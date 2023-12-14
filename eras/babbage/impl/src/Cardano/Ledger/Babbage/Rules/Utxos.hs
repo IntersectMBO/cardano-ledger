@@ -34,14 +34,28 @@ import Cardano.Ledger.Alonzo.Rules (
   validEnd,
   when2Phase,
  )
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
-import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
+import Cardano.Ledger.Alonzo.UTxO (
+  AlonzoEraUTxO (..),
+  AlonzoScriptsNeeded,
+ )
+import Cardano.Ledger.Babbage.Collateral (
+  collAdaBalance,
+  collOuts,
+ )
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
-import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
+import Cardano.Ledger.BaseTypes (
+  ShelleyBase,
+  epochInfo,
+  strictMaybeToMaybe,
+  systemStart,
+ )
 import Cardano.Ledger.Binary (EncCBOR (..))
-import Cardano.Ledger.Plutus.Evaluate (ScriptFailure (..), ScriptResult (..))
+import Cardano.Ledger.Plutus.Evaluate (
+  ScriptFailure (..),
+  ScriptResult (..),
+ )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
@@ -200,8 +214,14 @@ babbageEvalScriptsTxValid = do
   expectScriptsToPass pp tx utxo
   () <- pure $! traceEvent validEnd ()
 
-  updateUTxOState pp utxos txBody certState ppup' $
-    tellEvent . TotalDeposits (hashAnnotated txBody)
+  updateUTxOState
+    pp
+    utxos
+    txBody
+    certState
+    ppup'
+    (tellEvent . TotalDeposits (hashAnnotated txBody))
+    (\a b -> tellEvent $ TxUTxODiff a b)
 
 babbageEvalScriptsTxInvalid ::
   forall s era.

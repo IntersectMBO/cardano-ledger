@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -21,7 +20,10 @@ import Cardano.Ledger.Alonzo.Rules (
   validBegin,
   validEnd,
  )
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.UTxO (
+  AlonzoEraUTxO,
+  AlonzoScriptsNeeded,
+ )
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,
   BabbageUtxoPredFailure (..),
@@ -40,7 +42,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   utxosDonationL,
  )
-import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), updateUTxOState)
+import Cardano.Ledger.Shelley.Rules (
+  UtxoEnv (..),
+  updateUTxOState,
+ )
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.State.Transition.Extended
 import Debug.Trace (traceEvent)
@@ -131,6 +136,12 @@ conwayEvalScriptsTxValid = do
   () <- pure $! traceEvent validEnd ()
 
   utxos' <-
-    updateUTxOState pp utxos txBody certState govState $
-      tellEvent . TotalDeposits (hashAnnotated txBody)
+    updateUTxOState
+      pp
+      utxos
+      txBody
+      certState
+      govState
+      (tellEvent . TotalDeposits (hashAnnotated txBody))
+      (\a b -> tellEvent $ TxUTxODiff a b)
   pure $! utxos' & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL

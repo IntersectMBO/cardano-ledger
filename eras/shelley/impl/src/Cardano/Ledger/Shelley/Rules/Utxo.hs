@@ -58,14 +58,30 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
-import Cardano.Ledger.CertState (certsTotalDepositsTxBody, certsTotalRefundsTxBody)
+import Cardano.Ledger.CertState (
+  certsTotalDepositsTxBody,
+  certsTotalRefundsTxBody,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs)
-import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
-import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
+import Cardano.Ledger.Rules.ValidationMode (
+  Inject (..),
+  Test,
+  runTest,
+ )
+import Cardano.Ledger.SafeHash (
+  SafeHash,
+  hashAnnotated,
+ )
+import Cardano.Ledger.Shelley.AdaPots (
+  consumedTxBody,
+  producedTxBody,
+ )
+import Cardano.Ledger.Shelley.Era (
+  ShelleyEra,
+  ShelleyUTXO,
+ )
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
@@ -87,7 +103,11 @@ import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   Withdrawals (..),
  )
-import Cardano.Ledger.Shelley.UTxO (consumed, produced, txup)
+import Cardano.Ledger.Shelley.UTxO (
+  consumed,
+  produced,
+  txup,
+ )
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (
@@ -114,7 +134,10 @@ import Control.State.Transition (
   wrapEvent,
   wrapFailed,
  )
-import Data.Foldable (foldl', toList)
+import Data.Foldable (
+  foldl',
+  toList,
+ )
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Data.Set (Set)
@@ -150,6 +173,12 @@ deriving instance Show (PParams era) => Show (UtxoEnv era)
 data UtxoEvent era
   = TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
   | UpdateEvent (Event (EraRule "PPUP" era))
+  | -- | The UTxOs consumed and created by a signal tx
+    TxUTxODiff
+      -- | UTxO consumed
+      (UTxO era)
+      -- | UTxO created
+      (UTxO era)
 
 data ShelleyUtxoPredFailure era
   = BadInputsUTxO
@@ -442,8 +471,14 @@ utxoInductive = do
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ validateMaxTxSizeUTxO pp tx
 
-  updateUTxOState pp utxos txBody certState ppup' $
-    tellEvent . TotalDeposits (hashAnnotated txBody)
+  updateUTxOState
+    pp
+    utxos
+    txBody
+    certState
+    ppup'
+    (tellEvent . TotalDeposits (hashAnnotated txBody))
+    (\a b -> tellEvent $ TxUTxODiff a b)
 
 -- | The ttl field marks the top of an open interval, so it must be strictly
 -- less than the slot, so fail if it is (>=).
@@ -615,8 +650,9 @@ updateUTxOState ::
   CertState era ->
   GovState era ->
   (Coin -> m ()) ->
+  (UTxO era -> UTxO era -> m ()) ->
   m (UTxOState era)
-updateUTxOState pp utxos txBody certState govState depositChangeEvent = do
+updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent = do
   let UTxOState {utxosUtxo, utxosDeposited, utxosFees, utxosStakeDistr, utxosDonation} = utxos
       UTxO utxo = utxosUtxo
       !utxoAdd = txouts txBody -- These will be inserted into the UTxO
@@ -624,11 +660,13 @@ updateUTxOState pp utxos txBody certState govState depositChangeEvent = do
       !(utxoWithout, utxoDel) = extractKeys utxo (txBody ^. inputsTxBodyL)
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
-      newIncStakeDistro = updateStakeDistribution pp utxosStakeDistr (UTxO utxoDel) utxoAdd
+      deletedUTxO = UTxO utxoDel
+      newIncStakeDistro = updateStakeDistribution pp utxosStakeDistr deletedUTxO utxoAdd
       totalRefunds = certsTotalRefundsTxBody pp certState txBody
       totalDeposits = certsTotalDepositsTxBody pp certState txBody
       depositChange = totalDeposits <-> totalRefunds
   depositChangeEvent depositChange
+  txUtxODiffEvent deletedUTxO utxoAdd
   pure $!
     UTxOState
       { utxosUtxo = UTxO newUTxO

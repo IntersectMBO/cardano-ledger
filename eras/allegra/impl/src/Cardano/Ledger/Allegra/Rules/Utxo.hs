@@ -57,12 +57,20 @@ import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Rules (PpupEnv (..), ShelleyPPUP, ShelleyPpupPredFailure)
+import Cardano.Ledger.Shelley.Rules (
+  PpupEnv (..),
+  ShelleyPPUP,
+  ShelleyPpupPredFailure,
+ )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.UTxO (txup)
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txouts)
+import Cardano.Ledger.UTxO (
+  EraUTxO (..),
+  UTxO (..),
+  txouts,
+ )
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Monad.Trans.Reader (asks)
@@ -138,6 +146,12 @@ instance
 data AllegraUtxoEvent era
   = UpdateEvent (Event (EraRule "PPUP" era))
   | TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
+  | -- | The UTxOs consumed and created by a signal tx
+    TxUTxODiff
+      -- | UTxO consumed
+      (UTxO era)
+      -- | UTxO created
+      (UTxO era)
 
 -- | The UTxO transition rule for the Allegra era.
 utxoTransition ::
@@ -203,8 +217,14 @@ utxoTransition = do
   {- txsize tx ≤ maxTxSize pp -}
   runTest $ Shelley.validateMaxTxSizeUTxO pp tx
 
-  Shelley.updateUTxOState pp utxos txBody certState ppup' $
-    tellEvent . TotalDeposits (hashAnnotated txBody)
+  Shelley.updateUTxOState
+    pp
+    utxos
+    txBody
+    certState
+    ppup'
+    (tellEvent . TotalDeposits (hashAnnotated txBody))
+    (\a b -> tellEvent $ TxUTxODiff a b)
 
 -- | Ensure the transaction is within the validity window.
 --
