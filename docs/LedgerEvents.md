@@ -132,6 +132,10 @@ This event happens on the epoch boundary and gives us the ratification state (`R
 
 This event is triggered on each tx and gives us the votes, proposals and txid of a particular tx.
 
+### `TxUTxODiff utxosConsumed utxosCreated`
+
+This event is triggered on each tx and gives us the consumed and created UTxOs of that valid tx.
+
 ## Notes / TODO
 
 There appears to be multiple, redundant `NewEpoch` events.
