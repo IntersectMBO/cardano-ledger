@@ -77,9 +77,12 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   EncCBORGroup (..),
   ToCBOR (..),
+  Version,
   decodeList,
   encodeFoldableEncoder,
   encodeListLen,
+  getDecoderVersion,
+  natVersion,
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
@@ -109,7 +112,7 @@ import Cardano.Ledger.Plutus.Language (
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), keyBy, shelleyEqTxWitsRaw)
 import Control.DeepSeq (NFData)
-import Control.Monad ((>=>))
+import Control.Monad (unless, when, (>=>))
 import Data.Bifunctor (Bifunctor (first))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -578,41 +581,67 @@ instance
   ) =>
   DecCBOR (Annotator (AlonzoTxWitsRaw era))
   where
-  decCBOR =
+  decCBOR = do
+    v <- getDecoderVersion
+
     decode $
       SparseKeyed
         "AlonzoTxWits"
         (pure emptyTxWitness)
-        txWitnessField
+        (txWitnessField v)
         []
     where
       emptyTxWitness = AlonzoTxWitsRaw mempty mempty mempty mempty emptyRedeemers
 
-      txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
-      txWitnessField 0 =
+      txWitnessField :: Version -> Word -> Field (Annotator (AlonzoTxWitsRaw era))
+      txWitnessField _ 0 =
         fieldAA
           (\x wits -> wits {atwrAddrTxWits = x})
           (setDecodeA From)
-      txWitnessField 2 =
+      txWitnessField _ 2 =
         fieldAA
           (\x wits -> wits {atwrBootAddrTxWits = x})
           (setDecodeA From)
-      txWitnessField 1 =
+      txWitnessField v 1 =
         fieldAA
           addScripts
-          (listDecodeA (fmap fromNativeScript <$> From))
-      txWitnessField 3 = fieldA addScripts (decodePlutus SPlutusV1)
-      txWitnessField 4 =
+          ( if v >= natVersion @9
+              then decodeNonEmpty scriptField
+              else listDecodeA scriptField
+          )
+      txWitnessField v 3 =
+        fieldA
+          addScripts
+          ( if v >= natVersion @9
+              then decodeNonEmptyPlutusSet SPlutusV1
+              else decodePlutus SPlutusV1
+          )
+      txWitnessField _ 4 =
         fieldAA
           (\x wits -> wits {atwrDatsTxWits = x})
           From
-      txWitnessField 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
-      txWitnessField 6 = fieldA addScripts (decodePlutus SPlutusV2)
-      txWitnessField 7 = fieldA addScripts (decodePlutus SPlutusV3)
-      txWitnessField n = field (\_ t -> t) (Invalid n)
+      txWitnessField _ 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
+      txWitnessField _ 6 = fieldA addScripts (decodePlutus SPlutusV2)
+      txWitnessField _ 7 = fieldA addScripts (decodePlutus SPlutusV3)
+      txWitnessField _ n = field (\_ t -> t) (Invalid n)
       {-# INLINE txWitnessField #-}
 
+      scriptField :: Decode ('Closed 'Dense) (Annotator (Script era))
+      scriptField = fmap fromNativeScript <$> From
+
       decodePlutus slang = D (decodeList (fromPlutusScript <$> decodePlutusScript slang))
+
+      decodeNonEmptyPlutusSet slang = D $ do
+        xs <- decodeList (fromPlutusScript <$> decodePlutusScript slang)
+        when (null xs) $ fail "Empty list found, expected non-empty"
+        unless (length (Set.fromAscList xs) == length xs) $ fail "Duplicates found"
+        pure xs
+
+      decodeNonEmpty :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator [x])
+      decodeNonEmpty dx = D $ do
+        xs <- decodeList (decode dx)
+        when (null xs) $ fail "Empty list found, expected non-empty"
+        pure $ sequence xs
 
       addScripts :: [Script era] -> AlonzoTxWitsRaw era -> AlonzoTxWitsRaw era
       addScripts x wits =

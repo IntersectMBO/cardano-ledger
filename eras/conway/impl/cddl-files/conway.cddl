@@ -437,6 +437,17 @@ transaction_witness_set =
   , ? 7: [* plutus_v3_script ]
   }
 
+;transaction_witness_set =
+;  { ? 0: [+ vkeywitness ] / { + $vkey => $signature }
+;  , ? 1: nonempty_set<native_script>
+;  , ? 2: [+ bootstrap_witness ]
+;  , ? 3: nonempty_set<plutus_v1_script>
+;  , ? 4: nonempty_set<plutus_data>
+;  , ? 5: [+ redeemer ] / { + [ tag: redeemer_tag, index: uint ] => [data: plutus_data, ex_units: ex_units ] +
+;  , ? 6: nonempty_set<plutus_v2_script>
+;  , ? 7: nonempty_set<plutus_v3_script>
+;  }
+
 plutus_v1_script = bytes
 plutus_v2_script = bytes
 plutus_v3_script = bytes
