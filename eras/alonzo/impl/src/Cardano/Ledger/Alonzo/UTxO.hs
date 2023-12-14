@@ -230,4 +230,4 @@ getAlonzoScriptsNeeded (UTxO u) txBody =
       mapMaybe (\cred -> (Certifying cred,) <$> getScriptWitnessTxCert cred) $
         toList (txBody ^. certsTxBodyL)
 
-    !minted = map (\hash -> (Minting (PolicyID hash), hash)) $ Set.toList $ txBody ^. mintedTxBodyF
+    !minted = map (\pId@(PolicyID hash) -> (Minting pId, hash)) $ Set.toList $ txBody ^. mintedTxBodyF

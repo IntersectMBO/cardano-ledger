@@ -42,10 +42,7 @@ import Cardano.Ledger.Babbage (Babbage)
 import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
-import Cardano.Ledger.Babbage.TxBody (
-  BabbageTxBody (..),
-  Datum (..),
- )
+import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Babbage.TxInfo (
   ContextError (InlineDatumsNotSupported, ReferenceInputsNotSupported, ReferenceScriptsNotSupported),
  )
@@ -65,7 +62,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   hashKey,
  )
-import Cardano.Ledger.Plutus.Data (Data (..), dataToBinaryData, hashData)
+import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..), PlutusLanguage)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)

@@ -49,7 +49,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
-import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
@@ -71,7 +71,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..), WitVKey (..), hashKey)
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
-import Cardano.Ledger.Plutus.Data (Data (..), hashData)
+import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), hashData)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import qualified Cardano.Ledger.Shelley.PParams as PP (Update)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))

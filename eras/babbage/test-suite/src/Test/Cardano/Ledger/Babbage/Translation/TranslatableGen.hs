@@ -18,11 +18,11 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Babbage (Babbage, BabbageEra)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Plutus.Data (Data (..))
+import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))

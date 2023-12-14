@@ -2,6 +2,7 @@
 
 ## 1.5.0.0
 
+* Change return type of `mintedTxBodyF` to `Set PolicyID`
 * Stop exporting all of the internal `hkd*` functions and `PParamsHKD` from
   `Cardano.Ledger.Mary.Core`.
 * Stop exporting `ValidityInterval` and `StrictMaybe` from `Cardano.Ledger.Mary.TxBody`

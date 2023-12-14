@@ -98,7 +98,7 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
-import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies, policyID)
+import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset (..), policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -308,7 +308,7 @@ instance Crypto c => MaryEraTxBody (AlonzoEra c) where
   mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
   {-# INLINEABLE mintValueTxBodyF #-}
 
-  mintedTxBodyF = to (Set.map policyID . policies . atbrMint . getMemoRawType)
+  mintedTxBodyF = to (policies . atbrMint . getMemoRawType)
   {-# INLINEABLE mintedTxBodyF #-}
 
 instance Crypto c => AlonzoEraTxBody (AlonzoEra c) where

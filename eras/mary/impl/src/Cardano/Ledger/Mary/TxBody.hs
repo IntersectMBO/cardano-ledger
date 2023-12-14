@@ -61,7 +61,7 @@ import Cardano.Ledger.Shelley.PParams (Update, upgradeUpdate)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
 import Data.Sequence.Strict (StrictSeq)
-import qualified Data.Set as Set (Set, map)
+import Data.Set (Set)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -71,7 +71,7 @@ class AllegraEraTxBody era => MaryEraTxBody era where
 
   mintValueTxBodyF :: SimpleGetter (TxBody era) (Value era)
 
-  mintedTxBodyF :: SimpleGetter (TxBody era) (Set.Set (ScriptHash (EraCrypto era)))
+  mintedTxBodyF :: SimpleGetter (TxBody era) (Set (PolicyID (EraCrypto era)))
 
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern constructor.
@@ -147,7 +147,7 @@ instance (c ~ EraCrypto era, Era era) => HashAnnotated (MaryTxBody era) EraIndep
 -- | A pattern to keep the newtype and the MemoBytes hidden
 pattern MaryTxBody ::
   (EraTxOut era, EraTxCert era) =>
-  Set.Set (TxIn (EraCrypto era)) ->
+  Set (TxIn (EraCrypto era)) ->
   StrictSeq (TxOut era) ->
   StrictSeq (TxCert era) ->
   Withdrawals (EraCrypto era) ->
@@ -309,6 +309,5 @@ instance Crypto c => MaryEraTxBody (MaryEra c) where
   {-# INLINEABLE mintValueTxBodyF #-}
 
   mintedTxBodyF =
-    to $ \(TxBodyConstr (Memo (MaryTxBodyRaw txBodyRaw) _)) ->
-      Set.map policyID (policies (atbrMint txBodyRaw))
+    to $ \(TxBodyConstr (Memo (MaryTxBodyRaw txBodyRaw) _)) -> policies (atbrMint txBodyRaw)
   {-# INLINEABLE mintedTxBodyF #-}

@@ -55,6 +55,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxBody (..),
+  allSizedOutputsBabbageTxBodyF,
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
  )
@@ -97,7 +98,6 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (
   MaryValue (..),
   MultiAsset (..),
-  PolicyID (..),
   policies,
  )
 import Cardano.Ledger.MemoBytes (
@@ -119,10 +119,8 @@ import Control.DeepSeq (NFData)
 import Control.Monad (when)
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.OSet.Strict as SOS
-import Data.Sequence.Strict (StrictSeq, (|>))
-import qualified Data.Sequence.Strict as StrictSeq
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', to, (^.))
@@ -317,7 +315,7 @@ basicConwayTxBodyRaw =
     mempty
     mempty
     mempty
-    StrictSeq.empty
+    mempty
     SNothing
     SNothing
     SOS.empty
@@ -479,7 +477,7 @@ instance Crypto c => MaryEraTxBody (ConwayEra c) where
   mintValueTxBodyF = mintTxBodyL . to (MaryValue mempty)
 
   mintedTxBodyF =
-    to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (ctbrMint txBodyRaw)))
+    to (\(TxBodyConstr (Memo txBodyRaw _)) -> policies (ctbrMint txBodyRaw))
   {-# INLINE mintedTxBodyF #-}
 
 instance Crypto c => AlonzoEraTxBody (ConwayEra c) where
@@ -524,11 +522,7 @@ instance Crypto c => BabbageEraTxBody (ConwayEra c) where
     lensMemoRawType ctbrCollateralReturn (\txb x -> txb {ctbrCollateralReturn = x})
   {-# INLINE sizedCollateralReturnTxBodyL #-}
 
-  allSizedOutputsTxBodyF = to $ \txb ->
-    let txOuts = txb ^. sizedOutputsTxBodyL
-     in case txb ^. sizedCollateralReturnTxBodyL of
-          SNothing -> txOuts
-          SJust collTxOut -> txOuts |> collTxOut
+  allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
   {-# INLINE allSizedOutputsTxBodyF #-}
 
 instance Crypto c => ConwayEraTxBody (ConwayEra c) where

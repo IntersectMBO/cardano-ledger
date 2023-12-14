@@ -36,7 +36,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   Redeemers (..),
   TxDats (..),
  )
-import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..), ConwayTxCert (..))
@@ -46,7 +46,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   coerceKeyRole,
  )
-import Cardano.Ledger.Plutus.Data (Data, dataToBinaryData, hashData)
+import Cardano.Ledger.Plutus.Data (Data, Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Pretty (PrettyA (..), ppRecord)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)

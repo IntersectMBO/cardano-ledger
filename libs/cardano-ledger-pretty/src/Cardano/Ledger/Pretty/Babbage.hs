@@ -18,7 +18,6 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxOut (..),
-  Datum (..),
   adHash',
   certs',
   collateralInputs',
@@ -38,7 +37,7 @@ import Cardano.Ledger.Babbage.TxBody (
  )
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Plutus.Data (BinaryData, binaryDataToData)
+import Cardano.Ledger.Plutus.Data (BinaryData, Datum (..), binaryDataToData)
 import Cardano.Ledger.Pretty hiding (
   ppTxBody,
   ppTxOut,

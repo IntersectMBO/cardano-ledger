@@ -50,32 +50,9 @@ module Cardano.Ledger.Babbage.TxBody (
   ),
   BabbageTxBodyRaw (..),
   BabbageTxBodyUpgradeError (..),
-  mkBabbageTxBody,
-  inputsBabbageTxBodyL,
-  outputsBabbageTxBodyL,
-  feeBabbageTxBodyL,
-  auxDataHashBabbageTxBodyL,
-  babbageSpendableInputsTxBodyF,
   babbageAllInputsTxBodyF,
-  mintedBabbageTxBodyF,
-  mintValueBabbageTxBodyF,
-  withdrawalsBabbbageTxBodyL,
-  notSupportedInThisEraL,
-  updateBabbageTxBodyL,
-  certsBabbageTxBodyL,
-  vldtBabbageTxBodyL,
-  mintBabbageTxBodyL,
-  collateralInputsBabbageTxBodyL,
-  reqSignerHashesBabbageTxBodyL,
-  scriptIntegrityHashBabbageTxBodyL,
-  networkIdBabbageTxBodyL,
-  sizedOutputsBabbageTxBodyL,
-  referenceInputsBabbageTxBodyL,
-  totalCollateralBabbageTxBodyL,
-  collateralReturnBabbageTxBodyL,
-  sizedCollateralReturnBabbageTxBodyL,
+  babbageSpendableInputsTxBodyF,
   BabbageEraTxBody (..),
-  Datum (..),
   spendInputs',
   collateralInputs',
   referenceInputs',
@@ -126,7 +103,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, policies, policyID)
+import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, PolicyID (..), policies)
 import Cardano.Ledger.MemoBytes (
   EqRaw,
   Mem,
@@ -140,7 +117,6 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
   zipMemoRawType,
  )
-import Cardano.Ledger.Plutus.Data (Datum (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -301,8 +277,8 @@ babbageAllInputsTxBodyF =
       `Set.union` (txBody ^. referenceInputsTxBodyL)
 {-# INLINEABLE babbageAllInputsTxBodyF #-}
 
-mintedBabbageTxBodyF :: SimpleGetter (BabbageTxBody era) (Set (ScriptHash (EraCrypto era)))
-mintedBabbageTxBodyF = to (Set.map policyID . policies . btbrMint . getMemoRawType)
+mintedBabbageTxBodyF :: SimpleGetter (BabbageTxBody era) (Set (PolicyID (EraCrypto era)))
+mintedBabbageTxBodyF = to (policies . btbrMint . getMemoRawType)
 {-# INLINEABLE mintedBabbageTxBodyF #-}
 
 withdrawalsBabbbageTxBodyL ::
@@ -434,7 +410,7 @@ instance Crypto c => EraTxBody (BabbageEra c) where
   type TxBody (BabbageEra c) = BabbageTxBody (BabbageEra c)
   type TxBodyUpgradeError (BabbageEra c) = BabbageTxBodyUpgradeError
 
-  mkBasicTxBody = mkBabbageTxBody
+  mkBasicTxBody = mkMemoized basicBabbageTxBodyRaw
 
   inputsTxBodyL = inputsBabbageTxBodyL
   {-# INLINE inputsTxBodyL #-}
@@ -701,9 +677,6 @@ pattern BabbageTxBody
             }
 
 {-# COMPLETE BabbageTxBody #-}
-
-mkBabbageTxBody :: BabbageEraTxBody era => BabbageTxBody era
-mkBabbageTxBody = mkMemoized basicBabbageTxBodyRaw
 
 instance c ~ EraCrypto era => HashAnnotated (BabbageTxBody era) EraIndependentTxBody c where
   hashAnnotated = getMemoSafeHash
