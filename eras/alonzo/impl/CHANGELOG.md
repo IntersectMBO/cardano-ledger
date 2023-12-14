@@ -50,6 +50,7 @@
 * Delete `utxoPredFailMaToAlonzo`, `utxoPredFailShelleyToAlonzo`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Changed the type of the ConwayPParams field appEMax
+* Add `NewlySpendableUTxOsEvent (UTxO era)` inhabitant to the `AlonzoUtxosEvent era` data type.
 
 ### `testlib`
 

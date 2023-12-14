@@ -40,6 +40,7 @@
 * Add `runImpTestM`, `runImpTestM_`, `evalImpTestM` and `execImpTestM`
 * Add instance `Example (a -> ImpTestM era ())`, which allows use of `Arbitrary`
 * Add `getNextEpochCommitteeMembers` to `EraGov` typeclass, with a default empty implementation
+* Add `NewlySpendableUTxOsEvent (UTxO era)` inhabitant to the `UtxoEvent era` data type.
 
 ## 1.8.0.0
 
