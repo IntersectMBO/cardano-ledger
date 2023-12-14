@@ -20,10 +20,7 @@ import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.TxBody as Babbage (
-  BabbageTxOut (..),
-  Datum (..),
- )
+import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.Conway.Governance (GovProcedures (..))
 import Cardano.Ledger.Conway.PParams (
   ppCommitteeMaxTermLengthL,
@@ -36,6 +33,7 @@ import Cardano.Ledger.Conway.PParams (
   ppPoolVotingThresholdsL,
  )
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
+import Cardano.Ledger.Plutus.Data (Datum (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.Tx as Shelley (
   ShelleyTx (..),
@@ -306,15 +304,15 @@ updateTxOut (Alonzo _) (out@(AlonzoTxOut a v h)) txoutd = case txoutd of
 updateTxOut (Babbage _) (BabbageTxOut a v h refscript) txoutd = case txoutd of
   Address addr -> BabbageTxOut addr v h refscript
   Amount val -> BabbageTxOut a val h refscript
-  DHash SNothing -> BabbageTxOut a v Babbage.NoDatum refscript
-  DHash (SJust dh) -> BabbageTxOut a v (Babbage.DatumHash dh) refscript
+  DHash SNothing -> BabbageTxOut a v NoDatum refscript
+  DHash (SJust dh) -> BabbageTxOut a v (DatumHash dh) refscript
   FDatum d -> BabbageTxOut a v d refscript
   RefScript s -> BabbageTxOut a v h s
 updateTxOut (Conway _) (BabbageTxOut a v h refscript) txoutd = case txoutd of
   Address addr -> BabbageTxOut addr v h refscript
   Amount val -> BabbageTxOut a val h refscript
-  DHash SNothing -> BabbageTxOut a v Babbage.NoDatum refscript
-  DHash (SJust dh) -> BabbageTxOut a v (Babbage.DatumHash dh) refscript
+  DHash SNothing -> BabbageTxOut a v NoDatum refscript
+  DHash (SJust dh) -> BabbageTxOut a v (DatumHash dh) refscript
   FDatum d -> BabbageTxOut a v d refscript
   RefScript s -> BabbageTxOut a v h s
 {-# NOINLINE updateTxOut #-}

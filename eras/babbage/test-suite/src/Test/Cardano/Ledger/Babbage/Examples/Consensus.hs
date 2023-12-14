@@ -17,7 +17,7 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr (..), Redeemers 
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Translation ()
-import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
@@ -26,6 +26,7 @@ import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (
   Data (..),
+  Datum (..),
   dataToBinaryData,
   hashData,
  )

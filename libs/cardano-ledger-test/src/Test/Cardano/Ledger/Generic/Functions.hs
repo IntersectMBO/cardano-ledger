@@ -17,7 +17,6 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), collateral')
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxOut (..),
-  Datum (..),
   collateralInputs',
   collateralReturn',
   referenceInputs',
@@ -34,7 +33,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.Plutus.Data (binaryDataToData, hashData)
+import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, hashData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)

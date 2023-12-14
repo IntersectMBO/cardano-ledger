@@ -7,8 +7,16 @@
 * Stop exporting `AllegraEraTxBody`, `AlonzoEraTxBody`,`AlonzoTxBody`,
   `MaryEraTxBody`,`ShelleyEraTxBody`, `addrEitherBabbageTxOutL`,
   `valueEitherBabbageTxOutL`, `dataHashBabbageTxOutL`, `dataBabbageTxOutL`,
-  `datumBabbageTxOutL`, `referenceScriptBabbageTxOutL`, `getDatumBabbageTxOut` and `Datum`
-  from `Cardano.Ledger.Babbage.TxBody`
+  `datumBabbageTxOutL`, `referenceScriptBabbageTxOutL`, `getDatumBabbageTxOut`, `Datum`
+  `mkBabbageTxBody`, `inputsBabbageTxBodyL`, `outputsBabbageTxBodyL`, `feeBabbageTxBodyL`,
+  `auxDataHashBabbageTxBodyL`, `mintedBabbageTxBodyF`, `mintValueBabbageTxBodyF`,
+  `withdrawalsBabbbageTxBodyL`, `notSupportedInThisEraL`, `updateBabbageTxBodyL`,
+  `certsBabbageTxBodyL`, `vldtBabbageTxBodyL`, `mintBabbageTxBodyL`,
+  `collateralInputsBabbageTxBodyL`, `reqSignerHashesBabbageTxBodyL`,
+  `scriptIntegrityHashBabbageTxBodyL`, `networkIdBabbageTxBodyL`,
+  `sizedOutputsBabbageTxBodyL`, `referenceInputsBabbageTxBodyL`,
+  `totalCollateralBabbageTxBodyL`, `collateralReturnBabbageTxBodyL`,
+  `sizedCollateralReturnBabbageTxBodyL` from `Cardano.Ledger.Babbage.TxBody`
 * Remove `txInfoOutV1`, `txInfoOutV2`, `txInfoInV1` and `txInfoInV2`.
 * Add `transTxOutV1`, `transTxOutV2`, `transTxInInfoV1`, `transTxInInfoV2` and `transTxRedeemers`
 * Remove `babbageScriptPrefixTag`

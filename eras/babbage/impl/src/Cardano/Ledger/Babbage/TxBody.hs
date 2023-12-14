@@ -50,32 +50,9 @@ module Cardano.Ledger.Babbage.TxBody (
   ),
   BabbageTxBodyRaw (..),
   BabbageTxBodyUpgradeError (..),
-  mkBabbageTxBody,
-  inputsBabbageTxBodyL,
-  outputsBabbageTxBodyL,
-  feeBabbageTxBodyL,
-  auxDataHashBabbageTxBodyL,
-  babbageSpendableInputsTxBodyF,
   babbageAllInputsTxBodyF,
-  mintedBabbageTxBodyF,
-  mintValueBabbageTxBodyF,
-  withdrawalsBabbbageTxBodyL,
-  notSupportedInThisEraL,
-  updateBabbageTxBodyL,
-  certsBabbageTxBodyL,
-  vldtBabbageTxBodyL,
-  mintBabbageTxBodyL,
-  collateralInputsBabbageTxBodyL,
-  reqSignerHashesBabbageTxBodyL,
-  scriptIntegrityHashBabbageTxBodyL,
-  networkIdBabbageTxBodyL,
-  sizedOutputsBabbageTxBodyL,
-  referenceInputsBabbageTxBodyL,
-  totalCollateralBabbageTxBodyL,
-  collateralReturnBabbageTxBodyL,
-  sizedCollateralReturnBabbageTxBodyL,
+  babbageSpendableInputsTxBodyF,
   BabbageEraTxBody (..),
-  Datum (..),
   spendInputs',
   collateralInputs',
   referenceInputs',
@@ -140,7 +117,6 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
   zipMemoRawType,
  )
-import Cardano.Ledger.Plutus.Data (Datum (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -434,7 +410,7 @@ instance Crypto c => EraTxBody (BabbageEra c) where
   type TxBody (BabbageEra c) = BabbageTxBody (BabbageEra c)
   type TxBodyUpgradeError (BabbageEra c) = BabbageTxBodyUpgradeError
 
-  mkBasicTxBody = mkBabbageTxBody
+  mkBasicTxBody = mkMemoized basicBabbageTxBodyRaw
 
   inputsTxBodyL = inputsBabbageTxBodyL
   {-# INLINE inputsTxBodyL #-}
@@ -701,9 +677,6 @@ pattern BabbageTxBody
             }
 
 {-# COMPLETE BabbageTxBody #-}
-
-mkBabbageTxBody :: BabbageEraTxBody era => BabbageTxBody era
-mkBabbageTxBody = mkMemoized basicBabbageTxBodyRaw
 
 instance c ~ EraCrypto era => HashAnnotated (BabbageTxBody era) EraIndependentTxBody c where
   hashAnnotated = getMemoSafeHash

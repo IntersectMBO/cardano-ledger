@@ -55,6 +55,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxBody (..),
+  allSizedOutputsBabbageTxBodyF,
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,
  )
@@ -118,8 +119,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad (when)
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.OSet.Strict as SOS
-import Data.Sequence.Strict (StrictSeq, (|>))
-import qualified Data.Sequence.Strict as StrictSeq
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
@@ -315,7 +315,7 @@ basicConwayTxBodyRaw =
     mempty
     mempty
     mempty
-    StrictSeq.empty
+    mempty
     SNothing
     SNothing
     SOS.empty
@@ -522,11 +522,7 @@ instance Crypto c => BabbageEraTxBody (ConwayEra c) where
     lensMemoRawType ctbrCollateralReturn (\txb x -> txb {ctbrCollateralReturn = x})
   {-# INLINE sizedCollateralReturnTxBodyL #-}
 
-  allSizedOutputsTxBodyF = to $ \txb ->
-    let txOuts = txb ^. sizedOutputsTxBodyL
-     in case txb ^. sizedCollateralReturnTxBodyL of
-          SNothing -> txOuts
-          SJust collTxOut -> txOuts |> collTxOut
+  allSizedOutputsTxBodyF = allSizedOutputsBabbageTxBodyF
   {-# INLINE allSizedOutputsTxBodyF #-}
 
 instance Crypto c => ConwayEraTxBody (ConwayEra c) where
