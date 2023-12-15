@@ -430,11 +430,11 @@ transaction_witness_set =
   { ? 0: [* vkeywitness ]
   , ? 1: [* native_script ]
   , ? 2: [* bootstrap_witness ]
-  , ? 3: [* plutus_v1_script ]
+  , ? 3: nonempty_set<plutus_v1_script>
   , ? 4: [* plutus_data ]
   , ? 5: [* redeemer ]
-  , ? 6: [* plutus_v2_script ]
-  , ? 7: [* plutus_v3_script ]
+  , ? 6: nonempty_set<plutus_v2_script>
+  , ? 7: nonempty_set<plutus_v3_script>
   }
 
 plutus_v1_script = bytes

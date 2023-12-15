@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -77,9 +78,15 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   EncCBORGroup (..),
   ToCBOR (..),
+  allowTag,
   decodeList,
+  decodeListLenOrIndef,
+  decodeMapLikeEnforceNoDuplicates,
   encodeFoldableEncoder,
   encodeListLen,
+  ifDecoderVersionAtLeast,
+  natVersion,
+  setTag,
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core
@@ -109,7 +116,7 @@ import Cardano.Ledger.Plutus.Language (
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), keyBy, shelleyEqTxWitsRaw)
 import Control.DeepSeq (NFData)
-import Control.Monad ((>=>))
+import Control.Monad (when, (>=>))
 import Data.Bifunctor (Bifunctor (first))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -593,14 +600,23 @@ instance
         fieldAA
           (\x wits -> wits {atwrAddrTxWits = x})
           (setDecodeA From)
+      txWitnessField 1 =
+        fieldAA
+          addScripts
+          ( fmap Map.fromList
+              <$> listDecodeA
+                ( fmap
+                    ( \ns ->
+                        let script = fromNativeScript ns
+                         in (hashScript @era script, script)
+                    )
+                    <$> From
+                )
+          )
       txWitnessField 2 =
         fieldAA
           (\x wits -> wits {atwrBootAddrTxWits = x})
           (setDecodeA From)
-      txWitnessField 1 =
-        fieldAA
-          addScripts
-          (listDecodeA (fmap fromNativeScript <$> From))
       txWitnessField 3 = fieldA addScripts (decodePlutus SPlutusV1)
       txWitnessField 4 =
         fieldAA
@@ -612,15 +628,52 @@ instance
       txWitnessField n = field (\_ t -> t) (Invalid n)
       {-# INLINE txWitnessField #-}
 
-      decodePlutus slang = D (decodeList (fromPlutusScript <$> decodePlutusScript slang))
-
-      addScripts :: [Script era] -> AlonzoTxWitsRaw era -> AlonzoTxWitsRaw era
-      addScripts x wits =
-        wits
-          { atwrScriptTxWits =
-              keyBy (hashScript @era) x <> atwrScriptTxWits wits
+      addScripts ::
+        Map (ScriptHash (EraCrypto era)) (Script era) ->
+        AlonzoTxWitsRaw era ->
+        AlonzoTxWitsRaw era
+      addScripts scriptWitnesses txWits =
+        txWits
+          { atwrScriptTxWits = scriptWitnesses <> atwrScriptTxWits txWits
           }
       {-# INLINE addScripts #-}
+
+      decodePlutus ::
+        PlutusLanguage l =>
+        SLanguage l ->
+        Decode ('Closed 'Dense) (Map (ScriptHash (EraCrypto era)) (Script era))
+      decodePlutus slang =
+        D $
+          ifDecoderVersionAtLeast
+            (natVersion @9)
+            (scriptDecoderV9 (fromPlutusScript <$> decodePlutusScript slang))
+            (scriptDecoder (fromPlutusScript <$> decodePlutusScript slang))
+      {-# INLINE decodePlutus #-}
+
+      scriptDecoderV9 ::
+        Decoder s (Script era) ->
+        Decoder s (Map (ScriptHash (EraCrypto era)) (Script era))
+      scriptDecoderV9 decodeScript = do
+        allowTag setTag
+        scriptMap <- decodeMapLikeEnforceNoDuplicates decodeListLenOrIndef $ do
+          asHashedPair <$> decodeScript
+        when (Map.null scriptMap) $ fail "Empty list of scripts is not allowed"
+        pure scriptMap
+      {-# INLINE scriptDecoderV9 #-}
+
+      scriptDecoder ::
+        Decoder s (Script era) ->
+        Decoder s (Map (ScriptHash (EraCrypto era)) (Script era))
+      scriptDecoder decodeScript =
+        fmap Map.fromList $
+          decodeList $
+            asHashedPair <$> decodeScript
+      {-# INLINE scriptDecoder #-}
+
+      asHashedPair script =
+        let !scriptHash = hashScript @era script
+         in (scriptHash, script)
+      {-# INLINE asHashedPair #-}
   {-# INLINE decCBOR #-}
 
 deriving via
