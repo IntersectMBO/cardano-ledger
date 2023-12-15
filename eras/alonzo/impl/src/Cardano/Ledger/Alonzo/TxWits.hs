@@ -598,36 +598,51 @@ instance
         fieldAA
           (\x wits -> wits {atwrAddrTxWits = x})
           (setDecodeA From)
+      txWitnessField 1 =
+        fieldAA
+          addScripts
+          ( Map.fromList <$> listDecodeA
+              ( fmap
+                  ( \ns ->
+                      let script = fromNativeScript ns
+                       in (hashScript @era script, script)
+                  )
+                  <$> From
+              )
+          )
       txWitnessField 2 =
         fieldAA
           (\x wits -> wits {atwrBootAddrTxWits = x})
           (setDecodeA From)
-      txWitnessField 1 = fieldA addScripts decodeNativeScript
-      txWitnessField 3 = fieldA addScripts (decodePlutusScript SPlutusV1)
+      txWitnessField 3 = fieldA addScripts (decodePlutus SPlutusV1)
       txWitnessField 4 =
         fieldAA
           (\x wits -> wits {atwrDatsTxWits = x})
           From
       txWitnessField 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
-      txWitnessField 6 = fieldA addScripts (decodePlutusScript SPlutusV2)
-      txWitnessField 7 = fieldA addScripts (decodePlutusScript SPlutusV3)
+      txWitnessField 6 = fieldA addScripts (decodePlutus SPlutusV2)
+      txWitnessField 7 = fieldA addScripts (decodePlutus SPlutusV3)
       txWitnessField n = field (\_ t -> t) (Invalid n)
       {-# INLINE txWitnessField #-}
 
       scriptDecoder ::
-        (forall s'. Decoder s' (Script era)) ->
-        Decode ('Closed 'Dense) (Annotator (Script era))
-      scriptDecoder decodeScript = D $ decodeMapByKeyValue $ do
-        script <- decodeScript
-        let !scriptHash = hashScript @era script
-        pure (scriptHash, script)
+        (forall s. Decoder s (Script era)) ->
+        Decode ('Closed 'Dense) (Map (ScriptHash (EraCrypto era)) (Script era))
+      scriptDecoder decodeScript = D $ do
+        scriptMap <- decodeMapByKeyValue $ do
+          script <- decodeScript
+          let !scriptHash = hashScript @era script
+          pure (scriptHash, script)
+        when (Map.null scriptMap) $ fail "Empty list of scripts is not allowed"
+        pure scriptMap
       {-# INLINE scriptDecoder #-}
 
-      decodeNativeScript = scriptDecoder (fromNativeScript <$> decCBOR)
-      {-# INLINE decodeNativeScript #-}
-
-      decodePlutusScript slang = scriptDecoder (fromPlutusScript <$> decodePlutusScript slang)
-      {-# INLINE decodePlutusScript #-}
+      decodePlutus ::
+        PlutusLanguage l =>
+        SLanguage l ->
+        Decode ('Closed 'Dense) (Map (ScriptHash (EraCrypto era)) (Script era))
+      decodePlutus slang = scriptDecoder (fromPlutusScript <$> decodePlutusScript slang)
+      {-# INLINE decodePlutus #-}
 
       addScripts ::
         Map (ScriptHash (EraCrypto era)) (Script era) ->
