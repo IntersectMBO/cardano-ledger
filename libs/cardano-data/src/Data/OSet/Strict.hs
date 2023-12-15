@@ -101,7 +101,7 @@ instance EncCBOR a => EncCBOR (OSet a) where
   encCBOR (OSet seq _set) = encodeTag setTag <> encodeStrictSeq encCBOR seq
 
 instance (Show a, Ord a, DecCBOR a) => DecCBOR (OSet a) where
-  decCBOR = decodeSetLikeEnforceNoDuplicates member (flip snoc) decCBOR
+  decCBOR = decodeSetLikeEnforceNoDuplicates (flip snoc) (\oset -> (size oset, oset)) decCBOR
 
 -- | \( O(1) \). Shallow invariant using just `length` and `size`.
 invariantHolds :: OSet a -> Bool
