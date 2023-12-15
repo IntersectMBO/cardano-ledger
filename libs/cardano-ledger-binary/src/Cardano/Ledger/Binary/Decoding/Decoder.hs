@@ -65,10 +65,20 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   setTag,
   decodeMap,
   decodeMapByKey,
+  decodeMapLikeEnforceNoDuplicates,
   decodeVMap,
   decodeSeq,
   decodeStrictSeq,
   decodeSetTag,
+  decodeListLikeWithCount,
+  decodeSetLikeEnforceNoDuplicates,
+  decodeListLikeEnforceNoDuplicates,
+  decodeMapContents,
+  decodeMapNoDuplicates,
+
+  -- **** Applicaitve
+  decodeMapTraverse,
+  decodeMapContentsTraverse,
 
   -- *** Time
   decodeUTCTime,
@@ -76,10 +86,6 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   -- *** Network
   decodeIPv4,
   decodeIPv6,
-  decodeMapContents,
-  decodeMapNoDuplicates,
-  decodeMapTraverse,
-  decodeMapContentsTraverse,
 
   -- ** Lifted @cborg@ decoders
   decodeBool,
@@ -152,8 +158,6 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   peekAvailable,
   peekByteOffset,
   peekTokenType,
-  decodeSetLikeEnforceNoDuplicates,
-  decodeListLikeEnforceNoDuplicates,
 )
 where
 
@@ -264,7 +268,6 @@ import Data.Typeable (Proxy (Proxy), Typeable, typeRep)
 import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import Data.Word (Word16, Word32, Word64, Word8)
-import GHC.Exts as Exts (IsList (..))
 import Network.Socket (HostAddress6)
 import Numeric.Natural (Natural)
 import Prelude hiding (decodeFloat)
@@ -659,33 +662,23 @@ decodeMapSkel ::
   -- | Decoded list is guaranteed to be sorted on keys in descending order without any
   -- duplicate keys.
   ([(k, v)] -> m) ->
-  -- | Decoder for keys
-  Decoder s k ->
-  -- | Decoder for values
-  (k -> Decoder s v) ->
+  -- | Decoder for keys and values
+  Decoder s (k, v) ->
   Decoder s m
-decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
+decodeMapSkel fromDistinctDescList decodeKeyValue = do
   n <- decodeMapLen
   fromDistinctDescList <$> case n of
     0 -> return []
     _ -> do
-      (firstKey, firstValue) <- decodeEntry
+      (firstKey, firstValue) <- decodeKeyValue
       decodeEntries (n - 1) firstKey [(firstKey, firstValue)]
   where
-    -- Decode a single (k,v).
-    decodeEntry :: Decoder s (k, v)
-    decodeEntry = do
-      !k <- decodeKey
-      !v <- decodeValue k
-      return (k, v)
-    {-# INLINE decodeEntry #-}
-
     -- Decode all the entries, enforcing canonicity by ensuring that the
     -- previous key is smaller than the next one.
     decodeEntries :: Int -> k -> [(k, v)] -> Decoder s [(k, v)]
     decodeEntries 0 _ acc = pure acc
     decodeEntries !remainingPairs previousKey !acc = do
-      p@(newKey, _) <- decodeEntry
+      p@(newKey, _) <- decodeKeyValue
       -- Order of keys needs to be strictly increasing, because otherwise it's
       -- possible to supply lists with various amount of duplicate keys which
       -- will result in the same map as long as the last value of the given
@@ -703,39 +696,16 @@ decodeCollectionWithLen ::
   Decoder s (Maybe Int) ->
   Decoder s v ->
   Decoder s (Int, [v])
-decodeCollectionWithLen lenOrIndef el = do
-  lenOrIndef >>= \case
-    Just len -> (,) len <$> replicateM len el
-    Nothing -> loop (0, []) (not <$> decodeBreakOr) el
-  where
-    loop (!n, !acc) condition action =
-      condition >>= \case
-        False -> pure (n, reverse acc)
-        True -> action >>= \v -> loop (n + 1, v : acc) condition action
+decodeCollectionWithLen lenOrIndef decodeElement =
+  fmap reverse <$> decodeListLikeWithCount lenOrIndef (:) (const decodeElement)
 {-# INLINE decodeCollectionWithLen #-}
-
-decodeIsListByKey ::
-  forall k t v s.
-  (Exts.IsList t, Exts.Item t ~ (k, v)) =>
-  -- | Decoder for keys
-  Decoder s k ->
-  -- | Decoder for values
-  (k -> Decoder s v) ->
-  Decoder s t
-decodeIsListByKey decodeKey decodeValueFor =
-  uncurry Exts.fromListN
-    <$> decodeCollectionWithLen decodeMapLenOrIndef decodeInlinedPair
-  where
-    decodeInlinedPair = do
-      !key <- decodeKey
-      !value <- decodeValueFor key
-      pure (key, value)
-    {-# INLINE decodeInlinedPair #-}
-{-# INLINE decodeIsListByKey #-}
 
 -- | `Decoder` for `Map.Map`. Versions variance:
 --
--- * [>= 2] - Allows variable as well as exact list length encoding. Duplicates are
+-- * [>= 9] - Allows variable as well as exact list length encoding. Duplicate keys will
+--   result in a deserialization failure
+--
+-- * [>= 2] - Allows variable as well as exact list length encoding. Duplicate keys are
 --   silently ignored
 --
 -- * [< 2] - Expects exact list length encoding and enforces strict order
@@ -770,11 +740,34 @@ decodeMapByKey decodeKey decodeValue =
     (natVersion @2)
     ( ifDecoderVersionAtLeast
         (natVersion @9)
-        (decodeMapEnforceNoDuplicates decodeKey decodeValue)
-        (decodeIsListByKey decodeKey decodeValue)
+        (decodeMapLikeEnforceNoDuplicates decodeMapLenOrIndef decodeKeyValue)
+        (Map.fromList <$> decodeCollection decodeMapLenOrIndef decodeKeyValue)
     )
-    (decodeMapSkel Map.fromDistinctDescList decodeKey decodeValue)
+    (decodeMapSkel Map.fromDistinctDescList decodeKeyValue)
+  where
+    decodeKeyValue = do
+      !key <- decodeKey
+      !value <- decodeValue key
+      pure (key, value)
+    {-# INLINE decodeKeyValue #-}
 {-# INLINE decodeMapByKey #-}
+
+-- | Similar to `decodeMapByKey`, except it gives access to the key value
+-- decoder as a pair and allows for different type of length encoding
+decodeMapLikeEnforceNoDuplicates ::
+  Ord k =>
+  Decoder s (Maybe Int) ->
+  Decoder s (k, v) ->
+  Decoder s (Map.Map k v)
+decodeMapLikeEnforceNoDuplicates decodeLenOrIndef =
+  -- We first decode into a list because most of the time the encoded Map will be in sorted
+  -- order and there is a nice optimization on the `Map.fromList` that can take advantage of
+  -- that fact. In case when encoded data is not sorted the penalty of going through a list
+  -- is insignificant.
+  decodeListLikeEnforceNoDuplicates decodeLenOrIndef (:) $ \xs ->
+    let result = Map.fromList (reverse xs)
+     in (Map.size result, result)
+{-# INLINE decodeMapLikeEnforceNoDuplicates #-}
 
 -- | Decode `VMap`. Unlike `decodeMap` it does not behavee differently for
 -- version prior to 2.
@@ -783,7 +776,11 @@ decodeVMap ::
   Decoder s k ->
   Decoder s v ->
   Decoder s (VMap.VMap kv vv k v)
-decodeVMap decodeKey decodeValue = decodeIsListByKey decodeKey (const decodeValue)
+decodeVMap decodeKey decodeValue =
+  VMap.fromMap
+    <$> decodeMapLikeEnforceNoDuplicates
+      decodeMapLenOrIndef
+      ((,) <$> decodeKey <*> decodeValue)
 {-# INLINE decodeVMap #-}
 
 -- | We stitch a `258` in from of a (Hash)Set, so that tools which
@@ -861,49 +858,91 @@ decodeSetEnforceNoDuplicates ::
   Ord a =>
   Decoder s a ->
   Decoder s (Set.Set a)
-decodeSetEnforceNoDuplicates = decodeSetLikeEnforceNoDuplicates Set.member Set.insert
+decodeSetEnforceNoDuplicates = decodeSetLikeEnforceNoDuplicates (:) $ \xs ->
+  -- We first decode into a list because most of the time the encoded Set will be in sorted
+  -- order and there is a nice optimization on the `Set.fromList` that can take advantage of
+  -- that fact. In case when encoded data is not sorted the penalty of going through a list
+  -- is insignificant.
+  let result = Set.fromList (reverse xs)
+   in (Set.size result, result)
 {-# INLINE decodeSetEnforceNoDuplicates #-}
 
--- | Decode a collection of values either as a definite or indefinite list. Duplicates are not
+-- | Decode a collection of values with ability to supply length decoder. Number of
+-- decoded elements will be returned together with the data structure
+decodeListLikeWithCount ::
+  forall s a b.
+  Monoid b =>
+  -- | Length decoder that produces the expected number of elements. When `Nothing` is
+  -- decoded the `decodeBreakOr` will be used as termination indicator.
+  Decoder s (Maybe Int) ->
+  -- | Add an element into the decoded List like data structure
+  (a -> b -> b) ->
+  -- | Decoder for the values. Current accumulator is supplied as an argument
+  (b -> Decoder s a) ->
+  Decoder s (Int, b)
+decodeListLikeWithCount decodeLenOrIndef insert decodeElement = do
+  decodeLenOrIndef >>= \case
+    Just len -> loop (\x -> pure (x >= len)) 0 mempty
+    Nothing -> loop (\_ -> decodeBreakOr) 0 mempty
+  where
+    loop :: (Int -> Decoder s Bool) -> Int -> b -> Decoder s (Int, b)
+    loop condition = go
+      where
+        go !count !acc = do
+          shouldStop <- condition count
+          if shouldStop
+            then pure (count, acc)
+            else do
+              element <- decodeElement acc
+              go (count + 1) (insert element acc)
+    {-# INLINE loop #-}
+{-# INLINE decodeListLikeWithCount #-}
+
+-- | Decode a collection of values with ability to supply length decoder. Duplicates are not
 -- allowed.
 decodeListLikeEnforceNoDuplicates ::
-  forall s a f.
-  Monoid (f a) =>
-  -- | Check for membership. Decoder will fail if this predicate returns True
-  (a -> f a -> Bool) ->
+  forall s a b c.
+  Monoid b =>
+  Decoder s (Maybe Int) ->
   -- | Add an element into the decoded List like data structure
-  (a -> f a -> f a) ->
+  (a -> b -> b) ->
+  -- | Get the final data structure and the number of elements it has.
+  (b -> (Int, c)) ->
   Decoder s a ->
-  Decoder s (f a)
-decodeListLikeEnforceNoDuplicates isMember insert decodeElement = do
-  decodeListLenOrIndef >>= \case
-    Just len -> loop (\x -> pure (x - 1, x <= 0)) len mempty
-    Nothing -> loop (\x -> (,) x <$> decodeBreakOr) () mempty
-  where
-    loop :: (t -> Decoder s (t, Bool)) -> t -> f a -> Decoder s (f a)
-    loop condition prevStep !acc = do
-      (nextStep, shouldStop) <- condition prevStep
-      if shouldStop
-        then pure acc
-        else do
-          a <- decodeElement
-          when (a `isMember` acc) $ fail "Duplicate key detected in the List"
-          loop condition nextStep (insert a acc)
+  Decoder s c
+decodeListLikeEnforceNoDuplicates decodeLenOrIndef insert getFinalWithCount decodeElement = do
+  (count, result) <- decodeListLikeWithCount decodeLenOrIndef insert (const decodeElement)
+  let (len, finalResult) = getFinalWithCount result
+  when (len /= count) $
+    fail $
+      "Final number of elements: "
+        <> show len
+        <> " does not match the total count that was decoded: "
+        <> show count
+  pure finalResult
 {-# INLINE decodeListLikeEnforceNoDuplicates #-}
 
 -- | Decode a Set as a either a definite or indefinite list. Duplicates are not
 -- allowed. Set tag 258 is permitted, but not enforced.
 decodeSetLikeEnforceNoDuplicates ::
-  forall s a f.
-  Monoid (f a) =>
-  -- | Check for membership. Decoder will fail if this predicate returns True
-  (a -> f a -> Bool) ->
-  -- | Add an aelement into the decoded Set like data structure
-  (a -> f a -> f a) ->
+  forall s a b c.
+  Monoid b =>
+  -- | Add an element into the decoded Set like data structure
+  (a -> b -> b) ->
+  -- | Get the final data structure from the decoded sequence of values and the number of
+  -- elements it contains. This is useful when a sequence on the wire is represented by a
+  -- @set@, namely no duplicates are allowed, while the Haskell representation uses some
+  -- other data structure that enforces no duplicates by some other means. For example a
+  -- `Map`, where keys are hashes of the values encoded on the wire. The final size of the
+  -- data strucutre taht isreturned will be used to enforce the invariant of a Set, that
+  -- the number of elements decoded matches the final size of the Set, thus ensuring no
+  -- duplicates were encountered.
+  (b -> (Int, c)) ->
   Decoder s a ->
-  Decoder s (f a)
-decodeSetLikeEnforceNoDuplicates isMember insert decodeElement =
-  allowTag setTag >> decodeListLikeEnforceNoDuplicates isMember insert decodeElement
+  Decoder s c
+decodeSetLikeEnforceNoDuplicates insert getFinalWithLen decodeElement = do
+  allowTag setTag
+  decodeListLikeEnforceNoDuplicates decodeListLenOrIndef insert getFinalWithLen decodeElement
 {-# INLINE decodeSetLikeEnforceNoDuplicates #-}
 
 decodeContainerSkelWithReplicate ::
@@ -957,36 +996,14 @@ decodeStrictSeq :: Decoder s a -> Decoder s (SSeq.StrictSeq a)
 decodeStrictSeq decoder = SSeq.fromList <$> decodeCollection decodeListLenOrIndef decoder
 {-# INLINE decodeStrictSeq #-}
 
-decodeAccWithLen ::
-  Decoder s (Maybe Int) ->
-  (a -> b -> b) ->
-  b ->
-  Decoder s a ->
-  Decoder s (Int, b)
-decodeAccWithLen lenOrIndef combine acc0 action = do
-  mLen <- lenOrIndef
-  let condition = case mLen of
-        Nothing -> const <$> decodeBreakOr
-        Just len -> pure (>= len)
-      loop !i !acc = do
-        shouldStop <- condition
-        if shouldStop i
-          then pure (i, acc)
-          else do
-            v <- action
-            loop (i + 1) (v `combine` acc)
-  loop 0 acc0
-{-# INLINE decodeAccWithLen #-}
-
 -- | Just like `decodeMap`, but assumes that there are no duplicate keys, which is not enforced.
 decodeMapNoDuplicates :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
 decodeMapNoDuplicates decodeKey decodeValue =
   snd
-    <$> decodeAccWithLen
+    <$> decodeListLikeWithCount
       decodeMapLenOrIndef
       (uncurry Map.insert)
-      Map.empty
-      decodeInlinedPair
+      (const decodeInlinedPair)
   where
     decodeInlinedPair = do
       !key <- decodeKey
@@ -994,30 +1011,6 @@ decodeMapNoDuplicates decodeKey decodeValue =
       pure (key, value)
     {-# INLINE decodeInlinedPair #-}
 {-# INLINE decodeMapNoDuplicates #-}
-
--- | Just like `decodeMap`, but fails on duplicate keys
-decodeMapEnforceNoDuplicates ::
-  forall s k v.
-  Ord k =>
-  Decoder s k ->
-  (k -> Decoder s v) ->
-  Decoder s (Map.Map k v)
-decodeMapEnforceNoDuplicates decodeKey decodeValueFor = do
-  decodeMapLenOrIndef >>= \case
-    Just len -> loop (\x -> pure (x - 1, x <= 0)) len Map.empty
-    Nothing -> loop (\x -> (,) x <$> decodeBreakOr) () Map.empty
-  where
-    loop :: (a -> Decoder s (a, Bool)) -> a -> Map.Map k v -> Decoder s (Map.Map k v)
-    loop condition prevStep !acc = do
-      (nextStep, shouldStop) <- condition prevStep
-      if shouldStop
-        then pure acc
-        else do
-          !key <- decodeKey
-          !value <- decodeValueFor key
-          when (key `Map.member` acc) $ fail "Duplicate key detected in the Map"
-          loop condition nextStep (Map.insert key value acc)
-{-# INLINE decodeMapEnforceNoDuplicates #-}
 
 decodeMapContents :: Decoder s a -> Decoder s [a]
 decodeMapContents = decodeCollection decodeMapLenOrIndef
