@@ -706,7 +706,10 @@ decodeCollectionWithLen lenOrIndef el = do
 
 -- | `Decoder` for `Map.Map`. Versions variance:
 --
--- * [>= 2] - Allows variable as well as exact list length encoding. Duplicates are
+-- * [>= 9] - Allows variable as well as exact list length encoding. Duplicate keys will
+--   result in a deserialization failure
+--
+-- * [>= 2] - Allows variable as well as exact list length encoding. Duplicate keys are
 --   silently ignored
 --
 -- * [< 2] - Expects exact list length encoding and enforces strict order
@@ -740,7 +743,7 @@ decodeMapByKey decodeKey decodeValue =
   decodeMapByKeyValue (decodeKey >>= \ !k -> (,) k <$!> decodeValue k)
 {-# INLINE decodeMapByKey #-}
 
--- | Just like `decodeMap`, but also gives access to the key for the value decoder as a pair.
+-- | Just like `decodeMap`, but also gives access to the key value decoder as a pair.
 decodeMapByKeyValue ::
   Ord k =>
   Decoder s (k, v) ->
