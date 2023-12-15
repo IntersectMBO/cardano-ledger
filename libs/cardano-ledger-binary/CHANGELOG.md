@@ -2,6 +2,8 @@
 
 ## 1.3.0.0
 
+* Fix `decodeVMap`
+* Add `decodeMapByKeyValue`
 * Add `decodeListLikeT` and `decodeListLike`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Add `encodeEnum` and `decodeEnumBounded`

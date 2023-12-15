@@ -65,6 +65,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   setTag,
   decodeMap,
   decodeMapByKey,
+  decodeMapByKeyValue,
   decodeVMap,
   decodeSeq,
   decodeStrictSeq,
@@ -264,7 +265,6 @@ import Data.Typeable (Proxy (Proxy), Typeable, typeRep)
 import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import Data.Word (Word16, Word32, Word64, Word8)
-import GHC.Exts as Exts (IsList (..))
 import Network.Socket (HostAddress6)
 import Numeric.Natural (Natural)
 import Prelude hiding (decodeFloat)
@@ -659,33 +659,23 @@ decodeMapSkel ::
   -- | Decoded list is guaranteed to be sorted on keys in descending order without any
   -- duplicate keys.
   ([(k, v)] -> m) ->
-  -- | Decoder for keys
-  Decoder s k ->
-  -- | Decoder for values
-  (k -> Decoder s v) ->
+  -- | Decoder for keys and values
+  Decoder s (k, v) ->
   Decoder s m
-decodeMapSkel fromDistinctDescList decodeKey decodeValue = do
+decodeMapSkel fromDistinctDescList decodeKeyValue = do
   n <- decodeMapLen
   fromDistinctDescList <$> case n of
     0 -> return []
     _ -> do
-      (firstKey, firstValue) <- decodeEntry
+      (firstKey, firstValue) <- decodeKeyValue
       decodeEntries (n - 1) firstKey [(firstKey, firstValue)]
   where
-    -- Decode a single (k,v).
-    decodeEntry :: Decoder s (k, v)
-    decodeEntry = do
-      !k <- decodeKey
-      !v <- decodeValue k
-      return (k, v)
-    {-# INLINE decodeEntry #-}
-
     -- Decode all the entries, enforcing canonicity by ensuring that the
     -- previous key is smaller than the next one.
     decodeEntries :: Int -> k -> [(k, v)] -> Decoder s [(k, v)]
     decodeEntries 0 _ acc = pure acc
     decodeEntries !remainingPairs previousKey !acc = do
-      p@(newKey, _) <- decodeEntry
+      p@(newKey, _) <- decodeKeyValue
       -- Order of keys needs to be strictly increasing, because otherwise it's
       -- possible to supply lists with various amount of duplicate keys which
       -- will result in the same map as long as the last value of the given
@@ -713,25 +703,6 @@ decodeCollectionWithLen lenOrIndef el = do
         False -> pure (n, reverse acc)
         True -> action >>= \v -> loop (n + 1, v : acc) condition action
 {-# INLINE decodeCollectionWithLen #-}
-
-decodeIsListByKey ::
-  forall k t v s.
-  (Exts.IsList t, Exts.Item t ~ (k, v)) =>
-  -- | Decoder for keys
-  Decoder s k ->
-  -- | Decoder for values
-  (k -> Decoder s v) ->
-  Decoder s t
-decodeIsListByKey decodeKey decodeValueFor =
-  uncurry Exts.fromListN
-    <$> decodeCollectionWithLen decodeMapLenOrIndef decodeInlinedPair
-  where
-    decodeInlinedPair = do
-      !key <- decodeKey
-      !value <- decodeValueFor key
-      pure (key, value)
-    {-# INLINE decodeInlinedPair #-}
-{-# INLINE decodeIsListByKey #-}
 
 -- | `Decoder` for `Map.Map`. Versions variance:
 --
@@ -766,15 +737,24 @@ decodeMapByKey ::
   (k -> Decoder s v) ->
   Decoder s (Map.Map k v)
 decodeMapByKey decodeKey decodeValue =
+  decodeMapByKeyValue (decodeKey >>= \ !k -> (,) k <$!> decodeValue k)
+{-# INLINE decodeMapByKey #-}
+
+-- | Just like `decodeMap`, but also gives access to the key for the value decoder as a pair.
+decodeMapByKeyValue ::
+  Ord k =>
+  Decoder s (k, v) ->
+  Decoder s (Map.Map k v)
+decodeMapByKeyValue decodeKeyValue =
   ifDecoderVersionAtLeast
     (natVersion @2)
     ( ifDecoderVersionAtLeast
         (natVersion @9)
-        (decodeMapEnforceNoDuplicates decodeKey decodeValue)
-        (decodeIsListByKey decodeKey decodeValue)
+        (decodeMapEnforceNoDuplicates decodeKeyValue)
+        (Map.fromList <$> decodeCollection decodeMapLenOrIndef decodeKeyValue)
     )
-    (decodeMapSkel Map.fromDistinctDescList decodeKey decodeValue)
-{-# INLINE decodeMapByKey #-}
+    (decodeMapSkel Map.fromDistinctDescList decodeKeyValue)
+{-# INLINE decodeMapByKeyValue #-}
 
 -- | Decode `VMap`. Unlike `decodeMap` it does not behavee differently for
 -- version prior to 2.
@@ -783,7 +763,8 @@ decodeVMap ::
   Decoder s k ->
   Decoder s v ->
   Decoder s (VMap.VMap kv vv k v)
-decodeVMap decodeKey decodeValue = decodeIsListByKey decodeKey (const decodeValue)
+decodeVMap decodeKey decodeValue =
+  VMap.fromMap <$> decodeMapEnforceNoDuplicates ((,) <$> decodeKey <*> decodeValue)
 {-# INLINE decodeVMap #-}
 
 -- | We stitch a `258` in from of a (Hash)Set, so that tools which
@@ -999,10 +980,9 @@ decodeMapNoDuplicates decodeKey decodeValue =
 decodeMapEnforceNoDuplicates ::
   forall s k v.
   Ord k =>
-  Decoder s k ->
-  (k -> Decoder s v) ->
+  Decoder s (k, v) ->
   Decoder s (Map.Map k v)
-decodeMapEnforceNoDuplicates decodeKey decodeValueFor = do
+decodeMapEnforceNoDuplicates decodeKeyValue = do
   decodeMapLenOrIndef >>= \case
     Just len -> loop (\x -> pure (x - 1, x <= 0)) len Map.empty
     Nothing -> loop (\x -> (,) x <$> decodeBreakOr) () Map.empty
@@ -1013,8 +993,7 @@ decodeMapEnforceNoDuplicates decodeKey decodeValueFor = do
       if shouldStop
         then pure acc
         else do
-          !key <- decodeKey
-          !value <- decodeValueFor key
+          (!key, !value) <- decodeKeyValue
           when (key `Map.member` acc) $ fail "Duplicate key detected in the Map"
           loop condition nextStep (Map.insert key value acc)
 {-# INLINE decodeMapEnforceNoDuplicates #-}
