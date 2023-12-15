@@ -59,6 +59,7 @@ library
         containers,
         data-fix,
         deepseq,
+        FailT,
         formatting,
         iproute,
         microlens,
