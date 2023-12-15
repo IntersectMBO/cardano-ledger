@@ -24,12 +24,12 @@
 module Cardano.Ledger.Alonzo.TxWits (
   RdmrPtr (..),
   Redeemers (Redeemers),
-  RedeemersRaw (..),
+  RedeemersRaw,
   unRedeemers,
   nullRedeemers,
   upgradeRedeemers,
   TxDats (TxDats, TxDats'),
-  TxDatsRaw (..),
+  TxDatsRaw,
   upgradeTxDats,
   AlonzoTxWits (
     AlonzoTxWits,
@@ -45,7 +45,7 @@ module Cardano.Ledger.Alonzo.TxWits (
     txdats',
     txrdmrs'
   ),
-  AlonzoTxWitsRaw (..),
+  AlonzoTxWitsRaw,
   addrAlonzoTxWitsL,
   bootAddrAlonzoTxWitsL,
   scriptAlonzoTxWitsL,

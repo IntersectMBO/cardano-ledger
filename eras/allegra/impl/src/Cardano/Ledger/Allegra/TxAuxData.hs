@@ -18,7 +18,7 @@
 
 module Cardano.Ledger.Allegra.TxAuxData (
   AllegraTxAuxData (AllegraTxAuxData),
-  AllegraTxAuxDataRaw (..),
+  AllegraTxAuxDataRaw,
 
   -- * Deprecations
   AuxiliaryData,

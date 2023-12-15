@@ -27,7 +27,7 @@ module Cardano.Ledger.Shelley.Scripts (
   ScriptHash (..),
   nativeMultiSigTag,
   eqMultiSigRaw,
-  MultiSigRaw (..),
+  MultiSigRaw,
 )
 where
 

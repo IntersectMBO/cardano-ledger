@@ -115,7 +115,7 @@ instance ToExpr (ConwayDelegPredFailure era)
 -- TxBody
 instance (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (TxOut era)) => ToExpr (ConwayTxBodyRaw era)
 
-deriving instance
+instance
   (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (TxOut era)) =>
   ToExpr (ConwayTxBody era)
 

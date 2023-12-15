@@ -43,10 +43,9 @@ module Cardano.Ledger.Conway.TxBody (
     ctbVotingProcedures,
     ctbProposalProcedures,
     ctbCurrentTreasuryValue,
-    ctbTreasuryDonation,
-    TxBodyConstr
+    ctbTreasuryDonation
   ),
-  ConwayTxBodyRaw (..),
+  ConwayTxBodyRaw,
   conwayTotalDepositsTxBody,
   conwayProposalsDeposits,
 ) where

@@ -31,7 +31,7 @@ module Cardano.Ledger.Mary.TxBody (
     mtbWithdrawals,
     mtbMint
   ),
-  MaryTxBodyRaw (..),
+  MaryTxBodyRaw,
 )
 where
 
