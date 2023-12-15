@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -79,6 +80,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   Version,
   decodeList,
+  decodeMapByKeyValue,
   encodeFoldableEncoder,
   encodeListLen,
   getDecoderVersion,
@@ -581,73 +583,59 @@ instance
   ) =>
   DecCBOR (Annotator (AlonzoTxWitsRaw era))
   where
-  decCBOR = do
-    v <- getDecoderVersion
-
+  decCBOR =
     decode $
       SparseKeyed
         "AlonzoTxWits"
         (pure emptyTxWitness)
-        (txWitnessField v)
+        txWitnessField
         []
     where
       emptyTxWitness = AlonzoTxWitsRaw mempty mempty mempty mempty emptyRedeemers
 
-      txWitnessField :: Version -> Word -> Field (Annotator (AlonzoTxWitsRaw era))
-      txWitnessField _ 0 =
+      txWitnessField :: Word -> Field (Annotator (AlonzoTxWitsRaw era))
+      txWitnessField 0 =
         fieldAA
           (\x wits -> wits {atwrAddrTxWits = x})
           (setDecodeA From)
-      txWitnessField _ 2 =
+      txWitnessField 2 =
         fieldAA
           (\x wits -> wits {atwrBootAddrTxWits = x})
           (setDecodeA From)
-      txWitnessField v 1 =
-        fieldAA
-          addScripts
-          ( if v >= natVersion @9
-              then decodeNonEmpty scriptField
-              else listDecodeA scriptField
-          )
-      txWitnessField v 3 =
-        fieldA
-          addScripts
-          ( if v >= natVersion @9
-              then decodeNonEmptyPlutusSet SPlutusV1
-              else decodePlutus SPlutusV1
-          )
-      txWitnessField _ 4 =
+      txWitnessField 1 = fieldA addScripts decodeNativeScript
+      txWitnessField 3 = fieldA addScripts (decodePlutusScript SPlutusV1)
+      txWitnessField 4 =
         fieldAA
           (\x wits -> wits {atwrDatsTxWits = x})
           From
-      txWitnessField _ 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
-      txWitnessField _ 6 = fieldA addScripts (decodePlutus SPlutusV2)
-      txWitnessField _ 7 = fieldA addScripts (decodePlutus SPlutusV3)
-      txWitnessField _ n = field (\_ t -> t) (Invalid n)
+      txWitnessField 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
+      txWitnessField 6 = fieldA addScripts (decodePlutusScript SPlutusV2)
+      txWitnessField 7 = fieldA addScripts (decodePlutusScript SPlutusV3)
+      txWitnessField n = field (\_ t -> t) (Invalid n)
       {-# INLINE txWitnessField #-}
 
-      scriptField :: Decode ('Closed 'Dense) (Annotator (Script era))
-      scriptField = fmap fromNativeScript <$> From
+      scriptDecoder ::
+        (forall s'. Decoder s' (Script era)) ->
+        Decode ('Closed 'Dense) (Annotator (Script era))
+      scriptDecoder decodeScript = D $ decodeMapByKeyValue $ do
+        script <- decodeScript
+        let !scriptHash = hashScript @era script
+        pure (scriptHash, script)
+      {-# INLINE scriptDecoder #-}
 
-      decodePlutus slang = D (decodeList (fromPlutusScript <$> decodePlutusScript slang))
+      decodeNativeScript = scriptDecoder (fromNativeScript <$> decCBOR)
+      {-# INLINE decodeNativeScript #-}
 
-      decodeNonEmptyPlutusSet slang = D $ do
-        xs <- decodeList (fromPlutusScript <$> decodePlutusScript slang)
-        when (null xs) $ fail "Empty list found, expected non-empty"
-        unless (length (Set.fromAscList xs) == length xs) $ fail "Duplicates found"
-        pure xs
+      decodePlutusScript slang = scriptDecoder (fromPlutusScript <$> decodePlutusScript slang)
+      {-# INLINE decodePlutusScript #-}
 
-      decodeNonEmpty :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator [x])
-      decodeNonEmpty dx = D $ do
-        xs <- decodeList (decode dx)
-        when (null xs) $ fail "Empty list found, expected non-empty"
-        pure $ sequence xs
-
-      addScripts :: [Script era] -> AlonzoTxWitsRaw era -> AlonzoTxWitsRaw era
-      addScripts x wits =
-        wits
-          { atwrScriptTxWits =
-              keyBy (hashScript @era) x <> atwrScriptTxWits wits
+      addScripts ::
+        Map (ScriptHash (EraCrypto era)) (Script era) ->
+        AlonzoTxWitsRaw era ->
+        AlonzoTxWitsRaw era
+      addScripts scriptWitnesses txWits =
+        txWits
+          { atwrScriptTxWits = scriptWitnesses <> atwrScriptTxWits txWits
           }
       {-# INLINE addScripts #-}
   {-# INLINE decCBOR #-}
