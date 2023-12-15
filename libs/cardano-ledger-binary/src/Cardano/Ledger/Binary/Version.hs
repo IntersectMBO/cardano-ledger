@@ -10,7 +10,7 @@
 
 module Cardano.Ledger.Binary.Version (
   -- * Versioning
-  Version (..),
+  Version,
   getVersion,
   MinVersion,
   MaxVersion,

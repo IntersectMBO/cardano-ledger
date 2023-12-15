@@ -69,7 +69,7 @@ instance ToExpr a => ToExpr (StrictSeq a) where
 instance ToExpr a => ToExpr (StrictMaybe a)
 
 instance ToExpr Version where
-  toExpr (Version n) = App "Version" [toExpr n]
+  toExpr v = App "Version" [toExpr (getVersion64 v)]
 
 instance ToExpr a => ToExpr (Sized a)
 
