@@ -26,7 +26,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
     atadTimelock,
     atadPlutus
   ),
-  AlonzoTxAuxDataRaw (..),
+  AlonzoTxAuxDataRaw,
   mkAlonzoTxAuxData,
   AuxiliaryDataHash (..),
   hashAlonzoTxAuxData,

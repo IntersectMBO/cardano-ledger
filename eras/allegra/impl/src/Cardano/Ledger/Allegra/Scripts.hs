@@ -27,7 +27,7 @@ module Cardano.Ledger.Allegra.Scripts (
     RequireTimeExpire,
     RequireTimeStart
   ),
-  TimelockRaw (..),
+  TimelockRaw,
   pattern TimelockConstr,
   inInterval,
   showTimelock,
