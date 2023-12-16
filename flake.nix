@@ -7,7 +7,7 @@
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
 
-    CHaP.url = "github:input-output-hk/cardano-haskell-packages?ref=repo";
+    CHaP.url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
     CHaP.flake = false;
 
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror";
@@ -66,7 +66,7 @@
           #  nix flake lock --update-input CHaP
           #
           inputMap = {
-            "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.CHaP;
+            "https://chap.intersectmbo.org/" = inputs.CHaP;
           };
           cabalProjectLocal = ''
             repository cardano-haskell-packages-local
