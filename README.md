@@ -1,4 +1,4 @@
-<h1 align="center">Cardano Ledger</h1>
+<h1 align="center">Cardano Ledger</h1> 
 
 <p align="center">
   <a href="https://input-output-hk.github.io/cardano-engineering-handbook">
