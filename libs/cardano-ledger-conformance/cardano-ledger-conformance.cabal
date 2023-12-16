@@ -4,14 +4,14 @@ version:       0.1.0.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
-bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
+bug-reports:   https://github.com/intersectmbo/cardano-ledger/issues
 synopsis:      Testing utilities for conformance testing
 description:   Testing utilities for conformance testing
 build-type:    Simple
 
 source-repository head
     type:     git
-    location: https://github.com/input-output-hk/cardano-ledger
+    location: https://github.com/intersectmbo/cardano-ledger
     subdir:   libs/cardano-ledger-conformance
 
 flag asserts

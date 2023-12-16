@@ -52,7 +52,7 @@ data RewardProvenancePool c = RewardProvenancePool
   , appPerfP :: !Rational
   -- ^ The stake pool's apparent performance.
   -- See Section 5.5.2 of the
-  --  <https://github.com/input-output-hk/cardano-ledger/releases/latest/download/shelley-delegation.pdf>
+  --  <https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-delegation.pdf>
   , poolRP :: !Coin
   -- ^ The total Lovelace earned by the stake pool.
   , lRewardP :: !Coin
@@ -74,7 +74,7 @@ instance Crypto c => Default (RewardProvenancePool c) where
 -- | The desirability score of a stake pool, as described
 -- in <https://arxiv.org/abs/1807.11218 "Reward Sharing Schemes for Stake Pools">.
 -- Additionally, the hit rate estimation described in the
--- <https://github.com/input-output-hk/cardano-ledger/releases/latest/download/pool-ranking.pdf stake pool ranking document> is included.
+-- <https://github.com/intersectmbo/cardano-ledger/releases/latest/download/pool-ranking.pdf stake pool ranking document> is included.
 data Desirability = Desirability
   { desirabilityScore :: !Double
   , hitRateEstimate :: !Double
@@ -93,10 +93,10 @@ instance NFData Desirability
 --
 --  For more background, see "Figure 48: The Reward Calculation" and
 --  "Figure 51: Reward Update Creation" of the
---  <https://github.com/input-output-hk/cardano-ledger/releases/latest/download/shelley-ledger.pdf the formal specification>.
+--  <https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-ledger.pdf the formal specification>.
 --  The variable names here align with those in the specification.
 --  See also Section 5 of the
---  <https://github.com/input-output-hk/cardano-ledger/releases/latest/download/shelley-delegation.pdf>
+--  <https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-delegation.pdf>
 data RewardProvenance c = RewardProvenance
   { spe :: !Word64
   -- ^ The number of slots per epoch.
@@ -141,7 +141,7 @@ data RewardProvenance c = RewardProvenance
   , desirabilities ::
       !(Map (KeyHash 'StakePool c) Desirability)
   -- ^ A map from pool ID to the desirability score.
-  -- See the <https://github.com/input-output-hk/cardano-ledger/releases/latest/download/pool-ranking.pdf stake pool ranking document>.
+  -- See the <https://github.com/intersectmbo/cardano-ledger/releases/latest/download/pool-ranking.pdf stake pool ranking document>.
   }
   deriving (Eq, Generic)
 

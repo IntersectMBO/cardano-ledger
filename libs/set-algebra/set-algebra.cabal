@@ -4,7 +4,7 @@ version:            1.1.0.1
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
-homepage:           https://github.com/input-output-hk/cardano-ledger
+homepage:           https://github.com/intersectmbo/cardano-ledger
 synopsis:           Set Algebra
 category:           Control
 build-type:         Simple
@@ -12,7 +12,7 @@ extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
-    location: https://github.com/input-output-hk/cardano-ledger
+    location: https://github.com/intersectmbo/cardano-ledger
     subdir:   libs/set-algebra
 
 library

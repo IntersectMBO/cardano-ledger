@@ -4,7 +4,7 @@ version:            1.6.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
-bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
+bug-reports:        https://github.com/intersectmbo/cardano-ledger/issues
 synopsis:
     Cardano ledger introducing refrence scripts and inline datums
 
@@ -23,7 +23,7 @@ extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
-    location: https://github.com/input-output-hk/cardano-ledger
+    location: https://github.com/intersectmbo/cardano-ledger
     subdir:   eras/babbage/impl
 
 library

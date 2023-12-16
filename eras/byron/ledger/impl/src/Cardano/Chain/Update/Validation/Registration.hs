@@ -427,8 +427,8 @@ registerProposalComponents env rs proposal = do
     --
     -- For further details see:
     --
-    -- https://github.com/input-output-hk/cardano-ledger/issues/759
-    -- https://github.com/input-output-hk/cardano-ledger/pull/766
+    -- https://github.com/intersectmbo/cardano-ledger/issues/759
+    -- https://github.com/intersectmbo/cardano-ledger/pull/766
     --
     -- The existing staging network (protocol magic 633343913) does have existing
     -- null update proposals however: one in epoch 44 (slot number 969188) and

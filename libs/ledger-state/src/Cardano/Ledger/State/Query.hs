@@ -537,7 +537,7 @@ getDStateNoSharing dstateId = do
         pure (Keys.coerceKeyRole credential, UM.RDPair (UM.compactCoinOrError rewardCoin) (UM.CompactCoin 0))
   -- FIXME the deposit is not accounted for ^
   -- The PR ts-keydeposit-intoUMap breaks this tool since it changes the CertState data type.
-  -- https://github.com/input-output-hk/cardano-ledger/pull/3217
+  -- https://github.com/intersectmbo/cardano-ledger/pull/3217
   -- All the FIXME-s in this file will have to be addressed in a follow on PR
   delegations <-
     Map.fromList <$> do

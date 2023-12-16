@@ -4,10 +4,10 @@
   <a href="https://input-output-hk.github.io/cardano-engineering-handbook">
     <img alt="CEH" src="https://img.shields.io/badge/policy-Cardano%20Engineering%20Handbook-informational?style=for-the-badge" />
   </a>
-  <a href="https://github.com/input-output-hk/cardano-ledger/actions/workflows/haskell.yml">
-    <img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/actions/workflow/status/input-output-hk/cardano-ledger/haskell.yml?branch=master&style=for-the-badge" />
+  <a href="https://github.com/intersectmbo/cardano-ledger/actions/workflows/haskell.yml">
+    <img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-ledger/haskell.yml?branch=master&style=for-the-badge" />
   </a>
-  <a href="https://input-output-hk.github.io/cardano-ledger/">
+  <a href="https://cardano-ledger.cardano.intersectmbo.org/">
     <img alt="Haddock (master)" src="https://img.shields.io/badge/documentation-Haddock-yellow?style=for-the-badge" />
   </a>
 </p>
@@ -20,19 +20,19 @@ following links:
 
 Era | Design Documents | Formal Specification | CDDL
 ----|------------------|----------------------|-----
-Byron | | [Chain Spec](https://github.com/input-output-hk/cardano-ledger/releases/latest/download/byron-blockchain.pdf "Specification of the Blockchain Layer"), [Ledger Spec](https://github.com/input-output-hk/cardano-ledger/releases/latest/download/byron-ledger.pdf "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/input-output-hk/cardano-ledger/tree/master/eras/byron/cddl-spec/byron.cddl), [PDF](https://github.com/input-output-hk/cardano-ledger/releases/latest/download/byron-binary.pdf)
-Shelley | [Design](https://github.com/input-output-hk/cardano-ledger/releases/latest/download/shelley-delegation.pdf "Design Specification for Delegation and Incentives in Cardano") | [Spec](https://github.com/input-output-hk/cardano-ledger/releases/latest/download/shelley-ledger.pdf "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/input-output-hk/cardano-ledger/tree/master/eras/shelley/impl/cddl-files)
-Allegra | Same as Mary era below | Same as Mary era below | [CDDL](https://github.com/input-output-hk/cardano-ledger/tree/master/eras/allegra/impl/cddl-files)
-Mary | [Multi-Currency](https://eprint.iacr.org/2020/895 "Multi-Currency Ledgers"), [UTXOma](https://iohk.io/en/research/library/papers/utxoma-utxo-with-multi-asset-support/ "UTXOma:UTXO with Multi-Asset Support") | [Spec](https://github.com/input-output-hk/cardano-ledger/releases/latest/download/mary-ledger.pdf "A Formal Specification of the Cardano Ledger with a Native Multi-Asset Implementation") | [CDDL](https://github.com/input-output-hk/cardano-ledger/tree/master/eras/mary/impl/cddl-files)
-Alonzo | [eUTXO](https://iohk.io/en/research/library/papers/the-extended-utxo-model/ "The Extended UTXO Model")| [Spec](https://github.com/input-output-hk/cardano-ledger/releases/latest/download/alonzo-ledger.pdf "A Formal Specification of the Cardano Ledger integrating Plutus Core") | [CDDL](https://github.com/input-output-hk/cardano-ledger/tree/master/eras/alonzo/impl/cddl-files)
-Babbage | [batch-verification](https://iohk.io/en/research/library/papers/on-uc-secure-range-extension-and-batch-verification-for-ecvrf/ "On UC-Secure Range Extension and Batch Verification for ECVRF"), [CIP-31](https://github.com/cardano-foundation/CIPs/pull/159 "Reference inputs"), [CIP-32](https://github.com/cardano-foundation/CIPs/pull/160 "Inline datums"), [CIP-33](https://github.com/cardano-foundation/CIPs/pull/161 "Reference scripts") | [Spec](https://github.com/input-output-hk/cardano-ledger/releases/latest/download/babbage-ledger.pdf "Formal Specification of the Cardano Ledger for the Babbage era") | [CDDL](https://github.com/input-output-hk/cardano-ledger/tree/master/eras/babbage/impl/cddl-files)
-Conway | [CIP-1694](https://github.com/cardano-foundation/CIPs/tree/master/CIP-1694) | [Spec (WIP)](https://github.com/input-output-hk/formal-ledger-specifications) | [CDDL](https://github.com/input-output-hk/cardano-ledger/tree/master/eras/conway/impl/cddl-files)
+Byron | | [Chain Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/byron-blockchain.pdf "Specification of the Blockchain Layer"), [Ledger Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/byron-ledger.pdf "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/byron/cddl-spec/byron.cddl), [PDF](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/byron-binary.pdf)
+Shelley | [Design](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-delegation.pdf "Design Specification for Delegation and Incentives in Cardano") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-ledger.pdf "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/shelley/impl/cddl-files)
+Allegra | Same as Mary era below | Same as Mary era below | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/allegra/impl/cddl-files)
+Mary | [Multi-Currency](https://eprint.iacr.org/2020/895 "Multi-Currency Ledgers"), [UTXOma](https://iohk.io/en/research/library/papers/utxoma-utxo-with-multi-asset-support/ "UTXOma:UTXO with Multi-Asset Support") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/mary-ledger.pdf "A Formal Specification of the Cardano Ledger with a Native Multi-Asset Implementation") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/mary/impl/cddl-files)
+Alonzo | [eUTXO](https://iohk.io/en/research/library/papers/the-extended-utxo-model/ "The Extended UTXO Model")| [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/alonzo-ledger.pdf "A Formal Specification of the Cardano Ledger integrating Plutus Core") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/alonzo/impl/cddl-files)
+Babbage | [batch-verification](https://iohk.io/en/research/library/papers/on-uc-secure-range-extension-and-batch-verification-for-ecvrf/ "On UC-Secure Range Extension and Batch Verification for ECVRF"), [CIP-31](https://github.com/cardano-foundation/CIPs/pull/159 "Reference inputs"), [CIP-32](https://github.com/cardano-foundation/CIPs/pull/160 "Inline datums"), [CIP-33](https://github.com/cardano-foundation/CIPs/pull/161 "Reference scripts") | [Spec](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/babbage-ledger.pdf "Formal Specification of the Cardano Ledger for the Babbage era") | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/babbage/impl/cddl-files)
+Conway | [CIP-1694](https://github.com/cardano-foundation/CIPs/tree/master/CIP-1694) | [Spec (WIP)](https://github.com/intersectmbo/formal-ledger-specifications) | [CDDL](https://github.com/intersectmbo/cardano-ledger/tree/master/eras/conway/impl/cddl-files)
 
 
 Other Documents:
-- [Non-integer calculations specification](https://github.com/input-output-hk/cardano-ledger/releases/latest/download/non-integer-calculations.pdf): details on the parts of the Shelley specification that use real numbers.
-- [Stake pool ranking specification](https://github.com/input-output-hk/cardano-ledger/releases/latest/download/pool-ranking.pdf): details for a robust stake pool ranking mechanism.
-- [Explanation of the small-step-semantics framework](https://github.com/input-output-hk/cardano-ledger/releases/latest/download/small-step-semantics.pdf): a guide to the notation and style used by our ledger rules.
+- [Non-integer calculations specification](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/non-integer-calculations.pdf): details on the parts of the Shelley specification that use real numbers.
+- [Stake pool ranking specification](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/pool-ranking.pdf): details for a robust stake pool ranking mechanism.
+- [Explanation of the small-step-semantics framework](https://github.com/intersectmbo/cardano-ledger/releases/latest/download/small-step-semantics.pdf): a guide to the notation and style used by our ledger rules.
 
 In addition, there is a formalization of the Ledger Specification in Isabelle/HOL which can be found [here](https://github.com/input-output-hk/fm-ledger-formalization).
 
@@ -167,10 +167,10 @@ Note that this is only needed for the Byron tests.
 
 # Submitting an issue
 
-Issues can be filed in the [GitHub Issue tracker](https://github.com/input-output-hk/cardano-ledger/issues).
+Issues can be filed in the [GitHub Issue tracker](https://github.com/intersectmbo/cardano-ledger/issues).
 
 However, note that this is pre-release software, so we will not usually be providing support.
 
 # Contributing
 
-See [CONTRIBUTING](https://github.com/input-output-hk/cardano-ledger/blob/master/CONTRIBUTING.md).
+See [CONTRIBUTING](https://github.com/intersectmbo/cardano-ledger/blob/master/CONTRIBUTING.md).

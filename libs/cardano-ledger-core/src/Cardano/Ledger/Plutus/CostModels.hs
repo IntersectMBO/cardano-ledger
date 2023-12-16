@@ -253,8 +253,8 @@ decodeCostModels =
 -- Note that the number of elements in the V1 and V2 cost models
 -- may change in the future, they are only fixed prior to version 9.
 --
--- See https://github.com/input-output-hk/cardano-ledger/issues/2902
--- and https://github.com/input-output-hk/cardano-ledger/blob/master/docs/adr/2022-12-05_006-cost-model-serialization.md
+-- See https://github.com/intersectmbo/cardano-ledger/issues/2902
+-- and https://github.com/intersectmbo/cardano-ledger/blob/master/docs/adr/2022-12-05_006-cost-model-serialization.md
 legacyCostModelLength :: Language -> Int
 legacyCostModelLength PlutusV1 = 166
 legacyCostModelLength PlutusV2 = 175

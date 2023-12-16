@@ -7,7 +7,7 @@
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
 
-    CHaP.url = "github:input-output-hk/cardano-haskell-packages?ref=repo";
+    CHaP.url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
     CHaP.flake = false;
 
     cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror";
@@ -66,7 +66,7 @@
           #  nix flake lock --update-input CHaP
           #
           inputMap = {
-            "https://input-output-hk.github.io/cardano-haskell-packages" = inputs.CHaP;
+            "https://chap.intersectmbo.org/" = inputs.CHaP;
           };
           cabalProjectLocal = ''
             repository cardano-haskell-packages-local
@@ -203,7 +203,7 @@
             # PDF builds of LaTeX documentation.
             #
             # To download the latest PDF build from Hydra, use this link:
-            #   https://github.com/input-output-hk/cardano-ledger/releases/latest/download/NAME.pdf
+            #   https://github.com/intersectmbo/cardano-ledger/releases/latest/download/NAME.pdf
             #
             # To get a shell where you can run pdflatex to build it yourself, use:
             #   cd <spec directory>

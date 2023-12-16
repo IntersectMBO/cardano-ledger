@@ -95,7 +95,7 @@ instance EraPParams era => EncCBOR (Proposals era) where
 instance EraPParams era => DecCBOR (Proposals era) where
   decCBOR = fromGovActionStateSeq <$> decCBOR
 
--- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+-- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (Proposals era) where
   decShareCBOR _ = fromGovActionStateSeq <$> decCBOR
 

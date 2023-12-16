@@ -94,7 +94,7 @@
 
 ## 1.2.1.0
 
-* Fix `PParams BabbageEra` serialization. [#3440](https://github.com/input-output-hk/cardano-ledger/pull/3440)
+* Fix `PParams BabbageEra` serialization. [#3440](https://github.com/intersectmbo/cardano-ledger/pull/3440)
 
 ## 1.2.0.0
 

@@ -4,7 +4,7 @@ version:       1.2.0.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
-bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
+bug-reports:   https://github.com/intersectmbo/cardano-ledger/issues
 synopsis:      Tests for Cardano ledger introducing Plutus Core
 description:
     This package builds upon the Mary ledger with support for extended UTxO
@@ -18,7 +18,7 @@ data-files:
 
 source-repository head
     type:     git
-    location: https://github.com/input-output-hk/cardano-ledger
+    location: https://github.com/intersectmbo/cardano-ledger
     subdir:   eras/alonzo/test-suite
 
 library

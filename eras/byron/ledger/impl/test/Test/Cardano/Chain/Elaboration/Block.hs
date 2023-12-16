@@ -323,7 +323,7 @@ abEnvToCfg (_currentSlot, _genesisUtxo, allowedDelegators, protocolParams, stabl
         }
 
     -- We shouldn't need to use 'coerce' after
-    -- https://github.com/input-output-hk/cardano-ledger/issues/332 gets
+    -- https://github.com/intersectmbo/cardano-ledger/issues/332 gets
     -- implemented.
     genesisHash = Genesis.GenesisHash $ coerce $ H.serializeCborHash ("" :: ByteString)
 
