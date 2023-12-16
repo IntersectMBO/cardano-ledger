@@ -177,6 +177,9 @@ cradle:
     - path: "libs/cardano-ledger-binary/test"
       component: "cardano-ledger-binary:test:tests"
 
+    - path: "libs/cardano-ledger-binary/bench/Bench.hs"
+      component: "cardano-ledger-binary:bench:bench"
+
     - path: "libs/cardano-ledger-conformance/src"
       component: "lib:cardano-ledger-conformance"
 
