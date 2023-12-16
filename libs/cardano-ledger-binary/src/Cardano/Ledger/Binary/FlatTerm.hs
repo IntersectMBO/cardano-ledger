@@ -17,4 +17,4 @@ toFlatTerm :: Version -> Encoding -> C.FlatTerm
 toFlatTerm version = C.toFlatTerm . toPlainEncoding version
 
 fromFlatTerm :: Version -> (forall s. Decoder s a) -> C.FlatTerm -> Either String a
-fromFlatTerm version decoder = C.fromFlatTerm (toPlainDecoder version decoder)
+fromFlatTerm version decoder = C.fromFlatTerm (toPlainDecoder mempty version decoder)

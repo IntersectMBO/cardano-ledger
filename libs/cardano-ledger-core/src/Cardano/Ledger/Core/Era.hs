@@ -275,25 +275,34 @@ notSupportedInThisEraL :: HasCallStack => Lens' a b
 notSupportedInThisEraL = lens notSupportedInThisEra notSupportedInThisEra
 
 -- | Convert a type that implements `EncCBOR` to plain `Plain.Encoding` using the lowest
--- protocol version for the supplied @era@
+-- protocol version for the supplied @era@.
 toEraCBOR :: forall era t. (Era era, EncCBOR t) => t -> Plain.Encoding
 toEraCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
 {-# INLINE toEraCBOR #-}
 
 -- | Convert a type that implements `DecCBOR` to plain `Plain.Decoder` using the lowest
 -- protocol version for the supplied @era@
+--
+-- This action should not be used for decoders that require access to original bytes, use
+-- `toPlainDecoder` instead.
 fromEraCBOR :: forall era t s. (Era era, DecCBOR t) => Plain.Decoder s t
 fromEraCBOR = eraDecoder @era decCBOR
 {-# INLINE fromEraCBOR #-}
 
 -- | Convert a type that implements `DecShareCBOR` to plain `Plain.Decoder` using the lowest
 -- protocol version for the supplied @era@
+--
+-- This action should not be used for decoders that require access to original bytes, use
+-- `toPlainDecoder` instead.
 fromEraShareCBOR :: forall era t s. (Era era, DecShareCBOR t) => Plain.Decoder s t
 fromEraShareCBOR = eraDecoder @era decNoShareCBOR
 {-# INLINE fromEraShareCBOR #-}
 
 -- | Convert a versioned `Decoder` to plain a `Plain.Decoder` using the lowest protocol
 -- version for the supplied @era@
+--
+-- This action should not be used for decoders that require access to original bytes, use
+-- `toPlainDecoder` instead.
 eraDecoder :: forall era t s. Era era => Decoder s t -> Plain.Decoder s t
-eraDecoder = toPlainDecoder (eraProtVerLow @era)
+eraDecoder = toPlainDecoder Nothing (eraProtVerLow @era)
 {-# INLINE eraDecoder #-}

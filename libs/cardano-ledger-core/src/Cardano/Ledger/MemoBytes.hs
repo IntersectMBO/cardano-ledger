@@ -21,6 +21,7 @@ module Cardano.Ledger.MemoBytes (
   -- * Memoized
   Memoized (RawType),
   mkMemoized,
+  decodeMemoized,
   getMemoSafeHash,
   getMemoRawType,
   zipMemoRawType,

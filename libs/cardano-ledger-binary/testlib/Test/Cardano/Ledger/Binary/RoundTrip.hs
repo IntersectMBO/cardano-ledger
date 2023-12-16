@@ -522,7 +522,8 @@ embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s =
         Right val
           | Nothing <- mDropperError ->
               let flatTerm = CBOR.toFlatTerm encoding
-               in case CBOR.fromFlatTerm (toPlainDecoder decVersion decoder) flatTerm of
+                  plainDecoder = toPlainDecoder (Just encodedBytes) decVersion decoder
+               in case CBOR.fromFlatTerm plainDecoder flatTerm of
                     Left _err ->
                       -- Until we switch to a release of cborg that includes a fix for this issue:
                       -- https://github.com/well-typed/cborg/issues/324

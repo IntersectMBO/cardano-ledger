@@ -120,9 +120,9 @@ instance DecCBOR Version where
   {-# INLINE decCBOR #-}
 
 -- | Convert a versioned `DecCBOR` instance to a plain `Plain.Decoder` using Byron protocol
--- version.
+-- version and empty `BSL.ByteString`.
 fromByronCBOR :: DecCBOR a => Plain.Decoder s a
-fromByronCBOR = toPlainDecoder byronProtVer decCBOR
+fromByronCBOR = toPlainDecoder Nothing byronProtVer decCBOR
 {-# INLINE fromByronCBOR #-}
 
 --------------------------------------------------------------------------------

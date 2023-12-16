@@ -2,6 +2,9 @@
 
 ## 1.16.0.0
 
+* Remove requirement for `FromCBOR` instance for `TxOut` in `EraTxOut`
+* Add `decodeMemoized`
+* Add `DecCBOR` instance for `MemoBytes`
 * Add `VRFVerKeyHash` and `KeyRoleVRF`.
 * Switch `genDelegVrfHash`, `individualPoolStakeVrf` and `ppVrf` to using `VRFVerKeyHash`.
 * Add `{Enc|Dec}CBORGroup` instances for `Mismatch`. #4666

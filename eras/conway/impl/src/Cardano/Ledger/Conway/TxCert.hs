@@ -58,7 +58,6 @@ import Cardano.Ledger.Binary (
   encodeListLen,
   encodeNullStrictMaybe,
   encodeWord8,
-  toPlainDecoder,
   toPlainEncoding,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
@@ -609,7 +608,7 @@ instance
   ) =>
   FromCBOR (ConwayTxCert era)
   where
-  fromCBOR = toPlainDecoder (eraProtVerLow @era) decCBOR
+  fromCBOR = fromEraCBOR @era
 
 instance
   ( ConwayEraTxCert era

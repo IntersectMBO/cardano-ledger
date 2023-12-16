@@ -41,7 +41,6 @@ import Cardano.Ledger.Binary (
   enforceDecoderVersion,
   ifDecoderVersionAtLeast,
   natVersion,
-  toPlainDecoder,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.CertState (
@@ -362,7 +361,7 @@ instance (EraTxOut era, EraGov era) => ToCBOR (UTxOState era) where
   toCBOR = toEraCBOR @era
 
 instance (EraTxOut era, EraGov era) => FromCBOR (UTxOState era) where
-  fromCBOR = toPlainDecoder (eraProtVerLow @era) decNoShareCBOR
+  fromCBOR = fromEraShareCBOR @era
 
 instance (EraTxOut era, EraGov era) => ToJSON (UTxOState era) where
   toJSON = object . toUTxOStatePairs
@@ -556,7 +555,7 @@ instance (EraTxOut era, EraGov era) => ToCBOR (LedgerState era) where
   toCBOR = toEraCBOR @era
 
 instance (EraTxOut era, EraGov era) => FromCBOR (LedgerState era) where
-  fromCBOR = toPlainDecoder (eraProtVerLow @era) decNoShareCBOR
+  fromCBOR = fromEraShareCBOR @era
 
 instance (EraTxOut era, EraGov era) => ToJSON (LedgerState era) where
   toJSON = object . toLedgerStatePairs
