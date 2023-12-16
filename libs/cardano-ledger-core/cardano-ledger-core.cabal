@@ -4,7 +4,7 @@ version:            1.10.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
-bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
+bug-reports:        https://github.com/intersectmbo/cardano-ledger/issues
 synopsis:
     Core components of Cardano ledgers from the Shelley release on.
 
@@ -17,7 +17,7 @@ extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
-    location: https://github.com/input-output-hk/cardano-ledger
+    location: https://github.com/intersectmbo/cardano-ledger
     subdir:   libs/cardano-ledger-core
 
 flag asserts

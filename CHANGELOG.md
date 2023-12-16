@@ -5,7 +5,7 @@ starting with version `8.0`. We also provide per-Haskell-package changelogs. Ple
 the `CHANGELOG.md` for each individual package for any changes relevant for developers.
 
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
-[RELEASING.md](https://github.com/input-output-hk/cardano-ledger/blob/master/RELEASING.md#changelogmd).
+[RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
 ## 8.7
 
@@ -102,11 +102,11 @@ If you are looking for the Ledger Releasing and Versioning Process then you can 
 ## 8.0
 
 - The provenance for the reward calculation has been removed. The type signature to the API function `getRewardProvenance` has not changed, it just returns an empty provenance value.
-- We have created a Ledger API, with the aim of providing a user-friendly interface to the ledger libraries. See [here](https://github.com/input-output-hk/cardano-ledger/tree/b00e28698d9c7fbbeda1c9cfdd1238d3bc4569cf/libs/cardano-ledger-api).
+- We have created a Ledger API, with the aim of providing a user-friendly interface to the ledger libraries. See [here](https://github.com/intersectmbo/cardano-ledger/tree/b00e28698d9c7fbbeda1c9cfdd1238d3bc4569cf/libs/cardano-ledger-api).
 - The initial funds and staking in the Shelley genesis type (used only for testing) now use `ListMap` instead of `Map`.
 - There is a new `calculatePoolDistr'` function which is similar to `calculatePoolDistr` but has a new filter argument to only include the stake pool ids (stake pool key hashes) that are needed.
 - The ledger events are not guaranteed to appear in any given order within a block. For this reason, motivated by the use case in db-sync, the `TotalDeposits` event now includes a transaction ID and emits the change in deposits instead of the value.
-- We changed the way deposits are tracked. See [here](https://github.com/input-output-hk/cardano-ledger/blob/b00e28698d9c7fbbeda1c9cfdd1238d3bc4569cf/docs/adr/2022-12-05_003-track-individual-deposits.md) for the details.
+- We changed the way deposits are tracked. See [here](https://github.com/intersectmbo/cardano-ledger/blob/b00e28698d9c7fbbeda1c9cfdd1238d3bc4569cf/docs/adr/2022-12-05_003-track-individual-deposits.md) for the details.
 - We changed the API function Cardano.Ledger.Shelley.API.Wallet(`evaluateTransactionBalance`) to take `DPState` as input. This can no longer be computed without the `DPState`
 - Some noticeable changes have been made which will only become apparent starting at major protocol version 9:
   - There is a new ledger era, namely `conway`.

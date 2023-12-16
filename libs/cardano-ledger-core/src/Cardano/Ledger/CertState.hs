@@ -293,7 +293,7 @@ newtype CommitteeState era = CommitteeState
 
 deriving instance Era era => EncCBOR (CommitteeState era)
 
--- TODO: Implement sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+-- TODO: Implement sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance Era era => DecShareCBOR (CommitteeState era) where
   decShareCBOR _ = CommitteeState <$> decCBOR
 
@@ -335,7 +335,7 @@ instance Typeable (EraCrypto era) => NoThunks (VState era)
 
 instance Era era => NFData (VState era)
 
--- TODO: Implement sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+-- TODO: Implement sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance Era era => DecShareCBOR (VState era) where
   decShareCBOR _ =
     decode $

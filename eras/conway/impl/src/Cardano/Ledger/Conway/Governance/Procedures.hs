@@ -251,7 +251,7 @@ instance EraPParams era => NoThunks (GovActionState era)
 
 instance EraPParams era => NFData (GovActionState era)
 
--- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+-- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (GovActionState era) where
   decShareCBOR _ =
     decode $

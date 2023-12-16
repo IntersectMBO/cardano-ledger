@@ -128,7 +128,7 @@ data EpochState era = EpochState
   -- ^ This field, esNonMyopic, does not appear in the formal spec
   -- and is not a part of the protocol. It is only used for providing
   -- data to the stake pool ranking calculation @getNonMyopicMemberRewards@.
-  -- See https://github.com/input-output-hk/cardano-ledger/releases/latest/download/pool-ranking.pdf
+  -- See https://github.com/intersectmbo/cardano-ledger/releases/latest/download/pool-ranking.pdf
   }
   deriving (Generic)
 
@@ -337,7 +337,7 @@ instance
       utxosUtxo <- decShareCBOR credInterns
       utxosDeposited <- decCBOR
       utxosFees <- decCBOR
-      -- TODO: implement proper sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+      -- TODO: implement proper sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
       utxosGovState <- decNoShareCBOR
       utxosStakeDistr <- decShareCBOR credInterns
       utxosDonation <- decCBOR

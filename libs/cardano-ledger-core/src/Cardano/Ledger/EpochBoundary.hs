@@ -212,7 +212,7 @@ toSnapShotPair ss@(SnapShot _ _ _) =
 -- Note that ssStakeMark and ssStakeMarkPoolDistr are lazy on
 -- purpose since we only want to force the thunk after one stability window
 -- when we know that they are stable (so that we do not compute them if we do not have to).
--- See more info in the [Optimize TICKF ADR](https://github.com/input-output-hk/cardano-ledger/blob/master/docs/adr/2022-12-12_007-optimize-ledger-view.md)
+-- See more info in the [Optimize TICKF ADR](https://github.com/intersectmbo/cardano-ledger/blob/master/docs/adr/2022-12-12_007-optimize-ledger-view.md)
 data SnapShots c = SnapShots
   { ssStakeMark :: SnapShot c -- Lazy on purpose
   , ssStakeMarkPoolDistr :: PoolDistr c -- Lazy on purpose

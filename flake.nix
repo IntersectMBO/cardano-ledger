@@ -203,7 +203,7 @@
             # PDF builds of LaTeX documentation.
             #
             # To download the latest PDF build from Hydra, use this link:
-            #   https://github.com/input-output-hk/cardano-ledger/releases/latest/download/NAME.pdf
+            #   https://github.com/intersectmbo/cardano-ledger/releases/latest/download/NAME.pdf
             #
             # To get a shell where you can run pdflatex to build it yourself, use:
             #   cd <spec directory>

@@ -272,7 +272,7 @@
 
 ## 1.1.1.0
 
-* Disable `TICKF` rule optimization: [#3375](https://github.com/input-output-hk/cardano-ledger/pull/3375)
+* Disable `TICKF` rule optimization: [#3375](https://github.com/intersectmbo/cardano-ledger/pull/3375)
 
 ## 1.1.0.0
 

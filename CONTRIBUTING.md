@@ -30,7 +30,7 @@ Also see the CHaP README for [instructions](https://github.com/input-output-hk/c
 
 ## Building
 
-See the [Readme](https://github.com/input-output-hk/cardano-ledger#building) for instructions on building.
+See the [Readme](https://github.com/intersectmbo/cardano-ledger#building) for instructions on building.
 
 ### GHC 9.2 transition
 
@@ -91,8 +91,8 @@ cabal build <package-name>
 ```
 
 ## Publishing specifications
-PDF specs are stored as attachments to [github releases](https://github.com/input-output-hk/cardano-ledger/releases)
-We can create a release that builds and attaches the latest specs, by triggering the [push-docs github action](https://github.com/input-output-hk/cardano-ledger/blob/master/.github/workflows/push-specs.yml).
+PDF specs are stored as attachments to [github releases](https://github.com/intersectmbo/cardano-ledger/releases)
+We can create a release that builds and attaches the latest specs, by triggering the [push-docs github action](https://github.com/intersectmbo/cardano-ledger/blob/master/.github/workflows/push-specs.yml).
 This github action can be triggered by pushing a tag of the pattern: `cardano-ledger-spec-YYYY-MM-DD`, for example: `cardano-ledger-spec-2023-01-17`
 
 For example, if we decide it's time to publish new versions of docs,
@@ -102,7 +102,7 @@ git tag cardano-ledger-spec-2023-03-21
 git push origin cardano-ledger-spec-2023-03-21
 ```
 
-This will create a new release that will be available as [latest](https://github.com/input-output-hk/cardano-ledger/releases/latest).
+This will create a new release that will be available as [latest](https://github.com/intersectmbo/cardano-ledger/releases/latest).
 Make sure that the `YYYY-MM-DD` part in the tag name is alphabetically greater than the rest, otherwise the release won't be tagged as `latest`.
 Using the current date should ensure that this is the case.
 
@@ -271,7 +271,7 @@ and error may be required to make substantive changes!
 ### Code formatting
 
 We use [`fourmolu`](https://github.com/fourmolu/fourmolu) for formatting.
-There is a script [here](https://github.com/input-output-hk/cardano-ledger/blob/master/scripts/fourmolize.sh)
+There is a script [here](https://github.com/intersectmbo/cardano-ledger/blob/master/scripts/fourmolize.sh)
 which uses nix to format the appropriate directories.
 
 ### Compiler warnings
@@ -332,7 +332,7 @@ If you’re working on something that’s likely to conflict with someone else, 
 
 ### Memory
 
-The [ledger-state](https://github.com/input-output-hk/cardano-ledger/tree/master/libs/ledger-state)
+The [ledger-state](https://github.com/intersectmbo/cardano-ledger/tree/master/libs/ledger-state)
 tool is helpful for obverserving the memory overhead of the ledger state.
 
 ### Profiling
@@ -387,4 +387,4 @@ See [ADR-1](docs/adr/2022-12-01_001-record-architectural-decisions.md).
 
 ## Odds and Ends
 
-See the [wiki](https://github.com/input-output-hk/cardano-ledger/wiki) for some other odds and ends.
+See the [wiki](https://github.com/intersectmbo/cardano-ledger/wiki) for some other odds and ends.

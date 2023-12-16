@@ -4,7 +4,7 @@ version:       1.2.1.6
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
-bug-reports:   https://github.com/input-output-hk/cardano-ledger/issues
+bug-reports:   https://github.com/intersectmbo/cardano-ledger/issues
 synopsis:      Shelley ledger with multiasset and time lock support.
 description:
     This package extends the Shelley ledger with support for
@@ -15,7 +15,7 @@ build-type:    Simple
 
 source-repository head
     type:     git
-    location: https://github.com/input-output-hk/cardano-ledger
+    location: https://github.com/intersectmbo/cardano-ledger
     subdir:   eras/shelley-ma/test-suite
 
 library

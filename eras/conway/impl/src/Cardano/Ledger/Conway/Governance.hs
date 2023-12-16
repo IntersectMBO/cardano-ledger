@@ -333,7 +333,7 @@ instance EraPParams era => EncCBOR (PulsingSnapshot era) where
         !> To psDRepDistr
         !> To psDRepState
 
--- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+-- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (PulsingSnapshot era) where
   decShareCBOR _ =
     decode $
@@ -461,7 +461,7 @@ instance EraPParams era => Default (EnactState era) where
 instance EraPParams era => DecCBOR (EnactState era) where
   decCBOR = decNoShareCBOR
 
--- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+-- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (EnactState era) where
   decShareCBOR _ =
     decode $
@@ -570,7 +570,7 @@ conwayGovStateDRepDistrG = to (\govst -> (psDRepDistr . fst) $ finishDRepPulser 
 getRatifyState :: ConwayGovState era -> RatifyState era
 getRatifyState (ConwayGovState {cgDRepPulsingState}) = snd $ finishDRepPulser cgDRepPulsingState
 
--- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+-- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (ConwayGovState era) where
   decShareCBOR _ =
     decode $
@@ -1059,7 +1059,7 @@ instance EraPParams era => EncCBOR (DRepPulsingState era) where
     where
       (snap, ratstate) = finishDRepPulser x
 
--- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+-- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (DRepPulsingState era) where
   decShareCBOR _ =
     decode $
@@ -1211,7 +1211,7 @@ instance EraPParams era => EncCBOR (RatifyState era) where
 instance EraPParams era => DecCBOR (RatifyState era) where
   decCBOR = decode (RecD RatifyState <! From <! From <! From <! From)
 
--- TODO: Implement Sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+-- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (RatifyState era) where
   decShareCBOR _ =
     decode $

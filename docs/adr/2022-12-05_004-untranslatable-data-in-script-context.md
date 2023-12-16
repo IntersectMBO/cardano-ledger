@@ -38,4 +38,4 @@ inline datum at the same time.
 
 See this test suite for the list of untranslatable data at the time of the creation of this ADR:
 
-https://github.com/input-output-hk/cardano-ledger/blob/064acb8e7ab7b2aeef138ec0c821f8c5f1402621/eras/babbage/test-suite/test/Test/Cardano/Ledger/Babbage/TxInfo.hs#L190-L193
+https://github.com/intersectmbo/cardano-ledger/blob/064acb8e7ab7b2aeef138ec0c821f8c5f1402621/eras/babbage/test-suite/test/Test/Cardano/Ledger/Babbage/TxInfo.hs#L190-L193

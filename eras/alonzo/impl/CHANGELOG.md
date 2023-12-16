@@ -195,7 +195,7 @@
 
 ## 1.2.1.0
 
-* Fix `PParams AlonzoEra` serialization. [#3440](https://github.com/input-output-hk/cardano-ledger/pull/3440)
+* Fix `PParams AlonzoEra` serialization. [#3440](https://github.com/intersectmbo/cardano-ledger/pull/3440)
 
 ## 1.2.0.0
 
@@ -206,7 +206,7 @@
   * `VState`
 * Added support for Plutus V3 in the types and functions that use `Language`.
   (Note that the Alonzo ledger era rules do not allow V3 scripts, however.).
-* Fix a bug of converting a mint field to the plutus context: [#3398](https://github.com/input-output-hk/cardano-ledger/pull/3398)
+* Fix a bug of converting a mint field to the plutus context: [#3398](https://github.com/intersectmbo/cardano-ledger/pull/3398)
 * Change parametrization of `ScriptPurpose`, `CollectError` and `TransactionScriptFailure`
   from `c`rypto to `era`
 

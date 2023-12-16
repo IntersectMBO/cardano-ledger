@@ -4,7 +4,7 @@ version:            1.8.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
-bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
+bug-reports:        https://github.com/intersectmbo/cardano-ledger/issues
 synopsis:           Public API for the cardano ledger codebase
 description:
     This package a public interface into the cardano ledger codebase. It also
@@ -16,7 +16,7 @@ extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git
-    location: https://github.com/input-output-hk/cardano-ledger
+    location: https://github.com/intersectmbo/cardano-ledger
     subdir:   libs/cardano-ledger-api
 
 library

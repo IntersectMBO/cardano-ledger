@@ -16,7 +16,7 @@
 -- The leader election is the precisely the part of the ledger that is
 -- determined by Ouroboros (Praos and Genesis), our consensus mechanism.
 -- See Section 16, "Leader Value Calculation", of the
--- <https://github.com/input-output-hk/cardano-ledger/releases/latest/download/shelley-ledger.pdf formal specification>.
+-- <https://github.com/intersectmbo/cardano-ledger/releases/latest/download/shelley-ledger.pdf formal specification>.
 module Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
   PoolDistr (..),

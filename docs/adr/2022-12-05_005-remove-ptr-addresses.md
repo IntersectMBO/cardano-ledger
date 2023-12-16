@@ -35,7 +35,7 @@ Pointer addresses will no longer be available.
 The existing ~11 pointer addresses will be converted to enterprise addresses.
 (We could attempt to resolve the valid pointers at a hard fork that removes them,
 but this would involved getting the millions of stake credentials into the
-[translation context](https://github.com/input-output-hk/cardano-ledger/blob/8b6f8e1a75034ca66fd66a39d437252eec927d71/eras/conway/impl/src/Cardano/Ledger/Conway/Translation.hs#L66)
+[translation context](https://github.com/intersectmbo/cardano-ledger/blob/8b6f8e1a75034ca66fd66a39d437252eec927d71/eras/conway/impl/src/Cardano/Ledger/Conway/Translation.hs#L66)
 which is used by the consensus hard fork combinator, which would be very difficult and hence
 not worth the effort.)
 
