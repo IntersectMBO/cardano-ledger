@@ -74,7 +74,6 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeSetLikeEnforceNoDuplicates,
   decodeListLikeEnforceNoDuplicates,
   decodeMapContents,
-  decodeMapNoDuplicates,
 
   -- **** Applicaitve
   decodeMapTraverse,
@@ -995,22 +994,6 @@ decodeSeq decoder = Seq.fromList <$> decodeCollection decodeListLenOrIndef decod
 decodeStrictSeq :: Decoder s a -> Decoder s (SSeq.StrictSeq a)
 decodeStrictSeq decoder = SSeq.fromList <$> decodeCollection decodeListLenOrIndef decoder
 {-# INLINE decodeStrictSeq #-}
-
--- | Just like `decodeMap`, but assumes that there are no duplicate keys, which is not enforced.
-decodeMapNoDuplicates :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
-decodeMapNoDuplicates decodeKey decodeValue =
-  snd
-    <$> decodeListLikeWithCount
-      decodeMapLenOrIndef
-      (uncurry Map.insert)
-      (const decodeInlinedPair)
-  where
-    decodeInlinedPair = do
-      !key <- decodeKey
-      !value <- decodeValue
-      pure (key, value)
-    {-# INLINE decodeInlinedPair #-}
-{-# INLINE decodeMapNoDuplicates #-}
 
 decodeMapContents :: Decoder s a -> Decoder s [a]
 decodeMapContents = decodeCollection decodeMapLenOrIndef
