@@ -2,6 +2,7 @@
 
 ## 1.3.0.0
 
+* Remove unused and badly named `decodeMapNoDuplicates`
 * Fix `decodeVMap` to no longer allow duplicates
 * Add `decodeMapLikeEnforceNoDuplicates` and `decodeListLikeWithCount`
 * Change the semantics of one argument for `decodeListLikeEnforceNoDuplicates` and
