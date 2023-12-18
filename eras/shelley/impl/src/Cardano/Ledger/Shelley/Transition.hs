@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -19,13 +20,15 @@
 -- the trouble of generating all the history for preceeding eras.
 module Cardano.Ledger.Shelley.Transition (
   EraTransition (..),
-  mkShelleyTransitionConfig,
   tcInitialFundsL,
   tcInitialStakingL,
+  mkShelleyTransitionConfig,
   createInitialState,
   registerInitialFunds,
   registerInitialStaking,
   toShelleyTransitionConfigPairs,
+  protectMainnet,
+  protectMainnetLens,
 ) where
 
 import Cardano.Ledger.Address
@@ -120,7 +123,12 @@ class
     SimpleGetter (TransitionConfig era) (PParams era)
   tcInitialPParamsG =
     to $ \tc ->
-      translateEra' (tc ^. tcTranslationContextL) (tc ^. tcPreviousEraConfigL . tcInitialPParamsG)
+      translateEra'
+        (tc ^. tcTranslationContextL)
+        (tc ^. tcPreviousEraConfigL . tcInitialPParamsG)
+
+tcNetworkIDG :: EraTransition era => SimpleGetter (TransitionConfig era) Network
+tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
 
 instance Crypto c => EraTransition (ShelleyEra c) where
   newtype TransitionConfig (ShelleyEra c) = ShelleyTransitionConfig
@@ -147,10 +155,6 @@ instance Crypto c => EraTransition (ShelleyEra c) where
 
   tcInitialPParamsG = to (sgProtocolParams . stcShelleyGenesis)
 
--- | Constructor for the base Shelley `TransitionConfig`
-mkShelleyTransitionConfig :: ShelleyGenesis c -> TransitionConfig (ShelleyEra c)
-mkShelleyTransitionConfig = ShelleyTransitionConfig
-
 -- | Get the initial funds from the `TransitionConfig`. This value must be non-empty
 -- only during testing and benchmarking, it must never contain anything on a real system.
 --
@@ -160,10 +164,8 @@ tcInitialFundsL ::
   (HasCallStack, EraTransition era) =>
   Lens' (TransitionConfig era) (LM.ListMap (Addr (EraCrypto era)) Coin)
 tcInitialFundsL =
-  tcShelleyGenesisL
-    . lens
-      (\sg -> protectMainnet "InitialFunds" sg null (sgInitialFunds sg))
-      (\sg initialFunds -> sg {sgInitialFunds = initialFunds})
+  protectMainnetLens "InitialFunds" null $
+    tcShelleyGenesisL . sgInitialFundsL
 
 -- | Get the initial staking from the `TransitionConfig`. This value must be non-empty
 -- only during testing and benchmarking, it must never contain anything on a real system.
@@ -174,14 +176,33 @@ tcInitialStakingL ::
   (HasCallStack, EraTransition era) =>
   Lens' (TransitionConfig era) (ShelleyGenesisStaking (EraCrypto era))
 tcInitialStakingL =
-  tcShelleyGenesisL
-    . lens
-      (\sg -> protectMainnet "InitialStaking" sg (== mempty) (sgStaking sg))
-      (\sg staking -> sg {sgStaking = staking})
+  protectMainnetLens "InitialStaking" (== mempty) $
+    tcShelleyGenesisL . sgStakingL
 
-protectMainnet :: HasCallStack => String -> ShelleyGenesis c -> (a -> Bool) -> a -> a
-protectMainnet name sg isMainnetSafe m =
-  if sgNetworkId sg == Mainnet && not (isMainnetSafe m)
+-- | Constructor for the base Shelley `TransitionConfig`
+mkShelleyTransitionConfig :: ShelleyGenesis c -> TransitionConfig (ShelleyEra c)
+mkShelleyTransitionConfig = ShelleyTransitionConfig
+
+protectMainnetLens ::
+  (HasCallStack, EraTransition era) =>
+  String ->
+  (a -> Bool) ->
+  Lens' (TransitionConfig era) a ->
+  Lens' (TransitionConfig era) a
+protectMainnetLens name isMainnetSafe l =
+  lens
+    (\g -> protectMainnet name g isMainnetSafe $ g ^. l)
+    (\g x -> g & l .~ x)
+
+protectMainnet ::
+  (HasCallStack, EraTransition era) =>
+  String ->
+  TransitionConfig era ->
+  (a -> Bool) ->
+  a ->
+  a
+protectMainnet name g isMainnetSafe m =
+  if g ^. tcNetworkIDG == Mainnet && not (isMainnetSafe m)
     then error $ "Injection of " ++ name ++ " is not possible on Mainnet"
     else m
 
@@ -215,7 +236,7 @@ createInitialState ::
 createInitialState tc =
   protectMainnet
     "InitialState"
-    sg
+    tc
     (const False)
     NewEpochState
       { nesEL = initialEpochNo
@@ -274,9 +295,7 @@ createInitialState tc =
 -- when NetworkId is set to Mainnet
 registerInitialStaking ::
   forall era.
-  ( EraTransition era
-  , HasCallStack
-  ) =>
+  (HasCallStack, EraTransition era) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era

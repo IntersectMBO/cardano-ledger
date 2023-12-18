@@ -157,6 +157,7 @@ test-suite tests
     build-depends:
         aeson,
         base,
+        cardano-data,
         cardano-ledger-core:testlib,
         cardano-ledger-allegra,
         cardano-ledger-alonzo:testlib,

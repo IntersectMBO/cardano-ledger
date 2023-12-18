@@ -2,6 +2,8 @@
 
 ## 1.12.0.0
 
+* Add `registerInitialDReps` and `registerDRepDelegs`
+* Add `cgDRepDelegs`, `cgInitialDReps` to `ConwayGenesis`
 * Changed the type of lenses ppCommitteeMaxTermLengthL, ppuCommitteeMaxTermLengthL
 * Change 'getScriptWitnessConwayTxCert' so that DRepRegistration certificate requires a witness
 * Implement `ToJSON` and `FromJSON` instances for `PoolVotingThresholds` and

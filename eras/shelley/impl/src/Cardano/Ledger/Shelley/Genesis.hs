@@ -36,6 +36,8 @@ module Cardano.Ledger.Shelley.Genesis (
   toNominalDiffTimeMicroWithRounding,
   fromNominalDiffTimeMicro,
   secondsToNominalDiffTimeMicro,
+  sgInitialFundsL,
+  sgStakingL,
 )
 where
 
@@ -103,6 +105,7 @@ import Data.Time.Clock (
 import Data.Unit.Strict (forceElemsToWHNF)
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 -- | Genesis Shelley staking configuration.
@@ -221,6 +224,12 @@ data ShelleyGenesis c = ShelleyGenesis
   --   out-of-memory problems in testing and benchmarking.
   }
   deriving stock (Generic)
+
+sgInitialFundsL :: Lens' (ShelleyGenesis c) (LM.ListMap (Addr c) Coin)
+sgInitialFundsL = lens sgInitialFunds (\sg x -> sg {sgInitialFunds = x})
+
+sgStakingL :: Lens' (ShelleyGenesis c) (ShelleyGenesisStaking c)
+sgStakingL = lens sgStaking (\sg x -> sg {sgStaking = x})
 
 deriving instance Crypto c => Show (ShelleyGenesis c)
 

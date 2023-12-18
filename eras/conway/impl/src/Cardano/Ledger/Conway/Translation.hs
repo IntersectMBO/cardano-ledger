@@ -163,7 +163,7 @@ initEnactState ::
   PParams (ConwayEra c) ->
   PParams (ConwayEra c) ->
   EnactState (ConwayEra c)
-initEnactState (ConwayGenesis _ constitution committee) curPParams prevPParams =
+initEnactState (ConwayGenesis _ constitution committee _ _) curPParams prevPParams =
   def
     & ensConstitutionL .~ constitution
     & ensCommitteeL .~ SJust committee

@@ -72,7 +72,13 @@ instance (Arbitrary (PParams era), Arbitrary (PParamsUpdate era), Era era) => Ar
   arbitrary = DRComplete <$> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (ConwayGenesis c) where
-  arbitrary = ConwayGenesis <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary =
+    ConwayGenesis
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary (UpgradeConwayPParams Identity) where
   arbitrary =
