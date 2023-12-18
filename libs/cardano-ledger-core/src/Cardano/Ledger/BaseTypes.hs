@@ -35,7 +35,6 @@ module Cardano.Ledger.BaseTypes (
   PositiveInterval,
   NonNegativeInterval,
   BoundedRational (..),
-  BoundedRatio (..),
   fpPrecision,
   promoteRatio,
   invalidKey,

@@ -10,7 +10,7 @@
 
 module Cardano.Ledger.Binary.Version (
   -- * Versioning
-  Version (..),
+  Version,
   getVersion,
   MinVersion,
   MaxVersion,
@@ -30,6 +30,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Fail.String (errorFail)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
@@ -43,13 +44,17 @@ import NoThunks.Class (NoThunks)
 -- | Protocol version number that is used during encoding and decoding. All supported
 -- versions are in the range from `MinVersion` to `MaxVersion`.
 newtype Version = Version Word64
-  deriving (Eq, Ord, Show, Enum, NFData, NoThunks, ToCBOR, ToJSON)
+  deriving (Eq, Ord, Show, NFData, NoThunks, ToCBOR, ToJSON)
 
 -- | Minimum supported version
 type MinVersion = 0
 
 -- | Maximum supported version. This is the protocol version of the next upcoming era
 type MaxVersion = 10
+
+instance Enum Version where
+  toEnum = errorFail . mkVersion
+  fromEnum (Version v) = fromEnum v
 
 instance Bounded Version where
   minBound = Version (fromInteger (natVal (Proxy @MinVersion)))

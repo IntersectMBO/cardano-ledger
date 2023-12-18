@@ -23,7 +23,7 @@ module Cardano.Ledger.Shelley.Tx (
     wits,
     auxiliaryData
   ),
-  ShelleyTxRaw (..),
+  ShelleyTxRaw,
   bodyShelleyTxL,
   witsShelleyTxL,
   auxDataShelleyTxL,

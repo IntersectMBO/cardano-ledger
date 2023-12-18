@@ -42,7 +42,7 @@ module Cardano.Ledger.Alonzo.TxBody (
     atbAuxDataHash,
     atbTxNetworkId
   ),
-  AlonzoTxBodyRaw (..),
+  AlonzoTxBodyRaw,
   AlonzoTxBodyUpgradeError (..),
   AlonzoEraTxBody (..),
   ShelleyEraTxBody (..),

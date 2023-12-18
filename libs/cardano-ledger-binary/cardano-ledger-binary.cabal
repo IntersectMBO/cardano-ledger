@@ -59,6 +59,7 @@ library
         containers,
         data-fix,
         deepseq,
+        FailT,
         formatting,
         iproute,
         microlens,
@@ -172,3 +173,22 @@ test-suite tests
         time,
         vector,
         vector-map
+
+benchmark bench
+    type:             exitcode-stdio-1.0
+    main-is:          Bench.hs
+    hs-source-dirs:   bench
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
+        -threaded -rtsopts -O2
+
+    build-depends:
+        base,
+        bytestring,
+        cardano-ledger-binary,
+        containers,
+        criterion,
+        deepseq,
+        random

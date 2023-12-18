@@ -47,6 +47,7 @@ where
 import Cardano.Ledger.Binary (
   DecCBOR,
   EncCBOR (encCBOR),
+  decodeListLenOrIndef,
   decodeListLikeEnforceNoDuplicates,
   encodeStrictSeq,
  )
@@ -404,18 +405,17 @@ instance (Typeable k, EncCBOR v, Ord k) => EncCBOR (OMap k v) where
   encCBOR omap = encodeStrictSeq encCBOR (toStrictSeq omap)
 
 instance (Typeable k, HasOKey k v, DecCBOR v, Eq v) => DecCBOR (OMap k v) where
-  decCBOR = decodeListLikeEnforceNoDuplicates isMember insert decCBOR
-    where
-      -- we can't use `elem` here because it returns `False` when the
-      -- element is not fully equal, but the criterion for an element
-      -- to be included in the `OMap` only depends on its `okeyL` not
-      -- clashing.
-      isMember e = member (e ^. okeyL)
-      insert v omap = omap |> v
+  decCBOR =
+    decodeListLikeEnforceNoDuplicates
+      decodeListLenOrIndef
+      (flip snoc)
+      (\omap -> (size omap, omap))
+      decCBOR
 
 -- | \( O(n \log n) \)
 filter :: Ord k => (v -> Bool) -> OMap k v -> OMap k v
 filter f (OMap sseq kv) =
   let kv' = Map.filter f kv
-      sseq' = F.foldl' (\accum k -> if Map.member k kv' then accum SSeq.:|> k else accum) SSeq.empty sseq
+      sseq' =
+        F.foldl' (\accum k -> if Map.member k kv' then accum SSeq.:|> k else accum) SSeq.empty sseq
    in OMap sseq' kv'

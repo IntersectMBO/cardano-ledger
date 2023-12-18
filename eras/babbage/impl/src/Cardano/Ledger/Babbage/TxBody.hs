@@ -48,7 +48,7 @@ module Cardano.Ledger.Babbage.TxBody (
     btbAuxDataHash,
     btbTxNetworkId
   ),
-  BabbageTxBodyRaw (..),
+  BabbageTxBodyRaw,
   BabbageTxBodyUpgradeError (..),
   babbageAllInputsTxBodyF,
   babbageSpendableInputsTxBodyF,

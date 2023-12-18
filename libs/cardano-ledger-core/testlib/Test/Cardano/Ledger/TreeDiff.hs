@@ -119,7 +119,11 @@ instance ToExpr TxIx
 instance ToExpr CertIx where
   toExpr (CertIx x) = App "CertIx" [toExpr x]
 
-instance ToExpr UnitInterval
+instance ToExpr UnitInterval where
+  toExpr = toExpr . unboundRational
+
+instance ToExpr NonNegativeInterval where
+  toExpr = toExpr . unboundRational
 
 instance ToExpr Network
 
@@ -132,10 +136,6 @@ instance ToExpr Nonce where
   toExpr (Nonce x) = App "Nonce" [trimExprViaShow 10 x]
 
 instance ToExpr DnsName
-
-instance (ToExpr x, ToExpr y, Integral y) => ToExpr (BoundedRatio x y)
-
-instance ToExpr NonNegativeInterval
 
 instance ToExpr (BlocksMade c)
 

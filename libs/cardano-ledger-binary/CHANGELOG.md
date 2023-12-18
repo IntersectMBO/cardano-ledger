@@ -2,6 +2,12 @@
 
 ## 1.3.0.0
 
+* Remove unused and badly named `decodeMapNoDuplicates`
+* Fix `decodeVMap` to no longer allow duplicates
+* Add `decodeMapLikeEnforceNoDuplicates` and `decodeListLikeWithCount`
+* Change the semantics of one argument for `decodeListLikeEnforceNoDuplicates` and
+  `decodeSetLikeEnforceNoDuplicates` functions from checking membership to geting the size
+* Change `decodeListLikeEnforceNoDuplicates` to also accept length decoding function
 * Add `decodeListLikeT` and `decodeListLike`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Add `encodeEnum` and `decodeEnumBounded`
