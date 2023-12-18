@@ -586,10 +586,11 @@ toShelleyDelegCert = \case
   _ -> Nothing
 
 -- For both of the functions `getScriptWitnessConwayTxCert` and
--- `getVKeyWitnessConwayTxCert` we preserve the old behavior of not requiring a witness,
--- but only during the transitional period of Conway era and only for registration
--- cdertificates without a deposit. Future eras will require a witness for registration
--- certificates, because the one without a deposit will be removed.
+-- `getVKeyWitnessConwayTxCert` we preserve the old behavior of not requiring a witness
+-- for staking credential registration, but only during the transitional period of Conway
+-- era and only for staking credential registration certificates without a deposit. Future
+-- eras will require a witness for registration certificates, because the one without a
+-- deposit will be removed.
 
 getScriptWitnessConwayTxCert ::
   ConwayTxCert era ->
@@ -630,7 +631,6 @@ getVKeyWitnessConwayTxCert = \case
     govWitness = \case
       ConwayAuthCommitteeHotKey coldCred _hotCred -> credKeyHashWitness coldCred
       ConwayResignCommitteeColdKey coldCred _ -> credKeyHashWitness coldCred
-      -- Registration of a DRep does not require a witness
       ConwayRegDRep cred _ _ -> credKeyHashWitness cred
       ConwayUnRegDRep cred _ -> credKeyHashWitness cred
       ConwayUpdateDRep cred _ -> credKeyHashWitness cred
