@@ -830,7 +830,7 @@ newtype EpochInterval = EpochInterval
   }
   deriving (Eq, Ord, Generic)
   deriving (Show) via Quiet EpochInterval
-  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR, Num)
+  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR, ToCBOR, FromCBOR)
 
 -- | Add a EpochInterval (a positive change) to an EpochNo to get a new EpochNo
 addEpochInterval :: EpochNo -> EpochInterval -> EpochNo

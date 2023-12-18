@@ -55,7 +55,8 @@ spec =
     describe "Voting" $ do
       context "fails for" $ do
         it "expired gov-actions" $ do
-          modifyPParams $ ppGovActionLifetimeL .~ 2 -- Voting after the 3rd epoch should fail
+          -- Voting after the 3rd epoch should fail
+          modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
           khDRep <- setupSingleDRep
           (govActionId, _) <- submitConstitution SNothing
           passEpoch
@@ -137,7 +138,7 @@ spec =
 
     describe "Constitution" $ do
       it "submitted successfully with valid PrevGovActionId" $ do
-        modifyPParams $ ppGovActionLifetimeL .~ 1
+        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 1
 
         curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
         initialPulser <- getsNES $ newEpochStateGovStateL . cgDRepPulsingStateL
@@ -224,7 +225,7 @@ spec =
 
     describe "DRep expiry" $ do
       it "is updated based on to number of dormant epochs" $ do
-        modifyPParams $ ppGovActionLifetimeL .~ 2
+        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
         drep <- setupSingleDRep
 
         expectNumDormantEpochs 0
@@ -499,7 +500,7 @@ setPParams = do
           , dvtUpdateToConstitution = 1 %! 2
           }
       & ppCommitteeMaxTermLengthL .~ 10
-      & ppGovActionLifetimeL .~ 100
+      & ppGovActionLifetimeL .~ EpochInterval 100
       & ppGovActionDepositL .~ Coin 123
 
 -- =========================================================

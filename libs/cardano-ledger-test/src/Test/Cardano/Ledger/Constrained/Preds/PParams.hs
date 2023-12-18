@@ -91,7 +91,7 @@ genPParams proof tx bb bh = do
           , DRepDeposit $ Coin 7
           , GovActionDeposit $ Coin 13
           , DRepActivity $ EpochInterval 8
-          , EMax 100
+          , EMax $ EpochInterval 100
           ]
     )
 

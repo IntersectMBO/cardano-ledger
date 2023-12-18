@@ -29,7 +29,14 @@ where
 
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
 import Cardano.Ledger.Address (Addr, RewardAcnt (..))
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), TxIx, inject, mkTxIxPartial)
+import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
+  Network (..),
+  StrictMaybe (..),
+  TxIx,
+  inject,
+  mkTxIxPartial,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
@@ -153,7 +160,7 @@ ppsBench =
   emptyPParams
     & ppMaxBBSizeL .~ 50000
     & ppDL .~ unsafeBoundRational 0.5
-    & ppEMaxL .~ 10000
+    & ppEMaxL .~ EpochInterval 10000
     & ppKeyDepositL .~ Coin 0
     & ppMaxBHSizeL .~ 10000
     & ppMaxTxSizeL .~ 1000000000
