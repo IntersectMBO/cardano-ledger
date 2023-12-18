@@ -7,7 +7,7 @@
   <a href="https://github.com/intersectmbo/cardano-ledger/actions/workflows/haskell.yml">
     <img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/actions/workflow/status/intersectmbo/cardano-ledger/haskell.yml?branch=master&style=for-the-badge" />
   </a>
-  <a href="https://cardano-ledger.cardano.intersectmbo.org/">
+  <a href="https://intersectmbo.github.io/cardano-ledger">
     <img alt="Haddock (master)" src="https://img.shields.io/badge/documentation-Haddock-yellow?style=for-the-badge" />
   </a>
 </p>
