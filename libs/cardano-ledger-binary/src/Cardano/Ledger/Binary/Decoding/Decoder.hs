@@ -74,6 +74,8 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeSetLikeEnforceNoDuplicates,
   decodeListLikeEnforceNoDuplicates,
   decodeMapContents,
+  decodeCollection,
+  decodeCollectionWithLen,
 
   -- **** Applicaitve
   decodeMapTraverse,

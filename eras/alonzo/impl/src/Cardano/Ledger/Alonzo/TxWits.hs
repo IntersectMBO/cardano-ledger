@@ -78,12 +78,13 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   EncCBORGroup (..),
   ToCBOR (..),
-  Version,
+  decodeCollection,
   decodeList,
-  decodeMapByKeyValue,
+  decodeListLenOrIndef,
+  decodeMapLikeEnforceNoDuplicates,
   encodeFoldableEncoder,
   encodeListLen,
-  getDecoderVersion,
+  ifDecoderVersionAtLeast,
   natVersion,
  )
 import Cardano.Ledger.Binary.Coders
@@ -114,7 +115,7 @@ import Cardano.Ledger.Plutus.Language (
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), keyBy, shelleyEqTxWitsRaw)
 import Control.DeepSeq (NFData)
-import Control.Monad (unless, when, (>=>))
+import Control.Monad (when, (>=>))
 import Data.Bifunctor (Bifunctor (first))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -601,14 +602,15 @@ instance
       txWitnessField 1 =
         fieldAA
           addScripts
-          ( Map.fromList <$> listDecodeA
-              ( fmap
-                  ( \ns ->
-                      let script = fromNativeScript ns
-                       in (hashScript @era script, script)
-                  )
-                  <$> From
-              )
+          ( fmap Map.fromList
+              <$> listDecodeA
+                ( fmap
+                    ( \ns ->
+                        let script = fromNativeScript ns
+                         in (hashScript @era script, script)
+                    )
+                    <$> From
+                )
           )
       txWitnessField 2 =
         fieldAA
@@ -626,22 +628,37 @@ instance
       {-# INLINE txWitnessField #-}
 
       scriptDecoder ::
-        (forall s. Decoder s (Script era)) ->
-        Decode ('Closed 'Dense) (Map (ScriptHash (EraCrypto era)) (Script era))
-      scriptDecoder decodeScript = D $ do
-        scriptMap <- decodeMapByKeyValue $ do
+        Decoder s (Script era) ->
+        Decoder s (Map (ScriptHash (EraCrypto era)) (Script era))
+      scriptDecoder decodeScript =
+        fmap Map.fromList $ decodeCollection decodeListLenOrIndef $ do
+          script <- decodeScript
+          let !scriptHash = hashScript @era script
+          pure (scriptHash, script)
+      {-# INLINE scriptDecoder #-}
+
+      scriptDecoderV9 ::
+        Decoder s (Script era) ->
+        Decoder s (Map (ScriptHash (EraCrypto era)) (Script era))
+      scriptDecoderV9 decodeScript = do
+        scriptMap <- decodeMapLikeEnforceNoDuplicates decodeListLenOrIndef $ do
           script <- decodeScript
           let !scriptHash = hashScript @era script
           pure (scriptHash, script)
         when (Map.null scriptMap) $ fail "Empty list of scripts is not allowed"
         pure scriptMap
-      {-# INLINE scriptDecoder #-}
+      {-# INLINE scriptDecoderV9 #-}
 
       decodePlutus ::
         PlutusLanguage l =>
         SLanguage l ->
         Decode ('Closed 'Dense) (Map (ScriptHash (EraCrypto era)) (Script era))
-      decodePlutus slang = scriptDecoder (fromPlutusScript <$> decodePlutusScript slang)
+      decodePlutus slang =
+        D $
+          ifDecoderVersionAtLeast
+            (natVersion @9)
+            (scriptDecoderV9 (fromPlutusScript <$> decodePlutusScript slang))
+            (scriptDecoder (fromPlutusScript <$> decodePlutusScript slang))
       {-# INLINE decodePlutus #-}
 
       addScripts ::
