@@ -19,7 +19,7 @@ module Cardano.Ledger.Pretty.Conway (
 
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits, Prices)
-import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo, NonNegativeInterval, UnitInterval)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), NonNegativeInterval, UnitInterval)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
@@ -311,7 +311,6 @@ ppConwayPParams ::
   , PrettyA (HKD f Coin)
   , PrettyA (HKD f Natural)
   , PrettyA (HKD f ExUnits)
-  , PrettyA (HKD f EpochNo)
   , PrettyA (HKD f EpochInterval)
   , PrettyA (HKD f DRepVotingThresholds)
   , PrettyA (HKD f CostModels)

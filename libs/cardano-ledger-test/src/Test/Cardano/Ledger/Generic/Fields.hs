@@ -52,7 +52,6 @@ import Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
-  EpochNo (..),
   Network (..),
   NonNegativeInterval,
   Nonce,
@@ -245,7 +244,7 @@ data PParamsField era
     PoolVotingThreshold PoolVotingThresholds
   | DRepVotingThreshold DRepVotingThresholds
   | MinCommitteeSize Natural
-  | CommitteeTermLimit EpochNo
+  | CommitteeTermLimit EpochInterval
   | GovActionExpiration EpochInterval
   | GovActionDeposit Coin
   | DRepDeposit Coin

@@ -2222,7 +2222,7 @@ pcPParamsField x = case x of
   PoolVotingThreshold _ -> [("PoolVotingThresholds", ppString "?")]
   DRepVotingThreshold _ -> [("DRepVotingThresholds", ppString "?")]
   MinCommitteeSize n -> [("minCommitteeSize", ppNatural n)]
-  CommitteeTermLimit n -> [("committeeTermLimit", ppEpochNo n)]
+  CommitteeTermLimit n -> [("committeeTermLimit", ppEpochInterval n)]
   GovActionExpiration epochNo -> [("govActionExpire", ppEpochInterval epochNo)]
   GovActionDeposit coin -> [("govActiondDeposit", pcCoin coin)]
   DRepDeposit coin -> [("drepdeposit", pcCoin coin)]
