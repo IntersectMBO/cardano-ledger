@@ -35,5 +35,25 @@
       "scriptHash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": 2
     },
     "quorum": 0.5
+  },
+  "dRepDelegs": {
+    "keyHash-4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a": "drep-alwaysAbstain",
+    "keyHash-35bc5e86c42afbc593ab4cdd78301005df84ba67fa1f12f95f8ee103": "drep-alwaysNoConfidence",
+    "scriptHash-afbc5005df84ba5f8ee93ab435bc5e83067fa1f12f9110386c42cdd7": "drep-keyHash-78301005df84ba67fa1f12f95f8ee10335bc5e86c42afbc593ab4cdd",
+    "keyHash-afbc5005df84ba5f8ee93ab435bc5e83067fa1f12f9110386c42cdd7": "drep-scriptHash-01305df84b078ac5e86c42afbc593ab4cdd67fa1f12f95f8ee10335b"
+  },
+  "initialDReps": {
+    "keyHash-78301005df84ba67fa1f12f95f8ee10335bc5e86c42afbc593ab4cdd": {
+      "expiry": 1000,
+      "deposit": 5000
+    },
+    "scriptHash-01305df84b078ac5e86c42afbc593ab4cdd67fa1f12f95f8ee10335b": {
+      "expiry": 300,
+      "deposit": 6000,
+      "anchor": {
+        "url": "example.com",
+        "dataHash": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
   }
 }

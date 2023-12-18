@@ -28,10 +28,16 @@ import Data.Aeson (
   FromJSON (..),
   FromJSONKey (..),
   FromJSONKeyFunction (..),
+  KeyValue (..),
   ToJSON (..),
   ToJSONKey (..),
   Value (..),
+  object,
+  withObject,
   withText,
+  (.!=),
+  (.:),
+  (.:?),
  )
 import Data.Aeson.Types (toJSONKeyText)
 import qualified Data.Text as T
@@ -142,7 +148,22 @@ instance Crypto c => EncCBOR (DRepState c) where
         !> To drepAnchor
         !> To drepDeposit
 
-instance Crypto c => ToJSON (DRepState c)
+instance Crypto c => ToJSON (DRepState c) where
+  toJSON x@(DRepState _ _ _) =
+    let DRepState {..} = x
+     in toJSON $
+          object $
+            [ "expiry" .= toJSON drepExpiry
+            , "deposit" .= toJSON drepDeposit
+            ]
+              ++ ["anchor" .= toJSON anchor | SJust anchor <- [drepAnchor]]
+
+instance Crypto c => FromJSON (DRepState c) where
+  parseJSON = withObject "DRepState" $ \o ->
+    DRepState
+      <$> o .: "expiry"
+      <*> o .:? "anchor" .!= SNothing
+      <*> o .: "deposit"
 
 drepExpiryL :: Lens' (DRepState c) EpochNo
 drepExpiryL = lens drepExpiry (\x y -> x {drepExpiry = y})
