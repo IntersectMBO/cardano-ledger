@@ -88,11 +88,17 @@ import Cardano.Ledger.Hashes (EraIndependentTxBody)
 -- | Fix the first Outputs field in a [TxBodyField], by applying the delta Coin to the first Output in that Outputs field
 --   This is used to compensate for certificates which make deposits, and this Coin must come from somewhere, so it is
 --   added (subtracted if the Coin is negative) from the first TxOut.
-fixOutput :: EraTxOut era => Coin -> [TxBodyField era] -> [TxBodyField era]
-fixOutput _ [] = []
-fixOutput delta (Outputs' (txout : more) : others) =
-  (Outputs' ((txout & coinTxOutL <>~ delta) : more)) : others
-fixOutput delta (x : xs) = x : fixOutput delta xs
+--   In rare occurrences, it is possible that 'delta' might be too negative to subtract from the input
+--   in that case discard the trace. Note that in traces of length 150. this happens less than 1% of the time.
+fixOutput :: EraTxOut era => Coin -> [TxBodyField era] -> TraceM era [TxBodyField era]
+fixOutput _ [] = pure []
+fixOutput delta@(Coin n) (Outputs' (txout : more) : others) =
+  case txout ^. coinTxOutL of
+    (Coin m) ->
+      if n + m < 0
+        then discard
+        else pure ((Outputs' ((txout & coinTxOutL <>~ delta) : more)) : others)
+fixOutput delta (x : xs) = (x :) <$> fixOutput delta xs
 
 -- | Compute a valid Cert, and the change in the stored Deposits from that Cert.
 drepCert :: Reflect era => Proof era -> TraceM era (Coin, [TxBodyField era])
@@ -119,7 +125,9 @@ drepCertTx :: Reflect era => Coin -> Proof era -> TraceM era (TxF era)
 drepCertTx maxFeeEstimate proof = do
   simplefields <- simpleTxBody proof maxFeeEstimate
   (deltadeposit, certfields) <- drepCert proof
-  let txb = newTxBody proof (fixOutput deltadeposit simplefields ++ certfields)
+  txb <- do
+    fields2 <- fixOutput deltadeposit simplefields
+    pure (newTxBody proof (fields2 ++ certfields))
   tx <- completeTxBody proof maxFeeEstimate txb
   setVar txterm (TxF proof tx)
   pure (TxF proof tx)
