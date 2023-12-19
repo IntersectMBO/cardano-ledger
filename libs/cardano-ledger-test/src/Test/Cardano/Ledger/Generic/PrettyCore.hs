@@ -1995,7 +1995,7 @@ pcPParamsSynopsis p x = withEraPParams p help
         "PParams (synopsis)"
         [ ("maxBBSize", ppNatural (x ^. Core.ppMaxBBSizeL))
         , ("maxBHSize", ppNatural (x ^. Core.ppMaxBHSizeL))
-        , ("maxTxSize", ppNatural (x ^. Core.ppMaxTxSizeL))
+        , ("maxTxSize", ppWord32 (x ^. Core.ppMaxTxSizeL))
         , ("poolDeposit", pcCoin (x ^. Core.ppPoolDepositL))
         , ("keyDeposit", pcCoin (x ^. Core.ppKeyDepositL))
         , ("protVer", ppString (showProtver (x ^. Core.ppProtocolVersionL)))
@@ -2196,7 +2196,7 @@ pcPParamsField x = case x of
   MinfeeA coin -> [("minfeeA", pcCoin coin)]
   MinfeeB coin -> [("minfeeB", pcCoin coin)]
   MaxBBSize natural -> [("maxBBsize", ppNatural natural)]
-  MaxTxSize natural -> [("maxTxsize", ppNatural natural)]
+  MaxTxSize natural -> [("maxTxsize", ppWord32 natural)]
   MaxBHSize natural -> [("maxBHsize", ppNatural natural)]
   KeyDeposit coin -> [("keydeposit", pcCoin coin)]
   PoolDeposit coin -> [("pooldeposit", pcCoin coin)]

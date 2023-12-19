@@ -103,6 +103,7 @@ import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -419,7 +420,7 @@ data ConwayPParams f era = ConwayPParams
   -- ^ The constant factor for the minimum fee calculation
   , cppMaxBBSize :: !(THKD 'NetworkGroup f Natural)
   -- ^ Maximal block body size
-  , cppMaxTxSize :: !(THKD 'NetworkGroup f Natural)
+  , cppMaxTxSize :: !(THKD 'NetworkGroup f Word32)
   -- ^ Maximal transaction size
   , cppMaxBHSize :: !(THKD 'NetworkGroup f Natural)
   -- ^ Maximal block header size

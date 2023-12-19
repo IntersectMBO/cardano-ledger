@@ -85,6 +85,7 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq (fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Word (Word32)
 import Lens.Micro ((^.))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
@@ -195,7 +196,7 @@ data PParamsField era
   | -- | Maximal block body size
     MaxBBSize Natural
   | -- | Maximal transaction size
-    MaxTxSize Natural
+    MaxTxSize Word32
   | -- | Maximal block header size
     MaxBHSize Natural
   | -- | The amount of a key registration deposit

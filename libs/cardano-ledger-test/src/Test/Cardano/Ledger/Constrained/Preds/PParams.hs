@@ -79,7 +79,7 @@ genPParams proof tx bb bh = do
           , Prices (Script.Prices (nonNegativeInterval 1.0) (nonNegativeInterval 1.0))
           , defaultCostModels proof
           , MaxValSize 1000
-          , MaxTxSize tx
+          , MaxTxSize (fromIntegral tx)
           , MaxBBSize bb
           , MaxBHSize bh
           , MaxTxExUnits maxTxExUnits2

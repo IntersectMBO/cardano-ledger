@@ -91,6 +91,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Typeable)
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
+import Data.Word (Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
 import GHC.Natural (Natural)
 import Lens.Micro (Lens', SimpleGetter, lens)
@@ -297,7 +298,7 @@ class
   hkdMaxBBSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
 
   -- | Maximal transaction size
-  hkdMaxTxSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdMaxTxSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word32)
 
   -- | Maximal block header size
   hkdMaxBHSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
@@ -379,7 +380,7 @@ ppMaxBBSizeL :: forall era. EraPParams era => Lens' (PParams era) Natural
 ppMaxBBSizeL = ppLens . hkdMaxBBSizeL @era @Identity
 
 -- | Maximal transaction size
-ppMaxTxSizeL :: forall era. EraPParams era => Lens' (PParams era) Natural
+ppMaxTxSizeL :: forall era. EraPParams era => Lens' (PParams era) Word32
 ppMaxTxSizeL = ppLens . hkdMaxTxSizeL @era @Identity
 
 -- | Maximal block header size
@@ -445,7 +446,7 @@ ppuMaxBBSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (Strict
 ppuMaxBBSizeL = ppuLens . hkdMaxBBSizeL @era @StrictMaybe
 
 -- | Maximal transaction size
-ppuMaxTxSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuMaxTxSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word32)
 ppuMaxTxSizeL = ppuLens . hkdMaxTxSizeL @era @StrictMaybe
 
 -- | Maximal block header size

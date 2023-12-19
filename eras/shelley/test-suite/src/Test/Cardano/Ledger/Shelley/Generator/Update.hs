@@ -123,7 +123,7 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV, maxMajorPV} = do
       & ppMinFeeAL .~ Coin minFeeA
       & ppMinFeeBL .~ Coin minFeeB
       & ppMaxBBSizeL .~ maxBBSize
-      & ppMaxTxSizeL .~ maxTxSize
+      & ppMaxTxSizeL .~ fromIntegral (maxTxSize)
       & ppMaxBHSizeL .~ maxBHSize
       & ppKeyDepositL .~ keyDeposit
       & ppPoolDepositL .~ poolDeposit
@@ -262,7 +262,7 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB, maxMajorPV} pp = do
       & ppuMinFeeAL .~ fmap Coin minFeeA
       & ppuMinFeeBL .~ fmap Coin minFeeB
       & ppuMaxBBSizeL .~ maxBBSize
-      & ppuMaxTxSizeL .~ maxTxSize
+      & ppuMaxTxSizeL .~ (fromIntegral <$> maxTxSize)
       & ppuMaxBHSizeL .~ maxBHSize
       & ppuKeyDepositL .~ keyDeposit
       & ppuPoolDepositL .~ poolDeposit

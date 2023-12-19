@@ -86,6 +86,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Proxy
 import Data.Void
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (lens, (^.))
 import NoThunks.Class (NoThunks (..))
@@ -101,7 +102,7 @@ data ShelleyPParams f era = ShelleyPParams
   -- ^ The constant factor for the minimum fee calculation
   , sppMaxBBSize :: !(HKD f Natural)
   -- ^ Maximal block body size
-  , sppMaxTxSize :: !(HKD f Natural)
+  , sppMaxTxSize :: !(HKD f Word32)
   -- ^ Maximal transaction size
   , sppMaxBHSize :: !(HKD f Natural)
   -- ^ Maximal block header size
@@ -481,7 +482,7 @@ shelleyCommonPParamsHKDPairs px pp =
   [ ("minFeeA", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeAL @_ @f :: HKD f Coin))
   , ("minFeeB", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeBL @era @f))
   , ("maxBlockBodySize", hkdMap px (toJSON @Natural) (pp ^. hkdMaxBBSizeL @era @f))
-  , ("maxTxSize", hkdMap px (toJSON @Natural) (pp ^. hkdMaxTxSizeL @era @f))
+  , ("maxTxSize", hkdMap px (toJSON @Word32) (pp ^. hkdMaxTxSizeL @era @f))
   , ("maxBlockHeaderSize", hkdMap px (toJSON @Natural) (pp ^. hkdMaxBHSizeL @era @f))
   , ("keyDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdKeyDepositL @era @f))
   , ("poolDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdPoolDepositL @era @f))

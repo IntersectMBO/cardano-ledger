@@ -112,6 +112,7 @@ import qualified Data.Aeson as Aeson (Value)
 import Data.Functor.Identity (Identity (..))
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (Proxy))
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -141,7 +142,7 @@ data BabbagePParams f era = BabbagePParams
   -- ^ The constant factor for the minimum fee calculation
   , bppMaxBBSize :: !(HKD f Natural)
   -- ^ Maximal block body size
-  , bppMaxTxSize :: !(HKD f Natural)
+  , bppMaxTxSize :: !(HKD f Word32)
   -- ^ Maximal transaction size
   , bppMaxBHSize :: !(HKD f Natural)
   -- ^ Maximal block header size

@@ -91,7 +91,7 @@ import qualified Data.Sequence.Strict as SS
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
-import Data.Word (Word64)
+import Data.Word (Word32, Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Numeric.Natural (Natural)
@@ -1099,8 +1099,14 @@ maxTxSize p =
         p
         "maxTxSize"
         NaturalR
-        (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxTxSizeL)))
+        (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxTxSizeL . word32NaturalL)))
     )
+
+word32NaturalL :: Lens' Word32 Natural
+word32NaturalL = lens fromIntegral (\_ y -> fromIntegral (toInteger y))
+
+naturalWord32L :: Lens' Natural Word32
+naturalWord32L = lens fromIntegral (\_ y -> fromIntegral (toInteger y))
 
 -- | Max Block Header Size
 maxBHSize :: Era era => Proof era -> Term era Natural
