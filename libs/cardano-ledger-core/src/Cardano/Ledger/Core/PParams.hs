@@ -91,7 +91,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Typeable)
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
-import Data.Word (Word32)
+import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
 import GHC.Natural (Natural)
 import Lens.Micro (Lens', SimpleGetter, lens)
@@ -295,13 +295,13 @@ class
   hkdMinFeeBL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
 
   -- | Maximal block body size
-  hkdMaxBBSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdMaxBBSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word32)
 
   -- | Maximal transaction size
   hkdMaxTxSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word32)
 
   -- | Maximal block header size
-  hkdMaxBHSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Natural)
+  hkdMaxBHSizeL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Word16)
 
   -- | The amount of a key registration deposit
   hkdKeyDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
@@ -376,7 +376,7 @@ ppMinFeeBL :: forall era. EraPParams era => Lens' (PParams era) Coin
 ppMinFeeBL = ppLens . hkdMinFeeBL @era @Identity
 
 -- | Maximal block body size
-ppMaxBBSizeL :: forall era. EraPParams era => Lens' (PParams era) Natural
+ppMaxBBSizeL :: forall era. EraPParams era => Lens' (PParams era) Word32
 ppMaxBBSizeL = ppLens . hkdMaxBBSizeL @era @Identity
 
 -- | Maximal transaction size
@@ -384,7 +384,7 @@ ppMaxTxSizeL :: forall era. EraPParams era => Lens' (PParams era) Word32
 ppMaxTxSizeL = ppLens . hkdMaxTxSizeL @era @Identity
 
 -- | Maximal block header size
-ppMaxBHSizeL :: forall era. EraPParams era => Lens' (PParams era) Natural
+ppMaxBHSizeL :: forall era. EraPParams era => Lens' (PParams era) Word16
 ppMaxBHSizeL = ppLens . hkdMaxBHSizeL @era @Identity
 
 -- | The amount of a key registration deposit
@@ -442,7 +442,7 @@ ppuMinFeeBL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMa
 ppuMinFeeBL = ppuLens . hkdMinFeeBL @era @StrictMaybe
 
 -- | Maximal block body size
-ppuMaxBBSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuMaxBBSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word32)
 ppuMaxBBSizeL = ppuLens . hkdMaxBBSizeL @era @StrictMaybe
 
 -- | Maximal transaction size
@@ -450,7 +450,7 @@ ppuMaxTxSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (Strict
 ppuMaxTxSizeL = ppuLens . hkdMaxTxSizeL @era @StrictMaybe
 
 -- | Maximal block header size
-ppuMaxBHSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Natural)
+ppuMaxBHSizeL :: forall era. EraPParams era => Lens' (PParamsUpdate era) (StrictMaybe Word16)
 ppuMaxBHSizeL = ppuLens . hkdMaxBHSizeL @era @StrictMaybe
 
 -- | The amount of a key registration deposit

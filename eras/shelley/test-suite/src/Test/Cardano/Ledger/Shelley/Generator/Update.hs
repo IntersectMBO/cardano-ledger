@@ -62,7 +62,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Ratio (Ratio, (%))
 import Data.Typeable (Typeable)
-import Data.Word (Word64)
+import Data.Word (Word16, Word32, Word64)
 import GHC.Records
 import GHC.Stack (HasCallStack)
 import Lens.Micro
@@ -123,7 +123,7 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV, maxMajorPV} = do
       & ppMinFeeAL .~ Coin minFeeA
       & ppMinFeeBL .~ Coin minFeeB
       & ppMaxBBSizeL .~ maxBBSize
-      & ppMaxTxSizeL .~ fromIntegral (maxTxSize)
+      & ppMaxTxSizeL .~ maxTxSize
       & ppMaxBHSizeL .~ maxBHSize
       & ppKeyDepositL .~ keyDeposit
       & ppPoolDepositL .~ poolDeposit
@@ -138,14 +138,20 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV, maxMajorPV} = do
       & ppMinUTxOValueL .~ minUTxOValue
       & ppMinPoolCostL .~ minPoolCost
   where
-    szGen :: Gen (Natural, Natural, Natural)
+    szGen :: Gen (Word32, Word32, Word16)
     szGen = do
       blockBodySize <- genNatural low hi
-      (blockBodySize,,)
-        <$> rangeUpTo (blockBodySize `div` 2)
-        <*> rangeUpTo (blockBodySize `div` 2)
+      (fromIntegral blockBodySize,,)
+        <$> (fromIntegral <$> rangeUpTo (blockBodySize `div` 2))
+        <*> (fromIntegral <$> genNatural 25000 65535) -- Must stay in the range of Word16, but can't be too small
     rangeUpTo :: Natural -> Gen Natural
     rangeUpTo upper = genNatural low upper
+
+-- Note: we keep the lower bound high enough so that we can more likely
+-- generate valid transactions and blocks
+low, hi :: Natural
+low = 50000
+hi = 200000
 
 -- poolDeposit
 -- NOTE: we need to keep these deposits small, otherwise
@@ -164,12 +170,6 @@ genExtraEntropy =
     [ (1, pure NeutralNonce)
     , (1, mkNonceFromNumber <$> genWord64 1 123)
     ]
-
--- Note: we keep the lower bound high enough so that we can more likely
--- generate valid transactions and blocks
-low, hi :: Natural
-low = 50000
-hi = 200000
 
 -- eMax (for an epoch per 5 days, say, this is between a month and 7yrs)
 genEMax ::
@@ -261,9 +261,9 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB, maxMajorPV} pp = do
     emptyPParamsUpdate
       & ppuMinFeeAL .~ fmap Coin minFeeA
       & ppuMinFeeBL .~ fmap Coin minFeeB
-      & ppuMaxBBSizeL .~ maxBBSize
+      & ppuMaxBBSizeL .~ (fromIntegral <$> maxBBSize)
       & ppuMaxTxSizeL .~ (fromIntegral <$> maxTxSize)
-      & ppuMaxBHSizeL .~ maxBHSize
+      & ppuMaxBHSizeL .~ (fromIntegral <$> maxBHSize)
       & ppuKeyDepositL .~ keyDeposit
       & ppuPoolDepositL .~ poolDeposit
       & ppuEMaxL .~ eMax

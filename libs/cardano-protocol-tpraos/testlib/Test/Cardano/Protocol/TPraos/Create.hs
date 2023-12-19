@@ -108,7 +108,7 @@ mkBHBody ::
   BlockNo ->
   Nonce ->
   OCert v ->
-  Natural ->
+  Word32 ->
   Hash v EraIndependentBlockBody ->
   BHBody v
 mkBHBody = mkBHBodyWithVRF (VRF.evalCertified ()) (VRF.evalCertified ())
@@ -127,7 +127,7 @@ mkBHBodyFakeVRF ::
   BlockNo ->
   Nonce ->
   OCert v ->
-  Natural ->
+  Word32 ->
   Hash v EraIndependentBlockBody ->
   BHBody v
 mkBHBodyFakeVRF (NatNonce bnonce) l =
@@ -157,7 +157,7 @@ mkBHBodyWithVRF ::
   BlockNo ->
   Nonce ->
   OCert c ->
-  Natural ->
+  Word32 ->
   Hash c EraIndependentBlockBody ->
   BHBody c
 mkBHBodyWithVRF mkVrfEta mkVrfL protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash =

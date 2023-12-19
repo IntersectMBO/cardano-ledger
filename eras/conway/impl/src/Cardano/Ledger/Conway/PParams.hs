@@ -103,7 +103,7 @@ import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
-import Data.Word (Word32)
+import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -418,11 +418,11 @@ data ConwayPParams f era = ConwayPParams
   -- ^ The linear factor for the minimum fee calculation
   , cppMinFeeB :: !(THKD 'EconomicGroup f Coin)
   -- ^ The constant factor for the minimum fee calculation
-  , cppMaxBBSize :: !(THKD 'NetworkGroup f Natural)
+  , cppMaxBBSize :: !(THKD 'NetworkGroup f Word32)
   -- ^ Maximal block body size
   , cppMaxTxSize :: !(THKD 'NetworkGroup f Word32)
   -- ^ Maximal transaction size
-  , cppMaxBHSize :: !(THKD 'NetworkGroup f Natural)
+  , cppMaxBHSize :: !(THKD 'NetworkGroup f Word16)
   -- ^ Maximal block header size
   , cppKeyDeposit :: !(THKD 'EconomicGroup f Coin)
   -- ^ The amount of a key registration deposit

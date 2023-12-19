@@ -91,7 +91,7 @@ import qualified Data.Sequence.Strict as SS
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
-import Data.Word (Word32, Word64)
+import Data.Word (Word16, Word32, Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Numeric.Natural (Natural)
@@ -1088,7 +1088,7 @@ maxBBSize p =
         p
         "maxBBSize"
         NaturalR
-        (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxBBSizeL)))
+        (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxBBSizeL . word32NaturalL)))
     )
 
 -- | Max Tx Size
@@ -1105,8 +1105,8 @@ maxTxSize p =
 word32NaturalL :: Lens' Word32 Natural
 word32NaturalL = lens fromIntegral (\_ y -> fromIntegral (toInteger y))
 
-naturalWord32L :: Lens' Natural Word32
-naturalWord32L = lens fromIntegral (\_ y -> fromIntegral (toInteger y))
+word16NaturalL :: Lens' Word16 Natural
+word16NaturalL = lens fromIntegral (\_ y -> fromIntegral (toInteger y))
 
 -- | Max Block Header Size
 maxBHSize :: Era era => Proof era -> Term era Natural
@@ -1116,7 +1116,7 @@ maxBHSize p =
         p
         "maxBHSize"
         NaturalR
-        (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxBHSizeL)))
+        (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxBHSizeL . word16NaturalL)))
     )
 
 poolDepAmt :: Era era => Proof era -> Term era Coin

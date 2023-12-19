@@ -5,7 +5,7 @@
         "extraEntropy": {
             "tag": "NeutralNonce"
         },
-        "maxBlockHeaderSize": 217569,
+        "maxBlockHeaderSize": 17569,
         "poolDeposit": 0,
         "minUTxOValue": 0,
         "minFeeB": 0,

@@ -149,7 +149,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (Proxy))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Word (Word32)
+import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks (..))
@@ -256,11 +256,11 @@ data AlonzoPParams f era = AlonzoPParams
   -- ^ The linear factor for the minimum fee calculation
   , appMinFeeB :: !(HKD f Coin)
   -- ^ The constant factor for the minimum fee calculation
-  , appMaxBBSize :: !(HKD f Natural)
+  , appMaxBBSize :: !(HKD f Word32)
   -- ^ Maximal block body size
   , appMaxTxSize :: !(HKD f Word32)
   -- ^ Maximal transaction size
-  , appMaxBHSize :: !(HKD f Natural)
+  , appMaxBHSize :: !(HKD f Word16)
   -- ^ Maximal block header size
   , appKeyDeposit :: !(HKD f Coin)
   -- ^ The amount of a key registration deposit

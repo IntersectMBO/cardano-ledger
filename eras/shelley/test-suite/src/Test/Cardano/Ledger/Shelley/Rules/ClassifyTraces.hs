@@ -304,7 +304,7 @@ onlyValidLedgerSignalsAreGenerated ::
   ) =>
   TestTree
 onlyValidLedgerSignalsAreGenerated =
-  TQC.testProperty "Only valid CHAIN STS signals are generated" prop
+  TQC.testProperty "Only valid Ledger STS signals are generated" prop
   where
     prop =
       withMaxSuccess 200 $
@@ -397,7 +397,7 @@ onlyValidChainSignalsAreGenerated =
           genesisChainSt
     p :: Proxy era
     p = Proxy
-    genesisChainSt = Just $ mkGenesisChainState (genEnv p defaultConstants)
+    genesisChainSt = Just (mkGenesisChainState (genEnv p defaultConstants))
 
 -- | Counts the epochs spanned by this trace
 epochsInTrace :: forall era. Era era => [Block (BHeader (EraCrypto era)) era] -> Int

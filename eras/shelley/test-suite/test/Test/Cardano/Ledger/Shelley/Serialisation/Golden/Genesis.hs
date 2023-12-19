@@ -100,7 +100,7 @@ golden_cbor_ShelleyGenesis =
         . TkInt 0
         . TkInt 239857
         . TkInt 2048
-        . TkInt 217569
+        . TkInt 17569
         . TkInt 0
         . TkInt 0
         . TkInt 0
@@ -210,7 +210,7 @@ exampleShelleyGenesis =
         emptyPParams @(ShelleyEra c)
           & ppDL .~ unsafeBoundRational (realToFrac (1.9e-2 :: Scientific))
           & ppMaxBBSizeL .~ 239857
-          & ppMaxBHSizeL .~ 217569
+          & ppMaxBHSizeL .~ 17569
     , sgGenDelegs = Map.fromList [(genesisVerKeyHash, genDelegPair)]
     , sgInitialFunds = LM.ListMap [(initialFundedAddress, initialFunds)]
     , sgStaking = staking
