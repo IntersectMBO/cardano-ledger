@@ -51,6 +51,7 @@ import Control.State.Transition.Extended (
   TransitionRule,
   failBecause,
   judgmentContext,
+  tellEvent,
   transitionRules,
   (?!),
  )
@@ -126,7 +127,11 @@ instance
         pure (2, ConwayCommitteeHasPreviouslyResigned keyH)
       k -> invalidKey k
 
-newtype ConwayGovCertEvent era = GovCertEvent (Event (EraRule "GOVCERT" era))
+data ConwayGovCertEvent c
+  = -- | Event indicating that a DRep is registrating
+    DRepRegistration !(Credential 'DRepRole c)
+  | -- | Event indicating that a DRep is unregistrating
+    DRepUnregistration !(Credential 'DRepRole c)
 
 instance
   ( ConwayEraPParams era
@@ -144,7 +149,7 @@ instance
   type Environment (ConwayGOVCERT era) = ConwayGovCertEnv era
   type BaseM (ConwayGOVCERT era) = ShelleyBase
   type PredicateFailure (ConwayGOVCERT era) = ConwayGovCertPredFailure era
-  type Event (ConwayGOVCERT era) = ConwayGovCertEvent era
+  type Event (ConwayGOVCERT era) = ConwayGovCertEvent (EraCrypto era)
 
   transitionRules = [conwayGovCertTransition @era]
 
@@ -163,6 +168,7 @@ conwayGovCertTransition = do
     ConwayRegDRep cred deposit mAnchor -> do
       Map.notMember cred vsDReps ?! ConwayDRepAlreadyRegistered cred
       deposit == ppDRepDeposit ?! ConwayDRepIncorrectDeposit deposit ppDRepDeposit
+      tellEvent $ DRepRegistration cred
       pure
         vState
           { vsDReps =
@@ -170,6 +176,7 @@ conwayGovCertTransition = do
           }
     ConwayUnRegDRep cred deposit -> do
       checkRegistrationAndDepositAgainstPaidDeposit vsDReps cred deposit
+      tellEvent $ DRepUnregistration cred
       pure vState {vsDReps = Map.delete cred vsDReps}
     ConwayAuthCommitteeHotKey coldCred hotCred ->
       checkAndOverwriteCommitteeHotCred vState coldCred $ Just hotCred

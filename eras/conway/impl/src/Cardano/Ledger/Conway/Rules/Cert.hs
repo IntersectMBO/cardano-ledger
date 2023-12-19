@@ -18,7 +18,7 @@
 module Cardano.Ledger.Conway.Rules.Cert (
   ConwayCERT,
   ConwayCertPredFailure (..),
-  ConwayCertEvent,
+  ConwayCertEvent (GovCertEvent),
   CertEnv (..),
 ) where
 
