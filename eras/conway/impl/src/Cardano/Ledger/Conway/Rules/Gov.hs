@@ -51,6 +51,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
+  GovActionPurpose (..),
   GovActionState (..),
   GovProcedures (..),
   PrevGovActionId (..),
@@ -66,7 +67,6 @@ import Cardano.Ledger.Conway.Governance (
   isCommitteeVotingAllowed,
   isDRepVotingAllowed,
   isStakePoolVotingAllowed,
-  proposalsActions,
   proposalsAddProposal,
   proposalsAddVote,
   proposalsGovActionStates,
@@ -92,15 +92,14 @@ import Control.State.Transition.Extended (
   TRC (..),
   TransitionRule,
   failBecause,
+  failOnJust,
   judgmentContext,
   liftSTS,
   tellEvent,
   (?!),
  )
-import qualified Data.Foldable as Fold (toList)
 import qualified Data.Map.Merge.Strict as Map (dropMissing, merge, zipWithMaybeMatched)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
 import qualified Data.OSet.Strict as OSet
 import Data.Pulse (foldlM')
 import qualified Data.Sequence.Strict as SSeq
@@ -146,16 +145,13 @@ data ConwayGovPredFailure era
       (Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
   | InvalidPrevGovActionId (ProposalProcedure era)
   | VotingOnExpiredGovAction (Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))
-  | ProposalsCantFollow
-      ( Map.Map
-          -- \| The Id of the GovAction being Proposed
-          (GovActionId (EraCrypto era))
-          -- \| Its protocol version
-          ( ProtVer
-          , -- \| The ProtVer of the Previous GovAction pointed to by the one proposed
-            ProtVer
-          )
-      )
+  | ProposalCantFollow
+      -- | The PrevGovActionId of the HardForkInitiation that fails
+      (StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
+      -- | Its protocol version
+      ProtVer
+      -- | The ProtVer of the Previous GovAction pointed to by the one proposed
+      ProtVer
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
@@ -174,7 +170,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     7 -> SumD ExpirationEpochTooSmall <! From
     8 -> SumD InvalidPrevGovActionId <! From
     9 -> SumD VotingOnExpiredGovAction <! From
-    10 -> SumD ProposalsCantFollow <! From
+    10 -> SumD ProposalCantFollow <! From <! From <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -198,9 +194,11 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum InvalidPrevGovActionId 8 !> To proposal
       VotingOnExpiredGovAction ga ->
         Sum VotingOnExpiredGovAction 9 !> To ga
-      ProposalsCantFollow themap ->
-        Sum ProposalsCantFollow 10
-          !> To themap
+      ProposalCantFollow prevgaid pv1 pv2 ->
+        Sum ProposalCantFollow 10
+          !> To prevgaid
+          !> To pv1
+          !> To pv2
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -315,9 +313,18 @@ govTransition = do
 
   expectedNetworkId <- liftSTS $ asks networkId
 
-  runTest $ checkProposalsHaveBadProtVer pp prevGovActionIds st
-
   let processProposal grs@GovRuleState {..} (idx, proposal@ProposalProcedure {..}) = do
+        let newGaid = GovActionId txid idx
+
+        -- In a HardFork, check that the ProtVer can follow
+        let badHardFork = do
+              (prevGaid, newProtVer, prevProtVer) <-
+                preceedingHardFork @era pProcGovAction pp prevGovActionIds st
+              if pvCanFollow prevProtVer newProtVer
+                then Nothing
+                else Just $ ProposalCantFollow @era prevGaid newProtVer prevProtVer
+        failOnJust badHardFork id
+
         -- PParamsUpdate well-formedness check
         runTest $ actionWellFormed pProcGovAction
 
@@ -358,7 +365,7 @@ govTransition = do
         let expiry = pp ^. ppGovActionLifetimeL
             actionState =
               mkGovActionState
-                (GovActionId txid idx)
+                newGaid
                 pProcDeposit
                 pProcReturnAddr
                 pProcGovAction
@@ -409,9 +416,10 @@ instance Inject (ConwayGovPredFailure era) (ConwayGovPredFailure era) where
 
 -- ================================================
 
--- | If the GovAction is a HardFork, then return 2 things (if they exist)
---   1) The proposed ProtVer
---   2) The ProtVer of the preceeding HardFork
+-- | If the GovAction is a HardFork, then return 3 things (if they exist)
+--   1) The (StrictMaybe PrevGovActionId), pointed to by the HardFork proposal
+--   2) The proposed ProtVer
+--   3) The ProtVer of the preceeding HardFork
 --   If it is not a HardFork, or the previous govActionId points to something other
 --   than  HardFork, return Nothing. It will be verified with another predicate check
 preceedingHardFork ::
@@ -420,41 +428,11 @@ preceedingHardFork ::
   PParams era ->
   PrevGovActionIds era ->
   Proposals era ->
-  Maybe (ProtVer, ProtVer)
+  Maybe (StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)), ProtVer, ProtVer)
 preceedingHardFork (HardForkInitiation mPrev newProtVer) pp pgaids ps
-  | mPrev == pgaHardFork pgaids = Just (newProtVer, pp ^. ppProtocolVersionL)
+  | mPrev == pgaHardFork pgaids = Just (mPrev, newProtVer, pp ^. ppProtocolVersionL)
   | otherwise = do
       SJust (PrevGovActionId prevGovActionId) <- Just mPrev
       HardForkInitiation _ prevProtVer <- gasAction <$> proposalsLookupId prevGovActionId ps
-      Just (newProtVer, prevProtVer)
+      Just (mPrev, newProtVer, prevProtVer)
 preceedingHardFork _ _ _ _ = Nothing
-
--- | If the GovAction part of the GovActionState is a HardFork, test that
---   it's ProtVer is legal. If it is not then return the data to make one
---   entry in the Map inside PredicateFailure 'ProposalsCantFollow'
-legalProtVer ::
-  EraPParams era =>
-  PParams era ->
-  PrevGovActionIds era ->
-  Proposals era ->
-  GovActionState era ->
-  Maybe (GovActionId (EraCrypto era), (ProtVer, ProtVer))
-legalProtVer pp pgaids ps gas = do
-  (newProtVer, prevProtVer) <- preceedingHardFork (gasAction gas) pp pgaids ps
-  if pvCanFollow prevProtVer newProtVer
-    then Nothing
-    else Just (gasId gas, (newProtVer, prevProtVer))
-
--- | Raise a Predicate failure if any of the proposals is a Hardfork,
---   and it does not have a legal ProtVer
-checkProposalsHaveBadProtVer ::
-  EraPParams era =>
-  PParams era ->
-  PrevGovActionIds era ->
-  Proposals era ->
-  Test (ConwayGovPredFailure era)
-checkProposalsHaveBadProtVer pp pgaids ps =
-  let invalidProposals =
-        mapMaybe (legalProtVer pp pgaids ps) $ Fold.toList (proposalsActions ps)
-   in failureUnless (null invalidProposals) $
-        ProposalsCantFollow (Map.fromList invalidProposals)

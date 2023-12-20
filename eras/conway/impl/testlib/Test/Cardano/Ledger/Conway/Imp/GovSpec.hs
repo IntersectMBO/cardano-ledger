@@ -12,10 +12,9 @@ module Test.Cardano.Ledger.Conway.Imp.GovSpec where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState (vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Keys (
@@ -45,6 +44,14 @@ spec ::
   SpecWith (ImpTestState era)
 spec =
   describe "GOV" $ do
+    describe "Hardfork is the first one (doesn't have a PrevGovActionId) " $ do
+      it "Hardfork minorFollow" (firstHardForkFollows minorFollow)
+      it "Hardfork majorFollow" (firstHardForkFollows majorFollow)
+      it "Hardfork cantFollow" firstHardForkCantFollow
+    describe "Hardfork is the second one (has a PrevGovActionId)" $ do
+      it "Hardfork minorFollow" (secondHardForkFollows minorFollow)
+      it "Hardfork majorFollow" (secondHardForkFollows majorFollow)
+      it "Hardfork cantFollow" secondHardForkCantFollow
     describe "Voting" $ do
       context "fails for" $ do
         it "expired gov-actions" $ do
@@ -494,3 +501,102 @@ setPParams = do
       & ppCommitteeMaxTermLengthL .~ 10
       & ppGovActionLifetimeL .~ 100
       & ppGovActionDepositL .~ Coin 123
+
+-- =========================================================
+-- Proposing a HardFork should always use a new ProtVer that
+-- can follow the one installed in the previous HardFork action.
+
+-- | A legal ProtVer that differs in the minor Version
+minorFollow :: ProtVer -> ProtVer
+minorFollow (ProtVer x y) = ProtVer x (y + 1)
+
+-- | A legal ProtVer that moves to the next major Version
+majorFollow :: ProtVer -> ProtVer
+majorFollow pv@(ProtVer x _) = case succVersion x of
+  Just x' -> ProtVer x' 0
+  Nothing -> error ("The last major version can't be incremented. " ++ show pv)
+
+-- | An illegal ProtVer that skips 3 minor versions
+cantFollow :: ProtVer -> ProtVer
+cantFollow (ProtVer x y) = ProtVer x (y + 3)
+
+-- | Tests the first hardfork in the Conway era where the PrevGovActionID is SNothing
+firstHardForkFollows ::
+  forall era.
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  (ProtVer -> ProtVer) ->
+  ImpTestM era ()
+firstHardForkFollows computeNewFromOld = do
+  protVer <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
+  submitGovAction_ $ HardForkInitiation SNothing (computeNewFromOld protVer)
+
+-- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SNothing
+firstHardForkCantFollow ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxBody era
+  , -- , GovState era ~ ConwayGovState era
+    Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  ImpTestM era ()
+firstHardForkCantFollow = do
+  rewardAccount <- registerRewardAccount
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  let protver0 = pp ^. ppProtocolVersionL
+      protver1 = minorFollow protver0
+      protver2 = cantFollow protver1
+  submitFailingProposal
+    ( ProposalProcedure
+        { pProcDeposit = pp ^. ppGovActionDepositL
+        , pProcReturnAddr = rewardAccount
+        , pProcGovAction = HardForkInitiation SNothing protver2
+        , pProcAnchor = def
+        }
+    )
+    [inject @(ConwayGovPredFailure era) (ProposalCantFollow SNothing protver2 protver0)]
+
+-- | Tests a second hardfork in the Conway era where the PrevGovActionID is SJust
+secondHardForkFollows ::
+  forall era.
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  (ProtVer -> ProtVer) ->
+  ImpTestM era ()
+secondHardForkFollows computeNewFromOld = do
+  protver0 <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
+  let protver1 = minorFollow protver0
+      protver2 = computeNewFromOld protver1
+  gaid1 <- submitGovAction $ HardForkInitiation SNothing protver1
+  submitGovAction_ $ HardForkInitiation (SJust (PrevGovActionId gaid1)) protver2
+
+-- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SJust
+secondHardForkCantFollow ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxBody era
+  , -- , GovState era ~ ConwayGovState era
+    Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  ImpTestM era ()
+secondHardForkCantFollow = do
+  rewardAccount <- registerRewardAccount
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  let protver0 = pp ^. ppProtocolVersionL
+      protver1 = minorFollow protver0
+      protver2 = cantFollow protver1
+  gaid1 <-
+    submitProposal $
+      ProposalProcedure
+        { pProcDeposit = pp ^. ppGovActionDepositL
+        , pProcReturnAddr = rewardAccount
+        , pProcGovAction = HardForkInitiation SNothing protver1
+        , pProcAnchor = def
+        }
+  submitFailingProposal
+    ( ProposalProcedure
+        { pProcDeposit = pp ^. ppGovActionDepositL
+        , pProcReturnAddr = rewardAccount
+        , pProcGovAction = HardForkInitiation (SJust (PrevGovActionId gaid1)) protver2
+        , pProcAnchor = def
+        }
+    )
+    [inject @(ConwayGovPredFailure era) (ProposalCantFollow (SJust (PrevGovActionId gaid1)) protver2 protver1)]
