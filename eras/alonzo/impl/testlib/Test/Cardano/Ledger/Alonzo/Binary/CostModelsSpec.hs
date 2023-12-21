@@ -4,20 +4,17 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (ToCBOR (..))
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding
 import Cardano.Ledger.Plutus.CostModels
 import Cardano.Ledger.Plutus.Language
 import qualified Data.Map as Map
-import Data.Proxy
 import Data.Text (Text)
 import Data.Word (Word8)
 import Lens.Micro
@@ -27,9 +24,9 @@ import Test.Cardano.Ledger.Common
 spec :: forall era. AlonzoEraPParams era => Spec
 spec = do
   describe "CBOR deserialization" $ do
-    validCostModelProp @era Proxy
-    invalidCostModelProp @era Proxy
-    unknownCostModelProp @era Proxy
+    validCostModelProp @era
+    invalidCostModelProp @era
+    unknownCostModelProp @era
   prop "applyPPUpdates" $ \valid validUpdate unknown unknownUpdate -> do
     let
       validExpected = mkCostModels (costModelsValid validUpdate <> costModelsValid valid)
@@ -51,12 +48,11 @@ spec = do
 validCostModelProp ::
   forall era.
   AlonzoEraPParams era =>
-  Proxy era ->
   Spec
-validCostModelProp pxy = do
+validCostModelProp = do
   prop "valid CostModels deserialize correctly, both independently and within PParamsUpdate" $
     \(lang :: Language) -> do
-      forAllShow (genValidCostModelEnc lang) (showEnc pxy) $
+      forAllShow (genValidCostModelEnc lang) (showEnc @era) $
         \validCmEnc -> do
           encodeAndCheckDecoded @era validCmEnc $
             \cmDecoded ppuDecoded -> do
@@ -71,12 +67,11 @@ validCostModelProp pxy = do
 invalidCostModelProp ::
   forall era.
   AlonzoEraPParams era =>
-  Proxy era ->
   Spec
-invalidCostModelProp pxy = do
+invalidCostModelProp = do
   prop "invalid CostModels fail within PParamsUpdate" $
     \(lang :: Language) -> do
-      forAllShow (genInvalidCostModelEnc lang) (showEnc pxy) $
+      forAllShow (genInvalidCostModelEnc lang) (showEnc @era) $
         \invalidCmEnc -> do
           encodeAndCheckDecoded @era invalidCmEnc $
             \cmDecoded ppuDecoded -> do
@@ -102,11 +97,10 @@ invalidCostModelProp pxy = do
 unknownCostModelProp ::
   forall era.
   AlonzoEraPParams era =>
-  Proxy era ->
   Spec
-unknownCostModelProp pxy = do
+unknownCostModelProp = do
   prop "unknown CostModels deserialize correctly within PParamsUpdate starting with Conway" $
-    forAllShow genUnknownCostModelEnc (showEnc pxy) $
+    forAllShow genUnknownCostModelEnc (showEnc @era) $
       \unknownCmEnc -> do
         encodeAndCheckDecoded @era unknownCmEnc $
           \cmDecoded ppuDecoded -> do
@@ -138,12 +132,7 @@ encodeAndCheckDecoded ::
   IO ()
 encodeAndCheckDecoded cmEnc check = do
   let ver = eraProtVerHigh @era
-      ppuEnc =
-        fromPlainEncoding
-          . toCBOR
-          . Map.singleton (18 :: Int)
-          . toPlainEncoding ver
-          $ cmEnc
+      ppuEnc = encCBOR (Map.singleton (18 :: Int) cmEnc)
       cmBytes = serialize ver cmEnc
       ppuBytes = serialize ver ppuEnc
   check
@@ -153,18 +142,17 @@ encodeAndCheckDecoded cmEnc check = do
 genCostModelsEnc :: Word8 -> Int -> Gen Encoding
 genCostModelsEnc lang count = do
   values <- vectorOf count (arbitrary :: Gen Int)
-  pure $ fromPlainEncoding . toCBOR $ Map.singleton lang values
+  pure $ encCBOR $ Map.singleton lang values
 
 genCostModelEncForLanguage :: Language -> Int -> Gen Encoding
-genCostModelEncForLanguage lang =
-  genCostModelsEnc (fromIntegral (fromEnum lang))
+genCostModelEncForLanguage = genCostModelsEnc . fromIntegral . fromEnum
 
 expectDeserialiseFailure :: (HasCallStack, Show t) => Either DecoderError t -> Maybe Text -> IO ()
 expectDeserialiseFailure e expectedTxt = do
   res <- expectLeft e
   res `shouldSatisfy` \case
     DecoderErrorDeserialiseFailure txt _ -> maybe True (== txt) expectedTxt
-    _ -> True
+    _ -> False
 
-showEnc :: forall era. Era era => Proxy era -> Encoding -> String
-showEnc _ enc = show $ toPlainEncoding (eraProtVerHigh @era) enc
+showEnc :: forall era. Era era => Encoding -> String
+showEnc enc = show $ toPlainEncoding (eraProtVerHigh @era) enc
