@@ -21,6 +21,9 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   alwaysFails,
   alwaysFailsLang,
   FlexibleCostModels (..),
+  genAlonzoScript,
+  genNativeScript,
+  genPlutusScript,
   genScripts,
   genValidCostModel,
   genValidAndUnknownCostModels,
@@ -213,11 +216,34 @@ instance
 instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => Arbitrary (AlonzoScript era) where
   arbitrary = do
     lang <- elements [minBound .. eraMaxLanguage @era]
-    frequency
-      [ (1, alwaysSucceedsLang lang <$> elements [1, 2, 3])
-      , (1, alwaysFailsLang lang <$> elements [1, 2, 3])
-      , (10, TimelockScript <$> arbitrary)
-      ]
+    genAlonzoScript lang
+
+genAlonzoScript ::
+  ( AlonzoEraScript era
+  , Script era ~ AlonzoScript era
+  ) =>
+  Language ->
+  Gen (AlonzoScript era)
+genAlonzoScript lang =
+  frequency
+    [ (2, genPlutusScript lang)
+    , (8, genNativeScript)
+    ]
+
+genNativeScript :: AlonzoEraScript era => Gen (AlonzoScript era)
+genNativeScript = TimelockScript <$> arbitrary
+
+genPlutusScript ::
+  ( AlonzoEraScript era
+  , Script era ~ AlonzoScript era
+  ) =>
+  Language ->
+  Gen (AlonzoScript era)
+genPlutusScript lang =
+  frequency
+    [ (5, alwaysSucceedsLang lang <$> elements [1, 2, 3])
+    , (5, alwaysFailsLang lang <$> elements [1, 2, 3])
+    ]
 
 instance Arbitrary (AlonzoPParams Identity era) where
   arbitrary =

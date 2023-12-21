@@ -60,6 +60,7 @@
 * Add `alwaysSucceedsLang` and `alwaysFailsLang`
 * Change `alwaysSucceeds` and `alwaysFails` to accept the language version at the type level.
 * Remove `genAlonzoScript`
+* Export `genAlonzoScript`, `genNativeScript`, `genPlutusScript` from Arbitrary
 
 ## 1.5.1.0
 
