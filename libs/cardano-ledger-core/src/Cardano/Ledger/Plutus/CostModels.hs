@@ -38,7 +38,7 @@ module Cardano.Ledger.Plutus.CostModels (
   costModelFromMap,
   decodeCostModelFailHard,
   CostModels (..),
-  PV1.CostModelApplyError (..),
+  P.CostModelApplyError (..),
 )
 where
 
@@ -50,6 +50,14 @@ import Cardano.Ledger.Binary (
   decodeMapByKey,
   encodeFoldableAsDefLenList,
   ifDecoderVersionAtLeast,
+ )
+import Cardano.Ledger.Binary.Coders (
+  Decode (..),
+  Encode (..),
+  decode,
+  encode,
+  (!>),
+  (<!),
  )
 import Cardano.Ledger.Binary.Version (natVersion)
 import Cardano.Ledger.Plutus.Language (Language (..), mkLanguageEnum, nonNativeLanguages)
@@ -68,14 +76,17 @@ import Data.Aeson.Key (fromString)
 import Data.Aeson.Types (Parser)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Text as T (Text)
+import Data.Text as T (Text, pack, unpack)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import PlutusLedgerApi.Common (CostModelApplyWarn, showParamName)
-import qualified PlutusLedgerApi.V1 as PV1 (
+import qualified PlutusLedgerApi.Common as P (
   CostModelApplyError (..),
+  CostModelApplyWarn,
   EvaluationContext,
+  showParamName,
+ )
+import qualified PlutusLedgerApi.V1 as PV1 (
   ParamName,
   mkEvaluationContext,
  )
@@ -83,14 +94,14 @@ import qualified PlutusLedgerApi.V2 as PV2 (ParamName, mkEvaluationContext)
 import qualified PlutusLedgerApi.V3 as PV3 (ParamName, mkEvaluationContext)
 
 -- | A language dependent cost model for the Plutus evaluator.
--- Note that the `PV1.EvaluationContext` is entirely dependent on the
+-- Note that the `P.EvaluationContext` is entirely dependent on the
 -- cost model parameters (ie the `Map` `Text` `Integer`) and that
 -- this type uses the smart constructor `mkCostModel`
 -- to hide the evaluation context.
 data CostModel = CostModel
   { cmLanguage :: !Language
   , cmValues :: ![Integer]
-  , cmEvalCtx :: !PV1.EvaluationContext
+  , cmEvalCtx :: !P.EvaluationContext
   }
   deriving (Generic)
 
@@ -155,7 +166,7 @@ costModelParamNames PlutusV1 = plutusV1ParamNames
 costModelParamNames lang = plutusVXParamNames lang
 
 -- | There is a difference in 6 parameter names between the ones appearing alonzo genesis
--- files and the values returned by plutus via `showParamName` on the `ParamName` enum.
+-- files and the values returned by plutus via `P.showParamName` on the `ParamName` enum.
 -- This listed is sorted in the order given by `ParamName` enum, so we can use it to sort
 -- the costmodel param values before passing them to plutus `mkEvaluationContext`.
 plutusV1ParamNames :: [Text]
@@ -174,9 +185,9 @@ plutusV1ParamNames =
         ]
 
 plutusVXParamNames :: Language -> [Text]
-plutusVXParamNames PlutusV1 = showParamName <$> [minBound .. maxBound :: PV1.ParamName]
-plutusVXParamNames PlutusV2 = showParamName <$> [minBound .. maxBound :: PV2.ParamName]
-plutusVXParamNames PlutusV3 = showParamName <$> [minBound .. maxBound :: PV3.ParamName]
+plutusVXParamNames PlutusV1 = P.showParamName <$> [minBound .. maxBound :: PV1.ParamName]
+plutusVXParamNames PlutusV2 = P.showParamName <$> [minBound .. maxBound :: PV2.ParamName]
+plutusVXParamNames PlutusV3 = P.showParamName <$> [minBound .. maxBound :: PV3.ParamName]
 
 validateCostModel :: MonadFail m => Language -> [Integer] -> m CostModel
 validateCostModel lang cmps =
@@ -186,7 +197,7 @@ validateCostModel lang cmps =
 
 -- | Convert cost model parameters to a cost model, making use of the
 --  conversion function mkEvaluationContext from the Plutus API.
-mkCostModel :: Language -> [Integer] -> Either PV1.CostModelApplyError CostModel
+mkCostModel :: Language -> [Integer] -> Either P.CostModelApplyError CostModel
 mkCostModel lang cm =
   case eCostModel of
     Right (evalCtx, _) -> Right (CostModel lang cm evalCtx)
@@ -197,7 +208,7 @@ mkCostModel lang cm =
         PlutusV1 -> PV1.mkEvaluationContext
         PlutusV2 -> PV2.mkEvaluationContext
         PlutusV3 -> PV3.mkEvaluationContext
-    eCostModel :: Either PV1.CostModelApplyError (PV1.EvaluationContext, [CostModelApplyWarn])
+    eCostModel :: Either P.CostModelApplyError (P.EvaluationContext, [P.CostModelApplyWarn])
     eCostModel = runWriterT (mkEvaluationContext cm)
 
 getCostModelLanguage :: CostModel -> Language
@@ -206,7 +217,7 @@ getCostModelLanguage (CostModel lang _ _) = lang
 getCostModelParams :: CostModel -> [Integer]
 getCostModelParams (CostModel _ cm _) = cm
 
-getCostModelEvaluationContext :: CostModel -> PV1.EvaluationContext
+getCostModelEvaluationContext :: CostModel -> P.EvaluationContext
 getCostModelEvaluationContext = cmEvalCtx
 
 decodeCostModelsCollectingErrors :: Decoder s CostModels
@@ -286,18 +297,47 @@ decodeCostModelFailHard lang = do
     Right cm -> pure cm
 {-# INLINEABLE decodeCostModelFailHard #-}
 
-getEvaluationContext :: CostModel -> PV1.EvaluationContext
+getEvaluationContext :: CostModel -> P.EvaluationContext
 getEvaluationContext (CostModel _ _ ec) = ec
 
 -- | See 'CostModels' for an explanation of how 'CostModelError' is used.
-newtype CostModelError = CostModelError PV1.CostModelApplyError
-  deriving stock (Show, Generic)
-
-instance Eq CostModelError where
-  CostModelError x1 == CostModelError x2 = show x1 == show x2
+newtype CostModelError = CostModelError P.CostModelApplyError
+  deriving stock (Eq, Show, Generic)
 
 instance Ord CostModelError where
-  CostModelError x1 <= CostModelError x2 = show x1 <= show x2
+  compare (CostModelError x1) (CostModelError x2) = comp x1 x2
+    where
+      comp (P.CMUnknownParamError err1) (P.CMUnknownParamError err2) = compare err1 err2
+      comp P.CMInternalReadError P.CMInternalReadError = EQ
+      comp (P.CMInternalWriteError err1) (P.CMInternalWriteError err2) = compare err1 err2
+      comp (P.CMTooFewParamsError e1 a1) (P.CMTooFewParamsError e2 a2) = compare e1 e2 <> compare a1 a2
+      comp cme1 cme2 = compare (tagOf cme1) (tagOf cme2)
+      tagOf :: P.CostModelApplyError -> Int
+      tagOf = \case
+        P.CMUnknownParamError {} -> 0
+        P.CMInternalReadError {} -> 1
+        P.CMInternalWriteError {} -> 2
+        P.CMTooFewParamsError {} -> 3
+
+instance EncCBOR CostModelError where
+  encCBOR =
+    encode . \case
+      CostModelError (P.CMUnknownParamError err) ->
+        Sum (CostModelError . P.CMUnknownParamError) 1 !> To err
+      CostModelError P.CMInternalReadError ->
+        Sum (CostModelError P.CMInternalReadError) 2
+      CostModelError (P.CMInternalWriteError err) ->
+        Sum (CostModelError . P.CMInternalWriteError . T.unpack) 3 !> To (T.pack err)
+      CostModelError (P.CMTooFewParamsError expected actual) ->
+        Sum (\e -> CostModelError . P.CMTooFewParamsError e) 4 !> To expected !> To actual
+
+instance DecCBOR CostModelError where
+  decCBOR = decode $ Summands "CostModelError" $ \case
+    1 -> SumD (CostModelError . P.CMUnknownParamError) <! From
+    2 -> SumD (CostModelError P.CMInternalReadError)
+    3 -> SumD (CostModelError . P.CMInternalWriteError . T.unpack) <! From
+    4 -> SumD (\e -> CostModelError . P.CMTooFewParamsError e) <! From <! From
+    n -> Invalid n
 
 instance NoThunks CostModelError
 
@@ -319,7 +359,7 @@ data CostModels = CostModels
   , costModelsErrors :: !(Map Language CostModelError)
   , costModelsUnknown :: !(Map Word8 [Integer])
   }
-  deriving stock (Eq, Show, Ord, Generic)
+  deriving stock (Eq, Ord, Show, Generic)
 
 emptyCostModels :: CostModels
 emptyCostModels = CostModels mempty mempty mempty

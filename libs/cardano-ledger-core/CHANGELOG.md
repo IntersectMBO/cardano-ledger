@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Fix `Eq`/`Ord` and add `EncCBOR`/`DecCBOR` instances for `CostModelError`
 * Re-export `Cardano.Ledger.Keys.Bootstrap` and `Cardano.Ledger.Keys.WitsVKey` from
   `Cardano.Ledger.Keys`
 * Add `unData`, `getCostModelEvaluationContext`
@@ -9,7 +10,7 @@
   * Make `PlutusWithContext` era agnostic, but Language aware. `pwcScript` can be either
     in decoded or binary format. `pwcProtocolVersion` was added too.
   * `debugPlutus`, `runPlutusScript`, `runPlutusScriptWithLogs` and
-      `explainPlutusEvaluationError` no longer accept `PrtoVer` as argument, since major
+      `explainPlutusEvaluationError` no longer accept `ProtVer` as argument, since major
       protocol version has been added to `PlutusWithContext`
   * Change constructor of `ScriptFailure` from `PlutusSF` to `ScriptFailure` and add
     record names: `scriptFailureMessage` and `scriptFailurePlutus`

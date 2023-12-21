@@ -96,6 +96,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
+import Cardano.Ledger.Plutus.CostModels (CostModelApplyError (..), CostModelError (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
@@ -759,3 +760,17 @@ instance Crypto c => Arbitrary (PoolCert c) where
       , RetirePool <$> arbitrary <*> arbitrary
       ]
   shrink = genericShrink
+
+------------------------------------------------------------------------------------------
+-- Cardano.Ledger.Plutus ----------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+instance Arbitrary CostModelError where
+  arbitrary =
+    CostModelError
+      <$> oneof
+        [ CMUnknownParamError <$> arbitrary
+        , pure CMInternalReadError
+        , CMInternalWriteError <$> arbitrary
+        , CMTooFewParamsError <$> arbitrary <*> arbitrary
+        ]
