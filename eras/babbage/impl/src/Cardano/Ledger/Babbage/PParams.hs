@@ -97,12 +97,15 @@ import Cardano.Ledger.Orphans ()
 import Cardano.Ledger.Shelley.PParams (emptyPPPUpdates)
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
-  FromJSON,
+  FromJSON (..),
   Key,
   KeyValue ((.=)),
   ToJSON (..),
   object,
   pairs,
+  withObject,
+  (.!=),
+  (.:),
  )
 import qualified Data.Aeson as Aeson (Value)
 import Data.Functor.Identity (Identity (..))
@@ -349,6 +352,33 @@ babbagePParamsPairs ::
   [a]
 babbagePParamsPairs pp =
   uncurry (.=) <$> babbagePParamsHKDPairs (Proxy @Identity) pp
+
+instance FromJSON (BabbagePParams Identity era) where
+  parseJSON =
+    withObject "PParams" $ \obj ->
+      BabbagePParams
+        <$> obj .: "minFeeA"
+        <*> obj .: "minFeeB"
+        <*> obj .: "maxBlockBodySize"
+        <*> obj .: "maxTxSize"
+        <*> obj .: "maxBlockHeaderSize"
+        <*> obj .: "keyDeposit"
+        <*> obj .: "poolDeposit"
+        <*> obj .: "eMax"
+        <*> obj .: "nOpt"
+        <*> obj .: "a0"
+        <*> obj .: "rho"
+        <*> obj .: "tau"
+        <*> obj .: "protocolVersion"
+        <*> obj .: "minPoolCost" .!= mempty
+        <*> obj .: "coinsPerUTxOByte"
+        <*> obj .: "costmdls"
+        <*> obj .: "prices"
+        <*> obj .: "maxTxExUnits"
+        <*> obj .: "maxBlockExUnits"
+        <*> obj .: "maxValSize"
+        <*> obj .: "collateralPercentage"
+        <*> obj .: "maxCollateralInputs"
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyBabbagePParams :: forall era. Era era => BabbagePParams Identity era
