@@ -769,15 +769,15 @@ instance Crypto c => ToJSON (ConwayPParams Identity (ConwayEra c)) where
   toJSON = object . conwayPParamsPairs
   toEncoding = pairs . mconcat . conwayPParamsPairs
 
--- TODO: Add protocolVersion to JSON output (of PParams, NOT PParamsUpdate) with
--- something like: [("protocolVersion", toJSON $ pp ^. ppProtocolVersionL)]
 conwayPParamsPairs ::
   forall era a e.
   (ConwayEraPParams era, KeyValue e a) =>
   PParamsHKD Identity era ->
   [a]
 conwayPParamsPairs pp =
-  uncurry (.=) <$> conwayPParamsHKDPairs (Proxy @Identity) pp
+  uncurry (.=)
+    <$> conwayPParamsHKDPairs (Proxy @Identity) pp
+      <> [("protocolVersion", toJSON $ PParams pp ^. ppProtocolVersionL)]
 
 instance Era era => FromJSON (ConwayPParams Identity era) where
   parseJSON =

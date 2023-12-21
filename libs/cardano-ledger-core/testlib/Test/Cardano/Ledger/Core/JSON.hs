@@ -1,5 +1,5 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Core.JSON (
@@ -10,7 +10,7 @@ module Test.Cardano.Ledger.Core.JSON (
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
 import Data.Function ((&))
 import Data.Typeable (Proxy (..), Typeable, typeRep)
-import Test.Cardano.Ledger.Common (Arbitrary, Property, Spec, counterexample, prop, property, (===))
+import Test.Cardano.Ledger.Common (Arbitrary, Property, Spec, counterexample, prop, property, shouldBe)
 
 -- | QuickCheck property spec that uses `roundTripProperty`
 roundTripEraSpec ::
@@ -34,6 +34,5 @@ roundTripProperty original = do
       property False
         & counterexample ("failed: " <> err)
     Right result ->
-      result === original
-        & counterexample ("after:  " <> show result)
-        & counterexample ("before: " <> show original)
+      property (result `shouldBe` original)
+        & counterexample ("encoded: " <> show encoded)
