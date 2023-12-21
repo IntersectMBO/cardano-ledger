@@ -929,7 +929,9 @@ conwayPParamsHKDPairs ::
   Proxy f ->
   PParamsHKD f era ->
   [(Key, HKD f Aeson.Value)]
-conwayPParamsHKDPairs px pp = babbagePParamsHKDPairs px pp <> conwayUpgradePParamsHKDPairs px pp
+conwayPParamsHKDPairs px pp =
+  babbageCommonPParamsHKDPairs px pp
+    <> conwayUpgradePParamsHKDPairs px pp
 
 conwayUpgradePParamsHKDPairs ::
   forall era f.

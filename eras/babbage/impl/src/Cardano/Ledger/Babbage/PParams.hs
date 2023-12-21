@@ -36,6 +36,7 @@ module Cardano.Ledger.Babbage.PParams (
   coinsPerUTxOWordToCoinsPerUTxOByte,
   coinsPerUTxOByteToCoinsPerUTxOWord,
   babbagePParamsHKDPairs,
+  babbageCommonPParamsHKDPairs,
 )
 where
 
@@ -94,7 +95,7 @@ import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
-import Cardano.Ledger.Shelley.PParams (emptyPPPUpdates)
+import Cardano.Ledger.Shelley.PParams (emptyPPPUpdates, shelleyCommonPParamsHKDPairsV8)
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   FromJSON (..),
@@ -347,7 +348,7 @@ instance
 
 babbagePParamsPairs ::
   forall era a e.
-  (BabbageEraPParams era, KeyValue e a) =>
+  (BabbageEraPParams era, KeyValue e a, ProtVerAtMost era 8) =>
   PParamsHKD Identity era ->
   [a]
 babbagePParamsPairs pp =
@@ -524,7 +525,7 @@ instance
 
 babbagePParamsUpdatePairs ::
   forall era a e.
-  (BabbageEraPParams era, KeyValue e a) =>
+  (BabbageEraPParams era, KeyValue e a, ProtVerAtMost era 8) =>
   PParamsHKD StrictMaybe era ->
   [a]
 babbagePParamsUpdatePairs pp =
@@ -534,13 +535,24 @@ babbagePParamsUpdatePairs pp =
 
 babbagePParamsHKDPairs ::
   forall era f.
-  (BabbageEraPParams era, HKDFunctor f) =>
+  (BabbageEraPParams era, HKDFunctor f, ProtVerAtMost era 8) =>
   Proxy f ->
   PParamsHKD f era ->
   [(Key, HKD f Aeson.Value)]
 babbagePParamsHKDPairs px pp =
+  babbageCommonPParamsHKDPairs px pp
+    <> shelleyCommonPParamsHKDPairsV8 px pp -- for "protocolVersion"
+
+-- | These are the fields that are common across all eras starting with Babbage.
+babbageCommonPParamsHKDPairs ::
+  forall era f.
+  (BabbageEraPParams era, HKDFunctor f) =>
+  Proxy f ->
+  PParamsHKD f era ->
+  [(Key, HKD f Aeson.Value)]
+babbageCommonPParamsHKDPairs px pp =
   alonzoCommonPParamsHKDPairs px pp
-    ++ [("coinsPerUTxOByte", hkdMap px (toJSON @CoinPerByte) (pp ^. hkdCoinsPerUTxOByteL @_ @f))]
+    <> [("coinsPerUTxOByte", hkdMap px (toJSON @CoinPerByte) (pp ^. hkdCoinsPerUTxOByteL @_ @f))]
 
 upgradeBabbagePParams ::
   forall f c.
