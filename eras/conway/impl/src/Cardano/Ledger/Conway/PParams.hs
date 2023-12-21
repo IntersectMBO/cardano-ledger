@@ -206,6 +206,15 @@ instance ToJSON PoolVotingThresholds where
           , ("hardForkInitiation", toJSON pvtHardForkInitiation)
           ]
 
+instance FromJSON PoolVotingThresholds where
+  parseJSON =
+    withObject "PoolVotingThresholds" $ \o ->
+      PoolVotingThresholds
+        <$> o .: "motionNoConfidence"
+        <*> o .: "committeeNormal"
+        <*> o .: "committeeNoConfidence"
+        <*> o .: "hardForkInitiation"
+
 instance EncCBOR PoolVotingThresholds where
   encCBOR PoolVotingThresholds {..} =
     encodeListLen 4
@@ -260,6 +269,21 @@ instance ToJSON DRepVotingThresholds where
           , ("ppGovGroup", toJSON dvtPPGovGroup)
           , ("treasuryWithdrawal", toJSON dvtTreasuryWithdrawal)
           ]
+
+instance FromJSON DRepVotingThresholds where
+  parseJSON =
+    withObject "DRepVotingThresholds" $ \o ->
+      DRepVotingThresholds
+        <$> o .: "motionNoConfidence"
+        <*> o .: "committeeNormal"
+        <*> o .: "committeeNoConfidence"
+        <*> o .: "updateToConstitution"
+        <*> o .: "hardForkInitiation"
+        <*> o .: "ppNetworkGroup"
+        <*> o .: "ppEconomicGroup"
+        <*> o .: "ppTechnicalGroup"
+        <*> o .: "ppGovGroup"
+        <*> o .: "treasuryWithdrawal"
 
 dvtPPNetworkGroupL :: Lens' DRepVotingThresholds UnitInterval
 dvtPPNetworkGroupL = lens dvtPPNetworkGroup (\x y -> x {dvtPPNetworkGroup = y})
@@ -337,6 +361,12 @@ instance Ord (HKD f a) => Ord (THKD t f a) where
 instance Show (HKD f a) => Show (THKD t f a) where
   show = show . unTHKD
 
+instance Semigroup (HKD f a) => Semigroup (THKD t f a) where
+  a <> b = THKD $ unTHKD a <> unTHKD b
+
+instance Monoid (HKD f a) => Monoid (THKD t f a) where
+  mempty = THKD mempty
+
 instance NoThunks (HKD f a) => NoThunks (THKD t f a) where
   noThunks ctx = noThunks ctx . unTHKD
   wNoThunks ctx = wNoThunks ctx . unTHKD
@@ -356,6 +386,18 @@ instance (Typeable t, EncCBOR a) => EncCBOR (THKD t StrictMaybe a) where
 
 instance (Typeable t, DecCBOR a) => DecCBOR (THKD t StrictMaybe a) where
   decCBOR = THKD <$> decCBOR
+
+instance (Typeable t, ToJSON a) => ToJSON (THKD t Identity a) where
+  toJSON = toJSON . unTHKD
+
+instance (Typeable t, FromJSON a) => FromJSON (THKD t Identity a) where
+  parseJSON = fmap THKD . parseJSON
+
+instance (Typeable t, ToJSON a) => ToJSON (THKD t StrictMaybe a) where
+  toJSON = toJSON . unTHKD
+
+instance (Typeable t, FromJSON a) => FromJSON (THKD t StrictMaybe a) where
+  parseJSON = fmap THKD . parseJSON
 
 ppGroup :: forall t a. ToPPGroup t => THKD t StrictMaybe a -> Set PPGroup
 ppGroup = \case
@@ -727,6 +769,8 @@ instance Crypto c => ToJSON (ConwayPParams Identity (ConwayEra c)) where
   toJSON = object . conwayPParamsPairs
   toEncoding = pairs . mconcat . conwayPParamsPairs
 
+-- TODO: Add protocolVersion to JSON output (of PParams, NOT PParamsUpdate) with
+-- something like: [("protocolVersion", toJSON $ pp ^. ppProtocolVersionL)]
 conwayPParamsPairs ::
   forall era a e.
   (ConwayEraPParams era, KeyValue e a) =>
@@ -734,6 +778,41 @@ conwayPParamsPairs ::
   [a]
 conwayPParamsPairs pp =
   uncurry (.=) <$> conwayPParamsHKDPairs (Proxy @Identity) pp
+
+instance Era era => FromJSON (ConwayPParams Identity era) where
+  parseJSON =
+    withObject "PParams" $ \obj ->
+      ConwayPParams
+        <$> obj .: "minFeeA"
+        <*> obj .: "minFeeB"
+        <*> obj .: "maxBlockBodySize"
+        <*> obj .: "maxTxSize"
+        <*> obj .: "maxBlockHeaderSize"
+        <*> obj .: "keyDeposit"
+        <*> obj .: "poolDeposit"
+        <*> obj .: "eMax"
+        <*> obj .: "nOpt"
+        <*> obj .: "a0"
+        <*> obj .: "rho"
+        <*> obj .: "tau"
+        <*> obj .: "protocolVersion"
+        <*> obj .: "minPoolCost" .!= mempty
+        <*> obj .: "coinsPerUTxOByte"
+        <*> obj .: "costmdls"
+        <*> obj .: "prices"
+        <*> obj .: "maxTxExUnits"
+        <*> obj .: "maxBlockExUnits"
+        <*> obj .: "maxValSize"
+        <*> obj .: "collateralPercentage"
+        <*> obj .: "maxCollateralInputs"
+        <*> obj .: "poolVotingThresholds"
+        <*> obj .: "dRepVotingThresholds"
+        <*> obj .: "committeeMinSize"
+        <*> obj .: "committeeMaxTermLength"
+        <*> obj .: "govActionLifetime"
+        <*> obj .: "govActionDeposit"
+        <*> obj .: "dRepDeposit"
+        <*> obj .: "dRepActivity"
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyConwayPParams :: forall era. Era era => ConwayPParams Identity era
@@ -969,10 +1048,6 @@ upgradeConwayPParamsHKDPairs UpgradeConwayPParams {..} =
   , ("dRepDeposit", (toJSON @Coin) ucppDRepDeposit)
   , ("dRepActivity", (toJSON @EpochInterval) ucppDRepActivity)
   ]
-
-instance FromJSON PoolVotingThresholds
-
-instance FromJSON DRepVotingThresholds
 
 instance FromJSON (UpgradeConwayPParams Identity) where
   parseJSON =
