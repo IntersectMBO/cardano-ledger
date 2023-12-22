@@ -809,11 +809,8 @@ instance Arbitrary ExUnits where
 instance Arbitrary Prices where
   arbitrary = Prices <$> arbitrary <*> arbitrary
 
-genCostModel :: Language -> Gen (Language, CostModel)
-genCostModel lang = (,) lang <$> genValidCostModel lang
-
 instance Arbitrary CostModel where
-  arbitrary = snd <$> (elements nonNativeLanguages >>= genCostModel)
+  arbitrary = elements nonNativeLanguages >>= genValidCostModel
 
 genValidCostModel :: Language -> Gen CostModel
 genValidCostModel lang = do

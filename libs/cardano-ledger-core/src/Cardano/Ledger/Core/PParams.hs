@@ -230,6 +230,7 @@ class
   , FromCBOR (PParamsHKD Identity era)
   , NoThunks (PParamsHKD Identity era)
   , ToJSON (PParamsHKD Identity era)
+  , FromJSON (PParamsHKD Identity era)
   , Eq (PParamsHKD StrictMaybe era)
   , Ord (PParamsHKD StrictMaybe era)
   , Show (PParamsHKD StrictMaybe era)

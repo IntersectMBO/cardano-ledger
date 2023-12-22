@@ -17,15 +17,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Plutus.CostModels (
   -- * Cost Model
   CostModel,
   CostModelError (..),
-  decodeValidAndUnknownCostModels,
-  emptyCostModels,
-  updateCostModels,
+  P.CostModelApplyError (..),
   mkCostModel,
   mkCostModelsLenient,
   encodeCostModel,
@@ -38,13 +35,17 @@ module Cardano.Ledger.Plutus.CostModels (
   costModelFromMap,
   costModelParamsCount,
   decodeCostModelFailHard,
+
+  -- * Cost Models
   CostModels,
   mkCostModels,
+  emptyCostModels,
+  updateCostModels,
+  decodeValidAndUnknownCostModels,
   costModelsValid,
   costModelsErrors,
   costModelsUnknown,
-  flattenCostModel,
-  P.CostModelApplyError (..),
+  flattenCostModels,
 )
 where
 
@@ -338,20 +339,20 @@ instance EncCBOR CostModelError where
   encCBOR =
     encode . \case
       CostModelError (P.CMUnknownParamError err) ->
-        Sum (CostModelError . P.CMUnknownParamError) 1 !> To err
+        Sum (CostModelError . P.CMUnknownParamError) 0 !> To err
       CostModelError P.CMInternalReadError ->
-        Sum (CostModelError P.CMInternalReadError) 2
+        Sum (CostModelError P.CMInternalReadError) 1
       CostModelError (P.CMInternalWriteError err) ->
-        Sum (CostModelError . P.CMInternalWriteError . T.unpack) 3 !> To (T.pack err)
+        Sum (CostModelError . P.CMInternalWriteError . T.unpack) 2 !> To (T.pack err)
       CostModelError (P.CMTooFewParamsError expected actual) ->
-        Sum (\e -> CostModelError . P.CMTooFewParamsError e) 4 !> To expected !> To actual
+        Sum (\e -> CostModelError . P.CMTooFewParamsError e) 3 !> To expected !> To actual
 
 instance DecCBOR CostModelError where
   decCBOR = decode $ Summands "CostModelError" $ \case
-    1 -> SumD (CostModelError . P.CMUnknownParamError) <! From
-    2 -> SumD (CostModelError P.CMInternalReadError)
-    3 -> SumD (CostModelError . P.CMInternalWriteError . T.unpack) <! From
-    4 -> SumD (\e -> CostModelError . P.CMTooFewParamsError e) <! From <! From
+    0 -> SumD (CostModelError . P.CMUnknownParamError) <! From
+    1 -> SumD (CostModelError P.CMInternalReadError)
+    2 -> SumD (CostModelError . P.CMInternalWriteError . T.unpack) <! From
+    3 -> SumD (\e -> CostModelError . P.CMTooFewParamsError e) <! From <! From
     n -> Invalid n
 
 instance ToJSON CostModelError where
@@ -451,8 +452,8 @@ mkCostModelsLenient = Map.foldrWithKey addRawCostModel (CostModels mempty mempty
 -- cost model values, with no distinction between valid and invalid cost models.
 -- This is used for serialization, so that judgements about validity can be made
 -- upon deserialization.
-flattenCostModel :: CostModels -> Map Word8 [Integer]
-flattenCostModel (CostModels validCMs _ invalidCMs) =
+flattenCostModels :: CostModels -> Map Word8 [Integer]
+flattenCostModels (CostModels validCMs _ invalidCMs) =
   Map.foldrWithKey (\lang cm -> Map.insert (languageToWord8 lang) (cmValues cm)) invalidCMs validCMs
 
 languageToWord8 :: Language -> Word8
@@ -473,7 +474,7 @@ instance DecCBOR CostModels where
   {-# INLINE decCBOR #-}
 
 instance EncCBOR CostModels where
-  encCBOR = encCBOR . flattenCostModel
+  encCBOR = encCBOR . flattenCostModels
 
 instance ToJSON CostModel where
   toJSON = toJSON . getCostModelParams
@@ -483,7 +484,10 @@ instance ToJSON CostModels where
     where
       jsonMap toKey = Map.mapKeys toKey . Map.map toJSON
       jsonValid = jsonMap languageToText $ costModelsValid cms
-      jsonErrors = jsonMap languageToText $ costModelsErrors cms
+      jsonErrors
+        | null (costModelsErrors cms) = mempty
+        | otherwise =
+            Map.singleton "Errors" $ toJSON $ jsonMap languageToText $ costModelsErrors cms
       jsonUnknown
         | null (costModelsUnknown cms) = mempty
         | otherwise =

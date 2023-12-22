@@ -42,7 +42,7 @@ import qualified PlutusLedgerApi.Test.V2.EvaluationContext as PV2
 import qualified PlutusLedgerApi.Test.V3.EvaluationContext as PV3
 import PlutusLedgerApi.V1 as PV1
 
--- | Construct a test cost model where all paramters are set to the same value
+-- | Construct a test cost model where all parameters are set to the same value
 mkCostModelConst :: HasCallStack => Language -> Integer -> CostModel
 mkCostModelConst lang x =
   case lang of

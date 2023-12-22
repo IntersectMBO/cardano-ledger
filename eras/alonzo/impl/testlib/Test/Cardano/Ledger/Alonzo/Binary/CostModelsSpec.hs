@@ -34,9 +34,9 @@ spec = do
     let
       validExpected = mkCostModels (costModelsValid validUpdate <> costModelsValid valid)
       unknownExpected = unknownUpdate <> unknown
-      original = mkCostModelsLenient (flattenCostModel valid <> unknown)
-      update = mkCostModelsLenient (flattenCostModel validUpdate <> unknownUpdate)
-      expected = mkCostModelsLenient (flattenCostModel validExpected <> unknownExpected)
+      original = mkCostModelsLenient (flattenCostModels valid <> unknown)
+      update = mkCostModelsLenient (flattenCostModels validUpdate <> unknownUpdate)
+      expected = mkCostModelsLenient (flattenCostModels validExpected <> unknownExpected)
       pp =
         emptyPParams & ppCostModelsL .~ original
       ppUpdate =

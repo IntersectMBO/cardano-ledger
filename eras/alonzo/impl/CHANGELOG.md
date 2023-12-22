@@ -54,6 +54,7 @@
 ### `testlib`
 
 * Remove `Test.Cardano.Ledger.Alonzo.CostModel` in favor of `Test.Cardano.Ledger.Plutus`
+* Move `costModelParamsCount` to `Cardano.Ledger.Plutus.CostModels`
 * Add `mkPlutusScript'`
 * Add `alwaysSucceedsLang` and `alwaysFailsLang`
 * Change `alwaysSucceeds` and `alwaysFails` to accept the language version at the type level.

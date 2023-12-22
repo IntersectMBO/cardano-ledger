@@ -2,12 +2,14 @@
 
 ## 1.10.0.0
 
+* Fix `ToJSON`/`FromJSON` for `CostModels`. Make sure that `CostModels` can roundtrip
+  through JSON. Also report `CostModels` failures in JSON.
 * Add `costModelParamsCount`
 * Move Plutus related `Arbitrary` instances: `ExUnits`, `CostModels`,
   `FlexibleCostModels`, `CostModel`, `Prices`, `Language`
 * Add `Cardano.Ledger.Plutus` that re-exports all plutus related functionality
 * Add `Semigroup` and `Monoid` instances for `CostModels`
-* Add `mkCostModels` and expose `flattenCostModel`
+* Add `mkCostModels` and expose `flattenCostModels`
 * Stop exporting `CostModels` constructor in order to improve safety.
 * Fix `Eq`/`Ord` and add `EncCBOR`/`DecCBOR` instances for `CostModelError`
 * Re-export `Cardano.Ledger.Keys.Bootstrap` and `Cardano.Ledger.Keys.WitsVKey` from
@@ -53,6 +55,8 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Core.JSON` with `roundTripJsonSpec`, `roundTripJsonEraSpec` and
+  `roundTripJsonProperty`
 * Add `zeroTestingCostModel` and `zeroTestingCostModels`
 * Add `mkCostModelConst`
 * Add `diffExprCompact`

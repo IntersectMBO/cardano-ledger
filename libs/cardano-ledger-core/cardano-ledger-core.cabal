@@ -161,6 +161,7 @@ library testlib
 
     build-depends:
         aeson,
+        aeson-pretty,
         base,
         binary,
         bytestring,
@@ -200,6 +201,7 @@ test-suite tests
         Test.Cardano.Ledger.AddressSpec
         Test.Cardano.Ledger.BaseTypesSpec
         Test.Cardano.Ledger.BinarySpec
+        Test.Cardano.Ledger.JsonSpec
         Test.Cardano.Ledger.PlutusSpec
         Test.Cardano.Ledger.UMapSpec
 
