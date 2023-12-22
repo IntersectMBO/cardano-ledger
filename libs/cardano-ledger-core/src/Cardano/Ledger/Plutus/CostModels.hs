@@ -36,6 +36,7 @@ module Cardano.Ledger.Plutus.CostModels (
   costModelParamNames,
   costModelToMap,
   costModelFromMap,
+  costModelParamsCount,
   decodeCostModelFailHard,
   CostModels,
   mkCostModels,
@@ -259,6 +260,12 @@ decodeCostModels =
     decodeCostModelsFailingOnError
 {-# INLINEABLE decodeCostModels #-}
 
+-- | Number of parameters in a CostModel for a specific language
+costModelParamsCount :: Language -> Int
+costModelParamsCount PlutusV1 = 166
+costModelParamsCount PlutusV2 = 175
+costModelParamsCount PlutusV3 = 223
+
 -- | Prior to version 9, each 'CostModel' was expected to be serialized as
 -- an array of integers of a specific length (depending on the version of Plutus).
 -- Starting in version 9, we allow the decoders to accept lists longer than what they
@@ -271,17 +278,11 @@ decodeCostModels =
 --
 -- See https://github.com/intersectmbo/cardano-ledger/issues/2902
 -- and https://github.com/intersectmbo/cardano-ledger/blob/master/docs/adr/2022-12-05_006-cost-model-serialization.md
-legacyCostModelLength :: Language -> Int
-legacyCostModelLength PlutusV1 = 166
-legacyCostModelLength PlutusV2 = 175
-legacyCostModelLength PlutusV3 = 223
-
--- | See the note for 'legacyCostModelLength'.
 legacyDecodeCostModel :: Language -> Decoder s CostModel
 legacyDecodeCostModel lang = do
   values <- decCBOR
   let numValues = length values
-      expectedNumValues = legacyCostModelLength lang
+      expectedNumValues = costModelParamsCount lang
   when (numValues /= expectedNumValues) $
     fail $
       "Expected array with "
@@ -366,6 +367,12 @@ data CostModels = CostModels
   }
   deriving stock (Eq, Ord, Show, Generic)
 
+instance Semigroup CostModels where
+  (<>) = updateCostModels
+
+instance Monoid CostModels where
+  mempty = emptyCostModels
+
 costModelsValid :: CostModels -> Map Language CostModel
 costModelsValid = _costModelsValid
 
@@ -378,10 +385,16 @@ costModelsUnknown = _costModelsUnknown
 emptyCostModels :: CostModels
 emptyCostModels = CostModels mempty mempty mempty
 
--- | Updates the first @CostModels@ with the second one so that only the cost models that
--- are present in the second one get updated while all the others stay unchanged. Language
--- specific errors are removed, whenever a valid CostModel for the language is updated.
-updateCostModels :: CostModels -> CostModels -> CostModels
+-- | Updates the first @`CostModels`@ with the second one, so that only the cost models
+-- that are present in the second one get updated while all the others stay
+-- unchanged. Language specific errors and unknown cost models are removed, whenever a
+-- valid `CostModel` for the language is supplied in the update.
+updateCostModels ::
+  -- | Old CostModels that will be overwritten
+  CostModels ->
+  -- | New CostModels that will overwrite
+  CostModels ->
+  CostModels
 updateCostModels (CostModels oldValid oldErrors oldUnk) (CostModels modValid modErrors modUnk) =
   CostModels
     newValid

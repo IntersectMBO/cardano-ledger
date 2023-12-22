@@ -49,7 +49,6 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Paths_cardano_ledger_alonzo_test
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
-import Test.Cardano.Ledger.Alonzo.CostModel (freeV1V2CostModels)
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Cardano.Ledger.Mary.Golden (
@@ -61,6 +60,7 @@ import Test.Cardano.Ledger.Mary.Golden (
   smallName,
   smallestName,
  )
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (aliceAddr, bobAddr, carlAddr)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Tasty (TestTree, testGroup)
@@ -274,7 +274,7 @@ fromRightError errorMsg =
 exPP :: PParams Alonzo
 exPP =
   emptyPParams
-    & ppCostModelsL .~ freeV1V2CostModels
+    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1, PlutusV2]
 
 exampleLangDepViewPV1 :: LangDepView
 exampleLangDepViewPV1 = LangDepView b1 b2

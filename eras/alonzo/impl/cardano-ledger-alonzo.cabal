@@ -100,7 +100,6 @@ library testlib
         Test.Cardano.Ledger.Alonzo.Binary.Cddl
         Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec
         Test.Cardano.Ledger.Alonzo.Binary.RoundTrip
-        Test.Cardano.Ledger.Alonzo.CostModel
         Test.Cardano.Ledger.Alonzo.ImpTest
         Test.Cardano.Ledger.Alonzo.TreeDiff
 

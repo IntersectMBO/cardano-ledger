@@ -81,7 +81,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   alwaysFailsHash,
@@ -112,6 +111,7 @@ import Test.Cardano.Ledger.Generic.Scriptic (
   matchkey,
  )
 import Test.Cardano.Ledger.Generic.Updaters
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
   mkKeyPair,
@@ -716,7 +716,7 @@ hashsize = fromIntegral $ sizeHash ([] @(CC.HASH c))
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls freeV1CostModels
+  [ Costmdls $ zeroTestingCostModels [PlutusV1]
   , MaxValSize 1000000000
   , MaxTxExUnits $ ExUnits 1000000 1000000
   , MaxBlockExUnits $ ExUnits 1000000 1000000

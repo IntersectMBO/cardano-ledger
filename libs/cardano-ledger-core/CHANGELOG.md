@@ -2,6 +2,11 @@
 
 ## 1.10.0.0
 
+* Add `costModelParamsCount`
+* Move Plutus related `Arbitrary` instances: `ExUnits`, `CostModels`,
+  `FlexibleCostModels`, `CostModel`, `Prices`, `Language`
+* Add `Cardano.Ledger.Plutus` that re-exports all plutus related functionality
+* Add `Semigroup` and `Monoid` instances for `CostModels`
 * Add `mkCostModels` and expose `flattenCostModel`
 * Stop exporting `CostModels` constructor in order to improve safety.
 * Fix `Eq`/`Ord` and add `EncCBOR`/`DecCBOR` instances for `CostModelError`
@@ -48,6 +53,7 @@
 
 ### `testlib`
 
+* Add `zeroTestingCostModel` and `zeroTestingCostModels`
 * Add `mkCostModelConst`
 * Add `diffExprCompact`
 * Add `expectLeftDeep_`, `expectRightDeep_`

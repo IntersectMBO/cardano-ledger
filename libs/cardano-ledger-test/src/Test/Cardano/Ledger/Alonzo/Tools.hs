@@ -40,7 +40,6 @@ import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
@@ -54,6 +53,7 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
 import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo, Babbage))
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic, always)
 import Test.Cardano.Ledger.Generic.Updaters
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
@@ -291,7 +291,7 @@ failLeft err (Left e) = err (show e)
 testPParams :: forall era. AlonzoEraPParams era => PParams era
 testPParams =
   emptyPParams
-    & ppCostModelsL .~ freeV1CostModels
+    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1]
     & ppMaxValSizeL .~ 1000000000
     & ppMaxTxExUnitsL .~ ExUnits 100000000 100000000
     & ppMaxBlockExUnitsL .~ ExUnits 100000000 100000000

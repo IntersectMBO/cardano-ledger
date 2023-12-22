@@ -51,9 +51,9 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
-import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels, freeV1V2CostModels)
 import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Proof
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 
 -- ===========================================================================
 -- Upaters and the use of Policy to specify Merge Semantics and use of [t] as inputs.
@@ -432,9 +432,9 @@ defaultCostModels :: Proof era -> PParamsField era
 defaultCostModels (Shelley _) = Costmdls emptyCostModels
 defaultCostModels (Allegra _) = Costmdls emptyCostModels
 defaultCostModels (Mary _) = Costmdls emptyCostModels
-defaultCostModels (Alonzo _) = Costmdls freeV1CostModels
-defaultCostModels (Babbage _) = Costmdls freeV1V2CostModels
-defaultCostModels (Conway _) = Costmdls freeV1V2CostModels
+defaultCostModels (Alonzo _) = Costmdls $ zeroTestingCostModels [PlutusV1]
+defaultCostModels (Babbage _) = Costmdls $ zeroTestingCostModels [PlutusV1, PlutusV2]
+defaultCostModels (Conway _) = Costmdls $ zeroTestingCostModels [PlutusV1, PlutusV2]
 
 languages :: Proof era -> [Language]
 languages (Shelley _) = []

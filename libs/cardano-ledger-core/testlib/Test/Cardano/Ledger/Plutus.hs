@@ -16,10 +16,21 @@ module Test.Cardano.Ledger.Plutus (
   testingCostModelV2,
   testingCostModelV3,
   testingEvaluationContext,
+
+  -- * CostModels
+  testingCostModels,
+  zeroTestingCostModels,
 ) where
 
-import Cardano.Ledger.Plutus.CostModels (CostModel, getCostModelEvaluationContext, mkCostModel)
+import Cardano.Ledger.Plutus.CostModels (
+  CostModel,
+  CostModels,
+  getCostModelEvaluationContext,
+  mkCostModel,
+  mkCostModels,
+ )
 import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..))
+import qualified Data.Map.Strict as Map
 import GHC.Stack
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.Test.Examples as P (
@@ -52,6 +63,11 @@ mkCostModel' lang params =
           ++ show err
     Right costModel -> costModel
 
+-- | Test CostModels for all available languages with zero values for all parameters
+zeroTestingCostModels :: HasCallStack => [Language] -> CostModels
+zeroTestingCostModels =
+  foldMap $ \lang -> mkCostModels (Map.singleton lang (zeroTestingCostModel lang))
+
 zeroTestingCostModel :: HasCallStack => Language -> CostModel
 zeroTestingCostModel lang = mkCostModelConst lang 0
 
@@ -63,6 +79,11 @@ zeroTestingCostModelV2 = zeroTestingCostModel PlutusV2
 
 zeroTestingCostModelV3 :: HasCallStack => CostModel
 zeroTestingCostModelV3 = zeroTestingCostModel PlutusV3
+
+-- | Test CostModels for all available languages
+testingCostModels :: HasCallStack => [Language] -> CostModels
+testingCostModels =
+  foldMap $ \lang -> mkCostModels (Map.singleton lang (testingCostModel lang))
 
 testingCostModel :: HasCallStack => Language -> CostModel
 testingCostModel = \case

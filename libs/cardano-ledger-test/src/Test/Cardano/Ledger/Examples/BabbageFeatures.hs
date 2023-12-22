@@ -84,7 +84,6 @@ import GHC.Stack
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Arbitrary (mkPlutusScript')
-import Test.Cardano.Ledger.Alonzo.CostModel (freeV1V2CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   AlonzoBased (..),
@@ -105,6 +104,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, testCase)
@@ -211,7 +211,7 @@ yetAnotherTxIn = mkGenesisTxIn 3
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls freeV1V2CostModels
+  [ Costmdls $ zeroTestingCostModels [PlutusV1, PlutusV2]
   , MaxValSize 1000000000
   , MaxTxExUnits $ ExUnits 1000000 1000000
   , MaxBlockExUnits $ ExUnits 1000000 1000000

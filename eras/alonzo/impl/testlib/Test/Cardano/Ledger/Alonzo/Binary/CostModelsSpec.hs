@@ -21,7 +21,7 @@ import Data.Proxy
 import Data.Text (Text)
 import Data.Word (Word8)
 import Lens.Micro
-import Test.Cardano.Ledger.Alonzo.Arbitrary
+import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Common
 
 spec :: forall era. AlonzoEraPParams era => Spec
