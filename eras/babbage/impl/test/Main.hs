@@ -4,7 +4,6 @@ module Main where
 
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Core (PParams)
-import Data.Proxy (Proxy (Proxy))
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Babbage.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Babbage.BinarySpec as BinarySpec
@@ -24,4 +23,4 @@ main =
       describe "Imp" $ do
         ShelleyImp.spec @Babbage
       describe "CostModels" $ do
-        CostModelsSpec.spec @Babbage Proxy
+        CostModelsSpec.spec @Babbage

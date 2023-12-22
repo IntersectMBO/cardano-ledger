@@ -61,16 +61,6 @@ module Cardano.Ledger.Alonzo.PParams (
 where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Scripts (
-  CostModel,
-  CostModels (..),
-  ExUnits (..),
-  Prices (..),
-  emptyCostModels,
-  getCostModelLanguage,
-  getCostModelParams,
-  zipSemiExUnits,
- )
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   NonNegativeInterval,
@@ -114,6 +104,19 @@ import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Mary.Core
+import Cardano.Ledger.Plutus.CostModels (
+  CostModel,
+  CostModels,
+  costModelsValid,
+  emptyCostModels,
+  getCostModelLanguage,
+  getCostModelParams,
+ )
+import Cardano.Ledger.Plutus.ExUnits (
+  ExUnits (..),
+  Prices (..),
+  zipSemiExUnits,
+ )
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.PParams (
   ShelleyPParams (..),

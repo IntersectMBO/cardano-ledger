@@ -2,6 +2,8 @@
 
 ## 1.10.0.0
 
+* Add `mkCostModels` and expose `flattenCostModel`
+* Stop exporting `CostModels` constructor in order to improve safety.
 * Fix `Eq`/`Ord` and add `EncCBOR`/`DecCBOR` instances for `CostModelError`
 * Re-export `Cardano.Ledger.Keys.Bootstrap` and `Cardano.Ledger.Keys.WitsVKey` from
   `Cardano.Ledger.Keys`
@@ -46,6 +48,7 @@
 
 ### `testlib`
 
+* Add `mkCostModelConst`
 * Add `diffExprCompact`
 * Add `expectLeftDeep_`, `expectRightDeep_`
 * Two new modules `Test.Cardano.Ledger.Plutus` and `Test.Cardano.Ledger.Plutus.Examples`

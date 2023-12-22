@@ -4,7 +4,6 @@ module Main where
 
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Core (PParams)
-import Data.Proxy (Proxy (Proxy))
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.BinarySpec as BinarySpec
@@ -24,4 +23,4 @@ main =
       describe "Imp" $ do
         ShelleyImp.spec @Alonzo
       describe "CostModels" $ do
-        CostModelsSpec.spec @Alonzo Proxy
+        CostModelsSpec.spec @Alonzo

@@ -36,6 +36,11 @@
 * Implement `getNextEpochCommitteeMembers` in Conway `EraGov`
 * Change argument of `validCommitteeTerm` function from `StrictMaybe Committee` to `GovAction`
 
+### `testlib`
+
+* Remove `Test.Cardano.Ledger.Conway.PParamsSpec` and replace the unit test it contained
+  with a new property test in `Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec`
+
 ## 1.11.0.0
 
 * Switch `ppCommitteeMaxTermLength` to `EpochNo`, rather than `Natural`

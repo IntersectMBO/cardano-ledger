@@ -17,13 +17,6 @@ import Cardano.Ledger.Alonzo.PParams (
   LangDepView (..),
   getLanguageView,
  )
-import Cardano.Ledger.Alonzo.Scripts (
-  CostModel,
-  CostModels (..),
-  ExUnits (..),
-  Prices (..),
-  mkCostModel,
- )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
@@ -31,7 +24,17 @@ import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (valueFromList)
+import Cardano.Ledger.Plutus.CostModels (
+  CostModel,
+  CostModels,
+  mkCostModel,
+  mkCostModels,
+ )
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
+import Cardano.Ledger.Plutus.ExUnits (
+  ExUnits (..),
+  Prices (..),
+ )
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Data.Aeson (eitherDecodeFileStrict)
@@ -336,10 +339,8 @@ expectedGenesis =
 
 expectedCostModels :: CostModels
 expectedCostModels =
-  CostModels
+  mkCostModels
     (Map.fromList [(PlutusV1, expectedCostModel), (PlutusV2, expectedCostModelV2)])
-    mempty
-    mempty
 
 expectedCostModel :: CostModel
 expectedCostModel =

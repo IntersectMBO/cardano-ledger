@@ -37,16 +37,7 @@ import Cardano.Ledger.Alonzo.Rules (
   FailureDescription (..),
   TagMismatchDescription (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoScript (..),
-  CostModel,
-  CostModels (..),
-  ExUnits (..),
-  Prices (..),
-  Tag (..),
-  mkCostModel,
-  mkCostModelsLenient,
- )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
   IsValid (IsValid),
@@ -68,6 +59,14 @@ import Cardano.Ledger.Alonzo.TxWits (
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import Cardano.Ledger.Plutus.CostModels (
+  CostModel,
+  CostModels,
+  mkCostModel,
+  mkCostModels,
+  mkCostModelsLenient,
+  updateCostModels,
+ )
 import Cardano.Ledger.Plutus.Data (
   BinaryData,
   Data (..),
@@ -75,6 +74,7 @@ import Cardano.Ledger.Plutus.Data (
   dataToBinaryData,
   hashData,
  )
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices (..))
 import Cardano.Ledger.Plutus.Language (
   Language (..),
   Plutus (..),
@@ -253,23 +253,22 @@ genValidCostModel lang = do
   either (\err -> error $ "Corrupt cost model: " ++ show err) pure $
     mkCostModel lang newParamValues
 
-genValidCostModelPair :: Language -> Gen (Language, CostModel)
-genValidCostModelPair lang = (,) lang <$> genValidCostModel lang
+genValidCostModels :: Set.Set Language -> Gen CostModels
+genValidCostModels = fmap mkCostModels . sequence . Map.fromSet genValidCostModel
 
 genValidAndUnknownCostModels :: Gen CostModels
 genValidAndUnknownCostModels = do
   langs <- sublistOf nonNativeLanguages
-  validCms <- Map.fromList <$> mapM genValidCostModelPair langs
-  unknown <- genUnknownCostModels
-  pure $ CostModels validCms mempty unknown
+  validCms <- genValidCostModels $ Set.fromList langs
+  unknownCms <- mkCostModelsLenient <$> genUnknownCostModels
+  pure $ updateCostModels validCms unknownCms
 
 -- | This Arbitrary instance assumes the inflexible deserialization
 -- scheme prior to version 9.
 instance Arbitrary CostModels where
   arbitrary = do
     langs <- sublistOf nonNativeLanguages
-    cms <- mapM genValidCostModelPair langs
-    pure $ CostModels (Map.fromList cms) mempty mempty
+    genValidCostModels $ Set.fromList langs
 
 instance Arbitrary (AlonzoPParams Identity era) where
   arbitrary =

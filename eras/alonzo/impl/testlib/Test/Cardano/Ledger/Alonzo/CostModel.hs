@@ -5,7 +5,7 @@ module Test.Cardano.Ledger.Alonzo.CostModel (
   freeV1V2CostModels,
 ) where
 
-import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), mkCostModel)
+import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels, mkCostModel, mkCostModels)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
@@ -26,8 +26,8 @@ freeCostModel lang =
     mkCostModel lang (replicate (costModelParamsCount lang) 0)
 
 freeV1CostModels :: CostModels
-freeV1CostModels = CostModels (Map.singleton PlutusV1 (freeCostModel PlutusV1)) mempty mempty
+freeV1CostModels = mkCostModels (Map.singleton PlutusV1 (freeCostModel PlutusV1))
 
 freeV1V2CostModels :: CostModels
 freeV1V2CostModels =
-  CostModels (Map.fromList [(l, freeCostModel l) | l <- [PlutusV1, PlutusV2]]) mempty mempty
+  mkCostModels (Map.fromList [(l, freeCostModel l) | l <- [PlutusV1, PlutusV2]])

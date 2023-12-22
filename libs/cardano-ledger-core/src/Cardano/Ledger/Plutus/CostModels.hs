@@ -37,7 +37,12 @@ module Cardano.Ledger.Plutus.CostModels (
   costModelToMap,
   costModelFromMap,
   decodeCostModelFailHard,
-  CostModels (..),
+  CostModels,
+  mkCostModels,
+  costModelsValid,
+  costModelsErrors,
+  costModelsUnknown,
+  flattenCostModel,
   P.CostModelApplyError (..),
 )
 where
@@ -355,47 +360,60 @@ instance NFData CostModelError
 -- of Plutus, which we cannot yet even validate. These are stored in
 -- 'costModelsUnknown`.
 data CostModels = CostModels
-  { costModelsValid :: !(Map Language CostModel)
-  , costModelsErrors :: !(Map Language CostModelError)
-  , costModelsUnknown :: !(Map Word8 [Integer])
+  { _costModelsValid :: !(Map Language CostModel)
+  , _costModelsErrors :: !(Map Language CostModelError)
+  , _costModelsUnknown :: !(Map Word8 [Integer])
   }
   deriving stock (Eq, Ord, Show, Generic)
+
+costModelsValid :: CostModels -> Map Language CostModel
+costModelsValid = _costModelsValid
+
+costModelsErrors :: CostModels -> Map Language CostModelError
+costModelsErrors = _costModelsErrors
+
+costModelsUnknown :: CostModels -> Map Word8 [Integer]
+costModelsUnknown = _costModelsUnknown
 
 emptyCostModels :: CostModels
 emptyCostModels = CostModels mempty mempty mempty
 
--- | Updates the first @CostModels@ with the second one so that only the
--- cost models that are present in the second one get updated while all the
--- others stay unchanged
+-- | Updates the first @CostModels@ with the second one so that only the cost models that
+-- are present in the second one get updated while all the others stay unchanged. Language
+-- specific errors are removed, whenever a valid CostModel for the language is updated.
 updateCostModels :: CostModels -> CostModels -> CostModels
-updateCostModels
-  (CostModels oldValid oldErrors oldUnk)
-  (CostModels newValid newErrors newUnk) =
-    CostModels
-      (Map.union newValid oldValid)
-      (Map.union newErrors oldErrors)
-      (Map.union newUnk oldUnk)
-
--- | This function attempts to add a new cost model to a given 'CostModels'.
--- If it is a valid cost model for a known version of Plutus, it is added to
--- 'validCostModels'. If it is an invalid cost model for a known version of Plutus,
--- the error is sorted in 'costModelErrors' and the cost model is stored in
--- 'invalidCostModels'. Lastly, if the Plutus version is unknown,
--- the cost model is also stored in 'invalidCostModels'.
-addRawCostModel :: Word8 -> [Integer] -> CostModels -> CostModels
-addRawCostModel langW8 cmIds (CostModels validCMs errs invalidCMs) =
-  case mkLanguageEnum (fromIntegral langW8) of
-    Just lang ->
-      case mkCostModel lang cmIds of
-        Right cm -> CostModels (Map.insert lang cm validCMs) errs invalidCMs
-        Left e -> CostModels validCMs (addError lang e errs) updatedInvalidCMs
-    Nothing -> CostModels validCMs errs updatedInvalidCMs
+updateCostModels (CostModels oldValid oldErrors oldUnk) (CostModels modValid modErrors modUnk) =
+  CostModels
+    newValid
+    (newErrors Map.\\ newValid)
+    (Map.union modUnk oldUnk Map.\\ Map.mapKeys languageToWord8 newValid)
   where
-    updatedInvalidCMs = Map.insert langW8 cmIds invalidCMs
-    addError l e = Map.insert l (CostModelError e)
+    newValid = Map.union modValid oldValid
+    newErrors = Map.union modErrors oldErrors
 
+-- | Construct an all valid `CostModels`
+mkCostModels :: Map Language CostModel -> CostModels
+mkCostModels cms = CostModels cms mempty mempty
+
+-- | This function attempts to convert a Map with potential cost models to into validated
+-- 'CostModels'.  If it is a valid cost model for a known version of Plutus, it is added
+-- to 'costModelsValid'. If it is an invalid cost model for a known version of Plutus, the
+-- error is stored in 'costModelsErrors' and the cost model is stored in
+-- 'costModelsUnknown'. Lastly, if the Plutus version is unknown, the cost model is also
+-- stored in 'costModelsUnknown'.
 mkCostModelsLenient :: Map Word8 [Integer] -> CostModels
 mkCostModelsLenient = Map.foldrWithKey addRawCostModel (CostModels mempty mempty mempty)
+  where
+    addRawCostModel :: Word8 -> [Integer] -> CostModels -> CostModels
+    addRawCostModel langW8 cmIds (CostModels validCMs errs invalidCMs) =
+      case mkLanguageEnum (fromIntegral langW8) of
+        Just lang ->
+          case mkCostModel lang cmIds of
+            Right cm -> CostModels (Map.insert lang cm validCMs) errs invalidCMs
+            Left e -> CostModels validCMs (Map.insert lang (CostModelError e) errs) updatedInvalidCMs
+        Nothing -> CostModels validCMs errs updatedInvalidCMs
+      where
+        updatedInvalidCMs = Map.insert langW8 cmIds invalidCMs
 
 -- | Turn a 'CostModels' into a mapping of potential language versions and
 -- cost model values, with no distinction between valid and invalid cost models.
@@ -403,15 +421,16 @@ mkCostModelsLenient = Map.foldrWithKey addRawCostModel (CostModels mempty mempty
 -- upon deserialization.
 flattenCostModel :: CostModels -> Map Word8 [Integer]
 flattenCostModel (CostModels validCMs _ invalidCMs) =
-  Map.foldrWithKey (\lang cm -> Map.insert (toWord8 lang) (cmValues cm)) invalidCMs validCMs
+  Map.foldrWithKey (\lang cm -> Map.insert (languageToWord8 lang) (cmValues cm)) invalidCMs validCMs
+
+languageToWord8 :: Language -> Word8
+languageToWord8 lang
+  | 0 <= li && li <= fromIntegral (maxBound :: Word8) = fromIntegral li
+  | otherwise =
+      -- This should be impossible while we have under 256 versions of Plutus
+      error $ "Impossible: Overflow encountered during conversion of the language: " ++ show lang
   where
-    toWord8 lang =
-      case fromEnum lang of
-        li
-          | 0 <= li && li <= fromIntegral (maxBound :: Word8) -> fromIntegral li
-          | otherwise ->
-              -- This should be impossible while we have under 256 versions of Plutus
-              error $ "Overflow encountered during conversion of the language: " ++ show lang
+    li = fromEnum lang
 
 instance NoThunks CostModels
 

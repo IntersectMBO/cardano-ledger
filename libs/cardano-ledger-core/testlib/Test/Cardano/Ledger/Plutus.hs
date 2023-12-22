@@ -6,6 +6,7 @@ module Test.Cardano.Ledger.Plutus (
   alwaysFailsPlutus,
 
   -- * CostModel
+  mkCostModelConst,
   zeroTestingCostModel,
   zeroTestingCostModelV1,
   zeroTestingCostModelV2,
@@ -30,6 +31,14 @@ import qualified PlutusLedgerApi.Test.V2.EvaluationContext as PV2
 import qualified PlutusLedgerApi.Test.V3.EvaluationContext as PV3
 import PlutusLedgerApi.V1 as PV1
 
+-- | Construct a test cost model where all paramters are set to the same value
+mkCostModelConst :: HasCallStack => Language -> Integer -> CostModel
+mkCostModelConst lang x =
+  case lang of
+    PlutusV1 -> mkCostModel' lang (x <$ PV1.costModelParamsForTesting)
+    PlutusV2 -> mkCostModel' lang (x <$ PV2.costModelParamsForTesting)
+    PlutusV3 -> mkCostModel' lang (x <$ PV3.costModelParamsForTesting)
+
 mkCostModel' :: HasCallStack => Language -> [Integer] -> CostModel
 mkCostModel' lang params =
   case mkCostModel lang params of
@@ -44,19 +53,16 @@ mkCostModel' lang params =
     Right costModel -> costModel
 
 zeroTestingCostModel :: HasCallStack => Language -> CostModel
-zeroTestingCostModel = \case
-  PlutusV1 -> zeroTestingCostModelV1
-  PlutusV2 -> zeroTestingCostModelV2
-  PlutusV3 -> zeroTestingCostModelV3
+zeroTestingCostModel lang = mkCostModelConst lang 0
 
 zeroTestingCostModelV1 :: HasCallStack => CostModel
-zeroTestingCostModelV1 = mkCostModel' PlutusV1 (0 <$ PV1.costModelParamsForTesting)
+zeroTestingCostModelV1 = zeroTestingCostModel PlutusV1
 
 zeroTestingCostModelV2 :: HasCallStack => CostModel
-zeroTestingCostModelV2 = mkCostModel' PlutusV2 (0 <$ PV2.costModelParamsForTesting)
+zeroTestingCostModelV2 = zeroTestingCostModel PlutusV2
 
 zeroTestingCostModelV3 :: HasCallStack => CostModel
-zeroTestingCostModelV3 = mkCostModel' PlutusV3 (0 <$ PV3.costModelParamsForTesting)
+zeroTestingCostModelV3 = zeroTestingCostModel PlutusV3
 
 testingCostModel :: HasCallStack => Language -> CostModel
 testingCostModel = \case

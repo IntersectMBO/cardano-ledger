@@ -42,7 +42,7 @@ where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (CoinPerWord, UpgradeAlonzoPParams (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices (..))
 import Cardano.Ledger.Binary (
   DecCBOR,
   EncCBOR,

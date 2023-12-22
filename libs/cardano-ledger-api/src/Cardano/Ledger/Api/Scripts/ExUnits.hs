@@ -27,7 +27,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (lookupPlutusScript)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
-  CostModels (..),
   plutusScriptLanguage,
  )
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
@@ -41,6 +40,7 @@ import Cardano.Ledger.Alonzo.TxWits (
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..), getAlonzoSpendingTxIn)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), pvMajor)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Plutus.CostModels (costModelsValid)
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusDatums (..),

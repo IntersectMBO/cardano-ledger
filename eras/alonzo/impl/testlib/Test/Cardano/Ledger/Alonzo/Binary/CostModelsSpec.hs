@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -9,30 +10,43 @@
 module Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec (spec) where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (ToCBOR (..))
 import Cardano.Ledger.Binary.Decoding
 import Cardano.Ledger.Binary.Encoding
+import Cardano.Ledger.Plutus.CostModels
 import Cardano.Ledger.Plutus.Language
 import qualified Data.Map as Map
+import Data.Proxy
 import Data.Text (Text)
-import Data.Typeable
 import Data.Word (Word8)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Arbitrary
 import Test.Cardano.Ledger.Common
 
-spec ::
-  forall era.
-  AlonzoEraPParams era =>
-  Proxy era ->
-  Spec
-spec pxy = do
-  describe "CostModels CBOR deserialization" $ do
-    validCostModelProp @era pxy
+spec :: forall era. AlonzoEraPParams era => Spec
+spec = do
+  describe "CBOR deserialization" $ do
+    validCostModelProp @era Proxy
     invalidCostModelProp @era Proxy
     unknownCostModelProp @era Proxy
+  prop "applyPPUpdates" $ \valid validUpdate unknown unknownUpdate -> do
+    let
+      validExpected = mkCostModels (costModelsValid validUpdate <> costModelsValid valid)
+      unknownExpected = unknownUpdate <> unknown
+      original = mkCostModelsLenient (flattenCostModel valid <> unknown)
+      update = mkCostModelsLenient (flattenCostModel validUpdate <> unknownUpdate)
+      expected = mkCostModelsLenient (flattenCostModel validExpected <> unknownExpected)
+      pp =
+        emptyPParams & ppCostModelsL .~ original
+      ppUpdate =
+        emptyPParamsUpdate & ppuCostModelsL .~ SJust update
+    -- Starting with Conway we update CostModel on per-language basis, while before
+    -- that CostModels where overwritten completely
+    applyPPUpdates @era pp ppUpdate
+      `shouldBe` if eraProtVerLow @era >= natVersion @9
+        then pp & ppCostModelsL .~ expected
+        else pp & ppCostModelsL .~ update
 
 validCostModelProp ::
   forall era.
@@ -51,8 +65,8 @@ validCostModelProp pxy = do
               ppuRes `shouldSatisfy` \ppu -> (validCm <$> ppu ^. ppuCostModelsL) == SJust True
   where
     genValidCostModelEnc lang = genCostModelEncForLanguage lang (costModelParamsCount lang)
-    validCm (CostModels valid errors unknown) =
-      not (null valid) && null errors && null unknown
+    validCm cms =
+      not (null (costModelsValid cms)) && null (costModelsErrors cms) && null (costModelsUnknown cms)
 
 invalidCostModelProp ::
   forall era.
@@ -82,8 +96,8 @@ invalidCostModelProp pxy = do
       count <- choose (0, validCount - 1)
       genCostModelEncForLanguage lang count
 
-    invalidCm (CostModels valid errors _) =
-      null valid && not (null errors)
+    invalidCm cms =
+      null (costModelsValid cms) && not (null (costModelsErrors cms))
 
 unknownCostModelProp ::
   forall era.
@@ -113,8 +127,8 @@ unknownCostModelProp pxy = do
       lang <- choose (fromIntegral firstUnknownLang, maxBound @Word8)
       NonNegative count <- arbitrary
       genCostModelsEnc lang count
-    unknownCm (CostModels valid errors unknown) =
-      null valid && null errors && not (null unknown)
+    unknownCm cms =
+      null (costModelsValid cms) && null (costModelsErrors cms) && not (null (costModelsUnknown cms))
 
 encodeAndCheckDecoded ::
   forall era.
