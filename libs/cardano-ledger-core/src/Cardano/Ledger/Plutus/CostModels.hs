@@ -66,7 +66,12 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Binary.Version (natVersion)
-import Cardano.Ledger.Plutus.Language (Language (..), mkLanguageEnum, nonNativeLanguages)
+import Cardano.Ledger.Plutus.Language (
+  Language (..),
+  languageToText,
+  mkLanguageEnum,
+  nonNativeLanguages,
+ )
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (forM, when)
 import Control.Monad.Trans.Writer (WriterT (runWriterT))
@@ -75,8 +80,11 @@ import Data.Aeson (
   Object,
   ToJSON (..),
   Value (Array, Object),
+  object,
   withObject,
+  (.!=),
   (.:?),
+  (.=),
  )
 import Data.Aeson.Key (fromString)
 import Data.Aeson.Types (Parser)
@@ -133,9 +141,10 @@ instance NFData CostModel where
 
 instance FromJSON CostModels where
   parseJSON = withObject "CostModels" $ \o -> do
-    cms <- mapM (parseCostModels o) nonNativeLanguages
+    cms <- mapM (parseCostModel o) nonNativeLanguages
     let cmsMap = Map.fromList [(cmLanguage cm, cm) | Just cm <- cms]
-    pure $ CostModels cmsMap mempty mempty
+    unknown <- o .:? "Unknown" .!= mempty
+    pure $ mkCostModels cmsMap <> mkCostModelsLenient unknown
 
 -- | The costmodel parameters in Alonzo Genesis are represented as a map.  Plutus API does
 -- no longer require the map as a parameter to `mkEvaluationContext`, but the list of
@@ -144,8 +153,8 @@ instance FromJSON CostModels where
 -- just have to pass the list to plutus, we still need to use the names of the parameters
 -- in order to sort the list.  In new versions, we want to represent the costmodel
 -- parameters directly as a list, so we can avoid this reordering.
-parseCostModels :: Object -> Language -> Parser (Maybe CostModel)
-parseCostModels o lang = do
+parseCostModel :: Object -> Language -> Parser (Maybe CostModel)
+parseCostModel o lang = do
   plutusCostModelValueMaybe <- o .:? fromString (show lang)
   forM plutusCostModelValueMaybe $ \plutusCostModelValue ->
     case plutusCostModelValue of
@@ -345,6 +354,16 @@ instance DecCBOR CostModelError where
     4 -> SumD (\e -> CostModelError . P.CMTooFewParamsError e) <! From <! From
     n -> Invalid n
 
+instance ToJSON CostModelError where
+  toJSON = \case
+    CostModelError (P.CMUnknownParamError err) ->
+      object ["unknownParamError" .= toJSON err]
+    CostModelError P.CMInternalReadError -> "internalReadError"
+    CostModelError (P.CMInternalWriteError err) ->
+      object ["internalWriteError" .= toJSON err]
+    CostModelError (P.CMTooFewParamsError expected actual) ->
+      object ["tooFewParamsError" .= object ["expected" .= expected, "actual" .= actual]]
+
 instance NoThunks CostModelError
 
 instance NFData CostModelError
@@ -460,7 +479,15 @@ instance ToJSON CostModel where
   toJSON = toJSON . getCostModelParams
 
 instance ToJSON CostModels where
-  toJSON = toJSON . costModelsValid
+  toJSON cms = toJSON $ jsonValid <> jsonErrors <> jsonUnknown
+    where
+      jsonMap toKey = Map.mapKeys toKey . Map.map toJSON
+      jsonValid = jsonMap languageToText $ costModelsValid cms
+      jsonErrors = jsonMap languageToText $ costModelsErrors cms
+      jsonUnknown
+        | null (costModelsUnknown cms) = mempty
+        | otherwise =
+            Map.singleton "Unknown" $ toJSON $ jsonMap (T.pack . show) $ costModelsUnknown cms
 
 -- | Encoding for the `CostModel`. Important to note that it differs from `Encoding` used
 -- by `Cardano.Ledger.Alonzo.PParams.getLanguageView`
