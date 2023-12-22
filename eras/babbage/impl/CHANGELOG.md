@@ -22,6 +22,7 @@
 * Remove `babbageScriptPrefixTag`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Change the type of `ppEMaxL`
+* Fixed JSON serialization of `PParams` to include the `protocolVersion`.
 
 ## 1.5.1.0
 
