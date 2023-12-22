@@ -11,7 +11,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (textToUrl)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), textToUrl)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -116,7 +116,7 @@ spec =
       let deposit = Coin 999
       modifyPParams $ \pp ->
         pp
-          & ppGovActionLifetimeL .~ 1
+          & ppGovActionLifetimeL .~ EpochInterval 1
           & ppGovActionDepositL .~ deposit
       rewardAcount <- registerRewardAccount
 

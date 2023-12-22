@@ -76,7 +76,7 @@ import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint, Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.BaseTypes (Network (Testnet), inject)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (Testnet), inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
 import Cardano.Ledger.Keys (
@@ -624,7 +624,7 @@ genGenEnv proof gsize = do
           , ProtocolVersion $ protocolVersion proof
           , PoolDeposit $ Coin 5
           , KeyDeposit $ Coin 2
-          , EMax 5
+          , EMax $ EpochInterval 5
           ]
   pure $
     GenEnv
