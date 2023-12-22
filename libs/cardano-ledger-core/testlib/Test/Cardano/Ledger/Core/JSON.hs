@@ -21,7 +21,7 @@ roundTripEraSpec =
   prop (show (typeRep $ Proxy @t)) $ roundTripProperty @t
 
 -- | Roundtrip JSON testing for types and type families that implement
--- ToJSON/FromJSON. Requires TypeApplication of an @@era@
+-- ToJSON/FromJSON.
 roundTripProperty ::
   forall t.
   (Show t, Eq t, ToJSON t, FromJSON t) =>
