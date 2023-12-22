@@ -3,8 +3,9 @@
 ## 1.12.0.0
 
 * Change 'getScriptWitnessConwayTxCert' so that DRepRegistration certificate requires a witness
-* Implement `ToJSON` instance for `PoolVotingThresholds` and `DRepVotingThreshold`,
-  instead of deriving that doesn't handle field names correctly.
+* Implement `ToJSON` and `FromJSON` instances for `PoolVotingThresholds` and
+  `DRepVotingThreshold`, instead of deriving that doesn't handle field names
+  correctly.
 * Hide `Cardano.Ledger.Conway.TxOut` module
 * Export `ConwayEraPParams` and `ConwayEraTxBody` from `Cardano.Ledger.Conway.Core`
 * Stop exporting `BabbagePParams` from `Cardano.Ledger.Conway.PParams`

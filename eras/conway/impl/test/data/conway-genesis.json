@@ -1,21 +1,21 @@
 {
   "poolVotingThresholds": {
-    "pvtCommitteeNormal": 0,
-    "pvtCommitteeNoConfidence": 0,
-    "pvtHardForkInitiation": 0,
-    "pvtMotionNoConfidence": 0
+    "committeeNormal": 0,
+    "committeeNoConfidence": 0,
+    "hardForkInitiation": 0,
+    "motionNoConfidence": 0
   },
   "dRepVotingThresholds": {
-    "dvtMotionNoConfidence": 0,
-    "dvtCommitteeNormal": 0,
-    "dvtCommitteeNoConfidence": 0,
-    "dvtUpdateToConstitution": 0,
-    "dvtHardForkInitiation": 0,
-    "dvtPPNetworkGroup": 0,
-    "dvtPPEconomicGroup": 0,
-    "dvtPPTechnicalGroup": 0,
-    "dvtPPGovGroup": 0,
-    "dvtTreasuryWithdrawal": 0
+    "motionNoConfidence": 0,
+    "committeeNormal": 0,
+    "committeeNoConfidence": 0,
+    "updateToConstitution": 0,
+    "hardForkInitiation": 0,
+    "ppNetworkGroup": 0,
+    "ppEconomicGroup": 0,
+    "ppTechnicalGroup": 0,
+    "ppGovGroup": 0,
+    "treasuryWithdrawal": 0
   },
   "committeeMinSize": 0,
   "committeeMaxTermLength": 0,
