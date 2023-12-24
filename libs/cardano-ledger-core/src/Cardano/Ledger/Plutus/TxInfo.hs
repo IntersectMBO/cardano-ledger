@@ -35,6 +35,7 @@ module Cardano.Ledger.Plutus.TxInfo (
   transDataPair,
   transExUnits,
   exBudgetToExUnits,
+  coinToLovelace,
 )
 where
 
@@ -180,3 +181,6 @@ exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
     safeFromSatInt i
       | i >= 0 = Just . fromInteger $ fromSatInt i
       | otherwise = Nothing
+
+coinToLovelace :: Coin -> PV1.Lovelace
+coinToLovelace (Coin c) = PV1.Lovelace c
