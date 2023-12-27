@@ -98,6 +98,7 @@ import Cardano.Ledger.Binary (
   decodeRationalWithTag,
   encodeRatioWithTag,
   encodedSizeExpr,
+  ifDecoderVersionAtLeast,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -526,17 +527,25 @@ a ==> b = not a || b
 infix 1 ==>
 
 --
--- Helper functions for text with a 64 byte bound
+-- Helper functions for text with byte-length bounds
 --
 
-text64 :: MonadFail m => Text -> m Text
-text64 t =
-  if BS.length (encodeUtf8 t) <= 64
+textSizeN :: MonadFail m => Int -> Text -> m Text
+textSizeN n t =
+  if BS.length (encodeUtf8 t) <= n
     then pure t
-    else fail $ "Text exceeds 64 bytes:" ++ show t
+    else fail $ ("Text exceeds " ++ show n ++ " bytes:" ++ show t)
 
-text64DecCBOR :: Decoder s Text
-text64DecCBOR = decCBOR >>= text64
+textDecCBOR :: Int -> Decoder s Text
+textDecCBOR n = decCBOR >>= textSizeN n
+
+-- |  Turn a Text into a Url, fail if the Text has more than 'n' Bytes
+textToUrl :: MonadFail m => Int -> Text -> m Url
+textToUrl n t = Url <$> textSizeN n t
+
+-- |  Turn a Text into a DnsName, fail if the Text has more than 'n' Bytes
+textToDns :: MonadFail m => Int -> Text -> m DnsName
+textToDns n t = DnsName <$> textSizeN n t
 
 --
 -- Types used in the Stake Pool Relays
@@ -546,21 +555,25 @@ newtype Url = Url {urlToText :: Text}
   deriving (Eq, Ord, Generic, Show)
   deriving newtype (EncCBOR, NFData, NoThunks, FromJSON, ToJSON)
 
-textToUrl :: Text -> Maybe Url
-textToUrl t = Url <$> text64 t
-
 instance DecCBOR Url where
-  decCBOR = Url <$> text64DecCBOR
+  decCBOR =
+    Url
+      <$> ifDecoderVersionAtLeast
+        (natVersion @9)
+        (textDecCBOR 128)
+        (textDecCBOR 64)
 
 newtype DnsName = DnsName {dnsToText :: Text}
   deriving (Eq, Ord, Generic, Show)
   deriving newtype (EncCBOR, NoThunks, NFData, FromJSON, ToJSON)
 
-textToDns :: Text -> Maybe DnsName
-textToDns t = DnsName <$> text64 t
-
 instance DecCBOR DnsName where
-  decCBOR = DnsName <$> text64DecCBOR
+  decCBOR =
+    DnsName
+      <$> ifDecoderVersionAtLeast
+        (natVersion @9)
+        (textDecCBOR 128)
+        (textDecCBOR 64)
 
 newtype Port = Port {portToWord16 :: Word16}
   deriving (Eq, Ord, Generic, Show)

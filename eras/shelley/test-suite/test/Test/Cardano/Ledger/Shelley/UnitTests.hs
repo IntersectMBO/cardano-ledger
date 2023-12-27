@@ -622,7 +622,7 @@ alicePoolParamsSmallCost =
     , ppMetadata =
         SJust $
           PoolMetadata
-            { pmUrl = fromJust $ textToUrl "alice.pool"
+            { pmUrl = fromJust $ textToUrl 64 "alice.pool"
             , pmHash = BS.pack "{}"
             }
     }

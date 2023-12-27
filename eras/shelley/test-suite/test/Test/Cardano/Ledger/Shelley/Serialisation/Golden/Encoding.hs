@@ -543,8 +543,8 @@ tests =
           poolRelays =
             StrictSeq.fromList
               [ SingleHostAddr SNothing (SJust ipv4) SNothing
-              , SingleHostName (SJust 42) $ Maybe.fromJust $ textToDns "singlehost.relay.com"
-              , MultiHostName $ Maybe.fromJust $ textToDns "multihost.relay.com"
+              , SingleHostName (SJust 42) $ Maybe.fromJust $ textToDns 64 "singlehost.relay.com"
+              , MultiHostName $ Maybe.fromJust $ textToDns 64 "multihost.relay.com"
               ]
        in checkEncodingCBOR
             shelleyProtVer
@@ -562,7 +562,7 @@ tests =
                     , ppMetadata =
                         SJust $
                           PoolMetadata
-                            { pmUrl = Maybe.fromJust $ textToUrl poolUrl
+                            { pmUrl = Maybe.fromJust $ textToUrl 64 poolUrl
                             , pmHash = poolMDHash
                             }
                     }

@@ -197,14 +197,14 @@ instance Arbitrary DnsName where
   arbitrary = do
     n <- chooseInt (5, 64)
     txt <- genDnsName n
-    pure $! guardLength n txt $ textToDns txt
+    pure $! guardLength n txt $ textToDns 64 txt
 
 instance Arbitrary Url where
   arbitrary = do
     let prefix = "https://"
     n <- chooseInt (5, 64 - T.length prefix)
     txt <- genDnsName n
-    pure $! guardLength n txt $ textToUrl (prefix <> txt)
+    pure $! guardLength n txt $ textToUrl 64 (prefix <> txt)
 
 instance Arbitrary Port where
   arbitrary = fromIntegral @Word16 @Port <$> arbitrary

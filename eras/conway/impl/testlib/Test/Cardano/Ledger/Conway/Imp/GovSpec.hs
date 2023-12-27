@@ -449,7 +449,7 @@ newConstitution = do
   pure $
     Constitution
       ( Anchor
-          (fromJust $ textToUrl "constitution.0")
+          (fromJust $ textToUrl 64 "constitution.0")
           constitutionHash
       )
       SNothing
