@@ -49,7 +49,6 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Scripts (PlutusScript (..))
@@ -60,7 +59,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Plutus.TxInfo (transCoin, transCred, transKeyHash, transTxIn)
+import Cardano.Ledger.Plutus.TxInfo (coinToLovelace, transCoin, transCred, transKeyHash, transTxIn)
 import Cardano.Ledger.PoolParams
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, zipWithM)
@@ -205,7 +204,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
         { PV3.txInfoInputs = inputs
         , PV3.txInfoOutputs = outputs
         , PV3.txInfoReferenceInputs = refInputs
-        , PV3.txInfoFee = transCoin (txBody ^. feeTxBodyL)
+        , PV3.txInfoFee = coinToLovelace (txBody ^. feeTxBodyL)
         , PV3.txInfoMint = Alonzo.transMultiAsset (txBody ^. mintTxBodyL)
         , PV3.txInfoTxCerts = txCerts
         , PV3.txInfoWdrl = transTxBodyWithdrawals txBody
@@ -230,10 +229,10 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
     PV3.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
 
 -- | Translate all `Withdrawal`s from within a `TxBody`
-transTxBodyWithdrawals :: EraTxBody era => TxBody era -> PV3.Map PV3.Credential Integer
+transTxBodyWithdrawals :: EraTxBody era => TxBody era -> PV3.Map PV3.Credential PV3.Lovelace
 transTxBodyWithdrawals txBody =
   PV3.fromList $
-    map (\(RewardAcnt _networkId cred, Coin c) -> (transCred cred, c)) $
+    map (\(RewardAcnt _networkId cred, c) -> (transCred cred, coinToLovelace c)) $
       Map.toList (unWithdrawals $ txBody ^. withdrawalsTxBodyL)
 
 transTxCert :: ConwayEraTxCert era => TxCert era -> PV3.TxCert
