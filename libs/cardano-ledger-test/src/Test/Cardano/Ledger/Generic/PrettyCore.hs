@@ -22,8 +22,8 @@ import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (ContextError)
 import Cardano.Ledger.Alonzo.Rules as Alonzo (
   AlonzoBbodyPredFailure (..),
   AlonzoUtxoPredFailure (..),

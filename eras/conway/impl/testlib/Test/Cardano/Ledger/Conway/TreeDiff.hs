@@ -19,7 +19,7 @@ import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.Conway.TxInfo (ContextError)
+import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD
 import Data.Functor.Identity
@@ -35,7 +35,7 @@ instance ToExpr DRepVotingThresholds
 instance ToExpr (PlutusScript (ConwayEra c))
 
 -- PlutusContext
-instance ToExpr (ContextError (ConwayEra c))
+instance ToExpr (TxCert era) => ToExpr (ConwayContextError era)
 
 -- Governance/Procedure
 instance ToExpr GovActionIx
