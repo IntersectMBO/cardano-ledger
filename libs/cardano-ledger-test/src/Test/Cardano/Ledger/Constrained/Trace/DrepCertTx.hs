@@ -172,8 +172,8 @@ drepTree =
         "All Tx are valid on traces of length 150."
         (withMaxSuccess 5 $ mockChainProp (Conway Standard) 150 (drepCertTxForTrace (Coin 100000)) (stepProp allValidSignals))
     , testProperty
-        "Bruteforce = Pulsed, in every epoch, on traces of length 150"
-        (withMaxSuccess 5 $ mockChainProp (Conway Standard) 150 (drepCertTxForTrace (Coin 60000)) (epochProp pulserWorks))
+        "Bruteforce = Pulsed, in every epoch, on traces of length 130" -- used to be 150
+        (withMaxSuccess 25 $ mockChainProp (Conway Standard) 130 (drepCertTxForTrace (Coin 60000)) (epochProp pulserWorks))
     ]
 
 -- =================================================
