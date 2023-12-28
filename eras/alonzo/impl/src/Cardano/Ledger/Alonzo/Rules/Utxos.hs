@@ -35,21 +35,30 @@ where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOS)
 import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  ContextError,
+  EraPlutusContext,
+ )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (..),
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (
+  AlonzoEraTx (..),
+  IsValid (..),
+ )
 import Cardano.Ledger.Alonzo.TxBody (
   AlonzoEraTxBody (..),
   MaryEraTxBody (..),
   ShelleyEraTxBody (..),
  )
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
+import Cardano.Ledger.Alonzo.UTxO (
+  AlonzoEraUTxO (..),
+  AlonzoScriptsNeeded,
+ )
 import Cardano.Ledger.BaseTypes (
   Globals,
   ShelleyBase,
@@ -57,7 +66,10 @@ import Cardano.Ledger.BaseTypes (
   strictMaybeToMaybe,
   systemStart,
  )
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+ )
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin)
@@ -69,7 +81,10 @@ import Cardano.Ledger.Plutus.Evaluate (
  )
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Governance (EraGov (GovState), ShelleyGovState)
+import Cardano.Ledger.Shelley.Governance (
+  EraGov (GovState),
+  ShelleyGovState,
+ )
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (..),
@@ -85,7 +100,11 @@ import Cardano.Ledger.Shelley.Rules (
   updateUTxOState,
  )
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert)
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), coinBalance)
+import Cardano.Ledger.UTxO (
+  EraUTxO (..),
+  UTxO (..),
+  coinBalance,
+ )
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Monad.Trans.Reader (ReaderT, asks)
@@ -142,6 +161,12 @@ data AlonzoUtxosEvent era
   | TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
   | SuccessfulPlutusScriptsEvent (NonEmpty PlutusWithContext)
   | FailedPlutusScriptsEvent (NonEmpty PlutusWithContext)
+  | -- | The UTxOs consumed and created by a signal tx
+    TxUTxODiff
+      -- | UTxO consumed
+      (UTxO era)
+      -- | UTxO created
+      (UTxO era)
 
 instance
   ( Era era
@@ -253,8 +278,14 @@ alonzoEvalScriptsTxValid = do
       TRC
         (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyL)
 
-  updateUTxOState pp utxos txBody certState ppup' $
-    tellEvent . TotalDeposits (hashAnnotated txBody)
+  updateUTxOState
+    pp
+    utxos
+    txBody
+    certState
+    ppup'
+    (tellEvent . TotalDeposits (hashAnnotated txBody))
+    (\a b -> tellEvent $ TxUTxODiff a b)
 
 alonzoEvalScriptsTxInvalid ::
   forall era.
