@@ -1102,11 +1102,24 @@ maxTxSize p =
         (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxTxSizeL . word32NaturalL)))
     )
 
+fromIntegralBounded ::
+  forall a b.
+  (HasCallStack, Integral a, Show a, Integral b, Bounded b, Show b) =>
+  String ->
+  a ->
+  b
+fromIntegralBounded name x
+  | toInteger (minBound :: b) <= xi && xi <= toInteger (maxBound :: b) = fromIntegral x
+  | otherwise =
+      error $ "While converting " ++ name ++ ", " ++ show x <> " is out of bounds: " <> show (minBound :: b, maxBound :: b)
+  where
+    xi = toInteger x
+
 word32NaturalL :: Lens' Word32 Natural
-word32NaturalL = lens fromIntegral (\_ y -> fromIntegral (toInteger y))
+word32NaturalL = lens fromIntegral (\_ y -> fromIntegralBounded "word32NaturaL" (toInteger y))
 
 word16NaturalL :: Lens' Word16 Natural
-word16NaturalL = lens fromIntegral (\_ y -> fromIntegral (toInteger y))
+word16NaturalL = lens fromIntegral (\_ y -> fromIntegralBounded "word16NaturalL" (toInteger y))
 
 -- | Max Block Header Size
 maxBHSize :: Era era => Proof era -> Term era Natural

@@ -653,7 +653,7 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
       , isValid (/= 0) ppuMaxBHSizeL
       , isValid (/= 0) ppuMaxValSizeL
       , isValid (/= 0) ppuCollateralPercentageL
-      , isValid (/= 0) ppuCommitteeMaxTermLengthL
+      , isValid (/= EpochInterval 0) ppuCommitteeMaxTermLengthL
       , isValid (/= EpochInterval 0) ppuGovActionLifetimeL
       , -- Coins
         isValid (/= zero) ppuPoolDepositL

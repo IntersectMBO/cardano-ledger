@@ -171,7 +171,7 @@ genBlockWithTxGen
         <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
         <*> pure oCert
     let hView = makeHeaderView (bheader theBlock)
-    if bhviewBSize hView <= pp ^. ppMaxBBSizeL && bhviewHSize hView <= pp ^. ppMaxBHSizeL
+    if bhviewBSize hView <= pp ^. ppMaxBBSizeL && bhviewHSize hView <= fromIntegral (pp ^. ppMaxBHSizeL)
       then pure theBlock
       else discard
     where

@@ -107,7 +107,7 @@ import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Ratio ((%))
 import Data.Typeable
-import Data.Word (Word16, Word32, Word64)
+import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)

@@ -48,7 +48,7 @@ pparamsToChainChecksPParams pp =
 
 data ChainPredicateFailure
   = HeaderSizeTooLargeCHAIN
-      !Word16 -- Header Size
+      !Int -- Header Size
       !Word16 -- Max Header Size
   | BlockSizeTooLargeCHAIN
       !Word32 -- Block Size
@@ -68,7 +68,7 @@ chainChecks ::
   m ()
 chainChecks maxpv ccd bhv = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
-  unless (bhviewHSize bhv <= ccMaxBHSize ccd) $
+  unless (bhviewHSize bhv <= (fromIntegral :: Word16 -> Int) (ccMaxBHSize ccd)) $
     throwError $
       HeaderSizeTooLargeCHAIN (bhviewHSize bhv) (ccMaxBHSize ccd)
   unless (bhviewBSize bhv <= ccMaxBBSize ccd) $

@@ -708,7 +708,7 @@ electBasicCommittee = do
           , dvtCommitteeNoConfidence = 1 %! 2
           , dvtUpdateToConstitution = 1 %! 2
           }
-      & ppCommitteeMaxTermLengthL .~ 10
+      & ppCommitteeMaxTermLengthL .~ EpochInterval 10
       & ppGovActionLifetimeL .~ EpochInterval 2
       & ppGovActionDepositL .~ Coin 123
   khDRep <- setupSingleDRep

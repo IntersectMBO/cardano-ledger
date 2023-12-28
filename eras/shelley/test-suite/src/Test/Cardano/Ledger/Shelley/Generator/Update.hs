@@ -140,16 +140,14 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV, maxMajorPV} = do
   where
     szGen :: Gen (Word32, Word32, Word16)
     szGen = do
-      blockBodySize <- genNatural low hi
-      (fromIntegral blockBodySize,,)
-        <$> (fromIntegral <$> rangeUpTo (blockBodySize `div` 2))
-        <*> (fromIntegral <$> genNatural 25000 65535) -- Must stay in the range of Word16, but can't be too small
-    rangeUpTo :: Natural -> Gen Natural
-    rangeUpTo upper = genNatural low upper
+      blockBodySize <- choose (low, hi)
+      (blockBodySize,,)
+        <$> choose (blockBodySize, blockBodySize `div` 2)
+        <*> choose (25000, maxBound :: Word16) -- Must stay in the range of Word16, but can't be too small
 
 -- Note: we keep the lower bound high enough so that we can more likely
 -- generate valid transactions and blocks
-low, hi :: Natural
+low, hi :: Word32
 low = 50000
 hi = 200000
 
@@ -242,9 +240,10 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB, maxMajorPV} pp = do
   -- TODO generate Maybe types so not all updates are full
   minFeeA <- genM $ genInteger 0 (unCoin maxMinFeeA)
   minFeeB <- genM $ genInteger 0 (unCoin maxMinFeeB)
-  maxBBSize <- genM $ genNatural low hi
-  maxTxSize <- genM $ genNatural low hi
-  maxBHSize <- genM $ genNatural low hi
+  maxBBSize <- genM $ choose (low, hi)
+  maxTxSize <- genM $ choose (low, hi)
+  -- Must stay in the range of Word16, but can't be too small
+  maxBHSize <- genM $ choose (25000, maxBound :: Word16)
   keyDeposit <- genM $ genKeyDeposit
   poolDeposit <- genM $ genPoolDeposit
   eMax <- genM $ genEMax c
@@ -261,9 +260,9 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB, maxMajorPV} pp = do
     emptyPParamsUpdate
       & ppuMinFeeAL .~ fmap Coin minFeeA
       & ppuMinFeeBL .~ fmap Coin minFeeB
-      & ppuMaxBBSizeL .~ (fromIntegral <$> maxBBSize)
-      & ppuMaxTxSizeL .~ (fromIntegral <$> maxTxSize)
-      & ppuMaxBHSizeL .~ (fromIntegral <$> maxBHSize)
+      & ppuMaxBBSizeL .~ maxBBSize
+      & ppuMaxTxSizeL .~ maxTxSize
+      & ppuMaxBHSizeL .~ maxBHSize
       & ppuKeyDepositL .~ keyDeposit
       & ppuPoolDepositL .~ poolDeposit
       & ppuEMaxL .~ eMax

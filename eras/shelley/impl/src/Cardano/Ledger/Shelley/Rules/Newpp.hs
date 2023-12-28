@@ -108,7 +108,7 @@ newPpTransition = do
         == utxosDeposited utxoSt
           ?! UnexpectedDepositPot (Coin oblgCurr) (utxosDeposited utxoSt)
 
-      if (ppNew' ^. ppMaxTxSizeL + fromIntegral (ppNew' ^. ppMaxBHSizeL) < ppNew' ^. ppMaxBBSizeL)
+      if toInteger (ppNew' ^. ppMaxTxSizeL) + toInteger (ppNew' ^. ppMaxBHSizeL) < toInteger (ppNew' ^. ppMaxBBSizeL)
         then pure $ NewppState ppNew' (updatePpup ppupSt ppNew')
         else pure $ NewppState pp (updatePpup ppupSt pp)
     Nothing -> pure $ NewppState pp (updatePpup ppupSt pp)

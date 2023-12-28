@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Changed the type of lenses ppCommitteeMaxTermLengthL, ppuCommitteeMaxTermLengthL
 * Change 'getScriptWitnessConwayTxCert' so that DRepRegistration certificate requires a witness
 * Implement `ToJSON` and `FromJSON` instances for `PoolVotingThresholds` and
   `DRepVotingThreshold`, instead of deriving that doesn't handle field names
