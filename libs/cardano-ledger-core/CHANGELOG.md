@@ -2,6 +2,16 @@
 
 ## 1.10.0.0
 
+* Fix `ToJSON`/`FromJSON` for `CostModels`. Make sure that `CostModels` can roundtrip
+  through JSON. Also report `CostModels` failures in JSON.
+* Add `costModelParamsCount`
+* Move Plutus related `Arbitrary` instances: `ExUnits`, `CostModels`,
+  `FlexibleCostModels`, `CostModel`, `Prices`, `Language`
+* Add `Cardano.Ledger.Plutus` that re-exports all plutus related functionality
+* Add `Semigroup` and `Monoid` instances for `CostModels`
+* Add `mkCostModels` and expose `flattenCostModels`
+* Stop exporting `CostModels` constructor in order to improve safety.
+* Fix `Eq`/`Ord` and add `EncCBOR`/`DecCBOR` instances for `CostModelError`
 * Re-export `Cardano.Ledger.Keys.Bootstrap` and `Cardano.Ledger.Keys.WitsVKey` from
   `Cardano.Ledger.Keys`
 * Add `unData`, `getCostModelEvaluationContext`
@@ -9,7 +19,7 @@
   * Make `PlutusWithContext` era agnostic, but Language aware. `pwcScript` can be either
     in decoded or binary format. `pwcProtocolVersion` was added too.
   * `debugPlutus`, `runPlutusScript`, `runPlutusScriptWithLogs` and
-      `explainPlutusEvaluationError` no longer accept `PrtoVer` as argument, since major
+      `explainPlutusEvaluationError` no longer accept `ProtVer` as argument, since major
       protocol version has been added to `PlutusWithContext`
   * Change constructor of `ScriptFailure` from `PlutusSF` to `ScriptFailure` and add
     record names: `scriptFailureMessage` and `scriptFailurePlutus`
@@ -45,6 +55,10 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Core.JSON` with `roundTripJsonSpec`, `roundTripJsonEraSpec` and
+  `roundTripJsonProperty`
+* Add `zeroTestingCostModel` and `zeroTestingCostModels`
+* Add `mkCostModelConst`
 * Add `diffExprCompact`
 * Add `expectLeftDeep_`, `expectRightDeep_`
 * Two new modules `Test.Cardano.Ledger.Plutus` and `Test.Cardano.Ledger.Plutus.Examples`

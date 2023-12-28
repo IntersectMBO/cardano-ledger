@@ -13,8 +13,6 @@
 
 module Test.Cardano.Ledger.Examples.STSTestUtils (
   AlonzoBased (..),
-  freeCostModelV1,
-  freeCostModelV2,
   initUTxO,
   mkGenesisTxIn,
   mkTxDats,
@@ -45,10 +43,6 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure (..),
   AlonzoUtxowPredFailure (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (
-  CostModel,
-  mkCostModel,
- )
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (..),
   IsValid (..),
@@ -75,7 +69,6 @@ import Cardano.Ledger.Keys (
   hashKey,
  )
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
-import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.Shelley.API (
@@ -100,13 +93,11 @@ import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (Default (..))
-import Data.Either (fromRight)
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import GHC.Natural (Natural)
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
-import qualified PlutusLedgerApi.V2 as PV2
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (
   TxOutField (..),
@@ -137,20 +128,6 @@ alwaysSucceedsHash ::
   Proof era ->
   ScriptHash (EraCrypto era)
 alwaysSucceedsHash n pf = hashScript @era $ always n pf
-
--- | A cost model that sets everything as being free
-freeCostModelV1 :: CostModel
-freeCostModelV1 =
-  fromRight (error "corrupt freeCostModelV1") $
-    mkCostModel PlutusV1 $
-      0 <$ ([minBound .. maxBound] :: [PV1.ParamName])
-
--- | A cost model that sets everything as being free
-freeCostModelV2 :: CostModel
-freeCostModelV2 =
-  fromRight (error "corrupt freeCostModelV2") $
-    mkCostModel PlutusV1 $
-      0 <$ ([minBound .. maxBound] :: [PV2.ParamName])
 
 someKeys :: forall era. Era era => Proof era -> KeyPair 'Payment (EraCrypto era)
 someKeys _pf = KeyPair vk sk

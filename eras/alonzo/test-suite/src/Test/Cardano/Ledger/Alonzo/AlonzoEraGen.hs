@@ -94,9 +94,9 @@ import qualified PlutusTx as Plutus
 import System.Random
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds, mkPlutusScript')
-import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Plutus.Examples (
   evenRedeemer2,
   evendata3,
@@ -303,7 +303,7 @@ genAlonzoPParamsUpdate constants pp = do
   let alonzoUpgrade =
         UpgradeAlonzoPParams
           { uappCoinsPerUTxOWord = coinPerWord
-          , uappCostModels = SJust freeV1CostModels
+          , uappCostModels = SJust $ zeroTestingCostModels [PlutusV1]
           , uappPrices = prices
           , uappMaxTxExUnits = maxTxExUnits
           , uappMaxBlockExUnits = maxBlockExUnits
@@ -337,7 +337,7 @@ genAlonzoPParams constants = do
   let alonzoUpgrade =
         UpgradeAlonzoPParams
           { uappCoinsPerUTxOWord = coinPerWord
-          , uappCostModels = freeV1CostModels
+          , uappCostModels = zeroTestingCostModels [PlutusV1]
           , uappPrices = prices
           , uappMaxTxExUnits = maxTxExUnits
           , uappMaxBlockExUnits = maxBlockExUnits

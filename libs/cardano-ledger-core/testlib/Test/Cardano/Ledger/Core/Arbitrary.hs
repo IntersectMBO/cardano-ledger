@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -29,6 +30,11 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genInsertDeleteRoundtripPtr,
   genInsertDeleteRoundtripSPool,
   genInsertDeleteRoundtripDRep,
+
+  -- * Plutus
+  FlexibleCostModels (..),
+  genValidAndUnknownCostModels,
+  genValidCostModel,
 
   -- * Utils
 
@@ -70,7 +76,7 @@ import Cardano.Ledger.BaseTypes (
   textToDns,
   textToUrl,
  )
-import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR, Sized, mkSized)
 import Cardano.Ledger.CertState (
   Anchor (..),
   CertState (..),
@@ -96,6 +102,22 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
+import Cardano.Ledger.Plutus.CostModels (
+  CostModel,
+  CostModelApplyError (..),
+  CostModelError (..),
+  CostModels,
+  costModelParamsCount,
+  mkCostModel,
+  mkCostModels,
+  mkCostModelsLenient,
+  updateCostModels,
+ )
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..), Prices (..))
+import Cardano.Ledger.Plutus.Language (
+  Language (..),
+  nonNativeLanguages,
+ )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
@@ -115,8 +137,10 @@ import Cardano.Ledger.UMap (
   unify,
  )
 import Cardano.Ledger.UTxO (UTxO (..))
+import Control.Monad (replicateM)
 import Control.Monad.Identity (Identity)
 import Data.GenValidity
+import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
@@ -125,7 +149,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Typeable
 import qualified Data.VMap as VMap
-import Data.Word (Word16, Word32, Word64)
+import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Stack
 import Generic.Random (genericArbitraryU)
 import System.Random.Stateful (StatefulGen, uniformRM)
@@ -759,3 +783,100 @@ instance Crypto c => Arbitrary (PoolCert c) where
       , RetirePool <$> arbitrary <*> arbitrary
       ]
   shrink = genericShrink
+
+------------------------------------------------------------------------------------------
+-- Cardano.Ledger.Plutus ----------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+instance Arbitrary Language where
+  arbitrary = elements nonNativeLanguages
+
+instance Arbitrary CostModelError where
+  arbitrary =
+    CostModelError
+      <$> oneof
+        [ CMUnknownParamError <$> arbitrary
+        , pure CMInternalReadError
+        , CMInternalWriteError <$> arbitrary
+        , CMTooFewParamsError <$> arbitrary <*> arbitrary
+        ]
+
+instance Arbitrary ExUnits where
+  arbitrary = ExUnits <$> genUnit <*> genUnit
+    where
+      genUnit = fromIntegral <$> choose (0, maxBound :: Int64)
+
+instance Arbitrary Prices where
+  arbitrary = Prices <$> arbitrary <*> arbitrary
+
+instance Arbitrary CostModel where
+  arbitrary = elements nonNativeLanguages >>= genValidCostModel
+
+genValidCostModel :: Language -> Gen CostModel
+genValidCostModel lang = do
+  newParamValues <- vectorOf (costModelParamsCount lang) (arbitrary :: Gen Integer)
+  either (\err -> error $ "Corrupt cost model: " ++ show err) pure $
+    mkCostModel lang newParamValues
+
+genValidCostModels :: Set.Set Language -> Gen CostModels
+genValidCostModels = fmap mkCostModels . sequence . Map.fromSet genValidCostModel
+
+genValidAndUnknownCostModels :: Gen CostModels
+genValidAndUnknownCostModels = do
+  langs <- sublistOf nonNativeLanguages
+  validCms <- genValidCostModels $ Set.fromList langs
+  unknownCms <- mkCostModelsLenient <$> genUnknownCostModels
+  pure $ updateCostModels validCms unknownCms
+
+-- | This Arbitrary instance assumes the inflexible deserialization
+-- scheme prior to version 9.
+instance Arbitrary CostModels where
+  arbitrary = do
+    langs <- sublistOf nonNativeLanguages
+    genValidCostModels $ Set.fromList langs
+
+-- | This Arbitrary instance assumes the flexible deserialization
+-- scheme of 'CostModels' starting at version 9.
+newtype FlexibleCostModels = FlexibleCostModels {unFlexibleCostModels :: CostModels}
+  deriving stock (Show, Eq, Ord)
+  deriving newtype (EncCBOR, DecCBOR)
+
+instance Arbitrary FlexibleCostModels where
+  arbitrary = do
+    known <- genKnownCostModels
+    unknown <- genUnknownCostModels
+    let cms = known `Map.union` unknown
+    pure . FlexibleCostModels $ mkCostModelsLenient cms
+
+genUnknownCostModels :: Gen (Map Word8 [Integer])
+genUnknownCostModels = Map.fromList <$> listOf genUnknownCostModelValues
+
+genKnownCostModels :: Gen (Map Word8 [Integer])
+genKnownCostModels = do
+  langs <- sublistOf nonNativeLanguages
+  cms <- mapM genCostModelValues langs
+  return $ Map.fromList cms
+
+genUnknownCostModelValues :: Gen (Word8, [Integer])
+genUnknownCostModelValues = do
+  lang <- chooseInt (firstInvalid, fromIntegral (maxBound :: Word8))
+  vs <- arbitrary
+  return (fromIntegral . fromEnum $ lang, vs)
+  where
+    firstInvalid = fromEnum (maxBound :: Language) + 1
+
+genCostModelValues :: Language -> Gen (Word8, [Integer])
+genCostModelValues lang = do
+  Positive sub <- arbitrary
+  (,) lang'
+    <$> oneof
+      [ listAtLeast (costModelParamsCount lang) -- Valid Cost Model for known language
+      , take (tooFew sub) <$> arbitrary -- Invalid Cost Model for known language
+      ]
+  where
+    lang' = fromIntegral (fromEnum lang)
+    tooFew sub = costModelParamsCount lang - sub
+    listAtLeast :: Int -> Gen [Integer]
+    listAtLeast x = do
+      NonNegative y <- arbitrary
+      replicateM (x + y) arbitrary

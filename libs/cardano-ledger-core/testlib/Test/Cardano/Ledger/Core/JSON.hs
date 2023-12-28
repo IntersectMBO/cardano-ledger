@@ -1,38 +1,60 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Core.JSON (
-  roundTripEraSpec,
-  roundTripProperty,
+  roundTripJsonSpec,
+  roundTripJsonEraSpec,
+  roundTripJsonProperty,
 ) where
 
+import Cardano.Ledger.Core
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
+import Data.Aeson.Encode.Pretty (encodePretty)
+import qualified Data.ByteString.Lazy as BSL
 import Data.Function ((&))
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import Data.Typeable (Proxy (..), Typeable, typeRep)
-import Test.Cardano.Ledger.Common (Arbitrary, Property, Spec, counterexample, prop, property, shouldBe)
+import GHC.Stack
+import Test.Cardano.Ledger.Common
 
--- | QuickCheck property spec that uses `roundTripProperty`
-roundTripEraSpec ::
+-- | QuickCheck property spec that uses `roundTripJsonProperty`
+roundTripJsonSpec ::
   forall t.
-  (Typeable t, Show t, Eq t, ToJSON t, FromJSON t, Arbitrary t) =>
+  (HasCallStack, Typeable t, Show t, Eq t, ToJSON t, FromJSON t, Arbitrary t) =>
   Spec
-roundTripEraSpec =
-  prop (show (typeRep $ Proxy @t)) $ roundTripProperty @t
+roundTripJsonSpec =
+  prop (show (typeRep $ Proxy @t)) $ roundTripJsonProperty @t
 
--- | Roundtrip JSON testing for types and type families that implement
--- ToJSON/FromJSON.
-roundTripProperty ::
+-- | Roundtrip JSON testing for types that implement ToJSON/FromJSON.
+roundTripJsonProperty ::
   forall t.
-  (Show t, Eq t, ToJSON t, FromJSON t) =>
+  (HasCallStack, Show t, Eq t, ToJSON t, FromJSON t) =>
   t ->
   Property
-roundTripProperty original = do
+roundTripJsonProperty original = do
   let encoded = encode original
+      encodedString =
+        "Encoded: \n  " <> T.unpack (T.decodeUtf8 (BSL.toStrict (encodePretty original)))
   case eitherDecode encoded of
     Left err ->
       property False
-        & counterexample ("failed: " <> err)
+        & counterexample ("Failed decoding: \n  " <> err <> "\n" <> encodedString)
     Right result ->
       property (result `shouldBe` original)
-        & counterexample ("encoded: " <> show encoded)
+        & counterexample encodedString
+
+-- | Roundtrip JSON testing for core type families.
+roundTripJsonEraSpec ::
+  forall era.
+  ( HasCallStack
+  , EraPParams era
+  , Arbitrary (PParams era)
+  ) =>
+  Spec
+roundTripJsonEraSpec =
+  describe (eraName @era) $ do
+    describe "RoundTrip JSON" $ do
+      roundTripJsonSpec @(PParams era)

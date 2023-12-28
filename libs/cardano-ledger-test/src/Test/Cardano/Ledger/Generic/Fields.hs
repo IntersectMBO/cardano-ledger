@@ -43,7 +43,7 @@ where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..), unOrdExUnits)
-import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices)
+import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits (..), Prices)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))

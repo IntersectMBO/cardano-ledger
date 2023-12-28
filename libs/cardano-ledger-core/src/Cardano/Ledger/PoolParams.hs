@@ -43,7 +43,7 @@ import Cardano.Ledger.Binary (
   szCases,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   Hash,
   KeyHash (..),
@@ -113,7 +113,7 @@ data StakePoolRelay
 
 instance FromJSON StakePoolRelay where
   parseJSON =
-    Aeson.withObject "Credential" $ \obj ->
+    Aeson.withObject "StakePoolRelay" $ \obj ->
       asum
         [ explicitParseField parser1 obj "single host address"
         , explicitParseField parser2 obj "single host name"
@@ -213,14 +213,14 @@ data PoolParams c = PoolParams
   deriving (EncCBOR) via CBORGroup (PoolParams c)
   deriving (DecCBOR) via CBORGroup (PoolParams c)
 
-instance CC.Crypto c => Default (PoolParams c) where
+instance Crypto c => Default (PoolParams c) where
   def = PoolParams def def (Coin 0) (Coin 0) def def def def def
 
 instance NoThunks (PoolParams c)
 
 deriving instance NFData (PoolParams c)
 
-instance CC.Crypto c => ToJSON (PoolParams c) where
+instance Crypto c => ToJSON (PoolParams c) where
   toJSON pp =
     Aeson.object
       [ "publicKey" .= ppId pp -- TODO publicKey is an unfortunate name, should be poolId
@@ -234,7 +234,7 @@ instance CC.Crypto c => ToJSON (PoolParams c) where
       , "metadata" .= ppMetadata pp
       ]
 
-instance CC.Crypto c => FromJSON (PoolParams c) where
+instance Crypto c => FromJSON (PoolParams c) where
   parseJSON =
     Aeson.withObject "PoolParams" $ \obj ->
       PoolParams
@@ -272,10 +272,7 @@ data SizeOfPoolRelays = SizeOfPoolRelays
 instance EncCBOR SizeOfPoolRelays where
   encCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
 
-instance
-  CC.Crypto c =>
-  EncCBORGroup (PoolParams c)
-  where
+instance Crypto c => EncCBORGroup (PoolParams c) where
   encCBORGroup poolParams =
     encCBOR (ppId poolParams)
       <> encCBOR (ppVrf poolParams)
@@ -312,10 +309,7 @@ instance
   listLen _ = 9
   listLenBound _ = 9
 
-instance
-  CC.Crypto c =>
-  DecCBORGroup (PoolParams c)
-  where
+instance Crypto c => DecCBORGroup (PoolParams c) where
   decCBORGroup = do
     hk <- decCBOR
     vrf <- decCBOR

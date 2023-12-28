@@ -17,13 +17,6 @@ import Cardano.Ledger.Alonzo.PParams (
   LangDepView (..),
   getLanguageView,
  )
-import Cardano.Ledger.Alonzo.Scripts (
-  CostModel,
-  CostModels (..),
-  ExUnits (..),
-  Prices (..),
-  mkCostModel,
- )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
@@ -31,7 +24,17 @@ import Cardano.Ledger.Binary.Plain as Plain (serialize)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (valueFromList)
+import Cardano.Ledger.Plutus.CostModels (
+  CostModel,
+  CostModels,
+  mkCostModel,
+  mkCostModels,
+ )
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
+import Cardano.Ledger.Plutus.ExUnits (
+  ExUnits (..),
+  Prices (..),
+ )
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Data.Aeson (eitherDecodeFileStrict)
@@ -46,7 +49,6 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Paths_cardano_ledger_alonzo_test
 import qualified PlutusLedgerApi.V1 as PV1 (Data (..))
-import Test.Cardano.Ledger.Alonzo.CostModel (freeV1V2CostModels)
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Cardano.Ledger.Mary.Golden (
@@ -58,6 +60,7 @@ import Test.Cardano.Ledger.Mary.Golden (
   smallName,
   smallestName,
  )
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (aliceAddr, bobAddr, carlAddr)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Tasty (TestTree, testGroup)
@@ -271,7 +274,7 @@ fromRightError errorMsg =
 exPP :: PParams Alonzo
 exPP =
   emptyPParams
-    & ppCostModelsL .~ freeV1V2CostModels
+    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1, PlutusV2]
 
 exampleLangDepViewPV1 :: LangDepView
 exampleLangDepViewPV1 = LangDepView b1 b2
@@ -336,10 +339,8 @@ expectedGenesis =
 
 expectedCostModels :: CostModels
 expectedCostModels =
-  CostModels
+  mkCostModels
     (Map.fromList [(PlutusV1, expectedCostModel), (PlutusV2, expectedCostModelV2)])
-    mempty
-    mempty
 
 expectedCostModel :: CostModel
 expectedCostModel =

@@ -20,7 +20,6 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   alwaysSucceedsLang,
   alwaysFails,
   alwaysFailsLang,
-  costModelParamsCount,
   FlexibleCostModels (..),
   genScripts,
   genValidCostModel,
@@ -37,16 +36,7 @@ import Cardano.Ledger.Alonzo.Rules (
   FailureDescription (..),
   TagMismatchDescription (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoScript (..),
-  CostModel,
-  CostModels (..),
-  ExUnits (..),
-  Prices (..),
-  Tag (..),
-  mkCostModel,
-  mkCostModelsLenient,
- )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
   IsValid (IsValid),
@@ -67,7 +57,6 @@ import Cardano.Ledger.Alonzo.TxWits (
   TxDats (TxDats),
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe)
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Plutus.Data (
   BinaryData,
   Data (..),
@@ -75,31 +64,31 @@ import Cardano.Ledger.Plutus.Data (
   dataToBinaryData,
   hashData,
  )
+import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.Plutus.Language (
   Language (..),
   Plutus (..),
   PlutusLanguage,
   asSLanguage,
-  nonNativeLanguages,
   plutusLanguage,
   withSLanguage,
  )
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Shelley.TxWits (keyBy)
-import Control.Monad (replicateM)
 import Data.Functor.Identity (Identity)
-import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty ((:|)))
-import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (pack)
-import Data.Word (Word8)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.CostModel (costModelParamsCount)
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Arbitrary (
+  FlexibleCostModels (..),
+  genValidAndUnknownCostModels,
+  genValidCostModel,
+ )
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, alwaysSucceedsPlutus)
 
@@ -138,11 +127,6 @@ instance Arbitrary Tag where
 
 instance Arbitrary RdmrPtr where
   arbitrary = RdmrPtr <$> arbitrary <*> arbitrary
-
-instance Arbitrary ExUnits where
-  arbitrary = ExUnits <$> genUnit <*> genUnit
-    where
-      genUnit = fromIntegral <$> choose (0, maxBound :: Int64)
 
 instance Era era => Arbitrary (Redeemers era) where
   arbitrary = Redeemers <$> arbitrary
@@ -234,42 +218,6 @@ instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => Arbitrary (Alon
       , (1, alwaysFailsLang lang <$> elements [1, 2, 3])
       , (10, TimelockScript <$> arbitrary)
       ]
-
-instance Arbitrary Language where
-  arbitrary = elements nonNativeLanguages
-
-instance Arbitrary Prices where
-  arbitrary = Prices <$> arbitrary <*> arbitrary
-
-genCostModel :: Language -> Gen (Language, CostModel)
-genCostModel lang = (,) lang <$> genValidCostModel lang
-
-instance Arbitrary CostModel where
-  arbitrary = snd <$> (elements nonNativeLanguages >>= genCostModel)
-
-genValidCostModel :: Language -> Gen CostModel
-genValidCostModel lang = do
-  newParamValues <- vectorOf (costModelParamsCount lang) (arbitrary :: Gen Integer)
-  either (\err -> error $ "Corrupt cost model: " ++ show err) pure $
-    mkCostModel lang newParamValues
-
-genValidCostModelPair :: Language -> Gen (Language, CostModel)
-genValidCostModelPair lang = (,) lang <$> genValidCostModel lang
-
-genValidAndUnknownCostModels :: Gen CostModels
-genValidAndUnknownCostModels = do
-  langs <- sublistOf nonNativeLanguages
-  validCms <- Map.fromList <$> mapM genValidCostModelPair langs
-  unknown <- genUnknownCostModels
-  pure $ CostModels validCms mempty unknown
-
--- | This Arbitrary instance assumes the inflexible deserialization
--- scheme prior to version 9.
-instance Arbitrary CostModels where
-  arbitrary = do
-    langs <- sublistOf nonNativeLanguages
-    cms <- mapM genValidCostModelPair langs
-    pure $ CostModels (Map.fromList cms) mempty mempty
 
 instance Arbitrary (AlonzoPParams Identity era) where
   arbitrary =
@@ -478,50 +426,3 @@ mkPlutusScript' plutus =
       error $
         "Plutus version " ++ show (plutusLanguage plutus) ++ " is not supported in " ++ eraName @era
     Just plutusScript -> fromPlutusScript plutusScript
-
--- | This Arbitrary instance assumes the flexible deserialization
--- scheme of 'CostModels' starting at version 9.
-newtype FlexibleCostModels = FlexibleCostModels {unFlexibleCostModels :: CostModels}
-  deriving (Show, Eq, Ord)
-  deriving newtype (EncCBOR, DecCBOR)
-
-instance Arbitrary FlexibleCostModels where
-  arbitrary = do
-    known <- genKnownCostModels
-    unknown <- genUnknownCostModels
-    let cms = known `Map.union` unknown
-    pure . FlexibleCostModels $ mkCostModelsLenient cms
-
-genUnknownCostModels :: Gen (Map Word8 [Integer])
-genUnknownCostModels = Map.fromList <$> listOf genUnknownCostModelValues
-
-genKnownCostModels :: Gen (Map Word8 [Integer])
-genKnownCostModels = do
-  langs <- sublistOf nonNativeLanguages
-  cms <- mapM genCostModelValues langs
-  return $ Map.fromList cms
-
-genUnknownCostModelValues :: Gen (Word8, [Integer])
-genUnknownCostModelValues = do
-  lang <- chooseInt (firstInvalid, fromIntegral (maxBound :: Word8))
-  vs <- arbitrary
-  return (fromIntegral . fromEnum $ lang, vs)
-  where
-    firstInvalid = fromEnum (maxBound :: Language) + 1
-
-genCostModelValues :: Language -> Gen (Word8, [Integer])
-genCostModelValues lang = do
-  Positive sub <- arbitrary
-  (lang',)
-    <$> oneof
-      [ listAtLeast (costModelParamsCount lang) -- Valid Cost Model for known language
-      , take (tooFew sub) <$> arbitrary -- Invalid Cost Model for known language
-      ]
-  where
-    lang' = fromIntegral (fromEnum lang)
-    tooFew sub = costModelParamsCount lang - sub
-
-listAtLeast :: Int -> Gen [Integer]
-listAtLeast x = do
-  NonNegative y <- arbitrary
-  replicateM (x + y) arbitrary

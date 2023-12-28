@@ -44,10 +44,8 @@ import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
-  freeCostModelV1,
   initUTxO,
   mkGenesisTxIn,
   mkTxDats,
@@ -65,6 +63,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModel, zeroTestingCostModels)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
@@ -88,7 +87,7 @@ collectTwoPhaseScriptInputsOutputOrdering = do
             , pwcScript = Left $ plutus
             , pwcDatums = PlutusDatums [unData @Alonzo datum, unData @Alonzo redeemer, context]
             , pwcExUnits = ExUnits 5000 5000
-            , pwcCostModel = freeCostModelV1
+            , pwcCostModel = zeroTestingCostModel PlutusV1
             }
       ]
   where
@@ -196,7 +195,7 @@ testSystemStart = SystemStart $ posixSecondsToUTCTime 0
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls freeV1CostModels
+  [ Costmdls $ zeroTestingCostModels [PlutusV1]
   , MaxValSize 1000000000
   , MaxTxExUnits $ ExUnits 1000000 1000000
   , MaxBlockExUnits $ ExUnits 1000000 1000000

@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   CostModel,
-  CostModels (..),
+  CostModels,
   ExUnits (ExUnits),
   Prices (..),
   Tag,
@@ -39,6 +39,7 @@ import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Plutus.CostModels (costModelsValid)
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Pretty hiding (ppPParams, ppPParamsUpdate, ppTx, ppTxBody, ppTxOut)

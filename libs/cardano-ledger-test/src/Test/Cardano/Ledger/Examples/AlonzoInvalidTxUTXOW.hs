@@ -67,7 +67,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   AlonzoBased (..),
@@ -98,6 +97,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (HasTokens (..), PostShelley, Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (
   RawSeed (..),
   mkKeyPair,
@@ -959,7 +959,7 @@ extraneousKeyHash = hashKey . snd . mkKeyPair $ RawSeed 0 0 0 0 99
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls freeV1CostModels
+  [ Costmdls $ zeroTestingCostModels [PlutusV1]
   , MaxValSize 1000000000
   , MaxTxExUnits $ ExUnits 1000000 1000000
   , MaxBlockExUnits $ ExUnits 1000000 1000000

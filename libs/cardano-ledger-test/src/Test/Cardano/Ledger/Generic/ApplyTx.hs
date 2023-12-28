@@ -41,7 +41,6 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
-import Test.Cardano.Ledger.Alonzo.CostModel (freeV1CostModels)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   initUTxO,
@@ -75,6 +74,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (pcCredential, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (never))
 import Test.Cardano.Ledger.Generic.Updaters (newPParams, newScriptIntegrityHash, newTx, newTxBody, newTxOut)
+import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld (deltaFOld), rsOld)
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
@@ -82,7 +82,7 @@ import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls freeV1CostModels
+  [ Costmdls $ zeroTestingCostModels [PlutusV1]
   , MaxValSize 1000000000
   , MaxTxExUnits $ ExUnits 1000000 1000000
   , MaxBlockExUnits $ ExUnits 1000000 1000000
