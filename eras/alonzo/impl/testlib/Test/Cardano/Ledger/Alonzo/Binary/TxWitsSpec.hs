@@ -44,7 +44,7 @@ emptyFieldsProps ::
 emptyFieldsProps = do
   prop "fails to deserialize if fields contain an empty collection" $
     conjoin $
-      emptyFieldProp <$> [0, 1, 2, 3, 5, 6, 7]
+      emptyFieldProp <$> [0 .. 7]
   where
     emptyFieldProp :: Int -> Property
     emptyFieldProp k =

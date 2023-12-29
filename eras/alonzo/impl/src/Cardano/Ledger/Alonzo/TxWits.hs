@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -319,8 +318,11 @@ nullDats :: TxDats era -> Bool
 nullDats (TxDats' d) = Map.null d
 
 instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
-  decCBOR :: Decoder s (Annotator (TxDatsRaw era))
-  decCBOR = decode $ fmap (TxDatsRaw . keyBy hashData) <$> listDecodeA From
+  decCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      (mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (TxDatsRaw . keyBy hashData . NE.toList))
+      (mapTraverseableDecoderA (decodeList decCBOR) (TxDatsRaw . keyBy hashData))
   {-# INLINE decCBOR #-}
 
 -- | Note that 'TxDats' are based on 'MemoBytes' since we must preserve
