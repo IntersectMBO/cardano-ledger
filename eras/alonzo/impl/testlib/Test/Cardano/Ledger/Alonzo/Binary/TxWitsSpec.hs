@@ -44,7 +44,7 @@ emptyFieldsProps ::
 emptyFieldsProps = do
   prop "fails to deserialize if fields contain an empty collection" $
     conjoin $
-      emptyFieldProp <$> [1, 3, 6, 7]
+      emptyFieldProp <$> [0, 1, 3, 6, 7]
   where
     emptyFieldProp :: Int -> Property
     emptyFieldProp k =
@@ -107,7 +107,6 @@ nativeScriptsProp = do
     "fails to deserialize if empty, starting with Conway"
     distinctProp
   where
-    key :: Int = 1
     distinctProp =
       forAllShow (genEncoding False) (showEnc @era) $
         expectDeserialiseSuccess @era
@@ -129,7 +128,7 @@ nativeScriptsProp = do
             | otherwise = [sc]
 
       let natives = Maybe.mapMaybe getNativeScript scs
-      pure $ encCBOR $ Map.singleton key (encCBOR natives)
+      pure $ encCBOR $ Map.singleton (1 :: Int) (encCBOR natives)
 
 expectDeserialiseSuccess ::
   forall era.

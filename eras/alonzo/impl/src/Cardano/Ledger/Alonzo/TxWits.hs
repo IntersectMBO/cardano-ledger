@@ -601,7 +601,12 @@ instance
       txWitnessField 0 =
         fieldAA
           (\x wits -> wits {atwrAddrTxWits = x})
-          (setDecodeA From)
+          ( D $
+              ifDecoderVersionAtLeast
+                (natVersion @9)
+                (mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList))
+                (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
+          )
       txWitnessField 1 =
         fieldAA
           addScripts

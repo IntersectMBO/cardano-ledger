@@ -427,7 +427,7 @@ drep_voting_thresholds =
   ]
 
 transaction_witness_set =
-  { ? 0: [* vkeywitness ]
+  { ? 0: [+ vkeywitness ]
   , ? 1: [+ native_script ]
   , ? 2: [* bootstrap_witness ]
   , ? 3: nonempty_set<plutus_v1_script>
