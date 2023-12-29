@@ -121,11 +121,11 @@ alicePoolParams =
         StrictSeq.singleton $
           SingleHostName SNothing $
             fromJust $
-              textToDns "relay.io"
+              textToDns 64 "relay.io"
     , ppMetadata =
         SJust $
           PoolMetadata
-            { pmUrl = fromJust $ textToUrl "alice.pool"
+            { pmUrl = fromJust $ textToUrl 64 "alice.pool"
             , pmHash = BS.pack "{}"
             }
     }

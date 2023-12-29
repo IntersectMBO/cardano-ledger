@@ -781,7 +781,7 @@ constitutionShouldBe cUrl = do
         fromMaybe
           (error "No constitution has been set")
           constitution
-  anchorUrl `shouldBe` fromJust (textToUrl $ T.pack cUrl)
+  anchorUrl `shouldBe` fromJust (textToUrl 64 $ T.pack cUrl)
 
 -- | Performs the action without running the fix-up function on any transactions
 withNoFixup :: ImpTestM era a -> ImpTestM era a

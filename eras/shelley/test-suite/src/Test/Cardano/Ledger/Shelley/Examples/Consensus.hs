@@ -395,7 +395,7 @@ testEpochInfo = epochInfoPure testGlobals
 mkDummyAnchor :: Crypto c => Int -> Anchor c
 mkDummyAnchor n =
   Anchor
-    { anchorUrl = fromJust . textToUrl $ "dummy@" <> pack (show n)
+    { anchorUrl = fromJust . textToUrl 64 $ "dummy@" <> pack (show n)
     , anchorDataHash = mkDummySafeHash Proxy n
     }
 
@@ -567,7 +567,7 @@ examplePoolParams =
     , ppMetadata =
         SJust $
           PoolMetadata
-            { pmUrl = fromJust $ textToUrl "consensus.pool"
+            { pmUrl = fromJust $ textToUrl 64 "consensus.pool"
             , pmHash = "{}"
             }
     }

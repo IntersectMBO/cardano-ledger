@@ -248,8 +248,8 @@ exampleShelleyGenesis =
             (L.SJust $ L.Port 1234)
             (L.SJust $ read "0.0.0.0")
             (L.SJust $ read "2001:db8:a::123")
-        , L.SingleHostName L.SNothing (fromJust $ textToDns "cool.domain.com")
-        , L.MultiHostName (fromJust $ textToDns "cool.domain.com")
+        , L.SingleHostName L.SNothing (fromJust $ textToDns 64 "cool.domain.com")
+        , L.MultiHostName (fromJust $ textToDns 64 "cool.domain.com")
         ]
     poolParams :: L.PoolParams c
     poolParams =
@@ -265,7 +265,7 @@ exampleShelleyGenesis =
         , L.ppMetadata =
             L.SJust $
               L.PoolMetadata
-                { L.pmUrl = fromJust $ textToUrl "best.pool.com"
+                { L.pmUrl = fromJust $ textToUrl 64 "best.pool.com"
                 , L.pmHash = BS.pack "100ab{}100ab{}"
                 }
         }

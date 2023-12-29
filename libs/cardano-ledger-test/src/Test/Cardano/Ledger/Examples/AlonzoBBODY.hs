@@ -582,7 +582,7 @@ poolMDHTooBigTx pf =
             , ppRewardAcnt = RewardAcnt Testnet (scriptStakeCredSuceed pf)
             , ppOwners = mempty
             , ppRelays = mempty
-            , ppMetadata = SJust $ PoolMetadata (fromJust $ textToUrl "") tooManyBytes
+            , ppMetadata = SJust $ PoolMetadata (fromJust $ textToUrl 64 "") tooManyBytes
             }
 
 -- ============================== Expected UTXO  ===============================
