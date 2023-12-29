@@ -34,7 +34,7 @@ spec =
     cddlRoundTripAnnCborSpec @(TxWits Conway) v "transaction_witness_set"
     cddlRoundTripCborSpec @(PParamsUpdate Conway) v "protocol_param_update"
     cddlRoundTripCborSpec @CostModels v "costmdls"
-    cddlRoundTripAnnCborSpec @(Redeemers Conway) v "[* redeemer]"
+    cddlRoundTripAnnCborSpec @(Redeemers Conway) v "[+ redeemer]"
     cddlRoundTripAnnCborSpec @(Tx Conway) v "transaction"
     cddlRoundTripCborSpec @(VotingProcedure Conway) v "voting_procedure"
     cddlRoundTripCborSpec @(ProposalProcedure Conway) v "proposal_procedure"

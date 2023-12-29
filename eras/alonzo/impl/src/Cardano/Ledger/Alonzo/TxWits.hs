@@ -554,9 +554,11 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
           Just plutusScripts -> plutusScripts
 
 instance Era era => DecCBOR (Annotator (RedeemersRaw era)) where
-  decCBOR = do
-    entries <- fmap sequence . decodeList $ decodeAnnElement
-    pure $ RedeemersRaw . Map.fromList <$> entries
+  decCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      (mapTraverseableDecoderA (decodeNonEmptyList decodeAnnElement) (RedeemersRaw . Map.fromList . NE.toList))
+      (mapTraverseableDecoderA (decodeList decodeAnnElement) (RedeemersRaw . Map.fromList))
     where
       decodeAnnElement :: forall s. Decoder s (Annotator (RdmrPtr, (Data era, ExUnits)))
       decodeAnnElement = do

@@ -432,7 +432,7 @@ transaction_witness_set =
   , ? 2: [+ bootstrap_witness ]
   , ? 3: nonempty_set<plutus_v1_script>
   , ? 4: [* plutus_data ]
-  , ? 5: [* redeemer ]
+  , ? 5: [+ redeemer ]
   , ? 6: nonempty_set<plutus_v2_script>
   , ? 7: nonempty_set<plutus_v3_script>
   }
