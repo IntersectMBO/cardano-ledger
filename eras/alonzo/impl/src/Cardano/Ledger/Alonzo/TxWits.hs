@@ -614,7 +614,12 @@ instance
       txWitnessField 2 =
         fieldAA
           (\x wits -> wits {atwrBootAddrTxWits = x})
-          (setDecodeA From)
+          ( D $
+              ifDecoderVersionAtLeast
+                (natVersion @9)
+                (mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList))
+                (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
+          )
       txWitnessField 3 = fieldA addScripts (decodePlutus SPlutusV1)
       txWitnessField 4 =
         fieldAA
