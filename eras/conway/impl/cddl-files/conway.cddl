@@ -349,7 +349,7 @@ pool_params = ( operator:       pool_keyhash
 port = uint .le 65535
 ipv4 = bytes .size 4
 ipv6 = bytes .size 16
-dns_name = tstr .size (0..64)
+dns_name = tstr .size (0..128)
 
 single_host_addr = ( 0
                    , port / null
@@ -370,7 +370,7 @@ relay =
   ]
 
 pool_metadata = [url, pool_metadata_hash]
-url = tstr .size (0..64)
+url = tstr .size (0..128)
 
 withdrawals = { + reward_account => coin }
 

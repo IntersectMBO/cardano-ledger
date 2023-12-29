@@ -534,7 +534,7 @@ textSizeN :: MonadFail m => Int -> Text -> m Text
 textSizeN n t =
   if BS.length (encodeUtf8 t) <= n
     then pure t
-    else fail $ ("Text exceeds " ++ show n ++ " bytes:" ++ show t)
+    else fail $ "Text exceeds " ++ show n ++ " bytes:" ++ show t
 
 textDecCBOR :: Int -> Decoder s Text
 textDecCBOR n = decCBOR >>= textSizeN n
