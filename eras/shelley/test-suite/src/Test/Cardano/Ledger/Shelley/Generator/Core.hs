@@ -113,7 +113,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Ratio (denominator, numerator, (%))
-import Data.Word (Word64)
+import Data.Word (Word32, Word64)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), KeyPairs, mkAddr, mkCred, vKey)
@@ -475,7 +475,7 @@ mkBlockHeader ::
   -- | Operational certificate
   OCert c ->
   -- | Block size
-  Natural ->
+  Word32 ->
   -- | Block body hash
   Hash c EraIndependentBlockBody ->
   BHeader c

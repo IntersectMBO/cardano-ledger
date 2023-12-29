@@ -62,7 +62,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Ratio (Ratio, (%))
 import Data.Typeable (Typeable)
-import Data.Word (Word64)
+import Data.Word (Word16, Word32, Word64)
 import GHC.Records
 import GHC.Stack (HasCallStack)
 import Lens.Micro
@@ -138,14 +138,18 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV, maxMajorPV} = do
       & ppMinUTxOValueL .~ minUTxOValue
       & ppMinPoolCostL .~ minPoolCost
   where
-    szGen :: Gen (Natural, Natural, Natural)
+    szGen :: Gen (Word32, Word32, Word16)
     szGen = do
-      blockBodySize <- genNatural low hi
+      blockBodySize <- choose (low, hi)
       (blockBodySize,,)
-        <$> rangeUpTo (blockBodySize `div` 2)
-        <*> rangeUpTo (blockBodySize `div` 2)
-    rangeUpTo :: Natural -> Gen Natural
-    rangeUpTo upper = genNatural low upper
+        <$> choose (blockBodySize, blockBodySize `div` 2)
+        <*> choose (25000, maxBound :: Word16) -- Must stay in the range of Word16, but can't be too small
+
+-- Note: we keep the lower bound high enough so that we can more likely
+-- generate valid transactions and blocks
+low, hi :: Word32
+low = 50000
+hi = 200000
 
 -- poolDeposit
 -- NOTE: we need to keep these deposits small, otherwise
@@ -164,12 +168,6 @@ genExtraEntropy =
     [ (1, pure NeutralNonce)
     , (1, mkNonceFromNumber <$> genWord64 1 123)
     ]
-
--- Note: we keep the lower bound high enough so that we can more likely
--- generate valid transactions and blocks
-low, hi :: Natural
-low = 50000
-hi = 200000
 
 -- eMax (for an epoch per 5 days, say, this is between a month and 7yrs)
 genEMax ::
@@ -242,9 +240,10 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB, maxMajorPV} pp = do
   -- TODO generate Maybe types so not all updates are full
   minFeeA <- genM $ genInteger 0 (unCoin maxMinFeeA)
   minFeeB <- genM $ genInteger 0 (unCoin maxMinFeeB)
-  maxBBSize <- genM $ genNatural low hi
-  maxTxSize <- genM $ genNatural low hi
-  maxBHSize <- genM $ genNatural low hi
+  maxBBSize <- genM $ choose (low, hi)
+  maxTxSize <- genM $ choose (low, hi)
+  -- Must stay in the range of Word16, but can't be too small
+  maxBHSize <- genM $ choose (25000, maxBound :: Word16)
   keyDeposit <- genM $ genKeyDeposit
   poolDeposit <- genM $ genPoolDeposit
   eMax <- genM $ genEMax c

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -15,7 +16,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Block (
 where
 
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.BHeaderView (bhviewBSize)
+import Cardano.Ledger.BHeaderView (bhviewBSize, bhviewHSize)
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Shelley.API hiding (vKey)
@@ -170,7 +171,7 @@ genBlockWithTxGen
         <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
         <*> pure oCert
     let hView = makeHeaderView (bheader theBlock)
-    if bhviewBSize hView <= pp ^. ppMaxBBSizeL
+    if bhviewBSize hView <= pp ^. ppMaxBBSizeL && bhviewHSize hView <= fromIntegral (pp ^. ppMaxBHSizeL)
       then pure theBlock
       else discard
     where

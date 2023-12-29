@@ -23,14 +23,14 @@ import Cardano.Ledger.BaseTypes (ProtVer (..), Version)
 import Cardano.Ledger.Core
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
+import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 
 data ChainChecksPParams = ChainChecksPParams
-  { ccMaxBHSize :: Natural
-  , ccMaxBBSize :: Natural
+  { ccMaxBHSize :: Word16
+  , ccMaxBBSize :: Word32
   , ccProtocolVersion :: ProtVer
   }
   deriving (Show, Eq, Generic, NoThunks)
@@ -48,11 +48,11 @@ pparamsToChainChecksPParams pp =
 
 data ChainPredicateFailure
   = HeaderSizeTooLargeCHAIN
-      !Natural -- Header Size
-      !Natural -- Max Header Size
+      !Int -- Header Size
+      !Word16 -- Max Header Size
   | BlockSizeTooLargeCHAIN
-      !Natural -- Block Size
-      !Natural -- Max Block Size
+      !Word32 -- Block Size
+      !Word32 -- Max Block Size
   | ObsoleteNodeCHAIN
       !Version -- protocol version used
       !Version -- max protocol version
@@ -68,9 +68,9 @@ chainChecks ::
   m ()
 chainChecks maxpv ccd bhv = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
-  unless (fromIntegral (bhviewHSize bhv) <= ccMaxBHSize ccd) $
+  unless (bhviewHSize bhv <= (fromIntegral :: Word16 -> Int) (ccMaxBHSize ccd)) $
     throwError $
-      HeaderSizeTooLargeCHAIN (fromIntegral $ bhviewHSize bhv) (ccMaxBHSize ccd)
+      HeaderSizeTooLargeCHAIN (bhviewHSize bhv) (ccMaxBHSize ccd)
   unless (bhviewBSize bhv <= ccMaxBBSize ccd) $
     throwError $
       BlockSizeTooLargeCHAIN (bhviewBSize bhv) (ccMaxBBSize ccd)

@@ -297,7 +297,7 @@ spec =
             c1 <- freshKeyHash
             c2 <- freshKeyHash
             currentEpoch <- getsNES nesELL
-            let maxExpiry = currentEpoch + maxTermLength
+            let maxExpiry = addEpochInterval currentEpoch maxTermLength
             let initialMembers = [(c1, maxExpiry), (c2, maxExpiry)]
             govIdCom1 <-
               electCommittee
@@ -316,8 +316,8 @@ spec =
             c3 <- freshKeyHash
             c4 <- freshKeyHash
             currentEpoch <- getsNES nesELL
-            let exceedingExpiry = currentEpoch + maxTermLength + 7
-            let membersExceedingExpiry = [(c3, exceedingExpiry), (c4, currentEpoch + maxTermLength)]
+            let exceedingExpiry = addEpochInterval (addEpochInterval currentEpoch maxTermLength) (EpochInterval 7)
+            let membersExceedingExpiry = [(c3, exceedingExpiry), (c4, addEpochInterval currentEpoch maxTermLength)]
             _ <-
               electCommittee
                 (SJust govIdCom1)
@@ -347,7 +347,7 @@ spec =
           currentEpoch <- getsNES nesELL
           let delta =
                 fromIntegral (unEpochNo exceedingExpiry)
-                  - fromIntegral (unEpochNo (maxTermLength + currentEpoch))
+                  - fromIntegral (unEpochNo (addEpochInterval currentEpoch maxTermLength))
           replicateM_ delta passEpoch
 
           -- pass one more epoch after ratification, in order to be enacted
@@ -499,7 +499,7 @@ setPParams = do
           , dvtCommitteeNoConfidence = 1 %! 2
           , dvtUpdateToConstitution = 1 %! 2
           }
-      & ppCommitteeMaxTermLengthL .~ 10
+      & ppCommitteeMaxTermLengthL .~ EpochInterval 10
       & ppGovActionLifetimeL .~ EpochInterval 100
       & ppGovActionDepositL .~ Coin 123
 

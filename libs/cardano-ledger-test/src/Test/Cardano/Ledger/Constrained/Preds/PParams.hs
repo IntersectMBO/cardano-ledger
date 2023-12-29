@@ -79,9 +79,9 @@ genPParams proof tx bb bh = do
           , Prices (Script.Prices (nonNegativeInterval 1.0) (nonNegativeInterval 1.0))
           , defaultCostModels proof
           , MaxValSize 1000
-          , MaxTxSize tx
-          , MaxBBSize bb
-          , MaxBHSize bh
+          , MaxTxSize (fromIntegralBounded "TxSize" tx) -- In the Model these are Natural
+          , MaxBBSize (fromIntegralBounded "BlockBodySize" bb) -- But in the PParams, they are
+          , MaxBHSize (fromIntegralBounded "BlockHeaderSize" bh) -- Word32, Word32, and Word16
           , MaxTxExUnits maxTxExUnits2
           , MaxCollateralInputs maxCollateralInputs
           , CollateralPercentage collateralPercentage2

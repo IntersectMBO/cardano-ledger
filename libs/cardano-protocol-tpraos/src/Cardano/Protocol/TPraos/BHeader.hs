@@ -107,7 +107,7 @@ import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Ratio ((%))
 import Data.Typeable
-import Data.Word (Word64)
+import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
@@ -167,7 +167,7 @@ data BHBody c = BHBody
   -- ^ block nonce
   , bheaderL :: !(CertifiedVRF c Natural)
   -- ^ leader election value
-  , bsize :: !Natural
+  , bsize :: !Word32
   -- ^ Size of the block body
   , bhash :: !(Hash c EraIndependentBlockBody)
   -- ^ Hash of block body
@@ -229,7 +229,7 @@ instance
     where
       oc = bheaderOCert <$> proxy
       pv = bprotver <$> proxy
-      toWord64 :: Natural -> Word64
+      toWord64 :: Word32 -> Word64
       toWord64 = fromIntegral
 
 instance
@@ -363,7 +363,7 @@ bhbody ::
   BHBody c
 bhbody (BHeader b _) = b
 
-hBbsize :: BHBody c -> Natural
+hBbsize :: BHBody c -> Word32
 hBbsize = bsize
 
 -- | Natural value with some additional bound. It must always be the base that

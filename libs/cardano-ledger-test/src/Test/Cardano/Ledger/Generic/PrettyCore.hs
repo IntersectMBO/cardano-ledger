@@ -1993,9 +1993,9 @@ pcPParamsSynopsis p x = withEraPParams p help
     help =
       ppRecord
         "PParams (synopsis)"
-        [ ("maxBBSize", ppNatural (x ^. Core.ppMaxBBSizeL))
-        , ("maxBHSize", ppNatural (x ^. Core.ppMaxBHSizeL))
-        , ("maxTxSize", ppNatural (x ^. Core.ppMaxTxSizeL))
+        [ ("maxBBSize", ppWord32 (x ^. Core.ppMaxBBSizeL))
+        , ("maxBHSize", ppWord16 (x ^. Core.ppMaxBHSizeL))
+        , ("maxTxSize", ppWord32 (x ^. Core.ppMaxTxSizeL))
         , ("poolDeposit", pcCoin (x ^. Core.ppPoolDepositL))
         , ("keyDeposit", pcCoin (x ^. Core.ppKeyDepositL))
         , ("protVer", ppString (showProtver (x ^. Core.ppProtocolVersionL)))
@@ -2195,9 +2195,9 @@ pcPParamsField ::
 pcPParamsField x = case x of
   MinfeeA coin -> [("minfeeA", pcCoin coin)]
   MinfeeB coin -> [("minfeeB", pcCoin coin)]
-  MaxBBSize natural -> [("maxBBsize", ppNatural natural)]
-  MaxTxSize natural -> [("maxTxsize", ppNatural natural)]
-  MaxBHSize natural -> [("maxBHsize", ppNatural natural)]
+  MaxBBSize natural -> [("maxBBsize", ppWord32 natural)]
+  MaxTxSize natural -> [("maxTxsize", ppWord32 natural)]
+  MaxBHSize natural -> [("maxBHsize", ppWord16 natural)]
   KeyDeposit coin -> [("keydeposit", pcCoin coin)]
   PoolDeposit coin -> [("pooldeposit", pcCoin coin)]
   EMax n -> [("emax", ppEpochInterval n)]
@@ -2222,7 +2222,7 @@ pcPParamsField x = case x of
   PoolVotingThreshold _ -> [("PoolVotingThresholds", ppString "?")]
   DRepVotingThreshold _ -> [("DRepVotingThresholds", ppString "?")]
   MinCommitteeSize n -> [("minCommitteeSize", ppNatural n)]
-  CommitteeTermLimit n -> [("committeeTermLimit", ppEpochNo n)]
+  CommitteeTermLimit n -> [("committeeTermLimit", ppEpochInterval n)]
   GovActionExpiration epochNo -> [("govActionExpire", ppEpochInterval epochNo)]
   GovActionDeposit coin -> [("govActiondDeposit", pcCoin coin)]
   DRepDeposit coin -> [("drepdeposit", pcCoin coin)]

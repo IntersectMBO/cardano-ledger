@@ -7,7 +7,7 @@ import Cardano.Ledger.BaseTypes (BoundedRational (..), UnitInterval)
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.Slot (SlotNo (..), (-*))
-import Numeric.Natural (Natural)
+import Data.Word (Word32)
 
 -- | 'BHeaderView' provides an interface between block headers
 -- from different Cardano protocols and packages that should be
@@ -22,7 +22,7 @@ data BHeaderView c = BHeaderView
   { bhviewID :: KeyHash 'BlockIssuer c
   -- ^ The block issuer. In the TPraos protocol, this can be a
   --  Genesis delegate, everywhere else it is the stake pool ID.
-  , bhviewBSize :: Natural
+  , bhviewBSize :: Word32
   -- ^ The purported size (in bytes) of the block body.
   , bhviewHSize :: Int
   -- ^ The purported size (in bytes) of the block header.

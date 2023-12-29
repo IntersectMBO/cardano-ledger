@@ -29,7 +29,7 @@ module Cardano.Ledger.Conway.Rules.Ratify (
   withdrawalCanWithdraw,
 ) where
 
-import Cardano.Ledger.BaseTypes (BoundedRational (..), ShelleyBase, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (BoundedRational (..), ShelleyBase, StrictMaybe (..), addEpochInterval)
 import Cardano.Ledger.CertState (CommitteeState (csCommitteeCreds))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core (
@@ -404,7 +404,7 @@ validCommitteeTerm govAction pp currentEpoch =
     _ -> True
   where
     committeeMaxTermLength = pp ^. ppCommitteeMaxTermLengthL
-    withinMaxTermLength = all (<= currentEpoch + committeeMaxTermLength)
+    withinMaxTermLength = all (<= addEpochInterval currentEpoch committeeMaxTermLength)
 
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where
   wrapFailed = absurd

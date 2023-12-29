@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Changed the type of the Lenses ppMaxBBSizeL, ppMaxTxSizeL, ppMaxBHSizeL, ppuMaxBBSizeL, ppuMaxTxSizeL and ppuMaxBHSizeL
 * Fix `ToJSON`/`FromJSON` for `CostModels`. Make sure that `CostModels` can roundtrip
   through JSON. Also report `CostModels` failures in JSON.
 * Add `costModelParamsCount`
