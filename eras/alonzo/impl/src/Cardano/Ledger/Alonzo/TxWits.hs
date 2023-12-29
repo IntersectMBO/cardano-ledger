@@ -82,6 +82,7 @@ import Cardano.Ledger.Binary (
   decodeList,
   decodeListLenOrIndef,
   decodeMapLikeEnforceNoDuplicates,
+  decodeNonEmptyList,
   encodeFoldableEncoder,
   encodeListLen,
   ifDecoderVersionAtLeast,
@@ -118,6 +119,7 @@ import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), keyBy, shelleyEqTxWits
 import Control.DeepSeq (NFData)
 import Control.Monad (when, (>=>))
 import Data.Bifunctor (Bifunctor (first))
+import Data.List.NonEmpty as NE (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -603,16 +605,7 @@ instance
       txWitnessField 1 =
         fieldAA
           addScripts
-          ( fmap Map.fromList
-              <$> listDecodeA
-                ( fmap
-                    ( \ns ->
-                        let script = fromNativeScript ns
-                         in (hashScript @era script, script)
-                    )
-                    <$> From
-                )
-          )
+          (D nativeScriptsDecoder)
       txWitnessField 2 =
         fieldAA
           (\x wits -> wits {atwrBootAddrTxWits = x})
@@ -627,6 +620,16 @@ instance
       txWitnessField 7 = fieldA addScripts (decodePlutus SPlutusV3)
       txWitnessField n = field (\_ t -> t) (Invalid n)
       {-# INLINE txWitnessField #-}
+
+      nativeScriptsDecoder :: Decoder s (Annotator (Map (ScriptHash (EraCrypto era)) (Script era)))
+      nativeScriptsDecoder =
+        ifDecoderVersionAtLeast
+          (natVersion @9)
+          (mapTraverseableDecoderA (decodeNonEmptyList pairDecoder) (Map.fromList . NE.toList))
+          (mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList)
+        where
+          pairDecoder :: Decoder s (Annotator (ScriptHash (EraCrypto era), Script era))
+          pairDecoder = fmap (asHashedPair . fromNativeScript) <$> decCBOR
 
       addScripts ::
         Map (ScriptHash (EraCrypto era)) (Script era) ->
@@ -686,3 +689,10 @@ alonzoEqTxWitsRaw txWits1 txWits2 =
   shelleyEqTxWitsRaw txWits1 txWits2
     && eqRawType (txWits1 ^. datsTxWitsL) (txWits2 ^. datsTxWitsL)
     && eqRawType (txWits1 ^. rdmrsTxWitsL) (txWits2 ^. rdmrsTxWitsL)
+
+mapTraverseableDecoderA ::
+  Traversable f =>
+  Decoder s (f (Annotator a)) ->
+  (f a -> m b) ->
+  Decoder s (Annotator (m b))
+mapTraverseableDecoderA decList transformList = fmap transformList . sequence <$> decList

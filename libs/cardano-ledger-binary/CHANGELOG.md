@@ -2,6 +2,7 @@
 
 ## 1.3.0.0
 
+* Add `decodeNonEmptyList`
 * Add instance `EncCBOR`/`DecCBOR` instance for `SignedDSIGN` and add `encodedSignedDSIGNSizeExpr`
 * Remove unused and badly named `decodeMapNoDuplicates`
 * Fix `decodeVMap` to no longer allow duplicates

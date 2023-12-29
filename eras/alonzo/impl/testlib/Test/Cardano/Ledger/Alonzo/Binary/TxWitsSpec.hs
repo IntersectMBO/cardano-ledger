@@ -33,7 +33,27 @@ spec ::
 spec = do
   describe "AlonzoTxWits deserialization" $ do
     describe "plutus scripts" $ do
+      emptyFieldsProps @era
       plutusScriptsProp @era
+      nativeScriptsProp @era
+
+emptyFieldsProps ::
+  forall era.
+  AlonzoEraScript era =>
+  Spec
+emptyFieldsProps = do
+  prop "fails to deserialize if fields contain an empty collection" $
+    conjoin $
+      emptyFieldProp <$> [1, 3, 6, 7]
+  where
+    emptyFieldProp :: Int -> Property
+    emptyFieldProp k =
+      property $
+        expectDeserialiseFailureFromVersion @era
+          (natVersion @9)
+          (emptyEnc k)
+          "Empty list"
+    emptyEnc k = encCBOR $ Map.singleton k (encCBOR ([] :: [Encoding]))
 
 plutusScriptsProp ::
   forall era.
@@ -46,7 +66,6 @@ plutusScriptsProp = do
     conjoin $
       [ distinctProp
       , duplicateProp
-      , emptyProp
       ]
         <*> [minBound .. eraMaxLanguage @era]
   where
@@ -62,14 +81,6 @@ plutusScriptsProp = do
             enc
             "Final number of elements"
 
-    emptyProp lang =
-      let emptyScriptsEnc = encCBOR $ Map.singleton (keys lang) (encCBOR ([] :: [Encoding]))
-       in property $
-            expectDeserialiseFailureFromVersion @era
-              (natVersion @9)
-              emptyScriptsEnc
-              "Empty list"
-
     genEncoding :: Language -> Bool -> Gen Encoding
     genEncoding lang duplicate = do
       sc <- genPlutusScript @era lang
@@ -84,6 +95,41 @@ plutusScriptsProp = do
     keys PlutusV1 = 3 :: Int
     keys PlutusV2 = 6
     keys PlutusV3 = 7
+
+nativeScriptsProp ::
+  forall era.
+  ( AlonzoEraScript era
+  , Script era ~ AlonzoScript era
+  ) =>
+  Spec
+nativeScriptsProp = do
+  prop
+    "fails to deserialize if empty, starting with Conway"
+    distinctProp
+  where
+    key :: Int = 1
+    distinctProp =
+      forAllShow (genEncoding False) (showEnc @era) $
+        expectDeserialiseSuccess @era
+
+    -- TODO: enable this after we enforce distinct entries for Annotator
+    -- duplicateProp =
+    --   forAllShow (genEncoding True) (showEnc  @era) $
+    --     \enc ->
+    --       expectDeserialiseFailureFromVersion @era
+    --       (natVersion @9)
+    --       enc
+    --       "Final number of elements"
+
+    genEncoding :: Bool -> Gen Encoding
+    genEncoding duplicate = do
+      sc <- genNativeScript @era
+      let scs
+            | duplicate = [sc, sc]
+            | otherwise = [sc]
+
+      let natives = Maybe.mapMaybe getNativeScript scs
+      pure $ encCBOR $ Map.singleton key (encCBOR natives)
 
 expectDeserialiseSuccess ::
   forall era.
