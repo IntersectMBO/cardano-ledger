@@ -33,7 +33,7 @@ import Cardano.Ledger.Credential (
   Credential (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (Crypto, DSIGN, HASH)
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   DSignable,
   HasKeyRole,
@@ -51,10 +51,13 @@ import Control.DeepSeq (NFData)
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
+import Test.QuickCheck
 
 data KeyPair (kd :: KeyRole) c = KeyPair
   { vKey :: !(VKey kd c)
@@ -75,6 +78,16 @@ instance
 instance Crypto c => NoThunks (KeyPair kd c)
 
 instance HasKeyRole KeyPair
+
+instance DSIGN.DSIGNAlgorithm (DSIGN c) => Arbitrary (KeyPair kd c) where
+  arbitrary = do
+    seed <- mkSeedFromBytes <$> genByteString (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @(DSIGN c))))
+    let signKey = DSIGN.genKeyDSIGN seed
+    pure $
+      KeyPair
+        { vKey = VKey $ DSIGN.deriveVerKeyDSIGN signKey
+        , sKey = signKey
+        }
 
 mkAddr ::
   Crypto c =>
