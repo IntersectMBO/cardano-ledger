@@ -45,6 +45,7 @@ module Cardano.Ledger.Binary.Encoding.EncCBOR (
   encodedVerKeyDSIGNSizeExpr,
   encodedSignKeyDSIGNSizeExpr,
   encodedSigDSIGNSizeExpr,
+  encodedSignedDSIGNSizeExpr,
   encodedVerKeyKESSizeExpr,
   encodedSignKeyKESSizeExpr,
   encodedSigKESSizeExpr,
@@ -59,6 +60,7 @@ import Cardano.Crypto.DSIGN.Class (
   SeedSizeDSIGN,
   SigDSIGN,
   SignKeyDSIGN,
+  SignedDSIGN,
   VerKeyDSIGN,
   sizeSigDSIGN,
   sizeSignKeyDSIGN,
@@ -858,6 +860,11 @@ encodedSigDSIGNSizeExpr _proxy =
     -- payload
     + fromIntegral (sizeSigDSIGN (Proxy :: Proxy v))
 
+
+-- | 'Size' expression for 'SignedDSIGN' which uses `encodedSigDSIGNSizeExpr`
+encodedSignedDSIGNSizeExpr :: forall v a. DSIGNAlgorithm v => Proxy (SignedDSIGN v a) -> Size
+encodedSignedDSIGNSizeExpr _proxy = encodedSigDSIGNSizeExpr (Proxy :: Proxy (SigDSIGN v))
+
 --------------------------------------------------------------------------------
 -- DSIGN
 --------------------------------------------------------------------------------
@@ -873,6 +880,10 @@ instance DSIGNAlgorithm v => EncCBOR (SignKeyDSIGN v) where
 instance DSIGNAlgorithm v => EncCBOR (SigDSIGN v) where
   encCBOR = encodeSigDSIGN
   encodedSizeExpr _ = encodedSigDSIGNSizeExpr
+
+instance (DSIGNAlgorithm v, Typeable a) => EncCBOR (SignedDSIGN v a) where
+  encCBOR = encodeSignedDSIGN
+  encodedSizeExpr _ = encodedSignedDSIGNSizeExpr
 
 --------------------------------------------------------------------------------
 -- Hash

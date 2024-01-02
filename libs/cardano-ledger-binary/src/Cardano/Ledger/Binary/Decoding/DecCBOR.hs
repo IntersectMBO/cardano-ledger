@@ -20,7 +20,14 @@ module Cardano.Ledger.Binary.Decoding.DecCBOR (
 where
 
 import qualified Cardano.Binary as Plain (Decoder, FromCBOR (..))
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm, SeedSizeDSIGN, SigDSIGN, SignKeyDSIGN, VerKeyDSIGN)
+import Cardano.Crypto.DSIGN.Class (
+  DSIGNAlgorithm,
+  SeedSizeDSIGN,
+  SigDSIGN,
+  SignKeyDSIGN,
+  SignedDSIGN,
+  VerKeyDSIGN,
+ )
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm)
 import Cardano.Crypto.KES.Class (KESAlgorithm, OptimizedKESAlgorithm, SigKES, SignKeyKES, VerKeyKES)
 import Cardano.Crypto.KES.CompactSingle (CompactSingleKES)
@@ -459,6 +466,10 @@ instance DSIGNAlgorithm v => DecCBOR (SignKeyDSIGN v) where
 
 instance DSIGNAlgorithm v => DecCBOR (SigDSIGN v) where
   decCBOR = decodeSigDSIGN
+  {-# INLINE decCBOR #-}
+
+instance (DSIGNAlgorithm v, Typeable a) => DecCBOR (SignedDSIGN v a) where
+  decCBOR = decodeSignedDSIGN
   {-# INLINE decCBOR #-}
 
 --------------------------------------------------------------------------------
