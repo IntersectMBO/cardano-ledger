@@ -860,7 +860,6 @@ encodedSigDSIGNSizeExpr _proxy =
     -- payload
     + fromIntegral (sizeSigDSIGN (Proxy :: Proxy v))
 
-
 -- | 'Size' expression for 'SignedDSIGN' which uses `encodedSigDSIGNSizeExpr`
 encodedSignedDSIGNSizeExpr :: forall v a. DSIGNAlgorithm v => Proxy (SignedDSIGN v a) -> Size
 encodedSignedDSIGNSizeExpr _proxy = encodedSigDSIGNSizeExpr (Proxy :: Proxy (SigDSIGN v))

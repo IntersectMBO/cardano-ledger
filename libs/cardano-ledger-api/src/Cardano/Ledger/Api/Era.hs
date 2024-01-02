@@ -1,6 +1,7 @@
 module Cardano.Ledger.Api.Era (
   -- * Eras
   Era (
+    EraCrypto,
     PreviousEra,
     ProtVerLow,
     ProtVerHigh

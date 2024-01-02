@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Add `estimateMinFeeTx`
 * Add `registerInitialDReps`, `registerDRepDelegs`
 * Stop exporting `CostModels` internal representation
 * Change return type of `mintedTxBodyF` to `Set PolicyID`
