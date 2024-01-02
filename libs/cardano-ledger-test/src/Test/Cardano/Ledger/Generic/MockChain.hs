@@ -16,14 +16,6 @@ module Test.Cardano.Ledger.Generic.MockChain where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), ShelleyBase)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Pretty (
-  PDoc,
-  PrettyA (..),
-  ppInt,
-  ppKeyHash,
-  ppRecord,
-  ppSlotNo,
- )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
@@ -62,8 +54,14 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks, ThunkInfo, noThunks)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (..))
 import Test.Cardano.Ledger.Generic.PrettyCore (
+  PDoc,
+  PrettyA (..),
+  pcKeyHash,
   pcNewEpochState,
-  ppLedgersPredicateFailure,
+  pcSlotNo,
+  ppInt,
+  ppRecord,
+  ppShelleyLedgersPredFailure,
   ppTickPredicateFailure,
  )
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (reify))
@@ -219,7 +217,7 @@ ppMockChainState (MockChainState nes _ sl count) =
   ppRecord
     "MockChainState"
     [ ("NewEpochState", pcNewEpochState reify nes)
-    , ("LastBlock", ppSlotNo sl)
+    , ("LastBlock", pcSlotNo sl)
     , ("Count", ppInt count)
     ]
 
@@ -230,8 +228,8 @@ ppMockBlock :: MockBlock era -> PDoc
 ppMockBlock (MockBlock iss sl txs) =
   ppRecord
     "MockBock"
-    [ ("Issuer", ppKeyHash iss)
-    , ("Slot", ppSlotNo sl)
+    [ ("Issuer", pcKeyHash iss)
+    , ("Slot", pcSlotNo sl)
     , ("Transactions", ppInt (length txs))
     ]
 
@@ -247,12 +245,12 @@ ppMockChainFailure proof x = case proof of
   (Shelley _) -> help x
   where
     help (MockChainFromTickFailure y) = ppTickPredicateFailure y
-    help (MockChainFromLedgersFailure y) = ppLedgersPredicateFailure y
+    help (MockChainFromLedgersFailure y) = ppShelleyLedgersPredFailure proof y
     help (BlocksOutOfOrder lastslot cand) =
       ppRecord
         "BlocksOutOfOrder"
-        [ ("Last applied block", ppSlotNo lastslot)
-        , ("Candidate block", ppSlotNo cand)
+        [ ("Last applied block", pcSlotNo lastslot)
+        , ("Candidate block", pcSlotNo cand)
         ]
 
 noThunksGen :: Proof era -> MockChainState era -> IO (Maybe ThunkInfo)

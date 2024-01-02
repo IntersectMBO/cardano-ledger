@@ -71,6 +71,7 @@ library
         Test.Cardano.Ledger.Generic.MockChain
         Test.Cardano.Ledger.Generic.ModelState
         Test.Cardano.Ledger.Generic.PrettyCore
+        Test.Cardano.Ledger.Generic.PrettyTest
         Test.Cardano.Ledger.Generic.Properties
         Test.Cardano.Ledger.Generic.Same
         Test.Cardano.Ledger.Generic.Scriptic
@@ -92,6 +93,7 @@ library
     build-depends:
         array,
         base >=4.14 && <5,
+        bech32,
         bytestring,
         cardano-data,
         cardano-crypto-class,
@@ -107,7 +109,6 @@ library
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-ledger-pretty,
         cardano-ledger-mary,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-shelley-test,

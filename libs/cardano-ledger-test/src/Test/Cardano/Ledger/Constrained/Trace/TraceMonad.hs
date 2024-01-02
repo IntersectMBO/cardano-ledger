@@ -22,7 +22,6 @@ import Cardano.Ledger.Conway.Governance (
   newEpochStateDRepPulsingStateL,
  )
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Pretty (ppList, ppPair, ppSlotNo, ppStrictSeq)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState (..))
 import Cardano.Ledger.Shelley.Rules (runIdentity)
 import Cardano.Ledger.TxIn (TxIn)
@@ -93,7 +92,7 @@ import Test.Cardano.Ledger.Constrained.Rewrite (
 import Test.Cardano.Ledger.Constrained.Solver (solveOneVar)
 import Test.Cardano.Ledger.Constrained.Vars (currentSlot, newEpochStateT)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockBlock (..), MockChainState (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx, summaryMapCompact)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcSlotNo, pcTx, ppList, ppPair, ppStrictSeq, summaryMapCompact)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Trace (chooseIssuer)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
@@ -356,7 +355,7 @@ genNewEpochStateEnv proof = do
 data PredGen era = PredGen (Vector (StrictSeq (Tx era), SlotNo)) (Env era)
 
 instance Reflect era => Show (PredGen era) where
-  show (PredGen xs _) = show (ppList (ppPair (ppStrictSeq (pcTx reify)) (ppSlotNo)) (toList xs))
+  show (PredGen xs _) = show (ppList (ppPair (ppStrictSeq (pcTx reify)) (pcSlotNo)) (toList xs))
 
 instance
   ( STS (MOCKCHAIN era)

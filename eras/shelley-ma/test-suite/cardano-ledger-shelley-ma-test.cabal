@@ -43,7 +43,6 @@ library
         bytestring,
         cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.2,
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.3,
-        cardano-ledger-pretty,
         cardano-ledger-allegra:{cardano-ledger-allegra, testlib} ^>=1.3,
         cardano-ledger-mary:{cardano-ledger-mary, testlib} ^>=1.5,
         cardano-slotting,

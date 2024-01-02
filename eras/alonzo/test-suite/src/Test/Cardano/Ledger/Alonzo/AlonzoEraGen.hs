@@ -67,7 +67,6 @@ import Cardano.Ledger.Mary.Value (
  )
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (

@@ -54,7 +54,6 @@ import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.CostModels (emptyCostModels)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
@@ -118,13 +117,10 @@ alonzoUTXOWTests ::
   forall era.
   ( AlonzoBased era (PredicateFailure (EraRule "UTXOW" era))
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , GoodCrypto (EraCrypto era)
   , HasTokens era
-  , EraTx era
+  , Reflect era
   , PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto,
   , Value era ~ MaryValue (EraCrypto era)
-  , EraGov era
-  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   TestTree
@@ -935,9 +931,8 @@ noCostModelTx pf pp' =
 
 testU ::
   forall era.
-  ( GoodCrypto (EraCrypto era)
-  , PostShelley era
-  , EraTx era
+  ( PostShelley era
+  , Reflect era
   , HasCallStack
   ) =>
   Proof era ->

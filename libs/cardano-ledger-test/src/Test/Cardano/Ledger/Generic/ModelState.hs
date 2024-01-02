@@ -51,20 +51,6 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Pretty (
-  PDoc,
-  ppAccountState,
-  ppCoin,
-  ppEpochNo,
-  ppInt,
-  ppKeyHash,
-  ppMap,
-  ppNatural,
-  ppRecord,
-  ppString,
- )
-import Cardano.Ledger.Pretty.Alonzo ()
-import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -101,9 +87,12 @@ import GHC.Natural (Natural)
 import Lens.Micro ((&), (.~))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Generic.PrettyCore (
-  PrettyC (..),
+  PDoc,
+  PrettyA (..),
   credSummary,
   keyHashSummary,
+  pcAccountState,
+  pcCoin,
   pcCredential,
   pcIndividualPoolStake,
   pcKeyHash,
@@ -111,10 +100,15 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcTxId,
   pcTxIn,
   pcTxOut,
+  ppEpochNo,
+  ppInt,
+  ppMap,
+  ppNatural,
+  ppRecord,
+  ppString,
  )
 import Test.Cardano.Ledger.Generic.Proof (
   BabbageEra,
-  Evidence (..),
   Mock,
   Proof (..),
   Reflect (..),
@@ -415,17 +409,17 @@ pcModelNewEpochState :: Reflect era => Proof era -> ModelNewEpochState era -> PD
 pcModelNewEpochState proof x =
   ppRecord "ModelNewEpochState" $
     [ ("poolparams", ppMap keyHashSummary pcPoolParams (mPoolParams x))
-    , ("pool deposits", ppMap keyHashSummary ppCoin (mPoolDeposits x))
-    , ("rewards", ppMap credSummary ppCoin (mRewards x))
+    , ("pool deposits", ppMap keyHashSummary pcCoin (mPoolDeposits x))
+    , ("rewards", ppMap credSummary pcCoin (mRewards x))
     , ("delegations", ppMap pcCredential pcKeyHash (mDelegations x))
-    , ("key deposits", ppMap credSummary ppCoin (mKeyDeposits x))
+    , ("key deposits", ppMap credSummary pcCoin (mKeyDeposits x))
     , ("utxo", ppMap pcTxIn (pcTxOut proof) (mUTxO x))
     , ("mutFees", ppMap pcTxIn (pcTxOut proof) (mMutFee x))
-    , ("account", ppAccountState (mAccountState x))
+    , ("account", pcAccountState (mAccountState x))
     , ("pool distr", ppMap pcKeyHash pcIndividualPoolStake (mPoolDistr x))
     , ("protocol params", ppString "PParams ...")
-    , ("deposited", ppCoin (mDeposited x))
-    , ("fees", ppCoin (mFees x))
+    , ("deposited", pcCoin (mDeposited x))
+    , ("fees", pcCoin (mFees x))
     , ("count", ppInt (mCount x))
     , ("index", ppMap ppInt pcTxId (mIndex x))
     -- Add additional EpochBoundary fields here
@@ -434,11 +428,11 @@ pcModelNewEpochState proof x =
 
 epochBoundaryPDoc :: Proof era -> ModelNewEpochState era -> [Maybe (Text, PDoc)]
 epochBoundaryPDoc _proof x =
-  [ if Map.null futurepp then Nothing else Just ("future pparams", ppMap ppKeyHash pcPoolParams futurepp)
-  , if Map.null retiring then Nothing else Just ("retiring", ppMap ppKeyHash ppEpochNo retiring)
+  [ if Map.null futurepp then Nothing else Just ("future pparams", ppMap pcKeyHash pcPoolParams futurepp)
+  , if Map.null retiring then Nothing else Just ("retiring", ppMap pcKeyHash ppEpochNo retiring)
   , if lastepoch == EpochNo 0 then Nothing else Just ("last epoch", ppEpochNo lastepoch)
-  , if Map.null prevBlocks then Nothing else Just ("prev blocks", ppMap ppKeyHash ppNatural prevBlocks)
-  , if Map.null curBlocks then Nothing else Just ("current blocks", ppMap ppKeyHash ppNatural curBlocks)
+  , if Map.null prevBlocks then Nothing else Just ("prev blocks", ppMap pcKeyHash ppNatural prevBlocks)
+  , if Map.null curBlocks then Nothing else Just ("current blocks", ppMap pcKeyHash ppNatural curBlocks)
   ]
   where
     futurepp = mFPoolParams x
@@ -449,7 +443,7 @@ epochBoundaryPDoc _proof x =
 
 -- SnapShots and PulsingRewUdate delberately ommitted from pretty printer
 
-instance Reflect era => PrettyC (ModelNewEpochState era) era where prettyC = pcModelNewEpochState
+instance Reflect era => PrettyA (ModelNewEpochState era) where prettyA = pcModelNewEpochState reify
 
 instance era ~ BabbageEra Mock => Show (ModelNewEpochState era) where
-  show x = show (prettyC (Babbage Mock) x)
+  show x = show (prettyA x)

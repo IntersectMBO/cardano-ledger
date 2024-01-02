@@ -81,7 +81,6 @@ library
         cardano-ledger-byron,
         cardano-ledger-byron-test,
         cardano-ledger-core:{cardano-ledger-core, testlib} ^>=1.10,
-        cardano-ledger-pretty,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib} ^>=1.9,
         cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib} >=1.0.1,
         cardano-slotting,
@@ -130,7 +129,6 @@ test-suite cardano-ledger-shelley-test
         Test.Cardano.Ledger.Shelley.Examples.Updates
         Test.Cardano.Ledger.Shelley.Fees
         Test.Cardano.Ledger.Shelley.MultiSigExamples
-        Test.Cardano.Ledger.Shelley.Pretty
         Test.Cardano.Ledger.Shelley.SafeHash
         Test.Cardano.Ledger.Shelley.Serialisation
         Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address
@@ -160,7 +158,6 @@ test-suite cardano-ledger-shelley-test
         cardano-data,
         cardano-ledger-byron,
         cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-ledger-pretty,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-shelley-test >=1.1,
         cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
@@ -172,7 +169,6 @@ test-suite cardano-ledger-shelley-test
         groups,
         iproute,
         microlens,
-        prettyprinter,
         scientific,
         small-steps,
         small-steps-test,

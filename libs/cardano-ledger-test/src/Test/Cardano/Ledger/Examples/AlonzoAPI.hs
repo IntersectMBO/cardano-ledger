@@ -22,7 +22,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (getMinFeeTx)
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (evaluateTransactionFee)
 import qualified Data.Map.Strict as Map

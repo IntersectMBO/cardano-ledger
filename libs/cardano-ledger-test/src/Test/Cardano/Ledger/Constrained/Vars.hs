@@ -35,7 +35,6 @@ import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppDRepDepositL, ppGovActionDepositL)
 import Cardano.Ledger.Conway.Rules (GovRuleState (..))
 import Cardano.Ledger.Core (
-  EraPParams,
   PParams,
   TxOut,
   TxWits,
@@ -65,7 +64,6 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.Pretty (ppString)
 import Cardano.Ledger.SafeHash (SafeHash)
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
@@ -125,6 +123,7 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), WitnessesField (..))
 import qualified Test.Cardano.Ledger.Generic.Fields as Fields
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
+import Test.Cardano.Ledger.Generic.PrettyCore (ppString, withEraPParams)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (merge, newPParams, newTx, newTxBody, newWitnesses)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
@@ -1030,14 +1029,6 @@ printTarget t = putStrLn (show (ppTarget t))
 -- =====================================================================
 -- PParams fields
 
-withEraPParams :: forall era a. Proof era -> (EraPParams era => a) -> a
-withEraPParams (Shelley _) x = x
-withEraPParams (Mary _) x = x
-withEraPParams (Allegra _) x = x
-withEraPParams (Alonzo _) x = x
-withEraPParams (Babbage _) x = x
-withEraPParams (Conway _) x = x
-
 -- | ProtVer in pparams
 protVer :: Era era => Proof era -> Term era ProtVer
 protVer proof =
@@ -1247,6 +1238,9 @@ adHash = Var $ V "adHash" (MaybeR AuxiliaryDataHashR) No
 
 wppHash :: Era era => Term era (Maybe (SafeHash (EraCrypto era) EraIndependentScriptIntegrity))
 wppHash = Var $ V "wppHash" (MaybeR ScriptIntegrityHashR) No
+
+txDonation :: Era era => Term era Coin
+txDonation = Var $ V "txDonation" CoinR No
 
 -- | lift the model type of 'mint' into a MultiAsset
 liftMultiAsset :: Map (ScriptHash c) (Map AssetName Integer) -> MultiAsset c
@@ -1485,6 +1479,7 @@ txbodyTarget feeparam wpphashparam totalColParam =
     ^$ adHash
     ^$ wpphashparam
     ^$ feeparam
+    ^$ txDonation
   where
     proof = reify
     txbodyf
@@ -1504,7 +1499,8 @@ txbodyTarget feeparam wpphashparam totalColParam =
       net
       adh
       wpp
-      fee =
+      fee
+      donate =
         TxBodyF
           proof
           ( newTxBody
@@ -1526,6 +1522,7 @@ txbodyTarget feeparam wpphashparam totalColParam =
               , Txnetworkid (maybeToStrictMaybe net)
               , AdHash (maybeToStrictMaybe adh)
               , WppHash (maybeToStrictMaybe wpp)
+              , TreasuryDonation donate
               ]
           )
 

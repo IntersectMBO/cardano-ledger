@@ -25,7 +25,6 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
-import Cardano.Ledger.Pretty (PDoc, PrettyA, ppString)
 import Cardano.Ledger.Shelley.Governance (ShelleyGovState (..))
 import qualified Cardano.Ledger.Shelley.Governance as Gov (GovState (..))
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
@@ -67,6 +66,8 @@ import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.PrettyCore (
+  PDoc,
+  PrettyA,
   pcScript,
   pcScriptsNeeded,
   pcTx,
@@ -75,6 +76,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcTxOut,
   pcVal,
   pcWitnesses,
+  ppString,
  )
 import Test.Cardano.Ledger.Generic.Proof (
   GoodCrypto,

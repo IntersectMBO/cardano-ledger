@@ -33,7 +33,6 @@ import Cardano.Ledger.Mary.Value (
   multiAssetFromList,
  )
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
-import Cardano.Ledger.Pretty (ppList, ppMap)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
@@ -59,7 +58,7 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxOutField (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (pcData, pcDataHash, pcScript, pcScriptHash, pcTxOut)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcData, pcDataHash, pcScript, pcScriptHash, pcTxOut, ppList, ppMap)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (newTxBody, newTxOut)
 import Test.QuickCheck

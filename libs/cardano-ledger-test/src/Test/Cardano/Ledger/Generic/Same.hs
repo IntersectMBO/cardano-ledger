@@ -30,9 +30,6 @@ import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
-import Cardano.Ledger.Pretty
-import Cardano.Ledger.Pretty.Alonzo (ppRdmrPtr)
-import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..))
@@ -396,7 +393,7 @@ sameTxWits proof@(Conway _) x y = sameAlonzoTxWits proof x y
 -- Comparing TxBody for Sameness
 
 sameShelleyTxBody ::
-  (Reflect era, PrettyA (TxCert era)) =>
+  Reflect era =>
   Proof era ->
   ShelleyTxBody era ->
   ShelleyTxBody era ->
@@ -404,16 +401,16 @@ sameShelleyTxBody ::
 sameShelleyTxBody proof (ShelleyTxBody i1 o1 c1 (Withdrawals w1) f1 s1 pu1 d1) (ShelleyTxBody i2 o2 c2 (Withdrawals w2) f2 s2 pu2 d2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
   , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
-  , ("TxCert", eqVia (ppList prettyA . toList) c1 c2)
+  , ("TxCert", eqVia (ppList (pcTxCert proof) . toList) c1 c2)
   , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
   , ("Fee", eqVia pcCoin f1 f2)
-  , ("TimeToLive", eqVia ppSlotNo s1 s2)
+  , ("TimeToLive", eqVia pcSlotNo s1 s2)
   , ("PPupdate", eqVia (\_ -> ppString "Update") pu1 pu2)
   , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
   ]
 
 sameAllegraTxBody ::
-  (Reflect era, PrettyA (TxCert era)) =>
+  Reflect era =>
   Proof era ->
   AllegraTxBody era ->
   AllegraTxBody era ->
@@ -421,7 +418,7 @@ sameAllegraTxBody ::
 sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1) (AllegraTxBody i2 o2 c2 (Withdrawals w2) f2 v2 pu2 d2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
   , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
-  , ("TxCert", eqVia (ppList prettyA . toList) c1 c2)
+  , ("TxCert", eqVia (ppList (pcTxCert proof) . toList) c1 c2)
   , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
   , ("Fee", eqVia pcCoin f1 f2)
   , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
@@ -430,7 +427,7 @@ sameAllegraTxBody proof (AllegraTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1) (
   ]
 
 sameMaryTxBody ::
-  (Reflect era, PrettyA (TxCert era)) =>
+  Reflect era =>
   Proof era ->
   MaryTxBody era ->
   MaryTxBody era ->
@@ -438,7 +435,7 @@ sameMaryTxBody ::
 sameMaryTxBody proof (MaryTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1 m1) (MaryTxBody i2 o2 c2 (Withdrawals w2) f2 v2 pu2 d2 m2) =
   [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
   , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
-  , ("TxCert", eqVia (ppList prettyA . toList) c1 c2)
+  , ("TxCert", eqVia (ppList (pcTxCert proof) . toList) c1 c2)
   , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
   , ("Fee", eqVia pcCoin f1 f2)
   , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
@@ -448,7 +445,7 @@ sameMaryTxBody proof (MaryTxBody i1 o1 c1 (Withdrawals w1) f1 v1 pu1 d1 m1) (Mar
   ]
 
 sameAlonzoTxBody ::
-  (Reflect era, PrettyA (TxCert era)) =>
+  Reflect era =>
   Proof era ->
   AlonzoTxBody era ->
   AlonzoTxBody era ->
@@ -460,7 +457,7 @@ sameAlonzoTxBody
     [ ("Inputs", eqVia (ppSet pcTxIn) i1 i2)
     , ("Collateral", eqVia (ppSet pcTxIn) cl1 cl2)
     , ("Outputs", eqVia (ppList (pcTxOut proof) . toList) o1 o2)
-    , ("Certs", eqVia (ppList prettyA . toList) c1 c2)
+    , ("Certs", eqVia (ppList (pcTxCert proof) . toList) c1 c2)
     , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
     , ("Fee", eqVia pcCoin f1 f2)
     , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
@@ -475,7 +472,6 @@ sameAlonzoTxBody
 sameBabbageTxBody ::
   ( Reflect era
   , BabbageEraTxBody era
-  , PrettyA (TxCert era)
   ) =>
   Proof era ->
   BabbageTxBody era ->
@@ -491,7 +487,7 @@ sameBabbageTxBody
     , ("Outputs", eqVia (ppList (pcTxOut proof . sizedValue) . toList) o1 o2)
     , ("ColReturn", eqVia (ppStrictMaybe (pcTxOut proof . sizedValue)) cr1 cr2)
     , ("TotalCol", eqVia (ppStrictMaybe pcCoin) tc1 tc2)
-    , ("Certs", eqVia (ppList prettyA . toList) c1 c2)
+    , ("Certs", eqVia (ppList (pcTxCert proof) . toList) c1 c2)
     , ("WDRL", eqVia (ppMap pcRewardAcnt pcCoin) w1 w2)
     , ("Fee", eqVia pcCoin f1 f2)
     , ("ValidityInterval", eqVia ppValidityInterval v1 v2)
@@ -505,7 +501,6 @@ sameBabbageTxBody
 
 sameConwayTxBody ::
   ( ConwayEraTxBody era
-  , PrettyA (PParamsUpdate era)
   , Reflect era
   ) =>
   Proof era ->
@@ -531,10 +526,16 @@ sameConwayTxBody
     , ("ScriptIntegrityHash", eqVia (ppStrictMaybe (trim . ppSafeHash)) s1 s2)
     , ("AuxDataHash", eqVia (ppStrictMaybe (\(AuxiliaryDataHash h) -> trim (ppSafeHash h))) d1 d2)
     , ("NetworkId", eqVia (ppStrictMaybe pcNetwork) n1 n2)
-    , ("VotingProcedures", eqVia prettyA (unVotingProcedures vp1) (unVotingProcedures vp2))
-    , ("ProposalProcedures", eqVia (ppOSet prettyA) pp1 pp2)
-    , ("CurrentTreasuryValue", eqVia (ppStrictMaybe prettyA) ctv1 ctv2)
-    , ("TreasuryDonation", eqVia prettyA td1 td2)
+    ,
+      ( "VotingProcedures"
+      , eqVia
+          (ppMap pcVoter (ppMap pcGovActionId pcVotingProcedure))
+          (unVotingProcedures vp1)
+          (unVotingProcedures vp2)
+      )
+    , ("ProposalProcedures", eqVia (ppOSet pcProposalProcedure) pp1 pp2)
+    , ("CurrentTreasuryValue", eqVia (ppStrictMaybe pcCoin) ctv1 ctv2)
+    , ("TreasuryDonation", eqVia pcCoin td1 td2)
     ]
 
 sameTxBody :: Reflect era => Proof era -> TxBody era -> TxBody era -> [(String, Maybe PDoc)]

@@ -39,7 +39,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Keys (KeyRole (Witness), WitVKey)
-import Cardano.Ledger.Pretty (PrettyA (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.API (
   Addr (Addr),
@@ -167,10 +166,6 @@ class
   , ScriptClass era
   , EraPParams era
   , MinGenTxout era
-  , PrettyA (Tx era)
-  , PrettyA (TxBody era)
-  , PrettyA (TxWits era)
-  , PrettyA (Value era)
   , Default (StashedAVVMAddresses era)
   ) =>
   EraGen era

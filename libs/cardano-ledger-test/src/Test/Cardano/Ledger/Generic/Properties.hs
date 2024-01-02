@@ -16,7 +16,6 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTxBody (..), IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Pretty (PrettyA (..), ppList)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -59,7 +58,7 @@ import Test.Cardano.Ledger.Generic.GenState (
  )
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockChainState (..))
 import Test.Cardano.Ledger.Generic.ModelState
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..), pcLedgerState, pcTx)
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..), pcLedgerState, pcTx, ppList)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Trace (Gen1, forEachEpochTrace, testPropMax, testTraces, traceProp)
 import Test.Cardano.Ledger.Generic.TxGen (
@@ -392,14 +391,14 @@ makeGen :: Reflect era => Proof era -> (Proof era -> GenRS era b) -> Gen b
 makeGen proof computeWith = fst <$> runGenRS proof def (computeWith proof)
 
 runTest ::
-  (Reflect era, PrettyC a era) =>
+  (Reflect era, PrettyA a) =>
   (Proof era -> GenRS era a) ->
   (a -> IO ()) ->
   Proof era ->
   IO ()
 runTest computeWith action proof = do
   ans <- generate (makeGen proof computeWith)
-  print (prettyC proof ans)
+  print (prettyA ans)
   action ans
 
 main2 :: IO ()

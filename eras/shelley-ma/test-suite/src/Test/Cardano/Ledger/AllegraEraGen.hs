@@ -29,7 +29,6 @@ import Cardano.Ledger.Binary (encCBOR, serialize')
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Keys (KeyHash)
-import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx)

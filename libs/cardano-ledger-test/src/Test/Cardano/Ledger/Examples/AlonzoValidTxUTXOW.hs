@@ -36,7 +36,6 @@ import Cardano.Ledger.Credential (
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   ProtVer (..),
@@ -98,13 +97,10 @@ tests =
 alonzoUTXOWTests ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
-  , GoodCrypto (EraCrypto era)
   , HasTokens era
-  , EraTx era
+  , Reflect era
   , PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto,
   , Value era ~ MaryValue (EraCrypto era)
-  , EraGov era
-  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   TestTree
@@ -954,9 +950,8 @@ expectedUTxO' pf = expectedUTxO (initUTxO pf)
 
 testU ::
   forall era.
-  ( GoodCrypto (EraCrypto era)
-  , PostShelley era
-  , EraTx era
+  ( PostShelley era
+  , Reflect era
   , HasCallStack
   ) =>
   Proof era ->

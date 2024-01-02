@@ -21,7 +21,6 @@ module Test.Cardano.Ledger.Shelley.Rewards (
   defaultMain,
   newEpochProp,
   newEpochEventsProp,
-  ppAgg,
   RewardUpdateOld (..),
   createRUpdOld,
   createRUpdOld_,
@@ -65,7 +64,6 @@ import Cardano.Ledger.Keys (
   VKey (..),
   hashKey,
  )
-import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppMap, ppReward, ppSet)
 import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
 import Cardano.Ledger.Shelley.Core
@@ -622,7 +620,7 @@ oldEqualsNew ::
   Property
 oldEqualsNew pv newepochstate =
   counterexample
-    (show (prettyA newepochstate) ++ show (ansiWlEditExprCompact $ ediff old new))
+    (show newepochstate ++ show (ansiWlEditExprCompact $ ediff old new))
     (old === new)
   where
     globals = testGlobals
@@ -736,17 +734,11 @@ eventsMirrorRewards events nes = same eventRew compRew
               x
               y
 
-ppAgg :: Map (Credential 'Staking (EraCrypto C)) (Set (Reward (EraCrypto C))) -> PDoc
-ppAgg = ppMap prettyA (ppSet ppReward)
-
 instance Terse (Reward c) where
-  terse x = show (ppReward x)
+  terse (Reward ty pl (Coin n)) = "Reward{" ++ show ty ++ ", #" ++ take 9 (show pl) ++ ", " ++ show n ++ "}"
 
-instance PrettyA x => Terse (Set x) where
-  terse x = show (ppSet prettyA x)
-
-instance PrettyA (Reward c) where
-  prettyA = ppReward
+instance Terse x => Terse (Set x) where
+  terse x = unlines (Set.toList (Set.map terse x))
 
 -- ================================================================
 

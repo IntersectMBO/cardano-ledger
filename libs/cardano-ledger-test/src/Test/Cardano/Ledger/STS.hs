@@ -31,7 +31,6 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.PoolParams
-import Cardano.Ledger.Pretty
 import Cardano.Ledger.Shelley.Rules hiding (epochNo, slotNo)
 import Cardano.Ledger.TxIn (TxId (..))
 import qualified Cardano.Ledger.UMap as UM
@@ -63,6 +62,7 @@ import Test.Cardano.Ledger.Constrained.Tests
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars hiding (delegations, drepDeposit, rewards)
 import qualified Test.Cardano.Ledger.Constrained.Vars as Vars
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..), ppList, ppString, withEraPParams)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.QuickCheck

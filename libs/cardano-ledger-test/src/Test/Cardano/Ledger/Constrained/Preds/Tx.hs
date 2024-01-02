@@ -62,7 +62,6 @@ import Cardano.Ledger.Mary.Core (MaryEraTxBody)
 import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppList, ppMap, ppRecord, ppSafeHash)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
@@ -108,15 +107,23 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), protocolVersion)
 import Test.Cardano.Ledger.Generic.PrettyCore (
+  PDoc,
+  PrettyA (..),
   pcGenDelegPair,
   pcKeyHash,
+  pcLedgerState,
   pcScript,
   pcScriptHash,
+  pcTx,
   pcTxBody,
   pcTxBodyField,
   pcTxField,
   pcTxIn,
   pcTxOut,
+  ppList,
+  ppMap,
+  ppRecord,
+  ppSafeHash,
   psNewEpochState,
  )
 import Test.Cardano.Ledger.Generic.Proof
@@ -593,7 +600,8 @@ txBodyPreds sizes@UnivSize {..} p =
         , txterm :<-: txTarget txbodyterm bootWits keyWits
         ]
       UTxOAlonzoToConway ->
-        [ Proj acNeededL (ListR (PairR (ScriptPurposeR p) ScriptHashR)) scriptsNeeded :=: acNeeded
+        [ Sized (ExactSize 0) txDonation
+        , Proj acNeededL (ListR (PairR (ScriptPurposeR p) ScriptHashR)) scriptsNeeded :=: acNeeded
         , -- Hashes of scripts that will be run. Not all of these will be in the 'scriptWits'
           neededHashSet :<-: (Constr "toSet" (\x -> Set.fromList (map snd x)) ^$ acNeeded)
         , -- Only the refAdjusted scripts need to be in the 'scriptWits' but if the refscripts that are
@@ -829,6 +837,14 @@ demoTxNes = do
   let proof = Conway Standard
   (nes, _tx, env) <- generate $ genTxAndNewEpoch def proof
   putStrLn (show (psNewEpochState proof nes))
+  goRepl proof env ""
+
+demoTx :: IO ()
+demoTx = do
+  let proof = Conway Standard
+  (ls, tx, env) <- generate $ genTxAndLedger def proof
+  putStrLn (show (pcLedgerState proof ls))
+  putStrLn (show (pcTx proof tx))
   goRepl proof env ""
 
 -- ================================================================
