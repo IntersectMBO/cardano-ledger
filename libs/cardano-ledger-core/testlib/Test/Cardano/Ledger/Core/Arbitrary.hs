@@ -43,6 +43,7 @@ module Test.Cardano.Ledger.Core.Arbitrary (
 )
 where
 
+import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm)
 import Cardano.Ledger.Address
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
@@ -399,6 +400,15 @@ instance Arbitrary DeltaCoin where
 
 instance Arbitrary (BootstrapAddress c) where
   arbitrary = BootstrapAddress <$> hedgehog Byron.genAddress
+
+instance Arbitrary Byron.Address where
+  arbitrary = hedgehog Byron.genAddress
+
+instance Arbitrary Byron.AddrAttributes where
+  arbitrary = hedgehog Byron.genAddrAttributes
+
+instance Arbitrary (Byron.Attributes Byron.AddrAttributes) where
+  arbitrary = hedgehog $ Byron.genAttributes Byron.genAddrAttributes
 
 instance Crypto c => Arbitrary (Addr c) where
   arbitrary = genAddrWith arbitrary

@@ -58,6 +58,8 @@
 
 ### `testlib`
 
+* Add `ByronKeyPair`
+* Add `Arbitrary` instances for Byron types: `Address`, `Attributes` and `AddrAttributes`
 * Add `Test.Cardano.Ledger.Core.JSON` with `roundTripJsonSpec`, `roundTripJsonEraSpec` and
   `roundTripJsonProperty`
 * Add `zeroTestingCostModel` and `zeroTestingCostModels`

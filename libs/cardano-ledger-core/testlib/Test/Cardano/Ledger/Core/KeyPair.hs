@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Core.KeyPair (
   mkVKeyRwdAcnt,
   mkKeyPair,
   mkKeyHash,
+  ByronKeyPair (..),
 )
 where
 
@@ -25,6 +26,11 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash (hashToBytes)
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Crypto.Seed (mkSeedFromBytes)
+import qualified Cardano.Crypto.Signing as Byron (
+  SigningKey,
+  VerificationKey (..),
+  deterministicKeyGen,
+ )
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (Testnet), shelleyProtVer)
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder)
@@ -154,3 +160,12 @@ mkKeyPair seed = KeyPair vk sk
       DSIGN.genKeyDSIGN $
         mkSeedFromBytes . hashToBytes $
           hashWithEncoder @CH.Blake2b_256 shelleyProtVer encCBOR seed
+
+data ByronKeyPair = ByronKeyPair
+  { bkpVerificationKey :: !Byron.VerificationKey
+  , bkpSigningKey :: !Byron.SigningKey
+  }
+  deriving (Generic, Show)
+
+instance Arbitrary ByronKeyPair where
+  arbitrary = uncurry ByronKeyPair . Byron.deterministicKeyGen <$> genByteString 32
