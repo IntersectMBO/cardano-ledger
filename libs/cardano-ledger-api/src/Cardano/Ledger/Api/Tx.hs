@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
@@ -83,7 +84,7 @@ import Cardano.Ledger.Binary (byronProtVer, decodeFull', serialize')
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (EraCrypto, EraTx (..), PParams, ppProtocolVersionL, setMinFeeTx)
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (BootstrapWitness (..), ChainCode (..))
+import Cardano.Ledger.Keys (BootstrapWitness (..), ChainCode (..), VKey)
 import Data.Bits (shiftR)
 import qualified Data.ByteString as BS
 import Data.Proxy
@@ -110,11 +111,35 @@ estimateMinFeeTx ::
   Coin
 estimateMinFeeTx pp tx numKeyWits numByronKeyWits = setMinFeeTx pp tx' ^. bodyTxL . feeTxBodyL
   where
-    tx' =
-      tx
-        & (witsTxL . addrTxWitsL <>~ dummyKeyWits)
-        & (witsTxL . bootAddrTxWitsL <>~ dummyByronKeyWits)
+    tx' = addDummyWitsTx pp tx numKeyWits $ replicate numByronKeyWits dummyByronAttributes
+    -- We assume testnet network magic here to avoid having to thread the actual network
+    -- ID into this function merely to calculate the fees of byron witnesses more
+    -- accurately. This will over-estimate min fees for byron witnesses in mainnet
+    -- transaction by 7 bytes per witness.
+    dummyByronAttributes =
+      Byron.AddrAttributes
+        { Byron.aaVKDerivationPath = Nothing
+        , Byron.aaNetworkMagic = Byron.NetworkTestnet maxBound
+        }
 
+addDummyWitsTx ::
+  forall era.
+  EraTx era =>
+  -- | The current protocol parameters.
+  PParams era ->
+  -- | The transaction.
+  Tx era ->
+  -- | The number of key witnesses still to be added to the transaction.
+  Int ->
+  -- | List of attributes from TxOuts with Byron addresses that are being spent
+  [Byron.AddrAttributes] ->
+  -- | The required minimum fee.
+  Tx era
+addDummyWitsTx pp tx numKeyWits byronAttrs =
+  tx
+    & (witsTxL . addrTxWitsL <>~ dummyKeyWits)
+    & (witsTxL . bootAddrTxWitsL <>~ dummyByronKeyWits)
+  where
     dsign :: Proxy (DSIGN (EraCrypto era))
     dsign = Proxy
     version = pvMajor (pp ^. ppProtocolVersionL)
@@ -137,17 +162,10 @@ estimateMinFeeTx pp tx numKeyWits numByronKeyWits = setMinFeeTx pp tx' ^. bodyTx
 
     -- ChainCode is always 32 bytes long.
     chainCode = ChainCode $ BS.replicate 32 0
-    -- We assume testnet network magic here to avoid having to thread the actual network
-    -- ID into this function merely to calculate the fees of byron witnesses more
-    -- accurately. This will over-estimate min fees for byron witnesses in mainnet
-    -- transaction by 7 bytes per witness.
-    dummyByronAttributes =
-      serialize' byronProtVer $
-        Byron.mkAttributes
-          Byron.AddrAttributes
-            { Byron.aaVKDerivationPath = Nothing
-            , Byron.aaNetworkMagic = Byron.NetworkTestnet maxBound
-            }
-    mkDummyByronKeyWit key = BootstrapWitness key dummySig chainCode dummyByronAttributes
+
+    mkDummyByronKeyWit ::
+      VKey 'Witness (EraCrypto era) -> Byron.AddrAttributes -> BootstrapWitness (EraCrypto era)
+    mkDummyByronKeyWit key =
+      BootstrapWitness key dummySig chainCode . serialize' byronProtVer . Byron.mkAttributes
     dummyByronKeyWits =
-      Set.fromList [mkDummyByronKeyWit key | key <- take numByronKeyWits dummyKeys]
+      Set.fromList $ zipWith mkDummyByronKeyWit dummyKeys byronAttrs
