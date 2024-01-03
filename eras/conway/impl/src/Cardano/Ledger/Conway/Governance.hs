@@ -109,6 +109,7 @@ module Cardano.Ledger.Conway.Governance (
   pulseDRepPulsingState,
   completeDRepPulsingState,
   extractDRepPulsingState,
+  forceDRepPulsingState,
   finishDRepPulser,
   computeDrepDistr,
   getRatifyState,
@@ -1021,6 +1022,13 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
         , rsDelayed = False
         }
     !ratifyState' = runConwayRatify dpGlobals ratifyEnv ratifyState ratifySig
+
+-- | Force computation of DRep stake distribution and figure out the next enact
+-- state. This operation is useful in cases when access to new EnactState or DRep stake
+-- distribution is needed moer than once. It is safe to call this function at any
+-- point. Whenever pulser is already in computed state this will be a noop.
+forceDRepPulsingState :: ConwayEraGov era => NewEpochState era -> NewEpochState era
+forceDRepPulsingState nes = nes & newEpochStateDRepPulsingStateL %~ completeDRepPulsingState
 
 -- ===========================================================
 -- The State which is stored in ConwayGovState
