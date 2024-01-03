@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -452,8 +453,9 @@ payPoolDeposit ::
 payPoolDeposit keyhash pp pstate = pstate {psDeposits = newpool}
   where
     pool = psDeposits pstate
+    !deposit = pp ^. ppPoolDepositL
     newpool
-      | Map.notMember keyhash pool = Map.insert keyhash (pp ^. ppPoolDepositL) pool
+      | Map.notMember keyhash pool = Map.insert keyhash deposit pool
       | otherwise = pool
 
 refundPoolDeposit :: KeyHash 'StakePool (EraCrypto era) -> PState era -> (Coin, PState era)

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -709,7 +710,7 @@ initialLedgerState gstate = LedgerState utxostate dpstate
     pools = gsInitialPoolParams gstate
     pp = mPParams (gsModel gstate)
     keyDeposit = pp ^. ppKeyDepositL
-    poolDeposit = pp ^. ppPoolDepositL
+    !poolDeposit = pp ^. ppPoolDepositL
     rdpair rew = UM.RDPair (UM.compactCoinOrError rew) (UM.compactCoinOrError keyDeposit)
 
 -- =============================================

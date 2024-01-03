@@ -79,7 +79,7 @@ import qualified Data.Map.Strict as Map
 import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
 import Lens.Micro
-import NoThunks.Class (NoThunks (..))
+import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- ==================================
@@ -300,12 +300,16 @@ deriving stock instance
   ) =>
   Eq (UTxOState era)
 
-instance
-  ( NoThunks (UTxO era)
-  , NoThunks (Value era)
-  , NoThunks (GovState era)
-  ) =>
-  NoThunks (UTxOState era)
+deriving via
+  AllowThunksIn
+    '["utxosDeposited"]
+    (UTxOState era)
+  instance
+    ( NoThunks (UTxO era)
+    , NoThunks (GovState era)
+    , Era era
+    ) =>
+    NoThunks (UTxOState era)
 
 instance
   ( EraTxOut era
