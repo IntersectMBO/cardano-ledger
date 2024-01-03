@@ -437,9 +437,13 @@ transaction_witness_set =
   , ? 7: nonempty_set<plutus_v3_script>
   }
 
-plutus_v1_script = bytes
-plutus_v2_script = bytes
-plutus_v3_script = bytes
+; The real type of  plutus_v1_script, plutus_v2_script and plutus_v3_script is bytes.
+; However, because we enforce uniqueness when many scripts are supplied,
+; we need to hack around for tests in order to avoid generating duplicates,
+; since the cddl tool we use for roundtrip testing doesn't generate distinct collections.
+plutus_v1_script = distinct<bytes>
+plutus_v2_script = distinct<bytes>
+plutus_v3_script = distinct<bytes>
 
 plutus_data =
     constr<plutus_data>
