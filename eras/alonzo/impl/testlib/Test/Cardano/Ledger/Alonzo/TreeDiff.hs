@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Alonzo.TreeDiff (
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.Plutus.Context
 import Cardano.Ledger.Alonzo.Plutus.Evaluate
 import Cardano.Ledger.Alonzo.Plutus.TxInfo
 import Cardano.Ledger.Alonzo.Rules
@@ -103,7 +104,7 @@ instance
 instance ToExpr (TxCert era) => ToExpr (ScriptPurpose era)
 
 -- Plutus/TxInfo
-instance ToExpr (ContextError (AlonzoEra c))
+instance ToExpr (AlonzoContextError era)
 
 instance (ToExpr (ContextError era), ToExpr (TxCert era)) => ToExpr (CollectError era)
 

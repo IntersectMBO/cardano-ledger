@@ -6,13 +6,15 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Babbage.TxInfo (
-  ContextError (..),
+  BabbageContextError (..),
   transReferenceScript,
   transTxOutV1,
   transTxOutV2,
@@ -21,14 +23,13 @@ module Cardano.Ledger.Babbage.TxInfo (
   transTxRedeemers,
 ) where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   PlutusScriptPurpose,
   mkPlutusLanguageContext,
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (ContextError (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
 import Cardano.Ledger.Alonzo.TxWits (RdmrPtr, unRedeemers)
@@ -60,6 +61,7 @@ import Cardano.Ledger.Plutus.TxInfo (
  )
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
+import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, when, zipWithM)
 import Data.Foldable as F (Foldable (..))
@@ -82,38 +84,34 @@ transReferenceScript (SJust s) = Just . transScriptHash . hashScript @era $ s
 -- | Given a TxOut, translate it for V2 and return (Right transalation).
 -- If the transaction contains any Byron addresses or Babbage features, return Left.
 transTxOutV1 ::
-  forall era a.
-  ( Inject (ContextError (BabbageEra (EraCrypto era))) a
+  forall era.
+  ( Inject (BabbageContextError era) (ContextError era)
   , Value era ~ MaryValue (EraCrypto era)
   , BabbageEraTxOut era
   ) =>
   TxOutSource (EraCrypto era) ->
   TxOut era ->
-  Either a PV1.TxOut
+  Either (ContextError era) PV1.TxOut
 transTxOutV1 txOutSource txOut = do
-  when (isSJust (txOut ^. referenceScriptTxOutL)) $
-    Left $
-      inject $
-        ReferenceScriptsNotSupported txOutSource
-  when (isSJust (txOut ^. dataTxOutL)) $
-    Left $
-      inject $
-        InlineDatumsNotSupported txOutSource
+  when (isSJust (txOut ^. referenceScriptTxOutL)) $ do
+    Left $ inject $ ReferenceScriptsNotSupported @era txOutSource
+  when (isSJust (txOut ^. dataTxOutL)) $ do
+    Left $ inject $ InlineDatumsNotSupported @era txOutSource
   case Alonzo.transTxOut txOut of
-    Nothing -> Left $ inject $ ByronTxOutInContext txOutSource
+    Nothing -> Left $ inject $ ByronTxOutInContext @era txOutSource
     Just plutusTxOut -> Right plutusTxOut
 
 -- | Given a TxOut, translate it for V2 and return (Right transalation). It is
 --   possible the address part is a Bootstrap Address, in that case return Left.
 transTxOutV2 ::
-  forall era a.
-  ( Inject (ContextError (BabbageEra (EraCrypto era))) a
+  forall era.
+  ( Inject (BabbageContextError era) (ContextError era)
   , Value era ~ MaryValue (EraCrypto era)
   , BabbageEraTxOut era
   ) =>
   TxOutSource (EraCrypto era) ->
   TxOut era ->
-  Either a PV2.TxOut
+  Either (ContextError era) PV2.TxOut
 transTxOutV2 txOutSource txOut = do
   let val = txOut ^. valueTxOutL
       referenceScript = transReferenceScript $ txOut ^. referenceScriptTxOutL
@@ -129,37 +127,37 @@ transTxOutV2 txOutSource txOut = do
               . binaryDataToData
               $ binaryData
   case transAddr (txOut ^. addrTxOutL) of
-    Nothing -> Left $ inject $ ByronTxOutInContext txOutSource
+    Nothing -> Left $ inject $ ByronTxOutInContext @era txOutSource
     Just addr ->
       Right (PV2.TxOut addr (Alonzo.transValue val) datum referenceScript)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V1 context
 transTxInInfoV1 ::
-  ( Inject (ContextError (AlonzoEra (EraCrypto era))) a
-  , Inject (ContextError (BabbageEra (EraCrypto era))) a
+  forall era.
+  ( Inject (BabbageContextError era) (ContextError era)
   , Value era ~ MaryValue (EraCrypto era)
   , BabbageEraTxOut era
   ) =>
   UTxO era ->
   TxIn (EraCrypto era) ->
-  Either a PV1.TxInInfo
+  Either (ContextError era) PV1.TxInInfo
 transTxInInfoV1 utxo txIn = do
-  txOut <- Alonzo.transLookupTxOut utxo txIn
+  txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
   plutusTxOut <- transTxOutV1 (TxOutFromInput txIn) txOut
   Right (PV1.TxInInfo (transTxIn txIn) plutusTxOut)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V2 context
 transTxInInfoV2 ::
-  ( Inject (ContextError (AlonzoEra (EraCrypto era))) a
-  , Inject (ContextError (BabbageEra (EraCrypto era))) a
+  forall era.
+  ( Inject (BabbageContextError era) (ContextError era)
   , Value era ~ MaryValue (EraCrypto era)
   , BabbageEraTxOut era
   ) =>
   UTxO era ->
   TxIn (EraCrypto era) ->
-  Either a PV2.TxInInfo
+  Either (ContextError era) PV2.TxInInfo
 transTxInInfoV2 utxo txIn = do
-  txOut <- Alonzo.transLookupTxOut utxo txIn
+  txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
   plutusTxOut <- transTxOutV2 (TxOutFromInput txIn) txOut
   Right (PV2.TxInInfo (transTxIn txIn) plutusTxOut)
 
@@ -170,7 +168,7 @@ transRedeemerPtr ::
   forall proxy l era.
   ( EraPlutusTxInfo l era
   , MaryEraTxBody era
-  , Inject (ContextError (BabbageEra (EraCrypto era))) (ContextError era)
+  , Inject (BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
   TxBody era ->
@@ -178,7 +176,7 @@ transRedeemerPtr ::
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
 transRedeemerPtr proxy txBody (ptr, (d, _)) =
   case rdptrInv txBody ptr of
-    SNothing -> Left $ inject $ RdmrPtrPointsToNothing @(EraCrypto era) ptr
+    SNothing -> Left $ inject $ RdmrPtrPointsToNothing @era ptr
     SJust sp -> do
       plutusScriptPurpose <- toPlutusScriptPurpose proxy sp
       Right (plutusScriptPurpose, transRedeemer d)
@@ -190,7 +188,7 @@ transTxRedeemers ::
   , MaryEraTxBody era
   , EraTx era
   , AlonzoEraTxWits era
-  , Inject (ContextError (BabbageEra (EraCrypto era))) (ContextError era)
+  , Inject (BabbageContextError era) (ContextError era)
   ) =>
   proxy l ->
   Tx era ->
@@ -202,46 +200,52 @@ transTxRedeemers proxy tx =
       (Map.toList (unRedeemers $ tx ^. witsTxL . rdmrsTxWitsL))
 
 instance Crypto c => EraPlutusContext (BabbageEra c) where
-  data ContextError (BabbageEra c)
-    = AlonzoContextError !(ContextError (AlonzoEra c))
-    | ByronTxOutInContext !(TxOutSource c)
-    | RdmrPtrPointsToNothing !RdmrPtr
-    | InlineDatumsNotSupported !(TxOutSource c)
-    | ReferenceScriptsNotSupported !(TxOutSource c)
-    | ReferenceInputsNotSupported !(Set.Set (TxIn c))
-    deriving (Eq, Show, Generic)
+  type ContextError (BabbageEra c) = BabbageContextError (BabbageEra c)
 
   mkPlutusScriptContext = \case
     BabbagePlutusV1 p -> mkPlutusLanguageContext p
     BabbagePlutusV2 p -> mkPlutusLanguageContext p
 
-instance NoThunks (ContextError (BabbageEra c))
+data BabbageContextError era
+  = AlonzoContextError !(AlonzoContextError era)
+  | ByronTxOutInContext !(TxOutSource (EraCrypto era))
+  | RdmrPtrPointsToNothing !RdmrPtr
+  | InlineDatumsNotSupported !(TxOutSource (EraCrypto era))
+  | ReferenceScriptsNotSupported !(TxOutSource (EraCrypto era))
+  | ReferenceInputsNotSupported !(Set.Set (TxIn (EraCrypto era)))
+  deriving (Generic)
 
-instance Crypto c => NFData (ContextError (BabbageEra c))
+deriving instance Eq (ContextError era) => Eq (BabbageContextError era)
 
-instance Inject (ContextError (BabbageEra c)) (ContextError (BabbageEra c))
+deriving instance Show (ContextError era) => Show (BabbageContextError era)
 
-instance Inject (ContextError (AlonzoEra c)) (ContextError (BabbageEra c)) where
+instance NoThunks (BabbageContextError era)
+
+instance Era era => NFData (BabbageContextError era)
+
+instance Inject (BabbageContextError era) (BabbageContextError era)
+
+instance Inject (AlonzoContextError era) (BabbageContextError era) where
   inject = AlonzoContextError
 
-instance Crypto c => EncCBOR (ContextError (BabbageEra c)) where
+instance Era era => EncCBOR (BabbageContextError era) where
   encCBOR = \case
     ByronTxOutInContext txOutSource ->
-      encode $ Sum ByronTxOutInContext 0 !> To txOutSource
+      encode $ Sum (ByronTxOutInContext @era) 0 !> To txOutSource
     AlonzoContextError (TranslationLogicMissingInput txIn) ->
-      encode $ Sum TranslationLogicMissingInput 1 !> To txIn
+      encode $ Sum (TranslationLogicMissingInput @era) 1 !> To txIn
     RdmrPtrPointsToNothing ptr ->
       encode $ Sum RdmrPtrPointsToNothing 2 !> To ptr
     InlineDatumsNotSupported txOutSource ->
-      encode $ Sum InlineDatumsNotSupported 4 !> To txOutSource
+      encode $ Sum (InlineDatumsNotSupported @era) 4 !> To txOutSource
     ReferenceScriptsNotSupported txOutSource ->
-      encode $ Sum ReferenceScriptsNotSupported 5 !> To txOutSource
+      encode $ Sum (ReferenceScriptsNotSupported @era) 5 !> To txOutSource
     ReferenceInputsNotSupported txIns ->
-      encode $ Sum ReferenceInputsNotSupported 6 !> To txIns
+      encode $ Sum (ReferenceInputsNotSupported @era) 6 !> To txIns
     AlonzoContextError (TimeTranslationPastHorizon err) ->
       encode $ Sum TimeTranslationPastHorizon 7 !> To err
 
-instance Crypto c => DecCBOR (ContextError (BabbageEra c)) where
+instance Era era => DecCBOR (BabbageContextError era) where
   decCBOR = decode $ Summands "ContextError" $ \case
     0 -> SumD ByronTxOutInContext <! From
     1 -> SumD (AlonzoContextError . TranslationLogicMissingInput) <! From

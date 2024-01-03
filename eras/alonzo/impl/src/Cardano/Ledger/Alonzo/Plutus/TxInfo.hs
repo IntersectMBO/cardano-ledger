@@ -20,7 +20,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Plutus.TxInfo (
-  ContextError (..),
+  AlonzoContextError (..),
   TxOutSource (..),
   transLookupTxOut,
   transTxOut,
@@ -33,6 +33,7 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   transWithdrawals,
   transDataPair,
   transTxCert,
+  transTxCertCommon,
   transScriptPurpose,
   transTxBodyId,
   transTxBodyCerts,
@@ -135,47 +136,50 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
     PV1.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
 
 instance Crypto c => EraPlutusContext (AlonzoEra c) where
-  data ContextError (AlonzoEra c)
-    = TranslationLogicMissingInput !(TxIn c)
-    | TimeTranslationPastHorizon !Text
-    deriving (Eq, Show, Generic)
+  type ContextError (AlonzoEra c) = AlonzoContextError (AlonzoEra c)
 
   mkPlutusScriptContext (AlonzoPlutusV1 p) =
     mkPlutusLanguageContext p
 
-instance NoThunks (ContextError (AlonzoEra c))
+data AlonzoContextError era
+  = TranslationLogicMissingInput !(TxIn (EraCrypto era))
+  | TimeTranslationPastHorizon !Text
+  deriving (Eq, Show, Generic)
 
-instance Inject (ContextError (AlonzoEra c)) (ContextError (AlonzoEra c))
+instance NoThunks (AlonzoContextError era)
 
-instance Crypto c => NFData (ContextError (AlonzoEra c))
+instance Inject (AlonzoContextError era) (AlonzoContextError era)
 
-instance Crypto c => EncCBOR (ContextError (AlonzoEra c)) where
+instance Era era => NFData (AlonzoContextError era)
+
+instance Era era => EncCBOR (AlonzoContextError era) where
   encCBOR = \case
     TranslationLogicMissingInput txIn ->
-      encode $ Sum TranslationLogicMissingInput 1 !> To txIn
+      encode $ Sum (TranslationLogicMissingInput @era) 1 !> To txIn
     TimeTranslationPastHorizon err ->
-      encode $ Sum TimeTranslationPastHorizon 7 !> To err
+      encode $ Sum (TimeTranslationPastHorizon @era) 7 !> To err
 
-instance Crypto c => DecCBOR (ContextError (AlonzoEra c)) where
+instance Era era => DecCBOR (AlonzoContextError era) where
   decCBOR = decode $ Summands "ContextError" $ \case
-    1 -> SumD TranslationLogicMissingInput <! From
-    7 -> SumD TimeTranslationPastHorizon <! From
+    1 -> SumD (TranslationLogicMissingInput @era) <! From
+    7 -> SumD (TimeTranslationPastHorizon @era) <! From
     n -> Invalid n
 
 transLookupTxOut ::
-  Inject (ContextError (AlonzoEra (EraCrypto era))) a =>
+  forall era a.
+  Inject (AlonzoContextError era) a =>
   UTxO era ->
   TxIn (EraCrypto era) ->
   Either a (TxOut era)
 transLookupTxOut (UTxO utxo) txIn =
   case Map.lookup txIn utxo of
-    Nothing -> Left $ inject $ TranslationLogicMissingInput txIn
+    Nothing -> Left $ inject $ TranslationLogicMissingInput @era txIn
     Just txOut -> Right txOut
 
 -- | Translate a validity interval to POSIX time
 transValidityInterval ::
   forall era a.
-  (Inject (ContextError (AlonzoEra (EraCrypto era))) a, EraPParams era) =>
+  (Inject (AlonzoContextError era) a, EraPParams era) =>
   PParams era ->
   EpochInfo (Either Text) ->
   SystemStart ->
@@ -202,7 +206,7 @@ transValidityInterval pp epochInfo systemStart = \case
         (PV1.strictUpperBound t2)
   where
     transSlotToPOSIXTime =
-      left (inject . TimeTranslationPastHorizon @(EraCrypto era))
+      left (inject . TimeTranslationPastHorizon @era)
         . slotToPOSIXTime epochInfo systemStart
 
 -- | Translate a TxOut. Returns `Nothing` if a Byron address is present in the TxOut.
@@ -288,19 +292,30 @@ transValue (MaryValue c m) = transCoin c <> transMultiAsset m
 -- translate fields like TxCert, Withdrawals, and similar
 
 transTxCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCert era -> PV1.DCert
-transTxCert = \case
+transTxCert txCert =
+  case transTxCertCommon txCert of
+    Just cert -> cert
+    Nothing ->
+      case txCert of
+        GenesisDelegTxCert {} -> PV1.DCertGenesis
+        MirTxCert {} -> PV1.DCertMir
+        _ -> error "Impossible: All certificates should have been accounted for"
+
+-- | Just like `transTxCert`, but do not translate certificates that were deprecated in Conway
+transTxCertCommon :: ShelleyEraTxCert era => TxCert era -> Maybe PV1.DCert
+transTxCertCommon = \case
   RegTxCert stakeCred ->
-    PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
+    Just $ PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
   UnRegTxCert stakeCred ->
-    PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
+    Just $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
   DelegStakeTxCert stakeCred keyHash ->
-    PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
+    Just $ PV1.DCertDelegDelegate (PV1.StakingHash (transCred stakeCred)) (transKeyHash keyHash)
   RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
-    PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes ppVrf)))
+    Just $
+      PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes ppVrf)))
   RetirePoolTxCert poolId (EpochNo i) ->
-    PV1.DCertPoolRetire (transKeyHash poolId) (toInteger i)
-  GenesisDelegTxCert {} -> PV1.DCertGenesis
-  MirTxCert {} -> PV1.DCertMir
+    Just $ PV1.DCertPoolRetire (transKeyHash poolId) (toInteger i)
+  _ -> Nothing
 
 transScriptPurpose ::
   (EraPlutusTxInfo l era, PlutusTxCert l ~ PV1.DCert) =>

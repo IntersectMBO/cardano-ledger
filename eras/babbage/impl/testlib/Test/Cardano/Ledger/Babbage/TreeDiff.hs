@@ -19,7 +19,7 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules
 import Cardano.Ledger.Babbage.TxBody
-import Cardano.Ledger.Babbage.TxInfo (ContextError (..))
+import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Shelley.Rules
@@ -32,7 +32,7 @@ deriving newtype instance ToExpr CoinPerByte
 instance ToExpr (PlutusScript (BabbageEra c))
 
 -- PlutusContext
-instance ToExpr (ContextError (BabbageEra c))
+instance ToExpr (BabbageContextError era)
 
 -- PParams
 instance ToExpr (BabbagePParams StrictMaybe era)

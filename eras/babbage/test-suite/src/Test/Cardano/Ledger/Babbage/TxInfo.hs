@@ -9,16 +9,14 @@
 module Test.Cardano.Ledger.Babbage.TxInfo where
 
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
   EraPlutusTxInfo (toPlutusTxInfo),
   PlutusTxInfo,
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (TxOutSource (..))
-import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.TxInfo (ContextError (..), transTxInInfoV2, transTxOutV2)
+import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..), transTxInInfoV2, transTxOutV2)
 import Cardano.Ledger.BaseTypes (Inject (..), Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
@@ -218,8 +216,7 @@ translatedInputEx1 ::
   ( BabbageEraTxOut era
   , Show (ContextError era)
   , Value era ~ MaryValue (EraCrypto era)
-  , Inject (ContextError (AlonzoEra (EraCrypto era))) (ContextError era)
-  , Inject (ContextError (BabbageEra (EraCrypto era))) (ContextError era)
+  , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
   PV2.TxInInfo
@@ -231,8 +228,7 @@ translatedInputEx2 ::
   ( BabbageEraTxOut era
   , Show (ContextError era)
   , Value era ~ MaryValue (EraCrypto era)
-  , Inject (ContextError (AlonzoEra (EraCrypto era))) (ContextError era)
-  , Inject (ContextError (BabbageEra (EraCrypto era))) (ContextError era)
+  , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
   PV2.TxInInfo
@@ -244,7 +240,7 @@ translatedOutputEx1 ::
   ( BabbageEraTxOut era
   , Show (ContextError era)
   , Value era ~ MaryValue (EraCrypto era)
-  , Inject (ContextError (BabbageEra (EraCrypto era))) (ContextError era)
+  , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
   PV2.TxOut
@@ -257,7 +253,7 @@ translatedOutputEx2 ::
   ( BabbageEraTxOut era
   , Show (ContextError era)
   , Value era ~ MaryValue (EraCrypto era)
-  , Inject (ContextError (BabbageEra (EraCrypto era))) (ContextError era)
+  , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
   PV2.TxOut
@@ -271,8 +267,7 @@ txInfoTestsV1 ::
   , BabbageEraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
   , EraPlutusTxInfo 'PlutusV1 era
-  , Inject (ContextError (AlonzoEra (EraCrypto era))) (ContextError era)
-  , Inject (ContextError (BabbageEra (EraCrypto era))) (ContextError era)
+  , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
   TestTree
@@ -282,35 +277,35 @@ txInfoTestsV1 _ =
     [ testCase "translation error on byron txout" $
         expectV1TranslationError @era
           (txBare shelleyInput byronOutput)
-          (inject $ ByronTxOutInContext (TxOutFromOutput @(EraCrypto era) minBound))
+          (inject $ ByronTxOutInContext @era (TxOutFromOutput minBound))
     , testCase "translation error on byron txin" $
         expectV1TranslationError @era
           (txBare byronInput shelleyOutput)
-          (inject $ ByronTxOutInContext (TxOutFromInput @(EraCrypto era) byronInput))
+          (inject $ ByronTxOutInContext @era (TxOutFromInput byronInput))
     , testCase "translation error on unknown txin (logic error)" $
         expectV1TranslationError @era
           (txBare unknownInput shelleyOutput)
-          (inject $ TranslationLogicMissingInput (unknownInput @(EraCrypto era)))
+          (inject $ AlonzoContextError $ TranslationLogicMissingInput @era unknownInput)
     , testCase "translation error on reference input" $
         expectV1TranslationError @era
           (txRefInput shelleyInput)
-          (inject $ ReferenceInputsNotSupported (Set.singleton (shelleyInput @(EraCrypto era))))
+          (inject $ ReferenceInputsNotSupported @era (Set.singleton shelleyInput))
     , testCase "translation error on inline datum in input" $
         expectV1TranslationError @era
           (txBare inputWithInlineDatum shelleyOutput)
-          (inject $ InlineDatumsNotSupported (TxOutFromInput @(EraCrypto era) inputWithInlineDatum))
+          (inject $ InlineDatumsNotSupported @era (TxOutFromInput inputWithInlineDatum))
     , testCase "translation error on inline datum in output" $
         expectV1TranslationError @era
           (txBare shelleyInput inlineDatumOutput)
-          (inject $ InlineDatumsNotSupported (TxOutFromOutput @(EraCrypto era) minBound))
+          (inject $ InlineDatumsNotSupported @era (TxOutFromOutput minBound))
     , testCase "translation error on reference script in input" $
         expectV1TranslationError @era
           (txBare inputWithRefScript shelleyOutput)
-          (inject $ ReferenceScriptsNotSupported (TxOutFromInput @(EraCrypto era) inputWithRefScript))
+          (inject $ ReferenceScriptsNotSupported @era (TxOutFromInput inputWithRefScript))
     , testCase "translation error on reference script in output" $
         expectV1TranslationError @era
           (txBare shelleyInput refScriptOutput)
-          (inject $ ReferenceScriptsNotSupported (TxOutFromOutput @(EraCrypto era) minBound))
+          (inject $ ReferenceScriptsNotSupported @era (TxOutFromOutput minBound))
     ]
 
 txInfoTestsV2 ::
@@ -319,8 +314,7 @@ txInfoTestsV2 ::
   , EraPlutusTxInfo l era
   , BabbageEraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
-  , Inject (ContextError (AlonzoEra (EraCrypto era))) (ContextError era)
-  , Inject (ContextError (BabbageEra (EraCrypto era))) (ContextError era)
+  , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Proxy era ->
   SLanguage l ->
@@ -332,17 +326,17 @@ txInfoTestsV2 p lang =
         expectTranslationError @era
           lang
           (txBare shelleyInput byronOutput)
-          (inject $ ByronTxOutInContext (TxOutFromOutput @(EraCrypto era) minBound))
+          (inject $ ByronTxOutInContext @era (TxOutFromOutput minBound))
     , testCase "translation error on byron txin" $
         expectTranslationError @era
           lang
           (txBare byronInput shelleyOutput)
-          (inject $ ByronTxOutInContext (TxOutFromInput @(EraCrypto era) byronInput))
+          (inject $ ByronTxOutInContext @era (TxOutFromInput byronInput))
     , testCase "translation error on unknown txin (logic error)" $
         expectTranslationError @era
           lang
           (txBare unknownInput shelleyOutput)
-          (inject $ TranslationLogicMissingInput (unknownInput @(EraCrypto era)))
+          (inject $ AlonzoContextError $ TranslationLogicMissingInput @era unknownInput)
     , testCase "use reference input starting in Babbage" $
         successfulTranslation @era
           lang
@@ -375,8 +369,7 @@ txInfoTests ::
   ( EraTx era
   , BabbageEraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
-  , Inject (ContextError (AlonzoEra (EraCrypto era))) (ContextError era)
-  , Inject (ContextError (BabbageEra (EraCrypto era))) (ContextError era)
+  , Inject (BabbageContextError era) (ContextError era)
   , EraPlutusTxInfo 'PlutusV1 era
   , EraPlutusTxInfo 'PlutusV2 era
   ) =>

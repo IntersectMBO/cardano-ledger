@@ -7,13 +7,15 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.TxInfo (
-  ContextError (..),
+  ConwayContextError (..),
   transTxBodyWithdrawals,
   transTxCert,
   transDRepCred,
@@ -26,18 +28,16 @@ module Cardano.Ledger.Conway.TxInfo (
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Address (RewardAcnt (..))
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
   PlutusTxCert,
   mkPlutusLanguageContext,
  )
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (TxOutSource (..))
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..))
-import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.TxInfo (ContextError (..))
+import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (EpochNo (..), Inject (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -74,29 +74,35 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 
 instance Crypto c => EraPlutusContext (ConwayEra c) where
-  data ContextError (ConwayEra c)
-    = BabbageContextError !(ContextError (BabbageEra c))
-    | CertificateNotSupported !(TxCert (ConwayEra c))
-    deriving (Eq, Show, Generic)
+  type ContextError (ConwayEra c) = ConwayContextError (ConwayEra c)
 
   mkPlutusScriptContext = \case
     ConwayPlutusV1 p -> mkPlutusLanguageContext p
     ConwayPlutusV2 p -> mkPlutusLanguageContext p
     ConwayPlutusV3 p -> mkPlutusLanguageContext p
 
-instance Inject (ContextError (ConwayEra c)) (ContextError (ConwayEra c))
+data ConwayContextError era
+  = BabbageContextError !(BabbageContextError era)
+  | CertificateNotSupported !(TxCert era)
+  deriving (Generic)
 
-instance Inject (ContextError (BabbageEra c)) (ContextError (ConwayEra c)) where
+deriving instance (Eq (ContextError era), Eq (TxCert era)) => Eq (ConwayContextError era)
+
+deriving instance (Show (ContextError era), Show (TxCert era)) => Show (ConwayContextError era)
+
+instance Inject (ConwayContextError era) (ConwayContextError era)
+
+instance Inject (BabbageContextError era) (ConwayContextError era) where
   inject = BabbageContextError
 
-instance Inject (ContextError (AlonzoEra c)) (ContextError (ConwayEra c)) where
+instance Inject (AlonzoContextError era) (ConwayContextError era) where
   inject = BabbageContextError . inject
 
-instance NoThunks (ContextError (ConwayEra c))
+instance NoThunks (TxCert era) => NoThunks (ConwayContextError era)
 
-instance Crypto c => NFData (ContextError (ConwayEra c))
+instance (Era era, NFData (TxCert era)) => NFData (ConwayContextError era)
 
-instance Crypto c => EncCBOR (ContextError (ConwayEra c)) where
+instance (EncCBOR (TxCert era), Era era) => EncCBOR (ConwayContextError era) where
   encCBOR = \case
     -- We start at tag 8, just in case to avoid clashes with previous eras.
     BabbageContextError babbageContextError ->
@@ -104,20 +110,20 @@ instance Crypto c => EncCBOR (ContextError (ConwayEra c)) where
     CertificateNotSupported txCert ->
       encode $ Sum CertificateNotSupported 9 !> To txCert
 
-instance Crypto c => DecCBOR (ContextError (ConwayEra c)) where
+instance (DecCBOR (TxCert era), Era era) => DecCBOR (ConwayContextError era) where
   decCBOR = decode $ Summands "ContextError" $ \case
     8 -> SumD BabbageContextError <! From
     9 -> SumD CertificateNotSupported <! From
     n -> Invalid n
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
-  toPlutusTxCert _ = fmap Alonzo.transTxCert . downgradeConwayTxCert
+  toPlutusTxCert _ = transTxCertV1V2
 
   toPlutusScriptPurpose = Alonzo.transScriptPurpose
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
     let refInputs = txBody ^. referenceInputsTxBodyL
-    unless (Set.null refInputs) $ Left $ inject $ ReferenceInputsNotSupported refInputs
+    unless (Set.null refInputs) $ Left $ inject $ ReferenceInputsNotSupported @(ConwayEra c) refInputs
 
     timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (Babbage.transTxInInfoV1 utxo) (Set.toList (txBody ^. inputsTxBodyL))
@@ -147,7 +153,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
     PV1.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
-  toPlutusTxCert _ = fmap Alonzo.transTxCert . downgradeConwayTxCert
+  toPlutusTxCert _ = transTxCertV1V2
 
   toPlutusScriptPurpose = Alonzo.transScriptPurpose
 
@@ -297,14 +303,11 @@ transScriptPurpose proxy = \case
     pure $ PV3.Rewarding (transCred cred)
   Certifying txCert -> PV3.Certifying <$> toPlutusTxCert proxy txCert
 
-downgradeConwayTxCert ::
-  Crypto c =>
-  TxCert (ConwayEra c) ->
-  Either (ContextError (ConwayEra c)) (TxCert (BabbageEra c))
-downgradeConwayTxCert = \case
-  RegPoolTxCert poolParams -> Right $ RegPoolTxCert poolParams
-  RetirePoolTxCert poolId epochNo -> Right $ RetirePoolTxCert poolId epochNo
-  RegTxCert cred -> Right $ RegTxCert cred
-  UnRegTxCert cred -> Right $ UnRegTxCert cred
-  DelegStakeTxCert cred poolId -> Right $ DelegStakeTxCert cred poolId
-  txCert -> Left $ CertificateNotSupported txCert
+transTxCertV1V2 ::
+  (ShelleyEraTxCert era, Inject (ConwayContextError era) (ContextError era)) =>
+  TxCert era ->
+  Either (ContextError era) PV1.DCert
+transTxCertV1V2 txCert =
+  case Alonzo.transTxCertCommon txCert of
+    Nothing -> Left $ inject $ CertificateNotSupported txCert
+    Just cert -> Right cert

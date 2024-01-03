@@ -5,7 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
@@ -74,7 +74,7 @@ class
   ) =>
   EraPlutusContext era
   where
-  data ContextError era :: Type
+  type ContextError era = (r :: Type) | r -> era
 
   mkPlutusScriptContext ::
     PlutusScript era ->
