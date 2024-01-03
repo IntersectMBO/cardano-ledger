@@ -59,7 +59,7 @@ jobs:
 
     - name: Install cbor-diag and cddl
       run: |
-        gem install cddl -v 0.8.15
+        gem install cddl -v 0.10.3
         gem install cbor-diag
 
     - name: Install Haskell
