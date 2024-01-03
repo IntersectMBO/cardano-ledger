@@ -126,8 +126,7 @@ conwayUtxowTransition = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx ⊆ witsKeyHashes                   -}
-  let needed = getWitsVKeyNeeded certState utxo (tx ^. bodyTxL)
-  runTest $ validateNeededWitnesses @era witsKeyHashes needed
+  runTest $ validateNeededWitnesses witsKeyHashes certState utxo txBody
 
   -- check metadata hash
   {-   adh := txADhash txb;  ad := auxiliaryData tx                      -}

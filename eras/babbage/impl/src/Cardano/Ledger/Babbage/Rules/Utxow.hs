@@ -310,8 +310,7 @@ babbageUtxowTransition = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  let needed = getWitsVKeyNeeded certState utxo (tx ^. bodyTxL)
-  runTest $ validateNeededWitnesses @era witsKeyHashes needed
+  runTest $ validateNeededWitnesses @era witsKeyHashes certState utxo txBody
   -- TODO can we add the required signers to witsVKeyNeeded so we dont need the check below?
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but

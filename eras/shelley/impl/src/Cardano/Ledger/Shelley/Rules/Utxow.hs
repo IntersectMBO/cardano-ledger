@@ -49,7 +49,7 @@ import Cardano.Ledger.BaseTypes (
   (==>),
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordSum, encodeListLen)
-import Cardano.Ledger.CertState (certDState, dsGenDelegs)
+import Cardano.Ledger.CertState (CertState, certDState, dsGenDelegs)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (DSIGN))
 import Cardano.Ledger.Keys (
@@ -91,7 +91,6 @@ import Cardano.Ledger.Shelley.UTxO (
   ScriptsProvided (..),
   ShelleyScriptsNeeded (..),
   UTxO,
-  getShelleyWitsVKeyNeeded,
   getShelleyWitsVKeyNeededNoGov,
   verifyWitVKey,
  )
@@ -325,8 +324,7 @@ transitionRulesUTXOW = do
   runTestOnSignal $ validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  let needed = getShelleyWitsVKeyNeeded certState utxo (tx ^. bodyTxL)
-  runTest $ validateNeededWitnesses @era witsKeyHashes needed
+  runTest $ validateNeededWitnesses witsKeyHashes certState utxo (tx ^. bodyTxL)
 
   -- check metadata hash
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
@@ -443,12 +441,20 @@ validateVerifiedWits tx =
           (not . verifyBootstrapWit txBodyHash)
           (Set.toList $ tx ^. witsTxL . bootAddrTxWitsL)
 
+-- | Verify that we provide at least all of the required witnesses
+--
+-- @witsVKeyNeeded utxo tx ⊆ witsKeyHashes@
 validateNeededWitnesses ::
+  EraUTxO era =>
+  -- | Provided witness
   Set (KeyHash 'Witness (EraCrypto era)) ->
-  Set (KeyHash 'Witness (EraCrypto era)) ->
+  CertState era ->
+  UTxO era ->
+  TxBody era ->
   Test (ShelleyUtxowPredFailure era)
-validateNeededWitnesses witsKeyHashes needed =
-  let missingWitnesses = Set.difference needed witsKeyHashes
+validateNeededWitnesses witsKeyHashes certState utxo txBody =
+  let needed = getWitsVKeyNeeded certState utxo txBody
+      missingWitnesses = Set.difference needed witsKeyHashes
    in failureUnless (Set.null missingWitnesses) $
         MissingVKeyWitnessesUTXOW missingWitnesses
 

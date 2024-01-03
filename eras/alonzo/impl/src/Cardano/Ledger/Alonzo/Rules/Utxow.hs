@@ -363,8 +363,7 @@ alonzoStyleWitness = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  let needed = getWitsVKeyNeeded certState utxo (tx ^. bodyTxL)
-  runTest $ validateNeededWitnesses @era witsKeyHashes needed
+  runTest $ validateNeededWitnesses witsKeyHashes certState utxo txBody
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
       witsVKeyNeeded must include the reqSignerHashes in the union   -}
