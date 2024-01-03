@@ -84,7 +84,9 @@ import Cardano.Ledger.Binary (
   decodeNonEmptyList,
   encodeFoldableEncoder,
   encodeListLen,
+  encodeTag,
   ifDecoderVersionAtLeast,
+  ifEncodingVersionAtLeast,
   natVersion,
   setTag,
  )
@@ -543,7 +545,13 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
         Encode ('Closed 'Dense) (Map.Map (ScriptHash (EraCrypto era)) (Plutus l))
       encodePlutus slang =
         E
-          (encCBOR . map plutusBinary . Map.elems)
+          ( \m ->
+              let enc = encCBOR . map plutusBinary $ Map.elems m
+               in ifEncodingVersionAtLeast
+                    (natVersion @9)
+                    (encodeTag setTag <> enc)
+                    enc
+          )
           (Map.mapMaybe (toPlutusScript >=> toPlutusSLanguage slang) scripts)
       toScript ::
         forall l h. PlutusLanguage l => Map.Map h (Plutus l) -> Map.Map h (Script era)
