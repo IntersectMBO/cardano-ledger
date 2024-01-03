@@ -127,7 +127,7 @@ conwayEvalScriptsTxValid ::
   ) =>
   TransitionRule (ConwayUTXOS era)
 conwayEvalScriptsTxValid = do
-  TRC (UtxoEnv _ pp certState _, utxos@(UTxOState utxo _ _ govState _ _), tx) <-
+  TRC (UtxoEnv _ pp certState, utxos@(UTxOState utxo _ _ govState _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
 

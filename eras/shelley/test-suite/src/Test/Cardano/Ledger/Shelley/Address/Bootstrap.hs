@@ -33,7 +33,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (
-  GenDelegs (..),
   KeyRole (..),
   VKey (..),
   coerceKeyRole,
@@ -176,7 +175,6 @@ utxoEnv =
     0
     (emptyPParams & ppMaxTxSizeL .~ 1000)
     def
-    (GenDelegs mempty)
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 1000000

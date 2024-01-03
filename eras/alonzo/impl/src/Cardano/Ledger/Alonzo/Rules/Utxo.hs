@@ -83,7 +83,7 @@ import Cardano.Ledger.Rules.ValidationMode (
  )
 import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
-  UTxOState (UTxOState),
+  UTxOState (utxosUtxo),
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -468,8 +468,8 @@ utxoTransition ::
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
-  TRC (UtxoEnv slot pp dpstate _genDelegs, u, tx) <- judgmentContext
-  let UTxOState utxo _deposits _fees _ppup _ _ = u
+  TRC (UtxoEnv slot pp dpstate, utxos, tx) <- judgmentContext
+  let utxo = utxosUtxo utxos
 
   {-   txb := txbody tx   -}
   let txBody = tx ^. bodyTxL

@@ -87,7 +87,7 @@ conwayUtxowTransition ::
   ) =>
   TransitionRule (ConwayUTXOW era)
 conwayUtxowTransition = do
-  (TRC (UtxoEnv slot pp certState genDelegs, u, tx)) <- judgmentContext
+  (TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  txb := txbody tx  -}
@@ -149,8 +149,7 @@ conwayUtxowTransition = do
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   runTest $ ppViewHashesMatch tx pp scriptsProvided scriptHashesNeeded
 
-  trans @(EraRule "UTXO" era) $
-    TRC (UtxoEnv slot pp certState genDelegs, u, tx)
+  trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
 
 conwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>

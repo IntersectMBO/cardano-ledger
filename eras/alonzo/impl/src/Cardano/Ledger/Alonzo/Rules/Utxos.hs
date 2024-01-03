@@ -72,6 +72,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Evaluate (
@@ -257,9 +258,10 @@ alonzoEvalScriptsTxValid ::
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxValid = do
-  TRC (UtxoEnv slot pp certState genDelegs, utxos@(UTxOState utxo _ _ pup _ _), tx) <-
+  TRC (UtxoEnv slot pp certState, utxos@(UTxOState utxo _ _ pup _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
+      genDelegs = dsGenDelegs (certDState certState)
 
   () <- pure $! traceEvent validBegin ()
 
@@ -297,7 +299,7 @@ alonzoEvalScriptsTxInvalid ::
   ) =>
   TransitionRule (AlonzoUTXOS era)
 alonzoEvalScriptsTxInvalid = do
-  TRC (UtxoEnv slot pp _ _, us@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
+  TRC (UtxoEnv slot pp _, us@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
   let !_ = traceEvent invalidBegin ()

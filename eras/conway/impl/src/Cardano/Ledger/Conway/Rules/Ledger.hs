@@ -33,7 +33,6 @@ import Cardano.Ledger.BaseTypes (Inject (..), ShelleyBase, StrictMaybe (..), epo
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (txid)
-import Cardano.Ledger.CertState (certDStateL, dsGenDelegsL)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayGOV, ConwayLEDGER, ConwayUTXOW)
@@ -320,7 +319,7 @@ ledgerTransition = do
         -- Pass to UTXOW the unmodified CertState in its Environment, so it can process
         -- refunds of deposits for deregistering stake credentials and DReps.
         -- The modified CertState (certStateAfterCERTS) has these already removed from its UMap.
-        ( UtxoEnv @era slot pp certState (certState ^. certDStateL . dsGenDelegsL)
+        ( UtxoEnv @era slot pp certState
         , utxoState'
         , tx
         )

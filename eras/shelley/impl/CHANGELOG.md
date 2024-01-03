@@ -4,6 +4,7 @@
 
 * Add `getShelleyWitsVKeyNeeded` and `getShelleyWitsVKeyNeededNoGov`
 * Deprecate `witsVKeyNeededNoGov` and `shelleyWitsVKeyNeeded`
+* Get rid of `ueGenDelegs` and `ueGenDelegsL` as unnecessary.
 * Change the signature of `protectMainnet` to make it work with any
   `TransitionConfig`
 * Add `protectMainnetLens`

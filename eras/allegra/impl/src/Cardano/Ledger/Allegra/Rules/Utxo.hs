@@ -44,6 +44,7 @@ import Cardano.Ledger.Binary (
   invalidKey,
   serialize,
  )
+import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -169,9 +170,10 @@ utxoTransition ::
   ) =>
   TransitionRule (AllegraUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp certState genDelegs, utxos, tx) <- judgmentContext
+  TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let Shelley.UTxOState utxo _ _ ppup _ _ = utxos
-  let txBody = tx ^. bodyTxL
+      txBody = tx ^. bodyTxL
+      genDelegs = dsGenDelegs (certDState certState)
 
   {- ininterval slot (txvld tx) -}
   runTest $ validateOutsideValidityIntervalUTxO slot txBody

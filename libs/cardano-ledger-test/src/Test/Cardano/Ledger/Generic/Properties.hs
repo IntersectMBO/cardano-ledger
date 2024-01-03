@@ -16,7 +16,6 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTxBody (..), IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Pretty (PrettyA (..), ppList)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -41,7 +40,12 @@ import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle, twiddleInvariantProp)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Generic.Fields (abstractTx, abstractTxBody, abstractTxOut, abstractWitnesses)
+import Test.Cardano.Ledger.Generic.Fields (
+  abstractTx,
+  abstractTxBody,
+  abstractTxOut,
+  abstractWitnesses,
+ )
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), isValid')
 import Test.Cardano.Ledger.Generic.GenState (
   GenEnv (..),
@@ -78,22 +82,22 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 genTxAndUTXOState :: Reflect era => Proof era -> GenSize -> Gen (TRC (EraRule "UTXOW" era), GenState era)
 genTxAndUTXOState proof@(Conway _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Babbage _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Alonzo _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Mary _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Allegra _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Shelley _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp def (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 
 genTxAndLEDGERState ::
   forall era.

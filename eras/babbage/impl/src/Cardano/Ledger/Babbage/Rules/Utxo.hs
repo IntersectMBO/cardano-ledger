@@ -64,8 +64,7 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTest,
   runTestOnSignal,
  )
-import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure, UTxOState (utxosUtxo))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn)
@@ -309,14 +308,14 @@ utxoTransition ::
   , -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (BabbageUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ Shelley.UTxOState era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   TransitionRule (BabbageUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp dpstate _genDelegs, u, tx) <- judgmentContext
-  let Shelley.UTxOState utxo _deposits _fees _ppup _ _ = u
+  TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
+  let utxo = utxosUtxo utxos
 
   {-   txb := txbody tx   -}
   let txBody = body tx
@@ -342,7 +341,7 @@ utxoTransition = do
   runTest $ Shelley.validateBadInputsUTxO utxo allInputs
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ Shelley.validateValueNotConservedUTxO pp utxo dpstate txBody
+  runTest $ Shelley.validateValueNotConservedUTxO pp utxo certState txBody
 
   {-   adaID ∉ supp mint tx - check not needed because mint field of type MultiAsset
    cannot contain ada -}
@@ -394,14 +393,14 @@ instance
   , -- instructions for calling UTXOS from BabbageUTXO
     Embed (EraRule "UTXOS" era) (BabbageUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ Shelley.UTxOState era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
   , PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era
   ) =>
   STS (BabbageUTXO era)
   where
-  type State (BabbageUTXO era) = Shelley.UTxOState era
+  type State (BabbageUTXO era) = UTxOState era
   type Signal (BabbageUTXO era) = AlonzoTx era
   type Environment (BabbageUTXO era) = UtxoEnv era
   type BaseM (BabbageUTXO era) = ShelleyBase

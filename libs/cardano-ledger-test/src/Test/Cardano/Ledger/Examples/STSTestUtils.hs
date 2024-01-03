@@ -62,12 +62,8 @@ import Cardano.Ledger.Credential (
   StakeCredential,
   StakeReference (..),
  )
-import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Keys (
-  GenDelegs (..),
-  KeyRole (..),
-  hashKey,
- )
+import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys (KeyRole (..), hashKey)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Babbage ()
@@ -271,7 +267,7 @@ instance AlonzoBased (ConwayEra c) (BabbageUtxowPredFailure (ConwayEra c)) where
 -- ========================= Shared helper functions  ===================
 -- ======================================================================
 
-mkGenesisTxIn :: (CH.HashAlgorithm (CC.HASH c), HasCallStack) => Integer -> TxIn c
+mkGenesisTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => Integer -> TxIn c
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
 mkTxDats :: Era era => Data era -> TxDats era
@@ -347,7 +343,7 @@ testUTXOWsubset (UTXOW other) _ = error ("Cannot use testUTXOW in era " ++ show 
 
 -- | Use a test where any two (ValidationTagMismatch x y) failures match regardless of 'x' and 'y'
 testUTXOspecialCase wit@(UTXOW proof) utxo pparam tx expected =
-  let env = UtxoEnv (SlotNo 0) pparam def (GenDelegs mempty)
+  let env = UtxoEnv (SlotNo 0) pparam def
       state = smartUTxOState pparam utxo (Coin 0) (Coin 0) def mempty
    in case proof of
         Alonzo _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
@@ -374,7 +370,7 @@ testUTXOWwith ::
   Result era ->
   Assertion
 testUTXOWwith wit@(UTXOW proof) cont utxo pparams tx expected =
-  let env = UtxoEnv (SlotNo 0) pparams def (GenDelegs mempty)
+  let env = UtxoEnv (SlotNo 0) pparams def
       state = smartUTxOState pparams utxo (Coin 0) (Coin 0) def mempty
    in case proof of
         Conway _ -> runSTS wit (TRC (env, state, tx)) (cont expected)

@@ -49,6 +49,7 @@ import Cardano.Ledger.BaseTypes (
   (==>),
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordSum, encodeListLen)
+import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (DSIGN))
 import Cardano.Ledger.Keys (
@@ -83,13 +84,8 @@ import Cardano.Ledger.Shelley.Rules.Utxo (
   UtxoEvent,
  )
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
-import Cardano.Ledger.Shelley.Tx (
-  ShelleyTx,
-  witsFromTxWitnesses,
- )
-import Cardano.Ledger.Shelley.TxCert (
-  isInstantaneousRewards,
- )
+import Cardano.Ledger.Shelley.Tx (ShelleyTx, witsFromTxWitnesses)
+import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.Shelley.UTxO (
   EraUTxO (..),
   ScriptsProvided (..),
@@ -281,8 +277,8 @@ initialLedgerStateUTXOW ::
   ) =>
   InitialRule (ShelleyUTXOW era)
 initialLedgerStateUTXOW = do
-  IRC (UtxoEnv slots pp stakepools genDelegs) <- judgmentContext
-  trans @(EraRule "UTXO" era) $ IRC (UtxoEnv slots pp stakepools genDelegs)
+  IRC (UtxoEnv slots pp certState) <- judgmentContext
+  trans @(EraRule "UTXO" era) $ IRC (UtxoEnv slots pp certState)
 
 -- | A generic Utxow witnessing function designed to be used across many Eras.
 --   Note the 'embed' argument lifts from the simple Shelley (ShelleyUtxowPredFailure) to
@@ -307,7 +303,7 @@ transitionRulesUTXOW ::
   ) =>
   TransitionRule (utxow era)
 transitionRulesUTXOW = do
-  (TRC (UtxoEnv slot pp certState genDelegs, u, tx)) <- judgmentContext
+  (TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
@@ -339,12 +335,12 @@ transitionRulesUTXOW = do
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
+  let genDelegs = dsGenDelegs (certDState certState)
   coreNodeQuorum <- liftSTS $ asks quorum
   runTest $
     validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
 
-  trans @(EraRule "UTXO" era) $
-    TRC (UtxoEnv slot pp certState genDelegs, u, tx)
+  trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
 
 instance
   ( Era era

@@ -36,7 +36,6 @@ module Cardano.Ledger.Shelley.Rules.Utxo (
   utxoEnvSlotL,
   utxoEnvPParamsL,
   utxoEnvCertStateL,
-  utxoEnvGenDelegsL,
 )
 where
 
@@ -61,10 +60,10 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.CertState (
   certsTotalDepositsTxBody,
   certsTotalRefundsTxBody,
+  dsGenDelegs,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Keys (GenDelegs)
 import Cardano.Ledger.Rules.ValidationMode (
   Inject (..),
   Test,
@@ -153,7 +152,6 @@ data UtxoEnv era = UtxoEnv
   { ueSlot :: SlotNo
   , uePParams :: PParams era
   , ueCertState :: CertState era
-  , ueGenDelegs :: GenDelegs (EraCrypto era)
   }
 
 utxoEnvSlotL :: Lens' (UtxoEnv era) SlotNo
@@ -164,9 +162,6 @@ utxoEnvPParamsL = lens uePParams $ \x y -> x {uePParams = y}
 
 utxoEnvCertStateL :: Lens' (UtxoEnv era) (CertState era)
 utxoEnvCertStateL = lens ueCertState $ \x y -> x {ueCertState = y}
-
-utxoEnvGenDelegsL :: Lens' (UtxoEnv era) (GenDelegs (EraCrypto era))
-utxoEnvGenDelegsL = lens ueGenDelegs $ \x y -> x {ueGenDelegs = y}
 
 deriving instance Show (PParams era) => Show (UtxoEnv era)
 
@@ -373,7 +368,7 @@ instance
     AssertionViolation
       { avSTS
       , avMsg
-      , avCtx = TRC (UtxoEnv _slot pp dpstate _, UTxOState {utxosDeposited, utxosUtxo}, tx)
+      , avCtx = TRC (UtxoEnv _slot pp certState, UTxOState {utxosDeposited, utxosUtxo}, tx)
       } =
       "AssertionViolation ("
         <> avSTS
@@ -386,9 +381,9 @@ instance
         <> "\n Deposits\n"
         <> show utxosDeposited
         <> "\n Consumed\n"
-        <> show (consumedTxBody (tx ^. bodyTxL) pp dpstate utxosUtxo)
+        <> show (consumedTxBody (tx ^. bodyTxL) pp certState utxosUtxo)
         <> "\n Produced\n"
-        <> show (producedTxBody (tx ^. bodyTxL) pp dpstate)
+        <> show (producedTxBody (tx ^. bodyTxL) pp certState)
 
   assertions =
     [ PreCondition
@@ -405,7 +400,7 @@ instance
           withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWithdrawals $ txb ^. withdrawalsTxBodyL
        in PostCondition
             "Should preserve value in the UTxO state"
-            ( \(TRC (UtxoEnv _ _pp _pools _, us, tx)) us' ->
+            ( \(TRC (_, us, tx)) us' ->
                 utxoBalance us <> withdrawals (tx ^. bodyTxL) == utxoBalance us'
             )
     ]
@@ -431,10 +426,11 @@ utxoInductive ::
   ) =>
   TransitionRule (utxo era)
 utxoInductive = do
-  TRC (UtxoEnv slot pp certState genDelegs, utxos, tx) <- judgmentContext
+  TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let UTxOState utxo _ _ ppup _ _ = utxos
       txBody = tx ^. bodyTxL
       outputs = txBody ^. outputsTxBodyL
+      genDelegs = dsGenDelegs (certDState certState)
 
   {- txttl txb ≥ slot -}
   runTest $ validateTimeToLive txBody slot
