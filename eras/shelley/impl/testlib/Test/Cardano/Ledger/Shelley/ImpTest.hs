@@ -31,7 +31,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpException (..),
   ShelleyEraImp (..),
   emptyShelleyImpNES,
-  shelleyImpWitsVKeyNeeded,
+  impWitsVKeyNeeded,
   modifyPrevPParams,
   passEpoch,
   passTick,
@@ -101,9 +101,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
-  certDStateL,
   curPParamsEpochStateL,
-  dsGenDelegsL,
   epochStateIncrStakeDistrL,
   epochStateUMapL,
   esAccountStateL,
@@ -118,7 +116,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosGovStateL,
   utxosUtxoL,
  )
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), shelleyWitsVKeyNeeded)
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -231,11 +229,6 @@ class
   ShelleyEraImp era
   where
   emptyImpNES :: Coin -> NewEpochState era
-
-  impWitsVKeyNeeded ::
-    NewEpochState era ->
-    TxBody era ->
-    Set.Set (KeyHash 'Witness (EraCrypto era))
 
   -- | This modifer should change not only the current PParams, but also the future
   -- PParams. If the future PParams are not updated, then they will overwrite the
@@ -356,20 +349,15 @@ instance
   where
   emptyImpNES = emptyShelleyImpNES
 
-  impWitsVKeyNeeded = shelleyImpWitsVKeyNeeded
-
-shelleyImpWitsVKeyNeeded ::
-  ( ProtVerAtMost era 8
-  , EraTx era
-  , ShelleyEraTxBody era
-  ) =>
+impWitsVKeyNeeded ::
+  EraUTxO era =>
   NewEpochState era ->
   TxBody era ->
   Set.Set (KeyHash 'Witness (EraCrypto era))
-shelleyImpWitsVKeyNeeded nes txb = shelleyWitsVKeyNeeded utxo txb genDelegs
+impWitsVKeyNeeded nes txBody = getWitsVKeyNeeded certState utxo txBody
   where
     utxo = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
-    genDelegs = nes ^. nesEsL . esLStateL . lsCertStateL . certDStateL . dsGenDelegsL
+    certState = nes ^. nesEsL . esLStateL . lsCertStateL
 
 data ImpTestEnv era = ImpTestEnv
   { iteState :: !(IORef (ImpTestState era))

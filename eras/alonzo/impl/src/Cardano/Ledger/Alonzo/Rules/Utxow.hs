@@ -73,7 +73,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure (..),
   UtxoEnv (..),
-  shelleyWitsVKeyNeeded,
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -325,7 +324,7 @@ alonzoStyleWitness ::
   ) =>
   TransitionRule (AlonzoUTXOW era)
 alonzoStyleWitness = do
-  (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
+  (TRC (UtxoEnv slot pp certState genDelegs, u, tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  txb := txbody tx  -}
@@ -363,7 +362,7 @@ alonzoStyleWitness = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  let needed = shelleyWitsVKeyNeeded utxo (tx ^. bodyTxL) genDelegs
+  let needed = getWitsVKeyNeeded certState utxo (tx ^. bodyTxL)
   runTest $ validateNeededWitnesses @era witsKeyHashes needed
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
@@ -393,7 +392,7 @@ alonzoStyleWitness = do
   runTest $ ppViewHashesMatch tx pp scriptsProvided scriptsHashesNeeded
 
   trans @(EraRule "UTXO" era) $
-    TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
+    TRC (UtxoEnv slot pp certState genDelegs, u, tx)
 
 -- ================================
 

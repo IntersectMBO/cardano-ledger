@@ -39,7 +39,6 @@ module Cardano.Ledger.Shelley.Rules.Utxow (
 where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (VerKeyDSIGN))
-import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
@@ -51,7 +50,6 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordSum, encodeListLen)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), credKeyHashWitness)
 import Cardano.Ledger.Crypto (Crypto (DSIGN))
 import Cardano.Ledger.Keys (
   DSignable,
@@ -66,7 +64,6 @@ import Cardano.Ledger.Keys (
   bwKey,
   verifyBootstrapWit,
  )
-import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Rules.ValidationMode (
   Inject (..),
   Test,
@@ -74,8 +71,8 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTestOnSignal,
  )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyUTXOW)
-import Cardano.Ledger.Shelley.Governance (EraGov (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
@@ -90,20 +87,16 @@ import Cardano.Ledger.Shelley.Tx (
   ShelleyTx,
   witsFromTxWitnesses,
  )
-import Cardano.Ledger.Shelley.TxBody (
-  ShelleyEraTxBody (..),
-  getRwdCred,
-  unWithdrawals,
- )
 import Cardano.Ledger.Shelley.TxCert (
   isInstantaneousRewards,
  )
-import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
-import Cardano.Ledger.UTxO (
+import Cardano.Ledger.Shelley.UTxO (
   EraUTxO (..),
   ScriptsProvided (..),
+  ShelleyScriptsNeeded (..),
   UTxO,
-  txinLookup,
+  getShelleyWitsVKeyNeeded,
+  getShelleyWitsVKeyNeededNoGov,
   verifyWitVKey,
  )
 import Control.DeepSeq
@@ -123,7 +116,7 @@ import Control.State.Transition (
   wrapEvent,
   wrapFailed,
  )
-import Data.Foldable (foldr', sequenceA_)
+import Data.Foldable (sequenceA_)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -314,7 +307,7 @@ transitionRulesUTXOW ::
   ) =>
   TransitionRule (utxow era)
 transitionRulesUTXOW = do
-  (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
+  (TRC (UtxoEnv slot pp certState genDelegs, u, tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
@@ -336,7 +329,7 @@ transitionRulesUTXOW = do
   runTestOnSignal $ validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  let needed = shelleyWitsVKeyNeeded utxo (tx ^. bodyTxL) genDelegs
+  let needed = getShelleyWitsVKeyNeeded certState utxo (tx ^. bodyTxL)
   runTest $ validateNeededWitnesses @era witsKeyHashes needed
 
   -- check metadata hash
@@ -351,7 +344,7 @@ transitionRulesUTXOW = do
     validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
 
   trans @(EraRule "UTXO" era) $
-    TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
+    TRC (UtxoEnv slot pp certState genDelegs, u, tx)
 
 instance
   ( Era era
@@ -454,9 +447,6 @@ validateVerifiedWits tx =
           (not . verifyBootstrapWit txBodyHash)
           (Set.toList $ tx ^. witsTxL . bootAddrTxWitsL)
 
--- How to compute the set of witnessed needed (witsvkeyneeded) varies
--- from Era to Era, so we parameterise over that function in this test.
--- That allows it to be used in many Eras.
 validateNeededWitnesses ::
   Set (KeyHash 'Witness (EraCrypto era)) ->
   Set (KeyHash 'Witness (EraCrypto era)) ->
@@ -477,6 +467,7 @@ witsVKeyNeededGov ::
   Set (KeyHash 'Witness (EraCrypto era))
 witsVKeyNeededGov txBody genDelegs =
   asWitness `Set.map` proposedUpdatesWitnesses (txBody ^. updateTxBodyL) genDelegs
+{-# DEPRECATED witsVKeyNeededGov "As unnecessary. Use `getWitsVKeyNeeded` instead" #-}
 
 witsVKeyNeededNoGov ::
   forall era.
@@ -484,47 +475,8 @@ witsVKeyNeededNoGov ::
   UTxO era ->
   TxBody era ->
   Set (KeyHash 'Witness (EraCrypto era))
-witsVKeyNeededNoGov utxo' txBody =
-  certAuthors
-    `Set.union` inputAuthors
-    `Set.union` owners
-    `Set.union` wdrlAuthors
-  where
-    inputAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    inputAuthors = foldr' accum Set.empty (txBody ^. spendableInputsTxBodyF)
-      where
-        accum txin !ans =
-          case txinLookup txin utxo' of
-            Just txOut ->
-              case txOut ^. addrTxOutL of
-                Addr _ (KeyHashObj pay) _ -> Set.insert (asWitness pay) ans
-                AddrBootstrap bootAddr ->
-                  Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
-                _ -> ans
-            Nothing -> ans
-
-    wdrlAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    wdrlAuthors = Map.foldrWithKey' accum Set.empty (unWithdrawals (txBody ^. withdrawalsTxBodyL))
-      where
-        accum key _ !ans =
-          case credKeyHashWitness (getRwdCred key) of
-            Nothing -> ans
-            Just vkeyWit -> Set.insert vkeyWit ans
-    owners :: Set (KeyHash 'Witness (EraCrypto era))
-    owners = foldr' accum Set.empty (txBody ^. certsTxBodyL)
-      where
-        accum (RegPoolTxCert pool) !ans =
-          Set.union
-            (Set.map asWitness (ppOwners pool))
-            ans
-        accum _cert ans = ans
-    certAuthors :: Set (KeyHash 'Witness (EraCrypto era))
-    certAuthors = foldr' accum Set.empty (txBody ^. certsTxBodyL)
-      where
-        accum cert !ans =
-          case getVKeyWitnessTxCert cert of
-            Nothing -> ans
-            Just vkeyWit -> Set.insert vkeyWit ans
+witsVKeyNeededNoGov = getShelleyWitsVKeyNeededNoGov
+{-# DEPRECATED witsVKeyNeededNoGov "Use `getShelleyWitsVKeyNeededNoGov` instead" #-}
 
 shelleyWitsVKeyNeeded ::
   forall era.
@@ -533,9 +485,10 @@ shelleyWitsVKeyNeeded ::
   TxBody era ->
   GenDelegs (EraCrypto era) ->
   Set (KeyHash 'Witness (EraCrypto era))
-shelleyWitsVKeyNeeded utxo' txBody genDelegs =
-  witsVKeyNeededNoGov utxo' txBody
+shelleyWitsVKeyNeeded utxo txBody genDelegs =
+  witsVKeyNeededNoGov utxo txBody
     `Set.union` witsVKeyNeededGov txBody genDelegs
+{-# DEPRECATED shelleyWitsVKeyNeeded "Use `getShelleyWitsVKeyNeeded` instead" #-}
 
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)
@@ -598,8 +551,7 @@ instance
   where
   inject = UtxoFailure
 
--- | Calculate the set of hash keys of the required witnesses for update
--- proposals.
+-- | Deprecated.
 proposedUpdatesWitnesses ::
   StrictMaybe (Update era) ->
   GenDelegs (EraCrypto era) ->

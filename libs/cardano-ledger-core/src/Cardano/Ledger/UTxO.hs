@@ -46,6 +46,7 @@ import Cardano.Ledger.Binary (
   decodeMap,
  )
 import Cardano.Ledger.Block (txid)
+import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
@@ -252,3 +253,7 @@ class EraTx era => EraUTxO era where
 
   -- | Extract the set of all script hashes that are needed for script validation.
   getScriptsHashesNeeded :: ScriptsNeeded era -> Set (ScriptHash (EraCrypto era))
+
+  -- | Extract all of the KeyHash witnesses that are required for validating the transaction
+  getWitsVKeyNeeded ::
+    CertState era -> UTxO era -> TxBody era -> Set (KeyHash 'Witness (EraCrypto era))

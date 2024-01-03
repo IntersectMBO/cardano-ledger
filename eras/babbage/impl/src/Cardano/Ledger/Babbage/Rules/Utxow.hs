@@ -56,7 +56,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure,
   UtxoEnv (..),
-  shelleyWitsVKeyNeeded,
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -271,7 +270,7 @@ babbageUtxowTransition ::
   ) =>
   TransitionRule (BabbageUTXOW era)
 babbageUtxowTransition = do
-  (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
+  (TRC (UtxoEnv slot pp certState genDelegs, u, tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  txb := txbody tx  -}
@@ -310,7 +309,7 @@ babbageUtxowTransition = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  let needed = shelleyWitsVKeyNeeded utxo (tx ^. bodyTxL) genDelegs
+  let needed = getWitsVKeyNeeded certState utxo (tx ^. bodyTxL)
   runTest $ validateNeededWitnesses @era witsKeyHashes needed
   -- TODO can we add the required signers to witsVKeyNeeded so we dont need the check below?
 
@@ -348,7 +347,7 @@ babbageUtxowTransition = do
   runTest $ ppViewHashesMatch tx pp scriptsProvided scriptHashesNeeded
 
   trans @(EraRule "UTXO" era) $
-    TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
+    TRC (UtxoEnv slot pp certState genDelegs, u, tx)
 
 -- ================================
 

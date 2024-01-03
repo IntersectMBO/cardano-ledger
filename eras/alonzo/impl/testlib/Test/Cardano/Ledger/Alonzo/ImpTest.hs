@@ -46,5 +46,3 @@ instance
   ShelleyEraImp (AlonzoEra c)
   where
   emptyImpNES = emptyAlonzoImpNES
-
-  impWitsVKeyNeeded = shelleyImpWitsVKeyNeeded

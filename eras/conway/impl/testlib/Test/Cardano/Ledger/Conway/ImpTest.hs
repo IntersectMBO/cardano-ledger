@@ -102,7 +102,6 @@ import Cardano.Ledger.Conway.Rules (
   EnactSignal,
   committeeAccepted,
   committeeAcceptedRatio,
-  conwayWitsVKeyNeeded,
   dRepAccepted,
   dRepAcceptedRatio,
   prevActionAsExpected,
@@ -123,7 +122,6 @@ import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
-  NewEpochState,
   asTreasuryL,
   certVStateL,
   curPParamsEpochStateL,
@@ -137,7 +135,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesPdL,
   newEpochStateGovStateL,
   utxosStakeDistrL,
-  utxosUtxoL,
   vsCommitteeStateL,
   vsDRepsL,
  )
@@ -151,7 +148,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (isSJust)
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
-import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
@@ -159,17 +155,6 @@ import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
-
-conwayImpWitsVKeyNeeded ::
-  ( EraTx era
-  , ConwayEraTxBody era
-  ) =>
-  NewEpochState era ->
-  TxBody era ->
-  Set (KeyHash 'Witness (EraCrypto era))
-conwayImpWitsVKeyNeeded nes = conwayWitsVKeyNeeded utxo
-  where
-    utxo = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
 
 -- | Modify the PParams in the current state with the given function
 conwayModifyPParams ::
@@ -202,8 +187,6 @@ instance
         epochState = nes ^. nesEsL
         ratifyState = def & rsEnactStateL .~ (epochState ^. epochStateGovStateL . cgEnactStateL)
      in nes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState
-
-  impWitsVKeyNeeded = conwayImpWitsVKeyNeeded
 
   modifyPParams = conwayModifyPParams
 

@@ -2,6 +2,8 @@
 
 ## 1.9.0.0
 
+* Add `getShelleyWitsVKeyNeeded` and `getShelleyWitsVKeyNeededNoGov`
+* Deprecate `witsVKeyNeededNoGov` and `shelleyWitsVKeyNeeded`
 * Change the signature of `protectMainnet` to make it work with any
   `TransitionConfig`
 * Add `protectMainnetLens`
@@ -36,6 +38,7 @@
 
 ### `testlib`
 
+* Extract `impWitsVKeyNeeded` from the `ShelleyEraImp` type class
 * Add:
   `fixupFees`
   `impLastTickL`

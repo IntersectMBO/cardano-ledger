@@ -11,10 +11,7 @@ import Cardano.Ledger.Core (EraIndependentTxBody)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Test.Cardano.Ledger.Alonzo.ImpTest (emptyAlonzoImpNES)
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
-import Test.Cardano.Ledger.Shelley.ImpTest (
-  ShelleyEraImp (..),
-  shelleyImpWitsVKeyNeeded,
- )
+import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp (..))
 
 instance
   ( Crypto c
@@ -23,5 +20,3 @@ instance
   ShelleyEraImp (BabbageEra c)
   where
   emptyImpNES = emptyAlonzoImpNES
-
-  impWitsVKeyNeeded = shelleyImpWitsVKeyNeeded

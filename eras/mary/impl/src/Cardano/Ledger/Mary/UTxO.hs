@@ -13,12 +13,11 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyRole (DRepRole, Staking))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
-import Cardano.Ledger.Mary.Tx ()
-import Cardano.Ledger.Mary.TxBody ()
 import Cardano.Ledger.Mary.Value (MaryValue, policyID)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getShelleyScriptsNeeded,
+  getShelleyWitsVKeyNeeded,
   shelleyProducedValue,
  )
 import Cardano.Ledger.UTxO (
@@ -45,6 +44,8 @@ instance Crypto c => EraUTxO (MaryEra c) where
   getScriptsNeeded = getMaryScriptsNeeded
 
   getScriptsHashesNeeded (ShelleyScriptsNeeded scriptHashes) = scriptHashes
+
+  getWitsVKeyNeeded = getShelleyWitsVKeyNeeded
 
 -- | Calculate the value consumed by the transation.
 --
