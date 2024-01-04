@@ -6,15 +6,14 @@
 
 module Cardano.Ledger.Allegra.UTxO () where
 
+import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraEra)
-import Cardano.Ledger.Allegra.Tx ()
-import Cardano.Ledger.Allegra.TxBody ()
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getConsumedCoin,
   getShelleyScriptsNeeded,
+  getShelleyWitsVKeyNeeded,
   shelleyProducedValue,
  )
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
@@ -32,3 +31,5 @@ instance Crypto c => EraUTxO (AllegraEra c) where
   getScriptsNeeded = getShelleyScriptsNeeded
 
   getScriptsHashesNeeded (ShelleyScriptsNeeded scriptHashes) = scriptHashes
+
+  getWitsVKeyNeeded = getShelleyWitsVKeyNeeded

@@ -40,10 +40,9 @@ import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOW)
-import Cardano.Ledger.Conway.Governance (Voter (..), VotingProcedures (..))
-import Cardano.Ledger.Credential (credKeyHashWitness)
+import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeeded)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
@@ -88,7 +87,7 @@ conwayUtxowTransition ::
   ) =>
   TransitionRule (ConwayUTXOW era)
 conwayUtxowTransition = do
-  (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
+  (TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  txb := txbody tx  -}
@@ -127,14 +126,12 @@ conwayUtxowTransition = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx ⊆ witsKeyHashes                   -}
-  let needed = conwayWitsVKeyNeeded utxo (tx ^. bodyTxL)
-  runTest $ validateNeededWitnesses @era witsKeyHashes needed
+  runTest $ validateNeededWitnesses witsKeyHashes certState utxo txBody
 
   -- check metadata hash
   {-   adh := txADhash txb;  ad := auxiliaryData tx                      -}
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
-  runTestOnSignal $
-    Shelley.validateMetadata pp tx
+  runTestOnSignal $ Shelley.validateMetadata pp tx
 
   {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ (⋃ ( , ,d,s) ∈ txouts tx {s, d}),
                          x ∈ Script ∪ Datum ⇒ isWellFormed x
@@ -151,32 +148,15 @@ conwayUtxowTransition = do
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   runTest $ ppViewHashesMatch tx pp scriptsProvided scriptHashesNeeded
 
-  trans @(EraRule "UTXO" era) $
-    TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
-
-voterWitnesses ::
-  ConwayEraTxBody era =>
-  TxBody era ->
-  Set (KeyHash 'Witness (EraCrypto era))
-voterWitnesses txb =
-  Map.foldrWithKey' accum mempty (unVotingProcedures (txb ^. votingProceduresTxBodyL))
-  where
-    accum voter _ khs =
-      maybe khs (`Set.insert` khs) $
-        case voter of
-          CommitteeVoter cred -> credKeyHashWitness cred
-          DRepVoter cred -> credKeyHashWitness cred
-          StakePoolVoter poolId -> Just $ asWitness poolId
+  trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
 
 conwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>
   UTxO era ->
   TxBody era ->
   Set (KeyHash 'Witness (EraCrypto era))
-conwayWitsVKeyNeeded utxo txBody =
-  Shelley.witsVKeyNeededNoGov utxo txBody
-    `Set.union` (txBody ^. reqSignerHashesTxBodyL)
-    `Set.union` voterWitnesses txBody
+conwayWitsVKeyNeeded = getConwayWitsVKeyNeeded
+{-# DEPRECATED conwayWitsVKeyNeeded "In favor of `getConwayWitsVKeyNeeded` or `getWitsVKeyNeeded`" #-}
 
 -- ================================
 

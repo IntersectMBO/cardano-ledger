@@ -11,6 +11,7 @@
 
 module Cardano.Ledger.Conway.UTxO (
   conwayProducedValue,
+  getConwayWitsVKeyNeeded,
 ) where
 
 import Cardano.Ledger.Alonzo.UTxO (
@@ -24,28 +25,22 @@ import Cardano.Ledger.Babbage.UTxO (
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
  )
-import Cardano.Ledger.Conway.Core (
-  Era (..),
-  EraTxBody (..),
-  PParams,
-  Value,
- )
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (
   Voter (..),
   VotingProcedures (..),
  )
-import Cardano.Ledger.Conway.Tx ()
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
-import Cardano.Ledger.Credential (credScriptHash)
+import Cardano.Ledger.Credential (credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
-import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
+import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov, shelleyProducedValue)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
 import Cardano.Ledger.Val (Val (..), inject)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
+import qualified Data.Set as Set
 import Lens.Micro ((^.))
 
 getConwayScriptsNeeded ::
@@ -89,7 +84,33 @@ instance Crypto c => EraUTxO (ConwayEra c) where
 
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded -- TODO: This also changes for Conway
 
+  getWitsVKeyNeeded _ = getConwayWitsVKeyNeeded
+
 instance Crypto c => AlonzoEraUTxO (ConwayEra c) where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes
 
   getSpendingDatum = getBabbageSpendingDatum
+
+getConwayWitsVKeyNeeded ::
+  (EraTx era, ConwayEraTxBody era) =>
+  UTxO era ->
+  TxBody era ->
+  Set.Set (KeyHash 'Witness (EraCrypto era))
+getConwayWitsVKeyNeeded utxo txBody =
+  getShelleyWitsVKeyNeededNoGov utxo txBody
+    `Set.union` (txBody ^. reqSignerHashesTxBodyL)
+    `Set.union` voterWitnesses txBody
+
+voterWitnesses ::
+  ConwayEraTxBody era =>
+  TxBody era ->
+  Set.Set (KeyHash 'Witness (EraCrypto era))
+voterWitnesses txb =
+  Map.foldrWithKey' accum mempty (unVotingProcedures (txb ^. votingProceduresTxBodyL))
+  where
+    accum voter _ khs =
+      maybe khs (`Set.insert` khs) $
+        case voter of
+          CommitteeVoter cred -> credKeyHashWitness cred
+          DRepVoter cred -> credKeyHashWitness cred
+          StakePoolVoter poolId -> Just $ asWitness poolId

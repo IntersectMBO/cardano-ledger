@@ -30,6 +30,7 @@ import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary.Decoding (mkSized, sizedSize)
 import Cardano.Ledger.Binary.Encoding (EncCBOR)
+import Cardano.Ledger.CertState (CertState, certDStateL, dsGenDelegsL)
 import Cardano.Ledger.Coin (Coin (..), rationalToCoinViaCeiling)
 import Cardano.Ledger.Core (
   EraRule,
@@ -65,7 +66,7 @@ import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppList, ppMap, ppRecord, ppSaf
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..), shelleyWitsVKeyNeeded, witsVKeyNeededNoGov)
+import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
@@ -358,12 +359,15 @@ necessaryKeyHashes ::
   Set (KeyHash 'Witness (EraCrypto era))
 necessaryKeyHashes (TxBodyF _ txb) u gd reqsigners =
   case reify @era of
-    Shelley _ -> Set.union (shelleyWitsVKeyNeeded (liftUTxO u) txb (GenDelegs gd)) reqsigners
-    Allegra _ -> Set.union (shelleyWitsVKeyNeeded (liftUTxO u) txb (GenDelegs gd)) reqsigners
-    Mary _ -> Set.union (shelleyWitsVKeyNeeded (liftUTxO u) txb (GenDelegs gd)) reqsigners
-    Alonzo _ -> Set.union (shelleyWitsVKeyNeeded (liftUTxO u) txb (GenDelegs gd)) reqsigners
-    Babbage _ -> Set.union (shelleyWitsVKeyNeeded (liftUTxO u) txb (GenDelegs gd)) reqsigners
-    Conway _ -> Set.union (witsVKeyNeededNoGov (liftUTxO u) txb) reqsigners
+    Shelley _ -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
+    Allegra _ -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
+    Mary _ -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
+    Alonzo _ -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
+    Babbage _ -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
+    Conway _ -> Set.union (getWitsVKeyNeeded def (liftUTxO u) txb) reqsigners
+  where
+    certState :: CertState era
+    certState = def & certDStateL . dsGenDelegsL .~ GenDelegs gd
 
 -- ========================================================
 

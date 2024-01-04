@@ -2,6 +2,10 @@
 
 ## 1.9.0.0
 
+* Change the type signature and the logic in `validateNeededWitnesses`
+* Add `getShelleyWitsVKeyNeeded` and `getShelleyWitsVKeyNeededNoGov`
+* Deprecate `witsVKeyNeededNoGov` and `shelleyWitsVKeyNeeded`
+* Get rid of `ueGenDelegs` and `ueGenDelegsL` as unnecessary.
 * Change the signature of `protectMainnet` to make it work with any
   `TransitionConfig`
 * Add `protectMainnetLens`
@@ -36,6 +40,7 @@
 
 ### `testlib`
 
+* Extract `impWitsVKeyNeeded` from the `ShelleyEraImp` type class
 * Add:
   `fixupFees`
   `impLastTickL`

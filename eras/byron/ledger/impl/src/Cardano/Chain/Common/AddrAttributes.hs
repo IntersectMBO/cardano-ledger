@@ -152,7 +152,7 @@ data HDPassphrase = HDPassphrase !ByteString
 --
 -- It consisted of
 --
---   * serialiazed and encrypted using HDPassphrase derivation path from the
+--   * serialized and encrypted using HDPassphrase derivation path from the
 --   root key to given descendant key (using ChaChaPoly1305 algorithm)
 --
 --   * cryptographic tag

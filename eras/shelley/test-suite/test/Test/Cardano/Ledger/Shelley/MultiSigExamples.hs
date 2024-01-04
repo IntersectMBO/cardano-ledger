@@ -17,10 +17,7 @@ module Test.Cardano.Ledger.Shelley.MultiSigExamples (
 ) where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address (
-  Addr,
-  pattern Addr,
- )
+import Cardano.Ledger.Address (Addr (Addr))
 import Cardano.Ledger.BaseTypes (
   Network (..),
   StrictMaybe (..),
@@ -35,7 +32,6 @@ import Cardano.Ledger.Credential (
   pattern StakeRefBase,
  )
 import Cardano.Ledger.Keys (
-  GenDelegs (..),
   KeyHash (..),
   KeyRole (..),
   asWitness,
@@ -253,7 +249,6 @@ initialUTxOState aliceKeep msigs =
                         (SlotNo 0)
                         initPParams
                         def
-                        (GenDelegs Map.empty)
                     , lsUTxOState genesis
                     , tx
                     )
@@ -307,7 +302,6 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
                   (SlotNo 0)
                   initPParams
                   def
-                  (GenDelegs Map.empty)
               , utxoSt
               , tx
               )

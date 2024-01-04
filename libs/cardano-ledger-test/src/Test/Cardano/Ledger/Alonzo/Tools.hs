@@ -19,7 +19,6 @@ import Cardano.Ledger.Api.Tx (TransactionScriptFailure (..), evalTxExUnits)
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits, transExUnits)
@@ -228,7 +227,7 @@ exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 
 uenv :: AlonzoEraPParams era => UtxoEnv era
-uenv = UtxoEnv (SlotNo 0) testPParams def (GenDelegs mempty)
+uenv = UtxoEnv (SlotNo 0) testPParams def
 
 ustate ::
   ( EraTxOut era

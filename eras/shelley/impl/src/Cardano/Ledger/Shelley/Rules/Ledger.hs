@@ -42,7 +42,6 @@ import Cardano.Ledger.Shelley.Era (ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
   CertState (..),
-  DState (..),
   LedgerState (..),
   UTxOState (..),
   utxosDepositedL,
@@ -221,24 +220,23 @@ ledgerTransition ::
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
-  dpstate' <-
+  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt certState, tx) <- judgmentContext
+  certState' <-
     trans @(EraRule "DELEGS" era) $
       TRC
         ( DelegsEnv slot txIx pp tx account
-        , dpstate
+        , certState
         , StrictSeq.fromStrict $ tx ^. bodyTxL . certsTxBodyL
         )
-  let genDelegs = dsGenDelegs (certDState dpstate)
 
   utxoSt' <-
     trans @(EraRule "UTXOW" era) $
       TRC
-        ( UtxoEnv slot pp dpstate genDelegs
+        ( UtxoEnv slot pp certState
         , utxoSt
         , tx
         )
-  pure (LedgerState utxoSt' dpstate')
+  pure (LedgerState utxoSt' certState')
 
 instance
   ( Era era

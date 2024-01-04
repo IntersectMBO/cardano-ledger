@@ -78,9 +78,7 @@ import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, extractHash)
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
   UTxOState (..),
-  certDStateL,
   curPParamsEpochStateL,
-  dsGenDelegsL,
   esLStateL,
   lsCertStateL,
   lsUTxOStateL,
@@ -617,7 +615,6 @@ trySubmitTxConform txPreFixup = do
       UtxoEnv
         { ueSlot = lastTick
         , uePParams = pParams
-        , ueGenDelegs = certState ^. certDStateL . dsGenDelegsL
         , ueCertState = certState
         }
   agdaUtxoEnv <- expectRight $ toSpecRep utxoEnv

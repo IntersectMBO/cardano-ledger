@@ -8,7 +8,7 @@ If you are looking for the Ledger Releasing and Versioning Process then you can 
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
 ## 8.7
-	
+
 - Fix `PParamsUpdate` governance action ratification. Votes of DReps are now accounted for.
 - Move CDDL specification files from test packages into libraries that actually implement each era.
 - Add ability to retain Plutus logs for debugging when running scripts

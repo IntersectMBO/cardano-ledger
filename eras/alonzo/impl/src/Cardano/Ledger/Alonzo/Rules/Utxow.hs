@@ -64,6 +64,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -73,7 +74,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure (..),
   UtxoEnv (..),
-  shelleyWitsVKeyNeeded,
   validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
@@ -325,7 +325,7 @@ alonzoStyleWitness ::
   ) =>
   TransitionRule (AlonzoUTXOW era)
 alonzoStyleWitness = do
-  (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
+  (TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  txb := txbody tx  -}
@@ -363,8 +363,7 @@ alonzoStyleWitness = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  let needed = shelleyWitsVKeyNeeded utxo (tx ^. bodyTxL) genDelegs
-  runTest $ validateNeededWitnesses @era witsKeyHashes needed
+  runTest $ validateNeededWitnesses witsKeyHashes certState utxo txBody
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
       witsVKeyNeeded must include the reqSignerHashes in the union   -}
@@ -374,6 +373,7 @@ alonzoStyleWitness = do
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
+  let genDelegs = dsGenDelegs (certDState certState)
   coreNodeQuorum <- liftSTS $ asks quorum
   runTest $
     Shelley.validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
@@ -392,8 +392,7 @@ alonzoStyleWitness = do
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   runTest $ ppViewHashesMatch tx pp scriptsProvided scriptsHashesNeeded
 
-  trans @(EraRule "UTXO" era) $
-    TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
+  trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
 
 -- ================================
 
