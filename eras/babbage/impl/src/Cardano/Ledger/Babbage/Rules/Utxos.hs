@@ -85,6 +85,7 @@ import Lens.Micro
 instance
   ( AlonzoEraTx era
   , AlonzoEraPParams era
+  , ShelleyEraTxBody era
   , BabbageEraTxBody era
   , AlonzoEraUTxO era
   , EraPlutusContext era
@@ -99,7 +100,6 @@ instance
   , EncCBOR (PPUPPredFailure era) -- Serializing the PredicateFailure
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , ProtVerAtMost era 8
   ) =>
   STS (BabbageUTXOS era)
   where
@@ -125,6 +125,7 @@ instance
 utxosTransition ::
   forall era.
   ( AlonzoEraTx era
+  , ShelleyEraTxBody era
   , BabbageEraTxBody era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
@@ -139,7 +140,6 @@ utxosTransition ::
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , EraPlutusContext era
-  , ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
@@ -186,6 +186,7 @@ babbageEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
+  , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (BabbageUTXOS era)
   , Signal (BabbageUTXOS era) ~ Tx era
@@ -195,7 +196,6 @@ babbageEvalScriptsTxValid ::
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext era
-  , ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
 babbageEvalScriptsTxValid = do

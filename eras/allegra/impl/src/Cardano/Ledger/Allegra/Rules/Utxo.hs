@@ -23,12 +23,9 @@ module Cardano.Ledger.Allegra.Rules.Utxo (
 where
 
 import Cardano.Ledger.Address (Addr, RewardAcnt)
+import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraUTXO)
-import Cardano.Ledger.Allegra.Scripts (
-  ValidityInterval (ValidityInterval),
-  inInterval,
- )
-import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
+import Cardano.Ledger.Allegra.Scripts (inInterval)
 import Cardano.Ledger.BaseTypes (
   Network,
   ProtVer (pvMajor),
@@ -46,7 +43,6 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Rules.ValidationMode (
   Inject (..),
@@ -54,7 +50,6 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTest,
  )
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -158,6 +153,7 @@ data AllegraUtxoEvent era
 utxoTransition ::
   forall era.
   ( EraUTxO era
+  , ShelleyEraTxBody era
   , AllegraEraTxBody era
   , STS (AllegraUTXO era)
   , Tx era ~ ShelleyTx era
@@ -165,7 +161,6 @@ utxoTransition ::
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
-  , ProtVerAtMost era 8
   , GovState era ~ ShelleyGovState era
   ) =>
   TransitionRule (AllegraUTXO era)
@@ -287,6 +282,7 @@ instance
   forall era.
   ( EraTx era
   , EraUTxO era
+  , ShelleyEraTxBody era
   , AllegraEraTxBody era
   , Tx era ~ ShelleyTx era
   , Embed (EraRule "PPUP" era) (AllegraUTXO era)

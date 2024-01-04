@@ -349,7 +349,6 @@ instance
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   ) =>
@@ -421,7 +420,6 @@ utxoInductive ::
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
-  , ProtVerAtMost era 8
   , GovState era ~ ShelleyGovState era
   ) =>
   TransitionRule (utxo era)
@@ -549,7 +547,7 @@ validateWrongNetwork netId outputs =
 --
 -- > ∀(a → ) ∈ txwdrls txb, netId a = NetworkId
 validateWrongNetworkWithdrawal ::
-  ShelleyEraTxBody era =>
+  EraTxBody era =>
   Network ->
   TxBody era ->
   Test (ShelleyUtxoPredFailure era)
@@ -566,9 +564,7 @@ validateWrongNetworkWithdrawal netId txb =
 --
 -- > consumed pp utxo txb = produced pp poolParams txb
 validateValueNotConservedUTxO ::
-  ( ShelleyEraTxBody era
-  , EraUTxO era
-  ) =>
+  EraUTxO era =>
   PParams era ->
   UTxO era ->
   CertState era ->

@@ -142,7 +142,6 @@ instance
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure,
-  , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , EraPlutusContext era
@@ -183,6 +182,7 @@ instance
 utxosTransition ::
   forall era.
   ( AlonzoEraTx era
+  , ShelleyEraTxBody era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , TxCert era ~ ShelleyTxCert era
@@ -193,7 +193,6 @@ utxosTransition ::
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
-  , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , EraPlutusContext era
@@ -246,12 +245,12 @@ alonzoEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
+  , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (AlonzoUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
-  , ProtVerAtMost era 8
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext era

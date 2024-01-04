@@ -78,7 +78,7 @@ getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit (UTxO u) txBody =
 -- withdrawals. Unlike the one from Shelley, this one also includes script hashes needed
 -- for minting multi-assets in the transaction.
 getMaryScriptsNeeded ::
-  MaryEraTxBody era =>
+  (ShelleyEraTxBody era, MaryEraTxBody era) =>
   UTxO era ->
   TxBody era ->
   ShelleyScriptsNeeded era

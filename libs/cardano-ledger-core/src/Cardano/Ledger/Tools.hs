@@ -34,6 +34,10 @@ import Lens.Micro
 
 -- | Calculate and update the fee in the transaction until it has the smallest possible
 -- value according to the settings in the protocol parameters.
+--
+-- This function potentially changes the `feeTxBodyL` field of the `TxBody`, as such it
+-- affects the hash of the body, which consequently invalidates all of the signature in
+-- the attached witnesses.
 setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
 setMinFeeTx pp tx =
   let curMinFee = getMinFeeTx pp tx

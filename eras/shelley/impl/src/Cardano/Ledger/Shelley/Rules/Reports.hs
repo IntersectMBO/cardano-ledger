@@ -12,7 +12,6 @@ module Cardano.Ledger.Shelley.Rules.Reports (
   showMap,
   showWithdrawal,
   showSafeHash,
-  synopsisCert,
   synopsisCoinMap,
   showTxCerts,
   produceEqualsConsumed,
@@ -29,8 +28,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), ShelleyEraTxBody (..), Withdrawals (..))
-import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert (..))
+import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), Withdrawals (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (fold, toList)
 import qualified Data.Map.Strict as Map
@@ -43,16 +41,13 @@ showCred :: Credential x c -> String
 showCred (ScriptHashObj (ScriptHash x)) = show x
 showCred (KeyHashObj (KeyHash x)) = show x
 
-synopsisCert :: ShelleyEraTxCert era => TxCert era -> String
-synopsisCert = show
-
 showKeyHash :: KeyHash c x -> String
 showKeyHash (KeyHash hash) = take 10 (show hash)
 
-showCerts :: ShelleyEraTxCert era => [TxCert era] -> String
-showCerts certs = unlines (map (("  " ++) . synopsisCert) certs)
+showCerts :: Show (TxCert era) => [TxCert era] -> String
+showCerts certs = unlines (map (("  " ++) . show) certs)
 
-showTxCerts :: ShelleyEraTxBody era => TxBody era -> String
+showTxCerts :: EraTxBody era => TxBody era -> String
 showTxCerts txb = showCerts (toList (txb ^. certsTxBodyL))
 
 -- | Display a synopsis of a map to Coin
@@ -64,7 +59,7 @@ synopsisCoinMap Nothing = "SYNOPSIS NOTHING"
 -- Printing Produced == Consumed
 
 produceEqualsConsumed ::
-  ShelleyEraTxBody era =>
+  EraTxBody era =>
   PParams era ->
   CertState era ->
   UTxO era ->

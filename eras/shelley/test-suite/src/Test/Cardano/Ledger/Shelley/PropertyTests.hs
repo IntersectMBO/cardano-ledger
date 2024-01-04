@@ -58,7 +58,6 @@ commonTests ::
   , BaseM ledger ~ ReaderT Globals Identity
   , State ledger ~ LedgerState era
   , Signal ledger ~ Tx era
-  , ProtVerAtMost era 8
   , GovState era ~ ShelleyGovState era
   ) =>
   [TestTree]

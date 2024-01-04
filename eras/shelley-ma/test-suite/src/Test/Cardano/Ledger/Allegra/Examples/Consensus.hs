@@ -36,7 +36,7 @@ ledgerExamplesAllegra =
 exampleAllegraTxBody ::
   forall era.
   ( AllegraEraTxBody era
-  , ProtVerAtMost era 8
+  , ShelleyEraTxBody era
   ) =>
   Value era ->
   TxBody era

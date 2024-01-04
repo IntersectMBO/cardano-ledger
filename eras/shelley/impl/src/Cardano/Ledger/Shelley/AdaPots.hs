@@ -34,7 +34,7 @@ import Cardano.Ledger.Shelley.LedgerState.Types (
   LedgerState (..),
   UTxOState (..),
  )
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), unWithdrawals)
+import Cardano.Ledger.Shelley.TxBody (unWithdrawals)
 import Cardano.Ledger.UMap (UView (RewDepUView), sumDepositUView, sumRewardsUView)
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txouts)
 import Data.Foldable (fold)
@@ -140,7 +140,7 @@ instance Show Produced where
 
 -- | Compute the Coin part of what is consumed by a TxBody, itemized as a 'Consume'
 consumedTxBody ::
-  ShelleyEraTxBody era =>
+  EraTxBody era =>
   TxBody era ->
   PParams era ->
   CertState era ->
@@ -155,7 +155,7 @@ consumedTxBody txBody pp dpstate (UTxO u) =
 
 -- | Compute the Coin part of what is produced by a TxBody, itemized as a 'Produced'
 producedTxBody ::
-  ShelleyEraTxBody era =>
+  EraTxBody era =>
   TxBody era ->
   PParams era ->
   CertState era ->

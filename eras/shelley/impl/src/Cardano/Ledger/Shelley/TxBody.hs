@@ -92,10 +92,10 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
-class (ShelleyEraTxCert era, EraTxBody era) => ShelleyEraTxBody era where
+class (ShelleyEraTxCert era, EraTxBody era, ProtVerAtMost era 8) => ShelleyEraTxBody era where
   ttlTxBodyL :: ExactEra ShelleyEra era => Lens' (TxBody era) SlotNo
 
-  updateTxBodyL :: ProtVerAtMost era 8 => Lens' (TxBody era) (StrictMaybe (Update era))
+  updateTxBodyL :: Lens' (TxBody era) (StrictMaybe (Update era))
 
 -- ==============================
 -- The underlying type for TxBody

@@ -84,7 +84,7 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
-class ShelleyEraTxBody era => AllegraEraTxBody era where
+class EraTxBody era => AllegraEraTxBody era where
   vldtTxBodyL :: Lens' (TxBody era) ValidityInterval
 
 -- =======================================================

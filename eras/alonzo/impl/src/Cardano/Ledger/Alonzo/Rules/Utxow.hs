@@ -28,6 +28,7 @@ where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Rules.Utxo (
@@ -35,19 +36,13 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUtxoEvent,
   AlonzoUtxoPredFailure,
  )
-import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toPlutusScript)
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.Tx (
-  AlonzoEraTx,
   ScriptPurpose,
   hashScriptIntegrity,
   rdptr,
  )
-import Cardano.Ledger.Alonzo.TxBody (
-  AlonzoEraTxBody (..),
-  ScriptIntegrityHash,
- )
 import Cardano.Ledger.Alonzo.TxWits (
-  AlonzoEraTxWits (..),
   RdmrPtr,
   unRedeemers,
   unTxDats,
@@ -65,7 +60,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
@@ -313,6 +307,7 @@ ppViewHashesMatch tx pp (ScriptsProvided scriptsProvided) scriptsNeeded = do
 alonzoStyleWitness ::
   forall era.
   ( AlonzoEraTx era
+  , ShelleyEraTxBody era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
@@ -321,7 +316,6 @@ alonzoStyleWitness ::
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
-  , ProtVerAtMost era 8
   ) =>
   TransitionRule (AlonzoUTXOW era)
 alonzoStyleWitness = do
@@ -411,6 +405,7 @@ instance
   ( AlonzoEraTx era
   , EraTxAuxData era
   , AlonzoEraUTxO era
+  , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , -- Allow UTXOW to call UTXO
@@ -418,7 +413,6 @@ instance
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
-  , ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXOW era)
   where

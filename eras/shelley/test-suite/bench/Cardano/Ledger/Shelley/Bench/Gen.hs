@@ -113,7 +113,6 @@ genTriple ::
   , EraGov era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
-  , ProtVerAtMost era 8
   ) =>
   Proxy era ->
   Int ->

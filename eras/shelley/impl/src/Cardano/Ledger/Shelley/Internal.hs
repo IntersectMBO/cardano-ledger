@@ -15,7 +15,6 @@ module Cardano.Ledger.Shelley.Internal (
   showMap,
   showWithdrawal,
   showSafeHash,
-  synopsisCert,
   synopsisCoinMap,
   showTxCerts,
 )
@@ -36,7 +35,6 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   showSafeHash,
   showTxCerts,
   showWithdrawal,
-  synopsisCert,
   synopsisCoinMap,
  )
 import Cardano.Ledger.Val ((<->))

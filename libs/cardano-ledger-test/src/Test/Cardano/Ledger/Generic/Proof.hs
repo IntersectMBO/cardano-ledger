@@ -113,7 +113,7 @@ import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (EraGov, EraIndependentTxBody, ShelleyEraTxBody, ShelleyEraTxCert)
+import Cardano.Ledger.Shelley.Core (EraGov, EraIndependentTxBody, ShelleyEraTxCert)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), ShelleyGovState (..))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig)
@@ -206,7 +206,6 @@ class
   , EraUTxO era
   , EraTxAuxData era
   , ShelleyEraTxCert era
-  , ShelleyEraTxBody era
   , ReflectC (EraCrypto era)
   ) =>
   Reflect era

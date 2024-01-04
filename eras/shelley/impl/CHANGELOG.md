@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Prevent instances for `ShelleyEraTxBody` starting with protocol version 9.
 * Add `ToJSON` instance for `ShelleyTxCert`, `ShelleyDelegCert`, `MIRCert`, `MIRTarget`,
   `MIRPot` and `GenesisDelegCert`
 * Deprecate `evaluateTransactionFee` in favor of `Cardano.Ledger.Api.Tx.estimateMinFeeTx`

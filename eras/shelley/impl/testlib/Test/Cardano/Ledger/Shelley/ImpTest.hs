@@ -117,7 +117,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.Tools (setMinFeeTx)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -215,7 +214,7 @@ class
       (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
   , EraUTxO era
-  , ShelleyEraTxBody era
+  , ShelleyEraTxCert era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , EraGov era

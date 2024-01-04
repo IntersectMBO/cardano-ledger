@@ -286,7 +286,6 @@ transitionRulesUTXOW ::
   forall era utxow.
   ( EraUTxO era
   , ShelleyEraTxBody era
-  , ProtVerAtMost era 8
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
   , BaseM (utxow era) ~ ShelleyBase
   , Embed (EraRule "UTXO" era) (utxow era)
@@ -355,7 +354,6 @@ instance
   ( EraTx era
   , EraUTxO era
   , ShelleyEraTxBody era
-  , ProtVerAtMost era 8
   , Tx era ~ ShelleyTx era
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
@@ -365,7 +363,6 @@ instance
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
-  , ProtVerAtMost era 8
   , EraGov era
   ) =>
   STS (ShelleyUTXOW era)
@@ -463,7 +460,7 @@ validateNeededWitnesses witsKeyHashes certState utxo txBody =
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeededGov ::
   forall era.
-  (ShelleyEraTxBody era, ProtVerAtMost era 8) =>
+  ShelleyEraTxBody era =>
   TxBody era ->
   GenDelegs (EraCrypto era) ->
   Set (KeyHash 'Witness (EraCrypto era))
@@ -482,7 +479,7 @@ witsVKeyNeededNoGov = getShelleyWitsVKeyNeededNoGov
 
 shelleyWitsVKeyNeeded ::
   forall era.
-  (EraTx era, ShelleyEraTxBody era, ProtVerAtMost era 8) =>
+  (EraTx era, ShelleyEraTxBody era) =>
   UTxO era ->
   TxBody era ->
   GenDelegs (EraCrypto era) ->
@@ -519,7 +516,6 @@ validateMetadata pp tx =
 validateMIRInsufficientGenesisSigs ::
   ( EraTx era
   , ShelleyEraTxBody era
-  , ProtVerAtMost era 8
   ) =>
   GenDelegs (EraCrypto era) ->
   Word64 ->

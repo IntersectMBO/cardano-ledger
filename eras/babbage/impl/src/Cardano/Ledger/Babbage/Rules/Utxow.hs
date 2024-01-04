@@ -258,7 +258,7 @@ babbageUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ProtVerAtMost era 8
+  , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (BabbageUTXOW era)
   , BabbageEraTxBody era
@@ -355,7 +355,7 @@ instance
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ProtVerAtMost era 8
+  , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
@@ -366,7 +366,6 @@ instance
   , Signal (EraRule "UTXO" era) ~ Tx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
-  , ProtVerAtMost era 8
   ) =>
   STS (BabbageUTXOW era)
   where
