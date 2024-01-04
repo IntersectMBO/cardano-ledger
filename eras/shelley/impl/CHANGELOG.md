@@ -2,6 +2,8 @@
 
 ## 1.9.0.0
 
+* Add `ToJSON` instance for `ShelleyTxCert`, `ShelleyDelegCert`, `MIRCert`, `MIRTarget`,
+  `MIRPot` and `GenesisDelegCert`
 * Deprecate `evaluateTransactionFee` in favor of `Cardano.Ledger.Api.Tx.estimateMinFeeTx`
 * Change the type signature and the logic in `validateNeededWitnesses`
 * Add `getShelleyWitsVKeyNeeded` and `getShelleyWitsVKeyNeededNoGov`

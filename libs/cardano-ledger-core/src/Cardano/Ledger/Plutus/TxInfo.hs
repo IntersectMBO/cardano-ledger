@@ -20,6 +20,7 @@
 
 module Cardano.Ledger.Plutus.TxInfo (
   TxOutSource (..),
+  txOutSourceToText,
   transAddr,
   transProtocolVersion,
   transDataHash,
@@ -65,12 +66,13 @@ import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Plutus.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Plutus.ExUnits (ExUnits (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..), txInToText)
 import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData (..), rwhnf)
-import Data.Text (Text)
+import Data.Aeson (ToJSON (..), Value (String))
+import Data.Text as T (Text, pack)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Word (Word64)
@@ -104,6 +106,14 @@ instance Crypto c => DecCBOR (TxOutSource c) where
       dec 0 = SumD TxOutFromInput <! From
       dec 1 = SumD TxOutFromOutput <! From
       dec n = Invalid n
+
+instance ToJSON (TxOutSource c) where
+  toJSON = String . txOutSourceToText
+
+txOutSourceToText :: TxOutSource c -> Text
+txOutSourceToText = \case
+  TxOutFromInput txIn -> "Input: " <> txInToText txIn
+  TxOutFromOutput txIx -> "Output: " <> T.pack (show txIx)
 
 transProtocolVersion :: ProtVer -> PV1.MajorProtocolVersion
 transProtocolVersion (ProtVer major _minor) =

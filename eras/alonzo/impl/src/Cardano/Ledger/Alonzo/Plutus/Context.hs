@@ -32,6 +32,7 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
+import Data.Aeson (ToJSON)
 import Data.Kind (Type)
 import Data.Text (Text)
 import NoThunks.Class (NoThunks)
@@ -71,6 +72,7 @@ class
   , NoThunks (ContextError era)
   , EncCBOR (ContextError era)
   , DecCBOR (ContextError era)
+  , ToJSON (ContextError era)
   ) =>
   EraPlutusContext era
   where

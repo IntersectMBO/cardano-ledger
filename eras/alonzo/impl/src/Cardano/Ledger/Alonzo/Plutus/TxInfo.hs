@@ -9,6 +9,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -83,7 +84,7 @@ import Cardano.Ledger.Rules.ValidationMode (Inject (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.TxCert
-import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (zero)
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -92,6 +93,7 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (forM, guard)
+import Data.Aeson (ToJSON (..), pattern String)
 import Data.ByteString.Short as SBS (fromShort)
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
@@ -164,6 +166,13 @@ instance Era era => DecCBOR (AlonzoContextError era) where
     1 -> SumD (TranslationLogicMissingInput @era) <! From
     7 -> SumD (TimeTranslationPastHorizon @era) <! From
     n -> Invalid n
+
+instance ToJSON (AlonzoContextError era) where
+  toJSON = \case
+    TranslationLogicMissingInput txin ->
+      String $ "Transaction input does not exist in the UTxO: " <> txInToText txin
+    TimeTranslationPastHorizon msg ->
+      String $ "Time translation requested past the horizon: " <> msg
 
 transLookupTxOut ::
   forall era a.

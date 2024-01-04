@@ -2,6 +2,8 @@
 
 ## 1.12.0.0
 
+* Add `ToJSON` instance for `ConwayContextError`, `ConwayTxCert`, `ConwayDelegCert`,
+  `Delegatee` and `ConwayGovCert`
 * Add `forceDRepPulsingState`
 * Add `registerInitialDReps` and `registerDRepDelegs`
 * Add `cgDRepDelegs`, `cgInitialDReps` to `ConwayGenesis`

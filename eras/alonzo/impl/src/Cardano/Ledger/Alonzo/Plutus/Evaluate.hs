@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -26,7 +27,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), indexedRdmrs)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum), AlonzoScriptsNeeded (..))
-import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), natVersion)
+import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), kindObject, natVersion)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Plutus.CostModels (costModelsValid)
@@ -42,6 +43,7 @@ import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Monad (guard)
+import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -90,6 +92,32 @@ instance (EraTxCert era, DecCBOR (ContextError era)) => DecCBOR (CollectError er
       dec 2 = SumD NoCostModel <! From
       dec 3 = SumD BadTranslation <! From
       dec n = Invalid n
+
+instance
+  ( Era era
+  , ToJSON (ScriptPurpose era)
+  , ToJSON (ContextError era)
+  ) =>
+  ToJSON (CollectError era)
+  where
+  toJSON = \case
+    NoRedeemer sPurpose ->
+      kindObject "CollectError" $
+        [ "error" .= String "NoRedeemer"
+        , "plutusPurpose" .= toJSON sPurpose
+        ]
+    NoWitness sHash ->
+      kindObject "CollectError" $
+        [ "error" .= String "NoWitness"
+        , "scriptHash" .= toJSON sHash
+        ]
+    NoCostModel lang ->
+      kindObject "CollectError" $
+        [ "error" .= String "NoCostModel"
+        , "language" .= toJSON lang
+        ]
+    BadTranslation err ->
+      kindObject "BadTranslation" ["error" .= toJSON err]
 
 -- | Given a script hash and a Map of available scripts, find the PlutusScript. Returns
 -- Nothing when script is missing or it is not a PlutusScript

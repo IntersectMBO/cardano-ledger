@@ -55,6 +55,7 @@ module Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochInterval (..),
   addEpochInterval,
+  kindObject,
 
   -- * Indices
   TxIx (..),
@@ -137,13 +138,14 @@ import Data.Aeson (
   FromJSON (..),
   KeyValue,
   ToJSON (..),
+  Value,
   object,
   pairs,
   withObject,
   (.:),
   (.=),
  )
-import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Pair)
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
@@ -189,14 +191,14 @@ instance NoThunks ProtVer
 
 instance ToJSON ProtVer where
   toJSON (ProtVer major minor) =
-    Aeson.object
+    object
       [ "major" .= getVersion64 major
       , "minor" .= minor
       ]
 
 instance FromJSON ProtVer where
   parseJSON =
-    Aeson.withObject "ProtVer" $ \obj -> do
+    withObject "ProtVer" $ \obj -> do
       pvMajor <- mkVersion64 =<< obj .: "major"
       pvMinor <- obj .: "minor"
       pure ProtVer {..}
@@ -853,3 +855,7 @@ class Inject t s where
   inject :: t -> s
   default inject :: t ~ s => t -> s
   inject = id
+
+-- | Helper function for a common pattern of creating objects
+kindObject :: Text -> [Pair] -> Value
+kindObject name obj = object $ ("kind" .= name) : obj

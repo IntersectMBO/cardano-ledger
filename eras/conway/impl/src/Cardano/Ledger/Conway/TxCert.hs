@@ -45,7 +45,7 @@ module Cardano.Ledger.Conway.TxCert (
 where
 
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), invalidKey)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), invalidKey, kindObject)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
@@ -80,6 +80,7 @@ import Cardano.Ledger.Shelley.TxCert (
  )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Foldable (foldMap', foldl')
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
@@ -345,6 +346,18 @@ data Delegatee c
   | DelegStakeVote !(KeyHash 'StakePool c) !(DRep c)
   deriving (Show, Generic, Eq, Ord)
 
+instance Crypto c => ToJSON (Delegatee c) where
+  toJSON = \case
+    DelegStake poolId ->
+      kindObject "DelegStake" ["poolId" .= toJSON poolId]
+    DelegVote dRep ->
+      kindObject "DelegVote" ["dRep" .= toJSON dRep]
+    DelegStakeVote poolId dRep ->
+      kindObject "DelegStakeVote" $
+        [ "poolId" .= toJSON poolId
+        , "dRep" .= toJSON dRep
+        ]
+
 getStakePoolDelegatee :: Delegatee c -> Maybe (KeyHash 'StakePool c)
 getStakePoolDelegatee = \case
   DelegStake targetPool -> Just targetPool
@@ -390,6 +403,30 @@ instance NFData (ConwayDelegCert c)
 
 instance NoThunks (ConwayDelegCert c)
 
+instance Crypto c => ToJSON (ConwayDelegCert c) where
+  toJSON = \case
+    ConwayRegCert cred deposit ->
+      kindObject "RegCert" $
+        [ "credential" .= toJSON cred
+        , "deposit" .= toJSON deposit
+        ]
+    ConwayUnRegCert cred refund ->
+      kindObject "UnRegCert" $
+        [ "credential" .= toJSON cred
+        , "refund" .= toJSON refund
+        ]
+    ConwayDelegCert cred delegatee ->
+      kindObject "DelegCert" $
+        [ "credential" .= toJSON cred
+        , "delegatee" .= toJSON delegatee
+        ]
+    ConwayRegDelegCert cred delegatee deposit ->
+      kindObject "RegDelegCert" $
+        [ "credential" .= toJSON cred
+        , "delegatee" .= toJSON delegatee
+        , "deposit" .= toJSON deposit
+        ]
+
 data ConwayGovCert c
   = ConwayRegDRep !(Credential 'DRepRole c) !Coin !(StrictMaybe (Anchor c))
   | ConwayUnRegDRep !(Credential 'DRepRole c) !Coin
@@ -402,6 +439,35 @@ instance Crypto c => NFData (ConwayGovCert c)
 
 instance NoThunks (ConwayGovCert c)
 
+instance Crypto c => ToJSON (ConwayGovCert c) where
+  toJSON = \case
+    ConwayRegDRep dRep deposit anchor ->
+      kindObject "RegDRep" $
+        [ "dRep" .= toJSON dRep
+        , "deposit" .= toJSON deposit
+        , "anchor" .= toJSON anchor
+        ]
+    ConwayUnRegDRep dRep refund ->
+      kindObject "UnRegDRep" $
+        [ "dRep" .= toJSON dRep
+        , "refund" .= toJSON refund
+        ]
+    ConwayUpdateDRep dRep anchor ->
+      kindObject "UpdateDRep" $
+        [ "dRep" .= toJSON dRep
+        , "anchor" .= toJSON anchor
+        ]
+    ConwayAuthCommitteeHotKey coldCred hotCred ->
+      kindObject "AuthCommitteeHotKey" $
+        [ "coldCredential" .= toJSON coldCred
+        , "hotCredential" .= toJSON hotCred
+        ]
+    ConwayResignCommitteeColdKey coldCred anchor ->
+      kindObject "ResignCommitteeColdKey" $
+        [ "coldCredential" .= toJSON coldCred
+        , "anchor" .= toJSON anchor
+        ]
+
 data ConwayTxCert era
   = ConwayTxCertDeleg !(ConwayDelegCert (EraCrypto era))
   | ConwayTxCertPool !(PoolCert (EraCrypto era))
@@ -411,6 +477,12 @@ data ConwayTxCert era
 instance Crypto (EraCrypto era) => NFData (ConwayTxCert era)
 
 instance NoThunks (ConwayTxCert era)
+
+instance Era era => ToJSON (ConwayTxCert era) where
+  toJSON = \case
+    ConwayTxCertDeleg delegCert -> toJSON delegCert
+    ConwayTxCertPool poolCert -> toJSON poolCert
+    ConwayTxCertGov govCert -> toJSON govCert
 
 instance
   ( ShelleyEraTxCert era

@@ -20,6 +20,7 @@ module Cardano.Ledger.TxIn (
   _unTxId,
   TxIn (TxIn),
   mkTxInPartial,
+  txInToText,
   TxIx,
 )
 where
