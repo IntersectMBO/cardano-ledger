@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Add `forceDRepPulsingState`
 * Add `registerInitialDReps` and `registerDRepDelegs`
 * Add `cgDRepDelegs`, `cgInitialDReps` to `ConwayGenesis`
 * Changed the type of lenses ppCommitteeMaxTermLengthL, ppuCommitteeMaxTermLengthL

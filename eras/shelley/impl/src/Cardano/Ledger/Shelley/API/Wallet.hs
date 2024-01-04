@@ -495,6 +495,7 @@ evaluateTransactionFee pp tx numKeyWits = getMinFeeTx pp tx'
        in fromRight (error "corrupt dummy vkey") (decodeFull version keyBytes)
     dummyKeyWits = Set.fromList [WitVKey (dummyVKey x) dummySig | x <- [1 .. numKeyWits]]
     tx' = addKeyWitnesses tx dummyKeyWits
+{-# DEPRECATED evaluateTransactionFee "In favor of `Cardano.Ledger.Api.Tx.estimateMinFeeTx`" #-}
 
 -- | Evaluate the difference between the value currently being consumed by
 -- a transaction and the number of lovelace being produced.

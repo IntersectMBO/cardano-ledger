@@ -54,10 +54,12 @@ library
         base >=4.14 && <4.19,
         aeson >=2.2,
         bytestring,
+        cardano-crypto-class,
         cardano-ledger-allegra ^>=1.3,
         cardano-ledger-alonzo ^>=1.6,
         cardano-ledger-babbage ^>=1.6,
         cardano-ledger-binary ^>=1.3,
+        cardano-ledger-byron ^>=1.0,
         cardano-ledger-conway ^>=1.12,
         cardano-ledger-core ^>=1.10,
         cardano-ledger-mary ^>=1.5,
@@ -94,6 +96,7 @@ test-suite cardano-ledger-api-test
     main-is:          Tests.hs
     hs-source-dirs:   test
     other-modules:
+        Test.Cardano.Ledger.Api.Tx
         Test.Cardano.Ledger.Api.Tx.Out
         Test.Cardano.Ledger.Api.Tx.Body
         Test.Cardano.Ledger.Api.State.Imp.QuerySpec
@@ -109,8 +112,10 @@ test-suite cardano-ledger-api-test
         base,
         bytestring,
         cardano-ledger-api,
+        cardano-ledger-byron,
         data-default-class,
         testlib,
+        cardano-crypto-class,
         cardano-ledger-binary,
         cardano-ledger-babbage:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},

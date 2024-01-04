@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Core.KeyPair (
   mkVKeyRwdAcnt,
   mkKeyPair,
   mkKeyHash,
+  ByronKeyPair (..),
 )
 where
 
@@ -25,6 +26,11 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash (hashToBytes)
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Crypto.Seed (mkSeedFromBytes)
+import qualified Cardano.Crypto.Signing as Byron (
+  SigningKey,
+  VerificationKey (..),
+  deterministicKeyGen,
+ )
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (Testnet), shelleyProtVer)
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder)
@@ -33,7 +39,7 @@ import Cardano.Ledger.Credential (
   Credential (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (Crypto, DSIGN, HASH)
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   DSignable,
   HasKeyRole,
@@ -51,10 +57,13 @@ import Control.DeepSeq (NFData)
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
+import Test.QuickCheck
 
 data KeyPair (kd :: KeyRole) c = KeyPair
   { vKey :: !(VKey kd c)
@@ -75,6 +84,16 @@ instance
 instance Crypto c => NoThunks (KeyPair kd c)
 
 instance HasKeyRole KeyPair
+
+instance DSIGN.DSIGNAlgorithm (DSIGN c) => Arbitrary (KeyPair kd c) where
+  arbitrary = do
+    seed <- mkSeedFromBytes <$> genByteString (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @(DSIGN c))))
+    let signKey = DSIGN.genKeyDSIGN seed
+    pure $
+      KeyPair
+        { vKey = VKey $ DSIGN.deriveVerKeyDSIGN signKey
+        , sKey = signKey
+        }
 
 mkAddr ::
   Crypto c =>
@@ -141,3 +160,12 @@ mkKeyPair seed = KeyPair vk sk
       DSIGN.genKeyDSIGN $
         mkSeedFromBytes . hashToBytes $
           hashWithEncoder @CH.Blake2b_256 shelleyProtVer encCBOR seed
+
+data ByronKeyPair = ByronKeyPair
+  { bkpVerificationKey :: !Byron.VerificationKey
+  , bkpSigningKey :: !Byron.SigningKey
+  }
+  deriving (Generic, Show)
+
+instance Arbitrary ByronKeyPair where
+  arbitrary = uncurry ByronKeyPair . Byron.deterministicKeyGen <$> genByteString 32

@@ -43,11 +43,8 @@ module Test.Cardano.Ledger.Core.Arbitrary (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class (
-  DSIGNAlgorithm (deriveVerKeyDSIGN, genKeyDSIGN),
-  seedSizeDSIGN,
- )
-import Cardano.Crypto.Seed (mkSeedFromBytes)
+import qualified Cardano.Chain.Common as Byron
+import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm)
 import Cardano.Ledger.Address
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (
@@ -156,7 +153,6 @@ import System.Random.Stateful (StatefulGen, uniformRM)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
 import Test.Cardano.Ledger.Binary.Random (QC (..))
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck
 import Test.QuickCheck.Hedgehog (hedgehog)
@@ -384,16 +380,6 @@ instance Crypto c => Arbitrary (GenDelegPair c) where
 
 deriving instance Crypto c => Arbitrary (GenDelegs c)
 
-instance DSIGNAlgorithm (DSIGN c) => Arbitrary (KeyPair kd c) where
-  arbitrary = do
-    seed <- mkSeedFromBytes <$> genByteString (fromIntegral (seedSizeDSIGN (Proxy @(DSIGN c))))
-    let signKey = genKeyDSIGN seed
-    pure $
-      KeyPair
-        { vKey = VKey $ deriveVerKeyDSIGN signKey
-        , sKey = signKey
-        }
-
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Coin -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
@@ -414,6 +400,15 @@ instance Arbitrary DeltaCoin where
 
 instance Arbitrary (BootstrapAddress c) where
   arbitrary = BootstrapAddress <$> hedgehog Byron.genAddress
+
+instance Arbitrary Byron.Address where
+  arbitrary = hedgehog Byron.genAddress
+
+instance Arbitrary Byron.AddrAttributes where
+  arbitrary = hedgehog Byron.genAddrAttributes
+
+instance Arbitrary (Byron.Attributes Byron.AddrAttributes) where
+  arbitrary = hedgehog $ Byron.genAttributes Byron.genAddrAttributes
 
 instance Crypto c => Arbitrary (Addr c) where
   arbitrary = genAddrWith arbitrary

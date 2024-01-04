@@ -5,7 +5,7 @@
 
 module Test.Cardano.Ledger.Binary.RoundTripSpec (spec) where
 
-import Cardano.Crypto.DSIGN.Class (SigDSIGN, SignKeyDSIGN, VerKeyDSIGN)
+import Cardano.Crypto.DSIGN.Class (SigDSIGN, SignKeyDSIGN, SignedDSIGN, VerKeyDSIGN)
 import Cardano.Crypto.DSIGN.EcdsaSecp256k1 (EcdsaSecp256k1DSIGN)
 import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.DSIGN.Ed448 (Ed448DSIGN)
@@ -124,22 +124,27 @@ spec = do
           roundTripSpec @(SignKeyDSIGN Ed25519DSIGN) cborTrip
           roundTripSpec @(VerKeyDSIGN Ed25519DSIGN) cborTrip
           roundTripSpec @(SigDSIGN Ed25519DSIGN) cborTrip
+          roundTripSpec @(SignedDSIGN Ed25519DSIGN ()) cborTrip
         describe "Ed448" $ do
           roundTripSpec @(SignKeyDSIGN Ed448DSIGN) cborTrip
           roundTripSpec @(VerKeyDSIGN Ed448DSIGN) cborTrip
           roundTripSpec @(SigDSIGN Ed448DSIGN) cborTrip
+          roundTripSpec @(SignedDSIGN Ed448DSIGN ()) cborTrip
         describe "EcdsaSecp256k1" $ do
           roundTripSpec @(SignKeyDSIGN EcdsaSecp256k1DSIGN) cborTrip
           roundTripSpec @(VerKeyDSIGN EcdsaSecp256k1DSIGN) cborTrip
           roundTripSpec @(SigDSIGN EcdsaSecp256k1DSIGN) cborTrip
+          roundTripSpec @(SignedDSIGN EcdsaSecp256k1DSIGN ()) cborTrip
         describe "SchnorrSecp256k1" $ do
           roundTripSpec @(SignKeyDSIGN SchnorrSecp256k1DSIGN) cborTrip
           roundTripSpec @(VerKeyDSIGN SchnorrSecp256k1DSIGN) cborTrip
           roundTripSpec @(SigDSIGN SchnorrSecp256k1DSIGN) cborTrip
+          roundTripSpec @(SignedDSIGN SchnorrSecp256k1DSIGN ()) cborTrip
         describe "Mock" $ do
           roundTripSpec @(SignKeyDSIGN MockDSIGN) cborTrip
           roundTripSpec @(VerKeyDSIGN MockDSIGN) cborTrip
           roundTripSpec @(SigDSIGN MockDSIGN) cborTrip
+          roundTripSpec @(SignedDSIGN MockDSIGN ()) cborTrip
       describe "VRF" $ do
         describe "OutputVRF" $ do
           roundTripSpec @(OutputVRF PraosVRF) cborTrip

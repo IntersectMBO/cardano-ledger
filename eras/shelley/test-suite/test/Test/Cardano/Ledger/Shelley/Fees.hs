@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Test.Cardano.Ledger.Shelley.Fees (
   sizeTests,

@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Deprecate `evaluateTransactionFee` in favor of `Cardano.Ledger.Api.Tx.estimateMinFeeTx`
 * Change the type signature and the logic in `validateNeededWitnesses`
 * Add `getShelleyWitsVKeyNeeded` and `getShelleyWitsVKeyNeededNoGov`
 * Deprecate `witsVKeyNeededNoGov` and `shelleyWitsVKeyNeeded`
