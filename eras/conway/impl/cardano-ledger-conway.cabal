@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-conway
-version:            1.12.0.0
+version:            1.12.0.1
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -71,7 +71,7 @@ library
         -Wunused-packages
 
     build-depends:
-        base >=4.14 && <4.19,
+        base >=4.14 && <5,
         aeson >=2.2,
         data-default-class,
         cardano-crypto-class,

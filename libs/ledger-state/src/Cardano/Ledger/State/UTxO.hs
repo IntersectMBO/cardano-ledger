@@ -33,7 +33,6 @@ import Control.Foldl (Fold (..))
 import Control.SetAlgebra (range)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Foldable as F
-import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set

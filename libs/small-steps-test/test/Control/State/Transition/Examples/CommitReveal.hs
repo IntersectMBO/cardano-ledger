@@ -18,7 +18,7 @@ import Cardano.Ledger.Binary (EncCBOR (..), hashEncCBOR)
 import Control.State.Transition (
   Environment,
   PredicateFailure,
-  STS,
+  STS (..),
   Signal,
   State,
   TRC (TRC),

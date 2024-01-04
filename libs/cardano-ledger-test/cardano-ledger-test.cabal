@@ -91,7 +91,7 @@ library
 
     build-depends:
         array,
-        base >=4.14 && <4.19,
+        base >=4.14 && <5,
         bytestring,
         cardano-data,
         cardano-crypto-class,
@@ -126,7 +126,7 @@ library
         mtl,
         nothunks,
         hspec,
-        plutus-ledger-api,
+        plutus-ledger-api ^>=1.19,
         prettyprinter,
         QuickCheck,
         small-steps,

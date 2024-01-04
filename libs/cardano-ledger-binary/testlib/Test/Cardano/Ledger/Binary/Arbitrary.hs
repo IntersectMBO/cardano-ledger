@@ -234,5 +234,6 @@ genShortByteString n = uniformShortByteString (fromIntegral n) QC
 
 genByteArray :: Int -> Gen Prim.ByteArray
 genByteArray n = do
-  SBS.SBS ba <- genShortByteString n
-  pure (Prim.ByteArray ba)
+  sbs <- genShortByteString n
+  case sbs of
+    SBS.SBS ba -> pure (Prim.ByteArray ba)
