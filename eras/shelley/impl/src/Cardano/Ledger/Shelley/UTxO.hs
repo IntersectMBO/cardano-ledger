@@ -83,6 +83,7 @@ import Lens.Micro ((^.))
 
 txup :: (EraTx era, ShelleyEraTxBody era) => Tx era -> Maybe (Update era)
 txup tx = strictMaybeToMaybe (tx ^. bodyTxL . updateTxBodyL)
+{-# DEPRECATED txup "In favor of `updateTxBodyL`" #-}
 
 scriptStakeCred ::
   ShelleyEraTxCert era =>

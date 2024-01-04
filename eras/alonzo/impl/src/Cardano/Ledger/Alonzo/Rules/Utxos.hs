@@ -62,8 +62,8 @@ import Cardano.Ledger.Alonzo.UTxO (
 import Cardano.Ledger.BaseTypes (
   Globals,
   ShelleyBase,
+  StrictMaybe,
   epochInfo,
-  strictMaybeToMaybe,
   systemStart,
  )
 import Cardano.Ledger.Binary (
@@ -140,7 +140,7 @@ instance
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure,
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
@@ -190,7 +190,7 @@ utxosTransition ::
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
   , Eq (PPUPPredFailure era)
@@ -249,7 +249,7 @@ alonzoEvalScriptsTxValid ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (AlonzoUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
@@ -276,8 +276,7 @@ alonzoEvalScriptsTxValid = do
 
   ppup' <-
     trans @(EraRule "PPUP" era) $
-      TRC
-        (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyL)
+      TRC (PPUPEnv slot pp genDelegs, pup, txBody ^. updateTxBodyL)
 
   updateUTxOState
     pp

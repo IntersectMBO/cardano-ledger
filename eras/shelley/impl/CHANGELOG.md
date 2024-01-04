@@ -2,6 +2,8 @@
 
 ## 1.9.0.0
 
+* Change `PPUP` signal to `StrictMaybe` from `Maybe`
+* Deprecate `txup` function.
 * Prevent instances for `ShelleyEraTxBody` starting with protocol version 9.
 * Add `ToJSON` instance for `ShelleyTxCert`, `ShelleyDelegCert`, `MIRCert`, `MIRTarget`,
   `MIRPot` and `GenesisDelegCert`
@@ -45,12 +47,7 @@
 ### `testlib`
 
 * Extract `impWitsVKeyNeeded` from the `ShelleyEraImp` type class
-* Add:
-  `fixupFees`
-  `impLastTickL`
-  `withNoFixup`
-  `ImpTestEnv`
-  `iteDoFixupL`
+* Add `fixupFees` `impLastTickL` `withNoFixup` `ImpTestEnv` `iteDoFixupL`
 * Add `runImpTestM`, `runImpTestM_`, `evalImpTestM` and `execImpTestM`
 * Add instance `Example (a -> ImpTestM era ())`, which allows use of `Arbitrary`
 * Add `getNextEpochCommitteeMembers` to `EraGov` typeclass, with a default empty implementation

@@ -47,8 +47,8 @@ import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
+  StrictMaybe,
   epochInfo,
-  strictMaybeToMaybe,
   systemStart,
  )
 import Cardano.Ledger.Binary (EncCBOR (..))
@@ -94,7 +94,7 @@ instance
   , GovState era ~ ShelleyGovState era
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (BabbageUTXOS era) ~ Tx era
   , EncCBOR (PPUPPredFailure era) -- Serializing the PredicateFailure
@@ -132,7 +132,7 @@ utxosTransition ::
   , EraGov era
   , GovState era ~ ShelleyGovState era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (BabbageUTXOS era) ~ Tx era
@@ -191,7 +191,7 @@ babbageEvalScriptsTxValid ::
   , STS (BabbageUTXOS era)
   , Signal (BabbageUTXOS era) ~ Tx era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
@@ -209,8 +209,7 @@ babbageEvalScriptsTxValid = do
   -- transaction will fail due to `PPUP`
   ppup' <-
     trans @(EraRule "PPUP" era) $
-      TRC
-        (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyL)
+      TRC (PPUPEnv slot pp genDelegs, pup, txBody ^. updateTxBodyL)
 
   () <- pure $! traceEvent validBegin ()
   expectScriptsToPass pp tx utxo
