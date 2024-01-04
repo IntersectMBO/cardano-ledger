@@ -312,10 +312,15 @@ babbageUtxowTransition = do
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
   runTest $ validateNeededWitnesses @era witsKeyHashes certState utxo txBody
   -- TODO can we add the required signers to witsVKeyNeeded so we dont need the check below?
+  --
+  --      ^ Answer: yes we can. It is now implememnted. We just can't remove
+  --      MissingRequiredSigners predicate failure until we are in Conway
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
       witsVKeyNeeded must include the reqSignerHashes in the union   -}
   {- reqSignerHashes txbody ⊆ witsKeyHashes -}
+  -- TODO: Remove once we are in Conway. This check is now handled by
+  -- validateNeededWitnesses, as per spec
   runTestOnSignal $ requiredSignersAreWitnessed txBody witsKeyHashes
 
   -- check genesis keys signatures for instantaneous rewards certificates

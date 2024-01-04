@@ -2,6 +2,7 @@
 
 ## 1.6.0.0
 
+* Add `getAlonzoWitsVKeyNeeded` and use it for `getWitsVKeyNeeded`
 * Add `ToJSON` for `AlonzoContextError` and `CollectError`
 * Stop exporting all of the internal `hkd*` functions and `PParamsHKD` from
   `Cardano.Ledger.Alonzo.Core`.

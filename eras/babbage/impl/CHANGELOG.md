@@ -2,6 +2,7 @@
 
 ## 1.6.0.0
 
+* Use `getAlonzoWitsVKeyNeeded` for `getWitsVKeyNeeded`
 * Add `ToJSON` for `BabbageContextError`
 * `FromJSON` instance for `PParamsUPdate`: #3949
 * Fixed JSON serialization of `PParams` to include the `protocolVersion`: #3953
