@@ -63,6 +63,7 @@ library
         Cardano.Ledger.SafeHash
         Cardano.Ledger.Serialization
         Cardano.Ledger.Slot
+        Cardano.Ledger.Tools
         Cardano.Ledger.TxIn
         Cardano.Ledger.UTxO
         Cardano.Ledger.Val

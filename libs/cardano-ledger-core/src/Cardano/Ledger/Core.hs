@@ -48,9 +48,6 @@ module Cardano.Ledger.Core (
   RewardType (..),
   Reward (..),
 
-  -- * Helpers
-  setMinFeeTx,
-
   -- * Re-exports
   module Cardano.Ledger.Hashes,
   module Cardano.Ledger.Core.Era,
@@ -165,17 +162,6 @@ class
     EraTx (PreviousEra era) =>
     Tx (PreviousEra era) ->
     Either (TxUpgradeError era) (Tx era)
-
--- | Calculate and update the fee in the transaction until it has the smallest possible
--- value according to the settings in the protocol parameters.
-setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
-setMinFeeTx pp tx =
-  let curMinFee = getMinFeeTx pp tx
-      curFee = tx ^. bodyTxL . feeTxBodyL
-      modifiedTx = tx & bodyTxL . feeTxBodyL .~ curMinFee
-   in if curFee == curMinFee
-        then tx
-        else setMinFeeTx pp modifiedTx
 
 class
   ( EraTxOut era

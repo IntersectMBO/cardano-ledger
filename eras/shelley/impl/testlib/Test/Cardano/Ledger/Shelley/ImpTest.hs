@@ -119,6 +119,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.Shelley.TxCert
+import Cardano.Ledger.Tools (setMinFeeTx)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin)
