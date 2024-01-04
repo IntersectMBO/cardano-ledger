@@ -22,6 +22,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   submitFailingProposal,
   trySubmitGovAction,
   trySubmitProposal,
+  submitTreasuryWithdrawals,
   submitVote,
   submitVote_,
   submitYesVote_,
@@ -85,6 +86,7 @@ import Cardano.Ledger.Conway.Governance (
   cgDRepPulsingStateL,
   cgEnactStateL,
   ensCommitteeL,
+  ensConstitutionL,
   ensCurPParamsL,
   epochStateDRepPulsingStateL,
   finishDRepPulser,
@@ -131,6 +133,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   lsCertStateL,
   lsUTxOStateL,
   nesELL,
+  nesEpochStateL,
   nesEsL,
   nesPdL,
   newEpochStateGovStateL,
@@ -438,6 +441,20 @@ submitGovAction_ ::
   GovAction era ->
   ImpTestM era ()
 submitGovAction_ = void . submitGovAction
+
+submitTreasuryWithdrawals ::
+  ( ShelleyEraImp era
+  , ConwayEraTxBody era
+  , ConwayEraGov era
+  ) =>
+  [(RewardAcnt (EraCrypto era), Coin)] ->
+  ImpTestM era (GovActionId (EraCrypto era))
+submitTreasuryWithdrawals wdrls = do
+  policy <-
+    getsNES $
+      nesEpochStateL . epochStateGovStateL . enactStateGovStateL . ensConstitutionL . constitutionScriptL
+  let govAction = TreasuryWithdrawals (Map.fromList wdrls) policy
+  submitGovAction govAction
 
 getEnactState :: ConwayEraGov era => ImpTestM era (EnactState era)
 getEnactState = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . enactStateGovStateL

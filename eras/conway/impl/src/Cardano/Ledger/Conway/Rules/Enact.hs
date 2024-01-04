@@ -67,7 +67,7 @@ enactmentTransition = do
   TRC ((), st, EnactSignal govActionId act) <- judgmentContext
 
   case act of
-    ParameterChange _ ppup ->
+    ParameterChange _ ppup _ ->
       pure $
         st
           & ensCurPParamsL %~ (`applyPPUpdates` ppup)
@@ -77,7 +77,7 @@ enactmentTransition = do
         st
           & ensProtVerL .~ pv
           & ensPrevHardForkL .~ SJust (PrevGovActionId govActionId)
-    TreasuryWithdrawals wdrls -> do
+    TreasuryWithdrawals wdrls _ -> do
       let wdrlsAmount = fold wdrls
           wdrlsNoNetworkId = Map.mapKeys getRwdCred wdrls
       pure

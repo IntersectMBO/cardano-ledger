@@ -24,8 +24,8 @@ spec =
   describe "ENACT" $ do
     it "TreasuryWithdrawal" $ do
       rewardAcount1 <- registerRewardAccount
-      let govAction = TreasuryWithdrawals [(rewardAcount1, Coin 666)]
-      govActionId <- submitGovAction govAction
+      govActionId <- submitTreasuryWithdrawals [(rewardAcount1, Coin 666)]
+      GovActionState {gasAction = govAction} <- getGovActionState govActionId
       enactStateInit <- use $ impNESL . newEpochStateGovStateL . cgEnactStateL
       let signal =
             EnactSignal
@@ -44,8 +44,8 @@ spec =
             [ (rewardAcount1, Coin 111)
             , (rewardAcount2, Coin 222)
             ]
-          govAction' = TreasuryWithdrawals withdrawals'
-      govActionId' <- submitGovAction govAction'
+      govActionId' <- submitTreasuryWithdrawals withdrawals'
+      GovActionState {gasAction = govAction'} <- getGovActionState govActionId'
       let signal' =
             EnactSignal
               { esGovActionId = govActionId'

@@ -435,9 +435,10 @@ ratifyStateCheckPreds p = enactStateCheckPreds p
 
 govEnvT :: forall era. Reflect era => PropEnv era -> RootTarget era (GovEnv era) (GovEnv era)
 govEnvT PropEnv {..} =
-  Invert "GovEnv" (typeRep @(GovEnv era)) (\txid pgovact -> GovEnv txid peEpochNo pePParams pgovact)
+  Invert "GovEnv" (typeRep @(GovEnv era)) (\txid pgovact policy -> GovEnv txid peEpochNo pePParams pgovact $ maybeToStrictMaybe policy)
     :$ Lensed txIdV (lens geTxId $ \ge x -> ge {geTxId = x})
     :$ Shift prevGovActionIdsT (lens gePrevGovActionIds $ \ge x -> ge {gePrevGovActionIds = x})
+    :$ Lensed gaPolicy (lens (strictMaybeToMaybe . gePPolicy) $ \ge x -> ge {gePPolicy = maybeToStrictMaybe x})
 
 txIdV :: Reflect era => Term era (TxId (EraCrypto era))
 txIdV = Var $ V "txId" TxIdR No

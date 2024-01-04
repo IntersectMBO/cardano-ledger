@@ -1,11 +1,9 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -20,10 +18,14 @@ import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   ProposalProcedure (..),
   Voter (..),
+  cgEnactStateL,
+  ensConstitutionL,
  )
 import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
+  epochStateGovStateL,
   esAccountStateL,
+  nesEpochStateL,
   nesEsL,
  )
 import Cardano.Ledger.Val
@@ -99,8 +101,7 @@ spec =
 
       rewardAcount <- registerRewardAccount
       let withdrawalAmount = Coin 666
-          govAction = TreasuryWithdrawals [(rewardAcount, withdrawalAmount)]
-      govActionId <- submitGovAction govAction
+      govActionId <- submitTreasuryWithdrawals [(rewardAcount, withdrawalAmount)]
 
       submitYesVote_ (DRepVoter dRepCred) govActionId
       submitYesVote_ (CommitteeVoter committeeHotCred) govActionId
@@ -122,12 +123,15 @@ spec =
 
       getRewardAccountAmount rewardAcount `shouldReturn` Coin 0
 
+      policy <-
+        getsNES $
+          nesEpochStateL . epochStateGovStateL . cgEnactStateL . ensConstitutionL . constitutionScriptL
       govActionId <-
         submitProposal $
           ProposalProcedure
             { pProcDeposit = deposit
             , pProcReturnAddr = rewardAcount
-            , pProcGovAction = TreasuryWithdrawals [(rewardAcount, Coin 123456789)]
+            , pProcGovAction = TreasuryWithdrawals [(rewardAcount, Coin 123456789)] policy
             , pProcAnchor = def
             }
       expectPresentGovActionId govActionId

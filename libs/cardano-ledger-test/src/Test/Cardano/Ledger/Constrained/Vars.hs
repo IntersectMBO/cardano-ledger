@@ -2161,17 +2161,30 @@ gaAddMember = Var (V "gaAddMember" (MapR CommColdCredR EpochR) No)
 gaThreshold :: Era era => Term era UnitInterval
 gaThreshold = Var (V "gaThreshold" UnitIntervalR No)
 
-gaConstitution :: Era era => Term era (Constitution era)
-gaConstitution = Var (V "gaConstitution" ConstitutionR No)
+gaPolicy :: Era era => Term era (Maybe (ScriptHash (EraCrypto era)))
+gaPolicy = Var (V "gaPolicy" (MaybeR ScriptHashR) No)
+
+gaConstitutionAnchor :: Era era => Term era (Anchor (EraCrypto era))
+gaConstitutionAnchor = Var (V "gaConstitutionAnchor" AnchorR No)
+
+gaNewConstitution :: Era era => Term era (Constitution era)
+gaNewConstitution = Var (V "gaNewConstitution" ConstitutionR No)
 
 -- ===================================
 -- The partial Targets, one for each constructor of GovAction
 
+constitutionT :: forall era. Reflect era => RootTarget era (Constitution era) (Constitution era)
+constitutionT =
+  Invert "Constitution" (typeRep @(Constitution era)) (\x y -> Constitution x $ maybeToStrictMaybe y)
+    :$ Lensed gaConstitutionAnchor constitutionAnchorL
+    :$ Lensed gaPolicy (constitutionScriptL . strictMaybeToMaybeL)
+
 parameterChangeT :: forall era. Reflect era => RootTarget era (GovAction era) (GovAction era)
 parameterChangeT =
-  Invert "ParameterChange" (typeRep @(GovAction era)) (\x y -> ParameterChange (liftId x) (unPParamsUpdate y))
-    :$ Partial gaPrevId (\case (ParameterChange x _) -> Just $ dropId x; _ -> Nothing)
-    :$ Partial gaPParamsUpdate (\case (ParameterChange _ y) -> Just $ PParamsUpdateF reify y; _ -> Nothing)
+  Invert "ParameterChange" (typeRep @(GovAction era)) (\x y c -> ParameterChange (liftId x) (unPParamsUpdate y) (maybeToStrictMaybe c))
+    :$ Partial gaPrevId (\case (ParameterChange x _ _) -> Just $ dropId x; _ -> Nothing)
+    :$ Partial gaPParamsUpdate (\case (ParameterChange _ y _) -> Just $ PParamsUpdateF reify y; _ -> Nothing)
+    :$ Partial gaPolicy (\case (ParameterChange _ _ x) -> Just $ strictMaybeToMaybe x; _ -> Nothing)
 
 hardForkInitiationT :: forall era. Reflect era => RootTarget era (GovAction era) (GovAction era)
 hardForkInitiationT =
@@ -2181,8 +2194,9 @@ hardForkInitiationT =
 
 treasuryWithdrawalsT :: forall era. Reflect era => RootTarget era (GovAction era) (GovAction era)
 treasuryWithdrawalsT =
-  Invert "TreasuryWithdrawals" (typeRep @(GovAction era)) TreasuryWithdrawals
-    :$ Partial gaRewardAcnt (\case (TreasuryWithdrawals x) -> Just x; _ -> Nothing)
+  Invert "TreasuryWithdrawals" (typeRep @(GovAction era)) (\x y -> TreasuryWithdrawals x $ maybeToStrictMaybe y)
+    :$ Partial gaRewardAcnt (\case (TreasuryWithdrawals x _) -> Just x; _ -> Nothing)
+    :$ Partial gaPolicy (\case (TreasuryWithdrawals _ y) -> Just $ strictMaybeToMaybe y; _ -> Nothing)
 
 noConfidenceT :: forall era. Reflect era => RootTarget era (GovAction era) (GovAction era)
 noConfidenceT =
@@ -2201,7 +2215,7 @@ newConstitutionT :: forall era. Reflect era => RootTarget era (GovAction era) (G
 newConstitutionT =
   Invert "NewConstitution" (typeRep @(GovAction era)) (\x y -> NewConstitution (liftId x) y)
     :$ Partial gaPrevId (\case (UpdateCommittee x _ _ _) -> Just $ dropId x; _ -> Nothing)
-    :$ Partial gaConstitution (\case (NewConstitution _ y) -> Just y; _ -> Nothing)
+    :$ Partial gaNewConstitution (\case (NewConstitution _ y) -> Just y; _ -> Nothing)
 
 infoActionT :: forall era. Reflect era => RootTarget era (GovAction era) (GovAction era)
 infoActionT =

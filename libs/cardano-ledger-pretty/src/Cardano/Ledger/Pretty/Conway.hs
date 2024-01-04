@@ -257,11 +257,12 @@ instance PrettyA (PrevGovActionIdsChildren era) where
   prettyA = viaShow
 
 instance PrettyA (PParamsUpdate era) => PrettyA (GovAction era) where
-  prettyA (ParameterChange pgaid ppup) =
+  prettyA (ParameterChange pgaid ppup policy) =
     ppRecord
       "ParameterChange"
       [ ("previous governance action id", prettyA pgaid)
       , ("protocol parameters update", prettyA ppup)
+      , ("policy hash", prettyA policy)
       ]
   prettyA (HardForkInitiation pgaid pv) =
     ppRecord
@@ -269,10 +270,12 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovAction era) where
       [ ("previous governance action id", prettyA pgaid)
       , ("protocol version", prettyA pv)
       ]
-  prettyA (TreasuryWithdrawals ws) =
+  prettyA (TreasuryWithdrawals ws policy) =
     ppRecord
       "TreasuryWithdrawals"
-      [("withdrawals map", prettyA ws)]
+      [ ("withdrawals map", prettyA ws)
+      , ("policy hash", prettyA policy)
+      ]
   prettyA (NoConfidence pgaid) =
     ppRecord "NoConfidence" [("previous governance action id", prettyA pgaid)]
   prettyA (UpdateCommittee pgaid toRemove toAdd qrm) =

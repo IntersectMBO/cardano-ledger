@@ -101,11 +101,13 @@ gov_action =
   // info_action
   ]
 
-parameter_change_action = (0, gov_action_id / null, protocol_param_update)
+policy_hash = scripthash
+
+parameter_change_action = (0, gov_action_id / null, protocol_param_update, policy_hash / null)
 
 hard_fork_initiation_action = (1, gov_action_id / null, [protocol_version])
 
-treasury_withdrawals_action = (2, { reward_account => coin })
+treasury_withdrawals_action = (2, { reward_account => coin }, policy_hash / null)
 
 no_confidence = (3, gov_action_id / null)
 

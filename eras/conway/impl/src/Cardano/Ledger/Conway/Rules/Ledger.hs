@@ -40,6 +40,7 @@ import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   GovProcedures (..),
   enactStateGovStateL,
+  ensConstitutionL,
   ensPrevGovActionIdsChildrenL,
   ensPrevGovActionIdsL,
   proposalsGovStateL,
@@ -300,6 +301,7 @@ ledgerTransition = do
                   currentEpoch
                   pp
                   (utxoState ^. utxosGovStateL . enactStateGovStateL . ensPrevGovActionIdsL)
+                  (utxoState ^. utxosGovStateL . enactStateGovStateL . ensConstitutionL . constitutionScriptL)
               , GovRuleState
                   (utxoState ^. utxosGovStateL . proposalsGovStateL)
                   (utxoState ^. utxosGovStateL . enactStateGovStateL . ensPrevGovActionIdsChildrenL)
