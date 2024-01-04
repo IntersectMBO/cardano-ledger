@@ -116,6 +116,7 @@ data GovEnv era = GovEnv
   , geEpoch :: !EpochNo
   , gePParams :: !(PParams era)
   , gePrevGovActionIds :: !(PrevGovActionIds era)
+  , gePPolicy :: !(StrictMaybe (ScriptHash (EraCrypto era)))
   }
 
 data GovRuleState era = GovRuleState
@@ -152,6 +153,11 @@ data ConwayGovPredFailure era
       ProtVer
       -- | The ProtVer of the Previous GovAction pointed to by the one proposed
       ProtVer
+  | InvalidPolicyHash
+      -- | The policy script hash in the proposal
+      (StrictMaybe (ScriptHash (EraCrypto era)))
+      -- | The policy script hash of the current constitution
+      (StrictMaybe (ScriptHash (EraCrypto era)))
   deriving (Eq, Show, Generic)
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
@@ -199,6 +205,10 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
           !> To prevgaid
           !> To pv1
           !> To pv2
+      InvalidPolicyHash got expected ->
+        Sum InvalidPolicyHash 11
+          !> To got
+          !> To expected
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -270,7 +280,7 @@ actionWellFormed :: ConwayEraPParams era => GovAction era -> Test (ConwayGovPred
 actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
   where
     isWellFormed = case ga of
-      ParameterChange _ ppd -> ppuWellFormed ppd
+      ParameterChange _ ppd _ -> ppuWellFormed ppd
       _ -> True
 
 mkGovActionState ::
@@ -299,13 +309,21 @@ mkGovActionState actionId deposit returnAddress action expiryInterval curEpoch =
     , gasChildren = mempty
     }
 
+checkPolicy ::
+  StrictMaybe (ScriptHash (EraCrypto era)) ->
+  StrictMaybe (ScriptHash (EraCrypto era)) ->
+  Test (ConwayGovPredFailure era)
+checkPolicy expectedPolicyHash actualPolicyHash =
+  failureUnless (actualPolicyHash == expectedPolicyHash) $
+    InvalidPolicyHash actualPolicyHash expectedPolicyHash
+
 govTransition ::
   forall era.
   ConwayEraPParams era =>
   TransitionRule (ConwayGOV era)
 govTransition = do
   TRC
-    ( GovEnv txid currentEpoch pp prevGovActionIds
+    ( GovEnv txid currentEpoch pp prevGovActionIds constitutionPolicy
       , GovRuleState st prevChildren
       , gp
       ) <-
@@ -341,11 +359,15 @@ govTransition = do
 
         -- Treasury withdrawal return address and committee well-formedness checks
         case pProcGovAction of
-          TreasuryWithdrawals wdrls ->
+          TreasuryWithdrawals wdrls proposalPolicy ->
             let mismatchedAccounts =
                   Set.filter ((/= expectedNetworkId) . getRwdNetwork) $ Map.keysSet wdrls
-             in Set.null mismatchedAccounts
-                  ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
+             in do
+                  Set.null mismatchedAccounts
+                    ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
+
+                  -- Policy check
+                  runTest $ checkPolicy @era constitutionPolicy proposalPolicy
           UpdateCommittee _mPrevGovActionId membersToRemove membersToAdd _qrm -> do
             checkConflictingUpdate
             checkExpirationEpoch
@@ -359,6 +381,8 @@ govTransition = do
               checkExpirationEpoch =
                 let invalidMembers = Map.filter (<= currentEpoch) membersToAdd
                  in Map.null invalidMembers ?! ExpirationEpochTooSmall invalidMembers
+          ParameterChange _ _ proposalPolicy ->
+            runTest $ checkPolicy @era constitutionPolicy proposalPolicy
           _ -> pure ()
 
         -- Ancestry checks and accept proposal

@@ -1,12 +1,9 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.UTxO (
@@ -28,6 +25,8 @@ import Cardano.Ledger.Babbage.UTxO (
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (
+  GovAction (..),
+  ProposalProcedure (..),
   Voter (..),
   VotingProcedures (..),
  )
@@ -38,8 +37,10 @@ import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov, shelleyProducedValue)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
 import Cardano.Ledger.Val (Val (..), inject)
+import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
+import Data.Maybe.Strict (strictMaybeToMaybe)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 
@@ -48,7 +49,7 @@ getConwayScriptsNeeded ::
   UTxO era ->
   TxBody era ->
   AlonzoScriptsNeeded era
-getConwayScriptsNeeded utxo txb = getAlonzoScriptsNeeded utxo txb <> voterScripts
+getConwayScriptsNeeded utxo txb = getAlonzoScriptsNeeded utxo txb <> voterScripts <> policyScripts
   where
     getMaybeScriptHash voter =
       (,) (error "TODO: Implement VoterScriptPurpose")
@@ -60,6 +61,19 @@ getConwayScriptsNeeded utxo txb = getAlonzoScriptsNeeded utxo txb <> voterScript
     voterScripts =
       AlonzoScriptsNeeded . mapMaybe getMaybeScriptHash . Map.keys . unVotingProcedures $
         txb ^. votingProceduresTxBodyL
+
+    proposalPolicy ProposalProcedure {pProcGovAction} =
+      case pProcGovAction of
+        ParameterChange _ _ p -> strictMaybeToMaybe p
+        TreasuryWithdrawals _ p -> strictMaybeToMaybe p
+        _ -> Nothing
+
+    proposalScript =
+      fmap (error "TODO: Implement ProposeScriptPurpose",) . proposalPolicy
+
+    policyScripts =
+      AlonzoScriptsNeeded . mapMaybe proposalScript . toList $
+        txb ^. proposalProceduresTxBodyL
 
 conwayProducedValue ::
   ConwayEraTxBody era =>

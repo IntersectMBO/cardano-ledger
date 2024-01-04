@@ -21,6 +21,7 @@ import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
  )
+import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Control.Monad (replicateM_)
 import Control.State.Transition.Extended (PredicateFailure)
@@ -31,6 +32,7 @@ import Data.Maybe
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
+import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
@@ -222,6 +224,78 @@ spec =
           rsEnacted pulserRatifyState `shouldBe` Set.empty
           enactState <- getsNES $ newEpochStateGovStateL . cgEnactStateL
           rsEnactState pulserRatifyState `shouldBe` enactState
+
+      xit "policy is respected by proposals" $ do
+        let
+          scriptHash = hashScript @era $ alwaysSucceeds @'PlutusV3 0
+          wrongScriptHash = hashScript @era $ alwaysSucceeds @'PlutusV3 1
+        modifyNES $
+          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
+            .~ Constitution def (SJust scriptHash)
+        pp <- getsNES $ nesEsL . curPParamsEpochStateL
+        impAnn "ParameterChange with correct policy succeeds" $ do
+          let
+            pparamsUpdate =
+              def
+                & ppuCommitteeMinSizeL .~ SJust 1
+          rewardAccount <- registerRewardAccount
+          void $
+            submitProposal
+              ProposalProcedure
+                { pProcReturnAddr = rewardAccount
+                , pProcGovAction = ParameterChange SNothing pparamsUpdate (SJust scriptHash)
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = def
+                }
+
+        impAnn "TreasuryWithdrawals with correct policy succeeds" $ do
+          rewardAccount <- registerRewardAccount
+          let
+            withdrawals =
+              Map.fromList
+                [ (rewardAccount, Coin 1000)
+                ]
+          void $
+            submitProposal
+              ProposalProcedure
+                { pProcReturnAddr = rewardAccount
+                , pProcGovAction = TreasuryWithdrawals withdrawals (SJust scriptHash)
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = def
+                }
+
+        impAnn "ParameterChange with invalid policy succeeds" $ do
+          rewardAccount <- registerRewardAccount
+          let
+            pparamsUpdate =
+              def
+                & ppuCommitteeMinSizeL .~ SJust 2
+          res <-
+            trySubmitProposal
+              ProposalProcedure
+                { pProcReturnAddr = rewardAccount
+                , pProcGovAction = ParameterChange SNothing pparamsUpdate (SJust wrongScriptHash)
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = def
+                }
+          res `shouldBeLeft` []
+
+        impAnn "TreasuryWithdrawals with invalid policy succeeds" $ do
+          rewardAccount <- registerRewardAccount
+          let
+            withdrawals =
+              Map.fromList
+                [ (rewardAccount, Coin 1000)
+                ]
+          res <-
+            trySubmitProposal
+              ProposalProcedure
+                { pProcReturnAddr = rewardAccount
+                , pProcGovAction = TreasuryWithdrawals withdrawals (SJust wrongScriptHash)
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = def
+                }
+          res `shouldBeLeft` []
 
     describe "DRep expiry" $ do
       it "is updated based on to number of dormant epochs" $ do

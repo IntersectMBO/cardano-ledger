@@ -228,13 +228,13 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionState e
   arbitrary = genGovActionStateFromAction =<< arbitrary
 
 genParameterChange :: (Era era, Arbitrary (PParamsUpdate era)) => Gen (GovAction era)
-genParameterChange = ParameterChange <$> arbitrary <*> arbitrary
+genParameterChange = ParameterChange <$> arbitrary <*> arbitrary <*> arbitrary
 
 genHardForkInitiation :: Era era => Gen (GovAction era)
 genHardForkInitiation = HardForkInitiation <$> arbitrary <*> arbitrary
 
 genTreasuryWithdrawals :: Era era => Gen (GovAction era)
-genTreasuryWithdrawals = TreasuryWithdrawals <$> arbitrary
+genTreasuryWithdrawals = TreasuryWithdrawals <$> arbitrary <*> arbitrary
 
 genNoConfidence :: Era era => Gen (GovAction era)
 genNoConfidence = NoConfidence <$> arbitrary
@@ -334,6 +334,7 @@ instance (Era era, Arbitrary (PParamsHKD Identity era)) => Arbitrary (GovEnv era
   arbitrary =
     GovEnv
       <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

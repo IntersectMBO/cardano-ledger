@@ -332,11 +332,11 @@ addToEnactedPrevGovActionIdsChildren ::
   Maybe (PrevGovActionIdsChildren era)
 addToEnactedPrevGovActionIdsChildren gas PrevGovActionIds {..} children =
   case gas ^. gasActionL of
-    ParameterChange prev _ ->
+    ParameterChange prev _ _ ->
       guard (pgaPParamUpdate == prev) $> update pgacPParamUpdateL
     HardForkInitiation prev _ ->
       guard (pgaHardFork == prev) $> update pgacHardForkL
-    TreasuryWithdrawals _ -> Just children
+    TreasuryWithdrawals _ _ -> Just children
     NoConfidence prev ->
       guard (pgaCommittee == prev) $> update pgacCommitteeL
     UpdateCommittee prev _ _ _ ->
@@ -362,7 +362,7 @@ proposalsAddChild ::
   Maybe (Proposals era)
 proposalsAddChild gas proposals@(Proposals omap) =
   case gas ^. gasActionL of
-    ParameterChange prev _ ->
+    ParameterChange prev _ _ ->
       updateProposals prev $ \case
         ParameterChange {} -> True
         _ -> False
@@ -370,7 +370,7 @@ proposalsAddChild gas proposals@(Proposals omap) =
       updateProposals prev $ \case
         HardForkInitiation {} -> True
         _ -> False
-    TreasuryWithdrawals _ -> Just proposals
+    TreasuryWithdrawals _ _ -> Just proposals
     NoConfidence prev ->
       updateProposals prev $ \case
         NoConfidence {} -> True

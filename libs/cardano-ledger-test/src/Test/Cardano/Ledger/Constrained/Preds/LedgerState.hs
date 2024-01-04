@@ -307,23 +307,23 @@ mainGov :: IO ()
 mainGov = demoGov (Conway Standard) Interactive
 
 setActionId :: GovAction era -> Maybe (GovActionId (EraCrypto era)) -> GovAction era
-setActionId (ParameterChange _ pp) x = ParameterChange (liftId x) pp
+setActionId (ParameterChange _ pp p) x = ParameterChange (liftId x) pp p
 setActionId (HardForkInitiation _ y) x = HardForkInitiation (liftId x) y
 setActionId (UpdateCommittee _ w y z) x = UpdateCommittee (liftId x) w y z
 setActionId (NewConstitution _ y) x = NewConstitution (liftId x) y
 setActionId InfoAction _ = InfoAction
 setActionId (NoConfidence _) x = NoConfidence (liftId x)
-setActionId x@(TreasuryWithdrawals _) _ = x
+setActionId x@(TreasuryWithdrawals _ _) _ = x
 
 actionIdL :: Lens' (GovAction era) (Maybe (GovActionId (EraCrypto era)))
 actionIdL = lens getter setter
   where
-    getter (ParameterChange x _) = dropId x
+    getter (ParameterChange x _ _) = dropId x
     getter (HardForkInitiation x _) = dropId x
     getter (UpdateCommittee x _ _ _) = dropId x
     getter (NewConstitution x _) = dropId x
     getter (NoConfidence x) = dropId x
-    getter (TreasuryWithdrawals _) = Nothing
+    getter (TreasuryWithdrawals _ _) = Nothing
     getter InfoAction = Nothing
     setter ga mid = setActionId ga mid
 
@@ -360,7 +360,7 @@ genGovActionStates proof gaids = do
 
 genGovAction :: forall era. Era era => Proof era -> GovActionPurpose -> Maybe (GovActionId (EraCrypto era)) -> Gen (GovAction era)
 genGovAction proof purpose gaid = case purpose of
-  PParamUpdatePurpose -> ParameterChange (liftId gaid) <$> (unPParamsUpdate <$> genPParamsUpdate proof)
+  PParamUpdatePurpose -> ParameterChange (liftId gaid) <$> (unPParamsUpdate <$> genPParamsUpdate proof) <*> arbitrary
   HardForkPurpose -> HardForkInitiation (liftId gaid) <$> arbitrary
   CommitteePurpose ->
     frequency

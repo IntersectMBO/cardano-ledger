@@ -1331,6 +1331,8 @@ ppConwayGovPredFailure x = case x of
     ppSexp "VotingOnExpiredGovAction" [ppMap pcGovActionId pcVoter m]
   ProposalCantFollow s1 p1 p2 ->
     ppSexp "ProposalCantFollow" [ppStrictMaybe pcPrevGovActionId s1, ppProtVer p1, ppProtVer p2]
+  InvalidPolicyHash a b ->
+    ppSexp "InvalidPolicyHash" [ppStrictMaybe prettyA a, ppStrictMaybe prettyA b]
 
 instance PrettyA (ConwayGovPredFailure era) where
   prettyA = ppConwayGovPredFailure
@@ -2650,11 +2652,12 @@ instance PrettyA (Committee era) where
 
 pcGovAction :: GovAction era -> PDoc
 pcGovAction x = case x of
-  (ParameterChange pgaid _ppup) ->
+  (ParameterChange pgaid _ppup policy) ->
     ppRecord
       "ParameterChange"
       [ ("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)
       , ("PPUpdate", ppString "(PParamsUpdate ...)")
+      , ("Policy", ppStrictMaybe prettyA policy)
       ]
   (HardForkInitiation pgaid pv) ->
     ppRecord
@@ -2662,10 +2665,12 @@ pcGovAction x = case x of
       [ ("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)
       , ("ProtVer", ppString (showProtver pv))
       ]
-  (TreasuryWithdrawals ws) ->
-    ppSexp
+  (TreasuryWithdrawals ws policy) ->
+    ppRecord
       "TreasuryWithdrawals"
-      [ppMap pcRewardAcnt pcCoin ws]
+      [ ("Withdrawals", ppMap pcRewardAcnt pcCoin ws)
+      , ("Policy", ppStrictMaybe prettyA policy)
+      ]
   (NoConfidence pgaid) ->
     ppRecord "NoConfidence" [("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)]
   (UpdateCommittee pgaid toRemove toAdd quor) ->

@@ -839,7 +839,7 @@ votingDRepThresholdInternal pp isElectedCommittee action =
               else dvtCommitteeNoConfidence
         NewConstitution {} -> VotingThreshold dvtUpdateToConstitution
         HardForkInitiation {} -> VotingThreshold dvtHardForkInitiation
-        ParameterChange _ ppu -> VotingThreshold $ pparamsUpdateThreshold pp ppu
+        ParameterChange _ ppu _ -> VotingThreshold $ pparamsUpdateThreshold pp ppu
         TreasuryWithdrawals {} -> VotingThreshold dvtTreasuryWithdrawal
         InfoAction {} -> NoVotingThreshold
 

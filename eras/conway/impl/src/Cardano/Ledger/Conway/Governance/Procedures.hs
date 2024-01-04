@@ -572,6 +572,8 @@ data GovAction era
       !(StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
       -- | Proposed changes to PParams
       !(PParamsUpdate era)
+      -- | Policy hash protection
+      !(StrictMaybe (ScriptHash (EraCrypto era)))
   | HardForkInitiation
       -- | Previous governance action id of `HardForkInitiation` type, which corresponds
       -- to `HardForkPurpose`
@@ -581,6 +583,8 @@ data GovAction era
   | TreasuryWithdrawals
       -- | Proposed treasury withdrawals
       !(Map (RewardAcnt (EraCrypto era)) Coin)
+      -- | Policy hash protection
+      !(StrictMaybe (ScriptHash (EraCrypto era)))
   | NoConfidence
       -- | Previous governance action id of `NoConfidence` or `UpdateCommittee` type, which
       -- corresponds to `CommitteePurpose`
@@ -616,9 +620,9 @@ instance EraPParams era => ToJSON (GovAction era)
 instance EraPParams era => DecCBOR (GovAction era) where
   decCBOR =
     decode $ Summands "GovAction" $ \case
-      0 -> SumD ParameterChange <! D (decodeNullStrictMaybe decCBOR) <! From
+      0 -> SumD ParameterChange <! D (decodeNullStrictMaybe decCBOR) <! From <! D (decodeNullStrictMaybe decCBOR)
       1 -> SumD HardForkInitiation <! D (decodeNullStrictMaybe decCBOR) <! From
-      2 -> SumD TreasuryWithdrawals <! From
+      2 -> SumD TreasuryWithdrawals <! From <! D (decodeNullStrictMaybe decCBOR)
       3 -> SumD NoConfidence <! D (decodeNullStrictMaybe decCBOR)
       4 -> SumD UpdateCommittee <! D (decodeNullStrictMaybe decCBOR) <! From <! From <! From
       5 -> SumD NewConstitution <! D (decodeNullStrictMaybe decCBOR) <! From
@@ -629,12 +633,12 @@ instance EraPParams era => DecCBOR (GovAction era) where
 instance EraPParams era => EncCBOR (GovAction era) where
   encCBOR =
     encode . \case
-      ParameterChange gid ppup ->
-        Sum ParameterChange 0 !> E (encodeNullStrictMaybe encCBOR) gid !> To ppup
+      ParameterChange gid ppup pol ->
+        Sum ParameterChange 0 !> E (encodeNullStrictMaybe encCBOR) gid !> To ppup !> E (encodeNullStrictMaybe encCBOR) pol
       HardForkInitiation gid pv ->
         Sum HardForkInitiation 1 !> E (encodeNullStrictMaybe encCBOR) gid !> To pv
-      TreasuryWithdrawals ws ->
-        Sum TreasuryWithdrawals 2 !> To ws
+      TreasuryWithdrawals ws pol ->
+        Sum TreasuryWithdrawals 2 !> To ws !> E (encodeNullStrictMaybe encCBOR) pol
       NoConfidence gid ->
         Sum NoConfidence 3 !> E (encodeNullStrictMaybe encCBOR) gid
       UpdateCommittee gid old new q ->

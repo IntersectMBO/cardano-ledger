@@ -288,7 +288,7 @@ reorderActions :: StrictSeq (GovActionState era) -> StrictSeq (GovActionState er
 reorderActions = Seq.fromList . sortOn (actionPriority . gasAction) . toList
 
 withdrawalCanWithdraw :: GovAction era -> Coin -> Bool
-withdrawalCanWithdraw (TreasuryWithdrawals m) treasury =
+withdrawalCanWithdraw (TreasuryWithdrawals m _) treasury =
   Map.foldr' (<+>) zero m <= treasury
 withdrawalCanWithdraw _ _ = True
 
@@ -357,9 +357,9 @@ ratifyTransition = do
 --   does match the last one of the same purpose that was enacted.
 prevActionAsExpected :: forall era. GovAction era -> PrevGovActionIds era -> Bool
 prevActionAsExpected = \case
-  ParameterChange prev _ -> (prev ==) . pgaPParamUpdate
+  ParameterChange prev _ _ -> (prev ==) . pgaPParamUpdate
   HardForkInitiation prev _ -> (prev ==) . pgaHardFork
-  TreasuryWithdrawals _ -> const True
+  TreasuryWithdrawals _ _ -> const True
   NoConfidence prev -> (prev ==) . pgaCommittee
   UpdateCommittee prev _ _ _ -> (prev ==) . pgaCommittee
   NewConstitution prev _ -> (prev ==) . pgaConstitution
@@ -370,7 +370,7 @@ getSiblings :: PrevGovActionIdsChildren era -> GovAction era -> Set.Set (GovActi
 getSiblings pgac = \case
   ParameterChange {} -> Set.map unPrevGovActionId (pgac ^. pgacPParamUpdateL)
   HardForkInitiation {} -> Set.map unPrevGovActionId (pgac ^. pgacHardForkL)
-  TreasuryWithdrawals _ -> mempty
+  TreasuryWithdrawals _ _ -> mempty
   NoConfidence {} -> Set.map unPrevGovActionId (pgac ^. pgacCommitteeL)
   UpdateCommittee {} -> Set.map unPrevGovActionId (pgac ^. pgacCommitteeL)
   NewConstitution {} -> Set.map unPrevGovActionId (pgac ^. pgacConstitutionL)
@@ -384,7 +384,7 @@ updatePrevGovActionIdsChildren gas pgac =
   case gas ^. gasActionL of
     ParameterChange {} -> pgac & pgacPParamUpdateL .~ Set.map coerce children
     HardForkInitiation {} -> pgac & pgacHardForkL .~ Set.map coerce children
-    TreasuryWithdrawals _ -> pgac
+    TreasuryWithdrawals _ _ -> pgac
     NoConfidence {} -> pgac & pgacCommitteeL .~ Set.map coerce children
     UpdateCommittee {} -> pgac & pgacCommitteeL .~ Set.map coerce children
     NewConstitution {} -> pgac & pgacConstitutionL .~ Set.map coerce children

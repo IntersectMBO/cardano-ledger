@@ -2,6 +2,9 @@
 
 ## 1.12.0.0
 
+* Add a policy field to `ParameterChange` and `TreasuryWithdrawals` constructors
+  of `GovAction`
+* Add `InvalidPolicyHash` to `ConwayGovPredFailure`
 * Add `ToJSON` instance for `ConwayContextError`, `ConwayTxCert`, `ConwayDelegCert`,
   `Delegatee` and `ConwayGovCert`
 * Add `forceDRepPulsingState`
@@ -44,6 +47,7 @@
 
 ### `testlib`
 
+* Add `submitTreasuryWithdrawals`
 * Remove `Test.Cardano.Ledger.Conway.PParamsSpec` and replace the unit test it contained
   with a new property test in `Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec`
 
