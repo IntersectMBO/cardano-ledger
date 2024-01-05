@@ -1,12 +1,14 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
 -- | This is a module that contains functionality that is not necessary for ledger
--- operation, but is usefuk for testing as well as for downstream users of ledger
+-- operation, but is useful for testing as well as for downstream users of ledger
 module Cardano.Ledger.Tools (
   setMinFeeTx,
+  calcMinFeeTx,
   estimateMinFeeTx,
   addDummyWitsTx,
 )
@@ -14,6 +16,7 @@ where
 
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN.Class (sizeSigDSIGN, sizeVerKeyDSIGN)
+import Cardano.Ledger.Address (BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (byronProtVer, decodeFull', serialize')
 import Cardano.Ledger.Coin (Coin)
@@ -25,9 +28,14 @@ import Cardano.Ledger.Keys (
   KeyRole (Witness),
   VKey,
   WitVKey (..),
+  asWitness,
  )
+import Cardano.Ledger.UTxO (EraUTxO (getWitsVKeyNeeded), UTxO (..))
 import Data.Bits (shiftR)
 import qualified Data.ByteString as BS
+import Data.Default.Class (def)
+import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import Data.Proxy
 import qualified Data.Set as Set
 import Lens.Micro
@@ -46,6 +54,41 @@ setMinFeeTx pp tx =
    in if curFee == curMinFee
         then tx
         else setMinFeeTx pp modifiedTx
+
+calcMinFeeTx ::
+  forall era.
+  EraUTxO era =>
+  -- | All relevant TxOuts for this transaction. In other words `TxIn`s produced by
+  -- `allInputsTxBodyF` should be present in this `UTxO` map, however this is not
+  -- checked.
+  UTxO era ->
+  -- | The current protocol parameters.
+  PParams era ->
+  -- | The transaction.
+  Tx era ->
+  -- | Number of extra KeyHash witnesses that will be supplied for satisfying native
+  -- scripts. It is impossible to know how many of these is required without knowing the
+  -- actual witnesses supplied and the time when the transaction will be
+  -- submitted. Therefore we put this burden on the user.
+  --
+  -- This number can also be used to specify all of the redundant extra key witnesses that
+  -- will be supplied.
+  Int ->
+  -- | The required minimum fee.
+  Coin
+calcMinFeeTx utxo pp tx extraKeyWitsCount =
+  setMinFeeTx pp tx' ^. bodyTxL . feeTxBodyL
+  where
+    tx' = addDummyWitsTx pp tx numKeyWitsRequired $ Map.elems byronAttributes
+    inputs = Set.toList $ tx ^. bodyTxL . spendableInputsTxBodyF
+    getByronAttrs txIn = do
+      txOut <- Map.lookup txIn $ unUTxO utxo
+      ba@(BootstrapAddress bootAddr) <- txOut ^. bootAddrTxOutF
+      pure (asWitness (bootstrapKeyHash ba), Byron.addrAttributes bootAddr)
+    byronAttributes = Map.fromList $ mapMaybe getByronAttrs inputs
+    requiredKeyHashes = getWitsVKeyNeeded def utxo (tx ^. bodyTxL)
+    numKeyWitsRequired =
+      extraKeyWitsCount + Set.size (requiredKeyHashes Set.\\ Map.keysSet byronAttributes)
 
 -- | Estimate a minimum transaction fee for a transaction that does not yet have all of
 -- the `VKey` witnesses. This calculation is not very accurate in estimating Byron
@@ -73,10 +116,11 @@ estimateMinFeeTx pp tx numKeyWits numByronKeyWits = setMinFeeTx pp tx' ^. bodyTx
     -- accurately. This will over-estimate min fees for byron witnesses in mainnet
     -- transaction by 7 bytes per witness.
     dummyByronAttributes =
-      Byron.AddrAttributes
-        { Byron.aaVKDerivationPath = Nothing
-        , Byron.aaNetworkMagic = Byron.NetworkTestnet maxBound
-        }
+      Byron.mkAttributes
+        Byron.AddrAttributes
+          { Byron.aaVKDerivationPath = Nothing
+          , Byron.aaNetworkMagic = Byron.NetworkTestnet maxBound
+          }
 
 -- | Create dummy witnesses and add them to the transaction
 addDummyWitsTx ::
@@ -89,7 +133,7 @@ addDummyWitsTx ::
   -- | The number of key witnesses still to be added to the transaction.
   Int ->
   -- | List of attributes from TxOuts with Byron addresses that are being spent
-  [Byron.AddrAttributes] ->
+  [Byron.Attributes Byron.AddrAttributes] ->
   -- | The required minimum fee.
   Tx era
 addDummyWitsTx pp tx numKeyWits byronAttrs =
@@ -121,8 +165,10 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
     chainCode = ChainCode $ BS.replicate 32 0
 
     mkDummyByronKeyWit ::
-      VKey 'Witness (EraCrypto era) -> Byron.AddrAttributes -> BootstrapWitness (EraCrypto era)
+      VKey 'Witness (EraCrypto era) ->
+      Byron.Attributes Byron.AddrAttributes ->
+      BootstrapWitness (EraCrypto era)
     mkDummyByronKeyWit key =
-      BootstrapWitness key dummySig chainCode . serialize' byronProtVer . Byron.mkAttributes
+      BootstrapWitness key dummySig chainCode . serialize' byronProtVer
     dummyByronKeyWits =
       Set.fromList $ zipWith mkDummyByronKeyWit dummyKeys byronAttrs

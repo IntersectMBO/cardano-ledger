@@ -77,17 +77,8 @@ evaluateTransactionBalance ::
   UTxO era ->
   TxBody era ->
   Value era
-evaluateTransactionBalance pp dpstate utxo txBody = consumed <-> produced
-  where
-    produced =
-      balance (txouts txBody)
-        <+> inject (txBody ^. feeTxBodyL <+> totalTxDeposits pp dpstate txBody)
-    consumed =
-      (txBody ^. mintValueTxBodyF)
-        <> balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
-        <> inject (refunds <> withdrawals)
-    refunds = keyTxRefunds pp dpstate txBody
-    withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
+evaluateTransactionBalance pp dpstate utxo txBody =
+  evaluateTransactionBalanceShelley pp dpstate utxo txBody <> (txBody ^. mintValueTxBodyF)
 
 evaluateTransactionBalanceShelley ::
   (EraTxBody era, ShelleyEraTxCert era) =>

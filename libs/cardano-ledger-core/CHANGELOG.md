@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Add `calcMinFeeTx`
 * Add `estimateMinFeeTx`, `addDummyWitsTx` and move `setMinFeeTx` to `Cardano.Ledger.Tools`
 * Add `kindObject`
 * Add `ToJSON` instance for `TxOutSource` and `PoolCert`
