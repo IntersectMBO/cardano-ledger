@@ -35,6 +35,7 @@ module Cardano.Ledger.Shelley.TxBody (
   EraIndependentTxBody,
   RewardAcnt (..),
   Withdrawals (..),
+  shelleyGenesisKeyHashCount,
 ) where
 
 import Cardano.Ledger.Address (RewardAcnt (..), Withdrawals (..))
@@ -76,7 +77,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert (..))
 import Cardano.Ledger.Shelley.TxOut ()
 import Cardano.Ledger.Slot (SlotNo (..))
@@ -274,6 +275,8 @@ instance Crypto c => EraTxBody (ShelleyEra c) where
     lensMemoRawType stbrCerts $ \txBodyRaw certs -> txBodyRaw {stbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
+  genesisKeyHashCount = shelleyGenesisKeyHashCount
+
   upgradeTxBody =
     error $
       "Calling this function will cause a compilation error, "
@@ -376,3 +379,10 @@ instance
   hashAnnotated = getMemoSafeHash
 
 -- ===============================================================
+
+-- | Count number of Genesis keys supplied in the `updateTxBodyL` field.
+shelleyGenesisKeyHashCount :: ShelleyEraTxBody era => TxBody era -> Int
+shelleyGenesisKeyHashCount txBody =
+  case txBody ^. updateTxBodyL of
+    SJust (Update (ProposedPPUpdates m) _) -> Map.size m
+    _ -> 0

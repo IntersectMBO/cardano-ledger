@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add `shelleyGenesisKeyHashCount`
 * Change `PPUP` signal to `StrictMaybe` from `Maybe`
 * Deprecate `txup` function.
 * Prevent instances for `ShelleyEraTxBody` starting with protocol version 9.
