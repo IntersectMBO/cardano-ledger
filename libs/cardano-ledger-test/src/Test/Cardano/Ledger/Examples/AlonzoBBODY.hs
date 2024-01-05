@@ -29,7 +29,7 @@ import Cardano.Ledger.BaseTypes (
   natVersion,
   textToUrl,
  )
-import Cardano.Ledger.Block (Block (..), txid)
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (
   Credential (..),
@@ -601,10 +601,10 @@ testBBodyState pf =
   let utxo =
         UTxO $
           Map.fromList
-            [ (TxIn (txid (validatingBody pf)) minBound, validatingTxOut pf)
-            , (TxIn (txid (validatingBodyWithCert pf)) minBound, validatingTxWithCertOut pf)
-            , (TxIn (txid (validatingBodyWithWithdrawal pf)) minBound, validatingTxWithWithdrawalOut pf)
-            , (TxIn (txid (validatingBodyWithMint pf)) minBound, validatingTxWithMintOut pf)
+            [ (TxIn (txIdTxBody (validatingBody pf)) minBound, validatingTxOut pf)
+            , (TxIn (txIdTxBody (validatingBodyWithCert pf)) minBound, validatingTxWithCertOut pf)
+            , (TxIn (txIdTxBody (validatingBodyWithWithdrawal pf)) minBound, validatingTxWithWithdrawalOut pf)
+            , (TxIn (txIdTxBody (validatingBodyWithMint pf)) minBound, validatingTxWithMintOut pf)
             , (mkGenesisTxIn 11, newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 5)])
             , (mkGenesisTxIn 2, alwaysFailsOutput)
             , (mkGenesisTxIn 13, newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 5)])

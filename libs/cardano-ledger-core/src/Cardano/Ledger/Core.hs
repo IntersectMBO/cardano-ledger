@@ -23,12 +23,14 @@
 module Cardano.Ledger.Core (
   -- * Era-changing types
   EraTx (..),
+  txIdTx,
   EraTxOut (..),
   bootAddrTxOutF,
   coinTxOutL,
   compactCoinTxOutL,
   isAdaOnlyTxOutF,
   EraTxBody (..),
+  txIdTxBody,
   EraTxAuxData (..),
   EraTxWits (..),
   EraScript (..),
@@ -102,7 +104,7 @@ import Cardano.Ledger.Keys.WitVKey (WitVKey)
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
-import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
@@ -607,3 +609,9 @@ class
 
 bBodySize :: forall era. EraSegWits era => ProtVer -> TxSeq era -> Int
 bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
+
+txIdTx :: EraTx era => Tx era -> TxId (EraCrypto era)
+txIdTx tx = txIdTxBody (tx ^. bodyTxL)
+
+txIdTxBody :: EraTxBody era => TxBody era -> TxId (EraCrypto era)
+txIdTxBody = TxId . hashAnnotated

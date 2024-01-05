@@ -32,7 +32,7 @@ import Cardano.Ledger.BaseTypes (
   mkCertIxPartial,
   (⭒),
  )
-import Cardano.Ledger.Block (Block, bheader, txid)
+import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential, Ptr (..))
@@ -288,7 +288,7 @@ aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> feeTx2)
 txbodyEx2 :: forall c. Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx2 =
   ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn (txid (txbodyEx1 @c)) minBound]
+    { stbInputs = Set.fromList [TxIn (txIdTxBody (txbodyEx1 @c)) minBound]
     , stbOutputs =
         StrictSeq.fromList
           [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx2Base)
@@ -459,7 +459,7 @@ aliceCoinEx4Base = aliceCoinEx2Base <-> feeTx4
 txbodyEx4 :: forall c. Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx4 =
   ShelleyTxBody
-    { stbInputs = Set.fromList [TxIn (txid txbodyEx2) minBound]
+    { stbInputs = Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound]
     , stbOutputs = StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx4Base)]
     , stbCerts =
         StrictSeq.fromList
@@ -919,7 +919,7 @@ aliceRetireEpoch = EpochNo 5
 txbodyEx11 :: forall c. Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx11 =
   ShelleyTxBody
-    (Set.fromList [TxIn (txid txbodyEx4) minBound])
+    (Set.fromList [TxIn (txIdTxBody txbodyEx4) minBound])
     (StrictSeq.singleton $ ShelleyTxOut Cast.alicePtrAddr (Val.inject aliceCoinEx11Ptr))
     (StrictSeq.fromList [RetirePoolTxCert (aikColdKeyHash Cast.alicePoolKeys) aliceRetireEpoch])
     (Withdrawals Map.empty)

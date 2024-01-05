@@ -165,7 +165,6 @@ library testlib
         cardano-ledger-byron-test,
         cardano-ledger-shelley,
         containers,
-        deepseq,
         generic-random,
         containers,
         HUnit,

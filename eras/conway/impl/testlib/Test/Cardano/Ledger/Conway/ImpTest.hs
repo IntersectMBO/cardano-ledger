@@ -48,7 +48,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   electBasicCommittee,
 ) where
 
-import Cardano.Crypto.DSIGN.Class (Signable)
+import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.BaseTypes (
@@ -175,6 +175,8 @@ conwayModifyPParams f = modifyNES $ \nes ->
 
 instance
   ( Crypto c
+  , NFData (SigDSIGN (DSIGN c))
+  , NFData (VerKeyDSIGN (DSIGN c))
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (ConwayEra c)
@@ -205,6 +207,8 @@ class
 
 instance
   ( Crypto c
+  , NFData (SigDSIGN (DSIGN c))
+  , NFData (VerKeyDSIGN (DSIGN c))
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ConwayEraImp (ConwayEra c)
@@ -220,16 +224,15 @@ registerDRep ::
 registerDRep = do
   -- Register a DRep
   khDRep <- freshKeyHash
-  _ <-
-    submitTx "register DRep" $
-      mkBasicTx mkBasicTxBody
-        & bodyTxL . certsTxBodyL
-          .~ SSeq.singleton
-            ( RegDRepTxCert
-                (KeyHashObj khDRep)
-                zero
-                SNothing
-            )
+  submitTxAnn_ "Register DRep" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.singleton
+          ( RegDRepTxCert
+              (KeyHashObj khDRep)
+              zero
+              SNothing
+          )
   dreps <- getsNES @era $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   dreps `shouldSatisfy` Map.member (KeyHashObj khDRep)
   pure khDRep
@@ -248,22 +251,21 @@ setupSingleDRep = do
   khDelegator <- freshKeyHash
   kpDelegator <- lookupKeyPair khDelegator
   kpSpending <- lookupKeyPair =<< freshKeyHash
-  _ <-
-    submitTx "Delegate to DRep" $
-      mkBasicTx mkBasicTxBody
-        & bodyTxL . outputsTxBodyL
-          .~ SSeq.singleton
-            ( mkBasicTxOut
-                (mkAddr (kpSpending, kpDelegator))
-                (inject $ Coin 1000000)
-            )
-        & bodyTxL . certsTxBodyL
-          .~ SSeq.fromList
-            [ mkRegDepositDelegTxCert @era
-                (KeyHashObj khDelegator)
-                (DelegVote (DRepCredential $ KeyHashObj khDRep))
-                zero
-            ]
+  submitTxAnn_ "Delegate to DRep" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . outputsTxBodyL
+        .~ SSeq.singleton
+          ( mkBasicTxOut
+              (mkAddr (kpSpending, kpDelegator))
+              (inject $ Coin 1000000)
+          )
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.fromList
+          [ mkRegDepositDelegTxCert @era
+              (KeyHashObj khDelegator)
+              (DelegVote (DRepCredential $ KeyHashObj khDRep))
+              zero
+          ]
   pure khDRep
 
 -- | Submits a transaction with a Vote for the given governance action as
@@ -329,22 +331,23 @@ trySubmitVote ::
         [PredicateFailure (EraRule "LEDGER" era)]
         (TxId (EraCrypto era))
     )
-trySubmitVote vote voter gaId = do
-  trySubmitTx $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . votingProceduresTxBodyL
-        .~ VotingProcedures
-          ( Map.singleton
-              voter
-              ( Map.singleton
-                  gaId
-                  ( VotingProcedure
-                      { vProcVote = vote
-                      , vProcAnchor = SNothing
-                      }
-                  )
-              )
-          )
+trySubmitVote vote voter gaId =
+  fmap (fmap txIdTx) $
+    trySubmitTx $
+      mkBasicTx mkBasicTxBody
+        & bodyTxL . votingProceduresTxBodyL
+          .~ VotingProcedures
+            ( Map.singleton
+                voter
+                ( Map.singleton
+                    gaId
+                    ( VotingProcedure
+                        { vProcVote = vote
+                        , vProcAnchor = SNothing
+                        }
+                    )
+                )
+            )
 
 submitProposal ::
   forall era.
@@ -369,15 +372,15 @@ trySubmitProposal ::
         (GovActionId (EraCrypto era))
     )
 trySubmitProposal proposal = do
-  eitherTxId <-
+  res <-
     trySubmitTx $
       mkBasicTx mkBasicTxBody
         & bodyTxL . proposalProceduresTxBodyL .~ OSet.singleton proposal
-  pure $ case eitherTxId of
-    Right txId ->
+  pure $ case res of
+    Right tx ->
       Right
         GovActionId
-          { gaidTxId = txId
+          { gaidTxId = txIdTx tx
           , gaidGovActionIx = GovActionIx 0
           }
     Left err -> Left err
@@ -633,11 +636,10 @@ registerCommitteeHotKey ::
   ImpTestM era (KeyHash 'HotCommitteeRole (EraCrypto era))
 registerCommitteeHotKey coldKey = do
   hotKey <- freshKeyHash
-  _ <-
-    submitTx "Registering hot key" $
-      mkBasicTx mkBasicTxBody
-        & bodyTxL . certsTxBodyL
-          .~ SSeq.singleton (AuthCommitteeHotKeyTxCert (KeyHashObj coldKey) (KeyHashObj hotKey))
+  submitTxAnn_ "Registering Committee Hot key" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.singleton (AuthCommitteeHotKeyTxCert (KeyHashObj coldKey) (KeyHashObj hotKey))
   pure hotKey
 
 -- | Submits a transaction that resigns the cold key
@@ -646,11 +648,10 @@ resignCommitteeColdKey ::
   KeyHash 'ColdCommitteeRole (EraCrypto era) ->
   ImpTestM era ()
 resignCommitteeColdKey coldKey = do
-  void $
-    submitTx "Resigning cold key" $
-      mkBasicTx mkBasicTxBody
-        & bodyTxL . certsTxBodyL
-          .~ SSeq.singleton (ResignCommitteeColdTxCert (KeyHashObj coldKey) SNothing)
+  submitTxAnn_ "Resigning Committee Cold key" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.singleton (ResignCommitteeColdTxCert (KeyHashObj coldKey) SNothing)
 
 electCommittee ::
   forall era.

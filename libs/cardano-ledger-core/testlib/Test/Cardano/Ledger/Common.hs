@@ -3,6 +3,7 @@ module Test.Cardano.Ledger.Common (
   ledgerTestMain,
   ledgerTestMainWith,
   ledgerHspecConfig,
+  NFData,
 
   -- * Expr
   ToExpr (..),

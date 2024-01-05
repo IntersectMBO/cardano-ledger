@@ -32,7 +32,6 @@ import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (Inject (..), ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayGOV, ConwayLEDGER, ConwayUTXOW)
@@ -297,7 +296,7 @@ ledgerTransition = do
           trans @(EraRule "GOV" era) $
             TRC
               ( GovEnv
-                  (txid txBody)
+                  (txIdTxBody txBody)
                   currentEpoch
                   pp
                   (utxoState ^. utxosGovStateL . enactStateGovStateL . ensPrevGovActionIdsL)

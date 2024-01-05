@@ -40,7 +40,6 @@ module Test.Cardano.Ledger.Imp.Common (
 )
 where
 
-import Control.DeepSeq (NFData)
 import Control.Monad.IO.Class
 import Test.Cardano.Ledger.Binary.TreeDiff (expectExprEqualWithMessage)
 import Test.Cardano.Ledger.Common as X hiding (

@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -39,6 +40,9 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   freshSafeHash,
   lookupKeyPair,
   submitTx,
+  submitTx_,
+  submitTxAnn,
+  submitTxAnn_,
   submitFailingTx,
   trySubmitTx,
   modifyNES,
@@ -46,6 +50,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impAnn,
   mkTxWits,
   runImpRule,
+  tryRunImpRule,
   registerRewardAccount,
   getRewardAccountAmount,
   constitutionShouldBe,
@@ -94,7 +99,7 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (Constitution (..), EraGov (..))
+import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -117,13 +122,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
-import Cardano.Ledger.Shelley.TxCert
-import Cardano.Ledger.Tools (setMinFeeTx)
+import Cardano.Ledger.Tools (calcMinFeeTx)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin)
 import Cardano.Ledger.Val (Val (..))
-import Control.DeepSeq (NFData)
+import Control.Monad (forM)
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader (..), asks)
 import Control.Monad.State.Strict (MonadState (..), gets, modify)
@@ -149,7 +153,7 @@ import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
 import Prettyprinter (Doc, Pretty (..), defaultLayoutOptions, layoutPretty, line)
 import Prettyprinter.Render.String (renderString)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkKeyHash, mkKeyPair, mkWitnessVKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkKeyHash, mkKeyPair, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
@@ -194,6 +198,7 @@ impRootTxIdL = lens impRootTxId (\x y -> x {impRootTxId = y})
 class
   ( Show (NewEpochState era)
   , ToExpr (NewEpochState era)
+  , ToExpr (Tx era)
   , ToExpr (TxOut era)
   , ToExpr (PParams era)
   , ToExpr (StashedAVVMAddresses era)
@@ -225,6 +230,8 @@ class
   , STS (EraRule "TICK" era)
   , NFData (PredicateFailure (EraRule "TICK" era))
   , NFData (StashedAVVMAddresses era)
+  , NFData (Tx era)
+  , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
   ) =>
   ShelleyEraImp era
   where
@@ -302,6 +309,10 @@ emptyShelleyImpNES rootCoin =
     testKeyHash = mkKeyHash (-1)
     rootTxId = TxId (mkDummySafeHash Proxy 0)
     seedSize = fromIntegral . seedSizeDSIGN $ Proxy @(DSIGN (EraCrypto era))
+    pp =
+      emptyPParams
+        & ppMinFeeAL .~ Coin 44
+        & ppMinFeeBL .~ Coin 155381
     epochState =
       EpochState
         { esAccountState =
@@ -324,8 +335,8 @@ emptyShelleyImpNES rootCoin =
               }
         , esNonMyopic = def
         }
-        & prevPParamsEpochStateL .~ emptyPParams
-        & curPParamsEpochStateL .~ emptyPParams
+        & prevPParamsEpochStateL .~ pp
+        & curPParamsEpochStateL .~ pp
     addr =
       Addr
         Testnet
@@ -343,6 +354,8 @@ emptyShelleyImpNES rootCoin =
 
 instance
   ( Crypto c
+  , NFData (SigDSIGN (DSIGN c))
+  , NFData (VerKeyDSIGN (DSIGN c))
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (ShelleyEra c)
@@ -350,14 +363,10 @@ instance
   emptyImpNES = emptyShelleyImpNES
 
 impWitsVKeyNeeded ::
-  EraUTxO era =>
-  NewEpochState era ->
-  TxBody era ->
-  Set.Set (KeyHash 'Witness (EraCrypto era))
-impWitsVKeyNeeded nes txBody = getWitsVKeyNeeded certState utxo txBody
-  where
-    utxo = nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
-    certState = nes ^. nesEsL . esLStateL . lsCertStateL
+  EraUTxO era => TxBody era -> ImpTestM era (Set.Set (KeyHash 'Witness (EraCrypto era)))
+impWitsVKeyNeeded txBody = do
+  ls <- getsNES (nesEsL . esLStateL)
+  pure $ getWitsVKeyNeeded (ls ^. lsCertStateL) (ls ^. lsUTxOStateL . utxosUtxoL) txBody
 
 data ImpTestEnv era = ImpTestEnv
   { iteState :: !(IORef (ImpTestState era))
@@ -458,6 +467,7 @@ fixupFees ::
 fixupFees tx = do
   ImpTestState {impRootTxId, impRootTxCoin} <- get
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
   kpSpending <- lookupKeyPair =<< freshKeyHash
   kpStaking <- lookupKeyPair =<< freshKeyHash
@@ -470,28 +480,48 @@ fixupFees tx = do
       mkBasicTxOut @era
         (mkAddr (kpSpending, kpStaking))
         (inject remainingCoin)
-  impRootTxCoinL .= remainingCoin
   let
-    balancedTx =
-      setMinFeeTx pp tx
+    txNoWits =
+      tx
         & bodyTxL . inputsTxBodyL %~ Set.insert (TxIn impRootTxId $ TxIx 0)
         & bodyTxL . outputsTxBodyL %~ (remainingTxOut :<|)
-    txId = TxId . hashAnnotated $ balancedTx ^. bodyTxL
-  impRootTxIdL .= txId
-  wits <- mkTxWits (balancedTx ^. bodyTxL)
-  pure $ balancedTx & witsTxL .~ wits
+    nativeScriptKeyWitsCount = 0 -- TODO figure out wits for native scripts
+    outsWithoutRemaining = tx ^. bodyTxL . outputsTxBodyL
+    fee = calcMinFeeTx utxo pp txNoWits nativeScriptKeyWitsCount
+    remainderAvailable = remainingTxOut ^. coinTxOutL <-> fee
+    remainingTxOut' = remainingTxOut & coinTxOutL .~ remainderAvailable
+    -- If the remainder is sufficently big we add it to outputs, otherwise we add the
+    -- extraneous coin to the fee and discard the remainder TxOut
+    txBalanced
+      | remainderAvailable >= getMinCoinTxOut pp remainingTxOut' =
+          txNoWits
+            & bodyTxL . outputsTxBodyL .~ (remainingTxOut' :<| outsWithoutRemaining)
+            & bodyTxL . feeTxBodyL .~ fee
+      | otherwise =
+          txNoWits
+            & bodyTxL . outputsTxBodyL .~ outsWithoutRemaining
+            & bodyTxL . feeTxBodyL .~ (fee <> remainingTxOut ^. coinTxOutL)
+  wits <- mkTxWits (txBalanced ^. bodyTxL)
+  impRootTxCoinL .= remainderAvailable
+  let txWithWits = txBalanced & witsTxL .~ wits
+      Coin feeUsed = txWithWits ^. bodyTxL . feeTxBodyL
+      Coin feeMin = getMinFeeTx pp txWithWits
+  when (feeUsed /= feeMin) $ do
+    logEntry $
+      "Estimated fee " <> show feeUsed <> " while required fee is " <> show feeMin
+  pure txWithWits
 
-submitTx_ ::
-  forall era.
+submitTx_ :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era ()
+submitTx_ = void . submitTx
+
+submitTx :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era (Tx era)
+submitTx tx = trySubmitTx tx >>= expectRightDeepExpr
+
+trySubmitTx ::
   ShelleyEraImp era =>
   Tx era ->
-  ImpTestM
-    era
-    ( Either
-        [PredicateFailure (EraRule "LEDGER" era)]
-        (State (EraRule "LEDGER" era), Tx era)
-    )
-submitTx_ tx = do
+  ImpTestM era (Either [PredicateFailure (EraRule "LEDGER" era)] (Tx era))
+trySubmitTx tx = do
   st <- gets impNES
   doFixup <- asks iteDoTxFixup
   txFixed <-
@@ -499,27 +529,12 @@ submitTx_ tx = do
       then fixupFees tx
       else pure tx
   lEnv <- impLedgerEnv st
-  globals <- use $ to impGlobals
-  let
-    trc =
-      TRC
-        ( lEnv
-        , st ^. nesEsL . esLStateL
-        , txFixed
-        )
-  pure $ (,txFixed) <$> runShelleyBase globals (applySTSTest @(EraRule "LEDGER" era) trc)
-
-trySubmitTx ::
-  ShelleyEraImp era =>
-  Tx era ->
-  ImpTestM era (Either [PredicateFailure (EraRule "LEDGER" era)] (TxId (EraCrypto era)))
-trySubmitTx tx = do
-  res <- submitTx_ tx
-  case res of
-    Right (st, finalTx) -> do
-      modify $ impNESL . nesEsL . esLStateL .~ st
-      pure . Right . TxId . hashAnnotated $ finalTx ^. bodyTxL
-    Left err -> pure $ Left err
+  res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
+  forM res $ \st' -> do
+    modify $ impNESL . nesEsL . esLStateL .~ st'
+    let txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
+    impRootTxIdL .= txId
+    pure txFixed
 
 -- | Submit a transaction that is expected to be rejected. The inputs and
 -- outputs are automatically balanced.
@@ -531,6 +546,18 @@ submitFailingTx ::
   [PredicateFailure (EraRule "LEDGER" era)] ->
   ImpTestM era ()
 submitFailingTx tx expectedFailure = trySubmitTx tx >>= (`shouldBeLeftExpr` expectedFailure)
+
+tryRunImpRule ::
+  forall rule era.
+  (STS (EraRule rule era), BaseM (EraRule rule era) ~ ShelleyBase) =>
+  Environment (EraRule rule era) ->
+  State (EraRule rule era) ->
+  Signal (EraRule rule era) ->
+  ImpTestM era (Either [PredicateFailure (EraRule rule era)] (State (EraRule rule era)))
+tryRunImpRule stsEnv stsState stsSignal = do
+  let trc = TRC (stsEnv, stsState, stsSignal)
+  globals <- use $ to impGlobals
+  pure $ runShelleyBase globals (applySTSTest @(EraRule rule era) trc)
 
 runImpRule ::
   forall rule era.
@@ -545,10 +572,8 @@ runImpRule ::
   Signal (EraRule rule era) ->
   ImpTestM era (State (EraRule rule era))
 runImpRule stsEnv stsState stsSignal = do
-  let trc = TRC (stsEnv, stsState, stsSignal)
-      ruleName = symbolVal (Proxy @rule)
-  globals <- use $ to impGlobals
-  case runShelleyBase globals (applySTSTest @(EraRule rule era) trc) of
+  let ruleName = symbolVal (Proxy @rule)
+  tryRunImpRule @rule stsEnv stsState stsSignal >>= \case
     Left [] -> error "Impossible: STS rule failed without a predicate failure"
     Left fs ->
       assertFailure $
@@ -661,20 +686,12 @@ mkTxWits ::
   ) =>
   TxBody era ->
   ImpTestM era (TxWits era)
-mkTxWits txb = do
-  nes <- getsNES id
-  keyPairs <- gets impKeyPairs
-  let
-    txbHash = hashAnnotated txb
-    witsNeeded =
-      impWitsVKeyNeeded nes txb
-    mkTxWit kh =
-      mkWitnessVKey txbHash
-        . fromMaybe (error "Could not find a keypair corresponding to keyhash. Always use `freshKeyHash` to create key hashes.")
-        $ Map.lookup kh keyPairs
+mkTxWits txBody = do
+  let txBodyHash = hashAnnotated txBody
+  witsVKeyNeeded <- impWitsVKeyNeeded txBody
+  keyPairs <- mapM lookupKeyPair $ Set.toList witsVKeyNeeded
   pure $
-    mkBasicTxWits
-      & addrTxWitsL .~ Set.map mkTxWit witsNeeded
+    mkBasicTxWits & addrTxWitsL .~ mkWitnessesVKey txBodyHash keyPairs
 
 -- | Creates a fresh @SafeHash@
 freshSafeHash :: Era era => ImpTestM era (SafeHash (EraCrypto era) a)
@@ -699,10 +716,15 @@ addKeyPair kp@(KeyPair vk _) = do
 -- | Looks up the keypair corresponding to the keyhash. The keyhash must be
 -- created with @freshKeyHash@ for this to work.
 lookupKeyPair :: HasCallStack => KeyHash r (EraCrypto era) -> ImpTestM era (KeyPair r (EraCrypto era))
-lookupKeyPair kh = do
-  ImpTestState {impKeyPairs} <- get
-  maybe (error $ "Could not find keyhash from the keypairs map: " ++ show kh) (pure . coerce) $
-    Map.lookup (coerceKeyRole kh) impKeyPairs
+lookupKeyPair keyHash = do
+  keyPairs <- gets impKeyPairs
+  case Map.lookup keyHash keyPairs of
+    Just keyPair -> pure keyPair
+    Nothing ->
+      error $
+        "Could not find a keypair corresponding to keyHash:"
+          ++ show keyHash
+          ++ "\nAlways use `freshKeyHash` to create key hashes."
 
 -- | Generates a fresh keyhash and stores the corresponding keypair in the
 -- ImpTestState. Use @lookupKeyPair@ to look up the keypair corresponding to the
@@ -722,14 +744,16 @@ modifyNES = (impNESL %=)
 getsNES :: SimpleGetter (NewEpochState era) a -> ImpTestM era a
 getsNES l = gets . view $ impNESL . l
 
-submitTx ::
-  ( HasCallStack
-  , ShelleyEraImp era
-  ) =>
+submitTxAnn ::
+  (HasCallStack, ShelleyEraImp era) =>
   String ->
   Tx era ->
-  ImpTestM era (TxId (EraCrypto era))
-submitTx msg tx = logEntry msg >> trySubmitTx tx >>= expectRightDeepExpr
+  ImpTestM era (Tx era)
+submitTxAnn msg tx = impAnn msg (trySubmitTx tx >>= expectRightDeepExpr)
+
+submitTxAnn_ ::
+  (HasCallStack, ShelleyEraImp era) => String -> Tx era -> ImpTestM era ()
+submitTxAnn_ msg = void . submitTxAnn msg
 
 registerRewardAccount ::
   forall era.
@@ -742,17 +766,16 @@ registerRewardAccount = do
   kpDelegator <- lookupKeyPair khDelegator
   kpSpending <- lookupKeyPair =<< freshKeyHash
   let stakingCredential = KeyHashObj khDelegator
-  _ <-
-    submitTx ("Register Reward Account: " <> T.unpack (credToText stakingCredential)) $
-      mkBasicTx mkBasicTxBody
-        & bodyTxL . outputsTxBodyL
-          .~ SSeq.fromList
-            [ mkBasicTxOut
-                (mkAddr (kpSpending, kpDelegator))
-                (inject $ Coin 10_000_000)
-            ]
-        & bodyTxL . certsTxBodyL
-          .~ SSeq.fromList [RegTxCert @era stakingCredential]
+  submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText stakingCredential)) $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . outputsTxBodyL
+        .~ SSeq.fromList
+          [ mkBasicTxOut
+              (mkAddr (kpSpending, kpDelegator))
+              (inject $ Coin 10_000_000)
+          ]
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.fromList [RegTxCert @era stakingCredential]
   networkId <- use (to impGlobals . to networkId)
   pure $ RewardAcnt networkId stakingCredential
 

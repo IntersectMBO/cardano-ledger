@@ -22,7 +22,7 @@ import Cardano.Ledger.BaseTypes (
   mkNonceFromNumber,
   (⭒),
  )
-import Cardano.Ledger.Block (Block, bheader, txid)
+import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
 import qualified Cardano.Ledger.EpochBoundary as EB
@@ -205,7 +205,7 @@ aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 txbodyEx2 :: forall c. Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx2 =
   ShelleyTxBody
-    (Set.fromList [TxIn (txid txbodyEx1) minBound])
+    (Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound])
     (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx2))
     StrictSeq.empty
     (Withdrawals Map.empty)
@@ -281,7 +281,7 @@ aliceCoinEx3 = aliceCoinEx2 <-> feeTx3
 txbodyEx3 :: forall c. Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx3 =
   ShelleyTxBody
-    (Set.fromList [TxIn (txid txbodyEx2) minBound])
+    (Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound])
     (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx3))
     StrictSeq.empty
     (Withdrawals Map.empty)

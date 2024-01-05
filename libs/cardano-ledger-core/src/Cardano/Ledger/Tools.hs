@@ -55,12 +55,22 @@ setMinFeeTx pp tx =
         then tx
         else setMinFeeTx pp modifiedTx
 
+-- | This is a more accurate version `estimateMinFeeTx` that looks into transaction and
+-- figures out how many and what kind of key witnesses this transaction needs. It requires
+-- access to the portion of the `UTxO` that is relevant for this transaction. The only
+-- type of witnesses that it cannot figure out reliably is the witnesses needed for
+-- satisfying native scripts included in the transaction. For this reason number of
+-- witnesses needed for native scripts must be supplied as an extra argument.
+--
+-- ====__Example__
+--
+-- >>> let relevantUtxo = txInsFilter utxo (tx ^. bodyTxL . allInputsTxBodyF)
+-- >>> calcMinFeeTx relevantUtxo pp tx 5
 calcMinFeeTx ::
   forall era.
   EraUTxO era =>
-  -- | All relevant TxOuts for this transaction. In other words `TxIn`s produced by
-  -- `allInputsTxBodyF` should be present in this `UTxO` map, however this is not
-  -- checked.
+  -- | All TxOuts available for this transaction. In other words `TxIn`s produced by
+  -- `allInputsTxBodyF` should be present in this `UTxO` map, however this is not checked.
   UTxO era ->
   -- | The current protocol parameters.
   PParams era ->
@@ -96,7 +106,8 @@ calcMinFeeTx utxo pp tx extraKeyWitsCount =
 
 -- | Estimate a minimum transaction fee for a transaction that does not yet have all of
 -- the `VKey` witnesses. This calculation is not very accurate in estimating Byron
--- witnesses, but it should work for the most part.
+-- witnesses, but it should work for the most part. If you have access to UTxO necessary
+-- for the transaction that it is better and easier to use `calcMinFeeTx` instead.
 --
 -- @since 1.8.0
 estimateMinFeeTx ::

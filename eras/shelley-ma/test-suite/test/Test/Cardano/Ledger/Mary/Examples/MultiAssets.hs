@@ -15,7 +15,6 @@ where
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (asWitness, hashKey)
@@ -66,7 +65,7 @@ unboundedInterval :: ValidityInterval
 unboundedInterval = ValidityInterval SNothing SNothing
 
 bootstrapTxId :: TxId StandardCrypto
-bootstrapTxId = txid txb
+bootstrapTxId = txIdTxBody txb
   where
     txb :: TxBody Mary
     txb = mkBasicTxBody
@@ -176,7 +175,7 @@ expectedUTxOSimpleEx1 :: UTxO Mary
 expectedUTxOSimpleEx1 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txid txbodySimpleEx1) 0, ShelleyTxOut Cast.aliceAddr tokensSimpleEx1)
+      [ (mkTxInPartial (txIdTxBody txbodySimpleEx1) 0, ShelleyTxOut Cast.aliceAddr tokensSimpleEx1)
       , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
@@ -206,7 +205,7 @@ bobTokensSimpleEx2 =
 txbodySimpleEx2 :: TxBody Mary
 txbodySimpleEx2 =
   makeMaryTxBody
-    [mkTxInPartial (txid txbodySimpleEx1) 0]
+    [mkTxInPartial (txIdTxBody txbodySimpleEx1) 0]
     [ ShelleyTxOut Cast.aliceAddr aliceTokensSimpleEx2
     , ShelleyTxOut Cast.bobAddr bobTokensSimpleEx2
     ]
@@ -224,8 +223,8 @@ expectedUTxOSimpleEx2 :: UTxO Mary
 expectedUTxOSimpleEx2 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txid txbodySimpleEx2) 0, ShelleyTxOut Cast.aliceAddr aliceTokensSimpleEx2)
-      , (mkTxInPartial (txid txbodySimpleEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensSimpleEx2)
+      [ (mkTxInPartial (txIdTxBody txbodySimpleEx2) 0, ShelleyTxOut Cast.aliceAddr aliceTokensSimpleEx2)
+      , (mkTxInPartial (txIdTxBody txbodySimpleEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensSimpleEx2)
       , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
@@ -317,7 +316,7 @@ expectedUTxOTimeEx1 :: UTxO Mary
 expectedUTxOTimeEx1 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txid txbodyTimeEx1Valid) 0, ShelleyTxOut Cast.aliceAddr tokensTimeEx1)
+      [ (mkTxInPartial (txIdTxBody txbodyTimeEx1Valid) 0, ShelleyTxOut Cast.aliceAddr tokensTimeEx1)
       , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
@@ -341,7 +340,7 @@ aliceCoinsTimeEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> mintTimeEx2)
 txbodyTimeEx2 :: TxBody Mary
 txbodyTimeEx2 =
   makeMaryTxBody
-    [mkTxInPartial (txid txbodyTimeEx1Valid) 0]
+    [mkTxInPartial (txIdTxBody txbodyTimeEx1Valid) 0]
     [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2)
     , ShelleyTxOut Cast.bobAddr bobTokensTimeEx2
     ]
@@ -362,8 +361,8 @@ expectedUTxOTimeEx2 :: UTxO Mary
 expectedUTxOTimeEx2 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txid txbodyTimeEx2) 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2))
-      , (mkTxInPartial (txid txbodyTimeEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensTimeEx2)
+      [ (mkTxInPartial (txIdTxBody txbodyTimeEx2) 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2))
+      , (mkTxInPartial (txIdTxBody txbodyTimeEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensTimeEx2)
       , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
@@ -419,7 +418,7 @@ expectedUTxOSingWitEx1 :: UTxO Mary
 expectedUTxOSingWitEx1 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txid txbodySingWitEx1) 0, ShelleyTxOut Cast.bobAddr tokensSingWitEx1)
+      [ (mkTxInPartial (txIdTxBody txbodySingWitEx1) 0, ShelleyTxOut Cast.bobAddr tokensSingWitEx1)
       , (mkTxInPartial bootstrapTxId 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin))
       ]
 
@@ -456,7 +455,7 @@ aliceTokensNegEx1 =
 txbodyNegEx1 :: TxBody Mary
 txbodyNegEx1 =
   makeMaryTxBody
-    [mkTxInPartial (txid txbodySimpleEx2) 0]
+    [mkTxInPartial (txIdTxBody txbodySimpleEx2) 0]
     [ShelleyTxOut Cast.aliceAddr aliceTokensNegEx1]
     unboundedInterval
     mintNegEx1
@@ -476,9 +475,9 @@ expectedUTxONegEx1 :: UTxO Mary
 expectedUTxONegEx1 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txid txbodyNegEx1) 0, ShelleyTxOut Cast.aliceAddr aliceTokensNegEx1)
+      [ (mkTxInPartial (txIdTxBody txbodyNegEx1) 0, ShelleyTxOut Cast.aliceAddr aliceTokensNegEx1)
       , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
-      , (mkTxInPartial (txid txbodySimpleEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensSimpleEx2)
+      , (mkTxInPartial (txIdTxBody txbodySimpleEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensSimpleEx2)
       ]
 
 --
@@ -500,7 +499,7 @@ aliceTokensNegEx2 =
 txbodyNegEx2 :: TxBody Mary
 txbodyNegEx2 =
   makeMaryTxBody
-    [mkTxInPartial (txid txbodySimpleEx2) 0]
+    [mkTxInPartial (txIdTxBody txbodySimpleEx2) 0]
     [ShelleyTxOut Cast.aliceAddr aliceTokensNegEx2]
     unboundedInterval
     mintNegEx2

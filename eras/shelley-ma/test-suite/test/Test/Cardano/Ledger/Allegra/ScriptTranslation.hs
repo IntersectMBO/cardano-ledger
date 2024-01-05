@@ -6,7 +6,6 @@ module Test.Cardano.Ledger.Allegra.ScriptTranslation (
 where
 
 import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as S
@@ -20,17 +19,18 @@ import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import GHC.Stack
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
 
 bootstrapTxId :: S.TxId StandardCrypto
-bootstrapTxId = txid @Shelley mkBasicTxBody
+bootstrapTxId = txIdTxBody @Shelley mkBasicTxBody
 
-fromRight :: Either e a -> a
+fromRight :: HasCallStack => Either e a -> a
 fromRight (Right x) = x
-fromRight _ = undefined
+fromRight _ = error "Expected Right"
 
 script :: S.MultiSig Shelley
 script = S.RequireAllOf []

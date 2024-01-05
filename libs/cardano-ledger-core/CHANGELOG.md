@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Add `txIdTxBody` and `txIdTx`. Deprecated `txid`.
 * Add `genesisKeyHashCount` to `EraTxBody`
 * Add `calcMinFeeTx`
 * Add `estimateMinFeeTx`, `addDummyWitsTx` and move `setMinFeeTx` to `Cardano.Ledger.Tools`

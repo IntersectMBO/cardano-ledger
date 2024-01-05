@@ -168,3 +168,4 @@ neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
 -- | Compute the id of a transaction.
 txid :: EraTxBody era => TxBody era -> TxId (EraCrypto era)
 txid = TxId . hashAnnotated
+{-# DEPRECATED txid "In favor of `Cardano.Ledger.Core.txIdTxBody` or `Cardano.Ledger.Core.txIdTx`" #-}

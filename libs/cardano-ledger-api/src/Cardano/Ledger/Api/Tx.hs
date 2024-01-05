@@ -48,7 +48,9 @@ module Cardano.Ledger.Api.Tx (
   sizeTxF,
   getMinFeeTx,
   setMinFeeTx,
+  calcMinFeeTx,
   estimateMinFeeTx,
+  txIdTx,
 
   -- * Alonzo onwards
   AlonzoEraTx,
@@ -77,5 +79,5 @@ import Cardano.Ledger.Api.Tx.AuxData
 import Cardano.Ledger.Api.Tx.Body
 import Cardano.Ledger.Api.Tx.Cert
 import Cardano.Ledger.Api.Tx.Wits
-import Cardano.Ledger.Core (EraTx (..))
-import Cardano.Ledger.Tools (estimateMinFeeTx, setMinFeeTx)
+import Cardano.Ledger.Core (EraTx (..), txIdTx)
+import Cardano.Ledger.Tools (calcMinFeeTx, estimateMinFeeTx, setMinFeeTx)

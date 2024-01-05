@@ -24,7 +24,6 @@ import Cardano.Ledger.BaseTypes (
   maybeToStrictMaybe,
   mkTxIxPartial,
  )
-import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (
   pattern KeyHashObj,
@@ -241,7 +240,7 @@ initialUTxOState aliceKeep msigs =
               (asWitness <$> [Cast.alicePay, Cast.bobPay])
               Map.empty
               Nothing
-       in ( txid $ tx ^. bodyTxL
+       in ( txIdTx tx
           , runShelleyBase $
               applySTSTest @(ShelleyUTXOW (ShelleyEra c))
                 ( TRC

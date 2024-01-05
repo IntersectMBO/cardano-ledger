@@ -46,7 +46,6 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   decodeMap,
  )
-import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -143,7 +142,7 @@ txouts txBody =
       | (out, idx) <- zip (toList $ txBody ^. outputsTxBodyL) [minBound ..]
       ]
   where
-    transId = txid txBody
+    transId = txIdTxBody txBody
 
 -- | Lookup a txin for a given UTxO collection
 txinLookup ::

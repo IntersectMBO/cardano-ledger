@@ -52,7 +52,6 @@ import Cardano.Ledger.BaseTypes (
   strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (Sized (..))
-import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
@@ -557,7 +556,7 @@ toAgdaTxBody tx =
     <*> toSpecRep (tx ^. bodyTxL . feeTxBodyL)
     <*> toSpecRep (tx ^. bodyTxL . vldtTxBodyL)
     <*> pure (tx ^. sizeTxF)
-    <*> toSpecRep (txid $ tx ^. bodyTxL)
+    <*> toSpecRep (txIdTx tx)
     <*> toSpecRep (tx ^. bodyTxL . collateralInputsTxBodyL)
     <*> toSpecRep (tx ^. bodyTxL . reqSignerHashesTxBodyL)
     <*> toSpecRep (tx ^. bodyTxL . scriptIntegrityHashTxBodyL)
@@ -595,7 +594,7 @@ trySubmitTxConform ::
     Conway
     ( Either
         [PredicateFailure (EraRule "LEDGER" Conway)]
-        (TxId (EraCrypto Conway))
+        (Tx Conway)
     )
 trySubmitTxConform txPreFixup = do
   nes <- getsNES id
