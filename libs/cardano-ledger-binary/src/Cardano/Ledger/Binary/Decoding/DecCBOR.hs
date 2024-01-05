@@ -67,7 +67,7 @@ import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Data.Fixed (Fixed (..))
 import Data.IP (IPv4, IPv6)
 import Data.Int (Int16, Int32, Int64, Int8)
-import Data.List.NonEmpty (NonEmpty, nonEmpty)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe.Strict as SMaybe
 import qualified Data.Primitive.ByteArray as Prim
@@ -377,11 +377,7 @@ instance (DecCBOR a, DecCBOR b) => DecCBOR (Either a b) where
   dropCBOR _ = () <$ decodeEither (dropCBOR (Proxy :: Proxy a)) (dropCBOR (Proxy :: Proxy b))
 
 instance DecCBOR a => DecCBOR (NonEmpty a) where
-  decCBOR = do
-    ls <- decCBOR
-    case nonEmpty ls of
-      Nothing -> cborError $ DecoderErrorEmptyList "NonEmpty"
-      Just ne -> pure ne
+  decCBOR = decodeNonEmptyList decCBOR
   {-# INLINE decCBOR #-}
 
 instance DecCBOR a => DecCBOR (Maybe a) where

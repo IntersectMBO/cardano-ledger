@@ -60,6 +60,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   decodeNullStrictMaybe,
   decodeEither,
   decodeList,
+  decodeNonEmptyList,
   decodeVector,
   decodeSet,
   setTag,
@@ -254,6 +255,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Functor.Compose (Compose (..))
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
 import Data.Int (Int16, Int32, Int64, Int8)
+import qualified Data.List.NonEmpty as NE (NonEmpty, nonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..), maybeToStrictMaybe)
 import Data.Ratio ((%))
@@ -481,6 +483,14 @@ decodeList decodeValue =
     (decodeCollection decodeListLenOrIndef decodeValue)
     (decodeListWith decodeValue)
 {-# INLINE decodeList #-}
+
+decodeNonEmptyList :: Decoder s a -> Decoder s (NE.NonEmpty a)
+decodeNonEmptyList decodeValue = do
+  xs <- decodeList decodeValue
+  case NE.nonEmpty xs of
+    Nothing -> fail "Empty list found, expected non-empty"
+    Just ne -> pure ne
+{-# INLINE decodeNonEmptyList #-}
 
 -- | @'Decoder'@ for list.
 decodeListWith :: Decoder s a -> Decoder s [a]

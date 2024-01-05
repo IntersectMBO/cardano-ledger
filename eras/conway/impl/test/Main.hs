@@ -4,6 +4,7 @@ module Main where
 
 import Cardano.Ledger.Conway (Conway)
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
+import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
@@ -31,3 +32,5 @@ main =
         ShelleyImp.spec @Conway
       describe "CostModels" $ do
         CostModelsSpec.spec @Conway
+      describe "TxWits" $ do
+        TxWitsSpec.spec @Conway

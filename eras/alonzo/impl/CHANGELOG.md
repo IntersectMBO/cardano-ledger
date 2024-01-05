@@ -59,7 +59,7 @@
 * Add `mkPlutusScript'`
 * Add `alwaysSucceedsLang` and `alwaysFailsLang`
 * Change `alwaysSucceeds` and `alwaysFails` to accept the language version at the type level.
-* Remove `genAlonzoScript`
+* Export `genNativeScript` and `genPlutusScript` from Arbitrary
 
 ## 1.5.1.0
 

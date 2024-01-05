@@ -53,3 +53,7 @@ bounded_bytes = bytes .size (0..64)
   ;  ( reminder: in CBOR, the indefinite-length encoding of bytestrings
   ;    consists of a token #2.31 followed by a sequence of definite-length
   ;    encoded bytestrings and a stop code )
+
+; a type for distinct values.
+; The type parameter must support .size, for example: bytes or uint
+distinct<a> = a .size 8 / a .size 16 / a .size 20 / a .size 24 / a .size 30 / a .size 32
