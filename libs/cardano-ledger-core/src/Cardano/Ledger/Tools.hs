@@ -79,16 +79,20 @@ calcMinFeeTx ::
 calcMinFeeTx utxo pp tx extraKeyWitsCount =
   setMinFeeTx pp tx' ^. bodyTxL . feeTxBodyL
   where
+    txBody = tx ^. bodyTxL
     tx' = addDummyWitsTx pp tx numKeyWitsRequired $ Map.elems byronAttributes
-    inputs = Set.toList $ tx ^. bodyTxL . spendableInputsTxBodyF
+    inputs = Set.toList $ txBody ^. spendableInputsTxBodyF
     getByronAttrs txIn = do
       txOut <- Map.lookup txIn $ unUTxO utxo
       ba@(BootstrapAddress bootAddr) <- txOut ^. bootAddrTxOutF
       pure (asWitness (bootstrapKeyHash ba), Byron.addrAttributes bootAddr)
     byronAttributes = Map.fromList $ mapMaybe getByronAttrs inputs
-    requiredKeyHashes = getWitsVKeyNeeded def utxo (tx ^. bodyTxL)
+    requiredKeyHashes = getWitsVKeyNeeded def utxo txBody
+    -- number of non byron key hashes that will be supplied:
     numKeyWitsRequired =
-      extraKeyWitsCount + Set.size (requiredKeyHashes Set.\\ Map.keysSet byronAttributes)
+      genesisKeyHashCount txBody
+        + extraKeyWitsCount
+        + Set.size (requiredKeyHashes Set.\\ Map.keysSet byronAttributes)
 
 -- | Estimate a minimum transaction fee for a transaction that does not yet have all of
 -- the `VKey` witnesses. This calculation is not very accurate in estimating Byron
