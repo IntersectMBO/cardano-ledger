@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-crypto-test
-version:       1.5.0.0
+version:       1.5.0.1
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -51,7 +51,7 @@ library
         -Wno-safe -Wno-unsafe -Wunused-packages
 
     build-depends:
-        base >=4.14 && <4.19,
+        base >=4.14 && <5,
         bytestring,
         cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.0,
         cardano-crypto,

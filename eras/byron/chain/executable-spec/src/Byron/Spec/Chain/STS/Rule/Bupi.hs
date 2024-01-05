@@ -11,7 +11,7 @@ import Control.State.Transition (
   Embed,
   Environment,
   PredicateFailure,
-  STS,
+  STS (..),
   Signal,
   State,
   TRC (TRC),

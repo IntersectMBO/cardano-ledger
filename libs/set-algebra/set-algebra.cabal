@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               set-algebra
-version:            1.1.0.1
+version:            1.1.0.2
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -30,7 +30,7 @@ library
         -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
 
     build-depends:
-        base >=4.14 && <4.19,
+        base >=4.14 && <5,
         ansi-wl-pprint <1.0,
         cardano-data >=1.1,
         containers

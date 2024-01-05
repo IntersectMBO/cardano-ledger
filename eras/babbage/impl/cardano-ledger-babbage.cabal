@@ -60,7 +60,7 @@ library
         -Wunused-packages
 
     build-depends:
-        base >=4.14 && <4.19,
+        base >=4.14 && <5,
         aeson >=2.2,
         bytestring,
         cardano-crypto-class,

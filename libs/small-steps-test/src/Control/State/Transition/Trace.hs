@@ -512,10 +512,14 @@ deriving instance (Show (State a), Show (Signal a)) => Show (SourceSignalTarget 
 -- >>> sourceSignalTargets tr0123
 -- [SourceSignalTarget {source = 0, target = 1, signal = "one"},SourceSignalTarget {source = 1, target = 2, signal = "two"},SourceSignalTarget {source = 2, target = 3, signal = "three"}]
 sourceSignalTargets :: forall a. Trace a -> [SourceSignalTarget a]
-sourceSignalTargets trace = zipWith3 SourceSignalTarget states (tail states) signals
+sourceSignalTargets trace = zipWith3 SourceSignalTarget states statesTail signals
   where
-    states = traceStates OldestFirst trace
     signals = traceSignals OldestFirst trace
+    states = traceStates OldestFirst trace
+    statesTail =
+      case states of
+        [] -> error "Control.State.Transition.Trace.sourceSignalTargets: Unexpected empty list"
+        (_ : xs) -> xs
 
 -- | Apply STS checking assertions.
 applySTSTest ::

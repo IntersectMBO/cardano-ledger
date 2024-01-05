@@ -78,7 +78,7 @@ import Control.Monad.Trans.RWS.Strict (asks, get, gets, modify)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Bifunctor (first)
 import qualified Data.Foldable as F
-import Data.Functor
+import Data.Functor ((<&>))
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map

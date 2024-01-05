@@ -83,8 +83,8 @@ library
         -Wunused-packages
 
     build-depends:
-        base >=4.14 && <4.19,
-        aeson >=2.2,
+        base >=4.14 && <5,
+        aeson >=2,
         base16-bytestring,
         base64-bytestring,
         base-deriving-via,

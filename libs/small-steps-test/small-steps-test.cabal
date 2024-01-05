@@ -30,7 +30,7 @@ library
         -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
 
     build-depends:
-        base >=4.14 && <4.19,
+        base >=4.14 && <5,
         deepseq,
         cardano-ledger-binary:testlib ^>=1.3,
         hedgehog >=1.0.4,

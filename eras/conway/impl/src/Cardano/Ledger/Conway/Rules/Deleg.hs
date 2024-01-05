@@ -47,7 +47,7 @@ import Control.State.Transition (
   Environment,
   Event,
   PredicateFailure,
-  STS,
+  STS (..),
   Signal,
   State,
   TRC (TRC),
