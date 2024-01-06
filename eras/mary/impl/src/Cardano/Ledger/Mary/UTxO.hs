@@ -23,12 +23,12 @@ import Cardano.Ledger.Shelley.UTxO (
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
   ScriptsProvided (..),
-  UTxO (UTxO),
+  UTxO,
   balance,
+  txInsFilter,
  )
 import Cardano.Ledger.Val (inject)
 import Data.Foldable (fold)
-import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro
 
@@ -64,12 +64,12 @@ getConsumedMaryValue ::
   UTxO era ->
   TxBody era ->
   MaryValue (EraCrypto era)
-getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit (UTxO u) txBody =
+getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
   consumedValue <> txBody ^. mintValueTxBodyF
   where
     {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
     consumedValue =
-      balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
+      balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
         <> inject (refunds <> withdrawals)
     refunds = getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL

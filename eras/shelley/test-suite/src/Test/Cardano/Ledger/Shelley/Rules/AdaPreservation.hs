@@ -70,7 +70,7 @@ import Cardano.Ledger.Shelley.Rules.Reports (
  )
 import Cardano.Ledger.UMap (sumRewardsUView)
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txouts)
+import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txInsFilter, txouts)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (BHeader (..))
 import Control.State.Transition.Trace (
@@ -504,14 +504,14 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
 
     createdIsConsumed
       SourceSignalTarget
-        { source = LedgerState (UTxOState {utxosUtxo = UTxO u}) certState
+        { source = LedgerState (UTxOState {utxosUtxo = utxo}) certState
         , signal = tx
         } =
         inps === outs
         where
           txb = tx ^. bodyTxL
           inps =
-            coinBalance @era (UTxO (Map.restrictKeys u (txb ^. inputsTxBodyL)))
+            coinBalance @era (txInsFilter utxo (txb ^. inputsTxBodyL))
               <> certsTotalRefundsTxBody pp_ certState txb
               <> fold (unWithdrawals (txb ^. withdrawalsTxBodyL))
           outs =

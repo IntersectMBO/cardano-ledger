@@ -190,9 +190,9 @@ getConsumedCoin ::
   UTxO era ->
   TxBody era ->
   Coin
-getConsumedCoin pp lookupRefund (UTxO u) txBody =
+getConsumedCoin pp lookupRefund utxo txBody =
   {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds dpstate tx -}
-  coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
+  coinBalance (txInsFilter utxo (txBody ^. inputsTxBodyL))
     <> refunds
     <> withdrawals
   where

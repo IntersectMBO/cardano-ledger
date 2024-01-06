@@ -9,6 +9,7 @@
 * Add `getWitsVKeyNeeded` to `EraUTxO`
 * Changed the type of the lenses `ppMaxBBSizeL`, `ppMaxTxSizeL`, `ppMaxBHSizeL`,
   `ppuMaxBBSizeL`, `ppuMaxTxSizeL` and `ppuMaxBHSizeL`
+* Add `txInsFilter`
 * Fix `ToJSON`/`FromJSON` for `CostModels`. Make sure that `CostModels` can roundtrip
   through JSON. Also report `CostModels` failures in JSON.
 * Add `costModelParamsCount`

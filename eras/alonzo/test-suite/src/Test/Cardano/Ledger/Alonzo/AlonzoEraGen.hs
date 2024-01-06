@@ -74,6 +74,7 @@ import Cardano.Ledger.UTxO (
   UTxO (..),
   coinBalance,
   getScriptsNeeded,
+  txInsFilter,
  )
 import Cardano.Ledger.Val (Val (isAdaOnly, (<+>), (<×>)))
 import Control.Monad (replicateM)
@@ -394,7 +395,7 @@ instance Mock c => EraGen (AlonzoEra c) where
           (Redeemers rdmrMap)
       txinputs = inputs' txbody
       smallUtxo :: [TxOut (AlonzoEra c)]
-      smallUtxo = Map.elems (unUTxO utxo `Map.restrictKeys` txinputs)
+      smallUtxo = Map.elems (unUTxO (txInsFilter utxo txinputs))
       AlonzoScriptsNeeded purposeHashPairs = getScriptsNeeded @(AlonzoEra c) utxo txbody
       rdmrMap = List.foldl' accum Map.empty purposeHashPairs -- Search through the pairs for Plutus scripts
       accum ans (purpose, hash1) =
@@ -465,10 +466,8 @@ instance Mock c => EraGen (AlonzoEra c) where
       IsValid False -> sumCollateral tx utxo
 
 sumCollateral :: (EraTx era, AlonzoEraTxBody era) => Tx era -> UTxO era -> Coin
-sumCollateral tx (UTxO utxo) =
-  coinBalance . UTxO $ Map.restrictKeys utxo collateral_
-  where
-    collateral_ = tx ^. bodyTxL . collateralInputsTxBodyL
+sumCollateral tx utxo =
+  coinBalance $ txInsFilter utxo $ tx ^. bodyTxL . collateralInputsTxBodyL
 
 storageCost :: forall era t. (EraPParams era, EncCBOR t) => Integer -> PParams era -> t -> Coin
 storageCost extra pp x = (extra + encodedLen @era x) <×> pp ^. ppMinFeeAL

@@ -77,14 +77,14 @@ evaluateTransactionBalance ::
   UTxO era ->
   TxBody era ->
   Value era
-evaluateTransactionBalance pp dpstate (UTxO u) txBody = consumed <-> produced
+evaluateTransactionBalance pp dpstate utxo txBody = consumed <-> produced
   where
     produced =
       balance (txouts txBody)
         <+> inject (txBody ^. feeTxBodyL <+> totalTxDeposits pp dpstate txBody)
     consumed =
       (txBody ^. mintValueTxBodyF)
-        <> balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
+        <> balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
         <> inject (refunds <> withdrawals)
     refunds = keyTxRefunds pp dpstate txBody
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
@@ -96,13 +96,13 @@ evaluateTransactionBalanceShelley ::
   UTxO era ->
   TxBody era ->
   Value era
-evaluateTransactionBalanceShelley pp dpstate (UTxO u) txBody = consumed <-> produced
+evaluateTransactionBalanceShelley pp dpstate utxo txBody = consumed <-> produced
   where
     produced =
       balance (txouts txBody)
         <+> inject (txBody ^. feeTxBodyL <+> totalTxDeposits pp dpstate txBody)
     consumed =
-      balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
+      balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
         <> inject (refunds <> withdrawals)
     refunds = keyTxRefunds pp dpstate txBody
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
