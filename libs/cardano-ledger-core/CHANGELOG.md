@@ -2,6 +2,9 @@
 
 ## 1.10.0.0
 
+* Add `kindObject`
+* Add `ToJSON` instance for `TxOutSource` and `PoolCert`
+* Expose `txInToText`
 * Add `getWitsVKeyNeeded` to `EraUTxO`
 * Changed the type of the lenses `ppMaxBBSizeL`, `ppMaxTxSizeL`, `ppMaxBHSizeL`,
   `ppuMaxBBSizeL`, `ppuMaxTxSizeL` and `ppuMaxBHSizeL`

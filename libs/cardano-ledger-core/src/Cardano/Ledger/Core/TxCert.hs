@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -25,17 +26,20 @@ module Cardano.Ledger.Core.TxCert (
 )
 where
 
+import Cardano.Ledger.BaseTypes (kindObject)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR, ToCBOR)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core.Era (Era (EraCrypto))
 import Cardano.Ledger.Core.PParams (PParams)
 import Cardano.Ledger.Core.Translation
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), asWitness)
 import Cardano.Ledger.PoolParams (PoolParams (ppId))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData (..), rwhnf)
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Kind (Type)
 import Data.Maybe (isJust)
 import Data.Void (Void)
@@ -44,6 +48,7 @@ import NoThunks.Class (NoThunks (..))
 
 class
   ( Era era
+  , ToJSON (TxCert era)
   , DecCBOR (TxCert era)
   , EncCBOR (TxCert era)
   , ToCBOR (TxCert era)
@@ -151,6 +156,16 @@ instance NoThunks (PoolCert c)
 
 instance NFData (PoolCert c) where
   rnf = rwhnf
+
+instance Crypto c => ToJSON (PoolCert c) where
+  toJSON = \case
+    RegPool poolParams ->
+      kindObject "RegPool" ["poolParams" .= toJSON poolParams]
+    RetirePool poolId epochNo ->
+      kindObject "RetirePool" $
+        [ "poolId" .= toJSON poolId
+        , "epochNo" .= toJSON epochNo
+        ]
 
 poolCertKeyHashWitness :: PoolCert c -> KeyHash 'Witness c
 poolCertKeyHashWitness = \case

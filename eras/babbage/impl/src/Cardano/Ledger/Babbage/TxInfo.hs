@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -36,7 +37,7 @@ import Cardano.Ledger.Alonzo.TxWits (RdmrPtr, unRedeemers)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Scripts (PlutusScript (..))
-import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..), isSJust)
+import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..), isSJust, kindObject)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -58,15 +59,18 @@ import Cardano.Ledger.Plutus.TxInfo (
   transDataHash,
   transScriptHash,
   transTxIn,
+  txOutSourceToText,
  )
-import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, when, zipWithM)
+import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import GHC.Generics
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -255,6 +259,22 @@ instance Era era => DecCBOR (BabbageContextError era) where
     6 -> SumD ReferenceInputsNotSupported <! From
     7 -> SumD (AlonzoContextError . TimeTranslationPastHorizon) <! From
     n -> Invalid n
+
+instance ToJSON (BabbageContextError era) where
+  toJSON = \case
+    AlonzoContextError err -> toJSON err
+    ByronTxOutInContext txOutSource ->
+      String $ "Byron UTxO being created or spent: " <> txOutSourceToText txOutSource
+    RdmrPtrPointsToNothing ptr ->
+      kindObject "RedeemerPointerPointsToNothing" ["ptr" .= toJSON ptr]
+    InlineDatumsNotSupported txOutSource ->
+      String $ "Inline datums not supported, output source: " <> txOutSourceToText txOutSource
+    ReferenceScriptsNotSupported txOutSource ->
+      String $ "Reference scripts not supported, output source: " <> txOutSourceToText txOutSource
+    ReferenceInputsNotSupported txIns ->
+      String $
+        "Reference inputs not supported: "
+          <> T.intercalate ", " (map txInToText (Set.toList txIns))
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (BabbageEra c) where
   toPlutusTxCert _ = pure . Alonzo.transTxCert

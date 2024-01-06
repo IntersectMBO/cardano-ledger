@@ -83,7 +83,7 @@ module Cardano.Ledger.Shelley.TxCert (
 )
 where
 
-import Cardano.Ledger.BaseTypes (invalidKey)
+import Cardano.Ledger.BaseTypes (invalidKey, kindObject)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   DecCBORGroup (..),
@@ -117,6 +117,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData (..), rwhnf)
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Foldable (Foldable (..), foldMap', foldl')
 import Data.Map.Strict (Map)
 import Data.Maybe (isJust, isNothing)
@@ -227,7 +228,8 @@ pattern DelegStakeTxCert c kh <- (getDelegStakeTxCert -> Just (c, kh))
   where
     DelegStakeTxCert c kh = mkDelegStakeTxCert c kh
 
-pattern MirTxCert :: (ShelleyEraTxCert era, ProtVerAtMost era 8) => MIRCert (EraCrypto era) -> TxCert era
+pattern MirTxCert ::
+  (ShelleyEraTxCert era, ProtVerAtMost era 8) => MIRCert (EraCrypto era) -> TxCert era
 pattern MirTxCert d <- (getMirTxCert -> Just d)
   where
     MirTxCert d = mkMirTxCert d
@@ -267,6 +269,14 @@ instance NoThunks (GenesisDelegCert c)
 instance NFData (GenesisDelegCert c) where
   rnf = rwhnf
 
+instance Crypto c => ToJSON (GenesisDelegCert c) where
+  toJSON (GenesisDelegCert genKeyHash genDelegKeyHash hashVrf) =
+    kindObject "GenesisDelegCert" $
+      [ "genKeyHash" .= toJSON genKeyHash
+      , "genDelegKeyHash" .= toJSON genDelegKeyHash
+      , "hashVrf" .= toJSON hashVrf
+      ]
+
 genesisKeyHashWitness :: GenesisDelegCert c -> KeyHash 'Witness c
 genesisKeyHashWitness (GenesisDelegCert gk _ _) = asWitness gk
 
@@ -289,6 +299,11 @@ instance DecCBOR MIRPot where
       1 -> pure TreasuryMIR
       k -> invalidKey k
 
+instance ToJSON MIRPot where
+  toJSON = \case
+    ReservesMIR -> "reserves"
+    TreasuryMIR -> "treasury"
+
 -- | MIRTarget specifies if funds from either the reserves
 -- or the treasury are to be handed out to a collection of
 -- reward accounts or instead transfered to the opposite pot.
@@ -308,8 +323,16 @@ instance Crypto c => DecCBOR (MIRTarget c) where
       _ -> SendToOppositePotMIR <$> decCBOR
 
 instance Crypto c => EncCBOR (MIRTarget c) where
-  encCBOR (StakeAddressesMIR m) = encCBOR m
-  encCBOR (SendToOppositePotMIR c) = encCBOR c
+  encCBOR = \case
+    StakeAddressesMIR m -> encCBOR m
+    SendToOppositePotMIR c -> encCBOR c
+
+instance Crypto c => ToJSON (MIRTarget c) where
+  toJSON = \case
+    StakeAddressesMIR mirAddresses ->
+      kindObject "StakeAddressesMIR" ["addresses" .= toJSON mirAddresses]
+    SendToOppositePotMIR c ->
+      kindObject "SendToOppositePotMIR" ["coin" .= toJSON c]
 
 -- | Move instantaneous rewards certificate
 data MIRCert c = MIRCert
@@ -326,9 +349,14 @@ instance Crypto c => DecCBOR (MIRCert c) where
 
 instance Crypto c => EncCBOR (MIRCert c) where
   encCBOR (MIRCert pot targets) =
-    encodeListLen 2
-      <> encCBOR pot
-      <> encCBOR targets
+    encodeListLen 2 <> encCBOR pot <> encCBOR targets
+
+instance Crypto c => ToJSON (MIRCert c) where
+  toJSON MIRCert {mirPot, mirRewards} =
+    kindObject "MIRCert" $
+      [ "pot" .= toJSON mirPot
+      , "rewards" .= toJSON mirRewards
+      ]
 
 -- | A heavyweight certificate.
 data ShelleyTxCert era
@@ -339,6 +367,13 @@ data ShelleyTxCert era
   deriving (Show, Generic, Eq, NFData)
 
 instance NoThunks (ShelleyTxCert era)
+
+instance Era era => ToJSON (ShelleyTxCert era) where
+  toJSON = \case
+    ShelleyTxCertDelegCert delegCert -> toJSON delegCert
+    ShelleyTxCertPool poolCert -> toJSON poolCert
+    ShelleyTxCertGenesisDeleg genDelegCert -> toJSON genDelegCert
+    ShelleyTxCertMir mirCert -> toJSON mirCert
 
 upgradeShelleyTxCert ::
   EraCrypto era1 ~ EraCrypto era2 =>
@@ -459,6 +494,16 @@ data ShelleyDelegCert c
   | -- | A stake delegation certificate.
     ShelleyDelegCert !(StakeCredential c) !(KeyHash 'StakePool c)
   deriving (Show, Generic, Eq)
+
+instance Crypto c => ToJSON (ShelleyDelegCert c) where
+  toJSON = \case
+    ShelleyRegCert cred -> kindObject "RegCert" ["credential" .= toJSON cred]
+    ShelleyUnRegCert cred -> kindObject "UnRegCert" ["credential" .= toJSON cred]
+    ShelleyDelegCert cred poolId ->
+      kindObject "DelegCert" $
+        [ "credential" .= toJSON cred
+        , "poolId" .= toJSON poolId
+        ]
 
 pattern RegKey :: StakeCredential c -> ShelleyDelegCert c
 pattern RegKey cred = ShelleyRegCert cred

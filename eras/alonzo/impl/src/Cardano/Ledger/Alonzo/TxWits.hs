@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -64,11 +65,12 @@ import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
-  Tag,
+  Tag (..),
   decodePlutusScript,
   fromPlutusScript,
   toPlutusSLanguage,
  )
+import Cardano.Ledger.BaseTypes (kindObject)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -119,6 +121,7 @@ import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), keyBy, shelleyEqTxWitsRaw)
 import Control.DeepSeq (NFData)
 import Control.Monad (when, (>=>))
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty as NE (toList)
 import Data.Map.Strict (Map)
@@ -162,6 +165,15 @@ instance EncCBORGroup RdmrPtr where
 
 instance DecCBORGroup RdmrPtr where
   decCBORGroup = RdmrPtr <$> decCBOR <*> decCBOR
+
+instance ToJSON RdmrPtr where
+  toJSON = \case
+    RdmrPtr Spend n -> kindObjectWithValue "RedeemerPointerSpending" n
+    RdmrPtr Mint n -> kindObjectWithValue "RedeemerPointerMinting" n
+    RdmrPtr Cert n -> kindObjectWithValue "RedeemerPointerCertifying" n
+    RdmrPtr Rewrd n -> kindObjectWithValue "RedeemerPointerWithdrawing" n
+    where
+      kindObjectWithValue name n = kindObject name ["value" .= n]
 
 newtype RedeemersRaw era = RedeemersRaw (Map RdmrPtr (Data era, ExUnits))
   deriving (Eq, Generic, Typeable, NFData)

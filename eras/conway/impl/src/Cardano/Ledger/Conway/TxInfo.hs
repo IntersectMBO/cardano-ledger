@@ -39,7 +39,7 @@ import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
-import Cardano.Ledger.BaseTypes (EpochNo (..), Inject (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), Inject (..), kindObject)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -63,6 +63,7 @@ import Cardano.Ledger.Plutus.TxInfo (coinToLovelace, transCoin, transCred, trans
 import Cardano.Ledger.PoolParams
 import Control.DeepSeq (NFData)
 import Control.Monad (unless, zipWithM)
+import Data.Aeson (ToJSON (..), (.=))
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -115,6 +116,12 @@ instance (DecCBOR (TxCert era), Era era) => DecCBOR (ConwayContextError era) whe
     8 -> SumD BabbageContextError <! From
     9 -> SumD CertificateNotSupported <! From
     n -> Invalid n
+
+instance ToJSON (TxCert era) => ToJSON (ConwayContextError era) where
+  toJSON = \case
+    BabbageContextError err -> toJSON err
+    CertificateNotSupported txCert ->
+      kindObject "CertificateNotSupported" ["certificate" .= toJSON txCert]
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
   toPlutusTxCert _ = transTxCertV1V2
