@@ -47,6 +47,7 @@
 
 ### `testlib`
 
+* Add `lookupImpRootTxOut` and remove `impRootTxCoin`
 * Add `submitTx_`, `submitTxAnn` and `submitTxAnn_`.
 * Change type signature for `submitTx` and `trySubmitTx`.
 * Add `tryRunImpRule`

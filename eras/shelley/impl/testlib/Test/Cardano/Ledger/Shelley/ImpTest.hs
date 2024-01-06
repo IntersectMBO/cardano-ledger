@@ -56,6 +56,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   constitutionShouldBe,
   withImpState,
   fixupFees,
+  lookupImpRootTxOut,
   -- Logging
   logEntry,
   logStakeDistr,
@@ -125,7 +126,7 @@ import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Tools (calcMinFeeTx)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin)
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin, txinLookup)
 import Cardano.Ledger.Val (Val (..))
 import Control.Monad (forM)
 import Control.Monad.IO.Class
@@ -171,7 +172,6 @@ import UnliftIO.Exception (
 
 data ImpTestState era = ImpTestState
   { impNES :: !(NewEpochState era)
-  , impRootTxCoin :: !Coin
   , impRootTxId :: !(TxId (EraCrypto era))
   , impSafeHashIdx :: !Int
   , impKeyPairs :: !(forall k. Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
@@ -188,9 +188,6 @@ impNESL = lens impNES (\x y -> x {impNES = y})
 
 impLastTickL :: Lens' (ImpTestState era) SlotNo
 impLastTickL = lens impLastTick (\x y -> x {impLastTick = y})
-
-impRootTxCoinL :: Lens' (ImpTestState era) Coin
-impRootTxCoinL = lens impRootTxCoin (\x y -> x {impRootTxCoin = y})
 
 impRootTxIdL :: Lens' (ImpTestState era) (TxId (EraCrypto era))
 impRootTxIdL = lens impRootTxId (\x y -> x {impRootTxId = y})
@@ -459,23 +456,32 @@ getRewardAccountAmount rewardAcount = do
     Nothing -> assertFailure $ "Expected a reward account: " ++ show cred
     Just RDPair {rdReward} -> pure $ fromCompact rdReward
 
+lookupImpRootTxOut :: ImpTestM era (TxIn (EraCrypto era), TxOut era)
+lookupImpRootTxOut = do
+  ImpTestState {impRootTxId} <- get
+  let rootTxIn = TxIn impRootTxId $ TxIx 0
+  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  case txinLookup rootTxIn utxo of
+    Nothing -> error "Root txId no longer points to an existing unspent output"
+    Just rootTxOut -> pure (rootTxIn, rootTxOut)
+
 fixupFees ::
   forall era.
   ShelleyEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupFees tx = do
-  ImpTestState {impRootTxId, impRootTxCoin} <- get
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
   kpSpending <- lookupKeyPair =<< freshKeyHash
   kpStaking <- lookupKeyPair =<< freshKeyHash
+  (rootTxIn, rootTxOut) <- lookupImpRootTxOut
   let
     deposits = certsTotalDepositsTxBody pp certState (tx ^. bodyTxL)
     refunds = certsTotalRefundsTxBody pp certState (tx ^. bodyTxL)
     outputsTotalCoin = sumAllCoin $ tx ^. bodyTxL . outputsTxBodyL
-    remainingCoin = impRootTxCoin <-> (outputsTotalCoin <+> deposits <-> refunds)
+    remainingCoin = (rootTxOut ^. coinTxOutL) <-> (outputsTotalCoin <+> deposits <-> refunds)
     remainingTxOut =
       mkBasicTxOut @era
         (mkAddr (kpSpending, kpStaking))
@@ -483,7 +489,7 @@ fixupFees tx = do
   let
     txNoWits =
       tx
-        & bodyTxL . inputsTxBodyL %~ Set.insert (TxIn impRootTxId $ TxIx 0)
+        & bodyTxL . inputsTxBodyL %~ Set.insert rootTxIn
         & bodyTxL . outputsTxBodyL %~ (remainingTxOut :<|)
     nativeScriptKeyWitsCount = 0 -- TODO figure out wits for native scripts
     outsWithoutRemaining = tx ^. bodyTxL . outputsTxBodyL
@@ -502,7 +508,6 @@ fixupFees tx = do
             & bodyTxL . outputsTxBodyL .~ outsWithoutRemaining
             & bodyTxL . feeTxBodyL .~ (fee <> remainingTxOut ^. coinTxOutL)
   wits <- mkTxWits (txBalanced ^. bodyTxL)
-  impRootTxCoinL .= remainderAvailable
   let txWithWits = txBalanced & witsTxL .~ wits
       Coin feeUsed = txWithWits ^. bodyTxL . feeTxBodyL
       Coin feeMin = getMinFeeTx pp txWithWits
@@ -668,7 +673,6 @@ withImpState =
     pure
       ImpTestState
         { impNES = emptyImpNES rootCoin
-        , impRootTxCoin = rootCoin
         , impRootTxId = TxId (mkDummySafeHash Proxy 0)
         , impSafeHashIdx = 0
         , impKeyPairs = mempty
