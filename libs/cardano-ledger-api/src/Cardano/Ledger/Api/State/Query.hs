@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Ledger.Api.State.Query (
@@ -28,6 +27,9 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * @GetCommitteeMembersState@
   queryCommitteeMembersState,
+
+  -- * @GetAccountState@
+  queryAccountState,
   CommitteeMemberState (..),
   CommitteeMembersState (..),
   HotCredAuthStatus (..),
@@ -73,6 +75,7 @@ import Data.Maybe (isJust)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (&), (<&>), (^.))
+import Lens.Micro.Extras (view)
 
 -- | Filter out stake pool delegations and rewards for a set of stake credentials
 filterStakePoolDelegsAndRewards ::
@@ -243,3 +246,8 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
       , csQuorum = comQuorum
       , csEpochNo = currentEpoch
       }
+
+queryAccountState ::
+  NewEpochState era ->
+  AccountState
+queryAccountState = view $ nesEsL . esAccountStateL

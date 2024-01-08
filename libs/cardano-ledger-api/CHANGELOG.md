@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Add `queryAccountState`
 * Add `estimateMinFeeTx`
 * Add `registerInitialDReps`, `registerDRepDelegs`
 * Stop exporting `CostModels` internal representation
