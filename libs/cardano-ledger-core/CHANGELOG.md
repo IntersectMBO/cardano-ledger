@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Add `originalBytesSize` and default implementation to `SafeToHash` typeclass
 * Rename `RewardAccount` fields `getRwdNetwork` and `getRwdCred` to `raNetwork` and `raCredential` respectively
 * Deprecate `ppRewardAcnt` in favor of `ppRewardAccount`
 * Deprecate `fromCborRewardAcnt` in favor of `fromCborRewardAccount`

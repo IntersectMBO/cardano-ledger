@@ -67,7 +67,9 @@ import Cardano.Ledger.Orphans ()
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS (length)
 import Data.ByteString.Short (ShortByteString, fromShort)
+import qualified Data.ByteString.Short as SBS (length)
 import Data.Default.Class (Default (..))
 import Data.Foldable (fold)
 import Data.Typeable
@@ -142,6 +144,9 @@ class SafeToHash t where
   -- | Extract the original bytes from 't'
   originalBytes :: t -> ByteString
 
+  originalBytesSize :: t -> Int
+  originalBytesSize = BS.length . originalBytes
+
   makeHashWithExplicitProxys ::
     Hash.HashAlgorithm (HASH c) =>
     Proxy c ->
@@ -157,7 +162,8 @@ class SafeToHash t where
 -- from newtype deriving.
 
 instance SafeToHash ShortByteString where
-  originalBytes x = fromShort x
+  originalBytes = fromShort
+  originalBytesSize = SBS.length
 
 instance SafeToHash ByteString where
   originalBytes x = x
