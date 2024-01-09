@@ -114,7 +114,7 @@ data AlonzoUtxowPredFailure era
       -- | Computed from the current Protocol Parameters
       !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
   | -- | Set of witnesses which were needed and not supplied
-    MissingRequiredSigners -- TODO: remove. It is now redundant. See #3972
+    MissingRequiredSigners -- TODO: remove once in Conway. It is now redundant. See #3972
       (Set (KeyHash 'Witness (EraCrypto era)))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
@@ -276,6 +276,7 @@ requiredSignersAreWitnessed txBody witsKeyHashes = do
   failureUnless
     (eval (reqSignerHashes' ⊆ witsKeyHashes))
     (MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes))
+{-# DEPRECATED requiredSignersAreWitnessed "As no longer used. `validateNeededWitnesses` now handles this check" #-}
 
 -- =======================
 {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
@@ -358,13 +359,6 @@ alonzoStyleWitness = do
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
   runTest $ validateNeededWitnesses witsKeyHashes certState utxo txBody
-
-  {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
-      witsVKeyNeeded must include the reqSignerHashes in the union   -}
-  {- reqSignerHashes txBody ⊆ witsKeyHashes -}
-  -- TODO: Remove once we are in Conway. This check is now handled by
-  -- validateNeededWitnesses, as per spec
-  runTestOnSignal $ requiredSignersAreWitnessed txBody witsKeyHashes
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
