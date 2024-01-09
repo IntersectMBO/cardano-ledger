@@ -31,7 +31,6 @@ import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext (..),
  )
 import Cardano.Ledger.Plutus.Language (Language (..))
-import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (inject)

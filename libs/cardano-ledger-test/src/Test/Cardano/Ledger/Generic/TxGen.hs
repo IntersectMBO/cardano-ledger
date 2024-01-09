@@ -47,8 +47,6 @@ import Cardano.Ledger.Keys (
   coerceKeyRole,
  )
 import Cardano.Ledger.Plutus.Data (Data, Datum (..), dataToBinaryData, hashData)
-import Cardano.Ledger.Pretty (PrettyA (..), ppRecord)
-import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   Addr (..),
@@ -134,6 +132,7 @@ import Test.Cardano.Ledger.Generic.ModelState (
   ModelNewEpochState (..),
   UtxoEntry,
  )
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..), ppRecord)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)

@@ -26,19 +26,6 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import Cardano.Ledger.EpochBoundary (SnapShots (..), calculatePoolDistr)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
-import Cardano.Ledger.Pretty (
-  PDoc,
-  PrettyA (..),
-  ppInt,
-  ppList,
-  ppMap,
-  ppRecord,
-  ppSafeHash,
-  ppSet,
-  ppSlotNo,
-  ppString,
-  ppWord64,
- )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -117,14 +104,25 @@ import Test.Cardano.Ledger.Generic.GenState (
 import Test.Cardano.Ledger.Generic.MockChain
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)
 import Test.Cardano.Ledger.Generic.PrettyCore (
+  PDoc,
+  PrettyA (..),
   pcCoin,
   pcCredential,
   pcKeyHash,
   pcPoolParams,
   pcScript,
   pcScriptHash,
+  pcSlotNo,
   pcTxBodyField,
   pcTxIn,
+  ppInt,
+  ppList,
+  ppMap,
+  ppRecord,
+  ppSafeHash,
+  ppSet,
+  ppString,
+  ppWord64,
   scriptSummary,
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
@@ -635,7 +633,7 @@ main3 = showVector pretty
     pretty :: Proof era -> [Tx era] -> SlotNo -> PDoc
     pretty (Babbage Mock) xs slot =
       vsep
-        [ ppSlotNo slot
+        [ pcSlotNo slot
         , vsep (map (ppList prettyA . Fold.toList . certs' . body) xs)
         ]
     pretty p _ _ = ppString ("main3 does not work in era " ++ show p)

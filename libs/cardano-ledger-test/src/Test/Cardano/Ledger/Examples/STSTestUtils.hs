@@ -65,8 +65,6 @@ import Cardano.Ledger.Credential (
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyRole (..), hashKey)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
-import Cardano.Ledger.Pretty
-import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.Shelley.API (
   Block (..),
   EpochState (..),
@@ -98,7 +96,7 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (
   TxOutField (..),
  )
-import Test.Cardano.Ledger.Generic.PrettyCore ()
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..), ppList)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..), after, matchkey)
 import Test.Cardano.Ledger.Generic.Updaters
@@ -284,7 +282,7 @@ trustMeP _ _ tx = tx
 -- and expected are ValidationTagMismatch. Of course the 'path' to ValidationTagMismatch differs by Era.
 -- so we need to case over the Era proof, to get the path correctly.
 testBBODY ::
-  (GoodCrypto (EraCrypto era), HasCallStack) =>
+  (Reflect era, HasCallStack) =>
   WitRule "BBODY" era ->
   ShelleyBbodyState era ->
   Block (BHeaderView (EraCrypto era)) era ->
@@ -301,9 +299,7 @@ testBBODY wit@(BBODY proof) initialSt block expected pparams =
 
 testUTXOW ::
   forall era.
-  ( GoodCrypto (EraCrypto era)
-  , PostShelley era
-  , EraTx era
+  ( Reflect era
   , HasCallStack
   ) =>
   WitRule "UTXOW" era ->
@@ -322,10 +318,7 @@ testUTXOW (UTXOW other) _ _ _ = error ("Cannot use testUTXOW in era " ++ show ot
 testUTXOWsubset
   , testUTXOspecialCase ::
     forall era.
-    ( GoodCrypto (EraCrypto era)
-    , PostShelley era
-    , EraTx era
-    , EraGov era
+    ( Reflect era
     , HasCallStack
     ) =>
     WitRule "UTXOW" era ->

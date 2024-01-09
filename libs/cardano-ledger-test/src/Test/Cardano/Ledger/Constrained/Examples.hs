@@ -43,7 +43,7 @@ import Test.Cardano.Ledger.Constrained.Tests (prop_shrinking, prop_soundness)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (explainBad, testIO)
 import Test.Cardano.Ledger.Constrained.Vars
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..))
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 import Test.Cardano.Ledger.Generic.Proof (ConwayEra, Reflect (..), StandardCrypto)
 import Test.Cardano.Ledger.Generic.Trace (testPropMax)
 import Test.Hspec (shouldThrow)
@@ -63,13 +63,13 @@ runCompile cs = case runTyped (compile standardOrderInfo cs) of
   Left xs -> putStrLn (unlines xs)
 
 data Assembler era where
-  Assemble :: PrettyC t era => RootTarget era x t -> Assembler era
+  Assemble :: PrettyA t => RootTarget era x t -> Assembler era
   Skip :: Assembler era
 
 stoi :: OrderInfo
 stoi = standardOrderInfo
 
-genMaybeCounterExample :: Era era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen (Maybe String)
+genMaybeCounterExample :: Reflect era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen (Maybe String)
 genMaybeCounterExample proof _testname loud order cs target = do
   let cs3 = removeEqual cs []
   let cs4 = removeSameVar cs3 []
@@ -103,7 +103,7 @@ genMaybeCounterExample proof _testname loud order cs target = do
     Skip -> pure []
     Assemble t -> do
       !tval <- monadTyped (runTarget env t)
-      pure ["\nAssemble the pieces\n", show (prettyC proof tval)]
+      pure ["\nAssemble the pieces\n", show (prettyA tval)]
   let bad = filter (\(_, b, _) -> not b) testTriples
       ans =
         if null bad
@@ -114,7 +114,7 @@ genMaybeCounterExample proof _testname loud order cs target = do
     else pure ans
 
 -- | Test that 'cs' :: [Pred] has a solution
-testn :: Era era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen Property
+testn :: Reflect era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen Property
 testn proof testname loud order cs target = do
   result <- genMaybeCounterExample proof testname loud order cs target
   case result of
@@ -122,7 +122,7 @@ testn proof testname loud order cs target = do
     Just xs -> pure $ counterexample xs False
 
 -- | Test that 'cs' :: [Pred] does NOT have a solution. We expect a failure
-failn :: Era era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> IO ()
+failn :: Reflect era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> IO ()
 failn proof message loud order cs target = do
   shouldThrow
     ( do

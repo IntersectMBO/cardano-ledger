@@ -1,13 +1,14 @@
-module Test.Cardano.Ledger.Shelley.Pretty (testwidth, prettyTest) where
+module Test.Cardano.Ledger.Generic.PrettyTest (testwidth, prettyTest) where
 
 import Cardano.Ledger.Core (Tx, TxBody)
-import Cardano.Ledger.Pretty
 import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.UTxO (UTxO)
 import Prettyprinter (defaultLayoutOptions, layoutPretty)
 import Prettyprinter.Render.Text (renderStrict)
 import Prettyprinter.Util (putDocW)
+import Test.Cardano.Ledger.Generic.PrettyCore
+import Test.Cardano.Ledger.Generic.Proof (Evidence (Standard), Proof (Shelley))
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Tasty
@@ -49,8 +50,10 @@ prettyTest :: TestTree
 prettyTest =
   testGroup
     "Pretty printer tests"
-    [ testPP "UTxO" ppUTxO utxo
-    , testPP "TxBody" ppTxBody txbody
-    , testPP "Tx" ppTx tx
-    , testPP "LedgerState" ppLedgerState ls
+    [ testPP "UTxO" (pcUTxO proof) utxo
+    , testPP "TxBody" (pcTxBody proof) txbody
+    , testPP "Tx" (pcTx proof) tx
+    , testPP "LedgerState" (pcLedgerState proof) ls
     ]
+  where
+    proof = Shelley Standard

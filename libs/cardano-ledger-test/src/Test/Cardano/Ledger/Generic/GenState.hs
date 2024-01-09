@@ -89,8 +89,6 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString)
-import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
@@ -143,7 +141,8 @@ import Test.Cardano.Ledger.Generic.ModelState (
   pcModelNewEpochState,
  )
 import Test.Cardano.Ledger.Generic.PrettyCore (
-  PrettyC (..),
+  PDoc,
+  PrettyA (..),
   pcCoin,
   pcCredential,
   pcIndividualPoolStake,
@@ -151,6 +150,12 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcPoolParams,
   pcTxIn,
   pcTxOut,
+  ppInt,
+  ppMap,
+  ppRecord,
+  ppSet,
+  ppString,
+  ppValidityInterval,
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
@@ -682,7 +687,7 @@ viewGenState proof gsize verbose = do
   st <- generate (genGenState proof gsize)
   when verbose $ print (pcGenState proof st)
 
-instance Reflect era => PrettyC (GenState era) era where prettyC = pcGenState
+instance Reflect era => PrettyA (GenState era) where prettyA = pcGenState reify
 
 instance era ~ BabbageEra Mock => Show (GenState era) where
   show x = show (pcGenState (Babbage Mock) x)

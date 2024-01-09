@@ -27,7 +27,6 @@ import Cardano.Ledger.Core (
   coinTxOutL,
  )
 import Cardano.Ledger.DRep hiding (drepDeposit)
-import Cardano.Ledger.Pretty (ppList)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -65,7 +64,7 @@ import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..))
 import Test.Cardano.Ledger.Generic.MockChain (MockBlock (..), MockChainState (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTxCert)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcTxCert, ppList)
 import Test.Cardano.Ledger.Generic.Proof (
   ConwayEra,
   Evidence (..),

@@ -94,21 +94,6 @@ import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (ppId))
-import Cardano.Ledger.Pretty (
-  PDoc,
-  ppHash,
-  ppInteger,
-  ppList,
-  ppMap,
-  ppMaybe,
-  ppRecord',
-  ppSet,
-  ppString,
-  ppVKey,
-  ppWord32,
- )
-import Cardano.Ledger.Pretty.Alonzo (ppRdmrPtr)
-import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks (restrictPoolMetadataHash)
@@ -175,6 +160,7 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (WitnessesField (..))
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.PrettyCore (
+  PDoc,
   credSummary,
   keyHashSummary,
   pcAnchor,
@@ -217,6 +203,18 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcWitVKey,
   pcWitnesses,
   pcWitnessesField,
+  ppHash,
+  ppInteger,
+  ppList,
+  ppMap,
+  ppMaybe,
+  ppRdmrPtr,
+  ppRecord',
+  ppSet,
+  ppString,
+  ppVKey,
+  ppValidityInterval,
+  ppWord32,
   trim,
  )
 import Test.Cardano.Ledger.Generic.Proof

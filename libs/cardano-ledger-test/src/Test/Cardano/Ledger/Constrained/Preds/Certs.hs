@@ -30,7 +30,6 @@ import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolMetadata, PoolParams (..))
-import Cardano.Ledger.Pretty (ppList)
 import Cardano.Ledger.Shelley.LedgerState (AccountState, InstantaneousRewards, availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (
   EraTxCert (..),
@@ -61,7 +60,7 @@ import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTxCert)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcTxCert, ppList)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain)

@@ -16,7 +16,6 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Core (Era (EraCrypto), EraScript (..), hashScript)
 import Cardano.Ledger.Hashes (DataHash, ScriptHash (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
-import Cardano.Ledger.Pretty
 import Data.Char (toLower)
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as HashSet
@@ -52,6 +51,7 @@ import Test.Cardano.Ledger.Constrained.Env (
 import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed (..), failT, monadTyped)
 import Test.Cardano.Ledger.Constrained.Size (Size (..), runSize, seps)
 import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), format, hasEq, synopsis, testEql, (:~:) (Refl))
+import Test.Cardano.Ledger.Generic.PrettyCore (PDoc, ppRecord, ppString)
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import Test.QuickCheck (Gen, oneof)
 import Type.Reflection (TypeRep, Typeable, typeRep)

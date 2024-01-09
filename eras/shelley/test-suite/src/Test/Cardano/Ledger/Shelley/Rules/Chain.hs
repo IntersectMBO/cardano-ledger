@@ -52,8 +52,6 @@ import Cardano.Ledger.Keys (
   coerceKeyRole,
  )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.Pretty (PrettyA)
-import qualified Cardano.Ledger.Pretty as PP
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (
   AdaPots (..),
@@ -447,32 +445,6 @@ totalAdaPots = totalAdaPotsES . nesEs . chainNes
 -- | Calculate the total ada in the chain state
 totalAda :: EraTxOut era => ChainState era -> Coin
 totalAda = totalAdaES . nesEs . chainNes
-
-ppChainState ::
-  ( PP.CanPrettyPrintLedgerState era
-  , PrettyA (GovState era)
-  ) =>
-  ChainState era ->
-  PP.PDoc
-ppChainState (ChainState nes ocert epochnonce evolvenonce prevnonce candnonce lastab) =
-  PP.ppRecord
-    "ChainState"
-    [ ("newepoch", PP.ppNewEpochState nes)
-    , ("ocerts", PP.ppMap PP.ppKeyHash PP.ppWord64 ocert)
-    , ("epochNonce", PP.ppNonce epochnonce)
-    , ("evolvingNonce", PP.ppNonce evolvenonce)
-    , ("candidateNonce", PP.ppNonce prevnonce)
-    , ("prevepochNonce", PP.ppNonce candnonce)
-    , ("lastApplidBlock", PP.ppWithOrigin PP.ppLastAppliedBlock lastab)
-    ]
-
-instance
-  ( PP.CanPrettyPrintLedgerState era
-  , PrettyA (GovState era)
-  ) =>
-  PP.PrettyA (ChainState era)
-  where
-  prettyA = ppChainState
 
 instance
   ( ToExpr (PParams era)

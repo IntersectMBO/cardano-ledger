@@ -9,7 +9,6 @@ import qualified Test.Cardano.Ledger.Shelley.Address.Bootstrap as Bootstrap (
   bootstrapHashTest,
  )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
-import qualified Test.Cardano.Ledger.Shelley.Pretty as Pretty (prettyTest)
 import Test.Cardano.Ledger.Shelley.PropertyTests (commonTests)
 import qualified Test.Cardano.Ledger.Shelley.Rewards as Rewards (tests)
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
@@ -61,7 +60,6 @@ defaultTests =
     , RulesTests.multisigExamples
     , RulesTests.testTickF
     , UnitTests.unitTests
-    , Pretty.prettyTest
     , SafeHash.safeHashTest
     ]
 

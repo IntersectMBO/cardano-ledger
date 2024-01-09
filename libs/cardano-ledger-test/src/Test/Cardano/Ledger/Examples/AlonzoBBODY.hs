@@ -47,7 +47,6 @@ import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.PoolParams (PoolMetadata (..))
-import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
@@ -132,14 +131,12 @@ tests =
 
 alonzoBBODYexamplesP ::
   forall era.
-  ( GoodCrypto (EraCrypto era)
-  , HasTokens era
+  ( HasTokens era
   , PostShelley era
   , Value era ~ MaryValue (EraCrypto era)
   , EraSegWits era
-  , EraGov era
+  , Reflect era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , ShelleyEraTxCert era
   ) =>
   Proof era ->
   TestTree
