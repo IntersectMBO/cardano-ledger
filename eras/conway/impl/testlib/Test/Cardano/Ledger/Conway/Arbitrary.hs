@@ -100,6 +100,7 @@ instance Arbitrary (UpgradeConwayPParams Identity) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Crypto c => Arbitrary (Delegatee c) where
   arbitrary =
@@ -692,6 +693,7 @@ instance Era era => Arbitrary (ConwayPParams Identity era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Era era => Arbitrary (ConwayPParams StrictMaybe era) where
   arbitrary =
@@ -712,6 +714,7 @@ instance Era era => Arbitrary (ConwayPParams StrictMaybe era) where
       <*> arbitrary
       <*> arbitrary
       <*> (THKD <$> oneof [SJust <$> genValidAndUnknownCostModels, pure SNothing])
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

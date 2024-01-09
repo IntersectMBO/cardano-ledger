@@ -31,6 +31,7 @@ module Cardano.Ledger.Conway.PParams (
   ppGovActionDepositL,
   ppDRepDepositL,
   ppDRepActivityL,
+  ppMinFeeRefScriptCoinsPerByteL,
   ppuPoolVotingThresholdsL,
   ppuDRepVotingThresholdsL,
   ppuCommitteeMinSizeL,
@@ -39,6 +40,7 @@ module Cardano.Ledger.Conway.PParams (
   ppuGovActionDepositL,
   ppuDRepDepositL,
   ppuDRepActivityL,
+  ppuMinFeeRefScriptCoinsPerByteL,
   PoolVotingThresholds (..),
   pvtCommitteeNoConfidenceL,
   pvtCommitteeNormalL,
@@ -126,6 +128,7 @@ class BabbageEraPParams era => ConwayEraPParams era where
   hkdGovActionDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
   hkdDRepDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
   hkdDRepActivityL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
+  hkdMinFeeRefScriptCoinsPerByteL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f CoinPerByte)
 
 ppPoolVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParams era) PoolVotingThresholds
@@ -152,6 +155,9 @@ ppDRepDepositL = ppLens . hkdDRepDepositL @era @Identity
 
 ppDRepActivityL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
 ppDRepActivityL = ppLens . hkdDRepActivityL @era @Identity
+
+ppMinFeeRefScriptCoinsPerByteL :: forall era. ConwayEraPParams era => Lens' (PParams era) CoinPerByte
+ppMinFeeRefScriptCoinsPerByteL = ppLens . hkdMinFeeRefScriptCoinsPerByteL @era @Identity
 
 ppuPoolVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe PoolVotingThresholds)
@@ -184,6 +190,10 @@ ppuDRepDepositL = ppuLens . hkdDRepDepositL @era @StrictMaybe
 ppuDRepActivityL ::
   forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe EpochInterval)
 ppuDRepActivityL = ppuLens . hkdDRepActivityL @era @StrictMaybe
+
+ppuMinFeeRefScriptCoinsPerByteL ::
+  forall era. ConwayEraPParams era => Lens' (PParamsUpdate era) (StrictMaybe CoinPerByte)
+ppuMinFeeRefScriptCoinsPerByteL = ppuLens . hkdMinFeeRefScriptCoinsPerByteL @era @StrictMaybe
 
 data PoolVotingThresholds = PoolVotingThresholds
   { pvtMotionNoConfidence :: !UnitInterval
@@ -516,6 +526,8 @@ data ConwayPParams f era = ConwayPParams
   -- ^ The amount of a DRep registration deposit
   , cppDRepActivity :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ The number of Epochs that a DRep can perform no activity without losing their @Active@ status.
+  , cppMinFeeRefScriptCoinsPerByte :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
+  -- ^ Reference scripts fee for the minimum fee calculation
   }
   deriving (Generic)
 
@@ -548,6 +560,7 @@ data UpgradeConwayPParams f = UpgradeConwayPParams
   , ucppGovActionDeposit :: !(HKD f Coin)
   , ucppDRepDeposit :: !(HKD f Coin)
   , ucppDRepActivity :: !(HKD f EpochInterval)
+  , ucppMinFeeRefScriptCoinsPerByte :: !(HKD f CoinPerByte)
   }
   deriving (Generic)
 
@@ -582,6 +595,7 @@ instance Default (UpgradeConwayPParams Identity) where
       , ucppGovActionDeposit = Coin 0
       , ucppDRepDeposit = Coin 0
       , ucppDRepActivity = EpochInterval 0
+      , ucppMinFeeRefScriptCoinsPerByte = CoinPerByte $ Coin 0
       }
 
 instance Default (UpgradeConwayPParams StrictMaybe) where
@@ -595,6 +609,7 @@ instance Default (UpgradeConwayPParams StrictMaybe) where
       , ucppGovActionDeposit = SNothing
       , ucppDRepDeposit = SNothing
       , ucppDRepActivity = SNothing
+      , ucppMinFeeRefScriptCoinsPerByte = SNothing
       }
 
 instance EncCBOR (UpgradeConwayPParams Identity) where
@@ -609,11 +624,13 @@ instance EncCBOR (UpgradeConwayPParams Identity) where
         !> To ucppGovActionDeposit
         !> To ucppDRepDeposit
         !> To ucppDRepActivity
+        !> To ucppMinFeeRefScriptCoinsPerByte
 
 instance DecCBOR (UpgradeConwayPParams Identity) where
   decCBOR =
     decode $
       RecD UpgradeConwayPParams
+        <! From
         <! From
         <! From
         <! From
@@ -724,6 +741,8 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
     lens (unTHKD . cppDRepDeposit) $ \pp x -> pp {cppDRepDeposit = THKD x}
   hkdDRepActivityL =
     lens (unTHKD . cppDRepActivity) $ \pp x -> pp {cppDRepActivity = THKD x}
+  hkdMinFeeRefScriptCoinsPerByteL =
+    lens (unTHKD . cppMinFeeRefScriptCoinsPerByte) $ \pp x -> pp {cppMinFeeRefScriptCoinsPerByte = THKD x}
 
 instance Era era => EncCBOR (ConwayPParams Identity era) where
   encCBOR ConwayPParams {..} =
@@ -760,6 +779,7 @@ instance Era era => EncCBOR (ConwayPParams Identity era) where
         !> To cppGovActionDeposit
         !> To cppDRepDeposit
         !> To cppDRepActivity
+        !> To cppMinFeeRefScriptCoinsPerByte
 
 instance Era era => ToCBOR (ConwayPParams Identity era) where
   toCBOR = toEraCBOR @era
@@ -791,6 +811,7 @@ instance Era era => DecCBOR (ConwayPParams Identity era) where
         <! From
         <! From
         --  -- New for Conway
+        <! From
         <! From
         <! From
         <! From
@@ -851,6 +872,7 @@ instance Era era => FromJSON (ConwayPParams Identity era) where
         <*> obj .: "govActionDeposit"
         <*> obj .: "dRepDeposit"
         <*> obj .: "dRepActivity"
+        <*> obj .: "minFeeRefScriptCoinsPerByte"
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyConwayPParams :: forall era. Era era => ConwayPParams Identity era
@@ -887,6 +909,7 @@ emptyConwayPParams =
     , cppGovActionDeposit = THKD (Coin 0)
     , cppDRepDeposit = THKD (Coin 0)
     , cppDRepActivity = THKD (EpochInterval 0)
+    , cppMinFeeRefScriptCoinsPerByte = THKD (CoinPerByte $ Coin 0)
     }
 
 emptyConwayPParamsUpdate :: ConwayPParams StrictMaybe era
@@ -923,6 +946,7 @@ emptyConwayPParamsUpdate =
     , cppGovActionDeposit = THKD SNothing
     , cppDRepDeposit = THKD SNothing
     , cppDRepActivity = THKD SNothing
+    , cppMinFeeRefScriptCoinsPerByte = THKD SNothing
     }
 
 encodePParamsUpdate ::
@@ -961,6 +985,7 @@ encodePParamsUpdate ppu =
     !> omitStrictMaybe 30 (cppGovActionDeposit ppu) encCBOR
     !> omitStrictMaybe 31 (cppDRepDeposit ppu) encCBOR
     !> omitStrictMaybe 32 (cppDRepActivity ppu) encCBOR
+    !> omitStrictMaybe 33 (cppMinFeeRefScriptCoinsPerByte ppu) encCBOR
   where
     omitStrictMaybe ::
       Word ->
@@ -1010,6 +1035,7 @@ updateField = \case
   30 -> field (\x up -> up {cppGovActionDeposit = THKD (SJust x)}) From
   31 -> field (\x up -> up {cppDRepDeposit = THKD (SJust x)}) From
   32 -> field (\x up -> up {cppDRepActivity = THKD (SJust x)}) From
+  33 -> field (\x up -> up {cppMinFeeRefScriptCoinsPerByte = THKD (SJust x)}) From
   k -> field (\_x up -> up) (Invalid k)
 
 instance Era era => DecCBOR (ConwayPParams StrictMaybe era) where
@@ -1065,6 +1091,7 @@ conwayUpgradePParamsHKDPairs px pp =
   , ("govActionDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdGovActionDepositL @era @f))
   , ("dRepDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdDRepDepositL @era @f))
   , ("dRepActivity", hkdMap px (toJSON @EpochInterval) (pp ^. hkdDRepActivityL @era @f))
+  , ("minFeeRefScriptCoinsPerByte", hkdMap px (toJSON @CoinPerByte) (pp ^. hkdMinFeeRefScriptCoinsPerByteL @era @f))
   ]
 
 instance ToJSON (UpgradeConwayPParams Identity) where
@@ -1085,6 +1112,7 @@ upgradeConwayPParamsHKDPairs UpgradeConwayPParams {..} =
   , ("govActionDeposit", (toJSON @Coin) ucppGovActionDeposit)
   , ("dRepDeposit", (toJSON @Coin) ucppDRepDeposit)
   , ("dRepActivity", (toJSON @EpochInterval) ucppDRepActivity)
+  , ("minFeeRefScriptCoinsPerByte", (toJSON @CoinPerByte) ucppMinFeeRefScriptCoinsPerByte)
   ]
 
 instance FromJSON (UpgradeConwayPParams Identity) where
@@ -1099,6 +1127,7 @@ instance FromJSON (UpgradeConwayPParams Identity) where
         <*> o .: "govActionDeposit"
         <*> o .: "dRepDeposit"
         <*> o .: "dRepActivity"
+        <*> o .: "minFeeRefScriptCoinsPerByte"
 
 upgradeConwayPParams ::
   forall f c.
@@ -1139,6 +1168,7 @@ upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
     , cppGovActionDeposit = THKD ucppGovActionDeposit
     , cppDRepDeposit = THKD ucppDRepDeposit
     , cppDRepActivity = THKD ucppDRepActivity
+    , cppMinFeeRefScriptCoinsPerByte = THKD ucppMinFeeRefScriptCoinsPerByte
     }
 
 downgradeConwayPParams ::
@@ -1209,6 +1239,7 @@ conwayApplyPPUpdates pp ppu =
     , cppGovActionDeposit = ppUpdate (cppGovActionDeposit pp) (cppGovActionDeposit ppu)
     , cppDRepDeposit = ppUpdate (cppDRepDeposit pp) (cppDRepDeposit ppu)
     , cppDRepActivity = ppUpdate (cppDRepActivity pp) (cppDRepActivity ppu)
+    , cppMinFeeRefScriptCoinsPerByte = ppUpdate (cppMinFeeRefScriptCoinsPerByte pp) (cppMinFeeRefScriptCoinsPerByte ppu)
     }
   where
     ppUpdate ::
@@ -1262,6 +1293,7 @@ conwayModifiedPPGroups
       p28
       p29
       p30
+      p31
     ) =
     mconcat
       [ ppGroup p01
@@ -1293,4 +1325,5 @@ conwayModifiedPPGroups
       , ppGroup p28
       , ppGroup p29
       , ppGroup p30
+      , ppGroup p31
       ]

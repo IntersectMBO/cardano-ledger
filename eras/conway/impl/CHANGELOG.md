@@ -2,6 +2,8 @@
 
 ## 1.13.0.0
 
+* Add `cppMinFeeRefScriptCoinsPerByte` to `ConwayPParams` and `ppMinFeeRefScriptCoinsPerByteL`
+* Add `ucppMinFeeRefScriptCoinsPerByte` to `UpgradeConwayPParams` and `ppuMinFeeRefScriptCoinsPerByteL`
 * Fix `ConwayTxBody` pattern synonym, by changing its certificates arguments to `OSet`
   from a `StrictSeq`.
 * Add `VotingPurpose` and `ProposingPurpose` pattern synonyms
