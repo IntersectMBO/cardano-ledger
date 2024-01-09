@@ -1,9 +1,14 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -30,6 +35,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   registerDRep,
   setupSingleDRep,
   conwayModifyPParams,
+  getProposals,
   getEnactState,
   getGovActionState,
   lookupGovActionState,
@@ -46,6 +52,21 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   logCurPParams,
   electCommittee,
   electBasicCommittee,
+  submitFailingGovAction,
+  submitInitConstitutionGovAction,
+  submitChildConstitutionGovAction,
+  submitConstitutionGovAction,
+  mkCorruptGovActionId,
+  submitTreasuryWithdrawalsGovAction,
+  submitConstitutionGovActionTree,
+  submitConstitutionGovActionForest,
+  pattern J,
+  pattern E,
+  pattern N,
+  pattern I,
+  getProposalsForest,
+  logProposalsForest,
+  logProposalsForestDiff,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
@@ -58,45 +79,33 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe (..),
   inject,
+  maybeToStrictMaybe,
+  textToUrl,
  )
 import Cardano.Ledger.CertState (DRep (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (
-  Committee (..),
-  ConwayEraGov (..),
-  ConwayGovState,
-  DRepPulsingState (DRComplete),
-  EnactState (..),
-  GovAction (..),
-  GovActionId (..),
-  GovActionIx (..),
-  GovActionPurpose (..),
-  GovActionState (..),
-  PrevGovActionId (..),
-  ProposalProcedure (..),
-  RatifyEnv (..),
-  RatifyState (..),
-  Vote (..),
-  Voter (..),
-  VotingProcedure (..),
-  VotingProcedures (..),
-  cgDRepPulsingStateL,
-  cgEnactStateL,
-  ensCommitteeL,
-  ensCurPParamsL,
-  epochStateDRepPulsingStateL,
-  finishDRepPulser,
-  gasDRepVotesL,
-  proposalsLookupId,
-  psDRepDistrG,
-  rsEnactStateL,
-  setCompleteDRepPulsingState,
-  utxosGovStateL,
-  votingCommitteeThreshold,
-  votingDRepThreshold,
-  votingStakePoolThreshold,
+import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway.Core (
+  Era (..),
+  EraIndependentTxBody,
+  EraRule,
+  EraTx (..),
+  EraTxBody (..),
+  EraTxOut (..),
+  PParams,
+  PParamsHKD,
+ )
+import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.PParams (
+  ConwayEraPParams,
+  dvtCommitteeNoConfidence,
+  dvtCommitteeNormal,
+  dvtUpdateToConstitution,
+  ppCommitteeMaxTermLengthL,
+  ppDRepActivityL,
+  ppDRepVotingThresholdsL,
+  ppGovActionDepositL,
+  ppGovActionLifetimeL,
  )
 import Cardano.Ledger.Conway.Rules (
   EnactSignal,
@@ -110,6 +119,7 @@ import Cardano.Ledger.Conway.Rules (
   validCommitteeTerm,
   withdrawalCanWithdraw,
  )
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert (..),
   Delegatee (..),
@@ -145,11 +155,15 @@ import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Functor.Identity
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import Data.Maybe.Strict (isSJust)
 import qualified Data.OSet.Strict as OSet
+import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
-import Lens.Micro ((%~), (&), (.~), (^.))
+import Data.Tree
+import GHC.Generics (Generic)
+import Lens.Micro (Lens', (%~), (&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
@@ -255,7 +269,7 @@ setupSingleDRep = do
           .~ SSeq.singleton
             ( mkBasicTxOut
                 (mkAddr (kpSpending, kpDelegator))
-                (inject $ Coin 1000000)
+                (inject $ Coin 1_000_000)
             )
         & bodyTxL . certsTxBodyL
           .~ SSeq.fromList
@@ -436,17 +450,41 @@ submitGovAction_ ::
   ImpTestM era ()
 submitGovAction_ = void . submitGovAction
 
+submitFailingGovAction ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxBody era
+  , HasCallStack
+  ) =>
+  GovAction era ->
+  [PredicateFailure (EraRule "LEDGER" era)] ->
+  ImpTestM era ()
+submitFailingGovAction ga expectedFailure = trySubmitGovAction ga >>= (`shouldBeLeftExpr` expectedFailure)
+
 getEnactState :: ConwayEraGov era => ImpTestM era (EnactState era)
 getEnactState = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . enactStateGovStateL
+
+getProposals :: ConwayEraGov era => ImpTestM era (Proposals era)
+getProposals = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL
+
+logProposalsForest :: ConwayEraGov era => ImpTestM era ()
+logProposalsForest = do
+  proposals <- getProposals
+  logEntry $ proposalsShowDebug proposals True
+
+logProposalsForestDiff ::
+  (Era era, ToExpr (PParamsHKD StrictMaybe era)) =>
+  Proposals era ->
+  Proposals era ->
+  ImpTestM era ()
+logProposalsForestDiff pf1 pf2 = logEntry $ unlines ["Proposals Forest Diff:", diffExpr pf1 pf2]
 
 -- | Looks up the governance action state corresponding to the governance action id
 lookupGovActionState ::
   ConwayEraGov era =>
   GovActionId (EraCrypto era) ->
   ImpTestM era (Maybe (GovActionState era))
-lookupGovActionState aId = do
-  proposals <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL
-  pure $ proposalsLookupId aId proposals
+lookupGovActionState aId = proposalsLookupId aId <$> getProposals
 
 -- | Looks up the governance action state corresponding to the governance action id
 getGovActionState ::
@@ -471,13 +509,14 @@ expectMissingGovActionId ::
   GovActionId (EraCrypto era) ->
   ImpTestM era ()
 expectMissingGovActionId govActionId =
+  -- FIXME: @aniketd also check that the id isn't present in enacted or children
   impAnn "Expecting for gov action state to be missing" $ do
     lookupGovActionState govActionId >>= \case
       Just _ ->
         expectationFailure $ "Found gov action state for govActionId: " <> show govActionId
       Nothing -> pure ()
 
--- | Builds a RatifyState from the current state
+-- | Builds a RatifyEnv from the current state
 getRatifyEnv :: ConwayEraGov era => ImpTestM era (RatifyEnv era)
 getRatifyEnv = do
   eNo <- getsNES nesELL
@@ -538,10 +577,14 @@ logAcceptedRatio :: (HasCallStack, ConwayEraGov era) => GovActionId (EraCrypto e
 logAcceptedRatio aId = do
   dRepRatio <- calculateDRepAcceptedRatio aId
   committeeRatio <- calculateCommitteeAcceptedRatio aId
-  logEntry "----- ACCEPTED RATIOS -----"
-  logEntry $ "DRep accepted ratio:\t\t" <> show dRepRatio
-  logEntry $ "Committee accepted ratio:\t" <> show committeeRatio
-  logEntry ""
+  logEntry $
+    unlines
+      [ ""
+      , "----- ACCEPTED RATIOS ---"
+      , "DRep accepted ratio:\t\t" <> show dRepRatio
+      , "Committee accepted ratio:\t" <> show committeeRatio
+      , ""
+      ]
 
 -- | Checks whether the governance action has enough DRep votes to be accepted in the next
 -- epoch. (Note that no other checks execept DRep votes is used)
@@ -570,7 +613,7 @@ canGovActionBeDRepAccepted gaId = do
         }
     ratSt =
       RatifyState
-        { rsRemoved = mempty
+        { rsExpired = mempty
         , rsEnacted = mempty
         , rsEnactState = enactSt
         , rsDelayed = False
@@ -586,8 +629,7 @@ logRatificationChecks gaId = do
   gas@GovActionState {gasCommitteeVotes, gasDRepVotes, gasAction} <- getGovActionState gaId
   ens@EnactState {..} <- getEnactState
   ratEnv <- getRatifyEnv
-  let
-    ratSt = RatifyState ens mempty mempty False
+  let ratSt = RatifyState ens mempty mempty False
   curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   currentEpoch <- getsNES nesELL
   let
@@ -602,26 +644,25 @@ logRatificationChecks gaId = do
       , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction curTreasury)
       , "committeeAccepted:\t\t"
           <> show (committeeAccepted ratEnv ratSt gas)
-          <> " [To Pass: "
-          <> show
-            (committeeAcceptedRatio members gasCommitteeVotes committeeState currentEpoch)
-          <> show " >= "
+          <> " [ To Pass: "
+          <> show (committeeAcceptedRatio members gasCommitteeVotes committeeState currentEpoch)
+          <> " >= "
           <> show (votingCommitteeThreshold ratSt gasAction)
-          <> show "]"
+          <> " ]"
       , "spoAccepted:\t\t"
           <> show (spoAccepted ratEnv ratSt gas)
-          <> " [To Pass: "
+          <> " [ To Pass: "
           <> show (spoAcceptedRatio ratEnv gas)
           <> " >= "
           <> show (votingStakePoolThreshold ratSt gasAction)
-          <> "]"
+          <> " ]"
       , "dRepAccepted:\t\t"
           <> show (dRepAccepted ratEnv ratSt gas)
-          <> " [To Pass: "
+          <> " [ To Pass: "
           <> show (dRepAcceptedRatio ratEnv gasDRepVotes gasAction)
           <> " >= "
           <> show (votingDRepThreshold ratSt gasAction)
-          <> "]"
+          <> " ]"
       , ""
       ]
 
@@ -657,11 +698,11 @@ electCommittee ::
   ( HasCallStack
   , ConwayEraImp era
   ) =>
-  StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)) ->
+  StrictMaybe (GovPurposeId 'CommitteePurpose era) ->
   KeyHash 'DRepRole (EraCrypto era) ->
   Set.Set (KeyHash 'ColdCommitteeRole (EraCrypto era)) ->
   Map.Map (KeyHash 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
-  ImpTestM era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
+  ImpTestM era (GovPurposeId 'CommitteePurpose era)
 electCommittee prevGovId drep toRemove toAdd = do
   let
     committeeAction =
@@ -672,7 +713,7 @@ electCommittee prevGovId drep toRemove toAdd = do
         (1 %! 2)
   gaidCommitteeProp <- submitGovAction committeeAction
   submitYesVote_ (DRepVoter $ KeyHashObj drep) gaidCommitteeProp
-  pure (PrevGovActionId gaidCommitteeProp)
+  pure (GovPurposeId gaidCommitteeProp)
 
 electBasicCommittee ::
   forall era.
@@ -734,4 +775,156 @@ electBasicCommittee = do
 logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era ()
 logCurPParams = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  logEntry $ "Current PParams:\n--------------" <> showExpr pp <> "\n--------------"
+  logEntry $
+    unlines
+      [ ""
+      , "----- Current PParams -----"
+      , showExpr pp
+      , "---------------------------"
+      , ""
+      ]
+
+submitInitConstitutionGovAction ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  ImpTestM era (GovActionId (EraCrypto era))
+submitInitConstitutionGovAction = do
+  submitConstitutionGovAction SNothing
+
+submitChildConstitutionGovAction ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era (GovActionId (EraCrypto era))
+submitChildConstitutionGovAction gai =
+  submitConstitutionGovAction $ SJust $ GovPurposeId gai
+
+submitConstitutionGovAction ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  ImpTestM era (GovActionId (EraCrypto era))
+submitConstitutionGovAction pgai = do
+  constitutionHash <- freshSafeHash
+  let constitutionAction =
+        NewConstitution
+          pgai
+          ( Constitution
+              ( Anchor
+                  (fromJust $ textToUrl 64 "constitution.dummy.0")
+                  constitutionHash
+              )
+              SNothing
+          )
+  submitGovAction constitutionAction
+
+data PTrees a = PTrees
+  { ptPParamUpdate :: Tree a
+  , ptHardFork :: Tree a
+  , ptCommittee :: Tree a
+  , ptConstitution :: Tree a
+  }
+  deriving (Show, Eq, Generic, Default)
+
+pattern E :: Forest () -> Tree ()
+pattern E a <- Node () a
+  where
+    E a = Node () a
+
+pattern N ::
+  forall era.
+  era ~ Conway =>
+  GovActionId (EraCrypto era) ->
+  Forest (GovActionId (EraCrypto era)) ->
+  Tree (GovActionId (EraCrypto era))
+pattern N a b <- Node a b
+  where
+    N a b = Node a b
+
+pattern I ::
+  forall era.
+  era ~ Conway =>
+  Forest (StrictMaybe (GovActionId (EraCrypto era))) ->
+  Tree (StrictMaybe (GovActionId (EraCrypto era)))
+pattern I a <- Node SNothing a
+  where
+    I a = Node SNothing a
+
+pattern J ::
+  forall era.
+  era ~ Conway =>
+  StrictMaybe (GovActionId (EraCrypto era)) ->
+  Forest (StrictMaybe (GovActionId (EraCrypto era))) ->
+  Tree (StrictMaybe (GovActionId (EraCrypto era)))
+pattern J a b <- Node a b
+  where
+    J a b = Node a b
+
+getProposalsForest ::
+  forall era.
+  era ~ Conway =>
+  ConwayEraGov era =>
+  ImpTestM era (Forest (StrictMaybe (GovActionId (EraCrypto era))))
+getProposalsForest = do
+  ps <- getProposals
+  pure
+    [ J @era (mkRoot pfrPParamUpdateL ps) $ mkForest pfrPParamUpdateL pfhPParamUpdateL ps
+    , J @era (mkRoot pfrHardForkL ps) $ mkForest pfrHardForkL pfhHardForkL ps
+    , J @era (mkRoot pfrCommitteeL ps) $ mkForest pfrCommitteeL pfhCommitteeL ps
+    , J @era (mkRoot pfrConstitutionL ps) $ mkForest pfrConstitutionL pfhConstitutionL ps
+    ]
+  where
+    mkRoot ::
+      Lens' (PForest PRoot era) (PRoot (GovPurposeId p era)) ->
+      Proposals era ->
+      StrictMaybe (GovActionId (EraCrypto era))
+    mkRoot lenz ps = fmap unGovPurposeId $ maybeToStrictMaybe $ ps ^. pRootsL . lenz . prRootL
+    mkForest ::
+      Lens' (PForest PRoot era) (PRoot (GovPurposeId p era)) ->
+      Lens' (PForest PHierarchy era) (PHierarchy (GovPurposeId p era)) ->
+      Proposals era ->
+      Forest (StrictMaybe (GovActionId (EraCrypto era)))
+    mkForest lenzR lenzH ps =
+      let h = ps ^. pHierarchyL . lenzH . pHierarchyNTL
+          s = SSeq.fromStrict $ proposalsIds ps
+          getOrderedChildren cs = toList $ Seq.filter (`Set.member` Set.map unGovPurposeId cs) s
+          go c = (SJust c, getOrderedChildren $ h Map.! GovPurposeId c ^. pnChildrenL)
+       in unfoldForest go (getOrderedChildren $ ps ^. pRootsL . lenzR . prChildrenL)
+
+submitConstitutionGovActionTree ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  StrictMaybe (GovActionId (EraCrypto era)) ->
+  Tree () ->
+  ImpTestM era (Tree (GovActionId (EraCrypto era)))
+submitConstitutionGovActionTree p tree =
+  unfoldTreeM go $ fmap (const p) tree
+  where
+    go (Node parent children) = do
+      n <- submitConstitutionGovAction $ GovPurposeId <$> parent
+      pure (n, fmap (\(Node _child subtree) -> Node (SJust n) subtree) children)
+
+submitConstitutionGovActionForest ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  StrictMaybe (GovActionId (EraCrypto era)) ->
+  Forest () ->
+  ImpTestM era (Forest (GovActionId (EraCrypto era)))
+submitConstitutionGovActionForest p forest =
+  unfoldForestM go $ fmap (fmap $ const p) forest
+  where
+    go (Node parent children) = do
+      n <- submitConstitutionGovAction $ GovPurposeId <$> parent
+      pure (n, fmap (\(Node _child subtree) -> Node (SJust n) subtree) children)
+
+mkCorruptGovActionId :: GovActionId c -> GovActionId c
+mkCorruptGovActionId (GovActionId txi (GovActionIx gaix)) =
+  GovActionId txi $ GovActionIx $ gaix + 999
+
+submitTreasuryWithdrawalsGovAction ::
+  forall era.
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  ImpTestM era (RewardAcnt (EraCrypto era), GovActionId (EraCrypto era))
+submitTreasuryWithdrawalsGovAction = do
+  rewardAccount <- registerRewardAccount @era
+  let withdrawalAction =
+        TreasuryWithdrawals $
+          Map.singleton rewardAccount $
+            Coin 1_000_000
+  gaid <- submitGovAction withdrawalAction
+  pure (rewardAccount, gaid)

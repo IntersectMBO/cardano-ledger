@@ -21,10 +21,10 @@ spec = do
   specUpgrade @Conway def
   describe "RoundTrip" $ do
     roundTripCborSpec @(GovActionId StandardCrypto)
-    roundTripCborSpec @(PrevGovActionId 'PParamUpdatePurpose StandardCrypto)
-    roundTripCborSpec @(PrevGovActionId 'HardForkPurpose StandardCrypto)
-    roundTripCborSpec @(PrevGovActionId 'CommitteePurpose StandardCrypto)
-    roundTripCborSpec @(PrevGovActionId 'ConstitutionPurpose StandardCrypto)
+    roundTripCborSpec @(GovPurposeId 'PParamUpdatePurpose Conway)
+    roundTripCborSpec @(GovPurposeId 'HardForkPurpose Conway)
+    roundTripCborSpec @(GovPurposeId 'CommitteePurpose Conway)
+    roundTripCborSpec @(GovPurposeId 'ConstitutionPurpose Conway)
     roundTripCborSpec @Vote
     roundTripCborSpec @(Voter StandardCrypto)
     roundTripConwayCommonSpec @Conway

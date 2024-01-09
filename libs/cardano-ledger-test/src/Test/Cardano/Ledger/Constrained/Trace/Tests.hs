@@ -10,9 +10,9 @@ module Test.Cardano.Ledger.Constrained.Trace.Tests
 where
 
 import Cardano.Ledger.Babbage.TxOut ()
-import Cardano.Ledger.BaseTypes (TxIx)
+import Cardano.Ledger.BaseTypes (StrictMaybe, TxIx)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraRule, EraTx (..), EraTxBody (..), Tx)
+import Cardano.Ledger.Core (EraPParams (PParamsHKD), EraRule, EraTx (..), EraTxBody (..), Tx)
 import Cardano.Ledger.Plutus.Data ()
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
@@ -151,6 +151,7 @@ testTrace ::
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Reflect era
   , Show (PredicateFailure (EraRule "LEDGER" era))
+  , Arbitrary (PParamsHKD StrictMaybe era)
   ) =>
   Proof era ->
   Int ->

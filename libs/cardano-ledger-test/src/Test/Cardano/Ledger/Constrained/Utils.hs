@@ -6,7 +6,7 @@ module Test.Cardano.Ledger.Constrained.Utils (
   explainBad,
 ) where
 
-import Cardano.Ledger.Conway.Core (Era)
+import Cardano.Ledger.Conway.Core (EraPParams)
 import qualified Control.Exception as Exc
 import Control.Monad (void)
 import qualified Data.HashSet as HashSet
@@ -24,7 +24,7 @@ testIO msg x = testCase msg (Exc.catch (void x) handler)
     -- handler :: Exc.ErrorCall -> IO ()
     handler (Exc.SomeException zs) = assertFailure (unlines [msg, show zs])
 
-checkForSoundness :: Era era => [Pred era] -> Subst era -> Typed (Env era, Maybe String)
+checkForSoundness :: EraPParams era => [Pred era] -> Subst era -> Typed (Env era, Maybe String)
 checkForSoundness preds subst = do
   !env <- monadTyped $ substToEnv subst emptyEnv
   testTriples <- mapM (makeTest env) preds
@@ -33,7 +33,7 @@ checkForSoundness preds subst = do
     then pure (env, Nothing)
     else pure (env, Just ("Some conditions fail\n" ++ explainBad bad subst))
 
-explainBad :: Era era => [(String, Bool, Pred era)] -> Subst era -> String
+explainBad :: EraPParams era => [(String, Bool, Pred era)] -> Subst era -> String
 explainBad cs (Subst subst) = unlines (map getString cs) ++ "\n" ++ show restricted
   where
     names = List.foldl' varsOfPred HashSet.empty (map getPred cs)

@@ -113,6 +113,7 @@ library testlib
         Test.Cardano.Ledger.Conway.Imp.EpochSpec
         Test.Cardano.Ledger.Conway.Imp.EnactSpec
         Test.Cardano.Ledger.Conway.Imp.GovSpec
+        Test.Cardano.Ledger.Conway.Proposals
         Test.Cardano.Ledger.Conway.TreeDiff
 
     visibility:       public
@@ -129,6 +130,7 @@ library testlib
         bytestring,
         cardano-data:{cardano-data, testlib},
         containers,
+        deepseq,
         microlens,
         microlens-mtl,
         cardano-ledger-binary,

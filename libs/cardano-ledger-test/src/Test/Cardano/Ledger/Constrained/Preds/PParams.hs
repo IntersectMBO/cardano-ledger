@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -11,13 +12,14 @@ module Test.Cardano.Ledger.Constrained.Preds.PParams (
 
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Script (Prices (..))
-import Cardano.Ledger.Api.Era
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   NonNegativeInterval,
+  StrictMaybe,
   boundRational,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core (EraPParams (..))
 import Control.Monad (when)
 import GHC.Num (Natural)
 import Lens.Micro ((^.))
@@ -38,7 +40,7 @@ import Test.Cardano.Ledger.Generic.Updaters (defaultCostModels, newPParams)
 import Test.Tasty (TestTree, defaultMain)
 import Test.Tasty.QuickCheck
 
-extract :: Era era => Term era t -> Term era s -> Pred era
+extract :: EraPParams era => Term era t -> Term era s -> Pred era
 extract term@(Var (V _ _ (Yes r1 lens))) record =
   case testEql r1 (termRep record) of
     Just Refl -> term :<-: (Constr "lookup" (\x -> x ^. lens) ^$ record)
@@ -135,6 +137,7 @@ pParamsPreds p =
        )
 
 pParamsStage ::
+  Arbitrary (PParamsHKD StrictMaybe era) =>
   Reflect era =>
   Proof era ->
   Subst era ->

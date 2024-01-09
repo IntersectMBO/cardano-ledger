@@ -192,6 +192,7 @@ import qualified Data.Map.Strict as Map
 import Data.OSet.Strict (OSet)
 import Data.Proxy (Proxy (..))
 import Data.Ratio (Ratio, denominator, numerator)
+import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, toList)
 import Data.Text (Text)
@@ -364,6 +365,9 @@ ppList p xs = brackets $ fillSep $ punctuate comma $ map p xs
 
 ppStrictSeq :: (a -> Doc ann) -> StrictSeq a -> Doc ann
 ppStrictSeq p xs = ppList p (foldr (:) [] xs)
+
+ppSeq :: (a -> Doc ann) -> Seq a -> Doc ann
+ppSeq p xs = ppList p (foldr (:) [] xs)
 
 ppOSet :: (a -> Doc ann) -> OSet a -> Doc ann
 ppOSet p xs = ppList p (foldr (:) [] xs)

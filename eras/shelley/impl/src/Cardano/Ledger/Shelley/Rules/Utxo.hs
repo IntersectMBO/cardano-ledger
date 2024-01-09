@@ -575,7 +575,8 @@ validateValueNotConservedUTxO ::
   TxBody era ->
   Test (ShelleyUtxoPredFailure era)
 validateValueNotConservedUTxO pp utxo dpstate txb =
-  failureUnless (consumedValue == producedValue) $ ValueNotConservedUTxO consumedValue producedValue
+  failureUnless (consumedValue == producedValue) $
+    ValueNotConservedUTxO consumedValue producedValue
   where
     consumedValue = consumed pp dpstate utxo txb
     producedValue = produced pp dpstate txb

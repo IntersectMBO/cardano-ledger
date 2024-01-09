@@ -39,9 +39,11 @@ import Control.State.Transition.Extended
 import qualified Data.ByteString as BS
 import Data.Default.Class (Default (def))
 import Data.Foldable
+import qualified Data.Foldable as F
 import qualified Data.HashSet as HashSet
 import qualified Data.Map as Map
 import Data.Maybe
+import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
@@ -74,16 +76,16 @@ import Type.Reflection (typeRep)
 -- Generator Setup
 ------------------------------------------------------------------------
 
-applySubst :: Subst era -> [Pred era] -> [Pred era]
+applySubst :: EraPParams era => Subst era -> [Pred era] -> [Pred era]
 applySubst = map . substPredWithVarTest
 
-genFromConstraints :: Era era => Proof era -> OrderInfo -> [Pred era] -> RootTarget era s t -> Gen t
+genFromConstraints :: EraPParams era => Proof era -> OrderInfo -> [Pred era] -> RootTarget era s t -> Gen t
 genFromConstraints proof order cs target = do
   subst <- genSubstFromConstraints proof order cs
   env <- monadTyped $ substToEnv subst emptyEnv
   monadTyped (runTarget env target)
 
-genSubstFromConstraints :: Era era => Proof era -> OrderInfo -> [Pred era] -> Gen (Subst era)
+genSubstFromConstraints :: EraPParams era => Proof era -> OrderInfo -> [Pred era] -> Gen (Subst era)
 genSubstFromConstraints proof order cs = do
   (_, graph) <- compileGenWithSubst order emptySubst cs
   result <- genDependGraph False proof graph
@@ -91,7 +93,7 @@ genSubstFromConstraints proof order cs = do
     Left errs -> error $ unlines errs
     Right subst -> pure subst
 
-shrinkFromConstraints :: Era era => OrderInfo -> [Pred era] -> RootTarget era t t -> t -> [t]
+shrinkFromConstraints :: EraPParams era => OrderInfo -> [Pred era] -> RootTarget era t t -> t -> [t]
 shrinkFromConstraints order cs target val = do
   -- Solve variables that are uniquely determined by the
   -- target and the constraints (e.g. "helper variables")
@@ -105,7 +107,7 @@ shrinkFromConstraints order cs target val = do
   monadTyped $ runTarget env' target
 
 -- | Add variables to the environment that are uniquely determined by the constraints.
-saturateEnv :: Era era => Env era -> [Pred era] -> Env era
+saturateEnv :: EraPParams era => Env era -> [Pred era] -> Env era
 saturateEnv env0 preds = go env0 preds
   where
     go env [] = env
@@ -114,7 +116,7 @@ saturateEnv env0 preds = go env0 preds
       | otherwise = go env ps
 
 -- | Try to find a solution for a single variable from a predicate in an environment
-solveUnknown :: forall era. Era era => Env era -> Pred era -> Maybe (Name era, Payload era)
+solveUnknown :: forall era. EraPParams era => Env era -> Pred era -> Maybe (Name era, Payload era)
 solveUnknown env p = case p of
   SumsTo _ (Var x@(V _ rep acc)) EQL sums
     | unknown (Name x)
@@ -151,7 +153,7 @@ solveUnknown env p = case p of
     knownSums = all known . foldl' varsOfSum mempty
 
 lookupTerm ::
-  Testable p =>
+  (Testable p, EraPParams era) =>
   Subst era ->
   Term era t ->
   (t -> p) ->
@@ -165,7 +167,7 @@ lookupTerm sub term cont =
         Right val -> property $ cont val
 
 genShrinkFromConstraints ::
-  Era era =>
+  EraPParams era =>
   Proof era ->
   Subst era ->
   (Proof era -> [Pred era]) ->
@@ -209,9 +211,9 @@ pParamsGen s = genFromConstraints reify standardOrderInfo (pParamsPs s) pParamsT
 -- by building a proper target for PParams but I don't yet know how to do that.
 -- NOTE: Can't we use the
 -- Proj :: Lens' b t -> Rep era t -> Term era b -> Term era t
--- on var currPParams :: Era era => Proof era -> Term era (PParamsF era)
+-- on var currPParams :: EraPParams era => Proof era -> Term era (PParamsF era)
 -- and the var
--- maxTxSize :: Era era => Proof era -> Term era Natural
+-- maxTxSize :: EraPParams era => Proof era -> Term era Natural
 -- to do something?
 pParamsShrink ::
   Subst (ConwayEra StandardCrypto) ->
@@ -403,25 +405,25 @@ ratifyEnvCheckPreds _ = []
 
 ratifyStateT :: RootTarget (ConwayEra StandardCrypto) (RatifyState (ConwayEra StandardCrypto)) (RatifyState (ConwayEra StandardCrypto))
 ratifyStateT =
-  Invert "RatifyState" (typeRep @(RatifyState (ConwayEra StandardCrypto))) RatifyState
+  Invert "RatifyState" (typeRep @(RatifyState (ConwayEra StandardCrypto))) (\es en ex d -> RatifyState es (Seq.fromList en) ex d)
     :$ Shift enactStateT (lens rsEnactState $ \rs x -> rs {rsEnactState = x})
-    :$ Lensed removedV (lens rsRemoved $ \rs x -> rs {rsRemoved = x})
-    :$ Lensed enactedV (lens rsEnacted $ \rs x -> rs {rsEnacted = x})
+    :$ Lensed enactedV (lens (F.toList . rsEnacted) $ \rs x -> rs {rsEnacted = Seq.fromList x})
+    :$ Lensed expiredV (lens rsExpired $ \rs x -> rs {rsExpired = x})
     :$ Lensed delayedV (lens rsDelayed $ \rs x -> rs {rsDelayed = x})
 
-removedV :: Term (ConwayEra StandardCrypto) (Set.Set (GovActionId StandardCrypto))
-removedV = Var $ V "removed" (SetR GovActionIdR) No
+expiredV :: Term (ConwayEra StandardCrypto) (Set.Set (GovActionId StandardCrypto))
+expiredV = Var $ V "expired" (SetR GovActionIdR) No
 
-enactedV :: Term (ConwayEra StandardCrypto) (Set.Set (GovActionId StandardCrypto))
-enactedV = Var $ V "enacted" (SetR GovActionIdR) No
+enactedV :: Term (ConwayEra StandardCrypto) [GovActionId StandardCrypto]
+enactedV = Var $ V "enacted" (ListR GovActionIdR) No
 
-delayedV :: Era era => Term era Bool
+delayedV :: EraPParams era => Term era Bool
 delayedV = Var $ V "delayed" BoolR No
 
 -- TODO: it's possible that these should depend on the variables in the environment!
 ratifyStateGenPreds :: Proof (ConwayEra StandardCrypto) -> [Pred (ConwayEra StandardCrypto)]
 ratifyStateGenPreds p =
-  [ Random removedV
+  [ Random expiredV
   , Random enactedV
   , Random delayedV
   ]
@@ -450,7 +452,7 @@ govEnvCheckPreds p = prevGovActionIdsCheckPreds p
 
 -- GovSnapshots -----------------------------------------------------------
 
-proposalsSnapshotGenPreds :: Era era => Proof era -> [Pred era]
+proposalsSnapshotGenPreds :: EraPParams era => Proof era -> [Pred era]
 proposalsSnapshotGenPreds _ =
   [ Random prevProposals
   ]
@@ -610,10 +612,10 @@ prop_GOV sub =
   stsProperty @"GOV"
     sub
     (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) govEnvGenPreds govEnvCheckPreds (govEnvT pe))
-    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) proposalsSnapshotGenPreds proposalsSnapshotsCheckPreds govRuleStateT)
+    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) proposalsSnapshotGenPreds proposalsSnapshotsCheckPreds proposalsT {-govRuleStateT-})
     (\_ _ -> (arbitrary, const []))
     -- TODO: we should probably check more things here
-    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) proposalsSnapshotsCheckPreds govRuleStateT st'
+    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) proposalsSnapshotsCheckPreds proposalsT {-govRuleStateT-} st'
 
 ------------------------------------------------------------------------
 -- Test Tree

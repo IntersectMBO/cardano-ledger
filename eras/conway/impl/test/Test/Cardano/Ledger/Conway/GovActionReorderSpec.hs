@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conway.GovActionReorderSpec (spec) where
@@ -9,33 +10,25 @@ import Data.Foldable (Foldable (..))
 import Data.List (sort, sortOn)
 import qualified Data.Sequence.Strict as Seq
 import Test.Cardano.Ledger.Binary.Arbitrary ()
-import Test.Cardano.Ledger.Common (Spec, describe, prop, shuffle)
-import Test.Cardano.Ledger.Conway.Arbitrary (
-  genGovActionStateFromAction,
-  govActionGenerators,
- )
+import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Conway.Arbitrary ()
 
 spec :: Spec
 spec =
   describe "Conway governance actions reordering" $ do
     prop "preserves length when reordered" $
-      \actions -> Seq.length actions == Seq.length (reorderActions @Conway actions)
+      \(actions :: Seq.StrictSeq (GovActionState Conway)) ->
+        Seq.length actions `shouldBe` Seq.length (reorderActions @Conway actions)
     prop "sorts by priority" $
-      \actions ->
+      \(actions :: Seq.StrictSeq (GovActionState Conway)) ->
         sort (toList (actionPriority . gasAction @Conway <$> actions))
-          == toList (actionPriority . gasAction <$> reorderActions actions)
+          `shouldBe` toList (actionPriority . gasAction <$> reorderActions actions)
     prop "same priority actions are not rearranged" $
-      \a as ->
+      \(a :: GovActionState Conway) (as :: Seq.StrictSeq (GovActionState Conway)) ->
         let filterPrio b = actionPriority (gasAction a) == actionPriority (gasAction b)
          in filter filterPrio (toList $ reorderActions @Conway (a Seq.:<| as))
-              == filter filterPrio (toList $ reorderActions (a Seq.:<| as))
-    prop "orders actions correctly" $ do
-      actionsList <-
-        traverse
-          (>>= genGovActionStateFromAction)
-          (govActionGenerators @Conway)
-      let sortedActions = sortOn (actionPriority . gasAction) actionsList
-      shuffledActions <- shuffle actionsList
-      pure $
-        Seq.fromList sortedActions
-          == reorderActions (Seq.fromList shuffledActions)
+              `shouldBe` filter filterPrio (toList $ reorderActions (a Seq.:<| as))
+    prop "orders actions correctly" $
+      \(actionsList :: [GovActionState Conway]) -> do
+        let sortedActions = sortOn (actionPriority . gasAction) actionsList
+        Seq.fromList sortedActions `shouldBe` reorderActions (Seq.fromList actionsList)

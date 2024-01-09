@@ -35,7 +35,7 @@ module Test.Cardano.Ledger.Constrained.Rewrite (
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance (GovAction (..))
-import Cardano.Ledger.Core (EraTxOut (..), TxOut, coinTxOutL)
+import Cardano.Ledger.Core (EraPParams, EraTxOut (..), TxOut, coinTxOutL)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Val (Val (coin, modifyCoin))
@@ -70,12 +70,12 @@ import Type.Reflection (typeRep)
 -- Conservative (approximate) Equality
 
 -- | Test if two terms (of possibly different types) are equal
-typedEq :: Era era => Term era a -> Term era b -> Bool
+typedEq :: EraPParams era => Term era a -> Term era b -> Bool
 typedEq x y = case testEql (termRep x) (termRep y) of
   Just Refl -> cteq x y
   Nothing -> False
 
-cEq :: (Eq c, Era era) => Term era c -> Term era a -> c -> a -> Bool
+cEq :: (Eq c, EraPParams era) => Term era c -> Term era a -> c -> a -> Bool
 cEq t1 t2 c1 c2 = case testEql (termRep t1) (termRep t2) of
   Just Refl -> c1 == c2
   Nothing -> False
@@ -86,7 +86,7 @@ listEq eqf (x : xs) (y : ys) = eqf x y && listEq eqf xs ys
 listEq _ _ _ = False
 
 -- | Conservative Sum equality
-csumeq :: Era era => Sum era t -> Sum era t -> Bool
+csumeq :: EraPParams era => Sum era t -> Sum era t -> Bool
 csumeq (One x) (One y) = cteq x y
 csumeq (SumMap x) (SumMap y) =
   case testEql (termRep x) (termRep y) of
@@ -96,7 +96,7 @@ csumeq (SumList x) (SumList y) = cteq x y
 csumeq _ _ = False
 
 -- | Conservative (and unsound for Constr and Invert) Target equality
-ctareq :: Era era => RootTarget era r t -> RootTarget era r t -> Bool
+ctareq :: EraPParams era => RootTarget era r t -> RootTarget era r t -> Bool
 ctareq (Constr x _) (Constr y _) = x == y
 ctareq (Invert x _ _) (Invert y _ _) = x == y
 ctareq (Simple x) (Simple y) = cteq x y
@@ -107,7 +107,7 @@ ctareq (x :$ (Simple xs)) (y :$ (Simple ys)) =
 ctareq _ _ = False
 
 -- | Conservative Term equality
-cteq :: Era era => Term era t -> Term era t -> Bool
+cteq :: EraPParams era => Term era t -> Term era t -> Bool
 cteq (Lit t1 x) (Lit t2 y) = case testEql t1 t2 of
   Just Refl ->
     case hasEq t1 t1 of
@@ -126,7 +126,7 @@ cteq (Pair x a) (Pair y b) = typedEq x y && typedEq a b
 cteq _ _ = False
 
 -- | Conservative Pred equality
-cpeq :: Era era => Pred era -> Pred era -> Bool
+cpeq :: EraPParams era => Pred era -> Pred era -> Bool
 cpeq (Sized x a) (Sized y b) = cteq x y && typedEq a b
 cpeq (x :=: a) (y :=: b) = typedEq x y && typedEq a b
 cpeq (x :⊆: a) (y :⊆: b) = typedEq x y && typedEq a b
@@ -150,7 +150,7 @@ cpeq (x :<-: xs) (y :<-: ys) = case testEql (termRep x) (termRep y) of
 cpeq x y = sumsEq x y
 
 -- |  Conservative SumsTo equality
-sumsEq :: Era era => Pred era -> Pred era -> Bool
+sumsEq :: EraPParams era => Pred era -> Pred era -> Bool
 sumsEq (SumsTo (Left s1) x1 c1 ss1) (SumsTo (Left s2) x2 c2 ss2) =
   case testEql (termRep x1) (termRep x2) of
     Just Refl -> s1 == s2 && typedEq x1 x2 && c1 == c2 && listEq csumeq ss1 ss2
@@ -162,7 +162,7 @@ sumsEq (SumsTo (Right s1) x1 c1 ss1) (SumsTo (Right s2) x2 c2 ss2) =
 sumsEq _ _ = False
 
 -- | Conservative Sum equality
-cseq :: Era era => Sum era c -> Sum era d -> Bool
+cseq :: EraPParams era => Sum era c -> Sum era d -> Bool
 cseq (One x) (One y) = typedEq x y
 cseq (SumMap x) (SumMap y) = typedEq x y
 cseq (SumList x) (SumList y) = typedEq x y
@@ -171,7 +171,7 @@ cseq (ProjMap r1 _ x) (ProjMap r2 _ y) = case testEql r1 r2 of
   Nothing -> False
 cseq _ _ = False
 
-anyWeq :: Era era => AnyF era t -> AnyF era s -> Bool
+anyWeq :: EraPParams era => AnyF era t -> AnyF era s -> Bool
 anyWeq (AnyF (Field x y z l)) (AnyF (Field a b c m)) = Name (V x y (Yes z l)) == Name (V a b (Yes c m))
 anyWeq _ _ = False
 
@@ -179,7 +179,7 @@ anyWeq _ _ = False
 -- Rewriting by replacing (Dom x) by a new varariabl xDom, and adding additional
 -- [Pred], that relate xDom with other terms
 
-mkNewVar :: forall era d r. Term era (Map d r) -> Term era (Set d)
+mkNewVar :: forall era d r. EraPParams era => Term era (Map d r) -> Term era (Set d)
 mkNewVar (Var (V nm (MapR d _) _)) = newVar
   where
     newstring = nm ++ "Dom"
@@ -187,23 +187,23 @@ mkNewVar (Var (V nm (MapR d _) _)) = newVar
     newVar = Var newV
 mkNewVar other = error ("mkNewVar should only be applied to variables: " ++ show other)
 
-addP :: Era era => Pred era -> [Pred era] -> [Pred era]
+addP :: EraPParams era => Pred era -> [Pred era] -> [Pred era]
 addP p ps = List.nubBy cpeq (p : ps)
 
-addPred :: Era era => HashSet (Name era) -> Pred era -> [Name era] -> [Pred era] -> [Pred era] -> [Pred era]
+addPred :: EraPParams era => HashSet (Name era) -> Pred era -> [Name era] -> [Pred era] -> [Pred era] -> [Pred era]
 addPred bad orig names ans newps =
   if any (\x -> HashSet.member x bad) names
     then addP orig ans
     else foldr addP ans newps
 
-removeSameVar :: Era era => [Pred era] -> [Pred era] -> [Pred era]
+removeSameVar :: EraPParams era => [Pred era] -> [Pred era] -> [Pred era]
 removeSameVar [] ans = reverse ans
 removeSameVar ((Var v :=: Var u) : more) ans | Name v == Name u = removeSameVar more ans
 removeSameVar ((Var v :⊆: Var u) : more) ans | Name v == Name u = removeSameVar more ans
 removeSameVar (Disjoint (Var v@(V _ rep _)) (Var u) : more) ans | Name v == Name u = removeSameVar more ((Lit rep mempty :=: Var v) : ans)
 removeSameVar (m : more) ans = removeSameVar more (m : ans)
 
-removeEqual :: Era era => [Pred era] -> [Pred era] -> [Pred era]
+removeEqual :: EraPParams era => [Pred era] -> [Pred era] -> [Pred era]
 removeEqual [] ans = reverse ans
 removeEqual ((Var v :=: Var u) : more) ans | Name v == Name u = removeEqual more ans
 removeEqual ((Var v :=: expr@Lit {}) : more) ans = removeEqual (map sub more) ((Var v :=: expr) : map sub ans)
@@ -214,7 +214,7 @@ removeEqual ((expr@Lit {} :=: Var v) : more) ans = removeEqual (map sub more) ((
     sub = substPred (singleSubst v expr)
 removeEqual (m : more) ans = removeEqual more (m : ans)
 
-removeTrivial :: Era era => [Pred era] -> [Pred era]
+removeTrivial :: EraPParams era => [Pred era] -> [Pred era]
 removeTrivial = filter (not . trivial)
   where
     trivial p | null (varsOfPred mempty p) =
@@ -224,7 +224,7 @@ removeTrivial = filter (not . trivial)
     trivial (e1 :=: e2) = cteq e1 e2
     trivial _ = False
 
-rewrite :: Era era => [Pred era] -> [Pred era]
+rewrite :: EraPParams era => [Pred era] -> [Pred era]
 rewrite cs = removeTrivial $ removeSameVar (removeEqual cs []) []
 
 -- =========================================================
@@ -232,7 +232,7 @@ rewrite cs = removeTrivial $ removeSameVar (removeEqual cs []) []
 
 type SubItems era = [SubItem era]
 
-fresh :: (Int, SubItems era) -> RootTarget era r t -> (Int, SubItems era)
+fresh :: EraPParams era => (Int, SubItems era) -> RootTarget era r t -> (Int, SubItems era)
 fresh (n, sub) (Constr _ _) = (n, sub)
 fresh (n, sub) (Invert _ _ _) = (n, sub)
 fresh (n, sub) (Shift x _) = fresh (n, sub) x
@@ -258,29 +258,30 @@ fresh (n, sub) (Partial expr _) = mksub n (HashSet.toList (vars expr))
 fresh (n, sub) (f :$ x) = fresh (fresh (n, sub) f) x
 fresh (n, sub) (Virtual x _ _) = fresh (n, sub) (Simple x)
 
-freshP :: (Int, SubItems era) -> Pat era t -> (Int, SubItems era)
+freshP :: EraPParams era => (Int, SubItems era) -> Pat era t -> (Int, SubItems era)
 freshP (n, sub) (Pat _ as) = List.foldl' freshA (n, sub) as
 
-freshA :: (Int, SubItems era) -> Arg era t -> (Int, SubItems era)
+freshA :: EraPParams era => (Int, SubItems era) -> Arg era t -> (Int, SubItems era)
 freshA (n, sub) (Arg (Field nm r a l)) = (n + 1, SubItem (V nm r (Yes a l)) (Var (V (index nm n) r (Yes a l))) : sub)
 freshA pair (Arg (FConst _ _ _ _)) = pair
 freshA (n, sub) (ArgPs (Field nm r a l) ps) =
   List.foldl' freshP (n + 1, SubItem (V nm r (Yes a l)) (Var (V (index nm n) r (Yes a l))) : sub) ps
 freshA pair (ArgPs (FConst _ _ _ _) ps) = List.foldl' freshP pair ps
 
-freshVars :: Int -> Int -> V era [t] -> ([Term era t], Int)
+freshVars :: EraPParams era => Int -> Int -> V era [t] -> ([Term era t], Int)
 freshVars m count (V nm (ListR rep) _) = ([Var (V (index nm c) rep No) | c <- [m .. m + (count - 1)]], m + count)
 
 index :: String -> Int -> String
 index nm c = nm ++ "." ++ show c
 
 -- When we expect the variable to have a (FromList t a) constraint
-freshVars2 :: FromList fs t => Int -> Int -> V era fs -> ([Term era t], Int)
+freshVars2 :: EraPParams era => FromList fs t => Int -> Int -> V era fs -> ([Term era t], Int)
 freshVars2 m count (V nm lrep _) =
   let arep = tsRep lrep
    in ([Var (V (index nm c) arep No) | c <- [m .. m + (count - 1)]], m + count)
 
 freshPairs ::
+  EraPParams era =>
   ((Int, SubItems era), [(RootTarget era r t, [Pred era])]) ->
   (RootTarget era r t, [Pred era]) ->
   ((Int, SubItems era), [(RootTarget era r t, [Pred era])])
@@ -292,6 +293,7 @@ freshPairs (xx, ans) (tar, ps) = (yy, (target2, ps2) : ans)
     ps2 = map (substPred subst) ps
 
 freshPair ::
+  EraPParams era =>
   Int ->
   (RootTarget era r t, [Pred era]) ->
   (Int, SubItems era, RootTarget era r t, [Pred era])
@@ -304,6 +306,7 @@ freshPair m0 (tar, ps) = (m1, subitems, target2, ps2)
 
 -- | Used to rename targets and preds, where they are embeded in a Triple, where the first component is the frequency
 freshTriples ::
+  EraPParams era =>
   ((Int, SubItems era), [(Int, RootTarget era r t, [Pred era])]) ->
   (Int, RootTarget era r t, [Pred era]) ->
   ((Int, SubItems era), [(Int, RootTarget era r t, [Pred era])])
@@ -315,6 +318,7 @@ freshTriples (xx, ans) (i, tar, ps) = (yy, (i, target2, ps2) : ans)
     ps2 = map (substPred subst) ps
 
 freshPats ::
+  EraPParams era =>
   ((Int, SubItems era), [(Pat era t, [Pred era])]) ->
   (Pat era t, [Pred era]) ->
   ((Int, SubItems era), [(Pat era t, [Pred era])])
@@ -330,7 +334,7 @@ freshPats (xx, ans) (pat, ps) = (yy, (pat2, ps2) : ans)
 -- | Or something like (SumSplit x total EQL [One x]) which expands to
 --   something like: (SumSplitx total EQL [One x.1, One x.2, One x.3])
 --   So we find all the bindings for 'x' in the SubItems, and cons them together.
-extendSum :: SubItems era -> Sum era c -> [Sum era c]
+extendSum :: EraPParams era => SubItems era -> Sum era c -> [Sum era c]
 extendSum sub (ProjOne l r (Var v2)) = foldr accum [] sub
   where
     accum (SubItem v1 term) ans | Just Refl <- sameName v1 v2 = ProjOne l r term : ans
@@ -341,13 +345,13 @@ extendSum sub (One (Var v2)) = foldr accum [] sub
     accum _ ans = ans
 extendSum _sub other = error ("None One or ProjOne in Sum list: " ++ show other)
 
-extendSums :: Era era => SubItems era -> [Pred era] -> [Pred era]
+extendSums :: EraPParams era => SubItems era -> [Pred era] -> [Pred era]
 extendSums _ [] = []
 extendSums sub (SumsTo c t cond [s] : more) = SumsTo c t cond (extendSum sub s) : extendSums sub more
 extendSums sub (SumSplit c t cond [s] : more) = SumSplit c t cond (extendSum sub s) : extendSums sub more
 extendSums _ (m : _more) = error ("Non extendableSumsTo in extendSums: " ++ show m)
 
-rename :: Name era -> [Int] -> [Name era]
+rename :: EraPParams era => Name era -> [Int] -> [Name era]
 rename name@(Name (V nm r a)) ns = case takeWhile (/= '.') nm of
   (_ : _) -> map (\n -> Name (V (index nm n) r a)) ns
   _ -> [name]
@@ -373,7 +377,7 @@ freq outVar inVar = GenFrom outVar (Constr "frequency" (frequency . map h) :$ (S
 type Where era t = (Term era t, RootTarget era t t, [Pred era])
 
 -- | Unfold (Where x tar ps) into (x :<-: tar' : ps'), renaming tar to tar' and ps to ps'
-unfoldWhere :: forall era t. ([Where era t], Int) -> ([Pred era], Int)
+unfoldWhere :: forall era t. EraPParams era => ([Where era t], Int) -> ([Pred era], Int)
 unfoldWhere (ps0, m0) = List.foldl' accum ([], m0) ps0
   where
     accum :: ([Pred era], Int) -> Where era t -> ([Pred era], Int)
@@ -381,7 +385,7 @@ unfoldWhere (ps0, m0) = List.foldl' accum ([], m0) ps0
       where
         (mx1, _, tar2, ps2) = freshPair mx (tar, ps)
 
-rewritePred :: Era era => Int -> Pred era -> Gen ([Pred era], Int)
+rewritePred :: EraPParams era => Int -> Pred era -> Gen ([Pred era], Int)
 {-
 OneOf x [(i,t1,p1),(j,t2,p2)] rewrites to
 [ Where x.1 t1 p1, Where x.2 t2 p2, List xlist.3 [(i,x.1),(j,x.2)], GenFrom x frequency xlist.3]
@@ -458,13 +462,13 @@ rewritePred m0 (Maybe (Var v) (target :: (RootTarget era r t)) preds) = do
       pure (expandedPred ++ [Var v :<-: (Invert "Just" (typeRep @r) Just :$ target2)], m2)
 rewritePred m0 p = pure ([p], m0)
 
-removeExpandablePred :: Era era => ([Pred era], Int) -> [Pred era] -> Gen ([Pred era], Int)
+removeExpandablePred :: EraPParams era => ([Pred era], Int) -> [Pred era] -> Gen ([Pred era], Int)
 removeExpandablePred (ps, m) [] = pure (List.nubBy cpeq (reverse ps), m)
 removeExpandablePred (ps, m) (p : more) = do
   (ps2, m1) <- rewritePred m p
   removeExpandablePred (ps2 ++ ps, m1) more
 
-removeMetaSize :: Era era => [Pred era] -> [Pred era] -> Gen [Pred era]
+removeMetaSize :: EraPParams era => [Pred era] -> [Pred era] -> Gen [Pred era]
 removeMetaSize [] ans = pure $ reverse ans
 removeMetaSize ((MetaSize sz t@(Var v)) : more) ans = do
   n <- genFromSize sz
@@ -472,7 +476,7 @@ removeMetaSize ((MetaSize sz t@(Var v)) : more) ans = do
   removeMetaSize (map sub more) ((t :<-: Simple (Lit SizeR (SzExact n))) : (map sub ans))
 removeMetaSize (m : more) ans = removeMetaSize more (m : ans)
 
-rewriteGen :: Era era => (Int, [Pred era]) -> Gen (Int, [Pred era])
+rewriteGen :: EraPParams era => (Int, [Pred era]) -> Gen (Int, [Pred era])
 rewriteGen (m, cs0) = do
   cs1 <- removeMetaSize cs0 []
   (cs2, m1) <- removeExpandablePred ([], m) cs1
@@ -483,7 +487,7 @@ notBefore (Before _ _) = False
 notBefore _ = True
 
 -- | Construct the DependGraph
-compileGenWithSubst :: Era era => OrderInfo -> Subst era -> [Pred era] -> Gen (Int, DependGraph era)
+compileGenWithSubst :: EraPParams era => OrderInfo -> Subst era -> [Pred era] -> Gen (Int, DependGraph era)
 compileGenWithSubst info subst0 cs = do
   (m, simple) <- rewriteGen (0, cs)
   let instanSimple = fmap (substPredWithVarTest subst0) simple
@@ -501,7 +505,7 @@ compileGenWithSubst info subst0 cs = do
 -- | An Ordering
 newtype DependGraph era = DependGraph [([Name era], [Pred era])]
 
-instance Era era => Show (DependGraph era) where
+instance EraPParams era => Show (DependGraph era) where
   show (DependGraph xs) = unlines (map f xs)
     where
       f (nm, cs) = pad n (showL shName " " nm) ++ " | " ++ showL show ", " cs
@@ -530,7 +534,7 @@ instance Era era => Show (DependGraph era) where
 -- 2) One predicate that defines many Names
 -- 3) Some other bad combination
 splitMultiName ::
-  Era era =>
+  EraPParams era =>
   Name era ->
   [([Name era], Pred era)] ->
   ([Pred era], Maybe ([Name era], Pred era), [String]) ->
@@ -570,7 +574,7 @@ splitMultiName n ((ms, p) : more) (unary, Just first, bad) =
 
 mkDependGraph ::
   forall era.
-  Era era =>
+  EraPParams era =>
   Int ->
   [([Name era], [Pred era])] ->
   HashSet (Name era) ->
@@ -649,7 +653,7 @@ firstE f (x : xs) = case f x of
 
 -- | Add to the dependency map 'answer' constraints such that every Name in 'before'
 --   preceeds every Name in 'after' in the order in which Names are solved for.
-mkDeps :: Era era => HashSet (Name era) -> HashSet (Name era) -> Map (Name era) (HashSet (Name era)) -> Map (Name era) (HashSet (Name era))
+mkDeps :: EraPParams era => HashSet (Name era) -> HashSet (Name era) -> Map (Name era) (HashSet (Name era)) -> Map (Name era) (HashSet (Name era))
 mkDeps before after answer = HashSet.foldl' accum answer after
   where
     accum ans left = Map.insertWith (HashSet.union) left before ans
@@ -669,7 +673,7 @@ standardOrderInfo =
     , setBeforeSubset = True
     }
 
-accumdep :: Era era => OrderInfo -> Map (Name era) (HashSet (Name era)) -> Pred era -> Map (Name era) (HashSet (Name era))
+accumdep :: EraPParams era => OrderInfo -> Map (Name era) (HashSet (Name era)) -> Pred era -> Map (Name era) (HashSet (Name era))
 accumdep info answer c = case c of
   sub :⊆: set ->
     if setBeforeSubset info
@@ -719,7 +723,7 @@ accumdep info answer c = case c of
     where
       accum ans v = Map.insertWith (HashSet.union) v HashSet.empty ans
 
-componentVars :: [AnyF era s] -> HashSet (Name era)
+componentVars :: EraPParams era => [AnyF era s] -> HashSet (Name era)
 componentVars [] = HashSet.empty
 componentVars (AnyF (Field n r a l) : cs) = HashSet.insert (Name $ V n r (Yes a l)) $ componentVars cs
 componentVars (AnyF (FConst _ _ _ _) : cs) = componentVars cs
@@ -727,7 +731,7 @@ componentVars (AnyF (FConst _ _ _ _) : cs) = componentVars cs
 -- =========================================================================
 -- Create an initial Ordering. Build a Graph, then extract the Ordering
 
-initialOrder :: forall era. Era era => OrderInfo -> [Pred era] -> Typed [Name era]
+initialOrder :: forall era. EraPParams era => OrderInfo -> [Pred era] -> Typed [Name era]
 initialOrder info cs0 = do
   mmm <- flatOrError (stronglyConnComp listDep)
   pure $ map getname mmm
@@ -753,7 +757,7 @@ initialOrder info cs0 = do
         message = "Cycle in dependencies: " ++ List.intercalate " <= " theCycle
 
 -- | Construct the DependGraph
-compile :: Era era => OrderInfo -> [Pred era] -> Typed (DependGraph era)
+compile :: EraPParams era => OrderInfo -> [Pred era] -> Typed (DependGraph era)
 compile info cs = do
   let simple = rewrite cs
   orderedNames <- initialOrder info simple

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE QuantifiedConstraints #-}
@@ -13,8 +14,9 @@
 --   Eventually this will repace the most of the tests in Spec.hs
 module Test.Cardano.Ledger.Constrained.SpecClass where
 
+import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Core
 import Data.Kind
 import Data.Map.Strict (Map)
 import Data.Set (Set)
@@ -148,7 +150,7 @@ instance Specification Size Int where
   genFromS _ _ _ = genFromSize
 
 instance
-  (Era era, Ord dom {- HasRep dom, HasRep rng, HasRep c, -}, Ord rng, Adds rng) =>
+  (EraPParams era, Arbitrary (PParamsHKD StrictMaybe era), Ord dom {- HasRep dom, HasRep rng, HasRep c, -}, Ord rng, Adds rng) =>
   Specification (MapSpec era dom rng) (Map dom rng)
   where
   type Count (MapSpec era dom rng) = Int
@@ -161,7 +163,7 @@ instance
   genFromS msgs _count (genD, genR) spec = genFromMapSpec "genFromMapSpec" msgs genD genR spec
 
 instance
-  (Era era, Ord dom, Eq rng, HasRep dom, HasRep rng) =>
+  (EraPParams era, Arbitrary (PParamsHKD StrictMaybe era), Ord dom, Eq rng, HasRep dom, HasRep rng) =>
   Specification (PairSpec era dom rng) (Map dom rng)
   where
   type Count (PairSpec era dom rng) = Int
@@ -174,7 +176,7 @@ instance
   genFromS msgs _count () spec = genFromPairSpec msgs spec
 
 instance
-  (Era era, Ord dom, HasRep dom) =>
+  (EraPParams era, Arbitrary (PParamsHKD StrictMaybe era), Ord dom, HasRep dom) =>
   Specification (RelSpec era dom) (Set dom)
   where
   type Count (RelSpec era dom) = Int
@@ -187,7 +189,7 @@ instance
   genFromS msgs count g spec = genFromRelSpec msgs g count spec
 
 instance
-  (Era era, Adds rng, Ord rng) =>
+  (EraPParams era, Arbitrary (PParamsHKD StrictMaybe era), Adds rng, Ord rng) =>
   Specification (RngSpec era rng) [rng]
   where
   type Count (RngSpec era rng) = Int
@@ -200,7 +202,7 @@ instance
   genFromS msgs count g spec = genFromRngSpec msgs g count spec
 
 instance
-  (Era era, Ord a, HasRep a) =>
+  (EraPParams era, Arbitrary (PParamsHKD StrictMaybe era), Ord a, HasRep a) =>
   Specification (SetSpec era a) (Set a)
   where
   type Count (SetSpec era a) = Int
@@ -213,7 +215,7 @@ instance
   genFromS msgs _count g spec = genFromSetSpec msgs g spec
 
 instance
-  (Era era, HasRep a, Adds a) =>
+  (EraPParams era, Arbitrary (PParamsHKD StrictMaybe era), HasRep a, Adds a) =>
   Specification (ElemSpec era a) [a]
   where
   type Count (ElemSpec era a) = Size
@@ -226,7 +228,7 @@ instance
   genFromS msgs count g spec = genFromElemSpec msgs g count spec
 
 instance
-  (Era era, HasRep a, Adds a) =>
+  (EraPParams era, Arbitrary (PParamsHKD StrictMaybe era), HasRep a, Adds a) =>
   Specification (ListSpec era a) [a]
   where
   type Count (ListSpec era a) = Size

@@ -1,14 +1,16 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Constrained.Preds.CertState where
 
-import Cardano.Ledger.BaseTypes (EpochNo (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Core (EraPParams (PParamsHKD))
 import Cardano.Ledger.DRep (drepAnchorL, drepDepositL, drepExpiryL)
-import Cardano.Ledger.Era (Era, EraCrypto)
+import Cardano.Ledger.Era (EraCrypto)
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..))
@@ -50,10 +52,10 @@ manyCoin size = do
 
 -- ======================================
 
-vstatePreds :: Era era => Proof era -> [Pred era]
+vstatePreds :: EraPParams era => Proof era -> [Pred era]
 vstatePreds p = vstateGenPreds p ++ vstateCheckPreds p
 
-vstateGenPreds :: forall era. Era era => Proof era -> [Pred era]
+vstateGenPreds :: forall era. EraPParams era => Proof era -> [Pred era]
 vstateGenPreds p = case whichPParams p of
   PParamsConwayToConway ->
     [ MetaSize (SzRng 5 15) currentDRepStateSize
@@ -91,6 +93,7 @@ vstateCheckPreds :: Proof era -> [Pred era]
 vstateCheckPreds _p = []
 
 vstateStage ::
+  Arbitrary (PParamsHKD StrictMaybe era) =>
   Reflect era =>
   Proof era ->
   Subst era ->
@@ -128,10 +131,10 @@ pstateNames =
   , "poolDeposits"
   ]
 
-pstatePreds :: Era era => Proof era -> [Pred era]
+pstatePreds :: EraPParams era => Proof era -> [Pred era]
 pstatePreds p = pstateGenPreds p ++ pstateCheckPreds p
 
-pstateGenPreds :: Era era => Proof era -> [Pred era]
+pstateGenPreds :: EraPParams era => Proof era -> [Pred era]
 pstateGenPreds _ =
   [ -- These Sized constraints are needd to be ensure that regPools is bigger than retiring
     Sized (ExactSize 5) retiring
@@ -153,7 +156,7 @@ pstateGenPreds _ =
     e = var "e" EpochR
     epochs = var "epochs" (ListR EpochR)
 
-pstateCheckPreds :: Era era => Proof era -> [Pred era]
+pstateCheckPreds :: EraPParams era => Proof era -> [Pred era]
 pstateCheckPreds _ =
   [ Subset (Dom retiring) (Dom regPools) -- Note regPools must be bigger than retiring
   , Dom regPools :=: Dom poolDeposits
@@ -162,7 +165,7 @@ pstateCheckPreds _ =
   ]
 
 pstateStage ::
-  Reflect era =>
+  (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
@@ -195,7 +198,7 @@ mainP = defaultMain $ testIO "Testing PState Stage" (demoP Interactive)
 -- | A field that selects the 'genDelegKeyHash' field from a 'GenDelegPair'
 --   It also silently casts the 'KeyRole. from 'Genesis to 'Witness
 gdKeyHashField ::
-  Era era =>
+  EraPParams era =>
   Field
     era
     (GenDelegPair (EraCrypto era))
@@ -211,7 +214,7 @@ gdKeyHashField =
     )
 
 -- | A Var Term that pairs the Field 'gdKeyHashField'
-gdKeyHash :: Era era => Term era (KeyHash 'Witness (EraCrypto era))
+gdKeyHash :: EraPParams era => Term era (KeyHash 'Witness (EraCrypto era))
 gdKeyHash = fieldToTerm gdKeyHashField
 
 gdkeyL :: Lens' (GenDelegPair c) (KeyHash 'Witness c)
@@ -223,10 +226,10 @@ gdkeyL =
 
 -- ============================================================================
 
-certStatePreds :: Era era => Proof era -> [Pred era]
+certStatePreds :: EraPParams era => Proof era -> [Pred era]
 certStatePreds p = certStateGenPreds p ++ certStateCheckPreds p
 
-certStateGenPreds :: Era era => Proof era -> [Pred era]
+certStateGenPreds :: EraPParams era => Proof era -> [Pred era]
 certStateGenPreds p =
   [ MetaSize (SzExact (fromIntegral (quorumConstant + 2))) genDelegSize
   , --  , GenFrom quorum (constTarget (pure (fromIntegral quorumConstant)))
@@ -287,7 +290,7 @@ certStateGenPreds p =
     gdKeyHashSet = var "gdKeyHashSet" (SetR GenDelegPairR)
     gdKeyHashList = var "gdKeyHashList" (ListR GenDelegPairR)
 
-certStateCheckPreds :: Era era => Proof era -> [Pred era]
+certStateCheckPreds :: EraPParams era => Proof era -> [Pred era]
 certStateCheckPreds p =
   [ NotMember (Lit CoinR (Coin 0)) (Rng stakeDeposits)
   , Dom rewards :=: Dom stakeDeposits
@@ -298,7 +301,7 @@ certStateCheckPreds p =
   ]
 
 dstateStage ::
-  Reflect era =>
+  (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)

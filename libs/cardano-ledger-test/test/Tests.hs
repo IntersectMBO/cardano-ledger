@@ -4,9 +4,11 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Main where
 
+import Cardano.Ledger.Conway (Conway)
 import Data.Default.Class (Default (def))
 import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
@@ -40,7 +42,7 @@ main = do
 defaultTests :: [TestTree]
 defaultTests =
   [ Pretty.prettyTest
-  , allSpecTests
+  , allSpecTests @Conway
   , allExampleTests
   , conwayTrace
   , predsTests

@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -7,7 +8,8 @@
 
 module Test.Cardano.Ledger.Constrained.Preds.NewEpochState where
 
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.Core (EraPParams (PParamsHKD))
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
@@ -55,7 +57,7 @@ epochstatePreds _proof =
   , Sized (Range 2 6) markPoolDistr
   ]
 
-newEpochStatePreds :: Era era => Proof era -> [Pred era]
+newEpochStatePreds :: EraPParams era => Proof era -> [Pred era]
 newEpochStatePreds _proof =
   [ Sized (ExactSize 4) (Dom prevBlocksMade) -- Both prevBlocksMade and prevBlocksMadeDom will have size 4
   , Sized (ExactSize 4) (Dom currBlocksMade)
@@ -66,13 +68,14 @@ newEpochStatePreds _proof =
 -- ========================
 
 epochStateStage ::
+  Arbitrary (PParamsHKD StrictMaybe era) =>
   Reflect era =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
 epochStateStage proof = toolChainSub proof standardOrderInfo (epochstatePreds proof)
 
-demoES :: Reflect era => Proof era -> ReplMode -> IO ()
+demoES :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> ReplMode -> IO ()
 demoES proof mode = do
   env <-
     generate
@@ -100,13 +103,13 @@ mainES = defaultMain $ testIO "Testing EpochState Stage" (demoES (Conway Standar
 -- ====================================================
 
 newEpochStateStage ::
-  Reflect era =>
+  (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) =>
   Proof era ->
   Subst era ->
   Gen (Subst era)
 newEpochStateStage proof = toolChainSub proof (standardOrderInfo {sumBeforeParts = False}) (newEpochStatePreds proof)
 
-demoNES :: Reflect era => Proof era -> ReplMode -> IO ()
+demoNES :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> ReplMode -> IO ()
 demoNES proof mode = do
   env <-
     generate

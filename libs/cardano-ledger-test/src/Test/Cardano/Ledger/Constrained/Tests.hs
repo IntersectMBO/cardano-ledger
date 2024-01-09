@@ -31,8 +31,9 @@ import Prelude hiding (subtract)
 
 import Test.Cardano.Ledger.Constrained.Ast
 
+import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Shelley
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as HashSet
@@ -105,24 +106,24 @@ instance Arbitrary OrderInfo where
   arbitrary = OrderInfo <$> arbitrary <*> arbitrary <*> arbitrary
   shrink info = [standardOrderInfo | info /= standardOrderInfo]
 
-addVar :: V era t -> t -> GenEnv era -> GenEnv era
+addVar :: EraPParams era => V era t -> t -> GenEnv era -> GenEnv era
 addVar vvar val env = env {gEnv = storeVar vvar val $ gEnv env}
 
-markSolved :: HashSet (Name era) -> Depth -> GenEnv era -> GenEnv era
+markSolved :: EraPParams era => HashSet (Name era) -> Depth -> GenEnv era -> GenEnv era
 markSolved solved d env = env {gSolved = Map.unionWith max new (gSolved env)}
   where
     new = Map.fromSet (const d) (hashSetToSet solved)
 
-addSolvedVar :: V era t -> t -> Depth -> GenEnv era -> GenEnv era
+addSolvedVar :: EraPParams era => V era t -> t -> Depth -> GenEnv era -> GenEnv era
 addSolvedVar vvar@(V _ _ _) val d = markSolved (HashSet.singleton $ Name vvar) d . addVar vvar val
 
-depthOfName :: GenEnv era -> Name era -> Depth
+depthOfName :: EraPParams era => GenEnv era -> Name era -> Depth
 depthOfName env x = Map.findWithDefault 0 x (gSolved env)
 
-depthOf :: GenEnv era -> Term era t -> Depth
+depthOf :: EraPParams era => GenEnv era -> Term era t -> Depth
 depthOf env t = maximum $ 0 : map (depthOfName env) (HashSet.toList $ vars t)
 
-depthOfSum :: GenEnv era -> Sum era c -> Depth
+depthOfSum :: EraPParams era => GenEnv era -> Sum era c -> Depth
 depthOfSum env = \case
   SumMap t -> depthOf env t
   SumList t -> depthOf env t
@@ -130,7 +131,7 @@ depthOfSum env = \case
   ProjOne _ _ t -> depthOf env t
   ProjMap _ _ t -> depthOf env t
 
-genLiteral :: forall era t. Era era => GenEnv era -> Rep era t -> Gen t
+genLiteral :: forall era t. (Arbitrary (PParamsHKD StrictMaybe era), EraPParams era) => GenEnv era -> Rep era t -> Gen t
 genLiteral env rep =
   case rep of
     SetR erep -> setLiteral erep
@@ -157,7 +158,7 @@ genFreshVarName = elements . varNames
       where
         Env vmap = gEnv env
 
-envVarsOfType :: Era era => Env era -> Rep era t -> [(V era t, t)]
+envVarsOfType :: EraPParams era => Env era -> Rep era t -> [(V era t, t)]
 envVarsOfType (Env env) rep = concatMap wellTyped $ Map.toList env
   where
     wellTyped (name, Payload rep' val access) =
@@ -174,10 +175,10 @@ data VarSpec
     KnownTerm
   deriving (Eq, Show)
 
-genTerm :: Era era => GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, GenEnv era)
+genTerm :: (Arbitrary (PParamsHKD StrictMaybe era), EraPParams era) => GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, GenEnv era)
 genTerm env rep vspec = genTerm' env rep (const True) (genLiteral env rep) vspec
 
-genTerm' :: forall era t. Era era => GenEnv era -> Rep era t -> (t -> Bool) -> Gen t -> VarSpec -> Gen (Term era t, GenEnv era)
+genTerm' :: forall era t. (EraPParams era, Arbitrary (PParamsHKD StrictMaybe era)) => GenEnv era -> Rep era t -> (t -> Bool) -> Gen t -> VarSpec -> Gen (Term era t, GenEnv era)
 genTerm' env rep valid genLit vspec =
   frequency $
     [(5, genFixed) | vspec == KnownTerm]
@@ -225,12 +226,12 @@ genTerm' env rep valid genLit vspec =
           vspec
       pure (Rng m, env')
 
-genMapLiteralWithDom :: Era era => GenEnv era -> Rep era v -> Set k -> Gen (Map k v)
+genMapLiteralWithDom :: (Arbitrary (PParamsHKD StrictMaybe era), EraPParams era) => GenEnv era -> Rep era v -> Set k -> Gen (Map k v)
 genMapLiteralWithDom env vrep keys = do
   let genVal = genLiteral env vrep
   traverse (\_ -> genVal) (Map.fromSet (const ()) keys)
 
-genMapLiteralWithRng :: (Era era, Ord k) => GenEnv era -> Rep era k -> Set v -> Gen (Map k v)
+genMapLiteralWithRng :: (Ord k, Arbitrary (PParamsHKD StrictMaybe era), EraPParams era) => GenEnv era -> Rep era k -> Set v -> Gen (Map k v)
 genMapLiteralWithRng env krep vals = do
   keys <- setSized [] (Set.size vals) (genLiteral env krep)
   valsList <- shuffle $ Set.toList vals
@@ -307,7 +308,7 @@ genFromOrdCond cond canBeNegative n =
     )
     (flip (runOrdCondition cond) n)
 
-genPredicate :: forall era. Era era => GenEnv era -> Gen (Pred era, GenEnv era)
+genPredicate :: forall era. (Arbitrary (PParamsHKD StrictMaybe era), EraPParams era) => GenEnv era -> Gen (Pred era, GenEnv era)
 genPredicate env =
   frequency $
     [(1, fixedSizedC)]
@@ -436,7 +437,7 @@ genPredicate env =
     uniqueVars (SumsTo _ _ _ parts) =
       and
         [ hashSetDisjoint us vs
-        | us : vss <- List.tails $ map (varsOfSum mempty) parts
+        | us : vss <- List.tails $ map (varsOfSum @era mempty) parts
         , vs <- vss
         ]
     uniqueVars _ = True
@@ -501,7 +502,7 @@ genPredicate env =
               pure (domTm :=: Dom mapTm, env'')
         ]
 
-genPreds :: Era era => GenEnv era -> Gen ([Pred era], GenEnv era)
+genPreds :: (EraPParams era, Arbitrary (PParamsHKD StrictMaybe era)) => GenEnv era -> Gen ([Pred era], GenEnv era)
 genPreds = \env -> do
   n <- choose (1, 40)
   loop (n :: Int) env
@@ -520,7 +521,7 @@ withEq _ _ = Nothing
 
 -- We can't drop constraints due to dependency limitations. There needs to be at least one
 -- constraint to solve each variable. We can replace constraints by Random though!
-shrinkPreds :: forall era. Era era => ([Pred era], GenEnv era) -> [([Pred era], GenEnv era)]
+shrinkPreds :: forall era. EraPParams era => ([Pred era], GenEnv era) -> [([Pred era], GenEnv era)]
 shrinkPreds (preds, env) =
   [ (preds', env')
   | preds' <- shrinkList shrinkPred preds
@@ -601,24 +602,24 @@ initEnv info =
     , gSolved = mempty
     }
 
-showVal :: Rep era t -> t -> String
+showVal :: EraPParams era => Rep era t -> t -> String
 showVal (SetR r) t = "{" ++ intercalate ", " (map (synopsis r) (Set.toList t)) ++ "}"
 showVal (MapR kr vr) t = "{" ++ intercalate ", " [synopsis kr k ++ " -> " ++ synopsis vr v | (k, v) <- Map.toList t] ++ "}"
 showVal rep t = synopsis rep t
 
-showTerm :: Term era t -> String
+showTerm :: EraPParams era => Term era t -> String
 showTerm (Lit rep t) = showVal rep t
 showTerm (Dom t) = "(Dom " ++ showTerm t ++ ")"
 showTerm (Rng t) = "(Rng " ++ showTerm t ++ ")"
 showTerm t = show t
 
-showPred :: Pred era -> String
+showPred :: EraPParams era => Pred era -> String
 showPred (sub `Subset` sup) = showTerm sub ++ " ⊆ " ++ showTerm sup
 showPred (sub :=: sup) = showTerm sub ++ " == " ++ showTerm sup
 showPred (Disjoint s t) = "Disjoint " ++ showTerm s ++ " " ++ showTerm t
 showPred pr = show pr
 
-showEnv :: Env era -> String
+showEnv :: EraPParams era => Env era -> String
 showEnv (Env vmap) = unlines $ map pr (Map.toList vmap)
   where
     pr (name, Payload rep t _) = name ++ " :: " ++ show rep ++ " -> " ++ showVal rep t
@@ -681,7 +682,7 @@ constraintProperty timeout strict whitelist info prop =
         ==> counterexample (unlines errs) False
     checkWhitelist (Right x) k = property $ k x
 
-checkPredicates :: [Pred era] -> Env era -> Property
+checkPredicates :: EraPParams era => [Pred era] -> Env era -> Property
 checkPredicates preds env =
   counterexample ("-- Solution --\n" ++ showEnv env) $
     conjoin $

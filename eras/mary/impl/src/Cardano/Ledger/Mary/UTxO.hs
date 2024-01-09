@@ -68,9 +68,7 @@ getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit (UTxO u) txBody =
   consumedValue <> txBody ^. mintValueTxBodyF
   where
     {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
-    consumedValue =
-      balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
-        <> inject (refunds <> withdrawals)
+    consumedValue = balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL))) <> inject (refunds <> withdrawals)
     refunds = getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
 

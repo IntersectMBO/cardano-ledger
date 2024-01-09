@@ -12,7 +12,7 @@
 module Test.Cardano.Ledger.Constrained.Trace.TraceMonad
 where
 
-import Cardano.Ledger.BaseTypes (Globals, SlotNo (..))
+import Cardano.Ledger.BaseTypes (Globals, SlotNo (..), StrictMaybe)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
@@ -158,14 +158,14 @@ liftCounter f a = do
 -- ========================
 
 -- | Lookup the value of a Term in the Env internal to TraceM.
-getTerm :: Term era a -> TraceM era a
+getTerm :: EraPParams era => Term era a -> TraceM era a
 getTerm term = do
   env <- getEnv
   case runTyped (runTerm env term) of
     Right a -> pure a
     Left ss -> failTrace (ss ++ ["in call to (getTerm " ++ show term ++ ")"])
 
-getTarget :: RootTarget era r a -> TraceM era a
+getTarget :: EraPParams era => RootTarget era r a -> TraceM era a
 getTarget tar = do
   env <- getEnv
   case runTyped (runTarget env tar) of
@@ -173,13 +173,13 @@ getTarget tar = do
     Left ss -> failTrace (ss ++ ["in call to (getTarget " ++ show tar ++ ")"])
 
 -- | Pick a random (key,value) pair from a Map
-fromMapTerm :: Term era (Map k a) -> TraceM era (k, a)
+fromMapTerm :: EraPParams era => Term era (Map k a) -> TraceM era (k, a)
 fromMapTerm term = do
   u <- getTerm term
   liftGen $ genFromMap ["fromMapTerm " ++ show term] u
 
 -- | Pick a random (key,value) pair from a Map such that the (key,value) pair meets predicate 'p'
-fromMapTermSuchThat :: Term era (Map k a) -> ((k, a) -> Bool) -> TraceM era (k, a)
+fromMapTermSuchThat :: EraPParams era => Term era (Map k a) -> ((k, a) -> Bool) -> TraceM era (k, a)
 fromMapTermSuchThat term p = do
   u <- getTerm term
   let n = Map.size u
@@ -190,7 +190,7 @@ fromMapTermSuchThat term p = do
       p
 
 -- | Pick a random element from a Set
-fromSetTerm :: Term era (Set b) -> TraceM era b
+fromSetTerm :: EraPParams era => Term era (Set b) -> TraceM era b
 fromSetTerm term = do
   u <- getTerm term
   liftGen (fst <$> (itemFromSet ["fromSetTerm " ++ show term] u))
@@ -200,7 +200,7 @@ update :: (Env era -> TraceM era (Env era)) -> TraceM era ()
 update f = getEnv >>= f >>= putEnv >> pure ()
 
 -- | Update the value of one variable stored in the Env internal to TraceM.
-updateVar :: Term era t -> (t -> t) -> TraceM era ()
+updateVar :: EraPParams era => Term era t -> (t -> t) -> TraceM era ()
 updateVar term@(Var v) adjust = TraceM $ do
   TraceState i env <- get
   case runTyped (runTerm env term) of
@@ -208,7 +208,7 @@ updateVar term@(Var v) adjust = TraceM $ do
     Left ss -> lift (throwE (ss ++ ["in call to 'updateVar'"]))
 updateVar term _ = failTrace ["Non Var term in call to 'updateVar'", show term]
 
-setVar :: Term era t -> t -> TraceM era ()
+setVar :: EraPParams era => Term era t -> t -> TraceM era ()
 setVar (Var v) t = TraceM $ do
   TraceState i env <- get
   put (TraceState i (storeVar v t env))
@@ -242,7 +242,7 @@ reqSig (Conway _) txb = txb ^. reqSignerHashesTxBodyL
 --   First: Apply the Rewriter
 --   Second: appy the Subst
 --   Third: Construct the DependGraph
-compileTraceWithSubst :: Era era => OrderInfo -> Subst era -> [Pred era] -> TraceM era (DependGraph era)
+compileTraceWithSubst :: EraPParams era => OrderInfo -> Subst era -> [Pred era] -> TraceM era (DependGraph era)
 compileTraceWithSubst info subst0 cs0 = do
   simple <- liftCounter rewriteGen cs0
   graph <- liftTyped $ do
@@ -252,7 +252,7 @@ compileTraceWithSubst info subst0 cs0 = do
   pure graph
 
 -- | Use the tool chain to generate a Subst from a list of Pred, in the TraceM monad.
-toolChainTrace :: Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> TraceM era (Subst era)
+toolChainTrace :: (EraPParams era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> OrderInfo -> [Pred era] -> Subst era -> TraceM era (Subst era)
 toolChainTrace _proof order cs subst0 = do
   (DependGraph pairs) <- compileTraceWithSubst order subst0 cs
   Subst subst <- liftGen (foldlM' solveOneVar subst0 pairs)
@@ -263,28 +263,28 @@ toolChainTrace _proof order cs subst0 = do
 -- Lift some [Pred era] into TraceM (monadic) (Subst era) transformers
 -- Create tool (TraceM era (Subst era)) functions that can be chained together
 
-universeTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
+universeTrace :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> Subst era -> TraceM era (Subst era)
 universeTrace proof subst = liftGen (universeStage def proof subst)
 
-pparamsTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
+pparamsTrace :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> Subst era -> TraceM era (Subst era)
 pparamsTrace proof subst = liftGen (pParamsStage proof subst)
 
-pstateTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
+pstateTrace :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> Subst era -> TraceM era (Subst era)
 pstateTrace proof subst = liftGen (pstateStage proof subst)
 
-vstateTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
+vstateTrace :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> Subst era -> TraceM era (Subst era)
 vstateTrace proof subst = liftGen (vstateStage proof subst)
 
-dstateTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
+dstateTrace :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> Subst era -> TraceM era (Subst era)
 dstateTrace proof subst = liftGen (dstateStage proof subst)
 
-ledgerStateTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
+ledgerStateTrace :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> Subst era -> TraceM era (Subst era)
 ledgerStateTrace proof subst = liftGen (ledgerStateStage def proof subst)
 
-epochStateTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
+epochStateTrace :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> Subst era -> TraceM era (Subst era)
 epochStateTrace proof subst = liftGen (epochStateStage proof subst)
 
-newEpochStateTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
+newEpochStateTrace :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> Subst era -> TraceM era (Subst era)
 newEpochStateTrace proof subst = liftGen (newEpochStateStage proof subst)
 
 -- ==============================================================
@@ -317,7 +317,7 @@ beforeAfterTrace !n make = do
 
 -- | Generate an Env that contains the pieces of the LedgerState
 --   by chaining smaller pieces together.
-genLedgerStateEnv :: Reflect era => Proof era -> TraceM era (Env era)
+genLedgerStateEnv :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> TraceM era (Env era)
 genLedgerStateEnv proof = do
   subst <-
     pure emptySubst
@@ -332,7 +332,7 @@ genLedgerStateEnv proof = do
 
 -- | Generate an Env that contains the pieces of the NewEpochState
 --   by chaining smaller pieces together.
-genNewEpochStateEnv :: Reflect era => Proof era -> TraceM era (Env era)
+genNewEpochStateEnv :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> TraceM era (Env era)
 genNewEpochStateEnv proof = do
   subst <-
     pure emptySubst
@@ -391,7 +391,7 @@ instance
 -- We need to generate these together so that the trace is valid, i.e. it passes all the STS rules
 
 genTraceParts ::
-  Reflect era =>
+  (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) =>
   Proof era ->
   Int ->
   (Proof era -> TraceM era (Tx era)) ->
@@ -423,6 +423,7 @@ traceStepToVector getTx steps m prev = do
 newStsTrace ::
   ( Reflect era
   , STS (MOCKCHAIN era)
+  , Arbitrary (PParamsHKD StrictMaybe era)
   ) =>
   Proof era ->
   Int ->
@@ -437,7 +438,7 @@ newStsTrace proof len genTx = do
 --   2) A function that creates a property from a (Trace (MOCKCHAIN era))
 mockChainProp ::
   forall era.
-  (Reflect era, STS (MOCKCHAIN era)) =>
+  (Reflect era, STS (MOCKCHAIN era), Arbitrary (PParamsHKD StrictMaybe era)) =>
   Proof era ->
   Int ->
   (Proof era -> TraceM era (Tx era)) ->

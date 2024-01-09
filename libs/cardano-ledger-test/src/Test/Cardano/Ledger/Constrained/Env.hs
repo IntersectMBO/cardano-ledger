@@ -4,7 +4,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -33,6 +32,7 @@ module Test.Cardano.Ledger.Constrained.Env (
   sameName,
 ) where
 
+import Cardano.Ledger.Core (EraPParams)
 import Cardano.Ledger.Era (Era)
 import Data.Hashable
 import Data.List (intercalate)
@@ -56,12 +56,12 @@ data Access era s t where
   Yes :: Rep era s -> Lens' s t -> Access era s t
   No :: Access era s t
 
-instance Show (V era t) where
+instance EraPParams era => Show (V era t) where
   show (VRaw nm rep _ _) = nm ++ " :: " ++ show rep
 
 -- | We make hashing of 'V' cheap by memoizing most of the hash computation in in the
 --   3rd argument of 'VRaw', we provide this pattern to hide this from every other use.
-pattern V :: () => Era era => String -> Rep era t -> Access era s t -> V era t
+pattern V :: EraPParams era => String -> Rep era t -> Access era s t -> V era t
 pattern V s r a <- VRaw s r _ a
   where
     V s r a = VRaw s r (0 `hashWithSalt` s `hashWithSalt` r) a
@@ -89,13 +89,13 @@ instance Show (Name era) where
   show (Name (VRaw n _ _ _)) = n
 
 -- | Does not satisfy extensionality
-instance Eq (Name era) where
+instance EraPParams era => Eq (Name era) where
   Name (V n1 rep1 _) == Name (V n2 rep2 _) = case testEql rep1 rep2 of
     Nothing -> False
     Just Refl -> n1 == n2
   {-# INLINE (==) #-}
 
-instance Ord (Name era) where
+instance EraPParams era => Ord (Name era) where
   {-# SPECIALIZE instance Ord (Name (BabbageEra StandardCrypto)) #-}
   {-# SPECIALIZE instance Ord (Name (ConwayEra StandardCrypto)) #-}
   compare (Name (V n1 rep1 _)) (Name (V n2 rep2 _)) =
@@ -104,7 +104,7 @@ instance Ord (Name era) where
       other -> other
   {-# INLINE compare #-}
 
-sameName :: V era t -> V era s -> Maybe (t :~: s)
+sameName :: EraPParams era => V era t -> V era s -> Maybe (t :~: s)
 sameName (V x r1 _) (V y r2 _) | x == y = testEql r1 r2
 sameName _ _ = Nothing
 
@@ -118,7 +118,7 @@ data Field era s t where
 
 -- SubField :: String -> Rep era t -> Access era s t -> Field era t r -> Field era s t
 
-instance Show (Field era s t) where
+instance EraPParams era => Show (Field era s t) where
   show (Field n t s _) = intercalate " " ["Field", show n, show s, show t]
   show (FConst r t _ _) = "FConst " ++ synopsis r t
 
@@ -127,11 +127,11 @@ data AnyF era s where
   AnyF :: -- Eq t =>
     Field era s t -> AnyF era s
 
-instance Show (AnyF era s) where
+instance EraPParams era => Show (AnyF era s) where
   show (AnyF (Field n r t _)) = "Field " ++ n ++ " " ++ show t ++ " " ++ show r
   show (AnyF (FConst r t _ _)) = "FConst " ++ synopsis r t
 
-vToField :: Era era => Rep era s -> V era t -> Typed (Field era s t)
+vToField :: EraPParams era => Rep era s -> V era t -> Typed (Field era s t)
 vToField reps (V name rept (Yes reps' l)) = case testEql reps reps' of
   Just Refl -> pure $ Field name rept reps l
   Nothing ->
@@ -142,7 +142,7 @@ vToField reps (V name rept (Yes reps' l)) = case testEql reps reps' of
       ]
 vToField _ v@(V _ _ No) = failT ["Cannot convert a V with a No access to a Field", show v]
 
-fieldToV :: Era era => Field era s t -> Typed (V era t)
+fieldToV :: EraPParams era => Field era s t -> Typed (V era t)
 fieldToV (Field name rep repx l) = pure $ V name rep (Yes repx l)
 fieldToV (FConst _ _ _ _) = failT ["Cannot convert a FieldConst to a V"]
 
@@ -154,7 +154,7 @@ data Payload era where
 
 newtype Env era = Env (Map String (Payload era))
 
-instance Show (Env era) where
+instance EraPParams era => Show (Env era) where
   show (Env m) = unlines (map f (Map.toList m))
     where
       f (nm, Payload rep t _) = nm ++ " -> " ++ synopsis rep t
@@ -162,7 +162,7 @@ instance Show (Env era) where
 emptyEnv :: Env era
 emptyEnv = Env Map.empty
 
-findVar :: V era t -> Env era -> Typed t
+findVar :: EraPParams era => V era t -> Env era -> Typed t
 findVar (V name rep1 _) (Env m) =
   case Map.lookup name m of
     Nothing -> failT ["Cannot find " ++ name ++ " in env"]
@@ -171,24 +171,24 @@ findVar (V name rep1 _) (Env m) =
         Just Refl -> pure t
         Nothing -> failT ["We found: " ++ name ++ ", but the types did not match. " ++ show rep1 ++ " =/= " ++ show rep2]
 
-storeVar :: V era t -> t -> Env era -> Env era
+storeVar :: EraPParams era => V era t -> t -> Env era -> Env era
 storeVar (V name rep access) t (Env m) = Env (Map.insert name (Payload rep t access) m)
 
 -- | Untyped version of 'findVar'.
-findName :: Name era -> Env era -> Maybe (Payload era)
+findName :: EraPParams era => Name era -> Env era -> Maybe (Payload era)
 findName (Name (V name _ _)) (Env env) = Map.lookup name env
 
 -- | Untyped version of 'storeVar'.
-storeName :: Name era -> Payload era -> Env era -> Env era
+storeName :: EraPParams era => Name era -> Payload era -> Env era -> Env era
 storeName (Name (V name _ _)) p (Env env) = Env $ Map.insert name p env
 
 -- | Drop any names that are not in the given list from an environment.
-restrictEnv :: [Name era] -> Env era -> Env era
+restrictEnv :: EraPParams era => [Name era] -> Env era -> Env era
 restrictEnv names (Env env) = Env $ Map.filterWithKey (\x _ -> elem x xs) env
   where
     xs = [x | Name (V x _ _) <- names]
 
-otherFromEnv :: [String] -> Env era -> [String]
+otherFromEnv :: EraPParams era => [String] -> Env era -> [String]
 otherFromEnv known (Env m) = [n ++ " = " ++ synopsis r t | (n, Payload r t _) <- Map.toList m, not (elem n known)]
 
 -- ============================================
@@ -197,11 +197,11 @@ otherFromEnv known (Env m) = [n ++ " = " ++ synopsis r t | (n, Payload r t _) <-
 data P era where
   P :: V era t -> t -> P era
 
-instance Show (P era) where
+instance EraPParams era => Show (P era) where
   show (P (V nm rep _) t) = nm ++ " = " ++ synopsis rep t
   showList xs ans = unlines (ans : (map show xs))
 
-bulkStore :: [P era] -> Env era -> Env era
+bulkStore :: EraPParams era => [P era] -> Env era -> Env era
 bulkStore ps env = List.foldl' accum env ps
   where
     accum e (P v t) = storeVar v t e
@@ -239,22 +239,22 @@ instance Eq (Proof e) where
   x == y = shape x == shape y
   {-# INLINE (==) #-}
 
-instance Hashable (Rep e t) where
+instance EraPParams e => Hashable (Rep e t) where
   hashWithSalt s r = s `hashWithSalt` typeRepOf r
   {-# INLINE hashWithSalt #-}
 
-instance Eq (Rep e t) where
+instance EraPParams e => Eq (Rep e t) where
   x == y = typeRepOf x == typeRepOf y
   {-# INLINE (==) #-}
 
-instance Hashable (V era t) where
+instance EraPParams era => Hashable (V era t) where
   hashWithSalt s (VRaw _ _ h _) = s `hashWithSalt` h
   {-# INLINE hashWithSalt #-}
 
-instance Eq (V era t) where
+instance EraPParams era => Eq (V era t) where
   (V n1 r1 _) == (V n2 r2 _) = n1 == n2 && r1 == r2
   {-# INLINE (==) #-}
 
-instance Era era => Hashable (Name era) where
+instance EraPParams era => Hashable (Name era) where
   hashWithSalt s (Name (VRaw _ _ h _)) = s `hashWithSalt` h
   {-# INLINE hashWithSalt #-}

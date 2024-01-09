@@ -33,6 +33,7 @@ import Cardano.Ledger.Binary.Encoding (EncCBOR)
 import Cardano.Ledger.CertState (CertState, certDStateL, dsGenDelegsL)
 import Cardano.Ledger.Coin (Coin (..), rationalToCoinViaCeiling)
 import Cardano.Ledger.Core (
+  EraPParams (PParamsHKD),
   EraRule,
   EraScript (..),
   EraTx (..),
@@ -695,6 +696,7 @@ txBodyPreds sizes@UnivSize {..} p =
     sufficientHashes = Var $ pV p "sufficientHashes" (SetR WitHashR) No
 
 txBodyStage ::
+  Arbitrary (PParamsHKD StrictMaybe era) =>
   Reflect era =>
   UnivSize ->
   Proof era ->
@@ -765,20 +767,20 @@ adjustC (i : is) m extra@(Coin n) coinL = case compare n 0 of
         Nothing -> error ("Collateral input: " ++ show i ++ " is not found in UTxO in 'adjust'")
       subextra outf = outf & coinL .~ (Coin (max 1 (unCoin ((outf ^. coinL) <+> extra))))
 
-updateVal :: (a -> b -> a) -> Term era a -> b -> Env era -> Typed (Env era)
+updateVal :: EraPParams era => (a -> b -> a) -> Term era a -> b -> Env era -> Typed (Env era)
 updateVal adjust term@(Var v) delta env = do
   varV <- runTerm env term
   pure $ storeVar v (adjust varV delta) env
 updateVal _ v _ _ = failT ["Non Var in updateVal: " ++ show v]
 
-updateTerm :: (a -> b -> a) -> Term era a -> Term era b -> Env era -> Typed (Env era)
+updateTerm :: EraPParams era => (a -> b -> a) -> Term era a -> Term era b -> Env era -> Typed (Env era)
 updateTerm adjust term@(Var v) delta env = do
   varV <- runTerm env term
   deltaV <- runTerm env delta
   pure $ storeVar v (adjust varV deltaV) env
 updateTerm _ v _ _ = failT ["Non Var in updateTerm: " ++ show v]
 
-updateTarget :: (a -> b -> a) -> Term era a -> Target era b -> Env era -> Typed (Env era, b)
+updateTarget :: EraPParams era => (a -> b -> a) -> Term era a -> Target era b -> Env era -> Typed (Env era, b)
 updateTarget adjust term@(Var v) delta env = do
   varV <- runTerm env term
   deltaV <- runTarget env delta
@@ -790,7 +792,7 @@ override _ y = y
 
 -- ========================================
 
-genTxAndLedger :: Reflect era => UnivSize -> Proof era -> Gen (LedgerState era, Tx era, Env era)
+genTxAndLedger :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => UnivSize -> Proof era -> Gen (LedgerState era, Tx era, Env era)
 genTxAndLedger sizes proof = do
   subst <-
     ( pure emptySubst
@@ -810,7 +812,7 @@ genTxAndLedger sizes proof = do
   (TxF _ tx) <- monadTyped (findVar (unVar txterm) env2)
   pure (ledger, tx, env2)
 
-genTxAndNewEpoch :: Reflect era => UnivSize -> Proof era -> Gen (NewEpochState era, Tx era, Env era)
+genTxAndNewEpoch :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => UnivSize -> Proof era -> Gen (NewEpochState era, Tx era, Env era)
 genTxAndNewEpoch sizes proof = do
   subst <-
     ( pure emptySubst
@@ -935,6 +937,7 @@ oneTest ::
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , Show (PredicateFailure (EraRule "LEDGER" era))
+  , Arbitrary (PParamsHKD StrictMaybe era)
   ) =>
   UnivSize ->
   Proof era ->

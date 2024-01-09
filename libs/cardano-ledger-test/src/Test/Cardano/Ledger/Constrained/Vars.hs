@@ -33,8 +33,8 @@ import Cardano.Ledger.CertState (CommitteeState (..), csCommitteeCredsL, vsNumDo
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppDRepDepositL, ppGovActionDepositL)
-import Cardano.Ledger.Conway.Rules (GovRuleState (..))
 import Cardano.Ledger.Core (
+  EraPParams,
   PParams,
   TxOut,
   TxWits,
@@ -137,7 +137,7 @@ import Type.Reflection (Typeable, typeRep)
 -- Where fooPart1 :: Term era a, and fooPart2 :: Term era b
 -- And fooPart1 has an (Access foo a)
 -- And fooPart2 has an (Access foo b)
-field :: Era era => Rep era s -> Term era t -> AnyF era s
+field :: EraPParams era => Rep era s -> Term era t -> AnyF era s
 field repS1 (Var (V name rept (Yes repS2 l))) = case testEql repS1 repS2 of
   Just Refl -> AnyF (Field name rept repS2 l)
   Nothing ->
@@ -150,7 +150,7 @@ field repS1 (Var (V name rept (Yes repS2 l))) = case testEql repS1 repS2 of
       )
 field _ term = error ("field can only be applied to variable terms: " ++ show term)
 
-getName :: Term era t -> Name era
+getName :: EraPParams era => Term era t -> Name era
 getName (Var v) = Name v
 getName x = error ("nameOf can't find the name in: " ++ show x)
 
@@ -159,20 +159,20 @@ getName x = error ("nameOf can't find the name in: " ++ show x)
 
 type NELens era t = Lens' (NewEpochState era) t
 
-currentEpoch :: Era era => Term era EpochNo
+currentEpoch :: EraPParams era => Term era EpochNo
 currentEpoch = Var (V "currentEpoch" EpochR (Yes NewEpochStateR nesELL))
 
-prevBlocksMade :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) Natural)
+prevBlocksMade :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) Natural)
 prevBlocksMade = Var $ V "prevBlocksMade" (MapR PoolHashR NaturalR) (Yes NewEpochStateR nesBprevL)
 
-currBlocksMade :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) Natural)
+currBlocksMade :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) Natural)
 currBlocksMade = Var $ V "currBlocksMade" (MapR PoolHashR NaturalR) (Yes NewEpochStateR nesBcurL)
 
-poolDistr :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
+poolDistr :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
 poolDistr = Var $ V "poolDistr" (MapR PoolHashR IPoolStakeR) (Yes NewEpochStateR poolDistrL)
 
 -- | For tests only, Like PoolDistr but has a Rational (rather than a IndividualPoolStake).
-mockPoolDistr :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) Rational)
+mockPoolDistr :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) Rational)
 mockPoolDistr = Var $ V "mockPoolDistr" (MapR PoolHashR RationalR) No
 
 poolDistrL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
@@ -183,43 +183,43 @@ unPoolDistrL = lens unPoolDistr (\(PoolDistr _) x -> PoolDistr x)
 
 -- CertState - DState
 
-rewards :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
+rewards :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 rewards = Var $ V "rewards" (MapR CredR CoinR) (Yes NewEpochStateR rewardsL)
 
 rewardsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 rewardsL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL . rewardsUMapL
 
-delegations :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
+delegations :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 delegations = Var $ V "delegations" (MapR CredR PoolHashR) (Yes NewEpochStateR delegationsL)
 
 delegationsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 delegationsL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL . delegationsUMapL
 
-stakeDeposits :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
+stakeDeposits :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 stakeDeposits = Var $ V "stakeDeposits" (MapR CredR CoinR) (Yes NewEpochStateR stakeDepositsL)
 
 stakeDepositsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 stakeDepositsL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL . stakeDepositsUMapL
 
-ptrs :: Era era => Term era (Map Ptr (Credential 'Staking (EraCrypto era)))
+ptrs :: EraPParams era => Term era (Map Ptr (Credential 'Staking (EraCrypto era)))
 ptrs = Var $ V "ptrs" (MapR PtrR CredR) (Yes NewEpochStateR ptrsL)
 
 ptrsL :: NELens era (Map Ptr (Credential 'Staking (EraCrypto era)))
 ptrsL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL . ptrsUMapL
 
-currentDRepState :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+currentDRepState :: EraPParams era => Term era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 currentDRepState = Var $ V "currentDRepState" (MapR VCredR DRepStateR) (Yes NewEpochStateR drepsL)
 
 drepsL :: NELens era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 drepsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
-drepDelegation :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)))
+drepDelegation :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)))
 drepDelegation = Var $ V "drepDelegation" (MapR CredR DRepR) (Yes NewEpochStateR drepDelegationL)
 
 drepDelegationL :: NELens era (Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)))
 drepDelegationL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL . drepUMapL
 
-futureGenDelegs :: Era era => Term era (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+futureGenDelegs :: EraPParams era => Term era (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
 futureGenDelegs =
   Var $
     V
@@ -230,7 +230,7 @@ futureGenDelegs =
 futureGenDelegsL :: NELens era (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
 futureGenDelegsL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsFutureGenDelegsL
 
-genDelegs :: Era era => Term era (Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+genDelegs :: EraPParams era => Term era (Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
 genDelegs = Var $ V "genDelegs" (MapR GenHashR GenDelegPairR) (Yes NewEpochStateR genDelegsL)
 
 genDelegsL :: NELens era (Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
@@ -238,31 +238,31 @@ genDelegsL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsGenDelegsL . un
 
 -- DState - InstantaneousRewards
 
-instanReserves :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
+instanReserves :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 instanReserves = Var $ V "instanReserves" (MapR CredR CoinR) (Yes NewEpochStateR instanReservesL)
 
 instanReservesL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 instanReservesL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsIRewardsL . iRReservesL
 
-instanReservesSum :: Era era => Term era Coin
+instanReservesSum :: EraPParams era => Term era Coin
 instanReservesSum = Var (V "instanReservesSum" CoinR No)
 
-instanTreasury :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
+instanTreasury :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 instanTreasury = Var $ V "instanTreasury" (MapR CredR CoinR) (Yes NewEpochStateR instanTreasuryL)
 
 instanTreasuryL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 instanTreasuryL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsIRewardsL . iRTreasuryL
 
-instanTreasurySum :: Era era => Term era Coin
+instanTreasurySum :: EraPParams era => Term era Coin
 instanTreasurySum = Var (V "instanTreasurySum" CoinR No)
 
-deltaReserves :: Era era => Term era DeltaCoin
+deltaReserves :: EraPParams era => Term era DeltaCoin
 deltaReserves = Var $ V "deltaReserves" DeltaCoinR (Yes NewEpochStateR deltaReservesNEL)
 
 deltaReservesNEL :: NELens era DeltaCoin
 deltaReservesNEL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsIRewardsL . deltaReservesL
 
-deltaTreasury :: Era era => Term era DeltaCoin
+deltaTreasury :: EraPParams era => Term era DeltaCoin
 deltaTreasury = Var $ V "deltaTreasury" DeltaCoinR (Yes NewEpochStateR deltaTreasuryNEL)
 
 deltaTreasuryNEL :: NELens era DeltaCoin
@@ -270,37 +270,37 @@ deltaTreasuryNEL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsIRewardsL
 
 -- CertState - PState
 
-regPools :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+regPools :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 regPools = Var $ V "regPools" (MapR PoolHashR PoolParamsR) (Yes NewEpochStateR regPoolsL)
 
 regPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 regPoolsL = nesEsL . esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
 
-futureRegPools :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+futureRegPools :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 futureRegPools = Var $ V "futureRegPools" (MapR PoolHashR PoolParamsR) (Yes NewEpochStateR futureRegPoolsL)
 
 futureRegPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 futureRegPoolsL = nesEsL . esLStateL . lsCertStateL . certPStateL . psFutureStakePoolParamsL
 
-retiring :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
+retiring :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
 retiring = Var $ V "retiring" (MapR PoolHashR EpochR) (Yes NewEpochStateR retiringL)
 
 retiringL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
 retiringL = nesEsL . esLStateL . lsCertStateL . certPStateL . psRetiringL
 
-poolDeposits :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
+poolDeposits :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
 poolDeposits = Var $ V "poolDeposits" (MapR PoolHashR CoinR) (Yes NewEpochStateR poolDepositsL)
 
 poolDepositsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
 poolDepositsL = nesEsL . esLStateL . lsCertStateL . certPStateL . psDepositsL
 
-committeeState :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
+committeeState :: EraPParams era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
 committeeState = Var $ V "committeeState" (MapR CommColdCredR (MaybeR CommHotCredR)) (Yes NewEpochStateR committeeStateL)
 
 committeeStateL :: NELens era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
 committeeStateL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
 
-numDormantEpochs :: Era era => Term era EpochNo
+numDormantEpochs :: EraPParams era => Term era EpochNo
 numDormantEpochs = Var $ V "numDormantEpochs" EpochR (Yes NewEpochStateR numDormantEpochsL)
 
 numDormantEpochsL :: NELens era EpochNo
@@ -308,7 +308,7 @@ numDormantEpochsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsNumDorma
 
 -- UTxOState
 
-utxo :: Era era => Proof era -> Term era (Map (TxIn (EraCrypto era)) (TxOutF era))
+utxo :: EraPParams era => Proof era -> Term era (Map (TxIn (EraCrypto era)) (TxOutF era))
 utxo p = Var $ pV p "utxo" (MapR TxInR (TxOutR p)) (Yes NewEpochStateR (utxoL p))
 
 utxoL :: Proof era -> NELens era (Map (TxIn (EraCrypto era)) (TxOutF era))
@@ -317,25 +317,25 @@ utxoL proof = nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL . unUtxoL proof
 unUtxoL :: Proof era -> Lens' (UTxO era) (Map (TxIn (EraCrypto era)) (TxOutF era))
 unUtxoL p = lens (Map.map (TxOutF p) . unUTxO) (\(UTxO _) new -> liftUTxO new)
 
-deposits :: Era era => Term era Coin
+deposits :: EraPParams era => Term era Coin
 deposits = Var $ V "deposits" CoinR (Yes NewEpochStateR depositsL)
 
 depositsL :: NELens era Coin
 depositsL = nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL
 
-fees :: Era era => Term era Coin
+fees :: EraPParams era => Term era Coin
 fees = Var $ V "fees" CoinR (Yes NewEpochStateR feesL)
 
 feesL :: NELens era Coin
 feesL = nesEsL . esLStateL . lsUTxOStateL . utxosFeesL
 
-donation :: Era era => Term era Coin
+donation :: EraPParams era => Term era Coin
 donation = Var $ V "donation" CoinR (Yes NewEpochStateR donationL)
 
 donationL :: NELens era Coin
 donationL = nesEsL . esLStateL . lsUTxOStateL . utxosDonationL
 
-ppup :: Era era => Proof era -> Term era (ShelleyGovState era)
+ppup :: EraPParams era => Proof era -> Term era (ShelleyGovState era)
 ppup p = Var $ pV p "ppup" (PPUPStateR p) (Yes NewEpochStateR (ppupsL p))
 
 ppupsL :: Proof era -> NELens era (ShelleyGovState era)
@@ -346,14 +346,14 @@ ppupsL (Alonzo _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
 ppupsL (Babbage _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
 ppupsL (Conway _) = error "Conway era does not have a PPUPState, in ppupsL"
 
-pparamProposals :: Era era => Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
+pparamProposals :: EraPParams era => Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 pparamProposals p = Var (pV p "pparamProposals" (MapR GenHashR (PParamsUpdateR p)) No)
 
 futurePParamProposals ::
-  Era era => Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
+  EraPParams era => Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 futurePParamProposals p = Var (pV p "futurePParamProposals" (MapR GenHashR (PParamsUpdateR p)) No)
 
-currPParams :: Era era => Proof era -> Term era (PParamsF era)
+currPParams :: EraPParams era => Proof era -> Term era (PParamsF era)
 currPParams p = Var (pV p "currPParams" (PParamsR p) No)
 
 prevPParams :: Gov.EraGov era => Proof era -> Term era (PParamsF era)
@@ -398,7 +398,7 @@ govL = lens f g
     g (GovState p@(Babbage _) _) y = GovState p y
     g (GovState p@(Conway _) _) y = GovState p y
 
-govStateT :: forall era. Era era => Proof era -> RootTarget era (GovState era) (GovState era)
+govStateT :: forall era. EraPParams era => Proof era -> RootTarget era (GovState era) (GovState era)
 govStateT p@(Shelley _) = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
 govStateT p@(Allegra _) = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
 govStateT p@(Mary _) = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
@@ -411,13 +411,13 @@ individualPoolStakeL = lens individualPoolStake (\ds u -> ds {individualPoolStak
 
 -- Incremental Stake
 
-isPtrMapT :: Era era => Term era (Map Ptr Coin)
+isPtrMapT :: EraPParams era => Term era (Map Ptr Coin)
 isPtrMapT = Var $ V "ptrMap" (MapR PtrR CoinR) (Yes NewEpochStateR ptrMapL)
 
 ptrMapL :: Lens' (NewEpochState era) (Map Ptr Coin)
 ptrMapL = nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL . isPtrMapL
 
-isCredMapT :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
+isCredMapT :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 isCredMapT = Var $ V "credMap" (MapR CredR CoinR) (Yes NewEpochStateR credMapL)
 
 credMapL :: Lens' (NewEpochState era) (Map (Credential 'Staking (EraCrypto era)) Coin)
@@ -425,13 +425,13 @@ credMapL = nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL . isCredMapL
 
 -- AccountState
 
-treasury :: Era era => Term era Coin
+treasury :: EraPParams era => Term era Coin
 treasury = Var $ V "treasury" CoinR (Yes NewEpochStateR treasuryL)
 
 treasuryL :: NELens era Coin
 treasuryL = nesEsL . esAccountStateL . asTreasuryL
 
-reserves :: Era era => Term era Coin
+reserves :: EraPParams era => Term era Coin
 reserves = Var $ V "reserves" CoinR (Yes NewEpochStateR reservesL)
 
 reservesL :: NELens era Coin
@@ -439,17 +439,17 @@ reservesL = nesEsL . esAccountStateL . asReservesL
 
 -- | The Coin availabe for a MIR transfer to/from the Treasury
 --   Computed from 'treasury' + 'deltaTreasury' - sum('instanTreasury')
-mirAvailTreasury :: Era era => Term era Coin
+mirAvailTreasury :: EraPParams era => Term era Coin
 mirAvailTreasury = Var (V "mirAvailTreasury" CoinR No)
 
 -- | The Coin availabe for a MIR transfer to/from the Reserves
 --   Computed from 'reserves' + 'deltaReserves' - sum('instanReserves')
-mirAvailReserves :: Era era => Term era Coin
+mirAvailReserves :: EraPParams era => Term era Coin
 mirAvailReserves = Var (V "mirAvailReserves" CoinR No)
 
 -- EpochState
 
-snapshots :: Era era => Term era (SnapShots (EraCrypto era))
+snapshots :: EraPParams era => Term era (SnapShots (EraCrypto era))
 snapshots = Var (V "snapshots" SnapShotsR (Yes NewEpochStateR snapshotsL))
 
 snapshotsL :: NELens era (SnapShots (EraCrypto era))
@@ -465,10 +465,10 @@ pparamsVar p = (V "pparams" (PParamsR p) (Yes NewEpochStateR (nesEsL . curPParam
 pparams :: Gov.EraGov era => Proof era -> Term era (PParamsF era)
 pparams p = Var $ pparamsVar p
 
-nmLikelihoodsT :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) [Float])
+nmLikelihoodsT :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) [Float])
 nmLikelihoodsT = Var (V "likelihoodsNM" (MapR PoolHashR (ListR FloatR)) (Yes NewEpochStateR (nesEsL . esNonMyopicL . nmLikelihoodsL)))
 
-nmRewardPotT :: Era era => Term era Coin
+nmRewardPotT :: EraPParams era => Term era Coin
 nmRewardPotT = Var $ V "rewardPotNM" CoinR (Yes NewEpochStateR (nesEsL . esNonMyopicL . nmRewardPotL))
 
 -- ===== SnapShots
@@ -487,22 +487,22 @@ vmapL = lens VMap.toMap (\_ u -> VMap.fromMap u)
 markStakeL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 markStakeL = nesEsL . esSnapshotsL . ssStakeMarkL . ssStakeL . stakeL
 
-markStake :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
+markStake :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 markStake = Var (V "markStake" (MapR CredR CoinR) (Yes NewEpochStateR markStakeL))
 
-markDelegs :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
+markDelegs :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 markDelegs = Var (V "markDelegs" (MapR CredR PoolHashR) (Yes NewEpochStateR markDelegsL))
 
 markDelegsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 markDelegsL = nesEsL . esSnapshotsL . ssStakeMarkL . ssDelegationsL . vmapL
 
-markPools :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+markPools :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 markPools = Var (V "markPools" (MapR PoolHashR PoolParamsR) (Yes NewEpochStateR markPoolsL))
 
 markPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 markPoolsL = nesEsL . esSnapshotsL . ssStakeMarkL . ssPoolParamsL . vmapL
 
-markSnapShotT :: forall era. Era era => RootTarget era (SnapShot (EraCrypto era)) (SnapShot (EraCrypto era))
+markSnapShotT :: forall era. EraPParams era => RootTarget era (SnapShot (EraCrypto era)) (SnapShot (EraCrypto era))
 markSnapShotT =
   Invert "SnapShot" (typeRep @(SnapShot (EraCrypto era))) snapfun
     :$ Lensed markStake (ssStakeL . stakeL)
@@ -515,25 +515,25 @@ markSnapShotT =
         (VMap.fromMap y)
         (VMap.fromMap z)
 
-setStake :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
+setStake :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 setStake = Var (V "setStake" (MapR CredR CoinR) (Yes NewEpochStateR setStakeL))
 
 setStakeL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 setStakeL = nesEsL . esSnapshotsL . ssStakeSetL . ssStakeL . stakeL
 
-setDelegs :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
+setDelegs :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 setDelegs = Var (V "setDelegs" (MapR CredR PoolHashR) (Yes NewEpochStateR setDelegsL))
 
 setDelegsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 setDelegsL = nesEsL . esSnapshotsL . ssStakeSetL . ssDelegationsL . vmapL
 
-setPools :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+setPools :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 setPools = Var (V "setPools" (MapR PoolHashR PoolParamsR) (Yes NewEpochStateR setPoolsL))
 
 setPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 setPoolsL = nesEsL . esSnapshotsL . ssStakeSetL . ssPoolParamsL . vmapL
 
-setSnapShotT :: forall era. Era era => RootTarget era (SnapShot (EraCrypto era)) (SnapShot (EraCrypto era))
+setSnapShotT :: forall era. EraPParams era => RootTarget era (SnapShot (EraCrypto era)) (SnapShot (EraCrypto era))
 setSnapShotT =
   Invert "SnapShot" (typeRep @(SnapShot (EraCrypto era))) snapfun
     :$ Lensed setStake (ssStakeL . stakeL)
@@ -546,25 +546,25 @@ setSnapShotT =
         (VMap.fromMap y)
         (VMap.fromMap z)
 
-goStake :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
+goStake :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 goStake = Var (V "goStake" (MapR CredR CoinR) (Yes NewEpochStateR goStakeL))
 
 goStakeL :: NELens era (Map (Credential 'Staking (EraCrypto era)) Coin)
 goStakeL = nesEsL . esSnapshotsL . ssStakeGoL . ssStakeL . stakeL
 
-goDelegs :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
+goDelegs :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 goDelegs = Var (V "goDelegs" (MapR CredR PoolHashR) (Yes NewEpochStateR goDelegsL))
 
 goDelegsL :: NELens era (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
 goDelegsL = nesEsL . esSnapshotsL . ssStakeGoL . ssDelegationsL . vmapL
 
-goPools :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+goPools :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 goPools = Var (V "goPools" (MapR PoolHashR PoolParamsR) (Yes NewEpochStateR goPoolsL))
 
 goPoolsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 goPoolsL = nesEsL . esSnapshotsL . ssStakeGoL . ssPoolParamsL . vmapL
 
-goSnapShotT :: forall era. Era era => RootTarget era (SnapShot (EraCrypto era)) (SnapShot (EraCrypto era))
+goSnapShotT :: forall era. EraPParams era => RootTarget era (SnapShot (EraCrypto era)) (SnapShot (EraCrypto era))
 goSnapShotT =
   Invert "SnapShot" (typeRep @(SnapShot (EraCrypto era))) snapfun
     :$ Lensed goStake (ssStakeL . stakeL)
@@ -577,7 +577,7 @@ goSnapShotT =
         (VMap.fromMap y)
         (VMap.fromMap z)
 
-markPoolDistr :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
+markPoolDistr :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
 markPoolDistr = Var (V "markPoolDistr" (MapR PoolHashR IPoolStakeR) No)
 
 markPoolDistrL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
@@ -586,10 +586,10 @@ markPoolDistrL = nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL . pooldistrHelpL
 pooldistrHelpL :: Lens' (PoolDistr c) (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
 pooldistrHelpL = lens unPoolDistr (\_ u -> PoolDistr u)
 
-snapShotFee :: Era era => Term era Coin
+snapShotFee :: EraPParams era => Term era Coin
 snapShotFee = Var (V "snapShotFee" CoinR No)
 
-snapShotsT :: forall era. Era era => RootTarget era (SnapShots (EraCrypto era)) (SnapShots (EraCrypto era))
+snapShotsT :: forall era. EraPParams era => RootTarget era (SnapShots (EraCrypto era)) (SnapShots (EraCrypto era))
 snapShotsT =
   Invert "SnapShots" (typeRep @(SnapShots (EraCrypto era))) shotsfun
     :$ Shift markSnapShotT ssStakeMarkL
@@ -603,7 +603,7 @@ snapShotsT =
 -- ==================================================================
 -- RewardUpdate
 
-deltaT :: Era era => Term era (Maybe DeltaCoin)
+deltaT :: EraPParams era => Term era (Maybe DeltaCoin)
 deltaT = Var (V "deltaT" (MaybeR DeltaCoinR) (Yes NewEpochStateR deltaTL))
 
 deltaTL :: NELens era (Maybe DeltaCoin)
@@ -618,7 +618,7 @@ deltaTL = nesRuL . help
         update (SJust (Complete ru)) (Just change) = SJust (Complete (ru {RU.deltaT = change}))
         update _ _ = SNothing
 
-deltaR :: Era era => Term era (Maybe DeltaCoin)
+deltaR :: EraPParams era => Term era (Maybe DeltaCoin)
 deltaR = Var (V "deltaR" (MaybeR DeltaCoinR) (Yes NewEpochStateR deltaRL))
 
 deltaRL :: NELens era (Maybe DeltaCoin)
@@ -633,7 +633,7 @@ deltaRL = nesRuL . help
         update (SJust (Complete ru)) (Just change) = SJust (Complete (ru {RU.deltaR = change}))
         update _ _ = SNothing
 
-deltaF :: Era era => Term era (Maybe DeltaCoin)
+deltaF :: EraPParams era => Term era (Maybe DeltaCoin)
 deltaF = Var (V "deltaF" (MaybeR DeltaCoinR) (Yes NewEpochStateR deltaFL))
 
 deltaFL :: NELens era (Maybe DeltaCoin)
@@ -648,7 +648,7 @@ deltaFL = nesRuL . help
         update (SJust (Complete ru)) (Just change) = SJust (Complete (ru {RU.deltaF = change}))
         update _ _ = SNothing
 
-rewardSet :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
+rewardSet :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
 rewardSet = Var (V "rewardSet" (MapR CredR (SetR RewardR)) No)
 
 rewardSetL :: NELens era (Maybe (Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era)))))
@@ -666,102 +666,102 @@ rewardSetL = nesRuL . help
 -- ===================================================================
 -- Non Access variables
 
-totalAda :: Era era => Term era Coin
+totalAda :: EraPParams era => Term era Coin
 totalAda = Var $ V "totalAda" CoinR No
 
-utxoCoin :: Era era => Term era Coin
+utxoCoin :: EraPParams era => Term era Coin
 utxoCoin = Var $ V "utxoCoin" CoinR No
 
 -- | The universe of Staking Credentials. A credential is either KeyHash of a ScriptHash
 --   Any Plutus scripts in this Universe are NOT Spending scripts, so they do not need a Redeemer
-credsUniv :: Era era => Term era (Set (Credential 'Staking (EraCrypto era)))
+credsUniv :: EraPParams era => Term era (Set (Credential 'Staking (EraCrypto era)))
 credsUniv = Var $ V "credsUniv" (SetR CredR) No
 
 -- | The universe of Staking Credentials. A credential is either KeyHash of a ScriptHash
 --   All Plutus scripts in this Universe are SPENDING scripts, so they will need a Redeemer
 --   Use this ONLY in the Pay-part of an Address (Do not use this in the Stake-part of an Address)
-spendCredsUniv :: Era era => Term era (Set (Credential 'Payment (EraCrypto era)))
+spendCredsUniv :: EraPParams era => Term era (Set (Credential 'Payment (EraCrypto era)))
 spendCredsUniv = Var $ V "spendCredsUniv" (SetR PCredR) No
 
 -- | The universe of Voting Credentials. A credential is either KeyHash of a ScriptHash
-voteUniv :: Era era => Term era (Set (Credential 'DRepRole (EraCrypto era)))
+voteUniv :: EraPParams era => Term era (Set (Credential 'DRepRole (EraCrypto era)))
 voteUniv = Var $ V "voteUniv" (SetR VCredR) No
 
 -- | The universe of DReps
-drepUniv :: Era era => Term era (Set (DRep (EraCrypto era)))
+drepUniv :: EraPParams era => Term era (Set (DRep (EraCrypto era)))
 drepUniv = Var $ V "drepUniv" (SetR DRepR) No
 
 -- | The universe of Credentials used in voting for constitutional committee changes.
-hotCommitteeCredsUniv :: Era era => Term era (Set (Credential 'HotCommitteeRole (EraCrypto era)))
+hotCommitteeCredsUniv :: EraPParams era => Term era (Set (Credential 'HotCommitteeRole (EraCrypto era)))
 hotCommitteeCredsUniv = Var $ V "hotCommitteeCredsUniv" (SetR CommHotCredR) No
 
 -- | The universe of Credentials used in voting for constitutional committee changes.
-coldCommitteeCredsUniv :: Era era => Term era (Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+coldCommitteeCredsUniv :: EraPParams era => Term era (Set (Credential 'ColdCommitteeRole (EraCrypto era)))
 coldCommitteeCredsUniv = Var $ V "coldCommitteeCredsUniv" (SetR CommColdCredR) No
 
 -- | The universe of Payment Credentials. A credential is either KeyHash of a ScriptHash
 --   We only find payment credentials in the Payment part of an Addr.
-payUniv :: Era era => Term era (Set (Credential 'Payment (EraCrypto era)))
+payUniv :: EraPParams era => Term era (Set (Credential 'Payment (EraCrypto era)))
 payUniv = Var $ V "payUniv" (SetR PCredR) No
 
 -- | The universe of Scripts (and their hashes) useable in spending contexts
 --  That means if they are Plutus scripts then they will be passed an additional
 --  argument (the TxInfo context)
-spendscriptUniv :: Era era => Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
+spendscriptUniv :: EraPParams era => Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
 spendscriptUniv p = Var (pV p "spendscriptUniv" (MapR ScriptHashR (ScriptR p)) No)
 
 -- | The universe of Scripts (and their hashes) useable in contexts other than Spending
-nonSpendScriptUniv :: Era era => Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
+nonSpendScriptUniv :: EraPParams era => Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
 nonSpendScriptUniv p = Var (pV p "nonSpendScriptUniv" (MapR ScriptHashR (ScriptR p)) No)
 
 -- | The union of 'spendscriptUniv' and 'nonSpendScriptUniv'. All possible scripts in any context
-allScriptUniv :: Era era => Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
+allScriptUniv :: EraPParams era => Proof era -> Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
 allScriptUniv p = Var (pV p "allScriptUniv" (MapR ScriptHashR (ScriptR p)) No)
 
 -- | The universe of Data (and their hashes)
-dataUniv :: Era era => Term era (Map (DataHash (EraCrypto era)) (Data era))
+dataUniv :: EraPParams era => Term era (Map (DataHash (EraCrypto era)) (Data era))
 dataUniv = Var (V "dataUniv" (MapR DataHashR DataR) No)
 
 -- | The universe of StakePool key hashes. These hashes hash the cold key of the
 --   Pool operators.
-poolHashUniv :: Era era => Term era (Set (KeyHash 'StakePool (EraCrypto era)))
+poolHashUniv :: EraPParams era => Term era (Set (KeyHash 'StakePool (EraCrypto era)))
 poolHashUniv = Var $ V "poolHashUniv" (SetR PoolHashR) No
 
 -- | The universe of StakePool key hashes. These hashes hash are hashes of the Owners of a PoolParam
-stakeHashUniv :: Era era => Term era (Set (KeyHash 'Staking (EraCrypto era)))
+stakeHashUniv :: EraPParams era => Term era (Set (KeyHash 'Staking (EraCrypto era)))
 stakeHashUniv = Var $ V "stakeHashUniv" (SetR StakeHashR) No
 
 -- | The universe of DRep key hashes. These hashes hash are hashes of the DReps
-drepHashUniv :: Era era => Term era (Set (KeyHash 'DRepRole (EraCrypto era)))
+drepHashUniv :: EraPParams era => Term era (Set (KeyHash 'DRepRole (EraCrypto era)))
 drepHashUniv = Var $ V "drepHashUniv" (SetR DRepHashR) No
 
 -- | The universe of the Genesis key hashes and their signing and validating GenDelegPairs
-genesisHashUniv :: Era era => Term era (Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+genesisHashUniv :: EraPParams era => Term era (Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)))
 genesisHashUniv = Var $ V "genesisHashUniv" (MapR GenHashR GenDelegPairR) No
 
-voteCredUniv :: Era era => Term era (Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+voteCredUniv :: EraPParams era => Term era (Set (Credential 'ColdCommitteeRole (EraCrypto era)))
 voteCredUniv = Var $ V "voteHashUniv" (SetR CommColdCredR) No
 
 -- | The universe of TxIns. Pairs of TxId: hashes of previously run transaction bodies,
 --   and TxIx: indexes of one of the bodies outputs.
-txinUniv :: Era era => Term era (Set (TxIn (EraCrypto era)))
+txinUniv :: EraPParams era => Term era (Set (TxIn (EraCrypto era)))
 txinUniv = Var $ V "txinUniv" (SetR TxInR) No
 
 -- | The universe of GovActionId. Pairs of TxId: hashes of previously run transaction bodies,
 --   and GovActionIx: indexes of one of the bodies Proposals .
-govActionIdUniv :: Era era => Term era (Set (GovActionId (EraCrypto era)))
+govActionIdUniv :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
 govActionIdUniv = Var $ V "govActionIdUniv" (SetR GovActionIdR) No
 
 -- | The universe of TxOuts.
 --   It contains 'colTxoutUniv' as a sublist and 'feeOutput' as an element
 --   See also 'feeOutput' which is defined by the universes, and is related.
-txoutUniv :: Era era => Proof era -> Term era (Set (TxOutF era))
+txoutUniv :: EraPParams era => Proof era -> Term era (Set (TxOutF era))
 txoutUniv p = Var (pV p "txoutUniv" (SetR (TxOutR p)) No)
 
 -- | The universe of TxOuts useable for collateral
 --   The collateral TxOuts consists only of VKey addresses
 --   and The collateral TxOuts do not contain any non-ADA part
-colTxoutUniv :: Era era => Proof era -> Term era (Set (TxOutF era))
+colTxoutUniv :: EraPParams era => Proof era -> Term era (Set (TxOutF era))
 colTxoutUniv p = Var (pV p "colTxoutUniv" (SetR (TxOutR p)) No)
 
 -- | A TxOut, guaranteed to have
@@ -775,37 +775,37 @@ feeTxOut = Var (V "feeTxOut" (TxOutR reify) No)
 
 -- | A TxIn, guaranteed to have
 --  1) be a member of the txinUniv
-feeTxIn :: Era era => Term era (TxIn (EraCrypto era))
+feeTxIn :: EraPParams era => Term era (TxIn (EraCrypto era))
 feeTxIn = Var (V "feeTxIn" TxInR No)
 
 -- | A Coin large enough to pay almost any fee.
 --   See also 'feeOutput' which is related.
-bigCoin :: Era era => Term era Coin
+bigCoin :: EraPParams era => Term era Coin
 bigCoin = Var (V "bigCoin" CoinR No)
 
-datumsUniv :: Era era => Term era [Datum era]
+datumsUniv :: EraPParams era => Term era [Datum era]
 datumsUniv = Var (V "datumsUniv" (ListR DatumR) No)
 
-multiAssetUniv :: Era era => Term era [MultiAsset (EraCrypto era)]
+multiAssetUniv :: EraPParams era => Term era [MultiAsset (EraCrypto era)]
 multiAssetUniv = Var (V "multiAssetUniv" (ListR MultiAssetR) No)
 
 -- | The universe of key hashes, and the signing and validating key pairs they represent.
-keymapUniv :: Era era => Term era (Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)))
+keymapUniv :: EraPParams era => Term era (Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)))
 keymapUniv = Var (V "keymapUniv" (MapR WitHashR KeyPairR) No)
 
-currentSlot :: Era era => Term era SlotNo
+currentSlot :: EraPParams era => Term era SlotNo
 currentSlot = Var (V "currentSlot" SlotNoR No)
 
-endSlotDelta :: Era era => Term era SlotNo
+endSlotDelta :: EraPParams era => Term era SlotNo
 endSlotDelta = Var (V "endSlotDelta" SlotNoR No)
 
-beginSlotDelta :: Era era => Term era SlotNo
+beginSlotDelta :: EraPParams era => Term era SlotNo
 beginSlotDelta = Var (V "beginSlotDelta" SlotNoR No)
 
 -- See also currentEpoch in NewEpochState fields
 
 -- | From Globals
-network :: Era era => Term era Network
+network :: EraPParams era => Term era Network
 network = Var (V "network" NetworkR No)
 
 -- | This not really a variable, But a constant that is set by the 'testGlobals'
@@ -815,13 +815,13 @@ quorumConstant = Base.quorum Utils.testGlobals
 
 -- | From Globals. Reflected here at type Int, This is set to 'quorumConstant' in CertState.
 --   because is is used to compare the Size of things, which are computed as Int
-quorum :: Era era => Term era Int
+quorum :: EraPParams era => Term era Int
 quorum = Var (V "quorum" IntR No)
 
-addrUniv :: Era era => Term era (Set (Addr (EraCrypto era)))
+addrUniv :: EraPParams era => Term era (Set (Addr (EraCrypto era)))
 addrUniv = Var $ V "addrUniv" (SetR AddrR) No
 
-ptrUniv :: Era era => Term era (Set Ptr)
+ptrUniv :: EraPParams era => Term era (Set Ptr)
 ptrUniv = Var $ V "ptrUniv" (SetR PtrR) No
 
 plutusUniv :: Reflect era => Term era (Map (ScriptHash (EraCrypto era)) (IsValid, ScriptF era))
@@ -832,7 +832,7 @@ spendPlutusUniv = Var $ V "spendPlutusUniv" (MapR ScriptHashR (PairR IsValidR (S
 
 -- | The universe of all Byron addresses. In Eras, Babbage, Conway we avoid these Adresses,
 --   as they do not play well with Plutus Scripts.
-byronAddrUniv :: Era era => Term era (Map (KeyHash 'Payment (EraCrypto era)) (Addr (EraCrypto era), SigningKey))
+byronAddrUniv :: EraPParams era => Term era (Map (KeyHash 'Payment (EraCrypto era)) (Addr (EraCrypto era), SigningKey))
 byronAddrUniv = Var $ V "byronAddrUniv" (MapR PayHashR (PairR AddrR SigningKeyR)) No
 
 -- ====================================================================
@@ -904,7 +904,7 @@ epochStateT proof =
     epochStateFun a s l = EpochState a s l (NonMyopic Map.empty (Coin 0))
 
 -- | Target for AccountState
-accountStateT :: Era era => RootTarget era AccountState AccountState
+accountStateT :: EraPParams era => RootTarget era AccountState AccountState
 accountStateT =
   Invert "AccountState" (typeRep @AccountState) AccountState
     :$ Lensed treasury asTreasuryL
@@ -948,7 +948,7 @@ justProtocolVersion :: forall era. Reflect era => Proof era -> PParams era
 justProtocolVersion proof = newPParams proof [Fields.ProtocolVersion $ protocolVersion proof]
 
 -- | Target for CertState
-certstateT :: forall era. Era era => RootTarget era (CertState era) (CertState era)
+certstateT :: forall era. EraPParams era => RootTarget era (CertState era) (CertState era)
 certstateT =
   Invert "CertState" (typeRep @(CertState era)) CertState
     :$ (Shift vstateT certVStateL)
@@ -956,7 +956,7 @@ certstateT =
     :$ (Shift dstateT certDStateL)
 
 -- | Target for VState
-vstateT :: forall era. Era era => RootTarget era (VState era) (VState era)
+vstateT :: forall era. EraPParams era => RootTarget era (VState era) (VState era)
 vstateT =
   Invert "VState" (typeRep @(VState era)) (\x y z -> VState x (CommitteeState y) z)
     :$ Lensed currentDRepState vsDRepsL
@@ -973,7 +973,7 @@ committeeL ::
 committeeL = lens CommitteeState (\_ (CommitteeState x) -> x)
 
 -- | Target for PState
-pstateT :: forall era. Era era => RootTarget era (PState era) (PState era)
+pstateT :: forall era. EraPParams era => RootTarget era (PState era) (PState era)
 pstateT =
   Invert "PState" (typeRep @(PState era)) PState
     :$ Lensed regPools psStakePoolParamsL
@@ -982,7 +982,7 @@ pstateT =
     :$ Lensed poolDeposits psDepositsL
 
 -- | Target for DState
-dstateT :: forall era. Era era => RootTarget era (DState era) (DState era)
+dstateT :: forall era. EraPParams era => RootTarget era (DState era) (DState era)
 dstateT =
   Invert "DState" (typeRep @(DState era)) dstate
     :$ Lensed rewards (dsUnifiedL . rewardsUMapL)
@@ -1010,7 +1010,7 @@ dstate rew dep deleg drepdeleg ptr fgen gen =
 
 instantaneousRewardsT ::
   forall era.
-  Era era =>
+  EraPParams era =>
   RootTarget era (InstantaneousRewards (EraCrypto era)) (InstantaneousRewards (EraCrypto era))
 instantaneousRewardsT =
   Invert "InstanRew" (typeRep @(InstantaneousRewards (EraCrypto era))) InstantaneousRewards
@@ -1023,14 +1023,14 @@ instantaneousRewardsT =
 allvars :: String
 allvars = show (ppTarget (newEpochStateT (Conway Standard)))
 
-printTarget :: RootTarget era root t -> IO ()
+printTarget :: EraPParams era => RootTarget era root t -> IO ()
 printTarget t = putStrLn (show (ppTarget t))
 
 -- =====================================================================
 -- PParams fields
 
 -- | ProtVer in pparams
-protVer :: Era era => Proof era -> Term era ProtVer
+protVer :: EraPParams era => Proof era -> Term era ProtVer
 protVer proof =
   Var
     ( pV
@@ -1041,7 +1041,7 @@ protVer proof =
     )
 
 -- | ProtVer in prevPParams
-prevProtVer :: Era era => Proof era -> Term era ProtVer
+prevProtVer :: EraPParams era => Proof era -> Term era ProtVer
 prevProtVer proof =
   Var
     ( pV
@@ -1051,7 +1051,7 @@ prevProtVer proof =
         (Yes (PParamsR proof) $ withEraPParams proof (pparamsWrapperL . ppProtocolVersionL))
     )
 
-minFeeA :: Era era => Proof era -> Term era Coin
+minFeeA :: EraPParams era => Proof era -> Term era Coin
 minFeeA proof =
   Var
     ( pV
@@ -1061,7 +1061,7 @@ minFeeA proof =
         (Yes (PParamsR proof) $ withEraPParams proof (pparamsWrapperL . ppMinFeeAL))
     )
 
-minFeeB :: Era era => Proof era -> Term era Coin
+minFeeB :: EraPParams era => Proof era -> Term era Coin
 minFeeB proof =
   Var
     ( pV
@@ -1072,7 +1072,7 @@ minFeeB proof =
     )
 
 -- | Max Block Body Size
-maxBBSize :: Era era => Proof era -> Term era Natural
+maxBBSize :: EraPParams era => Proof era -> Term era Natural
 maxBBSize p =
   Var
     ( pV
@@ -1083,7 +1083,7 @@ maxBBSize p =
     )
 
 -- | Max Tx Size
-maxTxSize :: Era era => Proof era -> Term era Natural
+maxTxSize :: EraPParams era => Proof era -> Term era Natural
 maxTxSize p =
   Var
     ( pV
@@ -1113,7 +1113,7 @@ word16NaturalL :: Lens' Word16 Natural
 word16NaturalL = lens fromIntegral (\_ y -> fromIntegralBounded "word16NaturalL" (toInteger y))
 
 -- | Max Block Header Size
-maxBHSize :: Era era => Proof era -> Term era Natural
+maxBHSize :: EraPParams era => Proof era -> Term era Natural
 maxBHSize p =
   Var
     ( pV
@@ -1123,7 +1123,7 @@ maxBHSize p =
         (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppMaxBHSizeL . word16NaturalL)))
     )
 
-poolDepAmt :: Era era => Proof era -> Term era Coin
+poolDepAmt :: EraPParams era => Proof era -> Term era Coin
 poolDepAmt p =
   Var $
     pV
@@ -1132,7 +1132,7 @@ poolDepAmt p =
       CoinR
       (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppPoolDepositL)))
 
-keyDepAmt :: Era era => Proof era -> Term era Coin
+keyDepAmt :: EraPParams era => Proof era -> Term era Coin
 keyDepAmt p =
   Var $
     pV
@@ -1174,7 +1174,7 @@ drepDeposit p = Var $ pV p "drepDeposit" CoinR (Yes (PParamsR p) (withEraPParams
 drepActivity :: ConwayEraPParams era => Proof era -> Term era Base.EpochInterval
 drepActivity p = Var $ pV p "drepActivty" EpochIntervalR (Yes (PParamsR p) (withEraPParams p (pparamsWrapperL . ppDRepActivityL)))
 
-maxEpoch :: Era era => Proof era -> Term era Base.EpochInterval
+maxEpoch :: EraPParams era => Proof era -> Term era Base.EpochInterval
 maxEpoch p =
   Var $
     pV
@@ -1189,57 +1189,57 @@ maxEpoch p =
 txbodyterm :: Reflect era => Term era (TxBodyF era)
 txbodyterm = Var $ V "txbodyterm" (TxBodyR reify) No
 
-inputs :: Era era => Term era (Set (TxIn (EraCrypto era)))
+inputs :: EraPParams era => Term era (Set (TxIn (EraCrypto era)))
 inputs = Var $ V "inputs" (SetR TxInR) No
 
-collateral :: Era era => Term era (Set (TxIn (EraCrypto era)))
+collateral :: EraPParams era => Term era (Set (TxIn (EraCrypto era)))
 collateral = Var $ V "collateral" (SetR TxInR) No
 
-refInputs :: Era era => Term era (Set (TxIn (EraCrypto era)))
+refInputs :: EraPParams era => Term era (Set (TxIn (EraCrypto era)))
 refInputs = Var $ V "refInputs" (SetR TxInR) No
 
-outputs :: Era era => Proof era -> Term era [TxOutF era]
+outputs :: EraPParams era => Proof era -> Term era [TxOutF era]
 outputs p = Var $ pV p "outputs" (ListR (TxOutR p)) No
 
-collateralReturn :: Era era => Proof era -> Term era (TxOutF era)
+collateralReturn :: EraPParams era => Proof era -> Term era (TxOutF era)
 collateralReturn p = Var $ pV p "collateralReturn" (TxOutR p) No
 
 -- | The sum of all the 'collateral' inputs. The Tx is constucted
 --   by SNothing or wrapping 'SJust' around this value.
-totalCol :: Era era => Term era Coin
+totalCol :: EraPParams era => Term era Coin
 totalCol = Var $ V "totalCol" CoinR No
 
 certs :: Reflect era => Term era [TxCertF era]
 certs = Var $ V "certs" (ListR (TxCertR reify)) No
 
-withdrawals :: forall era. Era era => Term era (Map (RewardAcnt (EraCrypto era)) Coin)
+withdrawals :: forall era. EraPParams era => Term era (Map (RewardAcnt (EraCrypto era)) Coin)
 withdrawals = Var $ V "withdrawals" (MapR (RewardAcntR @era) CoinR) No
 
-txfee :: Era era => Term era Coin
+txfee :: EraPParams era => Term era Coin
 txfee = Var $ V "txfee" CoinR No
 
-ttl :: Era era => Term era SlotNo
+ttl :: EraPParams era => Term era SlotNo
 ttl = Var $ V "ttl" SlotNoR No
 
-validityInterval :: Era era => Term era ValidityInterval
+validityInterval :: EraPParams era => Term era ValidityInterval
 validityInterval = Var $ V "validityInterval" ValidityIntervalR No
 
-mint :: Era era => Term era (Map (ScriptHash (EraCrypto era)) (Map AssetName Integer))
+mint :: EraPParams era => Term era (Map (ScriptHash (EraCrypto era)) (Map AssetName Integer))
 mint = Var $ V "mint" (MapR ScriptHashR (MapR AssetNameR IntegerR)) No
 
-reqSignerHashes :: Era era => Term era (Set (KeyHash 'Witness (EraCrypto era)))
+reqSignerHashes :: EraPParams era => Term era (Set (KeyHash 'Witness (EraCrypto era)))
 reqSignerHashes = Var $ V "reqSignerHashes" (SetR WitHashR) No
 
-networkID :: Era era => Term era (Maybe Network)
+networkID :: EraPParams era => Term era (Maybe Network)
 networkID = Var $ V "networkID" (MaybeR NetworkR) No
 
-adHash :: Era era => Term era (Maybe (AuxiliaryDataHash (EraCrypto era)))
+adHash :: EraPParams era => Term era (Maybe (AuxiliaryDataHash (EraCrypto era)))
 adHash = Var $ V "adHash" (MaybeR AuxiliaryDataHashR) No
 
-wppHash :: Era era => Term era (Maybe (SafeHash (EraCrypto era) EraIndependentScriptIntegrity))
+wppHash :: EraPParams era => Term era (Maybe (SafeHash (EraCrypto era) EraIndependentScriptIntegrity))
 wppHash = Var $ V "wppHash" (MaybeR ScriptIntegrityHashR) No
 
-txDonation :: Era era => Term era Coin
+txDonation :: EraPParams era => Term era Coin
 txDonation = Var $ V "txDonation" CoinR No
 
 -- | lift the model type of 'mint' into a MultiAsset
@@ -1270,24 +1270,24 @@ acNeededL =
 
 -- | A Coin that needs to be added to the range of the colInputs in the UtxO
 --   that will make sure the collateral is large enough to pay the fees if needed
-extraCol :: Era era => Term era Coin
+extraCol :: EraPParams era => Term era Coin
 extraCol = Var $ V "extraCol" CoinR No
 
 -- | The sum of all the 'collateral' inputs, total colateral of the Tx is computed by adding (SJust _) to this value.
-sumCol :: Era era => Term era Coin
+sumCol :: EraPParams era => Term era Coin
 sumCol = Var $ V "sumCol" CoinR No
 
-colRetAddr :: Era era => Term era (Addr (EraCrypto era))
+colRetAddr :: EraPParams era => Term era (Addr (EraCrypto era))
 colRetAddr = Var $ V "colRetAddr" AddrR No
 
 -- | The Coin in the 'collateralReturn' TxOut
-colRetCoin :: Era era => Term era Coin
+colRetCoin :: EraPParams era => Term era Coin
 colRetCoin = Var $ V "colRetCoin" CoinR No
 
 -- | The amount that the collateral must cover if there is a two phase error.
 --   This is roughly the 'collateralPercentage' * 'txfee' . The calculation deals with rounding,
 --   but you don't need those details to understand what is going on.
-owed :: Era era => Term era Coin
+owed :: EraPParams era => Term era Coin
 owed = Var $ V "owed" CoinR No
 
 -- ==============================================================
@@ -1302,10 +1302,10 @@ txwits = Var $ V "txwits" (TxWitsR reify) No
 txauxdata :: Reflect era => Term era (Maybe (TxAuxDataF era))
 txauxdata = Var $ V "txauxdata" (MaybeR (TxAuxDataR reify)) No
 
-txisvalid :: Era era => Term era IsValid
+txisvalid :: EraPParams era => Term era IsValid
 txisvalid = Var $ V "txisvalid" IsValidR No
 
-valids :: Era era => Term era [IsValid]
+valids :: EraPParams era => Term era [IsValid]
 valids = Var $ V "valids" (ListR IsValidR) No
 
 txterm :: Reflect era => Term era (TxF era)
@@ -1535,29 +1535,29 @@ allowMIRTransfer p = Lit BoolR (HardForks.allowMIRTransfer (protocolVersion p))
 -- ====================================
 -- ConwayGovState variables
 
-constitution :: Era era => Term era (Constitution era)
+constitution :: EraPParams era => Term era (Constitution era)
 constitution = Var $ V "constitution" ConstitutionR No
 
-enactTreasury :: Era era => Term era Coin
+enactTreasury :: EraPParams era => Term era Coin
 enactTreasury = Var $ V "enactTreasury" CoinR No
 
-enactWithdrawals :: forall era. Era era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
+enactWithdrawals :: forall era. EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
 enactWithdrawals = Var $ V "enactWithdrawals" (MapR CredR CoinR) No
 
-currentGovActionStates :: Era era => Term era (Map (GovActionId (EraCrypto era)) (GovActionState era))
+currentGovActionStates :: EraPParams era => Term era (Map (GovActionId (EraCrypto era)) (GovActionState era))
 currentGovActionStates = Var $ V "currentGovActionStates" (MapR GovActionIdR GovActionStateR) No
 
-currentProposalOrder :: Era era => Term era [GovActionId (EraCrypto era)]
+currentProposalOrder :: EraPParams era => Term era [GovActionId (EraCrypto era)]
 currentProposalOrder = Var $ V "currentProposalOrder" (ListR GovActionIdR) No
 
-prevGovActionStates :: Era era => Term era (Map (GovActionId (EraCrypto era)) (GovActionState era))
+prevGovActionStates :: EraPParams era => Term era (Map (GovActionId (EraCrypto era)) (GovActionState era))
 prevGovActionStates = Var $ V "prevGovActionStates" (MapR GovActionIdR GovActionStateR) No
 
-prevProposalOrder :: Era era => Term era [GovActionId (EraCrypto era)]
+prevProposalOrder :: EraPParams era => Term era [GovActionId (EraCrypto era)]
 prevProposalOrder = Var $ V "prevProposalOrder" (ListR GovActionIdR) No
 
 previousCommitteeState ::
-  Era era =>
+  EraPParams era =>
   Term
     era
     ( Map
@@ -1566,13 +1566,13 @@ previousCommitteeState ::
     )
 previousCommitteeState = Var $ V "previousCommitteeState" (MapR CommColdCredR (MaybeR CommHotCredR)) No
 
-commMembers :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+commMembers :: EraPParams era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
 commMembers = Var $ V "commMembers" (MapR CommColdCredR EpochR) No
 
-commQuorum :: Era era => Term era UnitInterval
+commQuorum :: EraPParams era => Term era UnitInterval
 commQuorum = Var $ V "commQuorum" UnitIntervalR No
 
-committeeVar :: Era era => Term era (Maybe (Committee era))
+committeeVar :: EraPParams era => Term era (Maybe (Committee era))
 committeeVar = Var $ V "committeeVar" (MaybeR CommitteeR) No
 
 -- ====================================
@@ -1615,7 +1615,7 @@ pulsingPairT proof =
     :$ Virtual currentEpoch (ppString "prevEpoch") (_2 . prevEpochL)
     :$ Virtual committeeState (ppString "prevCommitteeState") (_2 . prevCommitteeStateL)
     :$ Shift enactStateT (_2 . prevEnactStateL)
-    :$ Virtual currProposals (ppString "prevProposals") (_2 . prevProposalsL)
+    :$ Virtual currGovActionStates (ppString "prevProposals") (_2 . prevProposalsL)
 
 -- TODO access prevTreasury from the EnactState
 --  :$ Virtual treasury (ppString "prevTreasury") (_2 . prevTreasuryL)
@@ -1636,7 +1636,7 @@ justPulser p =
     :$ Virtual currentEpoch (ppString "prevEpoch") (prevEpochL)
     :$ Virtual committeeState (ppString "prevCommitteeState") (prevCommitteeStateL)
     :$ Shift enactStateT (prevEnactStateL)
-    :$ Virtual currProposals (ppString "prevProposals") (prevProposalsL)
+    :$ Virtual currGovActionStates (ppString "prevProposals") (prevProposalsL)
 
 -- TODO access prevTreasury from the EnactState
 -- :$ Virtual treasury (ppString "prevTreasury") (prevTreasuryL)
@@ -1727,10 +1727,15 @@ initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactsta
         -- treas
         testGlobals
 
-govRuleStateT :: forall era. Era era => RootTarget era (GovRuleState era) (GovRuleState era)
-govRuleStateT =
-  Invert "GovRuleState" (typeRep @(GovRuleState era)) (flip GovRuleState def . fromGovActionStateSeq . SS.fromList)
-    :$ Lensed prevProposals (lens (F.toList . proposalsActions . grsProposals) $ const (flip GovRuleState def . fromGovActionStateSeq . SS.fromList))
+proposalsT :: forall era. EraPParams era => RootTarget era (Proposals era) (Proposals era)
+proposalsT =
+  Invert "Proposals" (typeRep @(Proposals era)) id
+    :$ Lensed prevProposals' (lens id $ const id)
+
+-- govRuleStateT :: forall era. EraPParams era => RootTarget era (GovRuleState era) (GovRuleState era)
+-- govRuleStateT =
+--   Invert "GovRuleState" (typeRep @(GovRuleState era)) (flip GovRuleState def . fromGovActionStateSeq . SS.fromList)
+--     :$ Lensed prevProposals (lens (F.toList . proposalsActions . grsProposals) $ const (flip GovRuleState def . fromGovActionStateSeq . SS.fromList))
 
 -- ==================================================
 -- Second form of DRepPulsingState 'DRComplete'
@@ -1738,7 +1743,7 @@ govRuleStateT =
 
 -- | The snapshot dedicated datatype (PulsingSnapshot era) stored inside 'DRComplete'
 --   Note this is used in 'dRepPulsingStateT', the second  DRepPulsingState form.
-pulsingSnapshotT :: forall era. Era era => RootTarget era (PulsingSnapshot era) (PulsingSnapshot era)
+pulsingSnapshotT :: forall era. EraPParams era => RootTarget era (PulsingSnapshot era) (PulsingSnapshot era)
 pulsingSnapshotT =
   Invert "PulsingSnapshot" (typeRep @(PulsingSnapshot era)) (\x y -> PulsingSnapshot (SS.fromList x) (Map.map compactCoinOrError y))
     :$ Lensed prevProposals (psProposalsL . strictSeqListL)
@@ -1780,8 +1785,11 @@ ratifyStateL = lens getter setter
       (x, _) -> DRComplete x y
 
 -- | Snapshot of 'currentProposals' from the start of the current Epoch
-prevProposals :: Era era => Term era [GovActionState era]
+prevProposals :: EraPParams era => Term era [GovActionState era]
 prevProposals = Var $ V "prevProposals" (ListR GovActionStateR) No
+
+prevProposals' :: EraPParams era => Term era (Proposals era)
+prevProposals' = Var $ V "prevProposals'" (ProposalsR) No
 
 prevProposalsL :: Lens' (DRepPulser era Identity (RatifyState era)) [GovActionState era]
 prevProposalsL =
@@ -1790,7 +1798,7 @@ prevProposalsL =
     (\x y -> x {dpProposals = SS.fromList y})
 
 -- | Partially computed DRepDistr inside the pulser
-partialDRepDistr :: Era era => Term era (Map (DRep (EraCrypto era)) Coin)
+partialDRepDistr :: EraPParams era => Term era (Map (DRep (EraCrypto era)) Coin)
 partialDRepDistr = Var $ V "partialDRepDistr" (MapR DRepR CoinR) No
 
 partialDRepDistrL :: Lens' (DRepPulser era Identity (RatifyState era)) (Map (DRep (EraCrypto era)) Coin)
@@ -1800,7 +1808,7 @@ partialDRepDistrL =
     (\x y -> x {dpDRepDistr = Map.map compactCoinOrError y})
 
 -- | Snapshot of 'dreps' from the start of the current epoch
-prevDRepState :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+prevDRepState :: EraPParams era => Term era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 prevDRepState = Var $ V "prevDRepState" (MapR VCredR DRepStateR) No
 
 prevDRepStateL ::
@@ -1810,14 +1818,14 @@ prevDRepStateL ::
 prevDRepStateL = lens dpDRepState (\x y -> x {dpDRepState = y})
 
 -- | Snapshot of 'committeeState' from the start of the current epoch
-prevCommittee :: Era era => Term era (Maybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
+prevCommittee :: EraPParams era => Term era (Maybe (GovPurposeId 'CommitteePurpose era))
 prevCommittee = Var $ V "prevCommittee" (MaybeR PrevCommitteeR) No
 
-prevConstitution :: Era era => Term era (Maybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
+prevConstitution :: EraPParams era => Term era (Maybe (GovPurposeId 'ConstitutionPurpose era))
 prevConstitution = Var $ V "prevConstitution" (MaybeR PrevConstitutionR) No
 
 -- | snapshot of 'poolDistr' from the start of the current epoch
-prevPoolDistr :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
+prevPoolDistr :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
 prevPoolDistr = Var $ V "prevPoolDistr" (MapR PoolHashR IPoolStakeR) No
 
 prevPoolDistrL ::
@@ -1830,7 +1838,7 @@ prevPoolDistrL =
     (\x y -> x {dpStakePoolDistr = PoolDistr y})
 
 -- | Snapshot of the 'drepDelegation' from he start of the current epoch.
-prevDRepDelegations :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)))
+prevDRepDelegations :: EraPParams era => Term era (Map (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)))
 prevDRepDelegations = Var $ V "prevDRepDelegations" (MapR CredR DRepR) No
 
 -- | Snapshot of 'drepDelegation' from the start of the current epoch
@@ -1853,7 +1861,7 @@ prevDRepDelegationsL =
     )
 
 -- | Snapshot of 'committeeState' from the start of the current epoch
-prevCommitteeState :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
+prevCommitteeState :: EraPParams era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
 prevCommitteeState = Var $ V "prevCommitteeState" (MapR CommColdCredR (MaybeR CommHotCredR)) No
 
 prevCommitteeStateL ::
@@ -1873,13 +1881,13 @@ prevEnactStateL :: Lens' (DRepPulser era Identity (RatifyState era)) (EnactState
 prevEnactStateL = lens dpEnactState (\x y -> x {dpEnactState = y})
 
 -- | Snapshot of 'currentEpoch' just before the start of the current epoch. (currenEpoch - 1)
-prevEpoch :: Era era => Term era EpochNo
+prevEpoch :: EraPParams era => Term era EpochNo
 prevEpoch = Var $ V "prevEpoch" EpochR No
 
 prevEpochL :: Lens' (DRepPulser era Identity (RatifyState era)) EpochNo
 prevEpochL = lens dpCurrentEpoch (\x y -> x {dpCurrentEpoch = y})
 
-prevTreasury :: Era era => Term era Coin
+prevTreasury :: EraPParams era => Term era Coin
 prevTreasury = Var $ V "prevTreasury" CoinR No
 
 {-
@@ -1897,29 +1905,32 @@ conwayGovStateT ::
   Proof era ->
   RootTarget era (ConwayGovState era) (ConwayGovState era)
 conwayGovStateT _ =
-  Invert "ConwayGovState" (typeRep @(ConwayGovState era)) (\x -> ConwayGovState (fromGovActionStateSeq (SS.fromList x)))
-    :$ Lensed currProposals (cgProposalsL . proposalsL)
+  Invert "ConwayGovState" (typeRep @(ConwayGovState era)) ConwayGovState
+    :$ Lensed currProposals cgProposalsL
     :$ Shift enactStateT cgEnactStateL
     -- :$ Shift (completePulsingStateT p) cgDRepPulsingStateL
     :$ Shift pulsingPulsingStateT cgDRepPulsingStateL
 
 -- | The sum of all the 'gasDeposit' fields of 'currProposals'
-proposalDeposits :: Era era => Term era Coin
+proposalDeposits :: EraPParams era => Term era Coin
 proposalDeposits = Var (V "proposalDeposits" CoinR No)
 
 -- | A view of 'currentDRepState' (sum of the drepDeposit field of in the range of 'currentDRepState')
-drepDepositsView :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) Coin)
+drepDepositsView :: EraPParams era => Term era (Map (Credential 'DRepRole (EraCrypto era)) Coin)
 drepDepositsView = Var (V "drepDepositsView" (MapR VCredR CoinR) No)
 
-currProposals :: Era era => Term era [GovActionState era]
-currProposals = Var $ V "currProposals" (ListR GovActionStateR) No
+currProposals :: EraPParams era => Term era (Proposals era)
+currProposals = Var $ V "currProposals" (ProposalsR) No
+
+currGovActionStates :: EraPParams era => Term era [GovActionState era]
+currGovActionStates = Var $ V "currGovActionStates" (ListR GovActionStateR) No
 
 enactStateT :: forall era. Reflect era => RootTarget era (EnactState era) (EnactState era)
 enactStateT =
   Invert
     "EnactState"
     (typeRep @(EnactState era))
-    (\x y (PParamsF _ z) (PParamsF _ w) a b c d -> EnactState (maybeToStrictMaybe x) y z w a b c d)
+    (\x y (PParamsF _ z) (PParamsF _ w) a b c -> EnactState (maybeToStrictMaybe x) y z w a b c)
     :$ Lensed committeeVar (ensCommitteeL . strictMaybeToMaybeL) -- see 'committeeT' to construct a binding for committeeVar
     :$ Lensed constitution ensConstitutionL
     :$ Lensed (currPParams reify) (ensCurPParamsL . pparamsFL reify)
@@ -1927,70 +1938,46 @@ enactStateT =
     :$ Lensed enactTreasury ensTreasuryL
     :$ Lensed enactWithdrawals ensWithdrawalsL
     :$ Shift prevGovActionIdsT ensPrevGovActionIdsL
-    :$ Shift prevGovActionIdsChildrenT ensPrevGovActionIdsChildrenL
 
 -- | One can use this Target, to make a constraint for 'committeeVar' from the
 --   vars 'commMembers' and 'commQuorum'
-committeeT :: forall era. Era era => RootTarget era (Committee era) (Committee era)
+committeeT :: forall era. EraPParams era => RootTarget era (Committee era) (Committee era)
 committeeT =
   Invert "Committee" (typeRep @(Committee era)) Committee
     :$ Lensed commMembers committeeMembersL
     :$ Lensed commQuorum committeeQuorumL
 
-prevGovActionIdsT :: forall era. Era era => RootTarget era (PrevGovActionIds era) (PrevGovActionIds era)
+prevGovActionIdsT :: forall era. EraPParams era => RootTarget era (PrevGovActionIds era) (PrevGovActionIds era)
 prevGovActionIdsT =
   Invert
     "prevGovActionIds"
     (typeRep @(PrevGovActionIds era))
-    (\w x y z -> PrevGovActionIds (maybeToStrictMaybe w) (maybeToStrictMaybe x) (maybeToStrictMaybe y) (maybeToStrictMaybe z))
-    :$ Lensed prevPParamUpdate (pgaPParamUpdateL . strictMaybeToMaybeL)
-    :$ Lensed prevHardFork (pgaHardForkL . strictMaybeToMaybeL)
-    :$ Lensed prevCommittee (pgaCommitteeL . strictMaybeToMaybeL)
-    :$ Lensed prevConstitution (pgaConstitutionL . strictMaybeToMaybeL)
+    (\w x y z -> PrevGovActionIds $ PForest (maybeToStrictMaybe w) (maybeToStrictMaybe x) (maybeToStrictMaybe y) (maybeToStrictMaybe z))
+    :$ Lensed prevPParamUpdate (prevGovActionIdsL . pfPParamUpdateL . strictMaybeToMaybeL)
+    :$ Lensed prevHardFork (prevGovActionIdsL . pfHardForkL . strictMaybeToMaybeL)
+    :$ Lensed prevCommittee (prevGovActionIdsL . pfCommitteeL . strictMaybeToMaybeL)
+    :$ Lensed prevConstitution (prevGovActionIdsL . pfConstitutionL . strictMaybeToMaybeL)
 
-prevGovActionIdsChildrenT :: forall era. Era era => RootTarget era (PrevGovActionIdsChildren era) (PrevGovActionIdsChildren era)
-prevGovActionIdsChildrenT =
-  Invert
-    "prevGovActionIdsChildren"
-    (typeRep @(PrevGovActionIdsChildren era))
-    (\w x y z -> PrevGovActionIdsChildren (gaiToPgac w) (gaiToPgac x) (gaiToPgac y) (gaiToPgac z))
-    :$ Lensed ppUpdateChildren ppUpdateChildrenL
-    :$ Lensed hardForkChildren hardForkChildrenL
-    :$ Lensed committeeChildren committeeChildrenL
-    :$ Lensed constitutionChildren constitutionChildrenL
-
-prevPParamUpdate :: Era era => Term era (Maybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
+prevPParamUpdate :: EraPParams era => Term era (Maybe (GovPurposeId 'PParamUpdatePurpose era))
 prevPParamUpdate = Var $ V "prevPParamUpdate" (MaybeR PrevPParamUpdateR) No
 
-prevHardFork :: Era era => Term era (Maybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
+prevHardFork :: EraPParams era => Term era (Maybe (GovPurposeId 'HardForkPurpose era))
 prevHardFork = Var $ V "prevHardFork" (MaybeR PrevHardForkR) No
 
-ppUpdateChildren :: Era era => Term era (Set (GovActionId (EraCrypto era)))
+ppUpdateChildren :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
 ppUpdateChildren = Var $ V "ppUpdateChildren" (SetR GovActionIdR) No
 
-hardForkChildren :: Era era => Term era (Set (GovActionId (EraCrypto era)))
+hardForkChildren :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
 hardForkChildren = Var $ V "hardForkChildren" (SetR GovActionIdR) No
 
-committeeChildren :: Era era => Term era (Set (GovActionId (EraCrypto era)))
+committeeChildren :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
 committeeChildren = Var $ V "committeeChildren" (SetR GovActionIdR) No
 
-constitutionChildren :: Era era => Term era (Set (GovActionId (EraCrypto era)))
+constitutionChildren :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
 constitutionChildren = Var $ V "constitutionChildren" (SetR GovActionIdR) No
 
 -- ================
 -- Lenses
-
-proposalsL :: Lens' (Proposals era) [GovActionState era]
-proposalsL =
-  lens
-    (\s -> foldr (:) [] (proposalsActions s))
-    (\_ l -> fromGovActionStateSeq (SS.fromList l))
-
-unProposalsL :: Lens' [GovActionState era] (Proposals era)
-unProposalsL =
-  lens
-    (\l -> fromGovActionStateSeq (SS.fromList l))
-    (\_ s -> foldr (:) [] (proposalsActions s))
 
 pparamsFL :: Proof era -> Lens' (PParams era) (PParamsF era)
 pparamsFL p = lens (PParamsF p) (\_ (PParamsF _ x) -> x)
@@ -2019,55 +2006,19 @@ proposedMapL p =
     (\(ProposedPPUpdates x) -> Map.map (PParamsUpdateF p) x)
     (\(ProposedPPUpdates _) y -> ProposedPPUpdates (Map.map unPParamsUpdate y))
 
-pgaPParamUpdateL :: Lens' (PrevGovActionIds era) (StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
-pgaPParamUpdateL = lens pgaPParamUpdate (\x y -> x {pgaPParamUpdate = y})
+gaiToPgac :: Set (GovActionId (EraCrypto era)) -> Set (GovPurposeId p era)
+gaiToPgac = Set.map GovPurposeId
 
-pgaHardForkL :: Lens' (PrevGovActionIds era) (StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
-pgaHardForkL = lens pgaHardFork (\x y -> x {pgaHardFork = y})
+pgacToGai :: Set (GovPurposeId p era) -> Set (GovActionId (EraCrypto era))
+pgacToGai = Set.map unGovPurposeId
 
-pgaCommitteeL :: Lens' (PrevGovActionIds era) (StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
-pgaCommitteeL = lens pgaCommittee (\x y -> x {pgaCommittee = y})
-
-pgaConstitutionL :: Lens' (PrevGovActionIds era) (StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
-pgaConstitutionL = lens pgaConstitution (\x y -> x {pgaConstitution = y})
-
-gaiToPgac :: Set (GovActionId c) -> Set (PrevGovActionId p c)
-gaiToPgac x = Set.map PrevGovActionId x
-
-pgacToGai :: Set (PrevGovActionId p c) -> Set (GovActionId c)
-pgacToGai x = Set.map unPrevGovActionId x
-
-ppUpdateChildrenL :: Lens' (PrevGovActionIdsChildren era) (Set (GovActionId (EraCrypto era)))
-ppUpdateChildrenL =
-  lens
-    (pgacToGai . pgacPParamUpdate)
-    $ \x y -> x {pgacPParamUpdate = gaiToPgac y}
-
-hardForkChildrenL :: Lens' (PrevGovActionIdsChildren era) (Set (GovActionId (EraCrypto era)))
-hardForkChildrenL =
-  lens
-    (pgacToGai . pgacHardFork)
-    $ \x y -> x {pgacHardFork = gaiToPgac y}
-
-committeeChildrenL :: Lens' (PrevGovActionIdsChildren era) (Set (GovActionId (EraCrypto era)))
-committeeChildrenL =
-  lens
-    (pgacToGai . pgacCommittee)
-    $ \x y -> x {pgacCommittee = gaiToPgac y}
-
-constitutionChildrenL :: Lens' (PrevGovActionIdsChildren era) (Set (GovActionId (EraCrypto era)))
-constitutionChildrenL =
-  lens
-    (pgacToGai . pgacConstitution)
-    $ \x y -> x {pgacConstitution = gaiToPgac y}
-
-pair1 :: Era era => Rep era a -> Term era a
+pair1 :: EraPParams era => Rep era a -> Term era a
 pair1 rep = Var (V "pair1" rep No)
 
-pair2 :: Era era => Rep era b -> Term era b
+pair2 :: EraPParams era => Rep era b -> Term era b
 pair2 rep = Var (V "pair2" rep No)
 
-pairT :: forall era a b. (Typeable a, Typeable b, Era era) => Rep era a -> Rep era b -> RootTarget era (a, b) (a, b)
+pairT :: forall era a b. (Typeable a, Typeable b, EraPParams era) => Rep era a -> Rep era b -> RootTarget era (a, b) (a, b)
 pairT repa repb =
   Invert "(,)" (typeRep @(a, b)) (,)
     :$ Lensed (pair1 repa) fstL
@@ -2077,37 +2028,37 @@ pairT repa repb =
 -- Targets for GovActionState
 -- The variables xxV align with the field selectors gasXx
 
-idV :: Era era => Term era (GovActionId (EraCrypto era))
+idV :: EraPParams era => Term era (GovActionId (EraCrypto era))
 idV = Var (V "idV" GovActionIdR No)
 
-committeeVotesV :: Era era => Term era (Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
+committeeVotesV :: EraPParams era => Term era (Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
 committeeVotesV = Var (V "committeeVotesV" (MapR CommHotCredR VoteR) No)
 
-drepVotesV :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) Vote)
+drepVotesV :: EraPParams era => Term era (Map (Credential 'DRepRole (EraCrypto era)) Vote)
 drepVotesV = Var (V "drepVotesV" (MapR VCredR VoteR) No)
 
-stakePoolVotesV :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) Vote)
+stakePoolVotesV :: EraPParams era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) Vote)
 stakePoolVotesV = Var (V "stakePoolVotesV" (MapR PoolHashR VoteR) No)
 
-depositV :: Era era => Term era Coin
+depositV :: EraPParams era => Term era Coin
 depositV = Var (V "depositV" CoinR No)
 
-returnAddrV :: Era era => Term era (RewardAcnt (EraCrypto era))
+returnAddrV :: EraPParams era => Term era (RewardAcnt (EraCrypto era))
 returnAddrV = Var (V "returnAddrV" RewardAcntR No)
 
-actionV :: Era era => Term era (GovAction era)
+actionV :: EraPParams era => Term era (GovAction era)
 actionV = Var (V "actionV" GovActionR No)
 
-proposedInV :: Era era => Term era EpochNo
+proposedInV :: EraPParams era => Term era EpochNo
 proposedInV = Var (V "proposedInV" EpochR No)
 
-expiresAfterV :: Era era => Term era EpochNo
+expiresAfterV :: EraPParams era => Term era EpochNo
 expiresAfterV = Var (V "expiresAfterV" EpochR No)
 
-childrenV :: Era era => Term era (Set (GovActionId (EraCrypto era)))
+childrenV :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
 childrenV = Var (V "childrenV" (SetR GovActionIdR) No)
 
-govActionStateTarget :: forall era. Era era => RootTarget era (GovActionState era) (GovActionState era)
+govActionStateTarget :: forall era. EraPParams era => RootTarget era (GovActionState era) (GovActionState era)
 govActionStateTarget =
   Invert "GovActionState" (typeRep @(GovActionState era)) GovActionState
     :$ Lensed idV gasIdL
@@ -2119,9 +2070,8 @@ govActionStateTarget =
     :$ Lensed actionV gasActionL
     :$ Lensed proposedInV gasProposedInL
     :$ Lensed expiresAfterV gasExpiresAfterL
-    :$ Lensed childrenV gasChildrenL
 
-govstates :: Era era => Term era [GovActionState era]
+govstates :: EraPParams era => Term era [GovActionState era]
 govstates = Var (V "govstates" (ListR GovActionStateR) No)
 
 -- ==============================================================
@@ -2130,17 +2080,17 @@ govstates = Var (V "govstates" (ListR GovActionStateR) No)
 -- targets provide the coercions to produce the real data from the Model
 
 -- | Lift the Model to the real type
-liftId :: Maybe (GovActionId c) -> StrictMaybe (PrevGovActionId r c)
-liftId x = PrevGovActionId <$> (maybeToStrictMaybe x)
+liftId :: Maybe (GovActionId (EraCrypto era)) -> StrictMaybe (GovPurposeId p era)
+liftId x = GovPurposeId <$> (maybeToStrictMaybe x)
 
 -- | Drop the real type back to the Model
-dropId :: StrictMaybe (PrevGovActionId r c) -> Maybe (GovActionId c)
-dropId x = unPrevGovActionId <$> (strictMaybeToMaybe x)
+dropId :: StrictMaybe (GovPurposeId p era) -> Maybe (GovActionId (EraCrypto era))
+dropId x = unGovPurposeId <$> (strictMaybeToMaybe x)
 
 -- =====================
 -- Variables for the fields of GovAction
 
-gaPrevId :: Era era => Term era (Maybe (GovActionId (EraCrypto era)))
+gaPrevId :: EraPParams era => Term era (Maybe (GovActionId (EraCrypto era)))
 gaPrevId = Var (V "gaPrevId" (MaybeR GovActionIdR) No)
 
 gaPParamsUpdate :: Reflect era => Term era (PParamsUpdateF era)
@@ -2149,19 +2099,19 @@ gaPParamsUpdate = Var (V "gsPParamsUpdate" (PParamsUpdateR reify) No)
 gaProtVer :: Reflect era => Term era ProtVer
 gaProtVer = Var (V "gaProtVer" (ProtVerR reify) No)
 
-gaRewardAcnt :: Era era => Term era (Map (RewardAcnt (EraCrypto era)) Coin)
+gaRewardAcnt :: EraPParams era => Term era (Map (RewardAcnt (EraCrypto era)) Coin)
 gaRewardAcnt = Var (V "gaRewardAcnt" (MapR RewardAcntR CoinR) No)
 
-gaRemMember :: Era era => Term era (Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+gaRemMember :: EraPParams era => Term era (Set (Credential 'ColdCommitteeRole (EraCrypto era)))
 gaRemMember = Var (V "gaRemMember" (SetR CommColdCredR) No)
 
-gaAddMember :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+gaAddMember :: EraPParams era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
 gaAddMember = Var (V "gaAddMember" (MapR CommColdCredR EpochR) No)
 
-gaThreshold :: Era era => Term era UnitInterval
+gaThreshold :: EraPParams era => Term era UnitInterval
 gaThreshold = Var (V "gaThreshold" UnitIntervalR No)
 
-gaConstitution :: Era era => Term era (Constitution era)
+gaConstitution :: EraPParams era => Term era (Constitution era)
 gaConstitution = Var (V "gaConstitution" ConstitutionR No)
 
 -- ===================================

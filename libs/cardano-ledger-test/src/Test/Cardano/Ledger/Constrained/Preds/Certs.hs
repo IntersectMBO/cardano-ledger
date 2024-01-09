@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -24,6 +25,7 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (..),
   pattern RegDepositDelegTxCert,
  )
+import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Credential (Credential (..), StakeCredential)
 import Cardano.Ledger.Crypto (HASH, VRF)
 import Cardano.Ledger.DRep (DRep (..))
@@ -186,7 +188,7 @@ partBfromPartA p mp = Map.fromList (fixer (Map.toList mp))
 --   in the surrounding context (inside a Choose Target perhaps)
 makeDRepPred ::
   forall era.
-  Era era =>
+  EraPParams era =>
   Term era (DRep (EraCrypto era)) ->
   Term era (Credential 'DRepRole (EraCrypto era)) ->
   Pred era
@@ -545,6 +547,7 @@ certsPreds UnivSize {..} p = case whichTxCert p of
     drep2b = Var (pV p "drep2b" DRepR No)
 
 certsStage ::
+  Arbitrary (PParamsHKD StrictMaybe era) =>
   Reflect era =>
   UnivSize ->
   Proof era ->

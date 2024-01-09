@@ -58,6 +58,7 @@ import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (GovAction (..), ProposalProcedure (..), VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
+import Cardano.Ledger.Conway.TxBody (proposalProceduresTxBodyL, treasuryDonationTxBodyL, votingProceduresTxBodyL)
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
   ConwayGovCert (..),

@@ -16,10 +16,11 @@
 module Test.Cardano.Ledger.Constrained.Examples where
 
 import Cardano.Ledger.Babbage (Babbage)
-import Cardano.Ledger.BaseTypes (EpochNo (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe)
 import Cardano.Ledger.CertState (FutureGenDeleg (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Core (EraPParams (PParamsHKD))
 import Cardano.Ledger.Era (Era (EraCrypto))
 import Cardano.Ledger.Keys (GenDelegPair)
 import Control.DeepSeq (deepseq)
@@ -57,7 +58,7 @@ import Type.Reflection (typeRep)
 
 -- ===========================================
 
-runCompile :: Era era => [Pred era] -> IO ()
+runCompile :: EraPParams era => [Pred era] -> IO ()
 runCompile cs = case runTyped (compile standardOrderInfo cs) of
   Right x -> print x
   Left xs -> putStrLn (unlines xs)
@@ -69,7 +70,7 @@ data Assembler era where
 stoi :: OrderInfo
 stoi = standardOrderInfo
 
-genMaybeCounterExample :: Reflect era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen (Maybe String)
+genMaybeCounterExample :: EraPParams era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen (Maybe String)
 genMaybeCounterExample proof _testname loud order cs target = do
   let cs3 = removeEqual cs []
   let cs4 = removeSameVar cs3 []
@@ -114,7 +115,7 @@ genMaybeCounterExample proof _testname loud order cs target = do
     else pure ans
 
 -- | Test that 'cs' :: [Pred] has a solution
-testn :: Reflect era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen Property
+testn :: EraPParams era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen Property
 testn proof testname loud order cs target = do
   result <- genMaybeCounterExample proof testname loud order cs target
   case result of
@@ -122,7 +123,7 @@ testn proof testname loud order cs target = do
     Just xs -> pure $ counterexample xs False
 
 -- | Test that 'cs' :: [Pred] does NOT have a solution. We expect a failure
-failn :: Reflect era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> IO ()
+failn :: EraPParams era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> IO ()
 failn proof message loud order cs target = do
   shouldThrow
     ( do
@@ -153,14 +154,14 @@ testSpec name p = do
 -- ======================================================
 
 -- | Used to test cyclic dependencies
-aCyclicPred :: Era era => [Pred era]
+aCyclicPred :: EraPParams era => [Pred era]
 aCyclicPred = [a :⊆: b, b :⊆: c, Random c]
   where
     a = Var (V "a" (SetR IntR) No)
     b = Var (V "b" (SetR IntR) No)
     c = Var (V "c" (SetR IntR) No)
 
-cyclicPred :: Era era => [Pred era]
+cyclicPred :: EraPParams era => [Pred era]
 cyclicPred = [a :⊆: b, b :⊆: c, c :⊆: d, d :⊆: a, Random d]
   where
     a = Var (V "a" (SetR IntR) No)
@@ -283,7 +284,7 @@ test7 loud = do
 
 -- ================================================
 
-pstateConstraints :: Era era => [Pred era]
+pstateConstraints :: EraPParams era => [Pred era]
 pstateConstraints =
   [ Sized (ExactSize 20) poolHashUniv
   , -- we have , retiring :⊆: regPools        :⊆: poolsUinv AND
@@ -479,7 +480,7 @@ test15 =
 
 -- ============================================================
 
-preds16 :: Era era => Proof era -> [Pred era]
+preds16 :: EraPParams era => Proof era -> [Pred era]
 preds16 _proof =
   [ Sized (ExactSize 6) poolHashUniv
   , Sized (Range 1 3) (Dom poolDistr) -- At least 1 but smaller than the poolHashUniv
@@ -506,7 +507,7 @@ test16 =
 
 -- ==============================================
 
-univPreds :: Era era => Proof era -> [Pred era]
+univPreds :: EraPParams era => Proof era -> [Pred era]
 univPreds p =
   [ Sized (ExactSize 15) credsUniv
   , Sized (ExactSize 20) poolHashUniv
@@ -540,7 +541,7 @@ univPreds p =
   , Dom (utxo p) :⊆: txinUniv
   ]
 
-pstatePreds :: Era era => Proof era -> [Pred era]
+pstatePreds :: EraPParams era => Proof era -> [Pred era]
 pstatePreds _p =
   [ Sized (AtMost 3) (Dom futureRegPools) -- See comments in test8 why we need these Fixed predicates
   , Sized (Range 5 6) (Dom retiring) -- we need       retiring :⊆: regPools        :⊆: poolsUinv
@@ -552,7 +553,7 @@ pstatePreds _p =
     Disjoint (Dom futureRegPools) (Dom retiring)
   ]
 
-dstatePreds :: Era era => Proof era -> [Pred era]
+dstatePreds :: EraPParams era => Proof era -> [Pred era]
 dstatePreds _p =
   [ Sized (AtMost 8) rewards -- Small enough that its leaves some slack with credUniv
   , Dom rewards :=: Dom stakeDeposits
@@ -621,7 +622,7 @@ epochstatePreds proof =
   where
     pp = PParamsR proof
 
-newepochstatePreds :: Era era => Proof era -> [Pred era]
+newepochstatePreds :: EraPParams era => Proof era -> [Pred era]
 newepochstatePreds _proof =
   [ Random currentEpoch
   , Sized (ExactSize 8) (Dom prevBlocksMade) -- Both prevBlocksMade and prevBlocksMadeDom will have size 8
@@ -654,13 +655,13 @@ test17 =
 -- ==========================================================
 -- Tests of the Term projection function ProjS
 
-projPreds1 :: Era era => Proof era -> [Pred era]
+projPreds1 :: EraPParams era => Proof era -> [Pred era]
 projPreds1 _proof =
   [ Sized (ExactSize 4) futureGenDelegs
   , ProjS fGenDelegGenKeyHashL GenHashR (Dom futureGenDelegs) :=: Dom genDelegs
   ]
 
-projPreds2 :: Era era => Proof era -> [Pred era]
+projPreds2 :: EraPParams era => Proof era -> [Pred era]
 projPreds2 _proof =
   [ Dom genDelegs :⊆: Dom genesisHashUniv
   , Sized (ExactSize 12) futGDUniv
@@ -692,7 +693,8 @@ test18b =
 
 help19 ::
   forall era.
-  Era era =>
+  Arbitrary (PParamsHKD StrictMaybe era) =>
+  EraPParams era =>
   Proof era ->
   Gen (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
 help19 _proof = do
@@ -709,7 +711,7 @@ test19 = do
 
 -- ===================================================
 
-preds20 :: Era era => Proof era -> [Pred era]
+preds20 :: EraPParams era => Proof era -> [Pred era]
 preds20 proof =
   [ Sized (ExactSize 10) intUniv
   , Sized (AtMost 6) rewardsx
@@ -828,7 +830,7 @@ allExampleTests =
 --   solution meets the 'preds', and puts you in the Repl to
 --   inspect the value of each variable solved for.
 --   Companion function to 'testPreds'
-demoPreds :: Reflect era => Proof era -> [Pred era] -> IO ()
+demoPreds :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> [Pred era] -> IO ()
 demoPreds proof preds = do
   let tryPred env p = (p, errorTyped (runPred env p))
   env <-
@@ -844,7 +846,7 @@ demoPreds proof preds = do
 -- | Use this to generate a solution to 'preds', and make a TestTree
 --   that tests the solution meets the 'preds'.
 --   Companion function to 'demoPreds'
-testPreds :: Reflect era => String -> Proof era -> [Pred era] -> TestTree
+testPreds :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => String -> Proof era -> [Pred era] -> TestTree
 testPreds name proof preds = do
   let tryPred env p = (p, errorTyped (runPred env p))
   testProperty name $ do

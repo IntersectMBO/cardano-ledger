@@ -19,7 +19,7 @@ module Cardano.Ledger.Pretty.Conway (
 
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels, ExUnits, Prices)
-import Cardano.Ledger.BaseTypes (EpochInterval (..), NonNegativeInterval, UnitInterval)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), NonNegativeInterval, StrictMaybe, UnitInterval)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway (ConwayEra)
@@ -34,9 +34,9 @@ import Cardano.Ledger.Conway.Governance (
   GovActionIx (..),
   GovActionState (..),
   GovProcedures (..),
-  PrevGovActionId (..),
+  GovPurposeId (..),
+  PForest (..),
   PrevGovActionIds (..),
-  PrevGovActionIdsChildren,
   ProposalProcedure (..),
   Proposals,
   PulsingSnapshot (..),
@@ -62,10 +62,9 @@ import Cardano.Ledger.Conway.Rules (
   EnactSignal (..),
   EnactState (..),
   GovEnv (..),
-  GovRuleState (..),
   PredicateFailure,
  )
-import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..), ConwayTxBody (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
   ConwayGovCert (..),
@@ -99,6 +98,7 @@ import Cardano.Ledger.Pretty (
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.Shelley.Rules (PoolEnv (..))
 import Data.Foldable
+import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import Data.Word (Word16, Word32)
 import Lens.Micro ((^.))
@@ -250,13 +250,10 @@ instance (EraPParams era, PrettyA (PParamsUpdate era)) => PrettyA (GovProcedures
       , ("ProposalProcedures", ppList prettyA (toList gpProposalProcedures))
       ]
 
-instance PrettyA (PrevGovActionId p c) where
+instance Era era => PrettyA (GovPurposeId p era) where
   prettyA = viaShow
 
-instance PrettyA (PrevGovActionIdsChildren era) where
-  prettyA = viaShow
-
-instance PrettyA (PParamsUpdate era) => PrettyA (GovAction era) where
+instance (PrettyA (PParamsUpdate era), Era era) => PrettyA (GovAction era) where
   prettyA (ParameterChange pgaid ppup) =
     ppRecord
       "ParameterChange"
@@ -411,17 +408,8 @@ instance
 instance EraPParams era => PrettyA (ConwayGovPredFailure era) where
   prettyA = viaShow
 
-instance PrettyA (PParamsUpdate era) => PrettyA (Proposals era) where
+instance (PrettyA (PParamsUpdate era), Era era) => PrettyA (Proposals era) where
   prettyA = prettyA . proposalsActions
-
-instance PrettyA (PParamsUpdate era) => PrettyA (GovRuleState era) where
-  prettyA grs@(GovRuleState _ _) =
-    let GovRuleState {..} = grs
-     in ppRecord
-          "GovRuleState"
-          [ ("grsPrevGovActionIdsChildren", prettyA grsPrevGovActionIdsChildren)
-          , ("grsProposals", prettyA grsProposals)
-          ]
 
 instance PrettyA (GovActionId era) where
   prettyA gaid@(GovActionId _ _) =
@@ -446,8 +434,8 @@ instance PrettyA (Anchor era) where
       , ("datahash", ppSafeHash h)
       ]
 
-instance PrettyA (PParamsUpdate era) => PrettyA (GovActionState era) where
-  prettyA gas@(GovActionState _ _ _ _ _ _ _ _ _ _) =
+instance (PrettyA (PParamsUpdate era), Era era) => PrettyA (GovActionState era) where
+  prettyA gas@(GovActionState _ _ _ _ _ _ _ _ _) =
     let GovActionState {..} = gas
      in ppRecord
           "GovActionState"
@@ -460,7 +448,6 @@ instance PrettyA (PParamsUpdate era) => PrettyA (GovActionState era) where
           , ("Action", prettyA gasAction)
           , ("Proposed In", prettyA gasProposedIn)
           , ("Expires After", prettyA gasExpiresAfter)
-          , ("Children", prettyA gasChildren)
           ]
 
 instance PrettyA (Constitution era) where
@@ -471,8 +458,8 @@ instance PrettyA (Constitution era) where
       , ("script", prettyA constitutionScript)
       ]
 
-instance PrettyA (PParams era) => PrettyA (EnactState era) where
-  prettyA ens@(EnactState _ _ _ _ _ _ _ _) =
+instance (PrettyA (PParams era), Era era) => PrettyA (EnactState era) where
+  prettyA ens@(EnactState _ _ _ _ _ _ _) =
     let EnactState {..} = ens
      in ppRecord
           "EnactState"
@@ -483,10 +470,9 @@ instance PrettyA (PParams era) => PrettyA (EnactState era) where
           , ("Treasury", prettyA ensTreasury)
           , ("Withdrawals", prettyA ensWithdrawals)
           , ("PrevGovActionIds", prettyA ensPrevGovActionIds)
-          , ("PrevGovActionIdsChildren", prettyA ensPrevGovActionIdsChildren)
           ]
 
-instance PrettyA (PParamsUpdate era) => PrettyA (EnactSignal era) where
+instance (PrettyA (PParamsUpdate era), Era era) => PrettyA (EnactSignal era) where
   prettyA EnactSignal {..} =
     ppRecord
       "EnactSignal"
@@ -494,15 +480,11 @@ instance PrettyA (PParamsUpdate era) => PrettyA (EnactSignal era) where
       , ("Gov Action", prettyA esGovAction)
       ]
 
-instance PrettyA (PrevGovActionIds era) where
-  prettyA PrevGovActionIds {..} =
-    ppRecord
-      "PrevGovActionIds"
-      [ ("LastPParamUpdate", prettyA pgaPParamUpdate)
-      , ("LastHardFork", prettyA pgaHardFork)
-      , ("LastCommittee", prettyA pgaCommittee)
-      , ("LastConstitution", prettyA pgaConstitution)
-      ]
+instance Era era => PrettyA (PForest StrictMaybe era) where
+  prettyA = viaShow
+
+instance Era era => PrettyA (PrevGovActionIds era) where
+  prettyA = viaShow . unPrevGovActionIds
 
 instance PrettyA (RatifyEnv era) where
   prettyA rs@(RatifyEnv {}) =
@@ -517,8 +499,11 @@ instance PrettyA (RatifyEnv era) where
           , ("CommitteeState", prettyA reCommitteeState)
           ]
 
+instance PrettyA (Seq.Seq (GovActionId era)) where
+  prettyA = viaShow
+
 instance
-  PrettyA (PParams era) =>
+  (Era era, PrettyA (PParams era)) =>
   PrettyA (RatifyState era)
   where
   prettyA rs@(RatifyState _ _ _ _) =
@@ -526,18 +511,18 @@ instance
      in ppRecord
           "RatifyState"
           [ ("EnactState", prettyA rsEnactState)
-          , ("Removed", prettyA rsRemoved)
           , ("Enacted", prettyA rsEnacted)
+          , ("Expired", prettyA rsExpired)
           , ("Delayed", prettyA rsDelayed)
           ]
 
 instance
-  PrettyA (PParamsUpdate era) =>
+  (Era era, PrettyA (PParamsUpdate era)) =>
   PrettyA (RatifySignal era)
   where
   prettyA (RatifySignal s) = ppStrictSeq prettyA s
 
-instance PrettyA (PParams era) => PrettyA (GovEnv era) where
+instance (Era era, PrettyA (PParams era)) => PrettyA (GovEnv era) where
   prettyA GovEnv {..} =
     ppRecord
       "GovEnv"
@@ -550,6 +535,7 @@ instance PrettyA (PParams era) => PrettyA (GovEnv era) where
 instance
   ( PrettyA (PParamsUpdate era)
   , PrettyA (PParams era)
+  , Era era
   ) =>
   PrettyA (ConwayGovState era)
   where
@@ -562,7 +548,7 @@ instance
           , ("drepPulsingState", ppDRepPulsingState cgDRepPulsingState)
           ]
 
-ppPulsingSnapshot :: PrettyA (PParamsUpdate era) => PulsingSnapshot era -> PDoc
+ppPulsingSnapshot :: (PrettyA (PParamsUpdate era), Era era) => PulsingSnapshot era -> PDoc
 ppPulsingSnapshot (PulsingSnapshot x y z) =
   ppRecord
     "Snapshot"
@@ -571,7 +557,7 @@ ppPulsingSnapshot (PulsingSnapshot x y z) =
     , ("drepState", ppMap prettyA prettyA z)
     ]
 
-ppDRepPulsingState :: (PrettyA (PParamsUpdate era), PrettyA (PParams era)) => DRepPulsingState era -> PDoc
+ppDRepPulsingState :: (PrettyA (PParamsUpdate era), PrettyA (PParams era), Era era) => DRepPulsingState era -> PDoc
 ppDRepPulsingState (DRComplete x y) =
   ppRecord
     "CompleteDRepPulsingState"

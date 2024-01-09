@@ -13,6 +13,7 @@ import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
+import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
@@ -20,6 +21,7 @@ main :: IO ()
 main =
   ledgerTestMain $
     describe "Conway" $ do
+      Proposals.spec
       Binary.spec
       Cddl.spec
       DRepRatify.spec

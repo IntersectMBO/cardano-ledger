@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -7,18 +8,21 @@
 
 module Test.Cardano.Ledger.Constrained.Preds.LedgerState where
 
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionId (..),
   GovActionPurpose (..),
   GovActionState (..),
+  proposalsActions,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
-import Cardano.Ledger.Core (Era (..))
+import Cardano.Ledger.Core (Era (..), EraPParams, PParamsHKD)
 import Cardano.Ledger.DRep (drepDepositL)
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
+import Data.Foldable (toList)
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
@@ -98,8 +102,12 @@ ledgerStatePreds usize p =
   , Random prevHardFork
   , Random prevConstitution
   , Random prevCommittee
-  , Sized (Range 2 5) currProposals
-  , proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit) :$ (Simple currProposals))
+  , Random currProposals
+  , -- , Sized (Range 2 5) currGovActionStates
+    currGovActionStates :<-: (Constr "currGovActionStates" (toList . proposalsActions) :$ (Simple currProposals))
+  , -- , proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit) :$ (Simple currGovActionStates))
+    -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
+    proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit . proposalsActions) :$ (Simple currProposals))
   , -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
     MetaSize (SzRng (usNumPreUtxo usize) (usNumPreUtxo usize)) utxoSize -- must be bigger than sum of (maxsize inputs 10) and (mazsize collateral 3)
   , Sized utxoSize preUtxo
@@ -143,7 +151,7 @@ ledgerStatePreds usize p =
     preUtxo = Var (V "preUtxo" (MapR TxInR (TxOutR p)) No)
 
 ledgerStateStage ::
-  Reflect era =>
+  (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) =>
   UnivSize ->
   Proof era ->
   Subst era ->
@@ -156,7 +164,7 @@ ledgerStateStage usize proof subst0 = do
     Nothing -> pure subst
     Just msg -> error msg
 
-demo :: Reflect era => Proof era -> ReplMode -> IO ()
+demo :: (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> ReplMode -> IO ()
 demo proof mode = do
   env <-
     generate
@@ -215,7 +223,6 @@ useTriples pairs as gs = zipWith3 help pairs as gs
     help (parent, idx) a g =
       g
         { gasId = idx
-        , gasChildren = (children idx pairs)
         , gasAction = setActionId a parent
         }
 
@@ -291,7 +298,7 @@ govStatePreds p =
     govActions = Var (pV p "govActions" (ListR (GovActionR)) No)
     govAction = Var (pV p "govAction" GovActionR No)
 
-demoGov :: (ConwayEraPParams era, Reflect era) => Proof era -> ReplMode -> IO ()
+demoGov :: (ConwayEraPParams era, Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) => Proof era -> ReplMode -> IO ()
 demoGov proof mode = do
   env <-
     generate
@@ -335,7 +342,7 @@ children x ys = List.foldl' accum Set.empty ys
 
 genGovActionStates ::
   forall era.
-  Era era =>
+  (Arbitrary (PParamsHKD StrictMaybe era), EraPParams era) =>
   Proof era ->
   Set (GovActionId (EraCrypto era)) ->
   Gen (Map.Map (GovActionId (EraCrypto era)) (GovActionState era))
@@ -353,12 +360,11 @@ genGovActionStates proof gaids = do
             <*> genGovAction proof CommitteePurpose parent
             <*> arbitrary
             <*> arbitrary
-            <*> pure (children idx pairs)
         pure (state {gasAction = setActionId (gasAction state) parent})
   states <- mapM genGovState pairs
   pure (Map.fromList (map (\x -> (gasId x, x)) states))
 
-genGovAction :: forall era. Era era => Proof era -> GovActionPurpose -> Maybe (GovActionId (EraCrypto era)) -> Gen (GovAction era)
+genGovAction :: forall era. (Arbitrary (PParamsHKD StrictMaybe era), EraPParams era) => Proof era -> GovActionPurpose -> Maybe (GovActionId (EraCrypto era)) -> Gen (GovAction era)
 genGovAction proof purpose gaid = case purpose of
   PParamUpdatePurpose -> ParameterChange (liftId gaid) <$> (unPParamsUpdate <$> genPParamsUpdate proof)
   HardForkPurpose -> HardForkInitiation (liftId gaid) <$> arbitrary

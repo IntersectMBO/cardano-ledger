@@ -156,6 +156,7 @@ test-suite cardano-ledger-test
     build-depends:
         base,
         cardano-ledger-test,
+        cardano-ledger-conway,
         tasty,
         data-default-class
 
@@ -187,8 +188,8 @@ benchmark bench
         cardano-ledger-alonzo,
         cardano-ledger-alonzo-test,
         cardano-ledger-binary,
-        cardano-ledger-test,
         cardano-ledger-core,
+        cardano-ledger-test,
         cardano-ledger-shelley-ma-test,
         cardano-ledger-mary:{cardano-ledger-mary, testlib},
         vector-map,

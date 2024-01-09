@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -28,6 +29,7 @@ import Cardano.Ledger.BaseTypes (
 import qualified Cardano.Ledger.BaseTypes as Utils (Globals (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (
+  EraPParams (..),
   EraScript,
   EraTxOut (..),
   TxOut,
@@ -622,12 +624,12 @@ stakeToHotCommittee = coerceKeyRole
 stakeToColdCommittee :: Credential 'Staking c -> Credential 'ColdCommitteeRole c
 stakeToColdCommittee = coerceKeyRole
 
-solveUniv :: Reflect era => UnivSize -> Proof era -> Gen (Subst era)
+solveUniv :: Arbitrary (PParamsHKD StrictMaybe era) => Reflect era => UnivSize -> Proof era -> Gen (Subst era)
 solveUniv size proof = do
   toolChainSub proof standardOrderInfo (universePreds size proof) emptySubst
 
 universeStage ::
-  Reflect era =>
+  (Reflect era, Arbitrary (PParamsHKD StrictMaybe era)) =>
   UnivSize ->
   Proof era ->
   Subst era ->

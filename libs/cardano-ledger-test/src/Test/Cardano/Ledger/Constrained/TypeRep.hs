@@ -59,6 +59,7 @@ import Cardano.Ledger.BaseTypes (
   Network (..),
   ProtVer (..),
   SlotNo (..),
+  StrictMaybe,
   UnitInterval,
   mkTxIxPartial,
  )
@@ -75,9 +76,9 @@ import Cardano.Ledger.Conway.Governance (
   GovActionIx (..),
   GovActionPurpose (..),
   GovActionState (..),
-  PrevGovActionId (..),
+  GovPurposeId (..),
   PrevGovActionIds (..),
-  PrevGovActionIdsChildren (..),
+  Proposals,
   RatifyState (..),
   RunConwayRatify (..),
   Vote (..),
@@ -187,7 +188,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcMultiAsset,
   pcPParams,
   pcPrevGovActionIds,
-  pcPrevGovActionIdsChildren,
+  pcProposals,
   pcRatifyState,
   pcReward,
   pcRewardAcnt,
@@ -335,14 +336,15 @@ data Rep era t where
   GovActionIdR :: Era era => Rep era (GovActionId (EraCrypto era))
   GovActionIxR :: Rep era GovActionIx
   GovActionStateR :: Era era => Rep era (GovActionState era)
+  ProposalsR :: Era era => Rep era (Proposals era)
   UnitIntervalR :: Rep era UnitInterval
   CommitteeR :: Era era => Rep era (Committee era)
   ConstitutionR :: Era era => Rep era (Constitution era)
   PrevGovActionIdsR :: Era era => Rep era (PrevGovActionIds era)
-  PrevPParamUpdateR :: Era era => Rep era (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era))
-  PrevHardForkR :: Era era => Rep era (PrevGovActionId 'HardForkPurpose (EraCrypto era))
-  PrevCommitteeR :: Era era => Rep era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
-  PrevConstitutionR :: Era era => Rep era (PrevGovActionId 'ConstitutionPurpose (EraCrypto era))
+  PrevPParamUpdateR :: Era era => Rep era (GovPurposeId 'PParamUpdatePurpose era)
+  PrevHardForkR :: Era era => Rep era (GovPurposeId 'HardForkPurpose era)
+  PrevCommitteeR :: Era era => Rep era (GovPurposeId 'CommitteePurpose era)
+  PrevConstitutionR :: Era era => Rep era (GovPurposeId 'ConstitutionPurpose era)
   RatifyStateR :: Reflect era => Rep era (RatifyState era)
   NumDormantEpochsR :: Era era => Rep era EpochNo
   DRepHashR :: Era era => Rep era (KeyHash 'DRepRole (EraCrypto era))
@@ -351,7 +353,6 @@ data Rep era t where
   VStateR :: Era era => Rep era (VState era)
   EnactStateR :: Reflect era => Rep era (EnactState era)
   DRepPulserR :: (RunConwayRatify era, Reflect era) => Rep era (DRepPulser era Identity (RatifyState era))
-  PrevGovActionIdsChildrenR :: Era era => Rep era (PrevGovActionIdsChildren era)
   DelegateeR :: Era era => Rep era (Delegatee (EraCrypto era))
   VoteR :: Rep era Vote
 
@@ -386,10 +387,10 @@ pattern IsTypeable <- Type _ _
   where
     IsTypeable = Type Isn't Isn't
 
-typeRepOf :: Rep era t -> TypeRep
+typeRepOf :: EraPParams era => Rep era t -> TypeRep
 typeRepOf r@(repHasInstances -> IsTypeable) = typeRep r
 
-repHasInstances :: Rep era t -> HasInstances t
+repHasInstances :: EraPParams era => Rep era t -> HasInstances t
 repHasInstances r = case r of
   TxIdR -> IsOrd
   VStateR -> IsEq
@@ -486,6 +487,7 @@ repHasInstances r = case r of
   GovActionIdR {} -> IsOrd
   GovActionIxR {} -> IsOrd
   GovActionStateR {} -> IsTypeable
+  ProposalsR {} -> IsEq
   CommitteeStateR {} -> IsOrd
   UnitIntervalR {} -> IsOrd
   CommitteeR {} -> IsEq
@@ -506,7 +508,6 @@ repHasInstances r = case r of
   DRepHashR {} -> IsOrd
   AnchorR {} -> IsEq
   DRepPulserR {} -> IsEq
-  PrevGovActionIdsChildrenR {} -> IsEq
   DelegateeR {} -> IsOrd
   VoteR {} -> IsEq
 
@@ -542,7 +543,7 @@ requireInstances ::
   HasInstances (f a)
 requireInstances (Type eq ord) = Type (requireIs eq) (requireIs ord)
 
-instance Singleton (Rep era) where
+instance EraPParams era => Singleton (Rep era) where
   testEql
     (repHasInstances -> IsTypeable :: HasInstances a)
     (repHasInstances -> IsTypeable :: HasInstances b) = eqT @a @b
@@ -551,10 +552,10 @@ instance Singleton (Rep era) where
 -- ============================================================
 -- Show instances
 
-instance Show (Rep era t) where
+instance EraPParams era => Show (Rep era t) where
   showsPrec d (repHasInstances -> IsTypeable :: HasInstances t) = showsPrec d $ typeRep (Proxy @t)
 
-synopsis :: forall e t. Rep e t -> t -> String
+synopsis :: forall e t. EraPParams e => Rep e t -> t -> String
 synopsis TxIdR r = show r
 synopsis RationalR r = show r
 synopsis CoinR c = show (pcCoin c)
@@ -660,14 +661,15 @@ synopsis DStateR x = show (pcDState x)
 synopsis GovActionIdR x = show (pcGovActionId x)
 synopsis GovActionIxR (GovActionIx a) = show (ppWord32 a)
 synopsis GovActionStateR x = show (pcGovActionState x)
+synopsis ProposalsR x = show (pcProposals x)
 synopsis UnitIntervalR x = show x
 synopsis CommitteeR x = show (pcCommittee x)
 synopsis ConstitutionR x = show $ pcConstitution x
 synopsis PrevGovActionIdsR x = show (pcPrevGovActionIds x)
-synopsis PrevPParamUpdateR (PrevGovActionId x) = synopsis @e GovActionIdR x
-synopsis PrevHardForkR (PrevGovActionId x) = synopsis @e GovActionIdR x
-synopsis PrevCommitteeR (PrevGovActionId x) = synopsis @e GovActionIdR x
-synopsis PrevConstitutionR (PrevGovActionId x) = synopsis @e GovActionIdR x
+synopsis PrevPParamUpdateR (GovPurposeId x) = synopsis @e GovActionIdR x
+synopsis PrevHardForkR (GovPurposeId x) = synopsis @e GovActionIdR x
+synopsis PrevCommitteeR (GovPurposeId x) = synopsis @e GovActionIdR x
+synopsis PrevConstitutionR (GovPurposeId x) = synopsis @e GovActionIdR x
 synopsis RatifyStateR dr = show (pcRatifyState reify dr)
 synopsis NumDormantEpochsR x = show x
 synopsis CommitteeStateR x = show x
@@ -676,7 +678,6 @@ synopsis DRepHashR k = "(KeyHash 'DRepRole " ++ show (keyHashSummary k) ++ ")"
 synopsis AnchorR k = show (pcAnchor k)
 synopsis EnactStateR x = show (pcEnactState reify x)
 synopsis DRepPulserR x = show (pcDRepPulser x)
-synopsis PrevGovActionIdsChildrenR x = show (pcPrevGovActionIdsChildren x)
 synopsis DelegateeR x = show (pcDelegatee x)
 synopsis VoteR v = show v
 
@@ -712,6 +713,9 @@ accumTxOut (Conway _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
 
 genSizedRep ::
   forall era t.
+  ( Arbitrary (PParamsHKD StrictMaybe era)
+  , EraPParams era
+  ) =>
   Int ->
   Rep era t ->
   Gen t
@@ -864,6 +868,7 @@ genSizedRep _ DStateR =
     )
 genSizedRep _ GovActionIdR = arbitrary
 genSizedRep _ GovActionIxR = GovActionIx <$> choose (0, 100)
+genSizedRep _ ProposalsR = arbitrary
 genSizedRep _ GovActionStateR =
   GovActionState
     <$> arbitrary
@@ -875,7 +880,6 @@ genSizedRep _ GovActionStateR =
     <*> genRep @era GovActionR
     <*> arbitrary
     <*> arbitrary
-    <*> pure mempty
 genSizedRep _ UnitIntervalR = arbitrary
 genSizedRep _ CommitteeR = arbitrary
 genSizedRep _ ConstitutionR = arbitrary
@@ -904,7 +908,6 @@ genSizedRep _ EnactStateR =
     <*> arbitrary
     <*> arbitrary
     <*> arbitrary
-    <*> arbitrary
 genSizedRep _ DRepPulserR =
   DRepPulser
     <$> arbitrary -- pulsesize
@@ -919,7 +922,6 @@ genSizedRep _ DRepPulserR =
     <*> genRep EnactStateR
     <*> (SS.fromList . (: []) <$> genRep GovActionStateR) -- proposals
     <*> (pure testGlobals)
-genSizedRep _ PrevGovActionIdsChildrenR = arbitrary
 genSizedRep n DelegateeR =
   oneof
     [ DelegStake <$> genSizedRep n (PoolHashR @era)
@@ -930,6 +932,9 @@ genSizedRep _ VoteR = arbitrary
 
 genRep ::
   forall era b.
+  ( Arbitrary (PParamsHKD StrictMaybe era)
+  , EraPParams era
+  ) =>
   Rep era b ->
   Gen b
 genRep IntR = choose (0, 10000)
@@ -1064,6 +1069,7 @@ shrinkRep DStateR _ = []
 shrinkRep GovActionIdR x = shrink x
 shrinkRep GovActionIxR (GovActionIx n) = map GovActionIx (shrink n)
 shrinkRep GovActionStateR _ = []
+shrinkRep ProposalsR _ = []
 shrinkRep UnitIntervalR x = shrink x
 shrinkRep CommitteeR x = shrink x
 shrinkRep ConstitutionR x = shrink x
@@ -1080,26 +1086,25 @@ shrinkRep NumDormantEpochsR x = shrink x
 shrinkRep DRepHashR x = shrink x
 shrinkRep AnchorR x = shrink x
 shrinkRep DRepPulserR _ = []
-shrinkRep PrevGovActionIdsChildrenR x = shrink x
 shrinkRep DelegateeR _ = []
 shrinkRep VoteR x = shrink x
 
-hasOrd :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
+hasOrd :: EraPParams era => Rep era t -> s t -> Typed (HasConstraint Ord (s t))
 hasOrd rep x = case repHasInstances rep of
   IsOrd -> pure $ With x
   IsTypeable -> failT [show rep ++ " does not have an Ord instance."]
 
-hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
+hasEq :: EraPParams era => Rep era t -> s t -> Typed (HasConstraint Eq (s t))
 hasEq rep x = case repHasInstances rep of
   IsEq -> pure $ With x
   IsTypeable -> failT [show rep ++ " does not have an Eq instance."]
 
-format :: Rep era t -> t -> String
+format :: EraPParams era => Rep era t -> t -> String
 format rep@(MapR d r) x = show (ppMap (syn d) (syn r) x) ++ synSum rep x ++ "\nsize=" ++ show (Map.size x)
 format rep@(ListR d) x = show (ppList (syn d) x) ++ synSum rep x ++ synSum rep x ++ "\nsize=" ++ show (length x)
 format rep@(SetR d) x = show (ppSet (syn d) x) ++ synSum rep x ++ synSum rep x ++ "\nsize=" ++ show (Set.size x)
 format (MaybeR d) x = show (ppMaybe (syn d) x)
 format r x = synopsis r x
 
-syn :: Rep era t -> t -> PDoc
+syn :: EraPParams era => Rep era t -> t -> PDoc
 syn d x = ppString (format d x)
