@@ -1,12 +1,8 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.UTxO (
@@ -31,6 +27,7 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   Voter (..),
   VotingProcedures (..),
  )
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Credential (credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
@@ -71,7 +68,7 @@ conwayProducedValue pp isStakePool txBody =
   shelleyProducedValue pp isStakePool txBody
     <+> inject (txBody ^. treasuryDonationTxBodyL)
 
-instance Crypto c => EraUTxO (ConwayEra c) where
+instance (Crypto c, EraTx (ConwayEra c)) => EraUTxO (ConwayEra c) where
   type ScriptsNeeded (ConwayEra c) = AlonzoScriptsNeeded (ConwayEra c)
 
   getConsumedValue = getConsumedMaryValue
@@ -86,7 +83,7 @@ instance Crypto c => EraUTxO (ConwayEra c) where
 
   getWitsVKeyNeeded _ = getConwayWitsVKeyNeeded
 
-instance Crypto c => AlonzoEraUTxO (ConwayEra c) where
+instance (Crypto c, EraTx (ConwayEra c), AlonzoEraTx (ConwayEra c)) => AlonzoEraUTxO (ConwayEra c) where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes
 
   getSpendingDatum = getBabbageSpendingDatum

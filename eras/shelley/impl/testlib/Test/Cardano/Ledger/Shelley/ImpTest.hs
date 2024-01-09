@@ -34,6 +34,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impWitsVKeyNeeded,
   modifyPrevPParams,
   passEpoch,
+  passNEpochs,
   passTick,
   freshKeyHash,
   freshSafeHash,
@@ -147,6 +148,7 @@ import GHC.Stack (SrcLoc (..), getCallStack)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
+import Numeric.Natural (Natural)
 import Prettyprinter (Doc, Pretty (..), defaultLayoutOptions, layoutPretty, line)
 import Prettyprinter.Render.String (renderString)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkKeyHash, mkKeyPair, mkWitnessVKey)
@@ -379,6 +381,9 @@ newtype ImpTestM era a = ImpTestM (ReaderT (ImpTestEnv era) IO a)
     , MonadReader (ImpTestEnv era)
     )
 
+instance MonadFail (ImpTestM era) where
+  fail = assertFailure
+
 instance MonadState (ImpTestState era) (ImpTestM era) where
   get = ImpTestM $ do
     liftIO . readIORef . iteState =<< ask
@@ -596,6 +601,20 @@ passEpoch = do
         then logEntry $ "Entered " <> show newEpoch
         else tickUntilNewEpoch newEpoch
   tickUntilNewEpoch startEpoch
+
+-- | Runs the TICK rule until the `n` epochs are passed
+passNEpochs ::
+  forall era.
+  ( BaseM (EraRule "TICK" era) ~ ReaderT Globals Identity
+  , Environment (EraRule "TICK" era) ~ ()
+  , STS (EraRule "TICK" era)
+  , Signal (EraRule "TICK" era) ~ SlotNo
+  , NFData (State (EraRule "TICK" era))
+  , State (EraRule "TICK" era) ~ NewEpochState era
+  ) =>
+  Natural ->
+  ImpTestM era ()
+passNEpochs n = when (n > 0) $ passEpoch >> passNEpochs (n - 1)
 
 -- | Stores extra information about the failure of the unit test
 data ImpException = ImpException

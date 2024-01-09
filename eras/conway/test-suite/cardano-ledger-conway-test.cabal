@@ -73,7 +73,6 @@ test-suite cardano-ledger-conway-test
     hs-source-dirs:   test
     other-modules:
         Test.Cardano.Ledger.Conway.TxInfo
-        Test.Cardano.Ledger.Conway.GovSnapshot
         Paths_cardano_ledger_conway_test
 
     default-language: Haskell2010
@@ -85,9 +84,6 @@ test-suite cardano-ledger-conway-test
 
     build-depends:
         base,
-        containers,
         cardano-ledger-babbage-test,
-        cardano-ledger-conway:{cardano-ledger-conway, testlib},
-        tasty,
-        cardano-strict-containers,
-        tasty-quickcheck
+        cardano-ledger-conway,
+        tasty

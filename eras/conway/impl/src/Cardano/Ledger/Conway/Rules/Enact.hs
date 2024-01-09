@@ -22,7 +22,7 @@ import Cardano.Ledger.Conway.Governance (
   EnactState (..),
   GovAction (..),
   GovActionId (..),
-  PrevGovActionId (..),
+  GovPurposeId (GovPurposeId),
   ensCommitteeL,
   ensConstitutionL,
   ensCurPParamsL,
@@ -71,12 +71,12 @@ enactmentTransition = do
       pure $
         st
           & ensCurPParamsL %~ (`applyPPUpdates` ppup)
-          & ensPrevPParamUpdateL .~ SJust (PrevGovActionId govActionId)
+          & ensPrevPParamUpdateL .~ SJust (GovPurposeId govActionId)
     HardForkInitiation _ pv ->
       pure $
         st
           & ensProtVerL .~ pv
-          & ensPrevHardForkL .~ SJust (PrevGovActionId govActionId)
+          & ensPrevHardForkL .~ SJust (GovPurposeId govActionId)
     TreasuryWithdrawals wdrls -> do
       let wdrlsAmount = fold wdrls
           wdrlsNoNetworkId = Map.mapKeys getRwdCred wdrls
@@ -89,17 +89,17 @@ enactmentTransition = do
       pure $
         st
           & ensCommitteeL .~ SNothing
-          & ensPrevCommitteeL .~ SJust (PrevGovActionId govActionId)
+          & ensPrevCommitteeL .~ SJust (GovPurposeId govActionId)
     UpdateCommittee _ membersToRemove membersToAdd newQuorum -> do
       pure $
         st
           & ensCommitteeL %~ SJust . updatedCommittee membersToRemove membersToAdd newQuorum
-          & ensPrevCommitteeL .~ SJust (PrevGovActionId govActionId)
+          & ensPrevCommitteeL .~ SJust (GovPurposeId govActionId)
     NewConstitution _ c ->
       pure $
         st
           & ensConstitutionL .~ c
-          & ensPrevConstitutionL .~ SJust (PrevGovActionId govActionId)
+          & ensPrevConstitutionL .~ SJust (GovPurposeId govActionId)
     InfoAction -> pure st
 
 updatedCommittee ::

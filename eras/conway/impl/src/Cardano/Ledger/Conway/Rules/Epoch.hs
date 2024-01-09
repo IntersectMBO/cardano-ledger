@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -54,10 +55,11 @@ import Cardano.Ledger.Conway.Governance (
   ensWithdrawalsL,
   epochStateDRepPulsingStateL,
   extractDRepPulsingState,
+  proposalsApplyEnactment,
+  proposalsGovStateL,
   setFreshDRepPulsingState,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
-import Cardano.Ledger.Conway.Governance.Proposals (proposalsRemoveDescendentIds, proposalsRemoveIds)
 import Cardano.Ledger.EpochBoundary (SnapShots)
 import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -113,8 +115,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Void (Void, absurd)
 import Lens.Micro ((%~), (&), (+~), (.~), (<>~), (^.))
-
--- ====================================================
 
 data ConwayEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
@@ -279,21 +279,35 @@ epochTransition = do
   let
     pulsingState = epochState0 ^. epochStateDRepPulsingStateL
 
-    ratState0@RatifyState {rsRemoved, rsEnacted, rsEnactState} = extractDRepPulsingState pulsingState
+    ratState0@RatifyState {rsEnactState, rsEnacted, rsExpired} =
+      extractDRepPulsingState pulsingState
 
     (accountState2, dState2, newEnactState) =
       applyEnactedWithdrawals accountState1 dState1 rsEnactState
 
-    -- It is important that we use current proposals here instead of the ones from the pulser
-    (proposals0, removedInvalidGovActions) = proposalsRemoveDescendentIds rsRemoved (govState0 ^. cgProposalsL)
-    (proposals1, removedEnactedGovActions) = proposalsRemoveIds rsEnacted proposals0
+    -- NOTE: It is important that we use current proposals here instead
+    -- of the ones from the pulser. The proposals in the pulser are a
+    -- subset of the current proposals, in that, in addition to the
+    -- proposals in the pulser, the current proposals now contain new
+    -- proposals submitted during the epoch that just passed (we are
+    -- at its boundary here) and any votes that were submitted to the
+    -- already pulsing as well as newly submitted proposals. We only
+    -- need to apply the enactment operations to this superset to get
+    -- a new set of proposals with enacted actions and their sibling
+    -- subtrees, as well as expired actions and their subtrees, removed,
+    -- and with all the votes intact for the rest of them.
+    (newProposals, enactedActions, expiredActions) =
+      proposalsApplyEnactment rsEnacted rsExpired (govState0 ^. proposalsGovStateL)
 
     govState1 =
       govState0
-        & cgProposalsL .~ proposals1
-        & cgEnactStateL .~ (newEnactState & ensPrevPParamsL .~ curPParams)
+        & cgProposalsL .~ newProposals
+        & cgEnactStateL
+          .~ ( newEnactState
+                & ensPrevPParamsL .~ curPParams
+             )
 
-    allRemovedGovActions = removedInvalidGovActions <> removedEnactedGovActions
+    allRemovedGovActions = expiredActions `Map.union` enactedActions
 
     certState =
       CertState

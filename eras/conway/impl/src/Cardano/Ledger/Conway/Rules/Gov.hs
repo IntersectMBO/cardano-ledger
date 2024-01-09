@@ -18,7 +18,6 @@ module Cardano.Ledger.Conway.Rules.Gov (
   ConwayGOV,
   GovEnv (..),
   ConwayGovEvent (..),
-  GovRuleState (..),
   ConwayGovPredFailure (..),
 ) where
 
@@ -54,9 +53,8 @@ import Cardano.Ledger.Conway.Governance (
   GovActionPurpose (..),
   GovActionState (..),
   GovProcedures (..),
-  PrevGovActionId (..),
+  GovPurposeId (..),
   PrevGovActionIds (..),
-  PrevGovActionIdsChildren,
   ProposalProcedure (..),
   Proposals,
   Voter (..),
@@ -67,7 +65,9 @@ import Cardano.Ledger.Conway.Governance (
   isCommitteeVotingAllowed,
   isDRepVotingAllowed,
   isStakePoolVotingAllowed,
-  proposalsAddProposal,
+  pfHardForkL,
+  prevGovActionIdsL,
+  proposalsAddAction,
   proposalsAddVote,
   proposalsGovActionStates,
   proposalsLookupId,
@@ -118,11 +118,6 @@ data GovEnv era = GovEnv
   , gePrevGovActionIds :: !(PrevGovActionIds era)
   }
 
-data GovRuleState era = GovRuleState
-  { grsProposals :: !(Proposals era)
-  , grsPrevGovActionIdsChildren :: !(PrevGovActionIdsChildren era)
-  }
-
 data ConwayGovPredFailure era
   = GovActionsDoNotExist (Set.Set (GovActionId (EraCrypto era)))
   | MalformedProposal (GovAction era)
@@ -147,7 +142,7 @@ data ConwayGovPredFailure era
   | VotingOnExpiredGovAction (Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))
   | ProposalCantFollow
       -- | The PrevGovActionId of the HardForkInitiation that fails
-      (StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
+      (StrictMaybe (GovPurposeId 'HardForkPurpose era))
       -- | Its protocol version
       ProtVer
       -- | The ProtVer of the Previous GovAction pointed to by the one proposed
@@ -210,7 +205,7 @@ data ConwayGovEvent era
   = GovNewProposals !(TxId (EraCrypto era)) !(Proposals era)
 
 instance ConwayEraPParams era => STS (ConwayGOV era) where
-  type State (ConwayGOV era) = GovRuleState era
+  type State (ConwayGOV era) = Proposals era
   type Signal (ConwayGOV era) = GovProcedures era
   type Environment (ConwayGOV era) = GovEnv era
   type BaseM (ConwayGOV era) = ShelleyBase
@@ -296,7 +291,6 @@ mkGovActionState actionId deposit returnAddress action expiryInterval curEpoch =
     , gasAction = action
     , gasProposedIn = curEpoch
     , gasExpiresAfter = addEpochInterval curEpoch expiryInterval
-    , gasChildren = mempty
     }
 
 govTransition ::
@@ -306,14 +300,14 @@ govTransition ::
 govTransition = do
   TRC
     ( GovEnv txid currentEpoch pp prevGovActionIds
-      , GovRuleState st prevChildren
+      , st
       , gp
       ) <-
     judgmentContext
 
   expectedNetworkId <- liftSTS $ asks networkId
 
-  let processProposal grs@GovRuleState {..} (idx, proposal@ProposalProcedure {..}) = do
+  let processProposal ps (idx, proposal@ProposalProcedure {..}) = do
         let newGaid = GovActionId txid idx
 
         -- In a HardFork, check that the ProtVer can follow
@@ -371,28 +365,20 @@ govTransition = do
                 pProcGovAction
                 expiry
                 currentEpoch
-            updatedProposalsState =
-              proposalsAddProposal
-                actionState
-                prevGovActionIds
-                grsPrevGovActionIdsChildren
-                grsProposals
-         in case updatedProposalsState of
-              Just (updatedChildren, updatedProposals) ->
-                pure $ GovRuleState updatedProposals updatedChildren
-              Nothing ->
-                grs <$ failBecause (InvalidPrevGovActionId proposal)
+         in case proposalsAddAction actionState ps of
+              Just updatedPs -> pure updatedPs
+              Nothing -> ps <$ failBecause (InvalidPrevGovActionId proposal)
 
-  GovRuleState proposals prevChildren' <-
+  proposals <-
     foldlM'
       processProposal
-      (GovRuleState st prevChildren)
+      st
       (indexedGovProps $ SSeq.fromStrict $ OSet.toStrictSeq $ gpProposalProcedures gp)
 
   -- Voting
   let VotingProcedures votingProcedures = gpVotingProcedures gp
-      -- Inversion of the keys in VotingProcedures, where we can find the voter for every
-      -- govActionId
+      -- Inversion of the keys in VotingProcedures, where we can find
+      -- the voter for every govActionId
       govActionIdVotes =
         Map.foldlWithKey'
           (\acc voter gaIds -> Map.union (voter <$ gaIds) acc)
@@ -409,30 +395,28 @@ govTransition = do
   -- Report the event
   tellEvent $ GovNewProposals txid updatedProposalStates
 
-  pure $ GovRuleState updatedProposalStates prevChildren'
+  pure updatedProposalStates
 
 instance Inject (ConwayGovPredFailure era) (ConwayGovPredFailure era) where
   inject = id
 
--- ================================================
-
 -- | If the GovAction is a HardFork, then return 3 things (if they exist)
---   1) The (StrictMaybe PrevGovActionId), pointed to by the HardFork proposal
---   2) The proposed ProtVer
---   3) The ProtVer of the preceeding HardFork
---   If it is not a HardFork, or the previous govActionId points to something other
---   than  HardFork, return Nothing. It will be verified with another predicate check
+-- 1) The (StrictMaybe GovPurposeId), pointed to by the HardFork proposal
+-- 2) The proposed ProtVer
+-- 3) The ProtVer of the preceeding HardFork
+-- If it is not a HardFork, or the previous govActionId points to something other
+-- than  HardFork, return Nothing. It will be verified with another predicate check.
 preceedingHardFork ::
   EraPParams era =>
   GovAction era ->
   PParams era ->
   PrevGovActionIds era ->
   Proposals era ->
-  Maybe (StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)), ProtVer, ProtVer)
+  Maybe (StrictMaybe (GovPurposeId 'HardForkPurpose era), ProtVer, ProtVer)
 preceedingHardFork (HardForkInitiation mPrev newProtVer) pp pgaids ps
-  | mPrev == pgaHardFork pgaids = Just (mPrev, newProtVer, pp ^. ppProtocolVersionL)
+  | mPrev == pgaids ^. prevGovActionIdsL . pfHardForkL = Just (mPrev, newProtVer, pp ^. ppProtocolVersionL)
   | otherwise = do
-      SJust (PrevGovActionId prevGovActionId) <- Just mPrev
+      SJust (GovPurposeId prevGovActionId) <- Just mPrev
       HardForkInitiation _ prevProtVer <- gasAction <$> proposalsLookupId prevGovActionId ps
       Just (mPrev, newProtVer, prevProtVer)
 preceedingHardFork _ _ _ _ = Nothing
