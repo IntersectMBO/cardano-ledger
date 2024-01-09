@@ -100,7 +100,7 @@ calcMinFeeTx utxo pp tx extraKeyWitsCount =
     requiredKeyHashes = getWitsVKeyNeeded def utxo txBody
     -- number of non byron key hashes that will be supplied:
     numKeyWitsRequired =
-      genesisKeyHashCount txBody
+      getGenesisKeyHashCountTxBody txBody
         + extraKeyWitsCount
         + Set.size (requiredKeyHashes Set.\\ Map.keysSet byronAttributes)
 

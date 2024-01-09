@@ -239,8 +239,8 @@ class
 
   -- | This function is not used in the ledger rules. It is only used by the downstream
   -- tooling to figure out how many witnesses should be supplied for Genesis keys.
-  genesisKeyHashCount :: TxBody era -> Int
-  genesisKeyHashCount _ = 0
+  getGenesisKeyHashCountTxBody :: TxBody era -> Int
+  getGenesisKeyHashCountTxBody _ = 0
 
   -- | Upgrade the transaction body from the previous era.
   --

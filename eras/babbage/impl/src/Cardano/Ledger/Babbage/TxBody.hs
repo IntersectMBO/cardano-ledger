@@ -119,7 +119,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
-import Cardano.Ledger.Shelley.TxBody (shelleyGenesisKeyHashCount)
+import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
@@ -437,7 +437,7 @@ instance Crypto c => EraTxBody (BabbageEra c) where
   certsTxBodyL = certsBabbageTxBodyL
   {-# INLINE certsTxBodyL #-}
 
-  genesisKeyHashCount = shelleyGenesisKeyHashCount
+  getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
 
   upgradeTxBody txBody = do
     certs <-

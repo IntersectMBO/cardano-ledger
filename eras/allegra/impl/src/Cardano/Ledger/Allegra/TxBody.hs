@@ -75,7 +75,7 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams (Update (..), upgradeUpdate)
-import Cardano.Ledger.Shelley.TxBody (shelleyGenesisKeyHashCount)
+import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
 import qualified Data.Map.Strict as Map
@@ -341,7 +341,7 @@ instance Crypto c => EraTxBody (AllegraEra c) where
     lensMemoRawType atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
-  genesisKeyHashCount = shelleyGenesisKeyHashCount
+  getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
 
   upgradeTxBody txBody = do
     certs <- traverse upgradeTxCert (txBody ^. certsTxBodyL)

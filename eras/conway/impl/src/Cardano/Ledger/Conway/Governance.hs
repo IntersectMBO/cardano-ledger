@@ -754,7 +754,7 @@ isCommitteeVotingAllowed :: ConwayEraPParams era => GovAction era -> Bool
 isCommitteeVotingAllowed =
   isVotingAllowed . votingCommitteeThresholdInternal def committee
   where
-    -- Information about presence of committe is irrelevant for knowing if voting is
+    -- Information about presence of committee is irrelevant for knowing if voting is
     -- allowed or not
     committee = SNothing
 

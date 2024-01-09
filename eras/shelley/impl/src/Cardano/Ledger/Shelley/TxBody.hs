@@ -35,7 +35,7 @@ module Cardano.Ledger.Shelley.TxBody (
   EraIndependentTxBody,
   RewardAcnt (..),
   Withdrawals (..),
-  shelleyGenesisKeyHashCount,
+  getShelleyGenesisKeyHashCountTxBody,
 ) where
 
 import Cardano.Ledger.Address (RewardAcnt (..), Withdrawals (..))
@@ -275,7 +275,7 @@ instance Crypto c => EraTxBody (ShelleyEra c) where
     lensMemoRawType stbrCerts $ \txBodyRaw certs -> txBodyRaw {stbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
 
-  genesisKeyHashCount = shelleyGenesisKeyHashCount
+  getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
 
   upgradeTxBody =
     error $
@@ -381,8 +381,8 @@ instance
 -- ===============================================================
 
 -- | Count number of Genesis keys supplied in the `updateTxBodyL` field.
-shelleyGenesisKeyHashCount :: ShelleyEraTxBody era => TxBody era -> Int
-shelleyGenesisKeyHashCount txBody =
+getShelleyGenesisKeyHashCountTxBody :: ShelleyEraTxBody era => TxBody era -> Int
+getShelleyGenesisKeyHashCountTxBody txBody =
   case txBody ^. updateTxBodyL of
     SJust (Update (ProposedPPUpdates m) _) -> Map.size m
     _ -> 0
