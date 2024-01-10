@@ -413,6 +413,7 @@ pool_voting_thresholds =
   , unit_interval ; committee normal
   , unit_interval ; committee no confidence
   , unit_interval ; hard fork initiation
+  , unit_interval ; security relevant parameter voting threshold
   ]
 
 drep_voting_thresholds =

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -21,6 +22,7 @@ import Cardano.Ledger.CertState (vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.PParams (dvtCommitteeNoConfidenceL, pvtCommitteeNoConfidenceL, pvtPPSecurityGroupL)
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep (drepExpiryL)
@@ -83,6 +85,126 @@ spec =
             voter
             dummyGaid
             [inject $ GovActionsDoNotExist @era $ Set.singleton dummyGaid]
+      it "Motion of no confidence can be passed" $ do
+        modifyPParams $ \pp ->
+          pp
+            & ppDRepVotingThresholdsL . dvtCommitteeNoConfidenceL .~ 1 %! 2
+            & ppPoolVotingThresholdsL . pvtCommitteeNoConfidenceL .~ 1 %! 2
+            & ppCommitteeMaxTermLengthL .~ EpochInterval 200
+        let
+          getCommittee =
+            getsNES $
+              nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+          assertNoCommittee :: HasCallStack => ImpTestM era ()
+          assertNoCommittee =
+            do
+              committee <- getCommittee
+              impAnn "There should not be a committee" $ committee `shouldBe` SNothing
+        assertNoCommittee
+        khCC <- freshKeyHash
+        drep <- setupSingleDRep
+        let committeeMap =
+              Map.fromList
+                [ (KeyHashObj khCC, EpochNo 50)
+                ]
+        prevGaidCommittee@(PrevGovActionId gaidCommittee) <-
+          electCommittee
+            SNothing
+            drep
+            mempty
+            committeeMap
+        khSPO <- setupPoolWithStake $ Coin 42_000_000
+        logStakeDistr
+        submitYesVote_ (StakePoolVoter khSPO) gaidCommittee
+        replicateM_ 4 passEpoch
+        impAnn "Committee should be elected" $ do
+          committee <- getCommittee
+          committee `shouldBe` SJust (Committee committeeMap $ 1 %! 2)
+        pp <- getsNES $ nesEsL . curPParamsEpochStateL
+        returnAddr <- registerRewardAccount
+        gaidNoConf <-
+          submitProposal $
+            ProposalProcedure
+              { pProcReturnAddr = returnAddr
+              , pProcGovAction = NoConfidence (SJust prevGaidCommittee)
+              , pProcDeposit = pp ^. ppGovActionDepositL
+              , pProcAnchor = def
+              }
+        submitYesVote_ (StakePoolVoter khSPO) gaidNoConf
+        submitYesVote_ (DRepVoter $ KeyHashObj drep) gaidNoConf
+        replicateM_ 4 passEpoch
+        assertNoCommittee
+      it "SPO needs to vote on security-relevant parameter changes" $ do
+        (drep, ccCred) <- electBasicCommittee
+        khPool <- setupPoolWithStake $ Coin 42_000_000
+        initMinFeeA <- getsNES $ nesEsL . curPParamsEpochStateL . ppMinFeeAL
+        gaidThreshold <- impAnn "Update StakePool thresholds" $ do
+          pp <- getsNES $ nesEsL . curPParamsEpochStateL
+          (pp ^. ppPoolVotingThresholdsL . pvtPPSecurityGroupL) `shouldBe` minBound
+          rew <- registerRewardAccount
+          let ppUpdate =
+                emptyPParamsUpdate
+                  & ppuPoolVotingThresholdsL
+                    .~ SJust
+                      PoolVotingThresholds
+                        { pvtPPSecurityGroup = 1 %! 2
+                        , pvtMotionNoConfidence = 1 %! 2
+                        , pvtHardForkInitiation = 1 %! 2
+                        , pvtCommitteeNormal = 1 %! 2
+                        , pvtCommitteeNoConfidence = 1 %! 2
+                        }
+                  & ppuGovActionLifetimeL .~ SJust (EpochInterval 100)
+          gaidThreshold <-
+            submitProposal $
+              ProposalProcedure
+                { pProcReturnAddr = rew
+                , pProcGovAction = ParameterChange SNothing ppUpdate SNothing
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = def
+                }
+          submitYesVote_ (DRepVoter drep) gaidThreshold
+          submitYesVote_ (CommitteeVoter ccCred) gaidThreshold
+          logAcceptedRatio gaidThreshold
+          pure gaidThreshold
+        passEpoch
+        logAcceptedRatio gaidThreshold
+        passEpoch
+        let newMinFeeA = Coin 12_345
+        gaidMinFee <- do
+          pp <- getsNES $ nesEsL . curPParamsEpochStateL
+          (pp ^. ppPoolVotingThresholdsL . pvtPPSecurityGroupL) `shouldBe` (1 %! 2)
+          rew <- registerRewardAccount
+          gaidMinFee <-
+            submitProposal $
+              ProposalProcedure
+                { pProcReturnAddr = rew
+                , pProcGovAction =
+                    ParameterChange
+                      (SJust (PrevGovActionId gaidThreshold))
+                      ( emptyPParamsUpdate
+                          & ppuMinFeeAL .~ SJust newMinFeeA
+                      )
+                      SNothing
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = def
+                }
+          submitYesVote_ (DRepVoter drep) gaidMinFee
+          submitYesVote_ (CommitteeVoter ccCred) gaidMinFee
+          pure gaidMinFee
+        passEpoch
+        logAcceptedRatio gaidMinFee
+        passEpoch
+        do
+          pp <- getsNES $ nesEsL . curPParamsEpochStateL
+          (pp ^. ppMinFeeAL) `shouldBe` initMinFeeA
+          submitYesVote_ (StakePoolVoter khPool) gaidMinFee
+        passEpoch
+        logStakeDistr
+        logAcceptedRatio gaidMinFee
+        logRatificationChecks gaidMinFee
+        passEpoch
+        pp <- getsNES $ nesEsL . curPParamsEpochStateL
+        (pp ^. ppMinFeeAL) `shouldBe` newMinFeeA
 
     describe "Constitution proposals" $ do
       context "accepted for" $
@@ -387,7 +509,7 @@ spec =
             c2 <- freshKeyHash
             currentEpoch <- getsNES nesELL
             let maxExpiry = addEpochInterval currentEpoch maxTermLength
-            let initialMembers = [(c1, maxExpiry), (c2, maxExpiry)]
+            let initialMembers = [(KeyHashObj c1, maxExpiry), (KeyHashObj c2, maxExpiry)]
             govIdCom1 <-
               electCommittee
                 SNothing
@@ -406,7 +528,7 @@ spec =
             c4 <- freshKeyHash
             currentEpoch <- getsNES nesELL
             let exceedingExpiry = addEpochInterval (addEpochInterval currentEpoch maxTermLength) (EpochInterval 7)
-            let membersExceedingExpiry = [(c3, exceedingExpiry), (c4, addEpochInterval currentEpoch maxTermLength)]
+            let membersExceedingExpiry = [(KeyHashObj c3, exceedingExpiry), (KeyHashObj c4, addEpochInterval currentEpoch maxTermLength)]
             _ <-
               electCommittee
                 (SJust govIdCom1)
@@ -423,7 +545,7 @@ spec =
           (govIdConst1, constitution) <- submitConstitution SNothing
           submitYesVote_ (DRepVoter (KeyHashObj drep)) govIdConst1
           hks <- traverse registerCommitteeHotKey (Set.toList initialMembers)
-          traverse_ (\m -> submitYesVote_ (CommitteeVoter (KeyHashObj m)) govIdConst1) hks
+          traverse_ (\m -> submitYesVote_ (CommitteeVoter m) govIdConst1) hks
 
           passEpoch >> passEpoch
           curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
@@ -447,20 +569,20 @@ spec =
           (govIdConst2, constitution) <- submitConstitution $ SJust (PrevGovActionId govIdConst1)
           submitYesVote_ (DRepVoter (KeyHashObj drep)) govIdConst2
           hks <- traverse registerCommitteeHotKey (Set.toList membersExceedingExpiry)
-          traverse_ (\m -> submitYesVote_ (CommitteeVoter (KeyHashObj m)) govIdConst2) hks
+          traverse_ (\m -> submitYesVote_ (CommitteeVoter m) govIdConst2) hks
 
           passEpoch >> passEpoch
           curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
           curConstitution `shouldBe` constitution
   where
     expectMembers ::
-      HasCallStack => Set.Set (KeyHash 'ColdCommitteeRole (EraCrypto era)) -> ImpTestM era ()
+      HasCallStack => Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) -> ImpTestM era ()
     expectMembers expKhs = do
       committee <-
         getsNES $
           nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
       let members = Map.keysSet $ foldMap' committeeMembers committee
-      impAnn "Expecting committee members" $ members `shouldBe` Set.map KeyHashObj expKhs
+      impAnn "Expecting committee members" $ members `shouldBe` expKhs
 
     expectNumDormantEpochs :: HasCallStack => EpochNo -> ImpTestM era ()
     expectNumDormantEpochs expected = do

@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -41,7 +40,11 @@ module Cardano.Ledger.Conway.PParams (
   ppuDRepDepositL,
   ppuDRepActivityL,
   PoolVotingThresholds (..),
+  pvtCommitteeNoConfidenceL,
+  pvtCommitteeNormalL,
+  pvtPPSecurityGroupL,
   DRepVotingThresholds (..),
+  dvtCommitteeNoConfidenceL,
   dvtPPNetworkGroupL,
   dvtPPGovGroupL,
   dvtPPTechnicalGroupL,
@@ -55,7 +58,9 @@ module Cardano.Ledger.Conway.PParams (
   UpgradeConwayPParams (..),
   toUpgradeConwayPParamsUpdatePairs,
   THKD (..),
-  PPGroup (..),
+  DRepGroup (..),
+  PPGroups (..),
+  StakePoolGroup (..),
   conwayModifiedPPGroups,
 )
 where
@@ -110,7 +115,7 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
 class BabbageEraPParams era => ConwayEraPParams era where
-  modifiedPPGroups :: PParamsUpdate era -> Set PPGroup
+  modifiedPPGroups :: PParamsUpdate era -> Set PPGroups
   ppuWellFormed :: PParamsUpdate era -> Bool
 
   hkdPoolVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f PoolVotingThresholds)
@@ -185,8 +190,18 @@ data PoolVotingThresholds = PoolVotingThresholds
   , pvtCommitteeNormal :: !UnitInterval
   , pvtCommitteeNoConfidence :: !UnitInterval
   , pvtHardForkInitiation :: !UnitInterval
+  , pvtPPSecurityGroup :: !UnitInterval
   }
   deriving (Eq, Ord, Show, Generic)
+
+pvtCommitteeNormalL :: Lens' PoolVotingThresholds UnitInterval
+pvtCommitteeNormalL = lens pvtCommitteeNormal (\x y -> x {pvtCommitteeNormal = y})
+
+pvtCommitteeNoConfidenceL :: Lens' PoolVotingThresholds UnitInterval
+pvtCommitteeNoConfidenceL = lens pvtCommitteeNoConfidence (\x y -> x {pvtCommitteeNoConfidence = y})
+
+pvtPPSecurityGroupL :: Lens' PoolVotingThresholds UnitInterval
+pvtPPSecurityGroupL = lens pvtPPSecurityGroup (\x y -> x {pvtPPSecurityGroup = y})
 
 instance NoThunks PoolVotingThresholds
 
@@ -194,16 +209,17 @@ instance NFData PoolVotingThresholds where
   rnf = rwhnf
 
 instance Default PoolVotingThresholds where
-  def = PoolVotingThresholds def def def def
+  def = PoolVotingThresholds def def def def def
 
 instance ToJSON PoolVotingThresholds where
-  toJSON pvt@(PoolVotingThresholds _ _ _ _) =
+  toJSON pvt@(PoolVotingThresholds _ _ _ _ _) =
     let PoolVotingThresholds {..} = pvt
      in object
           [ ("motionNoConfidence", toJSON pvtMotionNoConfidence)
           , ("committeeNormal", toJSON pvtCommitteeNormal)
           , ("committeeNoConfidence", toJSON pvtCommitteeNoConfidence)
           , ("hardForkInitiation", toJSON pvtHardForkInitiation)
+          , ("ppSecurityGroup", toJSON pvtPPSecurityGroup)
           ]
 
 instance FromJSON PoolVotingThresholds where
@@ -214,22 +230,25 @@ instance FromJSON PoolVotingThresholds where
         <*> o .: "committeeNormal"
         <*> o .: "committeeNoConfidence"
         <*> o .: "hardForkInitiation"
+        <*> o .: "ppSecurityGroup"
 
 instance EncCBOR PoolVotingThresholds where
   encCBOR PoolVotingThresholds {..} =
-    encodeListLen 4
+    encodeListLen 5
       <> encCBOR pvtMotionNoConfidence
       <> encCBOR pvtCommitteeNormal
       <> encCBOR pvtCommitteeNoConfidence
       <> encCBOR pvtHardForkInitiation
+      <> encCBOR pvtPPSecurityGroup
 
 instance DecCBOR PoolVotingThresholds where
   decCBOR =
-    decodeRecordNamed "PoolVotingThresholds" (const 4) $ do
+    decodeRecordNamed "PoolVotingThresholds" (const 5) $ do
       pvtMotionNoConfidence <- decCBOR
       pvtCommitteeNormal <- decCBOR
       pvtCommitteeNoConfidence <- decCBOR
       pvtHardForkInitiation <- decCBOR
+      pvtPPSecurityGroup <- decCBOR
       pure $ PoolVotingThresholds {..}
 
 data DRepVotingThresholds = DRepVotingThresholds
@@ -300,6 +319,9 @@ dvtPPGovGroupL = lens dvtPPGovGroup (\x y -> x {dvtPPGovGroup = y})
 dvtUpdateToConstitutionL :: Lens' DRepVotingThresholds UnitInterval
 dvtUpdateToConstitutionL = lens dvtUpdateToConstitution (\x y -> x {dvtUpdateToConstitution = y})
 
+dvtCommitteeNoConfidenceL :: Lens' DRepVotingThresholds UnitInterval
+dvtCommitteeNoConfidenceL = lens dvtCommitteeNoConfidence (\x y -> x {dvtCommitteeNoConfidence = y})
+
 instance EncCBOR DRepVotingThresholds where
   encCBOR DRepVotingThresholds {..} =
     encodeListLen 10
@@ -329,28 +351,45 @@ instance DecCBOR DRepVotingThresholds where
       dvtTreasuryWithdrawal <- decCBOR
       pure $ DRepVotingThresholds {..}
 
+data PPGroups
+  = PPGroups DRepGroup StakePoolGroup
+  deriving (Eq, Ord, Show)
+
 -- | Protocol parameter groups that dictate different thresholds for DReps.
-data PPGroup
+data DRepGroup
   = NetworkGroup
   | EconomicGroup
   | TechnicalGroup
   | GovGroup
   deriving (Eq, Ord, Show)
 
-class ToPPGroup (t :: PPGroup) where
-  toPPGroup :: PPGroup
+data StakePoolGroup
+  = SecurityGroup
+  | NoStakePoolGroup
+  deriving (Eq, Ord, Show)
 
-instance ToPPGroup 'NetworkGroup where
-  toPPGroup = NetworkGroup
-instance ToPPGroup 'EconomicGroup where
-  toPPGroup = EconomicGroup
-instance ToPPGroup 'TechnicalGroup where
-  toPPGroup = TechnicalGroup
-instance ToPPGroup 'GovGroup where
-  toPPGroup = GovGroup
+class ToDRepGroup (t :: DRepGroup) where
+  toDRepGroup :: DRepGroup
+
+instance ToDRepGroup 'NetworkGroup where
+  toDRepGroup = NetworkGroup
+instance ToDRepGroup 'EconomicGroup where
+  toDRepGroup = EconomicGroup
+instance ToDRepGroup 'TechnicalGroup where
+  toDRepGroup = TechnicalGroup
+instance ToDRepGroup 'GovGroup where
+  toDRepGroup = GovGroup
+
+class ToStakePoolGroup (t :: StakePoolGroup) where
+  toStakePoolGroup :: StakePoolGroup
+
+instance ToStakePoolGroup 'SecurityGroup where
+  toStakePoolGroup = SecurityGroup
+instance ToStakePoolGroup 'NoStakePoolGroup where
+  toStakePoolGroup = NoStakePoolGroup
 
 -- | HKD that is tagged with a group
-newtype THKD (t :: PPGroup) f a = THKD {unTHKD :: HKD f a}
+newtype THKD (t :: PPGroups) f a = THKD {unTHKD :: HKD f a}
 
 instance Eq (HKD f a) => Eq (THKD t f a) where
   THKD x1 == THKD x2 = x1 == x2
@@ -399,10 +438,10 @@ instance (Typeable t, ToJSON a) => ToJSON (THKD t StrictMaybe a) where
 instance (Typeable t, FromJSON a) => FromJSON (THKD t StrictMaybe a) where
   parseJSON = fmap THKD . parseJSON
 
-ppGroup :: forall t a. ToPPGroup t => THKD t StrictMaybe a -> Set PPGroup
+ppGroup :: forall t s a. (ToDRepGroup t, ToStakePoolGroup s) => THKD ('PPGroups t s) StrictMaybe a -> Set PPGroups
 ppGroup = \case
   THKD SNothing -> Set.empty
-  THKD SJust {} -> Set.singleton (toPPGroup @t)
+  THKD SJust {} -> Set.singleton $ PPGroups (toDRepGroup @t) (toStakePoolGroup @s)
 
 -- | Conway Protocol parameters. The following parameters have been added since Babbage:
 -- * @poolVotingThresholds@
@@ -414,68 +453,68 @@ ppGroup = \case
 -- * @dRepDeposit@
 -- * @dRepActivity@
 data ConwayPParams f era = ConwayPParams
-  { cppMinFeeA :: !(THKD 'EconomicGroup f Coin)
+  { cppMinFeeA :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin)
   -- ^ The linear factor for the minimum fee calculation
-  , cppMinFeeB :: !(THKD 'EconomicGroup f Coin)
+  , cppMinFeeB :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f Coin)
   -- ^ The constant factor for the minimum fee calculation
-  , cppMaxBBSize :: !(THKD 'NetworkGroup f Word32)
+  , cppMaxBBSize :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
   -- ^ Maximal block body size
-  , cppMaxTxSize :: !(THKD 'NetworkGroup f Word32)
+  , cppMaxTxSize :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
   -- ^ Maximal transaction size
-  , cppMaxBHSize :: !(THKD 'NetworkGroup f Word16)
+  , cppMaxBHSize :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word16)
   -- ^ Maximal block header size
-  , cppKeyDeposit :: !(THKD 'EconomicGroup f Coin)
+  , cppKeyDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f Coin)
   -- ^ The amount of a key registration deposit
-  , cppPoolDeposit :: !(THKD 'EconomicGroup f Coin)
+  , cppPoolDeposit :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f Coin)
   -- ^ The amount of a pool registration deposit
-  , cppEMax :: !(THKD 'TechnicalGroup f EpochInterval)
+  , cppEMax :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
   -- be scheduled for.
-  , cppNOpt :: !(THKD 'TechnicalGroup f Natural)
+  , cppNOpt :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f Natural)
   -- ^ Desired number of pools
-  , cppA0 :: !(THKD 'TechnicalGroup f NonNegativeInterval)
+  , cppA0 :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f NonNegativeInterval)
   -- ^ Pool influence
-  , cppRho :: !(THKD 'EconomicGroup f UnitInterval)
+  , cppRho :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f UnitInterval)
   -- ^ Monetary expansion
-  , cppTau :: !(THKD 'EconomicGroup f UnitInterval)
+  , cppTau :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f UnitInterval)
   -- ^ Treasury expansion
   , cppProtocolVersion :: !(HKDNoUpdate f ProtVer)
   -- ^ Protocol version
-  , cppMinPoolCost :: !(THKD 'EconomicGroup f Coin)
+  , cppMinPoolCost :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f Coin)
   -- ^ Minimum Stake Pool Cost
-  , cppCoinsPerUTxOByte :: !(THKD 'EconomicGroup f CoinPerByte)
+  , cppCoinsPerUTxOByte :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f CoinPerByte)
   -- ^ Cost in lovelace per byte of UTxO storage
-  , cppCostModels :: !(THKD 'TechnicalGroup f CostModels)
+  , cppCostModels :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f CostModels)
   -- ^ Cost models for non-native script languages
-  , cppPrices :: !(THKD 'EconomicGroup f Prices)
+  , cppPrices :: !(THKD ('PPGroups 'EconomicGroup 'NoStakePoolGroup) f Prices)
   -- ^ Prices of execution units (for non-native script languages)
-  , cppMaxTxExUnits :: !(THKD 'NetworkGroup f OrdExUnits)
+  , cppMaxTxExUnits :: !(THKD ('PPGroups 'NetworkGroup 'NoStakePoolGroup) f OrdExUnits)
   -- ^ Max total script execution resources units allowed per tx
-  , cppMaxBlockExUnits :: !(THKD 'NetworkGroup f OrdExUnits)
+  , cppMaxBlockExUnits :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f OrdExUnits)
   -- ^ Max total script execution resources units allowed per block
-  , cppMaxValSize :: !(THKD 'NetworkGroup f Natural)
+  , cppMaxValSize :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Natural)
   -- ^ Max size of a Value in an output
-  , cppCollateralPercentage :: !(THKD 'TechnicalGroup f Natural)
+  , cppCollateralPercentage :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f Natural)
   -- ^ Percentage of the txfee which must be provided as collateral when
   -- including non-native scripts.
-  , cppMaxCollateralInputs :: !(THKD 'NetworkGroup f Natural)
+  , cppMaxCollateralInputs :: !(THKD ('PPGroups 'NetworkGroup 'NoStakePoolGroup) f Natural)
   -- ^ Maximum number of collateral inputs allowed in a transaction
   , -- New ones for Conway:
-    cppPoolVotingThresholds :: !(THKD 'GovGroup f PoolVotingThresholds)
+    cppPoolVotingThresholds :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f PoolVotingThresholds)
   -- ^ Thresholds for SPO votes
-  , cppDRepVotingThresholds :: !(THKD 'GovGroup f DRepVotingThresholds)
+  , cppDRepVotingThresholds :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f DRepVotingThresholds)
   -- ^ Thresholds for DRep votes
-  , cppCommitteeMinSize :: !(THKD 'GovGroup f Natural)
+  , cppCommitteeMinSize :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f Natural)
   -- ^ Minimum size of the Constitutional Committee
-  , cppCommitteeMaxTermLength :: !(THKD 'GovGroup f EpochInterval)
+  , cppCommitteeMaxTermLength :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ The Constitutional Committee Term limit in number of Slots
-  , cppGovActionLifetime :: !(THKD 'GovGroup f EpochInterval)
+  , cppGovActionLifetime :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ Gov action lifetime in number of Epochs
-  , cppGovActionDeposit :: !(THKD 'GovGroup f Coin)
+  , cppGovActionDeposit :: !(THKD ('PPGroups 'GovGroup 'SecurityGroup) f Coin)
   -- ^ The amount of the Gov Action deposit
-  , cppDRepDeposit :: !(THKD 'GovGroup f Coin)
+  , cppDRepDeposit :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f Coin)
   -- ^ The amount of a DRep registration deposit
-  , cppDRepActivity :: !(THKD 'GovGroup f EpochInterval)
+  , cppDRepActivity :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ The number of Epochs that a DRep can perform no activity without losing their @Active@ status.
   }
   deriving (Generic)
@@ -1191,7 +1230,7 @@ conwayApplyPPUpdates pp ppu =
         SNothing -> THKD curCostModel
         SJust costModelUpdate -> THKD $ updateCostModels curCostModel costModelUpdate
 
-conwayModifiedPPGroups :: ConwayPParams StrictMaybe era -> Set PPGroup
+conwayModifiedPPGroups :: ConwayPParams StrictMaybe era -> Set PPGroups
 conwayModifiedPPGroups
   ( ConwayPParams
       p01

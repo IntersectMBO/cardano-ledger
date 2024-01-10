@@ -2,6 +2,16 @@
 
 ## 1.12.0.0
 
+* Add `pvtPPSecurityGroup`
+* Add lenses:
+  * `pvtCommitteeNormalL`
+  * `pvtCommitteeNoConfidenceL`
+  * `pvtPPSecurityGroupL`
+  * `dvtCommitteeNoConfidenceL`
+* Add `PPGroups` and `StakePoolGroup`
+* Add `ToStakePoolGroup` typeclass
+* Add `DRepGroup` and `ToDRepGroup` typeclass
+* Modify `THKD` replacing `PPGroup` with `PPGroups`
 * Add `ConwayPlutusPurpose`
 * Add `unGovActionIx`
 * Add `foldlVotingProcedures`
@@ -50,6 +60,10 @@
 
 ### `testlib`
 
+* Add `setupPoolWithStake`
+* Add:
+  * `registerPool`
+  * `sendCoinTo` and `sendValueTo`
 * Add `submitProposal_`
 * Add `submitTreasuryWithdrawals`
 * Remove `Test.Cardano.Ledger.Conway.PParamsSpec` and replace the unit test it contained
