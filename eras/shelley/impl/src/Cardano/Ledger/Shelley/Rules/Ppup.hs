@@ -119,7 +119,7 @@ newtype PpupEvent era = NewEpoch EpochNo
 
 instance (EraPParams era, ProtVerAtMost era 8) => STS (ShelleyPPUP era) where
   type State (ShelleyPPUP era) = ShelleyGovState era
-  type Signal (ShelleyPPUP era) = Maybe (Update era)
+  type Signal (ShelleyPPUP era) = StrictMaybe (Update era)
   type Environment (ShelleyPPUP era) = PpupEnv era
   type BaseM (ShelleyPPUP era) = ShelleyBase
   type PredicateFailure (ShelleyPPUP era) = ShelleyPpupPredFailure era
@@ -172,13 +172,13 @@ ppupTransitionNonEmpty = do
     judgmentContext
 
   case up of
-    Nothing ->
+    SNothing ->
       pure $
         pps
           { proposals = ProposedPPUpdates pupS
           , futureProposals = ProposedPPUpdates fpupS
           }
-    Just (Update (ProposedPPUpdates pup) te) -> do
+    SJust (Update (ProposedPPUpdates pup) te) -> do
       eval (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (eval (dom pup)) (eval (dom _genDelegs))
 
       let firstIllegalProtVerUpdate = do

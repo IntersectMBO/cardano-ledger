@@ -20,6 +20,7 @@ module Cardano.Ledger.Api.Tx.Body (
   spendableInputsTxBodyF,
   allInputsTxBodyF,
   evalBalanceTxBody,
+  txIdTxBody,
 
   -- * Shelley Era
   ShelleyEraTxBody,
@@ -74,7 +75,7 @@ import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.BaseTypes (SlotNo, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
-import Cardano.Ledger.Core (Era (EraCrypto), EraTxBody (..), PParams, Value)
+import Cardano.Ledger.Core (Era (EraCrypto), EraTxBody (..), PParams, Value, txIdTxBody)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Core (MaryEraTxBody (..))

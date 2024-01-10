@@ -75,6 +75,7 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.PParams (Update (..), upgradeUpdate)
+import Cardano.Ledger.Shelley.TxBody (getShelleyGenesisKeyHashCountTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.DeepSeq (NFData (..))
 import qualified Data.Map.Strict as Map
@@ -84,7 +85,7 @@ import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
-class ShelleyEraTxBody era => AllegraEraTxBody era where
+class EraTxBody era => AllegraEraTxBody era where
   vldtTxBodyL :: Lens' (TxBody era) ValidityInterval
 
 -- =======================================================
@@ -95,7 +96,7 @@ data AllegraTxBodyRaw ma era = AllegraTxBodyRaw
   , atbrCerts :: !(StrictSeq (TxCert era))
   , atbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , atbrTxFee :: !Coin
-  , atbrValidityInterval :: !ValidityInterval -- imported from Timelocks
+  , atbrValidityInterval :: !ValidityInterval
   , atbrUpdate :: !(StrictMaybe (Update era))
   , atbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
   , atbrMint :: !ma
@@ -339,6 +340,8 @@ instance Crypto c => EraTxBody (AllegraEra c) where
   certsTxBodyL =
     lensMemoRawType atbrCerts $ \txBodyRaw certs -> txBodyRaw {atbrCerts = certs}
   {-# INLINEABLE certsTxBodyL #-}
+
+  getGenesisKeyHashCountTxBody = getShelleyGenesisKeyHashCountTxBody
 
   upgradeTxBody txBody = do
     certs <- traverse upgradeTxCert (txBody ^. certsTxBodyL)

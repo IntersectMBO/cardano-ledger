@@ -23,13 +23,11 @@ module Cardano.Ledger.Allegra.Rules.Utxo (
 where
 
 import Cardano.Ledger.Address (Addr, RewardAcnt)
+import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraUTXO)
-import Cardano.Ledger.Allegra.Scripts (
-  ValidityInterval (ValidityInterval),
-  inInterval,
- )
-import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
+import Cardano.Ledger.Allegra.Scripts (inInterval)
 import Cardano.Ledger.BaseTypes (
+  Inject (..),
   Network,
   ProtVer (pvMajor),
   ShelleyBase,
@@ -46,15 +44,9 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Rules.ValidationMode (
-  Inject (..),
-  Test,
-  runTest,
- )
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -65,7 +57,6 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.UTxO (txup)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
@@ -158,14 +149,14 @@ data AllegraUtxoEvent era
 utxoTransition ::
   forall era.
   ( EraUTxO era
+  , ShelleyEraTxBody era
   , AllegraEraTxBody era
   , STS (AllegraUTXO era)
   , Tx era ~ ShelleyTx era
   , Embed (EraRule "PPUP" era) (AllegraUTXO era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
-  , ProtVerAtMost era 8
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , GovState era ~ ShelleyGovState era
   ) =>
   TransitionRule (AllegraUTXO era)
@@ -200,7 +191,7 @@ utxoTransition = do
 
   -- process Protocol Parameter Update Proposals
   ppup' <-
-    trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
+    trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txBody ^. updateTxBodyL)
 
   {- adaPolicy ∉ supp mint tx
      above check not needed because mint field of type MultiAsset cannot contain ada -}
@@ -287,12 +278,13 @@ instance
   forall era.
   ( EraTx era
   , EraUTxO era
+  , ShelleyEraTxBody era
   , AllegraEraTxBody era
   , Tx era ~ ShelleyTx era
   , Embed (EraRule "PPUP" era) (AllegraUTXO era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)

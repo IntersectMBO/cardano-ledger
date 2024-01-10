@@ -53,7 +53,6 @@ import Cardano.Ledger.BaseTypes (
   mkTxIxPartial,
   natVersion,
  )
-import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto
@@ -68,7 +67,7 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (ProtVer (..), UTxO (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS
@@ -1094,7 +1093,7 @@ utxoFromTestCaseData pf (TestCaseData txBody' (InitOutputs ofInputs' ofRefInputs
       refInputs' = Set.toList refInputsIns `zip` ofRefInputs'
       collateral' = Set.toList collateralIns `zip` ofCollateral'
 
-      newTxIns = fmap (TxIn (txid txBody') . mkTxIx) [0 ..] :: [TxIn (EraCrypto era)]
+      newTxIns = fmap (TxIn (txIdTxBody txBody') . mkTxIx) [0 ..] :: [TxIn (EraCrypto era)]
       newTxInOuts = newTxIns `zip` toList (getOutputs pf txBody')
 
       initUtxo = UTxO $ Map.fromList (inputs' ++ refInputs' ++ collateral')
@@ -1151,7 +1150,7 @@ testExpectSuccessValid
         fees = txBody' ^. feeTxBodyL
         (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
 
-        newTxIn = TxIn (txid txBody') minBound
+        newTxIn = TxIn (txIdTxBody txBody') minBound
         newTxInOut = [newTxIn] `zip` (maybeToList . StrictSeq.lookup 0) (getOutputs pf txBody')
 
         initUtxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
@@ -1169,7 +1168,7 @@ newColReturn ::
   [InOut era]
 newColReturn
   txBody' =
-    let newColReturnTxIn = TxIn (txid txBody') (mkTxIxPartial 1)
+    let newColReturnTxIn = mkTxInPartial (txIdTxBody txBody') 1
         colReturnOut = case txBody' ^. collateralReturnTxBodyL of
           SNothing -> []
           SJust rOut -> [rOut]

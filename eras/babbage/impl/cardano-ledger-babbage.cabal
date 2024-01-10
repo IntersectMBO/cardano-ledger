@@ -107,7 +107,7 @@ library testlib
         cardano-crypto-class,
         cardano-ledger-babbage,
         cardano-ledger-binary,
-        cardano-ledger-core,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
         small-steps,
         QuickCheck
 

@@ -66,7 +66,6 @@ tests ::
   ( EraGen era
   , QC.HasTrace (CHAIN era) (GenEnv era)
   , ChainProperty era
-  , ProtVerAtMost era 8
   ) =>
   TestTree
 tests =

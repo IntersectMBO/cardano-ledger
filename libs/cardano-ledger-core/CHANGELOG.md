@@ -2,12 +2,17 @@
 
 ## 1.10.0.0
 
+* Add `txIdTxBody` and `txIdTx`. Deprecated `txid`.
+* Add `getGenesisKeyHashCountTxBody` to `EraTxBody`
+* Add `calcMinFeeTx`
+* Add `estimateMinFeeTx`, `addDummyWitsTx` and move `setMinFeeTx` to `Cardano.Ledger.Tools`
 * Add `kindObject`
 * Add `ToJSON` instance for `TxOutSource` and `PoolCert`
 * Expose `txInToText`
 * Add `getWitsVKeyNeeded` to `EraUTxO`
 * Changed the type of the lenses `ppMaxBBSizeL`, `ppMaxTxSizeL`, `ppMaxBHSizeL`,
   `ppuMaxBBSizeL`, `ppuMaxTxSizeL` and `ppuMaxBHSizeL`
+* Add `txInsFilter`
 * Fix `ToJSON`/`FromJSON` for `CostModels`. Make sure that `CostModels` can roundtrip
   through JSON. Also report `CostModels` failures in JSON.
 * Add `costModelParamsCount`

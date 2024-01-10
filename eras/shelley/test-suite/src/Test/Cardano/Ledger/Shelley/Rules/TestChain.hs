@@ -208,7 +208,6 @@ delegTraceFromBlock ::
   ( ChainProperty era
   , ShelleyEraTxBody era
   , EraSegWits era
-  , ProtVerAtMost era 8
   ) =>
   ChainState era ->
   Block (BHeader (EraCrypto era)) era ->

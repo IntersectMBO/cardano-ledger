@@ -97,7 +97,6 @@ relevantCasesAreCovered ::
   ( EraGen era
   , ChainProperty era
   , QC.HasTrace (CHAIN era) (GenEnv era)
-  , ProtVerAtMost era 8
   ) =>
   Int ->
   TestTree
@@ -121,7 +120,6 @@ relevantCasesAreCoveredForTrace ::
   ( ChainProperty era
   , EraSegWits era
   , ShelleyEraTxBody era
-  , ProtVerAtMost era 8
   ) =>
   Trace (CHAIN era) ->
   Property
@@ -280,7 +278,7 @@ txScriptOutputsRatio txoutsList =
 hasWithdrawal :: (ShelleyEraTxBody era, EraTx era) => Tx era -> Bool
 hasWithdrawal tx = not . null $ unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL)
 
-hasPParamUpdate :: (ShelleyEraTxBody era, EraTx era, ProtVerAtMost era 8) => Tx era -> Bool
+hasPParamUpdate :: (ShelleyEraTxBody era, EraTx era) => Tx era -> Bool
 hasPParamUpdate tx = ppUpdates (tx ^. bodyTxL . updateTxBodyL)
   where
     ppUpdates SNothing = False

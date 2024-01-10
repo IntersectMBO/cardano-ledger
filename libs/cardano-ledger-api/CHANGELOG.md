@@ -2,6 +2,8 @@
 
 ## 1.8.0.0
 
+* Add `txIdTxBody` and `txIdTx`.
+* Add `estimateMinFeeTx` and `calcMinFeeTx`
 * Add `queryAccountState`
 * Add `estimateMinFeeTx`
 * Add `registerInitialDReps`, `registerDRepDelegs`

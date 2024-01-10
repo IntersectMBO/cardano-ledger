@@ -23,12 +23,14 @@
 module Cardano.Ledger.Core (
   -- * Era-changing types
   EraTx (..),
+  txIdTx,
   EraTxOut (..),
   bootAddrTxOutF,
   coinTxOutL,
   compactCoinTxOutL,
   isAdaOnlyTxOutF,
   EraTxBody (..),
+  txIdTxBody,
   EraTxAuxData (..),
   EraTxWits (..),
   EraScript (..),
@@ -47,9 +49,6 @@ module Cardano.Ledger.Core (
   -- * Rewards
   RewardType (..),
   Reward (..),
-
-  -- * Helpers
-  setMinFeeTx,
 
   -- * Re-exports
   module Cardano.Ledger.Hashes,
@@ -105,7 +104,7 @@ import Cardano.Ledger.Keys.WitVKey (WitVKey)
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
-import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
@@ -165,17 +164,6 @@ class
     EraTx (PreviousEra era) =>
     Tx (PreviousEra era) ->
     Either (TxUpgradeError era) (Tx era)
-
--- | Calculate and update the fee in the transaction until it has the smallest possible
--- value according to the settings in the protocol parameters.
-setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
-setMinFeeTx pp tx =
-  let curMinFee = getMinFeeTx pp tx
-      curFee = tx ^. bodyTxL . feeTxBodyL
-      modifiedTx = tx & bodyTxL . feeTxBodyL .~ curMinFee
-   in if curFee == curMinFee
-        then tx
-        else setMinFeeTx pp modifiedTx
 
 class
   ( EraTxOut era
@@ -248,6 +236,11 @@ class
     Coin
   getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody =
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
+
+  -- | This function is not used in the ledger rules. It is only used by the downstream
+  -- tooling to figure out how many witnesses should be supplied for Genesis keys.
+  getGenesisKeyHashCountTxBody :: TxBody era -> Int
+  getGenesisKeyHashCountTxBody _ = 0
 
   -- | Upgrade the transaction body from the previous era.
   --
@@ -616,3 +609,9 @@ class
 
 bBodySize :: forall era. EraSegWits era => ProtVer -> TxSeq era -> Int
 bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
+
+txIdTx :: EraTx era => Tx era -> TxId (EraCrypto era)
+txIdTx tx = txIdTxBody (tx ^. bodyTxL)
+
+txIdTxBody :: EraTxBody era => TxBody era -> TxId (EraCrypto era)
+txIdTxBody = TxId . hashAnnotated

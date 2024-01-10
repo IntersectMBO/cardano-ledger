@@ -67,11 +67,10 @@ import Cardano.Ledger.Shelley.Rules.Reports (
   showListy,
   showMap,
   showWithdrawal,
-  synopsisCert,
  )
 import Cardano.Ledger.UMap (sumRewardsUView)
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txouts)
+import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txInsFilter, txouts)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (BHeader (..))
 import Control.State.Transition.Trace (
@@ -173,7 +172,6 @@ infoRetire deposits keyhash = showKeyHash keyhash ++ extra
 checkPreservation ::
   forall era.
   ( EraSegWits era
-  , ShelleyEraTxBody era
   , GovState era ~ ShelleyGovState era
   , EraGov era
   ) =>
@@ -292,7 +290,7 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
         ++ "\nwithdrawals:"
         ++ showWithdrawal (tx ^. bodyTxL . withdrawalsTxBodyL)
         ++ "\ncerts:"
-        ++ showListy (("   " ++) . synopsisCert) (toList $ tx ^. bodyTxL . certsTxBodyL)
+        ++ showListy (("   " ++) . show) (toList $ tx ^. bodyTxL . certsTxBodyL)
         ++ "total deposits "
         ++ show (certsTotalDepositsTxBody currPP oldCertState (tx ^. bodyTxL))
         ++ "\ntotal refunds "
@@ -506,14 +504,14 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
 
     createdIsConsumed
       SourceSignalTarget
-        { source = LedgerState (UTxOState {utxosUtxo = UTxO u}) certState
+        { source = LedgerState (UTxOState {utxosUtxo = utxo}) certState
         , signal = tx
         } =
         inps === outs
         where
           txb = tx ^. bodyTxL
           inps =
-            coinBalance @era (UTxO (Map.restrictKeys u (txb ^. inputsTxBodyL)))
+            coinBalance @era (txInsFilter utxo (txb ^. inputsTxBodyL))
               <> certsTotalRefundsTxBody pp_ certState txb
               <> fold (unWithdrawals (txb ^. withdrawalsTxBodyL))
           outs =

@@ -22,9 +22,9 @@ import Cardano.Ledger.BaseTypes (
   Nonce,
   StrictMaybe (..),
  )
-import Cardano.Ledger.Block (Block, bheader, txid)
+import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Crypto as Cr
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.EpochBoundary (SnapShot (ssPoolParams), emptySnapShot)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -78,10 +78,10 @@ import Test.Tasty.HUnit (testCase)
 aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initUTxO :: Cr.Crypto c => UTxO (ShelleyEra c)
+initUTxO :: Crypto c => UTxO (ShelleyEra c)
 initUTxO = genesisCoins genesisId [ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin)]
 
-initStPoolReReg :: Cr.Crypto c => ChainState (ShelleyEra c)
+initStPoolReReg :: Crypto c => ChainState (ShelleyEra c)
 initStPoolReReg = initSt initUTxO
 
 --
@@ -94,7 +94,7 @@ feeTx1 = Coin 3
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> Coin 250 <-> feeTx1
 
-txbodyEx1 :: Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx1 :: Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -106,7 +106,7 @@ txbodyEx1 =
     SNothing
     SNothing
 
-txEx1 :: forall c. (Cr.Crypto c, ExMock (EraCrypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
+txEx1 :: forall c. (Crypto c, ExMock (EraCrypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
 txEx1 =
   ShelleyTx
     txbodyEx1
@@ -167,13 +167,13 @@ feeTx2 = Coin 3
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
-newPoolParams :: Cr.Crypto c => PoolParams c
+newPoolParams :: Crypto c => PoolParams c
 newPoolParams = Cast.alicePoolParams {ppCost = Coin 500}
 
-txbodyEx2 :: forall c. Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx2 :: forall c. Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx2 =
   ShelleyTxBody
-    (Set.fromList [TxIn (txid txbodyEx1) minBound])
+    (Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound])
     (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx2)])
     ( StrictSeq.fromList
         ( [ RegPoolTxCert newPoolParams
@@ -186,7 +186,7 @@ txbodyEx2 =
     SNothing
     SNothing
 
-txEx2 :: forall c. (Cr.Crypto c, ExMock (EraCrypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
+txEx2 :: forall c. (Crypto c, ExMock (EraCrypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
 txEx2 =
   ShelleyTx
     txbodyEx2
@@ -285,7 +285,7 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110) 0 (KESPeriod 0))
 
-snapEx3 :: Cr.Crypto c => SnapShot c
+snapEx3 :: Crypto c => SnapShot c
 snapEx3 =
   emptySnapShot {ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]}
 

@@ -30,7 +30,6 @@ import Cardano.Ledger.Alonzo.Rules (
   hasExactSetOfRedeemers,
   missingRequiredDatums,
   ppViewHashesMatch,
-  requiredSignersAreWitnessed,
  )
 import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
 import Cardano.Ledger.Alonzo.Scripts (validScript)
@@ -258,7 +257,7 @@ babbageUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ProtVerAtMost era 8
+  , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (BabbageUTXOW era)
   , BabbageEraTxBody era
@@ -311,12 +310,6 @@ babbageUtxowTransition = do
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
   runTest $ validateNeededWitnesses @era witsKeyHashes certState utxo txBody
-  -- TODO can we add the required signers to witsVKeyNeeded so we dont need the check below?
-
-  {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
-      witsVKeyNeeded must include the reqSignerHashes in the union   -}
-  {- reqSignerHashes txbody ⊆ witsKeyHashes -}
-  runTestOnSignal $ requiredSignersAreWitnessed txBody witsKeyHashes
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
@@ -355,7 +348,7 @@ instance
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ProtVerAtMost era 8
+  , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
@@ -366,7 +359,6 @@ instance
   , Signal (EraRule "UTXO" era) ~ Tx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
-  , ProtVerAtMost era 8
   ) =>
   STS (BabbageUTXOW era)
   where

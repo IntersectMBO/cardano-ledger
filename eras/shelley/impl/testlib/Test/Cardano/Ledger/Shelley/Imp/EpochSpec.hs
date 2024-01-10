@@ -22,7 +22,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest (
   ShelleyEraImp,
   getsNES,
   passEpoch,
-  submitTx,
+  submitTxAnn_,
  )
 
 spec ::
@@ -38,7 +38,7 @@ spec = describe "EPOCH" $ do
     do
       deposited <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosDepositedL
       deposited `shouldBe` zero
-    _ <- submitTx "simple transaction" $ mkBasicTx mkBasicTxBody
+    submitTxAnn_ "simple transaction" $ mkBasicTx mkBasicTxBody
     passEpoch
 
   it "Crosses the epoch boundary" $ do

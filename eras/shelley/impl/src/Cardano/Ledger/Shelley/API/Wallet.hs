@@ -119,7 +119,7 @@ import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), txInsFilter)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
@@ -172,10 +172,7 @@ getUTxOSubset ::
   NewEpochState era ->
   Set (TxIn (EraCrypto era)) ->
   UTxO era
-getUTxOSubset ss txins =
-  UTxO $ fullUTxO `Map.restrictKeys` txins
-  where
-    UTxO fullUTxO = getUTxO ss
+getUTxOSubset nes = txInsFilter (getUTxO nes)
 
 --------------------------------------------------------------------------------
 -- Stake pools and pool rewards

@@ -179,7 +179,6 @@ instance
   ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , EraTx era
   , EraGov era
-  , ShelleyEraTxBody era
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
   , Embed (EraRule "UTXOW" era) (ShelleyLEDGER era)
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
@@ -264,7 +263,6 @@ instance
 renderDepositEqualsObligationViolation ::
   ( EraTx era
   , EraGov era
-  , ShelleyEraTxBody era
   , Environment t ~ LedgerEnv era
   , Signal t ~ Tx era
   , State t ~ LedgerState era

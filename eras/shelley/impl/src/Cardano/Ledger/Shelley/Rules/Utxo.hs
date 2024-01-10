@@ -45,12 +45,7 @@ import Cardano.Ledger.Address (
   getNetwork,
   getRwdNetwork,
  )
-import Cardano.Ledger.BaseTypes (
-  Network,
-  ShelleyBase,
-  invalidKey,
-  networkId,
- )
+import Cardano.Ledger.BaseTypes (Inject (..), Network, ShelleyBase, StrictMaybe, invalidKey, networkId)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -63,30 +58,12 @@ import Cardano.Ledger.CertState (
   dsGenDelegs,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
-import Cardano.Ledger.Rules.ValidationMode (
-  Inject (..),
-  Test,
-  runTest,
- )
-import Cardano.Ledger.SafeHash (
-  SafeHash,
-  hashAnnotated,
- )
-import Cardano.Ledger.Shelley.AdaPots (
-  consumedTxBody,
-  producedTxBody,
- )
-import Cardano.Ledger.Shelley.Era (
-  ShelleyEra,
-  ShelleyUTXO,
- )
-import Cardano.Ledger.Shelley.Governance
-import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
-  PPUPPredFailure,
-  UTxOState (..),
- )
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
+import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
+import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
+import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
+import Cardano.Ledger.Shelley.LedgerState (CertState (..), PPUPPredFailure, UTxOState (..))
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (
@@ -97,24 +74,11 @@ import Cardano.Ledger.Shelley.Rules.Ppup (
  )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (
-  RewardAcnt,
-  ShelleyEraTxBody (..),
-  Withdrawals (..),
- )
-import Cardano.Ledger.Shelley.UTxO (
-  consumed,
-  produced,
-  txup,
- )
+import Cardano.Ledger.Shelley.TxBody (RewardAcnt)
+import Cardano.Ledger.Shelley.UTxO (consumed, produced)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (
-  EraUTxO,
-  UTxO (..),
-  balance,
-  txouts,
- )
+import Cardano.Ledger.UTxO (EraUTxO, UTxO (..), balance, txouts)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq
@@ -347,9 +311,8 @@ instance
   , Show (ShelleyTx era)
   , Embed (EraRule "PPUP" era) (ShelleyUTXO era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   ) =>
@@ -420,8 +383,7 @@ utxoInductive ::
   , Event (utxo era) ~ UtxoEvent era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
-  , ProtVerAtMost era 8
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , GovState era ~ ShelleyGovState era
   ) =>
   TransitionRule (utxo era)
@@ -456,7 +418,7 @@ utxoInductive = do
   runTest $ validateValueNotConservedUTxO pp utxo certState txBody
 
   -- process Protocol Parameter Update Proposals
-  ppup' <- trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
+  ppup' <- trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txBody ^. updateTxBodyL)
 
   {- ∀(_ → (_, c)) ∈ txouts txb, c ≥ (minUTxOValue pp) -}
   runTest $ validateOutputTooSmallUTxO pp outputs
@@ -549,7 +511,7 @@ validateWrongNetwork netId outputs =
 --
 -- > ∀(a → ) ∈ txwdrls txb, netId a = NetworkId
 validateWrongNetworkWithdrawal ::
-  ShelleyEraTxBody era =>
+  EraTxBody era =>
   Network ->
   TxBody era ->
   Test (ShelleyUtxoPredFailure era)
@@ -566,9 +528,7 @@ validateWrongNetworkWithdrawal netId txb =
 --
 -- > consumed pp utxo txb = produced pp poolParams txb
 validateValueNotConservedUTxO ::
-  ( ShelleyEraTxBody era
-  , EraUTxO era
-  ) =>
+  EraUTxO era =>
   PParams era ->
   UTxO era ->
   CertState era ->

@@ -10,10 +10,10 @@
 
 module Cardano.Ledger.Allegra.Rules.Utxow (AllegraUTXOW) where
 
+import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraUTXOW)
 import Cardano.Ledger.Allegra.Rules.Utxo (AllegraUTXO, AllegraUtxoPredFailure)
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import Cardano.Ledger.Shelley.Rules (
@@ -23,8 +23,6 @@ import Cardano.Ledger.Shelley.Rules (
   transitionRulesUTXOW,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
-import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded)
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.State.Transition.Extended
@@ -38,7 +36,6 @@ instance
   ( EraTx era
   , EraUTxO era
   , ShelleyEraTxBody era
-  , TxWits era ~ ShelleyTxWits era
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AllegraUTXOW era)
@@ -46,7 +43,6 @@ instance
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
-  , ProtVerAtMost era 8
   ) =>
   STS (AllegraUTXOW era)
   where

@@ -88,9 +88,9 @@ instance Era era => PrettyA (AllegraTxAuxData era) where
 
 allegraFields ::
   ( AllegraEraTxBody era
+  , ShelleyEraTxBody era
   , PrettyA (TxOut era)
   , PrettyA (PParamsUpdate era)
-  , ProtVerAtMost era 8
   , PrettyA (TxCert era)
   ) =>
   TxBody era ->
@@ -108,10 +108,10 @@ allegraFields txBody =
 
 instance
   ( AllegraEraTxBody era
+  , ShelleyEraTxBody era
   , PrettyA (TxOut era)
   , PrettyA (PParamsUpdate era)
   , TxBody era ~ AllegraTxBody era
-  , ProtVerAtMost era 8
   , PrettyA (TxCert era)
   ) =>
   PrettyA (AllegraTxBody era)
@@ -120,10 +120,10 @@ instance
 
 instance
   ( MaryEraTxBody era
+  , ShelleyEraTxBody era
   , PrettyA (TxOut era)
   , PrettyA (PParamsUpdate era)
   , TxBody era ~ MaryTxBody era
-  , ProtVerAtMost era 8
   , PrettyA (TxCert era)
   ) =>
   PrettyA (MaryTxBody era)

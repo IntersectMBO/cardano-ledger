@@ -2,6 +2,7 @@
 
 ## 1.3.0.0
 
+* Remove `ShelleyEraTxBody` superclass constraint on `AllegraEraTxBody`
 * Stop exporting all of the internal `hkd*` functions and `PParamsHKD` from
   `Cardano.Ledger.Allegra.Core`.
 * Export `ValidityInterval` from `Cardano.Ledger.Allegra.Core`

@@ -28,6 +28,7 @@ where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Rules.Utxo (
@@ -35,19 +36,13 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUtxoEvent,
   AlonzoUtxoPredFailure,
  )
-import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toPlutusScript)
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.Tx (
-  AlonzoEraTx,
   ScriptPurpose,
   hashScriptIntegrity,
   rdptr,
  )
-import Cardano.Ledger.Alonzo.TxBody (
-  AlonzoEraTxBody (..),
-  ScriptIntegrityHash,
- )
 import Cardano.Ledger.Alonzo.TxWits (
-  AlonzoEraTxWits (..),
   RdmrPtr,
   unRedeemers,
   unTxDats,
@@ -65,7 +60,6 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
@@ -120,7 +114,7 @@ data AlonzoUtxowPredFailure era
       -- | Computed from the current Protocol Parameters
       !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
   | -- | Set of witnesses which were needed and not supplied
-    MissingRequiredSigners
+    MissingRequiredSigners -- TODO: remove once in Conway. It is now redundant. See #3972
       (Set (KeyHash 'Witness (EraCrypto era)))
   | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
     UnspendableUTxONoDatumHash
@@ -134,7 +128,7 @@ deriving instance
   ( Era era
   , Show (TxCert era)
   , Show (Script era)
-  , Show (PredicateFailure (EraRule "UTXO" era)) -- The ShelleyUtxowPredFailure needs this to Show
+  , Show (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Show (AlonzoUtxowPredFailure era)
 
@@ -142,7 +136,7 @@ deriving instance
   ( Era era
   , Eq (TxCert era)
   , Eq (Script era)
-  , Eq (PredicateFailure (EraRule "UTXO" era)) -- The ShelleyUtxowPredFailure needs this to Eq
+  , Eq (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Eq (AlonzoUtxowPredFailure era)
 
@@ -282,6 +276,7 @@ requiredSignersAreWitnessed txBody witsKeyHashes = do
   failureUnless
     (eval (reqSignerHashes' ⊆ witsKeyHashes))
     (MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes))
+{-# DEPRECATED requiredSignersAreWitnessed "As no longer used. `validateNeededWitnesses` now handles this check" #-}
 
 -- =======================
 {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
@@ -313,6 +308,7 @@ ppViewHashesMatch tx pp (ScriptsProvided scriptsProvided) scriptsNeeded = do
 alonzoStyleWitness ::
   forall era.
   ( AlonzoEraTx era
+  , ShelleyEraTxBody era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
@@ -321,7 +317,6 @@ alonzoStyleWitness ::
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
-  , ProtVerAtMost era 8
   ) =>
   TransitionRule (AlonzoUTXOW era)
 alonzoStyleWitness = do
@@ -365,11 +360,6 @@ alonzoStyleWitness = do
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
   runTest $ validateNeededWitnesses witsKeyHashes certState utxo txBody
 
-  {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
-      witsVKeyNeeded must include the reqSignerHashes in the union   -}
-  {- reqSignerHashes txBody ⊆ witsKeyHashes -}
-  runTestOnSignal $ requiredSignersAreWitnessed txBody witsKeyHashes
-
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
@@ -411,6 +401,7 @@ instance
   ( AlonzoEraTx era
   , EraTxAuxData era
   , AlonzoEraUTxO era
+  , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , -- Allow UTXOW to call UTXO
@@ -418,7 +409,6 @@ instance
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
-  , ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXOW era)
   where

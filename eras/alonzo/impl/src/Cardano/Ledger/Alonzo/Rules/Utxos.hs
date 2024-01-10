@@ -62,8 +62,8 @@ import Cardano.Ledger.Alonzo.UTxO (
 import Cardano.Ledger.BaseTypes (
   Globals,
   ShelleyBase,
+  StrictMaybe,
   epochInfo,
-  strictMaybeToMaybe,
   systemStart,
  )
 import Cardano.Ledger.Binary (
@@ -140,9 +140,8 @@ instance
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure,
-  , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , EraPlutusContext era
@@ -183,6 +182,7 @@ instance
 utxosTransition ::
   forall era.
   ( AlonzoEraTx era
+  , ShelleyEraTxBody era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , TxCert era ~ ShelleyTxCert era
@@ -190,10 +190,9 @@ utxosTransition ::
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
-  , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , EraPlutusContext era
@@ -246,12 +245,12 @@ alonzoEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
+  , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (AlonzoUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
-  , ProtVerAtMost era 8
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext era
@@ -277,8 +276,7 @@ alonzoEvalScriptsTxValid = do
 
   ppup' <-
     trans @(EraRule "PPUP" era) $
-      TRC
-        (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyL)
+      TRC (PPUPEnv slot pp genDelegs, pup, txBody ^. updateTxBodyL)
 
   updateUTxOState
     pp

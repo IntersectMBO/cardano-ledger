@@ -27,7 +27,6 @@ import Cardano.Ledger.BaseTypes (
   mkTxIxPartial,
   natVersion,
  )
-import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (
   Credential (..),
@@ -736,8 +735,10 @@ validatingManyScriptsState pf =
     mempty
   where
     utxo =
-      Map.insert (TxIn (txid (validatingManyScriptsBody pf)) minBound) (validatingManyScriptsTxOut pf) $
-        Map.filterWithKey
+      Map.insert
+        (TxIn (txIdTxBody (validatingManyScriptsBody pf)) minBound)
+        (validatingManyScriptsTxOut pf)
+        $ Map.filterWithKey
           (\k _ -> k /= mkGenesisTxIn 1 && k /= mkGenesisTxIn 100)
           (unUTxO $ initUTxO pf)
 
@@ -934,7 +935,7 @@ expectedUTxO initUtxo ex idx = UTxO utxo
   where
     utxo = case ex of
       ExpectSuccess txb newOut ->
-        Map.insert (TxIn (txid txb) minBound) newOut (filteredUTxO (mkTxIxPartial idx))
+        Map.insert (TxIn (txIdTxBody txb) minBound) newOut (filteredUTxO (mkTxIxPartial idx))
       ExpectSuccessInvalid -> filteredUTxO (mkTxIxPartial idx)
       ExpectFailure -> filteredUTxO (mkTxIxPartial (10 + idx))
     filteredUTxO :: TxIx -> Map.Map (TxIn (EraCrypto era)) (TxOut era)

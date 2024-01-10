@@ -47,8 +47,8 @@ import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
+  StrictMaybe,
   epochInfo,
-  strictMaybeToMaybe,
   systemStart,
  )
 import Cardano.Ledger.Binary (EncCBOR (..))
@@ -85,6 +85,7 @@ import Lens.Micro
 instance
   ( AlonzoEraTx era
   , AlonzoEraPParams era
+  , ShelleyEraTxBody era
   , BabbageEraTxBody era
   , AlonzoEraUTxO era
   , EraPlutusContext era
@@ -93,13 +94,12 @@ instance
   , GovState era ~ ShelleyGovState era
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (BabbageUTXOS era) ~ Tx era
   , EncCBOR (PPUPPredFailure era) -- Serializing the PredicateFailure
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
-  , ProtVerAtMost era 8
   ) =>
   STS (BabbageUTXOS era)
   where
@@ -125,13 +125,14 @@ instance
 utxosTransition ::
   forall era.
   ( AlonzoEraTx era
+  , ShelleyEraTxBody era
   , BabbageEraTxBody era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , EraGov era
   , GovState era ~ ShelleyGovState era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (BabbageUTXOS era) ~ Tx era
@@ -139,7 +140,6 @@ utxosTransition ::
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
   , EraPlutusContext era
-  , ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
@@ -186,16 +186,16 @@ babbageEvalScriptsTxValid ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
+  , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (BabbageUTXOS era)
   , Signal (BabbageUTXOS era) ~ Tx era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
-  , Signal (EraRule "PPUP" era) ~ Maybe (Update era)
+  , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext era
-  , ProtVerAtMost era 8
   ) =>
   TransitionRule (BabbageUTXOS era)
 babbageEvalScriptsTxValid = do
@@ -209,8 +209,7 @@ babbageEvalScriptsTxValid = do
   -- transaction will fail due to `PPUP`
   ppup' <-
     trans @(EraRule "PPUP" era) $
-      TRC
-        (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyL)
+      TRC (PPUPEnv slot pp genDelegs, pup, txBody ^. updateTxBodyL)
 
   () <- pure $! traceEvent validBegin ()
   expectScriptsToPass pp tx utxo

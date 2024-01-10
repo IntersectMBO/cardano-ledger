@@ -19,6 +19,7 @@ import Cardano.Ledger.Alonzo.UTxO (
   getAlonzoScriptsHashesNeeded,
   getAlonzoScriptsNeeded,
   getAlonzoSpendingTxIn,
+  getAlonzoWitsVKeyNeeded,
  )
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.Tx ()
@@ -36,7 +37,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Plutus.Data (Data)
-import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeeded, shelleyProducedValue)
+import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Control.Applicative
@@ -60,7 +61,7 @@ instance Crypto c => EraUTxO (BabbageEra c) where
 
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
 
-  getWitsVKeyNeeded = getShelleyWitsVKeyNeeded
+  getWitsVKeyNeeded = getAlonzoWitsVKeyNeeded
 
 instance Crypto c => AlonzoEraUTxO (BabbageEra c) where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes

@@ -2,6 +2,10 @@
 
 ## 1.9.0.0
 
+* Add `getShelleyGenesisKeyHashCountTxBody`
+* Change `PPUP` signal to `StrictMaybe` from `Maybe`
+* Deprecate `txup` function.
+* Prevent instances for `SahelleyEraTxBody` starting with protocol version 9.
 * Add `ToJSON` instance for `ShelleyTxCert`, `ShelleyDelegCert`, `MIRCert`, `MIRTarget`,
   `MIRPot` and `GenesisDelegCert`
 * Deprecate `evaluateTransactionFee` in favor of `Cardano.Ledger.Api.Tx.estimateMinFeeTx`
@@ -43,13 +47,13 @@
 
 ### `testlib`
 
-* Extract `impWitsVKeyNeeded` from the `ShelleyEraImp` type class
-* Add:
-  `fixupFees`
-  `impLastTickL`
-  `withNoFixup`
-  `ImpTestEnv`
-  `iteDoFixupL`
+* Add `lookupImpRootTxOut` and remove `impRootTxCoin`
+* Add `submitTx_`, `submitTxAnn` and `submitTxAnn_`.
+* Change type signature for `submitTx` and `trySubmitTx`.
+* Add `tryRunImpRule`
+* Extract `impWitsVKeyNeeded` from the `ShelleyEraImp` type class and make it into an
+  `ImpTestM` action
+* Add `fixupFees` `impLastTickL` `withNoFixup` `ImpTestEnv` `iteDoFixupL`
 * Add `runImpTestM`, `runImpTestM_`, `evalImpTestM` and `execImpTestM`
 * Add instance `Example (a -> ImpTestM era ())`, which allows use of `Arbitrary`
 * Add `getNextEpochCommitteeMembers` to `EraGov` typeclass, with a default empty implementation

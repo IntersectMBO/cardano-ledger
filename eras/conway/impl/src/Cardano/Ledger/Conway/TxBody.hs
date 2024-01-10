@@ -414,20 +414,6 @@ instance Crypto c => EraTxBody (ConwayEra c) where
         , ctbTreasuryDonation = Coin 0
         }
 
-instance
-  ( Crypto c
-  , ShelleyEraTxCert (ConwayEra c)
-  ) =>
-  ShelleyEraTxBody (ConwayEra c)
-  where
-  {-# SPECIALIZE instance ShelleyEraTxBody (ConwayEra StandardCrypto) #-}
-
-  ttlTxBodyL = notSupportedInThisEraL
-  {-# INLINE ttlTxBodyL #-}
-
-  updateTxBodyL = notSupportedInThisEraL
-  {-# INLINE updateTxBodyL #-}
-
 -- ==========================================
 -- Deposits and Refunds for Conway TxBody
 

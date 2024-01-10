@@ -81,8 +81,9 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 
-txup :: (EraTx era, ShelleyEraTxBody era, ProtVerAtMost era 8) => Tx era -> Maybe (Update era)
+txup :: (EraTx era, ShelleyEraTxBody era) => Tx era -> Maybe (Update era)
 txup tx = strictMaybeToMaybe (tx ^. bodyTxL . updateTxBodyL)
+{-# DEPRECATED txup "In favor of `updateTxBodyL`" #-}
 
 scriptStakeCred ::
   ShelleyEraTxCert era =>
@@ -103,7 +104,7 @@ scriptCred = credScriptHash
 -- and the withdrawals.
 scriptsNeeded ::
   forall era.
-  (EraTx era, ShelleyEraTxBody era) =>
+  EraTx era =>
   UTxO era ->
   Tx era ->
   Set (ScriptHash (EraCrypto era))
@@ -130,7 +131,7 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
       Nothing -> ans
 
 getShelleyScriptsNeeded ::
-  ShelleyEraTxBody era =>
+  EraTxBody era =>
   UTxO era ->
   TxBody era ->
   ShelleyScriptsNeeded era
@@ -170,7 +171,7 @@ produced pp certState =
   getProducedValue pp (flip Map.member $ certState ^. certPStateL . psStakePoolParamsL)
 
 shelleyProducedValue ::
-  ShelleyEraTxBody era =>
+  EraTxBody era =>
   PParams era ->
   -- | Check whether a pool with a supplied PoolStakeId is already registered.
   (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
@@ -184,15 +185,15 @@ shelleyProducedValue pp isRegPoolId txBody =
 -- | Compute the lovelace which are destroyed by the transaction. This implementation is
 -- suitable for Shelley and Allegra only.
 getConsumedCoin ::
-  ShelleyEraTxBody era =>
+  EraTxBody era =>
   PParams era ->
   (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
   UTxO era ->
   TxBody era ->
   Coin
-getConsumedCoin pp lookupRefund (UTxO u) txBody =
+getConsumedCoin pp lookupRefund utxo txBody =
   {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds dpstate tx -}
-  coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
+  coinBalance (txInsFilter utxo (txBody ^. inputsTxBodyL))
     <> refunds
     <> withdrawals
   where
@@ -222,7 +223,7 @@ instance Crypto c => EraUTxO (ShelleyEra c) where
 --  certificate authors, and withdrawal reward accounts.
 witsVKeyNeededGenDelegs ::
   forall era.
-  (ShelleyEraTxBody era, ProtVerAtMost era 8) =>
+  ShelleyEraTxBody era =>
   TxBody era ->
   GenDelegs (EraCrypto era) ->
   Set (KeyHash 'Witness (EraCrypto era))
@@ -291,7 +292,7 @@ getShelleyWitsVKeyNeededNoGov utxo' txBody =
 
 getShelleyWitsVKeyNeeded ::
   forall era.
-  (EraTx era, ShelleyEraTxBody era, ProtVerAtMost era 8) =>
+  (EraTx era, ShelleyEraTxBody era) =>
   CertState era ->
   UTxO era ->
   TxBody era ->

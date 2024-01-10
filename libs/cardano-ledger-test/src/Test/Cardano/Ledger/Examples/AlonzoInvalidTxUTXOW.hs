@@ -141,7 +141,9 @@ alonzoUTXOWTests pf =
             testU
               pf
               (trustMeP pf True $ missingRequiredWitnessTx pf)
-              ( Left [(fromPredFail @era . MissingRequiredSigners . Set.singleton) extraneousKeyHash]
+              ( Left
+                  [ fromUtxow @era $ MissingVKeyWitnessesUTXOW $ Set.singleton extraneousKeyHash
+                  ]
               )
         , testCase "missing redeemer" $
             testU

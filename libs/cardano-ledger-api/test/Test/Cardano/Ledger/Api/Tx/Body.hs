@@ -28,7 +28,7 @@ import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
 
 totalTxDeposits ::
-  ShelleyEraTxBody era =>
+  EraTxBody era =>
   PParams era ->
   CertState era ->
   TxBody era ->
@@ -47,7 +47,7 @@ totalTxDeposits pp dpstate txb =
     accum ans _ = ans
 
 keyTxRefunds ::
-  ShelleyEraTxBody era =>
+  (EraTxBody era, ShelleyEraTxCert era) =>
   PParams era ->
   CertState era ->
   TxBody era ->
@@ -71,20 +71,29 @@ keyTxRefunds pp dpstate tx = snd (foldl' accum (initialKeys, Coin 0) certs)
 -- | This is the old implementation of `evalBodyTxBody`. We keep it around to ensure that
 -- the produced result hasn't changed
 evaluateTransactionBalance ::
-  (EraUTxO era, MaryEraTxBody era) =>
+  (MaryEraTxBody era, ShelleyEraTxCert era) =>
   PParams era ->
   CertState era ->
   UTxO era ->
   TxBody era ->
   Value era
-evaluateTransactionBalance pp dpstate (UTxO u) txBody = consumed <-> produced
+evaluateTransactionBalance pp dpstate utxo txBody =
+  evaluateTransactionBalanceShelley pp dpstate utxo txBody <> (txBody ^. mintValueTxBodyF)
+
+evaluateTransactionBalanceShelley ::
+  (EraTxBody era, ShelleyEraTxCert era) =>
+  PParams era ->
+  CertState era ->
+  UTxO era ->
+  TxBody era ->
+  Value era
+evaluateTransactionBalanceShelley pp dpstate utxo txBody = consumed <-> produced
   where
     produced =
       balance (txouts txBody)
         <+> inject (txBody ^. feeTxBodyL <+> totalTxDeposits pp dpstate txBody)
     consumed =
-      (txBody ^. mintValueTxBodyF)
-        <> balance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
+      balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
         <> inject (refunds <> withdrawals)
     refunds = keyTxRefunds pp dpstate txBody
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
@@ -92,7 +101,7 @@ evaluateTransactionBalance pp dpstate (UTxO u) txBody = consumed <-> produced
 -- | Randomly lookup pool params and staking credentials to add them as unregistration and
 -- undelegation certificates respectively.
 genTxBodyFrom ::
-  (ShelleyEraTxBody era, Arbitrary (TxBody era)) =>
+  (EraTxBody era, ShelleyEraTxCert era, Arbitrary (TxBody era)) =>
   CertState era ->
   UTxO era ->
   Gen (TxBody era)
@@ -113,7 +122,7 @@ genTxBodyFrom CertState {certDState, certPState} (UTxO u) = do
     )
 
 propEvalBalanceTxBody ::
-  (EraUTxO era, MaryEraTxBody era, Arbitrary (TxBody era)) =>
+  (EraUTxO era, MaryEraTxBody era, ShelleyEraTxCert era, Arbitrary (TxBody era)) =>
   PParams era ->
   CertState era ->
   UTxO era ->
@@ -128,12 +137,32 @@ propEvalBalanceTxBody pp certState utxo =
     lookupDRepDeposit = lookupDepositVState (certVState certState)
     isRegPoolId = (`Map.member` psStakePoolParams (certPState certState))
 
+propEvalBalanceShelleyTxBody ::
+  (EraUTxO era, ShelleyEraTxCert era, Arbitrary (TxBody era)) =>
+  PParams era ->
+  CertState era ->
+  UTxO era ->
+  Property
+propEvalBalanceShelleyTxBody pp certState utxo =
+  property $
+    forAll (genTxBodyFrom certState utxo) $ \txBody ->
+      evalBalanceTxBody pp lookupKeyDeposit lookupDRepDeposit isRegPoolId utxo txBody
+        `shouldBe` evaluateTransactionBalanceShelley pp certState utxo txBody
+  where
+    lookupKeyDeposit = lookupDepositDState (certDState certState)
+    lookupDRepDeposit = lookupDepositVState (certVState certState)
+    isRegPoolId = (`Map.member` psStakePoolParams (certPState certState))
+
 -- | NOTE: We cannot have this property pass for Conway and beyond because Conway changes this calculation.
 -- This property test only exists to confirm that the old and new implementations for the evalBalanceTxBody` API matched,
 -- and this can be ascertained only until Babbage.
 spec :: Spec
 spec =
   describe "TxBody" $ do
+    describe "ShelleyEra" $ do
+      prop "evalBalanceTxBody" $ propEvalBalanceShelleyTxBody @Shelley
+    describe "AllegraEra" $ do
+      prop "evalBalanceTxBody" $ propEvalBalanceShelleyTxBody @Allegra
     describe "MaryEra" $ do
       prop "evalBalanceTxBody" $ propEvalBalanceTxBody @Mary
     describe "AlonzoEra" $ do

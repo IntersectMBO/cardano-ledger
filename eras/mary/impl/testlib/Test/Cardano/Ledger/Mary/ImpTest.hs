@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -8,6 +9,7 @@ import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Core (EraIndependentTxBody)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Mary (MaryEra)
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.ImpTest (
   ShelleyEraImp (..),
@@ -16,6 +18,8 @@ import Test.Cardano.Ledger.Shelley.ImpTest (
 
 instance
   ( Crypto c
+  , NFData (SigDSIGN (DSIGN c))
+  , NFData (VerKeyDSIGN (DSIGN c))
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (MaryEra c)

@@ -20,21 +20,23 @@ module Cardano.Ledger.Alonzo.UTxO (
   getAlonzoScriptsNeeded,
   getAlonzoScriptsHashesNeeded,
   getInputDataHashesTxBody,
+  getAlonzoWitsVKeyNeeded,
 )
 where
 
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), isTwoPhaseScriptAddressFromMap)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), MaryEraTxBody (..))
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (datsTxWitsL), unTxDats)
+import Cardano.Ledger.Alonzo.TxWits (unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Core
+import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
-import Cardano.Ledger.Shelley.TxBody (Withdrawals (..), getRwdCred)
+import Cardano.Ledger.Shelley.TxBody (getRwdCred)
 import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeeded, shelleyProducedValue)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UTxO (
@@ -72,7 +74,7 @@ instance Crypto c => EraUTxO (AlonzoEra c) where
 
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
 
-  getWitsVKeyNeeded = getShelleyWitsVKeyNeeded
+  getWitsVKeyNeeded = getAlonzoWitsVKeyNeeded
 
 class EraUTxO era => AlonzoEraUTxO era where
   -- | Get data hashes for a transaction that are not required. Such datums are optional,
@@ -233,3 +235,15 @@ getAlonzoScriptsNeeded (UTxO u) txBody =
         toList (txBody ^. certsTxBodyL)
 
     !minted = map (\pId@(PolicyID hash) -> (Minting pId, hash)) $ Set.toList $ txBody ^. mintedTxBodyF
+
+-- | Just like `getShelleyWitsVKeyNeeded`, but also requires `reqSignerHashesTxBodyL`.
+getAlonzoWitsVKeyNeeded ::
+  forall era.
+  (EraTx era, AlonzoEraTxBody era, ShelleyEraTxBody era) =>
+  CertState era ->
+  UTxO era ->
+  TxBody era ->
+  Set.Set (KeyHash 'Witness (EraCrypto era))
+getAlonzoWitsVKeyNeeded certState utxo txBody =
+  getShelleyWitsVKeyNeeded certState utxo txBody
+    `Set.union` (txBody ^. reqSignerHashesTxBodyL)

@@ -15,7 +15,6 @@ where
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.BaseTypes (TxIx (..), txIxFromIntegral)
-import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -48,7 +47,7 @@ collOuts ::
 collOuts txBody =
   case txBody ^. collateralReturnTxBodyL of
     SNothing -> UTxO Map.empty
-    SJust txOut -> UTxO (Map.singleton (TxIn (txid txBody) index) txOut)
+    SJust txOut -> UTxO (Map.singleton (TxIn (txIdTxBody txBody) index) txOut)
       where
         index = case txIxFromIntegral (length (txBody ^. outputsTxBodyL)) of
           Just i -> i

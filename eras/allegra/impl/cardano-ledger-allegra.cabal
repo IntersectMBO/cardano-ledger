@@ -94,7 +94,7 @@ library testlib
         cardano-ledger-allegra,
         cardano-crypto-class,
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
-        cardano-ledger-core,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-strict-containers,
         generic-random,

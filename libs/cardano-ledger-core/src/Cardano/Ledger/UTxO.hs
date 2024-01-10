@@ -24,6 +24,7 @@ module Cardano.Ledger.UTxO (
   -- * Functions
   txins,
   txinLookup,
+  txInsFilter,
   txouts,
   balance,
   coinBalance,
@@ -45,7 +46,6 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   decodeMap,
  )
-import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -142,7 +142,7 @@ txouts txBody =
       | (out, idx) <- zip (toList $ txBody ^. outputsTxBodyL) [minBound ..]
       ]
   where
-    transId = txid txBody
+    transId = txIdTxBody txBody
 
 -- | Lookup a txin for a given UTxO collection
 txinLookup ::
@@ -150,6 +150,15 @@ txinLookup ::
   UTxO era ->
   Maybe (TxOut era)
 txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
+
+-- | Filter out TxIn's from the `UTxO` map
+txInsFilter ::
+  -- | Source `UTxO`
+  UTxO era ->
+  -- | Which of the `TxIn`s you would like to keep.
+  Set (TxIn (EraCrypto era)) ->
+  UTxO era
+txInsFilter (UTxO utxo') txIns = UTxO (utxo' `Map.restrictKeys` txIns)
 
 -- | Verify a transaction body witness
 verifyWitVKey ::
