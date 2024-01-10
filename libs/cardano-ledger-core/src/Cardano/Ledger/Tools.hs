@@ -1,8 +1,5 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 
 -- | This is a module that contains functionality that is not necessary for ledger
 -- operation, but is useful for testing as well as for downstream users of ledger
@@ -12,6 +9,7 @@ module Cardano.Ledger.Tools (
   calcMinFeeTxNativeScriptWits,
   estimateMinFeeTx,
   addDummyWitsTx,
+  integralToByteStringN,
 )
 where
 
@@ -33,7 +31,8 @@ import Cardano.Ledger.Keys (
   asWitness,
  )
 import Cardano.Ledger.UTxO (EraUTxO (getWitsVKeyNeeded), UTxO (..))
-import Data.Bits (shiftR)
+import Data.Bits (Bits, shiftR)
+import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
@@ -181,6 +180,9 @@ estimateMinFeeTx pp tx numKeyWits numByronKeyWits = setMinFeeTx pp tx' ^. bodyTx
           , Byron.aaNetworkMagic = Byron.NetworkTestnet maxBound
           }
 
+integralToByteStringN :: (Integral i, Bits i) => Int -> i -> ByteString
+integralToByteStringN len = fst . BS.unfoldrN len (\n -> Just (fromIntegral n, n `shiftR` 8))
+
 -- | Create dummy witnesses and add them to the transaction
 addDummyWitsTx ::
   forall era.
@@ -210,8 +212,7 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
         id
         . decodeFull' version
         . serialize' version
-        . fst
-        . BS.unfoldrN n (\b -> Just (fromIntegral b, b `shiftR` 8))
+        . integralToByteStringN n
     vKeySize = fromIntegral $ sizeVerKeyDSIGN dsign
     dummyKeys = map (mkDummy "VKey" vKeySize) [0 :: Int ..]
 

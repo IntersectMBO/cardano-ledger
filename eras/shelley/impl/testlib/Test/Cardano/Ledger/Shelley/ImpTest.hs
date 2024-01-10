@@ -15,7 +15,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -39,6 +38,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   passTick,
   freshKeyHash,
   freshSafeHash,
+  freshKeyHashVRF,
   lookupKeyPair,
   submitTx,
   submitTx_,
@@ -53,12 +53,16 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   runImpRule,
   tryRunImpRule,
   registerRewardAccount,
+  registerPool,
   getRewardAccountAmount,
   constitutionShouldBe,
   withImpState,
   fixupFees,
   fixupTx,
   lookupImpRootTxOut,
+  sendValueTo,
+  sendCoinTo,
+  dispenseIndex,
 
   -- * Logging
   logEntry,
@@ -78,7 +82,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), seedSizeDSIGN)
-import Cardano.Crypto.Hash (Hash)
+import Cardano.Crypto.Hash (Hash, HashAlgorithm)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
@@ -105,9 +109,11 @@ import Cardano.Ledger.Keys (
   HasKeyRole (..),
   KeyHash,
   KeyRole (..),
+  VerKeyVRF,
   hashKey,
  )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
+import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
@@ -134,7 +140,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
-import Cardano.Ledger.Tools (calcMinFeeTxNativeScriptWits)
+import Cardano.Ledger.Tools (calcMinFeeTxNativeScriptWits, integralToByteStringN)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin, txinLookup)
@@ -146,7 +152,6 @@ import Control.Monad.State.Strict (MonadState (..), gets, modify)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.State.Transition (STS (..), TRC (..))
 import Control.State.Transition.Trace (applySTSTest)
-import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..))
 import Data.Default.Class (Default (..))
@@ -184,7 +189,7 @@ import UnliftIO.Exception (
 data ImpTestState era = ImpTestState
   { impNES :: !(NewEpochState era)
   , impRootTxId :: !(TxId (EraCrypto era))
-  , impSafeHashIdx :: !Int
+  , impFreshIdx :: !Integer
   , impKeyPairs :: !(forall k. Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
   , impScripts :: !(Map (ScriptHash (EraCrypto era)) (Script era))
   , impLastTick :: !SlotNo
@@ -259,6 +264,9 @@ class
   , NFData (StashedAVVMAddresses era)
   , NFData (Tx era)
   , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
+  , VRF.VRFAlgorithm (VRF (EraCrypto era))
+  , HashAlgorithm (HASH (EraCrypto era))
+  , DSIGNAlgorithm (DSIGN (EraCrypto era))
   ) =>
   ShelleyEraImp era
   where
@@ -303,11 +311,32 @@ logStakeDistr = do
   stakeDistr <- getsNES $ nesEsL . epochStateIncrStakeDistrL
   logEntry $ "Stake distr: " <> showExpr stakeDistr
 
+mkHashVerKeyVRF ::
+  forall era.
+  ShelleyEraImp era =>
+  Integer ->
+  Hash (HASH (EraCrypto era)) (VerKeyVRF (EraCrypto era))
+mkHashVerKeyVRF =
+  VRF.hashVerKeyVRF
+    . VRF.deriveVerKeyVRF
+    . VRF.genKeyVRF
+    . mkSeedFromBytes
+    . integralToByteStringN seedSize
+  where
+    seedSize = fromIntegral . seedSizeDSIGN $ Proxy @(DSIGN (EraCrypto era))
+
+freshKeyHashVRF ::
+  forall era.
+  ShelleyEraImp era =>
+  ImpTestM era (Hash (HASH (EraCrypto era)) (VerKeyVRF (EraCrypto era)))
+freshKeyHashVRF = do
+  idx <- dispenseIndex
+  pure $ mkHashVerKeyVRF @era $ fromIntegral idx
+
 initShelleyImpNES ::
   forall era.
-  ( EraGov era
-  , EraTxOut era
-  , Default (StashedAVVMAddresses era)
+  ( Default (StashedAVVMAddresses era)
+  , ShelleyEraImp era
   ) =>
   Coin ->
   NewEpochState era
@@ -330,7 +359,7 @@ initShelleyImpNES rootCoin =
               ( testKeyHash
               , IndividualPoolStake
                   1
-                  (VRF.hashVerKeyVRF . VRF.deriveVerKeyVRF . VRF.genKeyVRF . mkSeedFromBytes $ BS.replicate seedSize 1)
+                  (mkHashVerKeyVRF @era 0)
               )
             ]
     , nesEs = epochState
@@ -341,11 +370,10 @@ initShelleyImpNES rootCoin =
   where
     testKeyHash = mkKeyHash (-1)
     rootTxId = TxId (mkDummySafeHash Proxy 0)
-    seedSize = fromIntegral . seedSizeDSIGN $ Proxy @(DSIGN (EraCrypto era))
     pp =
       emptyPParams
         & ppMinFeeAL .~ Coin 44
-        & ppMinFeeBL .~ Coin 155381
+        & ppMinFeeBL .~ Coin 155_381
     epochState =
       EpochState
         { esAccountState =
@@ -786,7 +814,7 @@ withImpState =
       ImpTestState
         { impNES = initImpNES rootCoin
         , impRootTxId = TxId (mkDummySafeHash Proxy 0)
-        , impSafeHashIdx = 0
+        , impFreshIdx = 1000 -- Added some leeway to prevent collisions with values in the initial state
         , impKeyPairs = mempty
         , impScripts = mempty
         , impLastTick = 0
@@ -796,12 +824,15 @@ withImpState =
   where
     rootCoin = Coin 1_000_000_000
 
+dispenseIndex :: ImpTestM era Integer
+dispenseIndex = do
+  ImpTestState {impFreshIdx} <- get
+  modify $ \st -> st {impFreshIdx = succ impFreshIdx}
+  pure impFreshIdx
+
 -- | Creates a fresh @SafeHash@
 freshSafeHash :: Era era => ImpTestM era (SafeHash (EraCrypto era) a)
-freshSafeHash = do
-  ImpTestState {impSafeHashIdx} <- get
-  modify $ \st -> st {impSafeHashIdx = succ impSafeHashIdx}
-  pure $ mkDummySafeHash Proxy impSafeHashIdx
+freshSafeHash = mkDummySafeHash Proxy . fromInteger <$> dispenseIndex
 
 -- | Adds a key pair to the keyhash lookup map
 addKeyPair :: Era era => KeyPair r (EraCrypto era) -> ImpTestM era ()
@@ -838,6 +869,24 @@ freshKeyHash = do
   let kp@(KeyPair kh _) = mkKeyPair $ Map.size impKeyPairs
   addKeyPair kp
   pure $ hashKey kh
+
+sendCoinTo ::
+  ShelleyEraImp era =>
+  Addr (EraCrypto era) ->
+  Coin ->
+  ImpTestM era ()
+sendCoinTo addr = sendValueTo addr . inject
+
+sendValueTo ::
+  ShelleyEraImp era =>
+  Addr (EraCrypto era) ->
+  Value era ->
+  ImpTestM era ()
+sendValueTo addr amount = do
+  submitTxAnn_
+    ("Giving " <> show amount <> " to " <> show addr)
+    $ mkBasicTx mkBasicTxBody
+      & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr amount)
 
 -- | Modify the current new epoch state with a function
 modifyNES :: (NewEpochState era -> NewEpochState era) -> ImpTestM era ()
@@ -881,6 +930,29 @@ registerRewardAccount = do
         .~ SSeq.fromList [RegTxCert @era stakingCredential]
   networkId <- use (to impGlobals . to networkId)
   pure $ RewardAcnt networkId stakingCredential
+
+registerPool :: ShelleyEraImp era => ImpTestM era (KeyHash 'StakePool (EraCrypto era))
+registerPool = do
+  khPool <- freshKeyHash
+  rewardAccount <- registerRewardAccount
+  vrfHash <- freshKeyHashVRF
+  let
+    poolParams =
+      PoolParams
+        { ppVrf = vrfHash
+        , ppRewardAcnt = rewardAccount
+        , ppRelays = mempty
+        , ppPledge = zero
+        , ppOwners = mempty
+        , ppMetadata = SNothing
+        , ppMargin = def
+        , ppId = khPool
+        , ppCost = zero
+        }
+  submitTxAnn_ "Registering a new stake pool" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert poolParams)
+  pure khPool
 
 -- | Asserts that the URL of the current constitution is equal to the given
 -- string

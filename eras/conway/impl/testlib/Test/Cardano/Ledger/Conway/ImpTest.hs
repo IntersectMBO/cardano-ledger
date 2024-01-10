@@ -31,6 +31,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   trySubmitVote,
   registerDRep,
   setupSingleDRep,
+  setupPoolWithStake,
   conwayModifyPParams,
   getEnactState,
   getGovActionState,
@@ -52,7 +53,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
 import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
@@ -119,9 +120,10 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (..),
   pattern AuthCommitteeHotKeyTxCert,
   pattern RegDRepTxCert,
+  pattern RegDepositDelegTxCert,
   pattern ResignCommitteeColdTxCert,
  )
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -276,6 +278,34 @@ setupSingleDRep = do
               zero
           ]
   pure khDRep
+
+-- | Sets up a stake pool with coin delegated to it.
+--
+-- NOTE: This uses the `RegDepositDelegTxCert` for delegating, so it has to be
+-- in Conway. The Shelley version of this function would have to separately
+-- register the staking credential and then delegate it.
+setupPoolWithStake ::
+  (ShelleyEraImp era, ConwayEraTxCert era) =>
+  Coin ->
+  ImpTestM era (KeyHash 'StakePool (EraCrypto era))
+setupPoolWithStake delegCoin = do
+  khPool <- registerPool
+  credDelegatorPayment <- KeyHashObj <$> freshKeyHash
+  credDelegatorStaking <- KeyHashObj <$> freshKeyHash
+  sendCoinTo
+    (Addr Testnet credDelegatorPayment (StakeRefBase credDelegatorStaking))
+    delegCoin
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  submitTxAnn_ "Delegate to stake pool" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.fromList
+          [ RegDepositDelegTxCert
+              credDelegatorStaking
+              (DelegStake khPool)
+              (pp ^. ppKeyDepositL)
+          ]
+  pure khPool
 
 -- | Submits a transaction with a Vote for the given governance action as
 -- some voter
@@ -561,15 +591,26 @@ calculateCommitteeAcceptedRatio gaId = do
       reCommitteeState
       eNo
 
+calculatePoolAcceptedRatio :: ConwayEraGov era => GovActionId (EraCrypto era) -> ImpTestM era Rational
+calculatePoolAcceptedRatio gaId = do
+  ratEnv <- getRatifyEnv
+  gas <- getGovActionState gaId
+  pure $ spoAcceptedRatio ratEnv gas
+
 -- | Logs the ratios of accepted votes per category
 logAcceptedRatio :: (HasCallStack, ConwayEraGov era) => GovActionId (EraCrypto era) -> ImpTestM era ()
 logAcceptedRatio aId = do
   dRepRatio <- calculateDRepAcceptedRatio aId
   committeeRatio <- calculateCommitteeAcceptedRatio aId
-  logEntry "----- ACCEPTED RATIOS -----"
-  logEntry $ "DRep accepted ratio:\t\t" <> show dRepRatio
-  logEntry $ "Committee accepted ratio:\t" <> show committeeRatio
-  logEntry ""
+  spoRatio <- calculatePoolAcceptedRatio aId
+  logEntry $
+    unlines
+      [ ""
+      , "----- ACCEPTED RATIOS -----"
+      , "DRep accepted ratio:\t\t" <> show dRepRatio
+      , "Committee accepted ratio:\t" <> show committeeRatio
+      , "SPO accepted ratio:\t\t" <> show spoRatio
+      ]
 
 -- | Checks whether the governance action has enough DRep votes to be accepted in the next
 -- epoch. (Note that no other checks execept DRep votes is used)
@@ -628,7 +669,7 @@ logRatificationChecks gaId = do
       , "validCommitteeTerm:\t" <> show (validCommitteeTerm gasAction ensCurPParams currentEpoch)
       , "notDelayed:\t\t??"
       , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction curTreasury)
-      , "committeeAccepted:\t\t"
+      , "committeeAccepted:\t"
           <> show (committeeAccepted ratEnv ratSt gas)
           <> " [To Pass: "
           <> show
@@ -657,26 +698,26 @@ logRatificationChecks gaId = do
 -- Returns the hot key hash.
 registerCommitteeHotKey ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
-  KeyHash 'ColdCommitteeRole (EraCrypto era) ->
-  ImpTestM era (KeyHash 'HotCommitteeRole (EraCrypto era))
+  Credential 'ColdCommitteeRole (EraCrypto era) ->
+  ImpTestM era (Credential 'HotCommitteeRole (EraCrypto era))
 registerCommitteeHotKey coldKey = do
-  hotKey <- freshKeyHash
+  hotKey <- KeyHashObj <$> freshKeyHash
   submitTxAnn_ "Registering Committee Hot key" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
-        .~ SSeq.singleton (AuthCommitteeHotKeyTxCert (KeyHashObj coldKey) (KeyHashObj hotKey))
+        .~ SSeq.singleton (AuthCommitteeHotKeyTxCert coldKey hotKey)
   pure hotKey
 
 -- | Submits a transaction that resigns the cold key
 resignCommitteeColdKey ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
-  KeyHash 'ColdCommitteeRole (EraCrypto era) ->
+  Credential 'ColdCommitteeRole (EraCrypto era) ->
   ImpTestM era ()
 resignCommitteeColdKey coldKey = do
   submitTxAnn_ "Resigning Committee Cold key" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
-        .~ SSeq.singleton (ResignCommitteeColdTxCert (KeyHashObj coldKey) SNothing)
+        .~ SSeq.singleton (ResignCommitteeColdTxCert coldKey SNothing)
 
 electCommittee ::
   forall era.
@@ -685,16 +726,16 @@ electCommittee ::
   ) =>
   StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)) ->
   KeyHash 'DRepRole (EraCrypto era) ->
-  Set.Set (KeyHash 'ColdCommitteeRole (EraCrypto era)) ->
-  Map.Map (KeyHash 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
+  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
+  Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
   ImpTestM era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
 electCommittee prevGovId drep toRemove toAdd = do
   let
     committeeAction =
       UpdateCommittee
         prevGovId
-        (Set.map KeyHashObj toRemove)
-        (Map.mapKeys KeyHashObj toAdd)
+        toRemove
+        toAdd
         (1 %! 2)
   gaidCommitteeProp <- submitGovAction committeeAction
   submitYesVote_ (DRepVoter $ KeyHashObj drep) gaidCommitteeProp
@@ -723,13 +764,13 @@ electBasicCommittee = do
   khDRep <- setupSingleDRep
 
   logEntry "Registering committee member"
-  khCommitteeMember <- freshKeyHash
+  khCommitteeMember <- KeyHashObj <$> freshKeyHash
   let
     committeeAction =
       UpdateCommittee
         SNothing
         mempty
-        (Map.singleton (KeyHashObj khCommitteeMember) 10)
+        (Map.singleton khCommitteeMember 10)
         (1 %! 2)
   gaidCommitteeProp <- submitGovAction committeeAction
 
@@ -754,8 +795,8 @@ electBasicCommittee = do
         nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
     impAnn "There should be a committee" $ committee `shouldSatisfy` isSJust
 
-  khCommitteeMemberHot <- registerCommitteeHotKey khCommitteeMember
-  pure (KeyHashObj khDRep, KeyHashObj khCommitteeMemberHot)
+  credCommitteeMemberHot <- registerCommitteeHotKey khCommitteeMember
+  pure (KeyHashObj khDRep, credCommitteeMemberHot)
 
 logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era ()
 logCurPParams = do

@@ -579,6 +579,7 @@ instance Arbitrary PoolVotingThresholds where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Arbitrary DRepVotingThresholds where
   arbitrary =

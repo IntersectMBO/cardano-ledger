@@ -13,9 +13,8 @@ import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppMaxValSizeL)
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core (EraIndependentTxBody, EraTxOut)
+import Cardano.Ledger.Core (EraIndependentTxBody)
 import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
   StashedAVVMAddresses,
@@ -30,10 +29,9 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.ImpTest as ImpTest
 
 initAlonzoImpNES ::
-  ( EraGov era
-  , EraTxOut era
-  , AlonzoEraPParams era
+  ( AlonzoEraPParams era
   , Default (StashedAVVMAddresses era)
+  , ShelleyEraImp era
   ) =>
   Coin ->
   NewEpochState era

@@ -3,7 +3,8 @@
     "committeeNormal": 0,
     "committeeNoConfidence": 0,
     "hardForkInitiation": 0,
-    "motionNoConfidence": 0
+    "motionNoConfidence": 0,
+    "ppSecurityGroup": 0
   },
   "dRepVotingThresholds": {
     "motionNoConfidence": 0,

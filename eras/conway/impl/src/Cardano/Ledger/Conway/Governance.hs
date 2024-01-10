@@ -211,9 +211,11 @@ import Cardano.Ledger.Conway.Governance.Proposals (
  )
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
+  DRepGroup (..),
   DRepVotingThresholds (..),
-  PPGroup (..),
+  PPGroups (..),
   PoolVotingThresholds (..),
+  StakePoolGroup (..),
   dvtPPEconomicGroupL,
   dvtPPGovGroupL,
   dvtPPNetworkGroupL,
@@ -677,7 +679,7 @@ pparamsUpdateThreshold pp ppu =
         GovGroup -> dvtPPGovGroupL
         TechnicalGroup -> dvtPPTechnicalGroupL
         EconomicGroup -> dvtPPEconomicGroupL
-      lookupGroupThreshold grp =
+      lookupGroupThreshold (PPGroups grp _) =
         pp ^. ppDRepVotingThresholdsL . thresholdLens grp
    in Set.foldr' max minBound $
         Set.map lookupGroupThreshold $
@@ -738,7 +740,16 @@ votingStakePoolThresholdInternal pp isElectedCommittee action =
         { pvtCommitteeNoConfidence
         , pvtCommitteeNormal
         , pvtHardForkInitiation
+        , pvtPPSecurityGroup
         } = pp ^. ppPoolVotingThresholdsL
+      isSecurityRelevant (PPGroups _ s) =
+        case s of
+          SecurityGroup -> True
+          NoStakePoolGroup -> False
+      paramChangeThreshold ppu
+        | any isSecurityRelevant (modifiedPPGroups ppu) =
+            VotingThreshold pvtPPSecurityGroup
+        | otherwise = NoVotingAllowed
    in case action of
         NoConfidence {} -> VotingThreshold pvtCommitteeNoConfidence
         UpdateCommittee {} ->
@@ -748,7 +759,7 @@ votingStakePoolThresholdInternal pp isElectedCommittee action =
               else pvtCommitteeNoConfidence
         NewConstitution {} -> NoVotingAllowed
         HardForkInitiation {} -> VotingThreshold pvtHardForkInitiation
-        ParameterChange {} -> NoVotingAllowed
+        ParameterChange _ ppu _ -> paramChangeThreshold ppu
         TreasuryWithdrawals {} -> NoVotingAllowed
         InfoAction {} -> NoVotingThreshold
 

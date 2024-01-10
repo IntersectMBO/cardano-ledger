@@ -47,6 +47,10 @@
 
 ### `testlib`
 
+* Add `freshKeyHashVRF`
+* Add `registerPool`
+* Add `sendValueTo` and `sendCoinTo`
+* Add `dispenseIndex`
 * Add `fixupTx`, `impAddNativeScript` and `logToExpr`
 * Remove `mkTxWits`
 * Add `impNESG`, `impLastTickG`, `impKeyPairsG` and `impScriptsG`. Stop exporting
