@@ -44,6 +44,7 @@
 * Changed types of lenses: `ppGovActionLifetimeL`, `ppDRepActivityL`, `ppCommitteeMaxTermLengthL` and `ppuGovActionLifetimeL`, `ppuDRepActivityL`, `ppuCommitteeMaxTermLengthL`
 * Implement `getNextEpochCommitteeMembers` in Conway `EraGov`
 * Change argument of `validCommitteeTerm` function from `StrictMaybe Committee` to `GovAction`
+* Expose `ConwayCertEvent`'s inhabitants
 
 ### `testlib`
 
