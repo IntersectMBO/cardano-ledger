@@ -2,9 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Shelley.Imp (
-  spec,
-) where
+module Test.Cardano.Ledger.Shelley.Imp (spec) where
 
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch

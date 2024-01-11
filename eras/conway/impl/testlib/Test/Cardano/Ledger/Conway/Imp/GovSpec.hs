@@ -11,6 +11,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.GovSpec where
 
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireAllOf,
   pattern RequireAnyOf,
@@ -22,8 +23,15 @@ import Cardano.Ledger.CertState (vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams (dvtCommitteeNoConfidenceL, pvtCommitteeNoConfidenceL, pvtPPSecurityGroupL)
-import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
+import Cardano.Ledger.Conway.PParams (
+  dvtCommitteeNoConfidenceL,
+  pvtCommitteeNoConfidenceL,
+  pvtPPSecurityGroupL,
+ )
+import Cardano.Ledger.Conway.Rules (
+  ConwayGovPredFailure (..),
+  ConwayLedgerPredFailure (ConwayGovFailure),
+ )
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -32,11 +40,13 @@ import Control.Monad (replicateM_)
 import Control.State.Transition.Extended (PredicateFailure)
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..), traverse_)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import Data.Tree
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
@@ -46,6 +56,8 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , GovState era ~ ConwayGovState era
+  , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
+  , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
   , Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   SpecWith (ImpTestState era)
@@ -59,6 +71,574 @@ spec =
       it "Hardfork minorFollow" (secondHardForkFollows minorFollow)
       it "Hardfork majorFollow" (secondHardForkFollows majorFollow)
       it "Hardfork cantFollow" secondHardForkCantFollow
+    context "Proposal-forests" $ do
+      context "GOV, EPOCH, RATIFY and ENACT" $ do
+        it "Proposals submitted without proper parent fail" $ do
+          let mkCorruptGovActionId :: GovActionId c -> GovActionId c
+              mkCorruptGovActionId (GovActionId txi (GovActionIx gaix)) =
+                GovActionId txi $ GovActionIx $ gaix + 999
+          modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
+          Node p1 [Node _p11 []] <-
+            submitConstitutionGovActionTree
+              SNothing
+              $ Node
+                ()
+                [ Node () []
+                ]
+          constitutionHash <- freshSafeHash
+          pp <- getsNES $ nesEsL . curPParamsEpochStateL
+          khPropRwd <- freshKeyHash
+          let constitutionAction =
+                NewConstitution
+                  (SJust $ GovPurposeId $ mkCorruptGovActionId p1)
+                  ( Constitution
+                      ( Anchor
+                          (fromJust $ textToUrl 64 "constitution.after.0")
+                          constitutionHash
+                      )
+                      SNothing
+                  )
+              constitutionProposal =
+                ProposalProcedure
+                  { pProcDeposit = pp ^. ppGovActionDepositL
+                  , pProcReturnAddr = RewardAccount Testnet (KeyHashObj khPropRwd)
+                  , pProcGovAction = constitutionAction
+                  , pProcAnchor = def
+                  }
+          submitFailingProposal
+            constitutionProposal
+            [ ConwayGovFailure $ InvalidPrevGovActionId constitutionProposal
+            ]
+        it "Proposals survive multiple epochs without any activity" $ do
+          -- + 2 epochs to pass to get the desired effect
+          modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
+          _tree <-
+            submitConstitutionGovActionTree SNothing $
+              Node
+                ()
+                [ Node
+                    ()
+                    [ Node () []
+                    , Node () []
+                    ]
+                , Node () []
+                ]
+
+          forest <- getProposals
+          passNEpochs 5
+          forest' <- getProposals
+          forest' `shouldBe` forest
+          passEpoch
+          forest'' <- getProposals
+          forest'' `shouldBe` def
+        it "Subtrees are pruned when proposals expire" $ do
+          modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
+          p1 <- submitInitConstitutionGovAction
+          passNEpochs 3
+          a <-
+            submitConstitutionGovActionTree
+              (SJust p1)
+              $ Node
+                ()
+                [ Node () []
+                , Node () []
+                ]
+          b <-
+            submitConstitutionGovActionTree
+              SNothing
+              $ Node
+                ()
+                [ Node () []
+                ]
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node
+                              SNothing
+                              [ Node (SJust p1) [SJust <$> a]
+                              , SJust <$> b
+                              ]
+                           ]
+          passNEpochs 3
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing [SJust <$> b]
+                           ]
+        it "Subtrees are pruned when competing proposals are enacted" $ do
+          (dRep, committeeMember, GovPurposeId committeeGovActionId) <- electBasicCommittee
+          a@[ _
+              , b@(Node p2 _)
+              ] <-
+            submitConstitutionGovActionForest
+              SNothing
+              [ Node
+                  ()
+                  [ Node
+                      ()
+                      [ Node () []
+                      , Node () []
+                      ]
+                  ]
+              , Node
+                  ()
+                  [ Node () []
+                  ]
+              ]
+
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node (SJust committeeGovActionId) []
+                           , Node SNothing (fmap SJust <$> a)
+                           ]
+          passEpoch
+          submitYesVote_ (DRepVoter dRep) p2
+          submitYesVote_ (CommitteeVoter committeeMember) p2
+          passNEpochs 2
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node (SJust committeeGovActionId) []
+                           , SJust <$> b
+                           ]
+        it "Subtrees are pruned when proposals expire over multiple rounds" $ do
+          modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
+          p1 <- submitInitConstitutionGovAction
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node
+                              SNothing
+                              [ Node (SJust p1) []
+                              ]
+                           ]
+          passEpoch
+          p2 <- submitInitConstitutionGovAction
+          p11 <- submitChildConstitutionGovAction p1
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node
+                              SNothing
+                              [ Node (SJust p1) [Node (SJust p11) []]
+                              , Node (SJust p2) []
+                              ]
+                           ]
+
+          passEpoch
+          p3 <- submitInitConstitutionGovAction
+          p21 <- submitChildConstitutionGovAction p2
+          a <-
+            submitConstitutionGovActionForest
+              (SJust p11)
+              [ Node () []
+              , Node () []
+              ]
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node
+                              SNothing
+                              [ Node
+                                  (SJust p1)
+                                  [ Node
+                                      (SJust p11)
+                                      (fmap SJust <$> a)
+                                  ]
+                              , Node (SJust p2) [Node (SJust p21) []]
+                              , Node (SJust p3) []
+                              ]
+                           ]
+          passEpoch
+          p4 <- submitInitConstitutionGovAction
+          p31 <- submitChildConstitutionGovAction p3
+          p211 <- submitChildConstitutionGovAction p21
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node
+                              SNothing
+                              [ Node
+                                  (SJust p1)
+                                  [ Node
+                                      (SJust p11)
+                                      (fmap SJust <$> a)
+                                  ]
+                              , Node (SJust p2) [Node (SJust p21) [Node (SJust p211) []]]
+                              , Node (SJust p3) [Node (SJust p31) []]
+                              , Node (SJust p4) []
+                              ]
+                           ]
+          passNEpochs 3
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node
+                              SNothing
+                              [ Node (SJust p2) [Node (SJust p21) [Node (SJust p211) []]]
+                              , Node (SJust p3) [Node (SJust p31) []]
+                              , Node (SJust p4) []
+                              ]
+                           ]
+          p5 <- submitInitConstitutionGovAction
+          p41 <- submitChildConstitutionGovAction p4
+          p311 <- submitChildConstitutionGovAction p31
+          p212 <- submitChildConstitutionGovAction p21
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node
+                              SNothing
+                              [ Node
+                                  (SJust p2)
+                                  [ Node
+                                      (SJust p21)
+                                      [ Node (SJust p211) []
+                                      , Node (SJust p212) []
+                                      ]
+                                  ]
+                              , Node (SJust p3) [Node (SJust p31) [Node (SJust p311) []]]
+                              , Node (SJust p4) [Node (SJust p41) []]
+                              , Node (SJust p5) []
+                              ]
+                           ]
+          passEpoch
+          p6 <- submitInitConstitutionGovAction
+          p51 <- submitChildConstitutionGovAction p5
+          p411 <- submitChildConstitutionGovAction p41
+          p312 <- submitChildConstitutionGovAction p31
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node
+                              SNothing
+                              [ Node
+                                  (SJust p3)
+                                  [ Node
+                                      (SJust p31)
+                                      [ Node (SJust p311) []
+                                      , Node (SJust p312) []
+                                      ]
+                                  ]
+                              , Node (SJust p4) [Node (SJust p41) [Node (SJust p411) []]]
+                              , Node (SJust p5) [Node (SJust p51) []]
+                              , Node (SJust p6) []
+                              ]
+                           ]
+          passEpoch
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node
+                              SNothing
+                              [ Node (SJust p4) [Node (SJust p41) [Node (SJust p411) []]]
+                              , Node (SJust p5) [Node (SJust p51) []]
+                              , Node (SJust p6) []
+                              ]
+                           ]
+          passEpoch
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node
+                              SNothing
+                              [ Node (SJust p5) [Node (SJust p51) []]
+                              , Node (SJust p6) []
+                              ]
+                           ]
+          passNEpochs 3
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node
+                              SNothing
+                              [ Node (SJust p6) []
+                              ]
+                           ]
+          passEpoch
+          getProposalsForest
+            `shouldReturn` [ Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           , Node SNothing []
+                           ]
+        it "Subtrees are pruned when competing proposals are enacted over multiple rounds" $ do
+          (dRep, committeeMember, _) <- electBasicCommittee
+          a@[ c
+              , Node
+                  p2
+                  [ Node p21 []
+                    , Node p22 []
+                    ]
+              , Node p3 []
+              ] <-
+            submitConstitutionGovActionForest
+              SNothing
+              [ Node
+                  ()
+                  [ Node
+                      ()
+                      [ Node () []
+                      , Node () []
+                      ]
+                  ]
+              , Node
+                  ()
+                  [ Node () []
+                  , Node () []
+                  ]
+              , Node () []
+              ]
+          submitYesVote_ (DRepVoter dRep) p2
+          submitYesVote_ (CommitteeVoter committeeMember) p2
+          submitYesVote_ (DRepVoter dRep) p21
+          submitYesVote_ (CommitteeVoter committeeMember) p21
+          submitYesVote_ (DRepVoter dRep) p3
+          submitYesVote_ (CommitteeVoter committeeMember) p3 -- Two competing proposals break the tie based on proposal order
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` Node SNothing (fmap SJust <$> a)
+          passEpoch
+          p4 <- submitInitConstitutionGovAction
+          p31 <- submitChildConstitutionGovAction p3
+          p211 <- submitChildConstitutionGovAction p21
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` Node
+              SNothing
+              [ SJust <$> c
+              , Node
+                  (SJust p2)
+                  [ Node (SJust p21) [Node (SJust p211) []]
+                  , Node (SJust p22) []
+                  ]
+              , Node (SJust p3) [Node (SJust p31) []]
+              , Node (SJust p4) []
+              ]
+          passEpoch
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` Node
+              (SJust p2)
+              [ Node (SJust p21) [Node (SJust p211) []]
+              , Node (SJust p22) []
+              ]
+          [ Node p212 []
+            , Node p213 []
+            , Node p214 []
+            ] <-
+            submitConstitutionGovActionForest
+              (SJust p21)
+              [ Node () []
+              , Node () []
+              , Node () []
+              ]
+          p2131 <- submitChildConstitutionGovAction p213
+          p2141 <- submitChildConstitutionGovAction p214
+          submitYesVote_ (DRepVoter dRep) p212
+          submitYesVote_ (CommitteeVoter committeeMember) p212
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` Node
+              (SJust p2)
+              [ Node
+                  (SJust p21)
+                  [ Node (SJust p211) []
+                  , Node (SJust p212) []
+                  , Node (SJust p213) [Node (SJust p2131) []]
+                  , Node (SJust p214) [Node (SJust p2141) []]
+                  ]
+              , Node (SJust p22) []
+              ]
+          passNEpochs 2
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` Node (SJust p212) []
+          props <- getProposals
+          proposalsSize props `shouldBe` 0
+        it "Votes from subsequent epochs are considered for ratification" $ do
+          modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
+          (dRep, committeeMember, _) <- electBasicCommittee
+          [Node p1 []] <-
+            submitConstitutionGovActionForest
+              SNothing
+              [Node () []]
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` Node SNothing [Node (SJust p1) []]
+          passNEpochs 2
+          submitYesVote_ (DRepVoter dRep) p1
+          submitYesVote_ (CommitteeVoter committeeMember) p1
+          passNEpochs 2
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` Node (SJust p1) []
+        it "Subtrees are pruned for both enactment and expiry over multiple rounds" $ do
+          (dRep, committeeMember, _) <- electBasicCommittee
+          modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
+          [ a@( Node
+                  p1
+                  [ b@( Node
+                          p11
+                          [ Node _p111 []
+                            , Node _p112 []
+                            ]
+                        )
+                    ]
+                )
+            , Node
+                _p2
+                [ Node _p21 []
+                  , Node _p22 []
+                  ]
+            , Node p3 []
+            ] <-
+            submitConstitutionGovActionForest
+              SNothing
+              [ Node
+                  ()
+                  [ Node
+                      ()
+                      [ Node () []
+                      , Node () []
+                      ]
+                  ]
+              , Node
+                  ()
+                  [ Node () []
+                  , Node () []
+                  ]
+              , Node () []
+              ]
+          passNEpochs 2
+          submitYesVote_ (DRepVoter dRep) p1
+          submitYesVote_ (CommitteeVoter committeeMember) p1
+          submitYesVote_ (DRepVoter dRep) p11
+          submitYesVote_ (CommitteeVoter committeeMember) p11
+          submitYesVote_ (DRepVoter dRep) p3
+          submitYesVote_ (CommitteeVoter committeeMember) p3 -- Two competing proposals break the tie based on proposal order
+          passNEpochs 2
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` SJust
+            <$> a
+          passEpoch -- ConstitutionPurpose is a delayed action
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` SJust
+            <$> b
+          passNEpochs 2
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` Node (SJust p11) []
+          c@[ Node _p113 []
+              , Node _p114 []
+              ] <-
+            submitConstitutionGovActionForest
+              (SJust p11)
+              [ Node () []
+              , Node () []
+              ]
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` Node (SJust p11) (fmap SJust <$> c)
+          passNEpochs 4
+          d@[ Node _p115 []
+              , Node p116 []
+              ] <-
+            submitConstitutionGovActionForest
+              (SJust p11)
+              [ Node () []
+              , Node () []
+              ]
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` Node (SJust p11) (fmap SJust <$> (c <> d))
+          passNEpochs 2
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` Node (SJust p11) (fmap SJust <$> d)
+          submitYesVote_ (DRepVoter dRep) p116
+          submitYesVote_ (CommitteeVoter committeeMember) p116
+          passNEpochs 3
+          fmap (!! 3) getProposalsForest
+            `shouldReturn` Node (SJust p116) []
+    describe "Proposals always have valid previous actions" $ do
+      context "Invalid proposals are rejected" $ do
+        it "Invalid Index in GovPurposeId" $ do
+          gaidConstitutionProp <- submitInitConstitutionGovAction
+          curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+          constitutionHash <- freshSafeHash
+          let constitutionActionNext =
+                NewConstitution
+                  (SJust $ GovPurposeId gaidConstitutionProp)
+                  ( Constitution
+                      ( Anchor
+                          (fromJust $ textToUrl 64 "constitution.1")
+                          constitutionHash
+                      )
+                      SNothing
+                  )
+          curConstitution' <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+          impAnn "Constitution has not been enacted yet" $
+            curConstitution' `shouldBe` curConstitution
+          submitGovAction_ constitutionActionNext
+        it "Enact Constitution and use valid GovPurposeId" $ do
+          (dRep, committeeMember, _) <- electBasicCommittee
+          constitutionHash <- freshSafeHash
+          let constitution =
+                Constitution
+                  ( Anchor
+                      (fromJust $ textToUrl 64 "constitution.0")
+                      constitutionHash
+                  )
+                  SNothing
+              constitutionAction =
+                NewConstitution SNothing constitution
+          gaidConstitutionProp <- submitGovAction constitutionAction
+          submitYesVote_ (DRepVoter dRep) gaidConstitutionProp
+          submitYesVote_ (CommitteeVoter committeeMember) gaidConstitutionProp
+          passEpoch
+          passEpoch
+          curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+          impAnn "Constitution has been enacted" $
+            curConstitution `shouldBe` constitution
+          constitutionHash1 <- freshSafeHash
+          let constitutionAction1 =
+                NewConstitution
+                  (SJust $ GovPurposeId gaidConstitutionProp)
+                  ( Constitution
+                      ( Anchor
+                          (fromJust $ textToUrl 64 "constitution.1")
+                          constitutionHash1
+                      )
+                      SNothing
+                  )
+          submitGovAction_ constitutionAction1
+    describe "Votes fail as expected" $ do
+      it "on expired gov-actions" $ do
+        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2 -- Voting after the 3rd epoch should fail
+        khDRep <- setupSingleDRep
+        gaidConstitutionProp <- submitInitConstitutionGovAction
+        passEpoch
+        passEpoch
+        passEpoch
+        let voter = DRepVoter $ KeyHashObj khDRep
+        submitFailingVote
+          voter
+          gaidConstitutionProp
+          [ ConwayGovFailure @era $ VotingOnExpiredGovAction $ (voter, gaidConstitutionProp) NE.:| []
+          ]
+      it "on non-existant gov-actions" $ do
+        khDRep <- setupSingleDRep
+        gaidConstitutionProp <- submitInitConstitutionGovAction
+        let voter = DRepVoter $ KeyHashObj khDRep
+            dummyGaid = gaidConstitutionProp {gaidGovActionIx = GovActionIx 99} -- non-existant `GovActionId`
+        submitFailingVote
+          voter
+          dummyGaid
+          [ConwayGovFailure $ GovActionsDoNotExist $ dummyGaid NE.:| []]
+
     describe "Voting" $ do
       context "fails for" $ do
         it "expired gov-actions" $ do
@@ -360,7 +940,7 @@ spec =
         impAnn "Pulser should reflect the constitution to be enacted" $ do
           ConwayGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
           let ratifyState = extractDRepPulsingState pulser
-          gasId <$> rsEnacted ratifyState `shouldBe` Seq.singleton govActionId
+          gasId <$> rsEnacted ratifyState `shouldBe` govActionId Seq.:<| Seq.Empty
           rsEnactState ratifyState ^. ensConstitutionL `shouldBe` constitution
 
         passEpoch
@@ -825,7 +1405,6 @@ secondHardForkCantFollow = do
 committeeMemberVotingOnCommitteeChange ::
   forall era.
   ( ConwayEraImp era
-  , GovState era ~ ConwayGovState era
   , Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   ImpTestM era ()
@@ -851,7 +1430,6 @@ committeeMemberVotingOnCommitteeChange = do
 ccVoteOnConstitutionFailsWithMultipleVotes ::
   forall era.
   ( ConwayEraImp era
-  , GovState era ~ ConwayGovState era
   , Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   ImpTestM era ()

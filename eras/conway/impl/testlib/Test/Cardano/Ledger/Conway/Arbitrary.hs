@@ -27,9 +27,10 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
   genHardForkGovAction,
   genCommitteeGovAction,
   genConstitutionGovAction,
+  genProposals,
   ProposalsNewActions (..),
   ProposalsForEnactment (..),
-  genProposals,
+  ShuffledGovActionStates (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -201,7 +202,7 @@ instance
 data ProposalsForEnactment era
   = ProposalsForEnactment
       (Proposals era)
-      (Seq.Seq (GovActionId (EraCrypto era)))
+      (Seq.Seq (GovActionState era))
       (Set.Set (GovActionId (EraCrypto era)))
   deriving (Show, Eq)
 
@@ -215,7 +216,7 @@ instance
     hardForks <- chooseLineage grHardForkL ps Seq.Empty
     committees <- chooseLineage grCommitteeL ps Seq.Empty
     constitutions <- chooseLineage grConstitutionL ps Seq.Empty
-    sequencedGais <-
+    sequencedGass <-
       sequenceLineages
         ( Seq.filter
             (not . Seq.null)
@@ -224,35 +225,32 @@ instance
         Seq.Empty
     let expiredGais =
           Set.fromList (toList $ proposalsIds ps)
-            `Set.difference` Set.fromList (toList sequencedGais)
-    pure $ ProposalsForEnactment ps sequencedGais expiredGais
+            `Set.difference` Set.fromList (gasId <$> toList sequencedGass)
+    pure $ ProposalsForEnactment ps sequencedGass expiredGais
     where
       chooseLineage ::
         (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
         Proposals era ->
-        Seq.Seq (GovActionId (EraCrypto era)) ->
-        Gen (Seq.Seq (GovActionId (EraCrypto era)))
-      chooseLineage forestL ps = \case
+        Seq.Seq (GovActionState era) ->
+        Gen (Seq.Seq (GovActionState era))
+      chooseLineage govRelL ps = \case
         Seq.Empty ->
-          let children = ps ^. pRootsL . forestL . prChildrenL
+          let children = ps ^. pRootsL . govRelL . prChildrenL
            in if Set.null children
                 then pure Seq.Empty
                 else do
                   child <- elements $ toList children
-                  chooseLineage forestL ps (Seq.Empty Seq.:|> unGovPurposeId child)
-        lineage@(_ Seq.:|> gai) ->
-          let children = ps ^. pGraphL . forestL . pGraphNodesL . to (Map.! GovPurposeId gai) . peChildrenL
+                  chooseLineage govRelL ps (Seq.Empty Seq.:|> (proposalsActionsMap ps Map.! unGovPurposeId child))
+        lineage@(_ Seq.:|> gas) ->
+          let children = ps ^. pGraphL . govRelL . pGraphNodesL . to (Map.! GovPurposeId (gasId gas)) . peChildrenL
            in if Set.null children
                 then pure lineage
                 else do
                   child <- elements $ toList children
-                  chooseLineage forestL ps (lineage Seq.:|> unGovPurposeId child)
+                  chooseLineage govRelL ps (lineage Seq.:|> (proposalsActionsMap ps Map.! unGovPurposeId child))
       consumeHeadAtIndex :: Int -> Seq.Seq (Seq.Seq a) -> (a, Seq.Seq (Seq.Seq a))
       consumeHeadAtIndex idx ss = (ss `Seq.index` idx `Seq.index` 0, Seq.adjust' (Seq.drop 1) idx ss)
-      sequenceLineages ::
-        Seq.Seq (Seq.Seq (GovActionId (EraCrypto era))) ->
-        Seq.Seq (GovActionId (EraCrypto era)) ->
-        Gen (Seq.Seq (GovActionId (EraCrypto era)))
+      sequenceLineages :: Seq.Seq (Seq.Seq a) -> Seq.Seq a -> Gen (Seq.Seq a)
       sequenceLineages lineages sequenced = case lineages of
         Seq.Empty -> pure sequenced
         _ -> do
@@ -320,11 +318,11 @@ genGovAction ps =
       (StrictMaybe (GovPurposeId p era) -> Gen (GovAction era)) ->
       (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
       Gen (GovAction era)
-    genWithParent gen forestL =
+    genWithParent gen govRelL =
       gen
         =<< elements
-          ( (ps ^. pRootsL . forestL . prRootL)
-              : fmap SJust (Map.keys $ ps ^. pGraphL . forestL . pGraphNodesL)
+          ( (ps ^. pRootsL . govRelL . prRootL)
+              : fmap SJust (Map.keys $ ps ^. pGraphL . govRelL . pGraphNodesL)
           )
 
 genPParamUpdateGovAction ::
@@ -371,6 +369,21 @@ genGovActionState ga =
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionState era) where
   arbitrary = genGovActionState =<< arbitrary
+
+-- | These lists of `GovActionStates` contain only one of a priority.
+-- In other words, no two `GovActionState`s in the list have the same `actionPriority`.
+data ShuffledGovActionStates era
+  = ShuffledGovActionStates [GovActionState era] [GovActionState era]
+  deriving (Show)
+
+instance
+  (Era era, Arbitrary (PParamsUpdate era)) =>
+  Arbitrary (ShuffledGovActionStates era)
+  where
+  arbitrary = do
+    gass <- traverse (genGovActionState =<<) govActionGenerators
+    shuffledGass <- shuffle gass
+    pure $ ShuffledGovActionStates gass shuffledGass
 
 genParameterChange :: (Era era, Arbitrary (PParamsUpdate era)) => Gen (GovAction era)
 genParameterChange = ParameterChange <$> arbitrary <*> arbitrary <*> arbitrary

@@ -268,6 +268,7 @@ class
       (DSIGN (EraCrypto era))
       (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
+  , ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , EraUTxO era
   , ShelleyEraTxCert era
   , State (EraRule "LEDGER" era) ~ LedgerState era

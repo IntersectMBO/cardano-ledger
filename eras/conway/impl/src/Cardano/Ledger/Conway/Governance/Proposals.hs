@@ -410,7 +410,11 @@ proposalsApplyEnactment enactedGass expiredGais props =
           )
         enactWithoutRoot =
           let (newOMap, removedActions) = OMap.extractKeys (Set.singleton gai) $ ps ^. pPropsL
-           in (ps & pPropsL .~ newOMap, removed `Map.union` removedActions)
+           in assert -- we want an AssertionFailure here for exhaustive property-testing
+                (not $ Map.null removedActions)
+                ( ps & pPropsL .~ newOMap
+                , removed `Map.union` removedActions
+                )
         enactFromRoot ::
           (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
           StrictMaybe (GovPurposeId p era) ->
