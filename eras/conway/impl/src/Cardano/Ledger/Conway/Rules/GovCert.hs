@@ -37,7 +37,7 @@ import Cardano.Ledger.Core (Era (EraCrypto), EraRule, PParams)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
-import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, DRepRole))
+import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, DRepRole, HotCommitteeRole))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -132,6 +132,10 @@ data ConwayGovCertEvent c
     DRepRegistration !(Credential 'DRepRole c)
   | -- | Event indicating that a DRep is unregistrating
     DRepUnregistration !(Credential 'DRepRole c)
+  | -- | Event indicating that the hot key (corresponding to the given cold key) is being overwritten
+    OverwriteCommitteeHotKey !(Credential 'ColdCommitteeRole c) !(Credential 'HotCommitteeRole c)
+  | -- | Event indicating that a cold key is being resigned
+    ResignCommitteeColdKey !(Credential 'ColdCommitteeRole c)
 
 instance
   ( ConwayEraPParams era
@@ -178,10 +182,14 @@ conwayGovCertTransition = do
       checkRegistrationAndDepositAgainstPaidDeposit vsDReps cred deposit
       tellEvent $ DRepUnregistration cred
       pure vState {vsDReps = Map.delete cred vsDReps}
-    ConwayAuthCommitteeHotKey coldCred hotCred ->
-      checkAndOverwriteCommitteeHotCred vState coldCred $ Just hotCred
-    ConwayResignCommitteeColdKey coldCred _ ->
-      checkAndOverwriteCommitteeHotCred vState coldCred Nothing
+    ConwayAuthCommitteeHotKey coldCred hotCred -> do
+      vState' <- checkAndOverwriteCommitteeHotCred vState coldCred $ Just hotCred
+      tellEvent $ OverwriteCommitteeHotKey coldCred hotCred
+      return vState'
+    ConwayResignCommitteeColdKey coldCred _ -> do
+      vState' <- checkAndOverwriteCommitteeHotCred vState coldCred Nothing
+      tellEvent $ ResignCommitteeColdKey coldCred
+      return vState'
     -- Update a DRep expiry too along with its anchor.
     ConwayUpdateDRep cred mAnchor -> do
       Map.member cred vsDReps ?! ConwayDRepNotRegistered cred
