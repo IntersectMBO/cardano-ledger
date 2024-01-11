@@ -23,7 +23,6 @@ module Cardano.Ledger.Plutus.TxInfo (
   txOutSourceToText,
   transAddr,
   transRewardAccount,
-  transProtocolVersion,
   transDataHash,
   transKeyHash,
   transSafeHash,
@@ -44,10 +43,8 @@ where
 import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.BaseTypes (
-  ProtVer (..),
   TxIx,
   certIxToInt,
-  getVersion64,
   txIxToInt,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -76,7 +73,6 @@ import Data.Aeson (ToJSON (..), Value (String))
 import Data.Text as T (Text, pack)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
@@ -115,10 +111,6 @@ txOutSourceToText :: TxOutSource c -> Text
 txOutSourceToText = \case
   TxOutFromInput txIn -> "Input: " <> txInToText txIn
   TxOutFromOutput txIx -> "Output: " <> T.pack (show txIx)
-
-transProtocolVersion :: ProtVer -> PV1.MajorProtocolVersion
-transProtocolVersion (ProtVer major _minor) =
-  PV1.MajorProtocolVersion ((fromIntegral :: Word64 -> Int) (getVersion64 major))
 
 transDataHash :: DataHash c -> PV1.DatumHash
 transDataHash safe = PV1.DatumHash (transSafeHash safe)
