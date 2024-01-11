@@ -55,7 +55,7 @@ import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Plutus.TxInfo (
   TxOutSource (..),
   transAddr,
-  transCoin,
+  transCoinToValue,
   transDataHash,
   transScriptHash,
   transTxIn,
@@ -301,7 +301,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (BabbageEra c) where
       PV1.TxInfo
         { PV1.txInfoInputs = inputs
         , PV1.txInfoOutputs = outputs
-        , PV1.txInfoFee = transCoin (txBody ^. feeTxBodyL)
+        , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
         , PV1.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
         , PV1.txInfoDCert = txCerts
         , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
@@ -337,7 +337,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV2 (BabbageEra c) where
         { PV2.txInfoInputs = inputs
         , PV2.txInfoOutputs = outputs
         , PV2.txInfoReferenceInputs = refInputs
-        , PV2.txInfoFee = transCoin (txBody ^. feeTxBodyL)
+        , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
         , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
         , PV2.txInfoDCert = txCerts
         , PV2.txInfoWdrl = PV2.fromList $ Alonzo.transTxBodyWithdrawals txBody

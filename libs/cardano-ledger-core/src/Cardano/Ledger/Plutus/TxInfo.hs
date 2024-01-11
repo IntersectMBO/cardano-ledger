@@ -33,11 +33,11 @@ module Cardano.Ledger.Plutus.TxInfo (
   transCred,
   slotToPOSIXTime,
   transTxIn,
-  transCoin,
+  transCoinToValue,
+  transCoinToLovelace,
   transDataPair,
   transExUnits,
   exBudgetToExUnits,
-  coinToLovelace,
 )
 where
 
@@ -179,8 +179,8 @@ transTxId (TxId safe) = PV1.TxId (transSafeHash safe)
 transTxIn :: TxIn c -> PV1.TxOutRef
 transTxIn (TxIn txid txIx) = PV1.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
 
-transCoin :: Coin -> PV1.Value
-transCoin (Coin c) = PV1.singleton PV1.adaSymbol PV1.adaToken c
+transCoinToValue :: Coin -> PV1.Value
+transCoinToValue (Coin c) = PV1.singleton PV1.adaSymbol PV1.adaToken c
 
 transDataPair :: (DataHash c, Data era) -> (PV1.DatumHash, PV1.Datum)
 transDataPair (x, y) = (transDataHash x, PV1.Datum (PV1.dataToBuiltinData (getPlutusData y)))
@@ -200,5 +200,5 @@ exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
       | i >= 0 = Just . fromInteger $ fromSatInt i
       | otherwise = Nothing
 
-coinToLovelace :: Coin -> PV1.Lovelace
-coinToLovelace (Coin c) = PV1.Lovelace c
+transCoinToLovelace :: Coin -> PV1.Lovelace
+transCoinToLovelace (Coin c) = PV1.Lovelace c

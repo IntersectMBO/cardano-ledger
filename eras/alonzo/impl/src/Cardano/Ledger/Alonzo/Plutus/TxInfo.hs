@@ -112,7 +112,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
           -- preserve this behavior by only retaining the Just case:
           PV1.txInfoInputs = catMaybes txInsMaybes
         , PV1.txInfoOutputs = mapMaybe transTxOut $ F.toList (txBody ^. outputsTxBodyL)
-        , PV1.txInfoFee = transCoin (txBody ^. feeTxBodyL)
+        , PV1.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
         , PV1.txInfoMint = transMintValue (txBody ^. mintTxBodyL)
         , PV1.txInfoDCert = txCerts
         , PV1.txInfoWdrl = transTxBodyWithdrawals txBody
@@ -282,10 +282,10 @@ transMultiAssetInternal (MultiAsset m) initAcc = Map.foldlWithKey' accum1 initAc
 -- makes no sense). However, if we don't preserve previous translation, scripts that
 -- previously succeeded will fail.
 transMintValue :: MultiAsset c -> PV1.Value
-transMintValue m = transMultiAssetInternal m (transCoin zero)
+transMintValue m = transMultiAssetInternal m (transCoinToValue zero)
 
 transValue :: MaryValue c -> PV1.Value
-transValue (MaryValue c m) = transCoin c <> transMultiAsset m
+transValue (MaryValue c m) = transCoinToValue c <> transMultiAsset m
 
 -- =============================================
 -- translate fields like TxCert, Withdrawals, and similar
