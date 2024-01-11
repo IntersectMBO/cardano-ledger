@@ -33,6 +33,7 @@ import Test.Cardano.Ledger.Constrained.Monad (monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.CertState (dstateStage, pstateStage, vstateStage)
 import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), modeRepl)
+import Test.Cardano.Ledger.Constrained.Preds.UTxO (utxoStage)
 import Test.Cardano.Ledger.Constrained.Preds.Universes (UnivSize (..), universeStage)
 import Test.Cardano.Ledger.Constrained.Rewrite (standardOrderInfo)
 import Test.Cardano.Ledger.Constrained.Size (Size (..))
@@ -85,7 +86,7 @@ enactStateCheckPreds :: Proof era -> [Pred era]
 enactStateCheckPreds _ = []
 
 ledgerStatePreds :: forall era. Reflect era => UnivSize -> Proof era -> [Pred era]
-ledgerStatePreds usize p =
+ledgerStatePreds _usize p =
   [ Subset (Dom enactWithdrawals) credsUniv
   , Random enactTreasury
   , Random constitution
@@ -101,19 +102,7 @@ ledgerStatePreds usize p =
   , Sized (Range 2 5) currProposals
   , proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit) :$ (Simple currProposals))
   , -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
-    MetaSize (SzRng (usNumPreUtxo usize) (usNumPreUtxo usize)) utxoSize -- must be bigger than sum of (maxsize inputs 10) and (mazsize collateral 3)
-  , Sized utxoSize preUtxo
-  , Sized (Range (usNumColUtxo usize) (usNumColUtxo usize)) colUtxo
-  , MapMember feeTxIn feeTxOut (Right preUtxo)
-  , Subset (Dom preUtxo) txinUniv
-  , Subset (Rng preUtxo) (txoutUniv p)
-  , utxo p :<-: (Constr "mapunion" Map.union ^$ preUtxo ^$ colUtxo)
-  , Disjoint (Dom preUtxo) (Dom colUtxo)
-  , Subset (Dom colUtxo) txinUniv
-  , Subset (Rng colUtxo) (colTxoutUniv p)
-  , NotMember feeTxIn (Dom colUtxo)
-  , NotMember feeTxOut (Rng colUtxo)
-  , SumsTo
+    SumsTo
       (Right (Coin 1))
       deposits
       EQL
@@ -137,10 +126,6 @@ ledgerStatePreds usize p =
             , Sized (Range 0 1) (futurePParamProposals p)
             ]
        )
-  where
-    colUtxo = Var (V "colUtxo" (MapR TxInR (TxOutR p)) No)
-    utxoSize = Var (V "utxoSize" SizeR No)
-    preUtxo = Var (V "preUtxo" (MapR TxInR (TxOutR p)) No)
 
 ledgerStateStage ::
   Reflect era =>
@@ -163,6 +148,7 @@ demo proof mode = do
       ( pure emptySubst
           >>= pParamsStage proof
           >>= universeStage def proof
+          >>= utxoStage def proof
           >>= vstateStage proof
           >>= pstateStage proof
           >>= dstateStage proof
@@ -170,7 +156,7 @@ demo proof mode = do
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
       )
   lstate <- monadTyped $ runTarget env (ledgerStateT proof)
-  let env2 = getTarget lstate (ledgerStateT proof) emptyEnv
+  let env2 = getTarget lstate (ledgerStateT proof) env
   when (mode == Interactive) $ putStrLn (show (pcLedgerState proof lstate))
   modeRepl mode proof env2 ""
 

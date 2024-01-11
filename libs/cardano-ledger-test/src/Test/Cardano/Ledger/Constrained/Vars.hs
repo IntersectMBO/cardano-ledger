@@ -423,6 +423,22 @@ isCredMapT = Var $ V "credMap" (MapR CredR CoinR) (Yes NewEpochStateR credMapL)
 credMapL :: Lens' (NewEpochState era) (Map (Credential 'Staking (EraCrypto era)) Coin)
 credMapL = nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL . isCredMapL
 
+-- | This variable is computed from the UTxO and the PParams,
+--   It represents the incremental stake that is computed by 'smartUTxO'
+--   in the UTxOState Target UTxOStateT
+--   The domain of this map is the complete set of credentials used to delegate Coin
+--   in the TxOuts in the UTxO.
+incrementalStake :: Era era => Term era (Map (Credential 'Staking (EraCrypto era)) Coin)
+incrementalStake = Var $ V "incrementalStake" (MapR CredR CoinR) No
+
+incrementalStakeT :: Reflect era => Proof era -> Target era (Map (Credential 'Staking (EraCrypto era)) Coin)
+incrementalStakeT proof = Constr "computeIncrementalStake" get ^$ (utxo proof)
+  where
+    get utxom =
+      let IStake stakeDistr _ = updateStakeDistribution (justProtocolVersion proof) mempty mempty (liftUTxO utxom)
+       in Map.map fromCompact stakeDistr
+
+-- ==========================
 -- AccountState
 
 treasury :: Era era => Term era Coin
