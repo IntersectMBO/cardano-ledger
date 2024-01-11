@@ -22,8 +22,10 @@ module Cardano.Ledger.Conway.Rules.GovCert (
 where
 
 import Cardano.Ledger.BaseTypes (
+  Anchor,
   EpochNo,
   ShelleyBase,
+  StrictMaybe,
   addEpochInterval,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
@@ -136,6 +138,8 @@ data ConwayGovCertEvent c
     OverwriteCommitteeHotKey !(Credential 'ColdCommitteeRole c) !(Credential 'HotCommitteeRole c)
   | -- | Event indicating that a cold key is being resigned
     ResignCommitteeColdKey !(Credential 'ColdCommitteeRole c)
+  | -- | Event indicating that a drep expiry and anchor are updated
+    DRepUpdate !(Credential 'DRepRole c) !(StrictMaybe (Anchor c))
 
 instance
   ( ConwayEraPParams era
@@ -193,6 +197,7 @@ conwayGovCertTransition = do
     -- Update a DRep expiry too along with its anchor.
     ConwayUpdateDRep cred mAnchor -> do
       Map.member cred vsDReps ?! ConwayDRepNotRegistered cred
+      tellEvent $ DRepUpdate cred mAnchor
       pure
         vState
           { vsDReps =
