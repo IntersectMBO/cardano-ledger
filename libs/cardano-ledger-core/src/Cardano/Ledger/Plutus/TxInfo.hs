@@ -37,12 +37,18 @@ module Cardano.Ledger.Plutus.TxInfo (
   transDataPair,
   transExUnits,
   exBudgetToExUnits,
+  transBoundedRational,
+  transEpochNo,
+  transEpochInterval,
 )
 where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.BaseTypes (
+  BoundedRational (unboundRational),
+  EpochInterval (..),
+  EpochNo (..),
   TxIx,
   certIxToInt,
   txIxToInt,
@@ -78,6 +84,7 @@ import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import PlutusLedgerApi.V1 (SatInt, fromSatInt)
 import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusTx.Ratio as P
 
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
@@ -111,6 +118,9 @@ txOutSourceToText :: TxOutSource c -> Text
 txOutSourceToText = \case
   TxOutFromInput txIn -> "Input: " <> txInToText txIn
   TxOutFromOutput txIx -> "Output: " <> T.pack (show txIx)
+
+transBoundedRational :: BoundedRational r => r -> P.Rational
+transBoundedRational = P.fromGHC . unboundRational
 
 transDataHash :: DataHash c -> PV1.DatumHash
 transDataHash safe = PV1.DatumHash (transSafeHash safe)
@@ -194,3 +204,9 @@ exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
 
 transCoinToLovelace :: Coin -> PV1.Lovelace
 transCoinToLovelace (Coin c) = PV1.Lovelace c
+
+transEpochNo :: EpochNo -> Integer
+transEpochNo = toInteger . unEpochNo
+
+transEpochInterval :: EpochInterval -> Integer
+transEpochInterval = toInteger . unEpochInterval

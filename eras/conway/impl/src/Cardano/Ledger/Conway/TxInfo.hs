@@ -24,6 +24,7 @@ module Cardano.Ledger.Conway.TxInfo (
   transDelegatee,
   transDRep,
   transScriptPurpose,
+  transMap,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
@@ -38,7 +39,14 @@ import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
-import Cardano.Ledger.BaseTypes (EpochNo (..), Inject (..), kindObject, strictMaybe)
+import Cardano.Ledger.BaseTypes (
+  Inject (..),
+  ProtVer (..),
+  StrictMaybe (..),
+  getVersion64,
+  kindObject,
+  strictMaybe,
+ )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -54,8 +62,12 @@ import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionId (..),
+  PrevGovActionId (..),
   ProposalProcedure (..),
+  Vote (..),
   Voter (..),
+  VotingProcedure (..),
+  VotingProcedures (..),
   unGovActionIx,
  )
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..), PlutusScript (..))
@@ -67,11 +79,14 @@ import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Plutus.TxInfo (
+  transBoundedRational,
   transCoinToLovelace,
   transCoinToValue,
   transCred,
+  transEpochNo,
   transKeyHash,
   transRewardAccount,
+  transScriptHash,
   transTxId,
   transTxIn,
  )
@@ -279,8 +294,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
         , PV3.txInfoRedeemers = plutusRedeemers
         , PV3.txInfoData = PV3.fromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
         , PV3.txInfoId = Alonzo.transTxBodyId txBody
-        , -- FIXME: implement for plutus v3
-          PV3.txInfoVotes = error "Unimplemented"
+        , PV3.txInfoVotes = transVotingProcedures (txBody ^. votingProceduresTxBodyL)
         , PV3.txInfoProposalProcedures =
             map transProposal $ toList (txBody ^. proposalProceduresTxBodyL)
         , PV3.txInfoCurrentTreasuryAmount =
@@ -299,16 +313,14 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
 -- | Translate all `Withdrawal`s from within a `TxBody`
 transTxBodyWithdrawals :: EraTxBody era => TxBody era -> PV3.Map PV3.Credential PV3.Lovelace
 transTxBodyWithdrawals txBody =
-  PV3.fromList $
-    map (\(rewardAccount, c) -> (transRewardAccount rewardAccount, transCoinToLovelace c)) $
-      Map.toList (unWithdrawals $ txBody ^. withdrawalsTxBodyL)
+  transMap transRewardAccount transCoinToLovelace (unWithdrawals $ txBody ^. withdrawalsTxBodyL)
 
 transTxCert :: ConwayEraTxCert era => TxCert era -> PV3.TxCert
 transTxCert = \case
   RegPoolTxCert PoolParams {ppId, ppVrf} ->
     PV3.TxCertPoolRegister (transKeyHash ppId) (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes ppVrf)))
-  RetirePoolTxCert poolId (EpochNo retireEpochNo) ->
-    PV3.TxCertPoolRetire (transKeyHash poolId) (toInteger retireEpochNo)
+  RetirePoolTxCert poolId retireEpochNo ->
+    PV3.TxCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
   RegTxCert stakeCred ->
     PV3.TxCertRegStaking (transCred stakeCred) Nothing
   UnRegTxCert stakeCred ->
@@ -376,8 +388,8 @@ transVoter = \case
   DRepVoter cred -> PV3.DRepVoter $ PV3.DRepCredential $ transCred cred
   StakePoolVoter keyHash -> PV3.StakePoolVoter $ transKeyHash keyHash
 
-_transGovActionId :: GovActionId c -> PV3.GovernanceActionId
-_transGovActionId GovActionId {gaidTxId, gaidGovActionIx} =
+transGovActionId :: GovActionId c -> PV3.GovernanceActionId
+transGovActionId GovActionId {gaidTxId, gaidGovActionIx} =
   PV3.GovernanceActionId
     { PV3.gaidTxId = transTxId gaidTxId
     , PV3.gaidGovActionIx = toInteger $ unGovActionIx gaidGovActionIx
@@ -385,15 +397,60 @@ _transGovActionId GovActionId {gaidTxId, gaidGovActionIx} =
 
 transGovAction :: GovAction era -> PV3.GovernanceAction
 transGovAction = \case
-  ParameterChange {} -> unimplemented
-  HardForkInitiation {} -> unimplemented
-  TreasuryWithdrawals {} -> unimplemented
-  NoConfidence {} -> unimplemented
-  UpdateCommittee {} -> unimplemented
-  NewConstitution {} -> unimplemented
+  ParameterChange pGovActionId ppu govPolicy ->
+    PV3.ParameterChange
+      (transPrevGovActionId pGovActionId)
+      (transPParamsUpdate ppu)
+      (transGovPolicy govPolicy)
+  HardForkInitiation pGovActionId protVer ->
+    PV3.HardForkInitiation
+      (transPrevGovActionId pGovActionId)
+      (transProtVer protVer)
+  TreasuryWithdrawals withdrawals govPolicy ->
+    PV3.TreasuryWithdrawals
+      (transMap transRewardAccount transCoinToLovelace withdrawals)
+      (transGovPolicy govPolicy)
+  NoConfidence pGovActionId -> PV3.NoConfidence (transPrevGovActionId pGovActionId)
+  UpdateCommittee pGovActionId ccToRemove ccToAdd quorum ->
+    PV3.UpdateCommittee
+      (transPrevGovActionId pGovActionId)
+      (map (PV3.ColdCommitteeCredential . transCred) $ Set.toList ccToRemove)
+      (transMap (PV3.ColdCommitteeCredential . transCred) transEpochNo ccToAdd)
+      (transBoundedRational quorum)
+  NewConstitution pGovActionId constitution ->
+    PV3.NewConstitution
+      (transPrevGovActionId pGovActionId)
+      (transConstitution constitution)
   InfoAction -> PV3.InfoAction
   where
+    -- TODO: make a new type class `ConwayEraPlutusTxInfo` with `toPlutusPParamsUpdate`
+    -- that can handle this across future eras.
+    transPParamsUpdate _ppu =
+      unimplemented
+    transGovPolicy = \case
+      SJust govPolicy -> Just (transScriptHash govPolicy)
+      SNothing -> Nothing
+    transConstitution (Constitution _ govPolicy) =
+      PV3.Constitution (transGovPolicy govPolicy)
+    transPrevGovActionId = \case
+      SJust (PrevGovActionId gaId) -> Just (transGovActionId gaId)
+      SNothing -> Nothing
     unimplemented = error "Unimplemented"
+
+transMap :: (t1 -> k) -> (t2 -> v) -> Map.Map t1 t2 -> PV3.Map k v
+transMap transKey transValue =
+  PV3.fromList . map (\(k, v) -> (transKey k, transValue v)) . Map.toList
+
+transVotingProcedures ::
+  VotingProcedures era -> PV3.Map PV3.Voter (PV3.Map PV3.GovernanceActionId PV3.Vote)
+transVotingProcedures =
+  transMap transVoter (transMap transGovActionId (transVote . vProcVote)) . unVotingProcedures
+
+transVote :: Vote -> PV3.Vote
+transVote = \case
+  VoteNo -> PV3.VoteNo
+  VoteYes -> PV3.VoteYes
+  Abstain -> PV3.Abstain
 
 transProposal :: ProposalProcedure era -> PV3.ProposalProcedure
 transProposal ProposalProcedure {pProcDeposit, pProcReturnAddr, pProcGovAction} =
@@ -427,3 +484,7 @@ transTxCertV1V2 txCert =
   case Alonzo.transTxCertCommon txCert of
     Nothing -> Left $ inject $ CertificateNotSupported txCert
     Just cert -> Right cert
+
+transProtVer :: ProtVer -> PV3.ProtocolVersion
+transProtVer (ProtVer major minor) =
+  PV3.ProtocolVersion (toInteger (getVersion64 major)) (toInteger minor)
