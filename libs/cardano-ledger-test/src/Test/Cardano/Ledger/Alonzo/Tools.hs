@@ -47,7 +47,7 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
  )
-import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo, Babbage))
+import Test.Cardano.Ledger.Generic.Proof (Proof (Alonzo, Babbage))
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic, always)
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
@@ -63,13 +63,13 @@ tests =
     [ testProperty "Plutus ExUnit translation round-trip" exUnitsTranslationRoundTrip
     , testGroup
         "Alonzo"
-        [ testCase "calculate ExUnits" (exampleExUnitCalc (Alonzo Mock))
-        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc (Alonzo Mock))
+        [ testCase "calculate ExUnits" (exampleExUnitCalc Alonzo)
+        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc Alonzo)
         ]
     , testGroup
         "Babbage"
-        [ testCase "calculate ExUnits" (exampleExUnitCalc (Babbage Mock))
-        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc (Babbage Mock))
+        [ testCase "calculate ExUnits" (exampleExUnitCalc Babbage)
+        , testCase "attempt calculate ExUnits with invalid tx" (exampleInvalidExUnitCalc Babbage)
         ]
     ]
 

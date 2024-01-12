@@ -386,7 +386,7 @@ genStakeRefWith proof ps cs =
   frequency
     [ (80, StakeRefBase <$> pick1 ["from genStakeRefWith StakeRefBase"] cs)
     ,
-      ( if protocolVersion proof >= protocolVersion (Conway Standard) then 0 else 5
+      ( if protocolVersion proof >= protocolVersion Conway then 0 else 5
       , StakeRefPtr <$> pick1 ["from genStakeRefWith StakeRefPtr"] ps
       )
     , (15, pure StakeRefNull)
@@ -639,7 +639,7 @@ universeStage size proof = toolChainSub proof standardOrderInfo (universePreds s
 
 demo :: ReplMode -> IO ()
 demo mode = do
-  let proof = Shelley Standard
+  let proof = Shelley
   subst <- generate (universeStage def proof emptySubst)
   if mode == Interactive
     then putStrLn "\n" >> putStrLn (show subst)

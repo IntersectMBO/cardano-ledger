@@ -125,9 +125,9 @@ tests :: TestTree
 tests =
   testGroup
     "Generic Tests, testing Alonzo PredicateFailures, in postAlonzo eras."
-    [ alonzoBBODYexamplesP (Alonzo Mock)
-    , alonzoBBODYexamplesP (Babbage Mock)
-    -- alonzoBBODYexamplesP (Conway Mock) TODO
+    [ alonzoBBODYexamplesP Alonzo
+    , alonzoBBODYexamplesP Babbage
+    -- alonzoBBODYexamplesP Conway TODO
     ]
 
 alonzoBBODYexamplesP ::
@@ -212,9 +212,9 @@ testAlonzoBlock pf =
     ]
 
 testAlonzoBadPMDHBlock :: GoodCrypto (EraCrypto era) => Proof era -> Block (BHeaderView (EraCrypto era)) era
-testAlonzoBadPMDHBlock pf@(Alonzo _) = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
-testAlonzoBadPMDHBlock pf@(Babbage _) = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
-testAlonzoBadPMDHBlock pf@(Conway _) = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
+testAlonzoBadPMDHBlock pf@Alonzo = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
+testAlonzoBadPMDHBlock pf@Babbage = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
+testAlonzoBadPMDHBlock pf@Conway = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
 testAlonzoBadPMDHBlock other = error ("testAlonzoBadPMDHBlock does not work in era " ++ show other)
 
 -- ============================== DATA ===============================
@@ -680,13 +680,13 @@ testBBodyState pf =
 -- ============================== Helper functions ===============================
 
 makeTooBig :: Proof era -> AlonzoBbodyPredFailure era
-makeTooBig proof@(Alonzo _) =
+makeTooBig proof@Alonzo =
   ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
-makeTooBig proof@(Babbage _) =
+makeTooBig proof@Babbage =
   ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
--- makeTooBig proof@(Conway _) =
+-- makeTooBig proof@Conway =
 --   ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . ConwayCertsFailure . CertFailure . PoolFailure $ ConwayPoolPredFailure -- FIXME: This needs fixing after POOL rules are implemented for Conway
 makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)
 

@@ -373,12 +373,12 @@ instance Reflect era => Sums (TxOutF era) Coin where
 genTxOutX :: Reflect era => Proof era -> Coin -> Gen (TxOutF era)
 genTxOutX p coins = do
   txout <- case p of
-    Shelley _ -> arbitrary
-    Allegra _ -> arbitrary
-    Mary _ -> arbitrary
-    Alonzo _ -> arbitrary
-    Babbage _ -> arbitrary
-    Conway _ -> arbitrary
+    Shelley -> arbitrary
+    Allegra -> arbitrary
+    Mary -> arbitrary
+    Alonzo -> arbitrary
+    Babbage -> arbitrary
+    Conway -> arbitrary
   pure $ TxOutF p (txout & coinTxOutL .~ coins)
 
 instance Reflect era => Sums (ValueF era) Coin where
@@ -498,23 +498,23 @@ instance Show (TxAuxDataF era) where
   show (TxAuxDataF p x) = show ((unReflect pcAuxData p x) :: PDoc)
 
 instance Eq (TxAuxDataF era) where
-  (TxAuxDataF (Shelley _) x) == (TxAuxDataF (Shelley _) y) = x == y
-  (TxAuxDataF (Allegra _) x) == (TxAuxDataF (Allegra _) y) = x == y
-  (TxAuxDataF (Mary _) x) == (TxAuxDataF (Mary _) y) = x == y
-  (TxAuxDataF (Alonzo _) x) == (TxAuxDataF (Alonzo _) y) = x == y
-  (TxAuxDataF (Babbage _) x) == (TxAuxDataF (Babbage _) y) = x == y
-  (TxAuxDataF (Conway _) x) == (TxAuxDataF (Conway _) y) = x == y
+  (TxAuxDataF Shelley x) == (TxAuxDataF Shelley y) = x == y
+  (TxAuxDataF Allegra x) == (TxAuxDataF Allegra y) = x == y
+  (TxAuxDataF Mary x) == (TxAuxDataF Mary y) = x == y
+  (TxAuxDataF Alonzo x) == (TxAuxDataF Alonzo y) = x == y
+  (TxAuxDataF Babbage x) == (TxAuxDataF Babbage y) = x == y
+  (TxAuxDataF Conway x) == (TxAuxDataF Conway y) = x == y
 
 pcAuxData :: Proof era -> TxAuxData era -> PDoc
 pcAuxData p _x = ppString ("TxAuxData " ++ show p) -- TODO make this more accurate
 
 genTxAuxDataF :: Proof era -> Gen (TxAuxDataF era)
-genTxAuxDataF p@(Shelley _) = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
-genTxAuxDataF p@(Allegra _) = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
-genTxAuxDataF p@(Mary _) = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
-genTxAuxDataF p@(Alonzo _) = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
-genTxAuxDataF p@(Babbage _) = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
-genTxAuxDataF p@(Conway _) = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
+genTxAuxDataF p@Shelley = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
+genTxAuxDataF p@Allegra = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
+genTxAuxDataF p@Mary = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
+genTxAuxDataF p@Alonzo = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
+genTxAuxDataF p@Babbage = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
+genTxAuxDataF p@Conway = TxAuxDataF p <$> suchThat arbitrary (validateTxAuxData (protocolVersion p))
 
 -- ==============
 
@@ -528,12 +528,12 @@ instance PrettyA (PParamsUpdate era) => Show (TxF era) where
   show (TxF p x) = show ((unReflect pcTx p x) :: PDoc)
 
 instance Eq (TxF era) where
-  (TxF (Shelley _) x) == (TxF (Shelley _) y) = x == y
-  (TxF (Allegra _) x) == (TxF (Allegra _) y) = x == y
-  (TxF (Mary _) x) == (TxF (Mary _) y) = x == y
-  (TxF (Alonzo _) x) == (TxF (Alonzo _) y) = x == y
-  (TxF (Babbage _) x) == (TxF (Babbage _) y) = x == y
-  (TxF (Conway _) x) == (TxF (Conway _) y) = x == y
+  (TxF Shelley x) == (TxF Shelley y) = x == y
+  (TxF Allegra x) == (TxF Allegra y) = x == y
+  (TxF Mary x) == (TxF Mary y) = x == y
+  (TxF Alonzo x) == (TxF Alonzo y) = x == y
+  (TxF Babbage x) == (TxF Babbage y) = x == y
+  (TxF Conway x) == (TxF Conway y) = x == y
 
 -- ==============
 
@@ -547,12 +547,12 @@ instance Show (TxWitsF era) where
   show (TxWitsF p x) = show ((unReflect pcWitnesses p x) :: PDoc)
 
 instance Eq (TxWitsF era) where
-  (TxWitsF (Shelley _) x) == (TxWitsF (Shelley _) y) = x == y
-  (TxWitsF (Allegra _) x) == (TxWitsF (Allegra _) y) = x == y
-  (TxWitsF (Mary _) x) == (TxWitsF (Mary _) y) = x == y
-  (TxWitsF (Alonzo _) x) == (TxWitsF (Alonzo _) y) = x == y
-  (TxWitsF (Babbage _) x) == (TxWitsF (Babbage _) y) = x == y
-  (TxWitsF (Conway _) x) == (TxWitsF (Conway _) y) = x == y
+  (TxWitsF Shelley x) == (TxWitsF Shelley y) = x == y
+  (TxWitsF Allegra x) == (TxWitsF Allegra y) = x == y
+  (TxWitsF Mary x) == (TxWitsF Mary y) = x == y
+  (TxWitsF Alonzo x) == (TxWitsF Alonzo y) = x == y
+  (TxWitsF Babbage x) == (TxWitsF Babbage y) = x == y
+  (TxWitsF Conway x) == (TxWitsF Conway y) = x == y
 
 -- ==============================
 
@@ -566,12 +566,12 @@ instance PrettyA (PParamsUpdate era) => Show (TxBodyF era) where
   show (TxBodyF p x) = show ((unReflect pcTxBody p x) :: PDoc)
 
 instance Eq (TxBodyF era) where
-  (TxBodyF (Shelley _) x) == (TxBodyF (Shelley _) y) = x == y
-  (TxBodyF (Allegra _) x) == (TxBodyF (Allegra _) y) = x == y
-  (TxBodyF (Mary _) x) == (TxBodyF (Mary _) y) = x == y
-  (TxBodyF (Alonzo _) x) == (TxBodyF (Alonzo _) y) = x == y
-  (TxBodyF (Babbage _) x) == (TxBodyF (Babbage _) y) = x == y
-  (TxBodyF (Conway _) x) == (TxBodyF (Conway _) y) = x == y
+  (TxBodyF Shelley x) == (TxBodyF Shelley y) = x == y
+  (TxBodyF Allegra x) == (TxBodyF Allegra y) = x == y
+  (TxBodyF Mary x) == (TxBodyF Mary y) = x == y
+  (TxBodyF Alonzo x) == (TxBodyF Alonzo y) = x == y
+  (TxBodyF Babbage x) == (TxBodyF Babbage y) = x == y
+  (TxBodyF Conway x) == (TxBodyF Conway y) = x == y
 
 -- ==================
 data TxCertF era where
@@ -584,12 +584,12 @@ instance Show (TxCertF era) where
   show (TxCertF p x) = show (pcTxCert p x)
 
 instance Eq (TxCertF era) where
-  (TxCertF (Shelley _) x) == (TxCertF (Shelley _) y) = x == y
-  (TxCertF (Allegra _) x) == (TxCertF (Allegra _) y) = x == y
-  (TxCertF (Mary _) x) == (TxCertF (Mary _) y) = x == y
-  (TxCertF (Alonzo _) x) == (TxCertF (Alonzo _) y) = x == y
-  (TxCertF (Babbage _) x) == (TxCertF (Babbage _) y) = x == y
-  (TxCertF (Conway _) x) == (TxCertF (Conway _) y) = x == y
+  (TxCertF Shelley x) == (TxCertF Shelley y) = x == y
+  (TxCertF Allegra x) == (TxCertF Allegra y) = x == y
+  (TxCertF Mary x) == (TxCertF Mary y) = x == y
+  (TxCertF Alonzo x) == (TxCertF Alonzo y) = x == y
+  (TxCertF Babbage x) == (TxCertF Babbage y) = x == y
+  (TxCertF Conway x) == (TxCertF Conway y) = x == y
 
 -- ==================
 data PlutusPurposeF era where
@@ -611,21 +611,21 @@ instance Show (PlutusPointerF era) where
   show (PlutusPointerF p x) = unReflect (\_ -> show (ppPlutusPurposeAsIndex x)) p
 
 instance Eq (PlutusPurposeF era) where
-  PlutusPurposeF (Alonzo _) x == PlutusPurposeF (Alonzo _) y = x == y
-  PlutusPurposeF (Babbage _) x == PlutusPurposeF (Babbage _) y = x == y
-  PlutusPurposeF (Conway _) x == PlutusPurposeF (Conway _) y = x == y
+  PlutusPurposeF Alonzo x == PlutusPurposeF Alonzo y = x == y
+  PlutusPurposeF Babbage x == PlutusPurposeF Babbage y = x == y
+  PlutusPurposeF Conway x == PlutusPurposeF Conway y = x == y
   _ == _ = error "Unsupported"
 
 instance Eq (PlutusPointerF era) where
-  PlutusPointerF (Alonzo _) x == PlutusPointerF (Alonzo _) y = x == y
-  PlutusPointerF (Babbage _) x == PlutusPointerF (Babbage _) y = x == y
-  PlutusPointerF (Conway _) x == PlutusPointerF (Conway _) y = x == y
+  PlutusPointerF Alonzo x == PlutusPointerF Alonzo y = x == y
+  PlutusPointerF Babbage x == PlutusPointerF Babbage y = x == y
+  PlutusPointerF Conway x == PlutusPointerF Conway y = x == y
   _ == _ = error "Unsupported"
 
 instance Ord (PlutusPointerF era) where
-  compare (PlutusPointerF (Alonzo _) x) (PlutusPointerF (Alonzo _) y) = compare x y
-  compare (PlutusPointerF (Babbage _) x) (PlutusPointerF (Babbage _) y) = compare x y
-  compare (PlutusPointerF (Conway _) x) (PlutusPointerF (Conway _) y) = compare x y
+  compare (PlutusPointerF Alonzo x) (PlutusPointerF Alonzo y) = compare x y
+  compare (PlutusPointerF Babbage x) (PlutusPointerF Babbage y) = compare x y
+  compare (PlutusPointerF Conway x) (PlutusPointerF Conway y) = compare x y
   compare _ _ = error "Unsupported"
 
 -- =========
@@ -639,17 +639,17 @@ instance Eq (TxOutF era) where
   x1 == x2 = compare x1 x2 == EQ
 
 instance Ord (TxOutF era) where
-  compare (TxOutF (Shelley _) (ShelleyTxOut a1 v1)) (TxOutF (Shelley _) (ShelleyTxOut a2 v2)) =
+  compare (TxOutF Shelley (ShelleyTxOut a1 v1)) (TxOutF Shelley (ShelleyTxOut a2 v2)) =
     compare a1 a2 <> compare v1 v2
-  compare (TxOutF (Allegra _) (ShelleyTxOut a1 v1)) (TxOutF (Allegra _) (ShelleyTxOut a2 v2)) =
+  compare (TxOutF Allegra (ShelleyTxOut a1 v1)) (TxOutF Allegra (ShelleyTxOut a2 v2)) =
     compare (a1, v1) (a2, v2)
-  compare (TxOutF (Mary _) (ShelleyTxOut a1 v1)) (TxOutF (Mary _) (ShelleyTxOut a2 v2)) =
+  compare (TxOutF Mary (ShelleyTxOut a1 v1)) (TxOutF Mary (ShelleyTxOut a2 v2)) =
     compare (a1, v1) (a2, v2)
-  compare (TxOutF (Alonzo _) (AlonzoTxOut a1 v1 d1)) (TxOutF (Alonzo _) (AlonzoTxOut a2 v2 d2)) =
+  compare (TxOutF Alonzo (AlonzoTxOut a1 v1 d1)) (TxOutF Alonzo (AlonzoTxOut a2 v2 d2)) =
     compare (a1, v1, d1) (a2, v2, d2)
-  compare (TxOutF (Babbage _) (BabbageTxOut a1 v1 d1 x1)) (TxOutF (Babbage _) (BabbageTxOut a2 v2 d2 x2)) =
+  compare (TxOutF Babbage (BabbageTxOut a1 v1 d1 x1)) (TxOutF Babbage (BabbageTxOut a2 v2 d2 x2)) =
     compare (a1, v1, d1, fmap hashScript x1) (a2, v2, d2, fmap hashScript x2)
-  compare (TxOutF (Conway _) (BabbageTxOut a1 v1 d1 x1)) (TxOutF (Conway _) (BabbageTxOut a2 v2 d2 x2)) =
+  compare (TxOutF Conway (BabbageTxOut a1 v1 d1 x1)) (TxOutF Conway (BabbageTxOut a2 v2 d2 x2)) =
     compare (a1, v1, d1, fmap hashScript x1) (a2, v2, d2, fmap hashScript x2)
 
 -- ======
@@ -669,12 +669,12 @@ instance Eq (ValueF era) where
   x == y = compare x y == EQ
 
 instance Ord (ValueF era) where
-  (ValueF (Shelley _) x) `compare` (ValueF (Shelley _) y) = compare x y
-  (ValueF (Allegra _) x) `compare` (ValueF (Allegra _) y) = compare x y
-  (ValueF (Mary _) (MaryValue c1 m1)) `compare` (ValueF (Mary _) (MaryValue c2 m2)) = compare c1 c2 <> compare m1 m2
-  (ValueF (Alonzo _) (MaryValue c1 m1)) `compare` (ValueF (Alonzo _) (MaryValue c2 m2)) = compare c1 c2 <> compare m1 m2
-  (ValueF (Babbage _) (MaryValue c1 m1)) `compare` (ValueF (Babbage _) (MaryValue c2 m2)) = compare c1 c2 <> compare m1 m2
-  (ValueF (Conway _) (MaryValue c1 m1)) `compare` (ValueF (Conway _) (MaryValue c2 m2)) = compare c1 c2 <> compare m1 m2
+  (ValueF Shelley x) `compare` (ValueF Shelley y) = compare x y
+  (ValueF Allegra x) `compare` (ValueF Allegra y) = compare x y
+  (ValueF Mary (MaryValue c1 m1)) `compare` (ValueF Mary (MaryValue c2 m2)) = compare c1 c2 <> compare m1 m2
+  (ValueF Alonzo (MaryValue c1 m1)) `compare` (ValueF Alonzo (MaryValue c2 m2)) = compare c1 c2 <> compare m1 m2
+  (ValueF Babbage (MaryValue c1 m1)) `compare` (ValueF Babbage (MaryValue c2 m2)) = compare c1 c2 <> compare m1 m2
+  (ValueF Conway (MaryValue c1 m1)) `compare` (ValueF Conway (MaryValue c2 m2)) = compare c1 c2 <> compare m1 m2
 
 -- ======
 data PParamsF era where
@@ -738,20 +738,20 @@ govProposedL =
     (\(GovState p _) y -> GovState p (putPPUP p y))
 
 getPPUP :: forall era. Proof era -> Gov.GovState era -> ShelleyGovState era
-getPPUP (Shelley _) x = x
-getPPUP (Allegra _) x = x
-getPPUP (Mary _) x = x
-getPPUP (Alonzo _) x = x
-getPPUP (Babbage _) x = x
-getPPUP (Conway _) _ = def @(ShelleyGovState era)
+getPPUP Shelley x = x
+getPPUP Allegra x = x
+getPPUP Mary x = x
+getPPUP Alonzo x = x
+getPPUP Babbage x = x
+getPPUP Conway _ = def @(ShelleyGovState era)
 
 putPPUP :: forall era. Proof era -> ShelleyGovState era -> Gov.GovState era
-putPPUP (Shelley _) x = x
-putPPUP (Allegra _) x = x
-putPPUP (Mary _) x = x
-putPPUP (Alonzo _) x = x
-putPPUP (Babbage _) x = x
-putPPUP (Conway _) _ = Gov.emptyGovState @era
+putPPUP Shelley x = x
+putPPUP Allegra x = x
+putPPUP Mary x = x
+putPPUP Alonzo x = x
+putPPUP Babbage x = x
+putPPUP Conway _ = Gov.emptyGovState @era
 
 -- ================
 liftUTxO :: Map (TxIn (EraCrypto era)) (TxOutF era) -> UTxO era
@@ -774,12 +774,12 @@ instance Show (ProposedPPUpdatesF era) where
 
 genValue :: Proof era -> Gen (ValueF era)
 genValue p = case p of
-  (Shelley _) -> ValueF p <$> arbitrary
-  (Allegra _) -> ValueF p <$> arbitrary
-  (Mary _) -> ValueF p <$> arbitrary
-  (Alonzo _) -> ValueF p <$> arbitrary
-  (Babbage _) -> ValueF p <$> arbitrary
-  (Conway _) -> ValueF p <$> arbitrary
+  Shelley -> ValueF p <$> arbitrary
+  Allegra -> ValueF p <$> arbitrary
+  Mary -> ValueF p <$> arbitrary
+  Alonzo -> ValueF p <$> arbitrary
+  Babbage -> ValueF p <$> arbitrary
+  Conway -> ValueF p <$> arbitrary
 
 genTxOut :: Proof era -> Gen (TxOutF era)
 genTxOut p = do
@@ -788,48 +788,48 @@ genTxOut p = do
 
 genPParams :: Proof era -> Gen (PParamsF era)
 genPParams p = case p of
-  (Shelley _) -> PParamsF p <$> arbitrary
-  (Allegra _) -> PParamsF p <$> arbitrary
-  (Mary _) -> PParamsF p <$> arbitrary
-  (Alonzo _) -> PParamsF p <$> arbitrary
-  (Babbage _) -> PParamsF p <$> arbitrary
-  (Conway _) -> PParamsF p <$> arbitrary
+  Shelley -> PParamsF p <$> arbitrary
+  Allegra -> PParamsF p <$> arbitrary
+  Mary -> PParamsF p <$> arbitrary
+  Alonzo -> PParamsF p <$> arbitrary
+  Babbage -> PParamsF p <$> arbitrary
+  Conway -> PParamsF p <$> arbitrary
 
 genPParamsUpdate :: Proof era -> Gen (PParamsUpdateF era)
 genPParamsUpdate p = case p of
-  (Shelley _) -> PParamsUpdateF p <$> genShelleyPParamsUpdate defaultConstants def
-  (Allegra _) -> PParamsUpdateF p <$> genShelleyPParamsUpdate defaultConstants def
-  (Mary _) -> PParamsUpdateF p <$> genShelleyPParamsUpdate defaultConstants def
-  (Alonzo _) -> PParamsUpdateF p <$> arbitrary
-  (Babbage _) -> PParamsUpdateF p <$> arbitrary
-  (Conway _) -> PParamsUpdateF p <$> arbitrary
+  Shelley -> PParamsUpdateF p <$> genShelleyPParamsUpdate defaultConstants def
+  Allegra -> PParamsUpdateF p <$> genShelleyPParamsUpdate defaultConstants def
+  Mary -> PParamsUpdateF p <$> genShelleyPParamsUpdate defaultConstants def
+  Alonzo -> PParamsUpdateF p <$> arbitrary
+  Babbage -> PParamsUpdateF p <$> arbitrary
+  Conway -> PParamsUpdateF p <$> arbitrary
 
 genProposedPPUpdates :: Proof era -> Gen (ProposedPPUpdatesF era)
 genProposedPPUpdates p = case p of
-  (Shelley _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
-  (Allegra _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
-  (Mary _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
-  (Alonzo _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
-  (Babbage _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
-  (Conway _) -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
+  Shelley -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
+  Allegra -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
+  Mary -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
+  Alonzo -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
+  Babbage -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
+  Conway -> ProposedPPUpdatesF p . PP.ProposedPPUpdates <$> arbitrary
 
 genGovState :: Proof era -> Gen (GovState era)
 genGovState p = case p of
-  (Shelley _) -> GovState p <$> arbitrary
-  (Allegra _) -> GovState p <$> arbitrary
-  (Mary _) -> GovState p <$> arbitrary
-  (Alonzo _) -> GovState p <$> arbitrary
-  (Babbage _) -> GovState p <$> arbitrary
-  (Conway _) -> pure $ GovState p Gov.emptyGovState
+  Shelley -> GovState p <$> arbitrary
+  Allegra -> GovState p <$> arbitrary
+  Mary -> GovState p <$> arbitrary
+  Alonzo -> GovState p <$> arbitrary
+  Babbage -> GovState p <$> arbitrary
+  Conway -> pure $ GovState p Gov.emptyGovState
 
 genUTxO :: Proof era -> Gen (UTxO era)
 genUTxO p = case p of
-  (Shelley _) -> arbitrary
-  (Allegra _) -> arbitrary
-  (Mary _) -> arbitrary
-  (Alonzo _) -> arbitrary
-  (Babbage _) -> arbitrary
-  (Conway _) -> arbitrary
+  Shelley -> arbitrary
+  Allegra -> arbitrary
+  Mary -> arbitrary
+  Alonzo -> arbitrary
+  Babbage -> arbitrary
+  Conway -> arbitrary
 
 -- ========================
 
@@ -854,12 +854,12 @@ instance Show (ScriptF era) where
   show (ScriptF p t) = show ((unReflect pcScript p t) :: PDoc)
 
 instance Eq (ScriptF era) where
-  (ScriptF (Shelley _) x) == (ScriptF (Shelley _) y) = x == y
-  (ScriptF (Allegra _) x) == (ScriptF (Allegra _) y) = x == y
-  (ScriptF (Mary _) x) == (ScriptF (Mary _) y) = x == y
-  (ScriptF (Alonzo _) x) == (ScriptF (Alonzo _) y) = x == y
-  (ScriptF (Babbage _) x) == (ScriptF (Babbage _) y) = x == y
-  (ScriptF (Conway _) x) == (ScriptF (Conway _) y) = x == y
+  (ScriptF Shelley x) == (ScriptF Shelley y) = x == y
+  (ScriptF Allegra x) == (ScriptF Allegra y) = x == y
+  (ScriptF Mary x) == (ScriptF Mary y) = x == y
+  (ScriptF Alonzo x) == (ScriptF Alonzo y) = x == y
+  (ScriptF Babbage x) == (ScriptF Babbage y) = x == y
+  (ScriptF Conway x) == (ScriptF Conway y) = x == y
 
 genScriptF :: Era era => Proof era -> Gen (ScriptF era)
 genScriptF proof = do

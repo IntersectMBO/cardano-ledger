@@ -143,7 +143,7 @@ pParamsStage proof = toolChainSub proof standardOrderInfo (pParamsPreds proof)
 
 demo :: ReplMode -> IO ()
 demo mode = do
-  let proof = Babbage Standard
+  let proof = Babbage
   subst <- generate (pParamsStage proof emptySubst)
   env <- monadTyped (substToEnv subst emptyEnv)
   when (mode == Interactive) $ putStrLn "\n" >> putStrLn (show subst)

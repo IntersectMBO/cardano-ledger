@@ -48,43 +48,43 @@ class HasTokens era where
   forge :: Integer -> Script era -> MultiAsset (EraCrypto era)
 
 instance Crypto c => Scriptic (ShelleyEra c) where
-  never _ (Shelley _) = Multi.RequireAnyOf mempty -- always False
-  always _ (Shelley _) = Multi.RequireAllOf mempty -- always True
-  alwaysAlt _ (Shelley _) = Multi.RequireAllOf mempty -- always True
-  require key (Shelley _) = Multi.RequireSignature key
-  allOf xs (Shelley c) = Multi.RequireAllOf (map ($ Shelley c) xs)
-  anyOf xs (Shelley c) = Multi.RequireAnyOf (map ($ Shelley c) xs)
-  mOf n xs (Shelley c) = Multi.RequireMOf n (map ($ Shelley c) xs)
+  never _ Shelley = Multi.RequireAnyOf mempty -- always False
+  always _ Shelley = Multi.RequireAllOf mempty -- always True
+  alwaysAlt _ Shelley = Multi.RequireAllOf mempty -- always True
+  require key Shelley = Multi.RequireSignature key
+  allOf xs Shelley = Multi.RequireAllOf (map ($ Shelley) xs)
+  anyOf xs Shelley = Multi.RequireAnyOf (map ($ Shelley) xs)
+  mOf n xs Shelley = Multi.RequireMOf n (map ($ Shelley) xs)
 
 -- Make Scripts in AllegraEra
 
 instance Crypto c => Scriptic (AllegraEra c) where
-  never _ (Allegra _) = RequireAnyOf mempty -- always False
-  always _ (Allegra _) = RequireAllOf mempty -- always True
-  alwaysAlt _ (Allegra _) = RequireAllOf mempty -- always True
-  require key (Allegra _) = RequireSignature key
+  never _ Allegra = RequireAnyOf mempty -- always False
+  always _ Allegra = RequireAllOf mempty -- always True
+  alwaysAlt _ Allegra = RequireAllOf mempty -- always True
+  require key Allegra = RequireSignature key
   allOf xs proof = RequireAllOf (Seq.fromList (map ($ proof) xs))
   anyOf xs proof = RequireAnyOf (Seq.fromList (map ($ proof) xs))
   mOf n xs proof = RequireMOf n (Seq.fromList (map ($ proof) xs))
 
 instance Crypto c => PostShelley (AllegraEra c) where
-  before n (Allegra _) = RequireTimeStart (theSlot n)
-  after n (Allegra _) = RequireTimeExpire (theSlot n)
+  before n Allegra = RequireTimeStart (theSlot n)
+  after n Allegra = RequireTimeExpire (theSlot n)
 
 -- Make Scripts in Mary era
 
 instance Crypto c => Scriptic (MaryEra c) where
-  never _ (Mary _) = RequireAnyOf mempty -- always False
-  always _ (Mary _) = RequireAllOf mempty -- always True
-  alwaysAlt _ (Mary _) = RequireAllOf mempty -- always True
-  require key (Mary _) = RequireSignature key
+  never _ Mary = RequireAnyOf mempty -- always False
+  always _ Mary = RequireAllOf mempty -- always True
+  alwaysAlt _ Mary = RequireAllOf mempty -- always True
+  require key Mary = RequireSignature key
   allOf xs proof = RequireAllOf (Seq.fromList (map ($ proof) xs))
   anyOf xs proof = RequireAnyOf (Seq.fromList (map ($ proof) xs))
   mOf n xs proof = RequireMOf n (Seq.fromList (map ($ proof) xs))
 
 instance Crypto c => PostShelley (MaryEra c) where
-  before n (Mary _) = RequireTimeStart (theSlot n)
-  after n (Mary _) = RequireTimeExpire (theSlot n)
+  before n Mary = RequireTimeStart (theSlot n)
+  after n Mary = RequireTimeExpire (theSlot n)
 
 instance forall c. Crypto c => HasTokens (MaryEra c) where
   forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
@@ -114,47 +114,47 @@ instance forall c. Crypto c => HasTokens (ConwayEra c) where
 -- Make Scripts in Alonzo era
 
 instance Crypto c => Scriptic (AlonzoEra c) where
-  never n (Alonzo _) = alwaysFails @'PlutusV1 n -- always False
-  always n (Alonzo _) = alwaysSucceeds @'PlutusV1 n -- always True
-  alwaysAlt n (Alonzo _) = alwaysSucceeds @'PlutusV1 n -- always True
-  require key (Alonzo _) = RequireSignature key
+  never n Alonzo = alwaysFails @'PlutusV1 n -- always False
+  always n Alonzo = alwaysSucceeds @'PlutusV1 n -- always True
+  alwaysAlt n Alonzo = alwaysSucceeds @'PlutusV1 n -- always True
+  require key Alonzo = RequireSignature key
   allOf xs proof = RequireAllOf (Seq.fromList (($ proof) <$> xs))
   anyOf xs proof = RequireAnyOf (Seq.fromList (($ proof) <$> xs))
   mOf n xs proof = RequireMOf n (Seq.fromList (($ proof) <$> xs))
 
 instance Crypto c => PostShelley (AlonzoEra c) where
-  before n (Alonzo _) = RequireTimeStart (theSlot n)
-  after n (Alonzo _) = RequireTimeExpire (theSlot n)
+  before n Alonzo = RequireTimeStart (theSlot n)
+  after n Alonzo = RequireTimeExpire (theSlot n)
 
 -- =================================
 
 instance Crypto c => Scriptic (BabbageEra c) where
-  never n (Babbage _) = alwaysFails @'PlutusV1 n -- always False
-  always n (Babbage _) = alwaysSucceeds @'PlutusV1 n -- always True
-  alwaysAlt n (Babbage _) = alwaysSucceeds @'PlutusV2 n -- always True
-  require key (Babbage _) = RequireSignature key
+  never n Babbage = alwaysFails @'PlutusV1 n -- always False
+  always n Babbage = alwaysSucceeds @'PlutusV1 n -- always True
+  alwaysAlt n Babbage = alwaysSucceeds @'PlutusV2 n -- always True
+  require key Babbage = RequireSignature key
   allOf xs proof = RequireAllOf (Seq.fromList (($ proof) <$> xs))
   anyOf xs proof = RequireAnyOf (Seq.fromList (($ proof) <$> xs))
   mOf n xs proof = RequireMOf n (Seq.fromList (($ proof) <$> xs))
 
 instance Crypto c => PostShelley (BabbageEra c) where
-  before n (Babbage _) = RequireTimeStart (theSlot n)
-  after n (Babbage _) = RequireTimeExpire (theSlot n)
+  before n Babbage = RequireTimeStart (theSlot n)
+  after n Babbage = RequireTimeExpire (theSlot n)
 
 -- =================================
 
 instance Crypto c => Scriptic (ConwayEra c) where
-  never n (Conway _) = alwaysFails @'PlutusV1 n -- always False
-  always n (Conway _) = alwaysSucceeds @'PlutusV1 n -- always True
-  alwaysAlt n (Conway _) = alwaysSucceeds @'PlutusV2 n -- always True
-  require key (Conway _) = RequireSignature key
+  never n Conway = alwaysFails @'PlutusV1 n -- always False
+  always n Conway = alwaysSucceeds @'PlutusV1 n -- always True
+  alwaysAlt n Conway = alwaysSucceeds @'PlutusV2 n -- always True
+  require key Conway = RequireSignature key
   allOf xs proof = RequireAllOf (Seq.fromList (($ proof) <$> xs))
   anyOf xs proof = RequireAnyOf (Seq.fromList (($ proof) <$> xs))
   mOf n xs proof = RequireMOf n (Seq.fromList (($ proof) <$> xs))
 
 instance Crypto c => PostShelley (ConwayEra c) where
-  before n (Conway _) = RequireTimeStart (theSlot n)
-  after n (Conway _) = RequireTimeExpire (theSlot n)
+  before n Conway = RequireTimeStart (theSlot n)
+  after n Conway = RequireTimeExpire (theSlot n)
 
 -- =======================================
 -- Some examples that work in multiple Eras

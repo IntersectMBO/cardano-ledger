@@ -12,7 +12,7 @@ import Control.State.Transition.Extended (STS)
 import Data.Default.Class (def)
 import Test.Cardano.Ledger.Generic.GenState (GenSize)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, noThunksGen)
-import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (..), Reflect)
+import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect)
 import Test.Cardano.Ledger.Generic.Trace (traceProp)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
@@ -21,11 +21,11 @@ test :: TestTree
 test =
   testGroup
     "There are no unexpected thunks in MockChainState"
-    [ f $ Babbage Mock
-    , f $ Alonzo Mock
-    , f $ Allegra Mock
-    , f $ Mary Mock
-    , f $ Shelley Mock
+    [ f $ Babbage
+    , f $ Alonzo
+    , f $ Allegra
+    , f $ Mary
+    , f $ Shelley
     ]
   where
     f proof = testThunks proof 100 def

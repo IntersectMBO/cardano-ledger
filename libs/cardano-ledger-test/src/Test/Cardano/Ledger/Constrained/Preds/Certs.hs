@@ -557,8 +557,8 @@ certsStage us proof subst0 = do
 demo :: ReplMode -> Int -> IO ()
 demo mode seed = do
   let proof =
-        Conway Standard
-  -- Babbage Standard
+        Conway
+  -- Babbage
   env <-
     generateWithSeed
       seed

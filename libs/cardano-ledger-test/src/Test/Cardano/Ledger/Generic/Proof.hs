@@ -17,11 +17,8 @@
 module Test.Cardano.Ledger.Generic.Proof (
   Mock,
   Standard,
-  Evidence (..),
-  Proof (..),
-  getCrypto,
   GoodCrypto,
-  ReflectC (..),
+  Proof (..),
   Reflect (..),
   Some (..),
   WitRule (..),
@@ -67,11 +64,6 @@ module Test.Cardano.Ledger.Generic.Proof (
   whichGovState,
 ) where
 
-import Cardano.Crypto.DSIGN as DSIGN
-import qualified Cardano.Crypto.Hash as CH
-import Cardano.Crypto.KES.Class (ContextKES)
-import qualified Cardano.Crypto.KES.Class as KES (Signable)
-import Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -86,7 +78,6 @@ import Cardano.Ledger.Babbage.Core (BabbageEraPParams)
 import Cardano.Ledger.Babbage.PParams (BabbagePParams (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..), BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import qualified Cardano.Ledger.BaseTypes as Base (Seed)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..), RunConwayRatify (..))
@@ -108,12 +99,11 @@ import Cardano.Ledger.Core (
   TxWits,
   Value,
  )
-import Cardano.Ledger.Crypto (Crypto, DSIGN, HASH, KES, StandardCrypto, VRF)
-import Cardano.Ledger.Keys (DSignable)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Core (EraGov, EraIndependentTxBody, ShelleyEraTxCert)
+import Cardano.Ledger.Shelley.Core (EraGov, ShelleyEraTxCert)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), ShelleyGovState (..))
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig)
@@ -122,9 +112,6 @@ import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsNeeded)
-import Cardano.Protocol.TPraos.API (PraosCrypto)
-import Cardano.Protocol.TPraos.BHeader (BHBody)
-import Cardano.Protocol.TPraos.OCert
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
@@ -133,6 +120,11 @@ import GHC.TypeLits (Symbol)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 
+import Cardano.Crypto.DSIGN.Class (Signable)
+import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Core (EraIndependentTxBody)
+import Cardano.Ledger.Crypto (Crypto, DSIGN, HASH)
+
 -- =================================================
 -- GADTs for witnessing Crypto and Era
 
@@ -140,65 +132,29 @@ type Mock = C_Crypto
 
 type Standard = StandardCrypto
 
-data Evidence c where
-  Standard :: Evidence Standard
-  Mock :: Evidence Mock
+type GoodCrypto c = (Crypto c, Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody))
+
+-- ===================================================
 
 -- | Proof of a valid (predefined) era
 data Proof era where
-  Shelley :: forall c. Crypto c => Evidence c -> Proof (ShelleyEra c)
-  Mary :: forall c. Crypto c => Evidence c -> Proof (MaryEra c)
-  Allegra :: forall c. Crypto c => Evidence c -> Proof (AllegraEra c)
-  Alonzo :: forall c. Crypto c => Evidence c -> Proof (AlonzoEra c)
-  Babbage :: forall c. Crypto c => Evidence c -> Proof (BabbageEra c)
-  Conway :: forall c. Crypto c => Evidence c -> Proof (ConwayEra c)
+  Shelley :: Proof (ShelleyEra StandardCrypto)
+  Mary :: Proof (MaryEra StandardCrypto)
+  Allegra :: Proof (AllegraEra StandardCrypto)
+  Alonzo :: Proof (AlonzoEra StandardCrypto)
+  Babbage :: Proof (BabbageEra StandardCrypto)
+  Conway :: Proof (ConwayEra StandardCrypto)
 
 instance Show (Proof e) where
-  show (Shelley c) = "Shelley " ++ show c
-  show (Allegra c) = "Allegra " ++ show c
-  show (Mary c) = "Mary " ++ show c
-  show (Alonzo c) = "Alonzo " ++ show c
-  show (Babbage c) = "Babbage " ++ show c
-  show (Conway c) = "Conway " ++ show c
-
-instance Show (Evidence c) where
-  show Mock = "Mock"
-  show Standard = "Standard"
-
-getCrypto :: Proof era -> Evidence (EraCrypto era)
-getCrypto (Babbage c) = c
-getCrypto (Alonzo c) = c
-getCrypto (Mary c) = c
-getCrypto (Allegra c) = c
-getCrypto (Shelley c) = c
-getCrypto (Conway c) = c
+  show Shelley = "Shelley"
+  show Allegra = "Allegra"
+  show Mary = "Mary"
+  show Alonzo = "Alonzo"
+  show Babbage = "Babbage"
+  show Conway = "Conway"
 
 -- ==================================
 -- Reflection over Crypto and Era
-
-type GoodCrypto c =
-  ( Crypto c
-  , DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
-  , DSIGNAlgorithm (DSIGN c)
-  , DSIGN.Signable (DSIGN c) (OCertSignable c)
-  , VRF.Signable (VRF c) Base.Seed
-  , KES.Signable (KES c) (BHBody c)
-  , ContextKES (KES c) ~ ()
-  , ContextVRF (VRF c) ~ ()
-  , CH.HashAlgorithm (HASH c)
-  , PraosCrypto c
-  )
-
-class GoodCrypto c => ReflectC c where
-  evidence :: Evidence c
-  liftC :: forall a. (Evidence c -> a) -> a
-  liftC f = f (evidence @c)
-
-instance ReflectC StandardCrypto where
-  evidence = Standard
-
-instance ReflectC C_Crypto where
-  evidence = Mock
 
 class
   ( EraGov era
@@ -206,7 +162,8 @@ class
   , EraUTxO era
   , EraTxAuxData era
   , ShelleyEraTxCert era
-  , ReflectC (EraCrypto era)
+  , --  , GoodCrypto (EraCrypto era)
+    EraCrypto era ~ StandardCrypto
   ) =>
   Reflect era
   where
@@ -214,34 +171,34 @@ class
   lift :: forall a. (Proof era -> a) -> a
   lift f = f (reify @era)
 
-instance ReflectC c => Reflect (ConwayEra c) where
-  reify = Conway evidence
+instance Reflect (ConwayEra StandardCrypto) where
+  reify = Conway
 
-instance ReflectC c => Reflect (BabbageEra c) where
-  reify = Babbage evidence
+instance Reflect (BabbageEra StandardCrypto) where
+  reify = Babbage
 
-instance ReflectC c => Reflect (AlonzoEra c) where
-  reify = Alonzo evidence
+instance Reflect (AlonzoEra StandardCrypto) where
+  reify = Alonzo
 
-instance ReflectC c => Reflect (MaryEra c) where
-  reify = Mary evidence
+instance Reflect (MaryEra StandardCrypto) where
+  reify = Mary
 
-instance ReflectC c => Reflect (AllegraEra c) where
-  reify = Allegra evidence
+instance Reflect (AllegraEra StandardCrypto) where
+  reify = Allegra
 
-instance ReflectC c => Reflect (ShelleyEra c) where
-  reify = Shelley evidence
+instance Reflect (ShelleyEra StandardCrypto) where
+  reify = Shelley
 
 -- ===================================================
 -- Tools for building TestTrees for multiple Eras
 
 instance Show (Some Proof) where
-  show (Some (Shelley c)) = show (Shelley c)
-  show (Some (Allegra c)) = show (Allegra c)
-  show (Some (Mary c)) = show (Mary c)
-  show (Some (Alonzo c)) = show (Alonzo c)
-  show (Some (Babbage c)) = show (Babbage c)
-  show (Some (Conway c)) = show (Conway c)
+  show (Some Shelley) = show Shelley
+  show (Some Allegra) = show Allegra
+  show (Some Mary) = show Mary
+  show (Some Alonzo) = show Alonzo
+  show (Some Babbage) = show Babbage
+  show (Some Conway) = show Conway
 
 -- ===============================================================
 -- Proofs or witnesses to EraRule Tags
@@ -308,14 +265,14 @@ runSTS' (EPOCH _proof) x = runShelleyBase (applySTSTest x)
 -- | Like runSTS, but makes the components of the TRC triple explicit.
 --   in case you can't remember, in ghci type
 -- @@@
---   :t goSTS (UTXOW (Babbage Mock))
---   goSTS (LEDGER (Babbage Mock))
---     :: LedgerEnv (BabbageEra C_Crypto)
---        -> (UTxOState (BabbageEra C_Crypto), CertState C_Crypto)
---        -> Cardano.Ledger.Alonzo.Tx.AlonzoTx (BabbageEra C_Crypto)
+--   :t goSTS (UTXOW Babbage)
+--   goSTS (LEDGER Babbage)
+--     :: LedgerEnv (BabbageEra StandardCrypto)
+--        -> (UTxOState (BabbageEra StandardCrypto), CertState StandardCrypto)
+--        -> Cardano.Ledger.Alonzo.Tx.AlonzoTx (BabbageEra StandardCrypto)
 --        -> (Either
---              [LedgerPredicateFailure (BabbageEra C_Crypto)]
---              (UTxOState (BabbageEra C_Crypto), CertState C_Crypto)
+--              [LedgerPredicateFailure (BabbageEra StandardCrypto)]
+--              (UTxOState (BabbageEra StandardCrypto), CertState StandardCrypto)
 --        -> ans)
 --        -> ans
 -- @@@
@@ -357,27 +314,27 @@ goSTS (EPOCH _proof) env state sig cont =
 -- Crypto agnostic operations on (Proof era) via (Some Proof)
 
 preShelley, preAllegra, preMary, preAlonzo, preBabbage, preConway :: [Some Proof]
-preShelley = [Some (Shelley Mock)]
-preAllegra = [Some (Allegra Mock), Some (Shelley Mock)]
-preMary = [Some (Mary Mock), Some (Allegra Mock), Some (Shelley Mock)]
-preAlonzo = [Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock), Some (Shelley Mock)]
-preBabbage = [Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock), Some (Shelley Mock)]
-preConway = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock), Some (Shelley Mock)]
+preShelley = [Some Shelley]
+preAllegra = [Some Allegra, Some Shelley]
+preMary = [Some Mary, Some Allegra, Some Shelley]
+preAlonzo = [Some Alonzo, Some Mary, Some Allegra, Some Shelley]
+preBabbage = [Some Babbage, Some Alonzo, Some Mary, Some Allegra, Some Shelley]
+preConway = [Some Conway, Some Babbage, Some Alonzo, Some Mary, Some Allegra, Some Shelley]
 
 postShelley, postAllegra, postMary, postAlonzo, postBabbage, postConway :: [Some Proof]
 postShelley =
-  [ Some (Conway Mock)
-  , Some (Babbage Mock)
-  , Some (Alonzo Mock)
-  , Some (Mary Mock)
-  , Some (Allegra Mock)
-  , Some (Shelley Mock)
+  [ Some Conway
+  , Some Babbage
+  , Some Alonzo
+  , Some Mary
+  , Some Allegra
+  , Some Shelley
   ]
-postAllegra = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock)]
-postMary = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock)]
-postAlonzo = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock)]
-postBabbage = [Some (Conway Mock), Some (Babbage Mock)]
-postConway = [Some (Conway Mock)]
+postAllegra = [Some Conway, Some Babbage, Some Alonzo, Some Mary, Some Allegra]
+postMary = [Some Conway, Some Babbage, Some Alonzo, Some Mary]
+postAlonzo = [Some Conway, Some Babbage, Some Alonzo]
+postBabbage = [Some Conway, Some Babbage]
+postConway = [Some Conway]
 
 -- ============================================
 
@@ -400,12 +357,12 @@ specialize ::
   t
 specialize proof action =
   case proof of
-    Shelley _ -> action
-    Allegra _ -> action
-    Mary _ -> action
-    Alonzo _ -> action
-    Babbage _ -> action
-    Conway _ -> action
+    Shelley -> action
+    Allegra -> action
+    Mary -> action
+    Alonzo -> action
+    Babbage -> action
+    Conway -> action
 {-# NOINLINE specialize #-}
 
 -- =================================================
@@ -417,48 +374,32 @@ specialize proof action =
 --   one writes:            unReflect f proof arg1 .. argn
 --   which will not require a (Reflect era) instance
 unReflect :: (Reflect era => Proof era -> a) -> Proof era -> a
-unReflect f (Shelley Mock) = f (Shelley Mock)
-unReflect f (Shelley Standard) = f (Shelley Standard)
-unReflect f (Allegra Mock) = f (Allegra Mock)
-unReflect f (Allegra Standard) = f (Allegra Standard)
-unReflect f (Mary Mock) = f (Mary Mock)
-unReflect f (Mary Standard) = f (Mary Standard)
-unReflect f (Alonzo Mock) = f (Alonzo Mock)
-unReflect f (Alonzo Standard) = f (Alonzo Standard)
-unReflect f (Babbage Mock) = f (Babbage Mock)
-unReflect f (Babbage Standard) = f (Babbage Standard)
-unReflect f (Conway Mock) = f (Conway Mock)
-unReflect f (Conway Standard) = f (Conway Standard)
+unReflect f Shelley = f Shelley
+unReflect f Allegra = f Allegra
+unReflect f Mary = f Mary
+unReflect f Alonzo = f Alonzo
+unReflect f Babbage = f Babbage
+unReflect f Conway = f Conway
 
 -- ======================================================
 
-instance Singleton Evidence where
-  testEql Standard Standard = Just Refl
-  testEql Mock Mock = Just Refl
-  testEql _ _ = Nothing
-  cmpIndex x y = compare (shape x) (shape y)
-
-instance Shaped Evidence any where
-  shape Standard = Nullary 0
-  shape Mock = Nullary 1
-
 instance Singleton Proof where
-  testEql (Shelley c1) (Shelley c2) = do Refl <- testEql c1 c2; Just Refl
-  testEql (Allegra c1) (Allegra c2) = do Refl <- testEql c1 c2; Just Refl
-  testEql (Mary c1) (Mary c2) = do Refl <- testEql c1 c2; Just Refl
-  testEql (Alonzo c1) (Alonzo c2) = do Refl <- testEql c1 c2; Just Refl
-  testEql (Babbage c1) (Babbage c2) = do Refl <- testEql c1 c2; Just Refl
-  testEql (Conway c1) (Conway c2) = do Refl <- testEql c1 c2; Just Refl
+  testEql Shelley Shelley = Just Refl
+  testEql Allegra Allegra = Just Refl
+  testEql Mary Mary = Just Refl
+  testEql Alonzo Alonzo = Just Refl
+  testEql Babbage Babbage = Just Refl
+  testEql Conway Conway = Just Refl
   testEql _ _ = Nothing
   cmpIndex x y = compare (shape x) (shape y)
 
 instance Shaped Proof any where
-  shape (Shelley c) = Nary 0 [shape c]
-  shape (Allegra c) = Nary 1 [shape c]
-  shape (Mary c) = Nary 2 [shape c]
-  shape (Alonzo c) = Nary 3 [shape c]
-  shape (Babbage c) = Nary 4 [shape c]
-  shape (Conway c) = Nary 5 [shape c]
+  shape Shelley = Nary 0 []
+  shape Allegra = Nary 1 []
+  shape Mary = Nary 2 []
+  shape Alonzo = Nary 3 []
+  shape Babbage = Nary 4 []
+  shape Conway = Nary 5 []
 
 -- ======================================================
 -- GADT's that witness the special properties that hold
@@ -470,36 +411,36 @@ data TxOutWit era where
   TxOutBabbageToConway :: (TxOut era ~ BabbageTxOut era, BabbageEraTxOut era) => TxOutWit era
 
 whichTxOut :: Proof era -> TxOutWit era
-whichTxOut (Shelley _) = TxOutShelleyToMary
-whichTxOut (Allegra _) = TxOutShelleyToMary
-whichTxOut (Mary _) = TxOutShelleyToMary
-whichTxOut (Alonzo _) = TxOutAlonzoToAlonzo
-whichTxOut (Babbage _) = TxOutBabbageToConway
-whichTxOut (Conway _) = TxOutBabbageToConway
+whichTxOut Shelley = TxOutShelleyToMary
+whichTxOut Allegra = TxOutShelleyToMary
+whichTxOut Mary = TxOutShelleyToMary
+whichTxOut Alonzo = TxOutAlonzoToAlonzo
+whichTxOut Babbage = TxOutBabbageToConway
+whichTxOut Conway = TxOutBabbageToConway
 
 data TxCertWit era where
   TxCertShelleyToBabbage :: (TxCert era ~ ShelleyTxCert era, ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCertWit era
   TxCertConwayToConway :: (TxCert era ~ ConwayTxCert era, ConwayEraTxCert era, ConwayEraPParams era) => TxCertWit era
 
 whichTxCert :: Proof era -> TxCertWit era
-whichTxCert (Shelley _) = TxCertShelleyToBabbage
-whichTxCert (Allegra _) = TxCertShelleyToBabbage
-whichTxCert (Mary _) = TxCertShelleyToBabbage
-whichTxCert (Alonzo _) = TxCertShelleyToBabbage
-whichTxCert (Babbage _) = TxCertShelleyToBabbage
-whichTxCert (Conway _) = TxCertConwayToConway
+whichTxCert Shelley = TxCertShelleyToBabbage
+whichTxCert Allegra = TxCertShelleyToBabbage
+whichTxCert Mary = TxCertShelleyToBabbage
+whichTxCert Alonzo = TxCertShelleyToBabbage
+whichTxCert Babbage = TxCertShelleyToBabbage
+whichTxCert Conway = TxCertConwayToConway
 
 data ValueWit era where
   ValueShelleyToAllegra :: Value era ~ Coin => ValueWit era
   ValueMaryToConway :: Value era ~ MaryValue (EraCrypto era) => ValueWit era
 
 whichValue :: Proof era -> ValueWit era
-whichValue (Shelley _) = ValueShelleyToAllegra
-whichValue (Allegra _) = ValueShelleyToAllegra
-whichValue (Mary _) = ValueMaryToConway
-whichValue (Alonzo _) = ValueMaryToConway
-whichValue (Babbage _) = ValueMaryToConway
-whichValue (Conway _) = ValueMaryToConway
+whichValue Shelley = ValueShelleyToAllegra
+whichValue Allegra = ValueShelleyToAllegra
+whichValue Mary = ValueMaryToConway
+whichValue Alonzo = ValueMaryToConway
+whichValue Babbage = ValueMaryToConway
+whichValue Conway = ValueMaryToConway
 
 data PParamsWit era where
   PParamsShelleyToMary :: (PParamsHKD Identity era ~ ShelleyPParams Identity era, EraPParams era) => PParamsWit era
@@ -508,12 +449,12 @@ data PParamsWit era where
   PParamsConwayToConway :: (PParamsHKD Identity era ~ ConwayPParams Identity era, ConwayEraPParams era) => PParamsWit era
 
 whichPParams :: Proof era -> PParamsWit era
-whichPParams (Shelley _) = PParamsShelleyToMary
-whichPParams (Allegra _) = PParamsShelleyToMary
-whichPParams (Mary _) = PParamsShelleyToMary
-whichPParams (Alonzo _) = PParamsAlonzoToAlonzo
-whichPParams (Babbage _) = PParamsBabbageToBabbage
-whichPParams (Conway _) = PParamsConwayToConway
+whichPParams Shelley = PParamsShelleyToMary
+whichPParams Allegra = PParamsShelleyToMary
+whichPParams Mary = PParamsShelleyToMary
+whichPParams Alonzo = PParamsAlonzoToAlonzo
+whichPParams Babbage = PParamsBabbageToBabbage
+whichPParams Conway = PParamsConwayToConway
 
 data UTxOWit era where
   UTxOShelleyToMary ::
@@ -534,12 +475,12 @@ data UTxOWit era where
     UTxOWit era
 
 whichUTxO :: Proof era -> UTxOWit era
-whichUTxO (Shelley _) = UTxOShelleyToMary
-whichUTxO (Allegra _) = UTxOShelleyToMary
-whichUTxO (Mary _) = UTxOShelleyToMary
-whichUTxO (Alonzo _) = UTxOAlonzoToConway
-whichUTxO (Babbage _) = UTxOAlonzoToConway
-whichUTxO (Conway _) = UTxOAlonzoToConway
+whichUTxO Shelley = UTxOShelleyToMary
+whichUTxO Allegra = UTxOShelleyToMary
+whichUTxO Mary = UTxOShelleyToMary
+whichUTxO Alonzo = UTxOAlonzoToConway
+whichUTxO Babbage = UTxOAlonzoToConway
+whichUTxO Conway = UTxOAlonzoToConway
 
 data ScriptWit era where
   ScriptShelleyToShelley :: (Script era ~ MultiSig era, EraScript era) => ScriptWit era
@@ -547,21 +488,21 @@ data ScriptWit era where
   ScriptAlonzoToConway :: (Script era ~ AlonzoScript era, EraScript era) => ScriptWit era
 
 whichScript :: Proof era -> ScriptWit era
-whichScript (Shelley _) = ScriptShelleyToShelley
-whichScript (Allegra _) = ScriptAllegraToMary
-whichScript (Mary _) = ScriptAllegraToMary
-whichScript (Alonzo _) = ScriptAlonzoToConway
-whichScript (Babbage _) = ScriptAlonzoToConway
-whichScript (Conway _) = ScriptAlonzoToConway
+whichScript Shelley = ScriptShelleyToShelley
+whichScript Allegra = ScriptAllegraToMary
+whichScript Mary = ScriptAllegraToMary
+whichScript Alonzo = ScriptAlonzoToConway
+whichScript Babbage = ScriptAlonzoToConway
+whichScript Conway = ScriptAlonzoToConway
 
 data GovStateWit era where
   GovStateShelleyToBabbage :: (EraGov era, GovState era ~ ShelleyGovState era) => GovStateWit era
   GovStateConwayToConway :: (RunConwayRatify era, EraGov era, GovState era ~ ConwayGovState era) => GovStateWit era
 
 whichGovState :: Proof era -> GovStateWit era
-whichGovState (Shelley _) = GovStateShelleyToBabbage
-whichGovState (Allegra _) = GovStateShelleyToBabbage
-whichGovState (Mary _) = GovStateShelleyToBabbage
-whichGovState (Alonzo _) = GovStateShelleyToBabbage
-whichGovState (Babbage _) = GovStateShelleyToBabbage
-whichGovState (Conway _) = GovStateConwayToConway
+whichGovState Shelley = GovStateShelleyToBabbage
+whichGovState Allegra = GovStateShelleyToBabbage
+whichGovState Mary = GovStateShelleyToBabbage
+whichGovState Alonzo = GovStateShelleyToBabbage
+whichGovState Babbage = GovStateShelleyToBabbage
+whichGovState Conway = GovStateConwayToConway

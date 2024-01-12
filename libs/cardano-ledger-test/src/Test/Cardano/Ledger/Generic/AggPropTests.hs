@@ -47,7 +47,7 @@ import Test.Cardano.Ledger.Generic.Functions (
  )
 import Test.Cardano.Ledger.Generic.GenState (GenSize (..), initStableFields)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockBlock (..), MockChainState (..))
-import Test.Cardano.Ledger.Generic.Proof (Evidence (..), Proof (..), Reflect (..), Some (..), preBabbage, unReflect)
+import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..), Some (..), preBabbage, unReflect)
 import Test.Cardano.Ledger.Generic.Trace (Gen1, genTrace, testPropMax)
 import Test.QuickCheck
 import Test.Tasty
@@ -96,9 +96,9 @@ aggTests :: TestTree
 aggTests =
   testGroup
     "tests, aggregating Tx's over a Trace."
-    [ testPropMax 30 "UTxO size in Babbage" (aggUTxO (Babbage Mock))
-    , testPropMax 30 "UTxO size in Alonzo" (aggUTxO (Alonzo Mock))
-    , testPropMax 30 "UTxO size in Mary" (aggUTxO (Mary Mock))
+    [ testPropMax 30 "UTxO size in Babbage" (aggUTxO Babbage)
+    , testPropMax 30 "UTxO size in Alonzo" (aggUTxO Alonzo)
+    , testPropMax 30 "UTxO size in Mary" (aggUTxO Mary)
     ]
 
 -- ===============================================================
@@ -107,17 +107,17 @@ aggTests =
 -- We will add additional analogs (ledgerTraceFromBlock, poolTraceFromBlock) soon,
 -- and then redo the tests in that module in the Generic fashion
 forAllChainTrace :: (Testable prop, Reflect era) => Proof era -> Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
-forAllChainTrace p@(Conway _) n propf =
+forAllChainTrace p@Conway n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
-forAllChainTrace p@(Babbage _) n propf =
+forAllChainTrace p@Babbage n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
-forAllChainTrace p@(Alonzo _) n propf =
+forAllChainTrace p@Alonzo n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
-forAllChainTrace p@(Mary _) n propf =
+forAllChainTrace p@Mary n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
-forAllChainTrace p@(Allegra _) n propf =
+forAllChainTrace p@Allegra n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
-forAllChainTrace p@(Shelley _) n propf =
+forAllChainTrace p@Shelley n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 
 -- ===========================================================

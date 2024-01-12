@@ -350,12 +350,12 @@ ppup :: Era era => Proof era -> Term era (ShelleyGovState era)
 ppup p = Var $ pV p "ppup" (PPUPStateR p) (Yes NewEpochStateR (ppupsL p))
 
 ppupsL :: Proof era -> NELens era (ShelleyGovState era)
-ppupsL (Shelley _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
-ppupsL (Allegra _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
-ppupsL (Mary _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
-ppupsL (Alonzo _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
-ppupsL (Babbage _) = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
-ppupsL (Conway _) = error "Conway era does not have a PPUPState, in ppupsL"
+ppupsL Shelley = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+ppupsL Allegra = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+ppupsL Mary = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+ppupsL Alonzo = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+ppupsL Babbage = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+ppupsL Conway = error "Conway era does not have a PPUPState, in ppupsL"
 
 pparamProposals :: Era era => Proof era -> Term era (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 pparamProposals p = Var (pV p "pparamProposals" (MapR GenHashR (PParamsUpdateR p)) No)
@@ -395,27 +395,27 @@ govL :: Lens' (GovState era) (Gov.GovState era)
 govL = lens f g
   where
     f :: GovState era -> Gov.GovState era
-    f (GovState (Shelley _) x) = x
-    f (GovState (Allegra _) x) = x
-    f (GovState (Mary _) x) = x
-    f (GovState (Alonzo _) x) = x
-    f (GovState (Babbage _) x) = x
-    f (GovState (Conway _) x) = x
+    f (GovState Shelley x) = x
+    f (GovState Allegra x) = x
+    f (GovState Mary x) = x
+    f (GovState Alonzo x) = x
+    f (GovState Babbage x) = x
+    f (GovState Conway x) = x
     g :: GovState era -> Gov.GovState era -> GovState era
-    g (GovState p@(Shelley _) _) y = GovState p y
-    g (GovState p@(Allegra _) _) y = GovState p y
-    g (GovState p@(Mary _) _) y = GovState p y
-    g (GovState p@(Alonzo _) _) y = GovState p y
-    g (GovState p@(Babbage _) _) y = GovState p y
-    g (GovState p@(Conway _) _) y = GovState p y
+    g (GovState p@Shelley _) y = GovState p y
+    g (GovState p@Allegra _) y = GovState p y
+    g (GovState p@Mary _) y = GovState p y
+    g (GovState p@Alonzo _) y = GovState p y
+    g (GovState p@Babbage _) y = GovState p y
+    g (GovState p@Conway _) y = GovState p y
 
 govStateT :: forall era. Era era => Proof era -> RootTarget era (GovState era) (GovState era)
-govStateT p@(Shelley _) = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
-govStateT p@(Allegra _) = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
-govStateT p@(Mary _) = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
-govStateT p@(Alonzo _) = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
-govStateT p@(Babbage _) = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
-govStateT p@(Conway _) = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (unReflect conwayGovStateT p) govL
+govStateT p@Shelley = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
+govStateT p@Allegra = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
+govStateT p@Mary = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
+govStateT p@Alonzo = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
+govStateT p@Babbage = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (ppupStateT p) govL
+govStateT p@Conway = Invert "GovState" (typeRep @(GovState era)) (GovState p) :$ Shift (unReflect conwayGovStateT p) govL
 
 individualPoolStakeL :: Lens' (IndividualPoolStake c) Rational
 individualPoolStakeL = lens individualPoolStake (\ds u -> ds {individualPoolStake = u})
@@ -902,12 +902,12 @@ newEpochStateConstr
       SNothing
       (PoolDistr nesPd')
       ( case proof of
-          Shelley _ -> UTxO Map.empty
-          Allegra _ -> ()
-          Mary _ -> ()
-          Alonzo _ -> ()
-          Babbage _ -> ()
-          Conway _ -> ()
+          Shelley -> UTxO Map.empty
+          Allegra -> ()
+          Mary -> ()
+          Alonzo -> ()
+          Babbage -> ()
+          Conway -> ()
       )
 
 -- | Target for NewEpochState
@@ -1048,7 +1048,7 @@ instantaneousRewardsT =
 
 -- | A String that pretty prints the complete set of variables of the NewEpochState
 allvars :: String
-allvars = show (ppTarget (newEpochStateT (Conway Standard)))
+allvars = show (ppTarget (newEpochStateT Conway))
 
 printTarget :: RootTarget era root t -> IO ()
 printTarget t = putStrLn (show (ppTarget t))

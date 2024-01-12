@@ -48,7 +48,7 @@ import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.Tools (setMinFeeTx)
 import Cardano.Ledger.TxIn (TxIn (..))
-import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.Val (Val (..), inject)
 import Control.Monad (when)
 import Control.State.Transition.Extended (STS (..), TRC (..))
@@ -232,32 +232,29 @@ getPlutusDataHashes ut (TxBodyF _ txbodyV) m =
 
 bootWitsT ::
   forall era.
-  EraTxOut era =>
+  Reflect era =>
   Proof era ->
   Map (TxIn (EraCrypto era)) (TxOutF era) ->
   TxBodyF era ->
   Map (KeyHash 'Payment (EraCrypto era)) (Addr (EraCrypto era), SigningKey) ->
   Set (BootstrapWitness (EraCrypto era))
-bootWitsT proof spend (TxBodyF _ txb) byronUniv =
-  case getCrypto proof of
-    Mock -> error "Can only use StandardCrypto in bootWitsT"
-    Standard -> bootWitness h boots byronUniv
+bootWitsT proof spend (TxBodyF _ txb) byronUniv = bootWitness h boots byronUniv
+  where
+    boots :: [BootstrapAddress (EraCrypto era)] -- Not every Addr has a BootStrapAddress
+    boots = Map.foldl' accum [] spend -- Compute a list of them.
       where
-        boots :: [BootstrapAddress (EraCrypto era)] -- Not every Addr has a BootStrapAddress
-        boots = Map.foldl' accum [] spend -- Compute a list of them.
-          where
-            accum ans (TxOutF _ out) = case out ^. addrTxOutL of
-              AddrBootstrap b -> b : ans
-              _ -> ans
-        h = hashBody proof txb
+        accum ans (TxOutF _ out) = case out ^. addrTxOutL of
+          AddrBootstrap b -> b : ans
+          _ -> ans
+    h = hashBody proof txb
 
 hashBody :: forall era. Proof era -> TxBody era -> Hash (EraCrypto era) EraIndependentTxBody
-hashBody (Shelley _) txb = extractHash @(EraCrypto era) (hashAnnotated txb)
-hashBody (Allegra _) txb = extractHash @(EraCrypto era) (hashAnnotated txb)
-hashBody (Mary _) txb = extractHash @(EraCrypto era) (hashAnnotated txb)
-hashBody (Alonzo _) txb = extractHash @(EraCrypto era) (hashAnnotated txb)
-hashBody (Babbage _) txb = extractHash @(EraCrypto era) (hashAnnotated txb)
-hashBody (Conway _) txb = extractHash @(EraCrypto era) (hashAnnotated txb)
+hashBody Shelley txb = extractHash @(EraCrypto era) (hashAnnotated txb)
+hashBody Allegra txb = extractHash @(EraCrypto era) (hashAnnotated txb)
+hashBody Mary txb = extractHash @(EraCrypto era) (hashAnnotated txb)
+hashBody Alonzo txb = extractHash @(EraCrypto era) (hashAnnotated txb)
+hashBody Babbage txb = extractHash @(EraCrypto era) (hashAnnotated txb)
+hashBody Conway txb = extractHash @(EraCrypto era) (hashAnnotated txb)
 
 -- =======================================
 
@@ -357,12 +354,12 @@ necessaryKeyHashes ::
   Set (KeyHash 'Witness (EraCrypto era))
 necessaryKeyHashes (TxBodyF _ txb) u gd reqsigners =
   case reify @era of
-    Shelley _ -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
-    Allegra _ -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
-    Mary _ -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
-    Alonzo _ -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
-    Babbage _ -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
-    Conway _ -> Set.union (getWitsVKeyNeeded def (liftUTxO u) txb) reqsigners
+    Shelley -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
+    Allegra -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
+    Mary -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
+    Alonzo -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
+    Babbage -> Set.union (getWitsVKeyNeeded certState (liftUTxO u) txb) reqsigners
+    Conway -> Set.union (getWitsVKeyNeeded def (liftUTxO u) txb) reqsigners
   where
     certState :: CertState era
     certState = def & certDStateL . dsGenDelegsL .~ GenDelegs gd
@@ -430,9 +427,9 @@ scriptWitsLangs :: Map k (ScriptF era) -> Set Language
 scriptWitsLangs m = Map.foldl' accum Set.empty m
   where
     accum :: Set Language -> ScriptF era -> Set Language
-    accum ans (ScriptF (Alonzo _) (PlutusScript ps)) = Set.insert (plutusScriptLanguage ps) ans
-    accum ans (ScriptF (Babbage _) (PlutusScript ps)) = Set.insert (plutusScriptLanguage ps) ans
-    accum ans (ScriptF (Conway _) (PlutusScript ps)) = Set.insert (plutusScriptLanguage ps) ans
+    accum ans (ScriptF Alonzo (PlutusScript ps)) = Set.insert (plutusScriptLanguage ps) ans
+    accum ans (ScriptF Babbage (PlutusScript ps)) = Set.insert (plutusScriptLanguage ps) ans
+    accum ans (ScriptF Conway (PlutusScript ps)) = Set.insert (plutusScriptLanguage ps) ans
     accum ans _ = ans
 
 -- | Starting in the Babbage era, we can adjust the script witnesses by not supplying
@@ -827,7 +824,7 @@ genTxAndNewEpoch sizes proof = do
 
 demoTxNes :: IO ()
 demoTxNes = do
-  let proof = Conway Standard
+  let proof = Conway
   (nes, _tx, env) <- generate $ genTxAndNewEpoch def proof
   putStrLn (show (psNewEpochState proof nes))
   pools <- monadTyped $ runTerm env regPools
@@ -848,7 +845,7 @@ demoTxNes = do
 
 demoTx :: IO ()
 demoTx = do
-  let proof = Conway Standard
+  let proof = Conway
   (ls, tx, env) <- generate $ genTxAndLedger def proof
   putStrLn (show (pcLedgerState proof ls))
   putStrLn (show (pcTx proof tx))
@@ -859,7 +856,7 @@ demoTx = do
 gone :: Gen (IO ())
 gone = do
   txIx <- arbitrary
-  let proof = Babbage Standard
+  let proof = Babbage
       sizes = def
   (ledgerstate, tx, env) <- genTxAndLedger sizes proof
   slot <- monadTyped (findVar (unVar currentSlot) env)
@@ -867,16 +864,16 @@ gone = do
   accntState <- monadTyped (runTarget env accountStateT)
   utxo1 <- monadTyped (findVar (unVar (utxo proof)) env)
   let lenv = LedgerEnv slot txIx pp accntState
-  -- putStrLn (show (pcTx (Babbage Standard) tx))
+  -- putStrLn (show (pcTx Babbage tx))
   pure $ case applySTSByProof proof (TRC (lenv, ledgerstate, tx)) of
     Right _ledgerState' -> do
-      -- putStrLn (show (pcTx (Babbage Standard) tx))
+      -- putStrLn (show (pcTx Babbage tx))
       putStrLn "SUCCESS"
     Left errs -> do
       putStrLn "FAIL"
       putStrLn (show (pgenTx proof utxo1 tx))
       putStrLn (show (ppList prettyA errs))
-      goRepl (Babbage Standard) env ""
+      goRepl Babbage env ""
 
 test :: Maybe Int -> IO ()
 test (Just seed) = do x <- generateWithSeed seed gone; x
@@ -933,6 +930,12 @@ pgenTx proof ut tx = ppRecord (pack "Tx") pairs
     fields = abstractTx proof tx
     pairs = concatMap (pgenTxField proof ut) fields
 
+pcTxWithUTxO :: Reflect era => Proof era -> UTxO era -> Tx era -> PDoc
+pcTxWithUTxO proof (UTxO ut) tx = ppRecord (pack "Tx") pairs
+  where
+    fields = abstractTx proof tx
+    pairs = concatMap (pgenTxField proof (fmap (TxOutF proof) ut)) fields
+
 -- =================================================
 -- Demos and Tests
 
@@ -979,18 +982,18 @@ oneTest sizes proof = do
         )
 
 main1 :: IO ()
-main1 = quickCheck (withMaxSuccess 30 (oneTest def (Babbage Standard)))
+main1 = quickCheck (withMaxSuccess 30 (oneTest def Babbage))
 
 main2 :: IO ()
-main2 = quickCheck (withMaxSuccess 30 (oneTest def (Shelley Standard)))
+main2 = quickCheck (withMaxSuccess 30 (oneTest def Shelley))
 
 demo :: ReplMode -> IO ()
 demo mode = do
-  let proof = Babbage Standard
-  -- Conway Standard
-  -- Alonzo Standard
-  -- Mary Standard
-  -- Shelley Standard
+  let proof = Babbage
+  -- Conway
+  -- Alonzo
+  -- Mary
+  -- Shelley
   let sizes = def
   subst <-
     generate
@@ -1030,8 +1033,8 @@ demoTest =
   testGroup
     "Tests for Tx Stage"
     [ testIO "Testing Tx Stage" (demo CI)
-    , testProperty "One Tx Test Babbage" $ withMaxSuccess 30 (oneTest def (Babbage Standard))
-    , testProperty "One Tx Test Shelley" $ withMaxSuccess 30 (oneTest def (Shelley Standard))
+    , testProperty "One Tx Test Babbage" $ withMaxSuccess 30 (oneTest def Babbage)
+    , testProperty "One Tx Test Shelley" $ withMaxSuccess 30 (oneTest def Shelley)
     ]
 
 main :: IO ()

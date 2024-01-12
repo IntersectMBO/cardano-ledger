@@ -219,20 +219,20 @@ setVar term _ = failTrace ["Non Var term in call to 'setVar'", show term]
 -- A few helper functions that need to do different things in different Eras.
 
 refInputs :: Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
-refInputs (Shelley _) _ = Set.empty
-refInputs (Allegra _) _ = Set.empty
-refInputs (Mary _) _ = Set.empty
-refInputs (Alonzo _) _ = Set.empty
-refInputs (Babbage _) txb = txb ^. referenceInputsTxBodyL
-refInputs (Conway _) txb = txb ^. referenceInputsTxBodyL
+refInputs Shelley _ = Set.empty
+refInputs Allegra _ = Set.empty
+refInputs Mary _ = Set.empty
+refInputs Alonzo _ = Set.empty
+refInputs Babbage txb = txb ^. referenceInputsTxBodyL
+refInputs Conway txb = txb ^. referenceInputsTxBodyL
 
 reqSig :: Proof era -> TxBody era -> Set (KeyHash 'Witness (EraCrypto era))
-reqSig (Shelley _) _ = Set.empty
-reqSig (Allegra _) _ = Set.empty
-reqSig (Mary _) _ = Set.empty
-reqSig (Alonzo _) _ = Set.empty
-reqSig (Babbage _) txb = txb ^. reqSignerHashesTxBodyL
-reqSig (Conway _) txb = txb ^. reqSignerHashesTxBodyL
+reqSig Shelley _ = Set.empty
+reqSig Allegra _ = Set.empty
+reqSig Mary _ = Set.empty
+reqSig Alonzo _ = Set.empty
+reqSig Babbage txb = txb ^. reqSignerHashesTxBodyL
+reqSig Conway txb = txb ^. reqSignerHashesTxBodyL
 
 -- =======================================================================================
 -- Code to run the standard [Pred era] found in the Preds directory in the TraceM monad

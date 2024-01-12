@@ -122,10 +122,10 @@ genPlutusScript tag proof = do
   -- For reasons unknown, this number differs from Alonzo to Babbage
   -- Perhaps because Babbage is using PlutusV2 scripts?
   let numArgs = case (proof, tag) of
-        (Conway _, Spending) -> 2
-        (Conway _, _) -> 1
-        (Babbage _, Spending) -> 2
-        (Babbage _, _) -> 1
+        (Conway, Spending) -> 2
+        (Conway, _) -> 1
+        (Babbage, Spending) -> 2
+        (Babbage, _) -> 1
         (_, Spending) -> 3
         (_, _) -> 2
   -- While using varying number of arguments for alwaysSucceeds we get
@@ -143,25 +143,25 @@ genCoreScript ::
   ValidityInterval ->
   Gen (Script era)
 genCoreScript proof tag keymap vi = case proof of
-  Conway _ ->
+  Conway ->
     frequency
       [ (1, TimelockScript <$> genTimelock keymap vi proof)
       -- TODO Add this once scripts are working in Conway
       -- , (1, snd <$> genPlutusScript tag proof)
       ]
-  Babbage _ ->
+  Babbage ->
     frequency
       [ (1, TimelockScript <$> genTimelock keymap vi proof)
       , (1, snd <$> genPlutusScript tag proof)
       ]
-  Alonzo _ ->
+  Alonzo ->
     frequency
       [ (1, TimelockScript <$> genTimelock keymap vi proof)
       , (1, snd <$> genPlutusScript tag proof)
       ]
-  Mary _ -> genTimelock keymap vi proof
-  Allegra _ -> genTimelock keymap vi proof
-  Shelley _ -> genMultiSig keymap proof
+  Mary -> genTimelock keymap vi proof
+  Allegra -> genTimelock keymap vi proof
+  Shelley -> genMultiSig keymap proof
 
 -- | For any given Era, there are only a finite number of Plutus scripts.
 --   This function computes all of them. There will be two failing scripts
@@ -187,10 +187,10 @@ plutusByTag :: Proof era -> PlutusPurposeTag -> [(IsValid, Script era)]
 plutusByTag proof tag = trueS ++ falseS
   where
     numArgs = case (proof, tag) of
-      (Conway _, Spending) -> 2
-      (Conway _, _) -> 1
-      (Babbage _, Spending) -> 2
-      (Babbage _, _) -> 1
+      (Conway, Spending) -> 2
+      (Conway, _) -> 1
+      (Babbage, Spending) -> 2
+      (Babbage, _) -> 1
       (_, Spending) -> 3
       (_, _) -> 2
     trueS = [(IsValid True, alwaysTrue proof mlanguage (numArgs + n)) | n <- [0, 1, 2, 3 :: Natural]]
