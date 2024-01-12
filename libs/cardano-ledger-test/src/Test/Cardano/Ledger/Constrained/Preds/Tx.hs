@@ -96,6 +96,7 @@ import Test.Cardano.Ledger.Constrained.Preds.NewEpochState (epochStateStage, new
 import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), goRepl, modeRepl)
 import Test.Cardano.Ledger.Constrained.Preds.TxOut (txOutPreds)
+import Test.Cardano.Ledger.Constrained.Preds.UTxO (utxoStage)
 import Test.Cardano.Ledger.Constrained.Preds.Universes hiding (demo, demoTest, main)
 import Test.Cardano.Ledger.Constrained.Rewrite
 import Test.Cardano.Ledger.Constrained.Scripts (sufficientScript)
@@ -124,7 +125,9 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   ppMap,
   ppRecord,
   ppSafeHash,
+  ppString,
   psNewEpochState,
+  putDoc,
  )
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.TxGen (applySTSByProof)
@@ -134,6 +137,9 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
 import Cardano.Ledger.DRep (drepDepositL)
+import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..), calculatePoolDistr)
+import qualified Cardano.Ledger.UMap as UMap
+import qualified Data.VMap as VMap
 import qualified Test.Cardano.Ledger.Constrained.Preds.CertState as CertState
 import qualified Test.Cardano.Ledger.Constrained.Preds.Certs as Certs
 import qualified Test.Cardano.Ledger.Constrained.Preds.LedgerState as LedgerState
@@ -796,6 +802,7 @@ genTxAndLedger sizes proof = do
     ( pure emptySubst
         >>= pParamsStage proof
         >>= universeStage sizes proof
+        >>= utxoStage sizes proof
         >>= vstateStage proof
         >>= pstateStage proof
         >>= dstateStage proof
@@ -816,6 +823,7 @@ genTxAndNewEpoch sizes proof = do
     ( pure emptySubst
         >>= pParamsStage proof
         >>= universeStage sizes proof
+        >>= utxoStage sizes proof
         >>= vstateStage proof
         >>= pstateStage proof
         >>= dstateStage proof
@@ -837,6 +845,20 @@ demoTxNes = do
   let proof = Conway Standard
   (nes, _tx, env) <- generate $ genTxAndNewEpoch def proof
   putStrLn (show (psNewEpochState proof nes))
+  pools <- monadTyped $ runTerm env regPools
+  deleg <- monadTyped $ runTerm env delegations
+  stak <- monadTyped $ runTerm env incrementalStake
+  putDoc (ppString "\nPool " <> prettyA pools)
+  putDoc (ppString "\nDeleg " <> prettyA deleg)
+  putDoc (ppString "\nStake " <> prettyA stak)
+  let distr =
+        calculatePoolDistr
+          ( SnapShot
+              (Stake (VMap.fromMap (Map.map UMap.compactCoinOrError stak)))
+              (VMap.fromMap deleg)
+              (VMap.fromMap pools)
+          )
+  putDoc (ppString "\nPoolDistr " <> prettyA distr)
   goRepl proof env ""
 
 demoTx :: IO ()
@@ -944,6 +966,7 @@ oneTest sizes proof = do
     pure emptySubst
       >>= pParamsStage proof
       >>= universeStage sizes proof
+      >>= utxoStage sizes proof
       >>= vstateStage proof
       >>= pstateStage proof
       >>= dstateStage proof
@@ -989,6 +1012,7 @@ demo mode = do
       ( pure emptySubst
           >>= pParamsStage proof
           >>= universeStage sizes proof
+          >>= utxoStage sizes proof
           >>= vstateStage proof
           >>= pstateStage proof
           >>= dstateStage proof

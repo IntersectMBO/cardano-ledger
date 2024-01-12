@@ -249,7 +249,10 @@ certStateGenPreds p =
   , rewardRange :=: Elems rewards
   , NotMember (Lit CoinR (Coin 0)) (Rng stakeDeposits)
   , Dom rewards :=: Dom stakeDeposits
+  , Sized (AtMost 8) delegations
   , Dom delegations :⊆: Dom rewards
+  , Dom delegations :⊆: Dom incrementalStake
+  , Rng delegations :⊆: Dom regPools
   , if protocolVersion p >= protocolVersion (Conway Standard)
       then Sized (ExactSize 0) ptrs
       else Dom rewards :=: Rng ptrs

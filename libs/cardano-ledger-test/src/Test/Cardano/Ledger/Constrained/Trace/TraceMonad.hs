@@ -80,6 +80,7 @@ import Test.Cardano.Ledger.Constrained.Preds.CertState (
 import Test.Cardano.Ledger.Constrained.Preds.LedgerState (ledgerStateStage)
 import Test.Cardano.Ledger.Constrained.Preds.NewEpochState (epochStateStage, newEpochStateStage)
 import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
+import Test.Cardano.Ledger.Constrained.Preds.UTxO (utxoStage)
 import Test.Cardano.Ledger.Constrained.Preds.Universes (universeStage)
 import Test.Cardano.Ledger.Constrained.Rewrite (
   DependGraph (..),
@@ -269,6 +270,9 @@ universeTrace proof subst = liftGen (universeStage def proof subst)
 pparamsTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
 pparamsTrace proof subst = liftGen (pParamsStage proof subst)
 
+utxoTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
+utxoTrace proof subst = liftGen (utxoStage def proof subst)
+
 pstateTrace :: Reflect era => Proof era -> Subst era -> TraceM era (Subst era)
 pstateTrace proof subst = liftGen (pstateStage proof subst)
 
@@ -323,6 +327,7 @@ genLedgerStateEnv proof = do
     pure emptySubst
       >>= pparamsTrace proof
       >>= universeTrace proof
+      >>= utxoTrace proof
       >>= vstateTrace proof
       >>= pstateTrace proof
       >>= dstateTrace proof
@@ -338,6 +343,7 @@ genNewEpochStateEnv proof = do
     pure emptySubst
       >>= pparamsTrace proof
       >>= universeTrace proof
+      >>= utxoTrace proof
       >>= vstateTrace proof
       >>= pstateTrace proof
       >>= dstateTrace proof
@@ -416,7 +422,10 @@ traceStepToVector _ [] _ zs = pure (fromList (reverse (map (\(x, y) -> (SS.fromL
 traceStepToVector getTx steps m prev = do
   n <- liftGen $ choose (1, 2)
   let steplist = take n steps
-  nextslot <- liftGen ((+ m) <$> choose (2, 4))
+  nextslot <- liftGen ((+ m) <$> frequency [(2, pure 2), (1, pure 3), (1, pure 4)])
+  -- Longtraces, with large inter block slot changes may exceed the Maximum validity of the Validity interval in generated
+  -- scripts, so try for an average slot difference less than 3, that should suport Traces up to length 300
+  -- since  Sized (Range 900 1000) endSlotDelta, should always be at east 900
   traceStepToVector getTx (drop n steps) nextslot ((map getTx steplist, SlotNo m) : prev)
 
 -- | Generate a Control.State.Transition.Trace(Trace) from a (TraceM era (Tx era))

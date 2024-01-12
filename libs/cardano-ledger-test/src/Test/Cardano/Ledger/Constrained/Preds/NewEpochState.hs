@@ -7,19 +7,23 @@
 
 module Test.Cardano.Ledger.Constrained.Preds.NewEpochState where
 
+import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..), calculatePoolDistr)
 import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Core (EraGov)
+import qualified Cardano.Ledger.UMap as UMap
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
-import Data.Ratio ((%))
+import qualified Data.Map.Strict as Map
+import qualified Data.VMap as VMap
 import Test.Cardano.Ledger.Constrained.Ast
-import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad (monadTyped)
 import Test.Cardano.Ledger.Constrained.Preds.CertState (dstateStage, pstateStage, vstateStage)
 import Test.Cardano.Ledger.Constrained.Preds.LedgerState (ledgerStateStage)
 import Test.Cardano.Ledger.Constrained.Preds.PParams (pParamsStage)
 import Test.Cardano.Ledger.Constrained.Preds.Repl (ReplMode (..), modeRepl)
+import Test.Cardano.Ledger.Constrained.Preds.UTxO (utxoStage)
 import Test.Cardano.Ledger.Constrained.Preds.Universes (universeStage)
 import Test.Cardano.Ledger.Constrained.Rewrite (OrderInfo (..), standardOrderInfo)
 import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
@@ -35,11 +39,9 @@ import Test.Tasty (TestTree, defaultMain)
 
 epochstatePreds :: EraGov era => Proof era -> [Pred era]
 epochstatePreds _proof =
-  [ Dom markStake `Subset` credsUniv
-  , Dom markDelegs `Subset` credsUniv
-  , Rng markDelegs `Subset` poolHashUniv
-  , Sized (Range 1 2) markPools
-  , Dom markPools `Subset` poolHashUniv
+  [ incrementalStake :=: markStake
+  , delegations :=: markDelegs
+  , regPools :=: markPools
   , Dom setStake `Subset` credsUniv
   , Dom setDelegs `Subset` credsUniv
   , Rng setDelegs `Subset` poolHashUniv
@@ -51,8 +53,22 @@ epochstatePreds _proof =
   , Sized (Range 1 2) goPools
   , Dom goPools `Subset` poolHashUniv
   , Random snapShotFee
-  , SumsTo (Right (1 % 1000)) (Lit RationalR 1) EQL [ProjMap RationalR individualPoolStakeL markPoolDistr]
-  , Sized (Range 2 6) markPoolDistr
+  , markPoolDistr
+      :<-: ( Constr
+              "calculatePoolDistr"
+              ( \stak del pl ->
+                  unPoolDistr $
+                    calculatePoolDistr
+                      ( SnapShot
+                          (Stake (VMap.fromMap (Map.map UMap.compactCoinOrError stak)))
+                          (VMap.fromMap del)
+                          (VMap.fromMap pl)
+                      )
+              )
+              ^$ markStake
+              ^$ markDelegs
+              ^$ markPools
+           )
   ]
 
 newEpochStatePreds :: Era era => Proof era -> [Pred era]
@@ -79,6 +95,7 @@ demoES proof mode = do
       ( pure emptySubst
           >>= pParamsStage proof
           >>= universeStage def proof
+          >>= utxoStage def proof
           >>= vstateStage proof
           >>= pstateStage proof
           >>= dstateStage proof

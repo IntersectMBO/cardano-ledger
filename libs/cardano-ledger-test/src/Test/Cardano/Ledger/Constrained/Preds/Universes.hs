@@ -493,7 +493,8 @@ universePreds :: Reflect era => UnivSize -> Proof era -> [Pred era]
 universePreds size p =
   [ Sized (Range 100 500) currentSlot
   , Sized (Range 0 30) beginSlotDelta -- Note that (currentSlot - beginSlotDelta) is aways positive
-  , Sized (Range 300 500) endSlotDelta
+  , Sized (Range 900 1000) endSlotDelta -- Note each block may have spacing of 2-4 blocks,
+  -- So for a Trace of length at most 300, we need at least 900 slots on average
   , Sized (ExactSize (usNumKeys size)) keypairs
   , keymapUniv :<-: (Constr "xx" (\s -> Map.fromList (map (\x -> (hashKey (vKey x), x)) s)) ^$ keypairs)
   , Sized (ExactSize (usNumPools size)) prePoolUniv

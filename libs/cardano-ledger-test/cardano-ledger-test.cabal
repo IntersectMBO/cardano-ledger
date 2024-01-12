@@ -37,6 +37,7 @@ library
         Test.Cardano.Ledger.Constrained.Preds.Certs
         Test.Cardano.Ledger.Constrained.Preds.LedgerState
         Test.Cardano.Ledger.Constrained.Preds.NewEpochState
+        Test.Cardano.Ledger.Constrained.Preds.UTxO
         Test.Cardano.Ledger.Constrained.Trace.TraceMonad
         Test.Cardano.Ledger.Constrained.Trace.SimpleTx
         Test.Cardano.Ledger.Constrained.Trace.Actions
