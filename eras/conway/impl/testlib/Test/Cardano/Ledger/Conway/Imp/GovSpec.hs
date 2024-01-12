@@ -10,7 +10,11 @@
 
 module Test.Cardano.Ledger.Conway.Imp.GovSpec where
 
-import Cardano.Ledger.Allegra.Scripts (pattern RequireAllOf, pattern RequireAnyOf)
+import Cardano.Ledger.Allegra.Scripts (
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+ )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState (vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (Coin))
@@ -227,7 +231,10 @@ spec =
 
       it "policy is respected by proposals" $ do
         scriptHash <- impAddNativeScript $ RequireAllOf mempty
-        wrongScriptHash <- impAddNativeScript $ RequireAnyOf mempty
+        wrongScriptHash <-
+          impAddNativeScript $
+            RequireMOf 1 $
+              SSeq.fromList [RequireAnyOf mempty, RequireAllOf mempty]
         modifyNES $
           nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
             .~ Constitution def (SJust scriptHash)
@@ -275,7 +282,8 @@ spec =
                 , pProcDeposit = pp ^. ppGovActionDepositL
                 , pProcAnchor = def
                 }
-          res `shouldBeLeft` []
+          res
+            `shouldBeLeft` [inject $ InvalidPolicyHash @era (SJust wrongScriptHash) (SJust scriptHash)]
 
         impAnn "TreasuryWithdrawals with invalid policy succeeds" $ do
           rewardAccount <- registerRewardAccount
@@ -292,7 +300,8 @@ spec =
                 , pProcDeposit = pp ^. ppGovActionDepositL
                 , pProcAnchor = def
                 }
-          res `shouldBeLeft` []
+          res `shouldBeLeft`
+             [inject $ InvalidPolicyHash @era (SJust wrongScriptHash) (SJust scriptHash)]
 
     describe "DRep expiry" $ do
       it "is updated based on to number of dormant epochs" $ do

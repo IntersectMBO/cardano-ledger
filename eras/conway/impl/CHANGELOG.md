@@ -56,6 +56,7 @@
 
 ## 1.11.0.0
 
+* Add `submitProposal_`
 * Switch `ppCommitteeMaxTermLength` to `EpochNo`, rather than `Natural`
 * Add `conwayTotalDepositsTxBody` and `conwayProposalsDeposits`
 * Add `conwayDRepDepositsTxCerts`, `conwayDRepRefundsTxCerts`,

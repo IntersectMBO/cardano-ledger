@@ -49,7 +49,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getsNES,
   impAddNativeScript,
   impAnn,
-  mkTxWits,
   runImpRule,
   tryRunImpRule,
   registerRewardAccount,
@@ -60,6 +59,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   lookupImpRootTxOut,
   -- Logging
   logEntry,
+  logToExpr,
   logStakeDistr,
   -- Combinators
   withNoFixup,
@@ -470,20 +470,6 @@ lookupImpRootTxOut = do
     Nothing -> error "Root txId no longer points to an existing unspent output"
     Just rootTxOut -> pure (rootTxIn, rootTxOut)
 
-fixupScriptWitnesses ::
-  forall era.
-  ShelleyEraImp era =>
-  Tx era ->
-  ImpTestM era (Tx era)
-fixupScriptWitnesses tx = do
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
-  -- TODO: Add proper support for Plutus Scripts
-  let scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
-      scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
-  ImpTestState {impScripts} <- get
-  logEntry $ show (impScripts `Map.restrictKeys` scriptHashesNeeded)
-  pure (tx & witsTxL . scriptTxWitsL <>~ (impScripts `Map.restrictKeys` scriptHashesNeeded))
-
 impAddNativeScript ::
   forall era.
   EraScript era =>
@@ -495,6 +481,34 @@ impAddNativeScript nativeScript = do
   ImpTestState {impScripts} <- get
   impScriptsL .= Map.insert scriptHash script impScripts
   pure scriptHash
+
+addScriptTxWits ::
+  forall era.
+  ShelleyEraImp era =>
+  Tx era ->
+  ImpTestM era (Tx era)
+addScriptTxWits tx = do
+  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  -- TODO: Add proper support for Plutus Scripts
+  let scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
+      scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
+  ImpTestState {impScripts} <- get
+  pure (tx & witsTxL . scriptTxWitsL <>~ (impScripts `Map.restrictKeys` scriptHashesNeeded))
+
+-- | Adds @TxWits@ that will satisfy all of the required key witnesses
+addAddrTxWits ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  Tx era ->
+  ImpTestM era (Tx era)
+addAddrTxWits tx = do
+  let txBody = tx ^. bodyTxL
+      txBodyHash = hashAnnotated txBody
+  witsVKeyNeeded <- impWitsVKeyNeeded txBody
+  keyPairs <- mapM lookupKeyPair $ Set.toList witsVKeyNeeded
+  pure $
+    tx & witsTxL . addrTxWitsL <>~ mkWitnessesVKey txBodyHash keyPairs
 
 fixupFees ::
   forall era.
@@ -529,7 +543,7 @@ fixupFees tx = do
     remainingTxOut' = remainingTxOut & coinTxOutL .~ remainderAvailable
     -- If the remainder is sufficently big we add it to outputs, otherwise we add the
     -- extraneous coin to the fee and discard the remainder TxOut
-    txBalanced
+    txWithFee
       | remainderAvailable >= getMinCoinTxOut pp remainingTxOut' =
           txNoWits
             & bodyTxL . outputsTxBodyL .~ (remainingTxOut' :<| outsWithoutRemaining)
@@ -538,14 +552,24 @@ fixupFees tx = do
           txNoWits
             & bodyTxL . outputsTxBodyL .~ outsWithoutRemaining
             & bodyTxL . feeTxBodyL .~ (fee <> remainingTxOut ^. coinTxOutL)
-  wits <- mkTxWits (txBalanced ^. bodyTxL)
-  let txWithWits = txBalanced & witsTxL .~ wits
-      Coin feeUsed = txWithWits ^. bodyTxL . feeTxBodyL
-      Coin feeMin = getMinFeeTx pp txWithWits
+  pure txWithFee
+
+fixupTx ::
+  forall era.
+  ShelleyEraImp era =>
+  Tx era ->
+  ImpTestM era (Tx era)
+fixupTx txRaw = do
+  txWithScriptWits <- addScriptTxWits txRaw
+  txWithFee <- fixupFees txWithScriptWits
+  txFixed <- addAddrTxWits txWithFee
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  let Coin feeUsed = txFixed ^. bodyTxL . feeTxBodyL
+      Coin feeMin = getMinFeeTx pp txFixed
   when (feeUsed /= feeMin) $ do
     logEntry $
       "Estimated fee " <> show feeUsed <> " while required fee is " <> show feeMin
-  pure txWithWits
+  pure txFixed
 
 submitTx_ :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era ()
 submitTx_ = void . submitTx
@@ -562,7 +586,7 @@ trySubmitTx tx = do
   doFixup <- asks iteDoTxFixup
   txFixed <-
     if doFixup
-      then fixupScriptWitnesses tx >>= fixupFees
+      then fixupTx tx
       else pure tx
   lEnv <- impLedgerEnv st
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
@@ -698,6 +722,9 @@ logEntry e = impLogL %= (<> pretty loc <> "\t" <> pretty e <> line)
         (_, srcLoc) : _ -> formatSrcLoc srcLoc
         _ -> ""
 
+logToExpr :: (HasCallStack, ToExpr a) => a -> ImpTestM era ()
+logToExpr e = logEntry (showExpr e)
+
 withImpState :: ShelleyEraImp era => SpecWith (ImpTestState era) -> Spec
 withImpState =
   beforeAll $
@@ -714,20 +741,6 @@ withImpState =
         }
   where
     rootCoin = Coin 1_000_000_000
-
--- | Returns the @TxWits@ needed for sumbmitting the transaction
-mkTxWits ::
-  ( HasCallStack
-  , ShelleyEraImp era
-  ) =>
-  TxBody era ->
-  ImpTestM era (TxWits era)
-mkTxWits txBody = do
-  let txBodyHash = hashAnnotated txBody
-  witsVKeyNeeded <- impWitsVKeyNeeded txBody
-  keyPairs <- mapM lookupKeyPair $ Set.toList witsVKeyNeeded
-  pure $
-    mkBasicTxWits & addrTxWitsL .~ mkWitnessesVKey txBodyHash keyPairs
 
 -- | Creates a fresh @SafeHash@
 freshSafeHash :: Era era => ImpTestM era (SafeHash (EraCrypto era) a)
