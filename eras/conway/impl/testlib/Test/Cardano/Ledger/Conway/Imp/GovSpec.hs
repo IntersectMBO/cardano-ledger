@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -9,6 +10,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.GovSpec where
 
+import Cardano.Ledger.Allegra.Scripts (pattern RequireAllOf, pattern RequireAnyOf)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState (vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (Coin))
@@ -21,7 +23,6 @@ import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
  )
-import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Control.Monad (replicateM_)
 import Control.State.Transition.Extended (PredicateFailure)
@@ -32,7 +33,6 @@ import Data.Maybe
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
-import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
@@ -225,10 +225,9 @@ spec =
           enactState <- getsNES $ newEpochStateGovStateL . cgEnactStateL
           rsEnactState pulserRatifyState `shouldBe` enactState
 
-      xit "policy is respected by proposals" $ do
-        let
-          scriptHash = hashScript @era $ alwaysSucceeds @'PlutusV3 0
-          wrongScriptHash = hashScript @era $ alwaysSucceeds @'PlutusV3 1
+      it "policy is respected by proposals" $ do
+        scriptHash <- impAddNativeScript $ RequireAllOf mempty
+        wrongScriptHash <- impAddNativeScript $ RequireAnyOf mempty
         modifyNES $
           nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
             .~ Constitution def (SJust scriptHash)
@@ -239,14 +238,13 @@ spec =
               def
                 & ppuCommitteeMinSizeL .~ SJust 1
           rewardAccount <- registerRewardAccount
-          void $
-            submitProposal
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = ParameterChange SNothing pparamsUpdate (SJust scriptHash)
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = def
-                }
+          submitProposal_
+            ProposalProcedure
+              { pProcReturnAddr = rewardAccount
+              , pProcGovAction = ParameterChange SNothing pparamsUpdate (SJust scriptHash)
+              , pProcDeposit = pp ^. ppGovActionDepositL
+              , pProcAnchor = def
+              }
 
         impAnn "TreasuryWithdrawals with correct policy succeeds" $ do
           rewardAccount <- registerRewardAccount
@@ -255,14 +253,13 @@ spec =
               Map.fromList
                 [ (rewardAccount, Coin 1000)
                 ]
-          void $
-            submitProposal
-              ProposalProcedure
-                { pProcReturnAddr = rewardAccount
-                , pProcGovAction = TreasuryWithdrawals withdrawals (SJust scriptHash)
-                , pProcDeposit = pp ^. ppGovActionDepositL
-                , pProcAnchor = def
-                }
+          submitProposal_
+            ProposalProcedure
+              { pProcReturnAddr = rewardAccount
+              , pProcGovAction = TreasuryWithdrawals withdrawals (SJust scriptHash)
+              , pProcDeposit = pp ^. ppGovActionDepositL
+              , pProcAnchor = def
+              }
 
         impAnn "ParameterChange with invalid policy succeeds" $ do
           rewardAccount <- registerRewardAccount

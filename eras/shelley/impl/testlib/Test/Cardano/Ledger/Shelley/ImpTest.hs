@@ -31,7 +31,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestEnv (..),
   ImpException (..),
   ShelleyEraImp (..),
-  emptyShelleyImpNES,
+  initShelleyImpNES,
   impWitsVKeyNeeded,
   modifyPrevPParams,
   passEpoch,
@@ -47,6 +47,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   trySubmitTx,
   modifyNES,
   getsNES,
+  impAddNativeScript,
   impAnn,
   mkTxWits,
   runImpRule,
@@ -150,7 +151,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import GHC.Stack (SrcLoc (..), getCallStack)
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (^.))
+import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
 import Prettyprinter (Doc, Pretty (..), defaultLayoutOptions, layoutPretty, line)
 import Prettyprinter.Render.String (renderString)
@@ -175,6 +176,7 @@ data ImpTestState era = ImpTestState
   , impRootTxId :: !(TxId (EraCrypto era))
   , impSafeHashIdx :: !Int
   , impKeyPairs :: !(forall k. Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
+  , impScripts :: !(Map (ScriptHash (EraCrypto era)) (Script era))
   , impLastTick :: !SlotNo
   , impGlobals :: !Globals
   , impLog :: !(Doc ())
@@ -191,6 +193,9 @@ impLastTickL = lens impLastTick (\x y -> x {impLastTick = y})
 
 impRootTxIdL :: Lens' (ImpTestState era) (TxId (EraCrypto era))
 impRootTxIdL = lens impRootTxId (\x y -> x {impRootTxId = y})
+
+impScriptsL :: Lens' (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (Script era))
+impScriptsL = lens impScripts (\x y -> x {impScripts = y})
 
 class
   ( Show (NewEpochState era)
@@ -232,7 +237,7 @@ class
   ) =>
   ShelleyEraImp era
   where
-  emptyImpNES :: Coin -> NewEpochState era
+  initImpNES :: Coin -> NewEpochState era
 
   -- | This modifer should change not only the current PParams, but also the future
   -- PParams. If the future PParams are not updated, then they will overwrite the
@@ -267,7 +272,7 @@ logStakeDistr = do
   stakeDistr <- getsNES $ nesEsL . epochStateIncrStakeDistrL
   logEntry $ "Stake distr: " <> showExpr stakeDistr
 
-emptyShelleyImpNES ::
+initShelleyImpNES ::
   forall era.
   ( EraGov era
   , EraTxOut era
@@ -275,7 +280,7 @@ emptyShelleyImpNES ::
   ) =>
   Coin ->
   NewEpochState era
-emptyShelleyImpNES rootCoin =
+initShelleyImpNES rootCoin =
   NewEpochState
     { stashedAVVMAddresses = def
     , nesRu =
@@ -357,7 +362,7 @@ instance
   ) =>
   ShelleyEraImp (ShelleyEra c)
   where
-  emptyImpNES = emptyShelleyImpNES
+  initImpNES = initShelleyImpNES
 
 impWitsVKeyNeeded ::
   EraUTxO era => TxBody era -> ImpTestM era (Set.Set (KeyHash 'Witness (EraCrypto era)))
@@ -465,6 +470,32 @@ lookupImpRootTxOut = do
     Nothing -> error "Root txId no longer points to an existing unspent output"
     Just rootTxOut -> pure (rootTxIn, rootTxOut)
 
+fixupScriptWitnesses ::
+  forall era.
+  ShelleyEraImp era =>
+  Tx era ->
+  ImpTestM era (Tx era)
+fixupScriptWitnesses tx = do
+  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  -- TODO: Add proper support for Plutus Scripts
+  let scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
+      scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
+  ImpTestState {impScripts} <- get
+  logEntry $ show (impScripts `Map.restrictKeys` scriptHashesNeeded)
+  pure (tx & witsTxL . scriptTxWitsL <>~ (impScripts `Map.restrictKeys` scriptHashesNeeded))
+
+impAddNativeScript ::
+  forall era.
+  EraScript era =>
+  NativeScript era ->
+  ImpTestM era (ScriptHash (EraCrypto era))
+impAddNativeScript nativeScript = do
+  let script = fromNativeScript nativeScript
+      scriptHash = hashScript @era script
+  ImpTestState {impScripts} <- get
+  impScriptsL .= Map.insert scriptHash script impScripts
+  pure scriptHash
+
 fixupFees ::
   forall era.
   ShelleyEraImp era =>
@@ -531,7 +562,7 @@ trySubmitTx tx = do
   doFixup <- asks iteDoTxFixup
   txFixed <-
     if doFixup
-      then fixupFees tx
+      then fixupScriptWitnesses tx >>= fixupFees
       else pure tx
   lEnv <- impLedgerEnv st
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
@@ -672,10 +703,11 @@ withImpState =
   beforeAll $
     pure
       ImpTestState
-        { impNES = emptyImpNES rootCoin
+        { impNES = initImpNES rootCoin
         , impRootTxId = TxId (mkDummySafeHash Proxy 0)
         , impSafeHashIdx = 0
         , impKeyPairs = mempty
+        , impScripts = mempty
         , impLastTick = 0
         , impGlobals = testGlobals
         , impLog = mempty

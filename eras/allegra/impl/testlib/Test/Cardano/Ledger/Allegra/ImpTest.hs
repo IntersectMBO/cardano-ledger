@@ -13,7 +13,7 @@ import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.ImpTest (
   ShelleyEraImp (..),
-  emptyShelleyImpNES,
+  initShelleyImpNES,
  )
 
 instance
@@ -24,4 +24,4 @@ instance
   ) =>
   ShelleyEraImp (AllegraEra c)
   where
-  emptyImpNES = emptyShelleyImpNES
+  initImpNES = initShelleyImpNES

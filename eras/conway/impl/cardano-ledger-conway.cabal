@@ -128,6 +128,7 @@ library testlib
         cardano-crypto-class,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-babbage:testlib,
+        cardano-ledger-allegra,
         cardano-ledger-alonzo:testlib,
         cardano-ledger-conway,
         data-default-class,

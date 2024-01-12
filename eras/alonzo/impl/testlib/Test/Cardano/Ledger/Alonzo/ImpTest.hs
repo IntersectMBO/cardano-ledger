@@ -5,7 +5,7 @@
 
 module Test.Cardano.Ledger.Alonzo.ImpTest (
   module ImpTest,
-  emptyAlonzoImpNES,
+  initAlonzoImpNES,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
@@ -28,7 +28,7 @@ import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.ImpTest as ImpTest
 
-emptyAlonzoImpNES ::
+initAlonzoImpNES ::
   ( EraGov era
   , EraTxOut era
   , AlonzoEraPParams era
@@ -36,8 +36,8 @@ emptyAlonzoImpNES ::
   ) =>
   Coin ->
   NewEpochState era
-emptyAlonzoImpNES rootCoin =
-  emptyShelleyImpNES rootCoin
+initAlonzoImpNES rootCoin =
+  initShelleyImpNES rootCoin
     & nesEsL . curPParamsEpochStateL . ppMaxValSizeL .~ 1_000_000_000
 
 instance
@@ -48,4 +48,4 @@ instance
   ) =>
   ShelleyEraImp (AlonzoEra c)
   where
-  emptyImpNES = emptyAlonzoImpNES
+  initImpNES = initAlonzoImpNES
