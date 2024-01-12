@@ -71,6 +71,7 @@ import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
+import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 import qualified Test.Cardano.Ledger.Shelley.Utils as Utils
@@ -368,10 +369,10 @@ genAddrWith ::
   Gen (Addr (EraCrypto era))
 genAddrWith proof net ps ptrss cs byronMap =
   case whichTxOut proof of
-    TxOutBabbageToConway -> Addr net <$> pick1 ["from genPayCred ScriptHashObj"] ps <*> genStakeRefWith ptrss cs
+    TxOutBabbageToConway -> Addr net <$> pick1 ["from genPayCred ScriptHashObj"] ps <*> genStakeRefWith proof ptrss cs
     _ ->
       frequency
-        [ (8, Addr net <$> pick1 ["from genPayCred ScriptHashObj"] ps <*> genStakeRefWith ptrss cs)
+        [ (8, Addr net <$> pick1 ["from genPayCred ScriptHashObj"] ps <*> genStakeRefWith proof ptrss cs)
         , (2, fst . snd <$> genFromMap ["from byronAddrUniv"] byronMap) -- This generates a known Byron Address
         ]
 
@@ -382,11 +383,14 @@ genPtr (SlotNo n) =
     <*> (TxIx <$> choose (0, 10))
     <*> (mkCertIxPartial <$> choose (1, 20))
 
-genStakeRefWith :: Set Ptr -> Set (Credential 'Staking c) -> Gen (StakeReference c)
-genStakeRefWith ps cs =
+genStakeRefWith :: forall era. Proof era -> Set Ptr -> Set (Credential 'Staking (EraCrypto era)) -> Gen (StakeReference (EraCrypto era))
+genStakeRefWith proof ps cs =
   frequency
     [ (80, StakeRefBase <$> pick1 ["from genStakeRefWith StakeRefBase"] cs)
-    , (5, StakeRefPtr <$> pick1 ["from genStakeRefWith StakeRefPtr"] ps)
+    ,
+      ( if protocolVersion proof >= protocolVersion (Conway Standard) then 0 else 5
+      , StakeRefPtr <$> pick1 ["from genStakeRefWith StakeRefPtr"] ps
+      )
     , (15, pure StakeRefNull)
     ]
 
