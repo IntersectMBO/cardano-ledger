@@ -117,6 +117,7 @@ library testlib
         base,
         bytestring,
         containers,
+        cardano-ledger-allegra:testlib,
         cardano-ledger-alonzo,
         cardano-ledger-binary,
         cardano-ledger-mary:testlib,

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -27,7 +28,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   runImpTestM_,
   evalImpTestM,
   execImpTestM,
-  ImpTestState,
+  ImpTestState (ImpTestState,impKeyPairs, impLastTick),
   ImpTestEnv (..),
   ImpException (..),
   ShelleyEraImp (..),
@@ -124,7 +125,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
-import Cardano.Ledger.Tools (calcMinFeeTx)
+import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
+import Cardano.Ledger.Tools (calcMinFeeTxNativeScriptWits)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin, txinLookup)
@@ -144,7 +146,7 @@ import Data.Functor.Identity (Identity (..))
 import Data.IORef
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (catMaybes, fromJust, fromMaybe, mapMaybe)
 import Data.Sequence.Strict (StrictSeq ((:<|)))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -238,6 +240,12 @@ class
   ShelleyEraImp era
   where
   initImpNES :: Coin -> NewEpochState era
+
+  -- | Try to find a sufficient number of KeyPairs that would satisfy a native script.
+  -- Whenever script can't be satisfied, Nothing is returned
+  impSatisfyNativeScript ::
+    NativeScript era ->
+    ImpTestM era (Maybe (Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))))
 
   -- | This modifer should change not only the current PParams, but also the future
   -- PParams. If the future PParams are not updated, then they will overwrite the
@@ -364,6 +372,27 @@ instance
   where
   initImpNES = initShelleyImpNES
 
+  impSatisfyNativeScript script = do
+    keyPairs <- gets impKeyPairs
+    let
+      satisfyMOf m []
+        | m <= 0 = Just mempty
+        | otherwise = Nothing
+      satisfyMOf m (x : xs) =
+        case satisfyScript x of
+          Nothing -> satisfyMOf m xs
+          Just kps -> do
+            kps' <- satisfyMOf (m - 1) xs
+            Just $ kps <> kps'
+      satisfyScript = \case
+        RequireSignature keyHash -> do
+          keyPair <- Map.lookup keyHash keyPairs
+          Just $ Map.singleton keyHash keyPair
+        RequireAllOf ss -> satisfyMOf (length ss) ss
+        RequireAnyOf ss -> satisfyMOf 1 ss
+        RequireMOf m ss -> satisfyMOf m ss
+    pure $ satisfyScript script
+
 impWitsVKeyNeeded ::
   EraUTxO era => TxBody era -> ImpTestM era (Set.Set (KeyHash 'Witness (EraCrypto era)))
 impWitsVKeyNeeded txBody = do
@@ -482,18 +511,21 @@ impAddNativeScript nativeScript = do
   impScriptsL .= Map.insert scriptHash script impScripts
   pure scriptHash
 
+-- | Modifies transaction by adding necessary scripts
 addScriptTxWits ::
-  forall era.
   ShelleyEraImp era =>
   Tx era ->
-  ImpTestM era (Tx era)
+  ImpTestM era (Tx era, Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)))
 addScriptTxWits tx = do
   utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  ImpTestState {impScripts} <- get
   -- TODO: Add proper support for Plutus Scripts
   let scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
       scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
-  ImpTestState {impScripts} <- get
-  pure (tx & witsTxL . scriptTxWitsL <>~ (impScripts `Map.restrictKeys` scriptHashesNeeded))
+      scriptsToAdd = impScripts `Map.restrictKeys` scriptHashesNeeded
+      nativeScripts = mapMaybe getNativeScript $ Map.elems scriptsToAdd
+  keyPairs <- mapM impSatisfyNativeScript nativeScripts
+  pure (tx & witsTxL . scriptTxWitsL <>~ scriptsToAdd, mconcat $ catMaybes keyPairs)
 
 -- | Adds @TxWits@ that will satisfy all of the required key witnesses
 addAddrTxWits ::
@@ -501,21 +533,22 @@ addAddrTxWits ::
   , ShelleyEraImp era
   ) =>
   Tx era ->
+  [KeyPair 'Witness (EraCrypto era)] ->
   ImpTestM era (Tx era)
-addAddrTxWits tx = do
+addAddrTxWits tx nativeScriptsKeyPairs = do
   let txBody = tx ^. bodyTxL
       txBodyHash = hashAnnotated txBody
   witsVKeyNeeded <- impWitsVKeyNeeded txBody
   keyPairs <- mapM lookupKeyPair $ Set.toList witsVKeyNeeded
   pure $
-    tx & witsTxL . addrTxWitsL <>~ mkWitnessesVKey txBodyHash keyPairs
+    tx & witsTxL . addrTxWitsL <>~ mkWitnessesVKey txBodyHash (keyPairs ++ nativeScriptsKeyPairs)
 
 fixupFees ::
-  forall era.
   ShelleyEraImp era =>
   Tx era ->
+  Set.Set (KeyHash 'Witness (EraCrypto era)) ->
   ImpTestM era (Tx era)
-fixupFees tx = do
+fixupFees tx nativeScriptKeyWits = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
@@ -528,7 +561,7 @@ fixupFees tx = do
     outputsTotalCoin = sumAllCoin $ tx ^. bodyTxL . outputsTxBodyL
     remainingCoin = (rootTxOut ^. coinTxOutL) <-> (outputsTotalCoin <+> deposits <-> refunds)
     remainingTxOut =
-      mkBasicTxOut @era
+      mkBasicTxOut
         (mkAddr (kpSpending, kpStaking))
         (inject remainingCoin)
   let
@@ -536,9 +569,8 @@ fixupFees tx = do
       tx
         & bodyTxL . inputsTxBodyL %~ Set.insert rootTxIn
         & bodyTxL . outputsTxBodyL %~ (remainingTxOut :<|)
-    nativeScriptKeyWitsCount = 0 -- TODO figure out wits for native scripts
     outsWithoutRemaining = tx ^. bodyTxL . outputsTxBodyL
-    fee = calcMinFeeTx utxo pp txNoWits nativeScriptKeyWitsCount
+    fee = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
     remainderAvailable = remainingTxOut ^. coinTxOutL <-> fee
     remainingTxOut' = remainingTxOut & coinTxOutL .~ remainderAvailable
     -- If the remainder is sufficently big we add it to outputs, otherwise we add the
@@ -555,14 +587,13 @@ fixupFees tx = do
   pure txWithFee
 
 fixupTx ::
-  forall era.
   ShelleyEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupTx txRaw = do
-  txWithScriptWits <- addScriptTxWits txRaw
-  txWithFee <- fixupFees txWithScriptWits
-  txFixed <- addAddrTxWits txWithFee
+  (txWithScriptWits, nativeScriptKeyPairs) <- addScriptTxWits txRaw
+  txWithFee <- fixupFees txWithScriptWits (Map.keysSet nativeScriptKeyPairs)
+  txFixed <- addAddrTxWits txWithFee (Map.elems nativeScriptKeyPairs)
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   let Coin feeUsed = txFixed ^. bodyTxL . feeTxBodyL
       Coin feeMin = getMinFeeTx pp txFixed

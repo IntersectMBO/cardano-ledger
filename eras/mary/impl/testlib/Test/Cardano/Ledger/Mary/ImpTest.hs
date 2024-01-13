@@ -9,6 +9,7 @@ import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Core (EraIndependentTxBody)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Mary (MaryEra)
+import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.ImpTest (
@@ -25,3 +26,4 @@ instance
   ShelleyEraImp (MaryEra c)
   where
   initImpNES = initShelleyImpNES
+  impSatisfyNativeScript = impAllegraSatisfyNativeScript

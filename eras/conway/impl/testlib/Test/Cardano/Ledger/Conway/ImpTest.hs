@@ -148,6 +148,7 @@ import Cardano.Ledger.Val (Val (..))
 import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
+import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Data.Functor.Identity
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (isSJust)
@@ -194,6 +195,8 @@ instance
         epochState = nes ^. nesEsL
         ratifyState = def & rsEnactStateL .~ (epochState ^. epochStateGovStateL . cgEnactStateL)
      in nes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState
+
+  impSatisfyNativeScript = impAllegraSatisfyNativeScript
 
   modifyPParams = conwayModifyPParams
 
