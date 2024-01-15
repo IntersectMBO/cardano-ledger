@@ -314,21 +314,21 @@ transTxCert = \case
   UnRegTxCert stakeCred ->
     PV3.TxCertUnRegStaking (transCred stakeCred) Nothing
   RegDepositTxCert stakeCred deposit ->
-    PV3.TxCertRegStaking (transCred stakeCred) (Just (transCoin deposit))
+    PV3.TxCertRegStaking (transCred stakeCred) (Just (coinToLovelace deposit))
   UnRegDepositTxCert stakeCred refund ->
-    PV3.TxCertUnRegStaking (transCred stakeCred) (Just (transCoin refund))
+    PV3.TxCertUnRegStaking (transCred stakeCred) (Just (coinToLovelace refund))
   DelegTxCert stakeCred delegatee ->
     PV3.TxCertDelegStaking (transCred stakeCred) (transDelegatee delegatee)
   RegDepositDelegTxCert stakeCred delegatee deposit ->
-    PV3.TxCertRegDeleg (transCred stakeCred) (transDelegatee delegatee) (transCoin deposit)
+    PV3.TxCertRegDeleg (transCred stakeCred) (transDelegatee delegatee) (coinToLovelace deposit)
   AuthCommitteeHotKeyTxCert coldCred hotCred ->
     PV3.TxCertAuthHotCommittee (transColdCommitteeCred coldCred) (transHotCommitteeCred hotCred)
   ResignCommitteeColdTxCert coldCred _anchor ->
     PV3.TxCertResignColdCommittee (transColdCommitteeCred coldCred)
   RegDRepTxCert drepCred deposit _anchor ->
-    PV3.TxCertRegDRep (transDRepCred drepCred) (transCoin deposit)
+    PV3.TxCertRegDRep (transDRepCred drepCred) (coinToLovelace deposit)
   UnRegDRepTxCert drepCred refund ->
-    PV3.TxCertUnRegDRep (transDRepCred drepCred) (transCoin refund)
+    PV3.TxCertUnRegDRep (transDRepCred drepCred) (coinToLovelace refund)
   UpdateDRepTxCert drepCred _anchor ->
     PV3.TxCertUpdateDRep (transDRepCred drepCred)
 
@@ -361,12 +361,14 @@ transScriptPurpose ::
 transScriptPurpose proxy = \case
   ConwaySpending (AsItem txIn) -> pure $ PV3.Spending (transTxIn txIn)
   ConwayMinting (AsItem policyId) -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
-  ConwayCertifying (AsItem txCert) -> PV3.Certifying <$> toPlutusTxCert proxy txCert
+  ConwayCertifying (AsItem txCert) ->
+    -- TODO: fix the index. Reqiures adding index to AsItem.
+    PV3.Certifying 0 <$> toPlutusTxCert proxy txCert
   ConwayRewarding (AsItem rewardAccount) -> pure $ PV3.Rewarding (transRewardAccount rewardAccount)
-  ConwayVoting (AsItem voter) ->
-    pure $ PV3.Voting (transVoter voter) undefined
-  ConwayProposing (AsItem _proposal) ->
-    pure $ PV3.Proposing $ error "Requires adjustment on the Plutus side and implementation of #3957"
+  ConwayVoting (AsItem voter) -> pure $ PV3.Voting (transVoter voter)
+  ConwayProposing (AsItem proposal) ->
+    -- TODO: fix the index. Reqiures adding index to AsItem.
+    pure $ PV3.Proposing 0 (transProposal proposal)
 
 transVoter :: Voter c -> PV3.Voter
 transVoter = \case
@@ -396,7 +398,7 @@ transGovAction = \case
 transProposal :: ProposalProcedure era -> PV3.ProposalProcedure
 transProposal ProposalProcedure {pProcDeposit, pProcReturnAddr, pProcGovAction} =
   PV3.ProposalProcedure
-    { PV3.ppDeposit = transCoin pProcDeposit
+    { PV3.ppDeposit = coinToLovelace pProcDeposit
     , PV3.ppReturnAddr = transRewardAccount pProcReturnAddr
     , PV3.ppGovernanceAction = transGovAction pProcGovAction
     }
