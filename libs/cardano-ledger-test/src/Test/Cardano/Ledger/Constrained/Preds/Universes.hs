@@ -339,7 +339,7 @@ makeHashScriptMap p size tag m vi = do
           ScriptAllegraToMary -> genCoreScript p Spending m vi
           ScriptAlonzoToConway ->
             oneof
-              [ (snd . snd) <$> genFromMap [] (spendPlutusScripts p)
+              [ snd . snd <$> genFromMap [] (spendPlutusScripts p)
               , genCoreScript p Spending m vi
               ]
       genOne t = genCoreScript p t m vi
