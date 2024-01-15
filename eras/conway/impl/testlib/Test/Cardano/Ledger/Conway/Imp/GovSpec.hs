@@ -14,6 +14,7 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
+  pattern RequireSignature,
  )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState (vsNumDormantEpochsL)
@@ -23,10 +24,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep (drepExpiryL)
-import Cardano.Ledger.Keys (
-  KeyHash,
-  KeyRole (..),
- )
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Control.Monad (replicateM_)
 import Control.State.Transition.Extended (PredicateFailure)
@@ -100,8 +98,14 @@ spec =
           (govActionId, _) <- submitConstitution SNothing
           modifyNES $ \nes ->
             nes
-              & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensPrevConstitutionL
-                .~ SJust (PrevGovActionId govActionId) -- Add first proposal to PrevGovActionIds in enacted state
+              & nesEsL
+                . esLStateL
+                . lsUTxOStateL
+                . utxosGovStateL
+                . cgEnactStateL
+                . ensPrevConstitutionL
+                .~ SJust (PrevGovActionId govActionId)
+              -- Add first proposal to PrevGovActionIds in enacted state
               & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgProposalsL
                 .~ def -- Remove all proposals, so that the lookup only succeeds for enacted state.
                 -- Once a proposal with a purpose has been enacted, following proposals can no
@@ -155,12 +159,14 @@ spec =
         impAnn "Constitution has not been enacted yet" $
           curConstitution' `shouldBe` curConstitution
 
-        ConwayGovState expectedProposals expectedEnactState expectedPulser <- getsNES newEpochStateGovStateL
+        ConwayGovState expectedProposals expectedEnactState expectedPulser <-
+          getsNES newEpochStateGovStateL
 
         impAnn "EnactState reflects the submitted governance action" $ do
           let enactStateWithChildren =
                 initialEnactState
-                  & ensPrevGovActionIdsChildrenL . pgacConstitutionL %~ Set.insert (PrevGovActionId govActionId)
+                  & ensPrevGovActionIdsChildrenL . pgacConstitutionL
+                    %~ Set.insert (PrevGovActionId govActionId)
           expectedEnactState `shouldBe` enactStateWithChildren
 
         impAnn "Proposals contain the submitted proposal" $
@@ -179,10 +185,12 @@ spec =
         (dRep, committeeMember) <- electBasicCommittee
         (govActionId, constitution) <- submitConstitution SNothing
 
-        ConwayGovState proposalsBeforeVotes enactStateBeforeVotes pulserBeforeVotes <- getsNES newEpochStateGovStateL
+        ConwayGovState proposalsBeforeVotes enactStateBeforeVotes pulserBeforeVotes <-
+          getsNES newEpochStateGovStateL
         submitYesVote_ (DRepVoter dRep) govActionId
         submitYesVote_ (CommitteeVoter committeeMember) govActionId
-        ConwayGovState proposalsAfterVotes enactStateAfterVotes pulserAfterVotes <- getsNES newEpochStateGovStateL
+        ConwayGovState proposalsAfterVotes enactStateAfterVotes pulserAfterVotes <-
+          getsNES newEpochStateGovStateL
 
         impAnn "Votes are recorded in the proposals" $ do
           let proposalsWithVotes =
@@ -230,7 +238,8 @@ spec =
           rsEnactState pulserRatifyState `shouldBe` enactState
 
       it "policy is respected by proposals" $ do
-        scriptHash <- impAddNativeScript $ RequireAllOf mempty
+        keyHash <- freshKeyHash
+        scriptHash <- impAddNativeScript $ RequireAllOf (SSeq.singleton (RequireSignature keyHash))
         wrongScriptHash <-
           impAddNativeScript $
             RequireMOf 1 $
@@ -300,8 +309,8 @@ spec =
                 , pProcDeposit = pp ^. ppGovActionDepositL
                 , pProcAnchor = def
                 }
-          res `shouldBeLeft`
-             [inject $ InvalidPolicyHash @era (SJust wrongScriptHash) (SJust scriptHash)]
+          res
+            `shouldBeLeft` [inject $ InvalidPolicyHash @era (SJust wrongScriptHash) (SJust scriptHash)]
 
     describe "DRep expiry" $ do
       it "is updated based on to number of dormant epochs" $ do
@@ -634,7 +643,7 @@ firstHardForkCantFollow = do
         , pProcAnchor = def
         }
     )
-    [inject @(ConwayGovPredFailure era) (ProposalCantFollow SNothing protver2 protver0)]
+    [inject (ProposalCantFollow @era SNothing protver2 protver0)]
 
 -- | Tests a second hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkFollows ::
@@ -654,8 +663,7 @@ secondHardForkCantFollow ::
   forall era.
   ( ShelleyEraImp era
   , ConwayEraTxBody era
-  , -- , GovState era ~ ConwayGovState era
-    Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
+  , Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   ImpTestM era ()
 secondHardForkCantFollow = do
@@ -680,4 +688,4 @@ secondHardForkCantFollow = do
         , pProcAnchor = def
         }
     )
-    [inject @(ConwayGovPredFailure era) (ProposalCantFollow (SJust (PrevGovActionId gaid1)) protver2 protver1)]
+    [inject (ProposalCantFollow @era (SJust (PrevGovActionId gaid1)) protver2 protver1)]

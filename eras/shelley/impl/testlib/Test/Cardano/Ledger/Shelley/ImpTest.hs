@@ -28,7 +28,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   runImpTestM_,
   evalImpTestM,
   execImpTestM,
-  ImpTestState (ImpTestState,impKeyPairs, impLastTick),
+  ImpTestState (ImpTestState, impKeyPairs, impLastTick),
   ImpTestEnv (..),
   ImpException (..),
   ShelleyEraImp (..),

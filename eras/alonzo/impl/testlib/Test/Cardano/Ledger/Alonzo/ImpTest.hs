@@ -24,10 +24,10 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Data.Default.Class (Default)
 import Lens.Micro ((&), (.~))
+import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.ImpTest as ImpTest
-import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 
 initAlonzoImpNES ::
   ( EraGov era
