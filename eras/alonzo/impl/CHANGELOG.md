@@ -67,6 +67,7 @@
 
 ### `testlib`
 
+* Rename `emptyAlonzoImpNES` to `initAlonzoImpNES`
 * Remove `Test.Cardano.Ledger.Alonzo.CostModel` in favor of `Test.Cardano.Ledger.Plutus`
 * Move `costModelParamsCount` to `Cardano.Ledger.Plutus.CostModels`
 * Add `mkPlutusScript'`

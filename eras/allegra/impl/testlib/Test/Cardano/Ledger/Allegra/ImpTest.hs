@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -18,6 +19,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Control.Monad.State.Strict (get)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq (..))
+import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
 import Test.Cardano.Ledger.Imp.Common
@@ -40,8 +42,10 @@ impAllegraSatisfyNativeScript ::
   NativeScript era ->
   ImpTestM era (Maybe (Map.Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))))
 impAllegraSatisfyNativeScript script = do
-  ImpTestState {impKeyPairs, impLastTick} <- get
+  impState <- get
   let
+    keyPairs = impState ^. impKeyPairsG
+    prevSlotNo = impState ^. impLastTickG
     satisfyMOf m Empty
       | m <= 0 = Just mempty
       | otherwise = Nothing
@@ -53,15 +57,15 @@ impAllegraSatisfyNativeScript script = do
           Just $ kps <> kps'
     satisfyScript = \case
       RequireSignature keyHash -> do
-        keyPair <- Map.lookup keyHash impKeyPairs
+        keyPair <- Map.lookup keyHash keyPairs
         Just $ Map.singleton keyHash keyPair
       RequireAllOf ss -> satisfyMOf (length ss) ss
       RequireAnyOf ss -> satisfyMOf 1 ss
       RequireMOf m ss -> satisfyMOf m ss
       RequireTimeExpire slotNo
-        | slotNo < impLastTick -> Just mempty
+        | slotNo < prevSlotNo -> Just mempty
         | otherwise -> Nothing
       RequireTimeStart slotNo
-        | slotNo > impLastTick -> Just mempty
+        | slotNo > prevSlotNo -> Just mempty
         | otherwise -> Nothing
   pure $ satisfyScript script

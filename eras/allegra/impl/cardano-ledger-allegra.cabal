@@ -99,6 +99,7 @@ library testlib
         cardano-strict-containers,
         containers,
         generic-random,
+        microlens,
         mtl,
         QuickCheck
 

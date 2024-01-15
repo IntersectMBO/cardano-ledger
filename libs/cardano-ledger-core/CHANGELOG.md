@@ -4,8 +4,8 @@
 
 * Add `txIdTxBody` and `txIdTx`. Deprecated `txid`.
 * Add `getGenesisKeyHashCountTxBody` to `EraTxBody`
-* Add `calcMinFeeTx`
-* Add `estimateMinFeeTx`, `addDummyWitsTx` and move `setMinFeeTx` to `Cardano.Ledger.Tools`
+* Add `calcMinFeeTx` and `calcMinFeeTxNativeScriptWits`, `estimateMinFeeTx`,
+  `addDummyWitsTx` and move `setMinFeeTx` to `Cardano.Ledger.Tools`
 * Add `kindObject`
 * Add `ToJSON` instance for `TxOutSource` and `PoolCert`
 * Expose `txInToText`

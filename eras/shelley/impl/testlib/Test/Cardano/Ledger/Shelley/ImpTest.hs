@@ -28,7 +28,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   runImpTestM_,
   evalImpTestM,
   execImpTestM,
-  ImpTestState (ImpTestState, impKeyPairs, impLastTick),
+  ImpTestState,
   ImpTestEnv (..),
   ImpException (..),
   ShelleyEraImp (..),
@@ -57,16 +57,24 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   constitutionShouldBe,
   withImpState,
   fixupFees,
+  fixupTx,
   lookupImpRootTxOut,
-  -- Logging
+
+  -- * Logging
   logEntry,
   logToExpr,
   logStakeDistr,
-  -- Combinators
+
+  -- * Combinators
   withNoFixup,
-  -- Lenses
-  impNESL,
-  impLastTickL,
+
+  -- * Lenses
+
+  -- We only export getters, because internal state should not be accessed during testing
+  impNESG,
+  impLastTickG,
+  impKeyPairsG,
+  impScriptsG,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), seedSizeDSIGN)
@@ -190,14 +198,29 @@ impLogL = lens impLog (\x y -> x {impLog = y})
 impNESL :: Lens' (ImpTestState era) (NewEpochState era)
 impNESL = lens impNES (\x y -> x {impNES = y})
 
+impNESG :: SimpleGetter (ImpTestState era) (NewEpochState era)
+impNESG = impNESL
+
 impLastTickL :: Lens' (ImpTestState era) SlotNo
 impLastTickL = lens impLastTick (\x y -> x {impLastTick = y})
+
+impLastTickG :: SimpleGetter (ImpTestState era) SlotNo
+impLastTickG = impLastTickL
 
 impRootTxIdL :: Lens' (ImpTestState era) (TxId (EraCrypto era))
 impRootTxIdL = lens impRootTxId (\x y -> x {impRootTxId = y})
 
+impKeyPairsG ::
+  SimpleGetter
+    (ImpTestState era)
+    (Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
+impKeyPairsG = to impKeyPairs
+
 impScriptsL :: Lens' (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (Script era))
 impScriptsL = lens impScripts (\x y -> x {impScripts = y})
+
+impScriptsG :: SimpleGetter (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (Script era))
+impScriptsG = impScriptsL
 
 class
   ( Show (NewEpochState era)
