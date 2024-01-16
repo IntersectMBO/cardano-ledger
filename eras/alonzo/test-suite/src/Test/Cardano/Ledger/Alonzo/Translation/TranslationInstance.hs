@@ -48,7 +48,6 @@ import GHC.Generics (Generic)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
-import PlutusTx.Ratio as PlutusTx
 
 data VersionedTxInfo
   = TxInfoPV1 PV1.TxInfo
@@ -114,7 +113,7 @@ instance Cborg.Serialise a => Cborg.Serialise (PV3.Extended a)
 instance Cborg.Serialise a => Cborg.Serialise (PV3.Interval a)
 instance Cborg.Serialise a => Cborg.Serialise (PV3.LowerBound a)
 instance Cborg.Serialise a => Cborg.Serialise (PV3.UpperBound a)
-instance Cborg.Serialise PlutusTx.Rational
+instance Cborg.Serialise PV3.Rational
 
 instance Cborg.Serialise VersionedTxInfo
 

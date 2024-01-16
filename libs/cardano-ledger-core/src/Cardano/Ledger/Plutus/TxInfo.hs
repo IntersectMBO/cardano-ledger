@@ -23,7 +23,6 @@ module Cardano.Ledger.Plutus.TxInfo (
   txOutSourceToText,
   transAddr,
   transRewardAccount,
-  transProtocolVersion,
   transDataHash,
   transKeyHash,
   transSafeHash,
@@ -33,21 +32,25 @@ module Cardano.Ledger.Plutus.TxInfo (
   transCred,
   slotToPOSIXTime,
   transTxIn,
-  transCoin,
+  transCoinToValue,
+  transCoinToLovelace,
   transDataPair,
   transExUnits,
   exBudgetToExUnits,
-  coinToLovelace,
+  transBoundedRational,
+  transEpochNo,
+  transEpochInterval,
 )
 where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.BaseTypes (
-  ProtVer (..),
+  BoundedRational (unboundRational),
+  EpochInterval (..),
+  EpochNo (..),
   TxIx,
   certIxToInt,
-  getVersion64,
   txIxToInt,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -76,12 +79,12 @@ import Data.Aeson (ToJSON (..), Value (String))
 import Data.Text as T (Text, pack)
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import PlutusLedgerApi.V1 (SatInt, fromSatInt)
 import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusLedgerApi.V3 as PV3
 
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
@@ -116,9 +119,8 @@ txOutSourceToText = \case
   TxOutFromInput txIn -> "Input: " <> txInToText txIn
   TxOutFromOutput txIx -> "Output: " <> T.pack (show txIx)
 
-transProtocolVersion :: ProtVer -> PV1.MajorProtocolVersion
-transProtocolVersion (ProtVer major _minor) =
-  PV1.MajorProtocolVersion ((fromIntegral :: Word64 -> Int) (getVersion64 major))
+transBoundedRational :: BoundedRational r => r -> PV3.Rational
+transBoundedRational = PV3.fromGHC . unboundRational
 
 transDataHash :: DataHash c -> PV1.DatumHash
 transDataHash safe = PV1.DatumHash (transSafeHash safe)
@@ -179,8 +181,8 @@ transTxId (TxId safe) = PV1.TxId (transSafeHash safe)
 transTxIn :: TxIn c -> PV1.TxOutRef
 transTxIn (TxIn txid txIx) = PV1.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
 
-transCoin :: Coin -> PV1.Value
-transCoin (Coin c) = PV1.singleton PV1.adaSymbol PV1.adaToken c
+transCoinToValue :: Coin -> PV1.Value
+transCoinToValue (Coin c) = PV1.singleton PV1.adaSymbol PV1.adaToken c
 
 transDataPair :: (DataHash c, Data era) -> (PV1.DatumHash, PV1.Datum)
 transDataPair (x, y) = (transDataHash x, PV1.Datum (PV1.dataToBuiltinData (getPlutusData y)))
@@ -200,5 +202,11 @@ exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
       | i >= 0 = Just . fromInteger $ fromSatInt i
       | otherwise = Nothing
 
-coinToLovelace :: Coin -> PV1.Lovelace
-coinToLovelace (Coin c) = PV1.Lovelace c
+transCoinToLovelace :: Coin -> PV1.Lovelace
+transCoinToLovelace (Coin c) = PV1.Lovelace c
+
+transEpochNo :: EpochNo -> Integer
+transEpochNo = toInteger . unEpochNo
+
+transEpochInterval :: EpochInterval -> Integer
+transEpochInterval = toInteger . unEpochInterval

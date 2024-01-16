@@ -53,7 +53,7 @@
   * Remove: `transDataHash'`, `transHash` (use `hashToBytes` instead), `transTxOutAddr`,
     `txInfoIn'`, `getWitVKeyHash`, `VersionedTxInfo`, `EraPlutusContext`, `PlutusTxCert`,
     `unTxCertV1`, `unTxCertV2`, `unTxCertV3` and `txInfoId` (use `transTxId` instead)
-  * Add `transCoin`, `transTxId`
+  * Add `transCoinToValue`, `transTxId`
 * Add `fromNativeScript`
 * Remove unused `mapMaybeValidation` and `runTestMaybe`
 * Remove `InjectMaybe` type class in favor of more general `Inject`

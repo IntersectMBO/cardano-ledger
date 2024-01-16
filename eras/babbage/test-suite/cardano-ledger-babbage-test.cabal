@@ -47,7 +47,6 @@ library
         containers,
         data-default-class,
         microlens,
-        plutus-tx,
         QuickCheck,
         time,
         plutus-ledger-api,
