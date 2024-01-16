@@ -43,15 +43,12 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import qualified Data.ByteString.Lazy as BSL
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
-import qualified PlutusLedgerApi.V3.Contexts as PV3
-
 import PlutusTx.Ratio as PlutusTx
-
-import Data.Typeable (Typeable)
 
 data VersionedTxInfo
   = TxInfoPV1 PV1.TxInfo

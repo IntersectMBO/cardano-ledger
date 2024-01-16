@@ -14,7 +14,6 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Signing as Byron
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), bootstrapKeyHash)
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Scripts (Tag (..))
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
@@ -72,6 +71,7 @@ import Test.Cardano.Ledger.Constrained.Utils (testIO)
 import Test.Cardano.Ledger.Constrained.Vars
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
+import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..))
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 import qualified Test.Cardano.Ledger.Shelley.Utils as Utils
@@ -327,22 +327,20 @@ makeHashScriptMap ::
   Reflect era =>
   Proof era ->
   Int ->
-  Scripts.Tag ->
-  Map
-    (KeyHash 'Witness (EraCrypto era))
-    (KeyPair 'Witness (EraCrypto era)) ->
+  PlutusPurposeTag ->
+  Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)) ->
   ValidityInterval ->
   Gen (Map (ScriptHash (EraCrypto era)) (ScriptF era))
 makeHashScriptMap p size tag m vi = do
-  let genOne Scripts.Spend =
+  let genOne Spending =
         -- Make an effort to get as many plutus scripts as possible (in Eras that support plutus)
         case whichScript p of
-          ScriptShelleyToShelley -> genCoreScript p Scripts.Spend m vi
-          ScriptAllegraToMary -> genCoreScript p Scripts.Spend m vi
+          ScriptShelleyToShelley -> genCoreScript p Spending m vi
+          ScriptAllegraToMary -> genCoreScript p Spending m vi
           ScriptAlonzoToConway ->
             oneof
-              [ (snd . snd) <$> genFromMap [] (spendPlutusScripts p)
-              , genCoreScript p Scripts.Spend m vi
+              [ snd . snd <$> genFromMap [] (spendPlutusScripts p)
+              , genCoreScript p Spending m vi
               ]
       genOne t = genCoreScript p t m vi
   scs <- vectorOf size (genOne tag)
@@ -466,7 +464,7 @@ addrUnivT p naddr net ps pts cs byronAddrUnivT =
 makeHashScriptMapT ::
   Proof era ->
   Int ->
-  Scripts.Tag ->
+  PlutusPurposeTag ->
   Term era (Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))) ->
   Term era ValidityInterval ->
   Target era (Gen (Map (ScriptHash (EraCrypto era)) (ScriptF era)))
@@ -526,8 +524,8 @@ universePreds size p =
       , (1, keyHashObjT keyhash, [Member (Left keyhash) (Dom keymapUniv)])
       ]
   , credsUniv :<-: listToSetTarget credList
-  , GenFrom (spendscriptUniv p) (makeHashScriptMapT p 25 Scripts.Spend keymapUniv validityInterval)
-  , GenFrom (nonSpendScriptUniv p) (makeHashScriptMapT p 25 Scripts.Cert keymapUniv validityInterval)
+  , GenFrom (spendscriptUniv p) (makeHashScriptMapT p 25 Spending keymapUniv validityInterval)
+  , GenFrom (nonSpendScriptUniv p) (makeHashScriptMapT p 25 Certifying keymapUniv validityInterval)
   , allScriptUniv p :<-: (Constr "union" Map.union ^$ (spendscriptUniv p) ^$ (nonSpendScriptUniv p))
   , Choose
       (ExactSize 70)

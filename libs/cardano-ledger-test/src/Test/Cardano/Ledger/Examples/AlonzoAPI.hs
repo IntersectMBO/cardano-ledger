@@ -14,19 +14,17 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoAPI (tests) where
 
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), inject, natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (getMinFeeTx)
+import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (evaluateTransactionFee)
-import qualified Data.Map.Strict as Map
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
+import Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW (mkSingleRedeemer)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   mkGenesisTxIn,
   mkTxDats,
@@ -40,6 +38,7 @@ import Test.Cardano.Ledger.Generic.Fields (
   TxOutField (..),
   WitnessesField (..),
  )
+import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..))
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
@@ -94,9 +93,7 @@ testEvaluateTransactionFee =
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (newPParams pf defaultPPs) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
         ]
-    redeemers =
-      Redeemers $
-        Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
+    redeemers = mkSingleRedeemer pf Spending (Data (PV1.I 42))
 
 defaultPPs :: [PParamsField era]
 defaultPPs =

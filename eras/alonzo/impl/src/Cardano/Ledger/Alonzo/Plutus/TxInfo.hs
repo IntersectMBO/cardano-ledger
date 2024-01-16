@@ -35,7 +35,7 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   transDataPair,
   transTxCert,
   transTxCertCommon,
-  transScriptPurpose,
+  transPlutusPurpose,
   transTxBodyId,
   transTxBodyCerts,
   transTxBodyWithdrawals,
@@ -45,19 +45,11 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
 where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
-import Cardano.Ledger.Address (RewardAcnt (..), Withdrawals (..))
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context
-import Cardano.Ledger.Alonzo.Scripts (PlutusScript (..))
-import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..))
-import Cardano.Ledger.Alonzo.TxBody (
-  AlonzoEraTxBody (..),
-  AlonzoEraTxOut (..),
-  mintTxBodyL,
-  vldtTxBodyL,
- )
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), unTxDats)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), PlutusScript (..))
+import Cardano.Ledger.Alonzo.TxWits (unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -69,7 +61,6 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
@@ -83,7 +74,6 @@ import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.TxCert
 import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (zero)
@@ -108,7 +98,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
   toPlutusTxCert _ = pure . transTxCert
 
-  toPlutusScriptPurpose = transScriptPurpose
+  toPlutusScriptPurpose = transPlutusPurpose
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
     timeRange <- transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
@@ -246,8 +236,8 @@ transTxBodyCerts proxy txBody =
 transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
   where
-    accum ans (RewardAcnt _networkId cred) (Coin n) =
-      Map.insert (PV1.StakingHash (transCred cred)) n ans
+    accum ans rewardAccount (Coin n) =
+      Map.insert (PV1.StakingHash (transRewardAccount rewardAccount)) n ans
 
 -- | Translate all `Withdrawal`s from within a `TxBody`
 transTxBodyWithdrawals :: EraTxBody era => TxBody era -> [(PV1.StakingCredential, Integer)]
@@ -326,14 +316,14 @@ transTxCertCommon = \case
     Just $ PV1.DCertPoolRetire (transKeyHash poolId) (toInteger i)
   _ -> Nothing
 
-transScriptPurpose ::
+transPlutusPurpose ::
   (EraPlutusTxInfo l era, PlutusTxCert l ~ PV1.DCert) =>
   proxy l ->
-  ScriptPurpose era ->
+  AlonzoPlutusPurpose AsItem era ->
   Either (ContextError era) PV1.ScriptPurpose
-transScriptPurpose proxy = \case
-  Minting policyId -> pure $ PV1.Minting (transPolicyID policyId)
-  Spending txIn -> pure $ PV1.Spending (transTxIn txIn)
-  Rewarding (RewardAcnt _networkId cred) ->
-    pure $ PV1.Rewarding (PV1.StakingHash (transCred cred))
-  Certifying txCert -> PV1.Certifying <$> toPlutusTxCert proxy txCert
+transPlutusPurpose proxy = \case
+  AlonzoSpending (AsItem txIn) -> pure $ PV1.Spending (transTxIn txIn)
+  AlonzoMinting (AsItem policyId) -> pure $ PV1.Minting (transPolicyID policyId)
+  AlonzoCertifying (AsItem txCert) -> PV1.Certifying <$> toPlutusTxCert proxy txCert
+  AlonzoRewarding (AsItem rewardAccount) ->
+    pure $ PV1.Rewarding (PV1.StakingHash (transRewardAccount rewardAccount))

@@ -16,12 +16,12 @@ module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, mkPlutusScriptContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..), collectPlutusScriptsWithContext)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..), AlonzoScript (..), ExUnits (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.Tx (
-  ScriptPurpose (..),
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoEraScript (..),
+  AlonzoScript (..),
+  AsItem (..),
+  ExUnits (..),
  )
-import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -37,12 +37,12 @@ import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
+import Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (spendingPurpose1)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   initUTxO,
   mkGenesisTxIn,
@@ -57,6 +57,7 @@ import Test.Cardano.Ledger.Generic.Fields (
   TxOutField (..),
   WitnessesField (..),
  )
+import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..), mkRedeemersFromTags)
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
@@ -93,13 +94,12 @@ collectTwoPhaseScriptInputsOutputOrdering = do
     plutusScript = case always 3 apf of
       TimelockScript _ -> error "always was not a Plutus script"
       PlutusScript ps -> ps
-    scriptPurpose = Spending $ mkGenesisTxIn 1
     Data context =
       either (\err -> error $ "Translation error: " ++ show err) id $
         mkPlutusScriptContext'
           apf
           plutusScript
-          scriptPurpose
+          (spendingPurpose1 apf)
           (pp apf)
           testEpochInfo
           testSystemStart
@@ -143,9 +143,7 @@ validatingTx pf =
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers (mkTxDats datum))
         ]
-    redeemers =
-      Redeemers $
-        Map.singleton (RdmrPtr Tag.Spend 0) (redeemer, ExUnits 5000 5000)
+    redeemers = mkRedeemersFromTags pf [((Spending, 0), (redeemer, ExUnits 5000 5000))]
 
 -- ============================== Helper functions ===============================
 
@@ -171,7 +169,7 @@ collectInputs x = error ("collectInputs Not defined in era " ++ show x)
 mkPlutusScriptContext' ::
   Proof era ->
   PlutusScript era ->
-  ScriptPurpose era ->
+  PlutusPurpose AsItem era ->
   PParams era ->
   EpochInfo (Either Text) ->
   SystemStart ->

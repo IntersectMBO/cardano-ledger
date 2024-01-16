@@ -51,6 +51,7 @@ module Cardano.Ledger.Conway.TxBody (
 ) where
 
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
+import Cardano.Ledger.Alonzo.TxBody (Indexable (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (
   BabbageTxBody (..),
@@ -85,7 +86,7 @@ import Cardano.Ledger.Coin (Coin (..), decodePositiveCoin)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppGovActionDepositL)
-import Cardano.Ledger.Conway.Scripts ()
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert,
   ConwayTxCert (..),
@@ -97,6 +98,7 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (
   MaryValue (..),
   MultiAsset (..),
+  PolicyID,
   policies,
  )
 import Cardano.Ledger.MemoBytes (
@@ -483,6 +485,10 @@ instance Crypto c => AlonzoEraTxBody (ConwayEra c) where
   networkIdTxBodyL = lensMemoRawType ctbrTxNetworkId (\txb x -> txb {ctbrTxNetworkId = x})
   {-# INLINE networkIdTxBodyL #-}
 
+  redeemerPointer = conwayRedeemerPointer
+
+  redeemerPointerInverse = conwayRedeemerPointerInverse
+
 instance Crypto c => BabbageEraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance BabbageEraTxBody (ConwayEra StandardCrypto) #-}
 
@@ -692,3 +698,42 @@ class (BabbageEraTxBody era, ConwayEraTxCert era, ConwayEraPParams era) => Conwa
   proposalProceduresTxBodyL :: Lens' (TxBody era) (SOS.OSet (ProposalProcedure era))
 
   treasuryDonationTxBodyL :: Lens' (TxBody era) Coin
+
+conwayRedeemerPointer ::
+  forall era.
+  ConwayEraTxBody era =>
+  TxBody era ->
+  ConwayPlutusPurpose AsItem era ->
+  StrictMaybe (ConwayPlutusPurpose AsIndex era)
+conwayRedeemerPointer txBody = \case
+  ConwayMinting policyID ->
+    ConwayMinting <$> indexOf policyID (txBody ^. mintedTxBodyF :: Set (PolicyID (EraCrypto era)))
+  ConwaySpending txIn ->
+    ConwaySpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
+  ConwayRewarding rewardAccount ->
+    ConwayRewarding <$> indexOf rewardAccount (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  ConwayCertifying txCert ->
+    ConwayCertifying <$> indexOf txCert (txBody ^. certsTxBodyL)
+  ConwayVoting votingProcedure ->
+    ConwayVoting <$> indexOf votingProcedure (txBody ^. votingProceduresTxBodyL)
+  ConwayProposing proposalProcedure ->
+    ConwayProposing <$> indexOf proposalProcedure (txBody ^. proposalProceduresTxBodyL)
+
+conwayRedeemerPointerInverse ::
+  ConwayEraTxBody era =>
+  TxBody era ->
+  ConwayPlutusPurpose AsIndex era ->
+  StrictMaybe (ConwayPlutusPurpose AsItem era)
+conwayRedeemerPointerInverse txBody = \case
+  ConwayMinting idx ->
+    ConwayMinting <$> fromIndex idx (txBody ^. mintedTxBodyF)
+  ConwaySpending idx ->
+    ConwaySpending <$> fromIndex idx (txBody ^. inputsTxBodyL)
+  ConwayRewarding idx ->
+    ConwayRewarding <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
+  ConwayCertifying idx ->
+    ConwayCertifying <$> fromIndex idx (txBody ^. certsTxBodyL)
+  ConwayVoting idx ->
+    ConwayVoting <$> fromIndex idx (txBody ^. votingProceduresTxBodyL)
+  ConwayProposing idx ->
+    ConwayProposing <$> fromIndex idx (txBody ^. proposalProceduresTxBodyL)

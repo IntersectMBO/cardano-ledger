@@ -32,7 +32,7 @@ deriving newtype instance ToExpr CoinPerByte
 instance ToExpr (PlutusScript (BabbageEra c))
 
 -- PlutusContext
-instance ToExpr (BabbageContextError era)
+instance ToExpr (PlutusPurpose AsIndex era) => ToExpr (BabbageContextError era)
 
 -- PParams
 instance ToExpr (BabbagePParams StrictMaybe era)
@@ -67,6 +67,8 @@ instance
 instance
   ( Era era
   , ToExpr (PredicateFailure (EraRule "UTXO" era))
+  , ToExpr (PlutusPurpose AsIndex era)
+  , ToExpr (PlutusPurpose AsItem era)
   , ToExpr (TxCert era)
   ) =>
   ToExpr (BabbageUtxowPredFailure era)

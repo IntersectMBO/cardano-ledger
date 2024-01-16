@@ -29,15 +29,24 @@ module Cardano.Ledger.Api.Tx.Wits (
   rdmrsTxWitsL,
   Redeemers (..),
   unRedeemers,
-  RdmrPtr (..),
-  Tag (..),
+  PlutusPurpose,
+  AlonzoPlutusPurpose (..),
+  AsIndex (..),
+  AsItem (..),
+
+  -- ** Conway
+  ConwayPlutusPurpose (..),
 )
 where
 
-import Cardano.Ledger.Alonzo.Scripts (Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoPlutusPurpose (..),
+  AsIndex (..),
+  AsItem (..),
+  PlutusPurpose,
+ )
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoEraTxWits,
-  RdmrPtr (..),
   Redeemers (..),
   TxDats (..),
   datsTxWitsL,
@@ -47,6 +56,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   unTxDats,
  )
 import Cardano.Ledger.Api.Era ()
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Core (EraTxWits (..), hashScriptTxWitsL)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)

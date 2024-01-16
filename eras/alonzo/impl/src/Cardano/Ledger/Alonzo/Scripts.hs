@@ -11,18 +11,18 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Scripts (
-  Tag (..),
   PlutusBinary (..),
   AlonzoScript (TimelockScript, PlutusScript),
   Script,
@@ -39,24 +39,33 @@ module Cardano.Ledger.Alonzo.Scripts (
   isValidPlutusScript,
   toPlutusSLanguage,
 
+  -- ** Plutus Purpose
+  AlonzoPlutusPurpose (..),
+  AsItem (..),
+  AsIndex (..),
+
   -- * Re-exports
   module Cardano.Ledger.Plutus.CostModels,
   module Cardano.Ledger.Plutus.ExUnits,
 )
 where
 
+import Cardano.Ledger.Address (RewardAcnt)
 import Cardano.Ledger.Allegra.Scripts (Timelock, eqTimelockRaw, translateTimelock)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.Alonzo.TxCert ()
+import Cardano.Ledger.BaseTypes (ProtVer (..), kindObject)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
+  DecCBORGroup (..),
   Decoder,
-  DecoderError (..),
-  EncCBOR (encCBOR),
+  EncCBOR (..),
+  EncCBORGroup (..),
   ToCBOR (toCBOR),
   Version,
-  cborError,
+  decodeWord8,
+  encodeWord8,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (Ann, D, From, Invalid, SumD, Summands),
@@ -65,11 +74,13 @@ import Cardano.Ledger.Binary.Coders (
   decode,
   encode,
   (!>),
+  (<!),
   (<*!),
  )
 import Cardano.Ledger.Binary.Plain (serializeAsHexText)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Mary.Value (PolicyID)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.CostModels
 import Cardano.Ledger.Plutus.ExUnits
@@ -87,13 +98,14 @@ import Cardano.Ledger.Plutus.Language (
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
-import Control.DeepSeq (NFData (..), deepseq, rwhnf)
+import Cardano.Ledger.TxIn (TxIn)
+import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (guard)
-import Data.Aeson (ToJSON (..), Value (String))
+import Data.Aeson (ToJSON (..), Value (String), object, (.=))
 import Data.Kind (Type)
 import Data.Maybe (fromJust, isJust)
 import Data.Typeable
-import Data.Word (Word8)
+import Data.Word (Word16, Word32, Word8)
 import GHC.Generics (Generic)
 import GHC.Stack
 import NoThunks.Class (NoThunks (..))
@@ -106,10 +118,27 @@ class
   , NoThunks (PlutusScript era)
   , NFData (PlutusScript era)
   , SafeToHash (PlutusScript era)
+  , Eq (PlutusPurpose AsItem era)
+  , Show (PlutusPurpose AsItem era)
+  , EncCBOR (PlutusPurpose AsItem era)
+  , DecCBOR (PlutusPurpose AsItem era)
+  , NoThunks (PlutusPurpose AsItem era)
+  , NFData (PlutusPurpose AsItem era)
+  , Eq (PlutusPurpose AsIndex era)
+  , Ord (PlutusPurpose AsIndex era)
+  , Show (PlutusPurpose AsIndex era)
+  , EncCBOR (PlutusPurpose AsIndex era)
+  , DecCBOR (PlutusPurpose AsIndex era)
+  , EncCBORGroup (PlutusPurpose AsIndex era)
+  , DecCBORGroup (PlutusPurpose AsIndex era)
+  , NoThunks (PlutusPurpose AsIndex era)
+  , NFData (PlutusPurpose AsIndex era)
   ) =>
   AlonzoEraScript era
   where
   data PlutusScript era :: Type
+
+  type PlutusPurpose (f :: Type -> Type -> Type) era = (r :: Type) | r -> era
 
   -- | Highest supported Plutus language version for this era.
   eraMaxLanguage :: Language
@@ -137,23 +166,12 @@ class
     (forall l. PlutusLanguage l => Plutus l -> a) ->
     a
 
--- | Marker indicating the part of a transaction for which this script is acting
--- as a validator.
-data Tag
-  = -- | Validates spending a script-locked UTxO
-    Spend
-  | -- | Validates minting new tokens
-    Mint
-  | -- | Validates certificate transactions
-    Cert
-  | -- | Validates withdrawal from a reward account
-    Rewrd
-  deriving (Eq, Generic, Ord, Show, Enum, Bounded)
+  plutusPurposeSpendingTxIn :: PlutusPurpose AsItem era -> Maybe (TxIn (EraCrypto era))
 
-instance NoThunks Tag
-
-instance NFData Tag where
-  rnf = rwhnf
+  upgradePlutusPurposeAsIndex ::
+    AlonzoEraScript (PreviousEra era) =>
+    PlutusPurpose AsIndex (PreviousEra era) ->
+    PlutusPurpose AsIndex era
 
 mkBinaryPlutusScript :: AlonzoEraScript era => Language -> PlutusBinary -> Maybe (PlutusScript era)
 mkBinaryPlutusScript lang pb = withSLanguage lang (mkPlutusScript . (`asSLanguage` Plutus pb))
@@ -194,7 +212,116 @@ plutusScriptBinary ps = withPlutusScript ps plutusBinary
 isValidPlutusScript :: AlonzoEraScript era => Version -> PlutusScript era -> Bool
 isValidPlutusScript pv ps = withPlutusScript ps (isValidPlutus pv)
 
--- =======================================================
+-- Alonzo Plutus Purpose =======================================================
+
+newtype AsIndex ix it = AsIndex {unAsIndex :: ix}
+  deriving newtype (Eq, Ord, Show, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
+
+newtype AsItem ix it = AsItem {unAsItem :: it}
+  deriving newtype (Eq, Ord, Show, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
+
+instance ToJSON a => ToJSON (AsIndex a b) where
+  toJSON (AsIndex i) = object ["index" .= toJSON i]
+
+instance ToJSON b => ToJSON (AsItem a b) where
+  toJSON (AsItem i) = object ["item" .= toJSON i]
+
+data AlonzoPlutusPurpose f era
+  = AlonzoSpending !(f Word32 (TxIn (EraCrypto era)))
+  | AlonzoMinting !(f Word32 (PolicyID (EraCrypto era)))
+  | AlonzoCertifying !(f Word32 (TxCert era))
+  | AlonzoRewarding !(f Word32 (RewardAcnt (EraCrypto era)))
+  deriving (Generic)
+
+deriving instance Eq (AlonzoPlutusPurpose AsIndex era)
+deriving instance Ord (AlonzoPlutusPurpose AsIndex era)
+deriving instance Show (AlonzoPlutusPurpose AsIndex era)
+instance NoThunks (AlonzoPlutusPurpose AsIndex era)
+
+deriving instance Eq (TxCert era) => Eq (AlonzoPlutusPurpose AsItem era)
+deriving instance Show (TxCert era) => Show (AlonzoPlutusPurpose AsItem era)
+instance NoThunks (TxCert era) => NoThunks (AlonzoPlutusPurpose AsItem era)
+
+instance
+  (forall a b. (NFData a, NFData b) => NFData (f a b), NFData (TxCert era), Era era) =>
+  NFData (AlonzoPlutusPurpose f era)
+  where
+  rnf = \case
+    AlonzoSpending x -> rnf x
+    AlonzoMinting x -> rnf x
+    AlonzoCertifying x -> rnf x
+    AlonzoRewarding x -> rnf x
+
+instance Era era => EncCBORGroup (AlonzoPlutusPurpose AsIndex era) where
+  listLen _ = 2
+  listLenBound _ = 2
+  encCBORGroup = \case
+    AlonzoSpending (AsIndex redeemerIx) -> encodeWord8 0 <> encCBOR redeemerIx
+    AlonzoMinting (AsIndex redeemerIx) -> encodeWord8 1 <> encCBOR redeemerIx
+    AlonzoCertifying (AsIndex redeemerIx) -> encodeWord8 2 <> encCBOR redeemerIx
+    AlonzoRewarding (AsIndex redeemerIx) -> encodeWord8 3 <> encCBOR redeemerIx
+  encodedGroupSizeExpr size_ _proxy =
+    encodedSizeExpr size_ (Proxy :: Proxy Word8)
+      + encodedSizeExpr size_ (Proxy :: Proxy Word16)
+
+instance Era era => DecCBORGroup (AlonzoPlutusPurpose AsIndex era) where
+  decCBORGroup =
+    decodeWord8 >>= \case
+      0 -> AlonzoSpending . AsIndex <$> decCBOR
+      1 -> AlonzoMinting . AsIndex <$> decCBOR
+      2 -> AlonzoCertifying . AsIndex <$> decCBOR
+      3 -> AlonzoRewarding . AsIndex <$> decCBOR
+      n -> fail $ "Unexpected tag for AlonzoPlutusPurpose: " <> show n
+
+-- | Incorrect CBOR implementation. Missing length encoding. Must keep it for backwards
+-- compatibility
+instance Era era => EncCBOR (AlonzoPlutusPurpose AsIndex era) where
+  encCBOR = encCBORGroup
+
+-- | Incorrect CBOR implementation. Missing length encoding. Must keep it for backwards
+-- compatibility
+instance Era era => DecCBOR (AlonzoPlutusPurpose AsIndex era) where
+  decCBOR = decCBORGroup
+
+instance
+  ( forall a b. (ToJSON a, ToJSON b) => ToJSON (f a b)
+  , ToJSON (TxCert era)
+  , Era era
+  ) =>
+  ToJSON (AlonzoPlutusPurpose f era)
+  where
+  toJSON = \case
+    AlonzoSpending n -> kindObjectWithValue "AlonzoSpending" n
+    AlonzoMinting n -> kindObjectWithValue "AlonzoMinting" n
+    AlonzoCertifying n -> kindObjectWithValue "AlonzoCertifying" n
+    AlonzoRewarding n -> kindObjectWithValue "AlonzoRewarding" n
+    where
+      kindObjectWithValue name n = kindObject name ["value" .= n]
+
+-- | /Note/ - serialization of `AlonzoPlutusPurpose` `AsItem`
+--
+-- * Tags do not match the `AlonzoPlutusPurpose` `AsIndex`. Unfortunate inconsistency
+--
+-- * It is only used for predicate failures. Thus we can change it after Conway to be
+--   consistent with `AlonzoPlutusPurpose` `AsIndex`
+instance (Era era, EncCBOR (TxCert era)) => EncCBOR (AlonzoPlutusPurpose AsItem era) where
+  encCBOR = \case
+    AlonzoSpending (AsItem x) -> encode (Sum (AlonzoSpending @_ @era . AsItem) 1 !> To x)
+    AlonzoMinting (AsItem x) -> encode (Sum (AlonzoMinting @_ @era . AsItem) 0 !> To x)
+    AlonzoCertifying (AsItem x) -> encode (Sum (AlonzoCertifying . AsItem) 3 !> To x)
+    AlonzoRewarding (AsItem x) -> encode (Sum (AlonzoRewarding @_ @era . AsItem) 2 !> To x)
+
+-- | See note on the `EncCBOR` instace.
+instance (Era era, DecCBOR (TxCert era)) => DecCBOR (AlonzoPlutusPurpose AsItem era) where
+  decCBOR = decode (Summands "AlonzoPlutusPurpose" dec)
+    where
+      dec 1 = SumD (AlonzoSpending . AsItem) <! From
+      dec 0 = SumD (AlonzoMinting . AsItem) <! From
+      dec 3 = SumD (AlonzoCertifying . AsItem) <! From
+      dec 2 = SumD (AlonzoRewarding . AsItem) <! From
+      dec n = Invalid n
+
+-- Alonzo Script ===============================================================
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
 data AlonzoScript era
@@ -244,6 +371,8 @@ instance Crypto c => AlonzoEraScript (AlonzoEra c) where
   newtype PlutusScript (AlonzoEra c) = AlonzoPlutusV1 (Plutus 'PlutusV1)
     deriving newtype (Eq, Ord, Show, NFData, NoThunks, SafeToHash, Generic)
 
+  type PlutusPurpose f (AlonzoEra c) = AlonzoPlutusPurpose f (AlonzoEra c)
+
   eraMaxLanguage = PlutusV1
 
   mkPlutusScript plutus =
@@ -252,6 +381,13 @@ instance Crypto c => AlonzoEraScript (AlonzoEra c) where
       _ -> Nothing
 
   withPlutusScript (AlonzoPlutusV1 plutus) f = f plutus
+
+  plutusPurposeSpendingTxIn = \case
+    AlonzoSpending (AsItem txIn) -> Just txIn
+    _ -> Nothing
+
+  upgradePlutusPurposeAsIndex =
+    error "Impossible: No `PlutusScript` and `AlonzoEraScript` instances in the previous era"
 
 instance Eq (PlutusScript era) => EqRaw (AlonzoScript era) where
   eqRaw = eqAlonzoScriptRaw
@@ -262,25 +398,6 @@ instance AlonzoEraScript era => ToJSON (AlonzoScript era) where
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
-
-tagToWord8 :: Tag -> Word8
-tagToWord8 = toEnum . fromEnum
-
-word8ToTag :: Word8 -> Maybe Tag
-word8ToTag e
-  | fromEnum e > fromEnum (Prelude.maxBound :: Tag) = Nothing
-  | fromEnum e < fromEnum (minBound :: Tag) = Nothing
-  | otherwise = Just $ toEnum (fromEnum e)
-
-instance EncCBOR Tag where
-  encCBOR = encCBOR . tagToWord8
-
-instance DecCBOR Tag where
-  decCBOR =
-    word8ToTag <$> decCBOR >>= \case
-      Nothing -> cborError $ DecoderErrorCustom "Tag" "Unknown redeemer tag"
-      Just n -> pure n
-  {-# INLINE decCBOR #-}
 
 decodePlutusScript ::
   forall era l s.

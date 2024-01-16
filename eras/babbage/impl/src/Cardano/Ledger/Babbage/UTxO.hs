@@ -10,30 +10,18 @@ module Cardano.Ledger.Babbage.UTxO (
   getReferenceScripts,
 ) where
 
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose)
-import Cardano.Ledger.Alonzo.TxOut (dataHashTxOutL)
 import Cardano.Ledger.Alonzo.TxWits (unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   AlonzoScriptsNeeded,
   getAlonzoScriptsHashesNeeded,
   getAlonzoScriptsNeeded,
-  getAlonzoSpendingTxIn,
   getAlonzoWitsVKeyNeeded,
  )
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.Tx ()
-import Cardano.Ledger.Babbage.TxBody (
-  BabbageEraTxBody (
-    allSizedOutputsTxBodyF,
-    referenceInputsTxBodyL
-  ),
- )
-import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (dataTxOutL, referenceScriptTxOutL))
-import Cardano.Ledger.Babbage.TxWits (datsTxWitsL)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (sizedValue)
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Plutus.Data (Data)
@@ -88,10 +76,10 @@ getBabbageSpendingDatum ::
   ) =>
   UTxO era ->
   Tx era ->
-  ScriptPurpose era ->
+  PlutusPurpose AsItem era ->
   Maybe (Data era)
 getBabbageSpendingDatum (UTxO utxo) tx sp = do
-  txIn <- getAlonzoSpendingTxIn sp
+  txIn <- plutusPurposeSpendingTxIn sp
   txOut <- Map.lookup txIn utxo
   let txOutDataFromWits = do
         dataHash <- strictMaybeToMaybe (txOut ^. dataHashTxOutL)

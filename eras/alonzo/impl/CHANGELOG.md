@@ -2,6 +2,17 @@
 
 ## 1.6.0.0
 
+* Deprecated `getAlonzoSpendingTxIn` in favor of `plutusPurposeSpendingTxIn`
+* Add `PlutusPurpose`, `plutusPurposeSpendingTxIn` and `upgradePlutusPurposeAsIndex` to
+  `AlonzoEraScript`.
+* Add `AsIndex`, `AsItem` and `AlonzoPlutusPurpose`
+* Remove `RdmrPtr` and `Tag` in favor of `PlutusPurpose AsIndex`
+* Remove `ScriptPurpose` in favor of `PlutusPurpose AsItem`
+* Add `AlonzoTxAuxData'`, `atadMetadata'`, `atadTimelock'`, `atadPlutus'`
+* Add `alonzoRedeemerPointer`, `alonzoRedeemerPointerInverse`
+* Remove `rdptr` and `rdptrInv` in favor of `redeemerPointer` and `redeemerPointerInverse`
+  respectively
+* Rename `indexedRdmrs` to `indexRedeemers` and change the type of one of its arguments
 * Deprecate `requiredSignersAreWitnessed`
 * Add `ToJSON` for `AlonzoContextError` and `CollectError`
 * Stop exporting all of the internal `hkd*` functions and `PParamsHKD` from

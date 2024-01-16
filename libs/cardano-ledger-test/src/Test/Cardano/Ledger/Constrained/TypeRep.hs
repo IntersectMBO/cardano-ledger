@@ -48,9 +48,8 @@ import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Crypto.Signing (SigningKey (..), shortVerificationKeyHexF, toVerification)
 import qualified Cardano.Crypto.Wallet as Byron
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
-import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..))
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (
@@ -120,14 +119,14 @@ import Formatting (formatToString)
 import Lens.Micro
 import Numeric.Natural (Natural)
 import Prettyprinter (hsep)
-import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
-import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoPlutusPurposePointer)
 import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (add, zero),
   PParamsF (..),
   PParamsUpdateF (..),
+  PlutusPointerF (..),
+  PlutusPurposeF (..),
   ScriptF (..),
   ScriptsNeededF (..),
   TxAuxDataF (..),
@@ -155,6 +154,7 @@ import Test.Cardano.Ledger.Constrained.Classes (
 import Test.Cardano.Ledger.Constrained.Combinators (mapSized, setSized)
 import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed, failT)
 import Test.Cardano.Ledger.Constrained.Size (Size (..))
+import Test.Cardano.Ledger.Conway.Arbitrary (genConwayPlutusPurposePointer)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (WitnessesField (..))
@@ -192,7 +192,6 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcReward,
   pcRewardAcnt,
   pcScriptHash,
-  pcScriptPurpose,
   pcShelleyTxCert,
   pcTx,
   pcTxBody,
@@ -208,7 +207,6 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   ppList,
   ppMap,
   ppMaybe,
-  ppRdmrPtr,
   ppRecord',
   ppSet,
   ppString,
@@ -299,11 +297,10 @@ data Rep era t where
   ScriptR :: Era era => Proof era -> Rep era (ScriptF era)
   ScriptHashR :: Era era => Rep era (ScriptHash (EraCrypto era))
   NetworkR :: Rep era Network
-  RdmrPtrR :: Rep era RdmrPtr
+  RdmrPtrR :: Era era => Proof era -> Rep era (PlutusPointerF era)
   DataR :: Era era => Rep era (Data era)
   DatumR :: Era era => Rep era (Datum era)
   ExUnitsR :: Rep era ExUnits
-  TagR :: Rep era Tag
   DataHashR :: Era era => Rep era (DataHash (EraCrypto era))
   PCredR :: Era era => Rep era (Credential 'Payment (EraCrypto era))
   ShelleyTxCertR :: Era era => Rep era (ShelleyTxCert era)
@@ -312,7 +309,7 @@ data Rep era t where
   IsValidR :: Rep era IsValid
   IntegerR :: Rep era Integer
   ScriptsNeededR :: Era era => Proof era -> Rep era (ScriptsNeededF era)
-  ScriptPurposeR :: Era era => Proof era -> Rep era (ScriptPurpose era)
+  ScriptPurposeR :: Era era => Proof era -> Rep era (PlutusPurposeF era)
   TxBodyR :: Era era => Proof era -> Rep era (TxBodyF era)
   BootstrapWitnessR :: Era era => Rep era (BootstrapWitness (EraCrypto era))
   SigningKeyR :: Rep era SigningKey
@@ -416,19 +413,13 @@ repHasInstances r = case r of
   PayHashR {} -> IsOrd
   IntegerR {} -> IsOrd
   ScriptsNeededR {} -> IsTypeable
-  ScriptPurposeR (Shelley _) -> IsEq
-  ScriptPurposeR (Mary _) -> IsEq
-  ScriptPurposeR (Allegra _) -> IsEq
-  ScriptPurposeR (Alonzo _) -> IsEq
-  ScriptPurposeR (Babbage _) -> IsEq
-  ScriptPurposeR (Conway _) -> IsEq
+  ScriptPurposeR {} -> IsEq
   TxBodyR {} -> IsEq
   ShelleyTxCertR {} -> IsEq
   ConwayTxCertR {} -> IsEq
   MIRPotR {} -> IsOrd
   IsValidR {} -> IsEq
   ExUnitsR {} -> IsEq
-  TagR {} -> IsOrd
   DataHashR {} -> IsOrd
   PCredR {} -> IsOrd
   NetworkR {} -> IsOrd
@@ -622,11 +613,10 @@ synopsis (GenR x) _ = "(Gen " ++ show x ++ " ...)"
 synopsis (ScriptR _) x = show x -- The Show instance uses pcScript
 synopsis ScriptHashR x = show (pcScriptHash x)
 synopsis NetworkR x = show x
-synopsis RdmrPtrR x = show (ppRdmrPtr x)
+synopsis (RdmrPtrR _) x = show x
 synopsis DataR x = show (pcData x)
 synopsis DatumR x = show (pcDatum x)
 synopsis ExUnitsR (ExUnits m d) = "(ExUnits mem=" ++ show m ++ " data=" ++ show d ++ ")"
-synopsis TagR x = show x
 synopsis DataHashR x = show (pcDataHash x)
 synopsis PCredR c = show (credSummary c)
 synopsis ConwayTxCertR x = show (pcConwayTxCert x)
@@ -635,7 +625,7 @@ synopsis MIRPotR x = show x
 synopsis IsValidR x = show x
 synopsis IntegerR x = show x
 synopsis (ScriptsNeededR _) x = show x
-synopsis (ScriptPurposeR p) x = show (pcScriptPurpose p x)
+synopsis (ScriptPurposeR _) x = show x
 synopsis (TxBodyR p) x = show (pcTxBody p (unTxBodyF x))
 synopsis BootstrapWitnessR x = "(BootstrapWitness " ++ show (ppVKey (bwKey x)) ++ ")"
 synopsis SigningKeyR key = "(publicKeyOfSecretKey " ++ formatToString shortVerificationKeyHexF (toVerification key) ++ ")"
@@ -781,7 +771,20 @@ genSizedRep n (GenR x) = pure (genSizedRep n x)
 genSizedRep _ (ScriptR p) = genScriptF p
 genSizedRep _ ScriptHashR = arbitrary
 genSizedRep _ NetworkR = arbitrary
-genSizedRep n RdmrPtrR = RdmrPtr <$> arbitrary <*> choose (0, fromIntegral n)
+genSizedRep n (RdmrPtrR p) =
+  case p of
+    Shelley _ -> error "Redeemers are not supported in Shelley"
+    Allegra _ -> error "Redeemers are not supported in Allegra"
+    Mary _ -> error "Redeemers are not supported in Mary"
+    Alonzo _ -> do
+      i <- choose (0, fromIntegral n)
+      PlutusPointerF p <$> genAlonzoPlutusPurposePointer i
+    Babbage _ -> do
+      i <- choose (0, fromIntegral n)
+      PlutusPointerF p <$> genAlonzoPlutusPurposePointer i
+    Conway _ -> do
+      i <- choose (0, fromIntegral n)
+      PlutusPointerF p <$> genConwayPlutusPurposePointer i
 genSizedRep _ DataR = arbitrary
 genSizedRep n DatumR =
   oneof
@@ -790,7 +793,6 @@ genSizedRep n DatumR =
     , Datum . dataToBinaryData <$> genSizedRep @era n DataR
     ]
 genSizedRep _ ExUnitsR = arbitrary
-genSizedRep _ TagR = arbitrary
 genSizedRep _ DataHashR = arbitrary
 genSizedRep _ PCredR = arbitrary
 genSizedRep _ ShelleyTxCertR = arbitrary
@@ -801,9 +803,14 @@ genSizedRep _ IntegerR = arbitrary
 genSizedRep _ (ScriptsNeededR p) = case whichUTxO p of
   UTxOShelleyToMary -> pure $ ScriptsNeededF p (ShelleyScriptsNeeded Set.empty)
   UTxOAlonzoToConway -> pure $ ScriptsNeededF p (AlonzoScriptsNeeded [])
-genSizedRep _ (ScriptPurposeR p) = case whichTxCert p of
-  TxCertShelleyToBabbage -> arbitrary
-  TxCertConwayToConway -> arbitrary
+genSizedRep _ (ScriptPurposeR p) =
+  case p of
+    Shelley _ -> error "PlutusPurpose is not supported in Shelley"
+    Allegra _ -> error "PlutusPurpose is not supported in Allegra"
+    Mary _ -> error "PlutusPurpose is not supported in Mary"
+    Alonzo _ -> PlutusPurposeF p <$> arbitrary
+    Babbage _ -> PlutusPurposeF p <$> arbitrary
+    Conway _ -> PlutusPurposeF p <$> arbitrary
 genSizedRep _ (TxBodyR p) =
   case p of
     Shelley _ -> pure (TxBodyF p (newTxBody p []))
@@ -1025,11 +1032,10 @@ shrinkRep ScriptHashR t = shrink t
 shrinkRep VCredR t = shrink t
 shrinkRep VHashR t = shrink t
 shrinkRep NetworkR t = shrink t
-shrinkRep RdmrPtrR t = shrink t
+shrinkRep (RdmrPtrR _) _ = []
 shrinkRep DataR t = shrink t
 shrinkRep DatumR _ = []
 shrinkRep ExUnitsR t = shrink t
-shrinkRep TagR t = shrink t
 shrinkRep DataHashR t = shrink t
 shrinkRep AddrR t = shrink t
 shrinkRep PCredR t = shrink t

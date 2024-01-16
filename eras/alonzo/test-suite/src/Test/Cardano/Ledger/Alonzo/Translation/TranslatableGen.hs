@@ -23,6 +23,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   toPlutusTxInfo,
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (eraMaxLanguage))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -53,11 +54,13 @@ data TxInfoLanguage era where
   TxInfoLanguage :: EraPlutusTxInfo l era => SLanguage l -> TxInfoLanguage era
 
 class EraTx era => TranslatableGen era where
+  tgRedeemers :: Gen (Redeemers era)
   tgTx :: Language -> Gen (Core.Tx era)
   tgUtxo :: Language -> Core.Tx era -> Gen (UTxO era)
   mkTxInfoLanguage :: HasCallStack => Language -> TxInfoLanguage era
 
 instance TranslatableGen Alonzo where
+  tgRedeemers = arbitrary
   tgTx _ = arbitrary :: Gen (Tx Alonzo)
   tgUtxo _ tx = do
     let ins = tx ^. bodyTxL ^. inputsTxBodyL

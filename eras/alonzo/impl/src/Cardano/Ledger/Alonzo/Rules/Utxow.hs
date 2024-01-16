@@ -37,13 +37,8 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUtxoPredFailure,
  )
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
-import Cardano.Ledger.Alonzo.Tx (
-  ScriptPurpose,
-  hashScriptIntegrity,
-  rdptr,
- )
+import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits (
-  RdmrPtr,
   unRedeemers,
   unTxDats,
  )
@@ -97,7 +92,7 @@ data AlonzoUtxowPredFailure era
   = ShelleyInAlonzoUtxowPredFailure !(ShelleyUtxowPredFailure era)
   | -- | List of scripts for which no redeemers were supplied
     MissingRedeemers
-      ![(ScriptPurpose era, ScriptHash (EraCrypto era))]
+      ![(PlutusPurpose AsItem era, ScriptHash (EraCrypto era))]
   | MissingRequiredDatums
       -- | Set of missing data hashes
       !(Set (DataHash (EraCrypto era)))
@@ -121,39 +116,35 @@ data AlonzoUtxowPredFailure era
       (Set (TxIn (EraCrypto era)))
   | -- | List of redeemers not needed
     ExtraRedeemers
-      ![RdmrPtr]
+      ![PlutusPurpose AsIndex era]
   deriving (Generic)
 
 deriving instance
-  ( Era era
+  ( AlonzoEraScript era
   , Show (TxCert era)
-  , Show (Script era)
   , Show (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Show (AlonzoUtxowPredFailure era)
 
 deriving instance
-  ( Era era
+  ( AlonzoEraScript era
   , Eq (TxCert era)
-  , Eq (Script era)
   , Eq (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Eq (AlonzoUtxowPredFailure era)
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , NoThunks (TxCert era)
-  , NoThunks (Script era)
   , NoThunks (PredicateFailure (EraRule "UTXO" era))
   ) =>
   NoThunks (AlonzoUtxowPredFailure era)
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , EncCBOR (TxCert era)
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
   , Typeable (TxAuxData era)
-  , EncCBOR (Script era)
   ) =>
   EncCBOR (AlonzoUtxowPredFailure era)
   where
@@ -172,34 +163,24 @@ newtype AlonzoUtxowEvent era
   = WrappedShelleyEraEvent (ShelleyUtxowEvent era)
 
 instance
-  ( Era era
+  ( AlonzoEraScript era
   , DecCBOR (TxCert era)
   , DecCBOR (PredicateFailure (EraRule "UTXO" era))
-  , Typeable (Script era)
   , Typeable (TxAuxData era)
   ) =>
   DecCBOR (AlonzoUtxowPredFailure era)
   where
-  decCBOR = decode (Summands "UtxowPredicateFail" decodePredFail)
-
-decodePredFail ::
-  ( Era era
-  , DecCBOR (TxCert era)
-  , DecCBOR (PredicateFailure (EraRule "UTXO" era))
-  , Typeable (Script era)
-  , Typeable (TxAuxData era)
-  ) =>
-  Word ->
-  Decode 'Open (AlonzoUtxowPredFailure era)
-decodePredFail 0 = SumD ShelleyInAlonzoUtxowPredFailure <! From
-decodePredFail 1 = SumD MissingRedeemers <! From
-decodePredFail 2 = SumD MissingRequiredDatums <! From <! From
-decodePredFail 3 = SumD NotAllowedSupplementalDatums <! From <! From
-decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
-decodePredFail 5 = SumD MissingRequiredSigners <! From
-decodePredFail 6 = SumD UnspendableUTxONoDatumHash <! From
-decodePredFail 7 = SumD ExtraRedeemers <! From
-decodePredFail n = Invalid n
+  decCBOR =
+    decode $ Summands "UtxowPredicateFail" $ \case
+      0 -> SumD ShelleyInAlonzoUtxowPredFailure <! From
+      1 -> SumD MissingRedeemers <! From
+      2 -> SumD MissingRequiredDatums <! From <! From
+      3 -> SumD NotAllowedSupplementalDatums <! From <! From
+      4 -> SumD PPViewHashesDontMatch <! From <! From
+      5 -> SumD MissingRequiredSigners <! From
+      6 -> SumD UnspendableUTxONoDatumHash <! From
+      7 -> SumD ExtraRedeemers <! From
+      n -> Invalid n
 
 -- =================
 
@@ -250,9 +231,9 @@ hasExactSetOfRedeemers tx (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded
       redeemersNeeded =
         [ (rp, (sp, sh))
         | (sp, sh) <- scriptsNeeded
-        , SJust rp <- [rdptr @era txBody sp]
+        , SJust rp <- [redeemerPointer @era txBody sp]
         , Just script <- [Map.lookup sh scriptsProvided]
-        , (not . isNativeScript) script
+        , not (isNativeScript script)
         ]
       (extraRdmrs, missingRdmrs) =
         extSymmetricDifference

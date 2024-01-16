@@ -12,9 +12,7 @@ module Test.Cardano.Ledger.Generic.ApplyTx where
 
 import Cardano.Ledger.Address (RewardAcnt (..), Withdrawals (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (RdmrPtr), Redeemers (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial, natVersion)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import Cardano.Ledger.Core
@@ -64,6 +62,7 @@ import Test.Cardano.Ledger.Generic.Functions (
   getOutputs,
   txInBalance,
  )
+import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..), mkRedeemersFromTags)
 import Test.Cardano.Ledger.Generic.ModelState (
   Model,
   ModelNewEpochState (..),
@@ -73,7 +72,13 @@ import Test.Cardano.Ledger.Generic.ModelState (
 import Test.Cardano.Ledger.Generic.PrettyCore (pcCredential, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (never))
-import Test.Cardano.Ledger.Generic.Updaters (newPParams, newScriptIntegrityHash, newTx, newTxBody, newTxOut)
+import Test.Cardano.Ledger.Generic.Updaters (
+  newPParams,
+  newScriptIntegrityHash,
+  newTx,
+  newTxBody,
+  newTxOut,
+ )
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld (deltaFOld), rsOld)
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
@@ -387,11 +392,4 @@ notValidatingTx pf =
         , WppHash (newScriptIntegrityHash pf (pparams pf) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 0))))
         ]
     redeemers =
-      Redeemers
-        ( Map.fromList
-            [
-              ( RdmrPtr Tag.Spend 0
-              , (Data (PV1.I 1), ExUnits 5000 5000)
-              )
-            ]
-        )
+      mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 1), ExUnits 5000 5000))]

@@ -1,33 +1,52 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Scripts (
   AlonzoScript (..),
   PlutusScript (..),
   isPlutusScript,
+  ConwayPlutusPurpose (..),
 )
 where
 
+import Cardano.Ledger.Address (RewardAcnt)
 import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
-import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript (..),
-  AlonzoScript (..),
-  isPlutusScript,
- )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AlonzoScript (..), isPlutusScript)
+import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Scripts (PlutusScript (..))
+import Cardano.Ledger.BaseTypes (kindObject)
+import Cardano.Ledger.Binary (
+  CBORGroup (..),
+  DecCBOR (decCBOR),
+  DecCBORGroup (..),
+  EncCBOR (..),
+  EncCBORGroup (..),
+  decodeWord8,
+  encodeWord8,
+ )
 import Cardano.Ledger.Conway.Era
-import Cardano.Ledger.Core
+import Cardano.Ledger.Conway.Governance.Procedures
+import Cardano.Ledger.Conway.TxCert ()
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Mary.Value (PolicyID)
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
+import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
+import Data.Aeson (ToJSON (..), (.=))
+import Data.Typeable
+import Data.Word (Word16, Word32, Word8)
 import GHC.Generics
 import NoThunks.Class (NoThunks (..))
 
@@ -59,6 +78,8 @@ instance Crypto c => AlonzoEraScript (ConwayEra c) where
     | ConwayPlutusV3 !(Plutus 'PlutusV3)
     deriving (Eq, Ord, Show, Generic)
 
+  type PlutusPurpose f (ConwayEra c) = ConwayPlutusPurpose f (ConwayEra c)
+
   eraMaxLanguage = PlutusV3
 
   mkPlutusScript plutus =
@@ -71,8 +92,124 @@ instance Crypto c => AlonzoEraScript (ConwayEra c) where
   withPlutusScript (ConwayPlutusV2 plutus) f = f plutus
   withPlutusScript (ConwayPlutusV3 plutus) f = f plutus
 
+  plutusPurposeSpendingTxIn = \case
+    ConwaySpending (AsItem txIn) -> Just txIn
+    _ -> Nothing
+
+  upgradePlutusPurposeAsIndex = \case
+    AlonzoSpending (AsIndex ix) -> ConwaySpending (AsIndex ix)
+    AlonzoMinting (AsIndex ix) -> ConwayMinting (AsIndex ix)
+    AlonzoCertifying (AsIndex ix) -> ConwayCertifying (AsIndex ix)
+    AlonzoRewarding (AsIndex ix) -> ConwayRewarding (AsIndex ix)
+
 instance NFData (PlutusScript (ConwayEra c)) where
   rnf = rwhnf
 instance NoThunks (PlutusScript (ConwayEra c))
 instance Crypto c => SafeToHash (PlutusScript (ConwayEra c)) where
   originalBytes ps = withPlutusScript ps originalBytes
+
+data ConwayPlutusPurpose f era
+  = ConwaySpending !(f Word32 (TxIn (EraCrypto era)))
+  | ConwayMinting !(f Word32 (PolicyID (EraCrypto era)))
+  | ConwayCertifying !(f Word32 (TxCert era))
+  | ConwayRewarding !(f Word32 (RewardAcnt (EraCrypto era)))
+  | ConwayVoting !(f Word32 (Voter (EraCrypto era)))
+  | ConwayProposing !(f Word32 (ProposalProcedure era))
+  deriving (Generic)
+
+deriving instance Eq (ConwayPlutusPurpose AsIndex era)
+deriving instance Ord (ConwayPlutusPurpose AsIndex era)
+deriving instance Show (ConwayPlutusPurpose AsIndex era)
+instance NoThunks (ConwayPlutusPurpose AsIndex era)
+
+deriving instance (Eq (TxCert era), EraPParams era) => Eq (ConwayPlutusPurpose AsItem era)
+deriving instance (Show (TxCert era), EraPParams era) => Show (ConwayPlutusPurpose AsItem era)
+instance (NoThunks (TxCert era), EraPParams era) => NoThunks (ConwayPlutusPurpose AsItem era)
+deriving via
+  (CBORGroup (ConwayPlutusPurpose f era))
+  instance
+    ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
+    , EraPParams era
+    , Typeable f
+    , EncCBOR (TxCert era)
+    ) =>
+    EncCBOR (ConwayPlutusPurpose f era)
+deriving via
+  (CBORGroup (ConwayPlutusPurpose f era))
+  instance
+    ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
+    , forall a b. (DecCBOR a, DecCBOR b) => DecCBOR (f a b)
+    , EraPParams era
+    , Typeable f
+    , EncCBOR (TxCert era)
+    , DecCBOR (TxCert era)
+    ) =>
+    DecCBOR (ConwayPlutusPurpose f era)
+
+instance
+  (forall a b. (NFData a, NFData b) => NFData (f a b), NFData (TxCert era), EraPParams era) =>
+  NFData (ConwayPlutusPurpose f era)
+  where
+  rnf = \case
+    ConwaySpending x -> rnf x
+    ConwayMinting x -> rnf x
+    ConwayCertifying x -> rnf x
+    ConwayRewarding x -> rnf x
+    ConwayVoting x -> rnf x
+    ConwayProposing x -> rnf x
+
+instance
+  ( forall a b. (EncCBOR a, EncCBOR b) => EncCBOR (f a b)
+  , EraPParams era
+  , Typeable f
+  , EncCBOR (TxCert era)
+  ) =>
+  EncCBORGroup (ConwayPlutusPurpose f era)
+  where
+  listLen _ = 2
+  listLenBound _ = 2
+  encCBORGroup = \case
+    ConwaySpending p -> encodeWord8 0 <> encCBOR p
+    ConwayMinting p -> encodeWord8 1 <> encCBOR p
+    ConwayCertifying p -> encodeWord8 2 <> encCBOR p
+    ConwayRewarding p -> encodeWord8 3 <> encCBOR p
+    ConwayVoting p -> encodeWord8 4 <> encCBOR p
+    ConwayProposing p -> encodeWord8 5 <> encCBOR p
+  encodedGroupSizeExpr size_ _proxy =
+    encodedSizeExpr size_ (Proxy :: Proxy Word8)
+      + encodedSizeExpr size_ (Proxy :: Proxy Word16)
+
+instance
+  ( forall a b. (DecCBOR a, DecCBOR b) => DecCBOR (f a b)
+  , EraPParams era
+  , Typeable f
+  , DecCBOR (TxCert era)
+  ) =>
+  DecCBORGroup (ConwayPlutusPurpose f era)
+  where
+  decCBORGroup =
+    decodeWord8 >>= \case
+      0 -> ConwaySpending <$> decCBOR
+      1 -> ConwayMinting <$> decCBOR
+      2 -> ConwayCertifying <$> decCBOR
+      3 -> ConwayRewarding <$> decCBOR
+      4 -> ConwayVoting <$> decCBOR
+      5 -> ConwayProposing <$> decCBOR
+      n -> fail $ "Unexpected tag for ConwayPlutusPurpose: " <> show n
+
+instance
+  ( forall a b. (ToJSON a, ToJSON b) => ToJSON (f a b)
+  , ToJSON (TxCert era)
+  , EraPParams era
+  ) =>
+  ToJSON (ConwayPlutusPurpose f era)
+  where
+  toJSON = \case
+    ConwaySpending n -> kindObjectWithValue "ConwaySpending" n
+    ConwayMinting n -> kindObjectWithValue "ConwayMinting" n
+    ConwayCertifying n -> kindObjectWithValue "ConwayCertifying" n
+    ConwayRewarding n -> kindObjectWithValue "ConwayRewarding" n
+    ConwayVoting n -> kindObjectWithValue "ConwayVoting" n
+    ConwayProposing n -> kindObjectWithValue "ConwayProposing" n
+    where
+      kindObjectWithValue name n = kindObject name ["value" .= n]

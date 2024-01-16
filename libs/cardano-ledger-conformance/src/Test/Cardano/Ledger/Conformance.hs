@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
@@ -25,20 +26,9 @@ import Cardano.Crypto.Hash (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), serialiseAddr)
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
-import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoScript (..),
-  CostModels,
-  ExUnits (..),
-  Prices,
-  Tag (..),
- )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.Alonzo.TxWits (
-  AlonzoTxWits (..),
-  RdmrPtr (..),
-  Redeemers (..),
-  TxDats (..),
- )
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
   Anchor,
@@ -57,6 +47,7 @@ import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (GovAction (..), ProposalProcedure (..), VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
   ConwayGovCert (..),
@@ -71,6 +62,7 @@ import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
+import Cardano.Ledger.Plutus (CostModels, ExUnits (..), Prices)
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, extractHash)
@@ -395,14 +387,6 @@ instance
   specToTestRep = L.sortOn fst
   toTestRep = toSpecRep
 
-instance SpecTranslate Tag where
-  type SpecRep Tag = Agda.Tag
-
-  toSpecRep Spend = pure Agda.Spend
-  toSpecRep Mint = pure Agda.Mint
-  toSpecRep Cert = pure Agda.Cert
-  toSpecRep Rewrd = pure Agda.Rewrd
-
 instance SpecTranslate Word64 where
   type SpecRep Word64 = Integer
 
@@ -413,10 +397,25 @@ instance SpecTranslate Word32 where
 
   toSpecRep = pure . toInteger
 
-instance SpecTranslate RdmrPtr where
-  type SpecRep RdmrPtr = Agda.RdmrPtr
+instance SpecTranslate (AlonzoPlutusPurpose AsIndex era) where
+  type SpecRep (AlonzoPlutusPurpose AsIndex era) = Agda.RdmrPtr
 
-  toSpecRep (RdmrPtr t x) = toSpecRep (t, x)
+  toSpecRep = \case
+    AlonzoSpending (AsIndex i) -> pure (Agda.Spend, toInteger i)
+    AlonzoMinting (AsIndex i) -> pure (Agda.Mint, toInteger i)
+    AlonzoCertifying (AsIndex i) -> pure (Agda.Cert, toInteger i)
+    AlonzoRewarding (AsIndex i) -> pure (Agda.Rewrd, toInteger i)
+
+instance SpecTranslate (ConwayPlutusPurpose AsIndex era) where
+  type SpecRep (ConwayPlutusPurpose AsIndex era) = Agda.RdmrPtr
+
+  toSpecRep = \case
+    ConwaySpending (AsIndex i) -> pure (Agda.Spend, toInteger i)
+    ConwayMinting (AsIndex i) -> pure (Agda.Mint, toInteger i)
+    ConwayCertifying (AsIndex i) -> pure (Agda.Cert, toInteger i)
+    ConwayRewarding (AsIndex i) -> pure (Agda.Rewrd, toInteger i)
+    ConwayVoting (AsIndex i) -> pure (Agda.Vote, toInteger i)
+    ConwayProposing (AsIndex i) -> pure (Agda.Propose, toInteger i)
 
 instance (SpecTranslate a, SpecTranslate b) => SpecTranslate (a, b) where
   type SpecRep (a, b) = (SpecRep a, SpecRep b)
@@ -428,13 +427,24 @@ instance SpecTranslate (Data era) where
 
   toSpecRep _ = pure ()
 
-instance Era era => SpecTranslate (Redeemers era) where
-  type SpecRep (Redeemers era) = [(Agda.RdmrPtr, (Agda.Redeemer, Agda.ExUnits))]
+instance
+  ( AlonzoEraScript era
+  , Ord (SpecRep (PlutusPurpose AsIndex era))
+  , SpecTranslate (PlutusPurpose AsIndex era)
+  ) =>
+  SpecTranslate (Redeemers era)
+  where
+  type
+    SpecRep (Redeemers era) =
+      [(SpecRep (PlutusPurpose AsIndex era), (Agda.Redeemer, Agda.ExUnits))]
 
   toSpecRep (Redeemers x) = toSpecRep x
 
 instance
-  AlonzoEraScript era =>
+  ( AlonzoEraScript era
+  , SpecTranslate (PlutusPurpose AsIndex era)
+  , SpecRep (PlutusPurpose AsIndex era) ~ Agda.RdmrPtr
+  ) =>
   SpecTranslate (AlonzoTxWits era)
   where
   type SpecRep (AlonzoTxWits era) = Agda.TxWitnesses

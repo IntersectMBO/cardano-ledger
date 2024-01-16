@@ -9,12 +9,16 @@ import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Prices (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoPlutusPurpose (..),
+  AlonzoScript (..),
+  ExUnits (..),
+  Prices (..),
+ )
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..), mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
-import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), RdmrPtr (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.BaseTypes (NonNegativeInterval, StrictMaybe (..), boundRational)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -147,7 +151,7 @@ exampleTx =
         )
         (TxDats $ Map.singleton (hashData datumExample) datumExample)
         ( Redeemers $
-            Map.singleton (RdmrPtr Tag.Spend 0) (redeemerExample, ExUnits 5000 5000)
+            Map.singleton (AlonzoSpending $ AsIndex 0) (redeemerExample, ExUnits 5000 5000)
         ) -- redeemers
     )
     ( SJust $

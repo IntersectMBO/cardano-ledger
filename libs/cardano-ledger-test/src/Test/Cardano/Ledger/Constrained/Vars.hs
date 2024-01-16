@@ -13,9 +13,8 @@ import Cardano.Crypto.Signing (SigningKey)
 import Cardano.Ledger.Address (Addr (..), Withdrawals (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, ppCollateralPercentageL, ppMaxTxExUnitsL)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrityHash, ScriptPurpose (..))
-import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptIntegrityHash)
+import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (
@@ -32,7 +31,12 @@ import qualified Cardano.Ledger.BaseTypes as Base (EpochInterval (..), Globals (
 import Cardano.Ledger.CertState (CommitteeState (..), csCommitteeCredsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppDRepDepositL, ppGovActionDepositL)
+import Cardano.Ledger.Conway.PParams (
+  ConwayEraPParams,
+  ppDRepActivityL,
+  ppDRepDepositL,
+  ppGovActionDepositL,
+ )
 import Cardano.Ledger.Conway.Rules (GovRuleState (..))
 import Cardano.Ledger.Core (
   PParams,
@@ -61,6 +65,7 @@ import Cardano.Ledger.Keys (GenDelegPair, GenDelegs (..), KeyHash, KeyRole (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
@@ -78,6 +83,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (compactCoinOrError, fromCompact, ptrMap, rdPairMap, sPoolMap, unify)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
+import Control.Arrow (first)
 import Data.Default.Class (Default (def))
 import qualified Data.Foldable as F
 import Data.Functor.Identity (Identity)
@@ -99,6 +105,8 @@ import Test.Cardano.Ledger.Constrained.Classes (
   GovState (..),
   PParamsF (..),
   PParamsUpdateF (..),
+  PlutusPointerF (..),
+  PlutusPurposeF (..),
   ScriptF (..),
   ScriptsNeededF (..),
   TxAuxDataF (..),
@@ -111,6 +119,8 @@ import Test.Cardano.Ledger.Constrained.Classes (
   liftUTxO,
   pparamsWrapperL,
   unPParamsUpdate,
+  unPlutusPointerF,
+  unPlutusPurposeF,
   unScriptF,
   unTxCertF,
   unTxOut,
@@ -123,6 +133,7 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), WitnessesField (..))
 import qualified Test.Cardano.Ledger.Generic.Fields as Fields
 import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
+import Test.Cardano.Ledger.Generic.GenState (mkRedeemers)
 import Test.Cardano.Ledger.Generic.PrettyCore (ppString, withEraPParams)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters (merge, newPParams, newTx, newTxBody, newWitnesses)
@@ -1275,11 +1286,13 @@ smNeededL =
 
 acNeededL ::
   ScriptsNeeded era ~ AlonzoScriptsNeeded era =>
-  Lens' (ScriptsNeededF era) [(ScriptPurpose era, ScriptHash (EraCrypto era))]
+  Lens' (ScriptsNeededF era) [(PlutusPurposeF era, ScriptHash (EraCrypto era))]
 acNeededL =
   lens
-    (\(ScriptsNeededF _ (AlonzoScriptsNeeded s)) -> s)
-    (\(ScriptsNeededF p _) s -> ScriptsNeededF p (AlonzoScriptsNeeded s))
+    (\(ScriptsNeededF p (AlonzoScriptsNeeded s)) -> map (first (PlutusPurposeF p)) s)
+    ( \(ScriptsNeededF p _) s ->
+        ScriptsNeededF p (AlonzoScriptsNeeded (map (first unPlutusPurposeF) s))
+    )
 
 -- ===============
 -- Auxliary Vars to compute collateral
@@ -1420,8 +1433,8 @@ txoutAmount = fieldToTerm txoutAmountF
 scriptWits :: Reflect era => Term era (Map (ScriptHash (EraCrypto era)) (ScriptF era))
 scriptWits = Var $ V "scriptWits" (MapR ScriptHashR (ScriptR reify)) No
 
-redeemers :: Reflect era => Term era (Map RdmrPtr (Data era, ExUnits))
-redeemers = Var $ V "redeemers" (MapR RdmrPtrR (PairR DataR ExUnitsR)) No
+redeemers :: Reflect era => Term era (Map (PlutusPointerF era) (Data era, ExUnits))
+redeemers = Var $ V "redeemers" (MapR (RdmrPtrR reify) (PairR DataR ExUnitsR)) No
 
 bootWits :: forall era. Reflect era => Term era (Set (BootstrapWitness (EraCrypto era)))
 bootWits = Var $ V "bootWits" (SetR (BootstrapWitnessR @era)) No
@@ -1445,7 +1458,8 @@ witsTarget ::
   Term era (Set (BootstrapWitness (EraCrypto era))) ->
   Term era (Set (WitVKey 'Witness (EraCrypto era))) ->
   Target era (TxWits era)
-witsTarget bootWitsParam keyWitsParam = Constr "TxWits" witsf ^$ scriptWits ^$ redeemers ^$ bootWitsParam ^$ dataWits ^$ keyWitsParam
+witsTarget bootWitsParam keyWitsParam =
+  Constr "TxWits" witsf ^$ scriptWits ^$ redeemers ^$ bootWitsParam ^$ dataWits ^$ keyWitsParam
   where
     proof = reify
     witsf script redeem boot dataw key =
@@ -1456,7 +1470,7 @@ witsTarget bootWitsParam keyWitsParam = Constr "TxWits" witsf ^$ scriptWits ^$ r
         , BootWits boot
         , ScriptWits (Map.map unScriptF script)
         , DataWits (TxDats dataw)
-        , RdmrWits (Redeemers redeem)
+        , RdmrWits (mkRedeemers proof $ map (first unPlutusPointerF) $ Map.toList $ redeem)
         ]
 
 txTarget ::
@@ -1465,7 +1479,8 @@ txTarget ::
   Term era (Set (BootstrapWitness (EraCrypto era))) ->
   Term era (Set (WitVKey 'Witness (EraCrypto era))) ->
   Target era (TxF era)
-txTarget bodyparam bootWitsParam keyWitsParam = Constr "tx" txf ^$ bodyparam :$ wits ^$ txauxdata ^$ txisvalid
+txTarget bodyparam bootWitsParam keyWitsParam =
+  Constr "tx" txf ^$ bodyparam :$ wits ^$ txauxdata ^$ txisvalid
   where
     wits = witsTarget bootWitsParam keyWitsParam
     txf (TxBodyF proof txb) w auxs isvalid =

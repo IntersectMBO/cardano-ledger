@@ -62,6 +62,7 @@ import Cardano.Ledger.Conway.Governance (
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
+  foldlVotingProcedures,
   gasExpiresAfterL,
   indexedGovProps,
   isCommitteeVotingAllowed,
@@ -230,16 +231,6 @@ instance ConwayEraPParams era => STS (ConwayGOV era) where
   initialRules = []
 
   transitionRules = [govTransition]
-
-addVoterVote ::
-  forall era.
-  Voter (EraCrypto era) ->
-  Proposals era ->
-  GovActionId (EraCrypto era) ->
-  VotingProcedure era ->
-  Proposals era
-addVoterVote voter as govActionId VotingProcedure {vProcVote} =
-  proposalsAddVote voter vProcVote govActionId as
 
 checkVotesAreForValidActions ::
   EpochNo ->
@@ -414,21 +405,21 @@ govTransition = do
       (indexedGovProps $ SSeq.fromStrict $ OSet.toStrictSeq $ gpProposalProcedures gp)
 
   -- Voting
-  let VotingProcedures votingProcedures = gpVotingProcedures gp
+  let votingProcedures = gpVotingProcedures gp
       -- Inversion of the keys in VotingProcedures, where we can find the voter for every
       -- govActionId
       govActionIdVotes =
         Map.foldlWithKey'
           (\acc voter gaIds -> Map.union (voter <$ gaIds) acc)
           Map.empty
-          votingProcedures
+          (unVotingProcedures votingProcedures)
   runTest $ checkVotesAreForValidActions currentEpoch proposals govActionIdVotes
   runTest $ checkVotersAreValid proposals govActionIdVotes
 
-  let applyVoterVotes curState voter =
-        Map.foldlWithKey' (addVoterVote voter) curState
-      updatedProposalStates =
-        Map.foldlWithKey' applyVoterVotes proposals votingProcedures
+  let
+    addVoterVote ps voter govActionId VotingProcedure {vProcVote} =
+      proposalsAddVote voter vProcVote govActionId ps
+    updatedProposalStates = foldlVotingProcedures addVoterVote proposals votingProcedures
 
   -- Report the event
   tellEvent $ GovNewProposals txid updatedProposalStates

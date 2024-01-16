@@ -10,13 +10,12 @@ module Test.Cardano.Ledger.Conway.Examples.Consensus where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxAuxData (
   AuxiliaryDataHash (..),
   mkAlonzoTxAuxData,
  )
-import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (mkSized)
@@ -26,6 +25,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Rules (ConwayCERTS, ConwayCertsPredFailure (..), ConwayLEDGER)
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
@@ -181,7 +181,7 @@ exampleTx =
         )
         (TxDats $ Map.singleton (hashData datumExample) datumExample)
         ( Redeemers $
-            Map.singleton (RdmrPtr Tag.Spend 0) (redeemerExample, ExUnits 5000 5000)
+            Map.singleton (ConwaySpending $ AsIndex 0) (redeemerExample, ExUnits 5000 5000)
         ) -- redeemers
     )
     ( SJust $

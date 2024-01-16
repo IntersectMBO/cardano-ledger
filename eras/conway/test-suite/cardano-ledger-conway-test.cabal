@@ -48,8 +48,7 @@ library
         data-default-class,
         small-steps,
         plutus-tx,
-        microlens,
-        QuickCheck
+        microlens
 
 executable gen-golden
     main-is:          GenerateGoldenFileMain.hs

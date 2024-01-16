@@ -27,6 +27,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   genScripts,
   genValidCostModel,
   genValidAndUnknownCostModels,
+  genAlonzoPlutusPurposePointer,
 ) where
 
 import Cardano.Ledger.Alonzo.Core
@@ -39,12 +40,14 @@ import Cardano.Ledger.Alonzo.Rules (
   FailureDescription (..),
   TagMismatchDescription (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoPlutusPurpose (..),
+  AlonzoScript (..),
+ )
 import Cardano.Ledger.Alonzo.Tx (
   AlonzoTx (AlonzoTx),
   IsValid (IsValid),
   ScriptIntegrity (ScriptIntegrity),
-  ScriptPurpose (..),
   getLanguageView,
  )
 import Cardano.Ledger.Alonzo.TxAuxData (
@@ -55,7 +58,6 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (AlonzoTxBody))
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (AlonzoTxOut))
 import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (AlonzoTxWits),
-  RdmrPtr (RdmrPtr),
   Redeemers (Redeemers),
   TxDats (TxDats),
  )
@@ -84,6 +86,7 @@ import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Text (pack)
+import Data.Word
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Common
@@ -125,19 +128,17 @@ instance
   where
   arbitrary = mkAlonzoTxAuxData @[] <$> arbitrary <*> arbitrary
 
-instance Arbitrary Tag where
-  arbitrary = arbitraryBoundedEnum
-
-instance Arbitrary RdmrPtr where
-  arbitrary = RdmrPtr <$> arbitrary <*> arbitrary
-
-instance Era era => Arbitrary (Redeemers era) where
+instance
+  (AlonzoEraScript era, Arbitrary (PlutusPurpose AsIndex era)) =>
+  Arbitrary (Redeemers era)
+  where
   arbitrary = Redeemers <$> arbitrary
 
 instance
   ( Era era
   , Arbitrary (Script era)
   , AlonzoEraScript era
+  , Arbitrary (PlutusPurpose AsIndex era)
   ) =>
   Arbitrary (AlonzoTxWits era)
   where
@@ -355,6 +356,7 @@ instance
   , Arbitrary (PredicateFailure (EraRule "UTXO" era))
   , Arbitrary (ShelleyUtxowPredFailure era)
   , Arbitrary (TxCert era)
+  , Arbitrary (PlutusPurpose AsItem era)
   ) =>
   Arbitrary (AlonzoUtxowPredFailure era)
   where
@@ -366,23 +368,41 @@ instance
       , PPViewHashesDontMatch <$> arbitrary <*> arbitrary
       ]
 
+deriving instance Arbitrary ix => Arbitrary (AsIndex ix it)
+
+deriving instance Arbitrary it => Arbitrary (AsItem ix it)
+
+genAlonzoPlutusPurposePointer :: Word32 -> Gen (AlonzoPlutusPurpose AsIndex era)
+genAlonzoPlutusPurposePointer i =
+  elements
+    [ AlonzoSpending (AsIndex i)
+    , AlonzoMinting (AsIndex i)
+    , AlonzoCertifying (AsIndex i)
+    , AlonzoRewarding (AsIndex i)
+    ]
+
 instance
   ( Era era
   , Arbitrary (TxCert era)
   ) =>
-  Arbitrary (ScriptPurpose era)
+  Arbitrary (AlonzoPlutusPurpose AsItem era)
   where
   arbitrary =
     oneof
-      [ Minting <$> arbitrary
-      , Spending <$> arbitrary
-      , Rewarding <$> arbitrary
-      , Certifying <$> arbitrary
+      [ AlonzoSpending <$> arbitrary
+      , AlonzoMinting <$> arbitrary
+      , AlonzoCertifying <$> arbitrary
+      , AlonzoRewarding <$> arbitrary
       ]
 
+instance Era era => Arbitrary (AlonzoPlutusPurpose AsIndex era) where
+  arbitrary = arbitrary >>= genAlonzoPlutusPurposePointer
+
 instance
-  ( AlonzoEraPParams era
+  ( AlonzoEraScript era
+  , AlonzoEraPParams era
   , Arbitrary (PParams era)
+  , Arbitrary (PlutusPurpose AsIndex era)
   ) =>
   Arbitrary (ScriptIntegrity era)
   where

@@ -20,6 +20,13 @@ module Test.Cardano.Ledger.Generic.GenState (
   GenRS,
   GenState (..),
   GenSize (..),
+  PlutusPurposeTag (..),
+  plutusPurposeTags,
+  mkRedeemers,
+  mkRedeemersFromTags,
+  mkPlutusPurposePointer,
+  mkAlonzoPlutusPurposePointer,
+  mkConwayPlutusPurposePointer,
   elementsT, -- TODO move to a utilities module
   frequencyT, -- TODO move to a utilities module
   positiveSingleDigitInt,
@@ -75,10 +82,12 @@ module Test.Cardano.Ledger.Generic.GenState (
 
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Scripts hiding (Mint, Script)
+import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (Testnet), inject)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
 import Cardano.Ledger.Keys (
   KeyHash (..),
@@ -117,7 +126,7 @@ import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.Word (Word64)
+import GHC.Word (Word32, Word64)
 import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -199,7 +208,7 @@ data GenState era = GenState
   { gsValidityInterval :: !ValidityInterval
   , gsKeys :: !(Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)))
   , gsScripts :: !(Map (ScriptHash (EraCrypto era)) (Script era))
-  , gsPlutusScripts :: !(Map (ScriptHash (EraCrypto era), Tag) (IsValid, Script era))
+  , gsPlutusScripts :: !(Map (ScriptHash (EraCrypto era), PlutusPurposeTag) (IsValid, Script era))
   , gsDatums :: !(Map (DataHash (EraCrypto era)) (Data era))
   , gsVI :: !(Map ValidityInterval (Set (ScriptHash (EraCrypto era))))
   , gsModel :: !(ModelNewEpochState era)
@@ -277,6 +286,97 @@ small =
     , withdrawalMax = 2
     , maxStablePools = 4
     }
+
+data PlutusPurposeTag
+  = Spending
+  | Minting
+  | Certifying
+  | Rewarding
+  | Voting
+  | Proposing
+  deriving (Eq, Ord, Show, Enum, Bounded)
+
+plutusPurposeTags :: Proof era -> [PlutusPurposeTag]
+plutusPurposeTags = \case
+  Shelley {} -> []
+  Allegra {} -> []
+  Mary {} -> []
+  Alonzo {} -> [Spending .. Rewarding]
+  Babbage {} -> [Spending .. Rewarding]
+  Conway {} -> [Spending .. Proposing]
+
+mkRedeemers ::
+  forall era.
+  Proof era ->
+  [(PlutusPurpose AsIndex era, (Data era, ExUnits))] ->
+  Redeemers era
+mkRedeemers proof redeemerMap =
+  -- Pattern match on proof is needed in order to avoid leacking Ord constraint.
+  case proof of
+    Shelley {} -> error "No Redeemers"
+    Allegra {} -> error "No Redeemers"
+    Mary {} -> error "No Redeemers"
+    Alonzo {} -> Redeemers $ Map.fromList redeemerMap
+    Babbage {} -> Redeemers $ Map.fromList redeemerMap
+    Conway {} -> Redeemers $ Map.fromList redeemerMap
+
+mkRedeemersFromTags ::
+  forall era.
+  Proof era ->
+  [((PlutusPurposeTag, Word32), (Data era, ExUnits))] ->
+  Redeemers era
+mkRedeemersFromTags proof redeemerPointers =
+  case proof of
+    Shelley {} -> error "No Redeemers"
+    Allegra {} -> error "No Redeemers"
+    Mary {} -> error "No Redeemers"
+    Alonzo {} -> mkRedeemers proof redeemerAssocs
+    Babbage {} -> mkRedeemers proof redeemerAssocs
+    Conway {} -> mkRedeemers proof redeemerAssocs
+  where
+    redeemerAssocs :: [(PlutusPurpose AsIndex era, (Data era, ExUnits))]
+    redeemerAssocs =
+      [ (mkPlutusPurposePointer proof tag i, redeemer)
+      | ((tag, i), redeemer) <- redeemerPointers
+      ]
+
+mkPlutusPurposePointer ::
+  Proof era ->
+  PlutusPurposeTag ->
+  Word32 ->
+  PlutusPurpose AsIndex era
+mkPlutusPurposePointer proof tag i =
+  case proof of
+    Shelley {} -> error "No PlutusPurpose"
+    Allegra {} -> error "No PlutusPurpose"
+    Mary {} -> error "No PlutusPurpose"
+    Alonzo {} -> mkAlonzoPlutusPurposePointer tag i
+    Babbage {} -> mkAlonzoPlutusPurposePointer tag i
+    Conway {} -> mkConwayPlutusPurposePointer tag i
+
+mkAlonzoPlutusPurposePointer ::
+  forall era.
+  Era era =>
+  PlutusPurposeTag ->
+  Word32 ->
+  AlonzoPlutusPurpose AsIndex era
+mkAlonzoPlutusPurposePointer tag i =
+  case tag of
+    Spending -> AlonzoSpending (AsIndex i)
+    Minting -> AlonzoMinting (AsIndex i)
+    Certifying -> AlonzoCertifying (AsIndex i)
+    Rewarding -> AlonzoRewarding (AsIndex i)
+    _ -> error $ "Unsupported tag: " ++ show tag ++ " in era " ++ eraName @era
+
+mkConwayPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> ConwayPlutusPurpose AsIndex era
+mkConwayPlutusPurposePointer tag i =
+  case tag of
+    Spending -> ConwaySpending (AsIndex i)
+    Minting -> ConwayMinting (AsIndex i)
+    Certifying -> ConwayCertifying (AsIndex i)
+    Rewarding -> ConwayRewarding (AsIndex i)
+    Voting -> ConwayVoting (AsIndex i)
+    Proposing -> ConwayProposing (AsIndex i)
 
 -- =====================================================================
 -- Accessing information
@@ -406,8 +506,8 @@ modifyGenStateScripts f =
   modify $ \gs -> gs {gsScripts = f (gsScripts gs)}
 
 modifyPlutusScripts ::
-  ( Map.Map (ScriptHash (EraCrypto era), Tag) (IsValid, Script era) ->
-    Map.Map (ScriptHash (EraCrypto era), Tag) (IsValid, Script era)
+  ( Map.Map (ScriptHash (EraCrypto era), PlutusPurposeTag) (IsValid, Script era) ->
+    Map.Map (ScriptHash (EraCrypto era), PlutusPurposeTag) (IsValid, Script era)
   ) ->
   GenRS era ()
 modifyPlutusScripts f = modify (\gs -> gs {gsPlutusScripts = f (gsPlutusScripts gs)})
@@ -753,7 +853,7 @@ genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash col
 -- Generate Era agnostic Scripts
 
 -- Adds to gsScripts and gsPlutusScripts
-genScript :: forall era. Reflect era => Proof era -> Tag -> GenRS era (ScriptHash (EraCrypto era))
+genScript :: Reflect era => Proof era -> PlutusPurposeTag -> GenRS era (ScriptHash (EraCrypto era))
 genScript proof tag = case proof of
   Conway _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
   Babbage _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
@@ -850,7 +950,7 @@ genPlutusScript ::
   forall era.
   Reflect era =>
   Proof era ->
-  Tag ->
+  PlutusPurposeTag ->
   GenRS era (ScriptHash (EraCrypto era))
 genPlutusScript proof tag = do
   isValid <- lift $ frequency [(5, pure False), (95, pure True)]
@@ -859,11 +959,11 @@ genPlutusScript proof tag = do
   -- For reasons unknown, this number differs from Alonzo to Babbage
   -- Perhaps because Babbage is using PlutusV2 scripts?
   let numArgs = case (proof, tag) of
-        (Conway _, Spend) -> 2
+        (Conway _, Spending) -> 2
         (Conway _, _) -> 1
-        (Babbage _, Spend) -> 2
+        (Babbage _, Spending) -> 2
         (Babbage _, _) -> 1
-        (_, Spend) -> 3
+        (_, Spending) -> 3
         (_, _) -> 2
   -- While using varying number of arguments for alwaysSucceeds we get
   -- varying script hashes, which helps with the fuzziness
@@ -897,7 +997,8 @@ genPlutusScript proof tag = do
 -- generated set. Returns the credential
 -- Adds to both gsKeys and gsScripts and gsPlutusScript
 -- via genKeyHash and genScript
-genCredential :: forall era kr. Reflect era => Tag -> GenRS era (Credential kr (EraCrypto era))
+genCredential ::
+  forall era kr. Reflect era => PlutusPurposeTag -> GenRS era (Credential kr (EraCrypto era))
 genCredential tag =
   frequencyT
     [ (35, KeyHashObj <$> genKeyHash')
@@ -909,7 +1010,7 @@ genCredential tag =
     genKeyHash' = do
       kh <- genFreshKeyHash -- We need to avoid some key credentials
       case tag of
-        Rewrd -> modifyGenStateInitialRewards (Map.insert (KeyHashObj kh) (Coin 0))
+        Rewarding -> modifyGenStateInitialRewards (Map.insert (KeyHashObj kh) (Coin 0))
         _ -> pure ()
       return $ coerceKeyRole kh
     genScript' = f (100 :: Int)
@@ -924,7 +1025,7 @@ genCredential tag =
               if Map.notMember newcred initialRewards && Set.notMember newcred avoidCredentials
                 then do
                   case tag of
-                    Rewrd -> modifyGenStateInitialRewards (Map.insert newcred (Coin 0))
+                    Rewarding -> modifyGenStateInitialRewards (Map.insert newcred (Coin 0))
                     _ -> pure ()
                   return sh
                 else f $ n - 1
@@ -961,7 +1062,7 @@ genFreshCredential ::
   forall era kr.
   Reflect era =>
   Int ->
-  Tag ->
+  PlutusPurposeTag ->
   Set (Credential kr (EraCrypto era)) ->
   GenRS era (Credential kr (EraCrypto era))
 genFreshCredential 0 _tag _old = error "Ran out of tries in genFreshCredential."
@@ -973,7 +1074,7 @@ genFreshCredential tries0 tag old = go tries0
         then go (tries - 1)
         else pure c
 
-genFreshRegCred :: forall era. Reflect era => Tag -> GenRS era (Credential 'Staking (EraCrypto era))
+genFreshRegCred :: Reflect era => PlutusPurposeTag -> GenRS era (Credential 'Staking (EraCrypto era))
 genFreshRegCred tag = do
   old <- gets (Map.keysSet . gsInitialRewards)
   avoid <- gets gsAvoidCred
@@ -991,7 +1092,7 @@ genPoolParams ppId = do
   ppPledge <- lift genPositiveVal
   ppCost <- lift genPositiveVal
   ppMargin <- lift arbitrary
-  ppRewardAcnt <- RewardAcnt Testnet <$> genFreshRegCred Rewrd
+  ppRewardAcnt <- RewardAcnt Testnet <$> genFreshRegCred Rewarding
   let ppOwners = mempty
   let ppRelays = mempty
   let ppMetadata = SNothing
@@ -1005,7 +1106,7 @@ genFreshCredentials ::
   Reflect era =>
   Int ->
   Int ->
-  Tag ->
+  PlutusPurposeTag ->
   Set (Credential kr (EraCrypto era)) ->
   [Credential kr (EraCrypto era)] ->
   GenRS era [Credential kr (EraCrypto era)]
@@ -1046,7 +1147,7 @@ initStableFields = do
   credentials <- replicateM (maxStablePools geSize) $ do
     old' <- gets (Map.keysSet . gsInitialRewards)
     prev <- gets gsAvoidCred
-    cred <- genFreshCredential 100 Rewrd (Set.union old' prev)
+    cred <- genFreshCredential 100 Rewarding (Set.union old' prev)
     modifyGenStateStableDelegators (Set.insert cred)
     modifyGenStateInitialRewards (Map.insert cred (Coin 0))
     return cred
@@ -1074,7 +1175,7 @@ genRewards = do
   -- generated here, or one that arose from gsAvoidCred (i.e. prev)
   old <- gets (Map.keysSet . gsInitialRewards)
   prev <- gets gsAvoidCred
-  credentials <- genFreshCredentials n 100 Rewrd (Set.union old prev) []
+  credentials <- genFreshCredentials n 100 Rewarding (Set.union old prev) []
   newRewards <- Map.fromList <$> mapM (\x -> (,) x <$> lift genRewardVal) credentials
   modifyModelRewards (\rewards -> eval (rewards ⨃ newRewards)) -- Prefers coins in newrewards
   pp <- asks gePParams

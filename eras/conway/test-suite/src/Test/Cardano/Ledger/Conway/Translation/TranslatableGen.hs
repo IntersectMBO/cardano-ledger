@@ -1,17 +1,23 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conway.Translation.TranslatableGen where
 
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AsIndex (..), PlutusPurpose)
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
+import Cardano.Ledger.Plutus (Data (..), ExUnits, Language (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
+import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (fromList)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
@@ -23,15 +29,11 @@ import qualified Test.Cardano.Ledger.Babbage.Translation.TranslatableGen as Babb
   genTxOut,
   utxoWithTx,
  )
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.QuickCheck (
-  Gen,
-  arbitrary,
-  listOf1,
-  scale,
- )
 
 instance TranslatableGen Conway where
+  tgRedeemers = genRedeemers
   tgTx l = BabbageTranslatableGen.genTx @Conway (genTxBody l)
   tgUtxo = BabbageTranslatableGen.utxoWithTx @Conway
   mkTxInfoLanguage PlutusV1 = TxInfoLanguage SPlutusV1
@@ -70,3 +72,15 @@ genTxBody l = do
     <*> arbitrary
     <*> arbitrary
     <*> arbitrary
+
+genRedeemers ::
+  forall era.
+  (AlonzoEraScript era, PlutusPurpose AsIndex era ~ ConwayPlutusPurpose AsIndex era) =>
+  Gen (Redeemers era)
+genRedeemers = do
+  d <- arbitrary :: Gen (Data era)
+  eu <- arbitrary :: Gen ExUnits
+  -- We provide `RdrmPtr Spend 0` as the only valid reedemer, because
+  -- for any other redeemer type, we would have to modify the body of the transaction
+  -- in order for the translation to succeed
+  Redeemers <$> elements [Map.singleton (ConwaySpending $ AsIndex 0) (d, eu), Map.empty]

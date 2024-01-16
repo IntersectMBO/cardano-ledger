@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -13,7 +14,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (tests) where
+module Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (tests, spendingPurpose1) where
 
 import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
@@ -25,13 +26,9 @@ import Cardano.Ledger.Alonzo.Rules (
   FailureDescription (..),
   TagMismatchDescription (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.Tx (
-  IsValid (..),
-  ScriptPurpose (..),
- )
-import Cardano.Ledger.Alonzo.TxWits (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AsItem (..), PlutusPurpose)
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.BaseTypes (
   Network (..),
   ProtVer (..),
@@ -39,6 +36,7 @@ import Cardano.Ledger.BaseTypes (
   natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeCredential,
@@ -51,9 +49,7 @@ import Cardano.Ledger.Keys (
   hashKey,
  )
 import Cardano.Ledger.Mary.Value (MaryValue (..))
-import Cardano.Ledger.Plutus.CostModels (emptyCostModels)
-import Cardano.Ledger.Plutus.Data (Data (..), hashData)
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus (Data (..), ExUnits (..), Language (..), emptyCostModels, hashData)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
@@ -91,6 +87,12 @@ import Test.Cardano.Ledger.Generic.Fields (
   TxOutField (..),
   WitnessesField (..),
  )
+import Test.Cardano.Ledger.Generic.GenState (
+  PlutusPurposeTag (..),
+  mkPlutusPurposePointer,
+  mkRedeemers,
+  mkRedeemersFromTags,
+ )
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
@@ -103,6 +105,15 @@ import Test.Cardano.Ledger.Shelley.Utils (
  )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase)
+
+spendingPurpose1 :: Proof era -> PlutusPurpose AsItem era
+spendingPurpose1 = \case
+  Shelley {} -> error "Unsupported"
+  Allegra {} -> error "Unsupported"
+  Mary {} -> error "Unsupported"
+  Alonzo {} -> AlonzoSpending (AsItem (mkGenesisTxIn 1))
+  Babbage {} -> AlonzoSpending (AsItem (mkGenesisTxIn 1))
+  Conway {} -> ConwaySpending (AsItem (mkGenesisTxIn 1))
 
 tests :: TestTree
 tests =
@@ -150,11 +161,9 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ missingRedeemerTx pf)
               ( Left
-                  [ fromUtxos @era . CollectErrors $
-                      [NoRedeemer (Spending (mkGenesisTxIn 1))]
+                  [ fromUtxos @era $ CollectErrors [NoRedeemer $ spendingPurpose1 pf]
                   , fromPredFail $
-                      MissingRedeemers @era
-                        [(Spending (mkGenesisTxIn 1), alwaysSucceedsHash 3 pf)]
+                      MissingRedeemers @era [(spendingPurpose1 pf, alwaysSucceedsHash 3 pf)]
                   ]
               )
         , testCase "wrong wpp hash" $
@@ -168,14 +177,14 @@ alonzoUTXOWTests pf =
                             pf
                             (pp pf)
                             [PlutusV1]
-                            (Redeemers mempty)
+                            (mkRedeemers pf [])
                             (mkTxDats (Data (PV1.I 123)))
                         )
                         ( newScriptIntegrityHash
                             pf
                             (pp pf)
                             [PlutusV1]
-                            wrongWpphashRedeemers
+                            (wrongWpphashRedeemers pf)
                             (mkTxDats (Data (PV1.I 123)))
                         )
                   ]
@@ -196,9 +205,9 @@ alonzoUTXOWTests pf =
               ( Left
                   [ -- these redeemers are associated with phase-1 scripts
                     fromPredFail @era . ExtraRedeemers $
-                      [ RdmrPtr Tag.Mint 1
-                      , RdmrPtr Tag.Cert 1
-                      , RdmrPtr Tag.Rewrd 0
+                      [ mkPlutusPurposePointer pf Minting 1
+                      , mkPlutusPurposePointer pf Certifying 1
+                      , mkPlutusPurposePointer pf Rewarding 0
                       ]
                   , fromUtxow @era . MissingScriptWitnessesUTXOW . Set.singleton $
                       alwaysSucceedsHash 2 pf
@@ -209,15 +218,11 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ wrongRedeemerLabelTx pf)
               ( Left
-                  [ fromUtxos @era (CollectErrors [NoRedeemer (Spending (mkGenesisTxIn 1))])
+                  [ fromUtxos @era (CollectErrors [NoRedeemer $ spendingPurpose1 pf])
                   , -- now "wrong redeemer label" means there are both unredeemable scripts and extra redeemers
                     fromPredFail @era . MissingRedeemers $
-                      [
-                        ( Spending (mkGenesisTxIn 1)
-                        , alwaysSucceedsHash 3 pf
-                        )
-                      ]
-                  , fromPredFail @era . ExtraRedeemers $ [RdmrPtr Tag.Mint 0]
+                      [(spendingPurpose1 pf, alwaysSucceedsHash 3 pf)]
+                  , fromPredFail @era $ ExtraRedeemers [mkPlutusPurposePointer pf Minting 0]
                   ]
               )
         , testCase "missing datum" $
@@ -326,8 +331,7 @@ alonzoUTXOWTests pf =
               (trustMeP pf True $ extraRedeemersTx pf)
               ( Left
                   [ fromPredFail @era $
-                      ExtraRedeemers
-                        [RdmrPtr Tag.Spend 7]
+                      ExtraRedeemers [mkPlutusPurposePointer pf Spending 7]
                   ]
               )
         , testCase "multiple equal plutus-locked certs" $
@@ -335,7 +339,7 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ multipleEqualCertsInvalidTx pf)
               ( Left
-                  [ fromPredFail @era $ ExtraRedeemers [RdmrPtr Tag.Cert 1]
+                  [ fromPredFail @era $ ExtraRedeemers [mkPlutusPurposePointer pf Certifying 1]
                   ]
               )
         , testCase "no cost model" $
@@ -414,7 +418,14 @@ missingRedeemerTxBody pf =
     , Collateral' [mkGenesisTxIn 11]
     , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
     , Txfee (Coin 5)
-    , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (Redeemers mempty) (mkTxDats (Data (PV1.I 123))))
+    , WppHash
+        ( newScriptIntegrityHash
+            pf
+            (pp pf)
+            [PlutusV1]
+            (mkRedeemers pf [])
+            (mkTxDats (Data (PV1.I 123)))
+        )
     ]
 
 wrongWppHashTx ::
@@ -429,13 +440,13 @@ wrongWppHashTx pf =
         [ AddrWits' [mkWitnessVKey (hashAnnotated (missingRedeemerTxBody pf)) (someKeys pf)]
         , ScriptWits' [always 3 pf]
         , DataWits' [Data (PV1.I 123)]
-        , RdmrWits wrongWpphashRedeemers
+        , RdmrWits $ wrongWpphashRedeemers pf
         ]
     ]
 
-wrongWpphashRedeemers :: Era era => Redeemers era
-wrongWpphashRedeemers =
-  Redeemers $ Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
+wrongWpphashRedeemers :: Era era => Proof era -> Redeemers era
+wrongWpphashRedeemers pf =
+  mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
 
 missing1phaseScriptWitnessTx ::
   forall era.
@@ -465,7 +476,7 @@ missing1phaseScriptWitnessTx pf =
             , timelockScript 2 pf
             ]
         , DataWits' [Data (PV1.I 123)]
-        , RdmrWits validatingManyScriptsRedeemers
+        , RdmrWits $ validatingManyScriptsRedeemers pf
         ]
     ]
 
@@ -497,7 +508,7 @@ missing2phaseScriptWitnessTx pf =
             , timelockScript 2 pf
             ]
         , DataWits' [Data (PV1.I 123)]
-        , RdmrWits validatingManyScriptsRedeemers
+        , RdmrWits $ validatingManyScriptsRedeemers pf
         ]
     ]
 
@@ -525,7 +536,14 @@ validatingManyScriptsBody pf =
               ]
         )
     , Mint mint
-    , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingManyScriptsRedeemers (mkTxDats (Data (PV1.I 123))))
+    , WppHash
+        ( newScriptIntegrityHash
+            pf
+            (pp pf)
+            [PlutusV1]
+            (validatingManyScriptsRedeemers pf)
+            (mkTxDats (Data (PV1.I 123)))
+        )
     , Vldt (ValidityInterval SNothing (SJust $ SlotNo 1))
     ]
   where
@@ -537,13 +555,14 @@ validatingManyScriptsBody pf =
         ]
     mint = forge @era 1 (always 2 pf) <> forge @era 1 (timelockScript 1 pf)
 
-validatingManyScriptsRedeemers :: Era era => Redeemers era
-validatingManyScriptsRedeemers =
-  Redeemers . Map.fromList $
-    [ (RdmrPtr Tag.Spend 0, (Data (PV1.I 101), ExUnits 5000 5000))
-    , (RdmrPtr Tag.Cert 1, (Data (PV1.I 102), ExUnits 5000 5000))
-    , (RdmrPtr Tag.Rewrd 0, (Data (PV1.I 103), ExUnits 5000 5000))
-    , (RdmrPtr Tag.Mint 1, (Data (PV1.I 104), ExUnits 5000 5000))
+validatingManyScriptsRedeemers :: Era era => Proof era -> Redeemers era
+validatingManyScriptsRedeemers pf =
+  mkRedeemersFromTags
+    pf
+    [ ((Spending, 0), (Data (PV1.I 101), ExUnits 5000 5000))
+    , ((Certifying, 1), (Data (PV1.I 102), ExUnits 5000 5000))
+    , ((Rewarding, 0), (Data (PV1.I 103), ExUnits 5000 5000))
+    , ((Minting, 1), (Data (PV1.I 104), ExUnits 5000 5000))
     ]
 
 wrongRedeemerLabelTx ::
@@ -576,8 +595,8 @@ wrongRedeemerLabelTx pf =
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] misPurposedRedeemer (mkTxDats (Data (PV1.I 123))))
         ]
     misPurposedRedeemer =
-      Redeemers $ -- The label *should* be Spend, not Mint
-        Map.singleton (RdmrPtr Tag.Mint 0) (Data (PV1.I 42), ExUnits 5000 5000)
+      -- The label *should* be Spend, not Mint
+      mkRedeemersFromTags pf [((Minting, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
 
 missingDatumTx ::
   forall era.
@@ -607,7 +626,7 @@ missingDatumTx pf =
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers mempty)
         ]
-    redeemers = Redeemers $ Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
+    redeemers = mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
 
 phase1FailureTx ::
   forall era.
@@ -638,7 +657,7 @@ phase1FailureTx pf =
             , timelockScript 2 pf
             ]
         , DataWits' [Data (PV1.I 123)]
-        , RdmrWits validatingManyScriptsRedeemers
+        , RdmrWits $ validatingManyScriptsRedeemers pf
         ]
     ]
 
@@ -658,7 +677,7 @@ validatingTx pf =
         [ AddrWits' [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
         , ScriptWits' [always 3 pf]
         , DataWits' [Data (PV1.I 123)]
-        , RdmrWits validatingRedeemers
+        , RdmrWits $ validatingRedeemers pf
         ]
     ]
 
@@ -670,11 +689,18 @@ validatingBody pf =
     , Collateral' [mkGenesisTxIn 11]
     , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
     , Txfee (Coin 5)
-    , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemers (mkTxDats (Data (PV1.I 123))))
+    , WppHash
+        ( newScriptIntegrityHash
+            pf
+            (pp pf)
+            [PlutusV1]
+            (validatingRedeemers pf)
+            (mkTxDats (Data (PV1.I 123)))
+        )
     ]
 
-validatingRedeemers :: Era era => Redeemers era
-validatingRedeemers = Redeemers $ Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
+validatingRedeemers :: Era era => Proof era -> Redeemers era
+validatingRedeemers pf = mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
 
 notValidatingTx ::
   ( Scriptic era
@@ -704,15 +730,7 @@ notValidatingTx pf =
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 0))))
         ]
-    redeemers =
-      Redeemers
-        ( Map.fromList
-            [
-              ( RdmrPtr Tag.Spend 0
-              , (Data (PV1.I 1), ExUnits 5000 5000)
-              )
-            ]
-        )
+    redeemers = mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 1), ExUnits 5000 5000))]
 
 tooManyExUnitsTx ::
   forall era.
@@ -743,9 +761,7 @@ tooManyExUnitsTx pf =
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
         ]
-    redeemers =
-      Redeemers $
-        Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 1000001 5000)
+    redeemers = mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 42), ExUnits 1000001 5000))]
 
 missingCollateralSigTx ::
   forall era.
@@ -759,7 +775,7 @@ missingCollateralSigTx pf =
     , WitnessesI
         [ ScriptWits' [always 3 pf]
         , DataWits' [Data (PV1.I 123)]
-        , RdmrWits $ Redeemers $ Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
+        , RdmrWits $ mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
         ]
     ]
 
@@ -791,7 +807,7 @@ plutusOutputWithNoDataTx pf =
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers mempty)
         ]
-    redeemers = Redeemers $ Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
+    redeemers = mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
 
 notOkSupplimentaryDatumTx ::
   forall era.
@@ -817,7 +833,7 @@ notOkSupplimentaryDatumTx pf =
         [ Inputs' [mkGenesisTxIn 3]
         , Outputs' [outputWithNoDatum]
         , Txfee (Coin 5)
-        , WppHash (newScriptIntegrityHash pf (pp pf) [] (Redeemers mempty) totallyIrrelevantTxDats)
+        , WppHash (newScriptIntegrityHash pf (pp pf) [] (mkRedeemers pf []) totallyIrrelevantTxDats)
         ]
     totallyIrrelevantTxDats = TxDats $ keyBy hashData [totallyIrrelevantDatum]
     outputWithNoDatum = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 995)]
@@ -854,8 +870,11 @@ extraRedeemersTx pf =
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] extraRedeemersEx (mkTxDats (Data (PV1.I 123))))
         ]
-    extraRedeemersEx = Redeemers $ Map.insert (RdmrPtr Tag.Spend 7) (Data (PV1.I 42), ExUnits 432 444) (unRedeemers redeemers)
-    redeemers = Redeemers $ Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
+    extraRedeemersEx =
+      mkRedeemersFromTags pf $
+        [ ((Spending, 7), (Data (PV1.I 42), ExUnits 432 444))
+        , ((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))
+        ]
 
 multipleEqualCertsInvalidTx ::
   forall era.
@@ -891,11 +910,11 @@ multipleEqualCertsInvalidTx pf =
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers mempty)
         ]
     redeemers =
-      Redeemers $
-        Map.fromList
-          [ (RdmrPtr Tag.Cert 0, (Data (PV1.I 42), ExUnits 5000 5000))
-          , (RdmrPtr Tag.Cert 1, (Data (PV1.I 42), ExUnits 5000 5000))
-          ]
+      mkRedeemersFromTags
+        pf
+        [ ((Certifying, 0), (Data (PV1.I 42), ExUnits 5000 5000))
+        , ((Certifying, 1), (Data (PV1.I 42), ExUnits 5000 5000))
+        ]
 
 noCostModelTx ::
   forall era.
@@ -927,7 +946,7 @@ noCostModelTx pf pp' =
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf pp' [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
         ]
-    redeemers = Redeemers $ Map.singleton (RdmrPtr Tag.Spend 0) (Data (PV1.I 42), ExUnits 5000 5000)
+    redeemers = mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
 
 -- ============================== HELPER FUNCTIONS ===============================
 

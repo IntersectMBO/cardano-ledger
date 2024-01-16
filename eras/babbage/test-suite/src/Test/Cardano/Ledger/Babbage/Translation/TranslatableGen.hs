@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Babbage.Translation.TranslatableGen (
 ) where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Babbage (Babbage, BabbageEra)
@@ -26,7 +26,7 @@ import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import Data.Sequence.Strict (fromList)
 import qualified Data.Set as Set
@@ -52,6 +52,7 @@ import Test.QuickCheck (
  )
 
 instance TranslatableGen Babbage where
+  tgRedeemers = genRedeemers
   tgTx l = genTx @Babbage (genTxBody l)
   tgUtxo = utxoWithTx @Babbage
   mkTxInfoLanguage PlutusV1 = TxInfoLanguage SPlutusV1
@@ -76,10 +77,10 @@ utxoWithTx l tx = do
 
 genTx ::
   forall era.
-  ( Arbitrary (TxAuxData era)
+  ( TranslatableGen era
+  , Arbitrary (TxAuxData era)
   , Arbitrary (Script era)
   , AlonzoEraScript era
-  , AlonzoScript era ~ Script era
   , AlonzoTxWits era ~ TxWits era
   ) =>
   Gen (TxBody era) ->
@@ -146,8 +147,8 @@ genNonByronAddr =
       ]
 
 genTxWits ::
-  ( Arbitrary (Script era)
-  , AlonzoScript era ~ Script era
+  ( TranslatableGen era
+  , Arbitrary (Script era)
   , AlonzoEraScript era
   ) =>
   Gen (AlonzoTxWits era)
@@ -157,13 +158,16 @@ genTxWits =
     <*> arbitrary
     <*> genScripts
     <*> arbitrary
-    <*> genRedeemers
+    <*> tgRedeemers
 
-genRedeemers :: forall era. Era era => Gen (Redeemers era)
+genRedeemers ::
+  forall era.
+  (AlonzoEraScript era, PlutusPurpose AsIndex era ~ AlonzoPlutusPurpose AsIndex era) =>
+  Gen (Redeemers era)
 genRedeemers = do
   d <- arbitrary :: Gen (Data era)
   eu <- arbitrary :: Gen ExUnits
   -- We provide `RdrmPtr Spend 0` as the only valid reedemer, because
   -- for any other redeemer type, we would have to modify the body of the transaction
   -- in order for the translation to succeed
-  Redeemers <$> elements [Map.singleton (RdmrPtr Spend 0) (d, eu), Map.empty]
+  Redeemers <$> elements [Map.singleton (AlonzoSpending $ AsIndex 0) (d, eu), Map.empty]

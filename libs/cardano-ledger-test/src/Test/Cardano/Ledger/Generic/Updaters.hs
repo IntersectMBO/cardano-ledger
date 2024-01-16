@@ -94,7 +94,7 @@ instance Ord a => Merge (Set a) where
 instance Era era => Merge (TxDats era) where
   merge (TxDats x) (TxDats y) = TxDats (Map.union x y)
 
-instance Era era => Merge (Redeemers era) where
+instance AlonzoEraScript era => Merge (Redeemers era) where
   merge (Redeemers x) (Redeemers y) = Redeemers (Map.union x y)
 
 instance Merge (Map (ScriptHash c) v) where

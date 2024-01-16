@@ -22,14 +22,15 @@ module Cardano.Ledger.Babbage.Scripts (
 where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
+import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript (..),
+  AlonzoPlutusPurpose (..),
   AlonzoScript (..),
   PlutusScript (..),
   isPlutusScript,
  )
 import Cardano.Ledger.Babbage.Era
-import Cardano.Ledger.Core
+import Cardano.Ledger.Babbage.TxCert ()
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.SafeHash (SafeToHash (..))
@@ -62,6 +63,7 @@ instance Crypto c => AlonzoEraScript (BabbageEra c) where
     = BabbagePlutusV1 !(Plutus 'PlutusV1)
     | BabbagePlutusV2 !(Plutus 'PlutusV2)
     deriving (Eq, Ord, Show, Generic)
+  type PlutusPurpose f (BabbageEra c) = AlonzoPlutusPurpose f (BabbageEra c)
 
   eraMaxLanguage = PlutusV2
 
@@ -73,6 +75,16 @@ instance Crypto c => AlonzoEraScript (BabbageEra c) where
 
   withPlutusScript (BabbagePlutusV1 plutus) f = f plutus
   withPlutusScript (BabbagePlutusV2 plutus) f = f plutus
+
+  plutusPurposeSpendingTxIn = \case
+    AlonzoSpending (AsItem txIn) -> Just txIn
+    _ -> Nothing
+
+  upgradePlutusPurposeAsIndex = \case
+    AlonzoMinting (AsIndex ix) -> AlonzoMinting (AsIndex ix)
+    AlonzoSpending (AsIndex ix) -> AlonzoSpending (AsIndex ix)
+    AlonzoRewarding (AsIndex ix) -> AlonzoRewarding (AsIndex ix)
+    AlonzoCertifying (AsIndex ix) -> AlonzoCertifying (AsIndex ix)
 
 instance NFData (PlutusScript (BabbageEra c)) where
   rnf = rwhnf
