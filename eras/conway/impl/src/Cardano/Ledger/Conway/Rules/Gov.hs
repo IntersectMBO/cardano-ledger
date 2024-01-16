@@ -22,7 +22,7 @@ module Cardano.Ledger.Conway.Rules.Gov (
   ConwayGovPredFailure (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAcnt, getRwdNetwork)
+import Cardano.Ledger.Address (RewardAccount, getRwdNetwork)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
@@ -124,8 +124,8 @@ data GovEnv era = GovEnv
 data ConwayGovPredFailure era
   = GovActionsDoNotExist (NonEmpty (GovActionId (EraCrypto era)))
   | MalformedProposal (GovAction era)
-  | ProposalProcedureNetworkIdMismatch (RewardAcnt (EraCrypto era)) Network
-  | TreasuryWithdrawalsNetworkIdMismatch (Set.Set (RewardAcnt (EraCrypto era))) Network
+  | ProposalProcedureNetworkIdMismatch (RewardAccount (EraCrypto era)) Network
+  | TreasuryWithdrawalsNetworkIdMismatch (Set.Set (RewardAccount (EraCrypto era))) Network
   | ProposalDepositIncorrect
       -- | Submitted deposit
       Coin
@@ -266,7 +266,7 @@ mkGovActionState ::
   -- | The deposit
   Coin ->
   -- | The return address
-  RewardAcnt (EraCrypto era) ->
+  RewardAccount (EraCrypto era) ->
   GovAction era ->
   -- | The number of epochs to expiry from protocol parameters
   EpochInterval ->

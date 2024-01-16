@@ -23,7 +23,7 @@ module Test.Cardano.Ledger.Conformance (
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
 import Cardano.Crypto.Hash (Hash, hashToBytes)
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), serialiseAddr)
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..), serialiseAddr)
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AlonzoScript (..))
@@ -481,8 +481,8 @@ instance SpecTranslate (Credential k c) where
   toSpecRep (KeyHashObj h) = Agda.KeyHashObj <$> toSpecRep h
   toSpecRep (ScriptHashObj h) = Agda.ScriptObj <$> toSpecRep h
 
-instance SpecTranslate (RewardAcnt c) where
-  type SpecRep (RewardAcnt c) = SpecRep (Credential 'Staking c)
+instance SpecTranslate (RewardAccount c) where
+  type SpecRep (RewardAccount c) = SpecRep (Credential 'Staking c)
 
   toSpecRep = toSpecRep . getRwdCred
 

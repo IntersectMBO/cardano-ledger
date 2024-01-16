@@ -21,7 +21,7 @@
 module Test.Cardano.Ledger.Generic.PrettyCore where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
@@ -2531,10 +2531,10 @@ instance PrettyA (VotingProcedure era) where
 
 -- ============================================================
 
-pcRewardAcnt :: RewardAcnt c -> PDoc
-pcRewardAcnt (RewardAcnt net cred) = ppSexp "RewAccnt" [pcNetwork net, pcCredential cred]
+pcRewardAcnt :: RewardAccount c -> PDoc
+pcRewardAcnt (RewardAccount net cred) = ppSexp "RewAccnt" [pcNetwork net, pcCredential cred]
 
-instance PrettyA (RewardAcnt c) where prettyA = pcRewardAcnt
+instance PrettyA (RewardAccount c) where prettyA = pcRewardAcnt
 
 pcExUnits :: ExUnits -> PDoc
 pcExUnits (ExUnits mem step) =

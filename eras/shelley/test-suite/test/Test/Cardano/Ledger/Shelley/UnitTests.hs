@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (Addr (..), getRwdCred, pattern RewardAcnt)
+import Cardano.Ledger.Address (Addr (..), getRwdCred, pattern RewardAccount)
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (
@@ -616,7 +616,7 @@ alicePoolParamsSmallCost =
     , ppPledge = Coin 1
     , ppCost = Coin 5 -- Too Small!
     , ppMargin = unsafeBoundRational 0.1
-    , ppRewardAcnt = RewardAcnt Testnet (KeyHashObj . hashKey . vKey $ aliceStake)
+    , ppRewardAcnt = RewardAccount Testnet (KeyHashObj . hashKey . vKey $ aliceStake)
     , ppOwners = Set.singleton $ (hashKey . vKey) aliceStake
     , ppRelays = StrictSeq.empty
     , ppMetadata =

@@ -146,8 +146,8 @@ mkVKeyRwdAcnt ::
   Crypto c =>
   Network ->
   KeyPair 'Staking c ->
-  RewardAcnt c
-mkVKeyRwdAcnt network keys = RewardAcnt network $ KeyHashObj (hashKey $ vKey keys)
+  RewardAccount c
+mkVKeyRwdAcnt network keys = RewardAccount network $ KeyHashObj (hashKey $ vKey keys)
 
 mkKeyHash :: Crypto c => Int -> KeyHash kd c
 mkKeyHash = hashKey . vKey . mkKeyPair

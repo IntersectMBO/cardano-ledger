@@ -80,7 +80,7 @@ module Test.Cardano.Ledger.Generic.GenState (
   modifyModelMutFee,
 ) where
 
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
@@ -1092,7 +1092,7 @@ genPoolParams ppId = do
   ppPledge <- lift genPositiveVal
   ppCost <- lift genPositiveVal
   ppMargin <- lift arbitrary
-  ppRewardAcnt <- RewardAcnt Testnet <$> genFreshRegCred Rewarding
+  ppRewardAcnt <- RewardAccount Testnet <$> genFreshRegCred Rewarding
   let ppOwners = mempty
   let ppRelays = mempty
   let ppMetadata = SNothing

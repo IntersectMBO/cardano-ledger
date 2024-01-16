@@ -107,7 +107,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyNewEpochEvent (DeltaRewardEvent, TotalRewardEvent),
   ShelleyTickEvent (TickNewEpochEvent, TickRupdEvent),
  )
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..))
+import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
@@ -283,7 +283,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
           , ppPledge = pledge
           , ppCost = cost
           , ppMargin = margin
-          , ppRewardAcnt = RewardAcnt Testnet . KeyHashObj . hashKey . vKey $ rewardKey
+          , ppRewardAcnt = RewardAccount Testnet . KeyHashObj . hashKey . vKey $ rewardKey
           , ppOwners = Set.fromList [hashKey $ vKey ownerKey]
           , ppRelays = StrictSeq.empty
           , ppMetadata = SNothing

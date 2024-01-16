@@ -255,7 +255,7 @@ instance Pretty PoolParamsStats where
     prettyRecord
       "PoolParamsStats"
       [ "PoolId" <:> ppsPoolId
-      , "RewardAcnt" <:> ppsRewardAcnt
+      , "RewardAccount" <:> ppsRewardAcnt
       , "Owners" <:> ppsOwners
       ]
 

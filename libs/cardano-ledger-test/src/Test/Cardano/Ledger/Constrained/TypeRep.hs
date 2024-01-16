@@ -46,7 +46,7 @@ where
 import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Crypto.Signing (SigningKey (..), shortVerificationKeyHexF, toVerification)
 import qualified Cardano.Crypto.Wallet as Byron
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
@@ -289,7 +289,7 @@ data Rep era t where
   WitnessesFieldR :: Era era => Proof era -> Rep era (WitnessesField era)
   AssetNameR :: Rep era AssetName
   TxCertR :: Era era => Proof era -> Rep era (TxCertF era)
-  RewardAcntR :: Era era => Rep era (RewardAcnt (EraCrypto era))
+  RewardAcntR :: Era era => Rep era (RewardAccount (EraCrypto era))
   ValidityIntervalR :: Era era => Rep era ValidityInterval
   KeyPairR :: Era era => Rep era (KeyPair 'Witness (EraCrypto era))
   GenR :: Rep era x -> Rep era (Gen x)
@@ -765,7 +765,7 @@ genSizedRep n MultiAssetR = MultiAsset <$> genSizedRep n (MapR (PolicyIDR @era) 
 genSizedRep _ PolicyIDR = arbitrary
 genSizedRep _ (WitnessesFieldR _) = pure $ AddrWits Set.empty
 genSizedRep _ AssetNameR = arbitrary
-genSizedRep _ RewardAcntR = RewardAcnt <$> pure Testnet <*> arbitrary
+genSizedRep _ RewardAcntR = RewardAccount <$> pure Testnet <*> arbitrary
 genSizedRep _ (TxCertR Shelley) = TxCertF Shelley <$> arbitrary
 genSizedRep _ (TxCertR Allegra) = TxCertF Allegra <$> arbitrary
 genSizedRep _ (TxCertR Mary) = TxCertF Mary <$> arbitrary

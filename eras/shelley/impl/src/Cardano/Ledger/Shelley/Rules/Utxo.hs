@@ -74,7 +74,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (
  )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt)
+import Cardano.Ledger.Shelley.TxBody (RewardAccount)
 import Cardano.Ledger.Shelley.UTxO (consumed, produced)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.TxIn (TxIn)
@@ -160,7 +160,7 @@ data ShelleyUtxoPredFailure era
       !(Set (Addr (EraCrypto era))) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       !Network -- the expected network id
-      !(Set (RewardAcnt (EraCrypto era))) -- the set of reward addresses with incorrect network IDs
+      !(Set (RewardAccount (EraCrypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       ![TxOut era] -- list of supplied transaction outputs that are too small
   | UpdateFailure (PPUPPredFailure era) -- Subtransition Failures

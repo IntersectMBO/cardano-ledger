@@ -24,10 +24,13 @@ module Cardano.Ledger.Api.Tx.Address (
   decodeAddrLenientEither,
 
   -- * Reward Account
-  RewardAcnt (..),
+  RewardAccount (..),
   mkRwdAcnt,
   serialiseRewardAcnt,
   deserialiseRewardAcnt,
+
+  -- * Deprecations
+  RewardAcnt,
 )
 where
 

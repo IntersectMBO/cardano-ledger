@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.API (
   Network (..),
   NewEpochState (..),
   ProposedPPUpdates (..),
-  RewardAcnt (..),
+  RewardAccount (..),
   TxId (..),
   Update (..),
  )
@@ -124,7 +124,7 @@ exampleTxBodyBabbage =
     SLE.exampleCerts -- txcerts
     ( Withdrawals $
         Map.singleton
-          (RewardAcnt Testnet (SLE.keyToCredential SLE.exampleStakeKey))
+          (RewardAccount Testnet (SLE.keyToCredential SLE.exampleStakeKey))
           (Coin 100) -- txwdrls
     )
     (Coin 999) -- txfee

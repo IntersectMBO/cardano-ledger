@@ -179,7 +179,7 @@ instance ToExpr (DRepState c)
 -- Address
 instance ToExpr (Addr c)
 
-instance ToExpr (RewardAcnt era)
+instance ToExpr (RewardAccount era)
 
 instance ToExpr (BootstrapAddress c) where
   toExpr = defaultExprViaShow

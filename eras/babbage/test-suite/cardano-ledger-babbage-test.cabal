@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-babbage-test
-version:       1.2.0.0
+version:       1.2.0.1
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -37,11 +37,11 @@ library
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib} >=1.5.1,
         cardano-ledger-alonzo-test >=1.1,
         cardano-ledger-babbage:{cardano-ledger-babbage, testlib} >=1.5 && <1.7,
-        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.10,
+        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.11,
         cardano-ledger-shelley-ma-test >=1.1,
         cardano-ledger-mary >=1.4,
         cardano-ledger-shelley-test >=1.1,
-        cardano-ledger-shelley >=1.6 && <1.10,
+        cardano-ledger-shelley >=1.6 && <1.11,
         cardano-strict-containers,
         cardano-slotting,
         containers,

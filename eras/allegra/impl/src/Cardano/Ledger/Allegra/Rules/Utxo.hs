@@ -22,7 +22,7 @@ module Cardano.Ledger.Allegra.Rules.Utxo (
 )
 where
 
-import Cardano.Ledger.Address (Addr, RewardAcnt)
+import Cardano.Ledger.Address (Addr, RewardAccount)
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraUTXO)
 import Cardano.Ledger.Allegra.Scripts (inInterval)
@@ -102,7 +102,7 @@ data AllegraUtxoPredFailure era
       !(Set (Addr (EraCrypto era))) -- the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       !Network -- the expected network id
-      !(Set (RewardAcnt (EraCrypto era))) -- the set of reward addresses with incorrect network IDs
+      !(Set (RewardAccount (EraCrypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       ![TxOut era] -- list of supplied transaction outputs that are too small
   | UpdateFailure !(PPUPPredFailure era) -- Subtransition Failures

@@ -3,7 +3,7 @@ module Cardano.Ledger.Shelley.API.Types (
 )
 where
 
-import Cardano.Ledger.Address as X (Addr (..), RewardAcnt (..), Withdrawals (..))
+import Cardano.Ledger.Address as X (Addr (..), RewardAccount (..), RewardAcnt, Withdrawals (..))
 import Cardano.Ledger.BHeaderView as X (isOverlaySlot)
 import Cardano.Ledger.BaseTypes as X (
   CertIx,

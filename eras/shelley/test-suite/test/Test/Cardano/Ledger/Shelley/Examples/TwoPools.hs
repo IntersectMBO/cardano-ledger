@@ -77,7 +77,7 @@ import Cardano.Ledger.Shelley.Rewards (
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), ShelleyTxBody (..))
+import Cardano.Ledger.Shelley.TxBody (RewardAccount (..), ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,
@@ -175,10 +175,10 @@ feeTx1 :: Coin
 feeTx1 = Coin 3
 
 alicePoolParams' :: Crypto c => PoolParams c
-alicePoolParams' = Cast.alicePoolParams {ppRewardAcnt = RewardAcnt Testnet Cast.carlSHK}
+alicePoolParams' = Cast.alicePoolParams {ppRewardAcnt = RewardAccount Testnet Cast.carlSHK}
 
 bobPoolParams' :: Crypto c => PoolParams c
-bobPoolParams' = Cast.bobPoolParams {ppRewardAcnt = RewardAcnt Testnet Cast.carlSHK}
+bobPoolParams' = Cast.bobPoolParams {ppRewardAcnt = RewardAccount Testnet Cast.carlSHK}
 
 txbodyEx1 :: TxBody C
 txbodyEx1 =

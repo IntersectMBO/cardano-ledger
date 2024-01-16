@@ -54,7 +54,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
 import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
@@ -466,7 +466,7 @@ trySubmitGovAction ga = do
   trySubmitProposal $
     ProposalProcedure
       { pProcDeposit = pp ^. ppGovActionDepositL
-      , pProcReturnAddr = RewardAcnt Testnet (KeyHashObj khPropRwd)
+      , pProcReturnAddr = RewardAccount Testnet (KeyHashObj khPropRwd)
       , pProcGovAction = ga
       , pProcAnchor = def
       }
@@ -496,7 +496,7 @@ submitTreasuryWithdrawals ::
   , ConwayEraTxBody era
   , ConwayEraGov era
   ) =>
-  [(RewardAcnt (EraCrypto era), Coin)] ->
+  [(RewardAccount (EraCrypto era), Coin)] ->
   ImpTestM era (GovActionId (EraCrypto era))
 submitTreasuryWithdrawals wdrls = do
   policy <-

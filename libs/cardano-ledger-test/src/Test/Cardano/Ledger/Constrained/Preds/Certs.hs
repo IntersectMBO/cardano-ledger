@@ -15,7 +15,7 @@ import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Crypto.VRF.Class (VerKeyVRF)
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), maybeToStrictMaybe)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.TxCert (
@@ -295,7 +295,7 @@ certsPreds UnivSize {..} p = case whichTxCert p of
                 , field PoolParamsR (poolMetadata p)
                 ]
             , Member (Left poolId) poolHashUniv
-            , poolRewAcnt :<-: (Constr "mkRewAcnt" RewardAcnt ^$ network ^$ rewCred)
+            , poolRewAcnt :<-: (Constr "mkRewAcnt" RewardAccount ^$ network ^$ rewCred)
             , Member (Right rewCred) credsUniv
             , Subset poolOwners stakeHashUniv
             , Maybe (poolMetadata p) (Simple localpool) [Random localpool]
@@ -472,7 +472,7 @@ certsPreds UnivSize {..} p = case whichTxCert p of
                 , field PoolParamsR (poolMetadata p)
                 ]
             , Member (Left poolId) poolHashUniv
-            , poolRewAcnt :<-: (Constr "mkRewAcnt" RewardAcnt ^$ network ^$ rewCred)
+            , poolRewAcnt :<-: (Constr "mkRewAcnt" RewardAccount ^$ network ^$ rewCred)
             , Member (Right rewCred) credsUniv
             , Subset poolOwners stakeHashUniv
             , Maybe (poolMetadata p) (Simple localpool) [Random localpool]

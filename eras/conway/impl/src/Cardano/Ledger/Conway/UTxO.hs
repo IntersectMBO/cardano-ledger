@@ -17,7 +17,7 @@ module Cardano.Ledger.Conway.UTxO (
   getConwayWitsVKeyNeeded,
 ) where
 
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   AlonzoScriptsNeeded (..),

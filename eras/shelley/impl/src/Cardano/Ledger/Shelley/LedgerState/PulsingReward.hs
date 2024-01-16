@@ -19,7 +19,7 @@ module Cardano.Ledger.Shelley.LedgerState.PulsingReward (
 )
 where
 
-import Cardano.Ledger.Address (RewardAcnt (..), getRwdCred)
+import Cardano.Ledger.Address (RewardAccount (..), getRwdCred)
 import Cardano.Ledger.BaseTypes (
   ActiveSlotCoeff,
   BlocksMade (..),

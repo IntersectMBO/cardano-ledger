@@ -15,7 +15,7 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW (tests, mkSingleRedeemer) where
 
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
@@ -419,7 +419,7 @@ validatingWithWithdrawalBody pf =
     , Withdrawals'
         ( Withdrawals $
             Map.singleton
-              (RewardAcnt Testnet (scriptStakeCredSuceed pf))
+              (RewardAccount Testnet (scriptStakeCredSuceed pf))
               (Coin 1000)
         )
     , WppHash
@@ -486,7 +486,7 @@ notValidatingTxWithWithdrawal pf =
         , Withdrawals'
             ( Withdrawals $
                 Map.singleton
-                  (RewardAcnt Testnet (scriptStakeCredFail pf))
+                  (RewardAccount Testnet (scriptStakeCredFail pf))
                   (Coin 1000)
             )
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers mempty)
@@ -685,8 +685,8 @@ validatingManyScriptsBody pf =
     , Withdrawals'
         ( Withdrawals $
             Map.fromList
-              [ (RewardAcnt Testnet (scriptStakeCredSuceed pf), Coin 0)
-              , (RewardAcnt Testnet (timelockStakeCred pf), Coin 0)
+              [ (RewardAccount Testnet (scriptStakeCredSuceed pf), Coin 0)
+              , (RewardAccount Testnet (timelockStakeCred pf), Coin 0)
               ]
         )
     , Mint (validatingManyScriptsMint pf)

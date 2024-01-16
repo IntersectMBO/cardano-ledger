@@ -54,7 +54,7 @@ import Cardano.Ledger.Shelley.API (
   Coin,
   KeyHash,
   KeyRole (..),
-  RewardAcnt,
+  RewardAccount,
  )
 import Cardano.Ledger.Shelley.Rules (
   drainWithdrawals,
@@ -92,7 +92,7 @@ data ConwayCertsPredFailure era
       !(KeyHash 'StakePool (EraCrypto era))
   | -- | Withdrawals that are missing or do not withdrawal the entire amount
     WithdrawalsNotInRewardsCERTS
-      !(Map.Map (RewardAcnt (EraCrypto era)) Coin)
+      !(Map.Map (RewardAccount (EraCrypto era)) Coin)
   | -- | CERT rule subtransition Failures
     CertFailure !(PredicateFailure (EraRule "CERT" era))
   deriving (Generic)

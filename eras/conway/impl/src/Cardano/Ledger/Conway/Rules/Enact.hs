@@ -13,7 +13,7 @@ module Cardano.Ledger.Conway.Rules.Enact (
   EnactState (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACT)

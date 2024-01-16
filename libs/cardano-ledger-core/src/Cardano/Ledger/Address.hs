@@ -9,8 +9,10 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Ledger.Address (
   mkRwdAcnt,
@@ -22,7 +24,7 @@ module Cardano.Ledger.Address (
   bootstrapAddressAttrsSize,
   isBootstrapRedeemer,
   getNetwork,
-  RewardAcnt (..),
+  RewardAccount (.., RewardAcnt),
   serialiseRewardAcnt,
   deserialiseRewardAcnt,
   bootstrapKeyHash,
@@ -54,6 +56,9 @@ module Cardano.Ledger.Address (
   decodeRewardAcnt,
   fromCborRewardAcnt,
   Withdrawals (..),
+
+  -- * Deprecations
+  RewardAcnt,
 )
 where
 
@@ -193,11 +198,20 @@ addrPtrNormalize = \case
   addr -> addr
 
 -- | An account based address for rewards
-data RewardAcnt c = RewardAcnt
+data RewardAccount c = RewardAccount
   { getRwdNetwork :: !Network
   , getRwdCred :: !(Credential 'Staking c)
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
+
+pattern RewardAcnt :: Network -> Credential 'Staking c -> RewardAccount c
+pattern RewardAcnt a b = RewardAccount a b
+
+{-# COMPLETE RewardAcnt #-}
+
+type RewardAcnt = RewardAccount
+
+{-# DEPRECATED RewardAcnt "Use `RewardAccount` instead" #-}
 
 instance Crypto c => Default (RewardAcnt c) where
   def = RewardAcnt def def

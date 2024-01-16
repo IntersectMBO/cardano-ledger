@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.8.0.1
+## 1.9.0.0
 
-*
+* Deprecate `RewardAcnt` in favor of `RewardAccount`
 
 ## 1.8.0.0
 

@@ -16,7 +16,7 @@ module Cardano.Ledger.PoolParams (
 )
 where
 
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   DnsName,
   Port,
@@ -204,7 +204,7 @@ data PoolParams c = PoolParams
   , ppPledge :: !Coin
   , ppCost :: !Coin
   , ppMargin :: !UnitInterval
-  , ppRewardAcnt :: !(RewardAcnt c)
+  , ppRewardAcnt :: !(RewardAccount c)
   , ppOwners :: !(Set (KeyHash 'Staking c))
   , ppRelays :: !(StrictSeq StakePoolRelay)
   , ppMetadata :: !(StrictMaybe PoolMetadata)

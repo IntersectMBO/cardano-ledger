@@ -22,7 +22,7 @@ module Cardano.Ledger.Conway.Rules.Epoch (
 )
 where
 
-import Cardano.Ledger.Address (RewardAcnt (getRwdCred))
+import Cardano.Ledger.Address (RewardAccount (getRwdCred))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.CertState (
   CertState (..),

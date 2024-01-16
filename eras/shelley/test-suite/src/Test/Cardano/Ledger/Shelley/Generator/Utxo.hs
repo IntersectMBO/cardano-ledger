@@ -21,7 +21,7 @@ where
 
 import Cardano.Ledger.Address (
   Addr (..),
-  RewardAcnt (..),
+  RewardAccount (..),
  )
 import Cardano.Ledger.BaseTypes (
   Network (..),
@@ -763,7 +763,7 @@ genWithdrawals ::
   Map (KeyHash 'Staking (EraCrypto era)) (KeyPair 'Staking (EraCrypto era)) ->
   Map (Credential 'Staking (EraCrypto era)) Coin ->
   Gen
-    ( [(RewardAcnt (EraCrypto era), Coin)]
+    ( [(RewardAccount (EraCrypto era), Coin)]
     , ([KeyPair 'Witness (EraCrypto era)], [(Script era, Script era)])
     )
 genWithdrawals
@@ -793,7 +793,7 @@ genWithdrawals
         ]
     pure (a, b)
     where
-      toRewardAcnt (rwd, coinx) = (RewardAcnt Testnet rwd, coinx)
+      toRewardAcnt (rwd, coinx) = (RewardAccount Testnet rwd, coinx)
       genWrdls withdrawals_ = do
         selectedWrdls <- map toRewardAcnt <$> QC.sublistOf withdrawals_
         let txwits =

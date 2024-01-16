@@ -64,7 +64,7 @@ import Cardano.Ledger.Shelley.Rules.Delpl (
   ShelleyDelplPredFailure,
  )
 import Cardano.Ledger.Shelley.TxBody (
-  RewardAcnt (..),
+  RewardAccount (..),
   ShelleyEraTxBody (..),
   Withdrawals (..),
  )
@@ -116,7 +116,7 @@ data ShelleyDelegsPredFailure era
       !(KeyHash 'StakePool (EraCrypto era))
   | -- | Withdrawals that are missing or do not withdrawal the entire amount
     WithdrawalsNotInRewardsDELEGS
-      !(Map (RewardAcnt (EraCrypto era)) Coin)
+      !(Map (RewardAccount (EraCrypto era)) Coin)
   | -- | Subtransition Failures
     DelplFailure !(PredicateFailure (EraRule "DELPL" era))
   deriving (Generic)
@@ -251,13 +251,13 @@ validateStakePoolDelegateeRegistered pState targetPool =
 -- than the latter into the right shape so we can call 'Map.isSubmapOf'.
 isSubmapOfUM ::
   forall era.
-  Map (RewardAcnt (EraCrypto era)) Coin ->
+  Map (RewardAccount (EraCrypto era)) Coin ->
   UView (EraCrypto era) (Credential 'Staking (EraCrypto era)) UM.RDPair ->
   Bool
 isSubmapOfUM ws (RewDepUView (UMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
   where
     withdrawalMap :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
-    withdrawalMap = Map.mapKeys (\(RewardAcnt _ cred) -> cred) ws
+    withdrawalMap = Map.mapKeys (\(RewardAccount _ cred) -> cred) ws
     f :: Coin -> UMElem (EraCrypto era) -> Bool
     f coin1 (UMElem (SJust (UM.RDPair coin2 _)) _ _ _) = coin1 == fromCompact coin2
     f _ _ = False
@@ -268,7 +268,7 @@ drainWithdrawals dState (Withdrawals wdrls) =
   where
     drainedRewardAccounts =
       Map.foldrWithKey
-        ( \(RewardAcnt _ cred) _coin ->
+        ( \(RewardAccount _ cred) _coin ->
             Map.insert cred (UM.RDPair (UM.CompactCoin 0) (UM.CompactCoin 0))
             -- Note that the deposit (CompactCoin 0) will be ignored.
         )
@@ -280,13 +280,13 @@ validateZeroRewards ::
   DState era ->
   Withdrawals (EraCrypto era) ->
   Network ->
-  Test (Map (RewardAcnt (EraCrypto era)) Coin)
+  Test (Map (RewardAccount (EraCrypto era)) Coin)
 validateZeroRewards dState (Withdrawals wdrls) network = do
   failureUnless (isSubmapOfUM @era wdrls (rewards dState)) $ -- withdrawals_ ⊆ rewards
     Map.differenceWith
       (\x y -> if x /= y then Just x else Nothing)
       wdrls
-      (Map.mapKeys (RewardAcnt network) (UM.rewardMap (dsUnified dState)))
+      (Map.mapKeys (RewardAccount network) (UM.rewardMap (dsUnified dState)))
 
 instance
   ( Era era

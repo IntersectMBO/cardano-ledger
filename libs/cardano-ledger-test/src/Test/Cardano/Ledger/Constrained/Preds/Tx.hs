@@ -15,7 +15,7 @@
 module Test.Cardano.Ledger.Constrained.Preds.Tx where
 
 import Cardano.Crypto.Signing (SigningKey)
-import Cardano.Ledger.Address (Addr (..), BootstrapAddress, RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), BootstrapAddress, RewardAccount (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), plutusScriptLanguage)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
@@ -521,7 +521,7 @@ txBodyPreds sizes@UnivSize {..} p =
                       ( \s r ->
                           Map.fromList
                             ( map
-                                (\x -> (RewardAcnt Testnet x, r Map.! x))
+                                (\x -> (RewardAccount Testnet x, r Map.! x))
                                 (Set.toList s)
                             )
                       )

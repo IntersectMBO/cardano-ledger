@@ -16,7 +16,7 @@
 module Test.Cardano.Ledger.Examples.AlonzoBBODY (tests) where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoBbodyPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
@@ -336,7 +336,7 @@ validatingBodyWithWithdrawal pf =
     , Withdrawals'
         ( Withdrawals $
             Map.singleton
-              (RewardAcnt Testnet (scriptStakeCredSuceed pf))
+              (RewardAccount Testnet (scriptStakeCredSuceed pf))
               (Coin 1000)
         )
     , WppHash
@@ -384,7 +384,7 @@ notValidatingTxWithWithdrawal pf =
         , Withdrawals'
             ( Withdrawals $
                 Map.singleton
-                  (RewardAcnt Testnet (scriptStakeCredFail pf))
+                  (RewardAccount Testnet (scriptStakeCredFail pf))
                   (Coin 1000)
             )
         , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemers mempty)
@@ -590,7 +590,7 @@ poolMDHTooBigTx pf =
             , ppPledge = Coin 0
             , ppCost = Coin 0
             , ppMargin = minBound
-            , ppRewardAcnt = RewardAcnt Testnet (scriptStakeCredSuceed pf)
+            , ppRewardAcnt = RewardAccount Testnet (scriptStakeCredSuceed pf)
             , ppOwners = mempty
             , ppRelays = mempty
             , ppMetadata = SJust $ PoolMetadata (fromJust $ textToUrl 64 "") tooManyBytes

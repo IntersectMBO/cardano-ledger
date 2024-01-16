@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.6.0.1
+
+*
+
 ## 1.6.0.0
 
 * Remove deprecated `getDatumBabbage`, `babbageTxScripts`, `refScripts`

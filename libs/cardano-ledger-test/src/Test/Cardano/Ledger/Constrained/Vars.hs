@@ -76,7 +76,7 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
 import Cardano.Ledger.Shelley.Rewards (Reward (..))
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..))
+import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (compactCoinOrError, fromCompact, ptrMap, rdPairMap, sPoolMap, unify)
@@ -1238,7 +1238,7 @@ totalCol = Var $ V "totalCol" CoinR No
 certs :: Reflect era => Term era [TxCertF era]
 certs = Var $ V "certs" (ListR (TxCertR reify)) No
 
-withdrawals :: forall era. Era era => Term era (Map (RewardAcnt (EraCrypto era)) Coin)
+withdrawals :: forall era. Era era => Term era (Map (RewardAccount (EraCrypto era)) Coin)
 withdrawals = Var $ V "withdrawals" (MapR (RewardAcntR @era) CoinR) No
 
 txfee :: Era era => Term era Coin
@@ -1344,7 +1344,7 @@ txterm = Var $ V "txterm" (TxR reify) No
 
 -- Lenses for use in TxBody
 
-getRwdCredL :: Lens' (RewardAcnt c) (Credential 'Staking c)
+getRwdCredL :: Lens' (RewardAccount c) (Credential 'Staking c)
 getRwdCredL = lens getRwdCred (\r c -> r {getRwdCred = c})
 
 txOutFL :: Lens' (TxOutF era) (TxOut era)
@@ -2071,7 +2071,7 @@ stakePoolVotesV = Var (V "stakePoolVotesV" (MapR PoolHashR VoteR) No)
 depositV :: Era era => Term era Coin
 depositV = Var (V "depositV" CoinR No)
 
-returnAddrV :: Era era => Term era (RewardAcnt (EraCrypto era))
+returnAddrV :: Era era => Term era (RewardAccount (EraCrypto era))
 returnAddrV = Var (V "returnAddrV" RewardAcntR No)
 
 actionV :: Era era => Term era (GovAction era)
@@ -2124,7 +2124,7 @@ gaPParamsUpdate = Var (V "gsPParamsUpdate" (PParamsUpdateR reify) No)
 gaProtVer :: Reflect era => Term era ProtVer
 gaProtVer = Var (V "gaProtVer" (ProtVerR reify) No)
 
-gaRewardAcnt :: Era era => Term era (Map (RewardAcnt (EraCrypto era)) Coin)
+gaRewardAcnt :: Era era => Term era (Map (RewardAccount (EraCrypto era)) Coin)
 gaRewardAcnt = Var (V "gaRewardAcnt" (MapR RewardAcntR CoinR) No)
 
 gaRemMember :: Era era => Term era (Set (Credential 'ColdCommitteeRole (EraCrypto era)))

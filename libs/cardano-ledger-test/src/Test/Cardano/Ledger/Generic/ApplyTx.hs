@@ -10,7 +10,7 @@
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
-import Cardano.Ledger.Address (RewardAcnt (..), Withdrawals (..))
+import Cardano.Ledger.Address (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (ExUnits))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..), TxIx, mkTxIxPartial, natVersion)
@@ -157,8 +157,8 @@ applyField proof count model field = case field of
   Withdrawals' (Withdrawals m) -> Map.foldlWithKey' (applyWithdrawals proof) model m
   _other -> model
 
-applyWithdrawals :: Proof era -> Model era -> RewardAcnt (EraCrypto era) -> Coin -> Model era
-applyWithdrawals _proof model (RewardAcnt _network cred) coin =
+applyWithdrawals :: Proof era -> Model era -> RewardAccount (EraCrypto era) -> Coin -> Model era
+applyWithdrawals _proof model (RewardAccount _network cred) coin =
   model {mRewards = Map.adjust (<-> coin) cred (mRewards model)}
 
 applyCert :: forall era. Reflect era => Model era -> TxCert era -> Model era

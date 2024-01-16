@@ -50,7 +50,7 @@ module Cardano.Ledger.Alonzo.Scripts (
 )
 where
 
-import Cardano.Ledger.Address (RewardAcnt)
+import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.Allegra.Scripts (Timelock, eqTimelockRaw, translateTimelock)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.TxCert ()
@@ -230,7 +230,7 @@ data AlonzoPlutusPurpose f era
   = AlonzoSpending !(f Word32 (TxIn (EraCrypto era)))
   | AlonzoMinting !(f Word32 (PolicyID (EraCrypto era)))
   | AlonzoCertifying !(f Word32 (TxCert era))
-  | AlonzoRewarding !(f Word32 (RewardAcnt (EraCrypto era)))
+  | AlonzoRewarding !(f Word32 (RewardAccount (EraCrypto era)))
   deriving (Generic)
 
 deriving instance Eq (AlonzoPlutusPurpose AsIndex era)

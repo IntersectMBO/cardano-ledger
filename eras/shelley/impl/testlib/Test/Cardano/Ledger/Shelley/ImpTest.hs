@@ -86,7 +86,7 @@ import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), seedSizeDSIGN)
 import Cardano.Crypto.Hash (Hash, HashAlgorithm)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   Anchor (..),
   BlocksMade (..),
@@ -538,7 +538,7 @@ runImpTestM impState (ImpTestM m) = do
 runShelleyBase :: Globals -> ShelleyBase a -> a
 runShelleyBase globals act = runIdentity $ runReaderT act globals
 
-getRewardAccountAmount :: RewardAcnt (EraCrypto era) -> ImpTestM era Coin
+getRewardAccountAmount :: RewardAccount (EraCrypto era) -> ImpTestM era Coin
 getRewardAccountAmount rewardAcount = do
   umap <- getsNES $ nesEsL . epochStateUMapL
   let cred = getRwdCred rewardAcount
@@ -931,7 +931,7 @@ registerRewardAccount ::
   ( HasCallStack
   , ShelleyEraImp era
   ) =>
-  ImpTestM era (RewardAcnt (EraCrypto era))
+  ImpTestM era (RewardAccount (EraCrypto era))
 registerRewardAccount = do
   khDelegator <- freshKeyHash
   kpDelegator <- lookupKeyPair khDelegator
@@ -948,7 +948,7 @@ registerRewardAccount = do
       & bodyTxL . certsTxBodyL
         .~ SSeq.fromList [RegTxCert @era stakingCredential]
   networkId <- use (to impGlobals . to networkId)
-  pure $ RewardAcnt networkId stakingCredential
+  pure $ RewardAccount networkId stakingCredential
 
 registerPool :: ShelleyEraImp era => ImpTestM era (KeyHash 'StakePool (EraCrypto era))
 registerPool = do

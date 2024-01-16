@@ -52,7 +52,7 @@ import Cardano.Ledger.Shelley.API (
   Addr (..),
   Credential (..),
   PoolParams (..),
-  RewardAcnt (..),
+  RewardAccount (..),
   ShelleyDelegCert (..),
   StakeReference (..),
   Withdrawals (..),
@@ -839,7 +839,7 @@ genWithdrawals slot =
     then do
       let networkId = Testnet
       newRewards <- genRewards
-      pure (Withdrawals $ Map.mapKeys (RewardAcnt networkId) newRewards, newRewards)
+      pure (Withdrawals $ Map.mapKeys (RewardAccount networkId) newRewards, newRewards)
     else pure (Withdrawals Map.empty, Map.empty)
 
 timeToLive :: ValidityInterval -> SlotNo
