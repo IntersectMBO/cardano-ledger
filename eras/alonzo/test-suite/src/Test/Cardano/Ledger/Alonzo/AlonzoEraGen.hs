@@ -86,9 +86,7 @@ import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set as Set
 import Lens.Micro
 import Numeric.Natural (Natural)
-import qualified PlutusLedgerApi.V1 as PV1 (Data)
-import qualified PlutusTx as P (Data (..))
-import qualified PlutusTx as Plutus
+import qualified PlutusLedgerApi.Common as P (Data (..))
 import System.Random
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds, mkPlutusScript')
@@ -179,19 +177,19 @@ genAlonzoMint startvalue = do
 genPair :: Gen a -> Gen b -> Gen (a, b)
 genPair x y = (,) <$> x <*> y
 
-genPlutusData :: Gen PV1.Data
+genPlutusData :: Gen P.Data
 genPlutusData = resize 5 (sized gendata)
   where
     gendata n
       | n > 0 =
           oneof
-            [ Plutus.I <$> arbitrary
-            , Plutus.B <$> arbitrary
-            , Plutus.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2)))
-            , Plutus.Constr <$> arbitrary <*> listOf (gendata (n `div` 2))
-            , Plutus.List <$> listOf (gendata (n `div` 2))
+            [ P.I <$> arbitrary
+            , P.B <$> arbitrary
+            , P.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2)))
+            , P.Constr <$> arbitrary <*> listOf (gendata (n `div` 2))
+            , P.List <$> listOf (gendata (n `div` 2))
             ]
-    gendata _ = oneof [Plutus.I <$> arbitrary, Plutus.B <$> arbitrary]
+    gendata _ = oneof [P.I <$> arbitrary, P.B <$> arbitrary]
 
 genSet :: Ord a => Gen a -> Gen (Set a)
 genSet gen =
@@ -474,7 +472,7 @@ addRedeemMap ::
   forall c.
   Crypto c =>
   TxBody (AlonzoEra c) ->
-  (PV1.Data, Natural, Natural) ->
+  (P.Data, Natural, Natural) ->
   AlonzoPlutusPurpose AsItem (AlonzoEra c) ->
   Map (AlonzoPlutusPurpose AsIndex (AlonzoEra c)) (Data (AlonzoEra c), ExUnits) ->
   Map (AlonzoPlutusPurpose AsIndex (AlonzoEra c)) (Data (AlonzoEra c), ExUnits)

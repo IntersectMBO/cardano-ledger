@@ -51,7 +51,7 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Lens.Micro
-import qualified PlutusTx as Plutus
+import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import qualified Test.Cardano.Ledger.Core.Utils as SLE
@@ -147,10 +147,10 @@ exampleTxBodyBabbage =
     MaryValue _ exampleMultiAsset = MarySLE.exampleMultiAssetValue 3
 
 datumExample :: Data Babbage
-datumExample = Data (Plutus.I 191)
+datumExample = Data (P.I 191)
 
 redeemerExample :: Data Babbage
-redeemerExample = Data (Plutus.I 919)
+redeemerExample = Data (P.I 919)
 
 exampleTx :: ShelleyTx Babbage
 exampleTx =

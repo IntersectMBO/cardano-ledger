@@ -62,7 +62,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Lens.Micro
-import qualified PlutusTx as Plutus
+import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
@@ -163,10 +163,10 @@ exampleTxBodyConway =
     MaryValue _ exampleMultiAsset = MarySLE.exampleMultiAssetValue 3
 
 datumExample :: Data Conway
-datumExample = Data (Plutus.I 191)
+datumExample = Data (P.I 191)
 
 redeemerExample :: Data Conway
-redeemerExample = Data (Plutus.I 919)
+redeemerExample = Data (P.I 919)
 
 exampleTx :: ShelleyTx Conway
 exampleTx =

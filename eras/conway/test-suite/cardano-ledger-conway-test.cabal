@@ -35,7 +35,6 @@ library
         cardano-ledger-babbage >=1.3 && <1.7,
         cardano-ledger-babbage-test >=1.1.1,
         cardano-ledger-binary >=1.0,
-        cardano-strict-containers,
         cardano-ledger-conway:{cardano-ledger-conway, testlib} >=1.9 && <1.13,
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.8.1,
         cardano-ledger-allegra >=1.2,
@@ -44,10 +43,11 @@ library
         cardano-ledger-shelley-test >=1.1,
         cardano-ledger-shelley >=1.6,
         cardano-slotting,
+        cardano-strict-containers,
         containers,
         data-default-class,
         small-steps,
-        plutus-tx,
+        plutus-ledger-api,
         microlens
 
 executable gen-golden

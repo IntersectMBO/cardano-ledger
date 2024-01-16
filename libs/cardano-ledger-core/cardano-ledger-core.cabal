@@ -114,7 +114,6 @@ library
         nothunks,
         partial-order,
         plutus-ledger-api,
-        plutus-tx,
         prettyprinter,
         quiet,
         serialise,
