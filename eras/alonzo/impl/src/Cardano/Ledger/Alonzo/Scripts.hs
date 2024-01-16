@@ -43,6 +43,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
   AsItem (..),
   AsIndex (..),
+  AsIxItem (..),
 
   -- * Re-exports
   module Cardano.Ledger.Plutus.CostModels,
@@ -215,16 +216,34 @@ isValidPlutusScript pv ps = withPlutusScript ps (isValidPlutus pv)
 -- Alonzo Plutus Purpose =======================================================
 
 newtype AsIndex ix it = AsIndex {unAsIndex :: ix}
-  deriving newtype (Eq, Ord, Show, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
+  deriving stock (Show)
+  deriving newtype (Eq, Ord, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
 
 newtype AsItem ix it = AsItem {unAsItem :: it}
-  deriving newtype (Eq, Ord, Show, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
+  deriving stock (Show)
+  deriving newtype (Eq, Ord, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
 
-instance ToJSON a => ToJSON (AsIndex a b) where
+data AsIxItem ix it = AsIxItem
+  { asIndex :: !ix
+  , asItem :: !it
+  }
+  deriving (Eq, Ord, Show, Generic)
+
+instance (NFData ix, NFData it) => NFData (AsIxItem ix it) where
+  rnf (AsIxItem ix it) = ix `deepseq` rnf it
+
+instance ToJSON ix => ToJSON (AsIndex ix it) where
   toJSON (AsIndex i) = object ["index" .= toJSON i]
 
-instance ToJSON b => ToJSON (AsItem a b) where
+instance ToJSON it => ToJSON (AsItem ix it) where
   toJSON (AsItem i) = object ["item" .= toJSON i]
+
+instance (ToJSON ix, ToJSON it) => ToJSON (AsIxItem ix it) where
+  toJSON (AsIxItem ix it) =
+    object
+      [ "index" .= toJSON ix
+      , "item" .= toJSON it
+      ]
 
 data AlonzoPlutusPurpose f era
   = AlonzoSpending !(f Word32 (TxIn (EraCrypto era)))
