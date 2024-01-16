@@ -4,6 +4,7 @@ module Cardano.Ledger.Alonzo.Core (
   AlonzoEraScript (..),
   AsIndex (..),
   AsItem (..),
+  AsIxItem (..),
   ScriptIntegrityHash,
   AlonzoEraTxBody (..),
   AlonzoEraTxWits (..),
@@ -49,7 +50,7 @@ import Cardano.Ledger.Alonzo.PParams (
   ppuMaxValSizeL,
   ppuPricesL,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..), AsIndex (..), AsItem (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..), AsIndex (..), AsItem (..), AsIxItem (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..))

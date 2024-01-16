@@ -372,6 +372,9 @@ deriving instance Arbitrary ix => Arbitrary (AsIndex ix it)
 
 deriving instance Arbitrary it => Arbitrary (AsItem ix it)
 
+instance (Arbitrary ix, Arbitrary it) => Arbitrary (AsIxItem ix it) where
+  arbitrary = AsIxItem <$> arbitrary <*> arbitrary
+
 genAlonzoPlutusPurposePointer :: Word32 -> Gen (AlonzoPlutusPurpose AsIndex era)
 genAlonzoPlutusPurposePointer i =
   elements
