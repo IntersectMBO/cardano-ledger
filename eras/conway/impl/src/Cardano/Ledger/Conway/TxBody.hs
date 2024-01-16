@@ -117,9 +117,9 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
-import Control.Monad (when)
+import Control.Monad (unless, when)
 import Data.Maybe.Strict (StrictMaybe (..))
-import qualified Data.OSet.Strict as SOS
+import qualified Data.OSet.Strict as OSet
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
@@ -137,7 +137,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrOutputs :: !(StrictSeq (Sized (TxOut era)))
   , ctbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
   , ctbrTotalCollateral :: !(StrictMaybe Coin)
-  , ctbrCerts :: !(SOS.OSet (ConwayTxCert era))
+  , ctbrCerts :: !(OSet.OSet (ConwayTxCert era))
   , ctbrWithdrawals :: !(Withdrawals (EraCrypto era))
   , ctbrTxfee :: !Coin
   , ctbrVldt :: !ValidityInterval
@@ -147,7 +147,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrAuxDataHash :: !(StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
   , ctbrTxNetworkId :: !(StrictMaybe Network)
   , ctbrVotingProcedures :: !(VotingProcedures era)
-  , ctbrProposalProcedures :: !(SOS.OSet (ProposalProcedure era))
+  , ctbrProposalProcedures :: !(OSet.OSet (ProposalProcedure era))
   , ctbrCurrentTreasuryValue :: !(StrictMaybe Coin)
   , ctbrTreasuryDonation :: !Coin
   }
@@ -194,7 +194,7 @@ instance
       bodyFields 4 =
         fieldGuarded
           (emptyFailure "Certificates" "non-empty")
-          SOS.null
+          OSet.null
           (\x tx -> tx {ctbrCerts = x})
           From
       bodyFields 5 =
@@ -245,7 +245,7 @@ instance
       bodyFields 20 =
         fieldGuarded
           (emptyFailure "ProposalProcedures" "non-empty")
-          SOS.null
+          OSet.null
           (\x tx -> tx {ctbrProposalProcedures = x})
           From
       bodyFields 21 = ofield (\x tx -> tx {ctbrCurrentTreasuryValue = x}) From
@@ -319,7 +319,7 @@ basicConwayTxBodyRaw =
     mempty
     SNothing
     SNothing
-    SOS.empty
+    OSet.empty
     (Withdrawals mempty)
     mempty
     (ValidityInterval SNothing SNothing)
@@ -329,22 +329,24 @@ basicConwayTxBodyRaw =
     SNothing
     SNothing
     (VotingProcedures mempty)
-    SOS.empty
+    OSet.empty
     SNothing
     mempty
 
-data ConwayTxBodyUpgradeError
+data ConwayTxBodyUpgradeError c
   = CTBUETxCert ConwayTxCertUpgradeError
   | -- | The TxBody contains an update proposal from a pre-Conway era. Since
     --   this can only have come from the genesis delegates, we just discard it.
     CTBUEContainsUpdate
+  | -- | In eras prior to Conway duplicate certificates where allowed
+    CTBUEContainsDuplicateCerts (Set (TxCert (ConwayEra c)))
   deriving (Eq, Show)
 
 instance Crypto c => EraTxBody (ConwayEra c) where
   {-# SPECIALIZE instance EraTxBody (ConwayEra StandardCrypto) #-}
 
   type TxBody (ConwayEra c) = ConwayTxBody (ConwayEra c)
-  type TxBodyUpgradeError (ConwayEra c) = ConwayTxBodyUpgradeError
+  type TxBodyUpgradeError (ConwayEra c) = ConwayTxBodyUpgradeError c
 
   mkBasicTxBody = mkConwayTxBody
 
@@ -373,7 +375,7 @@ instance Crypto c => EraTxBody (ConwayEra c) where
   {-# INLINE withdrawalsTxBodyL #-}
 
   certsTxBodyL =
-    lensMemoRawType (SOS.toStrictSeq . ctbrCerts) (\txb x -> txb {ctbrCerts = SOS.fromStrictSeq x})
+    lensMemoRawType (OSet.toStrictSeq . ctbrCerts) (\txb x -> txb {ctbrCerts = OSet.fromStrictSeq x})
   {-# INLINE certsTxBodyL #-}
 
   getTotalDepositsTxBody = conwayTotalDepositsTxBody
@@ -382,9 +384,10 @@ instance Crypto c => EraTxBody (ConwayEra c) where
     getTotalRefundsTxCerts pp lookupStakingDeposit lookupDRepDeposit (txBody ^. certsTxBodyL)
 
   upgradeTxBody btb = do
-    when (isSJust (btbUpdate btb)) $
-      Left CTBUEContainsUpdate
+    when (isSJust (btbUpdate btb)) $ Left CTBUEContainsUpdate
     certs <- traverse (left CTBUETxCert . upgradeTxCert) (btbCerts btb)
+    let (duplicates, certsOSet) = OSet.fromStrictSeqDuplicates certs
+    unless (null duplicates) $ Left $ CTBUEContainsDuplicateCerts duplicates
     pure $
       ConwayTxBody
         { ctbSpendInputs = btbInputs btb
@@ -393,7 +396,7 @@ instance Crypto c => EraTxBody (ConwayEra c) where
               . upgradeTxOut
               . sizedValue
               <$> btbOutputs btb
-        , ctbCerts = certs
+        , ctbCerts = certsOSet
         , ctbWithdrawals = btbWithdrawals btb
         , ctbTxfee = btbTxFee btb
         , ctbVldt = btbValidityInterval btb
@@ -411,7 +414,7 @@ instance Crypto c => EraTxBody (ConwayEra c) where
               <$> btbCollateralReturn btb
         , ctbTotalCollateral = btbTotalCollateral btb
         , ctbCurrentTreasuryValue = SNothing
-        , ctbProposalProcedures = SOS.empty
+        , ctbProposalProcedures = OSet.empty
         , ctbVotingProcedures = VotingProcedures mempty
         , ctbTreasuryDonation = Coin 0
         }
@@ -542,7 +545,7 @@ pattern ConwayTxBody ::
   StrictSeq (Sized (TxOut era)) ->
   StrictMaybe (Sized (TxOut era)) ->
   StrictMaybe Coin ->
-  StrictSeq (ConwayTxCert era) ->
+  OSet.OSet (ConwayTxCert era) ->
   Withdrawals (EraCrypto era) ->
   Coin ->
   ValidityInterval ->
@@ -552,7 +555,7 @@ pattern ConwayTxBody ::
   StrictMaybe (AuxiliaryDataHash (EraCrypto era)) ->
   StrictMaybe Network ->
   VotingProcedures era ->
-  SOS.OSet (ProposalProcedure era) ->
+  OSet.OSet (ProposalProcedure era) ->
   StrictMaybe Coin ->
   Coin ->
   ConwayTxBody era
@@ -585,7 +588,7 @@ pattern ConwayTxBody
         , ctbrOutputs = ctbOutputs
         , ctbrCollateralReturn = ctbCollateralReturn
         , ctbrTotalCollateral = ctbTotalCollateral
-        , ctbrCerts = (SOS.toStrictSeq -> ctbCerts)
+        , ctbrCerts = ctbCerts
         , ctbrWithdrawals = ctbWithdrawals
         , ctbrTxfee = ctbTxfee
         , ctbrVldt = ctbVldt
@@ -629,7 +632,7 @@ pattern ConwayTxBody
             outputsX
             collateralReturnX
             totalCollateralX
-            (SOS.fromStrictSeq certsX)
+            certsX
             withdrawalsX
             txfeeX
             vldtX
@@ -667,7 +670,7 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
         !> encodeKeyedStrictMaybe 17 ctbrTotalCollateral
         !> Key 2 (To ctbrTxfee)
         !> encodeKeyedStrictMaybe 3 top
-        !> Omit SOS.null (Key 4 (To ctbrCerts))
+        !> Omit OSet.null (Key 4 (To ctbrCerts))
         !> Omit (null . unWithdrawals) (Key 5 (To ctbrWithdrawals))
         !> encodeKeyedStrictMaybe 8 bot
         !> Omit null (Key 14 (To ctbrReqSignerHashes))
@@ -676,7 +679,7 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
         !> encodeKeyedStrictMaybe 7 ctbrAuxDataHash
         !> encodeKeyedStrictMaybe 15 ctbrTxNetworkId
         !> Omit (null . unVotingProcedures) (Key 19 (To ctbrVotingProcedures))
-        !> Omit SOS.null (Key 20 (To ctbrProposalProcedures))
+        !> Omit OSet.null (Key 20 (To ctbrProposalProcedures))
         !> encodeKeyedStrictMaybe 21 ctbrCurrentTreasuryValue
         !> Omit (== mempty) (Key 22 $ To ctbrTreasuryDonation)
 
@@ -695,7 +698,7 @@ class (BabbageEraTxBody era, ConwayEraTxCert era, ConwayEraPParams era) => Conwa
   votingProceduresTxBodyL :: Lens' (TxBody era) (VotingProcedures era)
 
   -- | Lens for getting and setting `ProposalProcedures`.
-  proposalProceduresTxBodyL :: Lens' (TxBody era) (SOS.OSet (ProposalProcedure era))
+  proposalProceduresTxBodyL :: Lens' (TxBody era) (OSet.OSet (ProposalProcedure era))
 
   treasuryDonationTxBodyL :: Lens' (TxBody era) Coin
 

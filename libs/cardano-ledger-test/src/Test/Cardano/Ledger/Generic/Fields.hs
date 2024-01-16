@@ -81,6 +81,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.OSet.Strict as OSet
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq (fromList)
 import Data.Set (Set)
@@ -443,7 +444,7 @@ abstractTxBody Conway (ConwayTxBody inp col ref out colret totcol cert wdrl fee 
   , Outputs (sizedValue <$> out)
   , CollateralReturn (sizedValue <$> colret)
   , TotalCol totcol
-  , Certs cert
+  , Certs $ OSet.toStrictSeq cert
   , Withdrawals' wdrl
   , Txfee fee
   , Vldt vldt

@@ -2,6 +2,7 @@
 
 ## 1.2.1.0
 
+* Add `OSet.fromList`
 * Add `fromFoldableDuplicates`
 
 ## 1.2.0.0
