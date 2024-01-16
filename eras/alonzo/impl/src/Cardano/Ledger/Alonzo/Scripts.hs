@@ -20,6 +20,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Scripts (
@@ -40,6 +41,10 @@ module Cardano.Ledger.Alonzo.Scripts (
   toPlutusSLanguage,
 
   -- ** Plutus Purpose
+  pattern SpendingPurpose,
+  pattern MintingPurpose,
+  pattern CertifyingPurpose,
+  pattern RewardingPurpose,
   AlonzoPlutusPurpose (..),
   AsItem (..),
   AsIndex (..),
@@ -167,7 +172,21 @@ class
     (forall l. PlutusLanguage l => Plutus l -> a) ->
     a
 
-  plutusPurposeSpendingTxIn :: PlutusPurpose AsItem era -> Maybe (TxIn (EraCrypto era))
+  mkSpendingPurpose :: f Word32 (TxIn (EraCrypto era)) -> PlutusPurpose f era
+
+  toSpendingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (TxIn (EraCrypto era)))
+
+  mkMintingPurpose :: f Word32 (PolicyID (EraCrypto era)) -> PlutusPurpose f era
+
+  toMintingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (PolicyID (EraCrypto era)))
+
+  mkCertifyingPurpose :: f Word32 (TxCert era) -> PlutusPurpose f era
+
+  toCertifyingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (TxCert era))
+
+  mkRewardingPurpose :: f Word32 (RewardAcnt (EraCrypto era)) -> PlutusPurpose f era
+
+  toRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (RewardAcnt (EraCrypto era)))
 
   upgradePlutusPurposeAsIndex ::
     AlonzoEraScript (PreviousEra era) =>
@@ -340,6 +359,30 @@ instance (Era era, DecCBOR (TxCert era)) => DecCBOR (AlonzoPlutusPurpose AsItem 
       dec 2 = SumD (AlonzoRewarding . AsItem) <! From
       dec n = Invalid n
 
+pattern SpendingPurpose ::
+  AlonzoEraScript era => f Word32 (TxIn (EraCrypto era)) -> PlutusPurpose f era
+pattern SpendingPurpose c <- (toSpendingPurpose -> Just c)
+  where
+    SpendingPurpose c = mkSpendingPurpose c
+
+pattern MintingPurpose ::
+  AlonzoEraScript era => f Word32 (PolicyID (EraCrypto era)) -> PlutusPurpose f era
+pattern MintingPurpose c <- (toMintingPurpose -> Just c)
+  where
+    MintingPurpose c = mkMintingPurpose c
+
+pattern CertifyingPurpose ::
+  AlonzoEraScript era => f Word32 (TxCert era) -> PlutusPurpose f era
+pattern CertifyingPurpose c <- (toCertifyingPurpose -> Just c)
+  where
+    CertifyingPurpose c = mkCertifyingPurpose c
+
+pattern RewardingPurpose ::
+  AlonzoEraScript era => f Word32 (RewardAcnt (EraCrypto era)) -> PlutusPurpose f era
+pattern RewardingPurpose c <- (toRewardingPurpose -> Just c)
+  where
+    RewardingPurpose c = mkRewardingPurpose c
+
 -- Alonzo Script ===============================================================
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
@@ -401,9 +444,25 @@ instance Crypto c => AlonzoEraScript (AlonzoEra c) where
 
   withPlutusScript (AlonzoPlutusV1 plutus) f = f plutus
 
-  plutusPurposeSpendingTxIn = \case
-    AlonzoSpending (AsItem txIn) -> Just txIn
-    _ -> Nothing
+  mkSpendingPurpose = AlonzoSpending
+
+  toSpendingPurpose (AlonzoSpending i) = Just i
+  toSpendingPurpose _ = Nothing
+
+  mkMintingPurpose = AlonzoMinting
+
+  toMintingPurpose (AlonzoMinting i) = Just i
+  toMintingPurpose _ = Nothing
+
+  mkCertifyingPurpose = AlonzoCertifying
+
+  toCertifyingPurpose (AlonzoCertifying i) = Just i
+  toCertifyingPurpose _ = Nothing
+
+  mkRewardingPurpose = AlonzoRewarding
+
+  toRewardingPurpose (AlonzoRewarding i) = Just i
+  toRewardingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIndex =
     error "Impossible: No `PlutusScript` and `AlonzoEraScript` instances in the previous era"

@@ -79,7 +79,7 @@ getBabbageSpendingDatum ::
   PlutusPurpose AsItem era ->
   Maybe (Data era)
 getBabbageSpendingDatum (UTxO utxo) tx sp = do
-  txIn <- plutusPurposeSpendingTxIn sp
+  AsItem txIn <- toSpendingPurpose sp
   txOut <- Map.lookup txIn utxo
   let txOutDataFromWits = do
         dataHash <- strictMaybeToMaybe (txOut ^. dataHashTxOutL)
