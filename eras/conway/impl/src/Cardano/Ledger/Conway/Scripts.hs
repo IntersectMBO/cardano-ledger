@@ -5,17 +5,22 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Scripts (
+  ConwayEraScript (..),
   AlonzoScript (..),
   PlutusScript (..),
   isPlutusScript,
   ConwayPlutusPurpose (..),
+  pattern VotingPurpose,
+  pattern ProposingPurpose,
 )
 where
 
@@ -49,6 +54,15 @@ import Data.Typeable
 import Data.Word (Word16, Word32, Word8)
 import GHC.Generics
 import NoThunks.Class (NoThunks (..))
+
+class AlonzoEraScript era => ConwayEraScript era where
+  mkVotingPurpose :: f Word32 (Voter (EraCrypto era)) -> PlutusPurpose f era
+
+  toVotingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (Voter (EraCrypto era)))
+
+  mkProposingPurpose :: f Word32 (ProposalProcedure era) -> PlutusPurpose f era
+
+  toProposingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (ProposalProcedure era))
 
 instance Crypto c => EraScript (ConwayEra c) where
   type Script (ConwayEra c) = AlonzoScript (ConwayEra c)
@@ -92,15 +106,42 @@ instance Crypto c => AlonzoEraScript (ConwayEra c) where
   withPlutusScript (ConwayPlutusV2 plutus) f = f plutus
   withPlutusScript (ConwayPlutusV3 plutus) f = f plutus
 
-  plutusPurposeSpendingTxIn = \case
-    ConwaySpending (AsItem txIn) -> Just txIn
-    _ -> Nothing
+  mkSpendingPurpose = ConwaySpending
+
+  toSpendingPurpose (ConwaySpending i) = Just i
+  toSpendingPurpose _ = Nothing
+
+  mkMintingPurpose = ConwayMinting
+
+  toMintingPurpose (ConwayMinting i) = Just i
+  toMintingPurpose _ = Nothing
+
+  mkCertifyingPurpose = ConwayCertifying
+
+  toCertifyingPurpose (ConwayCertifying i) = Just i
+  toCertifyingPurpose _ = Nothing
+
+  mkRewardingPurpose = ConwayRewarding
+
+  toRewardingPurpose (ConwayRewarding i) = Just i
+  toRewardingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIndex = \case
     AlonzoSpending (AsIndex ix) -> ConwaySpending (AsIndex ix)
     AlonzoMinting (AsIndex ix) -> ConwayMinting (AsIndex ix)
     AlonzoCertifying (AsIndex ix) -> ConwayCertifying (AsIndex ix)
     AlonzoRewarding (AsIndex ix) -> ConwayRewarding (AsIndex ix)
+
+instance Crypto c => ConwayEraScript (ConwayEra c) where
+  mkVotingPurpose = ConwayVoting
+
+  toVotingPurpose (ConwayVoting i) = Just i
+  toVotingPurpose _ = Nothing
+
+  mkProposingPurpose = ConwayProposing
+
+  toProposingPurpose (ConwayProposing i) = Just i
+  toProposingPurpose _ = Nothing
 
 instance NFData (PlutusScript (ConwayEra c)) where
   rnf = rwhnf
@@ -213,3 +254,15 @@ instance
     ConwayProposing n -> kindObjectWithValue "ConwayProposing" n
     where
       kindObjectWithValue name n = kindObject name ["value" .= n]
+
+pattern VotingPurpose ::
+  ConwayEraScript era => f Word32 (Voter (EraCrypto era)) -> PlutusPurpose f era
+pattern VotingPurpose c <- (toVotingPurpose -> Just c)
+  where
+    VotingPurpose c = mkVotingPurpose c
+
+pattern ProposingPurpose ::
+  ConwayEraScript era => f Word32 (ProposalProcedure era) -> PlutusPurpose f era
+pattern ProposingPurpose c <- (toProposingPurpose -> Just c)
+  where
+    ProposingPurpose c = mkProposingPurpose c

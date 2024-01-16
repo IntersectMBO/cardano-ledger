@@ -76,9 +76,25 @@ instance Crypto c => AlonzoEraScript (BabbageEra c) where
   withPlutusScript (BabbagePlutusV1 plutus) f = f plutus
   withPlutusScript (BabbagePlutusV2 plutus) f = f plutus
 
-  plutusPurposeSpendingTxIn = \case
-    AlonzoSpending (AsItem txIn) -> Just txIn
-    _ -> Nothing
+  mkSpendingPurpose = AlonzoSpending
+
+  toSpendingPurpose (AlonzoSpending i) = Just i
+  toSpendingPurpose _ = Nothing
+
+  mkMintingPurpose = AlonzoMinting
+
+  toMintingPurpose (AlonzoMinting i) = Just i
+  toMintingPurpose _ = Nothing
+
+  mkCertifyingPurpose = AlonzoCertifying
+
+  toCertifyingPurpose (AlonzoCertifying i) = Just i
+  toCertifyingPurpose _ = Nothing
+
+  mkRewardingPurpose = AlonzoRewarding
+
+  toRewardingPurpose (AlonzoRewarding i) = Just i
+  toRewardingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIndex = \case
     AlonzoMinting (AsIndex ix) -> AlonzoMinting (AsIndex ix)

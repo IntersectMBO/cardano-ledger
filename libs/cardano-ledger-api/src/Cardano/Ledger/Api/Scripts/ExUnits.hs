@@ -240,8 +240,8 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
       -- inline datums, when they are present, since for PlutusV1 presence of inline
       -- datums would short circuit earlier on PlutusContext translation.
       datums <-
-        case plutusPurposeSpendingTxIn plutusPurpose of
-          Just txIn -> do
+        case toSpendingPurpose plutusPurpose of
+          Just (AsItem txIn) -> do
             txOut <- note (UnknownTxIn txIn) $ Map.lookup txIn (unUTxO utxo)
             datum <-
               case txOut ^. datumTxOutF of

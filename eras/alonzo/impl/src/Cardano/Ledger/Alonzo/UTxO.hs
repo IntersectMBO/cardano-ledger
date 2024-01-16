@@ -128,7 +128,7 @@ getAlonzoSpendingDatum ::
   PlutusPurpose AsItem era ->
   Maybe (Data era)
 getAlonzoSpendingDatum (UTxO m) tx sp = do
-  txIn <- plutusPurposeSpendingTxIn sp
+  AsItem txIn <- toSpendingPurpose sp
   txOut <- Map.lookup txIn m
   SJust hash <- Just $ txOut ^. dataHashTxOutL
   Map.lookup hash (unTxDats $ tx ^. witsTxL . datsTxWitsL)
@@ -140,7 +140,7 @@ getAlonzoSpendingTxIn = \case
   AlonzoMinting _policyId -> Nothing
   AlonzoRewarding _rewardAccount -> Nothing
   AlonzoCertifying _txCert -> Nothing
-{-# DEPRECATED getAlonzoSpendingTxIn "In favor of more general `plutusPurposeSpendingTxIn`" #-}
+{-# DEPRECATED getAlonzoSpendingTxIn "In favor of more general `toSpendingPurpose`" #-}
 
 getAlonzoScriptsHashesNeeded :: AlonzoScriptsNeeded era -> Set.Set (ScriptHash (EraCrypto era))
 getAlonzoScriptsHashesNeeded (AlonzoScriptsNeeded sn) = Set.fromList (map snd sn)
