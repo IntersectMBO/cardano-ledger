@@ -6,7 +6,8 @@ module Test.Cardano.Data.OSet.StrictSpec where
 
 import Data.OSet.Strict hiding (empty)
 import Data.Proxy
-import Data.Sequence.Strict (StrictSeq, fromList, (><))
+import Data.Sequence.Strict (StrictSeq, (><))
+import qualified Data.Sequence.Strict as SSeq (fromList)
 import Data.Set (Set, elems, empty)
 import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborSpec)
@@ -68,15 +69,15 @@ spec =
         fromSet set `shouldSatisfy` invariantHolds'
     prop "fromStrictSeq preserves order" $
       \(set :: Set Int) ->
-        let sseq = fromList $ elems set
-         in toStrictSeq (fromStrictSeq sseq) `shouldBe` sseq
+        let sseq = SSeq.fromList $ elems set
+         in toStrictSeq (fromList (elems set)) `shouldBe` sseq
     context "fromStrictSeqDuplicates" $ do
       prop "with duplicates" $ \(set :: (Set Int)) ->
-        let sseq = fromList $ elems set
+        let sseq = SSeq.fromList $ elems set
             oset = fromStrictSeq sseq
          in fromStrictSeqDuplicates (sseq >< sseq) `shouldBe` (set, oset)
       prop "without duplicates" $ \(set :: (Set Int)) ->
-        let sseq = fromList $ elems set
+        let sseq = SSeq.fromList $ elems set
             oset = fromStrictSeq sseq
          in fromStrictSeqDuplicates sseq `shouldBe` (empty, oset)
     context "CBOR round-trip" $ do

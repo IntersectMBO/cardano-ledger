@@ -20,6 +20,7 @@ module Data.OSet.Strict (
   lookup,
   member,
   (!?),
+  fromList,
   fromStrictSeq,
   fromStrictSeqDuplicates,
   toStrictSeq,
@@ -46,7 +47,7 @@ import Control.DeepSeq (NFData)
 import Data.Foldable qualified as F
 import Data.Sequence.Strict qualified as SSeq
 import Data.Set qualified as Set
-import GHC.Exts (IsList (..))
+import qualified GHC.Exts as GHC (IsList (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Prelude hiding (filter, lookup, null, seq)
@@ -72,9 +73,9 @@ instance Ord a => Semigroup (OSet a) where
 instance Ord a => Monoid (OSet a) where
   mempty = empty
 
-instance Ord a => IsList (OSet a) where
+instance Ord a => GHC.IsList (OSet a) where
   type Item (OSet a) = a
-  fromList = fromStrictSeq . SSeq.fromList
+  fromList = fromList
   toList = F.toList . osSSeq
 
 instance Foldable OSet where
@@ -175,16 +176,19 @@ unsnoc (OSet seq set) = case seq of
   SSeq.Empty -> Nothing
   xs' SSeq.:|> x -> Just (OSet xs' (x `Set.delete` set), x)
 
+-- | \(O(n \log n)\). Convert to an OSet from a List.
+-- De-duplicates the StrictSeq without overwriting.
+fromList :: Ord a => [a] -> OSet a
+fromList = F.foldl' snoc empty
+
 -- | \(O(n \log n)\). Checks membership before snoc-ing.
 -- De-duplicates the StrictSeq without overwriting.
--- Starts from the left or head, using `foldl'`
 fromStrictSeq :: Ord a => SSeq.StrictSeq a -> OSet a
 fromStrictSeq = F.foldl' snoc empty
 
 -- | \(O(n \log n)\). Checks membership before snoc-ing.
 -- Returns a 2-tuple, with `fst` as a `Set` of duplicates found
 -- and the `snd` as the de-duplicated `OSet` without overwriting.
--- Starts from the left or head, using `foldl'`
 fromStrictSeqDuplicates :: Ord a => SSeq.StrictSeq a -> (Set.Set a, OSet a)
 fromStrictSeqDuplicates = F.foldl' snoc' (Set.empty, empty)
   where

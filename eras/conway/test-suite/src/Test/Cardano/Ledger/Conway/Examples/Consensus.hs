@@ -57,8 +57,8 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended (Embed (..))
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
+import qualified Data.OSet.Strict as OSet
 import Data.Proxy (Proxy (..))
-import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Lens.Micro
@@ -119,9 +119,9 @@ collateralOutput =
     NoDatum
     SNothing
 
-exampleConwayCerts :: Era era => StrictSeq (ConwayTxCert era)
+exampleConwayCerts :: Era era => OSet.OSet (ConwayTxCert era)
 exampleConwayCerts =
-  StrictSeq.fromList -- TODO should I add the new certs here?
+  OSet.fromList -- TODO should I add the new certs here?
     [ ConwayTxCertPool (RegPool examplePoolParams)
     ]
 
