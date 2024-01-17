@@ -84,10 +84,11 @@ import Cardano.Ledger.Alonzo.PParams (
   ppPricesL,
  )
 import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript (PlutusPurpose),
-  AsItem (..),
+  AlonzoEraScript (PlutusPurpose, mapPlutusPurpose),
+  AsIxItem,
   CostModel,
   ExUnits (..),
+  toAsIndex,
   txscriptfee,
  )
 import Cardano.Ledger.Alonzo.TxBody (
@@ -377,15 +378,13 @@ getMapFromValue (MaryValue _ (MultiAsset m)) = m
 
 -- | Find the Data and ExUnits assigned to a plutus script.
 indexRedeemers ::
-  (AlonzoEraTxBody era, AlonzoEraTxWits era, EraTx era) =>
+  (AlonzoEraTxWits era, EraTx era) =>
   Tx era ->
-  PlutusPurpose AsItem era ->
+  PlutusPurpose AsIxItem era ->
   Maybe (Data era, ExUnits)
-indexRedeemers tx sp = case redeemerPointer (tx ^. bodyTxL) sp of
-  SNothing -> Nothing
-  SJust rPtr -> Map.lookup rPtr rdmrs
-    where
-      rdmrs = unRedeemers (tx ^. witsTxL . rdmrsTxWitsL)
+indexRedeemers tx sp = Map.lookup (mapPlutusPurpose toAsIndex sp) redeemers
+  where
+    redeemers = unRedeemers (tx ^. witsTxL . rdmrsTxWitsL)
 
 --------------------------------------------------------------------------------
 -- Serialisation

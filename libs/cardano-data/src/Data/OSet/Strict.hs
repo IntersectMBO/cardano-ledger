@@ -47,7 +47,7 @@ import Control.DeepSeq (NFData)
 import Data.Foldable qualified as F
 import Data.Sequence.Strict qualified as SSeq
 import Data.Set qualified as Set
-import qualified GHC.Exts as GHC (IsList (..))
+import GHC.Exts qualified as GHC (IsList (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Prelude hiding (filter, lookup, null, seq)

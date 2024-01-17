@@ -13,7 +13,7 @@
 
 module Test.Cardano.Ledger.Constrained.Classes where
 
-import Cardano.Ledger.Alonzo.Scripts (AsIndex, AsItem, PlutusPurpose)
+import Cardano.Ledger.Alonzo.Scripts (AsIndex, AsIxItem, PlutusPurpose)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
@@ -78,7 +78,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcVal,
   pcWitnesses,
   ppPlutusPurposeAsIndex,
-  ppPlutusPurposeAsItem,
+  ppPlutusPurposeAsIxItem,
   ppString,
  )
 import Test.Cardano.Ledger.Generic.Proof (
@@ -593,9 +593,9 @@ instance Eq (TxCertF era) where
 
 -- ==================
 data PlutusPurposeF era where
-  PlutusPurposeF :: Proof era -> PlutusPurpose AsItem era -> PlutusPurposeF era
+  PlutusPurposeF :: Proof era -> PlutusPurpose AsIxItem era -> PlutusPurposeF era
 
-unPlutusPurposeF :: PlutusPurposeF era -> PlutusPurpose AsItem era
+unPlutusPurposeF :: PlutusPurposeF era -> PlutusPurpose AsIxItem era
 unPlutusPurposeF (PlutusPurposeF _ pp) = pp
 
 data PlutusPointerF era where
@@ -605,7 +605,7 @@ unPlutusPointerF :: PlutusPointerF era -> PlutusPurpose AsIndex era
 unPlutusPointerF (PlutusPointerF _ pp) = pp
 
 instance Show (PlutusPurposeF era) where
-  show (PlutusPurposeF p x) = unReflect (\_ -> show (ppPlutusPurposeAsItem x)) p
+  show (PlutusPurposeF p x) = unReflect (\_ -> show (ppPlutusPurposeAsIxItem x)) p
 
 instance Show (PlutusPointerF era) where
   show (PlutusPointerF p x) = unReflect (\_ -> show (ppPlutusPurposeAsIndex x)) p

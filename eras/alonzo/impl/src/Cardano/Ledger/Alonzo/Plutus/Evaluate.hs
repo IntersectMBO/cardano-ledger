@@ -24,7 +24,7 @@ where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
-import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem)
 import Cardano.Ledger.Alonzo.Tx (indexRedeemers)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum), AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), kindObject, natVersion)
@@ -174,13 +174,14 @@ collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
     getScriptWithRedeemer (sp, script) =
       case indexRedeemers tx sp of
         Just (d, eu) -> Right (script, sp, d, eu)
-        Nothing -> Left (NoRedeemer sp)
+        Nothing -> Left (NoRedeemer (mapPlutusPurpose toAsItem sp))
     apply (plutusScript, scriptPurpose, d, eu) = do
       let lang = plutusScriptLanguage plutusScript
       costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang costModels
       case mkPlutusScriptContext plutusScript scriptPurpose pp epochInfo sysStart utxo tx of
         Right scriptContext ->
-          let datums = maybe id (:) (getSpendingDatum utxo tx scriptPurpose) [d, scriptContext]
+          let spendingDatum = getSpendingDatum utxo tx $ mapPlutusPurpose toAsItem scriptPurpose
+              datums = maybe id (:) spendingDatum [d, scriptContext]
            in Right $
                 withPlutusScript plutusScript $ \plutus ->
                   PlutusWithContext

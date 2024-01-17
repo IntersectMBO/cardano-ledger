@@ -285,7 +285,7 @@ addWitnesses proof scriptUniv plutusuniv byronuniv keymapuniv datauniv txb ut gd
          in ( Map.restrictKeys scriptUniv refAdjusted
             , Map.restrictKeys scriptUniv neededHashset
             , validities
-            , getRdmrPtrs (TxBodyF proof txb) xs' plutusuniv
+            , getRdmrPtrs xs' plutusuniv
             , Map.restrictKeys
                 datauniv
                 ( getPlutusDataHashes

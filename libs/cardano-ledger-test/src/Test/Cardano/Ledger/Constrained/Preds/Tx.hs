@@ -16,12 +16,12 @@ module Test.Cardano.Ledger.Constrained.Preds.Tx where
 
 import Cardano.Crypto.Signing (SigningKey)
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress, RewardAcnt (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), plutusScriptLanguage)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), plutusScriptLanguage, toAsIndex)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (getInputDataHashesTxBody)
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
-import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), StrictMaybe (..), strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary.Decoding (mkSized, sizedSize)
 import Cardano.Ledger.Binary.Encoding (EncCBOR)
 import Cardano.Ledger.CertState (CertState, certDStateL, dsGenDelegsL)
@@ -197,28 +197,26 @@ needT proof = Constr "neededScripts" needed
     needed (TxBodyF _ txbodyV) ut = ScriptsNeededF proof (getScriptsNeeded (liftUTxO ut) txbodyV)
 
 rdmrPtrsT ::
-  AlonzoEraTxBody era =>
+  AlonzoEraScript era =>
   Target
     era
-    ( TxBodyF era ->
-      [((PlutusPurposeF era), (ScriptHash (EraCrypto era)))] ->
+    ( [((PlutusPurposeF era), (ScriptHash (EraCrypto era)))] ->
       Map (ScriptHash (EraCrypto era)) any ->
       Set (PlutusPointerF era)
     )
 rdmrPtrsT = Constr "getRdmrPtrs" getRdmrPtrs
 
 getRdmrPtrs ::
-  AlonzoEraTxBody era =>
-  TxBodyF era ->
+  AlonzoEraScript era =>
   [((PlutusPurposeF era), (ScriptHash (EraCrypto era)))] ->
   Map (ScriptHash (EraCrypto era)) any ->
   Set (PlutusPointerF era)
-getRdmrPtrs (TxBodyF _ txbodyV) xs allplutus = List.foldl' accum Set.empty xs
+getRdmrPtrs xs allplutus = List.foldl' accum Set.empty xs
   where
     accum ans (PlutusPurposeF p sp, hash)
-      | Map.member hash allplutus
-      , SJust x <- redeemerPointer txbodyV sp =
-          Set.insert (PlutusPointerF p x) ans
+      | Map.member hash allplutus =
+          let ptr = mapPlutusPurpose toAsIndex sp
+           in Set.insert (PlutusPointerF p ptr) ans
       | otherwise = ans
 
 getPlutusDataHashes ::
@@ -599,7 +597,7 @@ txBodyPreds sizes@UnivSize {..} p =
         , -- , scriptWits :=: Restrict refAdjusted (allScriptUniv p)
           Restrict refAdjusted (allScriptUniv p) :=: scriptWits
         , Elems (ProjM fstL IsValidR (Restrict neededHashSet plutusUniv)) :=: valids
-        , rdmrPtrs :<-: (rdmrPtrsT ^$ tempTxBody ^$ acNeeded ^$ plutusUniv)
+        , rdmrPtrs :<-: (rdmrPtrsT ^$ acNeeded ^$ plutusUniv)
         , rdmrPtrs :=: Dom redeemers
         , If
             (Constr "null" Set.null ^$ rdmrPtrs)

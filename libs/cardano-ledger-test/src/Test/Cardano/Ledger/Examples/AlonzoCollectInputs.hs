@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..), collectPlutusSc
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   AlonzoScript (..),
-  AsItem (..),
+  AsIxItem (..),
   ExUnits (..),
  )
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
@@ -169,7 +169,7 @@ collectInputs x = error ("collectInputs Not defined in era " ++ show x)
 mkPlutusScriptContext' ::
   Proof era ->
   PlutusScript era ->
-  PlutusPurpose AsItem era ->
+  PlutusPurpose AsIxItem era ->
   PParams era ->
   EpochInfo (Either Text) ->
   SystemStart ->

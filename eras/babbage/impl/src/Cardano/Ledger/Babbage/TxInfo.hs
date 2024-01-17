@@ -32,6 +32,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
+import Cardano.Ledger.Alonzo.Scripts (toAsItem)
 import Cardano.Ledger.Alonzo.Tx (Data)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemers)
 import Cardano.Ledger.Babbage.Core
@@ -283,7 +284,7 @@ instance ToJSON (PlutusPurpose AsIndex era) => ToJSON (BabbageContextError era) 
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (BabbageEra c) where
   toPlutusTxCert _ = pure . Alonzo.transTxCert
 
-  toPlutusScriptPurpose = Alonzo.transPlutusPurpose
+  toPlutusScriptPurpose proxy = Alonzo.transPlutusPurpose proxy . mapPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
     let refInputs = txBody ^. referenceInputsTxBodyL
@@ -319,7 +320,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (BabbageEra c) where
 instance Crypto c => EraPlutusTxInfo 'PlutusV2 (BabbageEra c) where
   toPlutusTxCert _ = pure . Alonzo.transTxCert
 
-  toPlutusScriptPurpose = Alonzo.transPlutusPurpose
+  toPlutusScriptPurpose proxy = Alonzo.transPlutusPurpose proxy . mapPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
     timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)

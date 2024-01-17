@@ -40,6 +40,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoScript (..),
   AsIndex (..),
   AsItem (..),
+  AsIxItem (..),
   ExUnits (..),
   PlutusPurpose,
   plutusScriptLanguage,
@@ -1804,18 +1805,21 @@ ppContextError e =
     Babbage -> ppString (show e)
     Conway -> ppString (show e)
 
-ppPlutusPurposeAsIndex :: forall era. Reflect era => PlutusPurpose AsIndex era -> PDoc
-ppPlutusPurposeAsIndex p =
-  case reify @era of
-    Shelley -> error "Unsuported"
-    Allegra -> error "Unsuported"
-    Mary -> error "Unsuported"
-    Alonzo -> prettyA p
-    Babbage -> prettyA p
-    Conway -> prettyA p
+ppPlutusPurposeAsIndex :: Reflect era => PlutusPurpose AsIndex era -> PDoc
+ppPlutusPurposeAsIndex = ppPlutusPurpose @AsIndex
 
-ppPlutusPurposeAsItem :: forall era. Reflect era => PlutusPurpose AsItem era -> PDoc
-ppPlutusPurposeAsItem p =
+ppPlutusPurposeAsItem :: Reflect era => PlutusPurpose AsItem era -> PDoc
+ppPlutusPurposeAsItem = ppPlutusPurpose @AsItem
+
+ppPlutusPurposeAsIxItem :: Reflect era => PlutusPurpose AsIxItem era -> PDoc
+ppPlutusPurposeAsIxItem = ppPlutusPurpose @AsIxItem
+
+ppPlutusPurpose ::
+  forall f era.
+  (Reflect era, forall ix it. (PrettyA ix, PrettyA it) => PrettyA (f ix it)) =>
+  PlutusPurpose f era ->
+  PDoc
+ppPlutusPurpose p =
   case reify @era of
     Shelley -> error "Unsuported"
     Allegra -> error "Unsuported"
@@ -3122,25 +3126,21 @@ pcMultiAsset m = ppList pptriple (flattenMultiAsset m)
 instance PrettyA (MultiAsset c) where
   prettyA = pcMultiAsset
 
-instance PrettyA a => PrettyA (AsIndex a b) where
-  prettyA (AsIndex i) = ppSexp "AsIndex" [prettyA i]
+instance PrettyA ix => PrettyA (AsIndex ix it) where
+  prettyA (AsIndex ix) = ppSexp "AsIndex" [prettyA ix]
 
-instance PrettyA b => PrettyA (AsItem a b) where
-  prettyA (AsItem i) = ppSexp "AsItem" [prettyA i]
+instance PrettyA it => PrettyA (AsItem ix it) where
+  prettyA (AsItem it) = ppSexp "AsItem" [prettyA it]
 
-instance
-  Reflect era =>
-  PrettyA (AlonzoPlutusPurpose AsIndex era)
-  where
-  prettyA = \case
-    AlonzoMinting i -> ppSexp "AlonzoMinting" [ppString (show i)]
-    AlonzoSpending i -> ppSexp "AlonzoSpending" [ppString (show i)]
-    AlonzoRewarding i -> ppSexp "AlonzoRewarding" [ppString (show i)]
-    AlonzoCertifying i -> ppSexp "AlonzoCertifying" [ppString (show i)]
+instance (PrettyA ix, PrettyA it) => PrettyA (AsIxItem ix it) where
+  prettyA (AsIxItem ix it) = ppSexp "AsIxItem" [prettyA ix, prettyA it]
 
 instance
-  (Reflect era, PrettyA (TxCert era)) =>
-  PrettyA (AlonzoPlutusPurpose AsItem era)
+  ( forall ix it. (PrettyA ix, PrettyA it) => PrettyA (f ix it)
+  , Reflect era
+  , PrettyA (TxCert era)
+  ) =>
+  PrettyA (AlonzoPlutusPurpose f era)
   where
   prettyA = \case
     AlonzoMinting i -> ppSexp "AlonzoMinting" [prettyA i]
@@ -3149,20 +3149,11 @@ instance
     AlonzoCertifying i -> ppSexp "AlonzoCertifying" [prettyA i]
 
 instance
-  Reflect era =>
-  PrettyA (ConwayPlutusPurpose AsIndex era)
-  where
-  prettyA = \case
-    ConwayMinting i -> ppSexp "ConwayMinting" [ppString (show i)]
-    ConwaySpending i -> ppSexp "ConwaySpending" [ppString (show i)]
-    ConwayRewarding i -> ppSexp "ConwayRewarding" [ppString (show i)]
-    ConwayCertifying i -> ppSexp "ConwayCertifying" [ppString (show i)]
-    ConwayVoting i -> ppSexp "ConwayVoting" [ppString (show i)]
-    ConwayProposing i -> ppSexp "ConwayProposing" [ppString (show i)]
-
-instance
-  (Reflect era, PrettyA (TxCert era)) =>
-  PrettyA (ConwayPlutusPurpose AsItem era)
+  ( forall ix it. (PrettyA ix, PrettyA it) => PrettyA (f ix it)
+  , Reflect era
+  , PrettyA (TxCert era)
+  ) =>
+  PrettyA (ConwayPlutusPurpose f era)
   where
   prettyA = \case
     ConwayMinting i -> ppSexp "ConwayMinting" [prettyA i]
@@ -3172,7 +3163,8 @@ instance
     ConwayVoting i -> ppSexp "ConwayVoting" [prettyA i]
     ConwayProposing i -> ppSexp "ConwayProposing" [prettyA i]
 
--- ScriptsNeeded is a type family so it doesn't have PrettyA instance, use pcScriptsNeeded instead of prettyA
+-- ScriptsNeeded is a type family so it doesn't have PrettyA instance, use pcScriptsNeeded
+-- instead of prettyA
 pcScriptsNeeded :: Reflect era => Proof era -> ScriptsNeeded era -> PDoc
 pcScriptsNeeded Shelley (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
 pcScriptsNeeded Allegra (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]

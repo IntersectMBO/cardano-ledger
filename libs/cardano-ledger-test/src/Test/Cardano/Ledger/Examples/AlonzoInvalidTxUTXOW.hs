@@ -26,7 +26,12 @@ import Cardano.Ledger.Alonzo.Rules (
   FailureDescription (..),
   TagMismatchDescription (..),
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AsItem (..), PlutusPurpose)
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoPlutusPurpose (..),
+  AsItem (..),
+  AsIxItem (..),
+  PlutusPurpose,
+ )
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.BaseTypes (
@@ -106,8 +111,17 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase)
 
-spendingPurpose1 :: Proof era -> PlutusPurpose AsItem era
+spendingPurpose1 :: Proof era -> PlutusPurpose AsIxItem era
 spendingPurpose1 = \case
+  Shelley {} -> error "Unsupported"
+  Allegra {} -> error "Unsupported"
+  Mary {} -> error "Unsupported"
+  Alonzo {} -> AlonzoSpending (AsIxItem 1 (mkGenesisTxIn 1))
+  Babbage {} -> AlonzoSpending (AsIxItem 1 (mkGenesisTxIn 1))
+  Conway {} -> ConwaySpending (AsIxItem 1 (mkGenesisTxIn 1))
+
+spendingPurposeAsItem1 :: Proof era -> PlutusPurpose AsItem era
+spendingPurposeAsItem1 = \case
   Shelley {} -> error "Unsupported"
   Allegra {} -> error "Unsupported"
   Mary {} -> error "Unsupported"
@@ -161,9 +175,9 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ missingRedeemerTx pf)
               ( Left
-                  [ fromUtxos @era $ CollectErrors [NoRedeemer $ spendingPurpose1 pf]
+                  [ fromUtxos @era $ CollectErrors [NoRedeemer $ spendingPurposeAsItem1 pf]
                   , fromPredFail $
-                      MissingRedeemers @era [(spendingPurpose1 pf, alwaysSucceedsHash 3 pf)]
+                      MissingRedeemers @era [(spendingPurposeAsItem1 pf, alwaysSucceedsHash 3 pf)]
                   ]
               )
         , testCase "wrong wpp hash" $
@@ -218,10 +232,11 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ wrongRedeemerLabelTx pf)
               ( Left
-                  [ fromUtxos @era (CollectErrors [NoRedeemer $ spendingPurpose1 pf])
-                  , -- now "wrong redeemer label" means there are both unredeemable scripts and extra redeemers
-                    fromPredFail @era . MissingRedeemers $
-                      [(spendingPurpose1 pf, alwaysSucceedsHash 3 pf)]
+                  [ fromUtxos @era (CollectErrors [NoRedeemer $ spendingPurposeAsItem1 pf])
+                  , -- now "wrong redeemer label" means there are both unredeemable
+                    -- scripts and extra redeemers
+                    fromPredFail @era $
+                      MissingRedeemers [(spendingPurposeAsItem1 pf, alwaysSucceedsHash 3 pf)]
                   , fromPredFail @era $ ExtraRedeemers [mkPlutusPurposePointer pf Minting 1]
                   ]
               )

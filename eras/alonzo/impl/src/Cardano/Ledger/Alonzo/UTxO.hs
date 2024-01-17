@@ -17,10 +17,20 @@ module Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   getAlonzoSpendingDatum,
   getAlonzoSpendingTxIn,
+
+  -- * Scripts needed
   AlonzoScriptsNeeded (..),
   getAlonzoScriptsNeeded,
+  getSpendingScriptsNeeded,
+  getRewardingScriptsNeeded,
+  getMintingScriptsNeeded,
   getAlonzoScriptsHashesNeeded,
+  zipAsIxItem,
+
+  -- * Datums needed
   getInputDataHashesTxBody,
+
+  -- * WitsVKey needed
   getAlonzoWitsVKeyNeeded,
 )
 where
@@ -48,16 +58,16 @@ import Cardano.Ledger.UTxO (
   getScriptHash,
  )
 import Control.SetAlgebra (eval, (◁))
-import Data.Foldable (toList)
+import Data.Foldable (foldl', toList)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
+import Data.Maybe (catMaybes, fromMaybe)
 import qualified Data.Set as Set
-import Lens.Micro
+import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 
 -- | Alonzo era style scripts needed require also a `ScriptPurpose`, not only the `ScriptHash`
 newtype AlonzoScriptsNeeded era
-  = AlonzoScriptsNeeded [(PlutusPurpose AsItem era, ScriptHash (EraCrypto era))]
+  = AlonzoScriptsNeeded [(PlutusPurpose AsIxItem era, ScriptHash (EraCrypto era))]
   deriving (Semigroup, Monoid)
 
 deriving instance AlonzoEraScript era => Eq (AlonzoScriptsNeeded era)
@@ -208,38 +218,73 @@ getInputDataHashesTxBody (UTxO mp) txBody (ScriptsProvided scriptsProvided) =
 -- that every script credential refers to some actual script.  This is tested in the test
 -- function 'validateMissingScripts' in the Utxow rule.
 getAlonzoScriptsNeeded ::
-  forall era.
-  (MaryEraTxBody era, PlutusPurpose AsItem era ~ AlonzoPlutusPurpose AsItem era) =>
+  (MaryEraTxBody era, AlonzoEraScript era) =>
   UTxO era ->
   TxBody era ->
   AlonzoScriptsNeeded era
-getAlonzoScriptsNeeded (UTxO utxo) txBody =
-  AlonzoScriptsNeeded (spend ++ reward ++ cert ++ minted)
+getAlonzoScriptsNeeded utxo txBody =
+  getSpendingScriptsNeeded utxo txBody
+    <> getRewardingScriptsNeeded txBody
+    <> certifyingScriptsNeeded
+    <> getMintingScriptsNeeded txBody
   where
-    collect ::
-      TxIn (EraCrypto era) ->
-      Maybe (AlonzoPlutusPurpose AsItem era, ScriptHash (EraCrypto era))
-    collect !txIn = do
-      addr <- view addrTxOutL <$> Map.lookup txIn utxo
-      hash <- getScriptHash addr
-      return (AlonzoSpending (AsItem txIn), hash)
-
-    !spend = mapMaybe collect (Set.toList $ txBody ^. inputsTxBodyL)
-
-    !reward = mapMaybe fromRewardAccount (Map.keys withdrawals)
+    certifyingScriptsNeeded =
+      AlonzoScriptsNeeded $
+        case foldl' addUniqueTxCertPurpose (Map.empty, 0, []) (txBody ^. certsTxBodyL) of
+          (_, _, certPurposes) -> reverse certPurposes
       where
-        withdrawals = unWithdrawals $ txBody ^. withdrawalsTxBodyL
-        fromRewardAccount rewardAccount = do
-          hash <- credScriptHash $ getRwdCred rewardAccount
-          return (AlonzoRewarding (AsItem rewardAccount), hash)
+        -- We need to do this funny index manipulation here because we've allowed
+        -- duplicate certificates all the way until Conway. This prevented second
+        -- occurance of a duplicate certificate in the sequence to be used. In order to
+        -- preserve this behavior we need to use the index of the first occurance of a
+        -- duplicate certificate.
+        addUniqueTxCertPurpose (!certScriptHashes, !ix, !certPurposes) txCert =
+          fromMaybe (certScriptHashes, ix + 1, certPurposes) $ do
+            scriptHash <- getScriptWitnessTxCert txCert
+            case Map.lookup scriptHash certScriptHashes of
+              Nothing -> do
+                let purpose = (CertifyingPurpose (AsIxItem ix txCert), scriptHash)
+                pure (Map.insert scriptHash ix certScriptHashes, ix + 1, purpose : certPurposes)
+              Just ix' -> do
+                let purpose = (CertifyingPurpose (AsIxItem ix' txCert), scriptHash)
+                pure (certScriptHashes, ix + 1, purpose : certPurposes)
 
-    !cert =
-      mapMaybe (\cred -> (AlonzoCertifying (AsItem cred),) <$> getScriptWitnessTxCert cred) $
-        toList (txBody ^. certsTxBodyL)
+zipAsIxItem :: (Num ix, Enum ix, Foldable f) => f it -> (AsIxItem ix it -> c) -> [c]
+zipAsIxItem xs f = zipWith (\ix it -> f (AsIxItem ix it)) [0 ..] (toList xs)
 
-    !minted =
-      map (\policyId@(PolicyID hash) -> (AlonzoMinting (AsItem policyId), hash)) $
-        Set.toList (txBody ^. mintedTxBodyF)
+getSpendingScriptsNeeded ::
+  (AlonzoEraScript era, EraTxBody era) =>
+  UTxO era ->
+  TxBody era ->
+  AlonzoScriptsNeeded era
+getSpendingScriptsNeeded (UTxO utxo) txBody =
+  AlonzoScriptsNeeded $
+    catMaybes $
+      zipAsIxItem (txBody ^. inputsTxBodyL) $
+        \asIxItem@(AsIxItem _ txIn) -> do
+          addr <- view addrTxOutL <$> Map.lookup txIn utxo
+          hash <- getScriptHash addr
+          return (SpendingPurpose asIxItem, hash)
+
+getRewardingScriptsNeeded ::
+  (AlonzoEraScript era, EraTxBody era) =>
+  TxBody era ->
+  AlonzoScriptsNeeded era
+getRewardingScriptsNeeded txBody =
+  AlonzoScriptsNeeded $
+    catMaybes $
+      zipAsIxItem (Map.keys (unWithdrawals $ txBody ^. withdrawalsTxBodyL)) $
+        \asIxItem@(AsIxItem _ rewardAccount) ->
+          (RewardingPurpose asIxItem,) <$> credScriptHash (getRwdCred rewardAccount)
+
+getMintingScriptsNeeded ::
+  (AlonzoEraScript era, MaryEraTxBody era) =>
+  TxBody era ->
+  AlonzoScriptsNeeded era
+getMintingScriptsNeeded txBody =
+  AlonzoScriptsNeeded $
+    zipAsIxItem (txBody ^. mintedTxBodyF) $
+      \asIxItem@(AsIxItem _ (PolicyID scriptHash)) -> (MintingPurpose asIxItem, scriptHash)
 
 -- | Just like `getShelleyWitsVKeyNeeded`, but also requires `reqSignerHashesTxBodyL`.
 getAlonzoWitsVKeyNeeded ::

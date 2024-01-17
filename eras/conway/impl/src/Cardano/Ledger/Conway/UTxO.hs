@@ -16,17 +16,21 @@ module Cardano.Ledger.Conway.UTxO (
   getConwayWitsVKeyNeeded,
 ) where
 
-import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   AlonzoScriptsNeeded (..),
   getAlonzoScriptsHashesNeeded,
+  getMintingScriptsNeeded,
+  getRewardingScriptsNeeded,
+  getSpendingScriptsNeeded,
+  zipAsIxItem,
  )
 import Cardano.Ledger.Babbage.UTxO (
   getBabbageScriptsProvided,
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
  )
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (
@@ -35,75 +39,62 @@ import Cardano.Ledger.Conway.Governance.Procedures (
   Voter (..),
   unVotingProcedures,
  )
-import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
-import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov, shelleyProducedValue)
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), getScriptHash)
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val (Val (..), inject)
-import Data.Foldable (Foldable (..), toList)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
-import Data.Maybe.Strict (strictMaybeToMaybe)
+import Data.Maybe (catMaybes)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
-import Lens.Micro.Extras (view)
 
 getConwayScriptsNeeded ::
-  (ConwayEraTxBody era, PlutusPurpose AsItem era ~ ConwayPlutusPurpose AsItem era) =>
+  ConwayEraTxBody era =>
   UTxO era ->
   TxBody era ->
   AlonzoScriptsNeeded era
-getConwayScriptsNeeded (UTxO utxo) txBody =
-  AlonzoScriptsNeeded (spending ++ rewarding ++ certifying ++ minting ++ voting ++ proposing)
+getConwayScriptsNeeded utxo txBody =
+  getSpendingScriptsNeeded utxo txBody
+    <> getRewardingScriptsNeeded txBody
+    <> certifyingScriptsNeeded
+    <> getMintingScriptsNeeded txBody
+    <> votingScriptsNeeded
+    <> proposingScriptsNeeded
   where
-    collect !txIn = do
-      addr <- view addrTxOutL <$> Map.lookup txIn utxo
-      hash <- getScriptHash addr
-      return (ConwaySpending (AsItem txIn), hash)
+    certifyingScriptsNeeded =
+      AlonzoScriptsNeeded $
+        catMaybes $
+          zipAsIxItem (txBody ^. certsTxBodyL) $
+            \asIxItem@(AsIxItem _ txCert) ->
+              (CertifyingPurpose asIxItem,) <$> getScriptWitnessTxCert txCert
 
-    spending = mapMaybe collect (Set.toList $ txBody ^. inputsTxBodyL)
-
-    rewarding = mapMaybe fromRewardAccount (Map.keys withdrawals)
-      where
-        withdrawals = unWithdrawals $ txBody ^. withdrawalsTxBodyL
-        fromRewardAccount rewardAccount = do
-          hash <- credScriptHash $ getRwdCred rewardAccount
-          return (ConwayRewarding (AsItem rewardAccount), hash)
-
-    certifying =
-      mapMaybe (\cred -> (ConwayCertifying (AsItem cred),) <$> getScriptWitnessTxCert cred) $
-        toList (txBody ^. certsTxBodyL)
-
-    minting =
-      map (\policyId@(PolicyID hash) -> (ConwayMinting (AsItem policyId), hash)) $
-        Set.toList (txBody ^. mintedTxBodyF)
-
-    voting =
-      mapMaybe toConwayVoting $
-        Map.keys (unVotingProcedures (txBody ^. votingProceduresTxBodyL))
+    votingScriptsNeeded =
+      AlonzoScriptsNeeded $
+        catMaybes $
+          zipAsIxItem (Map.keys (unVotingProcedures (txBody ^. votingProceduresTxBodyL))) $
+            \asIxItem@(AsIxItem _ voter) ->
+              (VotingPurpose asIxItem,) <$> getVoterScriptHash voter
       where
         getVoterScriptHash = \case
           CommitteeVoter cred -> credScriptHash cred
           DRepVoter cred -> credScriptHash cred
           StakePoolVoter _ -> Nothing
-        toConwayVoting voter = do
-          scriptHash <- getVoterScriptHash voter
-          let !purpose = ConwayVoting (AsItem voter)
-          pure (purpose, scriptHash)
 
-    proposing =
-      mapMaybe proposalPolicy . toList $ txBody ^. proposalProceduresTxBodyL
+    proposingScriptsNeeded =
+      AlonzoScriptsNeeded $
+        catMaybes $
+          zipAsIxItem (txBody ^. proposalProceduresTxBodyL) $
+            \asIxItem@(AsIxItem _ proposal) ->
+              (ProposingPurpose asIxItem,) <$> getProposalScriptHash proposal
       where
-        proposalPolicy proposal@ProposalProcedure {pProcGovAction} = do
-          govPolicy <- case pProcGovAction of
-            ParameterChange _ _ p -> strictMaybeToMaybe p
-            TreasuryWithdrawals _ p -> strictMaybeToMaybe p
+        getProposalScriptHash ProposalProcedure {pProcGovAction} =
+          case pProcGovAction of
+            ParameterChange _ _ (SJust govPolicyHash) -> Just govPolicyHash
+            TreasuryWithdrawals _ (SJust govPolicyHash) -> Just govPolicyHash
             _ -> Nothing
-          pure (ConwayProposing (AsItem proposal), govPolicy)
 
 conwayProducedValue ::
   ConwayEraTxBody era =>

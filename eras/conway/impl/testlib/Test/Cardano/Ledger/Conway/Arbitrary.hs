@@ -348,6 +348,23 @@ instance
       ]
 
 instance
+  ( Era era
+  , Arbitrary (TxCert era)
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
+  Arbitrary (ConwayPlutusPurpose AsIxItem era)
+  where
+  arbitrary =
+    oneof
+      [ ConwaySpending <$> arbitrary
+      , ConwayMinting <$> arbitrary
+      , ConwayCertifying <$> arbitrary
+      , ConwayRewarding <$> arbitrary
+      , ConwayVoting <$> arbitrary
+      , ConwayProposing <$> arbitrary
+      ]
+
+instance
   Era era =>
   Arbitrary (ConwayPlutusPurpose AsIndex era)
   where
