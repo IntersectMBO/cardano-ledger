@@ -24,7 +24,7 @@ where
 
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript,
-  AsItem (..),
+  AsIxItem (..),
   PlutusPurpose,
   PlutusScript (..),
  )
@@ -50,7 +50,7 @@ class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language
 
   toPlutusScriptPurpose ::
     proxy l ->
-    PlutusPurpose AsItem era ->
+    PlutusPurpose AsIxItem era ->
     Either (ContextError era) (PlutusScriptPurpose l)
 
   toPlutusTxInfo ::
@@ -65,7 +65,7 @@ class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language
   toPlutusScriptContext ::
     proxy l ->
     PlutusTxInfo l ->
-    PlutusPurpose AsItem era ->
+    PlutusPurpose AsIxItem era ->
     Either (ContextError era) (PlutusScriptContext l)
 
 class
@@ -84,7 +84,7 @@ class
 
   mkPlutusScriptContext ::
     PlutusScript era ->
-    PlutusPurpose AsItem era ->
+    PlutusPurpose AsIxItem era ->
     PParams era ->
     EpochInfo (Either Text) ->
     SystemStart ->
@@ -95,7 +95,7 @@ class
 mkPlutusLanguageContext ::
   (EraPlutusTxInfo l era, P.ToData (PlutusScriptContext l)) =>
   proxy l ->
-  PlutusPurpose AsItem era ->
+  PlutusPurpose AsIxItem era ->
   PParams era ->
   EpochInfo (Either Text) ->
   SystemStart ->

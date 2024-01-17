@@ -86,6 +86,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
   AsIndex (..),
   AsItem (..),
+  AsIxItem (..),
   PlutusPurpose,
  )
 import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash (..))
@@ -171,7 +172,7 @@ class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
   redeemerPointerInverse ::
     TxBody era ->
     PlutusPurpose AsIndex era ->
-    StrictMaybe (PlutusPurpose AsItem era)
+    StrictMaybe (PlutusPurpose AsIxItem era)
 
 -- ======================================
 
@@ -661,7 +662,7 @@ alonzoRedeemerPointerInverse ::
   MaryEraTxBody era =>
   TxBody era ->
   AlonzoPlutusPurpose AsIndex era ->
-  StrictMaybe (AlonzoPlutusPurpose AsItem era)
+  StrictMaybe (AlonzoPlutusPurpose AsIxItem era)
 alonzoRedeemerPointerInverse txBody = \case
   AlonzoSpending idx ->
     AlonzoSpending <$> fromIndex idx (txBody ^. inputsTxBodyL)
@@ -674,7 +675,7 @@ alonzoRedeemerPointerInverse txBody = \case
 
 class Indexable elem container where
   indexOf :: AsItem Word32 elem -> container -> StrictMaybe (AsIndex Word32 elem)
-  fromIndex :: AsIndex Word32 elem -> container -> StrictMaybe (AsItem Word32 elem)
+  fromIndex :: AsIndex Word32 elem -> container -> StrictMaybe (AsIxItem Word32 elem)
 
 instance Ord k => Indexable k (Set k) where
   indexOf (AsItem n) s = case Set.lookupIndex n s of
@@ -683,17 +684,17 @@ instance Ord k => Indexable k (Set k) where
   fromIndex (AsIndex w32) s =
     let i = fromIntegral @Word32 @Int w32
      in if i < Set.size s
-          then SJust $ AsItem (Set.elemAt i s)
+          then SJust $ AsIxItem w32 (Set.elemAt i s)
           else SNothing
 
 instance Eq k => Indexable k (StrictSeq k) where
   indexOf (AsItem n) seqx = case StrictSeq.findIndexL (== n) seqx of
     Just m -> SJust (AsIndex (fromIntegral @Int @Word32 m))
     Nothing -> SNothing
-  fromIndex (AsIndex i) seqx =
-    case StrictSeq.lookup (fromIntegral @Word32 @Int i) seqx of
+  fromIndex (AsIndex w32) seqx =
+    case StrictSeq.lookup (fromIntegral @Word32 @Int w32) seqx of
       Nothing -> SNothing
-      Just x -> SJust $ AsItem x
+      Just x -> SJust $ AsIxItem w32 x
 
 instance Ord k => Indexable k (Map.Map k v) where
   indexOf (AsItem n) mp = case Map.lookupIndex n mp of
@@ -702,7 +703,7 @@ instance Ord k => Indexable k (Map.Map k v) where
   fromIndex (AsIndex w32) mp =
     let i = fromIntegral @Word32 @Int w32
      in if i < fromIntegral (Map.size mp)
-          then SJust . AsItem . fst $ Map.elemAt i mp
+          then SJust . AsIxItem w32 . fst $ Map.elemAt i mp
           else SNothing
 
 instance Ord k => Indexable k (OSet k) where

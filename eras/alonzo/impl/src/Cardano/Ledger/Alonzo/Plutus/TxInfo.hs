@@ -48,7 +48,7 @@ import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), PlutusScript (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), PlutusScript (..), toAsItem)
 import Cardano.Ledger.Alonzo.TxWits (unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -98,7 +98,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
   toPlutusTxCert _ = pure . transTxCert
 
-  toPlutusScriptPurpose = transPlutusPurpose
+  toPlutusScriptPurpose proxy = transPlutusPurpose proxy . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
     timeRange <- transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)

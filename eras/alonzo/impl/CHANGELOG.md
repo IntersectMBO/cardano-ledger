@@ -1,8 +1,16 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.6.0.1
+## 1.7.0.0
 
-*
+* Add `lookupRedeemer`
+* Add `AsIxItem` as well as `toAsItem`, `toAsIndex`.
+* Switch `PlutusPurpose` to `AsIxItem` in `AlonzoScriptsNeeded`
+* Add `hoistPlutusPurpose`, `toSpendingPurpose`, `toMintingPurpose`,
+  `toCertifyingPurpose`, `toRewardingPurpose`, `fromSpendingPurpose`,
+  `fromMintingPurpose`, `fromCertifyingPurpose`, `fromRewardingPurpose` to `AlonzoEraScript`
+* Add `SpendingPurpose`, `MintingPurpose`, `CertifyingPurpose`, `RewardingPurpose` pattern synonyms.
+* Add `getSpendingScriptsNeeded`, `getRewardingScriptsNeeded`, `getMintingScriptsNeeded`
+* Add `zipAsIxItem`
 
 ## 1.6.0.0
 

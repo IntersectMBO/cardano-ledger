@@ -10,6 +10,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -106,6 +107,14 @@ instance Crypto c => AlonzoEraScript (ConwayEra c) where
   withPlutusScript (ConwayPlutusV2 plutus) f = f plutus
   withPlutusScript (ConwayPlutusV3 plutus) f = f plutus
 
+  hoistPlutusPurpose f = \case
+    ConwaySpending x -> ConwaySpending $ f x
+    ConwayMinting x -> ConwayMinting $ f x
+    ConwayCertifying x -> ConwayCertifying $ f x
+    ConwayRewarding x -> ConwayRewarding $ f x
+    ConwayVoting x -> ConwayVoting $ f x
+    ConwayProposing x -> ConwayProposing $ f x
+
   mkSpendingPurpose = ConwaySpending
 
   toSpendingPurpose (ConwaySpending i) = Just i
@@ -186,6 +195,10 @@ deriving via
     , DecCBOR (TxCert era)
     ) =>
     DecCBOR (ConwayPlutusPurpose f era)
+
+deriving instance (Eq (TxCert era), EraPParams era) => Eq (ConwayPlutusPurpose AsIxItem era)
+deriving instance (Show (TxCert era), EraPParams era) => Show (ConwayPlutusPurpose AsIxItem era)
+instance (NoThunks (TxCert era), EraPParams era) => NoThunks (ConwayPlutusPurpose AsIxItem era)
 
 instance
   (forall a b. (NFData a, NFData b) => NFData (f a b), NFData (TxCert era), EraPParams era) =>

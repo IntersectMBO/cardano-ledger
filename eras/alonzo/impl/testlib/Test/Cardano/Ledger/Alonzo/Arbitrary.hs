@@ -398,6 +398,20 @@ instance
       , AlonzoRewarding <$> arbitrary
       ]
 
+instance
+  ( Era era
+  , Arbitrary (TxCert era)
+  ) =>
+  Arbitrary (AlonzoPlutusPurpose AsIxItem era)
+  where
+  arbitrary =
+    oneof
+      [ AlonzoSpending <$> arbitrary
+      , AlonzoMinting <$> arbitrary
+      , AlonzoCertifying <$> arbitrary
+      , AlonzoRewarding <$> arbitrary
+      ]
+
 instance Era era => Arbitrary (AlonzoPlutusPurpose AsIndex era) where
   arbitrary = arbitrary >>= genAlonzoPlutusPurposePointer
 

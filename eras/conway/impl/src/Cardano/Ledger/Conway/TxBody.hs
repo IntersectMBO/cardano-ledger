@@ -86,7 +86,7 @@ import Cardano.Ledger.Coin (Coin (..), decodePositiveCoin)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (ProposalProcedure, VotingProcedures (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppGovActionDepositL)
-import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
+import Cardano.Ledger.Conway.Scripts (ConwayEraScript, ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayEraTxCert,
   ConwayTxCert (..),
@@ -689,7 +689,10 @@ instance ConwayEraTxBody era => EncCBOR (ConwayTxBodyRaw era) where
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (ConwayTxBody era)
 
-class (BabbageEraTxBody era, ConwayEraTxCert era, ConwayEraPParams era) => ConwayEraTxBody era where
+class
+  (BabbageEraTxBody era, ConwayEraTxCert era, ConwayEraPParams era, ConwayEraScript era) =>
+  ConwayEraTxBody era
+  where
   -- | Lens for getting and setting number of `Coin` that is expected to be in the
   -- Treasury at the current Epoch
   currentTreasuryValueTxBodyL :: Lens' (TxBody era) (StrictMaybe Coin)
@@ -726,7 +729,7 @@ conwayRedeemerPointerInverse ::
   ConwayEraTxBody era =>
   TxBody era ->
   ConwayPlutusPurpose AsIndex era ->
-  StrictMaybe (ConwayPlutusPurpose AsItem era)
+  StrictMaybe (ConwayPlutusPurpose AsIxItem era)
 conwayRedeemerPointerInverse txBody = \case
   ConwayMinting idx ->
     ConwayMinting <$> fromIndex idx (txBody ^. mintedTxBodyF)
