@@ -218,16 +218,16 @@ genGenericScriptWitness ::
   GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
 genGenericScriptWitness proof mTag script =
   case proof of
-    Shelley _ -> mkMultiSigWit proof mTag script
-    Allegra _ -> mkTimelockWit proof mTag script
-    Mary _ -> mkTimelockWit proof mTag script
-    Alonzo _ -> case script of
+    Shelley -> mkMultiSigWit proof mTag script
+    Allegra -> mkTimelockWit proof mTag script
+    Mary -> mkTimelockWit proof mTag script
+    Alonzo -> case script of
       TimelockScript timelock -> mkTimelockWit proof mTag timelock
       PlutusScript _ -> pure (const [])
-    Babbage _ -> case script of
+    Babbage -> case script of
       TimelockScript timelock -> mkTimelockWit proof mTag timelock
       PlutusScript _ -> pure (const [])
-    Conway _ -> case script of
+    Conway -> case script of
       TimelockScript timelock -> mkTimelockWit proof mTag timelock
       PlutusScript _ -> pure (const [])
 
@@ -326,13 +326,13 @@ genCredKeyWit era mTag cred = mkWitVKey era mTag cred
 
 makeDatumWitness :: Proof era -> TxOut era -> GenRS era [WitnessesField era]
 makeDatumWitness proof txout = case (proof, txout) of
-  (Babbage _, BabbageTxOut _ _ (DatumHash h) _) -> mkDatumWit (SJust h)
-  (Babbage _, BabbageTxOut _ _ (Datum _) _) -> pure []
-  (Babbage _, BabbageTxOut _ _ NoDatum _) -> pure []
-  (Conway _, BabbageTxOut _ _ (DatumHash h) _) -> mkDatumWit (SJust h)
-  (Conway _, BabbageTxOut _ _ (Datum _) _) -> pure []
-  (Conway _, BabbageTxOut _ _ NoDatum _) -> pure []
-  (Alonzo _, AlonzoTxOut _ _ mDatum) -> mkDatumWit mDatum
+  (Babbage, BabbageTxOut _ _ (DatumHash h) _) -> mkDatumWit (SJust h)
+  (Babbage, BabbageTxOut _ _ (Datum _) _) -> pure []
+  (Babbage, BabbageTxOut _ _ NoDatum _) -> pure []
+  (Conway, BabbageTxOut _ _ (DatumHash h) _) -> mkDatumWit (SJust h)
+  (Conway, BabbageTxOut _ _ (Datum _) _) -> pure []
+  (Conway, BabbageTxOut _ _ NoDatum _) -> pure []
+  (Alonzo, AlonzoTxOut _ _ mDatum) -> mkDatumWit mDatum
   _ -> pure [] -- No other era has data witnesses
   where
     mkDatumWit SNothing = pure []
@@ -421,19 +421,19 @@ genRefScript proof = do
 genDataHashField :: Reflect era => Proof era -> Maybe (Script era) -> GenRS era [TxOutField era]
 genDataHashField proof maybeCoreScript =
   case proof of
-    Conway _ -> case maybeCoreScript of
+    Conway -> case maybeCoreScript of
       Just (PlutusScript _) -> do
         datum <- genBabbageDatum
         script <- genRefScript proof
         pure [FDatum datum, RefScript script]
       _ -> pure []
-    Babbage _ -> case maybeCoreScript of
+    Babbage -> case maybeCoreScript of
       Just (PlutusScript _) -> do
         datum <- genBabbageDatum
         script <- genRefScript proof
         pure [FDatum datum, RefScript script]
       _ -> pure []
-    Alonzo _ -> case maybeCoreScript of
+    Alonzo -> case maybeCoreScript of
       Just (PlutusScript _) -> do
         (datahash, _data) <- genDatumWithHash
         pure [DHash (SJust datahash)]
@@ -580,12 +580,12 @@ genShelleyDelegCert =
 
 genTxCertDeleg :: forall era. Reflect era => GenRS era (TxCert era)
 genTxCertDeleg = case reify @era of
-  Shelley _ -> genShelleyDelegCert
-  Mary _ -> genShelleyDelegCert
-  Allegra _ -> genShelleyDelegCert
-  Alonzo _ -> genShelleyDelegCert
-  Babbage _ -> genShelleyDelegCert
-  Conway _ -> genShelleyDelegCert
+  Shelley -> genShelleyDelegCert
+  Mary -> genShelleyDelegCert
+  Allegra -> genShelleyDelegCert
+  Alonzo -> genShelleyDelegCert
+  Babbage -> genShelleyDelegCert
+  Conway -> genShelleyDelegCert
 
 genTxCert :: forall era. Reflect era => SlotNo -> GenRS era (TxCert era)
 genTxCert slot =
@@ -610,21 +610,21 @@ genTxCert slot =
 
 -- getShelleyTxCertDelegG :: forall era. Reflect era => TxCert era -> Maybe (ShelleyDelegCert (EraCrypto era))
 -- getShelleyTxCertDelegG = case reify @era of
---   Shelley _ -> getShelleyTxCertDeleg
---   Mary _ -> getShelleyTxCertDeleg
---   Allegra _ -> getShelleyTxCertDeleg
---   Alonzo _ -> getShelleyTxCertDeleg
---   Babbage _ -> getShelleyTxCertDeleg
---   Conway _ -> getShelleyTxCertDeleg -- TODO write a generator for Conway certs
+--   Shelley -> getShelleyTxCertDeleg
+--   Mary -> getShelleyTxCertDeleg
+--   Allegra -> getShelleyTxCertDeleg
+--   Alonzo -> getShelleyTxCertDeleg
+--   Babbage -> getShelleyTxCertDeleg
+--   Conway -> getShelleyTxCertDeleg -- TODO write a generator for Conwayerts
 
 -- mkShelleyTxCertDelegG :: forall era. Reflect era => ShelleyDelegCert (EraCrypto era) -> TxCert era
 -- mkShelleyTxCertDelegG = case reify @era of
---   Shelley _ -> mkShelleyTxCertDeleg
---   Mary _ -> mkShelleyTxCertDeleg
---   Allegra _ -> mkShelleyTxCertDeleg
---   Alonzo _ -> mkShelleyTxCertDeleg
---   Babbage _ -> mkShelleyTxCertDeleg
---   Conway _ -> mkShelleyTxCertDeleg -- TODO write a generator for Conway certs
+--   Shelley -> mkShelleyTxCertDeleg
+--   Mary -> mkShelleyTxCertDeleg
+--   Allegra -> mkShelleyTxCertDeleg
+--   Alonzo -> mkShelleyTxCertDeleg
+--   Babbage -> mkShelleyTxCertDeleg
+--   Conway -> mkShelleyTxCertDeleg -- TODO write a generator for Conwayerts
 
 genTxCerts :: forall era. Reflect era => SlotNo -> GenRS era [TxCert era]
 genTxCerts slot = do
@@ -803,12 +803,12 @@ genRecipientsFrom txOuts = do
 
 getTxCertCredential :: forall era. Reflect era => TxCert era -> Maybe (Credential 'Staking (EraCrypto era))
 getTxCertCredential = case reify @era of
-  Shelley _ -> getShelleyTxCertCredential
-  Mary _ -> getShelleyTxCertCredential
-  Allegra _ -> getShelleyTxCertCredential
-  Alonzo _ -> getShelleyTxCertCredential
-  Babbage _ -> getShelleyTxCertCredential
-  Conway _ -> getConwayTxCertCredential
+  Shelley -> getShelleyTxCertCredential
+  Mary -> getShelleyTxCertCredential
+  Allegra -> getShelleyTxCertCredential
+  Alonzo -> getShelleyTxCertCredential
+  Babbage -> getShelleyTxCertCredential
+  Conway -> getConwayTxCertCredential
 
 getShelleyTxCertCredential :: ShelleyTxCert era -> Maybe (Credential 'Staking (EraCrypto era))
 getShelleyTxCertCredential = \case
@@ -962,7 +962,7 @@ genAlonzoTxAndInfo proof slot = do
       updateTotalColl (SJust (Coin n)) (Coin m) = SJust (Coin (n + m))
   -- If Babbage era, or greater, add a stub for a CollateralReturn TxOut
   bogusCollReturn <-
-    if Some proof >= Some (Babbage Mock)
+    if Some proof >= Some Babbage
       then
         frequencyT
           [ (1, pure SNothing)
@@ -989,7 +989,7 @@ genAlonzoTxAndInfo proof slot = do
           , Certs' dcerts
           , Withdrawals' withdrawals
           , Txfee maxCoin
-          , if Some proof >= Some (Allegra Mock)
+          , if Some proof >= Some Allegra
               then Vldt validityInterval
               else TTL (timeToLive validityInterval)
           , Update' []
@@ -1020,12 +1020,12 @@ genAlonzoTxAndInfo proof slot = do
 
   keyDeposits <- gets (mKeyDeposits . gsModel)
   let deposits = case proof of
-        Shelley _ -> depositsAndRefunds gePParams dcerts keyDeposits
-        Mary _ -> depositsAndRefunds gePParams dcerts keyDeposits
-        Allegra _ -> depositsAndRefunds gePParams dcerts keyDeposits
-        Alonzo _ -> depositsAndRefunds gePParams dcerts keyDeposits
-        Babbage _ -> depositsAndRefunds gePParams dcerts keyDeposits
-        Conway _ -> depositsAndRefunds gePParams dcerts keyDeposits
+        Shelley -> depositsAndRefunds gePParams dcerts keyDeposits
+        Mary -> depositsAndRefunds gePParams dcerts keyDeposits
+        Allegra -> depositsAndRefunds gePParams dcerts keyDeposits
+        Alonzo -> depositsAndRefunds gePParams dcerts keyDeposits
+        Babbage -> depositsAndRefunds gePParams dcerts keyDeposits
+        Conway -> depositsAndRefunds gePParams dcerts keyDeposits
 
   -- 8. Crank up the amount in one of outputs to account for the fee and deposits. Note
   -- this is a hack that is not possible in a real life, but in the end it does produce
@@ -1134,13 +1134,13 @@ instance
 
 applySTSByProof ::
   forall era.
-  (Era era, GoodCrypto (EraCrypto era)) =>
+  Era era =>
   Proof era ->
   RuleContext 'Transition (EraRule "LEDGER" era) ->
   Either [PredicateFailure (EraRule "LEDGER" era)] (State (EraRule "LEDGER" era))
-applySTSByProof (Conway _) trc = runShelleyBase $ applySTS trc
-applySTSByProof (Babbage _) trc = runShelleyBase $ applySTS trc
-applySTSByProof (Alonzo _) trc = runShelleyBase $ applySTS trc
-applySTSByProof (Mary _) trc = runShelleyBase $ applySTS trc
-applySTSByProof (Allegra _) trc = runShelleyBase $ applySTS trc
-applySTSByProof (Shelley _) trc = runShelleyBase $ applySTS trc
+applySTSByProof Conway trc = runShelleyBase $ applySTS trc
+applySTSByProof Babbage trc = runShelleyBase $ applySTS trc
+applySTSByProof Alonzo trc = runShelleyBase $ applySTS trc
+applySTSByProof Mary trc = runShelleyBase $ applySTS trc
+applySTSByProof Allegra trc = runShelleyBase $ applySTS trc
+applySTSByProof Shelley trc = runShelleyBase $ applySTS trc

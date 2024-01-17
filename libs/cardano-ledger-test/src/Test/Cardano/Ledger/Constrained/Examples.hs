@@ -171,12 +171,12 @@ cyclicPred = [a :⊆: b, b :⊆: c, c :⊆: d, d :⊆: a, Random d]
 test1 :: IO ()
 test1 = do
   putStrLn "testing: Detect cycles"
-  runCompile @Babbage cyclicPred
+  runCompile @Babbage aCyclicPred
   putStrLn "+++ OK, passed 1 test."
 
 -- ===================================
 test3 :: Gen Property
-test3 = testn (Mary Standard) "Test 3. PState example" False stoi cs (Assemble pstateT)
+test3 = testn Mary "Test 3. PState example" False stoi cs (Assemble pstateT)
   where
     cs =
       [ Sized (ExactSize 10) poolHashUniv
@@ -192,7 +192,7 @@ test3 = testn (Mary Standard) "Test 3. PState example" False stoi cs (Assemble p
 -- ==============================
 
 test4 :: IO ()
-test4 = failn (Mary Standard) "Test 4. Inconsistent Size" False stoi cs Skip
+test4 = failn Mary "Test 4. Inconsistent Size" False stoi cs Skip
   where
     cs =
       [ Sized (ExactSize 5) rewards
@@ -200,7 +200,7 @@ test4 = failn (Mary Standard) "Test 4. Inconsistent Size" False stoi cs Skip
       ]
 
 test5 :: IO ()
-test5 = failn (Mary Standard) "Test 5. Bad Sum, impossible partition." False stoi cs Skip
+test5 = failn Mary "Test 5. Bad Sum, impossible partition." False stoi cs Skip
   where
     cs =
       [ Sized (ExactSize 5) rewards
@@ -253,7 +253,7 @@ test6 :: Bool -> IO ()
 test6 loud = do
   putStrLn "testing: find a viable order of variables"
   when loud $ putStrLn "======================================================="
-  case runTyped (compile standardOrderInfo $ constraints (Shelley Standard)) of
+  case runTyped (compile standardOrderInfo $ constraints Shelley) of
     Right x ->
       if loud
         then print x
@@ -265,7 +265,7 @@ test7 :: Bool -> IO ()
 test7 loud = do
   putStrLn "testing: compute a solution"
   when loud $ putStrLn "======================================================="
-  let proof = Shelley Standard
+  let proof = Shelley
   when loud $ putStrLn (show $ constraints proof)
   graph <- monadTyped $ compile standardOrderInfo $ constraints proof
   when loud $ putStrLn (show graph)
@@ -307,7 +307,7 @@ pstateConstraints =
 test8 :: Gen Property
 test8 =
   testn
-    (Alonzo Standard)
+    Alonzo
     "Test 8. Pstate constraints"
     False
     -- (stoi{setBeforeSubset = False})  -- Both of these choices work
@@ -333,7 +333,7 @@ sumPreds proof =
     utxoAmt = Var (V "utxoAmt" CoinR No)
 
 test9 :: Gen Property
-test9 = testn (Alonzo Standard) "Test 9. Test of summing" False stoi (sumPreds (Alonzo Standard)) Skip
+test9 = testn Alonzo "Test 9. Test of summing" False stoi (sumPreds Alonzo) Skip
 
 test10 :: Gen Property
 test10 =
@@ -360,7 +360,7 @@ test10 =
     tsumGTE = Var (V "tsumGTE" rep No)
     tsumEQL = Var (V "tsumEQL" rep No)
     rep = CoinR
-    proof = Mary Standard
+    proof = Mary
 
 test11 :: Gen Property
 test11 =
@@ -381,7 +381,7 @@ test11 =
     ]
     Skip
   where
-    proof = Alonzo Standard
+    proof = Alonzo
 
 -- =====================================================
 
@@ -401,7 +401,7 @@ test12 =
     Skip
   where
     pp = PParamsR p
-    p = Shelley Standard
+    p = Shelley
 
 -- ==============================================================
 -- Test the Component Predicate
@@ -437,14 +437,14 @@ test13 =
     (componentPreds proof)
     Skip
   where
-    proof = Shelley Standard
+    proof = Shelley
 
 -- ==============================================
 
 test14 :: IO ()
 test14 =
   failn
-    (Allegra Standard)
+    Allegra
     "Test 14. Catch unsolveable use of Sized"
     False
     stoi
@@ -474,7 +474,7 @@ test15 =
     ]
     Skip
   where
-    proof = Alonzo Standard
+    proof = Alonzo
     pp = PParamsR proof
 
 -- ============================================================
@@ -502,7 +502,7 @@ test16 =
     (preds16 proof)
     Skip
   where
-    proof = Alonzo Standard
+    proof = Alonzo
 
 -- ==============================================
 
@@ -649,7 +649,7 @@ test17 =
     (newepochConstraints proof)
     (Assemble (newEpochStateT proof))
   where
-    proof = Alonzo Standard
+    proof = Alonzo
 
 -- ==========================================================
 -- Tests of the Term projection function ProjS
@@ -673,7 +673,7 @@ projPreds2 _proof =
 test18a :: Gen Property
 test18a = testn proof "Test 18a. Projection test" False stoi (projPreds1 proof) Skip
   where
-    proof = Alonzo Standard
+    proof = Alonzo
 
 test18b :: Gen Property
 test18b =
@@ -685,7 +685,7 @@ test18b =
     (projPreds2 proof)
     (Assemble (Constr "Pair" (,) ^$ futureGenDelegs ^$ genDelegs))
   where
-    proof = Alonzo Standard
+    proof = Alonzo
 
 -- ===============================================
 -- test of projOnDom
@@ -703,7 +703,7 @@ help19 _proof = do
 test19 :: IO ()
 test19 = do
   putStrLn "testing: Test 19. test of projOnDom function"
-  ans <- generate (help19 (Mary Standard))
+  ans <- generate (help19 Mary)
   putStrLn (synopsis (MapR (FutureGenDelegR @TT) GenDelegPairR) ans) -- (ppMap pcFutureGenDeleg pcGenDelegPair ans))
   putStrLn "+++ OK, passed 1 test"
 
@@ -731,11 +731,11 @@ test20 =
     (preds20 proof)
     Skip
   where
-    proof = Alonzo Standard
+    proof = Alonzo
 
 test21 :: Int -> IO Bool
 test21 seed = do
-  let proof = Babbage Standard
+  let proof = Babbage
       w = Var (V "w" (ListR IntR) No)
       a = Var (V "a" IntR No)
       b = Var (V "b" IntR No)
@@ -795,7 +795,7 @@ allExampleTests =
           Left xs -> assertFailure (unlines xs)
     , testIO
         "test 19 Test of projOnDom function"
-        (generate (help19 (Mary Standard)))
+        (generate (help19 Mary))
     , testIO "Test 4. Inconsistent Size" test4
     , testIO "Test 5. Bad Sum, impossible partition." test5
     , testIO "Test6. Find a viable order of variables" (test6 False)
@@ -817,9 +817,9 @@ allExampleTests =
     , testPropMax 30 "Constraint soundness" $ prop_soundness
     , testProperty "Shrinking soundness" $ withMaxSuccess 30 $ prop_shrinking
     , testProperty "NewEpochState and Tx generation" $ do
-        (st, tx, _) <- genTxAndNewEpoch def $ Conway Standard
+        (st, tx, _) <- genTxAndNewEpoch def $ Conway
         (st, tx) `deepseq` pure True
-    , testPreds "ListWhereTest" (Conway Standard) listWherePreds
+    , testPreds "ListWhereTest" Conway listWherePreds
     ]
 
 -- ==============================
@@ -870,7 +870,7 @@ listWherePreds =
     ans = Var (V "ans" (ListR (PairR CredR VCredR)) No)
 
 mainListWhere :: IO ()
-mainListWhere = demoPreds (Conway Standard) listWherePreds
+mainListWhere = demoPreds Conway listWherePreds
 
 govPreds :: [Pred (ConwayEra StandardCrypto)]
 govPreds =
@@ -897,4 +897,4 @@ govPreds =
   ]
 
 mainGov :: IO ()
-mainGov = demoPreds (Conway Standard) govPreds
+mainGov = demoPreds Conway govPreds

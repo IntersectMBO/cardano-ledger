@@ -66,11 +66,8 @@ import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..))
 import Test.Cardano.Ledger.Generic.MockChain (MockBlock (..), MockChainState (..))
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTxCert, ppList)
 import Test.Cardano.Ledger.Generic.Proof (
-  ConwayEra,
-  Evidence (..),
   Proof (..),
   Reflect (..),
-  StandardCrypto,
   TxCertWit (..),
   whichTxCert,
  )
@@ -160,19 +157,16 @@ drepCertTxForTrace maxFeeEstimate proof = do
 
 -- ======================================
 
-conway :: Proof (ConwayEra StandardCrypto)
-conway = Conway Standard
-
 drepTree :: TestTree
 drepTree =
   testGroup
     "DRep property traces"
     [ testProperty
         "All Tx are valid on traces of length 150."
-        (withMaxSuccess 5 $ mockChainProp (Conway Standard) 150 (drepCertTxForTrace (Coin 100000)) (stepProp allValidSignals))
+        (withMaxSuccess 5 $ mockChainProp Conway 150 (drepCertTxForTrace (Coin 100000)) (stepProp allValidSignals))
     , testProperty
         "Bruteforce = Pulsed, in every epoch, on traces of length 150"
-        (withMaxSuccess 5 $ mockChainProp (Conway Standard) 150 (drepCertTxForTrace (Coin 60000)) (epochProp pulserWorks))
+        (withMaxSuccess 5 $ mockChainProp Conway 150 (drepCertTxForTrace (Coin 60000)) (epochProp pulserWorks))
     ]
 
 -- =================================================

@@ -51,7 +51,7 @@ tests :: TestTree
 tests =
   testGroup "Alonzo API" [testCase "evaluateTransactionFee" testEvaluateTransactionFee]
 
-type A = AlonzoEra C_Crypto
+type A = AlonzoEra StandardCrypto
 
 testEvaluateTransactionFee :: Assertion
 testEvaluateTransactionFee =
@@ -61,7 +61,7 @@ testEvaluateTransactionFee =
     1
     @?= getMinFeeTx pparams validatingTx
   where
-    pf = Alonzo Mock
+    pf = Alonzo
     pparams = newPParams pf $ defaultPPs ++ [MinfeeA (Coin 1)]
     validatingTxNoWits =
       newTx

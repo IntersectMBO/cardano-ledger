@@ -35,7 +35,6 @@ module Test.Cardano.Ledger.Constrained.TypeRep (
   unPParamsUpdate,
   liftUTxO,
   Proof (..),
-  Evidence (..),
   stringR,
   hasOrd,
   hasEq,
@@ -414,6 +413,14 @@ repHasInstances r = case r of
   IntegerR {} -> IsOrd
   ScriptsNeededR {} -> IsTypeable
   ScriptPurposeR {} -> IsEq
+  {-
+    ScriptPurposeR Shelley -> IsEq
+    ScriptPurposeR Mary -> IsEq
+    ScriptPurposeR Allegra -> IsEq
+    ScriptPurposeR Alonzo -> IsEq
+    ScriptPurposeR Babbage -> IsEq
+    ScriptPurposeR Conway -> IsEq
+  -}
   TxBodyR {} -> IsEq
   ShelleyTxCertR {} -> IsEq
   ConwayTxCertR {} -> IsEq
@@ -691,12 +698,12 @@ synSum (ListR ExUnitsR) m = ", sum = " ++ show (List.foldl' add zero m)
 synSum _ _ = ""
 
 accumTxOut :: Proof era -> Coin -> TxOutF era -> Coin
-accumTxOut (Shelley _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
-accumTxOut (Allegra _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
-accumTxOut (Mary _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
-accumTxOut (Alonzo _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
-accumTxOut (Babbage _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
-accumTxOut (Conway _) z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
+accumTxOut Shelley z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
+accumTxOut Allegra z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
+accumTxOut Mary z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
+accumTxOut Alonzo z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
+accumTxOut Babbage z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
+accumTxOut Conway z (TxOutF _ out) = z <+> (out ^. Core.coinTxOutL)
 
 -- ==================================================
 
@@ -759,12 +766,12 @@ genSizedRep _ PolicyIDR = arbitrary
 genSizedRep _ (WitnessesFieldR _) = pure $ AddrWits Set.empty
 genSizedRep _ AssetNameR = arbitrary
 genSizedRep _ RewardAcntR = RewardAcnt <$> pure Testnet <*> arbitrary
-genSizedRep _ (TxCertR (Shelley c)) = TxCertF (Shelley c) <$> arbitrary
-genSizedRep _ (TxCertR (Allegra c)) = TxCertF (Allegra c) <$> arbitrary
-genSizedRep _ (TxCertR (Mary c)) = TxCertF (Mary c) <$> arbitrary
-genSizedRep _ (TxCertR (Alonzo c)) = TxCertF (Alonzo c) <$> arbitrary
-genSizedRep _ (TxCertR (Babbage c)) = TxCertF (Babbage c) <$> arbitrary
-genSizedRep _ (TxCertR (Conway c)) = TxCertF (Conway c) <$> arbitrary
+genSizedRep _ (TxCertR Shelley) = TxCertF Shelley <$> arbitrary
+genSizedRep _ (TxCertR Allegra) = TxCertF Allegra <$> arbitrary
+genSizedRep _ (TxCertR Mary) = TxCertF Mary <$> arbitrary
+genSizedRep _ (TxCertR Alonzo) = TxCertF Alonzo <$> arbitrary
+genSizedRep _ (TxCertR Babbage) = TxCertF Babbage <$> arbitrary
+genSizedRep _ (TxCertR Conway) = TxCertF Conway <$> arbitrary
 genSizedRep _ ValidityIntervalR = arbitrary
 genSizedRep _ KeyPairR = arbitrary
 genSizedRep n (GenR x) = pure (genSizedRep n x)
@@ -773,16 +780,16 @@ genSizedRep _ ScriptHashR = arbitrary
 genSizedRep _ NetworkR = arbitrary
 genSizedRep n (RdmrPtrR p) =
   case p of
-    Shelley _ -> error "Redeemers are not supported in Shelley"
-    Allegra _ -> error "Redeemers are not supported in Allegra"
-    Mary _ -> error "Redeemers are not supported in Mary"
-    Alonzo _ -> do
+    Shelley -> error "Redeemers are not supported in Shelley"
+    Allegra -> error "Redeemers are not supported in Allegra"
+    Mary -> error "Redeemers are not supported in Mary"
+    Alonzo -> do
       i <- choose (0, fromIntegral n)
       PlutusPointerF p <$> genAlonzoPlutusPurposePointer i
-    Babbage _ -> do
+    Babbage -> do
       i <- choose (0, fromIntegral n)
       PlutusPointerF p <$> genAlonzoPlutusPurposePointer i
-    Conway _ -> do
+    Conway -> do
       i <- choose (0, fromIntegral n)
       PlutusPointerF p <$> genConwayPlutusPurposePointer i
 genSizedRep _ DataR = arbitrary
@@ -805,39 +812,39 @@ genSizedRep _ (ScriptsNeededR p) = case whichUTxO p of
   UTxOAlonzoToConway -> pure $ ScriptsNeededF p (AlonzoScriptsNeeded [])
 genSizedRep _ (ScriptPurposeR p) =
   case p of
-    Shelley _ -> error "PlutusPurpose is not supported in Shelley"
-    Allegra _ -> error "PlutusPurpose is not supported in Allegra"
-    Mary _ -> error "PlutusPurpose is not supported in Mary"
-    Alonzo _ -> PlutusPurposeF p <$> arbitrary
-    Babbage _ -> PlutusPurposeF p <$> arbitrary
-    Conway _ -> PlutusPurposeF p <$> arbitrary
+    Shelley -> error "PlutusPurpose is not supported in Shelley"
+    Allegra -> error "PlutusPurpose is not supported in Allegra"
+    Mary -> error "PlutusPurpose is not supported in Mary"
+    Alonzo -> PlutusPurposeF p <$> arbitrary
+    Babbage -> PlutusPurposeF p <$> arbitrary
+    Conway -> PlutusPurposeF p <$> arbitrary
 genSizedRep _ (TxBodyR p) =
   case p of
-    Shelley _ -> pure (TxBodyF p (newTxBody p []))
-    Allegra _ -> pure (TxBodyF p (newTxBody p []))
-    Mary _ -> pure (TxBodyF p (newTxBody p []))
-    Alonzo _ -> pure (TxBodyF p (newTxBody p []))
-    Babbage _ -> pure (TxBodyF p (newTxBody p []))
-    Conway _ -> pure (TxBodyF p (newTxBody p []))
+    Shelley -> pure (TxBodyF p (newTxBody p []))
+    Allegra -> pure (TxBodyF p (newTxBody p []))
+    Mary -> pure (TxBodyF p (newTxBody p []))
+    Alonzo -> pure (TxBodyF p (newTxBody p []))
+    Babbage -> pure (TxBodyF p (newTxBody p []))
+    Conway -> pure (TxBodyF p (newTxBody p []))
 genSizedRep _ BootstrapWitnessR = arbitrary
 genSizedRep _ SigningKeyR = genSigningKey
 genSizedRep _ (TxWitsR p) =
   case p of
-    Shelley _ -> TxWitsF p <$> arbitrary
-    Allegra _ -> TxWitsF p <$> arbitrary
-    Mary _ -> TxWitsF p <$> arbitrary
-    Alonzo _ -> TxWitsF p <$> arbitrary
-    Babbage _ -> TxWitsF p <$> arbitrary
-    Conway _ -> TxWitsF p <$> arbitrary
+    Shelley -> TxWitsF p <$> arbitrary
+    Allegra -> TxWitsF p <$> arbitrary
+    Mary -> TxWitsF p <$> arbitrary
+    Alonzo -> TxWitsF p <$> arbitrary
+    Babbage -> TxWitsF p <$> arbitrary
+    Conway -> TxWitsF p <$> arbitrary
 genSizedRep _ PayHashR = arbitrary
 genSizedRep _ (TxR p) =
   case p of
-    Shelley _ -> TxF p <$> arbitrary
-    Allegra _ -> TxF p <$> arbitrary
-    Mary _ -> TxF p <$> arbitrary
-    Alonzo _ -> TxF p <$> arbitrary
-    Babbage _ -> TxF p <$> arbitrary
-    Conway _ -> TxF p <$> arbitrary
+    Shelley -> TxF p <$> arbitrary
+    Allegra -> TxF p <$> arbitrary
+    Mary -> TxF p <$> arbitrary
+    Alonzo -> TxF p <$> arbitrary
+    Babbage -> TxF p <$> arbitrary
+    Conway -> TxF p <$> arbitrary
 genSizedRep _ ScriptIntegrityHashR = arbitrary
 genSizedRep _ AuxiliaryDataHashR = arbitrary
 genSizedRep _ GovActionR = NoConfidence <$> arbitrary
@@ -847,12 +854,12 @@ genSizedRep _ CommColdCredR = arbitrary
 genSizedRep _ CommHotCredR = arbitrary
 genSizedRep _ LanguageR = arbitrary
 genSizedRep _ (LedgerStateR p) = case p of
-  Shelley _ -> arbitrary
-  Allegra _ -> arbitrary
-  Mary _ -> arbitrary
-  Alonzo _ -> arbitrary
-  Babbage _ -> arbitrary
-  Conway _ -> arbitrary
+  Shelley -> arbitrary
+  Allegra -> arbitrary
+  Mary -> arbitrary
+  Alonzo -> arbitrary
+  Babbage -> arbitrary
+  Conway -> arbitrary
 genSizedRep _ StakeHashR = arbitrary
 genSizedRep _ BoolR = arbitrary
 genSizedRep _ DRepR = arbitrary
@@ -959,12 +966,12 @@ protVerRange :: forall era. Era era => Proof era -> [Version]
 protVerRange _ = [Core.eraProtVerLow @era .. Core.eraProtVerHigh @era]
 
 genpup :: Rep era (ShelleyGovState era) -> Gen (ShelleyGovState era)
-genpup (PPUPStateR (Shelley _)) = arbitrary
-genpup (PPUPStateR (Allegra _)) = arbitrary
-genpup (PPUPStateR (Mary _)) = arbitrary
-genpup (PPUPStateR (Alonzo _)) = arbitrary
-genpup (PPUPStateR (Babbage _)) = arbitrary
-genpup (PPUPStateR (Conway _)) = arbitrary -- FIXME when Conway is fully defined.
+genpup (PPUPStateR Shelley) = arbitrary
+genpup (PPUPStateR Allegra) = arbitrary
+genpup (PPUPStateR Mary) = arbitrary
+genpup (PPUPStateR Alonzo) = arbitrary
+genpup (PPUPStateR Babbage) = arbitrary
+genpup (PPUPStateR Conway) = arbitrary -- FIXME when Conway is fully defined.
 
 -- ===========================
 -- QuickCheck shrinking
@@ -1017,12 +1024,12 @@ shrinkRep MultiAssetR t = shrink t
 shrinkRep PolicyIDR t = shrink t
 shrinkRep (WitnessesFieldR _) _ = []
 shrinkRep AssetNameR t = shrink t
-shrinkRep (TxCertR (Shelley _)) (TxCertF p x) = map (TxCertF p) (shrink x)
-shrinkRep (TxCertR (Allegra _)) (TxCertF p x) = map (TxCertF p) (shrink x)
-shrinkRep (TxCertR (Mary _)) (TxCertF p x) = map (TxCertF p) (shrink x)
-shrinkRep (TxCertR (Alonzo _)) (TxCertF p x) = map (TxCertF p) (shrink x)
-shrinkRep (TxCertR (Babbage _)) (TxCertF p x) = map (TxCertF p) (shrink x)
-shrinkRep (TxCertR (Conway _)) (TxCertF p x) = map (TxCertF p) (shrink x)
+shrinkRep (TxCertR Shelley) (TxCertF p x) = map (TxCertF p) (shrink x)
+shrinkRep (TxCertR Allegra) (TxCertF p x) = map (TxCertF p) (shrink x)
+shrinkRep (TxCertR Mary) (TxCertF p x) = map (TxCertF p) (shrink x)
+shrinkRep (TxCertR Alonzo) (TxCertF p x) = map (TxCertF p) (shrink x)
+shrinkRep (TxCertR Babbage) (TxCertF p x) = map (TxCertF p) (shrink x)
+shrinkRep (TxCertR Conway) (TxCertF p x) = map (TxCertF p) (shrink x)
 shrinkRep RewardAcntR t = shrink t
 shrinkRep ValidityIntervalR _ = []
 shrinkRep KeyPairR t = shrink t

@@ -187,7 +187,7 @@ genShrinkFromConstraints proof sub generationPreds checkPreds target =
 ------------------------------------------------------------------------
 
 conwayProof :: Proof (ConwayEra StandardCrypto)
-conwayProof = Conway Standard
+conwayProof = Conway
 
 -- PParams ----------------------------------------------------------------
 
@@ -621,7 +621,7 @@ prop_GOV sub =
 ------------------------------------------------------------------------
 
 genUniverse :: IO (Subst (ConwayEra StandardCrypto))
-genUniverse = generate (genSubstFromConstraints (Conway Standard) standardOrderInfo (universePreds def (Conway Standard)))
+genUniverse = generate (genSubstFromConstraints Conway standardOrderInfo (universePreds def Conway))
 
 -- NOTE: these tests can be slow (~10 seconds) because it takes time to generate
 -- the initial universe. Reducing the number of tests will NOT help.

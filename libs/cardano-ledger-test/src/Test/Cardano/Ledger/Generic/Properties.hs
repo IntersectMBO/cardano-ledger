@@ -79,22 +79,22 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 -- Top level generators of TRC
 
 genTxAndUTXOState :: Reflect era => Proof era -> GenSize -> Gen (TRC (EraRule "UTXOW" era), GenState era)
-genTxAndUTXOState proof@(Conway _) gsize = do
+genTxAndUTXOState proof@Conway gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
-genTxAndUTXOState proof@(Babbage _) gsize = do
+genTxAndUTXOState proof@Babbage gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
-genTxAndUTXOState proof@(Alonzo _) gsize = do
+genTxAndUTXOState proof@Alonzo gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
-genTxAndUTXOState proof@(Mary _) gsize = do
+genTxAndUTXOState proof@Mary gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
-genTxAndUTXOState proof@(Allegra _) gsize = do
+genTxAndUTXOState proof@Allegra gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
-genTxAndUTXOState proof@(Shelley _) gsize = do
+genTxAndUTXOState proof@Shelley gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 
@@ -180,35 +180,35 @@ coreTypesRoundTrip =
     "Core types make generic roundtrips"
     [ testGroup
         "TxWits roundtrip"
-        [ testPropMax 30 "Babbage era" $ txWitRoundTrip (Babbage Mock)
-        , testPropMax 30 "Alonzo era" $ txWitRoundTrip (Alonzo Mock)
-        , testPropMax 30 "Mary era" $ txWitRoundTrip (Mary Mock)
-        , testPropMax 30 "Allegra era" $ txWitRoundTrip (Allegra Mock)
-        , testPropMax 30 "Shelley era" $ txWitRoundTrip (Shelley Mock)
+        [ testPropMax 30 "Babbage era" $ txWitRoundTrip Babbage
+        , testPropMax 30 "Alonzo era" $ txWitRoundTrip Alonzo
+        , testPropMax 30 "Mary era" $ txWitRoundTrip Mary
+        , testPropMax 30 "Allegra era" $ txWitRoundTrip Allegra
+        , testPropMax 30 "Shelley era" $ txWitRoundTrip Shelley
         ]
     , testGroup
         "TxBody roundtrips"
-        [ testPropMax 30 "Babbage era" $ txBodyRoundTrip (Babbage Mock)
-        , testPropMax 30 "Alonzo era" $ txBodyRoundTrip (Alonzo Mock)
-        , testPropMax 30 "Mary era" $ txBodyRoundTrip (Mary Mock)
-        , testPropMax 30 "Allegra era" $ txBodyRoundTrip (Allegra Mock)
-        , testPropMax 30 "Shelley era" $ txBodyRoundTrip (Shelley Mock)
+        [ testPropMax 30 "Babbage era" $ txBodyRoundTrip Babbage
+        , testPropMax 30 "Alonzo era" $ txBodyRoundTrip Alonzo
+        , testPropMax 30 "Mary era" $ txBodyRoundTrip Mary
+        , testPropMax 30 "Allegra era" $ txBodyRoundTrip Allegra
+        , testPropMax 30 "Shelley era" $ txBodyRoundTrip Shelley
         ]
     , testGroup
         "TxOut roundtrips"
-        [ testPropMax 30 "Babbage era" $ txOutRoundTrip (Babbage Mock)
-        , testPropMax 30 "Alonzo era" $ txOutRoundTrip (Alonzo Mock)
-        , testPropMax 30 "Mary era" $ txOutRoundTrip (Mary Mock)
-        , testPropMax 30 "Allegra era" $ txOutRoundTrip (Allegra Mock)
-        , testPropMax 30 "Shelley era" $ txOutRoundTrip (Shelley Mock)
+        [ testPropMax 30 "Babbage era" $ txOutRoundTrip Babbage
+        , testPropMax 30 "Alonzo era" $ txOutRoundTrip Alonzo
+        , testPropMax 30 "Mary era" $ txOutRoundTrip Mary
+        , testPropMax 30 "Allegra era" $ txOutRoundTrip Allegra
+        , testPropMax 30 "Shelley era" $ txOutRoundTrip Shelley
         ]
     , testGroup
         "Tx roundtrips"
-        [ testPropMax 30 "Babbage era" $ txRoundTrip (Babbage Mock)
-        , testPropMax 30 "Alonzo era" $ txRoundTrip (Alonzo Mock)
-        , testPropMax 30 "Mary era" $ txRoundTrip (Mary Mock)
-        , testPropMax 30 "Allegra era" $ txRoundTrip (Allegra Mock)
-        , testPropMax 30 "Shelley era" $ txRoundTrip (Shelley Mock)
+        [ testPropMax 30 "Babbage era" $ txRoundTrip Babbage
+        , testPropMax 30 "Alonzo era" $ txRoundTrip Alonzo
+        , testPropMax 30 "Mary era" $ txRoundTrip Mary
+        , testPropMax 30 "Allegra era" $ txRoundTrip Allegra
+        , testPropMax 30 "Shelley era" $ txRoundTrip Shelley
         ]
     ]
 
@@ -218,18 +218,18 @@ txPreserveAda genSize =
   testGroup
     "Individual Tx's preserve Ada"
     [ testPropMax 30 "Shelley Tx preserves ADA" $
-        forAll (genTxAndLEDGERState (Shelley Mock) genSize) (testTxValidForLEDGER (Shelley Mock))
+        forAll (genTxAndLEDGERState Shelley genSize) (testTxValidForLEDGER Shelley)
     , testPropMax 30 "Allegra Tx preserves ADA" $
-        forAll (genTxAndLEDGERState (Allegra Mock) genSize) (testTxValidForLEDGER (Allegra Mock))
+        forAll (genTxAndLEDGERState Allegra genSize) (testTxValidForLEDGER Allegra)
     , testPropMax 30 "Mary Tx preserves ADA" $
-        forAll (genTxAndLEDGERState (Mary Mock) genSize) (testTxValidForLEDGER (Mary Mock))
+        forAll (genTxAndLEDGERState Mary genSize) (testTxValidForLEDGER Mary)
     , testPropMax 30 "Alonzo ValidTx preserves ADA" $
-        forAll (genTxAndLEDGERState (Alonzo Mock) genSize) (testTxValidForLEDGER (Alonzo Mock))
+        forAll (genTxAndLEDGERState Alonzo genSize) (testTxValidForLEDGER Alonzo)
     , testPropMax 30 "Babbage ValidTx preserves ADA" $
-        forAll (genTxAndLEDGERState (Babbage Mock) genSize) (testTxValidForLEDGER (Babbage Mock))
+        forAll (genTxAndLEDGERState Babbage genSize) (testTxValidForLEDGER Babbage)
         -- TODO
         -- testPropMax 30 "Conway ValidTx preserves ADA" $
-        --  forAll (genTxAndLEDGERState (Conway Mock) genSize) (testTxValidForLEDGER (Conway Mock))
+        --  forAll (genTxAndLEDGERState Conway genSize) (testTxValidForLEDGER Conway)
     ]
 
 -- | Ada is preserved over a trace of length 100
@@ -254,14 +254,14 @@ tracePreserveAda numTx gensize =
   testGroup
     ("Total Ada is preserved over traces of length " ++ show numTx)
     [ adaIsPreservedBabbage numTx gensize
-    , adaIsPreserved (Alonzo Mock) numTx gensize
-    , adaIsPreserved (Mary Mock) numTx gensize
-    , adaIsPreserved (Allegra Mock) numTx gensize
-    , adaIsPreserved (Shelley Mock) numTx gensize
+    , adaIsPreserved Alonzo numTx gensize
+    , adaIsPreserved Mary numTx gensize
+    , adaIsPreserved Allegra numTx gensize
+    , adaIsPreserved Shelley numTx gensize
     ]
 
 adaIsPreservedBabbage :: Int -> GenSize -> TestTree
-adaIsPreservedBabbage numTx gensize = adaIsPreserved (Babbage Mock) numTx gensize
+adaIsPreservedBabbage numTx gensize = adaIsPreserved Babbage numTx gensize
 
 -- | The incremental Stake invaraint is preserved over a trace of length 100=
 stakeInvariant :: EraTxOut era => MockChainState era -> MockChainState era -> Property
@@ -285,12 +285,12 @@ incrementalStake genSize =
   testGroup
     "Incremental Stake invariant holds"
     [ -- TODO re-enable this once we have added all the new rules to Conway
-      -- incrementStakeInvariant (Conway Mock) genSize,
-      incrementStakeInvariant (Babbage Mock) genSize
-    , incrementStakeInvariant (Alonzo Mock) genSize
-    , incrementStakeInvariant (Mary Mock) genSize
-    , incrementStakeInvariant (Allegra Mock) genSize
-    , incrementStakeInvariant (Shelley Mock) genSize
+      -- incrementStakeInvariant Conway genSize,
+      incrementStakeInvariant Babbage genSize
+    , incrementStakeInvariant Alonzo genSize
+    , incrementStakeInvariant Mary genSize
+    , incrementStakeInvariant Allegra genSize
+    , incrementStakeInvariant Shelley genSize
     ]
 
 genericProperties :: GenSize -> TestTree
@@ -310,11 +310,11 @@ epochPreserveAda :: GenSize -> TestTree
 epochPreserveAda genSize =
   testGroup
     "Ada is preserved in each epoch"
-    [ adaIsPreservedInEachEpoch (Babbage Mock) genSize
-    , adaIsPreservedInEachEpoch (Alonzo Mock) genSize
-    , adaIsPreservedInEachEpoch (Mary Mock) genSize
-    , adaIsPreservedInEachEpoch (Allegra Mock) genSize
-    , adaIsPreservedInEachEpoch (Shelley Mock) genSize
+    [ adaIsPreservedInEachEpoch Babbage genSize
+    , adaIsPreservedInEachEpoch Alonzo genSize
+    , adaIsPreservedInEachEpoch Mary genSize
+    , adaIsPreservedInEachEpoch Allegra genSize
+    , adaIsPreservedInEachEpoch Shelley genSize
     ]
 
 adaIsPreservedInEachEpoch ::
@@ -361,22 +361,22 @@ main :: IO ()
 main = defaultMain $ adaIsPreservedBabbage 100 (def {blocksizeMax = 4})
 
 main8 :: IO ()
-main8 = test 100 (Babbage Mock)
+main8 = test 100 Babbage
 
-test :: ReflectC (EraCrypto era) => Int -> Proof era -> IO ()
+test :: Int -> Proof era -> IO ()
 test n proof = defaultMain $
   case proof of
     -- TODO
-    -- Conway _ ->
+    -- Conway ->
     --  testPropMax 30 "Conway ValidTx preserves ADA" $
     --    withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
-    Babbage _ ->
+    Babbage ->
       testPropMax 30 "Babbage ValidTx preserves ADA" $
         withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
-    Alonzo _ ->
+    Alonzo ->
       testPropMax 30 "Alonzo ValidTx preserves ADA" $
         withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
-    Shelley _ ->
+    Shelley ->
       testPropMax 30 "Shelley ValidTx preserves ADA" $
         withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     other -> error ("NO Test in era " ++ show other)
@@ -402,9 +402,9 @@ runTest computeWith action proof = do
   action ans
 
 main2 :: IO ()
-main2 = runTest (\x -> fst <$> genAlonzoTx x (SlotNo 0)) (const (pure ())) (Babbage Mock)
+main2 = runTest (\x -> fst <$> genAlonzoTx x (SlotNo 0)) (const (pure ())) Babbage
 
 main3 :: IO ()
-main3 = runTest (\_x -> UTxO . fst <$> genUTxO) action (Alonzo Mock)
+main3 = runTest (\_x -> UTxO . fst <$> genUTxO) action Alonzo
   where
     action (UTxO x) = putStrLn ("Size = " ++ show (Map.size x))

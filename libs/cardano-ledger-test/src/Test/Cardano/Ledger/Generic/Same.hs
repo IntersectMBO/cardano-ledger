@@ -146,21 +146,21 @@ instance Same era (VState era) where
     ]
 
 sameUTxO :: Proof era -> UTxO era -> UTxO era -> Maybe PDoc
-sameUTxO (Shelley _) x y = eqByShow x y
-sameUTxO (Allegra _) x y = eqByShow x y
-sameUTxO (Mary _) x y = eqByShow x y
-sameUTxO (Alonzo _) x y = eqByShow x y
-sameUTxO (Babbage _) x y = eqByShow x y
-sameUTxO (Conway _) x y = eqByShow x y
+sameUTxO Shelley x y = eqByShow x y
+sameUTxO Allegra x y = eqByShow x y
+sameUTxO Mary x y = eqByShow x y
+sameUTxO Alonzo x y = eqByShow x y
+sameUTxO Babbage x y = eqByShow x y
+sameUTxO Conway x y = eqByShow x y
 {-# NOINLINE sameUTxO #-}
 
 samePPUP :: Proof era -> ShelleyGovState era -> ShelleyGovState era -> Maybe PDoc
-samePPUP (Shelley _) x y = eqByShow x y
-samePPUP (Allegra _) x y = eqByShow x y
-samePPUP (Mary _) x y = eqByShow x y
-samePPUP (Alonzo _) x y = eqByShow x y
-samePPUP (Babbage _) x y = eqByShow x y
-samePPUP (Conway _) x y = eqByShow x y
+samePPUP Shelley x y = eqByShow x y
+samePPUP Allegra x y = eqByShow x y
+samePPUP Mary x y = eqByShow x y
+samePPUP Alonzo x y = eqByShow x y
+samePPUP Babbage x y = eqByShow x y
+samePPUP Conway x y = eqByShow x y
 {-# NOINLINE samePPUP #-}
 
 instance Reflect era => Same era (UTxOState era) where
@@ -175,12 +175,12 @@ instance Reflect era => Same era (UTxOState era) where
       ppuPretty :: GovState era ~ ShelleyGovState era => [(String, Maybe PDoc)]
       ppuPretty = [("ShelleyGovState", samePPUP proof (utxosGovState u1) (utxosGovState u2))]
       ppu = case reify @era of
-        Shelley _ -> ppuPretty
-        Mary _ -> ppuPretty
-        Allegra _ -> ppuPretty
-        Alonzo _ -> ppuPretty
-        Babbage _ -> ppuPretty
-        Conway _ -> []
+        Shelley -> ppuPretty
+        Mary -> ppuPretty
+        Allegra -> ppuPretty
+        Alonzo -> ppuPretty
+        Babbage -> ppuPretty
+        Conway -> []
 
 instance Reflect era => Same era (LedgerState era) where
   same proof x1 x2 =
@@ -201,12 +201,12 @@ sameStashedAVVMAddresses ::
   Proof era -> StashedAVVMAddresses era -> StashedAVVMAddresses era -> Maybe PDoc
 sameStashedAVVMAddresses proof x y =
   case proof of
-    Shelley _ -> if x == y then Nothing else Just (viaShow x)
-    Allegra _ -> if x == y then Nothing else Just (viaShow x)
-    Mary _ -> if x == y then Nothing else Just (viaShow x)
-    Alonzo _ -> if x == y then Nothing else Just (viaShow x)
-    Babbage _ -> if x == y then Nothing else Just (viaShow x)
-    Conway _ -> if x == y then Nothing else Just (viaShow x)
+    Shelley -> if x == y then Nothing else Just (viaShow x)
+    Allegra -> if x == y then Nothing else Just (viaShow x)
+    Mary -> if x == y then Nothing else Just (viaShow x)
+    Alonzo -> if x == y then Nothing else Just (viaShow x)
+    Babbage -> if x == y then Nothing else Just (viaShow x)
+    Conway -> if x == y then Nothing else Just (viaShow x)
 
 instance
   Reflect era =>
@@ -271,12 +271,12 @@ instance Era era => Same era (ShelleyResultExamples era) where
     ,
       ( "ProposedPPUpdates"
       , case proof of
-          Shelley _ -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
-          Allegra _ -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
-          Mary _ -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
-          Alonzo _ -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
-          Babbage _ -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
-          Conway _ -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
+          Shelley -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
+          Allegra -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
+          Mary -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
+          Alonzo -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
+          Babbage -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
+          Conway -> sameProposedPPUpdates (sreProposedPPUpdates r1) (sreProposedPPUpdates r2)
       )
     , ("poolDistr", eqByShow (srePoolDistr r1) (srePoolDistr r2))
     , ("NonMyopicRewards", eqByShow (sreNonMyopicRewards r1) (sreNonMyopicRewards r2))
@@ -295,30 +295,30 @@ instance Era era => Same era (ShelleyResultExamples era) where
 -- We also can avoid all extra constraints by pattern matching against all current Proofs.
 
 samePParams :: Proof era -> PParams era -> PParams era -> Maybe PDoc
-samePParams (Shelley _) x y = eqByShow x y
-samePParams (Allegra _) x y = eqByShow x y
-samePParams (Mary _) x y = eqByShow x y
-samePParams (Alonzo _) x y = eqByShow x y
-samePParams (Babbage _) x y = eqByShow x y
-samePParams (Conway _) x y = eqByShow x y
+samePParams Shelley x y = eqByShow x y
+samePParams Allegra x y = eqByShow x y
+samePParams Mary x y = eqByShow x y
+samePParams Alonzo x y = eqByShow x y
+samePParams Babbage x y = eqByShow x y
+samePParams Conway x y = eqByShow x y
 {-# NOINLINE samePParams #-}
 
 samePParamsUpdate :: Proof era -> PParamsUpdate era -> PParamsUpdate era -> Maybe PDoc
-samePParamsUpdate (Shelley _) x y = eqByShow x y
-samePParamsUpdate (Allegra _) x y = eqByShow x y
-samePParamsUpdate (Mary _) x y = eqByShow x y
-samePParamsUpdate (Alonzo _) x y = eqByShow x y
-samePParamsUpdate (Babbage _) x y = eqByShow x y
-samePParamsUpdate (Conway _) x y = eqByShow x y
+samePParamsUpdate Shelley x y = eqByShow x y
+samePParamsUpdate Allegra x y = eqByShow x y
+samePParamsUpdate Mary x y = eqByShow x y
+samePParamsUpdate Alonzo x y = eqByShow x y
+samePParamsUpdate Babbage x y = eqByShow x y
+samePParamsUpdate Conway x y = eqByShow x y
 {-# NOINLINE samePParamsUpdate #-}
 
 sameTxOut :: Proof era -> TxOut era -> TxOut era -> Maybe PDoc
-sameTxOut (Shelley _) x y = eqByShow x y
-sameTxOut (Allegra _) x y = eqByShow x y
-sameTxOut (Mary _) x y = eqByShow x y
-sameTxOut (Alonzo _) x y = eqByShow x y
-sameTxOut (Babbage _) x y = eqByShow x y
-sameTxOut (Conway _) x y = eqByShow x y
+sameTxOut Shelley x y = eqByShow x y
+sameTxOut Allegra x y = eqByShow x y
+sameTxOut Mary x y = eqByShow x y
+sameTxOut Alonzo x y = eqByShow x y
+sameTxOut Babbage x y = eqByShow x y
+sameTxOut Conway x y = eqByShow x y
 {-# NOINLINE sameTxOut #-}
 
 sameLedgerFail ::
@@ -326,12 +326,12 @@ sameLedgerFail ::
   ApplyTxError era ->
   ApplyTxError era ->
   Maybe PDoc
-sameLedgerFail (Shelley _) x y = eqByShow x y
-sameLedgerFail (Allegra _) x y = eqByShow x y
-sameLedgerFail (Mary _) x y = eqByShow x y
-sameLedgerFail (Alonzo _) x y = eqByShow x y
-sameLedgerFail (Babbage _) x y = eqByShow x y
-sameLedgerFail (Conway _) x y = eqByShow x y
+sameLedgerFail Shelley x y = eqByShow x y
+sameLedgerFail Allegra x y = eqByShow x y
+sameLedgerFail Mary x y = eqByShow x y
+sameLedgerFail Alonzo x y = eqByShow x y
+sameLedgerFail Babbage x y = eqByShow x y
+sameLedgerFail Conway x y = eqByShow x y
 {-# NOINLINE sameLedgerFail #-}
 
 sameTransCtx ::
@@ -339,12 +339,12 @@ sameTransCtx ::
   TranslationContext era ->
   TranslationContext era ->
   Maybe PDoc
-sameTransCtx (Shelley _) x y = eqByShow x y
-sameTransCtx (Allegra _) x y = eqByShow x y
-sameTransCtx (Mary _) x y = eqByShow x y
-sameTransCtx (Alonzo _) x y = eqByShow x y
-sameTransCtx (Babbage _) x y = eqByShow x y
-sameTransCtx (Conway _) x y = eqByShow x y
+sameTransCtx Shelley x y = eqByShow x y
+sameTransCtx Allegra x y = eqByShow x y
+sameTransCtx Mary x y = eqByShow x y
+sameTransCtx Alonzo x y = eqByShow x y
+sameTransCtx Babbage x y = eqByShow x y
+sameTransCtx Conway x y = eqByShow x y
 {-# NOINLINE sameTransCtx #-}
 
 -- ==========================
@@ -382,12 +382,12 @@ sameAlonzoTxWits
     ]
 
 sameTxWits :: Reflect era => Proof era -> TxWits era -> TxWits era -> [(String, Maybe PDoc)]
-sameTxWits proof@(Shelley _) x y = sameShelleyTxWits proof x y
-sameTxWits proof@(Allegra _) x y = sameShelleyTxWits proof x y
-sameTxWits proof@(Mary _) x y = sameShelleyTxWits proof x y
-sameTxWits proof@(Alonzo _) x y = sameAlonzoTxWits proof x y
-sameTxWits proof@(Babbage _) x y = sameAlonzoTxWits proof x y
-sameTxWits proof@(Conway _) x y = sameAlonzoTxWits proof x y
+sameTxWits proof@Shelley x y = sameShelleyTxWits proof x y
+sameTxWits proof@Allegra x y = sameShelleyTxWits proof x y
+sameTxWits proof@Mary x y = sameShelleyTxWits proof x y
+sameTxWits proof@Alonzo x y = sameAlonzoTxWits proof x y
+sameTxWits proof@Babbage x y = sameAlonzoTxWits proof x y
+sameTxWits proof@Conway x y = sameAlonzoTxWits proof x y
 
 -- =======================
 -- Comparing TxBody for Sameness
@@ -539,12 +539,12 @@ sameConwayTxBody
     ]
 
 sameTxBody :: Reflect era => Proof era -> TxBody era -> TxBody era -> [(String, Maybe PDoc)]
-sameTxBody proof@(Shelley _) x y = sameShelleyTxBody proof x y
-sameTxBody proof@(Allegra _) x y = sameAllegraTxBody proof x y
-sameTxBody proof@(Mary _) x y = sameMaryTxBody proof x y
-sameTxBody proof@(Alonzo _) x y = sameAlonzoTxBody proof x y
-sameTxBody proof@(Babbage _) x y = sameBabbageTxBody proof x y
-sameTxBody proof@(Conway _) x y = sameConwayTxBody proof x y
+sameTxBody proof@Shelley x y = sameShelleyTxBody proof x y
+sameTxBody proof@Allegra x y = sameAllegraTxBody proof x y
+sameTxBody proof@Mary x y = sameMaryTxBody proof x y
+sameTxBody proof@Alonzo x y = sameAlonzoTxBody proof x y
+sameTxBody proof@Babbage x y = sameBabbageTxBody proof x y
+sameTxBody proof@Conway x y = sameConwayTxBody proof x y
 
 -- =======================
 -- Comparing Tx for Sameness
@@ -579,12 +579,12 @@ sameAlonzoTx proof (AlonzoTx b1 w1 v1 aux1) (AlonzoTx b2 w2 v2 aux2) =
 {-# NOINLINE sameAlonzoTx #-}
 
 sameTx :: Reflect era => Proof era -> Tx era -> Tx era -> [(String, Maybe PDoc)]
-sameTx proof@(Shelley _) x y = sameShelleyTx proof x y
-sameTx proof@(Allegra _) x y = sameShelleyTx proof x y
-sameTx proof@(Mary _) x y = sameShelleyTx proof x y
-sameTx proof@(Alonzo _) x y = sameAlonzoTx proof x y
-sameTx proof@(Babbage _) x y = sameAlonzoTx proof x y
-sameTx proof@(Conway _) x y = sameAlonzoTx proof x y
+sameTx proof@Shelley x y = sameShelleyTx proof x y
+sameTx proof@Allegra x y = sameShelleyTx proof x y
+sameTx proof@Mary x y = sameShelleyTx proof x y
+sameTx proof@Alonzo x y = sameAlonzoTx proof x y
+sameTx proof@Babbage x y = sameAlonzoTx proof x y
+sameTx proof@Conway x y = sameAlonzoTx proof x y
 {-# NOINLINE sameTx #-}
 
 -- ==========================
@@ -622,10 +622,10 @@ sameAlonzoTxSeq proof (AlonzoTxSeq ss1) (AlonzoTxSeq ss2) =
     f n t1 t2 = SomeM (show n) (sameTx proof) t1 t2
 
 sameTxSeq :: Reflect era => Proof era -> TxSeq era -> TxSeq era -> [(String, Maybe PDoc)]
-sameTxSeq proof@(Shelley _) x y = sameShelleyTxSeq proof x y
-sameTxSeq proof@(Allegra _) x y = sameShelleyTxSeq proof x y
-sameTxSeq proof@(Mary _) x y = sameShelleyTxSeq proof x y
-sameTxSeq proof@(Alonzo _) x y = sameAlonzoTxSeq proof x y
-sameTxSeq proof@(Babbage _) x y = sameAlonzoTxSeq proof x y
-sameTxSeq proof@(Conway _) x y = sameAlonzoTxSeq proof x y
+sameTxSeq proof@Shelley x y = sameShelleyTxSeq proof x y
+sameTxSeq proof@Allegra x y = sameShelleyTxSeq proof x y
+sameTxSeq proof@Mary x y = sameShelleyTxSeq proof x y
+sameTxSeq proof@Alonzo x y = sameAlonzoTxSeq proof x y
+sameTxSeq proof@Babbage x y = sameAlonzoTxSeq proof x y
+sameTxSeq proof@Conway x y = sameAlonzoTxSeq proof x y
 {-# NOINLINE sameTxSeq #-}

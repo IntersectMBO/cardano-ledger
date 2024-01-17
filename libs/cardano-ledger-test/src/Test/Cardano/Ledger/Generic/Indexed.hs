@@ -27,10 +27,7 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness), SignKeyDSIGN, VKey, WitVKey (..), hashKey)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
-import Test.Cardano.Ledger.Generic.Proof (
-  GoodCrypto,
-  Proof (..),
- )
+import Test.Cardano.Ledger.Generic.Proof (GoodCrypto, Proof (..))
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 
 -- =======================================================
@@ -54,7 +51,11 @@ theSKey n = SKey (sKey (theKeyPair @c n))
 theKeyHash :: CC.Crypto c => Int -> KeyHash kr c
 theKeyHash n = hashKey (theVKey n)
 
-theWitVKey :: GoodCrypto c => Int -> SafeHash c EraIndependentTxBody -> WitVKey 'Witness c
+theWitVKey ::
+  GoodCrypto c =>
+  Int ->
+  SafeHash c EraIndependentTxBody ->
+  WitVKey 'Witness c
 theWitVKey n hash = mkWitnessVKey hash (theKeyPair n)
 
 theKeyHashObj :: CC.Crypto c => Int -> Credential kr c

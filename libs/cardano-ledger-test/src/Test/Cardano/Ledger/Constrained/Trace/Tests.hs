@@ -58,7 +58,7 @@ import Test.Tasty.QuickCheck (testProperty)
 --  Computed by using 'inputsAction' , 'outputsAction' , and 'feesAction'
 genAndRunSimpleTx :: TraceM (ConwayEra StandardCrypto) Property
 genAndRunSimpleTx = do
-  let proof = Conway Standard
+  let proof = Conway
   _ <- genLedgerStateEnv proof
 
   -- Compute the TRC before we make the Tx, because that adds things to the Env
@@ -165,7 +165,7 @@ conwayTrace :: TestTree
 conwayTrace =
   testProperty
     ("Testing each Tx in a Conway trace of length=" ++ show tracelen ++ " passes applySTS.")
-    (withMaxSuccess n (fstTriple <$> (runTraceM 0 emptyEnv (testTrace (Conway Standard) tracelen))))
+    (withMaxSuccess n (fstTriple <$> (runTraceM 0 emptyEnv (testTrace Conway tracelen))))
   where
     tracelen = 100
     n = 10

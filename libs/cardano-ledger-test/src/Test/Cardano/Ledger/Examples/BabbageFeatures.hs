@@ -136,12 +136,12 @@ simpleScript pf = fromNativeScript $ allOf [require @era (keyHashForMultisig pf)
 evenData3ArgsScript :: HasCallStack => Proof era -> Script era
 evenData3ArgsScript proof =
   case proof of
-    Shelley _ -> error unsupported
-    Mary _ -> error unsupported
-    Allegra _ -> error unsupported
-    Alonzo _ -> evenData3ArgsLang @'PlutusV1
-    Babbage _ -> evenData3ArgsLang @'PlutusV2
-    Conway _ -> evenData3ArgsLang @'PlutusV2
+    Shelley -> error unsupported
+    Mary -> error unsupported
+    Allegra -> error unsupported
+    Alonzo -> evenData3ArgsLang @'PlutusV1
+    Babbage -> evenData3ArgsLang @'PlutusV2
+    Conway -> evenData3ArgsLang @'PlutusV2
   where
     unsupported = "Plutus scripts are not supported in:" ++ show proof
     evenData3ArgsLang :: forall l era'. (PlutusLanguage l, AlonzoEraScript era') => Script era'
@@ -1356,7 +1356,7 @@ babbageFeatures :: TestTree
 babbageFeatures =
   testGroup
     "Babbage Features"
-    [ genericBabbageFeatures (Babbage Standard)
-    , genericBabbageFailures (Babbage Standard)
-    -- genericBabbageFeatures (Conway Mock) TODO
+    [ genericBabbageFeatures Babbage
+    , genericBabbageFailures Babbage
+    -- genericBabbageFeatures Conway -- TODO
     ]

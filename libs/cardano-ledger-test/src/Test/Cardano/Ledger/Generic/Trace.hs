@@ -180,7 +180,7 @@ genTxSeq proof gensize numTx initialize = do
 
 runTest :: IO ()
 runTest = do
-  (v, _) <- generate $ genTxSeq (Babbage Mock) def 20 (pure ())
+  (v, _) <- generate $ genTxSeq Babbage def 20 (pure ())
   print (Vector.length v)
 
 -- ==================================================================
@@ -296,7 +296,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
   where
     getw :: Proof era -> MockChainFailure era -> Set.Set (ScriptHash (EraCrypto era))
     getw
-      (Babbage _)
+      Babbage
       ( MockChainFromLedgersFailure
           ( LedgerFailure
               ( UtxowFailure
@@ -309,7 +309,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
             )
         ) = set
     getw
-      (Alonzo _)
+      Alonzo
       ( MockChainFromLedgersFailure
           ( LedgerFailure
               ( UtxowFailure
@@ -320,7 +320,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
             )
         ) = set
     getw
-      (Mary _)
+      Mary
       ( MockChainFromLedgersFailure
           ( LedgerFailure
               ( UtxowFailure
@@ -329,7 +329,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
             )
         ) = set
     getw
-      (Allegra _)
+      Allegra
       ( MockChainFromLedgersFailure
           ( LedgerFailure
               ( UtxowFailure
@@ -506,12 +506,12 @@ forEachEpochTrace ::
 forEachEpochTrace proof tracelen genSize f = do
   let newEpoch tr1 tr2 = nesEL (mcsNes tr1) /= nesEL (mcsNes tr2)
   trc <- case proof of
-    Conway _ -> genTrace proof tracelen genSize initStableFields
-    Babbage _ -> genTrace proof tracelen genSize initStableFields
-    Alonzo _ -> genTrace proof tracelen genSize initStableFields
-    Allegra _ -> genTrace proof tracelen genSize initStableFields
-    Mary _ -> genTrace proof tracelen genSize initStableFields
-    Shelley _ -> genTrace proof tracelen genSize initStableFields
+    Conway -> genTrace proof tracelen genSize initStableFields
+    Babbage -> genTrace proof tracelen genSize initStableFields
+    Alonzo -> genTrace proof tracelen genSize initStableFields
+    Allegra -> genTrace proof tracelen genSize initStableFields
+    Mary -> genTrace proof tracelen genSize initStableFields
+    Shelley -> genTrace proof tracelen genSize initStableFields
   let propf (subtrace, index) = counterexample ("Subtrace of EpochNo " ++ show index ++ " fails.") (f subtrace)
   -- The very last sub-trace may not be a full epoch, so we throw it away.
   case reverse (splitTrace newEpoch trc) of
@@ -579,12 +579,12 @@ testTraces :: Int -> TestTree
 testTraces n =
   testGroup
     "MockChainTrace"
-    [ chainTest (Babbage Mock) n def
-    , chainTest (Alonzo Mock) n def
-    , chainTest (Mary Mock) n def
-    , chainTest (Allegra Mock) n def
-    , multiEpochTest (Babbage Mock) 225 def
-    , multiEpochTest (Shelley Mock) 225 def
+    [ chainTest Babbage n def
+    , chainTest Alonzo n def
+    , chainTest Mary n def
+    , chainTest Allegra n def
+    , multiEpochTest Babbage 225 def
+    , multiEpochTest Shelley 225 def
     ]
 
 -- | Show that Ada is preserved across multiple Epochs
@@ -612,13 +612,13 @@ multiEpochTest proof numTx gsize =
 -- need to see from the trace.
 
 main :: IO ()
-main = defaultMain $ multiEpochTest (Shelley Mock) 200 def
+main = defaultMain $ multiEpochTest Shelley 200 def
 
 data TT where
   TT :: Proof era -> [(StrictSeq (Tx era), SlotNo)] -> TT
 
 theVector :: IORef TT
-theVector = unsafePerformIO (newIORef (TT (Babbage Mock) []))
+theVector = unsafePerformIO (newIORef (TT Babbage []))
 
 showVector :: (forall era. Proof era -> [Tx era] -> SlotNo -> PDoc) -> IO ()
 showVector pretty = do
@@ -631,7 +631,7 @@ main3 :: IO ()
 main3 = showVector pretty
   where
     pretty :: Proof era -> [Tx era] -> SlotNo -> PDoc
-    pretty (Babbage Mock) xs slot =
+    pretty Babbage xs slot =
       vsep
         [ pcSlotNo slot
         , vsep (map (ppList prettyA . Fold.toList . certs' . body) xs)
@@ -639,12 +639,12 @@ main3 = showVector pretty
     pretty p _ _ = ppString ("main3 does not work in era " ++ show p)
 
 main2 :: IO ()
-main2 = defaultMain (chainTest (Babbage Mock) 100 def)
+main2 = defaultMain (chainTest Babbage 100 def)
 
 -- | display information about stable fields if the only action is to 'initStableFields'
 displayStableInfo :: IO ()
 displayStableInfo = do
-  let proof = Babbage Mock
+  let proof = Babbage
   ((), gstate) <- generate $ runGenRS proof def initStableFields
   let mcst = initialMockChainState proof gstate
   let del = gsInitialPoolParams gstate

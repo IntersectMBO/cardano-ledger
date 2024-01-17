@@ -150,7 +150,7 @@ solvePipeline2 pipes = do
 
 main :: IO ()
 main = do
-  let proof = Babbage Standard
+  let proof = Babbage
   ((env, DependGraph zs), _, _) <- generate (runTraceM 0 emptyEnv (solvePipeline2 (ledgerPipeline def proof)))
   let vs = varsOfTarget HashSet.empty dstateT
       ok = any (`HashSet.member` vs) . fst
@@ -205,7 +205,7 @@ sts1 state ctx sig apply test =
     )
 
 proofx :: Proof (BabbageEra StandardCrypto)
-proofx = Babbage Standard
+proofx = Babbage
 
 genLedgerState :: Gen (Env Babbage, Subst Babbage, LedgerState Babbage)
 genLedgerState = do

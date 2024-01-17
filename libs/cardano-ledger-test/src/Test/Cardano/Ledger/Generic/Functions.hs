@@ -79,33 +79,33 @@ import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 -- other XX types Mostly by pattern matching against Proof objects
 
 maxCollateralInputs' :: Proof era -> PParams era -> Natural
-maxCollateralInputs' (Alonzo _) pp = pp ^. ppMaxCollateralInputsL
-maxCollateralInputs' (Babbage _) pp = pp ^. ppMaxCollateralInputsL
-maxCollateralInputs' (Conway _) pp = pp ^. ppMaxCollateralInputsL
+maxCollateralInputs' Alonzo pp = pp ^. ppMaxCollateralInputsL
+maxCollateralInputs' Babbage pp = pp ^. ppMaxCollateralInputsL
+maxCollateralInputs' Conway pp = pp ^. ppMaxCollateralInputsL
 maxCollateralInputs' _proof _pp = 0
 {-# NOINLINE maxCollateralInputs' #-}
 
 maxTxExUnits' :: Proof era -> PParams era -> ExUnits
-maxTxExUnits' (Alonzo _) pp = pp ^. ppMaxTxExUnitsL
-maxTxExUnits' (Babbage _) pp = pp ^. ppMaxTxExUnitsL
-maxTxExUnits' (Conway _) pp = pp ^. ppMaxTxExUnitsL
+maxTxExUnits' Alonzo pp = pp ^. ppMaxTxExUnitsL
+maxTxExUnits' Babbage pp = pp ^. ppMaxTxExUnitsL
+maxTxExUnits' Conway pp = pp ^. ppMaxTxExUnitsL
 maxTxExUnits' _proof _x = mempty
 {-# NOINLINE maxTxExUnits' #-}
 
 collateralPercentage' :: Proof era -> PParams era -> Natural
-collateralPercentage' (Alonzo _) pp = pp ^. ppCollateralPercentageL
-collateralPercentage' (Babbage _) pp = pp ^. ppCollateralPercentageL
-collateralPercentage' (Conway _) pp = pp ^. ppCollateralPercentageL
+collateralPercentage' Alonzo pp = pp ^. ppCollateralPercentageL
+collateralPercentage' Babbage pp = pp ^. ppCollateralPercentageL
+collateralPercentage' Conway pp = pp ^. ppCollateralPercentageL
 collateralPercentage' _proof _pp = 0
 {-# NOINLINE collateralPercentage' #-}
 
 protocolVersion :: Proof era -> ProtVer
-protocolVersion (Conway _) = ProtVer (natVersion @9) 0
-protocolVersion (Babbage _) = ProtVer (natVersion @7) 0
-protocolVersion (Alonzo _) = ProtVer (natVersion @6) 0
-protocolVersion (Mary _) = ProtVer (natVersion @4) 0
-protocolVersion (Allegra _) = ProtVer (natVersion @3) 0
-protocolVersion (Shelley _) = ProtVer (natVersion @2) 0
+protocolVersion Conway = ProtVer (natVersion @9) 0
+protocolVersion Babbage = ProtVer (natVersion @7) 0
+protocolVersion Alonzo = ProtVer (natVersion @6) 0
+protocolVersion Mary = ProtVer (natVersion @4) 0
+protocolVersion Allegra = ProtVer (natVersion @3) 0
+protocolVersion Shelley = ProtVer (natVersion @2) 0
 {-# NOINLINE protocolVersion #-}
 
 -- | Positive numbers are "deposits owed", negative amounts are "refunds gained"
@@ -129,40 +129,40 @@ depositsAndRefunds pp certificates keydeposits = List.foldl' accum (Coin 0) cert
 -- | Compute the set of ScriptHashes for which there should be ScriptWitnesses. In Babbage
 --  Era and later, where inline Scripts are allowed, they should not appear in this set.
 scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (EraCrypto era))
-scriptWitsNeeded' (Conway _) utxo txBody = regularScripts `Set.difference` inlineScripts
+scriptWitsNeeded' Conway utxo txBody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
     inputs = txBody ^. inputsTxBodyL
     inlineScripts = keysSet $ getReferenceScripts theUtxo inputs
     regularScripts = getScriptsHashesNeeded (getScriptsNeeded theUtxo txBody)
-scriptWitsNeeded' (Babbage _) utxo txBody = regularScripts `Set.difference` inlineScripts
+scriptWitsNeeded' Babbage utxo txBody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
     inputs = spendInputs' txBody `Set.union` referenceInputs' txBody
     inlineScripts = keysSet $ getReferenceScripts theUtxo inputs
     regularScripts = getScriptsHashesNeeded (getScriptsNeeded theUtxo txBody)
-scriptWitsNeeded' (Alonzo _) utxo txBody =
+scriptWitsNeeded' Alonzo utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptWitsNeeded' (Mary _) utxo txBody =
+scriptWitsNeeded' Mary utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptWitsNeeded' (Allegra _) utxo txBody =
+scriptWitsNeeded' Allegra utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptWitsNeeded' (Shelley _) utxo txBody =
+scriptWitsNeeded' Shelley utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 {-# NOINLINE scriptWitsNeeded' #-}
 
 scriptsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (EraCrypto era))
-scriptsNeeded' (Conway _) utxo txBody =
+scriptsNeeded' Conway utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' (Babbage _) utxo txBody =
+scriptsNeeded' Babbage utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' (Alonzo _) utxo txBody =
+scriptsNeeded' Alonzo utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' (Mary _) utxo txBody =
+scriptsNeeded' Mary utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' (Allegra _) utxo txBody =
+scriptsNeeded' Allegra utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
-scriptsNeeded' (Shelley _) utxo txBody =
+scriptsNeeded' Shelley utxo txBody =
   getScriptsHashesNeeded (getScriptsNeeded (UTxO utxo) txBody)
 {-# NOINLINE scriptsNeeded' #-}
 
@@ -176,40 +176,40 @@ txInBalance txinSet m = coinBalance (UTxO (restrictKeys m txinSet))
 
 -- | Break a TxOut into its mandatory and optional parts
 txoutFields :: Proof era -> TxOut era -> (Addr (EraCrypto era), Value era, [TxOutField era])
-txoutFields (Conway _) (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
-txoutFields (Babbage _) (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
-txoutFields (Alonzo _) (AlonzoTxOut addr val dh) = (addr, val, [DHash dh])
-txoutFields (Mary _) (ShelleyTxOut addr val) = (addr, val, [])
-txoutFields (Allegra _) (ShelleyTxOut addr val) = (addr, val, [])
-txoutFields (Shelley _) (ShelleyTxOut addr val) = (addr, val, [])
+txoutFields Conway (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
+txoutFields Babbage (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
+txoutFields Alonzo (AlonzoTxOut addr val dh) = (addr, val, [DHash dh])
+txoutFields Mary (ShelleyTxOut addr val) = (addr, val, [])
+txoutFields Allegra (ShelleyTxOut addr val) = (addr, val, [])
+txoutFields Shelley (ShelleyTxOut addr val) = (addr, val, [])
 {-# NOINLINE txoutFields #-}
 
 injectFee :: EraTxOut era => Proof era -> Coin -> TxOut era -> TxOut era
 injectFee _ fee txOut = txOut & valueTxOutL %~ (<+> inject fee)
 
 getTxOutRefScript :: Proof era -> TxOut era -> StrictMaybe (Script era)
-getTxOutRefScript (Conway _) (BabbageTxOut _ _ _ ms) = ms
-getTxOutRefScript (Babbage _) (BabbageTxOut _ _ _ ms) = ms
+getTxOutRefScript Conway (BabbageTxOut _ _ _ ms) = ms
+getTxOutRefScript Babbage (BabbageTxOut _ _ _ ms) = ms
 getTxOutRefScript _ _ = SNothing
 {-# NOINLINE getTxOutRefScript #-}
 
 emptyPPUPstate :: forall era. Proof era -> ShelleyGovState era
-emptyPPUPstate (Conway _) = def
-emptyPPUPstate (Babbage _) = def
-emptyPPUPstate (Alonzo _) = def
-emptyPPUPstate (Mary _) = def
-emptyPPUPstate (Allegra _) = def
-emptyPPUPstate (Shelley _) = def
+emptyPPUPstate Conway = def
+emptyPPUPstate Babbage = def
+emptyPPUPstate Alonzo = def
+emptyPPUPstate Mary = def
+emptyPPUPstate Allegra = def
+emptyPPUPstate Shelley = def
 {-# NOINLINE emptyPPUPstate #-}
 
 maxRefInputs :: Proof era -> Int
-maxRefInputs (Babbage _) = 3
+maxRefInputs Babbage = 3
 maxRefInputs _ = 0
 
 isValid' :: Proof era -> Tx era -> IsValid
-isValid' (Conway _) x = isValid x
-isValid' (Babbage _) x = isValid x
-isValid' (Alonzo _) x = isValid x
+isValid' Conway x = isValid x
+isValid' Babbage x = isValid x
+isValid' Alonzo x = isValid x
 isValid' _ _ = IsValid True
 {-# NOINLINE isValid' #-}
 
@@ -221,27 +221,27 @@ txoutEvidence ::
   Proof era ->
   TxOut era ->
   ([Credential 'Payment (EraCrypto era)], Maybe (DataHash (EraCrypto era)))
-txoutEvidence (Alonzo _) (AlonzoTxOut addr _ (SJust dh)) =
+txoutEvidence Alonzo (AlonzoTxOut addr _ (SJust dh)) =
   (addrCredentials addr, Just dh)
-txoutEvidence (Alonzo _) (AlonzoTxOut addr _ SNothing) =
+txoutEvidence Alonzo (AlonzoTxOut addr _ SNothing) =
   (addrCredentials addr, Nothing)
-txoutEvidence (Conway _) (BabbageTxOut addr _ NoDatum _) =
+txoutEvidence Conway (BabbageTxOut addr _ NoDatum _) =
   (addrCredentials addr, Nothing)
-txoutEvidence (Conway _) (BabbageTxOut addr _ (DatumHash dh) _) =
+txoutEvidence Conway (BabbageTxOut addr _ (DatumHash dh) _) =
   (addrCredentials addr, Just dh)
-txoutEvidence (Conway _) (BabbageTxOut addr _ (Datum _d) _) =
+txoutEvidence Conway (BabbageTxOut addr _ (Datum _d) _) =
   (addrCredentials addr, Just (hashData @era (binaryDataToData _d)))
-txoutEvidence (Babbage _) (BabbageTxOut addr _ NoDatum _) =
+txoutEvidence Babbage (BabbageTxOut addr _ NoDatum _) =
   (addrCredentials addr, Nothing)
-txoutEvidence (Babbage _) (BabbageTxOut addr _ (DatumHash dh) _) =
+txoutEvidence Babbage (BabbageTxOut addr _ (DatumHash dh) _) =
   (addrCredentials addr, Just dh)
-txoutEvidence (Babbage _) (BabbageTxOut addr _ (Datum _d) _) =
+txoutEvidence Babbage (BabbageTxOut addr _ (Datum _d) _) =
   (addrCredentials addr, Just (hashData @era (binaryDataToData _d)))
-txoutEvidence (Mary _) (ShelleyTxOut addr _) =
+txoutEvidence Mary (ShelleyTxOut addr _) =
   (addrCredentials addr, Nothing)
-txoutEvidence (Allegra _) (ShelleyTxOut addr _) =
+txoutEvidence Allegra (ShelleyTxOut addr _) =
   (addrCredentials addr, Nothing)
-txoutEvidence (Shelley _) (ShelleyTxOut addr _) =
+txoutEvidence Shelley (ShelleyTxOut addr _) =
   (addrCredentials addr, Nothing)
 {-# NOINLINE txoutEvidence #-}
 
@@ -260,21 +260,21 @@ getBody :: EraTx era => Proof era -> Tx era -> TxBody era
 getBody _ tx = tx ^. bodyTxL
 
 getCollateralInputs :: Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
-getCollateralInputs (Conway _) tx = tx ^. collateralInputsTxBodyL
-getCollateralInputs (Babbage _) tx = collateralInputs' tx
-getCollateralInputs (Alonzo _) tx = collateral' tx
-getCollateralInputs (Mary _) _ = Set.empty
-getCollateralInputs (Allegra _) _ = Set.empty
-getCollateralInputs (Shelley _) _ = Set.empty
+getCollateralInputs Conway tx = tx ^. collateralInputsTxBodyL
+getCollateralInputs Babbage tx = collateralInputs' tx
+getCollateralInputs Alonzo tx = collateral' tx
+getCollateralInputs Mary _ = Set.empty
+getCollateralInputs Allegra _ = Set.empty
+getCollateralInputs Shelley _ = Set.empty
 {-# NOINLINE getCollateralInputs #-}
 
 getCollateralOutputs :: Proof era -> TxBody era -> [TxOut era]
-getCollateralOutputs (Conway _) tx = case tx ^. collateralReturnTxBodyL of SNothing -> []; SJust x -> [x]
-getCollateralOutputs (Babbage _) tx = case collateralReturn' tx of SNothing -> []; SJust x -> [x]
-getCollateralOutputs (Alonzo _) _ = []
-getCollateralOutputs (Mary _) _ = []
-getCollateralOutputs (Allegra _) _ = []
-getCollateralOutputs (Shelley _) _ = []
+getCollateralOutputs Conway tx = case tx ^. collateralReturnTxBodyL of SNothing -> []; SJust x -> [x]
+getCollateralOutputs Babbage tx = case collateralReturn' tx of SNothing -> []; SJust x -> [x]
+getCollateralOutputs Alonzo _ = []
+getCollateralOutputs Mary _ = []
+getCollateralOutputs Allegra _ = []
+getCollateralOutputs Shelley _ = []
 {-# NOINLINE getCollateralOutputs #-}
 
 getInputs :: EraTxBody era => Proof era -> TxBody era -> Set (TxIn (EraCrypto era))
@@ -293,34 +293,34 @@ getWitnesses :: EraTx era => Proof era -> Tx era -> TxWits era
 getWitnesses _ tx = tx ^. witsTxL
 
 primaryLanguage :: Proof era -> Maybe Language
-primaryLanguage (Conway _) = Just PlutusV2
-primaryLanguage (Babbage _) = Just PlutusV2
-primaryLanguage (Alonzo _) = Just PlutusV1
+primaryLanguage Conway = Just PlutusV2
+primaryLanguage Babbage = Just PlutusV2
+primaryLanguage Alonzo = Just PlutusV1
 primaryLanguage _ = Nothing
 {-# NOINLINE primaryLanguage #-}
 
 alwaysTrue :: forall era. Proof era -> Maybe Language -> Natural -> Script era
-alwaysTrue (Conway _) (Just l) n = alwaysSucceedsLang @era l n
-alwaysTrue p@(Conway _) Nothing _ = fromNativeScript $ allOf [] p
-alwaysTrue (Babbage _) (Just l) n = alwaysSucceedsLang @era l n
-alwaysTrue p@(Babbage _) Nothing _ = fromNativeScript $ allOf [] p
-alwaysTrue (Alonzo _) (Just l) n = alwaysSucceedsLang @era l n
-alwaysTrue p@(Alonzo _) Nothing _ = fromNativeScript $ allOf [] p
-alwaysTrue p@(Mary _) _ n = always n p
-alwaysTrue p@(Allegra _) _ n = always n p
-alwaysTrue p@(Shelley _) _ n = always n p
+alwaysTrue Conway (Just l) n = alwaysSucceedsLang @era l n
+alwaysTrue p@Conway Nothing _ = fromNativeScript $ allOf [] p
+alwaysTrue Babbage (Just l) n = alwaysSucceedsLang @era l n
+alwaysTrue p@Babbage Nothing _ = fromNativeScript $ allOf [] p
+alwaysTrue Alonzo (Just l) n = alwaysSucceedsLang @era l n
+alwaysTrue p@Alonzo Nothing _ = fromNativeScript $ allOf [] p
+alwaysTrue p@Mary _ n = always n p
+alwaysTrue p@Allegra _ n = always n p
+alwaysTrue p@Shelley _ n = always n p
 {-# NOINLINE alwaysTrue #-}
 
 alwaysFalse :: forall era. Proof era -> Maybe Language -> Natural -> Script era
-alwaysFalse (Conway _) (Just l) n = alwaysFailsLang @era l n
-alwaysFalse p@(Conway _) Nothing _ = fromNativeScript $ anyOf [] p
-alwaysFalse (Babbage _) (Just l) n = alwaysFailsLang @era l n
-alwaysFalse p@(Babbage _) Nothing _ = fromNativeScript $ anyOf [] p
-alwaysFalse (Alonzo _) (Just l) n = alwaysFailsLang @era l n
-alwaysFalse p@(Alonzo _) Nothing _ = fromNativeScript $ anyOf [] p
-alwaysFalse p@(Mary _) _ n = never n p
-alwaysFalse p@(Allegra _) _ n = never n p
-alwaysFalse p@(Shelley _) _ n = never n p
+alwaysFalse Conway (Just l) n = alwaysFailsLang @era l n
+alwaysFalse p@Conway Nothing _ = fromNativeScript $ anyOf [] p
+alwaysFalse Babbage (Just l) n = alwaysFailsLang @era l n
+alwaysFalse p@Babbage Nothing _ = fromNativeScript $ anyOf [] p
+alwaysFalse Alonzo (Just l) n = alwaysFailsLang @era l n
+alwaysFalse p@Alonzo Nothing _ = fromNativeScript $ anyOf [] p
+alwaysFalse p@Mary _ n = never n p
+alwaysFalse p@Allegra _ n = never n p
+alwaysFalse p@Shelley _ n = never n p
 {-# NOINLINE alwaysFalse #-}
 
 certs :: (ShelleyEraTxBody era, EraTx era) => Proof era -> Tx era -> [TxCert era]
@@ -347,12 +347,12 @@ createRUpdNonPulsing' proof model =
         Left err -> error ("Failed to calculate slots per epoch:\n" ++ show err)
         Right x -> x
    in (`runReader` testGlobals) $ case proof of
-        Conway _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Babbage _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Alonzo _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Mary _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Allegra _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
-        Shelley _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
+        Conway -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
+        Babbage -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
+        Alonzo -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
+        Mary -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
+        Allegra -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
+        Shelley -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
 {-# NOINLINE createRUpdNonPulsing' #-}
 
 languagesUsed ::
@@ -363,12 +363,12 @@ languagesUsed ::
   Set (ScriptHash (EraCrypto era)) ->
   Set Language
 languagesUsed proof tx utxo sNeeded = case proof of
-  (Shelley _) -> Set.empty
-  (Allegra _) -> Set.empty
-  (Mary _) -> Set.empty
-  (Alonzo _) -> languages tx utxo sNeeded
-  (Babbage _) -> languages tx utxo sNeeded
-  (Conway _) -> languages tx utxo sNeeded
+  Shelley -> Set.empty
+  Allegra -> Set.empty
+  Mary -> Set.empty
+  Alonzo -> languages tx utxo sNeeded
+  Babbage -> languages tx utxo sNeeded
+  Conway -> languages tx utxo sNeeded
 {-# NOINLINE languagesUsed #-}
 
 -- | Compute the Set of Languages in an era, where 'AlonzoScripts' are used
@@ -426,12 +426,12 @@ instance TotalAda (ShelleyGovState era) where
 
 govStateTotalAda :: forall era. Reflect era => GovState era -> Coin
 govStateTotalAda = case reify @era of
-  Shelley _ -> totalAda
-  Mary _ -> totalAda
-  Allegra _ -> totalAda
-  Alonzo _ -> totalAda
-  Babbage _ -> totalAda
-  Conway _ -> mempty
+  Shelley -> totalAda
+  Mary -> totalAda
+  Allegra -> totalAda
+  Alonzo -> totalAda
+  Babbage -> totalAda
+  Conway -> mempty
 
 instance Reflect era => TotalAda (LedgerState era) where
   totalAda (LedgerState utxos dps) = totalAda utxos <+> totalAda dps
@@ -443,10 +443,10 @@ instance Reflect era => TotalAda (NewEpochState era) where
   totalAda nes = totalAda (nesEs nes)
 
 adaPots :: Proof era -> EpochState era -> AdaPots
-adaPots (Conway _) es = totalAdaPotsES es
-adaPots (Babbage _) es = totalAdaPotsES es
-adaPots (Alonzo _) es = totalAdaPotsES es
-adaPots (Mary _) es = totalAdaPotsES es
-adaPots (Allegra _) es = totalAdaPotsES es
-adaPots (Shelley _) es = totalAdaPotsES es
+adaPots Conway es = totalAdaPotsES es
+adaPots Babbage es = totalAdaPotsES es
+adaPots Alonzo es = totalAdaPotsES es
+adaPots Mary es = totalAdaPotsES es
+adaPots Allegra es = totalAdaPotsES es
+adaPots Shelley es = totalAdaPotsES es
 {-# NOINLINE adaPots #-}

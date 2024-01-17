@@ -109,9 +109,9 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
  )
 import Test.Cardano.Ledger.Generic.Proof (
   BabbageEra,
-  Mock,
   Proof (..),
   Reflect (..),
+  StandardCrypto,
  )
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 
@@ -220,12 +220,12 @@ nonMyopicZero :: NonMyopic c
 nonMyopicZero = NonMyopic Map.empty mempty
 
 pParamsZeroByProof :: Proof era -> PParams era
-pParamsZeroByProof (Conway _) = def
-pParamsZeroByProof (Babbage _) = def
-pParamsZeroByProof (Alonzo _) = def
-pParamsZeroByProof (Mary _) = def
-pParamsZeroByProof (Allegra _) = def
-pParamsZeroByProof (Shelley _) = def
+pParamsZeroByProof Conway = def
+pParamsZeroByProof Babbage = def
+pParamsZeroByProof Alonzo = def
+pParamsZeroByProof Mary = def
+pParamsZeroByProof Allegra = def
+pParamsZeroByProof Shelley = def
 
 uTxOStateZero :: forall era. Reflect era => UTxOState era
 uTxOStateZero =
@@ -265,12 +265,12 @@ newEpochStateZero =
     (stashedAVVMAddressesZero (reify :: Proof era))
 
 stashedAVVMAddressesZero :: Proof era -> StashedAVVMAddresses era
-stashedAVVMAddressesZero (Shelley _) = utxoZero
-stashedAVVMAddressesZero (Conway _) = ()
-stashedAVVMAddressesZero (Babbage _) = ()
-stashedAVVMAddressesZero (Alonzo _) = ()
-stashedAVVMAddressesZero (Mary _) = ()
-stashedAVVMAddressesZero (Allegra _) = ()
+stashedAVVMAddressesZero Shelley = utxoZero
+stashedAVVMAddressesZero Conway = ()
+stashedAVVMAddressesZero Babbage = ()
+stashedAVVMAddressesZero Alonzo = ()
+stashedAVVMAddressesZero Mary = ()
+stashedAVVMAddressesZero Allegra = ()
 
 mNewEpochStateZero :: Reflect era => ModelNewEpochState era
 mNewEpochStateZero =
@@ -299,10 +299,10 @@ mNewEpochStateZero =
     , mRu = SNothing
     }
 
-testNES :: NewEpochState (BabbageEra Mock)
+testNES :: NewEpochState (BabbageEra StandardCrypto)
 testNES = newEpochStateZero
 
-testMNES :: ModelNewEpochState (BabbageEra Mock)
+testMNES :: ModelNewEpochState (BabbageEra StandardCrypto)
 testMNES = mNewEpochStateZero
 
 -- ======================================================================
@@ -445,5 +445,5 @@ epochBoundaryPDoc _proof x =
 
 instance Reflect era => PrettyA (ModelNewEpochState era) where prettyA = pcModelNewEpochState reify
 
-instance era ~ BabbageEra Mock => Show (ModelNewEpochState era) where
+instance Reflect era => Show (ModelNewEpochState era) where
   show x = show (prettyA x)

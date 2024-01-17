@@ -947,12 +947,12 @@ genOrFailList ::
 genOrFailList loud = foldlM' (genOrFail loud)
 
 genDependGraph :: Bool -> Proof era -> DependGraph era -> Gen (Either [String] (Subst era))
-genDependGraph loud (Shelley _) (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
-genDependGraph loud (Allegra _) (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
-genDependGraph loud (Mary _) (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
-genDependGraph loud (Alonzo _) (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
-genDependGraph loud (Babbage _) (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
-genDependGraph loud (Conway _) (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
+genDependGraph loud Shelley (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
+genDependGraph loud Allegra (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
+genDependGraph loud Mary (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
+genDependGraph loud Alonzo (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
+genDependGraph loud Babbage (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
+genDependGraph loud Conway (DependGraph pairs) = genOrFailList loud (Right emptySubst) pairs
 
 -- | Solve for one variable, and add its solution to the substitution
 solveOneVar :: Era era => Subst era -> ([Name era], [Pred era]) -> Gen (Subst era)

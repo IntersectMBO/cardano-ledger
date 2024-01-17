@@ -8,7 +8,7 @@ import Prettyprinter (defaultLayoutOptions, layoutPretty)
 import Prettyprinter.Render.Text (renderStrict)
 import Prettyprinter.Util (putDocW)
 import Test.Cardano.Ledger.Generic.PrettyCore
-import Test.Cardano.Ledger.Generic.Proof (Evidence (Standard), Proof (Shelley))
+import Test.Cardano.Ledger.Generic.Proof (Proof (Shelley))
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Tasty
@@ -56,4 +56,4 @@ prettyTest =
     , testPP "LedgerState" (pcLedgerState proof) ls
     ]
   where
-    proof = Shelley Standard
+    proof = Shelley

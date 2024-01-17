@@ -163,12 +163,12 @@ applyWithdrawals _proof model (RewardAcnt _network cred) coin =
 
 applyCert :: forall era. Reflect era => Model era -> TxCert era -> Model era
 applyCert = case reify @era of
-  Shelley _ -> applyShelleyCert
-  Mary _ -> applyShelleyCert
-  Allegra _ -> applyShelleyCert
-  Alonzo _ -> applyShelleyCert
-  Babbage _ -> applyShelleyCert
-  Conway _ -> undefined -- TODO once Conway era is done
+  Shelley -> applyShelleyCert
+  Mary -> applyShelleyCert
+  Allegra -> applyShelleyCert
+  Alonzo -> applyShelleyCert
+  Babbage -> applyShelleyCert
+  Conway -> undefined -- TODO once Conway era is done
 
 applyShelleyCert :: forall era. EraPParams era => Model era -> ShelleyTxCert era -> Model era
 applyShelleyCert model dcert = case dcert of
@@ -299,13 +299,13 @@ additions bodyhash firstTxIx outputs =
 --   the BabbageFeatures.hs unit test file.
 go :: IO ()
 go = do
-  let proof = Babbage Mock
+  let proof = Babbage
       tx = (notValidatingTx proof) {isValid = IsValid False}
       allinputs = txbody ^. allInputsTxBodyF
       txbody = body tx
       doc = pcTx proof tx
       model1 =
-        (mNewEpochStateZero @(BabbageEra Mock))
+        (mNewEpochStateZero @(BabbageEra StandardCrypto))
           { mUTxO = Map.restrictKeys (unUTxO (initUTxO proof)) allinputs
           , mCount = 0
           , mFees = Coin 10

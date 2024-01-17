@@ -193,7 +193,7 @@ txOutPreds size@UnivSize {usDatumFreq} p balanceCoin outputS =
 
 demo :: ReplMode -> IO ()
 demo mode = do
-  let proof = Conway Standard
+  let proof = Conway
   env <-
     generate
       ( pure emptySubst

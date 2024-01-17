@@ -107,7 +107,7 @@ instance Merge (Map (ScriptHash c) v) where
 -- Updaters for Tx
 
 updateTx :: Proof era -> Tx era -> TxField era -> Tx era
-updateTx wit@(Shelley _) tx@(ShelleyTx b w d) dt =
+updateTx wit@Shelley tx@(ShelleyTx b w d) dt =
   case dt of
     Body fbody -> ShelleyTx fbody w d
     BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
@@ -115,7 +115,7 @@ updateTx wit@(Shelley _) tx@(ShelleyTx b w d) dt =
     WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
     AuxData faux -> ShelleyTx b w faux
     Valid _ -> tx
-updateTx wit@(Allegra _) tx@(ShelleyTx b w d) dt =
+updateTx wit@Allegra tx@(ShelleyTx b w d) dt =
   case dt of
     Body fbody -> ShelleyTx fbody w d
     BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
@@ -123,7 +123,7 @@ updateTx wit@(Allegra _) tx@(ShelleyTx b w d) dt =
     WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
     AuxData faux -> ShelleyTx b w faux
     Valid _ -> tx
-updateTx wit@(Mary _) tx@(ShelleyTx b w d) dt =
+updateTx wit@Mary tx@(ShelleyTx b w d) dt =
   case dt of
     Body fbody -> ShelleyTx fbody w d
     BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
@@ -131,7 +131,7 @@ updateTx wit@(Mary _) tx@(ShelleyTx b w d) dt =
     WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
     AuxData faux -> ShelleyTx b w faux
     Valid _ -> tx
-updateTx wit@(Alonzo _) (Alonzo.AlonzoTx b w iv d) dt =
+updateTx wit@Alonzo (Alonzo.AlonzoTx b w iv d) dt =
   case dt of
     Body fbody -> Alonzo.AlonzoTx fbody w iv d
     BodyI bfields -> Alonzo.AlonzoTx (newTxBody wit bfields) w iv d
@@ -139,7 +139,7 @@ updateTx wit@(Alonzo _) (Alonzo.AlonzoTx b w iv d) dt =
     WitnessesI wfields -> Alonzo.AlonzoTx b (newWitnesses override wit wfields) iv d
     AuxData faux -> Alonzo.AlonzoTx b w iv faux
     Valid iv' -> Alonzo.AlonzoTx b w iv' d
-updateTx wit@(Babbage _) (AlonzoTx b w iv d) dt =
+updateTx wit@Babbage (AlonzoTx b w iv d) dt =
   case dt of
     Body fbody -> AlonzoTx fbody w iv d
     BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d
@@ -147,7 +147,7 @@ updateTx wit@(Babbage _) (AlonzoTx b w iv d) dt =
     WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
     AuxData faux -> AlonzoTx b w iv faux
     Valid iv' -> AlonzoTx b w iv' d
-updateTx wit@(Conway _) (AlonzoTx b w iv d) dt =
+updateTx wit@Conway (AlonzoTx b w iv d) dt =
   case dt of
     Body fbody -> AlonzoTx fbody w iv d
     BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d
@@ -170,26 +170,26 @@ updateTxBody pf txBody dt =
     _ | Outputs outs <- dt -> txBody & outputsTxBodyL .~ outs
     _ | Txfee fee <- dt -> txBody & feeTxBodyL .~ fee
     _ | AdHash auxDataHash <- dt -> txBody & auxDataHashTxBodyL .~ auxDataHash
-    Shelley _ -> case dt of
+    Shelley -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
       Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       TTL ttl -> txBody & ttlTxBodyL .~ ttl
       Update update -> txBody & updateTxBodyL .~ update
       _ -> txBody
-    Allegra _ -> case dt of
+    Allegra -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
       Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
       _ -> txBody
-    Mary _ -> case dt of
+    Mary -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
       Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
       Update update -> txBody & updateTxBodyL .~ update
       Mint mint -> txBody & mintTxBodyL .~ mint
       _ -> txBody
-    Alonzo _ -> case dt of
+    Alonzo -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
       Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
@@ -200,7 +200,7 @@ updateTxBody pf txBody dt =
       WppHash scriptIntegrityHash -> txBody & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
       Txnetworkid networkId -> txBody & networkIdTxBodyL .~ networkId
       _ -> txBody
-    Babbage _ -> case dt of
+    Babbage -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
       Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
@@ -214,7 +214,7 @@ updateTxBody pf txBody dt =
       TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
       _ -> txBody
-    Conway _ -> case dt of
+    Conway -> case dt of
       Certs certs -> txBody & certsTxBodyL .~ certs
       Withdrawals' withdrawals -> txBody & withdrawalsTxBodyL .~ withdrawals
       Vldt vldt -> txBody & vldtTxBodyL .~ vldt
@@ -237,34 +237,34 @@ newTxBody era = List.foldl' (updateTxBody era) (initialTxBody era)
 -- Updaters for TxWits
 
 updateWitnesses :: forall era. Policy -> Proof era -> TxWits era -> WitnessesField era -> TxWits era
-updateWitnesses p (Shelley _) w dw = case dw of
+updateWitnesses p Shelley w dw = case dw of
   (AddrWits ks) -> w {Shelley.addrWits = p (Shelley.addrWits w) ks}
   (BootWits boots) -> w {Shelley.bootWits = p (Shelley.bootWits w) boots}
   (ScriptWits ss) -> w {Shelley.scriptWits = p (Shelley.scriptWits w) ss}
   _ -> w
-updateWitnesses p (Allegra _) w dw = case dw of
+updateWitnesses p Allegra w dw = case dw of
   (AddrWits ks) -> w {Shelley.addrWits = p (Shelley.addrWits w) ks}
   (BootWits boots) -> w {Shelley.bootWits = p (Shelley.bootWits w) boots}
   (ScriptWits ss) -> w {Shelley.scriptWits = p (Shelley.scriptWits w) ss}
   _ -> w
-updateWitnesses p (Mary _) w dw = case dw of
+updateWitnesses p Mary w dw = case dw of
   (AddrWits ks) -> w {Shelley.addrWits = p (Shelley.addrWits w) ks}
   (BootWits boots) -> w {Shelley.bootWits = p (Shelley.bootWits w) boots}
   (ScriptWits ss) -> w {Shelley.scriptWits = p (Shelley.scriptWits w) ss}
   _ -> w
-updateWitnesses p (Alonzo _) w dw = case dw of
+updateWitnesses p Alonzo w dw = case dw of
   (AddrWits ks) -> w {txwitsVKey = p (txwitsVKey w) ks}
   (BootWits boots) -> w {txwitsBoot = p (txwitsBoot w) boots}
   (ScriptWits ss) -> w {txscripts = p (txscripts w) ss}
   (DataWits ds) -> w {txdats = p (txdats w) ds}
   (RdmrWits r) -> w {txrdmrs = p (txrdmrs w) r}
-updateWitnesses p (Babbage _) w dw = case dw of
+updateWitnesses p Babbage w dw = case dw of
   (AddrWits ks) -> w {txwitsVKey = p (txwitsVKey w) ks}
   (BootWits boots) -> w {txwitsBoot = p (txwitsBoot w) boots}
   (ScriptWits ss) -> w {txscripts = p (txscripts w) ss}
   (DataWits ds) -> w {txdats = p (txdats w) ds}
   (RdmrWits r) -> w {txrdmrs = p (txrdmrs w) r}
-updateWitnesses p (Conway _) w dw = case dw of
+updateWitnesses p Conway w dw = case dw of
   (AddrWits ks) -> w {txwitsVKey = p (txwitsVKey w) ks}
   (BootWits boots) -> w {txwitsBoot = p (txwitsBoot w) boots}
   (ScriptWits ss) -> w {txscripts = p (txscripts w) ss}
@@ -283,32 +283,32 @@ notAddress (Address _) = False
 notAddress _ = True
 
 updateTxOut :: Proof era -> TxOut era -> TxOutField era -> TxOut era
-updateTxOut (Shelley _) (out@(ShelleyTxOut a v)) txoutd = case txoutd of
+updateTxOut Shelley (out@(ShelleyTxOut a v)) txoutd = case txoutd of
   Address addr -> ShelleyTxOut addr v
   Amount val -> ShelleyTxOut a val
   _ -> out
-updateTxOut (Allegra _) (out@(ShelleyTxOut a v)) txoutd = case txoutd of
+updateTxOut Allegra (out@(ShelleyTxOut a v)) txoutd = case txoutd of
   Address addr -> ShelleyTxOut addr v
   Amount val -> ShelleyTxOut a val
   _ -> out
-updateTxOut (Mary _) (out@(ShelleyTxOut a v)) txoutd = case txoutd of
+updateTxOut Mary (out@(ShelleyTxOut a v)) txoutd = case txoutd of
   Address addr -> ShelleyTxOut addr v
   Amount val -> ShelleyTxOut a val
   _ -> out
-updateTxOut (Alonzo _) (out@(AlonzoTxOut a v h)) txoutd = case txoutd of
+updateTxOut Alonzo (out@(AlonzoTxOut a v h)) txoutd = case txoutd of
   Address addr -> AlonzoTxOut addr v h
   Amount val -> AlonzoTxOut a val h
   DHash mdh -> AlonzoTxOut a v mdh
   FDatum d -> error ("This feature is only available from Babbage onward " ++ show d)
   _ -> out
-updateTxOut (Babbage _) (BabbageTxOut a v h refscript) txoutd = case txoutd of
+updateTxOut Babbage (BabbageTxOut a v h refscript) txoutd = case txoutd of
   Address addr -> BabbageTxOut addr v h refscript
   Amount val -> BabbageTxOut a val h refscript
   DHash SNothing -> BabbageTxOut a v NoDatum refscript
   DHash (SJust dh) -> BabbageTxOut a v (DatumHash dh) refscript
   FDatum d -> BabbageTxOut a v d refscript
   RefScript s -> BabbageTxOut a v h s
-updateTxOut (Conway _) (BabbageTxOut a v h refscript) txoutd = case txoutd of
+updateTxOut Conway (BabbageTxOut a v h refscript) txoutd = case txoutd of
   Address addr -> BabbageTxOut addr v h refscript
   Amount val -> BabbageTxOut a val h refscript
   DHash SNothing -> BabbageTxOut a v NoDatum refscript
@@ -345,25 +345,25 @@ updatePParams proof pp' ppf =
         MinPoolCost coin -> pp' & ppMinPoolCostL .~ coin
         _ -> pp'
    in case proof of
-        Shelley _ ->
+        Shelley ->
           case ppf of
             D d -> pp & ppDL .~ d
             ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
             MinUTxOValue mu -> pp & ppMinUTxOValueL .~ mu
             _ -> pp
-        Allegra _ ->
+        Allegra ->
           case ppf of
             D d -> pp & ppDL .~ d
             ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
             MinUTxOValue mu -> pp & ppMinUTxOValueL .~ mu
             _ -> pp
-        Mary _ ->
+        Mary ->
           case ppf of
             D d -> pp & ppDL .~ d
             ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
             MinUTxOValue mu -> pp & ppMinUTxOValueL .~ mu
             _ -> pp
-        Alonzo _ ->
+        Alonzo ->
           case ppf of
             D d -> pp & ppDL .~ d
             ExtraEntropy nonce -> pp & ppExtraEntropyL .~ nonce
@@ -376,7 +376,7 @@ updatePParams proof pp' ppf =
             CollateralPercentage colPerc -> pp & ppCollateralPercentageL .~ colPerc
             MaxCollateralInputs maxColInputs -> pp & ppMaxCollateralInputsL .~ maxColInputs
             _ -> pp
-        Babbage _ ->
+        Babbage ->
           case ppf of
             CoinPerUTxOByte coinPerByte -> pp & ppCoinsPerUTxOByteL .~ coinPerByte
             Costmdls costModels -> pp & ppCostModelsL .~ costModels
@@ -387,7 +387,7 @@ updatePParams proof pp' ppf =
             CollateralPercentage colPerc -> pp & ppCollateralPercentageL .~ colPerc
             MaxCollateralInputs maxColInputs -> pp & ppMaxCollateralInputsL .~ maxColInputs
             _ -> pp
-        Conway _ ->
+        Conway ->
           case ppf of
             CoinPerUTxOByte coinPerByte -> pp & ppCoinsPerUTxOByteL .~ coinPerByte
             Costmdls costModels -> pp & ppCostModelsL .~ costModels
@@ -420,26 +420,26 @@ newScriptIntegrityHash ::
   Redeemers era ->
   TxDats era ->
   StrictMaybe (Alonzo.ScriptIntegrityHash (EraCrypto era))
-newScriptIntegrityHash (Conway _) pp ls rds dats =
+newScriptIntegrityHash Conway pp ls rds dats =
   hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
-newScriptIntegrityHash (Babbage _) pp ls rds dats =
+newScriptIntegrityHash Babbage pp ls rds dats =
   hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
-newScriptIntegrityHash (Alonzo _) pp ls rds dats =
+newScriptIntegrityHash Alonzo pp ls rds dats =
   hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
 newScriptIntegrityHash _wit _pp _ls _rds _dats = SNothing
 
 defaultCostModels :: Proof era -> PParamsField era
-defaultCostModels (Shelley _) = Costmdls emptyCostModels
-defaultCostModels (Allegra _) = Costmdls emptyCostModels
-defaultCostModels (Mary _) = Costmdls emptyCostModels
-defaultCostModels (Alonzo _) = Costmdls $ zeroTestingCostModels [PlutusV1]
-defaultCostModels (Babbage _) = Costmdls $ zeroTestingCostModels [PlutusV1, PlutusV2]
-defaultCostModels (Conway _) = Costmdls $ zeroTestingCostModels [PlutusV1, PlutusV2]
+defaultCostModels Shelley = Costmdls emptyCostModels
+defaultCostModels Allegra = Costmdls emptyCostModels
+defaultCostModels Mary = Costmdls emptyCostModels
+defaultCostModels Alonzo = Costmdls $ zeroTestingCostModels [PlutusV1]
+defaultCostModels Babbage = Costmdls $ zeroTestingCostModels [PlutusV1, PlutusV2]
+defaultCostModels Conway = Costmdls $ zeroTestingCostModels [PlutusV1, PlutusV2]
 
 languages :: Proof era -> [Language]
-languages (Shelley _) = []
-languages (Allegra _) = []
-languages (Mary _) = []
-languages (Alonzo _) = [PlutusV1]
-languages (Babbage _) = [PlutusV1, PlutusV2]
-languages (Conway _) = [PlutusV1, PlutusV2]
+languages Shelley = []
+languages Allegra = []
+languages Mary = []
+languages Alonzo = [PlutusV1]
+languages Babbage = [PlutusV1, PlutusV2]
+languages Conway = [PlutusV1, PlutusV2]

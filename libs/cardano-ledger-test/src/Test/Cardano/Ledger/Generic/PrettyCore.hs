@@ -817,12 +817,12 @@ extractAlonzoTxAuxDataScripts ::
   StrictSeq (Script era)
 extractAlonzoTxAuxDataScripts auxData =
   case reify @era of
-    Shelley _ -> error "Unsuported"
-    Allegra _ -> error "Unsuported"
-    Mary _ -> error "Unsuported"
-    Alonzo _ -> getAlonzoTxAuxDataScripts auxData
-    Babbage _ -> getAlonzoTxAuxDataScripts auxData
-    Conway _ -> getAlonzoTxAuxDataScripts auxData
+    Shelley -> error "Unsuported"
+    Allegra -> error "Unsuported"
+    Mary -> error "Unsuported"
+    Alonzo -> getAlonzoTxAuxDataScripts auxData
+    Babbage -> getAlonzoTxAuxDataScripts auxData
+    Conway -> getAlonzoTxAuxDataScripts auxData
 
 instance
   (Reflect era, Script era ~ AlonzoScript era) =>
@@ -830,13 +830,13 @@ instance
   where
   prettyA = ppAlonzoTxAuxData
 
-pcAuxData :: Reflect era => Proof era -> TxAuxData era -> PDoc
-pcAuxData (Shelley _) x = ppShelleyTxAuxData x
-pcAuxData (Allegra _) x = ppAllegraTxAuxData x
-pcAuxData (Mary _) x = ppAllegraTxAuxData x
-pcAuxData (Alonzo _) x = ppAlonzoTxAuxData x
-pcAuxData (Babbage _) x = ppAlonzoTxAuxData x
-pcAuxData (Conway _) x = ppAlonzoTxAuxData x
+pcAuxData :: Proof era -> TxAuxData era -> PDoc
+pcAuxData Shelley x = ppShelleyTxAuxData x
+pcAuxData Allegra x = ppAllegraTxAuxData x
+pcAuxData Mary x = ppAllegraTxAuxData x
+pcAuxData Alonzo x = ppAlonzoTxAuxData x
+pcAuxData Babbage x = ppAlonzoTxAuxData x
+pcAuxData Conway x = ppAlonzoTxAuxData x
 
 ppWithdrawals :: Withdrawals c -> PDoc
 ppWithdrawals (Withdrawals m) = ppSexp "Withdrawals" [ppMap' (text "Wdr") pcRewardAcnt pcCoin m]
@@ -949,41 +949,41 @@ instance (TxBody era ~ MaryTxBody era, Reflect era) => PrettyA (MaryTxBody era) 
 -- any type family.
 -- ==============================================================
 
-ppCoreWitnesses :: Reflect era => Proof era -> TxWits era -> PDoc
-ppCoreWitnesses (Conway _) x = ppTxWitness x
-ppCoreWitnesses (Babbage _) x = ppTxWitness x
-ppCoreWitnesses (Alonzo _) x = ppTxWitness x
-ppCoreWitnesses (Mary _) x = ppWitnessSetHKD x
-ppCoreWitnesses (Allegra _) x = ppWitnessSetHKD x
-ppCoreWitnesses (Shelley _) x = ppWitnessSetHKD x
+ppCoreWitnesses :: Proof era -> TxWits era -> PDoc
+ppCoreWitnesses Conway x = ppTxWitness x
+ppCoreWitnesses Babbage x = ppTxWitness x
+ppCoreWitnesses Alonzo x = ppTxWitness x
+ppCoreWitnesses Mary x = ppWitnessSetHKD x
+ppCoreWitnesses Allegra x = ppWitnessSetHKD x
+ppCoreWitnesses Shelley x = ppWitnessSetHKD x
 
 pcTxOut :: Reflect era => Proof era -> TxOut era -> PDoc
-pcTxOut p@(Conway _) (BabbageTxOut addr v d s) =
+pcTxOut p@Conway (BabbageTxOut addr v d s) =
   ppSexp "TxOut" [pcAddr addr, pcValue v, pcDatum d, ppStrictMaybe (pcScript p) s]
-pcTxOut p@(Babbage _) (BabbageTxOut addr v d s) =
+pcTxOut p@Babbage (BabbageTxOut addr v d s) =
   ppSexp "TxOut" [pcAddr addr, pcValue v, pcDatum d, ppStrictMaybe (pcScript p) s]
-pcTxOut (Alonzo _) (AlonzoTxOut addr v md) =
+pcTxOut Alonzo (AlonzoTxOut addr v md) =
   ppSexp "TxOut" [pcAddr addr, pcValue v, ppStrictMaybe pcDataHash md]
-pcTxOut p@(Mary _) (ShelleyTxOut addr v) =
+pcTxOut p@Mary (ShelleyTxOut addr v) =
   ppSexp "TxOut" [pcAddr addr, pcCoreValue p v]
-pcTxOut p@(Allegra _) (ShelleyTxOut addr v) =
+pcTxOut p@Allegra (ShelleyTxOut addr v) =
   ppSexp "TxOut" [pcAddr addr, pcCoreValue p v]
-pcTxOut p@(Shelley _) (ShelleyTxOut addr v) =
+pcTxOut p@Shelley (ShelleyTxOut addr v) =
   ppSexp "TxOut" [pcAddr addr, pcCoreValue p v]
 
 pcScript :: forall era. Reflect era => Proof era -> Script era -> PDoc
-pcScript (Conway _) (TimelockScript t) = pcTimelock @era t
-pcScript p@(Conway _) s@(PlutusScript v) =
+pcScript Conway (TimelockScript t) = pcTimelock @era t
+pcScript p@Conway s@(PlutusScript v) =
   parens (hsep [ppString ("PlutusScript " <> show (plutusScriptLanguage v) <> " "), pcHashScript p s])
-pcScript (Babbage _) (TimelockScript t) = pcTimelock @era t
-pcScript p@(Babbage _) s@(PlutusScript v) =
+pcScript Babbage (TimelockScript t) = pcTimelock @era t
+pcScript p@Babbage s@(PlutusScript v) =
   parens (hsep [ppString ("PlutusScript " <> show (plutusScriptLanguage v) <> " "), pcHashScript p s])
-pcScript (Alonzo _) (TimelockScript t) = pcTimelock @era t
-pcScript p@(Alonzo _) s@(PlutusScript v) =
+pcScript Alonzo (TimelockScript t) = pcTimelock @era t
+pcScript p@Alonzo s@(PlutusScript v) =
   parens (hsep [ppString ("PlutusScript " <> show (plutusScriptLanguage v) <> " "), pcHashScript p s])
-pcScript (Mary _) s = pcTimelock @era s
-pcScript (Allegra _) s = pcTimelock @era s
-pcScript p@(Shelley _) s = pcMultiSig @era (pcHashScript @era p s) s
+pcScript Mary s = pcTimelock @era s
+pcScript Allegra s = pcTimelock @era s
+pcScript p@Shelley s = pcMultiSig @era (pcHashScript @era p s) s
 
 pcWitnesses ::
   Reflect era =>
@@ -1135,17 +1135,17 @@ pcPParamsField x = case x of
 -- Complicated because some Eras do NOT have type instances for all (EraRule "XXX")
 
 ppUTXOW :: Reflect era => Proof era -> PredicateFailure (EraRule "UTXOW" era) -> PDoc
-ppUTXOW (Shelley _) x = ppShelleyUtxowPredFailure x
-ppUTXOW (Allegra _) x = ppShelleyUtxowPredFailure x
-ppUTXOW (Mary _) x = ppShelleyUtxowPredFailure x
-ppUTXOW (Alonzo _) x = ppAlonzoUtxowPredFailure x
-ppUTXOW p@(Babbage _) x = ppBabbageUtxowPredFailure p x
-ppUTXOW p@(Conway _) x = ppBabbageUtxowPredFailure p x
+ppUTXOW Shelley x = ppShelleyUtxowPredFailure x
+ppUTXOW Allegra x = ppShelleyUtxowPredFailure x
+ppUTXOW Mary x = ppShelleyUtxowPredFailure x
+ppUTXOW Alonzo x = ppAlonzoUtxowPredFailure x
+ppUTXOW p@Babbage x = ppBabbageUtxowPredFailure p x
+ppUTXOW p@Conway x = ppBabbageUtxowPredFailure p x
 
-ppUTXOS :: Reflect era => Proof era -> PredicateFailure (EraRule "UTXOS" era) -> PDoc
-ppUTXOS (Alonzo _) x = ppUtxosPredicateFailure x
-ppUTXOS (Babbage _) x = ppUtxosPredicateFailure x
-ppUTXOS (Conway _) x = ppUtxosPredicateFailure x
+ppUTXOS :: Proof era -> PredicateFailure (EraRule "UTXOS" era) -> PDoc
+ppUTXOS Alonzo x = ppUtxosPredicateFailure x
+ppUTXOS Babbage x = ppUtxosPredicateFailure x
+ppUTXOS Conway x = ppUtxosPredicateFailure x
 ppUTXOS proof _ =
   error
     ( "Only the AlonzoEra, BabbageEra, and ConwayEra have a (PredicateFailure (EraRule \"UTXOS\" era))."
@@ -1154,12 +1154,12 @@ ppUTXOS proof _ =
     )
 
 ppDELEGS :: Proof era -> PredicateFailure (EraRule "DELEGS" era) -> PDoc
-ppDELEGS p@(Shelley _) x = ppShelleyDelegsPredFailure p x
-ppDELEGS p@(Allegra _) x = ppShelleyDelegsPredFailure p x
-ppDELEGS p@(Mary _) x = ppShelleyDelegsPredFailure p x
-ppDELEGS p@(Alonzo _) x = ppShelleyDelegsPredFailure p x
-ppDELEGS p@(Babbage _) x = ppShelleyDelegsPredFailure p x
-ppDELEGS p@(Conway _) _ =
+ppDELEGS p@Shelley x = ppShelleyDelegsPredFailure p x
+ppDELEGS p@Allegra x = ppShelleyDelegsPredFailure p x
+ppDELEGS p@Mary x = ppShelleyDelegsPredFailure p x
+ppDELEGS p@Alonzo x = ppShelleyDelegsPredFailure p x
+ppDELEGS p@Babbage x = ppShelleyDelegsPredFailure p x
+ppDELEGS p@Conway _ =
   error
     ( "Only the Shelley, Allegra, Mary, Alonzo, and Babbage era have a (PredicateFailure (EraRule \"DELEGS\" era))."
         ++ "This Era is "
@@ -1167,96 +1167,96 @@ ppDELEGS p@(Conway _) _ =
     )
 
 ppDELEG :: Proof era -> PredicateFailure (EraRule "DELEG" era) -> PDoc
-ppDELEG (Shelley _) x = ppShelleyDelegPredFailure x
-ppDELEG (Allegra _) x = ppShelleyDelegPredFailure x
-ppDELEG (Mary _) x = ppShelleyDelegPredFailure x
-ppDELEG (Alonzo _) x = ppShelleyDelegPredFailure x
-ppDELEG (Babbage _) x = ppShelleyDelegPredFailure x
-ppDELEG (Conway _) x = ppConwayDelegPredFailure x
+ppDELEG Shelley x = ppShelleyDelegPredFailure x
+ppDELEG Allegra x = ppShelleyDelegPredFailure x
+ppDELEG Mary x = ppShelleyDelegPredFailure x
+ppDELEG Alonzo x = ppShelleyDelegPredFailure x
+ppDELEG Babbage x = ppShelleyDelegPredFailure x
+ppDELEG Conway x = ppConwayDelegPredFailure x
 
 ppPOOL :: Proof era -> PredicateFailure (EraRule "POOL" era) -> PDoc
-ppPOOL (Shelley _) x = ppShelleyPoolPredFailure x
-ppPOOL (Allegra _) x = ppShelleyPoolPredFailure x
-ppPOOL (Mary _) x = ppShelleyPoolPredFailure x
-ppPOOL (Alonzo _) x = ppShelleyPoolPredFailure x
-ppPOOL (Babbage _) x = ppShelleyPoolPredFailure x
-ppPOOL (Conway _) x = ppShelleyPoolPredFailure x
+ppPOOL Shelley x = ppShelleyPoolPredFailure x
+ppPOOL Allegra x = ppShelleyPoolPredFailure x
+ppPOOL Mary x = ppShelleyPoolPredFailure x
+ppPOOL Alonzo x = ppShelleyPoolPredFailure x
+ppPOOL Babbage x = ppShelleyPoolPredFailure x
+ppPOOL Conway x = ppShelleyPoolPredFailure x
 
 ppLEDGER :: Reflect era => Proof era -> PredicateFailure (EraRule "LEDGER" era) -> PDoc
-ppLEDGER p@(Shelley _) x = ppShelleyLedgerPredFailure p x
-ppLEDGER p@(Allegra _) x = ppShelleyLedgerPredFailure p x
-ppLEDGER p@(Mary _) x = ppShelleyLedgerPredFailure p x
-ppLEDGER p@(Alonzo _) x = ppShelleyLedgerPredFailure p x
-ppLEDGER p@(Babbage _) x = ppShelleyLedgerPredFailure p x
-ppLEDGER p@(Conway _) x = ppConwayLedgerPredFailure p x
+ppLEDGER p@Shelley x = ppShelleyLedgerPredFailure p x
+ppLEDGER p@Allegra x = ppShelleyLedgerPredFailure p x
+ppLEDGER p@Mary x = ppShelleyLedgerPredFailure p x
+ppLEDGER p@Alonzo x = ppShelleyLedgerPredFailure p x
+ppLEDGER p@Babbage x = ppShelleyLedgerPredFailure p x
+ppLEDGER p@Conway x = ppConwayLedgerPredFailure p x
 
-ppUTXO :: Reflect era => Proof era -> PredicateFailure (EraRule "UTXO" era) -> PDoc
-ppUTXO (Shelley _) x = ppShelleyUtxoPredFailure x
-ppUTXO (Allegra _) x = ppAllegraUtxoPredFailure x
-ppUTXO (Mary _) x = ppAllegraUtxoPredFailure x
-ppUTXO (Alonzo _) x = ppAlonzoUtxoPredFailure x
-ppUTXO (Babbage _) x = ppBabbageUtxoPredFailure x
-ppUTXO (Conway _) x = ppBabbageUtxoPredFailure x
+ppUTXO :: Proof era -> PredicateFailure (EraRule "UTXO" era) -> PDoc
+ppUTXO Shelley x = ppShelleyUtxoPredFailure x
+ppUTXO Allegra x = ppAllegraUtxoPredFailure x
+ppUTXO Mary x = ppAllegraUtxoPredFailure x
+ppUTXO Alonzo x = ppAlonzoUtxoPredFailure x
+ppUTXO Babbage x = ppBabbageUtxoPredFailure x
+ppUTXO Conway x = ppBabbageUtxoPredFailure x
 
 ppLEDGERS :: Proof era -> PredicateFailure (EraRule "LEDGERS" era) -> PDoc
-ppLEDGERS p@(Shelley _) x = unReflect ppShelleyLedgersPredFailure p x
-ppLEDGERS p@(Allegra _) x = unReflect ppShelleyLedgersPredFailure p x
-ppLEDGERS p@(Mary _) x = unReflect ppShelleyLedgersPredFailure p x
-ppLEDGERS p@(Alonzo _) x = unReflect ppShelleyLedgersPredFailure p x
-ppLEDGERS p@(Babbage _) x = unReflect ppShelleyLedgersPredFailure p x
-ppLEDGERS p@(Conway _) x = unReflect ppShelleyLedgersPredFailure p x
+ppLEDGERS p@Shelley x = unReflect ppShelleyLedgersPredFailure p x
+ppLEDGERS p@Allegra x = unReflect ppShelleyLedgersPredFailure p x
+ppLEDGERS p@Mary x = unReflect ppShelleyLedgersPredFailure p x
+ppLEDGERS p@Alonzo x = unReflect ppShelleyLedgersPredFailure p x
+ppLEDGERS p@Babbage x = unReflect ppShelleyLedgersPredFailure p x
+ppLEDGERS p@Conway x = unReflect ppShelleyLedgersPredFailure p x
 
 ppDELPL :: Proof era -> PredicateFailure (EraRule "DELPL" era) -> PDoc
-ppDELPL p@(Shelley _) x = ppShelleyDelplPredFailure p x
-ppDELPL p@(Allegra _) x = ppShelleyDelplPredFailure p x
-ppDELPL p@(Mary _) x = ppShelleyDelplPredFailure p x
-ppDELPL p@(Alonzo _) x = ppShelleyDelplPredFailure p x
-ppDELPL p@(Babbage _) x = ppShelleyDelplPredFailure p x
-ppDELPL p@(Conway _) _ =
+ppDELPL p@Shelley x = ppShelleyDelplPredFailure p x
+ppDELPL p@Allegra x = ppShelleyDelplPredFailure p x
+ppDELPL p@Mary x = ppShelleyDelplPredFailure p x
+ppDELPL p@Alonzo x = ppShelleyDelplPredFailure p x
+ppDELPL p@Babbage x = ppShelleyDelplPredFailure p x
+ppDELPL p@Conway _ =
   error
     ( "Only the Shelley, Allegra, Mary, Alonzo, and Babbage era have a (PredicateFailure (EraRule \"DELPL\" era))."
         ++ "This Era is "
         ++ show p
     )
 
-ppNEWEPOCH :: Reflect era => Proof era -> PredicateFailure (EraRule "NEWEPOCH" era) -> PDoc
-ppNEWEPOCH (Shelley _) x = ppShelleyNewEpochPredicateFailure x
-ppNEWEPOCH (Allegra _) x = ppShelleyNewEpochPredicateFailure x
-ppNEWEPOCH (Mary _) x = ppShelleyNewEpochPredicateFailure x
-ppNEWEPOCH (Alonzo _) x = ppShelleyNewEpochPredicateFailure x
-ppNEWEPOCH (Babbage _) x = ppShelleyNewEpochPredicateFailure x
-ppNEWEPOCH (Conway _) x = ppConwayNewEpochPredFailure x
+ppNEWEPOCH :: Proof era -> PredicateFailure (EraRule "NEWEPOCH" era) -> PDoc
+ppNEWEPOCH Shelley x = ppShelleyNewEpochPredicateFailure x
+ppNEWEPOCH Allegra x = ppShelleyNewEpochPredicateFailure x
+ppNEWEPOCH Mary x = ppShelleyNewEpochPredicateFailure x
+ppNEWEPOCH Alonzo x = ppShelleyNewEpochPredicateFailure x
+ppNEWEPOCH Babbage x = ppShelleyNewEpochPredicateFailure x
+ppNEWEPOCH Conway x = ppConwayNewEpochPredFailure x
 
-ppEPOCH :: Reflect era => Proof era -> PredicateFailure (EraRule "EPOCH" era) -> PDoc
-ppEPOCH (Shelley _) x = ppShelleyEpochPredFailure x
-ppEPOCH (Allegra _) x = ppShelleyEpochPredFailure x
-ppEPOCH (Mary _) x = ppShelleyEpochPredFailure x
-ppEPOCH (Alonzo _) x = ppShelleyEpochPredFailure x
-ppEPOCH (Babbage _) x = ppShelleyEpochPredFailure x
-ppEPOCH (Conway _) _ = ppString "PredicateFailure (ConwayEPOCH era) = Void, and can never Fail"
+ppEPOCH :: Proof era -> PredicateFailure (EraRule "EPOCH" era) -> PDoc
+ppEPOCH Shelley x = ppShelleyEpochPredFailure x
+ppEPOCH Allegra x = ppShelleyEpochPredFailure x
+ppEPOCH Mary x = ppShelleyEpochPredFailure x
+ppEPOCH Alonzo x = ppShelleyEpochPredFailure x
+ppEPOCH Babbage x = ppShelleyEpochPredFailure x
+ppEPOCH Conway _ = ppString "PredicateFailure (ConwayEPOCH era) = Void, and can never Fail"
 
 -- | A bit different since it is NOT of the form: PredicateFailure (EraRule "UPEC" era)
 --   but instead, the type family UpecPredFailurePV pv era
 --   where, type UpecPredFailure era = UpecPredFailurePV (ProtVerLow era) era
 --   But the effect is still the same. The Proof era, fixes the type family result.
 ppUPEC :: Proof era -> UpecPredFailure era -> PDoc
-ppUPEC (Shelley _) x = ppUpecPredicateFailure x
-ppUPEC (Mary _) x = ppUpecPredicateFailure x
-ppUPEC (Alonzo _) x = ppUpecPredicateFailure x
-ppUPEC (Allegra _) x = ppUpecPredicateFailure x
-ppUPEC (Babbage _) x = ppUpecPredicateFailure x
-ppUPEC (Conway _) x = absurd x
+ppUPEC Shelley x = ppUpecPredicateFailure x
+ppUPEC Mary x = ppUpecPredicateFailure x
+ppUPEC Alonzo x = ppUpecPredicateFailure x
+ppUPEC Allegra x = ppUpecPredicateFailure x
+ppUPEC Babbage x = ppUpecPredicateFailure x
+ppUPEC Conway x = absurd x
 
 -- | A bit different since it is NOT of the form: PredicateFailure (EraRule "LEDGERS" era)
 --   but instead:  State (EraRule "LEDGERS" era)
 --   But the effect is still the same. The Proof era, fixes the type family result.
 ppStateLEDGERS :: Proof era -> State (EraRule "LEDGERS" era) -> PDoc
-ppStateLEDGERS p@(Shelley _) = pcLedgerState p
-ppStateLEDGERS p@(Allegra _) = pcLedgerState p
-ppStateLEDGERS p@(Mary _) = pcLedgerState p
-ppStateLEDGERS p@(Alonzo _) = pcLedgerState p
-ppStateLEDGERS p@(Babbage _) = pcLedgerState p
-ppStateLEDGERS p@(Conway _) = pcLedgerState p
+ppStateLEDGERS p@Shelley = pcLedgerState p
+ppStateLEDGERS p@Allegra = pcLedgerState p
+ppStateLEDGERS p@Mary = pcLedgerState p
+ppStateLEDGERS p@Alonzo = pcLedgerState p
+ppStateLEDGERS p@Babbage = pcLedgerState p
+ppStateLEDGERS p@Conway = pcLedgerState p
 
 -- ============================================================================
 -- pretty printers for concrete types that are the target of PredicateFailure type instances
@@ -1292,18 +1292,18 @@ ppConwayLedgerPredFailure proof x = case x of
   ConwayWdrlNotDelegatedToDRep s -> ppSexp "ConwayWdrlNotDelegatedToDRep" [ppSet pcCredential s]
   ConwayTreasuryValueMismatch c1 c2 -> ppSexp "ConwayTreasuryValueMismatch" [pcCoin c1, pcCoin c2]
   ConwayGovFailure y -> case proof of
-    Conway _ -> ppSexp "ConwayGovFailure" [ppConwayGovPredFailure y]
+    Conway -> ppSexp "ConwayGovFailure" [ppConwayGovPredFailure y]
     _ -> error ("Only the ConwayEra has a (PredicateFailure (EraRule \"GOV\" era)). This Era is " ++ show proof)
   ConwayUtxowFailure y -> ppUTXOW proof y
   {- case proof of -- (PredicateFailure (EraRule "UTXOW" era))
-    Shelley _ -> ppShelleyUtxowPredFailure y
-    Allegra _ -> ppShelleyUtxowPredFailure y
-    Mary _ -> ppShelleyUtxowPredFailure y
-    Alonzo _ -> ppAlonzoUtxowPredFailure y
-    Babbage _ -> ppBabbageUtxowPredFailure proof y
-    Conway _ -> ppBabbageUtxowPredFailure proof y -}
+    Shelley -> ppShelleyUtxowPredFailure y
+    Allegra -> ppShelleyUtxowPredFailure y
+    Mary -> ppShelleyUtxowPredFailure y
+    Alonzo -> ppAlonzoUtxowPredFailure y
+    Babbage -> ppBabbageUtxowPredFailure proof y
+    Conway -> ppBabbageUtxowPredFailure proof y -}
   ConwayCertsFailure pf -> case proof of
-    Conway _ -> ppConwayCertsPredFailure proof pf
+    Conway -> ppConwayCertsPredFailure proof pf
     _ -> error ("Only the ConwayEra has a (PredicateFailure (EraRule \"CERTS\" era)). This Era is " ++ show proof)
 
 instance Reflect era => PrettyA (ConwayLedgerPredFailure era) where
@@ -1314,7 +1314,7 @@ ppConwayCertPredFailure proof x = case x of
   ConwayRules.DelegFailure pf -> ppSexp "DelegFailure" [ppDELEG proof pf] -- (PredicateFailure (EraRule "DELEG" era))
   ConwayRules.PoolFailure pf -> ppSexp ".PoolFailure" [ppPOOL proof pf] -- (PredicateFailure (EraRule "POOL" era))
   ConwayRules.GovCertFailure pf -> case proof of
-    Conway _ -> ppSexp "GovCertFailure" [ppConwayGovCertPredFailure pf] -- (PredicateFailure (EraRule "GOVCERT" era))
+    Conway -> ppSexp "GovCertFailure" [ppConwayGovCertPredFailure pf] -- (PredicateFailure (EraRule "GOVCERT" era))
     _ -> error ("Only the ConwayEra has a (PredicateFailure (EraRule \"GOVCERT\" era)). This Era is " ++ show proof)
 
 instance Reflect era => PrettyA (ConwayRules.ConwayCertPredFailure era) where
@@ -1335,7 +1335,7 @@ ppConwayCertsPredFailure proof x = case x of
   ConwayRules.DelegateeNotRegisteredDELEG kh -> ppSexp "DelegateeNotRegisteredDELEG" [pcKeyHash kh]
   WithdrawalsNotInRewardsCERTS m -> ppSexp "WithdrawalsNotInRewardsCERTS" [ppMap pcRewardAcnt pcCoin m]
   CertFailure pf -> case proof of
-    Conway _ -> ppSexp " CertFailure" [ppConwayCertPredFailure proof pf] -- !(PredicateFailure (EraRule "CERT" era))
+    Conway -> ppSexp " CertFailure" [ppConwayCertPredFailure proof pf] -- !(PredicateFailure (EraRule "CERT" era))
     _ -> error ("Only the ConwayEra has a (PredicateFailure (EraRule \"CERT\" era)). This Era is " ++ show proof)
 
 instance Reflect era => PrettyA (ConwayCertsPredFailure era) where
@@ -1797,32 +1797,32 @@ ppCollectError (BadTranslation x) = ppSexp "BadTranslation" [ppContextError x]
 ppContextError :: forall era. Reflect era => ContextError era -> PDoc
 ppContextError e =
   case reify @era of
-    Shelley _ -> error "Unsuported"
-    Allegra _ -> error "Unsuported"
-    Mary _ -> error "Unsuported"
-    Alonzo _ -> ppString (show e)
-    Babbage _ -> ppString (show e)
-    Conway _ -> ppString (show e)
+    Shelley -> error "Unsuported"
+    Allegra -> error "Unsuported"
+    Mary -> error "Unsuported"
+    Alonzo -> ppString (show e)
+    Babbage -> ppString (show e)
+    Conway -> ppString (show e)
 
 ppPlutusPurposeAsIndex :: forall era. Reflect era => PlutusPurpose AsIndex era -> PDoc
 ppPlutusPurposeAsIndex p =
   case reify @era of
-    Shelley _ -> error "Unsuported"
-    Allegra _ -> error "Unsuported"
-    Mary _ -> error "Unsuported"
-    Alonzo _ -> prettyA p
-    Babbage _ -> prettyA p
-    Conway _ -> prettyA p
+    Shelley -> error "Unsuported"
+    Allegra -> error "Unsuported"
+    Mary -> error "Unsuported"
+    Alonzo -> prettyA p
+    Babbage -> prettyA p
+    Conway -> prettyA p
 
 ppPlutusPurposeAsItem :: forall era. Reflect era => PlutusPurpose AsItem era -> PDoc
 ppPlutusPurposeAsItem p =
   case reify @era of
-    Shelley _ -> error "Unsuported"
-    Allegra _ -> error "Unsuported"
-    Mary _ -> error "Unsuported"
-    Alonzo _ -> prettyA p
-    Babbage _ -> prettyA p
-    Conway _ -> prettyA p
+    Shelley -> error "Unsuported"
+    Allegra -> error "Unsuported"
+    Mary -> error "Unsuported"
+    Alonzo -> prettyA p
+    Babbage -> prettyA p
+    Conway -> prettyA p
 
 instance Reflect era => PrettyA (CollectError era) where
   prettyA = ppCollectError
@@ -2062,15 +2062,15 @@ txInSummary :: TxIn era -> PDoc
 txInSummary (TxIn (TxId h) n) = ppSexp "TxIn" [trim (ppSafeHash h), ppInt (txIxToInt n)]
 
 txOutSummary :: Proof era -> TxOut era -> PDoc
-txOutSummary p@(Conway _) (BabbageTxOut addr v d s) =
+txOutSummary p@Conway (BabbageTxOut addr v d s) =
   ppSexp "TxOut" [addrSummary addr, pcCoreValue p v, datumSummary d, ppStrictMaybe (scriptSummary p) s]
-txOutSummary p@(Babbage _) (BabbageTxOut addr v d s) =
+txOutSummary p@Babbage (BabbageTxOut addr v d s) =
   ppSexp "TxOut" [addrSummary addr, pcCoreValue p v, datumSummary d, ppStrictMaybe (scriptSummary p) s]
-txOutSummary p@(Alonzo _) (AlonzoTxOut addr v md) =
+txOutSummary p@Alonzo (AlonzoTxOut addr v md) =
   ppSexp "TxOut" [addrSummary addr, pcCoreValue p v, ppStrictMaybe dataHashSummary md]
-txOutSummary p@(Mary _) (ShelleyTxOut addr v) = ppSexp "TxOut" [addrSummary addr, pcCoreValue p v]
-txOutSummary p@(Allegra _) (ShelleyTxOut addr v) = ppSexp "TxOut" [addrSummary addr, pcCoreValue p v]
-txOutSummary p@(Shelley _) (ShelleyTxOut addr v) = ppSexp "TxOut" [addrSummary addr, pcCoreValue p v]
+txOutSummary p@Mary (ShelleyTxOut addr v) = ppSexp "TxOut" [addrSummary addr, pcCoreValue p v]
+txOutSummary p@Allegra (ShelleyTxOut addr v) = ppSexp "TxOut" [addrSummary addr, pcCoreValue p v]
+txOutSummary p@Shelley (ShelleyTxOut addr v) = ppSexp "TxOut" [addrSummary addr, pcCoreValue p v]
 
 datumSummary :: Era era => Datum era -> PDoc
 datumSummary NoDatum = ppString "NoDatum"
@@ -2095,12 +2095,12 @@ vSummary (MaryValue n ma) =
   ppSexp "Value" [pcCoin n, multiAssetSummary ma]
 
 scriptSummary :: forall era. Proof era -> Script era -> PDoc
-scriptSummary p@(Conway _) script = plutusSummary p script
-scriptSummary p@(Babbage _) script = plutusSummary p script
-scriptSummary p@(Alonzo _) script = plutusSummary p script
-scriptSummary (Mary _) script = timelockSummary script
-scriptSummary (Allegra _) script = timelockSummary script
-scriptSummary (Shelley _) script = multiSigSummary script
+scriptSummary p@Conway script = plutusSummary p script
+scriptSummary p@Babbage script = plutusSummary p script
+scriptSummary p@Alonzo script = plutusSummary p script
+scriptSummary Mary script = timelockSummary script
+scriptSummary Allegra script = timelockSummary script
+scriptSummary Shelley script = multiSigSummary script
 
 networkSummary :: Network -> PDoc
 networkSummary Testnet = ppString "Test"
@@ -2163,15 +2163,15 @@ multiSigSummary (SS.RequireAnyOf ps) = ppSexp "AnyOf" (map multiSigSummary ps)
 multiSigSummary (SS.RequireMOf m ps) = ppSexp "MOf" (ppInt m : map multiSigSummary ps)
 
 plutusSummary :: forall era. Proof era -> AlonzoScript era -> PDoc
-plutusSummary (Conway _) s@(PlutusScript plutusScript) =
+plutusSummary Conway s@(PlutusScript plutusScript) =
   ppString (show (plutusScriptLanguage plutusScript) ++ " ") <> scriptHashSummary (hashScript @era s)
-plutusSummary (Conway _) (TimelockScript x) = timelockSummary x
-plutusSummary (Babbage _) s@(PlutusScript plutusScript) =
+plutusSummary Conway (TimelockScript x) = timelockSummary x
+plutusSummary Babbage s@(PlutusScript plutusScript) =
   ppString (show (plutusScriptLanguage plutusScript) ++ " ") <> scriptHashSummary (hashScript @era s)
-plutusSummary (Babbage _) (TimelockScript x) = timelockSummary x
-plutusSummary (Alonzo _) s@(PlutusScript plutusScript) =
+plutusSummary Babbage (TimelockScript x) = timelockSummary x
+plutusSummary Alonzo s@(PlutusScript plutusScript) =
   ppString (show (plutusScriptLanguage plutusScript) ++ " ") <> scriptHashSummary (hashScript @era s)
-plutusSummary (Alonzo _) (TimelockScript x) = timelockSummary x
+plutusSummary Alonzo (TimelockScript x) = timelockSummary x
 plutusSummary other _ = ppString ("Plutus script in era " ++ show other ++ "???")
 
 dStateSummary :: DState c -> PDoc
@@ -2269,12 +2269,12 @@ instance PrettyA (Addr c) where prettyA = pcAddr
 
 -- | Value is a type family, so it has no PrettyA instance.
 pcCoreValue :: Proof era -> Value era -> PDoc
-pcCoreValue (Conway _) v = vSummary v
-pcCoreValue (Babbage _) v = vSummary v
-pcCoreValue (Alonzo _) v = vSummary v
-pcCoreValue (Mary _) v = vSummary v
-pcCoreValue (Allegra _) (Coin n) = hsep [ppString "₳", ppInteger n]
-pcCoreValue (Shelley _) (Coin n) = hsep [ppString "₳", ppInteger n]
+pcCoreValue Conway v = vSummary v
+pcCoreValue Babbage v = vSummary v
+pcCoreValue Alonzo v = vSummary v
+pcCoreValue Mary v = vSummary v
+pcCoreValue Allegra (Coin n) = hsep [ppString "₳", ppInteger n]
+pcCoreValue Shelley (Coin n) = hsep [ppString "₳", ppInteger n]
 
 pcCoin :: Coin -> PDoc
 pcCoin (Coin n) = hsep [ppString "₳", ppInteger n]
@@ -2294,12 +2294,12 @@ instance PrettyA (MaryValue c) where
   prettyA = pcValue
 
 pcVal :: Proof era -> Value era -> PDoc
-pcVal (Shelley _) v = pcCoin v
-pcVal (Allegra _) v = pcCoin v
-pcVal (Mary _) v = pcValue v
-pcVal (Alonzo _) v = pcValue v
-pcVal (Babbage _) v = pcValue v
-pcVal (Conway _) v = pcValue v
+pcVal Shelley v = pcCoin v
+pcVal Allegra v = pcCoin v
+pcVal Mary v = pcValue v
+pcVal Alonzo v = pcValue v
+pcVal Babbage v = pcValue v
+pcVal Conway v = pcValue v
 
 pcDatum :: Era era => Datum era -> PDoc
 pcDatum NoDatum = ppString "NoDatum"
@@ -2349,12 +2349,12 @@ instance PrettyA (ScriptHash era) where
   prettyA = pcScriptHash
 
 pcHashScript :: forall era. Reflect era => Proof era -> Script era -> PDoc
-pcHashScript (Conway _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
-pcHashScript (Babbage _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
-pcHashScript (Alonzo _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
-pcHashScript (Mary _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
-pcHashScript (Allegra _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
-pcHashScript (Shelley _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
+pcHashScript Conway s = ppString "Hash " <> pcScriptHash (hashScript @era s)
+pcHashScript Babbage s = ppString "Hash " <> pcScriptHash (hashScript @era s)
+pcHashScript Alonzo s = ppString "Hash " <> pcScriptHash (hashScript @era s)
+pcHashScript Mary s = ppString "Hash " <> pcScriptHash (hashScript @era s)
+pcHashScript Allegra s = ppString "Hash " <> pcScriptHash (hashScript @era s)
+pcHashScript Shelley s = ppString "Hash " <> pcScriptHash (hashScript @era s)
 
 instance (Script era ~ AlonzoScript era, Reflect era) => PrettyA (AlonzoScript era) where
   prettyA = pcScript reify
@@ -2461,12 +2461,12 @@ instance PrettyA (Delegatee c) where
   prettyA = pcDelegatee
 
 pcTxCert :: Proof era -> TxCert era -> PDoc
-pcTxCert (Shelley _) x = pcShelleyTxCert x
-pcTxCert (Allegra _) x = pcShelleyTxCert x
-pcTxCert (Mary _) x = pcShelleyTxCert x
-pcTxCert (Alonzo _) x = pcShelleyTxCert x
-pcTxCert (Babbage _) x = pcShelleyTxCert x
-pcTxCert (Conway _) x = pcConwayTxCert x
+pcTxCert Shelley x = pcShelleyTxCert x
+pcTxCert Allegra x = pcShelleyTxCert x
+pcTxCert Mary x = pcShelleyTxCert x
+pcTxCert Alonzo x = pcShelleyTxCert x
+pcTxCert Babbage x = pcShelleyTxCert x
+pcTxCert Conway x = pcConwayTxCert x
 
 pcGovProcedures :: forall era. GovProcedures era -> PDoc
 pcGovProcedures (GovProcedures vote proposal) =
@@ -2897,12 +2897,12 @@ pcPoolDistr (PoolDistr pdistr) =
 instance PrettyA (PoolDistr c) where prettyA = pcPoolDistr
 
 withEraPParams :: forall era a. Proof era -> (Core.EraPParams era => a) -> a
-withEraPParams (Shelley _) x = x
-withEraPParams (Mary _) x = x
-withEraPParams (Allegra _) x = x
-withEraPParams (Alonzo _) x = x
-withEraPParams (Babbage _) x = x
-withEraPParams (Conway _) x = x
+withEraPParams Shelley x = x
+withEraPParams Mary x = x
+withEraPParams Allegra x = x
+withEraPParams Alonzo x = x
+withEraPParams Babbage x = x
+withEraPParams Conway x = x
 
 -- | Print just a few of the PParams fields
 pcPParamsSynopsis :: forall era. Proof era -> Core.PParams era -> PDoc
@@ -3172,16 +3172,16 @@ instance
     ConwayVoting i -> ppSexp "ConwayVoting" [prettyA i]
     ConwayProposing i -> ppSexp "ConwayProposing" [prettyA i]
 
--- ScriptsNeeded is a typr family so it doesn't have PrettyA instance, use pcScriptsNeeded instead of prettyA
+-- ScriptsNeeded is a type family so it doesn't have PrettyA instance, use pcScriptsNeeded instead of prettyA
 pcScriptsNeeded :: Reflect era => Proof era -> ScriptsNeeded era -> PDoc
-pcScriptsNeeded (Shelley _) (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
-pcScriptsNeeded (Allegra _) (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
-pcScriptsNeeded (Mary _) (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
-pcScriptsNeeded (Alonzo _) (AlonzoScriptsNeeded pl) =
+pcScriptsNeeded Shelley (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
+pcScriptsNeeded Allegra (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
+pcScriptsNeeded Mary (ShelleyScriptsNeeded ss) = ppSexp "ScriptsNeeded" [ppSet pcScriptHash ss]
+pcScriptsNeeded Alonzo (AlonzoScriptsNeeded pl) =
   ppSexp "ScriptsNeeded" [ppList (ppPair prettyA pcScriptHash) pl]
-pcScriptsNeeded (Babbage _) (AlonzoScriptsNeeded pl) =
+pcScriptsNeeded Babbage (AlonzoScriptsNeeded pl) =
   ppSexp "ScriptsNeeded" [ppList (ppPair prettyA pcScriptHash) pl]
-pcScriptsNeeded (Conway _) (AlonzoScriptsNeeded pl) =
+pcScriptsNeeded Conway (AlonzoScriptsNeeded pl) =
   ppSexp "ScriptsNeeded" [ppList (ppPair prettyA pcScriptHash) pl]
 
 pcDRepPulser :: DRepPulser era Identity (RatifyState era) -> PDoc

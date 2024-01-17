@@ -574,7 +574,7 @@ shrinkPreds (preds, env) =
 type TestEra = ShelleyEra Standard
 
 testProof :: Proof TestEra
-testProof = Shelley Standard
+testProof = Shelley
 
 testEnv :: Env TestEra
 testEnv = Env $ Map.fromList [("A", Payload CoinR (Coin 5) No)]

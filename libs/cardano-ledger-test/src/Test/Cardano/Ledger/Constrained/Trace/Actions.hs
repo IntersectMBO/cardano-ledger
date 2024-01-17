@@ -35,7 +35,7 @@ feesAction :: Era era => Coin -> TraceM era ()
 feesAction feeCoin = updateVar fees (<+> feeCoin)
 
 certAction :: Era era => Proof era -> TxCert era -> TraceM era ()
-certAction p@(Conway _) cert =
+certAction p@Conway cert =
   case cert of
     ConwayTxCertGov (ConwayRegDRep cred _ manchor) -> do
       epoch <- getTerm currentEpoch

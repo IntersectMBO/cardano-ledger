@@ -88,9 +88,9 @@ tests :: TestTree
 tests =
   testGroup
     "Generic Tests for valid transactions, testing Alonzo UTXOW PredicateFailures, in postAlonzo eras."
-    [ alonzoUTXOWTests (Alonzo Mock)
-    , alonzoUTXOWTests (Babbage Mock)
-    -- alonzoUTXOWTests (Conway Mock) TODO
+    [ alonzoUTXOWTests Alonzo
+    , alonzoUTXOWTests Babbage
+    -- alonzoUTXOWTests Conway TODO
     ]
 
 alonzoUTXOWTests ::
@@ -708,7 +708,7 @@ validatingManyScriptsRedeemers proof =
     [ ((Spending, 0), (Data (PV1.I 101), ExUnits 5000 5000))
     , ((Certifying, 1), (Data (PV1.I 102), ExUnits 5000 5000))
     , ((Rewarding, 0), (Data (PV1.I 103), ExUnits 5000 5000))
-    , ((Minting, 1), (Data (PV1.I 104), ExUnits 5000 5000))
+    , ((Minting, 0), (Data (PV1.I 104), ExUnits 5000 5000))
     ]
 
 validatingManyScriptsMint :: forall era. (PostShelley era, HasTokens era) => Proof era -> MultiAsset (EraCrypto era)

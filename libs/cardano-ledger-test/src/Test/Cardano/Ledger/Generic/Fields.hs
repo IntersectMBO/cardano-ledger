@@ -365,28 +365,28 @@ initWithdrawals :: Withdrawals c
 initWithdrawals = Withdrawals Map.empty
 
 initialTxBody :: Era era => Proof era -> TxBody era
-initialTxBody (Shelley _) = mkBasicTxBody
-initialTxBody (Allegra _) = mkBasicTxBody
-initialTxBody (Mary _) = mkBasicTxBody
-initialTxBody (Alonzo _) = mkBasicTxBody
-initialTxBody (Babbage _) = mkBasicTxBody
-initialTxBody (Conway _) = mkBasicTxBody
+initialTxBody Shelley = mkBasicTxBody
+initialTxBody Allegra = mkBasicTxBody
+initialTxBody Mary = mkBasicTxBody
+initialTxBody Alonzo = mkBasicTxBody
+initialTxBody Babbage = mkBasicTxBody
+initialTxBody Conway = mkBasicTxBody
 
 initialWitnesses :: Era era => Proof era -> TxWits era
-initialWitnesses (Shelley _) = mkBasicTxWits
-initialWitnesses (Allegra _) = mkBasicTxWits
-initialWitnesses (Mary _) = mkBasicTxWits
-initialWitnesses (Alonzo _) = mkBasicTxWits
-initialWitnesses (Babbage _) = mkBasicTxWits
-initialWitnesses (Conway _) = mkBasicTxWits
+initialWitnesses Shelley = mkBasicTxWits
+initialWitnesses Allegra = mkBasicTxWits
+initialWitnesses Mary = mkBasicTxWits
+initialWitnesses Alonzo = mkBasicTxWits
+initialWitnesses Babbage = mkBasicTxWits
+initialWitnesses Conway = mkBasicTxWits
 
 initialTx :: forall era. Proof era -> Tx era
-initialTx era@(Shelley _) = mkBasicTx (initialTxBody era)
-initialTx era@(Allegra _) = mkBasicTx (initialTxBody era)
-initialTx era@(Mary _) = mkBasicTx (initialTxBody era)
-initialTx era@(Alonzo _) = mkBasicTx (initialTxBody era)
-initialTx era@(Babbage _) = mkBasicTx (initialTxBody era)
-initialTx era@(Conway _) = mkBasicTx (initialTxBody era)
+initialTx era@Shelley = mkBasicTx (initialTxBody era)
+initialTx era@Allegra = mkBasicTx (initialTxBody era)
+initialTx era@Mary = mkBasicTx (initialTxBody era)
+initialTx era@Alonzo = mkBasicTx (initialTxBody era)
+initialTx era@Babbage = mkBasicTx (initialTxBody era)
+initialTx era@Conway = mkBasicTx (initialTxBody era)
 
 -- | A Meaningless Addr.
 initialAddr :: Era era => Proof era -> Addr (EraCrypto era)
@@ -397,31 +397,31 @@ initialAddr _wit = Addr Testnet pCred sCred
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
 initialTxOut :: Era era => Proof era -> TxOut era
-initialTxOut wit@(Shelley _) = mkBasicTxOut (initialAddr wit) mempty
-initialTxOut wit@(Allegra _) = mkBasicTxOut (initialAddr wit) mempty
-initialTxOut wit@(Mary _) = mkBasicTxOut (initialAddr wit) mempty
-initialTxOut wit@(Alonzo _) = mkBasicTxOut (initialAddr wit) mempty
-initialTxOut wit@(Babbage _) = mkBasicTxOut (initialAddr wit) mempty
-initialTxOut wit@(Conway _) = mkBasicTxOut (initialAddr wit) mempty
+initialTxOut wit@Shelley = mkBasicTxOut (initialAddr wit) mempty
+initialTxOut wit@Allegra = mkBasicTxOut (initialAddr wit) mempty
+initialTxOut wit@Mary = mkBasicTxOut (initialAddr wit) mempty
+initialTxOut wit@Alonzo = mkBasicTxOut (initialAddr wit) mempty
+initialTxOut wit@Babbage = mkBasicTxOut (initialAddr wit) mempty
+initialTxOut wit@Conway = mkBasicTxOut (initialAddr wit) mempty
 
 -- ============================================================
 
 abstractTx :: Proof era -> Tx era -> [TxField era]
-abstractTx (Conway _) (AlonzoTx txBody wit v auxdata) =
+abstractTx Conway (AlonzoTx txBody wit v auxdata) =
   [Body txBody, TxWits wit, Valid v, AuxData auxdata]
-abstractTx (Babbage _) (AlonzoTx txBody wit v auxdata) =
+abstractTx Babbage (AlonzoTx txBody wit v auxdata) =
   [Body txBody, TxWits wit, Valid v, AuxData auxdata]
-abstractTx (Alonzo _) (AlonzoTx txBody wit v auxdata) =
+abstractTx Alonzo (AlonzoTx txBody wit v auxdata) =
   [Body txBody, TxWits wit, Valid v, AuxData auxdata]
-abstractTx (Shelley _) (ShelleyTx txBody wit auxdata) =
+abstractTx Shelley (ShelleyTx txBody wit auxdata) =
   [Body txBody, TxWits wit, AuxData auxdata]
-abstractTx (Mary _) (ShelleyTx txBody wit auxdata) =
+abstractTx Mary (ShelleyTx txBody wit auxdata) =
   [Body txBody, TxWits wit, AuxData auxdata]
-abstractTx (Allegra _) (ShelleyTx txBody wit auxdata) =
+abstractTx Allegra (ShelleyTx txBody wit auxdata) =
   [Body txBody, TxWits wit, AuxData auxdata]
 
 abstractTxBody :: Proof era -> TxBody era -> [TxBodyField era]
-abstractTxBody (Alonzo _) (AlonzoTxBody inp col out cert wdrl fee vldt up req mnt sih adh net) =
+abstractTxBody Alonzo (AlonzoTxBody inp col out cert wdrl fee vldt up req mnt sih adh net) =
   [ Inputs inp
   , Collateral col
   , Outputs out
@@ -436,7 +436,7 @@ abstractTxBody (Alonzo _) (AlonzoTxBody inp col out cert wdrl fee vldt up req mn
   , AdHash adh
   , Txnetworkid net
   ]
-abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl fee vldt req mnt sih adh net vp pp ctv td) =
+abstractTxBody Conway (ConwayTxBody inp col ref out colret totcol cert wdrl fee vldt req mnt sih adh net vp pp ctv td) =
   [ Inputs inp
   , Collateral col
   , RefInputs ref
@@ -456,7 +456,7 @@ abstractTxBody (Conway _) (ConwayTxBody inp col ref out colret totcol cert wdrl 
   , CurrentTreasuryValue ctv
   , TreasuryDonation td
   ]
-abstractTxBody (Babbage _) (BabbageTxBody inp col ref out colret totcol cert wdrl fee vldt up req mnt sih adh net) =
+abstractTxBody Babbage (BabbageTxBody inp col ref out colret totcol cert wdrl fee vldt up req mnt sih adh net) =
   [ Inputs inp
   , Collateral col
   , RefInputs ref
@@ -474,32 +474,32 @@ abstractTxBody (Babbage _) (BabbageTxBody inp col ref out colret totcol cert wdr
   , AdHash adh
   , Txnetworkid net
   ]
-abstractTxBody (Shelley _) (ShelleyTxBody inp out cert wdrl fee ttlslot up adh) =
+abstractTxBody Shelley (ShelleyTxBody inp out cert wdrl fee ttlslot up adh) =
   [Inputs inp, Outputs out, Certs cert, Withdrawals' wdrl, Txfee fee, TTL ttlslot, Update up, AdHash adh]
-abstractTxBody (Mary _) (MaryTxBody inp out cert wdrl fee vldt up adh mnt) =
+abstractTxBody Mary (MaryTxBody inp out cert wdrl fee vldt up adh mnt) =
   [Inputs inp, Outputs out, Certs cert, Withdrawals' wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh, Mint mnt]
-abstractTxBody (Allegra _) (AllegraTxBody inp out cert wdrl fee vldt up adh) =
+abstractTxBody Allegra (AllegraTxBody inp out cert wdrl fee vldt up adh) =
   [Inputs inp, Outputs out, Certs cert, Withdrawals' wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh]
 
 abstractWitnesses :: Proof era -> TxWits era -> [WitnessesField era]
-abstractWitnesses (Shelley _) (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
-abstractWitnesses (Allegra _) (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
-abstractWitnesses (Mary _) (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
-abstractWitnesses (Alonzo _) (AlonzoTxWits key boot scripts dats red) =
+abstractWitnesses Shelley (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
+abstractWitnesses Allegra (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
+abstractWitnesses Mary (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
+abstractWitnesses Alonzo (AlonzoTxWits key boot scripts dats red) =
   [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
-abstractWitnesses (Babbage _) (AlonzoTxWits key boot scripts dats red) =
+abstractWitnesses Babbage (AlonzoTxWits key boot scripts dats red) =
   [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
-abstractWitnesses (Conway _) (AlonzoTxWits key boot scripts dats red) =
+abstractWitnesses Conway (AlonzoTxWits key boot scripts dats red) =
   [AddrWits key, ScriptWits scripts, BootWits boot, DataWits dats, RdmrWits red]
 
 abstractTxOut :: Era era => Proof era -> TxOut era -> [TxOutField era]
-abstractTxOut (Shelley _) (ShelleyTxOut addr c) = [Address addr, Amount c]
-abstractTxOut (Allegra _) (ShelleyTxOut addr c) = [Address addr, Amount c]
-abstractTxOut (Mary _) (ShelleyTxOut addr val) = [Address addr, Amount val]
-abstractTxOut (Alonzo _) (AlonzoTxOut addr val d) = [Address addr, Amount val, DHash d]
-abstractTxOut (Babbage _) (BabbageTxOut addr val d refscr) =
+abstractTxOut Shelley (ShelleyTxOut addr c) = [Address addr, Amount c]
+abstractTxOut Allegra (ShelleyTxOut addr c) = [Address addr, Amount c]
+abstractTxOut Mary (ShelleyTxOut addr val) = [Address addr, Amount val]
+abstractTxOut Alonzo (AlonzoTxOut addr val d) = [Address addr, Amount val, DHash d]
+abstractTxOut Babbage (BabbageTxOut addr val d refscr) =
   [Address addr, Amount val, FDatum d, RefScript refscr]
-abstractTxOut (Conway _) (BabbageTxOut addr val d refscr) =
+abstractTxOut Conway (BabbageTxOut addr val d refscr) =
   [Address addr, Amount val, FDatum d, RefScript refscr]
 
 -- =================================================================

@@ -90,7 +90,7 @@ collectTwoPhaseScriptInputsOutputOrdering = do
             }
       ]
   where
-    apf = Alonzo Standard
+    apf = Alonzo
     plutusScript = case always 3 apf of
       TimelockScript _ -> error "always was not a Plutus script"
       PlutusScript ps -> ps
@@ -161,9 +161,9 @@ collectInputs ::
   Tx era ->
   UTxO era ->
   Either [CollectError era] [PlutusWithContext]
-collectInputs (Alonzo _) = collectPlutusScriptsWithContext
-collectInputs (Babbage _) = collectPlutusScriptsWithContext
-collectInputs (Conway _) = collectPlutusScriptsWithContext
+collectInputs Alonzo = collectPlutusScriptsWithContext
+collectInputs Babbage = collectPlutusScriptsWithContext
+collectInputs Conway = collectPlutusScriptsWithContext
 collectInputs x = error ("collectInputs Not defined in era " ++ show x)
 
 mkPlutusScriptContext' ::
@@ -176,9 +176,9 @@ mkPlutusScriptContext' ::
   UTxO era ->
   Tx era ->
   Either (ContextError era) (Data era)
-mkPlutusScriptContext' (Alonzo _) = mkPlutusScriptContext
-mkPlutusScriptContext' (Babbage _) = mkPlutusScriptContext
-mkPlutusScriptContext' (Conway _) = mkPlutusScriptContext
+mkPlutusScriptContext' Alonzo = mkPlutusScriptContext
+mkPlutusScriptContext' Babbage = mkPlutusScriptContext
+mkPlutusScriptContext' Conway = mkPlutusScriptContext
 mkPlutusScriptContext' era = error ("mkPlutusScriptContext is not defined in era " ++ show era)
 
 testEpochInfo :: EpochInfo (Either Text)

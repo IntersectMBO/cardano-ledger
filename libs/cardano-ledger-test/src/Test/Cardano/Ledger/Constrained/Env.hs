@@ -68,12 +68,12 @@ pattern V s r a <- VRaw s r _ a
 
 -- | Construct a V, dsicharging the (Era era) constraint, using the Proof
 pV :: Proof era -> String -> Rep era t -> Access era s t -> V era t
-pV (Shelley _) = V
-pV (Allegra _) = V
-pV (Mary _) = V
-pV (Alonzo _) = V
-pV (Babbage _) = V
-pV (Conway _) = V
+pV Shelley = V
+pV Allegra = V
+pV Mary = V
+pV Alonzo = V
+pV Babbage = V
+pV Conway = V
 
 {-# COMPLETE V #-}
 
@@ -222,14 +222,6 @@ instance Hashable (Shape a) where
   hashWithSalt s (Nary n xs) = s `hashWithSalt` (1 :: Int) `hashWithSalt` n `hashWithSalt` xs
   hashWithSalt s (Esc _ _) = s `hashWithSalt` (2 :: Int)
   {-# INLINE hashWithSalt #-}
-
-instance Hashable (Evidence c) where
-  hashWithSalt s x = s `hashWithSalt` (shape x)
-  {-# INLINE hashWithSalt #-}
-
-instance Eq (Evidence c) where
-  x == y = shape x == shape y
-  {-# INLINE (==) #-}
 
 instance Hashable (Proof e) where
   hashWithSalt s x = s `hashWithSalt` (shape x)

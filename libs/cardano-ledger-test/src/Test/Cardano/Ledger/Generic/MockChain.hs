@@ -237,12 +237,12 @@ instance PrettyA (MockBlock era) where prettyA = ppMockBlock
 
 ppMockChainFailure :: Reflect era => Proof era -> MockChainFailure era -> PDoc
 ppMockChainFailure proof x = case proof of
-  (Conway _) -> help x
-  (Babbage _) -> help x
-  (Alonzo _) -> help x
-  (Mary _) -> help x
-  (Allegra _) -> help x
-  (Shelley _) -> help x
+  Conway -> help x
+  Babbage -> help x
+  Alonzo -> help x
+  Mary -> help x
+  Allegra -> help x
+  Shelley -> help x
   where
     help (MockChainFromTickFailure y) = ppTickPredicateFailure y
     help (MockChainFromLedgersFailure y) = ppShelleyLedgersPredFailure proof y
@@ -254,9 +254,9 @@ ppMockChainFailure proof x = case proof of
         ]
 
 noThunksGen :: Proof era -> MockChainState era -> IO (Maybe ThunkInfo)
-noThunksGen (Conway _) = noThunks []
-noThunksGen (Babbage _) = noThunks []
-noThunksGen (Alonzo _) = noThunks []
-noThunksGen (Mary _) = noThunks []
-noThunksGen (Allegra _) = noThunks []
-noThunksGen (Shelley _) = noThunks []
+noThunksGen Conway = noThunks []
+noThunksGen Babbage = noThunks []
+noThunksGen Alonzo = noThunks []
+noThunksGen Mary = noThunks []
+noThunksGen Allegra = noThunks []
+noThunksGen Shelley = noThunks []

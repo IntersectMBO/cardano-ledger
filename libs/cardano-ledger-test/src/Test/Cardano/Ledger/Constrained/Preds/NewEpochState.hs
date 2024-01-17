@@ -109,10 +109,10 @@ demoES proof mode = do
   modeRepl mode proof env2 ""
 
 demoESTest :: TestTree
-demoESTest = testIO "Testing EpochState Stage" (demoES (Conway Standard) CI)
+demoESTest = testIO "Testing EpochState Stage" (demoES Conway CI)
 
 mainES :: IO ()
-mainES = defaultMain $ testIO "Testing EpochState Stage" (demoES (Conway Standard) Interactive)
+mainES = defaultMain $ testIO "Testing EpochState Stage" (demoES Conway Interactive)
 
 -- ====================================================
 
@@ -144,9 +144,9 @@ demoNES proof mode = do
   modeRepl mode proof env2 ""
 
 demoNESTest :: TestTree
-demoNESTest = testIO "Testing NewEpochState Stage" (demoNES (Conway Standard) CI)
+demoNESTest = testIO "Testing NewEpochState Stage" (demoNES Conway CI)
 
 mainNES :: IO ()
-mainNES = defaultMain $ testIO "Testing NewEpochState Stage" (demoNES (Conway Standard) Interactive)
+mainNES = defaultMain $ testIO "Testing NewEpochState Stage" (demoNES Conway Interactive)
 
 -- ==========================

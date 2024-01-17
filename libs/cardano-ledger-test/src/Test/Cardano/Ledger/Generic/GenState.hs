@@ -659,10 +659,10 @@ validTxOut ::
 validTxOut proof m _txin txout = case txoutFields proof txout of
   (Addr _ (KeyHashObj _) _, _, _) -> True
   (Addr _ (ScriptHashObj h) _, _, _) -> case (proof, Map.lookup h m) of
-    (Conway _, Just (PlutusScript _)) -> True
-    (Babbage _, Just (PlutusScript _)) -> True
-    (Alonzo _, Just (PlutusScript _)) -> True
-    (Shelley _, Just _msig) -> True
+    (Conway, Just (PlutusScript _)) -> True
+    (Babbage, Just (PlutusScript _)) -> True
+    (Alonzo, Just (PlutusScript _)) -> True
+    (Shelley, Just _msig) -> True
     _ -> False
   _bootstrap -> False
 
@@ -789,8 +789,8 @@ viewGenState proof gsize verbose = do
 
 instance Reflect era => PrettyA (GenState era) where prettyA = pcGenState reify
 
-instance era ~ BabbageEra Mock => Show (GenState era) where
-  show x = show (pcGenState (Babbage Mock) x)
+instance Reflect era => Show (GenState era) where
+  show x = show (pcGenState reify x)
 
 -- =====================================================================
 -- Build an Initial LedgerState for a Trace from a GenState, after
@@ -855,12 +855,12 @@ genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash col
 -- Adds to gsScripts and gsPlutusScripts
 genScript :: Reflect era => Proof era -> PlutusPurposeTag -> GenRS era (ScriptHash (EraCrypto era))
 genScript proof tag = case proof of
-  Conway _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
-  Babbage _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
-  Alonzo _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
-  Mary _ -> genTimelockScript proof
-  Allegra _ -> genTimelockScript proof
-  Shelley _ -> genMultiSigScript proof
+  Conway -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
+  Babbage -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
+  Alonzo -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
+  Mary -> genTimelockScript proof
+  Allegra -> genTimelockScript proof
+  Shelley -> genMultiSigScript proof
 
 -- Adds to gsScripts
 genTimelockScript :: forall era. Reflect era => Proof era -> GenRS era (ScriptHash (EraCrypto era))
@@ -902,12 +902,12 @@ genTimelockScript proof = do
   tlscript <- genNestedTimelock (2 :: Natural)
   let corescript :: Script era
       corescript = case proof of
-        Conway _ -> TimelockScript tlscript
-        Babbage _ -> TimelockScript tlscript
-        Alonzo _ -> TimelockScript tlscript
-        Mary _ -> tlscript
-        Allegra _ -> tlscript
-        Shelley _ -> error "Shelley does not have TimeLock scripts"
+        Conway -> TimelockScript tlscript
+        Babbage -> TimelockScript tlscript
+        Alonzo -> TimelockScript tlscript
+        Mary -> tlscript
+        Allegra -> tlscript
+        Shelley -> error "Shelley does not have TimeLock scripts"
 
   let scriptHash = hashScript @era corescript
       insertOrCreate x Nothing = Just (Set.singleton x)
@@ -939,7 +939,7 @@ genMultiSigScript proof = do
   msscript <- genNestedMultiSig (2 :: Natural)
   let corescript :: Script era
       corescript = case proof of
-        Shelley _ -> msscript
+        Shelley -> msscript
         _ -> error (show proof ++ " does not have MultiSig scripts")
   let scriptHash = hashScript @era corescript
   modifyGenStateScripts (Map.insert scriptHash corescript)
@@ -959,10 +959,10 @@ genPlutusScript proof tag = do
   -- For reasons unknown, this number differs from Alonzo to Babbage
   -- Perhaps because Babbage is using PlutusV2 scripts?
   let numArgs = case (proof, tag) of
-        (Conway _, Spending) -> 2
-        (Conway _, _) -> 1
-        (Babbage _, Spending) -> 2
-        (Babbage _, _) -> 1
+        (Conway, Spending) -> 2
+        (Conway, _) -> 1
+        (Babbage, Spending) -> 2
+        (Babbage, _) -> 1
         (_, Spending) -> 3
         (_, _) -> 2
   -- While using varying number of arguments for alwaysSucceeds we get
@@ -975,9 +975,9 @@ genPlutusScript proof tag = do
 
   let corescript :: Script era
       corescript = case proof of
-        Alonzo _ -> script
-        Babbage _ -> script
-        Conway _ -> script
+        Alonzo -> script
+        Babbage -> script
+        Conway -> script
         _ ->
           error
             ( "PlutusScripts are available starting in the Alonzo era. "

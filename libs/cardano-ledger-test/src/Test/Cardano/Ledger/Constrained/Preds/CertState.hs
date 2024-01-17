@@ -99,7 +99,7 @@ vstateStage proof = toolChainSub proof standardOrderInfo (vstatePreds proof)
 
 demoV :: ReplMode -> IO ()
 demoV mode = do
-  let proof = Conway Standard
+  let proof = Conway
   env <-
     generate
       ( pure emptySubst
@@ -170,7 +170,7 @@ pstateStage proof = toolChainSub proof standardOrderInfo (pstatePreds proof)
 
 demoP :: ReplMode -> IO ()
 demoP mode = do
-  let proof = Babbage Standard
+  let proof = Babbage
   env <-
     generate
       ( pure emptySubst
@@ -253,7 +253,7 @@ certStateGenPreds p =
   , Dom delegations :⊆: Dom rewards
   , Dom delegations :⊆: Dom incrementalStake
   , Rng delegations :⊆: Dom regPools
-  , if protocolVersion p >= protocolVersion (Conway Standard)
+  , if protocolVersion p >= protocolVersion Conway
       then Sized (ExactSize 0) ptrs
       else Dom rewards :=: Rng ptrs
   , Dom drepDelegation :⊆: credsUniv
@@ -295,7 +295,7 @@ certStateCheckPreds p =
   [ NotMember (Lit CoinR (Coin 0)) (Rng stakeDeposits)
   , Dom rewards :=: Dom stakeDeposits
   , Dom delegations :⊆: Dom rewards
-  , if protocolVersion p >= protocolVersion (Conway Standard)
+  , if protocolVersion p >= protocolVersion Conway
       then Sized (ExactSize 0) ptrs
       else Dom rewards :=: Rng ptrs
   ]
@@ -309,7 +309,7 @@ dstateStage proof = toolChainSub proof standardOrderInfo (certStatePreds proof)
 
 demoD :: ReplMode -> Int -> IO ()
 demoD mode seed = do
-  let proof = Babbage Standard
+  let proof = Babbage
   env <-
     generateWithSeed
       seed
@@ -332,7 +332,7 @@ mainD seed = defaultMain $ testIO "Testing DState Stage" (demoD Interactive seed
 
 demoC :: ReplMode -> IO ()
 demoC mode = do
-  let proof = Conway Standard
+  let proof = Conway
   env <-
     generate
       ( pure emptySubst

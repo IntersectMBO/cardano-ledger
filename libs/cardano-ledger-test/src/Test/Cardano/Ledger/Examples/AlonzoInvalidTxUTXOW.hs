@@ -119,9 +119,9 @@ tests :: TestTree
 tests =
   testGroup
     "Generic Tests for invalid transactions, testing Alonzo UTXOW PredicateFailures, in postAlonzo eras."
-    [ alonzoUTXOWTests (Alonzo Mock)
-    , alonzoUTXOWTests (Babbage Mock)
-    -- alonzoUTXOWTests (Conway Mock) TODO
+    [ alonzoUTXOWTests Alonzo
+    , alonzoUTXOWTests Babbage
+    -- alonzoUTXOWTests Conway TODO
     ]
 
 alonzoUTXOWTests ::
@@ -205,7 +205,7 @@ alonzoUTXOWTests pf =
               ( Left
                   [ -- these redeemers are associated with phase-1 scripts
                     fromPredFail @era . ExtraRedeemers $
-                      [ mkPlutusPurposePointer pf Minting 1
+                      [ mkPlutusPurposePointer pf Minting 0
                       , mkPlutusPurposePointer pf Certifying 1
                       , mkPlutusPurposePointer pf Rewarding 0
                       ]
@@ -222,7 +222,7 @@ alonzoUTXOWTests pf =
                   , -- now "wrong redeemer label" means there are both unredeemable scripts and extra redeemers
                     fromPredFail @era . MissingRedeemers $
                       [(spendingPurpose1 pf, alwaysSucceedsHash 3 pf)]
-                  , fromPredFail @era $ ExtraRedeemers [mkPlutusPurposePointer pf Minting 0]
+                  , fromPredFail @era $ ExtraRedeemers [mkPlutusPurposePointer pf Minting 1]
                   ]
               )
         , testCase "missing datum" $
@@ -562,7 +562,7 @@ validatingManyScriptsRedeemers pf =
     [ ((Spending, 0), (Data (PV1.I 101), ExUnits 5000 5000))
     , ((Certifying, 1), (Data (PV1.I 102), ExUnits 5000 5000))
     , ((Rewarding, 0), (Data (PV1.I 103), ExUnits 5000 5000))
-    , ((Minting, 1), (Data (PV1.I 104), ExUnits 5000 5000))
+    , ((Minting, 0), (Data (PV1.I 104), ExUnits 5000 5000))
     ]
 
 wrongRedeemerLabelTx ::
@@ -596,7 +596,7 @@ wrongRedeemerLabelTx pf =
         ]
     misPurposedRedeemer =
       -- The label *should* be Spend, not Mint
-      mkRedeemersFromTags pf [((Minting, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
+      mkRedeemersFromTags pf [((Minting, 1), (Data (PV1.I 42), ExUnits 5000 5000))]
 
 missingDatumTx ::
   forall era.

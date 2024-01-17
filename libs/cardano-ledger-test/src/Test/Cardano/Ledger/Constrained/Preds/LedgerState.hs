@@ -161,10 +161,10 @@ demo proof mode = do
   modeRepl mode proof env2 ""
 
 demoTest :: TestTree
-demoTest = testIO "Testing LedgerState Stage" (demo (Conway Standard) CI)
+demoTest = testIO "Testing LedgerState Stage" (demo Conway CI)
 
 main :: IO ()
-main = defaultMain $ testIO "Testing LedgerState Stage" (demo (Conway Standard) Interactive)
+main = defaultMain $ testIO "Testing LedgerState Stage" (demo Conway Interactive)
 
 -- =================================
 
@@ -290,7 +290,7 @@ demoGov proof mode = do
   modeRepl mode proof env ""
 
 mainGov :: IO ()
-mainGov = demoGov (Conway Standard) Interactive
+mainGov = demoGov Conway Interactive
 
 setActionId :: GovAction era -> Maybe (GovActionId (EraCrypto era)) -> GovAction era
 setActionId (ParameterChange _ pp p) x = ParameterChange (liftId x) pp p
