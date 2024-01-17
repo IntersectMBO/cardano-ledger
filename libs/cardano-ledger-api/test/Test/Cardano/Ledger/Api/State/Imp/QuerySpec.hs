@@ -257,7 +257,7 @@ spec =
       Maybe (Map.Map (KeyHash 'ColdCommitteeRole (EraCrypto era)) (CommitteeMemberState (EraCrypto era))) ->
       ImpTestM era ()
     expectQueryResult ckFilter hkFilter statusFilter expResult = do
-      nes <- use impNESL
+      nes <- use impNESG
       let res =
             queryCommitteeMembersState
               (Set.map KeyHashObj ckFilter)

@@ -47,6 +47,14 @@
 
 ### `testlib`
 
+* Add `fixupTx`, `impAddNativeScript` and `logToExpr`
+* Remove `mkTxWits`
+* Add `impNESG`, `impLastTickG`, `impKeyPairsG` and `impScriptsG`. Stop exporting
+  `impNESL` and `impLastTickL`
+* Add `impScripts` and `impScriptsG`
+* Add `impSatisfyNativeScript` and `impShelleySatisfyNativeScript`
+* Rename `emptyImpNES` to `initImpNES`
+* Rename `emptyShelleyImpNES` to `initShelleyImpNES`
 * Add `lookupImpRootTxOut` and remove `impRootTxCoin`
 * Add `submitTx_`, `submitTxAnn` and `submitTxAnn_`.
 * Change type signature for `submitTx` and `trySubmitTx`.

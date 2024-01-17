@@ -50,6 +50,7 @@
 
 ### `testlib`
 
+* Add `submitProposal_`
 * Add `submitTreasuryWithdrawals`
 * Remove `Test.Cardano.Ledger.Conway.PParamsSpec` and replace the unit test it contained
   with a new property test in `Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec`

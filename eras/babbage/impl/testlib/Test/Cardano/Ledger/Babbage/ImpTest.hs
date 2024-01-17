@@ -9,7 +9,8 @@ import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (..))
-import Test.Cardano.Ledger.Alonzo.ImpTest (emptyAlonzoImpNES)
+import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
+import Test.Cardano.Ledger.Alonzo.ImpTest (initAlonzoImpNES)
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp (..))
@@ -22,4 +23,5 @@ instance
   ) =>
   ShelleyEraImp (BabbageEra c)
   where
-  emptyImpNES = emptyAlonzoImpNES
+  initImpNES = initAlonzoImpNES
+  impSatisfyNativeScript = impAllegraSatisfyNativeScript

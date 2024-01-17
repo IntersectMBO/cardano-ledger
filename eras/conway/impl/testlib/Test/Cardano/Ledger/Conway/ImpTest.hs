@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   submitGovAction,
   submitGovAction_,
   submitProposal,
+  submitProposal_,
   submitFailingProposal,
   trySubmitGovAction,
   trySubmitProposal,
@@ -52,6 +53,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo,
@@ -153,6 +155,7 @@ import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (&), (.~), (^.))
+import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
@@ -184,14 +187,16 @@ instance
   ) =>
   ShelleyEraImp (ConwayEra c)
   where
-  emptyImpNES rootCoin =
+  initImpNES rootCoin =
     let nes =
-          emptyAlonzoImpNES rootCoin
+          initAlonzoImpNES rootCoin
             & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
             & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
         epochState = nes ^. nesEsL
         ratifyState = def & rsEnactStateL .~ (epochState ^. epochStateGovStateL . cgEnactStateL)
      in nes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState
+
+  impSatisfyNativeScript = impAllegraSatisfyNativeScript
 
   modifyPParams = conwayModifyPParams
 
@@ -205,6 +210,7 @@ class
   , Signal (EraRule "ENACT" era) ~ EnactSignal era
   , Environment (EraRule "ENACT" era) ~ ()
   , ToExpr (PParamsHKD Identity era)
+  , NativeScript era ~ Timelock era
   ) =>
   ConwayEraImp era
 
@@ -352,12 +358,14 @@ trySubmitVote vote voter gaId =
                 )
             )
 
+submitProposal_ ::
+  (ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =>
+  ProposalProcedure era ->
+  ImpTestM era ()
+submitProposal_ = void . submitProposal
+
 submitProposal ::
-  forall era.
-  ( ShelleyEraImp era
-  , ConwayEraTxBody era
-  , HasCallStack
-  ) =>
+  (ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =>
   ProposalProcedure era ->
   ImpTestM era (GovActionId (EraCrypto era))
 submitProposal proposal = trySubmitProposal proposal >>= expectRightExpr

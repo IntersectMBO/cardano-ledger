@@ -9,6 +9,7 @@
 module Cardano.Ledger.Tools (
   setMinFeeTx,
   calcMinFeeTx,
+  calcMinFeeTxNativeScriptWits,
   estimateMinFeeTx,
   addDummyWitsTx,
 )
@@ -25,6 +26,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   BootstrapWitness (..),
   ChainCode (..),
+  KeyHash,
   KeyRole (Witness),
   VKey,
   WitVKey (..),
@@ -54,6 +56,30 @@ setMinFeeTx pp tx =
    in if curFee == curMinFee
         then tx
         else setMinFeeTx pp modifiedTx
+
+-- | Same as `calcMinFeeTx`, except this function allows to specify hashes of key witnesses
+-- that will be supplied, instead of their count. That is only useful whenever there is a
+-- chance of some of the required witnesses being the same as the witnesses that will be
+-- supplied for native scripts.
+calcMinFeeTxNativeScriptWits ::
+  forall era.
+  EraUTxO era =>
+  -- | All TxOuts available for this transaction. In other words `TxIn`s produced by
+  -- `allInputsTxBodyF` should be present in this `UTxO` map, however this is not checked.
+  UTxO era ->
+  -- | The current protocol parameters.
+  PParams era ->
+  -- | The transaction.
+  Tx era ->
+  -- | KeyHash witnesses that will be supplied for satisfying native scripts. It is
+  -- impossible to know how many of these is required without knowing the actual witnesses
+  -- supplied and the time when the transaction will be submitted. Therefore we put this
+  -- burden on the user.
+  Set.Set (KeyHash 'Witness (EraCrypto era)) ->
+  -- | The required minimum fee.
+  Coin
+calcMinFeeTxNativeScriptWits utxo pp tx nativeScriptsKeyWitsHashes =
+  calcMinFeeTxInternal utxo pp tx (Set.size nativeScriptsKeyWitsHashes) nativeScriptsKeyWitsHashes
 
 -- | This is a more accurate version `estimateMinFeeTx` that looks into transaction and
 -- figures out how many and what kind of key witnesses this transaction needs. It requires
@@ -87,6 +113,24 @@ calcMinFeeTx ::
   -- | The required minimum fee.
   Coin
 calcMinFeeTx utxo pp tx extraKeyWitsCount =
+  calcMinFeeTxInternal utxo pp tx extraKeyWitsCount Set.empty
+
+calcMinFeeTxInternal ::
+  forall era.
+  EraUTxO era =>
+  -- | All TxOuts available for this transaction. In other words `TxIn`s produced by
+  -- `allInputsTxBodyF` should be present in this `UTxO` map, however this is not checked.
+  UTxO era ->
+  -- | The current protocol parameters.
+  PParams era ->
+  -- | The transaction.
+  Tx era ->
+  -- | Number of KeyHash witnesses that will be supplied for native scripts
+  Int ->
+  -- | KeyHash witnesses that will be supplied for native scripts
+  Set.Set (KeyHash 'Witness (EraCrypto era)) ->
+  Coin
+calcMinFeeTxInternal utxo pp tx extraKeyWitsCount nativeScriptsKeyWitsHashes =
   setMinFeeTx pp tx' ^. bodyTxL . feeTxBodyL
   where
     txBody = tx ^. bodyTxL
@@ -97,8 +141,8 @@ calcMinFeeTx utxo pp tx extraKeyWitsCount =
       ba@(BootstrapAddress bootAddr) <- txOut ^. bootAddrTxOutF
       pure (asWitness (bootstrapKeyHash ba), Byron.addrAttributes bootAddr)
     byronAttributes = Map.fromList $ mapMaybe getByronAttrs inputs
-    requiredKeyHashes = getWitsVKeyNeeded def utxo txBody
-    -- number of non byron key hashes that will be supplied:
+    requiredKeyHashes =
+      getWitsVKeyNeeded def utxo txBody Set.\\ nativeScriptsKeyWitsHashes
     numKeyWitsRequired =
       getGenesisKeyHashCountTxBody txBody
         + extraKeyWitsCount

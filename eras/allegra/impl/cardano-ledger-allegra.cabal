@@ -97,7 +97,10 @@ library testlib
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-strict-containers,
+        containers,
         generic-random,
+        microlens,
+        mtl,
         QuickCheck
 
 test-suite tests

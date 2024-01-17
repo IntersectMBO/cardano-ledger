@@ -83,7 +83,8 @@ import Cardano.Ledger.Shelley.Rules (Identity, UtxoEnv (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
-import Control.Monad.RWS.Class (asks, gets, modify)
+import Control.Monad (replicateM_)
+import Control.Monad.RWS.Class (asks, gets)
 import Control.State.Transition.Extended (STS (..))
 import Data.Bitraversable (bimapM)
 import Data.ByteString (ByteString)
@@ -102,7 +103,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Word (Word32, Word64)
-import Lens.Micro (to, (.~), (^.))
+import Lens.Micro
 import Lens.Micro.Extras (view)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance.Orphans ()
@@ -113,13 +114,14 @@ import Test.Cardano.Ledger.Conway.ImpTest (
   ImpTestM,
   ImpTestState,
   evalImpTestM,
-  fixupFees,
+  fixupTx,
   getsNES,
   impAnn,
-  impLastTickL,
+  impLastTickG,
   logCurPParams,
   logEntry,
   modifyNES,
+  passTick,
   trySubmitTx,
   withImpState,
   withNoFixup,
@@ -611,12 +613,12 @@ trySubmitTxConform txPreFixup = do
   doFixup <- asks iteDoTxFixup
   tx <-
     if doFixup
-      then fixupFees txPreFixup
+      then fixupTx txPreFixup
       else pure txPreFixup
   let
   agdaUtxoState <- expectRight . toSpecRep $ nes ^. nesEsL . esLStateL . lsUTxOStateL
   agdaTx <- expectRight $ toSpecRep tx
-  lastTick <- gets $ view impLastTickL
+  lastTick <- gets $ view impLastTickG
   pParams <- getsNES $ nesEsL . curPParamsEpochStateL
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
   let
@@ -687,7 +689,7 @@ conformsWhen makeTestsSmall condition impState =
       condition nes tx
         ==> evalImpTestM impState
         $ do
-          modify (impLastTickL @Conway .~ 100)
+          replicateM_ 100 passTick
           modifyNES $ const nes
           logCurPParams
           -- logNESSummary

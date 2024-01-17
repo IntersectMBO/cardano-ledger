@@ -26,7 +26,7 @@ spec =
       rewardAcount1 <- registerRewardAccount
       govActionId <- submitTreasuryWithdrawals [(rewardAcount1, Coin 666)]
       GovActionState {gasAction = govAction} <- getGovActionState govActionId
-      enactStateInit <- use $ impNESL . newEpochStateGovStateL . cgEnactStateL
+      enactStateInit <- use $ impNESG . newEpochStateGovStateL . cgEnactStateL
       let signal =
             EnactSignal
               { esGovActionId = govActionId
