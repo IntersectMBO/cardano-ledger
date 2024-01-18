@@ -71,6 +71,8 @@ import Cardano.Ledger.Binary (
   encodeNullStrictMaybe,
   encodeWord8,
   invalidKey,
+  FromCBOR (..),
+  toPlainDecoder,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -82,7 +84,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Core (Era (..), EraPParams (..), PParamsUpdate)
+import Cardano.Ledger.Core (Era (..), EraPParams (..), PParamsUpdate, eraProtVerLow)
 import Cardano.Ledger.Credential (Credential (..), credToText)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -453,6 +455,9 @@ instance EraPParams era => DecCBOR (ProposalProcedure era) where
         <! From
         <! From
   {-# INLINE decCBOR #-}
+
+instance EraPParams era => FromCBOR (ProposalProcedure era) where
+  fromCBOR = toPlainDecoder (eraProtVerLow @era) decCBOR
 
 instance EraPParams era => EncCBOR (ProposalProcedure era) where
   encCBOR ProposalProcedure {..} =

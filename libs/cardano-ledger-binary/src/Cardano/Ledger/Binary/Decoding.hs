@@ -12,6 +12,7 @@ module Cardano.Ledger.Binary.Decoding (
   decodeFullDecoder',
   decodeFullAnnotator,
   decodeFullAnnotatedBytes,
+  decodeHexFromText,
   module Cardano.Ledger.Binary.Version,
   module Cardano.Ledger.Binary.Decoding.DecCBOR,
   module Cardano.Ledger.Binary.Decoding.Sharing,
@@ -60,6 +61,9 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Internal as BSL
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text)
+import qualified Data.ByteString.Base16 as B16
+import qualified Data.Text.Encoding as Text
+import qualified Data.Text as T
 
 -- | Deserialize a Haskell value from the external binary representation, which
 -- have been made using 'serialize' or a matching serialization functionilty in
@@ -272,3 +276,9 @@ decCBORMaybe = decodeMaybe
 -- Decode the bytes to get an @('Annotator' f)@ where f is a function that when given
 -- original bytes produces a value of type @t@, then apply @f@ to @('Full' bytes)@ to get
 -- the answer.
+
+decodeHexFromText :: DecCBOR a => Version -> Text -> Text -> Either DecoderError a
+decodeHexFromText ver lbl dat =
+  case B16.decode (Text.encodeUtf8 dat) of
+    Left err -> Left . DecoderErrorCustom "Failed to read from hex" $ T.pack err
+    Right x -> decodeFullDecoder' ver lbl decCBOR x

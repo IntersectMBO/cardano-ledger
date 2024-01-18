@@ -10,12 +10,12 @@ module Test.Cardano.Ledger.Conway.Imp.GovSpec where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams (ppGovActionLifetimeL)
+import Cardano.Ledger.Conway.PParams (ppGovActionLifetimeL, ppGovActionDepositL)
 import Cardano.Ledger.Conway.Rules (
   ConwayGOV,
   ConwayGovPredFailure (..),
   ConwayLEDGER,
-  ConwayLedgerPredFailure (ConwayGovFailure),
+  ConwayLedgerPredFailure (ConwayGovFailure), PredicateFailure,
  )
 import Cardano.Ledger.Core (EraRule)
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
@@ -28,6 +28,13 @@ import Lens.Micro
 import Test.Cardano.Ledger.Conway.Imp.EpochSpec (electBasicCommittee)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
+import Test.Cardano.Ledger.Imp.Common hiding (Success)
+import Control.Monad.IO.Class (MonadIO(..))
+import Data.Aeson (withObject, (.:), decode)
+import Data.Aeson.Types (parse, Result(..))
+import Cardano.Ledger.Binary (decodeHexFromText, DecCBOR, Annotator, runAnnotator, FullByteString(..))
+import qualified Data.ByteString.Lazy as LBS
 
 spec ::
   forall era.
@@ -39,152 +46,46 @@ spec ::
   SpecWith (ImpTestState era)
 spec =
   describe "GOV" $ do
-    let submitInitConstitutionGovAction = do
-          constitutionHash <- freshSafeHash
-          let constitutionAction =
-                NewConstitution
-                  SNothing
-                  ( Constitution
-                      ( Anchor
-                          (fromJust $ textToUrl "constitution.0")
-                          constitutionHash
-                      )
-                      SNothing
-                  )
-          submitGovAction constitutionAction
+    describe "Voting" $ do
+      context "fails for" $ do
+        it
+          "committee member voting on committee change"
+          committeeMemberVotingOnCommitteeChange
+        it "non-committee-member voting on committee change as a committee member" $ do
+          _ <- electBasicCommittee
+          rewardAccount <- registerRewardAccount
+          prevGovActionId <- getsNES $
+            nesEsL .
+            esLStateL .
+            lsUTxOStateL .
+            utxosGovStateL .
+            cgEnactStateL .
+            ensPrevGovActionIdsL .
+            pgaCommitteeL
+          credCandidate <- KeyHashObj <$> freshKeyHash
+          credVoter <- KeyHashObj <$> freshKeyHash
+          govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+          committeeUpdateId <- submitProposal ProposalProcedure
+            { pProcReturnAddr = rewardAccount
+            , pProcGovAction = UpdateCommittee
+                prevGovActionId
+                mempty
+                (Map.singleton credCandidate $ EpochNo 28)
+                (3 %! 5)
+            , pProcDeposit = govActionDeposit
+            , pProcAnchor = def
+            }
+          let voter = CommitteeVoter credVoter
+          trySubmitVote VoteNo voter committeeUpdateId
+            `shouldReturn`
+              Left
+                [ ConwayGovFailure . DisallowedVoters @era $
+                    Map.fromList
+                      [ (committeeUpdateId, voter)
+                      ]
+                ]
     describe "Votes fail as expected" $ do
-      it "on expired gov-actions" $ do
-        modifyPParams $ ppGovActionLifetimeL .~ 2 -- Voting after the 3rd epoch should fail
-        khDRep <- setupSingleDRep
-        gaidConstitutionProp <- submitInitConstitutionGovAction
-        passEpoch
-        passEpoch
-        passEpoch
-        let voter = DRepVoter $ KeyHashObj khDRep
-        submitFailingVote voter gaidConstitutionProp $
-          [ ConwayGovFailure $ VotingOnExpiredGovAction $ Map.singleton gaidConstitutionProp voter
-          ]
-      it "on non-existant gov-actions" $ do
-        khDRep <- setupSingleDRep
-        gaidConstitutionProp <- submitInitConstitutionGovAction
-        let voter = DRepVoter $ KeyHashObj khDRep
-            dummyGaid = gaidConstitutionProp {gaidGovActionIx = GovActionIx 99} -- non-existant `GovActionId`
-        submitFailingVote voter dummyGaid $
-          [ConwayGovFailure $ GovActionsDoNotExist $ Set.singleton dummyGaid]
-
-    describe "Proposals always have valid previous actions" $ do
-      it "Another proposal after the first ever proposal is accepted" $ do
-        --  Initial proposal does not need a PrevGovActionId but after it is enacted, the
-        --  following ones are not
-        gaidConstitutionProp <- submitInitConstitutionGovAction
-        constitutionHash' <- freshSafeHash
-        let constitutionAction' =
-              NewConstitution
-                SNothing
-                ( Constitution
-                    ( Anchor
-                        (fromJust $ textToUrl "constitution.0")
-                        constitutionHash'
-                    )
-                    SNothing
-                )
-        -- Until the first proposal is enacted all proposals with empty PrevGovActionIds are valid
-        submitGovAction_ constitutionAction'
-        modifyNES $ \nes ->
-          nes
-            & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensPrevConstitutionL
-              .~ SJust (PrevGovActionId gaidConstitutionProp) -- Add first proposal to PrevGovActionIds in enacted state
-            & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgProposalsL
-              .~ def -- Remove all proposals, so that the lookup only succeeds for ecacted state.
-        constitutionHash'' <- freshSafeHash
-        -- Once a proposal with a purpose has been enacted, following proposals can no
-        -- longer have empty PrevGovActionIds
-        rewardAccount <- registerRewardAccount
-        let invalidNewConstitutionGovAction =
-              NewConstitution
-                SNothing
-                ( Constitution
-                    ( Anchor
-                        (fromJust $ textToUrl "constitution.0")
-                        constitutionHash''
-                    )
-                    SNothing
-                )
-            invalidNewConstitutionProposal =
-              ProposalProcedure
-                { pProcDeposit = mempty
-                , pProcReturnAddr = rewardAccount
-                , pProcGovAction = invalidNewConstitutionGovAction
-                , pProcAnchor = def
-                }
-        submitFailingProposal
-          invalidNewConstitutionProposal
-          [ ConwayGovFailure $ InvalidPrevGovActionIdsInProposals [invalidNewConstitutionProposal]
-          ]
       context "Invalid proposals are rejected" $ do
-        it "Invalid Index in PrevGovActionId" $ do
-          gaidConstitutionProp <- submitInitConstitutionGovAction
-          constitutionHash <- freshSafeHash
-          rewardAccount <- registerRewardAccount
-          let invalidPrevGovActionId =
-                -- Expected Ix = 0
-                PrevGovActionId (gaidConstitutionProp {gaidGovActionIx = GovActionIx 1})
-              invalidNewConstitutionGovAction =
-                NewConstitution
-                  (SJust invalidPrevGovActionId)
-                  ( Constitution
-                      ( Anchor
-                          (fromJust $ textToUrl "constitution.1")
-                          constitutionHash
-                      )
-                      SNothing
-                  )
-              invalidNewConstitutionProposal =
-                ProposalProcedure
-                  { pProcDeposit = mempty
-                  , pProcReturnAddr = rewardAccount
-                  , pProcGovAction = invalidNewConstitutionGovAction
-                  , pProcAnchor = def
-                  }
-          submitFailingProposal
-            invalidNewConstitutionProposal
-            [ ConwayGovFailure $ InvalidPrevGovActionIdsInProposals [invalidNewConstitutionProposal]
-            ]
-        it "Valid PrevGovActionId but invalid purpose" $ do
-          gaidConstitutionProp <- submitInitConstitutionGovAction
-          rewardAccount <- registerRewardAccount
-          let invalidNoConfidenceAction =
-                NoConfidence $ SJust $ PrevGovActionId gaidConstitutionProp
-              invalidNoConfidenceProposal =
-                ProposalProcedure
-                  { pProcDeposit = mempty
-                  , pProcReturnAddr = rewardAccount
-                  , pProcGovAction = invalidNoConfidenceAction
-                  , pProcAnchor = def
-                  }
-          submitFailingProposal
-            invalidNoConfidenceProposal
-            [ ConwayGovFailure $ InvalidPrevGovActionIdsInProposals [invalidNoConfidenceProposal]
-            ]
-      context "Valid proposals are accepted" $ do
-        it "Submit Constitution and use valid PrevGovActionId" $ do
-          curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-          gaidConstitutionProp <- submitInitConstitutionGovAction
-          constitutionHash <- freshSafeHash
-          let constitutionActionNext =
-                NewConstitution
-                  (SJust $ PrevGovActionId gaidConstitutionProp)
-                  ( Constitution
-                      ( Anchor
-                          (fromJust $ textToUrl "constitution.1")
-                          constitutionHash
-                      )
-                      SNothing
-                  )
-          curConstitution' <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-          impAnn "Constitution has not been enacted yet" $
-            curConstitution' `shouldBe` curConstitution
-          submitGovAction_ constitutionActionNext
         it "Enact Constitution and use valid PrevGovActionId" $ do
           (dRep, committeeMember) <- electBasicCommittee
           constitutionHash <- freshSafeHash
@@ -217,3 +118,44 @@ spec =
                       SNothing
                   )
           submitGovAction_ constitutionAction1
+
+committeeMemberVotingOnCommitteeChange ::
+  forall era.
+  ( ConwayEraImp era
+  , GovState era ~ ConwayGovState era
+  , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
+  , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
+  ) =>
+  ImpTestM era ()
+committeeMemberVotingOnCommitteeChange = do
+  (_, ccHot) <- electBasicCommittee
+  rewardAccount <- registerRewardAccount
+  govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+  khCommittee <- KeyHashObj <$> freshKeyHash
+  prevGovActionId <- getsNES $
+    nesEsL .
+    esLStateL .
+    lsUTxOStateL .
+    utxosGovStateL .
+    cgEnactStateL .
+    ensPrevGovActionIdsL .
+    pgaCommitteeL
+  committeeUpdateId <- submitProposal ProposalProcedure
+    { pProcReturnAddr = rewardAccount
+    , pProcGovAction = UpdateCommittee
+        prevGovActionId
+        mempty
+        (Map.singleton khCommittee $ EpochNo 28)
+        (3 %! 5)
+    , pProcDeposit = govActionDeposit
+    , pProcAnchor = def
+    }
+  let voter = CommitteeVoter ccHot
+  submitFailingVote
+    voter
+    committeeUpdateId
+    [ ConwayGovFailure . DisallowedVoters @era $
+        Map.fromList
+          [ (committeeUpdateId, voter)
+          ]
+    ]

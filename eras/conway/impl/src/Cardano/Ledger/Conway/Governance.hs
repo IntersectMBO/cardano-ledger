@@ -98,6 +98,12 @@ module Cardano.Ledger.Conway.Governance (
   epochStateRegDrepL,
   epochStateUMapL,
   reDRepDistrL,
+  pgaPParamUpdateL,
+  pgaHardForkL,
+  pgaCommitteeL,
+  pgaConstitutionL,
+
+  -- Pulser
   pulseDRepPulsingState,
   completeDRepPulsingState,
   extractDRepPulsingState,
@@ -185,7 +191,7 @@ import Cardano.Ledger.Conway.Governance.Proposals (
   proposalsIds,
   proposalsInsertGovAction,
   proposalsLookupId,
-  proposalsRemoveIds,
+  proposalsRemoveIds, pgaPParamUpdateL, pgaHardForkL, pgaCommitteeL, pgaConstitutionL, PrevGovActionIds (..),
  )
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
@@ -341,55 +347,6 @@ instance EraPParams era => FromCBOR (PulsingSnapshot era) where
 
 -- ===============================
 
-data PrevGovActionIds era = PrevGovActionIds
-  { pgaPParamUpdate :: !(StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
-  -- ^ The last enacted GovActionId for a protocol parameter update
-  , pgaHardFork :: !(StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
-  -- ^ The last enacted GovActionId for a hard fork
-  , pgaCommittee :: !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
-  -- ^ The last enacted GovActionId for a committee change or no confidence vote
-  , pgaConstitution :: !(StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
-  -- ^ The last enacted GovActionId for a new constitution
-  }
-  deriving (Eq, Show, Generic)
-
-instance NoThunks (PrevGovActionIds era)
-instance Era era => NFData (PrevGovActionIds era)
-instance Default (PrevGovActionIds era)
-
-instance Era era => DecCBOR (PrevGovActionIds era) where
-  decCBOR =
-    decode $
-      RecD PrevGovActionIds
-        <! From
-        <! From
-        <! From
-        <! From
-
-instance Era era => EncCBOR (PrevGovActionIds era) where
-  encCBOR PrevGovActionIds {..} =
-    encode $
-      Rec (PrevGovActionIds @era)
-        !> To pgaPParamUpdate
-        !> To pgaHardFork
-        !> To pgaCommittee
-        !> To pgaConstitution
-
-toPrevGovActionIdsPairs :: (KeyValue e a, Era era) => PrevGovActionIds era -> [a]
-toPrevGovActionIdsPairs pga@(PrevGovActionIds _ _ _ _) =
-  let PrevGovActionIds {..} = pga
-   in [ "pgaPParamUpdate" .= pgaPParamUpdate
-      , "pgaHardFork" .= pgaHardFork
-      , "pgaCommittee" .= pgaCommittee
-      , "pgaConstitution" .= pgaConstitution
-      ]
-
-instance Era era => ToJSON (PrevGovActionIds era) where
-  toJSON = object . toPrevGovActionIdsPairs
-  toEncoding = pairs . mconcat . toPrevGovActionIdsPairs
-
-instance ToExpr (PrevGovActionIds era)
-
 data EnactState era = EnactState
   { ensCommittee :: !(StrictMaybe (Committee era))
   -- ^ Constitutional Committee
@@ -456,7 +413,11 @@ ensPrevConstitutionL =
     (pgaConstitution . ensPrevGovActionIds)
     (\es x -> es {ensPrevGovActionIds = (ensPrevGovActionIds es) {pgaConstitution = x}})
 
-instance ToExpr (PParamsHKD Identity era) => ToExpr (EnactState era)
+instance
+  ( ToExpr (PParamsHKD Identity era)
+  , ToExpr (PrevGovActionIds era)
+  ) =>
+  ToExpr (EnactState era)
 
 instance EraPParams era => ToJSON (EnactState era) where
   toJSON = object . toEnactStatePairs
@@ -541,7 +502,7 @@ deriving instance EraPParams era => Show (RatifyState era)
 rsEnactStateL :: Lens' (RatifyState era) (EnactState era)
 rsEnactStateL = lens rsEnactState (\x y -> x {rsEnactState = y})
 
-instance EraPParams era => ToExpr (RatifyState era)
+instance (EraPParams era, ToExpr (PrevGovActionIds era)) => ToExpr (RatifyState era)
 
 instance EraPParams era => Default (RatifyState era)
 
@@ -635,7 +596,7 @@ instance EraPParams era => NFData (ConwayGovState era)
 
 instance EraPParams era => NoThunks (ConwayGovState era)
 
-instance EraPParams era => ToExpr (ConwayGovState era)
+instance (EraPParams era, ToExpr (PrevGovActionIds era)) => ToExpr (ConwayGovState era)
 
 instance EraPParams era => ToJSON (ConwayGovState era) where
   toJSON = object . toConwayGovPairs
@@ -1089,7 +1050,7 @@ instance EraPParams era => DecShareCBOR (DRepPulsingState era) where
 instance EraPParams era => DecCBOR (DRepPulsingState era) where
   decCBOR = decode (RecD DRComplete <! From <! From)
 
-instance EraPParams era => ToExpr (DRepPulsingState era) where
+instance (EraPParams era, ToExpr (PrevGovActionIds era)) => ToExpr (DRepPulsingState era) where
   toExpr (DRComplete x y) = App "DRComplete" [toExpr x, toExpr y]
   toExpr x@(DRPulsing (DRepPulser {})) = App "DRComplete" [toExpr a, toExpr b]
     where

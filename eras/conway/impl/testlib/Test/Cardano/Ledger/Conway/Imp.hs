@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Test.Cardano.Ledger.Conway.Imp (
   spec,
@@ -15,6 +16,11 @@ import Cardano.Ledger.Conway.Rules (
   ConwayLEDGER,
  )
 import Cardano.Ledger.Core (EraRule)
+import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.Conway.Governance (ConwayGovState, GovState)
+import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
+import Cardano.Ledger.Core (EraRule, EraPParams (..))
+import Control.State.Transition.Extended (PredicateFailure)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
@@ -27,6 +33,7 @@ spec ::
   , GovState era ~ ConwayGovState era
   , EraRule "GOV" era ~ ConwayGOV era
   , EraRule "LEDGER" era ~ ConwayLEDGER era
+  , ToExpr (PParamsHKD StrictMaybe era)
   ) =>
   Spec
 spec = do
