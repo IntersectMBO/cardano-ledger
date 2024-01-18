@@ -8,7 +8,6 @@
 
 module Test.Cardano.Ledger.Constrained.Preds.LedgerState where
 
-import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
@@ -103,12 +102,12 @@ ledgerStatePreds _usize p =
   , Random prevHardFork
   , Random prevConstitution
   , Random prevCommittee
-  , Random currProposals
+  , Random (currProposals p)
   , -- , Sized (Range 2 5) currGovActionStates
-    currGovActionStates :<-: (Constr "currGovActionStates" (toList . proposalsActions) :$ (Simple currProposals))
+    currGovActionStates :<-: (Constr "currGovActionStates" (toList . proposalsActions) :$ (Simple (currProposals p)))
   , -- , proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit) :$ (Simple currGovActionStates))
     -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
-    proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit . proposalsActions) :$ (Simple currProposals))
+    proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit . proposalsActions) :$ (Simple (currProposals p)))
   , -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
     SumsTo
       (Right (Coin 1))
@@ -346,7 +345,6 @@ genGovActionStates proof gaids = do
             <*> genGovAction proof CommitteePurpose parent
             <*> arbitrary
             <*> arbitrary
-            <*> pure (children idx pairs)
         pure (state {gasAction = setActionId (gasAction state) parent})
   states <- mapM genGovState pairs
   pure (Map.fromList (map (\x -> (gasId x, x)) states))

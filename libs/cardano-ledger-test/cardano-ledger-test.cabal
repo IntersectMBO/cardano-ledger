@@ -157,7 +157,6 @@ test-suite cardano-ledger-test
     build-depends:
         base,
         cardano-ledger-test,
-        cardano-ledger-conway,
         tasty,
         data-default-class
 

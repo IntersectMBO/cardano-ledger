@@ -1757,10 +1757,10 @@ initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactsta
         -- treas
         testGlobals
 
-proposalsT :: forall era. Reflect era => RootTarget era (Proposals era) (Proposals era)
-proposalsT =
+proposalsT :: forall era. Era era => Proof era -> RootTarget era (Proposals era) (Proposals era)
+proposalsT proof  =
   Invert "Proposals" (typeRep @(Proposals era)) id
-    :$ Lensed prevProposals' (lens id $ const id)
+    :$ Lensed (prevProposals' proof) (lens id $ const id)
 
 -- govRuleStateT :: forall era. EraPParams era => RootTarget era (GovRuleState era) (GovRuleState era)
 -- govRuleStateT =
@@ -1818,8 +1818,8 @@ ratifyStateL = lens getter setter
 prevProposals :: Era era => Term era [GovActionState era]
 prevProposals = Var $ V "prevProposals" (ListR GovActionStateR) No
 
-prevProposals' :: Reflect era => Term era (Proposals era)
-prevProposals' = Var $ V "prevProposals'" (ProposalsR reify) No
+prevProposals' :: Era era => Proof era -> Term era (Proposals era)
+prevProposals' proof = Var $ V "prevProposals'" (ProposalsR proof) No
 
 prevProposalsL :: Lens' (DRepPulser era Identity (RatifyState era)) [GovActionState era]
 prevProposalsL =
@@ -1848,10 +1848,10 @@ prevDRepStateL ::
 prevDRepStateL = lens dpDRepState (\x y -> x {dpDRepState = y})
 
 -- | Snapshot of 'committeeState' from the start of the current epoch
-prevCommittee :: Era era => Term era (Maybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
+prevCommittee :: Era era => Term era (Maybe (GovPurposeId 'CommitteePurpose era))
 prevCommittee = Var $ V "prevCommittee" (MaybeR PrevCommitteeR) No
 
-prevConstitution :: Era era => Term era (Maybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
+prevConstitution :: Era era => Term era (Maybe (GovPurposeId 'ConstitutionPurpose  era))
 prevConstitution = Var $ V "prevConstitution" (MaybeR PrevConstitutionR) No
 
 -- | snapshot of 'poolDistr' from the start of the current epoch
@@ -1934,9 +1934,9 @@ conwayGovStateT ::
   (RunConwayRatify era, Reflect era) =>
   Proof era ->
   RootTarget era (ConwayGovState era) (ConwayGovState era)
-conwayGovStateT _ =
+conwayGovStateT p =
   Invert "ConwayGovState" (typeRep @(ConwayGovState era)) ConwayGovState
-    :$ Lensed currProposals cgProposalsL
+    :$ Lensed (currProposals p) cgProposalsL
     :$ Shift enactStateT cgEnactStateL
     -- :$ Shift (completePulsingStateT p) cgDRepPulsingStateL
     :$ Shift pulsingPulsingStateT cgDRepPulsingStateL
@@ -1949,10 +1949,10 @@ proposalDeposits = Var (V "proposalDeposits" CoinR No)
 drepDepositsView :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) Coin)
 drepDepositsView = Var (V "drepDepositsView" (MapR VCredR CoinR) No)
 
-currProposals :: Reflect era => Term era (Proposals era)
-currProposals = Var $ V "currProposals" (ProposalsR reify) No
+currProposals :: Era era => Proof era -> Term era (Proposals era)
+currProposals p = Var $ V "currProposals" (ProposalsR p) No
 
-currGovActionStates :: EraPParams era => Term era [GovActionState era]
+currGovActionStates :: Era era => Term era [GovActionState era]
 currGovActionStates = Var $ V "currGovActionStates" (ListR GovActionStateR) No
 
 enactStateT :: forall era. Reflect era => RootTarget era (EnactState era) (EnactState era)
@@ -1988,22 +1988,22 @@ prevGovActionIdsT =
     :$ Lensed prevCommittee (prevGovActionIdsL . pfCommitteeL . strictMaybeToMaybeL)
     :$ Lensed prevConstitution (prevGovActionIdsL . pfConstitutionL . strictMaybeToMaybeL)
 
-prevPParamUpdate :: EraPParams era => Term era (Maybe (GovPurposeId 'PParamUpdatePurpose era))
+prevPParamUpdate :: Era era => Term era (Maybe (GovPurposeId 'PParamUpdatePurpose era))
 prevPParamUpdate = Var $ V "prevPParamUpdate" (MaybeR PrevPParamUpdateR) No
 
-prevHardFork :: EraPParams era => Term era (Maybe (GovPurposeId 'HardForkPurpose era))
+prevHardFork :: Era era => Term era (Maybe (GovPurposeId 'HardForkPurpose era))
 prevHardFork = Var $ V "prevHardFork" (MaybeR PrevHardForkR) No
 
-ppUpdateChildren :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
+ppUpdateChildren :: Era era => Term era (Set (GovActionId (EraCrypto era)))
 ppUpdateChildren = Var $ V "ppUpdateChildren" (SetR GovActionIdR) No
 
-hardForkChildren :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
+hardForkChildren :: Era era => Term era (Set (GovActionId (EraCrypto era)))
 hardForkChildren = Var $ V "hardForkChildren" (SetR GovActionIdR) No
 
-committeeChildren :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
+committeeChildren :: Era era => Term era (Set (GovActionId (EraCrypto era)))
 committeeChildren = Var $ V "committeeChildren" (SetR GovActionIdR) No
 
-constitutionChildren :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
+constitutionChildren :: Era era => Term era (Set (GovActionId (EraCrypto era)))
 constitutionChildren = Var $ V "constitutionChildren" (SetR GovActionIdR) No
 
 -- ================

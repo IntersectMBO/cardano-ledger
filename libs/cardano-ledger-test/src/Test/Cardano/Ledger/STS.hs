@@ -613,10 +613,10 @@ prop_GOV sub =
   stsProperty @"GOV"
     sub
     (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) govEnvGenPreds govEnvCheckPreds (govEnvT pe))
-    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) proposalsSnapshotGenPreds proposalsSnapshotsCheckPreds proposalsT {-govRuleStateT-})
+    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) proposalsSnapshotGenPreds proposalsSnapshotsCheckPreds (proposalsT conwayProof) {-govRuleStateT-})
     (\_ _ -> (arbitrary, const []))
     -- TODO: we should probably check more things here
-    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) proposalsSnapshotsCheckPreds proposalsT {-govRuleStateT-} st'
+    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) proposalsSnapshotsCheckPreds (proposalsT conwayProof) {-govRuleStateT-} st'
 
 ------------------------------------------------------------------------
 -- Test Tree

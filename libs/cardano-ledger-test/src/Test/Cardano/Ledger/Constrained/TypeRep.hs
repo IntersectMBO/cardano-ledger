@@ -368,10 +368,10 @@ data HasInstances a where
     Is Ord a ->
     HasInstances a
 
-pattern IsOrd :: (Typeable a, Ord a) => HasInstances a
+pattern IsOrd :: () => (Typeable a, Ord a) => HasInstances a
 pattern IsOrd = Type Is Is
 
-pattern IsEq :: (Typeable a, Eq a) => HasInstances a
+pattern IsEq :: () => (Typeable a, Eq a) => HasInstances a
 pattern IsEq <- Type Is _
   where
     IsEq = Type Is Isn't
@@ -484,13 +484,7 @@ repHasInstances r = case r of
   GovActionIdR {} -> IsOrd
   GovActionIxR {} -> IsOrd
   GovActionStateR {} -> IsTypeable
-  ProposalsR p -> case p of
-    Shelley -> IsEq
-    Mary -> IsEq
-    Allegra -> IsEq
-    Alonzo -> IsEq
-    Babbage -> IsEq
-    Conway -> IsEq
+  ProposalsR {} -> IsTypeable
   CommitteeStateR {} -> IsOrd
   UnitIntervalR {} -> IsOrd
   CommitteeR {} -> IsEq
@@ -1107,12 +1101,12 @@ shrinkRep DRepPulserR _ = []
 shrinkRep DelegateeR _ = []
 shrinkRep VoteR x = shrink x
 
-hasOrd :: Ord t => Typeable t => Rep era t -> s t -> Typed (HasConstraint Ord (s t))
+hasOrd :: Rep era t -> s t -> Typed (HasConstraint Ord (s t))
 hasOrd rep x = case repHasInstances rep of
   IsOrd -> pure $ With x
   IsTypeable -> failT [show rep ++ " does not have an Ord instance."]
 
-hasEq :: Eq t => Typeable t => Rep era t -> s t -> Typed (HasConstraint Eq (s t))
+hasEq :: Rep era t -> s t -> Typed (HasConstraint Eq (s t))
 hasEq rep x = case repHasInstances rep of
   IsEq -> pure $ With x
   IsTypeable -> failT [show rep ++ " does not have an Eq instance."]
