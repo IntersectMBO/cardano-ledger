@@ -58,6 +58,7 @@ library
         Cardano.Ledger.Plutus.Language
         Cardano.Ledger.Plutus.TxInfo
         Cardano.Ledger.Plutus.Evaluate
+        Cardano.Ledger.Plutus.ToPlutusData
         Cardano.Ledger.Rewards
         Cardano.Ledger.Rules.ValidationMode
         Cardano.Ledger.SafeHash
@@ -151,6 +152,7 @@ library testlib
         Test.Cardano.Ledger.Plutus
         Test.Cardano.Ledger.Plutus.Examples
         Test.Cardano.Ledger.TreeDiff
+        Test.Cardano.Ledger.Plutus.ToPlutusData
 
     visibility:       public
     hs-source-dirs:   testlib
