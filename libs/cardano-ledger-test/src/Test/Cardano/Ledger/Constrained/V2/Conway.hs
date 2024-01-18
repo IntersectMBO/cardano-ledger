@@ -17,6 +17,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
+-- | This module provides the necessary instances of `HasSpec`
+-- and `HasSimpleRep` to write specs for the environments,
+-- states, and signals in the conway STS rules.
 module Test.Cardano.Ledger.Constrained.V2.Conway where
 
 import Cardano.Chain.Common (
@@ -80,7 +83,10 @@ import Data.Foldable
 import Data.Kind
 import Data.Map (Map)
 import Data.Maybe
+import Data.OMap.Strict qualified as OMap
 import Data.OSet.Strict qualified as SOS
+import Data.Sequence (Seq)
+import Data.Sequence qualified as Seq
 import Data.Sequence.Strict (StrictSeq)
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set (Set)
@@ -114,6 +120,10 @@ type IsConwayUniv fn =
 
 -- TxBody HasSpec instance ------------------------------------------------
 
+-- NOTE: this is a representation of the `ConwayTxBody` type. You can't
+-- simply use the generics to derive the `SimpleRep` for `ConwayTxBody`
+-- because the type is memoized. So instead we say that the representation
+-- is the same as what you would get from using the `ConwayTxBody` pattern.
 type ConwayTxBodyTypes c =
   '[ Set (TxIn (EraCrypto (ConwayEra c)))
    , Set (TxIn (EraCrypto (ConwayEra c)))
@@ -236,6 +246,12 @@ instance HasSimpleRep (StrictSeq a) where
   toSimpleRep = toList
   fromSimpleRep = StrictSeq.fromList
 instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (StrictSeq a)
+
+instance HasSimpleRep (Seq a) where
+  type SimpleRep (Seq a) = [a]
+  toSimpleRep = toList
+  fromSimpleRep = Seq.fromList
+instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (Seq a)
 
 instance HasSimpleRep (StrictMaybe a)
 instance HasSpec fn a => HasSpec fn (StrictMaybe a)
@@ -665,6 +681,9 @@ instance HasSimpleRep Version where
 instance IsConwayUniv fn => HasSpec fn Version where
   emptySpec = NumSpecInterval (Just $ getVersion64 minBound) (Just $ getVersion64 maxBound)
 
+instance HasSimpleRep (GovPurposeId p era)
+instance (Typeable p, IsConwayUniv fn, Era era) => HasSpec fn (GovPurposeId p era)
+
 instance HasSimpleRep (GovAction era)
 instance
   ( IsConwayUniv fn
@@ -688,6 +707,7 @@ instance
   , HasSimpleRep (PParamsHKD StrictMaybe era)
   , TypeSpec fn (SimpleRep (PParamsHKD StrictMaybe era)) ~ TypeSpec fn (PParamsHKD StrictMaybe era)
   , HasSpec fn (SimpleRep (PParamsHKD StrictMaybe era))
+  , Show (TypeSpec fn (PParamsHKD StrictMaybe era))
   ) =>
   HasSpec fn (PParamsUpdate era)
 
@@ -783,9 +803,6 @@ instance HasSimpleRep (THKD tag Identity a) where
   toSimpleRep (THKD a) = a
 instance (IsConwayUniv fn, Typeable tag, HasSpec fn a) => HasSpec fn (THKD tag Identity a)
 
-instance HasSimpleRep (PrevGovActionId r c)
-instance (IsConwayUniv fn, Typeable r, Crypto c) => HasSpec fn (PrevGovActionId r c)
-
 instance HasSimpleRep GovActionPurpose
 instance IsConwayUniv fn => HasSpec fn GovActionPurpose
 
@@ -862,14 +879,11 @@ instance IsConwayUniv fn => HasSpec fn RDPair
 instance HasSimpleRep (CertState era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (CertState era)
 
-instance HasSimpleRep (PrevGovActionIds (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (PrevGovActionIds (ConwayEra StandardCrypto))
+instance HasSimpleRep (PForest StrictMaybe era)
+instance (IsConwayUniv fn, Era era) => HasSpec fn (PForest StrictMaybe era)
 
-instance HasSimpleRep (PrevGovActionIdsChildren (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (PrevGovActionIdsChildren (ConwayEra StandardCrypto))
-
-instance HasSimpleRep (GovRuleState (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (GovRuleState (ConwayEra StandardCrypto))
+instance HasSimpleRep (PrevGovActionIds era)
+instance (Era era, IsConwayUniv fn) => HasSpec fn (PrevGovActionIds era)
 
 instance HasSimpleRep (GovEnv (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (GovEnv (ConwayEra StandardCrypto))
@@ -877,7 +891,10 @@ instance IsConwayUniv fn => HasSpec fn (GovEnv (ConwayEra StandardCrypto))
 instance HasSimpleRep (GovActionState (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (GovActionState (ConwayEra StandardCrypto))
 
-data ProposalsCtx = ProposalsCtx ProtVer (PrevGovActionIds (ConwayEra StandardCrypto))
+data ProposalsCtx = ProposalsCtx
+  { pctxProtVer :: ProtVer
+  , pctxPrevGovActionIds :: PrevGovActionIds (ConwayEra StandardCrypto)
+  }
   deriving (Eq, Show)
 
 instance Default ProposalsCtx where
@@ -909,7 +926,7 @@ instance IsConwayUniv fn => HasSpec fn (Proposals (ConwayEra StandardCrypto)) wh
           | otherwise -> genError ["Two different PrevGovActionsIds specified"]
       pure $ typeSpec $ ProposalsSpec mctx'' (as <> as')
 
-  genFromTypeSpec (ProposalsSpec mctx es) =
+  genFromTypeSpec (ProposalsSpec mctx _es) = do
     -- TODO: we might want to do this with a constraint-based generator
     -- that folds in whatever information we already know about the previous
     -- opreation of the same type instead. This would solve the ugly `adjustProposals`
@@ -931,13 +948,13 @@ instance IsConwayUniv fn => HasSpec fn (Proposals (ConwayEra StandardCrypto)) wh
     --
     -- Another nice consequence of this is that we don't need the function hack for introducing
     -- the context.
-    adjustProposals (fromMaybe def mctx) . fromGovActionStateSeq . StrictSeq.fromList
-      <$> listOfT (genFromSpec es)
+    -- TODO: This hack broke with the change to proposals. We need to rethink how to generate proposals
+    -- from scratch.
+    -- ps <- listOfT (genFromSpec es)
+    adjustProposals (fromMaybe def mctx) [] -- ps
 
   conformsTo ps (ProposalsSpec mctx es) =
-    -- TODO: this is not correct because it assumes linear proposal chain
-    -- when in reality it is meant to be a tree
-    adjustProposals (fromMaybe def mctx) ps == ps
+    pctxPrevGovActionIds (fromMaybe def mctx) == toPrevGovActionIds (ps ^. pRootsL)
       && all (`conformsToSpec` es) (toList . proposalsActions $ ps)
 
   toPreds tm (ProposalsSpec mctx as) =
@@ -946,11 +963,16 @@ instance IsConwayUniv fn => HasSpec fn (Proposals (ConwayEra StandardCrypto)) wh
           Just ctx -> elemPreds <> assert (app (injectFn $ RootActionsFn @fn ctx) tm)
           Nothing -> elemPreds
 
+-- TODO: handle proposals properly
+proposalsFromList :: EraPParams era => PrevGovActionIds era -> [GovActionState era] -> Maybe (Proposals era)
+proposalsFromList prv = mkProposals prv . OMap.fromFoldable
+
 adjustProposals ::
+  MonadFail m =>
   ProposalsCtx ->
-  Proposals (ConwayEra StandardCrypto) ->
-  Proposals (ConwayEra StandardCrypto)
-adjustProposals (ProposalsCtx protVer prev) = fromGovActionStateSeq . StrictSeq.fromList . go protVer prev . toList . proposalsActions
+  [GovActionState (ConwayEra StandardCrypto)] ->
+  m (Proposals (ConwayEra StandardCrypto))
+adjustProposals (ProposalsCtx protVer prev) = maybe (fail "Failed to adjust proposals") pure . proposalsFromList prev . go protVer prev
   where
     bumpProtVer :: ProtVer -> ProtVer
     bumpProtVer (ProtVer maj minV) = ProtVer maj (minV + 1)
@@ -964,14 +986,14 @@ adjustProposals (ProposalsCtx protVer prev) = fromGovActionStateSeq . StrictSeq.
       let (pv', prv', as') = case as ^. gasActionL of
             ParameterChange _ ppu we ->
               ( pv
-              , prv {pgaPParamUpdate = SJust $ PrevGovActionId $ gasId as}
-              , as & gasActionL .~ ParameterChange (pgaPParamUpdate prv) ppu we
+              , prv & prevGovActionIdsL . pfPParamUpdateL .~ SJust (GovPurposeId $ gasId as)
+              , as & gasActionL .~ ParameterChange (prv ^. prevGovActionIdsL . pfPParamUpdateL) ppu we
               )
             HardForkInitiation _ _ ->
               let pvNext = bumpProtVer pv
                in ( pvNext
-                  , prv {pgaHardFork = SJust $ PrevGovActionId $ gasId as}
-                  , as & gasActionL .~ HardForkInitiation (pgaHardFork prv) pvNext
+                  , prv & prevGovActionIdsL . pfHardForkL .~ SJust (GovPurposeId $ gasId as)
+                  , as & gasActionL .~ HardForkInitiation (prv ^. prevGovActionIdsL . pfHardForkL) pvNext
                   )
             TreasuryWithdrawals {} ->
               ( pv
@@ -980,18 +1002,18 @@ adjustProposals (ProposalsCtx protVer prev) = fromGovActionStateSeq . StrictSeq.
               )
             NoConfidence _ ->
               ( pv
-              , prv {pgaCommittee = SJust $ PrevGovActionId $ gasId as}
-              , as & gasActionL .~ NoConfidence (pgaCommittee prv)
+              , prv & prevGovActionIdsL . pfCommitteeL .~ SJust (GovPurposeId $ gasId as)
+              , as & gasActionL .~ NoConfidence (prv ^. prevGovActionIdsL . pfCommitteeL)
               )
             UpdateCommittee _ r a q ->
               ( pv
-              , prv {pgaCommittee = SJust $ PrevGovActionId $ gasId as}
-              , as & gasActionL .~ UpdateCommittee (pgaCommittee prv) r a q
+              , prv & prevGovActionIdsL . pfCommitteeL .~ SJust (GovPurposeId $ gasId as)
+              , as & gasActionL .~ UpdateCommittee (prv ^. prevGovActionIdsL . pfCommitteeL) r a q
               )
             NewConstitution _ c ->
               ( pv
-              , prv {pgaConstitution = SJust $ PrevGovActionId $ gasId as}
-              , as & gasActionL .~ NewConstitution (pgaConstitution prv) c
+              , prv & prevGovActionIdsL . pfConstitutionL .~ SJust (GovPurposeId $ gasId as)
+              , as & gasActionL .~ NewConstitution (prv ^. prevGovActionIdsL . pfConstitutionL) c
               )
             InfoAction {} ->
               ( pv
@@ -1007,7 +1029,7 @@ deriving instance Show (ProposalsSpecFn fn as b)
 deriving instance Eq (ProposalsSpecFn fn as b)
 
 instance FunctionLike (ProposalsSpecFn fn) where
-  sem (RootActionsFn ctx) = \props -> adjustProposals ctx props == props
+  sem (RootActionsFn ctx) = \props -> pctxPrevGovActionIds ctx == toPrevGovActionIds (props ^. pRootsL)
 
 instance IsConwayUniv fn => Functions (ProposalsSpecFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec

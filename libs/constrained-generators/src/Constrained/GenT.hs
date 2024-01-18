@@ -124,8 +124,8 @@ fromGEDiscard _ = discard
 
 headGE :: Foldable t => t a -> GE a
 headGE t
-  | null t = fatalError ["head of empty structure"]
-  | otherwise = pure $ head $ toList t
+  | x : _ <- toList t = pure x
+  | otherwise = fatalError ["head of empty structure"]
 
 ------------------------------------------------------------------------
 -- GenT

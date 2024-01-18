@@ -13,6 +13,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -122,7 +123,7 @@ data GovEnv era = GovEnv
   }
   deriving (Generic)
 
-deriving instance Show (PParams era) => Show (GovEnv era)
+deriving instance (Show (PParams era), Era era) => Show (GovEnv era)
 deriving instance Eq (PParams era) => Eq (GovEnv era)
 
 data ConwayGovPredFailure era

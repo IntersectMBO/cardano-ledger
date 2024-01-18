@@ -5,6 +5,8 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
+-- | Specs necessary to generate, environment, state, and signal
+-- for the UTXO rule
 module Test.Cardano.Ledger.Constrained.V2.Conway.UTXO where
 
 import Cardano.Ledger.Api

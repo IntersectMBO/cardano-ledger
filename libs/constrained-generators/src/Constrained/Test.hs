@@ -187,28 +187,28 @@ type Numbery a =
   )
 
 data NumberyType where
-  N :: (Typeable a, Numbery a) => NumberyType
+  N :: (Typeable a, Numbery a) => Proxy a -> NumberyType
 
 testNumberyListSpec :: String -> (forall a. Numbery a => Spec Fn [a]) -> TestTree
 testNumberyListSpec n p =
   testGroup
     n
-    [ testSpec (show $ typeRep $ Proxy @a) (p @a)
-    | N @a <- numberyTypes
+    [ testSpec (show $ typeRep proxy) (p @a)
+    | N (proxy :: Proxy a) <- numberyTypes
     ]
   where
     numberyTypes =
-      [ N @Int
-      , N @Integer
-      , N @Natural
-      , N @Word64
-      , N @Word32
-      , N @Word16
-      , N @Word8
-      , N @Int64
-      , N @Int32
-      , N @Int16
-      , N @Int8
+      [ N @Int Proxy
+      , N @Integer Proxy
+      , N @Natural Proxy
+      , N @Word64 Proxy
+      , N @Word32 Proxy
+      , N @Word16 Proxy
+      , N @Word8 Proxy
+      , N @Int64 Proxy
+      , N @Int32 Proxy
+      , N @Int16 Proxy
+      , N @Int8 Proxy
       ]
 
 testSpec :: HasSpec Fn a => String -> Spec Fn a -> TestTree

@@ -12,6 +12,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
+-- | This module provides some necessary instances
+-- of `Functions` that aren't needed in `Constrained.Base`
+-- (which is already big enough) but which are necessary
+-- to use the framework.
 module Constrained.Instances where
 
 import Data.Typeable

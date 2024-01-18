@@ -7,6 +7,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.STS where
@@ -21,13 +22,13 @@ import Control.State.Transition.Extended
 import Constrained
 
 import Test.Cardano.Ledger.Constrained.V2.Conway
-import Test.Cardano.Ledger.Constrained.V2.Conway.CertState
-import Test.Cardano.Ledger.Constrained.V2.Conway.DelegCert
-import Test.Cardano.Ledger.Constrained.V2.Conway.Gov
-import Test.Cardano.Ledger.Constrained.V2.Conway.GovCert
-import Test.Cardano.Ledger.Constrained.V2.Conway.Ledger
+import Test.Cardano.Ledger.Constrained.V2.Conway.CERT
+import Test.Cardano.Ledger.Constrained.V2.Conway.DELEG
+import Test.Cardano.Ledger.Constrained.V2.Conway.GOV
+import Test.Cardano.Ledger.Constrained.V2.Conway.GOVCERT
+import Test.Cardano.Ledger.Constrained.V2.Conway.LEDGER
+import Test.Cardano.Ledger.Constrained.V2.Conway.POOL
 import Test.Cardano.Ledger.Constrained.V2.Conway.PParams
-import Test.Cardano.Ledger.Constrained.V2.Conway.PoolCert
 import Test.Cardano.Ledger.Constrained.V2.Conway.UTXO
 
 import Test.Cardano.Ledger.Generic.PrettyCore
@@ -91,7 +92,7 @@ prop_GOV :: Property
 prop_GOV =
   stsPropertyV2 @"GOV" @ConwayFn
     govEnvSpec
-    govRuleStateSpec
+    govProposalsSpec
     govProceduresSpec
     -- TODO: we should probably check more things here
     $ \_env _st _sig _st' -> True

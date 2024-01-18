@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -12,6 +13,13 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
+
+-- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
+-- cases and turning off the overlap check in newer ghc versions we disable the check for old
+-- versions.
+#if __GLASGOW_HASKELL__ < 900
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+#endif
 
 module Constrained.Spec.Generics (
   GenericsFn,
@@ -40,7 +48,7 @@ import Constrained.Univ
 -- Generics
 ------------------------------------------------------------------------
 
-instance FunctionLike (GenericsFn uni) where
+instance FunctionLike (GenericsFn fn) where
   sem = \case
     ToGeneric -> toSimpleRep
     FromGeneric -> fromSimpleRep
@@ -62,10 +70,16 @@ instance IsUniverse fn => Functions (GenericsFn fn) fn where
       TypeSpec s cant -> TypeSpec s (toSimpleRep <$> cant)
       MemberSpec es -> MemberSpec (toSimpleRep <$> es)
 
-  rewriteRules (FromGeneric @_ @a) =
-    [rewriteRule_ $ \x -> fromGeneric_ (toGeneric_ x) ~> x]
-  rewriteRules (ToGeneric @_ @a) =
-    [rewriteRule_ $ \x -> toGeneric_ (fromGeneric_ @a x) ~> x]
+  rewriteRules f@FromGeneric =
+    -- No TypeAbstractions in ghc-8.10
+    case f of
+      (_ :: GenericsFn fn '[SimpleRep a] a) ->
+        [rewriteRule_ $ \x -> fromGeneric_ (toGeneric_ x) ~> x]
+  rewriteRules f@ToGeneric =
+    -- No TypeAbstractions in ghc-8.10
+    case f of
+      (_ :: GenericsFn fn '[a] (SimpleRep a)) ->
+        [rewriteRule_ $ \x -> toGeneric_ (fromGeneric_ @a x) ~> x]
 
   mapTypeSpec f ts = case f of
     ToGeneric -> typeSpec ts

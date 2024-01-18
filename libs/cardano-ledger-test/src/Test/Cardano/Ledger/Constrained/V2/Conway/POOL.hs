@@ -2,7 +2,9 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Constrained.V2.Conway.PoolCert where
+-- | Specs necessary to generate, environment, state, and signal
+-- for the POOL rule
+module Test.Cardano.Ledger.Constrained.V2.Conway.POOL where
 
 import Cardano.Crypto.Hash.Class qualified as Hash
 import Cardano.Ledger.Api

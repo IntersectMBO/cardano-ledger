@@ -2,7 +2,9 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Test.Cardano.Ledger.Constrained.V2.Conway.DelegCert where
+-- | Specs necessary to generate, environment, state, and signal
+-- for the DELEG rule
+module Test.Cardano.Ledger.Constrained.V2.Conway.DELEG where
 
 import Cardano.Ledger.Api
 import Cardano.Ledger.CertState

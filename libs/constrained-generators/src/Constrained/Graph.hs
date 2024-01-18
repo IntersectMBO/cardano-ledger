@@ -71,17 +71,31 @@ noDependencies ns = Graph nodeMap nodeMap
   where
     nodeMap = Map.fromList ((,mempty) <$> Set.toList ns)
 
--- TODO: maybe return the cycle if it fails
-topsort :: Ord node => Graph node -> Maybe [node]
-topsort (Graph e _) = go e
+-- | Topsort the graph, returning a cycle
+-- (`Left cycle`) on failure.
+topsort :: Ord node => Graph node -> Either [node] [node]
+topsort gr@(Graph e _) = go [] e
   where
-    go g
-      | null g = pure []
+    go order g
+      | null g = pure $ reverse order
       | otherwise = do
           let noDeps = Map.keysSet . Map.filter null $ g
               removeNode n ds = Set.difference ds noDeps <$ guard (not $ n `Set.member` noDeps)
-          guard (not . null $ noDeps)
-          (Set.toList noDeps ++) <$> go (Map.mapMaybeWithKey removeNode g)
+          if not $ null noDeps
+            then go (Set.toList noDeps ++ order) (Map.mapMaybeWithKey removeNode g)
+            else Left . concat . take 1 . filter (not . null) . map (findCycle gr) $ Map.keys e
+
+-- | Simple DFS cycle finding
+findCycle :: Ord node => Graph node -> node -> [node]
+findCycle (Graph e _) node = concat . take 1 $ go mempty node
+  where
+    go seen n
+      | n `Set.member` seen = [[]]
+      | otherwise = do
+          n' <- neighbours
+          (n :) <$> go (Set.insert n seen) n'
+      where
+        neighbours = maybe [] Set.toList $ Map.lookup n e
 
 dependencies :: Ord node => node -> Graph node -> Set node
 dependencies x (Graph e _) = fromMaybe mempty (Map.lookup x e)

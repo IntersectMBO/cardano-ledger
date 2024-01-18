@@ -5,7 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Constrained.V2.Conway.Ledger where
+module Test.Cardano.Ledger.Constrained.V2.Conway.LEDGER where
 
 import Cardano.Ledger.Api
 import Cardano.Ledger.Shelley.API.Types

@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
@@ -23,6 +24,22 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
+-- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
+-- cases and turning off the overlap check in newer ghc versions we disable the check for old
+-- versions.
+#if __GLASGOW_HASKELL__ < 900
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+#endif
+
+-- | This module contains most of the implementation
+-- of the framework.
+--
+-- NOTE: This is a very big module. Splitting it up would
+-- be a nice thing to do but it's not very easy. The problem
+-- is that a lot of the things in here depend on each other
+-- via a cycle like `Pred` depends on `Term` which depend on
+-- `HasSpec` which depends on `Spec` and `Generic` and `Spec`
+-- depends in turn on `Pred` and so on.
 module Constrained.Base where
 
 import Control.Applicative
@@ -106,12 +123,12 @@ Computing a good choice of variable order that leaves the least room for error
 is obviously undecidable and difficult and we choose instead an explicit
 syntax-directed variable order. Specifically, variable dependency in terms is
 _left-to-right_, meaning that the variables in `x + y < z` will be solved in
-the order `z -> y -> x`. On top of that there is a constraint `DependsOn y x`
+the order `z -> y -> x`. On top of that there is a constraint `dependsOn y x`
 that allows you to overwrite the order of two variables. Consequently, the
 following constraints will be solved in the order `z -> x -> y`:
 
   x + y < z
-  y `DependsOn` x
+  y `dependsOn` x
 
 A consequence of this is that it is possible to form dependency loops by
 specifying multiple constraints, e.g. in:
@@ -119,16 +136,16 @@ specifying multiple constraints, e.g. in:
   x < y
   y < x + 10
 
-However, this situation can be addressed by the introduction of `DependsOn` to
-settle the order.  It is worth noting that the choice of order in `DependsOn`
+However, this situation can be addressed by the introduction of `dependsOn` to
+settle the order.  It is worth noting that the choice of order in `dependsOn`
 is important as it affects the solveability of the constraints (as we saw
-above). We leave the choice of `DependsOn` in the example below as an exercise
+above). We leave the choice of `dependsOn` in the example below as an exercise
 for the reader.
 
   x < y
   y < x + 10
   0 < x
-  ? `DependsOn` ?
+  ? `dependsOn` ?
 
 -- The total definition requirement ---------------------------------------
 
@@ -162,8 +179,8 @@ x < y
 
 The dependency graph for these constraints will be the following:
 
-x <- y
-p <- x
+x `dependsOn` y
+p `dependsOn` x
 
 This configuration is solveable, one picks `y` first, then picks `x < y`
 and finally constructs `p = (x, y)`.
@@ -230,7 +247,7 @@ data Term (fn :: [Type] -> Type -> Type) a where
 instance HasSpec fn a => Eq (Term fn a) where
   V x == V x' = x == x'
   Lit a == Lit b = a == b
-  App @as f ts == App @as' f' ts'
+  App (f :: fn as b) ts == App (f' :: fn as' b') ts'
     | Just Refl <- eqT @as @as'
     , f == f' =
         mapListC @(HasSpec fn) (WithHasSpec @fn) ts
@@ -444,7 +461,7 @@ checkPred env = \case
     val <- runTerm env t
     checkPred (extendEnv x val env) p
   Exists k (x :-> p) -> do
-    a <- runGE . k $ errorGE . explain ["checkPred: Exists"] . runTerm env
+    a <- runGE $ k (errorGE . explain ["checkPred: Exists"] . runTerm env)
     checkPred (extendEnv x a env) p
 
 checkPreds :: (MonadGenError m, Traversable t, FunctionLike fn) => Env -> t (Pred fn) -> m Bool
@@ -545,6 +562,18 @@ typeSpec ts = TypeSpec ts mempty
 
 -- The HasSpec Class ------------------------------------------------------
 
+-- | This class provides the interface that allows you to extend the language
+-- to handle a new type. In the case of types that have a generic representation
+-- (via `HasSimpleRep`) that already has an instance of `HasSpec` it is sufficient
+-- to provide an empty instance. However, for types that are used together with
+-- specific functions in the function universe `fn` it may be necessary to provide
+-- a specific implementation of `HasSpec`. This is typically necessary when the `TypeSpec`
+-- for the generic representation does not permit an implementation of `propagateSpecFun`
+-- for some function.
+--
+-- The basic types provided in the language, `Set`, `[]`, `Map`, `Int`, `Word64`,
+-- `(,)`, `Either`, etc. have instances of this class (technically `(,)` and `Either` have
+-- instances derived from the instances for their generic `Prod` and `Sum` implementations).
 class
   ( Typeable a
   , Eq a
@@ -554,13 +583,32 @@ class
   ) =>
   HasSpec fn a
   where
+  -- | The `TypeSpec fn a` is the type-specific `Spec fn a`.
   type TypeSpec (fn :: [Type] -> Type -> Type) a
+
   type TypeSpec fn a = TypeSpec fn (SimpleRep a)
+
+  -- `TypeSpec` behaves sort-of like a monoid with a neutral
+  -- enement `emptySpec` and a `combineSpec` for combining
+  -- two `TypeSpec fn a`. However, in order to provide flexibilty
+  -- `combineSpec` takes two `TypeSpec` and provide a `Spec`. This
+  -- avoids e.g. having to have a separate implementation of `ErrorSpec`
+  -- and `MemberSpec` in `TypeSpec`.
 
   emptySpec :: TypeSpec fn a
   combineSpec :: TypeSpec fn a -> TypeSpec fn a -> Spec fn a
+
+  -- | Generate a value that satisfies the `TypeSpec`.
+  -- The key property for this generator is soundness:
+  --  ∀ a ∈ genFromTypeSpec spec. a `conformsTo` spec
   genFromTypeSpec :: (HasCallStack, MonadGenError m) => TypeSpec fn a -> GenT m a
+
+  -- | Check conformance to the spec.
   conformsTo :: HasCallStack => a -> TypeSpec fn a -> Bool
+
+  -- | Convert a spec to predicates:
+  -- The key property here is:
+  --   ∀ a. a `conformsTo` spec == a `conformsTo` constrained (\t -> toPreds t spec)
   toPreds :: Term fn a -> TypeSpec fn a -> Pred fn
 
   -- | Prerequisites for the instance that are sometimes necessary
@@ -574,6 +622,22 @@ class
   prerequisites :: Evidence (Prerequisites fn a)
   default prerequisites :: Prerequisites fn a => Evidence (Prerequisites fn a)
   prerequisites = Evidence
+
+  {- NOTE: Below follows default implementations for the the functions in this
+     class.  They are meant to provide an implementation of `HasSpec fn a` when
+     `HasSimpleRep a` and `HasSpec fn (SimpleRep a)`. For example, for a
+     newtype wrapper like `newtype Foo = Foo Word64` we can define `SimpleRep
+     Foo = Word64` with the requisite instance for `HasSimpleRep` (all of which
+     is derived from `Generic Foo`) and the instance for `HasSpec fn Foo` is
+     essentially the same as the instance for `Word64`. This is achieved by
+     ensuring that `TypeSpec fn Foo = TypeSpec fn Word64` (c.f. the default
+     implementation of `TypeSpec` above). To this end, the implementations
+     below simply convert the relevant things between `SimpleRep a` and `a`.
+     For example, in the implementation of `combineSpec s s'` we treat `s` and
+     `s'` (which have type `TypeSpec fn a`) as `TypeSpec fn (SimpleRep a)`,
+     combine them, and go from the resulting `Spec fn (SimpleRep a)` to `Spec
+     fn a` using `fromSimpleRepSpec`.
+   -}
 
   default emptySpec :: (HasSpec fn (SimpleRep a), TypeSpec fn a ~ TypeSpec fn (SimpleRep a)) => TypeSpec fn a
   emptySpec = emptySpec @fn @(SimpleRep a)
@@ -689,7 +753,7 @@ genFromSpec (SuspendedSpec x p) = do
   env <- genFromPreds p
   findEnv env x
 genFromSpec ts@(TypeSpec s cant) =
-  explain ["", "genFromSpec", "    " ++ show (typeOf @a $ head cant), "    " ++ show ts] $
+  explain ["", "genFromSpec", "    " ++ show (typeRep cant), "    " ++ show ts] $
     -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
     -- starts giving us trouble.
     genFromTypeSpec @fn s `suchThatT` (`notElem` cant)
@@ -754,7 +818,6 @@ computeDependencies hints =
   respecting hints . \case
     Subst x t p -> computeDependencies hints (substitutePred x t p)
     Assert _ t -> computeTermDependencies t
-    -- TODO: everything under the binder depends on the bound variable
     Reify t _ b ->
       b `irreflexiveDependencyOn` t
         <> computeBinderDependencies hints b
@@ -822,7 +885,9 @@ computeTermDependencies t = noDependencies t
 -- Here we want to consider this constraint defining for A
 linearize :: (MonadGenError m, IsUniverse fn) => [Pred fn] -> DependGraph fn -> m [(Name fn, [Pred fn])]
 linearize preds graph = do
-  sorted <- maybe (fatalError ["topsort failed", show graph]) pure $ topsort graph
+  sorted <- case topsort graph of
+    Left cycle -> fatalError ["dependency cycle in graph", show cycle, show graph]
+    Right sorted -> pure sorted
   go sorted [(freeVarSet ps, ps) | ps <- filter isRelevantPred preds]
   where
     isRelevantPred TruePred = False
@@ -1854,7 +1919,7 @@ data FoldSpec (fn :: [Type] -> Type -> Type) a where
 combineFoldSpec :: MonadGenError m => FoldSpec fn a -> FoldSpec fn a -> m (FoldSpec fn a)
 combineFoldSpec NoFold s = pure s
 combineFoldSpec s NoFold = pure s
-combineFoldSpec (FoldSpec @b @fn f s) (FoldSpec @b' @fn' f' s')
+combineFoldSpec (FoldSpec (f :: fn as b) s) (FoldSpec (f' :: fn' as' b') s')
   | Just Refl <- eqT @b @b'
   , Just Refl <- eqT @fn @fn'
   , f == f' =
@@ -2438,7 +2503,7 @@ instance IsUniverse fn => Functions (SetFn fn) fn where
             -- This risks blowing up too much, don't build sets of sets
             MemberSpec {} -> ErrorSpec ["propagateSpecFun Union MemberSpec"]
     Subset
-      | HOLE @(Set a) :? Value s :> Nil <- ctx
+      | HOLE :? Value (s :: Set a) :> Nil <- ctx
       , Evidence <- prerequisites @fn @(Set a) -> caseBoolSpec spec $ \case
           True -> typeSpec $ SetSpec mempty (MemberSpec $ Set.toList s) mempty
           False -> constrained $ \set ->
@@ -2447,7 +2512,7 @@ instance IsUniverse fn => Functions (SetFn fn) fn where
               , assert $ not_ $ member_ e (Lit s)
               , assert $ member_ e set
               ]
-      | Value s :! NilCtx (HOLE @(Set a)) <- ctx
+      | Value (s :: Set a) :! NilCtx HOLE <- ctx
       , Evidence <- prerequisites @fn @(Set a) -> caseBoolSpec spec $ \case
           True -> typeSpec $ SetSpec s TrueSpec mempty
           False -> constrained $ \set ->
@@ -2471,8 +2536,8 @@ instance IsUniverse fn => Functions (SetFn fn) fn where
           True -> typeSpec $ ListSpec [e] mempty mempty NoFold
           False -> typeSpec $ ListSpec mempty mempty (notEqualSpec e) NoFold
     Disjoint
-      | HOLE :? Value s :> Nil <- ctx -> propagateSpecFun @(SetFn fn) @fn Disjoint (Value s :! NilCtx HOLE) spec
-      | Value s :! NilCtx (HOLE @(Set a)) <- ctx
+      | HOLE :? Value (s :: Set a) :> Nil <- ctx -> propagateSpecFun @(SetFn fn) @fn Disjoint (Value s :! NilCtx HOLE) spec
+      | Value (s :: Set a) :! NilCtx HOLE <- ctx
       , Evidence <- prerequisites @fn @(Set a) -> caseBoolSpec spec $ \case
           True -> typeSpec $ SetSpec mempty (notMemberSpec s) mempty
           False -> constrained $ \set ->
@@ -2482,16 +2547,26 @@ instance IsUniverse fn => Functions (SetFn fn) fn where
               , assert $ member_ e set
               ]
 
-  rewriteRules (Elem @a) =
-    [ rewriteRule_ $ \x -> elem_ @a x (Lit []) ~> Lit False
-    ]
-  rewriteRules (Member @a) =
-    [ rewriteRule_ $ \x -> member_ @a x mempty ~> Lit False
-    ]
-  rewriteRules (Union @a) =
-    [ rewriteRule_ @'[Set a] $ \x -> (mempty <> x) ~> x
-    , rewriteRule_ @'[Set a] $ \x -> (x <> mempty) ~> x
-    ]
+  rewriteRules f@Elem =
+    -- No TypeAbstractions in ghc-8.10 (otherwise we could bind a in the head with
+    -- `rewriteRules (Elem @a)`. Without it we need this song and dance with the case.
+    case f of
+      (_ :: SetFn fn '[a, [a]] Bool) ->
+        [ rewriteRule_ $ \x -> elem_ @a x (Lit []) ~> Lit False
+        ]
+  rewriteRules f@Member =
+    -- No TypeAbstractions in ghc-8.10
+    case f of
+      (_ :: SetFn fn '[a, Set a] Bool) ->
+        [ rewriteRule_ $ \x -> member_ @a x mempty ~> Lit False
+        ]
+  rewriteRules f@Union =
+    -- No TypeAbstractions in ghc-8.10
+    case f of
+      (_ :: SetFn fn '[Set a, Set a] (Set a)) ->
+        [ rewriteRule_ @'[Set a] $ \x -> (mempty <> x) ~> x
+        , rewriteRule_ @'[Set a] $ \x -> (x <> mempty) ~> x
+        ]
   rewriteRules _ = []
 
   -- NOTE: this function over-approximates and returns a liberal spec.
@@ -2869,7 +2944,7 @@ data FunFn fn args res where
 deriving instance Show (FunFn fn args res)
 
 instance Typeable fn => Eq (FunFn fn args res) where
-  Compose @b f f' == Compose @b' g g'
+  Compose (f :: fn '[b] c) f' == Compose (g :: fn '[b'] c') g'
     | Just Refl <- eqT @b @b' = f == g && f' == g'
   Compose {} == _ = False
   Id == Id = True
@@ -2895,8 +2970,11 @@ instance (IsUniverse fn, Member (FunFn fn) fn) => Functions (FunFn fn) fn where
     Id -> typeSpec ts
     Compose g h -> mapSpec g . mapSpec h $ typeSpec ts
 
-  rewriteRules (Id @_ @a) =
-    [rewriteRule_ $ \x -> app (injectFn $ Id @fn @a) x ~> x]
+  rewriteRules f@Id =
+    -- No TypeAbstractions in ghc-8.10
+    case f of
+      (_ :: FunFn fn '[a] a) ->
+        [rewriteRule_ $ \x -> app (injectFn $ Id @fn @a) x ~> x]
   rewriteRules (Compose f g) =
     [rewriteRule_ $ \x -> app (injectFn $ Compose f g) x ~> app f (app g x)]
 
@@ -3171,12 +3249,12 @@ instance IsUniverse fn => Functions (IntFn fn) fn where
           TypeSpec ts cant ->
             subtractSpec @fn i ts <> notMemberSpec (catMaybes $ map (safeSubtract @fn i) cant)
           MemberSpec es -> MemberSpec $ catMaybes (map (safeSubtract @fn i) es)
-  propagateSpecFun (Negate @_ @a) (NilCtx HOLE) spec = case spec of
-    TypeSpec ts cant ->
+  propagateSpecFun Negate (NilCtx HOLE) spec = case spec of
+    TypeSpec ts (cant :: OrdSet a) ->
       negateSpec @fn @a ts <> notMemberSpec (map negate cant)
     MemberSpec es -> MemberSpec $ map negate es
 
-  mapTypeSpec (Negate @_ @a) ts =
+  mapTypeSpec Negate (ts :: TypeSpec fn a) =
     negateSpec @fn @a ts
 
 ------------------------------------------------------------------------
@@ -3326,7 +3404,6 @@ foldMap_ fn = app (foldMapFn fn)
 
 -- Language constructs ----------------------------------------------------
 
--- TODO: better name for this!
 constrained ::
   forall a fn p.
   (IsPred p fn, HasSpec fn a) =>
@@ -3424,8 +3501,6 @@ bind body = x :-> p
 
     nextVar p = 1 + bound p
 
-    -- TODO: consider redoing this and being much more careful about how we
-    -- do renaming to avoid recursing here
     boundBinder :: Binder fn a -> Int
     boundBinder (x :-> p) = max (nameOf x) (bound p)
 

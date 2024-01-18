@@ -153,37 +153,49 @@ instance (Member (MapFn fn) fn, IsUniverse fn) => Functions (MapFn fn) fn where
           constrained $ \v' ->
             let args = appendList (mapList (\(Value a) -> Lit a) pre) (v' :> mapList (\(Value a) -> Lit a) suf)
              in Let (App (injectFn fn) args) (v :-> ps)
-    Dom
-      | NilCtx (HOLE @(Map k v)) <- ctx
-      , Evidence <- prerequisites @fn @(Map k v) ->
-          case spec of
-            MemberSpec [s] ->
-              typeSpec $ MapSpec s [] (equalSpec $ Set.size s) TrueSpec NoFold
-            TypeSpec (SetSpec must elemspec size) [] ->
-              typeSpec $ MapSpec must [] size (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec) NoFold
-            _ -> ErrorSpec ["Dom on bad map spec", show spec]
-    Rng
-      | NilCtx (HOLE @(Map k v)) <- ctx
-      , Evidence <- prerequisites @fn @(Map k v) ->
-          case spec of
-            MemberSpec [r] ->
-              typeSpec $ MapSpec Set.empty r (equalSpec $ length r) TrueSpec NoFold
-            TypeSpec (ListSpec must size elemspec foldspec) [] ->
-              typeSpec $ MapSpec Set.empty must size (constrained $ \kv -> satisfies (app (sndFn @fn) (app (toGenericFn @fn) kv)) elemspec) foldspec
-            _ -> ErrorSpec ["Rng on bad map spec", show spec]
+    Dom ->
+      -- No TypeAbstractions in ghc-8.10
+      case fn of
+        (_ :: MapFn fn '[Map k v] (Set k))
+          | NilCtx HOLE <- ctx
+          , Evidence <- prerequisites @fn @(Map k v) ->
+              case spec of
+                MemberSpec [s] ->
+                  typeSpec $ MapSpec s [] (equalSpec $ Set.size s) TrueSpec NoFold
+                TypeSpec (SetSpec must elemspec size) [] ->
+                  typeSpec $ MapSpec must [] size (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec) NoFold
+                _ -> ErrorSpec ["Dom on bad map spec", show spec]
+    Rng ->
+      -- No TypeAbstractions in ghc-8.10
+      case fn of
+        (_ :: MapFn fn '[Map k v] [v])
+          | NilCtx HOLE <- ctx
+          , Evidence <- prerequisites @fn @(Map k v) ->
+              case spec of
+                MemberSpec [r] ->
+                  typeSpec $ MapSpec Set.empty r (equalSpec $ length r) TrueSpec NoFold
+                TypeSpec (ListSpec must size elemspec foldspec) [] ->
+                  typeSpec $ MapSpec Set.empty must size (constrained $ \kv -> satisfies (app (sndFn @fn) (app (toGenericFn @fn) kv)) elemspec) foldspec
+                _ -> ErrorSpec ["Rng on bad map spec", show spec]
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of
     -- TODO: consider checking against singleton member-specs in the other component
     -- interacting with cant
-    Dom @k @_ @v
-      | MapSpec mustSet _ sz kvSpec _ <- ts
-      , Evidence <- prerequisites @fn @(Map k v) ->
-          typeSpec $ SetSpec mustSet (mapSpec (fstFn @fn) $ toSimpleRepSpec kvSpec) sz
-    Rng @_ @k @v
-      | MapSpec _ mustList sz kvSpec foldSpec <- ts
-      , Evidence <- prerequisites @fn @(Map k v) ->
-          typeSpec $ ListSpec mustList sz (mapSpec (sndFn @fn) $ toSimpleRepSpec kvSpec) foldSpec
+    Dom ->
+      -- No TypeAbstractions in ghc-8.10
+      case f of
+        (_ :: MapFn fn '[Map k v] (Set k))
+          | MapSpec mustSet _ sz kvSpec _ <- ts
+          , Evidence <- prerequisites @fn @(Map k v) ->
+              typeSpec $ SetSpec mustSet (mapSpec (fstFn @fn) $ toSimpleRepSpec kvSpec) sz
+    Rng ->
+      -- No TypeAbstractions in ghc-8.10
+      case f of
+        (_ :: MapFn fn '[Map k v] [v])
+          | MapSpec _ mustList sz kvSpec foldSpec <- ts
+          , Evidence <- prerequisites @fn @(Map k v) ->
+              typeSpec $ ListSpec mustList sz (mapSpec (sndFn @fn) $ toSimpleRepSpec kvSpec) foldSpec
 
 ------------------------------------------------------------------------
 -- Syntax

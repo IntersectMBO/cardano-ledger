@@ -1,7 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Test.Cardano.Ledger.Constrained.V2.Conway.GovCert where
+-- | Specs necessary to generate, environment, state, and signal
+-- for the GOVCERT rule
+module Test.Cardano.Ledger.Constrained.V2.Conway.GOVCERT where
 
 import Cardano.Ledger.Api
 import Cardano.Ledger.CertState

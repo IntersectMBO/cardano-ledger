@@ -1,6 +1,9 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE PatternSynonyms #-}
 
+-- | This module exports the user-facing interface for the library.
+-- It is supposed to contain everything you need to write constraints
+-- and implement `HasSpec` and `HasSimpleRep` instances.
 module Constrained (
   Spec (..), -- TODO: it would be nice not to expose this whole thing
   Pred (..), -- TODO: it would be nice not to expose this whole thing

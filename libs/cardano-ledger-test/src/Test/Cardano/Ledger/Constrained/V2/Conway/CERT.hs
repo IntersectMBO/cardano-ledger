@@ -1,7 +1,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Test.Cardano.Ledger.Constrained.V2.Conway.CertState where
+-- | Specs necessary to generate, environment, state, and signal
+-- for the CERT rule
+module Test.Cardano.Ledger.Constrained.V2.Conway.CERT where
 
 import Cardano.Ledger.Api
 import Cardano.Ledger.CertState
@@ -12,10 +14,10 @@ import Cardano.Ledger.Shelley.API.Types
 import Constrained
 
 import Test.Cardano.Ledger.Constrained.V2.Conway
-import Test.Cardano.Ledger.Constrained.V2.Conway.DelegCert
-import Test.Cardano.Ledger.Constrained.V2.Conway.GovCert
+import Test.Cardano.Ledger.Constrained.V2.Conway.DELEG
+import Test.Cardano.Ledger.Constrained.V2.Conway.GOVCERT
+import Test.Cardano.Ledger.Constrained.V2.Conway.POOL
 import Test.Cardano.Ledger.Constrained.V2.Conway.PParams
-import Test.Cardano.Ledger.Constrained.V2.Conway.PoolCert
 
 certEnvSpec ::
   IsConwayUniv fn =>

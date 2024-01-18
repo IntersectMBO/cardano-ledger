@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -8,6 +9,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
+-- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
+-- cases and turning off the overlap check in newer ghc versions we disable the check for old
+-- versions.
+#if __GLASGOW_HASKELL__ < 900
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+#endif
 
 module Constrained.Spec.Pairs where
 
@@ -52,14 +60,20 @@ instance IsUniverse fn => Functions (PairFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
-    Fst @_ @a @b
-      | NilCtx HOLE <- ctx
-      , Evidence <- prerequisites @fn @(Prod a b) ->
-          cartesian spec TrueSpec
-    Snd @_ @a @b
-      | NilCtx HOLE <- ctx
-      , Evidence <- prerequisites @fn @(Prod a b) ->
-          cartesian TrueSpec spec
+    Fst ->
+      -- No TypeAbstractions in ghc-8.10
+      case fn of
+        (_ :: PairFn fn '[Prod a b] a)
+          | NilCtx HOLE <- ctx
+          , Evidence <- prerequisites @fn @(Prod a b) ->
+              cartesian spec TrueSpec
+    Snd ->
+      -- No TypeAbstractions in ghc-8.10
+      case fn of
+        (_ :: PairFn fn '[Prod a b] b)
+          | NilCtx HOLE <- ctx
+          , Evidence <- prerequisites @fn @(Prod a b) ->
+              cartesian TrueSpec spec
     _
       | SuspendedSpec v ps <- spec
       , ListCtx pre HOLE suf <- ctx ->
@@ -78,16 +92,22 @@ instance IsUniverse fn => Functions (PairFn fn) fn where
                 TypeSpec (Cartesian _ sb) cant -> sb <> foldMap notEqualSpec (sameFst cant)
                 MemberSpec es -> MemberSpec (sameFst es)
 
-  rewriteRules (Fst @_ @a @b)
-    | Evidence <- prerequisites @fn @(Prod a b) =
-        [ rewriteRule_ $ \x y ->
-            app fstFn (app (pairFn @fn @a @b) x y) ~> x
-        ]
-  rewriteRules (Snd @_ @a @b)
-    | Evidence <- prerequisites @fn @(Prod a b) =
-        [ rewriteRule_ $ \x y ->
-            app sndFn (app (pairFn @fn @a @b) x y) ~> y
-        ]
+  rewriteRules f@Fst =
+    -- No TypeAbstractions in ghc-8.10
+    case f of
+      (_ :: PairFn fn '[Prod a b] a)
+        | Evidence <- prerequisites @fn @(Prod a b) ->
+            [ rewriteRule_ $ \x y ->
+                app fstFn (app (pairFn @fn @a @b) x y) ~> x
+            ]
+  rewriteRules f@Snd =
+    -- No TypeAbstractions in ghc-8.10
+    case f of
+      (_ :: PairFn fn '[Prod a b] b)
+        | Evidence <- prerequisites @fn @(Prod a b) ->
+            [ rewriteRule_ $ \x y ->
+                app sndFn (app (pairFn @fn @a @b) x y) ~> y
+            ]
   rewriteRules _ = []
 
   mapTypeSpec f ts = case f of

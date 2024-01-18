@@ -39,9 +39,10 @@ library
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
         -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
 
     build-depends:
-        base >=4.14 && <4.19,
+        base >=4.14 && <4.20,
         containers,
         mtl,
         prettyprinter,
@@ -58,7 +59,7 @@ test-suite constrained
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
         -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
-        rtsopts -threaded
+        -Wunused-packages -rtsopts -threaded
 
     build-depends:
         base,
