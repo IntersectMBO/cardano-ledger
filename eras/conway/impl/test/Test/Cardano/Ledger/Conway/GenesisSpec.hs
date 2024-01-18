@@ -13,6 +13,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (Anchor (..), Committee (..))
+import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -96,29 +97,43 @@ goldenConwayGenesisJSON =
                       }
                   )
                 ]
-          , cgDRepDelegs =
+          , cgDelegs =
               ListMap.fromList
                 [
                   ( KeyHashObj
-                      (KeyHash "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a")
-                  , DRepAlwaysAbstain
+                      (KeyHash "35bc5e86c42afbc593ab4cdd78301005df84ba67fa1f12f95f8ee103")
+                  , DelegVote DRepAlwaysNoConfidence
                   )
                 ,
                   ( KeyHashObj
-                      (KeyHash "35bc5e86c42afbc593ab4cdd78301005df84ba67fa1f12f95f8ee103")
-                  , DRepAlwaysNoConfidence
+                      (KeyHash "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a")
+                  , DelegVote DRepAlwaysAbstain
+                  )
+                ,
+                  ( KeyHashObj
+                      (KeyHash "5df84bcdd7a5f8ee93aafbc500b435bc5e83067fa1f12f9110386c42")
+                  , DelegStake $ KeyHash "0335bc5e86c42afbc578301005df84ba67fa1f12f95f8ee193ab4cdd"
+                  )
+                ,
+                  ( KeyHashObj
+                      (KeyHash "8ee93a5df84bc42cdd7a5fafbc500b435bc5e83067fa1f12f9110386")
+                  , DelegStakeVote
+                      (KeyHash "086c42afbc578301005df84ba67fa1f12f95f8ee193ab4cdd335bc5e")
+                      DRepAlwaysAbstain
+                  )
+                ,
+                  ( KeyHashObj
+                      (KeyHash "df93ab435bc5eafbc500583067fa1f12f9110386c42cdd784ba5f8ee")
+                  , DelegVote $
+                      DRepCredential
+                        (ScriptHashObj (ScriptHash "01305df84b078ac5e86c42afbc593ab4cdd67fa1f12f95f8ee10335b"))
                   )
                 ,
                   ( ScriptHashObj
-                      (ScriptHash "afbc5005df84ba5f8ee93ab435bc5e83067fa1f12f9110386c42cdd7")
-                  , DRepCredential
-                      (KeyHashObj (KeyHash "78301005df84ba67fa1f12f95f8ee10335bc5e86c42afbc593ab4cdd"))
-                  )
-                ,
-                  ( KeyHashObj
-                      (KeyHash "afbc5005df84ba5f8ee93ab435bc5e83067fa1f12f9110386c42cdd7")
-                  , DRepCredential
-                      (ScriptHashObj (ScriptHash "01305df84b078ac5e86c42afbc593ab4cdd67fa1f12f95f8ee10335b"))
+                      (ScriptHash "afbc5005df84ba5f8ee93ab435bc5e83067fa1f12f9c42cdd7110386")
+                  , DelegVote $
+                      DRepCredential
+                        (KeyHashObj (KeyHash "78301005df84ba67fa1f12f95f8ee10335bc5e86c42afbc593ab4cdd"))
                   )
                 ]
           }

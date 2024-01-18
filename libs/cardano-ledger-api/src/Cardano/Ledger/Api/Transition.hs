@@ -24,14 +24,14 @@ module Cardano.Ledger.Api.Transition (
   registerInitialFunds,
   registerInitialStaking,
   registerInitialDReps,
-  registerDRepDelegs,
+  registerDelegs,
 ) where
 
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Api.Era (LatestKnownEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Transition (
-  registerDRepDelegs,
+  registerDelegs,
   registerInitialDReps,
  )
 import Cardano.Ledger.Crypto

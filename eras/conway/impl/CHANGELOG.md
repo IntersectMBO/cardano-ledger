@@ -2,6 +2,8 @@
 
 ## 1.12.0.0
 
+* Add `cgDelegsL`
+* Add `FromJSON`, `EncCBOR` and `DecCBOR` instances for `Delegatee`
 * Add `pvtPPSecurityGroup`
 * Add lenses:
   * `pvtCommitteeNormalL`
@@ -21,8 +23,8 @@
 * Add `ToJSON` instance for `ConwayContextError`, `ConwayTxCert`, `ConwayDelegCert`,
   `Delegatee` and `ConwayGovCert`
 * Add `forceDRepPulsingState`
-* Add `registerInitialDReps` and `registerDRepDelegs`
-* Add `cgDRepDelegs`, `cgInitialDReps` to `ConwayGenesis`
+* Add `registerInitialDReps` and `registerDelegs`
+* Add `cgDelegs`, `cgInitialDReps` to `ConwayGenesis`
 * Changed the type of lenses ppCommitteeMaxTermLengthL, ppuCommitteeMaxTermLengthL
 * Change 'getScriptWitnessConwayTxCert' so that DRepRegistration certificate requires a witness
 * Implement `ToJSON` and `FromJSON` instances for `PoolVotingThresholds` and
