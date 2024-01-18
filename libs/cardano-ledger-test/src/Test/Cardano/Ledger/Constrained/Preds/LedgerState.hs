@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -7,18 +8,21 @@
 
 module Test.Cardano.Ledger.Constrained.Preds.LedgerState where
 
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionId (..),
   GovActionPurpose (..),
   GovActionState (..),
+  proposalsActions,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Core (Era (..))
 import Cardano.Ledger.DRep (drepDepositL)
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
+import Data.Foldable (toList)
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
@@ -99,8 +103,12 @@ ledgerStatePreds _usize p =
   , Random prevHardFork
   , Random prevConstitution
   , Random prevCommittee
-  , Sized (Range 2 5) currProposals
-  , proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit) :$ (Simple currProposals))
+  , Random currProposals
+  , -- , Sized (Range 2 5) currGovActionStates
+    currGovActionStates :<-: (Constr "currGovActionStates" (toList . proposalsActions) :$ (Simple currProposals))
+  , -- , proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit) :$ (Simple currGovActionStates))
+    -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
+    proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit . proposalsActions) :$ (Simple currProposals))
   , -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
     SumsTo
       (Right (Coin 1))
@@ -201,7 +209,6 @@ useTriples pairs as gs = zipWith3 help pairs as gs
     help (parent, idx) a g =
       g
         { gasId = idx
-        , gasChildren = (children idx pairs)
         , gasAction = setActionId a parent
         }
 

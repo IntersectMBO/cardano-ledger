@@ -39,9 +39,11 @@ import Control.State.Transition.Extended
 import qualified Data.ByteString as BS
 import Data.Default.Class (Default (def))
 import Data.Foldable
+import qualified Data.Foldable as F
 import qualified Data.HashSet as HashSet
 import qualified Data.Map as Map
 import Data.Maybe
+import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import GHC.Stack
 import Lens.Micro
@@ -403,17 +405,17 @@ ratifyEnvCheckPreds _ = []
 
 ratifyStateT :: RootTarget (ConwayEra StandardCrypto) (RatifyState (ConwayEra StandardCrypto)) (RatifyState (ConwayEra StandardCrypto))
 ratifyStateT =
-  Invert "RatifyState" (typeRep @(RatifyState (ConwayEra StandardCrypto))) RatifyState
+  Invert "RatifyState" (typeRep @(RatifyState (ConwayEra StandardCrypto))) (\es en ex d -> RatifyState es (Seq.fromList en) ex d)
     :$ Shift enactStateT (lens rsEnactState $ \rs x -> rs {rsEnactState = x})
-    :$ Lensed removedV (lens rsRemoved $ \rs x -> rs {rsRemoved = x})
-    :$ Lensed enactedV (lens rsEnacted $ \rs x -> rs {rsEnacted = x})
+    :$ Lensed enactedV (lens (F.toList . rsEnacted) $ \rs x -> rs {rsEnacted = Seq.fromList x})
+    :$ Lensed expiredV (lens rsExpired $ \rs x -> rs {rsExpired = x})
     :$ Lensed delayedV (lens rsDelayed $ \rs x -> rs {rsDelayed = x})
 
-removedV :: Term (ConwayEra StandardCrypto) (Set.Set (GovActionId StandardCrypto))
-removedV = Var $ V "removed" (SetR GovActionIdR) No
+expiredV :: Term (ConwayEra StandardCrypto) (Set.Set (GovActionId StandardCrypto))
+expiredV = Var $ V "expired" (SetR GovActionIdR) No
 
-enactedV :: Term (ConwayEra StandardCrypto) (Set.Set (GovActionId StandardCrypto))
-enactedV = Var $ V "enacted" (SetR GovActionIdR) No
+enactedV :: Term (ConwayEra StandardCrypto) [GovActionId StandardCrypto]
+enactedV = Var $ V "enacted" (ListR GovActionIdR) No
 
 delayedV :: Era era => Term era Bool
 delayedV = Var $ V "delayed" BoolR No
@@ -421,7 +423,7 @@ delayedV = Var $ V "delayed" BoolR No
 -- TODO: it's possible that these should depend on the variables in the environment!
 ratifyStateGenPreds :: Proof (ConwayEra StandardCrypto) -> [Pred (ConwayEra StandardCrypto)]
 ratifyStateGenPreds p =
-  [ Random removedV
+  [ Random expiredV
   , Random enactedV
   , Random delayedV
   ]
@@ -611,10 +613,10 @@ prop_GOV sub =
   stsProperty @"GOV"
     sub
     (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) govEnvGenPreds govEnvCheckPreds (govEnvT pe))
-    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) proposalsSnapshotGenPreds proposalsSnapshotsCheckPreds govRuleStateT)
+    (\pe -> genShrinkFromConstraints conwayProof (extendSub pe sub) proposalsSnapshotGenPreds proposalsSnapshotsCheckPreds proposalsT {-govRuleStateT-})
     (\_ _ -> (arbitrary, const []))
     -- TODO: we should probably check more things here
-    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) proposalsSnapshotsCheckPreds govRuleStateT st'
+    $ \pe _env _st _sig st' -> checkConstraints conwayProof (extendSub pe sub) proposalsSnapshotsCheckPreds proposalsT {-govRuleStateT-} st'
 
 ------------------------------------------------------------------------
 -- Test Tree

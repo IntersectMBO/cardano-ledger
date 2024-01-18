@@ -35,8 +35,9 @@ module Cardano.Ledger.Conway.Governance (
   GovActionId (..),
   GovActionPurpose (..),
   PrevGovActionIds (..),
-  PrevGovActionIdsChildren (..),
-  PrevGovActionId (..),
+  prevGovActionIdsL,
+  fromPrevGovActionIds,
+  toPrevGovActionIds,
   DRepPulsingState (..),
   DRepPulser (..),
   govActionIdToText,
@@ -58,17 +59,35 @@ module Cardano.Ledger.Conway.Governance (
   isStakePoolVotingAllowed,
   isDRepVotingAllowed,
   isCommitteeVotingAllowed,
+  reorderActions,
+  actionPriority,
   Proposals,
+  mkProposals,
+  PForest (..),
+  GovPurposeId (..),
+  PRoot (..),
+  PNode (..),
+  PGraph (..),
+  pRootsL,
+  prRootL,
+  prChildrenL,
+  pnChildrenL,
+  pGraphL,
+  pGraphNodesL,
+  pfPParamUpdateL,
+  pfHardForkL,
+  pfCommitteeL,
+  pfConstitutionL,
   proposalsActions,
+  proposalsAddAction,
+  proposalsRemoveDescendentIds,
   proposalsAddVote,
-  proposalsAddProposal,
   proposalsIds,
-  proposalsRemoveIds,
+  proposalsApplyEnactment,
+  proposalsSize,
   proposalsLookupId,
-  proposalsGovActionStates,
-  fromGovActionStateSeq,
-  isConsistent_,
-  -- Lenses
+  proposalsActionsMap,
+  proposalsAreConsistent,
   cgProposalsL,
   cgEnactStateL,
   cgDRepPulsingStateL,
@@ -85,6 +104,9 @@ module Cardano.Ledger.Conway.Governance (
   ensPrevConstitutionL,
   ensProtVerL,
   rsEnactStateL,
+  rsExpiredL,
+  rsEnactedL,
+  rsDelayedL,
   curPParamsConwayGovStateL,
   prevPParamsConwayGovStateL,
   constitutionScriptL,
@@ -96,7 +118,6 @@ module Cardano.Ledger.Conway.Governance (
   gasStakePoolVotesL,
   gasExpiresAfterL,
   gasActionL,
-  gasChildrenL,
   gasReturnAddrL,
   gasProposedInL,
   utxosGovStateL,
@@ -124,11 +145,6 @@ module Cardano.Ledger.Conway.Governance (
   psDRepDistrL,
   psDRepStateL,
   RunConwayRatify (..),
-  ensPrevGovActionIdsChildrenL,
-  pgacPParamUpdateL,
-  pgacHardForkL,
-  pgacCommitteeL,
-  pgacConstitutionL,
 
   -- * Exported for testing
   pparamsUpdateThreshold,
@@ -161,54 +177,8 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.CertState (CommitteeState, Obligations (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayRATIFY)
-import Cardano.Ledger.Conway.Governance.Procedures (
-  Anchor (..),
-  AnchorData (..),
-  Committee (..),
-  GovAction (..),
-  GovActionId (..),
-  GovActionIx (..),
-  GovActionPurpose (..),
-  GovActionState (..),
-  GovProcedures (..),
-  PrevGovActionId (..),
-  ProposalProcedure (..),
-  Vote (..),
-  Voter (..),
-  VotingProcedure (..),
-  VotingProcedures (..),
-  foldlVotingProcedures,
-  gasActionL,
-  gasChildrenL,
-  gasCommitteeVotesL,
-  gasDRepVotesL,
-  gasDepositL,
-  gasExpiresAfterL,
-  gasIdL,
-  gasProposedInL,
-  gasReturnAddrL,
-  gasStakePoolVotesL,
-  govActionIdToText,
-  indexedGovProps,
- )
-import Cardano.Ledger.Conway.Governance.Proposals (
-  PrevGovActionIds (..),
-  PrevGovActionIdsChildren (..),
-  Proposals,
-  fromGovActionStateSeq,
-  isConsistent_,
-  pgacCommitteeL,
-  pgacConstitutionL,
-  pgacHardForkL,
-  pgacPParamUpdateL,
-  proposalsActions,
-  proposalsAddProposal,
-  proposalsAddVote,
-  proposalsGovActionStates,
-  proposalsIds,
-  proposalsLookupId,
-  proposalsRemoveIds,
- )
+import Cardano.Ledger.Conway.Governance.Procedures
+import Cardano.Ledger.Conway.Governance.Proposals
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
   DRepVotingThresholds (..),
@@ -271,10 +241,12 @@ import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
+import Data.List (sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Pulse (Pulsable (..), pulse)
 import Data.Ratio ((%))
+import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SS
 import Data.Set (Set)
@@ -370,7 +342,6 @@ data EnactState era = EnactState
   , ensWithdrawals :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
   , ensPrevGovActionIds :: !(PrevGovActionIds era)
   -- ^ Last enacted GovAction Ids
-  , ensPrevGovActionIdsChildren :: !(PrevGovActionIdsChildren era) -- TODO: @aniketd Move this inside Proposals
   }
   deriving (Generic)
 
@@ -398,56 +369,39 @@ ensWithdrawalsL = lens ensWithdrawals $ \es x -> es {ensWithdrawals = x}
 ensPrevGovActionIdsL :: Lens' (EnactState era) (PrevGovActionIds era)
 ensPrevGovActionIdsL = lens ensPrevGovActionIds (\es x -> es {ensPrevGovActionIds = x})
 
-ensPrevGovActionIdsChildrenL :: Lens' (EnactState era) (PrevGovActionIdsChildren era)
-ensPrevGovActionIdsChildrenL =
-  lens ensPrevGovActionIdsChildren (\es x -> es {ensPrevGovActionIdsChildren = x})
-
 ensPrevPParamUpdateL ::
-  Lens' (EnactState era) (StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
-ensPrevPParamUpdateL =
-  lens
-    (pgaPParamUpdate . ensPrevGovActionIds)
-    (\es x -> es {ensPrevGovActionIds = (ensPrevGovActionIds es) {pgaPParamUpdate = x}})
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
+ensPrevPParamUpdateL = ensPrevGovActionIdsL . prevGovActionIdsL . pfPParamUpdateL
 
 ensPrevHardForkL ::
-  Lens' (EnactState era) (StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
-ensPrevHardForkL =
-  lens
-    (pgaHardFork . ensPrevGovActionIds)
-    (\es x -> es {ensPrevGovActionIds = (ensPrevGovActionIds es) {pgaHardFork = x}})
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'HardForkPurpose era))
+ensPrevHardForkL = ensPrevGovActionIdsL . prevGovActionIdsL . pfHardForkL
 
 ensPrevCommitteeL ::
-  Lens' (EnactState era) (StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
-ensPrevCommitteeL =
-  lens
-    (pgaCommittee . ensPrevGovActionIds)
-    (\es x -> es {ensPrevGovActionIds = (ensPrevGovActionIds es) {pgaCommittee = x}})
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'CommitteePurpose era))
+ensPrevCommitteeL = ensPrevGovActionIdsL . prevGovActionIdsL . pfCommitteeL
 
 ensPrevConstitutionL ::
-  Lens' (EnactState era) (StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
-ensPrevConstitutionL =
-  lens
-    (pgaConstitution . ensPrevGovActionIds)
-    (\es x -> es {ensPrevGovActionIds = (ensPrevGovActionIds es) {pgaConstitution = x}})
+  Lens' (EnactState era) (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
+ensPrevConstitutionL = ensPrevGovActionIdsL . prevGovActionIdsL . pfConstitutionL
 
 instance EraPParams era => ToJSON (EnactState era) where
   toJSON = object . toEnactStatePairs
   toEncoding = pairs . mconcat . toEnactStatePairs
 
 toEnactStatePairs :: (KeyValue e a, EraPParams era) => EnactState era -> [a]
-toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _ _) =
+toEnactStatePairs cg@(EnactState _ _ _ _ _ _ _) =
   let EnactState {..} = cg
    in [ "committee" .= ensCommittee
       , "constitution" .= ensConstitution
       , "curPParams" .= ensCurPParams
       , "prevPParams" .= ensPrevPParams
       , "prevGovActionIds" .= ensPrevGovActionIds
-      , "prevGovActionIdsChilren" .= ensPrevGovActionIdsChildren
       ]
 
-deriving instance Eq (PParams era) => Eq (EnactState era)
+deriving instance (Era era, Eq (PParams era)) => Eq (EnactState era)
 
-deriving instance Show (PParams era) => Show (EnactState era)
+deriving instance (Era era, Show (PParams era)) => Show (EnactState era)
 
 instance EraPParams era => Default (EnactState era) where
   def =
@@ -459,7 +413,6 @@ instance EraPParams era => Default (EnactState era) where
       (Coin 0)
       def
       def
-      def
 
 instance EraPParams era => DecCBOR (EnactState era) where
   decCBOR = decNoShareCBOR
@@ -469,7 +422,6 @@ instance EraPParams era => DecShareCBOR (EnactState era) where
   decShareCBOR _ =
     decode $
       RecD EnactState
-        <! From
         <! From
         <! From
         <! From
@@ -489,7 +441,6 @@ instance EraPParams era => EncCBOR (EnactState era) where
         !> To ensTreasury
         !> To ensWithdrawals
         !> To ensPrevGovActionIds
-        !> To ensPrevGovActionIdsChildren
 
 instance EraPParams era => ToCBOR (EnactState era) where
   toCBOR = toEraCBOR @era
@@ -505,8 +456,8 @@ instance EraPParams era => NoThunks (EnactState era)
 
 data RatifyState era = RatifyState
   { rsEnactState :: !(EnactState era)
-  , rsRemoved :: !(Set (GovActionId (EraCrypto era)))
-  , rsEnacted :: !(Set (GovActionId (EraCrypto era)))
+  , rsEnacted :: !(Seq (GovActionId (EraCrypto era)))
+  , rsExpired :: !(Set (GovActionId (EraCrypto era)))
   , rsDelayed :: !Bool
   }
   deriving (Generic)
@@ -517,6 +468,15 @@ deriving instance EraPParams era => Show (RatifyState era)
 
 rsEnactStateL :: Lens' (RatifyState era) (EnactState era)
 rsEnactStateL = lens rsEnactState (\x y -> x {rsEnactState = y})
+
+rsEnactedL :: Lens' (RatifyState era) (Seq (GovActionId (EraCrypto era)))
+rsEnactedL = lens rsEnacted (\x y -> x {rsEnacted = y})
+
+rsExpiredL :: Lens' (RatifyState era) (Set (GovActionId (EraCrypto era)))
+rsExpiredL = lens rsExpired (\x y -> x {rsExpired = y})
+
+rsDelayedL :: Lens' (RatifyState era) Bool
+rsDelayedL = lens rsDelayed (\x y -> x {rsDelayed = y})
 
 instance EraPParams era => Default (RatifyState era)
 
@@ -532,8 +492,8 @@ toRatifyStatePairs :: (KeyValue e a, EraPParams era) => RatifyState era -> [a]
 toRatifyStatePairs cg@(RatifyState _ _ _ _) =
   let RatifyState {..} = cg
    in [ "nextEnactState" .= rsEnactState
-      , "removedGovActions" .= rsRemoved
       , "enactedGovActions" .= rsEnacted
+      , "expiredGovActions" .= rsExpired
       , "ratificationDelayed" .= rsDelayed
       ]
 
@@ -982,6 +942,18 @@ instance EraPParams era => NFData (DRepPulser era Identity (RatifyState era)) wh
                         as `deepseq`
                           rnf gs
 
+actionPriority :: GovAction era -> Int
+actionPriority NoConfidence {} = 0
+actionPriority UpdateCommittee {} = 1
+actionPriority NewConstitution {} = 2
+actionPriority HardForkInitiation {} = 3
+actionPriority ParameterChange {} = 4
+actionPriority TreasuryWithdrawals {} = 5
+actionPriority InfoAction {} = 6
+
+reorderActions :: SS.StrictSeq (GovActionState era) -> SS.StrictSeq (GovActionState era)
+reorderActions = SS.fromList . sortOn (actionPriority . gasAction) . toList
+
 class
   ( STS (ConwayRATIFY era)
   , Signal (ConwayRATIFY era) ~ RatifySignal era
@@ -992,9 +964,9 @@ class
   RunConwayRatify era
   where
   runConwayRatify :: Globals -> RatifyEnv era -> RatifyState era -> RatifySignal era -> RatifyState era
-  runConwayRatify globals ratifyEnv ratifyState ratifySig =
+  runConwayRatify globals ratifyEnv ratifyState (RatifySignal ratifySig) =
     let ratifyResult =
-          runReader (applySTS @(ConwayRATIFY era) (TRC (ratifyEnv, ratifyState, ratifySig))) globals
+          runReader (applySTS @(ConwayRATIFY era) (TRC (ratifyEnv, ratifyState, RatifySignal $ reorderActions ratifySig))) globals
      in case ratifyResult of
           Left ps ->
             error (unlines ("Impossible: RATIFY rule never fails, but it did:" : map show ps))
@@ -1018,9 +990,9 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
     !ratifySig = RatifySignal dpProposals
     !ratifyState =
       RatifyState
-        { rsRemoved = mempty
+        { rsEnactState = dpEnactState
         , rsEnacted = mempty
-        , rsEnactState = dpEnactState
+        , rsExpired = mempty
         , rsDelayed = False
         }
     !ratifyState' = runConwayRatify dpGlobals ratifyEnv ratifyState ratifySig
@@ -1166,9 +1138,6 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
               )
   pure epochState'
 
--- ===================================
--- RatifyEnv
-
 newtype RatifySignal era = RatifySignal (StrictSeq (GovActionState era))
   deriving (Show)
 
@@ -1209,12 +1178,12 @@ instance Era era => NFData (RatifyEnv era) where
               rnf cs
 
 instance EraPParams era => EncCBOR (RatifyState era) where
-  encCBOR (RatifyState es removed enacted delayed) =
+  encCBOR (RatifyState es enacted expired delayed) =
     encode
       ( Rec (RatifyState @era)
           !> To es
-          !> To removed
           !> To enacted
+          !> To expired
           !> To delayed
       )
 

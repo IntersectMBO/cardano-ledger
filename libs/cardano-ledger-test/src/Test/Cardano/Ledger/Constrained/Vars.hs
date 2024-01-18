@@ -37,7 +37,6 @@ import Cardano.Ledger.Conway.PParams (
   ppDRepDepositL,
   ppGovActionDepositL,
  )
-import Cardano.Ledger.Conway.Rules (GovRuleState (..))
 import Cardano.Ledger.Core (
   PParams,
   TxOut,
@@ -1646,7 +1645,7 @@ pulsingPairT proof =
     :$ Virtual currentEpoch (ppString "prevEpoch") (_2 . prevEpochL)
     :$ Virtual committeeState (ppString "prevCommitteeState") (_2 . prevCommitteeStateL)
     :$ Shift enactStateT (_2 . prevEnactStateL)
-    :$ Virtual currProposals (ppString "prevProposals") (_2 . prevProposalsL)
+    :$ Virtual currGovActionStates (ppString "prevProposals") (_2 . prevProposalsL)
 
 -- TODO access prevTreasury from the EnactState
 --  :$ Virtual treasury (ppString "prevTreasury") (_2 . prevTreasuryL)
@@ -1667,7 +1666,7 @@ justPulser p =
     :$ Virtual currentEpoch (ppString "prevEpoch") (prevEpochL)
     :$ Virtual committeeState (ppString "prevCommitteeState") (prevCommitteeStateL)
     :$ Shift enactStateT (prevEnactStateL)
-    :$ Virtual currProposals (ppString "prevProposals") (prevProposalsL)
+    :$ Virtual currGovActionStates (ppString "prevProposals") (prevProposalsL)
 
 -- TODO access prevTreasury from the EnactState
 -- :$ Virtual treasury (ppString "prevTreasury") (prevTreasuryL)
@@ -1758,10 +1757,15 @@ initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactsta
         -- treas
         testGlobals
 
-govRuleStateT :: forall era. Era era => RootTarget era (GovRuleState era) (GovRuleState era)
-govRuleStateT =
-  Invert "GovRuleState" (typeRep @(GovRuleState era)) (flip GovRuleState def . fromGovActionStateSeq . SS.fromList)
-    :$ Lensed prevProposals (lens (F.toList . proposalsActions . grsProposals) $ const (flip GovRuleState def . fromGovActionStateSeq . SS.fromList))
+proposalsT :: forall era. Reflect era => RootTarget era (Proposals era) (Proposals era)
+proposalsT =
+  Invert "Proposals" (typeRep @(Proposals era)) id
+    :$ Lensed prevProposals' (lens id $ const id)
+
+-- govRuleStateT :: forall era. EraPParams era => RootTarget era (GovRuleState era) (GovRuleState era)
+-- govRuleStateT =
+--   Invert "GovRuleState" (typeRep @(GovRuleState era)) (flip GovRuleState def . fromGovActionStateSeq . SS.fromList)
+--     :$ Lensed prevProposals (lens (F.toList . proposalsActions . grsProposals) $ const (flip GovRuleState def . fromGovActionStateSeq . SS.fromList))
 
 -- ==================================================
 -- Second form of DRepPulsingState 'DRComplete'
@@ -1813,6 +1817,9 @@ ratifyStateL = lens getter setter
 -- | Snapshot of 'currentProposals' from the start of the current Epoch
 prevProposals :: Era era => Term era [GovActionState era]
 prevProposals = Var $ V "prevProposals" (ListR GovActionStateR) No
+
+prevProposals' :: Reflect era => Term era (Proposals era)
+prevProposals' = Var $ V "prevProposals'" (ProposalsR reify) No
 
 prevProposalsL :: Lens' (DRepPulser era Identity (RatifyState era)) [GovActionState era]
 prevProposalsL =
@@ -1928,8 +1935,8 @@ conwayGovStateT ::
   Proof era ->
   RootTarget era (ConwayGovState era) (ConwayGovState era)
 conwayGovStateT _ =
-  Invert "ConwayGovState" (typeRep @(ConwayGovState era)) (\x -> ConwayGovState (fromGovActionStateSeq (SS.fromList x)))
-    :$ Lensed currProposals (cgProposalsL . proposalsL)
+  Invert "ConwayGovState" (typeRep @(ConwayGovState era)) ConwayGovState
+    :$ Lensed currProposals cgProposalsL
     :$ Shift enactStateT cgEnactStateL
     -- :$ Shift (completePulsingStateT p) cgDRepPulsingStateL
     :$ Shift pulsingPulsingStateT cgDRepPulsingStateL
@@ -1942,15 +1949,18 @@ proposalDeposits = Var (V "proposalDeposits" CoinR No)
 drepDepositsView :: Era era => Term era (Map (Credential 'DRepRole (EraCrypto era)) Coin)
 drepDepositsView = Var (V "drepDepositsView" (MapR VCredR CoinR) No)
 
-currProposals :: Era era => Term era [GovActionState era]
-currProposals = Var $ V "currProposals" (ListR GovActionStateR) No
+currProposals :: Reflect era => Term era (Proposals era)
+currProposals = Var $ V "currProposals" (ProposalsR reify) No
+
+currGovActionStates :: EraPParams era => Term era [GovActionState era]
+currGovActionStates = Var $ V "currGovActionStates" (ListR GovActionStateR) No
 
 enactStateT :: forall era. Reflect era => RootTarget era (EnactState era) (EnactState era)
 enactStateT =
   Invert
     "EnactState"
     (typeRep @(EnactState era))
-    (\x y (PParamsF _ z) (PParamsF _ w) a b c d -> EnactState (maybeToStrictMaybe x) y z w a b c d)
+    (\x y (PParamsF _ z) (PParamsF _ w) a b c -> EnactState (maybeToStrictMaybe x) y z w a b c)
     :$ Lensed committeeVar (ensCommitteeL . strictMaybeToMaybeL) -- see 'committeeT' to construct a binding for committeeVar
     :$ Lensed constitution ensConstitutionL
     :$ Lensed (currPParams reify) (ensCurPParamsL . pparamsFL reify)
@@ -1958,7 +1968,6 @@ enactStateT =
     :$ Lensed enactTreasury ensTreasuryL
     :$ Lensed enactWithdrawals ensWithdrawalsL
     :$ Shift prevGovActionIdsT ensPrevGovActionIdsL
-    :$ Shift prevGovActionIdsChildrenT ensPrevGovActionIdsChildrenL
 
 -- | One can use this Target, to make a constraint for 'committeeVar' from the
 --   vars 'commMembers' and 'commQuorum'
@@ -1973,55 +1982,32 @@ prevGovActionIdsT =
   Invert
     "prevGovActionIds"
     (typeRep @(PrevGovActionIds era))
-    (\w x y z -> PrevGovActionIds (maybeToStrictMaybe w) (maybeToStrictMaybe x) (maybeToStrictMaybe y) (maybeToStrictMaybe z))
-    :$ Lensed prevPParamUpdate (pgaPParamUpdateL . strictMaybeToMaybeL)
-    :$ Lensed prevHardFork (pgaHardForkL . strictMaybeToMaybeL)
-    :$ Lensed prevCommittee (pgaCommitteeL . strictMaybeToMaybeL)
-    :$ Lensed prevConstitution (pgaConstitutionL . strictMaybeToMaybeL)
+    (\w x y z -> PrevGovActionIds $ PForest (maybeToStrictMaybe w) (maybeToStrictMaybe x) (maybeToStrictMaybe y) (maybeToStrictMaybe z))
+    :$ Lensed prevPParamUpdate (prevGovActionIdsL . pfPParamUpdateL . strictMaybeToMaybeL)
+    :$ Lensed prevHardFork (prevGovActionIdsL . pfHardForkL . strictMaybeToMaybeL)
+    :$ Lensed prevCommittee (prevGovActionIdsL . pfCommitteeL . strictMaybeToMaybeL)
+    :$ Lensed prevConstitution (prevGovActionIdsL . pfConstitutionL . strictMaybeToMaybeL)
 
-prevGovActionIdsChildrenT :: forall era. Era era => RootTarget era (PrevGovActionIdsChildren era) (PrevGovActionIdsChildren era)
-prevGovActionIdsChildrenT =
-  Invert
-    "prevGovActionIdsChildren"
-    (typeRep @(PrevGovActionIdsChildren era))
-    (\w x y z -> PrevGovActionIdsChildren (gaiToPgac w) (gaiToPgac x) (gaiToPgac y) (gaiToPgac z))
-    :$ Lensed ppUpdateChildren ppUpdateChildrenL
-    :$ Lensed hardForkChildren hardForkChildrenL
-    :$ Lensed committeeChildren committeeChildrenL
-    :$ Lensed constitutionChildren constitutionChildrenL
-
-prevPParamUpdate :: Era era => Term era (Maybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
+prevPParamUpdate :: EraPParams era => Term era (Maybe (GovPurposeId 'PParamUpdatePurpose era))
 prevPParamUpdate = Var $ V "prevPParamUpdate" (MaybeR PrevPParamUpdateR) No
 
-prevHardFork :: Era era => Term era (Maybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
+prevHardFork :: EraPParams era => Term era (Maybe (GovPurposeId 'HardForkPurpose era))
 prevHardFork = Var $ V "prevHardFork" (MaybeR PrevHardForkR) No
 
-ppUpdateChildren :: Era era => Term era (Set (GovActionId (EraCrypto era)))
+ppUpdateChildren :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
 ppUpdateChildren = Var $ V "ppUpdateChildren" (SetR GovActionIdR) No
 
-hardForkChildren :: Era era => Term era (Set (GovActionId (EraCrypto era)))
+hardForkChildren :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
 hardForkChildren = Var $ V "hardForkChildren" (SetR GovActionIdR) No
 
-committeeChildren :: Era era => Term era (Set (GovActionId (EraCrypto era)))
+committeeChildren :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
 committeeChildren = Var $ V "committeeChildren" (SetR GovActionIdR) No
 
-constitutionChildren :: Era era => Term era (Set (GovActionId (EraCrypto era)))
+constitutionChildren :: EraPParams era => Term era (Set (GovActionId (EraCrypto era)))
 constitutionChildren = Var $ V "constitutionChildren" (SetR GovActionIdR) No
 
 -- ================
 -- Lenses
-
-proposalsL :: Lens' (Proposals era) [GovActionState era]
-proposalsL =
-  lens
-    (\s -> foldr (:) [] (proposalsActions s))
-    (\_ l -> fromGovActionStateSeq (SS.fromList l))
-
-unProposalsL :: Lens' [GovActionState era] (Proposals era)
-unProposalsL =
-  lens
-    (\l -> fromGovActionStateSeq (SS.fromList l))
-    (\_ s -> foldr (:) [] (proposalsActions s))
 
 pparamsFL :: Proof era -> Lens' (PParams era) (PParamsF era)
 pparamsFL p = lens (PParamsF p) (\_ (PParamsF _ x) -> x)
@@ -2050,47 +2036,11 @@ proposedMapL p =
     (\(ProposedPPUpdates x) -> Map.map (PParamsUpdateF p) x)
     (\(ProposedPPUpdates _) y -> ProposedPPUpdates (Map.map unPParamsUpdate y))
 
-pgaPParamUpdateL :: Lens' (PrevGovActionIds era) (StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
-pgaPParamUpdateL = lens pgaPParamUpdate (\x y -> x {pgaPParamUpdate = y})
+gaiToPgac :: Set (GovActionId (EraCrypto era)) -> Set (GovPurposeId p era)
+gaiToPgac = Set.map GovPurposeId
 
-pgaHardForkL :: Lens' (PrevGovActionIds era) (StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
-pgaHardForkL = lens pgaHardFork (\x y -> x {pgaHardFork = y})
-
-pgaCommitteeL :: Lens' (PrevGovActionIds era) (StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
-pgaCommitteeL = lens pgaCommittee (\x y -> x {pgaCommittee = y})
-
-pgaConstitutionL :: Lens' (PrevGovActionIds era) (StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
-pgaConstitutionL = lens pgaConstitution (\x y -> x {pgaConstitution = y})
-
-gaiToPgac :: Set (GovActionId c) -> Set (PrevGovActionId p c)
-gaiToPgac x = Set.map PrevGovActionId x
-
-pgacToGai :: Set (PrevGovActionId p c) -> Set (GovActionId c)
-pgacToGai x = Set.map unPrevGovActionId x
-
-ppUpdateChildrenL :: Lens' (PrevGovActionIdsChildren era) (Set (GovActionId (EraCrypto era)))
-ppUpdateChildrenL =
-  lens
-    (pgacToGai . pgacPParamUpdate)
-    $ \x y -> x {pgacPParamUpdate = gaiToPgac y}
-
-hardForkChildrenL :: Lens' (PrevGovActionIdsChildren era) (Set (GovActionId (EraCrypto era)))
-hardForkChildrenL =
-  lens
-    (pgacToGai . pgacHardFork)
-    $ \x y -> x {pgacHardFork = gaiToPgac y}
-
-committeeChildrenL :: Lens' (PrevGovActionIdsChildren era) (Set (GovActionId (EraCrypto era)))
-committeeChildrenL =
-  lens
-    (pgacToGai . pgacCommittee)
-    $ \x y -> x {pgacCommittee = gaiToPgac y}
-
-constitutionChildrenL :: Lens' (PrevGovActionIdsChildren era) (Set (GovActionId (EraCrypto era)))
-constitutionChildrenL =
-  lens
-    (pgacToGai . pgacConstitution)
-    $ \x y -> x {pgacConstitution = gaiToPgac y}
+pgacToGai :: Set (GovPurposeId p era) -> Set (GovActionId (EraCrypto era))
+pgacToGai = Set.map unGovPurposeId
 
 pair1 :: Era era => Rep era a -> Term era a
 pair1 rep = Var (V "pair1" rep No)
@@ -2150,7 +2100,6 @@ govActionStateTarget =
     :$ Lensed actionV gasActionL
     :$ Lensed proposedInV gasProposedInL
     :$ Lensed expiresAfterV gasExpiresAfterL
-    :$ Lensed childrenV gasChildrenL
 
 govstates :: Era era => Term era [GovActionState era]
 govstates = Var (V "govstates" (ListR GovActionStateR) No)
@@ -2161,12 +2110,12 @@ govstates = Var (V "govstates" (ListR GovActionStateR) No)
 -- targets provide the coercions to produce the real data from the Model
 
 -- | Lift the Model to the real type
-liftId :: Maybe (GovActionId c) -> StrictMaybe (PrevGovActionId r c)
-liftId x = PrevGovActionId <$> (maybeToStrictMaybe x)
+liftId :: Maybe (GovActionId (EraCrypto era)) -> StrictMaybe (GovPurposeId p era)
+liftId x = GovPurposeId <$> (maybeToStrictMaybe x)
 
 -- | Drop the real type back to the Model
-dropId :: StrictMaybe (PrevGovActionId r c) -> Maybe (GovActionId c)
-dropId x = unPrevGovActionId <$> (strictMaybeToMaybe x)
+dropId :: StrictMaybe (GovPurposeId p era) -> Maybe (GovActionId (EraCrypto era))
+dropId x = unGovPurposeId <$> (strictMaybeToMaybe x)
 
 -- =====================
 -- Variables for the fields of GovAction

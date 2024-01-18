@@ -71,12 +71,26 @@ instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (ProposalProcedure era)
 
 instance ToExpr (Committee era)
 
-instance ToExpr (PrevGovActionId r ci)
+instance ToExpr (GovPurposeId purpose era)
 
 instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (GovAction era)
 
 -- Governance/Proposals
-instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (Proposals era)
+instance ToExpr a => ToExpr (PRoot a)
+
+instance ToExpr a => ToExpr (PNode a)
+
+instance ToExpr a => ToExpr (PGraph a)
+
+instance Era era => ToExpr (PForest PRoot era)
+
+instance Era era => ToExpr (PForest PGraph era)
+
+instance Era era => ToExpr (PForest StrictMaybe era)
+
+instance Era era => ToExpr (PrevGovActionIds era)
+
+instance (Era era, ToExpr (PParamsHKD StrictMaybe era)) => ToExpr (Proposals era)
 
 -- PParams
 instance ToExpr (HKD f a) => ToExpr (THKD t f a) where
@@ -89,11 +103,7 @@ instance ToExpr (ConwayPParams StrictMaybe era)
 -- Governance
 instance (EraPParams era, ToExpr (PParamsHKD StrictMaybe era)) => ToExpr (PulsingSnapshot era)
 
-instance ToExpr (PrevGovActionIds era)
-
-instance ToExpr (PrevGovActionIdsChildren era)
-
-instance ToExpr (PParamsHKD Identity era) => ToExpr (EnactState era)
+instance (Era era, ToExpr (PParamsHKD Identity era)) => ToExpr (EnactState era)
 
 instance (EraPParams era, ToExpr (PParamsHKD Identity era)) => ToExpr (RatifyState era)
 

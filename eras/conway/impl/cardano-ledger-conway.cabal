@@ -24,6 +24,10 @@ source-repository head
     location: https://github.com/intersectmbo/cardano-ledger
     subdir:   eras/conway/impl
 
+flag asserts
+    description: Enable assertions
+    default:     False
+
 library
     exposed-modules:
         Cardano.Ledger.Conway.Genesis
@@ -96,6 +100,9 @@ library
         transformers,
         validation-selective
 
+    if flag(asserts)
+        ghc-options: -fno-ignore-asserts
+
 library testlib
     exposed-modules:
         Test.Cardano.Ledger.Conway.Arbitrary
@@ -167,8 +174,8 @@ test-suite tests
         cardano-ledger-shelley:testlib,
         cardano-ledger-core,
         cardano-ledger-binary:testlib,
+        cardano-strict-containers,
         containers,
         data-default-class,
         microlens,
-        testlib,
-        cardano-strict-containers
+        testlib

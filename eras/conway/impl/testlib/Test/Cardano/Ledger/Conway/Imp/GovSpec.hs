@@ -32,6 +32,7 @@ import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..), traverse_)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
+import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
@@ -48,11 +49,11 @@ spec ::
   SpecWith (ImpTestState era)
 spec =
   describe "GOV" $ do
-    describe "Hardfork is the first one (doesn't have a PrevGovActionId) " $ do
+    describe "Hardfork is the first one (doesn't have a GovPurposeId) " $ do
       it "Hardfork minorFollow" (firstHardForkFollows minorFollow)
       it "Hardfork majorFollow" (firstHardForkFollows majorFollow)
       it "Hardfork cantFollow" firstHardForkCantFollow
-    describe "Hardfork is the second one (has a PrevGovActionId)" $ do
+    describe "Hardfork is the second one (has a GovPurposeId)" $ do
       it "Hardfork minorFollow" (secondHardForkFollows minorFollow)
       it "Hardfork majorFollow" (secondHardForkFollows majorFollow)
       it "Hardfork cantFollow" secondHardForkCantFollow
@@ -87,29 +88,19 @@ spec =
     describe "Constitution proposals" $ do
       context "accepted for" $
         it "empty PrevGovId before the first constitution is enacted" $ do
-          --  Initial proposal does not need a PrevGovActionId but after it is enacted, the
+          --  Initial proposal does not need a GovPurposeId but after it is enacted, the
           --  following ones are not
           _ <- submitConstitution SNothing
-          -- Until the first proposal is enacted all proposals with empty PrevGovActionIds are valid
+          -- Until the first proposal is enacted all proposals with empty GovPurposeIds are valid
           void $ submitConstitution SNothing
 
       context "rejected for" $ do
         it "empty PrevGovId after the first constitution was enacted" $ do
-          (govActionId, _) <- submitConstitution SNothing
-          modifyNES $ \nes ->
-            nes
-              & nesEsL
-                . esLStateL
-                . lsUTxOStateL
-                . utxosGovStateL
-                . cgEnactStateL
-                . ensPrevConstitutionL
-                .~ SJust (PrevGovActionId govActionId)
-              -- Add first proposal to PrevGovActionIds in enacted state
-              & nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgProposalsL
-                .~ def -- Remove all proposals, so that the lookup only succeeds for enacted state.
-                -- Once a proposal with a purpose has been enacted, following proposals can no
-                -- longer have empty PrevGovActionIds
+          (dRep, committeeMember) <- electBasicCommittee
+          (govActionId, _constitution) <- submitConstitution SNothing
+          submitYesVote_ (DRepVoter dRep) govActionId
+          submitYesVote_ (CommitteeVoter committeeMember) govActionId
+          passNEpochs 2
           constitution <- newConstitution
           let invalidNewConstitutionGovAction =
                 NewConstitution
@@ -120,12 +111,14 @@ spec =
             invalidNewConstitutionProposal
             [ inject $ InvalidPrevGovActionId invalidNewConstitutionProposal
             ]
-        it "invalid index in PrevGovActionId" $ do
-          (govActionId, _) <- submitConstitution SNothing
+        it "invalid index in GovPurposeId" $ do
+          (_dRep, _committeeMember) <- electBasicCommittee
+          (govActionId, _constitution) <- submitConstitution SNothing
+          passNEpochs 2
           constitution <- newConstitution
           let invalidPrevGovActionId =
                 -- Expected Ix = 0
-                PrevGovActionId (govActionId {gaidGovActionIx = GovActionIx 1})
+                GovPurposeId (govActionId {gaidGovActionIx = GovActionIx 1})
               invalidNewConstitutionGovAction =
                 NewConstitution
                   (SJust invalidPrevGovActionId)
@@ -135,10 +128,12 @@ spec =
             invalidNewConstitutionProposal
             [ inject $ InvalidPrevGovActionId invalidNewConstitutionProposal
             ]
-        it "valid PrevGovActionId but invalid purpose" $ do
-          (govActionId, _) <- submitConstitution SNothing
+        it "valid GovPurposeId but invalid purpose" $ do
+          (_dRep, _committeeMember) <- electBasicCommittee
+          (govActionId, _constitution) <- submitConstitution SNothing
+          passNEpochs 2
           let invalidNoConfidenceAction =
-                NoConfidence $ SJust $ PrevGovActionId govActionId
+                NoConfidence $ SJust $ GovPurposeId govActionId
           invalidNoConfidenceProposal <- proposalWithRewardAccount invalidNoConfidenceAction
 
           submitFailingProposal
@@ -147,7 +142,7 @@ spec =
             ]
 
     describe "Constitution" $ do
-      it "submitted successfully with valid PrevGovActionId" $ do
+      it "submitted successfully with valid GovPurposeId" $ do
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 1
 
         curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
@@ -163,11 +158,7 @@ spec =
           getsNES newEpochStateGovStateL
 
         impAnn "EnactState reflects the submitted governance action" $ do
-          let enactStateWithChildren =
-                initialEnactState
-                  & ensPrevGovActionIdsChildrenL . pgacConstitutionL
-                    %~ Set.insert (PrevGovActionId govActionId)
-          expectedEnactState `shouldBe` enactStateWithChildren
+          expectedEnactState `shouldBe` initialEnactState
 
         impAnn "Proposals contain the submitted proposal" $
           expectedProposals `shouldSatisfy` \props -> govActionId `elem` proposalsIds props
@@ -179,7 +170,7 @@ spec =
         impAnn "Proposal gets removed after expiry" $ do
           ConwayGovState _ _ pulser <- getsNES newEpochStateGovStateL
           let ratifyState = extractDRepPulsingState pulser
-          rsRemoved ratifyState `shouldBe` Set.singleton govActionId
+          rsExpired ratifyState `shouldBe` Set.singleton govActionId
 
       it "submitted and enacted when voted on" $ do
         (dRep, committeeMember) <- electBasicCommittee
@@ -221,7 +212,7 @@ spec =
         impAnn "Pulser should reflect the constitution to be enacted" $ do
           ConwayGovState _ _ pulser <- getsNES newEpochStateGovStateL
           let ratifyState = extractDRepPulsingState pulser
-          rsEnacted ratifyState `shouldBe` Set.singleton govActionId
+          rsEnacted ratifyState `shouldBe` Seq.singleton govActionId
           rsEnactState ratifyState ^. ensConstitutionL `shouldBe` constitution
 
         passEpoch
@@ -233,7 +224,7 @@ spec =
         impAnn "Pulser is reset" $ do
           ConwayGovState _ _ pulser <- getsNES newEpochStateGovStateL
           let pulserRatifyState = extractDRepPulsingState pulser
-          rsEnacted pulserRatifyState `shouldBe` Set.empty
+          rsEnacted pulserRatifyState `shouldBe` Seq.empty
           enactState <- getsNES $ newEpochStateGovStateL . cgEnactStateL
           rsEnactState pulserRatifyState `shouldBe` enactState
 
@@ -444,7 +435,7 @@ spec =
           expectMembers $ initialMembers <> membersExceedingExpiry
 
         impAnn "New committee can vote" $ do
-          (govIdConst2, constitution) <- submitConstitution $ SJust (PrevGovActionId govIdConst1)
+          (govIdConst2, constitution) <- submitConstitution $ SJust (GovPurposeId govIdConst1)
           submitYesVote_ (DRepVoter (KeyHashObj drep)) govIdConst2
           hks <- traverse registerCommitteeHotKey (Set.toList membersExceedingExpiry)
           traverse_ (\m -> submitYesVote_ (CommitteeVoter (KeyHashObj m)) govIdConst2) hks
@@ -507,7 +498,7 @@ spec =
       proposalsIds
         <$> getsNES (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL @era)
     lastEpochProposals =
-      proposalsIds
+      fmap gasId . psProposals
         <$> getsNES
           ( nesEsL
               . esLStateL
@@ -515,13 +506,12 @@ spec =
               . utxosGovStateL
               . drepPulsingStateGovStateL @era
               . pulsingStateSnapshotL
-              . psProposalsL'
           )
 
 submitConstitution ::
   forall era.
   ConwayEraImp era =>
-  StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)) ->
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
   ImpTestM era (GovActionId (EraCrypto era), Constitution era)
 submitConstitution prevGovId = do
   constitution <- newConstitution
@@ -552,7 +542,7 @@ proposalWithRewardAccount action = do
   rewardAccount <- registerRewardAccount
   pure
     ProposalProcedure
-      { pProcDeposit = mempty
+      { pProcDeposit = Coin 123
       , pProcReturnAddr = rewardAccount
       , pProcGovAction = action
       , pProcAnchor = def
@@ -565,13 +555,6 @@ pulsingStateSnapshotL = lens getter setter
     getter state = fst (finishDRepPulser state)
     setter (DRComplete _ y) snap = DRComplete snap y
     setter state snap = DRComplete snap $ snd $ finishDRepPulser state
-
--- | Accesses the same data as psProposalsL, but converts from (StrictSeq (GovActionState era)) to (Proposals era)
-psProposalsL' :: Lens' (PulsingSnapshot era) (Proposals era)
-psProposalsL' =
-  lens
-    (fromGovActionStateSeq . psProposals)
-    (\x y -> x {psProposals = proposalsActions y})
 
 setPParams ::
   forall era.
@@ -656,7 +639,7 @@ secondHardForkFollows computeNewFromOld = do
   let protver1 = minorFollow protver0
       protver2 = computeNewFromOld protver1
   gaid1 <- submitGovAction $ HardForkInitiation SNothing protver1
-  submitGovAction_ $ HardForkInitiation (SJust (PrevGovActionId gaid1)) protver2
+  submitGovAction_ $ HardForkInitiation (SJust (GovPurposeId gaid1)) protver2
 
 -- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkCantFollow ::
@@ -684,8 +667,8 @@ secondHardForkCantFollow = do
     ( ProposalProcedure
         { pProcDeposit = pp ^. ppGovActionDepositL
         , pProcReturnAddr = rewardAccount
-        , pProcGovAction = HardForkInitiation (SJust (PrevGovActionId gaid1)) protver2
+        , pProcGovAction = HardForkInitiation (SJust (GovPurposeId gaid1)) protver2
         , pProcAnchor = def
         }
     )
-    [inject (ProposalCantFollow @era (SJust (PrevGovActionId gaid1)) protver2 protver1)]
+    [inject (ProposalCantFollow @era (SJust (GovPurposeId gaid1)) protver2 protver1)]
