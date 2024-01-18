@@ -32,6 +32,7 @@ import Control.Monad (replicateM_)
 import Control.State.Transition.Extended (PredicateFailure)
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..), traverse_)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import qualified Data.Sequence as Seq
@@ -40,7 +41,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
-import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Imp.Common hiding (Success)
 
 spec ::
   forall era.
@@ -75,7 +76,7 @@ spec =
             govActionId
             [ inject $
                 VotingOnExpiredGovAction @era $
-                  Map.singleton govActionId voter
+                  [(voter, govActionId)]
             ]
         it "non-existent gov-actions" $ do
           khDRep <- setupSingleDRep
@@ -85,7 +86,31 @@ spec =
           submitFailingVote
             voter
             dummyGaid
-            [inject $ GovActionsDoNotExist @era $ Set.singleton dummyGaid]
+            [inject $ GovActionsDoNotExist @era $ NE.singleton dummyGaid]
+        it
+          "committee member voting on committee change"
+          committeeMemberVotingOnCommitteeChange
+        it "non-committee-member voting on committee change as a committee member" $ do
+          (_, _, prevGovActionId) <- electBasicCommittee
+          credCandidate <- KeyHashObj <$> freshKeyHash
+          credVoter <- KeyHashObj <$> freshKeyHash
+          committeeUpdateId <-
+            submitGovAction $
+              UpdateCommittee
+                (SJust prevGovActionId)
+                mempty
+                (Map.singleton credCandidate $ EpochNo 28)
+                (3 %! 5)
+          let voter = CommitteeVoter credVoter
+          trySubmitVote VoteNo voter committeeUpdateId
+            `shouldReturn` Left
+              [ inject . DisallowedVoters @era $
+                  [ (voter, committeeUpdateId)
+                  ]
+              ]
+        it
+          "committee member can't vote on committee update when sandwiched between other votes"
+          ccVoteOnConstitutionFailsWithMultipleVotes
       it "Motion of no confidence can be passed" $ do
         modifyPParams $ \pp ->
           pp
@@ -136,7 +161,7 @@ spec =
         replicateM_ 4 passEpoch
         assertNoCommittee
       it "SPO needs to vote on security-relevant parameter changes" $ do
-        (drep, ccCred) <- electBasicCommittee
+        (drep, ccCred, _) <- electBasicCommittee
         khPool <- setupPoolWithStake $ Coin 42_000_000
         initMinFeeA <- getsNES $ nesEsL . curPParamsEpochStateL . ppMinFeeAL
         gaidThreshold <- impAnn "Update StakePool thresholds" $ do
@@ -218,7 +243,7 @@ spec =
 
       context "rejected for" $ do
         it "empty PrevGovId after the first constitution was enacted" $ do
-          (dRep, committeeMember) <- electBasicCommittee
+          (dRep, committeeMember, _) <- electBasicCommittee
           (govActionId, _constitution) <- submitConstitution SNothing
           submitYesVote_ (DRepVoter dRep) govActionId
           submitYesVote_ (CommitteeVoter committeeMember) govActionId
@@ -234,7 +259,7 @@ spec =
             [ inject $ InvalidPrevGovActionId invalidNewConstitutionProposal
             ]
         it "invalid index in GovPurposeId" $ do
-          (_dRep, _committeeMember) <- electBasicCommittee
+          (_dRep, _committeeMember, _) <- electBasicCommittee
           (govActionId, _constitution) <- submitConstitution SNothing
           passNEpochs 2
           constitution <- newConstitution
@@ -251,7 +276,7 @@ spec =
             [ inject $ InvalidPrevGovActionId invalidNewConstitutionProposal
             ]
         it "valid GovPurposeId but invalid purpose" $ do
-          (_dRep, _committeeMember) <- electBasicCommittee
+          (_dRep, _committeeMember, _) <- electBasicCommittee
           (govActionId, _constitution) <- submitConstitution SNothing
           passNEpochs 2
           let invalidNoConfidenceAction =
@@ -295,7 +320,7 @@ spec =
           rsExpired ratifyState `shouldBe` Set.singleton govActionId
 
       it "submitted and enacted when voted on" $ do
-        (dRep, committeeMember) <- electBasicCommittee
+        (dRep, committeeMember, _) <- electBasicCommittee
         (govActionId, constitution) <- submitConstitution SNothing
 
         ConwayGovState proposalsBeforeVotes enactStateBeforeVotes pulserBeforeVotes <-
@@ -794,3 +819,75 @@ secondHardForkCantFollow = do
         }
     )
     [inject (ProposalCantFollow @era (SJust (GovPurposeId gaid1)) protver2 protver1)]
+
+committeeMemberVotingOnCommitteeChange ::
+  forall era.
+  ( ConwayEraImp era
+  , GovState era ~ ConwayGovState era
+  , Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  ImpTestM era ()
+committeeMemberVotingOnCommitteeChange = do
+  (_, ccHot, prevGovActionId) <- electBasicCommittee
+  khCommittee <- KeyHashObj <$> freshKeyHash
+  committeeUpdateId <-
+    submitGovAction $
+      UpdateCommittee
+        (SJust prevGovActionId)
+        mempty
+        (Map.singleton khCommittee $ EpochNo 28)
+        (3 %! 5)
+  let voter = CommitteeVoter ccHot
+  submitFailingVote
+    voter
+    committeeUpdateId
+    [ inject . DisallowedVoters @era $
+        [ (voter, committeeUpdateId)
+        ]
+    ]
+
+ccVoteOnConstitutionFailsWithMultipleVotes ::
+  forall era.
+  ( ConwayEraImp era
+  , GovState era ~ ConwayGovState era
+  , Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
+  ) =>
+  ImpTestM era ()
+ccVoteOnConstitutionFailsWithMultipleVotes = do
+  (drepCred, ccCred, prevCommitteeId) <- electBasicCommittee
+  drepCred2 <- KeyHashObj <$> registerDRep
+  newCommitteeMember <- KeyHashObj <$> freshKeyHash
+  committeeProposal <-
+    submitGovAction $
+      UpdateCommittee
+        (SJust prevCommitteeId)
+        mempty
+        (Map.singleton newCommitteeMember $ EpochNo 10)
+        (1 %! 2)
+  let
+    voteTx =
+      mkBasicTx $
+        mkBasicTxBody
+          & votingProceduresTxBodyL
+            .~ VotingProcedures
+              ( Map.fromList
+                  [
+                    ( DRepVoter drepCred2
+                    , Map.singleton committeeProposal $ VotingProcedure VoteYes SNothing
+                    )
+                  ,
+                    ( CommitteeVoter ccCred
+                    , Map.singleton committeeProposal $ VotingProcedure VoteNo SNothing
+                    )
+                  ,
+                    ( DRepVoter drepCred
+                    , Map.singleton committeeProposal $ VotingProcedure VoteYes SNothing
+                    )
+                  ]
+              )
+  impAnn "Try to vote as a committee member" $
+    submitFailingTx
+      voteTx
+      [ inject $
+          DisallowedVoters @era [(CommitteeVoter ccCred, committeeProposal)]
+      ]

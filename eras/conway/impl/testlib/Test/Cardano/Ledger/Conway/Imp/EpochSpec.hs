@@ -70,7 +70,7 @@ spec =
       logEntry "Submitting new constitution"
       gaidConstitutionProp <- submitGovAction constitutionAction
 
-      (dRepCred, committeeHotCred) <- electBasicCommittee
+      (dRepCred, committeeHotCred, _) <- electBasicCommittee
 
       logRatificationChecks gaidConstitutionProp
       do
@@ -95,7 +95,7 @@ spec =
       constitutionShouldBe "constitution.0"
 
     it "TreasuryWithdrawal" $ do
-      (dRepCred, committeeHotCred) <- electBasicCommittee
+      (dRepCred, committeeHotCred, _) <- electBasicCommittee
 
       treasuryStart <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
 
