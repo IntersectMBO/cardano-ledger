@@ -53,8 +53,8 @@ module Cardano.Ledger.Address (
   fromCborBothAddr,
   fromCborCompactAddr,
   fromCborBackwardsBothAddr,
-  fromCborRewardAcnt,
   decodeRewardAccount,
+  fromCborRewardAccount,
   Withdrawals (..),
 
   -- * Deprecations
@@ -63,6 +63,7 @@ module Cardano.Ledger.Address (
   deserialiseRewardAcnt,
   putRewardAcnt,
   decodeRewardAcnt,
+  fromCborRewardAcnt,
 )
 where
 
@@ -894,11 +895,14 @@ decodeRewardAcnt = decodeRewardAccount
 {-# INLINE decodeRewardAcnt #-}
 {-# DEPRECATED decodeRewardAcnt "Use `decodeRewardAccount` instead" #-}
 
-fromCborRewardAcnt :: forall c s. Crypto c => Decoder s (RewardAcnt c)
-fromCborRewardAcnt = do
+fromCborRewardAccount :: forall c s. Crypto c => Decoder s (RewardAcnt c)
+fromCborRewardAccount = do
   sbs :: ShortByteString <- decCBOR
   decodeRewardAcnt @c sbs
+fromCborRewardAcnt :: forall c s. Crypto c => Decoder s (RewardAcnt c)
+fromCborRewardAcnt = fromCborRewardAccount
 {-# INLINE fromCborRewardAcnt #-}
+{-# DEPRECATED fromCborRewardAcnt "Use `fromCborRewardAccount` instead" #-}
 
 headerIsRewardAccount :: Header -> Bool
 headerIsRewardAccount header = header .&. 0b11101110 == 0b11100000
