@@ -25,8 +25,8 @@ module Cardano.Ledger.Address (
   isBootstrapRedeemer,
   getNetwork,
   RewardAccount (.., RewardAcnt),
-  deserialiseRewardAcnt,
   serialiseRewardAccount,
+  deserialiseRewardAccount,
   bootstrapKeyHash,
   -- internals exported for testing
   putAddr,
@@ -60,6 +60,7 @@ module Cardano.Ledger.Address (
   -- * Deprecations
   RewardAcnt,
   serialiseRewardAcnt,
+  deserialiseRewardAcnt,
 )
 where
 
@@ -160,9 +161,13 @@ serialiseRewardAcnt = serialiseRewardAccount
 
 -- | Deserialise a reward account from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
+deserialiseRewardAccount :: Crypto c => ByteString -> Maybe (RewardAcnt c)
+deserialiseRewardAccount = decodeRewardAcnt
+
 deserialiseRewardAcnt :: Crypto c => ByteString -> Maybe (RewardAcnt c)
-deserialiseRewardAcnt = decodeRewardAcnt
+deserialiseRewardAcnt = deserialiseRewardAccount
 {-# INLINE deserialiseRewardAcnt #-}
+{-# DEPRECATED deserialiseRewardAcnt "Use `deserialiseRewardAccount` instead" #-}
 
 -- | An address for UTxO.
 --
