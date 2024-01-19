@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Deprecate `decodeRewardAcnt` in favor of `decodeRewardAccount`
 * Deprecate `putRewardAcnt` in favor of `putRewardAccount`
 * Deprecate `deserialiseRewardAcnt` in favor of `deserialiseRewardAccount`
 * Deprecate `serialiseRewardAcnt` in favor of `serialiseRewardAccount`

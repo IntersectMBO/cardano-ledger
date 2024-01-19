@@ -227,7 +227,7 @@ propDeserializeRewardAcntErrors v acnt = do
     $ counterexample
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
     $ isNothing
-    $ decodeRewardAcnt @c badAddr
+    $ decodeRewardAccount @c badAddr
 
 addressWithExtraneousBytes :: HasCallStack => BS.ByteString
 addressWithExtraneousBytes = bs

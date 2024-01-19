@@ -53,8 +53,8 @@ module Cardano.Ledger.Address (
   fromCborBothAddr,
   fromCborCompactAddr,
   fromCborBackwardsBothAddr,
-  decodeRewardAcnt,
   fromCborRewardAcnt,
+  decodeRewardAccount,
   Withdrawals (..),
 
   -- * Deprecations
@@ -62,6 +62,7 @@ module Cardano.Ledger.Address (
   serialiseRewardAcnt,
   deserialiseRewardAcnt,
   putRewardAcnt,
+  decodeRewardAcnt,
 )
 where
 
@@ -878,13 +879,20 @@ decodeVariableLengthWord64 name buf = fix (decode7BitVarLength name buf) 0
 -- Reward Account Deserializer -----------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
+decodeRewardAccount ::
+  forall c b m.
+  (Crypto c, AddressBuffer b, MonadFail m) =>
+  b ->
+  m (RewardAcnt c)
+decodeRewardAccount buf = evalStateT (decodeRewardAccountT buf) 0
 decodeRewardAcnt ::
   forall c b m.
   (Crypto c, AddressBuffer b, MonadFail m) =>
   b ->
   m (RewardAcnt c)
-decodeRewardAcnt buf = evalStateT (decodeRewardAccountT buf) 0
+decodeRewardAcnt = decodeRewardAccount
 {-# INLINE decodeRewardAcnt #-}
+{-# DEPRECATED decodeRewardAcnt "Use `decodeRewardAccount` instead" #-}
 
 fromCborRewardAcnt :: forall c s. Crypto c => Decoder s (RewardAcnt c)
 fromCborRewardAcnt = do
