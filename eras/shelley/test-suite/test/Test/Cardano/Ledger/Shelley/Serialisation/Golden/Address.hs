@@ -104,12 +104,12 @@ goldenTests_MockCrypto =
         ("70" <> scriptHashHex)
     , golden
         "rewardAcntK"
-        putRewardAcnt
+        putRewardAccount
         (RewardAccount Testnet keyHash)
         ("e0" <> keyHashHex)
     , golden
         "rewardAcntS"
-        putRewardAcnt
+        putRewardAccount
         (RewardAccount Testnet scriptHash)
         ("f0" <> scriptHashHex)
     ]
@@ -171,7 +171,7 @@ goldenTests_ShelleyCrypto =
         "418a4d111f71a79169c50bcbc27e1e20b6e13e87ff8f33edc3cab419d481000203"
     , golden
         "rewardAcntK"
-        putRewardAcnt
+        putRewardAccount
         (RewardAccount Testnet stakeKey)
         "e008b2d658668c2e341ee5bda4477b63c5aca7ec7ae4e3d196163556a4"
     , golden

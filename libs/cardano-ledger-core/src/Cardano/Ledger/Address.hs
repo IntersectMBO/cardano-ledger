@@ -32,7 +32,7 @@ module Cardano.Ledger.Address (
   putAddr,
   putCredential,
   putPtr,
-  putRewardAcnt,
+  putRewardAccount,
   putVariableLengthWord64,
   Word7 (..),
   toWord7,
@@ -61,6 +61,7 @@ module Cardano.Ledger.Address (
   RewardAcnt,
   serialiseRewardAcnt,
   deserialiseRewardAcnt,
+  putRewardAcnt,
 )
 where
 
@@ -310,8 +311,8 @@ putAddr (Addr network pc sr) =
           putCredential pc
 {-# INLINE putAddr #-}
 
-putRewardAcnt :: RewardAcnt c -> Put
-putRewardAcnt (RewardAcnt network cred) = do
+putRewardAccount :: RewardAcnt c -> Put
+putRewardAccount (RewardAcnt network cred) = do
   let setPayCredBit = case cred of
         ScriptHashObj _ -> flip setBit payCredIsScript
         KeyHashObj _ -> id
@@ -320,7 +321,10 @@ putRewardAcnt (RewardAcnt network cred) = do
       header = setPayCredBit (netId .|. rewardAcntPrefix)
   B.putWord8 header
   putCredential cred
+putRewardAcnt :: RewardAcnt c -> Put
+putRewardAcnt = putRewardAccount
 {-# INLINE putRewardAcnt #-}
+{-# DEPRECATED putRewardAcnt "Use `putRewardAccount` instead" #-}
 
 putHash :: Hash.Hash h a -> Put
 putHash = B.putByteString . Hash.hashToBytes
