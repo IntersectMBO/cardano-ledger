@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Deprecate `serialiseRewardAcnt` in favor of `serialiseRewardAccount`
 * Deprecate `RewardAcnt` in favor of `RewardAccount`
 
 ## 1.8.0.0
