@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -13,6 +14,7 @@ import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
   GovActionPurpose (..),
   GovActionState (..),
+  proposalsActions,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Core (Era (..))
@@ -51,11 +53,7 @@ import Type.Reflection (typeRep)
 
 prevGovActionIdsGenPreds :: Reflect era => Proof era -> [Pred era]
 prevGovActionIdsGenPreds _ =
-  [ Random prevPParamUpdate
-  , Random prevHardFork
-  , Random prevCommittee
-  , Random prevConstitution
-  , Random ppUpdateChildren
+  [ Random prevGovActionIds
   , Random hardForkChildren
   , Random committeeChildren
   , Random constitutionChildren
@@ -73,11 +71,7 @@ enactStateGenPreds p =
   , Random enactTreasury
   , Random enactWithdrawals
   , -- PrevGovActionsIds constraints
-    Random prevPParamUpdate
-  , Random prevHardFork
-  , Random prevCommittee
-  , Random prevConstitution
-  , Subset (Dom prevDRepState) voteUniv
+    Subset (Dom prevDRepState) voteUniv
   , Subset (Dom partialDRepDistr) drepUniv
   ]
     ++ prevGovActionIdsGenPreds p
@@ -95,12 +89,9 @@ ledgerStatePreds _usize p =
   , Random hardForkChildren
   , Random committeeChildren
   , Random constitutionChildren
-  , Random prevPParamUpdate
-  , Random prevHardFork
-  , Random prevConstitution
-  , Random prevCommittee
-  , Sized (Range 2 5) currProposals
-  , proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit) :$ (Simple currProposals))
+  , -- , Sized (Range 2 5) currProposals
+    Sized (ExactSize 0) (currProposals p)
+  , proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit . proposalsActions) :$ (Simple $ currProposals p))
   , -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
     SumsTo
       (Right (Coin 1))
@@ -169,7 +160,7 @@ main = defaultMain $ testIO "Testing LedgerState Stage" (demo Conway Interactive
 -- =================================
 
 -- | Generate the (parent,child) pairs in a Tree.
---   Be sure the list of 'a' are unique.
+--   Be sure the list of 'a' are unique, because each node should appear in the Tree only once.
 --   The first one will be the root of the tree
 --   and have parent Nothing.
 genTree :: Ord a => [a] -> Gen [(Maybe a, a)]
@@ -201,7 +192,6 @@ useTriples pairs as gs = zipWith3 help pairs as gs
     help (parent, idx) a g =
       g
         { gasId = idx
-        , gasChildren = (children idx pairs)
         , gasAction = setActionId a parent
         }
 
@@ -267,7 +257,7 @@ govStatePreds p =
             )
           ]
       ]
-  , govstates :<-: (Constr "useTriples" useTriples ^$ pairs ^$ govActions ^$ preGovstates)
+      -- ???? , govstates :<-: (Constr "useTriples" useTriples ^$ pairs ^$ govActions ^$ preGovstates)
   ]
   where
     gaids = Var (pV p "gaids" (SetR GovActionIdR) No)
@@ -339,7 +329,6 @@ genGovActionStates proof gaids = do
             <*> genGovAction proof CommitteePurpose parent
             <*> arbitrary
             <*> arbitrary
-            <*> pure (children idx pairs)
         pure (state {gasAction = setActionId (gasAction state) parent})
   states <- mapM genGovState pairs
   pure (Map.fromList (map (\x -> (gasId x, x)) states))

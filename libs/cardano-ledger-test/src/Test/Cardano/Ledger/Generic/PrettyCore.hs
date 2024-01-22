@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
@@ -84,9 +85,11 @@ import Cardano.Ledger.Conway.Governance (
   GovActionIx (..),
   GovActionState (..),
   GovProcedures (..),
-  PrevGovActionId (..),
+  GovPurposeId (..),
+  PEdges (..),
+  PForest (..),
+  PGraph (..),
   PrevGovActionIds (..),
-  PrevGovActionIdsChildren (..),
   ProposalProcedure (..),
   Proposals,
   PulsingSnapshot (..),
@@ -97,7 +100,11 @@ import Cardano.Ledger.Conway.Governance (
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
-  proposalsActions,
+  pGraphL,
+  pRootsL,
+  proposalsActionsMap,
+  toPrevGovActionIds,
+  unPGraph,
  )
 import Cardano.Ledger.Conway.Rules (
   ConwayCertsPredFailure (..),
@@ -109,7 +116,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayNewEpochPredFailure,
   EnactSignal (..),
   GovEnv (..),
-  GovRuleState (..),
  )
 import qualified Cardano.Ledger.Conway.Rules as ConwayRules
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
@@ -235,6 +241,7 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.OSet.Strict (OSet)
+import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -492,6 +499,9 @@ puncLeft open (x : xs) coma close = align (sep ((open <+> x) : help xs))
 
 ppSet :: (x -> Doc ann) -> Set x -> Doc ann
 ppSet p xs = encloseSep lbrace rbrace comma (map p (toList xs))
+
+ppSeq :: (a -> Doc ann) -> Seq a -> Doc ann
+ppSeq p xs = ppList p (foldr (:) [] xs)
 
 ppList :: (x -> Doc ann) -> [x] -> Doc ann
 ppList p xs = brackets $ fillSep $ punctuate comma $ map p xs
@@ -1358,7 +1368,7 @@ ppConwayGovPredFailure x = case x of
   VotingOnExpiredGovAction m ->
     ppSexp "VotingOnExpiredGovAction" [ppMap pcGovActionId pcVoter m]
   ProposalCantFollow s1 p1 p2 ->
-    ppSexp "ProposalCantFollow" [ppStrictMaybe pcPrevGovActionId s1, ppProtVer p1, ppProtVer p2]
+    ppSexp "ProposalCantFollow" [ppStrictMaybe pcGovPurposeId s1, ppProtVer p1, ppProtVer p2]
   InvalidPolicyHash a b ->
     ppSexp "InvalidPolicyHash" [ppStrictMaybe prettyA a, ppStrictMaybe prettyA b]
 
@@ -2560,7 +2570,7 @@ instance
 pcGovState :: Proof era -> GovState era -> PDoc
 pcGovState p x = case whichGovState p of
   (GovStateShelleyToBabbage) -> pcShelleyGovState p x
-  (GovStateConwayToConway) -> pcConwayGovState p x
+  (GovStateConwayToConway) -> unReflect pcConwayGovState p x
 
 pcShelleyGovState :: Proof era -> ShelleyGovState era -> PDoc
 pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp) =
@@ -2576,7 +2586,7 @@ instance Reflect era => PrettyA (ShelleyGovState era) where
   prettyA = pcShelleyGovState reify
 
 pcEnactState :: Proof era -> EnactState era -> PDoc
-pcEnactState p ens@(EnactState _ _ _ _ _ _ _ _) =
+pcEnactState p ens@(EnactState _ _ _ _ _ _ _) =
   let EnactState {..} = ens
    in ppRecord
         "EnactState"
@@ -2587,7 +2597,6 @@ pcEnactState p ens@(EnactState _ _ _ _ _ _ _ _) =
         , ("Treasury", pcCoin ensTreasury)
         , ("Withdrawals", ppMap pcCredential pcCoin ensWithdrawals)
         , ("PrevGovActionIds", pcPrevGovActionIds ensPrevGovActionIds)
-        , ("PrevGovActionIdsChildren", pcPrevGovActionIdsChildren ensPrevGovActionIdsChildren)
         ]
 
 instance Reflect era => PrettyA (EnactState era) where
@@ -2599,39 +2608,23 @@ pcGovActionId (GovActionId txid (GovActionIx a)) = ppSexp "GovActId" [pcTxId txi
 instance PrettyA (GovActionId c) where
   prettyA = pcGovActionId
 
-pcPrevGovActionId :: PrevGovActionId a c -> PDoc
-pcPrevGovActionId (PrevGovActionId x) = pcGovActionId x
-
-instance PrettyA (PrevGovActionId a c) where
-  prettyA = pcPrevGovActionId
+pcGovPurposeId :: GovPurposeId p era -> PDoc
+pcGovPurposeId (GovPurposeId x) = pcGovActionId x
 
 pcPrevGovActionIds :: PrevGovActionIds era -> PDoc
-pcPrevGovActionIds PrevGovActionIds {..} =
+pcPrevGovActionIds (PrevGovActionIds (PForest {pfPParamUpdate, pfHardFork, pfCommittee, pfConstitution})) =
   ppRecord
     "PrevGovActionIds"
-    [ ("LastPParamUpdate", ppStrictMaybe pcPrevGovActionId pgaPParamUpdate)
-    , ("LastHardFork", ppStrictMaybe pcPrevGovActionId pgaHardFork)
-    , ("LastCommittee", ppStrictMaybe pcPrevGovActionId pgaCommittee)
-    , ("LastConstitution", ppStrictMaybe pcPrevGovActionId pgaConstitution)
+    [ ("LastPParamUpdate", ppStrictMaybe pcGovPurposeId pfPParamUpdate)
+    , ("LastHardFork", ppStrictMaybe pcGovPurposeId pfHardFork)
+    , ("LastCommittee", ppStrictMaybe pcGovPurposeId pfCommittee)
+    , ("LastConstitution", ppStrictMaybe pcGovPurposeId pfConstitution)
     ]
 
 instance PrettyA (PrevGovActionIds era) where
   prettyA = pcPrevGovActionIds
 
-pcPrevGovActionIdsChildren :: PrevGovActionIdsChildren era -> PDoc
-pcPrevGovActionIdsChildren PrevGovActionIdsChildren {..} =
-  ppRecord
-    "PrevGovActionIdsChildren"
-    [ ("PParamUpdateChildren", ppSet pcPrevGovActionId pgacPParamUpdate)
-    , ("HardForkChildren", ppSet pcPrevGovActionId pgacHardFork)
-    , ("CommitteeChildren", ppSet pcPrevGovActionId pgacCommittee)
-    , ("ConstitutionChildren", ppSet pcPrevGovActionId pgacConstitution)
-    ]
-
-instance PrettyA (PrevGovActionIdsChildren era) where
-  prettyA = pcPrevGovActionIdsChildren
-
-pcConwayGovState :: Proof era -> ConwayGovState era -> PDoc
+pcConwayGovState :: Reflect era => Proof era -> ConwayGovState era -> PDoc
 pcConwayGovState p (ConwayGovState ss es dr) =
   ppRecord
     "ConwayGovState"
@@ -2668,26 +2661,50 @@ instance Reflect era => PrettyA (DRepPulsingState era) where
   prettyA = pcDRepPulsingState reify
 
 pcRatifyState :: Proof era -> RatifyState era -> PDoc
-pcRatifyState p (RatifyState enactedState removedPs enactedPs delayedPs) =
+pcRatifyState p (RatifyState enactedState enactedPs expiredPs delayedPs) =
   ppRecord
     "RatifyState"
     [ ("enactstate", pcEnactState p enactedState)
-    , ("removed", ppSet pcGovActionId removedPs)
-    , ("enacted", ppSet pcGovActionId enactedPs)
+    , ("enacted", ppSeq pcGovActionState enactedPs)
+    , ("expired", ppSet pcGovActionId expiredPs)
     , ("delayed", ppBool delayedPs)
     ]
 
 instance Reflect era => PrettyA (RatifyState era) where
   prettyA = pcRatifyState reify
 
-pcProposals :: Proposals era -> PDoc
-pcProposals x = ppSexp "Proposals" (map pcGovActionState (toList (proposalsActions x)))
+pcProposals :: Era era => Proposals era -> PDoc
+pcProposals p =
+  ppRecord
+    "Proposals"
+    [ ("pProps", ppMap pcGovActionId pcGovActionState (proposalsActionsMap p))
+    , ("pRoots", pcPrevGovActionIds (toPrevGovActionIds (p ^. pRootsL)))
+    , ("pGraph", pcForest (p ^. pGraphL))
+    ]
 
-instance PrettyA (Proposals era) where
+pcPEdges :: PEdges (GovPurposeId purpose era) -> PDoc
+pcPEdges (PEdges x y) =
+  ppRecord
+    "PEdges"
+    [ ("parent edge", ppStrictMaybe pcGovPurposeId x)
+    , ("children", ppSet pcGovPurposeId y)
+    ]
+
+pcForest :: PForest PGraph era -> PDoc
+pcForest (PForest a b c d) =
+  ppRecord
+    "Forest PGraph"
+    [ ("pparamupdate", ppMap pcGovPurposeId pcPEdges (unPGraph a))
+    , ("hardfork", ppMap pcGovPurposeId pcPEdges (unPGraph b))
+    , ("commitee", ppMap pcGovPurposeId pcPEdges (unPGraph c))
+    , ("constitution", ppMap pcGovPurposeId pcPEdges (unPGraph d))
+    ]
+
+instance Reflect era => PrettyA (Proposals era) where
   prettyA = pcProposals
 
 pcGovActionState :: GovActionState era -> PDoc
-pcGovActionState gas@(GovActionState _ _ _ _ _ _ _ _ _ _) =
+pcGovActionState gas@(GovActionState _ _ _ _ _ _ _ _ _) =
   let GovActionState {..} = gas
    in ppRecord
         "GovActionState"
@@ -2700,7 +2717,6 @@ pcGovActionState gas@(GovActionState _ _ _ _ _ _ _ _ _ _) =
         , ("Action", pcGovAction gasAction)
         , ("Proposed In", ppEpochNo gasProposedIn)
         , ("Expires After", ppEpochNo gasExpiresAfter)
-        , ("Children", ppSet pcGovActionId gasChildren)
         ]
 
 instance PrettyA (GovActionState era) where
@@ -2728,14 +2744,14 @@ pcGovAction x = case x of
   (ParameterChange pgaid _ppup policy) ->
     ppRecord
       "ParameterChange"
-      [ ("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)
+      [ ("PrevGovActId", ppStrictMaybe pcGovPurposeId pgaid)
       , ("PPUpdate", ppString "(PParamsUpdate ...)")
       , ("Policy", ppStrictMaybe prettyA policy)
       ]
   (HardForkInitiation pgaid pv) ->
     ppRecord
       "HardForkInitiation"
-      [ ("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)
+      [ ("PrevGovActId", ppStrictMaybe pcGovPurposeId pgaid)
       , ("ProtVer", ppString (showProtver pv))
       ]
   (TreasuryWithdrawals ws policy) ->
@@ -2745,11 +2761,11 @@ pcGovAction x = case x of
       , ("Policy", ppStrictMaybe prettyA policy)
       ]
   (NoConfidence pgaid) ->
-    ppRecord "NoConfidence" [("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)]
+    ppRecord "NoConfidence" [("PrevGovActId", ppStrictMaybe pcGovPurposeId pgaid)]
   (UpdateCommittee pgaid toRemove toAdd quor) ->
     ppRecord
       "NewCommittee"
-      [ ("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)
+      [ ("PrevGovActId", ppStrictMaybe pcGovPurposeId pgaid)
       , ("membersToRemove", ppSet pcCredential toRemove)
       , ("membersToAdd", ppMap pcCredential ppEpochNo toAdd)
       , ("quorum", ppUnitInterval quor)
@@ -2757,7 +2773,7 @@ pcGovAction x = case x of
   (NewConstitution pgaid c) ->
     ppRecord
       "NewConstitution"
-      [ ("PrevGovActId", ppStrictMaybe pcPrevGovActionId pgaid)
+      [ ("PrevGovActId", ppStrictMaybe pcGovPurposeId pgaid)
       , ("Constitution", pcConstitution c)
       ]
   InfoAction -> ppString "InfoAction"
@@ -3250,18 +3266,6 @@ pcRatifyEnv rs@(RatifyEnv {}) =
 
 instance PrettyA (RatifyEnv era) where
   prettyA = pcRatifyEnv
-
-pcGovRuleState :: GovRuleState era -> PDoc
-pcGovRuleState grs@(GovRuleState _ _) =
-  let GovRuleState {..} = grs
-   in ppRecord
-        "GovRuleState"
-        [ ("grsPrevGovActionIdsChildren", pcPrevGovActionIdsChildren grsPrevGovActionIdsChildren)
-        , ("grsProposals", pcProposals grsProposals)
-        ]
-
-instance PrettyA (GovRuleState era) where
-  prettyA = pcGovRuleState
 
 pcGovEnv :: Reflect era => GovEnv era -> PDoc
 pcGovEnv GovEnv {..} =

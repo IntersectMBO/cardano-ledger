@@ -2,7 +2,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -14,38 +18,24 @@ module Test.Cardano.Ledger.Conway.Arbitrary (
   genHardForkInitiation,
   genParameterChange,
   genNewConstitution,
-  genGovActionStateFromAction,
   govActionGenerators,
-  uniqueIdGovActions,
   genConwayPlutusPurposePointer,
+  genGovAction,
+  genGovActionState,
+  genPParamUpdateGovAction,
+  genHardForkGovAction,
+  genCommitteeGovAction,
+  genConstitutionGovAction,
+  ProposalsNewActions (..),
+  ProposalsForEnactment (..),
+  genProposals,
 ) where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Conway.Governance (
-  Committee (..),
-  ConwayGovState (..),
-  DRepPulsingState (..),
-  GovAction (..),
-  GovActionId (..),
-  GovActionIx (..),
-  GovActionState (..),
-  GovProcedures (..),
-  PrevGovActionId (..),
-  PrevGovActionIds (..),
-  PrevGovActionIdsChildren (..),
-  ProposalProcedure (..),
-  Proposals,
-  PulsingSnapshot (..),
-  RatifyEnv (..),
-  Vote,
-  Voter (..),
-  VotingProcedure (..),
-  VotingProcedures (..),
-  fromGovActionStateSeq,
- )
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (
   ConwayPParams (..),
   THKD (..),
@@ -58,17 +48,29 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, NoUpdate (..))
 import Control.State.Transition.Extended (STS (Event))
+import Data.Default.Class (def)
+import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import Data.List (nubBy)
-import qualified Data.Sequence.Strict as Seq
+import qualified Data.Map.Strict as Map
+import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
 import Data.Word
+import Lens.Micro
 import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Data.Arbitrary ()
-import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidAndUnknownCostModels, unFlexibleCostModels)
+import Test.Cardano.Ledger.Alonzo.Arbitrary (
+  genValidAndUnknownCostModels,
+  unFlexibleCostModels,
+ )
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
 
-instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (PulsingSnapshot era) where
+instance
+  (Era era, Arbitrary (PParamsUpdate era)) =>
+  Arbitrary (PulsingSnapshot era)
+  where
   arbitrary = PulsingSnapshot <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance
@@ -132,10 +134,6 @@ instance Crypto c => Arbitrary (ConwayGovCert c) where
       , ConwayResignCommitteeColdKey <$> arbitrary <*> arbitrary
       ]
 
-------------------------------------------------------------------------------------------
--- Cardano.Ledger.Conway.Goverance  ------------------------------------------------------
-------------------------------------------------------------------------------------------
-
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsHKD StrictMaybe era)) =>
   Arbitrary (ConwayGovState era)
@@ -170,22 +168,6 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance Era era => Arbitrary (PrevGovActionIds era) where
-  arbitrary =
-    PrevGovActionIds
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance Era era => Arbitrary (PrevGovActionIdsChildren era) where
-  arbitrary =
-    PrevGovActionIdsChildren
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
   Arbitrary (EnactState era)
@@ -199,25 +181,178 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
 
-uniqueIdGovActions ::
-  ( Era era
-  , Arbitrary (PParamsUpdate era)
-  ) =>
-  Gen (Seq.StrictSeq (GovActionState era))
-uniqueIdGovActions = Seq.fromList . nubBy (\x y -> gasId x == gasId y) <$> arbitrary
+_uniqueIdGovActions ::
+  (Era era, Arbitrary (PParamsUpdate era)) =>
+  Gen (SSeq.StrictSeq (GovActionState era))
+_uniqueIdGovActions = SSeq.fromList . nubBy (\x y -> gasId x == gasId y) <$> arbitrary
+
+instance Era era => Arbitrary (PrevGovActionIds era) where
+  arbitrary =
+    fmap PrevGovActionIds $
+      PForest
+        <$> arbitrary
+        <*> arbitrary
+        <*> arbitrary
+        <*> arbitrary
+
+data ProposalsForEnactment era
+  = ProposalsForEnactment
+      (Proposals era)
+      (Seq.Seq (GovActionId (EraCrypto era)))
+      (Set.Set (GovActionId (EraCrypto era)))
+  deriving (Show, Eq)
 
 instance
-  ( Era era
-  , Arbitrary (PParamsUpdate era)
-  ) =>
+  (Era era, Arbitrary (PParamsUpdate era), Arbitrary (PParamsHKD StrictMaybe era)) =>
+  Arbitrary (ProposalsForEnactment era)
+  where
+  arbitrary = do
+    ps <- genProposals @era (2, 50)
+    pparamUpdates <- chooseLineage pfPParamUpdateL ps Seq.Empty
+    hardForks <- chooseLineage pfHardForkL ps Seq.Empty
+    committees <- chooseLineage pfCommitteeL ps Seq.Empty
+    constitutions <- chooseLineage pfConstitutionL ps Seq.Empty
+    sequencedGais <-
+      sequenceLineages
+        ( Seq.filter
+            (not . Seq.null)
+            (Seq.fromList [pparamUpdates, hardForks, committees, constitutions])
+        )
+        Seq.Empty
+    let expiredGais =
+          Set.fromList (toList $ proposalsIds ps)
+            `Set.difference` Set.fromList (toList sequencedGais)
+    pure $ ProposalsForEnactment ps sequencedGais expiredGais
+    where
+      chooseLineage ::
+        (forall f. Lens' (PForest f era) (f (GovPurposeId p era))) ->
+        Proposals era ->
+        Seq.Seq (GovActionId (EraCrypto era)) ->
+        Gen (Seq.Seq (GovActionId (EraCrypto era)))
+      chooseLineage forestL ps = \case
+        Seq.Empty ->
+          let children = ps ^. pRootsL . forestL . prChildrenL
+           in if Set.null children
+                then pure Seq.Empty
+                else do
+                  child <- elements $ toList children
+                  chooseLineage forestL ps (Seq.Empty Seq.:|> unGovPurposeId child)
+        lineage@(_ Seq.:|> gai) ->
+          let children = ps ^. pGraphL . forestL . pGraphNodesL . to (Map.! GovPurposeId gai) . peChildrenL
+           in if Set.null children
+                then pure lineage
+                else do
+                  child <- elements $ toList children
+                  chooseLineage forestL ps (lineage Seq.:|> unGovPurposeId child)
+      consumeHeadAtIndex :: Int -> Seq.Seq (Seq.Seq a) -> (a, Seq.Seq (Seq.Seq a))
+      consumeHeadAtIndex idx ss = (ss `Seq.index` idx `Seq.index` 0, Seq.adjust' (Seq.drop 1) idx ss)
+      sequenceLineages ::
+        Seq.Seq (Seq.Seq (GovActionId (EraCrypto era))) ->
+        Seq.Seq (GovActionId (EraCrypto era)) ->
+        Gen (Seq.Seq (GovActionId (EraCrypto era)))
+      sequenceLineages lineages sequenced = case lineages of
+        Seq.Empty -> pure sequenced
+        _ -> do
+          index <- chooseInt (0, length lineages - 1)
+          let (chosen, adjustedLineages) = consumeHeadAtIndex index lineages
+          sequenceLineages (Seq.filter (not . Seq.null) adjustedLineages) (sequenced Seq.:|> chosen)
+
+data ProposalsNewActions era = ProposalsNewActions (Proposals era) [GovActionState era]
+  deriving (Show, Eq)
+
+instance
+  (Era era, Arbitrary (PParamsUpdate era), Arbitrary (PParamsHKD StrictMaybe era)) =>
+  Arbitrary (ProposalsNewActions era)
+  where
+  arbitrary = do
+    ps <- arbitrary
+    i <- chooseInt (2, 20)
+    gass <- vectorOf i $ genGovActionState =<< genGovAction ps
+    pure $ ProposalsNewActions ps gass
+
+instance
+  (Era era, Arbitrary (PParamsUpdate era), Arbitrary (PParamsHKD StrictMaybe era)) =>
   Arbitrary (Proposals era)
   where
-  arbitrary = fromGovActionStateSeq <$> uniqueIdGovActions
+  arbitrary = genProposals (2, 30)
 
-genGovActionStateFromAction :: Era era => GovAction era -> Gen (GovActionState era)
-genGovActionStateFromAction act =
+genProposals ::
+  forall era.
+  ( Era era
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
+  (Int, Int) ->
+  Gen (Proposals era)
+genProposals range = do
+  pgais <- arbitrary
+  i <- chooseInt range
+  go (def & pRootsL .~ fromPrevGovActionIds pgais) i
+  where
+    go :: Proposals era -> Int -> Gen (Proposals era)
+    go ps n
+      | n <= 0 = pure ps
+      | otherwise = do
+          gas <- genGovActionState @era =<< genGovAction ps
+          case proposalsAddAction gas ps of
+            Nothing -> error "Error adding GovActionState to Proposals"
+            Just ps' -> go ps' (n - 1)
+
+genGovAction ::
+  forall era.
+  (Era era, Arbitrary (PParamsHKD StrictMaybe era)) =>
+  Proposals era ->
+  Gen (GovAction era)
+genGovAction ps =
+  oneof
+    [ genWithParent genPParamUpdateGovAction pfPParamUpdateL
+    , genWithParent genHardForkGovAction pfHardForkL
+    , genWithParent genCommitteeGovAction pfCommitteeL
+    , genWithParent genConstitutionGovAction pfConstitutionL
+    ]
+  where
+    genWithParent ::
+      (StrictMaybe (GovPurposeId p era) -> Gen (GovAction era)) ->
+      (forall f. Lens' (PForest f era) (f (GovPurposeId p era))) ->
+      Gen (GovAction era)
+    genWithParent gen forestL =
+      gen
+        =<< elements
+          ( (ps ^. pRootsL . forestL . prRootL)
+              : fmap SJust (Map.keys $ ps ^. pGraphL . forestL . pGraphNodesL)
+          )
+
+genPParamUpdateGovAction ::
+  ( Era era
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
+  StrictMaybe (GovPurposeId 'PParamUpdatePurpose era) ->
+  Gen (GovAction era)
+genPParamUpdateGovAction parent = ParameterChange parent <$> arbitrary <*> arbitrary
+
+genHardForkGovAction ::
+  StrictMaybe (GovPurposeId 'HardForkPurpose era) ->
+  Gen (GovAction era)
+genHardForkGovAction parent = HardForkInitiation parent <$> arbitrary
+
+genCommitteeGovAction ::
+  Era era =>
+  StrictMaybe (GovPurposeId 'CommitteePurpose era) ->
+  Gen (GovAction era)
+genCommitteeGovAction parent =
+  oneof
+    [ pure $ NoConfidence parent
+    , UpdateCommittee parent <$> arbitrary <*> arbitrary <*> arbitrary
+    ]
+
+genConstitutionGovAction ::
+  Era era =>
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  Gen (GovAction era)
+genConstitutionGovAction parent = NewConstitution parent <$> arbitrary
+
+genGovActionState :: Era era => GovAction era -> Gen (GovActionState era)
+genGovActionState ga =
   GovActionState
     <$> arbitrary
     <*> arbitrary
@@ -225,13 +360,12 @@ genGovActionStateFromAction act =
     <*> arbitrary
     <*> arbitrary
     <*> arbitrary
-    <*> pure act
-    <*> arbitrary
+    <*> pure ga
     <*> arbitrary
     <*> arbitrary
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionState era) where
-  arbitrary = genGovActionStateFromAction =<< arbitrary
+  arbitrary = genGovActionState =<< arbitrary
 
 genParameterChange :: (Era era, Arbitrary (PParamsUpdate era)) => Gen (GovAction era)
 genParameterChange = ParameterChange <$> arbitrary <*> arbitrary <*> arbitrary
@@ -278,14 +412,14 @@ instance Era era => Arbitrary (Committee era) where
   arbitrary = Committee <$> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (GovActionId c) where
-  arbitrary =
-    GovActionId
-      <$> arbitrary
-      <*> arbitrary
+  arbitrary = GovActionId <$> arbitrary <*> arbitrary
 
 deriving instance Arbitrary GovActionIx
 
-deriving instance Crypto c => Arbitrary (PrevGovActionId r c)
+deriving instance
+  forall (p :: GovActionPurpose) era.
+  Crypto (EraCrypto era) =>
+  Arbitrary (GovPurposeId p era)
 
 instance Crypto c => Arbitrary (Voter c) where
   arbitrary =
