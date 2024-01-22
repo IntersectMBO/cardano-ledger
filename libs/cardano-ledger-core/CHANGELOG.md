@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Add `umElemsL`
 * Add `txIdTxBody` and `txIdTx`. Deprecated `txid`.
 * Add `getGenesisKeyHashCountTxBody` to `EraTxBody`
 * Add `calcMinFeeTx` and `calcMinFeeTxNativeScriptWits`, `estimateMinFeeTx`,

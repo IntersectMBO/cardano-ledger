@@ -61,6 +61,7 @@ import Cardano.Ledger.Binary (
   toPlainDecoder,
   toPlainEncoding,
  )
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (Anchor)
@@ -80,10 +81,10 @@ import Cardano.Ledger.Shelley.TxCert (
  )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
-import Data.Aeson (ToJSON (..), (.=))
+import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:?), (.=))
 import Data.Foldable (foldMap', foldl')
 import qualified Data.Map.Strict as Map
-import Data.Monoid (Sum (..))
+import Data.Monoid (Sum (getSum))
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -357,6 +358,31 @@ instance Crypto c => ToJSON (Delegatee c) where
         [ "poolId" .= toJSON poolId
         , "dRep" .= toJSON dRep
         ]
+
+instance Crypto c => FromJSON (Delegatee c) where
+  parseJSON = withObject "Delegatee" $ \obj -> do
+    poolId <- obj .:? "poolId"
+    dRep <- obj .:? "dRep"
+    case (poolId, dRep) of
+      (Just poolId', Nothing) -> pure $ DelegStake poolId'
+      (Nothing, Just dRep') -> pure $ DelegVote dRep'
+      (Just poolId', Just dRep') -> pure $ DelegStakeVote poolId' dRep'
+      _ -> fail "Object does not contain a dRep or a poolId field"
+
+instance Crypto c => EncCBOR (Delegatee c) where
+  encCBOR =
+    encode . \case
+      DelegStake kh -> Sum DelegStake 0 !> To kh
+      DelegVote dRep -> Sum DelegVote 1 !> To dRep
+      DelegStakeVote kh dRep -> Sum DelegStakeVote 2 !> To kh !> To dRep
+
+instance Crypto c => DecCBOR (Delegatee c) where
+  decCBOR = decode $
+    Summands "Delegatee" $ \case
+      0 -> SumD DelegStake <! From
+      1 -> SumD DelegVote <! From
+      2 -> SumD DelegStakeVote <! From <! From
+      k -> Invalid k
 
 getStakePoolDelegatee :: Delegatee c -> Maybe (KeyHash 'StakePool c)
 getStakePoolDelegatee = \case

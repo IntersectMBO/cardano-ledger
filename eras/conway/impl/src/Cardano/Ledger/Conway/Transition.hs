@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -11,7 +12,7 @@ module Cardano.Ledger.Conway.Transition (
   ConwayEraTransition (..),
   TransitionConfig (..),
   toConwayTransitionConfigPairs,
-  registerDRepDelegs,
+  registerDelegs,
   registerInitialDReps,
 ) where
 
@@ -22,9 +23,10 @@ import Cardano.Ledger.Conway.Core (Era (..))
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..), toConwayGenesisPairs)
 import Cardano.Ledger.Conway.Translation ()
+import Cardano.Ledger.Conway.TxCert (Delegatee, getStakePoolDelegatee, getVoteDelegatee)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.DRep (DRep, DRepState)
+import Cardano.Ledger.DRep (DRepState)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
@@ -37,7 +39,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   vsDRepsL,
  )
 import Cardano.Ledger.Shelley.Transition
-import qualified Cardano.Ledger.UMap as UMap
+import Cardano.Ledger.UMap (UMElem (..), umElemsL)
+import Control.Applicative (Alternative (..))
 import Data.Aeson (
   FromJSON (..),
   KeyValue (..),
@@ -51,15 +54,16 @@ import Data.Aeson (
 import Data.ListMap (ListMap)
 import qualified Data.ListMap as ListMap
 import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict (StrictMaybe (..), maybeToStrictMaybe)
 import GHC.Generics
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 class EraTransition era => ConwayEraTransition era where
-  tcDRepDelegsL ::
+  tcDelegsL ::
     Lens'
       (TransitionConfig era)
-      (ListMap (Credential 'Staking (EraCrypto era)) (DRep (EraCrypto era)))
+      (ListMap (Credential 'Staking (EraCrypto era)) (Delegatee (EraCrypto era)))
 
   tcInitialDRepsL ::
     Lens'
@@ -86,9 +90,9 @@ instance Crypto c => EraTransition (ConwayEra c) where
 instance Crypto c => ConwayEraTransition (ConwayEra c) where
   tcConwayGenesisL = lens ctcConwayGenesis (\g x -> g {ctcConwayGenesis = x})
 
-  tcDRepDelegsL =
-    protectMainnetLens "DRepDelegs" null $
-      tcConwayGenesisL . lens cgDRepDelegs (\g x -> g {cgDRepDelegs = x})
+  tcDelegsL =
+    protectMainnetLens "ConwayDelegs" null $
+      tcConwayGenesisL . lens cgDelegs (\g x -> g {cgDelegs = x})
 
   tcInitialDRepsL =
     protectMainnetLens "InitialDReps" null $
@@ -124,17 +128,28 @@ registerInitialDReps cfg =
   where
     drepsMap = ListMap.toMap $ cfg ^. tcInitialDRepsL
 
-registerDRepDelegs ::
+registerDelegs ::
+  forall era.
   ConwayEraTransition era =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
-registerDRepDelegs cfg =
-  nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL %~ drepDelegs
+registerDelegs cfg =
+  nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL . umElemsL
+    %~ \m -> ListMap.foldrWithKey (\(k, v) -> Map.insertWith joinUMElems k $ delegateeToUMElem v) m delegs
   where
-    drepDelegs umap =
-      UMap.unUView $
-        Map.foldrWithKey'
-          UMap.insert'
-          (UMap.DRepUView umap)
-          (ListMap.toMap $ cfg ^. tcDRepDelegsL)
+    delegs = cfg ^. tcDelegsL
+    delegateeToUMElem d =
+      UMElem
+        SNothing
+        mempty
+        (maybeToStrictMaybe $ getStakePoolDelegatee d)
+        (maybeToStrictMaybe $ getVoteDelegatee d)
+    joinUMElems
+      (UMElem _ _ newStakePool newDRep)
+      (UMElem rdp ptrs oldStakePool oldDRrep) =
+        UMElem
+          rdp
+          ptrs
+          (oldStakePool <|> newStakePool)
+          (oldDRrep <|> newDRep)

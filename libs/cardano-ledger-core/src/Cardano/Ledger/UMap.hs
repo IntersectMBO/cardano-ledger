@@ -35,6 +35,7 @@ module Cardano.Ledger.UMap (
   nullUMElem,
   nullUMElemMaybe,
   UMap (..),
+  umElemsL,
   empty,
   umInvariant,
 
@@ -128,6 +129,7 @@ import qualified Data.Set as Set
 import qualified Data.Set.Internal as SI (Set (Tip))
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
 import Prelude hiding (lookup, null)
 
@@ -384,6 +386,9 @@ data UMap c = UMap
   , umPtrs :: !(Map Ptr (Credential 'Staking c))
   }
   deriving (Show, Eq, Generic, NoThunks, NFData)
+
+umElemsL :: Lens' (UMap c) (Map (Credential 'Staking c) (UMElem c))
+umElemsL = lens umElems (\x y -> x {umElems = y})
 
 -- | All maps unrolled. It is important to note that all fields are lazy, because
 -- conversion from UMap can be expensive, thus only fields that are forced will incur that

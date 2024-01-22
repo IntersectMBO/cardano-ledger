@@ -10,6 +10,7 @@
 module Cardano.Ledger.Conway.Genesis (
   ConwayGenesis (..),
   toConwayGenesisPairs,
+  cgDelegsL,
 )
 where
 
@@ -21,9 +22,10 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams, toUpgradeConwayPParamsUpdatePairs)
+import Cardano.Ledger.Conway.TxCert (Delegatee)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.DRep (DRep, DRepState)
+import Cardano.Ledger.DRep (DRepState)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Data.Aeson (
   FromJSON (..),
@@ -41,16 +43,20 @@ import Data.Default.Class (Default (def))
 import Data.Functor.Identity (Identity)
 import Data.ListMap (ListMap)
 import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks)
 
 data ConwayGenesis c = ConwayGenesis
   { cgUpgradePParams :: !(UpgradeConwayPParams Identity)
   , cgConstitution :: !(Constitution (ConwayEra c))
   , cgCommittee :: !(Committee (ConwayEra c))
-  , cgDRepDelegs :: ListMap (Credential 'Staking c) (DRep c)
+  , cgDelegs :: ListMap (Credential 'Staking c) (Delegatee c)
   , cgInitialDReps :: ListMap (Credential 'DRepRole c) (DRepState c)
   }
   deriving (Eq, Generic, Show)
+
+cgDelegsL :: Lens' (ConwayGenesis c) (ListMap (Credential 'Staking c) (Delegatee c))
+cgDelegsL = lens cgDelegs (\x y -> x {cgDelegs = y})
 
 instance Crypto c => NoThunks (ConwayGenesis c)
 
@@ -59,13 +65,13 @@ instance Crypto c => DecCBOR (ConwayGenesis c) where
   decCBOR = decode $ RecD ConwayGenesis <! From <! From <! From <! From <! From
 
 instance Crypto c => EncCBOR (ConwayGenesis c) where
-  encCBOR (ConwayGenesis pparams constitution committee dRepDelegs initialDReps) =
+  encCBOR (ConwayGenesis pparams constitution committee delegs initialDReps) =
     encode $
       Rec (ConwayGenesis @c)
         !> To pparams
         !> To constitution
         !> To committee
-        !> To dRepDelegs
+        !> To delegs
         !> To initialDReps
 
 instance Crypto c => ToJSON (ConwayGenesis c) where
@@ -80,7 +86,7 @@ instance Crypto c => FromJSON (ConwayGenesis c) where
         <$> pure upgradeProtocolPParams
         <*> obj .: "constitution"
         <*> obj .: "committee"
-        <*> obj .:? "dRepDelegs" .!= mempty
+        <*> obj .:? "delegs" .!= mempty
         <*> obj .:? "initialDReps" .!= mempty
 
 toConwayGenesisPairs :: (Crypto c, KeyValue e a) => ConwayGenesis c -> [a]
@@ -89,7 +95,7 @@ toConwayGenesisPairs cg@(ConwayGenesis _ _ _ _ _) =
    in [ "constitution" .= cgConstitution
       , "committee" .= cgCommittee
       ]
-        ++ ["dRepDelegs" .= cgDRepDelegs | not (null cgDRepDelegs)]
+        ++ ["delegs" .= cgDelegs | not (null cgDelegs)]
         ++ ["initialDReps" .= cgInitialDReps | not (null cgInitialDReps)]
         ++ toUpgradeConwayPParamsUpdatePairs cgUpgradePParams
 

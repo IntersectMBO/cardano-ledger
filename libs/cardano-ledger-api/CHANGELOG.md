@@ -6,7 +6,7 @@
 * Add `estimateMinFeeTx` and `calcMinFeeTx`
 * Add `queryAccountState`
 * Add `estimateMinFeeTx`
-* Add `registerInitialDReps`, `registerDRepDelegs`
+* Add `registerInitialDReps`, `registerDelegs`
 * Stop exporting `CostModels` internal representation
 * Change return type of `mintedTxBodyF` to `Set PolicyID`
 * Remove old and deprecated functions `evaluateTransactionExecutionUnits`,
