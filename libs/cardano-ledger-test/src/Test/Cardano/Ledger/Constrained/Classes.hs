@@ -19,6 +19,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (EpochNo (..), ProtVer (..), SlotNo (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -441,6 +442,9 @@ instance Sizeable Coin where
 
 instance Sizeable (MultiAsset c) where
   getSize (MultiAsset m) = Map.size m
+
+instance EraPParams era => Sizeable (Proposals era) where
+  getSize = proposalsSize
 
 -- ===========================================================
 -- The Count class 0,1,2,3,4 ...

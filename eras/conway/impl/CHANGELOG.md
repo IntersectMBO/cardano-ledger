@@ -38,22 +38,36 @@
 * Remove `conwayTxInfo` and `babbageScriptPrefixTag`
 * Remove deprcated `translateScript`
 * Add `getVoteDelegatee`
-* Track and prune unreachable proposals #3855
+* Track and prune unreachable proposals #3855 #3919 #3978 #3981
+  * Consolidate the entire proposals-tree under the `Proposals` module and expose all its operations in a convenient manner
   * Move `PrevGovActionIds` from `Governance` to `Governance.Proposals`
-  * Add `PrevGovActionIdsChildren` to `EnactState`
-  * Add `rsEnacted` field to `RatifyState` to track enacted proposals separately from removed ones
-  * Add `gasChildren` to `GovActionState`
-  * Remove `proposalsInsertGovAction` to `Governance.Proposals`
-  * Add the following to `Governance.Proposals`
-    * `proposalsRemoveDescendentIds`
-    * `PrevGovActionIdsChildren` and associated lenses
-    * `proposalsAddProposal` as the only way to add new proposals to the system
-  * Add the pruning functionality and the deposit refunds in the `Epoch` rule
+  * Add `rsEnacted` field to `RatifyState` to track enacted proposals separately from removed ones and rename `rsRemoved` to `rsExpired` in order to better represent its role
+  * Add `ProposalsSerializable` as an accompanying type used to correctly serialize `Proposals` in a space-efficient way
+  * Add the following operations to `Governance.Proposals`
+    * `mkProposals` as the only way to reconstruct the `Proposals` tree from, for instance, a deserialized one
+    * `proposalsAddAction` as the only way to add new proposals to the system
+    * `proposalsApplyEnactment` as the only way to replay from `ENACT` operations upon `Proposals` in the ledger state, outside of the pulser.
+    * Rename `PrevGovActionId purpose (EraCrypto era)` to `GovPurposeId purpose era`
+    * Add the following accessors and lenses, among others:
+      * `PForest`
+      * `PRoot`
+      * `PNode`
+      * `PHierarchy`
+      * `pRootsL`
+      * `prRootL`
+      * `prChildrenL`
+      * `pnChildrenL`
+      * `pHierarchyL`
+      * `pHierarchyNodesL`
+      * `pfPParamUpdateL`
+      * `pfHardForkL`
+      * `pfCommitteeL`
+      * `pfConstitutionL`
+  * Add the pruning functionality and the deposit refunds in the `EPOCH` rule
   * In the `Gov` rule
-    * Introduce the `GovRuleState` to include `PrevGovActionIdsChildren` along with the `Proposals`
     * Modify the rule transition implementation to accept new proposals into the `Proposals` forests based on proposal purpose
   * In the `Ratify` rule
-    * Account for the tracking of enacted and removed proposals
+    * Account for the tracking of enacted and expired proposals
 * Moved `ToExpr` instances out of the main library and into the testlib.
 * Changed the type of ConwayPParam's fields  cppEMax,  cppGovActionLifetime, cppDRepActivity
 * Changed types of lenses: `ppGovActionLifetimeL`, `ppDRepActivityL`, `ppCommitteeMaxTermLengthL` and `ppuGovActionLifetimeL`, `ppuDRepActivityL`, `ppuCommitteeMaxTermLengthL`
@@ -68,6 +82,10 @@
   * `sendCoinTo` and `sendValueTo`
 * Add `submitProposal_`
 * Add `submitTreasuryWithdrawals`
+* Track and prune unreachable proposals #3855 #3919 #3978 #3981
+  * Add invariant-respecting `Arbitrary` generators for `Proposals`
+  * Add property tests for all `Proposals` operations
+  * Add procedural unit tests for all `Proposals` operations
 * Remove `Test.Cardano.Ledger.Conway.PParamsSpec` and replace the unit test it contained
   with a new property test in `Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec`
 

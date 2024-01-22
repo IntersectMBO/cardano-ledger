@@ -62,7 +62,7 @@ import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionId (..),
-  PrevGovActionId (..),
+  GovPurposeId (..),
   ProposalProcedure (..),
   Vote (..),
   Voter (..),
@@ -433,7 +433,7 @@ transGovAction = \case
     transConstitution (Constitution _ govPolicy) =
       PV3.Constitution (transGovPolicy govPolicy)
     transPrevGovActionId = \case
-      SJust (PrevGovActionId gaId) -> Just (transGovActionId gaId)
+      SJust (GovPurposeId gaId) -> Just (transGovActionId gaId)
       SNothing -> Nothing
     unimplemented = error "Unimplemented"
 

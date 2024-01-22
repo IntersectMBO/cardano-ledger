@@ -82,6 +82,9 @@ package cardano-ledger-shelley
 package cardano-ledger-mary
   flags: +asserts
 
+package cardano-ledger-conway
+  flags: +asserts
+
 -- Always write GHC env files, because they are needed for repl and by the doctests.
 write-ghc-environment-files: always
 
