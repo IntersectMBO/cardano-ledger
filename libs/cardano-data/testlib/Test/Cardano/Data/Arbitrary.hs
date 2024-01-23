@@ -13,7 +13,7 @@ import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.QuickCheck
 
 instance (Arbitrary a, Ord a) => Arbitrary (OSet.OSet a) where
-  arbitrary = fmap (OSet.fromSet . Set.fromList) . shuffle . Set.toList =<< arbitrary
+  arbitrary = fmap OSet.fromFoldable . shuffle . Set.toList =<< arbitrary
 
 instance (Ord v, Arbitrary v, OMap.HasOKey k v, Arbitrary k) => Arbitrary (OMap.OMap k v) where
   arbitrary =
