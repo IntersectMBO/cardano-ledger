@@ -11,6 +11,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec, electBasicCommittee) where
 
+import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.BaseTypes (textToUrl)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
@@ -41,6 +42,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Val
 import Data.Default.Class (Default (..))
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Maybe.Strict (StrictMaybe (..), isSJust)
@@ -114,20 +116,28 @@ spec =
 
       rewardAcount <- registerRewardAccount
       let withdrawalAmount = Coin 666
-          govAction = TreasuryWithdrawals [(rewardAcount, withdrawalAmount)]
-      govActionId <- submitGovAction govAction
+      (govActionId NE.:| _) <-
+        submitGovActions
+          [ TreasuryWithdrawals (Map.singleton rewardAcount withdrawalAmount)
+          , TreasuryWithdrawals (Map.singleton rewardAcount withdrawalAmount)
+          ]
 
       submitYesVote_ (DRepVoter dRepCred) govActionId
       submitYesVote_ (CommitteeVoter committeeHotCred) govActionId
 
-      passEpoch
-      passEpoch
+      passEpoch -- 1st epoch crossing starts DRep pulser
+      lookupReward (getRwdCred rewardAcount) `shouldReturn` mempty
 
+      passEpoch -- 2nd epoch crossing enacts all the ratified actions
       treasuryEnd <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
 
       treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
 
-    it "Expired proposl deposit refunded" $ do
+      lookupReward (getRwdCred rewardAcount) `shouldReturn` withdrawalAmount
+
+      expectMissingGovActionId govActionId
+
+    it "Expired proposal deposit refunded" $ do
       let deposit = Coin 999
       modifyPParams $ \pp ->
         pp
@@ -184,7 +194,11 @@ electBasicCommittee = do
         mempty
         (Map.singleton (KeyHashObj khCommitteeMember) 10)
         (1 %! 2)
-  gaidCommitteeProp <- submitGovAction committeeAction
+  (gaidCommitteeProp NE.:| _) <-
+    submitGovActions
+      [ committeeAction
+      , UpdateCommittee SNothing mempty mempty (1 %! 10)
+      ]
 
   submitYesVote_ (DRepVoter $ KeyHashObj khDRep) gaidCommitteeProp
 

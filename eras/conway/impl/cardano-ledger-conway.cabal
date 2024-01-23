@@ -120,7 +120,7 @@ library testlib
     build-depends:
         base,
         bytestring,
-        cardano-data:{cardano-data, testlib},
+        cardano-data:testlib,
         containers,
         microlens,
         microlens-mtl,
