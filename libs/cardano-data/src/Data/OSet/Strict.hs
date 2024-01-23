@@ -24,6 +24,7 @@ module Data.OSet.Strict (
   fromStrictSeqDuplicates,
   toStrictSeq,
   fromSet,
+  fromFoldable,
   invariantHolds,
   invariantHolds',
   (|>),
@@ -74,7 +75,7 @@ instance Ord a => Monoid (OSet a) where
 
 instance Ord a => IsList (OSet a) where
   type Item (OSet a) = a
-  fromList = fromStrictSeq . SSeq.fromList
+  fromList = fromFoldable
   toList = F.toList . osSSeq
 
 instance Foldable OSet where
@@ -175,11 +176,15 @@ unsnoc (OSet seq set) = case seq of
   SSeq.Empty -> Nothing
   xs' SSeq.:|> x -> Just (OSet xs' (x `Set.delete` set), x)
 
+-- | Using a `Foldable` instance of the source data structure convert it to an `OSet`
+fromFoldable :: (Foldable f, Ord a) => f a -> OSet a
+fromFoldable = F.foldl' snoc empty
+
 -- | \(O(n \log n)\). Checks membership before snoc-ing.
 -- De-duplicates the StrictSeq without overwriting.
 -- Starts from the left or head, using `foldl'`
 fromStrictSeq :: Ord a => SSeq.StrictSeq a -> OSet a
-fromStrictSeq = F.foldl' snoc empty
+fromStrictSeq = fromFoldable
 
 -- | \(O(n \log n)\). Checks membership before snoc-ing.
 -- Returns a 2-tuple, with `fst` as a `Set` of duplicates found

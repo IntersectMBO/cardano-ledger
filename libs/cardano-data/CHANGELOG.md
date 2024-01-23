@@ -2,6 +2,7 @@
 
 ## 1.2.0.0
 
+* Add `fromFoldable`
 * Moved `ToExpr` instances out of the main library and into the testlib.
 
 ## 1.1.2.0
