@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -18,11 +19,13 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   ConwayEraImp,
   submitGovAction,
   submitGovAction_,
+  submitGovActions,
   submitProposal,
   submitProposal_,
   submitProposals,
   submitFailingProposal,
   trySubmitGovAction,
+  trySubmitGovActions,
   trySubmitProposal,
   trySubmitProposals,
   submitTreasuryWithdrawals,
@@ -52,6 +55,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   electCommittee,
   electBasicCommittee,
   proposalsShowDebug,
+  getGovPolicy,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
@@ -160,6 +164,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.Val (Val (..))
+import Control.Monad (forM)
 import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
@@ -468,7 +473,8 @@ submitFailingProposal ::
 submitFailingProposal proposal expectedFailure =
   trySubmitProposal proposal >>= (`shouldBeLeftExpr` expectedFailure)
 
--- | Submits a transaction that proposes the given governance action
+-- | Submits a transaction that proposes the given governance action. For proposing
+-- multiple actions in the same transaciton use `trySubmitGovActions` instead.
 trySubmitGovAction ::
   ( ShelleyEraImp era
   , ConwayEraTxBody era
@@ -481,15 +487,26 @@ trySubmitGovAction ::
         (GovActionId (EraCrypto era))
     )
 trySubmitGovAction ga = do
-  pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  khPropRwd <- freshKeyHash
-  trySubmitProposal $
-    ProposalProcedure
-      { pProcDeposit = pp ^. ppGovActionDepositL
-      , pProcReturnAddr = RewardAccount Testnet (KeyHashObj khPropRwd)
-      , pProcGovAction = ga
-      , pProcAnchor = def
-      }
+  let mkGovActionId tx = GovActionId (txIdTx tx) (GovActionIx 0)
+  fmap mkGovActionId <$> trySubmitGovActions (pure ga)
+
+-- | Submits a transaction that proposes the given governance action
+trySubmitGovActions ::
+  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  NE.NonEmpty (GovAction era) ->
+  ImpTestM era (Either [PredicateFailure (EraRule "LEDGER" era)] (Tx era))
+trySubmitGovActions gas = do
+  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+  proposals <- forM gas $ \ga -> do
+    khPropRwd <- freshKeyHash
+    pure
+      ProposalProcedure
+        { pProcDeposit = deposit
+        , pProcReturnAddr = RewardAccount Testnet (KeyHashObj khPropRwd)
+        , pProcGovAction = ga
+        , pProcAnchor = def
+        }
+  trySubmitProposals proposals
 
 submitGovAction ::
   forall era.
@@ -499,7 +516,9 @@ submitGovAction ::
   ) =>
   GovAction era ->
   ImpTestM era (GovActionId (EraCrypto era))
-submitGovAction ga = trySubmitGovAction ga >>= expectRightExpr
+submitGovAction ga = do
+  gaId NE.:| _ <- submitGovActions (pure ga)
+  pure gaId
 
 submitGovAction_ ::
   forall era.
@@ -511,6 +530,19 @@ submitGovAction_ ::
   ImpTestM era ()
 submitGovAction_ = void . submitGovAction
 
+submitGovActions ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxBody era
+  , HasCallStack
+  ) =>
+  NE.NonEmpty (GovAction era) ->
+  ImpTestM era (NE.NonEmpty (GovActionId (EraCrypto era)))
+submitGovActions gas = do
+  tx <- trySubmitGovActions gas >>= expectRightExpr
+  let txId = txIdTx tx
+  pure $ NE.zipWith (\ix _ -> GovActionId txId (GovActionIx ix)) (0 NE.:| [1 ..]) gas
+
 submitTreasuryWithdrawals ::
   ( ShelleyEraImp era
   , ConwayEraTxBody era
@@ -519,11 +551,17 @@ submitTreasuryWithdrawals ::
   [(RewardAccount (EraCrypto era), Coin)] ->
   ImpTestM era (GovActionId (EraCrypto era))
 submitTreasuryWithdrawals wdrls = do
-  policy <-
-    getsNES $
-      nesEpochStateL . epochStateGovStateL . enactStateGovStateL . ensConstitutionL . constitutionScriptL
-  let govAction = TreasuryWithdrawals (Map.fromList wdrls) policy
-  submitGovAction govAction
+  policy <- getGovPolicy
+  submitGovAction $ TreasuryWithdrawals (Map.fromList wdrls) policy
+
+getGovPolicy :: ConwayEraGov era => ImpTestM era (StrictMaybe (ScriptHash (EraCrypto era)))
+getGovPolicy =
+  getsNES $
+    nesEpochStateL
+      . epochStateGovStateL
+      . enactStateGovStateL
+      . ensConstitutionL
+      . constitutionScriptL
 
 getEnactState :: ConwayEraGov era => ImpTestM era (EnactState era)
 getEnactState = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . enactStateGovStateL
@@ -808,8 +846,11 @@ electBasicCommittee = do
         mempty
         (Map.singleton khCommitteeMember 10)
         (1 %! 2)
-  gaidCommitteeProp <- submitGovAction committeeAction
-
+  (gaidCommitteeProp NE.:| _) <-
+    submitGovActions
+      [ committeeAction
+      , UpdateCommittee SNothing mempty mempty (1 %! 10)
+      ]
   submitYesVote_ (DRepVoter $ KeyHashObj khDRep) gaidCommitteeProp
 
   let

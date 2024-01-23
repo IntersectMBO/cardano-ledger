@@ -7,6 +7,8 @@
 
 ### `testlib`
 
+* Add `getGovPolicy`
+* Add `submitGovActions` and `trySubmitGovActions`
 * Add `submitProposals` and `trySubmitProposal`
 
 ## 1.12.0.0
