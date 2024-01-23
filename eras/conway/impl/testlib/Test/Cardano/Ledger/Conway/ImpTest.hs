@@ -20,9 +20,11 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   submitGovAction_,
   submitProposal,
   submitProposal_,
+  submitProposals,
   submitFailingProposal,
   trySubmitGovAction,
   trySubmitProposal,
+  trySubmitProposals,
   submitTreasuryWithdrawals,
   submitVote,
   submitVote_,
@@ -162,11 +164,12 @@ import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Functor.Identity
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (isSJust)
-import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro ((%~), (&), (.~), (^.))
 import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
@@ -411,6 +414,15 @@ submitProposal ::
   ImpTestM era (GovActionId (EraCrypto era))
 submitProposal proposal = trySubmitProposal proposal >>= expectRightExpr
 
+submitProposals ::
+  (ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =>
+  NE.NonEmpty (ProposalProcedure era) ->
+  ImpTestM era (NE.NonEmpty (GovActionId (EraCrypto era)))
+submitProposals proposals = do
+  tx <- trySubmitProposals proposals >>= expectRightExpr
+  let txId = txIdTx tx
+  pure $ NE.zipWith (\ix _ -> GovActionId txId (GovActionIx ix)) (0 NE.:| [1 ..]) proposals
+
 -- | Submits a transaction that proposes the given proposal
 trySubmitProposal ::
   ( ShelleyEraImp era
@@ -424,10 +436,7 @@ trySubmitProposal ::
         (GovActionId (EraCrypto era))
     )
 trySubmitProposal proposal = do
-  res <-
-    trySubmitTx $
-      mkBasicTx mkBasicTxBody
-        & bodyTxL . proposalProceduresTxBodyL .~ OSet.singleton proposal
+  res <- trySubmitProposals (pure proposal)
   pure $ case res of
     Right tx ->
       Right
@@ -436,6 +445,17 @@ trySubmitProposal proposal = do
           , gaidGovActionIx = GovActionIx 0
           }
     Left err -> Left err
+
+trySubmitProposals ::
+  ( ShelleyEraImp era
+  , ConwayEraTxBody era
+  ) =>
+  NE.NonEmpty (ProposalProcedure era) ->
+  ImpTestM era (Either [PredicateFailure (EraRule "LEDGER" era)] (Tx era))
+trySubmitProposals proposals = do
+  trySubmitTx $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . proposalProceduresTxBodyL .~ GHC.fromList (toList proposals)
 
 submitFailingProposal ::
   ( ShelleyEraImp era
