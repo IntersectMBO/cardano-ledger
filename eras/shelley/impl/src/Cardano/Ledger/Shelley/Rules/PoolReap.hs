@@ -19,6 +19,9 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPoolreapEnv (..),
   PredicateFailure,
   ShelleyPoolreapPredFailure,
+
+  -- * Deprecations
+  prAcnt,
 )
 where
 
@@ -69,10 +72,14 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyPoolreapState era = PoolreapState
   { prUTxOSt :: UTxOState era
-  , prAcnt :: AccountState
+  , prAccountState :: AccountState
   , prDState :: DState era
   , prPState :: PState era
   }
+
+prAcnt :: ShelleyPoolreapState era -> AccountState
+prAcnt = prAccountState
+{-# DEPRECATED prAcnt "Use `prAccountState` instead" #-}
 
 newtype ShelleyPoolreapEnv era = ShelleyPoolreapEnv
   { speVState :: VState era

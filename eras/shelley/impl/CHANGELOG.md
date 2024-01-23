@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Deprecate `prAcnt` in favor of `prAccountState`
 * Deprecate `RewardAcnt` in favor of `RewardAccount`
 
 ## 1.9.0.0
