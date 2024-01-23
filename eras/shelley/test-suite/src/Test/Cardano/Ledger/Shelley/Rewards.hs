@@ -283,7 +283,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
           , ppPledge = pledge
           , ppCost = cost
           , ppMargin = margin
-          , ppRewardAcnt = RewardAccount Testnet . KeyHashObj . hashKey . vKey $ rewardKey
+          , ppRewardAccount = RewardAccount Testnet . KeyHashObj . hashKey . vKey $ rewardKey
           , ppOwners = Set.fromList [hashKey $ vKey ownerKey]
           , ppRelays = StrictSeq.empty
           , ppMetadata = SNothing
@@ -446,7 +446,7 @@ rewardOnePool
           then Map.insertWith (<>)
           else Map.insert
       potentialRewards =
-        f (getRwdCred $ ppRewardAcnt pool) lReward mRewards
+        f (getRwdCred $ ppRewardAccount pool) lReward mRewards
       potentialRewards' =
         if HardForks.forgoRewardPrefilter pv
           then potentialRewards

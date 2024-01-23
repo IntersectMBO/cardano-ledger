@@ -2390,7 +2390,7 @@ pcPoolParams x =
   ppRecord
     "PoolParams"
     [ ("Id", keyHashSummary (ppId x))
-    , ("reward accnt", pcCredential (getRwdCred (ppRewardAcnt x)))
+    , ("reward accnt", pcCredential (getRwdCred (ppRewardAccount x)))
     ]
 
 instance PrettyA (PoolParams era) where prettyA = pcPoolParams

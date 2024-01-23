@@ -489,7 +489,7 @@ instance SpecTranslate (RewardAccount c) where
 instance SpecTranslate (PoolParams era) where
   type SpecRep (PoolParams era) = Agda.PoolParams
 
-  toSpecRep = toSpecRep . ppRewardAcnt
+  toSpecRep = toSpecRep . ppRewardAccount
 
 instance SpecTranslate (DRep c) where
   type SpecRep (DRep c) = Agda.VDeleg

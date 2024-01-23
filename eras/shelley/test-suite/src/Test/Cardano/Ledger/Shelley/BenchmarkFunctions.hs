@@ -58,7 +58,7 @@ import Cardano.Ledger.PoolParams (
   ppOwners,
   ppPledge,
   ppRelays,
-  ppRewardAcnt,
+  ppRewardAccount,
   ppVrf,
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -408,7 +408,7 @@ mkPoolParameters keys =
     , ppPledge = Coin 0
     , ppCost = Coin 0
     , ppMargin = unsafeBoundRational 0
-    , ppRewardAcnt = RewardAccount Testnet firstStakeKeyCred
+    , ppRewardAccount = RewardAccount Testnet firstStakeKeyCred
     , ppOwners = Set.singleton $ hashKey (vKey stakeKeyOne)
     , ppRelays = StrictSeq.empty
     , ppMetadata = SNothing

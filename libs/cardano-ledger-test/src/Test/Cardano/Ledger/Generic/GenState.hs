@@ -1092,7 +1092,7 @@ genPoolParams ppId = do
   ppPledge <- lift genPositiveVal
   ppCost <- lift genPositiveVal
   ppMargin <- lift arbitrary
-  ppRewardAcnt <- RewardAccount Testnet <$> genFreshRegCred Rewarding
+  ppRewardAccount <- RewardAccount Testnet <$> genFreshRegCred Rewarding
   let ppOwners = mempty
   let ppRelays = mempty
   let ppMetadata = SNothing

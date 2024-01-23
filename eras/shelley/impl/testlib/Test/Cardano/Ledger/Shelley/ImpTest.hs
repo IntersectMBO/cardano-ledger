@@ -959,7 +959,7 @@ registerPool = do
     poolParams =
       PoolParams
         { ppVrf = vrfHash
-        , ppRewardAcnt = rewardAccount
+        , ppRewardAccount = rewardAccount
         , ppRelays = mempty
         , ppPledge = zero
         , ppOwners = mempty

@@ -29,7 +29,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
-import Cardano.Ledger.PoolParams (ppRewardAcnt)
+import Cardano.Ledger.PoolParams (ppRewardAccount)
 import Cardano.Ledger.Shelley.Era (ShelleyPOOLREAP)
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -146,7 +146,7 @@ poolReapTransition = do
     (retiringDeposits, remainingDeposits) =
       Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
     rewardAcnts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era))
-    rewardAcnts = Map.map ppRewardAcnt $ eval (retired ◁ psStakePoolParams ps)
+    rewardAcnts = Map.map ppRewardAccount $ eval (retired ◁ psStakePoolParams ps)
     rewardAcnts_ :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era), Coin)
     rewardAcnts_ = Map.intersectionWith (,) rewardAcnts retiringDeposits
     rewardAcnts' :: Map.Map (RewardAccount (EraCrypto era)) Coin

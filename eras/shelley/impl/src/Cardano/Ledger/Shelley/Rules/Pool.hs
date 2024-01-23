@@ -173,11 +173,11 @@ poolCertTransition ::
   PoolCert c ->
   TransitionRule (ledger era)
 poolCertTransition (PoolEnv slot pp) ps@PState {psStakePoolParams, psFutureStakePoolParams, psRetiring} = \case
-  RegPool poolParams@PoolParams {ppId, ppRewardAcnt, ppMetadata, ppCost} -> do
+  RegPool poolParams@PoolParams {ppId, ppRewardAccount, ppMetadata, ppCost} -> do
     let pv = pp ^. ppProtocolVersionL
     when (HardForks.validatePoolRewardAccountNetID pv) $ do
       actualNetID <- liftSTS $ asks networkId
-      let suppliedNetID = getRwdNetwork ppRewardAcnt
+      let suppliedNetID = getRwdNetwork ppRewardAccount
       actualNetID == suppliedNetID ?! WrongNetworkPOOL actualNetID suppliedNetID ppId
 
     when (SoftForks.restrictPoolMetadataHash pv) $

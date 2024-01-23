@@ -472,7 +472,7 @@ reapPool pool cs = cs {chainNes = nes'}
         }
     pp = es ^. curPParamsEpochStateL
     ds = certDState dps
-    RewardAccount _ rewardAddr = ppRewardAcnt pool
+    RewardAccount _ rewardAddr = ppRewardAccount pool
     (rewards', unclaimed) =
       case UM.lookup rewardAddr (rewards ds) of
         Nothing -> (rewards ds, pp ^. ppPoolDepositL)

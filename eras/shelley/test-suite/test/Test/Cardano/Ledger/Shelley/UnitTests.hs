@@ -40,7 +40,7 @@ import Cardano.Ledger.PoolParams (
   ppOwners,
   ppPledge,
   ppRelays,
-  ppRewardAcnt,
+  ppRewardAccount,
   ppVrf,
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -616,7 +616,7 @@ alicePoolParamsSmallCost =
     , ppPledge = Coin 1
     , ppCost = Coin 5 -- Too Small!
     , ppMargin = unsafeBoundRational 0.1
-    , ppRewardAcnt = RewardAccount Testnet (KeyHashObj . hashKey . vKey $ aliceStake)
+    , ppRewardAccount = RewardAccount Testnet (KeyHashObj . hashKey . vKey $ aliceStake)
     , ppOwners = Set.singleton $ (hashKey . vKey) aliceStake
     , ppRelays = StrictSeq.empty
     , ppMetadata =

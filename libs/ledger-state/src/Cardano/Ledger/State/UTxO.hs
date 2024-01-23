@@ -267,7 +267,7 @@ countPoolParamsStats :: PoolParams C -> PoolParamsStats
 countPoolParamsStats PoolParams {..} =
   PoolParamsStats
     { ppsPoolId = statSingleton ppId
-    , ppsRewardAcnt = statSingleton (getRwdCred ppRewardAcnt)
+    , ppsRewardAcnt = statSingleton (getRwdCred ppRewardAccount)
     , ppsOwners = statSet ppOwners
     }
 

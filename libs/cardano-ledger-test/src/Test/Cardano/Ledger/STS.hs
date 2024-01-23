@@ -287,7 +287,7 @@ genPoolCert net epochNo pParams pState =
       pp <- arbitrary
       pure $
         pp
-          { ppRewardAcnt = adjustRewardAcnt $ ppRewardAcnt pp
+          { ppRewardAccount = adjustRewardAcnt $ ppRewardAccount pp
           , ppMetadata = adjustMetadata $ ppMetadata pp
           }
 

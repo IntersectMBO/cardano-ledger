@@ -116,7 +116,7 @@ alicePoolParams =
     , ppPledge = Coin 1
     , ppCost = Coin 5
     , ppMargin = unsafeBoundRational 0.1
-    , ppRewardAcnt = RewardAccount Testnet aliceSHK
+    , ppRewardAccount = RewardAccount Testnet aliceSHK
     , ppOwners = Set.singleton $ (hashKey . vKey) aliceStake
     , ppRelays =
         StrictSeq.singleton $

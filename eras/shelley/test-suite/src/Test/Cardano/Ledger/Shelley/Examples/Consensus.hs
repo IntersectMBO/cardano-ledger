@@ -488,7 +488,7 @@ exampleWithdrawals :: Crypto c => Withdrawals c
 exampleWithdrawals =
   Withdrawals $
     Map.fromList
-      [ (ppRewardAcnt examplePoolParams, Coin 100)
+      [ (ppRewardAccount examplePoolParams, Coin 100)
       ]
 
 exampleProposedPPUpdates ::
@@ -561,7 +561,7 @@ examplePoolParams =
     , ppPledge = Coin 1
     , ppCost = Coin 5
     , ppMargin = unsafeBoundRational 0.1
-    , ppRewardAcnt = RewardAccount Testnet (keyToCredential exampleStakeKey)
+    , ppRewardAccount = RewardAccount Testnet (keyToCredential exampleStakeKey)
     , ppOwners = Set.singleton $ hashKey $ vKey exampleStakeKey
     , ppRelays = StrictSeq.empty
     , ppMetadata =

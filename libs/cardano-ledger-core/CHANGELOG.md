@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Deprecate `ppRewardAcnt` in favor of `ppRewardAccount`
 * Deprecate `fromCborRewardAcnt` in favor of `fromCborRewardAccount`
 * Deprecate `decodeRewardAcnt` in favor of `decodeRewardAccount`
 * Deprecate `putRewardAcnt` in favor of `putRewardAccount`
