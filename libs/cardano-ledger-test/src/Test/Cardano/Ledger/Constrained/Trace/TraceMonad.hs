@@ -9,8 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Constrained.Trace.TraceMonad
-where
+module Test.Cardano.Ledger.Constrained.Trace.TraceMonad where
 
 import Cardano.Ledger.BaseTypes (Globals, SlotNo (..))
 import Cardano.Ledger.Conway.Core

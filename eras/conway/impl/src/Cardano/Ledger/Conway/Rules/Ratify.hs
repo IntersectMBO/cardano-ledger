@@ -21,8 +21,6 @@ module Cardano.Ledger.Conway.Rules.Ratify (
   spoAcceptedRatio,
   dRepAccepted,
   dRepAcceptedRatio,
-  reorderActions,
-  actionPriority,
   -- Testing
   prevActionAsExpected,
   validCommitteeTerm,
@@ -42,28 +40,27 @@ import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   GovAction (..),
-  GovActionId,
   GovActionState (..),
-  PrevGovActionId (..),
   PrevGovActionIds (..),
-  PrevGovActionIdsChildren (..),
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
   Vote (..),
   ensCommitteeL,
-  ensPrevGovActionIdsChildrenL,
   ensTreasuryL,
-  pgacCommitteeL,
-  pgacConstitutionL,
-  pgacHardForkL,
-  pgacPParamUpdateL,
+  pfCommitteeL,
+  pfConstitutionL,
+  pfHardForkL,
+  pfPParamUpdateL,
+  prevGovActionIdsL,
+  rsDelayedL,
   rsEnactStateL,
+  rsEnactedL,
+  rsExpiredL,
   votingCommitteeThreshold,
   votingDRepThreshold,
   votingStakePoolThreshold,
  )
-import Cardano.Ledger.Conway.Governance.Procedures (gasActionL, gasChildrenL)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
   ppCommitteeMaxTermLengthL,
@@ -83,20 +80,18 @@ import Control.State.Transition.Extended (
   judgmentContext,
   trans,
  )
-import Data.Coerce (coerce)
 import Data.Foldable (Foldable (..))
-import Data.List (sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Sum (..))
 import Data.Ratio ((%))
-import Data.Sequence.Strict (StrictSeq (..))
-import qualified Data.Sequence.Strict as Seq
+import qualified Data.Sequence as Seq
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Void (Void, absurd)
 import Data.Word (Word64)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro
 
 instance
   ( ConwayEraPParams era
@@ -276,18 +271,6 @@ delayingAction TreasuryWithdrawals {} = False
 delayingAction ParameterChange {} = False
 delayingAction InfoAction {} = False
 
-actionPriority :: GovAction era -> Int
-actionPriority NoConfidence {} = 0
-actionPriority UpdateCommittee {} = 1
-actionPriority NewConstitution {} = 2
-actionPriority HardForkInitiation {} = 3
-actionPriority ParameterChange {} = 4
-actionPriority TreasuryWithdrawals {} = 5
-actionPriority InfoAction {} = 6
-
-reorderActions :: StrictSeq (GovActionState era) -> StrictSeq (GovActionState era)
-reorderActions = Seq.fromList . sortOn (actionPriority . gasAction) . toList
-
 withdrawalCanWithdraw :: GovAction era -> Coin -> Bool
 withdrawalCanWithdraw (TreasuryWithdrawals m _) treasury =
   Map.foldr' (<+>) zero m <= treasury
@@ -310,18 +293,16 @@ ratifyTransition = do
                 { ensCurPParams
                 , ensTreasury
                 , ensPrevGovActionIds
-                , ensPrevGovActionIdsChildren
                 }
-              rsRemoved
-              rsEnacted
+              _rsEnacted
+              _rsExpired
               rsDelayed
             )
       , RatifySignal rsig
       ) <-
     judgmentContext
-  let reorderedActions = reorderActions rsig
-  case reorderedActions of
-    gas@GovActionState {gasId, gasAction, gasExpiresAfter} :<| sigs -> do
+  case rsig of
+    gas@GovActionState {gasId, gasAction, gasExpiresAfter} SSeq.:<| sigs -> do
       if prevActionAsExpected gasAction ensPrevGovActionIds
         && validCommitteeTerm gasAction ensCurPParams reCurrentEpoch
         && not rsDelayed
@@ -330,68 +311,36 @@ ratifyTransition = do
         && spoAccepted env st gas
         && dRepAccepted env st gas
         then do
-          let siblings = getSiblings ensPrevGovActionIdsChildren gasAction
-          -- Update ENACT state with the governance action that was ratified
-          es <-
+          newEnactState <-
             trans @(EraRule "ENACT" era) $
               TRC ((), rsEnactState, EnactSignal gasId gasAction)
-          let st' =
-                st
-                  { rsEnactState =
-                      es
-                        & ensPrevGovActionIdsChildrenL .~ updatePrevGovActionIdsChildren gas ensPrevGovActionIdsChildren
-                  , rsEnacted = Set.insert gasId rsEnacted
-                  , rsRemoved = Set.union (Set.delete gasId siblings) rsRemoved
-                  , rsDelayed = delayingAction gasAction
-                  }
+          let
+            st' =
+              st
+                & rsEnactStateL .~ newEnactState
+                & rsDelayedL .~ delayingAction gasAction
+                & rsEnactedL %~ (Seq.:|> gas)
           trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
         else do
           -- This action hasn't been ratified yet. Process the remaining actions.
           st' <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)
-          -- Finally, filter out actions that are not processed.
+          -- Finally, filter out actions that have expired.
           if gasExpiresAfter < reCurrentEpoch
-            then pure st' {rsRemoved = Set.insert gasId rsRemoved} -- Action expires after current Epoch. Remove it.
+            then pure $ st' & rsExpiredL %~ Set.insert gasId
             else pure st'
-    Empty -> pure $ st & rsEnactStateL . ensTreasuryL .~ Coin 0
+    SSeq.Empty -> pure $ st & rsEnactStateL . ensTreasuryL .~ Coin 0
 
 -- | Check that the previous governance action id specified in the proposal
---   does match the last one of the same purpose that was enacted.
+-- does match the last one of the same purpose that was enacted.
 prevActionAsExpected :: forall era. GovAction era -> PrevGovActionIds era -> Bool
 prevActionAsExpected = \case
-  ParameterChange prev _ _ -> (prev ==) . pgaPParamUpdate
-  HardForkInitiation prev _ -> (prev ==) . pgaHardFork
+  ParameterChange parent _ _ -> (parent ==) . (^. prevGovActionIdsL . pfPParamUpdateL)
+  HardForkInitiation parent _ -> (parent ==) . (^. prevGovActionIdsL . pfHardForkL)
   TreasuryWithdrawals _ _ -> const True
-  NoConfidence prev -> (prev ==) . pgaCommittee
-  UpdateCommittee prev _ _ _ -> (prev ==) . pgaCommittee
-  NewConstitution prev _ -> (prev ==) . pgaConstitution
+  NoConfidence parent -> (parent ==) . (^. prevGovActionIdsL . pfCommitteeL)
+  UpdateCommittee parent _ _ _ -> (parent ==) . (^. prevGovActionIdsL . pfCommitteeL)
+  NewConstitution parent _ -> (parent ==) . (^. prevGovActionIdsL . pfConstitutionL)
   InfoAction -> const True
-
--- | Get the siblings of a `GovAction`.
-getSiblings :: PrevGovActionIdsChildren era -> GovAction era -> Set.Set (GovActionId (EraCrypto era))
-getSiblings pgac = \case
-  ParameterChange {} -> Set.map unPrevGovActionId (pgac ^. pgacPParamUpdateL)
-  HardForkInitiation {} -> Set.map unPrevGovActionId (pgac ^. pgacHardForkL)
-  TreasuryWithdrawals _ _ -> mempty
-  NoConfidence {} -> Set.map unPrevGovActionId (pgac ^. pgacCommitteeL)
-  UpdateCommittee {} -> Set.map unPrevGovActionId (pgac ^. pgacCommitteeL)
-  NewConstitution {} -> Set.map unPrevGovActionId (pgac ^. pgacConstitutionL)
-  InfoAction -> mempty
-
-updatePrevGovActionIdsChildren ::
-  GovActionState era ->
-  PrevGovActionIdsChildren era ->
-  PrevGovActionIdsChildren era
-updatePrevGovActionIdsChildren gas pgac =
-  case gas ^. gasActionL of
-    ParameterChange {} -> pgac & pgacPParamUpdateL .~ Set.map coerce children
-    HardForkInitiation {} -> pgac & pgacHardForkL .~ Set.map coerce children
-    TreasuryWithdrawals _ _ -> pgac
-    NoConfidence {} -> pgac & pgacCommitteeL .~ Set.map coerce children
-    UpdateCommittee {} -> pgac & pgacCommitteeL .~ Set.map coerce children
-    NewConstitution {} -> pgac & pgacConstitutionL .~ Set.map coerce children
-    InfoAction -> pgac
-  where
-    children = gas ^. gasChildrenL
 
 validCommitteeTerm ::
   ConwayEraPParams era =>

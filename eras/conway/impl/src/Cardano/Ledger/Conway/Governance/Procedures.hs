@@ -34,7 +34,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   GovAction (..),
   GovActionId (..),
   GovActionIx (..),
-  PrevGovActionId (..),
+  GovPurposeId (..),
   GovActionPurpose (..),
   GovActionState (..),
   govActionIdToText,
@@ -51,7 +51,6 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   govProceduresProposalsL,
   pProcGovActionL,
   gasActionL,
-  gasChildrenL,
   gasReturnAddrL,
   gasProposedInL,
   gasIdL,
@@ -111,6 +110,7 @@ import Data.Aeson (
   (.:),
  )
 import Data.Aeson.Types (toJSONKeyText)
+import Data.Data (Typeable)
 import Data.Default.Class
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -143,7 +143,7 @@ data GovActionId c = GovActionId
   { gaidTxId :: !(TxId c)
   , gaidGovActionIx :: !GovActionIx
   }
-  deriving (Generic, Eq, Ord, Show)
+  deriving (Generic, Show, Eq, Ord)
 
 instance Crypto c => DecCBOR (GovActionId c) where
   decCBOR =
@@ -193,15 +193,11 @@ data GovActionState era = GovActionState
   , gasAction :: !(GovAction era)
   , gasProposedIn :: !EpochNo
   , gasExpiresAfter :: !EpochNo
-  , gasChildren :: Set (GovActionId (EraCrypto era))
   }
-  deriving (Generic)
+  deriving (Ord, Generic)
 
 gasIdL :: Lens' (GovActionState era) (GovActionId (EraCrypto era))
 gasIdL = lens gasId $ \x y -> x {gasId = y}
-
-gasDepositL :: Lens' (GovActionState era) Coin
-gasDepositL = lens gasDeposit (\x y -> x {gasDeposit = y})
 
 gasCommitteeVotesL ::
   Lens' (GovActionState era) (Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
@@ -213,11 +209,8 @@ gasDRepVotesL = lens gasDRepVotes (\x y -> x {gasDRepVotes = y})
 gasStakePoolVotesL :: Lens' (GovActionState era) (Map (KeyHash 'StakePool (EraCrypto era)) Vote)
 gasStakePoolVotesL = lens gasStakePoolVotes (\x y -> x {gasStakePoolVotes = y})
 
-gasExpiresAfterL :: Lens' (GovActionState era) EpochNo
-gasExpiresAfterL = lens gasExpiresAfter $ \x y -> x {gasExpiresAfter = y}
-
-gasProposedInL :: Lens' (GovActionState era) EpochNo
-gasProposedInL = lens gasProposedIn $ \x y -> x {gasProposedIn = y}
+gasDepositL :: Lens' (GovActionState era) Coin
+gasDepositL = lens gasDeposit (\x y -> x {gasDeposit = y})
 
 gasReturnAddrL :: Lens' (GovActionState era) (RewardAcnt (EraCrypto era))
 gasReturnAddrL = lens gasReturnAddr $ \x y -> x {gasReturnAddr = y}
@@ -225,15 +218,18 @@ gasReturnAddrL = lens gasReturnAddr $ \x y -> x {gasReturnAddr = y}
 gasActionL :: Lens' (GovActionState era) (GovAction era)
 gasActionL = lens gasAction $ \x y -> x {gasAction = y}
 
-gasChildrenL :: Lens' (GovActionState era) (Set (GovActionId (EraCrypto era)))
-gasChildrenL = lens gasChildren $ \x y -> x {gasChildren = y}
+gasProposedInL :: Lens' (GovActionState era) EpochNo
+gasProposedInL = lens gasProposedIn $ \x y -> x {gasProposedIn = y}
+
+gasExpiresAfterL :: Lens' (GovActionState era) EpochNo
+gasExpiresAfterL = lens gasExpiresAfter $ \x y -> x {gasExpiresAfter = y}
 
 instance EraPParams era => ToJSON (GovActionState era) where
   toJSON = object . toGovActionStatePairs
   toEncoding = pairs . mconcat . toGovActionStatePairs
 
 toGovActionStatePairs :: (KeyValue e a, EraPParams era) => GovActionState era -> [a]
-toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _ _ _) =
+toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _ _) =
   let GovActionState {..} = gas
    in [ "actionId" .= gasId
       , "committeeVotes" .= gasCommitteeVotes
@@ -244,7 +240,6 @@ toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _ _ _) =
       , "action" .= gasAction
       , "proposedIn" .= gasProposedIn
       , "expiresAfter" .= gasExpiresAfter
-      , "children" .= gasChildren
       ]
 
 deriving instance EraPParams era => Eq (GovActionState era)
@@ -260,7 +255,6 @@ instance EraPParams era => DecShareCBOR (GovActionState era) where
   decShareCBOR _ =
     decode $
       RecD GovActionState
-        <! From
         <! From
         <! From
         <! From
@@ -287,7 +281,6 @@ instance EraPParams era => EncCBOR (GovActionState era) where
         !> To gasAction
         !> To gasProposedIn
         !> To gasExpiresAfter
-        !> To gasChildren
 
 -- Ref: https://gitlab.haskell.org/ghc/ghc/-/issues/14046
 instance
@@ -344,7 +337,7 @@ data Vote
   = VoteNo
   | VoteYes
   | Abstain
-  deriving (Generic, Eq, Show, Enum, Bounded)
+  deriving (Ord, Generic, Eq, Show, Enum, Bounded)
 
 instance ToJSON Vote
 
@@ -578,22 +571,20 @@ data GovActionPurpose
   | ConstitutionPurpose
   deriving (Eq, Show)
 
-newtype PrevGovActionId (r :: GovActionPurpose) c = PrevGovActionId
-  { unPrevGovActionId :: GovActionId c
+newtype GovPurposeId (p :: GovActionPurpose) era = GovPurposeId
+  { unGovPurposeId :: GovActionId (EraCrypto era)
   }
-  deriving
-    ( Eq
-    , Show
-    , Generic
-    , EncCBOR
-    , DecCBOR
-    , NoThunks
-    , NFData
-    , ToJSON
-    , Ord
-    )
+  deriving (Eq, Ord, Generic)
 
-type role PrevGovActionId nominal nominal
+type role GovPurposeId nominal nominal
+
+deriving newtype instance (Era era, Typeable p) => EncCBOR (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance (Era era, Typeable p) => DecCBOR (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance Era era => NoThunks (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance Era era => NFData (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance Era era => ToJSONKey (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance Era era => ToJSON (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance Era era => Show (GovPurposeId (p :: GovActionPurpose) era)
 
 -- | Note that the previous governance action id is only optional for the very first
 -- governance action of the same purpose.
@@ -601,7 +592,7 @@ data GovAction era
   = ParameterChange
       -- | Previous governance action id of `ParameterChange` type, which corresponds to
       -- `PParamUpdatePurpose`.
-      !(StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
+      !(StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
       -- | Proposed changes to PParams
       !(PParamsUpdate era)
       -- | Policy hash protection
@@ -609,7 +600,7 @@ data GovAction era
   | HardForkInitiation
       -- | Previous governance action id of `HardForkInitiation` type, which corresponds
       -- to `HardForkPurpose`
-      !(StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
+      !(StrictMaybe (GovPurposeId 'HardForkPurpose era))
       -- | Proposed new protocol version
       !ProtVer
   | TreasuryWithdrawals
@@ -620,11 +611,11 @@ data GovAction era
   | NoConfidence
       -- | Previous governance action id of `NoConfidence` or `UpdateCommittee` type, which
       -- corresponds to `CommitteePurpose`
-      !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
+      !(StrictMaybe (GovPurposeId 'CommitteePurpose era))
   | UpdateCommittee
       -- | Previous governance action id of `UpdateCommittee` or `NoConfidence` type, which
       -- corresponds to `CommitteePurpose`
-      !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
+      !(StrictMaybe (GovPurposeId 'CommitteePurpose era))
       -- | Constitutional Committe members to be removed
       !(Set (Credential 'ColdCommitteeRole (EraCrypto era)))
       -- | Constitutional committee members to be added
@@ -634,14 +625,14 @@ data GovAction era
   | NewConstitution
       -- | Previous governance action id of `NewConstitution` type, which corresponds to
       -- `ConstitutionPurpose`
-      !(StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
+      !(StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
       !(Constitution era)
   | InfoAction
   deriving (Generic, Ord)
 
-deriving instance EraPParams era => Eq (GovAction era)
-
 deriving instance EraPParams era => Show (GovAction era)
+
+deriving instance EraPParams era => Eq (GovAction era)
 
 instance EraPParams era => NoThunks (GovAction era)
 

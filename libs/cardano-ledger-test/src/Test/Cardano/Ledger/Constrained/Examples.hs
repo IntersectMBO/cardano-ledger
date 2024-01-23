@@ -876,7 +876,7 @@ govPreds :: [Pred (ConwayEra StandardCrypto)]
 govPreds =
   [ ListWhere
       (Range 2 4)
-      govstates
+      currGovStates
       govActionStateTarget
       [ Random hotCommitteeCredsUniv
       , Random voteUniv

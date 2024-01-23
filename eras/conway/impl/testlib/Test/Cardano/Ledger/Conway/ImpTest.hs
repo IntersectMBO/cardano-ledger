@@ -49,6 +49,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   logCurPParams,
   electCommittee,
   electBasicCommittee,
+  proposalsShowDebug,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
@@ -78,8 +79,9 @@ import Cardano.Ledger.Conway.Governance (
   GovActionIx (..),
   GovActionPurpose (..),
   GovActionState (..),
-  PrevGovActionId (..),
+  GovPurposeId (..),
   ProposalProcedure (..),
+  Proposals,
   RatifyEnv (..),
   RatifyState (..),
   Vote (..),
@@ -94,7 +96,16 @@ import Cardano.Ledger.Conway.Governance (
   epochStateDRepPulsingStateL,
   finishDRepPulser,
   gasDRepVotesL,
+  pGraphL,
+  pGraphNodesL,
+  pRootsL,
+  pfCommitteeL,
+  pfConstitutionL,
+  pfHardForkL,
+  pfPParamUpdateL,
+  proposalsIds,
   proposalsLookupId,
+  proposalsSize,
   psDRepDistrG,
   rsEnactStateL,
   setCompleteDRepPulsingState,
@@ -639,9 +650,9 @@ canGovActionBeDRepAccepted gaId = do
         }
     ratSt =
       RatifyState
-        { rsRemoved = mempty
+        { rsEnactState = enactSt
         , rsEnacted = mempty
-        , rsEnactState = enactSt
+        , rsExpired = mempty
         , rsDelayed = False
         }
   pure $ dRepAccepted ratEnv ratSt action
@@ -724,11 +735,11 @@ electCommittee ::
   ( HasCallStack
   , ConwayEraImp era
   ) =>
-  StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)) ->
+  StrictMaybe (GovPurposeId 'CommitteePurpose era) ->
   KeyHash 'DRepRole (EraCrypto era) ->
   Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
   Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
-  ImpTestM era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
+  ImpTestM era (GovPurposeId 'CommitteePurpose era)
 electCommittee prevGovId drep toRemove toAdd = do
   let
     committeeAction =
@@ -739,7 +750,7 @@ electCommittee prevGovId drep toRemove toAdd = do
         (1 %! 2)
   gaidCommitteeProp <- submitGovAction committeeAction
   submitYesVote_ (DRepVoter $ KeyHashObj drep) gaidCommitteeProp
-  pure (PrevGovActionId gaidCommitteeProp)
+  pure (GovPurposeId gaidCommitteeProp)
 
 electBasicCommittee ::
   forall era.
@@ -802,3 +813,39 @@ logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era 
 logCurPParams = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   logEntry $ "Current PParams:\n--------------" <> showExpr pp <> "\n--------------"
+
+proposalsShowDebug :: Era era => Proposals era -> Bool -> String
+proposalsShowDebug ps showRoots =
+  unlines $
+    [ ""
+    , "----- Proposals -----"
+    , "Size"
+    , show $ proposalsSize ps
+    , "OMap"
+    , show $ proposalsIds ps
+    , ""
+    , "Roots"
+    , "> PParamUpdate"
+    , show $ ps ^. pRootsL . pfPParamUpdateL
+    , "> HardFork"
+    , show $ ps ^. pRootsL . pfHardForkL
+    , "> Committee"
+    , show $ ps ^. pRootsL . pfCommitteeL
+    , "> Constitution"
+    , show $ ps ^. pRootsL . pfConstitutionL
+    ]
+      <> ( if showRoots
+            then
+              [ "Hierarchy"
+              , ">> PParamUpdate"
+              , show $ ps ^. pGraphL . pfPParamUpdateL . pGraphNodesL
+              , ">> HardFork"
+              , show $ ps ^. pGraphL . pfHardForkL . pGraphNodesL
+              , ">> Committee"
+              , show $ ps ^. pGraphL . pfCommitteeL . pGraphNodesL
+              , ">> Constitution"
+              , show $ ps ^. pGraphL . pfConstitutionL . pGraphNodesL
+              ]
+            else mempty
+         )
+      <> ["----- Proposals End -----"]
