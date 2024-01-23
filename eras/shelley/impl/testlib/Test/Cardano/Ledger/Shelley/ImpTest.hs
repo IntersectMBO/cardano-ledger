@@ -101,7 +101,6 @@ import Cardano.Ledger.BaseTypes (
   inject,
   textToUrl,
  )
-import Cardano.Ledger.CertState (certsTotalDepositsTxBody, certsTotalRefundsTxBody)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToText)
@@ -125,6 +124,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
+  consumed,
   curPParamsEpochStateL,
   epochStateIncrStakeDistrL,
   epochStateUMapL,
@@ -135,6 +135,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesELL,
   nesEsL,
   prevPParamsEpochStateL,
+  produced,
   smartUTxOState,
   startStep,
   utxosGovStateL,
@@ -145,7 +146,11 @@ import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
 import Cardano.Ledger.Tools (calcMinFeeTxNativeScriptWits, integralToByteStringN)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin, txinLookup)
+import Cardano.Ledger.UTxO (
+  EraUTxO (..),
+  UTxO (..),
+  txinLookup,
+ )
 import Cardano.Ledger.Val (Val (..))
 import Control.Monad (forM)
 import Control.Monad.IO.Class
@@ -611,36 +616,34 @@ fixupFees tx nativeScriptKeyWits = do
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
   kpSpending <- lookupKeyPair =<< freshKeyHash
   kpStaking <- lookupKeyPair =<< freshKeyHash
-  (rootTxIn, rootTxOut) <- lookupImpRootTxOut
+  rootTxIn <- fst <$> lookupImpRootTxOut
   let
-    deposits = certsTotalDepositsTxBody pp certState (tx ^. bodyTxL)
-    refunds = certsTotalRefundsTxBody pp certState (tx ^. bodyTxL)
-    outputsTotalCoin = sumAllCoin $ tx ^. bodyTxL . outputsTxBodyL
-    remainingCoin = (rootTxOut ^. coinTxOutL) <-> (outputsTotalCoin <+> deposits <-> refunds)
-    remainingTxOut =
+    txWithRoot = tx & bodyTxL . inputsTxBodyL %~ Set.insert rootTxIn
+    consumedValue = consumed pp certState utxo (txWithRoot ^. bodyTxL)
+    producedValue = produced pp certState (txWithRoot ^. bodyTxL)
+    changeBeforeFee = consumedValue <-> producedValue
+    changeBeforeFeeTxOut =
       mkBasicTxOut
         (mkAddr (kpSpending, kpStaking))
-        (inject remainingCoin)
+        changeBeforeFee
   let
     txNoWits =
-      tx
-        & bodyTxL . inputsTxBodyL %~ Set.insert rootTxIn
-        & bodyTxL . outputsTxBodyL %~ (remainingTxOut :<|)
-    outsWithoutRemaining = tx ^. bodyTxL . outputsTxBodyL
+      txWithRoot & bodyTxL . outputsTxBodyL %~ (changeBeforeFeeTxOut :<|)
+    outsBeforeFee = txWithRoot ^. bodyTxL . outputsTxBodyL
     fee = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
-    remainderAvailable = remainingTxOut ^. coinTxOutL <-> fee
-    remainingTxOut' = remainingTxOut & coinTxOutL .~ remainderAvailable
+    change = changeBeforeFeeTxOut ^. coinTxOutL <-> fee
+    changeTxOut = changeBeforeFeeTxOut & coinTxOutL .~ change
     -- If the remainder is sufficently big we add it to outputs, otherwise we add the
     -- extraneous coin to the fee and discard the remainder TxOut
     txWithFee
-      | remainderAvailable >= getMinCoinTxOut pp remainingTxOut' =
+      | change >= getMinCoinTxOut pp changeTxOut =
           txNoWits
-            & bodyTxL . outputsTxBodyL .~ (remainingTxOut' :<| outsWithoutRemaining)
+            & bodyTxL . outputsTxBodyL .~ (changeTxOut :<| outsBeforeFee)
             & bodyTxL . feeTxBodyL .~ fee
       | otherwise =
           txNoWits
-            & bodyTxL . outputsTxBodyL .~ outsWithoutRemaining
-            & bodyTxL . feeTxBodyL .~ (fee <> remainingTxOut ^. coinTxOutL)
+            & bodyTxL . outputsTxBodyL .~ outsBeforeFee
+            & bodyTxL . feeTxBodyL .~ (fee <> changeTxOut ^. coinTxOutL)
   pure txWithFee
 
 fixupTx ::
