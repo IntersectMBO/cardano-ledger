@@ -23,6 +23,7 @@ module Data.OSet.Strict (
   fromStrictSeq,
   fromStrictSeqDuplicates,
   toStrictSeq,
+  toSet,
   fromSet,
   fromFoldable,
   invariantHolds,
@@ -199,9 +200,13 @@ fromStrictSeqDuplicates = F.foldl' snoc' (Set.empty, empty)
         then (x `Set.insert` duplicates, oset)
         else (duplicates, OSet (seq SSeq.|> x) (x `Set.insert` set))
 
--- | \( O(1) \).
+-- | \( O(1) \) -  Extract underlying strict sequence
 toStrictSeq :: OSet a -> SSeq.StrictSeq a
 toStrictSeq = osSSeq
+
+-- | \( O(1) \) -  Extract underlying Set
+toSet :: OSet a -> Set.Set a
+toSet = osSet
 
 -- | \( O(n) \).
 fromSet :: Set.Set a -> OSet a
