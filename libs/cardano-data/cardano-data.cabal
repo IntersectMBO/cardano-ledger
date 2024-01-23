@@ -91,5 +91,5 @@ test-suite cardano-data-tests
         cardano-ledger-binary:{cardano-ledger-binary, testlib},
         testlib,
         QuickCheck,
-        quickcheck-classes-base,
+        quickcheck-classes,
         microlens

@@ -15,7 +15,7 @@ import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Binary.RoundTrip (cborTrip, embedTripSpec, roundTripCborSpec)
 import Test.Hspec
 import Test.Hspec.QuickCheck
-import Test.QuickCheck.Classes.Base
+import Test.QuickCheck.Classes
 
 spec :: Spec
 spec =
@@ -94,7 +94,9 @@ spec =
       it "Type" $
         lawsCheckOne
           (Proxy :: Proxy (OSet Int))
-          [ isListLaws
+          [ eqLaws
+          , ordLaws
+          , isListLaws
           , semigroupLaws
           , monoidLaws
           , semigroupMonoidLaws
