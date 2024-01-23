@@ -88,7 +88,7 @@ test-suite cardano-data-tests
         containers,
         hspec,
         cardano-data,
-        cardano-ledger-binary:testlib,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
         testlib,
         QuickCheck,
         quickcheck-classes-base,
