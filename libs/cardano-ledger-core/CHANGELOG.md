@@ -13,6 +13,7 @@
 
 ### `testlib`
 
+* Deprecate `deserialiseRewardAcntOld` in favor of `deserialiseRewardAccountOld`
 * Deprecate `mkVKeyRwdAcnt` in favor of `mkVKeyRewardAccount`
 
 ## 1.10.0.0
