@@ -148,6 +148,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
+  ScriptsProvided (..),
   UTxO (..),
   txinLookup,
  )
@@ -582,10 +583,12 @@ addScriptTxWits tx = do
   utxo <- getUTxO
   ImpTestState {impScripts} <- get
   -- TODO: Add proper support for Plutus Scripts
-  let scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
-      scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
-      scriptsToAdd = impScripts `Map.restrictKeys` scriptHashesNeeded
-      nativeScripts = mapMaybe getNativeScript $ Map.elems scriptsToAdd
+  let needed = getScriptsNeeded utxo (tx ^. bodyTxL)
+      ScriptsProvided provided = getScriptsProvided utxo tx
+      hashesNeeded = getScriptsHashesNeeded needed
+      scriptsRequired = impScripts `Map.restrictKeys` hashesNeeded
+      scriptsToAdd = scriptsRequired Map.\\ provided
+      nativeScripts = mapMaybe getNativeScript $ Map.elems scriptsRequired
   keyPairs <- mapM impSatisfyNativeScript nativeScripts
   pure (tx & witsTxL . scriptTxWitsL <>~ scriptsToAdd, mconcat $ catMaybes keyPairs)
 
