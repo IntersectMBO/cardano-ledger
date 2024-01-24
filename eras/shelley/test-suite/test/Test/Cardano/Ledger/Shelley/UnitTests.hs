@@ -95,7 +95,7 @@ import Data.Word (Word64)
 import GHC.Stack
 import Lens.Micro
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkVKeyRwdAcnt, mkWitnessVKey, mkWitnessesVKey, vKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkVKeyRewardAccount, mkWitnessVKey, mkWitnessesVKey, vKey)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap (
   testBootstrapNotSpending,
   testBootstrapSpending,
@@ -451,7 +451,7 @@ testWitnessWrongUTxO =
 
 testEmptyInputSet :: Assertion
 testEmptyInputSet =
-  let aliceWithdrawal = Map.singleton (mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
+  let aliceWithdrawal = Map.singleton (mkVKeyRewardAccount Testnet aliceStake) (Coin 2000)
       txb =
         ShelleyTxBody
           Set.empty
@@ -464,7 +464,7 @@ testEmptyInputSet =
           SNothing
       txwits = mempty {addrWits = mkWitnessesVKey (hashAnnotated txb) [aliceStake]}
       tx = ShelleyTx txb txwits SNothing
-      dpState' = addReward dpState (raCredential $ mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
+      dpState' = addReward dpState (raCredential $ mkVKeyRewardAccount Testnet aliceStake) (Coin 2000)
    in testLEDGER
         (LedgerState utxoState dpState')
         tx
@@ -543,7 +543,7 @@ testWithdrawalNoWit =
               ]
           )
           Empty
-          (Withdrawals $ Map.singleton (mkVKeyRwdAcnt Testnet bobStake) (Coin 10))
+          (Withdrawals $ Map.singleton (mkVKeyRewardAccount Testnet bobStake) (Coin 10))
           (Coin 1000)
           (SlotNo 0)
           SNothing
@@ -555,7 +555,7 @@ testWithdrawalNoWit =
       errs =
         [ UtxowFailure $ MissingVKeyWitnessesUTXOW missing
         ]
-      dpState' = addReward dpState (raCredential $ mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
+      dpState' = addReward dpState (raCredential $ mkVKeyRewardAccount Testnet bobStake) (Coin 10)
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testWithdrawalWrongAmt :: Assertion
@@ -569,7 +569,7 @@ testWithdrawalWrongAmt =
               ]
           )
           Empty
-          (Withdrawals $ Map.singleton (mkVKeyRwdAcnt Testnet bobStake) (Coin 11))
+          (Withdrawals $ Map.singleton (mkVKeyRewardAccount Testnet bobStake) (Coin 11))
           (Coin 1000)
           (SlotNo 0)
           SNothing
@@ -581,7 +581,7 @@ testWithdrawalWrongAmt =
                 (hashAnnotated txb)
                 [asWitness alicePay, asWitness bobStake]
           }
-      rAcnt = mkVKeyRwdAcnt Testnet bobStake
+      rAcnt = mkVKeyRewardAccount Testnet bobStake
       dpState' = addReward dpState (raCredential rAcnt) (Coin 10)
       tx = ShelleyTx @C txb txwits SNothing
       errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]

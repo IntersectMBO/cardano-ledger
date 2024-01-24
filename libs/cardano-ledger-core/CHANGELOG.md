@@ -11,6 +11,10 @@
 * Deprecate `serialiseRewardAcnt` in favor of `serialiseRewardAccount`
 * Deprecate `RewardAcnt` in favor of `RewardAccount`
 
+### `testlib`
+
+* Deprecate `mkVKeyRwdAcnt` in favor of `mkVKeyRewardAccount`
+
 ## 1.10.0.0
 
 * Add `umElemsL`
