@@ -4,6 +4,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Plutus.Context (
@@ -23,6 +24,7 @@ import Cardano.Ledger.Alonzo.PParams (
   ppuMaxValSizeL,
   ppuPricesL,
  )
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Babbage.PParams (CoinPerByte (..), ppuCoinsPerUTxOByteL)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.PParams (
@@ -195,13 +197,14 @@ conwayPParam =
   , PParam 32 ppuDRepActivityL
   ]
 
--- =========================================================
--- make an instance (ToPlutusData (PParamsUpdate (ConwayEra c)))
--- using the ConwayPParamMap
-
 -- ===========================================================
 -- A class to compute the changed parameters in the TxInfo
 -- given a ToPlutusData instance for PParamsUpdate
 
-class ToPlutusData (PParamsUpdate era) => ConwayEraPlutusTxInfo (l :: Language) era where
+class
+  ( ToPlutusData (PParamsUpdate era)
+  , EraPlutusTxInfo l era
+  ) =>
+  ConwayEraPlutusTxInfo (l :: Language) era
+  where
   toPlutusChangedParameters :: proxy l -> PParamsUpdate era -> PV3.ChangedParameters

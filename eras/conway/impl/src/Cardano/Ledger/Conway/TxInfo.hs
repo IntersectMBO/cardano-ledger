@@ -373,7 +373,7 @@ transDRep = \case
   DRepAlwaysNoConfidence -> PV3.DRepAlwaysNoConfidence
 
 transScriptPurpose ::
-  (EraPlutusTxInfo l era, PlutusTxCert l ~ PV3.TxCert, ConwayEraPlutusTxInfo l era) =>
+  (ConwayEraPlutusTxInfo l era, PlutusTxCert l ~ PV3.TxCert) =>
   proxy l ->
   ConwayPlutusPurpose AsItem era ->
   Either (ContextError era) PV3.ScriptPurpose
@@ -502,5 +502,5 @@ instance Crypto c => ToPlutusData (PParamsUpdate (ConwayEra c)) where
   toPlutusData = pparamUpdateToData conwayPParamMap
   fromPlutusData = pparamUpdateFromData conwayPParamMap
 
-instance Crypto c => ConwayEraPlutusTxInfo l (ConwayEra c) where
-  toPlutusChangedParameters _ x = (PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x)))
+instance Crypto c => ConwayEraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
+  toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))
