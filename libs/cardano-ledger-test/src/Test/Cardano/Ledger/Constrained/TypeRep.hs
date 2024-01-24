@@ -189,7 +189,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcProposals,
   pcRatifyState,
   pcReward,
-  pcRewardAcnt,
+  pcRewardAccount,
   pcScriptHash,
   pcShelleyTxCert,
   pcTx,
@@ -613,7 +613,7 @@ synopsis PolicyIDR (PolicyID x) = show (pcScriptHash x)
 synopsis (WitnessesFieldR p) x = show $ ppRecord' mempty $ unReflect pcWitnessesField p x
 synopsis AssetNameR (AssetName x) = take 10 (show x)
 synopsis (TxCertR p) (TxCertF _ x) = show (pcTxCert p x)
-synopsis RewardAcntR x = show (pcRewardAcnt x)
+synopsis RewardAcntR x = show (pcRewardAccount x)
 synopsis ValidityIntervalR x = show (ppValidityInterval x)
 synopsis KeyPairR _ = "(KeyPairR ...)"
 synopsis (GenR x) _ = "(Gen " ++ show x ++ " ...)"

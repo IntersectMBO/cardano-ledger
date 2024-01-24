@@ -851,7 +851,7 @@ pcAuxData Babbage x = ppAlonzoTxAuxData x
 pcAuxData Conway x = ppAlonzoTxAuxData x
 
 ppWithdrawals :: Withdrawals c -> PDoc
-ppWithdrawals (Withdrawals m) = ppSexp "Withdrawals" [ppMap' (text "Wdr") pcRewardAcnt pcCoin m]
+ppWithdrawals (Withdrawals m) = ppSexp "Withdrawals" [ppMap' (text "Wdr") pcRewardAccount pcCoin m]
 
 instance PrettyA (Withdrawals c) where
   prettyA = ppWithdrawals
@@ -1049,7 +1049,7 @@ pcTxBodyField proof x = case x of
   TotalCol SNothing -> []
   TotalCol (SJust c) -> [("total coll", pcCoin c)]
   Certs xs -> [("certs", ppList (pcTxCert proof) (toList xs))]
-  Withdrawals' (Withdrawals m) -> [("withdrawal", ppMap pcRewardAcnt pcCoin m)]
+  Withdrawals' (Withdrawals m) -> [("withdrawal", ppMap pcRewardAccount pcCoin m)]
   Txfee c -> [("fee", pcCoin c)]
   Vldt v -> [("validity interval", ppValidityInterval v)]
   TTL slot -> [("time to live", pcSlotNo slot)]
@@ -1275,7 +1275,7 @@ ppStateLEDGERS p@Conway = pcLedgerState p
 
 ppShelleyDelegsPredFailure :: forall era. Proof era -> ShelleyDelegsPredFailure era -> PDoc
 ppShelleyDelegsPredFailure _ (Shelley.DelegateeNotRegisteredDELEG x) = pcKeyHash x
-ppShelleyDelegsPredFailure _ (WithdrawalsNotInRewardsDELEGS x) = ppMap pcRewardAcnt pcCoin x
+ppShelleyDelegsPredFailure _ (WithdrawalsNotInRewardsDELEGS x) = ppMap pcRewardAccount pcCoin x
 ppShelleyDelegsPredFailure p (DelplFailure x) = ppDELPL p x
 
 instance Reflect era => PrettyA (ShelleyDelegsPredFailure era) where
@@ -1345,7 +1345,7 @@ instance PrettyA (ConwayGovCertPredFailure era) where
 ppConwayCertsPredFailure :: Proof era -> ConwayCertsPredFailure era -> PDoc
 ppConwayCertsPredFailure proof x = case x of
   ConwayRules.DelegateeNotRegisteredDELEG kh -> ppSexp "DelegateeNotRegisteredDELEG" [pcKeyHash kh]
-  WithdrawalsNotInRewardsCERTS m -> ppSexp "WithdrawalsNotInRewardsCERTS" [ppMap pcRewardAcnt pcCoin m]
+  WithdrawalsNotInRewardsCERTS m -> ppSexp "WithdrawalsNotInRewardsCERTS" [ppMap pcRewardAccount pcCoin m]
   CertFailure pf -> case proof of
     Conway -> ppSexp " CertFailure" [ppConwayCertPredFailure proof pf] -- !(PredicateFailure (EraRule "CERT" era))
     _ -> error ("Only the ConwayEra has a (PredicateFailure (EraRule \"CERT\" era)). This Era is " ++ show proof)
@@ -1361,9 +1361,9 @@ ppConwayGovPredFailure x = case x of
   GovActionsDoNotExist c -> ppSexp "GovActionsDoNotExist" [prettyA c]
   MalformedProposal ga -> ppSexp " MalformedProposal" [pcGovAction ga] -- (GovAction era)
   ProposalProcedureNetworkIdMismatch racnt nw ->
-    ppSexp "ProposalProcedureNetworkIdMismatch" [pcRewardAcnt racnt, pcNetwork nw]
+    ppSexp "ProposalProcedureNetworkIdMismatch" [pcRewardAccount racnt, pcNetwork nw]
   TreasuryWithdrawalsNetworkIdMismatch sr nw ->
-    ppSexp "TreasuryWithdrawalsNetworkIdMismatch" [ppSet pcRewardAcnt sr, pcNetwork nw]
+    ppSexp "TreasuryWithdrawalsNetworkIdMismatch" [ppSet pcRewardAccount sr, pcNetwork nw]
   ProposalDepositIncorrect c1 c2 -> ppSexp "ProposalDepositIncorrect" [pcCoin c1, pcCoin c2]
   DisallowedVoters m -> ppSexp "DisallowedVoters" [prettyA m]
   ConflictingCommitteeUpdate s ->
@@ -1617,7 +1617,7 @@ ppAlonzoUtxoPredFailure x = case x of
   Alonzo.WrongNetworkWithdrawal n accnt ->
     ppRecord
       "WrongNetworkWithdrawal"
-      [("expected network id", ppNetwork n), ("set reward address with wrong network id", ppSet pcRewardAcnt accnt)]
+      [("expected network id", ppNetwork n), ("set reward address with wrong network id", ppSet pcRewardAccount accnt)]
   Alonzo.OutputTooSmallUTxO xs ->
     ppRecord
       "OutputTooSmallUTxO"
@@ -1895,7 +1895,7 @@ ppShelleyUtxoPredFailure (Shelley.WrongNetworkWithdrawal n accnt) =
   ppRecord
     "WrongNetworkWithdrawal"
     [ ("expected network id", ppNetwork n)
-    , ("set of reward address with wrong network id", ppSet pcRewardAcnt accnt)
+    , ("set of reward address with wrong network id", ppSet pcRewardAccount accnt)
     ]
 ppShelleyUtxoPredFailure (Shelley.OutputTooSmallUTxO xs) =
   ppRecord
@@ -1980,7 +1980,7 @@ ppAllegraUtxoPredFailure (Allegra.WrongNetworkWithdrawal n accnt) =
   ppRecord
     "WrongNetworkWithdrawal"
     [ ("expected network id", ppNetwork n)
-    , ("set reward address with wrong network id", ppSet pcRewardAcnt accnt)
+    , ("set reward address with wrong network id", ppSet pcRewardAccount accnt)
     ]
 ppAllegraUtxoPredFailure (Allegra.OutputTooSmallUTxO xs) =
   ppRecord
@@ -2506,7 +2506,7 @@ pcProposalProcedure (ProposalProcedure c rewacnt govact anch) =
   ppRecord
     "ProposalProcedure"
     [ ("Deposit", pcCoin c)
-    , ("ReturnAddr", pcRewardAcnt rewacnt)
+    , ("ReturnAddr", pcRewardAccount rewacnt)
     , ("GovAction", pcGovAction govact)
     , ("Anchor", pcAnchor anch)
     ]
@@ -2531,10 +2531,10 @@ instance PrettyA (VotingProcedure era) where
 
 -- ============================================================
 
-pcRewardAcnt :: RewardAccount c -> PDoc
-pcRewardAcnt (RewardAccount net cred) = ppSexp "RewAccnt" [pcNetwork net, pcCredential cred]
+pcRewardAccount :: RewardAccount c -> PDoc
+pcRewardAccount (RewardAccount net cred) = ppSexp "RewardAccount" [pcNetwork net, pcCredential cred]
 
-instance PrettyA (RewardAccount c) where prettyA = pcRewardAcnt
+instance PrettyA (RewardAccount c) where prettyA = pcRewardAccount
 
 pcExUnits :: ExUnits -> PDoc
 pcExUnits (ExUnits mem step) =
@@ -2718,7 +2718,7 @@ pcGovActionState gas@(GovActionState _ _ _ _ _ _ _ _ _) =
         , ("DRepVotes", ppMap pcCredential pcVote gasDRepVotes)
         , ("StakePoolVotes", ppMap pcKeyHash pcVote gasStakePoolVotes)
         , ("Deposit", pcCoin gasDeposit)
-        , ("Return Address", pcRewardAcnt gasReturnAddr)
+        , ("Return Address", pcRewardAccount gasReturnAddr)
         , ("Action", pcGovAction gasAction)
         , ("Proposed In", ppEpochNo gasProposedIn)
         , ("Expires After", ppEpochNo gasExpiresAfter)
@@ -2762,7 +2762,7 @@ pcGovAction x = case x of
   (TreasuryWithdrawals ws policy) ->
     ppRecord
       "TreasuryWithdrawals"
-      [ ("Withdrawals", ppMap pcRewardAcnt pcCoin ws)
+      [ ("Withdrawals", ppMap pcRewardAccount pcCoin ws)
       , ("Policy", ppStrictMaybe prettyA policy)
       ]
   (NoConfidence pgaid) ->
