@@ -8,12 +8,6 @@ module Test.Cardano.Ledger.Shelley.Imp.LedgerSpec (
 import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState (
-  esLStateL,
-  lsUTxOStateL,
-  nesEsL,
-  utxosUtxoL,
- )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Data.Map.Strict as Map
@@ -23,9 +17,6 @@ import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
-
-getUTxO :: ImpTestM era (UTxO era)
-getUTxO = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
 
 spec ::
   forall era.

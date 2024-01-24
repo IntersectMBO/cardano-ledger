@@ -49,6 +49,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   trySubmitTx,
   modifyNES,
   getsNES,
+  getUTxO,
   impAddNativeScript,
   impAnn,
   runImpRule,
@@ -550,7 +551,7 @@ lookupImpRootTxOut :: ImpTestM era (TxIn (EraCrypto era), TxOut era)
 lookupImpRootTxOut = do
   ImpTestState {impRootTxId} <- get
   let rootTxIn = TxIn impRootTxId $ TxIx 0
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  utxo <- getUTxO
   case txinLookup rootTxIn utxo of
     Nothing -> error "Root txId no longer points to an existing unspent output"
     Just rootTxOut -> pure (rootTxIn, rootTxOut)
@@ -573,7 +574,7 @@ addScriptTxWits ::
   Tx era ->
   ImpTestM era (Tx era, Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)))
 addScriptTxWits tx = do
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  utxo <- getUTxO
   ImpTestState {impScripts} <- get
   -- TODO: Add proper support for Plutus Scripts
   let scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
@@ -606,7 +607,7 @@ fixupFees ::
   ImpTestM era (Tx era)
 fixupFees tx nativeScriptKeyWits = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
   kpSpending <- lookupKeyPair =<< freshKeyHash
   kpStaking <- lookupKeyPair =<< freshKeyHash
@@ -914,6 +915,9 @@ modifyNES = (impNESL %=)
 -- | Get a value from the current new epoch state using the lens
 getsNES :: SimpleGetter (NewEpochState era) a -> ImpTestM era a
 getsNES l = gets . view $ impNESL . l
+
+getUTxO :: ImpTestM era (UTxO era)
+getUTxO = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
 
 submitTxAnn ::
   (HasCallStack, ShelleyEraImp era) =>

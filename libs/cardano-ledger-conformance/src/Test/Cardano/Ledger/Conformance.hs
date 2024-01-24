@@ -77,7 +77,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   totalObligation,
   utxosDepositedL,
   utxosGovStateL,
-  utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (Identity, UtxoEnv (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -115,6 +114,7 @@ import Test.Cardano.Ledger.Conway.ImpTest (
   ImpTestState,
   evalImpTestM,
   fixupTx,
+  getUTxO,
   getsNES,
   impAnn,
   impLastTickG,
@@ -717,7 +717,7 @@ spec = describe "Conway conformance tests" . withImpState $ do
 
 logTxSummary :: Tx Conway -> ImpTestM Conway ()
 logTxSummary tx = do
-  UTxO utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  UTxO utxo <- getUTxO
   let
     txb = tx ^. bodyTxL
     ins = toList $ txb ^. inputsTxBodyL
