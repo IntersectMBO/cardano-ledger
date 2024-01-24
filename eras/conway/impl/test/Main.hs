@@ -35,4 +35,5 @@ main =
         CostModelsSpec.spec @Conway
       describe "TxWits" $ do
         TxWitsSpec.spec @Conway
-      PlutusSpec.spec
+      describe "Plutus" $ do
+        PlutusSpec.spec

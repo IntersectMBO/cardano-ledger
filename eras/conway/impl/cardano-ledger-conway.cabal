@@ -115,7 +115,6 @@ library testlib
         Test.Cardano.Ledger.Conway.Imp.EnactSpec
         Test.Cardano.Ledger.Conway.Imp.GovSpec
         Test.Cardano.Ledger.Conway.TreeDiff
-        Test.Cardano.Ledger.Conway.Plutus.PlutusSpec
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -137,7 +136,7 @@ library testlib
         cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
         cardano-ledger-alonzo:testlib,
         cardano-ledger-binary,
-        cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
+        cardano-ledger-babbage:testlib,
         cardano-ledger-conway,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley,
@@ -156,6 +155,7 @@ test-suite tests
         Test.Cardano.Ledger.Conway.CommitteeRatifySpec
         Test.Cardano.Ledger.Conway.GenesisSpec
         Test.Cardano.Ledger.Conway.GovActionReorderSpec
+        Test.Cardano.Ledger.Conway.Plutus.PlutusSpec
         Paths_cardano_ledger_conway
 
     default-language: Haskell2010
@@ -172,6 +172,7 @@ test-suite tests
         cardano-ledger-allegra,
         cardano-ledger-alonzo:testlib,
         cardano-ledger-alonzo,
+        cardano-ledger-babbage,
         cardano-ledger-conway,
         cardano-ledger-shelley:testlib,
         cardano-ledger-core,
