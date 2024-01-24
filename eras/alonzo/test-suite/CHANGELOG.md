@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-alonzo-test`
 
+## 1.2.0.1
+
+*
+
 ## 1.2.0.0
 
-* Chnage type signature of `genTranslationInstance`. It no longer accepts a list of
+* Change type signature of `genTranslationInstance`. It no longer accepts a list of
   supported languages
 
 ## 1.1.2.7

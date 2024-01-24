@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.3.0.1
+
+*
+
 ## 1.3.0.0
 
 * Remove `ShelleyEraTxBody` superclass constraint on `AllegraEraTxBody`

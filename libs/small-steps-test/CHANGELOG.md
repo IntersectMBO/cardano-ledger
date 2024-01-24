@@ -1,5 +1,9 @@
 # Version history for `small-steps-test`
 
+## 1.0.1.1
+
+*
+
 ## 1.0.1.0
 
 * GHC-9.6 compatibility
