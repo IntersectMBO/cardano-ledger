@@ -708,7 +708,6 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
       isValid p l = case ppu ^. l of
         SJust x -> p x
         SNothing -> True
-
   hkdPoolVotingThresholdsL =
     lens (unTHKD . cppPoolVotingThresholds) $ \pp x -> pp {cppPoolVotingThresholds = THKD x}
   hkdDRepVotingThresholdsL =

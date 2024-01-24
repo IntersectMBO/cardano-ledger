@@ -70,6 +70,12 @@ import Cardano.Ledger.Conway.Governance (
   VotingProcedures (..),
   unGovActionIx,
  )
+import Cardano.Ledger.Conway.Plutus.Context (
+  ConwayEraPlutusTxInfo (toPlutusChangedParameters),
+  conwayPParamMap,
+  pparamUpdateFromData,
+  pparamUpdateToData,
+ )
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..), PlutusScript (..))
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxCert
@@ -78,6 +84,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Plutus.TxInfo (
   transBoundedRational,
   transCoinToLovelace,
@@ -296,7 +303,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
         , PV3.txInfoId = Alonzo.transTxBodyId txBody
         , PV3.txInfoVotes = transVotingProcedures (txBody ^. votingProceduresTxBodyL)
         , PV3.txInfoProposalProcedures =
-            map transProposal $ toList (txBody ^. proposalProceduresTxBodyL)
+            map (transProposal proxy) $ toList (txBody ^. proposalProceduresTxBodyL)
         , PV3.txInfoCurrentTreasuryAmount =
             strictMaybe Nothing (Just . transCoinToLovelace) $ txBody ^. currentTreasuryValueTxBodyL
         , PV3.txInfoTreasuryDonation =
@@ -366,7 +373,7 @@ transDRep = \case
   DRepAlwaysNoConfidence -> PV3.DRepAlwaysNoConfidence
 
 transScriptPurpose ::
-  (EraPlutusTxInfo l era, PlutusTxCert l ~ PV3.TxCert) =>
+  (ConwayEraPlutusTxInfo l era, PlutusTxCert l ~ PV3.TxCert) =>
   proxy l ->
   ConwayPlutusPurpose AsItem era ->
   Either (ContextError era) PV3.ScriptPurpose
@@ -380,7 +387,7 @@ transScriptPurpose proxy = \case
   ConwayVoting (AsItem voter) -> pure $ PV3.Voting (transVoter voter)
   ConwayProposing (AsItem proposal) ->
     -- TODO: fix the index. Reqiures adding index to AsItem.
-    pure $ PV3.Proposing 0 (transProposal proposal)
+    pure $ PV3.Proposing 0 (transProposal proxy proposal)
 
 transVoter :: Voter c -> PV3.Voter
 transVoter = \case
@@ -395,12 +402,12 @@ transGovActionId GovActionId {gaidTxId, gaidGovActionIx} =
     , PV3.gaidGovActionIx = toInteger $ unGovActionIx gaidGovActionIx
     }
 
-transGovAction :: GovAction era -> PV3.GovernanceAction
-transGovAction = \case
+transGovAction :: ConwayEraPlutusTxInfo l era => proxy l -> GovAction era -> PV3.GovernanceAction
+transGovAction proxy = \case
   ParameterChange pGovActionId ppu govPolicy ->
     PV3.ParameterChange
       (transPrevGovActionId pGovActionId)
-      (transPParamsUpdate ppu)
+      (toPlutusChangedParameters proxy ppu)
       (transGovPolicy govPolicy)
   HardForkInitiation pGovActionId protVer ->
     PV3.HardForkInitiation
@@ -423,10 +430,6 @@ transGovAction = \case
       (transConstitution constitution)
   InfoAction -> PV3.InfoAction
   where
-    -- TODO: make a new type class `ConwayEraPlutusTxInfo` with `toPlutusPParamsUpdate`
-    -- that can handle this across future eras.
-    transPParamsUpdate _ppu =
-      unimplemented
     transGovPolicy = \case
       SJust govPolicy -> Just (transScriptHash govPolicy)
       SNothing -> Nothing
@@ -435,7 +438,6 @@ transGovAction = \case
     transPrevGovActionId = \case
       SJust (GovPurposeId gaId) -> Just (transGovActionId gaId)
       SNothing -> Nothing
-    unimplemented = error "Unimplemented"
 
 transMap :: (t1 -> k) -> (t2 -> v) -> Map.Map t1 t2 -> PV3.Map k v
 transMap transKey transValue =
@@ -452,12 +454,16 @@ transVote = \case
   VoteYes -> PV3.VoteYes
   Abstain -> PV3.Abstain
 
-transProposal :: ProposalProcedure era -> PV3.ProposalProcedure
-transProposal ProposalProcedure {pProcDeposit, pProcReturnAddr, pProcGovAction} =
+transProposal ::
+  ConwayEraPlutusTxInfo l era =>
+  proxy l ->
+  ProposalProcedure era ->
+  PV3.ProposalProcedure
+transProposal proxy ProposalProcedure {pProcDeposit, pProcReturnAddr, pProcGovAction} =
   PV3.ProposalProcedure
     { PV3.ppDeposit = transCoinToLovelace pProcDeposit
     , PV3.ppReturnAddr = transRewardAccount pProcReturnAddr
-    , PV3.ppGovernanceAction = transGovAction pProcGovAction
+    , PV3.ppGovernanceAction = transGovAction proxy pProcGovAction
     }
 
 transPlutusPurposeV1V2 ::
@@ -488,3 +494,13 @@ transTxCertV1V2 txCert =
 transProtVer :: ProtVer -> PV3.ProtocolVersion
 transProtVer (ProtVer major minor) =
   PV3.ProtocolVersion (toInteger (getVersion64 major)) (toInteger minor)
+
+-- ==========================
+-- Instances
+
+instance Crypto c => ToPlutusData (PParamsUpdate (ConwayEra c)) where
+  toPlutusData = pparamUpdateToData conwayPParamMap
+  fromPlutusData = pparamUpdateFromData conwayPParamMap
+
+instance Crypto c => ConwayEraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
+  toPlutusChangedParameters _ x = PV3.ChangedParameters (PV3.dataToBuiltinData (toPlutusData x))

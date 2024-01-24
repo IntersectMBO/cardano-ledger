@@ -13,6 +13,7 @@ import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
 import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
+import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
@@ -34,3 +35,5 @@ main =
         CostModelsSpec.spec @Conway
       describe "TxWits" $ do
         TxWitsSpec.spec @Conway
+      describe "Plutus" $ do
+        PlutusSpec.spec

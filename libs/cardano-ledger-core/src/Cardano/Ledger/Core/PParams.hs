@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
@@ -70,6 +72,10 @@ module Cardano.Ledger.Core.PParams (
   downgradePParams,
   upgradePParamsUpdate,
   downgradePParamsUpdate,
+
+  -- * PParamsUpdate to Data
+  PParam (..),
+  makePParamMap,
 )
 where
 
@@ -85,12 +91,15 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..), NoUpdate (..))
+import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Data (Typeable)
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), U1, V1, type (:*:) (..))
 import GHC.Natural (Natural)
@@ -546,3 +555,14 @@ downgradePParamsUpdate ::
   PParamsUpdate (PreviousEra era)
 downgradePParamsUpdate args (PParamsUpdate pphkd) =
   PParamsUpdate (downgradePParamsHKD @_ @StrictMaybe args pphkd)
+
+-- =====================================================================================
+-- Tools for building ToPlutusData instances for (PParamUpdates era).
+
+-- | Pair the tag, and exisitenially hide the type of the lens for the field with that Lens'
+data PParam era where
+  PParam :: ToPlutusData t => Word -> Lens' (PParamsUpdate era) (StrictMaybe t) -> PParam era
+
+-- | Turn a list into a Map, this assures we have no duplicates.
+makePParamMap :: [PParam era] -> Map Word (PParam era)
+makePParamMap xs = Map.fromList [(n, p) | p@(PParam n _) <- xs]

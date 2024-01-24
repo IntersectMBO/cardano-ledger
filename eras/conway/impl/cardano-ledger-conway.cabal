@@ -45,6 +45,7 @@ library
         Cardano.Ledger.Conway.Core
         Cardano.Ledger.Conway.TxCert
         Cardano.Ledger.Conway.UTxO
+        Cardano.Ledger.Conway.Plutus.Context
 
     hs-source-dirs:   src
     other-modules:
@@ -154,6 +155,7 @@ test-suite tests
         Test.Cardano.Ledger.Conway.CommitteeRatifySpec
         Test.Cardano.Ledger.Conway.GenesisSpec
         Test.Cardano.Ledger.Conway.GovActionReorderSpec
+        Test.Cardano.Ledger.Conway.Plutus.PlutusSpec
         Paths_cardano_ledger_conway
 
     default-language: Haskell2010
@@ -170,6 +172,7 @@ test-suite tests
         cardano-ledger-allegra,
         cardano-ledger-alonzo:testlib,
         cardano-ledger-alonzo,
+        cardano-ledger-babbage,
         cardano-ledger-conway,
         cardano-ledger-shelley:testlib,
         cardano-ledger-core,
