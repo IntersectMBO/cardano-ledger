@@ -22,7 +22,7 @@ module Cardano.Ledger.Conway.Rules.Epoch (
 )
 where
 
-import Cardano.Ledger.Address (RewardAccount (getRwdCred))
+import Cardano.Ledger.Address (RewardAccount (raCredential))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.CertState (
   CertState (..),
@@ -182,7 +182,7 @@ returnProposalDeposits removedProposals =
         addReward m' GovActionState {..} =
           Map.insertWith
             (<>)
-            (getRwdCred gasReturnAddr)
+            (raCredential gasReturnAddr)
             (compactCoinOrError gasDeposit) -- Deposits have been validated at this point
             m'
 

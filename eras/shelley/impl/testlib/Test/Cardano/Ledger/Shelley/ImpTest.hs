@@ -541,7 +541,7 @@ runShelleyBase globals act = runIdentity $ runReaderT act globals
 getRewardAccountAmount :: RewardAccount (EraCrypto era) -> ImpTestM era Coin
 getRewardAccountAmount rewardAcount = do
   umap <- getsNES $ nesEsL . epochStateUMapL
-  let cred = getRwdCred rewardAcount
+  let cred = raCredential rewardAcount
   case UMap.lookup cred (RewDepUView umap) of
     Nothing -> assertFailure $ "Expected a reward account: " ++ show cred
     Just RDPair {rdReward} -> pure $ fromCompact rdReward

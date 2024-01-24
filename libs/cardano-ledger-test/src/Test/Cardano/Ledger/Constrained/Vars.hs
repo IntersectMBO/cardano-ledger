@@ -1345,7 +1345,7 @@ txterm = Var $ V "txterm" (TxR reify) No
 -- Lenses for use in TxBody
 
 getRwdCredL :: Lens' (RewardAccount c) (Credential 'Staking c)
-getRwdCredL = lens getRwdCred (\r c -> r {getRwdCred = c})
+getRwdCredL = lens raCredential (\r c -> r {raCredential = c})
 
 txOutFL :: Lens' (TxOutF era) (TxOut era)
 txOutFL = lens unTxOut (\(TxOutF p _) y -> TxOutF p y)

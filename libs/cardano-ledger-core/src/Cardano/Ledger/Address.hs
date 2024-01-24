@@ -24,7 +24,7 @@ module Cardano.Ledger.Address (
   bootstrapAddressAttrsSize,
   isBootstrapRedeemer,
   getNetwork,
-  RewardAccount (.., RewardAcnt),
+  RewardAccount (.., RewardAcnt, getRwdNetwork, getRwdCred),
   serialiseRewardAccount,
   deserialiseRewardAccount,
   bootstrapKeyHash,
@@ -212,13 +212,16 @@ addrPtrNormalize = \case
 
 -- | An account based address for rewards
 data RewardAccount c = RewardAccount
-  { getRwdNetwork :: !Network
-  , getRwdCred :: !(Credential 'Staking c)
+  { raNetwork :: !Network
+  , raCredential :: !(Credential 'Staking c)
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
 pattern RewardAcnt :: Network -> Credential 'Staking c -> RewardAccount c
-pattern RewardAcnt a b = RewardAccount a b
+pattern RewardAcnt {getRwdNetwork, getRwdCred} = RewardAccount getRwdNetwork getRwdCred
+
+{-# DEPRECATED getRwdNetwork "In favor of `raNetwork`" #-}
+{-# DEPRECATED getRwdCred "In favor of `raCredential`" #-}
 
 {-# COMPLETE RewardAcnt #-}
 
@@ -232,8 +235,8 @@ instance Crypto c => Default (RewardAcnt c) where
 instance Crypto c => ToJSON (RewardAcnt c) where
   toJSON ra =
     Aeson.object
-      [ "network" .= getRwdNetwork ra
-      , "credential" .= getRwdCred ra
+      [ "network" .= raNetwork ra
+      , "credential" .= raCredential ra
       ]
 
 instance Crypto c => FromJSON (RewardAcnt c) where

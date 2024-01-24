@@ -446,7 +446,7 @@ rewardOnePool
           then Map.insertWith (<>)
           else Map.insert
       potentialRewards =
-        f (getRwdCred $ ppRewardAccount pool) lReward mRewards
+        f (raCredential $ ppRewardAccount pool) lReward mRewards
       potentialRewards' =
         if HardForks.forgoRewardPrefilter pv
           then potentialRewards

@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Rename `RewardAccount` fields `getRwdNetwork` and `getRwdCred` to `raNetwork` and `raCredential` respectively
 * Deprecate `prAcnt` in favor of `prAccountState`
 * Deprecate `RewardAcnt` in favor of `RewardAccount`
 

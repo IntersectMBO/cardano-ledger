@@ -25,7 +25,7 @@ module Cardano.Ledger.Shelley.Rules.Pool (
 where
 
 import Cardano.Crypto.Hash.Class (sizeHash)
-import Cardano.Ledger.Address (getRwdNetwork)
+import Cardano.Ledger.Address (raNetwork)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
   Network,
@@ -177,7 +177,7 @@ poolCertTransition (PoolEnv slot pp) ps@PState {psStakePoolParams, psFutureStake
     let pv = pp ^. ppProtocolVersionL
     when (HardForks.validatePoolRewardAccountNetID pv) $ do
       actualNetID <- liftSTS $ asks networkId
-      let suppliedNetID = getRwdNetwork ppRewardAccount
+      let suppliedNetID = raNetwork ppRewardAccount
       actualNetID == suppliedNetID ?! WrongNetworkPOOL actualNetID suppliedNetID ppId
 
     when (SoftForks.restrictPoolMetadataHash pv) $

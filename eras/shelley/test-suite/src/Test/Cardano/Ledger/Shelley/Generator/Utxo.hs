@@ -798,7 +798,7 @@ genWithdrawals
         selectedWrdls <- map toRewardAcnt <$> QC.sublistOf withdrawals_
         let txwits =
               mkWithdrawalsWits @era ksIndexedStakeScripts ksIndexedStakingKeys
-                . getRwdCred
+                . raCredential
                 . fst
                 <$> selectedWrdls
         return (selectedWrdls, Either.partitionEithers txwits)

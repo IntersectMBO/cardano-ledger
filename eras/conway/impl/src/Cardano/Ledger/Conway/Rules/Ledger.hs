@@ -277,7 +277,7 @@ ledgerTransition = do
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
         let wdrlAddrs = Map.keysSet . unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
-            wdrlCreds = Set.map getRwdCred wdrlAddrs
+            wdrlCreds = Set.map raCredential wdrlAddrs
             dUnified = dsUnified $ certDState certStateAfterCERTS
             delegatedAddrs = DRepUView dUnified
 

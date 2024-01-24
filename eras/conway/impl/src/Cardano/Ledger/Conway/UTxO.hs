@@ -72,7 +72,7 @@ getConwayScriptsNeeded (UTxO utxo) txBody =
       where
         withdrawals = unWithdrawals $ txBody ^. withdrawalsTxBodyL
         fromRewardAccount rewardAccount = do
-          hash <- credScriptHash $ getRwdCred rewardAccount
+          hash <- credScriptHash $ raCredential rewardAccount
           return (ConwayRewarding (AsItem rewardAccount), hash)
 
     certifying =

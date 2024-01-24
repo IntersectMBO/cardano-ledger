@@ -87,7 +87,7 @@ showListy :: Foldable t => (a -> String) -> t a -> String
 showListy showElem list = unlines (map showElem (toList list))
 
 showRewardAcct :: RewardAccount c -> [Char]
-showRewardAcct (RewardAccount {getRwdNetwork = network, getRwdCred = cred}) =
+showRewardAcct (RewardAccount {raNetwork = network, raCredential = cred}) =
   show network ++ " " ++ showCred cred
 
 showWithdrawal :: Withdrawals c -> String

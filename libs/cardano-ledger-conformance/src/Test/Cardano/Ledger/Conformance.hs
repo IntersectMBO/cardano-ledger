@@ -484,7 +484,7 @@ instance SpecTranslate (Credential k c) where
 instance SpecTranslate (RewardAccount c) where
   type SpecRep (RewardAccount c) = SpecRep (Credential 'Staking c)
 
-  toSpecRep = toSpecRep . getRwdCred
+  toSpecRep = toSpecRep . raCredential
 
 instance SpecTranslate (PoolParams era) where
   type SpecRep (PoolParams era) = Agda.PoolParams

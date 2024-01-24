@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Rename `RewardAccount` fields `getRwdNetwork` and `getRwdCred` to `raNetwork` and `raCredential` respectively
 * Deprecate `deserialiseRewardAcnt` in favor of `deserialiseRewardAccount`
 * Deprecate `serialiseRewardAcnt` in favor of `serialiseRewardAccount`
 * Deprecate `RewardAcnt` in favor of `RewardAccount`

@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (Addr (..), getRwdCred, pattern RewardAccount)
+import Cardano.Ledger.Address (Addr (..), raCredential, pattern RewardAccount)
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (
@@ -464,7 +464,7 @@ testEmptyInputSet =
           SNothing
       txwits = mempty {addrWits = mkWitnessesVKey (hashAnnotated txb) [aliceStake]}
       tx = ShelleyTx txb txwits SNothing
-      dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
+      dpState' = addReward dpState (raCredential $ mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
    in testLEDGER
         (LedgerState utxoState dpState')
         tx
@@ -555,7 +555,7 @@ testWithdrawalNoWit =
       errs =
         [ UtxowFailure $ MissingVKeyWitnessesUTXOW missing
         ]
-      dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
+      dpState' = addReward dpState (raCredential $ mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testWithdrawalWrongAmt :: Assertion
@@ -582,7 +582,7 @@ testWithdrawalWrongAmt =
                 [asWitness alicePay, asWitness bobStake]
           }
       rAcnt = mkVKeyRwdAcnt Testnet bobStake
-      dpState' = addReward dpState (getRwdCred rAcnt) (Coin 10)
+      dpState' = addReward dpState (raCredential rAcnt) (Coin 10)
       tx = ShelleyTx @C txb txwits SNothing
       errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)

@@ -79,7 +79,7 @@ enactmentTransition = do
           & ensPrevHardForkL .~ SJust (GovPurposeId govActionId)
     TreasuryWithdrawals wdrls _ -> do
       let wdrlsAmount = fold wdrls
-          wdrlsNoNetworkId = Map.mapKeys getRwdCred wdrls
+          wdrlsNoNetworkId = Map.mapKeys raCredential wdrls
       pure
         st
           { ensWithdrawals = Map.unionWith (<>) wdrlsNoNetworkId $ ensWithdrawals st

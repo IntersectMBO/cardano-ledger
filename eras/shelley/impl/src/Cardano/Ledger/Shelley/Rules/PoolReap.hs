@@ -25,7 +25,7 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
 )
 where
 
-import Cardano.Ledger.Address (RewardAccount, getRwdCred)
+import Cardano.Ledger.Address (RewardAccount, raCredential)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.CertState (VState)
 import Cardano.Ledger.Coin (Coin)
@@ -166,7 +166,7 @@ poolReapTransition = do
     (refunds, mRefunds) =
       Map.partitionWithKey
         (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
-        (Map.mapKeys getRwdCred rewardAcnts')
+        (Map.mapKeys raCredential rewardAcnts')
     refunded = fold refunds
     unclaimed = fold mRefunds
 
@@ -174,7 +174,7 @@ poolReapTransition = do
     let rewardAcntsWithPool =
           Map.foldlWithKey'
             ( \acc sp (ra, coin) ->
-                Map.insertWith (Map.unionWith (<>)) (getRwdCred ra) (Map.singleton sp coin) acc
+                Map.insertWith (Map.unionWith (<>)) (raCredential ra) (Map.singleton sp coin) acc
             )
             Map.empty
             rewardAcnts_

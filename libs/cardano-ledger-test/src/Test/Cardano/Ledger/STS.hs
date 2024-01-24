@@ -279,7 +279,7 @@ genPoolCert net epochNo pParams pState =
 
     maxMetaLen = fromIntegral (sizeHash ([] @(CC.HASH StandardCrypto)))
 
-    adjustRewardAcnt rwd = rwd {getRwdNetwork = net}
+    adjustRewardAcnt rwd = rwd {raNetwork = net}
     adjustMetadata SNothing = SNothing
     adjustMetadata (SJust m) = SJust $ m {pmHash = BS.take maxMetaLen (pmHash m)}
 

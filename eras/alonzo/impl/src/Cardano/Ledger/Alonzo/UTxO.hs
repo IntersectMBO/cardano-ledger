@@ -38,7 +38,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
-import Cardano.Ledger.Shelley.TxBody (getRwdCred)
+import Cardano.Ledger.Shelley.TxBody (raCredential)
 import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeeded, shelleyProducedValue)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UTxO (
@@ -230,7 +230,7 @@ getAlonzoScriptsNeeded (UTxO utxo) txBody =
       where
         withdrawals = unWithdrawals $ txBody ^. withdrawalsTxBodyL
         fromRewardAccount rewardAccount = do
-          hash <- credScriptHash $ getRwdCred rewardAccount
+          hash <- credScriptHash $ raCredential rewardAccount
           return (AlonzoRewarding (AsItem rewardAccount), hash)
 
     !cert =

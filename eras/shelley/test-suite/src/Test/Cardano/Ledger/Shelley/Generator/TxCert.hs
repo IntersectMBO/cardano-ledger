@@ -250,7 +250,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
              in ((&&) <$> registered <*> zeroRewards) cred
         )
         scripts
-    zeroRewards k = case UM.lookup (getRwdCred $ RewardAccount Testnet k) (rewards dState) of
+    zeroRewards k = case UM.lookup (raCredential $ RewardAccount Testnet k) (rewards dState) of
       Nothing -> False
       Just (UM.RDPair ccoin _) -> ccoin == UM.CompactCoin 0
 

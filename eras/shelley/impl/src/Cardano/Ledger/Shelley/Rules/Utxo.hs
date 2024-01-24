@@ -43,7 +43,7 @@ import Cardano.Ledger.Address (
   Addr (..),
   bootstrapAddressAttrsSize,
   getNetwork,
-  getRwdNetwork,
+  raNetwork,
  )
 import Cardano.Ledger.BaseTypes (Inject (..), Network, ShelleyBase, StrictMaybe, invalidKey, networkId)
 import Cardano.Ledger.Binary (
@@ -521,7 +521,7 @@ validateWrongNetworkWithdrawal netId txb =
   where
     withdrawalsWrongNetwork =
       filter
-        (\a -> getRwdNetwork a /= netId)
+        (\a -> raNetwork a /= netId)
         (Map.keys . unWithdrawals $ txb ^. withdrawalsTxBodyL)
 
 -- | Ensure that value consumed and produced matches up exactly

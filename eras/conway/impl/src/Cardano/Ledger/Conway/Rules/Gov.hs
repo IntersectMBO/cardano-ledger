@@ -22,7 +22,7 @@ module Cardano.Ledger.Conway.Rules.Gov (
   ConwayGovPredFailure (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAccount, getRwdNetwork)
+import Cardano.Ledger.Address (RewardAccount, raNetwork)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
@@ -330,7 +330,7 @@ govTransition = do
                 ?! ProposalDepositIncorrect pProcDeposit expectedDep
 
         -- Return address network id check
-        getRwdNetwork pProcReturnAddr
+        raNetwork pProcReturnAddr
           == expectedNetworkId
             ?! ProposalProcedureNetworkIdMismatch pProcReturnAddr expectedNetworkId
 
@@ -338,7 +338,7 @@ govTransition = do
         case pProcGovAction of
           TreasuryWithdrawals wdrls proposalPolicy ->
             let mismatchedAccounts =
-                  Set.filter ((/= expectedNetworkId) . getRwdNetwork) $ Map.keysSet wdrls
+                  Set.filter ((/= expectedNetworkId) . raNetwork) $ Map.keysSet wdrls
              in do
                   Set.null mismatchedAccounts
                     ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId
