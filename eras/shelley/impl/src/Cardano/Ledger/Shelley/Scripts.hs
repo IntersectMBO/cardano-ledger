@@ -43,7 +43,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Encode (..), (!>))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, HASH)
-import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash (..), KeyRole (Witness))
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.MemoBytes (
   EqRaw (..),
@@ -217,5 +217,5 @@ evalMultiSig vhks = go
 -- | Script validator for native multi-signature scheme.
 validateMultiSig :: EraTx era => Tx era -> MultiSig era -> Bool
 validateMultiSig tx =
-  evalMultiSig $ Set.map (coerceKeyRole . witVKeyHash) (tx ^. witsTxL . addrTxWitsL)
+  evalMultiSig $ Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)
 {-# INLINE validateMultiSig #-}
