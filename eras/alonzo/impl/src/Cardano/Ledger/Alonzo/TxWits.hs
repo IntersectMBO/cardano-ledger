@@ -76,6 +76,7 @@ import Cardano.Ledger.Binary (
   Decoder,
   EncCBOR (..),
   EncCBORGroup (..),
+  Encoding,
   ToCBOR (..),
   allowTag,
   decodeList,
@@ -275,14 +276,14 @@ isEmptyTxWitness (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers e)) =
   Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
 -- =====================================================
-newtype TxDatsRaw era = TxDatsRaw (Map (DataHash (EraCrypto era)) (Data era))
+newtype TxDatsRaw era = TxDatsRaw {unTxDatsRaw :: Map (DataHash (EraCrypto era)) (Data era)}
   deriving (Generic, Typeable, Eq)
   deriving newtype (NoThunks, NFData)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TxDatsRaw era)
 
 instance (Typeable era, EncCBOR (Data era)) => EncCBOR (TxDatsRaw era) where
-  encCBOR (TxDatsRaw m) = encCBOR $ Map.elems m
+  encCBOR = encodeWithSetTag . Map.elems . unTxDatsRaw
 
 pattern TxDats' :: Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
 pattern TxDats' m <- (getMemoRawType -> TxDatsRaw m)
@@ -306,7 +307,11 @@ instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
   decCBOR =
     ifDecoderVersionAtLeast
       (natVersion @9)
-      (mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (TxDatsRaw . keyBy hashData . NE.toList))
+      ( allowTag setTag
+          >> mapTraverseableDecoderA
+            (decodeNonEmptyList decCBOR)
+            (TxDatsRaw . keyBy hashData . NE.toList)
+      )
       (mapTraverseableDecoderA (decodeList decCBOR) (TxDatsRaw . keyBy hashData))
   {-# INLINE decCBOR #-}
 
@@ -508,11 +513,6 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
         !> Omit nullDats (Key 4 $ To dats)
         !> Omit nullRedeemers (Key 5 $ To rdmrs)
     where
-      encodeWithSetTag xs =
-        ifEncodingVersionAtLeast
-          (natVersion @9)
-          (encodeTag setTag <> encCBOR xs)
-          (encCBOR xs)
       encodePlutus ::
         PlutusLanguage l =>
         SLanguage l ->
@@ -700,3 +700,10 @@ mapTraverseableDecoderA ::
   (f a -> m b) ->
   Decoder s (Annotator (m b))
 mapTraverseableDecoderA decList transformList = fmap transformList . sequence <$> decList
+
+encodeWithSetTag :: EncCBOR a => a -> Encoding
+encodeWithSetTag xs =
+  ifEncodingVersionAtLeast
+    (natVersion @9)
+    (encodeTag setTag <> encCBOR xs)
+    (encCBOR xs)
