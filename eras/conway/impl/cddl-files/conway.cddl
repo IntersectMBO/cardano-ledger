@@ -431,7 +431,7 @@ drep_voting_thresholds =
 
 transaction_witness_set =
   { ? 0: nonempty_set<vkeywitness>
-  , ? 1: [+ native_script ]
+  , ? 1: nonempty_set<native_script>
   , ? 2: nonempty_set<bootstrap_witness>
   , ? 3: nonempty_set<plutus_v1_script>
   , ? 4: [+ plutus_data ]

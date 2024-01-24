@@ -499,7 +499,7 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
           null
           ( Key 1 $
               E
-                (encCBOR . mapMaybe getNativeScript . Map.elems)
+                (encodeWithSetTag . mapMaybe getNativeScript . Map.elems)
                 (Map.filter isNativeScript scripts)
           )
         !> Omit null (Key 3 $ encodePlutus SPlutusV1)
@@ -508,19 +508,18 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
         !> Omit nullDats (Key 4 $ To dats)
         !> Omit nullRedeemers (Key 5 $ To rdmrs)
     where
+      encodeWithSetTag xs =
+        ifEncodingVersionAtLeast
+          (natVersion @9)
+          (encodeTag setTag <> encCBOR xs)
+          (encCBOR xs)
       encodePlutus ::
         PlutusLanguage l =>
         SLanguage l ->
         Encode ('Closed 'Dense) (Map.Map (ScriptHash (EraCrypto era)) (Plutus l))
       encodePlutus slang =
         E
-          ( \m ->
-              let enc = encCBOR . map plutusBinary $ Map.elems m
-               in ifEncodingVersionAtLeast
-                    (natVersion @9)
-                    (encodeTag setTag <> enc)
-                    enc
-          )
+          (encodeWithSetTag . encCBOR . map plutusBinary . Map.elems)
           (Map.mapMaybe (toPlutusScript >=> toPlutusSLanguage slang) scripts)
       toScript ::
         forall l h. PlutusLanguage l => Map.Map h (Plutus l) -> Map.Map h (Script era)
@@ -628,7 +627,9 @@ instance
       nativeScriptsDecoder =
         ifDecoderVersionAtLeast
           (natVersion @9)
-          (mapTraverseableDecoderA (decodeNonEmptyList pairDecoder) (Map.fromList . NE.toList))
+          ( allowTag setTag
+              >> mapTraverseableDecoderA (decodeNonEmptyList pairDecoder) (Map.fromList . NE.toList)
+          )
           (mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList)
         where
           pairDecoder :: Decoder s (Annotator (ScriptHash (EraCrypto era), Script era))
