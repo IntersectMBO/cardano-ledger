@@ -42,6 +42,7 @@ import Cardano.Slotting.Slot (EpochNo, EpochSize, SlotNo, WithOrigin)
 import Cardano.Slotting.Time (SystemStart)
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (..))
+import Control.Monad (when)
 import Data.Fixed (Nano, Pico)
 import Data.Foldable as F
 import Data.IP (IPv4, IPv6)
@@ -310,8 +311,11 @@ spec = do
           \xs sxs -> xs `shouldBe` F.toList sxs
         embedTripSpec v v (cborTrip @(SSeq.StrictSeq Word) @[Word]) $
           \xs sxs -> xs `shouldBe` F.toList sxs
-        embedTripSpec v v (cborTrip @(Set.Set Word) @[Word]) $
-          \xs sxs -> xs `shouldBe` Set.toList sxs
+        when (v < natVersion @9) $ do
+          -- Starting with version 9 Set is prefixed with tag 258, which prevents it from
+          -- being deserialized into a list.
+          embedTripSpec v v (cborTrip @(Set.Set Word) @[Word]) $
+            \xs sxs -> xs `shouldBe` Set.toList sxs
         embedTripSpec v v (cborTrip @(VMap.VMap VMap.VP VMap.VP Word Int) @(Map.Map Word Int)) $
           \xs sxs -> xs `shouldBe` VMap.toMap sxs
     forM_ [minBound .. natVersion @8] $ \v ->

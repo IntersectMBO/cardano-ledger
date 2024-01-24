@@ -468,16 +468,24 @@ variableListLenEncoding len contents =
 
 -- | Encode a Set. Versions variance:
 --
+-- * [>= 9] - Variable length encoding for Sets larger than 23 elements, otherwise exact
+--   length encoding. Prefixes with a special 258 `setTag`.
+--
 -- * [>= 2] - Variable length encoding for Sets larger than 23 elements, otherwise exact
 --   length encoding
 --
--- * [< 2] - Variable length encoding. Also prefixes with a special 258 tag.
+-- * [< 2] - Variable length encoding. Prefixes with a special 258 `setTag`.
 encodeSet :: (a -> Encoding) -> Set.Set a -> Encoding
 encodeSet encodeValue f =
   let foldableEncoding = foldMap' encodeValue f
+      varLenSetEncoding = variableListLenEncoding (Set.size f) foldableEncoding
    in ifEncodingVersionAtLeast
         (natVersion @2)
-        (variableListLenEncoding (Set.size f) foldableEncoding)
+        ( ifEncodingVersionAtLeast
+            (natVersion @9)
+            (encodeTag setTag <> varLenSetEncoding)
+            varLenSetEncoding
+        )
         (encodeTag setTag <> exactListLenEncoding (Set.size f) foldableEncoding)
 {-# INLINE encodeSet #-}
 

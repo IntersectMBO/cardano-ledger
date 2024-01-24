@@ -1,18 +1,21 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Data.OSet.StrictSpec where
 
+import Cardano.Ledger.Binary (natVersion)
+import Control.Monad (forM_)
 import Data.OSet.Strict hiding (empty)
 import Data.Proxy
 import Data.Sequence.Strict (StrictSeq, fromList, (><))
 import Data.Set (Set, elems, empty)
 import Test.Cardano.Data.Arbitrary ()
-import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborSpec)
+import Test.Cardano.Ledger.Binary.RoundTrip (cborTrip, embedTripSpec, roundTripCborSpec)
 import Test.Hspec
 import Test.Hspec.QuickCheck
-import Test.QuickCheck.Classes.Base
+import Test.QuickCheck.Classes
 
 spec :: Spec
 spec =
@@ -82,15 +85,19 @@ spec =
     context "CBOR round-trip" $ do
       roundTripCborSpec @(OSet Int)
       roundTripCborSpec @(OSet (OSet Int))
+      forM_ [natVersion @9 .. maxBound] $ \v -> do
+        embedTripSpec v v (cborTrip @(Set Word) @(OSet Word)) $
+          \oset set -> set `shouldBe` toSet oset
+        embedTripSpec v v (cborTrip @(OSet Word) @(Set Word)) $
+          \set oset -> toSet oset `shouldBe` set
     context "Typeclass laws" $ do
       it "Type" $
         lawsCheckOne
           (Proxy :: Proxy (OSet Int))
-          [ isListLaws
+          [ eqLaws
+          , ordLaws
+          , isListLaws
           , semigroupLaws
           , monoidLaws
           , semigroupMonoidLaws
           ]
-
--- it "Type -> Type" $ do
---   lawsCheck $ foldableLaws (Proxy :: Proxy OSet)

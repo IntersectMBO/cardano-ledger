@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Binary.Decoding.Annotated (
@@ -28,11 +30,15 @@ where
 import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (..))
 import Cardano.Ledger.Binary.Decoding.Decoder (
   Decoder,
+  allowTag,
   decodeList,
   decodeWithByteSpan,
   fromPlainDecoder,
+  setTag,
+  whenDecoderVersionAtLeast,
  )
 import Cardano.Ledger.Binary.Encoding (EncCBOR, Version, serialize')
+import Cardano.Ledger.Binary.Version (natVersion)
 import Codec.CBOR.Read (ByteOffset)
 import qualified Codec.Serialise as Serialise (decode)
 import Control.DeepSeq (NFData)
@@ -192,6 +198,8 @@ withSlice dec = do
 -- order to enforce no duplicates.
 decodeAnnSet :: Ord t => Decoder s (Annotator t) -> Decoder s (Annotator (Set.Set t))
 decodeAnnSet dec = do
+  whenDecoderVersionAtLeast (natVersion @9) $
+    allowTag setTag
   xs <- decodeList dec
   pure (Set.fromList <$> sequence xs)
 {-# INLINE decodeAnnSet #-}

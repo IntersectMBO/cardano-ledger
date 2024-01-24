@@ -19,7 +19,7 @@ import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck (Arbitrary)
 import Test.QuickCheck.Arbitrary (Arbitrary (arbitrary))
-import Test.QuickCheck.Classes.Base
+import Test.QuickCheck.Classes
 import Prelude hiding (elem, filter, lookup, null)
 
 spec :: Spec
@@ -148,7 +148,8 @@ spec =
       it "Type" $
         lawsCheckOne
           (Proxy :: Proxy (OMap Int Int))
-          [ isListLaws
+          [ eqLaws
+          , isListLaws
           , semigroupLaws
           , monoidLaws
           , semigroupMonoidLaws

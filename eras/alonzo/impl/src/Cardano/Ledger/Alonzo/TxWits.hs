@@ -76,6 +76,7 @@ import Cardano.Ledger.Binary (
   Decoder,
   EncCBOR (..),
   EncCBORGroup (..),
+  Encoding,
   ToCBOR (..),
   allowTag,
   decodeList,
@@ -275,14 +276,14 @@ isEmptyTxWitness (getMemoRawType -> AlonzoTxWitsRaw a b c d (Redeemers e)) =
   Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
 -- =====================================================
-newtype TxDatsRaw era = TxDatsRaw (Map (DataHash (EraCrypto era)) (Data era))
+newtype TxDatsRaw era = TxDatsRaw {unTxDatsRaw :: Map (DataHash (EraCrypto era)) (Data era)}
   deriving (Generic, Typeable, Eq)
   deriving newtype (NoThunks, NFData)
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (TxDatsRaw era)
 
 instance (Typeable era, EncCBOR (Data era)) => EncCBOR (TxDatsRaw era) where
-  encCBOR (TxDatsRaw m) = encCBOR $ Map.elems m
+  encCBOR = encodeWithSetTag . Map.elems . unTxDatsRaw
 
 pattern TxDats' :: Map (DataHash (EraCrypto era)) (Data era) -> TxDats era
 pattern TxDats' m <- (getMemoRawType -> TxDatsRaw m)
@@ -306,7 +307,11 @@ instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
   decCBOR =
     ifDecoderVersionAtLeast
       (natVersion @9)
-      (mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (TxDatsRaw . keyBy hashData . NE.toList))
+      ( allowTag setTag
+          >> mapTraverseableDecoderA
+            (decodeNonEmptyList decCBOR)
+            (TxDatsRaw . keyBy hashData . NE.toList)
+      )
       (mapTraverseableDecoderA (decodeList decCBOR) (TxDatsRaw . keyBy hashData))
   {-# INLINE decCBOR #-}
 
@@ -499,7 +504,7 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
           null
           ( Key 1 $
               E
-                (encCBOR . mapMaybe getNativeScript . Map.elems)
+                (encodeWithSetTag . mapMaybe getNativeScript . Map.elems)
                 (Map.filter isNativeScript scripts)
           )
         !> Omit null (Key 3 $ encodePlutus SPlutusV1)
@@ -514,13 +519,7 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
         Encode ('Closed 'Dense) (Map.Map (ScriptHash (EraCrypto era)) (Plutus l))
       encodePlutus slang =
         E
-          ( \m ->
-              let enc = encCBOR . map plutusBinary $ Map.elems m
-               in ifEncodingVersionAtLeast
-                    (natVersion @9)
-                    (encodeTag setTag <> enc)
-                    enc
-          )
+          (encodeWithSetTag . encCBOR . map plutusBinary . Map.elems)
           (Map.mapMaybe (toPlutusScript >=> toPlutusSLanguage slang) scripts)
       toScript ::
         forall l h. PlutusLanguage l => Map.Map h (Plutus l) -> Map.Map h (Script era)
@@ -593,7 +592,9 @@ instance
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                (mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList))
+                ( allowTag setTag
+                    >> mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList)
+                )
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
       txWitnessField 1 =
@@ -606,7 +607,9 @@ instance
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                (mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList))
+                ( allowTag setTag
+                    >> mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList)
+                )
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
       txWitnessField 3 = fieldA addScripts (decodePlutus SPlutusV1)
@@ -624,7 +627,9 @@ instance
       nativeScriptsDecoder =
         ifDecoderVersionAtLeast
           (natVersion @9)
-          (mapTraverseableDecoderA (decodeNonEmptyList pairDecoder) (Map.fromList . NE.toList))
+          ( allowTag setTag
+              >> mapTraverseableDecoderA (decodeNonEmptyList pairDecoder) (Map.fromList . NE.toList)
+          )
           (mapTraverseableDecoderA (decodeList pairDecoder) Map.fromList)
         where
           pairDecoder :: Decoder s (Annotator (ScriptHash (EraCrypto era), Script era))
@@ -695,3 +700,10 @@ mapTraverseableDecoderA ::
   (f a -> m b) ->
   Decoder s (Annotator (m b))
 mapTraverseableDecoderA decList transformList = fmap transformList . sequence <$> decList
+
+encodeWithSetTag :: EncCBOR a => a -> Encoding
+encodeWithSetTag xs =
+  ifEncodingVersionAtLeast
+    (natVersion @9)
+    (encodeTag setTag <> encCBOR xs)
+    (encCBOR xs)
