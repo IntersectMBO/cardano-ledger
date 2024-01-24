@@ -593,7 +593,9 @@ instance
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                (mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList))
+                ( allowTag setTag
+                    >> mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList)
+                )
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
       txWitnessField 1 =
@@ -606,7 +608,9 @@ instance
           ( D $
               ifDecoderVersionAtLeast
                 (natVersion @9)
-                (mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList))
+                ( allowTag setTag
+                    >> mapTraverseableDecoderA (decodeNonEmptyList decCBOR) (Set.fromList . NE.toList)
+                )
                 (mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
           )
       txWitnessField 3 = fieldA addScripts (decodePlutus SPlutusV1)
