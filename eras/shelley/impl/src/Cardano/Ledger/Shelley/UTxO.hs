@@ -113,7 +113,7 @@ scriptsNeeded u tx =
     ShelleyScriptsNeeded sn -> sn
 {-# DEPRECATED scriptsNeeded "In favor of `getScriptsNeeded`" #-}
 
--- | Compute the subset of inputs of the set 'txInps' for which each input is
+-- | Compute the subset of inputs of the set 'txIns' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScriptHashes ::
   EraTxOut era =>
