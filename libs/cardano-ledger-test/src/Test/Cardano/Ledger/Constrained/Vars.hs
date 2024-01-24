@@ -2124,8 +2124,8 @@ gaPParamsUpdate = Var (V "gsPParamsUpdate" (PParamsUpdateR reify) No)
 gaProtVer :: Reflect era => Term era ProtVer
 gaProtVer = Var (V "gaProtVer" (ProtVerR reify) No)
 
-gaRewardAcnt :: Era era => Term era (Map (RewardAccount (EraCrypto era)) Coin)
-gaRewardAcnt = Var (V "gaRewardAcnt" (MapR RewardAcntR CoinR) No)
+gaRewardAccount :: Era era => Term era (Map (RewardAccount (EraCrypto era)) Coin)
+gaRewardAccount = Var (V "gaRewardAccount" (MapR RewardAcntR CoinR) No)
 
 gaRemMember :: Era era => Term era (Set (Credential 'ColdCommitteeRole (EraCrypto era)))
 gaRemMember = Var (V "gaRemMember" (SetR CommColdCredR) No)
@@ -2170,7 +2170,7 @@ hardForkInitiationT =
 treasuryWithdrawalsT :: forall era. Reflect era => RootTarget era (GovAction era) (GovAction era)
 treasuryWithdrawalsT =
   Invert "TreasuryWithdrawals" (typeRep @(GovAction era)) (\x y -> TreasuryWithdrawals x $ maybeToStrictMaybe y)
-    :$ Partial gaRewardAcnt (\case (TreasuryWithdrawals x _) -> Just x; _ -> Nothing)
+    :$ Partial gaRewardAccount (\case (TreasuryWithdrawals x _) -> Just x; _ -> Nothing)
     :$ Partial gaPolicy (\case (TreasuryWithdrawals _ y) -> Just $ strictMaybeToMaybe y; _ -> Nothing)
 
 noConfidenceT :: forall era. Reflect era => RootTarget era (GovAction era) (GovAction era)
