@@ -32,7 +32,6 @@ import Control.Monad (replicateM_)
 import Control.State.Transition.Extended (PredicateFailure)
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..), traverse_)
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import qualified Data.Sequence as Seq
