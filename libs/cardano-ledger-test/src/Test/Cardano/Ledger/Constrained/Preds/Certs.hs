@@ -529,7 +529,7 @@ certsPreds UnivSize {..} p = case whichTxCert p of
     epochDelta = Var $ pV p "epochDelta" EpochR No
     poolId = Var (pV p "poolId" PoolHashR (Yes PoolParamsR (lens ppId (\x i -> x {ppId = i}))))
     poolOwners = Var (pV p "poolOwners" (SetR StakeHashR) (Yes PoolParamsR (lens ppOwners (\x i -> x {ppOwners = i}))))
-    poolRewAcnt = Var (pV p "poolRewAcnt" RewardAcntR (Yes PoolParamsR (lens ppRewardAccount (\x r -> x {ppRewardAccount = r}))))
+    poolRewAcnt = Var (pV p "poolRewAcnt" RewardAccountR (Yes PoolParamsR (lens ppRewardAccount (\x r -> x {ppRewardAccount = r}))))
     localpool = Var (pV p "localpool" (PoolMetadataR p) No)
     rewCred = Var (pV p "rewCred" CredR No)
     available = Var (pV p "available" CoinR No)

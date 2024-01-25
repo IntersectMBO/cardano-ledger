@@ -1239,7 +1239,7 @@ certs :: Reflect era => Term era [TxCertF era]
 certs = Var $ V "certs" (ListR (TxCertR reify)) No
 
 withdrawals :: forall era. Era era => Term era (Map (RewardAccount (EraCrypto era)) Coin)
-withdrawals = Var $ V "withdrawals" (MapR (RewardAcntR @era) CoinR) No
+withdrawals = Var $ V "withdrawals" (MapR (RewardAccountR @era) CoinR) No
 
 txfee :: Era era => Term era Coin
 txfee = Var $ V "txfee" CoinR No
@@ -2072,7 +2072,7 @@ depositV :: Era era => Term era Coin
 depositV = Var (V "depositV" CoinR No)
 
 returnAddrV :: Era era => Term era (RewardAccount (EraCrypto era))
-returnAddrV = Var (V "returnAddrV" RewardAcntR No)
+returnAddrV = Var (V "returnAddrV" RewardAccountR No)
 
 actionV :: Era era => Term era (GovAction era)
 actionV = Var (V "actionV" GovActionR No)
@@ -2125,7 +2125,7 @@ gaProtVer :: Reflect era => Term era ProtVer
 gaProtVer = Var (V "gaProtVer" (ProtVerR reify) No)
 
 gaRewardAccount :: Era era => Term era (Map (RewardAccount (EraCrypto era)) Coin)
-gaRewardAccount = Var (V "gaRewardAccount" (MapR RewardAcntR CoinR) No)
+gaRewardAccount = Var (V "gaRewardAccount" (MapR RewardAccountR CoinR) No)
 
 gaRemMember :: Era era => Term era (Set (Credential 'ColdCommitteeRole (EraCrypto era)))
 gaRemMember = Var (V "gaRemMember" (SetR CommColdCredR) No)
