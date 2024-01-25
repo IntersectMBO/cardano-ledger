@@ -334,7 +334,7 @@ rewardsBoundedByPot _ = property $ do
         flip fmap pools $
           \PoolInfo {params, members} ->
             Map.fromList $ (,ppId params) <$> Map.keys members
-      rewardAcnts = Set.fromList $ Map.keys delegs
+      rewardAccounts = Set.fromList $ Map.keys delegs
       poolParams =
         VMap.fromList
           [(ppId params, params) | PoolInfo {params} <- pools]
@@ -346,7 +346,7 @@ rewardsBoundedByPot _ = property $ do
             pp
             bs
             rewardPot
-            rewardAcnts
+            rewardAccounts
             poolParams
             (Stake (VMap.fromMap (toCompactCoinError <$> stake)))
             (VMap.fromMap delegs)
@@ -358,8 +358,8 @@ rewardsBoundedByPot _ = property $ do
           , show pp
           , "\nrewardPot\n"
           , show rewardPot
-          , "\nrewardAcnts\n"
-          , show rewardAcnts
+          , "\nrewardAccounts\n"
+          , show rewardAccounts
           , "\npoolParams\n"
           , show poolParams
           , "\nstake\n"

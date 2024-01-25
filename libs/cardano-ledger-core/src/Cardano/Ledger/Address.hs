@@ -322,8 +322,8 @@ putRewardAccount (RewardAcnt network cred) = do
         ScriptHashObj _ -> flip setBit payCredIsScript
         KeyHashObj _ -> id
       netId = networkToWord8 network
-      rewardAcntPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
-      header = setPayCredBit (netId .|. rewardAcntPrefix)
+      rewardAccountPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
+      header = setPayCredBit (netId .|. rewardAccountPrefix)
   B.putWord8 header
   putCredential cred
 putRewardAcnt :: RewardAcnt c -> Put

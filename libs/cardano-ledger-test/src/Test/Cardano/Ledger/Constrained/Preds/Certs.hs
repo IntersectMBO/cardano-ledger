@@ -283,19 +283,19 @@ certsPreds UnivSize {..} p = case whichTxCert p of
           ( 1
           , sRegPool ^$ poolParams
           ,
-            [ -- Pick a random PoolParams, except constrain the fields poolId, poolRewAcnt, poolOwners, and poolMetadata
+            [ -- Pick a random PoolParams, except constrain the fields poolId, poolRewardAccount, poolOwners, and poolMetadata
               -- by the additional Preds. Note that the (genRep (PoolMetadataR p)) function knows how to handle the
               -- 'SoftForks.restrictPoolMetadataHash' issue on '(poolMetadata p)'. So using 'Random' which uses genRep
               -- should produce the right PoolMetadata format, by obseriving the Proof 'p'.
               Component
                 (Right poolParams)
                 [ field PoolParamsR poolId
-                , field PoolParamsR poolRewAcnt
+                , field PoolParamsR poolRewardAccount
                 , field PoolParamsR poolOwners
                 , field PoolParamsR (poolMetadata p)
                 ]
             , Member (Left poolId) poolHashUniv
-            , poolRewAcnt :<-: (Constr "mkRewAcnt" RewardAccount ^$ network ^$ rewCred)
+            , poolRewardAccount :<-: (Constr "mkRewAcnt" RewardAccount ^$ network ^$ rewCred)
             , Member (Right rewCred) credsUniv
             , Subset poolOwners stakeHashUniv
             , Maybe (poolMetadata p) (Simple localpool) [Random localpool]
@@ -463,16 +463,16 @@ certsPreds UnivSize {..} p = case whichTxCert p of
         ,
           ( 1
           , cRegPool ^$ poolParams
-          , [ -- Pick a random PoolParams, except constrain the poolId and the poolRewAcnt, by the additional Preds
+          , [ -- Pick a random PoolParams, except constrain the poolId and the poolRewardAccount, by the additional Preds
               Component
                 (Right poolParams)
                 [ field PoolParamsR poolId
-                , field PoolParamsR poolRewAcnt
+                , field PoolParamsR poolRewardAccount
                 , field PoolParamsR poolOwners
                 , field PoolParamsR (poolMetadata p)
                 ]
             , Member (Left poolId) poolHashUniv
-            , poolRewAcnt :<-: (Constr "mkRewAcnt" RewardAccount ^$ network ^$ rewCred)
+            , poolRewardAccount :<-: (Constr "mkRewAcnt" RewardAccount ^$ network ^$ rewCred)
             , Member (Right rewCred) credsUniv
             , Subset poolOwners stakeHashUniv
             , Maybe (poolMetadata p) (Simple localpool) [Random localpool]
@@ -529,7 +529,7 @@ certsPreds UnivSize {..} p = case whichTxCert p of
     epochDelta = Var $ pV p "epochDelta" EpochR No
     poolId = Var (pV p "poolId" PoolHashR (Yes PoolParamsR (lens ppId (\x i -> x {ppId = i}))))
     poolOwners = Var (pV p "poolOwners" (SetR StakeHashR) (Yes PoolParamsR (lens ppOwners (\x i -> x {ppOwners = i}))))
-    poolRewAcnt = Var (pV p "poolRewAcnt" RewardAccountR (Yes PoolParamsR (lens ppRewardAccount (\x r -> x {ppRewardAccount = r}))))
+    poolRewardAccount = Var (pV p "poolRewardAccount" RewardAccountR (Yes PoolParamsR (lens ppRewardAccount (\x r -> x {ppRewardAccount = r}))))
     localpool = Var (pV p "localpool" (PoolMetadataR p) No)
     rewCred = Var (pV p "rewCred" CredR No)
     available = Var (pV p "available" CoinR No)

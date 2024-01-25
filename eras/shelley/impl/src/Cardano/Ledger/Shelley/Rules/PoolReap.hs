@@ -152,36 +152,36 @@ poolReapTransition = do
     retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin
     (retiringDeposits, remainingDeposits) =
       Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
-    rewardAcnts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era))
-    rewardAcnts = Map.map ppRewardAccount $ eval (retired ◁ psStakePoolParams ps)
-    rewardAcnts_ :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era), Coin)
-    rewardAcnts_ = Map.intersectionWith (,) rewardAcnts retiringDeposits
-    rewardAcnts' :: Map.Map (RewardAccount (EraCrypto era)) Coin
-    rewardAcnts' =
+    rewardAccounts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era))
+    rewardAccounts = Map.map ppRewardAccount $ eval (retired ◁ psStakePoolParams ps)
+    rewardAccounts_ :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era), Coin)
+    rewardAccounts_ = Map.intersectionWith (,) rewardAccounts retiringDeposits
+    rewardAccounts' :: Map.Map (RewardAccount (EraCrypto era)) Coin
+    rewardAccounts' =
       Map.fromListWith (<+>)
         . Map.elems
-        $ rewardAcnts_
+        $ rewardAccounts_
     refunds :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
     mRefunds :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
     (refunds, mRefunds) =
       Map.partitionWithKey
         (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
-        (Map.mapKeys raCredential rewardAcnts')
+        (Map.mapKeys raCredential rewardAccounts')
     refunded = fold refunds
     unclaimed = fold mRefunds
 
   tellEvent $
-    let rewardAcntsWithPool =
+    let rewardAccountsWithPool =
           Map.foldlWithKey'
             ( \acc sp (ra, coin) ->
                 Map.insertWith (Map.unionWith (<>)) (raCredential ra) (Map.singleton sp coin) acc
             )
             Map.empty
-            rewardAcnts_
+            rewardAccounts_
         (refundPools', unclaimedPools') =
           Map.partitionWithKey
             (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
-            rewardAcntsWithPool
+            rewardAccountsWithPool
      in RetiredPools
           { refundPools = refundPools'
           , unclaimedPools = unclaimedPools'

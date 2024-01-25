@@ -47,7 +47,7 @@ roundTripAddressSpec = describe "Address" $ do
     prop "Ensure Addr failures on incorrect binary data" $
       propDecompactErrors @StandardCrypto
     prop "Ensure RewardAcnt failures on incorrect binary data" $
-      propDeserializeRewardAcntErrors @StandardCrypto
+      propDeserializeRewardAccountErrors @StandardCrypto
     prop "RoundTrip-invalid" $
       forAll genCompactAddrBadPtr $
         roundTripRangeExpectation @(CompactAddr StandardCrypto)
@@ -201,8 +201,8 @@ propDecompactErrors addr = do
     $ isLeft
     $ decodeAddrEither @c badAddr
 
-propDeserializeRewardAcntErrors :: forall c. Crypto c => Version -> RewardAccount c -> Gen Property
-propDeserializeRewardAcntErrors v acnt = do
+propDeserializeRewardAccountErrors :: forall c. Crypto c => Version -> RewardAccount c -> Gen Property
+propDeserializeRewardAccountErrors v acnt = do
   let bs = serialize' v acnt
       flipHeaderBit b =
         case BS.uncons bs of

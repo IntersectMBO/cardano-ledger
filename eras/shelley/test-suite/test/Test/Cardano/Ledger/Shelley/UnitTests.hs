@@ -581,10 +581,10 @@ testWithdrawalWrongAmt =
                 (hashAnnotated txb)
                 [asWitness alicePay, asWitness bobStake]
           }
-      rAcnt = mkVKeyRewardAccount Testnet bobStake
-      dpState' = addReward dpState (raCredential rAcnt) (Coin 10)
+      rAccount = mkVKeyRewardAccount Testnet bobStake
+      dpState' = addReward dpState (raCredential rAccount) (Coin 10)
       tx = ShelleyTx @C txb txwits SNothing
-      errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]
+      errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAccount (Coin 11)))]
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testOutputTooSmall :: Assertion

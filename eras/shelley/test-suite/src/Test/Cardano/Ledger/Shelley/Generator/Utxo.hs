@@ -793,9 +793,9 @@ genWithdrawals
         ]
     pure (a, b)
     where
-      toRewardAcnt (rwd, coinx) = (RewardAccount Testnet rwd, coinx)
+      toRewardAccount (rwd, coinx) = (RewardAccount Testnet rwd, coinx)
       genWrdls withdrawals_ = do
-        selectedWrdls <- map toRewardAcnt <$> QC.sublistOf withdrawals_
+        selectedWrdls <- map toRewardAccount <$> QC.sublistOf withdrawals_
         let txwits =
               mkWithdrawalsWits @era ksIndexedStakeScripts ksIndexedStakingKeys
                 . raCredential

@@ -279,7 +279,7 @@ genPoolCert net epochNo pParams pState =
 
     maxMetaLen = fromIntegral (sizeHash ([] @(CC.HASH StandardCrypto)))
 
-    adjustRewardAcnt rwd = rwd {raNetwork = net}
+    adjustRewardAccount rwd = rwd {raNetwork = net}
     adjustMetadata SNothing = SNothing
     adjustMetadata (SJust m) = SJust $ m {pmHash = BS.take maxMetaLen (pmHash m)}
 
@@ -287,7 +287,7 @@ genPoolCert net epochNo pParams pState =
       pp <- arbitrary
       pure $
         pp
-          { ppRewardAccount = adjustRewardAcnt $ ppRewardAccount pp
+          { ppRewardAccount = adjustRewardAccount $ ppRewardAccount pp
           , ppMetadata = adjustMetadata $ ppMetadata pp
           }
 
