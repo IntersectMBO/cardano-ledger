@@ -68,12 +68,19 @@ import Lens.Micro.Extras (view)
 -- | Alonzo era style scripts needed require also a `ScriptPurpose`, not only the `ScriptHash`
 newtype AlonzoScriptsNeeded era
   = AlonzoScriptsNeeded [(PlutusPurpose AsIxItem era, ScriptHash (EraCrypto era))]
-  deriving (Semigroup, Monoid)
+  deriving (Monoid)
+
+instance Semigroup (AlonzoScriptsNeeded era) where
+  (<>) (AlonzoScriptsNeeded xs1) (AlonzoScriptsNeeded xs2) = AlonzoScriptsNeeded (xs1 ++ xs2)
+  -- INLINE is not placed on derived instances, which can interfer with list fusion, hence
+  -- manual definition.
+  {-# INLINE (<>) #-}
 
 deriving instance AlonzoEraScript era => Eq (AlonzoScriptsNeeded era)
 deriving instance AlonzoEraScript era => Show (AlonzoScriptsNeeded era)
 
 instance Crypto c => EraUTxO (AlonzoEra c) where
+  {-# SPECIALIZE instance EraUTxO (AlonzoEra StandardCrypto) #-}
   type ScriptsNeeded (AlonzoEra c) = AlonzoScriptsNeeded (AlonzoEra c)
 
   getConsumedValue = getConsumedMaryValue
@@ -83,6 +90,7 @@ instance Crypto c => EraUTxO (AlonzoEra c) where
   getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
   getScriptsNeeded = getAlonzoScriptsNeeded
+  {-# INLINEABLE getScriptsNeeded #-}
 
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
 
@@ -248,9 +256,11 @@ getAlonzoScriptsNeeded utxo txBody =
               Just ix' -> do
                 let purpose = (CertifyingPurpose (AsIxItem ix' txCert), scriptHash)
                 pure (certScriptHashes, ix + 1, purpose : certPurposes)
+{-# INLINEABLE getAlonzoScriptsNeeded #-}
 
 zipAsIxItem :: (Num ix, Enum ix, Foldable f) => f it -> (AsIxItem ix it -> c) -> [c]
-zipAsIxItem xs f = zipWith (\ix it -> f (AsIxItem ix it)) [0 ..] (toList xs)
+zipAsIxItem xs f = zipWith (\it ix -> f (AsIxItem ix it)) (toList xs) [0 ..]
+{-# INLINE zipAsIxItem #-}
 
 getSpendingScriptsNeeded ::
   (AlonzoEraScript era, EraTxBody era) =>
@@ -265,6 +275,7 @@ getSpendingScriptsNeeded (UTxO utxo) txBody =
           addr <- view addrTxOutL <$> Map.lookup txIn utxo
           hash <- getScriptHash addr
           return (SpendingPurpose asIxItem, hash)
+{-# INLINEABLE getSpendingScriptsNeeded #-}
 
 getRewardingScriptsNeeded ::
   (AlonzoEraScript era, EraTxBody era) =>
@@ -276,6 +287,7 @@ getRewardingScriptsNeeded txBody =
       zipAsIxItem (Map.keys (unWithdrawals $ txBody ^. withdrawalsTxBodyL)) $
         \asIxItem@(AsIxItem _ rewardAccount) ->
           (RewardingPurpose asIxItem,) <$> credScriptHash (getRwdCred rewardAccount)
+{-# INLINEABLE getRewardingScriptsNeeded #-}
 
 getMintingScriptsNeeded ::
   (AlonzoEraScript era, MaryEraTxBody era) =>
@@ -285,6 +297,7 @@ getMintingScriptsNeeded txBody =
   AlonzoScriptsNeeded $
     zipAsIxItem (txBody ^. mintedTxBodyF) $
       \asIxItem@(AsIxItem _ (PolicyID scriptHash)) -> (MintingPurpose asIxItem, scriptHash)
+{-# INLINEABLE getMintingScriptsNeeded #-}
 
 -- | Just like `getShelleyWitsVKeyNeeded`, but also requires `reqSignerHashesTxBodyL`.
 getAlonzoWitsVKeyNeeded ::
