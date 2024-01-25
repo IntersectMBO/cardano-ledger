@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -62,10 +63,11 @@ import Data.Foldable (foldl', toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import qualified Data.Set as Set
+import Data.Word (Word32)
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 
--- | Alonzo era style scripts needed require also a `ScriptPurpose`, not only the `ScriptHash`
+-- | Alonzo era style `ScriptsNeeded` require also a `PlutusPurpose`, not only the `ScriptHash`
 newtype AlonzoScriptsNeeded era
   = AlonzoScriptsNeeded [(PlutusPurpose AsIxItem era, ScriptHash (EraCrypto era))]
   deriving (Monoid)
@@ -251,15 +253,18 @@ getAlonzoScriptsNeeded utxo txBody =
             scriptHash <- getScriptWitnessTxCert txCert
             case Map.lookup scriptHash certScriptHashes of
               Nothing -> do
-                let purpose = (CertifyingPurpose (AsIxItem ix txCert), scriptHash)
-                pure (Map.insert scriptHash ix certScriptHashes, ix + 1, purpose : certPurposes)
+                let !purpose = CertifyingPurpose (AsIxItem ix txCert)
+                    !certScriptHashes' = Map.insert scriptHash ix certScriptHashes
+                pure (certScriptHashes', ix + 1, (purpose, scriptHash) : certPurposes)
               Just ix' -> do
-                let purpose = (CertifyingPurpose (AsIxItem ix' txCert), scriptHash)
-                pure (certScriptHashes, ix + 1, purpose : certPurposes)
+                let !purpose = CertifyingPurpose (AsIxItem ix' txCert)
+                pure (certScriptHashes, ix + 1, (purpose, scriptHash) : certPurposes)
 {-# INLINEABLE getAlonzoScriptsNeeded #-}
 
-zipAsIxItem :: (Num ix, Enum ix, Foldable f) => f it -> (AsIxItem ix it -> c) -> [c]
-zipAsIxItem xs f = zipWith (\it ix -> f (AsIxItem ix it)) (toList xs) [0 ..]
+zipAsIxItem :: Foldable f => f it -> (AsIxItem Word32 it -> c) -> [c]
+zipAsIxItem xs f =
+  -- Past experience showed that enumeration for Int is faster than for Word32
+  zipWith (\it ix -> f (AsIxItem (fromIntegral @Int @Word32 ix) it)) (toList xs) [0 ..]
 {-# INLINE zipAsIxItem #-}
 
 getSpendingScriptsNeeded ::
