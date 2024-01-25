@@ -86,7 +86,7 @@ spec =
           submitFailingVote
             voter
             dummyGaid
-            [inject $ GovActionsDoNotExist @era $ NE.singleton dummyGaid]
+            [inject $ GovActionsDoNotExist @era $ pure dummyGaid]
         it
           "committee member voting on committee change"
           committeeMemberVotingOnCommitteeChange
