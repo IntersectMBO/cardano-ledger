@@ -135,7 +135,7 @@ instance Crypto c => Arbitrary (ConwayGovCert c) where
       ]
 
 instance
-  (Era era, Arbitrary (PParams era), Arbitrary (PParamsHKD StrictMaybe era)) =>
+  (EraPParams era, Arbitrary (PParams era), Arbitrary (PParamsHKD StrictMaybe era)) =>
   Arbitrary (ConwayGovState era)
   where
   arbitrary =
@@ -204,7 +204,7 @@ data ProposalsForEnactment era
   deriving (Show, Eq)
 
 instance
-  (Era era, Arbitrary (PParamsUpdate era), Arbitrary (PParamsHKD StrictMaybe era)) =>
+  (EraPParams era, Arbitrary (PParamsUpdate era), Arbitrary (PParamsHKD StrictMaybe era)) =>
   Arbitrary (ProposalsForEnactment era)
   where
   arbitrary = do
@@ -262,7 +262,7 @@ data ProposalsNewActions era = ProposalsNewActions (Proposals era) [GovActionSta
   deriving (Show, Eq)
 
 instance
-  (Era era, Arbitrary (PParamsUpdate era), Arbitrary (PParamsHKD StrictMaybe era)) =>
+  (EraPParams era, Arbitrary (PParamsUpdate era), Arbitrary (PParamsHKD StrictMaybe era)) =>
   Arbitrary (ProposalsNewActions era)
   where
   arbitrary = do
@@ -272,14 +272,15 @@ instance
     pure $ ProposalsNewActions ps gass
 
 instance
-  (Era era, Arbitrary (PParamsUpdate era), Arbitrary (PParamsHKD StrictMaybe era)) =>
+  (EraPParams era, Arbitrary (PParamsUpdate era), Arbitrary (PParamsHKD StrictMaybe era)) =>
   Arbitrary (Proposals era)
   where
-  arbitrary = genProposals (2, 30)
+  arbitrary = genProposals (0, 30)
 
 genProposals ::
   forall era.
-  ( Era era
+  ( HasCallStack
+  , EraPParams era
   , Arbitrary (PParamsHKD StrictMaybe era)
   ) =>
   (Int, Int) ->
@@ -307,8 +308,10 @@ genGovAction ps =
   oneof
     [ genWithParent genPParamUpdateGovAction pfPParamUpdateL
     , genWithParent genHardForkGovAction pfHardForkL
+    , genTreasuryWithdrawals
     , genWithParent genCommitteeGovAction pfCommitteeL
     , genWithParent genConstitutionGovAction pfConstitutionL
+    , pure InfoAction
     ]
   where
     genWithParent ::

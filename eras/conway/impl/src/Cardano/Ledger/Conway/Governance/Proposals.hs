@@ -8,7 +8,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -94,6 +96,9 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   toPrevGovActionIds,
 
   -- * To be used only for testing
+  TreeMaybe (..),
+  toPForest,
+  toPForestEither,
   pPropsL,
   pRootsL,
   pGraphL,
@@ -111,10 +116,14 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   PGraph (..),
   pGraphNodesL,
   fromPrevGovActionIds,
-  proposalsAreConsistent,
 ) where
 
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (
+  StrictMaybe (..),
+  isSJust,
+  isSNothing,
+  strictMaybe,
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -129,17 +138,22 @@ import Control.Exception (assert)
 import Control.Monad (unless)
 import Data.Aeson (KeyValue ((.=)), ToJSON (..), object, pairs)
 import Data.Default.Class (Default (..))
-import Data.Foldable (foldl')
+import Data.Either (partitionEithers)
+import Data.Foldable (foldl', foldrM, toList)
 import Data.Kind (Type)
 import qualified Data.Map as Map
 import Data.Map.Strict (Map)
 import qualified Data.OMap.Strict as OMap
+import qualified Data.OSet.Strict as OSet
 import Data.Pulse (foldlM')
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Text as T
+import Data.Tree
 import GHC.Generics (Generic)
+import GHC.Stack
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
@@ -152,26 +166,14 @@ data PRoot a = PRoot
   }
   deriving (Show, Eq, Ord, Generic, NoThunks, NFData, Default)
 
-prRootL :: Lens' (PRoot a) (StrictMaybe a)
-prRootL = lens prRoot $ \x y -> x {prRoot = y}
-
-prChildrenL :: Lens' (PRoot a) (Set a)
-prChildrenL = lens prChildren $ \x y -> x {prChildren = y}
-
 -- | A non-root edges in a `Proposals` tree. `peParent` is expected to be
 -- a `SNothing` only at the begining when no governance actions has been
 -- enacted yet.
 data PEdges a = PEdges
-  { -- This field lacks its lens only because we didn't need one yet
-    -- because, in all operations implemented so far, we only traverse
-    -- down the tree and not up.
-    peParent :: !(StrictMaybe a)
+  { peParent :: !(StrictMaybe a)
   , peChildren :: !(Set a)
   }
   deriving (Show, Eq, Ord, Generic, NoThunks, NFData, Default)
-
-peChildrenL :: Lens' (PEdges a) (Set a)
-peChildrenL = lens peChildren $ \x y -> x {peChildren = y}
 
 -- | A single proposal-tree. This map represents all the action-ids that
 -- form a tree.
@@ -180,6 +182,15 @@ newtype PGraph a = PGraph
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks, NFData, Default)
+
+prRootL :: Lens' (PRoot a) (StrictMaybe a)
+prRootL = lens prRoot $ \x y -> x {prRoot = y}
+
+prChildrenL :: Lens' (PRoot a) (Set a)
+prChildrenL = lens prChildren $ \x y -> x {prChildren = y}
+
+peChildrenL :: Lens' (PEdges a) (Set a)
+peChildrenL = lens peChildren $ \x y -> x {peChildren = y}
 
 pGraphNodesL :: Lens' (PGraph a) (Map a (PEdges a))
 pGraphNodesL = lens unPGraph $ \x y -> x {unPGraph = y}
@@ -272,7 +283,12 @@ instance EraPParams era => ToJSON (Proposals era) where
 -- The tree to which it is added is picked according to its
 -- @`GovActionPurpose`@. Returns `Nothing` when the operation cannot
 -- succeed.
-proposalsAddAction :: forall era. GovActionState era -> Proposals era -> Maybe (Proposals era)
+proposalsAddAction ::
+  forall era.
+  (EraPParams era, HasCallStack) =>
+  GovActionState era ->
+  Proposals era ->
+  Maybe (Proposals era)
 proposalsAddAction gas ps =
   case gas ^. gasActionL of
     ParameterChange parent _ _ ->
@@ -292,103 +308,31 @@ proposalsAddAction gas ps =
     -- Append a new GovActionState to the Proposals and then add it to the set of children
     -- for its parent as well as initiate an empty lineage for this new child.
     update ::
+      forall p.
+      HasCallStack =>
       (forall f. Lens' (PForest f era) (f (GovPurposeId p era))) ->
       StrictMaybe (GovPurposeId p era) ->
       Maybe (Proposals era)
     update forestL parent
       | parent == ps ^. pRootsL . forestL . prRootL =
           Just $
-            psWithGas
-              & pRootsL . forestL . prChildrenL %~ Set.insert newId
-              & pGraphL . forestL . pGraphNodesL %~ Map.insert newId (PEdges parent Set.empty)
+            checkInvariantAfterAddition gas ps $
+              psWithGas
+                & pRootsL . forestL . prChildrenL %~ Set.insert newId
+                & pGraphL . forestL . pGraphNodesL %~ Map.insert newId (PEdges parent Set.empty)
       | SJust parentId <- parent
       , Map.member parentId $ ps ^. pGraphL . forestL . pGraphNodesL =
           Just $
-            psWithGas
-              & pGraphL . forestL . pGraphNodesL
-                %~ ( Map.insert newId (PEdges (SJust parentId) Set.empty)
-                      . Map.adjust (peChildrenL %~ Set.insert newId) parentId
-                   )
+            checkInvariantAfterAddition gas ps $
+              psWithGas
+                & pGraphL . forestL . pGraphNodesL
+                  %~ ( Map.insert newId (PEdges (SJust parentId) Set.empty)
+                        . Map.adjust (peChildrenL %~ Set.insert newId) parentId
+                     )
       | otherwise = Nothing
       where
+        newId :: GovPurposeId p era
         newId = GovPurposeId $ gas ^. gasIdL
-
--- | Internal function for checking if the invariants for @`Proposals`@
--- are maintained
-proposalsAreConsistent :: Proposals era -> Bool
-proposalsAreConsistent (Proposals omap roots hierarchy) =
-  -- OMap internal invariant
-  assert (OMap.invariantHolds' omap)
-    $ assert
-      -- The hierarchies are disjoint by the pigeon-hole principle
-      ( let sizeOfUnions = Set.size unionGraph
-            sumOfSizes =
-              sum
-                [ Map.size pparamUpdateH
-                , Map.size hardForkH
-                , Map.size committeeH
-                , Map.size constitutionH
-                ]
-         in sizeOfUnions == sumOfSizes && sumOfSizes == OMap.size omap
-      )
-    $ assert
-      -- The root-children are disjoint by the pigeon-hole principle
-      ( let sizeOfUnions =
-              Set.size $
-                Set.unions
-                  [ Set.map unGovPurposeId pparamUpdateRC
-                  , Set.map unGovPurposeId hardForkRC
-                  , Set.map unGovPurposeId committeeRC
-                  , Set.map unGovPurposeId constitutionRC
-                  ]
-            sumOfSizes =
-              sum
-                [ Set.size pparamUpdateRC
-                , Set.size hardForkRC
-                , Set.size committeeRC
-                , Set.size constitutionRC
-                ]
-         in sizeOfUnions == sumOfSizes
-      )
-    $ assert
-      -- The union of the four hierarchies should be equal to the OMap
-      (Map.keysSet (OMap.toMap omap) == unionGraph)
-    $ assert
-      -- Root-children should be subsets of the hierarchy
-      ( and
-          [ pparamUpdateRC `Set.isSubsetOf` Map.keysSet pparamUpdateH
-          , hardForkRC `Set.isSubsetOf` Map.keysSet hardForkH
-          , committeeRC `Set.isSubsetOf` Map.keysSet committeeH
-          , constitutionRC `Set.isSubsetOf` Map.keysSet constitutionH
-          ]
-      )
-    $ assert
-      -- Children of nodes should be subsets of the hierarchy
-      ( and
-          [ isSubset pparamUpdateH
-          , isSubset hardForkH
-          , isSubset committeeH
-          , isSubset constitutionH
-          ]
-      )
-      True
-  where
-    pparamUpdateH = hierarchy ^. pfPParamUpdateL . pGraphNodesL
-    hardForkH = hierarchy ^. pfHardForkL . pGraphNodesL
-    committeeH = hierarchy ^. pfCommitteeL . pGraphNodesL
-    constitutionH = hierarchy ^. pfConstitutionL . pGraphNodesL
-    unionGraph =
-      Set.unions
-        [ Set.map unGovPurposeId $ Map.keysSet pparamUpdateH
-        , Set.map unGovPurposeId $ Map.keysSet hardForkH
-        , Set.map unGovPurposeId $ Map.keysSet committeeH
-        , Set.map unGovPurposeId $ Map.keysSet constitutionH
-        ]
-    pparamUpdateRC = roots ^. pfPParamUpdateL . prChildrenL
-    hardForkRC = roots ^. pfHardForkL . prChildrenL
-    committeeRC = roots ^. pfCommitteeL . prChildrenL
-    constitutionRC = roots ^. pfConstitutionL . prChildrenL
-    isSubset h = and $ flip Set.isSubsetOf (Map.keysSet h) . peChildren <$> Map.elems h
 
 -- | Reconstruct the @`Proposals`@ forest from an @`OMap`@ of
 -- @`GovActionState`@s and the 4 roots (@`PrevGovActionIds`@)
@@ -408,7 +352,6 @@ mkProposals pgais omap = do
       initialProposals
       omap
   unless (omap == omap') $ fail "mkProposals: OMap is malformed"
-  unless (proposalsAreConsistent ps) $ fail "mkProposals: Proposals structure is inconsistent"
   pure ps
   where
     initialProposals = def & pRootsL .~ fromPrevGovActionIds pgais
@@ -454,13 +397,14 @@ proposalsAddVote voter vote gai (Proposals omap roots hierarchy) =
 -- cover them in property-tests
 proposalsRemoveIds ::
   forall era.
+  EraPParams era =>
   Set (GovActionId (EraCrypto era)) ->
   Proposals era ->
   (Proposals era, Map.Map (GovActionId (EraCrypto era)) (GovActionState era))
 proposalsRemoveIds gais ps =
   let (retainedOMap, removedFromOMap) = OMap.extractKeys gais $ ps ^. pPropsL
       (roots, hierarchy) = foldl' removeEach (ps ^. pRootsL, ps ^. pGraphL) removedFromOMap
-   in (Proposals retainedOMap roots hierarchy, removedFromOMap)
+   in (checkInvariantAfterDeletion gais ps $ Proposals retainedOMap roots hierarchy, removedFromOMap)
   where
     removeEach accum@(!roots, !hierarchy) gas =
       case gas ^. gasActionL of
@@ -522,6 +466,7 @@ getAllDescendents (Proposals omap _roots hierarchy) gai = case OMap.lookup gai o
 -- | Remove the set of given action-ids with their descendents from the
 -- @`Proposals`@ forest
 proposalsRemoveDescendentIds ::
+  EraPParams era =>
   Set (GovActionId (EraCrypto era)) ->
   Proposals era ->
   (Proposals era, Map (GovActionId (EraCrypto era)) (GovActionState era))
@@ -537,6 +482,7 @@ proposalsRemoveDescendentIds gais ps =
 --   step
 proposalsApplyEnactment ::
   forall era.
+  EraPParams era =>
   Seq (GovActionState era) ->
   Set (GovActionId (EraCrypto era)) ->
   Proposals era ->
@@ -685,3 +631,145 @@ fromPrevGovActionIds (PrevGovActionIds pforest@(PForest _ _ _ _)) =
         & pfHardForkL . prRootL .~ pfHardFork
         & pfCommitteeL . prRootL .~ pfCommittee
         & pfConstitutionL . prRootL .~ pfConstitution
+
+---------------------
+-- Debugging tools --
+---------------------
+
+-- | Wraper type, which serves as a composition of @`Tree` . `StrictMaybe`@
+--
+-- Also its Show instance will print a nice tree structure.
+data TreeMaybe a = TreeMaybe {unTreeMaybe :: Tree (StrictMaybe a)}
+  deriving (Eq)
+
+instance Show (TreeMaybe (GovPurposeId p era)) where
+  show = ("\n" <>) . drawTree . fmap showGovPurposeId . unTreeMaybe
+    where
+      showGovPurposeId = \case
+        SNothing -> "x"
+        SJust (GovPurposeId govActionId) -> T.unpack (govActionIdToText govActionId)
+
+-- | Partial version of `toPForestEither`
+toPForest :: (Era era, HasCallStack) => Proposals era -> PForest TreeMaybe era
+toPForest = either error id . toPForestEither
+
+-- | Convert `Proposals` into a valid `Tree`
+toPForestEither :: Era era => Proposals era -> Either String (PForest TreeMaybe era)
+toPForestEither Proposals {pProps, pRoots, pGraph} = do
+  unless (OMap.invariantHolds' pProps) $ Left "OMap invariant is violated"
+
+  (pfPParamUpdate, nodesPParamUpdate) <-
+    toPTree (pfPParamUpdate pRoots) (unPGraph (pfPParamUpdate pGraph))
+  (pfHardFork, nodesHardFork) <-
+    toPTree (pfHardFork pRoots) (unPGraph (pfHardFork pGraph))
+  (pfCommittee, nodesCommittee) <-
+    toPTree (pfCommittee pRoots) (unPGraph (pfCommittee pGraph))
+  (pfConstitution, nodesConstitution) <-
+    toPTree (pfConstitution pRoots) (unPGraph (pfConstitution pGraph))
+
+  let allNodes =
+        Set.unions
+          [ Set.map unGovPurposeId nodesPParamUpdate
+          , Set.map unGovPurposeId nodesHardFork
+          , Set.map unGovPurposeId nodesCommittee
+          , Set.map unGovPurposeId nodesConstitution
+          ]
+      propsMap = OMap.toMap pProps
+      guardUnknown = do
+        let unknown = allNodes Set.\\ Map.keysSet propsMap
+        unless (null unknown) $ do
+          Left $ "Discovered unrecognized nodes: " ++ show unknown
+      guardUnique = do
+        let sumSizes =
+              sum
+                [ Set.size nodesPParamUpdate
+                , Set.size nodesHardFork
+                , Set.size nodesCommittee
+                , Set.size nodesConstitution
+                ]
+        unless (Set.size allNodes == sumSizes) $ do
+          Left $
+            "Duplicate govActionIds found between different purposes: "
+              ++ show (sumSizes - Set.size allNodes)
+  guardUnknown
+  guardUnique
+  pure PForest {pfPParamUpdate, pfHardFork, pfCommittee, pfConstitution}
+
+toPTree :: (Ord a, Show a) => PRoot a -> Map a (PEdges a) -> Either String (TreeMaybe a, Set a)
+toPTree root fullGraph = do
+  (_, tree) <- nodeToTree (prRoot root) (prChildren root) fullGraph
+  nodesList <-
+    case partitionEithers $ map (strictMaybe (Left ()) Right) $ toList tree of
+      (roots, nodes)
+        | isSNothing (prRoot root) && null roots ->
+            Left $ "Expected an empty root, but it was not found in the Tree"
+        | isSJust (prRoot root) && not (null roots) ->
+            Left $ "Expected a full root, but got " ++ show (length roots) ++ " Nothing cases"
+        | otherwise -> pure nodes
+  let nodes = Set.fromList nodesList
+      nodesWithoutRoot = strictMaybe nodes (`Set.delete` nodes) (prRoot root)
+      unreachable = Map.withoutKeys fullGraph nodesWithoutRoot
+  unless (Set.size nodes == length nodesList) $ do
+    Left $ "Detected duplicate nodes: " ++ show (fst $ OSet.fromFoldableDuplicates nodesList)
+  unless (Map.null unreachable) $ do
+    Left $ "Discovered unreachable nodes in the graph: " ++ show unreachable
+  pure (TreeMaybe tree, nodesWithoutRoot)
+  where
+    nodeToTree node children graph = do
+      (graph', subTrees) <- foldrM (childToTree node) (graph, []) children
+      pure (graph', Node node subTrees)
+    childToTree parent child (!graph, !acc) =
+      case Map.lookup child graph of
+        Nothing -> Left $ "Cannot find the node: " ++ show child
+        Just edges -> do
+          unless (peParent edges == parent) $
+            Left $
+              "Incorrect parent: "
+                ++ show (peParent edges)
+                ++ " listed for the node: "
+                ++ show child
+          (graph', !subTree) <-
+            -- Deleting the child from the graph ensures that every node except the root
+            -- appears exactly once in the graph.
+            nodeToTree (SJust child) (peChildren edges) (Map.delete child graph)
+          pure (graph', subTree : acc)
+
+-- | Verify invariant after addition of GovActionState to Proposals. Will print the state
+-- before the invariant is violated.
+--
+-- /Note/ - runs only when assertions are turned on.
+checkInvariantAfterAddition ::
+  (EraPParams era, HasCallStack) =>
+  -- | GovAction that was added
+  GovActionState era ->
+  -- | Proposals before adding the GovActionState
+  Proposals era ->
+  -- | Proposals after adding the GovActionState
+  Proposals era ->
+  Proposals era
+checkInvariantAfterAddition gas psPre ps = assert check ps
+  where
+    check =
+      case toPForestEither ps of
+        Left err -> error $ "Addition error: " ++ err ++ "\n" ++ show gas ++ "\n" ++ show psPre
+        Right _ -> True
+
+-- | Verify invariant after deletion of GovActionState to Proposals. Will print the state
+-- before the invariant is violated.
+--
+-- /Note/ - runs only when assertions are turned on.
+checkInvariantAfterDeletion ::
+  (EraPParams era, HasCallStack) =>
+  -- | GovAction that was added
+  Set (GovActionId (EraCrypto era)) ->
+  -- | Proposals before adding the GovActionState
+  Proposals era ->
+  -- | Proposals after adding the GovActionState
+  Proposals era ->
+  Proposals era
+checkInvariantAfterDeletion gais psPre ps = assert check ps
+  where
+    check =
+      case toPForestEither ps of
+        Left err -> error $ "Deletion error: " ++ err ++ "\n" ++ show gais ++ "\n" ++ show psPre
+        Right _ -> True

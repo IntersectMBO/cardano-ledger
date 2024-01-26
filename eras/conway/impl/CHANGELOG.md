@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.12.0.1
+## 1.13.0.0
 
-*
+* Add `TreeMaybe`, `toPForest` and `toPForestEither`
+* Remove `proposalsAreConsistent`
 
 ## 1.12.0.0
 
