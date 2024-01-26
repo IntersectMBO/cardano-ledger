@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -59,9 +60,7 @@ import Cardano.Ledger.Conway.Governance (
   Proposals,
   Voter (..),
   VotingProcedure (..),
-  VotingProcedures (..),
   foldlVotingProcedures,
-  gasExpiresAfterL,
   indexedGovProps,
   isCommitteeVotingAllowed,
   isDRepVotingAllowed,
@@ -73,7 +72,7 @@ import Cardano.Ledger.Conway.Governance (
   proposalsAddVote,
   proposalsLookupId,
  )
-import Cardano.Ledger.Conway.Governance.Procedures (GovAction (..))
+import Cardano.Ledger.Conway.Governance.Procedures (GovAction (..), foldrVotingProcedures)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
   ppGovActionDepositL,
@@ -86,7 +85,6 @@ import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.TxIn (TxId (..))
 import Control.DeepSeq (NFData)
-import Control.Monad (guard)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   STS (..),
@@ -94,12 +92,15 @@ import Control.State.Transition.Extended (
   TransitionRule,
   failBecause,
   failOnJust,
+  failOnNonEmpty,
+  failureOnNonEmpty,
   judgmentContext,
   liftSTS,
   tellEvent,
   (?!),
  )
-import qualified Data.Map.Merge.Strict as Map (dropMissing, merge, zipWithMaybeMatched)
+import Data.Bifunctor (Bifunctor (..))
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import Data.Pulse (foldlM')
@@ -121,7 +122,7 @@ data GovEnv era = GovEnv
   }
 
 data ConwayGovPredFailure era
-  = GovActionsDoNotExist (Set.Set (GovActionId (EraCrypto era)))
+  = GovActionsDoNotExist (NonEmpty (GovActionId (EraCrypto era)))
   | MalformedProposal (GovAction era)
   | ProposalProcedureNetworkIdMismatch (RewardAcnt (EraCrypto era)) Network
   | TreasuryWithdrawalsNetworkIdMismatch (Set.Set (RewardAcnt (EraCrypto era))) Network
@@ -133,7 +134,7 @@ data ConwayGovPredFailure era
   | -- | Some governance actions are not allowed to be voted on by certain types of
     -- Voters. This failure lists all governance action ids with their respective voters
     -- that are not allowed to vote on those governance actions.
-    DisallowedVoters !(Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))
+    DisallowedVoters !(NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)))
   | ConflictingCommitteeUpdate
       -- | Credentials that are mentioned as members to be both removed and added
       (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
@@ -141,7 +142,7 @@ data ConwayGovPredFailure era
       -- | Members for which the expiration epoch has already been reached
       (Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
   | InvalidPrevGovActionId (ProposalProcedure era)
-  | VotingOnExpiredGovAction (Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)))
+  | VotingOnExpiredGovAction (NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)))
   | ProposalCantFollow
       -- | The PrevGovActionId of the HardForkInitiation that fails
       (StrictMaybe (GovPurposeId 'HardForkPurpose era))
@@ -227,40 +228,31 @@ instance ConwayEraPParams era => STS (ConwayGOV era) where
 
   transitionRules = [govTransition]
 
-checkVotesAreForValidActions ::
+checkVotesAreNotForExpiredActions ::
   EpochNo ->
-  Proposals era ->
-  Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
+  [(Voter (EraCrypto era), GovActionState era)] ->
   Test (ConwayGovPredFailure era)
-checkVotesAreForValidActions curEpoch proposals gaIds =
-  let curGovActionIds = proposalsActionsMap proposals
-      expiredActions = Map.filter ((curEpoch >) . (^. gasExpiresAfterL)) curGovActionIds
-      unknownGovActionIds = gaIds `Map.difference` curGovActionIds
-      votesOnExpiredActions = gaIds `Map.intersection` expiredActions
-   in failureUnless
-        (Map.null unknownGovActionIds)
-        (GovActionsDoNotExist (Map.keysSet unknownGovActionIds))
-        *> failureUnless
-          (Map.null votesOnExpiredActions)
-          (VotingOnExpiredGovAction votesOnExpiredActions)
+checkVotesAreNotForExpiredActions curEpoch voters =
+  let votesOnExpiredActions = filter (\(_, GovActionState {gasExpiresAfter}) -> curEpoch > gasExpiresAfter) voters
+   in failureOnNonEmpty votesOnExpiredActions $
+        VotingOnExpiredGovAction . fmap (second gasId)
 
 checkVotersAreValid ::
   forall era.
   ConwayEraPParams era =>
-  Proposals era ->
-  Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
+  [(Voter (EraCrypto era), GovActionState era)] ->
   Test (ConwayGovPredFailure era)
-checkVotersAreValid proposals voters =
-  let curGovActionIds = proposalsActionsMap proposals
+checkVotersAreValid voters =
+  let canVoteOn voter gasAction = case voter of
+        CommitteeVoter {} -> isCommitteeVotingAllowed gasAction
+        DRepVoter {} -> isDRepVotingAllowed gasAction
+        StakePoolVoter {} -> isStakePoolVotingAllowed gasAction
       disallowedVoters =
-        Map.merge Map.dropMissing Map.dropMissing keepDisallowedVoters curGovActionIds voters
-      keepDisallowedVoters = Map.zipWithMaybeMatched $ \_ GovActionState {gasAction} voter -> do
-        guard $ not $ case voter of
-          CommitteeVoter {} -> isCommitteeVotingAllowed gasAction
-          DRepVoter {} -> isDRepVotingAllowed gasAction
-          StakePoolVoter {} -> isStakePoolVotingAllowed gasAction
-        Just voter
-   in failureUnless (Map.null disallowedVoters) $ DisallowedVoters disallowedVoters
+        filter
+          (\(voter, action) -> not $ voter `canVoteOn` gasAction action)
+          voters
+   in failureOnNonEmpty disallowedVoters $
+        DisallowedVoters . fmap (second gasId)
 
 actionWellFormed :: ConwayEraPParams era => GovAction era -> Test (ConwayGovPredFailure era)
 actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
@@ -393,14 +385,21 @@ govTransition = do
   -- Voting
   let votingProcedures = gpVotingProcedures gp
       -- Inversion of the keys in VotingProcedures, where we can find
-      -- the voter for every govActionId
-      govActionIdVotes =
-        Map.foldlWithKey'
-          (\acc voter gaIds -> Map.union (voter <$ gaIds) acc)
-          Map.empty
-          (unVotingProcedures votingProcedures)
-  runTest $ checkVotesAreForValidActions currentEpoch proposals govActionIdVotes
-  runTest $ checkVotersAreValid proposals govActionIdVotes
+      -- the voters for every govActionId
+      (unknownGovActionIds, knownVotes) =
+        foldrVotingProcedures
+          -- strictness is not needed for `unknown`
+          ( \voter gaId _ (unknown, !known) ->
+              case Map.lookup gaId curGovActionIds of
+                Just gas -> (unknown, (voter, gas) : known)
+                Nothing -> (gaId : unknown, known)
+          )
+          ([], [])
+          votingProcedures
+      curGovActionIds = proposalsActionsMap proposals
+  failOnNonEmpty unknownGovActionIds GovActionsDoNotExist
+  runTest $ checkVotesAreNotForExpiredActions currentEpoch knownVotes
+  runTest $ checkVotersAreValid knownVotes
 
   let
     addVoterVote ps voter govActionId VotingProcedure {vProcVote} =

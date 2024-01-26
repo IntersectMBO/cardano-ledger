@@ -758,7 +758,12 @@ electBasicCommittee ::
   , ConwayEraImp era
   , GovState era ~ ConwayGovState era
   ) =>
-  ImpTestM era (Credential 'DRepRole (EraCrypto era), Credential 'HotCommitteeRole (EraCrypto era))
+  ImpTestM
+    era
+    ( Credential 'DRepRole (EraCrypto era)
+    , Credential 'HotCommitteeRole (EraCrypto era)
+    , GovPurposeId 'CommitteePurpose era
+    )
 electBasicCommittee = do
   logEntry "Setting up PParams and DRep"
   modifyPParams $ \pp ->
@@ -807,7 +812,7 @@ electBasicCommittee = do
     impAnn "There should be a committee" $ committee `shouldSatisfy` isSJust
 
   credCommitteeMemberHot <- registerCommitteeHotKey khCommitteeMember
-  pure (KeyHashObj khDRep, credCommitteeMemberHot)
+  pure (KeyHashObj khDRep, credCommitteeMemberHot, GovPurposeId gaidCommitteeProp)
 
 logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era ()
 logCurPParams = do

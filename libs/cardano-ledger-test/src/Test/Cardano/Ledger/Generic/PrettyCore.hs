@@ -318,6 +318,8 @@ import qualified Cardano.Ledger.Shelley.PParams as PParams (Update (..))
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxBodyRaw (..))
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 
 -- ================================================
 
@@ -1351,22 +1353,25 @@ ppConwayCertsPredFailure proof x = case x of
 instance Reflect era => PrettyA (ConwayCertsPredFailure era) where
   prettyA = ppConwayCertsPredFailure reify
 
+instance PrettyA a => PrettyA (NonEmpty a) where
+  prettyA = prettyA . NE.toList
+
 ppConwayGovPredFailure :: ConwayGovPredFailure era -> PDoc
 ppConwayGovPredFailure x = case x of
-  GovActionsDoNotExist c -> ppSexp "GovActionsDoNotExist" [ppSet pcGovActionId c]
+  GovActionsDoNotExist c -> ppSexp "GovActionsDoNotExist" [prettyA c]
   MalformedProposal ga -> ppSexp " MalformedProposal" [pcGovAction ga] -- (GovAction era)
   ProposalProcedureNetworkIdMismatch racnt nw ->
     ppSexp "ProposalProcedureNetworkIdMismatch" [pcRewardAcnt racnt, pcNetwork nw]
   TreasuryWithdrawalsNetworkIdMismatch sr nw ->
     ppSexp "TreasuryWithdrawalsNetworkIdMismatch" [ppSet pcRewardAcnt sr, pcNetwork nw]
   ProposalDepositIncorrect c1 c2 -> ppSexp "ProposalDepositIncorrect" [pcCoin c1, pcCoin c2]
-  DisallowedVoters m -> ppSexp "DisallowedVoters" [ppMap pcGovActionId pcVoter m]
+  DisallowedVoters m -> ppSexp "DisallowedVoters" [prettyA m]
   ConflictingCommitteeUpdate s ->
     ppSexp "ConflictingCommitteeUpdate" [ppSet pcCredential s]
   ExpirationEpochTooSmall m -> ppSexp " ExpirationEpochTooSmall" [ppMap pcCredential ppEpochNo m]
   InvalidPrevGovActionId p -> ppSexp "InvalidPrevGovActionId" [pcProposalProcedure p]
   VotingOnExpiredGovAction m ->
-    ppSexp "VotingOnExpiredGovAction" [ppMap pcGovActionId pcVoter m]
+    ppSexp "VotingOnExpiredGovAction" [prettyA m]
   ProposalCantFollow s1 p1 p2 ->
     ppSexp "ProposalCantFollow" [ppStrictMaybe pcGovPurposeId s1, ppProtVer p1, ppProtVer p2]
   InvalidPolicyHash a b ->

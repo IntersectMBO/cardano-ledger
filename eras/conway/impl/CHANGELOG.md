@@ -2,6 +2,8 @@
 
 ## 1.12.0.0
 
+* Changed the types in `GovernanceActionsDoNotExist`, `DisallowedVoters`
+  and `VotingOnExpiredGovAction` to `NonEmpty`
 * Add `cgDelegsL`
 * Add `FromJSON`, `EncCBOR` and `DecCBOR` instances for `Delegatee`
 * Add `pvtPPSecurityGroup`
@@ -76,6 +78,7 @@
 
 ### `testlib`
 
+* Add the previous governance action ID to the outputs of `electBasicCommittee`
 * Add `setupPoolWithStake`
 * Add:
   * `registerPool`
