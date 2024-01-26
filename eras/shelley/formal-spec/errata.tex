@@ -35,7 +35,7 @@ unregistered accounts go to the treasury already anyway.
 \subsection{Stability Windows}
 \label{sec:errata:stability-windows}
 
-The constant $RandomnessStabilisationWindow$ was intended to be used only
+The constant \RandomnessStabilisationWindow\ was intended to be used only
 for freezing the candidate nonce in the $\mathsf{UPDN}$ rule
 from Figure~\ref{fig:rules:update-nonce}.
 This was chosen as a good value for both Ouroboros Praos and Ouroboros Genesis.
@@ -44,10 +44,11 @@ from Figure~\ref{fig:rules:reward-update}, and used $\StabilityWindow$
 in for the $\mathsf{UPDN}$ transition.
 
 The constant $\StabilityWindow$ is a good choice for the $\mathsf{UPDN}$
-transition while we remain using Ouroboros Praos, but it will be changed before
-adopting Ouroboros Genesis in the consensus layer.
+transition while we remain using Ouroboros Praos, but it has been changed to
+\RandomnessStabilisationWindow\ in the consensus layer starting in Conway in
+order to be prepared for Ouroboros Genesis.
 
-There is no problem with using $RandomnessStabilisationWindow$ for the
+There is no problem with using \RandomnessStabilisationWindow\ for the
 $\mathsf{RUPD}$ transition, since anything after $\StabilityWindow$ would work,
 but there is no reason to do so.
 
