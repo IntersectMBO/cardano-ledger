@@ -18,10 +18,9 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
+  ConwayEraGov (..),
   ConwayGovState,
   EraGov (..),
-  cgEnactStateL,
-  ensCommitteeL,
  )
 import Cardano.Ledger.Conway.PParams (
   dvtCommitteeNoConfidence,
@@ -244,7 +243,7 @@ spec =
     expectMembers expKhs = do
       committee <-
         getsNES $
-          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
       let members = Map.keysSet $ foldMap' committeeMembers committee
       impAnn "Expecting committee members" $ members `shouldBe` expKhs
 

@@ -37,30 +37,28 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   Committee,
-  ConwayEraGov (enactStateGovStateL),
+  ConwayEraGov (..),
   ConwayGovState (..),
   DRepPulsingState (..),
-  EnactState,
+  EnactState (..),
   GovActionState (..),
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
   RunConwayRatify,
-  cgEnactStateL,
-  cgProposalsL,
+  cgsCommitteeL,
+  cgsConstitutionL,
+  cgsCurPParamsL,
+  cgsPrevPParamsL,
+  cgsProposalsL,
   dormantEpoch,
-  ensCommitteeL,
-  ensPrevGovActionIdsL,
-  ensPrevPParamsL,
   ensTreasuryL,
   ensWithdrawalsL,
   epochStateDRepPulsingStateL,
   extractDRepPulsingState,
-  pRootsL,
   proposalsApplyEnactment,
   proposalsGovStateL,
   setFreshDRepPulsingState,
-  toPrevGovActionIds,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
 import Cardano.Ledger.EpochBoundary (SnapShots)
@@ -73,7 +71,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   UTxOState (..),
   asTreasuryL,
-  epochStateGovStateL,
   esAccountState,
   esAccountStateL,
   esLStateL,
@@ -103,7 +100,6 @@ import Cardano.Ledger.UMap (UView (..), unionRewAgg, (∪+), (◁))
 import Cardano.Ledger.Val (zero, (<->))
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
-  Assertion (..),
   Embed (..),
   STS (..),
   TRC (..),
@@ -117,7 +113,7 @@ import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Void (Void, absurd)
-import Lens.Micro (to, (%~), (&), (+~), (.~), (<>~), (^.))
+import Lens.Micro ((%~), (&), (+~), (.~), (<>~), (^.))
 
 data ConwayEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
@@ -155,21 +151,6 @@ instance
   type PredicateFailure (ConwayEPOCH era) = Void
   type Event (ConwayEPOCH era) = ConwayEpochEvent era
   transitionRules = [epochTransition]
-  assertions =
-    let withdrawalsEmptyMessage = "Withdrawals in EnactState must be empty"
-        withdrawalsEmptyCheck es = null $ es ^. epochStateGovStateL . cgEnactStateL . ensWithdrawalsL
-        treasuryZeroMessage = "Treasury in EnactState must be zero"
-        treasuryZeroCheck es = zero == es ^. epochStateGovStateL . cgEnactStateL . ensTreasuryL
-        enactConsistentMessage = "ENACT Rule should match proposalsApplyEnactment"
-        enactConsistentCheck es =
-          es ^. esLStateL . lsUTxOStateL . utxosGovStateL . enactStateGovStateL . ensPrevGovActionIdsL
-            == es ^. esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL . pRootsL . to toPrevGovActionIds
-     in [ PreCondition withdrawalsEmptyMessage (\(TRC (_, es, _)) -> withdrawalsEmptyCheck es)
-        , PostCondition withdrawalsEmptyMessage (const withdrawalsEmptyCheck)
-        , PreCondition treasuryZeroMessage (\(TRC (_, es, _)) -> treasuryZeroCheck es)
-        , PostCondition treasuryZeroMessage (const treasuryZeroCheck)
-        , PostCondition enactConsistentMessage (const enactConsistentCheck)
-        ]
 
 returnProposalDeposits ::
   Foldable f => f (GovActionState era) -> DState era -> DState era
@@ -290,7 +271,7 @@ epochTransition = do
     ratState0@RatifyState {rsEnactState, rsEnacted, rsExpired} =
       extractDRepPulsingState pulsingState
 
-    (accountState2, dState2, newEnactState) =
+    (accountState2, dState2, EnactState {..}) =
       applyEnactedWithdrawals accountState1 dState1 rsEnactState
 
     -- NOTE: It is important that we apply the results of ratifcation
@@ -308,10 +289,14 @@ epochTransition = do
     (newProposals, enactedActions, expiredActions) =
       proposalsApplyEnactment rsEnacted rsExpired (govState0 ^. proposalsGovStateL)
 
+    -- Apply the values from the computed EnactState to the GovState
     govState1 =
       govState0
-        & cgProposalsL .~ newProposals
-        & cgEnactStateL .~ (newEnactState & ensPrevPParamsL .~ curPParams)
+        & cgsProposalsL .~ newProposals
+        & cgsCommitteeL .~ ensCommittee
+        & cgsConstitutionL .~ ensConstitution
+        & cgsCurPParamsL .~ ensCurPParams
+        & cgsPrevPParamsL .~ curPParams
 
     allRemovedGovActions = expiredActions `Map.union` enactedActions
 
@@ -323,7 +308,7 @@ epochTransition = do
             -- Increment the dormant epoch counter
             updateNumDormantEpochs pulsingState vState
               -- Remove cold credentials of committee members that were removed or were invalid
-              & vsCommitteeStateL %~ updateCommitteeState (govState1 ^. cgEnactStateL . ensCommitteeL)
+              & vsCommitteeStateL %~ updateCommitteeState (govState1 ^. cgsCommitteeL)
         }
     accountState3 =
       accountState2

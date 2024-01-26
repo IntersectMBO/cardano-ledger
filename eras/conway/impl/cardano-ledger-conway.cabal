@@ -131,7 +131,6 @@ library testlib
         cardano-data:testlib,
         containers,
         microlens,
-        microlens-mtl,
         cardano-crypto-class,
         cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
         cardano-ledger-alonzo:testlib,

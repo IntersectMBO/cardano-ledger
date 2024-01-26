@@ -119,7 +119,7 @@ spec =
         let
           getCommittee =
             getsNES $
-              nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+              nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
           assertNoCommittee :: HasCallStack => ImpTestM era ()
           assertNoCommittee =
             do
@@ -197,7 +197,8 @@ spec =
         let newMinFeeA = Coin 12_345
         gaidMinFee <- do
           pp <- getsNES $ nesEsL . curPParamsEpochStateL
-          (pp ^. ppPoolVotingThresholdsL . pvtPPSecurityGroupL) `shouldBe` (1 %! 2)
+          impAnn "Security group threshold should be 1/2" $
+            (pp ^. ppPoolVotingThresholdsL . pvtPPSecurityGroupL) `shouldBe` (1 %! 2)
           rew <- registerRewardAccount
           gaidMinFee <-
             submitProposal $
@@ -292,16 +293,17 @@ spec =
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 1
 
         curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-        initialPulser <- getsNES $ newEpochStateGovStateL . cgDRepPulsingStateL
-        initialEnactState <- getsNES $ newEpochStateGovStateL . cgEnactStateL
+        initialPulser <- getsNES $ newEpochStateGovStateL . drepPulsingStateGovStateL
+        initialEnactState <- getEnactState
 
         (govActionId, _) <- submitConstitution SNothing
         curConstitution' <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
         impAnn "Constitution has not been enacted yet" $
           curConstitution' `shouldBe` curConstitution
 
-        ConwayGovState expectedProposals expectedEnactState expectedPulser <-
+        ConwayGovState expectedProposals _ _ _ _ expectedPulser <-
           getsNES newEpochStateGovStateL
+        expectedEnactState <- getEnactState
 
         impAnn "EnactState reflects the submitted governance action" $ do
           expectedEnactState `shouldBe` initialEnactState
@@ -314,7 +316,7 @@ spec =
 
         passEpoch >> passEpoch
         impAnn "Proposal gets removed after expiry" $ do
-          ConwayGovState _ _ pulser <- getsNES newEpochStateGovStateL
+          ConwayGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
           let ratifyState = extractDRepPulsingState pulser
           rsExpired ratifyState `shouldBe` Set.singleton govActionId
 
@@ -322,11 +324,11 @@ spec =
         (dRep, committeeMember, _) <- electBasicCommittee
         (govActionId, constitution) <- submitConstitution SNothing
 
-        ConwayGovState proposalsBeforeVotes enactStateBeforeVotes pulserBeforeVotes <-
+        ConwayGovState proposalsBeforeVotes enactStateBeforeVotes pulserBeforeVotes _ _ _ <-
           getsNES newEpochStateGovStateL
         submitYesVote_ (DRepVoter dRep) govActionId
         submitYesVote_ (CommitteeVoter committeeMember) govActionId
-        ConwayGovState proposalsAfterVotes enactStateAfterVotes pulserAfterVotes <-
+        ConwayGovState proposalsAfterVotes enactStateAfterVotes pulserAfterVotes _ _ _ <-
           getsNES newEpochStateGovStateL
 
         impAnn "Votes are recorded in the proposals" $ do
@@ -356,7 +358,7 @@ spec =
           constitutionAfterOneEpoch `shouldBe` def
 
         impAnn "Pulser should reflect the constitution to be enacted" $ do
-          ConwayGovState _ _ pulser <- getsNES newEpochStateGovStateL
+          ConwayGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
           let ratifyState = extractDRepPulsingState pulser
           gasId <$> rsEnacted ratifyState `shouldBe` Seq.singleton govActionId
           rsEnactState ratifyState ^. ensConstitutionL `shouldBe` constitution
@@ -368,10 +370,10 @@ spec =
           curConstitution `shouldBe` constitution
 
         impAnn "Pulser is reset" $ do
-          ConwayGovState _ _ pulser <- getsNES newEpochStateGovStateL
+          ConwayGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
           let pulserRatifyState = extractDRepPulsingState pulser
           rsEnacted pulserRatifyState `shouldBe` Seq.empty
-          enactState <- getsNES $ newEpochStateGovStateL . cgEnactStateL
+          enactState <- getEnactState
           rsEnactState pulserRatifyState `shouldBe` enactState
 
       it "policy is respected by proposals" $ do
@@ -382,7 +384,7 @@ spec =
             RequireMOf 1 $
               SSeq.fromList [RequireAnyOf mempty, RequireAllOf mempty]
         modifyNES $
-          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensConstitutionL
+          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . constitutionGovStateL
             .~ Constitution def (SJust scriptHash)
         pp <- getsNES $ nesEsL . curPParamsEpochStateL
         impAnn "ParameterChange with correct policy succeeds" $ do
@@ -595,7 +597,7 @@ spec =
     expectMembers expKhs = do
       committee <-
         getsNES $
-          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
       let members = Map.keysSet $ foldMap' committeeMembers committee
       impAnn "Expecting committee members" $ members `shouldBe` expKhs
 

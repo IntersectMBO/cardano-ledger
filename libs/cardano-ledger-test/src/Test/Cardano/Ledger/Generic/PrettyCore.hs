@@ -2630,12 +2630,15 @@ instance PrettyA (PrevGovActionIds era) where
   prettyA = pcPrevGovActionIds
 
 pcConwayGovState :: Reflect era => Proof era -> ConwayGovState era -> PDoc
-pcConwayGovState p (ConwayGovState ss es dr) =
+pcConwayGovState p (ConwayGovState ss cmt con cpp ppp dr) =
   ppRecord
     "ConwayGovState"
     [ ("proposals", pcProposals ss)
-    , ("enactState", pcEnactState p es)
     , ("drepPulsingState", pcDRepPulsingState p dr)
+    , ("committee", ppStrictMaybe prettyA cmt)
+    , ("constitution", prettyA con)
+    , ("currentPParams", prettyA cpp)
+    , ("prevPParams", prettyA ppp)
     ]
 
 instance Reflect era => PrettyA (ConwayGovState era) where

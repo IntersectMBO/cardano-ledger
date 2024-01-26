@@ -40,10 +40,9 @@ import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   GovProcedures (..),
   Proposals,
-  enactStateGovStateL,
-  ensConstitutionL,
-  ensPrevGovActionIdsL,
+  pRootsL,
   proposalsGovStateL,
+  toPrevGovActionIds,
  )
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv)
 import Cardano.Ledger.Conway.Rules.Certs (
@@ -100,7 +99,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic (..))
-import Lens.Micro
+import Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
 
 data ConwayLedgerPredFailure era
@@ -299,8 +298,8 @@ ledgerTransition = do
                   (txIdTxBody txBody)
                   currentEpoch
                   pp
-                  (utxoState ^. utxosGovStateL . enactStateGovStateL . ensPrevGovActionIdsL)
-                  (utxoState ^. utxosGovStateL . enactStateGovStateL . ensConstitutionL . constitutionScriptL)
+                  (utxoState ^. utxosGovStateL . proposalsGovStateL . pRootsL . L.to toPrevGovActionIds)
+                  (utxoState ^. utxosGovStateL . constitutionGovStateL . constitutionScriptL)
               , utxoState ^. utxosGovStateL . proposalsGovStateL
               , govProcedures
               )

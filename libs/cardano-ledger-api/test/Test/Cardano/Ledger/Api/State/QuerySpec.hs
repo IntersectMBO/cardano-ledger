@@ -23,11 +23,10 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
-  ConwayEraGov,
+  ConwayEraGov (..),
   ConwayGovState,
   DRepPulsingState (..),
   RatifyState (..),
-  cgEnactStateL,
   ensCommitteeL,
   newEpochStateDRepPulsingStateL,
   rsEnactStateL,
@@ -86,7 +85,7 @@ committeeMembersStateSpec =
                   & nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
                     .~ committeeState
                   & newEpochStateDRepPulsingStateL .~ DRComplete def nextRatifyState
-                  & nesEpochStateL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+                  & nesEpochStateL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
                     .~ maybeToStrictMaybe committee
               nextRatifyState =
                 (def @(RatifyState era))
