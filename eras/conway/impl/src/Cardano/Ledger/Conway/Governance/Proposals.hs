@@ -91,6 +91,7 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   proposalsActionsMap,
   PrevGovActionIds (..),
   prevGovActionIdsL,
+  toPrevGovActionIds,
 
   -- * To be used only for testing
   pPropsL,
@@ -110,7 +111,6 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   PGraph (..),
   pGraphNodesL,
   fromPrevGovActionIds,
-  toPrevGovActionIds,
   proposalsAreConsistent,
 ) where
 
@@ -289,28 +289,29 @@ proposalsAddAction gas ps =
     InfoAction -> Just psWithGas
   where
     psWithGas = ps & pPropsL %~ (OMap.||> gas)
+    -- Append a new GovActionState to the Proposals and then add it to the set of children
+    -- for its parent as well as initiate an empty lineage for this new child.
     update ::
       (forall f. Lens' (PForest f era) (f (GovPurposeId p era))) ->
       StrictMaybe (GovPurposeId p era) ->
       Maybe (Proposals era)
-    update forestL prev
-      | prev == ps ^. pRootsL . forestL . prRootL =
+    update forestL parent
+      | parent == ps ^. pRootsL . forestL . prRootL =
           Just $
             psWithGas
               & pRootsL . forestL . prChildrenL %~ Set.insert newId
-              & pGraphL . forestL . pGraphNodesL %~ Map.insert newId (newNode prev)
-      | SJust parentId <- prev
+              & pGraphL . forestL . pGraphNodesL %~ Map.insert newId (PEdges parent Set.empty)
+      | SJust parentId <- parent
       , Map.member parentId $ ps ^. pGraphL . forestL . pGraphNodesL =
           Just $
             psWithGas
               & pGraphL . forestL . pGraphNodesL
-                %~ ( Map.insert newId (newNode $ SJust parentId)
+                %~ ( Map.insert newId (PEdges (SJust parentId) Set.empty)
                       . Map.adjust (peChildrenL %~ Set.insert newId) parentId
                    )
       | otherwise = Nothing
       where
         newId = GovPurposeId $ gas ^. gasIdL
-        newNode parent = PEdges parent Set.empty
 
 -- | Internal function for checking if the invariants for @`Proposals`@
 -- are maintained
@@ -415,8 +416,7 @@ mkProposals pgais omap = do
 instance EraPParams era => EncCBOR (Proposals era) where
   encCBOR ps =
     let roots = toPrevGovActionIds $ ps ^. pRootsL
-        props = ps ^. pPropsL
-     in encCBOR (roots, props)
+     in encCBOR (roots, ps ^. pPropsL)
 
 instance EraPParams era => DecCBOR (Proposals era) where
   decCBOR = decCBOR >>= uncurry mkProposals
@@ -546,7 +546,8 @@ proposalsApplyEnactment ::
   )
 proposalsApplyEnactment enactedGass expiredGais props =
   let (unexpiredProposals, expiredRemoved) = proposalsRemoveDescendentIds expiredGais props
-      (enactedProposalsState, enactedRemoved) = foldl' enact (unexpiredProposals, Map.empty) enactedGass
+      (enactedProposalsState, enactedRemoved) =
+        foldl' enact (unexpiredProposals, Map.empty) enactedGass
    in (enactedProposalsState, enactedRemoved, expiredRemoved)
   where
     enact (!ps, !removed) gas =
@@ -574,13 +575,18 @@ proposalsApplyEnactment enactedGass expiredGais props =
           , Map (GovActionId (EraCrypto era)) (GovActionState era)
           )
         enactFromRoot forestL parent =
-          -- do
           let gpi = GovPurposeId gai
-              siblings = Set.delete gai $ Set.map unGovPurposeId (ps ^. pRootsL . forestL . prChildrenL)
-              newRootChildren = maybe (assert False Set.empty) peChildren $ Map.lookup gpi $ ps ^. pGraphL . forestL . pGraphNodesL
+              siblings =
+                Set.delete gai $
+                  Set.map unGovPurposeId (ps ^. pRootsL . forestL . prChildrenL)
+              newRootChildren =
+                case Map.lookup gpi $ ps ^. pGraphL . forestL . pGraphNodesL of
+                  Nothing -> assert False Set.empty
+                  Just pe -> peChildren pe
               (withoutSiblings, removedActions) = proposalsRemoveDescendentIds siblings ps
               newGraph = Map.delete gpi $ withoutSiblings ^. pGraphL . forestL . pGraphNodesL
-              (newOMap, enactedAction) = OMap.extractKeys (Set.singleton gai) $ withoutSiblings ^. pPropsL
+              (newOMap, enactedAction) =
+                OMap.extractKeys (Set.singleton gai) $ withoutSiblings ^. pPropsL
            in assert
                 (ps ^. pRootsL . forestL . prRootL == parent)
                 ( withoutSiblings
