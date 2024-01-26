@@ -99,9 +99,9 @@ utxoTxSpec ::
   Spec fn (Tx (ConwayEra StandardCrypto))
 utxoTxSpec env st =
   constrained $ \tx ->
-    match tx $ \body _wits isValid _auxData ->
+    match tx $ \bdy _wits isValid _auxData ->
       [ match isValid assert
-      , match body $
+      , match bdy $
           \ctbSpendInputs
            ctbCollateralInputs
            _ctbReferenceInputs

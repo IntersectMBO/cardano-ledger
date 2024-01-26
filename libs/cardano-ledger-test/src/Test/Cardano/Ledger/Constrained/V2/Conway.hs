@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
@@ -16,6 +17,11 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+
+-- RecordWildCards cause name shadowing warnings in ghc-8.10.
+#if __GLASGOW_HASKELL__ < 900
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+#endif
 
 -- | This module provides the necessary instances of `HasSpec`
 -- and `HasSimpleRep` to write specs for the environments,
@@ -95,8 +101,8 @@ import Data.Typeable
 import Data.VMap (VMap)
 import Data.VMap qualified as VMap
 import Data.Word
-import GHC.TypeLits
 import Lens.Micro
+import Numeric.Natural (Natural)
 import PlutusLedgerApi.V1 qualified as PV1
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
@@ -609,10 +615,16 @@ instance IsConwayUniv fn => Functions (StringFn fn) fn where
                     (mapList (\(C.Value a) -> lit a) pre)
                     (x' :> mapList (\(C.Value a) -> lit a) suf)
              in uncurryList (app @fn $ injectFn fn) args `satisfies` spec
-    LengthFn @s | NilCtx HOLE <- ctx -> typeSpec $ lengthSpec @s spec
+    LengthFn ->
+      -- No TypeAbstractions in ghc-8.10
+      case fn of
+        (_ :: StringFn fn '[s] Int)
+          | NilCtx HOLE <- ctx -> typeSpec $ lengthSpec @s spec
 
-  mapTypeSpec (LengthFn @s) ss =
-    getLengthSpec @s ss
+  mapTypeSpec f@LengthFn ss =
+    -- No TypeAbstractions in ghc-8.10
+    case f of
+      (_ :: StringFn fn '[s] Int) -> getLengthSpec @s ss
 
 class StringLike s where
   lengthSpec :: IsConwayUniv fn => Spec fn Int -> TypeSpec fn s
