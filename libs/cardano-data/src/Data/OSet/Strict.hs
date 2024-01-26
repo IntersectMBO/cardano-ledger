@@ -26,6 +26,7 @@ module Data.OSet.Strict (
   toSet,
   fromSet,
   fromFoldable,
+  fromFoldableDuplicates,
   invariantHolds,
   invariantHolds',
   (|>),
@@ -187,18 +188,21 @@ fromFoldable = F.foldl' snoc empty
 fromStrictSeq :: Ord a => SSeq.StrictSeq a -> OSet a
 fromStrictSeq = fromFoldable
 
--- | \(O(n \log n)\). Checks membership before snoc-ing.
--- Returns a 2-tuple, with `fst` as a `Set` of duplicates found
--- and the `snd` as the de-duplicated `OSet` without overwriting.
--- Starts from the left or head, using `foldl'`
-fromStrictSeqDuplicates :: Ord a => SSeq.StrictSeq a -> (Set.Set a, OSet a)
-fromStrictSeqDuplicates = F.foldl' snoc' (Set.empty, empty)
+fromFoldableDuplicates :: (Foldable f, Ord a) => f a -> (Set.Set a, OSet a)
+fromFoldableDuplicates = F.foldl' snoc' (Set.empty, empty)
   where
     snoc' :: Ord a => (Set.Set a, OSet a) -> a -> (Set.Set a, OSet a)
     snoc' (!duplicates, !oset@(OSet seq set)) x =
       if x `Set.member` set
         then (x `Set.insert` duplicates, oset)
         else (duplicates, OSet (seq SSeq.|> x) (x `Set.insert` set))
+
+-- | \(O(n \log n)\). Checks membership before snoc-ing.
+-- Returns a 2-tuple, with `fst` as a `Set` of duplicates found
+-- and the `snd` as the de-duplicated `OSet` without overwriting.
+-- Starts from the left or head, using `foldl'`
+fromStrictSeqDuplicates :: Ord a => SSeq.StrictSeq a -> (Set.Set a, OSet a)
+fromStrictSeqDuplicates = fromFoldableDuplicates
 
 -- | \( O(1) \) -  Extract underlying strict sequence
 toStrictSeq :: OSet a -> SSeq.StrictSeq a

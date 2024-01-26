@@ -1,8 +1,8 @@
 # Version history for `cardano-data`
 
-## 1.2.0.1
+## 1.2.1.0
 
-*
+* Add `fromFoldableDuplicates`
 
 ## 1.2.0.0
 
