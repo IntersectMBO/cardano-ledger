@@ -1,8 +1,8 @@
 # Version history for `cardano-protocol-tpraos`
 
-## 1.0.3.8
+## 1.1.0.0
 
-*
+* Change the type of `bsize` and `hBbsize` to `Word32`
 
 ## 1.0.3.7
 

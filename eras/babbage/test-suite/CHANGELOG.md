@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage-test`
 
+## 1.2.0.1
+
+*
+
 ## 1.2.0.0
 
 * Remove `txInfoTestsBabbageOnly` and `BabbageTxInfoTests`

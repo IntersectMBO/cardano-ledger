@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.6.0.1
+
+*
+
 ## 1.6.0.0
 
 * Deprecated `getAlonzoSpendingTxIn` in favor of `plutusPurposeSpendingTxIn`

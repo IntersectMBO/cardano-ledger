@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.5.0.1
+
+*
+
 ## 1.5.0.0
 
 * Change return type of `mintedTxBodyF` to `Set PolicyID`

@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.10.0.1
+
+*
+
 ## 1.10.0.0
 
 * Add `umElemsL`
