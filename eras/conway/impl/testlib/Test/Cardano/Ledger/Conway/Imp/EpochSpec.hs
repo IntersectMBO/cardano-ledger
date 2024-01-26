@@ -15,12 +15,11 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Anchor (..),
+  ConwayEraGov (..),
   ConwayGovState,
   GovAction (..),
   ProposalProcedure (..),
   Voter (..),
-  cgEnactStateL,
-  ensConstitutionL,
  )
 import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
@@ -121,7 +120,7 @@ spec =
 
       policy <-
         getsNES $
-          nesEpochStateL . epochStateGovStateL . cgEnactStateL . ensConstitutionL . constitutionScriptL
+          nesEpochStateL . epochStateGovStateL . constitutionGovStateL . constitutionScriptL
       govActionId <-
         submitProposal $
           ProposalProcedure

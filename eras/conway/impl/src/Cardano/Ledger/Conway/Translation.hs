@@ -25,12 +25,11 @@ import Cardano.Ledger.Conway.Core hiding (Tx)
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (
-  EnactState (..),
-  cgEnactStateL,
-  ensCommitteeL,
-  ensConstitutionL,
-  ensCurPParamsL,
-  ensPrevPParamsL,
+  cgsCommitteeL,
+  cgsConstitutionL,
+  cgsCurPParamsL,
+  cgsPrevPParamsL,
+  mkEnactState,
   rsEnactStateL,
   setCompleteDRepPulsingState,
  )
@@ -50,7 +49,9 @@ import Cardano.Ledger.Shelley.API (
   VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.LedgerState (epochStateGovStateL)
+import Cardano.Ledger.Shelley.LedgerState (
+  epochStateGovStateL,
+ )
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -78,7 +79,9 @@ instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
         -- We need to ensure that we have the same initial EnactState in the pulser as
         -- well as in the current EnactState, otherwise in the very first EPOCH rule call
         -- the pulser will reset it.
-        ratifyState = def & rsEnactStateL .~ (es ^. epochStateGovStateL . cgEnactStateL)
+        ratifyState =
+          def
+            & rsEnactStateL .~ mkEnactState (es ^. epochStateGovStateL)
     pure $
       NewEpochState
         { nesEL = nesEL nes
@@ -157,28 +160,19 @@ instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
         , API.lsCertState = translateEra' conwayGenesis $ API.lsCertState ls
         }
 
-initEnactState ::
-  Crypto c =>
-  ConwayGenesis c ->
-  PParams (ConwayEra c) ->
-  PParams (ConwayEra c) ->
-  EnactState (ConwayEra c)
-initEnactState (ConwayGenesis _ constitution committee _ _) curPParams prevPParams =
-  def
-    & ensConstitutionL .~ constitution
-    & ensCommitteeL .~ SJust committee
-    & ensCurPParamsL .~ curPParams
-    & ensPrevPParamsL .~ prevPParams
-
 translateGovState ::
   Crypto c =>
   TranslationContext (ConwayEra c) ->
   GovState (BabbageEra c) ->
   GovState (ConwayEra c)
-translateGovState ctxt sgov =
+translateGovState ctxt@ConwayGenesis {..} sgov =
   let curPParams = translateEra' ctxt (sgov ^. curPParamsGovStateL)
       prevPParams = translateEra' ctxt (sgov ^. prevPParamsGovStateL)
-   in emptyGovState & cgEnactStateL .~ initEnactState ctxt curPParams prevPParams
+   in emptyGovState
+        & cgsCurPParamsL .~ curPParams
+        & cgsPrevPParamsL .~ prevPParams
+        & cgsCommitteeL .~ SJust cgCommittee
+        & cgsConstitutionL .~ cgConstitution
 
 instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
   translateEra ctxt us =

@@ -1921,11 +1921,16 @@ conwayGovStateT ::
   Proof era ->
   RootTarget era (ConwayGovState era) (ConwayGovState era)
 conwayGovStateT p =
-  Invert "ConwayGovState" (typeRep @(ConwayGovState era)) ConwayGovState
-    :$ Lensed (currProposals p) (cgProposalsL)
-    :$ Shift enactStateT cgEnactStateL
-    -- :$ Shift (completePulsingStateT p) cgDRepPulsingStateL
-    :$ Shift pulsingPulsingStateT cgDRepPulsingStateL
+  Invert
+    "ConwayGovState"
+    (typeRep @(ConwayGovState era))
+    (\pr com con (PParamsF _ cpp) (PParamsF _ ppp) pu -> ConwayGovState pr (maybeToStrictMaybe com) con cpp ppp pu)
+    :$ Lensed (currProposals p) cgsProposalsL
+    :$ Lensed committeeVar (cgsCommitteeL . strictMaybeToMaybeL) -- see 'committeeT' to construct a binding for committeeVar
+    :$ Lensed constitution cgsConstitutionL
+    :$ Lensed (currPParams reify) (cgsCurPParamsL . pparamsFL reify)
+    :$ Lensed (prevPParams reify) (cgsPrevPParamsL . pparamsFL reify)
+    :$ Shift pulsingPulsingStateT cgsDRepPulsingStateL
 
 -- | The sum of all the 'gasDeposit' fields of 'currProposals'
 proposalDeposits :: Era era => Term era Coin

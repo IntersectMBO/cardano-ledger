@@ -2,6 +2,17 @@
 
 ## 1.13.0.0
 
+* Rename:
+  * `cgProposalsL` to `cgsProposalsL`
+  * `cgEnactStateL` to `cgsEnactStateL`
+  * `cgDRepPulsingStateL` to `cgsDRepPulsingStateL`
+* Add:
+  * `cgsPrevPParamsL`
+  * `cgsCommitteeL`
+  * `cgsConstitutionL`
+  * `govStatePrevGovActionIds`
+  * `mkEnactState`
+* Deprecated `curPParamsConwayGovStateL` and `curPParamsConwayGovStateL`
 * Add `TreeMaybe`, `toPForest` and `toPForestEither`
 * Remove `proposalsAreConsistent`
 

@@ -2,6 +2,8 @@
 
 ## 1.9.0.0
 
+* Rename `cgProposalsL` to `cgsProposalsL`
+* Remove `cgEnactStateL`
 * Rename `RewardAccount` fields `getRwdNetwork` and `getRwdCred` to `raNetwork` and `raCredential` respectively
 * Deprecate `deserialiseRewardAcnt` in favor of `deserialiseRewardAccount`
 * Deprecate `serialiseRewardAcnt` in favor of `serialiseRewardAccount`

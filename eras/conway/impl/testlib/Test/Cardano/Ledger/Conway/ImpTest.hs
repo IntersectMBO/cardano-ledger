@@ -94,14 +94,12 @@ import Cardano.Ledger.Conway.Governance (
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
-  cgDRepPulsingStateL,
-  cgEnactStateL,
-  ensCommitteeL,
-  ensConstitutionL,
+  cgsDRepPulsingStateL,
   ensCurPParamsL,
   epochStateDRepPulsingStateL,
   finishDRepPulser,
   gasDRepVotesL,
+  mkEnactState,
   pGraphL,
   pGraphNodesL,
   pRootsL,
@@ -193,7 +191,7 @@ conwayModifyPParams ::
 conwayModifyPParams f = modifyNES $ \nes ->
   nes
     & nesEsL . curPParamsEpochStateL %~ f
-    & newEpochStateGovStateL . cgDRepPulsingStateL %~ modifyDRepPulser
+    & newEpochStateGovStateL . cgsDRepPulsingStateL %~ modifyDRepPulser
   where
     modifyDRepPulser pulser =
       case finishDRepPulser pulser of
@@ -214,7 +212,9 @@ instance
             & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
             & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
         epochState = nes ^. nesEsL
-        ratifyState = def & rsEnactStateL .~ (epochState ^. epochStateGovStateL . cgEnactStateL)
+        ratifyState =
+          def
+            & rsEnactStateL .~ mkEnactState (epochState ^. epochStateGovStateL)
      in nes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState
 
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
@@ -557,14 +557,10 @@ submitTreasuryWithdrawals wdrls = do
 getGovPolicy :: ConwayEraGov era => ImpTestM era (StrictMaybe (ScriptHash (EraCrypto era)))
 getGovPolicy =
   getsNES $
-    nesEpochStateL
-      . epochStateGovStateL
-      . enactStateGovStateL
-      . ensConstitutionL
-      . constitutionScriptL
+    nesEpochStateL . epochStateGovStateL . constitutionGovStateL . constitutionScriptL
 
 getEnactState :: ConwayEraGov era => ImpTestM era (EnactState era)
-getEnactState = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . enactStateGovStateL
+getEnactState = mkEnactState <$> getsNES (nesEsL . epochStateGovStateL)
 
 -- | Looks up the governance action state corresponding to the governance action id
 lookupGovActionState ::
@@ -649,9 +645,8 @@ calculateCommitteeAcceptedRatio gaId = do
   eNo <- getsNES nesELL
   RatifyEnv {reCommitteeState} <- getRatifyEnv
   GovActionState {gasCommitteeVotes} <- getGovActionState gaId
-  ens <- getEnactState
+  committee <- getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
   let
-    committee = ens ^. ensCommitteeL
     members = foldMap' (committeeMembers @era) committee
   pure $
     committeeAcceptedRatio
@@ -723,19 +718,21 @@ logRatificationChecks ::
 logRatificationChecks gaId = do
   gas@GovActionState {gasCommitteeVotes, gasDRepVotes, gasAction} <- getGovActionState gaId
   ens@EnactState {..} <- getEnactState
+  committee <- getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
   ratEnv <- getRatifyEnv
   let
     ratSt = RatifyState ens mempty mempty False
   curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   currentEpoch <- getsNES nesELL
   let
-    members = foldMap' committeeMembers (ens ^. ensCommitteeL)
+    members = foldMap' committeeMembers committee
     committeeState = reCommitteeState ratEnv
+  curPParams <- getsNES $ nesEsL . epochStateGovStateL . curPParamsGovStateL
   logEntry $
     unlines
       [ "----- RATIFICATION CHECKS -----"
       , "prevActionAsExpected:\t" <> show (prevActionAsExpected gasAction ensPrevGovActionIds)
-      , "validCommitteeTerm:\t" <> show (validCommitteeTerm gasAction ensCurPParams currentEpoch)
+      , "validCommitteeTerm:\t" <> show (validCommitteeTerm gasAction curPParams currentEpoch)
       , "notDelayed:\t\t??"
       , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction curTreasury)
       , "committeeAccepted:\t"
@@ -857,7 +854,7 @@ electBasicCommittee = do
     assertNoCommittee = do
       committee <-
         getsNES $
-          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
       impAnn "There should not be a committee" $ committee `shouldBe` SNothing
   logRatificationChecks gaidCommitteeProp
   assertNoCommittee
@@ -869,7 +866,7 @@ electBasicCommittee = do
   do
     committee <-
       getsNES $
-        nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgEnactStateL . ensCommitteeL
+        nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
     impAnn "There should be a committee" $ committee `shouldSatisfy` isSJust
 
   credCommitteeMemberHot <- registerCommitteeHotKey khCommitteeMember

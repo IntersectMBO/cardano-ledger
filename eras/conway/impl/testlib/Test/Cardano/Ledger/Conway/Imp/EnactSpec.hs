@@ -3,7 +3,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.EnactSpec (spec) where
 
@@ -11,14 +10,12 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (EnactSignal (..))
-import Cardano.Ledger.Shelley.LedgerState
-import Lens.Micro.Mtl
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  (ConwayEraImp era, GovState era ~ ConwayGovState era) =>
+  ConwayEraImp era =>
   SpecWith (ImpTestState era)
 spec =
   describe "ENACT" $ do
@@ -26,7 +23,7 @@ spec =
       rewardAcount1 <- registerRewardAccount
       govActionId <- submitTreasuryWithdrawals [(rewardAcount1, Coin 666)]
       GovActionState {gasAction = govAction} <- getGovActionState govActionId
-      enactStateInit <- use $ impNESG . newEpochStateGovStateL . cgEnactStateL
+      enactStateInit <- getEnactState
       let signal =
             EnactSignal
               { esGovActionId = govActionId
