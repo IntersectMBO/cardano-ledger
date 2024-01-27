@@ -62,6 +62,7 @@ import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo,
@@ -232,6 +233,7 @@ class
   , Environment (EraRule "ENACT" era) ~ ()
   , ToExpr (PParamsHKD Identity era)
   , NativeScript era ~ Timelock era
+  , Script era ~ AlonzoScript era
   ) =>
   ConwayEraImp era
 

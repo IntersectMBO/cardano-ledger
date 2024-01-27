@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Core.KeyPair (
   mkKeyPair,
   mkKeyHash,
   ByronKeyPair (..),
+  mkScriptAddr,
 
   -- * Deprecations
   mkVKeyRwdAcnt,
@@ -37,7 +38,7 @@ import qualified Cardano.Crypto.Signing as Byron (
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (Testnet), shelleyProtVer)
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder)
-import Cardano.Ledger.Core (EraIndependentTxBody)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeReference (..),
@@ -103,6 +104,14 @@ mkAddr ::
   (KeyPair 'Payment c, KeyPair 'Staking c) ->
   Addr c
 mkAddr (payKey, stakeKey) = Addr Testnet (mkCred payKey) (StakeRefBase $ mkCred stakeKey)
+
+mkScriptAddr ::
+  Crypto c =>
+  ScriptHash c ->
+  KeyPair 'Staking c ->
+  Addr c
+mkScriptAddr scriptHash stakeKey =
+  Addr Testnet (ScriptHashObj scriptHash) (StakeRefBase $ mkCred stakeKey)
 
 mkCred ::
   Crypto c =>

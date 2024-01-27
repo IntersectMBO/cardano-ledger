@@ -20,6 +20,7 @@
 
 ### `testlib`
 
+* Add `mkScriptAddr`
 * Deprecate `deserialiseRewardAcntOld` in favor of `deserialiseRewardAccountOld`
 * Deprecate `mkVKeyRwdAcnt` in favor of `mkVKeyRewardAccount`
 
