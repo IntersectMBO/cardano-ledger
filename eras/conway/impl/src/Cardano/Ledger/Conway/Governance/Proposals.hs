@@ -164,7 +164,8 @@ data PRoot a = PRoot
   { prRoot :: !(StrictMaybe a)
   , prChildren :: !(Set a)
   }
-  deriving (Show, Eq, Ord, Generic, NoThunks, NFData, Default)
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NoThunks, NFData, Default)
 
 -- | A non-root edges in a `Proposals` tree. `peParent` is expected to be
 -- a `SNothing` only at the begining when no governance actions has been
@@ -173,7 +174,8 @@ data PEdges a = PEdges
   { peParent :: !(StrictMaybe a)
   , peChildren :: !(Set a)
   }
-  deriving (Show, Eq, Ord, Generic, NoThunks, NFData, Default)
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NoThunks, NFData, Default)
 
 -- | A single proposal-tree. This map represents all the action-ids that
 -- form a tree.
@@ -247,19 +249,19 @@ pfCommitteeL = lens pfCommittee $ \x y -> x {pfCommittee = y}
 pfConstitutionL :: Lens' (PForest f era) (f (GovPurposeId 'ConstitutionPurpose era))
 pfConstitutionL = lens pfConstitution $ \x y -> x {pfConstitution = y}
 
-deriving instance
+deriving stock instance
   (forall p. Eq (f (GovPurposeId (p :: GovActionPurpose) era))) =>
   Eq (PForest f era)
-deriving instance
+deriving stock instance
   (forall p. Ord (f (GovPurposeId (p :: GovActionPurpose) era))) =>
   Ord (PForest f era)
-deriving instance
+deriving anyclass instance
   (forall p. NoThunks (f (GovPurposeId (p :: GovActionPurpose) era))) =>
   NoThunks (PForest f era)
-deriving instance
+deriving anyclass instance
   (forall p. NFData (f (GovPurposeId (p :: GovActionPurpose) era))) =>
   NFData (PForest f era)
-deriving instance
+deriving anyclass instance
   (forall p. Default (f (GovPurposeId (p :: GovActionPurpose) era))) =>
   Default (PForest f era)
 
@@ -288,7 +290,8 @@ data Proposals era = Proposals
   , pRoots :: !(PForest PRoot era)
   , pGraph :: !(PForest PGraph era)
   }
-  deriving (Show, Eq, Generic, NoThunks, NFData, Default)
+  deriving stock (Show, Eq, Generic)
+  deriving anyclass (NoThunks, NFData, Default)
 
 pPropsL :: Lens' (Proposals era) (OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era))
 pPropsL = lens pProps $ \x y -> x {pProps = y}
@@ -599,14 +602,11 @@ proposalsLookupId gai (Proposals omap _ _) = OMap.lookup gai omap
 newtype PrevGovActionIds era = PrevGovActionIds
   { unPrevGovActionIds :: PForest StrictMaybe era
   }
-  deriving (Show, Eq, Generic)
+  deriving stock (Show, Eq, Generic)
+  deriving newtype (NoThunks, NFData, Default)
 
 prevGovActionIdsL :: Lens' (PrevGovActionIds era) (PForest StrictMaybe era)
 prevGovActionIdsL = lens unPrevGovActionIds $ \_x y -> PrevGovActionIds y
-
-instance Era era => NoThunks (PrevGovActionIds era)
-instance Era era => NFData (PrevGovActionIds era)
-instance Era era => Default (PrevGovActionIds era)
 
 instance Era era => DecCBOR (PrevGovActionIds era) where
   decCBOR =
