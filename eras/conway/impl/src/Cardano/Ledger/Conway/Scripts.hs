@@ -19,7 +19,7 @@ module Cardano.Ledger.Conway.Scripts (
 )
 where
 
-import Cardano.Ledger.Address (RewardAcnt)
+import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AlonzoScript (..), isPlutusScript)
 import Cardano.Ledger.Babbage.Core
@@ -112,7 +112,7 @@ data ConwayPlutusPurpose f era
   = ConwaySpending !(f Word32 (TxIn (EraCrypto era)))
   | ConwayMinting !(f Word32 (PolicyID (EraCrypto era)))
   | ConwayCertifying !(f Word32 (TxCert era))
-  | ConwayRewarding !(f Word32 (RewardAcnt (EraCrypto era)))
+  | ConwayRewarding !(f Word32 (RewardAccount (EraCrypto era)))
   | ConwayVoting !(f Word32 (Voter (EraCrypto era)))
   | ConwayProposing !(f Word32 (ProposalProcedure era))
   deriving (Generic)

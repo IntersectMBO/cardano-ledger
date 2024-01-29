@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (Addr (..), getRwdCred, pattern RewardAcnt)
+import Cardano.Ledger.Address (Addr (..), raCredential, pattern RewardAccount)
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential (
@@ -40,7 +40,7 @@ import Cardano.Ledger.PoolParams (
   ppOwners,
   ppPledge,
   ppRelays,
-  ppRewardAcnt,
+  ppRewardAccount,
   ppVrf,
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -95,7 +95,7 @@ import Data.Word (Word64)
 import GHC.Stack
 import Lens.Micro
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkVKeyRwdAcnt, mkWitnessVKey, mkWitnessesVKey, vKey)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkVKeyRewardAccount, mkWitnessVKey, mkWitnessesVKey, vKey)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap (
   testBootstrapNotSpending,
   testBootstrapSpending,
@@ -451,7 +451,7 @@ testWitnessWrongUTxO =
 
 testEmptyInputSet :: Assertion
 testEmptyInputSet =
-  let aliceWithdrawal = Map.singleton (mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
+  let aliceWithdrawal = Map.singleton (mkVKeyRewardAccount Testnet aliceStake) (Coin 2000)
       txb =
         ShelleyTxBody
           Set.empty
@@ -464,7 +464,7 @@ testEmptyInputSet =
           SNothing
       txwits = mempty {addrWits = mkWitnessesVKey (hashAnnotated txb) [aliceStake]}
       tx = ShelleyTx txb txwits SNothing
-      dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
+      dpState' = addReward dpState (raCredential $ mkVKeyRewardAccount Testnet aliceStake) (Coin 2000)
    in testLEDGER
         (LedgerState utxoState dpState')
         tx
@@ -543,7 +543,7 @@ testWithdrawalNoWit =
               ]
           )
           Empty
-          (Withdrawals $ Map.singleton (mkVKeyRwdAcnt Testnet bobStake) (Coin 10))
+          (Withdrawals $ Map.singleton (mkVKeyRewardAccount Testnet bobStake) (Coin 10))
           (Coin 1000)
           (SlotNo 0)
           SNothing
@@ -555,7 +555,7 @@ testWithdrawalNoWit =
       errs =
         [ UtxowFailure $ MissingVKeyWitnessesUTXOW missing
         ]
-      dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
+      dpState' = addReward dpState (raCredential $ mkVKeyRewardAccount Testnet bobStake) (Coin 10)
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testWithdrawalWrongAmt :: Assertion
@@ -569,7 +569,7 @@ testWithdrawalWrongAmt =
               ]
           )
           Empty
-          (Withdrawals $ Map.singleton (mkVKeyRwdAcnt Testnet bobStake) (Coin 11))
+          (Withdrawals $ Map.singleton (mkVKeyRewardAccount Testnet bobStake) (Coin 11))
           (Coin 1000)
           (SlotNo 0)
           SNothing
@@ -581,10 +581,10 @@ testWithdrawalWrongAmt =
                 (hashAnnotated txb)
                 [asWitness alicePay, asWitness bobStake]
           }
-      rAcnt = mkVKeyRwdAcnt Testnet bobStake
-      dpState' = addReward dpState (getRwdCred rAcnt) (Coin 10)
+      rAccount = mkVKeyRewardAccount Testnet bobStake
+      dpState' = addReward dpState (raCredential rAccount) (Coin 10)
       tx = ShelleyTx @C txb txwits SNothing
-      errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]
+      errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAccount (Coin 11)))]
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testOutputTooSmall :: Assertion
@@ -616,7 +616,7 @@ alicePoolParamsSmallCost =
     , ppPledge = Coin 1
     , ppCost = Coin 5 -- Too Small!
     , ppMargin = unsafeBoundRational 0.1
-    , ppRewardAcnt = RewardAcnt Testnet (KeyHashObj . hashKey . vKey $ aliceStake)
+    , ppRewardAccount = RewardAccount Testnet (KeyHashObj . hashKey . vKey $ aliceStake)
     , ppOwners = Set.singleton $ (hashKey . vKey) aliceStake
     , ppRelays = StrictSeq.empty
     , ppMetadata =

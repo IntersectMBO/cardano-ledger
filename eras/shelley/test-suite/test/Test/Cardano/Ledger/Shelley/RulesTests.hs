@@ -30,7 +30,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), Withdrawals (..))
+import Cardano.Ledger.Shelley.TxBody (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Protocol.TPraos.API (GetLedgerView (..))
 import Control.State.Transition.Extended (TRC (..))
@@ -464,7 +464,7 @@ testRwdAliceSignsAlone =
         [aliceOnly]
         ( Withdrawals $
             Map.singleton
-              ( RewardAcnt
+              ( RewardAccount
                   Testnet
                   (ScriptHashObj $ hashScript @C aliceOnly)
               )
@@ -489,7 +489,7 @@ testRwdAliceSignsAlone' =
         [aliceOnly, bobOnly]
         ( Withdrawals $
             Map.singleton
-              ( RewardAcnt
+              ( RewardAccount
                   Testnet
                   ( ScriptHashObj $
                       hashScript @C bobOnly
@@ -511,7 +511,7 @@ testRwdAliceSignsAlone'' =
         [aliceOnly, bobOnly]
         ( Withdrawals $
             Map.singleton
-              ( RewardAcnt
+              ( RewardAccount
                   Testnet
                   ( ScriptHashObj $
                       hashScript @C bobOnly
@@ -540,7 +540,7 @@ testRwdAliceSignsAlone''' =
         [aliceOnly]
         ( Withdrawals $
             Map.singleton
-              (RewardAcnt Testnet (ScriptHashObj $ hashScript @C bobOnly))
+              (RewardAccount Testnet (ScriptHashObj $ hashScript @C bobOnly))
               (Coin 1000)
         )
         (Coin 0)

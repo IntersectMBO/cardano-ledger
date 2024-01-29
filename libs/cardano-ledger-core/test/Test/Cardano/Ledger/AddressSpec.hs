@@ -47,7 +47,7 @@ roundTripAddressSpec = describe "Address" $ do
     prop "Ensure Addr failures on incorrect binary data" $
       propDecompactErrors @StandardCrypto
     prop "Ensure RewardAcnt failures on incorrect binary data" $
-      propDeserializeRewardAcntErrors @StandardCrypto
+      propDeserializeRewardAccountErrors @StandardCrypto
     prop "RoundTrip-invalid" $
       forAll genCompactAddrBadPtr $
         roundTripRangeExpectation @(CompactAddr StandardCrypto)
@@ -67,7 +67,7 @@ roundTripAddressSpec = describe "Address" $ do
     prop "Deserializing an address matches old implementation" $
       propValidateNewDeserialize @StandardCrypto
   describe "RewardAcnt" $ do
-    roundTripCborSpec @(RewardAcnt StandardCrypto)
+    roundTripCborSpec @(RewardAccount StandardCrypto)
 
 propSameAsOldDecompactAddr :: forall c. Crypto c => CompactAddr c -> Expectation
 propSameAsOldDecompactAddr cAddr = do
@@ -201,8 +201,8 @@ propDecompactErrors addr = do
     $ isLeft
     $ decodeAddrEither @c badAddr
 
-propDeserializeRewardAcntErrors :: forall c. Crypto c => Version -> RewardAcnt c -> Gen Property
-propDeserializeRewardAcntErrors v acnt = do
+propDeserializeRewardAccountErrors :: forall c. Crypto c => Version -> RewardAccount c -> Gen Property
+propDeserializeRewardAccountErrors v acnt = do
   let bs = serialize' v acnt
       flipHeaderBit b =
         case BS.uncons bs of
@@ -227,7 +227,7 @@ propDeserializeRewardAcntErrors v acnt = do
     $ counterexample
       ("Mingled address with " ++ mingler ++ " was parsed: " ++ show badAddr)
     $ isNothing
-    $ decodeRewardAcnt @c badAddr
+    $ decodeRewardAccount @c badAddr
 
 addressWithExtraneousBytes :: HasCallStack => BS.ByteString
 addressWithExtraneousBytes = bs

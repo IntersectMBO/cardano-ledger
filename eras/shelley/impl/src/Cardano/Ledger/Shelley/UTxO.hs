@@ -62,7 +62,7 @@ import Cardano.Ledger.Shelley.Tx ()
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyEraTxBody (..),
   Withdrawals (..),
-  getRwdCred,
+  raCredential,
  )
 import Cardano.Ledger.Shelley.TxCert (
   ShelleyEraTxCert,
@@ -139,7 +139,7 @@ getShelleyScriptsNeeded u txBody =
   ShelleyScriptsNeeded
     ( scriptHashes
         `Set.union` Set.fromList
-          [sh | w <- withdrawals, Just sh <- [credScriptHash (getRwdCred w)]]
+          [sh | w <- withdrawals, Just sh <- [credScriptHash (raCredential w)]]
         `Set.union` Set.fromList
           [sh | c <- certificates, Just sh <- [getScriptWitnessTxCert c]]
     )
@@ -271,7 +271,7 @@ getShelleyWitsVKeyNeededNoGov utxo' txBody =
     wdrlAuthors = Map.foldrWithKey' accum Set.empty (unWithdrawals (txBody ^. withdrawalsTxBodyL))
       where
         accum key _ !ans =
-          case credKeyHashWitness (getRwdCred key) of
+          case credKeyHashWitness (raCredential key) of
             Nothing -> ans
             Just vkeyWit -> Set.insert vkeyWit ans
     owners :: Set (KeyHash 'Witness (EraCrypto era))

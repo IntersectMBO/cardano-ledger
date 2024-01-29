@@ -12,7 +12,7 @@ import Cardano.Ledger.Shelley.API (
   Network (..),
   PoolEnv (..),
   PoolParams (..),
-  RewardAcnt (..),
+  RewardAccount (..),
   ShelleyPOOL,
  )
 import Cardano.Ledger.Shelley.Core
@@ -60,13 +60,13 @@ testPoolNetworkID pv poolParams e = do
 
 matchingNetworkIDPoolParams :: PoolParams C_Crypto
 matchingNetworkIDPoolParams =
-  Cast.alicePoolParams {ppRewardAcnt = RewardAcnt Testnet Cast.aliceSHK}
+  Cast.alicePoolParams {ppRewardAccount = RewardAccount Testnet Cast.aliceSHK}
 
 -- test globals use Testnet
 
 mismatchingNetworkIDPoolParams :: PoolParams C_Crypto
 mismatchingNetworkIDPoolParams =
-  Cast.alicePoolParams {ppRewardAcnt = RewardAcnt Mainnet Cast.aliceSHK}
+  Cast.alicePoolParams {ppRewardAccount = RewardAccount Mainnet Cast.aliceSHK}
 
 -- test globals use Testnet
 

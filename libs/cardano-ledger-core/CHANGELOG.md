@@ -1,8 +1,20 @@
 # Version history for `cardano-ledger-core`
 
-## 1.10.0.1
+## 1.11.0.0
 
-*
+* Rename `RewardAccount` fields `getRwdNetwork` and `getRwdCred` to `raNetwork` and `raCredential` respectively
+* Deprecate `ppRewardAcnt` in favor of `ppRewardAccount`
+* Deprecate `fromCborRewardAcnt` in favor of `fromCborRewardAccount`
+* Deprecate `decodeRewardAcnt` in favor of `decodeRewardAccount`
+* Deprecate `putRewardAcnt` in favor of `putRewardAccount`
+* Deprecate `deserialiseRewardAcnt` in favor of `deserialiseRewardAccount`
+* Deprecate `serialiseRewardAcnt` in favor of `serialiseRewardAccount`
+* Deprecate `RewardAcnt` in favor of `RewardAccount`
+
+### `testlib`
+
+* Deprecate `deserialiseRewardAcntOld` in favor of `deserialiseRewardAccountOld`
+* Deprecate `mkVKeyRwdAcnt` in favor of `mkVKeyRewardAccount`
 
 ## 1.10.0.0
 

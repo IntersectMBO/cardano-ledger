@@ -13,10 +13,13 @@ module Cardano.Ledger.PoolParams (
   StakePoolRelay (..),
   SizeOfPoolRelays (..),
   SizeOfPoolOwners (..),
+
+  -- * Deprecations
+  ppRewardAcnt,
 )
 where
 
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   DnsName,
   Port,
@@ -204,7 +207,7 @@ data PoolParams c = PoolParams
   , ppPledge :: !Coin
   , ppCost :: !Coin
   , ppMargin :: !UnitInterval
-  , ppRewardAcnt :: !(RewardAcnt c)
+  , ppRewardAccount :: !(RewardAccount c)
   , ppOwners :: !(Set (KeyHash 'Staking c))
   , ppRelays :: !(StrictSeq StakePoolRelay)
   , ppMetadata :: !(StrictMaybe PoolMetadata)
@@ -212,6 +215,10 @@ data PoolParams c = PoolParams
   deriving (Show, Generic, Eq, Ord)
   deriving (EncCBOR) via CBORGroup (PoolParams c)
   deriving (DecCBOR) via CBORGroup (PoolParams c)
+
+ppRewardAcnt :: PoolParams c -> RewardAccount c
+ppRewardAcnt = ppRewardAccount
+{-# DEPRECATED ppRewardAcnt "Use `ppRewardAccount` instead" #-}
 
 instance Crypto c => Default (PoolParams c) where
   def = PoolParams def def (Coin 0) (Coin 0) def def def def def
@@ -327,7 +334,7 @@ instance Crypto c => DecCBORGroup (PoolParams c) where
         , ppPledge = pledge
         , ppCost = cost
         , ppMargin = margin
-        , ppRewardAcnt = ra
+        , ppRewardAccount = ra
         , ppOwners = owners
         , ppRelays = relays
         , ppMetadata = maybeToStrictMaybe md

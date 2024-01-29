@@ -52,7 +52,7 @@ import Cardano.Ledger.Shelley.API (
   Addr (..),
   Credential (..),
   PoolParams (..),
-  RewardAcnt (..),
+  RewardAccount (..),
   ShelleyDelegCert (..),
   StakeReference (..),
   Withdrawals (..),
@@ -839,7 +839,7 @@ genWithdrawals slot =
     then do
       let networkId = Testnet
       newRewards <- genRewards
-      pure (Withdrawals $ Map.mapKeys (RewardAcnt networkId) newRewards, newRewards)
+      pure (Withdrawals $ Map.mapKeys (RewardAccount networkId) newRewards, newRewards)
     else pure (Withdrawals Map.empty, Map.empty)
 
 timeToLive :: ValidityInterval -> SlotNo
@@ -917,7 +917,7 @@ genAlonzoTxAndInfo proof slot = do
     if withdrawalAmount == Coin 0
       then pure Nothing
       else Just . coreTxOut proof <$> genTxOut proof (inject withdrawalAmount)
-  let wdrlCreds = map (getRwdCred . fst) $ Map.toAscList wdrlMap
+  let wdrlCreds = map (raCredential . fst) $ Map.toAscList wdrlMap
   (IsValid v2, mkWithdrawalsWits) <-
     redeemerWitnessMaker proof Rewarding $ map (Just . (,) genDatum) wdrlCreds
 

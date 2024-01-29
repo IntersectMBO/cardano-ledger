@@ -22,7 +22,7 @@ module Cardano.Ledger.Conway.Rules.Gov (
   ConwayGovPredFailure (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAcnt, getRwdNetwork)
+import Cardano.Ledger.Address (RewardAccount, raNetwork)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
@@ -124,8 +124,8 @@ data GovEnv era = GovEnv
 data ConwayGovPredFailure era
   = GovActionsDoNotExist (NonEmpty (GovActionId (EraCrypto era)))
   | MalformedProposal (GovAction era)
-  | ProposalProcedureNetworkIdMismatch (RewardAcnt (EraCrypto era)) Network
-  | TreasuryWithdrawalsNetworkIdMismatch (Set.Set (RewardAcnt (EraCrypto era))) Network
+  | ProposalProcedureNetworkIdMismatch (RewardAccount (EraCrypto era)) Network
+  | TreasuryWithdrawalsNetworkIdMismatch (Set.Set (RewardAccount (EraCrypto era))) Network
   | ProposalDepositIncorrect
       -- | Submitted deposit
       Coin
@@ -266,7 +266,7 @@ mkGovActionState ::
   -- | The deposit
   Coin ->
   -- | The return address
-  RewardAcnt (EraCrypto era) ->
+  RewardAccount (EraCrypto era) ->
   GovAction era ->
   -- | The number of epochs to expiry from protocol parameters
   EpochInterval ->
@@ -330,7 +330,7 @@ govTransition = do
                 ?! ProposalDepositIncorrect pProcDeposit expectedDep
 
         -- Return address network id check
-        getRwdNetwork pProcReturnAddr
+        raNetwork pProcReturnAddr
           == expectedNetworkId
             ?! ProposalProcedureNetworkIdMismatch pProcReturnAddr expectedNetworkId
 
@@ -338,7 +338,7 @@ govTransition = do
         case pProcGovAction of
           TreasuryWithdrawals wdrls proposalPolicy ->
             let mismatchedAccounts =
-                  Set.filter ((/= expectedNetworkId) . getRwdNetwork) $ Map.keysSet wdrls
+                  Set.filter ((/= expectedNetworkId) . raNetwork) $ Map.keysSet wdrls
              in do
                   Set.null mismatchedAccounts
                     ?! TreasuryWithdrawalsNetworkIdMismatch mismatchedAccounts expectedNetworkId

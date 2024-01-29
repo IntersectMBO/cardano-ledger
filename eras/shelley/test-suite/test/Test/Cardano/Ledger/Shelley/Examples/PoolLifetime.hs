@@ -65,7 +65,7 @@ import Cardano.Ledger.Shelley.PoolRank (
  )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (
-  RewardAcnt (..),
+  RewardAccount (..),
   ShelleyTxBody (..),
  )
 import Cardano.Ledger.Shelley.TxCert (ShelleyTxCert (..))
@@ -856,7 +856,7 @@ txbodyEx10 =
     (Set.fromList [mkTxInPartial genesisId 1])
     (StrictSeq.singleton $ ShelleyTxOut Cast.bobAddr (Val.inject bobAda10))
     (StrictSeq.fromList [UnRegTxCert Cast.bobSHK])
-    (Withdrawals $ Map.singleton (RewardAcnt Testnet Cast.bobSHK) bobRAcnt8)
+    (Withdrawals $ Map.singleton (RewardAccount Testnet Cast.bobSHK) bobRAcnt8)
     feeTx10
     (SlotNo 500)
     SNothing

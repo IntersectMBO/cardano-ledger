@@ -10,9 +10,12 @@
 -- perforance reference for benchmarking.
 module Test.Cardano.Ledger.Core.Address (
   deserialiseAddrOld,
-  deserialiseRewardAcntOld,
+  deserialiseRewardAccountOld,
   decompactAddrOld,
   decompactAddrOldLazy,
+
+  -- * Deprecations
+  deserialiseRewardAcntOld,
 )
 where
 
@@ -21,7 +24,7 @@ import Cardano.Ledger.Address (
   Addr (..),
   BootstrapAddress (BootstrapAddress),
   CompactAddr,
-  RewardAcnt (..),
+  RewardAccount (..),
   Word7 (..),
   toWord7,
   unCompactAddr,
@@ -70,14 +73,18 @@ deserialiseAddrOld bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
 
 -- | Deserialise an reward account from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
-deserialiseRewardAcntOld :: forall c m. (Crypto c, MonadFail m) => BS.ByteString -> m (RewardAcnt c)
-deserialiseRewardAcntOld bs = case B.runGetOrFail getRewardAcnt (BSL.fromStrict bs) of
+deserialiseRewardAccountOld :: forall c m. (Crypto c, MonadFail m) => BS.ByteString -> m (RewardAccount c)
+deserialiseRewardAccountOld bs = case B.runGetOrFail getRewardAccount (BSL.fromStrict bs) of
   Left (_remaining, _offset, message) ->
     fail $ "Old RewardAcnt decoder failed: " <> fromString message
   Right (remaining, _offset, result) ->
     if BSL.null remaining
       then pure result
       else fail $ "Old RewardAcnt decoder did not consume all input"
+
+deserialiseRewardAcntOld :: forall c m. (Crypto c, MonadFail m) => BS.ByteString -> m (RewardAccount c)
+deserialiseRewardAcntOld = deserialiseRewardAccountOld
+{-# DEPRECATED deserialiseRewardAcntOld "Use `deserialiseRewardAccountOld` instead" #-}
 
 byron :: Int
 byron = 7
@@ -112,13 +119,13 @@ getAddr = do
             concat
               ["Address with unknown network Id. (", show addrNetId, ")"]
 
-getRewardAcnt :: Crypto c => Get (RewardAcnt c)
-getRewardAcnt = do
+getRewardAccount :: Crypto c => Get (RewardAccount c)
+getRewardAccount = do
   header <- B.getWord8
-  let rewardAcntPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
-      isRewardAcnt = (header .&. rewardAcntPrefix) == rewardAcntPrefix
+  let rewardAccountPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
+      isRewardAccount = (header .&. rewardAccountPrefix) == rewardAccountPrefix
       netId = header .&. 0x0F -- 0b00001111 is the mask for the network id
-  case (word8ToNetwork netId, isRewardAcnt) of
+  case (word8ToNetwork netId, isRewardAccount) of
     (Nothing, _) ->
       fail $ concat ["Reward account with unknown network Id. (", show netId, ")"]
     (_, False) ->
@@ -127,7 +134,7 @@ getRewardAcnt = do
       cred <- case testBit header rewardCredIsScript of
         True -> getScriptHash
         False -> getKeyHash
-      pure $ RewardAcnt network cred
+      pure $ RewardAccount network cred
 
 getHash :: forall h a. Hash.HashAlgorithm h => Get (Hash.Hash h a)
 getHash = do

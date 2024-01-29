@@ -9,8 +9,10 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Ledger.Address (
   mkRwdAcnt,
@@ -22,15 +24,15 @@ module Cardano.Ledger.Address (
   bootstrapAddressAttrsSize,
   isBootstrapRedeemer,
   getNetwork,
-  RewardAcnt (..),
-  serialiseRewardAcnt,
-  deserialiseRewardAcnt,
+  RewardAccount (.., RewardAcnt, getRwdNetwork, getRwdCred),
+  serialiseRewardAccount,
+  deserialiseRewardAccount,
   bootstrapKeyHash,
   -- internals exported for testing
   putAddr,
   putCredential,
   putPtr,
-  putRewardAcnt,
+  putRewardAccount,
   putVariableLengthWord64,
   Word7 (..),
   toWord7,
@@ -51,9 +53,17 @@ module Cardano.Ledger.Address (
   fromCborBothAddr,
   fromCborCompactAddr,
   fromCborBackwardsBothAddr,
+  decodeRewardAccount,
+  fromCborRewardAccount,
+  Withdrawals (..),
+
+  -- * Deprecations
+  RewardAcnt,
+  serialiseRewardAcnt,
+  deserialiseRewardAcnt,
+  putRewardAcnt,
   decodeRewardAcnt,
   fromCborRewardAcnt,
-  Withdrawals (..),
 )
 where
 
@@ -144,15 +154,23 @@ deserialiseAddr = decodeAddr
 {-# DEPRECATED deserialiseAddr "In favor of `Cardano.Ledger.Api.Tx.Address.decodeAddr` or `Cardano.Ledger.Api.Tx.Address.decodeAddrLenient`. Please choose the appropriate variant carefully depending on your use case" #-}
 
 -- | Serialise a reward account to the external format.
+serialiseRewardAccount :: RewardAcnt c -> ByteString
+serialiseRewardAccount = BSL.toStrict . B.runPut . putRewardAcnt
+
 serialiseRewardAcnt :: RewardAcnt c -> ByteString
-serialiseRewardAcnt = BSL.toStrict . B.runPut . putRewardAcnt
+serialiseRewardAcnt = serialiseRewardAccount
 {-# INLINE serialiseRewardAcnt #-}
+{-# DEPRECATED serialiseRewardAcnt "Use `serialiseRewardAccount` instead" #-}
 
 -- | Deserialise a reward account from the external format. This will fail if the
 -- input data is not in the right format (or if there is trailing data).
+deserialiseRewardAccount :: Crypto c => ByteString -> Maybe (RewardAcnt c)
+deserialiseRewardAccount = decodeRewardAcnt
+
 deserialiseRewardAcnt :: Crypto c => ByteString -> Maybe (RewardAcnt c)
-deserialiseRewardAcnt = decodeRewardAcnt
+deserialiseRewardAcnt = deserialiseRewardAccount
 {-# INLINE deserialiseRewardAcnt #-}
+{-# DEPRECATED deserialiseRewardAcnt "Use `deserialiseRewardAccount` instead" #-}
 
 -- | An address for UTxO.
 --
@@ -193,11 +211,23 @@ addrPtrNormalize = \case
   addr -> addr
 
 -- | An account based address for rewards
-data RewardAcnt c = RewardAcnt
-  { getRwdNetwork :: !Network
-  , getRwdCred :: !(Credential 'Staking c)
+data RewardAccount c = RewardAccount
+  { raNetwork :: !Network
+  , raCredential :: !(Credential 'Staking c)
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
+
+pattern RewardAcnt :: Network -> Credential 'Staking c -> RewardAccount c
+pattern RewardAcnt {getRwdNetwork, getRwdCred} = RewardAccount getRwdNetwork getRwdCred
+
+{-# DEPRECATED getRwdNetwork "In favor of `raNetwork`" #-}
+{-# DEPRECATED getRwdCred "In favor of `raCredential`" #-}
+
+{-# COMPLETE RewardAcnt #-}
+
+type RewardAcnt = RewardAccount
+
+{-# DEPRECATED RewardAcnt "Use `RewardAccount` instead" #-}
 
 instance Crypto c => Default (RewardAcnt c) where
   def = RewardAcnt def def
@@ -205,8 +235,8 @@ instance Crypto c => Default (RewardAcnt c) where
 instance Crypto c => ToJSON (RewardAcnt c) where
   toJSON ra =
     Aeson.object
-      [ "network" .= getRwdNetwork ra
-      , "credential" .= getRwdCred ra
+      [ "network" .= raNetwork ra
+      , "credential" .= raCredential ra
       ]
 
 instance Crypto c => FromJSON (RewardAcnt c) where
@@ -286,17 +316,20 @@ putAddr (Addr network pc sr) =
           putCredential pc
 {-# INLINE putAddr #-}
 
-putRewardAcnt :: RewardAcnt c -> Put
-putRewardAcnt (RewardAcnt network cred) = do
+putRewardAccount :: RewardAcnt c -> Put
+putRewardAccount (RewardAcnt network cred) = do
   let setPayCredBit = case cred of
         ScriptHashObj _ -> flip setBit payCredIsScript
         KeyHashObj _ -> id
       netId = networkToWord8 network
-      rewardAcntPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
-      header = setPayCredBit (netId .|. rewardAcntPrefix)
+      rewardAccountPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
+      header = setPayCredBit (netId .|. rewardAccountPrefix)
   B.putWord8 header
   putCredential cred
+putRewardAcnt :: RewardAcnt c -> Put
+putRewardAcnt = putRewardAccount
 {-# INLINE putRewardAcnt #-}
+{-# DEPRECATED putRewardAcnt "Use `putRewardAccount` instead" #-}
 
 putHash :: Hash.Hash h a -> Put
 putHash = B.putByteString . Hash.hashToBytes
@@ -850,19 +883,29 @@ decodeVariableLengthWord64 name buf = fix (decode7BitVarLength name buf) 0
 -- Reward Account Deserializer -----------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
+decodeRewardAccount ::
+  forall c b m.
+  (Crypto c, AddressBuffer b, MonadFail m) =>
+  b ->
+  m (RewardAcnt c)
+decodeRewardAccount buf = evalStateT (decodeRewardAccountT buf) 0
 decodeRewardAcnt ::
   forall c b m.
   (Crypto c, AddressBuffer b, MonadFail m) =>
   b ->
   m (RewardAcnt c)
-decodeRewardAcnt buf = evalStateT (decodeRewardAccountT buf) 0
+decodeRewardAcnt = decodeRewardAccount
 {-# INLINE decodeRewardAcnt #-}
+{-# DEPRECATED decodeRewardAcnt "Use `decodeRewardAccount` instead" #-}
 
-fromCborRewardAcnt :: forall c s. Crypto c => Decoder s (RewardAcnt c)
-fromCborRewardAcnt = do
+fromCborRewardAccount :: forall c s. Crypto c => Decoder s (RewardAcnt c)
+fromCborRewardAccount = do
   sbs :: ShortByteString <- decCBOR
   decodeRewardAcnt @c sbs
+fromCborRewardAcnt :: forall c s. Crypto c => Decoder s (RewardAcnt c)
+fromCborRewardAcnt = fromCborRewardAccount
 {-# INLINE fromCborRewardAcnt #-}
+{-# DEPRECATED fromCborRewardAcnt "Use `fromCborRewardAccount` instead" #-}
 
 headerIsRewardAccount :: Header -> Bool
 headerIsRewardAccount header = header .&. 0b11101110 == 0b11100000

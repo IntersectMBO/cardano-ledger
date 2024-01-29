@@ -18,7 +18,7 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Encoding (tests) where
 import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
   EpochInterval (..),
@@ -483,7 +483,7 @@ tests =
             <> S (testScript @C_Crypto)
         )
     , -- checkEncodingCBOR "withdrawal_key"
-      let r = RewardAcnt Testnet (testStakeCred @C_Crypto)
+      let r = RewardAccount Testnet (testStakeCred @C_Crypto)
        in checkEncodingCBOR
             shelleyProtVer
             "withdrawal"
@@ -494,7 +494,7 @@ tests =
             )
     , -- checkEncodingCBOR "withdrawal_script"
       --
-      let r = RewardAcnt Testnet (ScriptHashObj (testScriptHash @C_Crypto))
+      let r = RewardAccount Testnet (ScriptHashObj (testScriptHash @C_Crypto))
        in checkEncodingCBOR
             shelleyProtVer
             "withdrawal"
@@ -533,7 +533,7 @@ tests =
     , -- checkEncodingCBOR "register-pool"
       let poolOwner = testKeyHash2 @C_Crypto
           poolMargin = unsafeBoundRational 0.7
-          poolRAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto)
+          poolRAcnt = RewardAccount Testnet (testStakeCred @C_Crypto)
           poolPledge = Coin 11
           poolCost = Coin 55
           poolUrl = "pool.io"
@@ -556,7 +556,7 @@ tests =
                     , ppPledge = poolPledge
                     , ppCost = poolCost
                     , ppMargin = poolMargin
-                    , ppRewardAcnt = poolRAcnt
+                    , ppRewardAccount = poolRAcnt
                     , ppOwners = Set.singleton poolOwner
                     , ppRelays = poolRelays
                     , ppMetadata =
@@ -756,7 +756,7 @@ tests =
             )
     , -- checkEncodingCBOR "transaction_mixed"
       let tout = ShelleyTxOut @C testAddrE (Coin 2)
-          ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
+          ra = RewardAccount Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
           up =
             Update
@@ -797,7 +797,7 @@ tests =
     , -- checkEncodingCBOR "full_txn_body"
       let tout = ShelleyTxOut @C testAddrE (Coin 2)
           reg = RegTxCert (testStakeCred @C_Crypto)
-          ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
+          ra = RewardAccount Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
           up =
             Update

@@ -16,7 +16,7 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (tests, spendingPurpose1) where
 
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (
@@ -531,8 +531,8 @@ validatingManyScriptsBody pf =
     , Withdrawals'
         ( Withdrawals $
             Map.fromList
-              [ (RewardAcnt Testnet (scriptStakeCredSuceed pf), Coin 0)
-              , (RewardAcnt Testnet (timelockStakeCred pf), Coin 0)
+              [ (RewardAccount Testnet (scriptStakeCredSuceed pf), Coin 0)
+              , (RewardAccount Testnet (timelockStakeCred pf), Coin 0)
               ]
         )
     , Mint mint

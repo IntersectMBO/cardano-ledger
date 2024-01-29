@@ -47,7 +47,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators (
 )
 where
 
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Nonce (..),
@@ -472,7 +472,7 @@ reapPool pool cs = cs {chainNes = nes'}
         }
     pp = es ^. curPParamsEpochStateL
     ds = certDState dps
-    RewardAcnt _ rewardAddr = ppRewardAcnt pool
+    RewardAccount _ rewardAddr = ppRewardAccount pool
     (rewards', unclaimed) =
       case UM.lookup rewardAddr (rewards ds) of
         Nothing -> (rewards ds, pp ^. ppPoolDepositL)

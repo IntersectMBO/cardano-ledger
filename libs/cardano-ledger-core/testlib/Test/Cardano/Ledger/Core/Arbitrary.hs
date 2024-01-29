@@ -442,8 +442,8 @@ genStakeRefWith genPtr =
     , (15, pure StakeRefNull)
     ]
 
-instance Crypto c => Arbitrary (RewardAcnt c) where
-  arbitrary = RewardAcnt <$> arbitrary <*> arbitrary
+instance Crypto c => Arbitrary (RewardAccount c) where
+  arbitrary = RewardAccount <$> arbitrary <*> arbitrary
   shrink = genericShrink
 
 instance Crypto c => Arbitrary (Withdrawals c) where

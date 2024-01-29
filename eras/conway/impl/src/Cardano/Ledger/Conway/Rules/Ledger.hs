@@ -22,7 +22,7 @@ module Cardano.Ledger.Conway.Rules.Ledger (
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowEvent)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
@@ -277,7 +277,7 @@ ledgerTransition = do
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
         let wdrlAddrs = Map.keysSet . unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
-            wdrlCreds = Set.map getRwdCred wdrlAddrs
+            wdrlCreds = Set.map raCredential wdrlAddrs
             dUnified = dsUnified $ certDState certStateAfterCERTS
             delegatedAddrs = DRepUView dUnified
 

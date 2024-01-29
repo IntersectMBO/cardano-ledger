@@ -46,7 +46,7 @@ where
 import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Crypto.Signing (SigningKey (..), shortVerificationKeyHexF, toVerification)
 import qualified Cardano.Crypto.Wallet as Byron
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
@@ -189,7 +189,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcProposals,
   pcRatifyState,
   pcReward,
-  pcRewardAcnt,
+  pcRewardAccount,
   pcScriptHash,
   pcShelleyTxCert,
   pcTx,
@@ -289,7 +289,7 @@ data Rep era t where
   WitnessesFieldR :: Era era => Proof era -> Rep era (WitnessesField era)
   AssetNameR :: Rep era AssetName
   TxCertR :: Era era => Proof era -> Rep era (TxCertF era)
-  RewardAcntR :: Era era => Rep era (RewardAcnt (EraCrypto era))
+  RewardAccountR :: Era era => Rep era (RewardAccount (EraCrypto era))
   ValidityIntervalR :: Era era => Rep era ValidityInterval
   KeyPairR :: Era era => Rep era (KeyPair 'Witness (EraCrypto era))
   GenR :: Rep era x -> Rep era (Gen x)
@@ -437,7 +437,7 @@ repHasInstances r = case r of
   ScriptR {} -> IsEq
   ScriptHashR {} -> IsOrd
   TxCertR {} -> IsEq
-  RewardAcntR {} -> IsOrd
+  RewardAccountR {} -> IsOrd
   ValidityIntervalR {} -> IsOrd
   AssetNameR {} -> IsOrd
   WitnessesFieldR {} -> IsTypeable
@@ -613,7 +613,7 @@ synopsis PolicyIDR (PolicyID x) = show (pcScriptHash x)
 synopsis (WitnessesFieldR p) x = show $ ppRecord' mempty $ unReflect pcWitnessesField p x
 synopsis AssetNameR (AssetName x) = take 10 (show x)
 synopsis (TxCertR p) (TxCertF _ x) = show (pcTxCert p x)
-synopsis RewardAcntR x = show (pcRewardAcnt x)
+synopsis RewardAccountR x = show (pcRewardAccount x)
 synopsis ValidityIntervalR x = show (ppValidityInterval x)
 synopsis KeyPairR _ = "(KeyPairR ...)"
 synopsis (GenR x) _ = "(Gen " ++ show x ++ " ...)"
@@ -765,7 +765,7 @@ genSizedRep n MultiAssetR = MultiAsset <$> genSizedRep n (MapR (PolicyIDR @era) 
 genSizedRep _ PolicyIDR = arbitrary
 genSizedRep _ (WitnessesFieldR _) = pure $ AddrWits Set.empty
 genSizedRep _ AssetNameR = arbitrary
-genSizedRep _ RewardAcntR = RewardAcnt <$> pure Testnet <*> arbitrary
+genSizedRep _ RewardAccountR = RewardAccount <$> pure Testnet <*> arbitrary
 genSizedRep _ (TxCertR Shelley) = TxCertF Shelley <$> arbitrary
 genSizedRep _ (TxCertR Allegra) = TxCertF Allegra <$> arbitrary
 genSizedRep _ (TxCertR Mary) = TxCertF Mary <$> arbitrary
@@ -1034,7 +1034,7 @@ shrinkRep (TxCertR Mary) (TxCertF p x) = map (TxCertF p) (shrink x)
 shrinkRep (TxCertR Alonzo) (TxCertF p x) = map (TxCertF p) (shrink x)
 shrinkRep (TxCertR Babbage) (TxCertF p x) = map (TxCertF p) (shrink x)
 shrinkRep (TxCertR Conway) (TxCertF p x) = map (TxCertF p) (shrink x)
-shrinkRep RewardAcntR t = shrink t
+shrinkRep RewardAccountR t = shrink t
 shrinkRep ValidityIntervalR _ = []
 shrinkRep KeyPairR t = shrink t
 shrinkRep (GenR _) _ = []

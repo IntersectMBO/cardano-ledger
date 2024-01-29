@@ -44,7 +44,7 @@ module Cardano.Ledger.Plutus.TxInfo (
 where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (unboundRational),
   EpochInterval (..),
@@ -160,8 +160,8 @@ transAddr = \case
 --
 -- /Note/ - This function is the right one to use starting with PlutusV3, prior to that an
 -- extra `PV1.StakingHash` wrapper is needed.
-transRewardAccount :: RewardAcnt c -> PV1.Credential
-transRewardAccount (RewardAcnt _networkId cred) = transCred cred
+transRewardAccount :: RewardAccount c -> PV1.Credential
+transRewardAccount (RewardAccount _networkId cred) = transCred cred
 
 slotToPOSIXTime ::
   EpochInfo (Either Text) ->

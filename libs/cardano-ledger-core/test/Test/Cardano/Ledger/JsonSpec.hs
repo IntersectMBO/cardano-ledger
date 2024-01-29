@@ -33,7 +33,7 @@ spec = do
     roundTripJsonSpec @StakePoolRelay
     roundTripJsonSpec @(PoolParams StandardCrypto)
     roundTripJsonSpec @(Addr StandardCrypto)
-    roundTripJsonSpec @(RewardAcnt StandardCrypto)
+    roundTripJsonSpec @(RewardAccount StandardCrypto)
     roundTripJsonSpec @(Credential 'Witness StandardCrypto)
     roundTripJsonSpec @(DRep StandardCrypto)
     roundTripJsonSpec @(Anchor StandardCrypto)

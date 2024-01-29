@@ -6,7 +6,7 @@
 
 module Test.Cardano.Ledger.Shelley.Binary.CddlSpec (spec) where
 
-import Cardano.Ledger.Address (Addr, RewardAcnt)
+import Cardano.Ledger.Address (Addr, RewardAccount)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (Staking))
@@ -34,7 +34,7 @@ spec =
     let v = eraProtVerLow @Shelley
     cddlRoundTripAnnCborSpec @(BootstrapWitness StandardCrypto) v "bootstrap_witness"
     cddlRoundTripCborSpec @(Addr StandardCrypto) v "address"
-    cddlRoundTripCborSpec @(RewardAcnt StandardCrypto) v "reward_account"
+    cddlRoundTripCborSpec @(RewardAccount StandardCrypto) v "reward_account"
     cddlRoundTripCborSpec @(Credential 'Staking StandardCrypto) v "stake_credential"
     cddlRoundTripAnnCborSpec @(TxBody Shelley) v "transaction_body"
     cddlRoundTripCborSpec @(TxOut Shelley) v "transaction_output"

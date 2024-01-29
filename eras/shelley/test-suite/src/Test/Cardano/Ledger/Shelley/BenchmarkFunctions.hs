@@ -28,7 +28,7 @@ module Test.Cardano.Ledger.Shelley.BenchmarkFunctions (
 where
 
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
-import Cardano.Ledger.Address (Addr, RewardAcnt (..))
+import Cardano.Ledger.Address (Addr, RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   Network (..),
@@ -58,7 +58,7 @@ import Cardano.Ledger.PoolParams (
   ppOwners,
   ppPledge,
   ppRelays,
-  ppRewardAcnt,
+  ppRewardAccount,
   ppVrf,
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -356,7 +356,7 @@ txbWithdrawals x y =
     StrictSeq.empty
     ( Withdrawals $
         Map.fromList $
-          fmap (\ks -> (RewardAcnt Testnet (stakeKeyToCred ks), Coin 0)) (stakeKeys x y)
+          fmap (\ks -> (RewardAccount Testnet (stakeKeyToCred ks), Coin 0)) (stakeKeys x y)
     )
     (Coin 0)
     (SlotNo 10)
@@ -408,7 +408,7 @@ mkPoolParameters keys =
     , ppPledge = Coin 0
     , ppCost = Coin 0
     , ppMargin = unsafeBoundRational 0
-    , ppRewardAcnt = RewardAcnt Testnet firstStakeKeyCred
+    , ppRewardAccount = RewardAccount Testnet firstStakeKeyCred
     , ppOwners = Set.singleton $ hashKey (vKey stakeKeyOne)
     , ppRelays = StrictSeq.empty
     , ppMetadata = SNothing

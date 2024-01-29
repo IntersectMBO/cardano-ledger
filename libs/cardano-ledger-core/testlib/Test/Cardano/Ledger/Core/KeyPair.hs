@@ -15,10 +15,13 @@ module Test.Cardano.Ledger.Core.KeyPair (
   mkWitnessVKey,
   mkWitnessesVKey,
   makeWitnessesFromScriptKeys,
-  mkVKeyRwdAcnt,
+  mkVKeyRewardAccount,
   mkKeyPair,
   mkKeyHash,
   ByronKeyPair (..),
+
+  -- * Deprecations
+  mkVKeyRwdAcnt,
 )
 where
 
@@ -142,12 +145,20 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
    in mkWitnessesVKey txbodyHash (Map.elems witKeys)
 
+mkVKeyRewardAccount ::
+  Crypto c =>
+  Network ->
+  KeyPair 'Staking c ->
+  RewardAccount c
+mkVKeyRewardAccount network keys = RewardAccount network $ KeyHashObj (hashKey $ vKey keys)
+
 mkVKeyRwdAcnt ::
   Crypto c =>
   Network ->
   KeyPair 'Staking c ->
-  RewardAcnt c
-mkVKeyRwdAcnt network keys = RewardAcnt network $ KeyHashObj (hashKey $ vKey keys)
+  RewardAccount c
+mkVKeyRwdAcnt = mkVKeyRewardAccount
+{-# DEPRECATED mkVKeyRwdAcnt "Use `mkVKeyRewardAccount` instead" #-}
 
 mkKeyHash :: Crypto c => Int -> KeyHash kd c
 mkKeyHash = hashKey . vKey . mkKeyPair

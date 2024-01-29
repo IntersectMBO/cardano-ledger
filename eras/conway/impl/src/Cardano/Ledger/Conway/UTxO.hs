@@ -17,7 +17,7 @@ module Cardano.Ledger.Conway.UTxO (
   getConwayWitsVKeyNeeded,
 ) where
 
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO (..),
   AlonzoScriptsNeeded (..),
@@ -72,7 +72,7 @@ getConwayScriptsNeeded (UTxO utxo) txBody =
       where
         withdrawals = unWithdrawals $ txBody ^. withdrawalsTxBodyL
         fromRewardAccount rewardAccount = do
-          hash <- credScriptHash $ getRwdCred rewardAccount
+          hash <- credScriptHash $ raCredential rewardAccount
           return (ConwayRewarding (AsItem rewardAccount), hash)
 
     certifying =

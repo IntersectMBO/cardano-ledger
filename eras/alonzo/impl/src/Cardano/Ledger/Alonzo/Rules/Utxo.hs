@@ -34,7 +34,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxo (
 import Cardano.Ledger.Address (
   Addr (..),
   CompactAddr,
-  RewardAcnt,
+  RewardAccount,
   isBootstrapCompactAddr,
   isPayCredScriptCompactAddr,
  )
@@ -149,7 +149,7 @@ data AlonzoUtxoPredFailure era
       -- | the expected network id
       !Network
       -- | the set of reward addresses with incorrect network IDs
-      !(Set (RewardAcnt (EraCrypto era)))
+      !(Set (RewardAccount (EraCrypto era)))
   | -- | list of supplied transaction outputs that are too small
     OutputTooSmallUTxO
       ![TxOut era]

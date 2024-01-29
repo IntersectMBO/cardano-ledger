@@ -28,7 +28,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), Withdrawals (..))
+import Cardano.Ledger.Shelley.TxBody (RewardAccount (..), Withdrawals (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Foldable (fold, toList)
 import qualified Data.Map.Strict as Map
@@ -86,8 +86,8 @@ showMap showKey showVal m = unlines (map showpair (Map.toList m))
 showListy :: Foldable t => (a -> String) -> t a -> String
 showListy showElem list = unlines (map showElem (toList list))
 
-showRewardAcct :: RewardAcnt c -> [Char]
-showRewardAcct (RewardAcnt {getRwdNetwork = network, getRwdCred = cred}) =
+showRewardAcct :: RewardAccount c -> [Char]
+showRewardAcct (RewardAccount {raNetwork = network, raCredential = cred}) =
   show network ++ " " ++ showCred cred
 
 showWithdrawal :: Withdrawals c -> String

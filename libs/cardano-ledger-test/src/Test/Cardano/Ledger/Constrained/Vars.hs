@@ -76,7 +76,7 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import qualified Cardano.Ledger.Shelley.RewardUpdate as RU
 import Cardano.Ledger.Shelley.Rewards (Reward (..))
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..))
+import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UMap (compactCoinOrError, fromCompact, ptrMap, rdPairMap, sPoolMap, unify)
@@ -1238,8 +1238,8 @@ totalCol = Var $ V "totalCol" CoinR No
 certs :: Reflect era => Term era [TxCertF era]
 certs = Var $ V "certs" (ListR (TxCertR reify)) No
 
-withdrawals :: forall era. Era era => Term era (Map (RewardAcnt (EraCrypto era)) Coin)
-withdrawals = Var $ V "withdrawals" (MapR (RewardAcntR @era) CoinR) No
+withdrawals :: forall era. Era era => Term era (Map (RewardAccount (EraCrypto era)) Coin)
+withdrawals = Var $ V "withdrawals" (MapR (RewardAccountR @era) CoinR) No
 
 txfee :: Era era => Term era Coin
 txfee = Var $ V "txfee" CoinR No
@@ -1344,8 +1344,8 @@ txterm = Var $ V "txterm" (TxR reify) No
 
 -- Lenses for use in TxBody
 
-getRwdCredL :: Lens' (RewardAcnt c) (Credential 'Staking c)
-getRwdCredL = lens getRwdCred (\r c -> r {getRwdCred = c})
+getRwdCredL :: Lens' (RewardAccount c) (Credential 'Staking c)
+getRwdCredL = lens raCredential (\r c -> r {raCredential = c})
 
 txOutFL :: Lens' (TxOutF era) (TxOut era)
 txOutFL = lens unTxOut (\(TxOutF p _) y -> TxOutF p y)
@@ -2071,8 +2071,8 @@ stakePoolVotesV = Var (V "stakePoolVotesV" (MapR PoolHashR VoteR) No)
 depositV :: Era era => Term era Coin
 depositV = Var (V "depositV" CoinR No)
 
-returnAddrV :: Era era => Term era (RewardAcnt (EraCrypto era))
-returnAddrV = Var (V "returnAddrV" RewardAcntR No)
+returnAddrV :: Era era => Term era (RewardAccount (EraCrypto era))
+returnAddrV = Var (V "returnAddrV" RewardAccountR No)
 
 actionV :: Era era => Term era (GovAction era)
 actionV = Var (V "actionV" GovActionR No)
@@ -2124,8 +2124,8 @@ gaPParamsUpdate = Var (V "gsPParamsUpdate" (PParamsUpdateR reify) No)
 gaProtVer :: Reflect era => Term era ProtVer
 gaProtVer = Var (V "gaProtVer" (ProtVerR reify) No)
 
-gaRewardAcnt :: Era era => Term era (Map (RewardAcnt (EraCrypto era)) Coin)
-gaRewardAcnt = Var (V "gaRewardAcnt" (MapR RewardAcntR CoinR) No)
+gaRewardAccount :: Era era => Term era (Map (RewardAccount (EraCrypto era)) Coin)
+gaRewardAccount = Var (V "gaRewardAccount" (MapR RewardAccountR CoinR) No)
 
 gaRemMember :: Era era => Term era (Set (Credential 'ColdCommitteeRole (EraCrypto era)))
 gaRemMember = Var (V "gaRemMember" (SetR CommColdCredR) No)
@@ -2170,7 +2170,7 @@ hardForkInitiationT =
 treasuryWithdrawalsT :: forall era. Reflect era => RootTarget era (GovAction era) (GovAction era)
 treasuryWithdrawalsT =
   Invert "TreasuryWithdrawals" (typeRep @(GovAction era)) (\x y -> TreasuryWithdrawals x $ maybeToStrictMaybe y)
-    :$ Partial gaRewardAcnt (\case (TreasuryWithdrawals x _) -> Just x; _ -> Nothing)
+    :$ Partial gaRewardAccount (\case (TreasuryWithdrawals x _) -> Just x; _ -> Nothing)
     :$ Partial gaPolicy (\case (TreasuryWithdrawals _ y) -> Just $ strictMaybeToMaybe y; _ -> Nothing)
 
 noConfidenceT :: forall era. Reflect era => RootTarget era (GovAction era) (GovAction era)

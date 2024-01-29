@@ -19,17 +19,20 @@ module Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPoolreapEnv (..),
   PredicateFailure,
   ShelleyPoolreapPredFailure,
+
+  -- * Deprecations
+  prAcnt,
 )
 where
 
-import Cardano.Ledger.Address (RewardAcnt, getRwdCred)
+import Cardano.Ledger.Address (RewardAccount, raCredential)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.CertState (VState)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
-import Cardano.Ledger.PoolParams (ppRewardAcnt)
+import Cardano.Ledger.PoolParams (ppRewardAccount)
 import Cardano.Ledger.Shelley.Era (ShelleyPOOLREAP)
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -69,10 +72,14 @@ import NoThunks.Class (NoThunks (..))
 
 data ShelleyPoolreapState era = PoolreapState
   { prUTxOSt :: UTxOState era
-  , prAcnt :: AccountState
+  , prAccountState :: AccountState
   , prDState :: DState era
   , prPState :: PState era
   }
+
+prAcnt :: ShelleyPoolreapState era -> AccountState
+prAcnt = prAccountState
+{-# DEPRECATED prAcnt "Use `prAccountState` instead" #-}
 
 newtype ShelleyPoolreapEnv era = ShelleyPoolreapEnv
   { speVState :: VState era
@@ -145,36 +152,36 @@ poolReapTransition = do
     retiringDeposits, remainingDeposits :: Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin
     (retiringDeposits, remainingDeposits) =
       Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
-    rewardAcnts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era))
-    rewardAcnts = Map.map ppRewardAcnt $ eval (retired ◁ psStakePoolParams ps)
-    rewardAcnts_ :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAcnt (EraCrypto era), Coin)
-    rewardAcnts_ = Map.intersectionWith (,) rewardAcnts retiringDeposits
-    rewardAcnts' :: Map.Map (RewardAcnt (EraCrypto era)) Coin
-    rewardAcnts' =
+    rewardAccounts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era))
+    rewardAccounts = Map.map ppRewardAccount $ eval (retired ◁ psStakePoolParams ps)
+    rewardAccounts_ :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era), Coin)
+    rewardAccounts_ = Map.intersectionWith (,) rewardAccounts retiringDeposits
+    rewardAccounts' :: Map.Map (RewardAccount (EraCrypto era)) Coin
+    rewardAccounts' =
       Map.fromListWith (<+>)
         . Map.elems
-        $ rewardAcnts_
+        $ rewardAccounts_
     refunds :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
     mRefunds :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
     (refunds, mRefunds) =
       Map.partitionWithKey
         (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
-        (Map.mapKeys getRwdCred rewardAcnts')
+        (Map.mapKeys raCredential rewardAccounts')
     refunded = fold refunds
     unclaimed = fold mRefunds
 
   tellEvent $
-    let rewardAcntsWithPool =
+    let rewardAccountsWithPool =
           Map.foldlWithKey'
             ( \acc sp (ra, coin) ->
-                Map.insertWith (Map.unionWith (<>)) (getRwdCred ra) (Map.singleton sp coin) acc
+                Map.insertWith (Map.unionWith (<>)) (raCredential ra) (Map.singleton sp coin) acc
             )
             Map.empty
-            rewardAcnts_
+            rewardAccounts_
         (refundPools', unclaimedPools') =
           Map.partitionWithKey
             (\k _ -> UM.member k (rewards ds)) -- (k ∈ dom (rewards ds))
-            rewardAcntsWithPool
+            rewardAccountsWithPool
      in RetiredPools
           { refundPools = refundPools'
           , unclaimedPools = unclaimedPools'

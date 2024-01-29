@@ -107,7 +107,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyNewEpochEvent (DeltaRewardEvent, TotalRewardEvent),
   ShelleyTickEvent (TickNewEpochEvent, TickRupdEvent),
  )
-import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..))
+import Cardano.Ledger.Shelley.TxBody (RewardAccount (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
@@ -283,7 +283,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
           , ppPledge = pledge
           , ppCost = cost
           , ppMargin = margin
-          , ppRewardAcnt = RewardAcnt Testnet . KeyHashObj . hashKey . vKey $ rewardKey
+          , ppRewardAccount = RewardAccount Testnet . KeyHashObj . hashKey . vKey $ rewardKey
           , ppOwners = Set.fromList [hashKey $ vKey ownerKey]
           , ppRelays = StrictSeq.empty
           , ppMetadata = SNothing
@@ -334,7 +334,7 @@ rewardsBoundedByPot _ = property $ do
         flip fmap pools $
           \PoolInfo {params, members} ->
             Map.fromList $ (,ppId params) <$> Map.keys members
-      rewardAcnts = Set.fromList $ Map.keys delegs
+      rewardAccounts = Set.fromList $ Map.keys delegs
       poolParams =
         VMap.fromList
           [(ppId params, params) | PoolInfo {params} <- pools]
@@ -346,7 +346,7 @@ rewardsBoundedByPot _ = property $ do
             pp
             bs
             rewardPot
-            rewardAcnts
+            rewardAccounts
             poolParams
             (Stake (VMap.fromMap (toCompactCoinError <$> stake)))
             (VMap.fromMap delegs)
@@ -358,8 +358,8 @@ rewardsBoundedByPot _ = property $ do
           , show pp
           , "\nrewardPot\n"
           , show rewardPot
-          , "\nrewardAcnts\n"
-          , show rewardAcnts
+          , "\nrewardAccounts\n"
+          , show rewardAccounts
           , "\npoolParams\n"
           , show poolParams
           , "\nstake\n"
@@ -446,7 +446,7 @@ rewardOnePool
           then Map.insertWith (<>)
           else Map.insert
       potentialRewards =
-        f (getRwdCred $ ppRewardAcnt pool) lReward mRewards
+        f (raCredential $ ppRewardAccount pool) lReward mRewards
       potentialRewards' =
         if HardForks.forgoRewardPrefilter pv
           then potentialRewards

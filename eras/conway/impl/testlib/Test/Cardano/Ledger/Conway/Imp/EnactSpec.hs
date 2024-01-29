@@ -37,7 +37,7 @@ spec =
               { ensTreasury = Coin 1000
               }
       enactState' <- runImpRule @"ENACT" () enactState signal
-      ensWithdrawals enactState' `shouldBe` [(getRwdCred rewardAcount1, Coin 666)]
+      ensWithdrawals enactState' `shouldBe` [(raCredential rewardAcount1, Coin 666)]
 
       rewardAcount2 <- registerRewardAccount
       let withdrawals' =
@@ -55,7 +55,7 @@ spec =
       enactState'' <- runImpRule @"ENACT" () enactState' signal'
 
       ensWithdrawals enactState''
-        `shouldBe` [ (getRwdCred rewardAcount1, Coin 777)
-                   , (getRwdCred rewardAcount2, Coin 222)
+        `shouldBe` [ (raCredential rewardAcount1, Coin 777)
+                   , (raCredential rewardAcount2, Coin 222)
                    ]
       ensTreasury enactState'' `shouldBe` Coin 1
