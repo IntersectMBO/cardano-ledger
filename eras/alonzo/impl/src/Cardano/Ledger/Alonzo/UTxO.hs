@@ -233,13 +233,13 @@ getAlonzoScriptsNeeded ::
   TxBody era ->
   AlonzoScriptsNeeded era
 getAlonzoScriptsNeeded utxo txBody =
-  getSpendingScriptsNeeded utxo txBody
-    <> getRewardingScriptsNeeded txBody
-    <> certifyingScriptsNeeded
-    <> getMintingScriptsNeeded txBody
+  AlonzoScriptsNeeded $
+  getSpendingScriptsNeeded' utxo txBody
+    ++ getRewardingScriptsNeeded' txBody
+    ++ certifyingScriptsNeeded
+    ++ getMintingScriptsNeeded' txBody
   where
     certifyingScriptsNeeded =
-      AlonzoScriptsNeeded $
         case foldl' addUniqueTxCertPurpose (Map.empty, 0, []) (txBody ^. certsTxBodyL) of
           (_, _, certPurposes) -> reverse certPurposes
       where
@@ -303,6 +303,41 @@ getMintingScriptsNeeded txBody =
     zipAsIxItem (txBody ^. mintedTxBodyF) $
       \asIxItem@(AsIxItem _ (PolicyID scriptHash)) -> (MintingPurpose asIxItem, scriptHash)
 {-# INLINEABLE getMintingScriptsNeeded #-}
+
+
+getSpendingScriptsNeeded' ::
+  (AlonzoEraScript era, EraTxBody era) =>
+  UTxO era ->
+  TxBody era ->
+  [(PlutusPurpose AsIxItem era, ScriptHash (EraCrypto era))]
+getSpendingScriptsNeeded' (UTxO utxo) txBody =
+    catMaybes $
+      zipAsIxItem (txBody ^. inputsTxBodyL) $
+        \asIxItem@(AsIxItem _ txIn) -> do
+          addr <- view addrTxOutL <$> Map.lookup txIn utxo
+          hash <- getScriptHash addr
+          return (SpendingPurpose asIxItem, hash)
+{-# INLINEABLE getSpendingScriptsNeeded' #-}
+
+getRewardingScriptsNeeded' ::
+  (AlonzoEraScript era, EraTxBody era) =>
+  TxBody era ->
+  [(PlutusPurpose AsIxItem era, ScriptHash (EraCrypto era))]
+getRewardingScriptsNeeded' txBody =
+    catMaybes $
+      zipAsIxItem (Map.keys (unWithdrawals $ txBody ^. withdrawalsTxBodyL)) $
+        \asIxItem@(AsIxItem _ rewardAccount) ->
+          (RewardingPurpose asIxItem,) <$> credScriptHash (getRwdCred rewardAccount)
+{-# INLINEABLE getRewardingScriptsNeeded' #-}
+
+getMintingScriptsNeeded' ::
+  (AlonzoEraScript era, MaryEraTxBody era) =>
+  TxBody era ->
+  [(PlutusPurpose AsIxItem era, ScriptHash (EraCrypto era))]
+getMintingScriptsNeeded' txBody =
+    zipAsIxItem (txBody ^. mintedTxBodyF) $
+      \asIxItem@(AsIxItem _ (PolicyID scriptHash)) -> (MintingPurpose asIxItem, scriptHash)
+{-# INLINEABLE getMintingScriptsNeeded' #-}
 
 -- | Just like `getShelleyWitsVKeyNeeded`, but also requires `reqSignerHashesTxBodyL`.
 getAlonzoWitsVKeyNeeded ::
