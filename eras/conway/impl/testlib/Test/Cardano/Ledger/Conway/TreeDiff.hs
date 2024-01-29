@@ -3,6 +3,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -82,13 +84,9 @@ instance ToExpr a => ToExpr (PEdges a)
 
 instance ToExpr a => ToExpr (PGraph a)
 
-instance Era era => ToExpr (PForest PRoot era)
-
-instance Era era => ToExpr (PForest PGraph era)
-
-instance Era era => ToExpr (PForest StrictMaybe era)
-
-instance Era era => ToExpr (PrevGovActionIds era)
+instance
+  (forall p. ToExpr (f (GovPurposeId (p :: GovActionPurpose) era))) =>
+  ToExpr (GovRelation f era)
 
 instance (Era era, ToExpr (PParamsHKD StrictMaybe era)) => ToExpr (Proposals era)
 

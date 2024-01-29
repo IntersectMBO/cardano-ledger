@@ -91,23 +91,17 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   proposalsAddVote,
   proposalsLookupId,
   proposalsActionsMap,
-  PrevGovActionIds (..),
-  prevGovActionIdsL,
   toPrevGovActionIds,
+  fromPrevGovActionIds,
 
   -- * To be used only for testing
   TreeMaybe (..),
-  toPForest,
-  toPForestEither,
+  toGovRelationTree,
+  toGovRelationTreeEither,
   pPropsL,
   pRootsL,
   pGraphL,
   mkProposals,
-  PForest (..),
-  pfPParamUpdateL,
-  pfHardForkL,
-  pfCommitteeL,
-  pfConstitutionL,
   PRoot (..),
   prRootL,
   prChildrenL,
@@ -115,7 +109,6 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   peChildrenL,
   PGraph (..),
   pGraphNodesL,
-  fromPrevGovActionIds,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -128,19 +121,16 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
-  decodeRecordNamed,
-  encodeListLen,
  )
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Core
 import Control.DeepSeq (NFData)
 import Control.Exception (assert)
 import Control.Monad (unless)
-import Data.Aeson (KeyValue ((.=)), ToJSON (..), object, pairs)
+import Data.Aeson (ToJSON (..))
 import Data.Default.Class (Default (..))
 import Data.Either (partitionEithers)
 import Data.Foldable (foldl', foldrM, toList)
-import Data.Kind (Type)
 import qualified Data.Map as Map
 import Data.Map.Strict (Map)
 import qualified Data.OMap.Strict as OMap
@@ -197,74 +187,6 @@ peChildrenL = lens peChildren $ \x y -> x {peChildren = y}
 pGraphNodesL :: Lens' (PGraph a) (Map a (PEdges a))
 pGraphNodesL = lens unPGraph $ \x y -> x {unPGraph = y}
 
--- | A smart data-type that encapsulates the essence of having 4
--- instance fields of the same parameterized data-structure. This is
--- used to make the 4 proposals-forest roots, the 4 proposals-forest
--- hierarchies and 4 `PrevGovActionIds`.
-data PForest (f :: Type -> Type) era = PForest
-  { pfPParamUpdate :: !(f (GovPurposeId 'PParamUpdatePurpose era))
-  , pfHardFork :: !(f (GovPurposeId 'HardForkPurpose era))
-  , pfCommittee :: !(f (GovPurposeId 'CommitteePurpose era))
-  , pfConstitution :: !(f (GovPurposeId 'ConstitutionPurpose era))
-  }
-  deriving (Generic)
-
-deriving instance
-  (forall p. Show (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Show (PForest f era)
-
-instance
-  (forall p. Semigroup (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Semigroup (PForest f era)
-  where
-  (<>) p1 p2 =
-    PForest
-      { pfPParamUpdate = pfPParamUpdate p1 <> pfPParamUpdate p2
-      , pfHardFork = pfHardFork p1 <> pfHardFork p2
-      , pfCommittee = pfCommittee p1 <> pfCommittee p2
-      , pfConstitution = pfConstitution p1 <> pfConstitution p2
-      }
-
-instance
-  (forall p. Monoid (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Monoid (PForest f era)
-  where
-  mempty =
-    PForest
-      { pfPParamUpdate = mempty
-      , pfHardFork = mempty
-      , pfCommittee = mempty
-      , pfConstitution = mempty
-      }
-
-pfPParamUpdateL :: Lens' (PForest f era) (f (GovPurposeId 'PParamUpdatePurpose era))
-pfPParamUpdateL = lens pfPParamUpdate $ \x y -> x {pfPParamUpdate = y}
-
-pfHardForkL :: Lens' (PForest f era) (f (GovPurposeId 'HardForkPurpose era))
-pfHardForkL = lens pfHardFork $ \x y -> x {pfHardFork = y}
-
-pfCommitteeL :: Lens' (PForest f era) (f (GovPurposeId 'CommitteePurpose era))
-pfCommitteeL = lens pfCommittee $ \x y -> x {pfCommittee = y}
-
-pfConstitutionL :: Lens' (PForest f era) (f (GovPurposeId 'ConstitutionPurpose era))
-pfConstitutionL = lens pfConstitution $ \x y -> x {pfConstitution = y}
-
-deriving stock instance
-  (forall p. Eq (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Eq (PForest f era)
-deriving stock instance
-  (forall p. Ord (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Ord (PForest f era)
-deriving anyclass instance
-  (forall p. NoThunks (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  NoThunks (PForest f era)
-deriving anyclass instance
-  (forall p. NFData (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  NFData (PForest f era)
-deriving anyclass instance
-  (forall p. Default (f (GovPurposeId (p :: GovActionPurpose) era))) =>
-  Default (PForest f era)
-
 -- | Self-contained representation of all 4 proposals trees. This forest
 -- is made up of only action-ids for nodes - full `GovActionState`s are
 -- stored only once in the `OMap`. All functions in this module prefixed
@@ -287,8 +209,8 @@ deriving anyclass instance
 -- as the @`PrevGovActionIds`@ from the @`EnactState`@
 data Proposals era = Proposals
   { pProps :: !(OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era))
-  , pRoots :: !(PForest PRoot era)
-  , pGraph :: !(PForest PGraph era)
+  , pRoots :: !(GovRelation PRoot era)
+  , pGraph :: !(GovRelation PGraph era)
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NoThunks, NFData, Default)
@@ -296,10 +218,10 @@ data Proposals era = Proposals
 pPropsL :: Lens' (Proposals era) (OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era))
 pPropsL = lens pProps $ \x y -> x {pProps = y}
 
-pRootsL :: Lens' (Proposals era) (PForest PRoot era)
+pRootsL :: Lens' (Proposals era) (GovRelation PRoot era)
 pRootsL = lens pRoots $ \x y -> x {pRoots = y}
 
-pGraphL :: Lens' (Proposals era) (PForest PGraph era)
+pGraphL :: Lens' (Proposals era) (GovRelation PGraph era)
 pGraphL = lens pGraph $ \x y -> x {pGraph = y}
 
 instance EraPParams era => ToJSON (Proposals era) where
@@ -316,31 +238,18 @@ proposalsAddAction ::
   GovActionState era ->
   Proposals era ->
   Maybe (Proposals era)
-proposalsAddAction gas ps =
-  case gas ^. gasActionL of
-    ParameterChange parent _ _ ->
-      update pfPParamUpdateL parent
-    HardForkInitiation parent _ ->
-      update pfHardForkL parent
-    TreasuryWithdrawals _ _ -> Just psWithGas
-    NoConfidence parent ->
-      update pfCommitteeL parent
-    UpdateCommittee parent _ _ _ ->
-      update pfCommitteeL parent
-    NewConstitution parent _ ->
-      update pfConstitutionL parent
-    InfoAction -> Just psWithGas
+proposalsAddAction gas ps = withGovActionParent gas (Just psWithGas) update
   where
     psWithGas = ps & pPropsL %~ (OMap.||> gas)
     -- Append a new GovActionState to the Proposals and then add it to the set of children
     -- for its parent as well as initiate an empty lineage for this new child.
     update ::
-      forall p.
       HasCallStack =>
-      (forall f. Lens' (PForest f era) (f (GovPurposeId p era))) ->
+      (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
       StrictMaybe (GovPurposeId p era) ->
+      GovPurposeId p era ->
       Maybe (Proposals era)
-    update forestL parent
+    update forestL parent newId
       | parent == ps ^. pRootsL . forestL . prRootL =
           Just $
             checkInvariantAfterAddition gas ps $
@@ -357,15 +266,12 @@ proposalsAddAction gas ps =
                         . Map.adjust (peChildrenL %~ Set.insert newId) parentId
                      )
       | otherwise = Nothing
-      where
-        newId :: GovPurposeId p era
-        newId = GovPurposeId $ gas ^. gasIdL
 
 -- | Reconstruct the @`Proposals`@ forest from an @`OMap`@ of
 -- @`GovActionState`@s and the 4 roots (@`PrevGovActionIds`@)
 mkProposals ::
   (EraPParams era, MonadFail m) =>
-  PrevGovActionIds era ->
+  GovRelation StrictMaybe era ->
   OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era) ->
   m (Proposals era)
 mkProposals pgais omap = do
@@ -434,29 +340,15 @@ proposalsRemoveIds gais ps =
    in (checkInvariantAfterDeletion gais ps $ Proposals retainedOMap roots hierarchy, removedFromOMap)
   where
     removeEach accum@(!roots, !hierarchy) gas =
-      case gas ^. gasActionL of
-        ParameterChange parent _ _ -> remove pfPParamUpdateL parent
-        HardForkInitiation parent _ -> remove pfHardForkL parent
-        TreasuryWithdrawals _ _ -> accum
-        NoConfidence parent -> remove pfCommitteeL parent
-        UpdateCommittee parent _ _ _ -> remove pfCommitteeL parent
-        NewConstitution parent _ -> remove pfConstitutionL parent
-        InfoAction -> accum
-      where
-        remove ::
-          (forall f. Lens' (PForest f era) (f (GovPurposeId p era))) ->
-          StrictMaybe (GovPurposeId p era) ->
-          (PForest PRoot era, PForest PGraph era)
-        remove forestL parent =
-          let gpi = GovPurposeId $ gas ^. gasIdL
-           in ( roots & forestL . prChildrenL %~ Set.delete gpi
-              , hierarchy
-                  & forestL . pGraphNodesL %~ Map.delete gpi
-                  & case parent of
-                    SNothing -> id
-                    SJust parentGpi ->
-                      forestL . pGraphNodesL %~ Map.adjust (peChildrenL %~ Set.delete gpi) parentGpi
-              )
+      withGovActionParent gas accum $ \forestL parent gpi ->
+        ( roots & forestL . prChildrenL %~ Set.delete gpi
+        , hierarchy
+            & forestL . pGraphNodesL %~ Map.delete gpi
+            & case parent of
+              SNothing -> id
+              SJust parentGpi ->
+                forestL . pGraphNodesL %~ Map.adjust (peChildrenL %~ Set.delete gpi) parentGpi
+        )
 
 -- | Get all the descendents of an action-id from the @`Proposals`@ forest
 getAllDescendents ::
@@ -464,28 +356,18 @@ getAllDescendents ::
   Proposals era ->
   GovActionId (EraCrypto era) ->
   Set (GovActionId (EraCrypto era))
-getAllDescendents (Proposals omap _roots hierarchy) gai = case OMap.lookup gai omap of
+getAllDescendents (Proposals omap _roots graph) gai = case OMap.lookup gai omap of
   Nothing -> Set.empty
-  Just gas -> case gas ^. gasActionL of
-    ParameterChange {} -> collectDescendents pfPParamUpdateL
-    HardForkInitiation {} -> collectDescendents pfHardForkL
-    TreasuryWithdrawals {} -> Set.empty
-    NoConfidence {} -> collectDescendents pfCommitteeL
-    UpdateCommittee {} -> collectDescendents pfCommitteeL
-    NewConstitution {} -> collectDescendents pfConstitutionL
-    InfoAction -> Set.empty
+  Just gas -> withGovActionParent gas Set.empty $ \graphL _ ->
+    Set.map unGovPurposeId . go graphL
   where
-    collectDescendents ::
-      Lens' (PForest PGraph era) (PGraph (GovPurposeId p era)) ->
-      Set (GovActionId (EraCrypto era))
-    collectDescendents graphL = Set.map unGovPurposeId $ go graphL $ GovPurposeId gai
     go ::
       forall p.
-      Lens' (PForest PGraph era) (PGraph (GovPurposeId p era)) ->
+      Lens' (GovRelation PGraph era) (PGraph (GovPurposeId p era)) ->
       GovPurposeId p era ->
       Set (GovPurposeId p era)
     go graphL gpi =
-      case Map.lookup gpi $ hierarchy ^. graphL . pGraphNodesL of
+      case Map.lookup gpi $ graph ^. graphL . pGraphNodesL of
         -- Impossible! getAllDescendents: GovPurposeId not found
         Nothing -> assert False mempty
         Just (PEdges _parent children) -> children <> foldMap (go graphL) children
@@ -523,15 +405,7 @@ proposalsApplyEnactment enactedGass expiredGais props =
         foldl' enact (unexpiredProposals, Map.empty) enactedGass
    in (enactedProposalsState, enactedRemoved, expiredRemoved)
   where
-    enact (!ps, !removed) gas =
-      case gas ^. gasActionL of
-        ParameterChange parent _ _ -> enactFromRoot pfPParamUpdateL parent
-        HardForkInitiation parent _ -> enactFromRoot pfHardForkL parent
-        TreasuryWithdrawals _ _ -> enactWithoutRoot
-        NoConfidence parent -> enactFromRoot pfCommitteeL parent
-        UpdateCommittee parent _ _ _ -> enactFromRoot pfCommitteeL parent
-        NewConstitution parent _ -> enactFromRoot pfConstitutionL parent
-        InfoAction -> enactWithoutRoot
+    enact (!ps, !removed) gas = withGovActionParent gas enactWithoutRoot enactFromRoot
       where
         gai = gas ^. gasIdL
         enactWithoutRoot ::
@@ -542,14 +416,14 @@ proposalsApplyEnactment enactedGass expiredGais props =
           let (newOMap, removedActions) = OMap.extractKeys (Set.singleton gai) $ ps ^. pPropsL
            in (ps & pPropsL .~ newOMap, removed `Map.union` removedActions)
         enactFromRoot ::
-          (forall f. Lens' (PForest f era) (f (GovPurposeId p era))) ->
+          (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
           StrictMaybe (GovPurposeId p era) ->
+          GovPurposeId p era ->
           ( Proposals era
           , Map (GovActionId (EraCrypto era)) (GovActionState era)
           )
-        enactFromRoot forestL parent =
-          let gpi = GovPurposeId gai
-              siblings =
+        enactFromRoot forestL parent gpi =
+          let siblings =
                 Set.delete gai $
                   Set.map unGovPurposeId (ps ^. pRootsL . forestL . prChildrenL)
               newRootChildren =
@@ -597,64 +471,11 @@ proposalsLookupId ::
   Maybe (GovActionState era)
 proposalsLookupId gai (Proposals omap _ _) = OMap.lookup gai omap
 
--- | Represents the @`GovActionId`@ of the last actions enacted on the
--- previous epoch boundary in the @`EnactState`@
-newtype PrevGovActionIds era = PrevGovActionIds
-  { unPrevGovActionIds :: PForest StrictMaybe era
-  }
-  deriving stock (Show, Eq, Generic)
-  deriving newtype (NoThunks, NFData, Default)
+toPrevGovActionIds :: GovRelation PRoot era -> GovRelation StrictMaybe era
+toPrevGovActionIds = hoistGovRelation prRoot
 
-prevGovActionIdsL :: Lens' (PrevGovActionIds era) (PForest StrictMaybe era)
-prevGovActionIdsL = lens unPrevGovActionIds $ \_x y -> PrevGovActionIds y
-
-instance Era era => DecCBOR (PrevGovActionIds era) where
-  decCBOR =
-    PrevGovActionIds
-      <$> decodeRecordNamed
-        "PrevGovActionIds"
-        (const 4)
-        (PForest <$> decCBOR <*> decCBOR <*> decCBOR <*> decCBOR)
-
-instance Era era => EncCBOR (PrevGovActionIds era) where
-  encCBOR (PrevGovActionIds pforest@(PForest _ _ _ _)) =
-    let PForest {..} = pforest
-     in encodeListLen 4
-          <> encCBOR pfPParamUpdate
-          <> encCBOR pfHardFork
-          <> encCBOR pfCommittee
-          <> encCBOR pfConstitution
-
-toPrevGovActionIdsPairs :: (Era era, KeyValue e a) => PrevGovActionIds era -> [a]
-toPrevGovActionIdsPairs (PrevGovActionIds pforest@(PForest _ _ _ _)) =
-  let PForest {..} = pforest
-   in [ "EnactedPParamUpdate" .= pfPParamUpdate
-      , "EnactedHardFork" .= pfHardFork
-      , "EnactedCommittee" .= pfCommittee
-      , "EnactedConstitution" .= pfConstitution
-      ]
-
-instance Era era => ToJSON (PrevGovActionIds era) where
-  toJSON = object . toPrevGovActionIdsPairs
-  toEncoding = pairs . mconcat . toPrevGovActionIdsPairs
-
-toPrevGovActionIds :: Era era => PForest PRoot era -> PrevGovActionIds era
-toPrevGovActionIds pforest@(PForest _ _ _ _) =
-  let PForest {..} = pforest
-   in def
-        & prevGovActionIdsL . pfPParamUpdateL .~ (pfPParamUpdate ^. prRootL)
-        & prevGovActionIdsL . pfHardForkL .~ (pfHardFork ^. prRootL)
-        & prevGovActionIdsL . pfCommitteeL .~ (pfCommittee ^. prRootL)
-        & prevGovActionIdsL . pfConstitutionL .~ (pfConstitution ^. prRootL)
-
-fromPrevGovActionIds :: PrevGovActionIds era -> PForest PRoot era
-fromPrevGovActionIds (PrevGovActionIds pforest@(PForest _ _ _ _)) =
-  let PForest {..} = pforest
-   in def
-        & pfPParamUpdateL . prRootL .~ pfPParamUpdate
-        & pfHardForkL . prRootL .~ pfHardFork
-        & pfCommitteeL . prRootL .~ pfCommittee
-        & pfConstitutionL . prRootL .~ pfConstitution
+fromPrevGovActionIds :: GovRelation StrictMaybe era -> GovRelation PRoot era
+fromPrevGovActionIds = hoistGovRelation (`PRoot` Set.empty)
 
 ---------------------
 -- Debugging tools --
@@ -673,23 +494,26 @@ instance Show (TreeMaybe (GovPurposeId p era)) where
         SNothing -> "x"
         SJust (GovPurposeId govActionId) -> T.unpack (govActionIdToText govActionId)
 
--- | Partial version of `toPForestEither`
-toPForest :: (Era era, HasCallStack) => Proposals era -> PForest TreeMaybe era
-toPForest = either error id . toPForestEither
+-- | Partial version of `toGovRelationTreeEither`
+toGovRelationTree :: (Era era, HasCallStack) => Proposals era -> GovRelation TreeMaybe era
+toGovRelationTree = either error id . toGovRelationTreeEither
 
 -- | Convert `Proposals` into a valid `Tree`
-toPForestEither :: Era era => Proposals era -> Either String (PForest TreeMaybe era)
-toPForestEither Proposals {pProps, pRoots, pGraph} = do
+toGovRelationTreeEither :: Era era => Proposals era -> Either String (GovRelation TreeMaybe era)
+toGovRelationTreeEither Proposals {pProps, pRoots, pGraph} = do
   unless (OMap.invariantHolds' pProps) $ Left "OMap invariant is violated"
 
-  (pfPParamUpdate, nodesPParamUpdate) <-
-    toPTree (pfPParamUpdate pRoots) (unPGraph (pfPParamUpdate pGraph))
-  (pfHardFork, nodesHardFork) <-
-    toPTree (pfHardFork pRoots) (unPGraph (pfHardFork pGraph))
-  (pfCommittee, nodesCommittee) <-
-    toPTree (pfCommittee pRoots) (unPGraph (pfCommittee pGraph))
-  (pfConstitution, nodesConstitution) <-
-    toPTree (pfConstitution pRoots) (unPGraph (pfConstitution pGraph))
+  let propsMap = OMap.toMap pProps
+      childParentRelation = toChildParentRelation propsMap
+
+  (grPParamUpdate, nodesPParamUpdate) <-
+    toPTree (grPParamUpdate childParentRelation) (grPParamUpdate pRoots) (grPParamUpdate pGraph)
+  (grHardFork, nodesHardFork) <-
+    toPTree (grHardFork childParentRelation) (grHardFork pRoots) (grHardFork pGraph)
+  (grCommittee, nodesCommittee) <-
+    toPTree (grCommittee childParentRelation) (grCommittee pRoots) (grCommittee pGraph)
+  (grConstitution, nodesConstitution) <-
+    toPTree (grConstitution childParentRelation) (grConstitution pRoots) (grConstitution pGraph)
 
   let allNodes =
         Set.unions
@@ -698,7 +522,6 @@ toPForestEither Proposals {pProps, pRoots, pGraph} = do
           , Set.map unGovPurposeId nodesCommittee
           , Set.map unGovPurposeId nodesConstitution
           ]
-      propsMap = OMap.toMap pProps
       guardUnknown = do
         let unknown = allNodes Set.\\ Map.keysSet propsMap
         unless (null unknown) $ do
@@ -717,10 +540,30 @@ toPForestEither Proposals {pProps, pRoots, pGraph} = do
               ++ show (sumSizes - Set.size allNodes)
   guardUnknown
   guardUnique
-  pure PForest {pfPParamUpdate, pfHardFork, pfCommittee, pfConstitution}
+  pure GovRelation {grPParamUpdate, grHardFork, grCommittee, grConstitution}
 
-toPTree :: (Ord a, Show a) => PRoot a -> Map a (PEdges a) -> Either String (TreeMaybe a, Set a)
-toPTree root fullGraph = do
+-- | Mapping from a child to a parent that was specified in the GovAction.
+newtype ChildParent a = ChildParent (Map a (StrictMaybe a))
+  deriving stock (Show)
+  deriving newtype (Eq, Semigroup, Monoid)
+
+toChildParentRelation ::
+  Foldable f =>
+  f (GovActionState era) ->
+  GovRelation ChildParent era
+toChildParentRelation = foldMap toChildParent
+  where
+    toChildParent gas =
+      withGovActionParent gas mempty $ \pfL parent _ ->
+        mempty & pfL .~ ChildParent (Map.singleton (GovPurposeId (gas ^. gasIdL)) parent)
+
+toPTree ::
+  (Ord a, Show a) =>
+  ChildParent a ->
+  PRoot a ->
+  PGraph a ->
+  Either String (TreeMaybe a, Set a)
+toPTree (ChildParent childParent) root (PGraph fullGraph) = do
   (_, tree) <- nodeToTree (prRoot root) (prChildren root) fullGraph
   nodesList <-
     case partitionEithers $ map (strictMaybe (Left ()) Right) $ toList tree of
@@ -752,6 +595,18 @@ toPTree root fullGraph = do
                 ++ show (peParent edges)
                 ++ " listed for the node: "
                 ++ show child
+          case Map.lookup child childParent of
+            Nothing -> Left $ "Node is not found in the governance states map: " ++ show child
+            Just trueParent
+              | trueParent /= parent ->
+                  Left $
+                    "Parent of "
+                      ++ show child
+                      ++ " specified in the GovAction: "
+                      ++ show trueParent
+                      ++ " does not match the one on the Graph: "
+                      ++ show parent
+              | otherwise -> pure ()
           (graph', !subTree) <-
             -- Deleting the child from the graph ensures that every node except the root
             -- appears exactly once in the graph.
@@ -774,7 +629,7 @@ checkInvariantAfterAddition ::
 checkInvariantAfterAddition gas psPre ps = assert check ps
   where
     check =
-      case toPForestEither ps of
+      case toGovRelationTreeEither ps of
         Left err -> error $ "Addition error: " ++ err ++ "\n" ++ show gas ++ "\n" ++ show psPre
         Right _ -> True
 
@@ -794,6 +649,6 @@ checkInvariantAfterDeletion ::
 checkInvariantAfterDeletion gais psPre ps = assert check ps
   where
     check =
-      case toPForestEither ps of
+      case toGovRelationTreeEither ps of
         Left err -> error $ "Deletion error: " ++ err ++ "\n" ++ show gais ++ "\n" ++ show psPre
         Right _ -> True

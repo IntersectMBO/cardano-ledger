@@ -1947,7 +1947,7 @@ currProposals :: Era era => Proof era -> Term era (Proposals era)
 currProposals p = Var $ V "currProposals" (ProposalsR p) No
 
 -- | Part of the EnactState, it is computed by selecting from currProposals
-prevGovActionIds :: forall era. Reflect era => Term era (PrevGovActionIds era)
+prevGovActionIds :: forall era. Reflect era => Term era (GovRelation StrictMaybe era)
 prevGovActionIds = Var $ V "prevGovActionIds" PrevGovActionIdsR No
 
 -- | This is a view of currProposals, so will compute it once

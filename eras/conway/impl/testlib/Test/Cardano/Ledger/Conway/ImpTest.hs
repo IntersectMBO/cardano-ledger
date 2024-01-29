@@ -99,14 +99,14 @@ import Cardano.Ledger.Conway.Governance (
   epochStateDRepPulsingStateL,
   finishDRepPulser,
   gasDRepVotesL,
+  grCommitteeL,
+  grConstitutionL,
+  grHardForkL,
+  grPParamUpdateL,
   mkEnactState,
   pGraphL,
   pGraphNodesL,
   pRootsL,
-  pfCommitteeL,
-  pfConstitutionL,
-  pfHardForkL,
-  pfPParamUpdateL,
   proposalsIds,
   proposalsLookupId,
   proposalsSize,
@@ -731,7 +731,7 @@ logRatificationChecks gaId = do
   logEntry $
     unlines
       [ "----- RATIFICATION CHECKS -----"
-      , "prevActionAsExpected:\t" <> show (prevActionAsExpected gasAction ensPrevGovActionIds)
+      , "prevActionAsExpected:\t" <> show (prevActionAsExpected gas ensPrevGovActionIds)
       , "validCommitteeTerm:\t" <> show (validCommitteeTerm gasAction curPParams currentEpoch)
       , "notDelayed:\t\t??"
       , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction curTreasury)
@@ -889,25 +889,25 @@ proposalsShowDebug ps showRoots =
     , ""
     , "Roots"
     , "> PParamUpdate"
-    , show $ ps ^. pRootsL . pfPParamUpdateL
+    , show $ ps ^. pRootsL . grPParamUpdateL
     , "> HardFork"
-    , show $ ps ^. pRootsL . pfHardForkL
+    , show $ ps ^. pRootsL . grHardForkL
     , "> Committee"
-    , show $ ps ^. pRootsL . pfCommitteeL
+    , show $ ps ^. pRootsL . grCommitteeL
     , "> Constitution"
-    , show $ ps ^. pRootsL . pfConstitutionL
+    , show $ ps ^. pRootsL . grConstitutionL
     ]
       <> ( if showRoots
             then
               [ "Hierarchy"
               , ">> PParamUpdate"
-              , show $ ps ^. pGraphL . pfPParamUpdateL . pGraphNodesL
+              , show $ ps ^. pGraphL . grPParamUpdateL . pGraphNodesL
               , ">> HardFork"
-              , show $ ps ^. pGraphL . pfHardForkL . pGraphNodesL
+              , show $ ps ^. pGraphL . grHardForkL . pGraphNodesL
               , ">> Committee"
-              , show $ ps ^. pGraphL . pfCommitteeL . pGraphNodesL
+              , show $ ps ^. pGraphL . grCommitteeL . pGraphNodesL
               , ">> Constitution"
-              , show $ ps ^. pGraphL . pfConstitutionL . pGraphNodesL
+              , show $ ps ^. pGraphL . grConstitutionL . pGraphNodesL
               ]
             else mempty
          )

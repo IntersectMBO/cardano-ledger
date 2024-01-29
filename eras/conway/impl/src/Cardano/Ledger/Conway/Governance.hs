@@ -34,10 +34,6 @@ module Cardano.Ledger.Conway.Governance (
   GovActionIx (..),
   GovActionId (..),
   GovActionPurpose (..),
-  PrevGovActionIds (..),
-  prevGovActionIdsL,
-  fromPrevGovActionIds,
-  toPrevGovActionIds,
   DRepPulsingState (..),
   DRepPulser (..),
   govActionIdToText,
@@ -63,7 +59,6 @@ module Cardano.Ledger.Conway.Governance (
   actionPriority,
   Proposals,
   mkProposals,
-  PForest (..),
   GovPurposeId (..),
   PRoot (..),
   PEdges (..),
@@ -74,10 +69,15 @@ module Cardano.Ledger.Conway.Governance (
   peChildrenL,
   pGraphL,
   pGraphNodesL,
-  pfPParamUpdateL,
-  pfHardForkL,
-  pfCommitteeL,
-  pfConstitutionL,
+  GovRelation (..),
+  hoistGovRelation,
+  withGovActionParent,
+  toPrevGovActionIds,
+  fromPrevGovActionIds,
+  grPParamUpdateL,
+  grHardForkL,
+  grCommitteeL,
+  grConstitutionL,
   proposalsActions,
   proposalsAddAction,
   proposalsRemoveDescendentIds,
@@ -153,8 +153,8 @@ module Cardano.Ledger.Conway.Governance (
   -- * Exported for testing
   pparamsUpdateThreshold,
   TreeMaybe (..),
-  toPForest,
-  toPForestEither,
+  toGovRelationTree,
+  toGovRelationTreeEither,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -352,7 +352,7 @@ data EnactState era = EnactState
   , ensPrevPParams :: !(PParams era)
   , ensTreasury :: !Coin
   , ensWithdrawals :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
-  , ensPrevGovActionIds :: !(PrevGovActionIds era)
+  , ensPrevGovActionIds :: !(GovRelation StrictMaybe era)
   -- ^ Last enacted GovAction Ids
   }
   deriving (Generic)
@@ -378,24 +378,24 @@ ensTreasuryL = lens ensTreasury $ \es x -> es {ensTreasury = x}
 ensWithdrawalsL :: Lens' (EnactState era) (Map (Credential 'Staking (EraCrypto era)) Coin)
 ensWithdrawalsL = lens ensWithdrawals $ \es x -> es {ensWithdrawals = x}
 
-ensPrevGovActionIdsL :: Lens' (EnactState era) (PrevGovActionIds era)
+ensPrevGovActionIdsL :: Lens' (EnactState era) (GovRelation StrictMaybe era)
 ensPrevGovActionIdsL = lens ensPrevGovActionIds (\es x -> es {ensPrevGovActionIds = x})
 
 ensPrevPParamUpdateL ::
   Lens' (EnactState era) (StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
-ensPrevPParamUpdateL = ensPrevGovActionIdsL . prevGovActionIdsL . pfPParamUpdateL
+ensPrevPParamUpdateL = ensPrevGovActionIdsL . grPParamUpdateL
 
 ensPrevHardForkL ::
   Lens' (EnactState era) (StrictMaybe (GovPurposeId 'HardForkPurpose era))
-ensPrevHardForkL = ensPrevGovActionIdsL . prevGovActionIdsL . pfHardForkL
+ensPrevHardForkL = ensPrevGovActionIdsL . grHardForkL
 
 ensPrevCommitteeL ::
   Lens' (EnactState era) (StrictMaybe (GovPurposeId 'CommitteePurpose era))
-ensPrevCommitteeL = ensPrevGovActionIdsL . prevGovActionIdsL . pfCommitteeL
+ensPrevCommitteeL = ensPrevGovActionIdsL . grCommitteeL
 
 ensPrevConstitutionL ::
   Lens' (EnactState era) (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
-ensPrevConstitutionL = ensPrevGovActionIdsL . prevGovActionIdsL . pfConstitutionL
+ensPrevConstitutionL = ensPrevGovActionIdsL . grConstitutionL
 
 instance EraPParams era => ToJSON (EnactState era) where
   toJSON = object . toEnactStatePairs
@@ -553,7 +553,7 @@ prevPParamsConwayGovStateL :: Lens' (ConwayGovState era) (PParams era)
 prevPParamsConwayGovStateL = cgsPrevPParamsL
 {-# DEPRECATED prevPParamsConwayGovStateL "In favor of cgsPrevPParamsL" #-}
 
-govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> PrevGovActionIds era
+govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe era
 govStatePrevGovActionIds = view $ proposalsGovStateL . pRootsL . to toPrevGovActionIds
 
 conwayGovStateDRepDistrG :: SimpleGetter (ConwayGovState era) (Map (DRep (EraCrypto era)) (CompactForm Coin))

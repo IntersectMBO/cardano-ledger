@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -190,14 +191,11 @@ _uniqueIdGovActions ::
   Gen (SSeq.StrictSeq (GovActionState era))
 _uniqueIdGovActions = SSeq.fromList . nubBy (\x y -> gasId x == gasId y) <$> arbitrary
 
-instance Era era => Arbitrary (PrevGovActionIds era) where
-  arbitrary =
-    fmap PrevGovActionIds $
-      PForest
-        <$> arbitrary
-        <*> arbitrary
-        <*> arbitrary
-        <*> arbitrary
+instance
+  (forall p. Arbitrary (f (GovPurposeId (p :: GovActionPurpose) era))) =>
+  Arbitrary (GovRelation f era)
+  where
+  arbitrary = GovRelation <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 data ProposalsForEnactment era
   = ProposalsForEnactment
@@ -212,10 +210,10 @@ instance
   where
   arbitrary = do
     ps <- genProposals @era (2, 50)
-    pparamUpdates <- chooseLineage pfPParamUpdateL ps Seq.Empty
-    hardForks <- chooseLineage pfHardForkL ps Seq.Empty
-    committees <- chooseLineage pfCommitteeL ps Seq.Empty
-    constitutions <- chooseLineage pfConstitutionL ps Seq.Empty
+    pparamUpdates <- chooseLineage grPParamUpdateL ps Seq.Empty
+    hardForks <- chooseLineage grHardForkL ps Seq.Empty
+    committees <- chooseLineage grCommitteeL ps Seq.Empty
+    constitutions <- chooseLineage grConstitutionL ps Seq.Empty
     sequencedGais <-
       sequenceLineages
         ( Seq.filter
@@ -229,7 +227,7 @@ instance
     pure $ ProposalsForEnactment ps sequencedGais expiredGais
     where
       chooseLineage ::
-        (forall f. Lens' (PForest f era) (f (GovPurposeId p era))) ->
+        (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
         Proposals era ->
         Seq.Seq (GovActionId (EraCrypto era)) ->
         Gen (Seq.Seq (GovActionId (EraCrypto era)))
@@ -309,17 +307,17 @@ genGovAction ::
   Gen (GovAction era)
 genGovAction ps =
   oneof
-    [ genWithParent genPParamUpdateGovAction pfPParamUpdateL
-    , genWithParent genHardForkGovAction pfHardForkL
+    [ genWithParent genPParamUpdateGovAction grPParamUpdateL
+    , genWithParent genHardForkGovAction grHardForkL
     , genTreasuryWithdrawals
-    , genWithParent genCommitteeGovAction pfCommitteeL
-    , genWithParent genConstitutionGovAction pfConstitutionL
+    , genWithParent genCommitteeGovAction grCommitteeL
+    , genWithParent genConstitutionGovAction grConstitutionL
     , pure InfoAction
     ]
   where
     genWithParent ::
       (StrictMaybe (GovPurposeId p era) -> Gen (GovAction era)) ->
-      (forall f. Lens' (PForest f era) (f (GovPurposeId p era))) ->
+      (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
       Gen (GovAction era)
     genWithParent gen forestL =
       gen

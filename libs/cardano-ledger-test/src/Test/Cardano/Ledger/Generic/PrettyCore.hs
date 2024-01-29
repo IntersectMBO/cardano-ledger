@@ -86,10 +86,9 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   GovProcedures (..),
   GovPurposeId (..),
+  GovRelation (..),
   PEdges (..),
-  PForest (..),
   PGraph (..),
-  PrevGovActionIds (..),
   ProposalProcedure (..),
   Proposals,
   PulsingSnapshot (..),
@@ -2616,17 +2615,17 @@ instance PrettyA (GovActionId c) where
 pcGovPurposeId :: GovPurposeId p era -> PDoc
 pcGovPurposeId (GovPurposeId x) = pcGovActionId x
 
-pcPrevGovActionIds :: PrevGovActionIds era -> PDoc
-pcPrevGovActionIds (PrevGovActionIds (PForest {pfPParamUpdate, pfHardFork, pfCommittee, pfConstitution})) =
+pcPrevGovActionIds :: GovRelation StrictMaybe era -> PDoc
+pcPrevGovActionIds GovRelation {grPParamUpdate, grHardFork, grCommittee, grConstitution} =
   ppRecord
     "PrevGovActionIds"
-    [ ("LastPParamUpdate", ppStrictMaybe pcGovPurposeId pfPParamUpdate)
-    , ("LastHardFork", ppStrictMaybe pcGovPurposeId pfHardFork)
-    , ("LastCommittee", ppStrictMaybe pcGovPurposeId pfCommittee)
-    , ("LastConstitution", ppStrictMaybe pcGovPurposeId pfConstitution)
+    [ ("LastPParamUpdate", ppStrictMaybe pcGovPurposeId grPParamUpdate)
+    , ("LastHardFork", ppStrictMaybe pcGovPurposeId grHardFork)
+    , ("LastCommittee", ppStrictMaybe pcGovPurposeId grCommittee)
+    , ("LastConstitution", ppStrictMaybe pcGovPurposeId grConstitution)
     ]
 
-instance PrettyA (PrevGovActionIds era) where
+instance PrettyA (GovRelation StrictMaybe era) where
   prettyA = pcPrevGovActionIds
 
 pcConwayGovState :: Reflect era => Proof era -> ConwayGovState era -> PDoc
@@ -2681,7 +2680,7 @@ pcRatifyState p (RatifyState enactedState enactedPs expiredPs delayedPs) =
 instance Reflect era => PrettyA (RatifyState era) where
   prettyA = pcRatifyState reify
 
-pcProposals :: Era era => Proposals era -> PDoc
+pcProposals :: Proposals era -> PDoc
 pcProposals p =
   ppRecord
     "Proposals"
@@ -2698,8 +2697,8 @@ pcPEdges (PEdges x y) =
     , ("children", ppSet pcGovPurposeId y)
     ]
 
-pcForest :: PForest PGraph era -> PDoc
-pcForest (PForest a b c d) =
+pcForest :: GovRelation PGraph era -> PDoc
+pcForest (GovRelation a b c d) =
   ppRecord
     "Forest PGraph"
     [ ("pparamupdate", ppMap pcGovPurposeId pcPEdges (unPGraph a))

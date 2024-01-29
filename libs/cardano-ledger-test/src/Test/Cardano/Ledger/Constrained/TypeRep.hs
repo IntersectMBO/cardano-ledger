@@ -57,6 +57,7 @@ import Cardano.Ledger.BaseTypes (
   Network (..),
   ProtVer (..),
   SlotNo (..),
+  StrictMaybe (..),
   UnitInterval,
   mkTxIxPartial,
  )
@@ -74,7 +75,7 @@ import Cardano.Ledger.Conway.Governance (
   GovActionPurpose (..),
   GovActionState (..),
   GovPurposeId (..),
-  PrevGovActionIds (..),
+  GovRelation (..),
   Proposals,
   RatifyState (..),
   RunConwayRatify (..),
@@ -335,7 +336,7 @@ data Rep era t where
   UnitIntervalR :: Rep era UnitInterval
   CommitteeR :: Era era => Rep era (Committee era)
   ConstitutionR :: Era era => Rep era (Constitution era)
-  PrevGovActionIdsR :: Era era => Rep era (PrevGovActionIds era)
+  PrevGovActionIdsR :: Era era => Rep era (GovRelation StrictMaybe era)
   PrevPParamUpdateR :: Era era => Rep era (GovPurposeId 'PParamUpdatePurpose era)
   PrevHardForkR :: Era era => Rep era (GovPurposeId 'HardForkPurpose era)
   PrevCommitteeR :: Era era => Rep era (GovPurposeId 'CommitteePurpose era)
