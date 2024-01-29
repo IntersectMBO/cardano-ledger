@@ -411,8 +411,7 @@ validateMissingScripts pp (ShelleyScriptsNeeded sNeeded) scriptsprovided =
   where
     sProvided = Map.keysSet $ unScriptsProvided scriptsprovided
 
--- | Given a ledger state, determine if the UTxO witnesses in a given
---  transaction are correct.
+-- | Determine if the UTxO witnesses in a given transaction are correct.
 validateVerifiedWits ::
   ( EraTx era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)

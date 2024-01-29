@@ -141,9 +141,9 @@ conwayUtxowTransition = do
   -- as given by the decoders in the Plutus libraray
 
   {- languages tx utxo ⊆ dom(costmdls tx) -}
-  -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
-  -- It raises 'NoCostModel' a construcotr of the predicate failure 'CollectError'. This check
-  -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
+  -- This check is checked when building the TxInfo using collectPlutusScriptsWithContext.
+  -- If it fails, it raises 'NoCostModel' - a constructor of the predicate failure 'CollectError'.
+  -- This check which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   runTest $ ppViewHashesMatch tx pp scriptsProvided scriptHashesNeeded

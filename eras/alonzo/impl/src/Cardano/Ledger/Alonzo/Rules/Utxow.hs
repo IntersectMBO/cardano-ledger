@@ -282,7 +282,7 @@ ppViewHashesMatch tx pp (ScriptsProvided scriptsProvided) scriptsNeeded = do
 
 -- ==============================================================
 -- Here we define the transtion function, using reusable tests.
--- The tests are very generic and resusabe, but the transition
+-- The tests are very generic and reusabe, but the transition
 -- function is very specific to the Alonzo Era.
 
 -- | A very specialized transitionRule function for the Alonzo Era.

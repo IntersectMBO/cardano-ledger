@@ -49,6 +49,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   trySubmitTx,
   modifyNES,
   getsNES,
+  getUTxO,
   impAddNativeScript,
   impAnn,
   runImpRule,
@@ -100,7 +101,6 @@ import Cardano.Ledger.BaseTypes (
   inject,
   textToUrl,
  )
-import Cardano.Ledger.CertState (certsTotalDepositsTxBody, certsTotalRefundsTxBody)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToText)
@@ -124,6 +124,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
+  consumed,
   curPParamsEpochStateL,
   epochStateIncrStakeDistrL,
   epochStateUMapL,
@@ -134,6 +135,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesELL,
   nesEsL,
   prevPParamsEpochStateL,
+  produced,
   smartUTxOState,
   startStep,
   utxosGovStateL,
@@ -144,7 +146,12 @@ import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
 import Cardano.Ledger.Tools (calcMinFeeTxNativeScriptWits, integralToByteStringN)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), sumAllCoin, txinLookup)
+import Cardano.Ledger.UTxO (
+  EraUTxO (..),
+  ScriptsProvided (..),
+  UTxO (..),
+  txinLookup,
+ )
 import Cardano.Ledger.Val (Val (..))
 import Control.Monad (forM)
 import Control.Monad.IO.Class
@@ -550,7 +557,7 @@ lookupImpRootTxOut :: ImpTestM era (TxIn (EraCrypto era), TxOut era)
 lookupImpRootTxOut = do
   ImpTestState {impRootTxId} <- get
   let rootTxIn = TxIn impRootTxId $ TxIx 0
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  utxo <- getUTxO
   case txinLookup rootTxIn utxo of
     Nothing -> error "Root txId no longer points to an existing unspent output"
     Just rootTxOut -> pure (rootTxIn, rootTxOut)
@@ -573,13 +580,15 @@ addScriptTxWits ::
   Tx era ->
   ImpTestM era (Tx era, Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)))
 addScriptTxWits tx = do
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  utxo <- getUTxO
   ImpTestState {impScripts} <- get
   -- TODO: Add proper support for Plutus Scripts
-  let scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
-      scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
-      scriptsToAdd = impScripts `Map.restrictKeys` scriptHashesNeeded
-      nativeScripts = mapMaybe getNativeScript $ Map.elems scriptsToAdd
+  let needed = getScriptsNeeded utxo (tx ^. bodyTxL)
+      ScriptsProvided provided = getScriptsProvided utxo tx
+      hashesNeeded = getScriptsHashesNeeded needed
+      scriptsRequired = impScripts `Map.restrictKeys` hashesNeeded
+      scriptsToAdd = scriptsRequired Map.\\ provided
+      nativeScripts = mapMaybe getNativeScript $ Map.elems scriptsRequired
   keyPairs <- mapM impSatisfyNativeScript nativeScripts
   pure (tx & witsTxL . scriptTxWitsL <>~ scriptsToAdd, mconcat $ catMaybes keyPairs)
 
@@ -606,40 +615,38 @@ fixupFees ::
   ImpTestM era (Tx era)
 fixupFees tx nativeScriptKeyWits = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
   kpSpending <- lookupKeyPair =<< freshKeyHash
   kpStaking <- lookupKeyPair =<< freshKeyHash
-  (rootTxIn, rootTxOut) <- lookupImpRootTxOut
+  rootTxIn <- fst <$> lookupImpRootTxOut
   let
-    deposits = certsTotalDepositsTxBody pp certState (tx ^. bodyTxL)
-    refunds = certsTotalRefundsTxBody pp certState (tx ^. bodyTxL)
-    outputsTotalCoin = sumAllCoin $ tx ^. bodyTxL . outputsTxBodyL
-    remainingCoin = (rootTxOut ^. coinTxOutL) <-> (outputsTotalCoin <+> deposits <-> refunds)
-    remainingTxOut =
+    txWithRoot = tx & bodyTxL . inputsTxBodyL %~ Set.insert rootTxIn
+    consumedValue = consumed pp certState utxo (txWithRoot ^. bodyTxL)
+    producedValue = produced pp certState (txWithRoot ^. bodyTxL)
+    changeBeforeFee = consumedValue <-> producedValue
+    changeBeforeFeeTxOut =
       mkBasicTxOut
         (mkAddr (kpSpending, kpStaking))
-        (inject remainingCoin)
+        changeBeforeFee
   let
     txNoWits =
-      tx
-        & bodyTxL . inputsTxBodyL %~ Set.insert rootTxIn
-        & bodyTxL . outputsTxBodyL %~ (remainingTxOut :<|)
-    outsWithoutRemaining = tx ^. bodyTxL . outputsTxBodyL
+      txWithRoot & bodyTxL . outputsTxBodyL %~ (changeBeforeFeeTxOut :<|)
+    outsBeforeFee = txWithRoot ^. bodyTxL . outputsTxBodyL
     fee = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
-    remainderAvailable = remainingTxOut ^. coinTxOutL <-> fee
-    remainingTxOut' = remainingTxOut & coinTxOutL .~ remainderAvailable
+    change = changeBeforeFeeTxOut ^. coinTxOutL <-> fee
+    changeTxOut = changeBeforeFeeTxOut & coinTxOutL .~ change
     -- If the remainder is sufficently big we add it to outputs, otherwise we add the
     -- extraneous coin to the fee and discard the remainder TxOut
     txWithFee
-      | remainderAvailable >= getMinCoinTxOut pp remainingTxOut' =
+      | change >= getMinCoinTxOut pp changeTxOut =
           txNoWits
-            & bodyTxL . outputsTxBodyL .~ (remainingTxOut' :<| outsWithoutRemaining)
+            & bodyTxL . outputsTxBodyL .~ (changeTxOut :<| outsBeforeFee)
             & bodyTxL . feeTxBodyL .~ fee
       | otherwise =
           txNoWits
-            & bodyTxL . outputsTxBodyL .~ outsWithoutRemaining
-            & bodyTxL . feeTxBodyL .~ (fee <> remainingTxOut ^. coinTxOutL)
+            & bodyTxL . outputsTxBodyL .~ outsBeforeFee
+            & bodyTxL . feeTxBodyL .~ (fee <> changeTxOut ^. coinTxOutL)
   pure txWithFee
 
 fixupTx ::
@@ -914,6 +921,9 @@ modifyNES = (impNESL %=)
 -- | Get a value from the current new epoch state using the lens
 getsNES :: SimpleGetter (NewEpochState era) a -> ImpTestM era a
 getsNES l = gets . view $ impNESL . l
+
+getUTxO :: ImpTestM era (UTxO era)
+getUTxO = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
 
 submitTxAnn ::
   (HasCallStack, ShelleyEraImp era) =>
