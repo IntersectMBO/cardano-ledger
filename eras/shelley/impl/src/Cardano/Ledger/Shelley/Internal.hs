@@ -20,6 +20,7 @@ module Cardano.Ledger.Shelley.Internal (
 )
 where
 
+import Cardano.Ledger.CertState (Obligations (..))
 import Cardano.Ledger.Shelley.AdaPots (
   AdaPots (..),
   consumedTxBody,
@@ -54,10 +55,11 @@ compareAdaPots xlabel x ylabel y =
     , oneline "reservesAdaPot" reservesAdaPot
     , oneline "rewardsAdaPot" rewardsAdaPot
     , oneline "utxoAdaPot" utxoAdaPot
-    , oneline "keyDepositAdaPot" keyDepositAdaPot
-    , oneline "poolDepositAdaPot" poolDepositAdaPot
-    , oneline "depositsAdaPot" depositsAdaPot
     , oneline "feesAdaPot" feesAdaPot
+    , oneline "oblStakePot" (oblStake . obligationsPot)
+    , oneline "oblPoolPot" (oblPool . obligationsPot)
+    , oneline "oblDRepPot" (oblDRep . obligationsPot)
+    , oneline "oblProposalPot" (oblProposal . obligationsPot)
     ]
   where
     n = 25

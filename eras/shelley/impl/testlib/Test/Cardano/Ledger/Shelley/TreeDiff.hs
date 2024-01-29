@@ -11,7 +11,9 @@ module Test.Cardano.Ledger.Shelley.TreeDiff (
 
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.CertState (Obligations)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.AdaPots (AdaPots)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
@@ -189,3 +191,7 @@ instance
   , ToExpr (PredicateFailure (EraRule "DELEGS" era))
   ) =>
   ToExpr (ShelleyLedgerPredFailure era)
+
+instance ToExpr Obligations
+
+instance ToExpr AdaPots

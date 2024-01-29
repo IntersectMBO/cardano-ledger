@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -3109,7 +3108,15 @@ pcSlotNo (SlotNo n) = ppWord64 n
 instance PrettyA SlotNo where
   prettyA = pcSlotNo
 
-pcAdaPot :: EraTxOut era => EpochState era -> PDoc
+instance PrettyA DP.Obligations where
+  prettyA = viaShow
+
+pcAdaPot ::
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  EpochState era ->
+  PDoc
 pcAdaPot es =
   let x = totalAdaPotsES es
    in ppRecord
@@ -3117,9 +3124,8 @@ pcAdaPot es =
         [ ("treasury", pcCoin (treasuryAdaPot x))
         , ("rewards", pcCoin (rewardsAdaPot x))
         , ("utxo", pcCoin (utxoAdaPot x))
-        , ("keydeposit", pcCoin (keyDepositAdaPot x))
-        , ("pooldeposit", pcCoin (poolDepositAdaPot x))
         , ("fees", pcCoin (feesAdaPot x))
+        , ("obligations", prettyA (obligationsPot x))
         , ("totalAda", pcCoin (totalAdaES es))
         ]
 

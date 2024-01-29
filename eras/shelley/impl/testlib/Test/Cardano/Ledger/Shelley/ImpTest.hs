@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -66,6 +65,9 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   sendValueTo,
   sendCoinTo,
   dispenseIndex,
+  expectRegisteredRewardAddress,
+  expectNotRegisteredRewardAddress,
+  expectTreasury,
 
   -- * Logging
   logEntry,
@@ -102,6 +104,7 @@ import Cardano.Ledger.BaseTypes (
   inject,
   textToUrl,
  )
+import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToText)
@@ -118,6 +121,7 @@ import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.AdaPots (AdaPots, sumAdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -125,6 +129,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
+  asTreasuryL,
   consumed,
   curPParamsEpochStateL,
   epochStateIncrStakeDistrL,
@@ -245,6 +250,8 @@ class
   , ToExpr (PParams era)
   , ToExpr (StashedAVVMAddresses era)
   , ToExpr (GovState era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  , ToExpr (PParamsHKD Identity era)
   , Show (TxOut era)
   , Show (PParams era)
   , Show (StashedAVVMAddresses era)
@@ -453,6 +460,9 @@ instance
         RequireAnyOf ss -> satisfyMOf 1 ss
         RequireMOf m ss -> satisfyMOf m ss
     pure $ satisfyScript script
+
+getAdaPots :: (EraGov era, EraTxOut era) => ImpTestM era AdaPots
+getAdaPots = totalAdaPotsES <$> getsNES nesEsL
 
 impWitsVKeyNeeded ::
   EraUTxO era => TxBody era -> ImpTestM era (Set.Set (KeyHash 'Witness (EraCrypto era)))
@@ -740,12 +750,8 @@ runImpRule stsEnv stsState stsSignal = do
 passTick ::
   forall era.
   ( HasCallStack
-  , BaseM (EraRule "TICK" era) ~ ReaderT Globals Identity
-  , Environment (EraRule "TICK" era) ~ ()
-  , STS (EraRule "TICK" era)
-  , Signal (EraRule "TICK" era) ~ SlotNo
-  , State (EraRule "TICK" era) ~ NewEpochState era
   , NFData (State (EraRule "TICK" era))
+  , ShelleyEraImp era
   ) =>
   ImpTestM era ()
 passTick = do
@@ -758,35 +764,32 @@ passTick = do
 -- | Runs the TICK rule until the next epoch is reached
 passEpoch ::
   forall era.
-  ( BaseM (EraRule "TICK" era) ~ ReaderT Globals Identity
-  , Environment (EraRule "TICK" era) ~ ()
-  , STS (EraRule "TICK" era)
-  , Signal (EraRule "TICK" era) ~ SlotNo
-  , NFData (State (EraRule "TICK" era))
-  , State (EraRule "TICK" era) ~ NewEpochState era
-  ) =>
+  ShelleyEraImp era =>
   ImpTestM era ()
 passEpoch = do
   startEpoch <- getsNES nesELL
+  logEntry $ "Entering " <> show (succ startEpoch)
   let
     tickUntilNewEpoch curEpoch = do
       passTick @era
       newEpoch <- getsNES nesELL
-      if newEpoch > curEpoch
-        then logEntry $ "Entered " <> show newEpoch
-        else tickUntilNewEpoch newEpoch
+      unless (newEpoch > curEpoch) $ tickUntilNewEpoch newEpoch
+  preAdaPots <- getAdaPots
   tickUntilNewEpoch startEpoch
+  impAnn "Checking ADA preservation at the epoch boundary" $ do
+    postAdaPots <- getAdaPots
+    logEntry $ diffExpr preAdaPots postAdaPots
+    let
+      preSum = sumAdaPots preAdaPots
+      postSum = sumAdaPots postAdaPots
+    unless (preSum == postSum) . expectationFailure $
+      "Total ADA in the epoch state is not preserved\n\tpost - pre = "
+        <> show (postSum <-> preSum)
 
 -- | Runs the TICK rule until the `n` epochs are passed
 passNEpochs ::
   forall era.
-  ( BaseM (EraRule "TICK" era) ~ ReaderT Globals Identity
-  , Environment (EraRule "TICK" era) ~ ()
-  , STS (EraRule "TICK" era)
-  , Signal (EraRule "TICK" era) ~ SlotNo
-  , NFData (State (EraRule "TICK" era))
-  , State (EraRule "TICK" era) ~ NewEpochState era
-  ) =>
+  ShelleyEraImp era =>
   Natural ->
   ImpTestM era ()
 passNEpochs n = when (n > 0) $ passEpoch >> passNEpochs (n - 1)
@@ -1014,3 +1017,19 @@ constitutionShouldBe cUrl = do
 -- | Performs the action without running the fix-up function on any transactions
 withNoFixup :: ImpTestM era a -> ImpTestM era a
 withNoFixup = local $ iteDoTxFixupL .~ False
+
+expectRegisteredRewardAddress :: RewardAccount (EraCrypto era) -> ImpTestM era ()
+expectRegisteredRewardAddress (RewardAccount _ cred) = do
+  umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
+  Map.member cred (rdPairMap umap) `shouldBe` True
+
+expectNotRegisteredRewardAddress :: RewardAccount (EraCrypto era) -> ImpTestM era ()
+expectNotRegisteredRewardAddress (RewardAccount _ cred) = do
+  umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
+  Map.member cred (rdPairMap umap) `shouldBe` False
+
+expectTreasury :: HasCallStack => Coin -> ImpTestM era ()
+expectTreasury c =
+  impAnn "Checking treasury amount" $ do
+    treasuryAmt <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+    c `shouldBe` treasuryAmt

@@ -473,6 +473,7 @@ data Obligations = Obligations
   , oblDRep :: !Coin
   , oblProposal :: !Coin
   }
+  deriving (Eq, Ord, Generic)
 
 -- | Calculate total possible refunds in the system that are related to certificates
 --

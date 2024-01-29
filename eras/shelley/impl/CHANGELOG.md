@@ -2,10 +2,20 @@
 
 ## 1.10.0.0
 
+* Replace `depositsAdaPot` in `AdaPots` with `obligationsPot`
+* Add `sumAdaPots`
 * Deprecate `delPlAcnt` in favor of `delPlAccount`
 * Rename `RewardAccount` fields `getRwdNetwork` and `getRwdCred` to `raNetwork` and `raCredential` respectively
 * Deprecate `prAcnt` in favor of `prAccountState`
 * Deprecate `RewardAcnt` in favor of `RewardAccount`
+
+### `testlib`
+
+* Add:
+  * `expectRegisteredRewardAddress`
+  * `expectNotRegisteredRewardAddress`
+  * `expectTreasury`
+* Add `ToExpr` instances for `AdaPots` and `Obligations`
 
 ## 1.9.0.0
 
