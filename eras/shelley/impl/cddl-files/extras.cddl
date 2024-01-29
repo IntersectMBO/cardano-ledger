@@ -6,7 +6,9 @@ unit_interval = #6.30([1, 2])
   ; but this produces numbers outside the unit interval
   ; and can also produce a zero in the denominator
 
-rational = #6.30([uint, uint])
+positive_int = 1 .. 18446744073709551615
+
+nonnegative_interval = #6.30([uint, positive_int])
 
 set<a> = [* a]
 

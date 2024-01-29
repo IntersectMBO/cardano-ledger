@@ -240,19 +240,19 @@ proposed_protocol_parameter_updates =
   { * genesishash => protocol_param_update }
 
 protocol_param_update =
-  { ? 0:  uint               ; minfee A
-  , ? 1:  uint               ; minfee B
-  , ? 2:  uint               ; max block body size
-  , ? 3:  uint               ; max transaction size
-  , ? 4:  uint               ; max block header size
-  , ? 5:  coin               ; key deposit
-  , ? 6:  coin               ; pool deposit
-  , ? 7: epoch               ; maximum epoch
-  , ? 8: uint                ; n_opt: desired number of stake pools
-  , ? 9: rational            ; pool pledge influence
-  , ? 10: unit_interval      ; expansion rate
-  , ? 11: unit_interval      ; treasury growth rate
-  , ? 12: unit_interval      ; d. decentralization constant
+  { ? 0:  uint                ; minfee A
+  , ? 1:  uint                ; minfee B
+  , ? 2:  uint                ; max block body size
+  , ? 3:  uint                ; max transaction size
+  , ? 4:  uint                ; max block header size
+  , ? 5:  coin                ; key deposit
+  , ? 6:  coin                ; pool deposit
+  , ? 7: epoch                ; maximum epoch
+  , ? 8: uint                 ; n_opt: desired number of stake pools
+  , ? 9: nonnegative_interval ; pool pledge influence
+  , ? 10: unit_interval       ; expansion rate
+  , ? 11: unit_interval       ; treasury growth rate
+  , ? 12: unit_interval       ; d. decentralization constant
   , ? 13: $nonce             ; extra entropy
   , ? 14: [protocol_version] ; protocol version
   , ? 16: coin               ; min pool cost ; New
