@@ -1287,6 +1287,8 @@ ppBabbageUtxoPredFailure (IncorrectTotalCollateralField c1 c2) =
     [("collateral provided", pcCoin c1), ("collateral declared", pcCoin c2)]
 ppBabbageUtxoPredFailure (BabbageOutputTooSmallUTxO xs) =
   ppSexp "BabbageOutputTooSmallUTxO" [ppList (ppPair (pcTxOut reify) pcCoin) xs]
+ppBabbageUtxoPredFailure (BabbageNonDisjointRefInputs xs) =
+  ppSexp "BabbageNonDisjointRefInputs" [ppSet pcTxIn xs]
 
 instance Reflect era => PrettyA (BabbageUtxoPredFailure era) where
   prettyA = ppBabbageUtxoPredFailure
