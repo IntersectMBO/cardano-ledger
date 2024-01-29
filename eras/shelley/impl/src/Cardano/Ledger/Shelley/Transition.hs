@@ -25,6 +25,7 @@ module Cardano.Ledger.Shelley.Transition (
   mkShelleyTransitionConfig,
   createInitialState,
   registerInitialFunds,
+  registerInitialFundsThenStaking,
   registerInitialStaking,
   toShelleyTransitionConfigPairs,
   protectMainnet,
@@ -85,6 +86,16 @@ class
     TransitionConfig (PreviousEra era) ->
     TransitionConfig era
 
+  registerInState ::
+    -- | Extract data from the given transition configuration and store it in the given state.
+    --
+    -- FIXME: Are there any other contextual consideration we need to comment on here?
+    --
+    -- FIXME: Perhaps 'injectInState' is a more fitting name?
+    TransitionConfig era ->
+    NewEpochState era ->
+    NewEpochState era
+
   -- | In case when a previous era is available, we should always be able to access
   -- `TransitionConfig` for the previous era, from within the current era's
   -- `TransitionConfig`
@@ -130,6 +141,16 @@ class
 tcNetworkIDG :: EraTransition era => SimpleGetter (TransitionConfig era) Network
 tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
 
+registerInitialFundsThenStaking ::
+  EraTransition era =>
+  TransitionConfig era ->
+  NewEpochState era ->
+  NewEpochState era
+registerInitialFundsThenStaking cfg =
+  -- We must first register the initial funds, because the stake
+  -- information depends on it.
+  registerInitialStaking cfg . registerInitialFunds cfg
+
 instance Crypto c => EraTransition (ShelleyEra c) where
   newtype TransitionConfig (ShelleyEra c) = ShelleyTransitionConfig
     { stcShelleyGenesis :: ShelleyGenesis c
@@ -138,6 +159,8 @@ instance Crypto c => EraTransition (ShelleyEra c) where
 
   mkTransitionConfig =
     error "Impossible: There is no EraTransition instance for ByronEra"
+
+  registerInState = registerInitialFundsThenStaking
 
   tcPreviousEraConfigL = notSupportedInThisEraL
 
