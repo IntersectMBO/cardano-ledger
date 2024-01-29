@@ -211,6 +211,30 @@ deriving instance
   (forall p. Show (f (GovPurposeId (p :: GovActionPurpose) era))) =>
   Show (PForest f era)
 
+instance
+  (forall p. Semigroup (f (GovPurposeId (p :: GovActionPurpose) era))) =>
+  Semigroup (PForest f era)
+  where
+  (<>) p1 p2 =
+    PForest
+      { pfPParamUpdate = pfPParamUpdate p1 <> pfPParamUpdate p2
+      , pfHardFork = pfHardFork p1 <> pfHardFork p2
+      , pfCommittee = pfCommittee p1 <> pfCommittee p2
+      , pfConstitution = pfConstitution p1 <> pfConstitution p2
+      }
+
+instance
+  (forall p. Monoid (f (GovPurposeId (p :: GovActionPurpose) era))) =>
+  Monoid (PForest f era)
+  where
+  mempty =
+    PForest
+      { pfPParamUpdate = mempty
+      , pfHardFork = mempty
+      , pfCommittee = mempty
+      , pfConstitution = mempty
+      }
+
 pfPParamUpdateL :: Lens' (PForest f era) (f (GovPurposeId 'PParamUpdatePurpose era))
 pfPParamUpdateL = lens pfPParamUpdate $ \x y -> x {pfPParamUpdate = y}
 
