@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -15,29 +16,35 @@ module Cardano.Ledger.Shelley.AdaPots (
   Consumed (..),
   consumedTxBody,
   producedTxBody,
+  sumAdaPots,
 ) where
 
 import Cardano.Ledger.CertState (
   CertState (..),
-  DState (..),
-  PState (..),
+  Obligations (..),
   certsTotalDepositsTxBody,
   certsTotalRefundsTxBody,
+  obligationCertState,
   rewards,
+  sumObligation,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.Governance (EraGov (..))
 import Cardano.Ledger.Shelley.LedgerState.Types (
   AccountState (..),
   EpochState (..),
   LedgerState (..),
   UTxOState (..),
+  lsUTxOStateL,
+  utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.TxBody (unWithdrawals)
-import Cardano.Ledger.UMap (UView (RewDepUView), sumDepositUView, sumRewardsUView)
+import Cardano.Ledger.UMap (sumRewardsUView)
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txInsFilter, txouts)
 import Data.Foldable (fold)
+import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 
 data AdaPots = AdaPots
@@ -45,16 +52,16 @@ data AdaPots = AdaPots
   , reservesAdaPot :: Coin
   , rewardsAdaPot :: Coin
   , utxoAdaPot :: Coin
-  , keyDepositAdaPot :: Coin
-  , poolDepositAdaPot :: Coin
-  , depositsAdaPot :: Coin
   , feesAdaPot :: Coin
+  , obligationsPot :: Obligations
   }
-  deriving (Show, Eq)
+  deriving (Show, Eq, Generic)
 
 -- | Calculate the total ada pots in the epoch state
 totalAdaPotsES ::
-  EraTxOut era =>
+  ( EraTxOut era
+  , EraGov era
+  ) =>
   EpochState era ->
   AdaPots
 totalAdaPotsES (EpochState (AccountState treasury_ reserves_) ls _ _) =
@@ -63,40 +70,36 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) ls _ _) =
     , reservesAdaPot = reserves_
     , rewardsAdaPot = rewards_
     , utxoAdaPot = coins
-    , keyDepositAdaPot = keyDeposits_
-    , poolDepositAdaPot = poolDeposits_
-    , depositsAdaPot = deposits
     , feesAdaPot = fees_
+    , obligationsPot = obligationCertState certState <> govStateObligations
     }
   where
-    UTxOState u deposits fees_ _ _ _ = lsUTxOState ls
-    CertState _ _ dstate = lsCertState ls
+    UTxOState u _ fees_ _ _ _ = lsUTxOState ls
+    certState@(CertState _ _ dstate) = lsCertState ls
     rewards_ = fromCompact $ sumRewardsUView (rewards dstate)
     coins = coinBalance u
-    keyDeposits_ =
-      fromCompact . sumDepositUView . RewDepUView . dsUnified . certDState $ lsCertState ls
-    poolDeposits_ = fold (psDeposits . certPState $ lsCertState ls)
+    govStateObligations = obligationGovState (ls ^. lsUTxOStateL . utxosGovStateL)
+
+sumAdaPots :: AdaPots -> Coin
+sumAdaPots
+  AdaPots
+    { treasuryAdaPot
+    , reservesAdaPot
+    , rewardsAdaPot
+    , utxoAdaPot
+    , feesAdaPot
+    , obligationsPot
+    } =
+    treasuryAdaPot
+      <> reservesAdaPot
+      <> rewardsAdaPot
+      <> utxoAdaPot
+      <> feesAdaPot
+      <> sumObligation obligationsPot
 
 -- | Calculate the total ada in the epoch state
-totalAdaES :: EraTxOut era => EpochState era -> Coin
-totalAdaES cs =
-  treasuryAdaPot
-    <> reservesAdaPot
-    <> rewardsAdaPot
-    <> utxoAdaPot
-    <> depositsAdaPot
-    <> feesAdaPot
-  where
-    AdaPots
-      { treasuryAdaPot
-      , reservesAdaPot
-      , rewardsAdaPot
-      , utxoAdaPot
-      , depositsAdaPot
-      , feesAdaPot
-      -- , keyDepositAdaPot  -- We don't count these two, as their
-      -- , poolDepositAdaPot -- sum is always depositsAdaPot
-      } = totalAdaPotsES cs
+totalAdaES :: (EraTxOut era, EraGov era) => EpochState era -> Coin
+totalAdaES = sumAdaPots . totalAdaPotsES
 
 -- =============================================
 -- Produced and Consumed are specialized AdaPots

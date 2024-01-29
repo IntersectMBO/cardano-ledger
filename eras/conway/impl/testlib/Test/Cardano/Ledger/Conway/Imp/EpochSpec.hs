@@ -10,7 +10,7 @@
 module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), textToUrl)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), textToUrl)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -21,21 +21,26 @@ import Cardano.Ledger.Conway.Governance (
   ProposalProcedure (..),
   Voter (..),
  )
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
+  curPParamsEpochStateL,
   epochStateGovStateL,
   esAccountStateL,
   nesEpochStateL,
   nesEsL,
  )
 import Cardano.Ledger.Val
+import Control.Monad (replicateM_)
 import Data.Default.Class (Default (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Maybe.Strict (StrictMaybe (..))
+import qualified Data.Sequence.Strict as SSeq
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 
 spec ::
@@ -136,6 +141,9 @@ spec =
       expectMissingGovActionId govActionId
 
       getRewardAccountAmount rewardAcount `shouldReturn` deposit
+    it
+      "deposit is moved to treasury when the reward address is not registered"
+      depositMovesToTreasuryWhenStakingAddressUnregisters
 
 treasuryWithdrawalExpectation ::
   forall era.
@@ -152,14 +160,54 @@ treasuryWithdrawalExpectation extraWithdrawals = do
   let withdrawalAmount = Coin 666
   (govActionId NE.:| _) <-
     submitGovActions $
-      (TreasuryWithdrawals (Map.singleton rewardAcount withdrawalAmount) govPolicy)
+      TreasuryWithdrawals (Map.singleton rewardAcount withdrawalAmount) govPolicy
         NE.:| extraWithdrawals
   submitYesVote_ (DRepVoter dRepCred) govActionId
   submitYesVote_ (CommitteeVoter committeeHotCred) govActionId
   passEpoch -- 1st epoch crossing starts DRep pulser
-  lookupReward (raCredential rewardAcount) `shouldReturn` mempty
+  impAnn "Withdrawal should not be received yet" $
+    lookupReward (raCredential rewardAcount) `shouldReturn` mempty
   passEpoch -- 2nd epoch crossing enacts all the ratified actions
   treasuryEnd <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
-  treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
-  lookupReward (raCredential rewardAcount) `shouldReturn` withdrawalAmount
+  impAnn "Withdrawal deducted from treasury" $
+    treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
+  impAnn "Withdrawal received by reward account" $
+    lookupReward (raCredential rewardAcount) `shouldReturn` withdrawalAmount
   expectMissingGovActionId govActionId
+
+depositMovesToTreasuryWhenStakingAddressUnregisters :: ConwayEraImp era => ImpTestM era ()
+depositMovesToTreasuryWhenStakingAddressUnregisters = do
+  initialTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+  modifyPParams $ \pp ->
+    pp
+      & ppGovActionLifetimeL .~ EpochInterval 8
+      & ppGovActionDepositL .~ Coin 100
+  returnAddr <- registerRewardAccount
+  govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+  khCC <- KeyHashObj <$> freshKeyHash
+  committeeActionId <-
+    submitProposal
+      ProposalProcedure
+        { pProcReturnAddr = returnAddr
+        , pProcGovAction =
+            UpdateCommittee
+              SNothing
+              mempty
+              (Map.singleton khCC $ EpochNo 10)
+              (1 %! 2)
+        , pProcDeposit = govActionDeposit
+        , pProcAnchor = def
+        }
+  expectPresentGovActionId committeeActionId
+  replicateM_ 5 passEpoch
+  expectTreasury initialTreasury
+  expectRegisteredRewardAddress returnAddr
+  submitTx_ $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.singleton
+          (UnRegTxCert $ raCredential returnAddr)
+  expectNotRegisteredRewardAddress returnAddr
+  replicateM_ 5 passEpoch
+  expectMissingGovActionId committeeActionId
+  expectTreasury $ initialTreasury <> govActionDeposit

@@ -688,9 +688,10 @@ proposalWithRewardAccount ::
   ImpTestM era (ProposalProcedure era)
 proposalWithRewardAccount action = do
   rewardAccount <- registerRewardAccount
+  govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
   pure
     ProposalProcedure
-      { pProcDeposit = Coin 123
+      { pProcDeposit = govActionDeposit
       , pProcReturnAddr = rewardAccount
       , pProcGovAction = action
       , pProcAnchor = def

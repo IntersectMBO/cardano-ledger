@@ -22,7 +22,7 @@ module Cardano.Ledger.Conway.Rules.Epoch (
 )
 where
 
-import Cardano.Ledger.Address (RewardAccount (raCredential))
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.CertState (
   CertState (..),
@@ -32,7 +32,7 @@ import Cardano.Ledger.CertState (
   vsCommitteeStateL,
   vsNumDormantEpochsL,
  )
-import Cardano.Ledger.Coin (compactCoinOrError)
+import Cardano.Ledger.Coin (Coin, compactCoinOrError)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
@@ -96,7 +96,8 @@ import Cardano.Ledger.Shelley.Rules (
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.UMap (UView (..), unionRewAgg, (∪+), (◁))
+import Cardano.Ledger.UMap (RDPair (..), UMap, UView (..), (∪+), (◁))
+import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (zero, (<->))
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
@@ -153,19 +154,29 @@ instance
   transitionRules = [epochTransition]
 
 returnProposalDeposits ::
-  Foldable f => f (GovActionState era) -> DState era -> DState era
-returnProposalDeposits removedProposals =
-  dsUnifiedL %~ returnProposalDepositsUMap
+  Foldable f =>
+  f (GovActionState era) ->
+  UMap (EraCrypto era) ->
+  (UMap (EraCrypto era), Coin)
+returnProposalDeposits removedProposals oldUMap =
+  foldr' processProposal (oldUMap, zero) removedProposals
   where
-    returnProposalDepositsUMap umap =
-      unionRewAgg (RewDepUView umap) $ foldl' addReward mempty removedProposals
-      where
-        addReward m' GovActionState {..} =
-          Map.insertWith
-            (<>)
-            (raCredential gasReturnAddr)
-            (compactCoinOrError gasDeposit) -- Deposits have been validated at this point
-            m'
+    processProposal
+      GovActionState
+        { gasDeposit
+        , gasReturnAddr = RewardAccount {raCredential}
+        }
+      (um, unclaimed)
+        | UMap.member raCredential (RewDepUView um) =
+            ( UMap.adjust (addReward gasDeposit) raCredential $ RewDepUView um
+            , unclaimed
+            )
+        | otherwise = (um, unclaimed <> gasDeposit)
+    addReward c rd =
+      rd
+        { -- Deposits have been validated at this point
+          rdReward = rdReward rd <> compactCoinOrError c
+        }
 
 -- | When there have been zero governance proposals to vote on in the previous epoch
 -- increase the dormant-epoch counter by one.
@@ -192,8 +203,8 @@ applyEnactedWithdrawals accountState dState enactedState =
       successfulWithdrawls = rewardsUView ◁ enactedWithdrawals
       accountState' =
         accountState
-          -- Subtract `successfulRefunds` from the treasury, and add them to the rewards UMap
-          -- `unclaimed` refunds remain in the treasury.
+          -- Subtract `successfulWithdrawals` from the treasury, and add them to the rewards UMap
+          -- `unclaimed` withdrawals remain in the treasury.
           -- Compared to the spec, instead of adding `unclaimed` and subtracting `totWithdrawals`
           --   + unclaimed - totWithdrawals
           -- we just subtract the `refunds`
@@ -299,11 +310,14 @@ epochTransition = do
         & cgsPrevPParamsL .~ curPParams
 
     allRemovedGovActions = expiredActions `Map.union` enactedActions
+    (newUMap, unclaimed) =
+      returnProposalDeposits allRemovedGovActions $
+        dState2 ^. dsUnifiedL
 
     certState =
       CertState
         { certPState = pState2
-        , certDState = returnProposalDeposits allRemovedGovActions dState2
+        , certDState = dState2 & dsUnifiedL .~ newUMap
         , certVState =
             -- Increment the dormant epoch counter
             updateNumDormantEpochs pulsingState vState
@@ -312,8 +326,8 @@ epochTransition = do
         }
     accountState3 =
       accountState2
-        -- Move donations to treasury:
-        & asTreasuryL <>~ (utxoState0 ^. utxosDonationL)
+        -- Move donations and unclaimed rewards from proposals to treasury:
+        & asTreasuryL <>~ (utxoState0 ^. utxosDonationL <> unclaimed)
     utxoState2 =
       utxoState1
         & utxosDepositedL .~ totalObligation certState govState1

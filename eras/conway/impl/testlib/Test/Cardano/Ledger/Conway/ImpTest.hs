@@ -497,12 +497,12 @@ trySubmitGovActions ::
   ImpTestM era (Either [PredicateFailure (EraRule "LEDGER" era)] (Tx era))
 trySubmitGovActions gas = do
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+  rewardAccount <- registerRewardAccount
   proposals <- forM gas $ \ga -> do
-    khPropRwd <- freshKeyHash
     pure
       ProposalProcedure
         { pProcDeposit = deposit
-        , pProcReturnAddr = RewardAccount Testnet (KeyHashObj khPropRwd)
+        , pProcReturnAddr = rewardAccount
         , pProcGovAction = ga
         , pProcAnchor = def
         }
@@ -740,9 +740,9 @@ logRatificationChecks gaId = do
           <> " [To Pass: "
           <> show
             (committeeAcceptedRatio members gasCommitteeVotes committeeState currentEpoch)
-          <> show " >= "
+          <> " >= "
           <> show (votingCommitteeThreshold ratSt gasAction)
-          <> show "]"
+          <> "]"
       , "spoAccepted:\t\t"
           <> show (spoAccepted ratEnv ratSt gas)
           <> " [To Pass: "

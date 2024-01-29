@@ -437,13 +437,15 @@ instance
 
 -- | Calculate the total ada pots in the chain state
 totalAdaPots ::
-  EraTxOut era =>
+  ( EraTxOut era
+  , EraGov era
+  ) =>
   ChainState era ->
   AdaPots
 totalAdaPots = totalAdaPotsES . nesEs . chainNes
 
 -- | Calculate the total ada in the chain state
-totalAda :: EraTxOut era => ChainState era -> Coin
+totalAda :: (EraTxOut era, EraGov era) => ChainState era -> Coin
 totalAda = totalAdaES . nesEs . chainNes
 
 instance
