@@ -58,6 +58,7 @@ import Cardano.Ledger.Binary.Coders
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusWithContext,
   ScriptFailure (..),
@@ -138,8 +139,8 @@ instance
 data AlonzoUtxosEvent era
   = AlonzoPpupToUtxosEvent (Event (EraRule "PPUP" era))
   | TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
-  | SuccessfulPlutusScriptsEvent (NonEmpty PlutusWithContext)
-  | FailedPlutusScriptsEvent (NonEmpty PlutusWithContext)
+  | SuccessfulPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
+  | FailedPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
   | -- | The UTxOs consumed and created by a signal tx
     TxUTxODiff
       -- | UTxO consumed
@@ -200,7 +201,7 @@ scriptsTransition ::
   PParams era ->
   Tx era ->
   UTxO era ->
-  (ScriptResult -> Rule sts ctx ()) ->
+  (ScriptResult (EraCrypto era) -> Rule sts ctx ()) ->
   Rule sts ctx ()
 scriptsTransition slot pp tx utxo action = do
   sysSt <- liftSTS $ asks systemStart
@@ -329,7 +330,7 @@ instance DecCBOR FailureDescription where
     1 -> SumD PlutusFailure <! From <! From
     n -> Invalid n
 
-scriptFailureToFailureDescription :: ScriptFailure -> FailureDescription
+scriptFailureToFailureDescription :: Crypto c => ScriptFailure c -> FailureDescription
 scriptFailureToFailureDescription (ScriptFailure msg pwc) =
   PlutusFailure msg (B64.encode $ Plain.serialize' pwc)
 

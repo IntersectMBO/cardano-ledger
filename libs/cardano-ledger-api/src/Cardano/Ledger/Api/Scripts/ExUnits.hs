@@ -75,7 +75,7 @@ data TransactionScriptFailure era
       !ExUnits
       !P.EvaluationError
       ![Text]
-      !PlutusWithContext
+      !(PlutusWithContext (EraCrypto era))
   | -- | A redeemer points to a transaction input which is not
     --  present in the current UTxO.
     UnknownTxIn !(TxIn (EraCrypto era))
@@ -207,7 +207,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
         (\(sp, sh) -> (sp, lookupPlutusScript scriptsProvided sh, sh))
         scriptsNeeded
     findAndCount ptrToPlutusScript pointer (rdmr, exUnits) = do
-      (plutusPurpose, mPlutusScript, _) <-
+      (plutusPurpose, mPlutusScript, scriptHash) <-
         note (RedeemerPointsToUnknownScriptHash pointer) $
           Map.lookup pointer ptrToPlutusScript
       let ptrToPlutusScriptNoContext =
@@ -238,6 +238,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
               PlutusWithContext
                 { pwcProtocolVersion = protVerMajor
                 , pwcScript = Left plutus
+                , pwcScriptHash = scriptHash
                 , pwcDatums = PlutusDatums (getPlutusData <$> datums)
                 , pwcExUnits = maxBudget
                 , pwcCostModel = costModel

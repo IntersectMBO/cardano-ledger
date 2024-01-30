@@ -17,7 +17,7 @@ where
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Core (eraProtVerLow)
+import Cardano.Ledger.Core (EraCrypto, eraProtVerLow)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusDatums (..),
   PlutusWithContext (..),
@@ -28,6 +28,7 @@ import Cardano.Ledger.Plutus.Language (
   Language (..),
   Plutus (..),
   PlutusLanguage (..),
+  hashPlutusScript,
   plutusLanguage,
  )
 import Data.Bifunctor (first)
@@ -178,6 +179,7 @@ explainTest plutus mode ds =
         PlutusWithContext
           { pwcProtocolVersion = eraProtVerLow @era
           , pwcScript = Left plutus
+          , pwcScriptHash = hashPlutusScript @l @(EraCrypto era) plutus
           , pwcDatums = PlutusDatums ds
           , pwcExUnits = ExUnits 100000000 10000000
           , pwcCostModel = zeroTestingCostModel (plutusLanguage plutus)
