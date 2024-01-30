@@ -660,7 +660,7 @@ conformsWhen makeTestsSmall condition impState =
       x
         { usNumPreUtxo = 3
         , usNumColUtxo = 3
-        , usMinInputs = 1
+        , usMinInputs = 2
         , usMaxInputs = 3
         , usMinCollaterals = 1
         , usMaxCollaterals = 3

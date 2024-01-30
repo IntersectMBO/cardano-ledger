@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.6.0.1
+## 1.7.0.0
 
-*
+* Add the constructor BabbageNonDisjointRefInputs to BabbageUtxoPredFailure
+  * Utxo rule raises that PredicateFailure in Conway and future Eras when they are not disjoint.
 
 ## 1.6.0.0
 

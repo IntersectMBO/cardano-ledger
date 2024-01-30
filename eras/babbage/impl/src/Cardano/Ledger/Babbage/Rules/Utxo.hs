@@ -80,6 +80,7 @@ import Control.State.Transition.Extended (
   STS (..),
   TRC (..),
   TransitionRule,
+  failureOnNonEmpty,
   judgmentContext,
   liftSTS,
   trans,
@@ -115,7 +116,7 @@ data BabbageUtxoPredFailure era
       ![(TxOut era, Coin)]
   | -- | TxIns that appear in both inputs and reference inputs
     BabbageNonDisjointRefInputs
-      !(Set (TxIn (EraCrypto era)))
+      !(NonEmpty (TxIn (EraCrypto era)))
   deriving (Generic)
 
 deriving instance
@@ -202,6 +203,7 @@ feesOK pp tx (UTxO utxo) =
             validateTotalCollateral pp txBody utxoCollateral
         ]
 
+-- | Test that inputs and refInpts are disjoint, in Conway and later Eras.
 disjointRefInputs ::
   forall era.
   EraPParams era =>
@@ -212,7 +214,7 @@ disjointRefInputs ::
 disjointRefInputs pp inputs refInputs =
   when
     (pvMajor (pp ^. ppProtocolVersionL) > eraProtVerHigh @(BabbageEra (EraCrypto era)))
-    (failureIf (null common) (BabbageNonDisjointRefInputs common))
+    (failureOnNonEmpty common BabbageNonDisjointRefInputs)
   where
     common = inputs `Set.intersection` refInputs
 
@@ -348,7 +350,7 @@ utxoTransition = do
       inputs = txBody ^. inputsTxBodyL
 
   {- inputs ∩ refInputs = ∅ -}
-  runTest $ disjointRefInputs @era pp inputs refInputs
+  runTest $ disjointRefInputs pp inputs refInputs
 
   {- ininterval slot (txvld txb) -}
   runTest $ Allegra.validateOutsideValidityIntervalUTxO slot txBody

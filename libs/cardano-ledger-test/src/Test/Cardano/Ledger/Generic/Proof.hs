@@ -204,6 +204,7 @@ instance Show (Some Proof) where
 -- Proofs or witnesses to EraRule Tags
 
 data WitRule (s :: Symbol) (e :: Type) where
+  UTXO :: Proof era -> WitRule "UTXO" era
   UTXOW :: Proof era -> WitRule "UTXOW" era
   LEDGER :: Proof era -> WitRule "LEDGER" era
   BBODY :: Proof era -> WitRule "BBODY" era
@@ -215,6 +216,7 @@ data WitRule (s :: Symbol) (e :: Type) where
   EPOCH :: Proof era -> WitRule "EPOCH" era
 
 ruleProof :: WitRule s e -> Proof e
+ruleProof (UTXO p) = p
 ruleProof (UTXOW p) = p
 ruleProof (LEDGER p) = p
 ruleProof (BBODY p) = p
@@ -234,6 +236,7 @@ runSTS ::
   TRC (EraRule s e) ->
   (Either [PredicateFailure (EraRule s e)] (State (EraRule s e)) -> ans) ->
   ans
+runSTS (UTXO _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (UTXOW _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (LEDGER _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (BBODY _proof) x cont = cont (runShelleyBase (applySTSTest x))
@@ -252,6 +255,7 @@ runSTS' ::
   WitRule s e ->
   TRC (EraRule s e) ->
   Either [PredicateFailure (EraRule s e)] (State (EraRule s e))
+runSTS' (UTXO _proof) x = runShelleyBase (applySTSTest x)
 runSTS' (UTXOW _proof) x = runShelleyBase (applySTSTest x)
 runSTS' (LEDGER _proof) x = runShelleyBase (applySTSTest x)
 runSTS' (BBODY _proof) x = runShelleyBase (applySTSTest x)
@@ -291,6 +295,8 @@ goSTS ::
   sig ->
   (Either [PredicateFailure (EraRule s e)] (State (EraRule s e)) -> ans) ->
   ans
+goSTS (UTXO _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
 goSTS (UTXOW _proof) env state sig cont =
   cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
 goSTS (LEDGER _proof) env state sig cont =

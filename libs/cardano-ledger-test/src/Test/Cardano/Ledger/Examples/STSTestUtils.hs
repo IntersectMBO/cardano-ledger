@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,6 +14,7 @@
 
 module Test.Cardano.Ledger.Examples.STSTestUtils (
   AlonzoBased (..),
+  ToUTXOW (..),
   initUTxO,
   mkGenesisTxIn,
   mkTxDats,
@@ -263,6 +265,30 @@ instance AlonzoBased (ConwayEra c) (BabbageUtxowPredFailure (ConwayEra c)) where
   fromUtxo = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
   fromUtxow = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
   fromPredFail = AlonzoInBabbageUtxowPredFailure
+
+class ToUTXOW era where
+  fromUtxos' :: AlonzoUtxosPredFailure era -> PredicateFailure (EraRule "UTXOW" era)
+  fromUtxo' :: AlonzoUtxoPredFailure era -> PredicateFailure (EraRule "UTXOW" era)
+  fromUtxow' :: ShelleyUtxowPredFailure era -> PredicateFailure (EraRule "UTXOW" era)
+  fromPredFail' :: AlonzoUtxowPredFailure era -> PredicateFailure (EraRule "UTXOW" era)
+  fromUtxoB' :: BabbageUtxoPredFailure era -> PredicateFailure (EraRule "UTXOW" era)
+  fromUtxowB' :: BabbageUtxowPredFailure era -> PredicateFailure (EraRule "UTXOW" era)
+
+instance ToUTXOW (ConwayEra c) where
+  fromUtxos' = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure . UtxosFailure
+  fromUtxo' = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
+  fromUtxow' = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
+  fromPredFail' = AlonzoInBabbageUtxowPredFailure
+  fromUtxoB' = Babbage.UtxoFailure
+  fromUtxowB' = id
+
+instance ToUTXOW (BabbageEra c) where
+  fromUtxos' = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure . UtxosFailure
+  fromUtxo' = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
+  fromUtxow' = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
+  fromPredFail' = AlonzoInBabbageUtxowPredFailure
+  fromUtxoB' = Babbage.UtxoFailure
+  fromUtxowB' = id
 
 -- ======================================================================
 -- ========================= Shared helper functions  ===================
