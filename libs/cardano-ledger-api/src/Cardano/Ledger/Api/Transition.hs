@@ -21,7 +21,7 @@ module Cardano.Ledger.Api.Transition (
   tcInitialFundsL,
   tcInitialStakingL,
   createInitialState,
-  registerInState,
+  injectIntoTestState,
   registerInitialFunds,
   registerInitialStaking,
   registerInitialDReps,

@@ -41,7 +41,7 @@ instance Crypto c => EraTransition (AlonzoEra c) where
 
   mkTransitionConfig = AlonzoTransitionConfig
 
-  registerInState = registerInitialFundsThenStaking
+  injectIntoTestState = registerInitialFundsThenStaking
 
   tcPreviousEraConfigL =
     lens atcMaryTransitionConfig (\atc pc -> atc {atcMaryTransitionConfig = pc})

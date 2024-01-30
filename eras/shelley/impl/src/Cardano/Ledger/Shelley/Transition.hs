@@ -86,12 +86,11 @@ class
     TransitionConfig (PreviousEra era) ->
     TransitionConfig era
 
-  registerInState ::
+  injectIntoTestState ::
     -- | Extract data from the given transition configuration and store it in the given state.
     --
-    -- FIXME: Are there any other contextual consideration we need to comment on here?
-    --
-    -- FIXME: Perhaps 'injectInState' is a more fitting name?
+    -- /Warning/ - Should only be used in testing and benchmarking. Will result in an error
+    -- when 'NetworkId' is set to 'Mainnet'.
     TransitionConfig era ->
     NewEpochState era ->
     NewEpochState era
@@ -160,7 +159,7 @@ instance Crypto c => EraTransition (ShelleyEra c) where
   mkTransitionConfig =
     error "Impossible: There is no EraTransition instance for ByronEra"
 
-  registerInState = registerInitialFundsThenStaking
+  injectIntoTestState = registerInitialFundsThenStaking
 
   tcPreviousEraConfigL = notSupportedInThisEraL
 

@@ -90,7 +90,7 @@ instance Crypto c => EraTransition (ConwayEra c) where
 
   mkTransitionConfig = ConwayTransitionConfig
 
-  registerInState cfg =
+  injectIntoTestState cfg =
     registerDRepsThenDelegs cfg
       . registerInitialFundsThenStaking cfg
 
