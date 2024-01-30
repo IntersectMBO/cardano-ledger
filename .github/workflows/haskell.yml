@@ -110,17 +110,18 @@ jobs:
     - name: Download Mainnet Mirror
       run: |
         REF=a31ac75
-        curl -L https://github.com/input-output-hk/cardano-mainnet-mirror/tarball/$REF -o mainnet-mirror.tgz
-        tar -xzf mainnet-mirror.tgz
-        if [ "$?" == 0 ]; then
+        {
+          curl -L https://github.com/input-output-hk/cardano-mainnet-mirror/tarball/$REF -o mainnet-mirror.tgz
+          tar -xzf mainnet-mirror.tgz
           mv input-output-hk-cardano-mainnet-mirror-$REF/epochs .
-        else
+        } ||
+        {
           git clone https://github.com/input-output-hk/cardano-mainnet-mirror
           cd cardano-mainnet-mirror
           git checkout $REF
           mv epochs ..
           cd ..
-        fi
+        }
 
     - name: Run tests
       run: |

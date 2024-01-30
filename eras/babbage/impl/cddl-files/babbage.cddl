@@ -266,28 +266,28 @@ proposed_protocol_parameter_updates =
   { * genesishash => protocol_param_update }
 
 protocol_param_update =
-  { ? 0:  uint               ; minfee A
-  , ? 1:  uint               ; minfee B
-  , ? 2:  uint               ; max block body size
-  , ? 3:  uint               ; max transaction size
-  , ? 4:  uint               ; max block header size
-  , ? 5:  coin               ; key deposit
-  , ? 6:  coin               ; pool deposit
-  , ? 7: epoch               ; maximum epoch
-  , ? 8: uint                ; n_opt: desired number of stake pools
-  , ? 9: rational            ; pool pledge influence
-  , ? 10: unit_interval      ; expansion rate
-  , ? 11: unit_interval      ; treasury growth rate
-  , ? 14: [protocol_version] ; protocol version
-  , ? 16: coin               ; min pool cost
-  , ? 17: coin               ; ada per utxo byte
-  , ? 18: costmdls           ; cost models for script languages
-  , ? 19: ex_unit_prices     ; execution costs
-  , ? 20: ex_units           ; max tx ex units
-  , ? 21: ex_units           ; max block ex units
-  , ? 22: uint               ; max value size
-  , ? 23: uint               ; collateral percentage
-  , ? 24: uint               ; max collateral inputs
+  { ? 0:  uint                ; minfee A
+  , ? 1:  uint                ; minfee B
+  , ? 2:  uint                ; max block body size
+  , ? 3:  uint                ; max transaction size
+  , ? 4:  uint                ; max block header size
+  , ? 5:  coin                ; key deposit
+  , ? 6:  coin                ; pool deposit
+  , ? 7: epoch                ; maximum epoch
+  , ? 8: uint                 ; n_opt: desired number of stake pools
+  , ? 9: nonnegative_interval ; pool pledge influence
+  , ? 10: unit_interval       ; expansion rate
+  , ? 11: unit_interval       ; treasury growth rate
+  , ? 14: [protocol_version]  ; protocol version
+  , ? 16: coin                ; min pool cost
+  , ? 17: coin                ; ada per utxo byte
+  , ? 18: costmdls            ; cost models for script languages
+  , ? 19: ex_unit_prices      ; execution costs
+  , ? 20: ex_units            ; max tx ex units
+  , ? 21: ex_units            ; max block ex units
+  , ? 22: uint                ; max value size
+  , ? 23: uint                ; collateral percentage
+  , ? 24: uint                ; max collateral inputs
   }
 
 transaction_witness_set =

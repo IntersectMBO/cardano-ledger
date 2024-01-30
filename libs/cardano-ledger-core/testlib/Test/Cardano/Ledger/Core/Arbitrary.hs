@@ -45,6 +45,7 @@ where
 
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm)
+import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Address
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (
@@ -338,11 +339,14 @@ instance Crypto c => Arbitrary (Credential r c) where
 -- Cardano.Ledger.Hashes -----------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
+genHash :: forall h a. HashAlgorithm h => Gen (Hash h a)
+genHash = UnsafeHash <$> genShortByteString (fromIntegral (sizeHash (Proxy @h)))
+
 instance Crypto c => Arbitrary (SafeHash c i) where
-  arbitrary = unsafeMakeSafeHash <$> arbitrary
+  arbitrary = unsafeMakeSafeHash <$> genHash
 
 instance Crypto c => Arbitrary (ScriptHash c) where
-  arbitrary = ScriptHash <$> arbitrary
+  arbitrary = ScriptHash <$> genHash
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.AuxiliaryDataHash ------------------------------------------------------
@@ -356,7 +360,7 @@ instance Crypto c => Arbitrary (AuxiliaryDataHash c) where
 ------------------------------------------------------------------------------------------
 
 instance Crypto c => Arbitrary (KeyHash a c) where
-  arbitrary = KeyHash <$> arbitrary
+  arbitrary = KeyHash <$> genHash
 
 instance DSIGNAlgorithm (DSIGN c) => Arbitrary (VKey kd c) where
   arbitrary = VKey <$> arbitrary

@@ -87,7 +87,6 @@ module Cardano.Ledger.Conway.Governance (
   proposalsSize,
   proposalsLookupId,
   proposalsActionsMap,
-  proposalsAreConsistent,
   cgProposalsL,
   cgEnactStateL,
   cgDRepPulsingStateL,
@@ -148,6 +147,9 @@ module Cardano.Ledger.Conway.Governance (
 
   -- * Exported for testing
   pparamsUpdateThreshold,
+  TreeMaybe (..),
+  toPForest,
+  toPForestEither,
 ) where
 
 import Cardano.Ledger.BaseTypes (

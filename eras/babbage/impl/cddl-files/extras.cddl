@@ -13,19 +13,11 @@ unit_interval = #6.30([1, 2])
   ; but this produces numbers outside the unit interval
   ; and can also produce a zero in the denominator
 
-;rational = #6.30([uint, uint])
-rational =  #6.30(
-   [ numerator   : 1
-   , denominator : 2
-   ])
-  ; real rational is: #6.30([uint, uint])
-  ; but this produces numbers outside the unit interval
-  ; and can also produce a zero in the denominator
+positive_int = 1 .. 18446744073709551615
 
-;positive_interval = #6.30([uint, positive_int])
-positive_interval = #6.30([1, 2])
-  ; fractional positive_interval is: #6.30([uint, uint])
-  ; but this can produce a zero in the denominator
+nonnegative_interval = #6.30([uint, positive_int])
+
+positive_interval = #6.30([positive_int, positive_int])
 
 ;address = bytes
 address =
