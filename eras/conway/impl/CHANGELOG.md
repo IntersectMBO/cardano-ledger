@@ -5,6 +5,12 @@
 * Add `TreeMaybe`, `toPForest` and `toPForestEither`
 * Remove `proposalsAreConsistent`
 
+### `testlib`
+
+* Add `getGovPolicy`
+* Add `submitGovActions` and `trySubmitGovActions`
+* Add `submitProposals` and `trySubmitProposal`
+
 ## 1.12.0.0
 
 * Changed the types in `GovernanceActionsDoNotExist`, `DisallowedVoters`

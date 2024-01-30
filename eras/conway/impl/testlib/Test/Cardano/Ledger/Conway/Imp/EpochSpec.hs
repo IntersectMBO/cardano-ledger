@@ -9,6 +9,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
 
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), textToUrl)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
@@ -30,6 +31,8 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Val
 import Data.Default.Class (Default (..))
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Lens.Micro ((&), (.~))
@@ -95,25 +98,18 @@ spec =
       constitutionShouldBe "constitution.0"
 
     it "TreasuryWithdrawal" $ do
-      (dRepCred, committeeHotCred, _) <- electBasicCommittee
+      treasuryWithdrawalExpectation []
 
-      treasuryStart <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
-
+    it "TreasuryWithdrawalExtra" $ do
       rewardAcount <- registerRewardAccount
-      let withdrawalAmount = Coin 666
-      govActionId <- submitTreasuryWithdrawals [(rewardAcount, withdrawalAmount)]
+      rewardAcountOther <- registerRewardAccount
+      govPolicy <- getGovPolicy
+      treasuryWithdrawalExpectation
+        [ TreasuryWithdrawals (Map.singleton rewardAcount (Coin 667)) govPolicy
+        , TreasuryWithdrawals (Map.singleton rewardAcountOther (Coin 668)) govPolicy
+        ]
 
-      submitYesVote_ (DRepVoter dRepCred) govActionId
-      submitYesVote_ (CommitteeVoter committeeHotCred) govActionId
-
-      passEpoch
-      passEpoch
-
-      treasuryEnd <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
-
-      treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
-
-    it "Expired proposl deposit refunded" $ do
+    it "Expired proposal deposit refunded" $ do
       let deposit = Coin 999
       modifyPParams $ \pp ->
         pp
@@ -141,3 +137,30 @@ spec =
       expectMissingGovActionId govActionId
 
       getRewardAccountAmount rewardAcount `shouldReturn` deposit
+
+treasuryWithdrawalExpectation ::
+  forall era.
+  ( ConwayEraImp era
+  , GovState era ~ ConwayGovState era
+  ) =>
+  [GovAction era] ->
+  ImpTestM era ()
+treasuryWithdrawalExpectation extraWithdrawals = do
+  (dRepCred, committeeHotCred, _) <- electBasicCommittee
+  treasuryStart <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+  rewardAcount <- registerRewardAccount
+  govPolicy <- getGovPolicy
+  let withdrawalAmount = Coin 666
+  (govActionId NE.:| _) <-
+    submitGovActions $
+      (TreasuryWithdrawals (Map.singleton rewardAcount withdrawalAmount) govPolicy)
+        NE.:| extraWithdrawals
+  submitYesVote_ (DRepVoter dRepCred) govActionId
+  submitYesVote_ (CommitteeVoter committeeHotCred) govActionId
+  passEpoch -- 1st epoch crossing starts DRep pulser
+  lookupReward (raCredential rewardAcount) `shouldReturn` mempty
+  passEpoch -- 2nd epoch crossing enacts all the ratified actions
+  treasuryEnd <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+  treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
+  lookupReward (raCredential rewardAcount) `shouldReturn` withdrawalAmount
+  expectMissingGovActionId govActionId
