@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Remove deprecated functions from `Wallet`: `evaluateMinFee` and `evaluateTransactionFee`
 * Replace `depositsAdaPot` in `AdaPots` with `obligationsPot`
 * Add `sumAdaPots`
 * Deprecate `delPlAcnt` in favor of `delPlAccount`

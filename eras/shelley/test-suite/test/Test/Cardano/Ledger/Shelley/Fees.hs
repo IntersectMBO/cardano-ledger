@@ -45,7 +45,6 @@ import Cardano.Ledger.Shelley.API (
   TxIn (..),
   hashVerKeyVRF,
  )
-import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Tx (
   ShelleyTx (..),
  )
@@ -54,7 +53,9 @@ import Cardano.Ledger.Shelley.TxCert (pattern DelegStakeTxCert, pattern RegTxCer
 import Cardano.Ledger.Shelley.TxWits (
   addrWits,
  )
+import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.Tools (estimateMinFeeTx)
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Base16.Lazy as Base16
@@ -480,13 +481,15 @@ txWithWithdrawalBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e
 
 -- | The transaction fee of txSimpleUTxO if one key witness were to be added,
 -- given minfeeA and minfeeB are set to 1.
-testEvaluateTransactionFee :: Assertion
-testEvaluateTransactionFee =
-  API.evaluateTransactionFee @Shelley
+testEstimateMinFee :: Assertion
+testEstimateMinFee =
+  estimateMinFeeTx @Shelley
     pp
     txSimpleUTxONoWit
     1
-    @?= getMinFeeTx pp txSimpleUTxO
+    0
+    0
+    @?= getShelleyMinFeeTxUtxo pp txSimpleUTxO
   where
     pp =
       emptyPParams
@@ -521,5 +524,5 @@ sizeTests =
     , testCase "auxiliaryData" $ sizeTest txWithMDBytes16 txWithMD
     , testCase "multisig" $ sizeTest txWithMultiSigBytes16 txWithMultiSig
     , testCase "reward withdrawal" $ sizeTest txWithWithdrawalBytes16 txWithWithdrawal
-    , testCase "evaluate transaction fee" testEvaluateTransactionFee
+    , testCase "estimate transaction fee" testEstimateMinFee
     ]
