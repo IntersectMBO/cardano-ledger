@@ -356,24 +356,6 @@ proposalsRemoveIds gais ps =
                     govRelationL . pGraphNodesL %~ Map.adjust (peChildrenL %~ Set.delete gpi) parentGpi
             )
 
--- | Get all the descendents of an action-id from the @`Proposals`@ forest
-getAllDescendents ::
-  forall era.
-  Proposals era ->
-  GovActionId (EraCrypto era) ->
-  Set (GovActionId (EraCrypto era))
-getAllDescendents (Proposals omap _roots graph) gai = case OMap.lookup gai omap of
-  Nothing -> assert False Set.empty
-  Just gas -> withGovActionParent gas Set.empty $ \govRelationL _ ->
-    let
-      go acc gpi =
-        case Map.lookup gpi $ graph ^. govRelationL . pGraphNodesL of
-          -- Impossible! getAllDescendents: GovPurposeId not found
-          Nothing -> assert False mempty
-          Just (PEdges _parent children) -> foldl' go (children <> acc) children
-     in
-      Set.map unGovPurposeId . go Set.empty
-
 -- | Remove the set of given action-ids with their descendents from the
 -- @`Proposals`@ forest
 proposalsRemoveDescendentIds ::
@@ -381,8 +363,20 @@ proposalsRemoveDescendentIds ::
   Set (GovActionId (EraCrypto era)) ->
   Proposals era ->
   (Proposals era, Map (GovActionId (EraCrypto era)) (GovActionState era))
-proposalsRemoveDescendentIds gais ps =
-  proposalsRemoveIds (gais <> foldMap (getAllDescendents ps) gais) ps
+proposalsRemoveDescendentIds gais ps@(Proposals omap _roots graph) =
+  proposalsRemoveIds (gais <> foldMap getAllDescendents gais) ps
+  where
+    getAllDescendents gai =
+      case OMap.lookup gai omap of
+        Nothing -> assert False mempty
+        Just gas -> withGovActionParent gas mempty $ \govRelationL _ ->
+          let go acc gpi =
+                case Map.lookup gpi $ graph ^. govRelationL . pGraphNodesL of
+                  -- Impossible! getAllDescendents: GovPurposeId not found
+                  Nothing -> assert False acc
+                  Just (PEdges _parent children) ->
+                    foldl' go (Set.map unGovPurposeId children <> acc) children
+           in go mempty
 
 -- | For use in the @`EPOCH`@ rule. Apply the result of
 -- @`extractDRepPulsingState`@ to the @`Proposals`@ forest, so that:
