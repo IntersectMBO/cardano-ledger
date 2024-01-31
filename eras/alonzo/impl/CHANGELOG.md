@@ -2,6 +2,14 @@
 
 ## 1.7.0.0
 
+* Add `NFData` instances for:
+  * `CollectError`
+  * `AlonzoUtxoPredFailure`
+  * `FailureDescription`
+  * `TagMismatchDescription`
+  * `AlonzoUtxosPredFailure`
+  * `AlonzoUtxowPredFailure`
+* Add `Semigroup` and `Monoid` instances for `Redeemers`
 * Add `alonzoScriptPrefixTag`
 * Add implementation for `getMinFeeTxUtxo`
 * Deprecated `indexRedeemers` and `redeemerPointer`.
@@ -14,6 +22,11 @@
 * Add `SpendingPurpose`, `MintingPurpose`, `CertifyingPurpose`, `RewardingPurpose` pattern synonyms.
 * Add `getSpendingScriptsNeeded`, `getRewardingScriptsNeeded`, `getMintingScriptsNeeded`
 * Add `zipAsIxItem`
+
+### `testlib`
+
+* Add `Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec`
+* Add `alonzoFixupTx`, `impAddPlutusScript`
 
 ## 1.6.0.0
 

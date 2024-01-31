@@ -94,6 +94,7 @@ import Cardano.Slotting.EpochInfo.API (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Slot (SlotNo)
 import Cardano.Slotting.Time (SystemStart)
+import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (◁))
@@ -220,6 +221,15 @@ instance
   , NoThunks (TxOut era)
   ) =>
   NoThunks (AlonzoUtxoPredFailure era)
+
+instance
+  ( Era era
+  , NFData (Value era)
+  , NFData (UTxO era)
+  , NFData (PredicateFailure (EraRule "UTXOS" era))
+  , NFData (TxOut era)
+  ) =>
+  NFData (AlonzoUtxoPredFailure era)
 
 newtype AlonzoUtxoEvent era
   = UtxosEvent (Event (EraRule "UTXOS" era))

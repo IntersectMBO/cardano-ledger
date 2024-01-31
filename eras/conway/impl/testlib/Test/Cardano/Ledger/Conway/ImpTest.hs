@@ -197,6 +197,8 @@ instance
 
   modifyPParams = conwayModifyPParams
 
+  fixupTx = alonzoFixupTx
+
 class
   ( ShelleyEraImp era
   , ConwayEraGov era
@@ -795,7 +797,7 @@ electCommittee ::
   Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
   Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
   ImpTestM era (GovPurposeId 'CommitteePurpose era)
-electCommittee prevGovId drep toRemove toAdd = do
+electCommittee prevGovId drep toRemove toAdd = impAnn "Electing committee" $ do
   let
     committeeAction =
       UpdateCommittee

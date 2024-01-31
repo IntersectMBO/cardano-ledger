@@ -88,6 +88,7 @@ import Cardano.Ledger.UTxO (
  )
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Slot (SlotNo)
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (ReaderT, asks)
 import Control.State.Transition.Extended
 import Data.ByteString as BS (ByteString)
@@ -317,6 +318,8 @@ data FailureDescription
   = PlutusFailure Text BS.ByteString
   deriving (Show, Eq, Generic, NoThunks)
 
+instance NFData FailureDescription
+
 instance EncCBOR FailureDescription where
   -- This strange encoding results from the fact that 'FailureDescription'
   -- used to have another constructor, which used key 0.
@@ -338,6 +341,8 @@ data TagMismatchDescription
   = PassedUnexpectedly
   | FailedUnexpectedly (NonEmpty FailureDescription)
   deriving (Show, Eq, Generic, NoThunks)
+
+instance NFData TagMismatchDescription
 
 instance EncCBOR TagMismatchDescription where
   encCBOR PassedUnexpectedly = encode (Sum PassedUnexpectedly 0)
@@ -427,6 +432,15 @@ instance
   , NoThunks (PPUPPredFailure era)
   ) =>
   NoThunks (AlonzoUtxosPredFailure era)
+
+instance
+  ( AlonzoEraScript era
+  , NFData (TxCert era)
+  , NFData (ContextError era)
+  , NFData (Shelley.UTxOState era)
+  , NFData (PPUPPredFailure era)
+  ) =>
+  NFData (AlonzoUtxosPredFailure era)
 
 --------------------------------------------------------------------------------
 -- 2-phase checks

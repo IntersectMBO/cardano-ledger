@@ -72,6 +72,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, balance)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val (inject, isAdaOnly, pointwise)
+import Control.DeepSeq (NFData)
 import Control.Monad (unless, when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (◁))
@@ -138,6 +139,14 @@ deriving instance
   , Eq (TxIn (EraCrypto era))
   ) =>
   Eq (BabbageUtxoPredFailure era)
+
+instance
+  ( Era era
+  , NFData (Value era)
+  , NFData (TxOut era)
+  , NFData (PredicateFailure (EraRule "UTXOS" era))
+  ) =>
+  NFData (BabbageUtxoPredFailure era)
 
 -- ===============================================
 -- Inject instances

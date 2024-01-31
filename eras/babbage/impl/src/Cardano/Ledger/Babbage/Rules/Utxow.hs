@@ -24,7 +24,7 @@ module Cardano.Ledger.Babbage.Rules.Utxow (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class (Signable)
+import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
@@ -63,6 +63,7 @@ import Cardano.Ledger.Shelley.Rules (
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..))
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
@@ -165,6 +166,14 @@ deriving via
   InspectHeapNamed "BabbageUtxowPred" (BabbageUtxowPredFailure era)
   instance
     NoThunks (BabbageUtxowPredFailure era)
+
+instance
+  ( AlonzoEraScript era
+  , NFData (TxCert era)
+  , NFData (PredicateFailure (EraRule "UTXO" era))
+  , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
+  ) =>
+  NFData (BabbageUtxowPredFailure era)
 
 -- ==================================================
 -- Reuseable tests first used in the Babbage Era

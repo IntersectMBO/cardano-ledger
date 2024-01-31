@@ -24,6 +24,7 @@
 
 ### `testlib`
 
+* Add `PlutusArgs`, `ScriptTestContext`
 * Add `txInAt`
 * Add `mkScriptAddr`
 * Deprecate `deserialiseRewardAcntOld` in favor of `deserialiseRewardAccountOld`

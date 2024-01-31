@@ -20,6 +20,19 @@
 ### `testlib`
 
 * Add:
+  * `PlutusArgs`
+  * `ScriptTestContext`
+  * `shelleyFixupTx`
+  * `getScriptTestContext`
+  * `updateAddrTxWits`
+  * `addNativeScriptTxWits`
+  * `addRootTxIn`
+  * `fixupFees`
+  * `logFeeMismatch`
+  * `impScriptsL`
+  * `impCollateralTxIdsL`
+  * `impNativeScriptsG`
+* Add:
   * `expectRegisteredRewardAddress`
   * `expectNotRegisteredRewardAddress`
   * `expectTreasury`

@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Add `NFData` instance for `BabbageUtxoPredFailure`, `BabbageUtxowPredFailure`
 * Add implementation for `getMinFeeTxUtxo`
 * Add `getReferenceScriptsNonDistinct`
 * Add the constructor `BabbageNonDisjointRefInputs` to `BabbageUtxoPredFailure`

@@ -101,6 +101,8 @@ library testlib
         Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec
         Test.Cardano.Ledger.Alonzo.Binary.RoundTrip
         Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec
+        Test.Cardano.Ledger.Alonzo.Imp
+        Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec
         Test.Cardano.Ledger.Alonzo.ImpTest
         Test.Cardano.Ledger.Alonzo.TreeDiff
 
@@ -124,10 +126,12 @@ library testlib
         cardano-ledger-mary:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-crypto-class,
+        cardano-strict-containers,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         plutus-ledger-api,
         data-default-class,
         microlens,
+        microlens-mtl,
         text
 
 test-suite tests

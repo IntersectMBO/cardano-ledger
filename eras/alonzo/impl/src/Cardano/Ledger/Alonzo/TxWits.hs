@@ -179,6 +179,12 @@ deriving newtype instance AlonzoEraScript era => NFData (Redeemers era)
 deriving newtype instance AlonzoEraScript era => NoThunks (Redeemers era)
 deriving instance AlonzoEraScript era => Show (Redeemers era)
 
+instance AlonzoEraScript era => Semigroup (Redeemers era) where
+  Redeemers x <> Redeemers y = Redeemers $ x <> y
+
+instance AlonzoEraScript era => Monoid (Redeemers era) where
+  mempty = Redeemers mempty
+
 -- =====================================================
 -- Pattern for Redeemers
 
