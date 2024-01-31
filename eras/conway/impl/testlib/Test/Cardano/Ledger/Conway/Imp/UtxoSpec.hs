@@ -28,7 +28,7 @@ import Cardano.Ledger.Plutus.Language (Language (..), plutusBinary)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
-import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (getMinFeeTxUtxo)
 import Cardano.Ledger.Val
 import Control.Monad (replicateM)
@@ -42,6 +42,7 @@ import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.KeyPair (mkScriptAddr)
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 
 spec ::
@@ -105,7 +106,7 @@ spec = describe "UTxO" $ do
           mkBasicTxBody
             & outputsTxBodyL @era
               .~ SSeq.fromList [mkBasicTxOut @era scriptAddr (inject (Coin 1000))]
-      pure $ txInAt 0 tx
+      pure $ txInAt (0 :: Int) tx
 
     createRefScriptsUtxos :: [Script era] -> ImpTestM era (Map.Map (TxIn (EraCrypto era)) (Script era))
     createRefScriptsUtxos scripts = do
@@ -121,7 +122,7 @@ spec = describe "UTxO" $ do
           mkBasicTxBody
             & outputsTxBodyL @era
               .~ SSeq.fromList outs
-      let refIns = (\i -> txInAt (fromIntegral i) tx) <$> [0 .. length scripts - 1]
+      let refIns = (`txInAt` tx) <$> [0 .. length scripts - 1]
       pure $ Map.fromList $ refIns `zip` scripts
 
     spendScriptUsingRefScripts :: TxIn (EraCrypto era) -> Set.Set (TxIn (EraCrypto era)) -> ImpTestM era (Tx era)
@@ -152,8 +153,3 @@ spec = describe "UTxO" $ do
       let refScriptFee = Coin 10
       modifyPParams $ ppMinFeeRefScriptCoinsPerByteL .~ CoinPerByte refScriptFee
       pure refScriptFee
-
-    txInAt :: Integer -> Tx era -> TxIn (EraCrypto era)
-    txInAt index tx =
-      let txid = txIdTx tx
-       in mkTxInPartial txid index

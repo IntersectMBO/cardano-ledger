@@ -6,6 +6,7 @@ module Test.Cardano.Ledger.Core.Utils (
   epsilonMaybeEq,
   testGlobals,
   mkDummySafeHash,
+  txInAt,
 )
 where
 
@@ -15,8 +16,10 @@ import Cardano.Ledger.BaseTypes (
   Network (..),
   mkActiveSlotCoeff,
  )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
+import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Data.Data (Proxy)
@@ -64,3 +67,8 @@ testGlobals =
 
 mkDummySafeHash :: forall c a. Crypto c => Proxy c -> Int -> SafeHash c a
 mkDummySafeHash _ = unsafeMakeSafeHash . mkDummyHash @(HASH c)
+
+txInAt :: (HasCallStack, Integral i, EraTx era) => i -> Tx era -> TxIn (EraCrypto era)
+txInAt index tx =
+  let txid = txIdTx tx
+   in mkTxInPartial txid (toInteger index)
