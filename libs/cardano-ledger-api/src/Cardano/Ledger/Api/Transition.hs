@@ -22,19 +22,11 @@ module Cardano.Ledger.Api.Transition (
   tcInitialStakingL,
   createInitialState,
   injectIntoTestState,
-  registerInitialFunds,
-  registerInitialStaking,
-  registerInitialDReps,
-  registerDelegs,
 ) where
 
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Api.Era (LatestKnownEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
-import Cardano.Ledger.Conway.Transition (
-  registerDelegs,
-  registerInitialDReps,
- )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
 import Cardano.Ledger.Shelley.Transition (
@@ -42,8 +34,6 @@ import Cardano.Ledger.Shelley.Transition (
   TransitionConfig,
   createInitialState,
   mkShelleyTransitionConfig,
-  registerInitialFunds,
-  registerInitialStaking,
   tcInitialFundsL,
   tcInitialStakingL,
  )

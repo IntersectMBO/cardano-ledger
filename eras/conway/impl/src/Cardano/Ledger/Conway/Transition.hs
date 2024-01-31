@@ -12,8 +12,6 @@ module Cardano.Ledger.Conway.Transition (
   ConwayEraTransition (..),
   TransitionConfig (..),
   toConwayTransitionConfigPairs,
-  registerDelegs,
-  registerInitialDReps,
 ) where
 
 import Cardano.Ledger.Alonzo.Transition (toAlonzoTransitionConfigPairs)
