@@ -47,9 +47,10 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits (nullRedeemers)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.Era (BabbageUTXO)
+import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXO)
 import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
 import Cardano.Ledger.BaseTypes (
+  ProtVer (..),
   ShelleyBase,
   epochInfo,
   networkId,
@@ -71,7 +72,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, balance)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val (inject, isAdaOnly, pointwise)
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended (
@@ -79,6 +80,7 @@ import Control.State.Transition.Extended (
   STS (..),
   TRC (..),
   TransitionRule,
+  failureOnNonEmpty,
   judgmentContext,
   liftSTS,
   trans,
@@ -89,6 +91,8 @@ import Data.Foldable (sequenceA_, toList)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -110,6 +114,9 @@ data BabbageUtxoPredFailure era
     -- together with the minimum value for the given output.
     BabbageOutputTooSmallUTxO
       ![(TxOut era, Coin)]
+  | -- | TxIns that appear in both inputs and reference inputs
+    BabbageNonDisjointRefInputs
+      !(NonEmpty (TxIn (EraCrypto era)))
   deriving (Generic)
 
 deriving instance
@@ -118,6 +125,7 @@ deriving instance
   , Show (PredicateFailure (EraRule "UTXO" era))
   , Show (TxOut era)
   , Show (Script era)
+  , Show (TxIn (EraCrypto era))
   ) =>
   Show (BabbageUtxoPredFailure era)
 
@@ -127,6 +135,7 @@ deriving instance
   , Eq (PredicateFailure (EraRule "UTXO" era))
   , Eq (TxOut era)
   , Eq (Script era)
+  , Eq (TxIn (EraCrypto era))
   ) =>
   Eq (BabbageUtxoPredFailure era)
 
@@ -193,6 +202,21 @@ feesOK pp tx (UTxO utxo) =
           unless (nullRedeemers $ tx ^. witsTxL . rdmrsTxWitsL) $
             validateTotalCollateral pp txBody utxoCollateral
         ]
+
+-- | Test that inputs and refInpts are disjoint, in Conway and later Eras.
+disjointRefInputs ::
+  forall era.
+  EraPParams era =>
+  PParams era ->
+  Set (TxIn (EraCrypto era)) ->
+  Set (TxIn (EraCrypto era)) ->
+  Test (BabbageUtxoPredFailure era)
+disjointRefInputs pp inputs refInputs =
+  when
+    (pvMajor (pp ^. ppProtocolVersionL) > eraProtVerHigh @(BabbageEra (EraCrypto era)))
+    (failureOnNonEmpty common BabbageNonDisjointRefInputs)
+  where
+    common = inputs `Set.intersection` refInputs
 
 validateTotalCollateral ::
   forall era.
@@ -320,6 +344,13 @@ utxoTransition = do
   {-   txb := txbody tx   -}
   let txBody = body tx
       allInputs = txBody ^. allInputsTxBodyF
+      refInputs :: Set (TxIn (EraCrypto era))
+      refInputs = txBody ^. referenceInputsTxBodyL
+      inputs :: Set (TxIn (EraCrypto era))
+      inputs = txBody ^. inputsTxBodyL
+
+  {- inputs ∩ refInputs = ∅ -}
+  runTest $ disjointRefInputs pp inputs refInputs
 
   {- ininterval slot (txvld txb) -}
   runTest $ Allegra.validateOutsideValidityIntervalUTxO slot txBody
@@ -431,6 +462,7 @@ instance
   , EncCBOR (PredicateFailure (EraRule "UTXOS" era))
   , EncCBOR (PredicateFailure (EraRule "UTXO" era))
   , EncCBOR (Script era)
+  , EncCBOR (TxIn (EraCrypto era))
   , Typeable (TxAuxData era)
   ) =>
   EncCBOR (BabbageUtxoPredFailure era)
@@ -440,6 +472,7 @@ instance
       AlonzoInBabbageUtxoPredFailure x -> Sum AlonzoInBabbageUtxoPredFailure 1 !> To x
       IncorrectTotalCollateralField c1 c2 -> Sum IncorrectTotalCollateralField 2 !> To c1 !> To c2
       BabbageOutputTooSmallUTxO x -> Sum BabbageOutputTooSmallUTxO 3 !> To x
+      BabbageNonDisjointRefInputs x -> Sum BabbageNonDisjointRefInputs 4 !> To x
 
 instance
   ( Era era
@@ -456,6 +489,7 @@ instance
     1 -> SumD AlonzoInBabbageUtxoPredFailure <! From
     2 -> SumD IncorrectTotalCollateralField <! From <! From
     3 -> SumD BabbageOutputTooSmallUTxO <! From
+    4 -> SumD BabbageNonDisjointRefInputs <! From
     n -> Invalid n
 
 deriving via

@@ -37,11 +37,9 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
-import Cardano.Ledger.Babbage (Babbage)
 import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
-import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Babbage.TxInfo (
   BabbageContextError (
     InlineDatumsNotSupported,
@@ -51,12 +49,13 @@ import Cardano.Ledger.Babbage.TxInfo (
  )
 import Cardano.Ledger.BaseTypes (
   Network (..),
+  SlotNo (..),
   StrictMaybe (..),
   mkTxIx,
   mkTxIxPartial,
-  natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
@@ -67,7 +66,7 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..), PlutusLanguage)
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API (ProtVer (..), UTxO (..))
+import Cardano.Ledger.Shelley.API (UTxO (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
@@ -87,7 +86,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Arbitrary (mkPlutusScript')
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
-  AlonzoBased (..),
+  ToUTXOW (..),
   mkGenesisTxIn,
   mkTxDats,
   testUTXOW,
@@ -102,14 +101,13 @@ import Test.Cardano.Ledger.Generic.Fields (
  )
 import Test.Cardano.Ledger.Generic.Functions
 import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..), mkRedeemers, mkRedeemersFromTags)
-import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 import Test.Tasty
-import Test.Tasty.HUnit (Assertion, testCase)
+import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase)
 
 someKeys :: forall era. Era era => Proof era -> KeyPair 'Payment (EraCrypto era)
 someKeys _pf = KeyPair vk sk
@@ -212,19 +210,22 @@ anotherTxIn = mkGenesisTxIn 2
 yetAnotherTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => TxIn c
 yetAnotherTxIn = mkGenesisTxIn 3
 
-defaultPPs :: [PParamsField era]
-defaultPPs =
+commonTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => TxIn c
+commonTxIn = mkGenesisTxIn 4
+
+defaultPPs :: Proof era -> [PParamsField era]
+defaultPPs p =
   [ Costmdls $ zeroTestingCostModels [PlutusV1, PlutusV2]
   , MaxValSize 1000000000
   , MaxTxExUnits $ ExUnits 1000000 1000000
   , MaxBlockExUnits $ ExUnits 1000000 1000000
-  , ProtocolVersion $ ProtVer (natVersion @7) 0
+  , ProtocolVersion $ protocolVersion p
   , CollateralPercentage 1
   , CoinPerUTxOByte (CoinPerByte (Coin 5))
   ]
 
 pp :: EraPParams era => Proof era -> PParams era
-pp pf = newPParams pf defaultPPs
+pp pf = newPParams pf (defaultPPs pf)
 
 -- =========================================================================
 -- Spend a EUTxO with an inline datum (without and with a failing script)
@@ -319,6 +320,51 @@ referenceScript pf =
                   [ Address (scriptAddr pf (alwaysAlt 3 pf))
                   , Amount (inject $ Coin 5000)
                   , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
+                  ]
+              ]
+          , ofRefInputs =
+              [ newTxOut
+                  pf
+                  [ Address (plainAddr pf)
+                  , Amount (inject $ Coin 5000)
+                  , RefScript (SJust $ alwaysAlt 3 pf)
+                  ]
+              ]
+          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
+          }
+    , keysForAddrWits = [someKeysPaymentKeyRole pf]
+    , otherWitsFields =
+        [ DataWits' [datumExampleSixtyFiveBytes]
+        , RdmrWits $ validatingRedeemers pf
+        ]
+    }
+
+commonReferenceScript :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+commonReferenceScript pf =
+  TestCaseData
+    { txBody =
+        newTxBody
+          pf
+          [ Inputs' [someTxIn, commonTxIn]
+          , RefInputs' [anotherTxIn, commonTxIn]
+          , Collateral' [yetAnotherTxIn]
+          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]]
+          , Txfee (Coin 5)
+          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) txDats)
+          ]
+    , initOutputs =
+        InitOutputs
+          { ofInputs =
+              [ newTxOut
+                  pf
+                  [ Address (scriptAddr pf (alwaysAlt 3 pf))
+                  , Amount (inject $ Coin 2500)
+                  , DHash' [hashData $ datumExampleSixtyFiveBytes @era]
+                  ]
+              , newTxOut
+                  pf
+                  [ Address (plainAddr pf)
+                  , Amount (inject $ Coin 2500)
                   ]
               ]
           , ofRefInputs =
@@ -1027,18 +1073,6 @@ noSuchThingAsReferenceDatum pf =
 
 -- ====================================================================================
 
-class BabbageBased era failure where
-  fromUtxoB :: BabbageUtxoPredFailure era -> failure
-  fromUtxowB :: BabbageUtxowPredFailure era -> failure
-
-instance BabbageBased (BabbageEra c) (BabbageUtxowPredFailure (BabbageEra c)) where
-  fromUtxoB = UtxoFailure
-  fromUtxowB = id
-
-instance BabbageBased (ConwayEra c) (BabbageUtxowPredFailure (ConwayEra c)) where
-  fromUtxoB = UtxoFailure
-  fromUtxowB = id
-
 type InOut era = (TxIn (EraCrypto era), TxOut era)
 
 data TestCaseData era = TestCaseData
@@ -1167,9 +1201,7 @@ testExpectSuccessValid
 
 newColReturn ::
   forall era.
-  ( TxBody era ~ BabbageTxBody era
-  , BabbageEraTxBody era
-  ) =>
+  BabbageEraTxBody era =>
   TxBody era ->
   [InOut era]
 newColReturn
@@ -1183,7 +1215,6 @@ newColReturn
 testExpectSuccessInvalid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
-  , TxBody era ~ BabbageTxBody era
   , PostShelley era
   , Reflect era
   , BabbageEraTxBody era
@@ -1249,12 +1280,20 @@ genericBabbageFeatures pf =
         ]
     ]
 
+badTranslation :: Proof era -> BabbageContextError era -> CollectError era
+badTranslation proof x =
+  case proof of
+    Babbage -> BadTranslation x
+    Conway -> BadTranslation (BabbageContextError x)
+    _ -> error "No reference inputs before BabbageEra"
+
 genericBabbageFailures ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
   , BabbageEraTxBody era
   , PostShelley era
-  , era ~ Babbage
+  , ToUTXOW era
+  , Reflect era
   ) =>
   Proof era ->
   TestTree
@@ -1269,21 +1308,17 @@ genericBabbageFailures pf =
             testExpectFailure
               pf
               (incorrectCollateralTotal pf)
-              (fromUtxoB @era (IncorrectTotalCollateralField (Coin 5) (Coin 6)))
+              (fromUtxoB' @era (IncorrectTotalCollateralField (Coin 5) (Coin 6)))
         , testCase "inline datum and ref script and redundant script witness" $
             testExpectFailure
               pf
               (inlineDatumAndRefScriptWithRedundantWitScript pf)
-              ( fromUtxow @era
-                  ( Shelley.ExtraneousScriptWitnessesUTXOW
-                      (Set.singleton $ hashScript @era (alwaysAlt 3 pf))
-                  )
-              )
+              (fromUtxow' @era (Shelley.ExtraneousScriptWitnessesUTXOW (Set.singleton $ hashScript @era (alwaysAlt 3 pf))))
         , testCase "inline datum with redundant datum witness" $
             testExpectFailure
               pf
               (inlineDatumRedundantDatumWit pf)
-              ( fromPredFail @era
+              ( fromPredFail' @era
                   ( NotAllowedSupplementalDatums
                       (Set.singleton $ hashData @era datumExampleSixtyFiveBytes)
                       mempty
@@ -1293,57 +1328,61 @@ genericBabbageFailures pf =
             testExpectFailure
               pf
               (inlineDatumWithPlutusV1Script pf)
-              ( fromUtxos @era
+              ( fromUtxos' @era
                   ( CollectErrors
-                      [BadTranslation $ InlineDatumsNotSupported (TxOutFromInput someTxIn)]
+                      [badTranslation pf $ InlineDatumsNotSupported (TxOutFromInput someTxIn)]
                   )
               )
         , testCase "reference script with Plutus V1" $
             testExpectFailure
               pf
               (referenceScriptWithPlutusV1Script pf)
-              ( fromUtxos @era
+              ( fromUtxos' @era
                   ( CollectErrors
-                      [BadTranslation $ ReferenceScriptsNotSupported (TxOutFromOutput (mkTxIxPartial 0))]
+                      [badTranslation pf $ ReferenceScriptsNotSupported (TxOutFromOutput (mkTxIxPartial 0))]
                   )
               )
         , testCase "reference input with Plutus V1" $
             testExpectFailure
               pf
               (referenceInputWithPlutusV1Script pf)
-              ( fromUtxos @era
+              ( fromUtxos' @era
                   ( CollectErrors
-                      [BadTranslation $ ReferenceInputsNotSupported $ Set.singleton anotherTxIn]
+                      [badTranslation pf $ ReferenceInputsNotSupported @era $ Set.singleton anotherTxIn]
                   )
               )
         , testCase "malformed reference script" $
             testExpectFailure
               pf
               (malformedPlutusRefScript pf)
-              ( fromUtxowB @era $
+              ( fromUtxowB' @era $
                   MalformedReferenceScripts $
-                    Set.singleton
-                      (hashScript @era $ malformedScript pf "rs")
+                    Set.singleton (hashScript @era $ malformedScript pf "rs")
               )
-        , testCase "malformed script witness" $
-            testExpectFailure
-              pf
-              (malformedScriptWit pf)
-              ( fromUtxowB @era $
-                  MalformedScriptWitnesses $
-                    Set.singleton
-                      (hashScript @era $ malformedScript pf "malfoy")
-              )
+        , case pf of
+            Babbage ->
+              testCase "malformed script witness" $
+                testExpectFailure
+                  pf
+                  (malformedScriptWit pf)
+                  ( fromUtxowB' @era $
+                      MalformedScriptWitnesses $
+                        Set.singleton
+                          (hashScript @era $ malformedScript pf "malfoy")
+                  )
+            -- The current code does not construct the right witnesses for plutus version 3, so skip this test in Conway
+            Conway -> testCase "malformed script witness" $ pure ()
+            _ -> error ("Babbage features used before BabbageEra")
         , testCase "min-utxo value with output too large" $
             testExpectFailure
               pf
               (largeOutput pf)
-              (fromUtxoB @era $ BabbageOutputTooSmallUTxO [(largeOutput' pf, Coin 8915)])
+              (fromUtxoB' @era $ BabbageOutputTooSmallUTxO [(largeOutput' pf, Coin 8915)])
         , testCase "no such thing as a reference datum" $
             testExpectFailure
               pf
               (noSuchThingAsReferenceDatum pf)
-              ( fromPredFail @era
+              ( fromPredFail' @era
                   ( MissingRequiredDatums
                       (Set.singleton (hashData $ datumExampleSixtyFiveBytes @era))
                       mempty
@@ -1358,5 +1397,39 @@ babbageFeatures =
     "Babbage Features"
     [ genericBabbageFeatures Babbage
     , genericBabbageFailures Babbage
-    -- genericBabbageFeatures Conway -- TODO
+    , genericBabbageFeatures Conway
+    , genericBabbageFailures Conway
+    , testCase "inputs and refinputs overlap in Babbage and don't Fail" $ testExpectSuccessValid Babbage (commonReferenceScript Babbage)
+    , testCase "inputs and refinputs overlap in Conway and Fail" $
+        testExpectUTXOFailure Conway (commonReferenceScript Conway) (BabbageNonDisjointRefInputs (pure commonTxIn))
     ]
+
+testExpectUTXOFailure ::
+  forall era.
+  ( State (EraRule "UTXO" era) ~ UTxOState era
+  , PostShelley era
+  , Reflect era
+  , BabbageEraTxBody era
+  ) =>
+  Proof era ->
+  TestCaseData era ->
+  PredicateFailure (EraRule "UTXO" era) ->
+  Assertion
+testExpectUTXOFailure pf@Conway tc failure =
+  let tx' = txFromTestCaseData pf tc
+      InitUtxo inputs' refInputs' collateral' = initUtxoFromTestCaseData pf tc
+      initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
+      pparams = newPParams pf (defaultPPs pf)
+      env = Shelley.UtxoEnv (SlotNo 0) pparams def
+      state = smartUTxOState pparams initUtxo (Coin 0) (Coin 0) def mempty
+   in goSTS
+        (UTXO pf)
+        env
+        state
+        tx'
+        ( \x -> case x of
+            Left [predfail] -> assertEqual "unexpected failure" predfail failure
+            Left _ -> assertFailure "not exactly one failure"
+            Right _ -> assertFailure "testExpectUTXOFailure succeeds"
+        )
+testExpectUTXOFailure _ _ _ = error "testExpectUTXOFailure is only good in Conway Era"

@@ -533,6 +533,8 @@ txBodyPreds sizes@UnivSize {..} p =
        , -- refInputs
          Sized (Range 0 1) refInputs
        , Subset refInputs (Dom (utxo p))
+       , NotMember feeTxIn refInputs
+       , Disjoint refInputs inputs -- New constraint in Conway, added PR #4024
        , Sized (Range 1 2) reqSignerHashes
        , Subset reqSignerHashes (Dom keymapUniv)
        , ttl :<-: (Constr "(+5)" (\x -> x + 5) ^$ currentSlot)
