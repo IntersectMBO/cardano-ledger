@@ -53,10 +53,10 @@
 --   operation to fail, since all invariants are expected to hold and
 --   only an implementation bug could cause this operation to fail.
 --   After applying this operation we expect the @`Proposals`@ to be in
---   a state, where (i) all expired actions and their descendents have
+--   a state, where (i) all expired actions and their descendants have
 --   been pruned, and (ii) the sequence of enacted action-ids have been
 --   promoted to be the root of the respective tree and their competing
---   or sibling action-ids and their descendents have been pruned from
+--   or sibling action-ids and their descendants have been pruned from
 --   the @`Proposals`@ tree.
 --
 --   2.2. The resultant @`Proposals`@ forest has all the latest
@@ -87,7 +87,6 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   proposalsSize,
   proposalsAddAction,
   proposalsApplyEnactment,
-  proposalsRemoveDescendentIds,
   proposalsAddVote,
   proposalsLookupId,
   proposalsActionsMap,
@@ -95,6 +94,7 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   fromPrevGovActionIds,
 
   -- * To be used only for testing
+  proposalsRemoveWithDescendants,
   TreeMaybe (..),
   toGovRelationTree,
   toGovRelationTreeEither,
@@ -356,23 +356,23 @@ proposalsRemoveIds gais ps =
                     govRelationL . pGraphNodesL %~ Map.adjust (peChildrenL %~ Set.delete gpi) parentGpi
             )
 
--- | Remove the set of given action-ids with their descendents from the
--- @`Proposals`@ forest
-proposalsRemoveDescendentIds ::
+-- | Remove the set of given action-ids with their descendants from the
+-- @`Proposals`@ forest. Cannot be used for removing enacted GovActionIds (i.e. roots)
+proposalsRemoveWithDescendants ::
   EraPParams era =>
   Set (GovActionId (EraCrypto era)) ->
   Proposals era ->
   (Proposals era, Map (GovActionId (EraCrypto era)) (GovActionState era))
-proposalsRemoveDescendentIds gais ps@(Proposals omap _roots graph) =
-  proposalsRemoveIds (gais <> foldMap getAllDescendents gais) ps
+proposalsRemoveWithDescendants gais ps@(Proposals omap _roots graph) =
+  proposalsRemoveIds (gais <> foldMap getAllDescendants gais) ps
   where
-    getAllDescendents gai =
+    -- Recursively aet all of the descendants for those actions that have lineage
+    getAllDescendants gai =
       case OMap.lookup gai omap of
         Nothing -> assert False mempty
         Just gas -> withGovActionParent gas mempty $ \govRelationL _ ->
           let go acc gpi =
                 case Map.lookup gpi $ graph ^. govRelationL . pGraphNodesL of
-                  -- Impossible! getAllDescendents: GovPurposeId not found
                   Nothing -> assert False acc
                   Just (PEdges _parent children) ->
                     foldl' go (Set.map unGovPurposeId children <> acc) children
@@ -380,10 +380,10 @@ proposalsRemoveDescendentIds gais ps@(Proposals omap _roots graph) =
 
 -- | For use in the @`EPOCH`@ rule. Apply the result of
 -- @`extractDRepPulsingState`@ to the @`Proposals`@ forest, so that:
---   i. all the expired action-ids and their descendents are removed,
+--   i. all the expired action-ids and their descendants are removed,
 --   and
 --   ii. the sequence of enacted action-ids is promoted to the root,
---   removing competing/sibling action-ids and their descendents at each
+--   removing competing/sibling action-ids and their descendants at each
 --   step
 proposalsApplyEnactment ::
   forall era.
@@ -396,7 +396,7 @@ proposalsApplyEnactment ::
   , Map (GovActionId (EraCrypto era)) (GovActionState era) -- Removed due to expiry
   )
 proposalsApplyEnactment enactedGass expiredGais props =
-  let (unexpiredProposals, expiredRemoved) = proposalsRemoveDescendentIds expiredGais props
+  let (unexpiredProposals, expiredRemoved) = proposalsRemoveWithDescendants expiredGais props
       (enactedProposalsState, enactedRemoved) =
         foldl' enact (unexpiredProposals, Map.empty) enactedGass
    in (enactedProposalsState, enactedRemoved, expiredRemoved)
@@ -426,7 +426,7 @@ proposalsApplyEnactment enactedGass expiredGais props =
                 case Map.lookup gpi $ ps ^. pGraphL . govRelationL . pGraphNodesL of
                   Nothing -> assert False Set.empty
                   Just pe -> peChildren pe
-              (withoutSiblings, removedActions) = proposalsRemoveDescendentIds siblings ps
+              (withoutSiblings, removedActions) = proposalsRemoveWithDescendants siblings ps
               newGraph = Map.delete gpi $ withoutSiblings ^. pGraphL . govRelationL . pGraphNodesL
               (newOMap, enactedAction) =
                 OMap.extractKeys (Set.singleton gai) $ withoutSiblings ^. pPropsL
