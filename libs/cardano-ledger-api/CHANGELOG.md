@@ -11,6 +11,8 @@
 * Deprecate `deserialiseRewardAcnt` in favor of `deserialiseRewardAccount`
 * Deprecate `serialiseRewardAcnt` in favor of `serialiseRewardAccount`
 * Deprecate `RewardAcnt` in favor of `RewardAccount`
+* Remove `registerInitialFunds`, `registerInitialStaking`, `registerInitialDReps`, and `registerDelegs` in favor of `injectIntoTestState`.
+* Change the semantics of `createInitialState` to not register any initial funds or delegates.
 
 ## 1.8.0.0
 

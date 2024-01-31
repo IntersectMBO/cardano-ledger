@@ -8,6 +8,8 @@
 * Rename `RewardAccount` fields `getRwdNetwork` and `getRwdCred` to `raNetwork` and `raCredential` respectively
 * Deprecate `prAcnt` in favor of `prAccountState`
 * Deprecate `RewardAcnt` in favor of `RewardAccount`
+* Remove `registerInitialFunds` and `registerInitialStaking`
+* Add `registerInitialFundsThenStaking`
 
 ### `testlib`
 
