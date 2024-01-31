@@ -434,13 +434,15 @@ proposalsApplyEnactment enactedGass expiredGais props =
               newGraph = Map.delete gpi $ withoutSiblings ^. pGraphL . forestL . pGraphNodesL
               (newOMap, enactedAction) =
                 OMap.extractKeys (Set.singleton gai) $ withoutSiblings ^. pPropsL
+              newProposals =
+                withoutSiblings
+                  & pGraphL . forestL . pGraphNodesL .~ newGraph
+                  & pRootsL . forestL . prRootL .~ SJust gpi -- Set the new root
+                  & pRootsL . forestL . prChildrenL .~ newRootChildren -- Set the new root children
+                  & pPropsL .~ newOMap
            in assert
                 (ps ^. pRootsL . forestL . prRootL == parent)
-                ( withoutSiblings
-                    & pGraphL . forestL . pGraphNodesL .~ newGraph
-                    & pRootsL . forestL . prRootL .~ SJust gpi -- Set the new root
-                    & pRootsL . forestL . prChildrenL .~ newRootChildren -- Set the new root children
-                    & pPropsL .~ newOMap
+                ( checkInvariantAfterDeletion (Set.singleton gai) withoutSiblings newProposals
                 , removed `Map.union` removedActions `Map.union` enactedAction
                 )
 
