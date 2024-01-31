@@ -363,16 +363,16 @@ getAllDescendents ::
   GovActionId (EraCrypto era) ->
   Set (GovActionId (EraCrypto era))
 getAllDescendents (Proposals omap _roots graph) gai = case OMap.lookup gai omap of
-  Nothing -> Set.empty
+  Nothing -> assert False Set.empty
   Just gas -> withGovActionParent gas Set.empty $ \govRelationL _ ->
     let
-      go gpi =
+      go acc gpi =
         case Map.lookup gpi $ graph ^. govRelationL . pGraphNodesL of
           -- Impossible! getAllDescendents: GovPurposeId not found
           Nothing -> assert False mempty
-          Just (PEdges _parent children) -> children <> foldMap go children
+          Just (PEdges _parent children) -> foldl' go (children <> acc) children
      in
-      Set.map unGovPurposeId . go
+      Set.map unGovPurposeId . go Set.empty
 
 -- | Remove the set of given action-ids with their descendents from the
 -- @`Proposals`@ forest
