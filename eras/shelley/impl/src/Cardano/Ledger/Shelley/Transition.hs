@@ -250,6 +250,8 @@ toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
 --
 -- /Warning/ - Should only be used in testing and benchmarking. Will result in an error
 -- when NetworkId is set to Mainnet
+--
+-- This function does not register any initial funds or delegates.
 createInitialState ::
   forall era.
   (EraTransition era, HasCallStack) =>
