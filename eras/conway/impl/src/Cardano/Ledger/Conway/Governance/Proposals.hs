@@ -339,16 +339,22 @@ proposalsRemoveIds gais ps =
       (roots, hierarchy) = foldl' removeEach (ps ^. pRootsL, ps ^. pGraphL) removedFromOMap
    in (checkInvariantAfterDeletion gais ps $ Proposals retainedOMap roots hierarchy, removedFromOMap)
   where
-    removeEach accum@(!roots, !hierarchy) gas =
+    removeEach accum@(!roots, !graph) gas =
       withGovActionParent gas accum $ \forestL parent gpi ->
-        ( roots & forestL . prChildrenL %~ Set.delete gpi
-        , hierarchy
-            & forestL . pGraphNodesL %~ Map.delete gpi
-            & case parent of
-              SNothing -> id
-              SJust parentGpi ->
-                forestL . pGraphNodesL %~ Map.adjust (peChildrenL %~ Set.delete gpi) parentGpi
-        )
+        if parent == roots ^. forestL . prRootL
+          then
+            ( roots & forestL . prChildrenL %~ Set.delete gpi
+            , graph & forestL . pGraphNodesL %~ Map.delete gpi
+            )
+          else
+            ( roots
+            , graph
+                & forestL . pGraphNodesL %~ Map.delete gpi
+                & case parent of
+                  SNothing -> id
+                  SJust parentGpi ->
+                    forestL . pGraphNodesL %~ Map.adjust (peChildrenL %~ Set.delete gpi) parentGpi
+            )
 
 -- | Get all the descendents of an action-id from the @`Proposals`@ forest
 getAllDescendents ::
