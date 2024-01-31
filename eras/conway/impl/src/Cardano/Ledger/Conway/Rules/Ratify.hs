@@ -41,18 +41,13 @@ import Cardano.Ledger.Conway.Governance (
   Committee (..),
   GovAction (..),
   GovActionState (..),
-  PrevGovActionIds (..),
+  GovRelation,
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
   Vote (..),
   ensCommitteeL,
   ensTreasuryL,
-  pfCommitteeL,
-  pfConstitutionL,
-  pfHardForkL,
-  pfPParamUpdateL,
-  prevGovActionIdsL,
   rsDelayedL,
   rsEnactStateL,
   rsEnactedL,
@@ -60,6 +55,7 @@ import Cardano.Ledger.Conway.Governance (
   votingCommitteeThreshold,
   votingDRepThreshold,
   votingStakePoolThreshold,
+  withGovActionParent,
  )
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
@@ -303,7 +299,7 @@ ratifyTransition = do
     judgmentContext
   case rsig of
     gas@GovActionState {gasId, gasAction, gasExpiresAfter} SSeq.:<| sigs -> do
-      if prevActionAsExpected gasAction ensPrevGovActionIds
+      if prevActionAsExpected gas ensPrevGovActionIds
         && validCommitteeTerm gasAction ensCurPParams reCurrentEpoch
         && not rsDelayed
         && withdrawalCanWithdraw gasAction ensTreasury
@@ -332,15 +328,10 @@ ratifyTransition = do
 
 -- | Check that the previous governance action id specified in the proposal
 -- does match the last one of the same purpose that was enacted.
-prevActionAsExpected :: forall era. GovAction era -> PrevGovActionIds era -> Bool
-prevActionAsExpected = \case
-  ParameterChange parent _ _ -> (parent ==) . (^. prevGovActionIdsL . pfPParamUpdateL)
-  HardForkInitiation parent _ -> (parent ==) . (^. prevGovActionIdsL . pfHardForkL)
-  TreasuryWithdrawals _ _ -> const True
-  NoConfidence parent -> (parent ==) . (^. prevGovActionIdsL . pfCommitteeL)
-  UpdateCommittee parent _ _ _ -> (parent ==) . (^. prevGovActionIdsL . pfCommitteeL)
-  NewConstitution parent _ -> (parent ==) . (^. prevGovActionIdsL . pfConstitutionL)
-  InfoAction -> const True
+prevActionAsExpected :: GovActionState era -> GovRelation StrictMaybe era -> Bool
+prevActionAsExpected gas prevGovActionIds =
+  withGovActionParent gas True $ \relationL parent _ ->
+    parent == prevGovActionIds ^. relationL
 
 validCommitteeTerm ::
   ConwayEraPParams era =>

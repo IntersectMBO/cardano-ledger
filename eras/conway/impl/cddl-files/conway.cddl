@@ -156,9 +156,11 @@ transaction_input = [ transaction_id : $hash32
                     , index : uint
                     ]
 
-transaction_output = legacy_transaction_output / post_alonzo_transaction_output
+; Both of the Alonzo and Babbage style TxOut formats are equally valid
+; and can be used interchangeably
+transaction_output = pre_babbage_transaction_output / post_alonzo_transaction_output
 
-legacy_transaction_output =
+pre_babbage_transaction_output =
   [ address
   , amount : value
   , ? datum_hash : $hash32

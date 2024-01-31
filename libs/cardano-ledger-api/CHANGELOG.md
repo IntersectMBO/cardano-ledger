@@ -2,6 +2,9 @@
 
 ## 1.9.0.0
 
+* Add `hoistGovRelation`, `withGovActionParent` and `GovRelation`
+
+* Remove `PrevGovActionIds`
 * Rename `cgProposalsL` to `cgsProposalsL`
 * Remove `cgEnactStateL`
 * Rename `RewardAccount` fields `getRwdNetwork` and `getRwdCred` to `raNetwork` and `raCredential` respectively

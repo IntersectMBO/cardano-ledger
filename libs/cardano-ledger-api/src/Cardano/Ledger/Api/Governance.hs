@@ -34,7 +34,9 @@ module Cardano.Ledger.Api.Governance (
   GovActionIx (..),
   GovActionState (..),
   GovActionPurpose (..),
-  PrevGovActionIds (..),
+  GovRelation (..),
+  hoistGovRelation,
+  withGovActionParent,
   GovPurposeId (..),
   govActionIdToText,
 
@@ -60,7 +62,7 @@ import Cardano.Ledger.Conway.Governance (
   GovActionPurpose (..),
   GovActionState (..),
   GovPurposeId (..),
-  PrevGovActionIds (..),
+  GovRelation (..),
   ProposalProcedure (..),
   RatifyState (..),
   Vote (..),
@@ -71,6 +73,8 @@ import Cardano.Ledger.Conway.Governance (
   constitutionAnchorL,
   constitutionScriptL,
   govActionIdToText,
+  hoistGovRelation,
+  withGovActionParent,
  )
 import Cardano.Ledger.Shelley.Governance (
   EraGov (GovState),

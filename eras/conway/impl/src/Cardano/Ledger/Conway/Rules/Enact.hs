@@ -66,41 +66,36 @@ enactmentTransition :: forall era. EraPParams era => TransitionRule (ConwayENACT
 enactmentTransition = do
   TRC ((), st, EnactSignal govActionId act) <- judgmentContext
 
-  case act of
-    ParameterChange _ ppup _ ->
-      pure $
+  pure $!
+    case act of
+      ParameterChange _ ppup _ ->
         st
           & ensCurPParamsL %~ (`applyPPUpdates` ppup)
           & ensPrevPParamUpdateL .~ SJust (GovPurposeId govActionId)
-    HardForkInitiation _ pv ->
-      pure $
+      HardForkInitiation _ pv ->
         st
           & ensProtVerL .~ pv
           & ensPrevHardForkL .~ SJust (GovPurposeId govActionId)
-    TreasuryWithdrawals wdrls _ -> do
-      let wdrlsAmount = fold wdrls
-          wdrlsNoNetworkId = Map.mapKeys raCredential wdrls
-      pure
-        st
-          { ensWithdrawals = Map.unionWith (<>) wdrlsNoNetworkId $ ensWithdrawals st
-          , ensTreasury = ensTreasury st <-> wdrlsAmount
-          }
-    NoConfidence _ ->
-      pure $
+      TreasuryWithdrawals wdrls _ ->
+        let wdrlsAmount = fold wdrls
+            wdrlsNoNetworkId = Map.mapKeys raCredential wdrls
+         in st
+              { ensWithdrawals = Map.unionWith (<>) wdrlsNoNetworkId $ ensWithdrawals st
+              , ensTreasury = ensTreasury st <-> wdrlsAmount
+              }
+      NoConfidence _ ->
         st
           & ensCommitteeL .~ SNothing
           & ensPrevCommitteeL .~ SJust (GovPurposeId govActionId)
-    UpdateCommittee _ membersToRemove membersToAdd newQuorum -> do
-      pure $
+      UpdateCommittee _ membersToRemove membersToAdd newQuorum -> do
         st
           & ensCommitteeL %~ SJust . updatedCommittee membersToRemove membersToAdd newQuorum
           & ensPrevCommitteeL .~ SJust (GovPurposeId govActionId)
-    NewConstitution _ c ->
-      pure $
+      NewConstitution _ c ->
         st
           & ensConstitutionL .~ c
           & ensPrevConstitutionL .~ SJust (GovPurposeId govActionId)
-    InfoAction -> pure st
+      InfoAction -> st
 
 updatedCommittee ::
   Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->

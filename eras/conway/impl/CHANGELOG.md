@@ -3,6 +3,11 @@
 ## 1.13.0.0
 
 * Rename:
+  * `pfPParamUpdateL` to `grPParamUpdateL`
+  * `pfHardForkL` to `grHardForkL`
+  * `pfCommitteeL` to `grCommitteeL`
+  * `pfConstitutionL` to `grConstitutionL`
+* Rename:
   * `cgProposalsL` to `cgsProposalsL`
   * `cgEnactStateL` to `cgsEnactStateL`
   * `cgDRepPulsingStateL` to `cgsDRepPulsingStateL`
@@ -13,7 +18,9 @@
   * `govStatePrevGovActionIds`
   * `mkEnactState`
 * Deprecated `curPParamsConwayGovStateL` and `curPParamsConwayGovStateL`
-* Add `TreeMaybe`, `toPForest` and `toPForestEither`
+* Rename `PForest` to `GovRelation`
+* Add `hoistGovRelation` and `withGovActionParent`
+* Add `TreeMaybe`, `toGovRelationTree` and `toGovRelationTreeEither`
 * Remove `proposalsAreConsistent`
 
 ### `testlib`

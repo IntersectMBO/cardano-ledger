@@ -55,18 +55,17 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   GovProcedures (..),
   GovPurposeId (..),
-  PrevGovActionIds (..),
+  GovRelation (..),
   ProposalProcedure (..),
   Proposals,
   Voter (..),
   VotingProcedure (..),
   foldlVotingProcedures,
+  grHardForkL,
   indexedGovProps,
   isCommitteeVotingAllowed,
   isDRepVotingAllowed,
   isStakePoolVotingAllowed,
-  pfHardForkL,
-  prevGovActionIdsL,
   proposalsActionsMap,
   proposalsAddAction,
   proposalsAddVote,
@@ -117,7 +116,7 @@ data GovEnv era = GovEnv
   { geTxId :: !(TxId (EraCrypto era))
   , geEpoch :: !EpochNo
   , gePParams :: !(PParams era)
-  , gePrevGovActionIds :: !(PrevGovActionIds era)
+  , gePrevGovActionIds :: !(GovRelation StrictMaybe era)
   , gePPolicy :: !(StrictMaybe (ScriptHash (EraCrypto era)))
   }
 
@@ -424,11 +423,11 @@ preceedingHardFork ::
   EraPParams era =>
   GovAction era ->
   PParams era ->
-  PrevGovActionIds era ->
+  GovRelation StrictMaybe era ->
   Proposals era ->
   Maybe (StrictMaybe (GovPurposeId 'HardForkPurpose era), ProtVer, ProtVer)
 preceedingHardFork (HardForkInitiation mPrev newProtVer) pp pgaids ps
-  | mPrev == pgaids ^. prevGovActionIdsL . pfHardForkL = Just (mPrev, newProtVer, pp ^. ppProtocolVersionL)
+  | mPrev == pgaids ^. grHardForkL = Just (mPrev, newProtVer, pp ^. ppProtocolVersionL)
   | otherwise = do
       SJust (GovPurposeId prevGovActionId) <- Just mPrev
       HardForkInitiation _ prevProtVer <- gasAction <$> proposalsLookupId prevGovActionId ps
