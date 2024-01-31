@@ -105,7 +105,7 @@ spec = describe "UTxO" $ do
           mkBasicTxBody
             & outputsTxBodyL @era
               .~ SSeq.fromList [mkBasicTxOut @era scriptAddr (inject (Coin 1000))]
-      pure $ txInAt 1 tx
+      pure $ txInAt 0 tx
 
     createRefScriptsUtxos :: [Script era] -> ImpTestM era (Map.Map (TxIn (EraCrypto era)) (Script era))
     createRefScriptsUtxos scripts = do
@@ -121,7 +121,7 @@ spec = describe "UTxO" $ do
           mkBasicTxBody
             & outputsTxBodyL @era
               .~ SSeq.fromList outs
-      let refIns = (\i -> txInAt (fromIntegral i) tx) <$> [1 .. length scripts]
+      let refIns = (\i -> txInAt (fromIntegral i) tx) <$> [0 .. length scripts - 1]
       pure $ Map.fromList $ refIns `zip` scripts
 
     spendScriptUsingRefScripts :: TxIn (EraCrypto era) -> Set.Set (TxIn (EraCrypto era)) -> ImpTestM era (Tx era)

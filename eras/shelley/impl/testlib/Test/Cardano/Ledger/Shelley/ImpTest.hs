@@ -102,6 +102,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   TxIx (..),
   inject,
+  mkTxIxPartial,
   textToUrl,
  )
 import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
@@ -174,7 +175,7 @@ import Data.IORef
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromJust, fromMaybe, mapMaybe)
-import Data.Sequence.Strict (StrictSeq ((:<|)))
+import Data.Sequence.Strict (StrictSeq ((:|>)))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -203,7 +204,7 @@ import UnliftIO.Exception (
 
 data ImpTestState era = ImpTestState
   { impNES :: !(NewEpochState era)
-  , impRootTxId :: !(TxId (EraCrypto era))
+  , impRootTxIn :: !(TxIn (EraCrypto era))
   , impFreshIdx :: !Integer
   , impKeyPairs :: !(forall k. Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
   , impScripts :: !(Map (ScriptHash (EraCrypto era)) (Script era))
@@ -227,8 +228,8 @@ impLastTickL = lens impLastTick (\x y -> x {impLastTick = y})
 impLastTickG :: SimpleGetter (ImpTestState era) SlotNo
 impLastTickG = impLastTickL
 
-impRootTxIdL :: Lens' (ImpTestState era) (TxId (EraCrypto era))
-impRootTxIdL = lens impRootTxId (\x y -> x {impRootTxId = y})
+impRootTxInL :: Lens' (ImpTestState era) (TxIn (EraCrypto era))
+impRootTxInL = lens impRootTxIn (\x y -> x {impRootTxIn = y})
 
 impKeyPairsG ::
   SimpleGetter
@@ -566,12 +567,11 @@ getRewardAccountAmount rewardAcount = do
 
 lookupImpRootTxOut :: ImpTestM era (TxIn (EraCrypto era), TxOut era)
 lookupImpRootTxOut = do
-  ImpTestState {impRootTxId} <- get
-  let rootTxIn = TxIn impRootTxId $ TxIx 0
+  ImpTestState {impRootTxIn} <- get
   utxo <- getUTxO
-  case txinLookup rootTxIn utxo of
+  case txinLookup impRootTxIn utxo of
     Nothing -> error "Root txId no longer points to an existing unspent output"
-    Just rootTxOut -> pure (rootTxIn, rootTxOut)
+    Just rootTxOut -> pure (impRootTxIn, rootTxOut)
 
 impAddNativeScript ::
   forall era.
@@ -642,7 +642,7 @@ fixupFees tx nativeScriptKeyWits = do
         changeBeforeFee
   let
     txNoWits =
-      txWithRoot & bodyTxL . outputsTxBodyL %~ (changeBeforeFeeTxOut :<|)
+      txWithRoot & bodyTxL . outputsTxBodyL %~ (:|> changeBeforeFeeTxOut)
     outsBeforeFee = txWithRoot ^. bodyTxL . outputsTxBodyL
     fee = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
     change = changeBeforeFeeTxOut ^. coinTxOutL <-> fee
@@ -652,7 +652,7 @@ fixupFees tx nativeScriptKeyWits = do
     txWithFee
       | change >= getMinCoinTxOut pp changeTxOut =
           txNoWits
-            & bodyTxL . outputsTxBodyL .~ (changeTxOut :<| outsBeforeFee)
+            & bodyTxL . outputsTxBodyL .~ (outsBeforeFee :|> changeTxOut)
             & bodyTxL . feeTxBodyL .~ fee
       | otherwise =
           txNoWits
@@ -696,10 +696,14 @@ trySubmitTx tx = do
       else pure tx
   lEnv <- impLedgerEnv st
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
+  let txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
+      outsSize = SSeq.length $ txFixed ^. bodyTxL . outputsTxBodyL
+      rootIndex
+        | outsSize > 0 = outsSize - 1
+        | otherwise = error ("Expected at least 1 output after submitting tx: " <> show txId)
   forM res $ \st' -> do
     modify $ impNESL . nesEsL . esLStateL .~ st'
-    let txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
-    impRootTxIdL .= txId
+    impRootTxInL .= TxIn txId (mkTxIxPartial (fromIntegral rootIndex))
     pure txFixed
 
 -- | Submit a transaction that is expected to be rejected. The inputs and
@@ -844,7 +848,7 @@ withImpState =
     pure
       ImpTestState
         { impNES = initImpNES rootCoin
-        , impRootTxId = TxId (mkDummySafeHash Proxy 0)
+        , impRootTxIn = TxIn (TxId (mkDummySafeHash Proxy 0)) (mkTxIxPartial 0)
         , impFreshIdx = 1000 -- Added some leeway to prevent collisions with values in the initial state
         , impKeyPairs = mempty
         , impScripts = mempty

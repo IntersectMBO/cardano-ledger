@@ -36,7 +36,7 @@ spec = describe "LEDGER" $ do
             .~ SSeq.singleton
               (mkBasicTxOut (mkAddr (kpPayment1, kpStaking1)) $ inject coin1)
     UTxO utxo1 <- getUTxO
-    case Map.lookup (mkTxInPartial (txIdTx tx1) 1) utxo1 of
+    case Map.lookup (mkTxInPartial (txIdTx tx1) 0) utxo1 of
       Just out1 -> out1 ^. coinTxOutL `shouldBe` coin1
       Nothing -> expectationFailure "Could not find the TxOut of the first transaction"
     kpPayment2 <- lookupKeyPair =<< freshKeyHash
@@ -52,7 +52,7 @@ spec = describe "LEDGER" $ do
             .~ SSeq.singleton
               (mkBasicTxOut (mkAddr (kpPayment2, kpStaking2)) $ inject coin2)
     UTxO utxo2 <- getUTxO
-    case Map.lookup (mkTxInPartial (txIdTx tx2) 1) utxo2 of
+    case Map.lookup (mkTxInPartial (txIdTx tx2) 0) utxo2 of
       Just out1 -> do
         out1 ^. coinTxOutL `shouldBe` coin2
       Nothing -> expectationFailure "Could not find the TxOut of the second transaction"
