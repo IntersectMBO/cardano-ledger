@@ -249,19 +249,19 @@ proposalsAddAction gas ps = withGovActionParent gas (Just psWithGas) update
       StrictMaybe (GovPurposeId p era) ->
       GovPurposeId p era ->
       Maybe (Proposals era)
-    update forestL parent newId
-      | parent == ps ^. pRootsL . forestL . prRootL =
+    update govRelationL parent newId
+      | parent == ps ^. pRootsL . govRelationL . prRootL =
           Just $
             checkInvariantAfterAddition gas ps $
               psWithGas
-                & pRootsL . forestL . prChildrenL %~ Set.insert newId
-                & pGraphL . forestL . pGraphNodesL %~ Map.insert newId (PEdges parent Set.empty)
+                & pRootsL . govRelationL . prChildrenL %~ Set.insert newId
+                & pGraphL . govRelationL . pGraphNodesL %~ Map.insert newId (PEdges parent Set.empty)
       | SJust parentId <- parent
-      , Map.member parentId $ ps ^. pGraphL . forestL . pGraphNodesL =
+      , Map.member parentId $ ps ^. pGraphL . govRelationL . pGraphNodesL =
           Just $
             checkInvariantAfterAddition gas ps $
               psWithGas
-                & pGraphL . forestL . pGraphNodesL
+                & pGraphL . govRelationL . pGraphNodesL
                   %~ ( Map.insert newId (PEdges (SJust parentId) Set.empty)
                         . Map.adjust (peChildrenL %~ Set.insert newId) parentId
                      )
@@ -340,20 +340,20 @@ proposalsRemoveIds gais ps =
    in (checkInvariantAfterDeletion gais ps $ Proposals retainedOMap roots hierarchy, removedFromOMap)
   where
     removeEach accum@(!roots, !graph) gas =
-      withGovActionParent gas accum $ \forestL parent gpi ->
-        if parent == roots ^. forestL . prRootL
+      withGovActionParent gas accum $ \govRelationL parent gpi ->
+        if parent == roots ^. govRelationL . prRootL
           then
-            ( roots & forestL . prChildrenL %~ Set.delete gpi
-            , graph & forestL . pGraphNodesL %~ Map.delete gpi
+            ( roots & govRelationL . prChildrenL %~ Set.delete gpi
+            , graph & govRelationL . pGraphNodesL %~ Map.delete gpi
             )
           else
             ( roots
             , graph
-                & forestL . pGraphNodesL %~ Map.delete gpi
+                & govRelationL . pGraphNodesL %~ Map.delete gpi
                 & case parent of
-                  SNothing -> id
+                  SNothing -> assert False id
                   SJust parentGpi ->
-                    forestL . pGraphNodesL %~ Map.adjust (peChildrenL %~ Set.delete gpi) parentGpi
+                    govRelationL . pGraphNodesL %~ Map.adjust (peChildrenL %~ Set.delete gpi) parentGpi
             )
 
 -- | Get all the descendents of an action-id from the @`Proposals`@ forest
@@ -364,19 +364,15 @@ getAllDescendents ::
   Set (GovActionId (EraCrypto era))
 getAllDescendents (Proposals omap _roots graph) gai = case OMap.lookup gai omap of
   Nothing -> Set.empty
-  Just gas -> withGovActionParent gas Set.empty $ \graphL _ ->
-    Set.map unGovPurposeId . go graphL
-  where
-    go ::
-      forall p.
-      Lens' (GovRelation PGraph era) (PGraph (GovPurposeId p era)) ->
-      GovPurposeId p era ->
-      Set (GovPurposeId p era)
-    go graphL gpi =
-      case Map.lookup gpi $ graph ^. graphL . pGraphNodesL of
-        -- Impossible! getAllDescendents: GovPurposeId not found
-        Nothing -> assert False mempty
-        Just (PEdges _parent children) -> children <> foldMap (go graphL) children
+  Just gas -> withGovActionParent gas Set.empty $ \govRelationL _ ->
+    let
+      go gpi =
+        case Map.lookup gpi $ graph ^. govRelationL . pGraphNodesL of
+          -- Impossible! getAllDescendents: GovPurposeId not found
+          Nothing -> assert False mempty
+          Just (PEdges _parent children) -> children <> foldMap go children
+     in
+      Set.map unGovPurposeId . go
 
 -- | Remove the set of given action-ids with their descendents from the
 -- @`Proposals`@ forest
@@ -428,26 +424,26 @@ proposalsApplyEnactment enactedGass expiredGais props =
           ( Proposals era
           , Map (GovActionId (EraCrypto era)) (GovActionState era)
           )
-        enactFromRoot forestL parent gpi =
+        enactFromRoot govRelationL parent gpi =
           let siblings =
                 Set.delete gai $
-                  Set.map unGovPurposeId (ps ^. pRootsL . forestL . prChildrenL)
+                  Set.map unGovPurposeId (ps ^. pRootsL . govRelationL . prChildrenL)
               newRootChildren =
-                case Map.lookup gpi $ ps ^. pGraphL . forestL . pGraphNodesL of
+                case Map.lookup gpi $ ps ^. pGraphL . govRelationL . pGraphNodesL of
                   Nothing -> assert False Set.empty
                   Just pe -> peChildren pe
               (withoutSiblings, removedActions) = proposalsRemoveDescendentIds siblings ps
-              newGraph = Map.delete gpi $ withoutSiblings ^. pGraphL . forestL . pGraphNodesL
+              newGraph = Map.delete gpi $ withoutSiblings ^. pGraphL . govRelationL . pGraphNodesL
               (newOMap, enactedAction) =
                 OMap.extractKeys (Set.singleton gai) $ withoutSiblings ^. pPropsL
               newProposals =
                 withoutSiblings
-                  & pGraphL . forestL . pGraphNodesL .~ newGraph
-                  & pRootsL . forestL . prRootL .~ SJust gpi -- Set the new root
-                  & pRootsL . forestL . prChildrenL .~ newRootChildren -- Set the new root children
+                  & pRootsL . govRelationL . prRootL .~ SJust gpi -- Set the new root
+                  & pRootsL . govRelationL . prChildrenL .~ newRootChildren
+                  & pGraphL . govRelationL . pGraphNodesL .~ newGraph
                   & pPropsL .~ newOMap
            in assert
-                (ps ^. pRootsL . forestL . prRootL == parent)
+                (ps ^. pRootsL . govRelationL . prRootL == parent)
                 ( checkInvariantAfterDeletion (Set.singleton gai) withoutSiblings newProposals
                 , removed `Map.union` removedActions `Map.union` enactedAction
                 )
@@ -562,8 +558,8 @@ toChildParentRelation ::
 toChildParentRelation = foldMap toChildParent
   where
     toChildParent gas =
-      withGovActionParent gas mempty $ \pfL parent _ ->
-        mempty & pfL .~ ChildParent (Map.singleton (GovPurposeId (gas ^. gasIdL)) parent)
+      withGovActionParent gas mempty $ \govRelationL parent _ ->
+        mempty & govRelationL .~ ChildParent (Map.singleton (GovPurposeId (gas ^. gasIdL)) parent)
 
 toPTree ::
   (Ord a, Show a) =>
