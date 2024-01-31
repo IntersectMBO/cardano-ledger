@@ -22,6 +22,7 @@
 * Add `hoistGovRelation` and `withGovActionParent`
 * Add `TreeMaybe`, `toGovRelationTree` and `toGovRelationTreeEither`
 * Remove `proposalsAreConsistent`
+* Remove `registerDelegs` and `registerInitialDReps`
 
 ### `testlib`
 

@@ -23,6 +23,8 @@ instance Crypto c => EraTransition (MaryEra c) where
 
   mkTransitionConfig () = MaryTransitionConfig
 
+  injectIntoTestState = registerInitialFundsThenStaking
+
   tcPreviousEraConfigL =
     lens mtcAllegraTransitionConfig (\mtc pc -> mtc {mtcAllegraTransitionConfig = pc})
 

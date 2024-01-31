@@ -23,6 +23,8 @@ instance Crypto c => EraTransition (BabbageEra c) where
 
   mkTransitionConfig () = BabbageTransitionConfig
 
+  injectIntoTestState = registerInitialFundsThenStaking
+
   tcPreviousEraConfigL =
     lens btcAlonzoTransitionConfig (\btc pc -> btc {btcAlonzoTransitionConfig = pc})
 

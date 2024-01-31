@@ -24,8 +24,7 @@ module Cardano.Ledger.Shelley.Transition (
   tcInitialStakingL,
   mkShelleyTransitionConfig,
   createInitialState,
-  registerInitialFunds,
-  registerInitialStaking,
+  registerInitialFundsThenStaking,
   toShelleyTransitionConfigPairs,
   protectMainnet,
   protectMainnetLens,
@@ -85,6 +84,15 @@ class
     TransitionConfig (PreviousEra era) ->
     TransitionConfig era
 
+  injectIntoTestState ::
+    -- | Extract data from the given transition configuration and store it in the given state.
+    --
+    -- /Warning/ - Should only be used in testing and benchmarking. Will result in an error
+    -- when 'NetworkId' is set to 'Mainnet'.
+    TransitionConfig era ->
+    NewEpochState era ->
+    NewEpochState era
+
   -- | In case when a previous era is available, we should always be able to access
   -- `TransitionConfig` for the previous era, from within the current era's
   -- `TransitionConfig`
@@ -130,6 +138,16 @@ class
 tcNetworkIDG :: EraTransition era => SimpleGetter (TransitionConfig era) Network
 tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
 
+registerInitialFundsThenStaking ::
+  EraTransition era =>
+  TransitionConfig era ->
+  NewEpochState era ->
+  NewEpochState era
+registerInitialFundsThenStaking cfg =
+  -- We must first register the initial funds, because the stake
+  -- information depends on it.
+  registerInitialStaking cfg . registerInitialFunds cfg
+
 instance Crypto c => EraTransition (ShelleyEra c) where
   newtype TransitionConfig (ShelleyEra c) = ShelleyTransitionConfig
     { stcShelleyGenesis :: ShelleyGenesis c
@@ -138,6 +156,8 @@ instance Crypto c => EraTransition (ShelleyEra c) where
 
   mkTransitionConfig =
     error "Impossible: There is no EraTransition instance for ByronEra"
+
+  injectIntoTestState = registerInitialFundsThenStaking
 
   tcPreviousEraConfigL = notSupportedInThisEraL
 
@@ -228,6 +248,8 @@ toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
 --
 -- /Warning/ - Should only be used in testing and benchmarking. Will result in an error
 -- when NetworkId is set to Mainnet
+--
+-- This function does not register any initial funds or delegates.
 createInitialState ::
   forall era.
   (EraTransition era, HasCallStack) =>
@@ -278,7 +300,7 @@ createInitialState tc =
     initialEpochNo :: EpochNo
     initialEpochNo = 0
     initialUtxo :: UTxO era
-    initialUtxo = genesisUTxO sg
+    initialUtxo = mempty
     reserves :: Coin
     reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coinBalance initialUtxo
 

@@ -12,8 +12,6 @@ module Cardano.Ledger.Conway.Transition (
   ConwayEraTransition (..),
   TransitionConfig (..),
   toConwayTransitionConfigPairs,
-  registerDelegs,
-  registerInitialDReps,
 ) where
 
 import Cardano.Ledger.Alonzo.Transition (toAlonzoTransitionConfigPairs)
@@ -72,6 +70,15 @@ class EraTransition era => ConwayEraTransition era where
 
   tcConwayGenesisL :: Lens' (TransitionConfig era) (ConwayGenesis (EraCrypto era))
 
+registerDRepsThenDelegs ::
+  ConwayEraTransition era =>
+  TransitionConfig era ->
+  NewEpochState era ->
+  NewEpochState era
+registerDRepsThenDelegs cfg =
+  -- NOTE: The order of registration does not matter.
+  registerDelegs cfg . registerInitialDReps cfg
+
 instance Crypto c => EraTransition (ConwayEra c) where
   data TransitionConfig (ConwayEra c) = ConwayTransitionConfig
     { ctcConwayGenesis :: !(ConwayGenesis c)
@@ -80,6 +87,10 @@ instance Crypto c => EraTransition (ConwayEra c) where
     deriving (Show, Eq, Generic)
 
   mkTransitionConfig = ConwayTransitionConfig
+
+  injectIntoTestState cfg =
+    registerDRepsThenDelegs cfg
+      . registerInitialFundsThenStaking cfg
 
   tcPreviousEraConfigL =
     lens ctcBabbageTransitionConfig (\ctc pc -> ctc {ctcBabbageTransitionConfig = pc})

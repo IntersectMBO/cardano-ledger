@@ -22,6 +22,8 @@ instance Crypto c => EraTransition (AllegraEra c) where
 
   mkTransitionConfig () = AllegraTransitionConfig
 
+  injectIntoTestState = registerInitialFundsThenStaking
+
   tcPreviousEraConfigL =
     lens atcShelleyTransitionConfig (\atc pc -> atc {atcShelleyTransitionConfig = pc})
 
