@@ -158,7 +158,13 @@ class
   -- | Using information from the transaction validate the supplied native script.
   validateNativeScript :: Tx era -> NativeScript era -> Bool
 
-  getMinFeeTx :: PParams era -> Tx era -> Coin
+  -- | Minimum fee calculation excluding witnesses
+  getMinFeeTx ::
+    PParams era ->
+    Tx era ->
+    -- | Size in bytes of reference scripts present in this transaction
+    Int ->
+    Coin
 
   upgradeTx ::
     EraTx (PreviousEra era) =>

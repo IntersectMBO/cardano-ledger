@@ -47,9 +47,15 @@ import Lens.Micro
 -- This function potentially changes the `feeTxBodyL` field of the `TxBody`, as such it
 -- affects the hash of the body, which consequently invalidates all of the signature in
 -- the attached witnesses.
-setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
-setMinFeeTx pp tx =
-  let curMinFee = getMinFeeTx pp tx
+setMinFeeTx ::
+  EraTx era =>
+  PParams era ->
+  Tx era ->
+  -- | Size in bytes of reference scripts present in this transaction
+  Int ->
+  Tx era
+setMinFeeTx pp tx refScriptsSize =
+  let curMinFee = getMinFeeTx pp tx refScriptsSize
       curFee = tx ^. bodyTxL . feeTxBodyL
       modifiedTx = tx & bodyTxL . feeTxBodyL .~ curMinFee
    in if curFee == curMinFee
@@ -164,9 +170,12 @@ estimateMinFeeTx ::
   Int ->
   -- | The number of Byron key witnesses still to be added to the transaction.
   Int ->
+  -- | The total size in bytes of reference scripts
+  Int ->
   -- | The required minimum fee.
   Coin
-estimateMinFeeTx pp tx numKeyWits numByronKeyWits = setMinFeeTx pp tx' ^. bodyTxL . feeTxBodyL
+estimateMinFeeTx pp tx numKeyWits numByronKeyWits refScriptsSize =
+  setMinFeeTx pp tx' refScriptsSize ^. bodyTxL . feeTxBodyL
   where
     tx' = addDummyWitsTx pp tx numKeyWits $ replicate numByronKeyWits dummyByronAttributes
     -- We assume testnet network magic here to avoid having to thread the actual network

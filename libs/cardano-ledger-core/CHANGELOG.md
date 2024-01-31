@@ -2,6 +2,10 @@
 
 ## 1.11.0.0
 
+* Change signature by adding `refScriptsSize` parameter for:
+  * `getMinFeeTx` in `EraTx`
+  * `setMinFeeTx`
+  * `estimateMinFeeTx`
 * Add `originalBytesSize` and default implementation to `SafeToHash` typeclass
 * Rename `RewardAccount` fields `getRwdNetwork` and `getRwdCred` to `raNetwork` and `raCredential` respectively
 * Deprecate `ppRewardAcnt` in favor of `ppRewardAccount`
