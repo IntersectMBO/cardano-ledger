@@ -385,6 +385,7 @@ indexRedeemers ::
 indexRedeemers tx sp = Map.lookup (hoistPlutusPurpose toAsIndex sp) redeemers
   where
     redeemers = unRedeemers (tx ^. witsTxL . rdmrsTxWitsL)
+{-# DEPRECATED indexRedeemers "As no longer needed" #-}
 
 --------------------------------------------------------------------------------
 -- Serialisation
