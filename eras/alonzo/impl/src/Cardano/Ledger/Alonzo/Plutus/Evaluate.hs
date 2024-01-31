@@ -42,6 +42,7 @@ import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
+import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Data.Aeson (ToJSON (..), (.=), pattern String)
 import Data.List (intercalate)
@@ -77,6 +78,10 @@ deriving instance
 deriving instance
   (AlonzoEraScript era, NoThunks (ContextError era)) =>
   NoThunks (CollectError era)
+
+deriving instance
+  (AlonzoEraScript era, NFData (ContextError era)) =>
+  NFData (CollectError era)
 
 instance (AlonzoEraScript era, EncCBOR (ContextError era)) => EncCBOR (CollectError era) where
   encCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x

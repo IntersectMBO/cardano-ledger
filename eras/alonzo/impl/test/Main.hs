@@ -7,6 +7,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Alonzo.BinarySpec as BinarySpec
+import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import Test.Cardano.Ledger.Alonzo.ImpTest ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
@@ -21,6 +22,7 @@ main =
       roundTripJsonEraSpec @Alonzo
       describe "Imp" $ do
         ShelleyImp.spec @Alonzo
+        AlonzoImp.spec @Alonzo
       describe "CostModels" $ do
         CostModelsSpec.spec @Alonzo
       describe "TxWits" $ do

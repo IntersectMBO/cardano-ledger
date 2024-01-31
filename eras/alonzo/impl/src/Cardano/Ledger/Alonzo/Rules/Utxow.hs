@@ -26,7 +26,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxow (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class (Signable)
+import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXOW)
@@ -70,6 +70,7 @@ import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended
@@ -139,6 +140,14 @@ instance
   , NoThunks (PredicateFailure (EraRule "UTXO" era))
   ) =>
   NoThunks (AlonzoUtxowPredFailure era)
+
+instance
+  ( AlonzoEraScript era
+  , NFData (TxCert era)
+  , NFData (PredicateFailure (EraRule "UTXO" era))
+  , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
+  ) =>
+  NFData (AlonzoUtxowPredFailure era)
 
 instance
   ( AlonzoEraScript era

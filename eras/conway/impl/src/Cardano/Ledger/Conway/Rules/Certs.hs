@@ -61,6 +61,7 @@ import Cardano.Ledger.Shelley.Rules (
   validateStakePoolDelegateeRegistered,
   validateZeroRewards,
  )
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
@@ -108,6 +109,10 @@ deriving stock instance
 instance
   NoThunks (PredicateFailure (EraRule "CERT" era)) =>
   NoThunks (ConwayCertsPredFailure era)
+
+instance
+  NFData (PredicateFailure (EraRule "CERT" era)) =>
+  NFData (ConwayCertsPredFailure era)
 
 newtype ConwayCertsEvent era = CertEvent (Event (EraRule "CERT" era))
 

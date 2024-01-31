@@ -36,6 +36,8 @@ instance
 
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
 
+  fixupTx = shelleyFixupTx
+
 impAllegraSatisfyNativeScript ::
   (ShelleyEraImp era, NativeScript era ~ Timelock era) =>
   NativeScript era ->

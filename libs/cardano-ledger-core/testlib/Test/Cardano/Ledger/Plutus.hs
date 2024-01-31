@@ -1,6 +1,10 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Test.Cardano.Ledger.Plutus (
+  PlutusArgs (..),
+  ScriptTestContext (..),
+
   -- * Plutus
   alwaysSucceedsPlutus,
   alwaysFailsPlutus,
@@ -29,7 +33,7 @@ import Cardano.Ledger.Plutus.CostModels (
   mkCostModel,
   mkCostModels,
  )
-import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..))
+import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..), PlutusLanguage)
 import qualified Data.Map.Strict as Map
 import GHC.Stack
 import Numeric.Natural (Natural)
@@ -41,6 +45,19 @@ import qualified PlutusLedgerApi.Test.V1.EvaluationContext as PV1
 import qualified PlutusLedgerApi.Test.V2.EvaluationContext as PV2
 import qualified PlutusLedgerApi.Test.V3.EvaluationContext as PV3
 import PlutusLedgerApi.V1 as PV1
+
+data PlutusArgs = PlutusArgs
+  { paData :: Data
+  , paSpendDatum :: Maybe Data
+  }
+
+data ScriptTestContext where
+  ScriptTestContext ::
+    PlutusLanguage l =>
+    { stcScript :: Plutus l
+    , stcArgs :: PlutusArgs
+    } ->
+    ScriptTestContext
 
 -- | Construct a test cost model where all parameters are set to the same value
 mkCostModelConst :: HasCallStack => Language -> Integer -> CostModel

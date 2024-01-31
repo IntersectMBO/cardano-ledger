@@ -65,6 +65,7 @@ import Cardano.Ledger.UTxO (
  )
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
@@ -134,6 +135,14 @@ instance
   , NoThunks (PPUPPredFailure era)
   ) =>
   NoThunks (AllegraUtxoPredFailure era)
+
+instance
+  ( Era era
+  , NFData (TxOut era)
+  , NFData (Value era)
+  , NFData (PPUPPredFailure era)
+  ) =>
+  NFData (AllegraUtxoPredFailure era)
 
 data AllegraUtxoEvent era
   = UpdateEvent (Event (EraRule "PPUP" era))

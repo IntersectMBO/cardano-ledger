@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -15,6 +16,7 @@ import Test.Cardano.Ledger.Mary.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.ImpTest (
   ShelleyEraImp (..),
   initShelleyImpNES,
+  shelleyFixupTx,
  )
 
 instance
@@ -27,3 +29,4 @@ instance
   where
   initImpNES = initShelleyImpNES
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
+  fixupTx = shelleyFixupTx

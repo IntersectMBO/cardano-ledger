@@ -14,7 +14,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -35,6 +34,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestEnv (..),
   ImpException (..),
   ShelleyEraImp (..),
+  PlutusArgs,
+  ScriptTestContext,
   initShelleyImpNES,
   impWitsVKeyNeeded,
   modifyPrevPParams,
@@ -63,8 +64,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   registerPool,
   getRewardAccountAmount,
   withImpState,
-  fixupFees,
-  fixupTx,
+  shelleyFixupTx,
   lookupImpRootTxOut,
   sendValueTo,
   sendCoinTo,
@@ -72,22 +72,29 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   expectRegisteredRewardAddress,
   expectNotRegisteredRewardAddress,
   expectTreasury,
+  getScriptTestContext,
+  updateAddrTxWits,
+  addNativeScriptTxWits,
+  addRootTxIn,
+  fixupFees,
 
   -- * Logging
   logEntry,
   logToExpr,
   logStakeDistr,
+  logFeeMismatch,
 
   -- * Combinators
   withNoFixup,
 
   -- * Lenses
-
+  impScriptsL,
+  impCollateralTxIdsL,
   -- We only export getters, because internal state should not be accessed during testing
   impNESG,
   impLastTickG,
   impKeyPairsG,
-  impScriptsG,
+  impNativeScriptsG,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), seedSizeDSIGN)
@@ -99,6 +106,7 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochSize (..),
   Globals (..),
+  Inject,
   Network (..),
   ShelleyBase,
   SlotNo,
@@ -172,12 +180,13 @@ import Control.State.Transition.Trace (applySTSTest)
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..))
 import Data.Default.Class (Default (..))
+import Data.Functor (($>))
 import Data.Functor.Identity (Identity (..))
 import Data.IORef
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
-import Data.Sequence.Strict (StrictSeq ((:|>)))
+import Data.Maybe (catMaybes, fromMaybe)
+import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -192,6 +201,7 @@ import System.Random
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkKeyHash, mkKeyPair, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals)
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus (PlutusArgs, ScriptTestContext)
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.HUnit.Lang (FailureReason (..), HUnitFailure (..))
 import Test.Hspec.Core.Spec (Example (..), Params, paramsQuickCheckArgs)
@@ -210,9 +220,11 @@ import UnliftIO.Exception (
 data ImpTestState era = ImpTestState
   { impNES :: !(NewEpochState era)
   , impRootTxIn :: !(TxIn (EraCrypto era))
+  , impCollateralTxIds :: ![TxIn (EraCrypto era)]
   , impFreshIdx :: !Integer
   , impKeyPairs :: !(forall k. Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
-  , impScripts :: !(Map (ScriptHash (EraCrypto era)) (Script era))
+  , impNativeScripts :: !(Map (ScriptHash (EraCrypto era)) (NativeScript era))
+  , impScripts :: !(Map (ScriptHash (EraCrypto era)) ScriptTestContext)
   , impLastTick :: !SlotNo
   , impGlobals :: !Globals
   , impLog :: !(Doc ())
@@ -237,17 +249,26 @@ impLastTickG = impLastTickL
 impRootTxInL :: Lens' (ImpTestState era) (TxIn (EraCrypto era))
 impRootTxInL = lens impRootTxIn (\x y -> x {impRootTxIn = y})
 
+impFreshIdxL :: Lens' (ImpTestState era) Integer
+impFreshIdxL = lens impFreshIdx (\x y -> x {impFreshIdx = y})
+
 impKeyPairsG ::
   SimpleGetter
     (ImpTestState era)
     (Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
 impKeyPairsG = to impKeyPairs
 
-impScriptsL :: Lens' (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (Script era))
+impNativeScriptsL :: Lens' (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (NativeScript era))
+impNativeScriptsL = lens impNativeScripts (\x y -> x {impNativeScripts = y})
+
+impNativeScriptsG :: SimpleGetter (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (NativeScript era))
+impNativeScriptsG = impNativeScriptsL
+
+impScriptsL :: Lens' (ImpTestState era) (Map (ScriptHash (EraCrypto era)) ScriptTestContext)
 impScriptsL = lens impScripts (\x y -> x {impScripts = y})
 
-impScriptsG :: SimpleGetter (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (Script era))
-impScriptsG = impScriptsL
+impCollateralTxIdsL :: Lens' (ImpTestState era) [TxIn (EraCrypto era)]
+impCollateralTxIdsL = lens impCollateralTxIds (\x y -> x {impCollateralTxIds = y})
 
 class
   ( Show (NewEpochState era)
@@ -289,6 +310,7 @@ class
   , NFData (StashedAVVMAddresses era)
   , NFData (Tx era)
   , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
+  , NFData (PredicateFailure (EraRule "LEDGER" era))
   , VRF.VRFAlgorithm (VRF (EraCrypto era))
   , HashAlgorithm (HASH (EraCrypto era))
   , DSIGNAlgorithm (DSIGN (EraCrypto era))
@@ -310,6 +332,8 @@ class
     (PParams era -> PParams era) ->
     ImpTestM era ()
   modifyPParams f = modifyNES $ nesEsL . curPParamsEpochStateL %~ f
+
+  fixupTx :: Tx era -> ImpTestM era (Tx era)
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
@@ -358,6 +382,17 @@ freshKeyHashVRF = do
   idx <- dispenseIndex
   pure $ mkHashVerKeyVRF @era $ fromIntegral idx
 
+testKeyHash :: Crypto c => KeyHash kd c
+testKeyHash = mkKeyHash (-1)
+
+impAddr :: Crypto c => Int -> Addr c
+impAddr idx =
+  let KeyPair vk _ = mkKeyPair idx
+   in Addr
+        Testnet
+        (KeyHashObj $ hashKey vk)
+        StakeRefNull
+
 initShelleyImpNES ::
   forall era.
   ( Default (StashedAVVMAddresses era)
@@ -393,8 +428,7 @@ initShelleyImpNES rootCoin =
     , nesBcur = BlocksMade mempty
     }
   where
-    testKeyHash = mkKeyHash (-1)
-    rootTxId = TxId (mkDummySafeHash Proxy 0)
+    rootTxId = mkTxId 0
     pp =
       emptyPParams
         & ppMinFeeAL .~ Coin 44
@@ -423,20 +457,27 @@ initShelleyImpNES rootCoin =
         }
         & prevPParamsEpochStateL .~ pp
         & curPParamsEpochStateL .~ pp
-    addr =
-      Addr
-        Testnet
-        (KeyHashObj $ hashKey vk)
-        (StakeRefBase (KeyHashObj testKeyHash))
     utxo =
-      UTxO $
-        Map.fromList
-          [
-            ( TxIn rootTxId minBound
-            , mkBasicTxOut addr $ inject rootCoin
-            )
-          ]
-    KeyPair vk _ = mkKeyPair 0
+      UTxO
+        . Map.fromList
+        $ (TxIn rootTxId minBound, mkBasicTxOut (impAddr 0) $ inject rootCoin)
+          : mkCollateralUTxO rootCoin
+
+mkTxId :: Crypto c => Int -> TxId c
+mkTxId idx = TxId (mkDummySafeHash Proxy idx)
+
+mkCollateralUTxO ::
+  ( EraTxOut era
+  , Inject t (Value era)
+  ) =>
+  t ->
+  [(TxIn (EraCrypto era), TxOut era)]
+mkCollateralUTxO rootCoin =
+  [ ( TxIn (mkTxId idx) minBound
+    , mkBasicTxOut (impAddr idx) $ inject rootCoin
+    )
+  | idx <- [1 .. 100]
+  ]
 
 instance
   ( Crypto c
@@ -468,6 +509,8 @@ instance
         RequireAnyOf ss -> satisfyMOf 1 ss
         RequireMOf m ss -> satisfyMOf m ss
     pure $ satisfyScript script
+
+  fixupTx = shelleyFixupTx
 
 getAdaPots :: (EraGov era, EraTxOut era) => ImpTestM era AdaPots
 getAdaPots = totalAdaPotsES <$> getsNES nesEsL
@@ -628,57 +671,98 @@ impAddNativeScript ::
 impAddNativeScript nativeScript = do
   let script = fromNativeScript nativeScript
       scriptHash = hashScript @era script
-  ImpTestState {impScripts} <- get
-  impScriptsL .= Map.insert scriptHash script impScripts
+  ImpTestState {impNativeScripts} <- get
+  impNativeScriptsL .= Map.insert scriptHash nativeScript impNativeScripts
   pure scriptHash
 
+getScriptTestContext :: ScriptHash (EraCrypto era) -> ImpTestM era (Maybe ScriptTestContext)
+getScriptTestContext sh = Map.lookup sh <$> gets impScripts
+
+impNativeScriptsRequired ::
+  EraUTxO era =>
+  Tx era ->
+  ImpTestM
+    era
+    (Map (ScriptHash (EraCrypto era)) (NativeScript era))
+impNativeScriptsRequired tx = do
+  utxo <- getUTxO
+  ImpTestState {impNativeScripts} <- get
+  let needed = getScriptsNeeded utxo (tx ^. bodyTxL)
+      hashesNeeded = getScriptsHashesNeeded needed
+  pure $ impNativeScripts `Map.restrictKeys` hashesNeeded
+
 -- | Modifies transaction by adding necessary scripts
-addScriptTxWits ::
+addNativeScriptTxWits ::
   ShelleyEraImp era =>
   Tx era ->
-  ImpTestM era (Tx era, Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)))
-addScriptTxWits tx = do
+  ImpTestM
+    era
+    (Tx era)
+addNativeScriptTxWits tx = do
+  scriptsRequired <- impNativeScriptsRequired tx
   utxo <- getUTxO
-  ImpTestState {impScripts} <- get
-  -- TODO: Add proper support for Plutus Scripts
-  let needed = getScriptsNeeded utxo (tx ^. bodyTxL)
-      ScriptsProvided provided = getScriptsProvided utxo tx
-      hashesNeeded = getScriptsHashesNeeded needed
-      scriptsRequired = impScripts `Map.restrictKeys` hashesNeeded
+  let ScriptsProvided provided = getScriptsProvided utxo tx
       scriptsToAdd = scriptsRequired Map.\\ provided
-      nativeScripts = mapMaybe getNativeScript $ Map.elems scriptsRequired
-  keyPairs <- mapM impSatisfyNativeScript nativeScripts
-  pure (tx & witsTxL . scriptTxWitsL <>~ scriptsToAdd, mconcat $ catMaybes keyPairs)
+  pure $
+    tx
+      & witsTxL . scriptTxWitsL <>~ fmap fromNativeScript scriptsToAdd
 
 -- | Adds @TxWits@ that will satisfy all of the required key witnesses
-addAddrTxWits ::
+updateAddrTxWits ::
   ( HasCallStack
   , ShelleyEraImp era
   ) =>
   Tx era ->
-  [KeyPair 'Witness (EraCrypto era)] ->
   ImpTestM era (Tx era)
-addAddrTxWits tx nativeScriptsKeyPairs = do
+updateAddrTxWits tx = do
   let txBody = tx ^. bodyTxL
       txBodyHash = hashAnnotated txBody
+  scriptsRequired <- impNativeScriptsRequired tx
+  let nativeScripts = Map.elems scriptsRequired
+  nativeScriptsKeyPairs <- mapM impSatisfyNativeScript nativeScripts
   witsVKeyNeeded <- impWitsVKeyNeeded txBody
-  keyPairs <- mapM lookupKeyPair $ Set.toList witsVKeyNeeded
+  keyPairs <- mapM lookupKeyPair (Set.toList witsVKeyNeeded)
+  let wits = keyPairs ++ Map.elems (mconcat (catMaybes nativeScriptsKeyPairs))
   pure $
-    tx & witsTxL . addrTxWitsL <>~ mkWitnessesVKey txBodyHash (keyPairs ++ nativeScriptsKeyPairs)
+    tx
+      & witsTxL . addrTxWitsL .~ mkWitnessesVKey txBodyHash wits
+
+addRootTxIn ::
+  EraTx era =>
+  Tx era ->
+  ImpTestM era (Tx era)
+addRootTxIn tx = do
+  rootTxIn <- fst <$> lookupImpRootTxOut
+  pure $
+    tx
+      & bodyTxL . inputsTxBodyL %~ Set.insert rootTxIn
+
+impNativeScriptKeyPairs ::
+  ShelleyEraImp era =>
+  Tx era ->
+  ImpTestM
+    era
+    (Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)))
+impNativeScriptKeyPairs tx = do
+  scriptsRequired <- impNativeScriptsRequired tx
+  let nativeScripts = Map.elems scriptsRequired
+  keyPairs <- mapM impSatisfyNativeScript nativeScripts
+  pure . mconcat $ catMaybes keyPairs
 
 fixupFees ::
   ShelleyEraImp era =>
   Tx era ->
-  Set.Set (KeyHash 'Witness (EraCrypto era)) ->
   ImpTestM era (Tx era)
-fixupFees tx nativeScriptKeyWits = do
+fixupFees tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
   kpSpending <- lookupKeyPair =<< freshKeyHash
   kpStaking <- lookupKeyPair =<< freshKeyHash
   rootTxIn <- fst <$> lookupImpRootTxOut
+  nativeScriptKeyPairs <- impNativeScriptKeyPairs tx
   let
+    nativeScriptKeyWits = Map.keysSet nativeScriptKeyPairs
     txWithRoot = tx & bodyTxL . inputsTxBodyL %~ Set.insert rootTxIn
     consumedValue = consumed pp certState utxo (txWithRoot ^. bodyTxL)
     producedValue = produced pp certState (txWithRoot ^. bodyTxL)
@@ -707,22 +791,27 @@ fixupFees tx nativeScriptKeyWits = do
             & bodyTxL . feeTxBodyL .~ (fee <> changeTxOut ^. coinTxOutL)
   pure txWithFee
 
-fixupTx ::
+shelleyFixupTx ::
+  forall era.
   ShelleyEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
-fixupTx txRaw = do
-  (txWithScriptWits, nativeScriptKeyPairs) <- addScriptTxWits txRaw
-  txWithFee <- fixupFees txWithScriptWits (Map.keysSet nativeScriptKeyPairs)
-  txFixed <- addAddrTxWits txWithFee (Map.elems nativeScriptKeyPairs)
+shelleyFixupTx =
+  addNativeScriptTxWits
+    >=> addRootTxIn
+    >=> fixupFees
+    >=> updateAddrTxWits
+    >=> (\tx -> logFeeMismatch tx $> tx)
+
+logFeeMismatch :: (EraGov era, EraUTxO era) => Tx era -> ImpTestM era ()
+logFeeMismatch tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
-  let Coin feeUsed = txFixed ^. bodyTxL . feeTxBodyL
-      Coin feeMin = getMinFeeTxUtxo pp txFixed utxo
+  let Coin feeUsed = tx ^. bodyTxL . feeTxBodyL
+      Coin feeMin = getMinFeeTxUtxo pp tx utxo
   when (feeUsed /= feeMin) $ do
     logEntry $
       "Estimated fee " <> show feeUsed <> " while required fee is " <> show feeMin
-  pure txFixed
 
 submitTx_ :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era ()
 submitTx_ = void . submitTx
@@ -889,20 +978,28 @@ logEntry e = impLogL %= (<> pretty loc <> "\t" <> pretty e <> line)
 logToExpr :: (HasCallStack, ToExpr a) => a -> ImpTestM era ()
 logToExpr e = logEntry (showExpr e)
 
-withImpState :: ShelleyEraImp era => SpecWith (ImpTestState era) -> Spec
+withImpState ::
+  forall era.
+  ShelleyEraImp era =>
+  SpecWith (ImpTestState era) ->
+  Spec
 withImpState =
   beforeAll $
     pure
       ImpTestState
         { impNES = initImpNES rootCoin
-        , impRootTxIn = TxIn (TxId (mkDummySafeHash Proxy 0)) (mkTxIxPartial 0)
+        , impRootTxIn = TxIn (mkTxId 0) minBound
         , impFreshIdx = 1000 -- Added some leeway to prevent collisions with values in the initial state
-        , impKeyPairs = mempty
-        , impScripts = mempty
+        , impKeyPairs =
+            Map.fromList $
+              (\kp@KeyPair {vKey} -> (hashKey vKey, kp)) . mkKeyPair <$> [0 .. 100]
+        , impNativeScripts = mempty
         , impLastTick = 0
         , impGlobals = testGlobals
         , impLog = mempty
         , impGen = mkQCGen 2024
+        , impScripts = mempty
+        , impCollateralTxIds = fst <$> mkCollateralUTxO @era rootCoin
         }
   where
     rootCoin = Coin 1_000_000_000
@@ -948,9 +1045,10 @@ lookupKeyPair keyHash = do
 -- keyhash
 freshKeyHash :: Era era => ImpTestM era (KeyHash r (EraCrypto era))
 freshKeyHash = do
-  ImpTestState {impKeyPairs} <- get
-  let kp@(KeyPair kh _) = mkKeyPair $ Map.size impKeyPairs
+  ImpTestState {impFreshIdx} <- get
+  let kp@(KeyPair kh _) = mkKeyPair $ fromIntegral impFreshIdx
   addKeyPair kp
+  impFreshIdxL += 1
   pure $ hashKey kh
 
 sendCoinTo ::
