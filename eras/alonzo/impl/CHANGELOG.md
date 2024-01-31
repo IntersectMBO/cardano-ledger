@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Add implementation for `getMinFeeTxUtxo`
 * Deprecated `indexRedeemers` and `redeemerPointer`.
 * Add `lookupRedeemer`
 * Add `AsIxItem` as well as `toAsItem`, `toAsIndex`.

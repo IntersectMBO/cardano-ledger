@@ -8,6 +8,7 @@ module Cardano.Ledger.Babbage.UTxO (
   getBabbageSpendingDatum,
   getBabbageScriptsProvided,
   getReferenceScripts,
+  getReferenceScriptsNonDistinct,
 ) where
 
 import Cardano.Ledger.Alonzo.TxWits (unTxDats)
@@ -25,7 +26,7 @@ import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Plutus.Data (Data)
-import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
+import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo, shelleyProducedValue)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Control.Applicative
@@ -52,6 +53,8 @@ instance Crypto c => EraUTxO (BabbageEra c) where
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
 
   getWitsVKeyNeeded = getAlonzoWitsVKeyNeeded
+
+  getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
 instance Crypto c => AlonzoEraUTxO (BabbageEra c) where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes
@@ -139,9 +142,15 @@ getReferenceScripts ::
   UTxO era ->
   Set (TxIn (EraCrypto era)) ->
   Map.Map (ScriptHash (EraCrypto era)) (Script era)
-getReferenceScripts (UTxO mp) inputs = Map.foldl' accum Map.empty (eval (inputs ◁ mp))
-  where
-    accum ans txOut =
-      case txOut ^. referenceScriptTxOutL of
-        SNothing -> ans
-        SJust script -> Map.insert (hashScript script) script ans
+getReferenceScripts utxo ins = Map.fromList (getReferenceScriptsNonDistinct utxo ins)
+
+getReferenceScriptsNonDistinct ::
+  BabbageEraTxOut era =>
+  UTxO era ->
+  Set (TxIn (EraCrypto era)) ->
+  [(ScriptHash (EraCrypto era), Script era)]
+getReferenceScriptsNonDistinct (UTxO mp) inputs =
+  [ (hashScript script, script)
+  | txOut <- Map.elems (eval (inputs ◁ mp))
+  , SJust script <- [txOut ^. referenceScriptTxOutL]
+  ]

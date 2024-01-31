@@ -2,6 +2,8 @@
 
 ## 1.11.0.0
 
+* Add `setMinFeeTxUtxo`
+* Add `getMinFeeTxUtxo` to `EraUTxO`
 * Change signature by adding `refScriptsSize` parameter for:
   * `getMinFeeTx` in `EraTx`
   * `setMinFeeTx`

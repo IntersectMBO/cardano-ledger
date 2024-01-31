@@ -50,7 +50,11 @@ import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
 import Cardano.Ledger.Shelley.TxBody (raCredential)
-import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeeded, shelleyProducedValue)
+import Cardano.Ledger.Shelley.UTxO (
+  getShelleyMinFeeTxUtxo,
+  getShelleyWitsVKeyNeeded,
+  shelleyProducedValue,
+ )
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
@@ -89,6 +93,8 @@ instance Crypto c => EraUTxO (AlonzoEra c) where
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
 
   getWitsVKeyNeeded = getAlonzoWitsVKeyNeeded
+
+  getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
 class EraUTxO era => AlonzoEraUTxO era where
   -- | Get data hashes for a transaction that are not required. Such datums are optional,

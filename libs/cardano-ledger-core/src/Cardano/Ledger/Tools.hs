@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -5,6 +6,7 @@
 -- operation, but is useful for testing as well as for downstream users of ledger
 module Cardano.Ledger.Tools (
   setMinFeeTx,
+  setMinFeeTxUtxo,
   calcMinFeeTx,
   calcMinFeeTxNativeScriptWits,
   estimateMinFeeTx,
@@ -30,7 +32,7 @@ import Cardano.Ledger.Keys (
   WitVKey (..),
   asWitness,
  )
-import Cardano.Ledger.UTxO (EraUTxO (getWitsVKeyNeeded), UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Data.Bits (Bits, shiftR)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -55,12 +57,24 @@ setMinFeeTx ::
   Int ->
   Tx era
 setMinFeeTx pp tx refScriptsSize =
-  let curMinFee = getMinFeeTx pp tx refScriptsSize
+  setMinFeeTxInternal (\t -> getMinFeeTx pp t refScriptsSize) tx
+
+setMinFeeTxUtxo :: EraUTxO era => PParams era -> Tx era -> UTxO era -> Tx era
+setMinFeeTxUtxo pp tx utxo =
+  setMinFeeTxInternal (\t -> getMinFeeTxUtxo pp t utxo) tx
+
+setMinFeeTxInternal ::
+  EraTx era =>
+  (Tx era -> Coin) ->
+  Tx era ->
+  Tx era
+setMinFeeTxInternal f tx =
+  let curMinFee = f tx
       curFee = tx ^. bodyTxL . feeTxBodyL
       modifiedTx = tx & bodyTxL . feeTxBodyL .~ curMinFee
    in if curFee == curMinFee
         then tx
-        else setMinFeeTx pp modifiedTx
+        else setMinFeeTxInternal f modifiedTx
 
 -- | Same as `calcMinFeeTx`, except this function allows to specify hashes of key witnesses
 -- that will be supplied, instead of their count. That is only useful whenever there is a
@@ -136,7 +150,7 @@ calcMinFeeTxInternal ::
   Set.Set (KeyHash 'Witness (EraCrypto era)) ->
   Coin
 calcMinFeeTxInternal utxo pp tx extraKeyWitsCount nativeScriptsKeyWitsHashes =
-  setMinFeeTx pp tx' ^. bodyTxL . feeTxBodyL
+  setMinFeeTxUtxo pp tx' utxo ^. bodyTxL . feeTxBodyL
   where
     txBody = tx ^. bodyTxL
     tx' = addDummyWitsTx pp tx numKeyWitsRequired $ Map.elems byronAttributes

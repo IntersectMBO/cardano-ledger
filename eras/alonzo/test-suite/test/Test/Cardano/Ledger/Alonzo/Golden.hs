@@ -17,6 +17,7 @@ import Cardano.Ledger.Alonzo.PParams (
   LangDepView (..),
   getLanguageView,
  )
+import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), utxoEntrySize)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
 import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotator)
@@ -264,7 +265,7 @@ goldenMinFee =
                 & ppMinFeeBL .~ Coin 155381
                 & ppPricesL .~ pricesParam
 
-        Coin 1006053 @?= getMinFeeTx pp firstTx
+        Coin 1006053 @?= alonzoMinFeeTx pp firstTx
     ]
 
 fromRightError :: (HasCallStack, Show a) => String -> Either a b -> b

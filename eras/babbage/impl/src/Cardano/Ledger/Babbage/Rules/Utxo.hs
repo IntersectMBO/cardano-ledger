@@ -180,7 +180,7 @@ instance
 --   embeds BabbageUtxoPred era. This makes it possibly useful in future Eras.
 feesOK ::
   forall era.
-  ( EraTx era
+  ( EraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
   ) =>
@@ -188,13 +188,13 @@ feesOK ::
   Tx era ->
   UTxO era ->
   Test (BabbageUtxoPredFailure era)
-feesOK pp tx (UTxO utxo) =
+feesOK pp tx u@(UTxO utxo) =
   let txBody = tx ^. bodyTxL
       collateral' = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
       -- restrict Utxo to those inputs we use to pay fees.
       utxoCollateral = eval (collateral' ◁ utxo)
       theFee = txBody ^. feeTxBodyL -- Coin supplied to pay fees
-      minFee = getMinFeeTx pp tx
+      minFee = getMinFeeTxUtxo pp tx u
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txBody
           failureUnless (minFee <= theFee) (inject (FeeTooSmallUTxO @era minFee theFee))

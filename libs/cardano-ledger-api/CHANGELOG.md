@@ -2,8 +2,8 @@
 
 ## 1.9.0.0
 
+* Add `refScriptSize` parameter to `getMinFeeTx`, `setMinFeeTx` and `estimateMinFeeTx`
 * Add `hoistGovRelation`, `withGovActionParent` and `GovRelation`
-
 * Remove `PrevGovActionIds`
 * Rename `cgProposalsL` to `cgsProposalsL`
 * Remove `cgEnactStateL`

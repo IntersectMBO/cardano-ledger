@@ -16,6 +16,7 @@ import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Value (MaryValue, policyID)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
+  getShelleyMinFeeTxUtxo,
   getShelleyScriptsNeeded,
   getShelleyWitsVKeyNeeded,
   shelleyProducedValue,
@@ -46,6 +47,8 @@ instance Crypto c => EraUTxO (MaryEra c) where
   getScriptsHashesNeeded (ShelleyScriptsNeeded scriptHashes) = scriptHashes
 
   getWitsVKeyNeeded = getShelleyWitsVKeyNeeded
+
+  getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
 
 -- | Calculate the value consumed by the transation.
 --

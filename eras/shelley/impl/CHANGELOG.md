@@ -2,6 +2,8 @@
 
 ## 1.10.0.0
 
+* Add `getShelleyMinFeeTxUtxo`
+* Add implementation for `getMinFeeTxUtxo`
 * Remove deprecated functions from `Wallet`: `evaluateMinFee` and `evaluateTransactionFee`
 * Replace `depositsAdaPot` in `AdaPots` with `obligationsPot`
 * Add `sumAdaPots`

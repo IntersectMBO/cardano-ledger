@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Add implementation for `getMinFeeTxUtxo`
 * Add `cppMinFeeRefScriptCoinsPerByte` to `ConwayPParams` and `ppMinFeeRefScriptCoinsPerByteL`
 * Add `ucppMinFeeRefScriptCoinsPerByte` to `UpgradeConwayPParams` and `ppuMinFeeRefScriptCoinsPerByteL`
 * Fix `ConwayTxBody` pattern synonym, by changing its certificates arguments to `OSet`

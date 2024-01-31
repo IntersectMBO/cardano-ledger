@@ -669,8 +669,9 @@ fixupTx txRaw = do
   txWithFee <- fixupFees txWithScriptWits (Map.keysSet nativeScriptKeyPairs)
   txFixed <- addAddrTxWits txWithFee (Map.elems nativeScriptKeyPairs)
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
   let Coin feeUsed = txFixed ^. bodyTxL . feeTxBodyL
-      Coin feeMin = getMinFeeTx pp txFixed
+      Coin feeMin = getMinFeeTxUtxo pp txFixed utxo
   when (feeUsed /= feeMin) $ do
     logEntry $
       "Estimated fee " <> show feeUsed <> " while required fee is " <> show feeMin

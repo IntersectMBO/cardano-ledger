@@ -266,3 +266,6 @@ class EraTx era => EraUTxO era where
   -- | Extract all of the KeyHash witnesses that are required for validating the transaction
   getWitsVKeyNeeded ::
     CertState era -> UTxO era -> TxBody era -> Set (KeyHash 'Witness (EraCrypto era))
+
+  -- | Minimum fee computation, excluding witnesses and including ref scripts size
+  getMinFeeTxUtxo :: PParams era -> Tx era -> UTxO era -> Coin
