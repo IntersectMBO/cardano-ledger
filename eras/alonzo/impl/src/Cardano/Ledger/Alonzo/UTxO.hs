@@ -240,6 +240,23 @@ getAlonzoScriptsNeeded utxo txBody =
         -- occurance of a duplicate certificate in the sequence to be used. In order to
         -- preserve this behavior we need to use the index of the first occurrence of a
         -- duplicate certificate.
+        --
+        -- The `ix + 1` part is to count the actual index of each element. It is only when
+        -- we see a duplicate we use the index of the first occurrence of the element, but
+        -- that should not affect indices of other elements.
+        --
+        -- For example if these are our certificates:
+        -- cert = [c0, c1, c2, c3, c4, c5]
+        --
+        -- Let's say `c3` is locked by a native script or a key witness, so it does not
+        -- participate in the script purpose
+        --
+        -- Also, let's say `c1 == c4`. Here is what we should get for the plutus purpose:
+        -- plutusPurpose = [(0, c0), (1, c1), (2, c2), (1, c4), (5, c5)]
+        --
+        -- The count must continue no matter what, thus the counter `ix + 1`, but
+        -- whenever we find a duplicate we use the stored `ix'`.
+        --
         addUniqueTxCertPurpose (!certScriptHashes, !ix, !certPurposes) txCert =
           fromMaybe (certScriptHashes, ix + 1, certPurposes) $ do
             scriptHash <- getScriptWitnessTxCert txCert
