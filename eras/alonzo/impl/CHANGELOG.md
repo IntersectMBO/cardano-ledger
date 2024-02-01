@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Add `alonzoScriptPrefixTag`
 * Add implementation for `getMinFeeTxUtxo`
 * Deprecated `indexRedeemers` and `redeemerPointer`.
 * Add `lookupRedeemer`

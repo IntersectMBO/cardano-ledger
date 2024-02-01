@@ -39,6 +39,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   mkBinaryPlutusScript,
   isValidPlutusScript,
   toPlutusSLanguage,
+  alonzoScriptPrefixTag,
 
   -- ** Plutus Purpose
   pattern SpendingPurpose,
@@ -110,6 +111,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (guard)
 import Data.Aeson (ToJSON (..), Value (String), object, (.=))
+import qualified Data.ByteString as BS
 import Data.Kind (Type)
 import Data.Maybe (fromJust, isJust)
 import Data.Typeable
@@ -442,15 +444,21 @@ instance Crypto c => EraScript (AlonzoEra c) where
 
   upgradeScript = TimelockScript . translateTimelock
 
-  scriptPrefixTag = \case
-    TimelockScript _ -> nativeMultiSigTag -- "\x00"
-    PlutusScript (AlonzoPlutusV1 _) -> "\x01"
+  scriptPrefixTag = alonzoScriptPrefixTag
 
   getNativeScript = \case
     TimelockScript ts -> Just ts
     _ -> Nothing
 
   fromNativeScript = TimelockScript
+
+alonzoScriptPrefixTag ::
+  (AlonzoEraScript era, AlonzoScript era ~ Script era) =>
+  Script era ->
+  BS.ByteString
+alonzoScriptPrefixTag = \case
+  TimelockScript _ -> nativeMultiSigTag -- "\x00"
+  PlutusScript plutusScript -> BS.singleton (withPlutusScript plutusScript plutusLanguageTag)
 
 instance Crypto c => AlonzoEraScript (AlonzoEra c) where
   newtype PlutusScript (AlonzoEra c) = AlonzoPlutusV1 (Plutus 'PlutusV1)

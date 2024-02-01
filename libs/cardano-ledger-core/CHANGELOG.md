@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Add `plutusLanguageTag` and `hashPlutusScript`
 * Add `setMinFeeTxUtxo`
 * Add `getMinFeeTxUtxo` to `EraUTxO`
 * Change signature by adding `refScriptsSize` parameter for:

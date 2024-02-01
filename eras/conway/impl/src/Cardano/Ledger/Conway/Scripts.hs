@@ -27,7 +27,12 @@ where
 
 import Cardano.Ledger.Address (RewardAccount)
 import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), AlonzoScript (..), isPlutusScript)
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoPlutusPurpose (..),
+  AlonzoScript (..),
+  alonzoScriptPrefixTag,
+  isPlutusScript,
+ )
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Scripts (PlutusScript (..))
 import Cardano.Ledger.BaseTypes (kindObject)
@@ -47,7 +52,6 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Value (PolicyID)
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
@@ -74,11 +78,7 @@ instance Crypto c => EraScript (ConwayEra c) where
     PlutusScript (BabbagePlutusV1 ps) -> PlutusScript $ ConwayPlutusV1 ps
     PlutusScript (BabbagePlutusV2 ps) -> PlutusScript $ ConwayPlutusV2 ps
 
-  scriptPrefixTag = \case
-    TimelockScript _ -> nativeMultiSigTag -- "\x00"
-    PlutusScript (ConwayPlutusV1 _) -> "\x01"
-    PlutusScript (ConwayPlutusV2 _) -> "\x02"
-    PlutusScript (ConwayPlutusV3 _) -> "\x03"
+  scriptPrefixTag = alonzoScriptPrefixTag
 
   getNativeScript = \case
     TimelockScript ts -> Just ts

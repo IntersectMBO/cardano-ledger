@@ -27,6 +27,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
   AlonzoScript (..),
   PlutusScript (..),
+  alonzoScriptPrefixTag,
   isPlutusScript,
  )
 import Cardano.Ledger.Babbage.Era
@@ -34,7 +35,6 @@ import Cardano.Ledger.Babbage.TxCert ()
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import Control.DeepSeq (NFData (..), rwhnf)
 import GHC.Generics
 import NoThunks.Class (NoThunks (..))
@@ -47,10 +47,7 @@ instance Crypto c => EraScript (BabbageEra c) where
     TimelockScript ts -> TimelockScript $ translateTimelock ts
     PlutusScript (AlonzoPlutusV1 ps) -> PlutusScript $ BabbagePlutusV1 ps
 
-  scriptPrefixTag = \case
-    TimelockScript _ -> nativeMultiSigTag -- "\x00"
-    PlutusScript (BabbagePlutusV1 _) -> "\x01"
-    PlutusScript (BabbagePlutusV2 _) -> "\x02"
+  scriptPrefixTag = alonzoScriptPrefixTag
 
   getNativeScript = \case
     TimelockScript ts -> Just ts
