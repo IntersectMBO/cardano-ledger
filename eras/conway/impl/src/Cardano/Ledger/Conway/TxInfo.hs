@@ -36,7 +36,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), toAsItem)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
@@ -105,7 +105,7 @@ import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Generics
-import Lens.Micro
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
@@ -201,7 +201,7 @@ instance
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
   toPlutusTxCert _ = transTxCertV1V2
 
-  toPlutusScriptPurpose = transPlutusPurposeV1V2
+  toPlutusScriptPurpose proxy = transPlutusPurposeV1V2 proxy . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
     let refInputs = txBody ^. referenceInputsTxBodyL
@@ -237,7 +237,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
 instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
   toPlutusTxCert _ = transTxCertV1V2
 
-  toPlutusScriptPurpose = transPlutusPurposeV1V2
+  toPlutusScriptPurpose proxy = transPlutusPurposeV1V2 proxy . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
     timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
@@ -372,22 +372,27 @@ transDRep = \case
   DRepAlwaysAbstain -> PV3.DRepAlwaysAbstain
   DRepAlwaysNoConfidence -> PV3.DRepAlwaysNoConfidence
 
+-- | In Conway we have `Anchor`s in some certificates and all proposals. However, because
+-- we do not translate anchors to plutus context, it is not always possible to deduce
+-- which item the script purpose is responsible for, without also including the index for
+-- that item. For this reason starting with PlutusV3, besides the item, `PV3.Certifying`
+-- and `PV3.Proposing` also have an index. Moreover, other script purposes rely on Ledger
+-- `Ord` instances for types that dictate the order, so it might not be a good idea to pass
+-- that information to Plutus for those purposes.
 transScriptPurpose ::
   (ConwayEraPlutusTxInfo l era, PlutusTxCert l ~ PV3.TxCert) =>
   proxy l ->
-  ConwayPlutusPurpose AsItem era ->
+  ConwayPlutusPurpose AsIxItem era ->
   Either (ContextError era) PV3.ScriptPurpose
 transScriptPurpose proxy = \case
-  ConwaySpending (AsItem txIn) -> pure $ PV3.Spending (transTxIn txIn)
-  ConwayMinting (AsItem policyId) -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
-  ConwayCertifying (AsItem txCert) ->
-    -- TODO: fix the index. Reqiures adding index to AsItem.
-    PV3.Certifying 0 <$> toPlutusTxCert proxy txCert
-  ConwayRewarding (AsItem rewardAccount) -> pure $ PV3.Rewarding (transRewardAccount rewardAccount)
-  ConwayVoting (AsItem voter) -> pure $ PV3.Voting (transVoter voter)
-  ConwayProposing (AsItem proposal) ->
-    -- TODO: fix the index. Reqiures adding index to AsItem.
-    pure $ PV3.Proposing 0 (transProposal proxy proposal)
+  ConwaySpending (AsIxItem _ txIn) -> pure $ PV3.Spending (transTxIn txIn)
+  ConwayMinting (AsIxItem _ policyId) -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
+  ConwayCertifying (AsIxItem ix txCert) ->
+    PV3.Certifying (toInteger ix) <$> toPlutusTxCert proxy txCert
+  ConwayRewarding (AsIxItem _ rewardAccount) -> pure $ PV3.Rewarding (transRewardAccount rewardAccount)
+  ConwayVoting (AsIxItem _ voter) -> pure $ PV3.Voting (transVoter voter)
+  ConwayProposing (AsIxItem ix proposal) ->
+    pure $ PV3.Proposing (toInteger ix) (transProposal proxy proposal)
 
 transVoter :: Voter c -> PV3.Voter
 transVoter = \case

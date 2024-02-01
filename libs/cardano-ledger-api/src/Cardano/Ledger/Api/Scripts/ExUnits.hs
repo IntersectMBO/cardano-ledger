@@ -25,24 +25,11 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (mkPlutusScriptContext),
  )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (lookupPlutusScript)
-import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript (..),
-  AsIndex (..),
-  AsItem (..),
-  PlutusPurpose (..),
-  plutusScriptLanguage,
- )
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (redeemerPointer))
-import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..))
-import Cardano.Ledger.Alonzo.TxWits (
-  AlonzoEraTxWits (..),
-  unRedeemers,
-  unTxDats,
- )
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsIndex, toAsItem)
+import Cardano.Ledger.Alonzo.TxWits (unRedeemers, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), pvMajor)
-import Cardano.Ledger.Core
+import Cardano.Ledger.BaseTypes (pvMajor)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Plutus.CostModels (costModelsValid)
 import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Plutus.Evaluate (
@@ -202,13 +189,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
               utxo
               tx
           pure (plutusScript, scriptContext)
-      -- Since `getScriptsNeeded` used the `txBody` to create script purposes, it would be
-      -- a logic error if `redeemerPointer` was not able to find `plutusPurpose`.
-      let !pointer =
-            case redeemerPointer txBody plutusPurpose of
-              SNothing ->
-                error "Impossible: Redeemer pointer was not found in the TxBody"
-              SJust p -> p
+      let pointer = hoistPlutusPurpose toAsIndex plutusPurpose
       pure (pointer, (plutusPurpose, mPlutusScriptAndContext, scriptHash))
   pure $ Map.mapWithKey (findAndCount $ Map.fromList ptrToPlutusScript) rdmrs
   where
@@ -230,7 +211,9 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
         note (RedeemerPointsToUnknownScriptHash pointer) $
           Map.lookup pointer ptrToPlutusScript
       let ptrToPlutusScriptNoContext =
-            Map.map (\(sp, mps, sh) -> (sp, fst <$> mps, sh)) ptrToPlutusScript
+            Map.map
+              (\(sp, mps, sh) -> (hoistPlutusPurpose toAsItem sp, fst <$> mps, sh))
+              ptrToPlutusScript
       (plutusScript, scriptContext) <-
         note (MissingScript pointer ptrToPlutusScriptNoContext) mPlutusScript
       let lang = plutusScriptLanguage plutusScript
@@ -240,8 +223,8 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
       -- inline datums, when they are present, since for PlutusV1 presence of inline
       -- datums would short circuit earlier on PlutusContext translation.
       datums <-
-        case plutusPurposeSpendingTxIn plutusPurpose of
-          Just txIn -> do
+        case toSpendingPurpose plutusPurpose of
+          Just (AsIxItem _ txIn) -> do
             txOut <- note (UnknownTxIn txIn) $ Map.lookup txIn (unUTxO utxo)
             datum <-
               case txOut ^. datumTxOutF of

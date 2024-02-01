@@ -69,7 +69,7 @@ import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core (AlonzoEraPParams, AlonzoEraTxBody)
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AlonzoScript (..))
 import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
@@ -471,6 +471,7 @@ data UTxOWit era where
     UTxOWit era
   UTxOAlonzoToConway ::
     ( EraUTxO era
+    , AlonzoEraScript era
     , AlonzoEraTxBody era
     , AlonzoEraPParams era
     , AlonzoEraTxOut era

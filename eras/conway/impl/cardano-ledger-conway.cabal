@@ -83,7 +83,7 @@ library
         cardano-data >=1.2.1,
         cardano-ledger-binary ^>=1.3,
         cardano-ledger-allegra ^>=1.3,
-        cardano-ledger-alonzo ^>=1.6,
+        cardano-ledger-alonzo ^>=1.7,
         cardano-ledger-babbage ^>=1.7,
         cardano-ledger-core ^>=1.11,
         cardano-ledger-mary ^>=1.5,

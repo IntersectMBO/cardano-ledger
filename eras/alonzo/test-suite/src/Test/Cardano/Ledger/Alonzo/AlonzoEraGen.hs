@@ -27,6 +27,7 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo (
   isPlutusScript,
   plutusScriptLanguage,
   pointWiseExUnits,
+  toAsIndex,
   txscriptfee,
  )
 import Cardano.Ledger.Alonzo.Tx (
@@ -401,9 +402,9 @@ instance Mock c => EraGen (AlonzoEra c) where
             if isNativeScript @(AlonzoEra c) script
               then ans -- Native scripts don't have redeemers
               else case Map.lookup hash1 (fst scriptinfo) of -- It could be one of the known 3-Arg Plutus Scripts
-                Just info -> addRedeemMap txbody (getRedeemer3 info) purpose ans -- Add it to the redeemer map
+                Just info -> addRedeemMap (getRedeemer3 info) purpose ans -- Add it to the redeemer map
                 Nothing -> case Map.lookup hash1 (snd scriptinfo) of -- It could be one of the known 2-Arg Plutus Scripts
-                  Just info -> addRedeemMap txbody (getRedeemer2 info) purpose ans -- Add it to the redeemer map
+                  Just info -> addRedeemMap (getRedeemer2 info) purpose ans -- Add it to the redeemer map
                   Nothing -> ans
 
   constructTx bod wit auxdata = AlonzoTx bod wit (IsValid v) auxdata
@@ -471,15 +472,13 @@ storageCost extra pp x = (extra + encodedLen @era x) <×> pp ^. ppMinFeeAL
 addRedeemMap ::
   forall c.
   Crypto c =>
-  TxBody (AlonzoEra c) ->
   (P.Data, Natural, Natural) ->
-  AlonzoPlutusPurpose AsItem (AlonzoEra c) ->
+  AlonzoPlutusPurpose AsIxItem (AlonzoEra c) ->
   Map (AlonzoPlutusPurpose AsIndex (AlonzoEra c)) (Data (AlonzoEra c), ExUnits) ->
   Map (AlonzoPlutusPurpose AsIndex (AlonzoEra c)) (Data (AlonzoEra c), ExUnits)
-addRedeemMap body1 (dat, space, steps) purpose ans =
-  case redeemerPointer @(AlonzoEra c) body1 purpose of
-    SJust ptr -> Map.insert ptr (Data dat, ExUnits space steps) ans
-    SNothing -> ans
+addRedeemMap (dat, space, steps) purpose ans =
+  let ptr = hoistPlutusPurpose toAsIndex purpose
+   in Map.insert ptr (Data dat, ExUnits space steps) ans
 
 getDataMap ::
   forall era.

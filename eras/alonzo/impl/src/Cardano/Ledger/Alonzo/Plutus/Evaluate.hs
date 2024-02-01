@@ -24,8 +24,8 @@ where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
-import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage)
-import Cardano.Ledger.Alonzo.Tx (indexRedeemers)
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsIndex, toAsItem)
+import Cardano.Ledger.Alonzo.TxWits (lookupRedeemer)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum), AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), kindObject, natVersion)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -171,23 +171,25 @@ collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
       mapMaybe (\(sp, sh) -> (,) sp <$> lookupPlutusScript scriptsProvided sh) scriptsNeeded
     usedLanguages = Set.fromList $ map (plutusScriptLanguage . snd) neededPlutusScripts
 
-    getScriptWithRedeemer (sp, script) =
-      case indexRedeemers tx sp of
-        Just (d, eu) -> Right (script, sp, d, eu)
-        Nothing -> Left (NoRedeemer sp)
-    apply (plutusScript, scriptPurpose, d, eu) = do
+    getScriptWithRedeemer (plutusPurpose, plutusScript) =
+      let redeemerIndex = hoistPlutusPurpose toAsIndex plutusPurpose
+       in case lookupRedeemer redeemerIndex $ tx ^. witsTxL . rdmrsTxWitsL of
+            Just (d, exUnits) -> Right (plutusScript, plutusPurpose, d, exUnits)
+            Nothing -> Left (NoRedeemer (hoistPlutusPurpose toAsItem plutusPurpose))
+    apply (plutusScript, plutusPurpose, d, exUnits) = do
       let lang = plutusScriptLanguage plutusScript
       costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang costModels
-      case mkPlutusScriptContext plutusScript scriptPurpose pp epochInfo sysStart utxo tx of
+      case mkPlutusScriptContext plutusScript plutusPurpose pp epochInfo sysStart utxo tx of
         Right scriptContext ->
-          let datums = maybe id (:) (getSpendingDatum utxo tx scriptPurpose) [d, scriptContext]
+          let spendingDatum = getSpendingDatum utxo tx $ hoistPlutusPurpose toAsItem plutusPurpose
+              datums = maybe id (:) spendingDatum [d, scriptContext]
            in Right $
                 withPlutusScript plutusScript $ \plutus ->
                   PlutusWithContext
                     { pwcProtocolVersion = protVerMajor
                     , pwcScript = Left plutus
                     , pwcDatums = PlutusDatums (getPlutusData <$> datums)
-                    , pwcExUnits = eu
+                    , pwcExUnits = exUnits
                     , pwcCostModel = costModel
                     }
         Left te -> Left $ BadTranslation te

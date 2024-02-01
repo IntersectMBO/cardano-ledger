@@ -20,6 +20,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Scripts (
@@ -40,9 +41,16 @@ module Cardano.Ledger.Alonzo.Scripts (
   toPlutusSLanguage,
 
   -- ** Plutus Purpose
+  pattern SpendingPurpose,
+  pattern MintingPurpose,
+  pattern CertifyingPurpose,
+  pattern RewardingPurpose,
   AlonzoPlutusPurpose (..),
   AsItem (..),
   AsIndex (..),
+  AsIxItem (..),
+  toAsItem,
+  toAsIndex,
 
   -- * Re-exports
   module Cardano.Ledger.Plutus.CostModels,
@@ -133,6 +141,10 @@ class
   , DecCBORGroup (PlutusPurpose AsIndex era)
   , NoThunks (PlutusPurpose AsIndex era)
   , NFData (PlutusPurpose AsIndex era)
+  , Eq (PlutusPurpose AsIxItem era)
+  , Show (PlutusPurpose AsIxItem era)
+  , NoThunks (PlutusPurpose AsIxItem era)
+  , NFData (PlutusPurpose AsIxItem era)
   ) =>
   AlonzoEraScript era
   where
@@ -166,7 +178,26 @@ class
     (forall l. PlutusLanguage l => Plutus l -> a) ->
     a
 
-  plutusPurposeSpendingTxIn :: PlutusPurpose AsItem era -> Maybe (TxIn (EraCrypto era))
+  hoistPlutusPurpose ::
+    (forall ix it. g ix it -> f ix it) ->
+    PlutusPurpose g era ->
+    PlutusPurpose f era
+
+  mkSpendingPurpose :: f Word32 (TxIn (EraCrypto era)) -> PlutusPurpose f era
+
+  toSpendingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (TxIn (EraCrypto era)))
+
+  mkMintingPurpose :: f Word32 (PolicyID (EraCrypto era)) -> PlutusPurpose f era
+
+  toMintingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (PolicyID (EraCrypto era)))
+
+  mkCertifyingPurpose :: f Word32 (TxCert era) -> PlutusPurpose f era
+
+  toCertifyingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (TxCert era))
+
+  mkRewardingPurpose :: f Word32 (RewardAccount (EraCrypto era)) -> PlutusPurpose f era
+
+  toRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (RewardAccount (EraCrypto era)))
 
   upgradePlutusPurposeAsIndex ::
     AlonzoEraScript (PreviousEra era) =>
@@ -215,16 +246,42 @@ isValidPlutusScript pv ps = withPlutusScript ps (isValidPlutus pv)
 -- Alonzo Plutus Purpose =======================================================
 
 newtype AsIndex ix it = AsIndex {unAsIndex :: ix}
-  deriving newtype (Eq, Ord, Show, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
+  deriving stock (Show)
+  deriving newtype (Eq, Ord, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
 
 newtype AsItem ix it = AsItem {unAsItem :: it}
-  deriving newtype (Eq, Ord, Show, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
+  deriving stock (Show)
+  deriving newtype (Eq, Ord, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
 
-instance ToJSON a => ToJSON (AsIndex a b) where
+data AsIxItem ix it = AsIxItem
+  { asIndex :: !ix
+  , asItem :: !it
+  }
+  deriving (Eq, Ord, Show, Generic)
+
+instance (NoThunks ix, NoThunks it) => NoThunks (AsIxItem ix it)
+
+instance (NFData ix, NFData it) => NFData (AsIxItem ix it) where
+  rnf (AsIxItem ix it) = ix `deepseq` rnf it
+
+instance ToJSON ix => ToJSON (AsIndex ix it) where
   toJSON (AsIndex i) = object ["index" .= toJSON i]
 
-instance ToJSON b => ToJSON (AsItem a b) where
+instance ToJSON it => ToJSON (AsItem ix it) where
   toJSON (AsItem i) = object ["item" .= toJSON i]
+
+instance (ToJSON ix, ToJSON it) => ToJSON (AsIxItem ix it) where
+  toJSON (AsIxItem ix it) =
+    object
+      [ "index" .= toJSON ix
+      , "item" .= toJSON it
+      ]
+
+toAsItem :: AsIxItem ix it -> AsItem ix it
+toAsItem (AsIxItem _ it) = AsItem it
+
+toAsIndex :: AsIxItem ix it -> AsIndex ix it
+toAsIndex (AsIxItem ix _) = AsIndex ix
 
 data AlonzoPlutusPurpose f era
   = AlonzoSpending !(f Word32 (TxIn (EraCrypto era)))
@@ -241,6 +298,10 @@ instance NoThunks (AlonzoPlutusPurpose AsIndex era)
 deriving instance Eq (TxCert era) => Eq (AlonzoPlutusPurpose AsItem era)
 deriving instance Show (TxCert era) => Show (AlonzoPlutusPurpose AsItem era)
 instance NoThunks (TxCert era) => NoThunks (AlonzoPlutusPurpose AsItem era)
+
+deriving instance Eq (TxCert era) => Eq (AlonzoPlutusPurpose AsIxItem era)
+deriving instance Show (TxCert era) => Show (AlonzoPlutusPurpose AsIxItem era)
+instance NoThunks (TxCert era) => NoThunks (AlonzoPlutusPurpose AsIxItem era)
 
 instance
   (forall a b. (NFData a, NFData b) => NFData (f a b), NFData (TxCert era), Era era) =>
@@ -321,6 +382,30 @@ instance (Era era, DecCBOR (TxCert era)) => DecCBOR (AlonzoPlutusPurpose AsItem 
       dec 2 = SumD (AlonzoRewarding . AsItem) <! From
       dec n = Invalid n
 
+pattern SpendingPurpose ::
+  AlonzoEraScript era => f Word32 (TxIn (EraCrypto era)) -> PlutusPurpose f era
+pattern SpendingPurpose c <- (toSpendingPurpose -> Just c)
+  where
+    SpendingPurpose c = mkSpendingPurpose c
+
+pattern MintingPurpose ::
+  AlonzoEraScript era => f Word32 (PolicyID (EraCrypto era)) -> PlutusPurpose f era
+pattern MintingPurpose c <- (toMintingPurpose -> Just c)
+  where
+    MintingPurpose c = mkMintingPurpose c
+
+pattern CertifyingPurpose ::
+  AlonzoEraScript era => f Word32 (TxCert era) -> PlutusPurpose f era
+pattern CertifyingPurpose c <- (toCertifyingPurpose -> Just c)
+  where
+    CertifyingPurpose c = mkCertifyingPurpose c
+
+pattern RewardingPurpose ::
+  AlonzoEraScript era => f Word32 (RewardAccount (EraCrypto era)) -> PlutusPurpose f era
+pattern RewardingPurpose c <- (toRewardingPurpose -> Just c)
+  where
+    RewardingPurpose c = mkRewardingPurpose c
+
 -- Alonzo Script ===============================================================
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
@@ -382,9 +467,31 @@ instance Crypto c => AlonzoEraScript (AlonzoEra c) where
 
   withPlutusScript (AlonzoPlutusV1 plutus) f = f plutus
 
-  plutusPurposeSpendingTxIn = \case
-    AlonzoSpending (AsItem txIn) -> Just txIn
-    _ -> Nothing
+  hoistPlutusPurpose f = \case
+    AlonzoSpending x -> AlonzoSpending $ f x
+    AlonzoMinting x -> AlonzoMinting $ f x
+    AlonzoCertifying x -> AlonzoCertifying $ f x
+    AlonzoRewarding x -> AlonzoRewarding $ f x
+
+  mkSpendingPurpose = AlonzoSpending
+
+  toSpendingPurpose (AlonzoSpending i) = Just i
+  toSpendingPurpose _ = Nothing
+
+  mkMintingPurpose = AlonzoMinting
+
+  toMintingPurpose (AlonzoMinting i) = Just i
+  toMintingPurpose _ = Nothing
+
+  mkCertifyingPurpose = AlonzoCertifying
+
+  toCertifyingPurpose (AlonzoCertifying i) = Just i
+  toCertifyingPurpose _ = Nothing
+
+  mkRewardingPurpose = AlonzoRewarding
+
+  toRewardingPurpose (AlonzoRewarding i) = Just i
+  toRewardingPurpose _ = Nothing
 
   upgradePlutusPurposeAsIndex =
     error "Impossible: No `PlutusScript` and `AlonzoEraScript` instances in the previous era"

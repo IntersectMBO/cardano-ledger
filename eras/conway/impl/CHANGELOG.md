@@ -2,6 +2,12 @@
 
 ## 1.13.0.0
 
+* Fix `ConwayTxBody` pattern synonym, by changing its certificates arguments to `OSet`
+  from a `StrictSeq`.
+* Add `VotingPurpose` and `ProposingPurpose` pattern synonyms
+* Add `ConwayEraScript` with `toVotingPurpose`, `toProposingPurpose`, `fromVotingPurpose`,
+  `fromProposingPurpose`.
+* Add upgrade failure: `CTBUEContainsDuplicateCerts`
 * Rename `proposalsRemoveDescendentIds` to `proposalsRemoveWithDescendants` (fixed spelling too)
 * Rename:
   * `pfPParamUpdateL` to `grPParamUpdateL`

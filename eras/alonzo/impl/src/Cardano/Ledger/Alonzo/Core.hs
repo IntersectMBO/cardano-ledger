@@ -1,9 +1,16 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Cardano.Ledger.Alonzo.Core (
   AlonzoEraTx (..),
   AlonzoEraTxOut (..),
   AlonzoEraScript (..),
   AsIndex (..),
   AsItem (..),
+  AsIxItem (..),
+  pattern SpendingPurpose,
+  pattern MintingPurpose,
+  pattern CertifyingPurpose,
+  pattern RewardingPurpose,
   ScriptIntegrityHash,
   AlonzoEraTxBody (..),
   AlonzoEraTxWits (..),
@@ -49,7 +56,16 @@ import Cardano.Ledger.Alonzo.PParams (
   ppuMaxValSizeL,
   ppuPricesL,
  )
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..), AsIndex (..), AsItem (..))
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoEraScript (..),
+  AsIndex (..),
+  AsItem (..),
+  AsIxItem (..),
+  pattern CertifyingPurpose,
+  pattern MintingPurpose,
+  pattern RewardingPurpose,
+  pattern SpendingPurpose,
+ )
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..))

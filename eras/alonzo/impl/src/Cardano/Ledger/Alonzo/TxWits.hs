@@ -27,6 +27,7 @@ module Cardano.Ledger.Alonzo.TxWits (
   RedeemersRaw,
   unRedeemers,
   nullRedeemers,
+  lookupRedeemer,
   upgradeRedeemers,
   TxDats (TxDats, TxDats'),
   TxDatsRaw,
@@ -192,6 +193,13 @@ nullRedeemers = Map.null . unRedeemers
 
 emptyRedeemers :: AlonzoEraScript era => Redeemers era
 emptyRedeemers = Redeemers mempty
+
+lookupRedeemer ::
+  Ord (PlutusPurpose AsIndex era) =>
+  PlutusPurpose AsIndex era ->
+  Redeemers era ->
+  Maybe (Data era, ExUnits)
+lookupRedeemer key = Map.lookup key . unRedeemers
 
 -- | Upgrade redeemers from one era to another. The underlying data structure
 -- will remain identical, but the memoised serialisation may change to reflect

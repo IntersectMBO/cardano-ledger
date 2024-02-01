@@ -22,7 +22,7 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (sizedValue)
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Plutus.Data (Data)
 import Cardano.Ledger.Shelley.UTxO (shelleyProducedValue)
@@ -37,6 +37,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 
 instance Crypto c => EraUTxO (BabbageEra c) where
+  {-# SPECIALIZE instance EraUTxO (BabbageEra StandardCrypto) #-}
   type ScriptsNeeded (BabbageEra c) = AlonzoScriptsNeeded (BabbageEra c)
 
   getConsumedValue = getConsumedMaryValue
@@ -46,6 +47,7 @@ instance Crypto c => EraUTxO (BabbageEra c) where
   getScriptsProvided = getBabbageScriptsProvided
 
   getScriptsNeeded = getAlonzoScriptsNeeded
+  {-# INLINEABLE getScriptsNeeded #-}
 
   getScriptsHashesNeeded = getAlonzoScriptsHashesNeeded
 
@@ -79,7 +81,7 @@ getBabbageSpendingDatum ::
   PlutusPurpose AsItem era ->
   Maybe (Data era)
 getBabbageSpendingDatum (UTxO utxo) tx sp = do
-  txIn <- plutusPurposeSpendingTxIn sp
+  AsItem txIn <- toSpendingPurpose sp
   txOut <- Map.lookup txIn utxo
   let txOutDataFromWits = do
         dataHash <- strictMaybeToMaybe (txOut ^. dataHashTxOutL)
