@@ -140,10 +140,10 @@ data AllegraUtxoEvent era
   | TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
   | -- | The UTxOs consumed and created by a signal tx
     TxUTxODiff
-      -- | UTxO consumed
       (UTxO era)
-      -- | UTxO created
+      -- ^ UTxO consumed
       (UTxO era)
+      -- ^ UTxO created
 
 -- | The UTxO transition rule for the Allegra era.
 utxoTransition ::
