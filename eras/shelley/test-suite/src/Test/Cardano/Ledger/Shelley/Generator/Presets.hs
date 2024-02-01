@@ -20,7 +20,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Presets (
 )
 where
 
-import Cardano.Ledger.Core (EraScript (hashScript))
+import Cardano.Ledger.Core (EraScript, hashScript)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),

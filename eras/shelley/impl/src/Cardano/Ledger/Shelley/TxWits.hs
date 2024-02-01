@@ -59,10 +59,11 @@ import Cardano.Ledger.Binary (
 import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR (..), encodePreEncoded)
 import Cardano.Ledger.Core (
   Era (EraCrypto),
-  EraScript (Script, hashScript),
+  EraScript (Script),
   EraTxWits (..),
   ScriptHash,
   eraProtVerLow,
+  hashScript,
  )
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.HKD (HKD)

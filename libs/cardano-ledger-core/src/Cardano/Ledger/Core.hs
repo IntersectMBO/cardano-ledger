@@ -34,6 +34,7 @@ module Cardano.Ledger.Core (
   EraTxAuxData (..),
   EraTxWits (..),
   EraScript (..),
+  hashScript,
   isNativeScript,
   hashScriptTxWitsL,
   Value,
@@ -550,21 +551,20 @@ class
 
   scriptPrefixTag :: Script era -> BS.ByteString
 
-  hashScript :: Script era -> ScriptHash (EraCrypto era)
-  -- ONE SHOULD NOT OVERIDE THE hashScript DEFAULT METHOD
-  -- UNLESS YOU UNDERSTAND THE SafeToHash class, AND THE ROLE OF THE scriptPrefixTag
-  hashScript =
-    ScriptHash
-      . Hash.castHash
-      . Hash.hashWith
-        (\x -> scriptPrefixTag @era x <> originalBytes x)
-
   getNativeScript :: Script era -> Maybe (NativeScript era)
 
   fromNativeScript :: NativeScript era -> Script era
 
 isNativeScript :: EraScript era => Script era -> Bool
 isNativeScript = isJust . getNativeScript
+
+-- | Compute `ScriptHash` of a `Script` for a particular era.
+hashScript :: forall era. EraScript era => Script era -> ScriptHash (EraCrypto era)
+hashScript =
+  ScriptHash
+    . Hash.castHash
+    . Hash.hashWith
+      (\x -> scriptPrefixTag @era x <> originalBytes x)
 
 --------------------------------------------------------------------------------
 -- Segregated Witness

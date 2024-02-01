@@ -13,7 +13,7 @@
 module Test.Cardano.Ledger.Constrained.Ast where
 
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Core (Era (EraCrypto), EraScript (..), hashScript)
+import Cardano.Ledger.Core (Era (EraCrypto), hashScript)
 import Cardano.Ledger.Hashes (DataHash, ScriptHash (..))
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Data.Char (toLower)
