@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Rename `proposalsRemoveDescendentIds` to `proposalsRemoveWithDescendants` (fixed spelling too)
 * Rename:
   * `pfPParamUpdateL` to `grPParamUpdateL`
   * `pfHardForkL` to `grHardForkL`

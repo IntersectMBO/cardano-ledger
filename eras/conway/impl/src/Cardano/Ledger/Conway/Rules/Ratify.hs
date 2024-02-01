@@ -330,8 +330,8 @@ ratifyTransition = do
 -- does match the last one of the same purpose that was enacted.
 prevActionAsExpected :: GovActionState era -> GovRelation StrictMaybe era -> Bool
 prevActionAsExpected gas prevGovActionIds =
-  withGovActionParent gas True $ \relationL parent _ ->
-    parent == prevGovActionIds ^. relationL
+  withGovActionParent gas True $ \govRelationL parent _ ->
+    parent == prevGovActionIds ^. govRelationL
 
 validCommitteeTerm ::
   ConwayEraPParams era =>

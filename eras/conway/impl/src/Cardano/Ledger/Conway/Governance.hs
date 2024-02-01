@@ -80,7 +80,7 @@ module Cardano.Ledger.Conway.Governance (
   grConstitutionL,
   proposalsActions,
   proposalsAddAction,
-  proposalsRemoveDescendentIds,
+  proposalsRemoveWithDescendants,
   proposalsAddVote,
   proposalsIds,
   proposalsApplyEnactment,
