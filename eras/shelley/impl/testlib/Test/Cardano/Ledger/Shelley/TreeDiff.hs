@@ -54,8 +54,6 @@ instance
   ) =>
   ToExpr (ShelleyGovState era)
 
-instance ToExpr (Constitution era)
-
 -- TxCert
 instance ToExpr (GenesisDelegCert c)
 instance ToExpr MIRPot

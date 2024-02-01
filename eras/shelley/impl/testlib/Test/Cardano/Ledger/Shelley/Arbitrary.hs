@@ -309,9 +309,6 @@ instance
   arbitrary = ShelleyGovState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
-instance Era era => Arbitrary (Constitution era) where
-  arbitrary = Constitution <$> arbitrary <*> arbitrary
-
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Shelley.TxAuxData ------------------------------------------------------
 ------------------------------------------------------------------------------------------

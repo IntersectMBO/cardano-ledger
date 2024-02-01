@@ -71,6 +71,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getProposalsForest,
   logProposalsForest,
   logProposalsForestDiff,
+  constitutionShouldBe,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
@@ -147,6 +148,7 @@ import Data.Maybe (fromJust)
 import Data.Maybe.Strict (isSJust)
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import Data.Tree
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro (Lens', (%~), (&), (.~), (^.))
@@ -998,3 +1000,12 @@ submitConstitutionGovActionForest p forest =
     go (Node parent children) = do
       n <- submitConstitutionGovAction $ GovPurposeId <$> parent
       pure (n, fmap (\(Node _child subtree) -> Node (SJust n) subtree) children)
+
+-- | Asserts that the URL of the current constitution is equal to the given
+-- string
+constitutionShouldBe :: (HasCallStack, ConwayEraGov era) => String -> ImpTestM era ()
+constitutionShouldBe cUrl = do
+  Constitution {constitutionAnchor = Anchor {anchorUrl}} <-
+    getsNES $
+      nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . constitutionGovStateL
+  anchorUrl `shouldBe` fromJust (textToUrl 64 $ T.pack cUrl)

@@ -35,9 +35,11 @@ module Cardano.Ledger.Api.State.Query (
   HotCredAuthStatus (..),
   MemberStatus (..),
   NextEpochChange (..),
+
+  -- * For testing
+  getCommitteeMembers,
 ) where
 
-import Cardano.Ledger.Allegra.Core (Constitution (constitutionAnchor))
 import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   CommitteeMemberState (..),
   CommitteeMembersState (..),
@@ -45,9 +47,18 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   MemberStatus (..),
   NextEpochChange (..),
  )
+import Cardano.Ledger.BaseTypes (EpochNo, UnitInterval, strictMaybeToMaybe)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Conway.Governance (
+  Constitution (constitutionAnchor),
+  ConwayEraGov (..),
+  committeeMembersL,
+  committeeQuorumL,
+  finishDRepPulser,
+  psDRepDistr,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (drepExpiryL)
@@ -56,9 +67,6 @@ import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance (
   EraGov (
     GovState,
-    getCommitteeMembers,
-    getConstitution,
-    getDRepDistr,
     getNextEpochCommitteeMembers
   ),
  )
@@ -101,15 +109,15 @@ queryStakePoolDelegsAndRewards nes = filterStakePoolDelegsAndRewards (dsUnified 
 getDState :: NewEpochState era -> DState era
 getDState = certDState . lsCertState . esLState . nesEs
 
-queryConstitution :: EraGov era => NewEpochState era -> Maybe (Constitution era)
-queryConstitution = getConstitution . queryGovState
+queryConstitution :: ConwayEraGov era => NewEpochState era -> Constitution era
+queryConstitution = (^. constitutionGovStateL) . queryGovState
 
 queryConstitutionHash ::
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
-  Maybe (SafeHash (EraCrypto era) AnchorData)
+  SafeHash (EraCrypto era) AnchorData
 queryConstitutionHash nes =
-  anchorDataHash . constitutionAnchor <$> queryConstitution nes
+  anchorDataHash . constitutionAnchor $ queryConstitution nes
 
 -- | This query returns all of the state related to governance
 queryGovState :: NewEpochState era -> GovState era
@@ -136,7 +144,7 @@ queryDRepState nes creds
 -- | Query DRep stake distribution. Note that this can be an expensive query because there
 -- is a chance that current distribution has not been fully computed yet.
 queryDRepStakeDistr ::
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
   -- | Specify DRep Ids whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the DReps will be returned.
@@ -146,7 +154,7 @@ queryDRepStakeDistr nes creds
   | null creds = Map.map fromCompact distr
   | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` creds
   where
-    distr = getDRepDistr (nes ^. newEpochStateGovStateL)
+    distr = psDRepDistr . fst $ finishDRepPulser (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL)
 
 -- | Query committee members
 queryCommitteeState :: NewEpochState era -> CommitteeState era
@@ -154,11 +162,20 @@ queryCommitteeState nes =
   vsCommitteeState $ certVState $ lsCertState $ esLState $ nesEs nes
 {-# DEPRECATED queryCommitteeState "In favor of `queryCommitteeMembersState`" #-}
 
+getCommitteeMembers ::
+  ConwayEraGov era =>
+  NewEpochState era ->
+  Maybe (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo, UnitInterval)
+getCommitteeMembers nes =
+  fmap (\c -> (c ^. committeeMembersL, c ^. committeeQuorumL)) $
+    strictMaybeToMaybe $
+      queryGovState nes ^. committeeGovStateL
+
 -- | Query committee members. Whenever the system is in No Confidence mode this query will
 -- return `Nothing`.
 queryCommitteeMembersState ::
   forall era.
-  EraGov era =>
+  ConwayEraGov era =>
   -- | filter by cold credentials (don't filter when empty)
   Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
   -- | filter by hot credentials (don't filter when empty)
@@ -169,7 +186,7 @@ queryCommitteeMembersState ::
   NewEpochState era ->
   Maybe (CommitteeMembersState (EraCrypto era))
 queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
-  (comMembers, comQuorum) <- getCommitteeMembers (queryGovState nes)
+  (comMembers, comQuorum) <- getCommitteeMembers nes
   let nextComMembers =
         maybe Map.empty fst (getNextEpochCommitteeMembers (queryGovState nes))
   let comStateMembers =

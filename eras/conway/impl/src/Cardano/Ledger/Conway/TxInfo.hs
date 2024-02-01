@@ -60,6 +60,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (
+  Constitution (..),
   GovAction (..),
   GovActionId (..),
   GovPurposeId (..),

@@ -2,6 +2,8 @@
 
 ## 1.13.0.0
 
+* Add `getDRepDistr`, `getConstitution` and `getCommitteeMembers` from `ConwayEraGov` #4033
+  * Move `Constitution` to `Conway.Governance.Procedures`
 * Add implementation for `getMinFeeTxUtxo`
 * Add `cppMinFeeRefScriptCoinsPerByte` to `ConwayPParams` and `ppMinFeeRefScriptCoinsPerByteL`
 * Add `ucppMinFeeRefScriptCoinsPerByte` to `UpgradeConwayPParams` and `ppuMinFeeRefScriptCoinsPerByteL`

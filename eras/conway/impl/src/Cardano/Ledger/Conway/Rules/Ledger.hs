@@ -40,6 +40,7 @@ import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   GovProcedures (..),
   Proposals,
+  constitutionScriptL,
   pRootsL,
   proposalsGovStateL,
   toPrevGovActionIds,

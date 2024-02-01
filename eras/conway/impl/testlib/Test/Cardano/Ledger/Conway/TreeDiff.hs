@@ -167,3 +167,5 @@ instance
   , ToExpr (PredicateFailure (EraRule "CERTS" era))
   ) =>
   ToExpr (ConwayLedgerPredFailure era)
+
+instance ToExpr (Constitution era)

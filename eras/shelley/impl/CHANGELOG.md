@@ -2,6 +2,8 @@
 
 ## 1.10.0.0
 
+* Remove `getDRepDistr`, `getConstitution` and `getCommitteeMembers` from `EraGov` #4033
+  * Move `Constitution` to `Conway.Governance.Procedures`
 * Deprecated `keyBy`
 * Add `getShelleyMinFeeTxUtxo`
 * Add implementation for `getMinFeeTxUtxo`

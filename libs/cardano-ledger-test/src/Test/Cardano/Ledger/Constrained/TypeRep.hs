@@ -67,6 +67,7 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
+  Constitution,
   DRepPulser (..),
   EnactState (..),
   GovAction (..),

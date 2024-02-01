@@ -59,6 +59,7 @@ roundTripConwayEraTypesSpec = do
     roundTripEraTypeSpec @era @VotingProcedure
     roundTripEraTypeSpec @era @VotingProcedures
     roundTripEraTypeSpec @era @ProposalProcedure
+    roundTripEraTypeSpec @era @Constitution
     -- Conway adds ability to serialize unknown cost models, i.e. FlexibleCostModels
     prop "CostModels" $ roundTripEraExpectation @era . unFlexibleCostModels
   describe "Conway State Types" $ do

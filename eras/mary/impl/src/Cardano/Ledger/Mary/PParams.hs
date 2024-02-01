@@ -6,10 +6,14 @@ module Cardano.Ledger.Mary.PParams () where
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Era (MaryEra)
-import Cardano.Ledger.Shelley.Governance (EraGov (..), ShelleyGovState (..), curPParamsShelleyGovStateL, prevPParamsShelleyGovStateL)
+import Cardano.Ledger.Shelley.Governance (
+  EraGov (..),
+  ShelleyGovState (..),
+  curPParamsShelleyGovStateL,
+  prevPParamsShelleyGovStateL,
+ )
 import Cardano.Ledger.Shelley.PParams
 import Data.Coerce
-import qualified Data.Map.Strict as Map
 import Lens.Micro
 
 instance Crypto c => EraPParams (MaryEra c) where
@@ -58,5 +62,3 @@ instance Crypto c => EraGov (MaryEra c) where
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
   obligationGovState = const mempty
-
-  getDRepDistr = const Map.empty

@@ -4,8 +4,8 @@
 
 * Add implementation for `getMinFeeTxUtxo`
 * Add `getReferenceScriptsNonDistinct`
-* Add the constructor BabbageNonDisjointRefInputs to BabbageUtxoPredFailure
-  * Utxo rule raises that PredicateFailure in Conway and future Eras when they are not disjoint.
+* Add the constructor `BabbageNonDisjointRefInputs` to `BabbageUtxoPredFailure`
+  * Utxo rule raises that `PredicateFailure` in Conway and future Eras when they are not disjoint.
 
 ## 1.6.0.0
 

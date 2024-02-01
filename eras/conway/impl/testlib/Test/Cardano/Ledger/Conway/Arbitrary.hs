@@ -770,3 +770,6 @@ instance Arbitrary DRepVotingThresholds where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+instance Era era => Arbitrary (Constitution era) where
+  arbitrary = Constitution <$> arbitrary <*> arbitrary

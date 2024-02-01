@@ -15,11 +15,13 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Anchor (..),
+  Constitution (..),
   ConwayEraGov (..),
   ConwayGovState,
   GovAction (..),
   ProposalProcedure (..),
   Voter (..),
+  constitutionScriptL,
  )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (

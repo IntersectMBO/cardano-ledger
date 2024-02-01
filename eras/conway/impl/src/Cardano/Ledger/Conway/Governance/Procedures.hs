@@ -48,6 +48,9 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   GovActionState (..),
   govActionIdToText,
   indexedGovProps,
+  Constitution (..),
+  constitutionAnchorL,
+  constitutionScriptL,
   -- Lenses
   pProcDepositL,
   gasDepositL,
@@ -74,11 +77,14 @@ import Cardano.Ledger.BaseTypes (
   AnchorData (..),
   ProtVer,
   UnitInterval,
+  maybeToStrictMaybe,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
+  FromCBOR (fromCBOR),
+  ToCBOR (toCBOR),
   decNoShareCBOR,
   decodeEnumBounded,
   decodeMapByKey,
@@ -118,6 +124,7 @@ import Data.Aeson (
   pairs,
   withObject,
   (.:),
+  (.:?),
  )
 import Data.Aeson.Types (toJSONKeyText)
 import Data.Data (Typeable)
@@ -829,3 +836,62 @@ instance EraPParams era => EncCBOR (GovAction era) where
         Sum NewConstitution 5 !> E (encodeNullStrictMaybe encCBOR) gid !> To c
       InfoAction ->
         Sum InfoAction 6
+
+data Constitution era = Constitution
+  { constitutionAnchor :: !(Anchor (EraCrypto era))
+  , constitutionScript :: !(StrictMaybe (ScriptHash (EraCrypto era)))
+  }
+  deriving (Generic, Ord)
+
+constitutionAnchorL :: Lens' (Constitution era) (Anchor (EraCrypto era))
+constitutionAnchorL = lens constitutionAnchor (\x y -> x {constitutionAnchor = y})
+
+constitutionScriptL :: Lens' (Constitution era) (StrictMaybe (ScriptHash (EraCrypto era)))
+constitutionScriptL = lens constitutionScript (\x y -> x {constitutionScript = y})
+
+instance Era era => ToJSON (Constitution era) where
+  toJSON = object . toConstitutionPairs
+  toEncoding = pairs . mconcat . toConstitutionPairs
+
+instance Era era => FromJSON (Constitution era) where
+  parseJSON = withObject "Constitution" $ \o ->
+    Constitution
+      <$> o .: "anchor"
+      <*> (maybeToStrictMaybe <$> (o .:? "script"))
+
+toConstitutionPairs :: (KeyValue e a, Era era) => Constitution era -> [a]
+toConstitutionPairs c@(Constitution _ _) =
+  let Constitution {..} = c
+   in ["anchor" .= constitutionAnchor]
+        <> ["script" .= cScript | SJust cScript <- [constitutionScript]]
+
+deriving instance Eq (Constitution era)
+
+deriving instance Show (Constitution era)
+
+instance Era era => Default (Constitution era) where
+  def = Constitution def def
+
+instance Era era => DecCBOR (Constitution era) where
+  decCBOR =
+    decode $
+      RecD Constitution
+        <! From
+        <! D (decodeNullStrictMaybe decCBOR)
+
+instance Era era => EncCBOR (Constitution era) where
+  encCBOR Constitution {..} =
+    encode $
+      Rec (Constitution @era)
+        !> To constitutionAnchor
+        !> E (encodeNullStrictMaybe encCBOR) constitutionScript
+
+instance Era era => ToCBOR (Constitution era) where
+  toCBOR = toEraCBOR @era
+
+instance Era era => FromCBOR (Constitution era) where
+  fromCBOR = fromEraCBOR @era
+
+instance Era era => NFData (Constitution era)
+
+instance Era era => NoThunks (Constitution era)

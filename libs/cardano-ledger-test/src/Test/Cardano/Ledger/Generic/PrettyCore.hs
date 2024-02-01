@@ -83,6 +83,7 @@ import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
+  Constitution (..),
   ConwayGovState (..),
   DRepPulser (..),
   DRepPulsingState (..),
