@@ -14,14 +14,14 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoAPI (tests) where
 
+import Cardano.Ledger.Alonzo.Tx (alonzoMinFeeTx)
 import Cardano.Ledger.BaseTypes (ProtVer (..), inject, natVersion)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (getMinFeeTx)
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API (evaluateTransactionFee)
+import Cardano.Ledger.Tools (estimateMinFeeTx)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW (mkSingleRedeemer)
@@ -49,17 +49,19 @@ import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 tests :: TestTree
 tests =
-  testGroup "Alonzo API" [testCase "evaluateTransactionFee" testEvaluateTransactionFee]
+  testGroup "Alonzo API" [testCase "estimateMinFee" testEstimateMinFee]
 
 type A = AlonzoEra StandardCrypto
 
-testEvaluateTransactionFee :: Assertion
-testEvaluateTransactionFee =
-  evaluateTransactionFee @A
+testEstimateMinFee :: Assertion
+testEstimateMinFee =
+  estimateMinFeeTx @A
     pparams
     validatingTxNoWits
     1
-    @?= getMinFeeTx pparams validatingTx
+    0
+    0
+    @?= alonzoMinFeeTx pparams validatingTx
   where
     pf = Alonzo
     pparams = newPParams pf $ defaultPPs ++ [MinfeeA (Coin 1)]
@@ -90,7 +92,7 @@ testEvaluateTransactionFee =
         [ Inputs' [mkGenesisTxIn 1]
         , Collateral' [mkGenesisTxIn 11]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
-        , Txfee (Coin 5)
+        , Txfee (Coin 316)
         , WppHash (newScriptIntegrityHash pf (newPParams pf defaultPPs) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
         ]
     redeemers = mkSingleRedeemer pf Spending (Data (PV1.I 42))

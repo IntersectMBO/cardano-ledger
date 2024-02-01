@@ -10,6 +10,7 @@ module Cardano.Ledger.Conway.Tx (
 where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
+import Cardano.Ledger.Alonzo.Core (AlonzoEraTxWits)
 import Cardano.Ledger.Alonzo.Tx (
   alonzoMinFeeTx,
   auxDataAlonzoTxL,
@@ -23,16 +24,21 @@ import Cardano.Ledger.Alonzo.TxSeq (
   AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
   hashAlonzoTxSeq,
  )
+import Cardano.Ledger.Babbage.PParams (CoinPerByte (..))
 import Cardano.Ledger.Babbage.Tx as BabbageTxReExport (
   AlonzoEraTx (..),
   AlonzoTx (..),
  )
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppMinFeeRefScriptCoinsPerByteL)
 import Cardano.Ledger.Conway.TxAuxData ()
 import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Val (Val (..))
+import Lens.Micro ((^.))
 
 instance Crypto c => EraTx (ConwayEra c) where
   {-# SPECIALIZE instance EraTx (ConwayEra StandardCrypto) #-}
@@ -57,7 +63,7 @@ instance Crypto c => EraTx (ConwayEra c) where
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
 
-  getMinFeeTx = alonzoMinFeeTx
+  getMinFeeTx = getConwayMinFeeTx
 
   upgradeTx (AlonzoTx b w valid aux) =
     AlonzoTx
@@ -65,6 +71,20 @@ instance Crypto c => EraTx (ConwayEra c) where
       <*> pure (upgradeTxWits w)
       <*> pure valid
       <*> pure (fmap upgradeTxAuxData aux)
+
+getConwayMinFeeTx ::
+  ( EraTx era
+  , AlonzoEraTxWits era
+  , ConwayEraPParams era
+  ) =>
+  PParams era ->
+  Tx era ->
+  Int ->
+  Coin
+getConwayMinFeeTx pp tx refScriptsSize =
+  alonzoMinFeeTx pp tx <+> (refScriptsSize <×> refScriptFee)
+  where
+    CoinPerByte refScriptFee = pp ^. ppMinFeeRefScriptCoinsPerByteL
 
 instance Crypto c => AlonzoEraTx (ConwayEra c) where
   {-# SPECIALIZE instance AlonzoEraTx (ConwayEra StandardCrypto) #-}

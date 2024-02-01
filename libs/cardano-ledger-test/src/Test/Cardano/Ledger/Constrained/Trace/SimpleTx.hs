@@ -214,7 +214,7 @@ completeTxBody proof maxFeeEstimate txBody = do
           txBody
           (liftUTxO u)
           (GenDelegs gd)
-      initialfee = computeFinalFee pp (TxF proof tx)
+      initialfee = computeFinalFee pp (TxF proof tx) u
   let loop _ _ fee _ | fee >= maxFeeEstimate = trace ("LOOP: fee >= maxFeeEstimate, Discard") $ discard
       loop count txx fee hash = do
         let adjustedtx = adjustTxForFee proof fee txx
@@ -231,7 +231,7 @@ completeTxBody proof maxFeeEstimate txBody = do
                 txb
                 (liftUTxO u)
                 (GenDelegs gd)
-            newfee = computeFinalFee pp (TxF proof completedtx)
+            newfee = computeFinalFee pp (TxF proof completedtx) u
         if (fee == newfee) && (hash == hash2)
           then pure completedtx
           else

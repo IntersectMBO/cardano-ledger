@@ -52,7 +52,9 @@ import Cardano.Ledger.Shelley.TxBody (Withdrawals (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (
+  EraUTxO,
   UTxO (..),
+  getMinFeeTxUtxo,
   sumAllValue,
  )
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
@@ -128,6 +130,7 @@ myDiscard message = trace ("\nDiscarded trace: " ++ message) discard
 genTx ::
   forall era.
   ( EraGen era
+  , EraUTxO era
   , Mock (EraCrypto era)
   , Embed (EraRule "DELPL" era) (CERTS era)
   , Environment (EraRule "DELPL" era) ~ DelplEnv era
@@ -350,7 +353,7 @@ encodedLen x = fromIntegral $ BSL.length (serialize (eraProtVerHigh @era) x)
 -- so that it will balance.
 genNextDelta ::
   forall era.
-  (EraGen era, Mock (EraCrypto era)) =>
+  (EraGen era, Mock (EraCrypto era), EraUTxO era) =>
   ScriptInfo era ->
   UTxO era ->
   PParams era ->
@@ -371,7 +374,7 @@ genNextDelta
   tx
   _count -- the counter of the fix loop
   delta@(Delta dfees extraInputs extraWitnesses change _ extraScripts) =
-    let !baseTxFee = getMinFeeTx pparams tx
+    let !baseTxFee = getMinFeeTxUtxo pparams tx utxo
         -- based on the current contents of delta, how much will the fee
         -- increase when we add the delta to the tx?
         draftSize =
@@ -469,6 +472,7 @@ genNextDeltaTilFixPoint ::
   forall era.
   ( EraGen era
   , Mock (EraCrypto era)
+  , EraUTxO era
   ) =>
   ScriptInfo era ->
   Coin ->
@@ -546,7 +550,7 @@ fix n f d = do d1 <- f n d; if d1 == d then pure d else fix (n + 1) f d1
 
 converge ::
   forall era.
-  (EraGen era, Mock (EraCrypto era)) =>
+  (EraGen era, Mock (EraCrypto era), EraUTxO era) =>
   ScriptInfo era ->
   Coin ->
   [KeyPair 'Witness (EraCrypto era)] ->

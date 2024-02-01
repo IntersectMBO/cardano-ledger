@@ -67,7 +67,7 @@ import Cardano.Ledger.Shelley.TxCert (
  )
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UTxO (UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (forM, replicateM)
@@ -1016,7 +1016,7 @@ genAlonzoTxAndInfo proof slot = do
           , Valid isValid
           , AuxData' []
           ]
-      fee = getMinFeeTx gePParams bogusTxForFeeCalc
+      fee = getMinFeeTxUtxo gePParams bogusTxForFeeCalc (UTxO refInputsUtxo)
 
   keyDeposits <- gets (mKeyDeposits . gsModel)
   let deposits = case proof of

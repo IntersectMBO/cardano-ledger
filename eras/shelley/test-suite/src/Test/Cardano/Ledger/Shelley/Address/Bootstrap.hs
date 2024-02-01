@@ -56,7 +56,7 @@ import Cardano.Ledger.Shelley.TxWits (
   bootWits,
  )
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<->))
 import Data.ByteString (ByteString)
@@ -70,6 +70,7 @@ import qualified Hedgehog.Range
 import Lens.Micro
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
@@ -165,9 +166,8 @@ utxoState1 =
     , utxosDonation = mempty
     }
   where
-    txid = TxId $ hashAnnotated txBody
-    bobResult = (mkTxInPartial txid 0, ShelleyTxOut bobAddr coinsToBob)
-    aliceResult = (mkTxInPartial txid 1, ShelleyTxOut aliceAddr (Coin 998990))
+    bobResult = (txInAt (0 :: Int) tx, ShelleyTxOut bobAddr coinsToBob)
+    aliceResult = (txInAt (1 :: Int) tx, ShelleyTxOut aliceAddr (Coin 998990))
 
 utxoEnv :: UtxoEnv C
 utxoEnv =

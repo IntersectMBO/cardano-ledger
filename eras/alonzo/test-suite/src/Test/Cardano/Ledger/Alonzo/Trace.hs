@@ -26,6 +26,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyDelplPredFailure,
   UtxoEnv,
  )
+import Cardano.Ledger.UTxO (EraUTxO)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -46,6 +47,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
 instance
   ( EraGen era
   , EraGov era
+  , EraUTxO era
   , AlonzoEraTx era
   , Mock (EraCrypto era)
   , MinLEDGER_STS era

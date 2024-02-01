@@ -56,7 +56,7 @@ instance Crypto c => EraTx (AllegraEra c) where
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
 
-  getMinFeeTx = shelleyMinFeeTx
+  getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
 
   upgradeTx (ShelleyTx txb txwits txAux) =
     ShelleyTx

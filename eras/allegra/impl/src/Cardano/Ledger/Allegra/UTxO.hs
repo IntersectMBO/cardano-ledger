@@ -12,6 +12,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getConsumedCoin,
+  getShelleyMinFeeTxUtxo,
   getShelleyScriptsNeeded,
   getShelleyWitsVKeyNeeded,
   shelleyProducedValue,
@@ -33,3 +34,5 @@ instance Crypto c => EraUTxO (AllegraEra c) where
   getScriptsHashesNeeded (ShelleyScriptsNeeded scriptHashes) = scriptHashes
 
   getWitsVKeyNeeded = getShelleyWitsVKeyNeeded
+
+  getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx

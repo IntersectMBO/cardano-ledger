@@ -37,6 +37,7 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv,
  )
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.UTxO (EraUTxO)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -75,6 +76,7 @@ genAccountState Constants {minTreasury, maxTreasury, minReserves, maxReserves} =
 instance
   ( EraGen era
   , EraGov era
+  , EraUTxO era
   , Mock (EraCrypto era)
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)
@@ -110,6 +112,7 @@ instance
   forall era.
   ( EraGen era
   , EraGov era
+  , EraUTxO era
   , Mock (EraCrypto era)
   , MinLEDGER_STS era
   , Embed (EraRule "DELPL" era) (CERTS era)

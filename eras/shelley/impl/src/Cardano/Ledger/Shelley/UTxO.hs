@@ -26,6 +26,7 @@ module Cardano.Ledger.Shelley.UTxO (
   consumed,
   produced,
   txup,
+  getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
   getShelleyWitsVKeyNeededNoGov,
   module UTxO,
@@ -217,6 +218,12 @@ instance Crypto c => EraUTxO (ShelleyEra c) where
   getScriptsHashesNeeded (ShelleyScriptsNeeded scriptsHashes) = scriptsHashes
 
   getWitsVKeyNeeded = getShelleyWitsVKeyNeeded
+
+  getMinFeeTxUtxo pp tx _ = getShelleyMinFeeTxUtxo pp tx
+
+-- We don't consider the reference scripts in the calculation before Conway
+getShelleyMinFeeTxUtxo :: EraTx era => PParams era -> Tx era -> Coin
+getShelleyMinFeeTxUtxo pparams tx = getMinFeeTx pparams tx 0
 
 -- | Collect the set of hashes of keys that needs to sign a
 --  given transaction. This set consists of the txin owners,

@@ -72,6 +72,7 @@ import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as Lazy
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
+import qualified Data.ByteString.Short as SBS (length)
 import Data.Coerce
 import Data.Typeable
 import GHC.Base (Type)
@@ -136,6 +137,7 @@ instance (Show (t era), HashAlgorithm (HASH (EraCrypto era))) => Show (MemoBytes
 
 instance SafeToHash (MemoBytes t era) where
   originalBytes = fromShort . mbBytes
+  originalBytesSize = SBS.length . mbBytes
 
 -- | Turn a lazy bytestring into a short bytestring.
 shorten :: Lazy.ByteString -> ShortByteString

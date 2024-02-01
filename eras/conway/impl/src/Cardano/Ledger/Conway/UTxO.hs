@@ -30,8 +30,10 @@ import Cardano.Ledger.Babbage.UTxO (
   getBabbageScriptsProvided,
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
+  getReferenceScriptsNonDistinct,
  )
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance.Procedures (
@@ -44,11 +46,13 @@ import Cardano.Ledger.Credential (credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
+import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov, shelleyProducedValue)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val (Val (..), inject)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
+import Data.Monoid (Sum (..))
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 
@@ -122,10 +126,27 @@ instance Crypto c => EraUTxO (ConwayEra c) where
 
   getWitsVKeyNeeded _ = getConwayWitsVKeyNeeded
 
+  getMinFeeTxUtxo = getConwayMinFeeTxUtxo
+
 instance Crypto c => AlonzoEraUTxO (ConwayEra c) where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes
 
   getSpendingDatum = getBabbageSpendingDatum
+
+getConwayMinFeeTxUtxo ::
+  ( EraTx era
+  , BabbageEraTxBody era
+  ) =>
+  PParams era ->
+  Tx era ->
+  UTxO era ->
+  Coin
+getConwayMinFeeTxUtxo pparams tx utxo =
+  getMinFeeTx pparams tx refScriptsSize
+  where
+    ins = (tx ^. bodyTxL . referenceInputsTxBodyL) `Set.union` (tx ^. bodyTxL . inputsTxBodyL)
+    refScripts = getReferenceScriptsNonDistinct utxo ins
+    refScriptsSize = getSum $ foldMap (Sum . originalBytesSize . snd) refScripts
 
 getConwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>

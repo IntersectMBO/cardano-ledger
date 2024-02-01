@@ -189,7 +189,7 @@ instance Crypto c => EraTx (AlonzoEra c) where
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
 
-  getMinFeeTx = alonzoMinFeeTx
+  getMinFeeTx pp tx _ = alonzoMinFeeTx pp tx
   {-# INLINE getMinFeeTx #-}
 
   upgradeTx (ShelleyTx body wits aux) =

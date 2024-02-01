@@ -203,7 +203,7 @@ instance Crypto c => EraTx (ShelleyEra c) where
   validateNativeScript = validateMultiSig
   {-# INLINE validateNativeScript #-}
 
-  getMinFeeTx = shelleyMinFeeTx
+  getMinFeeTx pp tx _ = shelleyMinFeeTx pp tx
 
   upgradeTx = error "Calling this function will cause a compilation error, since there is no Tx instance for Byron"
 

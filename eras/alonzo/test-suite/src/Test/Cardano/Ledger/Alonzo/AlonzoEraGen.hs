@@ -436,7 +436,7 @@ instance Mock c => EraGen (AlonzoEra c) where
   --    method of the EraGen class in the (AlonzoEra c) instance.
   genEraDone utxo pp tx =
     let theFee = tx ^. bodyTxL . feeTxBodyL -- Coin supplied to pay fees
-        minimumFee = getMinFeeTx @(AlonzoEra c) pp tx
+        minimumFee = getMinFeeTxUtxo @(AlonzoEra c) pp tx utxo
         neededHashes = getScriptsHashesNeeded $ getScriptsNeeded utxo (tx ^. bodyTxL)
         oldScriptWits = tx ^. witsTxL . scriptTxWitsL
         newWits = oldScriptWits `Map.restrictKeys` neededHashes

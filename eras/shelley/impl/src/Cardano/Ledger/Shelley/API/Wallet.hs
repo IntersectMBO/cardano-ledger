@@ -33,8 +33,6 @@ module Cardano.Ledger.Shelley.API.Wallet (
 
   -- * Transaction helpers
   addKeyWitnesses,
-  evaluateMinFee,
-  evaluateTransactionFee,
   evaluateTransactionBalance,
   evaluateMinLovelaceOutput,
   addShelleyKeyWitnesses,
@@ -46,7 +44,6 @@ module Cardano.Ledger.Shelley.API.Wallet (
 )
 where
 
-import Cardano.Crypto.DSIGN.Class (sizeSigDSIGN, sizeVerKeyDSIGN)
 import Cardano.Ledger.Address (Addr (..), compactAddr)
 import Cardano.Ledger.BaseTypes (
   BlocksMade,
@@ -59,10 +56,7 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
   decodeDouble,
-  decodeFull,
-  decodeFullDecoder,
   encodeDouble,
-  serialize,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -72,12 +66,10 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Binary.Crypto (decodeSignedDSIGN)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.EpochBoundary as EB
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), WitVKey (..))
 import Cardano.Ledger.PoolDistr (
@@ -125,13 +117,10 @@ import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
 import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.ByteString.Lazy as LBS
 import Data.Default.Class (Default (def))
-import Data.Either (fromRight)
 import Data.Foldable (foldMap')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -444,12 +433,6 @@ getRewardProvenance globals newepochstate =
 -- Transaction helpers
 --------------------------------------------------------------------------------
 
--- | The minimum fee calculation.
--- Used for the default implentation of 'evaluateTransactionFee'.
-evaluateMinFee :: EraTx era => PParams era -> Tx era -> Coin
-evaluateMinFee = getMinFeeTx
-{-# DEPRECATED evaluateMinFee "In favor of 'getMinFeeTx'" #-}
-
 -- | Evaluate the minimum lovelace that a given transaction output must contain.
 evaluateMinLovelaceOutput :: EraTxOut era => PParams era -> TxOut era -> Coin
 evaluateMinLovelaceOutput = getMinCoinTxOut
@@ -457,42 +440,6 @@ evaluateMinLovelaceOutput = getMinCoinTxOut
 
 addKeyWitnesses :: EraTx era => Tx era -> Set (WitVKey 'Witness (EraCrypto era)) -> Tx era
 addKeyWitnesses tx newWits = tx & witsTxL . addrTxWitsL %~ Set.union newWits
-
--- | Evaluate the fee for a given transaction.
-evaluateTransactionFee ::
-  forall era.
-  EraTx era =>
-  -- | The current protocol parameters.
-  PParams era ->
-  -- | The transaction.
-  Tx era ->
-  -- | The number of key witnesses still to be added to the transaction.
-  Word ->
-  -- | The required fee.
-  Coin
-evaluateTransactionFee pp tx numKeyWits = getMinFeeTx pp tx'
-  where
-    version = eraProtVerLow @era
-    sigSize = fromIntegral $ sizeSigDSIGN (Proxy @(DSIGN (EraCrypto era)))
-    dummySig =
-      fromRight
-        (error "corrupt dummy signature")
-        ( decodeFullDecoder
-            version
-            "dummy signature"
-            decodeSignedDSIGN
-            (serialize version $ LBS.replicate sigSize 0)
-        )
-    vkeySize = fromIntegral $ sizeVerKeyDSIGN (Proxy @(DSIGN (EraCrypto era)))
-    dummyVKey w =
-      let padding = LBS.replicate paddingSize 0
-          paddingSize = vkeySize - LBS.length sw
-          sw = serialize version w
-          keyBytes = serialize version $ padding <> sw
-       in fromRight (error "corrupt dummy vkey") (decodeFull version keyBytes)
-    dummyKeyWits = Set.fromList [WitVKey (dummyVKey x) dummySig | x <- [1 .. numKeyWits]]
-    tx' = addKeyWitnesses tx dummyKeyWits
-{-# DEPRECATED evaluateTransactionFee "In favor of `Cardano.Ledger.Api.Tx.estimateMinFeeTx`" #-}
 
 -- | Evaluate the difference between the value currently being consumed by
 -- a transaction and the number of lovelace being produced.

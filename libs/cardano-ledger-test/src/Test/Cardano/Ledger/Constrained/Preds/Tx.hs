@@ -20,6 +20,7 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), plutusScr
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (getInputDataHashesTxBody)
+import Cardano.Ledger.Api (setMinFeeTxUtxo)
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (Network (..), ProtVer (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary.Decoding (mkSized, sizedSize)
@@ -46,7 +47,6 @@ import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState, NewEpochState)
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
-import Cardano.Ledger.Tools (setMinFeeTx)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Ledger.Val (Val (..), inject)
@@ -155,15 +155,15 @@ txFL = lens (\(TxF _ x) -> x) (\(TxF p _) x -> TxF p x)
 -- ================================================
 -- Auxiliary functions and Targets
 
-computeFinalTx :: EraTx era => PParamsF era -> TxF era -> TxF era
-computeFinalTx (PParamsF _ ppV) (TxF p txV) = TxF p newtx
+computeFinalFee ::
+  EraUTxO era =>
+  PParamsF era ->
+  TxF era ->
+  Map (TxIn (EraCrypto era)) (TxOutF era) ->
+  Coin
+computeFinalFee (PParamsF _ ppV) (TxF _ txV) ut = newtx ^. (bodyTxL . feeTxBodyL)
   where
-    newtx = setMinFeeTx ppV txV
-
-computeFinalFee :: EraTx era => PParamsF era -> TxF era -> Coin
-computeFinalFee (PParamsF _ ppV) (TxF _ txV) = newtx ^. (bodyTxL . feeTxBodyL)
-  where
-    newtx = setMinFeeTx ppV txV
+    newtx = setMinFeeTxUtxo ppV txV (liftUTxO ut)
 
 integrityHash ::
   Era era1 =>
@@ -550,7 +550,7 @@ txBodyPreds sizes@UnivSize {..} p =
                   ^$ certs
                )
        , txdeposits :<-: (Constr "certsDeposits" certsDeposits ^$ pparams p ^$ regPools ^$ certs)
-       , scriptsNeeded :<-: (needT p ^$ tempTxBody ^$ (utxo p))
+       , scriptsNeeded :<-: (needT p ^$ tempTxBody ^$ utxo p)
        , txisvalid :<-: (Constr "allValid" allValid ^$ valids)
        , Maybe txauxdata (Simple oneAuxdata) [Random oneAuxdata]
        , adHash :<-: (Constr "hashMaybe" (hashTxAuxDataF <$>) ^$ txauxdata)
@@ -558,11 +558,11 @@ txBodyPreds sizes@UnivSize {..} p =
          -- We will use this to compute the 'txfee' using a fix-point approach.
          Random randomWppHash
        , tempWppHash :<-: justTarget randomWppHash
-       , tempTxFee :<-: (constTarget (Coin (fromIntegral (maxBound :: Word64))))
+       , tempTxFee :<-: constTarget (Coin (fromIntegral (maxBound :: Word64)))
        , tempTxBody :<-: txbodyTarget tempTxFee tempWppHash (Lit CoinR (Coin (fromIntegral (maxBound :: Word64))))
        , tempTx :<-: txTarget tempTxBody tempBootWits tempKeyWits
        , -- Compute the real fee, and then recompute the TxBody and the Tx
-         txfee :<-: (Constr "finalFee" computeFinalFee ^$ (pparams p) ^$ tempTx)
+         txfee :<-: (Constr "finalFee" computeFinalFee ^$ pparams p ^$ tempTx ^$ utxo p)
        , --  , txbodyterm :<-: txbodyTarget txfee wppHash totalCol
          --  , txterm :<-: txTarget txbodyterm bootWits keyWits
          ProjM drepDepositL CoinR currentDRepState :=: drepDepositsView

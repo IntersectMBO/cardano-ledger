@@ -78,7 +78,7 @@ import Cardano.Ledger.Shelley.TxBody (RewardAccount)
 import Cardano.Ledger.Shelley.UTxO (consumed, produced)
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO, UTxO (..), balance, txouts)
+import Cardano.Ledger.UTxO (EraUTxO (getMinFeeTxUtxo), UTxO (..), balance, txouts)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq
@@ -401,7 +401,7 @@ utxoInductive = do
   runTest $ validateInputSetEmptyUTxO txBody
 
   {- minfee pp tx ≤ txfee txb -}
-  runTest $ validateFeeTooSmallUTxO pp tx
+  runTest $ validateFeeTooSmallUTxO pp tx utxo
 
   {- txins txb ⊆ dom utxo -}
   runTest $ validateBadInputsUTxO utxo $ txBody ^. inputsTxBodyL
@@ -467,14 +467,15 @@ validateInputSetEmptyUTxO txb =
 --
 -- > minfee pp tx ≤ txfee txb
 validateFeeTooSmallUTxO ::
-  EraTx era =>
+  EraUTxO era =>
   PParams era ->
   Tx era ->
+  UTxO era ->
   Test (ShelleyUtxoPredFailure era)
-validateFeeTooSmallUTxO pp tx =
+validateFeeTooSmallUTxO pp tx utxo =
   failureUnless (minFee <= txFee) $ FeeTooSmallUTxO minFee txFee
   where
-    minFee = getMinFeeTx pp tx
+    minFee = getMinFeeTxUtxo pp tx utxo
     txFee = txb ^. feeTxBodyL
     txb = tx ^. bodyTxL
 

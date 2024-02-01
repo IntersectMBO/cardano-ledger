@@ -114,6 +114,7 @@ library testlib
         Test.Cardano.Ledger.Conway.Imp.EpochSpec
         Test.Cardano.Ledger.Conway.Imp.EnactSpec
         Test.Cardano.Ledger.Conway.Imp.GovSpec
+        Test.Cardano.Ledger.Conway.Imp.UtxoSpec
         Test.Cardano.Ledger.Conway.TreeDiff
 
     visibility:       public
@@ -133,9 +134,9 @@ library testlib
         microlens,
         cardano-crypto-class,
         cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
-        cardano-ledger-alonzo:testlib,
+        cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-binary,
-        cardano-ledger-babbage:testlib,
+        cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
         cardano-ledger-conway,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley,

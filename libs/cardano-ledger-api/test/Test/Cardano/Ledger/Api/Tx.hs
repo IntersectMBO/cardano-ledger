@@ -53,8 +53,8 @@ txSpec = describe (eraName @era) $ do
 
         txSigned = tx & (witsTxL . addrTxWitsL <>~ wits)
        in
-        estimateMinFeeTx pp tx (Map.size keyPairs) 0
-          === (setMinFeeTx pp txSigned ^. bodyTxL . feeTxBodyL)
+        estimateMinFeeTx pp tx (Map.size keyPairs) 0 0
+          === (setMinFeeTx pp txSigned 0 ^. bodyTxL . feeTxBodyL)
     prop "with Bootstrap" $ \(pp :: PParams era) (tx :: Tx era) keyPairsList byronKeyPairsList ->
       let
         txBody = tx ^. bodyTxL
@@ -99,8 +99,8 @@ txSpec = describe (eraName @era) $ do
         -- size of the transaction, which in turn affects the overestimation. For this
         -- reason we can only check `>=`
         tabulate "Attrs overestimation in bytes" (map show overestimations) $
-          estimateMinFeeTx pp tx (Map.size keyPairs) (Map.size byronKeyPairs)
-            >= ( (setMinFeeTx pp txSigned ^. bodyTxL . feeTxBodyL)
+          estimateMinFeeTx pp tx (Map.size keyPairs) (Map.size byronKeyPairs) 0
+            >= ( (setMinFeeTx pp txSigned 0 ^. bodyTxL . feeTxBodyL)
                   <> Coin (toInteger (sum overestimations))
                )
 

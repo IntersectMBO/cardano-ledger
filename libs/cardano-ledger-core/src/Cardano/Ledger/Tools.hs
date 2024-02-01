@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -5,6 +6,7 @@
 -- operation, but is useful for testing as well as for downstream users of ledger
 module Cardano.Ledger.Tools (
   setMinFeeTx,
+  setMinFeeTxUtxo,
   calcMinFeeTx,
   calcMinFeeTxNativeScriptWits,
   estimateMinFeeTx,
@@ -30,7 +32,7 @@ import Cardano.Ledger.Keys (
   WitVKey (..),
   asWitness,
  )
-import Cardano.Ledger.UTxO (EraUTxO (getWitsVKeyNeeded), UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Data.Bits (Bits, shiftR)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -47,14 +49,32 @@ import Lens.Micro
 -- This function potentially changes the `feeTxBodyL` field of the `TxBody`, as such it
 -- affects the hash of the body, which consequently invalidates all of the signature in
 -- the attached witnesses.
-setMinFeeTx :: EraTx era => PParams era -> Tx era -> Tx era
-setMinFeeTx pp tx =
-  let curMinFee = getMinFeeTx pp tx
+setMinFeeTx ::
+  EraTx era =>
+  PParams era ->
+  Tx era ->
+  -- | Size in bytes of reference scripts present in this transaction
+  Int ->
+  Tx era
+setMinFeeTx pp tx refScriptsSize =
+  setMinFeeTxInternal (\t -> getMinFeeTx pp t refScriptsSize) tx
+
+setMinFeeTxUtxo :: EraUTxO era => PParams era -> Tx era -> UTxO era -> Tx era
+setMinFeeTxUtxo pp tx utxo =
+  setMinFeeTxInternal (\t -> getMinFeeTxUtxo pp t utxo) tx
+
+setMinFeeTxInternal ::
+  EraTx era =>
+  (Tx era -> Coin) ->
+  Tx era ->
+  Tx era
+setMinFeeTxInternal f tx =
+  let curMinFee = f tx
       curFee = tx ^. bodyTxL . feeTxBodyL
       modifiedTx = tx & bodyTxL . feeTxBodyL .~ curMinFee
    in if curFee == curMinFee
         then tx
-        else setMinFeeTx pp modifiedTx
+        else setMinFeeTxInternal f modifiedTx
 
 -- | Same as `calcMinFeeTx`, except this function allows to specify hashes of key witnesses
 -- that will be supplied, instead of their count. That is only useful whenever there is a
@@ -130,7 +150,7 @@ calcMinFeeTxInternal ::
   Set.Set (KeyHash 'Witness (EraCrypto era)) ->
   Coin
 calcMinFeeTxInternal utxo pp tx extraKeyWitsCount nativeScriptsKeyWitsHashes =
-  setMinFeeTx pp tx' ^. bodyTxL . feeTxBodyL
+  setMinFeeTxUtxo pp tx' utxo ^. bodyTxL . feeTxBodyL
   where
     txBody = tx ^. bodyTxL
     tx' = addDummyWitsTx pp tx numKeyWitsRequired $ Map.elems byronAttributes
@@ -164,9 +184,12 @@ estimateMinFeeTx ::
   Int ->
   -- | The number of Byron key witnesses still to be added to the transaction.
   Int ->
+  -- | The total size in bytes of reference scripts
+  Int ->
   -- | The required minimum fee.
   Coin
-estimateMinFeeTx pp tx numKeyWits numByronKeyWits = setMinFeeTx pp tx' ^. bodyTxL . feeTxBodyL
+estimateMinFeeTx pp tx numKeyWits numByronKeyWits refScriptsSize =
+  setMinFeeTx pp tx' refScriptsSize ^. bodyTxL . feeTxBodyL
   where
     tx' = addDummyWitsTx pp tx numKeyWits $ replicate numByronKeyWits dummyByronAttributes
     -- We assume testnet network magic here to avoid having to thread the actual network
