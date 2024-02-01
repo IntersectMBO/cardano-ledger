@@ -266,7 +266,11 @@ explainPlutusEvaluationError ::
 explainPlutusEvaluationError pwc@PlutusWithContext {pwcProtocolVersion, pwcScript, pwcDatums} e =
   let lang = either plutusLanguage plutusLanguage pwcScript
       Plutus binaryScript = either id plutusFromRunnable pwcScript
-      firstLine = "The " ++ show lang ++ " script failed:"
+      firstLines =
+        [ "The " ++ show lang ++ " script failed:"
+        , "Base64-encoded script bytes:"
+        ]
+      shLine = "The script hash is:" ++ show (pwcScriptHash pwc)
       pvLine = "The protocol version is: " ++ show pwcProtocolVersion
       plutusError = "The plutus evaluation error is: " ++ show e
 
@@ -301,5 +305,5 @@ explainPlutusEvaluationError pwc@PlutusWithContext {pwcProtocolVersion, pwcScrip
             [ "Received an unexpected number of Data"
             , "The data is:\n" ++ show ds
             ]
-      line = pack . unlines $ "" : firstLine : show binaryScript : plutusError : pvLine : dataLines
+      line = pack . unlines $ "" : firstLines ++ show binaryScript : shLine : plutusError : pvLine : dataLines
    in scriptFail $ ScriptFailure line pwc
