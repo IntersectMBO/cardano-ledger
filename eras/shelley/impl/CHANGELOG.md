@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Deprecated `keyBy`
 * Add `getShelleyMinFeeTxUtxo`
 * Add implementation for `getMinFeeTxUtxo`
 * Remove deprecated functions from `Wallet`: `evaluateMinFee` and `evaluateTransactionFee`

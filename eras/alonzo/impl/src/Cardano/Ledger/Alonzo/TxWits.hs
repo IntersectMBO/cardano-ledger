@@ -118,13 +118,14 @@ import Cardano.Ledger.Plutus.Language (
   plutusLanguage,
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), keyBy, shelleyEqTxWitsRaw)
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), shelleyEqTxWitsRaw)
 import Control.DeepSeq (NFData)
 import Control.Monad (when, (>=>))
 import Data.Bifunctor (Bifunctor (first))
 import Data.List.NonEmpty as NE (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.MapExtras as Map (fromElems)
 import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
@@ -318,9 +319,9 @@ instance Era era => DecCBOR (Annotator (TxDatsRaw era)) where
       ( allowTag setTag
           >> mapTraverseableDecoderA
             (decodeNonEmptyList decCBOR)
-            (TxDatsRaw . keyBy hashData . NE.toList)
+            (TxDatsRaw . Map.fromElems hashData . NE.toList)
       )
-      (mapTraverseableDecoderA (decodeList decCBOR) (TxDatsRaw . keyBy hashData))
+      (mapTraverseableDecoderA (decodeList decCBOR) (TxDatsRaw . Map.fromElems hashData))
   {-# INLINE decCBOR #-}
 
 -- | Note that 'TxDats' are based on 'MemoBytes' since we must preserve
