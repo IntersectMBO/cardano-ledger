@@ -77,10 +77,10 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data DelegEnv era = DelegEnv
-  { slotNo :: SlotNo
-  , ptr_ :: Ptr
-  , acnt_ :: AccountState
-  , ppDE :: PParams era -- The protocol parameters are only used for the HardFork mechanism
+  { slotNo :: !SlotNo
+  , ptr_ :: !Ptr
+  , acnt_ :: !AccountState
+  , ppDE :: !(PParams era) -- The protocol parameters are only used for the HardFork mechanism
   }
 
 deriving instance Show (PParams era) => Show (DelegEnv era)
@@ -293,9 +293,7 @@ delegationTransition = do
       -- gkh ∈ dom genDelegs ?! GenesisKeyNotInMappingDELEG gkh
       isJust (Map.lookup gkh genDelegs) ?! GenesisKeyNotInMappingDELEG gkh
 
-      let cod =
-            range $
-              Map.filterWithKey (\g _ -> g /= gkh) genDelegs
+      let cod = range $ Map.delete gkh genDelegs
           fod =
             range $
               Map.filterWithKey (\(FutureGenDeleg _ g) _ -> g /= gkh) (dsFutureGenDelegs ds)
@@ -323,8 +321,10 @@ delegationTransition = do
         StakeAddressesMIR credCoinMap -> do
           let (potAmount, delta, instantaneousRewards) =
                 case targetPot of
-                  ReservesMIR -> (asReserves acnt, deltaReserves $ dsIRewards ds, iRReserves $ dsIRewards ds)
-                  TreasuryMIR -> (asTreasury acnt, deltaTreasury $ dsIRewards ds, iRTreasury $ dsIRewards ds)
+                  ReservesMIR ->
+                    (asReserves acnt, deltaReserves $ dsIRewards ds, iRReserves $ dsIRewards ds)
+                  TreasuryMIR ->
+                    (asTreasury acnt, deltaTreasury $ dsIRewards ds, iRTreasury $ dsIRewards ds)
           let credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
           (combinedMap, available) <-
             if HardForks.allowMIRTransfer pv
