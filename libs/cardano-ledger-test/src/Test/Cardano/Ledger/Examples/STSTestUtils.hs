@@ -28,7 +28,6 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
   testUTXOWsubset,
   testUTXOspecialCase,
   trustMeP,
-  keyBy,
   alwaysFailsHash,
   alwaysSucceedsHash,
   timelockScript,
@@ -83,7 +82,6 @@ import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxowPredFailure (..))
-import Cardano.Ledger.Shelley.TxWits (keyBy)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -298,7 +296,7 @@ mkGenesisTxIn :: (CH.HashAlgorithm (HASH c), HasCallStack) => Integer -> TxIn c
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
 mkTxDats :: Era era => Data era -> TxDats era
-mkTxDats d = TxDats $ keyBy hashData [d]
+mkTxDats d = TxDats $ Map.singleton (hashData d) d
 
 trustMeP :: Proof era -> Bool -> Tx era -> Tx era
 trustMeP Alonzo iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m

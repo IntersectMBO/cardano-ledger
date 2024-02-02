@@ -26,9 +26,12 @@ module Data.MapExtras (
   disjointMapSetFold,
   extractKeys,
   extractKeysSmallSet,
+  fromKeys,
+  fromElems,
 )
 where
 
+import Data.Foldable (toList)
 import Data.Map.Internal (Map (..), balanceL, balanceR, glue, link, link2)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -242,3 +245,29 @@ extractKeys# m@(Bin _ k x lm rm) s = (# w, r #)
     !(# lmw, lmr #) = extractKeys# lm ls
     !(# rmw, rmr #) = extractKeys# rm rs
 {-# INLINEABLE extractKeys# #-}
+
+-- | Convert any foldable data structure with keys to a Map. Implemented in terms of
+-- `Map.fromList`, therefore last duplicate key wins.
+fromKeys :: (Foldable f, Ord k) => (k -> v) -> f k -> Map k v
+fromKeys f ks =
+  -- Conversion implemented in terms of list instead of an Map.insert because fromList has
+  -- a nice optimization for already sorted keys and with list fusion there should be no overhead
+  Map.fromList [(k, f k) | k <- toList ks]
+{-# INLINE [2] fromKeys #-}
+
+{-# RULES "fromKeys/fromSet" [~2] fromKeys = Map.fromSet #-}
+
+-- | Convert any foldable data structure with values to a Map. Implemented in terms of
+-- `Map.fromList`, therefore last duplicate key wins.
+fromElems ::
+  (Foldable f, Ord k) =>
+  -- | Function that will create a key from a value. Most common case is a hashing
+  -- function.
+  (v -> k) ->
+  f v ->
+  Map k v
+fromElems f vs =
+  -- Conversion implemented in terms of list instead of an Map.insert because fromList has
+  -- a nice optimization for already sorted keys and with list fusion there should be no overhead
+  Map.fromList [(f v, v) | v <- toList vs]
+{-# INLINE fromElems #-}

@@ -64,6 +64,7 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
+import qualified Data.MapExtras as Map (fromElems)
 import qualified Data.Set as Set
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
@@ -72,7 +73,6 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   AlonzoBased (..),
   alwaysSucceedsHash,
   initUTxO,
-  keyBy,
   mkGenesisTxIn,
   mkTxDats,
   someAddr,
@@ -850,7 +850,7 @@ notOkSupplimentaryDatumTx pf =
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [] (mkRedeemers pf []) totallyIrrelevantTxDats)
         ]
-    totallyIrrelevantTxDats = TxDats $ keyBy hashData [totallyIrrelevantDatum]
+    totallyIrrelevantTxDats = TxDats $ Map.fromElems hashData [totallyIrrelevantDatum]
     outputWithNoDatum = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 995)]
 
 totallyIrrelevantDatum :: Era era => Data era

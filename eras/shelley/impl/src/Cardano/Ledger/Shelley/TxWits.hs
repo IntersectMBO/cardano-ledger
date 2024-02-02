@@ -82,6 +82,7 @@ import Data.Functor.Classes (Eq1 (liftEq))
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.MapExtras as Map (fromElems)
 import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -290,7 +291,7 @@ decodeWits = do
                 )
           1 ->
             decodeList decCBOR >>= \x ->
-              pure (\ws -> ws {scriptWits' = keyBy (hashScript @era) <$> sequence x})
+              pure (\ws -> ws {scriptWits' = Map.fromElems (hashScript @era) <$> sequence x})
           2 ->
             decodeList decCBOR >>= \x ->
               pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
@@ -308,3 +309,4 @@ decodeWits = do
 
 keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
+{-# DEPRECATED keyBy "In favor of `Data.MapExtras.fromElems`" #-}

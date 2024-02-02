@@ -613,7 +613,7 @@ decodeListLike ::
   Text.Text ->
   -- | Decoder for the datastructure itself
   Decoder s a ->
-  -- | In case when length was provided, act upon it.
+  -- | In case when length was encoded, act upon it.
   (a -> Int -> Decoder s ()) ->
   Decoder s a
 decodeListLike name decoder actOnLength =
@@ -626,7 +626,7 @@ decodeListLikeT ::
   Text.Text ->
   -- | Decoder for the datastructure itself
   m (Decoder s) a ->
-  -- | In case when length was provided, act upon it.
+  -- | In case when length was encoded, act upon it.
   (a -> Int -> m (Decoder s) ()) ->
   m (Decoder s) a
 decodeListLikeT name decoder actOnLength = do

@@ -80,10 +80,10 @@ import Cardano.Ledger.Plutus.Language (
  )
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)
-import Cardano.Ledger.Shelley.TxWits (keyBy)
 import Data.Functor.Identity (Identity)
 import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
+import qualified Data.MapExtras as Map (fromElems)
 import qualified Data.Set as Set
 import Data.Text (pack)
 import Data.Word
@@ -156,10 +156,10 @@ genScripts ::
   , Arbitrary (Script era)
   ) =>
   Gen (Map.Map (ScriptHash (EraCrypto era)) (Script era))
-genScripts = keyBy (hashScript @era) <$> (arbitrary :: Gen [Script era])
+genScripts = Map.fromElems (hashScript @era) <$> (arbitrary :: Gen [Script era])
 
 instance Era era => Arbitrary (TxDats era) where
-  arbitrary = TxDats . keyBy hashData <$> arbitrary
+  arbitrary = TxDats . Map.fromElems @[] hashData <$> arbitrary
 
 instance
   ( EraTxOut era

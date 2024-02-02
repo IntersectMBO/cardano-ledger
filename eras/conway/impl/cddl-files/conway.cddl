@@ -408,6 +408,7 @@ protocol_param_update =
   , ? 30: coin                   ; governance action deposit
   , ? 31: coin                   ; DRep deposit
   , ? 32: epoch                  ; DRep inactivity period
+  , ? 33: coin                   ; MinFee RefScriptCoinsPerByte
   }
 
 pool_voting_thresholds =
@@ -472,10 +473,11 @@ constr<a> =
   ; similarly for tag range: 6.1280 .. 6.1400 inclusive
   / #6.102([uint, [* a]])
 
+; Flat Array support is included for backwards compatibility and will be removed in the next era.
+; It is recommended for tools to adopt using a Map instead of Array going forward.
 redeemers =
   [ + [ tag: redeemer_tag, index: uint, data: plutus_data, ex_units: ex_units ] ]
-; TODO: Add alternative implementation that reflects the reality more accuratly:
-;  / { + [ tag: redeemer_tag, index: uint ] => [ data: plutus_data, ex_units: ex_units ] }
+  / { + [ tag: redeemer_tag, index: uint ] => [ data: plutus_data, ex_units: ex_units ] }
 
 redeemer_tag =
     0 ; Spending
