@@ -1,0 +1,67 @@
+cabal-version:      3.0
+name:               constrained-generators
+version:            0.2.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+synopsis:
+    Framework for generating constrained random data using
+    a subset of first order logic
+
+build-type:         Simple
+extra-source-files: CHANGELOG.md
+
+source-repository head
+    type:     git
+    location: https://github.com/input-output-hk/cardano-ledger
+    subdir:   libs/constrained-generators
+
+library
+    exposed-modules:
+        Constrained
+        Constrained.Base
+        Constrained.Core
+        Constrained.Env
+        Constrained.Instances
+        Constrained.Spec
+        Constrained.List
+        Constrained.GenT
+        Constrained.Univ
+        Constrained.Graph
+        Constrained.Spec.Generics
+        Constrained.Spec.Pairs
+        Constrained.Spec.Maps
+        Constrained.Test
+        Constrained.Internals
+
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
+
+    build-depends:
+        base >=4.14 && <4.20,
+        containers,
+        mtl,
+        prettyprinter,
+        QuickCheck,
+        random,
+        tasty,
+        tasty-quickcheck
+
+test-suite constrained
+    type:             exitcode-stdio-1.0
+    main-is:          Tests.hs
+    hs-source-dirs:   test
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages -rtsopts -threaded
+
+    build-depends:
+        base,
+        constrained-generators,
+        tasty

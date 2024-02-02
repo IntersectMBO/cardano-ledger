@@ -117,6 +117,7 @@ data UtxoEnv era = UtxoEnv
   , uePParams :: PParams era
   , ueCertState :: CertState era
   }
+  deriving (Generic)
 
 utxoEnvSlotL :: Lens' (UtxoEnv era) SlotNo
 utxoEnvSlotL = lens ueSlot $ \x y -> x {ueSlot = y}
@@ -128,6 +129,7 @@ utxoEnvCertStateL :: Lens' (UtxoEnv era) (CertState era)
 utxoEnvCertStateL = lens ueCertState $ \x y -> x {ueCertState = y}
 
 deriving instance Show (PParams era) => Show (UtxoEnv era)
+deriving instance Eq (PParams era) => Eq (UtxoEnv era)
 
 data UtxoEvent era
   = TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin

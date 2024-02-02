@@ -548,10 +548,15 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposalProcedur
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+  shrink (ProposalProcedure dep ret gov anch) =
+    [ ProposalProcedure dep' ret' gov' anch'
+    | (dep', ret', gov', anch') <- shrink (dep, ret, gov, anch)
+    ]
 
 instance (EraPParams era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovProcedures era) where
   arbitrary =
     GovProcedures <$> arbitrary <*> arbitrary
+  shrink (GovProcedures vp pp) = [GovProcedures vp' pp' | (vp', pp') <- shrink (vp, pp)]
 
 instance Era era => Arbitrary (ConwayGovPredFailure era) where
   arbitrary = GovActionsDoNotExist <$> arbitrary

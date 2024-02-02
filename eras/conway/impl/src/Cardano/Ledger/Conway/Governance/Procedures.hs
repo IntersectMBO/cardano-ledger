@@ -580,7 +580,7 @@ data GovActionPurpose
   | HardForkPurpose
   | CommitteePurpose
   | ConstitutionPurpose
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
 
 newtype GovPurposeId (p :: GovActionPurpose) era = GovPurposeId
   { unGovPurposeId :: GovActionId (EraCrypto era)

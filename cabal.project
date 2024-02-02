@@ -64,6 +64,7 @@ packages:
   libs/cardano-ledger-test
   libs/plutus-preprocessor
   libs/ledger-state
+  libs/constrained-generators
 
 -- GHC 9.8 introduces new warnings on partial functions.
 if impl(ghc < 9.8)

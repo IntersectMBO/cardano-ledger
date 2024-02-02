@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -45,12 +46,14 @@ import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Void (Void)
+import GHC.Generics
 import Lens.Micro
 
 data EnactSignal era = EnactSignal
   { esGovActionId :: !(GovActionId (EraCrypto era))
   , esGovAction :: !(GovAction era)
   }
+  deriving (Eq, Show, Generic)
 
 instance EraGov era => STS (ConwayENACT era) where
   type Environment (ConwayENACT era) = ()

@@ -23,6 +23,8 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
+import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
@@ -45,13 +47,18 @@ import Cardano.Ledger.Alonzo.Scripts (
   PlutusPurpose,
   plutusScriptLanguage,
  )
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData, atadMetadata')
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.TxAuxData (
+  AlonzoTxAuxData,
+  atadMetadata',
+  getAlonzoTxAuxDataScripts,
+ )
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), TxDats (..), unRedeemers, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.Core (CoinPerByte (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
   Anchor (..),
@@ -106,6 +113,7 @@ import Cardano.Ledger.Conway.Governance (
   unPGraph,
  )
 import Cardano.Ledger.Conway.Rules (
+  CertEnv (..),
   ConwayCertsPredFailure (..),
   ConwayDelegPredFailure (..),
   ConwayGovCertEnv (..),
@@ -152,6 +160,7 @@ import Cardano.Ledger.Keys (
   hashKey,
  )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
+import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
   MaryValue (..),
@@ -159,6 +168,7 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
   flattenMultiAsset,
  )
+import Cardano.Ledger.MemoBytes (MemoBytes (..))
 import Cardano.Ledger.Plutus.Data (
   Data (..),
   Datum (..),
@@ -192,8 +202,16 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   VState (..),
  )
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
+import qualified Cardano.Ledger.Shelley.PParams as PParams (Update (..))
 import Cardano.Ledger.Shelley.PoolRank (Likelihood (..), LogWeight (..), NonMyopic (..))
-import Cardano.Ledger.Shelley.Rules (PoolEnv (..), ShelleyLedgerPredFailure (..), UpecPredFailure)
+import Cardano.Ledger.Shelley.Rules (
+  LedgerEnv (..),
+  PoolEnv (..),
+  ShelleyLedgerPredFailure (..),
+  UpecPredFailure,
+  UtxoEnv (..),
+ )
 import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyBbodyPredFailure (..),
   ShelleyBbodyState (..),
@@ -214,6 +232,9 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyUtxowPredFailure (..),
  )
 import qualified Cardano.Ledger.Shelley.Scripts as SS (MultiSig (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxBodyRaw (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, prettyWitnessSetParts)
@@ -236,6 +257,8 @@ import Control.State.Transition.Extended (STS (..))
 import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import Data.Foldable (toList)
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -301,24 +324,6 @@ import Test.Cardano.Ledger.Generic.Proof (
   unReflect,
   whichGovState,
  )
-
-import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
-import Cardano.Ledger.Alonzo.TxAuxData (
-  getAlonzoTxAuxDataScripts,
- )
-import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..))
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
-import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
-import Cardano.Ledger.MemoBytes (MemoBytes (..))
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
-import qualified Cardano.Ledger.Shelley.PParams as PParams (Update (..))
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
-import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxBodyRaw (..))
-import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NE
 
 -- ================================================
 
@@ -3286,3 +3291,43 @@ pcGovEnv GovEnv {..} =
 
 instance Reflect era => PrettyA (GovEnv era) where
   prettyA = pcGovEnv
+
+instance PrettyA Int where
+  prettyA = ppInt
+
+instance Reflect era => PrettyA (LedgerEnv era) where
+  prettyA LedgerEnv {..} =
+    ppRecord
+      "LedgerEnv"
+      [ ("slot no", prettyA ledgerSlotNo)
+      , ("ix", prettyA (txIxToInt ledgerIx))
+      , ("pparams", prettyA ledgerPp)
+      , ("account", prettyA ledgerAccount)
+      ]
+
+instance Reflect era => PrettyA (UtxoEnv era) where
+  prettyA UtxoEnv {..} =
+    ppRecord
+      "UtxoEnv"
+      [ ("slot no", prettyA ueSlot)
+      , ("pparams", prettyA uePParams)
+      , ("certState", prettyA ueCertState)
+      ]
+
+instance Reflect era => PrettyA (CertEnv era) where
+  prettyA CertEnv {..} =
+    ppRecord
+      "CertEnv"
+      [ ("slot no", prettyA ceSlotNo)
+      , ("pparams", prettyA cePParams)
+      , ("currentEpoch", prettyA ceCurrentEpoch)
+      ]
+
+instance Reflect era => PrettyA (CertState era) where
+  prettyA CertState {..} =
+    ppRecord
+      "CertState"
+      [ ("vState", prettyA certVState)
+      , ("pState", prettyA certPState)
+      , ("dState", prettyA certDState)
+      ]

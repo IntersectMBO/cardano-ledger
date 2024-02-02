@@ -66,6 +66,7 @@ data ConwayGovCertEnv era = ConwayGovCertEnv
   { cgcePParams :: !(PParams era)
   , cgceCurrentEpoch :: !EpochNo
   }
+  deriving (Generic)
 
 deriving instance Show (PParams era) => Show (ConwayGovCertEnv era)
 

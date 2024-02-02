@@ -103,7 +103,7 @@ data Addr28Extra
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
-  deriving (Eq, Generic, NoThunks)
+  deriving (Eq, Show, Generic, NoThunks)
 
 data DataHash32
   = DataHash32
