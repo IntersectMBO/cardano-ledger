@@ -79,9 +79,12 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   Encoding,
   ToCBOR (..),
+  TokenType (..),
   allowTag,
   decodeList,
   decodeListLenOrIndef,
+  decodeListLikeWithCount,
+  decodeMapLenOrIndef,
   decodeMapLikeEnforceNoDuplicates,
   decodeNonEmptyList,
   encodeFoldableEncoder,
@@ -90,6 +93,7 @@ import Cardano.Ledger.Binary (
   ifDecoderVersionAtLeast,
   ifEncodingVersionAtLeast,
   natVersion,
+  peekTokenType,
   setTag,
  )
 import Cardano.Ledger.Binary.Coders
@@ -122,7 +126,7 @@ import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), shelleyEqTxWitsRaw)
 import Control.DeepSeq (NFData)
 import Control.Monad (when, (>=>))
 import Data.Bifunctor (Bifunctor (first))
-import Data.List.NonEmpty as NE (toList)
+import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.MapExtras as Map (fromElems)
@@ -148,7 +152,11 @@ deriving newtype instance AlonzoEraScript era => NoThunks (RedeemersRaw era)
 deriving newtype instance AlonzoEraScript era => Show (RedeemersRaw era)
 
 instance AlonzoEraScript era => EncCBOR (RedeemersRaw era) where
-  encCBOR (RedeemersRaw rs) = encodeFoldableEncoder keyValueEncoder $ Map.toAscList rs
+  encCBOR (RedeemersRaw rs) =
+    ifEncodingVersionAtLeast
+      (natVersion @9)
+      (encCBOR rs)
+      (encodeFoldableEncoder keyValueEncoder $ Map.toAscList rs)
     where
       keyValueEncoder (ptr, (dats, exs)) =
         encodeListLen (listLen ptr + 2)
@@ -544,15 +552,30 @@ instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
   decCBOR = do
     ifDecoderVersionAtLeast
       (natVersion @9)
-      ( mapTraverseableDecoderA
-          (decodeNonEmptyList decodeAnnElement)
-          (RedeemersRaw . Map.fromList . NE.toList)
+      ( peekTokenType >>= \case
+          TypeMapLenIndef -> decodeMapRedeemers
+          TypeMapLen -> decodeMapRedeemers
+          _ -> decodeListRedeemers
       )
       ( mapTraverseableDecoderA
           (decodeList decodeAnnElement)
           (RedeemersRaw . Map.fromList)
       )
     where
+      decodeRedeemersWith nonEmptyDecoder =
+        mapTraverseableDecoderA
+          nonEmptyDecoder
+          (RedeemersRaw . Map.fromList . NE.toList)
+      decodeMapRedeemers = decodeRedeemersWith $ do
+        (_, xs) <- decodeListLikeWithCount decodeMapLenOrIndef (:) $ \_ -> do
+          ptr <- decCBOR
+          (annData, exUnits) <- decCBOR
+          pure $ (\d -> (ptr, (d, exUnits))) <$> annData
+        case NE.nonEmpty xs of
+          Nothing -> fail "Expected redeemers map to be non-empty"
+          Just neList -> pure $ NE.reverse neList
+      decodeListRedeemers =
+        decodeRedeemersWith (decodeNonEmptyList decodeAnnElement)
       decodeAnnElement ::
         forall s. Decoder s (Annotator (PlutusPurpose AsIndex era, (Data era, ExUnits)))
       decodeAnnElement = do
