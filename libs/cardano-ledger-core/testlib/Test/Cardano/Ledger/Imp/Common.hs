@@ -1,3 +1,12 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Test.Cardano.Ledger.Imp.Common (
   module X,
   io,
@@ -37,14 +46,36 @@ module Test.Cardano.Ledger.Imp.Common (
   expectLeftExpr,
   expectLeftDeep,
   expectLeftDeepExpr,
+
+  -- * MonadGen
+  module QuickCheckT,
+  arbitrary,
+  -- TODO: add here any other lifted functions from quickcheck
+
+  -- * Random interface
+  HasStatefulGen (..),
+  HasGenEnv (..),
+  HasSubState (..),
+  R.StatefulGen,
+  StateGen (..),
+  StateGenM (..),
+  uniformM,
+  uniformRM,
+  uniformListM,
+  uniformListRM,
+  uniformByteStringM,
+  uniformShortByteStringM,
 )
 where
 
 import Control.Monad.IO.Class
 import Test.Cardano.Ledger.Binary.TreeDiff (expectExprEqualWithMessage)
 import Test.Cardano.Ledger.Common as X hiding (
+  arbitrary,
   assertBool,
   assertFailure,
+  choose,
+  elements,
   expectLeft,
   expectLeftDeep,
   expectLeftDeepExpr,
@@ -56,6 +87,12 @@ import Test.Cardano.Ledger.Common as X hiding (
   expectRightDeep_,
   expectRightExpr,
   expectationFailure,
+  frequency,
+  growingElements,
+  listOf,
+  listOf1,
+  oneof,
+  resize,
   shouldBe,
   shouldBeExpr,
   shouldBeLeft,
@@ -73,10 +110,31 @@ import Test.Cardano.Ledger.Common as X hiding (
   shouldSatisfy,
   shouldStartWith,
   shouldThrow,
+  sized,
+  suchThat,
+  suchThatMaybe,
+  variant,
+  vectorOf,
  )
 import qualified Test.Cardano.Ledger.Common as H
+import Test.QuickCheck.GenT as QuickCheckT
 import UnliftIO (MonadUnliftIO (..))
 import UnliftIO.Exception (Exception, evaluateDeep)
+
+-- Imports needed for Random interface. Separated from the rest, since they will migrate
+-- to `random` at a later point:
+
+import Control.Monad.Reader
+import Control.Monad.State
+import Data.ByteString (ByteString)
+import Data.ByteString.Short (ShortByteString)
+import Data.Kind
+import Foreign.Storable
+import qualified System.Random.Stateful as R
+
+instance MonadUnliftIO m => MonadUnliftIO (GenT m) where
+  withRunInIO inner = GenT $ \qc sz ->
+    withRunInIO $ \run -> inner $ \(GenT f) -> run (f qc sz)
 
 infix 1 `shouldBe`
         , `shouldBeExpr`
@@ -239,3 +297,112 @@ shouldBeLeft e x = expectLeft e >>= (`shouldBe` x)
 -- | Same as `shouldBeExpr`, except it checks that the value is `Left`
 shouldBeLeftExpr :: (HasCallStack, ToExpr a, ToExpr b, Eq a, MonadIO m) => Either a b -> a -> m ()
 shouldBeLeftExpr e x = expectLeftExpr e >>= (`shouldBeExpr` x)
+
+---------------------------
+-- MonadGen alternatives --
+---------------------------
+
+arbitrary :: (Arbitrary a, MonadGen m) => m a
+arbitrary = liftGen arbitrary
+
+---------------------------------------------------------------------------
+-- This interface will be defined in the next major version of `random` ---
+---------------------------------------------------------------------------
+
+class R.StatefulGen g m => HasStatefulGen g m | m -> g where
+  askStatefulGen :: m g
+
+class HasGenEnv env g | env -> g where
+  getGenEnv :: env -> g
+
+instance
+  (HasGenEnv env g, R.StatefulGen g (ReaderT env m), Monad m) =>
+  HasStatefulGen g (ReaderT env m)
+  where
+  askStatefulGen = getGenEnv <$> ask
+
+class HasSubState s where
+  type SubState s :: Type
+  getSubState :: s -> SubState s
+  setSubState :: s -> SubState s -> s
+
+uniformM ::
+  ( HasStatefulGen g m
+  , R.Uniform a
+  ) =>
+  m a
+uniformM = askStatefulGen >>= R.uniformM
+{-# INLINE uniformM #-}
+
+uniformRM ::
+  ( HasStatefulGen g m
+  , R.UniformRange a
+  ) =>
+  (a, a) ->
+  m a
+uniformRM r = askStatefulGen >>= R.uniformRM r
+{-# INLINE uniformRM #-}
+
+uniformListM ::
+  ( HasStatefulGen g m
+  , R.Uniform a
+  ) =>
+  Int ->
+  m [a]
+uniformListM n = askStatefulGen >>= R.uniformListM n
+{-# INLINE uniformListM #-}
+
+uniformListRM ::
+  ( HasStatefulGen g m
+  , R.UniformRange a
+  ) =>
+  (a, a) ->
+  Int ->
+  m [a]
+uniformListRM r n = askStatefulGen >>= replicateM n . R.uniformRM r
+{-# INLINE uniformListRM #-}
+
+uniformByteStringM :: HasStatefulGen a m => Int -> m ByteString
+uniformByteStringM n = askStatefulGen >>= R.uniformByteStringM n
+{-# INLINE uniformByteStringM #-}
+
+uniformShortByteStringM :: HasStatefulGen a m => Int -> m ShortByteString
+uniformShortByteStringM n = askStatefulGen >>= R.uniformShortByteString n
+{-# INLINE uniformShortByteStringM #-}
+
+data StateGenM s = StateGenM
+
+newtype StateGen s = StateGen {unStateGen :: s}
+  deriving (Eq, Ord, Show, R.RandomGen, Storable, NFData)
+
+instance HasSubState (StateGen g) where
+  type SubState (StateGen g) = g
+  getSubState (StateGen g) = g
+  {-# INLINE getSubState #-}
+  setSubState _ g = (StateGen g)
+  {-# INLINE setSubState #-}
+
+subState :: (HasSubState s, MonadState s m) => (SubState s -> (a, SubState s)) -> m a
+subState f = state $ \s ->
+  case f (getSubState s) of
+    (a, g) -> (a, setSubState s g)
+{-# INLINE subState #-}
+
+instance
+  (HasSubState s, R.RandomGen (SubState s), MonadState s m) =>
+  R.StatefulGen (StateGenM s) m
+  where
+  uniformWord32R r _ = subState (R.genWord32R r)
+  {-# INLINE uniformWord32R #-}
+  uniformWord64R r _ = subState (R.genWord64R r)
+  {-# INLINE uniformWord64R #-}
+  uniformWord8 _ = subState R.genWord8
+  {-# INLINE uniformWord8 #-}
+  uniformWord16 _ = subState R.genWord16
+  {-# INLINE uniformWord16 #-}
+  uniformWord32 _ = subState R.genWord32
+  {-# INLINE uniformWord32 #-}
+  uniformWord64 _ = subState R.genWord64
+  {-# INLINE uniformWord64 #-}
+  uniformShortByteString n _ = subState (R.genShortByteString n)
+  {-# INLINE uniformShortByteString #-}

@@ -164,23 +164,24 @@ library testlib
         cardano-ledger-byron-test,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley,
+        cardano-strict-containers,
         containers,
         generic-random,
-        containers,
+        hedgehog-quickcheck,
+        hspec-core,
         HUnit,
-        transformers,
+        prettyprinter,
+        QuickCheck,
+        random,
         small-steps,
         small-steps-test,
-        cardano-strict-containers,
-        hspec-core,
+        text,
+        transformers,
         microlens,
         microlens-mtl,
-        prettyprinter,
-        unliftio,
-        vector-map,
         mtl,
-        text,
-        hedgehog-quickcheck
+        unliftio,
+        vector-map
 
 test-suite tests
     type:             exitcode-stdio-1.0
