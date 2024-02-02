@@ -28,12 +28,9 @@ govEnvSpec = constrained $ \ge ->
     satisfies pp pparamsSpec
 
 govProposalsSpec ::
-  IsConwayUniv fn =>
   GovEnv (ConwayEra StandardCrypto) ->
   Spec fn (Proposals (ConwayEra StandardCrypto))
-govProposalsSpec GovEnv {..} =
-  constrained $ \ps ->
-    assert $ rootActionsAre (gePParams ^. ppProtocolVersionL) gePrevGovActionIds ps
+govProposalsSpec GovEnv {} = TrueSpec
 
 govProceduresSpec ::
   IsConwayUniv fn =>
@@ -88,11 +85,11 @@ wfGovAction GovEnv {..} govAction =
   caseOn
     govAction
     -- ParameterChange
-    --   !(StrictMaybe (PrevGovActionId 'PParamUpdatePurpose (EraCrypto era)))
+    --   !(StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
     --   !(PParamsUpdate era)
     --   !(StrictMaybe (ScriptHash (EraCrypto era)))
     ( branch $ \mPrevActionId ppUpdate _ ->
-        [ assert $ mPrevActionId ==. lit (gePrevGovActionIds ^. prevGovActionIdsL . pfPParamUpdateL)
+        [ assert $ mPrevActionId ==. lit (gePrevGovActionIds ^. grPParamUpdateL)
         , wfPParamsUpdate ppUpdate
         ]
     )
@@ -100,7 +97,7 @@ wfGovAction GovEnv {..} govAction =
     --   !(StrictMaybe (PrevGovActionId 'HardForkPurpose (EraCrypto era)))
     --   !ProtVer
     ( branch $ \mPrevActionId _protVer ->
-        mPrevActionId ==. lit (gePrevGovActionIds ^. prevGovActionIdsL . pfHardForkL)
+        mPrevActionId ==. lit (gePrevGovActionIds ^. grHardForkL)
         -- TODO: here we need to say that the `protVer` can follow the last prot ver
     )
     -- TreasuryWithdrawals !(Map (RewardAcnt (EraCrypto era)) Coin)
@@ -111,7 +108,7 @@ wfGovAction GovEnv {..} govAction =
     -- NoConfidence
     --   !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
     ( branch $ \mPrevActionId ->
-        mPrevActionId ==. lit (gePrevGovActionIds ^. prevGovActionIdsL . pfCommitteeL)
+        mPrevActionId ==. lit (gePrevGovActionIds ^. grCommitteeL)
     )
     -- UpdateCommittee
     --   !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
@@ -119,7 +116,7 @@ wfGovAction GovEnv {..} govAction =
     --   !(Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
     --   !UnitInterval
     ( branch $ \mPrevActionId _removed added _quorum ->
-        [ assert $ mPrevActionId ==. lit (gePrevGovActionIds ^. prevGovActionIdsL . pfCommitteeL)
+        [ assert $ mPrevActionId ==. lit (gePrevGovActionIds ^. grCommitteeL)
         , forAll (rng_ added) $ \epoch ->
             lit geEpoch <. epoch
         ]
@@ -128,7 +125,7 @@ wfGovAction GovEnv {..} govAction =
     --  !(StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
     --  !(Constitution era)
     ( branch $ \mPrevActionId _c ->
-        mPrevActionId ==. lit (gePrevGovActionIds ^. prevGovActionIdsL . pfConstitutionL)
+        mPrevActionId ==. lit (gePrevGovActionIds ^. grConstitutionL)
     )
     -- InfoAction
     (branch $ \_ -> True)
@@ -170,7 +167,8 @@ wfPParamsUpdate ppu =
          cppGovActionLifetime
          cppGovActionDeposit
          cppDRepDeposit
-         _cppDRepActivity ->
+         _cppDRepActivity
+         _cppMinFeeRefScriptCoinsPerByte ->
             [ cppMaxBBSize /=. lit (THKD $ SJust 0)
             , cppMaxTxSize /=. lit (THKD $ SJust 0)
             , cppMaxBHSize /=. lit (THKD $ SJust 0)

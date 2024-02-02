@@ -45,7 +45,8 @@ pparamsSpec =
          cppGovActionLifetime
          cppGovActionDeposit
          cppDRepDeposit
-         _cppDRepActivity ->
+         _cppDRepActivity
+         _cppMinFeeRefScriptCoinsPerByte ->
             [ assert $ cppMaxBBSize /=. lit (THKD 0)
             , assert $ cppMaxTxSize /=. lit (THKD 0)
             , assert $ cppMaxBHSize /=. lit (THKD 0)

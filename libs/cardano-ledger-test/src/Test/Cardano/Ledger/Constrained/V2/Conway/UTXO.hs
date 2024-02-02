@@ -67,7 +67,8 @@ utxoEnvSpec =
                  _cppGovActionLifetime
                  _cppGovActionDeposit
                  _cppDRepDeposit
-                 _cppDRepActivity ->
+                 _cppDRepActivity
+                 _cppMinFeeRefScriptCoinsPerByte ->
                     -- NOTE: this is for testing only! We should figure out a nicer way
                     -- of splitting generation and checking constraints here!
                     [ assert $ lit (THKD 3000) ==. cppMaxTxSize
