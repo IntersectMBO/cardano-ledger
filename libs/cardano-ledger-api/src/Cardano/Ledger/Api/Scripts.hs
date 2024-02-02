@@ -55,5 +55,5 @@ import Cardano.Ledger.Conway.Scripts (
   pattern ProposingPurpose,
   pattern VotingPurpose,
  )
-import Cardano.Ledger.Core (EraScript (..), isNativeScript, validateNativeScript)
+import Cardano.Ledger.Core (EraScript (..), hashScript, isNativeScript, validateNativeScript)
 import Cardano.Ledger.Hashes (ScriptHash)

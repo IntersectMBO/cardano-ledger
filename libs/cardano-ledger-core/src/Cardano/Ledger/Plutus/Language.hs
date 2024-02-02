@@ -24,6 +24,7 @@ module Cardano.Ledger.Plutus.Language (
   PlutusRunnable (..),
   plutusFromRunnable,
   decodeWithPlutus,
+  hashPlutusScript,
 
   -- * Value level Plutus Language version
   Language (..),
@@ -44,6 +45,7 @@ module Cardano.Ledger.Plutus.Language (
   asSLanguage,
 ) where
 
+import qualified Cardano.Crypto.Hash.Class as Hash (castHash, hashWith)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -61,6 +63,8 @@ import Cardano.Ledger.Binary (
   unlessDecoderVersionAtLeast,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
+import Cardano.Ledger.Crypto
+import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Control.DeepSeq (NFData (..))
 import Control.Monad (when)
@@ -74,12 +78,14 @@ import Data.Aeson (
   withText,
  )
 import Data.Aeson.Types (toJSONKeyText)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64 (encode)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Either (isRight)
 import Data.Ix (Ix)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.Common as P (
@@ -131,6 +137,14 @@ newtype Plutus (l :: Language) = Plutus
 
 plutusSLanguage :: PlutusLanguage l => proxy l -> SLanguage l
 plutusSLanguage _ = isLanguage
+
+-- | Compute a `ScriptHash` of a `Plutus` script. This function is equivalent to
+-- `Cardano.Ledger.Core.hashScript`, except it is restricted to Plutus scripts
+hashPlutusScript :: (PlutusLanguage l, Crypto c) => Plutus l -> ScriptHash c
+hashPlutusScript plutusScript =
+  ScriptHash $
+    Hash.castHash $
+      Hash.hashWith id (BS.singleton (plutusLanguageTag plutusScript) <> originalBytes plutusScript)
 
 decodePlutus :: Decoder s (Language, PlutusBinary)
 decodePlutus = decodeRecordNamed "Plutus" (const 2) $ (,) <$> decCBOR <*> decCBOR
@@ -283,6 +297,9 @@ plutusLanguage _ = case isLanguage @l of
 class Typeable l => PlutusLanguage (l :: Language) where
   isLanguage :: SLanguage l
 
+  -- | Tag that will be used as a prefix to compute the `ScriptHash`
+  plutusLanguageTag :: Plutus l -> Word8
+
   decodePlutusRunnable ::
     -- | Which major protocol version to use for deserialization and further execution
     Version ->
@@ -323,6 +340,7 @@ class Typeable l => PlutusLanguage (l :: Language) where
 
 instance PlutusLanguage 'PlutusV1 where
   isLanguage = SPlutusV1
+  plutusLanguageTag _ = 0x01
   decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
     PlutusRunnable <$> PV1.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
@@ -332,6 +350,7 @@ instance PlutusLanguage 'PlutusV1 where
 
 instance PlutusLanguage 'PlutusV2 where
   isLanguage = SPlutusV2
+  plutusLanguageTag _ = 0x02
   decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
     PlutusRunnable <$> PV2.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
@@ -341,6 +360,7 @@ instance PlutusLanguage 'PlutusV2 where
 
 instance PlutusLanguage 'PlutusV3 where
   isLanguage = SPlutusV3
+  plutusLanguageTag _ = 0x03
   decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
     PlutusRunnable <$> PV3.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =

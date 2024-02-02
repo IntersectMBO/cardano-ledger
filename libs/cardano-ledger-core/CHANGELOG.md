@@ -2,6 +2,8 @@
 
 ## 1.11.0.0
 
+* Extract `hashScript` outside of `EraScript` type class.
+* Add `plutusLanguageTag` and `hashPlutusScript`
 * Add `setMinFeeTxUtxo`
 * Add `getMinFeeTxUtxo` to `EraUTxO`
 * Change signature by adding `refScriptsSize` parameter for:

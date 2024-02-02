@@ -35,12 +35,9 @@ module Test.Cardano.Ledger.Shelley.Generator.ScriptClass (
 where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
-import Cardano.Ledger.Core (Era (..), EraScript (..), Script)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (DSIGN)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness, hashKey)
-import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import Data.List (permutations)
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
@@ -48,9 +45,7 @@ import Data.Proxy
 import Data.Tuple (swap)
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), KeyPairs, vKey)
-import Test.Cardano.Ledger.Shelley.Constants (
-  Constants (..),
- )
+import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
@@ -133,14 +128,14 @@ scriptKeyCombinations prox script = case quantify prox script of
 
 -- | Make a simple (non-combined, ie NO quantifer like All, Any, MofN, etc.) script.
 --   'basescript' is a method of ScriptClass, and is different for every Era.
-mkScriptFromKey :: forall era. ScriptClass era => KeyPair 'Witness (EraCrypto era) -> Core.Script era
+mkScriptFromKey :: forall era. ScriptClass era => KeyPair 'Witness (EraCrypto era) -> Script era
 mkScriptFromKey = (basescript (Proxy :: Proxy era) . hashKey . vKey)
 
 mkScriptsFromKeyPair ::
   forall era.
   ScriptClass era =>
   (KeyPair 'Payment (EraCrypto era), KeyPair 'Staking (EraCrypto era)) ->
-  (Core.Script era, Core.Script era)
+  (Script era, Script era)
 mkScriptsFromKeyPair (k0, k1) =
   (mkScriptFromKey @era $ asWitness k0, mkScriptFromKey @era $ asWitness k1)
 
@@ -149,14 +144,14 @@ mkScripts ::
   forall era.
   ScriptClass era =>
   KeyPairs (EraCrypto era) ->
-  [(Core.Script era, Core.Script era)]
+  [(Script era, Script era)]
 mkScripts = map (mkScriptsFromKeyPair @era)
 
 mkPayScriptHashMap ::
   forall era.
   ScriptClass era =>
-  [(Core.Script era, Core.Script era)] ->
-  Map.Map (ScriptHash (EraCrypto era)) (Core.Script era, Core.Script era)
+  [(Script era, Script era)] ->
+  Map.Map (ScriptHash (EraCrypto era)) (Script era, Script era)
 mkPayScriptHashMap scripts =
   Map.fromList (f <$> scripts)
   where
@@ -166,8 +161,8 @@ mkPayScriptHashMap scripts =
 mkStakeScriptHashMap ::
   forall era.
   ScriptClass era =>
-  [(Core.Script era, Core.Script era)] ->
-  Map.Map (ScriptHash (EraCrypto era)) (Core.Script era, Core.Script era)
+  [(Script era, Script era)] ->
+  Map.Map (ScriptHash (EraCrypto era)) (Script era, Script era)
 mkStakeScriptHashMap scripts =
   Map.fromList (f <$> scripts)
   where
@@ -179,8 +174,8 @@ mkStakeScriptHashMap scripts =
 mkScriptCombinations ::
   forall era.
   ScriptClass era =>
-  [(Core.Script era, Core.Script era)] ->
-  [(Core.Script era, Core.Script era)]
+  [(Script era, Script era)] ->
+  [(Script era, Script era)]
 mkScriptCombinations msigs =
   if length msigs < 3
     then error "length of input msigs must be at least 3"
@@ -209,7 +204,7 @@ mkScriptCombinations msigs =
                   ]
               ]
       ) ::
-        [(Core.Script era, Core.Script era)]
+        [(Script era, Script era)]
 
 -- | Make list of script pairs (payment,staking). These are non-combined scripts
 --   Ie NO quantifer like All, Any, MofN, etc.) scripts.
@@ -218,7 +213,7 @@ baseScripts ::
   forall era.
   ScriptClass era =>
   Constants ->
-  [(Core.Script era, Core.Script era)]
+  [(Script era, Script era)]
 baseScripts c = mkScripts @era (keyPairs c)
 
 -- | Make a list of script pairs (payment,staking). Each of these are combined scripts.
@@ -228,12 +223,12 @@ combinedScripts ::
   forall era.
   ScriptClass era =>
   Constants ->
-  [(Core.Script era, Core.Script era)]
+  [(Script era, Script era)]
 combinedScripts c@(Constants {numBaseScripts}) =
   mkScriptCombinations @era . take numBaseScripts $ baseScripts @era c
 
 -- | Constant list of KeyPairs intended to be used in the generators.
-keyPairs :: CC.Crypto c => Constants -> KeyPairs c
+keyPairs :: Crypto c => Constants -> KeyPairs c
 keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
 
 mkKeyPairs ::
