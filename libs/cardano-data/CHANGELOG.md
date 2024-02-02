@@ -2,6 +2,7 @@
 
 ## 1.2.1.0
 
+* Add `fromKeys`, `fromElems`
 * Add `OSet.fromList`
 * Add `fromFoldableDuplicates`
 
