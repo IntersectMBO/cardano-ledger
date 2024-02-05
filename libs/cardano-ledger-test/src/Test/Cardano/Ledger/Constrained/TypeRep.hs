@@ -568,9 +568,9 @@ synopsis rep@(MapR a b) mp = case Map.toList mp of
   ((d, r) : _) -> "Map{" ++ synopsis a d ++ " -> " ++ synopsis b r ++ " | size = " ++ show (Map.size mp) ++ synSum rep mp ++ "}"
 synopsis (SetR IntR) x = "Set" ++ show (Set.toList x)
 synopsis (SetR Word64R) x = "Set" ++ show (Set.toList x)
-synopsis rep@(SetR a) t
-  | Set.null t = "(empty::Set " ++ show a ++ ")"
-  | otherwise = "Set{" ++ synopsis a (head (Set.elems t)) ++ " | size = " ++ show (Set.size t) ++ synSum rep t ++ "}"
+synopsis rep@(SetR a) t = case Set.elems t of
+  [] -> "(empty::Set " ++ show a ++ ")"
+  (h : _) -> "Set{" ++ synopsis a h ++ " | size = " ++ show (Set.size t) ++ synSum rep t ++ "}"
 synopsis (ListR IntR) x = show x
 synopsis (ListR Word64R) x = show x
 synopsis rep@(ListR a) ll = case ll of

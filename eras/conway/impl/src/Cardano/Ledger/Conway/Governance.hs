@@ -66,6 +66,7 @@ module Cardano.Ledger.Conway.Governance (
   PEdges (..),
   PGraph (..),
   pRootsL,
+  pPropsL,
   prRootL,
   prChildrenL,
   peChildrenL,

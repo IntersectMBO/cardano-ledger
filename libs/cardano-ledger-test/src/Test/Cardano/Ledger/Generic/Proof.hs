@@ -504,7 +504,13 @@ whichScript Conway = ScriptAlonzoToConway
 
 data GovStateWit era where
   GovStateShelleyToBabbage :: (EraGov era, GovState era ~ ShelleyGovState era) => GovStateWit era
-  GovStateConwayToConway :: (RunConwayRatify era, EraGov era, GovState era ~ ConwayGovState era) => GovStateWit era
+  GovStateConwayToConway ::
+    ( ConwayEraPParams era
+    , RunConwayRatify era
+    , EraGov era
+    , GovState era ~ ConwayGovState era
+    ) =>
+    GovStateWit era
 
 whichGovState :: Proof era -> GovStateWit era
 whichGovState Shelley = GovStateShelleyToBabbage

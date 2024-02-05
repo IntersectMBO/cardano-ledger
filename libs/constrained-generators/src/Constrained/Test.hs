@@ -485,7 +485,12 @@ listSumRange = constrained $ \xs ->
 listSumRangeUpper :: Numbery a => Spec Fn [a]
 listSumRangeUpper = constrained $ \xs ->
   let n = sum_ xs
-   in [ forAll xs $ \x -> x <. 5
+   in -- All it takes is one big negative number,
+      -- then we can't get enough small ones to exceed 10
+      -- in the number of tries allowed.
+      -- So we make x relatively large ( <. 12), If its is
+      -- relatively small ( <. 5), we can get unlucky.
+      [ forAll xs $ \x -> [x <. 12]
       , assert $ n <. 20
       , assert $ 10 <. n
       ]

@@ -46,6 +46,7 @@ import Data.Default.Class (Default (def))
 import Data.Foldable (toList)
 import qualified Data.Foldable as Fold (toList)
 import qualified Data.HashSet as HashSet
+import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Pulse (foldlM')
@@ -496,28 +497,36 @@ preserveProp p tr = p state0 stateN
 
 -- | Apply '(preserveProp p)' to each full Epoch in a Trace. A partial epoch at the end of the trace is not tested.
 epochProp :: ConwayEraGov era => (MockChainState era -> MockChainState era -> Property) -> (Trace (MOCKCHAIN era) -> Property)
-epochProp p tr = counterexample message $ conjoin (map (\(epoch, _n) -> (p (head epoch) (last epoch))) epochs)
+epochProp p tr = counterexample message $ conjoin (map (\(epoch, _n) -> (p (NE.head epoch) (NE.last epoch))) epochs)
   where
     states = traceStates OldestFirst tr
     epochs = zip (splitEpochs states) [0 :: Int ..]
-    showEpoch (epoch, n) = unlines (("EPOCH " ++ show n) : map showPulserState epoch)
+    showEpoch (epoch, n) = unlines (("EPOCH " ++ show n) : map showPulserState (NE.toList epoch))
     message = "Trace length " ++ show (length states) ++ unlines (map showEpoch epochs)
 
-splitE :: (a -> a -> Bool) -> [a] -> [a] -> [[a]] -> [[a]]
-splitE _ [] epoch epochs = reverse (reverse epoch : epochs)
-splitE _ [x] epoch epochs = reverse (reverse (x : epoch) : epochs)
-splitE boundary (x : y : more) epoch epochs =
-  if boundary x y
-    then splitE boundary (y : more) [] (reverse (x : epoch) : epochs)
-    else splitE boundary (y : more) (x : epoch) epochs
+splitE :: (a -> a -> Bool) -> [a] -> [a] -> [NE.NonEmpty a] -> [NE.NonEmpty a]
+splitE boundary source epoch epochs =
+  case (source, NE.nonEmpty epoch) of
+    ([], Just epochNE) -> reverse (NE.reverse epochNE : epochs)
+    ([], Nothing) -> epochs
+    ([x], Just epochNE) -> reverse (NE.reverse (NE.cons x epochNE) : epochs)
+    ([x], Nothing) -> pure x : epochs
+    (x : y : more, Just epochNE) ->
+      if boundary x y
+        then splitE boundary (y : more) [] (NE.reverse (NE.cons x epochNE) : epochs)
+        else splitE boundary (y : more) (x : epoch) epochs
+    (x : y : more, Nothing) ->
+      if boundary x y
+        then splitE boundary (y : more) [] (pure x : epochs)
+        else splitE boundary (y : more) (x : epoch) epochs
 
-splitTest :: [[(Int, Char)]]
+splitTest :: [NE.NonEmpty (Int, Char)]
 splitTest = splitE boundary (zip [1, 1, 1, 2, 2, 1, 3, 3, 3, 3, 4, 4, 4, 5, 6, 6, 6, 8, 8] "abcdefghijklmnopqrstuvwxyz") [] []
   where
     boundary :: (Int, Char) -> (Int, Char) -> Bool
     boundary (n, _) (m, _) = n + 1 <= m
 
-splitEpochs :: [MockChainState era] -> [[MockChainState era]]
+splitEpochs :: [MockChainState era] -> [NE.NonEmpty (MockChainState era)]
 splitEpochs xs = init $ splitE boundary xs [] [] -- We only want full traces, so we drop the last potential trace
   where
     boundary mcs1 mcs2 = nesEL (mcsNes mcs1) + 1 <= nesEL (mcsNes mcs2)

@@ -8,6 +8,8 @@
 
 module Test.Cardano.Ledger.Constrained.Preds.LedgerState where
 
+import Cardano.Ledger.Alonzo.PParams (ppuMaxValSizeL)
+import Cardano.Ledger.Babbage.PParams (ppuCoinsPerUTxOByteL)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
@@ -15,19 +17,29 @@ import Cardano.Ledger.Conway.Governance (
   GovActionPurpose (..),
   GovActionState (..),
   ProposalProcedure (..),
+  Proposals,
   gasAction,
   gasActionL,
   gasDeposit,
   gasIdL,
+  pPropsL,
   proposalsActions,
  )
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
-import Cardano.Ledger.Core (Era (..))
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppuDRepDepositL, ppuMinFeeRefScriptCoinsPerByteL)
+import Cardano.Ledger.Core (
+  Era (..),
+  PParamsUpdate,
+  ppuMaxTxSizeL,
+  ppuMinFeeAL,
+  ppuMinFeeBL,
+ )
 import Cardano.Ledger.DRep (drepDepositL)
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict (StrictMaybe (..))
+import qualified Data.OMap.Strict as OMap
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -94,7 +106,6 @@ ledgerStatePreds _usize p =
   , Random hardForkChildren
   , Random committeeChildren
   , Random constitutionChildren
-  , Random (currProposals p) -- Uses (genRep ProposalsR) which generates a well formed Proposals
   , proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit . proposalsActions) :$ (Simple $ currProposals p))
   , -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
     SumsTo
@@ -115,12 +126,18 @@ ledgerStatePreds _usize p =
   , SumsTo (Left (1 % 1000)) (Lit RationalR 1) EQL [ProjMap RationalR individualPoolStakeL poolDistr]
   ]
     ++ ( case whichGovState p of
-          GovStateConwayToConway -> prevPulsingPreds p -- Constraints to generate a valid Pulser
+          GovStateConwayToConway ->
+            [ Random randomProposals
+            , currProposals p :<-: (Constr "reasonable" reasonable ^$ randomProposals)
+            ]
+              ++ prevPulsingPreds p -- Constraints to generate a valid Pulser
           GovStateShelleyToBabbage ->
             [ Sized (Range 0 1) (pparamProposals p)
             , Sized (Range 0 1) (futurePParamProposals p)
             ]
        )
+  where
+    randomProposals = Var (pV p "randomProposals" (ProposalsR p) No)
 
 ledgerStateStage ::
   Reflect era =>
@@ -365,3 +382,39 @@ genGovAction proof purpose gaid = case purpose of
         )
       ]
   ConstitutionPurpose -> NewConstitution (liftId gaid) <$> arbitrary
+
+-- ===========================================================================================
+-- Make sure that any PParamsUpdate in a Proposal does not change certain crucial parameters
+-- We currently generate well formed, but unreasonable ParameterChange GovActions.
+-- depending on what kind of Tx you generate, you might want to ensure some PParam fields
+-- take on reasonable values for your Tx generator.
+
+mapOMap :: OMap.HasOKey k v => (v -> v) -> OMap.OMap k v -> OMap.OMap k v
+mapOMap f x = foldr accum OMap.empty x
+  where
+    accum y ys = f y OMap.<| ys
+
+updateProposals :: (GovAction era -> GovAction era) -> Proposals era -> Proposals era
+updateProposals f x = x & pPropsL %~ (mapOMap (\y -> y & gasActionL %~ f))
+
+updateGovAction :: (PParamsUpdate era -> PParamsUpdate era) -> GovAction era -> GovAction era
+updateGovAction g (ParameterChange x y z) = ParameterChange x (g y) z
+updateGovAction _ x = x
+
+-- | What is reasonable for a Tx generated in Conway by 'drepCertTx'
+-- Well parameters that affect the Fee, the Tx Size, TxOuts, and DRep Deposits
+reasonable :: ConwayEraPParams era => Proposals era -> Proposals era
+reasonable =
+  updateProposals
+    ( updateGovAction
+        ( \x ->
+            x
+              & ppuMaxTxSizeL .~ SNothing
+              & ppuMinFeeAL .~ SNothing
+              & ppuMinFeeBL .~ SNothing
+              & ppuMaxValSizeL .~ SNothing
+              & ppuCoinsPerUTxOByteL .~ SNothing
+              & ppuMinFeeRefScriptCoinsPerByteL .~ SNothing
+              & ppuDRepDepositL .~ SNothing
+        )
+    )
