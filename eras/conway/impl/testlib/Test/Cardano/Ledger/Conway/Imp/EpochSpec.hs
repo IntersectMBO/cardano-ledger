@@ -147,9 +147,7 @@ spec =
 
 treasuryWithdrawalExpectation ::
   forall era.
-  ( ConwayEraImp era
-  , GovState era ~ ConwayGovState era
-  ) =>
+  ConwayEraImp era =>
   [GovAction era] ->
   ImpTestM era ()
 treasuryWithdrawalExpectation extraWithdrawals = do
