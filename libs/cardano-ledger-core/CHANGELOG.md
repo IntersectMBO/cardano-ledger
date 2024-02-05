@@ -2,6 +2,8 @@
 
 ## 1.11.0.0
 
+* Add `pwcScriptHash` field to `PlutusWithContext`
+* Parameterize `PlutusWithContext c` on crypto.
 * Extract `hashScript` outside of `EraScript` type class.
 * Add `plutusLanguageTag` and `hashPlutusScript`
 * Add `setMinFeeTxUtxo`

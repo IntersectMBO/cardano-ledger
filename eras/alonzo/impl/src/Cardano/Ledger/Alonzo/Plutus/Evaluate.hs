@@ -143,7 +143,7 @@ collectPlutusScriptsWithContext ::
   PParams era ->
   Tx era ->
   UTxO era ->
-  Either [CollectError era] [PlutusWithContext]
+  Either [CollectError era] [PlutusWithContext (EraCrypto era)]
 collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
   -- TODO: remove this whole complicated check when we get into Conway. It is much simpler
   -- to fail on a CostModel lookup in the `apply` function (already implemented).
@@ -168,15 +168,15 @@ collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
     ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
     AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     neededPlutusScripts =
-      mapMaybe (\(sp, sh) -> (,) sp <$> lookupPlutusScript scriptsProvided sh) scriptsNeeded
+      mapMaybe (\(sp, sh) -> (,) (sh, sp) <$> lookupPlutusScript scriptsProvided sh) scriptsNeeded
     usedLanguages = Set.fromList $ map (plutusScriptLanguage . snd) neededPlutusScripts
 
-    getScriptWithRedeemer (plutusPurpose, plutusScript) =
+    getScriptWithRedeemer ((plutusScriptHash, plutusPurpose), plutusScript) =
       let redeemerIndex = hoistPlutusPurpose toAsIndex plutusPurpose
        in case lookupRedeemer redeemerIndex $ tx ^. witsTxL . rdmrsTxWitsL of
-            Just (d, exUnits) -> Right (plutusScript, plutusPurpose, d, exUnits)
+            Just (d, exUnits) -> Right (plutusScript, plutusPurpose, d, exUnits, plutusScriptHash)
             Nothing -> Left (NoRedeemer (hoistPlutusPurpose toAsItem plutusPurpose))
-    apply (plutusScript, plutusPurpose, d, exUnits) = do
+    apply (plutusScript, plutusPurpose, d, exUnits, plutusScriptHash) = do
       let lang = plutusScriptLanguage plutusScript
       costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang costModels
       case mkPlutusScriptContext plutusScript plutusPurpose pp epochInfo sysStart utxo tx of
@@ -188,6 +188,7 @@ collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
                   PlutusWithContext
                     { pwcProtocolVersion = protVerMajor
                     , pwcScript = Left plutus
+                    , pwcScriptHash = plutusScriptHash
                     , pwcDatums = PlutusDatums (getPlutusData <$> datums)
                     , pwcExUnits = exUnits
                     , pwcCostModel = costModel
@@ -213,15 +214,15 @@ merge f (x : xs) zs = merge f xs (gg x zs)
 evalPlutusScripts ::
   EraTx era =>
   Tx era ->
-  [PlutusWithContext] ->
-  ScriptResult
+  [PlutusWithContext (EraCrypto era)] ->
+  ScriptResult (EraCrypto era)
 evalPlutusScripts tx pwcs = snd $ evalPlutusScriptsWithLogs tx pwcs
 
 evalPlutusScriptsWithLogs ::
   EraTx era =>
   Tx era ->
-  [PlutusWithContext] ->
-  ([Text], ScriptResult)
+  [PlutusWithContext (EraCrypto era)] ->
+  ([Text], ScriptResult (EraCrypto era))
 evalPlutusScriptsWithLogs _tx [] = mempty
 evalPlutusScriptsWithLogs tx (plutusWithContext : rest) =
   let beginMsg =

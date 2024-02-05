@@ -30,7 +30,7 @@ import Cardano.Ledger.Plutus.Evaluate (
   PlutusDatums (..),
   PlutusWithContext (..),
  )
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..), hashPlutusScript)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (inject)
@@ -83,7 +83,8 @@ collectTwoPhaseScriptInputsOutputOrdering = do
       [ withPlutusScript plutusScript $ \plutus ->
           PlutusWithContext
             { pwcProtocolVersion = pvMajor (pp apf ^. ppProtocolVersionL)
-            , pwcScript = Left $ plutus
+            , pwcScript = Left plutus
+            , pwcScriptHash = hashPlutusScript plutus
             , pwcDatums = PlutusDatums [unData @Alonzo datum, unData @Alonzo redeemer, context]
             , pwcExUnits = ExUnits 5000 5000
             , pwcCostModel = zeroTestingCostModel PlutusV1
@@ -160,7 +161,7 @@ collectInputs ::
   PParams era ->
   Tx era ->
   UTxO era ->
-  Either [CollectError era] [PlutusWithContext]
+  Either [CollectError era] [PlutusWithContext (EraCrypto era)]
 collectInputs Alonzo = collectPlutusScriptsWithContext
 collectInputs Babbage = collectPlutusScriptsWithContext
 collectInputs Conway = collectPlutusScriptsWithContext
