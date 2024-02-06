@@ -16,6 +16,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionState (..),
+  ProposalProcedure (..),
   RatifyEnv (..),
   RatifyState,
   Vote (..),
@@ -91,8 +92,8 @@ acceptedProp =
         committeeAccepted rEnv (rs & rsEnactStateL . ensCommitteeL .~ SNothing) gas
           `shouldBe` isNoConfidenceOrUpdateCommittee gas
   where
-    isNoConfidenceOrUpdateCommittee GovActionState {gasAction} =
-      case gasAction of
+    isNoConfidenceOrUpdateCommittee GovActionState {gasProposalProcedure} =
+      case pProcGovAction gasProposalProcedure of
         NoConfidence {} -> True
         UpdateCommittee {} -> True
         _ -> False

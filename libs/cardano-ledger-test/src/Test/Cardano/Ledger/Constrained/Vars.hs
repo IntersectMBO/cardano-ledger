@@ -2085,6 +2085,9 @@ expiresAfterV = Var (V "expiresAfterV" EpochR No)
 childrenV :: Era era => Term era (Set (GovActionId (EraCrypto era)))
 childrenV = Var (V "childrenV" (SetR GovActionIdR) No)
 
+anchorV :: Era era => Term era (Anchor (EraCrypto era))
+anchorV = Var (V "anchorV" AnchorR No)
+
 govActionStateTarget :: forall era. Era era => RootTarget era (GovActionState era) (GovActionState era)
 govActionStateTarget =
   Invert "GovActionState" (typeRep @(GovActionState era)) GovActionState
@@ -2092,9 +2095,14 @@ govActionStateTarget =
     :$ Lensed committeeVotesV gasCommitteeVotesL
     :$ Lensed drepVotesV gasDRepVotesL
     :$ Lensed stakePoolVotesV gasStakePoolVotesL
-    :$ Lensed depositV gasDepositL
-    :$ Lensed returnAddrV gasReturnAddrL
-    :$ Lensed actionV gasActionL
+    :$ Shift
+      ( Invert "ProposalProcedure" (typeRep @(ProposalProcedure era)) ProposalProcedure
+          :$ Lensed depositV pProcDepositL
+          :$ Lensed returnAddrV pProcReturnAddrL
+          :$ Lensed actionV pProcGovActionL
+          :$ Lensed anchorV pProcAnchorL
+      )
+      gasProposalProcedureL
     :$ Lensed proposedInV gasProposedInL
     :$ Lensed expiresAfterV gasExpiresAfterL
 

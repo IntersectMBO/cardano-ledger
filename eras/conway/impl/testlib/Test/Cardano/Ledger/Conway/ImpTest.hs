@@ -717,7 +717,8 @@ logRatificationChecks ::
   GovActionId (EraCrypto era) ->
   ImpTestM era ()
 logRatificationChecks gaId = do
-  gas@GovActionState {gasCommitteeVotes, gasDRepVotes, gasAction} <- getGovActionState gaId
+  gas@GovActionState {gasCommitteeVotes, gasDRepVotes} <- getGovActionState gaId
+  let govAction = gasAction gas
   ens@EnactState {..} <- getEnactState
   committee <- getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
   ratEnv <- getRatifyEnv
@@ -732,29 +733,29 @@ logRatificationChecks gaId = do
     unlines
       [ "----- RATIFICATION CHECKS -----"
       , "prevActionAsExpected:\t" <> show (prevActionAsExpected gas ensPrevGovActionIds)
-      , "validCommitteeTerm:\t" <> show (validCommitteeTerm gasAction curPParams currentEpoch)
+      , "validCommitteeTerm:\t" <> show (validCommitteeTerm govAction curPParams currentEpoch)
       , "notDelayed:\t\t??"
-      , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw gasAction curTreasury)
+      , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw govAction curTreasury)
       , "committeeAccepted:\t"
           <> show (committeeAccepted ratEnv ratSt gas)
           <> " [ To Pass: "
           <> show (committeeAcceptedRatio members gasCommitteeVotes committeeState currentEpoch)
           <> " >= "
-          <> show (votingCommitteeThreshold ratSt gasAction)
+          <> show (votingCommitteeThreshold ratSt (gasAction gas))
           <> " ]"
       , "spoAccepted:\t\t"
           <> show (spoAccepted ratEnv ratSt gas)
           <> " [ To Pass: "
           <> show (spoAcceptedRatio ratEnv gas)
           <> " >= "
-          <> show (votingStakePoolThreshold ratSt gasAction)
+          <> show (votingStakePoolThreshold ratSt (gasAction gas))
           <> " ]"
       , "dRepAccepted:\t\t"
           <> show (dRepAccepted ratEnv ratSt gas)
           <> " [ To Pass: "
-          <> show (dRepAcceptedRatio ratEnv gasDRepVotes gasAction)
+          <> show (dRepAcceptedRatio ratEnv gasDRepVotes (gasAction gas))
           <> " >= "
-          <> show (votingDRepThreshold ratSt gasAction)
+          <> show (votingDRepThreshold ratSt (gasAction gas))
           <> " ]"
       , ""
       ]

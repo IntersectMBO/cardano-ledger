@@ -14,6 +14,11 @@ import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
   GovActionPurpose (..),
   GovActionState (..),
+  ProposalProcedure (..),
+  gasAction,
+  gasActionL,
+  gasDeposit,
+  gasIdL,
   proposalsActions,
  )
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
@@ -89,8 +94,7 @@ ledgerStatePreds _usize p =
   , Random hardForkChildren
   , Random committeeChildren
   , Random constitutionChildren
-  , -- , Sized (Range 2 5) currProposals
-    Sized (ExactSize 0) (currProposals p)
+  , Random (currProposals p) -- Uses (genRep ProposalsR) which generates a well formed Proposals
   , proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit . proposalsActions) :$ (Simple $ currProposals p))
   , -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
     SumsTo
@@ -157,7 +161,8 @@ demoTest = testIO "Testing LedgerState Stage" (demo Conway CI)
 main :: IO ()
 main = defaultMain $ testIO "Testing LedgerState Stage" (demo Conway Interactive)
 
--- =================================
+-- =============================================
+-- Contraint based approach to generating Proposals
 
 -- | Generate the (parent,child) pairs in a Tree.
 --   Be sure the list of 'a' are unique, because each node should appear in the Tree only once.
@@ -191,11 +196,10 @@ useTriples pairs as gs = zipWith3 help pairs as gs
   where
     help (parent, idx) a g =
       g
-        { gasId = idx
-        , gasAction = setActionId a parent
-        }
+        & gasIdL .~ idx
+        & gasActionL .~ setActionId a parent
 
--- | [Pred era] that generate a valid Set(GovActionState era)
+-- | [Pred era] that generate a valid (Map GovActionId GovActionState)
 govStatePreds :: forall era. (ConwayEraPParams era, Reflect era) => Proof era -> [Pred era]
 govStatePreds p =
   [ MetaSize (SzRng 2 5) numActions
@@ -215,6 +219,7 @@ govStatePreds p =
       , Sized (Range 0 3) (Dom stakePoolVotesV)
       , proposalDeposit p :=: depositV
       , Random returnAddrV
+      , Random anchorV
       , Oneof
           actionV
           [ (1, noConfidenceT, [Random gaPrevId])
@@ -257,15 +262,23 @@ govStatePreds p =
             )
           ]
       ]
-      -- ???? , govstates :<-: (Constr "useTriples" useTriples ^$ pairs ^$ govActions ^$ preGovstates)
+  , govActionStates :<-: (Constr "useTriples" useTriples ^$ pairs ^$ govActions ^$ preGovstates)
+  , govActionMap :<-: (Constr "toProposalMap" toProposalMap ^$ govActionStates)
   ]
   where
     gaids = Var (pV p "gaids" (SetR GovActionIdR) No)
     pairs = Var (pV p "pairs" (ListR (PairR (MaybeR GovActionIdR) GovActionIdR)) No)
     numActions = Var (pV p "numActions" SizeR No)
     preGovstates = Var (V "preGovstates" (ListR GovActionStateR) No)
-    govActions = Var (pV p "govActions" (ListR (GovActionR)) No)
+    govActionStates = Var (pV p "govActionStates" (ListR (GovActionStateR)) No)
     govAction = Var (pV p "govAction" GovActionR No)
+    govActions = Var (pV p "govActions" (ListR GovActionR) No)
+    govActionMap = Var (pV p "govActionMap" (MapR GovActionIdR GovActionStateR) No)
+
+toProposalMap :: forall era. [GovActionState era] -> Map.Map (GovActionId (EraCrypto era)) (GovActionState era)
+toProposalMap xs = Map.fromList (map pairup xs)
+  where
+    pairup gas = (gasId gas, gas)
 
 demoGov :: (ConwayEraPParams era, Reflect era) => Proof era -> ReplMode -> IO ()
 demoGov proof mode = do
@@ -324,12 +337,15 @@ genGovActionStates proof gaids = do
             <*> pure Map.empty
             <*> pure Map.empty
             <*> pure Map.empty
-            <*> genRep @era CoinR
+            <*> ( ProposalProcedure
+                    <$> genRep @era CoinR
+                    <*> arbitrary
+                    <*> genGovAction proof CommitteePurpose parent
+                    <*> arbitrary
+                )
             <*> arbitrary
-            <*> genGovAction proof CommitteePurpose parent
             <*> arbitrary
-            <*> arbitrary
-        pure (state {gasAction = setActionId (gasAction state) parent})
+        pure (state & gasActionL .~ setActionId (gasAction state) parent)
   states <- mapM genGovState pairs
   pure (Map.fromList (map (\x -> (gasId x, x)) states))
 

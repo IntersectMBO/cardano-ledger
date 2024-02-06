@@ -56,6 +56,8 @@ import Cardano.Ledger.Conway.Governance (
   ensWithdrawalsL,
   epochStateDRepPulsingStateL,
   extractDRepPulsingState,
+  gasDeposit,
+  gasReturnAddr,
   proposalsApplyEnactment,
   proposalsGovStateL,
   setFreshDRepPulsingState,
@@ -162,21 +164,19 @@ returnProposalDeposits removedProposals oldUMap =
   foldr' processProposal (oldUMap, zero) removedProposals
   where
     processProposal
-      GovActionState
-        { gasDeposit
-        , gasReturnAddr = RewardAccount {raCredential}
-        }
+      gas
       (um, unclaimed)
-        | UMap.member raCredential (RewDepUView um) =
-            ( UMap.adjust (addReward gasDeposit) raCredential $ RewDepUView um
+        | UMap.member (raCredential (gasReturnAddr gas)) (RewDepUView um) =
+            ( UMap.adjust
+                (addReward (gasDeposit gas))
+                (raCredential (gasReturnAddr gas))
+                (RewDepUView um)
             , unclaimed
             )
-        | otherwise = (um, unclaimed <> gasDeposit)
+        | otherwise = (um, unclaimed <> gasDeposit gas)
     addReward c rd =
-      rd
-        { -- Deposits have been validated at this point
-          rdReward = rdReward rd <> compactCoinOrError c
-        }
+      -- Deposits have been validated at this point
+      rd {rdReward = rdReward rd <> compactCoinOrError c}
 
 -- | When there have been zero governance proposals to vote on in the previous epoch
 -- increase the dormant-epoch counter by one.

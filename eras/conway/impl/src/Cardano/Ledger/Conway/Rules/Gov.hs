@@ -63,6 +63,7 @@ import Cardano.Ledger.Conway.Governance (
   Voter (..),
   VotingProcedure (..),
   foldlVotingProcedures,
+  gasAction,
   grHardForkL,
   indexedGovProps,
   isCommitteeVotingAllowed,
@@ -248,10 +249,10 @@ checkVotersAreValid ::
   [(Voter (EraCrypto era), GovActionState era)] ->
   Test (ConwayGovPredFailure era)
 checkVotersAreValid voters =
-  let canVoteOn voter gasAction = case voter of
-        CommitteeVoter {} -> isCommitteeVotingAllowed gasAction
-        DRepVoter {} -> isDRepVotingAllowed gasAction
-        StakePoolVoter {} -> isStakePoolVotingAllowed gasAction
+  let canVoteOn voter govAction = case voter of
+        CommitteeVoter {} -> isCommitteeVotingAllowed govAction
+        DRepVoter {} -> isDRepVotingAllowed govAction
+        StakePoolVoter {} -> isStakePoolVotingAllowed govAction
       disallowedVoters =
         filter
           (\(voter, action) -> not $ voter `canVoteOn` gasAction action)
@@ -268,25 +269,19 @@ actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
 
 mkGovActionState ::
   GovActionId (EraCrypto era) ->
-  -- | The deposit
-  Coin ->
-  -- | The return address
-  RewardAccount (EraCrypto era) ->
-  GovAction era ->
+  ProposalProcedure era ->
   -- | The number of epochs to expiry from protocol parameters
   EpochInterval ->
   -- | The current epoch
   EpochNo ->
   GovActionState era
-mkGovActionState actionId deposit returnAddress action expiryInterval curEpoch =
+mkGovActionState actionId proposal expiryInterval curEpoch =
   GovActionState
     { gasId = actionId
     , gasCommitteeVotes = mempty
     , gasDRepVotes = mempty
     , gasStakePoolVotes = mempty
-    , gasDeposit = deposit
-    , gasReturnAddr = returnAddress
-    , gasAction = action
+    , gasProposalProcedure = proposal
     , gasProposedIn = curEpoch
     , gasExpiresAfter = addEpochInterval curEpoch expiryInterval
     }
@@ -372,9 +367,7 @@ govTransition = do
             actionState =
               mkGovActionState
                 newGaid
-                pProcDeposit
-                pProcReturnAddr
-                pProcGovAction
+                proposal
                 expiry
                 currentEpoch
          in case proposalsAddAction actionState ps of

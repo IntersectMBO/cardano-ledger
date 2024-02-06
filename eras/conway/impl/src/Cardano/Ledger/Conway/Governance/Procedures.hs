@@ -53,19 +53,25 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   constitutionScriptL,
   -- Lenses
   pProcDepositL,
-  gasDepositL,
+  pProcGovActionL,
+  pProcReturnAddrL,
+  pProcAnchorL,
   committeeMembersL,
   committeeQuorumL,
   gasDRepVotesL,
   gasStakePoolVotesL,
   gasCommitteeVotesL,
   gasExpiresAfterL,
+  gasProposalProcedureL,
   govProceduresProposalsL,
-  pProcGovActionL,
   gasActionL,
   gasReturnAddrL,
   gasProposedInL,
   gasIdL,
+  gasDepositL,
+  gasDeposit,
+  gasAction,
+  gasReturnAddr,
 ) where
 
 import Cardano.Crypto.Hash (hashToTextAsHex)
@@ -206,9 +212,7 @@ data GovActionState era = GovActionState
   , gasCommitteeVotes :: !(Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote)
   , gasDRepVotes :: !(Map (Credential 'DRepRole (EraCrypto era)) Vote)
   , gasStakePoolVotes :: !(Map (KeyHash 'StakePool (EraCrypto era)) Vote)
-  , gasDeposit :: !Coin
-  , gasReturnAddr :: !(RewardAccount (EraCrypto era))
-  , gasAction :: !(GovAction era)
+  , gasProposalProcedure :: !(ProposalProcedure era)
   , gasProposedIn :: !EpochNo
   , gasExpiresAfter :: !EpochNo
   }
@@ -227,14 +231,26 @@ gasDRepVotesL = lens gasDRepVotes (\x y -> x {gasDRepVotes = y})
 gasStakePoolVotesL :: Lens' (GovActionState era) (Map (KeyHash 'StakePool (EraCrypto era)) Vote)
 gasStakePoolVotesL = lens gasStakePoolVotes (\x y -> x {gasStakePoolVotes = y})
 
+gasProposalProcedureL :: Lens' (GovActionState era) (ProposalProcedure era)
+gasProposalProcedureL = lens gasProposalProcedure (\x y -> x {gasProposalProcedure = y})
+
 gasDepositL :: Lens' (GovActionState era) Coin
-gasDepositL = lens gasDeposit (\x y -> x {gasDeposit = y})
+gasDepositL = gasProposalProcedureL . pProcDepositL
+
+gasDeposit :: GovActionState era -> Coin
+gasDeposit = pProcDeposit . gasProposalProcedure
 
 gasReturnAddrL :: Lens' (GovActionState era) (RewardAccount (EraCrypto era))
-gasReturnAddrL = lens gasReturnAddr $ \x y -> x {gasReturnAddr = y}
+gasReturnAddrL = gasProposalProcedureL . pProcReturnAddrL
+
+gasReturnAddr :: GovActionState era -> RewardAccount (EraCrypto era)
+gasReturnAddr = pProcReturnAddr . gasProposalProcedure
 
 gasActionL :: Lens' (GovActionState era) (GovAction era)
-gasActionL = lens gasAction $ \x y -> x {gasAction = y}
+gasActionL = gasProposalProcedureL . pProcGovActionL
+
+gasAction :: GovActionState era -> GovAction era
+gasAction = pProcGovAction . gasProposalProcedure
 
 gasProposedInL :: Lens' (GovActionState era) EpochNo
 gasProposedInL = lens gasProposedIn $ \x y -> x {gasProposedIn = y}
@@ -247,15 +263,13 @@ instance EraPParams era => ToJSON (GovActionState era) where
   toEncoding = pairs . mconcat . toGovActionStatePairs
 
 toGovActionStatePairs :: (KeyValue e a, EraPParams era) => GovActionState era -> [a]
-toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _ _ _) =
+toGovActionStatePairs gas@(GovActionState _ _ _ _ _ _ _) =
   let GovActionState {..} = gas
    in [ "actionId" .= gasId
       , "committeeVotes" .= gasCommitteeVotes
       , "dRepVotes" .= gasDRepVotes
       , "stakePoolVotes" .= gasStakePoolVotes
-      , "deposit" .= gasDeposit
-      , "returnAddr" .= gasReturnAddr
-      , "action" .= gasAction
+      , "proposalProcedure" .= gasProposalProcedure
       , "proposedIn" .= gasProposedIn
       , "expiresAfter" .= gasExpiresAfter
       ]
@@ -280,8 +294,6 @@ instance EraPParams era => DecShareCBOR (GovActionState era) where
         <! From
         <! From
         <! From
-        <! From
-        <! From
 
 instance EraPParams era => DecCBOR (GovActionState era) where
   decCBOR = decNoShareCBOR
@@ -294,9 +306,7 @@ instance EraPParams era => EncCBOR (GovActionState era) where
         !> To gasCommitteeVotes
         !> To gasDRepVotes
         !> To gasStakePoolVotes
-        !> To gasDeposit
-        !> To gasReturnAddr
-        !> To gasAction
+        !> To gasProposalProcedure
         !> To gasProposedIn
         !> To gasExpiresAfter
 
@@ -488,8 +498,14 @@ data ProposalProcedure era = ProposalProcedure
 pProcDepositL :: Lens' (ProposalProcedure era) Coin
 pProcDepositL = lens pProcDeposit (\p x -> p {pProcDeposit = x})
 
+pProcReturnAddrL :: Lens' (ProposalProcedure era) (RewardAccount (EraCrypto era))
+pProcReturnAddrL = lens pProcReturnAddr (\p x -> p {pProcReturnAddr = x})
+
 pProcGovActionL :: Lens' (ProposalProcedure era) (GovAction era)
 pProcGovActionL = lens pProcGovAction $ \x y -> x {pProcGovAction = y}
+
+pProcAnchorL :: Lens' (ProposalProcedure era) (Anchor (EraCrypto era))
+pProcAnchorL = lens pProcAnchor $ \x y -> x {pProcAnchor = y}
 
 instance EraPParams era => NoThunks (ProposalProcedure era)
 

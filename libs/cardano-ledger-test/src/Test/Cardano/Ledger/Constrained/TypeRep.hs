@@ -77,6 +77,7 @@ import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   GovPurposeId (..),
   GovRelation (..),
+  ProposalProcedure (..),
   Proposals,
   RatifyState (..),
   RunConwayRatify (..),
@@ -893,9 +894,7 @@ genSizedRep _ GovActionStateR =
     <*> pure Map.empty
     <*> pure Map.empty
     <*> pure Map.empty
-    <*> genRep @era CoinR
-    <*> arbitrary
-    <*> genRep @era GovActionR
+    <*> (ProposalProcedure <$> genRep @era CoinR <*> arbitrary <*> genRep @era GovActionR <*> arbitrary)
     <*> arbitrary
     <*> arbitrary
 genSizedRep _ UnitIntervalR = arbitrary

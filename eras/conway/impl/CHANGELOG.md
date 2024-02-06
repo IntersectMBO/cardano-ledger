@@ -2,6 +2,10 @@
 
 ## 1.13.0.0
 
+* Changed `GovActionState` to have 1 field (`gasProposalProcedure`) rather than 3 (`gasDeposit`, `gasAction`, `gasReturnAddr`)
+  * the old field names (`gasDeposit`, `gasAction`, `gasReturnAddr`) become functions, and the lenses
+  * (`gasDepositL`, `gasActionL`, `gasReturnAddrL`) have the same type, but behave differently.
+  *  Added the lenses: `pProcDepositL`, `pProcGovActionL`, `pProcReturnAddrL`,  `pProcAnchorL`, `gasProposalProcedureL`.
 * Add `getDRepDistr`, `getConstitution` and `getCommitteeMembers` from `ConwayEraGov` #4033
   * Move `Constitution` to `Conway.Governance.Procedures`
 * Add implementation for `getMinFeeTxUtxo`
