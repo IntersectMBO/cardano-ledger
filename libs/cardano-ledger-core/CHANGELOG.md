@@ -1,5 +1,8 @@
 # Version history for `cardano-ledger-core`
 
+* Update `FromJSON` instance of `BoundedRatio`
+* Fix `ToJSON` instance of `BoundedRatio` to avoid precision loss
+* Remove `epsilonMaybeEq` from `Utils`
 ## 1.10.0.0
 
 * Add `umElemsL`
