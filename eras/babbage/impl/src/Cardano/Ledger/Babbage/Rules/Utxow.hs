@@ -343,10 +343,9 @@ babbageUtxowTransition = do
   -- Note that Datum validation is done during deserialization,
   -- as given by the decoders in the Plutus libraray
 
-  {- languages tx utxo ⊆ dom(costmdls tx) -}
+  {- languages tx utxo ⊆ dom(costmdls pp) -}
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
-  -- It raises 'NoCostModel' a construcotr of the predicate failure 'CollectError'. This check
-  -- which appears in the spec, seems broken since costmdls is a projection of PParams, not Tx
+  -- It raises 'NoCostModel' a construcotr of the predicate failure 'CollectError'.
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   runTest $ ppViewHashesMatch tx pp scriptsProvided scriptHashesNeeded
