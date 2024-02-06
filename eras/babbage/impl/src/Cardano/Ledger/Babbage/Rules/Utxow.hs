@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -248,7 +249,6 @@ validateScriptsWellFormed pp tx =
 -- The tests are very generic and reusable, but the transition
 -- function is very specific to the Babbage Era.
 
-
 babbageUtxowMirTransition ::
   forall era.
   ( AlonzoEraTx era
@@ -276,13 +276,19 @@ babbageUtxowTransition ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , Inject (BabbageUtxowPredFailure era) (PredicateFailure (EraRule "UTXOW" era))
+  , Inject (AlonzoUtxowPredFailure era) (PredicateFailure (EraRule "UTXOW" era))
+  , Inject (ShelleyUtxowPredFailure era) (PredicateFailure (EraRule "UTXOW" era))
   , -- Allow UTXOW to call UTXO
-    Embed (EraRule "UTXO" era) (BabbageUTXOW era)
+    Embed (EraRule "UTXO" era) (EraRule "UTXOW" era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , Signal (EraRule "UTXO" era) ~ Tx era
   , State (EraRule "UTXO" era) ~ UTxOState era
   ) =>
-  TransitionRule (BabbageUTXOW era)
+  TransitionRule (EraRule "UTXOW" era)
 babbageUtxowTransition = do
   TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx) <- judgmentContext
 
@@ -357,6 +363,7 @@ instance
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , EraRule "UTXOW" era ~ BabbageUTXOW era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
@@ -373,7 +380,7 @@ instance
   type BaseM (BabbageUTXOW era) = ShelleyBase
   type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPredFailure era
   type Event (BabbageUTXOW era) = AlonzoUtxowEvent era
-  transitionRules = [babbageUtxowMirTransition >> babbageUtxowTransition]
+  transitionRules = [babbageUtxowMirTransition >> babbageUtxowTransition @era]
   initialRules = []
 
 instance
