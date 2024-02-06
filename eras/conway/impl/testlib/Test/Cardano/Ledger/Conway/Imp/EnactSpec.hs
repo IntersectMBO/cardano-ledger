@@ -22,7 +22,8 @@ spec =
     it "TreasuryWithdrawal" $ do
       rewardAcount1 <- registerRewardAccount
       govActionId <- submitTreasuryWithdrawals [(rewardAcount1, Coin 666)]
-      GovActionState {gasAction = govAction} <- getGovActionState govActionId
+      gas <- getGovActionState govActionId
+      let govAction = gasAction gas
       enactStateInit <- getEnactState
       let signal =
             EnactSignal
@@ -42,7 +43,8 @@ spec =
             , (rewardAcount2, Coin 222)
             ]
       govActionId' <- submitTreasuryWithdrawals withdrawals'
-      GovActionState {gasAction = govAction'} <- getGovActionState govActionId'
+      gas' <- getGovActionState govActionId'
+      let govAction' = gasAction gas'
       let signal' =
             EnactSignal
               { esGovActionId = govActionId'

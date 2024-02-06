@@ -42,12 +42,14 @@ import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionState (..),
   GovRelation,
+  ProposalProcedure (..),
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
   Vote (..),
   ensCommitteeL,
   ensTreasuryL,
+  gasAction,
   rsDelayedL,
   rsEnactStateL,
   rsEnactedL,
@@ -204,13 +206,15 @@ spoAcceptedRatio RatifyEnv {reStakePoolDistr} GovActionState {gasStakePoolVotes}
         Abstain -> Just (mempty, distr)
 
 dRepAccepted :: ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
-dRepAccepted re rs GovActionState {gasDRepVotes, gasAction} =
-  case votingDRepThreshold rs gasAction of
+dRepAccepted re rs GovActionState {gasDRepVotes, gasProposalProcedure} =
+  case votingDRepThreshold rs govAction of
     SJust r ->
       -- Short circuit on zero threshold in order to avoid redundant computation.
       r == minBound
-        || dRepAcceptedRatio re gasDRepVotes gasAction >= unboundRational r
+        || dRepAcceptedRatio re gasDRepVotes govAction >= unboundRational r
     SNothing -> False
+  where
+    govAction = pProcGovAction gasProposalProcedure
 
 -- Compute the dRep ratio yes/(yes + no), where
 -- yes: is the total stake of
@@ -230,7 +234,7 @@ dRepAcceptedRatio ::
   Map (Credential 'DRepRole (EraCrypto era)) Vote ->
   GovAction era ->
   Rational
-dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVotes gasAction
+dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVotes govAction
   | totalExcludingAbstainStake == 0 = 0
   | otherwise = toInteger yesStake % toInteger totalExcludingAbstainStake
   where
@@ -251,7 +255,7 @@ dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVo
                     Just Abstain -> (yes, tot)
                     Just VoteNo -> (yes, tot + stake)
         DRepAlwaysNoConfidence ->
-          case gasAction of
+          case govAction of
             NoConfidence _ -> (yes + stake, tot + stake)
             _ -> (yes, tot + stake)
         DRepAlwaysAbstain -> (yes, tot)
@@ -298,23 +302,24 @@ ratifyTransition = do
       ) <-
     judgmentContext
   case rsig of
-    gas@GovActionState {gasId, gasAction, gasExpiresAfter} SSeq.:<| sigs -> do
+    gas@GovActionState {gasId, gasExpiresAfter} SSeq.:<| sigs -> do
+      let govAction = gasAction gas
       if prevActionAsExpected gas ensPrevGovActionIds
-        && validCommitteeTerm gasAction ensCurPParams reCurrentEpoch
+        && validCommitteeTerm govAction ensCurPParams reCurrentEpoch
         && not rsDelayed
-        && withdrawalCanWithdraw gasAction ensTreasury
+        && withdrawalCanWithdraw govAction ensTreasury
         && committeeAccepted env st gas
         && spoAccepted env st gas
         && dRepAccepted env st gas
         then do
           newEnactState <-
             trans @(EraRule "ENACT" era) $
-              TRC ((), rsEnactState, EnactSignal gasId gasAction)
+              TRC ((), rsEnactState, EnactSignal gasId govAction)
           let
             st' =
               st
                 & rsEnactStateL .~ newEnactState
-                & rsDelayedL .~ delayingAction gasAction
+                & rsDelayedL .~ delayingAction govAction
                 & rsEnactedL %~ (Seq.:|> gas)
           trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
         else do

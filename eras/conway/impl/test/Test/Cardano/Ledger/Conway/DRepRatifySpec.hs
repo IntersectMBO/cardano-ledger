@@ -23,6 +23,7 @@ import Cardano.Ledger.Conway.Governance (
   RatifyEnv (..),
   RatifyState,
   Vote (..),
+  gasAction,
   pparamsUpdateThreshold,
   votingDRepThreshold,
  )

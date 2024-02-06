@@ -361,9 +361,7 @@ genGovActionState ga =
     <*> arbitrary
     <*> arbitrary
     <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> pure ga
+    <*> (ProposalProcedure <$> arbitrary <*> arbitrary <*> pure ga <*> arbitrary)
     <*> arbitrary
     <*> arbitrary
 

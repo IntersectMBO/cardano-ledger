@@ -2722,7 +2722,7 @@ instance Reflect era => PrettyA (Proposals era) where
   prettyA = pcProposals
 
 pcGovActionState :: GovActionState era -> PDoc
-pcGovActionState gas@(GovActionState _ _ _ _ _ _ _ _ _) =
+pcGovActionState gas@(GovActionState _ _ _ _ _ _ _) =
   let GovActionState {..} = gas
    in ppRecord
         "GovActionState"
@@ -2730,9 +2730,7 @@ pcGovActionState gas@(GovActionState _ _ _ _ _ _ _ _ _) =
         , ("CommitteVotes", ppMap pcCredential pcVote gasCommitteeVotes)
         , ("DRepVotes", ppMap pcCredential pcVote gasDRepVotes)
         , ("StakePoolVotes", ppMap pcKeyHash pcVote gasStakePoolVotes)
-        , ("Deposit", pcCoin gasDeposit)
-        , ("Return Address", pcRewardAccount gasReturnAddr)
-        , ("Action", pcGovAction gasAction)
+        , ("Procedure", pcProposalProcedure gasProposalProcedure)
         , ("Proposed In", ppEpochNo gasProposedIn)
         , ("Expires After", ppEpochNo gasExpiresAfter)
         ]
