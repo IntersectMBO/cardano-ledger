@@ -110,7 +110,6 @@ import Data.Aeson as Aeson (
  )
 import qualified Data.Aeson as Aeson (Value)
 import Data.Functor.Identity (Identity (..))
-import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (Proxy))
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
@@ -278,8 +277,6 @@ instance Crypto c => EraGov (BabbageEra c) where
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
   obligationGovState = const mempty
-
-  getDRepDistr = const Map.empty
 
 instance Era era => EncCBOR (BabbagePParams Identity era) where
   encCBOR BabbagePParams {..} =

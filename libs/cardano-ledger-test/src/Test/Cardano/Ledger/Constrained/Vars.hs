@@ -2021,12 +2021,6 @@ constitutionChildren = Var $ V "constitutionChildren" (SetR GovActionIdR) No
 pparamsFL :: Proof era -> Lens' (PParams era) (PParamsF era)
 pparamsFL p = lens (PParamsF p) (\_ (PParamsF _ x) -> x)
 
-committeeMembersL :: Lens' (Committee era) (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
-committeeMembersL = lens committeeMembers (\x s -> x {committeeMembers = s})
-
-committeeQuorumL :: Lens' (Committee era) UnitInterval
-committeeQuorumL = lens committeeQuorum (\x s -> x {committeeQuorum = s})
-
 smCommL :: Lens' (StrictMaybe (Committee era)) (Committee era)
 smCommL = lens getter (\_ t -> SJust t)
   where

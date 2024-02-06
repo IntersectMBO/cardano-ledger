@@ -29,6 +29,8 @@ module Cardano.Ledger.Conway.Governance (
   RatifySignal (..),
   ConwayGovState (..),
   Committee (..),
+  committeeMembersL,
+  committeeQuorumL,
   GovAction (..),
   GovActionState (..),
   GovActionIx (..),
@@ -164,7 +166,6 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
   isSJust,
-  strictMaybeToMaybe,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -639,12 +640,6 @@ toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _) =
 instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
   type GovState (ConwayEra c) = ConwayGovState (ConwayEra c)
 
-  getConstitution = Just . cgsConstitution
-
-  getCommitteeMembers g =
-    fmap (\c -> (committeeMembers c, committeeQuorum c)) . strictMaybeToMaybe $
-      g ^. cgsCommitteeL
-
   getNextEpochCommitteeMembers g = ensCommitteeMembers (getRatifyState g ^. rsEnactStateL)
 
   curPParamsGovStateL = curPParamsConwayGovStateL
@@ -658,8 +653,6 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
       , oblStake = Coin 0
       , oblPool = Coin 0
       }
-
-  getDRepDistr govst = psDRepDistr . fst $ finishDRepPulser (govst ^. drepPulsingStateGovStateL)
 
 ensCommitteeMembers ::
   EnactState era ->

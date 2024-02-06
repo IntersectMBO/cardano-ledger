@@ -67,4 +67,3 @@ roundTripStateEraTypesSpec = do
     roundTripShareEraTypeSpec @era @UTxOState
     roundTripEraTypeSpec @era @EpochState
     roundTripEraTypeSpec @era @NewEpochState
-    roundTripEraTypeSpec @era @Constitution

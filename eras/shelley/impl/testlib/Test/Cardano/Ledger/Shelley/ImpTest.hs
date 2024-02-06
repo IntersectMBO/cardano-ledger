@@ -57,7 +57,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   lookupReward,
   registerPool,
   getRewardAccountAmount,
-  constitutionShouldBe,
   withImpState,
   fixupFees,
   fixupTx,
@@ -92,7 +91,6 @@ import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
-  Anchor (..),
   BlocksMade (..),
   EpochSize (..),
   Globals (..),
@@ -103,7 +101,6 @@ import Cardano.Ledger.BaseTypes (
   TxIx (..),
   inject,
   mkTxIxPartial,
-  textToUrl,
  )
 import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
 import Cardano.Ledger.Coin (Coin (..))
@@ -145,7 +142,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   produced,
   smartUTxOState,
   startStep,
-  utxosGovStateL,
   utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
@@ -174,7 +170,7 @@ import Data.Functor.Identity (Identity (..))
 import Data.IORef
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromJust, fromMaybe, mapMaybe)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -1004,21 +1000,6 @@ registerPool = do
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert poolParams)
   pure khPool
-
--- | Asserts that the URL of the current constitution is equal to the given
--- string
-constitutionShouldBe :: (HasCallStack, EraGov era) => String -> ImpTestM era ()
-constitutionShouldBe cUrl = do
-  constitution <-
-    getsNES $
-      nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . to getConstitution
-  Constitution {constitutionAnchor = Anchor {anchorUrl}} <-
-    impAnn "Expecting a constitution" $ do
-      pure $
-        fromMaybe
-          (error "No constitution has been set")
-          constitution
-  anchorUrl `shouldBe` fromJust (textToUrl 64 $ T.pack cUrl)
 
 -- | Performs the action without running the fix-up function on any transactions
 withNoFixup :: ImpTestM era a -> ImpTestM era a

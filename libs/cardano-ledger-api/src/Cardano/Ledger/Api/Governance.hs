@@ -48,12 +48,12 @@ module Cardano.Ledger.Api.Governance (
 
 -- Lenses
 
-import Cardano.Ledger.Allegra.Core (Constitution (..))
 import Cardano.Ledger.Api.Era ()
 import Cardano.Ledger.BaseTypes (hashAnchorData)
 import Cardano.Ledger.Conway.Governance (
   Anchor (..),
   AnchorData (..),
+  Constitution (..),
   ConwayGovState (..),
   EnactState (..),
   GovAction (..),

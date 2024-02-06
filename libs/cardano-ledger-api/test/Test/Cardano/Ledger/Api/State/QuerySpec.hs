@@ -16,6 +16,7 @@ import Cardano.Ledger.Api.State.Query (
   MemberStatus (..),
   NextEpochChange (..),
   filterStakePoolDelegsAndRewards,
+  getCommitteeMembers,
   queryCommitteeMembersState,
  )
 import Cardano.Ledger.BaseTypes
@@ -108,7 +109,7 @@ committeeMembersStateSpec =
 
 propEmpty ::
   forall era.
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
   Expectation
 propEmpty nes = do
@@ -119,7 +120,7 @@ propEmpty nes = do
 
 propComplete ::
   forall era.
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
   Expectation
 propComplete nes = do
@@ -132,7 +133,7 @@ propComplete nes = do
 
 propNotAuthorized ::
   forall era.
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
   Expectation
 propNotAuthorized nes = do
@@ -150,7 +151,7 @@ propNotAuthorized nes = do
 
 propAuthorized ::
   forall era.
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
   Expectation
 propAuthorized nes = do
@@ -168,7 +169,7 @@ propAuthorized nes = do
 
 propResigned ::
   forall era.
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
   Expectation
 propResigned nes = do
@@ -186,7 +187,7 @@ propResigned nes = do
 
 propUnrecognized ::
   forall era.
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
   Expectation
 propUnrecognized nes = do
@@ -215,7 +216,7 @@ propUnrecognized nes = do
 
 propActiveAuthorized ::
   forall era.
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
   Expectation
 propActiveAuthorized nes = do
@@ -246,7 +247,7 @@ propActiveAuthorized nes = do
 
 propFilters ::
   forall era.
-  EraGov era =>
+  ConwayEraGov era =>
   Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
   Set (Credential 'HotCommitteeRole (EraCrypto era)) ->
   Set MemberStatus ->
@@ -272,7 +273,7 @@ propFilters ckFilter hkFilter statusFilter nes = do
 
 propNextEpoch ::
   forall era.
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
   Expectation
 propNextEpoch nes = do
@@ -329,7 +330,7 @@ propNextEpoch nes = do
 
 propNoExpiration ::
   forall era.
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
   Expectation
 propNoExpiration nes =
@@ -410,7 +411,7 @@ genRetaining ret = do
   pure $ new <> take retSize ret
 
 withCommitteeInfo ::
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
   ( Committee era ->
     CommitteeState era ->
@@ -431,7 +432,7 @@ withCommitteeInfo nes expectation =
 
 committeeInfo ::
   forall era.
-  EraGov era =>
+  ConwayEraGov era =>
   NewEpochState era ->
   Maybe
     ( Committee era
@@ -439,8 +440,7 @@ committeeInfo ::
     , Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
     )
 committeeInfo nes = do
-  (comMembers, comQurum) <-
-    getCommitteeMembers (nes ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosGovStateL)
+  (comMembers, comQurum) <- getCommitteeMembers nes
   let ledgerState = nes ^. nesEpochStateL . esLStateL
   let nextCommitteeMembers =
         maybe
@@ -451,7 +451,10 @@ committeeInfo nes = do
   pure (Committee comMembers comQurum, comState, nextCommitteeMembers)
 
 queryCommitteeMembersStateNoFilters ::
-  forall era. EraGov era => NewEpochState era -> Maybe (CommitteeMembersState (EraCrypto era))
+  forall era.
+  ConwayEraGov era =>
+  NewEpochState era ->
+  Maybe (CommitteeMembersState (EraCrypto era))
 queryCommitteeMembersStateNoFilters =
   queryCommitteeMembersState @era
     Set.empty

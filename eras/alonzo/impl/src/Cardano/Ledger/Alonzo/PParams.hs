@@ -393,8 +393,6 @@ instance Crypto c => EraGov (AlonzoEra c) where
 
   obligationGovState = const mempty
 
-  getDRepDistr = const Map.empty
-
 instance Era era => EncCBOR (AlonzoPParams Identity era) where
   encCBOR AlonzoPParams {..} =
     encodeListLen (23 + listLen appProtocolVersion)
