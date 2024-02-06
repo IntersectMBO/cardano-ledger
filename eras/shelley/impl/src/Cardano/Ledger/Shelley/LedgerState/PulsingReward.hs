@@ -187,13 +187,14 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       newLikelihoods = VMap.toMap $ VMap.map makeLikelihoods allPoolInfo
       -- We now compute the leader rewards for each stake pool.
       collectLRs acc poolRI =
-        let rewardAcnt = raCredential . ppRewardAccount . poolPs $ poolRI
+        let rewardAccount = raCredential . ppRewardAccount . poolPs $ poolRI
             packageLeaderReward = Set.singleton . leaderRewardToGeneral . poolLeaderReward
-         in if HardForks.forgoRewardPrefilter (pr ^. ppProtocolVersionL) || rewardAcnt `UM.member` rewards ds
+         in if HardForks.forgoRewardPrefilter (pr ^. ppProtocolVersionL)
+              || rewardAccount `UM.member` rewards ds
               then
                 Map.insertWith
                   Set.union
-                  rewardAcnt
+                  rewardAccount
                   (packageLeaderReward poolRI)
                   acc
               else acc

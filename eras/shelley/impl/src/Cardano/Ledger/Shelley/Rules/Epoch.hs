@@ -29,7 +29,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
   PState (..),
   UTxOState (utxosDeposited, utxosGovState),
-  asReserves,
   curPParamsEpochStateL,
   esAccountState,
   esLState,
@@ -224,12 +223,10 @@ epochTransition = do
     -- the rules, So we can recompute the utxosDeposited field using adjustedCertState
     -- since we have the invariant that: obligationCertState dpstate == utxosDeposited utxostate
     oblgNew = totalObligation adjustedCertState (utxoSt'' ^. utxosGovStateL)
-    reserves = asReserves acnt'
     utxoSt''' = utxoSt'' {utxosDeposited = oblgNew}
-    acnt'' = acnt' {asReserves = reserves}
   pure $
     epochState'
-      & esAccountStateL .~ acnt''
+      & esAccountStateL .~ acnt'
       & esLStateL . lsUTxOStateL .~ utxoSt'''
       & prevPParamsEpochStateL .~ pp
       & curPParamsEpochStateL .~ pp'

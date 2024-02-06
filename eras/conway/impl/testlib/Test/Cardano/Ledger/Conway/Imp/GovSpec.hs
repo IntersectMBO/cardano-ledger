@@ -36,7 +36,6 @@ import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
-import Control.Monad (replicateM_)
 import Control.State.Transition.Extended (PredicateFailure)
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..), traverse_)

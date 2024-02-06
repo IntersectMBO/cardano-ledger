@@ -30,9 +30,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
 import Cardano.Ledger.Shelley.Era (ShelleyBBODY)
-import Cardano.Ledger.Shelley.LedgerState (
-  AccountState,
- )
+import Cardano.Ledger.Shelley.LedgerState (AccountState)
 import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersEnv (..))
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Control.Monad.Trans.Reader (asks)
@@ -53,7 +51,7 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyBbodyState era
-  = BbodyState (State (EraRule "LEDGERS" era)) (BlocksMade (EraCrypto era))
+  = BbodyState !(State (EraRule "LEDGERS" era)) !(BlocksMade (EraCrypto era))
 
 deriving stock instance Show (State (EraRule "LEDGERS" era)) => Show (ShelleyBbodyState era)
 

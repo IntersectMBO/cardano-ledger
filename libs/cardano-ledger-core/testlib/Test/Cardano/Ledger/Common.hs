@@ -35,7 +35,7 @@ module Test.Cardano.Ledger.Common (
 where
 
 import Control.DeepSeq (NFData)
-import Control.Monad as X (forM_, unless, void, when, (>=>))
+import Control.Monad as X (forM_, replicateM, replicateM_, unless, void, when, (>=>))
 import System.IO (
   BufferMode (LineBuffering),
   hSetBuffering,

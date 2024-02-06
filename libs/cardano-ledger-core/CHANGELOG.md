@@ -28,6 +28,11 @@
 * Add `mkScriptAddr`
 * Deprecate `deserialiseRewardAcntOld` in favor of `deserialiseRewardAccountOld`
 * Deprecate `mkVKeyRwdAcnt` in favor of `mkVKeyRewardAccount`
+* Add `Stateful` random interface: `HasStatefulGen`, `HasGenEnv`, `HasSubState`,
+  `StatefulGen`, `StateGen`, `StateGenM`, `uniformM`, `uniformRM`, `uniformListM`,
+  `uniformListRM`, `uniformByteStringM`, `uniformShortByteStringM`
+* Re-export the whole of `quickcheck-classes` from `Imp.Common`
+* Re-export `replicateM_` and `replicateM` from `Imp.Common`
 
 ## 1.10.0.0
 

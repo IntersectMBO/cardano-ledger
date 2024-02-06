@@ -31,7 +31,6 @@ import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (getMinFeeTxUtxo)
 import Cardano.Ledger.Val
-import Control.Monad (replicateM)
 import qualified Data.ByteString.Short as SBS (length)
 import qualified Data.Foldable as Foldable
 import Data.Functor ((<&>))

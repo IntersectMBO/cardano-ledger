@@ -14,6 +14,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -26,6 +27,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   runImpTestM_,
   evalImpTestM,
   execImpTestM,
+  runImpTestGenM,
+  runImpTestGenM_,
+  evalImpTestGenM,
+  execImpTestGenM,
   ImpTestState,
   ImpTestEnv (..),
   ImpException (..),
@@ -160,6 +165,7 @@ import Control.Monad (forM)
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader (..), asks)
 import Control.Monad.State.Strict (MonadState (..), gets, modify)
+import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.State.Transition (STS (..), TRC (..))
 import Control.State.Transition.Trace (applySTSTest)
@@ -170,7 +176,7 @@ import Data.Functor.Identity (Identity (..))
 import Data.IORef
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, mapMaybe)
+import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -182,13 +188,16 @@ import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
 import Numeric.Natural (Natural)
 import Prettyprinter (Doc, Pretty (..), defaultLayoutOptions, layoutPretty, line)
 import Prettyprinter.Render.String (renderString)
+import System.Random
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkKeyHash, mkKeyPair, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.HUnit.Lang (FailureReason (..), HUnitFailure (..))
-import Test.Hspec.Core.Spec (Example (..))
-import UnliftIO (MonadUnliftIO)
+import Test.Hspec.Core.Spec (Example (..), Params, paramsQuickCheckArgs)
+import Test.QuickCheck.Gen (Gen (..))
+import Test.QuickCheck.Random (QCGen (..), mkQCGen)
+import UnliftIO (MonadUnliftIO (..))
 import UnliftIO.Exception (
   Exception (..),
   SomeException (..),
@@ -207,6 +216,7 @@ data ImpTestState era = ImpTestState
   , impLastTick :: !SlotNo
   , impGlobals :: !Globals
   , impLog :: !(Doc ())
+  , impGen :: !QCGen
   }
 
 impLogL :: Lens' (ImpTestState era) (Doc ())
@@ -478,7 +488,7 @@ data ImpTestEnv era = ImpTestEnv
 iteDoTxFixupL :: Lens' (ImpTestEnv era) Bool
 iteDoTxFixupL = lens iteDoTxFixup (\x y -> x {iteDoTxFixup = y})
 
-newtype ImpTestM era a = ImpTestM (ReaderT (ImpTestEnv era) IO a)
+newtype ImpTestM era a = ImpTestM {unImpTestM :: ReaderT (ImpTestEnv era) (GenT IO) a}
   deriving
     ( Functor
     , Applicative
@@ -500,25 +510,65 @@ instance MonadState (ImpTestState era) (ImpTestM era) where
 instance Example (ImpTestM era ()) where
   type Arg (ImpTestM era ()) = ImpTestState era
 
-  evaluateExample impTest = evaluateExample (`evalImpTestM` impTest)
+  evaluateExample impTest params =
+    evaluateExample (\s -> evalImpTestM (getParamsQCGen params) s impTest) params
 
 instance (Arbitrary a, Show a) => Example (a -> ImpTestM era ()) where
   type Arg (a -> ImpTestM era ()) = ImpTestState era
 
-  evaluateExample impTest = evaluateExample (\s -> property $ evalImpTestM s . impTest)
+  evaluateExample impTest params =
+    evaluateExample (\s -> property $ evalImpTestM (getParamsQCGen params) s . impTest) params
 
-evalImpTestM :: ImpTestState era -> ImpTestM era b -> IO b
-evalImpTestM impState = fmap fst . runImpTestM impState
+instance MonadGen (ImpTestM era) where
+  liftGen = ImpTestM . lift . liftGen
+  variant n (ImpTestM f) = ImpTestM $ ask >>= lift . variant n . runReaderT f
+  sized f = ImpTestM $ do
+    env <- ask
+    lift $ sized (\n -> runReaderT (unImpTestM (f n)) env)
+  resize n (ImpTestM f) = ImpTestM $ ask >>= lift . resize n . runReaderT f
+  choose = ImpTestM . lift . choose
 
-execImpTestM :: ImpTestState era -> ImpTestM era b -> IO (ImpTestState era)
-execImpTestM impState = fmap snd . runImpTestM impState
+instance HasStatefulGen (StateGenM (ImpTestState era)) (ImpTestM era) where
+  askStatefulGen = pure StateGenM
 
-runImpTestM_ :: ImpTestState era -> ImpTestM era b -> IO ()
-runImpTestM_ impState = void . runImpTestM impState
+instance HasSubState (ImpTestState era) where
+  type SubState (ImpTestState era) = StateGen QCGen
+  getSubState = StateGen . impGen
+  setSubState s (StateGen g) = s {impGen = g}
 
-runImpTestM :: ImpTestState era -> ImpTestM era b -> IO (b, ImpTestState era)
-runImpTestM impState (ImpTestM m) = do
-  ioRef <- newIORef impState
+getParamsQCGen :: Params -> Maybe (QCGen, Int)
+getParamsQCGen params = replay (paramsQuickCheckArgs params)
+
+evalImpTestGenM :: ImpTestState era -> ImpTestM era b -> Gen (IO b)
+evalImpTestGenM impState = fmap (fmap fst) . runImpTestGenM impState
+
+evalImpTestM :: Maybe (QCGen, Int) -> ImpTestState era -> ImpTestM era b -> IO b
+evalImpTestM qc impState = fmap fst . runImpTestM qc impState
+
+execImpTestGenM :: ImpTestState era -> ImpTestM era b -> Gen (IO (ImpTestState era))
+execImpTestGenM impState = fmap (fmap snd) . runImpTestGenM impState
+
+execImpTestM :: Maybe (QCGen, Int) -> ImpTestState era -> ImpTestM era b -> IO (ImpTestState era)
+execImpTestM qc impState = fmap snd . runImpTestM qc impState
+
+runImpTestGenM_ :: ImpTestState era -> ImpTestM era b -> Gen (IO ())
+runImpTestGenM_ impState = fmap void . runImpTestGenM impState
+
+runImpTestM_ :: Maybe (QCGen, Int) -> ImpTestState era -> ImpTestM era b -> IO ()
+runImpTestM_ qc impState = void . runImpTestM qc impState
+
+runImpTestGenM :: ImpTestState era -> ImpTestM era b -> Gen (IO (b, ImpTestState era))
+runImpTestGenM impState m = MkGen $ \qcGen qcSz -> runImpTestM (Just (qcGen, qcSz)) impState m
+
+runImpTestM :: Maybe (QCGen, Int) -> ImpTestState era -> ImpTestM era b -> IO (b, ImpTestState era)
+runImpTestM mQCGen impState (ImpTestM m) = do
+  let
+    (qcGen, qcSize, impState') =
+      case fromMaybe (impGen impState, 30) mQCGen of
+        (initGen, sz) ->
+          case split initGen of
+            (qc, stdGen) -> (qc, sz, impState {impGen = stdGen})
+  ioRef <- newIORef impState'
   let
     env =
       ImpTestEnv
@@ -526,7 +576,7 @@ runImpTestM impState (ImpTestM m) = do
         , iteDoTxFixup = True
         }
   res <-
-    runReaderT m env `catchAny` \exc -> do
+    unGenT (runReaderT m env) qcGen qcSize `catchAny` \exc -> do
       logsDoc <- impLog <$> readIORef ioRef
       let logs = renderString (layoutPretty defaultLayoutOptions logsDoc)
           adjustHUnitExc header (HUnitFailure srcLoc failReason) =
@@ -852,6 +902,7 @@ withImpState =
         , impLastTick = 0
         , impGlobals = testGlobals
         , impLog = mempty
+        , impGen = mkQCGen 2024
         }
   where
     rootCoin = Coin 1_000_000_000

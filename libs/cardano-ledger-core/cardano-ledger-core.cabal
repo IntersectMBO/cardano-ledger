@@ -186,6 +186,7 @@ library testlib
         nothunks,
         primitive,
         QuickCheck,
+        quickcheck-transformer,
         plutus-ledger-api:{plutus-ledger-api, plutus-ledger-api-testlib},
         random >=1.2,
         text,

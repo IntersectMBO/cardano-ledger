@@ -76,7 +76,7 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 data RupdEnv era
-  = RupdEnv (BlocksMade (EraCrypto era)) (EpochState era)
+  = RupdEnv !(BlocksMade (EraCrypto era)) !(EpochState era)
 
 data ShelleyRupdPredFailure era -- No predicate failures
   deriving (Show, Eq, Generic)
@@ -157,12 +157,12 @@ rupdTransition = do
         SNothing -> do
           -- Nothing has been done, so start, and then complete the pulser. We hope this is very rare.
           let pulser = startStep slotsPerEpoch b es maxsupply asc k
-          (reward, event) <- liftSTS . completeStep $ pulser
+          (reward, event) <- liftSTS $ completeStep pulser
           tellRupd "Starting too late" (RupdEvent (e + 1) event)
           pure (SJust reward)
         SJust p@(Pulsing _ _) -> do
           -- We have been pulsing, but we ran out of time, so complete the pulser.
-          (reward, event) <- liftSTS . completeStep $ p
-          tellRupd "completing too late" (RupdEvent (e + 1) event)
+          (reward, event) <- liftSTS $ completeStep p
+          tellRupd "Completing too late" (RupdEvent (e + 1) event)
           pure (SJust reward)
         complete@(SJust (Complete _)) -> pure complete

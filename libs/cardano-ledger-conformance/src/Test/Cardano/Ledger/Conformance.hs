@@ -82,7 +82,6 @@ import Cardano.Ledger.Shelley.Rules (Identity, UtxoEnv (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
-import Control.Monad (replicateM_)
 import Control.Monad.RWS.Class (asks, gets)
 import Control.State.Transition.Extended (STS (..))
 import Data.Bitraversable (bimapM)
@@ -112,7 +111,7 @@ import Test.Cardano.Ledger.Conway.ImpTest (
   ImpTestEnv (..),
   ImpTestM,
   ImpTestState,
-  evalImpTestM,
+  evalImpTestGenM,
   fixupTx,
   getUTxO,
   getsNES,
@@ -686,15 +685,14 @@ conformsWhen makeTestsSmall condition impState =
     gen = genTxAndNewEpoch us $ reify @Conway
    in
     forAllBlind gen $ \(nes, tx, _env) ->
-      condition nes tx
-        ==> evalImpTestM impState
-        $ do
-          replicateM_ 100 passTick
-          modifyNES $ const nes
-          logCurPParams
-          -- logNESSummary
-          logTxSummary tx
-          withNoFixup $ trySubmitTxConform_ tx
+      let impTest = do
+            replicateM_ 100 passTick
+            modifyNES $ const nes
+            logCurPParams
+            -- logNESSummary
+            logTxSummary tx
+            withNoFixup $ trySubmitTxConform_ tx
+       in condition nes tx ==> evalImpTestGenM impState impTest
 
 txIsValid :: AlonzoEraTx era => Tx era -> Bool
 txIsValid tx = (tx ^. isValidTxL) == IsValid True
