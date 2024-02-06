@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Rename `MinFeeRefScriptCoinsPerByte` to `MinFeeRefScriptCostPerByte` and change its type from `CoinsPerByte` to `NonNegativeInterval` #4055
 * Rename `committeeQuorum` to `committeeThreshold` #4053
 * Changed `GovActionState` to have 1 field (`gasProposalProcedure`) rather than 3 (`gasDeposit`, `gasAction`, `gasReturnAddr`)
   * the old field names (`gasDeposit`, `gasAction`, `gasReturnAddr`) become functions, and the lenses

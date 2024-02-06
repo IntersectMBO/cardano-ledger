@@ -408,7 +408,7 @@ protocol_param_update =
   , ? 30: coin                   ; governance action deposit
   , ? 31: coin                   ; DRep deposit
   , ? 32: epoch                  ; DRep inactivity period
-  , ? 33: coin                   ; MinFee RefScriptCoinsPerByte
+  , ? 33: nonnegative_interval   ; MinFee RefScriptCostPerByte
   }
 
 pool_voting_thresholds =

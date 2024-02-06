@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -17,12 +16,11 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Alonzo.Scripts
-import Cardano.Ledger.Babbage.PParams (CoinPerByte (..))
 import Cardano.Ledger.Babbage.TxBody (referenceInputsTxBodyL)
 import Cardano.Ledger.Babbage.TxOut (referenceScriptTxOutL)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCoinsPerByteL)
+import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.MemoBytes (getMemoRawBytes)
 import Cardano.Ledger.Plutus.Language (Language (..), plutusBinary)
 import Cardano.Ledger.Shelley.Core
@@ -32,7 +30,6 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (getMinFeeTxUtxo)
 import Cardano.Ledger.Val
 import qualified Data.ByteString.Short as SBS (length)
-import qualified Data.Foldable as Foldable
 import Data.Functor ((<&>))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
@@ -41,6 +38,7 @@ import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.KeyPair (mkScriptAddr)
+import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 
@@ -81,7 +79,11 @@ spec = describe "UTxO" $ do
       minFeeDiff <- conwayDiffMinFee tx
       -- check that the difference is the sum of the sizes of the passed reference scripts
       minFeeDiff
-        `shouldBe` Foldable.foldMap (\s -> scriptSize s <×> refScriptFee) refScriptInToScripts
+        `shouldBe` Coin
+          ( floor $
+              fromIntegral @Int @Rational (sum $ scriptSize <$> refScriptInToScripts)
+                * unboundRational refScriptFee
+          )
 
     distinctScripts :: ImpTestM era [Script era]
     distinctScripts = do
@@ -147,8 +149,8 @@ spec = describe "UTxO" $ do
       TimelockScript tl -> SBS.length $ getMemoRawBytes tl
       PlutusScript ps -> withPlutusScript ps (SBS.length . unPlutusBinary . plutusBinary)
 
-    setRefScriptFee :: ImpTestM era Coin
+    setRefScriptFee :: ImpTestM era NonNegativeInterval
     setRefScriptFee = do
-      let refScriptFee = Coin 10
-      modifyPParams $ ppMinFeeRefScriptCoinsPerByteL .~ CoinPerByte refScriptFee
+      let refScriptFee = 10 %! 1
+      modifyPParams $ ppMinFeeRefScriptCostPerByteL .~ refScriptFee
       pure refScriptFee

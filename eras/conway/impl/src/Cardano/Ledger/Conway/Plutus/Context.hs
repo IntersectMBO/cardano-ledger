@@ -38,7 +38,7 @@ import Cardano.Ledger.Conway.PParams (
   ppuDRepVotingThresholdsL,
   ppuGovActionDepositL,
   ppuGovActionLifetimeL,
-  ppuMinFeeRefScriptCoinsPerByteL,
+  ppuMinFeeRefScriptCostPerByteL,
   ppuPoolVotingThresholdsL,
  )
 import Cardano.Ledger.Core (
@@ -196,7 +196,7 @@ conwayPParam =
   , PParam 30 ppuGovActionDepositL
   , PParam 31 ppuDRepDepositL
   , PParam 32 ppuDRepActivityL
-  , PParam 33 ppuMinFeeRefScriptCoinsPerByteL
+  , PParam 33 ppuMinFeeRefScriptCostPerByteL
   ]
 
 -- ===========================================================
