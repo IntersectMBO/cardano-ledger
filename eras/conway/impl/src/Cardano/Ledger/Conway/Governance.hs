@@ -30,7 +30,7 @@ module Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   Committee (..),
   committeeMembersL,
-  committeeQuorumL,
+  committeeThresholdL,
   GovAction (..),
   GovActionState (..),
   GovActionIx (..),
@@ -667,7 +667,7 @@ ensCommitteeMembers ::
   EnactState era ->
   Maybe (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo, UnitInterval)
 ensCommitteeMembers ens = case ens ^. ensCommitteeL of
-  SJust Committee {..} -> Just (committeeMembers, committeeQuorum)
+  SJust Committee {..} -> Just (committeeMembers, committeeThreshold)
   SNothing -> Nothing
 
 class EraGov era => ConwayEraGov era where
@@ -813,7 +813,7 @@ votingCommitteeThresholdInternal pp committee = \case
   InfoAction {} -> NoVotingThreshold
   where
     threshold =
-      case committeeQuorum <$> committee of
+      case committeeThreshold <$> committee of
         -- if the committee size is smaller than the mnimimum given in pparams,
         -- we treat it as if we had no committe
         SJust t | committeeSize >= minSize -> VotingThreshold t

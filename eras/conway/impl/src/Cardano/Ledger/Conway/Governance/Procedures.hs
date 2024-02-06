@@ -57,7 +57,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   pProcReturnAddrL,
   pProcAnchorL,
   committeeMembersL,
-  committeeQuorumL,
+  committeeThresholdL,
   gasDRepVotesL,
   gasStakePoolVotesL,
   gasCommitteeVotesL,
@@ -546,8 +546,8 @@ toProposalProcedurePairs proposalProcedure@(ProposalProcedure _ _ _ _) =
 data Committee era = Committee
   { committeeMembers :: !(Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
   -- ^ Committee members with epoch number when each of them expires
-  , committeeQuorum :: !UnitInterval
-  -- ^ Quorum of the committee that is necessary for a successful vote
+  , committeeThreshold :: !UnitInterval
+  -- ^ Threshold of the committee that is necessary for a successful vote
   }
   deriving (Eq, Show, Generic)
 
@@ -561,8 +561,8 @@ instance Default (Committee era) where
 committeeMembersL :: Lens' (Committee era) (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
 committeeMembersL = lens committeeMembers (\c m -> c {committeeMembers = m})
 
-committeeQuorumL :: Lens' (Committee era) UnitInterval
-committeeQuorumL = lens committeeQuorum (\c q -> c {committeeQuorum = q})
+committeeThresholdL :: Lens' (Committee era) UnitInterval
+committeeThresholdL = lens committeeThreshold (\c q -> c {committeeThreshold = q})
 
 instance Era era => DecCBOR (Committee era) where
   decCBOR =
@@ -573,11 +573,11 @@ instance Era era => DecCBOR (Committee era) where
   {-# INLINE decCBOR #-}
 
 instance Era era => EncCBOR (Committee era) where
-  encCBOR Committee {committeeMembers, committeeQuorum} =
+  encCBOR Committee {committeeMembers, committeeThreshold} =
     encode $
       Rec (Committee @era)
         !> To committeeMembers
-        !> To committeeQuorum
+        !> To committeeThreshold
 
 instance EraPParams era => ToJSON (Committee era) where
   toJSON = object . toCommitteePairs
@@ -589,13 +589,13 @@ instance Era era => FromJSON (Committee era) where
       parseCommittee o =
         Committee
           <$> (forceElemsToWHNF <$> o .: "members")
-          <*> o .: "quorum"
+          <*> o .: "threshold"
 
 toCommitteePairs :: (KeyValue e a, EraPParams era) => Committee era -> [a]
 toCommitteePairs committee@(Committee _ _) =
   let Committee {..} = committee
    in [ "members" .= committeeMembers
-      , "quorum" .= committeeQuorum
+      , "threshold" .= committeeThreshold
       ]
 
 data GovActionPurpose
@@ -802,7 +802,7 @@ data GovAction era
       !(Set (Credential 'ColdCommitteeRole (EraCrypto era)))
       -- | Constitutional committee members to be added
       !(Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
-      -- | New quorum
+      -- | New Threshold
       !UnitInterval
   | NewConstitution
       -- | Previous governance action id of `NewConstitution` type, which corresponds to

@@ -90,9 +90,9 @@ enactmentTransition = do
         st
           & ensCommitteeL .~ SNothing
           & ensPrevCommitteeL .~ SJust (GovPurposeId govActionId)
-      UpdateCommittee _ membersToRemove membersToAdd newQuorum -> do
+      UpdateCommittee _ membersToRemove membersToAdd newThreshold -> do
         st
-          & ensCommitteeL %~ SJust . updatedCommittee membersToRemove membersToAdd newQuorum
+          & ensCommitteeL %~ SJust . updatedCommittee membersToRemove membersToAdd newThreshold
           & ensPrevCommitteeL .~ SJust (GovPurposeId govActionId)
       NewConstitution _ c ->
         st
@@ -106,9 +106,9 @@ updatedCommittee ::
   UnitInterval ->
   StrictMaybe (Committee era) ->
   Committee era
-updatedCommittee membersToRemove membersToAdd newQuorum committee =
+updatedCommittee membersToRemove membersToAdd newThreshold committee =
   case committee of
-    SNothing -> Committee membersToAdd newQuorum
+    SNothing -> Committee membersToAdd newThreshold
     SJust (Committee currentMembers _) ->
       let newCommitteeMembers =
             Map.union
@@ -116,4 +116,4 @@ updatedCommittee membersToRemove membersToAdd newQuorum committee =
               (currentMembers `Map.withoutKeys` membersToRemove)
        in Committee
             newCommitteeMembers
-            newQuorum
+            newThreshold

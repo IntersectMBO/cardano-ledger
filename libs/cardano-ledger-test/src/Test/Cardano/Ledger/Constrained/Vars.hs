@@ -1975,7 +1975,7 @@ committeeT :: forall era. Era era => RootTarget era (Committee era) (Committee e
 committeeT =
   Invert "Committee" (typeRep @(Committee era)) Committee
     :$ Lensed commMembers committeeMembersL
-    :$ Lensed commQuorum committeeQuorumL
+    :$ Lensed commQuorum committeeThresholdL
 
 {-
 prevGovActionIdsT =
