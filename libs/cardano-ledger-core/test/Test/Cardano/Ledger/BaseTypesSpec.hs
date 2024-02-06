@@ -17,7 +17,6 @@ import Data.Typeable
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborExpectation)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
-import Test.Cardano.Ledger.Core.Utils (epsilonMaybeEq)
 
 boundedRationalTests ::
   forall a.
@@ -56,29 +55,16 @@ boundedRationalTests badJSONValues = do
                 , r <= unboundRational (maxBound :: a)
                 ]
     describe "JSON" $ do
-      prop "ToJSON/FromJSON roundtrip up to an epsilon" $
+      prop "ToJSON/FromJSON roundtrip" $
         forAll genValid $ \(br :: a) ->
           within 500000 $
-            case eitherDecode (encode br) of
+            case boundedFromJSON (encode br) of
               Left err -> error err
-              Right (br' :: a) ->
-                epsilonMaybeEq 1e-18 (unboundRational br) (unboundRational br')
-      prop "Roundtrip to Scientific and back up to an epsilon" $
-        forAll genValid $ \ui ->
-          within 500000 $
-            case fromRationalRepetendLimited 20 (unboundRational ui) of
-              Left (s, r) -> Just ui === boundRational (toRational s + r)
-              Right (s, Nothing) ->
-                classify
-                  True
-                  "no-repeat digits"
-                  (Right ui === boundedFromJSON (encode s))
-              Right (s, Just r) ->
-                Just ui === boundRational (toRationalRepetend s r)
+              Right (br' :: a) -> unboundRational br === unboundRational br'
       prop "Roundtrip from valid Scientific and back exactly" $
         within 500000 $
           forAll genValid $ \(s :: Scientific) ->
-            case eitherDecode (encode s) of
+            case boundedFromJSON (encode s) of
               Right (ui :: a) -> s === fromRational (unboundRational ui)
               Left _ -> property True
       describe "Bad Values" $ do

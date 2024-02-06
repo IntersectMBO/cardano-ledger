@@ -59,11 +59,9 @@ import Data.Aeson (
   (.:),
   (.=),
  )
-import qualified Data.Aeson as Aeson (Value)
 import Data.DerivingVia (InstantiatedAt (..))
 import Data.Int (Int64)
 import Data.Measure (BoundedMeasure, Measure)
-import Data.Scientific (fromRationalRepetendLimited)
 import Data.Semigroup (All (..))
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -175,12 +173,6 @@ instance ToJSON Prices where
       [ "prSteps" .= toRationalJSON (unboundRational prSteps)
       , "prMem" .= toRationalJSON (unboundRational prMem)
       ]
-
-toRationalJSON :: Rational -> Aeson.Value
-toRationalJSON r =
-  case fromRationalRepetendLimited 20 r of
-    Right (s, Nothing) -> toJSON s
-    _ -> toJSON r
 
 instance FromJSON Prices where
   parseJSON =

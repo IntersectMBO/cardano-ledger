@@ -138,7 +138,7 @@ import Data.Aeson (
   FromJSON (..),
   KeyValue,
   ToJSON (..),
-  Value,
+  Value (..),
   object,
   pairs,
   withObject,
@@ -161,8 +161,8 @@ import Data.Scientific (
   Scientific,
   base10Exponent,
   coefficient,
+  fromRationalRepetendLimited,
   normalize,
-  scientific,
  )
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -333,48 +333,41 @@ instance
         cborError $ DecoderErrorCustom "BoundedRatio" (Text.pack $ show r)
       Just u -> pure u
 
-instance ToJSON (BoundedRatio b Word64) where
-  toJSON = toJSON . toScientificBoundedRatioWord64WithRounding
-
-toScientificBoundedRatioWord64WithRounding :: BoundedRatio b Word64 -> Scientific
-toScientificBoundedRatioWord64WithRounding (toRationalBoundedRatio -> ur) =
-  scientific q 0 + scientific ((r * scale) `quot` d) (negate exp10)
-  where
-    n = numerator ur
-    d = denominator ur
-    (q, r) = n `quotRem` d
-    -- We need to reduce precision for numbers bigger than 1 in order to make them
-    -- parsable without overflowing
-    exp10 = 19 - min 19 (numDigits q)
-    scale = 10 ^ exp10
-    numDigits :: Integer -> Int
-    numDigits = go 0
-      where
-        go ds 0 = ds
-        go ds i = ds `seq` go (ds + 1) (i `quot` 10)
+instance Bounded (BoundedRatio b Word64) => ToJSON (BoundedRatio b Word64) where
+  toJSON = toRationalJSON . unboundRational
+    where
+      toRationalJSON r = case fromRationalRepetendLimited 19 r of
+        Right (s, Nothing) -> toJSON s
+        _ -> toJSON r
 
 instance Bounded (BoundedRatio b Word64) => FromJSON (BoundedRatio b Word64) where
-  parseJSON = either fail pure . fromScientificBoundedRatioWord64 <=< parseJSON
+  parseJSON = \case
+    rational@(Object _) -> parseWith fromRationalEither rational
+    sci -> parseWith fromScientificBoundedRatioWord64 sci
+    where
+      parseWith f = either fail pure . f <=< parseJSON
 
 fromScientificBoundedRatioWord64 ::
   Bounded (BoundedRatio b Word64) =>
   Scientific ->
   Either String (BoundedRatio b Word64)
 fromScientificBoundedRatioWord64 (normalize -> sci)
-  | coeff < 0 = failWith "negative"
+  | coeff < 0 = failWith "negative" sci
   | exp10 <= 0 = do
-      when (exp10 < -19) $ failWith "too precise"
+      when (exp10 < -19) $ failWith "too precise" sci
       fromRationalEither (coeff % (10 ^ negate exp10))
   | otherwise = do
-      when (19 < exp10) $ failWith "too big"
+      when (19 < exp10) $ failWith "too big" sci
       fromRationalEither (coeff * 10 ^ exp10 % 1)
   where
     coeff = coefficient sci
     exp10 = base10Exponent sci
-    failWith :: String -> Either String a
-    failWith msg = Left $ "Value is " ++ msg ++ ": " ++ show sci
-    fromRationalEither =
-      maybe (failWith "outside of bounds") Right . fromRationalBoundedRatio
+
+fromRationalEither :: Bounded (BoundedRatio b Word64) => Rational -> Either String (BoundedRatio b Word64)
+fromRationalEither r = maybe (failWith "outside of bounds" r) Right $ boundRational r
+
+failWith :: Show a => String -> a -> Either String b
+failWith msg val = Left $ "Value is " <> msg <> ": " <> show val
 
 -- | Type to represent a value in the interval [0; +∞)
 newtype NonNegativeInterval
