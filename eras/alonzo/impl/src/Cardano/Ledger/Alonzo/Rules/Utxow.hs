@@ -299,7 +299,7 @@ alonzoStyleWitness ::
   ) =>
   TransitionRule (AlonzoUTXOW era)
 alonzoStyleWitness = do
-  (TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx)) <- judgmentContext
+  TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  txb := txbody tx  -}
@@ -350,8 +350,7 @@ alonzoStyleWitness = do
   -- check metadata hash
   {-   adh := txADhash txb;  ad := auxiliaryData tx                      -}
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
-  runTestOnSignal $
-    Shelley.validateMetadata pp tx
+  runTestOnSignal $ Shelley.validateMetadata pp tx
 
   {- languages txw ⊆ dom(costmdls tx)  -}
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
