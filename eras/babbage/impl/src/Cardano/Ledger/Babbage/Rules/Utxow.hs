@@ -248,14 +248,32 @@ validateScriptsWellFormed pp tx =
 -- The tests are very generic and reusable, but the transition
 -- function is very specific to the Babbage Era.
 
--- | A very specialized transitionRule function for the Babbage Era.
+
+babbageUtxowMirTransition ::
+  forall era.
+  ( AlonzoEraTx era
+  , ShelleyEraTxBody era
+  , STS (BabbageUTXOW era)
+  ) =>
+  TransitionRule (BabbageUTXOW era)
+babbageUtxowMirTransition = do
+  TRC (UtxoEnv _ _ certState, st, tx) <- judgmentContext
+  -- check genesis keys signatures for instantaneous rewards certificates
+  {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
+  {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum  -}
+  let genDelegs = dsGenDelegs (certDState certState)
+      witsKeyHashes = witsFromTxWitnesses tx
+  coreNodeQuorum <- liftSTS $ asks quorum
+  runTest $
+    Shelley.validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
+  pure st
+
+-- | UTXOW transition rule that is used in Babbage and Conway era.
 babbageUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
-  , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , STS (BabbageUTXOW era)
   , BabbageEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , -- Allow UTXOW to call UTXO
@@ -266,7 +284,7 @@ babbageUtxowTransition ::
   ) =>
   TransitionRule (BabbageUTXOW era)
 babbageUtxowTransition = do
-  (TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx)) <- judgmentContext
+  TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  txb := txbody tx  -}
@@ -274,7 +292,7 @@ babbageUtxowTransition = do
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = utxosUtxo u
       txBody = tx ^. bodyTxL
-      witsKeyHashes = witsFromTxWitnesses @era tx
+      witsKeyHashes = witsFromTxWitnesses tx
       inputs = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
 
   -- check scripts
@@ -305,21 +323,12 @@ babbageUtxowTransition = do
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  runTest $ validateNeededWitnesses @era witsKeyHashes certState utxo txBody
-
-  -- check genesis keys signatures for instantaneous rewards certificates
-  {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
-  {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum  -}
-  let genDelegs = dsGenDelegs (certDState certState)
-  coreNodeQuorum <- liftSTS $ asks quorum
-  runTest $
-    Shelley.validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
+  runTest $ validateNeededWitnesses witsKeyHashes certState utxo txBody
 
   -- check metadata hash
   {-   adh := txADhash txb;  ad := auxiliaryData tx                      -}
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
-  runTestOnSignal $
-    Shelley.validateMetadata pp tx
+  runTestOnSignal $ Shelley.validateMetadata pp tx
 
   {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ (⋃ ( , ,d,s) ∈ txouts tx {s, d}),
                          x ∈ Script ∪ Datum ⇒ isWellFormed x
@@ -331,7 +340,7 @@ babbageUtxowTransition = do
   {- languages tx utxo ⊆ dom(costmdls tx) -}
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
   -- It raises 'NoCostModel' a construcotr of the predicate failure 'CollectError'. This check
-  -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
+  -- which appears in the spec, seems broken since costmdls is a projection of PParams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   runTest $ ppViewHashesMatch tx pp scriptsProvided scriptHashesNeeded
@@ -364,7 +373,7 @@ instance
   type BaseM (BabbageUTXOW era) = ShelleyBase
   type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPredFailure era
   type Event (BabbageUTXOW era) = AlonzoUtxowEvent era
-  transitionRules = [babbageUtxowTransition]
+  transitionRules = [babbageUtxowMirTransition >> babbageUtxowTransition]
   initialRules = []
 
 instance
