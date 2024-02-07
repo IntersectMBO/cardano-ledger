@@ -1,5 +1,6 @@
 # Version history for `cardano-ledger-core`
 
+* Fix `ToJSON`/`FromJSON` instances of `Prices`
 * Update `FromJSON` instance of `BoundedRatio`
 * Fix `ToJSON` instance of `BoundedRatio` to avoid precision loss
 * Remove `epsilonMaybeEq` from `Utils`
