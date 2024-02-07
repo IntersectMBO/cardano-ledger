@@ -885,7 +885,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \lor
       (\var{adh}=\fun{hashAD}~\var{ad})
       \\~\\
-      \hldiff{\fun{languages}~{txw} \subseteq \dom(\fun{costmdls}~tx)} \\
+      \hldiff{\fun{languages}~{txw} \subseteq \dom(\fun{costmdls}~{pp})} \\
       \hldiff{\fun{scriptIntegrityHash}~{txb} = 
         \fun{hashScriptIntegrity}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})~(\fun{txdats}~{txw})}
       \\~\\

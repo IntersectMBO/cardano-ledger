@@ -13,7 +13,6 @@
 
 module Cardano.Ledger.Conway.Rules.Utxow (
   ConwayUTXOW,
-  conwayUtxowTransition,
   conwayWitsVKeyNeeded,
 )
 where
@@ -23,132 +22,25 @@ import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent,
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
-  hasExactSetOfRedeemers,
-  missingRequiredDatums,
-  ppViewHashesMatch,
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,
   BabbageUtxoPredFailure,
   BabbageUtxowPredFailure (..),
-  babbageMissingScripts,
-  validateFailedBabbageScripts,
-  validateScriptsWellFormed,
+  babbageUtxowTransition,
  )
-import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayUTXOW)
 import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeeded)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Rules.ValidationMode (runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyUtxowEvent (UtxoEvent),
-  UtxoEnv (..),
-  validateNeededWitnesses,
- )
-import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxowEvent (UtxoEvent), UtxoEnv (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
-import Control.State.Transition.Extended (
-  Embed (..),
-  STS (..),
-  TRC (..),
-  TransitionRule,
-  judgmentContext,
-  trans,
- )
-import qualified Data.Map.Strict as Map
+import Control.State.Transition.Extended (Embed (..), STS (..))
 import Data.Set (Set)
-import qualified Data.Set as Set
-import Lens.Micro
-
--- ==============================================================
--- Here we define the transtion function, using reusable tests.
--- The tests are very generic and reusable, but the transition
--- function is very specific to the Babbage Era.
-
--- | A very specialized transitionRule function for the Babbage Era.
-conwayUtxowTransition ::
-  forall era.
-  ( AlonzoEraTx era
-  , AlonzoEraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , ConwayEraTxBody era
-  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , -- Allow UTXOW to call UTXO
-    Embed (EraRule "UTXO" era) (ConwayUTXOW era)
-  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
-  , Signal (EraRule "UTXO" era) ~ Tx era
-  , State (EraRule "UTXO" era) ~ UTxOState era
-  ) =>
-  TransitionRule (ConwayUTXOW era)
-conwayUtxowTransition = do
-  (TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx)) <- judgmentContext
-
-  {-  (utxo,_,_,_ ) := utxoSt  -}
-  {-  txb := txbody tx  -}
-  {-  txw := txwits tx  -}
-  {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
-  let utxo = utxosUtxo u
-      txBody = tx ^. bodyTxL
-      witsKeyHashes = witsFromTxWitnesses @era tx
-      inputs = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
-
-  -- check scripts
-  {- neededHashes := {h | ( , h) ∈ scriptsNeeded utxo txb} -}
-  {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
-  let scriptsNeeded = getScriptsNeeded utxo txBody
-      scriptsProvided = getScriptsProvided utxo tx
-      scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
-  {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
-  -- CHANGED In BABBAGE txscripts depends on UTxO
-  runTest $ validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
-
-  {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
-  let sReceived = Map.keysSet $ tx ^. witsTxL . scriptTxWitsL
-      sRefs = Map.keysSet $ getReferenceScripts utxo inputs
-  runTest $ babbageMissingScripts pp scriptHashesNeeded sRefs sReceived
-
-  {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
-  runTest $ missingRequiredDatums utxo tx
-
-  {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
-                           h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
-  runTest $ hasExactSetOfRedeemers tx scriptsProvided scriptsNeeded
-
-  -- check VKey witnesses
-  -- let txbodyHash = hashAnnotated @(Crypto era) txbody
-  {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
-  runTestOnSignal $ Shelley.validateVerifiedWits tx
-
-  {-  witsVKeyNeeded utxo tx ⊆ witsKeyHashes                   -}
-  runTest $ validateNeededWitnesses witsKeyHashes certState utxo txBody
-
-  -- check metadata hash
-  {-   adh := txADhash txb;  ad := auxiliaryData tx                      -}
-  {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
-  runTestOnSignal $ Shelley.validateMetadata pp tx
-
-  {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ (⋃ ( , ,d,s) ∈ txouts tx {s, d}),
-                         x ∈ Script ∪ Datum ⇒ isWellFormed x
-  -}
-  runTest $ validateScriptsWellFormed pp tx
-  -- Note that Datum validation is done during deserialization,
-  -- as given by the decoders in the Plutus libraray
-
-  {- languages tx utxo ⊆ dom(costmdls tx) -}
-  -- This check is checked when building the TxInfo using collectPlutusScriptsWithContext.
-  -- If it fails, it raises 'NoCostModel' - a constructor of the predicate failure 'CollectError'.
-  -- This check which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
-
-  {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx pp scriptsProvided scriptHashesNeeded
-
-  trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
 
 conwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>
@@ -167,6 +59,7 @@ instance
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ConwayEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , EraRule "UTXOW" era ~ ConwayUTXOW era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ConwayUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
@@ -183,7 +76,7 @@ instance
   type BaseM (ConwayUTXOW era) = ShelleyBase
   type PredicateFailure (ConwayUTXOW era) = BabbageUtxowPredFailure era
   type Event (ConwayUTXOW era) = AlonzoUtxowEvent era
-  transitionRules = [conwayUtxowTransition]
+  transitionRules = [babbageUtxowTransition @era]
   initialRules = []
 
 instance
