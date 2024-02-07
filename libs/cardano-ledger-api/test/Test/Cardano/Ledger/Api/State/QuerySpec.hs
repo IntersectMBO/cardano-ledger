@@ -221,7 +221,7 @@ propActiveAuthorized ::
   Expectation
 propActiveAuthorized nes = do
   withCommitteeInfo nes $
-    \(Committee comMembers comQuorum) (CommitteeState comStateMembers) _ noFilterResult -> do
+    \(Committee comMembers comThreshold) (CommitteeState comStateMembers) _ noFilterResult -> do
       let activeAuthorized =
             Map.mapMaybe
               ( \case
@@ -243,7 +243,7 @@ propActiveAuthorized nes = do
       Map.intersection comStateMembers activeAuthorized
         `shouldSatisfy` all isJust
       csEpochNo noFilterResult `shouldBe` epochNo
-      csQuorum noFilterResult `shouldBe` comQuorum
+      csThreshold noFilterResult `shouldBe` comThreshold
 
 propFilters ::
   forall era.

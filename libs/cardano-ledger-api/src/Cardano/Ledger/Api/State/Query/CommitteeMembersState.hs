@@ -148,7 +148,7 @@ toCommitteeMemberStatePairs c@(CommitteeMemberState _ _ _ _) =
 
 data CommitteeMembersState c = CommitteeMembersState
   { csCommittee :: !(Map (Credential 'ColdCommitteeRole c) (CommitteeMemberState c))
-  , csQuorum :: !UnitInterval
+  , csThreshold :: !UnitInterval
   , csEpochNo :: !EpochNo
   -- ^ Current epoch number. This is necessary to interpret committee member states
   }
@@ -162,7 +162,7 @@ instance Crypto c => EncCBOR (CommitteeMembersState c) where
      in encode $
           Rec (CommitteeMembersState @c)
             !> To csCommittee
-            !> To csQuorum
+            !> To csThreshold
             !> To csEpochNo
 
 instance Crypto c => DecCBOR (CommitteeMembersState c) where
@@ -181,6 +181,6 @@ toCommitteeMembersStatePairs :: (KeyValue e a, Crypto c) => CommitteeMembersStat
 toCommitteeMembersStatePairs c@(CommitteeMembersState _ _ _) =
   let CommitteeMembersState {..} = c
    in [ "committee" .= csCommittee
-      , "quorum" .= csQuorum
+      , "threshold" .= csThreshold
       , "epoch" .= csEpochNo
       ]

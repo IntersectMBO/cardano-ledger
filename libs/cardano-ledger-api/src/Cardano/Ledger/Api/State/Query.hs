@@ -55,7 +55,7 @@ import Cardano.Ledger.Conway.Governance (
   Constitution (constitutionAnchor),
   ConwayEraGov (..),
   committeeMembersL,
-  committeeQuorumL,
+  committeeThresholdL,
   finishDRepPulser,
   psDRepDistr,
  )
@@ -167,7 +167,7 @@ getCommitteeMembers ::
   NewEpochState era ->
   Maybe (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo, UnitInterval)
 getCommitteeMembers nes =
-  fmap (\c -> (c ^. committeeMembersL, c ^. committeeQuorumL)) $
+  fmap (\c -> (c ^. committeeMembersL, c ^. committeeThresholdL)) $
     strictMaybeToMaybe $
       queryGovState nes ^. committeeGovStateL
 
@@ -186,7 +186,7 @@ queryCommitteeMembersState ::
   NewEpochState era ->
   Maybe (CommitteeMembersState (EraCrypto era))
 queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
-  (comMembers, comQuorum) <- getCommitteeMembers nes
+  (comMembers, comThreshold) <- getCommitteeMembers nes
   let nextComMembers =
         maybe Map.empty fst (getNextEpochCommitteeMembers (queryGovState nes))
   let comStateMembers =
@@ -260,7 +260,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
   pure
     CommitteeMembersState
       { csCommittee = cms
-      , csQuorum = comQuorum
+      , csThreshold = comThreshold
       , csEpochNo = currentEpoch
       }
 

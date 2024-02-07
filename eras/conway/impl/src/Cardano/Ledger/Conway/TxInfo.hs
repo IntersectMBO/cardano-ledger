@@ -424,12 +424,12 @@ transGovAction proxy = \case
       (transMap transRewardAccount transCoinToLovelace withdrawals)
       (transGovPolicy govPolicy)
   NoConfidence pGovActionId -> PV3.NoConfidence (transPrevGovActionId pGovActionId)
-  UpdateCommittee pGovActionId ccToRemove ccToAdd quorum ->
+  UpdateCommittee pGovActionId ccToRemove ccToAdd threshold ->
     PV3.UpdateCommittee
       (transPrevGovActionId pGovActionId)
       (map (PV3.ColdCommitteeCredential . transCred) $ Set.toList ccToRemove)
       (transMap (PV3.ColdCommitteeCredential . transCred) transEpochNo ccToAdd)
-      (transBoundedRational quorum)
+      (transBoundedRational threshold)
   NewConstitution pGovActionId constitution ->
     PV3.NewConstitution
       (transPrevGovActionId pGovActionId)
