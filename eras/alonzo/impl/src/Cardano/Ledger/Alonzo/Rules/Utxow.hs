@@ -28,14 +28,16 @@ where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
 import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Era (AlonzoUTXOW)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUTXO,
   AlonzoUtxoEvent,
-  AlonzoUtxoPredFailure,
+  AlonzoUtxoPredFailure (..),
  )
+import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits (
@@ -60,6 +62,8 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
+  ShelleyPpupPredFailure,
+  ShelleyUtxoPredFailure,
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure (..),
   UtxoEnv (..),
@@ -119,6 +123,29 @@ data AlonzoUtxowPredFailure era
     ExtraRedeemers
       ![PlutusPurpose AsIx era]
   deriving (Generic)
+
+type instance EraRuleFailure "UTXOW" (AlonzoEra c) = AlonzoUtxowPredFailure (AlonzoEra c)
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure (AlonzoEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (AlonzoEra c) where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure (AlonzoEra c) where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure (AlonzoEra c) where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure (AlonzoEra c) where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (AlonzoEra c) where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure (AlonzoEra c) where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
 
 deriving instance
   ( AlonzoEraScript era

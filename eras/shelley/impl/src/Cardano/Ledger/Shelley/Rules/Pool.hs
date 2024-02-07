@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -45,7 +46,7 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..))
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyPOOL)
+import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPOOL)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (PState (..), payPoolDeposit)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
@@ -96,6 +97,11 @@ data ShelleyPoolPredFailure era
       !(KeyHash 'StakePool (EraCrypto era)) -- Stake Pool ID
       !Int -- Size of the metadata hash
   deriving (Eq, Show, Generic)
+
+type instance EraRuleFailure "POOL" (ShelleyEra c) = ShelleyPoolPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "POOL" ShelleyPoolPredFailure (ShelleyEra c) where
+  injectFailure = id
 
 instance NoThunks (ShelleyPoolPredFailure era)
 

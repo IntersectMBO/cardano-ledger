@@ -8,7 +8,13 @@ module Cardano.Ledger.Alonzo.Rules (
 where
 
 import Cardano.Ledger.Alonzo.Rules.Bbody
+import Cardano.Ledger.Alonzo.Rules.Deleg ()
+import Cardano.Ledger.Alonzo.Rules.Delegs ()
+import Cardano.Ledger.Alonzo.Rules.Delpl ()
 import Cardano.Ledger.Alonzo.Rules.Ledger
+import Cardano.Ledger.Alonzo.Rules.Ledgers ()
+import Cardano.Ledger.Alonzo.Rules.Pool ()
+import Cardano.Ledger.Alonzo.Rules.Ppup ()
 import Cardano.Ledger.Alonzo.Rules.Utxo
 import Cardano.Ledger.Alonzo.Rules.Utxos
 import Cardano.Ledger.Alonzo.Rules.Utxow

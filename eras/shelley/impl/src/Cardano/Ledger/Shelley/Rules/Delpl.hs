@@ -35,7 +35,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Credential (Ptr)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyDELPL)
+import Cardano.Ledger.Shelley.Era (ShelleyDELPL, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
   CertState,
@@ -70,6 +70,17 @@ data ShelleyDelplPredFailure era
   = PoolFailure (PredicateFailure (EraRule "POOL" era)) -- Subtransition Failures
   | DelegFailure (PredicateFailure (EraRule "DELEG" era)) -- Subtransition Failures
   deriving (Generic)
+
+type instance EraRuleFailure "DELPL" (ShelleyEra c) = ShelleyDelplPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "DELPL" ShelleyDelplPredFailure (ShelleyEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "DELPL" ShelleyPoolPredFailure (ShelleyEra c) where
+  injectFailure = PoolFailure
+
+instance InjectRuleFailure "DELPL" ShelleyDelegPredFailure (ShelleyEra c) where
+  injectFailure = DelegFailure
 
 data ShelleyDelplEvent era
   = PoolEvent (Event (ShelleyPOOL era))

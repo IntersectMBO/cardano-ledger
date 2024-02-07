@@ -43,7 +43,7 @@ import Cardano.Ledger.Babbage.Collateral (
   collOuts,
  )
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
+import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXOS)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
@@ -79,6 +79,14 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Debug.Trace (traceEvent)
 import Lens.Micro
+
+type instance EraRuleFailure "UTXOS" (BabbageEra c) = AlonzoUtxosPredFailure (BabbageEra c)
+
+instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (BabbageEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure (BabbageEra c) where
+  injectFailure = UpdateFailure
 
 -- =====================================================
 

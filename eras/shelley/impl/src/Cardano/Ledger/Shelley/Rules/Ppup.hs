@@ -39,7 +39,7 @@ import Cardano.Ledger.Binary (
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs), KeyHash, KeyRole (Genesis))
-import Cardano.Ledger.Shelley.Era (ShelleyPPUP)
+import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPPUP)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (ProposedPPUpdates),
@@ -111,6 +111,11 @@ data ShelleyPpupPredFailure era
       !ProtVer
   deriving (Show, Eq, Generic)
 
+type instance EraRuleFailure "PPUP" era = ShelleyPpupPredFailure era
+
+instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure (ShelleyEra c) where
+  injectFailure = id
+
 instance NoThunks (ShelleyPpupPredFailure era)
 
 instance NFData (ShelleyPpupPredFailure era)
@@ -141,7 +146,7 @@ instance Era era => EncCBOR (ShelleyPpupPredFailure era) where
     PVCannotFollowPPUP p -> encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR p
 
 instance Era era => DecCBOR (ShelleyPpupPredFailure era) where
-  decCBOR = decodeRecordSum "PredicateFailure (PPUP era)" $
+  decCBOR = decodeRecordSum "ShelleyPpupPredFailure" $
     \case
       0 -> do
         a <- decCBOR

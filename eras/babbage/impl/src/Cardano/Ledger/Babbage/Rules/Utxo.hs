@@ -25,7 +25,7 @@ module Cardano.Ledger.Babbage.Rules.Utxo (
   validateOutputTooSmallUTxO,
 ) where
 
-import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra (
   validateOutsideValidityIntervalUTxO,
  )
@@ -33,6 +33,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent (..),
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),
+  allegraToAlonzoUtxoPredFailure,
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   validateExUnitsTooBigUTxO,
@@ -66,7 +67,7 @@ import Cardano.Ledger.Rules.ValidationMode (
   runTestOnSignal,
  )
 import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure, UTxOState (utxosUtxo))
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv)
+import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, balance)
@@ -119,6 +120,29 @@ data BabbageUtxoPredFailure era
     BabbageNonDisjointRefInputs
       !(NonEmpty (TxIn (EraCrypto era)))
   deriving (Generic)
+
+type instance EraRuleFailure "UTXO" (BabbageEra c) = BabbageUtxoPredFailure (BabbageEra c)
+
+instance InjectRuleFailure "UTXO" BabbageUtxoPredFailure (BabbageEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "UTXO" AlonzoUtxoPredFailure (BabbageEra c) where
+  injectFailure = AlonzoInBabbageUtxoPredFailure
+
+instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure (BabbageEra c) where
+  injectFailure = AlonzoInBabbageUtxoPredFailure . UtxosFailure . injectFailure
+
+instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure (BabbageEra c) where
+  injectFailure =
+    AlonzoInBabbageUtxoPredFailure
+      . allegraToAlonzoUtxoPredFailure
+      . shelleyToAllegraUtxoPredFailure
+
+instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure (BabbageEra c) where
+  injectFailure = AlonzoInBabbageUtxoPredFailure . allegraToAlonzoUtxoPredFailure
+
+instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure (BabbageEra c) where
+  injectFailure = AlonzoInBabbageUtxoPredFailure . UtxosFailure
 
 deriving instance
   ( Era era

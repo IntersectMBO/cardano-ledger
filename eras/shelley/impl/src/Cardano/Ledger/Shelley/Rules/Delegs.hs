@@ -47,7 +47,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, Ptr (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Test)
-import Cardano.Ledger.Shelley.Era (ShelleyDELEGS)
+import Cardano.Ledger.Shelley.Era (ShelleyDELEGS, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
   CertState (..),
@@ -57,12 +57,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   psStakePoolParams,
   rewards,
  )
+import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (
   DelplEnv (..),
   ShelleyDELPL,
   ShelleyDelplEvent,
   ShelleyDelplPredFailure,
  )
+import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure)
 import Cardano.Ledger.Shelley.TxBody (
   RewardAccount (..),
   ShelleyEraTxBody (..),
@@ -120,6 +122,20 @@ data ShelleyDelegsPredFailure era
   | -- | Subtransition Failures
     DelplFailure !(PredicateFailure (EraRule "DELPL" era))
   deriving (Generic)
+
+type instance EraRuleFailure "DELEGS" (ShelleyEra c) = ShelleyDelegsPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "DELEGS" ShelleyDelegsPredFailure (ShelleyEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "DELEGS" ShelleyDelplPredFailure (ShelleyEra c) where
+  injectFailure = DelplFailure
+
+instance InjectRuleFailure "DELEGS" ShelleyPoolPredFailure (ShelleyEra c) where
+  injectFailure = DelplFailure . injectFailure
+
+instance InjectRuleFailure "DELEGS" ShelleyDelegPredFailure (ShelleyEra c) where
+  injectFailure = DelplFailure . injectFailure
 
 newtype ShelleyDelegsEvent era = DelplEvent (Event (EraRule "DELPL" era))
 

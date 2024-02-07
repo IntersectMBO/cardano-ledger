@@ -26,9 +26,12 @@ where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
 import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxoPredFailure,
+  AlonzoUtxosPredFailure,
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
-  AlonzoUtxowPredFailure (ShelleyInAlonzoUtxowPredFailure),
+  AlonzoUtxowPredFailure (..),
   hasExactSetOfRedeemers,
   missingRequiredDatums,
   ppViewHashesMatch,
@@ -37,7 +40,7 @@ import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
 import Cardano.Ledger.Alonzo.Scripts (validScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.Era (BabbageUTXOW)
+import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXOW)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (ShelleyBase, quorum, strictMaybeToMaybe)
@@ -55,6 +58,8 @@ import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
+  ShelleyPpupPredFailure,
+  ShelleyUtxoPredFailure,
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure,
   UtxoEnv (..),
@@ -88,7 +93,7 @@ import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Validation (failureUnless)
 
 data BabbageUtxowPredFailure era
-  = AlonzoInBabbageUtxowPredFailure !(AlonzoUtxowPredFailure era)
+  = AlonzoInBabbageUtxowPredFailure !(AlonzoUtxowPredFailure era) -- TODO: embed and translate
   | -- | Embed UTXO rule failures
     UtxoFailure !(PredicateFailure (EraRule "UTXO" era))
   | -- | the set of malformed script witnesses
@@ -98,6 +103,35 @@ data BabbageUtxowPredFailure era
     MalformedReferenceScripts
       !(Set (ScriptHash (EraCrypto era)))
   deriving (Generic)
+
+type instance EraRuleFailure "UTXOW" (BabbageEra c) = BabbageUtxowPredFailure (BabbageEra c)
+
+instance InjectRuleFailure "UTXOW" BabbageUtxowPredFailure (BabbageEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure (BabbageEra c) where
+  injectFailure = AlonzoInBabbageUtxowPredFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (BabbageEra c) where
+  injectFailure = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
+
+instance InjectRuleFailure "UTXOW" BabbageUtxoPredFailure (BabbageEra c) where
+  injectFailure = UtxoFailure
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure (BabbageEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure (BabbageEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure (BabbageEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (BabbageEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure (BabbageEra c) where
+  injectFailure = UtxoFailure . injectFailure
 
 deriving instance
   ( AlonzoEraScript era

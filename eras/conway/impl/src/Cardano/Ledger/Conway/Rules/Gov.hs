@@ -50,7 +50,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Era (ConwayGOV)
+import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
   GovActionPurpose (..),
@@ -162,6 +162,11 @@ data ConwayGovPredFailure era
       -- | The policy script hash of the current constitution
       (StrictMaybe (ScriptHash (EraCrypto era)))
   deriving (Eq, Show, Generic)
+
+type instance EraRuleFailure "GOV" (ConwayEra c) = ConwayGovPredFailure (ConwayEra c)
+
+instance InjectRuleFailure "GOV" ConwayGovPredFailure (ConwayEra c) where
+  injectFailure = id
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
 

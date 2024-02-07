@@ -169,6 +169,14 @@ data ShelleyUtxoPredFailure era
       ![TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
 
+type instance EraRuleFailure "UTXO" (ShelleyEra c) = ShelleyUtxoPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure (ShelleyEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure (ShelleyEra c) where
+  injectFailure = UpdateFailure
+
 deriving stock instance
   ( Show (Value era)
   , Show (TxOut era)

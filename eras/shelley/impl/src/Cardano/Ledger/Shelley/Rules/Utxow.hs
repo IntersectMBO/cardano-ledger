@@ -73,10 +73,11 @@ import Cardano.Ledger.Rules.ValidationMode (
  )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyUTXOW)
+import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXOW)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
+import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (
   ShelleyUTXO,
   ShelleyUtxoPredFailure,
@@ -150,6 +151,17 @@ data ShelleyUtxowPredFailure era
   | ExtraneousScriptWitnessesUTXOW
       !(Set (ScriptHash (EraCrypto era))) -- extraneous scripts
   deriving (Generic)
+
+type instance EraRuleFailure "UTXOW" (ShelleyEra c) = ShelleyUtxowPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (ShelleyEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (ShelleyEra c) where
+  injectFailure = UtxoFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure (ShelleyEra c) where
+  injectFailure = UtxoFailure . injectFailure
 
 newtype ShelleyUtxowEvent era
   = UtxoEvent (Event (EraRule "UTXO" era))
@@ -547,6 +559,10 @@ instance
   where
   inject = UtxoFailure
 
+-- instance EraRuleFailure "UTXOW" ShelleyUtxoPredFailure (ShelleyEra c) where
+--   type RuleFailure "UTXOW" (ShelleyEra c) = ShelleyUtxowPredFailure (ShelleyEra c)
+--   injectFailure = UtxoFailure
+
 -- | Deprecated.
 proposedUpdatesWitnesses ::
   StrictMaybe (Update era) ->
@@ -568,6 +584,6 @@ propWits ::
 propWits mu = proposedUpdatesWitnesses (maybeToStrictMaybe mu)
 {-# DEPRECATED
   propWits
-  "This is will become an internal function in the future. \
+  "This will become an internal function in the future. \
   \ Submit an issue if you still need it. "
   #-}

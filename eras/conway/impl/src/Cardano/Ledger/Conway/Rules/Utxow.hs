@@ -19,9 +19,13 @@ where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent,
+  AlonzoUtxoPredFailure,
+  AlonzoUtxosPredFailure,
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
+  AlonzoUtxowPredFailure (..),
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (
@@ -32,12 +36,18 @@ import Cardano.Ledger.Babbage.Rules (
  )
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayUTXOW)
+import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOW)
+import Cardano.Ledger.Conway.Rules.Utxo ()
 import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeeded)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxowEvent (UtxoEvent), UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyUtxoPredFailure,
+  ShelleyUtxowEvent (UtxoEvent),
+  ShelleyUtxowPredFailure,
+  UtxoEnv (..),
+ )
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
 import Control.State.Transition.Extended (Embed (..), STS (..))
 import Data.Set (Set)
@@ -51,6 +61,32 @@ conwayWitsVKeyNeeded = getConwayWitsVKeyNeeded
 {-# DEPRECATED conwayWitsVKeyNeeded "In favor of `getConwayWitsVKeyNeeded` or `getWitsVKeyNeeded`" #-}
 
 -- ================================
+
+type instance EraRuleFailure "UTXOW" (ConwayEra c) = BabbageUtxowPredFailure (ConwayEra c)
+
+instance InjectRuleFailure "UTXOW" BabbageUtxowPredFailure (ConwayEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure (ConwayEra c) where
+  injectFailure = AlonzoInBabbageUtxowPredFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (ConwayEra c) where
+  injectFailure = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
+
+instance InjectRuleFailure "UTXOW" BabbageUtxoPredFailure (ConwayEra c) where
+  injectFailure = UtxoFailure
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure (ConwayEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure (ConwayEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (ConwayEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure (ConwayEra c) where
+  injectFailure = UtxoFailure . injectFailure
 
 instance
   forall era.

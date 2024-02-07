@@ -19,12 +19,13 @@ module Cardano.Ledger.Allegra.Rules.Utxo (
   AllegraUtxoEvent (..),
   AllegraUtxoPredFailure (..),
   validateOutsideValidityIntervalUTxO,
+  shelleyToAllegraUtxoPredFailure,
 )
 where
 
 import Cardano.Ledger.Address (Addr, RewardAccount)
 import Cardano.Ledger.Allegra.Core
-import Cardano.Ledger.Allegra.Era (AllegraUTXO)
+import Cardano.Ledger.Allegra.Era (AllegraEra, AllegraUTXO)
 import Cardano.Ledger.Allegra.Scripts (inInterval)
 import Cardano.Ledger.BaseTypes (
   Inject (..),
@@ -109,10 +110,21 @@ data AllegraUtxoPredFailure era
   | OutputBootAddrAttrsTooBig
       ![TxOut era] -- list of supplied bad transaction outputs
   | -- Kept for backwards compatibility: no longer used because the `MultiAsset` type of mint doesn't allow for this possibility
-    TriesToForgeADA
+    TriesToForgeADA -- TODO: remove
   | OutputTooBigUTxO
       ![TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
+
+type instance EraRuleFailure "UTXO" (AllegraEra c) = AllegraUtxoPredFailure (AllegraEra c)
+
+instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure (AllegraEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure (AllegraEra c) where
+  injectFailure = UpdateFailure
+
+instance InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure (AllegraEra c) where
+  injectFailure = shelleyToAllegraUtxoPredFailure
 
 deriving stock instance
   ( Show (TxOut era)
@@ -442,15 +454,19 @@ instance Inject (AllegraUtxoPredFailure era) (AllegraUtxoPredFailure era) where
   inject = id
 
 instance Inject (Shelley.ShelleyUtxoPredFailure era) (AllegraUtxoPredFailure era) where
-  inject (Shelley.BadInputsUTxO ins) = BadInputsUTxO ins
-  inject (Shelley.ExpiredUTxO ttl current) =
+  inject = shelleyToAllegraUtxoPredFailure
+
+shelleyToAllegraUtxoPredFailure :: Shelley.ShelleyUtxoPredFailure era -> AllegraUtxoPredFailure era
+shelleyToAllegraUtxoPredFailure = \case
+  Shelley.BadInputsUTxO ins -> BadInputsUTxO ins
+  Shelley.ExpiredUTxO ttl current ->
     OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
-  inject (Shelley.MaxTxSizeUTxO a m) = MaxTxSizeUTxO a m
-  inject Shelley.InputSetEmptyUTxO = InputSetEmptyUTxO
-  inject (Shelley.FeeTooSmallUTxO mf af) = FeeTooSmallUTxO mf af
-  inject (Shelley.ValueNotConservedUTxO vc vp) = ValueNotConservedUTxO vc vp
-  inject (Shelley.WrongNetwork n as) = WrongNetwork n as
-  inject (Shelley.WrongNetworkWithdrawal n as) = WrongNetworkWithdrawal n as
-  inject (Shelley.OutputTooSmallUTxO x) = OutputTooSmallUTxO x
-  inject (Shelley.UpdateFailure x) = UpdateFailure x
-  inject (Shelley.OutputBootAddrAttrsTooBig outs) = OutputTooBigUTxO outs
+  Shelley.MaxTxSizeUTxO a m -> MaxTxSizeUTxO a m
+  Shelley.InputSetEmptyUTxO -> InputSetEmptyUTxO
+  Shelley.FeeTooSmallUTxO mf af -> FeeTooSmallUTxO mf af
+  Shelley.ValueNotConservedUTxO vc vp -> ValueNotConservedUTxO vc vp
+  Shelley.WrongNetwork n as -> WrongNetwork n as
+  Shelley.WrongNetworkWithdrawal n as -> WrongNetworkWithdrawal n as
+  Shelley.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
+  Shelley.UpdateFailure x -> UpdateFailure x
+  Shelley.OutputBootAddrAttrsTooBig outs -> OutputTooBigUTxO outs

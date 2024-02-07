@@ -53,7 +53,13 @@ library
         Cardano.Ledger.Alonzo.TxCert
         Cardano.Ledger.Alonzo.Era
         Cardano.Ledger.Alonzo.Rules.Bbody
+        Cardano.Ledger.Alonzo.Rules.Deleg
+        Cardano.Ledger.Alonzo.Rules.Delegs
+        Cardano.Ledger.Alonzo.Rules.Delpl
+        Cardano.Ledger.Alonzo.Rules.Pool
+        Cardano.Ledger.Alonzo.Rules.Ppup
         Cardano.Ledger.Alonzo.Rules.Ledger
+        Cardano.Ledger.Alonzo.Rules.Ledgers
         Cardano.Ledger.Alonzo.Rules.Utxo
         Cardano.Ledger.Alonzo.Rules.Utxos
         Cardano.Ledger.Alonzo.Rules.Utxow

@@ -11,12 +11,14 @@
 module Cardano.Ledger.Allegra.Rules.Utxow (AllegraUTXOW) where
 
 import Cardano.Ledger.Allegra.Core
-import Cardano.Ledger.Allegra.Era (AllegraUTXOW)
+import Cardano.Ledger.Allegra.Era (AllegraEra, AllegraUTXOW)
 import Cardano.Ledger.Allegra.Rules.Utxo (AllegraUTXO, AllegraUtxoPredFailure)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import Cardano.Ledger.Shelley.Rules (
+  ShelleyPpupPredFailure,
+  ShelleyUtxoPredFailure,
   ShelleyUtxowEvent (..),
   ShelleyUtxowPredFailure (..),
   UtxoEnv,
@@ -26,6 +28,20 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded)
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.State.Transition.Extended
+
+type instance EraRuleFailure "UTXOW" (AllegraEra c) = ShelleyUtxowPredFailure (AllegraEra c)
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (AllegraEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure (AllegraEra c) where
+  injectFailure = UtxoFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (AllegraEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure (AllegraEra c) where
+  injectFailure = UtxoFailure . injectFailure
 
 --------------------------------------------------------------------------------
 -- UTXOW STS

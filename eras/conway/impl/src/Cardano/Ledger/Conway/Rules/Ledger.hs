@@ -23,10 +23,19 @@ module Cardano.Ledger.Conway.Rules.Ledger (
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowEvent)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxoPredFailure,
+  AlonzoUtxosPredFailure,
+  AlonzoUtxowEvent,
+  AlonzoUtxowPredFailure,
+ )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
-import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure)
+import Cardano.Ledger.Babbage.Rules (
+  BabbageUtxoPredFailure,
+  BabbageUtxowPredFailure,
+ )
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (Inject (..), ShelleyBase, StrictMaybe (..), epochInfoPure)
@@ -34,7 +43,7 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayGOV, ConwayLEDGER, ConwayUTXOW)
+import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayEra, ConwayGOV, ConwayLEDGER, ConwayUTXOW)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   ConwayGovState (..),
@@ -45,17 +54,20 @@ import Cardano.Ledger.Conway.Governance (
   proposalsGovStateL,
   toPrevGovActionIds,
  )
-import Cardano.Ledger.Conway.Rules.Cert (CertEnv)
+import Cardano.Ledger.Conway.Rules.Cert (CertEnv, ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Certs (
   CertsEnv (CertsEnv),
   ConwayCertsEvent,
   ConwayCertsPredFailure,
  )
+import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (
   ConwayGovEvent (..),
   ConwayGovPredFailure,
   GovEnv (..),
  )
+import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
+import Cardano.Ledger.Conway.Rules.Utxow ()
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -72,6 +84,9 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLEDGERS,
   ShelleyLedgersEvent (..),
   ShelleyLedgersPredFailure (..),
+  ShelleyPoolPredFailure,
+  ShelleyUtxoPredFailure,
+  ShelleyUtxowPredFailure,
   UtxoEnv (..),
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
@@ -114,6 +129,53 @@ data ConwayLedgerPredFailure era
       -- | Submitted in transaction
       Coin
   deriving (Generic)
+
+type instance EraRuleFailure "LEDGER" (ConwayEra c) = ConwayLedgerPredFailure (ConwayEra c)
+
+instance InjectRuleFailure "LEDGER" ConwayLedgerPredFailure (ConwayEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "LEDGER" BabbageUtxowPredFailure (ConwayEra c) where
+  injectFailure = ConwayUtxowFailure
+
+instance InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure (ConwayEra c) where
+  injectFailure = ConwayUtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (ConwayEra c) where
+  injectFailure = ConwayUtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" BabbageUtxoPredFailure (ConwayEra c) where
+  injectFailure = ConwayUtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure (ConwayEra c) where
+  injectFailure = ConwayUtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure (ConwayEra c) where
+  injectFailure = ConwayUtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure (ConwayEra c) where
+  injectFailure = ConwayUtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" AllegraUtxoPredFailure (ConwayEra c) where
+  injectFailure = ConwayUtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ConwayCertsPredFailure (ConwayEra c) where
+  injectFailure = ConwayCertsFailure
+
+instance InjectRuleFailure "LEDGER" ConwayCertPredFailure (ConwayEra c) where
+  injectFailure = ConwayCertsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ConwayDelegPredFailure (ConwayEra c) where
+  injectFailure = ConwayCertsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure (ConwayEra c) where
+  injectFailure = ConwayCertsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ConwayGovCertPredFailure (ConwayEra c) where
+  injectFailure = ConwayCertsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ConwayGovPredFailure (ConwayEra c) where
+  injectFailure = ConwayGovFailure
 
 deriving instance
   ( Era era

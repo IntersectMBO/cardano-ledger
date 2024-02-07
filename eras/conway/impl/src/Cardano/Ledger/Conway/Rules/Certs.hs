@@ -34,19 +34,12 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.CertState (certDStateL, certVStateL, vsDRepsL, vsNumDormantEpochsL)
-import Cardano.Ledger.Conway.Core (
-  Era (EraCrypto),
-  EraRule,
-  EraTx (Tx, bodyTxL),
-  EraTxBody (withdrawalsTxBodyL),
-  EraTxCert (TxCert),
-  PParams,
- )
-import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayCERTS)
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayCERTS, ConwayEra)
 import Cardano.Ledger.Conway.Governance (Voter (DRepVoter), VotingProcedures (unVotingProcedures))
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL)
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
-import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
+import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
+import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.TxCert (getDelegateeTxCert, getStakePoolDelegatee)
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Shelley.API (
@@ -57,6 +50,7 @@ import Cardano.Ledger.Shelley.API (
   RewardAccount,
  )
 import Cardano.Ledger.Shelley.Rules (
+  ShelleyPoolPredFailure,
   drainWithdrawals,
   validateStakePoolDelegateeRegistered,
   validateZeroRewards,
@@ -97,6 +91,23 @@ data ConwayCertsPredFailure era
   | -- | CERT rule subtransition Failures
     CertFailure !(PredicateFailure (EraRule "CERT" era))
   deriving (Generic)
+
+type instance EraRuleFailure "CERTS" (ConwayEra c) = ConwayCertsPredFailure (ConwayEra c)
+
+instance InjectRuleFailure "CERTS" ConwayCertsPredFailure (ConwayEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "CERTS" ConwayCertPredFailure (ConwayEra c) where
+  injectFailure = CertFailure
+
+instance InjectRuleFailure "CERTS" ConwayDelegPredFailure (ConwayEra c) where
+  injectFailure = CertFailure . injectFailure
+
+instance InjectRuleFailure "CERTS" ShelleyPoolPredFailure (ConwayEra c) where
+  injectFailure = CertFailure . injectFailure
+
+instance InjectRuleFailure "CERTS" ConwayGovCertPredFailure (ConwayEra c) where
+  injectFailure = CertFailure . injectFailure
 
 deriving stock instance
   Eq (PredicateFailure (EraRule "CERT" era)) =>

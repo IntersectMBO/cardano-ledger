@@ -48,10 +48,17 @@ library
         Cardano.Ledger.Babbage.Era
         Cardano.Ledger.Babbage.TxAuxData
         Cardano.Ledger.Babbage.TxCert
-        Cardano.Ledger.Babbage.Rules.Utxow
+        Cardano.Ledger.Babbage.Rules.Bbody
+        Cardano.Ledger.Babbage.Rules.Deleg
+        Cardano.Ledger.Babbage.Rules.Delegs
+        Cardano.Ledger.Babbage.Rules.Delpl
+        Cardano.Ledger.Babbage.Rules.Pool
+        Cardano.Ledger.Babbage.Rules.Ppup
+        Cardano.Ledger.Babbage.Rules.Ledger
+        Cardano.Ledger.Babbage.Rules.Ledgers
         Cardano.Ledger.Babbage.Rules.Utxo
         Cardano.Ledger.Babbage.Rules.Utxos
-        Cardano.Ledger.Babbage.Rules.Ledger
+        Cardano.Ledger.Babbage.Rules.Utxow
 
     default-language: Haskell2010
     ghc-options:

@@ -4,6 +4,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -40,9 +41,8 @@ module Cardano.Ledger.Core (
   Value,
   EraPParams (..),
 
-  -- * Era STS
-  EraRule,
-  Era (..),
+  -- * Era
+  module Cardano.Ledger.Core.Era,
   -- $segWit
   EraSegWits (..),
   bBodySize,
@@ -53,7 +53,6 @@ module Cardano.Ledger.Core (
 
   -- * Re-exports
   module Cardano.Ledger.Hashes,
-  module Cardano.Ledger.Core.Era,
   module Cardano.Ledger.Core.TxCert,
   module Cardano.Ledger.Core.PParams,
   module Cardano.Ledger.Core.Translation,
@@ -120,7 +119,6 @@ import Data.Set (Set)
 import Data.Void (Void)
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
-import GHC.TypeLits (Symbol)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
@@ -505,9 +503,6 @@ hashScriptTxWitsL =
     (\wits -> wits ^. scriptTxWitsL)
     (\wits ss -> wits & scriptTxWitsL .~ Map.fromList [(hashScript s, s) | s <- ss])
 {-# INLINEABLE hashScriptTxWitsL #-}
-
--- | Era STS map
-type family EraRule (k :: Symbol) era = (r :: Type) | r -> k
 
 -----------------------------------------------------------------------------
 -- Script Validation

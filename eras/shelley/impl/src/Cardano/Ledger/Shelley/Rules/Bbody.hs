@@ -29,9 +29,17 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
-import Cardano.Ledger.Shelley.Era (ShelleyBBODY)
+import Cardano.Ledger.Shelley.Era (ShelleyBBODY, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (AccountState)
-import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersEnv (..))
+import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
+import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure)
+import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure)
+import Cardano.Ledger.Shelley.Rules.Ledger (ShelleyLedgerPredFailure)
+import Cardano.Ledger.Shelley.Rules.Ledgers (ShelleyLedgersEnv (..), ShelleyLedgersPredFailure)
+import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure)
+import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure)
+import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
@@ -71,6 +79,38 @@ data ShelleyBbodyPredFailure era
       !(Hash (EraCrypto era) EraIndependentBlockBody) -- Claimed Hash
   | LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
+
+type instance EraRuleFailure "BBODY" (ShelleyEra c) = ShelleyBbodyPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure (ShelleyEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure (ShelleyEra c) where
+  injectFailure = LedgersFailure
+
+instance InjectRuleFailure "BBODY" ShelleyLedgerPredFailure (ShelleyEra c) where
+  injectFailure = LedgersFailure . injectFailure
+
+instance InjectRuleFailure "BBODY" ShelleyUtxowPredFailure (ShelleyEra c) where
+  injectFailure = LedgersFailure . injectFailure
+
+instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure (ShelleyEra c) where
+  injectFailure = LedgersFailure . injectFailure
+
+instance InjectRuleFailure "BBODY" ShelleyPpupPredFailure (ShelleyEra c) where
+  injectFailure = LedgersFailure . injectFailure
+
+instance InjectRuleFailure "BBODY" ShelleyDelegsPredFailure (ShelleyEra c) where
+  injectFailure = LedgersFailure . injectFailure
+
+instance InjectRuleFailure "BBODY" ShelleyDelplPredFailure (ShelleyEra c) where
+  injectFailure = LedgersFailure . injectFailure
+
+instance InjectRuleFailure "BBODY" ShelleyPoolPredFailure (ShelleyEra c) where
+  injectFailure = LedgersFailure . injectFailure
+
+instance InjectRuleFailure "BBODY" ShelleyDelegPredFailure (ShelleyEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
 newtype ShelleyBbodyEvent era
   = LedgersEvent (Event (EraRule "LEDGERS" era))

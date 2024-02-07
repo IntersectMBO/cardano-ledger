@@ -34,7 +34,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxos (
 where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Era (AlonzoUTXOS)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXOS)
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (..),
@@ -369,6 +369,14 @@ data AlonzoUtxosPredFailure era
   | UpdateFailure (PPUPPredFailure era)
   deriving
     (Generic)
+
+type instance EraRuleFailure "UTXOS" (AlonzoEra c) = AlonzoUtxosPredFailure (AlonzoEra c)
+
+instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (AlonzoEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure (AlonzoEra c) where
+  injectFailure = UpdateFailure
 
 instance PPUPPredFailure era ~ () => Inject () (AlonzoUtxosPredFailure era) where
   inject () = UpdateFailure ()

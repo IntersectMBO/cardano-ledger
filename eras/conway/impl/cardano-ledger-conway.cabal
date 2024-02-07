@@ -52,6 +52,7 @@ library
         Cardano.Ledger.Conway.Era
         Cardano.Ledger.Conway.Governance.Procedures
         Cardano.Ledger.Conway.Governance.Proposals
+        Cardano.Ledger.Conway.Rules.Bbody
         Cardano.Ledger.Conway.Rules.Cert
         Cardano.Ledger.Conway.Rules.Deleg
         Cardano.Ledger.Conway.Rules.GovCert
@@ -59,10 +60,12 @@ library
         Cardano.Ledger.Conway.Rules.Enact
         Cardano.Ledger.Conway.Rules.Epoch
         Cardano.Ledger.Conway.Rules.Ledger
+        Cardano.Ledger.Conway.Rules.Ledgers
         Cardano.Ledger.Conway.Rules.NewEpoch
         Cardano.Ledger.Conway.Rules.Gov
         Cardano.Ledger.Conway.Rules.Ratify
         Cardano.Ledger.Conway.Rules.Tickf
+        Cardano.Ledger.Conway.Rules.Utxo
         Cardano.Ledger.Conway.Rules.Utxos
         Cardano.Ledger.Conway.Rules.Utxow
         Cardano.Ledger.Conway.TxAuxData

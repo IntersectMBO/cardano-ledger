@@ -43,6 +43,14 @@ library
         Cardano.Ledger.Allegra.TxOut
         Cardano.Ledger.Allegra.TxSeq
         Cardano.Ledger.Allegra.TxWits
+        Cardano.Ledger.Allegra.Rules.Bbody
+        Cardano.Ledger.Allegra.Rules.Deleg
+        Cardano.Ledger.Allegra.Rules.Delegs
+        Cardano.Ledger.Allegra.Rules.Delpl
+        Cardano.Ledger.Allegra.Rules.Pool
+        Cardano.Ledger.Allegra.Rules.Ppup
+        Cardano.Ledger.Allegra.Rules.Ledger
+        Cardano.Ledger.Allegra.Rules.Ledgers
         Cardano.Ledger.Allegra.Rules.Utxo
         Cardano.Ledger.Allegra.Rules.Utxow
         Cardano.Ledger.Allegra.UTxO

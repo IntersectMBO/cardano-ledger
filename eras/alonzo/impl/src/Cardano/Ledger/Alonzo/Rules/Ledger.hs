@@ -16,7 +16,11 @@ module Cardano.Ledger.Alonzo.Rules.Ledger (
   ledgerTransition,
 ) where
 
-import Cardano.Ledger.Alonzo.Era (AlonzoLEDGER)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoLEDGER)
+import Cardano.Ledger.Alonzo.Rules.Delegs ()
+import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUtxoPredFailure)
+import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, AlonzoUtxowEvent, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
@@ -30,9 +34,15 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv (..),
   ShelleyDELEGS,
+  ShelleyDelegPredFailure,
   ShelleyDelegsEvent,
   ShelleyDelegsPredFailure,
+  ShelleyDelplPredFailure (..),
   ShelleyLEDGERS,
+  ShelleyPoolPredFailure,
+  ShelleyPpupPredFailure,
+  ShelleyUtxoPredFailure,
+  ShelleyUtxowPredFailure,
   UtxoEnv (..),
   shelleyLedgerAssertions,
  )
@@ -56,6 +66,44 @@ import Data.Kind (Type)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro
+
+type instance EraRuleFailure "LEDGER" (AlonzoEra c) = ShelleyLedgerPredFailure (AlonzoEra c)
+
+instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure (AlonzoEra c) where
+  injectFailure = id
+
+instance InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure (AlonzoEra c) where
+  injectFailure = UtxowFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (AlonzoEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure (AlonzoEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure (AlonzoEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyPpupPredFailure (AlonzoEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure (AlonzoEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" AllegraUtxoPredFailure (AlonzoEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure (AlonzoEra c) where
+  injectFailure = DelegsFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyDelplPredFailure (AlonzoEra c) where
+  injectFailure = DelegsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure (AlonzoEra c) where
+  injectFailure = DelegsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure (AlonzoEra c) where
+  injectFailure = DelegsFailure . injectFailure
 
 -- =======================================
 
