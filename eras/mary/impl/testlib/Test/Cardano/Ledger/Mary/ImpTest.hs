@@ -1,11 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Mary.ImpTest () where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
+import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
 import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Core (EraIndependentTxBody)
 import Cardano.Ledger.Crypto (Crypto (..))
@@ -23,6 +24,7 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (MaryEra c)

@@ -99,7 +99,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impNativeScriptsG,
 ) where
 
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), seedSizeDSIGN)
+import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, seedSizeDSIGN)
 import Cardano.Crypto.Hash (Hash, HashAlgorithm)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as VRF
@@ -297,6 +297,7 @@ class
   , Signable
       (DSIGN (EraCrypto era))
       (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , DSIGN (EraCrypto era) ~ Ed25519DSIGN
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
   , EraUTxO era
@@ -486,6 +487,7 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (ShelleyEra c)

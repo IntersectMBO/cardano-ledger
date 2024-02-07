@@ -8,7 +8,7 @@
 
 module Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript) where
 
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
+import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core
@@ -28,6 +28,7 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (AllegraEra c)

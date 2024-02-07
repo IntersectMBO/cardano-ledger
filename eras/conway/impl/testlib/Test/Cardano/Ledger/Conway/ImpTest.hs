@@ -77,7 +77,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getLastEnactedCommittee,
 ) where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
+import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock)
@@ -182,6 +182,7 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (ConwayEra c)
@@ -222,6 +223,7 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ConwayEraImp (ConwayEra c)
