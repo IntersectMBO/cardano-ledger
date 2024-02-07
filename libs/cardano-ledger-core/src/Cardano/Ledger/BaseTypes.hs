@@ -306,12 +306,12 @@ fromRationalBoundedRatio r
 -- when in doubt.
 fromRatioBoundedRatio ::
   forall b a.
-  (Bounded (BoundedRatio b a), Integral a) =>
+  (Bounded a, Bounded (BoundedRatio b a), Integral a) =>
   Ratio a ->
   Maybe (BoundedRatio b a)
 fromRatioBoundedRatio ratio
-  | r < toRationalBoundedRatio lowerBound
-      || r > toRationalBoundedRatio upperBound =
+  | r < unboundRational lowerBound
+      || r > unboundRational upperBound =
       Nothing -- ensure valid range
   | otherwise = Just $ BoundedRatio ratio
   where
@@ -328,7 +328,7 @@ instance
   where
   decCBOR = do
     r <- decodeRationalWithTag
-    case fromRationalBoundedRatio r of
+    case boundRational r of
       Nothing ->
         cborError $ DecoderErrorCustom "BoundedRatio" (Text.pack $ show r)
       Just u -> pure u
