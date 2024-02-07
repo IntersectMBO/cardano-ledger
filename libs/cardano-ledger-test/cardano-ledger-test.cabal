@@ -70,6 +70,7 @@ library
         Test.Cardano.Ledger.Examples.AlonzoCollectInputs
         Test.Cardano.Ledger.Examples.AlonzoAPI
         Test.Cardano.Ledger.Examples.STSTestUtils
+        Test.Cardano.Ledger.EraClass
         Test.Cardano.Ledger.Generic.AggPropTests
         Test.Cardano.Ledger.Generic.ApplyTx
         Test.Cardano.Ledger.Generic.Indexed

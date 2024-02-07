@@ -7,26 +7,26 @@
 -- | Generate a Simple Tx with 1 inout, 1 output, and 1 DRep related Cert
 module Test.Cardano.Ledger.Constrained.Trace.DrepCertTx where
 
+import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
+  EraGov,
+  GovActionId,
+  GovActionState,
   PulsingSnapshot (..),
   computeDrepDistr,
+  curPParamsGovStateL,
   finishDRepPulser,
   newEpochStateDRepPulsingStateL,
+  proposalsActionsMap,
+  proposalsGovStateL,
   utxosGovStateL,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
-import Cardano.Ledger.Core (
-  Era (..),
-  EraTx (..),
-  EraTxBody (..),
-  EraTxOut (..),
-  Tx,
-  TxCert,
-  coinTxOutL,
- )
+import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.DRep hiding (drepDeposit)
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -37,6 +37,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   VState (..),
   allObligations,
+  esLStateL,
+  lsUTxOStateL,
+  nesEsL,
  )
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
@@ -62,9 +65,10 @@ import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (
   stepProp,
  )
 import Test.Cardano.Ledger.Constrained.Vars
+import Test.Cardano.Ledger.EraClass
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..))
 import Test.Cardano.Ledger.Generic.MockChain (MockBlock (..), MockChainState (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTxCert, ppList)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcNewEpochState, pcTxCert, ppList)
 import Test.Cardano.Ledger.Generic.Proof (
   Proof (..),
   Reflect (..),
@@ -74,10 +78,6 @@ import Test.Cardano.Ledger.Generic.Proof (
 import Test.Cardano.Ledger.Generic.Updaters (newTxBody)
 import Test.Tasty
 import Test.Tasty.QuickCheck
-
-import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Crypto (HASH)
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
 
 -- =========================================================================
 
@@ -163,7 +163,7 @@ drepTree =
     "DRep property traces"
     [ testProperty
         "All Tx are valid on traces of length 150."
-        (withMaxSuccess 5 $ mockChainProp Conway 150 (drepCertTxForTrace (Coin 100000)) (stepProp allValidSignals))
+        (withMaxSuccess 20 $ mockChainProp Conway 150 (drepCertTxForTrace (Coin 100000)) (stepProp (allValidSignals Conway)))
     , testProperty
         "Bruteforce = Pulsed, in every epoch, on traces of length 150"
         (withMaxSuccess 5 $ mockChainProp Conway 150 (drepCertTxForTrace (Coin 60000)) (epochProp pulserWorks))
@@ -175,8 +175,17 @@ drepTree =
 -- using 'stepProp', 'deltaProp', 'preserveProp', and 'epochProp'
 -- this lifted value is then passed to 'mockChainProp' to make a Property
 
-allValidSignals :: MockChainState era -> MockBlock era -> MockChainState era -> Property
-allValidSignals _state0 (MockBlock _ _ _txs) _stateN = (property True)
+getpp :: EraGov era => NewEpochState era -> PParams era
+getpp nes = nes ^. (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL)
+
+getProposals :: ConwayEraGov era => NewEpochState era -> Map.Map (GovActionId (EraCrypto era)) (GovActionState era)
+getProposals nes = proposalsActionsMap (nes ^. (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL))
+
+allValidSignals :: Reflect era => Proof era -> MockChainState era -> MockBlock era -> MockChainState era -> Property
+allValidSignals p (MockChainState nes _ slot count) (MockBlock _ _ _txs) _stateN =
+  counterexample
+    ("\nCount " ++ show count ++ " Slot " ++ show slot ++ "\n" ++ show (pcNewEpochState p nes))
+    (property True)
 
 pulserWorks :: ConwayEraGov era => MockChainState era -> MockChainState era -> Property
 pulserWorks mcsfirst mcslast =

@@ -1406,8 +1406,7 @@ babbageFeatures =
 
 testExpectUTXOFailure ::
   forall era.
-  ( State (EraRule "UTXO" era) ~ UTxOState era
-  , PostShelley era
+  ( PostShelley era
   , Reflect era
   , BabbageEraTxBody era
   ) =>

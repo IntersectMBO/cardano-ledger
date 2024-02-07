@@ -426,12 +426,12 @@ instance
 
 mapProportion :: EpochNo -> Word64 -> Int -> Map.Map k Int -> Gen k
 mapProportion epochnum lastSlot count m =
-  if null pairs
-    then -- TODO, we need to figure out why this occurs. It always occurs near SlotNo 300, So I am assuming that
-    -- sometimes as we move into the 3rd epoch, however stakeDistr is computed becomes empty. This is probably
-    -- because there is to action in Test.Cardano.Ledger.Constrained.Trace.Actions for the epoch boundary.
-    -- This temporary fix is good enough for now. But the annoying trace message reminds us to fix this.
-
+  case pairs of
+    [] ->
+      -- TODO, we need to figure out why this occurs. It always occurs near SlotNo 300, So I am assuming that
+      -- sometimes as we move into the 3rd epoch, however stakeDistr is computed becomes empty. This is probably
+      -- because there is no action in Test.Cardano.Ledger.Constrained.Trace.Actions for the epoch boundary.
+      -- This temporary fix is good enough for now. But the annoying trace message reminds us to fix this.
       trace
         ( "There are no stakepools to choose an issuer from"
             ++ ", epoch="
@@ -442,9 +442,9 @@ mapProportion epochnum lastSlot count m =
             ++ show count
         )
         discard
-    else
+    (w : _) ->
       if all (\(n, _k) -> n == 0) pairs
-        then snd (head pairs) -- All stakepools have zero Stake, choose issuer arbitrarily. possible, but rare.
+        then snd w -- All stakepools have zero Stake, choose issuer arbitrarily. possible, but rare.
         else frequency pairs
   where
     pairs = [(n, pure k) | (k, n) <- Map.toList m]

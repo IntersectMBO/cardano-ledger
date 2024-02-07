@@ -31,6 +31,7 @@ unpair z =
 
 -- Adapted from https://wiki.haskell.org/Generic_number_type
 squareRoot :: Int -> Int
+squareRoot n | n < 0 = error ("squareRoot works only for positive Int: " ++ show n)
 squareRoot 0 = 0
 squareRoot 1 = 1
 squareRoot n =
@@ -40,7 +41,9 @@ squareRoot n =
       newtonStep x = div (x + div n x) two
       iters = iterate newtonStep (squareRoot (div n lowerN) * lowerRoot)
       isRoot r = r ^ two <= n && n < (r + 1) ^ two
-   in head $ dropWhile (not . isRoot) iters
+   in case dropWhile (not . isRoot) iters of
+        (r : _) -> r
+        [] -> error ("Not possible, every positive Int has an Integral square root: " ++ show n)
 
 -- Defeat type defaulting without specifying the type every time.
 two :: Int
