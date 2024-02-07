@@ -394,7 +394,7 @@ mkTxOut addr _cAddr vl (DatumHash dh) SNothing
   , Just (Refl, dataHash32) <- encodeDataHash32 dh =
       TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
 mkTxOut _addr cAddr vl d rs =
-  let cVal = fromMaybe (error "Illegal value in txout") $ toCompact vl
+  let cVal = fromMaybe (error ("Illegal Value in TxOut: " ++ show vl)) $ toCompact vl
    in case rs of
         SNothing -> case d of
           NoDatum -> TxOutCompact' cAddr cVal

@@ -295,7 +295,7 @@ class
     , (getMinCoinSizedTxOut | getMinCoinTxOut)
     #-}
 
-  mkBasicTxOut :: Addr (EraCrypto era) -> Value era -> TxOut era
+  mkBasicTxOut :: HasCallStack => Addr (EraCrypto era) -> Value era -> TxOut era
 
   -- | Every era, except Shelley, must be able to upgrade a `TxOut` from a previous era.
   upgradeTxOut :: EraTxOut (PreviousEra era) => TxOut (PreviousEra era) -> TxOut era
