@@ -176,6 +176,9 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet (Quiet (Quiet))
 
+maxDecimalsWord64 :: Int
+maxDecimalsWord64 = 19
+
 data ProtVer = ProtVer {pvMajor :: !Version, pvMinor :: !Natural}
   deriving (Show, Eq, Generic, Ord, NFData)
   deriving (EncCBOR) via (CBORGroup ProtVer)
@@ -336,7 +339,7 @@ instance
 instance Bounded (BoundedRatio b Word64) => ToJSON (BoundedRatio b Word64) where
   toJSON = toRationalJSON . unboundRational
     where
-      toRationalJSON r = case fromRationalRepetendLimited 19 r of
+      toRationalJSON r = case fromRationalRepetendLimited maxDecimalsWord64 r of
         Right (s, Nothing) -> toJSON s
         _ -> toJSON r
 
@@ -354,10 +357,10 @@ fromScientificBoundedRatioWord64 ::
 fromScientificBoundedRatioWord64 (normalize -> sci)
   | coeff < 0 = failWith "negative" sci
   | exp10 <= 0 = do
-      when (exp10 < -19) $ failWith "too precise" sci
+      when (exp10 < -maxDecimalsWord64) $ failWith "too precise" sci
       fromRationalEither (coeff % (10 ^ negate exp10))
   | otherwise = do
-      when (19 < exp10) $ failWith "too big" sci
+      when (maxDecimalsWord64 < exp10) $ failWith "too big" sci
       fromRationalEither (coeff * 10 ^ exp10 % 1)
   where
     coeff = coefficient sci
@@ -411,7 +414,7 @@ instance Bounded (BoundedRatio PositiveInterval Word64) where
 
 -- | The smallest decimal value that can roundtrip JSON
 positiveIntervalEpsilon :: BoundedRatio b Word64
-positiveIntervalEpsilon = BoundedRatio (1 % 10 ^ (19 :: Int))
+positiveIntervalEpsilon = BoundedRatio (1 % 10 ^ (maxDecimalsWord64 :: Int))
 
 -- | Type to represent a value in the unit interval (0; 1]
 newtype PositiveUnitInterval
