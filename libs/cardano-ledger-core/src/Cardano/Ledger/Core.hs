@@ -507,7 +507,7 @@ hashScriptTxWitsL =
 {-# INLINEABLE hashScriptTxWitsL #-}
 
 -- | Era STS map
-type family EraRule (k :: Symbol) era :: Type
+type family EraRule (k :: Symbol) era = (r :: Type) | r -> k
 
 -----------------------------------------------------------------------------
 -- Script Validation
