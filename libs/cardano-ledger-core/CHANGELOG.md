@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Fix `ToJSON`/`FromJSON` instances of `Prices`
 * Update `FromJSON` instance of `BoundedRatio`
 * Fix `ToJSON` instance of `BoundedRatio` to avoid precision loss
 * Add `pwcScriptHash` field to `PlutusWithContext`

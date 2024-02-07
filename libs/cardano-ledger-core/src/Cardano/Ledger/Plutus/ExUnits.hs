@@ -31,7 +31,6 @@ where
 import Cardano.Ledger.BaseTypes (
   BoundedRational (unboundRational),
   NonNegativeInterval,
-  boundRational,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
@@ -166,28 +165,9 @@ instance NoThunks Prices
 
 instance NFData Prices
 
-instance ToJSON Prices where
-  toJSON Prices {prSteps, prMem} =
-    -- We cannot round-trip via NonNegativeInterval, so we go via Rational
-    object
-      [ "prSteps" .= toRationalJSON (unboundRational prSteps)
-      , "prMem" .= toRationalJSON (unboundRational prMem)
-      ]
+instance ToJSON Prices
 
-instance FromJSON Prices where
-  parseJSON =
-    withObject "prices" $ \o -> do
-      steps <- o .: "prSteps"
-      mem <- o .: "prMem"
-      prSteps <- checkBoundedRational steps
-      prMem <- checkBoundedRational mem
-      return Prices {prSteps, prMem}
-    where
-      -- We cannot round-trip via NonNegativeInterval, so we go via Rational
-      checkBoundedRational r =
-        case boundRational r of
-          Nothing -> fail ("too much precision for bounded rational: " ++ show r)
-          Just s -> return s
+instance FromJSON Prices
 
 -- | Compute the cost of a script based upon prices and the number of execution
 -- units.
