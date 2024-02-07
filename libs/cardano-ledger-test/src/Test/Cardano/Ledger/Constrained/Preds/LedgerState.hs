@@ -25,7 +25,7 @@ import Cardano.Ledger.Conway.Governance (
   pPropsL,
   proposalsActions,
  )
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppuDRepDepositL, ppuMinFeeRefScriptCoinsPerByteL)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppuDRepDepositL, ppuMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.Core (
   Era (..),
   PParamsUpdate,
@@ -414,7 +414,7 @@ reasonable =
               & ppuMinFeeBL .~ SNothing
               & ppuMaxValSizeL .~ SNothing
               & ppuCoinsPerUTxOByteL .~ SNothing
-              & ppuMinFeeRefScriptCoinsPerByteL .~ SNothing
+              & ppuMinFeeRefScriptCostPerByteL .~ SNothing
               & ppuDRepDepositL .~ SNothing
         )
     )

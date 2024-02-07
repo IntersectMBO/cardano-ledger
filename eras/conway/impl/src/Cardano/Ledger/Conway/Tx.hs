@@ -24,14 +24,14 @@ import Cardano.Ledger.Alonzo.TxSeq (
   AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
   hashAlonzoTxSeq,
  )
-import Cardano.Ledger.Babbage.PParams (CoinPerByte (..))
 import Cardano.Ledger.Babbage.Tx as BabbageTxReExport (
   AlonzoEraTx (..),
   AlonzoTx (..),
  )
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.BaseTypes (unboundRational)
+import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppMinFeeRefScriptCoinsPerByteL)
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.Conway.TxAuxData ()
 import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
@@ -82,9 +82,10 @@ getConwayMinFeeTx ::
   Int ->
   Coin
 getConwayMinFeeTx pp tx refScriptsSize =
-  alonzoMinFeeTx pp tx <+> (refScriptsSize <×> refScriptFee)
+  alonzoMinFeeTx pp tx <+> refScriptsFee
   where
-    CoinPerByte refScriptFee = pp ^. ppMinFeeRefScriptCoinsPerByteL
+    refScriptCostPerByte = unboundRational (pp ^. ppMinFeeRefScriptCostPerByteL)
+    refScriptsFee = Coin (floor (fromIntegral @Int @Rational refScriptsSize * refScriptCostPerByte))
 
 instance Crypto c => AlonzoEraTx (ConwayEra c) where
   {-# SPECIALIZE instance AlonzoEraTx (ConwayEra StandardCrypto) #-}

@@ -126,7 +126,7 @@ module Test.Cardano.Ledger.EraClass (
   ppGovActionDepositL,
   ppDRepDepositL,
   ppDRepActivityL,
-  ppMinFeeRefScriptCoinsPerByteL,
+  ppMinFeeRefScriptCostPerByteL,
   ppuPoolVotingThresholdsL,
   ppuDRepVotingThresholdsL,
   ppuCommitteeMinSizeL,
@@ -135,7 +135,7 @@ module Test.Cardano.Ledger.EraClass (
   ppuGovActionDepositL,
   ppuDRepDepositL,
   ppuDRepActivityL,
-  ppuMinFeeRefScriptCoinsPerByteL,
+  ppuMinFeeRefScriptCostPerByteL,
   -- Scripts
   EraScript (Script, NativeScript, getNativeScript, fromNativeScript),
   hashScript,
