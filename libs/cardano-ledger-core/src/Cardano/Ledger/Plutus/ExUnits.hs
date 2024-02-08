@@ -6,7 +6,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -15,7 +14,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Plutus.ExUnits (
@@ -31,7 +29,6 @@ where
 import Cardano.Ledger.BaseTypes (
   BoundedRational (unboundRational),
   NonNegativeInterval,
-  boundRational,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
@@ -59,11 +56,9 @@ import Data.Aeson (
   (.:),
   (.=),
  )
-import qualified Data.Aeson as Aeson (Value)
 import Data.DerivingVia (InstantiatedAt (..))
 import Data.Int (Int64)
 import Data.Measure (BoundedMeasure, Measure)
-import Data.Scientific (fromRationalRepetendLimited)
 import Data.Semigroup (All (..))
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -168,34 +163,9 @@ instance NoThunks Prices
 
 instance NFData Prices
 
-instance ToJSON Prices where
-  toJSON Prices {prSteps, prMem} =
-    -- We cannot round-trip via NonNegativeInterval, so we go via Rational
-    object
-      [ "prSteps" .= toRationalJSON (unboundRational prSteps)
-      , "prMem" .= toRationalJSON (unboundRational prMem)
-      ]
+instance ToJSON Prices
 
-toRationalJSON :: Rational -> Aeson.Value
-toRationalJSON r =
-  case fromRationalRepetendLimited 20 r of
-    Right (s, Nothing) -> toJSON s
-    _ -> toJSON r
-
-instance FromJSON Prices where
-  parseJSON =
-    withObject "prices" $ \o -> do
-      steps <- o .: "prSteps"
-      mem <- o .: "prMem"
-      prSteps <- checkBoundedRational steps
-      prMem <- checkBoundedRational mem
-      return Prices {prSteps, prMem}
-    where
-      -- We cannot round-trip via NonNegativeInterval, so we go via Rational
-      checkBoundedRational r =
-        case boundRational r of
-          Nothing -> fail ("too much precision for bounded rational: " ++ show r)
-          Just s -> return s
+instance FromJSON Prices
 
 -- | Compute the cost of a script based upon prices and the number of execution
 -- units.

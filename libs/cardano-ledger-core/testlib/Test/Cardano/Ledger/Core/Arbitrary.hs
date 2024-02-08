@@ -158,6 +158,9 @@ import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck
 import Test.QuickCheck.Hedgehog (hedgehog)
 
+maxDecimalsWord64 :: Int
+maxDecimalsWord64 = 19
+
 instance (Era era, EncCBOR (f era), Arbitrary (f era)) => Arbitrary (Sized (f era)) where
   arbitrary = mkSized (eraProtVerHigh @era) <$> arbitrary
 
@@ -211,7 +214,7 @@ instance Arbitrary Port where
 -- | Decimal numbers only
 instance Arbitrary UnitInterval where
   arbitrary = do
-    p <- chooseInt (0, 19)
+    p <- chooseInt (0, maxDecimalsWord64)
     let y = 10 ^ p :: Word64
     x <- choose (0, y)
     pure $ unsafeBoundRational $ promoteRatio (x % y)
@@ -219,7 +222,7 @@ instance Arbitrary UnitInterval where
 -- | Decimal numbers only
 instance Arbitrary PositiveUnitInterval where
   arbitrary = do
-    p <- chooseInt (0, 19)
+    p <- chooseInt (0, maxDecimalsWord64)
     let y = 10 ^ p :: Word64
     x <- choose (1, y)
     pure $ unsafeBoundRational $ promoteRatio (x % y)
@@ -227,17 +230,17 @@ instance Arbitrary PositiveUnitInterval where
 -- | Decimal numbers only
 instance Arbitrary PositiveInterval where
   arbitrary = do
-    p <- chooseInt (0, 19)
+    p <- chooseInt (0, maxDecimalsWord64)
     let y = 10 ^ p :: Word64
-    x <- choose (1, 10 ^ (19 :: Int))
+    x <- choose (1, 10 ^ (maxDecimalsWord64 :: Int))
     pure $ unsafeBoundRational $ promoteRatio (x % y)
 
 -- | Decimal numbers only
 instance Arbitrary NonNegativeInterval where
   arbitrary = do
-    p <- chooseInt (0, 19)
+    p <- chooseInt (0, maxDecimalsWord64)
     let y = 10 ^ p :: Word64
-    x <- choose (0, 10 ^ (19 :: Int))
+    x <- choose (0, 10 ^ (maxDecimalsWord64 :: Int))
     pure $ unsafeBoundRational $ promoteRatio (x % y)
 
 instance Validity UnitInterval where

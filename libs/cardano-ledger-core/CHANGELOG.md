@@ -2,6 +2,9 @@
 
 ## 1.11.0.0
 
+* Fix `ToJSON`/`FromJSON` instances of `Prices`
+* Update `FromJSON` instance of `BoundedRatio`
+* Fix `ToJSON` instance of `BoundedRatio` to avoid precision loss
 * Add `pwcScriptHash` field to `PlutusWithContext`
 * Parameterize `PlutusWithContext c` on crypto.
 * Extract `hashScript` outside of `EraScript` type class.
@@ -24,6 +27,7 @@
 
 ### `testlib`
 
+* Remove `epsilonMaybeEq` from `Utils`
 * Add `PlutusArgs`, `ScriptTestContext`
 * Add `txInAt`
 * Add `mkScriptAddr`
