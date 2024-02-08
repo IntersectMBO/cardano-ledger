@@ -77,6 +77,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   addNativeScriptTxWits,
   addRootTxIn,
   fixupFees,
+  impGetNativeScript,
+  impLookupUTxO,
 
   -- * Logging
   logEntry,
@@ -671,8 +673,7 @@ impAddNativeScript ::
 impAddNativeScript nativeScript = do
   let script = fromNativeScript nativeScript
       scriptHash = hashScript @era script
-  ImpTestState {impNativeScripts} <- get
-  impNativeScriptsL .= Map.insert scriptHash nativeScript impNativeScripts
+  impNativeScriptsL %= Map.insert scriptHash nativeScript
   pure scriptHash
 
 getScriptTestContext :: ScriptHash (EraCrypto era) -> ImpTestM era (Maybe ScriptTestContext)
@@ -830,6 +831,7 @@ trySubmitTx tx = do
     if doFixup
       then fixupTx tx
       else pure tx
+  logToExpr txFixed
   lEnv <- impLedgerEnv st
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
   let txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
@@ -1169,3 +1171,13 @@ expectTreasury c =
   impAnn "Checking treasury amount" $ do
     treasuryAmt <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
     c `shouldBe` treasuryAmt
+
+impGetNativeScript :: ScriptHash (EraCrypto era) -> ImpTestM era (Maybe (NativeScript era))
+impGetNativeScript sh = Map.lookup sh <$> gets impNativeScripts
+
+impLookupUTxO :: ShelleyEraImp era => TxIn (EraCrypto era) -> ImpTestM era (TxOut era)
+impLookupUTxO txIn = impAnn "Looking up TxOut" $ do
+  utxo <- getUTxO
+  case txinLookup txIn utxo of
+    Just txOut -> pure txOut
+    Nothing -> error $ "Failed to get TxOut for " <> show txIn

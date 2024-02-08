@@ -1286,6 +1286,40 @@ badTranslation proof x =
     Conway -> BadTranslation (BabbageContextError x)
     _ -> error "No reference inputs before BabbageEra"
 
+plutusV1RefScriptFailures ::
+  forall era.
+  ( PostShelley era
+  , BabbageEraTxBody era
+  , Reflect era
+  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure era
+  ) =>
+  Proof era ->
+  TestTree
+plutusV1RefScriptFailures pf =
+  testGroup
+    (show pf ++ " PlutusV1 reference script failure examples")
+    [ testCase "reference script with Plutus V1" $
+        testExpectFailure
+          pf
+          (referenceScriptWithPlutusV1Script pf)
+          ( injectFailure
+              ( CollectErrors
+                  [badTranslation pf $ ReferenceScriptsNotSupported (TxOutFromOutput (mkTxIxPartial 0))]
+              )
+          )
+    , testCase "reference input with Plutus V1" $
+        testExpectFailure
+          pf
+          (referenceInputWithPlutusV1Script pf)
+          ( injectFailure
+              ( CollectErrors
+                  [badTranslation pf $ ReferenceInputsNotSupported @era $ Set.singleton anotherTxIn]
+              )
+          )
+    ]
+
 genericBabbageFailures ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
@@ -1336,24 +1370,6 @@ genericBabbageFailures pf =
                       [badTranslation pf $ InlineDatumsNotSupported (TxOutFromInput someTxIn)]
                   )
               )
-        , testCase "reference script with Plutus V1" $
-            testExpectFailure
-              pf
-              (referenceScriptWithPlutusV1Script pf)
-              ( injectFailure
-                  ( CollectErrors
-                      [badTranslation pf $ ReferenceScriptsNotSupported (TxOutFromOutput (mkTxIxPartial 0))]
-                  )
-              )
-        , testCase "reference input with Plutus V1" $
-            testExpectFailure
-              pf
-              (referenceInputWithPlutusV1Script pf)
-              ( injectFailure
-                  ( CollectErrors
-                      [badTranslation pf $ ReferenceInputsNotSupported @era $ Set.singleton anotherTxIn]
-                  )
-              )
         , testCase "malformed reference script" $
             testExpectFailure
               pf
@@ -1375,7 +1391,7 @@ genericBabbageFailures pf =
                   )
             -- The current code does not construct the right witnesses for plutus version 3, so skip this test in Conway
             Conway -> testCase "malformed script witness" $ pure ()
-            _ -> error ("Babbage features used before BabbageEra")
+            _ -> error "Babbage features used before BabbageEra"
         , testCase "min-utxo value with output too large" $
             testExpectFailure
               pf
@@ -1400,6 +1416,7 @@ babbageFeatures =
     "Babbage Features"
     [ genericBabbageFeatures Babbage
     , genericBabbageFailures Babbage
+    , plutusV1RefScriptFailures Babbage
     , genericBabbageFeatures Conway
     , genericBabbageFailures Conway
     , testCase "inputs and refinputs overlap in Babbage and don't Fail" $ testExpectSuccessValid Babbage (commonReferenceScript Babbage)

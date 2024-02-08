@@ -1,7 +1,5 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -156,6 +154,7 @@ import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro (Lens', (%~), (&), (.~), (^.))
 import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
+import Test.Cardano.Ledger.Babbage.ImpTest (babbageFixupTx)
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
@@ -199,7 +198,7 @@ instance
 
   modifyPParams = conwayModifyPParams
 
-  fixupTx = alonzoFixupTx
+  fixupTx = babbageFixupTx
 
 class
   ( ShelleyEraImp era

@@ -14,30 +14,44 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   initAlonzoImpNES,
   PlutusArgs (..),
   impAddPlutusScript,
+  impLookupPlutusScript,
+  fixupPPHash,
+  fixupPlutusScripts,
+  addCollateralInput,
   alonzoFixupTx,
+  impGetPlutusContexts,
+  fixupDatums,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash (Hash)
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxOut (..), Era (..), EraGov)
+import Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxOut (..), AsIxItem, Era (..), EraGov)
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, getLanguageView, ppCostModelsL, ppMaxTxExUnitsL, ppMaxValSizeL)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), plutusScriptLanguage, toAsIx)
+import Cardano.Ledger.Alonzo.Scripts (
+  AsItem (..),
+  ExUnits (..),
+  plutusScriptLanguage,
+  toAsItem,
+  toAsIx,
+ )
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), Redeemers (..), TxDats (..))
-import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (
   EraIndependentTxBody,
   EraScript (..),
   EraTx (..),
-  EraTxBody (..),
+  EraTxOut (..),
   EraTxWits (..),
   ScriptHash,
  )
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), binaryDataToData, hashData)
+import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..), Plutus, PlutusLanguage, hashPlutusScript)
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
@@ -48,12 +62,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   utxosUtxoL,
  )
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), txinLookup)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (forM)
 import Data.Default.Class (Default)
-import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (fromElems)
 import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -62,6 +76,7 @@ import Lens.Micro.Mtl (use, (%=), (.=))
 import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Imp.Common (expectJust)
 import Test.Cardano.Ledger.Plutus (PlutusArgs (..), ScriptTestContext (..), testingCostModels)
 import Test.Cardano.Ledger.Shelley.ImpTest as ImpTest
 
@@ -112,6 +127,21 @@ impLookupPlutusScript sh = do
     Just (ScriptTestContext plutus _) -> pure $ mkPlutusScript plutus
     Nothing -> pure Nothing
 
+impGetPlutusContexts ::
+  (ScriptsNeeded era ~ AlonzoScriptsNeeded era, EraUTxO era) =>
+  Tx era ->
+  ImpTestM
+    era
+    [(PlutusPurpose AsIxItem era, ScriptHash (EraCrypto era), ScriptTestContext)]
+impGetPlutusContexts tx = do
+  let txBody = tx ^. bodyTxL
+  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  let AlonzoScriptsNeeded asn = getScriptsNeeded utxo txBody
+  mbyContexts <- forM asn $ \(prp, sh) -> do
+    ctx <- getScriptTestContext sh
+    pure $ (prp,sh,) <$> ctx
+  pure $ catMaybes mbyContexts
+
 fixupPlutusScripts ::
   forall era.
   ( EraUTxO era
@@ -123,15 +153,28 @@ fixupPlutusScripts ::
   Tx era ->
   ImpTestM era (Tx era)
 fixupPlutusScripts tx = do
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  contexts <- impGetPlutusContexts tx
+  exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
   let
-    txBody = tx ^. bodyTxL
-    AlonzoScriptsNeeded asn = getScriptsNeeded utxo txBody
-  mbyContexts <- forM asn $ \(prp, sh) -> do
-    ctx <- getScriptTestContext sh
-    pure $ (prp,sh,) <$> ctx
+    mkNewRedeemers (prpIdx, _, ScriptTestContext _ (PlutusArgs dat _)) =
+      (hoistPlutusPurpose @era toAsIx prpIdx, (Data dat, exUnits))
+    Redeemers oldRedeemers = tx ^. witsTxL . rdmrsTxWitsL
+    newRedeemers = Map.fromList $ mkNewRedeemers <$> contexts
+  pure $
+    tx
+      & witsTxL . rdmrsTxWitsL <>~ Redeemers (Map.union oldRedeemers newRedeemers)
+
+fixupScriptWits ::
+  forall era.
+  ( ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , AlonzoEraScript era
+  , EraUTxO era
+  ) =>
+  Tx era ->
+  ImpTestM era (Tx era)
+fixupScriptWits tx = do
+  contexts <- impGetPlutusContexts tx
   let
-    contexts = catMaybes mbyContexts
     plutusToScript ::
       forall l.
       PlutusLanguage l =>
@@ -143,31 +186,43 @@ fixupPlutusScripts tx = do
         Nothing -> error "Plutus version not supported by era"
   scriptWits <- forM contexts $ \(_, sh, ScriptTestContext plutus _) ->
     (sh,) <$> plutusToScript plutus
-  exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
-  let
-    mkNewRedeemers (prpIdx, _, ScriptTestContext _ (PlutusArgs dat _)) =
-      (hoistPlutusPurpose @era toAsIx prpIdx, (Data dat, exUnits))
-    newRedeemers = Redeemers . Map.fromList $ mkNewRedeemers <$> contexts
-    mkTxDats (_, _, ScriptTestContext _ (PlutusArgs _ datum)) =
-      (\d -> (hashData d, d)) . Data <$> datum
-    txDats = mkTxDats <$> contexts
-    mkInputDats txIn =
-      case txinLookup txIn utxo of
-        Just txOut ->
-          case txOut ^. datumTxOutF of
-            Datum bin -> do
-              let dat = binaryDataToData bin
-              Just (hashData dat, dat)
-            _ -> Nothing
-        Nothing -> error $ "TxIn not found in the UTxO: " <> show txIn
-    inputDats = mkInputDats <$> toList (txBody ^. inputsTxBodyL)
   pure $
     tx
       & witsTxL . scriptTxWitsL <>~ Map.fromList scriptWits
-      & witsTxL . rdmrsTxWitsL <>~ newRedeemers
+
+fixupDatums ::
+  forall era.
+  ( HasCallStack
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , AlonzoEraTxWits era
+  , AlonzoEraUTxO era
+  , AlonzoEraTxOut era
+  , ShelleyEraImp era
+  ) =>
+  Tx era ->
+  ImpTestM era (Tx era)
+fixupDatums tx = do
+  contexts <- impGetPlutusContexts tx
+  scripts <- use impScriptsL
+  let
+    txOutScriptHash txOut
+      | Addr _ (ScriptHashObj sh) _ <- txOut ^. addrTxOutL = sh
+      | otherwise = error "TxOut does not have a payment script"
+    spendDatum (ScriptTestContext _ (PlutusArgs _ (Just d))) = Data d
+    spendDatum _ = error "Context does not have a spending datum"
+    filterInline (purpose, _, _) = do
+      AsItem txIn <- expectJust . toSpendingPurpose $ hoistPlutusPurpose toAsItem purpose
+      txOut <- impLookupUTxO @era txIn
+      pure $ case txOut ^. datumTxOutF of
+        DatumHash _dh -> spendDatum <$> Map.lookup (txOutScriptHash txOut) scripts
+        _ -> Nothing
+  datums <- traverse filterInline contexts
+  let TxDats prevDats = tx ^. witsTxL . datsTxWitsL
+  pure $
+    tx
       & witsTxL . datsTxWitsL
-        <>~ TxDats
-          (Map.fromList . catMaybes $ txDats ++ inputDats)
+        .~ TxDats
+          (Map.union prevDats $ fromElems hashData (catMaybes datums))
 
 fixupPPHash ::
   forall era.
@@ -203,6 +258,7 @@ alonzoFixupTx ::
   , AlonzoEraTxWits era
   , AlonzoEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , AlonzoEraUTxO era
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
@@ -211,6 +267,8 @@ alonzoFixupTx =
     >=> addCollateralInput
     >=> addRootTxIn
     >=> fixupPlutusScripts
+    >=> fixupScriptWits
+    >=> fixupDatums
     >=> fixupPPHash
     >=> fixupFees
     >=> updateAddrTxWits
