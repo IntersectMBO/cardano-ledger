@@ -35,12 +35,13 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))
-import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
+import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.KeyPair (mkScriptAddr)
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus (ScriptTestContext (ScriptTestContext), alwaysSucceedsPlutus)
 
 spec ::
   forall era.
@@ -90,7 +91,25 @@ spec = describe "UTxO" $ do
       nativeScripts <-
         (fromNativeScript @era <$>)
           <$> replicateM 3 nativeScript
-      let plutusScripts = [alwaysSucceeds @'PlutusV3 3, alwaysSucceeds @'PlutusV3 50]
+      psh1 <-
+        impAddPlutusScript $
+          ScriptTestContext
+            (alwaysSucceedsPlutus @'PlutusV3 3)
+            PlutusArgs
+              { paSpendDatum = Nothing
+              , paData = P.I 0
+              }
+      Just ps1 <- impLookupPlutusScript psh1
+      psh2 <-
+        impAddPlutusScript $
+          ScriptTestContext
+            (alwaysSucceedsPlutus @'PlutusV3 50)
+            PlutusArgs
+              { paSpendDatum = Nothing
+              , paData = P.I 1
+              }
+      Just ps2 <- impLookupPlutusScript psh2
+      let plutusScripts = [fromPlutusScript ps1, fromPlutusScript ps2]
       pure $ nativeScripts ++ plutusScripts
 
     conwayDiffMinFee :: Tx era -> ImpTestM era Coin
@@ -127,8 +146,8 @@ spec = describe "UTxO" $ do
       pure $ Map.fromList $ refIns `zip` scripts
 
     spendScriptUsingRefScripts :: TxIn (EraCrypto era) -> Set.Set (TxIn (EraCrypto era)) -> ImpTestM era (Tx era)
-    spendScriptUsingRefScripts scriptIn refIns = do
-      submitTx . mkBasicTx $
+    spendScriptUsingRefScripts scriptIn refIns =
+      submitTxAnn "spendScriptUsingRefScripts" . mkBasicTx $
         mkBasicTxBody
           & inputsTxBodyL @era .~ Set.singleton scriptIn
           & referenceInputsTxBodyL @era .~ refIns
@@ -136,7 +155,9 @@ spec = describe "UTxO" $ do
     nativeScript :: ImpTestM era (NativeScript era)
     nativeScript = do
       requiredKeyHash <- freshKeyHash
-      pure $ RequireAllOf (SSeq.singleton (RequireSignature @era requiredKeyHash))
+      let script = RequireAllOf (SSeq.singleton (RequireSignature @era requiredKeyHash))
+      _ <- impAddNativeScript script
+      pure script
 
     addScriptAddr :: NativeScript era -> ImpTestM era (Addr (EraCrypto era))
     addScriptAddr script = do

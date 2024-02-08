@@ -46,6 +46,8 @@ module Test.Cardano.Ledger.Imp.Common (
   expectLeftExpr,
   expectLeftDeep,
   expectLeftDeepExpr,
+  expectJust,
+  expectNothingExpr,
 
   -- * MonadGen
   module QuickCheckT,
@@ -297,6 +299,16 @@ shouldBeLeft e x = expectLeft e >>= (`shouldBe` x)
 -- | Same as `shouldBeExpr`, except it checks that the value is `Left`
 shouldBeLeftExpr :: (HasCallStack, ToExpr a, ToExpr b, Eq a, MonadIO m) => Either a b -> a -> m ()
 shouldBeLeftExpr e x = expectLeftExpr e >>= (`shouldBeExpr` x)
+
+expectJust :: (HasCallStack, MonadIO m) => Maybe a -> m a
+expectJust (Just x) = pure x
+expectJust Nothing = assertFailure "Expected Just, got Nothing"
+
+expectNothingExpr :: (HasCallStack, MonadIO m, ToExpr a) => Maybe a -> m ()
+expectNothingExpr (Just x) =
+  assertFailure $
+    "Expected Nothing, got Just:\n" <> show (toExpr x)
+expectNothingExpr Nothing = pure ()
 
 ---------------------------
 -- MonadGen alternatives --

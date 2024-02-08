@@ -2,6 +2,9 @@
 
 ## 1.13.0.0
 
+* Add:
+  * `transTxInInfoV1`
+  * `transTxOutV1`
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Remove `ConwayPOOL` rule, in favor of `ShelleyPOOL`
 * Add `NFData` instance for `BabbageUtxoPredFailure`
@@ -47,6 +50,7 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Conway.Imp.UtxosSpec`
 * Add `getGovPolicy`
 * Add `submitGovActions` and `trySubmitGovActions`
 * Add `submitProposals` and `trySubmitProposal`

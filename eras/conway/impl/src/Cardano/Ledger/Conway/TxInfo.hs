@@ -25,6 +25,8 @@ module Cardano.Ledger.Conway.TxInfo (
   transDRep,
   transScriptPurpose,
   transMap,
+  transTxInInfoV1,
+  transTxOutV1,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
@@ -44,6 +46,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   StrictMaybe (..),
   getVersion64,
+  isSJust,
   kindObject,
   strictMaybe,
  )
@@ -84,6 +87,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Mary (MaryValue)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Plutus.TxInfo (
@@ -99,8 +103,11 @@ import Cardano.Ledger.Plutus.TxInfo (
   transTxIn,
  )
 import Cardano.Ledger.PoolParams
+import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.UTxO (UTxO)
+import Control.Arrow (ArrowChoice (..))
 import Control.DeepSeq (NFData)
-import Control.Monad (unless, zipWithM)
+import Control.Monad (when, zipWithM)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
@@ -199,20 +206,51 @@ instance
     PlutusPurposeNotSupported purpose ->
       kindObject "PlutusPurposeNotSupported" ["purpose" .= toJSON purpose]
 
+-- | Given a TxOut, translate it for V2 and return (Right transalation).
+-- If the transaction contains any Byron addresses or Babbage features, return Left.
+transTxOutV1 ::
+  forall era.
+  ( Inject (BabbageContextError era) (ContextError era)
+  , Value era ~ MaryValue (EraCrypto era)
+  , BabbageEraTxOut era
+  ) =>
+  TxOutSource (EraCrypto era) ->
+  TxOut era ->
+  Either (ContextError era) PV1.TxOut
+transTxOutV1 txOutSource txOut = do
+  when (isSJust (txOut ^. dataTxOutL)) $ do
+    Left $ inject $ InlineDatumsNotSupported @era txOutSource
+  case Alonzo.transTxOut txOut of
+    Nothing -> Left $ inject $ ByronTxOutInContext @era txOutSource
+    Just plutusTxOut -> Right plutusTxOut
+
+-- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V1 context
+transTxInInfoV1 ::
+  forall era.
+  ( Inject (BabbageContextError era) (ContextError era)
+  , Value era ~ MaryValue (EraCrypto era)
+  , BabbageEraTxOut era
+  ) =>
+  UTxO era ->
+  TxIn (EraCrypto era) ->
+  Either (ContextError era) PV1.TxInInfo
+transTxInInfoV1 utxo txIn = do
+  txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
+  plutusTxOut <- transTxOutV1 (TxOutFromInput txIn) txOut
+  Right (PV1.TxInInfo (transTxIn txIn) plutusTxOut)
+
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
   toPlutusTxCert _ = transTxCertV1V2
 
   toPlutusScriptPurpose proxy = transPlutusPurposeV1V2 proxy . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
-    let refInputs = txBody ^. referenceInputsTxBodyL
-    unless (Set.null refInputs) $ Left $ inject $ ReferenceInputsNotSupported @(ConwayEra c) refInputs
-
     timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
-    inputs <- mapM (Babbage.transTxInInfoV1 utxo) (Set.toList (txBody ^. inputsTxBodyL))
+    inputs <- mapM (transTxInInfoV1 utxo) (Set.toList (txBody ^. inputsTxBodyL))
+    mapM_ (transTxInInfoV1 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-
       zipWithM
-        (Babbage.transTxOutV1 . TxOutFromOutput)
+        (transTxOutV1 . TxOutFromOutput)
         [minBound ..]
         (F.toList (txBody ^. outputsTxBodyL))
     txCerts <- Alonzo.transTxBodyCerts proxy txBody

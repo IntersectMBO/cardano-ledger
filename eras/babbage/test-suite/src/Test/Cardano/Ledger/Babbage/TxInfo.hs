@@ -17,7 +17,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..), transTxInInfoV2, transTxOutV2)
-import Cardano.Ledger.BaseTypes (Inject (..), Network (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Inject (..), Network (..), StrictMaybe (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto)
@@ -274,39 +274,43 @@ txInfoTestsV1 ::
 txInfoTestsV1 _ =
   testGroup
     "Plutus V1"
-    [ testCase "translation error on byron txout" $
-        expectV1TranslationError @era
-          (txBare shelleyInput byronOutput)
-          (inject $ ByronTxOutInContext @era (TxOutFromOutput minBound))
-    , testCase "translation error on byron txin" $
-        expectV1TranslationError @era
-          (txBare byronInput shelleyOutput)
-          (inject $ ByronTxOutInContext @era (TxOutFromInput byronInput))
-    , testCase "translation error on unknown txin (logic error)" $
-        expectV1TranslationError @era
-          (txBare unknownInput shelleyOutput)
-          (inject $ AlonzoContextError $ TranslationLogicMissingInput @era unknownInput)
-    , testCase "translation error on reference input" $
-        expectV1TranslationError @era
-          (txRefInput shelleyInput)
-          (inject $ ReferenceInputsNotSupported @era (Set.singleton shelleyInput))
-    , testCase "translation error on inline datum in input" $
-        expectV1TranslationError @era
-          (txBare inputWithInlineDatum shelleyOutput)
-          (inject $ InlineDatumsNotSupported @era (TxOutFromInput inputWithInlineDatum))
-    , testCase "translation error on inline datum in output" $
-        expectV1TranslationError @era
-          (txBare shelleyInput inlineDatumOutput)
-          (inject $ InlineDatumsNotSupported @era (TxOutFromOutput minBound))
-    , testCase "translation error on reference script in input" $
-        expectV1TranslationError @era
-          (txBare inputWithRefScript shelleyOutput)
-          (inject $ ReferenceScriptsNotSupported @era (TxOutFromInput inputWithRefScript))
-    , testCase "translation error on reference script in output" $
-        expectV1TranslationError @era
-          (txBare shelleyInput refScriptOutput)
-          (inject $ ReferenceScriptsNotSupported @era (TxOutFromOutput minBound))
-    ]
+    $ [ testCase "translation error on byron txout" $
+          expectV1TranslationError @era
+            (txBare shelleyInput byronOutput)
+            (inject $ ByronTxOutInContext @era (TxOutFromOutput minBound))
+      , testCase "translation error on byron txin" $
+          expectV1TranslationError @era
+            (txBare byronInput shelleyOutput)
+            (inject $ ByronTxOutInContext @era (TxOutFromInput byronInput))
+      , testCase "translation error on unknown txin (logic error)" $
+          expectV1TranslationError @era
+            (txBare unknownInput shelleyOutput)
+            (inject $ AlonzoContextError $ TranslationLogicMissingInput @era unknownInput)
+      , testCase "translation error on inline datum in input" $
+          expectV1TranslationError @era
+            (txBare inputWithInlineDatum shelleyOutput)
+            (inject $ InlineDatumsNotSupported @era (TxOutFromInput inputWithInlineDatum))
+      , testCase "translation error on inline datum in output" $
+          expectV1TranslationError @era
+            (txBare shelleyInput inlineDatumOutput)
+            (inject $ InlineDatumsNotSupported @era (TxOutFromOutput minBound))
+      ]
+      ++ if eraProtVerLow @era < natVersion @9
+        then
+          [ testCase "translation error on reference script in input" $
+              expectV1TranslationError @era
+                (txBare inputWithRefScript shelleyOutput)
+                (inject $ ReferenceScriptsNotSupported @era (TxOutFromInput inputWithRefScript))
+          , testCase "translation error on reference script in output" $
+              expectV1TranslationError @era
+                (txBare shelleyInput refScriptOutput)
+                (inject $ ReferenceScriptsNotSupported @era (TxOutFromOutput minBound))
+          , testCase "translation error on reference input" $
+              expectV1TranslationError @era
+                (txRefInput shelleyInput)
+                (inject $ ReferenceInputsNotSupported @era (Set.singleton shelleyInput))
+          ]
+        else []
 
 txInfoTestsV2 ::
   forall era l.

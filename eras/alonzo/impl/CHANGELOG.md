@@ -28,6 +28,13 @@
 
 ### `testlib`
 
+* Add:
+  * `impLookupPlutusScript`
+  * `fixupPPHash`
+  * `fixupPlutusScripts`
+  * `addCollateralInput`
+  * `impGetPlutusContexts`
+  * `fixupDatums`
 * Add `Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec`
 * Add `alonzoFixupTx`, `impAddPlutusScript`
 
