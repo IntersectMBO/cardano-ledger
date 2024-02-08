@@ -171,14 +171,18 @@ utxoTransition ::
   ( EraUTxO era
   , ShelleyEraTxBody era
   , AllegraEraTxBody era
-  , STS (AllegraUTXO era)
-  , Embed (EraRule "PPUP" era) (AllegraUTXO era)
+  , Eq (PPUPPredFailure era)
+  , Show (PPUPPredFailure era)
+  , Embed (EraRule "PPUP" era) (EraRule "UTXO" era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , GovState era ~ ShelleyGovState era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
+  , EraRule "UTXO" era ~ AllegraUTXO era
   ) =>
-  TransitionRule (AllegraUTXO era)
+  TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let Shelley.UTxOState utxo _ _ ppup _ _ = utxos
@@ -306,7 +310,10 @@ instance
   , ProtVerAtMost era 8
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
+  , EraRule "UTXO" era ~ AllegraUTXO era
   , GovState era ~ ShelleyGovState era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure era
   ) =>
   STS (AllegraUTXO era)
   where

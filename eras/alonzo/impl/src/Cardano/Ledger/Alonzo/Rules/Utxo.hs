@@ -488,15 +488,17 @@ utxoTransition ::
   forall era.
   ( EraUTxO era
   , AlonzoEraTx era
-  , STS (AlonzoUTXO era)
-  , -- instructions for calling UTXOS from AlonzoUTXO
-    Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
+  , ProtVerAtMost era 8
+  , EraRule "UTXO" era ~ AlonzoUTXO era
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
+  , Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
-  , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  TransitionRule (AlonzoUTXO era)
+  TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
   TRC (UtxoEnv slot pp dpstate, utxos, tx) <- judgmentContext
   let utxo = utxosUtxo utxos
@@ -577,7 +579,10 @@ instance
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
-  , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
+  , EraRule "UTXO" era ~ AlonzoUTXO era
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXO era)

@@ -96,6 +96,9 @@ instance
   , ConwayEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , EraRule "UTXOW" era ~ ConwayUTXOW era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (ConwayUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era

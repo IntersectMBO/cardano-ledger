@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -361,7 +362,11 @@ utxoTransition ::
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
-  , STS (BabbageUTXO era)
+  , EraRule "UTXO" era ~ BabbageUTXO era
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (BabbageUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
@@ -369,7 +374,7 @@ utxoTransition ::
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  TransitionRule (BabbageUTXO era)
+  TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let utxo = utxosUtxo utxos
@@ -454,6 +459,11 @@ instance
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
+  , EraRule "UTXO" era ~ BabbageUTXO era
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , -- instructions for calling UTXOS from BabbageUTXO
     Embed (EraRule "UTXOS" era) (BabbageUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
@@ -472,7 +482,7 @@ instance
   type Event (BabbageUTXO era) = AlonzoUtxoEvent era
 
   initialRules = []
-  transitionRules = [utxoTransition]
+  transitionRules = [utxoTransition @era]
 
 instance
   ( Era era

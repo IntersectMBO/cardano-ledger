@@ -58,6 +58,8 @@ instance
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
+  , EraRule "UTXOW" era ~ AllegraUTXOW era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
   STS (AllegraUTXOW era)

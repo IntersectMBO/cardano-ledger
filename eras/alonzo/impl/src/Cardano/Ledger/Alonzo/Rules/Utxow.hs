@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -327,13 +328,16 @@ alonzoStyleWitness ::
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , EraRule "UTXOW" era ~ AlonzoUTXOW era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
   ) =>
-  TransitionRule (AlonzoUTXOW era)
+  TransitionRule (EraRule "UTXOW" era)
 alonzoStyleWitness = do
   TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx) <- judgmentContext
 
@@ -417,6 +421,9 @@ instance
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , EraRule "UTXOW" era ~ AlonzoUTXOW era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
@@ -431,7 +438,7 @@ instance
   type BaseM (AlonzoUTXOW era) = ShelleyBase
   type PredicateFailure (AlonzoUTXOW era) = AlonzoUtxowPredFailure era
   type Event (AlonzoUTXOW era) = AlonzoUtxowEvent era
-  transitionRules = [alonzoStyleWitness]
+  transitionRules = [alonzoStyleWitness @era]
   initialRules = []
 
 instance

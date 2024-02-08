@@ -72,6 +72,8 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
+  Rule,
+  RuleType (Transition),
   STS (..),
   TRC (..),
   TransitionRule,
@@ -296,11 +298,15 @@ babbageUtxowMirTransition ::
   forall era.
   ( AlonzoEraTx era
   , ShelleyEraTxBody era
-  , STS (BabbageUTXOW era)
+  , STS (EraRule "UTXOW" era)
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
   ) =>
-  TransitionRule (BabbageUTXOW era)
+  Rule (EraRule "UTXOW" era) 'Transition ()
 babbageUtxowMirTransition = do
-  TRC (UtxoEnv _ _ certState, st, tx) <- judgmentContext
+  TRC (UtxoEnv _ _ certState, _, tx) <- judgmentContext
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum  -}
@@ -309,7 +315,6 @@ babbageUtxowMirTransition = do
   coreNodeQuorum <- liftSTS $ asks quorum
   runTest $
     Shelley.validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
-  pure st
 
 -- | UTXOW transition rule that is used in Babbage and Conway era.
 babbageUtxowTransition ::
@@ -322,9 +327,9 @@ babbageUtxowTransition ::
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Inject (BabbageUtxowPredFailure era) (PredicateFailure (EraRule "UTXOW" era))
-  , Inject (AlonzoUtxowPredFailure era) (PredicateFailure (EraRule "UTXOW" era))
-  , Inject (ShelleyUtxowPredFailure era) (PredicateFailure (EraRule "UTXOW" era))
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (EraRule "UTXOW" era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
@@ -406,6 +411,9 @@ instance
   , BabbageEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , EraRule "UTXOW" era ~ BabbageUTXOW era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
@@ -422,7 +430,7 @@ instance
   type BaseM (BabbageUTXOW era) = ShelleyBase
   type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPredFailure era
   type Event (BabbageUTXOW era) = AlonzoUtxowEvent era
-  transitionRules = [babbageUtxowMirTransition >> babbageUtxowTransition @era]
+  transitionRules = [babbageUtxowMirTransition @era >> babbageUtxowTransition @era]
   initialRules = []
 
 instance

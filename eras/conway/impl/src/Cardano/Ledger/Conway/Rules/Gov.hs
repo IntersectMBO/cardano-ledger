@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -227,7 +228,13 @@ instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
 data ConwayGovEvent era
   = GovNewProposals !(TxId (EraCrypto era)) !(Proposals era)
 
-instance ConwayEraPParams era => STS (ConwayGOV era) where
+instance
+  ( ConwayEraPParams era
+  , EraRule "GOV" era ~ ConwayGOV era
+  , InjectRuleFailure "GOV" ConwayGovPredFailure era
+  ) =>
+  STS (ConwayGOV era)
+  where
   type State (ConwayGOV era) = Proposals era
   type Signal (ConwayGOV era) = GovProcedures era
   type Environment (ConwayGOV era) = GovEnv era
@@ -237,7 +244,7 @@ instance ConwayEraPParams era => STS (ConwayGOV era) where
 
   initialRules = []
 
-  transitionRules = [govTransition]
+  transitionRules = [govTransition @era]
 
 checkVotesAreNotForExpiredActions ::
   EpochNo ->
@@ -301,8 +308,17 @@ checkPolicy expectedPolicyHash actualPolicyHash =
 
 govTransition ::
   forall era.
-  ConwayEraPParams era =>
-  TransitionRule (ConwayGOV era)
+  ( ConwayEraPParams era
+  , STS (EraRule "GOV" era)
+  , Event (EraRule "GOV" era) ~ ConwayGovEvent era
+  , Signal (EraRule "GOV" era) ~ GovProcedures era
+  , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
+  , BaseM (EraRule "GOV" era) ~ ShelleyBase
+  , Environment (EraRule "GOV" era) ~ GovEnv era
+  , State (EraRule "GOV" era) ~ Proposals era
+  , InjectRuleFailure "GOV" ConwayGovPredFailure era
+  ) =>
+  TransitionRule (EraRule "GOV" era)
 govTransition = do
   TRC
     ( GovEnv txid currentEpoch pp prevGovActionIds constitutionPolicy

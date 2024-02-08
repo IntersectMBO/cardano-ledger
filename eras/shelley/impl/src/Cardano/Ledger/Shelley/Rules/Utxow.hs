@@ -295,23 +295,23 @@ initialLedgerStateUTXOW = do
 --   Note the 'embed' argument lifts from the simple Shelley (ShelleyUtxowPredFailure) to
 --   the PredicateFailure (type family) of the context of where it is called.
 transitionRulesUTXOW ::
-  forall era utxow.
+  forall era.
   ( EraUTxO era
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
-  , BaseM (utxow era) ~ ShelleyBase
-  , Embed (EraRule "UTXO" era) (utxow era)
+  , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
+  , Embed (EraRule "UTXO" era) (EraRule "UTXOW" era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
-  , Environment (utxow era) ~ UtxoEnv era
-  , State (utxow era) ~ UTxOState era
-  , Signal (utxow era) ~ Tx era
-  , PredicateFailure (utxow era) ~ ShelleyUtxowPredFailure era
-  , STS (utxow era)
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , STS (EraRule "UTXOW" era)
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
-  TransitionRule (utxow era)
+  TransitionRule (EraRule "UTXOW" era)
 transitionRulesUTXOW = do
   (TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx)) <- judgmentContext
 
@@ -373,6 +373,8 @@ instance
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
+  , EraRule "UTXOW" era ~ ShelleyUTXOW era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , EraGov era
   ) =>

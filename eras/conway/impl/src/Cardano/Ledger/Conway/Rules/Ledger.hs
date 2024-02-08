@@ -446,6 +446,7 @@ instance
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
+  , EraRule "GOV" era ~ ConwayGOV era
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , EraGov era
@@ -460,6 +461,8 @@ instance
   , BaseM (ConwayLEDGER era) ~ ShelleyBase
   , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
   , Event (EraRule "GOV" era) ~ ConwayGovEvent era
+  , EraRule "GOV" era ~ ConwayGOV era
+  , InjectRuleFailure "GOV" ConwayGovPredFailure era
   ) =>
   Embed (ConwayGOV era) (ConwayLEDGER era)
   where
