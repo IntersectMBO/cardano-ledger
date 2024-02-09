@@ -9,7 +9,24 @@ If you are looking for the Ledger Releasing and Versioning Process then you can 
 
 ## 8.8
 
-- Remove the library libs/cardano-ledger-pretty
+- Full PlutusV3 support
+- Support for governance policy script
+- Remove the library `cardano-ledger-pretty`
+- Ensure all sets are prefixed with tag 258 in CBOR serialization
+- Added DRep injections into the ledger state, thus allowing more complex testing and
+  benchmarking of Conway features
+- Addition of new ledger events
+- Increasing the limit for Url in Anchors to 128 bytes
+- Provide accurate transaction fee estimation functionality for Haskell tools
+- Important bug fixes:
+
+  - missing `"protocolVersion"` field in JSON instance for Babbage and Conway protocol parameters
+  - requiring witnesses for DRep registration
+  - new committee governance action ratification was implemented incorrectly
+  - guard against invalid protocol versions in hard fork initiation proposals
+  - failures during updates of Plutus CostModels were not retained
+  - fixed the types for some protocol parameters in order to prevent values that are too large
+  - serialization and CDDL fixes for transaction witnesses in the Conway Era
 
 ## 8.7
 
