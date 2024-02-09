@@ -298,7 +298,7 @@ feesOK pp tx u@(UTxO utxo) =
       minFee = getMinFeeTxUtxo pp tx u
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txb
-          failureUnless (minFee <= theFee) (inject (FeeTooSmallUTxO @era minFee theFee))
+          failureUnless (minFee <= theFee) (FeeTooSmallUTxO minFee theFee)
         , -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
           unless (nullRedeemers (tx ^. witsTxL . rdmrsTxWitsL)) $
             validateCollateral pp txBody utxoCollateral
@@ -723,21 +723,6 @@ instance
 -- =====================================================
 -- Injecting from one PredicateFailure to another
 
-instance Inject (AlonzoUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
-  inject = id
-
-instance
-  PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era =>
-  Inject (AlonzoUtxosPredFailure era) (AlonzoUtxoPredFailure era)
-  where
-  inject = UtxosFailure
-
-instance
-  Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (AllegraUtxoPredFailure era) (AlonzoUtxoPredFailure era)
-  where
-  inject = allegraToAlonzoUtxoPredFailure
-
 allegraToAlonzoUtxoPredFailure ::
   Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
   AllegraUtxoPredFailure era ->
@@ -756,9 +741,3 @@ allegraToAlonzoUtxoPredFailure = \case
   Allegra.OutputBootAddrAttrsTooBig xs -> OutputTooBigUTxO (map (0,0,) xs)
   Allegra.TriesToForgeADA -> TriesToForgeADA
   Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
-
-instance
-  Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (ShelleyUtxoPredFailure era) (AlonzoUtxoPredFailure era)
-  where
-  inject = allegraToAlonzoUtxoPredFailure . shelleyToAllegraUtxoPredFailure

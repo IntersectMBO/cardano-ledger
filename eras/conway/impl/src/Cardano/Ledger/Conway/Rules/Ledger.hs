@@ -38,7 +38,7 @@ import Cardano.Ledger.Babbage.Rules (
  )
 import Cardano.Ledger.Babbage.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes (Inject (..), ShelleyBase, StrictMaybe (..), epochInfoPure)
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
@@ -468,21 +468,3 @@ instance
   where
   wrapFailed = ConwayGovFailure
   wrapEvent = GovEvent
-
-instance
-  PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era =>
-  Inject (ConwayGovPredFailure era) (ConwayLedgerPredFailure era)
-  where
-  inject = ConwayGovFailure
-
-instance
-  PredicateFailure (EraRule "UTXOW" era) ~ BabbageUtxowPredFailure era =>
-  Inject (BabbageUtxowPredFailure era) (ConwayLedgerPredFailure era)
-  where
-  inject = ConwayUtxowFailure
-
-instance
-  PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era =>
-  Inject (ConwayCertsPredFailure era) (ConwayLedgerPredFailure era)
-  where
-  inject = ConwayCertsFailure

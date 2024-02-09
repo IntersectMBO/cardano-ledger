@@ -28,7 +28,6 @@ import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraEra, AllegraUTXO)
 import Cardano.Ledger.Allegra.Scripts (inInterval)
 import Cardano.Ledger.BaseTypes (
-  Inject (..),
   Network,
   ProtVer (pvMajor),
   ShelleyBase,
@@ -453,15 +452,6 @@ instance
           outs <- decCBOR
           pure (2, OutputTooBigUTxO outs)
         k -> invalidKey k
-
--- ===============================================
--- Inject instances
-
-instance Inject (AllegraUtxoPredFailure era) (AllegraUtxoPredFailure era) where
-  inject = id
-
-instance Inject (Shelley.ShelleyUtxoPredFailure era) (AllegraUtxoPredFailure era) where
-  inject = shelleyToAllegraUtxoPredFailure
 
 shelleyToAllegraUtxoPredFailure :: Shelley.ShelleyUtxoPredFailure era -> AllegraUtxoPredFailure era
 shelleyToAllegraUtxoPredFailure = \case

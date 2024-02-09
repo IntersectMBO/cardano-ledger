@@ -45,7 +45,7 @@ import Cardano.Ledger.Address (
   getNetwork,
   raNetwork,
  )
-import Cardano.Ledger.BaseTypes (Inject (..), Network, ShelleyBase, StrictMaybe, invalidKey, networkId)
+import Cardano.Ledger.BaseTypes (Network, ShelleyBase, StrictMaybe, invalidKey, networkId)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -653,14 +653,3 @@ instance
   where
   wrapFailed = UpdateFailure
   wrapEvent = UpdateEvent
-
--- =================================
-
-instance
-  PPUPPredFailure era ~ ShelleyPpupPredFailure era =>
-  Inject (ShelleyPpupPredFailure era) (ShelleyUtxoPredFailure era)
-  where
-  inject = UpdateFailure
-
-instance Inject (ShelleyUtxoPredFailure era) (ShelleyUtxoPredFailure era) where
-  inject = id

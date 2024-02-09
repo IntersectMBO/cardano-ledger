@@ -60,7 +60,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyPpupPredFailure,
@@ -454,12 +454,3 @@ instance
   where
   wrapFailed = ShelleyInAlonzoUtxowPredFailure . UtxoFailure
   wrapEvent = WrappedShelleyEraEvent . UtxoEvent
-
--- ==========================================================
--- inject instances
-
-instance Inject (AlonzoUtxowPredFailure era) (AlonzoUtxowPredFailure era) where
-  inject = id
-
-instance Inject (ShelleyUtxowPredFailure era) (AlonzoUtxowPredFailure era) where
-  inject = ShelleyInAlonzoUtxowPredFailure

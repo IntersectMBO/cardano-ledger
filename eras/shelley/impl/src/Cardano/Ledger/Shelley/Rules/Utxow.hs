@@ -66,7 +66,6 @@ import Cardano.Ledger.Keys (
   verifyBootstrapWit,
  )
 import Cardano.Ledger.Rules.ValidationMode (
-  Inject (..),
   Test,
   runTest,
   runTestOnSignal,
@@ -548,22 +547,6 @@ validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKey
    in failureUnless
         (not (null mirCerts) ==> Set.size genSig >= fromIntegral coreNodeQuorum)
         $ MIRInsufficientGenesisSigsUTXOW genSig
-
--- ===================================================
--- Inject Instances
-
-instance Inject (ShelleyUtxowPredFailure era) (ShelleyUtxowPredFailure era) where
-  inject = id
-
-instance
-  PredicateFailure (EraRule "UTXO" era) ~ ShelleyUtxoPredFailure era =>
-  Inject (ShelleyUtxoPredFailure era) (ShelleyUtxowPredFailure era)
-  where
-  inject = UtxoFailure
-
--- instance EraRuleFailure "UTXOW" ShelleyUtxoPredFailure (ShelleyEra c) where
---   type RuleFailure "UTXOW" (ShelleyEra c) = ShelleyUtxowPredFailure (ShelleyEra c)
---   injectFailure = UtxoFailure
 
 -- | Deprecated.
 proposedUpdatesWitnesses ::

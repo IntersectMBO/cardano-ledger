@@ -62,12 +62,11 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Rules.ValidationMode (
-  Inject (..),
   Test,
   runTest,
   runTestOnSignal,
  )
-import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure, UTxOState (utxosUtxo))
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (utxosUtxo))
 import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxoPredFailure, UtxoEnv)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn)
@@ -173,27 +172,6 @@ instance
   ) =>
   NFData (BabbageUtxoPredFailure era)
 
--- ===============================================
--- Inject instances
-
-instance Inject (AlonzoUtxoPredFailure era) (BabbageUtxoPredFailure era) where
-  inject = AlonzoInBabbageUtxoPredFailure
-
-instance Inject (BabbageUtxoPredFailure era) (BabbageUtxoPredFailure era) where
-  inject = id
-
-instance
-  Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (AllegraUtxoPredFailure era) (BabbageUtxoPredFailure era)
-  where
-  inject = AlonzoInBabbageUtxoPredFailure . inject
-
-instance
-  Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (ShelleyUtxoPredFailure era) (BabbageUtxoPredFailure era)
-  where
-  inject = AlonzoInBabbageUtxoPredFailure . inject
-
 -- =======================================================
 
 -- | feesOK is a predicate with several parts. Some parts only apply in special circumstances.
@@ -213,15 +191,17 @@ instance
 --   This version is generic in that it can be lifted to any PredicateFailure type that
 --   embeds BabbageUtxoPred era. This makes it possibly useful in future Eras.
 feesOK ::
-  forall era.
+  forall era rule.
   ( EraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
+  , EraRuleFailure rule era ~ BabbageUtxoPredFailure era
+  , InjectRuleFailure rule AlonzoUtxoPredFailure era
   ) =>
   PParams era ->
   Tx era ->
   UTxO era ->
-  Test (BabbageUtxoPredFailure era)
+  Test (EraRuleFailure rule era)
 feesOK pp tx u@(UTxO utxo) =
   let txBody = tx ^. bodyTxL
       collateral' = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
@@ -231,7 +211,7 @@ feesOK pp tx u@(UTxO utxo) =
       minFee = getMinFeeTxUtxo pp tx u
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txBody
-          failureUnless (minFee <= theFee) (inject (FeeTooSmallUTxO @era minFee theFee))
+          failureUnless (minFee <= theFee) (injectFailure $ FeeTooSmallUTxO minFee theFee)
         , -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
           unless (nullRedeemers $ tx ^. witsTxL . rdmrsTxWitsL) $
             validateTotalCollateral pp txBody utxoCollateral
@@ -253,12 +233,15 @@ disjointRefInputs pp inputs refInputs =
     common = inputs `Set.intersection` refInputs
 
 validateTotalCollateral ::
-  forall era.
-  BabbageEraTxBody era =>
+  forall era rule.
+  ( BabbageEraTxBody era
+  , InjectRuleFailure rule AlonzoUtxoPredFailure era
+  , EraRuleFailure rule era ~ BabbageUtxoPredFailure era
+  ) =>
   PParams era ->
   TxBody era ->
   Map.Map (TxIn (EraCrypto era)) (TxOut era) ->
-  Test (BabbageUtxoPredFailure era)
+  Test (EraRuleFailure rule era)
 validateTotalCollateral pp txBody utxoCollateral =
   sequenceA_
     [ -- Part 3: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
@@ -275,7 +258,7 @@ validateTotalCollateral pp txBody utxoCollateral =
     ]
   where
     bal = collAdaBalance txBody utxoCollateral
-    fromAlonzoValidation = first (fmap inject)
+    fromAlonzoValidation = first (fmap injectFailure)
 
 -- | This validation produces the same failure as in Alonzo, but is slightly
 -- different then the corresponding one in Alonzo, since it is possible to add
@@ -372,7 +355,6 @@ utxoTransition ::
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
-  , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
@@ -469,7 +451,6 @@ instance
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
-  , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
   , PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era
   ) =>
   STS (BabbageUTXO era)
