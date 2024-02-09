@@ -28,7 +28,7 @@ import Constrained
 import Test.Cardano.Ledger.Constrained.V2.Conway
 import Test.Cardano.Ledger.Constrained.V2.Conway.PParams
 
-utxoEnvSpec :: IsConwayUniv fn => Spec fn (UtxoEnv (ConwayEra StandardCrypto))
+utxoEnvSpec :: ConwayUniverse fn => Spec fn (UtxoEnv (ConwayEra StandardCrypto))
 utxoEnvSpec =
   constrained $ \utxoEnv ->
     match utxoEnv $
@@ -76,7 +76,7 @@ utxoEnvSpec =
           ]
 
 utxoStateSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   UtxoEnv (ConwayEra StandardCrypto) ->
   Spec fn (UTxOState (ConwayEra StandardCrypto))
 utxoStateSpec _env =
@@ -94,7 +94,7 @@ utxoStateSpec _env =
           ]
 
 utxoTxSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   UtxoEnv (ConwayEra StandardCrypto) ->
   UTxOState (ConwayEra StandardCrypto) ->
   Spec fn (Tx (ConwayEra StandardCrypto))
@@ -163,12 +163,12 @@ utxoTxSpec env st =
                   ]
               , onJust' ctbTxNetworkId (==. lit Testnet)
               , onJust' ctbCollateralReturn $ flip onSized correctAddrAndWFCoin
-              , assert $ size_ ctbCollateralInputs <=. lit (fromIntegral $ uePParams env ^. ppMaxCollateralInputsL)
+              , assert $ sizeOf_ ctbCollateralInputs <=. lit (fromIntegral $ uePParams env ^. ppMaxCollateralInputsL)
               ]
       ]
 
 correctAddrAndWFCoin ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   Term fn (TxOut (ConwayEra StandardCrypto)) ->
   Pred fn
 correctAddrAndWFCoin txOut =

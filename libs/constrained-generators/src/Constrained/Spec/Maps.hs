@@ -1,9 +1,12 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -32,10 +35,17 @@ import Constrained.Univ
 -- HasSpec
 ------------------------------------------------------------------------
 
+mapSize :: Map k v -> Size
+mapSize s = Size (fromIntegral (Map.size s))
+
+instance Ord a => Sized (Map.Map a b) where
+  sizeOf = mapSize
+  liftSizeSpec sizespec@(SizeSpec _) = TypeSpec (MapSpec mempty mempty (typeSpec sizespec) TrueSpec NoFold) []
+
 data MapSpec fn k v = MapSpec
   { mapSpecMustKeys :: Set k
   , mapSpecMustValues :: [v]
-  , mapSpecSize :: Spec fn Int
+  , mapSpecSize :: Spec fn Size
   , mapSpecElem :: Spec fn (k, v)
   , mapSpecFold :: FoldSpec fn v
   }
@@ -76,7 +86,7 @@ instance
     and
       [ mustKeys `Set.isSubsetOf` Map.keysSet m
       , all (`elem` Map.elems m) mustVals
-      , Map.size m `conformsToSpec` size
+      , mapSize m `conformsToSpec` size
       , all (`conformsToSpec` kvs) (Map.toList m)
       , Map.elems m `conformsToFoldSpec` foldSpec
       ]
@@ -89,7 +99,7 @@ instance
     let haveVals = map snd mustMap
         mustVals' = filter (`notElem` haveVals) mustVals
         size' = constrained $ \sz ->
-          satisfies (sz + Lit (length mustMap)) (size <> specSizeBound (mapSpec fstFn $ mapSpec toGenericFn kvs))
+          satisfies (app plusFn sz (Lit (listSize mustMap))) (size <> specSizeBound (mapSpec fstFn $ mapSpec toGenericFn kvs))
         foldSpec' = case foldSpec of
           NoFold -> NoFold
           FoldSpec fn sumSpec -> FoldSpec fn $ propagateSpecFun (theAddFn @fn) (HOLE :? Value mustSum :> Nil) sumSpec
@@ -143,7 +153,7 @@ instance
 -- Functions
 ------------------------------------------------------------------------
 
-instance (Member (MapFn fn) fn, IsUniverse fn) => Functions (MapFn fn) fn where
+instance (Member (MapFn fn) fn, BaseUniverse fn) => Functions (MapFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
@@ -161,7 +171,7 @@ instance (Member (MapFn fn) fn, IsUniverse fn) => Functions (MapFn fn) fn where
           , Evidence <- prerequisites @fn @(Map k v) ->
               case spec of
                 MemberSpec [s] ->
-                  typeSpec $ MapSpec s [] (equalSpec $ Set.size s) TrueSpec NoFold
+                  typeSpec $ MapSpec s [] (exactSizeSpec $ setSize s) TrueSpec NoFold
                 TypeSpec (SetSpec must elemspec size) [] ->
                   typeSpec $ MapSpec must [] size (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec) NoFold
                 _ -> ErrorSpec ["Dom on bad map spec", show spec]
@@ -173,7 +183,7 @@ instance (Member (MapFn fn) fn, IsUniverse fn) => Functions (MapFn fn) fn where
           , Evidence <- prerequisites @fn @(Map k v) ->
               case spec of
                 MemberSpec [r] ->
-                  typeSpec $ MapSpec Set.empty r (equalSpec $ length r) TrueSpec NoFold
+                  typeSpec $ MapSpec Set.empty r (equalSpec $ listSize [r]) TrueSpec NoFold
                 TypeSpec (ListSpec must size elemspec foldspec) [] ->
                   typeSpec $ MapSpec Set.empty must size (constrained $ \kv -> satisfies (app (sndFn @fn) (app (toGenericFn @fn) kv)) elemspec) foldspec
                 _ -> ErrorSpec ["Rng on bad map spec", show spec]

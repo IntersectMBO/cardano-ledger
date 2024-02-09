@@ -21,5 +21,5 @@ import Constrained.Spec.Maps as X
 import Constrained.Spec.Pairs as X
 import Constrained.Univ
 
-type DefaultFns = '[ListFn, SumFn, MapFn, SetFn, FunFn, GenericsFn, PairFn, IntFn, BoolFn, EqFn, OrdFn]
+type DefaultFns = '[ListFn, SumFn, MapFn, SetFn, FunFn, GenericsFn, PairFn, IntFn, BoolFn, EqFn, OrdFn, SizeFn]
 type Fn = Fix (OneofL DefaultFns)

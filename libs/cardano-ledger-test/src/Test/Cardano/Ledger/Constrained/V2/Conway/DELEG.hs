@@ -15,21 +15,27 @@ import qualified Data.Map as Map
 import Lens.Micro
 
 import Constrained
+import Constrained.Base (Term (..))
 
 import Test.Cardano.Ledger.Constrained.V2.Conway
 
 dStateSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   Spec fn (DState (ConwayEra StandardCrypto))
 dStateSpec = constrained $ \ds ->
-  match ds $ \rewardMap _futureGenDelegs _genDelegs _rewards ->
+  match ds $ \rewardMap futureGenDelegs genDelegs irewards ->
     match rewardMap $ \rdMap ptrMap sPoolMap _dRepMap ->
-      [ assertExplain ["dom sPoolMap is a subset of dom rdMap"] $ dom_ sPoolMap `subset_` dom_ rdMap
-      , assertExplain ["dom ptrMap is empty"] $ dom_ ptrMap ==. mempty
-      ]
+      match genDelegs $ \gd ->
+        [ assertExplain ["dom sPoolMap is a subset of dom rdMap"] $ dom_ sPoolMap `subset_` dom_ rdMap
+        , assertExplain ["dom ptrMap is empty"] $ dom_ ptrMap ==. mempty
+        , assertExplain ["GenDelegs is empty in Conway"] $ dom_ gd ==. Lit mempty
+        , assertExplain ["InstantaneousRewards were removed in Conway"] $
+            irewards ==. Lit (InstantaneousRewards Map.empty Map.empty mempty mempty)
+        , assertExplain ["FutureGenDelegs were removed in Conway"] $ dom_ futureGenDelegs ==. Lit mempty
+        ]
 
 delegCertSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   PParams (ConwayEra StandardCrypto) ->
   DState (ConwayEra StandardCrypto) ->
   Spec fn (ConwayDelegCert StandardCrypto)

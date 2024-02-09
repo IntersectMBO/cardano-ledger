@@ -2,12 +2,17 @@
 module Test.Cardano.Ledger.EraClass (
   Era (EraCrypto),
   -- Tx
+  -- EraTx implies EraTxBody, EraTxWits, EraTxAuxData, EraPParams
   EraTx (Tx, mkBasicTx, bodyTxL, witsTxL),
   AlonzoEraTx (isValidTxL),
   -- TxBody
+  -- EraTxBody implies EraTxOut, EraTxCert era, EraPParams era,
   EraTxBody (TxBody, mkBasicTxBody, inputsTxBodyL, outputsTxBodyL, feeTxBodyL, withdrawalsTxBodyL, auxDataHashTxBodyL, certsTxBodyL),
+  -- AllegraEraTxBody implies  EraTxBody
   AllegraEraTxBody (vldtTxBodyL),
+  -- MaryTxBody implies EraTxBody
   MaryEraTxBody (mintTxBodyL, mintValueTxBodyF, mintedTxBodyF),
+  -- AlonzoEraTxBody implies MaryEraTxBody, AlonzoEraTxOut
   AlonzoEraTxBody (
     collateralInputsTxBodyL,
     reqSignerHashesTxBodyL,
@@ -16,6 +21,16 @@ module Test.Cardano.Ledger.EraClass (
     redeemerPointer,
     redeemerPointerInverse
   ),
+  -- BabbageEraxBody implies AlonzoEraTxBody, BabbageEraTxOut
+  BabbageEraTxBody (
+    sizedOutputsTxBodyL,
+    referenceInputsTxBodyL,
+    totalCollateralTxBodyL,
+    collateralReturnTxBodyL,
+    sizedCollateralReturnTxBodyL,
+    allSizedOutputsTxBodyF
+  ),
+  --  ConwayEraTxBody implies BabbageEraTxBody, ConwayEraTxCert, ConwayEraPParams, ConwayEraScript
   ConwayEraTxBody (currentTreasuryValueTxBodyL, votingProceduresTxBodyL, proposalProceduresTxBodyL, treasuryDonationTxBodyL),
   -- TxOut
   EraTxOut (TxOut, mkBasicTxOut, valueTxOutL, compactValueTxOutL, valueEitherTxOutL, addrTxOutL, compactAddrTxOutL, addrEitherTxOutL),
@@ -24,6 +39,7 @@ module Test.Cardano.Ledger.EraClass (
   coinTxOutL,
   -- TxWits
   EraTxWits (TxWits, mkBasicTxWits, addrTxWitsL, bootAddrTxWitsL, scriptTxWitsL),
+  -- AlonzoEraTxWits implies EraTxWits, AlonzoEraScript
   AlonzoEraTxWits (datsTxWitsL, rdmrsTxWitsL),
   -- TxAuxData
   EraTxAuxData (TxAuxData, hashTxAuxData, validateTxAuxData),
@@ -41,6 +57,20 @@ module Test.Cardano.Ledger.EraClass (
     getTotalDepositsTxCerts,
     getTotalRefundsTxCerts
   ),
+  -- ShelleyEraTxCert implies EraTxCert
+  ShelleyEraTxCert (
+    mkRegTxCert,
+    getRegTxCert,
+    mkUnRegTxCert,
+    getUnRegTxCert,
+    mkDelegStakeTxCert,
+    getDelegStakeTxCert,
+    mkGenesisDelegTxCert,
+    getGenesisDelegTxCert,
+    mkMirTxCert,
+    getMirTxCert
+  ),
+  -- ConwayEraTxCert implies ShelleyEraTxCert
   ConwayEraTxCert (
     mkRegDepositTxCert,
     getRegDepositTxCert,
@@ -139,18 +169,40 @@ module Test.Cardano.Ledger.EraClass (
   -- Scripts
   EraScript (Script, NativeScript, getNativeScript, fromNativeScript),
   hashScript,
+  -- AlonzoEraScript implies EraScript
+  AlonzoEraScript (
+    eraMaxLanguage,
+    mkPlutusScript,
+    withPlutusScript,
+    hoistPlutusPurpose,
+    mkSpendingPurpose,
+    toSpendingPurpose,
+    mkMintingPurpose,
+    toMintingPurpose,
+    mkCertifyingPurpose,
+    toCertifyingPurpose,
+    mkRewardingPurpose,
+    toRewardingPurpose,
+    upgradePlutusPurposeAsIx
+  ),
+  -- ConwayEraScript implies AlonzoEraScript
+  ConwayEraScript (mkVotingPurpose, toVotingPurpose, mkProposingPurpose, toProposingPurpose),
 ) where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..))
 import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.Babbage.PParams (BabbageEraPParams (..), ppCoinsPerUTxOByteL, ppuCoinsPerUTxOByteL)
+import Cardano.Ledger.Babbage.TxBody (BabbageEraTxBody (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..))
 import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Conway.Scripts (ConwayEraScript (..))
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
+import Cardano.Ledger.Shelley.TxCert (ShelleyEraTxCert (..))

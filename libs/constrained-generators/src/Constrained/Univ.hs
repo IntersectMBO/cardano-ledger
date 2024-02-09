@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -133,14 +134,24 @@ instance FunctionLike (EqFn fn) where
 notFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool] Bool
 notFn = injectFn $ Not @fn
 
+andFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool, Bool] Bool
+andFn = injectFn $ And @fn
+
+orFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool, Bool] Bool
+orFn = injectFn $ Or @fn
+
 data BoolFn (fn :: [Type] -> Type -> Type) as b where
   Not :: BoolFn fn '[Bool] Bool
+  And :: BoolFn fn '[Bool, Bool] Bool
+  Or :: BoolFn fn '[Bool, Bool] Bool
 
 deriving instance Eq (BoolFn fn as b)
 deriving instance Show (BoolFn fn as b)
 
 instance FunctionLike (BoolFn fn) where
   sem Not = not
+  sem And = (&&)
+  sem Or = (||)
 
 ------------------------------------------------------------------------
 -- Pairs
@@ -270,16 +281,12 @@ elemFn = injectFn $ Elem @_ @fn
 disjointFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a, Set a] Bool
 disjointFn = injectFn $ Disjoint @_ @fn
 
-sizeFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a] Int
-sizeFn = injectFn $ Size @_ @fn
-
 data SetFn (fn :: [Type] -> Type -> Type) args res where
   Subset :: Ord a => SetFn fn '[Set a, Set a] Bool
   Disjoint :: Ord a => SetFn fn '[Set a, Set a] Bool
   Member :: Ord a => SetFn fn '[a, Set a] Bool
   Singleton :: Ord a => SetFn fn '[a] (Set a)
-  Union :: Ord a => SetFn fn '[Set a, Set a] (Set a)
-  Size :: Ord a => SetFn fn '[Set a] Int
+  Union :: Ord a => SetFn fn '[Set a, Set a] (Set a) -- HELP ME, I don't think this is usefull
   Elem :: Eq a => SetFn fn '[a, [a]] Bool
 
 deriving instance Show (SetFn fn args res)
@@ -292,7 +299,6 @@ instance FunctionLike (SetFn fn) where
     Member -> Set.member
     Singleton -> Set.singleton
     Union -> (<>)
-    Size -> Set.size
     Elem -> elem
 
 ------------------------------------------------------------------------

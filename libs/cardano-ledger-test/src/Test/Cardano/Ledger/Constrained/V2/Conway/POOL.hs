@@ -29,7 +29,7 @@ currentEpoch :: SlotNo -> EpochNo
 currentEpoch = runIdentity . EI.epochInfoEpoch (epochInfoPure testGlobals)
 
 poolEnvSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   Spec fn (PoolEnv (ConwayEra StandardCrypto))
 poolEnvSpec =
   constrained $ \pe ->
@@ -37,7 +37,7 @@ poolEnvSpec =
       satisfies pp pparamsSpec
 
 pStateSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   Spec fn (PState (ConwayEra StandardCrypto))
 pStateSpec = constrained $ \ps ->
   match ps $ \stakePoolParams futureStakePoolParams retiring deposits ->
@@ -53,7 +53,7 @@ pStateSpec = constrained $ \ps ->
     ]
 
 poolCertSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   PoolEnv (ConwayEra StandardCrypto) ->
   PState (ConwayEra StandardCrypto) ->
   Spec fn (PoolCert StandardCrypto)

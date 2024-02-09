@@ -21,7 +21,7 @@ import Test.Cardano.Ledger.Constrained.V2.Conway
 import Test.Cardano.Ledger.Constrained.V2.Conway.PParams
 
 govEnvSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   Spec fn (GovEnv (ConwayEra StandardCrypto))
 govEnvSpec = constrained $ \ge ->
   match ge $ \_ _ pp _ _ ->
@@ -33,7 +33,7 @@ govProposalsSpec ::
 govProposalsSpec GovEnv {} = TrueSpec
 
 govProceduresSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   GovEnv (ConwayEra StandardCrypto) ->
   Proposals (ConwayEra StandardCrypto) ->
   Spec fn (GovProcedures (ConwayEra StandardCrypto))
@@ -77,7 +77,7 @@ govProceduresSpec ge@GovEnv {..} ps =
 -- TODO: The pointer to the previous action could also point to a
 -- key in the `Proposals`
 wfGovAction ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   GovEnv (ConwayEra StandardCrypto) ->
   Term fn (GovAction (ConwayEra StandardCrypto)) ->
   Pred fn
@@ -131,7 +131,7 @@ wfGovAction GovEnv {..} govAction =
     (branch $ \_ -> True)
 
 wfPParamsUpdate ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   Term fn (PParamsUpdate (ConwayEra StandardCrypto)) ->
   Pred fn
 wfPParamsUpdate ppu =
