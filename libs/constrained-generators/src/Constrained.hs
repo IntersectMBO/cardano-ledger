@@ -73,7 +73,7 @@ module Constrained (
   not_,
   foldMap_,
   sum_,
-  size_,
+  sizeOf_,
   rng_,
   dom_,
   left_,

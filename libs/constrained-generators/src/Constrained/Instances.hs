@@ -67,5 +67,9 @@ instance IsUniverse fn => Functions (BoolFn fn) fn where
       let args = appendList (mapList (\(Value a) -> Lit a) pre) (v' :> mapList (\(Value a) -> Lit a) suf)
        in Let (App (injectFn fn) args) (v :-> ps)
   propagateSpecFun Not (NilCtx HOLE) spec = caseBoolSpec spec (equalSpec . not)
+  propagateSpecFun And (HOLE :? Value (s :: Bool) :> Nil) spec = caseBoolSpec spec (equalSpec . (&& s))
+  propagateSpecFun And (Value (s :: Bool) :! NilCtx HOLE) spec = caseBoolSpec spec (equalSpec . (&& s))
+  propagateSpecFun Or (HOLE :? Value (s :: Bool) :> Nil) spec = caseBoolSpec spec (equalSpec . (|| s))
+  propagateSpecFun Or (Value (s :: Bool) :! NilCtx HOLE) spec = caseBoolSpec spec (equalSpec . (|| s))
 
   mapTypeSpec Not _ = typeSpec ()
