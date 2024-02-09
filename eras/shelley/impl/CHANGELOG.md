@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Remove `poolCertTransition`
 * Remove `getDRepDistr`, `getConstitution` and `getCommitteeMembers` from `EraGov` #4033
   * Move `Constitution` to `Conway.Governance.Procedures`
 * Deprecated `keyBy`

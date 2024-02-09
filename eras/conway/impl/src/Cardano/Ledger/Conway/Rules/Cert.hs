@@ -30,11 +30,11 @@ import Cardano.Ledger.Conway.Era (
   ConwayCERT,
   ConwayDELEG,
   ConwayGOVCERT,
-  ConwayPOOL,
  )
-import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure (..))
+import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegEvent, ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.Rules.GovCert (
   ConwayGovCertEnv (..),
+  ConwayGovCertEvent,
   ConwayGovCertPredFailure,
  )
 import Cardano.Ledger.Conway.TxCert (
@@ -49,7 +49,7 @@ import Cardano.Ledger.Shelley.API (
   PoolEnv (PoolEnv),
   VState,
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyPoolPredFailure)
+import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPOOL, ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   Embed,
@@ -110,9 +110,9 @@ instance
   NFData (ConwayCertPredFailure era)
 
 data ConwayCertEvent era
-  = DelegEvent (Event (ConwayDELEG era))
-  | PoolEvent (Event (ConwayPOOL era))
-  | GovCertEvent (Event (ConwayGOVCERT era))
+  = DelegEvent (Event (EraRule "DELEG" era))
+  | PoolEvent (Event (EraRule "POOL" era))
+  | GovCertEvent (Event (EraRule "GOVCERT" era))
 
 instance
   forall era.
@@ -176,6 +176,7 @@ certTransition = do
 instance
   ( Era era
   , STS (ConwayDELEG era)
+  , Event (EraRule "DELEG" era) ~ ConwayDelegEvent era
   , PredicateFailure (EraRule "DELEG" era) ~ ConwayDelegPredFailure era
   ) =>
   Embed (ConwayDELEG era) (ConwayCERT era)
@@ -185,12 +186,13 @@ instance
 
 instance
   ( Era era
-  , STS (ConwayPOOL era)
+  , STS (ShelleyPOOL era)
+  , Event (EraRule "POOL" era) ~ PoolEvent era
   , PredicateFailure (EraRule "POOL" era) ~ ShelleyPoolPredFailure era
-  , PredicateFailure (ConwayPOOL era) ~ ShelleyPoolPredFailure era
-  , BaseM (ConwayPOOL era) ~ ShelleyBase
+  , PredicateFailure (ShelleyPOOL era) ~ ShelleyPoolPredFailure era
+  , BaseM (ShelleyPOOL era) ~ ShelleyBase
   ) =>
-  Embed (ConwayPOOL era) (ConwayCERT era)
+  Embed (ShelleyPOOL era) (ConwayCERT era)
   where
   wrapFailed = PoolFailure
   wrapEvent = PoolEvent
@@ -198,6 +200,7 @@ instance
 instance
   ( Era era
   , STS (ConwayGOVCERT era)
+  , Event (EraRule "GOVCERT" era) ~ ConwayGovCertEvent era
   , PredicateFailure (EraRule "GOVCERT" era) ~ ConwayGovCertPredFailure era
   ) =>
   Embed (ConwayGOVCERT era) (ConwayCERT era)

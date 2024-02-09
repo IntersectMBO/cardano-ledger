@@ -5,7 +5,6 @@ module Cardano.Ledger.Conway.Era (
   ConwayEra,
   ConwayCERT,
   ConwayDELEG,
-  ConwayPOOL,
   ConwayGOVCERT,
   ConwayCERTS,
   ConwayGOV,
@@ -27,6 +26,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules (
+  ShelleyPOOL,
   ShelleyRUPD,
   ShelleySNAP,
   ShelleyTICK,
@@ -94,10 +94,6 @@ data ConwayDELEG era
 
 type instance EraRule "DELEG" (ConwayEra c) = ConwayDELEG (ConwayEra c)
 
-data ConwayPOOL era
-
-type instance EraRule "POOL" (ConwayEra c) = ConwayPOOL (ConwayEra c)
-
 data ConwayGOVCERT era
 
 type instance EraRule "GOVCERT" (ConwayEra c) = ConwayGOVCERT (ConwayEra c)
@@ -125,5 +121,7 @@ type instance EraRule "RUPD" (ConwayEra c) = ShelleyRUPD (ConwayEra c)
 type instance EraRule "SNAP" (ConwayEra c) = ShelleySNAP (ConwayEra c)
 
 type instance EraRule "TICK" (ConwayEra c) = ShelleyTICK (ConwayEra c)
+
+type instance EraRule "POOL" (ConwayEra c) = ShelleyPOOL (ConwayEra c)
 
 -- =================================================

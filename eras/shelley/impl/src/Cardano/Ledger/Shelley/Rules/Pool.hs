@@ -20,7 +20,6 @@ module Cardano.Ledger.Shelley.Rules.Pool (
   PoolEnv (..),
   PredicateFailure,
   ShelleyPoolPredFailure (..),
-  poolCertTransition,
 )
 where
 
@@ -159,68 +158,6 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
         pure (3, PoolMedataHashTooBig poolID s)
       k -> invalidKey k
 
-poolCertTransition ::
-  forall (ledger :: Type -> Type) era c.
-  ( EraCrypto era ~ c
-  , EraPParams era
-  , State (ledger era) ~ PState era
-  , STS (ledger era)
-  , Event (ledger era) ~ PoolEvent era
-  , BaseM (ledger era) ~ ShelleyBase
-  , PredicateFailure (ledger era) ~ ShelleyPoolPredFailure era
-  ) =>
-  PoolEnv era ->
-  PState era ->
-  PoolCert c ->
-  TransitionRule (ledger era)
-poolCertTransition (PoolEnv slot pp) ps@PState {psStakePoolParams, psFutureStakePoolParams, psRetiring} = \case
-  RegPool poolParams@PoolParams {ppId, ppRewardAccount, ppMetadata, ppCost} -> do
-    let pv = pp ^. ppProtocolVersionL
-    when (HardForks.validatePoolRewardAccountNetID pv) $ do
-      actualNetID <- liftSTS $ asks networkId
-      let suppliedNetID = raNetwork ppRewardAccount
-      actualNetID == suppliedNetID ?! WrongNetworkPOOL actualNetID suppliedNetID ppId
-
-    when (SoftForks.restrictPoolMetadataHash pv) $
-      forM_ ppMetadata $ \pmd ->
-        let s = BS.length (pmHash pmd)
-         in s <= fromIntegral (sizeHash ([] @(CC.HASH (EraCrypto era)))) ?! PoolMedataHashTooBig ppId s
-
-    let minPoolCost = pp ^. ppMinPoolCostL
-    ppCost >= minPoolCost ?! StakePoolCostTooLowPOOL ppCost minPoolCost
-
-    if eval (ppId ∉ dom psStakePoolParams)
-      then do
-        -- register new, Pool-Reg
-        tellEvent $ RegisterPool ppId
-        pure $
-          payPoolDeposit ppId pp $
-            ps {psStakePoolParams = eval (psStakePoolParams ⨃ singleton ppId poolParams)}
-      else do
-        tellEvent $ ReregisterPool ppId
-        -- hk is already registered, so we want to reregister it. That means adding it to the
-        -- Future pool params (if it is not there already), and overriding the range with the new 'poolParam',
-        -- if it is (using ⨃ ). We must also unretire it, if it has been scheduled for retirement.
-        -- The deposit does not change. One pays the deposit just once. Only if it is fully retired
-        -- (i.e. it's deposit has been refunded, and it has been removed from the registered pools).
-        -- does it need to pay a new deposit (at the current deposit amount). But of course,
-        -- if that has happened, we cannot be in this branch of the if statement.
-        pure $
-          ps
-            { psFutureStakePoolParams = eval (psFutureStakePoolParams ⨃ singleton ppId poolParams)
-            , psRetiring = eval (setSingleton ppId ⋪ psRetiring)
-            }
-  RetirePool hk e -> do
-    eval (hk ∈ dom psStakePoolParams) ?! StakePoolNotRegisteredOnKeyPOOL hk
-    cepoch <- liftSTS $ do
-      ei <- asks epochInfoPure
-      epochInfoEpoch ei slot
-    let maxEpoch = pp ^. ppEMaxL
-    (cepoch < e && e <= addEpochInterval cepoch maxEpoch)
-      ?! StakePoolRetirementWrongEpochPOOL cepoch e (addEpochInterval cepoch maxEpoch)
-    -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
-    pure $ ps {psRetiring = eval (psRetiring ⨃ singleton hk e)}
-
 poolDelegationTransition ::
   forall (ledger :: Type -> Type) era.
   ( EraPParams era
@@ -234,5 +171,60 @@ poolDelegationTransition ::
   ) =>
   TransitionRule (ledger era)
 poolDelegationTransition = do
-  TRC (penv, ps, poolCert) <- judgmentContext
-  poolCertTransition penv ps poolCert
+  TRC
+    ( PoolEnv slot pp
+      , ps@PState {psStakePoolParams, psFutureStakePoolParams, psRetiring}
+      , poolCert
+      ) <-
+    judgmentContext
+  case poolCert of
+    RegPool poolParams@PoolParams {ppId, ppRewardAccount, ppMetadata, ppCost} -> do
+      let pv = pp ^. ppProtocolVersionL
+      when (HardForks.validatePoolRewardAccountNetID pv) $ do
+        actualNetID <- liftSTS $ asks networkId
+        let suppliedNetID = raNetwork ppRewardAccount
+        actualNetID == suppliedNetID ?! WrongNetworkPOOL actualNetID suppliedNetID ppId
+
+      when (SoftForks.restrictPoolMetadataHash pv) $
+        forM_ ppMetadata $ \pmd ->
+          let s = BS.length (pmHash pmd)
+           in s
+                <= fromIntegral (sizeHash ([] @(CC.HASH (EraCrypto era))))
+                  ?! PoolMedataHashTooBig ppId s
+
+      let minPoolCost = pp ^. ppMinPoolCostL
+      ppCost >= minPoolCost ?! StakePoolCostTooLowPOOL ppCost minPoolCost
+
+      if eval (ppId ∉ dom psStakePoolParams)
+        then do
+          -- register new, Pool-Reg
+          tellEvent $ RegisterPool ppId
+          pure $
+            payPoolDeposit ppId pp $
+              ps {psStakePoolParams = eval (psStakePoolParams ⨃ singleton ppId poolParams)}
+        else do
+          tellEvent $ ReregisterPool ppId
+          -- hk is already registered, so we want to reregister it. That means adding it
+          -- to the Future pool params (if it is not there already), and overriding the
+          -- range with the new 'poolParam', if it is (using ⨃ ). We must also unretire
+          -- it, if it has been scheduled for retirement.  The deposit does not
+          -- change. One pays the deposit just once. Only if it is fully retired
+          -- (i.e. it's deposit has been refunded, and it has been removed from the
+          -- registered pools).  does it need to pay a new deposit (at the current deposit
+          -- amount). But of course, if that has happened, we cannot be in this branch of
+          -- the if statement.
+          pure $
+            ps
+              { psFutureStakePoolParams = eval (psFutureStakePoolParams ⨃ singleton ppId poolParams)
+              , psRetiring = eval (setSingleton ppId ⋪ psRetiring)
+              }
+    RetirePool hk e -> do
+      eval (hk ∈ dom psStakePoolParams) ?! StakePoolNotRegisteredOnKeyPOOL hk
+      cepoch <- liftSTS $ do
+        ei <- asks epochInfoPure
+        epochInfoEpoch ei slot
+      let maxEpoch = pp ^. ppEMaxL
+      (cepoch < e && e <= addEpochInterval cepoch maxEpoch)
+        ?! StakePoolRetirementWrongEpochPOOL cepoch e (addEpochInterval cepoch maxEpoch)
+      -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
+      pure $ ps {psRetiring = eval (psRetiring ⨃ singleton hk e)}
