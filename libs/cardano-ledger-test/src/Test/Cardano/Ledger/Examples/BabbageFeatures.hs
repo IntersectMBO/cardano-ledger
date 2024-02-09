@@ -86,7 +86,6 @@ import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Alonzo.Arbitrary (mkPlutusScript')
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
-  ToUTXOW (..),
   mkGenesisTxIn,
   mkTxDats,
   testUTXOW,
@@ -1290,9 +1289,13 @@ badTranslation proof x =
 genericBabbageFailures ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
+  , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "UTXOW" Shelley.ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" BabbageUtxoPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , BabbageEraTxBody era
   , PostShelley era
-  , ToUTXOW era
   , Reflect era
   ) =>
   Proof era ->
@@ -1308,17 +1311,17 @@ genericBabbageFailures pf =
             testExpectFailure
               pf
               (incorrectCollateralTotal pf)
-              (fromUtxoB' @era (IncorrectTotalCollateralField (Coin 5) (Coin 6)))
+              (injectFailure (IncorrectTotalCollateralField (Coin 5) (Coin 6)))
         , testCase "inline datum and ref script and redundant script witness" $
             testExpectFailure
               pf
               (inlineDatumAndRefScriptWithRedundantWitScript pf)
-              (fromUtxow' @era (Shelley.ExtraneousScriptWitnessesUTXOW (Set.singleton $ hashScript @era (alwaysAlt 3 pf))))
+              (injectFailure (Shelley.ExtraneousScriptWitnessesUTXOW (Set.singleton $ hashScript @era (alwaysAlt 3 pf))))
         , testCase "inline datum with redundant datum witness" $
             testExpectFailure
               pf
               (inlineDatumRedundantDatumWit pf)
-              ( fromPredFail' @era
+              ( injectFailure
                   ( NotAllowedSupplementalDatums
                       (Set.singleton $ hashData @era datumExampleSixtyFiveBytes)
                       mempty
@@ -1328,7 +1331,7 @@ genericBabbageFailures pf =
             testExpectFailure
               pf
               (inlineDatumWithPlutusV1Script pf)
-              ( fromUtxos' @era
+              ( injectFailure
                   ( CollectErrors
                       [badTranslation pf $ InlineDatumsNotSupported (TxOutFromInput someTxIn)]
                   )
@@ -1337,7 +1340,7 @@ genericBabbageFailures pf =
             testExpectFailure
               pf
               (referenceScriptWithPlutusV1Script pf)
-              ( fromUtxos' @era
+              ( injectFailure
                   ( CollectErrors
                       [badTranslation pf $ ReferenceScriptsNotSupported (TxOutFromOutput (mkTxIxPartial 0))]
                   )
@@ -1346,7 +1349,7 @@ genericBabbageFailures pf =
             testExpectFailure
               pf
               (referenceInputWithPlutusV1Script pf)
-              ( fromUtxos' @era
+              ( injectFailure
                   ( CollectErrors
                       [badTranslation pf $ ReferenceInputsNotSupported @era $ Set.singleton anotherTxIn]
                   )
@@ -1355,7 +1358,7 @@ genericBabbageFailures pf =
             testExpectFailure
               pf
               (malformedPlutusRefScript pf)
-              ( fromUtxowB' @era $
+              ( injectFailure $
                   MalformedReferenceScripts $
                     Set.singleton (hashScript @era $ malformedScript pf "rs")
               )
@@ -1365,7 +1368,7 @@ genericBabbageFailures pf =
                 testExpectFailure
                   pf
                   (malformedScriptWit pf)
-                  ( fromUtxowB' @era $
+                  ( injectFailure $
                       MalformedScriptWitnesses $
                         Set.singleton
                           (hashScript @era $ malformedScript pf "malfoy")
@@ -1377,12 +1380,12 @@ genericBabbageFailures pf =
             testExpectFailure
               pf
               (largeOutput pf)
-              (fromUtxoB' @era $ BabbageOutputTooSmallUTxO [(largeOutput' pf, Coin 8915)])
+              (injectFailure $ BabbageOutputTooSmallUTxO [(largeOutput' pf, Coin 8915)])
         , testCase "no such thing as a reference datum" $
             testExpectFailure
               pf
               (noSuchThingAsReferenceDatum pf)
-              ( fromPredFail' @era
+              ( injectFailure
                   ( MissingRequiredDatums
                       (Set.singleton (hashData $ datumExampleSixtyFiveBytes @era))
                       mempty

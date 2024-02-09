@@ -13,8 +13,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Examples.STSTestUtils (
-  AlonzoBased (..),
-  ToUTXOW (..),
   initUTxO,
   mkGenesisTxIn,
   mkTxDats,
@@ -231,62 +229,6 @@ datumExample1 = Data (PV1.I 123)
 datumExample2 :: Era era => Data era
 datumExample2 = Data (PV1.I 0)
 
--- ======================================================================
--- ====================== Shared classes and Instances ==================
--- ======================================================================
-
--- | We use this to write set of tests that raise AlonzoBased PredicateFailures.
---   The type we use is for '(fail ~ PredicateFailure (EraRule "UTXOW" era))' .
---   There are 4 types of AlonzoBased PredicateFailures: 'UtxowPredFail',
---   'UtxosPredicateFailure',  'UtxoPredicateFailure', and  'UtxowPredicateFailure' .
---   The idea is to make tests that only raise these failures, in Alonzo and future Eras.
-class AlonzoBased era failure where
-  fromUtxos :: AlonzoUtxosPredFailure era -> failure
-  fromUtxo :: AlonzoUtxoPredFailure era -> failure
-  fromUtxow :: ShelleyUtxowPredFailure era -> failure
-  fromPredFail :: AlonzoUtxowPredFailure era -> failure
-
-instance AlonzoBased (AlonzoEra c) (AlonzoUtxowPredFailure (AlonzoEra c)) where
-  fromUtxos = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure . UtxosFailure
-  fromUtxo = ShelleyInAlonzoUtxowPredFailure . Shelley.UtxoFailure
-  fromUtxow = ShelleyInAlonzoUtxowPredFailure
-  fromPredFail = id
-
-instance AlonzoBased (BabbageEra c) (BabbageUtxowPredFailure (BabbageEra c)) where
-  fromUtxos = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure . UtxosFailure
-  fromUtxo = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
-  fromUtxow = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
-  fromPredFail = AlonzoInBabbageUtxowPredFailure
-
-instance AlonzoBased (ConwayEra c) (BabbageUtxowPredFailure (ConwayEra c)) where
-  fromUtxos = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure . UtxosFailure
-  fromUtxo = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
-  fromUtxow = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
-  fromPredFail = AlonzoInBabbageUtxowPredFailure
-
-class ToUTXOW era where
-  fromUtxos' :: AlonzoUtxosPredFailure era -> PredicateFailure (EraRule "UTXOW" era)
-  fromUtxo' :: AlonzoUtxoPredFailure era -> PredicateFailure (EraRule "UTXOW" era)
-  fromUtxow' :: ShelleyUtxowPredFailure era -> PredicateFailure (EraRule "UTXOW" era)
-  fromPredFail' :: AlonzoUtxowPredFailure era -> PredicateFailure (EraRule "UTXOW" era)
-  fromUtxoB' :: BabbageUtxoPredFailure era -> PredicateFailure (EraRule "UTXOW" era)
-  fromUtxowB' :: BabbageUtxowPredFailure era -> PredicateFailure (EraRule "UTXOW" era)
-
-instance ToUTXOW (ConwayEra c) where
-  fromUtxos' = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure . UtxosFailure
-  fromUtxo' = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
-  fromUtxow' = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
-  fromPredFail' = AlonzoInBabbageUtxowPredFailure
-  fromUtxoB' = Babbage.UtxoFailure
-  fromUtxowB' = id
-
-instance ToUTXOW (BabbageEra c) where
-  fromUtxos' = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure . UtxosFailure
-  fromUtxo' = Babbage.UtxoFailure . AlonzoInBabbageUtxoPredFailure
-  fromUtxow' = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
-  fromPredFail' = AlonzoInBabbageUtxowPredFailure
-  fromUtxoB' = Babbage.UtxoFailure
-  fromUtxowB' = id
 
 -- ======================================================================
 -- ========================= Shared helper functions  ===================
