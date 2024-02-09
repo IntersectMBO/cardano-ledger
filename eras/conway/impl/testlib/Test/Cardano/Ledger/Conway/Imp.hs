@@ -8,13 +8,9 @@
 
 module Test.Cardano.Ledger.Conway.Imp (spec) where
 
-import Cardano.Ledger.Conway.Governance (ConwayGovState, GovState)
-import Cardano.Ledger.Conway.Rules (
-  ConwayGovPredFailure,
-  ConwayLedgerPredFailure,
- )
-import Cardano.Ledger.Core (EraRule)
-import Control.State.Transition.Extended (PredicateFailure)
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance (ConwayGovState)
+import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
@@ -26,8 +22,7 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , GovState era ~ ConwayGovState era
-  , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
-  , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   Spec
 spec = do

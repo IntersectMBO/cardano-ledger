@@ -28,15 +28,11 @@ import Cardano.Ledger.Conway.PParams (
   pvtCommitteeNoConfidenceL,
   pvtPPSecurityGroupL,
  )
-import Cardano.Ledger.Conway.Rules (
-  ConwayGovPredFailure (..),
-  ConwayLedgerPredFailure (..),
- )
+import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
-import Control.State.Transition.Extended (PredicateFailure)
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..), traverse_)
 import qualified Data.List.NonEmpty as NE
@@ -55,8 +51,7 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , GovState era ~ ConwayGovState era
-  , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
-  , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 spec =
@@ -105,7 +100,7 @@ spec =
                   }
           submitFailingProposal
             constitutionProposal
-            [ ConwayGovFailure $ InvalidPrevGovActionId constitutionProposal
+            [ injectFailure $ InvalidPrevGovActionId constitutionProposal
             ]
         it "Proposals survive multiple epochs without any activity" $ do
           -- + 2 epochs to pass to get the desired effect
@@ -625,7 +620,9 @@ spec =
         submitFailingVote
           voter
           gaidConstitutionProp
-          [ ConwayGovFailure @era $ VotingOnExpiredGovAction $ (voter, gaidConstitutionProp) NE.:| []
+          [ injectFailure $
+              VotingOnExpiredGovAction $
+                (voter, gaidConstitutionProp) NE.:| []
           ]
       it "on non-existant gov-actions" $ do
         khDRep <- setupSingleDRep
@@ -635,7 +632,7 @@ spec =
         submitFailingVote
           voter
           dummyGaid
-          [ConwayGovFailure $ GovActionsDoNotExist $ dummyGaid NE.:| []]
+          [injectFailure $ GovActionsDoNotExist $ dummyGaid NE.:| []]
 
     describe "Voting" $ do
       context "fails for" $ do
@@ -651,9 +648,7 @@ spec =
           submitFailingVote
             voter
             govActionId
-            [ inject $
-                VotingOnExpiredGovAction @era $
-                  [(voter, govActionId)]
+            [ injectFailure $ VotingOnExpiredGovAction [(voter, govActionId)]
             ]
         it "non-existent gov-actions" $ do
           khDRep <- setupSingleDRep
@@ -663,7 +658,7 @@ spec =
           submitFailingVote
             voter
             dummyGaid
-            [inject $ GovActionsDoNotExist @era $ pure dummyGaid]
+            [injectFailure $ GovActionsDoNotExist $ pure dummyGaid]
         it
           "committee member voting on committee change"
           committeeMemberVotingOnCommitteeChange
@@ -681,9 +676,7 @@ spec =
           let voter = CommitteeVoter credVoter
           trySubmitVote VoteNo voter committeeUpdateId
             `shouldReturn` Left
-              [ inject . DisallowedVoters @era $
-                  [ (voter, committeeUpdateId)
-                  ]
+              [ injectFailure $ DisallowedVoters [(voter, committeeUpdateId)]
               ]
         it
           "committee member can't vote on committee update when sandwiched between other votes"
@@ -834,7 +827,7 @@ spec =
           invalidNewConstitutionProposal <- proposalWithRewardAccount invalidNewConstitutionGovAction
           submitFailingProposal
             invalidNewConstitutionProposal
-            [ inject $ InvalidPrevGovActionId invalidNewConstitutionProposal
+            [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
             ]
         it "invalid index in GovPurposeId" $ do
           (_dRep, _committeeMember, _) <- electBasicCommittee
@@ -851,7 +844,7 @@ spec =
           invalidNewConstitutionProposal <- proposalWithRewardAccount invalidNewConstitutionGovAction
           submitFailingProposal
             invalidNewConstitutionProposal
-            [ inject $ InvalidPrevGovActionId invalidNewConstitutionProposal
+            [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
             ]
         it "valid GovPurposeId but invalid purpose" $ do
           (_dRep, _committeeMember, _) <- electBasicCommittee
@@ -863,7 +856,7 @@ spec =
 
           submitFailingProposal
             invalidNoConfidenceProposal
-            [ inject $ InvalidPrevGovActionId invalidNoConfidenceProposal
+            [ injectFailure $ InvalidPrevGovActionId invalidNoConfidenceProposal
             ]
 
     describe "Constitution" $ do
@@ -1009,7 +1002,9 @@ spec =
                 , pProcAnchor = def
                 }
           res
-            `shouldBeLeft` [inject $ InvalidPolicyHash @era (SJust wrongScriptHash) (SJust scriptHash)]
+            `shouldBeLeft` [ injectFailure $
+                              InvalidPolicyHash (SJust wrongScriptHash) (SJust scriptHash)
+                           ]
 
         impAnn "TreasuryWithdrawals with invalid policy succeeds" $ do
           rewardAccount <- registerRewardAccount
@@ -1027,7 +1022,9 @@ spec =
                 , pProcAnchor = def
                 }
           res
-            `shouldBeLeft` [inject $ InvalidPolicyHash @era (SJust wrongScriptHash) (SJust scriptHash)]
+            `shouldBeLeft` [ injectFailure $
+                              InvalidPolicyHash (SJust wrongScriptHash) (SJust scriptHash)
+                           ]
 
     describe "DRep expiry" $ do
       it "is updated based on to number of dormant epochs" $ do
@@ -1385,8 +1382,7 @@ firstHardForkCantFollow ::
   forall era.
   ( ShelleyEraImp era
   , ConwayEraTxBody era
-  , -- , GovState era ~ ConwayGovState era
-    Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
 firstHardForkCantFollow = do
@@ -1403,7 +1399,7 @@ firstHardForkCantFollow = do
         , pProcAnchor = def
         }
     )
-    [inject (ProposalCantFollow @era SNothing protver2 protver0)]
+    [injectFailure $ ProposalCantFollow SNothing protver2 protver0]
 
 -- | Tests a second hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkFollows ::
@@ -1423,7 +1419,7 @@ secondHardForkCantFollow ::
   forall era.
   ( ShelleyEraImp era
   , ConwayEraTxBody era
-  , Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
 secondHardForkCantFollow = do
@@ -1448,12 +1444,12 @@ secondHardForkCantFollow = do
         , pProcAnchor = def
         }
     )
-    [inject (ProposalCantFollow @era (SJust (GovPurposeId gaid1)) protver2 protver1)]
+    [injectFailure $ ProposalCantFollow (SJust (GovPurposeId gaid1)) protver2 protver1]
 
 committeeMemberVotingOnCommitteeChange ::
   forall era.
   ( ConwayEraImp era
-  , Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
 committeeMemberVotingOnCommitteeChange = do
@@ -1470,15 +1466,13 @@ committeeMemberVotingOnCommitteeChange = do
   submitFailingVote
     voter
     committeeUpdateId
-    [ inject . DisallowedVoters @era $
-        [ (voter, committeeUpdateId)
-        ]
+    [ injectFailure $ DisallowedVoters [(voter, committeeUpdateId)]
     ]
 
 ccVoteOnConstitutionFailsWithMultipleVotes ::
   forall era.
   ( ConwayEraImp era
-  , Inject (ConwayGovPredFailure era) (PredicateFailure (EraRule "LEDGER" era))
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
 ccVoteOnConstitutionFailsWithMultipleVotes = do
@@ -1516,6 +1510,6 @@ ccVoteOnConstitutionFailsWithMultipleVotes = do
   impAnn "Try to vote as a committee member" $
     submitFailingTx
       voteTx
-      [ inject $
-          DisallowedVoters @era [(CommitteeVoter ccCred, committeeProposal)]
+      [ injectFailure $
+          DisallowedVoters [(CommitteeVoter ccCred, committeeProposal)]
       ]

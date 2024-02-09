@@ -30,8 +30,8 @@ module Cardano.Ledger.Rules.ValidationMode (
 )
 where
 
-import Cardano.Ledger.Core
 import Cardano.Ledger.BaseTypes (Inject (..))
+import Cardano.Ledger.Core
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
