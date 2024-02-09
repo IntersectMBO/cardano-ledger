@@ -135,11 +135,11 @@ instance Crypto c => AlonzoEraScript (ConwayEra c) where
   toRewardingPurpose (ConwayRewarding i) = Just i
   toRewardingPurpose _ = Nothing
 
-  upgradePlutusPurposeAsIndex = \case
-    AlonzoSpending (AsIndex ix) -> ConwaySpending (AsIndex ix)
-    AlonzoMinting (AsIndex ix) -> ConwayMinting (AsIndex ix)
-    AlonzoCertifying (AsIndex ix) -> ConwayCertifying (AsIndex ix)
-    AlonzoRewarding (AsIndex ix) -> ConwayRewarding (AsIndex ix)
+  upgradePlutusPurposeAsIx = \case
+    AlonzoSpending (AsIx ix) -> ConwaySpending (AsIx ix)
+    AlonzoMinting (AsIx ix) -> ConwayMinting (AsIx ix)
+    AlonzoCertifying (AsIx ix) -> ConwayCertifying (AsIx ix)
+    AlonzoRewarding (AsIx ix) -> ConwayRewarding (AsIx ix)
 
 instance Crypto c => ConwayEraScript (ConwayEra c) where
   mkVotingPurpose = ConwayVoting
@@ -167,10 +167,10 @@ data ConwayPlutusPurpose f era
   | ConwayProposing !(f Word32 (ProposalProcedure era))
   deriving (Generic)
 
-deriving instance Eq (ConwayPlutusPurpose AsIndex era)
-deriving instance Ord (ConwayPlutusPurpose AsIndex era)
-deriving instance Show (ConwayPlutusPurpose AsIndex era)
-instance NoThunks (ConwayPlutusPurpose AsIndex era)
+deriving instance Eq (ConwayPlutusPurpose AsIx era)
+deriving instance Ord (ConwayPlutusPurpose AsIx era)
+deriving instance Show (ConwayPlutusPurpose AsIx era)
+instance NoThunks (ConwayPlutusPurpose AsIx era)
 
 deriving instance (Eq (TxCert era), EraPParams era) => Eq (ConwayPlutusPurpose AsItem era)
 deriving instance (Show (TxCert era), EraPParams era) => Show (ConwayPlutusPurpose AsItem era)

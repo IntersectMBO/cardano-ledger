@@ -162,7 +162,7 @@ genTxWits =
 
 genRedeemers ::
   forall era.
-  (AlonzoEraScript era, PlutusPurpose AsIndex era ~ AlonzoPlutusPurpose AsIndex era) =>
+  (AlonzoEraScript era, PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era) =>
   Gen (Redeemers era)
 genRedeemers = do
   d <- arbitrary :: Gen (Data era)
@@ -170,4 +170,4 @@ genRedeemers = do
   -- We provide `RdrmPtr Spend 0` as the only valid reedemer, because
   -- for any other redeemer type, we would have to modify the body of the transaction
   -- in order for the translation to succeed
-  Redeemers <$> elements [Map.singleton (AlonzoSpending $ AsIndex 0) (d, eu), Map.empty]
+  Redeemers <$> elements [Map.singleton (AlonzoSpending $ AsIx 0) (d, eu), Map.empty]

@@ -24,7 +24,7 @@ where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
-import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsIndex, toAsItem)
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.TxWits (lookupRedeemer)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum), AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), kindObject, natVersion)
@@ -177,7 +177,7 @@ collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
     usedLanguages = Set.fromList $ map (plutusScriptLanguage . snd) neededPlutusScripts
 
     getScriptWithRedeemer ((plutusScriptHash, plutusPurpose), plutusScript) =
-      let redeemerIndex = hoistPlutusPurpose toAsIndex plutusPurpose
+      let redeemerIndex = hoistPlutusPurpose toAsIx plutusPurpose
        in case lookupRedeemer redeemerIndex $ tx ^. witsTxL . rdmrsTxWitsL of
             Just (d, exUnits) -> Right (plutusScript, plutusPurpose, d, exUnits, plutusScriptHash)
             Nothing -> Left (NoRedeemer (hoistPlutusPurpose toAsItem plutusPurpose))

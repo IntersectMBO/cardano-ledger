@@ -65,7 +65,7 @@ import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
-  AsIndex (..),
+  AsIx (..),
   decodePlutusScript,
   fromPlutusScript,
   toPlutusSLanguage,
@@ -142,7 +142,7 @@ import NoThunks.Class (NoThunks)
 -- ==========================================
 
 newtype RedeemersRaw era = RedeemersRaw
-  { unRedeemersRaw :: Map (PlutusPurpose AsIndex era) (Data era, ExUnits)
+  { unRedeemersRaw :: Map (PlutusPurpose AsIx era) (Data era, ExUnits)
   }
   deriving (Generic)
 
@@ -191,7 +191,7 @@ instance AlonzoEraScript era => Monoid (Redeemers era) where
 pattern Redeemers ::
   forall era.
   AlonzoEraScript era =>
-  Map (PlutusPurpose AsIndex era) (Data era, ExUnits) ->
+  Map (PlutusPurpose AsIx era) (Data era, ExUnits) ->
   Redeemers era
 pattern Redeemers rs <-
   (getMemoRawType -> RedeemersRaw rs)
@@ -200,7 +200,7 @@ pattern Redeemers rs <-
 
 {-# COMPLETE Redeemers #-}
 
-unRedeemers :: Redeemers era -> Map (PlutusPurpose AsIndex era) (Data era, ExUnits)
+unRedeemers :: Redeemers era -> Map (PlutusPurpose AsIx era) (Data era, ExUnits)
 unRedeemers = unRedeemersRaw . getMemoRawType
 
 nullRedeemers :: Redeemers era -> Bool
@@ -210,8 +210,8 @@ emptyRedeemers :: AlonzoEraScript era => Redeemers era
 emptyRedeemers = Redeemers mempty
 
 lookupRedeemer ::
-  Ord (PlutusPurpose AsIndex era) =>
-  PlutusPurpose AsIndex era ->
+  Ord (PlutusPurpose AsIx era) =>
+  PlutusPurpose AsIx era ->
   Redeemers era ->
   Maybe (Data era, ExUnits)
 lookupRedeemer key = Map.lookup key . unRedeemers
@@ -226,7 +226,7 @@ upgradeRedeemers ::
   Redeemers era
 upgradeRedeemers =
   Redeemers
-    . Map.mapKeys upgradePlutusPurposeAsIndex
+    . Map.mapKeys upgradePlutusPurposeAsIx
     . Map.map (first upgradeData)
     . unRedeemers
 
@@ -583,14 +583,14 @@ instance AlonzoEraScript era => DecCBOR (Annotator (RedeemersRaw era)) where
       decodeListRedeemers =
         decodeRedeemersWith (decodeNonEmptyList decodeAnnElement)
       decodeAnnElement ::
-        forall s. Decoder s (Annotator (PlutusPurpose AsIndex era, (Data era, ExUnits)))
+        forall s. Decoder s (Annotator (PlutusPurpose AsIx era, (Data era, ExUnits)))
       decodeAnnElement = do
         (rdmrPtr, dat, ex) <- decodeElement
         let f x y z = (x, (y, z))
         pure $ f rdmrPtr <$> dat <*> pure ex
       {-# INLINE decodeAnnElement #-}
       decodeElement ::
-        forall s. Decoder s (PlutusPurpose AsIndex era, Annotator (Data era), ExUnits)
+        forall s. Decoder s (PlutusPurpose AsIx era, Annotator (Data era), ExUnits)
       decodeElement = do
         decodeRecordNamed
           "Redeemer"

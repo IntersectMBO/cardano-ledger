@@ -398,25 +398,25 @@ instance SpecTranslate Word32 where
 
   toSpecRep = pure . toInteger
 
-instance SpecTranslate (AlonzoPlutusPurpose AsIndex era) where
-  type SpecRep (AlonzoPlutusPurpose AsIndex era) = Agda.RdmrPtr
+instance SpecTranslate (AlonzoPlutusPurpose AsIx era) where
+  type SpecRep (AlonzoPlutusPurpose AsIx era) = Agda.RdmrPtr
 
   toSpecRep = \case
-    AlonzoSpending (AsIndex i) -> pure (Agda.Spend, toInteger i)
-    AlonzoMinting (AsIndex i) -> pure (Agda.Mint, toInteger i)
-    AlonzoCertifying (AsIndex i) -> pure (Agda.Cert, toInteger i)
-    AlonzoRewarding (AsIndex i) -> pure (Agda.Rewrd, toInteger i)
+    AlonzoSpending (AsIx i) -> pure (Agda.Spend, toInteger i)
+    AlonzoMinting (AsIx i) -> pure (Agda.Mint, toInteger i)
+    AlonzoCertifying (AsIx i) -> pure (Agda.Cert, toInteger i)
+    AlonzoRewarding (AsIx i) -> pure (Agda.Rewrd, toInteger i)
 
-instance SpecTranslate (ConwayPlutusPurpose AsIndex era) where
-  type SpecRep (ConwayPlutusPurpose AsIndex era) = Agda.RdmrPtr
+instance SpecTranslate (ConwayPlutusPurpose AsIx era) where
+  type SpecRep (ConwayPlutusPurpose AsIx era) = Agda.RdmrPtr
 
   toSpecRep = \case
-    ConwaySpending (AsIndex i) -> pure (Agda.Spend, toInteger i)
-    ConwayMinting (AsIndex i) -> pure (Agda.Mint, toInteger i)
-    ConwayCertifying (AsIndex i) -> pure (Agda.Cert, toInteger i)
-    ConwayRewarding (AsIndex i) -> pure (Agda.Rewrd, toInteger i)
-    ConwayVoting (AsIndex i) -> pure (Agda.Vote, toInteger i)
-    ConwayProposing (AsIndex i) -> pure (Agda.Propose, toInteger i)
+    ConwaySpending (AsIx i) -> pure (Agda.Spend, toInteger i)
+    ConwayMinting (AsIx i) -> pure (Agda.Mint, toInteger i)
+    ConwayCertifying (AsIx i) -> pure (Agda.Cert, toInteger i)
+    ConwayRewarding (AsIx i) -> pure (Agda.Rewrd, toInteger i)
+    ConwayVoting (AsIx i) -> pure (Agda.Vote, toInteger i)
+    ConwayProposing (AsIx i) -> pure (Agda.Propose, toInteger i)
 
 instance (SpecTranslate a, SpecTranslate b) => SpecTranslate (a, b) where
   type SpecRep (a, b) = (SpecRep a, SpecRep b)
@@ -430,21 +430,21 @@ instance SpecTranslate (Data era) where
 
 instance
   ( AlonzoEraScript era
-  , Ord (SpecRep (PlutusPurpose AsIndex era))
-  , SpecTranslate (PlutusPurpose AsIndex era)
+  , Ord (SpecRep (PlutusPurpose AsIx era))
+  , SpecTranslate (PlutusPurpose AsIx era)
   ) =>
   SpecTranslate (Redeemers era)
   where
   type
     SpecRep (Redeemers era) =
-      [(SpecRep (PlutusPurpose AsIndex era), (Agda.Redeemer, Agda.ExUnits))]
+      [(SpecRep (PlutusPurpose AsIx era), (Agda.Redeemer, Agda.ExUnits))]
 
   toSpecRep (Redeemers x) = toSpecRep x
 
 instance
   ( AlonzoEraScript era
-  , SpecTranslate (PlutusPurpose AsIndex era)
-  , SpecRep (PlutusPurpose AsIndex era) ~ Agda.RdmrPtr
+  , SpecTranslate (PlutusPurpose AsIx era)
+  , SpecRep (PlutusPurpose AsIx era) ~ Agda.RdmrPtr
   ) =>
   SpecTranslate (AlonzoTxWits era)
   where

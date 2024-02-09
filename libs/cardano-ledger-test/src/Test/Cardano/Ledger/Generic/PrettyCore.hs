@@ -40,8 +40,8 @@ import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
   AlonzoPlutusPurpose (..),
   AlonzoScript (..),
-  AsIndex (..),
   AsItem (..),
+  AsIx (..),
   AsIxItem (..),
   ExUnits (..),
   PlutusPurpose,
@@ -621,7 +621,7 @@ ppTxWitness (AlonzoTxWits' vk wb sc da rd) =
     , ("bootstrap witnesses", ppSet ppBootstrapWitness wb)
     , ("scripts map", ppMap pcScriptHash (pcScript reify) sc)
     , ("Data map", ppMap ppSafeHash pcData (unTxDats da))
-    , ("Redeemer map", ppMap ppPlutusPurposeAsIndex (ppPair pcData pcExUnits) (unRedeemers rd))
+    , ("Redeemer map", ppMap ppPlutusPurposeAsIx (ppPair pcData pcExUnits) (unRedeemers rd))
     ]
 
 instance Reflect era => PrettyA (AlonzoTxWits era) where
@@ -1099,7 +1099,7 @@ pcWitnessesField proof x = case x of
   ScriptWits mp -> [("script wits", ppMap pcScriptHash (pcScript proof) mp)]
   DataWits (TxDats m) -> [("data wits", ppMap pcDataHash pcData m)]
   RdmrWits m ->
-    [("redeemer wits", ppMap ppPlutusPurposeAsIndex (pcPair pcData pcExUnits) (unRedeemers m))]
+    [("redeemer wits", ppMap ppPlutusPurposeAsIx (pcPair pcData pcExUnits) (unRedeemers m))]
 
 pcPParamsField ::
   PParamsField era ->
@@ -1551,7 +1551,7 @@ ppAlonzoUtxowPredFailure (MissingRequiredSigners x) =
 ppAlonzoUtxowPredFailure (UnspendableUTxONoDatumHash x) =
   ppSexp "UnspendableUTxONoDatumHash" [ppSet pcTxIn x]
 ppAlonzoUtxowPredFailure (ExtraRedeemers x) =
-  ppSexp "ExtraRedeemers" [ppList ppPlutusPurposeAsIndex x]
+  ppSexp "ExtraRedeemers" [ppList ppPlutusPurposeAsIx x]
 
 instance
   Reflect era =>
@@ -1826,8 +1826,8 @@ ppContextError e =
     Babbage -> ppString (show e)
     Conway -> ppString (show e)
 
-ppPlutusPurposeAsIndex :: Reflect era => PlutusPurpose AsIndex era -> PDoc
-ppPlutusPurposeAsIndex = ppPlutusPurpose @AsIndex
+ppPlutusPurposeAsIx :: Reflect era => PlutusPurpose AsIx era -> PDoc
+ppPlutusPurposeAsIx = ppPlutusPurpose @AsIx
 
 ppPlutusPurposeAsItem :: Reflect era => PlutusPurpose AsItem era -> PDoc
 ppPlutusPurposeAsItem = ppPlutusPurpose @AsItem
@@ -3161,8 +3161,8 @@ pcMultiAsset m = ppList pptriple (flattenMultiAsset m)
 instance PrettyA (MultiAsset c) where
   prettyA = pcMultiAsset
 
-instance PrettyA ix => PrettyA (AsIndex ix it) where
-  prettyA (AsIndex ix) = ppSexp "AsIndex" [prettyA ix]
+instance PrettyA ix => PrettyA (AsIx ix it) where
+  prettyA (AsIx ix) = ppSexp "AsIx" [prettyA ix]
 
 instance PrettyA it => PrettyA (AsItem ix it) where
   prettyA (AsItem it) = ppSexp "AsItem" [prettyA it]

@@ -177,7 +177,7 @@ transRedeemerPtr ::
   ) =>
   proxy l ->
   TxBody era ->
-  (PlutusPurpose AsIndex era, (Data era, ExUnits)) ->
+  (PlutusPurpose AsIx era, (Data era, ExUnits)) ->
   Either (ContextError era) (PlutusScriptPurpose l, PV2.Redeemer)
 transRedeemerPtr proxy txBody (ptr, (d, _)) =
   case redeemerPointerInverse txBody ptr of
@@ -214,30 +214,30 @@ instance Crypto c => EraPlutusContext (BabbageEra c) where
 data BabbageContextError era
   = AlonzoContextError !(AlonzoContextError era)
   | ByronTxOutInContext !(TxOutSource (EraCrypto era))
-  | RedeemerPointerPointsToNothing !(PlutusPurpose AsIndex era)
+  | RedeemerPointerPointsToNothing !(PlutusPurpose AsIx era)
   | InlineDatumsNotSupported !(TxOutSource (EraCrypto era))
   | ReferenceScriptsNotSupported !(TxOutSource (EraCrypto era))
   | ReferenceInputsNotSupported !(Set.Set (TxIn (EraCrypto era)))
   deriving (Generic)
 
 deriving instance
-  (Eq (AlonzoContextError era), Eq (PlutusPurpose AsIndex era)) =>
+  (Eq (AlonzoContextError era), Eq (PlutusPurpose AsIx era)) =>
   Eq (BabbageContextError era)
 
 deriving instance
-  (Show (AlonzoContextError era), Show (PlutusPurpose AsIndex era)) =>
+  (Show (AlonzoContextError era), Show (PlutusPurpose AsIx era)) =>
   Show (BabbageContextError era)
 
-instance NoThunks (PlutusPurpose AsIndex era) => NoThunks (BabbageContextError era)
+instance NoThunks (PlutusPurpose AsIx era) => NoThunks (BabbageContextError era)
 
-instance (Era era, NFData (PlutusPurpose AsIndex era)) => NFData (BabbageContextError era)
+instance (Era era, NFData (PlutusPurpose AsIx era)) => NFData (BabbageContextError era)
 
 instance Inject (BabbageContextError era) (BabbageContextError era)
 
 instance Inject (AlonzoContextError era) (BabbageContextError era) where
   inject = AlonzoContextError
 
-instance (Era era, EncCBOR (PlutusPurpose AsIndex era)) => EncCBOR (BabbageContextError era) where
+instance (Era era, EncCBOR (PlutusPurpose AsIx era)) => EncCBOR (BabbageContextError era) where
   encCBOR = \case
     ByronTxOutInContext txOutSource ->
       encode $ Sum (ByronTxOutInContext @era) 0 !> To txOutSource
@@ -254,7 +254,7 @@ instance (Era era, EncCBOR (PlutusPurpose AsIndex era)) => EncCBOR (BabbageConte
     AlonzoContextError (TimeTranslationPastHorizon err) ->
       encode $ Sum TimeTranslationPastHorizon 7 !> To err
 
-instance (Era era, DecCBOR (PlutusPurpose AsIndex era)) => DecCBOR (BabbageContextError era) where
+instance (Era era, DecCBOR (PlutusPurpose AsIx era)) => DecCBOR (BabbageContextError era) where
   decCBOR = decode $ Summands "ContextError" $ \case
     0 -> SumD ByronTxOutInContext <! From
     1 -> SumD (AlonzoContextError . TranslationLogicMissingInput) <! From
@@ -265,7 +265,7 @@ instance (Era era, DecCBOR (PlutusPurpose AsIndex era)) => DecCBOR (BabbageConte
     7 -> SumD (AlonzoContextError . TimeTranslationPastHorizon) <! From
     n -> Invalid n
 
-instance ToJSON (PlutusPurpose AsIndex era) => ToJSON (BabbageContextError era) where
+instance ToJSON (PlutusPurpose AsIx era) => ToJSON (BabbageContextError era) where
   toJSON = \case
     AlonzoContextError err -> toJSON err
     ByronTxOutInContext txOutSource ->

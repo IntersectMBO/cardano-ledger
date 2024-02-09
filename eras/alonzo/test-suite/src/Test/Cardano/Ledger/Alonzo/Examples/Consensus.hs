@@ -151,7 +151,7 @@ exampleTx =
         )
         (TxDats $ Map.singleton (hashData datumExample) datumExample)
         ( Redeemers $
-            Map.singleton (AlonzoSpending $ AsIndex 0) (redeemerExample, ExUnits 5000 5000)
+            Map.singleton (AlonzoSpending $ AsIx 0) (redeemerExample, ExUnits 5000 5000)
         ) -- redeemers
     )
     ( SJust $

@@ -34,11 +34,11 @@ instance ToExpr (PlutusScript (AlonzoEra c))
 
 instance ToExpr (PlutusScript era) => ToExpr (AlonzoScript era)
 
-instance ToExpr (AlonzoPlutusPurpose AsIndex era)
+instance ToExpr (AlonzoPlutusPurpose AsIx era)
 
 instance ToExpr (TxCert era) => ToExpr (AlonzoPlutusPurpose AsItem era)
 
-deriving newtype instance ToExpr ix => ToExpr (AsIndex ix it)
+deriving newtype instance ToExpr ix => ToExpr (AsIx ix it)
 
 deriving newtype instance ToExpr it => ToExpr (AsItem ix it)
 
@@ -58,9 +58,9 @@ instance ToExpr (AlonzoPParams StrictMaybe era)
 instance ToExpr (AlonzoPParams Identity era)
 
 -- TxWits
-instance ToExpr (PlutusPurpose AsIndex era) => ToExpr (RedeemersRaw era)
+instance ToExpr (PlutusPurpose AsIx era) => ToExpr (RedeemersRaw era)
 
-instance ToExpr (PlutusPurpose AsIndex era) => ToExpr (Redeemers era)
+instance ToExpr (PlutusPurpose AsIx era) => ToExpr (Redeemers era)
 
 instance
   ( Era era
@@ -139,7 +139,7 @@ instance
 -- Rules/Utxow
 instance
   ( Era era
-  , ToExpr (PlutusPurpose AsIndex era)
+  , ToExpr (PlutusPurpose AsIx era)
   , ToExpr (PlutusPurpose AsItem era)
   , ToExpr (PredicateFailure (EraRule "UTXO" era))
   , ToExpr (TxCert era)

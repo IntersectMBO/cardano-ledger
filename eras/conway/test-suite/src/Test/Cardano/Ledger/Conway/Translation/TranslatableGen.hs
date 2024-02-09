@@ -7,7 +7,7 @@
 
 module Test.Cardano.Ledger.Conway.Translation.TranslatableGen where
 
-import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AsIndex (..), PlutusPurpose)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AsIx (..), PlutusPurpose)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Conway (Conway, ConwayEra)
@@ -75,7 +75,7 @@ genTxBody l = do
 
 genRedeemers ::
   forall era.
-  (AlonzoEraScript era, PlutusPurpose AsIndex era ~ ConwayPlutusPurpose AsIndex era) =>
+  (AlonzoEraScript era, PlutusPurpose AsIx era ~ ConwayPlutusPurpose AsIx era) =>
   Gen (Redeemers era)
 genRedeemers = do
   d <- arbitrary :: Gen (Data era)
@@ -83,4 +83,4 @@ genRedeemers = do
   -- We provide `RdrmPtr Spend 0` as the only valid reedemer, because
   -- for any other redeemer type, we would have to modify the body of the transaction
   -- in order for the translation to succeed
-  Redeemers <$> elements [Map.singleton (ConwaySpending $ AsIndex 0) (d, eu), Map.empty]
+  Redeemers <$> elements [Map.singleton (ConwaySpending $ AsIx 0) (d, eu), Map.empty]

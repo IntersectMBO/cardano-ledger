@@ -31,7 +31,7 @@ module Cardano.Ledger.Api.Tx.Wits (
   unRedeemers,
   PlutusPurpose,
   AlonzoPlutusPurpose (..),
-  AsIndex (..),
+  AsIx (..),
   AsItem (..),
 
   -- ** Conway
@@ -41,8 +41,8 @@ where
 
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
-  AsIndex (..),
   AsItem (..),
+  AsIx (..),
   PlutusPurpose,
  )
 import Cardano.Ledger.Alonzo.TxWits (

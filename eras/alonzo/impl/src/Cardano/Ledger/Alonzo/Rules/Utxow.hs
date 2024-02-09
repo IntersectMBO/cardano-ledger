@@ -36,7 +36,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUtxoEvent,
   AlonzoUtxoPredFailure,
  )
-import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsIndex, toAsItem)
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits (
   unRedeemers,
@@ -117,7 +117,7 @@ data AlonzoUtxowPredFailure era
       (Set (TxIn (EraCrypto era)))
   | -- | List of redeemers not needed
     ExtraRedeemers
-      ![PlutusPurpose AsIndex era]
+      ![PlutusPurpose AsIx era]
   deriving (Generic)
 
 deriving instance
@@ -237,7 +237,7 @@ hasExactSetOfRedeemers ::
   Test (AlonzoUtxowPredFailure era)
 hasExactSetOfRedeemers tx (ScriptsProvided scriptsProvided) (AlonzoScriptsNeeded scriptsNeeded) = do
   let redeemersNeeded =
-        [ (hoistPlutusPurpose toAsIndex sp, (hoistPlutusPurpose toAsItem sp, sh))
+        [ (hoistPlutusPurpose toAsIx sp, (hoistPlutusPurpose toAsItem sp, sh))
         | (sp, sh) <- scriptsNeeded
         , Just script <- [Map.lookup sh scriptsProvided]
         , not (isNativeScript script)

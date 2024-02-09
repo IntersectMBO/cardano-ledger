@@ -27,7 +27,7 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo (
   isPlutusScript,
   plutusScriptLanguage,
   pointWiseExUnits,
-  toAsIndex,
+  toAsIx,
   txscriptfee,
  )
 import Cardano.Ledger.Alonzo.Tx (
@@ -474,10 +474,10 @@ addRedeemMap ::
   Crypto c =>
   (P.Data, Natural, Natural) ->
   AlonzoPlutusPurpose AsIxItem (AlonzoEra c) ->
-  Map (AlonzoPlutusPurpose AsIndex (AlonzoEra c)) (Data (AlonzoEra c), ExUnits) ->
-  Map (AlonzoPlutusPurpose AsIndex (AlonzoEra c)) (Data (AlonzoEra c), ExUnits)
+  Map (AlonzoPlutusPurpose AsIx (AlonzoEra c)) (Data (AlonzoEra c), ExUnits) ->
+  Map (AlonzoPlutusPurpose AsIx (AlonzoEra c)) (Data (AlonzoEra c), ExUnits)
 addRedeemMap (dat, space, steps) purpose ans =
-  let ptr = hoistPlutusPurpose toAsIndex purpose
+  let ptr = hoistPlutusPurpose toAsIx purpose
    in Map.insert ptr (Data dat, ExUnits space steps) ans
 
 getDataMap ::

@@ -516,19 +516,19 @@ instance
 
 instance
   Era era =>
-  Arbitrary (ConwayPlutusPurpose AsIndex era)
+  Arbitrary (ConwayPlutusPurpose AsIx era)
   where
   arbitrary = arbitrary >>= genConwayPlutusPurposePointer
 
-genConwayPlutusPurposePointer :: Word32 -> Gen (ConwayPlutusPurpose AsIndex era)
+genConwayPlutusPurposePointer :: Word32 -> Gen (ConwayPlutusPurpose AsIx era)
 genConwayPlutusPurposePointer i =
   elements
-    [ ConwaySpending (AsIndex i)
-    , ConwayMinting (AsIndex i)
-    , ConwayCertifying (AsIndex i)
-    , ConwayRewarding (AsIndex i)
-    , ConwayVoting (AsIndex i)
-    , ConwayProposing (AsIndex i)
+    [ ConwaySpending (AsIx i)
+    , ConwayMinting (AsIx i)
+    , ConwayCertifying (AsIx i)
+    , ConwayRewarding (AsIx i)
+    , ConwayVoting (AsIx i)
+    , ConwayProposing (AsIx i)
     ]
 
 ------------------------------------------------------------------------------------------
