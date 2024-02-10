@@ -134,7 +134,7 @@ tests =
     "Generic Tests for invalid transactions, testing Alonzo UTXOW PredicateFailures, in postAlonzo eras."
     [ alonzoUTXOWTests Alonzo
     , alonzoUTXOWTests Babbage
-    --, alonzoUTXOWTests Conway
+    , alonzoUTXOWTests Conway
     ]
 
 alonzoUTXOWTests ::

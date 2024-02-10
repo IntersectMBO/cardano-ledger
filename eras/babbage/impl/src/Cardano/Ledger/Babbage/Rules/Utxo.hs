@@ -86,6 +86,7 @@ import Control.State.Transition.Extended (
   judgmentContext,
   liftSTS,
   trans,
+  validate,
  )
 import Data.Bifunctor (first)
 import Data.Coerce (coerce)
@@ -195,8 +196,8 @@ feesOK ::
   ( EraUTxO era
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
-  , EraRuleFailure rule era ~ BabbageUtxoPredFailure era
   , InjectRuleFailure rule AlonzoUtxoPredFailure era
+  , InjectRuleFailure rule BabbageUtxoPredFailure era
   ) =>
   PParams era ->
   Tx era ->
@@ -236,7 +237,7 @@ validateTotalCollateral ::
   forall era rule.
   ( BabbageEraTxBody era
   , InjectRuleFailure rule AlonzoUtxoPredFailure era
-  , EraRuleFailure rule era ~ BabbageUtxoPredFailure era
+  , InjectRuleFailure rule BabbageUtxoPredFailure era
   ) =>
   PParams era ->
   TxBody era ->
@@ -252,7 +253,7 @@ validateTotalCollateral pp txBody utxoCollateral =
     , -- Part 5: balance ≥ ⌈txfee txb ∗ (collateralPercent pp) / 100⌉
       fromAlonzoValidation $ Alonzo.validateInsufficientCollateral pp txBody bal
     , -- Part 6: (txcoll tx ≠ ◇) ⇒ balance = txcoll tx
-      validateCollateralEqBalance bal (txBody ^. totalCollateralTxBodyL)
+      first (fmap injectFailure) $ validateCollateralEqBalance bal (txBody ^. totalCollateralTxBodyL)
     , -- Part 7: collInputs tx ≠ ∅
       fromAlonzoValidation $ failureIf (null utxoCollateral) (NoCollateralInputs @era)
     ]
@@ -385,7 +386,7 @@ utxoTransition = do
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
 
   {-   feesOK pp tx utxo   -}
-  runTest $ feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
+  validate $ feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
 
   {- allInputs = spendInputs txb ∪ collInputs txb ∪ refInputs txb -}
   {- (spendInputs txb ∪ collInputs txb ∪ refInputs txb) ⊆ dom utxo   -}

@@ -740,4 +740,4 @@ allegraToAlonzoUtxoPredFailure = \case
   Allegra.UpdateFailure x -> UtxosFailure (inject x)
   Allegra.OutputBootAddrAttrsTooBig xs -> OutputTooBigUTxO (map (0,0,) xs)
   Allegra.TriesToForgeADA -> TriesToForgeADA
-  Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
+  Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (0,0,) xs)

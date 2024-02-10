@@ -1,7 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.3.1.0
+## 1.4.0.0
 
+* Add instances for `InjectRuleFailure` and switch to using `injectFailure`
+* Add `shelleyToAllegraUtxoPredFailure`
 * Add `NFData` instance for `AllegraUtxoPredFailure`
 * Add implementation for `getMinFeeTxUtxo`
 

@@ -310,8 +310,7 @@ testUTXOspecialCase wit@(UTXOW proof) utxo pparam tx expected =
    in case proof of
         Alonzo -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
         Babbage -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
-        -- TODO re-enable this once we have added all the new rules to Conway
-        -- Conway -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
+        Conway -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
         other -> error ("Cannot use specialCase in era " ++ show other)
 
 -- | This type is what you get when you use runSTS in the UTXOW rule. It is also

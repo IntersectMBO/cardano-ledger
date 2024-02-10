@@ -7,9 +7,7 @@ module Cardano.Ledger.Alonzo.Rules.Deleg () where
 
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyDelegPredFailure,
- )
+import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure)
 
 type instance EraRuleFailure "DELEG" (AlonzoEra c) = ShelleyDelegPredFailure (AlonzoEra c)
 

@@ -11,15 +11,11 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
   allegraToAlonzoUtxoPredFailure,
  )
-import Cardano.Ledger.Babbage.Rules (
-  BabbageUtxoPredFailure (..),
- )
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Rules.Utxos ()
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.Rules (
-  ShelleyUtxoPredFailure (..),
- )
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure (..))
 
 type instance EraRuleFailure "UTXO" (ConwayEra c) = BabbageUtxoPredFailure (ConwayEra c)
 
