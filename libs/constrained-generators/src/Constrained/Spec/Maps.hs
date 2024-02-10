@@ -1,16 +1,17 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE QuantifiedConstraints #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Constrained.Spec.Maps (MapSpec (..), dom_, rng_) where
@@ -21,6 +22,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Debug.Trace
 import Prettyprinter
 
 import Constrained.Base
@@ -35,9 +37,9 @@ import Constrained.Univ
 ------------------------------------------------------------------------
 
 mapSize :: Map k v -> Size
-mapSize s =  Size (fromIntegral (Map.size s))
+mapSize s = Size (fromIntegral (Map.size s))
 
-instance (Ord a,forall fn. HasSpec fn a,forall fn. HasSpec fn b) => Sized (Map.Map a b) where
+instance (Ord a, forall fn. HasSpec fn a, forall fn. HasSpec fn b) => Sized (Map.Map a b) where
   sizeOf = mapSize
   liftSizeSpec sizespec@(SizeSpec _ _) = TypeSpec (MapSpec mempty mempty (typeSpec sizespec) mempty NoFold) []
 
@@ -83,27 +85,28 @@ instance
 
   conformsTo m (MapSpec mustKeys mustVals size kvs foldSpec) =
     and
-      [ mustKeys `Set.isSubsetOf` Map.keysSet m
-      , all (`elem` Map.elems m) mustVals
-      , mapSize m `conformsToSpec` size
-      , all (`conformsToSpec` kvs) (Map.toList m)
-      , Map.elems m `conformsToFoldSpec` foldSpec
+      [ trace "KEYS" $ mustKeys `Set.isSubsetOf` Map.keysSet m
+      , trace "MUST" $ all (`elem` Map.elems m) mustVals
+      , trace "SIZE" $ mapSize m `conformsToSpec` size
+      , trace ("\nELEM\n " ++ show kvs) $ all (`conformsToSpec` kvs) (Map.toList m)
+      , trace "FOLD" $ Map.elems m `conformsToFoldSpec` foldSpec
       ]
 
-  genFromTypeSpec (MapSpec mustKeys mustVals size kvs foldSpec) = do
+  genFromTypeSpec (MapSpec mustKeys mustVals size kvs foldSpec) = trace "GENERATING" $ do
     mustMap <- explain ["Make the mustMap"] $ forM (Set.toList mustKeys) $ \k -> do
       let vSpec = constrained $ \v -> satisfies (app (fromGenericFn @fn) $ app (pairFn @fn) (Lit k) v) kvs
       v <- explain [show $ "vSpec =" <+> pretty vSpec] $ genFromSpec vSpec
       pure (k, v)
-    let haveVals = map snd mustMap
-        mustVals' = filter (`notElem` haveVals) mustVals
+    let !haveVals = trace ("MUSTMAP " ++ show mustMap) $ map snd mustMap
+        !mustVals' = trace ("HAVEVALS " ++ show haveVals) $ filter (`notElem` haveVals) mustVals
         size' = constrained $ \case
-           w@(V _) -> error ("Non Lit in HasSpec fn (Map k v): "++show w)
-           w@(App _ _) -> error ("Non Lit in HasSpec fn (Map k v): "++show w)
-           (Lit (Size sz)) ->
-             let Size m = listSize mustMap
-              in satisfies (Lit (Size (fromIntegral sz + m)))
-                          (size <> specSizeBound (mapSpec fstFn $ mapSpec toGenericFn kvs))
+          w@(V _) -> trace ("Non Lit in HasSpec fn (Map k v): " ++ show w) $ error ("Non Lit in HasSpec fn (Map k v): " ++ show w)
+          w@(App _ _) -> trace ("Non Lit in HasSpec fn (Map k v): " ++ show w) $ error ("Non Lit in HasSpec fn (Map k v): " ++ show w)
+          (Lit (Size sz)) ->
+            let Size m = listSize mustMap
+             in satisfies
+                  (Lit (Size (fromIntegral sz + m)))
+                  (size <> specSizeBound (mapSpec fstFn $ mapSpec toGenericFn kvs))
         foldSpec' = case foldSpec of
           NoFold -> NoFold
           FoldSpec fn sumSpec -> FoldSpec fn $ propagateSpecFun (theAddFn @fn) (HOLE :? Value mustSum :> Nil) sumSpec

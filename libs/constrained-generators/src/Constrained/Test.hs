@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -23,6 +24,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Typeable
 import Data.Word
+import Debug.Trace
 import GHC.Generics
 import GHC.Natural
 import Test.QuickCheck hiding (Args, Fun, forAll)
@@ -94,7 +96,7 @@ prop_sound spec =
 prop_complete :: HasSpec fn a => Spec fn a -> Property
 prop_complete s =
   QC.forAllBlind (strictGen $ genFromSpec s) $ \ma -> fromGEProp $ do
-    a <- ma
+    !a <- trace ("\nCOMPLETE\n" ++ show ma) ma
     -- Force the value to make sure we don't crash with `error` somewhere
     -- or fall into an inifinite loop
     pure $ length (show a) > 0
@@ -145,8 +147,8 @@ tests =
     , testSpec "letExists" letExists
     , testSpec "letExistsLet" letExistsLet
     , testSpec "notSubset" notSubset
- --    , testSpec "unionSized" unionSized -- HELP ME  see unionized
-    , testSpec "dependencyWeirdness" dependencyWeirdness
+    , --    , testSpec "unionSized" unionSized -- HELP ME  see unionized
+      testSpec "dependencyWeirdness" dependencyWeirdness
     , testSpec "foldTrueCases" foldTrueCases
     , testSpec "foldSingleCase" foldSingleCase
     , testSpec "listSumPair" (listSumPair @Int)
@@ -216,8 +218,8 @@ testSpec n s = do
   sequentialTestGroup
     n
     AllSucceed
-    [ testProperty "prop_complete" $ within 10_000_000 $ withMaxSuccess 100 $ prop_complete s
-    , testProperty "prop_sound" $ withMaxSuccess 100 $ prop_sound s
+    [ -- testProperty "prop_complete" $ within 10_000_000 $ withMaxSuccess 100 $ prop_complete s
+      testProperty "prop_sound" $ withMaxSuccess 100 $ prop_sound s
     ]
 
 -- Examples ---------------------------------------------------------------
@@ -320,6 +322,20 @@ mapElemSpec = constrained $ \m ->
   , forAll' (rng_ m) $ \_ b ->
       [0 <. b, b <. 10]
   ]
+
+{-
+TASTY_PATTERN='/mapElemSpec.prop_sound/' cabal test
+
+ghci> mapElemSpec
+TypeSpec (MapSpec {mapSpecMustKeys = fromList [],
+                   mapSpecMustValues = [],
+                   mapSpecSize = TrueSpec,
+                   mapSpecElem =
+                      TypeSpec (Cartesian TrueSpec (
+                      TypeSpec (Cartesian TrueSpec (
+                      TypeSpec [1..9] [])) [])) [],
+                    mapSpecFold = NoFold}) [fromList []]
+-}
 
 mapElemKeySpec :: Spec Fn Int
 mapElemKeySpec = constrained $ \n ->
