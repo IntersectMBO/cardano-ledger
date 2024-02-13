@@ -73,7 +73,6 @@ import Cardano.Ledger.Shelley.Rules.Ppup (
   ShelleyPpupPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (RewardAccount)
 import Cardano.Ledger.Shelley.UTxO (consumed, produced)
 import Cardano.Ledger.Slot (SlotNo)
@@ -309,8 +308,6 @@ instance
   , EraGov era
   , GovState era ~ ShelleyGovState era
   , ExactEra ShelleyEra era
-  , Tx era ~ ShelleyTx era
-  , Show (ShelleyTx era)
   , Embed (EraRule "PPUP" era) (ShelleyUTXO era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
@@ -321,7 +318,7 @@ instance
   STS (ShelleyUTXO era)
   where
   type State (ShelleyUTXO era) = UTxOState era
-  type Signal (ShelleyUTXO era) = ShelleyTx era
+  type Signal (ShelleyUTXO era) = Tx era
   type Environment (ShelleyUTXO era) = UtxoEnv era
   type BaseM (ShelleyUTXO era) = ShelleyBase
   type PredicateFailure (ShelleyUTXO era) = ShelleyUtxoPredFailure era

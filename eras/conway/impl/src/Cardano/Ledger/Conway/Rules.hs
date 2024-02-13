@@ -1,7 +1,6 @@
 module Cardano.Ledger.Conway.Rules (
   module Cardano.Ledger.Conway.Rules.Cert,
   module Cardano.Ledger.Conway.Rules.Deleg,
-  module Cardano.Ledger.Conway.Rules.Pool,
   module Cardano.Ledger.Conway.Rules.GovCert,
   module Cardano.Ledger.Conway.Rules.Certs,
   module Cardano.Ledger.Conway.Rules.Enact,
@@ -25,7 +24,6 @@ import Cardano.Ledger.Conway.Rules.Gov
 import Cardano.Ledger.Conway.Rules.GovCert
 import Cardano.Ledger.Conway.Rules.Ledger
 import Cardano.Ledger.Conway.Rules.NewEpoch
-import Cardano.Ledger.Conway.Rules.Pool
 import Cardano.Ledger.Conway.Rules.Ratify
 import Cardano.Ledger.Conway.Rules.Tickf
 import Cardano.Ledger.Conway.Rules.Utxos

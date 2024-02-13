@@ -84,7 +84,7 @@ import Cardano.Ledger.Shelley.Rules.Utxo (
   UtxoEvent,
  )
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
-import Cardano.Ledger.Shelley.Tx (ShelleyTx, witsFromTxWitnesses)
+import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.TxCert (isInstantaneousRewards)
 import Cardano.Ledger.Shelley.UTxO (
   EraUTxO (..),
@@ -354,7 +354,6 @@ instance
   ( EraTx era
   , EraUTxO era
   , ShelleyEraTxBody era
-  , Tx era ~ ShelleyTx era
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , -- Allow UTXOW to call UTXO
@@ -368,7 +367,7 @@ instance
   STS (ShelleyUTXOW era)
   where
   type State (ShelleyUTXOW era) = UTxOState era
-  type Signal (ShelleyUTXOW era) = ShelleyTx era
+  type Signal (ShelleyUTXOW era) = Tx era
   type Environment (ShelleyUTXOW era) = UtxoEnv era
   type BaseM (ShelleyUTXOW era) = ShelleyBase
   type PredicateFailure (ShelleyUTXOW era) = ShelleyUtxowPredFailure era

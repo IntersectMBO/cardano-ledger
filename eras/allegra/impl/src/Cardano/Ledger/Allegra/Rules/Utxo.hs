@@ -56,7 +56,6 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyPpupPredFailure,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
@@ -161,7 +160,6 @@ utxoTransition ::
   , ShelleyEraTxBody era
   , AllegraEraTxBody era
   , STS (AllegraUTXO era)
-  , Tx era ~ ShelleyTx era
   , Embed (EraRule "PPUP" era) (AllegraUTXO era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
@@ -289,7 +287,6 @@ instance
   , EraUTxO era
   , ShelleyEraTxBody era
   , AllegraEraTxBody era
-  , Tx era ~ ShelleyTx era
   , Embed (EraRule "PPUP" era) (AllegraUTXO era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
@@ -302,7 +299,7 @@ instance
   STS (AllegraUTXO era)
   where
   type State (AllegraUTXO era) = Shelley.UTxOState era
-  type Signal (AllegraUTXO era) = ShelleyTx era
+  type Signal (AllegraUTXO era) = Tx era
   type Environment (AllegraUTXO era) = Shelley.UtxoEnv era
   type BaseM (AllegraUTXO era) = ShelleyBase
   type PredicateFailure (AllegraUTXO era) = AllegraUtxoPredFailure era

@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Remove `ConwayPOOL` rule, in favor of `ShelleyPOOL`
 * Add `NFData` instance for `BabbageUtxoPredFailure`
 * Rename `MinFeeRefScriptCoinsPerByte` to `MinFeeRefScriptCostPerByte` and change its type from `CoinsPerByte` to `NonNegativeInterval` #4055
 * Rename `committeeQuorum` to `committeeThreshold` #4053

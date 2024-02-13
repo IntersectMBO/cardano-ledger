@@ -54,7 +54,6 @@ library
         Cardano.Ledger.Conway.Governance.Proposals
         Cardano.Ledger.Conway.Rules.Cert
         Cardano.Ledger.Conway.Rules.Deleg
-        Cardano.Ledger.Conway.Rules.Pool
         Cardano.Ledger.Conway.Rules.GovCert
         Cardano.Ledger.Conway.Rules.Certs
         Cardano.Ledger.Conway.Rules.Enact
