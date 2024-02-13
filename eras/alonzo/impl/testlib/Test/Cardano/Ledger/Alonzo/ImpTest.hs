@@ -27,28 +27,18 @@ import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
 import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxOut (..), AsIxItem, Era (..), EraGov)
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, getLanguageView, ppCostModelsL, ppMaxTxExUnitsL, ppMaxValSizeL)
+import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Scripts (
-  AsItem (..),
   ExUnits (..),
   plutusScriptLanguage,
   toAsItem,
   toAsIx,
  )
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..))
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (
-  EraIndependentTxBody,
-  EraScript (..),
-  EraTx (..),
-  EraTxOut (..),
-  EraTxWits (..),
-  ScriptHash,
- )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), hashData)
