@@ -18,7 +18,7 @@ module Constrained (
   FunctionLike (..),
   Functions (..),
   HOLE (..),
-  IsUniverse,
+  BaseUniverse,
   Member,
   Fn,
   DefaultFns,

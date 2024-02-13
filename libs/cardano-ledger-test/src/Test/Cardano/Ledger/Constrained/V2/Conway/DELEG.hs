@@ -20,7 +20,7 @@ import Constrained.Base (Term (..))
 import Test.Cardano.Ledger.Constrained.V2.Conway
 
 dStateSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   Spec fn (DState (ConwayEra StandardCrypto))
 dStateSpec = constrained $ \ds ->
   match ds $ \rewardMap futureGenDelegs genDelegs irewards ->
@@ -35,7 +35,7 @@ dStateSpec = constrained $ \ds ->
         ]
 
 delegCertSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   PParams (ConwayEra StandardCrypto) ->
   DState (ConwayEra StandardCrypto) ->
   Spec fn (ConwayDelegCert StandardCrypto)

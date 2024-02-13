@@ -20,7 +20,7 @@ import Test.Cardano.Ledger.Constrained.V2.Conway.POOL
 import Test.Cardano.Ledger.Constrained.V2.Conway.PParams
 
 certEnvSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   Spec fn (CertEnv (ConwayEra StandardCrypto))
 certEnvSpec =
   constrained $ \ce ->
@@ -28,7 +28,7 @@ certEnvSpec =
       satisfies pp pparamsSpec
 
 certStateSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   Spec fn (CertState (ConwayEra StandardCrypto))
 certStateSpec =
   constrained $ \cs ->
@@ -39,7 +39,7 @@ certStateSpec =
       ]
 
 txCertSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   CertEnv (ConwayEra StandardCrypto) ->
   CertState (ConwayEra StandardCrypto) ->
   Spec fn (ConwayTxCert (ConwayEra StandardCrypto))

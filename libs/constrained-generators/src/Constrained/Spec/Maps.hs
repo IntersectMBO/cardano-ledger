@@ -22,7 +22,6 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Debug.Trace
 import Prettyprinter
 
 import Constrained.Base
@@ -39,9 +38,9 @@ import Constrained.Univ
 mapSize :: Map k v -> Size
 mapSize s = Size (fromIntegral (Map.size s))
 
-instance (Ord a, forall fn. HasSpec fn a, forall fn. HasSpec fn b) => Sized (Map.Map a b) where
+instance Ord a => Sized (Map.Map a b) where
   sizeOf = mapSize
-  liftSizeSpec sizespec@(SizeSpec _ _) = TypeSpec (MapSpec mempty mempty (typeSpec sizespec) mempty NoFold) []
+  liftSizeSpec sizespec@(SizeSpec _) = TypeSpec (MapSpec mempty mempty (typeSpec sizespec) TrueSpec NoFold) []
 
 data MapSpec fn k v = MapSpec
   { mapSpecMustKeys :: Set k
@@ -85,28 +84,22 @@ instance
 
   conformsTo m (MapSpec mustKeys mustVals size kvs foldSpec) =
     and
-      [ trace "KEYS" $ mustKeys `Set.isSubsetOf` Map.keysSet m
-      , trace "MUST" $ all (`elem` Map.elems m) mustVals
-      , trace "SIZE" $ mapSize m `conformsToSpec` size
-      , trace ("\nELEM\n " ++ show kvs) $ all (`conformsToSpec` kvs) (Map.toList m)
-      , trace "FOLD" $ Map.elems m `conformsToFoldSpec` foldSpec
+      [ mustKeys `Set.isSubsetOf` Map.keysSet m
+      , all (`elem` Map.elems m) mustVals
+      , mapSize m `conformsToSpec` size
+      , all (`conformsToSpec` kvs) (Map.toList m)
+      , Map.elems m `conformsToFoldSpec` foldSpec
       ]
 
-  genFromTypeSpec (MapSpec mustKeys mustVals size kvs foldSpec) = trace "GENERATING" $ do
+  genFromTypeSpec (MapSpec mustKeys mustVals size kvs foldSpec) = do
     mustMap <- explain ["Make the mustMap"] $ forM (Set.toList mustKeys) $ \k -> do
       let vSpec = constrained $ \v -> satisfies (app (fromGenericFn @fn) $ app (pairFn @fn) (Lit k) v) kvs
       v <- explain [show $ "vSpec =" <+> pretty vSpec] $ genFromSpec vSpec
       pure (k, v)
-    let !haveVals = trace ("MUSTMAP " ++ show mustMap) $ map snd mustMap
-        !mustVals' = trace ("HAVEVALS " ++ show haveVals) $ filter (`notElem` haveVals) mustVals
-        size' = constrained $ \case
-          w@(V _) -> trace ("Non Lit in HasSpec fn (Map k v): " ++ show w) $ error ("Non Lit in HasSpec fn (Map k v): " ++ show w)
-          w@(App _ _) -> trace ("Non Lit in HasSpec fn (Map k v): " ++ show w) $ error ("Non Lit in HasSpec fn (Map k v): " ++ show w)
-          (Lit (Size sz)) ->
-            let Size m = listSize mustMap
-             in satisfies
-                  (Lit (Size (fromIntegral sz + m)))
-                  (size <> specSizeBound (mapSpec fstFn $ mapSpec toGenericFn kvs))
+    let haveVals = map snd mustMap
+        mustVals' = filter (`notElem` haveVals) mustVals
+        size' = constrained $ \sz ->
+          satisfies (app plusFn sz (Lit (listSize mustMap))) (size <> specSizeBound (mapSpec fstFn $ mapSpec toGenericFn kvs))
         foldSpec' = case foldSpec of
           NoFold -> NoFold
           FoldSpec fn sumSpec -> FoldSpec fn $ propagateSpecFun (theAddFn @fn) (HOLE :? Value mustSum :> Nil) sumSpec
@@ -160,7 +153,7 @@ instance
 -- Functions
 ------------------------------------------------------------------------
 
-instance (Member (MapFn fn) fn, IsUniverse fn) => Functions (MapFn fn) fn where
+instance (Member (MapFn fn) fn, BaseUniverse fn) => Functions (MapFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
@@ -178,7 +171,7 @@ instance (Member (MapFn fn) fn, IsUniverse fn) => Functions (MapFn fn) fn where
           , Evidence <- prerequisites @fn @(Map k v) ->
               case spec of
                 MemberSpec [s] ->
-                  typeSpec $ MapSpec s [] (equalSpec $ listSize [s]) TrueSpec NoFold
+                  typeSpec $ MapSpec s [] (exactSizeSpec $ listSize [s]) TrueSpec NoFold
                 TypeSpec (SetSpec must elemspec size) [] ->
                   typeSpec $ MapSpec must [] size (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec) NoFold
                 _ -> ErrorSpec ["Dom on bad map spec", show spec]

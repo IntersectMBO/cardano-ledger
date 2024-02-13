@@ -11,7 +11,7 @@ import Constrained
 
 import Test.Cardano.Ledger.Constrained.V2.Conway
 
-pparamsSpec :: IsConwayUniv fn => Spec fn (PParams (ConwayEra StandardCrypto))
+pparamsSpec :: ConwayUniverse fn => Spec fn (PParams (ConwayEra StandardCrypto))
 pparamsSpec =
   constrained $ \pp ->
     match pp $ \cpp ->

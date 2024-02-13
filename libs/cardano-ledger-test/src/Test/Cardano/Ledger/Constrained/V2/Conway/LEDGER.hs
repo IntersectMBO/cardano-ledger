@@ -16,7 +16,7 @@ import Test.Cardano.Ledger.Constrained.V2.Conway
 import Test.Cardano.Ledger.Constrained.V2.Conway.UTXO
 
 ledgerTxSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   LedgerEnv (ConwayEra StandardCrypto) ->
   LedgerState (ConwayEra StandardCrypto) ->
   Spec fn (Tx (ConwayEra StandardCrypto))

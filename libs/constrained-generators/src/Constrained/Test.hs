@@ -304,7 +304,7 @@ data Foo = Foo Int | Bar Int Int
   deriving (Show, Eq, Ord, Generic)
 
 instance HasSimpleRep Foo
-instance IsUniverse fn => HasSpec fn Foo
+instance BaseUniverse fn => HasSpec fn Foo
 
 fooSpec :: Spec Fn Foo
 fooSpec = constrained $ \foo ->

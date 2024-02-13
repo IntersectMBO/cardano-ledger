@@ -22,7 +22,7 @@ vStateSpec :: Spec fn (VState (ConwayEra StandardCrypto))
 vStateSpec = TrueSpec
 
 govCertSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   ConwayGovCertEnv (ConwayEra StandardCrypto) ->
   VState (ConwayEra StandardCrypto) ->
   Spec fn (ConwayGovCert StandardCrypto)
@@ -52,7 +52,7 @@ govCertSpec ConwayGovCertEnv {..} vs =
           (branch $ \_ _ -> True)
 
 govCertEnvSpec ::
-  IsConwayUniv fn =>
+  ConwayUniverse fn =>
   Spec fn (ConwayGovCertEnv (ConwayEra StandardCrypto))
 govCertEnvSpec =
   constrained $ \gce ->
