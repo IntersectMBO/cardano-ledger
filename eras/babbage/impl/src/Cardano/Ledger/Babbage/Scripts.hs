@@ -99,11 +99,11 @@ instance Crypto c => AlonzoEraScript (BabbageEra c) where
   toRewardingPurpose (AlonzoRewarding i) = Just i
   toRewardingPurpose _ = Nothing
 
-  upgradePlutusPurposeAsIndex = \case
-    AlonzoMinting (AsIndex ix) -> AlonzoMinting (AsIndex ix)
-    AlonzoSpending (AsIndex ix) -> AlonzoSpending (AsIndex ix)
-    AlonzoRewarding (AsIndex ix) -> AlonzoRewarding (AsIndex ix)
-    AlonzoCertifying (AsIndex ix) -> AlonzoCertifying (AsIndex ix)
+  upgradePlutusPurposeAsIx = \case
+    AlonzoMinting (AsIx ix) -> AlonzoMinting (AsIx ix)
+    AlonzoSpending (AsIx ix) -> AlonzoSpending (AsIx ix)
+    AlonzoRewarding (AsIx ix) -> AlonzoRewarding (AsIx ix)
+    AlonzoCertifying (AsIx ix) -> AlonzoCertifying (AsIx ix)
 
 instance NFData (PlutusScript (BabbageEra c)) where
   rnf = rwhnf

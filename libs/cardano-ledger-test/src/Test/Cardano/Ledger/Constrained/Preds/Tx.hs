@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Constrained.Preds.Tx where
 
 import Cardano.Crypto.Signing (SigningKey)
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress, RewardAccount (..))
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), plutusScriptLanguage, toAsIndex)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..), plutusScriptLanguage, toAsIx)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (getInputDataHashesTxBody)
@@ -215,7 +215,7 @@ getRdmrPtrs xs allplutus = List.foldl' accum Set.empty xs
   where
     accum ans (PlutusPurposeF p sp, hash)
       | Map.member hash allplutus =
-          let ptr = hoistPlutusPurpose toAsIndex sp
+          let ptr = hoistPlutusPurpose toAsIx sp
            in Set.insert (PlutusPointerF p ptr) ans
       | otherwise = ans
 

@@ -22,7 +22,7 @@ import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxOut (..), Era (..), EraGov)
 import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, getLanguageView, ppCostModelsL, ppMaxTxExUnitsL, ppMaxValSizeL)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), plutusScriptLanguage, toAsIndex)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), plutusScriptLanguage, toAsIx)
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), Redeemers (..), TxDats (..))
@@ -146,7 +146,7 @@ fixupPlutusScripts tx = do
   exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
   let
     mkNewRedeemers (prpIdx, _, ScriptTestContext _ (PlutusArgs dat _)) =
-      (hoistPlutusPurpose @era toAsIndex prpIdx, (Data dat, exUnits))
+      (hoistPlutusPurpose @era toAsIx prpIdx, (Data dat, exUnits))
     newRedeemers = Redeemers . Map.fromList $ mkNewRedeemers <$> contexts
     mkTxDats (_, _, ScriptTestContext _ (PlutusArgs _ datum)) =
       (\d -> (hashData d, d)) . Data <$> datum

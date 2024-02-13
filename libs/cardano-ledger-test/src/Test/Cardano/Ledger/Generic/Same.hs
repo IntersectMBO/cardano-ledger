@@ -378,7 +378,7 @@ sameAlonzoTxWits
     , ("BootWits", eqVia (\_ -> ppString "BOOTWITS") boot1 boot2)
     , ("ScriptWits", eqVia (ppMap pcScriptHash (pcScript proof)) sh1 sh2)
     , ("DataWits", eqVia (ppMap pcDataHash pcData) d1 d2)
-    , ("RedeemerWits", eqVia (ppMap ppPlutusPurposeAsIndex (pcPair pcData pcExUnits)) r1 r2)
+    , ("RedeemerWits", eqVia (ppMap ppPlutusPurposeAsIx (pcPair pcData pcExUnits)) r1 r2)
     ]
 
 sameTxWits :: Reflect era => Proof era -> TxWits era -> TxWits era -> [(String, Maybe PDoc)]

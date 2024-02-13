@@ -134,7 +134,7 @@ exampleExUnitCalc ::
   , PostShelley era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , PlutusPurpose AsIndex era ~ AlonzoPlutusPurpose AsIndex era
+  , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , EraPlutusContext era
   , EraGov era
   ) =>
@@ -142,7 +142,7 @@ exampleExUnitCalc ::
   IO ()
 exampleExUnitCalc proof =
   testExUnitCalculation
-    (exampleTx proof (AlonzoSpending (AsIndex 0)))
+    (exampleTx proof (AlonzoSpending (AsIx 0)))
     (ustate proof)
     uenv
     exampleEpochInfo
@@ -155,7 +155,7 @@ exampleInvalidExUnitCalc ::
   , AlonzoEraTx era
   , EraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , PlutusPurpose AsIndex era ~ AlonzoPlutusPurpose AsIndex era
+  , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , Signable
       (DSIGN (EraCrypto era))
       (Crypto.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
@@ -167,7 +167,7 @@ exampleInvalidExUnitCalc proof = do
   let result =
         evalTxExUnits @era
           testPParams
-          (exampleTx proof (AlonzoSpending (AsIndex 1)))
+          (exampleTx proof (AlonzoSpending (AsIx 1)))
           (initUTxO proof)
           exampleEpochInfo
           testSystemStart
@@ -180,7 +180,7 @@ exampleInvalidExUnitCalc proof = do
         [] ->
           assertFailure "evalTxExUnits should have produced a failing report"
         [(_, failure)] ->
-          RedeemerPointsToUnknownScriptHash (AlonzoSpending (AsIndex 1))
+          RedeemerPointsToUnknownScriptHash (AlonzoSpending (AsIx 1))
             @=? failure
         failures ->
           assertFailure $
@@ -190,11 +190,11 @@ exampleInvalidExUnitCalc proof = do
 exampleTx ::
   ( Scriptic era
   , AlonzoEraTx era
-  , PlutusPurpose AsIndex era ~ AlonzoPlutusPurpose AsIndex era
+  , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   , Signable (DSIGN (EraCrypto era)) (Crypto.Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
-  PlutusPurpose AsIndex era ->
+  PlutusPurpose AsIx era ->
   Tx era
 exampleTx pf ptr =
   mkBasicTx (validatingBody pf)
@@ -214,7 +214,7 @@ validatingBody ::
   ( Scriptic era
   , AlonzoEraTxBody era
   , AlonzoEraScript era
-  , PlutusPurpose AsIndex era ~ AlonzoPlutusPurpose AsIndex era
+  , PlutusPurpose AsIx era ~ AlonzoPlutusPurpose AsIx era
   ) =>
   Proof era ->
   TxBody era
@@ -230,7 +230,7 @@ validatingBody pf =
   where
     redeemers =
       Redeemers $
-        Map.singleton (AlonzoSpending @_ @era (AsIndex 0)) (Data (PV1.I 42), ExUnits 5000 5000)
+        Map.singleton (AlonzoSpending @_ @era (AsIx 0)) (Data (PV1.I 42), ExUnits 5000 5000)
 
 exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
@@ -276,7 +276,7 @@ updateTxExUnits tx utxo ei ss err =
         Right
           ( rdmrs ::
               Map
-                (PlutusPurpose AsIndex era)
+                (PlutusPurpose AsIx era)
                 (Either (TransactionScriptFailure era) ExUnits)
             ) ->
             replaceRdmrs tx <$> traverse (failLeft err) rdmrs
@@ -285,13 +285,13 @@ replaceRdmrs ::
   forall era.
   (AlonzoEraTxWits era, EraTx era) =>
   Tx era ->
-  Map (PlutusPurpose AsIndex era) ExUnits ->
+  Map (PlutusPurpose AsIx era) ExUnits ->
   Tx era
 replaceRdmrs tx rdmrs = tx & witsTxL . rdmrsTxWitsL .~ newRdmrs
   where
     newRdmrs = Map.foldrWithKey replaceRdmr (tx ^. witsTxL . rdmrsTxWitsL) rdmrs
 
-    replaceRdmr :: PlutusPurpose AsIndex era -> ExUnits -> Redeemers era -> Redeemers era
+    replaceRdmr :: PlutusPurpose AsIx era -> ExUnits -> Redeemers era -> Redeemers era
     replaceRdmr ptr ex x@(Redeemers r) =
       case Map.lookup ptr r of
         Just (dat, _ex) -> Redeemers $ Map.insert ptr (dat, ex) r

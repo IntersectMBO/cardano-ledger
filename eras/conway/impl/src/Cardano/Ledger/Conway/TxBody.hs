@@ -710,7 +710,7 @@ conwayRedeemerPointer ::
   ConwayEraTxBody era =>
   TxBody era ->
   ConwayPlutusPurpose AsItem era ->
-  StrictMaybe (ConwayPlutusPurpose AsIndex era)
+  StrictMaybe (ConwayPlutusPurpose AsIx era)
 conwayRedeemerPointer txBody = \case
   ConwayMinting policyID ->
     ConwayMinting <$> indexOf policyID (txBody ^. mintedTxBodyF :: Set (PolicyID (EraCrypto era)))
@@ -728,7 +728,7 @@ conwayRedeemerPointer txBody = \case
 conwayRedeemerPointerInverse ::
   ConwayEraTxBody era =>
   TxBody era ->
-  ConwayPlutusPurpose AsIndex era ->
+  ConwayPlutusPurpose AsIx era ->
   StrictMaybe (ConwayPlutusPurpose AsIxItem era)
 conwayRedeemerPointerInverse txBody = \case
   ConwayMinting idx ->

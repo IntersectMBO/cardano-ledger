@@ -24,7 +24,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (mkPlutusScriptContext),
  )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (lookupPlutusScript)
-import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsIndex, toAsItem)
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemers, unTxDats)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (pvMajor)
@@ -54,15 +54,15 @@ import qualified PlutusLedgerApi.Common as P
 data TransactionScriptFailure era
   = -- | A redeemer was supplied which points to a script hash which
     -- we cannot connect to a Plutus script.
-    RedeemerPointsToUnknownScriptHash !(PlutusPurpose AsIndex era)
+    RedeemerPointsToUnknownScriptHash !(PlutusPurpose AsIx era)
   | -- | Missing redeemer.
     MissingScript
       -- | Redeemer pointer which cannot be resolved
-      !(PlutusPurpose AsIndex era)
+      !(PlutusPurpose AsIx era)
       -- | Map of pointers which can be resolved together with PlutusScripts and their
       -- respective contexts
       !( Map
-          (PlutusPurpose AsIndex era)
+          (PlutusPurpose AsIx era)
           (PlutusPurpose AsItem era, Maybe (PlutusScript era), ScriptHash (EraCrypto era))
        )
   | -- | Missing datum.
@@ -91,7 +91,7 @@ deriving instance
   ( Era era
   , Eq (TxCert era)
   , Eq (PlutusScript era)
-  , Eq (PlutusPurpose AsIndex era)
+  , Eq (PlutusPurpose AsIx era)
   , Eq (PlutusPurpose AsItem era)
   ) =>
   Eq (TransactionScriptFailure era)
@@ -100,7 +100,7 @@ deriving instance
   ( Era era
   , Show (TxCert era)
   , Show (PlutusScript era)
-  , Show (PlutusPurpose AsIndex era)
+  , Show (PlutusPurpose AsIx era)
   , Show (PlutusPurpose AsItem era)
   ) =>
   Show (TransactionScriptFailure era)
@@ -110,10 +110,10 @@ note _ (Just x) = Right x
 note e Nothing = Left e
 
 type RedeemerReport era =
-  Map (PlutusPurpose AsIndex era) (Either (TransactionScriptFailure era) ExUnits)
+  Map (PlutusPurpose AsIx era) (Either (TransactionScriptFailure era) ExUnits)
 
 type RedeemerReportWithLogs era =
-  Map (PlutusPurpose AsIndex era) (Either (TransactionScriptFailure era) ([Text], ExUnits))
+  Map (PlutusPurpose AsIx era) (Either (TransactionScriptFailure era) ([Text], ExUnits))
 
 -- | Evaluate the execution budgets needed for all the redeemers in
 --  a given transaction. If a redeemer is invalid, a failure is returned instead.
@@ -188,7 +188,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
               utxo
               tx
           pure (plutusScript, scriptContext)
-      let pointer = hoistPlutusPurpose toAsIndex plutusPurpose
+      let pointer = hoistPlutusPurpose toAsIx plutusPurpose
       pure (pointer, (plutusPurpose, mPlutusScriptAndContext, scriptHash))
   pure $ Map.mapWithKey (findAndCount $ Map.fromList ptrToPlutusScript) rdmrs
   where

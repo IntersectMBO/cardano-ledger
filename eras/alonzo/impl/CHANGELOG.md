@@ -14,7 +14,8 @@
 * Add implementation for `getMinFeeTxUtxo`
 * Deprecated `indexRedeemers` and `redeemerPointer`.
 * Add `lookupRedeemer`
-* Add `AsIxItem` as well as `toAsItem`, `toAsIndex`.
+* Rename `AsIndex` to `AsIx` and `upgradePlutusPurposeAsIndex` to `upgradePlutusPurposeAsIx`
+* Add `AsIxItem` as well as `toAsItem`, `toAsIx`.
 * Switch `PlutusPurpose` to `AsIxItem` in `AlonzoScriptsNeeded`
 * Add `hoistPlutusPurpose`, `toSpendingPurpose`, `toMintingPurpose`,
   `toCertifyingPurpose`, `toRewardingPurpose`, `fromSpendingPurpose`,

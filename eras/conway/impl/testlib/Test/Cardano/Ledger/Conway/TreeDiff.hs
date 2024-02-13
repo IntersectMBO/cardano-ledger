@@ -37,7 +37,7 @@ instance ToExpr DRepVotingThresholds
 -- Scripts
 instance ToExpr (PlutusScript (ConwayEra c))
 
-instance ToExpr (ConwayPlutusPurpose AsIndex era)
+instance ToExpr (ConwayPlutusPurpose AsIx era)
 
 instance
   ( Era era
@@ -49,7 +49,7 @@ instance
 -- PlutusContext
 instance
   ( ToExpr (TxCert era)
-  , ToExpr (PlutusPurpose AsIndex era)
+  , ToExpr (PlutusPurpose AsIx era)
   , ToExpr (PlutusPurpose AsItem era)
   ) =>
   ToExpr (ConwayContextError era)

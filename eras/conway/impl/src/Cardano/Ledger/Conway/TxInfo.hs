@@ -143,13 +143,13 @@ instance Inject (AlonzoContextError era) (ConwayContextError era) where
   inject = BabbageContextError . inject
 
 instance
-  (NoThunks (TxCert era), NoThunks (PlutusPurpose AsIndex era), NoThunks (PlutusPurpose AsItem era)) =>
+  (NoThunks (TxCert era), NoThunks (PlutusPurpose AsIx era), NoThunks (PlutusPurpose AsItem era)) =>
   NoThunks (ConwayContextError era)
 
 instance
   ( Era era
   , NFData (TxCert era)
-  , NFData (PlutusPurpose AsIndex era)
+  , NFData (PlutusPurpose AsIx era)
   , NFData (PlutusPurpose AsItem era)
   ) =>
   NFData (ConwayContextError era)
@@ -157,7 +157,7 @@ instance
 instance
   ( Era era
   , EncCBOR (TxCert era)
-  , EncCBOR (PlutusPurpose AsIndex era)
+  , EncCBOR (PlutusPurpose AsIx era)
   , EncCBOR (PlutusPurpose AsItem era)
   ) =>
   EncCBOR (ConwayContextError era)
@@ -174,7 +174,7 @@ instance
 instance
   ( Era era
   , DecCBOR (TxCert era)
-  , DecCBOR (PlutusPurpose AsIndex era)
+  , DecCBOR (PlutusPurpose AsIx era)
   , DecCBOR (PlutusPurpose AsItem era)
   ) =>
   DecCBOR (ConwayContextError era)
@@ -187,7 +187,7 @@ instance
 
 instance
   ( ToJSON (TxCert era)
-  , ToJSON (PlutusPurpose AsIndex era)
+  , ToJSON (PlutusPurpose AsIx era)
   , ToJSON (PlutusPurpose AsItem era)
   ) =>
   ToJSON (ConwayContextError era)

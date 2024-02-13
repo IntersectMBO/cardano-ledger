@@ -128,7 +128,7 @@ instance
   arbitrary = mkAlonzoTxAuxData @[] <$> arbitrary <*> arbitrary
 
 instance
-  (AlonzoEraScript era, Arbitrary (PlutusPurpose AsIndex era)) =>
+  (AlonzoEraScript era, Arbitrary (PlutusPurpose AsIx era)) =>
   Arbitrary (Redeemers era)
   where
   arbitrary = Redeemers <$> arbitrary
@@ -137,7 +137,7 @@ instance
   ( Era era
   , Arbitrary (Script era)
   , AlonzoEraScript era
-  , Arbitrary (PlutusPurpose AsIndex era)
+  , Arbitrary (PlutusPurpose AsIx era)
   ) =>
   Arbitrary (AlonzoTxWits era)
   where
@@ -367,20 +367,20 @@ instance
       , PPViewHashesDontMatch <$> arbitrary <*> arbitrary
       ]
 
-deriving instance Arbitrary ix => Arbitrary (AsIndex ix it)
+deriving instance Arbitrary ix => Arbitrary (AsIx ix it)
 
 deriving instance Arbitrary it => Arbitrary (AsItem ix it)
 
 instance (Arbitrary ix, Arbitrary it) => Arbitrary (AsIxItem ix it) where
   arbitrary = AsIxItem <$> arbitrary <*> arbitrary
 
-genAlonzoPlutusPurposePointer :: Word32 -> Gen (AlonzoPlutusPurpose AsIndex era)
+genAlonzoPlutusPurposePointer :: Word32 -> Gen (AlonzoPlutusPurpose AsIx era)
 genAlonzoPlutusPurposePointer i =
   elements
-    [ AlonzoSpending (AsIndex i)
-    , AlonzoMinting (AsIndex i)
-    , AlonzoCertifying (AsIndex i)
-    , AlonzoRewarding (AsIndex i)
+    [ AlonzoSpending (AsIx i)
+    , AlonzoMinting (AsIx i)
+    , AlonzoCertifying (AsIx i)
+    , AlonzoRewarding (AsIx i)
     ]
 
 instance
@@ -411,14 +411,14 @@ instance
       , AlonzoRewarding <$> arbitrary
       ]
 
-instance Era era => Arbitrary (AlonzoPlutusPurpose AsIndex era) where
+instance Era era => Arbitrary (AlonzoPlutusPurpose AsIx era) where
   arbitrary = arbitrary >>= genAlonzoPlutusPurposePointer
 
 instance
   ( AlonzoEraScript era
   , AlonzoEraPParams era
   , Arbitrary (PParams era)
-  , Arbitrary (PlutusPurpose AsIndex era)
+  , Arbitrary (PlutusPurpose AsIx era)
   ) =>
   Arbitrary (ScriptIntegrity era)
   where

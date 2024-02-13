@@ -84,8 +84,8 @@ import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
-  AsIndex (..),
   AsItem (..),
+  AsIx (..),
   AsIxItem (..),
   PlutusPurpose,
  )
@@ -166,12 +166,12 @@ class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
   redeemerPointer ::
     TxBody era ->
     PlutusPurpose AsItem era ->
-    StrictMaybe (PlutusPurpose AsIndex era)
+    StrictMaybe (PlutusPurpose AsIx era)
 
   -- | This is an inverse of `redeemerPointer`. Given purpose as an index return it as an item.
   redeemerPointerInverse ::
     TxBody era ->
-    PlutusPurpose AsIndex era ->
+    PlutusPurpose AsIx era ->
     StrictMaybe (PlutusPurpose AsIxItem era)
 {-# DEPRECATED redeemerPointer "As no longer needed" #-}
 
@@ -648,7 +648,7 @@ alonzoRedeemerPointer ::
   MaryEraTxBody era =>
   TxBody era ->
   AlonzoPlutusPurpose AsItem era ->
-  StrictMaybe (AlonzoPlutusPurpose AsIndex era)
+  StrictMaybe (AlonzoPlutusPurpose AsIx era)
 alonzoRedeemerPointer txBody = \case
   AlonzoSpending txIn ->
     AlonzoSpending <$> indexOf txIn (txBody ^. inputsTxBodyL)
@@ -662,7 +662,7 @@ alonzoRedeemerPointer txBody = \case
 alonzoRedeemerPointerInverse ::
   MaryEraTxBody era =>
   TxBody era ->
-  AlonzoPlutusPurpose AsIndex era ->
+  AlonzoPlutusPurpose AsIx era ->
   StrictMaybe (AlonzoPlutusPurpose AsIxItem era)
 alonzoRedeemerPointerInverse txBody = \case
   AlonzoSpending idx ->
@@ -675,14 +675,14 @@ alonzoRedeemerPointerInverse txBody = \case
     AlonzoRewarding <$> fromIndex idx (unWithdrawals (txBody ^. withdrawalsTxBodyL))
 
 class Indexable elem container where
-  indexOf :: AsItem Word32 elem -> container -> StrictMaybe (AsIndex Word32 elem)
-  fromIndex :: AsIndex Word32 elem -> container -> StrictMaybe (AsIxItem Word32 elem)
+  indexOf :: AsItem Word32 elem -> container -> StrictMaybe (AsIx Word32 elem)
+  fromIndex :: AsIx Word32 elem -> container -> StrictMaybe (AsIxItem Word32 elem)
 
 instance Ord k => Indexable k (Set k) where
   indexOf (AsItem n) s = case Set.lookupIndex n s of
-    Just x -> SJust (AsIndex (fromIntegral @Int @Word32 x))
+    Just x -> SJust (AsIx (fromIntegral @Int @Word32 x))
     Nothing -> SNothing
-  fromIndex (AsIndex w32) s =
+  fromIndex (AsIx w32) s =
     let i = fromIntegral @Word32 @Int w32
      in if i < Set.size s
           then SJust $ AsIxItem w32 (Set.elemAt i s)
@@ -690,18 +690,18 @@ instance Ord k => Indexable k (Set k) where
 
 instance Eq k => Indexable k (StrictSeq k) where
   indexOf (AsItem n) seqx = case StrictSeq.findIndexL (== n) seqx of
-    Just m -> SJust (AsIndex (fromIntegral @Int @Word32 m))
+    Just m -> SJust (AsIx (fromIntegral @Int @Word32 m))
     Nothing -> SNothing
-  fromIndex (AsIndex w32) seqx =
+  fromIndex (AsIx w32) seqx =
     case StrictSeq.lookup (fromIntegral @Word32 @Int w32) seqx of
       Nothing -> SNothing
       Just x -> SJust $ AsIxItem w32 x
 
 instance Ord k => Indexable k (Map.Map k v) where
   indexOf (AsItem n) mp = case Map.lookupIndex n mp of
-    Just x -> SJust (AsIndex (fromIntegral @Int @Word32 x))
+    Just x -> SJust (AsIx (fromIntegral @Int @Word32 x))
     Nothing -> SNothing
-  fromIndex (AsIndex w32) mp =
+  fromIndex (AsIx w32) mp =
     let i = fromIntegral @Word32 @Int w32
      in if i < fromIntegral (Map.size mp)
           then SJust . AsIxItem w32 . fst $ Map.elemAt i mp

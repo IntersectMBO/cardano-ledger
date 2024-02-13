@@ -4,7 +4,7 @@ module Cardano.Ledger.Alonzo.Core (
   AlonzoEraTx (..),
   AlonzoEraTxOut (..),
   AlonzoEraScript (..),
-  AsIndex (..),
+  AsIx (..),
   AsItem (..),
   AsIxItem (..),
   pattern SpendingPurpose,
@@ -58,8 +58,8 @@ import Cardano.Ledger.Alonzo.PParams (
  )
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
-  AsIndex (..),
   AsItem (..),
+  AsIx (..),
   AsIxItem (..),
   pattern CertifyingPurpose,
   pattern MintingPurpose,

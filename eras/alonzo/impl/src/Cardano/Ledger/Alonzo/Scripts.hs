@@ -48,10 +48,10 @@ module Cardano.Ledger.Alonzo.Scripts (
   pattern RewardingPurpose,
   AlonzoPlutusPurpose (..),
   AsItem (..),
-  AsIndex (..),
+  AsIx (..),
   AsIxItem (..),
   toAsItem,
-  toAsIndex,
+  toAsIx,
 
   -- * Re-exports
   module Cardano.Ledger.Plutus.CostModels,
@@ -134,15 +134,15 @@ class
   , DecCBOR (PlutusPurpose AsItem era)
   , NoThunks (PlutusPurpose AsItem era)
   , NFData (PlutusPurpose AsItem era)
-  , Eq (PlutusPurpose AsIndex era)
-  , Ord (PlutusPurpose AsIndex era)
-  , Show (PlutusPurpose AsIndex era)
-  , EncCBOR (PlutusPurpose AsIndex era)
-  , DecCBOR (PlutusPurpose AsIndex era)
-  , EncCBORGroup (PlutusPurpose AsIndex era)
-  , DecCBORGroup (PlutusPurpose AsIndex era)
-  , NoThunks (PlutusPurpose AsIndex era)
-  , NFData (PlutusPurpose AsIndex era)
+  , Eq (PlutusPurpose AsIx era)
+  , Ord (PlutusPurpose AsIx era)
+  , Show (PlutusPurpose AsIx era)
+  , EncCBOR (PlutusPurpose AsIx era)
+  , DecCBOR (PlutusPurpose AsIx era)
+  , EncCBORGroup (PlutusPurpose AsIx era)
+  , DecCBORGroup (PlutusPurpose AsIx era)
+  , NoThunks (PlutusPurpose AsIx era)
+  , NFData (PlutusPurpose AsIx era)
   , Eq (PlutusPurpose AsIxItem era)
   , Show (PlutusPurpose AsIxItem era)
   , NoThunks (PlutusPurpose AsIxItem era)
@@ -201,10 +201,10 @@ class
 
   toRewardingPurpose :: PlutusPurpose f era -> Maybe (f Word32 (RewardAccount (EraCrypto era)))
 
-  upgradePlutusPurposeAsIndex ::
+  upgradePlutusPurposeAsIx ::
     AlonzoEraScript (PreviousEra era) =>
-    PlutusPurpose AsIndex (PreviousEra era) ->
-    PlutusPurpose AsIndex era
+    PlutusPurpose AsIx (PreviousEra era) ->
+    PlutusPurpose AsIx era
 
 mkBinaryPlutusScript :: AlonzoEraScript era => Language -> PlutusBinary -> Maybe (PlutusScript era)
 mkBinaryPlutusScript lang pb = withSLanguage lang (mkPlutusScript . (`asSLanguage` Plutus pb))
@@ -247,7 +247,7 @@ isValidPlutusScript pv ps = withPlutusScript ps (isValidPlutus pv)
 
 -- Alonzo Plutus Purpose =======================================================
 
-newtype AsIndex ix it = AsIndex {unAsIndex :: ix}
+newtype AsIx ix it = AsIx {unAsIx :: ix}
   deriving stock (Show)
   deriving newtype (Eq, Ord, NFData, NoThunks, EncCBOR, DecCBOR, Generic)
 
@@ -266,8 +266,8 @@ instance (NoThunks ix, NoThunks it) => NoThunks (AsIxItem ix it)
 instance (NFData ix, NFData it) => NFData (AsIxItem ix it) where
   rnf (AsIxItem ix it) = ix `deepseq` rnf it
 
-instance ToJSON ix => ToJSON (AsIndex ix it) where
-  toJSON (AsIndex i) = object ["index" .= toJSON i]
+instance ToJSON ix => ToJSON (AsIx ix it) where
+  toJSON (AsIx i) = object ["index" .= toJSON i]
 
 instance ToJSON it => ToJSON (AsItem ix it) where
   toJSON (AsItem i) = object ["item" .= toJSON i]
@@ -282,8 +282,8 @@ instance (ToJSON ix, ToJSON it) => ToJSON (AsIxItem ix it) where
 toAsItem :: AsIxItem ix it -> AsItem ix it
 toAsItem (AsIxItem _ it) = AsItem it
 
-toAsIndex :: AsIxItem ix it -> AsIndex ix it
-toAsIndex (AsIxItem ix _) = AsIndex ix
+toAsIx :: AsIxItem ix it -> AsIx ix it
+toAsIx (AsIxItem ix _) = AsIx ix
 
 data AlonzoPlutusPurpose f era
   = AlonzoSpending !(f Word32 (TxIn (EraCrypto era)))
@@ -292,10 +292,10 @@ data AlonzoPlutusPurpose f era
   | AlonzoRewarding !(f Word32 (RewardAccount (EraCrypto era)))
   deriving (Generic)
 
-deriving instance Eq (AlonzoPlutusPurpose AsIndex era)
-deriving instance Ord (AlonzoPlutusPurpose AsIndex era)
-deriving instance Show (AlonzoPlutusPurpose AsIndex era)
-instance NoThunks (AlonzoPlutusPurpose AsIndex era)
+deriving instance Eq (AlonzoPlutusPurpose AsIx era)
+deriving instance Ord (AlonzoPlutusPurpose AsIx era)
+deriving instance Show (AlonzoPlutusPurpose AsIx era)
+instance NoThunks (AlonzoPlutusPurpose AsIx era)
 
 deriving instance Eq (TxCert era) => Eq (AlonzoPlutusPurpose AsItem era)
 deriving instance Show (TxCert era) => Show (AlonzoPlutusPurpose AsItem era)
@@ -315,35 +315,35 @@ instance
     AlonzoCertifying x -> rnf x
     AlonzoRewarding x -> rnf x
 
-instance Era era => EncCBORGroup (AlonzoPlutusPurpose AsIndex era) where
+instance Era era => EncCBORGroup (AlonzoPlutusPurpose AsIx era) where
   listLen _ = 2
   listLenBound _ = 2
   encCBORGroup = \case
-    AlonzoSpending (AsIndex redeemerIx) -> encodeWord8 0 <> encCBOR redeemerIx
-    AlonzoMinting (AsIndex redeemerIx) -> encodeWord8 1 <> encCBOR redeemerIx
-    AlonzoCertifying (AsIndex redeemerIx) -> encodeWord8 2 <> encCBOR redeemerIx
-    AlonzoRewarding (AsIndex redeemerIx) -> encodeWord8 3 <> encCBOR redeemerIx
+    AlonzoSpending (AsIx redeemerIx) -> encodeWord8 0 <> encCBOR redeemerIx
+    AlonzoMinting (AsIx redeemerIx) -> encodeWord8 1 <> encCBOR redeemerIx
+    AlonzoCertifying (AsIx redeemerIx) -> encodeWord8 2 <> encCBOR redeemerIx
+    AlonzoRewarding (AsIx redeemerIx) -> encodeWord8 3 <> encCBOR redeemerIx
   encodedGroupSizeExpr size_ _proxy =
     encodedSizeExpr size_ (Proxy :: Proxy Word8)
       + encodedSizeExpr size_ (Proxy :: Proxy Word16)
 
-instance Era era => DecCBORGroup (AlonzoPlutusPurpose AsIndex era) where
+instance Era era => DecCBORGroup (AlonzoPlutusPurpose AsIx era) where
   decCBORGroup =
     decodeWord8 >>= \case
-      0 -> AlonzoSpending . AsIndex <$> decCBOR
-      1 -> AlonzoMinting . AsIndex <$> decCBOR
-      2 -> AlonzoCertifying . AsIndex <$> decCBOR
-      3 -> AlonzoRewarding . AsIndex <$> decCBOR
+      0 -> AlonzoSpending . AsIx <$> decCBOR
+      1 -> AlonzoMinting . AsIx <$> decCBOR
+      2 -> AlonzoCertifying . AsIx <$> decCBOR
+      3 -> AlonzoRewarding . AsIx <$> decCBOR
       n -> fail $ "Unexpected tag for AlonzoPlutusPurpose: " <> show n
 
 -- | Incorrect CBOR implementation. Missing length encoding. Must keep it for backwards
 -- compatibility
-instance Era era => EncCBOR (AlonzoPlutusPurpose AsIndex era) where
+instance Era era => EncCBOR (AlonzoPlutusPurpose AsIx era) where
   encCBOR = encCBORGroup
 
 -- | Incorrect CBOR implementation. Missing length encoding. Must keep it for backwards
 -- compatibility
-instance Era era => DecCBOR (AlonzoPlutusPurpose AsIndex era) where
+instance Era era => DecCBOR (AlonzoPlutusPurpose AsIx era) where
   decCBOR = decCBORGroup
 
 instance
@@ -363,10 +363,10 @@ instance
 
 -- | /Note/ - serialization of `AlonzoPlutusPurpose` `AsItem`
 --
--- * Tags do not match the `AlonzoPlutusPurpose` `AsIndex`. Unfortunate inconsistency
+-- * Tags do not match the `AlonzoPlutusPurpose` `AsIx`. Unfortunate inconsistency
 --
 -- * It is only used for predicate failures. Thus we can change it after Conway to be
---   consistent with `AlonzoPlutusPurpose` `AsIndex`
+--   consistent with `AlonzoPlutusPurpose` `AsIx`
 instance (Era era, EncCBOR (TxCert era)) => EncCBOR (AlonzoPlutusPurpose AsItem era) where
   encCBOR = \case
     AlonzoSpending (AsItem x) -> encode (Sum (AlonzoSpending @_ @era . AsItem) 1 !> To x)
@@ -501,7 +501,7 @@ instance Crypto c => AlonzoEraScript (AlonzoEra c) where
   toRewardingPurpose (AlonzoRewarding i) = Just i
   toRewardingPurpose _ = Nothing
 
-  upgradePlutusPurposeAsIndex =
+  upgradePlutusPurposeAsIx =
     error "Impossible: No `PlutusScript` and `AlonzoEraScript` instances in the previous era"
 
 instance Eq (PlutusScript era) => EqRaw (AlonzoScript era) where

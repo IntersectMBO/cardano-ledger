@@ -88,7 +88,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   AsIxItem,
   CostModel,
   ExUnits (..),
-  toAsIndex,
+  toAsIx,
   txscriptfee,
  )
 import Cardano.Ledger.Alonzo.TxBody (
@@ -382,7 +382,7 @@ indexRedeemers ::
   Tx era ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era, ExUnits)
-indexRedeemers tx sp = Map.lookup (hoistPlutusPurpose toAsIndex sp) redeemers
+indexRedeemers tx sp = Map.lookup (hoistPlutusPurpose toAsIx sp) redeemers
   where
     redeemers = unRedeemers (tx ^. witsTxL . rdmrsTxWitsL)
 {-# DEPRECATED indexRedeemers "As no longer needed" #-}

@@ -308,7 +308,7 @@ plutusPurposeTags = \case
 mkRedeemers ::
   forall era.
   Proof era ->
-  [(PlutusPurpose AsIndex era, (Data era, ExUnits))] ->
+  [(PlutusPurpose AsIx era, (Data era, ExUnits))] ->
   Redeemers era
 mkRedeemers proof redeemerMap =
   -- Pattern match on proof is needed in order to avoid leacking Ord constraint.
@@ -334,7 +334,7 @@ mkRedeemersFromTags proof redeemerPointers =
     Babbage {} -> mkRedeemers proof redeemerAssocs
     Conway {} -> mkRedeemers proof redeemerAssocs
   where
-    redeemerAssocs :: [(PlutusPurpose AsIndex era, (Data era, ExUnits))]
+    redeemerAssocs :: [(PlutusPurpose AsIx era, (Data era, ExUnits))]
     redeemerAssocs =
       [ (mkPlutusPurposePointer proof tag i, redeemer)
       | ((tag, i), redeemer) <- redeemerPointers
@@ -344,7 +344,7 @@ mkPlutusPurposePointer ::
   Proof era ->
   PlutusPurposeTag ->
   Word32 ->
-  PlutusPurpose AsIndex era
+  PlutusPurpose AsIx era
 mkPlutusPurposePointer proof tag i =
   case proof of
     Shelley {} -> error "No PlutusPurpose"
@@ -359,24 +359,24 @@ mkAlonzoPlutusPurposePointer ::
   Era era =>
   PlutusPurposeTag ->
   Word32 ->
-  AlonzoPlutusPurpose AsIndex era
+  AlonzoPlutusPurpose AsIx era
 mkAlonzoPlutusPurposePointer tag i =
   case tag of
-    Spending -> AlonzoSpending (AsIndex i)
-    Minting -> AlonzoMinting (AsIndex i)
-    Certifying -> AlonzoCertifying (AsIndex i)
-    Rewarding -> AlonzoRewarding (AsIndex i)
+    Spending -> AlonzoSpending (AsIx i)
+    Minting -> AlonzoMinting (AsIx i)
+    Certifying -> AlonzoCertifying (AsIx i)
+    Rewarding -> AlonzoRewarding (AsIx i)
     _ -> error $ "Unsupported tag: " ++ show tag ++ " in era " ++ eraName @era
 
-mkConwayPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> ConwayPlutusPurpose AsIndex era
+mkConwayPlutusPurposePointer :: PlutusPurposeTag -> Word32 -> ConwayPlutusPurpose AsIx era
 mkConwayPlutusPurposePointer tag i =
   case tag of
-    Spending -> ConwaySpending (AsIndex i)
-    Minting -> ConwayMinting (AsIndex i)
-    Certifying -> ConwayCertifying (AsIndex i)
-    Rewarding -> ConwayRewarding (AsIndex i)
-    Voting -> ConwayVoting (AsIndex i)
-    Proposing -> ConwayProposing (AsIndex i)
+    Spending -> ConwaySpending (AsIx i)
+    Minting -> ConwayMinting (AsIx i)
+    Certifying -> ConwayCertifying (AsIx i)
+    Rewarding -> ConwayRewarding (AsIx i)
+    Voting -> ConwayVoting (AsIx i)
+    Proposing -> ConwayProposing (AsIx i)
 
 -- =====================================================================
 -- Accessing information
