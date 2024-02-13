@@ -44,6 +44,7 @@ import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXO)
 import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.Rules.Ppup ()
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), totExUnits)
@@ -77,15 +78,11 @@ import Cardano.Ledger.Coin (Coin (unCoin), rationalToCoinViaCeiling)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Rules.ValidationMode (
-  Inject (..),
   Test,
   runTest,
   runTestOnSignal,
  )
-import Cardano.Ledger.Shelley.LedgerState (
-  PPUPPredFailure,
-  UTxOState (utxosUtxo),
- )
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (utxosUtxo))
 import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn)
@@ -723,7 +720,10 @@ instance
 -- Injecting from one PredicateFailure to another
 
 allegraToAlonzoUtxoPredFailure ::
-  Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
+  forall t era.
+  ( EraRuleFailure "PPUP" era ~ t era
+  , InjectRuleFailure "UTXOS" t era
+  ) =>
   AllegraUtxoPredFailure era ->
   AlonzoUtxoPredFailure era
 allegraToAlonzoUtxoPredFailure = \case
@@ -736,7 +736,7 @@ allegraToAlonzoUtxoPredFailure = \case
   Allegra.WrongNetwork x y -> WrongNetwork x y
   Allegra.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
   Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
-  Allegra.UpdateFailure x -> UtxosFailure (inject x)
+  Allegra.UpdateFailure x -> UtxosFailure (injectFailure @"UTXOS" @t x)
   Allegra.OutputBootAddrAttrsTooBig xs -> OutputTooBigUTxO (map (0,0,) xs)
   Allegra.TriesToForgeADA -> TriesToForgeADA
   Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (0,0,) xs)

@@ -44,6 +44,7 @@ import Cardano.Ledger.Babbage.Collateral (
  )
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXOS)
+import Cardano.Ledger.Babbage.Rules.Ppup ()
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
@@ -58,11 +59,7 @@ import Cardano.Ledger.Plutus.Evaluate (
   ScriptResult (..),
  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.LedgerState (
-  PPUPPredFailure,
-  UTxOState (..),
-  updateStakeDistribution,
- )
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), updateStakeDistribution)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (
   PpupEnv (..),
@@ -104,9 +101,9 @@ instance
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (BabbageUTXOS era) ~ Tx era
-  , EncCBOR (PPUPPredFailure era) -- Serializing the PredicateFailure
-  , Eq (PPUPPredFailure era)
-  , Show (PPUPPredFailure era)
+  , EncCBOR (EraRuleFailure "PPUP" era)
+  , Eq (EraRuleFailure "PPUP" era)
+  , Show (EraRuleFailure "PPUP" era)
   ) =>
   STS (BabbageUTXOS era)
   where
@@ -121,7 +118,7 @@ instance
 instance
   ( Era era
   , STS (ShelleyPPUP era)
-  , PPUPPredFailure era ~ ShelleyPpupPredFailure era
+  , EraRuleFailure "PPUP" era ~ ShelleyPpupPredFailure era
   , Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
   ) =>
   Embed (ShelleyPPUP era) (BabbageUTXOS era)
@@ -143,9 +140,9 @@ utxosTransition ::
   , Embed (EraRule "PPUP" era) (BabbageUTXOS era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (BabbageUTXOS era) ~ Tx era
-  , EncCBOR (PPUPPredFailure era)
-  , Eq (PPUPPredFailure era)
-  , Show (PPUPPredFailure era)
+  , EncCBOR (EraRuleFailure "PPUP" era)
+  , Eq (EraRuleFailure "PPUP" era)
+  , Show (EraRuleFailure "PPUP" era)
   , EraPlutusContext era
   ) =>
   TransitionRule (BabbageUTXOS era)

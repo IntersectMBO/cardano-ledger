@@ -47,6 +47,11 @@ instance Crypto c => Era (ConwayEra c) where
 type instance Value (ConwayEra c) = MaryValue c
 
 -------------------------------------------------------------------------------
+-- Disabled rules
+-------------------------------------------------------------------------------
+type instance EraRuleFailure "PPUP" (ConwayEra c) = VoidEraRule "PPUP" (ConwayEra c)
+
+-------------------------------------------------------------------------------
 -- Era Mapping
 -------------------------------------------------------------------------------
 

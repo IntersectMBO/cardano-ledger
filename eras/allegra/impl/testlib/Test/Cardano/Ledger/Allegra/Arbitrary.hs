@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -19,7 +20,6 @@ import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (AllegraTxBody))
 import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API (KeyHash (KeyHash), ShelleyTxAuxData (ShelleyTxAuxData))
-import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Generic.Random (genericArbitraryU)
@@ -95,7 +95,7 @@ instance
   ( Era era
   , Arbitrary (Value era)
   , Arbitrary (TxOut era)
-  , Arbitrary (PPUPPredFailure era)
+  , Arbitrary (EraRuleFailure "PPUP" era)
   ) =>
   Arbitrary (AllegraUtxoPredFailure era)
   where

@@ -2,6 +2,8 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE EmptyCase #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,7 +22,8 @@ module Cardano.Ledger.Core.Era (
   -- ** Rules
   EraRule,
   EraRuleFailure,
-  VoidRuleFailure,
+  VoidEraRule,
+  absurdEraRule,
   InjectRuleFailure (..),
 
   -- ** Protocol Version
@@ -46,6 +49,7 @@ where
 import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto
+import Control.DeepSeq (NFData (..))
 import Control.State.Transition.Extended (PredicateFailure)
 import Data.Kind (Constraint, Type)
 import Data.Typeable (Typeable)
@@ -122,23 +126,43 @@ instance Crypto c => Era (ByronEra c) where
 -- | Era STS map
 type family EraRule (rule :: Symbol) era = (r :: Type) | r -> rule
 
--- | `EraRuleFailure` type family is needed for injectivity, which STS does not provide for
--- us unfortunately.
+-- | `EraRuleFailure` type family is needed for injectivity, which STS' `PredicateFailure`
+-- does not provide for us unfortunately.
 type family EraRuleFailure (rule :: Symbol) era = (r :: Type) | r -> rule era
 
-data VoidRuleFailure (rule :: Symbol) era
+-- | This is a type with no inhabitans for the rules. It is used to indicate that a rule
+-- does not have a predicate failure as well as marking rules that have been disabled when
+-- comparing to prior eras.
+data VoidEraRule (rule :: Symbol) era
+  deriving (Show, Eq, Ord)
+
+instance NFData (VoidEraRule (rule :: Symbol) era) where
+  rnf = absurdEraRule
+
+instance (KnownSymbol rule, Era era) => ToCBOR (VoidEraRule (rule :: Symbol) era) where
+  toCBOR = absurdEraRule
+
+instance (KnownSymbol rule, Era era) => EncCBOR (VoidEraRule (rule :: Symbol) era)
+
+instance (KnownSymbol rule, Era era) => FromCBOR (VoidEraRule (rule :: Symbol) era) where
+  fromCBOR = cborError DecoderErrorVoid
+
+instance (KnownSymbol rule, Era era) => DecCBOR (VoidEraRule (rule :: Symbol) era)
+
+absurdEraRule :: VoidEraRule rule era -> a
+absurdEraRule a = case a of {}
 
 -- Rules that should never have a predicate failures
-type instance EraRuleFailure "EPOCH" era = VoidRuleFailure "EPOCH" era
-type instance EraRuleFailure "NEWEPOCH" era = VoidRuleFailure "NEWEPOCH" era
-type instance EraRuleFailure "MIR" era = VoidRuleFailure "MIR" era
-type instance EraRuleFailure "NEWPP" era = VoidRuleFailure "NEWPP" era
-type instance EraRuleFailure "SNAP" era = VoidRuleFailure "SNAP" era
-type instance EraRuleFailure "TICK" era = VoidRuleFailure "TICK" era
-type instance EraRuleFailure "TICKF" era = VoidRuleFailure "TICKF" era
-type instance EraRuleFailure "UPEC" era = VoidRuleFailure "UPEC" era
-type instance EraRuleFailure "RUPD" era = VoidRuleFailure "RUPD" era
-type instance EraRuleFailure "POOLREAP" era = VoidRuleFailure "POOLREAP" era
+type instance EraRuleFailure "EPOCH" era = VoidEraRule "EPOCH" era
+type instance EraRuleFailure "NEWEPOCH" era = VoidEraRule "NEWEPOCH" era
+type instance EraRuleFailure "MIR" era = VoidEraRule "MIR" era
+type instance EraRuleFailure "NEWPP" era = VoidEraRule "NEWPP" era
+type instance EraRuleFailure "SNAP" era = VoidEraRule "SNAP" era
+type instance EraRuleFailure "TICK" era = VoidEraRule "TICK" era
+type instance EraRuleFailure "TICKF" era = VoidEraRule "TICKF" era
+type instance EraRuleFailure "UPEC" era = VoidEraRule "UPEC" era
+type instance EraRuleFailure "RUPD" era = VoidEraRule "RUPD" era
+type instance EraRuleFailure "POOLREAP" era = VoidEraRule "POOLREAP" era
 
 class
   EraRuleFailure rule era ~ PredicateFailure (EraRule rule era) =>

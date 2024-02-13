@@ -9,6 +9,6 @@ import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure)
 
-type instance EraRuleFailure "PPUP" era = ShelleyPpupPredFailure era
+type instance EraRuleFailure "PPUP" (BabbageEra c) = ShelleyPpupPredFailure (BabbageEra c)
 
 instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure (BabbageEra c)

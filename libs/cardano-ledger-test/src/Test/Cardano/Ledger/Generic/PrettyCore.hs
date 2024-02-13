@@ -197,7 +197,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   InstantaneousRewards (..),
   LedgerState (..),
   NewEpochState (..),
-  PPUPPredFailure,
   PState (..),
   RewardUpdate (..),
   UTxOState (..),
@@ -1802,7 +1801,7 @@ ppUtxosPredicateFailure (CollectErrors es) =
       , ppList ppCollectError es
       )
     ]
-ppUtxosPredicateFailure (Alonzo.UpdateFailure p) = ppPPUPPredFailure @era p
+ppUtxosPredicateFailure (Alonzo.UpdateFailure p) = ppPPUPPredFailure p
 
 instance Reflect era => PrettyA (AlonzoUtxosPredFailure era) where
   prettyA = ppUtxosPredicateFailure
@@ -1912,7 +1911,7 @@ ppShelleyUtxoPredFailure (Shelley.OutputTooSmallUTxO xs) =
     "OutputTooSmallUTxO"
     [("list of supplied transaction outputs that are too small", ppList (pcTxOut reify) xs)]
 ppShelleyUtxoPredFailure (Shelley.UpdateFailure x) =
-  ppSexp "UpdateFailure" [ppPPUPPredFailure @era x]
+  ppSexp "UpdateFailure" [ppPPUPPredFailure x]
 ppShelleyUtxoPredFailure (Shelley.OutputBootAddrAttrsTooBig xs) =
   ppRecord "OutputBootAddrAttrsTooBig" [("list of supplied bad transaction outputs", ppList (pcTxOut reify) xs)]
 
@@ -1945,7 +1944,7 @@ instance PrettyA (ShelleyPpupPredFailure era) where
 -- =====================================================
 -- Predicate failure for Mary UTXO
 
-ppPPUPPredFailure :: PPUPPredFailure era -> PDoc
+ppPPUPPredFailure :: a -> PDoc
 ppPPUPPredFailure _ = ppString "PPUPPredFailure" -- TODO FIXME
 
 ppAllegraUtxoPredFailure ::
@@ -1997,7 +1996,7 @@ ppAllegraUtxoPredFailure (Allegra.OutputTooSmallUTxO xs) =
     "OutputTooSmallUTxO"
     [("list of supplied transaction outputs that are too small", ppList (pcTxOut reify) xs)]
 ppAllegraUtxoPredFailure (Allegra.UpdateFailure x) =
-  ppSexp "UpdateFailure" [ppPPUPPredFailure @era x]
+  ppSexp "UpdateFailure" [ppPPUPPredFailure x]
 ppAllegraUtxoPredFailure (Allegra.OutputBootAddrAttrsTooBig xs) =
   ppRecord "OutputBootAddrAttrsTooBig" [("list of supplied bad transaction outputs", ppList (pcTxOut reify) xs)]
 ppAllegraUtxoPredFailure (Allegra.TriesToForgeADA) = ppSexp "TriesToForgeADA" []

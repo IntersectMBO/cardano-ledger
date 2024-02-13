@@ -26,6 +26,7 @@ where
 import Cardano.Ledger.Address (Addr, RewardAccount)
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Era (AllegraEra, AllegraUTXO)
+import Cardano.Ledger.Allegra.Rules.Ppup ()
 import Cardano.Ledger.Allegra.Scripts (inInterval)
 import Cardano.Ledger.BaseTypes (
   Network,
@@ -47,7 +48,6 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (
@@ -72,7 +72,6 @@ import Data.Foldable (toList)
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
-import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -105,7 +104,7 @@ data AllegraUtxoPredFailure era
       !(Set (RewardAccount (EraCrypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       ![TxOut era] -- list of supplied transaction outputs that are too small
-  | UpdateFailure !(PPUPPredFailure era) -- Subtransition Failures
+  | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
       ![TxOut era] -- list of supplied bad transaction outputs
   | -- Kept for backwards compatibility: no longer used because the `MultiAsset` type of mint doesn't allow for this possibility
@@ -127,21 +126,21 @@ instance InjectRuleFailure "UTXO" Shelley.ShelleyUtxoPredFailure (AllegraEra c) 
 deriving stock instance
   ( Show (TxOut era)
   , Show (Value era)
-  , Show (PPUPPredFailure era)
+  , Show (EraRuleFailure "PPUP" era)
   ) =>
   Show (AllegraUtxoPredFailure era)
 
 deriving stock instance
   ( Eq (TxOut era)
   , Eq (Value era)
-  , Eq (PPUPPredFailure era)
+  , Eq (EraRuleFailure "PPUP" era)
   ) =>
   Eq (AllegraUtxoPredFailure era)
 
 instance
   ( NoThunks (TxOut era)
   , NoThunks (Value era)
-  , NoThunks (PPUPPredFailure era)
+  , NoThunks (EraRuleFailure "PPUP" era)
   ) =>
   NoThunks (AllegraUtxoPredFailure era)
 
@@ -149,7 +148,7 @@ instance
   ( Era era
   , NFData (TxOut era)
   , NFData (Value era)
-  , NFData (PPUPPredFailure era)
+  , NFData (EraRuleFailure "PPUP" era)
   ) =>
   NFData (AllegraUtxoPredFailure era)
 
@@ -169,8 +168,8 @@ utxoTransition ::
   ( EraUTxO era
   , ShelleyEraTxBody era
   , AllegraEraTxBody era
-  , Eq (PPUPPredFailure era)
-  , Show (PPUPPredFailure era)
+  , Eq (EraRuleFailure "PPUP" era)
+  , Show (EraRuleFailure "PPUP" era)
   , Embed (EraRule "PPUP" era) (EraRule "UTXO" era)
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
@@ -306,8 +305,8 @@ instance
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , ProtVerAtMost era 8
-  , Eq (PPUPPredFailure era)
-  , Show (PPUPPredFailure era)
+  , Eq (EraRuleFailure "PPUP" era)
+  , Show (EraRuleFailure "PPUP" era)
   , EraRule "UTXO" era ~ AllegraUTXO era
   , GovState era ~ ShelleyGovState era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
@@ -328,7 +327,7 @@ instance
 instance
   ( Era era
   , STS (ShelleyPPUP era)
-  , PPUPPredFailure era ~ ShelleyPpupPredFailure era
+  , EraRuleFailure "PPUP" era ~ ShelleyPpupPredFailure era
   , Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
   ) =>
   Embed (ShelleyPPUP era) (AllegraUTXO era)
@@ -340,11 +339,11 @@ instance
 -- Serialisation
 --------------------------------------------------------------------------------
 instance
-  ( Typeable era
+  ( Era era
   , Crypto (EraCrypto era)
   , EncCBOR (Value era)
   , EncCBOR (TxOut era)
-  , EncCBOR (PPUPPredFailure era)
+  , EncCBOR (EraRuleFailure "PPUP" era)
   ) =>
   EncCBOR (AllegraUtxoPredFailure era)
   where
@@ -402,7 +401,7 @@ instance
 
 instance
   ( EraTxOut era
-  , DecCBOR (PPUPPredFailure era)
+  , DecCBOR (EraRuleFailure "PPUP" era)
   ) =>
   DecCBOR (AllegraUtxoPredFailure era)
   where

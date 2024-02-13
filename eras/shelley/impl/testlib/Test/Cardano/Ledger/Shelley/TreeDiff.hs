@@ -151,7 +151,7 @@ instance ToExpr (IncrementalStake c)
 
 -- Rules/Utxo
 instance
-  ( ToExpr (PPUPPredFailure era)
+  ( ToExpr (EraRuleFailure "PPUP" era)
   , ToExpr (Value era)
   , ToExpr (TxOut era)
   ) =>
