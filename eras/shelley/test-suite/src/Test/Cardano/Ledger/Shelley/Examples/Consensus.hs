@@ -365,7 +365,7 @@ exampleNewEpochState value ppp pp =
         (EpochSize 432000)
         (BlocksMade (Map.singleton (mkKeyHash 1) 10))
         epochState
-        (Coin 45)
+        (Coin 1000)
         (activeSlotCoeff testGlobals)
         10
 
