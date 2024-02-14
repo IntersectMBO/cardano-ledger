@@ -72,6 +72,8 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   logProposalsForest,
   logProposalsForestDiff,
   constitutionShouldBe,
+  ccShouldBeResigned,
+  ccShouldNotBeResigned,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
@@ -88,7 +90,7 @@ import Cardano.Ledger.BaseTypes (
   inject,
   textToUrl,
  )
-import Cardano.Ledger.CertState (DRep (..))
+import Cardano.Ledger.CertState (DRep (..), csCommitteeCredsL)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
@@ -144,7 +146,7 @@ import Data.Foldable (Foldable (..))
 import Data.Functor.Identity
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, isJust)
 import Data.Maybe.Strict (isSJust)
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -621,6 +623,18 @@ getRatifyEnv = do
       , reCurrentEpoch = eNo - 1
       , reCommitteeState = committeeState
       }
+
+-- | Test the resignation status for a CC cold key to be resigned
+ccShouldBeResigned :: HasCallStack => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
+ccShouldBeResigned coldK = do
+  committeeCreds <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
+  Map.lookup coldK committeeCreds `shouldBe` Just Nothing
+
+-- | Test the resignation status for a CC cold key to not be resigned
+ccShouldNotBeResigned :: HasCallStack => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
+ccShouldNotBeResigned coldK = do
+  committeeCreds <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
+  Map.lookup coldK committeeCreds `shouldSatisfy` maybe False isJust
 
 -- | Calculates the ratio of DReps that have voted for the governance action
 calculateDRepAcceptedRatio ::

@@ -9,7 +9,10 @@
 module Test.Cardano.Ledger.Conway.Imp (spec) where
 
 import Cardano.Ledger.Conway.Governance (ConwayGovState, GovState)
-import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure, ConwayLedgerPredFailure)
+import Cardano.Ledger.Conway.Rules (
+  ConwayGovPredFailure,
+  ConwayLedgerPredFailure,
+ )
 import Cardano.Ledger.Core (EraRule)
 import Control.State.Transition.Extended (PredicateFailure)
 import Test.Cardano.Ledger.Common
