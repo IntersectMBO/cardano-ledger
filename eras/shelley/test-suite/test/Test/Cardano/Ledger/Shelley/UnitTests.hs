@@ -107,7 +107,8 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..), genesisCoins
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils
-import qualified Test.QuickCheck.Gen as Gen
+import qualified Test.QuickCheck.Gen as QC
+import qualified Test.QuickCheck.Random as QC
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
@@ -212,50 +213,43 @@ testCheckLeaderVal =
       -- that this test fails under the hypothesis that our leader check is
       -- correct) is given by P(np - δ <= S <= np + δ).
       --
-      -- We wish to choose δ such that this value is sufficiently low (say, <
-      -- 1/1000).
+      -- Previously, we chose δ such that this value is quite low (eg, <1/1000).
+      -- However, this means the test *will* fail sometimes. If the probability
+      -- is 0.0004 and we run the test 100 times for each run of the test
+      -- suite, we would expect it to fail approximately once in every 25 test
+      -- runs.
+      --
+      -- We therefore now use a fixed seed so that this is effectively a unit test
+      -- and not a property test.
       --
       testProperty "We are elected as leader proportional to our stake" $
-        \(ASC f) (StakeProportion r) ->
-          r > 0 ==>
-            let ascVal :: Double
-                ascVal = fromRational . unboundRational $ activeSlotVal f
-                numTrials = 2000
-                -- 4 standard deviations
-                δ = 4 * sqrt (realToFrac numTrials * p * (1 - p))
-                p = 1 - (1 - ascVal) ** fromRational r
-                mean = realToFrac numTrials * p
-                maxVRFValInt :: Integer
-                maxVRFValInt = fromIntegral maxVRFVal
-                lb = floor (mean - δ)
-                ub = ceiling (mean + δ)
-             in do
-                  vrfVals <- Gen.vectorOf numTrials (Gen.choose (0, maxVRFValInt))
-                  let s =
-                        length . filter id $
-                          ( \v ->
-                              checkLeaderValue @v
-                                (VRF.mkTestOutputVRF $ fromIntegral v)
-                                r
-                                f
-                          )
-                            <$> vrfVals
-                  pure
-                    . counterexample
-                      ( show lb
-                          ++ " /< "
-                          ++ show s
-                          ++ " /< "
-                          ++ show ub
-                          ++ " (p="
-                          ++ show p
-                          ++ ")"
-                      )
-                    $ s > lb && s < ub
+        -- 6297 is a seed value that fails
+        -- --quickcheck-replay=618 fails when withSeed isn't used
+        once . withSeed 12345 $ do
+          let numTrials = 2000
+          ASC f <- arbitrary
+          StakeProportion r <- arbitrary
+          vrfVals <- QC.vectorOf numTrials (QC.choose (0, fromIntegral maxVRFVal :: Integer))
+          let ascVal :: Double
+              ascVal = fromRational . unboundRational $ activeSlotVal f
+              -- 4 standard deviations
+              δ = 4 * sqrt (realToFrac numTrials * p * (1 - p))
+              p = 1 - (1 - ascVal) ** fromRational r
+              mean = realToFrac numTrials * p
+              lb = floor (mean - δ)
+              ub = ceiling (mean + δ)
+              check vrf = checkLeaderValue @v (VRF.mkTestOutputVRF $ fromIntegral vrf) r f
+              s = length . filter id $ check <$> vrfVals
+          pure $
+            r > 0 ==>
+              counterexample
+                (show lb <> " /< " <> show s <> " /< " <> show ub <> " (p=" <> show p <> ")")
+                (lb < s && s < ub)
     ]
   where
     maxVRFVal :: Natural
     maxVRFVal = (2 ^ (8 * VRF.sizeOutputVRF (Proxy @v))) - 1
+    withSeed i (QC.MkGen f) = QC.MkGen $ \_r n -> f (QC.mkQCGen i) n
 
 testLEDGER ::
   HasCallStack =>
