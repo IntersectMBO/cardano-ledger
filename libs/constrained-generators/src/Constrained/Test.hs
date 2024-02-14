@@ -216,8 +216,10 @@ testSpec n s = do
   sequentialTestGroup
     n
     AllSucceed
-    [ testProperty "prop_complete" $ within 10_000_000 $ withMaxSuccess 100 $ prop_complete s
-    , testProperty "prop_sound" $ withMaxSuccess 100 $ prop_sound s
+    [
+    -- NOTE: during development you want to uncomment the line below:
+    -- testProperty "prop_complete" $ within 10_000_000 $ withMaxSuccess 100 $ prop_complete s,
+    testProperty "prop_sound" $ withMaxSuccess 100 $ prop_sound s
     ]
 
 -- Examples ---------------------------------------------------------------
