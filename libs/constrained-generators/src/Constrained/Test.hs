@@ -218,7 +218,7 @@ testSpec n s = do
     AllSucceed
     [ -- NOTE: during development you want to uncomment the line below:
       -- testProperty "prop_complete" $ within 10_000_000 $ withMaxSuccess 100 $ prop_complete s,
-      testProperty "prop_sound" $ withMaxSuccess 100 $ prop_sound s
+      testProperty "prop_sound" $ within 10_000_000 $ withMaxSuccess 100 $ prop_sound s
     ]
 
 -- Examples ---------------------------------------------------------------
