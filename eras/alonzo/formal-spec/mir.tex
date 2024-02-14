@@ -240,7 +240,7 @@ Lastly, Figure \ref{fig:rules:mir} is the updated MIR rule.
       \\
       \var{acnt'}\leteq
       {\begin{cases}
-          (\var{treasury}-\var{totT},~\var{reserves}-\var{totR})
+          (\hldiff{\var{availableTreasury}}-\var{totT},~\hldiff{\var{availableReserves}}-\var{totR})
           & \var{enough}
           \\
           \var{acnt}
