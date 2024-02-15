@@ -76,6 +76,7 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Short as SBS (ShortByteString, pack)
 import Data.Default.Class (Default (..))
 import Data.Foldable (toList)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (maybeToList)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -1236,8 +1237,7 @@ testExpectSuccessInvalid
 
 testExpectFailure ::
   forall era.
-  ( State (EraRule "UTXOW" era) ~ UTxOState era
-  , PostShelley era
+  ( PostShelley era
   , BabbageEraTxBody era
   , Reflect era
   ) =>
@@ -1252,7 +1252,7 @@ testExpectFailure
     let tx' = txFromTestCaseData pf tc
         (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
         utxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
-     in testUTXOW (UTXOW pf) utxo (pp pf) (trustMeP pf True tx') (Left [predicateFailure])
+     in testUTXOW (UTXOW pf) utxo (pp pf) (trustMeP pf True tx') (Left $ pure predicateFailure)
 
 genericBabbageFeatures ::
   forall era.
@@ -1291,7 +1291,6 @@ plutusV1RefScriptFailures ::
   ( PostShelley era
   , BabbageEraTxBody era
   , Reflect era
-  , State (EraRule "UTXOW" era) ~ UTxOState era
   , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure era
   ) =>
@@ -1446,8 +1445,8 @@ testExpectUTXOFailure pf@Conway tc failure =
         env
         state
         tx'
-        ( \x -> case x of
-            Left [predfail] -> assertEqual "unexpected failure" predfail failure
+        ( \case
+            Left (predfail :| []) -> assertEqual "unexpected failure" predfail failure
             Left _ -> assertFailure "not exactly one failure"
             Right _ -> assertFailure "testExpectUTXOFailure succeeds"
         )

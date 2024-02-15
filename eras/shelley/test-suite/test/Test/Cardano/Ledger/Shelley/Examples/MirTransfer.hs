@@ -29,6 +29,7 @@ import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Cardano.Ledger.UMap as UM
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
+import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -40,8 +41,8 @@ import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 type ShelleyTest = ShelleyEra C_Crypto
 
 ignoreAllButIRWD ::
-  Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (DState ShelleyTest) ->
-  Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (InstantaneousRewards C_Crypto)
+  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyTest))) (DState ShelleyTest) ->
+  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyTest))) (InstantaneousRewards C_Crypto)
 ignoreAllButIRWD = fmap dsIRewards
 
 env :: ProtVer -> AccountState -> DelegEnv ShelleyTest
@@ -65,7 +66,7 @@ testMirTransfer ::
   MIRTarget C_Crypto ->
   InstantaneousRewards C_Crypto ->
   AccountState ->
-  Either [PredicateFailure (ShelleyDELEG ShelleyTest)] (InstantaneousRewards C_Crypto) ->
+  Either (NonEmpty (PredicateFailure (ShelleyDELEG ShelleyTest))) (InstantaneousRewards C_Crypto) ->
   Assertion
 testMirTransfer pv pot target ir acnt (Right expected) = do
   checkTrace @(ShelleyDELEG ShelleyTest) runShelleyBase (env pv acnt) $
@@ -117,7 +118,7 @@ testMIRTransfer =
               (SendToOppositePotMIR $ Coin 1)
               (InstantaneousRewards mempty mempty mempty mempty)
               (AccountState {asReserves = Coin 1, asTreasury = Coin 0})
-              (Left [MIRTransferNotCurrentlyAllowed])
+              (Left . pure $ MIRTransferNotCurrentlyAllowed)
         , testCase "embargo treasury to reserves transfer" $
             testMirTransfer
               shelleyPV
@@ -125,7 +126,7 @@ testMIRTransfer =
               (SendToOppositePotMIR $ Coin 1)
               (InstantaneousRewards mempty mempty mempty mempty)
               (AccountState {asReserves = Coin 0, asTreasury = Coin 1})
-              (Left [MIRTransferNotCurrentlyAllowed])
+              (Left . pure $ MIRTransferNotCurrentlyAllowed)
         , testCase "embargo decrements from reserves" $
             testMirTransfer
               shelleyPV
@@ -133,7 +134,7 @@ testMIRTransfer =
               (StakeAddressesMIR $ aliceOnlyDelta (-1))
               (InstantaneousRewards (aliceOnlyReward 1) mempty mempty mempty)
               (AccountState {asReserves = Coin 1, asTreasury = Coin 0})
-              (Left [MIRNegativesNotCurrentlyAllowed])
+              (Left . pure $ MIRNegativesNotCurrentlyAllowed)
         , testCase "embargo decrements from treasury" $
             testMirTransfer
               shelleyPV
@@ -141,7 +142,7 @@ testMIRTransfer =
               (StakeAddressesMIR $ aliceOnlyDelta (-1))
               (InstantaneousRewards mempty (aliceOnlyReward 1) mempty mempty)
               (AccountState {asReserves = Coin 0, asTreasury = Coin 1})
-              (Left [MIRNegativesNotCurrentlyAllowed])
+              (Left . pure $ MIRNegativesNotCurrentlyAllowed)
         ]
     , testGroup
         "MIR cert alonzo"
@@ -152,7 +153,7 @@ testMIRTransfer =
               (StakeAddressesMIR $ aliceOnlyDelta 1)
               (InstantaneousRewards (aliceOnlyReward 1) mempty mempty mempty)
               (AccountState {asReserves = Coin 1, asTreasury = Coin 0})
-              (Left [InsufficientForInstantaneousRewardsDELEG ReservesMIR (Coin 2) (Coin 1)])
+              (Left . pure $ InsufficientForInstantaneousRewardsDELEG ReservesMIR (Coin 2) (Coin 1))
         , testCase "increment treasury too much" $
             testMirTransfer
               alonzoPV
@@ -160,7 +161,7 @@ testMIRTransfer =
               (StakeAddressesMIR $ aliceOnlyDelta 1)
               (InstantaneousRewards mempty (aliceOnlyReward 1) mempty mempty)
               (AccountState {asReserves = Coin 0, asTreasury = Coin 1})
-              (Left [InsufficientForInstantaneousRewardsDELEG TreasuryMIR (Coin 2) (Coin 1)])
+              (Left . pure $ InsufficientForInstantaneousRewardsDELEG TreasuryMIR (Coin 2) (Coin 1))
         , testCase "increment reserves too much with delta" $
             testMirTransfer
               alonzoPV
@@ -168,7 +169,7 @@ testMIRTransfer =
               (StakeAddressesMIR $ aliceOnlyDelta 1)
               (InstantaneousRewards (aliceOnlyReward 1) mempty (DeltaCoin (-1)) (DeltaCoin 1))
               (AccountState {asReserves = Coin 2, asTreasury = Coin 0})
-              (Left [InsufficientForInstantaneousRewardsDELEG ReservesMIR (Coin 2) (Coin 1)])
+              (Left . pure $ InsufficientForInstantaneousRewardsDELEG ReservesMIR (Coin 2) (Coin 1))
         , testCase "increment treasury too much with delta" $
             testMirTransfer
               alonzoPV
@@ -176,7 +177,7 @@ testMIRTransfer =
               (StakeAddressesMIR $ aliceOnlyDelta 1)
               (InstantaneousRewards mempty (aliceOnlyReward 1) (DeltaCoin 1) (DeltaCoin (-1)))
               (AccountState {asReserves = Coin 0, asTreasury = Coin 2})
-              (Left [InsufficientForInstantaneousRewardsDELEG TreasuryMIR (Coin 2) (Coin 1)])
+              (Left . pure $ InsufficientForInstantaneousRewardsDELEG TreasuryMIR (Coin 2) (Coin 1))
         , testCase "negative balance in reserves mapping" $
             testMirTransfer
               alonzoPV
@@ -184,7 +185,7 @@ testMIRTransfer =
               (StakeAddressesMIR $ aliceOnlyDelta (-1))
               (InstantaneousRewards mempty mempty mempty mempty)
               (AccountState {asReserves = Coin 1, asTreasury = Coin 0})
-              (Left [MIRProducesNegativeUpdate])
+              (Left . pure $ MIRProducesNegativeUpdate)
         , testCase "negative balance in treasury mapping" $
             testMirTransfer
               alonzoPV
@@ -192,7 +193,7 @@ testMIRTransfer =
               (StakeAddressesMIR $ aliceOnlyDelta (-1))
               (InstantaneousRewards mempty mempty mempty mempty)
               (AccountState {asReserves = Coin 0, asTreasury = Coin 1})
-              (Left [MIRProducesNegativeUpdate])
+              (Left . pure $ MIRProducesNegativeUpdate)
         , testCase "transfer reserves to treasury" $
             testMirTransfer
               alonzoPV
@@ -216,7 +217,7 @@ testMIRTransfer =
               (SendToOppositePotMIR (Coin 1))
               (InstantaneousRewards (aliceOnlyReward 1) mempty (DeltaCoin (-1)) (DeltaCoin 1))
               (AccountState {asReserves = Coin 2, asTreasury = Coin 0})
-              (Left [InsufficientForTransferDELEG ReservesMIR (Coin 1) (Coin 0)])
+              (Left . pure $ InsufficientForTransferDELEG ReservesMIR (Coin 1) (Coin 0))
         , testCase "insufficient transfer treasury to reserves" $
             testMirTransfer
               alonzoPV
@@ -224,7 +225,7 @@ testMIRTransfer =
               (SendToOppositePotMIR (Coin 1))
               (InstantaneousRewards mempty (aliceOnlyReward 1) (DeltaCoin 1) (DeltaCoin (-1)))
               (AccountState {asReserves = Coin 0, asTreasury = Coin 2})
-              (Left [InsufficientForTransferDELEG TreasuryMIR (Coin 1) (Coin 0)])
+              (Left . pure $ InsufficientForTransferDELEG TreasuryMIR (Coin 1) (Coin 0))
         , testCase "increment reserves mapping" $
             testMirTransfer
               alonzoPV

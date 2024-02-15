@@ -24,6 +24,7 @@ import Control.State.Transition.Extended (
 import Data.Default.Class (Default (def))
 import Data.HashSet (HashSet)
 import qualified Data.HashSet as HashSet
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Pulse (foldlM')
 import GHC.TypeLits (Symbol)
@@ -93,7 +94,7 @@ sts ::
   Environment (EraRule tag era) ->
   State (EraRule tag era) ->
   Signal (EraRule tag era) ->
-  Either [PredicateFailure (EraRule tag era)] (State (EraRule tag era))
+  Either (NonEmpty (PredicateFailure (EraRule tag era))) (State (EraRule tag era))
 sts proof rule env state sig =
   runReader
     ( applySTS @(EraRule tag era) @(Reader _) @'Transition
@@ -108,7 +109,7 @@ stsWithContinuations ::
   ) =>
   Proof era ->
   Rule tag ->
-  ([PredicateFailure (EraRule tag era)] -> ans) ->
+  (NonEmpty (PredicateFailure (EraRule tag era)) -> ans) ->
   (State (EraRule tag era) -> ans) ->
   Environment (EraRule tag era) ->
   State (EraRule tag era) ->

@@ -273,7 +273,7 @@ classifyTransactions =
 invalidChainTracesAreRejected ::
   TestLimit ->
   [(Int, SignalGenerator CHAIN)] ->
-  ([PredicateFailure CHAIN] -> ChainValidationError -> PropertyT IO ()) ->
+  (NonEmpty (PredicateFailure CHAIN) -> ChainValidationError -> PropertyT IO ()) ->
   TSProperty
 invalidChainTracesAreRejected numberOfTests failureProfile onFailureAgreement =
   withTestsTS numberOfTests
@@ -396,7 +396,7 @@ ts_prop_invalidHeaderSizesAreRejected =
     checkMaxSizeFailure
   where
     checkMaxSizeFailure ::
-      [PredicateFailure CHAIN] ->
+      NonEmpty (PredicateFailure CHAIN) ->
       ChainValidationError ->
       PropertyT IO ()
     checkMaxSizeFailure abstractPfs ChainValidationHeaderTooLarge {} = do
@@ -422,7 +422,7 @@ invalidSizesAreRejected ::
   -- | Function used to compute the size of the concrete-block's component.
   (ABlock ByteString -> Natural) ->
   -- | Function to check agreement of concrete and abstract failures.
-  ([PredicateFailure CHAIN] -> ChainValidationError -> PropertyT IO ()) ->
+  (NonEmpty (PredicateFailure CHAIN) -> ChainValidationError -> PropertyT IO ()) ->
   TSProperty
 invalidSizesAreRejected
   setAbstractParamTo
@@ -548,7 +548,7 @@ ts_prop_invalidBlockSizesAreRejected =
     checkMaxSizeFailure
   where
     checkMaxSizeFailure ::
-      [PredicateFailure CHAIN] ->
+      NonEmpty (PredicateFailure CHAIN) ->
       ChainValidationError ->
       PropertyT IO ()
     checkMaxSizeFailure abstractPfs ChainValidationBlockTooLarge {} = do

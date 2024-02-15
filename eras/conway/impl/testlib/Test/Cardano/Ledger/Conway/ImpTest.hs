@@ -168,6 +168,7 @@ import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Functor.Identity
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
@@ -394,7 +395,7 @@ submitFailingVote ::
   ) =>
   Voter (EraCrypto era) ->
   GovActionId (EraCrypto era) ->
-  [PredicateFailure (EraRule "LEDGER" era)] ->
+  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingVote voter gaId expectedFailure =
   trySubmitVote VoteYes voter gaId >>= (`shouldBeLeftExpr` expectedFailure)
@@ -411,7 +412,7 @@ trySubmitVote ::
   ImpTestM
     era
     ( Either
-        [PredicateFailure (EraRule "LEDGER" era)]
+        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
         (TxId (EraCrypto era))
     )
 trySubmitVote vote voter gaId =
@@ -478,7 +479,7 @@ trySubmitProposal ::
   ImpTestM
     era
     ( Either
-        [PredicateFailure (EraRule "LEDGER" era)]
+        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
         (GovActionId (EraCrypto era))
     )
 trySubmitProposal proposal = do
@@ -497,7 +498,7 @@ trySubmitProposals ::
   , ConwayEraTxBody era
   ) =>
   NE.NonEmpty (ProposalProcedure era) ->
-  ImpTestM era (Either [PredicateFailure (EraRule "LEDGER" era)] (Tx era))
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (Tx era))
 trySubmitProposals proposals = do
   trySubmitTx $
     mkBasicTx mkBasicTxBody
@@ -509,7 +510,7 @@ submitFailingProposal ::
   , HasCallStack
   ) =>
   ProposalProcedure era ->
-  [PredicateFailure (EraRule "LEDGER" era)] ->
+  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingProposal proposal expectedFailure =
   trySubmitProposal proposal >>= (`shouldBeLeftExpr` expectedFailure)
@@ -524,7 +525,7 @@ trySubmitGovAction ::
   ImpTestM
     era
     ( Either
-        [PredicateFailure (EraRule "LEDGER" era)]
+        (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
         (GovActionId (EraCrypto era))
     )
 trySubmitGovAction ga = do
@@ -535,7 +536,7 @@ trySubmitGovAction ga = do
 trySubmitGovActions ::
   (ShelleyEraImp era, ConwayEraTxBody era) =>
   NE.NonEmpty (GovAction era) ->
-  ImpTestM era (Either [PredicateFailure (EraRule "LEDGER" era)] (Tx era))
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (Tx era))
 trySubmitGovActions gas = do
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
   rewardAccount <- registerRewardAccount
@@ -615,7 +616,7 @@ submitFailingGovAction ::
   , HasCallStack
   ) =>
   GovAction era ->
-  [PredicateFailure (EraRule "LEDGER" era)] ->
+  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingGovAction ga expectedFailure = trySubmitGovAction ga >>= (`shouldBeLeftExpr` expectedFailure)
 

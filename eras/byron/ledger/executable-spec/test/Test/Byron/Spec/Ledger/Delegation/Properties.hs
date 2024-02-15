@@ -80,6 +80,7 @@ import Control.State.Transition.Trace (
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import Data.Data (Data, Typeable)
+import Data.Foldable (toList)
 import Data.List (foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -404,7 +405,7 @@ rejectDupSchedDelegs = withTests 300 $
       let dcert = mkDCert vkS (Sig (vkD, epo) (owner vkS)) vkD epo
       return (tr, dcert)
     let pfs = case applySTS @DELEG (TRC (tr ^. traceEnv, lastState tr, [dcert])) of
-          Left res -> res
+          Left res -> toList res
           Right _ -> []
     assert $ SDelegSFailure (SDelegFailure IsAlreadyScheduled) `elem` pfs
 

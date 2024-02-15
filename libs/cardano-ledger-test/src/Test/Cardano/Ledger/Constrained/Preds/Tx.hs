@@ -53,7 +53,7 @@ import Cardano.Ledger.Val (Val (..), inject)
 import Control.Monad (when)
 import Control.State.Transition.Extended (STS (..), TRC (..))
 import Data.Default.Class (Default (def))
-import Data.Foldable (foldl')
+import Data.Foldable (foldl', toList)
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -102,7 +102,6 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcTxField,
   pcTxIn,
   pcTxOut,
-  ppList,
   ppMap,
   ppRecord,
   ppSafeHash,
@@ -871,8 +870,8 @@ gone = do
       putStrLn "SUCCESS"
     Left errs -> do
       putStrLn "FAIL"
-      putStrLn (show (pgenTx proof utxo1 tx))
-      putStrLn (show (ppList prettyA errs))
+      print $ pgenTx proof utxo1 tx
+      print $ prettyA errs
       goRepl Babbage env ""
 
 test :: Maybe Int -> IO ()
@@ -974,12 +973,12 @@ oneTest sizes proof = do
   let lenv = LedgerEnv slot txIx pp accntState
   case applySTSByProof proof (TRC (lenv, ledgerstate, tx)) of
     Right ledgerState' -> pure (totalAda ledgerState' === totalAda ledgerstate)
-    Left errs ->
-      pure
-        ( whenFail
-            (putStrLn ("\napplySTS fails\n" ++ unlines (map show errs)) >> (goRepl proof env2 ""))
-            (counterexample ("\napplySTS fails\n" ++ unlines (map show errs)) (True === False))
-        )
+    Left errs -> do
+      let msg = unlines $ "" : "applySTS fails" : map show (toList errs)
+      pure $
+        whenFail
+          (putStrLn msg >> goRepl proof env2 "")
+          (counterexample msg $ True === False)
 
 main1 :: IO ()
 main1 = quickCheck (withMaxSuccess 30 (oneTest def Babbage))

@@ -130,7 +130,9 @@ testPlutusV1V2Failure sh badField lenz errorField = do
         & bodyTxL . lenz
           .~ badField
     )
-    [injectFailure $ CollectErrors [BadTranslation errorField]]
+    ( pure . injectFailure $
+        CollectErrors [BadTranslation errorField]
+    )
 
 spec ::
   forall era.
@@ -190,9 +192,9 @@ datumAndReferenceInputsSpec = do
     _ <-
       submitFailingTx
         consumingTx
-        [ injectFailure . BabbageNonDisjointRefInputs $
+        ( pure . injectFailure . BabbageNonDisjointRefInputs $
             mkTxInPartial producingTx 0 :| []
-        ]
+        )
     pure ()
   it "fails when using inline datums for PlutusV1" $ do
     let shSpending = hashPlutusScript (guessTheNumber3 SPlutusV1)
@@ -215,10 +217,10 @@ datumAndReferenceInputsSpec = do
     impAnn "Consuming transaction" $
       submitFailingTx
         consumingTx
-        [ injectFailure $
+        ( pure . injectFailure $
             CollectErrors
               [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
-        ]
+        )
   it "fails with same txIn in regular inputs and reference inputs" $ do
     producingTx <- setupRefTx
     let
@@ -233,9 +235,9 @@ datumAndReferenceInputsSpec = do
     _ <-
       submitFailingTx
         consumingTx
-        [ injectFailure . BabbageNonDisjointRefInputs $
+        ( pure . injectFailure . BabbageNonDisjointRefInputs $
             mkTxInPartial producingTx 0 :| []
-        ]
+        )
     pure ()
   it "fails when using inline datums for PlutusV1" $ do
     let shSpending = hashPlutusScript $ guessTheNumber3 SPlutusV1
@@ -257,10 +259,10 @@ datumAndReferenceInputsSpec = do
     impAnn "Consuming transaction" $
       submitFailingTx
         consumingTx
-        [ injectFailure $
+        ( pure . injectFailure $
             CollectErrors
               [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
-        ]
+        )
 
 conwayFeaturesPlutusV1V2FailureSpec ::
   forall era.
@@ -406,13 +408,13 @@ conwayFeaturesPlutusV1V2FailureSpec = do
                     & bodyTxL . certsTxBodyL
                       .~ SSeq.singleton badCert
                 )
-                [ injectFailure $
+                ( pure . injectFailure $
                     CollectErrors
                       [ BadTranslation $
                           inject $
                             CertificateNotSupported badCert
                       ]
-                ]
+                )
         describe "DelegTxCert" $ do
           it "V1" $ do
             (drepKH, delegatorKH, _spendingKP) <- setupSingleDRep 1_000

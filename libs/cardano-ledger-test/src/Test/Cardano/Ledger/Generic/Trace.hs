@@ -61,6 +61,7 @@ import Data.Default.Class (Default (def))
 import qualified Data.Foldable as Fold
 import Data.Functor.Identity (Identity (runIdentity))
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq (..))
@@ -240,7 +241,7 @@ raiseMockError ::
   Word64 ->
   SlotNo ->
   EpochState era ->
-  [MockChainFailure era] ->
+  NonEmpty (MockChainFailure era) ->
   [Tx era] ->
   GenState era ->
   String
@@ -275,7 +276,7 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
           , ppString "==================================="
           , ppString (show (adaPots reify epochstate))
           , ppString "==================================="
-          , ppList (ppMockChainFailure reify) pdfs
+          , ppList (ppMockChainFailure reify) (Fold.toList pdfs)
           , ppString "==================================="
           , ppString "Last Slot " <> ppWord64 slot
           , ppString "Current Slot " <> ppWord64 next
@@ -284,7 +285,7 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
               <> ppMap
                 pcScriptHash
                 (scriptSummary @era reify)
-                (Map.restrictKeys gsScripts (badScripts reify pdfs))
+                (Map.restrictKeys gsScripts . badScripts reify $ Fold.toList pdfs)
           , -- ppString "===================================",
             -- ppString "Real Pool Params\n" <> ppMap pcKeyHash pcPoolParams poolParams,
             ppString "====================================="
@@ -414,7 +415,9 @@ instance
         let txsl = Fold.toList txs
          in trace
               (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl gs)
-              (error ("sigGen in (HasTrace (MOCKCHAIN era) (Gen1 era)) FAILS\n" ++ unlines (map show pdfs)))
+              ( error . unlines $
+                  "sigGen in (HasTrace (MOCKCHAIN era) (Gen1 era)) FAILS" : map show (Fold.toList pdfs)
+              )
       Right mcs2 -> seq mcs2 (pure mockblock)
 
   shrinkSignal _ = []
@@ -532,7 +535,7 @@ forAllTraceFromInitState ::
   Word64 ->
   traceGenEnv ->
   -- | Optional generator of STS initial state
-  Maybe (IRC sts -> Gen (Either [STS.PredicateFailure sts] (State sts))) ->
+  Maybe (IRC sts -> Gen (Either (NonEmpty (STS.PredicateFailure sts)) (State sts))) ->
   (Trace sts -> prop) ->
   Property
 forAllTraceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 =

@@ -135,8 +135,8 @@ defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData transla
     , sleHashHeader = exampleHashHeader (Proxy @era)
     , sleTx = mkAlonzoTx tx
     , sleApplyTxError =
-        ApplyTxError
-          [DelegsFailure $ DelegateeNotRegisteredDELEG @era (mkKeyHash 1)]
+        ApplyTxError . pure . DelegsFailure $
+          DelegateeNotRegisteredDELEG @era (mkKeyHash 1)
     , sleRewardsCredentials =
         Set.fromList
           [ Left (Coin 100)

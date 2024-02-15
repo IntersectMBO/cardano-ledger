@@ -58,7 +58,7 @@ import Test.Cardano.Ledger.Generic.GenState (
  )
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockChainState (..))
 import Test.Cardano.Ledger.Generic.ModelState
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..), pcLedgerState, pcTx, ppList)
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..), pcLedgerState, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Trace (Gen1, forEachEpochTrace, testPropMax, testTraces, traceProp)
 import Test.Cardano.Ledger.Generic.TxGen (
@@ -148,7 +148,7 @@ testTxValidForLEDGER proof (Box _ trc@(TRC (_, ledgerState, vtx)) _genstate) =
             ++ "\n\n"
             ++ show (pcTx proof vtx)
             ++ "\n\n"
-            ++ show (ppList prettyA errs)
+            ++ show (prettyA errs)
         )
         (property False)
 

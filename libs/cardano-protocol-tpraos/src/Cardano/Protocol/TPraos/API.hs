@@ -114,6 +114,7 @@ import Control.State.Transition.Extended (
  )
 import Data.Either (fromRight)
 import Data.Functor.Identity (runIdentity)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -325,7 +326,7 @@ view
 --  application of the TICK rule at the target slot to the curernt ledger state.
 
 newtype FutureLedgerViewError era
-  = FutureLedgerViewError [PredicateFailure (EraRule "TICKF" era)]
+  = FutureLedgerViewError (NonEmpty (PredicateFailure (EraRule "TICKF" era)))
 
 deriving stock instance
   Eq (PredicateFailure (EraRule "TICKF" era)) =>
@@ -440,7 +441,7 @@ instance Crypto c => ToCBOR (ChainDepState c) where
         ]
 
 newtype ChainTransitionError c
-  = ChainTransitionError [PredicateFailure (STS.Prtcl.PRTCL c)]
+  = ChainTransitionError (NonEmpty (PredicateFailure (STS.Prtcl.PRTCL c)))
   deriving (Generic)
 
 instance Crypto c => NoThunks (ChainTransitionError c)

@@ -95,6 +95,7 @@ import Control.State.Transition.Trace (
  )
 import Data.Coerce (Coercible, coerce)
 import Data.Functor.Identity (runIdentity)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Typeable (Proxy (Proxy))
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
@@ -242,7 +243,7 @@ testSTS ::
   Environment s ->
   State s ->
   Signal s ->
-  Either [PredicateFailure s] (State s) ->
+  Either (NonEmpty (PredicateFailure s)) (State s) ->
   Assertion
 testSTS env initSt signal (Right expectedSt) = do
   checkTrace @s runShelleyBase env $ pure initSt .- signal .->> expectedSt

@@ -396,7 +396,7 @@ instance
     case runShelleyBase (applySTSTest (TRC @(MOCKCHAIN era) ((), mcs, mockblock))) of
       Left pdfs ->
         let _txsl = Fold.toList txs
-         in error ("FAILS\n" ++ unlines (map show pdfs))
+         in error . unlines $ "FAILS" : map show (toList pdfs)
       Right mcs2 -> seq mcs2 (pure mockblock)
 
   shrinkSignal _ = []

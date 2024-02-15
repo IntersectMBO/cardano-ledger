@@ -526,24 +526,24 @@ applySTSOptsEither ::
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   ApplySTSOpts ep ->
   RuleContext rtype s ->
-  m (Either [PredicateFailure s] (EventReturnType ep s (State s)))
+  m (Either (NonEmpty (PredicateFailure s)) (EventReturnType ep s (State s)))
 applySTSOptsEither opts ctx =
   let r1 = applySTSOpts opts ctx
    in case asoEvents opts of
         EPDiscard ->
           r1 <&> \case
             (st, []) -> Right st
-            (_, pfs) -> Left pfs
+            (_, pf : pfs) -> Left $ pf :| pfs
         EPReturn ->
           r1 <&> \case
             ((st, []), evts) -> Right (st, evts)
-            ((_, pfs), _) -> Left pfs
+            ((_, pf : pfs), _) -> Left $ pf :| pfs
 
 applySTS ::
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
-  m (Either [PredicateFailure s] (State s))
+  m (Either (NonEmpty (PredicateFailure s)) (State s))
 applySTS = applySTSOptsEither defaultOpts
   where
     defaultOpts =

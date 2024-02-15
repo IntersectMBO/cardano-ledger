@@ -78,6 +78,7 @@ import Data.Bifunctor (first)
 import qualified Data.Foldable as F
 import Data.Functor ((<&>))
 import qualified Data.List as List
+import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -1137,7 +1138,7 @@ applySTSByProof ::
   Era era =>
   Proof era ->
   RuleContext 'Transition (EraRule "LEDGER" era) ->
-  Either [PredicateFailure (EraRule "LEDGER" era)] (State (EraRule "LEDGER" era))
+  Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (State (EraRule "LEDGER" era))
 applySTSByProof Conway trc = runShelleyBase $ applySTS trc
 applySTSByProof Babbage trc = runShelleyBase $ applySTS trc
 applySTSByProof Alonzo trc = runShelleyBase $ applySTS trc

@@ -184,9 +184,11 @@ import Control.State.Transition.Trace (applySTSTest)
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..))
 import Data.Default.Class (Default (..))
+import Data.Foldable (toList)
 import Data.Functor (($>))
 import Data.Functor.Identity (Identity (..))
 import Data.IORef
+import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
@@ -819,7 +821,7 @@ submitTx tx = trySubmitTx tx >>= expectRightDeepExpr
 trySubmitTx ::
   (ShelleyEraImp era, HasCallStack) =>
   Tx era ->
-  ImpTestM era (Either [PredicateFailure (EraRule "LEDGER" era)] (Tx era))
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (Tx era))
 trySubmitTx tx = do
   doFixup <- asks iteDoTxFixup
   txFixed <-
@@ -857,7 +859,7 @@ submitFailingTx ::
   , ShelleyEraImp era
   ) =>
   Tx era ->
-  [PredicateFailure (EraRule "LEDGER" era)] ->
+  NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
 submitFailingTx tx expectedFailure = trySubmitTx tx >>= (`shouldBeLeftExpr` expectedFailure)
 
@@ -867,7 +869,7 @@ tryRunImpRule ::
   Environment (EraRule rule era) ->
   State (EraRule rule era) ->
   Signal (EraRule rule era) ->
-  ImpTestM era (Either [PredicateFailure (EraRule rule era)] (State (EraRule rule era)))
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule rule era))) (State (EraRule rule era)))
 tryRunImpRule stsEnv stsState stsSignal = do
   let trc = TRC (stsEnv, stsState, stsSignal)
   globals <- use $ to impGlobals
@@ -888,11 +890,10 @@ runImpRule ::
 runImpRule stsEnv stsState stsSignal = do
   let ruleName = symbolVal (Proxy @rule)
   tryRunImpRule @rule stsEnv stsState stsSignal >>= \case
-    Left [] -> error "Impossible: STS rule failed without a predicate failure"
     Left fs ->
       assertFailure $
         unlines $
-          ("Failed to run " <> ruleName <> ":") : map show fs
+          ("Failed to run " <> ruleName <> ":") : map show (toList fs)
     Right res -> evaluateDeep res
 
 -- | Runs the TICK rule once

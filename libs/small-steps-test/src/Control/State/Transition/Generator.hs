@@ -97,6 +97,7 @@ import Data.Either (isLeft)
 import Data.Foldable (traverse_)
 import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe (fromMaybe)
 import Data.String (fromString)
 import Data.Word (Word64)
@@ -690,7 +691,7 @@ coverFailures ::
   a ->
   m ()
 coverFailures coverPercentage targetFailures failureStructure = do
-  traverse_ coverFailure (toConstr <$> targetFailures)
+  traverse_ (coverFailure . toConstr) targetFailures
   where
     coverFailure predicateFailureConstructor =
       cover
@@ -713,7 +714,7 @@ invalidSignalsAreGenerated ::
   -- | Maximum trace length.
   Word64 ->
   -- | Action to run when the an invalid signal is generated.
-  ([PredicateFailure s] -> PropertyT IO ()) ->
+  (NonEmpty (PredicateFailure s) -> PropertyT IO ()) ->
   Property
 invalidSignalsAreGenerated baseEnv failureProfile maximumTraceLength checkFailures = property $ do
   tr <- forAll (invalidTrace @s baseEnv maximumTraceLength failureProfile)

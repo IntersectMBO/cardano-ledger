@@ -45,6 +45,7 @@ import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
+import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -234,7 +235,7 @@ updateNewEpochState ss (STS.BbodyState ls bcur) =
   LedgerState.updateNES ss bcur ls
 
 newtype TickTransitionError era
-  = TickTransitionError [STS.PredicateFailure (EraRule "TICK" era)]
+  = TickTransitionError (NonEmpty (STS.PredicateFailure (EraRule "TICK" era)))
   deriving (Generic)
 
 instance
@@ -250,7 +251,7 @@ deriving stock instance
   Show (TickTransitionError era)
 
 newtype BlockTransitionError era
-  = BlockTransitionError [STS.PredicateFailure (EraRule "BBODY" era)]
+  = BlockTransitionError (NonEmpty (STS.PredicateFailure (EraRule "BBODY" era)))
   deriving (Generic)
 
 deriving stock instance

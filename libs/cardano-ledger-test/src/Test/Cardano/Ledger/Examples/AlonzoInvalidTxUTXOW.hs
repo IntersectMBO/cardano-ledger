@@ -6,8 +6,8 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -852,7 +852,7 @@ notOkSupplimentaryDatumTx pf =
         , Txfee (Coin 5)
         , WppHash (newScriptIntegrityHash pf (pp pf) [] (mkRedeemers pf []) totallyIrrelevantTxDats)
         ]
-    totallyIrrelevantTxDats = TxDats $ Map.fromElems hashData [totallyIrrelevantDatum]
+    totallyIrrelevantTxDats = TxDats $ Map.fromElems @[] hashData [totallyIrrelevantDatum]
     outputWithNoDatum = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 995)]
 
 totallyIrrelevantDatum :: Era era => Data era
@@ -975,7 +975,7 @@ testU ::
   ) =>
   Proof era ->
   Tx era ->
-  Either [PredicateFailure (EraRule "UTXOW" era)] (State (EraRule "UTXOW" era)) ->
+  Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
   Assertion
 testU pf = testUTXOW (UTXOW pf) (initUTxO pf) (pp pf)
 
