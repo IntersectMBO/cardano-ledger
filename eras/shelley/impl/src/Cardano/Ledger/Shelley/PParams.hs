@@ -43,13 +43,15 @@ where
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   NonNegativeInterval,
-  Nonce (NeutralNonce),
+  Nonce (NeutralNonce, Nonce),
   ProtVer (..),
   StrictMaybe (..),
   UnitInterval,
   invalidKey,
+  parseAsRational,
   strictMaybeToMaybe,
   succVersion,
+  toRationalJSON,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -78,6 +80,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), Key, KeyValue, ToJSON (..), object, pairs, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.List (nub)
@@ -256,29 +259,43 @@ shelleyPParamsPairs ::
   PParamsHKD Identity era ->
   [a]
 shelleyPParamsPairs pp =
-  uncurry (.=) <$> shelleyPParamsHKDPairs (Proxy @Identity) pp
+  uncurry (.=)
+    <$> shelleyPParamsHKDPairs (Proxy @Identity) pp
+      ++ [ "collateralPercentage" .= Aeson.Null
+         , "costModels" .= Aeson.emptyObject
+         , "executionUnitPrices" .= Aeson.Null
+         , "maxBlockExecutionUnits" .= Aeson.Null
+         , "maxCollateralInputs" .= Aeson.Null
+         , "maxTxExecutionUnits" .= Aeson.Null
+         , "maxValueSize" .= Aeson.Null
+         , "utxoCostPerByte" .= Aeson.Null
+         ]
 
 instance FromJSON (ShelleyPParams Identity era) where
   parseJSON =
-    Aeson.withObject "ShelleyPParams" $ \obj ->
+    Aeson.withObject "ShelleyPParams" $ \obj -> do
       ShelleyPParams
-        <$> obj .: "minFeeA"
-        <*> obj .: "minFeeB"
+        <$> obj .: "txFeePerByte"
+        <*> obj .: "txFeeFixed"
         <*> obj .: "maxBlockBodySize"
         <*> obj .: "maxTxSize"
         <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "keyDeposit"
-        <*> obj .: "poolDeposit"
-        <*> obj .: "eMax"
-        <*> obj .: "nOpt"
-        <*> obj .: "a0"
-        <*> obj .: "rho"
-        <*> obj .: "tau"
-        <*> obj .: "decentralisationParam"
-        <*> obj .: "extraEntropy"
+        <*> obj .: "stakeAddressDeposit"
+        <*> obj .: "stakePoolDeposit"
+        <*> obj .: "poolRetireMaxEpoch"
+        <*> obj .: "stakePoolTargetNum"
+        <*> parseAsRational (obj .: "poolPledgeInfluence")
+        <*> parseAsRational (obj .: "monetaryExpansion")
+        <*> parseAsRational (obj .: "treasuryCut")
+        <*> parseAsRational (obj .: "decentralization")
+        <*> (obj .: "extraPraosEntropy" >>= jsonToNonce)
         <*> obj .: "protocolVersion"
         <*> obj .:? "minUTxOValue" .!= mempty
         <*> obj .:? "minPoolCost" .!= mempty
+    where
+      jsonToNonce :: Aeson.Value -> Aeson.Parser Nonce
+      jsonToNonce Aeson.Null = return NeutralNonce
+      jsonToNonce x = Nonce <$> parseJSON x
 
 emptyShelleyPParams :: forall era. Era era => ShelleyPParams Identity era
 emptyShelleyPParams =
@@ -457,9 +474,13 @@ shelleyCommonPParamsHKDPairsV6 ::
   PParamsHKD f era ->
   [(Key, HKD f Aeson.Value)]
 shelleyCommonPParamsHKDPairsV6 px pp =
-  [ ("decentralisationParam", hkdMap px (toJSON @UnitInterval) (pp ^. hkdDL @era @f))
-  , ("extraEntropy", hkdMap px (toJSON @Nonce) (pp ^. hkdExtraEntropyL @era @f))
+  [ ("decentralization", hkdMap px (toRationalJSON @UnitInterval) (pp ^. hkdDL @era @f))
+  , ("extraPraosEntropy", hkdMap px nonceToJSON (pp ^. hkdExtraEntropyL @era @f))
   ]
+  where
+    nonceToJSON :: Nonce -> Aeson.Value
+    nonceToJSON NeutralNonce = Aeson.Null
+    nonceToJSON (Nonce n) = toJSON n
 
 shelleyCommonPParamsHKDPairsV8 ::
   forall f era.
@@ -479,18 +500,18 @@ shelleyCommonPParamsHKDPairs ::
   PParamsHKD f era ->
   [(Key, HKD f Aeson.Value)]
 shelleyCommonPParamsHKDPairs px pp =
-  [ ("minFeeA", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeAL @_ @f :: HKD f Coin))
-  , ("minFeeB", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeBL @era @f))
+  [ ("txFeePerByte", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeAL @_ @f :: HKD f Coin))
+  , ("txFeeFixed", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeBL @era @f))
   , ("maxBlockBodySize", hkdMap px (toJSON @Word32) (pp ^. hkdMaxBBSizeL @era @f))
   , ("maxTxSize", hkdMap px (toJSON @Word32) (pp ^. hkdMaxTxSizeL @era @f))
   , ("maxBlockHeaderSize", hkdMap px (toJSON @Word16) (pp ^. hkdMaxBHSizeL @era @f))
-  , ("keyDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdKeyDepositL @era @f))
-  , ("poolDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdPoolDepositL @era @f))
-  , ("eMax", hkdMap px (toJSON @EpochInterval) (pp ^. hkdEMaxL @era @f))
-  , ("nOpt", hkdMap px (toJSON @Natural) (pp ^. hkdNOptL @era @f))
-  , ("a0", hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdA0L @era @f))
-  , ("rho", hkdMap px (toJSON @UnitInterval) (pp ^. hkdRhoL @era @f))
-  , ("tau", hkdMap px (toJSON @UnitInterval) (pp ^. hkdTauL @era @f))
+  , ("stakeAddressDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdKeyDepositL @era @f))
+  , ("stakePoolDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdPoolDepositL @era @f))
+  , ("poolRetireMaxEpoch", hkdMap px (toJSON @EpochInterval) (pp ^. hkdEMaxL @era @f))
+  , ("stakePoolTargetNum", hkdMap px (toJSON @Natural) (pp ^. hkdNOptL @era @f))
+  , ("poolPledgeInfluence", hkdMap px (toRationalJSON @NonNegativeInterval) (pp ^. hkdA0L @era @f))
+  , ("monetaryExpansion", hkdMap px (toRationalJSON @UnitInterval) (pp ^. hkdRhoL @era @f))
+  , ("treasuryCut", hkdMap px (toRationalJSON @UnitInterval) (pp ^. hkdTauL @era @f))
   , ("minPoolCost", hkdMap px (toJSON @Coin) (pp ^. hkdMinPoolCostL @era @f))
   ]
 

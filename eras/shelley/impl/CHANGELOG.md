@@ -1,5 +1,6 @@
 # Version history for `cardano-ledger-shelley`
 
+* Modify `PParams` JSON instances to match `cardano-api`
 ## 1.9.0.0
 
 * Add `getShelleyGenesisKeyHashCountTxBody`

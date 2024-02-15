@@ -1,5 +1,6 @@
 # Version history for `cardano-ledger-alonzo`
 
+* Modify `PParams` JSON instances to match `cardano-api`
 ## 1.6.0.0
 
 * Deprecated `getAlonzoSpendingTxIn` in favor of `plutusPurposeSpendingTxIn`

@@ -1,5 +1,6 @@
 # Version history for `cardano-ledger-conway`
 
+* Modify `PParams` JSON instances to match `cardano-api`
 ## 1.12.0.0
 
 * Changed the types in `GovernanceActionsDoNotExist`, `DisallowedVoters`

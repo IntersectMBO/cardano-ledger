@@ -1,5 +1,6 @@
 # Version history for `cardano-ledger-babbage`
 
+* Modify `PParams` JSON instances to match `cardano-api`
 ## 1.6.0.0
 
 * Remove deprecated `getDatumBabbage`, `babbageTxScripts`, `refScripts`
