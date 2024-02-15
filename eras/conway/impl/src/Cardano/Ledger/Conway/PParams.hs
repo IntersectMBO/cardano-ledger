@@ -840,34 +840,34 @@ conwayPParamsPairs pp =
 
 instance Era era => FromJSON (ConwayPParams Identity era) where
   parseJSON =
-    withObject "PParams" $ \obj ->
+    withObject "ProtocolParameters" $ \obj ->
       ConwayPParams
-        <$> obj .: "minFeeA"
-        <*> obj .: "minFeeB"
+        <$> obj .: "txFeePerByte"
+        <*> obj .: "txFeeFixed"
         <*> obj .: "maxBlockBodySize"
         <*> obj .: "maxTxSize"
         <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "keyDeposit"
-        <*> obj .: "poolDeposit"
-        <*> obj .: "eMax"
-        <*> obj .: "nOpt"
-        <*> obj .: "a0"
-        <*> obj .: "rho"
-        <*> obj .: "tau"
+        <*> obj .: "stakeAddressDeposit"
+        <*> obj .: "stakePoolDeposit"
+        <*> obj .: "poolRetireMaxEpoch"
+        <*> obj .: "stakePoolTargetNum"
+        <*> obj .: "poolPledgeInfluence"
+        <*> obj .: "monetaryExpansion"
+        <*> obj .: "treasuryCut"
         <*> obj .: "protocolVersion"
         <*> obj .: "minPoolCost" .!= mempty
-        <*> obj .: "coinsPerUTxOByte"
-        <*> obj .: "costmdls"
-        <*> obj .: "prices"
-        <*> obj .: "maxTxExUnits"
-        <*> obj .: "maxBlockExUnits"
-        <*> obj .: "maxValSize"
+        <*> obj .: "utxoCostPerByte"
+        <*> obj .: "costModels"
+        <*> obj .: "executionUnitPrices"
+        <*> obj .: "maxTxExecutionUnits"
+        <*> obj .: "maxBlockExecutionUnits"
+        <*> obj .: "maxValueSize"
         <*> obj .: "collateralPercentage"
         <*> obj .: "maxCollateralInputs"
         <*> obj .: "poolVotingThresholds"
         <*> obj .: "dRepVotingThresholds"
-        <*> obj .: "committeeMinSize"
-        <*> obj .: "committeeMaxTermLength"
+        <*> obj .: "minCommitteeSize"
+        <*> obj .: "committeeTermLength"
         <*> obj .: "govActionLifetime"
         <*> obj .: "govActionDeposit"
         <*> obj .: "dRepDeposit"
@@ -1085,8 +1085,8 @@ conwayUpgradePParamsHKDPairs ::
 conwayUpgradePParamsHKDPairs px pp =
   [ ("poolVotingThresholds", hkdMap px (toJSON @PoolVotingThresholds) (pp ^. hkdPoolVotingThresholdsL @era @f))
   , ("dRepVotingThresholds", hkdMap px (toJSON @DRepVotingThresholds) (pp ^. hkdDRepVotingThresholdsL @era @f))
-  , ("committeeMinSize", hkdMap px (toJSON @Natural) (pp ^. hkdCommitteeMinSizeL @era @f))
-  , ("committeeMaxTermLength", hkdMap px (toJSON @EpochInterval) (pp ^. hkdCommitteeMaxTermLengthL @era @f))
+  , ("minCommitteeSize", hkdMap px (toJSON @Natural) (pp ^. hkdCommitteeMinSizeL @era @f))
+  , ("committeeTermLength", hkdMap px (toJSON @EpochInterval) (pp ^. hkdCommitteeMaxTermLengthL @era @f))
   , ("govActionLifetime", hkdMap px (toJSON @EpochInterval) (pp ^. hkdGovActionLifetimeL @era @f))
   , ("govActionDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdGovActionDepositL @era @f))
   , ("dRepDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdDRepDepositL @era @f))
@@ -1106,8 +1106,8 @@ upgradeConwayPParamsHKDPairs :: UpgradeConwayPParams Identity -> [(Key, Aeson.Va
 upgradeConwayPParamsHKDPairs UpgradeConwayPParams {..} =
   [ ("poolVotingThresholds", (toJSON @PoolVotingThresholds) ucppPoolVotingThresholds)
   , ("dRepVotingThresholds", (toJSON @DRepVotingThresholds) ucppDRepVotingThresholds)
-  , ("committeeMinSize", (toJSON @Natural) ucppCommitteeMinSize)
-  , ("committeeMaxTermLength", (toJSON @EpochInterval) ucppCommitteeMaxTermLength)
+  , ("minCommitteeSize", (toJSON @Natural) ucppCommitteeMinSize)
+  , ("committeeTermLength", (toJSON @EpochInterval) ucppCommitteeMaxTermLength)
   , ("govActionLifetime", (toJSON @EpochInterval) ucppGovActionLifetime)
   , ("govActionDeposit", (toJSON @Coin) ucppGovActionDeposit)
   , ("dRepDeposit", (toJSON @Coin) ucppDRepDeposit)
@@ -1121,8 +1121,8 @@ instance FromJSON (UpgradeConwayPParams Identity) where
       UpgradeConwayPParams
         <$> o .: "poolVotingThresholds"
         <*> o .: "dRepVotingThresholds"
-        <*> o .: "committeeMinSize"
-        <*> o .: "committeeMaxTermLength"
+        <*> o .: "minCommitteeSize"
+        <*> o .: "committeeTermLength"
         <*> o .: "govActionLifetime"
         <*> o .: "govActionDeposit"
         <*> o .: "dRepDeposit"

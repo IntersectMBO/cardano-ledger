@@ -66,6 +66,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
   isSNothing,
+  parseAsRational,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -102,13 +103,13 @@ import Data.Aeson as Aeson (
   Key,
   KeyValue ((.=)),
   ToJSON (..),
+  Value (Null),
   object,
   pairs,
   withObject,
   (.!=),
   (.:),
  )
-import qualified Data.Aeson as Aeson (Value)
 import Data.Functor.Identity (Identity (..))
 import Data.Proxy (Proxy (Proxy))
 import Data.Word (Word16, Word32)
@@ -350,32 +351,37 @@ babbagePParamsPairs ::
   PParamsHKD Identity era ->
   [a]
 babbagePParamsPairs pp =
-  uncurry (.=) <$> babbagePParamsHKDPairs (Proxy @Identity) pp
+  uncurry (.=)
+    <$> babbagePParamsHKDPairs (Proxy @Identity) pp
+      ++ [ "decentralization" .= Aeson.Null
+         , "extraPraosEntropy" .= Aeson.Null
+         , "minUTxOValue" .= Aeson.Null
+         ]
 
 instance FromJSON (BabbagePParams Identity era) where
   parseJSON =
     withObject "PParams" $ \obj ->
       BabbagePParams
-        <$> obj .: "minFeeA"
-        <*> obj .: "minFeeB"
+        <$> obj .: "txFeePerByte"
+        <*> obj .: "txFeeFixed"
         <*> obj .: "maxBlockBodySize"
         <*> obj .: "maxTxSize"
         <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "keyDeposit"
-        <*> obj .: "poolDeposit"
-        <*> obj .: "eMax"
-        <*> obj .: "nOpt"
-        <*> obj .: "a0"
-        <*> obj .: "rho"
-        <*> obj .: "tau"
+        <*> obj .: "stakeAddressDeposit"
+        <*> obj .: "stakePoolDeposit"
+        <*> obj .: "poolRetireMaxEpoch"
+        <*> obj .: "stakePoolTargetNum"
+        <*> parseAsRational (obj .: "poolPledgeInfluence")
+        <*> parseAsRational (obj .: "monetaryExpansion")
+        <*> parseAsRational (obj .: "treasuryCut")
         <*> obj .: "protocolVersion"
         <*> obj .: "minPoolCost" .!= mempty
-        <*> obj .: "coinsPerUTxOByte"
-        <*> obj .: "costmdls"
-        <*> obj .: "prices"
-        <*> obj .: "maxTxExUnits"
-        <*> obj .: "maxBlockExUnits"
-        <*> obj .: "maxValSize"
+        <*> obj .: "utxoCostPerByte"
+        <*> obj .: "costModels"
+        <*> obj .: "executionUnitPrices"
+        <*> obj .: "maxTxExecutionUnits"
+        <*> obj .: "maxBlockExecutionUnits"
+        <*> obj .: "maxValueSize"
         <*> obj .: "collateralPercentage"
         <*> obj .: "maxCollateralInputs"
 
@@ -550,7 +556,7 @@ babbageCommonPParamsHKDPairs ::
   [(Key, HKD f Aeson.Value)]
 babbageCommonPParamsHKDPairs px pp =
   alonzoCommonPParamsHKDPairs px pp
-    <> [("coinsPerUTxOByte", hkdMap px (toJSON @CoinPerByte) (pp ^. hkdCoinsPerUTxOByteL @_ @f))]
+    <> [("utxoCostPerByte", hkdMap px (toJSON @CoinPerByte) (pp ^. hkdCoinsPerUTxOByteL @_ @f))]
 
 upgradeBabbagePParams ::
   forall f c.

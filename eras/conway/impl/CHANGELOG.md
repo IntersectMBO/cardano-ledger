@@ -60,6 +60,7 @@
 * Add `TreeMaybe`, `toGovRelationTree` and `toGovRelationTreeEither`
 * Remove `proposalsAreConsistent`
 * Remove `registerDelegs` and `registerInitialDReps`
+* Modify `PParams` JSON instances to match `cardano-api`
 
 ### `testlib`
 

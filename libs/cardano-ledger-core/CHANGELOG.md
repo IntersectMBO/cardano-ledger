@@ -27,6 +27,8 @@
 * Deprecate `deserialiseRewardAcnt` in favor of `deserialiseRewardAccount`
 * Deprecate `serialiseRewardAcnt` in favor of `serialiseRewardAccount`
 * Deprecate `RewardAcnt` in favor of `RewardAccount`
+* Add `toRationalJSON` and `parseAsRational` JSON Aeson helpers
+* Nodify `Prices` JSON instances to match `cardano-api`
 
 ### `testlib`
 
