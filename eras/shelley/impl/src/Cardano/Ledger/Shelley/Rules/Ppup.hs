@@ -113,8 +113,7 @@ data ShelleyPpupPredFailure era
 
 type instance EraRuleFailure "PPUP" era = ShelleyPpupPredFailure era
 
-instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure (ShelleyEra c) where
-  injectFailure = id
+instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure (ShelleyEra c)
 
 instance NoThunks (ShelleyPpupPredFailure era)
 

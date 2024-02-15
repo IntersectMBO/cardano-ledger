@@ -166,8 +166,7 @@ data ConwayGovPredFailure era
 
 type instance EraRuleFailure "GOV" (ConwayEra c) = ConwayGovPredFailure (ConwayEra c)
 
-instance InjectRuleFailure "GOV" ConwayGovPredFailure (ConwayEra c) where
-  injectFailure = id
+instance InjectRuleFailure "GOV" ConwayGovPredFailure (ConwayEra c)
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)
 

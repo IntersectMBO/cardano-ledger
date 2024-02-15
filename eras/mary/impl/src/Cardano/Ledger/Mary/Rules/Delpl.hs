@@ -17,8 +17,7 @@ import Cardano.Ledger.Shelley.Rules (
 
 type instance EraRuleFailure "DELPL" (MaryEra c) = ShelleyDelplPredFailure (MaryEra c)
 
-instance InjectRuleFailure "DELPL" ShelleyDelplPredFailure (MaryEra c) where
-  injectFailure = id
+instance InjectRuleFailure "DELPL" ShelleyDelplPredFailure (MaryEra c)
 
 instance InjectRuleFailure "DELPL" ShelleyPoolPredFailure (MaryEra c) where
   injectFailure = PoolFailure

@@ -104,8 +104,7 @@ data ShelleyLedgerPredFailure era
 
 type instance EraRuleFailure "LEDGER" (ShelleyEra c) = ShelleyLedgerPredFailure (ShelleyEra c)
 
-instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure (ShelleyEra c) where
-  injectFailure = id
+instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure (ShelleyEra c)
 
 instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (ShelleyEra c) where
   injectFailure = UtxowFailure

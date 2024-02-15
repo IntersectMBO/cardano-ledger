@@ -69,8 +69,7 @@ newtype ShelleyLedgersPredFailure era
 
 type instance EraRuleFailure "LEDGERS" (ShelleyEra c) = ShelleyLedgersPredFailure (ShelleyEra c)
 
-instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure (ShelleyEra c) where
-  injectFailure = id
+instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure (ShelleyEra c)
 
 instance InjectRuleFailure "LEDGERS" ShelleyLedgerPredFailure (ShelleyEra c) where
   injectFailure = LedgerFailure

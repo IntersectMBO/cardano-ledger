@@ -125,8 +125,7 @@ data ShelleyDelegsPredFailure era
 
 type instance EraRuleFailure "DELEGS" (ShelleyEra c) = ShelleyDelegsPredFailure (ShelleyEra c)
 
-instance InjectRuleFailure "DELEGS" ShelleyDelegsPredFailure (ShelleyEra c) where
-  injectFailure = id
+instance InjectRuleFailure "DELEGS" ShelleyDelegsPredFailure (ShelleyEra c)
 
 instance InjectRuleFailure "DELEGS" ShelleyDelplPredFailure (ShelleyEra c) where
   injectFailure = DelplFailure

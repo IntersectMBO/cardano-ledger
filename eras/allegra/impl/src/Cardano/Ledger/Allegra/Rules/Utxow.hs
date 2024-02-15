@@ -31,8 +31,7 @@ import Control.State.Transition.Extended
 
 type instance EraRuleFailure "UTXOW" (AllegraEra c) = ShelleyUtxowPredFailure (AllegraEra c)
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (AllegraEra c) where
-  injectFailure = id
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (AllegraEra c)
 
 instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure (AllegraEra c) where
   injectFailure = UtxoFailure

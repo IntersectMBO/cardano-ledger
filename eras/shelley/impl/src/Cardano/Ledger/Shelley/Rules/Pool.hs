@@ -100,8 +100,7 @@ data ShelleyPoolPredFailure era
 
 type instance EraRuleFailure "POOL" (ShelleyEra c) = ShelleyPoolPredFailure (ShelleyEra c)
 
-instance InjectRuleFailure "POOL" ShelleyPoolPredFailure (ShelleyEra c) where
-  injectFailure = id
+instance InjectRuleFailure "POOL" ShelleyPoolPredFailure (ShelleyEra c)
 
 instance NoThunks (ShelleyPoolPredFailure era)
 

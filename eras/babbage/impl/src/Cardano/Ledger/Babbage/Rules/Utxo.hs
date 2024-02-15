@@ -124,8 +124,7 @@ data BabbageUtxoPredFailure era
 
 type instance EraRuleFailure "UTXO" (BabbageEra c) = BabbageUtxoPredFailure (BabbageEra c)
 
-instance InjectRuleFailure "UTXO" BabbageUtxoPredFailure (BabbageEra c) where
-  injectFailure = id
+instance InjectRuleFailure "UTXO" BabbageUtxoPredFailure (BabbageEra c)
 
 instance InjectRuleFailure "UTXO" AlonzoUtxoPredFailure (BabbageEra c) where
   injectFailure = AlonzoInBabbageUtxoPredFailure

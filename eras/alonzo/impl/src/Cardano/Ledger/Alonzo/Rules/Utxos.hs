@@ -372,8 +372,7 @@ data AlonzoUtxosPredFailure era
 
 type instance EraRuleFailure "UTXOS" (AlonzoEra c) = AlonzoUtxosPredFailure (AlonzoEra c)
 
-instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (AlonzoEra c) where
-  injectFailure = id
+instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (AlonzoEra c)
 
 instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure (AlonzoEra c) where
   injectFailure = UpdateFailure

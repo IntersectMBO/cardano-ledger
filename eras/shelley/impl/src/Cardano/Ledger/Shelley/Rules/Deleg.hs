@@ -130,8 +130,7 @@ data ShelleyDelegPredFailure era
 
 type instance EraRuleFailure "DELEG" (ShelleyEra c) = ShelleyDelegPredFailure (ShelleyEra c)
 
-instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure (ShelleyEra c) where
-  injectFailure = id
+instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure (ShelleyEra c)
 
 newtype ShelleyDelegEvent era = NewEpoch EpochNo
 

@@ -95,8 +95,7 @@ newtype AlonzoBbodyEvent era
 
 type instance EraRuleFailure "BBODY" (AlonzoEra c) = AlonzoBbodyPredFailure (AlonzoEra c)
 
-instance InjectRuleFailure "BBODY" AlonzoBbodyPredFailure (AlonzoEra c) where
-  injectFailure = id
+instance InjectRuleFailure "BBODY" AlonzoBbodyPredFailure (AlonzoEra c)
 
 instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure (AlonzoEra c) where
   injectFailure = ShelleyInAlonzoBbodyPredFailure

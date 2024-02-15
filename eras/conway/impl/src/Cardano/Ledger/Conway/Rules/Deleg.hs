@@ -72,8 +72,7 @@ data ConwayDelegPredFailure era
 
 type instance EraRuleFailure "DELEG" (ConwayEra c) = ConwayDelegPredFailure (ConwayEra c)
 
-instance InjectRuleFailure "DELEG" ConwayDelegPredFailure (ConwayEra c) where
-  injectFailure = id
+instance InjectRuleFailure "DELEG" ConwayDelegPredFailure (ConwayEra c)
 
 instance NoThunks (ConwayDelegPredFailure era)
 

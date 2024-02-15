@@ -82,8 +82,7 @@ data ShelleyBbodyPredFailure era
 
 type instance EraRuleFailure "BBODY" (ShelleyEra c) = ShelleyBbodyPredFailure (ShelleyEra c)
 
-instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure (ShelleyEra c) where
-  injectFailure = id
+instance InjectRuleFailure "BBODY" ShelleyBbodyPredFailure (ShelleyEra c)
 
 instance InjectRuleFailure "BBODY" ShelleyLedgersPredFailure (ShelleyEra c) where
   injectFailure = LedgersFailure

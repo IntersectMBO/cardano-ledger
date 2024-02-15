@@ -94,8 +94,7 @@ data ConwayCertsPredFailure era
 
 type instance EraRuleFailure "CERTS" (ConwayEra c) = ConwayCertsPredFailure (ConwayEra c)
 
-instance InjectRuleFailure "CERTS" ConwayCertsPredFailure (ConwayEra c) where
-  injectFailure = id
+instance InjectRuleFailure "CERTS" ConwayCertsPredFailure (ConwayEra c)
 
 instance InjectRuleFailure "CERTS" ConwayCertPredFailure (ConwayEra c) where
   injectFailure = CertFailure

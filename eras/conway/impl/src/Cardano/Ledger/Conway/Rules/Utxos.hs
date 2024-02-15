@@ -53,8 +53,7 @@ import Lens.Micro
 
 type instance EraRuleFailure "UTXOS" (ConwayEra c) = AlonzoUtxosPredFailure (ConwayEra c)
 
-instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (ConwayEra c) where
-  injectFailure = id
+instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (ConwayEra c)
 
 instance
   ( AlonzoEraTx era

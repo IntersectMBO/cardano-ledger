@@ -116,8 +116,7 @@ data AllegraUtxoPredFailure era
 
 type instance EraRuleFailure "UTXO" (AllegraEra c) = AllegraUtxoPredFailure (AllegraEra c)
 
-instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure (AllegraEra c) where
-  injectFailure = id
+instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure (AllegraEra c)
 
 instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure (AllegraEra c) where
   injectFailure = UpdateFailure

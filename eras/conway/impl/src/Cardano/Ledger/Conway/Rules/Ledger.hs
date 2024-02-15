@@ -132,8 +132,7 @@ data ConwayLedgerPredFailure era
 
 type instance EraRuleFailure "LEDGER" (ConwayEra c) = ConwayLedgerPredFailure (ConwayEra c)
 
-instance InjectRuleFailure "LEDGER" ConwayLedgerPredFailure (ConwayEra c) where
-  injectFailure = id
+instance InjectRuleFailure "LEDGER" ConwayLedgerPredFailure (ConwayEra c)
 
 instance InjectRuleFailure "LEDGER" BabbageUtxowPredFailure (ConwayEra c) where
   injectFailure = ConwayUtxowFailure

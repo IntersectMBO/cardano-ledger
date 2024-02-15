@@ -153,8 +153,7 @@ data ShelleyUtxowPredFailure era
 
 type instance EraRuleFailure "UTXOW" (ShelleyEra c) = ShelleyUtxowPredFailure (ShelleyEra c)
 
-instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (ShelleyEra c) where
-  injectFailure = id
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (ShelleyEra c)
 
 instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (ShelleyEra c) where
   injectFailure = UtxoFailure

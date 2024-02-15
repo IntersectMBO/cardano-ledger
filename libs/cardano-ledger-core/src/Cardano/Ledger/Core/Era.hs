@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -144,6 +145,8 @@ class
   InjectRuleFailure (rule :: Symbol) t era
   where
   injectFailure :: t era -> EraRuleFailure rule era
+  default injectFailure :: t era ~ EraRuleFailure rule era => t era -> EraRuleFailure rule era
+  injectFailure = id
 
 -----------------------------
 -- Protocol version bounds --

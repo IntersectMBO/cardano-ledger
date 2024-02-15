@@ -64,8 +64,7 @@ import Data.Sequence (Seq)
 
 type instance EraRuleFailure "LEDGER" (BabbageEra c) = ShelleyLedgerPredFailure (BabbageEra c)
 
-instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure (BabbageEra c) where
-  injectFailure = id
+instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure (BabbageEra c)
 
 instance InjectRuleFailure "LEDGER" BabbageUtxowPredFailure (BabbageEra c) where
   injectFailure = UtxowFailure

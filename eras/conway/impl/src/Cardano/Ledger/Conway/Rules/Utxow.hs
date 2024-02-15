@@ -64,8 +64,7 @@ conwayWitsVKeyNeeded = getConwayWitsVKeyNeeded
 
 type instance EraRuleFailure "UTXOW" (ConwayEra c) = BabbageUtxowPredFailure (ConwayEra c)
 
-instance InjectRuleFailure "UTXOW" BabbageUtxowPredFailure (ConwayEra c) where
-  injectFailure = id
+instance InjectRuleFailure "UTXOW" BabbageUtxowPredFailure (ConwayEra c)
 
 instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure (ConwayEra c) where
   injectFailure = AlonzoInBabbageUtxowPredFailure
