@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -28,14 +29,16 @@ where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
 import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Era (AlonzoUTXOW)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUTXO,
   AlonzoUtxoEvent,
-  AlonzoUtxoPredFailure,
+  AlonzoUtxoPredFailure (..),
  )
+import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits (
@@ -57,9 +60,11 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
+  ShelleyPpupPredFailure,
+  ShelleyUtxoPredFailure,
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure (..),
   UtxoEnv (..),
@@ -119,6 +124,28 @@ data AlonzoUtxowPredFailure era
     ExtraRedeemers
       ![PlutusPurpose AsIx era]
   deriving (Generic)
+
+type instance EraRuleFailure "UTXOW" (AlonzoEra c) = AlonzoUtxowPredFailure (AlonzoEra c)
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure (AlonzoEra c)
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (AlonzoEra c) where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure (AlonzoEra c) where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure (AlonzoEra c) where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure (AlonzoEra c) where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (AlonzoEra c) where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure (AlonzoEra c) where
+  injectFailure = ShelleyInAlonzoUtxowPredFailure . UtxoFailure . injectFailure
 
 deriving instance
   ( AlonzoEraScript era
@@ -300,13 +327,16 @@ alonzoStyleWitness ::
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , EraRule "UTXOW" era ~ AlonzoUTXOW era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
   ) =>
-  TransitionRule (AlonzoUTXOW era)
+  TransitionRule (EraRule "UTXOW" era)
 alonzoStyleWitness = do
   TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx) <- judgmentContext
 
@@ -390,6 +420,9 @@ instance
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , EraRule "UTXOW" era ~ AlonzoUTXOW era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (AlonzoUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
@@ -404,7 +437,7 @@ instance
   type BaseM (AlonzoUTXOW era) = ShelleyBase
   type PredicateFailure (AlonzoUTXOW era) = AlonzoUtxowPredFailure era
   type Event (AlonzoUTXOW era) = AlonzoUtxowEvent era
-  transitionRules = [alonzoStyleWitness]
+  transitionRules = [alonzoStyleWitness @era]
   initialRules = []
 
 instance
@@ -420,12 +453,3 @@ instance
   where
   wrapFailed = ShelleyInAlonzoUtxowPredFailure . UtxoFailure
   wrapEvent = WrappedShelleyEraEvent . UtxoEvent
-
--- ==========================================================
--- inject instances
-
-instance Inject (AlonzoUtxowPredFailure era) (AlonzoUtxowPredFailure era) where
-  inject = id
-
-instance Inject (ShelleyUtxowPredFailure era) (AlonzoUtxowPredFailure era) where
-  inject = ShelleyInAlonzoUtxowPredFailure

@@ -38,7 +38,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyLEDGER)
+import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState,
   CertState (..),
@@ -47,14 +47,18 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosDepositedL,
  )
 import Cardano.Ledger.Shelley.LedgerState.Types (allObligations, potEqualsObligation)
+import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (
   DelegsEnv (..),
   ShelleyDELEGS,
   ShelleyDelegsEvent,
   ShelleyDelegsPredFailure,
  )
+import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure)
+import Cardano.Ledger.Shelley.Rules.Pool (ShelleyPoolPredFailure)
+import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
-import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
 import Control.DeepSeq (NFData (..))
@@ -97,6 +101,31 @@ data ShelleyLedgerPredFailure era
   = UtxowFailure (PredicateFailure (EraRule "UTXOW" era)) -- Subtransition Failures
   | DelegsFailure (PredicateFailure (EraRule "DELEGS" era)) -- Subtransition Failures
   deriving (Generic)
+
+type instance EraRuleFailure "LEDGER" (ShelleyEra c) = ShelleyLedgerPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (ShelleyEra c) where
+  injectFailure = UtxowFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure (ShelleyEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyPpupPredFailure (ShelleyEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure (ShelleyEra c) where
+  injectFailure = DelegsFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyDelplPredFailure (ShelleyEra c) where
+  injectFailure = DelegsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure (ShelleyEra c) where
+  injectFailure = DelegsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure (ShelleyEra c) where
+  injectFailure = DelegsFailure . injectFailure
 
 data ShelleyLedgerEvent era
   = UtxowEvent (Event (EraRule "UTXOW" era))

@@ -70,7 +70,6 @@ import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
-  AlonzoBased (..),
   alwaysSucceedsHash,
   initUTxO,
   mkGenesisTxIn,
@@ -135,17 +134,20 @@ tests =
     "Generic Tests for invalid transactions, testing Alonzo UTXOW PredicateFailures, in postAlonzo eras."
     [ alonzoUTXOWTests Alonzo
     , alonzoUTXOWTests Babbage
-    -- alonzoUTXOWTests Conway TODO
+    , alonzoUTXOWTests Conway
     ]
 
 alonzoUTXOWTests ::
   forall era.
-  ( AlonzoBased era (PredicateFailure (EraRule "UTXOW" era))
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  ( State (EraRule "UTXOW" era) ~ UTxOState era
   , HasTokens era
   , Reflect era
   , PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto,
   , Value era ~ MaryValue (EraCrypto era)
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure era
   ) =>
   Proof era ->
   TestTree
@@ -159,7 +161,7 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ incorrectNetworkIDTx pf)
               ( Left
-                  [ fromUtxo @era (WrongNetworkInTxBody Testnet Mainnet)
+                  [ injectFailure (WrongNetworkInTxBody Testnet Mainnet)
                   ]
               )
         , testCase "missing required key witness" $
@@ -167,7 +169,7 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ missingRequiredWitnessTx pf)
               ( Left
-                  [ fromUtxow @era $ MissingVKeyWitnessesUTXOW $ Set.singleton extraneousKeyHash
+                  [ injectFailure $ MissingVKeyWitnessesUTXOW $ Set.singleton extraneousKeyHash
                   ]
               )
         , testCase "missing redeemer" $
@@ -175,8 +177,8 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ missingRedeemerTx pf)
               ( Left
-                  [ fromUtxos @era $ CollectErrors [NoRedeemer $ spendingPurposeAsItem1 pf]
-                  , fromPredFail $
+                  [ injectFailure $ CollectErrors [NoRedeemer $ spendingPurposeAsItem1 pf]
+                  , injectFailure $
                       MissingRedeemers @era [(spendingPurposeAsItem1 pf, alwaysSucceedsHash 3 pf)]
                   ]
               )
@@ -185,7 +187,7 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ wrongWppHashTx pf)
               ( Left
-                  [ fromPredFail @era $
+                  [ injectFailure $
                       PPViewHashesDontMatch
                         ( newScriptIntegrityHash
                             pf
@@ -208,7 +210,7 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ missing1phaseScriptWitnessTx pf)
               ( Left
-                  [ fromUtxow @era . MissingScriptWitnessesUTXOW . Set.singleton $
+                  [ injectFailure . MissingScriptWitnessesUTXOW . Set.singleton $
                       timelockHash 0 pf
                   ]
               )
@@ -218,12 +220,12 @@ alonzoUTXOWTests pf =
               (trustMeP pf True $ missing2phaseScriptWitnessTx pf)
               ( Left
                   [ -- these redeemers are associated with phase-1 scripts
-                    fromPredFail @era . ExtraRedeemers $
+                    injectFailure . ExtraRedeemers $
                       [ mkPlutusPurposePointer pf Minting 0
                       , mkPlutusPurposePointer pf Certifying 1
                       , mkPlutusPurposePointer pf Rewarding 0
                       ]
-                  , fromUtxow @era . MissingScriptWitnessesUTXOW . Set.singleton $
+                  , injectFailure . MissingScriptWitnessesUTXOW . Set.singleton $
                       alwaysSucceedsHash 2 pf
                   ]
               )
@@ -232,12 +234,12 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ wrongRedeemerLabelTx pf)
               ( Left
-                  [ fromUtxos @era (CollectErrors [NoRedeemer $ spendingPurposeAsItem1 pf])
+                  [ injectFailure (CollectErrors [NoRedeemer $ spendingPurposeAsItem1 pf])
                   , -- now "wrong redeemer label" means there are both unredeemable
                     -- scripts and extra redeemers
-                    fromPredFail @era $
+                    injectFailure $
                       MissingRedeemers [(spendingPurposeAsItem1 pf, alwaysSucceedsHash 3 pf)]
-                  , fromPredFail @era $ ExtraRedeemers [mkPlutusPurposePointer pf Minting 1]
+                  , injectFailure $ ExtraRedeemers [mkPlutusPurposePointer pf Minting 1]
                   ]
               )
         , testCase "missing datum" $
@@ -245,7 +247,7 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ missingDatumTx pf)
               ( Left
-                  [ fromPredFail @era $
+                  [ injectFailure $
                       MissingRequiredDatums
                         (Set.singleton $ hashData @era (Data (PV1.I 123)))
                         mempty
@@ -256,7 +258,7 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ phase1FailureTx pf)
               ( Left
-                  [ fromUtxow @era $
+                  [ injectFailure $
                       ScriptWitnessNotValidatingUTXOW $
                         Set.fromList
                           [ timelockHash 0 pf
@@ -269,7 +271,7 @@ alonzoUTXOWTests pf =
             testU
               pf
               (trustMeP pf False $ validatingTx pf)
-              ( Left [fromUtxos @era (ValidationTagMismatch (IsValid False) PassedUnexpectedly)]
+              ( Left [injectFailure (ValidationTagMismatch (IsValid False) PassedUnexpectedly)]
               )
         , testCase "invalid transaction marked as valid" $
             testUTXOspecialCase
@@ -278,7 +280,7 @@ alonzoUTXOWTests pf =
               (pp pf)
               (trustMeP pf True $ notValidatingTx pf)
               ( Left
-                  [ fromUtxos @era
+                  [ injectFailure
                       ( ValidationTagMismatch
                           (IsValid True)
                           (FailedUnexpectedly (quietPlutusFailure :| []))
@@ -290,7 +292,7 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ tooManyExUnitsTx pf)
               ( Left
-                  [ fromUtxo @era $
+                  [ injectFailure $
                       ExUnitsTooBigUTxO
                         (ExUnits {exUnitsMem = 1000000, exUnitsSteps = 1000000})
                         (ExUnits {exUnitsMem = 1000001, exUnitsSteps = 5000})
@@ -301,7 +303,7 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ missingCollateralSigTx pf)
               ( Left
-                  [ fromUtxow @era
+                  [ injectFailure
                       ( MissingVKeyWitnessesUTXOW
                           ( Set.fromList
                               [ asWitness $
@@ -317,14 +319,14 @@ alonzoUTXOWTests pf =
               (initUTxO pf)
               (newPParams pf $ defaultPPs ++ [CollateralPercentage 150])
               (trustMeP pf True $ validatingTx pf)
-              ( Left [fromUtxo @era (InsufficientCollateral (Coin 5) (Coin 8))]
+              ( Left [injectFailure (InsufficientCollateral (Coin 5) (Coin 8))]
               )
         , testCase "two-phase UTxO with no datum hash" $
             testU
               pf
               (trustMeP pf True $ plutusOutputWithNoDataTx pf)
               ( Left
-                  [ fromPredFail @era $ UnspendableUTxONoDatumHash . Set.singleton $ mkGenesisTxIn 101
+                  [ injectFailure $ UnspendableUTxONoDatumHash . Set.singleton $ mkGenesisTxIn 101
                   ]
               )
         , testCase "unacceptable supplimentary datum" $
@@ -334,7 +336,7 @@ alonzoUTXOWTests pf =
               (pp pf)
               (trustMeP pf True $ notOkSupplimentaryDatumTx pf)
               ( Left
-                  [ fromPredFail @era $
+                  [ injectFailure $
                       NotAllowedSupplementalDatums
                         (Set.singleton $ hashData @era totallyIrrelevantDatum)
                         mempty
@@ -345,7 +347,7 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ extraRedeemersTx pf)
               ( Left
-                  [ fromPredFail @era $
+                  [ injectFailure $
                       ExtraRedeemers [mkPlutusPurposePointer pf Spending 7]
                   ]
               )
@@ -354,7 +356,7 @@ alonzoUTXOWTests pf =
               pf
               (trustMeP pf True $ multipleEqualCertsInvalidTx pf)
               ( Left
-                  [ fromPredFail @era $ ExtraRedeemers [mkPlutusPurposePointer pf Certifying 1]
+                  [ injectFailure $ ExtraRedeemers [mkPlutusPurposePointer pf Certifying 1]
                   ]
               )
         , testCase "no cost model" $
@@ -364,7 +366,7 @@ alonzoUTXOWTests pf =
                   (initUTxO pf)
                   pp'
                   (trustMeP pf True $ noCostModelTx pf pp')
-                  ( Left [fromUtxos @era (CollectErrors [NoCostModel PlutusV1])]
+                  ( Left [injectFailure (CollectErrors [NoCostModel PlutusV1])]
                   )
         ]
     ]

@@ -1,7 +1,9 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -14,6 +16,12 @@ module Cardano.Ledger.Core.Era (
   -- * Era
   Era (..),
   ByronEra,
+
+  -- ** Rules
+  EraRule,
+  EraRuleFailure,
+  VoidRuleFailure,
+  InjectRuleFailure (..),
 
   -- ** Protocol Version
   AtMostEra,
@@ -38,6 +46,7 @@ where
 import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto
+import Control.State.Transition.Extended (PredicateFailure)
 import Data.Kind (Constraint, Type)
 import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
@@ -105,6 +114,39 @@ instance Crypto c => Era (ByronEra c) where
   type ProtVerHigh (ByronEra c) = 1
 
   eraName = "Byron"
+
+-----------------------------
+-- Rules --------------------
+-----------------------------
+
+-- | Era STS map
+type family EraRule (rule :: Symbol) era = (r :: Type) | r -> rule
+
+-- | `EraRuleFailure` type family is needed for injectivity, which STS does not provide for
+-- us unfortunately.
+type family EraRuleFailure (rule :: Symbol) era = (r :: Type) | r -> rule era
+
+data VoidRuleFailure (rule :: Symbol) era
+
+-- Rules that should never have a predicate failures
+type instance EraRuleFailure "EPOCH" era = VoidRuleFailure "EPOCH" era
+type instance EraRuleFailure "NEWEPOCH" era = VoidRuleFailure "NEWEPOCH" era
+type instance EraRuleFailure "MIR" era = VoidRuleFailure "MIR" era
+type instance EraRuleFailure "NEWPP" era = VoidRuleFailure "NEWPP" era
+type instance EraRuleFailure "SNAP" era = VoidRuleFailure "SNAP" era
+type instance EraRuleFailure "TICK" era = VoidRuleFailure "TICK" era
+type instance EraRuleFailure "TICKF" era = VoidRuleFailure "TICKF" era
+type instance EraRuleFailure "UPEC" era = VoidRuleFailure "UPEC" era
+type instance EraRuleFailure "RUPD" era = VoidRuleFailure "RUPD" era
+type instance EraRuleFailure "POOLREAP" era = VoidRuleFailure "POOLREAP" era
+
+class
+  EraRuleFailure rule era ~ PredicateFailure (EraRule rule era) =>
+  InjectRuleFailure (rule :: Symbol) t era
+  where
+  injectFailure :: t era -> EraRuleFailure rule era
+  default injectFailure :: t era ~ EraRuleFailure rule era => t era -> EraRuleFailure rule era
+  injectFailure = id
 
 -----------------------------
 -- Protocol version bounds --

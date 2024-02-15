@@ -3,6 +3,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -30,10 +31,9 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (CommitteeState (..), VState (..))
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.Era (ConwayGOVCERT)
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepActivityL, ppDRepDepositL)
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT)
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
-import Cardano.Ledger.Core (Era (EraCrypto), EraRule, PParams)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
@@ -78,6 +78,10 @@ data ConwayGovCertPredFailure era
   | ConwayDRepIncorrectDeposit !Coin !Coin -- The first is the given and the second is the expected deposit
   | ConwayCommitteeHasPreviouslyResigned !(Credential 'ColdCommitteeRole (EraCrypto era))
   deriving (Show, Eq, Generic)
+
+type instance EraRuleFailure "GOVCERT" (ConwayEra c) = ConwayGovCertPredFailure (ConwayEra c)
+
+instance InjectRuleFailure "GOVCERT" ConwayGovCertPredFailure (ConwayEra c)
 
 instance NoThunks (ConwayGovCertPredFailure era)
 

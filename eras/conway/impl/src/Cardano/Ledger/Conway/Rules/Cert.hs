@@ -29,6 +29,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (
   ConwayCERT,
   ConwayDELEG,
+  ConwayEra,
   ConwayGOVCERT,
  )
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegEvent, ConwayDelegPredFailure (..))
@@ -80,6 +81,19 @@ data ConwayCertPredFailure era
   | PoolFailure (PredicateFailure (EraRule "POOL" era))
   | GovCertFailure (PredicateFailure (EraRule "GOVCERT" era))
   deriving (Generic)
+
+type instance EraRuleFailure "CERT" (ConwayEra c) = ConwayCertPredFailure (ConwayEra c)
+
+instance InjectRuleFailure "CERT" ConwayCertPredFailure (ConwayEra c)
+
+instance InjectRuleFailure "CERT" ConwayDelegPredFailure (ConwayEra c) where
+  injectFailure = DelegFailure
+
+instance InjectRuleFailure "CERT" ShelleyPoolPredFailure (ConwayEra c) where
+  injectFailure = PoolFailure
+
+instance InjectRuleFailure "CERT" ConwayGovCertPredFailure (ConwayEra c) where
+  injectFailure = GovCertFailure
 
 deriving stock instance
   ( Show (PredicateFailure (EraRule "DELEG" era))

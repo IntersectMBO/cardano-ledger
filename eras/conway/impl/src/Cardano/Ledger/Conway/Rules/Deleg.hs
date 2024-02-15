@@ -3,6 +3,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -29,13 +30,12 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.Core (ppKeyDepositL)
-import Cardano.Ledger.Conway.Era (ConwayDELEG)
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Era (ConwayDELEG, ConwayEra)
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (ConwayDelegCert, ConwayRegCert, ConwayRegDelegCert, ConwayUnRegCert),
   Delegatee (DelegStake, DelegStakeVote, DelegVote),
  )
-import Cardano.Ledger.Core (Era (EraCrypto), EraPParams, EraRule, PParams)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Shelley.LedgerState (DState (..))
@@ -69,6 +69,10 @@ data ConwayDelegPredFailure era
   | StakeKeyHasNonZeroRewardAccountBalanceDELEG !Coin
   | DRepAlreadyRegisteredForStakeKeyDELEG !(Credential 'Staking (EraCrypto era))
   deriving (Show, Eq, Generic)
+
+type instance EraRuleFailure "DELEG" (ConwayEra c) = ConwayDelegPredFailure (ConwayEra c)
+
+instance InjectRuleFailure "DELEG" ConwayDelegPredFailure (ConwayEra c)
 
 instance NoThunks (ConwayDelegPredFailure era)
 

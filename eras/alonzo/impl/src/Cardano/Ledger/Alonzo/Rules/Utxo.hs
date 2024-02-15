@@ -19,6 +19,7 @@
 module Cardano.Ledger.Alonzo.Rules.Utxo (
   AlonzoUTXO,
   AlonzoUtxoPredFailure (..),
+  allegraToAlonzoUtxoPredFailure,
   AlonzoUtxoEvent (..),
   validateCollateralContainsNonADA,
   validateExUnitsTooBigUTxO,
@@ -38,10 +39,10 @@ import Cardano.Ledger.Address (
   isBootstrapCompactAddr,
   isPayCredScriptCompactAddr,
  )
-import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra
 import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import Cardano.Ledger.Alonzo.Era (AlonzoUTXO)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoUTXO)
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, AlonzoUtxosPredFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
@@ -85,7 +86,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   PPUPPredFailure,
   UTxOState (utxosUtxo),
  )
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure, ShelleyUtxoPredFailure, UtxoEnv (..))
 import qualified Cardano.Ledger.Shelley.Rules as Shelley
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), areAllAdaOnly, coinBalance, sumAllValue)
@@ -197,6 +198,22 @@ data AlonzoUtxoPredFailure era
   | NoCollateralInputs
   deriving (Generic)
 
+type instance EraRuleFailure "UTXO" (AlonzoEra c) = AlonzoUtxoPredFailure (AlonzoEra c)
+
+instance InjectRuleFailure "UTXO" AlonzoUtxoPredFailure (AlonzoEra c)
+
+instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure (AlonzoEra c) where
+  injectFailure = UtxosFailure . injectFailure
+
+instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure (AlonzoEra c) where
+  injectFailure = allegraToAlonzoUtxoPredFailure . shelleyToAllegraUtxoPredFailure
+
+instance InjectRuleFailure "UTXO" AllegraUtxoPredFailure (AlonzoEra c) where
+  injectFailure = allegraToAlonzoUtxoPredFailure
+
+instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure (AlonzoEra c) where
+  injectFailure = UtxosFailure
+
 deriving stock instance
   ( Era era
   , Show (Value era)
@@ -280,7 +297,7 @@ feesOK pp tx u@(UTxO utxo) =
       minFee = getMinFeeTxUtxo pp tx u
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txb
-          failureUnless (minFee <= theFee) (inject (FeeTooSmallUTxO @era minFee theFee))
+          failureUnless (minFee <= theFee) (FeeTooSmallUTxO minFee theFee)
         , -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
           unless (nullRedeemers (tx ^. witsTxL . rdmrsTxWitsL)) $
             validateCollateral pp txBody utxoCollateral
@@ -470,15 +487,17 @@ utxoTransition ::
   forall era.
   ( EraUTxO era
   , AlonzoEraTx era
-  , STS (AlonzoUTXO era)
-  , -- instructions for calling UTXOS from AlonzoUTXO
-    Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
+  , ProtVerAtMost era 8
+  , EraRule "UTXO" era ~ AlonzoUTXO era
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
+  , Embed (EraRule "UTXOS" era) (AlonzoUTXO era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
-  , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  TransitionRule (AlonzoUTXO era)
+  TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
   TRC (UtxoEnv slot pp dpstate, utxos, tx) <- judgmentContext
   let utxo = utxosUtxo utxos
@@ -559,7 +578,10 @@ instance
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
-  , Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era))
+  , EraRule "UTXO" era ~ AlonzoUTXO era
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , ProtVerAtMost era 8
   ) =>
   STS (AlonzoUTXO era)
@@ -700,48 +722,21 @@ instance
 -- =====================================================
 -- Injecting from one PredicateFailure to another
 
-instance Inject (AlonzoUtxoPredFailure era) (AlonzoUtxoPredFailure era) where
-  inject = id
-
-instance
-  PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era =>
-  Inject (AlonzoUtxosPredFailure era) (AlonzoUtxoPredFailure era)
-  where
-  inject = UtxosFailure
-
-instance
+allegraToAlonzoUtxoPredFailure ::
   Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (AllegraUtxoPredFailure era) (AlonzoUtxoPredFailure era)
-  where
-  inject = \case
-    Allegra.BadInputsUTxO x -> BadInputsUTxO x
-    Allegra.OutsideValidityIntervalUTxO vi slotNo -> OutsideValidityIntervalUTxO vi slotNo
-    Allegra.MaxTxSizeUTxO x y -> MaxTxSizeUTxO x y
-    Allegra.InputSetEmptyUTxO -> InputSetEmptyUTxO
-    Allegra.FeeTooSmallUTxO c1 c2 -> FeeTooSmallUTxO c1 c2
-    Allegra.ValueNotConservedUTxO vc vp -> ValueNotConservedUTxO vc vp
-    Allegra.WrongNetwork x y -> WrongNetwork x y
-    Allegra.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
-    Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
-    Allegra.UpdateFailure x -> UtxosFailure (inject x)
-    Allegra.OutputBootAddrAttrsTooBig xs -> OutputTooBigUTxO (map (0,0,) xs)
-    Allegra.TriesToForgeADA -> TriesToForgeADA
-    Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
-
-instance
-  Inject (PPUPPredFailure era) (PredicateFailure (EraRule "UTXOS" era)) =>
-  Inject (ShelleyUtxoPredFailure era) (AlonzoUtxoPredFailure era)
-  where
-  inject = \case
-    Shelley.BadInputsUTxO ins -> BadInputsUTxO ins
-    Shelley.ExpiredUTxO ttl current ->
-      OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
-    Shelley.MaxTxSizeUTxO a m -> MaxTxSizeUTxO a m
-    Shelley.InputSetEmptyUTxO -> InputSetEmptyUTxO
-    Shelley.FeeTooSmallUTxO mf af -> FeeTooSmallUTxO mf af
-    Shelley.ValueNotConservedUTxO vc vp -> ValueNotConservedUTxO vc vp
-    Shelley.WrongNetwork n as -> WrongNetwork n as
-    Shelley.WrongNetworkWithdrawal n as -> WrongNetworkWithdrawal n as
-    Shelley.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
-    Shelley.UpdateFailure x -> UtxosFailure (inject x)
-    Shelley.OutputBootAddrAttrsTooBig outs -> OutputTooBigUTxO (map (0,0,) outs)
+  AllegraUtxoPredFailure era ->
+  AlonzoUtxoPredFailure era
+allegraToAlonzoUtxoPredFailure = \case
+  Allegra.BadInputsUTxO x -> BadInputsUTxO x
+  Allegra.OutsideValidityIntervalUTxO vi slotNo -> OutsideValidityIntervalUTxO vi slotNo
+  Allegra.MaxTxSizeUTxO x y -> MaxTxSizeUTxO x y
+  Allegra.InputSetEmptyUTxO -> InputSetEmptyUTxO
+  Allegra.FeeTooSmallUTxO c1 c2 -> FeeTooSmallUTxO c1 c2
+  Allegra.ValueNotConservedUTxO vc vp -> ValueNotConservedUTxO vc vp
+  Allegra.WrongNetwork x y -> WrongNetwork x y
+  Allegra.WrongNetworkWithdrawal x y -> WrongNetworkWithdrawal x y
+  Allegra.OutputTooSmallUTxO x -> OutputTooSmallUTxO x
+  Allegra.UpdateFailure x -> UtxosFailure (inject x)
+  Allegra.OutputBootAddrAttrsTooBig xs -> OutputTooBigUTxO (map (0,0,) xs)
+  Allegra.TriesToForgeADA -> TriesToForgeADA
+  Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (0,0,) xs)

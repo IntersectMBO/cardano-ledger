@@ -45,7 +45,7 @@ import Cardano.Ledger.Address (
   getNetwork,
   raNetwork,
  )
-import Cardano.Ledger.BaseTypes (Inject (..), Network, ShelleyBase, StrictMaybe, invalidKey, networkId)
+import Cardano.Ledger.BaseTypes (Network, ShelleyBase, StrictMaybe, invalidKey, networkId)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -168,6 +168,13 @@ data ShelleyUtxoPredFailure era
   | OutputBootAddrAttrsTooBig
       ![TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
+
+type instance EraRuleFailure "UTXO" (ShelleyEra c) = ShelleyUtxoPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure (ShelleyEra c) where
+  injectFailure = UpdateFailure
 
 deriving stock instance
   ( Show (Value era)
@@ -314,6 +321,8 @@ instance
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Eq (PPUPPredFailure era)
   , Show (PPUPPredFailure era)
+  , EraRule "UTXO" era ~ ShelleyUTXO era
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   ) =>
   STS (ShelleyUTXO era)
   where
@@ -368,24 +377,24 @@ instance
     ]
 
 utxoInductive ::
-  forall era utxo.
+  forall era.
   ( EraUTxO era
   , ShelleyEraTxBody era
   , ExactEra ShelleyEra era
-  , STS (utxo era)
-  , Embed (EraRule "PPUP" era) (utxo era)
-  , BaseM (utxo era) ~ ShelleyBase
-  , Environment (utxo era) ~ UtxoEnv era
-  , State (utxo era) ~ UTxOState era
-  , Signal (utxo era) ~ Tx era
-  , PredicateFailure (utxo era) ~ ShelleyUtxoPredFailure era
-  , Event (utxo era) ~ UtxoEvent era
+  , STS (EraRule "UTXO" era)
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , Embed (EraRule "PPUP" era) (EraRule "UTXO" era)
+  , BaseM (EraRule "UTXO" era) ~ ShelleyBase
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
+  , Signal (EraRule "UTXO" era) ~ Tx era
+  , Event (EraRule "UTXO" era) ~ UtxoEvent era
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , GovState era ~ ShelleyGovState era
   ) =>
-  TransitionRule (utxo era)
+  TransitionRule (EraRule "UTXO" era)
 utxoInductive = do
   TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let UTxOState utxo _ _ ppup _ _ = utxos
@@ -643,14 +652,3 @@ instance
   where
   wrapFailed = UpdateFailure
   wrapEvent = UpdateEvent
-
--- =================================
-
-instance
-  PPUPPredFailure era ~ ShelleyPpupPredFailure era =>
-  Inject (ShelleyPpupPredFailure era) (ShelleyUtxoPredFailure era)
-  where
-  inject = UpdateFailure
-
-instance Inject (ShelleyUtxoPredFailure era) (ShelleyUtxoPredFailure era) where
-  inject = id

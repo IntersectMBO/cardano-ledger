@@ -49,6 +49,17 @@ library
         Cardano.Ledger.Mary.TxCert
         Cardano.Ledger.Mary.TxSeq
         Cardano.Ledger.Mary.TxWits
+        Cardano.Ledger.Mary.Rules
+        Cardano.Ledger.Mary.Rules.Bbody
+        Cardano.Ledger.Mary.Rules.Deleg
+        Cardano.Ledger.Mary.Rules.Delegs
+        Cardano.Ledger.Mary.Rules.Delpl
+        Cardano.Ledger.Mary.Rules.Pool
+        Cardano.Ledger.Mary.Rules.Ppup
+        Cardano.Ledger.Mary.Rules.Ledger
+        Cardano.Ledger.Mary.Rules.Ledgers
+        Cardano.Ledger.Mary.Rules.Utxo
+        Cardano.Ledger.Mary.Rules.Utxow
 
     default-language: Haskell2010
     ghc-options:
@@ -63,7 +74,7 @@ library
         aeson >=2.2,
         cardano-crypto-class,
         cardano-data ^>=1.2,
-        cardano-ledger-allegra ^>=1.3,
+        cardano-ledger-allegra ^>=1.4,
         cardano-ledger-binary ^>=1.3,
         cardano-ledger-core ^>=1.11,
         cardano-ledger-shelley ^>=1.10,

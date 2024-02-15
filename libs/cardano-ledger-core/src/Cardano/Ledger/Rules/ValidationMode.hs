@@ -1,4 +1,7 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -28,6 +31,7 @@ module Cardano.Ledger.Rules.ValidationMode (
 where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
+import Cardano.Ledger.Core
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
@@ -104,8 +108,8 @@ applySTSNonStatic = applySTSValidateSuchThat (notElem lblStatic)
 
 type Test failure = Validation (NonEmpty failure) ()
 
-runTest :: Inject t (PredicateFailure sts) => Test t -> Rule sts ctx ()
-runTest = validateTrans inject
+runTest :: InjectRuleFailure rule f era => Test (f era) -> Rule (EraRule rule era) ctx ()
+runTest = validateTrans injectFailure
 
-runTestOnSignal :: Inject t (PredicateFailure sts) => Test t -> Rule sts ctx ()
-runTestOnSignal = validateTransLabeled inject $ lblStatic NE.:| []
+runTestOnSignal :: InjectRuleFailure rule f era => Test (f era) -> Rule (EraRule rule era) ctx ()
+runTestOnSignal = validateTransLabeled injectFailure $ lblStatic NE.:| []

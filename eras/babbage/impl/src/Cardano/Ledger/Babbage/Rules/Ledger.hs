@@ -12,9 +12,18 @@
 
 module Cardano.Ledger.Babbage.Rules.Ledger (BabbageLEDGER) where
 
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowEvent, ledgerTransition)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxoPredFailure,
+  AlonzoUtxosPredFailure,
+  AlonzoUtxowEvent,
+  AlonzoUtxowPredFailure,
+  ledgerTransition,
+ )
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.Era (BabbageLEDGER)
+import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageLEDGER)
+import Cardano.Ledger.Babbage.Rules.Delegs ()
+import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPredFailure)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Shelley.LedgerState (
@@ -26,11 +35,17 @@ import Cardano.Ledger.Shelley.Rules (
   DelegsEnv (..),
   LedgerEnv (..),
   ShelleyDELEGS,
+  ShelleyDelegPredFailure,
   ShelleyDelegsEvent,
   ShelleyDelegsPredFailure,
+  ShelleyDelplPredFailure,
   ShelleyLEDGERS,
   ShelleyLedgerEvent (..),
   ShelleyLedgerPredFailure (..),
+  ShelleyPoolPredFailure,
+  ShelleyPpupPredFailure,
+  ShelleyUtxoPredFailure,
+  ShelleyUtxowPredFailure,
   UtxoEnv (..),
   shelleyLedgerAssertions,
  )
@@ -46,6 +61,49 @@ import Control.State.Transition (
 import Data.Sequence (Seq)
 
 -- ==================================================
+
+type instance EraRuleFailure "LEDGER" (BabbageEra c) = ShelleyLedgerPredFailure (BabbageEra c)
+
+instance InjectRuleFailure "LEDGER" ShelleyLedgerPredFailure (BabbageEra c)
+
+instance InjectRuleFailure "LEDGER" BabbageUtxowPredFailure (BabbageEra c) where
+  injectFailure = UtxowFailure
+
+instance InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure (BabbageEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (BabbageEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" BabbageUtxoPredFailure (BabbageEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure (BabbageEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure (BabbageEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyPpupPredFailure (BabbageEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure (BabbageEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" AllegraUtxoPredFailure (BabbageEra c) where
+  injectFailure = UtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyDelegsPredFailure (BabbageEra c) where
+  injectFailure = DelegsFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyDelplPredFailure (BabbageEra c) where
+  injectFailure = DelegsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure (BabbageEra c) where
+  injectFailure = DelegsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure (BabbageEra c) where
+  injectFailure = DelegsFailure . injectFailure
 
 instance
   ( AlonzoEraTx era

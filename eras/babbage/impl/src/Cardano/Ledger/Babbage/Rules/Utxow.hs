@@ -26,9 +26,12 @@ where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
 import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxoPredFailure,
+  AlonzoUtxosPredFailure,
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
-  AlonzoUtxowPredFailure (ShelleyInAlonzoUtxowPredFailure),
+  AlonzoUtxowPredFailure (..),
   hasExactSetOfRedeemers,
   missingRequiredDatums,
   ppViewHashesMatch,
@@ -37,7 +40,7 @@ import Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxoEvent)
 import Cardano.Ledger.Alonzo.Scripts (validScript)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.Era (BabbageUTXOW)
+import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXOW)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.BaseTypes (ShelleyBase, quorum, strictMaybeToMaybe)
@@ -52,9 +55,11 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
-import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules (
+  ShelleyPpupPredFailure,
+  ShelleyUtxoPredFailure,
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure,
   UtxoEnv (..),
@@ -67,6 +72,8 @@ import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
+  Rule,
+  RuleType (Transition),
   STS (..),
   TRC (..),
   TransitionRule,
@@ -88,7 +95,7 @@ import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Validation (failureUnless)
 
 data BabbageUtxowPredFailure era
-  = AlonzoInBabbageUtxowPredFailure !(AlonzoUtxowPredFailure era)
+  = AlonzoInBabbageUtxowPredFailure !(AlonzoUtxowPredFailure era) -- TODO: embed and translate
   | -- | Embed UTXO rule failures
     UtxoFailure !(PredicateFailure (EraRule "UTXO" era))
   | -- | the set of malformed script witnesses
@@ -98,6 +105,34 @@ data BabbageUtxowPredFailure era
     MalformedReferenceScripts
       !(Set (ScriptHash (EraCrypto era)))
   deriving (Generic)
+
+type instance EraRuleFailure "UTXOW" (BabbageEra c) = BabbageUtxowPredFailure (BabbageEra c)
+
+instance InjectRuleFailure "UTXOW" BabbageUtxowPredFailure (BabbageEra c)
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure (BabbageEra c) where
+  injectFailure = AlonzoInBabbageUtxowPredFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (BabbageEra c) where
+  injectFailure = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
+
+instance InjectRuleFailure "UTXOW" BabbageUtxoPredFailure (BabbageEra c) where
+  injectFailure = UtxoFailure
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure (BabbageEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure (BabbageEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure (BabbageEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (BabbageEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" AllegraUtxoPredFailure (BabbageEra c) where
+  injectFailure = UtxoFailure . injectFailure
 
 deriving instance
   ( AlonzoEraScript era
@@ -119,12 +154,6 @@ deriving instance
   , Eq (TxCert era)
   ) =>
   Eq (BabbageUtxowPredFailure era)
-
-instance Inject (AlonzoUtxowPredFailure era) (BabbageUtxowPredFailure era) where
-  inject = AlonzoInBabbageUtxowPredFailure
-
-instance Inject (ShelleyUtxowPredFailure era) (BabbageUtxowPredFailure era) where
-  inject = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
 
 instance
   ( AlonzoEraScript era
@@ -262,11 +291,15 @@ babbageUtxowMirTransition ::
   forall era.
   ( AlonzoEraTx era
   , ShelleyEraTxBody era
-  , STS (BabbageUTXOW era)
+  , STS (EraRule "UTXOW" era)
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
   ) =>
-  TransitionRule (BabbageUTXOW era)
+  Rule (EraRule "UTXOW" era) 'Transition ()
 babbageUtxowMirTransition = do
-  TRC (UtxoEnv _ _ certState, st, tx) <- judgmentContext
+  TRC (UtxoEnv _ _ certState, _, tx) <- judgmentContext
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ TxCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum  -}
@@ -275,7 +308,6 @@ babbageUtxowMirTransition = do
   coreNodeQuorum <- liftSTS $ asks quorum
   runTest $
     Shelley.validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
-  pure st
 
 -- | UTXOW transition rule that is used in Babbage and Conway era.
 babbageUtxowTransition ::
@@ -288,9 +320,9 @@ babbageUtxowTransition ::
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , State (EraRule "UTXOW" era) ~ UTxOState era
-  , Inject (BabbageUtxowPredFailure era) (PredicateFailure (EraRule "UTXOW" era))
-  , Inject (AlonzoUtxowPredFailure era) (PredicateFailure (EraRule "UTXOW" era))
-  , Inject (ShelleyUtxowPredFailure era) (PredicateFailure (EraRule "UTXOW" era))
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (EraRule "UTXOW" era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
@@ -372,6 +404,9 @@ instance
   , BabbageEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , EraRule "UTXOW" era ~ BabbageUTXOW era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabbageUTXOW era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
@@ -388,7 +423,7 @@ instance
   type BaseM (BabbageUTXOW era) = ShelleyBase
   type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPredFailure era
   type Event (BabbageUTXOW era) = AlonzoUtxowEvent era
-  transitionRules = [babbageUtxowMirTransition >> babbageUtxowTransition @era]
+  transitionRules = [babbageUtxowMirTransition @era >> babbageUtxowTransition @era]
   initialRules = []
 
 instance
@@ -404,6 +439,3 @@ instance
   where
   wrapFailed = UtxoFailure
   wrapEvent = WrappedShelleyEraEvent . UtxoEvent
-
-instance Inject (BabbageUtxowPredFailure era) (BabbageUtxowPredFailure era) where
-  inject = id

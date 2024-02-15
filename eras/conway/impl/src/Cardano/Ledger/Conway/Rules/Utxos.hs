@@ -33,7 +33,7 @@ import Cardano.Ledger.Babbage.Rules (
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayUTXOS)
+import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -50,6 +50,10 @@ import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.State.Transition.Extended
 import Debug.Trace (traceEvent)
 import Lens.Micro
+
+type instance EraRuleFailure "UTXOS" (ConwayEra c) = AlonzoUtxosPredFailure (ConwayEra c)
+
+instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (ConwayEra c)
 
 instance
   ( AlonzoEraTx era

@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -36,7 +37,7 @@ import Cardano.Ledger.Keys (
   VerKeyVRF,
  )
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyDELEG)
+import Cardano.Ledger.Shelley.Era (ShelleyDELEG, ShelleyEra)
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -127,6 +128,10 @@ data ShelleyDelegPredFailure era
       !Coin -- amount attempted to transfer
   deriving (Show, Eq, Generic)
 
+type instance EraRuleFailure "DELEG" (ShelleyEra c) = ShelleyDelegPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure (ShelleyEra c)
+
 newtype ShelleyDelegEvent era = NewEpoch EpochNo
 
 instance (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) => STS (ShelleyDELEG era) where
@@ -196,7 +201,7 @@ instance
   (Era era, Typeable (Script era)) =>
   DecCBOR (ShelleyDelegPredFailure era)
   where
-  decCBOR = decodeRecordSum "PredicateFailure (DELEG era)" $
+  decCBOR = decodeRecordSum "ShelleyDelegPredFailure" $
     \case
       0 -> do
         kh <- decCBOR

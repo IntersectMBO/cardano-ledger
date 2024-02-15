@@ -2,6 +2,7 @@
 
 ## 1.7.0.0
 
+* Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Add `NFData` instance for `BabbageUtxoPredFailure`, `BabbageUtxowPredFailure`
 * Add implementation for `getMinFeeTxUtxo`
 * Add `getReferenceScriptsNonDistinct`

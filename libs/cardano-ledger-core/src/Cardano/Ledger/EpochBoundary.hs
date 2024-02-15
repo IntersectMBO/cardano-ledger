@@ -221,6 +221,7 @@ data SnapShots c = SnapShots
   , ssFee :: !Coin
   }
   deriving (Show, Eq, Generic)
+  -- TODO: switch `AllowThunksIn` to `OnlyCheckWhnfNamed`
   deriving (NoThunks) via AllowThunksIn '["ssStakeMark", "ssStakeMarkPoolDistr"] (SnapShots c)
 
 instance NFData (SnapShots c)

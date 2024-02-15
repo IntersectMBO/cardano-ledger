@@ -2,6 +2,8 @@
 
 ## 1.11.0.0
 
+* Add `EraRuleFailure` type family and `InjectRuleFailure` type class
+* Add `VoidRuleFailure`
 * Fix `ToJSON`/`FromJSON` instances of `Prices`
 * Update `FromJSON` instance of `BoundedRatio`
 * Fix `ToJSON` instance of `BoundedRatio` to avoid precision loss

@@ -66,17 +66,17 @@ import Cardano.Ledger.Keys (
   verifyBootstrapWit,
  )
 import Cardano.Ledger.Rules.ValidationMode (
-  Inject (..),
   Test,
   runTest,
   runTestOnSignal,
  )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyUTXOW)
+import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXOW)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
+import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (
   ShelleyUTXO,
   ShelleyUtxoPredFailure,
@@ -150,6 +150,16 @@ data ShelleyUtxowPredFailure era
   | ExtraneousScriptWitnessesUTXOW
       !(Set (ScriptHash (EraCrypto era))) -- extraneous scripts
   deriving (Generic)
+
+type instance EraRuleFailure "UTXOW" (ShelleyEra c) = ShelleyUtxowPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (ShelleyEra c)
+
+instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (ShelleyEra c) where
+  injectFailure = UtxoFailure
+
+instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure (ShelleyEra c) where
+  injectFailure = UtxoFailure . injectFailure
 
 newtype ShelleyUtxowEvent era
   = UtxoEvent (Event (EraRule "UTXO" era))
@@ -283,23 +293,23 @@ initialLedgerStateUTXOW = do
 --   Note the 'embed' argument lifts from the simple Shelley (ShelleyUtxowPredFailure) to
 --   the PredicateFailure (type family) of the context of where it is called.
 transitionRulesUTXOW ::
-  forall era utxow.
+  forall era.
   ( EraUTxO era
   , ShelleyEraTxBody era
   , ScriptsNeeded era ~ ShelleyScriptsNeeded era
-  , BaseM (utxow era) ~ ShelleyBase
-  , Embed (EraRule "UTXO" era) (utxow era)
+  , BaseM (EraRule "UTXOW" era) ~ ShelleyBase
+  , Embed (EraRule "UTXO" era) (EraRule "UTXOW" era)
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
-  , Environment (utxow era) ~ UtxoEnv era
-  , State (utxow era) ~ UTxOState era
-  , Signal (utxow era) ~ Tx era
-  , PredicateFailure (utxow era) ~ ShelleyUtxowPredFailure era
-  , STS (utxow era)
+  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
+  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , STS (EraRule "UTXOW" era)
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   ) =>
-  TransitionRule (utxow era)
+  TransitionRule (EraRule "UTXOW" era)
 transitionRulesUTXOW = do
   (TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx)) <- judgmentContext
 
@@ -361,6 +371,8 @@ instance
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , State (EraRule "UTXO" era) ~ UTxOState era
   , Signal (EraRule "UTXO" era) ~ Tx era
+  , EraRule "UTXOW" era ~ ShelleyUTXOW era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , EraGov era
   ) =>
@@ -535,18 +547,6 @@ validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKey
         (not (null mirCerts) ==> Set.size genSig >= fromIntegral coreNodeQuorum)
         $ MIRInsufficientGenesisSigsUTXOW genSig
 
--- ===================================================
--- Inject Instances
-
-instance Inject (ShelleyUtxowPredFailure era) (ShelleyUtxowPredFailure era) where
-  inject = id
-
-instance
-  PredicateFailure (EraRule "UTXO" era) ~ ShelleyUtxoPredFailure era =>
-  Inject (ShelleyUtxoPredFailure era) (ShelleyUtxowPredFailure era)
-  where
-  inject = UtxoFailure
-
 -- | Deprecated.
 proposedUpdatesWitnesses ::
   StrictMaybe (Update era) ->
@@ -568,6 +568,6 @@ propWits ::
 propWits mu = proposedUpdatesWitnesses (maybeToStrictMaybe mu)
 {-# DEPRECATED
   propWits
-  "This is will become an internal function in the future. \
+  "This will become an internal function in the future. \
   \ Submit an issue if you still need it. "
   #-}
