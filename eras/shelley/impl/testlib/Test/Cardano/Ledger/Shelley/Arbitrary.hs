@@ -718,7 +718,7 @@ instance
   ( Era era
   , Arbitrary (Value era)
   , Arbitrary (TxOut era)
-  , Arbitrary (PPUPPredFailure era)
+  , Arbitrary (EraRuleFailure "PPUP" era)
   ) =>
   Arbitrary (ShelleyUtxoPredFailure era)
   where

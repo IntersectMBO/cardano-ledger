@@ -9,6 +9,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Shelley.Rules (ShelleyPpupPredFailure)
 
-type instance EraRuleFailure "PPUP" era = ShelleyPpupPredFailure era
+type instance EraRuleFailure "PPUP" (MaryEra c) = ShelleyPpupPredFailure (MaryEra c)
 
 instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure (MaryEra c)

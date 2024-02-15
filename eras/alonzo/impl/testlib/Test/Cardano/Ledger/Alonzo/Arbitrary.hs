@@ -77,7 +77,6 @@ import Cardano.Ledger.Plutus.Language (
   plutusLanguage,
   withSLanguage,
  )
-import Cardano.Ledger.Shelley.LedgerState (PPUPPredFailure)
 import Cardano.Ledger.Shelley.Rules (PredicateFailure, ShelleyUtxowPredFailure)
 import Data.Functor.Identity (Identity)
 import Data.List.NonEmpty (NonEmpty ((:|)))
@@ -311,7 +310,7 @@ instance Arbitrary TagMismatchDescription where
     oneof [pure PassedUnexpectedly, FailedUnexpectedly <$> ((:|) <$> arbitrary <*> arbitrary)]
 
 instance
-  (Era era, Arbitrary (PPUPPredFailure era)) =>
+  (Era era, Arbitrary (EraRuleFailure "PPUP" era)) =>
   Arbitrary (AlonzoUtxosPredFailure era)
   where
   arbitrary =

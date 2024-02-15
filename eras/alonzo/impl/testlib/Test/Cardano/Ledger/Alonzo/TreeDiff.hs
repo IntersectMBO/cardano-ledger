@@ -130,7 +130,7 @@ instance ToExpr TagMismatchDescription
 
 instance
   ( ToExpr (PlutusPurpose AsItem era)
-  , ToExpr (PPUPPredFailure era)
+  , ToExpr (EraRuleFailure "PPUP" era)
   , ToExpr (ContextError era)
   , ToExpr (TxCert era)
   ) =>

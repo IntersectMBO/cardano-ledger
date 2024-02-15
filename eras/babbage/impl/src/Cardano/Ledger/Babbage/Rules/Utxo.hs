@@ -50,6 +50,7 @@ import Cardano.Ledger.Alonzo.TxWits (nullRedeemers)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageUTXO)
+import Cardano.Ledger.Babbage.Rules.Ppup ()
 import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
 import Cardano.Ledger.BaseTypes (
   ProtVer (..),

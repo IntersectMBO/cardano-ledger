@@ -111,7 +111,7 @@ data ShelleyPpupPredFailure era
       !ProtVer
   deriving (Show, Eq, Generic)
 
-type instance EraRuleFailure "PPUP" era = ShelleyPpupPredFailure era
+type instance EraRuleFailure "PPUP" (ShelleyEra c) = ShelleyPpupPredFailure (ShelleyEra c)
 
 instance InjectRuleFailure "PPUP" ShelleyPpupPredFailure (ShelleyEra c)
 
@@ -221,14 +221,5 @@ ppupTransitionNonEmpty = do
               , futureProposals = ProposedPPUpdates (eval (fpupS ⨃ pup))
               }
 
-type PPUPPredFailure era = PPUPPredFailurePV (ProtVerLow era) era
-
-type family PPUPPredFailurePV pv era where
-  PPUPPredFailurePV 2 era = ShelleyPpupPredFailure era
-  PPUPPredFailurePV 3 era = ShelleyPpupPredFailure era
-  PPUPPredFailurePV 4 era = ShelleyPpupPredFailure era
-  PPUPPredFailurePV 5 era = ShelleyPpupPredFailure era
-  PPUPPredFailurePV 6 era = ShelleyPpupPredFailure era
-  PPUPPredFailurePV 7 era = ShelleyPpupPredFailure era
-  PPUPPredFailurePV 8 era = ShelleyPpupPredFailure era
-  PPUPPredFailurePV _ _ = ()
+type PPUPPredFailure era = EraRuleFailure "PPUP" era
+{-# DEPRECATED PPUPPredFailure "In favor of `EraRuleFailure` PPUP era" #-}

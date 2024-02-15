@@ -41,6 +41,7 @@ import Cardano.Ledger.UTxO
 import Data.Functor.Identity
 import Data.TreeDiff.OMap
 import Data.VMap hiding (fromList)
+import GHC.TypeLits
 import Test.Cardano.Ledger.Binary.TreeDiff
 import Test.Data.VMap.TreeDiff ()
 
@@ -89,6 +90,10 @@ instance ToExpr Language
 instance ToExpr (t era) => ToExpr (MemoBytes t era)
 
 -- Core
+
+instance ToExpr (VoidEraRule (rule :: Symbol) era) where
+  toExpr = absurdEraRule
+
 instance ToExpr (ScriptHash c)
 
 instance ToExpr CostModelError where

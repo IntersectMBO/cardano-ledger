@@ -63,7 +63,7 @@ import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXO)
-import Cardano.Ledger.Shelley.LedgerState (CertState (..), PPUPPredFailure, UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (CertState (..), UTxOState (..))
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (
@@ -164,7 +164,7 @@ data ShelleyUtxoPredFailure era
       !(Set (RewardAccount (EraCrypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
       ![TxOut era] -- list of supplied transaction outputs that are too small
-  | UpdateFailure (PPUPPredFailure era) -- Subtransition Failures
+  | UpdateFailure (EraRuleFailure "PPUP" era) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
       ![TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
@@ -179,21 +179,21 @@ instance InjectRuleFailure "UTXO" ShelleyPpupPredFailure (ShelleyEra c) where
 deriving stock instance
   ( Show (Value era)
   , Show (TxOut era)
-  , Show (PPUPPredFailure era)
+  , Show (EraRuleFailure "PPUP" era)
   ) =>
   Show (ShelleyUtxoPredFailure era)
 
 deriving stock instance
   ( Eq (Value era)
   , Eq (TxOut era)
-  , Eq (PPUPPredFailure era)
+  , Eq (EraRuleFailure "PPUP" era)
   ) =>
   Eq (ShelleyUtxoPredFailure era)
 
 instance
   ( NoThunks (Value era)
   , NoThunks (TxOut era)
-  , NoThunks (PPUPPredFailure era)
+  , NoThunks (EraRuleFailure "PPUP" era)
   ) =>
   NoThunks (ShelleyUtxoPredFailure era)
 
@@ -201,7 +201,7 @@ instance
   ( Era era
   , NFData (Value era)
   , NFData (TxOut era)
-  , NFData (PPUPPredFailure era)
+  , NFData (EraRuleFailure "PPUP" era)
   ) =>
   NFData (ShelleyUtxoPredFailure era)
 
@@ -209,7 +209,7 @@ instance
   ( Era era
   , EncCBOR (Value era)
   , EncCBOR (TxOut era)
-  , EncCBOR (PPUPPredFailure era)
+  , EncCBOR (EraRuleFailure "PPUP" era)
   ) =>
   EncCBOR (ShelleyUtxoPredFailure era)
   where
@@ -262,7 +262,7 @@ instance
 
 instance
   ( EraTxOut era
-  , DecCBOR (PPUPPredFailure era)
+  , DecCBOR (EraRuleFailure "PPUP" era)
   ) =>
   DecCBOR (ShelleyUtxoPredFailure era)
   where
@@ -319,8 +319,8 @@ instance
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
-  , Eq (PPUPPredFailure era)
-  , Show (PPUPPredFailure era)
+  , Eq (EraRuleFailure "PPUP" era)
+  , Show (EraRuleFailure "PPUP" era)
   , EraRule "UTXO" era ~ ShelleyUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   ) =>
@@ -645,7 +645,7 @@ updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiff
 instance
   ( Era era
   , STS (ShelleyPPUP era)
-  , PPUPPredFailure era ~ ShelleyPpupPredFailure era
+  , EraRuleFailure "PPUP" era ~ ShelleyPpupPredFailure era
   , Event (EraRule "PPUP" era) ~ PpupEvent era
   ) =>
   Embed (ShelleyPPUP era) (ShelleyUTXO era)

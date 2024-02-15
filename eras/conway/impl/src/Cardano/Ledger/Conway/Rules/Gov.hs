@@ -84,7 +84,7 @@ import Cardano.Ledger.Conway.PParams (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.TxIn (TxId (..))
 import Control.DeepSeq (NFData)
@@ -428,9 +428,6 @@ govTransition = do
   tellEvent $ GovNewProposals txid updatedProposalStates
 
   pure updatedProposalStates
-
-instance Inject (ConwayGovPredFailure era) (ConwayGovPredFailure era) where
-  inject = id
 
 -- | If the GovAction is a HardFork, then return 3 things (if they exist)
 -- 1) The (StrictMaybe GovPurposeId), pointed to by the HardFork proposal

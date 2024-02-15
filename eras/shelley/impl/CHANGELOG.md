@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Deprecated `PPUPPredFailure`
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Remove `poolCertTransition`
 * Remove `getDRepDistr`, `getConstitution` and `getCommitteeMembers` from `EraGov` #4033

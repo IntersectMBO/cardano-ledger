@@ -41,6 +41,7 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   collectPlutusScriptsWithContext,
   evalPlutusScripts,
  )
+import Cardano.Ledger.Alonzo.Rules.Ppup ()
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded)
 import Cardano.Ledger.BaseTypes (
@@ -66,11 +67,7 @@ import Cardano.Ledger.Plutus.Evaluate (
  )
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.LedgerState (
-  PPUPPredFailure,
-  UTxOState (..),
-  updateStakeDistribution,
- )
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), updateStakeDistribution)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (
@@ -123,8 +120,8 @@ instance
   , Environment (EraRule "PPUP" era) ~ PpupEnv era
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure,
-  , Eq (PPUPPredFailure era)
-  , Show (PPUPPredFailure era)
+  , Eq (EraRuleFailure "PPUP" era)
+  , Show (EraRuleFailure "PPUP" era)
   , EraPlutusContext era
   ) =>
   STS (AlonzoUTXOS era)
@@ -152,7 +149,7 @@ data AlonzoUtxosEvent era
 instance
   ( Era era
   , STS (ShelleyPPUP era)
-  , PPUPPredFailure era ~ ShelleyPpupPredFailure era
+  , EraRuleFailure "PPUP" era ~ ShelleyPpupPredFailure era
   , Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
   ) =>
   Embed (ShelleyPPUP era) (AlonzoUTXOS era)
@@ -174,8 +171,8 @@ utxosTransition ::
   , Signal (EraRule "PPUP" era) ~ StrictMaybe (Update era)
   , Embed (EraRule "PPUP" era) (AlonzoUTXOS era)
   , EncCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
-  , Eq (PPUPPredFailure era)
-  , Show (PPUPPredFailure era)
+  , Eq (EraRuleFailure "PPUP" era)
+  , Show (EraRuleFailure "PPUP" era)
   , EraPlutusContext era
   ) =>
   TransitionRule (AlonzoUTXOS era)
@@ -366,7 +363,7 @@ data AlonzoUtxosPredFailure era
     --         might validate that shouldn't. So we double check in the function
     --         collectTwoPhaseScriptInputs, it should find data for every Script.
     CollectErrors [CollectError era]
-  | UpdateFailure (PPUPPredFailure era)
+  | UpdateFailure (EraRuleFailure "PPUP" era)
   deriving
     (Generic)
 
@@ -377,14 +374,14 @@ instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (AlonzoEra c)
 instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure (AlonzoEra c) where
   injectFailure = UpdateFailure
 
-instance PPUPPredFailure era ~ () => Inject () (AlonzoUtxosPredFailure era) where
+instance EraRuleFailure "PPUP" era ~ () => Inject () (AlonzoUtxosPredFailure era) where
   inject () = UpdateFailure ()
 
 instance
   ( EraTxCert era
   , AlonzoEraScript era
   , EncCBOR (ContextError era)
-  , EncCBOR (PPUPPredFailure era)
+  , EncCBOR (EraRuleFailure "PPUP" era)
   ) =>
   EncCBOR (AlonzoUtxosPredFailure era)
   where
@@ -397,7 +394,7 @@ instance
   ( EraTxCert era
   , AlonzoEraScript era
   , DecCBOR (ContextError era)
-  , DecCBOR (PPUPPredFailure era)
+  , DecCBOR (EraRuleFailure "PPUP" era)
   ) =>
   DecCBOR (AlonzoUtxosPredFailure era)
   where
@@ -413,7 +410,7 @@ deriving stock instance
   , Show (TxCert era)
   , Show (ContextError era)
   , Show (Shelley.UTxOState era)
-  , Show (PPUPPredFailure era)
+  , Show (EraRuleFailure "PPUP" era)
   ) =>
   Show (AlonzoUtxosPredFailure era)
 
@@ -422,7 +419,7 @@ instance
   , Eq (TxCert era)
   , Eq (ContextError era)
   , Eq (Shelley.UTxOState era)
-  , Eq (PPUPPredFailure era)
+  , Eq (EraRuleFailure "PPUP" era)
   ) =>
   Eq (AlonzoUtxosPredFailure era)
   where
@@ -436,7 +433,7 @@ instance
   , NoThunks (TxCert era)
   , NoThunks (ContextError era)
   , NoThunks (Shelley.UTxOState era)
-  , NoThunks (PPUPPredFailure era)
+  , NoThunks (EraRuleFailure "PPUP" era)
   ) =>
   NoThunks (AlonzoUtxosPredFailure era)
 
@@ -445,7 +442,7 @@ instance
   , NFData (TxCert era)
   , NFData (ContextError era)
   , NFData (Shelley.UTxOState era)
-  , NFData (PPUPPredFailure era)
+  , NFData (EraRuleFailure "PPUP" era)
   ) =>
   NFData (AlonzoUtxosPredFailure era)
 
@@ -471,15 +468,3 @@ lbl2Phase = "2phase"
 --   Note that 2-phase predicate checks are by definition static.
 when2Phase :: Rule sts ctx () -> Rule sts ctx ()
 when2Phase = labeled $ lblStatic NE.:| [lbl2Phase]
-
--- =========================================================
--- Inject instances
-
-instance
-  PPUPPredFailure era ~ ShelleyPpupPredFailure era =>
-  Inject (ShelleyPpupPredFailure era) (AlonzoUtxosPredFailure era)
-  where
-  inject = UpdateFailure
-
-instance Inject (AlonzoUtxosPredFailure era) (AlonzoUtxosPredFailure era) where
-  inject = id

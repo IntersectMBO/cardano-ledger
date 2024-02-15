@@ -37,11 +37,7 @@ import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.LedgerState (
-  PPUPPredFailure,
-  UTxOState (..),
-  utxosDonationL,
- )
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
 import Cardano.Ledger.Shelley.Rules (
   UtxoEnv (..),
   updateUTxOState,
@@ -65,8 +61,8 @@ instance
   , GovState era ~ ConwayGovState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
-  , Eq (PPUPPredFailure era)
-  , Show (PPUPPredFailure era)
+  , Eq (EraRuleFailure "PPUP" era)
+  , Show (EraRuleFailure "PPUP" era)
   ) =>
   STS (ConwayUTXOS era)
   where
@@ -91,8 +87,8 @@ instance
   , PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
-  , Eq (PPUPPredFailure era)
-  , Show (PPUPPredFailure era)
+  , Eq (EraRuleFailure "PPUP" era)
+  , Show (EraRuleFailure "PPUP" era)
   ) =>
   Embed (ConwayUTXOS era) (BabbageUTXO era)
   where
@@ -109,8 +105,8 @@ utxosTransition ::
   , GovState era ~ ConwayGovState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
-  , Eq (PPUPPredFailure era)
-  , Show (PPUPPredFailure era)
+  , Eq (EraRuleFailure "PPUP" era)
+  , Show (EraRuleFailure "PPUP" era)
   ) =>
   TransitionRule (ConwayUTXOS era)
 utxosTransition =

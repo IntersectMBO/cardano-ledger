@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -13,7 +14,6 @@ import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.PParams
-import Cardano.Ledger.Shelley.Rules
 import Test.Cardano.Ledger.Shelley.TreeDiff
 
 -- Scripts
@@ -48,6 +48,6 @@ instance
 instance
   ( ToExpr (TxOut era)
   , ToExpr (Value era)
-  , ToExpr (PPUPPredFailure era)
+  , ToExpr (EraRuleFailure "PPUP" era)
   ) =>
   ToExpr (AllegraUtxoPredFailure era)
