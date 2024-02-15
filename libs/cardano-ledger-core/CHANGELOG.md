@@ -29,6 +29,9 @@
 
 ### `testlib`
 
+* Add `genByronVKeyAddr`, `genByronAddrFromVKey`
+* Add `Uniform` instances for `ByronKeyPair` and `KeyPair`
+* Add `mkKeyPairWithSeed` and `mkBootKeyPairWithSeed`
 * Remove `epsilonMaybeEq` from `Utils`
 * Add `PlutusArgs`, `ScriptTestContext`
 * Add `txInAt`
