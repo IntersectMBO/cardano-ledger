@@ -47,9 +47,24 @@ instance Crypto c => Era (ConwayEra c) where
 type instance Value (ConwayEra c) = MaryValue c
 
 -------------------------------------------------------------------------------
--- Disabled rules
+-- Deprecated rules
 -------------------------------------------------------------------------------
+
+type instance EraRule "UPEC" (ConwayEra c) = VoidEraRule "UPEC" (ConwayEra c)
+
+type instance EraRule "NEWPP" (ConwayEra c) = VoidEraRule "NEWPP" (ConwayEra c)
+
+type instance EraRule "PPUP" (ConwayEra c) = VoidEraRule "PPUP" (ConwayEra c)
 type instance EraRuleFailure "PPUP" (ConwayEra c) = VoidEraRule "PPUP" (ConwayEra c)
+
+type instance EraRule "MIR" (ConwayEra c) = VoidEraRule "MIR" (ConwayEra c)
+type instance EraRuleFailure "MIR" (ConwayEra c) = VoidEraRule "MIR" (ConwayEra c)
+
+type instance EraRule "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (ConwayEra c)
+type instance EraRuleFailure "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (ConwayEra c)
+
+type instance EraRule "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (ConwayEra c)
+type instance EraRuleFailure "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (ConwayEra c)
 
 -------------------------------------------------------------------------------
 -- Era Mapping
