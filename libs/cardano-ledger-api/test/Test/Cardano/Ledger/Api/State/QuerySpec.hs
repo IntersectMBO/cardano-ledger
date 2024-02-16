@@ -16,7 +16,6 @@ import Cardano.Ledger.Api.State.Query (
   MemberStatus (..),
   NextEpochChange (..),
   filterStakePoolDelegsAndRewards,
-  getCommitteeMembers,
   getNextEpochCommitteeMembers,
   queryCommitteeMembersState,
  )
@@ -116,7 +115,7 @@ propEmpty ::
   Expectation
 propEmpty nes = do
   withCommitteeInfo nes $
-    \(Committee comMembers _) (CommitteeState comStateMembers) nextComMembers noFilterResult -> do
+    \comMembers (CommitteeState comStateMembers) nextComMembers noFilterResult -> do
       Map.null (csCommittee noFilterResult)
         `shouldBe` (Map.null comMembers && Map.null comStateMembers && Map.null nextComMembers)
 
@@ -127,7 +126,7 @@ propComplete ::
   Expectation
 propComplete nes = do
   withCommitteeInfo nes $
-    \(Committee comMembers _) (CommitteeState comStateMembers) nextComMembers noFilterResult -> do
+    \comMembers (CommitteeState comStateMembers) nextComMembers noFilterResult -> do
       -- if a credential appears in either Committee or CommitteeState, it should appear
       -- in the result
       Set.unions [Map.keysSet comMembers, Map.keysSet nextComMembers, Map.keysSet comStateMembers]
@@ -194,7 +193,7 @@ propUnrecognized ::
   Expectation
 propUnrecognized nes = do
   withCommitteeInfo nes $
-    \(Committee comMembers _) (CommitteeState comStateMembers) nextComMembers' noFilterResult -> do
+    \comMembers (CommitteeState comStateMembers) nextComMembers' noFilterResult -> do
       let unrecognized =
             Map.filter
               ( \case
@@ -223,7 +222,7 @@ propActiveAuthorized ::
   Expectation
 propActiveAuthorized nes = do
   withCommitteeInfo nes $
-    \(Committee comMembers comThreshold) (CommitteeState comStateMembers) _ noFilterResult -> do
+    \comMembers (CommitteeState comStateMembers) _ noFilterResult -> do
       let activeAuthorized =
             Map.mapMaybe
               ( \case
@@ -245,7 +244,6 @@ propActiveAuthorized nes = do
       Map.intersection comStateMembers activeAuthorized
         `shouldSatisfy` all isJust
       csEpochNo noFilterResult `shouldBe` epochNo
-      csThreshold noFilterResult `shouldBe` comThreshold
 
 propFilters ::
   forall era.
@@ -256,22 +254,21 @@ propFilters ::
   NewEpochState era ->
   Expectation
 propFilters ckFilter hkFilter statusFilter nes = do
-  let qRes = queryCommitteeMembersState @era ckFilter hkFilter statusFilter nes
-  forM_ qRes $ \(CommitteeMembersState result _ _) -> do
-    let allCks = Map.keysSet result
-    let (allHks, allMemberStatuses) =
-          foldMap'
-            ( \case
-                CommitteeMemberState (MemberAuthorized hk) ms _ _ -> (Set.singleton hk, Set.singleton ms)
-                CommitteeMemberState _ ms _ _ -> (Set.empty, Set.singleton ms)
-            )
-            result
-    unless (Set.null ckFilter) $
-      result `shouldSatisfy` const (allCks `Set.isSubsetOf` ckFilter)
-    unless (Set.null hkFilter) $
-      result `shouldSatisfy` const (allHks `Set.isSubsetOf` hkFilter)
-    unless (Set.null statusFilter) $
-      result `shouldSatisfy` const (allMemberStatuses `Set.isSubsetOf` statusFilter)
+  let (CommitteeMembersState result _ _) = queryCommitteeMembersState @era ckFilter hkFilter statusFilter nes
+  let allCks = Map.keysSet result
+  let (allHks, allMemberStatuses) =
+        foldMap'
+          ( \case
+              CommitteeMemberState (MemberAuthorized hk) ms _ _ -> (Set.singleton hk, Set.singleton ms)
+              CommitteeMemberState _ ms _ _ -> (Set.empty, Set.singleton ms)
+          )
+          result
+  unless (Set.null ckFilter) $
+    result `shouldSatisfy` const (allCks `Set.isSubsetOf` ckFilter)
+  unless (Set.null hkFilter) $
+    result `shouldSatisfy` const (allHks `Set.isSubsetOf` hkFilter)
+  unless (Set.null statusFilter) $
+    result `shouldSatisfy` const (allMemberStatuses `Set.isSubsetOf` statusFilter)
 
 propNextEpoch ::
   forall era.
@@ -280,7 +277,7 @@ propNextEpoch ::
   Expectation
 propNextEpoch nes = do
   withCommitteeInfo nes $
-    \(Committee comMembers' _) (CommitteeState comStateMembers') nextComMembers' noFilterResult -> do
+    \comMembers' (CommitteeState comStateMembers') nextComMembers' noFilterResult -> do
       let comMembers = Map.keysSet comMembers'
       let comStateMembers = Map.keysSet comStateMembers'
       let nextComMembers = Map.keysSet nextComMembers'
@@ -415,44 +412,41 @@ genRetaining ret = do
 withCommitteeInfo ::
   ConwayEraGov era =>
   NewEpochState era ->
-  ( Committee era ->
+  ( Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo -> -- current committee members
     CommitteeState era ->
     Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo -> -- next epoch committee members
     CommitteeMembersState (EraCrypto era) ->
     Expectation
   ) ->
   Expectation
-withCommitteeInfo nes expectation =
-  case committeeInfo nes of
-    Nothing -> queryCommitteeMembersStateNoFilters nes `shouldBe` Nothing
-    Just (committee, comState, nextComMembers) ->
-      case queryCommitteeMembersStateNoFilters nes of
-        Just noFilterQueryResult ->
-          expectation committee comState nextComMembers noFilterQueryResult
-        Nothing ->
-          expectationFailure "Expected queryCommitteeMembersState to return a Just value"
+withCommitteeInfo nes expectation = expectation comMembers comState nextComMembers noFilterQueryResult
+  where
+    noFilterQueryResult = queryCommitteeMembersStateNoFilters nes
+    (comMembers, comState, nextComMembers) = committeeInfo nes
 
 committeeInfo ::
   forall era.
   ConwayEraGov era =>
   NewEpochState era ->
-  Maybe
-    ( Committee era
-    , CommitteeState era
-    , Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
-    )
-committeeInfo nes = do
-  (comMembers, comQurum) <- getCommitteeMembers nes
+  ( Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
+  , CommitteeState era
+  , Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
+  )
+committeeInfo nes =
   let ledgerState = nes ^. nesEpochStateL . esLStateL
-  let nextCommitteeMembers = getNextEpochCommitteeMembers nes
-  let comState = ledgerState ^. lsCertStateL . certVStateL . vsCommitteeStateL
-  pure (Committee comMembers comQurum, comState, nextCommitteeMembers)
+      govState = ledgerState ^. lsUTxOStateL . utxosGovStateL
+      comMembers =
+        foldMap' committeeMembers $
+          strictMaybeToMaybe (govState ^. committeeGovStateL)
+      comState = ledgerState ^. lsCertStateL . certVStateL . vsCommitteeStateL
+      nextCommitteeMembers = getNextEpochCommitteeMembers nes
+   in (comMembers, comState, nextCommitteeMembers)
 
 queryCommitteeMembersStateNoFilters ::
   forall era.
   ConwayEraGov era =>
   NewEpochState era ->
-  Maybe (CommitteeMembersState (EraCrypto era))
+  CommitteeMembersState (EraCrypto era)
 queryCommitteeMembersStateNoFilters =
   queryCommitteeMembersState @era
     Set.empty

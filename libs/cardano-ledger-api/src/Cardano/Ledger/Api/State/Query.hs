@@ -37,7 +37,6 @@ module Cardano.Ledger.Api.State.Query (
   NextEpochChange (..),
 
   -- * For testing
-  getCommitteeMembers,
   getNextEpochCommitteeMembers,
 ) where
 
@@ -48,7 +47,7 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   MemberStatus (..),
   NextEpochChange (..),
  )
-import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), UnitInterval, binOpEpochNo, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), binOpEpochNo, strictMaybeToMaybe)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
@@ -56,7 +55,6 @@ import Cardano.Ledger.Conway.Governance (
   Committee (committeeMembers),
   Constitution (constitutionAnchor),
   ConwayEraGov (..),
-  committeeMembersL,
   committeeThresholdL,
   ensCommitteeL,
   finishDRepPulser,
@@ -166,15 +164,6 @@ queryCommitteeState nes =
   vsCommitteeState $ certVState $ lsCertState $ esLState $ nesEs nes
 {-# DEPRECATED queryCommitteeState "In favor of `queryCommitteeMembersState`" #-}
 
-getCommitteeMembers ::
-  ConwayEraGov era =>
-  NewEpochState era ->
-  Maybe (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo, UnitInterval)
-getCommitteeMembers nes =
-  fmap (\c -> (c ^. committeeMembersL, c ^. committeeThresholdL)) $
-    strictMaybeToMaybe $
-      queryGovState nes ^. committeeGovStateL
-
 -- | Query committee members. Whenever the system is in No Confidence mode this query will
 -- return `Nothing`.
 queryCommitteeMembersState ::
@@ -188,82 +177,83 @@ queryCommitteeMembersState ::
   -- (useful, for discovering, for example, only active members)
   Set MemberStatus ->
   NewEpochState era ->
-  Maybe (CommitteeMembersState (EraCrypto era))
-queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
-  (comMembers, comThreshold) <- getCommitteeMembers nes
-  let nextComMembers = getNextEpochCommitteeMembers nes
-      comStateMembers =
-        csCommitteeCreds $
-          nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
+  CommitteeMembersState (EraCrypto era)
+queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
+  let
+    committee = queryGovState nes ^. committeeGovStateL
+    comMembers = foldMap' committeeMembers committee
+    nextComMembers = getNextEpochCommitteeMembers nes
+    comStateMembers =
+      csCommitteeCreds $
+        nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
 
-      withFilteredColdCreds s
-        | Set.null coldCredsFilter = s
-        | otherwise = s `Set.intersection` coldCredsFilter
+    withFilteredColdCreds s
+      | Set.null coldCredsFilter = s
+      | otherwise = s `Set.intersection` coldCredsFilter
 
-      relevantColdKeys
-        | Set.null statusFilter || Set.member Unrecognized statusFilter =
-            withFilteredColdCreds $
-              Set.unions
-                [ Map.keysSet comMembers
-                , Map.keysSet comStateMembers
-                , Map.keysSet nextComMembers
-                ]
-        | otherwise = withFilteredColdCreds $ Map.keysSet comMembers
+    relevantColdKeys
+      | Set.null statusFilter || Set.member Unrecognized statusFilter =
+          withFilteredColdCreds $
+            Set.unions
+              [ Map.keysSet comMembers
+              , Map.keysSet comStateMembers
+              , Map.keysSet nextComMembers
+              ]
+      | otherwise = withFilteredColdCreds $ Map.keysSet comMembers
 
-      relevantHotKeys =
-        Map.keysSet $
-          Map.filter (maybe False (`Set.member` hotCredsFilter)) comStateMembers
+    relevantHotKeys =
+      Map.keysSet $
+        Map.filter (maybe False (`Set.member` hotCredsFilter)) comStateMembers
 
-      relevant
-        | Set.null hotCredsFilter = relevantColdKeys
-        | otherwise = relevantColdKeys `Set.intersection` relevantHotKeys
+    relevant
+      | Set.null hotCredsFilter = relevantColdKeys
+      | otherwise = relevantColdKeys `Set.intersection` relevantHotKeys
 
-      cms = Map.mapMaybe id $ Map.fromSet mkMaybeMemberState relevant
-      currentEpoch = nes ^. nesELL
+    cms = Map.mapMaybe id $ Map.fromSet mkMaybeMemberState relevant
+    currentEpoch = nes ^. nesELL
 
-      mkMaybeMemberState ::
-        Credential 'ColdCommitteeRole (EraCrypto era) ->
-        Maybe (CommitteeMemberState (EraCrypto era))
-      mkMaybeMemberState coldCred = do
-        let mbExpiry = Map.lookup coldCred comMembers
-        let status = case mbExpiry of
-              Nothing -> Unrecognized
-              Just expiry
-                | currentEpoch > expiry -> Expired
-                | otherwise -> Active
-        guard (null statusFilter || status `Set.member` statusFilter)
-        let hkStatus =
-              case Map.lookup coldCred comStateMembers of
-                Nothing -> MemberNotAuthorized
-                Just Nothing -> MemberResigned
-                Just (Just hk) -> MemberAuthorized hk
-        pure $ CommitteeMemberState hkStatus status mbExpiry (nextEpochChange coldCred)
+    mkMaybeMemberState ::
+      Credential 'ColdCommitteeRole (EraCrypto era) ->
+      Maybe (CommitteeMemberState (EraCrypto era))
+    mkMaybeMemberState coldCred = do
+      let mbExpiry = Map.lookup coldCred comMembers
+      let status = case mbExpiry of
+            Nothing -> Unrecognized
+            Just expiry
+              | currentEpoch > expiry -> Expired
+              | otherwise -> Active
+      guard (null statusFilter || status `Set.member` statusFilter)
+      let hkStatus =
+            case Map.lookup coldCred comStateMembers of
+              Nothing -> MemberNotAuthorized
+              Just Nothing -> MemberResigned
+              Just (Just hk) -> MemberAuthorized hk
+      pure $ CommitteeMemberState hkStatus status mbExpiry (nextEpochChange coldCred)
 
-      nextEpochChange :: Credential 'ColdCommitteeRole (EraCrypto era) -> NextEpochChange
-      nextEpochChange ck
-        | not inCurrent && inNext = ToBeEnacted
-        | not inNext = ToBeRemoved
-        | Just curTerm <- lookupCurrent
-        , Just nextTerm <- lookupNext
-        , curTerm /= nextTerm
-        , -- if the term is adjusted such that it expires in the next epoch,
-          -- we set it to ToBeExpired instead of TermAdjusted
-          not expiringNext =
-            TermAdjusted nextTerm
-        | expiringCurrent || expiringNext = ToBeExpired
-        | otherwise = NoChangeExpected
-        where
-          lookupCurrent = Map.lookup ck comMembers
-          lookupNext = Map.lookup ck nextComMembers
-          inCurrent = isJust lookupCurrent
-          inNext = isJust lookupNext
-          expiringCurrent = lookupCurrent == Just currentEpoch
-          expiringNext = lookupNext == Just currentEpoch
-
-  pure
+    nextEpochChange :: Credential 'ColdCommitteeRole (EraCrypto era) -> NextEpochChange
+    nextEpochChange ck
+      | not inCurrent && inNext = ToBeEnacted
+      | not inNext = ToBeRemoved
+      | Just curTerm <- lookupCurrent
+      , Just nextTerm <- lookupNext
+      , curTerm /= nextTerm
+      , -- if the term is adjusted such that it expires in the next epoch,
+        -- we set it to ToBeExpired instead of TermAdjusted
+        not expiringNext =
+          TermAdjusted nextTerm
+      | expiringCurrent || expiringNext = ToBeExpired
+      | otherwise = NoChangeExpected
+      where
+        lookupCurrent = Map.lookup ck comMembers
+        lookupNext = Map.lookup ck nextComMembers
+        inCurrent = isJust lookupCurrent
+        inNext = isJust lookupNext
+        expiringCurrent = lookupCurrent == Just currentEpoch
+        expiringNext = lookupNext == Just currentEpoch
+   in
     CommitteeMembersState
       { csCommittee = cms
-      , csThreshold = comThreshold
+      , csThreshold = strictMaybeToMaybe $ (^. committeeThresholdL) <$> committee
       , csEpochNo = currentEpoch
       }
 
@@ -278,5 +268,5 @@ getNextEpochCommitteeMembers ::
   Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
 getNextEpochCommitteeMembers nes =
   let ratifyState = snd . finishDRepPulser $ queryGovState nes ^. drepPulsingStateGovStateL
-      committee = strictMaybeToMaybe $ ratifyState ^. rsEnactStateL . ensCommitteeL
+      committee = ratifyState ^. rsEnactStateL . ensCommitteeL
    in foldMap' committeeMembers committee
