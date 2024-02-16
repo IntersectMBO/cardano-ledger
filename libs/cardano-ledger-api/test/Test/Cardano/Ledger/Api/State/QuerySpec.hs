@@ -17,6 +17,7 @@ import Cardano.Ledger.Api.State.Query (
   NextEpochChange (..),
   filterStakePoolDelegsAndRewards,
   getCommitteeMembers,
+  getNextEpochCommitteeMembers,
   queryCommitteeMembersState,
  )
 import Cardano.Ledger.BaseTypes
@@ -443,11 +444,7 @@ committeeInfo ::
 committeeInfo nes = do
   (comMembers, comQurum) <- getCommitteeMembers nes
   let ledgerState = nes ^. nesEpochStateL . esLStateL
-  let nextCommitteeMembers =
-        maybe
-          Map.empty
-          fst
-          $ getNextEpochCommitteeMembers (ledgerState ^. lsUTxOStateL . utxosGovStateL)
+  let nextCommitteeMembers = getNextEpochCommitteeMembers nes
   let comState = ledgerState ^. lsCertStateL . certVStateL . vsCommitteeStateL
   pure (Committee comMembers comQurum, comState, nextCommitteeMembers)
 

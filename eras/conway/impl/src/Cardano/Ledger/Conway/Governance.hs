@@ -649,8 +649,6 @@ toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _) =
 instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
   type GovState (ConwayEra c) = ConwayGovState (ConwayEra c)
 
-  getNextEpochCommitteeMembers g = ensCommitteeMembers (getRatifyState g ^. rsEnactStateL)
-
   curPParamsGovStateL = curPParamsConwayGovStateL
 
   prevPParamsGovStateL = prevPParamsConwayGovStateL
@@ -662,13 +660,6 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
       , oblStake = Coin 0
       , oblPool = Coin 0
       }
-
-ensCommitteeMembers ::
-  EnactState era ->
-  Maybe (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo, UnitInterval)
-ensCommitteeMembers ens = case ens ^. ensCommitteeL of
-  SJust Committee {..} -> Just (committeeMembers, committeeThreshold)
-  SNothing -> Nothing
 
 class EraGov era => ConwayEraGov era where
   constitutionGovStateL :: Lens' (GovState era) (Constitution era)

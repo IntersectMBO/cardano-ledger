@@ -20,7 +20,6 @@ module Cardano.Ledger.Shelley.Governance (
   prevPParamsShelleyGovStateL,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo, UnitInterval)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   DecShareCBOR (..),
@@ -32,9 +31,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.CertState (Obligations)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
 import Control.DeepSeq (NFData)
@@ -47,7 +44,6 @@ import Data.Aeson (
  )
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
-import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
@@ -78,10 +74,6 @@ class
   -- pparams updates
   getProposedPPUpdates :: GovState era -> Maybe (ProposedPPUpdates era)
   getProposedPPUpdates _ = Nothing
-
-  getNextEpochCommitteeMembers ::
-    GovState era -> Maybe (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo, UnitInterval)
-  getNextEpochCommitteeMembers = const Nothing
 
   -- | Lens for accessing current protocol parameters
   curPParamsGovStateL :: Lens' (GovState era) (PParams era)

@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Remove `getNextEpochCommitteeMembers` from `EraGov`
 * Remove `getDRepDistr`, `getConstitution` and `getCommitteeMembers` from `EraGov` #4033
 * Add `refScriptSize` parameter to `getMinFeeTx`, `setMinFeeTx` and `estimateMinFeeTx`
 * Add `hoistGovRelation`, `withGovActionParent` and `GovRelation`

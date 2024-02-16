@@ -38,6 +38,7 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * For testing
   getCommitteeMembers,
+  getNextEpochCommitteeMembers,
 ) where
 
 import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
@@ -52,12 +53,15 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Conway.Governance (
+  Committee (committeeMembers),
   Constitution (constitutionAnchor),
   ConwayEraGov (..),
   committeeMembersL,
   committeeThresholdL,
+  ensCommitteeL,
   finishDRepPulser,
   psDRepDistr,
+  rsEnactStateL,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
@@ -66,8 +70,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance (
   EraGov (
-    GovState,
-    getNextEpochCommitteeMembers
+    GovState
   ),
  )
 import Cardano.Ledger.Shelley.LedgerState
@@ -77,6 +80,7 @@ import Cardano.Ledger.UMap (
   domRestrictedStakeCredentials,
  )
 import Control.Monad (guard)
+import Data.Foldable (foldMap')
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
@@ -187,9 +191,8 @@ queryCommitteeMembersState ::
   Maybe (CommitteeMembersState (EraCrypto era))
 queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes = do
   (comMembers, comThreshold) <- getCommitteeMembers nes
-  let nextComMembers =
-        maybe Map.empty fst (getNextEpochCommitteeMembers (queryGovState nes))
-  let comStateMembers =
+  let nextComMembers = getNextEpochCommitteeMembers nes
+      comStateMembers =
         csCommitteeCreds $
           nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
 
@@ -268,3 +271,12 @@ queryAccountState ::
   NewEpochState era ->
   AccountState
 queryAccountState = view $ nesEsL . esAccountStateL
+
+getNextEpochCommitteeMembers ::
+  ConwayEraGov era =>
+  NewEpochState era ->
+  Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
+getNextEpochCommitteeMembers nes =
+  let ratifyState = snd . finishDRepPulser $ queryGovState nes ^. drepPulsingStateGovStateL
+      committee = strictMaybeToMaybe $ ratifyState ^. rsEnactStateL . ensCommitteeL
+   in foldMap' committeeMembers committee
