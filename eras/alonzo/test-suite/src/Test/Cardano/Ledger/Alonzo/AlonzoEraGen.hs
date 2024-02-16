@@ -65,7 +65,7 @@ import Cardano.Ledger.Mary.Value (
   policies,
  )
 import Cardano.Ledger.Plutus.Data (Data (..))
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (
@@ -94,15 +94,7 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds, mkPlut
 import Test.Cardano.Ledger.Binary.Random
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
-import Test.Cardano.Ledger.Plutus.Examples (
-  evenRedeemer2,
-  evendata3,
-  guessTheNumber3,
-  oddRedeemer2,
-  odddata3,
-  redeemerIs102,
-  sumsTo103,
- )
+import Test.Cardano.Ledger.Plutus.Examples
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (
@@ -131,10 +123,10 @@ vKeyLockedAdaOnly txOut = vKeyLocked txOut && isAdaOnly (txOut ^. valueTxOutL)
 phase2scripts3Arg :: forall era. AlonzoEraScript era => [TwoPhase3ArgInfo era]
 phase2scripts3Arg =
   [ mkTwoPhase3ArgInfo (alwaysSucceeds @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) True
-  , mkTwoPhase3ArgInfo (mkPlutusScript' guessTheNumber3) (P.I 9) (P.I 9, bigMem, bigStep) True
-  , mkTwoPhase3ArgInfo (mkPlutusScript' evendata3) (P.I 8) (P.I 8, bigMem, bigStep) True
-  , mkTwoPhase3ArgInfo (mkPlutusScript' odddata3) (P.I 9) (P.I 9, bigMem, bigStep) True
-  , mkTwoPhase3ArgInfo (mkPlutusScript' sumsTo103) (P.I 1) (P.I 9, bigMem, bigStep) True
+  , mkTwoPhase3ArgInfo (mkPlutusScript' (guessTheNumber3 SPlutusV1)) (P.I 9) (P.I 9, bigMem, bigStep) True
+  , mkTwoPhase3ArgInfo (mkPlutusScript' (evendata3 SPlutusV1)) (P.I 8) (P.I 8, bigMem, bigStep) True
+  , mkTwoPhase3ArgInfo (mkPlutusScript' (odddata3 SPlutusV1)) (P.I 9) (P.I 9, bigMem, bigStep) True
+  , mkTwoPhase3ArgInfo (mkPlutusScript' (sumsTo103 SPlutusV1)) (P.I 1) (P.I 9, bigMem, bigStep) True
   , mkTwoPhase3ArgInfo (alwaysFails @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) False
   ]
   where
@@ -143,9 +135,9 @@ phase2scripts3Arg =
 phase2scripts2Arg :: forall era. AlonzoEraScript era => [TwoPhase2ArgInfo era]
 phase2scripts2Arg =
   [ mkTwoPhase2ArgInfo (alwaysSucceeds @'PlutusV1 2) (P.I 1, bigMem, bigStep) True
-  , mkTwoPhase2ArgInfo (mkPlutusScript' oddRedeemer2) (P.I 13, bigMem, bigStep) True
-  , mkTwoPhase2ArgInfo (mkPlutusScript' evenRedeemer2) (P.I 14, bigMem, bigStep) True
-  , mkTwoPhase2ArgInfo (mkPlutusScript' redeemerIs102) (P.I 10, bigMem, bigStep) True
+  , mkTwoPhase2ArgInfo (mkPlutusScript' (oddRedeemer2 SPlutusV1)) (P.I 13, bigMem, bigStep) True
+  , mkTwoPhase2ArgInfo (mkPlutusScript' (evenRedeemer2 SPlutusV1)) (P.I 14, bigMem, bigStep) True
+  , mkTwoPhase2ArgInfo (mkPlutusScript' (redeemerIs102 SPlutusV1)) (P.I 10, bigMem, bigStep) True
   , mkTwoPhase2ArgInfo (alwaysFails @'PlutusV1 2) (P.I 1, bigMem, bigStep) False
   ]
   where

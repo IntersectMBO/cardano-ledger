@@ -153,6 +153,7 @@ library testlib
         Test.Cardano.Ledger.Plutus.Examples
         Test.Cardano.Ledger.TreeDiff
         Test.Cardano.Ledger.Plutus.ToPlutusData
+        Test.Cardano.Ledger.Plutus.ScriptTestContext
 
     visibility:       public
     hs-source-dirs:   testlib

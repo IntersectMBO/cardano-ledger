@@ -27,6 +27,7 @@ import Cardano.Ledger.Plutus.Language (
   Language (..),
   Plutus (..),
   PlutusLanguage (..),
+  SLanguage (..),
   hashPlutusScript,
   plutusLanguage,
  )
@@ -39,16 +40,7 @@ import Test.Cardano.Ledger.Plutus (
   testingEvaluationContext,
   zeroTestingCostModel,
  )
-import Test.Cardano.Ledger.Plutus.Examples (
-  evenRedeemer2,
-  evendata3,
-  guessTheNumber2,
-  guessTheNumber3,
-  oddRedeemer2,
-  odddata3,
-  redeemerIs102,
-  sumsTo103,
- )
+import Test.Cardano.Ledger.Plutus.Examples
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 
@@ -104,62 +96,62 @@ tests =
     , testCase "guess the number, correct" $
         directPlutusTest @Alonzo
           ShouldSucceed
-          guessTheNumber2
+          (guessTheNumber2 SPlutusV1)
           [P.I 3, P.I 3]
     , testCase "guess the number, incorrect" $
         directPlutusTest @Alonzo
           ShouldFail
-          guessTheNumber2
+          (guessTheNumber2 SPlutusV1)
           [P.I 3, P.I 4]
     , testCase "guess the number with 3 args, correct" $
         directPlutusTest @Alonzo
           ShouldSucceed
-          guessTheNumber3
+          (guessTheNumber3 SPlutusV1)
           [P.I 3, P.I 3, P.I 9]
     , testCase "evendata with 3 args, correct" $
         directPlutusTest @Alonzo
           ShouldSucceed
-          evendata3
+          (evendata3 SPlutusV1)
           [P.I 4, P.I 3, P.I 9]
     , testCase "evendata with 3 args, incorrect" $
         directPlutusTest @Alonzo
           ShouldFail
-          evendata3
+          (evendata3 SPlutusV1)
           [P.I 3, P.I 3, P.I 9]
     , testCase "odd data with 3 args, correct" $
         directPlutusTest @Alonzo
           ShouldSucceed
-          odddata3
+          (odddata3 SPlutusV1)
           [P.I 3, P.I 3, P.I 9]
     , testCase "odd data with 3 args, incorrect" $
         directPlutusTest @Alonzo
           ShouldFail
-          odddata3
+          (odddata3 SPlutusV1)
           [P.I 4, P.I 3, P.I 9]
     , testCase "sumsTo10 with 3 args, correct" $
         directPlutusTest @Alonzo
           ShouldSucceed
-          sumsTo103
+          (sumsTo103 SPlutusV1)
           [P.I 3, P.I 7, P.I 9]
     , testCase "sumsTo10 with 3 args, incorrect" $
         directPlutusTest @Alonzo
           ShouldFail
-          sumsTo103
+          (sumsTo103 SPlutusV1)
           [P.I 4, P.I 3, P.I 9]
     , testCase "even redeemer with 2 args, correct" $
         directPlutusTest @Alonzo
           ShouldSucceed
-          evenRedeemer2
+          (evenRedeemer2 SPlutusV1)
           [P.I 12, P.I 9]
     , testCase "odd redeemer with 2 args, correct" $
         directPlutusTest @Alonzo
           ShouldSucceed
-          oddRedeemer2
+          (oddRedeemer2 SPlutusV1)
           [P.I 11, P.I 9]
     , testCase "redeemer is 10 with 2 args, correct" $
         directPlutusTest @Alonzo
           ShouldSucceed
-          redeemerIs102
+          (redeemerIs102 SPlutusV1)
           [P.I 10, P.I 10]
     , explainTestTree
     ]
@@ -195,14 +187,14 @@ explainTestTree =
     "explain failures tests"
     [ testCase
         "even data with 3 args, fails as expected"
-        (explainTest @Alonzo evendata3 ShouldFail [P.I 3, P.I 3, P.I 5])
+        (explainTest @Alonzo (evendata3 SPlutusV1) ShouldFail [P.I 3, P.I 3, P.I 5])
     , testCase
         "even data with 3 args, succeeds as expected"
-        (explainTest @Alonzo evendata3 ShouldSucceed [P.I 4, P.I 3, P.I 5])
+        (explainTest @Alonzo (evendata3 SPlutusV1) ShouldSucceed [P.I 4, P.I 3, P.I 5])
     , testCase
         "guess the number with 3 args, succeeds as expected"
-        (explainTest @Alonzo guessTheNumber3 ShouldSucceed [P.I 4, P.I 4, P.I 5])
+        (explainTest @Alonzo (guessTheNumber3 SPlutusV1) ShouldSucceed [P.I 4, P.I 4, P.I 5])
     , testCase
         "guess the number with 3 args, fails as expected"
-        (explainTest @Alonzo guessTheNumber3 ShouldFail [P.I 4, P.I 5, P.I 5])
+        (explainTest @Alonzo (guessTheNumber3 SPlutusV1) ShouldFail [P.I 4, P.I 5, P.I 5])
     ]

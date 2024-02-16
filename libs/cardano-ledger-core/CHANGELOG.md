@@ -30,6 +30,7 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Plutus.ScriptTestContext`
 * Add `genByronVKeyAddr`, `genByronAddrFromVKey`
 * Add `Uniform` instances for `ByronKeyPair` and `KeyPair`
 * Add `mkKeyPairWithSeed` and `mkBootKeyPairWithSeed`

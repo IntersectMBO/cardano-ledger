@@ -22,7 +22,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.PParams (ppMinFeeRefScriptCostPerByteL)
 import Cardano.Ledger.MemoBytes (getMemoRawBytes)
-import Cardano.Ledger.Plutus.Language (Language (..), plutusBinary)
+import Cardano.Ledger.Plutus.Language (SLanguage (..), hashPlutusScript, plutusBinary)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
@@ -35,13 +35,12 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))
-import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.KeyPair (mkScriptAddr)
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus (ScriptTestContext (ScriptTestContext), alwaysSucceedsPlutus)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceeds3)
 
 spec ::
   forall era.
@@ -70,15 +69,15 @@ spec = describe "UTxO" $ do
     checkMinFee :: NativeScript era -> [Script era] -> ImpTestM era ()
     checkMinFee scriptToSpend refScripts = do
       refScriptFee <- setRefScriptFee
-      -- lock an input with a script
+      logEntry "lock an input with a script"
       scriptSpendIn <- createScriptUtxo scriptToSpend
-      -- create outputs with reference scripts and the return them mapped to their corresponding inputs
+      logEntry "create outputs with reference scripts and the return them mapped to their corresponding inputs"
       refScriptInToScripts <- createRefScriptsUtxos refScripts
-      -- spend the initial input by passing the reference scripts
+      logEntry "spend the initial input by passing the reference scripts"
       tx <- spendScriptUsingRefScripts scriptSpendIn $ Map.keysSet refScriptInToScripts
-      -- compute the difference between the current-era minFee and that computed in pre-Conway eras
+      logEntry "compute the difference between the current-era minFee and that computed in pre-Conway eras"
       minFeeDiff <- conwayDiffMinFee tx
-      -- check that the difference is the sum of the sizes of the passed reference scripts
+      logEntry "check that the difference is the sum of the sizes of the passed reference scripts"
       minFeeDiff
         `shouldBe` Coin
           ( floor $
@@ -91,24 +90,12 @@ spec = describe "UTxO" $ do
       nativeScripts <-
         (fromNativeScript @era <$>)
           <$> replicateM 3 nativeScript
-      psh1 <-
-        impAddPlutusScript $
-          ScriptTestContext
-            (alwaysSucceedsPlutus @'PlutusV3 3)
-            PlutusArgs
-              { paSpendDatum = Nothing
-              , paData = P.I 0
-              }
-      Just ps1 <- impLookupPlutusScript psh1
-      psh2 <-
-        impAddPlutusScript $
-          ScriptTestContext
-            (alwaysSucceedsPlutus @'PlutusV3 50)
-            PlutusArgs
-              { paSpendDatum = Nothing
-              , paData = P.I 1
-              }
-      Just ps2 <- impLookupPlutusScript psh2
+      let
+        psh1 = hashPlutusScript $ alwaysSucceeds3 SPlutusV3
+      ps1 <- impAnn "Expecting Plutus script" . expectJust $ impLookupPlutusScriptMaybe psh1
+      let
+        psh2 = hashPlutusScript $ alwaysSucceeds3 SPlutusV3
+      ps2 <- impAnn "Expecting Plutus script" . expectJust $ impLookupPlutusScriptMaybe psh2
       let plutusScripts = [fromPlutusScript ps1, fromPlutusScript ps2]
       pure $ nativeScripts ++ plutusScripts
 

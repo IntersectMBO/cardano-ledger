@@ -28,17 +28,19 @@
 
 ### `testlib`
 
+* Add:
+  * `impLookupPlutusScriptMaybe`
+  * `fixupOutputDatums`
 * Remove root coin argument from `initAlonzoImpNES`
 * Rename `fixupPlutusScripts` to `fixupRedeemers`
 * Add:
-  * `impLookupPlutusScript`
   * `fixupPPHash`
   * `fixupPlutusScripts`
   * `addCollateralInput`
   * `impGetPlutusContexts`
   * `fixupDatums`
 * Add `Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec`
-* Add `alonzoFixupTx`, `impAddPlutusScript`
+* Add `alonzoFixupTx`
 
 ## 1.6.0.0
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RankNTypes #-}
@@ -7,24 +8,28 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Alonzo.ImpTest (
   module ImpTest,
+  AlonzoEraImp (..),
   initAlonzoImpNES,
-  PlutusArgs (..),
-  impAddPlutusScript,
-  impLookupPlutusScript,
+  impLookupPlutusScriptMaybe,
+  addCollateralInput,
+  impGetPlutusContexts,
+  alonzoFixupTx,
+  plutusTestScripts,
+  impGetScriptContext,
+  impGetScriptContextMaybe,
+  -- Fixup
+  fixupDatums,
+  fixupOutputDatums,
   fixupPPHash,
   fixupRedeemers,
-  addCollateralInput,
-  alonzoFixupTx,
-  impGetPlutusContexts,
-  fixupDatums,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
-import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
@@ -38,11 +43,18 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Keys (Hash)
+import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), hashData)
-import Cardano.Ledger.Plutus.Language (Language (..), Plutus, PlutusLanguage, hashPlutusScript)
+import Cardano.Ledger.Plutus.Language (
+  Language (..),
+  Plutus,
+  PlutusLanguage,
+ )
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
   StashedAVVMAddresses,
@@ -54,21 +66,40 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ScriptsProvided (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Control.Monad (forM, join)
+import Control.Monad (forM)
 import Data.Default.Class (Default)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromElems)
 import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
-import Lens.Micro.Mtl (use, (%=))
-import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
+import qualified PlutusLedgerApi.Common as P
+import Test.Cardano.Ledger.Allegra.ImpTest (
+  impAllegraSatisfyNativeScript,
+ )
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus (PlutusArgs (..), ScriptTestContext (..), testingCostModels)
+import Test.Cardano.Ledger.Plutus (
+  PlutusArgs (..),
+  ScriptTestContext (..),
+  testingCostModels,
+ )
+import Test.Cardano.Ledger.Plutus.Examples
 import Test.Cardano.Ledger.Shelley.ImpTest as ImpTest
+
+class
+  ( ShelleyEraImp era
+  , AlonzoEraScript era
+  , AlonzoEraTxWits era
+  , AlonzoEraTx era
+  , AlonzoEraUTxO era
+  ) =>
+  AlonzoEraImp era
+  where
+  scriptTestContexts :: Map (ScriptHash (EraCrypto era)) ScriptTestContext
 
 initAlonzoImpNES ::
   forall era.
@@ -98,7 +129,7 @@ makeCollateralInput = do
   sendCoinTo addr collateral
 
 addCollateralInput ::
-  (AlonzoEraTxBody era, ShelleyEraImp era, ScriptsNeeded era ~ AlonzoScriptsNeeded era) =>
+  (AlonzoEraImp era, ScriptsNeeded era ~ AlonzoScriptsNeeded era) =>
   Tx era ->
   ImpTestM era (Tx era)
 addCollateralInput tx = do
@@ -111,16 +142,17 @@ addCollateralInput tx = do
         tx
           & bodyTxL . collateralInputsTxBodyL <>~ Set.singleton collateralInput
 
-impLookupPlutusScript ::
-  AlonzoEraScript era =>
+impLookupPlutusScriptMaybe ::
+  forall era.
+  AlonzoEraImp era =>
   ScriptHash (EraCrypto era) ->
-  ImpTestM era (Maybe (PlutusScript era))
-impLookupPlutusScript sh = do
-  mbyCtx <- getScriptTestContext sh
-  pure $ mbyCtx >>= \(ScriptTestContext plutus _) -> mkPlutusScript plutus
+  Maybe (PlutusScript era)
+impLookupPlutusScriptMaybe sh =
+  (\(ScriptTestContext plutus _) -> mkPlutusScript plutus) =<< impGetScriptContextMaybe @era sh
 
 impGetPlutusContexts ::
-  (ScriptsNeeded era ~ AlonzoScriptsNeeded era, EraUTxO era) =>
+  forall era.
+  (ScriptsNeeded era ~ AlonzoScriptsNeeded era, AlonzoEraImp era) =>
   Tx era ->
   ImpTestM
     era
@@ -130,17 +162,31 @@ impGetPlutusContexts tx = do
   utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
   let AlonzoScriptsNeeded asn = getScriptsNeeded utxo txBody
   mbyContexts <- forM asn $ \(prp, sh) -> do
-    ctx <- getScriptTestContext sh
-    pure $ (prp,sh,) <$> ctx
+    pure $ (prp,sh,) <$> impGetScriptContextMaybe @era sh
   pure $ catMaybes mbyContexts
+
+fixupRedeemerIndices ::
+  forall era.
+  AlonzoEraImp era =>
+  Tx era ->
+  ImpTestM era (Tx era)
+fixupRedeemerIndices tx = do
+  (rootTxIn, _) <- lookupImpRootTxOut
+  let
+    txInputs = tx ^. bodyTxL . inputsTxBodyL
+    rootTxIndex = toEnum $ Set.findIndex rootTxIn txInputs
+    updateIndex (SpendingPurpose (AsIx i))
+      | i >= rootTxIndex = SpendingPurpose . AsIx $ succ i
+    updateIndex x = x
+  pure $
+    tx
+      & witsTxL . rdmrsTxWitsL
+        %~ (\(Redeemers m) -> Redeemers $ Map.mapKeys updateIndex m)
 
 fixupRedeemers ::
   forall era.
-  ( EraUTxO era
-  , EraGov era
-  , AlonzoEraTxBody era
-  , AlonzoEraTxWits era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  ( ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , AlonzoEraImp era
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
@@ -151,16 +197,15 @@ fixupRedeemers tx = do
     mkNewRedeemers (prpIdx, _, ScriptTestContext _ (PlutusArgs dat _)) =
       (hoistPlutusPurpose @era toAsIx prpIdx, (Data dat, exUnits))
     Redeemers oldRedeemers = tx ^. witsTxL . rdmrsTxWitsL
-    newRedeemers = Map.fromList $ mkNewRedeemers <$> contexts
+    newRedeemers = Map.fromList (mkNewRedeemers <$> contexts)
   pure $
     tx
-      & witsTxL . rdmrsTxWitsL <>~ Redeemers (Map.union oldRedeemers newRedeemers)
+      & witsTxL . rdmrsTxWitsL .~ Redeemers (Map.union oldRedeemers newRedeemers)
 
 fixupScriptWits ::
   forall era.
   ( ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , AlonzoEraScript era
-  , EraUTxO era
+  , AlonzoEraImp era
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
@@ -189,10 +234,7 @@ fixupDatums ::
   forall era.
   ( HasCallStack
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , AlonzoEraTxWits era
-  , AlonzoEraUTxO era
-  , AlonzoEraTxOut era
-  , ShelleyEraImp era
+  , AlonzoEraImp era
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
@@ -211,14 +253,12 @@ fixupDatums tx = do
     collectDatums purpose = do
       let txIn = unAsItem <$> toSpendingPurpose (hoistPlutusPurpose toAsItem purpose)
       txOut <- traverse (impLookupUTxO @era) txIn
-      join <$> traverse getData txOut
+      pure $ getData =<< txOut
 
-    getData :: TxOut era -> ImpTestM era (Maybe (Data era))
-    getData txOut = do
-      scripts <- use impScriptsL
-      pure $ case txOut ^. datumTxOutF of
-        DatumHash _dh -> spendDatum <$> Map.lookup (txOutScriptHash txOut) scripts
-        _ -> Nothing
+    getData :: TxOut era -> Maybe (Data era)
+    getData txOut = case txOut ^. datumTxOutF of
+      DatumHash _dh -> spendDatum <$> Map.lookup (txOutScriptHash txOut) (scriptTestContexts @era)
+      _ -> Nothing
 
     txOutScriptHash txOut
       | Addr _ (ScriptHashObj sh) _ <- txOut ^. addrTxOutL = sh
@@ -229,11 +269,7 @@ fixupDatums tx = do
 
 fixupPPHash ::
   forall era.
-  ( AlonzoEraTxBody era
-  , AlonzoEraTxWits era
-  , EraGov era
-  , EraUTxO era
-  ) =>
+  AlonzoEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupPPHash tx = do
@@ -243,8 +279,8 @@ fixupPPHash tx = do
     scriptHashes :: Set (ScriptHash (EraCrypto era))
     scriptHashes = getScriptsHashesNeeded . getScriptsNeeded utxo $ tx ^. bodyTxL
     plutusLanguage sh = do
-      mbyPlutus <- impLookupPlutusScript sh
-      pure $ getLanguageView pp . plutusScriptLanguage <$> mbyPlutus
+      let mbyPlutus = impLookupPlutusScriptMaybe sh
+      pure $ getLanguageView pp . plutusScriptLanguage @era <$> mbyPlutus
   langs <- traverse plutusLanguage $ Set.toList scriptHashes
   let
     integrityHash =
@@ -256,13 +292,38 @@ fixupPPHash tx = do
     tx
       & bodyTxL . scriptIntegrityHashTxBodyL .~ integrityHash
 
+fixupOutputDatums ::
+  forall era.
+  AlonzoEraImp era =>
+  Tx era ->
+  ImpTestM era (Tx era)
+fixupOutputDatums tx = do
+  let
+    isDatum (Datum _) = True
+    isDatum _ = False
+    addDatum txOut =
+      case txOut ^. addrTxOutL of
+        Addr _ (ScriptHashObj sh) _ -> do
+          case impGetScriptContextMaybe @era sh of
+            Just (ScriptTestContext _ (PlutusArgs _ mbySpendDatum))
+              | not $ isDatum (txOut ^. datumTxOutF) -> do
+                  spendDatum <-
+                    impAnn "Looking up spend datum" $
+                      expectJust mbySpendDatum
+                  pure $
+                    txOut
+                      & dataHashTxOutL .~ SJust (hashData @era $ Data spendDatum)
+            _ -> pure txOut
+        _ -> pure txOut
+  newOutputs <- traverse addDatum $ tx ^. bodyTxL . outputsTxBodyL
+  pure $
+    tx
+      & bodyTxL . outputsTxBodyL .~ newOutputs
+
 alonzoFixupTx ::
-  ( ShelleyEraImp era
-  , AlonzoEraTxWits era
-  , AlonzoEraTxBody era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , AlonzoEraUTxO era
+  ( ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , HasCallStack
+  , AlonzoEraImp era
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
@@ -270,12 +331,49 @@ alonzoFixupTx =
   addNativeScriptTxWits
     >=> addCollateralInput
     >=> addRootTxIn
+    -- We need to update the indices after adding the rootTxIn because the
+    -- indices of inputs might get bumped if the rootTxIn appears before them
+    >=> fixupRedeemerIndices
     >=> fixupRedeemers
     >=> fixupScriptWits
+    >=> fixupOutputDatums
     >=> fixupDatums
     >=> fixupPPHash
     >=> fixupFees
     >=> updateAddrTxWits
+
+mkScriptTestEntry ::
+  (PlutusLanguage l, Crypto c) =>
+  Plutus l ->
+  PlutusArgs ->
+  (ScriptHash c, ScriptTestContext)
+mkScriptTestEntry script args =
+  ( hashPlutusScript script
+  , ScriptTestContext
+      { stcScript = script
+      , stcArgs = args
+      }
+  )
+
+plutusTestScripts ::
+  (Crypto c, PlutusLanguage l) =>
+  SLanguage l ->
+  Map.Map (ScriptHash c) ScriptTestContext
+plutusTestScripts lang =
+  Map.fromList
+    [ mkScriptTestEntry (alwaysSucceeds2 lang) $ PlutusArgs (P.I 0) Nothing
+    , mkScriptTestEntry (alwaysSucceeds3 lang) $ PlutusArgs (P.I 0) (Just $ P.I 0)
+    , mkScriptTestEntry (guessTheNumber2 lang) $ PlutusArgs (P.I 3) Nothing
+    , mkScriptTestEntry (guessTheNumber3 lang) $ PlutusArgs (P.I 3) (Just $ P.I 3)
+    , mkScriptTestEntry (evendata3 lang) $ PlutusArgs (P.I 4) (Just $ P.I 0)
+    , mkScriptTestEntry (odddata3 lang) $ PlutusArgs (P.I 3) (Just $ P.I 0)
+    , mkScriptTestEntry (evenRedeemer3 lang) $ PlutusArgs (P.I 0) (Just $ P.I 2)
+    , mkScriptTestEntry (oddRedeemer3 lang) $ PlutusArgs (P.I 0) (Just $ P.I 3)
+    , mkScriptTestEntry (sumsTo103 lang) $ PlutusArgs (P.I 4) (Just $ P.I 6)
+    , mkScriptTestEntry (oddRedeemer2 lang) $ PlutusArgs (P.I 0) Nothing
+    , mkScriptTestEntry (evenRedeemer2 lang) $ PlutusArgs (P.I 0) Nothing
+    , mkScriptTestEntry (redeemerIs102 lang) $ PlutusArgs (P.I 0) Nothing
+    ]
 
 instance
   ( Crypto c
@@ -290,12 +388,22 @@ instance
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = alonzoFixupTx
 
-impAddPlutusScript ::
+instance ShelleyEraImp (AlonzoEra c) => AlonzoEraImp (AlonzoEra c) where
+  scriptTestContexts = plutusTestScripts SPlutusV1
+
+impGetScriptContextMaybe ::
   forall era.
-  AlonzoEraScript era =>
-  ScriptTestContext ->
-  ImpTestM era (ScriptHash (EraCrypto era))
-impAddPlutusScript stc@(ScriptTestContext plutus _) = do
-  let sh = hashPlutusScript plutus
-  impScriptsL %= Map.insert sh stc
-  pure sh
+  AlonzoEraImp era =>
+  ScriptHash (EraCrypto era) ->
+  Maybe ScriptTestContext
+impGetScriptContextMaybe sh = Map.lookup sh $ scriptTestContexts @era
+
+impGetScriptContext ::
+  forall era.
+  AlonzoEraImp era =>
+  ScriptHash (EraCrypto era) ->
+  ImpTestM era ScriptTestContext
+impGetScriptContext sh =
+  impAnn ("Getting script context for " <> show sh)
+    . expectJust
+    $ impGetScriptContextMaybe @era sh
