@@ -107,7 +107,7 @@ import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Encoding.Encoder
 import Cardano.Ledger.Binary.Version (Version, byronProtVer, getVersion64)
 import Cardano.Slotting.Block (BlockNo (..))
-import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (..))
+import Cardano.Slotting.Slot (EpochInterval (..), EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (..))
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray (SBA), fromByteArray)
@@ -1146,6 +1146,8 @@ deriving instance EncCBOR SystemStart
 instance EncCBOR BlockNo where
   encCBOR = fromPlainEncoding . Serialise.encode
   encodedSizeExpr size = encodedSizeExpr size . fmap unBlockNo
+
+deriving instance EncCBOR EpochInterval
 
 --------------------------------------------------------------------------------
 -- Plutus

@@ -53,8 +53,6 @@ module Cardano.Ledger.BaseTypes (
   activeSlotLog,
   module Data.Maybe.Strict,
   BlocksMade (..),
-  EpochInterval (..),
-  addEpochInterval,
   kindObject,
 
   -- * Indices
@@ -124,10 +122,12 @@ import Cardano.Ledger.SafeHash (HashWithCrypto (..), SafeHash, SafeToHash)
 import Cardano.Slotting.Block as Slotting (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 import Cardano.Slotting.Slot as Slotting (
+  EpochInterval (..),
   EpochNo (..),
   EpochSize (..),
   SlotNo (..),
   WithOrigin (..),
+  addEpochInterval,
   binOpEpochNo,
  )
 import Cardano.Slotting.Time (SystemStart)
@@ -169,7 +169,7 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Typeable (Typeable)
-import Data.Word (Word16, Word32, Word64, Word8)
+import Data.Word (Word16, Word64, Word8)
 import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
@@ -835,18 +835,6 @@ toAnchorPairs vote@(Anchor _ _) =
 
 instance Default Network where
   def = Mainnet
-
--- | Denotes a positive change in the EpochNo
-newtype EpochInterval = EpochInterval
-  { unEpochInterval :: Word32
-  }
-  deriving (Eq, Ord, Generic)
-  deriving (Show) via Quiet EpochInterval
-  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, EncCBOR, DecCBOR, ToCBOR, FromCBOR)
-
--- | Add a EpochInterval (a positive change) to an EpochNo to get a new EpochNo
-addEpochInterval :: EpochNo -> EpochInterval -> EpochNo
-addEpochInterval (EpochNo n) (EpochInterval m) = EpochNo (n + fromIntegral m)
 
 class Inject t s where
   inject :: t -> s
