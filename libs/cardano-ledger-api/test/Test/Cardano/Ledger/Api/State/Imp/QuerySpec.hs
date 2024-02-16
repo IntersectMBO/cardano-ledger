@@ -55,7 +55,32 @@ spec ::
   , GovState era ~ ConwayGovState era
   ) =>
   SpecWith (ImpTestState era)
-spec =
+spec = do
+  describe "Committee members hot key pre-authorization" $ do
+    it "authorized members not elected get removed in the next epoch" $ do
+      setPParams
+
+      c1 <- KeyHashObj <$> freshKeyHash
+      hk1 <- registerCommitteeHotKey c1
+      expectQueryResult (Set.singleton c1) mempty mempty $
+        [(c1, CommitteeMemberState (MemberAuthorized hk1) Unrecognized Nothing ToBeRemoved)]
+      passEpoch
+      expectQueryResult (Set.singleton c1) mempty mempty Map.empty
+
+    it "members should remain authorized if authorized during the epoch after their election" $ do
+      setPParams
+      (KeyHashObj drep, _, ga0) <- electBasicCommittee
+
+      c1 <- KeyHashObj <$> freshKeyHash
+      _ <- electCommittee (SJust ga0) drep Set.empty [(c1, EpochNo 12)]
+      passEpoch
+      hk1 <- registerCommitteeHotKey c1
+      expectQueryResult (Set.singleton c1) mempty mempty $
+        [(c1, CommitteeMemberState (MemberAuthorized hk1) Unrecognized Nothing ToBeEnacted)]
+      passEpoch
+      expectQueryResult (Set.singleton c1) mempty mempty $
+        [(c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just 12) NoChangeExpected)]
+
   it "Committee queries" $ do
     setPParams
     drep <- setupSingleDRep
