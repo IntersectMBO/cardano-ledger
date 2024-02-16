@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | The 'main' function in this file writes a file
@@ -14,38 +15,29 @@ module Main where
 
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Data.ByteString.Short (ShortByteString, unpack)
+import Data.Foldable (forM_)
 import Language.Haskell.TH
-import qualified PlutusLedgerApi.V1 as PV1
-import PlutusScripts (
-  evenRedeemerDecl,
-  evenRedeemerDecl2Args,
-  evendataDecl,
-  guessDecl,
-  guessDecl2args,
-  oddRedeemerDecl,
-  oddRedeemerDecl2Args,
-  odddataDecl,
-  redeemerIs10Decl2Args,
-  sumsTo10Decl,
- )
-import qualified PlutusTx as P (compile)
+import qualified PlutusV1Scripts as PV1S
+import qualified PlutusV3Scripts as PV3S
+import ScriptSource
 import System.IO
 
 -- =============================================
 -- how to display a preprocessed script
 
-display :: Handle -> Language -> ShortByteString -> Q [Dec] -> String -> IO ()
-display h lang bytes code name = do
+display :: Handle -> (Language -> ShortByteString) -> Q [Dec] -> String -> IO ()
+display h scriptBytesFun code name = do
   xxx <- runQ code
   hPutStrLn h ("\n\n{- Preproceesed Plutus Script\n" ++ pprint xxx ++ "\n-}")
   hPutStr h $
     concat
       [ "\n"
-      , name ++ " :: Plutus '" ++ show lang ++ "\n"
-      , name ++ " = Plutus . PlutusBinary . pack $ concat\n"
-      , "  ["
+      , name ++ " :: SLanguage l -> Plutus l\n"
+      , name ++ " = Plutus . PlutusBinary . pack . \n  (\\case\n"
       ]
-  manylines h 15 (unpack bytes)
+  forM_ [PlutusV1 .. PlutusV3] $ \lang -> do
+    hPutStrLn h $ "    S" <> show lang <> " -> " <> show (unpack (scriptBytesFun lang))
+  hPutStrLn h "  )"
 
 manylines :: Show t => Handle -> Int -> [t] -> IO ()
 manylines h n ts' = write (split ts')
@@ -58,81 +50,115 @@ manylines h n ts' = write (split ts')
       hPutStr h (show ts ++ ",\n   ")
       write tss
 
--- ==========================================================================
--- Turn the Template Haskell Decls into real haskell functions using Template
--- Haskell top-level splices, of TH.Decl imported from PlutusScripts. We use
--- this 2 step process (1. define elsewhere as a TH.Decl, 2. splice here) so that
--- can export the actual text of the plutus code as a comment in the generated file.
-
-$guessDecl
-$guessDecl2args
-$evendataDecl
-$evenRedeemerDecl
-$odddataDecl
-$oddRedeemerDecl
-$sumsTo10Decl
-$evenRedeemerDecl2Args
-$oddRedeemerDecl2Args
-$redeemerIs10Decl2Args
-
--- ================================================================
--- Compile the real functions as Plutus scripts, and get their
--- bytestring equaivalents. Here is where we depend on plutus-plugin.
-
-guessTheNumberBytes :: ShortByteString
-guessTheNumberBytes =
-  PV1.serialiseCompiledCode
-    $$(P.compile [||guessTheNumber'3||])
-
-guess2args :: ShortByteString
-guess2args =
-  PV1.serialiseCompiledCode
-    $$(P.compile [||guessTheNumber'2||])
-
-evendataBytes :: ShortByteString
-evendataBytes =
-  PV1.serialiseCompiledCode
-    $$(P.compile [||evendata'||])
-
-evenRedeemerBytes :: ShortByteString
-evenRedeemerBytes =
-  PV1.serialiseCompiledCode
-    $$(P.compile [||evenRedeemer'||])
-
-odddataBytes :: ShortByteString
-odddataBytes =
-  PV1.serialiseCompiledCode
-    $$(P.compile [||odddata'||])
-
-oddRedeemerBytes :: ShortByteString
-oddRedeemerBytes =
-  PV1.serialiseCompiledCode
-    $$(P.compile [||oddRedeemer'||])
-
-sumsTo10Bytes :: ShortByteString
-sumsTo10Bytes =
-  PV1.serialiseCompiledCode
-    $$(P.compile [||sumsTo10'||])
-
-oddRedeemerBytes2Arg :: ShortByteString
-oddRedeemerBytes2Arg =
-  PV1.serialiseCompiledCode
-    $$(P.compile [||oddRedeemer2'||])
-
-evenRedeemerBytes2Args :: ShortByteString
-evenRedeemerBytes2Args =
-  PV1.serialiseCompiledCode
-    $$(P.compile [||evenRedeemer2'||])
-
-redeemerIs10Bytes2Args :: ShortByteString
-redeemerIs10Bytes2Args =
-  PV1.serialiseCompiledCode
-    $$(P.compile [||redeemerIs102'||])
-
 -- ========================================================================
 -- Generate the PlutusScripts.hs which does not depend on plutus-plugin.
 -- write out the file header (module and imports), then 'display' the result
 -- for each plutus script.
+
+displayScripts :: Handle -> IO ()
+displayScripts outh = do
+  let
+    scripts =
+      [
+        ( \case
+            PlutusV1 -> PV1S.alwaysSucceeds2argsBytes
+            PlutusV2 -> PV1S.alwaysSucceeds2argsBytes
+            PlutusV3 -> PV3S.alwaysSucceeds2argsBytes
+        , alwaysSucceedsDecl2args
+        , "alwaysSucceeds2"
+        )
+      ,
+        ( \case
+            PlutusV1 -> PV1S.alwaysSucceeds3argsBytes
+            PlutusV2 -> PV1S.alwaysSucceeds3argsBytes
+            PlutusV3 -> PV3S.alwaysSucceeds3argsBytes
+        , alwaysSucceedsDecl3args
+        , "alwaysSucceeds3"
+        )
+      ,
+        ( \case
+            PlutusV1 -> PV1S.guess2args
+            PlutusV2 -> PV1S.guess2args
+            PlutusV3 -> PV3S.guess2args
+        , guessDecl2args
+        , "guessTheNumber2"
+        )
+      ,
+        ( \case
+            PlutusV1 -> PV1S.guessTheNumberBytes
+            PlutusV2 -> PV1S.guessTheNumberBytes
+            PlutusV3 -> PV3S.guessTheNumberBytes
+        , guessDecl
+        , "guessTheNumber3"
+        )
+      ,
+        ( \case
+            PlutusV1 -> PV1S.evendataBytes
+            PlutusV2 -> PV1S.evendataBytes
+            PlutusV3 -> PV3S.evendataBytes
+        , evendataDecl
+        , "evendata3"
+        )
+      ,
+        ( \case
+            PlutusV1 -> PV1S.odddataBytes
+            PlutusV2 -> PV1S.odddataBytes
+            PlutusV3 -> PV3S.odddataBytes
+        , odddataDecl
+        , "odddata3"
+        )
+      ,
+        ( \case
+            PlutusV1 -> PV1S.evenRedeemerBytes
+            PlutusV2 -> PV1S.evenRedeemerBytes
+            PlutusV3 -> PV3S.evenRedeemerBytes
+        , evenRedeemerDecl
+        , "evenRedeemer3"
+        )
+      ,
+        ( \case
+            PlutusV1 -> PV1S.oddRedeemerBytes
+            PlutusV2 -> PV1S.oddRedeemerBytes
+            PlutusV3 -> PV3S.oddRedeemerBytes
+        , oddRedeemerDecl
+        , "oddRedeemer3"
+        )
+      ,
+        ( \case
+            PlutusV1 -> PV1S.sumsTo10Bytes
+            PlutusV2 -> PV1S.sumsTo10Bytes
+            PlutusV3 -> PV3S.sumsTo10Bytes
+        , sumsTo10Decl
+        , "sumsTo103"
+        )
+      , -- 2 arg plutus scripts
+
+        ( \case
+            PlutusV1 -> PV1S.oddRedeemerBytes2Arg
+            PlutusV2 -> PV1S.oddRedeemerBytes2Arg
+            PlutusV3 -> PV3S.oddRedeemerBytes2Arg
+        , oddRedeemerDecl2Args
+        , "oddRedeemer2"
+        )
+      ,
+        ( \case
+            PlutusV1 -> PV1S.evenRedeemerBytes2Args
+            PlutusV2 -> PV1S.evenRedeemerBytes2Args
+            PlutusV3 -> PV3S.evenRedeemerBytes2Args
+        , evenRedeemerDecl2Args
+        , "evenRedeemer2"
+        )
+      ,
+        ( \case
+            PlutusV1 -> PV1S.redeemerIs10Bytes2Args
+            PlutusV2 -> PV1S.redeemerIs10Bytes2Args
+            PlutusV3 -> PV3S.redeemerIs10Bytes2Args
+        , redeemerIs10Decl2Args
+        , "redeemerIs102"
+        )
+      ]
+  forM_ scripts $ \(scriptBytesFun, scriptArgs, name) -> do
+    display outh scriptBytesFun scriptArgs name
 
 main :: IO ()
 main = do
@@ -140,23 +166,13 @@ main = do
   hPutStrLn outh $
     unlines
       [ "{-# LANGUAGE DataKinds #-}"
+      , "{-# LANGUAGE LambdaCase #-}"
+      , "{-# LANGUAGE GADTs #-}"
       , "-- | This file is generated by \"plutus-preprocessor:plutus-preprocessor\""
-      , "module Test.Cardano.Ledger.Alonzo.PlutusScripts where"
+      , "module Test.Cardano.Ledger.Plutus.Examples where"
       , ""
-      , "import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..))"
+      , "import Cardano.Ledger.Plutus.Language (SLanguage (..), Plutus (..), PlutusBinary (..))"
       , "import Data.ByteString.Short (pack)"
       ]
-  display outh PlutusV1 guess2args guessDecl2args "guessTheNumber2"
-  display outh PlutusV1 guessTheNumberBytes guessDecl "guessTheNumber3"
-  display outh PlutusV1 evendataBytes evendataDecl "evendata3"
-  display outh PlutusV1 odddataBytes odddataDecl "odddata3"
-  display outh PlutusV1 evenRedeemerBytes evenRedeemerDecl "evenRedeemer3"
-  display outh PlutusV1 oddRedeemerBytes oddRedeemerDecl "oddRedeemer3"
-  display outh PlutusV1 sumsTo10Bytes sumsTo10Decl "sumsTo103"
-  -- 2 arg plutPlutusV1 us scripts
-  display outh PlutusV1 oddRedeemerBytes2Arg oddRedeemerDecl2Args "oddRedeemer2"
-  display outh PlutusV1 evenRedeemerBytes2Args evenRedeemerDecl2Args "evenRedeemer2"
-  display outh PlutusV1 redeemerIs10Bytes2Args redeemerIs10Decl2Args "redeemerIs102"
-  display outh PlutusV2 guess2args guessDecl2args "guessTheNumber2V2"
-  display outh PlutusV2 guessTheNumberBytes guessDecl "guessTheNumber3V2"
+  displayScripts outh
   hClose outh

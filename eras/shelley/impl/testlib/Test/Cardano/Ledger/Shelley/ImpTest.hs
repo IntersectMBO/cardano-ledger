@@ -76,7 +76,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   expectRegisteredRewardAddress,
   expectNotRegisteredRewardAddress,
   expectTreasury,
-  getScriptTestContext,
   updateAddrTxWits,
   addNativeScriptTxWits,
   addRootTxIn,
@@ -94,7 +93,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withNoFixup,
 
   -- * Lenses
-  impScriptsL,
   impCollateralTxIdsL,
   -- We only export getters, because internal state should not be accessed during testing
   impNESG,
@@ -244,7 +242,6 @@ data ImpTestState era = ImpTestState
   , impKeyPairs :: !(forall k. Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
   , impByronKeyPairs :: !(Map (BootstrapAddress (EraCrypto era)) ByronKeyPair)
   , impNativeScripts :: !(Map (ScriptHash (EraCrypto era)) (NativeScript era))
-  , impScripts :: !(Map (ScriptHash (EraCrypto era)) ScriptTestContext)
   , impLastTick :: !SlotNo
   , impGlobals :: !Globals
   , impLog :: !(Doc ())
@@ -280,9 +277,6 @@ impNativeScriptsL = lens impNativeScripts (\x y -> x {impNativeScripts = y})
 
 impNativeScriptsG :: SimpleGetter (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (NativeScript era))
 impNativeScriptsG = impNativeScriptsL
-
-impScriptsL :: Lens' (ImpTestState era) (Map (ScriptHash (EraCrypto era)) ScriptTestContext)
-impScriptsL = lens impScripts (\x y -> x {impScripts = y})
 
 impCollateralTxIdsL :: Lens' (ImpTestState era) [TxIn (EraCrypto era)]
 impCollateralTxIdsL = lens impCollateralTxIds (\x y -> x {impCollateralTxIds = y})
@@ -699,9 +693,6 @@ impAddNativeScript nativeScript = do
   impNativeScriptsL %= Map.insert scriptHash nativeScript
   pure scriptHash
 
-getScriptTestContext :: ScriptHash (EraCrypto era) -> ImpTestM era (Maybe ScriptTestContext)
-getScriptTestContext sh = Map.lookup sh <$> gets impScripts
-
 impNativeScriptsRequired ::
   EraUTxO era =>
   Tx era ->
@@ -1033,7 +1024,6 @@ withImpState =
         , impGlobals = testGlobals
         , impLog = mempty
         , impGen = qcGen
-        , impScripts = mempty
         , impCollateralTxIds = fst <$> mkCollateralUTxO @era rootCoin
         }
   where

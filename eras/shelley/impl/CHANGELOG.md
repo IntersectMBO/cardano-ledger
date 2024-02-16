@@ -33,7 +33,8 @@
   * `PlutusArgs`
   * `ScriptTestContext`
   * `shelleyFixupTx`
-  * `getScriptTestContext`
+  * `impGetScriptTestContext`
+  * `impGetScriptContextMaybe`
   * `updateAddrTxWits`
   * `addNativeScriptTxWits`
   * `addRootTxIn`

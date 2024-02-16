@@ -1,26 +1,24 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
-{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
 
-module PlutusScripts (
-  guessDecl,
-  guessDecl2args,
-  evendataDecl,
-  evenRedeemerDecl,
-  odddataDecl,
-  oddRedeemerDecl,
-  sumsTo10Decl,
-  evenRedeemerDecl2Args,
-  oddRedeemerDecl2Args,
-  redeemerIs10Decl2Args,
-)
-where
+module ScriptSource where
 
 import Language.Haskell.TH
 import qualified PlutusTx.Builtins as P
 import qualified PlutusTx.Prelude as P
+
+alwaysSucceedsDecl2args :: Q [Dec]
+alwaysSucceedsDecl2args =
+  [d|
+    alwaysSucceeds'2 :: P.BuiltinData -> P.BuiltinData -> ()
+    alwaysSucceeds'2 _ _ = ()
+    |]
+
+alwaysSucceedsDecl3args :: Q [Dec]
+alwaysSucceedsDecl3args =
+  [d|
+    alwaysSucceeds'3 :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
+    alwaysSucceeds'3 _ _ _ = ()
+    |]
 
 guessDecl :: Q [Dec]
 guessDecl =

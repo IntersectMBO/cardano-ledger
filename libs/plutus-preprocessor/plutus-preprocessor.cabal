@@ -22,7 +22,11 @@ source-repository head
 executable plutus-preprocessor
     main-is:          Main.hs
     hs-source-dirs:   src
-    other-modules:    PlutusScripts
+    other-modules:
+        PlutusV1Scripts
+        PlutusV3Scripts
+        ScriptSource
+
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates

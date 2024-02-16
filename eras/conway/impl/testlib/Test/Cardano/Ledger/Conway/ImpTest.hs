@@ -120,6 +120,7 @@ import Cardano.Ledger.Conway.TxCert (
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
   asTreasuryL,
@@ -204,8 +205,14 @@ instance
 
   fixupTx = alonzoFixupTx
 
+instance ShelleyEraImp (ConwayEra c) => AlonzoEraImp (ConwayEra c) where
+  scriptTestContexts =
+    plutusTestScripts SPlutusV1
+      <> plutusTestScripts SPlutusV2
+      <> plutusTestScripts SPlutusV3
+
 class
-  ( ShelleyEraImp era
+  ( AlonzoEraImp era
   , ConwayEraGov era
   , ConwayEraTxBody era
   , STS (EraRule "ENACT" era)

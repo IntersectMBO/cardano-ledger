@@ -22,8 +22,13 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.DRep
-import Cardano.Ledger.Plutus (Data (..), TxOutSource (..), hashData)
-import Cardano.Ledger.Plutus.Language (Plutus, PlutusLanguage)
+import Cardano.Ledger.Plutus (
+  Data (..),
+  SLanguage (..),
+  TxOutSource (..),
+  hashData,
+  hashPlutusScript,
+ )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
 import Data.Default.Class (def)
@@ -39,40 +44,17 @@ import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus (ScriptTestContext (..))
-import Test.Cardano.Ledger.Plutus.Examples (guessTheNumber3, guessTheNumber3V2)
+import Test.Cardano.Ledger.Plutus.Examples (guessTheNumber3)
 
 spendDatum :: P1.Data
 spendDatum = P1.I 3
 
-setupScriptPlutus ::
-  (AlonzoEraScript era, PlutusLanguage p) =>
-  Plutus p ->
-  ImpTestM era (ScriptHash (EraCrypto era))
-setupScriptPlutus script =
-  impAddPlutusScript
-    ScriptTestContext
-      { stcScript = script
-      , stcArgs =
-          PlutusArgs
-            { paSpendDatum = Just spendDatum
-            , paData = spendDatum
-            }
-      }
-
-setupScriptPlutusV1 :: AlonzoEraScript era => ImpTestM era (ScriptHash (EraCrypto era))
-setupScriptPlutusV1 = setupScriptPlutus guessTheNumber3
-
-setupScriptPlutusV2 :: AlonzoEraScript era => ImpTestM era (ScriptHash (EraCrypto era))
-setupScriptPlutusV2 = setupScriptPlutus guessTheNumber3V2
-
 txWithPlutus ::
   forall era.
   ConwayEraImp era =>
-  ImpTestM era (ScriptHash (EraCrypto era)) ->
+  ScriptHash (EraCrypto era) ->
   ImpTestM era (Tx era)
-txWithPlutus setupScript = do
-  sh <- setupScript
+txWithPlutus sh = do
   submitTxAnn "Submit a Plutus" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . outputsTxBodyL
@@ -89,11 +71,16 @@ scriptLockedTxOut shSpending =
     (inject $ Coin 1_000_000)
     & dataHashTxOutL .~ SJust (hashData @era $ Data spendDatum)
 
-mkRefTxOut :: BabbageEraTxOut era => ScriptHash (EraCrypto era) -> ImpTestM era (TxOut era)
+mkRefTxOut ::
+  ( BabbageEraTxOut era
+  , AlonzoEraImp era
+  ) =>
+  ScriptHash (EraCrypto era) ->
+  ImpTestM era (TxOut era)
 mkRefTxOut sh = do
   kpPayment <- lookupKeyPair =<< freshKeyHash
   kpStaking <- lookupKeyPair =<< freshKeyHash
-  mbyPlutusScript <- impLookupPlutusScript sh
+  let mbyPlutusScript = impLookupPlutusScriptMaybe sh
   pure $
     mkBasicTxOut (mkAddr (kpPayment, kpStaking)) (inject $ Coin 100)
       & referenceScriptTxOutL .~ maybeToStrictMaybe (fromPlutusScript <$> mbyPlutusScript)
@@ -101,11 +88,11 @@ mkRefTxOut sh = do
 setupRefTx ::
   forall era.
   ( BabbageEraTxOut era
-  , ShelleyEraImp era
+  , AlonzoEraImp era
   ) =>
   ImpTestM era (TxId (EraCrypto era))
 setupRefTx = do
-  shSpending <- setupScriptPlutusV1
+  let shSpending = hashPlutusScript (guessTheNumber3 SPlutusV1)
   refTxOut <- mkRefTxOut shSpending
   fmap txIdTx . submitTxAnn "Producing transaction" $
     mkBasicTx mkBasicTxBody
@@ -122,13 +109,13 @@ testPlutusV1V2Failure ::
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , HasCallStack
   ) =>
-  ImpTestM era (ScriptHash (EraCrypto era)) ->
+  ScriptHash (EraCrypto era) ->
   a ->
   Lens' (TxBody era) a ->
   ContextError era ->
   ImpTestM era ()
-testPlutusV1V2Failure setupScript badField lenz errorField = do
-  tx <- txWithPlutus @era setupScript
+testPlutusV1V2Failure sh badField lenz errorField = do
+  tx <- txWithPlutus @era sh
   submitFailingTx
     ( mkBasicTx mkBasicTxBody
         & bodyTxL . inputsTxBodyL
@@ -199,7 +186,50 @@ datumAndReferenceInputsSpec = do
         ]
     pure ()
   it "fails when using inline datums for PlutusV1" $ do
-    shSpending <- setupScriptPlutusV1
+    let shSpending = hashPlutusScript (guessTheNumber3 SPlutusV1)
+    refTxOut <- mkRefTxOut shSpending
+    let producingTx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . outputsTxBodyL
+              .~ SSeq.fromList
+                [ refTxOut
+                , scriptLockedTxOut shSpending & dataTxOutL .~ SJust (Data spendDatum)
+                ]
+    logToExpr producingTx
+    producingTxId <- txIdTx <$> submitTxAnn "Producing transaction" producingTx
+    let
+      lockedTxIn = mkTxInPartial producingTxId 1
+      consumingTx =
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . inputsTxBodyL .~ Set.singleton lockedTxIn
+          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTxId 0)
+    impAnn "Consuming transaction" $
+      submitFailingTx
+        consumingTx
+        [ injectFailure $
+            CollectErrors
+              [BadTranslation . inject . InlineDatumsNotSupported @era $ TxOutFromInput lockedTxIn]
+        ]
+  it "fails with same txIn in regular inputs and reference inputs" $ do
+    producingTx <- setupRefTx
+    let
+      consumingTx =
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . inputsTxBodyL
+            .~ Set.fromList
+              [ mkTxInPartial producingTx 0
+              , mkTxInPartial producingTx 1
+              ]
+          & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
+    _ <-
+      submitFailingTx
+        consumingTx
+        [ injectFailure . BabbageNonDisjointRefInputs $
+            mkTxInPartial producingTx 0 :| []
+        ]
+    pure ()
+  it "fails when using inline datums for PlutusV1" $ do
+    let shSpending = hashPlutusScript $ guessTheNumber3 SPlutusV1
     refTxOut <- mkRefTxOut shSpending
     producingTx <-
       fmap txIdTx . submitTxAnn "Producing transaction" $
@@ -237,7 +267,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
       describe "CurrentTreasuryValue" $ do
         it "V1"
           $ testPlutusV1V2Failure
-            setupScriptPlutusV1
+            (hashPlutusScript $ guessTheNumber3 SPlutusV1)
             (SJust (Coin 10_000))
             currentTreasuryValueTxBodyL
           $ inject
@@ -245,7 +275,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
           $ Coin 10_000
         it "V2"
           $ testPlutusV1V2Failure
-            setupScriptPlutusV2
+            (hashPlutusScript $ guessTheNumber3 SPlutusV2)
             (SJust (Coin 10_000))
             currentTreasuryValueTxBodyL
           $ inject
@@ -265,7 +295,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
                   $ Map.singleton proposal
                   $ VotingProcedure VoteYes SNothing
           testPlutusV1V2Failure
-            setupScriptPlutusV1
+            (hashPlutusScript $ guessTheNumber3 SPlutusV1)
             badField
             votingProceduresTxBodyL
             $ inject
@@ -283,7 +313,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
                   $ Map.singleton proposal
                   $ VotingProcedure VoteYes SNothing
           testPlutusV1V2Failure
-            setupScriptPlutusV2
+            (hashPlutusScript $ guessTheNumber3 SPlutusV2)
             badField
             votingProceduresTxBodyL
             $ inject
@@ -294,7 +324,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
           rewardAccount <- registerRewardAccount
           let badField = OSet.singleton $ ProposalProcedure deposit rewardAccount InfoAction def
           testPlutusV1V2Failure
-            setupScriptPlutusV1
+            (hashPlutusScript $ guessTheNumber3 SPlutusV1)
             badField
             proposalProceduresTxBodyL
             $ inject
@@ -304,7 +334,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
           rewardAccount <- registerRewardAccount
           let badField = OSet.singleton $ ProposalProcedure deposit rewardAccount InfoAction def
           testPlutusV1V2Failure
-            setupScriptPlutusV2
+            (hashPlutusScript $ guessTheNumber3 SPlutusV2)
             badField
             proposalProceduresTxBodyL
             $ inject
@@ -312,7 +342,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
       describe "TreasuryDonation" $ do
         it "V1"
           $ testPlutusV1V2Failure
-            setupScriptPlutusV1
+            (hashPlutusScript $ guessTheNumber3 SPlutusV1)
             (Coin 10_000)
             treasuryDonationTxBodyL
           $ inject
@@ -320,7 +350,7 @@ conwayFeaturesPlutusV1V2FailureSpec = do
           $ Coin 10_000
         it "V2"
           $ testPlutusV1V2Failure
-            setupScriptPlutusV2
+            (hashPlutusScript $ guessTheNumber3 SPlutusV2)
             (Coin 10_000)
             treasuryDonationTxBodyL
           $ inject
@@ -340,25 +370,25 @@ conwayFeaturesPlutusV1V2FailureSpec = do
           it "V1" $ do
             stakingC <- KeyHashObj <$> freshKeyHash
             let regDepositTxCert = RegDepositTxCert stakingC (Coin 0)
-            testCertificateTranslated regDepositTxCert =<< txWithPlutus setupScriptPlutusV1
+            testCertificateTranslated regDepositTxCert =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV1)
           it "V2" $ do
             stakingC <- KeyHashObj <$> freshKeyHash
             let regDepositTxCert = RegDepositTxCert stakingC (Coin 0)
-            testCertificateTranslated regDepositTxCert =<< txWithPlutus setupScriptPlutusV2
+            testCertificateTranslated regDepositTxCert =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV2)
         describe "UnRegDepositTxCert" $ do
           it "V1" $ do
             (_poolKH, _spendingC, stakingC) <- setupPoolWithStake $ Coin 1_000
             let unRegDepositTxCert = UnRegDepositTxCert stakingC (Coin 0)
-            testCertificateTranslated unRegDepositTxCert =<< txWithPlutus setupScriptPlutusV1
+            testCertificateTranslated unRegDepositTxCert =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV1)
           it "V2" $ do
             (_poolKH, _spendingC, stakingC) <- setupPoolWithStake $ Coin 1_000
             let unRegDepositTxCert = UnRegDepositTxCert stakingC (Coin 0)
-            testCertificateTranslated unRegDepositTxCert =<< txWithPlutus setupScriptPlutusV2
+            testCertificateTranslated unRegDepositTxCert =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV2)
       describe "Unsupported" $ do
         let testCertificateNotSupportedV1 badCert =
-              testCertificateNotSupported badCert =<< txWithPlutus @era setupScriptPlutusV1
+              testCertificateNotSupported badCert =<< txWithPlutus @era (hashPlutusScript $ guessTheNumber3 SPlutusV1)
             testCertificateNotSupportedV2 badCert =
-              testCertificateNotSupported badCert =<< txWithPlutus @era setupScriptPlutusV2
+              testCertificateNotSupported badCert =<< txWithPlutus @era (hashPlutusScript $ guessTheNumber3 SPlutusV2)
             testCertificateNotSupported badCert tx = do
               submitFailingTx
                 ( mkBasicTx mkBasicTxBody

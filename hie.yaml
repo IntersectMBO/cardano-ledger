@@ -273,7 +273,13 @@ cradle:
     - path: "libs/plutus-preprocessor/src/Main.hs"
       component: "plutus-preprocessor:exe:plutus-preprocessor"
 
-    - path: "libs/plutus-preprocessor/src/PlutusScripts.hs"
+    - path: "libs/plutus-preprocessor/src/PlutusV1Scripts.hs"
+      component: "plutus-preprocessor:exe:plutus-preprocessor"
+
+    - path: "libs/plutus-preprocessor/src/PlutusV3Scripts.hs"
+      component: "plutus-preprocessor:exe:plutus-preprocessor"
+
+    - path: "libs/plutus-preprocessor/src/ScriptSource.hs"
       component: "plutus-preprocessor:exe:plutus-preprocessor"
 
     - path: "libs/plutus-preprocessor/src/Debug.hs"
