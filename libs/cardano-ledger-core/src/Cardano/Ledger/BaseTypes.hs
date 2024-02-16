@@ -128,6 +128,7 @@ import Cardano.Slotting.Slot as Slotting (
   EpochSize (..),
   SlotNo (..),
   WithOrigin (..),
+  binOpEpochNo,
  )
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData (rnf), rwhnf)

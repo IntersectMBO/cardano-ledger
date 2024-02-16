@@ -48,7 +48,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Slot (
   Duration (..),
-  EpochNo,
+  EpochNo (..),
   SlotNo,
   epochInfoEpoch,
   epochInfoFirst,
@@ -147,7 +147,7 @@ rupdTransition = do
         (SJust p@(Pulsing _ _)) -> do
           -- We began pulsing earlier, so run another pulse
           (ans, event) <- liftSTS $ pulseStep p
-          tellRupd "Pulsing Rupd" (RupdEvent (e + 1) event)
+          tellRupd "Pulsing Rupd" (RupdEvent (succ e) event)
           pure (SJust ans)
         (SJust p@(Complete _)) -> pure (SJust p)
     -- Time to force the completion of the pulser so that downstream tools such as db-sync
@@ -158,11 +158,11 @@ rupdTransition = do
           -- Nothing has been done, so start, and then complete the pulser. We hope this is very rare.
           let pulser = startStep slotsPerEpoch b es maxsupply asc k
           (reward, event) <- liftSTS $ completeStep pulser
-          tellRupd "Starting too late" (RupdEvent (e + 1) event)
+          tellRupd "Starting too late" (RupdEvent (succ e) event)
           pure (SJust reward)
         SJust p@(Pulsing _ _) -> do
           -- We have been pulsing, but we ran out of time, so complete the pulser.
           (reward, event) <- liftSTS $ completeStep p
-          tellRupd "Completing too late" (RupdEvent (e + 1) event)
+          tellRupd "Completing too late" (RupdEvent (succ e) event)
           pure (SJust reward)
         complete@(SJust (Complete _)) -> pure complete

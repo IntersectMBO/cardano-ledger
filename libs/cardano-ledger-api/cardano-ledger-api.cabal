@@ -119,6 +119,7 @@ test-suite cardano-ledger-api-test
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+        cardano-slotting:testlib,
         cardano-strict-containers,
         containers,
         microlens,

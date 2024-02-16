@@ -73,6 +73,7 @@ import Data.Text (pack)
 import Lens.Micro
 import System.Environment (lookupEnv)
 import Test.Cardano.Ledger.Tickf (oldCalculatePoolDistr)
+import Test.Cardano.Slotting.Numeric ()
 
 -- ======================================================================
 

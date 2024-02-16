@@ -8,7 +8,7 @@
 
 module Cardano.Ledger.Shelley.API.Genesis where
 
-import Cardano.Ledger.BaseTypes (BlocksMade (..))
+import Cardano.Ledger.BaseTypes (BlocksMade (..), EpochNo (EpochNo))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -103,7 +103,7 @@ initialStateFromGenesis sg ag =
     (PoolDistr Map.empty)
     def
   where
-    initialEpochNo = 0
+    initialEpochNo = EpochNo 0
     initialUtxo = genesisUTxO sg
     reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coinBalance initialUtxo
     genDelegs = sgGenDelegs sg

@@ -23,7 +23,7 @@ module Cardano.Ledger.Conway.Rules.Certs (
   CertsEnv (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo, Globals (..), ShelleyBase, SlotNo, addEpochInterval)
+import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), Globals (..), ShelleyBase, SlotNo, addEpochInterval, binOpEpochNo)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -204,12 +204,12 @@ conwayCertsTransition = do
       let certState' =
             let hasProposals = not . OSet.null $ tx ^. bodyTxL . proposalProceduresTxBodyL
                 numDormantEpochs = certState ^. certVStateL . vsNumDormantEpochsL
-                isNumDormantEpochsNonZero = numDormantEpochs /= 0
+                isNumDormantEpochsNonZero = numDormantEpochs /= EpochNo 0
              in if hasProposals && isNumDormantEpochsNonZero
                   then
                     certState
-                      & certVStateL . vsDRepsL %~ (<&> (drepExpiryL %~ (+ numDormantEpochs)))
-                      & certVStateL . vsNumDormantEpochsL .~ 0
+                      & certVStateL . vsDRepsL %~ (<&> (drepExpiryL %~ binOpEpochNo (+) numDormantEpochs))
+                      & certVStateL . vsNumDormantEpochsL .~ EpochNo 0
                   else certState
 
       -- Update DRep expiry for all DReps that are voting in this transaction.

@@ -152,7 +152,7 @@ newEpochTransition = do
       , eNo
       ) <-
     judgmentContext
-  if eNo /= eL + 1
+  if eNo /= succ eL
     then pure (nes & newEpochStateDRepPulsingStateL %~ pulseDRepPulsingState)
     else do
       es1 <- case ru of -- Here is where we extract the result of Reward pulsing.

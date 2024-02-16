@@ -184,6 +184,7 @@ test-suite tests
         cardano-ledger-shelley:testlib,
         cardano-ledger-core,
         cardano-ledger-binary:testlib,
+        cardano-slotting:testlib,
         cardano-strict-containers,
         containers,
         data-default-class,

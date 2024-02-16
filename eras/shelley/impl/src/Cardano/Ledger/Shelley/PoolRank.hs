@@ -158,7 +158,7 @@ likelihood blocks t slotsPerEpoch =
     -- f = active slot coefficient = 1/20
     -- t = 1 - (1-f)^(1/1,000,000)
     n = fromIntegral blocks
-    m = fromIntegral $ slotsPerEpoch - fromIntegral blocks
+    m = fromIntegral $ unEpochSize slotsPerEpoch - fromIntegral blocks
     l :: Double -> Double
     l x = n * log x + m * log (1 - t * x)
     sample position = LogWeight (realToFrac $ l position)

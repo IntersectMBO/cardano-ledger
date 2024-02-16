@@ -298,7 +298,7 @@ createInitialState tc =
     sg :: ShelleyGenesis (EraCrypto era)
     sg = tc ^. tcShelleyGenesisL
     initialEpochNo :: EpochNo
-    initialEpochNo = 0
+    initialEpochNo = EpochNo 0
     initialUtxo :: UTxO era
     initialUtxo = mempty
     reserves :: Coin

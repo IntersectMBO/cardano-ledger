@@ -48,7 +48,7 @@ import Cardano.Ledger.Shelley.PParams (
  )
 import Cardano.Ledger.Slot (
   Duration (Duration),
-  EpochNo (EpochNo),
+  EpochNo (..),
   SlotNo,
   epochInfoEpoch,
   epochInfoFirst,
@@ -214,7 +214,7 @@ ppupTransitionNonEmpty = do
               , futureProposals = ProposedPPUpdates fpupS
               }
         else do
-          currentEpoch + 1 == te ?! PPUpdateWrongEpoch currentEpoch te VoteForNextEpoch
+          succ currentEpoch == te ?! PPUpdateWrongEpoch currentEpoch te VoteForNextEpoch
           pure $
             pps
               { proposals = ProposedPPUpdates pupS

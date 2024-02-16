@@ -23,6 +23,7 @@ import Test.Cardano.Ledger.Constrained.V2.Conway
 import Test.Cardano.Ledger.Constrained.V2.Conway.PParams
 
 import Test.Cardano.Ledger.Core.Utils
+import Test.Cardano.Slotting.Numeric ()
 
 currentEpoch :: SlotNo -> EpochNo
 currentEpoch = runIdentity . EI.epochInfoEpoch (epochInfoPure testGlobals)
