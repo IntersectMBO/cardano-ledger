@@ -49,9 +49,11 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   expectMissingGovActionId,
   getRatifyEnv,
   calculateDRepAcceptedRatio,
+  calculatePoolAcceptedRatio,
   calculateCommitteeAcceptedRatio,
   logAcceptedRatio,
-  canGovActionBeDRepAccepted,
+  isDRepAccepted,
+  isSpoAccepted,
   logRatificationChecks,
   resignCommitteeColdKey,
   registerCommitteeHotKey,
@@ -72,6 +74,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   constitutionShouldBe,
   ccShouldBeResigned,
   ccShouldNotBeResigned,
+  getLastEnactedCommittee,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
@@ -156,7 +159,7 @@ import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
 import Test.Cardano.Ledger.Babbage.ImpTest (babbageFixupTx)
 import Test.Cardano.Ledger.Conway.TreeDiff ()
-import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 
@@ -254,29 +257,34 @@ setupSingleDRep ::
   ( ConwayEraTxCert era
   , ShelleyEraImp era
   ) =>
-  ImpTestM era (KeyHash 'DRepRole (EraCrypto era))
-setupSingleDRep = do
-  khDRep <- registerDRep
-
-  khDelegator <- freshKeyHash
-  kpDelegator <- lookupKeyPair khDelegator
-  kpSpending <- lookupKeyPair =<< freshKeyHash
+  Integer ->
+  ImpTestM
+    era
+    ( KeyHash 'DRepRole (EraCrypto era)
+    , KeyHash 'Staking (EraCrypto era)
+    , KeyPair 'Payment (EraCrypto era)
+    )
+setupSingleDRep stake = do
+  drepKH <- registerDRep
+  delegatorKH <- freshKeyHash
+  delegatorKP <- lookupKeyPair delegatorKH
+  spendingKP <- lookupKeyPair =<< freshKeyHash
   submitTxAnn_ "Delegate to DRep" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . outputsTxBodyL
         .~ SSeq.singleton
           ( mkBasicTxOut
-              (mkAddr (kpSpending, kpDelegator))
-              (inject $ Coin 1_000_000)
+              (mkAddr (spendingKP, delegatorKP))
+              (inject $ Coin stake)
           )
       & bodyTxL . certsTxBodyL
         .~ SSeq.fromList
           [ mkRegDepositDelegTxCert @era
-              (KeyHashObj khDelegator)
-              (DelegVote (DRepCredential $ KeyHashObj khDRep))
+              (KeyHashObj delegatorKH)
+              (DelegVote (DRepCredential $ KeyHashObj drepKH))
               zero
           ]
-  pure khDRep
+  pure (drepKH, delegatorKH, spendingKP)
 
 -- | Sets up a stake pool with coin delegated to it.
 --
@@ -286,7 +294,12 @@ setupSingleDRep = do
 setupPoolWithStake ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
   Coin ->
-  ImpTestM era (KeyHash 'StakePool (EraCrypto era))
+  ImpTestM
+    era
+    ( KeyHash 'StakePool (EraCrypto era)
+    , Credential 'Payment (EraCrypto era)
+    , Credential 'Staking (EraCrypto era)
+    )
 setupPoolWithStake delegCoin = do
   khPool <- registerPool
   credDelegatorPayment <- KeyHashObj <$> freshKeyHash
@@ -304,7 +317,7 @@ setupPoolWithStake delegCoin = do
               (DelegStake khPool)
               (pp ^. ppKeyDepositL)
           ]
-  pure khPool
+  pure (khPool, credDelegatorPayment, credDelegatorStaking)
 
 -- | Submits a transaction with a Vote for the given governance action as
 -- some voter
@@ -561,6 +574,11 @@ logProposalsForest = do
   proposals <- getProposals
   logEntry $ proposalsShowDebug proposals True
 
+getLastEnactedCommittee :: ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'CommitteePurpose era))
+getLastEnactedCommittee = do
+  ps <- getProposals
+  pure $ ps ^. pRootsL . grCommitteeL . prRootL
+
 logProposalsForestDiff ::
   (Era era, ToExpr (PParamsHKD StrictMaybe era)) =>
   Proposals era ->
@@ -692,39 +710,38 @@ logAcceptedRatio aId = do
       , "SPO accepted ratio:\t\t" <> show spoRatio
       ]
 
+getRatifyEnvAndState :: ConwayEraGov era => ImpTestM era (RatifyEnv era, RatifyState era)
+getRatifyEnvAndState = do
+  ratifyEnv <- getRatifyEnv
+  enactState <- getEnactState
+  let ratifyState =
+        RatifyState
+          { rsEnactState = enactState
+          , rsEnacted = mempty
+          , rsExpired = mempty
+          , rsDelayed = False
+          }
+  pure (ratifyEnv, ratifyState)
+
 -- | Checks whether the governance action has enough DRep votes to be accepted in the next
 -- epoch. (Note that no other checks execept DRep votes is used)
-canGovActionBeDRepAccepted ::
+isDRepAccepted ::
   (HasCallStack, ConwayEraGov era, ConwayEraPParams era) =>
   GovActionId (EraCrypto era) ->
   ImpTestM era Bool
-canGovActionBeDRepAccepted gaId = do
-  eNo <- getsNES nesELL
-  stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
-  poolDistr <- getsNES nesPdL
-  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
-  drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+isDRepAccepted gaId = do
+  (ratifyEnv, ratifyState) <- getRatifyEnvAndState
   action <- getGovActionState gaId
-  enactSt <- getEnactState
-  committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
-  let
-    ratEnv =
-      RatifyEnv
-        { reStakePoolDistr = poolDistr
-        , reStakeDistr = credMap stakeDistr
-        , reDRepState = drepState
-        , reDRepDistr = drepDistr
-        , reCurrentEpoch = eNo
-        , reCommitteeState = committeeState
-        }
-    ratSt =
-      RatifyState
-        { rsEnactState = enactSt
-        , rsEnacted = mempty
-        , rsExpired = mempty
-        , rsDelayed = False
-        }
-  pure $ dRepAccepted ratEnv ratSt action
+  pure $ dRepAccepted ratifyEnv ratifyState action
+
+isSpoAccepted ::
+  (HasCallStack, ConwayEraGov era, ConwayEraPParams era) =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era Bool
+isSpoAccepted gaId = do
+  (ratifyEnv, ratifyState) <- getRatifyEnvAndState
+  action <- getGovActionState gaId
+  pure $ spoAccepted ratifyEnv ratifyState action
 
 -- | Logs the results of each check required to make the governance action pass
 logRatificationChecks ::
@@ -846,7 +863,7 @@ electBasicCommittee = do
       & ppCommitteeMaxTermLengthL .~ EpochInterval 20
       & ppGovActionLifetimeL .~ EpochInterval 2
       & ppGovActionDepositL .~ Coin 123
-  khDRep <- setupSingleDRep
+  (khDRep, _, _) <- setupSingleDRep 1_000_000
 
   logEntry "Registering committee member"
   khCommitteeMember <- KeyHashObj <$> freshKeyHash

@@ -82,18 +82,18 @@ spec =
 
       logRatificationChecks gaidConstitutionProp
       do
-        isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
+        isAccepted <- isDRepAccepted gaidConstitutionProp
         assertBool "Gov action should not be accepted" $ not isAccepted
       submitYesVote_ (DRepVoter dRepCred) gaidConstitutionProp
       submitYesVote_ (CommitteeVoter committeeHotCred) gaidConstitutionProp
       logAcceptedRatio gaidConstitutionProp
       do
-        isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
+        isAccepted <- isDRepAccepted gaidConstitutionProp
         assertBool "Gov action should be accepted" isAccepted
 
       passEpoch
       do
-        isAccepted <- canGovActionBeDRepAccepted gaidConstitutionProp
+        isAccepted <- isDRepAccepted gaidConstitutionProp
         assertBool "Gov action should be accepted" isAccepted
       logAcceptedRatio gaidConstitutionProp
       logRatificationChecks gaidConstitutionProp
