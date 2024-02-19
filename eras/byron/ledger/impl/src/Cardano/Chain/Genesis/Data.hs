@@ -22,6 +22,7 @@ import Cardano.Chain.Genesis.Delegation (GenesisDelegation)
 import Cardano.Chain.Genesis.Hash (GenesisHash (..))
 import Cardano.Chain.Genesis.KeyHashes (GenesisKeyHashes)
 import Cardano.Chain.Genesis.NonAvvmBalances (GenesisNonAvvmBalances)
+import Cardano.Chain.Slotting (SlotCount)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Crypto (
   ProtocolMagicId (..),
@@ -60,6 +61,7 @@ data GenesisData = GenesisData
   , gdK :: !BlockCount
   , gdProtocolMagicId :: !ProtocolMagicId
   , gdAvvmDistr :: !GenesisAvvmBalances
+  , gdGenesisWindow :: !SlotCount
   }
   deriving (Show, Eq, Generic, NoThunks)
 
@@ -81,6 +83,7 @@ instance Monad m => ToJSON m GenesisData where
             ]
         )
       , ("avvmDistr", toJSON $ gdAvvmDistr gd)
+      , ("genesisWindow", toJSON $ gdGenesisWindow gd)
       ]
 
 instance MonadError SchemaError m => FromJSON m GenesisData where
@@ -101,6 +104,7 @@ instance MonadError SchemaError m => FromJSON m GenesisData where
       <*> (BlockCount . fromIntegral @Int54 <$> fromJSField protocolConsts "k")
       <*> (ProtocolMagicId <$> fromJSField protocolConsts "protocolMagic")
       <*> fromJSField obj "avvmDistr"
+      <*> fromJSField obj "genesisWindow"
 
 data GenesisDataError
   = GenesisDataParseError Text
@@ -136,6 +140,7 @@ instance EncCBOR GenesisData where
         gdK_
         gdProtocolMagicId_
         gdAvvmDistr_
+        gdGenesisWindow_
       ) =
       mconcat
         [ encodeListLen 8
@@ -147,6 +152,7 @@ instance EncCBOR GenesisData where
         , encCBOR @BlockCount gdK_
         , encCBOR @ProtocolMagicId gdProtocolMagicId_
         , encCBOR @GenesisAvvmBalances gdAvvmDistr_
+        , encCBOR @SlotCount gdGenesisWindow_
         ]
 
 instance DecCBOR GenesisData where
@@ -161,6 +167,7 @@ instance DecCBOR GenesisData where
       <*> decCBOR @BlockCount
       <*> decCBOR @ProtocolMagicId
       <*> decCBOR @GenesisAvvmBalances
+      <*> decCBOR @SlotCount
 
 -- | Parse @GenesisData@ from a JSON file and annotate with Canonical JSON hash
 readGenesisData ::

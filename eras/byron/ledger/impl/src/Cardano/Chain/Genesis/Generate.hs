@@ -311,6 +311,7 @@ generateGenesisDataWithEntropy startTime genesisSpec = do
           , gdK = gsK genesisSpec
           , gdProtocolMagicId = getProtocolMagicId pm
           , gdAvvmDistr = fakeAvvmDistr <> realAvvmMultiplied
+          , gdGenesisWindow = 0x314
           }
 
   pure (genesisData, generatedSecrets)

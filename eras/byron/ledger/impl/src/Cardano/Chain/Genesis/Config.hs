@@ -20,6 +20,7 @@ module Cardano.Chain.Genesis.Config (
   configNonAvvmBalances,
   configProtocolParameters,
   configAvvmDistr,
+  configGenesisWindow,
   mkConfigFromFile,
 )
 where
@@ -130,6 +131,9 @@ configProtocolParameters = gdProtocolParameters . configGenesisData
 
 configAvvmDistr :: Config -> GenesisAvvmBalances
 configAvvmDistr = gdAvvmDistr . configGenesisData
+
+configGenesisWindow :: Config -> SlotCount
+configGenesisWindow = gdGenesisWindow . configGenesisData
 
 -- | Construct a 'Config' from an external genesis file.
 --
