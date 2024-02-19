@@ -37,7 +37,6 @@ import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (zero)
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..), traverse_)
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import qualified Data.Sequence as Seq
@@ -681,31 +680,6 @@ spec =
                       SNothing
                   )
           submitGovAction_ constitutionAction1
-    describe "Votes fail as expected" $ do
-      it "on expired gov-actions" $ do
-        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2 -- Voting after the 3rd epoch should fail
-        (khDRep, _, _) <- setupSingleDRep 1_000_000
-        gaidConstitutionProp <- submitInitConstitutionGovAction
-        passEpoch
-        passEpoch
-        passEpoch
-        let voter = DRepVoter $ KeyHashObj khDRep
-        submitFailingVote
-          voter
-          gaidConstitutionProp
-          [ injectFailure $
-              VotingOnExpiredGovAction $
-                (voter, gaidConstitutionProp) NE.:| []
-          ]
-      it "on non-existant gov-actions" $ do
-        (khDRep, _, _) <- setupSingleDRep 1_000_000
-        gaidConstitutionProp <- submitInitConstitutionGovAction
-        let voter = DRepVoter $ KeyHashObj khDRep
-            dummyGaid = gaidConstitutionProp {gaidGovActionIx = GovActionIx 99} -- non-existant `GovActionId`
-        submitFailingVote
-          voter
-          dummyGaid
-          [injectFailure $ GovActionsDoNotExist $ dummyGaid NE.:| []]
 
     describe "Voting" $ do
       context "fails for" $ do
