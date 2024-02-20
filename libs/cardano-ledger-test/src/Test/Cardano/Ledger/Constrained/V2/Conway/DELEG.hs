@@ -36,6 +36,7 @@ delegCertSpec ::
 delegCertSpec pp ds =
   let rewardMap = unUnify $ rewards ds
       delegMap = unUnify $ delegations ds
+      zeroReward = (== 0) . fromCompact . rdReward
       depositOf k =
         case fromCompact . rdDeposit <$> Map.lookup k rewardMap of
           Just d | d > 0 -> SJust d
@@ -46,7 +47,7 @@ delegCertSpec pp ds =
           (branch $ \_ mc -> mc ==. lit (SJust (pp ^. ppKeyDepositL)))
           -- ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
           ( branch $ \sc mc ->
-              [ assert $ elem_ sc $ lit (Map.keys $ Map.filter ((== 0) . fromCompact . rdReward) rewardMap)
+              [ assert $ elem_ sc $ lit (Map.keys $ Map.filter zeroReward rewardMap)
               , assert $ elem_ sc $ lit (Map.keys delegMap)
               , reify sc depositOf (==. mc)
               ]
