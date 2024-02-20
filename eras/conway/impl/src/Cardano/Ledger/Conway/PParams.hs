@@ -702,7 +702,7 @@ instance Crypto c => BabbageEraPParams (ConwayEra c) where
 instance Crypto c => ConwayEraPParams (ConwayEra c) where
   modifiedPPGroups (PParamsUpdate ppu) = conwayModifiedPPGroups ppu
   ppuWellFormed ppu =
-    and $
+    and
       [ -- Numbers
         isValid (/= 0) ppuMaxBBSizeL
       , isValid (/= 0) ppuMaxTxSizeL
@@ -717,7 +717,6 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
       , isValid (/= zero) ppuDRepDepositL
       , ppu /= emptyPParamsUpdate
       ]
-        <> [govActionLifeTimeWithinDRepActivity]
     where
       isValid ::
         (t -> Bool) ->
@@ -726,12 +725,6 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
       isValid p l = case ppu ^. l of
         SJust x -> p x
         SNothing -> True
-      govActionLifeTimeWithinDRepActivity =
-        case (ppu ^. ppuGovActionLifetimeL, ppu ^. ppuDRepActivityL) of
-          (SNothing, SNothing) -> True
-          (SJust _, SNothing) -> True
-          (SJust govActionLifetime, SJust drepActivity) -> govActionLifetime <= drepActivity
-          _ -> False
   hkdPoolVotingThresholdsL =
     lens (unTHKD . cppPoolVotingThresholds) $ \pp x -> pp {cppPoolVotingThresholds = THKD x}
   hkdDRepVotingThresholdsL =

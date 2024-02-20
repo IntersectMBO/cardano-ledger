@@ -135,38 +135,6 @@ spec =
               }
           )
           [injectFailure $ MalformedProposal ga]
-      context "PPU GovActionLifetime cannot be greater than DRepActivity" $ do
-        let
-          runTest ga = do
-            rew <- registerRewardAccount
-            pp <- getsNES $ nesEsL . curPParamsEpochStateL
-            submitFailingProposal
-              ( ProposalProcedure
-                  { pProcReturnAddr = rew
-                  , pProcGovAction = ga
-                  , pProcDeposit = pp ^. ppGovActionDepositL
-                  , pProcAnchor = def
-                  }
-              )
-              [injectFailure $ MalformedProposal ga]
-        it "GovActionLifetime greater than DRepActivity" $
-          runTest $
-            ParameterChange
-              SNothing
-              ( emptyPParamsUpdate
-                  & ppuGovActionLifetimeL .~ SJust (EpochInterval 11)
-                  & ppuDRepActivityL .~ SJust (EpochInterval 10)
-              )
-              SNothing
-        it "GovActionLifetime as SNothing, DRepActivity as SJust" $
-          runTest $
-            ParameterChange
-              SNothing
-              ( emptyPParamsUpdate
-                  & ppuGovActionLifetimeL .~ SNothing
-                  & ppuDRepActivityL .~ SJust (EpochInterval 10)
-              )
-              SNothing
     context "Proposal-forests" $ do
       context "GOV, EPOCH, RATIFY and ENACT" $ do
         it "Proposals submitted without proper parent fail" $ do
