@@ -64,19 +64,18 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Control.Monad (forM)
+import Control.Monad (forM, join)
 import Data.Default.Class (Default)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromElems)
 import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Lens.Micro ((%~), (&), (.~), (<>~), (^.))
+import Lens.Micro
 import Lens.Micro.Mtl (use, (%=), (.=))
 import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Imp.Common (expectJust)
 import Test.Cardano.Ledger.Plutus (PlutusArgs (..), ScriptTestContext (..), testingCostModels)
 import Test.Cardano.Ledger.Shelley.ImpTest as ImpTest
 
@@ -203,26 +202,34 @@ fixupDatums ::
   ImpTestM era (Tx era)
 fixupDatums tx = do
   contexts <- impGetPlutusContexts tx
-  scripts <- use impScriptsL
-  let
-    txOutScriptHash txOut
-      | Addr _ (ScriptHashObj sh) _ <- txOut ^. addrTxOutL = sh
-      | otherwise = error "TxOut does not have a payment script"
-    spendDatum (ScriptTestContext _ (PlutusArgs _ (Just d))) = Data d
-    spendDatum _ = error "Context does not have a spending datum"
-    filterInline (purpose, _, _) = do
-      AsItem txIn <- expectJust . toSpendingPurpose $ hoistPlutusPurpose toAsItem purpose
-      txOut <- impLookupUTxO @era txIn
-      pure $ case txOut ^. datumTxOutF of
-        DatumHash _dh -> spendDatum <$> Map.lookup (txOutScriptHash txOut) scripts
-        _ -> Nothing
-  datums <- traverse filterInline contexts
+  let purposes = (^. _1) <$> contexts
+  datums <- traverse collectDatums purposes
   let TxDats prevDats = tx ^. witsTxL . datsTxWitsL
   pure $
     tx
       & witsTxL . datsTxWitsL
         .~ TxDats
           (Map.union prevDats $ fromElems hashData (catMaybes datums))
+  where
+    collectDatums :: PlutusPurpose AsIxItem era -> ImpTestM era (Maybe (Data era))
+    collectDatums purpose = do
+      let txIn = unAsItem <$> toSpendingPurpose (hoistPlutusPurpose toAsItem purpose)
+      txOut <- traverse (impLookupUTxO @era) txIn
+      join <$> traverse getData txOut
+
+    getData :: TxOut era -> ImpTestM era (Maybe (Data era))
+    getData txOut = do
+      scripts <- use impScriptsL
+      pure $ case txOut ^. datumTxOutF of
+        DatumHash _dh -> spendDatum <$> Map.lookup (txOutScriptHash txOut) scripts
+        _ -> Nothing
+
+    txOutScriptHash txOut
+      | Addr _ (ScriptHashObj sh) _ <- txOut ^. addrTxOutL = sh
+      | otherwise = error "TxOut does not have a payment script"
+
+    spendDatum (ScriptTestContext _ (PlutusArgs _ (Just d))) = Data d
+    spendDatum _ = error "Context does not have a spending datum"
 
 fixupPPHash ::
   forall era.
