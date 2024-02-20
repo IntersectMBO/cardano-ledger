@@ -40,7 +40,7 @@ delegCertSpec pp ds =
       depositOf k =
         case fromCompact . rdDeposit <$> Map.lookup k rewardMap of
           Just d | d > 0 -> SJust d
-          _              -> SNothing
+          _ -> SNothing
    in constrained $ \dc ->
         (caseOn dc)
           -- ConwayRegCert !(StakeCredential c) !(StrictMaybe Coin)
