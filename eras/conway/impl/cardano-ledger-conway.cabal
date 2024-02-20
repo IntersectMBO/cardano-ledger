@@ -151,7 +151,8 @@ library testlib
         data-default-class,
         generic-random,
         small-steps,
-        text
+        text,
+        small-steps
 
 test-suite tests
     type:             exitcode-stdio-1.0

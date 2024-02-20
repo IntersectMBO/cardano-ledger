@@ -32,6 +32,9 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError)
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),
@@ -85,6 +88,7 @@ import qualified Data.MapExtras as Map (fromElems)
 import qualified Data.Set as Set
 import Data.Text (pack)
 import Data.Word
+import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Common
@@ -310,14 +314,26 @@ instance Arbitrary TagMismatchDescription where
     oneof [pure PassedUnexpectedly, FailedUnexpectedly <$> ((:|) <$> arbitrary <*> arbitrary)]
 
 instance
-  (Era era, Arbitrary (EraRuleFailure "PPUP" era)) =>
+  ( Era era
+  , Arbitrary (EraRuleFailure "PPUP" era)
+  , Arbitrary (PlutusPurpose AsItem era)
+  , Arbitrary (ContextError era)
+  ) =>
   Arbitrary (AlonzoUtxosPredFailure era)
   where
-  arbitrary =
-    oneof
-      [ ValidationTagMismatch <$> arbitrary <*> arbitrary
-      , UpdateFailure <$> arbitrary
-      ]
+  arbitrary = genericArbitraryU
+
+instance
+  ( Era era
+  , Arbitrary (PlutusPurpose AsItem era)
+  , Arbitrary (ContextError era)
+  ) =>
+  Arbitrary (CollectError era)
+  where
+  arbitrary = genericArbitraryU
+
+instance Era era => Arbitrary (AlonzoContextError era) where
+  arbitrary = genericArbitraryU
 
 instance
   ( EraTxOut era
@@ -328,26 +344,7 @@ instance
   ) =>
   Arbitrary (AlonzoUtxoPredFailure era)
   where
-  arbitrary =
-    oneof
-      [ BadInputsUTxO <$> arbitrary
-      , OutsideValidityIntervalUTxO <$> arbitrary <*> arbitrary
-      , MaxTxSizeUTxO <$> arbitrary <*> arbitrary
-      , pure InputSetEmptyUTxO
-      , FeeTooSmallUTxO <$> arbitrary <*> arbitrary
-      , ValueNotConservedUTxO <$> arbitrary <*> arbitrary
-      , OutputTooSmallUTxO <$> arbitrary
-      , UtxosFailure <$> arbitrary
-      , WrongNetwork <$> arbitrary <*> arbitrary
-      , WrongNetworkWithdrawal <$> arbitrary <*> arbitrary
-      , OutputBootAddrAttrsTooBig <$> arbitrary
-      , pure TriesToForgeADA
-      , OutputTooBigUTxO <$> arbitrary
-      , InsufficientCollateral <$> arbitrary <*> arbitrary
-      , ScriptsNotPaidUTxO <$> arbitrary
-      , ExUnitsTooBigUTxO <$> arbitrary <*> arbitrary
-      , CollateralContainsNonADA <$> arbitrary
-      ]
+  arbitrary = genericArbitraryU
 
 instance
   ( Era era
@@ -355,16 +352,11 @@ instance
   , Arbitrary (ShelleyUtxowPredFailure era)
   , Arbitrary (TxCert era)
   , Arbitrary (PlutusPurpose AsItem era)
+  , Arbitrary (PlutusPurpose AsIx era)
   ) =>
   Arbitrary (AlonzoUtxowPredFailure era)
   where
-  arbitrary =
-    oneof
-      [ ShelleyInAlonzoUtxowPredFailure <$> arbitrary
-      , MissingRedeemers <$> arbitrary
-      , MissingRequiredDatums <$> arbitrary <*> arbitrary
-      , PPViewHashesDontMatch <$> arbitrary <*> arbitrary
-      ]
+  arbitrary = genericArbitraryU
 
 deriving instance Arbitrary ix => Arbitrary (AsIx ix it)
 
