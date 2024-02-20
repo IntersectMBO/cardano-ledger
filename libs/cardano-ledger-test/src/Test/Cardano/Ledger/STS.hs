@@ -276,8 +276,8 @@ govTests =
     "GOV tests"
     [ testProperty "prop_GOVCERT" prop_GOVCERT
     , testProperty "prop_POOL" prop_POOL
-    , -- , testProperty "prop_DELEG" prop_DELEG
-      testProperty "prop_ENACT" prop_ENACT
+    , testProperty "prop_DELEG" prop_DELEG
+    , testProperty "prop_ENACT" prop_ENACT
     , testProperty "prop_RATIFY" prop_RATIFY
     -- , testProperty "prop_GOV" prop_GOV
     -- , testProperty "prop_CERT" prop_CERT
