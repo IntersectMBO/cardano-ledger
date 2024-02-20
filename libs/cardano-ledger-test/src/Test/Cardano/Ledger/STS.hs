@@ -279,8 +279,8 @@ govTests =
     , testProperty "prop_DELEG" prop_DELEG
     , testProperty "prop_ENACT" prop_ENACT
     , testProperty "prop_RATIFY" prop_RATIFY
+    , testProperty "prop_CERT" prop_CERT
     -- , testProperty "prop_GOV" prop_GOV
-    -- , testProperty "prop_CERT" prop_CERT
     ]
 
 utxoTests :: TestTree
