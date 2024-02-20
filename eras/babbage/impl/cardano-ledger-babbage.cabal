@@ -116,6 +116,7 @@ library testlib
         cardano-ledger-babbage,
         cardano-ledger-binary,
         cardano-ledger-core:{cardano-ledger-core, testlib},
+        generic-random,
         small-steps,
         QuickCheck
 
