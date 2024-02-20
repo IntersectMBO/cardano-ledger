@@ -29,6 +29,7 @@ import Data.Ratio ((%))
 import Paths_cardano_ledger_conway (getDataFileName)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
+import Test.Cardano.Slotting.Numeric ()
 
 spec :: Spec
 spec = do

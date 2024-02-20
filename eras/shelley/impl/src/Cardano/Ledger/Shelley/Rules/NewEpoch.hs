@@ -41,7 +41,7 @@ import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
 import Cardano.Ledger.Shelley.Rules.Mir (ShelleyMIR, ShelleyMirEvent, ShelleyMirPredFailure)
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
-import Cardano.Ledger.Slot (EpochNo (EpochNo))
+import Cardano.Ledger.Slot (EpochNo (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.State.Transition
@@ -162,7 +162,7 @@ newEpochTransition = do
       , eNo
       ) <-
     judgmentContext
-  if eNo /= eNoL + 1
+  if eNo /= succ eNoL
     then pure src
     else do
       es' <- case ru of

@@ -47,7 +47,7 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   MemberStatus (..),
   NextEpochChange (..),
  )
-import Cardano.Ledger.BaseTypes (EpochNo, UnitInterval, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), UnitInterval, binOpEpochNo, strictMaybeToMaybe)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
@@ -134,9 +134,9 @@ queryDRepState nes creds
   | null creds = drepsState
   | otherwise =
       drepsState `Map.restrictKeys` creds
-        & if numDormantEpochs == 0
+        & if numDormantEpochs == EpochNo 0
           then id
-          else (<&> drepExpiryL %~ (+ numDormantEpochs))
+          else (<&> drepExpiryL %~ binOpEpochNo (+) numDormantEpochs)
   where
     drepsState = vsDReps $ certVState $ lsCertState $ esLState $ nesEs nes
     numDormantEpochs = vsNumDormantEpochs $ certVState $ lsCertState $ esLState $ nesEs nes

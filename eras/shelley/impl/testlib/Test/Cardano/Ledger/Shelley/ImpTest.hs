@@ -205,6 +205,7 @@ import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (PlutusArgs, ScriptTestContext)
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
+import Test.Cardano.Slotting.Numeric ()
 import Test.HUnit.Lang (FailureReason (..), HUnitFailure (..))
 import Test.Hspec.Core.Spec (Example (..), Params, paramsQuickCheckArgs)
 import Test.QuickCheck.Gen (Gen (..))

@@ -52,6 +52,7 @@ import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary (genValidUMapWithCreds)
 import Test.Cardano.Ledger.Shelley.Arbitrary ()
+import Test.Cardano.Slotting.Numeric ()
 
 spec :: Spec
 spec = do

@@ -147,6 +147,7 @@ import Test.Cardano.Protocol.TPraos.Create (
   mkBlockFakeVRF,
   mkOCert,
  )
+import Test.Cardano.Slotting.Numeric ()
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 

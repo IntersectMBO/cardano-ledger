@@ -116,7 +116,7 @@ import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Void (Void, absurd)
-import Lens.Micro ((%~), (&), (+~), (.~), (<>~), (^.))
+import Lens.Micro ((%~), (&), (.~), (<>~), (^.))
 
 data ConwayEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
@@ -183,7 +183,7 @@ returnProposalDeposits removedProposals oldUMap =
 updateNumDormantEpochs :: DRepPulsingState era -> VState era -> VState era
 updateNumDormantEpochs pulser vState =
   if dormantEpoch pulser
-    then vState & vsNumDormantEpochsL +~ 1
+    then vState & vsNumDormantEpochsL %~ succ
     else vState
 
 -- | Apply TreasuryWithdrawals to the EpochState

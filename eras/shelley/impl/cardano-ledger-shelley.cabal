@@ -164,6 +164,7 @@ library testlib
         cardano-ledger-byron-test,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley,
+        cardano-slotting:testlib,
         cardano-strict-containers,
         containers,
         generic-random,

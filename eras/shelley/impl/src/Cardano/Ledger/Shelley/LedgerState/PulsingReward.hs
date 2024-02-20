@@ -136,7 +136,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       d = unboundRational (pr ^. ppDG)
       expectedBlocks =
         floor $
-          (1 - d) * unboundRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
+          (1 - d) * unboundRational (activeSlotVal asc) * (fromIntegral $ unEpochSize slotsPerEpoch)
       -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
       -- it would be nice to not have to compute expectedBlocks every epoch
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
