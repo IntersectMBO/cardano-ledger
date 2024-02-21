@@ -223,6 +223,12 @@ CHaP. (TODO: implement a script that lists all of the package that fit the above
    this stage, because it will later be used for deciding which package have changed and
    can be released.
 
+##### Adding revisions
+
+As mentioned above, sometimes a release could break downstream packages in which case you will need to add revisions.
+The instructions [here](https://github.com/IntersectMBO/cardano-ledger/blob/master/REVISIONING.md) will walk you through a specific case that we had when we released some packages in `cardano-base`
+and will also provide general instructions on how to add and test revisions.
+
 #### Backporting changes
 
 It is occasionally necessary to release a minor version for a package that has its history
