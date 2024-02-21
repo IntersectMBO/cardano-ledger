@@ -16,7 +16,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   impAddPlutusScript,
   impLookupPlutusScript,
   fixupPPHash,
-  fixupPlutusScripts,
+  fixupRedeemers,
   addCollateralInput,
   alonzoFixupTx,
   impGetPlutusContexts,
@@ -141,7 +141,7 @@ impGetPlutusContexts tx = do
     pure $ (prp,sh,) <$> ctx
   pure $ catMaybes mbyContexts
 
-fixupPlutusScripts ::
+fixupRedeemers ::
   forall era.
   ( EraUTxO era
   , EraGov era
@@ -151,7 +151,7 @@ fixupPlutusScripts ::
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
-fixupPlutusScripts tx = do
+fixupRedeemers tx = do
   contexts <- impGetPlutusContexts tx
   exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
   let
@@ -273,7 +273,7 @@ alonzoFixupTx =
   addNativeScriptTxWits
     >=> addCollateralInput
     >=> addRootTxIn
-    >=> fixupPlutusScripts
+    >=> fixupRedeemers
     >=> fixupScriptWits
     >=> fixupDatums
     >=> fixupPPHash

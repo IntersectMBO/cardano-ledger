@@ -27,7 +27,7 @@
 * Add `zipAsIxItem`
 
 ### `testlib`
-
+* Rename `fixupPlutusScripts` to `fixupRedeemers`
 * Add:
   * `impLookupPlutusScript`
   * `fixupPPHash`
