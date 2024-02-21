@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Remove `getNextEpochCommitteeMembers` from `EraGov`
 * Deprecated `PPUPPredFailure`
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Remove `poolCertTransition`

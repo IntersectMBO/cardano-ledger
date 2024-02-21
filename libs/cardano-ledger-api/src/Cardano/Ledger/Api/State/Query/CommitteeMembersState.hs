@@ -148,7 +148,7 @@ toCommitteeMemberStatePairs c@(CommitteeMemberState _ _ _ _) =
 
 data CommitteeMembersState c = CommitteeMembersState
   { csCommittee :: !(Map (Credential 'ColdCommitteeRole c) (CommitteeMemberState c))
-  , csThreshold :: !UnitInterval
+  , csThreshold :: !(Maybe UnitInterval)
   , csEpochNo :: !EpochNo
   -- ^ Current epoch number. This is necessary to interpret committee member states
   }
