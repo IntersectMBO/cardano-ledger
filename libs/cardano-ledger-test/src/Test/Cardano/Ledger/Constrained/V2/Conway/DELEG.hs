@@ -47,9 +47,11 @@ delegCertSpec pp ds =
           (branch $ \_ mc -> mc ==. lit (SJust (pp ^. ppKeyDepositL)))
           -- ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
           ( branch $ \sc mc ->
-              [ assert $ elem_ sc $ lit (Map.keys $ Map.filter zeroReward rewardMap)
+              [ -- You can only unregister things with 0 reward
+                assert $ elem_ sc $ lit (Map.keys $ Map.filter zeroReward rewardMap)
               , assert $ elem_ sc $ lit (Map.keys delegMap)
-              , reify sc depositOf (==. mc)
+              , -- The `StrictMaybe` needs to be precisely what is in the delegation map
+                reify sc depositOf (==. mc)
               ]
           )
           -- ConwayDelegCert !(StakeCredential c) !(Delegatee c)
