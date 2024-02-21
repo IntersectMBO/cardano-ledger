@@ -33,6 +33,7 @@ import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Val (zero)
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..), traverse_)
 import qualified Data.List.NonEmpty as NE
@@ -64,6 +65,76 @@ spec =
       it "Hardfork minorFollow" (secondHardForkFollows minorFollow)
       it "Hardfork majorFollow" (secondHardForkFollows majorFollow)
       it "Hardfork cantFollow" secondHardForkCantFollow
+    describe "PPU needs to be wellformed" $ do
+      let testMalformedProposal lbl lenz val = it lbl $ do
+            pp <- getsNES $ nesEsL . curPParamsEpochStateL
+            rew <- registerRewardAccount
+            let ppUpdate =
+                  emptyPParamsUpdate
+                    & lenz .~ SJust val
+                ga = ParameterChange SNothing ppUpdate SNothing
+            submitFailingProposal
+              ( ProposalProcedure
+                  { pProcReturnAddr = rew
+                  , pProcGovAction = ga
+                  , pProcDeposit = pp ^. ppGovActionDepositL
+                  , pProcAnchor = def
+                  }
+              )
+              [injectFailure $ MalformedProposal ga]
+      testMalformedProposal
+        "ppuMaxBBSizeL cannot be 0"
+        ppuMaxBBSizeL
+        0
+      testMalformedProposal
+        "ppuMaxTxSizeL cannot be 0"
+        ppuMaxTxSizeL
+        0
+      testMalformedProposal
+        "ppuMaxBHSizeL cannot be 0"
+        ppuMaxBHSizeL
+        0
+      testMalformedProposal
+        "ppuMaxValSizeL cannot be 0"
+        ppuMaxValSizeL
+        0
+      testMalformedProposal
+        "ppuCollateralPercentageL cannot be 0"
+        ppuCollateralPercentageL
+        0
+      testMalformedProposal
+        "ppuCommitteeMaxTermLengthL cannot be 0"
+        ppuCommitteeMaxTermLengthL
+        $ EpochInterval 0
+      testMalformedProposal
+        "ppuGovActionLifetimeL cannot be 0"
+        ppuGovActionLifetimeL
+        $ EpochInterval 0
+      testMalformedProposal
+        "ppuPoolDepositL cannot be 0"
+        ppuPoolDepositL
+        zero
+      testMalformedProposal
+        "ppuGovActionDepositL cannot be 0"
+        ppuGovActionDepositL
+        zero
+      testMalformedProposal
+        "ppuDRepDepositL cannot be 0"
+        ppuDRepDepositL
+        zero
+      it "PPU cannot be empty" $ do
+        pp <- getsNES $ nesEsL . curPParamsEpochStateL
+        rew <- registerRewardAccount
+        let ga = ParameterChange SNothing emptyPParamsUpdate SNothing
+        submitFailingProposal
+          ( ProposalProcedure
+              { pProcReturnAddr = rew
+              , pProcGovAction = ga
+              , pProcDeposit = pp ^. ppGovActionDepositL
+              , pProcAnchor = def
+              }
+          )
+          [injectFailure $ MalformedProposal ga]
     context "Proposal-forests" $ do
       context "GOV, EPOCH, RATIFY and ENACT" $ do
         it "Proposals submitted without proper parent fail" $ do
