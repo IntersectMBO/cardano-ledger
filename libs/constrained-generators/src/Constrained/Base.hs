@@ -333,6 +333,11 @@ data Pred (fn :: [Type] -> Type -> Type) where
     -- encoded with `ProdOver` (c.f. `Constrained.Univ`).
     List (Binder fn) as ->
     Pred fn
+  GenHint ::
+    HasGenHint fn a =>
+    Hint a ->
+    Term fn a ->
+    Pred fn
   TruePred :: Pred fn
   FalsePred :: [String] -> Pred fn
 
@@ -439,6 +444,7 @@ checkPred env = \case
   Subst x t p -> checkPred env $ substitutePred x t p
   Assert [] t -> runTerm env t
   Assert es t -> explain ("assert:" : map ("  " ++) es) $ runTerm env t
+  GenHint {} -> pure True
   Reify t f (x :-> p) -> do
     val <- runTerm env t
     checkPred (extendEnv x (f val) env) p
@@ -529,6 +535,10 @@ instance HasSpec fn a => Semigroup (Spec fn a) where
   ErrorSpec e <> ErrorSpec e' = ErrorSpec (e ++ "" : (replicate 20 '-') : "" : e')
   ErrorSpec e <> _ = ErrorSpec e
   _ <> ErrorSpec e = ErrorSpec e
+  MemberSpec [a] <> spec
+    | a `conformsToSpec` spec = MemberSpec [a]
+    | otherwise = ErrorSpec [show a, "does not conform to", show spec]
+  spec <> MemberSpec [a] = MemberSpec [a] <> spec
   MemberSpec as <> MemberSpec as' = MemberSpec $ intersect as as'
   MemberSpec as <> TypeSpec s cant =
     MemberSpec $
@@ -711,6 +721,14 @@ class Forallable t e | t -> e where
     [e]
   forAllToList t = forAllToList (toSimpleRep t)
 
+-- The HasGenHint class ---------------------------------------------------
+
+-- | Hints are things that only affect generation, and not validation. For instance, parameters to
+--   control distribution of generated values.
+class (HasSpec fn a, Show (Hint a)) => HasGenHint fn a where
+  type Hint a
+  giveHint :: Hint a -> Spec fn a
+
 -- Semantics of specs -----------------------------------------------------
 
 conformsToSpecM :: forall fn a m. (HasSpec fn a, MonadGenError m, Alternative m) => a -> Spec fn a -> m ()
@@ -833,6 +851,7 @@ computeDependencies hints =
     Block ps -> foldMap (computeDependencies hints) ps
     Exists _ b -> computeBinderDependencies hints b
     Let t b -> noDependencies t <> computeBinderDependencies hints b
+    GenHint _ t -> noDependencies t
 
 -- | Linearize a predicate, turning it into a list of variables to solve and
 -- their defining constraints such that each variable can be solved independently.
@@ -916,6 +935,7 @@ linearize preds graph = do
 -- | Precondition: the `Pred fn` defines the `Var a`
 computeSpec :: forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Spec fn a
 computeSpec x p = fromGE ErrorSpec $ case simplifyPred p of
+  GenHint h t -> propagateSpec (giveHint h) <$> toCtx x t -- NOTE: this implies you do need to actually propagate hints, e.g. propagate depth control in a `tail` or `cdr` like function
   Subst x' t p' -> pure $ computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
   FalsePred es -> genError es
@@ -1126,6 +1146,7 @@ instance HasVariables fn (Term fn a) where
 
 instance HasVariables fn (Pred fn) where
   freeVars = \case
+    GenHint _ t -> freeVars t
     Subst x t p -> freeVars t <> freeVars p `without` [Name x]
     Block ps -> foldMap freeVars ps
     Let t b -> freeVars t <> freeVars b
@@ -1200,6 +1221,7 @@ substituteBinder x tm (y :-> p) = y' :-> substitutePred x tm p'
 
 substitutePred :: HasSpec fn a => Var a -> Term fn a -> Pred fn -> Pred fn
 substitutePred x tm = \case
+  GenHint h t -> GenHint h (substituteTerm [x := tm] t)
   Subst x' t p -> substitutePred x tm $ substitutePred x' t p
   Assert es t -> Assert es (substituteTerm [x := tm] t)
   Block ps -> fold (substitutePred x tm <$> ps)
@@ -1227,6 +1249,7 @@ instance Rename (Pred fn) where
   rename v v'
     | v == v' = id
     | otherwise = \case
+        GenHint h t -> GenHint h (rename v v' t)
         Subst x t p -> rename v v' $ substitutePred x t p
         Block ps -> Block (rename v v' ps)
         Exists k b -> Exists (\eval -> k $ eval . rename v v') (rename v v' b)
@@ -1260,6 +1283,7 @@ substBinder env (x :-> p) = x :-> substPred (removeVar x env) p
 
 substPred :: BaseUniverse fn => Env -> Pred fn -> Pred fn
 substPred env = \case
+  GenHint h t -> GenHint h (substTerm env t)
   Subst x t p -> substPred env $ substitutePred x t p
   Assert es t -> assertExplain es (substTerm env t)
   Reify t f b -> Reify (substTerm env t) f (substBinder env b)
@@ -1302,6 +1326,9 @@ isLit = isJust . fromLit
 
 simplifyPred :: BaseUniverse fn => Pred fn -> Pred fn
 simplifyPred = \case
+  GenHint h t -> case simplifyTerm t of
+    Lit {} -> TruePred
+    t' -> GenHint h t'
   Subst x t p -> simplifyPred $ substitutePred x t p
   Assert es t -> assertExplain es (simplifyTerm t)
   Reify tm f b -> mkReify (simplifyTerm tm) f (simplifyBinder b)
@@ -1438,6 +1465,7 @@ letSubexpressionElimination = go []
     goBinder sub (x :-> p) = x :-> go (adjustSub x sub) p
 
     go sub = \case
+      GenHint h t -> GenHint h (backwardsSubstitution sub t)
       Block ps -> Block (go sub <$> ps)
       Let t (x :-> p) -> Let t' (x :-> go (x := t' : sub') p)
         where
@@ -1500,6 +1528,7 @@ letFloating = fold . go []
       Case t bs -> Case t (mapList (\(x :-> p) -> x :-> letFloating p) bs) : ctx
       -- Boring cases
       Assert es t -> Assert es t : ctx
+      GenHint h t -> GenHint h t : ctx
       DependsOn t t' -> DependsOn t t' : ctx
       TruePred -> TruePred : ctx
       FalsePred es -> FalsePred es : ctx
@@ -1567,6 +1596,12 @@ aggressiveInlining inlineable p
         , Lit b <- simplifyTerm $ substituteTerm sub t -> do
             tell $ Any True
             pure $ assertExplain es b
+        | otherwise -> pure p
+      GenHint _ t
+        | not (isLit t)
+        , Lit {} <- simplifyTerm $ substituteTerm sub t -> do
+            tell $ Any True
+            pure TruePred
         | otherwise -> pure p
       DependsOn t t'
         | not (isLit t)
@@ -2601,9 +2636,14 @@ instance HasSpec fn a => HasSpec fn [a] where
   genFromTypeSpec (ListSpec must TrueSpec elemS NoFold) = do
     lst <- listOfT $ genFromSpec elemS
     pureGen $ shuffle (must ++ lst)
-  genFromTypeSpec ss@(ListSpec must _ elemS NoFold) = do
-    sz <- genFromSpec (sizeSpecList $ typeSpec ss)
-    lst <- vectorOfT sz $ genFromSpec elemS
+  genFromTypeSpec ss@(ListSpec must szSpec elemS NoFold) = do
+    sz0 <- genFromSpec (sizeSpecList $ typeSpec ss)
+    let sz = sz0 - length must
+    lst <-
+      listOfUntilLenT
+        (genFromSpec elemS)
+        sz
+        ((`conformsToSpec` szSpec) . (+ length must))
     pureGen $ shuffle (must ++ lst)
   genFromTypeSpec (ListSpec must size elemS (FoldSpec f foldS)) = do
     genFromFold must size elemS f foldS
@@ -3504,6 +3544,9 @@ dependsOn = DependsOn
 lit :: Show a => a -> Term fn a
 lit = Lit
 
+genHint :: forall fn t. HasGenHint fn t => Hint t -> Term fn t -> Pred fn
+genHint = GenHint
+
 -- Internals --------------------------------------------------------------
 
 app ::
@@ -3534,6 +3577,7 @@ bind body = x :-> p
     bound (ForAll _ b) = boundBinder b
     bound (Case _ cs) = getMax $ foldMapList (Max . boundBinder) cs
     bound (Reify _ _ b) = boundBinder b
+    bound GenHint {} = -1
     bound Assert {} = -1
     bound DependsOn {} = -1
     bound TruePred = -1
@@ -3636,6 +3680,7 @@ instance Pretty (Pred fn) where
     ForAll t (x :-> p) -> "forall" <+> viaShow x <+> "in" <+> pretty t <+> "$" /> pretty p
     Case t bs -> "case" <+> pretty t <+> "of" /> vsep' (ppList_ pretty bs)
     Subst x t p -> "[" <> pretty t <> "/" <> viaShow x <> "]" <> pretty p
+    GenHint h t -> "genHint " <+> fromString (showsPrec 11 h "") <+> "$" <+> pretty t
     TruePred -> "True"
     FalsePred {} -> "False"
 

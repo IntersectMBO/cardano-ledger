@@ -13,6 +13,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Constrained.Test where
@@ -86,9 +87,9 @@ prop_sound ::
   Spec fn a ->
   Property
 prop_sound spec =
-  QC.forAll (strictGen $ genFromSpec spec) $ \ma -> fromGEDiscard $ do
+  QC.forAllBlind (strictGen $ genFromSpec spec) $ \ma -> fromGEDiscard $ do
     a <- ma
-    pure $ conformsToSpecProp a spec
+    pure $ counterexample (show a) $ conformsToSpecProp a spec
 
 -- | `prop_complete ps` assumes that `ps` is satisfiable
 prop_complete :: HasSpec fn a => Spec fn a -> Property
@@ -113,6 +114,7 @@ tests =
     [ testSpec "setSpec" setSpec
     , testSpec "leqPair" leqPair
     , testSpec "setPair" setPair
+    , testSpec "listEmpty" listEmpty
     , testSpec "compositionalSpec" compositionalSpec
     , testSpec "simplePairSpec" simplePairSpec
     , testSpec "trickyCompositional" trickyCompositional
@@ -152,6 +154,14 @@ tests =
     , testSpec "listSumPair" (listSumPair @Int)
     , testSpec "parallelLetPair" parallelLetPair
     , testSpec "mapSizeConstrained" mapSizeConstrained
+    , testSpec "allZeroTree" allZeroTree
+    , testSpec "noChildrenSameTree" noChildrenSameTree
+    , testSpec "isBST" isBST
+    , testSpec "pairListError" pairListError
+    , testSpec "listMustSizeIssue" listMustSizeIssue
+    , testSpec "successiveChildren" successiveChildren
+    , testSpec "successiveChildren8" successiveChildren8
+    , testSpec "roseTreeList" roseTreeList
     , numberyTests
     , testSpec "andPair" andPair
     , testSpec "orPair" orPair
@@ -214,7 +224,7 @@ testNumberyListSpec n p =
       , N @Int8 Proxy
       ]
 
-testSpec :: HasSpec BaseFn a => String -> Spec BaseFn a -> TestTree
+testSpec :: HasSpec fn a => String -> Spec fn a -> TestTree
 testSpec n s = do
   sequentialTestGroup
     n
@@ -520,6 +530,12 @@ listSumPair = constrained $ \xs ->
   , forAll' xs $ \x y -> [20 <. x, x <. 30, y <. 100]
   ]
 
+listEmpty :: Spec BaseFn [Int]
+listEmpty = constrained $ \xs ->
+  [ forAll xs $ \_ -> False
+  , assert $ length_ xs <=. 10
+  ]
+
 dependencyWeirdness :: Spec BaseFn (Int, Int, Int)
 dependencyWeirdness = constrained' $ \x y z ->
   reify (x + y) id $ \zv -> z ==. zv
@@ -569,3 +585,93 @@ orPair :: Spec BaseFn (Int, Int)
 orPair = constrained $ \p ->
   match p $ \x y ->
     x <=. 5 ||. y <=. 5
+
+-- TODO: how on earth does this terminate with such a high likelihood?!
+allZeroTree :: Spec BaseFn (BinTree Int)
+allZeroTree = constrained $ \t ->
+  [ forAll' t $ \_ a _ -> a ==. 0
+  , genHint 10 t
+  ]
+
+isBST :: Spec BaseFn (BinTree Int)
+isBST = constrained $ \t ->
+  [ forAll' t $ \left a right ->
+      -- TODO: if there was a `binTreeRoot` function on trees
+      -- this wouldn't need to be quadratic as we would
+      -- only check agains the head of the left and right
+      -- subtrees, not _every element_
+      [ forAll' left $ \_ l _ -> l <. a
+      , forAll' right $ \_ h _ -> a <. h
+      ]
+  , genHint 10 t
+  ]
+
+noChildrenSameTree :: Spec BaseFn (BinTree Int)
+noChildrenSameTree = constrained $ \t ->
+  [ forAll' t $ \left a right ->
+      [ forAll' left $ \_ l _ -> l /=. a
+      , forAll' right $ \_ r _ -> r /=. a
+      ]
+  , genHint 8 t
+  ]
+
+type RoseFn = Fix (OneofL (RoseTreeFn : BaseFns))
+
+allZeroRoseTree :: Spec RoseFn (RoseTree Int)
+allZeroRoseTree = constrained $ \t ->
+  [ forAll' t $ \a cs ->
+      [ a ==. 0
+      , length_ cs <=. 4
+      ]
+  , genHint (Just 2, 30) t
+  ]
+
+noSameChildrenRoseTree :: Spec RoseFn (RoseTree Int)
+noSameChildrenRoseTree = constrained $ \t ->
+  [ forAll' t $ \a cs ->
+      [ assert $ a `elem_` lit [1 .. 8]
+      , forAll cs $ \t' ->
+          forAll' t' $ \b _ ->
+            b /=. a
+      ]
+  , genHint (Just 2, 30) t
+  ]
+
+successiveChildren :: Spec RoseFn (RoseTree Int)
+successiveChildren = constrained $ \t ->
+  [ forAll' t $ \a cs ->
+      [ forAll cs $ \t' ->
+          roseRoot_ t' ==. a + 1
+      ]
+  , genHint (Just 2, 10) t
+  ]
+
+successiveChildren8 :: Spec RoseFn (RoseTree Int)
+successiveChildren8 = constrained $ \t ->
+  [ t `satisfies` successiveChildren
+  , forAll' t $ \a _ -> a `elem_` lit [1 .. 5]
+  ]
+
+roseTreeList :: Spec RoseFn [RoseTree Int]
+roseTreeList = constrained $ \ts ->
+  [ assert $ length_ ts <=. 10
+  , forAll ts $ \t ->
+      [ forAll t $ \_ -> False
+      ]
+  ]
+
+pairListError :: Spec BaseFn [(Int, Int)]
+pairListError = constrained $ \ps ->
+  [ assert $ length_ ps <=. 10
+  , forAll' ps $ \a b ->
+      [ a `elem_` lit [1 .. 8]
+      , a ==. 9
+      , b ==. a
+      ]
+  ]
+
+listMustSizeIssue :: Spec BaseFn [Int]
+listMustSizeIssue = constrained $ \xs ->
+  [ 1 `elem_` xs
+  , length_ xs ==. 1
+  ]

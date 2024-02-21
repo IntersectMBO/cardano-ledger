@@ -31,6 +31,7 @@ library
         Constrained.Spec.Generics
         Constrained.Spec.Pairs
         Constrained.Spec.Maps
+        Constrained.Spec.Tree
         Constrained.Test
         Constrained.Internals
 
