@@ -62,7 +62,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   utxosUtxoL,
  )
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..))
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ScriptsProvided (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (forM, join)
 import Data.Default.Class (Default)
@@ -173,6 +173,9 @@ fixupScriptWits ::
   ImpTestM era (Tx era)
 fixupScriptWits tx = do
   contexts <- impGetPlutusContexts tx
+  utxo <- getUTxO
+  let ScriptsProvided provided = getScriptsProvided utxo tx
+  let contextsToAdd = filter (\(_, sh, _) -> not (Map.member sh provided)) contexts
   let
     plutusToScript ::
       forall l.
@@ -183,7 +186,7 @@ fixupScriptWits tx = do
       case mkPlutusScript @era p of
         Just x -> pure $ fromPlutusScript x
         Nothing -> error "Plutus version not supported by era"
-  scriptWits <- forM contexts $ \(_, sh, ScriptTestContext plutus _) ->
+  scriptWits <- forM contextsToAdd $ \(_, sh, ScriptTestContext plutus _) ->
     (sh,) <$> plutusToScript plutus
   pure $
     tx
