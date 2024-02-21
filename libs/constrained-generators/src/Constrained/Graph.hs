@@ -26,8 +26,8 @@ instance Ord node => Semigroup (Graph node) where
 instance Ord node => Monoid (Graph node) where
   mempty = Graph mempty mempty
 
-nodes :: Ord node => Graph node -> Set node
-nodes (Graph e o) = Map.keysSet e <> Map.keysSet o
+nodes :: Graph node -> Set node
+nodes (Graph e _) = Map.keysSet e
 
 opGraph :: Graph node -> Graph node
 opGraph (Graph e o) = Graph o e
@@ -52,9 +52,15 @@ dependency x xs =
 
 irreflexiveDependencyOn :: Ord node => Set node -> Set node -> Graph node
 irreflexiveDependencyOn xs ys =
-  foldMap (\x -> dependency x (Set.difference ys xs)) xs
-    <> noDependencies xs
-    <> noDependencies ys
+  deps <> noDependencies ys
+  where
+    diff = Set.difference ys xs
+    deps =
+      Graph
+        (Map.fromDistinctAscList [(x, diff) | x <- Set.toList xs])
+        ( Map.fromDistinctAscList [(a, xs) | a <- Set.toList diff]
+            <> Map.fromDistinctAscList [(a, mempty) | a <- Set.toList xs]
+        )
 
 transitiveDependencies :: Ord node => node -> Graph node -> Set node
 transitiveDependencies x (Graph e _) = go (Set.singleton x) x

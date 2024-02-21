@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -8,6 +9,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -30,10 +32,25 @@ class FunctionLike fn where
   -- | The semantics of a function is given by `sem`
   sem :: fn as b -> FunTy as b
 
-class Member (fn :: [Type] -> Type -> Type) fnU where
+-- | Evidence that `fn` exists somewhere in `fnU`. To make it possible
+-- for `fnU` to consist of a balanced tree of functions we need the `path`
+-- to help GHC disambiguate instances of this class during solving.
+class IsMember (fn :: [Type] -> Type -> Type) fnU (path :: [PathElem]) where
   -- | Inject a specific function symbol into a function
   -- universe.
-  injectFn :: fn as b -> fnU as b
+  injectFn0 :: fn as b -> fnU as b
+
+  extractFn0 :: fnU as b -> Maybe (fn as b)
+
+type Member fn univ = IsMember fn univ (Path fn univ)
+
+injectFn :: forall fn fnU as b. Member fn fnU => fn as b -> fnU as b
+injectFn = injectFn0 @fn @fnU @(Path fn fnU)
+
+extractFn :: forall fn fnU as b. Member fn fnU => fnU as b -> Maybe (fn as b)
+extractFn = extractFn0 @fn @fnU @(Path fn fnU)
+
+data PathElem = PFix | PLeft | PRight
 
 ------------------------------------------------------------------------
 -- Fixpoints
@@ -58,10 +75,7 @@ data ListFn fn where
 
 -}
 
-newtype Fix fn (as :: [Type]) b = Fix (fn (Fix fn) as b)
-
-instance Member fn (fn' (Fix fn')) => Member fn (Fix fn') where
-  injectFn = Fix . injectFn
+newtype Fix (fn :: Univ -> Univ) (as :: [Type]) b = Fix (fn (Fix fn) as b)
 
 deriving via (fn (Fix fn)) instance FunctionLike (fn (Fix fn)) => FunctionLike (Fix fn)
 deriving via (fn (Fix fn) as b) instance Eq (fn (Fix fn) as b) => Eq (Fix fn as b)
@@ -70,6 +84,8 @@ deriving via (fn (Fix fn) as b) instance Show (fn (Fix fn) as b) => Show (Fix fn
 ------------------------------------------------------------------------
 -- Universes
 ------------------------------------------------------------------------
+
+type Univ = [Type] -> Type -> Type
 
 -- TODO: there are faster implementation of this
 data
@@ -85,18 +101,58 @@ data
   = OneofLeft !(fn fnU as b)
   | OneofRight !(fn' fnU as b)
 
+-- | Build a balanced tree of `Oneof` from a list of function universes.
+-- NOTE: it is important that this is a balanced tree as that reduces the amount of
+-- overhead in `injectFn` and `extractFn` from `O(n)` to `O(log(n))`. Surprisingly,
+-- we've observed this making more than 10% difference in runtime on some generation
+-- tasks even though the list `as` is typically small (< 20 elements).
 type family OneofL as where
   OneofL '[t] = t
-  OneofL (t : ts) = Oneof t (OneofL ts)
+  OneofL (t : ts) = Insert t (OneofL ts)
 
-instance Member (fn fnU) (Oneof fn fn' fnU) where
-  injectFn = OneofLeft
+type family Insert a t where
+  Insert a (Oneof fn fn') = Oneof fn' (Insert a fn)
+  Insert a t = Oneof a t
 
-instance Member (fn' fnU) (Oneof fn fn' fnU) where
-  injectFn = OneofRight
+-- | Compute the path to look up `fn` in `fnU`
+type family MPath fn fnU :: Maybe [PathElem] where
+  MPath fn fn = 'Just '[]
+  MPath fn (Oneof fn' fn'' fnU) = Resolve (MPath fn (fn' fnU)) (MPath fn (fn'' fnU))
+  MPath fn (Fix fn') = AddFix (MPath fn (fn' (Fix fn')))
+  MPath _ _ = 'Nothing
 
-instance {-# OVERLAPPABLE #-} Member fn (fn'' fnU) => Member fn (Oneof fn' fn'' fnU) where
-  injectFn = OneofRight . injectFn
+type family AddFix mpath where
+  AddFix ('Just path) = 'Just ('PFix ': path)
+  AddFix 'Nothing = 'Nothing
+
+type family Resolve a b where
+  Resolve ('Just as) _ = 'Just ('PLeft ': as)
+  Resolve _ ('Just bs) = 'Just ('PRight ': bs)
+  Resolve _ _ = 'Nothing
+
+type family FromJust m where
+  FromJust ('Just a) = a
+
+type family Path fn fn' where
+  Path fn fn' = FromJust (MPath fn fn')
+
+instance IsMember fn fn '[] where
+  injectFn0 = id
+  extractFn0 = Just
+
+instance IsMember fn (fn' (Fix fn')) path => IsMember fn (Fix fn') ('PFix : path) where
+  injectFn0 fn = Fix (injectFn0 @_ @_ @path fn)
+  extractFn0 (Fix fn) = extractFn0 @_ @_ @path fn
+
+instance IsMember fn (fn' fnU) path => IsMember fn (Oneof fn' fn'' fnU) ('PLeft : path) where
+  injectFn0 fn = OneofLeft (injectFn0 @_ @_ @path fn)
+  extractFn0 (OneofLeft fn) = extractFn0 @_ @_ @path fn
+  extractFn0 _ = Nothing
+
+instance IsMember fn (fn'' fnU) path => IsMember fn (Oneof fn' fn'' fnU) ('PRight : path) where
+  injectFn0 fn = OneofRight (injectFn0 @_ @_ @path fn)
+  extractFn0 (OneofRight fn) = extractFn0 @_ @_ @path fn
+  extractFn0 _ = Nothing
 
 instance (FunctionLike (fn fnU), FunctionLike (fn' fnU)) => FunctionLike (Oneof fn fn' fnU) where
   sem (OneofLeft f) = sem f

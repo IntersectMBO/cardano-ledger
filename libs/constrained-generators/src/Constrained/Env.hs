@@ -8,7 +8,6 @@ module Constrained.Env where
 
 import Data.Map (Map)
 import Data.Map qualified as Map
-import Data.Maybe
 import Data.Typeable
 
 import Constrained.Core
@@ -25,20 +24,13 @@ data EnvValue where
 deriving instance Show EnvValue
 
 data EnvKey where
-  EnvKey :: Typeable a => !(Var a) -> EnvKey
+  EnvKey :: !(Var a) -> EnvKey
 
 instance Eq EnvKey where
-  EnvKey v == EnvKey v' = isJust $ eqVar v v'
+  EnvKey v == EnvKey v' = nameOf v == nameOf v'
 
 instance Ord EnvKey where
-  -- Lexicographic ordering on `(typeRep v, v)`
-  compare (EnvKey v) (EnvKey v')
-    -- If the keys point to something of the same type
-    -- (`cast` returns `Just`) then compare the variable
-    -- indexes.
-    | Just v'' <- cast v = compare v'' v'
-    -- Otherwise compare the types.
-    | otherwise = compare (typeRep v) (typeRep v')
+  compare (EnvKey v) (EnvKey v') = compare (nameOf v) (nameOf v')
 
 instance Show EnvKey where
   show (EnvKey var) = show var
@@ -46,7 +38,7 @@ instance Show EnvKey where
 extendEnv :: (Typeable a, Show a) => Var a -> a -> Env -> Env
 extendEnv v a (Env m) = Env $ Map.insert (EnvKey v) (EnvValue a) m
 
-removeVar :: Typeable a => Var a -> Env -> Env
+removeVar :: Var a -> Env -> Env
 removeVar v (Env m) = Env $ Map.delete (EnvKey v) m
 
 singletonEnv :: (Typeable a, Show a) => Var a -> a -> Env

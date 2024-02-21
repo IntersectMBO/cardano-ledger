@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- The pattern completeness checker is much weaker before ghc-9.0. Rather than introducing redundant
@@ -94,24 +95,15 @@ instance BaseUniverse fn => Functions (PairFn fn) fn where
                 TypeSpec (Cartesian _ sb) cant -> sb <> foldMap notEqualSpec (sameFst cant)
                 MemberSpec es -> MemberSpec (sameFst es)
 
-  rewriteRules f@Fst =
-    -- No TypeAbstractions in ghc-8.10
-    case f of
-      (_ :: PairFn fn '[Prod a b] a)
-        | Evidence <- prerequisites @fn @(Prod a b) ->
-            [ rewriteRule_ $ \x y ->
-                app fstFn (app (pairFn @fn @a @b) x y) ~> x
-            ]
-  rewriteRules f@Snd =
-    -- No TypeAbstractions in ghc-8.10
-    case f of
-      (_ :: PairFn fn '[Prod a b] b)
-        | Evidence <- prerequisites @fn @(Prod a b) ->
-            [ rewriteRule_ $ \x y ->
-                app sndFn (app (pairFn @fn @a @b) x y) ~> y
-            ]
-  rewriteRules _ = []
+  rewriteRules Fst ((pairView -> Just (x, _)) :> Nil) = Just x
+  rewriteRules Snd ((pairView -> Just (_, y)) :> Nil) = Just y
+  rewriteRules _ _ = Nothing
 
   mapTypeSpec f ts = case f of
     Fst | Cartesian s _ <- ts -> s
     Snd | Cartesian _ s <- ts -> s
+
+pairView ::
+  forall fn a b. Member (PairFn fn) fn => Term fn (Prod a b) -> Maybe (Term fn a, Term fn b)
+pairView (App (extractFn @(PairFn fn) @fn -> Just Pair) (x :> y :> Nil)) = Just (x, y)
+pairView _ = Nothing

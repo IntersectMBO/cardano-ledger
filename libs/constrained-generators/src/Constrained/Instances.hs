@@ -37,7 +37,12 @@ instance
   mapTypeSpec (Fix fn) = mapTypeSpec fn
 
 instance
-  (Typeable fn, Typeable fn', Typeable fnU, Functions (fn fnU) fnU, Functions (fn' fnU) fnU) =>
+  ( Typeable fn
+  , Typeable fn'
+  , Typeable fnU
+  , Functions (fn fnU) fnU
+  , Functions (fn' fnU) fnU
+  ) =>
   Functions (Oneof fn fn' fnU) fnU
   where
   propagateSpecFun (OneofLeft fn) = propagateSpecFun fn
@@ -74,7 +79,7 @@ instance BaseUniverse fn => Functions (BoolFn fn) fn where
   propagateSpecFun Or (HOLE :? Value (s :: Bool) :> Nil) spec = caseBoolSpec spec (okOr s)
   propagateSpecFun Or (Value (s :: Bool) :! NilCtx HOLE) spec = caseBoolSpec spec (okOr s)
 
-  mapTypeSpec Not _ = typeSpec ()
+  mapTypeSpec Not (SumSpec a b) = typeSpec $ SumSpec b a
 
 -- | We have something like ('constant' ||. HOLE) must evaluate to 'need'. Return a (Spec fn Bool) for HOLE, that makes that True.
 okOr :: Bool -> Bool -> Spec fn Bool

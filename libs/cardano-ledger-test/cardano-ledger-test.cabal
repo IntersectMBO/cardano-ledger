@@ -153,7 +153,8 @@ library
         transformers,
         unordered-containers,
         vector,
-        constrained-generators
+        constrained-generators,
+        random
 
 test-suite cardano-ledger-test
     type:             exitcode-stdio-1.0
@@ -183,6 +184,7 @@ benchmark bench
         Bench.Cardano.Ledger.SumStake
         Bench.Cardano.Ledger.TxOut
         Bench.Cardano.Ledger.StakeDistr
+        Bench.Constrained.STS
 
     default-language: Haskell2010
     ghc-options:
@@ -199,6 +201,7 @@ benchmark bench
         cardano-ledger-alonzo,
         cardano-ledger-alonzo-test,
         cardano-ledger-binary,
+        cardano-ledger-conway,
         cardano-ledger-test,
         cardano-ledger-core,
         cardano-ledger-shelley-ma-test,
@@ -217,7 +220,8 @@ benchmark bench
         random,
         small-steps:{small-steps, testlib} >=1.1,
         cardano-strict-containers >=0.1.1,
-        text
+        text,
+        constrained-generators
 
 benchmark benchProperty
     type:             exitcode-stdio-1.0

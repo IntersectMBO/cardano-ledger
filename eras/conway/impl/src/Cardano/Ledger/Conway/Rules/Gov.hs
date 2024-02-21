@@ -125,6 +125,7 @@ data GovEnv era = GovEnv
   }
   deriving (Generic)
 
+instance (NFData (PParams era), Era era) => NFData (GovEnv era)
 deriving instance (Show (PParams era), Era era) => Show (GovEnv era)
 deriving instance Eq (PParams era) => Eq (GovEnv era)
 

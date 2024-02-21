@@ -18,6 +18,7 @@ import Constrained.Core
 import Constrained.GenT
 import Constrained.Instances ()
 import Constrained.List
+import Constrained.Spec.Generics
 import Constrained.Univ
 import Control.Monad
 import Data.List (nub)
@@ -33,7 +34,7 @@ import Prettyprinter
 
 instance Ord a => Sized (Map.Map a b) where
   sizeOf = toInteger . Map.size
-  liftSizeSpec sizespec = TypeSpec (MapSpec mempty mempty (typeSpec sizespec) TrueSpec NoFold) []
+  liftSizeSpec sz = TypeSpec (MapSpec mempty mempty (typeSpec sz) TrueSpec NoFold) []
   liftMemberSpec xs = typeSpec (MapSpec mempty mempty (MemberSpec xs) TrueSpec NoFold)
   sizeOfTypeSpec (MapSpec mustk mustv size _ _) =
     typeSpec (atLeastSize (sizeOf mustk))
@@ -107,14 +108,10 @@ instance
               mustSum = adds @fn (map (sem fn) haveVals)
     let valsSpec =
           ListSpec
+            Nothing
             mustVals'
             size'
-            ( constrained $ \v ->
-                unsafeExists $ \p ->
-                  [ satisfies p kvs
-                  , assert $ app equalFn v $ app sndFn (app toGenericFn p)
-                  ]
-            )
+            (constrained $ \v -> unsafeExists $ \p -> p `satisfies` kvs <> assert (v ==. snd_ p))
             foldSpec'
 
     restVals <-
@@ -124,11 +121,7 @@ instance
             valsSpec
     let go m [] = pure m
         go m (v : restVals') = do
-          let keySpec = constrained $ \k ->
-                toPred
-                  [ assert $ app (notFn @fn) (app (memberFn @fn) k (Lit $ Map.keysSet m))
-                  , satisfies (app (fromGenericFn @fn) $ app (pairFn @fn) k (Lit v)) kvs
-                  ]
+          let keySpec = notMemberSpec (Map.keysSet m) <> constrained (\k -> pair_ k (lit v) `satisfies` kvs)
           k <-
             explain
               [ "Make a key"
@@ -191,7 +184,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
               case spec of
                 MemberSpec [r] ->
                   typeSpec $ MapSpec Set.empty r (equalSpec $ sizeOf r) TrueSpec NoFold
-                TypeSpec (ListSpec must size elemspec foldspec) [] ->
+                TypeSpec (ListSpec Nothing must size elemspec foldspec) [] ->
                   typeSpec $
                     MapSpec
                       Set.empty
@@ -218,7 +211,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
         (_ :: MapFn fn '[Map k v] [v])
           | MapSpec _ mustList sz kvSpec foldSpec <- ts
           , Evidence <- prerequisites @fn @(Map k v) ->
-              typeSpec $ ListSpec mustList sz (mapSpec (sndFn @fn) $ toSimpleRepSpec kvSpec) foldSpec
+              typeSpec $ ListSpec Nothing mustList sz (mapSpec (sndFn @fn) $ toSimpleRepSpec kvSpec) foldSpec
 
 ------------------------------------------------------------------------
 -- Syntax

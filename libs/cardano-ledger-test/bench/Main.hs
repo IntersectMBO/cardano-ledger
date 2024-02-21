@@ -9,6 +9,7 @@ import qualified Bench.Cardano.Ledger.Serialisation.Generators as SerGen
 import qualified Bench.Cardano.Ledger.StakeDistr as StakeDistr (tickfRuleBench)
 import qualified Bench.Cardano.Ledger.SumStake as SumStake
 import qualified Bench.Cardano.Ledger.TxOut as TxOut
+import qualified Bench.Constrained.STS as ConstrainedSTS
 import Criterion.Main (defaultMain)
 
 main :: IO ()
@@ -20,5 +21,6 @@ main =
     , ApplyTx.applyTxBenchmarks
     , Epoch.aggregateUtxoBench
     , SumStake.sumStakeBenchmarks
+    , ConstrainedSTS.stsBenchmarks
     -- Balance.balanceBenchmarks
     ]

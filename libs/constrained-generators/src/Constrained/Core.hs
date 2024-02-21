@@ -11,7 +11,6 @@
 module Constrained.Core where
 
 import Control.Applicative
-import Control.Monad
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Typeable
@@ -27,9 +26,8 @@ instance Show (Var a) where
   show v = "v" ++ show (nameOf v)
 
 eqVar :: forall a a'. (Typeable a, Typeable a') => Var a -> Var a' -> Maybe (a :~: a')
-eqVar v v' = do
-  Refl <- eqT @a @a'
-  Refl <$ guard (v == v')
+eqVar v v' | nameOf v == nameOf v' = eqT @a @a'
+eqVar _ _ = Nothing
 
 -- Variable renaming ------------------------------------------------------
 

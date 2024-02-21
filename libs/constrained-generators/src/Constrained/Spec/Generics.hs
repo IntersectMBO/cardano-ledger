@@ -6,11 +6,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
@@ -34,9 +36,18 @@ module Constrained.Spec.Generics (
   forAll',
   constrained',
   con,
+  onCon,
+  isCon,
+  sel,
   match,
   onJust,
+  isJust,
+  ifElse,
 ) where
+
+import Data.Typeable
+import GHC.TypeNats
+import GHC.Types (Symbol)
 
 import Constrained.Base
 import Constrained.Core
@@ -70,16 +81,9 @@ instance BaseUniverse fn => Functions (GenericsFn fn) fn where
       TypeSpec s cant -> TypeSpec s (toSimpleRep <$> cant)
       MemberSpec es -> MemberSpec (toSimpleRep <$> es)
 
-  rewriteRules f@FromGeneric =
-    -- No TypeAbstractions in ghc-8.10
-    case f of
-      (_ :: GenericsFn fn '[SimpleRep a] a) ->
-        [rewriteRule_ $ \x -> fromGeneric_ (toGeneric_ x) ~> x]
-  rewriteRules f@ToGeneric =
-    -- No TypeAbstractions in ghc-8.10
-    case f of
-      (_ :: GenericsFn fn '[a] (SimpleRep a)) ->
-        [rewriteRule_ $ \x -> toGeneric_ (fromGeneric_ @a x) ~> x]
+  rewriteRules FromGeneric (App (extractFn @(GenericsFn fn) @fn -> Just ToGeneric) (x :> Nil) :> _) = cast x
+  rewriteRules ToGeneric (App (extractFn @(GenericsFn fn) @fn -> Just FromGeneric) (x :> Nil) :> _) = Just x
+  rewriteRules _ _ = Nothing
 
   mapTypeSpec f ts = case f of
     ToGeneric -> typeSpec ts
@@ -150,16 +154,6 @@ instance
   ) =>
   HasSpec fn (Either a b)
 
--- HasSpec for () ---------------------------------------------------------
-
-instance BaseUniverse fn => HasSpec fn () where
-  type TypeSpec fn () = ()
-  emptySpec = ()
-  combineSpec _ _ = typeSpec ()
-  _ `conformsTo` _ = True
-  genFromTypeSpec _ = pure ()
-  toPreds _ _ = TruePred
-
 ------------------------------------------------------------------------
 -- Sums
 ------------------------------------------------------------------------
@@ -197,7 +191,7 @@ fst_ ::
   ) =>
   Term fn (a, b) ->
   Term fn a
-fst_ = app fstFn . toGeneric_
+fst_ = sel @0
 
 snd_ ::
   forall fn a b.
@@ -206,7 +200,7 @@ snd_ ::
   ) =>
   Term fn (a, b) ->
   Term fn b
-snd_ = app sndFn . toGeneric_
+snd_ = sel @1
 
 pair_ ::
   forall fn a b.
@@ -338,6 +332,20 @@ con =
   curryList @(ConstrOf c (TheSop a)) @(Term fn)
     (app (fromGenericFn @_ @a) . inj_ @c @fn @(TheSop a) . prod_)
 
+sel ::
+  forall n fn a c as.
+  ( SimpleRep a ~ ProdOver as
+  , TheSop a ~ '[c ::: as]
+  , TypeSpec fn a ~ TypeSpec fn (ProdOver as)
+  , Select fn n as
+  , HasSpec fn a
+  , HasSpec fn (ProdOver as)
+  , HasSimpleRep a
+  ) =>
+  Term fn a ->
+  Term fn (At n as)
+sel = select_ @fn @n @as . toGeneric_
+
 type family Cases t where
   Cases (Sum a b) = a : Cases b
   Cases a = '[a]
@@ -414,11 +422,126 @@ instance
   where
   prod_ (a :> as) = app pairFn a (prod_ as)
 
+type family At n as where
+  At 0 (a : as) = a
+  At n (a : as) = At (n - 1) as
+
+class Select fn n as where
+  select_ :: Term fn (ProdOver as) -> Term fn (At n as)
+
+instance Select fn 0 (a : '[]) where
+  select_ = id
+
+instance (HasSpec fn a, HasSpec fn (ProdOver (a' : as))) => Select fn 0 (a : a' : as) where
+  select_ = app fstFn
+
+instance
+  {-# OVERLAPPABLE #-}
+  ( HasSpec fn a
+  , HasSpec fn (ProdOver (a' : as))
+  , At (n - 1) (a' : as) ~ At n (a : a' : as)
+  , Select fn (n - 1) (a' : as)
+  ) =>
+  Select fn n (a : a' : as)
+  where
+  select_ = select_ @fn @(n - 1) @(a' : as) . app sndFn
+
+class IsConstrOf (c :: Symbol) b sop where
+  mkCases ::
+    (HasSpec fn b, All (HasSpec fn) (Cases (SOP sop))) =>
+    (forall a. Term fn a -> Pred fn) ->
+    (Term fn b -> Pred fn) ->
+    List (Binder fn) (Cases (SOP sop))
+
+instance
+  ( b ~ ProdOver as
+  , TypeList (Cases (SOP (con : sop)))
+  ) =>
+  IsConstrOf c b ((c ::: as) : con : sop)
+  where
+  mkCases r (k :: Term fn b -> Pred fn) = bind k :> mapListC @(HasSpec fn) (\_ -> bind r) (listShape @(Cases (SOP (con : sop))))
+
+instance
+  ( b ~ ProdOver as
+  , IsNormalType b
+  ) =>
+  IsConstrOf c b '[c ::: as]
+  where
+  mkCases _ (k :: Term fn b -> Pred fn) = bind k :> Nil
+
+instance
+  {-# OVERLAPPABLE #-}
+  ( Cases (SOP ((c' ::: as) : cs)) ~ (ProdOver as : Cases (SOP cs))
+  , IsConstrOf c b cs
+  ) =>
+  IsConstrOf c b ((c' ::: as) : cs)
+  where
+  mkCases r k = bind (r @(ProdOver as)) :> mkCases @c @_ @cs r k
+
+-- TODO: the constraints around this are horrible!! We should figure out a way to make these things nicer.
+onCon ::
+  forall c a fn p.
+  ( IsConstrOf c (ProdOver (ConstrOf c (TheSop a))) (TheSop a)
+  , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
+  , HasSimpleRep a
+  , HasSpec fn a
+  , HasSpec fn (SimpleRep a)
+  , SumOver (Cases (SOP (TheSop a))) ~ SimpleRep a
+  , All (HasSpec fn) (Cases (SOP (TheSop a)))
+  , HasSpec fn (ProdOver (ConstrOf c (TheSop a)))
+  , IsPred p fn
+  , Args (ProdOver (ConstrOf c (TheSop a))) ~ ConstrOf c (TheSop a)
+  , All (HasSpec fn) (ConstrOf c (TheSop a))
+  , IsProd (ProdOver (ConstrOf c (TheSop a)))
+  ) =>
+  Term fn a ->
+  FunTy (MapList (Term fn) (ConstrOf c (TheSop a))) p ->
+  Pred fn
+onCon tm p =
+  Case
+    (toGeneric_ tm)
+    ( mkCases @c @(ProdOver (ConstrOf c (TheSop a))) @(TheSop a)
+        (const $ assert True)
+        (buildBranch @p p . toArgs)
+    )
+
+isCon ::
+  forall c a fn.
+  ( IsConstrOf c (ProdOver (ConstrOf c (TheSop a))) (TheSop a)
+  , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
+  , HasSimpleRep a
+  , HasSpec fn a
+  , HasSpec fn (SimpleRep a)
+  , SumOver (Cases (SOP (TheSop a))) ~ SimpleRep a
+  , All (HasSpec fn) (Cases (SOP (TheSop a)))
+  , HasSpec fn (ProdOver (ConstrOf c (TheSop a)))
+  ) =>
+  Term fn a ->
+  Pred fn
+isCon tm =
+  Case
+    (toGeneric_ tm)
+    ( mkCases @c @(ProdOver (ConstrOf c (TheSop a))) @(TheSop a)
+        (const $ assert False)
+        (const $ assert True)
+    )
+
 type IsNormalType a = (Cases a ~ '[a], Args a ~ '[a], IsProd a)
 
 onJust ::
+  forall fn a p.
   (BaseUniverse fn, HasSpec fn a, IsNormalType a, IsPred p fn) =>
   Term fn (Maybe a) ->
   (Term fn a -> p) ->
   Pred fn
-onJust tm p = caseOn tm (branch $ const True) (branch p)
+onJust = onCon @"Just"
+
+isJust ::
+  forall fn a.
+  (BaseUniverse fn, HasSpec fn a, IsNormalType a) =>
+  Term fn (Maybe a) ->
+  Pred fn
+isJust = isCon @"Just"
+
+ifElse :: (BaseUniverse fn, IsPred p fn, IsPred q fn) => Term fn Bool -> p -> q -> Pred fn
+ifElse b p q = caseOn b (branch $ \_ -> q) (branch $ \_ -> p)

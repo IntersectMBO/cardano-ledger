@@ -84,24 +84,29 @@ import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS
 import Data.ByteString.Short (ShortByteString)
 import Data.ByteString.Short qualified as SBS
-import Data.Default.Class
+import Data.Coerce
 import Data.Foldable
 import Data.Kind
 import Data.Map (Map)
+import Data.Map.Strict qualified as Map
 import Data.Maybe
+import Data.OMap.Strict qualified as OMap
 import Data.OSet.Strict qualified as SOS
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Sequence.Strict (StrictSeq)
 import Data.Sequence.Strict qualified as StrictSeq
 import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Text (Text)
+import Data.Tree
 import Data.Typeable
 import Data.VMap (VMap)
 import Data.VMap qualified as VMap
 import Data.Word
 import Numeric.Natural (Natural)
 import PlutusLedgerApi.V1 qualified as PV1
+import System.Random
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils
@@ -111,14 +116,15 @@ import Test.QuickCheck hiding (Args, Fun, forAll)
 import Constrained hiding (Value)
 import Constrained qualified as C
 
-type ConwayUnivFns = StringFn : BaseFns
+type ConwayUnivFns = StringFn : RoseTreeFn : BaseFns
 type ConwayFn = Fix (OneofL ConwayUnivFns)
 
 type IsConwayUniv fn =
-  ( Member (StringFn fn) fn
+  ( BaseUniverse fn
+  , Member (StringFn fn) fn
   , Member (MapFn fn) fn
   , Member (FunFn fn) fn
-  , BaseUniverse fn
+  , Member (RoseTreeFn fn) fn
   )
 
 -- TxBody HasSpec instance ------------------------------------------------
@@ -258,6 +264,12 @@ instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (Seq a)
 
 instance HasSimpleRep (StrictMaybe a)
 instance HasSpec fn a => HasSpec fn (StrictMaybe a)
+
+cSNothing_ :: HasSpec fn a => Term fn (StrictMaybe a)
+cSNothing_ = con @"SNothing" (lit ())
+
+cSJust_ :: HasSpec fn a => Term fn a -> Term fn (StrictMaybe a)
+cSJust_ = con @"SJust"
 
 instance HasSimpleRep (Sized a)
 instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (Sized a)
@@ -683,18 +695,43 @@ instance (IsConwayUniv fn, Crypto c) => HasSpec fn (GovActionId c)
 instance HasSimpleRep GovActionIx
 instance IsConwayUniv fn => HasSpec fn GovActionIx
 
--- TODO: this needs a `canFollow` predicate (that can't be negated).
 instance HasSimpleRep ProtVer
 instance IsConwayUniv fn => HasSpec fn ProtVer
 
--- TODO: this is a bit iffy, Version is really a bounded type
--- that we should be able to represent. Same thing with `UnitInterval`
+-- We do this like this to get the right bounds for `VersionRep`
+-- while ensuring that we don't have to add instances for e.g. `Num`
+-- to version.
+newtype VersionRep = VersionRep Word64
+  deriving (Show, Eq, Ord, Num, Random) via Word64
+instance BaseUniverse fn => HasSpec fn VersionRep where
+  type TypeSpec fn VersionRep = NumSpec VersionRep
+  emptySpec = emptyNumSpec
+  combineSpec = combineNumSpec
+  genFromTypeSpec = genFromNumSpec
+  conformsTo = conformsToNumSpec
+  toPreds = toPredsNumSpec
+instance Bounded VersionRep where
+  minBound = VersionRep $ getVersion64 minBound
+  maxBound = VersionRep $ getVersion64 maxBound
+instance MaybeBounded VersionRep
+
 instance HasSimpleRep Version where
-  type SimpleRep Version = Word64
-  fromSimpleRep = fromJust . mkVersion64
-  toSimpleRep = getVersion64
-instance IsConwayUniv fn => HasSpec fn Version where
-  emptySpec = NumSpecInterval (Just $ getVersion64 minBound) (Just $ getVersion64 maxBound)
+  type SimpleRep Version = VersionRep
+  fromSimpleRep (VersionRep rep) = case mkVersion64 rep of
+    Left err ->
+      error $
+        unlines
+          [ "fromSimpleRep @Version:"
+          , show rep
+          , err
+          ]
+    Right a -> a
+  toSimpleRep = VersionRep . getVersion64
+instance BaseUniverse fn => HasSpec fn Version
+instance BaseUniverse fn => OrdLike fn Version
+
+succV_ :: BaseUniverse fn => Term fn Version -> Term fn Version
+succV_ = fromGeneric_ . (+ 1) . toGeneric_
 
 instance HasSimpleRep (GovPurposeId p era)
 instance (Typeable p, IsConwayUniv fn, Era era) => HasSpec fn (GovPurposeId p era)
@@ -843,6 +880,12 @@ instance
   ) =>
   HasSpec fn (ProposalProcedure era)
 
+pProcGovAction_ ::
+  IsConwayUniv fn =>
+  Term fn (ProposalProcedure (ConwayEra StandardCrypto)) ->
+  Term fn (GovAction (ConwayEra StandardCrypto))
+pProcGovAction_ = sel @2
+
 instance HasSimpleRep ValidityInterval
 instance IsConwayUniv fn => HasSpec fn ValidityInterval
 
@@ -903,23 +946,101 @@ instance (IsConwayUniv fn, Era era) => HasSpec fn (CertState era)
 instance HasSimpleRep (GovRelation StrictMaybe era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (GovRelation StrictMaybe era)
 
--- instance HasSimpleRep (PrevGovActionIds era)
--- instance (Era era, IsConwayUniv fn) => HasSpec fn (PrevGovActionIds era)
-
 instance HasSimpleRep (GovEnv (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (GovEnv (ConwayEra StandardCrypto))
 
 instance HasSimpleRep (GovActionState (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (GovActionState (ConwayEra StandardCrypto))
 
--- TODO: model proposals properly
-instance IsConwayUniv fn => HasSpec fn (Proposals (ConwayEra StandardCrypto)) where
-  type TypeSpec fn (Proposals (ConwayEra StandardCrypto)) = ()
-  emptySpec = ()
-  combineSpec _ _ = TrueSpec
-  genFromTypeSpec _ = pure def
-  conformsTo _ _ = True
-  toPreds _ _ = toPred True
+gasId_ ::
+  IsConwayUniv fn =>
+  Term fn (GovActionState (ConwayEra StandardCrypto)) ->
+  Term fn (GovActionId StandardCrypto)
+gasId_ = sel @0
+
+gasCommitteeVotes_ ::
+  IsConwayUniv fn =>
+  Term fn (GovActionState (ConwayEra StandardCrypto)) ->
+  Term fn (Map (Credential 'HotCommitteeRole StandardCrypto) Vote)
+gasCommitteeVotes_ = sel @1
+
+gasDRepVotes_ ::
+  IsConwayUniv fn =>
+  Term fn (GovActionState (ConwayEra StandardCrypto)) ->
+  Term fn (Map (Credential 'DRepRole StandardCrypto) Vote)
+gasDRepVotes_ = sel @2
+
+gasProposalProcedure_ ::
+  IsConwayUniv fn =>
+  Term fn (GovActionState (ConwayEra StandardCrypto)) ->
+  Term fn (ProposalProcedure (ConwayEra StandardCrypto))
+gasProposalProcedure_ = sel @4
+
+type GAS = GovActionState (ConwayEra StandardCrypto)
+type ProposalTree = (StrictMaybe (GovActionId StandardCrypto), [RoseTree GAS])
+type ProposalsType =
+  '[ ProposalTree -- PParamUpdate
+   , ProposalTree -- HardFork
+   , ProposalTree -- Committee
+   , ProposalTree -- Constitution
+   , [GAS] -- Everything else (TreasuryWithdrawals, Info)
+   -- TODO - in order to improve the distribution of orders in the OMap
+   -- one could try doing something like this as well to materialize the order:
+   -- , TotalOrder (GovActionId StandardCrypto)
+   -- However, (1) I have no clue how this would work in detail and (2) the approach
+   -- of DFS gives us a lot of testing already, and there are bigger fish to fry than
+   -- this right now.
+   ]
+instance HasSimpleRep (Proposals (ConwayEra StandardCrypto)) where
+  type SimpleRep (Proposals (ConwayEra StandardCrypto)) = SOP '["Proposals" ::: ProposalsType]
+  toSimpleRep props =
+    inject @"Proposals" @'["Proposals" ::: ProposalsType]
+      (buildProposalTree $ coerce grPParamUpdate)
+      (buildProposalTree $ coerce grHardFork)
+      (buildProposalTree $ coerce grCommittee)
+      (buildProposalTree $ coerce grConstitution)
+      (Map.elems $ Map.withoutKeys idMap treeKeys)
+    where
+      GovRelation {..} = toGovRelationTree props
+      idMap = proposalsActionsMap props
+
+      treeKeys =
+        foldMap
+          keys
+          [ coerce grPParamUpdate
+          , coerce grHardFork
+          , coerce grCommittee
+          , coerce grConstitution
+          ]
+
+      buildProposalTree :: TreeMaybe (GovActionId StandardCrypto) -> ProposalTree
+      buildProposalTree (TreeMaybe (Node mId cs)) = (mId, map buildTree cs)
+
+      buildTree :: Tree (StrictMaybe (GovActionId StandardCrypto)) -> RoseTree GAS
+      buildTree (Node (SJust gid) cs) | Just gas <- Map.lookup gid idMap = RoseNode gas (map buildTree cs)
+      buildTree _ =
+        error "toSimpleRep @Proposals: toGovRelationTree returned trees with Nothing nodes below the root"
+
+      keys :: TreeMaybe (GovActionId StandardCrypto) -> Set (GovActionId StandardCrypto)
+      keys (TreeMaybe t) = foldMap (strictMaybe mempty Set.singleton) t
+
+  fromSimpleRep rep =
+    algebra @'["Proposals" ::: ProposalsType]
+      rep
+      $ \(rPPUp, ppupTree) (rHF, hfTree) (rCom, comTree) (rCon, conTree) others ->
+        let root = GovRelation (coerce rPPUp) (coerce rHF) (coerce rCom) (coerce rCon)
+            -- TODO: note, this doesn't roundtrip and the distribution is a bit iffy. See the TODO
+            -- above for ideas on how to deal with this.
+            oMap = foldMap (foldMap mkOMap) [ppupTree, hfTree, comTree, conTree] <> OMap.fromFoldable others
+         in unsafeMkProposals root oMap
+    where
+      mkOMap (RoseNode a ts) = a OMap.<| foldMap mkOMap ts
+
+-- TODO: this is a temporary workaround
+instance MonadFail (Either String) where
+  fail = Left
+
+instance IsConwayUniv fn => HasSpec fn (Proposals (ConwayEra StandardCrypto))
 
 instance HasSimpleRep (EnactSignal (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (EnactSignal (ConwayEra StandardCrypto))
