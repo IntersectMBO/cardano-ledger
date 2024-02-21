@@ -52,6 +52,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   calculatePoolAcceptedRatio,
   calculateCommitteeAcceptedRatio,
   logAcceptedRatio,
+  logDRepDistr,
   isDRepAccepted,
   isSpoAccepted,
   logRatificationChecks,
@@ -75,6 +76,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   ccShouldBeResigned,
   ccShouldNotBeResigned,
   getLastEnactedCommittee,
+  logDRepState,
 ) where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
@@ -621,6 +623,16 @@ expectMissingGovActionId govActionId =
       Just _ ->
         expectationFailure $ "Found gov action state for govActionId: " <> show govActionId
       Nothing -> pure ()
+
+logDRepDistr :: ConwayEraGov era => ImpTestM era ()
+logDRepDistr = do
+  drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
+  logEntry $ show drepDistr
+
+logDRepState :: ImpTestM era ()
+logDRepState = do
+  drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+  logEntry $ show drepState
 
 -- | Builds a RatifyEnv from the current state
 getRatifyEnv :: ConwayEraGov era => ImpTestM era (RatifyEnv era)

@@ -49,6 +49,7 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common hiding (Success)
+import Debug.Trace (trace)
 
 spec ::
   forall era.
@@ -1218,7 +1219,7 @@ spec =
           getLastEnactedCommittee `shouldReturn` SNothing
           -- Add to the rewards of the delegator to this DRep
           -- to barely make the threshold (51 %! 100)
-          modifyNES $
+          trace ">>> ADJUSTING HERE" $ modifyNES $
             nesEsL . epochStateUMapL
               %~ UM.adjust
                 (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000) d)
@@ -1251,6 +1252,7 @@ spec =
           submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
           passNEpochs 4 -- FIXME
           -- The vote should not result in a ratification
+          logStakeDistr
           logRatificationChecks addCCGaid
           isSpoAccepted addCCGaid `shouldReturn` False
           getLastEnactedCommittee `shouldReturn` SNothing

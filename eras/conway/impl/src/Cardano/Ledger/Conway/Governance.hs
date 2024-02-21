@@ -168,6 +168,7 @@ module Cardano.Ledger.Conway.Governance (
   toGovRelationTreeEither,
 ) where
 
+import Debug.Trace (trace)
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Globals (..),
@@ -895,9 +896,14 @@ epochStateDRepPulsingStateL = esLStateL . lsUTxOStateL . utxosGovStateL . drepPu
 computeDrepDistr ::
   UMap c ->
   Map (Credential 'DRepRole c) (DRepState c) ->
+  Map (DRep c) (CompactForm Coin) ->
   Map (Credential 'Staking c) (CompactForm Coin) ->
   Map (DRep c) (CompactForm Coin)
-computeDrepDistr um regDreps stakeDistr = Map.foldlWithKey' (accumDRepDistr um regDreps) Map.empty stakeDistr
+computeDrepDistr um regDreps accum stakeDistr = 
+  let x = Map.foldlWithKey' (accumDRepDistr um regDreps) accum stakeDistr 
+   in if Map.null x 
+        then x 
+        else trace (unlines ["DREP DISTR HERE", show x, show um, show regDreps, "DREP DISTR ENDS"]) x
 
 -- | For each 'stakecred' and coin 'c', check if that credential is delegated to some DRep.
 --   If so then add that coin to the aggregated map 'ans', mapping DReps to compact Coin
@@ -913,10 +919,15 @@ accumDRepDistr ::
 accumDRepDistr um regDreps ans stakecred c =
   case UMap.lookup stakecred (DRepUView um) of
     Nothing -> ans
-    Just drep@DRepAlwaysAbstain -> Map.insertWith UMap.addCompact drep c ans
-    Just drep@DRepAlwaysNoConfidence -> Map.insertWith UMap.addCompact drep c ans
+    Just drep@DRepAlwaysAbstain -> Map.insertWith addWithRewards drep c ans
+    Just drep@DRepAlwaysNoConfidence -> Map.insertWith addWithRewards drep c ans
     Just (DRepCredential cred2) | Map.notMember cred2 regDreps -> ans
-    Just drep@(DRepCredential _) -> Map.insertWith UMap.addCompact drep c ans
+    Just drep@(DRepCredential _) -> Map.insertWith addWithRewards drep c ans
+  where
+    addWithRewards x accum = UMap.sumCompactCoin [x, reward, accum]
+    reward = case UMap.lookup stakecred (RewDepUView um) of
+      Nothing -> CompactCoin 0
+      Just rdPair -> let x = rdReward rdPair in if x == mempty then x else trace (">>> COINC " <> show x) x
 
 -- | The type of a Pulser which uses 'accumDRepDistr' as its underlying function.
 --   'accumDRepDistr' will be partially applied to the components of type (UMap c)
@@ -968,7 +979,8 @@ instance Pulsable (DRepPulser era) where
     | Map.null dpBalance = pure pulser
     | otherwise =
         let !(!steps, !balance') = Map.splitAt dpPulseSize dpBalance
-            drep' = Map.foldlWithKey' (accumDRepDistr dpUMap dpDRepState) dpDRepDistr steps
+            -- drep' = Map.foldlWithKey' (accumDRepDistr dpUMap dpDRepState) dpDRepDistr steps
+            drep' = computeDrepDistr dpUMap dpDRepState dpDRepDistr steps
          in pure (pulser {dpBalance = balance', dpDRepDistr = drep'})
 
   completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
@@ -1043,7 +1055,8 @@ finishDRepPulser (DRComplete snap ratifyState) = (snap, ratifyState)
 finishDRepPulser (DRPulsing (DRepPulser {..})) =
   (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
   where
-    !finalDRepDistr = Map.foldlWithKey' (accumDRepDistr dpUMap dpDRepState) dpDRepDistr dpBalance
+    !finalDRepDistr = computeDrepDistr dpUMap dpDRepState dpDRepDistr dpBalance
+    -- Map.foldlWithKey' (accumDRepDistr dpUMap dpDRepState) dpDRepDistr dpBalance
     !ratifyEnv =
       RatifyEnv
         { reStakeDistr = dpStakeDistr
