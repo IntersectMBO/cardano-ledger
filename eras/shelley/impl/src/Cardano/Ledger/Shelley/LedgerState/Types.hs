@@ -46,9 +46,11 @@ import Cardano.Ledger.CertState (
   DRepState,
   Obligations (..),
   certDStateL,
+  certPStateL,
   certVStateL,
   dsUnifiedL,
   obligationCertState,
+  psStakePoolParamsL,
   sumObligation,
   vsDRepsL,
  )
@@ -62,6 +64,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
+import Cardano.Ledger.PoolParams
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
@@ -704,6 +707,12 @@ epochStateRegDrepL ::
     (EpochState era)
     (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
+
+epochStatePoolParamsL ::
+  Lens'
+    (EpochState era)
+    (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+epochStatePoolParamsL = esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
 
 epochStateUMapL :: Lens' (EpochState era) (UMap (EraCrypto era))
 epochStateUMapL = esLStateL . lsCertStateL . certDStateL . dsUnifiedL

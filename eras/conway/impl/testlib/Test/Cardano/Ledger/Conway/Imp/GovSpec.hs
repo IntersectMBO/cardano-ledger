@@ -11,7 +11,7 @@
 
 module Test.Cardano.Ledger.Conway.Imp.GovSpec where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireAllOf,
   pattern RequireAnyOf,
@@ -29,10 +29,11 @@ import Cardano.Ledger.Conway.PParams (
   pvtPPSecurityGroupL,
  )
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
-import Cardano.Ledger.Credential (Credential (KeyHashObj))
+import Cardano.Ledger.Credential (Credential (KeyHashObj), StakeReference (..))
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val (zero)
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..), traverse_)
@@ -45,6 +46,7 @@ import qualified Data.Set as Set
 import Data.Tree
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common hiding (Success)
 
@@ -682,7 +684,7 @@ spec =
     describe "Votes fail as expected" $ do
       it "on expired gov-actions" $ do
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2 -- Voting after the 3rd epoch should fail
-        khDRep <- setupSingleDRep
+        (khDRep, _, _) <- setupSingleDRep 1_000_000
         gaidConstitutionProp <- submitInitConstitutionGovAction
         passEpoch
         passEpoch
@@ -696,7 +698,7 @@ spec =
                 (voter, gaidConstitutionProp) NE.:| []
           ]
       it "on non-existant gov-actions" $ do
-        khDRep <- setupSingleDRep
+        (khDRep, _, _) <- setupSingleDRep 1_000_000
         gaidConstitutionProp <- submitInitConstitutionGovAction
         let voter = DRepVoter $ KeyHashObj khDRep
             dummyGaid = gaidConstitutionProp {gaidGovActionIx = GovActionIx 99} -- non-existant `GovActionId`
@@ -710,7 +712,7 @@ spec =
         it "expired gov-actions" $ do
           -- Voting after the 3rd epoch should fail
           modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-          khDRep <- setupSingleDRep
+          (khDRep, _, _) <- setupSingleDRep 1_000_000
           (govActionId, _) <- submitConstitution SNothing
           passEpoch
           passEpoch
@@ -722,7 +724,7 @@ spec =
             [ injectFailure $ VotingOnExpiredGovAction [(voter, govActionId)]
             ]
         it "non-existent gov-actions" $ do
-          khDRep <- setupSingleDRep
+          (khDRep, _, _) <- setupSingleDRep 1_000_000
           (govActionId, _) <- submitConstitution SNothing
           let voter = DRepVoter $ KeyHashObj khDRep
               dummyGaid = govActionId {gaidGovActionIx = GovActionIx 99} -- non-existent `GovActionId`
@@ -769,7 +771,7 @@ spec =
               impAnn "There should not be a committee" $ committee `shouldBe` SNothing
         assertNoCommittee
         khCC <- freshKeyHash
-        drep <- setupSingleDRep
+        (drep, _, _) <- setupSingleDRep 1_000_000
         let committeeMap =
               Map.fromList
                 [ (KeyHashObj khCC, EpochNo 50)
@@ -780,7 +782,7 @@ spec =
             drep
             mempty
             committeeMap
-        khSPO <- setupPoolWithStake $ Coin 42_000_000
+        (khSPO, _, _) <- setupPoolWithStake $ Coin 42_000_000
         logStakeDistr
         submitYesVote_ (StakePoolVoter khSPO) gaidCommittee
         replicateM_ 4 passEpoch
@@ -803,7 +805,7 @@ spec =
         assertNoCommittee
       it "SPO needs to vote on security-relevant parameter changes" $ do
         (drep, ccCred, _) <- electBasicCommittee
-        khPool <- setupPoolWithStake $ Coin 42_000_000
+        (khPool, _, _) <- setupPoolWithStake $ Coin 42_000_000
         initMinFeeA <- getsNES $ nesEsL . curPParamsEpochStateL . ppMinFeeAL
         gaidThreshold <- impAnn "Update StakePool thresholds" $ do
           pp <- getsNES $ nesEsL . curPParamsEpochStateL
@@ -1100,7 +1102,7 @@ spec =
     describe "DRep expiry" $ do
       it "is updated based on to number of dormant epochs" $ do
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-        drep <- setupSingleDRep
+        (drep, _, _) <- setupSingleDRep 1_000_000
 
         expectNumDormantEpochs 0
 
@@ -1157,7 +1159,150 @@ spec =
         expectPulserProposals
         expectNumDormantEpochs 1
         expectExtraDRepExpiry drep 2
-
+    describe "Active voting stake" $ do
+      context "DRep" $ do
+        it "UTxOs contribute to active voting stake" $ do
+          -- Only modify the applicable thresholds
+          modifyPParams $ \pp ->
+            pp
+              & ppDRepVotingThresholdsL
+                .~ def
+                  { dvtCommitteeNormal = 51 %! 100
+                  , dvtCommitteeNoConfidence = 51 %! 100
+                  }
+              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+          -- Setup DRep delegation #1
+          (drepKH1, stakingKH1, paymentKP1) <- setupSingleDRep 1_000_000
+          -- Setup DRep delegation #2
+          (_drepKH2, _stakingKH2, _paymentKP2) <- setupSingleDRep 1_000_000
+          -- Submit a committee proposal
+          cc <- KeyHashObj <$> freshKeyHash
+          let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+          addCCGaid <- submitGovAction addCCAction
+          -- Submit the vote
+          submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
+          passNEpochs 2
+          -- The vote should not result in a ratification
+          isDRepAccepted addCCGaid `shouldReturn` False
+          getLastEnactedCommittee `shouldReturn` SNothing
+          -- Bump up the UTxO delegated
+          -- to barely make the threshold (51 %! 100)
+          stakingKP1 <- lookupKeyPair stakingKH1
+          sendCoinTo (mkAddr (paymentKP1, stakingKP1)) (inject $ Coin 200_000)
+          passNEpochs 2 -- NOTE: For DReps, updates in stake distribution appear to reflect after 2 epochs for enactment.
+          -- The same vote should now successfully ratify the proposal
+          getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+        xit "Rewards contribute to active voting stake" $ do
+          -- FIXME: https://github.com/IntersectMBO/cardano-ledger/issues/4107
+          -- Only modify the applicable thresholds
+          modifyPParams $ \pp ->
+            pp
+              & ppDRepVotingThresholdsL
+                .~ def
+                  { dvtCommitteeNormal = 51 %! 100
+                  , dvtCommitteeNoConfidence = 51 %! 100
+                  }
+              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+          -- Setup DRep delegation #1
+          (drepKH1, stakingKH1, _paymentKP1) <- setupSingleDRep 1_000_000
+          -- Setup DRep delegation #2
+          (_drepKH2, _stakingKH2, _paymentKP2) <- setupSingleDRep 1_000_000
+          -- Submit a committee proposal
+          cc <- KeyHashObj <$> freshKeyHash
+          let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+          addCCGaid <- submitGovAction addCCAction
+          -- Submit the vote
+          submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
+          passNEpochs 2
+          -- The vote should not result in a ratification
+          isDRepAccepted addCCGaid `shouldReturn` False
+          getLastEnactedCommittee `shouldReturn` SNothing
+          -- Add to the rewards of the delegator to this DRep
+          -- to barely make the threshold (51 %! 100)
+          modifyNES $
+            nesEsL . epochStateUMapL
+              %~ UM.adjust
+                (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000) d)
+                (KeyHashObj stakingKH1)
+                . UM.RewDepUView
+          passNEpochs 2 -- NOTE: For DReps, updates in stake distribution appear to reflect after 2 epochs for enactment.
+          -- The same vote should now successfully ratify the proposal
+          getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+      context "StakePool" $ do
+        it "UTxOs contribute to active voting stake" $ do
+          -- Only modify the applicable thresholds
+          modifyPParams $ \pp ->
+            pp
+              & ppPoolVotingThresholdsL
+                .~ def
+                  { pvtCommitteeNormal = 51 %! 100
+                  , pvtCommitteeNoConfidence = 51 %! 100
+                  }
+              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+          -- Setup Pool delegation #1
+          (poolKH1, delegatorCPayment1, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
+          -- Setup Pool delegation #2
+          (_poolKH2, _delegatorCPayment2, _delegatorCStaking2) <- setupPoolWithStake $ Coin 1_000_000
+          passEpoch
+          -- Submit a committee proposal
+          cc <- KeyHashObj <$> freshKeyHash
+          let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+          addCCGaid <- submitGovAction addCCAction
+          -- Submit the vote
+          submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
+          passNEpochs 4 -- FIXME
+          -- The vote should not result in a ratification
+          logRatificationChecks addCCGaid
+          isSpoAccepted addCCGaid `shouldReturn` False
+          getLastEnactedCommittee `shouldReturn` SNothing
+          -- Bump up the UTxO delegated
+          -- to barely make the threshold (51 %! 100)
+          sendCoinTo
+            (Addr Testnet delegatorCPayment1 (StakeRefBase delegatorCStaking1))
+            (Coin 200_000)
+          -- FIXME: For SPOs, updates in stake distribution appear to reflect after 4 epochs for enactment.
+          -- https://github.com/IntersectMBO/cardano-ledger/issues/4108
+          passNEpochs 4
+          -- The same vote should now successfully ratify the proposal
+          getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+        it "Rewards contribute to active voting stake" $ do
+          -- Only modify the applicable thresholds
+          modifyPParams $ \pp ->
+            pp
+              & ppPoolVotingThresholdsL
+                .~ def
+                  { pvtCommitteeNormal = 51 %! 100
+                  , pvtCommitteeNoConfidence = 51 %! 100
+                  }
+              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+          -- Setup Pool delegation #1
+          (poolKH1, _delegatorCPayment1, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
+          -- Setup Pool delegation #2
+          (_poolKH2, _delegatorCPayment2, _delegatorCStaking2) <- setupPoolWithStake $ Coin 1_000_000
+          passEpoch
+          -- Submit a committee proposal
+          cc <- KeyHashObj <$> freshKeyHash
+          let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+          addCCGaid <- submitGovAction addCCAction
+          -- Submit the vote
+          submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
+          passNEpochs 4 -- FIXME
+          -- The vote should not result in a ratification
+          isSpoAccepted addCCGaid `shouldReturn` False
+          getLastEnactedCommittee `shouldReturn` SNothing
+          -- Add to the rewards of the delegator to this SPO
+          -- to barely make the threshold (51 %! 100)
+          modifyNES $
+            nesEsL . epochStateUMapL
+              %~ UM.adjust
+                (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000) d)
+                delegatorCStaking1
+                . UM.RewDepUView
+          -- FIXME: For SPOs, updates in stake distribution appear to reflect after 4 epochs for enactment.
+          -- https://github.com/IntersectMBO/cardano-ledger/issues/4108
+          passNEpochs 4
+          -- The same vote should now successfully ratify the proposal
+          getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
     describe "Committee actions validation" $ do
       it "A CC that has resigned will need to be first voted out and then voted in to be considered active" $ do
         (dRep, _, gaidCC) <- electBasicCommittee
@@ -1211,7 +1356,7 @@ spec =
         ccShouldNotBeResigned cc
       it "proposals to update the committee get delayed if the expiration exceeds the max term" $ do
         setPParams
-        drep <- setupSingleDRep
+        (drep, _, _) <- setupSingleDRep 1_000_000
         maxTermLength <-
           getsNES $
             nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL . ppCommitteeMaxTermLengthL

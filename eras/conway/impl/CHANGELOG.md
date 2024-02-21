@@ -50,6 +50,12 @@
 
 ### `testlib`
 
+* Rename `canGovActionBeDRepAccepted` to `isDRepAccepted` and refactor #4097
+  * Add `isSPOAccepted`
+  * Change `setupSingleDRep` to return relevant keyhashes
+  * Change `setupPoolWithStake` to return relevant keyhashes
+  * Add `getLastEnactedCommittee`
+  * Add `getRatifyEnvAndState`
 * Add `Test.Cardano.Ledger.Conway.Imp.UtxosSpec`
 * Add `getGovPolicy`
 * Add `submitGovActions` and `trySubmitGovActions`

@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -83,7 +84,7 @@ spec = do
 
   it "Committee queries" $ do
     setPParams
-    drep <- setupSingleDRep
+    (drep, _, _) <- setupSingleDRep 1_000_000
     c1 <- KeyHashObj <$> freshKeyHash
     c2 <- KeyHashObj <$> freshKeyHash
     c3 <- KeyHashObj <$> freshKeyHash
