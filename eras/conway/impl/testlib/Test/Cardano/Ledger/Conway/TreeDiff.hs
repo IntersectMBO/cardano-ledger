@@ -48,7 +48,9 @@ instance
 
 -- PlutusContext
 instance
-  ( ToExpr (TxCert era)
+  ( Era era
+  , ToExpr (PParamsHKD StrictMaybe era)
+  , ToExpr (TxCert era)
   , ToExpr (PlutusPurpose AsIx era)
   , ToExpr (PlutusPurpose AsItem era)
   ) =>

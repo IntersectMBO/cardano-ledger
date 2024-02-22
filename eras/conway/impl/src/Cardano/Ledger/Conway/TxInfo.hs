@@ -109,12 +109,13 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO)
 import Control.Arrow (ArrowChoice (..))
 import Control.DeepSeq (NFData)
-import Control.Monad (when, zipWithM)
+import Control.Monad (unless, when, zipWithM)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
+import qualified Data.OSet.Strict as OSet
 import qualified Data.Set as Set
-import GHC.Generics
+import GHC.Generics hiding (to)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
@@ -133,14 +134,28 @@ data ConwayContextError era
   = BabbageContextError !(BabbageContextError era)
   | CertificateNotSupported !(TxCert era)
   | PlutusPurposeNotSupported !(PlutusPurpose AsItem era)
+  | CurrentTreasuryFieldNotSupported !Coin
+  | VotingProceduresFieldNotSupported !(VotingProcedures era)
+  | ProposalProceduresFieldNotSupported !(OSet.OSet (ProposalProcedure era))
+  | TreasuryDonationFieldNotSupported !Coin
   deriving (Generic)
 
 deriving instance
-  (Eq (BabbageContextError era), Eq (TxCert era), Eq (PlutusPurpose AsItem era)) =>
+  ( Eq (BabbageContextError era)
+  , Eq (TxCert era)
+  , Eq (PlutusPurpose AsItem era)
+  , Eq (PlutusPurpose AsIx era)
+  , EraPParams era
+  ) =>
   Eq (ConwayContextError era)
 
 deriving instance
-  (Show (BabbageContextError era), Show (TxCert era), Show (PlutusPurpose AsItem era)) =>
+  ( Show (BabbageContextError era)
+  , Show (TxCert era)
+  , Show (PlutusPurpose AsItem era)
+  , Show (PlutusPurpose AsIx era)
+  , EraPParams era
+  ) =>
   Show (ConwayContextError era)
 
 instance Inject (ConwayContextError era) (ConwayContextError era)
@@ -152,11 +167,15 @@ instance Inject (AlonzoContextError era) (ConwayContextError era) where
   inject = BabbageContextError . inject
 
 instance
-  (NoThunks (TxCert era), NoThunks (PlutusPurpose AsIx era), NoThunks (PlutusPurpose AsItem era)) =>
+  ( NoThunks (TxCert era)
+  , NoThunks (PlutusPurpose AsIx era)
+  , NoThunks (PlutusPurpose AsItem era)
+  , EraPParams era
+  ) =>
   NoThunks (ConwayContextError era)
 
 instance
-  ( Era era
+  ( EraPParams era
   , NFData (TxCert era)
   , NFData (PlutusPurpose AsIx era)
   , NFData (PlutusPurpose AsItem era)
@@ -164,7 +183,7 @@ instance
   NFData (ConwayContextError era)
 
 instance
-  ( Era era
+  ( EraPParams era
   , EncCBOR (TxCert era)
   , EncCBOR (PlutusPurpose AsIx era)
   , EncCBOR (PlutusPurpose AsItem era)
@@ -179,9 +198,17 @@ instance
       encode $ Sum CertificateNotSupported 9 !> To txCert
     PlutusPurposeNotSupported purpose ->
       encode $ Sum PlutusPurposeNotSupported 10 !> To purpose
+    CurrentTreasuryFieldNotSupported scoin ->
+      encode $ Sum CurrentTreasuryFieldNotSupported 11 !> To scoin
+    VotingProceduresFieldNotSupported votingProcedures ->
+      encode $ Sum VotingProceduresFieldNotSupported 12 !> To votingProcedures
+    ProposalProceduresFieldNotSupported proposalProcedures ->
+      encode $ Sum ProposalProceduresFieldNotSupported 13 !> To proposalProcedures
+    TreasuryDonationFieldNotSupported coin ->
+      encode $ Sum TreasuryDonationFieldNotSupported 14 !> To coin
 
 instance
-  ( Era era
+  ( EraPParams era
   , DecCBOR (TxCert era)
   , DecCBOR (PlutusPurpose AsIx era)
   , DecCBOR (PlutusPurpose AsItem era)
@@ -192,12 +219,17 @@ instance
     8 -> SumD BabbageContextError <! From
     9 -> SumD CertificateNotSupported <! From
     10 -> SumD PlutusPurposeNotSupported <! From
+    11 -> SumD CurrentTreasuryFieldNotSupported <! From
+    12 -> SumD VotingProceduresFieldNotSupported <! From
+    13 -> SumD ProposalProceduresFieldNotSupported <! From
+    14 -> SumD TreasuryDonationFieldNotSupported <! From
     n -> Invalid n
 
 instance
   ( ToJSON (TxCert era)
   , ToJSON (PlutusPurpose AsIx era)
   , ToJSON (PlutusPurpose AsItem era)
+  , EraPParams era
   ) =>
   ToJSON (ConwayContextError era)
   where
@@ -207,6 +239,22 @@ instance
       kindObject "CertificateNotSupported" ["certificate" .= toJSON txCert]
     PlutusPurposeNotSupported purpose ->
       kindObject "PlutusPurposeNotSupported" ["purpose" .= toJSON purpose]
+    CurrentTreasuryFieldNotSupported scoin ->
+      kindObject
+        "CurrentTreasuryFieldNotSupported"
+        ["current_treasury_value" .= toJSON scoin]
+    VotingProceduresFieldNotSupported votingProcedures ->
+      kindObject
+        "VotingProceduresFieldNotSupported"
+        ["voting_procedures" .= toJSON votingProcedures]
+    ProposalProceduresFieldNotSupported proposalProcedures ->
+      kindObject
+        "ProposalProceduresFieldNotSupported"
+        ["proposal_procedures" .= toJSON proposalProcedures]
+    TreasuryDonationFieldNotSupported coin ->
+      kindObject
+        "TreasuryDonationFieldNotSupported"
+        ["treasury_donation" .= toJSON coin]
 
 -- | Given a TxOut, translate it for V2 and return (Right transalation).
 -- If the transaction contains any Byron addresses or Babbage features, return Left.
@@ -256,12 +304,59 @@ transTxInInfoV3 utxo txIn = do
   plutusTxOut <- transTxOutV2 (TxOutFromInput txIn) txOut
   Right (PV3.TxInInfo (transTxIn txIn) plutusTxOut)
 
+guardConwayFeaturesForPlutusV1V2 ::
+  forall era.
+  ( EraTx era
+  , ConwayEraTxBody era
+  , Inject (ConwayContextError era) (ContextError era)
+  ) =>
+  Tx era ->
+  Either (ContextError era) ()
+guardConwayFeaturesForPlutusV1V2 tx = do
+  let txBody = tx ^. bodyTxL
+      currentTreasuryValue = txBody ^. currentTreasuryValueTxBodyL
+      votingProcedures = txBody ^. votingProceduresTxBodyL
+      proposalProcedures = txBody ^. proposalProceduresTxBodyL
+      treasuryDonation = txBody ^. treasuryDonationTxBodyL
+  unless (null $ unVotingProcedures votingProcedures) $
+    Left $
+      inject $
+        VotingProceduresFieldNotSupported @era votingProcedures
+  unless (null proposalProcedures) $
+    Left $
+      inject $
+        ProposalProceduresFieldNotSupported @era proposalProcedures
+  unless (treasuryDonation == Coin 0) $
+    Left $
+      inject $
+        TreasuryDonationFieldNotSupported @era treasuryDonation
+  case currentTreasuryValue of
+    SNothing -> Right ()
+    SJust treasury ->
+      Left $ inject $ CurrentTreasuryFieldNotSupported @era treasury
+
+transTxCertV1V2 ::
+  ( ConwayEraTxCert era
+  , Inject (ConwayContextError era) (ContextError era)
+  ) =>
+  TxCert era ->
+  Either (ContextError era) PV1.DCert
+transTxCertV1V2 = \case
+  RegDepositTxCert stakeCred _deposit ->
+    Right $ PV1.DCertDelegRegKey (PV1.StakingHash (transCred stakeCred))
+  UnRegDepositTxCert stakeCred _refund ->
+    Right $ PV1.DCertDelegDeRegKey (PV1.StakingHash (transCred stakeCred))
+  txCert
+    | Just dCert <- Alonzo.transTxCertCommon txCert -> Right dCert
+    | otherwise -> Left $ inject $ CertificateNotSupported txCert
+
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
   toPlutusTxCert _ = transTxCertV1V2
 
   toPlutusScriptPurpose proxy = transPlutusPurposeV1V2 proxy . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
+    guardConwayFeaturesForPlutusV1V2 tx
     timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (transTxInInfoV1 utxo) (Set.toList (txBody ^. inputsTxBodyL))
     mapM_ (transTxInInfoV1 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
@@ -296,6 +391,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
   toPlutusScriptPurpose proxy = transPlutusPurposeV1V2 proxy . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
+    guardConwayFeaturesForPlutusV1V2 tx
     timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
     inputs <- mapM (Babbage.transTxInInfoV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
     refInputs <- mapM (Babbage.transTxInInfoV2 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
@@ -551,15 +647,6 @@ transPlutusPurposeV1V2 proxy = \case
   ConwayCertifying txCert -> Alonzo.transPlutusPurpose proxy $ AlonzoCertifying txCert
   ConwayRewarding rewardAccount -> Alonzo.transPlutusPurpose proxy $ AlonzoRewarding rewardAccount
   purpose -> Left $ inject $ PlutusPurposeNotSupported purpose
-
-transTxCertV1V2 ::
-  (ShelleyEraTxCert era, Inject (ConwayContextError era) (ContextError era)) =>
-  TxCert era ->
-  Either (ContextError era) PV1.DCert
-transTxCertV1V2 txCert =
-  case Alonzo.transTxCertCommon txCert of
-    Nothing -> Left $ inject $ CertificateNotSupported txCert
-    Just cert -> Right cert
 
 transProtVer :: ProtVer -> PV3.ProtocolVersion
 transProtVer (ProtVer major minor) =
