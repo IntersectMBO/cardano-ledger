@@ -5,6 +5,7 @@ module Main where
 import Cardano.Ledger.Conway (Conway)
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
+import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
@@ -31,6 +32,7 @@ main =
       GovActionReorder.spec
       roundTripJsonEraSpec @Conway
       describe "Imp" $ do
+        AlonzoImp.spec @Conway
         ConwayImp.spec @Conway
         ShelleyImp.spec @Conway
       describe "CostModels" $ do

@@ -157,7 +157,6 @@ import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro (Lens', (%~), (&), (.~), (^.))
 import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
-import Test.Cardano.Ledger.Babbage.ImpTest (babbageFixupTx)
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
@@ -201,7 +200,7 @@ instance
 
   modifyPParams = conwayModifyPParams
 
-  fixupTx = babbageFixupTx
+  fixupTx = alonzoFixupTx
 
 class
   ( ShelleyEraImp era
