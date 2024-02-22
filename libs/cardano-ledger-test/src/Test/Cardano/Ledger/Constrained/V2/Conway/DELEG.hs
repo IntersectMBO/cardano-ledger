@@ -36,14 +36,23 @@ delegCertSpec ::
 delegCertSpec pp ds =
   let rewardMap = unUnify $ rewards ds
       delegMap = unUnify $ delegations ds
+      zeroReward = (== 0) . fromCompact . rdReward
+      depositOf k =
+        case fromCompact . rdDeposit <$> Map.lookup k rewardMap of
+          Just d | d > 0 -> SJust d
+          _ -> SNothing
    in constrained $ \dc ->
         (caseOn dc)
           -- ConwayRegCert !(StakeCredential c) !(StrictMaybe Coin)
           (branch $ \_ mc -> mc ==. lit (SJust (pp ^. ppKeyDepositL)))
           -- ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
           ( branch $ \sc mc ->
-              onJust' mc $ \c ->
-                elem_ (pair_ sc c) $ lit [(k, r) | (k, RDPair (fromCompact -> r) _) <- Map.toList rewardMap]
+              [ -- You can only unregister things with 0 reward
+                assert $ elem_ sc $ lit (Map.keys $ Map.filter zeroReward rewardMap)
+              , assert $ elem_ sc $ lit (Map.keys delegMap)
+              , -- The `StrictMaybe` needs to be precisely what is in the delegation map
+                reify sc depositOf (==. mc)
+              ]
           )
           -- ConwayDelegCert !(StakeCredential c) !(Delegatee c)
           (branch $ \sc _ -> member_ sc $ lit (Map.keysSet delegMap))
