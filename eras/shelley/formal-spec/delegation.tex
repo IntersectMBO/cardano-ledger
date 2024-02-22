@@ -718,7 +718,7 @@ For each rule, again, we first check that a given certificate $c$ is of the corr
     advance will curb the growth of the $\var{retiring}$ list in the ledger state.
 
     The pools scheduled for retirement must be removed from
-    the $\var{retiring}$ state variable at the end of the epoch they are scheduled
+    the $\var{retiring}$ state variable at the beginning of the epoch they are scheduled
     to retire in. This non-signaled transition (triggered, instead, directly by a
     change of current slot number in the environment), along with all other transitions
     that take place at the epoch boundary, are described in Section~\ref{sec:epoch}.
