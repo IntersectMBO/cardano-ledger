@@ -315,7 +315,7 @@ expectNothingExpr Nothing = pure ()
 ---------------------------
 
 arbitrary :: (Arbitrary a, MonadGen m) => m a
-arbitrary = liftGen arbitrary
+arbitrary = liftGen H.arbitrary
 
 ---------------------------------------------------------------------------
 -- This interface will be defined in the next major version of `random` ---
