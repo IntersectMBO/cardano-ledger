@@ -172,7 +172,7 @@ CHaP. (TODO: implement a script that lists all of the package that fit the above
 #### Release to CHaP
 
 1. Follow the [CHaP release
-   instructions](https://github.com/input-output-hk/cardano-haskell-packages#-from-github)
+   instructions](https://github.com/intersectmbo/cardano-haskell-packages#-from-github)
 
    For example, to release commit with SHA `deadbeef`:
 
@@ -181,10 +181,10 @@ CHaP. (TODO: implement a script that lists all of the package that fit the above
    ```
    It is important to supply a commit SHA instead of a branch name.
 
-2. Create and merge a PR to https://github.com/input-output-hk/cardano-haskell-packages
+2. Create and merge a PR to https://github.com/intersectmbo/cardano-haskell-packages
    with the release(s). In case that a current release causes breakage on some downstream
    package due to that package lacking upper bounds, you will require to [add a revision
-   for that package](https://github.com/input-output-hk/cardano-haskell-packages#how-to-add-a-new-package-metadata-revision) that fixes the bounds in the same PR as the release. Also it is
+   for that package](https://github.com/intersectmbo/cardano-haskell-packages#how-to-add-a-new-package-metadata-revision) that fixes the bounds in the same PR as the release. Also it is
    necessary to notify the maintainers of the package via a bug report or a PR with a fix.
 
 3. Once the PR is merged then create a git tag with the same version for the same git SHA
@@ -267,7 +267,7 @@ versions behind the one on `master`.
 ## Packages excluded from release process
 
 We release most of the packages in this repo to [CHaP (Cardano Haskell
-Packages)](https://github.com/input-output-hk/cardano-haskell-packages). However, there
+Packages)](https://github.com/intersectmbo/cardano-haskell-packages). However, there
 are a few packages that are either used for testing, debugging or benchmarking and do not
 deserve to be released into the World. They are neither released nor versioned. Bounds on
 the local dependencies do not need to be updated, because they will always use the versions
