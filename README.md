@@ -89,6 +89,8 @@ The directory structure of this repository is as follows:
 It is recommended to use [`nix`](https://nixos.org/nix/download.html) for building everything in this repository.
 Haskell files can be built with [`cabal`](https://www.haskell.org/cabal/) inside of a nix shell.
 
+Make sure you have a recent version of `nix` by following this [guide](https://nixos.org/manual/nix/stable/installation/upgrading.html)
+
 ## Nix Cache
 
 When using `nix` it is recommended that you setup the cache, so that it can
