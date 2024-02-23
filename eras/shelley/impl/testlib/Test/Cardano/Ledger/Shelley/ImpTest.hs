@@ -761,22 +761,19 @@ fixupFees tx = do
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
   kpSpending <- lookupKeyPair =<< freshKeyHash
   kpStaking <- lookupKeyPair =<< freshKeyHash
-  rootTxIn <- fst <$> lookupImpRootTxOut
   nativeScriptKeyPairs <- impNativeScriptKeyPairs tx
   let
     nativeScriptKeyWits = Map.keysSet nativeScriptKeyPairs
-    txWithRoot = tx & bodyTxL . inputsTxBodyL %~ Set.insert rootTxIn
-    consumedValue = consumed pp certState utxo (txWithRoot ^. bodyTxL)
-    producedValue = produced pp certState (txWithRoot ^. bodyTxL)
+    consumedValue = consumed pp certState utxo (tx ^. bodyTxL)
+    producedValue = produced pp certState (tx ^. bodyTxL)
     changeBeforeFee = consumedValue <-> producedValue
     changeBeforeFeeTxOut =
       mkBasicTxOut
         (mkAddr (kpSpending, kpStaking))
         changeBeforeFee
   let
-    txNoWits =
-      txWithRoot & bodyTxL . outputsTxBodyL %~ (:|> changeBeforeFeeTxOut)
-    outsBeforeFee = txWithRoot ^. bodyTxL . outputsTxBodyL
+    txNoWits = tx & bodyTxL . outputsTxBodyL %~ (:|> changeBeforeFeeTxOut)
+    outsBeforeFee = tx ^. bodyTxL . outputsTxBodyL
     fee = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
     change = changeBeforeFeeTxOut ^. coinTxOutL <-> fee
     changeTxOut = changeBeforeFeeTxOut & coinTxOutL .~ change
