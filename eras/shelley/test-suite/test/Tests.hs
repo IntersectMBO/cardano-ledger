@@ -5,9 +5,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyLEDGER)
 import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
-import qualified Test.Cardano.Ledger.Shelley.Address.Bootstrap as Bootstrap (
-  bootstrapHashTest,
- )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.PropertyTests (commonTests)
 import qualified Test.Cardano.Ledger.Shelley.Rewards as Rewards (tests)
@@ -52,7 +49,6 @@ defaultTests =
       )
     , AdaPreservation.tests @C @(ShelleyLEDGER C) (maxSuccess stdArgs)
     , ClassifyTraces.onlyValidChainSignalsAreGenerated @C
-    , Bootstrap.bootstrapHashTest
     , WitVKeys.tests @(EraCrypto C)
     , Rewards.tests
     , Serialisation.tests

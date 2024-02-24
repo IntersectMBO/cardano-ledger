@@ -30,10 +30,7 @@ module Test.Cardano.Ledger.Core.KeyPair (
 )
 where
 
-import qualified Test.Cardano.Chain.Common.Gen as Byron
-import qualified Test.Cardano.Crypto.Gen as Byron
 import qualified Cardano.Chain.Common as Byron
-import Test.QuickCheck.Hedgehog (hedgehog)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash (hashToBytes)
 import qualified Cardano.Crypto.Hash as Hash
@@ -77,8 +74,11 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import System.Random.Stateful
+import qualified Test.Cardano.Chain.Common.Gen as Byron
+import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.QuickCheck
+import Test.QuickCheck.Hedgehog (hedgehog)
 
 data KeyPair (kd :: KeyRole) c = KeyPair
   { vKey :: !(VKey kd c)

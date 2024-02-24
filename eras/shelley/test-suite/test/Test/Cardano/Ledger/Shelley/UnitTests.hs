@@ -96,10 +96,6 @@ import GHC.Stack
 import Lens.Micro
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkVKeyRewardAccount, mkWitnessVKey, mkWitnessesVKey, vKey)
-import Test.Cardano.Ledger.Shelley.Address.Bootstrap (
-  testBootstrapNotSpending,
-  testBootstrapSpending,
- )
 import Test.Cardano.Ledger.Shelley.Arbitrary (ASC (ASC), StakeProportion (StakeProportion), VRFNatVal (VRFNatVal))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
@@ -688,14 +684,6 @@ testsInvalidLedger =
     , testCase "Invalid Ledger - ProducedOverMaxWord64" testProducedOverMaxWord64
     ]
 
-testBootstrap :: TestTree
-testBootstrap =
-  testGroup
-    "bootstrap witnesses"
-    [ testCase "spend from a bootstrap address" testBootstrapSpending
-    , testCase "don't spend from a bootstrap address" testBootstrapNotSpending
-    ]
-
 unitTests :: TestTree
 unitTests =
   testGroup
@@ -704,5 +692,4 @@ unitTests =
     , testsPParams
     , sizeTests
     , testCheckLeaderVal
-    , testBootstrap
     ]
