@@ -88,6 +88,7 @@ import Cardano.Ledger.BaseTypes (
   Network (..),
   ShelleyBase,
   StrictMaybe (..),
+  addEpochInterval,
   inject,
   textToUrl,
  )
@@ -412,13 +413,29 @@ submitProposal ::
 submitProposal proposal = trySubmitProposal proposal >>= expectRightExpr
 
 submitProposals ::
-  (ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =>
+  (ShelleyEraImp era, ConwayEraGov era, ConwayEraTxBody era, HasCallStack) =>
   NE.NonEmpty (ProposalProcedure era) ->
   ImpTestM era (NE.NonEmpty (GovActionId (EraCrypto era)))
 submitProposals proposals = do
+  curEpochNo <- getsNES nesELL
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
   tx <- trySubmitProposals proposals >>= expectRightExpr
   let txId = txIdTx tx
-  pure $ NE.zipWith (\ix _ -> GovActionId txId (GovActionIx ix)) (0 NE.:| [1 ..]) proposals
+      proposalsWithGovActionId =
+        NE.zipWith (\ix p -> (GovActionId txId (GovActionIx ix), p)) (0 NE.:| [1 ..]) proposals
+  forM proposalsWithGovActionId $ \(govActionId, proposal) -> do
+    govActionState <- getGovActionState govActionId
+    govActionState
+      `shouldBeExpr` GovActionState
+        { gasId = govActionId
+        , gasCommitteeVotes = mempty
+        , gasDRepVotes = mempty
+        , gasStakePoolVotes = mempty
+        , gasProposalProcedure = proposal
+        , gasProposedIn = curEpochNo
+        , gasExpiresAfter = addEpochInterval curEpochNo (pp ^. ppGovActionLifetimeL)
+        }
+    pure govActionId
 
 -- | Submits a transaction that proposes the given proposal
 trySubmitProposal ::
