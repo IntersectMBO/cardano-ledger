@@ -187,9 +187,9 @@ instance
   ) =>
   ShelleyEraImp (ConwayEra c)
   where
-  initImpNES rootCoin =
+  initImpNES =
     let nes =
-          initAlonzoImpNES rootCoin
+          initAlonzoImpNES
             & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
             & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
         epochState = nes ^. nesEsL

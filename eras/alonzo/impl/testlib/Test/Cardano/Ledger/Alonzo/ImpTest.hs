@@ -62,10 +62,11 @@ import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
-import Lens.Micro.Mtl (use, (%=), (.=))
+import Lens.Micro.Mtl (use, (%=))
 import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
-import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (PlutusArgs (..), ScriptTestContext (..), testingCostModels)
 import Test.Cardano.Ledger.Shelley.ImpTest as ImpTest
 
@@ -76,10 +77,9 @@ initAlonzoImpNES ::
   , ShelleyEraImp era
   , AlonzoEraScript era
   ) =>
-  Coin ->
   NewEpochState era
-initAlonzoImpNES rootCoin =
-  initShelleyImpNES rootCoin
+initAlonzoImpNES =
+  initShelleyImpNES
     & nesEsL . curPParamsEpochStateL %~ initPParams
   where
     initPParams pp =
@@ -90,21 +90,26 @@ initAlonzoImpNES rootCoin =
           .~ testingCostModels
             [PlutusV1 .. eraMaxLanguage @era]
 
-makeCollateralInput :: ImpTestM era (TxIn (EraCrypto era))
+makeCollateralInput :: ShelleyEraImp era => ImpTestM era (TxIn (EraCrypto era))
 makeCollateralInput = do
-  x : xs <- use impCollateralTxIdsL
-  impCollateralTxIdsL .= xs
-  pure x
+  -- TODO: make more accurate
+  let collateral = Coin 10_000_000
+  (_, addr) <- freshKeyAddr
+  sendCoinTo addr collateral
 
 addCollateralInput ::
-  (AlonzoEraTxBody era, EraTx era) =>
+  (AlonzoEraTxBody era, ShelleyEraImp era, ScriptsNeeded era ~ AlonzoScriptsNeeded era) =>
   Tx era ->
   ImpTestM era (Tx era)
 addCollateralInput tx = do
-  collInput <- makeCollateralInput
-  pure $
-    tx
-      & bodyTxL . collateralInputsTxBodyL <>~ Set.singleton collInput
+  ctx <- impGetPlutusContexts tx
+  if null ctx
+    then pure tx
+    else do
+      collateralInput <- makeCollateralInput
+      pure $
+        tx
+          & bodyTxL . collateralInputsTxBodyL <>~ Set.singleton collateralInput
 
 impLookupPlutusScript ::
   AlonzoEraScript era =>
@@ -112,9 +117,7 @@ impLookupPlutusScript ::
   ImpTestM era (Maybe (PlutusScript era))
 impLookupPlutusScript sh = do
   mbyCtx <- getScriptTestContext sh
-  case mbyCtx of
-    Just (ScriptTestContext plutus _) -> pure $ mkPlutusScript plutus
-    Nothing -> pure Nothing
+  pure $ mbyCtx >>= \(ScriptTestContext plutus _) -> mkPlutusScript plutus
 
 impGetPlutusContexts ::
   (ScriptsNeeded era ~ AlonzoScriptsNeeded era, EraUTxO era) =>
@@ -259,6 +262,7 @@ alonzoFixupTx ::
   , AlonzoEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , AlonzoEraUTxO era
+  , HasCallStack
   ) =>
   Tx era ->
   ImpTestM era (Tx era)

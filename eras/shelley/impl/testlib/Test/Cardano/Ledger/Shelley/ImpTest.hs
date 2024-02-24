@@ -43,9 +43,14 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   passNEpochs,
   passTick,
   freshKeyHash,
+  freshKeyPair,
+  freshKeyAddr,
+  lookupKeyPair,
+  freshByronKeyHash,
+  freshBootstapAddress,
+  lookupByronKeyPair,
   freshSafeHash,
   freshKeyHashVRF,
-  lookupKeyPair,
   submitTx,
   submitTx_,
   submitTxAnn,
@@ -68,7 +73,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   lookupImpRootTxOut,
   sendValueTo,
   sendCoinTo,
-  dispenseIndex,
   expectRegisteredRewardAddress,
   expectNotRegisteredRewardAddress,
   expectTreasury,
@@ -99,11 +103,12 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impNativeScriptsG,
 ) where
 
+import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, seedSizeDSIGN)
 import Cardano.Crypto.Hash (Hash, HashAlgorithm)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
+import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), RewardAccount (..), bootstrapKeyHash)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochSize (..),
@@ -128,11 +133,14 @@ import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
   VerKeyVRF,
+  bootstrapWitKeyHash,
   hashKey,
+  makeBootstrapWitness,
+  witVKeyHash,
  )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
-import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash)
+import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, extractHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, sumAdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
@@ -174,7 +182,7 @@ import Cardano.Ledger.Val (Val (..))
 import Control.Monad (forM)
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader (..), asks)
-import Control.Monad.State.Strict (MonadState (..), gets, modify)
+import Control.Monad.State.Strict (MonadState (..), execStateT, gets, modify)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.State.Transition (STS (..), TRC (..))
@@ -187,7 +195,7 @@ import Data.Functor.Identity (Identity (..))
 import Data.IORef
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -200,7 +208,16 @@ import Numeric.Natural (Natural)
 import Prettyprinter (Doc, Pretty (..), defaultLayoutOptions, layoutPretty, line)
 import Prettyprinter.Render.String (renderString)
 import System.Random
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkKeyHash, mkKeyPair, mkWitnessesVKey)
+import qualified System.Random as Random
+import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.KeyPair (
+  ByronKeyPair (..),
+  KeyPair (..),
+  mkAddr,
+  mkKeyHash,
+  mkKeyPair,
+  mkWitnessesVKey,
+ )
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals, txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (PlutusArgs, ScriptTestContext)
@@ -224,8 +241,8 @@ data ImpTestState era = ImpTestState
   { impNES :: !(NewEpochState era)
   , impRootTxIn :: !(TxIn (EraCrypto era))
   , impCollateralTxIds :: ![TxIn (EraCrypto era)]
-  , impFreshIdx :: !Integer
   , impKeyPairs :: !(forall k. Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
+  , impByronKeyPairs :: !(Map (BootstrapAddress (EraCrypto era)) ByronKeyPair)
   , impNativeScripts :: !(Map (ScriptHash (EraCrypto era)) (NativeScript era))
   , impScripts :: !(Map (ScriptHash (EraCrypto era)) ScriptTestContext)
   , impLastTick :: !SlotNo
@@ -251,9 +268,6 @@ impLastTickG = impLastTickL
 
 impRootTxInL :: Lens' (ImpTestState era) (TxIn (EraCrypto era))
 impRootTxInL = lens impRootTxIn (\x y -> x {impRootTxIn = y})
-
-impFreshIdxL :: Lens' (ImpTestState era) Integer
-impFreshIdxL = lens impFreshIdx (\x y -> x {impFreshIdx = y})
 
 impKeyPairsG ::
   SimpleGetter
@@ -321,11 +335,13 @@ class
   ) =>
   ShelleyEraImp era
   where
-  initImpNES :: Coin -> NewEpochState era
+  initImpNES :: NewEpochState era
 
   -- | Try to find a sufficient number of KeyPairs that would satisfy a native script.
   -- Whenever script can't be satisfied, Nothing is returned
   impSatisfyNativeScript ::
+    -- | Set of Witnesses that have already been satisfied
+    Set.Set (KeyHash 'Witness (EraCrypto era)) ->
     NativeScript era ->
     ImpTestM era (Maybe (Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))))
 
@@ -337,7 +353,7 @@ class
     ImpTestM era ()
   modifyPParams f = modifyNES $ nesEsL . curPParamsEpochStateL %~ f
 
-  fixupTx :: Tx era -> ImpTestM era (Tx era)
+  fixupTx :: HasCallStack => Tx era -> ImpTestM era (Tx era)
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
@@ -378,14 +394,6 @@ mkHashVerKeyVRF =
   where
     seedSize = fromIntegral . seedSizeDSIGN $ Proxy @(DSIGN (EraCrypto era))
 
-freshKeyHashVRF ::
-  forall era.
-  ShelleyEraImp era =>
-  ImpTestM era (Hash (HASH (EraCrypto era)) (VerKeyVRF (EraCrypto era)))
-freshKeyHashVRF = do
-  idx <- dispenseIndex
-  pure $ mkHashVerKeyVRF @era $ fromIntegral idx
-
 testKeyHash :: Crypto c => KeyHash kd c
 testKeyHash = mkKeyHash (-1)
 
@@ -402,9 +410,8 @@ initShelleyImpNES ::
   ( Default (StashedAVVMAddresses era)
   , ShelleyEraImp era
   ) =>
-  Coin ->
   NewEpochState era
-initShelleyImpNES rootCoin =
+initShelleyImpNES =
   NewEpochState
     { stashedAVVMAddresses = def
     , nesRu =
@@ -432,7 +439,6 @@ initShelleyImpNES rootCoin =
     , nesBcur = BlocksMade mempty
     }
   where
-    rootTxId = mkTxId 0
     pp =
       emptyPParams
         & ppMinFeeAL .~ Coin 44
@@ -461,11 +467,7 @@ initShelleyImpNES rootCoin =
         }
         & prevPParamsEpochStateL .~ pp
         & curPParamsEpochStateL .~ pp
-    utxo =
-      UTxO
-        . Map.fromList
-        $ (TxIn rootTxId minBound, mkBasicTxOut (impAddr 0) $ inject rootCoin)
-          : mkCollateralUTxO rootCoin
+    utxo = mempty
 
 mkTxId :: Crypto c => Int -> TxId c
 mkTxId idx = TxId (mkDummySafeHash Proxy idx)
@@ -494,7 +496,7 @@ instance
   where
   initImpNES = initShelleyImpNES
 
-  impSatisfyNativeScript script = do
+  impSatisfyNativeScript providedVKeyHashes script = do
     keyPairs <- gets impKeyPairs
     let
       satisfyMOf m []
@@ -507,9 +509,11 @@ instance
             kps' <- satisfyMOf (m - 1) xs
             Just $ kps <> kps'
       satisfyScript = \case
-        RequireSignature keyHash -> do
-          keyPair <- Map.lookup keyHash keyPairs
-          Just $ Map.singleton keyHash keyPair
+        RequireSignature keyHash
+          | keyHash `Set.member` providedVKeyHashes -> Just mempty
+          | otherwise -> do
+              keyPair <- Map.lookup keyHash keyPairs
+              Just $ Map.singleton keyHash keyPair
         RequireAllOf ss -> satisfyMOf (length ss) ss
         RequireAnyOf ss -> satisfyMOf 1 ss
         RequireMOf m ss -> satisfyMOf m ss
@@ -520,11 +524,27 @@ instance
 getAdaPots :: (EraGov era, EraTxOut era) => ImpTestM era AdaPots
 getAdaPots = totalAdaPotsES <$> getsNES nesEsL
 
+-- | Figure out all the Byron Addresses that need witnesses as well as all of the
+-- KeyHashes for Shelley Key witnesses that are required.
 impWitsVKeyNeeded ::
-  EraUTxO era => TxBody era -> ImpTestM era (Set.Set (KeyHash 'Witness (EraCrypto era)))
+  EraUTxO era =>
+  TxBody era ->
+  ImpTestM
+    era
+    ( Set.Set (BootstrapAddress (EraCrypto era)) -- Byron Based Addresses
+    , Set.Set (KeyHash 'Witness (EraCrypto era)) -- Shelley Based KeyHashes
+    )
 impWitsVKeyNeeded txBody = do
   ls <- getsNES (nesEsL . esLStateL)
-  pure $ getWitsVKeyNeeded (ls ^. lsCertStateL) (ls ^. lsUTxOStateL . utxosUtxoL) txBody
+  utxo <- getUTxO
+  let toBootAddr txIn = do
+        txOut <- txinLookup txIn utxo
+        txOut ^. bootAddrTxOutF
+      bootAddrs = Set.fromList $ mapMaybe toBootAddr $ Set.toList (txBody ^. spendableInputsTxBodyF)
+      bootKeyHashes = Set.map (coerceKeyRole . bootstrapKeyHash) bootAddrs
+      allKeyHashes =
+        getWitsVKeyNeeded (ls ^. lsCertStateL) (ls ^. lsUTxOStateL . utxosUtxoL) txBody
+  pure (bootAddrs, allKeyHashes Set.\\ bootKeyHashes)
 
 data ImpTestEnv era = ImpTestEnv
   { iteState :: !(IORef (ImpTestState era))
@@ -685,9 +705,7 @@ getScriptTestContext sh = Map.lookup sh <$> gets impScripts
 impNativeScriptsRequired ::
   EraUTxO era =>
   Tx era ->
-  ImpTestM
-    era
-    (Map (ScriptHash (EraCrypto era)) (NativeScript era))
+  ImpTestM era (Map (ScriptHash (EraCrypto era)) (NativeScript era))
 impNativeScriptsRequired tx = do
   utxo <- getUTxO
   ImpTestState {impNativeScripts} <- get
@@ -699,9 +717,7 @@ impNativeScriptsRequired tx = do
 addNativeScriptTxWits ::
   ShelleyEraImp era =>
   Tx era ->
-  ImpTestM
-    era
-    (Tx era)
+  ImpTestM era (Tx era)
 addNativeScriptTxWits tx = do
   scriptsRequired <- impNativeScriptsRequired tx
   utxo <- getUTxO
@@ -721,16 +737,34 @@ updateAddrTxWits ::
 updateAddrTxWits tx = do
   let txBody = tx ^. bodyTxL
       txBodyHash = hashAnnotated txBody
+  (bootAddrs, witsVKeyNeeded) <- impWitsVKeyNeeded txBody
+  -- Shelley Based Addr Witnesses
+  let curAddrWitHashes = Set.map witVKeyHash $ tx ^. witsTxL . addrTxWitsL
+  extraKeyPairs <- mapM lookupKeyPair $ Set.toList (witsVKeyNeeded Set.\\ curAddrWitHashes)
+  let extraAddrVKeyWits = mkWitnessesVKey txBodyHash extraKeyPairs
+      addrWitHashes = curAddrWitHashes <> Set.map witVKeyHash extraAddrVKeyWits
+  -- Shelley Based Native Script Witnesses
   scriptsRequired <- impNativeScriptsRequired tx
-  let nativeScripts = Map.elems scriptsRequired
-  nativeScriptsKeyPairs <- mapM impSatisfyNativeScript nativeScripts
-  witsVKeyNeeded <- impWitsVKeyNeeded txBody
-  keyPairs <- mapM lookupKeyPair (Set.toList witsVKeyNeeded)
-  let wits = keyPairs ++ Map.elems (mconcat (catMaybes nativeScriptsKeyPairs))
+  nativeScriptsKeyPairs <- mapM (impSatisfyNativeScript addrWitHashes) (Map.elems scriptsRequired)
+  let extraNativeScriptVKeyWits =
+        mkWitnessesVKey txBodyHash $ Map.elems (mconcat (catMaybes nativeScriptsKeyPairs))
+  -- Byron Based Witessed
+  let curBootAddrWitHashes = Set.map bootstrapWitKeyHash $ tx ^. witsTxL . bootAddrTxWitsL
+      bootAddrWitsNeeded =
+        [ bootAddr
+        | bootAddr <- Set.toList bootAddrs
+        , not (coerceKeyRole (bootstrapKeyHash bootAddr) `Set.member` curBootAddrWitHashes)
+        ]
+  extraBootAddrWits <- forM bootAddrWitsNeeded $ \bootAddr@(BootstrapAddress byronAddr) -> do
+    ByronKeyPair _ signingKey <- lookupByronKeyPair bootAddr
+    let attrs = Byron.addrAttributes byronAddr
+    pure $ makeBootstrapWitness (extractHash txBodyHash) signingKey attrs
   pure $
     tx
-      & witsTxL . addrTxWitsL .~ mkWitnessesVKey txBodyHash wits
+      & witsTxL . addrTxWitsL <>~ extraAddrVKeyWits <> extraNativeScriptVKeyWits
+      & witsTxL . bootAddrTxWitsL <>~ Set.fromList extraBootAddrWits
 
+-- | This fixup step ensures that there are enough funds in the transaction.
 addRootTxIn ::
   EraTx era =>
   Tx era ->
@@ -750,11 +784,12 @@ impNativeScriptKeyPairs ::
 impNativeScriptKeyPairs tx = do
   scriptsRequired <- impNativeScriptsRequired tx
   let nativeScripts = Map.elems scriptsRequired
-  keyPairs <- mapM impSatisfyNativeScript nativeScripts
+      curAddrWits = Set.map witVKeyHash $ tx ^. witsTxL . addrTxWitsL
+  keyPairs <- mapM (impSatisfyNativeScript curAddrWits) nativeScripts
   pure . mconcat $ catMaybes keyPairs
 
 fixupFees ::
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasCallStack) =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupFees tx = do
@@ -794,7 +829,7 @@ fixupFees tx = do
 
 shelleyFixupTx ::
   forall era.
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasCallStack) =>
   Tx era ->
   ImpTestM era (Tx era)
 shelleyFixupTx =
@@ -821,17 +856,17 @@ submitTx :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era (Tx era)
 submitTx tx = trySubmitTx tx >>= expectRightDeepExpr
 
 trySubmitTx ::
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasCallStack) =>
   Tx era ->
   ImpTestM era (Either [PredicateFailure (EraRule "LEDGER" era)] (Tx era))
 trySubmitTx tx = do
-  st <- gets impNES
   doFixup <- asks iteDoTxFixup
   txFixed <-
     if doFixup
       then fixupTx tx
       else pure tx
   logToExpr txFixed
+  st <- gets impNES
   lEnv <- impLedgerEnv st
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
   let txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
@@ -987,50 +1022,60 @@ withImpState ::
   Spec
 withImpState =
   beforeAll $
-    pure
+    execStateT addRootTxOut $
       ImpTestState
-        { impNES = initImpNES rootCoin
-        , impRootTxIn = TxIn (mkTxId 0) minBound
-        , impFreshIdx = 1000 -- Added some leeway to prevent collisions with values in the initial state
-        , impKeyPairs =
-            Map.fromList $
-              (\kp@KeyPair {vKey} -> (hashKey vKey, kp)) . mkKeyPair <$> [0 .. 100]
+        { impNES = initImpNES
+        , impRootTxIn = rootTxIn
+        , impKeyPairs = mempty
+        , impByronKeyPairs = mempty
         , impNativeScripts = mempty
         , impLastTick = 0
         , impGlobals = testGlobals
         , impLog = mempty
-        , impGen = mkQCGen 2024
+        , impGen = qcGen
         , impScripts = mempty
         , impCollateralTxIds = fst <$> mkCollateralUTxO @era rootCoin
         }
   where
     rootCoin = Coin 1_000_000_000
-
-dispenseIndex :: ImpTestM era Integer
-dispenseIndex = do
-  ImpTestState {impFreshIdx} <- get
-  modify $ \st -> st {impFreshIdx = succ impFreshIdx}
-  pure impFreshIdx
+    rootTxIn = TxIn (mkTxId 0) minBound
+    (rootKeyPair, qcGen) = Random.uniform (mkQCGen 2024)
+    addRootTxOut = do
+      rootKeyHash <- addKeyPair rootKeyPair
+      let rootAddr = Addr Testnet (KeyHashObj rootKeyHash) StakeRefNull
+          rootTxOut = mkBasicTxOut rootAddr $ inject rootCoin
+      impNESL . nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+        %= (<> UTxO (Map.singleton rootTxIn rootTxOut))
 
 -- | Creates a fresh @SafeHash@
 freshSafeHash :: Era era => ImpTestM era (SafeHash (EraCrypto era) a)
-freshSafeHash = mkDummySafeHash Proxy . fromInteger <$> dispenseIndex
+freshSafeHash = arbitrary
+
+freshKeyHashVRF ::
+  Era era =>
+  ImpTestM era (Hash (HASH (EraCrypto era)) (VerKeyVRF (EraCrypto era)))
+freshKeyHashVRF = arbitrary
 
 -- | Adds a key pair to the keyhash lookup map
-addKeyPair :: Era era => KeyPair r (EraCrypto era) -> ImpTestM era ()
-addKeyPair kp@(KeyPair vk _) = do
+addKeyPair ::
+  (Era era, MonadState (ImpTestState era) m) =>
+  KeyPair r (EraCrypto era) ->
+  m (KeyHash r (EraCrypto era))
+addKeyPair keyPair@(KeyPair vk _) = do
   ImpTestState {impKeyPairs} <- get
+  let keyHash = hashKey vk
   modify $ \st ->
     st
       { impKeyPairs =
           Map.insert
-            (coerceKeyRole $ hashKey vk)
-            (coerce kp)
+            (coerceKeyRole keyHash)
+            (coerce keyPair)
             impKeyPairs
       }
+  pure keyHash
 
--- | Looks up the keypair corresponding to the keyhash. The keyhash must be
--- created with @freshKeyHash@ for this to work.
+-- | Looks up the `KeyPair` corresponding to the `KeyHash`. The `KeyHash` must be
+-- created with `freshKeyHash` for this to work.
 lookupKeyPair :: HasCallStack => KeyHash r (EraCrypto era) -> ImpTestM era (KeyPair r (EraCrypto era))
 lookupKeyPair keyHash = do
   keyPairs <- gets impKeyPairs
@@ -1038,30 +1083,74 @@ lookupKeyPair keyHash = do
     Just keyPair -> pure keyPair
     Nothing ->
       error $
-        "Could not find a keypair corresponding to keyHash:"
+        "Could not find a keypair corresponding to: "
           ++ show keyHash
           ++ "\nAlways use `freshKeyHash` to create key hashes."
 
--- | Generates a fresh keyhash and stores the corresponding keypair in the
--- ImpTestState. Use @lookupKeyPair@ to look up the keypair corresponding to the
--- keyhash
+-- | Generates a fresh `KeyHash` and stores the corresponding `KeyPair` in the
+-- ImpTestState. If you also need the `KeyPair` consider using `freshKeyPair` for
+-- generation or `lookupKeyPair` to look up the `KeyPair` corresponding to the `KeyHash`
 freshKeyHash :: Era era => ImpTestM era (KeyHash r (EraCrypto era))
-freshKeyHash = do
-  ImpTestState {impFreshIdx} <- get
-  let kp@(KeyPair kh _) = mkKeyPair $ fromIntegral impFreshIdx
-  addKeyPair kp
-  impFreshIdxL += 1
-  pure $ hashKey kh
+freshKeyHash = fst <$> freshKeyPair
+
+-- | Generate a random KeyPair and add it to the known keys in the Imp state
+freshKeyPair ::
+  (Era era, MonadState (ImpTestState era) m, MonadGen m) =>
+  m (KeyHash r (EraCrypto era), KeyPair r (EraCrypto era))
+freshKeyPair = do
+  keyPair <- arbitrary
+  keyHash <- addKeyPair keyPair
+  pure (keyHash, keyPair)
+
+freshKeyAddr :: Era era => ImpTestM era (KeyHash r (EraCrypto era), Addr (EraCrypto era))
+freshKeyAddr = do
+  keyHash <- freshKeyHash
+  pure (coerceKeyRole keyHash, Addr Testnet (KeyHashObj keyHash) StakeRefNull)
+
+-- | Looks up the keypair corresponding to the `BootstrapAddress`. The `BootstrapAddress`
+-- must be created with `freshBootstrapAddess` for this to work.
+lookupByronKeyPair :: HasCallStack => BootstrapAddress (EraCrypto era) -> ImpTestM era ByronKeyPair
+lookupByronKeyPair bootAddr = do
+  keyPairs <- gets impByronKeyPairs
+  case Map.lookup bootAddr keyPairs of
+    Just keyPair -> pure keyPair
+    Nothing ->
+      error $
+        "Could not find a keypair corresponding to: "
+          ++ show bootAddr
+          ++ "\nAlways use `freshByronKeyHash` to create key hashes."
+
+-- | Generates a fresh `KeyHash` and stores the corresponding `ByronKeyPair` in the
+-- ImpTestState. If you also need the `ByronKeyPair` consider using `freshByronKeyPair` for
+-- generation or `lookupByronKeyPair` to look up the `ByronKeyPair` corresponding to the `KeyHash`
+freshByronKeyHash :: Era era => ImpTestM era (KeyHash r (EraCrypto era))
+freshByronKeyHash = coerceKeyRole . bootstrapKeyHash <$> freshBootstapAddress
+
+freshBootstapAddress :: ImpTestM era (BootstrapAddress (EraCrypto era))
+freshBootstapAddress = do
+  ImpTestState {impByronKeyPairs} <- get
+  keyPair@(ByronKeyPair verificationKey _) <- arbitrary
+  payload <-
+    oneof
+      [ pure Nothing
+      , Just . Byron.HDAddressPayload <$> (uniformByteStringM =<< choose (0, 63))
+      ]
+  let asd = Byron.VerKeyASD verificationKey
+      attrs = Byron.AddrAttributes payload (Byron.NetworkTestnet 0)
+      bootAddr = BootstrapAddress $ Byron.makeAddress asd attrs
+  modify $ \st ->
+    st {impByronKeyPairs = Map.insert bootAddr keyPair impByronKeyPairs}
+  pure bootAddr
 
 sendCoinTo ::
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasCallStack) =>
   Addr (EraCrypto era) ->
   Coin ->
   ImpTestM era (TxIn (EraCrypto era))
 sendCoinTo addr = sendValueTo addr . inject
 
 sendValueTo ::
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasCallStack) =>
   Addr (EraCrypto era) ->
   Value era ->
   ImpTestM era (TxIn (EraCrypto era))

@@ -27,6 +27,8 @@
 * Add `zipAsIxItem`
 
 ### `testlib`
+
+* Remove root coin argument from `initAlonzoImpNES`
 * Rename `fixupPlutusScripts` to `fixupRedeemers`
 * Add:
   * `impLookupPlutusScript`

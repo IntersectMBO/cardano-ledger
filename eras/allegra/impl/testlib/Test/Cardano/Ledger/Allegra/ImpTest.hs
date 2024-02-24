@@ -18,6 +18,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Control.Monad.State.Strict (get)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
@@ -41,9 +42,10 @@ instance
 
 impAllegraSatisfyNativeScript ::
   (ShelleyEraImp era, NativeScript era ~ Timelock era) =>
+  Set.Set (KeyHash 'Witness (EraCrypto era)) ->
   NativeScript era ->
   ImpTestM era (Maybe (Map.Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))))
-impAllegraSatisfyNativeScript script = do
+impAllegraSatisfyNativeScript providedVKeyHashes script = do
   impState <- get
   let
     keyPairs = impState ^. impKeyPairsG
@@ -58,9 +60,11 @@ impAllegraSatisfyNativeScript script = do
           kps' <- satisfyMOf (m - 1) xs
           Just $ kps <> kps'
     satisfyScript = \case
-      RequireSignature keyHash -> do
-        keyPair <- Map.lookup keyHash keyPairs
-        Just $ Map.singleton keyHash keyPair
+      RequireSignature keyHash
+        | keyHash `Set.member` providedVKeyHashes -> Just mempty
+        | otherwise -> do
+            keyPair <- Map.lookup keyHash keyPairs
+            Just $ Map.singleton keyHash keyPair
       RequireAllOf ss -> satisfyMOf (length ss) ss
       RequireAnyOf ss -> satisfyMOf 1 ss
       RequireMOf m ss -> satisfyMOf m ss
