@@ -24,6 +24,7 @@
 
 ### `testlib`
 
+* Adjust `sendCointTo` and `sendValueTo` to return `TxIn`
 * Added `ToExpr` instance for `ShelleyTxAuxDataRaw`
 * Add:
   * `PlutusArgs`

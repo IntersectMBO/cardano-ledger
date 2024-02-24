@@ -306,9 +306,10 @@ setupPoolWithStake delegCoin = do
   khPool <- registerPool
   credDelegatorPayment <- KeyHashObj <$> freshKeyHash
   credDelegatorStaking <- KeyHashObj <$> freshKeyHash
-  sendCoinTo
-    (Addr Testnet credDelegatorPayment (StakeRefBase credDelegatorStaking))
-    delegCoin
+  void $
+    sendCoinTo
+      (Addr Testnet credDelegatorPayment (StakeRefBase credDelegatorStaking))
+      delegCoin
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   submitTxAnn_ "Delegate to stake pool" $
     mkBasicTx mkBasicTxBody

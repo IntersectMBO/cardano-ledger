@@ -201,7 +201,7 @@ import Prettyprinter (Doc, Pretty (..), defaultLayoutOptions, layoutPretty, line
 import Prettyprinter.Render.String (renderString)
 import System.Random
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr, mkKeyHash, mkKeyPair, mkWitnessesVKey)
-import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals)
+import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals, txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (PlutusArgs, ScriptTestContext)
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
@@ -1057,19 +1057,21 @@ sendCoinTo ::
   ShelleyEraImp era =>
   Addr (EraCrypto era) ->
   Coin ->
-  ImpTestM era ()
+  ImpTestM era (TxIn (EraCrypto era))
 sendCoinTo addr = sendValueTo addr . inject
 
 sendValueTo ::
   ShelleyEraImp era =>
   Addr (EraCrypto era) ->
   Value era ->
-  ImpTestM era ()
+  ImpTestM era (TxIn (EraCrypto era))
 sendValueTo addr amount = do
-  submitTxAnn_
-    ("Giving " <> show amount <> " to " <> show addr)
-    $ mkBasicTx mkBasicTxBody
-      & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr amount)
+  tx <-
+    submitTxAnn
+      ("Giving " <> show amount <> " to " <> show addr)
+      $ mkBasicTx mkBasicTxBody
+        & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr amount)
+  pure $ txInAt (0 :: Int) tx
 
 -- | Modify the current new epoch state with a function
 modifyNES :: (NewEpochState era -> NewEpochState era) -> ImpTestM era ()
