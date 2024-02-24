@@ -22,7 +22,13 @@ spec ::
   ) =>
   SpecWith (ImpTestState era)
 spec = describe "UTXOW" $ do
-  describe "Bootstrap Witness" $
+  describe "Bootstrap Witness" $ do
+    it "Valid Witnesses" $ do
+      modifyPParams (ppMaxTxSizeL .~ 1000)
+      aliceBootAddr <- freshBootstapAddress
+      txIn <- sendCoinTo (AddrBootstrap aliceBootAddr) (Coin 1000000)
+      let txBody = mkBasicTxBody & inputsTxBodyL .~ [txIn]
+      submitTx_ (mkBasicTx txBody)
     it "InvalidWitnessesUTXOW" $ do
       modifyPParams (ppMaxTxSizeL .~ 1000)
       aliceBootAddr@(BootstrapAddress aliceByronAddr) <- freshBootstapAddress
