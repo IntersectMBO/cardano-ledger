@@ -265,6 +265,7 @@ import Data.Kind (Type)
 import Data.List (sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), pulse)
 import Data.Ratio ((%))
 import Data.Sequence (Seq)
@@ -888,7 +889,8 @@ computeDrepDistr ::
   Map (Credential 'DRepRole c) (DRepState c) ->
   Map (Credential 'Staking c) (CompactForm Coin) ->
   Map (DRep c) (CompactForm Coin)
-computeDrepDistr um regDreps stakeDistr = Map.foldlWithKey' (accumDRepDistr um regDreps) Map.empty stakeDistr
+computeDrepDistr um regDreps stakeDistr =
+  Map.foldlWithKey' (accumDRepDistr um regDreps) Map.empty stakeDistr
 
 -- | For each 'stakecred' and coin 'c', check if that credential is delegated to some DRep.
 --   If so then add that coin to the aggregated map 'ans', mapping DReps to compact Coin
@@ -901,13 +903,21 @@ accumDRepDistr ::
   Credential 'Staking c ->
   CompactForm Coin ->
   Map (DRep c) (CompactForm Coin)
-accumDRepDistr um regDreps ans stakecred c =
-  case UMap.lookup stakecred (DRepUView um) of
-    Nothing -> ans
-    Just drep@DRepAlwaysAbstain -> Map.insertWith UMap.addCompact drep c ans
-    Just drep@DRepAlwaysNoConfidence -> Map.insertWith UMap.addCompact drep c ans
-    Just (DRepCredential cred2) | Map.notMember cred2 regDreps -> ans
-    Just drep@(DRepCredential _) -> Map.insertWith UMap.addCompact drep c ans
+accumDRepDistr um regDreps ans stakeCred stake@(CompactCoin compactStake) = fromMaybe ans $ do
+  umElem <- Map.lookup stakeCred (umElems um)
+  drep <- umElemDRep umElem
+  let stakeWithRewards =
+        case umElemRDPair umElem of
+          Nothing -> stake
+          Just rdPair
+            | CompactCoin compactReward <- rdReward rdPair ->
+                CompactCoin (compactReward + compactStake)
+  pure $ case drep of
+    DRepAlwaysAbstain -> Map.insertWith UMap.addCompact drep stakeWithRewards ans
+    DRepAlwaysNoConfidence -> Map.insertWith UMap.addCompact drep stakeWithRewards ans
+    DRepCredential drepCred
+      | Map.member drepCred regDreps -> Map.insertWith UMap.addCompact drep stakeWithRewards ans
+      | otherwise -> ans
 
 -- | The type of a Pulser which uses 'accumDRepDistr' as its underlying function.
 --   'accumDRepDistr' will be partially applied to the components of type (UMap c)

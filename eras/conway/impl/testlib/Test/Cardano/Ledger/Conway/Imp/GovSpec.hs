@@ -1163,11 +1163,10 @@ spec =
           -- to barely make the threshold (51 %! 100)
           stakingKP1 <- lookupKeyPair stakingKH1
           sendCoinTo (mkAddr (paymentKP1, stakingKP1)) (inject $ Coin 200_000)
-          passNEpochs 2 -- NOTE: For DReps, updates in stake distribution appear to reflect after 2 epochs for enactment.
+          passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
-        xit "Rewards contribute to active voting stake" $ do
-          -- FIXME: https://github.com/IntersectMBO/cardano-ledger/issues/4107
+        it "Rewards contribute to active voting stake" $ do
           -- Only modify the applicable thresholds
           modifyPParams $ \pp ->
             pp
@@ -1199,7 +1198,7 @@ spec =
                 (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000) d)
                 (KeyHashObj stakingKH1)
                 . UM.RewDepUView
-          passNEpochs 2 -- NOTE: For DReps, updates in stake distribution appear to reflect after 2 epochs for enactment.
+          passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
       context "StakePool" $ do
