@@ -928,8 +928,9 @@ data DRepPulser era (m :: Type -> Type) ans where
     -- ^ The object we are iterating over. Shrinks with each pulse
     , dpStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
     -- ^ Snapshot of the stake distr (comes from the IncrementalStake)
-    , dpStakePoolDistr :: !(PoolDistr (EraCrypto era))
-    -- ^ Snapshot of the pool distr
+    , dpStakePoolDistr :: PoolDistr (EraCrypto era)
+    -- ^ Snapshot of the pool distr. Lazy on purpose: See `ssStakeMarkPoolDistr` and ADR-7
+    -- for explanation.
     , dpDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
     -- ^ The partial result that grows with each pulse. The purpose of the pulsing.
     , dpDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
@@ -974,8 +975,8 @@ instance EraPParams era => NoThunks (DRepPulser era Identity (RatifyState era)) 
       , noThunks ctxt (dpUMap drp)
       , noThunks ctxt (dpBalance drp)
       , noThunks ctxt (dpStakeDistr drp)
-      , noThunks ctxt (dpStakePoolDistr drp)
-      , noThunks ctxt (dpDRepDistr drp)
+      , -- dpStakePoolDistr is allowed to have thunks
+        noThunks ctxt (dpDRepDistr drp)
       , noThunks ctxt (dpDRepState drp)
       , noThunks ctxt (dpCurrentEpoch drp)
       , noThunks ctxt (dpCommitteeState drp)

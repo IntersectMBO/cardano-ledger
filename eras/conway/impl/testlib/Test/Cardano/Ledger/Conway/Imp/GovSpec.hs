@@ -1224,7 +1224,7 @@ spec =
           addCCGaid <- submitGovAction addCCAction
           -- Submit the vote
           submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
-          passNEpochs 4 -- FIXME
+          passNEpochs 2
           -- The vote should not result in a ratification
           logRatificationChecks addCCGaid
           isSpoAccepted addCCGaid `shouldReturn` False
@@ -1234,9 +1234,7 @@ spec =
           sendCoinTo
             (Addr Testnet delegatorCPayment1 (StakeRefBase delegatorCStaking1))
             (Coin 200_000)
-          -- FIXME: For SPOs, updates in stake distribution appear to reflect after 4 epochs for enactment.
-          -- https://github.com/IntersectMBO/cardano-ledger/issues/4108
-          passNEpochs 4
+          passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
         it "Rewards contribute to active voting stake" $ do
@@ -1260,7 +1258,7 @@ spec =
           addCCGaid <- submitGovAction addCCAction
           -- Submit the vote
           submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
-          passNEpochs 4 -- FIXME
+          passNEpochs 2
           -- The vote should not result in a ratification
           isSpoAccepted addCCGaid `shouldReturn` False
           getLastEnactedCommittee `shouldReturn` SNothing
@@ -1272,9 +1270,7 @@ spec =
                 (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000) d)
                 delegatorCStaking1
                 . UM.RewDepUView
-          -- FIXME: For SPOs, updates in stake distribution appear to reflect after 4 epochs for enactment.
-          -- https://github.com/IntersectMBO/cardano-ledger/issues/4108
-          passNEpochs 4
+          passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
     describe "Committee actions validation" $ do

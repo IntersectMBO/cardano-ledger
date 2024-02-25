@@ -63,8 +63,7 @@ import Cardano.Ledger.Conway.Governance (
   setFreshDRepPulsingState,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
-import Cardano.Ledger.EpochBoundary (SnapShots)
-import Cardano.Ledger.PoolDistr (PoolDistr)
+import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DState (..),
@@ -147,7 +146,7 @@ instance
   where
   type State (ConwayEPOCH era) = EpochState era
   type Signal (ConwayEPOCH era) = EpochNo
-  type Environment (ConwayEPOCH era) = PoolDistr (EraCrypto era)
+  type Environment (ConwayEPOCH era) = ()
   type BaseM (ConwayEPOCH era) = ShelleyBase
 
   -- EPOCH rule can never fail
@@ -249,7 +248,7 @@ epochTransition ::
   TransitionRule (ConwayEPOCH era)
 epochTransition = do
   TRC
-    ( stakePoolDistr
+    ( ()
       , epochState0@EpochState
           { esAccountState = accountState0
           , esSnapshots = snapshots0
@@ -277,6 +276,7 @@ epochTransition = do
       TRC (ShelleyPoolreapEnv vState, PoolreapState utxoState0 accountState0 dState0 pState1, eNo)
 
   let
+    stakePoolDistr = ssStakeMarkPoolDistr snapshots1
     pulsingState = epochState0 ^. epochStateDRepPulsingStateL
 
     ratState0@RatifyState {rsEnactState, rsEnacted, rsExpired} =

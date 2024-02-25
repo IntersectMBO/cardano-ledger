@@ -92,7 +92,7 @@ instance
   , ConwayEraGov era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
   , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
-  , Environment (EraRule "EPOCH" era) ~ PoolDistr (EraCrypto era)
+  , Environment (EraRule "EPOCH" era) ~ ()
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Signal (EraRule "EPOCH" era) ~ EpochNo
   , Default (EpochState era)
@@ -132,7 +132,7 @@ newEpochTransition ::
   ( EraTxOut era
   , ConwayEraGov era
   , Embed (EraRule "EPOCH" era) (ConwayNEWEPOCH era)
-  , Environment (EraRule "EPOCH" era) ~ PoolDistr (EraCrypto era)
+  , Environment (EraRule "EPOCH" era) ~ ()
   , State (EraRule "EPOCH" era) ~ EpochState era
   , Signal (EraRule "EPOCH" era) ~ EpochNo
   , Default (StashedAVVMAddresses era)
@@ -148,7 +148,7 @@ newEpochTransition ::
 newEpochTransition = do
   TRC
     ( _
-      , nes@(NewEpochState eL _ bcur es0 ru pd _)
+      , nes@(NewEpochState eL _ bcur es0 ru _ _)
       , eNo
       ) <-
     judgmentContext
@@ -162,7 +162,7 @@ newEpochTransition = do
           tellReward (DeltaRewardEvent (RupdEvent eNo event))
           updateRewards es0 eNo ans
         SJust (Complete ru') -> updateRewards es0 eNo ru'
-      es2 <- trans @(EraRule "EPOCH" era) $ TRC (pd, es1, eNo)
+      es2 <- trans @(EraRule "EPOCH" era) $ TRC ((), es1, eNo)
       let adaPots = totalAdaPotsES es2
       tellEvent $ TotalAdaPotsEvent adaPots
       let pd' = ssStakeMarkPoolDistr (esSnapshots es0)
