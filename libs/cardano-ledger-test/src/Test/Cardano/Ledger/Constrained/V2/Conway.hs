@@ -111,14 +111,14 @@ import Test.QuickCheck hiding (Args, Fun, forAll)
 import Constrained hiding (Value)
 import Constrained qualified as C
 
-type ConwayUnivFns = StringFn : DefaultFns
+type ConwayUnivFns = StringFn : BaseFns
 type ConwayFn = Fix (OneofL ConwayUnivFns)
 
 type IsConwayUniv fn =
   ( Member (StringFn fn) fn
   , Member (MapFn fn) fn
   , Member (FunFn fn) fn
-  , IsUniverse fn
+  , BaseUniverse fn
   )
 
 -- TxBody HasSpec instance ------------------------------------------------

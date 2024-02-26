@@ -45,7 +45,6 @@ deriving instance
   , HasSpec fn k
   , HasSpec fn v
   , HasSpec fn [v]
-  , Member (MapFn fn) fn
   ) =>
   Show (MapSpec fn k v)
 instance Ord k => Forallable (Map k v) (k, v) where
@@ -53,7 +52,7 @@ instance Ord k => Forallable (Map k v) (k, v) where
   forAllToList = Map.toList
 
 instance
-  (Ord k, HasSpec fn (Prod k v), HasSpec fn k, HasSpec fn v, HasSpec fn [v], Member (MapFn fn) fn) =>
+  (Ord k, HasSpec fn (Prod k v), HasSpec fn k, HasSpec fn v, HasSpec fn [v]) =>
   HasSpec fn (Map k v)
   where
   type TypeSpec fn (Map k v) = MapSpec fn k v
@@ -143,7 +142,7 @@ instance
 -- Functions
 ------------------------------------------------------------------------
 
-instance (Member (MapFn fn) fn, IsUniverse fn) => Functions (MapFn fn) fn where
+instance BaseUniverse fn => Functions (MapFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
@@ -202,13 +201,13 @@ instance (Member (MapFn fn) fn, IsUniverse fn) => Functions (MapFn fn) fn where
 ------------------------------------------------------------------------
 
 dom_ ::
-  (Member (MapFn fn) fn, HasSpec fn (Map k v), HasSpec fn k, Ord k) =>
+  (HasSpec fn (Map k v), HasSpec fn k, Ord k) =>
   Term fn (Map k v) ->
   Term fn (Set k)
 dom_ = app domFn
 
 rng_ ::
-  (Member (MapFn fn) fn, HasSpec fn k, HasSpec fn v, Ord k) =>
+  (HasSpec fn k, HasSpec fn v, Ord k) =>
   Term fn (Map k v) ->
   Term fn [v]
 rng_ = app rngFn

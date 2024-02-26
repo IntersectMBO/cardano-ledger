@@ -46,7 +46,7 @@ instance (Typeable fn, Typeable fn', Typeable fnU, Functions (fn fnU) fnU, Funct
   mapTypeSpec (OneofLeft fn) = mapTypeSpec fn
   mapTypeSpec (OneofRight fn) = mapTypeSpec fn
 
-instance IsUniverse fn => Functions (EqFn fn) fn where
+instance BaseUniverse fn => Functions (EqFn fn) fn where
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn (ListCtx pre HOLE suf) (SuspendedSpec v ps) =
     constrained $ \v' ->
@@ -60,7 +60,7 @@ instance IsUniverse fn => Functions (EqFn fn) fn where
 
   mapTypeSpec f _ = case f of {}
 
-instance IsUniverse fn => Functions (BoolFn fn) fn where
+instance BaseUniverse fn => Functions (BoolFn fn) fn where
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn (ListCtx pre HOLE suf) (SuspendedSpec v ps) =
     constrained $ \v' ->

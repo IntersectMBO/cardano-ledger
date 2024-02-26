@@ -230,7 +230,7 @@ data Term (fn :: [Type] -> Type -> Type) a where
     , TypeList as
     , All (HasSpec fn) as
     , HasSpec fn b
-    , IsUniverse fn
+    , BaseUniverse fn
     ) =>
     fn as b ->
     List (Term fn) as ->
@@ -295,7 +295,7 @@ data Pred (fn :: [Type] -> Type -> Type) where
     Binder fn a ->
     Pred fn
   Assert ::
-    IsUniverse fn =>
+    BaseUniverse fn =>
     [String] ->
     Term fn Bool ->
     Pred fn
@@ -336,7 +336,7 @@ data Pred (fn :: [Type] -> Type -> Type) where
   TruePred :: Pred fn
   FalsePred :: [String] -> Pred fn
 
-instance IsUniverse fn => Semigroup (Pred fn) where
+instance BaseUniverse fn => Semigroup (Pred fn) where
   FalsePred es <> _ = FalsePred es
   _ <> FalsePred es = FalsePred es
   TruePred <> p = p
@@ -346,7 +346,7 @@ instance IsUniverse fn => Semigroup (Pred fn) where
       unpackPred (Block ps) = ps
       unpackPred p = [p]
 
-instance IsUniverse fn => Monoid (Pred fn) where
+instance BaseUniverse fn => Monoid (Pred fn) where
   mempty = TruePred
 
 -- | Contexts for Terms, basically a term with a _single_ HOLE
@@ -382,7 +382,7 @@ data HOLE a b where
 
 toCtx ::
   forall m fn v a.
-  ( IsUniverse fn
+  ( BaseUniverse fn
   , Typeable v
   , MonadGenError m
   , HasCallStack
@@ -401,7 +401,7 @@ toCtx v = go . simplifyTerm
 
 toCtxList ::
   forall m fn v as.
-  (IsUniverse fn, Typeable v, MonadGenError m, HasCallStack) =>
+  (BaseUniverse fn, Typeable v, MonadGenError m, HasCallStack) =>
   Var v ->
   List (Term fn) as ->
   m (ListCtx Value as (Ctx fn v))
@@ -579,7 +579,7 @@ class
   , Eq a
   , Show a
   , Show (TypeSpec fn a)
-  , IsUniverse fn
+  , BaseUniverse fn
   ) =>
   HasSpec fn a
   where
@@ -689,7 +689,7 @@ data WithHasSpec fn f a where
 -- The Forallable class ---------------------------------------------------
 
 class Forallable t e | t -> e where
-  forAllSpec :: (HasSpec fn t, HasSpec fn e, IsUniverse fn) => Spec fn e -> Spec fn t
+  forAllSpec :: (HasSpec fn t, HasSpec fn e, BaseUniverse fn) => Spec fn e -> Spec fn t
   default forAllSpec ::
     ( HasSpec fn t
     , HasSpec fn e
@@ -790,7 +790,7 @@ genInverse f argS x =
 
 -- | Flatten nested `Let`, `Exists`, and `Block` in a `Pred fn`. `Let` and
 -- `Exists` bound variables become free in the result.
-flattenPred :: forall fn. IsUniverse fn => Pred fn -> [Pred fn]
+flattenPred :: forall fn. BaseUniverse fn => Pred fn -> [Pred fn]
 flattenPred pIn = go (freeVarNames pIn) [pIn]
   where
     go _ [] = []
@@ -836,7 +836,7 @@ computeDependencies hints =
 
 -- | Linearize a predicate, turning it into a list of variables to solve and
 -- their defining constraints such that each variable can be solved independently.
-prepareLinearization :: IsUniverse fn => Pred fn -> GE [(Name fn, [Pred fn])]
+prepareLinearization :: BaseUniverse fn => Pred fn -> GE [(Name fn, [Pred fn])]
 prepareLinearization p = do
   let preds = flattenPred p
       hints = computeHints preds
@@ -845,14 +845,14 @@ prepareLinearization p = do
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
-genFromPreds :: (MonadGenError m, IsUniverse fn) => Pred fn -> GenT m Env
+genFromPreds :: (MonadGenError m, BaseUniverse fn) => Pred fn -> GenT m Env
 genFromPreds preds = do
   -- NOTE: this is just lazy enough that the work of flattening, computing dependencies,
   -- and linearizing is memoized in properties that use `genFromPreds`.
   linear <- runGE $ prepareLinearization preds
   go mempty linear
   where
-    go :: (MonadGenError m, IsUniverse fn) => Env -> [(Name fn, [Pred fn])] -> GenT m Env
+    go :: (MonadGenError m, BaseUniverse fn) => Env -> [(Name fn, [Pred fn])] -> GenT m Env
     go env [] = pure env
     go env ((Name v, ps) : nps) = do
       let spec = foldMap (computeSpec v) (substPred env <$> ps)
@@ -883,7 +883,7 @@ computeTermDependencies t = noDependencies t
 -- We want to fail if A and B are independent.
 -- Consider: A + B = A + C, A <- B
 -- Here we want to consider this constraint defining for A
-linearize :: (MonadGenError m, IsUniverse fn) => [Pred fn] -> DependGraph fn -> m [(Name fn, [Pred fn])]
+linearize :: (MonadGenError m, BaseUniverse fn) => [Pred fn] -> DependGraph fn -> m [(Name fn, [Pred fn])]
 linearize preds graph = do
   sorted <- case topsort graph of
     Left cycle -> fatalError ["dependency cycle in graph", show cycle, show graph]
@@ -1258,7 +1258,7 @@ substTerm env = \case
 substBinder :: Env -> Binder fn a -> Binder fn a
 substBinder env (x :-> p) = x :-> substPred (removeVar x env) p
 
-substPred :: IsUniverse fn => Env -> Pred fn -> Pred fn
+substPred :: BaseUniverse fn => Env -> Pred fn -> Pred fn
 substPred env = \case
   Subst x t p -> substPred env $ substitutePred x t p
   Assert es t -> assertExplain es (substTerm env t)
@@ -1281,7 +1281,7 @@ unBind a (x :-> p) = substPred (singletonEnv x a) p
 
 -- Simplification for preds and terms -------------------------------------
 
-simplifyTerm :: forall fn a. IsUniverse fn => Term fn a -> Term fn a
+simplifyTerm :: forall fn a. BaseUniverse fn => Term fn a -> Term fn a
 simplifyTerm = \case
   V v -> V v
   Lit l -> Lit l
@@ -1300,7 +1300,7 @@ fromLit _ = Nothing
 isLit :: Term fn a -> Bool
 isLit = isJust . fromLit
 
-simplifyPred :: IsUniverse fn => Pred fn -> Pred fn
+simplifyPred :: BaseUniverse fn => Pred fn -> Pred fn
 simplifyPred = \case
   Subst x t p -> simplifyPred $ substitutePred x t p
   Assert es t -> assertExplain es (simplifyTerm t)
@@ -1316,7 +1316,7 @@ simplifyPred = \case
   Let t b -> Let (simplifyTerm t) (simplifyBinder b)
   Exists k b -> Exists k (simplifyBinder b)
 
-simplifyPreds :: IsUniverse fn => [Pred fn] -> [Pred fn]
+simplifyPreds :: BaseUniverse fn => [Pred fn] -> [Pred fn]
 simplifyPreds = go [] . map simplifyPred
   where
     go acc [] = reverse acc
@@ -1414,7 +1414,7 @@ type family RewriteArgumentTypes t where
 -- Arcane magic -----------------------------------------------------------
 
 -- TODO: it might be necessary to run aggressiveInlining again after the let floating etc.
-optimisePred :: IsUniverse fn => Pred fn -> Pred fn
+optimisePred :: BaseUniverse fn => Pred fn -> Pred fn
 optimisePred p =
   simplifyPred
     . letSubexpressionElimination
@@ -1424,7 +1424,7 @@ optimisePred p =
     $ p
 
 -- Common subexpression elimination but only on terms that are already let-bound.
-letSubexpressionElimination :: IsUniverse fn => Pred fn -> Pred fn
+letSubexpressionElimination :: BaseUniverse fn => Pred fn -> Pred fn
 letSubexpressionElimination = go []
   where
     adjustSub x sub =
@@ -1458,7 +1458,7 @@ letSubexpressionElimination = go []
 
 -- TODO: this can probably be cleaned up and generalized along with generalizing
 -- to make sure we float lets in some missing cases.
-letFloating :: IsUniverse fn => Pred fn -> Pred fn
+letFloating :: BaseUniverse fn => Pred fn -> Pred fn
 letFloating = fold . go []
   where
     goBlock ctx [] = ctx
@@ -1504,7 +1504,7 @@ letFloating = fold . go []
       TruePred -> TruePred : ctx
       FalsePred es -> FalsePred es : ctx
 
-aggressiveInlining :: IsUniverse fn => [Name fn] -> Pred fn -> Pred fn
+aggressiveInlining :: BaseUniverse fn => [Name fn] -> Pred fn -> Pred fn
 aggressiveInlining inlineable p
   | inlined = aggressiveInlining inlineable (simplifyPred pInlined)
   | otherwise = p
@@ -1895,7 +1895,7 @@ instance SimpleConstructor f => SimpleGeneric (C1 ('MetaCons c a b) f) where
 ------------------------------------------------------------------------
 
 class HasSpec fn a => Foldy fn a where
-  genList :: (IsUniverse fn, MonadGenError m) => Spec fn a -> Spec fn a -> GenT m [a]
+  genList :: (BaseUniverse fn, MonadGenError m) => Spec fn a -> Spec fn a -> GenT m [a]
   theAddFn :: fn '[a, a] a
   theZero :: a
 
@@ -1910,7 +1910,7 @@ data FoldSpec (fn :: [Type] -> Type -> Type) a where
     , HasSpec fn b
     , Foldy fn b
     , Member (ListFn fn) fn
-    , IsUniverse fn
+    , BaseUniverse fn
     ) =>
     fn '[a] b ->
     Spec fn b ->
@@ -1930,7 +1930,7 @@ conformsToFoldSpec :: forall fn a. [a] -> FoldSpec fn a -> Bool
 conformsToFoldSpec _ NoFold = True
 conformsToFoldSpec xs (FoldSpec f s) = adds @fn (map (sem f) xs) `conformsToSpec` s
 
-toPredsFoldSpec :: forall fn a. IsUniverse fn => Term fn [a] -> FoldSpec fn a -> Pred fn
+toPredsFoldSpec :: forall fn a. BaseUniverse fn => Term fn [a] -> FoldSpec fn a -> Pred fn
 toPredsFoldSpec _ NoFold = TruePred
 toPredsFoldSpec x (FoldSpec fn sspec) =
   satisfies (app (foldMapFn fn) x) sspec
@@ -1986,7 +1986,7 @@ knownLowerBound (TypeSpec (NumSpecInterval lo hi) cant) =
 
 narrowByFuelAndSize ::
   forall a fn.
-  ( IsUniverse fn
+  ( BaseUniverse fn
   , TypeSpec fn a ~ NumSpec a
   , HasSpec fn a
   , Arbitrary a
@@ -2089,7 +2089,7 @@ narrowByFuelAndSize fuel size specs =
 
 narrowFoldSpecs ::
   forall a fn.
-  ( IsUniverse fn
+  ( BaseUniverse fn
   , TypeSpec fn a ~ NumSpec a
   , HasSpec fn a
   , Arbitrary a
@@ -2155,7 +2155,7 @@ narrowFoldSpecs specs = maybe specs narrowFoldSpecs (go specs)
 
 genNumList ::
   forall a fn m.
-  ( IsUniverse fn
+  ( BaseUniverse fn
   , MonadGenError m
   , TypeSpec fn a ~ NumSpec a
   , HasSpec fn a
@@ -2240,57 +2240,57 @@ genNumList elemSIn foldSIn = do
                 . snd
           gen specs' (fuel - 1) (x : lst)
 
-instance IsUniverse fn => Foldy fn Int where
+instance BaseUniverse fn => Foldy fn Int where
   genList = genNumList
   theAddFn = injectFn (Add @fn)
   theZero = 0
 
-instance IsUniverse fn => Foldy fn Integer where
+instance BaseUniverse fn => Foldy fn Integer where
   genList = genNumList
   theAddFn = injectFn (Add @fn)
   theZero = 0
 
-instance IsUniverse fn => Foldy fn Int8 where
+instance BaseUniverse fn => Foldy fn Int8 where
   genList = genNumList
   theAddFn = injectFn (Add @fn)
   theZero = 0
 
-instance IsUniverse fn => Foldy fn Int16 where
+instance BaseUniverse fn => Foldy fn Int16 where
   genList = genNumList
   theAddFn = injectFn (Add @fn)
   theZero = 0
 
-instance IsUniverse fn => Foldy fn Int32 where
+instance BaseUniverse fn => Foldy fn Int32 where
   genList = genNumList
   theAddFn = injectFn (Add @fn)
   theZero = 0
 
-instance IsUniverse fn => Foldy fn Int64 where
+instance BaseUniverse fn => Foldy fn Int64 where
   genList = genNumList
   theAddFn = injectFn (Add @fn)
   theZero = 0
 
-instance IsUniverse fn => Foldy fn Word8 where
+instance BaseUniverse fn => Foldy fn Word8 where
   genList = genNumList
   theAddFn = injectFn (Add @fn)
   theZero = 0
 
-instance IsUniverse fn => Foldy fn Word16 where
+instance BaseUniverse fn => Foldy fn Word16 where
   genList = genNumList
   theAddFn = injectFn (Add @fn)
   theZero = 0
 
-instance IsUniverse fn => Foldy fn Word32 where
+instance BaseUniverse fn => Foldy fn Word32 where
   genList = genNumList
   theAddFn = injectFn (Add @fn)
   theZero = 0
 
-instance IsUniverse fn => Foldy fn Word64 where
+instance BaseUniverse fn => Foldy fn Word64 where
   genList = genNumList
   theAddFn = injectFn (Add @fn)
   theZero = 0
 
-instance IsUniverse fn => Foldy fn Natural where
+instance BaseUniverse fn => Foldy fn Natural where
   genList = genNumList
   theAddFn = injectFn (Add @fn)
   theZero = 0
@@ -2326,7 +2326,7 @@ genFromFold must size elemS fn foldS = do
 
 -- Bool -------------------------------------------------------------------
 
-instance IsUniverse fn => HasSpec fn Bool where
+instance BaseUniverse fn => HasSpec fn Bool where
   type TypeSpec fn Bool = ()
   emptySpec = ()
   combineSpec _ _ = typeSpec ()
@@ -2384,7 +2384,7 @@ instance (Ord a, HasSpec fn a) => Monoid (SetSpec fn a) where
   mempty = SetSpec mempty mempty TrueSpec
 
 -- NOTE: No guarantees that this is a tight spec!
-sizeSpec :: forall fn a. (Ord a, IsUniverse fn) => Spec fn (Set a) -> Spec fn Int
+sizeSpec :: forall fn a. (Ord a, BaseUniverse fn) => Spec fn (Set a) -> Spec fn Int
 sizeSpec TrueSpec = TrueSpec
 sizeSpec (MemberSpec es) = MemberSpec (Set.size <$> es)
 sizeSpec SuspendedSpec {} = TrueSpec
@@ -2399,7 +2399,7 @@ sizeSpec (TypeSpec (SetSpec must elemSpec sizeSpec) cant) =
       | mempty `elem` cant = notEqualSpec 0
       | otherwise = TrueSpec
 
-specSizeBound :: forall fn a. (Eq a, IsUniverse fn) => Spec fn a -> Spec fn Int
+specSizeBound :: forall fn a. (Eq a, BaseUniverse fn) => Spec fn a -> Spec fn Int
 specSizeBound TrueSpec = TrueSpec
 specSizeBound (MemberSpec es) = leqSpec @fn (length (nub es))
 specSizeBound ErrorSpec {} = equalSpec 0
@@ -2447,7 +2447,7 @@ instance Ord a => Forallable (Set a) a where
 
 deriving instance HasSpec fn a => Show (SetSpec fn a)
 
-instance IsUniverse fn => Functions (SetFn fn) fn where
+instance BaseUniverse fn => Functions (SetFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
@@ -2772,7 +2772,7 @@ toPredsNumSpec v (NumSpecInterval ml mu) =
     [assert $ Lit l <=. v | l <- maybeToList ml]
       ++ [assert $ v <=. Lit u | u <- maybeToList mu]
 
-instance IsUniverse fn => HasSpec fn Int where
+instance BaseUniverse fn => HasSpec fn Int where
   type TypeSpec fn Int = NumSpec Int
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2780,7 +2780,7 @@ instance IsUniverse fn => HasSpec fn Int where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-instance IsUniverse fn => HasSpec fn Integer where
+instance BaseUniverse fn => HasSpec fn Integer where
   type TypeSpec fn Integer = NumSpec Integer
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2788,7 +2788,7 @@ instance IsUniverse fn => HasSpec fn Integer where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-instance IsUniverse fn => HasSpec fn (Ratio Integer) where
+instance BaseUniverse fn => HasSpec fn (Ratio Integer) where
   type TypeSpec fn (Ratio Integer) = NumSpec (Ratio Integer)
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2796,7 +2796,7 @@ instance IsUniverse fn => HasSpec fn (Ratio Integer) where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-instance IsUniverse fn => HasSpec fn Natural where
+instance BaseUniverse fn => HasSpec fn Natural where
   type TypeSpec fn Natural = NumSpec Natural
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2804,7 +2804,7 @@ instance IsUniverse fn => HasSpec fn Natural where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-instance IsUniverse fn => HasSpec fn Word8 where
+instance BaseUniverse fn => HasSpec fn Word8 where
   type TypeSpec fn Word8 = NumSpec Word8
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2812,7 +2812,7 @@ instance IsUniverse fn => HasSpec fn Word8 where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-instance IsUniverse fn => HasSpec fn Word16 where
+instance BaseUniverse fn => HasSpec fn Word16 where
   type TypeSpec fn Word16 = NumSpec Word16
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2820,7 +2820,7 @@ instance IsUniverse fn => HasSpec fn Word16 where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-instance IsUniverse fn => HasSpec fn Word32 where
+instance BaseUniverse fn => HasSpec fn Word32 where
   type TypeSpec fn Word32 = NumSpec Word32
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2828,7 +2828,7 @@ instance IsUniverse fn => HasSpec fn Word32 where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-instance IsUniverse fn => HasSpec fn Word64 where
+instance BaseUniverse fn => HasSpec fn Word64 where
   type TypeSpec fn Word64 = NumSpec Word64
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2836,7 +2836,7 @@ instance IsUniverse fn => HasSpec fn Word64 where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-instance IsUniverse fn => HasSpec fn Int8 where
+instance BaseUniverse fn => HasSpec fn Int8 where
   type TypeSpec fn Int8 = NumSpec Int8
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2844,7 +2844,7 @@ instance IsUniverse fn => HasSpec fn Int8 where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-instance IsUniverse fn => HasSpec fn Int16 where
+instance BaseUniverse fn => HasSpec fn Int16 where
   type TypeSpec fn Int16 = NumSpec Int16
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2852,7 +2852,7 @@ instance IsUniverse fn => HasSpec fn Int16 where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-instance IsUniverse fn => HasSpec fn Int32 where
+instance BaseUniverse fn => HasSpec fn Int32 where
   type TypeSpec fn Int32 = NumSpec Int32
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2860,7 +2860,7 @@ instance IsUniverse fn => HasSpec fn Int32 where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-instance IsUniverse fn => HasSpec fn Int64 where
+instance BaseUniverse fn => HasSpec fn Int64 where
   type TypeSpec fn Int64 = NumSpec Int64
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2868,7 +2868,7 @@ instance IsUniverse fn => HasSpec fn Int64 where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-instance IsUniverse fn => HasSpec fn Float where
+instance BaseUniverse fn => HasSpec fn Float where
   type TypeSpec fn Float = NumSpec Float
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
@@ -2876,12 +2876,17 @@ instance IsUniverse fn => HasSpec fn Float where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
-------------------------------------------------------------------------
--- Function universes
-------------------------------------------------------------------------
+-----------------------------------------------------------------------------------
+-- The Base Function universe defines operations on TypeSpec defined in the Base.
+-- See module  Test.Cardano.Ledger.Constrained.V2.Conway for a Universe
+-- that is an extension of the Base Universe.
+-----------------------------------------------------------------------------------
+
+type BaseFns = '[ListFn, SumFn, MapFn, SetFn, FunFn, GenericsFn, PairFn, IntFn, BoolFn, EqFn, OrdFn]
+type BaseFn = Fix (OneofL BaseFns)
 
 -- | A minimal Universe contains functions for a bunch of different things.
-type IsUniverse fn =
+type BaseUniverse fn =
   ( Functions fn fn
   , Member (EqFn fn) fn
   , Member (SetFn fn) fn
@@ -2892,6 +2897,8 @@ type IsUniverse fn =
   , Member (GenericsFn fn) fn
   , Member (ListFn fn) fn
   , Member (SumFn fn) fn
+  , Member (MapFn fn) fn
+  , Member (FunFn fn) fn
   )
 
 -- Higher order functions -------------------------------------------------
@@ -2957,7 +2964,7 @@ instance FunctionLike fn => FunctionLike (FunFn fn) where
 
 -- Lam x t -> \ a -> errorGE $ runTerm (singletonEnv x a) t
 
-instance (IsUniverse fn, Member (FunFn fn) fn) => Functions (FunFn fn) fn where
+instance (BaseUniverse fn, Member (FunFn fn) fn) => Functions (FunFn fn) fn where
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
     Id | NilCtx HOLE <- ctx -> spec
@@ -3056,7 +3063,7 @@ instance FunctionLike (OrdFn fn) where
   sem LessOrEqual = (<=)
   sem Less = (<)
 
-instance IsUniverse fn => Functions (OrdFn fn) fn where
+instance BaseUniverse fn => Functions (OrdFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn (ListCtx pre HOLE suf) (SuspendedSpec x p) =
@@ -3109,7 +3116,7 @@ instance FunctionLike fn => FunctionLike (ListFn fn) where
     FoldMap f -> adds @fn . map (sem f)
     ListSize -> length
 
-instance IsUniverse fn => Functions (ListFn fn) fn where
+instance BaseUniverse fn => Functions (ListFn fn) fn where
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
     _
@@ -3235,7 +3242,7 @@ instance {-# OVERLAPPABLE #-} (HasSpec fn a, Ord a, Num a, TypeSpec fn a ~ NumSp
         Nothing
     | otherwise = Just $ x - a
 
-instance IsUniverse fn => Functions (IntFn fn) fn where
+instance BaseUniverse fn => Functions (IntFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn (ListCtx pre HOLE suf) (SuspendedSpec x p) =
@@ -3286,14 +3293,14 @@ fromGeneric_ ::
 fromGeneric_ = app fromGenericFn
 
 not_ ::
-  IsUniverse fn =>
+  BaseUniverse fn =>
   Term fn Bool ->
   Term fn Bool
 not_ = app notFn
 
 infixr 3 &&.
 (&&.) ::
-  IsUniverse fn =>
+  BaseUniverse fn =>
   Term fn Bool ->
   Term fn Bool ->
   Term fn Bool
@@ -3301,7 +3308,7 @@ infixr 3 &&.
 
 infixr 2 ||.
 (||.) ::
-  IsUniverse fn =>
+  BaseUniverse fn =>
   Term fn Bool ->
   Term fn Bool ->
   Term fn Bool
@@ -3400,7 +3407,7 @@ infix 4 <=., <., ==., /=.
 a /=. b = not_ (a ==. b)
 
 sum_ ::
-  ( IsUniverse fn
+  ( BaseUniverse fn
   , Member (FunFn fn) fn
   , Foldy fn a
   ) =>
@@ -3409,7 +3416,7 @@ sum_ ::
 sum_ = app (foldMapFn idFn)
 
 foldMap_ ::
-  ( IsUniverse fn
+  ( BaseUniverse fn
   , Foldy fn b
   , HasSpec fn a
   ) =>
@@ -3430,14 +3437,14 @@ constrained body =
    in computeSpec x (optimisePred p)
 
 assertExplain ::
-  (IsUniverse fn, IsPred p fn) =>
+  (BaseUniverse fn, IsPred p fn) =>
   [String] ->
   p ->
   Pred fn
 assertExplain = toPredExplain
 
 assert ::
-  (IsUniverse fn, IsPred p fn) =>
+  (BaseUniverse fn, IsPred p fn) =>
   p ->
   Pred fn
 assert = toPred
@@ -3556,9 +3563,9 @@ type IsPred p fn = (PredLike p, UnivConstr p fn)
 
 class PredLike p where
   type UnivConstr p (fn :: [Type] -> Type -> Type) :: Constraint
-  toPredExplain :: (IsUniverse fn, UnivConstr p fn) => [String] -> p -> Pred fn
+  toPredExplain :: (BaseUniverse fn, UnivConstr p fn) => [String] -> p -> Pred fn
 
-toPred :: (IsUniverse fn, IsPred p fn) => p -> Pred fn
+toPred :: (BaseUniverse fn, IsPred p fn) => p -> Pred fn
 toPred = toPredExplain []
 
 instance PredLike (Pred fn) where
@@ -3574,7 +3581,7 @@ instance PredLike Bool where
   toPredExplain _ True = TruePred
   toPredExplain es False = FalsePred es
 
-instance IsUniverse fn => PredLike (Term fn Bool) where
+instance BaseUniverse fn => PredLike (Term fn Bool) where
   type UnivConstr (Term fn Bool) fn' = fn ~ fn'
   toPredExplain es (Lit b) = toPredExplain es b
   toPredExplain es tm = Assert es tm
