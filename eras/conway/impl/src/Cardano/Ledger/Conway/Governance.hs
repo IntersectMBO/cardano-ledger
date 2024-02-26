@@ -867,7 +867,8 @@ votingDRepThresholdInternal pp isElectedCommittee action =
 -- Lenses for access to (DRepPulsingState era)
 
 newEpochStateDRepPulsingStateL :: ConwayEraGov era => Lens' (NewEpochState era) (DRepPulsingState era)
-newEpochStateDRepPulsingStateL = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
+newEpochStateDRepPulsingStateL =
+  nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
 
 epochStateDRepPulsingStateL :: ConwayEraGov era => Lens' (EpochState era) (DRepPulsingState era)
 epochStateDRepPulsingStateL = esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
@@ -877,13 +878,21 @@ epochStateDRepPulsingStateL = esLStateL . lsUTxOStateL . utxosGovStateL . drepPu
 -- ===============================================================================
 
 -- | Given three inputs
---   1) Map (Credential 'Staking c) (DRep c).   The delegation map. Inside the DRepUView of the UMap 'um' from the DState.
---   2) regDreps :: Map (Credential 'DRepRole c) (DRepState c). The map of registered DReps to their state. The first part of the VState.
---   3) stakeDistr :: VMap VB VP (Credential 'Staking c) (CompactForm Coin). The aggregated stake distr extracted from the
---      first component of the IncrementalStake i.e. (IStake credmap _) where credmap is converted to a VMap
+--
+--   1) Map (Credential 'Staking c) (DRep c). The delegation map. Inside the DRepUView of
+--   the UMap 'um' from the DState.
+--
+--   2) regDreps :: Map (Credential 'DRepRole c) (DRepState c). The map of registered
+--   DReps to their state. The first part of the VState.
+--
+--   3) stakeDistr :: VMap VB VP (Credential 'Staking c) (CompactForm Coin). The
+--   aggregated stake distr extracted from the first component of the IncrementalStake
+--   i.e. (IStake credmap _) where credmap is converted to a VMap
+--
 --  Compute the Drep distribution of stake(Coin)
 --  cost is expected to be O(size of 'stakeDistr' * log (size of 'um') * log (size of 'regDreps'))
---  This is going to be expensive, so we will want to pulse it. Without pulsing, we estimate 3-5 seconds
+--  This is going to be expensive, so we will want to pulse it. Without pulsing,
+--  we estimate 3-5 seconds
 computeDrepDistr ::
   UMap c ->
   Map (Credential 'DRepRole c) (DRepState c) ->

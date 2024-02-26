@@ -51,8 +51,17 @@ import Test.Cardano.Ledger.Constrained.Ast (RootTarget (..), (^$))
 import Test.Cardano.Ledger.Constrained.Classes (TxF (..), TxOutF (..))
 import Test.Cardano.Ledger.Constrained.Combinators (itemFromSet)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (hashBody)
-import Test.Cardano.Ledger.Constrained.Trace.Actions (certsAction, feesAction, inputsAction, outputsAction)
-import Test.Cardano.Ledger.Constrained.Trace.SimpleTx (completeTxBody, plutusFreeCredential, simpleTxBody)
+import Test.Cardano.Ledger.Constrained.Trace.Actions (
+  certsAction,
+  feesAction,
+  inputsAction,
+  outputsAction,
+ )
+import Test.Cardano.Ledger.Constrained.Trace.SimpleTx (
+  completeTxBody,
+  plutusFreeCredential,
+  simpleTxBody,
+ )
 import Test.Cardano.Ledger.Constrained.Trace.TraceMonad (
   TraceM,
   epochProp,
@@ -90,7 +99,7 @@ fixOutput :: EraTxOut era => Coin -> [TxBodyField era] -> TraceM era [TxBodyFiel
 fixOutput _ [] = pure []
 fixOutput delta@(Coin n) (Outputs' (txout : more) : others) =
   case txout ^. coinTxOutL of
-    (Coin m) ->
+    Coin m ->
       if n + m < 0
         then discard
         else pure ((Outputs' ((txout & coinTxOutL <>~ delta) : more)) : others)
@@ -151,7 +160,7 @@ applyDRepCertActions proof tx = do
 --   LedgerState to do this.
 drepCertTxForTrace :: Reflect era => Coin -> Proof era -> TraceM era (Tx era)
 drepCertTxForTrace maxFeeEstimate proof = do
-  (TxF _ tx) <- drepCertTx maxFeeEstimate proof
+  TxF _ tx <- drepCertTx maxFeeEstimate proof
   applyDRepCertActions proof tx
   pure tx
 
@@ -163,10 +172,14 @@ drepTree =
     "DRep property traces"
     [ testProperty
         "All Tx are valid on traces of length 150."
-        (withMaxSuccess 20 $ mockChainProp Conway 150 (drepCertTxForTrace (Coin 100000)) (stepProp (allValidSignals Conway)))
+        $ withMaxSuccess 20
+        $ mockChainProp Conway 150 (drepCertTxForTrace (Coin 100000))
+        $ stepProp (allValidSignals Conway)
     , testProperty
         "Bruteforce = Pulsed, in every epoch, on traces of length 150"
-        (withMaxSuccess 5 $ mockChainProp Conway 150 (drepCertTxForTrace (Coin 60000)) (epochProp pulserWorks))
+        $ withMaxSuccess 5
+        $ mockChainProp Conway 150 (drepCertTxForTrace (Coin 60000))
+        $ epochProp pulserWorks
     ]
 
 -- =================================================
@@ -178,10 +191,14 @@ drepTree =
 getpp :: EraGov era => NewEpochState era -> PParams era
 getpp nes = nes ^. (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL)
 
-getProposals :: ConwayEraGov era => NewEpochState era -> Map.Map (GovActionId (EraCrypto era)) (GovActionState era)
-getProposals nes = proposalsActionsMap (nes ^. (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL))
+getProposals ::
+  ConwayEraGov era => NewEpochState era -> Map.Map (GovActionId (EraCrypto era)) (GovActionState era)
+getProposals nes =
+  proposalsActionsMap
+    (nes ^. (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL))
 
-allValidSignals :: Reflect era => Proof era -> MockChainState era -> MockBlock era -> MockChainState era -> Property
+allValidSignals ::
+  Reflect era => Proof era -> MockChainState era -> MockBlock era -> MockChainState era -> Property
 allValidSignals p (MockChainState nes _ slot count) (MockBlock _ _ _txs) _stateN =
   counterexample
     ("\nCount " ++ show count ++ " Slot " ++ show slot ++ "\n" ++ show (pcNewEpochState p nes))
@@ -200,14 +217,18 @@ pulserWorks mcsfirst mcslast =
 bruteForceDRepDistr :: NewEpochState era -> Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
 bruteForceDRepDistr nes = computeDrepDistr umap dreps incstk
   where
-    ls = (esLState . nesEs) nes
+    ls = esLState (nesEs nes)
     cs = lsCertState ls
-    IStake incstk _ = (utxosStakeDistr . lsUTxOState) ls
+    IStake incstk _ = utxosStakeDistr (lsUTxOState ls)
     umap = dsUnified (certDState cs)
     dreps = vsDReps (certVState cs)
 
-extractPulsingDRepDistr :: ConwayEraGov era => NewEpochState era -> Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
-extractPulsingDRepDistr nes = (psDRepDistr . fst . finishDRepPulser) (nes ^. newEpochStateDRepPulsingStateL)
+extractPulsingDRepDistr ::
+  ConwayEraGov era =>
+  NewEpochState era ->
+  Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
+extractPulsingDRepDistr nes =
+  (psDRepDistr . fst . finishDRepPulser) (nes ^. newEpochStateDRepPulsingStateL)
 
 -- ===============================================
 -- helper functions
@@ -228,7 +249,11 @@ traceMap :: (Show k, Show v) => String -> Map.Map k v -> a -> a
 traceMap s m x = trace (showMap s m) x
 
 showPotObl :: ConwayEraGov era => NewEpochState era -> String
-showPotObl nes = "\nPOT " ++ show (utxosDeposited us) ++ "\nAll " ++ show (allObligations certSt (us ^. utxosGovStateL))
+showPotObl nes =
+  "\nPOT "
+    ++ show (utxosDeposited us)
+    ++ "\nAll "
+    ++ show (allObligations certSt (us ^. utxosGovStateL))
   where
     es = nesEs nes
     ls = esLState es
