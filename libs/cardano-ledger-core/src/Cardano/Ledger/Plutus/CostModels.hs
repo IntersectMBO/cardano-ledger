@@ -274,7 +274,7 @@ decodeCostModels =
 costModelParamsCount :: Language -> Int
 costModelParamsCount PlutusV1 = 166
 costModelParamsCount PlutusV2 = 175
-costModelParamsCount PlutusV3 = 223
+costModelParamsCount PlutusV3 = 233
 
 -- | Prior to version 9, each 'CostModel' was expected to be serialized as
 -- an array of integers of a specific length (depending on the version of Plutus).

@@ -220,7 +220,6 @@ transTxOut txOut = do
   address <- transAddr (txOut ^. addrTxOutL)
   pure $ PV1.TxOut address (transValue val) (transDataHash <$> strictMaybeToMaybe dataHash)
 
--- | Translate all `Withdrawal`s from within a `TxBody`
 transTxBodyId :: EraTxBody era => TxBody era -> PV1.TxId
 transTxBodyId txBody = PV1.TxId (transSafeHash (hashAnnotated txBody))
 
