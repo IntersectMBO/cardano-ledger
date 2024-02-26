@@ -535,7 +535,7 @@ epochProp p tr =
     epochs = splitEpochs states
     showEpoch epoch n = unlines (("EPOCH " ++ show n) : map showPulserState (NE.toList epoch))
     message =
-      "Trace length " ++ show (length states) ++ unlines (zipWith showEpoch epochs [0 :: Int ..])
+      unlines (("Trace length " ++ show (length states)) : zipWith showEpoch epochs [0 :: Int ..])
 
 splitEpochs :: [MockChainState era] -> [NE.NonEmpty (MockChainState era)]
 splitEpochs xs =
