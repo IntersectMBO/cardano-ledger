@@ -45,6 +45,7 @@ import Control.State.Transition.Trace.Generator.QuickCheck (
 import Data.Default.Class (Default (def))
 import Data.Foldable (toList)
 import qualified Data.Foldable as Fold (toList)
+import Data.Function (on)
 import qualified Data.HashSet as HashSet
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
@@ -536,38 +537,12 @@ epochProp p tr =
     message =
       "Trace length " ++ show (length states) ++ unlines (zipWith showEpoch epochs [0 :: Int ..])
 
-splitE :: (a -> a -> Bool) -> [a] -> [a] -> [NE.NonEmpty a] -> [NE.NonEmpty a]
-splitE boundary source epoch epochs =
-  case (source, NE.nonEmpty epoch) of
-    ([], Just epochNE) -> reverse (NE.reverse epochNE : epochs)
-    ([], Nothing) -> epochs
-    ([x], Just epochNE) -> reverse (NE.reverse (NE.cons x epochNE) : epochs)
-    ([x], Nothing) -> pure x : epochs
-    (x : y : more, Just epochNE) ->
-      if boundary x y
-        then splitE boundary (y : more) [] (NE.reverse (NE.cons x epochNE) : epochs)
-        else splitE boundary (y : more) (x : epoch) epochs
-    (x : y : more, Nothing) ->
-      if boundary x y
-        then splitE boundary (y : more) [] (pure x : epochs)
-        else splitE boundary (y : more) (x : epoch) epochs
-
-splitTest :: [NE.NonEmpty (Int, Char)]
-splitTest =
-  splitE
-    boundary
-    (zip [1, 1, 1, 2, 2, 1, 3, 3, 3, 3, 4, 4, 4, 5, 6, 6, 6, 8, 8] "abcdefghijklmnopqrstuvwxyz")
-    []
-    []
-  where
-    boundary :: (Int, Char) -> (Int, Char) -> Bool
-    boundary (n, _) (m, _) = n + 1 <= m
-
 splitEpochs :: [MockChainState era] -> [NE.NonEmpty (MockChainState era)]
 splitEpochs xs =
-  init $ splitE boundary xs [] [] -- We only want full traces, so we drop the last potential trace
-  where
-    boundary mcs1 mcs2 = nesEL (mcsNes mcs1) + 1 <= nesEL (mcsNes mcs2)
+  -- We only want full traces, so we drop the last potential trace
+  case reverse (NE.groupBy ((==) `on` (nesEL . mcsNes)) xs) of
+    [] -> error "Expected at least one full epoch"
+    _ : epochs -> reverse epochs
 
 -- =====================
 
