@@ -73,6 +73,9 @@ instance Cborg.Serialise PV1.TxInInfo
 instance Cborg.Serialise PV1.TxInfo
 instance Cborg.Serialise PV1.TxOut
 instance Cborg.Serialise PV2.ScriptPurpose
+instance Cborg.Serialise PV2.TxId
+instance Cborg.Serialise PV2.TxOutRef
+instance Cborg.Serialise PV2.TxInInfo
 instance Cborg.Serialise PV2.TxInfo
 instance Cborg.Serialise PV3.Address
 instance Cborg.Serialise PV3.BuiltinData

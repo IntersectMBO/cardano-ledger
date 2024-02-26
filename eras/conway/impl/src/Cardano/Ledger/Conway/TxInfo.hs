@@ -39,7 +39,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), toAsItem)
-import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
+import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..), transTxOutV2)
 import qualified Cardano.Ledger.Babbage.TxInfo as Babbage
 import Cardano.Ledger.BaseTypes (
   Inject (..),
@@ -49,6 +49,7 @@ import Cardano.Ledger.BaseTypes (
   isSJust,
   kindObject,
   strictMaybe,
+  txIxToInt,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
@@ -98,12 +99,13 @@ import Cardano.Ledger.Plutus.TxInfo (
   transEpochNo,
   transKeyHash,
   transRewardAccount,
+  transSafeHash,
   transScriptHash,
-  transTxId,
-  transTxIn,
  )
+import qualified Cardano.Ledger.Plutus.TxInfo as TxInfo
 import Cardano.Ledger.PoolParams
-import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO)
 import Control.Arrow (ArrowChoice (..))
 import Control.DeepSeq (NFData)
@@ -237,7 +239,22 @@ transTxInInfoV1 ::
 transTxInInfoV1 utxo txIn = do
   txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
   plutusTxOut <- transTxOutV1 (TxOutFromInput txIn) txOut
-  Right (PV1.TxInInfo (transTxIn txIn) plutusTxOut)
+  Right (PV1.TxInInfo (TxInfo.transTxIn txIn) plutusTxOut)
+
+-- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V3 context
+transTxInInfoV3 ::
+  forall era.
+  ( Inject (BabbageContextError era) (ContextError era)
+  , Value era ~ MaryValue (EraCrypto era)
+  , BabbageEraTxOut era
+  ) =>
+  UTxO era ->
+  TxIn (EraCrypto era) ->
+  Either (ContextError era) PV3.TxInInfo
+transTxInInfoV3 utxo txIn = do
+  txOut <- left (inject . AlonzoContextError @era) $ Alonzo.transLookupTxOut utxo txIn
+  plutusTxOut <- transTxOutV2 (TxOutFromInput txIn) txOut
+  Right (PV3.TxInInfo (transTxIn txIn) plutusTxOut)
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
   toPlutusTxCert _ = transTxCertV1V2
@@ -317,8 +334,8 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
     timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
-    inputs <- mapM (Babbage.transTxInInfoV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
-    refInputs <- mapM (Babbage.transTxInInfoV2 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
+    inputs <- mapM (transTxInInfoV3 utxo) (Set.toList (txBody ^. inputsTxBodyL))
+    refInputs <- mapM (transTxInInfoV3 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-
       zipWithM
         (Babbage.transTxOutV2 . TxOutFromOutput)
@@ -339,7 +356,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
         , PV3.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
         , PV3.txInfoRedeemers = plutusRedeemers
         , PV3.txInfoData = PV3.fromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
-        , PV3.txInfoId = Alonzo.transTxBodyId txBody
+        , PV3.txInfoId = transTxBodyId txBody
         , PV3.txInfoVotes = transVotingProcedures (txBody ^. votingProceduresTxBodyL)
         , PV3.txInfoProposalProcedures =
             map (transProposal proxy) $ toList (txBody ^. proposalProceduresTxBodyL)
@@ -355,6 +372,15 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
 
   toPlutusScriptContext proxy txInfo scriptPurpose =
     PV3.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
+
+transTxId :: TxId c -> PV3.TxId
+transTxId txId = PV3.TxId (transSafeHash (unTxId txId))
+
+transTxBodyId :: EraTxBody era => TxBody era -> PV3.TxId
+transTxBodyId txBody = PV3.TxId (transSafeHash (hashAnnotated txBody))
+
+transTxIn :: TxIn c -> PV3.TxOutRef
+transTxIn (TxIn txid txIx) = PV3.TxOutRef (transTxId txid) (toInteger (txIxToInt txIx))
 
 -- | Translate all `Withdrawal`s from within a `TxBody`
 transTxBodyWithdrawals :: EraTxBody era => TxBody era -> PV3.Map PV3.Credential PV3.Lovelace

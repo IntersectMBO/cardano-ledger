@@ -504,7 +504,7 @@ potential_languages = 0 .. 255
 costmdls =
   { ? 0 : [ 166* int ] ; Plutus v1, only 166 integers are used, but more are accepted (and ignored)
   , ? 1 : [ 175* int ] ; Plutus v2, only 175 integers are used, but more are accepted (and ignored)
-  , ? 2 : [ 223* int ] ; Plutus v3, only 223 integers are used, but more are accepted (and ignored)
+  , ? 2 : [ 233* int ] ; Plutus v3, only 233 integers are used, but more are accepted (and ignored)
   , ? 3 : [ int ] ; Any 8-bit unsigned number can be used as a key.
   }
 
