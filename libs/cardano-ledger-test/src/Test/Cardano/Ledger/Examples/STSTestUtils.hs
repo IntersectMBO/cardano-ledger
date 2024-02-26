@@ -20,7 +20,6 @@ module Test.Cardano.Ledger.Examples.STSTestUtils (
   someKeys,
   someScriptAddr,
   testBBODY,
-  runEPOCH,
   runLEDGER,
   testUTXOW,
   testUTXOWsubset,
@@ -51,7 +50,6 @@ import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.BaseTypes (
-  EpochNo (..),
   Network (..),
   mkTxIxPartial,
  )
@@ -66,10 +64,8 @@ import Cardano.Ledger.Keys (KeyRole (..), hashKey)
 import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Shelley.API (
   Block (..),
-  EpochState (..),
   LedgerEnv (..),
   LedgerState (..),
-  PoolDistr,
   UTxO (..),
  )
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
@@ -361,26 +357,6 @@ runLEDGER wit@(LEDGER proof) state pparams tx =
         Mary -> runSTS' wit (TRC (env, state, tx))
         Allegra -> runSTS' wit (TRC (env, state, tx))
         Shelley -> runSTS' wit (TRC (env, state, tx))
-
-runEPOCH ::
-  forall era.
-  ( GoodCrypto (EraCrypto era)
-  , EraTx era
-  , EraGov era
-  ) =>
-  WitRule "EPOCH" era ->
-  EpochState era ->
-  EpochNo ->
-  PoolDistr (EraCrypto era) ->
-  Either [PredicateFailure (EraRule "EPOCH" era)] (State (EraRule "EPOCH" era))
-runEPOCH wit@(EPOCH proof) state epochNo poolDistr =
-  case proof of
-    Conway -> runSTS' wit (TRC (poolDistr, state, epochNo))
-    Babbage -> runSTS' wit (TRC ((), state, epochNo))
-    Alonzo -> runSTS' wit (TRC ((), state, epochNo))
-    Mary -> runSTS' wit (TRC ((), state, epochNo))
-    Allegra -> runSTS' wit (TRC ((), state, epochNo))
-    Shelley -> runSTS' wit (TRC ((), state, epochNo))
 
 -- ======================================================================
 -- =========================  Internal helper functions  ================

@@ -2,6 +2,8 @@
 
 ## 1.13.0.0
 
+* Switch `EPOCH` rule environment back to `()`. Start using the latest stake pool
+  distribution: #4115
 * Add:
   * `transTxInInfoV1`
   * `transTxOutV1`
