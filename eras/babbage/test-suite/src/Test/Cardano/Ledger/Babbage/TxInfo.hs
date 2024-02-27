@@ -155,7 +155,7 @@ expectOneInput i slang txInfo =
   case slang of
     SPlutusV1 -> False
     SPlutusV2 -> PV2.txInfoInputs txInfo == [i]
-    SPlutusV3 -> PV3.txInfoInputs txInfo == [i]
+    SPlutusV3 -> False
 
 expectOneOutput :: PV2.TxOut -> SLanguage l -> PlutusTxInfo l -> Bool
 expectOneOutput o slang txInfo =
