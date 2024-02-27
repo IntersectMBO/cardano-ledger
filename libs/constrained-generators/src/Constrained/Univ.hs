@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -261,6 +262,7 @@ type family SumOver as where
 ------------------------------------------------------------------------
 -- Sets
 ------------------------------------------------------------------------
+newtype Size = MkSize {unSize :: Int} deriving (Eq, Ord, Num)
 
 singletonFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[a] (Set a)
 singletonFn = injectFn $ Singleton @_ @fn
@@ -280,8 +282,8 @@ elemFn = injectFn $ Elem @_ @fn
 disjointFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a, Set a] Bool
 disjointFn = injectFn $ Disjoint @_ @fn
 
-sizeFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a] Int
-sizeFn = injectFn $ Size @_ @fn
+sizeFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a] Size
+sizeFn = injectFn $ SetSize @_ @fn
 
 data SetFn (fn :: [Type] -> Type -> Type) args res where
   Subset :: Ord a => SetFn fn '[Set a, Set a] Bool
@@ -289,7 +291,7 @@ data SetFn (fn :: [Type] -> Type -> Type) args res where
   Member :: Ord a => SetFn fn '[a, Set a] Bool
   Singleton :: Ord a => SetFn fn '[a] (Set a)
   Union :: Ord a => SetFn fn '[Set a, Set a] (Set a)
-  Size :: Ord a => SetFn fn '[Set a] Int
+  SetSize :: Ord a => SetFn fn '[Set a] Size
   Elem :: Eq a => SetFn fn '[a, [a]] Bool
 
 deriving instance Show (SetFn fn args res)
@@ -302,7 +304,7 @@ instance FunctionLike (SetFn fn) where
     Member -> Set.member
     Singleton -> Set.singleton
     Union -> (<>)
-    Size -> Set.size
+    SetSize -> MkSize . Set.size
     Elem -> elem
 
 ------------------------------------------------------------------------

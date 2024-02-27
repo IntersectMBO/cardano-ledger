@@ -159,6 +159,9 @@ instance Monad m => Monad (GenT m) where
 strictGen :: GenT m a -> Gen (m a)
 strictGen gen = runGenT gen Strict
 
+genFromGenT :: GenT GE a -> Gen a
+genFromGenT genT = errorGE <$> runGenT genT Strict
+
 resizeT :: (Int -> Int) -> GenT m a -> GenT m a
 resizeT f (GenT gm) = GenT $ \mode -> sized $ \sz -> resize (f sz) (gm mode)
 

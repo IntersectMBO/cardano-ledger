@@ -19,6 +19,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Debug.Trace
 import Prettyprinter
 
 import Constrained.Base
@@ -32,10 +33,22 @@ import Constrained.Univ
 -- HasSpec
 ------------------------------------------------------------------------
 
+mapSize :: Map k v -> Size
+mapSize m = MkSize (Map.size m)
+
+instance Ord a => Sized (Map.Map a b) where
+  sizeOf = mapSize
+  liftSizeSpec sizespec@(SizeSpec _) = TypeSpec (MapSpec mempty mempty (typeSpec sizespec) TrueSpec NoFold) []
+  liftMemberSpec xs = typeSpec (MapSpec mempty mempty (MemberSpec xs) TrueSpec NoFold)
+  sizeOfTypeSpec (MapSpec mustk mustv size _ _) =
+    typeSpec (atLeastInt (Set.size mustk))
+      <> typeSpec (atLeastInt (length mustv))
+      <> size
+
 data MapSpec fn k v = MapSpec
   { mapSpecMustKeys :: Set k
   , mapSpecMustValues :: [v]
-  , mapSpecSize :: Spec fn Int
+  , mapSpecSize :: Spec fn Size
   , mapSpecElem :: Spec fn (k, v)
   , mapSpecFold :: FoldSpec fn v
   }
@@ -75,7 +88,7 @@ instance
     and
       [ mustKeys `Set.isSubsetOf` Map.keysSet m
       , all (`elem` Map.elems m) mustVals
-      , Map.size m `conformsToSpec` size
+      , mapSize m `conformsToSpec` size
       , all (`conformsToSpec` kvs) (Map.toList m)
       , Map.elems m `conformsToFoldSpec` foldSpec
       ]
@@ -88,7 +101,7 @@ instance
     let haveVals = map snd mustMap
         mustVals' = filter (`notElem` haveVals) mustVals
         size' = constrained $ \sz ->
-          satisfies (sz + Lit (length mustMap)) (size <> specSizeBound (mapSpec fstFn $ mapSpec toGenericFn kvs))
+          satisfies (sz + Lit (listSize mustMap)) (size <> specIntToSize (specSizeBound (mapSpec fstFn $ mapSpec toGenericFn kvs)))
         foldSpec' = case foldSpec of
           NoFold -> NoFold
           FoldSpec fn sumSpec -> FoldSpec fn $ propagateSpecFun (theAddFn @fn) (HOLE :? Value mustSum :> Nil) sumSpec
@@ -160,9 +173,18 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
           , Evidence <- prerequisites @fn @(Map k v) ->
               case spec of
                 MemberSpec [s] ->
-                  typeSpec $ MapSpec s [] (equalSpec $ Set.size s) TrueSpec NoFold
+                  trace ("Dom MemberSpec " ++ show s) $
+                    typeSpec $
+                      MapSpec s [] (exactSizeSpec $ setSize s) TrueSpec NoFold
                 TypeSpec (SetSpec must elemspec size) [] ->
-                  typeSpec $ MapSpec must [] size (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec) NoFold
+                  trace ("Dom TypeSpec " ++ show elemspec) $
+                    typeSpec $
+                      MapSpec
+                        must
+                        []
+                        size
+                        (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec)
+                        NoFold
                 _ -> ErrorSpec ["Dom on bad map spec", show spec]
     Rng ->
       -- No TypeAbstractions in ghc-8.10
@@ -172,7 +194,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
           , Evidence <- prerequisites @fn @(Map k v) ->
               case spec of
                 MemberSpec [r] ->
-                  typeSpec $ MapSpec Set.empty r (equalSpec $ length r) TrueSpec NoFold
+                  typeSpec $ MapSpec Set.empty r (equalSpec $ listSize r) TrueSpec NoFold
                 TypeSpec (ListSpec must size elemspec foldspec) [] ->
                   typeSpec $ MapSpec Set.empty must size (constrained $ \kv -> satisfies (app (sndFn @fn) (app (toGenericFn @fn) kv)) elemspec) foldspec
                 _ -> ErrorSpec ["Rng on bad map spec", show spec]
@@ -181,7 +203,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
   mapTypeSpec f ts = case f of
     -- TODO: consider checking against singleton member-specs in the other component
     -- interacting with cant
-    Dom ->
+    Dom -> trace "CASE HERE" $
       -- No TypeAbstractions in ghc-8.10
       case f of
         (_ :: MapFn fn '[Map k v] (Set k))

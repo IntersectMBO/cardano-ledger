@@ -166,6 +166,7 @@ tests =
     , numberyTests
     , testSpec "andPair" andPair
     , testSpec "orPair" orPair
+    , sizeTests
     ]
       ++ [ testSpec ("intRangeSpec " ++ show i) (intRangeSpec i)
          | i <- [-1000, -100, -10, 0, 10, 100, 1000]
@@ -190,6 +191,23 @@ numberyTests =
     , testNumberyListSpec "listSumRangeUpper" listSumRangeUpper
     , testNumberyListSpec "listSumRangeRange" listSumRangeRange
     , testNumberyListSpec "listSumElemRange" listSumElemRange
+    ]
+
+sizeTests :: TestTree
+sizeTests =
+  testGroup "SizeTests" $
+    [ testSpec "sizeAddOrSub1" sizeAddOrSub1
+    , testSpec "sizeAddOrSub2" sizeAddOrSub2
+    , testSpec "sizeAddOrSub3" sizeAddOrSub3
+    , -- This should fail, how do I state this , testSpec "sizeAddOrSub4" sizeAddOrSub4
+      testSpec "sizeAddOrSub5" sizeAddOrSub5
+    , testSpec "sizeAddOrSub5" sizeAddOrSub5
+    , testSpec "listSubSize" listSubSize
+    , testSpec "listSubSize" setSubSize
+    , testSpec "listSubSize" mapSubSize
+    , testSpec "hasSizeList" hasSizeList
+    , testSpec "hasSizeList" hasSizeSet
+    , testSpec "hasSizeList" hasSizeMap
     ]
 
 type Numbery a =
@@ -356,7 +374,7 @@ mapPairSpec = constrained' $ \m s ->
 
 mapEmptyDomainSpec :: Spec BaseFn (Map Int Int)
 mapEmptyDomainSpec = constrained $ \m ->
-  subset_ (dom_ m) mempty
+  subset_ (dom_ m) (Lit Set.empty)
 
 setPairSpec :: Spec BaseFn (Set Int, Set Int)
 setPairSpec = constrained' $ \s s' ->
@@ -677,3 +695,64 @@ listMustSizeIssue = constrained $ \xs ->
   [ 1 `elem_` xs
   , length_ xs ==. 1
   ]
+
+data Three = One | Two | Three
+  deriving (Ord, Eq, Show, Generic)
+
+instance HasSimpleRep Three
+instance BaseUniverse fn => HasSpec fn Three
+
+mapSizeConstrained :: Spec BaseFn (Map Three Int)
+mapSizeConstrained = constrained $ \m -> size_ (dom_ m) <=. 3
+
+sizeAddOrSub1 :: Spec BaseFn Size
+sizeAddOrSub1 = constrained $ \s ->
+  4 ==. s + 2
+
+sizeAddOrSub2 :: Spec BaseFn Size
+sizeAddOrSub2 = constrained $ \s ->
+  4 ==. 2 + s
+
+sizeAddOrSub3 :: Spec BaseFn Size
+sizeAddOrSub3 = constrained $ \s ->
+  4 ==. s - 2
+
+sizeAddOrSub4 :: Spec BaseFn Size
+sizeAddOrSub4 = constrained $ \s ->
+  4 ==. 2 - s
+
+sizeAddOrSub5 :: Spec BaseFn Size
+sizeAddOrSub5 = constrained $ \s ->
+  2 ==. 12 - s
+
+listSubSize :: Spec BaseFn [Int]
+listSubSize = constrained $ \s ->
+  2 ==. 12 - (sizeOf_ s)
+
+setSubSize :: Spec BaseFn (Set Int)
+setSubSize = constrained $ \s ->
+  2 ==. 12 - (sizeOf_ s)
+
+mapSubSize :: Spec BaseFn (Map Int Int)
+mapSubSize = constrained $ \s ->
+  2 ==. 12 - (sizeOf_ s)
+
+hasSizeList :: Spec BaseFn [Int]
+hasSizeList = hasSize (rangeInt 0 4)
+
+hasSizeSet :: Spec BaseFn (Set Int)
+hasSizeSet = hasSize (rangeInt 1 3)
+
+hasSizeMap :: Spec BaseFn (Map Int Int)
+hasSizeMap = hasSize (rangeInt 1 3)
+
+-- ==========================================================
+
+go :: HasSpec BaseFn t => Spec BaseFn t -> IO ()
+go spec = defaultMain (testSpec "testing with go" spec)
+
+run :: forall fn a. HasSpec fn a => Spec fn a -> IO ()
+run spec = do
+  x <- generate (genFromGenT (genFromSpec @fn spec))
+  print x
+
