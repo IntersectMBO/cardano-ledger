@@ -87,9 +87,14 @@ prop_sound ::
   Spec fn a ->
   Property
 prop_sound spec =
-  QC.forAllBlind (strictGen $ genFromSpec spec) $ \ma -> fromGEDiscard $ do
-    a <- ma
-    pure $ counterexample (show a) $ conformsToSpecProp a spec
+  checkCoverage $
+    QC.forAllBlind (strictGen $ genFromSpec spec) $ \ma ->
+      fromGE (\_ -> cover 80 False "successful" True) $ do
+        a <- ma
+        pure $
+          cover 80 True "successful" $
+            counterexample (show a) $
+              conformsToSpecProp a spec
 
 -- | `prop_complete ps` assumes that `ps` is satisfiable
 prop_complete :: HasSpec fn a => Spec fn a -> Property
