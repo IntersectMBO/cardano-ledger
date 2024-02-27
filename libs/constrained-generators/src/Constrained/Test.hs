@@ -151,6 +151,7 @@ tests =
     , testSpec "foldSingleCase" foldSingleCase
     , testSpec "listSumPair" (listSumPair @Int)
     , testSpec "parallelLetPair" parallelLetPair
+    , testSpec "mapSizeConstrained" mapSizeConstrained
     , numberyTests
     ]
       ++ [ testSpec ("intRangeSpec " ++ show i) (intRangeSpec i)
@@ -547,3 +548,12 @@ parallelLetPair = constrained $ \p ->
       ]
   , match p $ \x y -> y <=. x
   ]
+
+data Three = One | Two | Three
+  deriving (Ord, Eq, Show, Generic)
+
+instance HasSimpleRep Three
+instance IsUniverse fn => HasSpec fn Three
+
+mapSizeConstrained :: Spec Fn (Map Three Int)
+mapSizeConstrained = constrained $ \m -> size_ (dom_ m) <=. 3
