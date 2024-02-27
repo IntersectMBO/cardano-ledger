@@ -4,21 +4,25 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.TxAuxData (
   Metadatum (..),
   ShelleyTxAuxData (ShelleyTxAuxData),
+  ShelleyTxAuxDataRaw,
   hashShelleyTxAuxData,
   validMetadatum,
 
@@ -27,6 +31,7 @@ module Cardano.Ledger.Shelley.TxAuxData (
 )
 where
 
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -53,14 +58,21 @@ import Cardano.Ledger.Binary (
   encodeMapLen,
   encodeString,
   peekTokenType,
-  serialize,
-  withSlice,
  )
-import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR (toCBOR), encodePreEncoded)
-import Cardano.Ledger.Core (Era (..), EraTxAuxData (..), eraProtVerLow)
-import Cardano.Ledger.Crypto (Crypto)
+import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR)
+import Cardano.Ledger.Core (Era (..), EraTxAuxData (..))
+import Cardano.Ledger.Crypto (Crypto (HASH))
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
-import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.MemoBytes (
+  EqRaw (..),
+  Mem,
+  MemoBytes,
+  MemoHashIndex,
+  Memoized (RawType),
+  getMemoRawType,
+  getMemoSafeHash,
+  mkMemoized,
+ )
 import Cardano.Ledger.SafeHash (
   HashAnnotated,
   SafeHash,
@@ -68,17 +80,16 @@ import Cardano.Ledger.SafeHash (
   hashAnnotated,
  )
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Control.DeepSeq (NFData (rnf), deepseq)
+import Control.DeepSeq (NFData (rnf))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as LBS
 import Data.Map.Strict (Map)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Data.Typeable (Proxy (..), Typeable)
+import Data.Typeable (Proxy (..))
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
+import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 -- | A generic metadatum type.
 data Metadatum
@@ -99,12 +110,41 @@ instance NFData Metadatum where
     B _ -> ()
     S _ -> ()
 
-data ShelleyTxAuxData era = ShelleyTxAuxData'
-  { mdMap :: !(Map Word64 Metadatum)
-  , mdBytes :: LBS.ByteString
+newtype ShelleyTxAuxDataRaw era = ShelleyTxAuxDataRaw
+  { stadrMetadata :: Map Word64 Metadatum
   }
-  deriving (Eq, Show, Ord, Generic)
-  deriving (NoThunks) via AllowThunksIn '["mdBytes"] (ShelleyTxAuxData era)
+  deriving (Eq, Show, Generic)
+  deriving newtype (NFData)
+
+deriving via
+  InspectHeapNamed "ShelleyTxAuxDataRaw" (ShelleyTxAuxDataRaw era)
+  instance
+    NoThunks (ShelleyTxAuxDataRaw era)
+
+deriving newtype instance Era era => EncCBOR (ShelleyTxAuxDataRaw era)
+
+deriving newtype instance Era era => DecCBOR (ShelleyTxAuxDataRaw era)
+
+instance Era era => DecCBOR (Annotator (ShelleyTxAuxDataRaw era)) where
+  decCBOR = pure <$> decCBOR
+
+deriving via
+  InspectHeapNamed "ShelleyTxAuxDataRaw" (ShelleyTxAuxData era)
+  instance
+    NoThunks (ShelleyTxAuxData era)
+
+deriving via
+  (Mem ShelleyTxAuxDataRaw era)
+  instance
+    Era era => DecCBOR (Annotator (ShelleyTxAuxData era))
+
+newtype ShelleyTxAuxData era
+  = AuxiliaryDataConstr (MemoBytes ShelleyTxAuxDataRaw era)
+  deriving (Eq, Generic)
+  deriving newtype (NFData, Plain.ToCBOR, SafeToHash)
+
+instance Memoized ShelleyTxAuxData where
+  type RawType ShelleyTxAuxData = ShelleyTxAuxDataRaw
 
 type Metadata era = ShelleyTxAuxData era
 
@@ -124,19 +164,13 @@ instance Crypto c => EraTxAuxData (ShelleyEra c) where
     where
       index = Proxy @EraIndependentTxAuxData
 
-instance EqRaw (ShelleyTxAuxData era) where
-  eqRaw txAuxData1 txAuxData2 = mdMap txAuxData1 == mdMap txAuxData2
+instance EqRaw (ShelleyTxAuxData era)
 
-instance NFData (ShelleyTxAuxData era) where
-  rnf m = mdMap m `deepseq` rnf (mdBytes m)
-
--- Usually we derive SafeToHash instances, but since ShelleyTxAuxData preserves its serialisation
--- bytes we can just extract them here, and make an explicit SafeToHash instance.
-
-instance SafeToHash (ShelleyTxAuxData era) where
-  originalBytes = LBS.toStrict . mdBytes
-
-instance c ~ EraCrypto era => HashAnnotated (ShelleyTxAuxData era) EraIndependentTxAuxData c
+instance
+  c ~ EraCrypto era =>
+  HashAnnotated (ShelleyTxAuxData era) EraIndependentTxAuxData c
+  where
+  hashAnnotated = getMemoSafeHash
 
 hashShelleyTxAuxData ::
   Era era =>
@@ -146,24 +180,20 @@ hashShelleyTxAuxData = hashAnnotated
 
 pattern ShelleyTxAuxData :: forall era. Era era => Map Word64 Metadatum -> ShelleyTxAuxData era
 pattern ShelleyTxAuxData m <-
-  ShelleyTxAuxData' m _
+  (getMemoRawType -> ShelleyTxAuxDataRaw m)
   where
-    ShelleyTxAuxData m =
-      let bytes = serialize (eraProtVerLow @era) $ encCBOR m
-       in ShelleyTxAuxData' m bytes
+    ShelleyTxAuxData m = mkMemoized $ ShelleyTxAuxDataRaw m
 
 {-# COMPLETE ShelleyTxAuxData #-}
-
-instance Typeable era => Plain.ToCBOR (ShelleyTxAuxData era) where
-  toCBOR = Plain.encodePreEncoded . LBS.toStrict . mdBytes
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (ShelleyTxAuxData era)
 
-instance Typeable era => DecCBOR (Annotator (ShelleyTxAuxData era)) where
-  decCBOR = do
-    (m, bytesAnn) <- withSlice decCBOR
-    pure $ ShelleyTxAuxData' m <$> bytesAnn
+deriving instance
+  HashAlgorithm (HASH (EraCrypto era)) =>
+  Show (ShelleyTxAuxData era)
+
+type instance MemoHashIndex ShelleyTxAuxDataRaw = EraIndependentTxAuxData
 
 instance EncCBOR Metadatum where
   encCBOR = encodeMetadatum
