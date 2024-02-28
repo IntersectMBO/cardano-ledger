@@ -20,6 +20,7 @@
 module Test.Cardano.Ledger.Conway.ImpTest (
   module ImpTest,
   ConwayEraImp,
+  enactConstitution,
   submitGovAction,
   submitGovAction_,
   submitGovActions,
@@ -1108,6 +1109,29 @@ submitConstitutionGovActionForest p forest =
     go (Node parent children) = do
       n <- submitConstitutionGovAction $ GovPurposeId <$> parent
       pure (n, fmap (\(Node _child subtree) -> Node (SJust n) subtree) children)
+
+enactConstitution ::
+  forall era.
+  ( ConwayEraImp era
+  , HasCallStack
+  ) =>
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  Constitution era ->
+  Credential 'DRepRole (EraCrypto era) ->
+  Credential 'HotCommitteeRole (EraCrypto era) ->
+  ImpTestM era (GovActionId (EraCrypto era))
+enactConstitution prevGovId constitution dRep committeeMember = impAnn "Enacting constitution" $ do
+  let action = NewConstitution prevGovId constitution
+  govId <- submitGovAction action
+  submitYesVote_ (DRepVoter dRep) govId
+  submitYesVote_ (CommitteeVoter committeeMember) govId
+  logRatificationChecks govId
+  passNEpochs 2
+  enactedConstitution <-
+    getsNES $
+      nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . constitutionGovStateL
+  enactedConstitution `shouldBe` constitution
+  pure govId
 
 -- | Asserts that the URL of the current constitution is equal to the given
 -- string
