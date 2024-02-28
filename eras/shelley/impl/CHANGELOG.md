@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Re-implemented `ShelleyTxAuxData` with `MemoBytes`
 * Remove `getNextEpochCommitteeMembers` from `EraGov`
 * Deprecated `PPUPPredFailure`
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
@@ -23,6 +24,7 @@
 
 ### `testlib`
 
+* Added `ToExpr` instance for `ShelleyTxAuxDataRaw`
 * Add:
   * `PlutusArgs`
   * `ScriptTestContext`

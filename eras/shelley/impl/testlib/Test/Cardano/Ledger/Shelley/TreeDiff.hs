@@ -45,6 +45,8 @@ instance ToExpr (MultiSig era)
 -- TxAuxData
 instance ToExpr Metadatum
 
+instance ToExpr (ShelleyTxAuxDataRaw era)
+
 instance ToExpr (ShelleyTxAuxData era)
 
 -- Governance
