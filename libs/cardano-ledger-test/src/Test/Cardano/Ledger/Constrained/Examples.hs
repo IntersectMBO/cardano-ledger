@@ -814,7 +814,7 @@ allExampleTests =
     , testPropMax 30 "Test 18a. Projection test" test18a
     , testPropMax 30 "Test 18b. Projection test" test18b
     , testPropMax 30 "Test 20. ptr & rewards are inverses" test20
-    , testPropMax 30 "Constraint soundness" $ prop_soundness
+    , testPropMax 30 "Constraint soundness" $ within 1000000 $ prop_soundness
     , testProperty "Shrinking soundness" $ withMaxSuccess 30 $ prop_shrinking
     , testProperty "NewEpochState and Tx generation" $ do
         (st, tx, _) <- genTxAndNewEpoch def $ Conway
