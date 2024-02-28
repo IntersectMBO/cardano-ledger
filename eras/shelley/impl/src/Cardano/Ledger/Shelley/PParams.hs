@@ -43,15 +43,13 @@ where
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   NonNegativeInterval,
-  Nonce (NeutralNonce, Nonce),
+  Nonce (NeutralNonce),
   ProtVer (..),
   StrictMaybe (..),
   UnitInterval,
   invalidKey,
-  parseAsRational,
   strictMaybeToMaybe,
   succVersion,
-  toRationalJSON,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -284,18 +282,14 @@ instance FromJSON (ShelleyPParams Identity era) where
         <*> obj .: "stakePoolDeposit"
         <*> obj .: "poolRetireMaxEpoch"
         <*> obj .: "stakePoolTargetNum"
-        <*> parseAsRational (obj .: "poolPledgeInfluence")
-        <*> parseAsRational (obj .: "monetaryExpansion")
-        <*> parseAsRational (obj .: "treasuryCut")
-        <*> parseAsRational (obj .: "decentralization")
-        <*> (obj .: "extraPraosEntropy" >>= jsonToNonce)
+        <*> obj .: "poolPledgeInfluence"
+        <*> obj .: "monetaryExpansion"
+        <*> obj .: "treasuryCut"
+        <*> obj .: "decentralization"
+        <*> obj .: "extraPraosEntropy"
         <*> obj .: "protocolVersion"
         <*> obj .:? "minUTxOValue" .!= mempty
         <*> obj .:? "minPoolCost" .!= mempty
-    where
-      jsonToNonce :: Aeson.Value -> Aeson.Parser Nonce
-      jsonToNonce Aeson.Null = return NeutralNonce
-      jsonToNonce x = Nonce <$> parseJSON x
 
 emptyShelleyPParams :: forall era. Era era => ShelleyPParams Identity era
 emptyShelleyPParams =
@@ -474,13 +468,9 @@ shelleyCommonPParamsHKDPairsV6 ::
   PParamsHKD f era ->
   [(Key, HKD f Aeson.Value)]
 shelleyCommonPParamsHKDPairsV6 px pp =
-  [ ("decentralization", hkdMap px (toRationalJSON @UnitInterval) (pp ^. hkdDL @era @f))
-  , ("extraPraosEntropy", hkdMap px nonceToJSON (pp ^. hkdExtraEntropyL @era @f))
+  [ ("decentralization", hkdMap px (toJSON @UnitInterval) (pp ^. hkdDL @era @f))
+  , ("extraPraosEntropy", hkdMap px (toJSON @Nonce) (pp ^. hkdExtraEntropyL @era @f))
   ]
-  where
-    nonceToJSON :: Nonce -> Aeson.Value
-    nonceToJSON NeutralNonce = Aeson.Null
-    nonceToJSON (Nonce n) = toJSON n
 
 shelleyCommonPParamsHKDPairsV8 ::
   forall f era.
@@ -509,9 +499,9 @@ shelleyCommonPParamsHKDPairs px pp =
   , ("stakePoolDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdPoolDepositL @era @f))
   , ("poolRetireMaxEpoch", hkdMap px (toJSON @EpochInterval) (pp ^. hkdEMaxL @era @f))
   , ("stakePoolTargetNum", hkdMap px (toJSON @Natural) (pp ^. hkdNOptL @era @f))
-  , ("poolPledgeInfluence", hkdMap px (toRationalJSON @NonNegativeInterval) (pp ^. hkdA0L @era @f))
-  , ("monetaryExpansion", hkdMap px (toRationalJSON @UnitInterval) (pp ^. hkdRhoL @era @f))
-  , ("treasuryCut", hkdMap px (toRationalJSON @UnitInterval) (pp ^. hkdTauL @era @f))
+  , ("poolPledgeInfluence", hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdA0L @era @f))
+  , ("monetaryExpansion", hkdMap px (toJSON @UnitInterval) (pp ^. hkdRhoL @era @f))
+  , ("treasuryCut", hkdMap px (toJSON @UnitInterval) (pp ^. hkdTauL @era @f))
   , ("minPoolCost", hkdMap px (toJSON @Coin) (pp ^. hkdMinPoolCostL @era @f))
   ]
 

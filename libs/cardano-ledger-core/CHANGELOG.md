@@ -3,8 +3,7 @@
 * Fix `ToJSON`/`FromJSON` instances of `Prices`
 * Update `FromJSON` instance of `BoundedRatio`
 * Fix `ToJSON` instance of `BoundedRatio` to avoid precision loss
-* Add `toRationalJSON` and `parseAsRational` JSON Aeson helpers
-* Nodify `Prices` JSON instances to match `cardano-api`
+* Modify `Prices` and `Nonce` JSON instances to match `cardano-api`
 * Remove `epsilonMaybeEq` from `Utils`
 ## 1.10.0.0
 

@@ -66,7 +66,6 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
   isSNothing,
-  parseAsRational,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -374,9 +373,9 @@ instance FromJSON (BabbagePParams Identity era) where
         <*> obj .: "stakePoolDeposit"
         <*> obj .: "poolRetireMaxEpoch"
         <*> obj .: "stakePoolTargetNum"
-        <*> parseAsRational (obj .: "poolPledgeInfluence")
-        <*> parseAsRational (obj .: "monetaryExpansion")
-        <*> parseAsRational (obj .: "treasuryCut")
+        <*> obj .: "poolPledgeInfluence"
+        <*> obj .: "monetaryExpansion"
+        <*> obj .: "treasuryCut"
         <*> obj .: "protocolVersion"
         <*> obj .: "minPoolCost" .!= mempty
         <*> obj .: "utxoCostPerByte"

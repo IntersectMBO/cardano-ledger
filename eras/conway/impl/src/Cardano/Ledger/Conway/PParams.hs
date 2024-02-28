@@ -1093,8 +1093,8 @@ instance FromJSON (UpgradeConwayPParams Identity) where
       UpgradeConwayPParams
         <$> o .: "poolVotingThresholds"
         <*> o .: "dRepVotingThresholds"
-        <*> o .: "minCommitteeSize"
-        <*> o .: "committeeTermLength"
+        <*> o .: "committeeMinSize"
+        <*> o .: "committeeMaxTermLength"
         <*> o .: "govActionLifetime"
         <*> o .: "govActionDeposit"
         <*> o .: "dRepDeposit"
