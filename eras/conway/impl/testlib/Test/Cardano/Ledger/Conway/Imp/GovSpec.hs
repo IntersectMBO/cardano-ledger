@@ -1401,6 +1401,51 @@ spec =
           passEpoch >> passEpoch
           curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
           curConstitution `shouldBe` constitution
+    describe "Network ID" $ do
+      it "Fails with invalid network ID in proposal return address" $ do
+        rewardCredential <- KeyHashObj <$> freshKeyHash
+        let badRewardAccount =
+              RewardAccount
+                { raNetwork = Mainnet -- Our network is Testnet
+                , raCredential = rewardCredential
+                }
+        propDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+        submitFailingProposal
+          ProposalProcedure
+            { pProcReturnAddr = badRewardAccount
+            , pProcGovAction = InfoAction
+            , pProcDeposit = propDeposit
+            , pProcAnchor = def
+            }
+          [ injectFailure $
+              ProposalProcedureNetworkIdMismatch
+                badRewardAccount
+                Testnet
+          ]
+      it "Fails with invalid network ID in withdrawal addresses" $ do
+        rewardAccount <- registerRewardAccount
+        rewardCredential <- KeyHashObj <$> freshKeyHash
+        let badRewardAccount =
+              RewardAccount
+                { raNetwork = Mainnet -- Our network is Testnet
+                , raCredential = rewardCredential
+                }
+        propDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+        submitFailingProposal
+          ProposalProcedure
+            { pProcReturnAddr = rewardAccount
+            , pProcGovAction =
+                TreasuryWithdrawals
+                  (Map.singleton badRewardAccount $ Coin 100_000_000)
+                  SNothing
+            , pProcDeposit = propDeposit
+            , pProcAnchor = def
+            }
+          [ injectFailure $
+              TreasuryWithdrawalsNetworkIdMismatch
+                (Set.singleton badRewardAccount)
+                Testnet
+          ]
   where
     expectMembers ::
       HasCallStack => Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) -> ImpTestM era ()
