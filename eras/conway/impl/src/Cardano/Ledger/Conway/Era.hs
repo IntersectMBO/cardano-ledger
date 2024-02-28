@@ -41,6 +41,7 @@ instance Crypto c => Era (ConwayEra c) where
   type PreviousEra (ConwayEra c) = BabbageEra c
   type EraCrypto (ConwayEra c) = c
   type ProtVerLow (ConwayEra c) = 9
+  type ProtVerHigh (ConwayEra c) = 10
 
   eraName = "Conway"
 

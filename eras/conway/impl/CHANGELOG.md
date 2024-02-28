@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Support for intra-era hard fork with `ProtVerHigh` set to `10`
 * Guard Conway-specific features in transactions that use Plutus v1 or v2. #4112
   * Add `PlutusContextError` variants:
     * `CurrentTreasuryValueFieldNotSupported`
