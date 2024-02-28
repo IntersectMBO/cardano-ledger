@@ -64,11 +64,10 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   NonNegativeInterval,
-  Nonce (NeutralNonce, Nonce),
+  Nonce (NeutralNonce),
   StrictMaybe (..),
   UnitInterval,
   isSNothing,
-  parseAsRational,
  )
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Binary (
@@ -486,11 +485,11 @@ instance FromJSON (AlonzoPParams Identity era) where
         <*> obj .: "stakePoolDeposit"
         <*> obj .: "poolRetireMaxEpoch"
         <*> obj .: "stakePoolTargetNum"
-        <*> parseAsRational (obj .: "poolPledgeInfluence")
-        <*> parseAsRational (obj .: "monetaryExpansion")
-        <*> parseAsRational (obj .: "treasuryCut")
-        <*> parseAsRational (obj .: "decentralization")
-        <*> (obj .: "extraPraosEntropy" >>= jsonToNonce)
+        <*> obj .: "poolPledgeInfluence"
+        <*> obj .: "monetaryExpansion"
+        <*> obj .: "treasuryCut"
+        <*> obj .: "decentralization"
+        <*> obj .: "extraPraosEntropy"
         <*> obj .: "protocolVersion"
         <*> obj .: "minPoolCost" .!= mempty
         <*> obj .: "utxoCostPerByte"
@@ -501,10 +500,6 @@ instance FromJSON (AlonzoPParams Identity era) where
         <*> obj .: "maxValueSize"
         <*> obj .: "collateralPercentage"
         <*> obj .: "maxCollateralInputs"
-    where
-      jsonToNonce :: Aeson.Value -> Aeson.Parser Nonce
-      jsonToNonce Aeson.Null = return NeutralNonce
-      jsonToNonce x = Nonce <$> parseJSON x
 
 newtype CoinPerWord = CoinPerWord {unCoinPerWord :: Coin}
   deriving stock (Eq, Ord)

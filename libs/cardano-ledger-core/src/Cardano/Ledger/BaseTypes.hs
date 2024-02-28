@@ -78,10 +78,6 @@ module Cardano.Ledger.BaseTypes (
 
   -- * Injection
   Inject (..),
-
-  -- * Rationals and Aeson
-  toRationalJSON,
-  parseAsRational,
 )
 where
 
@@ -151,7 +147,7 @@ import Data.Aeson (
   (.:),
   (.=),
  )
-import Data.Aeson.Types (Pair, Parser)
+import Data.Aeson.Types (Pair)
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
@@ -344,7 +340,11 @@ instance
 
 instance Bounded (BoundedRatio b Word64) => ToJSON (BoundedRatio b Word64) where
   toJSON :: BoundedRatio b Word64 -> Value
-  toJSON = toRationalJSON
+  toJSON br = case fromRationalRepetendLimited maxDecimalsWord64 r of
+    Right (s, Nothing) -> toJSON s
+    _ -> toJSON r
+    where
+      r = unboundRational br
 
 instance Bounded (BoundedRatio b Word64) => FromJSON (BoundedRatio b Word64) where
   parseJSON = \case
@@ -488,9 +488,13 @@ instance FromCBOR Nonce where
         pure (2, Nonce x)
       k -> invalidKey k
 
-deriving anyclass instance ToJSON Nonce
+instance ToJSON Nonce where
+  toJSON NeutralNonce = Null
+  toJSON (Nonce n) = toJSON n
 
-deriving anyclass instance FromJSON Nonce
+instance FromJSON Nonce where
+  parseJSON Null = return NeutralNonce
+  parseJSON x = Nonce <$> parseJSON x
 
 -- | Evolve the nonce
 (⭒) :: Nonce -> Nonce -> Nonce
@@ -846,21 +850,3 @@ class Inject t s where
 -- | Helper function for a common pattern of creating objects
 kindObject :: Text -> [Pair] -> Value
 kindObject name obj = object $ ("kind" .= name) : obj
-
--- | Loseless way of representing BoundedRational as JSON that uses decimals when feasible
-toRationalJSON :: BoundedRational a => a -> Value
-toRationalJSON br =
-  case fromRationalRepetendLimited 20 r of
-    Right (s, Nothing) -> toJSON s
-    _ -> toJSON r
-  where
-    r = unboundRational br
-
--- | Aeson parser that works with the result of toRationalJSON
--- | (It adapts a BoundedRational so that it uses the Rational parser instead)
-parseAsRational :: BoundedRational r => Parser Rational -> Parser r
-parseAsRational parser = do
-  rational <- parser
-  case boundRational rational of
-    Nothing -> fail "Cannot convert to BoundRational"
-    Just x -> return x

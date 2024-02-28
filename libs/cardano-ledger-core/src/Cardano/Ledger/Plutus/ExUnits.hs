@@ -27,7 +27,7 @@ module Cardano.Ledger.Plutus.ExUnits (
 where
 
 import Cardano.Ledger.BaseTypes (
-  BoundedRational (boundRational, unboundRational),
+  BoundedRational (unboundRational),
   NonNegativeInterval,
  )
 import Cardano.Ledger.Binary (
@@ -46,12 +46,12 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData (..))
 import Control.Monad (when)
 import Data.Aeson (
   FromJSON (..),
   ToJSON (..),
-  Value,
   object,
   withObject,
   (.:),
@@ -60,7 +60,6 @@ import Data.Aeson (
 import Data.DerivingVia (InstantiatedAt (..))
 import Data.Int (Int64)
 import Data.Measure (BoundedMeasure, Measure)
-import Data.Scientific (fromRationalRepetendLimited)
 import Data.Semigroup (All (..))
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -116,8 +115,8 @@ instance ToJSON ExUnits where
 
 instance FromJSON ExUnits where
   parseJSON = withObject "exUnits" $ \o -> do
-    exUnitsMem <- checkWord64Bounds =<< o .: "memory"
-    exUnitsSteps <- checkWord64Bounds =<< o .: "steps"
+    exUnitsMem <- checkWord64Bounds =<< (o .: "memory" <|> o .: "exUnitsMem")
+    exUnitsSteps <- checkWord64Bounds =<< (o .: "steps" <|> o .: "exUnitsSteps")
     pure $ ExUnits {exUnitsMem, exUnitsSteps}
     where
       checkWord64Bounds n =
@@ -167,32 +166,17 @@ instance NFData Prices
 
 instance ToJSON Prices where
   toJSON Prices {prSteps, prMem} =
-    -- We cannot round-trip via NonNegativeInterval, so we go via Rational
     object
-      [ "priceSteps" .= toRationalJSON (unboundRational prSteps)
-      , "priceMemory" .= toRationalJSON (unboundRational prMem)
+      [ "priceSteps" .= prSteps
+      , "priceMemory" .= prMem
       ]
-    where
-      toRationalJSON :: Rational -> Value
-      toRationalJSON r =
-        case fromRationalRepetendLimited 20 r of
-          Right (s, Nothing) -> toJSON s
-          _ -> toJSON r
 
 instance FromJSON Prices where
   parseJSON =
     withObject "prices" $ \o -> do
-      steps <- o .: "priceSteps"
-      mem <- o .: "priceMemory"
-      prSteps <- checkBoundedRational steps
-      prMem <- checkBoundedRational mem
+      prSteps <- o .: "priceSteps" <|> o .: "prSteps"
+      prMem <- o .: "priceMemory" <|> o .: "prMem"
       return Prices {prSteps, prMem}
-    where
-      -- We cannot round-trip via NonNegativeInterval, so we go via Rational
-      checkBoundedRational r =
-        case boundRational r of
-          Nothing -> fail ("too much precision for bounded rational: " ++ show r)
-          Just s -> return s
 
 -- | Compute the cost of a script based upon prices and the number of execution
 -- units.
