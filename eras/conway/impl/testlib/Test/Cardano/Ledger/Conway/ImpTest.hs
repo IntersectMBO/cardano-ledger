@@ -874,11 +874,13 @@ electBasicCommittee = do
   modifyPParams $ \pp ->
     pp
       & ppDRepVotingThresholdsL
-        .~ def
-          { dvtCommitteeNormal = 1 %! 1
-          , dvtCommitteeNoConfidence = 1 %! 2
-          , dvtUpdateToConstitution = 1 %! 2
-          }
+        %~ ( \dvt ->
+              dvt
+                { dvtCommitteeNormal = 1 %! 1
+                , dvtCommitteeNoConfidence = 1 %! 2
+                , dvtUpdateToConstitution = 1 %! 2
+                }
+           )
       & ppCommitteeMaxTermLengthL .~ EpochInterval 20
       & ppGovActionLifetimeL .~ EpochInterval 2
       & ppGovActionDepositL .~ Coin 123
