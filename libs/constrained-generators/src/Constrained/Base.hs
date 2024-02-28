@@ -3291,6 +3291,22 @@ not_ ::
   Term fn Bool
 not_ = app notFn
 
+infixr 3 &&.
+(&&.) ::
+  IsUniverse fn =>
+  Term fn Bool ->
+  Term fn Bool ->
+  Term fn Bool
+(&&.) = app andFn
+
+infixr 2 ||.
+(||.) ::
+  IsUniverse fn =>
+  Term fn Bool ->
+  Term fn Bool ->
+  Term fn Bool
+(||.) = app orFn
+
 elem_ ::
   forall a fn.
   HasSpec fn a =>

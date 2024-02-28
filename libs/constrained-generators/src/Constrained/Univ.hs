@@ -133,14 +133,24 @@ instance FunctionLike (EqFn fn) where
 notFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool] Bool
 notFn = injectFn $ Not @fn
 
+andFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool, Bool] Bool
+andFn = injectFn $ And @fn
+
+orFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool, Bool] Bool
+orFn = injectFn $ Or @fn
+
 data BoolFn (fn :: [Type] -> Type -> Type) as b where
   Not :: BoolFn fn '[Bool] Bool
+  And :: BoolFn fn '[Bool, Bool] Bool
+  Or :: BoolFn fn '[Bool, Bool] Bool
 
 deriving instance Eq (BoolFn fn as b)
 deriving instance Show (BoolFn fn as b)
 
 instance FunctionLike (BoolFn fn) where
   sem Not = not
+  sem And = (&&)
+  sem Or = (||)
 
 ------------------------------------------------------------------------
 -- Pairs

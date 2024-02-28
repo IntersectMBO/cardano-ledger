@@ -153,6 +153,8 @@ tests =
     , testSpec "parallelLetPair" parallelLetPair
     , testSpec "mapSizeConstrained" mapSizeConstrained
     , numberyTests
+    , testSpec "andPair" andPair
+    , testSpec "orPair" orPair
     ]
       ++ [ testSpec ("intRangeSpec " ++ show i) (intRangeSpec i)
          | i <- [-1000, -100, -10, 0, 10, 100, 1000]
@@ -557,3 +559,13 @@ instance IsUniverse fn => HasSpec fn Three
 
 mapSizeConstrained :: Spec Fn (Map Three Int)
 mapSizeConstrained = constrained $ \m -> size_ (dom_ m) <=. 3
+
+andPair :: Spec Fn (Int, Int)
+andPair = constrained $ \p ->
+  match p $ \x y ->
+    x <=. 5 &&. y <=. 1
+
+orPair :: Spec Fn (Int, Int)
+orPair = constrained $ \p ->
+  match p $ \x y ->
+    x <=. 5 ||. y <=. 5
