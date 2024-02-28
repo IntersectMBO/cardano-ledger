@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Constrained.Test where
 
@@ -164,9 +165,9 @@ tests =
     , testSpec "successiveChildren8" successiveChildren8
     , testSpec "roseTreeList" roseTreeList
     , numberyTests
-    , testSpec "andPair" andPair
     , testSpec "orPair" orPair
     , sizeTests
+    , numNumSpecTree
     ]
       ++ [ testSpec ("intRangeSpec " ++ show i) (intRangeSpec i)
          | i <- [-1000, -100, -10, 0, 10, 100, 1000]
@@ -596,11 +597,6 @@ instance BaseUniverse fn => HasSpec fn Three
 mapSizeConstrained :: Spec BaseFn (Map Three Int)
 mapSizeConstrained = constrained $ \m -> size_ (dom_ m) <=. 3
 
-andPair :: Spec BaseFn [(Int, Int)]
-andPair = constrained $ \ps ->
-  forAll' ps $ \x y ->
-    x <=. 5 &&. y <=. 1
-
 orPair :: Spec BaseFn [(Int, Int)]
 orPair = constrained $ \ps ->
   forAll' ps $ \x y ->
@@ -696,15 +692,6 @@ listMustSizeIssue = constrained $ \xs ->
   , length_ xs ==. 1
   ]
 
-data Three = One | Two | Three
-  deriving (Ord, Eq, Show, Generic)
-
-instance HasSimpleRep Three
-instance BaseUniverse fn => HasSpec fn Three
-
-mapSizeConstrained :: Spec BaseFn (Map Three Int)
-mapSizeConstrained = constrained $ \m -> size_ (dom_ m) <=. 3
-
 sizeAddOrSub1 :: Spec BaseFn Size
 sizeAddOrSub1 = constrained $ \s ->
   4 ==. s + 2
@@ -746,13 +733,61 @@ hasSizeSet = hasSize (rangeInt 1 3)
 hasSizeMap :: Spec BaseFn (Map Int Int)
 hasSizeMap = hasSize (rangeInt 1 3)
 
+-- ========================================================
+-- Test properties of the instance Num(NumSpec Integer)
+
+instance Arbitrary (NumSpec Integer) where
+  arbitrary = NumSpecInterval <$> arbitrary <*> arbitrary
+
+newtype Pos a = Pos a deriving (Show)
+
+-- | multiplication is 'tight' only if there are no negative numbers, and lo < hi
+--   hence this instance
+instance Arbitrary (Pos (NumSpec Integer)) where
+  arbitrary = do
+    Positive lo <- arbitrary :: Gen (Positive Integer)
+    Positive hi <- suchThat (arbitrary :: Gen (Positive Integer)) (\(Positive x) -> x >= lo)
+    pure (Pos (NumSpecInterval (Just lo) (Just hi)))
+
+plusNegate :: NumSpec Integer -> NumSpec Integer -> Bool
+plusNegate x y = x - y == x + negate y
+
+commutesNumSpec :: NumSpec Integer -> NumSpec Integer -> Bool
+commutesNumSpec x y = x + y == y + x
+
+assocNumSpec :: NumSpec Integer -> NumSpec Integer -> NumSpec Integer -> Bool
+assocNumSpec x y z = x + (y + z) == (x + y) + z
+
+assocNumSpecTimes :: Pos (NumSpec Integer) -> Pos (NumSpec Integer) -> Pos (NumSpec Integer) -> Bool
+assocNumSpecTimes (Pos x) (Pos y) (Pos z) = x * (y * z) == (x * y) * z
+
+negNegate :: NumSpec Integer -> Bool
+negNegate x = x == negate (negate x)
+
+-- | multiplication is 'tight' only if there are no negative numbers, and lo < hi
+scaleNumSpec :: Pos (NumSpec Integer) -> Bool
+scaleNumSpec (Pos y) = y + y == 2 * y
+
+scaleOne :: Pos (NumSpec Integer) -> Bool
+scaleOne (Pos y) = y == 1 * y
+
+numNumSpecTree :: TestTree
+numNumSpecTree =
+  testGroup
+    "Num (NumSpec Integer) properties"
+    [ testProperty "plusNegate(x - y == x + negate y)" plusNegate
+    , testProperty "scaleNumSpec(y + y = 2 * y)" scaleNumSpec
+    , testProperty "scaleOne(y = 1 * y)" scaleOne
+    , testProperty "negNagate(x = x == negate (negate x))" negNegate
+    , testProperty "commutesNumSpec(x+y = y+x)" commutesNumSpec
+    , testProperty "assocNumSpec(x+(y+z) == (x+y)+z)" assocNumSpec
+    , testProperty "assocNumSpecTimes(x*(y*z) == (x*y)*z)" assocNumSpecTimes
+    ]
+
 -- ==========================================================
 
-go :: HasSpec BaseFn t => Spec BaseFn t -> IO ()
-go spec = defaultMain (testSpec "testing with go" spec)
+runTestSpec :: HasSpec BaseFn t => Spec BaseFn t -> IO ()
+runTestSpec spec = defaultMain (testSpec "interactive test with runTestSpec" spec)
 
-run :: forall fn a. HasSpec fn a => Spec fn a -> IO ()
-run spec = do
-  x <- generate (genFromGenT (genFromSpec @fn spec))
-  print x
-
+generateSpec :: forall fn a. HasSpec fn a => Spec fn a -> IO a
+generateSpec spec = generate (genFromGenT (genFromSpec @fn spec))

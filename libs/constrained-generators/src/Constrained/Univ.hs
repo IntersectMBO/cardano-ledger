@@ -134,23 +134,24 @@ instance FunctionLike (EqFn fn) where
 notFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool] Bool
 notFn = injectFn $ Not @fn
 
-andFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool, Bool] Bool
-andFn = injectFn $ And @fn
-
 orFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool, Bool] Bool
 orFn = injectFn $ Or @fn
 
 data BoolFn (fn :: [Type] -> Type -> Type) as b where
   Not :: BoolFn fn '[Bool] Bool
-  And :: BoolFn fn '[Bool, Bool] Bool
   Or :: BoolFn fn '[Bool, Bool] Bool
+
+-- One might expect   And :: BoolFn fn '[Bool, Bool] Bool
+-- But this is problematic because a Term like ( p x &&. q y ) has to solve for
+-- x or y first, choose x, so once x is fixed, it might be impossible to solve for y
+-- Luckily we can get conjuction by using Preds, in fact using Preds, the x and y
+-- can even be the same variable.
 
 deriving instance Eq (BoolFn fn as b)
 deriving instance Show (BoolFn fn as b)
 
 instance FunctionLike (BoolFn fn) where
   sem Not = not
-  sem And = (&&)
   sem Or = (||)
 
 ------------------------------------------------------------------------
@@ -262,7 +263,6 @@ type family SumOver as where
 ------------------------------------------------------------------------
 -- Sets
 ------------------------------------------------------------------------
-newtype Size = MkSize {unSize :: Int} deriving (Eq, Ord, Num)
 
 singletonFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[a] (Set a)
 singletonFn = injectFn $ Singleton @_ @fn
@@ -282,16 +282,12 @@ elemFn = injectFn $ Elem @_ @fn
 disjointFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a, Set a] Bool
 disjointFn = injectFn $ Disjoint @_ @fn
 
-sizeFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a] Size
-sizeFn = injectFn $ SetSize @_ @fn
-
 data SetFn (fn :: [Type] -> Type -> Type) args res where
   Subset :: Ord a => SetFn fn '[Set a, Set a] Bool
   Disjoint :: Ord a => SetFn fn '[Set a, Set a] Bool
   Member :: Ord a => SetFn fn '[a, Set a] Bool
   Singleton :: Ord a => SetFn fn '[a] (Set a)
   Union :: Ord a => SetFn fn '[Set a, Set a] (Set a)
-  SetSize :: Ord a => SetFn fn '[Set a] Size
   Elem :: Eq a => SetFn fn '[a, [a]] Bool
 
 deriving instance Show (SetFn fn args res)
@@ -304,7 +300,7 @@ instance FunctionLike (SetFn fn) where
     Member -> Set.member
     Singleton -> Set.singleton
     Union -> (<>)
-    SetSize -> MkSize . Set.size
+    --   SetSize -> MkSize . Set.size FIXME
     Elem -> elem
 
 ------------------------------------------------------------------------

@@ -155,7 +155,7 @@ instance (HasSpec fn a, Member (RoseTreeFn fn) fn) => HasSpec fn (RoseTree a) wh
               [ forAll t (`satisfies` s)
               , genHint (mal, sz') t
               ]
-          , assert $ length_ (snd_ ctx) <=. lit sz
+          , assert $ length_ (snd_ ctx) <=. lit (MkSize sz)
           , fst_ ctx `satisfies` rs
           , ctx `satisfies` s
           ]

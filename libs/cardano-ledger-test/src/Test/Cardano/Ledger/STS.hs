@@ -291,3 +291,40 @@ utxoTests =
     , testProperty "prop_UTXOW" prop_UTXOW
     , testProperty "prop_UTXOS" prop_UTXOS
     ]
+
+epoch :: TestTree
+epoch =
+  testGroup
+    "STS property tests"
+    [ govTests
+    , testProperty "prop_EPOCH" prop_EPOCH
+    ]
+
+{-
+zzz :: IO ()
+zzz = go ms
+
+ms ::Spec BaseFn (Map.Map Word8 [Integer])
+ms = TypeSpec (MapSpec
+        {mapSpecMustKeys = fromList [],
+         mapSpecMustValues = [],
+         mapSpecSize = TrueSpec,
+         mapSpecElem = TrueSpec,
+         mapSpecFold = NoFold}) []
+
+epoch :: TestTree
+epoch =
+  testGroup
+    "STS property tests"
+    [ testProperty "prop_EPOCH" prop_EPOCH
+    ]
+
+predmap :: Spec BaseFn Word8
+predmap = constrained $
+              \k -> toPred
+                  [ assert $ not_ (member_ k (Lit $ Set.fromList [1,2,3,4,5::Word8]))
+                  , satisfies (pair_ k (Lit @Word8 7)) TrueSpec
+                  ]
+
+-- type Conway = ConwayEra StandardCrypto
+-}

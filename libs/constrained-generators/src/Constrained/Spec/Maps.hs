@@ -13,21 +13,19 @@
 
 module Constrained.Spec.Maps (MapSpec (..), dom_, rng_) where
 
-import Control.Monad
-import Data.List (nub)
-import Data.Map (Map)
-import Data.Map qualified as Map
-import Data.Set (Set)
-import Data.Set qualified as Set
-import Debug.Trace
-import Prettyprinter
-
 import Constrained.Base
 import Constrained.Core
 import Constrained.GenT
 import Constrained.Instances ()
 import Constrained.List
 import Constrained.Univ
+import Control.Monad
+import Data.List (nub)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Set (Set)
+import Data.Set qualified as Set
+import Prettyprinter
 
 ------------------------------------------------------------------------
 -- HasSpec
@@ -101,7 +99,9 @@ instance
     let haveVals = map snd mustMap
         mustVals' = filter (`notElem` haveVals) mustVals
         size' = constrained $ \sz ->
-          satisfies (sz + Lit (listSize mustMap)) (size <> specIntToSize (specSizeBound (mapSpec fstFn $ mapSpec toGenericFn kvs)))
+          satisfies
+            (sz + Lit (listSize mustMap))
+            (size <> specIntToSize (cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs)))
         foldSpec' = case foldSpec of
           NoFold -> NoFold
           FoldSpec fn sumSpec -> FoldSpec fn $ propagateSpecFun (theAddFn @fn) (HOLE :? Value mustSum :> Nil) sumSpec
@@ -146,7 +146,7 @@ instance
       , forAll (Lit mustVals) $ \val ->
           app (elemFn @fn) val (app (rngFn @fn) m)
       , -- TODO: make nice
-        satisfies (app (injectFn $ ListSize @fn) $ app (rngFn @fn) m) size
+        satisfies (app (injectFn $ SizeOf @fn) $ app (rngFn @fn) m) size
       , forAll m $ \kv -> satisfies kv kvs
       , toPredsFoldSpec (app (rngFn @fn) m) foldSpec
       ]
@@ -173,18 +173,16 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
           , Evidence <- prerequisites @fn @(Map k v) ->
               case spec of
                 MemberSpec [s] ->
-                  trace ("Dom MemberSpec " ++ show s) $
-                    typeSpec $
-                      MapSpec s [] (exactSizeSpec $ setSize s) TrueSpec NoFold
+                  typeSpec $
+                    MapSpec s [] (exactSizeSpec $ setSize s) TrueSpec NoFold
                 TypeSpec (SetSpec must elemspec size) [] ->
-                  trace ("Dom TypeSpec " ++ show elemspec) $
-                    typeSpec $
-                      MapSpec
-                        must
-                        []
-                        size
-                        (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec)
-                        NoFold
+                  typeSpec $
+                    MapSpec
+                      must
+                      []
+                      size
+                      (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec)
+                      NoFold
                 _ -> ErrorSpec ["Dom on bad map spec", show spec]
     Rng ->
       -- No TypeAbstractions in ghc-8.10
@@ -203,7 +201,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
   mapTypeSpec f ts = case f of
     -- TODO: consider checking against singleton member-specs in the other component
     -- interacting with cant
-    Dom -> trace "CASE HERE" $
+    Dom ->
       -- No TypeAbstractions in ghc-8.10
       case f of
         (_ :: MapFn fn '[Map k v] (Set k))

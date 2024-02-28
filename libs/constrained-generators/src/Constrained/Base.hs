@@ -566,7 +566,7 @@ notEqualSpec :: forall fn a. HasSpec fn a => a -> Spec fn a
 notEqualSpec = TypeSpec (emptySpec @fn @a) . pure
 
 notMemberSpec :: forall fn a f. (HasSpec fn a, Foldable f) => f a -> Spec fn a
-notMemberSpec = TypeSpec (emptySpec @fn @a) . toList
+notMemberSpec = typeSpecOpt (emptySpec @fn @a) . toList
 
 typeSpec :: HasSpec fn a => TypeSpec fn a -> Spec fn a
 typeSpec ts = TypeSpec ts mempty
@@ -621,6 +621,22 @@ class
   -- The key property here is:
   --   ∀ a. a `conformsTo` spec == a `conformsTo` constrained (\t -> toPreds t spec)
   toPreds :: Term fn a -> TypeSpec fn a -> Pred fn
+
+  -- | Compute an upper and lower bound on the number of solutions genFromTypeSpec might return
+  cardinalTypeSpec :: TypeSpec fn a -> Spec fn Int
+  cardinalTypeSpec _ = TrueSpec
+
+  -- | A bound on the number of solutions (genFromTypeSpec TrueSpec)
+  --   For a type with finite elements, we can get a much more accurate
+  --   answer than TrueSpec
+  cardinalTrueSpec :: Spec fn Int
+  cardinalTrueSpec = TrueSpec
+
+  -- | For some types (especially finite ones) there may be much better ways to construct
+  --   a Spec than the default method of just adding a large 'bad' list to TypSpec. This
+  --   function allows each HasSpec instance to decide.
+  typeSpecOpt :: TypeSpec fn a -> [a] -> Spec fn a
+  typeSpecOpt tySpec bad = TypeSpec tySpec bad
 
   -- | Prerequisites for the instance that are sometimes necessary
   -- when working with e.g. `Spec`s or functions in the universe.
@@ -2373,6 +2389,16 @@ instance BaseUniverse fn => HasSpec fn Bool where
   _ `conformsTo` _ = True
   genFromTypeSpec _ = pureGen arbitrary
   toPreds _ _ = TruePred
+  cardinalTypeSpec _ = MemberSpec [2]
+  cardinalTrueSpec = intToSpecInt 2 -- there are exactly two, True and False
+  typeSpecOpt () [True] = MemberSpec [False]
+  typeSpecOpt () [False] = MemberSpec [True]
+  typeSpecOpt () [True, False] = ErrorSpec ["Both True and False are Not in the Spec, so the Spec is inconsistent."]
+  typeSpecOpt () [False, True] = ErrorSpec ["Both False and True are Not in the Spec, so the Spec is inconsistent."]
+  typeSpecOpt () bad = TypeSpec () bad
+
+-- Not Sure what happens if we have some thing like [True,True,False. ...]
+-- Any way we get the same semantics if we just used 'typeSpec', so thats ok.
 
 -- Sum --------------------------------------------------------------------
 
@@ -2410,6 +2436,8 @@ instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Sum a b) where
           :> Nil
       )
 
+  cardinalTypeSpec (SumSpec leftspec rightspec) = addSpecInt (cardinality leftspec) (cardinality rightspec)
+
 deriving instance (HasSpec fn a, HasSpec fn b) => Show (SumSpec fn a b)
 
 -- Sets -------------------------------------------------------------------
@@ -2423,19 +2451,24 @@ instance (Ord a, HasSpec fn a) => Semigroup (SetSpec fn a) where
 instance (Ord a, HasSpec fn a) => Monoid (SetSpec fn a) where
   mempty = SetSpec mempty mempty TrueSpec
 
--- NOTE: No guarantees that this is a tight spec!
-sizeSpec :: forall fn a. (Ord a, BaseUniverse fn) => Spec fn (Set a) -> Spec fn Size
-sizeSpec TrueSpec = TrueSpec
-sizeSpec (MemberSpec es) = MemberSpec (setSize <$> es)
-sizeSpec SuspendedSpec {} = TrueSpec
-sizeSpec (ErrorSpec es) = ErrorSpec es
-sizeSpec (TypeSpec (SetSpec must _elemSpec szSpec) cant) =
+-- ==================================================
+-- Suppose genFromSpec (Spec fn (Set a)) can generate 3 distinct sets {s1::Set a, s2::Set a, s3::Set a}
+-- where (Set.size s1 = 4) (Set.size s2 = 12) and (Set.size s3 = 0)
+-- then we want possibleSizes to generate the following things {4,12,0}
+-- There are No guarantees that this is a tight spec!
+-- ===================================================
+
+possibleSetSizes :: forall fn a. (Ord a, BaseUniverse fn, HasSpec fn a) => Spec fn (Set a) -> Spec fn Size
+possibleSetSizes TrueSpec = TrueSpec
+possibleSetSizes (MemberSpec es) = MemberSpec (setSize <$> es)
+possibleSetSizes SuspendedSpec {} = TrueSpec
+possibleSetSizes (ErrorSpec es) = ErrorSpec es
+possibleSetSizes (TypeSpec (SetSpec must elemSpec szSpec) cant) =
   cantSpec
     <> szSpec
     <> geqSpec @fn (setSize must)
+    <> specIntToSize (cardinality elemSpec) -- Can't have more elements, than the number (genFromSpec elemSpec) can produce
   where
-    --  <> specSizeBound elemSpec  -- I don't see how this can have any effect on the sizeSpec
-
     cantSpec
       | mempty `elem` cant = notEqualSpec 0
       | otherwise = TrueSpec
@@ -2460,7 +2493,9 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
   genFromTypeSpec (SetSpec must e TrueSpec) = (must <>) . Set.fromList <$> listOfT (genFromSpec e)
   genFromTypeSpec ss@(SetSpec must e _) = do
     -- Compute more constrained size spec based on must and elem spec!
-    n <- explain ["Generate set size"] $ genFromSpec (sizeSpec $ typeSpec ss) `suchThatT` (>= setSize must)
+    n <-
+      explain ["Choose a possible size Bounds for the Sets to be generated"] $
+        genFromSpec (possibleSetSizes $ typeSpec ss) `suchThatT` (>= setSize must)
     go (n - setSize must) must
     where
       go 0 s = pure s
@@ -2493,7 +2528,6 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
                     (mapList (\(Value a) -> Lit a) pre)
                     (x' :> mapList (\(Value a) -> Lit a) suf)
              in Let (App (injectFn fn) args) (x :-> p)
-    SetSize | NilCtx HOLE <- ctx -> typeSpec $ SetSpec mempty TrueSpec spec
     Singleton
       | NilCtx HOLE <- ctx ->
           let singletons = filter ((1 ==) . Set.size)
@@ -2611,10 +2645,6 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
       constrained $ \x ->
         unsafeExists $ \x' ->
           assert (x ==. singleton_ x') <> toPreds x' ts
-    SetSize ->
-      constrained $ \x ->
-        unsafeExists $ \x' ->
-          assert (x ==. size_ x') <> toPreds x' ts
 
 -- List -------------------------------------------------------------------
 
@@ -2638,18 +2668,13 @@ instance HasSpec fn a => HasSpec fn [a] where
     lst <- listOfT $ genFromSpec elemS
     pureGen $ shuffle (must ++ lst)
   genFromTypeSpec ss@(ListSpec must szSpec elemS NoFold) = do
-    sz0 <- genFromSpec (sizeSpecList $ typeSpec ss)
+    (MkSize sz0) <- genFromSpec (sizeSpecList $ typeSpec ss)
     let sz = sz0 - length must
     lst <-
       listOfUntilLenT
         (genFromSpec elemS)
         sz
-        ((`conformsToSpec` szSpec) . (+ length must))
-{- REDO consistsent with above
-  genFromTypeSpec ss@(ListSpec must _ elemS NoFold) = do
-    MkSize sz <- genFromSpec (sizeSpecList $ typeSpec ss)
-    lst <- vectorOfT sz $ genFromSpec elemS
--}
+        ((`conformsToSpec` szSpec) . MkSize . (+ length must))
     pureGen $ shuffle (must ++ lst)
   genFromTypeSpec (ListSpec must size elemS (FoldSpec f foldS)) = do
     genFromFold must size elemS f foldS
@@ -2665,6 +2690,11 @@ instance HasSpec fn a => HasSpec fn [a] where
       <> toPredsFoldSpec x foldS
       <> satisfies (sizeOf_ x) size
 
+-- | This function is a special case of (sizeOfSpec:: Spec fn t -> Spec fn Size), it is identical, except,
+--   since [a] has a monoid instance, it can be more accurate in two ways:
+--   1) by inspecting the cant set of (TypeSpec ListSpec{} cant)
+--   2) by inspecting the SuspendedSpec
+--   Neither of which 'sizeOfSpec' can do, because it does not know what the type 't' is.
 sizeSpecList :: forall fn a. Spec fn [a] -> Spec fn Size
 sizeSpecList TrueSpec = TrueSpec
 sizeSpecList (MemberSpec es) = MemberSpec (listSize <$> es)
@@ -2833,6 +2863,7 @@ instance BaseUniverse fn => HasSpec fn Integer where
   genFromTypeSpec = genFromNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalSizeIntegerSpec
 
 instance BaseUniverse fn => HasSpec fn (Ratio Integer) where
   type TypeSpec fn (Ratio Integer) = NumSpec (Ratio Integer)
@@ -2849,6 +2880,11 @@ instance BaseUniverse fn => HasSpec fn Natural where
   genFromTypeSpec = genFromNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
+  cardinalTypeSpec (NumSpecInterval (Just lo) (Just hi)) =
+    if hi >= lo then MemberSpec [fromIntegral @Natural @Int (hi - lo + 1)] else MemberSpec [0]
+  cardinalTypeSpec (NumSpecInterval Nothing (Just hi)) =
+    MemberSpec [fromIntegral @Natural @Int hi + 1]
+  cardinalTypeSpec _ = TrueSpec
 
 instance BaseUniverse fn => HasSpec fn Word8 where
   type TypeSpec fn Word8 = NumSpec Word8
@@ -2857,6 +2893,8 @@ instance BaseUniverse fn => HasSpec fn Word8 where
   genFromTypeSpec = genFromNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalSizeBoundedSpec
+  typeSpecOpt = notInNumSpec
 
 instance BaseUniverse fn => HasSpec fn Word16 where
   type TypeSpec fn Word16 = NumSpec Word16
@@ -2865,6 +2903,7 @@ instance BaseUniverse fn => HasSpec fn Word16 where
   genFromTypeSpec = genFromNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalSizeBoundedSpec
 
 instance BaseUniverse fn => HasSpec fn Word32 where
   type TypeSpec fn Word32 = NumSpec Word32
@@ -2873,6 +2912,7 @@ instance BaseUniverse fn => HasSpec fn Word32 where
   genFromTypeSpec = genFromNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalSizeBoundedSpec
 
 instance BaseUniverse fn => HasSpec fn Word64 where
   type TypeSpec fn Word64 = NumSpec Word64
@@ -2889,6 +2929,7 @@ instance BaseUniverse fn => HasSpec fn Int8 where
   genFromTypeSpec = genFromNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalSizeBoundedSpec
 
 instance BaseUniverse fn => HasSpec fn Int16 where
   type TypeSpec fn Int16 = NumSpec Int16
@@ -2897,6 +2938,7 @@ instance BaseUniverse fn => HasSpec fn Int16 where
   genFromTypeSpec = genFromNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalSizeBoundedSpec
 
 instance BaseUniverse fn => HasSpec fn Int32 where
   type TypeSpec fn Int32 = NumSpec Int32
@@ -2905,6 +2947,7 @@ instance BaseUniverse fn => HasSpec fn Int32 where
   genFromTypeSpec = genFromNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalSizeBoundedSpec
 
 instance BaseUniverse fn => HasSpec fn Int64 where
   type TypeSpec fn Int64 = NumSpec Int64
@@ -2913,6 +2956,7 @@ instance BaseUniverse fn => HasSpec fn Int64 where
   genFromTypeSpec = genFromNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalSizeBoundedSpec
 
 instance BaseUniverse fn => HasSpec fn Float where
   type TypeSpec fn Float = NumSpec Float
@@ -2928,7 +2972,7 @@ instance BaseUniverse fn => HasSpec fn Float where
 -- that is an extension of the Base Universe.
 -----------------------------------------------------------------------------------
 
-type BaseFns = '[ListFn, SumFn, MapFn, SetFn, FunFn, GenericsFn, PairFn, IntFn, BoolFn, EqFn, OrdFn, SizeFn]
+type BaseFns = '[EqFn, SetFn, BoolFn, PairFn, IntFn, OrdFn, GenericsFn, ListFn, SumFn, MapFn, FunFn, SizeFn]
 type BaseFn = Fix (OneofL BaseFns)
 
 -- | A minimal Universe contains functions for a bunch of different things.
@@ -3145,23 +3189,20 @@ data ListFn fn args res where
     ) =>
     fn '[a] b ->
     ListFn fn '[[a]] b
-  ListSize :: ListFn fn '[[a]] Size
 
-listSizeFn :: forall fn a. Member (ListFn fn) fn => fn '[[a]] Size
-listSizeFn = injectFn $ ListSize @fn
+{- TODO add these?
+  AppendFn :: ListFn fn '[[a],[a]] [a]
+  NullFn :: ListFn fn '[[a]] Bool
+-}
 
 deriving instance Show (ListFn fn args res)
 
 instance Typeable fn => Eq (ListFn fn args res) where
   FoldMap f == FoldMap g = cast f == Just g
-  FoldMap {} == _ = False
-  ListSize == ListSize = True
-  ListSize == _ = False
 
 instance FunctionLike fn => FunctionLike (ListFn fn) where
   sem = \case
     FoldMap f -> adds @fn . map (sem f)
-    ListSize -> listSize
 
 instance BaseUniverse fn => Functions (ListFn fn) fn where
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
@@ -3173,7 +3214,6 @@ instance BaseUniverse fn => Functions (ListFn fn) fn where
             let args = appendList (mapList (\(Value a) -> Lit a) pre) (v' :> mapList (\(Value a) -> Lit a) suf)
              in Let (App (injectFn fn) args) (x :-> p)
     FoldMap f | NilCtx HOLE <- ctx -> typeSpec (ListSpec [] TrueSpec TrueSpec $ FoldSpec f spec)
-    ListSize | NilCtx HOLE <- ctx -> typeSpec (ListSpec [] spec TrueSpec NoFold)
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of
@@ -3181,7 +3221,6 @@ instance BaseUniverse fn => Functions (ListFn fn) fn where
       constrained $ \x ->
         unsafeExists $ \x' ->
           assert (x ==. app (foldMapFn g) x') <> toPreds x' ts
-    ListSize -> sizeSpecList (TypeSpec ts mempty)
 
 foldMapFn ::
   forall fn a b.
@@ -3345,14 +3384,6 @@ not_ ::
   Term fn Bool
 not_ = app notFn
 
-infixr 3 &&.
-(&&.) ::
-  BaseUniverse fn =>
-  Term fn Bool ->
-  Term fn Bool ->
-  Term fn Bool
-(&&.) = app andFn
-
 infixr 2 ||.
 (||.) ::
   BaseUniverse fn =>
@@ -3410,7 +3441,7 @@ size_ ::
   (HasSpec fn (Set a), Ord a) =>
   Term fn (Set a) ->
   Term fn Size
-size_ = app sizeFn
+size_ = app sizeOfFn
 
 union_ ::
   forall a fn.
@@ -3427,7 +3458,7 @@ length_ ::
   HasSpec fn [a] =>
   Term fn [a] ->
   Term fn Size
-length_ = app listSizeFn
+length_ = app sizeOfFn
 
 infix 4 <=., <., ==., /=.
 
@@ -3733,7 +3764,7 @@ instance HasSpec fn a => Show (Spec fn a) where
 -- Size, Sized, and SizeSpec
 -- ==================================================================
 
--- newtype Size = MkSize {unSize :: Int} deriving (Eq, Ord, Num)
+newtype Size = MkSize {unSize :: Int} deriving (Eq, Ord, Num)
 
 instance Show Size where show (MkSize n) = "(Size " ++ show n ++ ")"
 
@@ -3755,6 +3786,7 @@ instance BaseUniverse fn => HasSpec fn Size where
   genFromTypeSpec = genFromSizeSpec deltaMax
   conformsTo = conformsToSize
   toPreds x szspec@(SizeSpec _) = toPredsSizeSpec x szspec
+  cardinalTypeSpec (SizeSpec interval) = cardinalTypeSpec @fn @Int interval
 
 instance {-# INCOHERENT #-} BaseUniverse fn => Num (Term fn Size) where
   (+) = app plusFn
@@ -3802,7 +3834,8 @@ instance Sized [a] where
   sizeOf = listSize
   liftSizeSpec spec = typeSpec (ListSpec mempty (typeSpec spec) TrueSpec NoFold)
   liftMemberSpec xs = typeSpec (ListSpec mempty (MemberSpec xs) TrueSpec NoFold)
-  sizeOfTypeSpec (ListSpec must sz _ _) = sz <> (TypeSpec (atLeastInt (length must)) [])
+  sizeOfTypeSpec (ListSpec _ _ ErrorSpec {} _) = equalSpec 0
+  sizeOfTypeSpec (ListSpec must sizespec _ _) = sizespec <> (TypeSpec (atLeastInt (length must)) [])
 
 hasSize :: (HasSpec fn t, Sized t) => SizeSpec -> Spec fn t
 hasSize sz = liftSizeSpec sz
@@ -3810,7 +3843,7 @@ hasSize sz = liftSizeSpec sz
 -- | sizeOfSpec generalizes the method 'sizeOfTypeSpec'
 --   From (sizeOfTypeSpec :: TypeSpec fn t -> Spec fn Size)
 --   To   (sizeOfSpec     :: Spec fn t     -> Spec fn Size)
---   It is not unusual for instances to define sizeOfTypeSpec with calls to sizeOfSpec,
+--   It is not unusual for instances (HasSpec fn t) to define sizeOfTypeSpec with calls to sizeOfSpec,
 --   Because many (TypeSpec fn t)'s contain (Spec fn s), for types 's' different from 't'
 sizeOfSpec :: forall fn t. (BaseUniverse fn, Sized t) => Spec fn t -> Spec fn Size
 sizeOfSpec TrueSpec = TrueSpec
@@ -3818,48 +3851,6 @@ sizeOfSpec (MemberSpec xs) = MemberSpec (map sizeOf xs)
 sizeOfSpec (ErrorSpec xs) = ErrorSpec xs
 sizeOfSpec SuspendedSpec {} = mempty
 sizeOfSpec (TypeSpec x _) = sizeOfTypeSpec @t @fn x
-
--- TEMPORARY FUNCTIONS WE HOPE
-
--- | Version of 'sizeOfSpec' returning (Spec fn Size) rather than SizeSpec, thus we can pass it to 'genFromTypeSpec'
-specSizeBoundx :: forall fn t. (Sized t, Eq t, BaseUniverse fn) => Spec fn t -> Spec fn Size
-specSizeBoundx TrueSpec = TrueSpec
-specSizeBoundx (MemberSpec []) = ErrorSpec []
-specSizeBoundx (MemberSpec xs) = TypeSpec (rangeInt (minimum sizes) (maximum sizes)) []
-  where
-    sizes = map (unSize . sizeOf) xs
-specSizeBoundx (ErrorSpec xs) = ErrorSpec ("ErrorSpec in specSizeBounds" : xs)
-specSizeBoundx (SuspendedSpec {}) = TypeSpec (SizeSpec mempty) []
-specSizeBoundx (TypeSpec s _) = sizeOfTypeSpec @t @fn s
-
-specSizeBound :: forall fn a. (Eq a, BaseUniverse fn) => Spec fn a -> Spec fn Int
-specSizeBound TrueSpec = TrueSpec
--- Is it this, or the next one?
-specSizeBound (MemberSpec es) = leqSpec @fn (length (nub es)) -- This one seems to be the cardinality interpretation
-{-
-specSizeBound (MemberSpec xs) = TypeSpec (NumSpecInterval (Just (minimum sizes)) (Just (maximum sizes))) []
-     where sizes = map (unSize . sizeOf) xs
--}
-specSizeBound ErrorSpec {} = equalSpec 0
--- Is it this, or the next one?
--- NOTE: in the cardinality interpretation, this is a concession, there is not really a good way to know
-specSizeBound (TypeSpec _ _) = TrueSpec
--- specSizeBound (TypeSpec _x _) = TypeSpec (unSizeSpec (sizeOfTypeSpec @a @fn _x)) []
-specSizeBound SuspendedSpec {} = TrueSpec
-
-specIntToSize :: Spec fn Int -> Spec fn Size
-specIntToSize TrueSpec = TrueSpec
-specIntToSize (TypeSpec interval _) = TypeSpec (SizeSpec interval) []
-specIntToSize (MemberSpec xs) = MemberSpec (map MkSize xs)
-specIntToSize (ErrorSpec xs) = ErrorSpec xs
-specIntToSize (SuspendedSpec {}) = TrueSpec
-
-specSizeToInt :: Spec fn Size -> Spec fn Int
-specSizeToInt TrueSpec = TrueSpec
-specSizeToInt (TypeSpec (SizeSpec interval) _) = TypeSpec interval []
-specSizeToInt (MemberSpec xs) = MemberSpec (map unSize xs)
-specSizeToInt (ErrorSpec xs) = ErrorSpec xs
-specSizeToInt (SuspendedSpec {}) = TrueSpec
 
 -- =============
 -- SizeSpec
@@ -3870,7 +3861,7 @@ newtype SizeSpec = SizeSpec (NumSpec Int) deriving (Show, Eq)
 unSizeSpec :: SizeSpec -> NumSpec Int
 unSizeSpec (SizeSpec x) = x
 
--- Operations that build SizeSpec from Int, but raise an error is called on a negative numbers
+-- Operations that build SizeSpec from Int, but raise an error if called on a negative numbers
 exactInt :: Int -> SizeSpec
 exactInt a = rangeInt a a
 
@@ -3879,15 +3870,17 @@ rangeInt a b | a < 0 || b < 0 = error ("Negative Int in call to rangeInt: " ++ s
 rangeInt a b = SizeSpec (NumSpecInterval (Just a) (Just b))
 
 atLeastInt :: Int -> SizeSpec
-atLeastInt a | a < 0 = error ("Negative Int in call to atLeastInt: " ++ show a)
-atLeastInt a = SizeSpec (NumSpecInterval (Just a) Nothing)
+atLeastInt a
+  | a < 0 = error ("Negative Int in call to atLeastInt: " ++ show a)
+  | otherwise = SizeSpec (NumSpecInterval (Just a) Nothing)
 
 atMostInt :: Int -> SizeSpec
-atMostInt a | a < 0 = error ("Negative Int in call to atMostInt: " ++ show a)
-atMostInt a = SizeSpec (NumSpecInterval Nothing (Just a))
+atMostInt a
+  | a < 0 = error ("Negative Int in call to atMostInt: " ++ show a)
+  | otherwise = SizeSpec (NumSpecInterval Nothing (Just a))
 
 exactSizeSpec :: BaseUniverse fn => Size -> Spec fn Size
-exactSizeSpec (MkSize a) = TypeSpec (exactInt a) []
+exactSizeSpec a = MemberSpec [a]
 
 -- | SizeSpec forms a Semigroup. It inherits from the Semigroup instance of (NumSpec Word64)
 instance Semigroup SizeSpec where
@@ -3897,21 +3890,17 @@ instance Semigroup SizeSpec where
 instance Monoid SizeSpec where
   mempty = SizeSpec mempty
 
-toPredsSizeSpec ::
-  BaseUniverse fn =>
-  Term fn Size ->
-  SizeSpec ->
-  Pred fn
+toPredsSizeSpec :: BaseUniverse fn => Term fn Size -> SizeSpec -> Pred fn
 toPredsSizeSpec _ (SizeSpec (NumSpecInterval Nothing Nothing)) = TruePred
 toPredsSizeSpec v (SizeSpec (NumSpecInterval Nothing (Just u))) = assert (v <=. Lit (MkSize u))
 toPredsSizeSpec v (SizeSpec (NumSpecInterval (Just u) Nothing)) = assert (Lit (MkSize u) <=. v)
 toPredsSizeSpec v (SizeSpec (NumSpecInterval (Just a) (Just b))) = assert [Lit (MkSize a) <=. v, v <=. Lit (MkSize b)]
 
--- | When we generate from an interval like [ x .. infinity ].
---   Since the underlying interval uses Int, we could use [ x .. maxBound::Int ]
+-- | When we generate from an interval like [ x ..  ∞ ],
+--   since the underlying interval uses Int, we could use [ x .. maxBound::Int ]
 --   That is not very practical because a very large size is not useful in tests.
---   What is the practical bound we want on infinity? So we answer this using deltaMax.
---   When we generate [ x .. infinity ] we use [ x .. x + deltaMax ]
+--   What is the practical bound we want on ∞ ? So we answer this using deltaMax.
+--   When we generate [ x ..  ∞ ] we use [ x .. x + deltaMax ]
 --   This creates a uniform distribution between x and (x + deltaMax). If we just choose an arbitray
 --   value greater than 'x', values are not uniform. Just the way arbitrary works on Int.
 deltaMax :: Int
@@ -3937,35 +3926,51 @@ genFromSizeSpec _ (SizeSpec interval) =
   fail ("genFromSizeSpec fails because the interval " ++ show interval ++ " has only negative choices.")
 
 -- =============================================================================
--- Size Spec acts like an interval, and we can implement interval arithmetic
--- We are careful not to apply subtraction if it leads to a negative choice.
+-- Size Spec acts like an interval, So we can implement interval arithmetic
+-- We convert to (NumSpec Integer) do the arithmetic in the (Num (NumSpec Integer))
+-- instance, and then raise an error if anything goes wrong in the conversion back to SizeSpec
 
-addM :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
-addM _ Nothing Nothing = Nothing
-addM _ Nothing (Just _) = Nothing
-addM _ (Just _) Nothing = Nothing
-addM f (Just x) (Just y) = Just (f x y)
+checkInterval :: NumSpec Integer -> Either String SizeSpec
+checkInterval m@(NumSpecInterval x y) =
+  case (x, y) of
+    (Just lo, _) | lo < 0 -> Left ("Negative low bound in conversion to SizeSpec: " ++ show m)
+    (_, Just hi) | hi < 0 -> Left ("Negative high bound in conversion to SizeSpec: " ++ show m)
+    (Just lo, Just hi) | lo > hi -> Left ("lo(" ++ show lo ++ ") > hi(" ++ show hi ++ ") in conversion to SizeSpec")
+    (lo, hi) -> Right $ SizeSpec (NumSpecInterval (lower lo) (upper hi))
 
-addition :: SizeSpec -> SizeSpec -> SizeSpec
-addition (SizeSpec (NumSpecInterval x y)) (SizeSpec (NumSpecInterval a b)) =
-  SizeSpec (NumSpecInterval (addM (+) x a) (addM (+) y b))
+dropSizeSpec :: NumSpec Integer -> SizeSpec
+dropSizeSpec interval = case checkInterval interval of
+  Left msg -> error msg
+  Right x -> x
 
-subtractionM :: SizeSpec -> SizeSpec -> Either String SizeSpec
-subtractionM m@(SizeSpec (NumSpecInterval x y)) n@(SizeSpec (NumSpecInterval a b)) =
-  case (addM (-) x b, addM (-) y a) of
-    (Just lo, _) | lo < 0 -> Left ("Negative low bound in subtraction of Sizes: " ++ show m ++ " - " ++ show n)
-    (_, Just hi) | hi < 0 -> Left ("Negative high bound in subtraction of Sizes: " ++ show m ++ " - " ++ show n)
-    (lo, hi) -> Right (SizeSpec (NumSpecInterval lo hi))
+lower :: forall n. (Bounded n, Integral n) => Maybe Integer -> Maybe n
+lower Nothing = Nothing
+lower (Just x) = if x < toInteger (minBound @n) then Nothing else Just (fromInteger x)
+
+upper :: forall n. (Bounded n, Integral n) => Maybe Integer -> Maybe n
+upper Nothing = Nothing
+upper (Just x) = if x > toInteger (maxBound @n) then Nothing else Just (fromInteger x)
+
+liftNumSpec :: Integral n => NumSpec n -> NumSpec Integer
+liftNumSpec (NumSpecInterval x y) = NumSpecInterval (toInteger <$> x) (toInteger <$> y)
+
+dropNumSpec :: (Bounded n, Integral n) => NumSpec Integer -> NumSpec n
+dropNumSpec (NumSpecInterval x y) = NumSpecInterval (lower x) (lower y)
 
 instance Num SizeSpec where
-  (+) = addition
-  (-) x y = case subtractionM x y of
-    Left msg -> error msg
-    Right ans -> ans
-  fromInteger = exactInt . (fromInteger @Int)
-  (*) = error "(*) not implemented for SizeSpec"
-  abs = error "abs not implemented for SizeSpec"
-  signum = error "signum not implemented for SizeSpec"
+  (+) (SizeSpec x) (SizeSpec y) = dropSizeSpec $ addNumSpec (liftNumSpec x) (liftNumSpec y)
+  (-) (SizeSpec x) (SizeSpec y) = dropSizeSpec $ subNumSpec (liftNumSpec x) (liftNumSpec y)
+  (*) (SizeSpec x) (SizeSpec y) = dropSizeSpec $ multNumSpec (liftNumSpec x) (liftNumSpec y)
+  negate (SizeSpec x) = dropSizeSpec $ negNumSpec (liftNumSpec x)
+  fromInteger n = SizeSpec $ NumSpecInterval (lower (Just n)) (upper (Just n))
+  abs = error "No abs in the Num (NumSpec Integer) instance"
+  signum = error "No signum in the Num (NumSpec Integer) instance"
+
+subtractionM :: SizeSpec -> SizeSpec -> Either String SizeSpec
+subtractionM (SizeSpec x) (SizeSpec y) = checkInterval (subNumSpec (liftNumSpec x) (liftNumSpec y))
+
+addition :: SizeSpec -> SizeSpec -> SizeSpec
+addition (SizeSpec x) (SizeSpec y) = dropSizeSpec (subNumSpec (liftNumSpec x) (liftNumSpec y))
 
 -- =====================================
 -- Size operations
@@ -3973,7 +3978,7 @@ instance Num SizeSpec where
 data SizeFn (fn :: [Type] -> Type -> Type) as b where
   Plus :: SizeFn fn '[Size, Size] Size
   Minus :: SizeFn fn '[Size, Size] Size
-  SizeOf :: (Sized a, HasSpec fn a) => SizeFn fn '[a] Size
+  SizeOf :: forall fn a. (Sized a, HasSpec fn a) => SizeFn fn '[a] Size
 
 instance FunctionLike (SizeFn fn) where
   sem Plus = (+) -- From the (Num Size) instance
@@ -3987,7 +3992,7 @@ minusFn :: forall fn. Member (SizeFn fn) fn => fn '[Size, Size] Size
 minusFn = injectFn (Minus @fn)
 
 sizeOfFn :: forall fn a. (HasSpec fn a, Member (SizeFn fn) fn, Sized a) => fn '[a] Size
-sizeOfFn = injectFn $ SizeOf @a @fn
+sizeOfFn = injectFn $ SizeOf @fn @a
 
 deriving instance Eq (SizeFn fn as b)
 deriving instance Show (SizeFn fn as b)
@@ -4015,7 +4020,7 @@ minus_ ::
   Term fn Size
 minus_ = app minusFn
 
-instance BaseUniverse fn => Functions (SizeFn fn) fn where
+instance (BaseUniverse fn, HasSpec fn Size) => Functions (SizeFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn (ListCtx pre HOLE suf) (SuspendedSpec x p) =
@@ -4033,7 +4038,14 @@ instance BaseUniverse fn => Functions (SizeFn fn) fn where
       ("\n(x - " ++ show s ++ " `conformsTo` " ++ show spec ++ ") can't be solved.")
       (subSizeSpec (liftAs s spec) spec)
 
-  mapTypeSpec = error "No cases SizeFn"
+  mapTypeSpec f ts = mapTypeSpecSize f ts
+
+mapTypeSpecSize :: forall fn a b f. f ~ SizeFn fn => f '[a] b -> TypeSpec fn a -> Spec fn b
+mapTypeSpecSize f ts = case f of
+  SizeOf ->
+    constrained $ \x ->
+      unsafeExists $ \x' ->
+        assert (x ==. sizeOf_ x') <> toPreds @fn @a x' ts
 
 -- | Add information to a Spec, if it is an ErrorSpec, otherwise just return the Spec
 explainSpec :: String -> Spec fn t -> Spec fn t
@@ -4043,7 +4055,8 @@ explainSpec _ spec = spec
 -- | Lift a Size to a SizeSpec, matching the form of the the second argument
 liftAs :: BaseUniverse fn => Size -> Spec fn Size -> Spec fn Size
 liftAs size (MemberSpec _) = MemberSpec [size]
-liftAs size _ = exactSizeSpec size
+liftAs (MkSize n) (TypeSpec _ _) = TypeSpec (rangeInt n n) []
+liftAs _ spec = ErrorSpec ["The missing, cases to 'propagateSpecFun' for Size, were not ruled out: " ++ show spec]
 
 -- | Subtract two (Spec fn Size). It is only called in propagateSpecFun with
 --   matching arguments with the same form (created using 'liftAs'). In all
@@ -4053,7 +4066,7 @@ subSizeSpec (TypeSpec x _) (TypeSpec y _) = case subtractionM x y of
   Left msg -> ErrorSpec [msg]
   Right ans -> TypeSpec ans []
 subSizeSpec (MemberSpec xs) (MemberSpec ys) =
-  if any (<= 0) members
+  if any (< 0) members
     then ErrorSpec ["'subSizeSpec' leads to negative Sizes: MemberSpec " ++ show members]
     else MemberSpec members
   where
@@ -4067,3 +4080,236 @@ addSizeSpec :: BaseUniverse fn => Spec fn Size -> Spec fn Size -> Spec fn Size
 addSizeSpec (TypeSpec x _) (TypeSpec y _) = TypeSpec (addition x y) []
 addSizeSpec (MemberSpec xs) (MemberSpec ys) = MemberSpec [x + y | x <- xs, y <- ys]
 addSizeSpec x y = ErrorSpec ["Non matching specs in 'addSizeSpec': " ++ show x ++ " and " ++ show y]
+
+lowBound :: Bounded n => Maybe n -> n
+lowBound Nothing = minBound
+lowBound (Just n) = n
+
+highBound :: Bounded n => Maybe n -> n
+highBound Nothing = maxBound
+highBound (Just n) = n
+
+specIntToSize :: Spec fn Int -> Spec fn Size
+specIntToSize TrueSpec = TrueSpec
+specIntToSize (TypeSpec interval _) = TypeSpec (SizeSpec interval) []
+specIntToSize (MemberSpec xs) = MemberSpec (map MkSize xs)
+specIntToSize (ErrorSpec xs) = ErrorSpec xs
+specIntToSize (SuspendedSpec {}) = TrueSpec
+
+specSizeToInt :: Spec fn Size -> Spec fn Int
+specSizeToInt TrueSpec = TrueSpec
+specSizeToInt (TypeSpec (SizeSpec interval) _) = TypeSpec interval []
+specSizeToInt (MemberSpec xs) = MemberSpec (map unSize xs)
+specSizeToInt (ErrorSpec xs) = ErrorSpec xs
+specSizeToInt (SuspendedSpec {}) = TrueSpec
+
+-- ==================================================================================
+-- (NumSpec Integer) can support interval arithmetic, so we can make a (Num (NumSpec fn Integer)) instance
+-- Given operator #, then (a,b) # (c,d) = (minimum s, maximum s) where s = [a # c, a # d, b # c, b # d]
+-- There are simpler rules for (+) and (-), but for (*) we need to use the general rule.
+
+operM :: (a -> a -> a) -> Maybe a -> Maybe a -> Maybe a
+operM _ Nothing Nothing = Nothing
+operM _ Nothing (Just _) = Nothing
+operM _ (Just _) Nothing = Nothing
+operM f (Just x) (Just y) = Just (f x y)
+
+addNumSpec :: Num n => NumSpec n -> NumSpec n -> NumSpec n
+addNumSpec (NumSpecInterval x y) (NumSpecInterval a b) = NumSpecInterval (operM (+) x a) (operM (+) y b)
+
+subNumSpec :: Num n => NumSpec n -> NumSpec n -> NumSpec n
+subNumSpec (NumSpecInterval x y) (NumSpecInterval a b) = NumSpecInterval (operM (-) x b) (operM (-) y a)
+
+multNumSpec :: (Ord n, Num n) => NumSpec n -> NumSpec n -> NumSpec n
+multNumSpec (NumSpecInterval a b) (NumSpecInterval c d) = NumSpecInterval (unT (minimum s)) (unT (maximum s))
+  where
+    s = [multT (neg a) (neg c), multT (neg a) (pos d), multT (pos b) (neg c), multT (pos b) (pos d)]
+
+negNumSpec :: Num n => NumSpec n -> NumSpec n
+negNumSpec (NumSpecInterval lo hi) = NumSpecInterval (negate <$> hi) (negate <$> lo)
+
+-- | Be REALLY CAREFULL, only the Integer instance is immune from Overflow issues
+instance (Num n, Ord n) => Num (NumSpec n) where
+  (+) = addNumSpec
+  (-) = subNumSpec
+  (*) = multNumSpec
+  negate = negNumSpec
+  fromInteger n = NumSpecInterval (Just (fromInteger n)) (Just (fromInteger n))
+  abs = error "No abs in the Num (NumSpec Integer) instance"
+  signum = error "No signum in the Num (NumSpec Integer) instance"
+
+intToSpecInt :: BaseUniverse fn => Int -> Spec fn Int
+intToSpecInt n = typeSpec (NumSpecInterval (Just n) (Just n))
+
+-- ========================================================================
+-- To implement the (HasSpec fn t) cardinalTypeSpec :: HasSpec fn a => TypeSpec fn a -> Spec fn Int
+-- We are going to need some arithmetic-like operations on (Spec fn Int)
+-- We will have instance equations like these
+-- cardinalTypeSpec (Cartesian x y) = 'multSpecInt' (cardinality x) (cardinality y)
+-- cardinalTypeSpec (SumSpec leftspec rightspec) = 'addSpecInt' (cardinality leftspec) (cardinality rightspec)
+-- To get thos functions, we are going to have to lift opertions on (TypeSpec fn Int) to (Spec fn Int)
+
+addSpecInt :: BaseUniverse fn => Spec fn Int -> Spec fn Int -> Spec fn Int
+addSpecInt x y = operateSpec (+) (+) x y
+
+subSpecInt :: BaseUniverse fn => Spec fn Int -> Spec fn Int -> Spec fn Int
+subSpecInt x y = operateSpec (-) (-) x y
+
+multSpecInt :: BaseUniverse fn => Spec fn Int -> Spec fn Int -> Spec fn Int
+multSpecInt x y = operateSpec (*) (*) x y
+
+-- | let 'n' be some numeric type, and 'f' and 'ft' be operations on 'n' and (TypeSpec fn n)
+--   Then lift these operations from (TypeSpec fn n) to (Spec fn n)
+--   Normally 'f' will be a (Num n) instance method (+,-,*) on n,
+--   and 'ft' will be a a (Num (TypeSpec fn n)) instance method (+,-,*) on (TypeSpec fn t)
+--   But this will work for any operations 'f' and 'ft' with the right types
+operateSpec ::
+  (TypeSpec fn n ~ NumSpec n, Enum n, Bounded n, Ord n) =>
+  (n -> n -> n) ->
+  (TypeSpec fn n -> TypeSpec fn n -> TypeSpec fn n) ->
+  Spec fn n ->
+  Spec fn n ->
+  Spec fn n
+operateSpec f ft x y = case (x, y) of
+  (ErrorSpec xs, ErrorSpec ys) -> ErrorSpec (xs ++ ys)
+  (ErrorSpec xs, _) -> ErrorSpec xs
+  (_, ErrorSpec ys) -> ErrorSpec ys
+  (TrueSpec, _) -> TrueSpec
+  (_, TrueSpec) -> TrueSpec
+  (_, SuspendedSpec _ _) -> TrueSpec
+  (SuspendedSpec _ _, _) -> TrueSpec
+  (TypeSpec x bad1, TypeSpec y bad2) -> TypeSpec (ft x y) [f b1 b2 | b1 <- bad1, b2 <- bad2]
+  (MemberSpec [], _) -> ErrorSpec ["Null MemberSpec"]
+  (_, MemberSpec []) -> ErrorSpec ["Null MemberSpec"]
+  (MemberSpec xs, MemberSpec ys) -> MemberSpec [f x y | x <- xs, y <- ys]
+  -- This block is all (MemberSpec{}, TypeSpec{}) with MemberSpec on the left
+  (MemberSpec xs, TypeSpec (NumSpecInterval (Just i) (Just j)) bad) ->
+    MemberSpec [f x y | x <- xs, y <- [i .. j], not (elem y bad)]
+  -- Somewhat loose spec here, but more accurate then TrueSpec, it is exact if 'xs' has one element (i.e. 'xs' = [i])
+  (MemberSpec xs, TypeSpec (NumSpecInterval lo hi) bads) ->
+    -- We use the specialized version of 'TypeSpec' 'typeSpecOpt'
+    typeSpecOpt
+      (NumSpecInterval (Just (f (minimum xs) (lowBound lo))) (Just (f (maximum xs) (highBound hi))))
+      [f x b | x <- xs, b <- bads]
+  -- we flip the arguments, so we need to flip the functions as well
+  (x, y) -> operateSpec (\a b -> f b a) (\u v -> ft v u) y x
+
+-- =================================
+-- Cardinality
+
+-- | Put some (admittedly loose bounds) on the number of solutions that
+--   'genFromTypeSpec' might return. For lots of types, there is no way to be very accurate.
+-- Here we lift the HasSpec methods 'cardinalTrueSpec' and 'cardinalTypeSpec'
+-- from (TypeSpec fn Int) to (Spec fn Int)
+cardinality :: forall fn a. (Eq a, BaseUniverse fn, HasSpec fn a) => Spec fn a -> Spec fn Int
+cardinality TrueSpec = cardinalTrueSpec @fn @a
+cardinality (MemberSpec es) = intToSpecInt (length (nub es))
+cardinality ErrorSpec {} = equalSpec 0
+-- This is a concession, there is not really a good way to know
+cardinality (TypeSpec s cant) =
+  subSpecInt (cardinalTypeSpec @fn @a s) (intToSpecInt (length (filter (\c -> conformsTo @fn @a c s) cant)))
+cardinality SuspendedSpec {} = TrueSpec
+
+-- The cardinalSize of (NumSpec Integer) is concrete, only if both the
+-- the lower and upper bounds are concrete. Otherwise it is TrueSpec.
+-- Just a little bit of infinity, makes the whole thing infinity.
+cardinalSizeIntegerSpec :: forall n fn. Integral n => NumSpec n -> Spec fn Int
+cardinalSizeIntegerSpec (NumSpecInterval (Just lo) (Just hi)) =
+  if hi >= lo
+    then MemberSpec [fromIntegral @n @Int (hi - lo)]
+    else MemberSpec [0]
+cardinalSizeIntegerSpec (NumSpecInterval _ _) = TrueSpec
+
+-- The cardinalSize of (NumSpec n) for a Bounded type 'n', can be made accurate
+-- by using the Bounds to capture exact information.
+cardinalSizeBoundedSpec :: forall n fn. (Bounded n, Integral n) => NumSpec n -> Spec fn Int
+cardinalSizeBoundedSpec x@(NumSpecInterval _ _) = MemberSpec [fromIntegral n]
+  where
+    n = countSpec x
+
+-- | The exact count of the number elements in a Bounded NumSpec
+countSpec :: forall n. (Bounded n, Integral n) => NumSpec n -> Integer
+countSpec (NumSpecInterval lo hi) = if lo > hi then 0 else toInteger high - toInteger low + 1
+  where
+    high = highBound hi
+    low = lowBound lo
+
+finiteSize :: forall n. (Integral n, Bounded n) => Integer
+finiteSize = toInteger (maxBound @n) - toInteger (minBound @n) + 1
+
+-- | This is an optimizing version of 'TypeSpec' for Bounded NumSpecs. We use this function
+--   to specialize the (HasSpec fn t) method 'typeSpecOpt' for bounded (i.e. finite) NumSpecs.
+--   So given (TypeSpec interval badlist) we might want to transform it to (MemberSpec goodlist)
+--   There are 2 opportunities where this can payoff big time.
+--   1) Suppose the total count of the elements in the interval is < length badlist
+--      we can then return (MemberSpec (filter elements (`notElem` badlist)))
+--      this must be smaller than (TypeSpec interval badlist) because the filtered list must be smaller than badlist
+--   2) Suppose the type 't' is finite with size N. If the length of the badlist > (N/2), then the number of possible
+--      good things must be smaller than (length badlist), because (possible good + bad == N), so regardless of the
+--      count of the interval (MemberSpec (filter elements (`notElem` badlist))) is better. Sometimes much better.
+--      Example, let 'n' be the finite set {0,1,2,3,4,5,6,7,8,9} and the bad list be [0,1,3,4,5,6,8,9]
+--      (TypeSpec [0..9]  [0,1,3,4,5,6,8,9]) = filter  {0,1,2,3,4,5,6,7,8,9} (`notElem` [0,1,3,4,5,6,8,9]) = [2,7]
+--      So (MemberSpec [2,7]) is better than  (TypeSpec [0..9]  [0,1,3,4,5,6,8,9]). This works no matter what
+--      the count of interval is. We only need the (length badlist > (N/2)).
+notInNumSpec ::
+  forall fn n.
+  ( Functions fn fn
+  , BaseUniverse fn
+  , HasSpec fn n
+  , TypeSpec fn n ~ NumSpec n
+  , Bounded n
+  , Integral n
+  ) =>
+  NumSpec n ->
+  [n] ->
+  Spec fn n
+notInNumSpec ns@(NumSpecInterval a b) bad
+  | toInteger (length bad) > (finiteSize @n `div` 2) || countSpec ns < toInteger (length bad) =
+      MemberSpec [x | x <- [lowBound a .. highBound b], notElem x bad]
+  | otherwise = TypeSpec @fn @n ns bad
+
+-- ========================================================================
+-- Helper functions for interval multiplication
+--  (a,b) * (c,d) = (minimum s, maximum s) where s = [a * c, a * d, b * c, b * d]
+
+data T x = NegInf | Ok x | PosInf
+  deriving (Show)
+
+instance Ord x => Eq (T x) where
+  x == y = compare x y == EQ
+
+instance Ord x => Ord (T x) where
+  compare NegInf NegInf = EQ
+  compare NegInf _ = LT
+  compare (Ok _) NegInf = GT
+  compare (Ok x) (Ok y) = compare x y
+  compare (Ok _) PosInf = LT
+  compare PosInf PosInf = EQ
+  compare PosInf _ = GT
+
+-- | Conversion between (T x) and (Maybe x)
+unT :: T x -> Maybe x
+unT (Ok x) = Just x
+unT _ = Nothing
+
+-- | Use this on the lower bound. I.e. lo from pair (lo,hi)
+neg :: Maybe x -> T x
+neg Nothing = NegInf
+neg (Just x) = Ok x
+
+-- | Use this on the upper bound. I.e. hi from pair (lo,hi)
+pos :: Maybe x -> T x
+pos Nothing = PosInf
+pos (Just x) = Ok x
+
+-- | multiply two (T x), correctly handling the infinities NegInf and PosInf
+multT :: Num x => T x -> T x -> T x
+multT NegInf NegInf = PosInf
+multT NegInf PosInf = NegInf
+multT NegInf (Ok _) = NegInf
+multT (Ok _) NegInf = NegInf
+multT (Ok x) (Ok y) = Ok (x * y)
+multT (Ok _) PosInf = PosInf
+multT PosInf PosInf = PosInf
+multT PosInf NegInf = NegInf
+multT PosInf (Ok _) = PosInf
