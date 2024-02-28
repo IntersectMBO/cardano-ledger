@@ -53,7 +53,7 @@ instance FunctionLike (GenericsFn fn) where
     ToGeneric -> toSimpleRep
     FromGeneric -> fromSimpleRep
 
-instance IsUniverse fn => Functions (GenericsFn fn) fn where
+instance BaseUniverse fn => Functions (GenericsFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
@@ -152,7 +152,7 @@ instance
 
 -- HasSpec for () ---------------------------------------------------------
 
-instance IsUniverse fn => HasSpec fn () where
+instance BaseUniverse fn => HasSpec fn () where
   type TypeSpec fn () = ()
   emptySpec = ()
   combineSpec _ _ = typeSpec ()
@@ -164,7 +164,7 @@ instance IsUniverse fn => HasSpec fn () where
 -- Sums
 ------------------------------------------------------------------------
 
-instance IsUniverse fn => Functions (SumFn fn) fn where
+instance BaseUniverse fn => Functions (SumFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
@@ -287,7 +287,7 @@ buildBranch ::
   forall p fn as.
   ( All (HasSpec fn) as
   , IsPred p fn
-  , IsUniverse fn
+  , BaseUniverse fn
   ) =>
   FunTy (MapList (Term fn) as) p ->
   List (Term fn) as ->
@@ -303,7 +303,7 @@ type family Args t where
 class IsProd p where
   toArgs ::
     ( HasSpec fn p
-    , IsUniverse fn
+    , BaseUniverse fn
     ) =>
     Term fn p ->
     List (Term fn) (Args p)
@@ -373,7 +373,7 @@ constrained' ::
   Spec fn a
 constrained' f = constrained $ \x -> match @fn @p x f
 
-class (IsUniverse fn, HasSpec fn (SOP sop)) => SOPTerm c fn sop where
+class (BaseUniverse fn, HasSpec fn (SOP sop)) => SOPTerm c fn sop where
   inj_ :: Term fn (ProdOver (ConstrOf c sop)) -> Term fn (SOP sop)
 
 instance HasSpec fn (ProdOver constr) => SOPTerm c fn (c ::: constr : '[]) where
@@ -397,7 +397,7 @@ instance
   where
   inj_ = app injRightFn . inj_ @c @fn @(con' : sop)
 
-class (IsUniverse fn, HasSpec fn (ProdOver constr)) => ConstrTerm fn constr where
+class (BaseUniverse fn, HasSpec fn (ProdOver constr)) => ConstrTerm fn constr where
   prod_ :: List (Term fn) constr -> Term fn (ProdOver constr)
 
 instance HasSpec fn a => ConstrTerm fn '[a] where
@@ -415,7 +415,7 @@ instance
 type IsNormalType a = (Cases a ~ '[a], Args a ~ '[a], IsProd a)
 
 onJust ::
-  (IsUniverse fn, HasSpec fn a, IsNormalType a, IsPred p fn) =>
+  (BaseUniverse fn, HasSpec fn a, IsNormalType a, IsPred p fn) =>
   Term fn (Maybe a) ->
   (Term fn a -> p) ->
   Pred fn

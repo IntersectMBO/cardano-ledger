@@ -56,7 +56,7 @@ deriving instance (HasSpec fn a, HasSpec fn b) => Show (PairSpec fn a b)
 
 -- Functions for working on pairs -----------------------------------------
 
-instance IsUniverse fn => Functions (PairFn fn) fn where
+instance BaseUniverse fn => Functions (PairFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of

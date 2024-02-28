@@ -101,7 +101,7 @@ prop_complete s =
 
 -- Test suite -------------------------------------------------------------
 
-genTest :: HasSpec Fn a => Spec Fn a -> IO a
+genTest :: HasSpec BaseFn a => Spec BaseFn a -> IO a
 genTest = fmap errorGE . generate . strictGen . genFromSpec
 
 testAll :: IO ()
@@ -161,11 +161,11 @@ tests =
          ]
       ++ [ testGroup
             "prop_conformEmpty"
-            [ testProperty "Int" $ prop_conformEmpty @Fn @Int
-            , testProperty "Set Int" $ prop_conformEmpty @Fn @(Set Int)
-            , testProperty "Map Int Int" $ prop_conformEmpty @Fn @(Map Int Int)
-            , testProperty "[Int]" $ prop_conformEmpty @Fn @[Int]
-            , testProperty "[(Int, Int)]" $ prop_conformEmpty @Fn @[(Int, Int)]
+            [ testProperty "Int" $ prop_conformEmpty @BaseFn @Int
+            , testProperty "Set Int" $ prop_conformEmpty @BaseFn @(Set Int)
+            , testProperty "Map Int Int" $ prop_conformEmpty @BaseFn @(Map Int Int)
+            , testProperty "[Int]" $ prop_conformEmpty @BaseFn @[Int]
+            , testProperty "[(Int, Int)]" $ prop_conformEmpty @BaseFn @[(Int, Int)]
             ]
          ]
 
@@ -182,9 +182,9 @@ numberyTests =
     ]
 
 type Numbery a =
-  ( Foldy Fn a
-  , OrdLike Fn a
-  , NumLike Fn a
+  ( Foldy BaseFn a
+  , OrdLike BaseFn a
+  , NumLike BaseFn a
   , Ord a
   , Enum a
   )
@@ -192,7 +192,7 @@ type Numbery a =
 data NumberyType where
   N :: (Typeable a, Numbery a) => Proxy a -> NumberyType
 
-testNumberyListSpec :: String -> (forall a. Numbery a => Spec Fn [a]) -> TestTree
+testNumberyListSpec :: String -> (forall a. Numbery a => Spec BaseFn [a]) -> TestTree
 testNumberyListSpec n p =
   testGroup
     n
@@ -214,7 +214,7 @@ testNumberyListSpec n p =
       , N @Int8 Proxy
       ]
 
-testSpec :: HasSpec Fn a => String -> Spec Fn a -> TestTree
+testSpec :: HasSpec BaseFn a => String -> Spec BaseFn a -> TestTree
 testSpec n s = do
   sequentialTestGroup
     n
@@ -226,37 +226,37 @@ testSpec n s = do
 
 -- Examples ---------------------------------------------------------------
 
-leqPair :: Spec Fn (Int, Int)
+leqPair :: Spec BaseFn (Int, Int)
 leqPair = constrained $ \p ->
   match p $ \x y ->
     x <=. y
 
-setPair :: Spec Fn (Set (Int, Int))
+setPair :: Spec BaseFn (Set (Int, Int))
 setPair = constrained $ \s ->
   [ forAll s $ \p ->
       p `satisfies` leqPair
   , assert $ lit (0, 1) `member_` s
   ]
 
-setSpec :: Spec Fn (Set Int)
+setSpec :: Spec BaseFn (Set Int)
 setSpec = constrained $ \ss ->
   forAll ss $ \s ->
     s <=. 10
 
-compositionalSpec :: Spec Fn (Set Int)
+compositionalSpec :: Spec BaseFn (Set Int)
 compositionalSpec = constrained $ \x ->
   [ satisfies x setSpec
   , assert $ 0 `member_` x
   ]
 
-simplePairSpec :: Spec Fn (Int, Int)
+simplePairSpec :: Spec BaseFn (Int, Int)
 simplePairSpec = constrained $ \p ->
   match p $ \x y ->
     [ x /=. 0
     , y /=. 0
     ]
 
-trickyCompositional :: Spec Fn (Int, Int)
+trickyCompositional :: Spec BaseFn (Int, Int)
 trickyCompositional = constrained $ \p ->
   satisfies p simplePairSpec <> assert (fst_ p ==. 1000)
 
@@ -269,27 +269,27 @@ instance Ord a => HasSimpleRep (NotASet a) where
 instance (Ord a, HasSpec fn a) => HasSpec fn (NotASet a)
 instance Ord a => Forallable (NotASet a) a
 
-emptyListSpec :: Spec Fn ([Int], NotASet (Either Int Int, Int))
+emptyListSpec :: Spec BaseFn ([Int], NotASet (Either Int Int, Int))
 emptyListSpec = constrained' $ \is ls ->
   [ forAll is $ \i -> i <=. 0
   , forAll' ls $ \l _ ->
       caseOn l (branch $ \_ -> False) (branch $ \_ -> False)
   ]
 
-eitherSpec :: Spec Fn (Either Int Int)
+eitherSpec :: Spec BaseFn (Either Int Int)
 eitherSpec = constrained $ \e ->
   (caseOn e)
     (branch $ \i -> i <=. 0)
     (branch $ \i -> 0 <=. i)
 
-maybeSpec :: Spec Fn (Set (Maybe Int))
+maybeSpec :: Spec BaseFn (Set (Maybe Int))
 maybeSpec = constrained $ \ms ->
   forAll ms $ \m ->
     (caseOn m)
       (branch $ \_ -> False)
       (branch $ \y -> 0 <=. y)
 
-eitherSetSpec :: Spec Fn (Set (Either Int Int), Set (Either Int Int), Set (Either Int Int))
+eitherSetSpec :: Spec BaseFn (Set (Either Int Int), Set (Either Int Int), Set (Either Int Int))
 eitherSetSpec = constrained' $ \es as bs ->
   [ assert $ es ==. (as <> bs)
   , forAll as $ \a ->
@@ -306,87 +306,87 @@ data Foo = Foo Int | Bar Int Int
   deriving (Show, Eq, Ord, Generic)
 
 instance HasSimpleRep Foo
-instance IsUniverse fn => HasSpec fn Foo
+instance BaseUniverse fn => HasSpec fn Foo
 
-fooSpec :: Spec Fn Foo
+fooSpec :: Spec BaseFn Foo
 fooSpec = constrained $ \foo ->
   (caseOn foo)
     (branch $ \i -> 0 <=. i)
     (branch $ \i j -> i <=. j)
 
-intSpec :: Spec Fn (Int, Int)
+intSpec :: Spec BaseFn (Int, Int)
 intSpec = constrained' $ \a b ->
   reify a (`mod` 10) $ \a' -> b ==. a'
 
-mapElemSpec :: Spec Fn (Map Int (Bool, Int))
+mapElemSpec :: Spec BaseFn (Map Int (Bool, Int))
 mapElemSpec = constrained $ \m ->
   [ assert $ m /=. lit mempty
   , forAll' (rng_ m) $ \_ b ->
       [0 <. b, b <. 10]
   ]
 
-mapElemKeySpec :: Spec Fn Int
+mapElemKeySpec :: Spec BaseFn Int
 mapElemKeySpec = constrained $ \n ->
-  letBind (pair_ n $ lit (False, 4)) $ \(p :: Term Fn (Int, (Bool, Int))) ->
+  letBind (pair_ n $ lit (False, 4)) $ \(p :: Term BaseFn (Int, (Bool, Int))) ->
     letBind (snd_ (snd_ p)) $ \x ->
       [x <. 10, 0 <. x, not_ $ elem_ n $ lit []]
 
-intRangeSpec :: Int -> Spec Fn Int
+intRangeSpec :: Int -> Spec BaseFn Int
 intRangeSpec a = constrained $ \n -> n <. lit a
 
-testRewriteSpec :: Spec Fn ((Int, Int), (Int, Int))
+testRewriteSpec :: Spec BaseFn ((Int, Int), (Int, Int))
 testRewriteSpec = constrained' $ \x y ->
   x ==. fromGeneric_ (toGeneric_ y)
 
-mapPairSpec :: Spec Fn (Map Int Int, Set Int)
+mapPairSpec :: Spec BaseFn (Map Int Int, Set Int)
 mapPairSpec = constrained' $ \m s ->
   subset_ (dom_ m) s
 
-mapEmptyDomainSpec :: Spec Fn (Map Int Int)
+mapEmptyDomainSpec :: Spec BaseFn (Map Int Int)
 mapEmptyDomainSpec = constrained $ \m ->
   subset_ (dom_ m) mempty
 
-setPairSpec :: Spec Fn (Set Int, Set Int)
+setPairSpec :: Spec BaseFn (Set Int, Set Int)
 setPairSpec = constrained' $ \s s' ->
   forAll s $ \x ->
     forAll s' $ \y ->
       x <=. y
 
-fixedSetSpec :: Spec Fn (Set Int)
+fixedSetSpec :: Spec BaseFn (Set Int)
 fixedSetSpec = constrained $ \s ->
   forAll s $ \x ->
     [x <=. lit (i :: Int) | i <- [1 .. 3]]
 
-setOfPairLetSpec :: Spec Fn (Set (Int, Int))
+setOfPairLetSpec :: Spec BaseFn (Set (Int, Int))
 setOfPairLetSpec = constrained $ \ps ->
   forAll' ps $ \x y ->
     x <=. y
 
-setSingletonSpec :: Spec Fn (Set (Int, Int))
+setSingletonSpec :: Spec BaseFn (Set (Int, Int))
 setSingletonSpec = constrained $ \ps ->
   forAll ps $ \p ->
     forAll (singleton_ (fst_ p)) $ \x ->
       x <=. 10
 
-pairSingletonSpec :: Spec Fn (Int, Int)
+pairSingletonSpec :: Spec BaseFn (Int, Int)
 pairSingletonSpec = constrained $ \q ->
   forAll (singleton_ q) $ \p ->
     letBind (fst_ p) $ \x ->
       letBind (snd_ p) $ \y ->
         x <=. y
 
-eitherSimpleSetSpec :: Spec Fn (Set (Either Int Int))
+eitherSimpleSetSpec :: Spec BaseFn (Set (Either Int Int))
 eitherSimpleSetSpec = constrained $ \ss ->
   forAll ss $ \s ->
     (caseOn s)
       (branch $ \a -> a <=. 0)
       (branch $ \b -> 0 <=. b)
 
-forAllAnySpec :: Spec Fn (Set Int)
+forAllAnySpec :: Spec BaseFn (Set Int)
 forAllAnySpec = constrained $ \as ->
   forAll as $ \_ -> True
 
-weirdSetPairSpec :: Spec Fn ([Int], Set (Either Int Int))
+weirdSetPairSpec :: Spec BaseFn ([Int], Set (Either Int Int))
 weirdSetPairSpec = constrained' $ \as as' ->
   [ as' `dependsOn` as
   , forAll as $ \a ->
@@ -397,47 +397,47 @@ weirdSetPairSpec = constrained' $ \as as' ->
         (branch $ \_ -> False)
   ]
 
-maybeJustSetSpec :: Spec Fn (Set (Maybe Int))
+maybeJustSetSpec :: Spec BaseFn (Set (Maybe Int))
 maybeJustSetSpec = constrained $ \ms ->
   forAll ms $ \m ->
     (caseOn m)
       (branch $ \_ -> False)
       (branch $ \y -> 0 <=. y)
 
-notSubsetSpec :: Spec Fn (Set Int, Set Int)
+notSubsetSpec :: Spec BaseFn (Set Int, Set Int)
 notSubsetSpec = constrained' $ \s s' -> not_ $ subset_ s s'
 
-emptySetSpec :: Spec Fn (Set Int)
+emptySetSpec :: Spec BaseFn (Set Int)
 emptySetSpec = constrained $ \s ->
   forAll s $ \x -> member_ x mempty
 
-emptyEitherMemberSpec :: Spec Fn (Set (Either Int Int))
+emptyEitherMemberSpec :: Spec BaseFn (Set (Either Int Int))
 emptyEitherMemberSpec = constrained $ \s ->
   forAll s $ \x ->
     (caseOn x)
       (branch $ \l -> member_ l mempty)
       (branch $ \r -> member_ r mempty)
 
-emptyEitherSpec :: Spec Fn (Set (Either Int Int))
+emptyEitherSpec :: Spec BaseFn (Set (Either Int Int))
 emptyEitherSpec = constrained $ \s ->
   forAll s $ \x ->
     (caseOn x)
       (branch $ \_ -> False)
       (branch $ \_ -> False)
 
-knownDomainMap :: Spec Fn (Map Int Int)
+knownDomainMap :: Spec BaseFn (Map Int Int)
 knownDomainMap = constrained $ \m ->
   [ dom_ m ==. lit (Set.fromList [1, 2])
   , not_ $ 0 `elem_` rng_ m
   ]
 
-parallelLet :: Spec Fn (Int, Int)
+parallelLet :: Spec BaseFn (Int, Int)
 parallelLet = constrained $ \p ->
   [ letBind (fst_ p) $ \x -> 0 <. x
   , letBind (snd_ p) $ \x -> x <. 0
   ]
 
-letExists :: Spec Fn (Int, Int)
+letExists :: Spec BaseFn (Int, Int)
 letExists = constrained $ \p ->
   [ letBind (fst_ p) $ \x -> 0 <. x
   , exists (\eval -> pure $ snd (eval p)) $
@@ -447,7 +447,7 @@ letExists = constrained $ \p ->
         ]
   ]
 
-letExistsLet :: Spec Fn (Int, Int)
+letExistsLet :: Spec BaseFn (Int, Int)
 letExistsLet = constrained $ \p ->
   [ letBind (fst_ p) $ \x -> 0 <. x
   , exists (\eval -> pure $ snd (eval p)) $
@@ -460,25 +460,25 @@ letExistsLet = constrained $ \p ->
         ]
   ]
 
-notSubset :: Spec Fn (Set Int)
+notSubset :: Spec BaseFn (Set Int)
 notSubset = constrained $ \s ->
   not_ $ s `subset_` lit (Set.fromList [1, 2, 3])
 
-unionSized :: Spec Fn (Set Int)
+unionSized :: Spec BaseFn (Set Int)
 unionSized = constrained $ \s ->
   10 ==. size_ (s <> lit (Set.fromList [1 .. 8]))
 
-listSum :: Numbery a => Spec Fn [a]
+listSum :: Numbery a => Spec BaseFn [a]
 listSum = constrained $ \as ->
   10 <=. sum_ as
 
-listSumForall :: Numbery a => Spec Fn [a]
+listSumForall :: Numbery a => Spec BaseFn [a]
 listSumForall = constrained $ \xs ->
   [ forAll xs $ \x -> 1 <. x
   , assert $ sum_ xs ==. 20
   ]
 
-listSumRange :: Numbery a => Spec Fn [a]
+listSumRange :: Numbery a => Spec BaseFn [a]
 listSumRange = constrained $ \xs ->
   let n = sum_ xs
    in [ forAll xs $ \x -> 1 <. x
@@ -486,7 +486,7 @@ listSumRange = constrained $ \xs ->
       , assert $ 10 <. n
       ]
 
-listSumRangeUpper :: Numbery a => Spec Fn [a]
+listSumRangeUpper :: Numbery a => Spec BaseFn [a]
 listSumRangeUpper = constrained $ \xs ->
   let n = sum_ xs
    in -- All it takes is one big negative number,
@@ -499,7 +499,7 @@ listSumRangeUpper = constrained $ \xs ->
       , assert $ 10 <. n
       ]
 
-listSumRangeRange :: Numbery a => Spec Fn [a]
+listSumRangeRange :: Numbery a => Spec BaseFn [a]
 listSumRangeRange = constrained $ \xs ->
   let n = sum_ xs
    in [ forAll xs $ \x -> [1 <. x, x <. 5]
@@ -507,24 +507,24 @@ listSumRangeRange = constrained $ \xs ->
       , assert $ 10 <. n
       ]
 
-listSumElemRange :: Numbery a => Spec Fn [a]
+listSumElemRange :: Numbery a => Spec BaseFn [a]
 listSumElemRange = constrained $ \xs ->
   let n = sum_ xs
    in [ forAll xs $ \x -> [1 <. x, x <. 5]
       , assert $ n `elem_` lit [10, 12 .. 20]
       ]
 
-listSumPair :: Numbery a => Spec Fn [(a, Int)]
+listSumPair :: Numbery a => Spec BaseFn [(a, Int)]
 listSumPair = constrained $ \xs ->
   [ assert $ foldMap_ (composeFn fstFn toGenericFn) xs ==. 100
   , forAll' xs $ \x y -> [20 <. x, x <. 30, y <. 100]
   ]
 
-dependencyWeirdness :: Spec Fn (Int, Int, Int)
+dependencyWeirdness :: Spec BaseFn (Int, Int, Int)
 dependencyWeirdness = constrained' $ \x y z ->
   reify (x + y) id $ \zv -> z ==. zv
 
-foldTrueCases :: Spec Fn (Either Int Int)
+foldTrueCases :: Spec BaseFn (Either Int Int)
 foldTrueCases = constrained $ \x ->
   [ assert $ not_ $ member_ x (lit (Set.fromList [Left 10]))
   , letBind (pair_ x (lit (0 :: Int))) $ \p ->
@@ -534,7 +534,7 @@ foldTrueCases = constrained $ \x ->
         (branch $ \_ -> True)
   ]
 
-foldSingleCase :: Spec Fn Int
+foldSingleCase :: Spec BaseFn Int
 foldSingleCase = constrained $ \x ->
   [ assert $ not_ $ member_ x (lit (Set.fromList [10]))
   , letBind (pair_ x $ lit [(10, 20) :: (Int, Int)]) $ \p ->
@@ -542,7 +542,7 @@ foldSingleCase = constrained $ \x ->
         assert (0 <=. snd_ p2)
   ]
 
-parallelLetPair :: Spec Fn (Int, Int)
+parallelLetPair :: Spec BaseFn (Int, Int)
 parallelLetPair = constrained $ \p ->
   [ match p $ \x y ->
       [ assert $ x <=. y
@@ -555,17 +555,17 @@ data Three = One | Two | Three
   deriving (Ord, Eq, Show, Generic)
 
 instance HasSimpleRep Three
-instance IsUniverse fn => HasSpec fn Three
+instance BaseUniverse fn => HasSpec fn Three
 
-mapSizeConstrained :: Spec Fn (Map Three Int)
+mapSizeConstrained :: Spec BaseFn (Map Three Int)
 mapSizeConstrained = constrained $ \m -> size_ (dom_ m) <=. 3
 
-andPair :: Spec Fn (Int, Int)
+andPair :: Spec BaseFn (Int, Int)
 andPair = constrained $ \p ->
   match p $ \x y ->
     x <=. 5 &&. y <=. 1
 
-orPair :: Spec Fn (Int, Int)
+orPair :: Spec BaseFn (Int, Int)
 orPair = constrained $ \p ->
   match p $ \x y ->
     x <=. 5 ||. y <=. 5
