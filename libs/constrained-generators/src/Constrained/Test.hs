@@ -581,14 +581,14 @@ instance BaseUniverse fn => HasSpec fn Three
 mapSizeConstrained :: Spec BaseFn (Map Three Int)
 mapSizeConstrained = constrained $ \m -> size_ (dom_ m) <=. 3
 
-andPair :: Spec BaseFn (Int, Int)
-andPair = constrained $ \p ->
-  match p $ \x y ->
+andPair :: Spec BaseFn [(Int, Int)]
+andPair = constrained $ \ps ->
+  forAll' ps $ \x y ->
     x <=. 5 &&. y <=. 1
 
-orPair :: Spec BaseFn (Int, Int)
-orPair = constrained $ \p ->
-  match p $ \x y ->
+orPair :: Spec BaseFn [(Int, Int)]
+orPair = constrained $ \ps ->
+  forAll' ps $ \x y ->
     x <=. 5 ||. y <=. 5
 
 -- TODO: how on earth does this terminate with such a high likelihood?!
