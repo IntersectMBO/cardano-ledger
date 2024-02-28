@@ -33,7 +33,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   esLState,
   lsCertState,
   lsUTxOState,
-  pattern CertState,
   pattern EpochState,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
@@ -60,9 +59,9 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 data UpecState era = UpecState
-  { currentPp :: !(PParams era)
+  { usCurPParams :: !(PParams era)
   -- ^ Current protocol parameters.
-  , ppupState :: !(ShelleyGovState era)
+  , usGovState :: !(ShelleyGovState era)
   -- ^ State of the protocol update transition system.
   }
 
@@ -98,22 +97,20 @@ instance
           ( EpochState
               { esLState = ls
               }
-            , UpecState pp ppupSt
+            , UpecState pp ppupState
             , _
             ) <-
           judgmentContext
 
         coreNodeQuorum <- liftSTS $ asks quorum
 
-        let utxoSt = lsUTxOState ls
-            CertState _ pstate dstate = lsCertState ls
-            pup = proposals . utxosGovState $ utxoSt
+        let utxoState = lsUTxOState ls
+            pup = proposals $ utxosGovState utxoState
             ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
-        NewppState pp' ppupSt' <-
+        NewppState pp' ppupState' <-
           trans @(ShelleyNEWPP era) $
-            TRC (NewppEnv dstate pstate utxoSt, NewppState pp ppupSt, ppNew)
-        pure $
-          UpecState pp' ppupSt'
+            TRC (NewppEnv (lsCertState ls) utxoState, NewppState pp ppupState, ppNew)
+        pure $! UpecState pp' ppupState'
     ]
 
 -- | If at least @n@ nodes voted to change __the same__ protocol parameters to
