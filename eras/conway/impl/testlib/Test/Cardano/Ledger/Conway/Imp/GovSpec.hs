@@ -137,7 +137,6 @@ spec =
           )
           [injectFailure $ MalformedProposal ga]
     context "Proposal-forests" $ do
-      context "GOV, EPOCH, RATIFY and ENACT" $ do
         it "Proposals submitted without proper parent fail" $ do
           let mkCorruptGovActionId :: GovActionId c -> GovActionId c
               mkCorruptGovActionId (GovActionId txi (GovActionIx gaix)) =
@@ -174,6 +173,8 @@ spec =
             constitutionProposal
             [ injectFailure $ InvalidPrevGovActionId constitutionProposal
             ]
+
+        -- MOVE: EpochSpec
         it "Proposals survive multiple epochs without any activity" $ do
           -- + 2 epochs to pass to get the desired effect
           modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
@@ -196,6 +197,7 @@ spec =
           passEpoch
           forest'' <- getProposals
           forest'' `shouldBe` def
+        -- Keep here
         it "Subtrees are pruned when proposals expire" $ do
           modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
           p1 <- submitInitConstitutionGovAction
@@ -728,6 +730,7 @@ spec =
         it
           "committee member can't vote on committee update when sandwiched between other votes"
           ccVoteOnConstitutionFailsWithMultipleVotes
+      -- MOVE: EnactSpec
       it "Motion of no confidence can be passed" $ do
         modifyPParams $ \pp ->
           pp
@@ -739,10 +742,9 @@ spec =
             getsNES $
               nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
           assertNoCommittee :: HasCallStack => ImpTestM era ()
-          assertNoCommittee =
-            do
-              committee <- getCommittee
-              impAnn "There should not be a committee" $ committee `shouldBe` SNothing
+          assertNoCommittee = do
+            committee <- getCommittee
+            impAnn "There should not be a committee" $ committee `shouldBe` SNothing
         assertNoCommittee
         khCC <- freshKeyHash
         (drep, _, _) <- setupSingleDRep 1_000_000
@@ -777,6 +779,7 @@ spec =
         submitYesVote_ (DRepVoter $ KeyHashObj drep) gaidNoConf
         replicateM_ 4 passEpoch
         assertNoCommittee
+      -- MOVE: ratify
       it "SPO needs to vote on security-relevant parameter changes" $ do
         (drep, ccCred, _) <- electBasicCommittee
         (khPool, _, _) <- setupPoolWithStake $ Coin 42_000_000
@@ -938,6 +941,7 @@ spec =
           let ratifyState = extractDRepPulsingState pulser
           rsExpired ratifyState `shouldBe` Set.singleton govActionId
 
+      -- MOVE: EnactSpec
       it "submitted and enacted when voted on" $ do
         (dRep, committeeMember, _) <- electBasicCommittee
         (govActionId, constitution) <- submitConstitution SNothing
@@ -1074,6 +1078,7 @@ spec =
                            ]
 
     describe "DRep expiry" $ do
+      -- MOVE: EpochSpec
       it "is updated based on to number of dormant epochs" $ do
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
         (drep, _, _) <- setupSingleDRep 1_000_000
@@ -1133,8 +1138,10 @@ spec =
         expectPulserProposals
         expectNumDormantEpochs 1
         expectExtraDRepExpiry drep 2
+    -- MOVE: The whole thing to RatifySpec
     describe "Active voting stake" $ do
       context "DRep" $ do
+        -- MOVE: RatifySpec
         it "UTxOs contribute to active voting stake" $ do
           -- Only modify the applicable thresholds
           modifyPParams $ \pp ->
@@ -1166,6 +1173,7 @@ spec =
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+        -- MOVE: RatifySpec
         it "Rewards contribute to active voting stake" $ do
           -- Only modify the applicable thresholds
           modifyPParams $ \pp ->
@@ -1202,6 +1210,7 @@ spec =
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
       context "StakePool" $ do
+        -- MOVE: RatifySpec
         it "UTxOs contribute to active voting stake" $ do
           -- Only modify the applicable thresholds
           modifyPParams $ \pp ->
@@ -1237,6 +1246,7 @@ spec =
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+        -- MOVE: RatifySpec
         it "Rewards contribute to active voting stake" $ do
           -- Only modify the applicable thresholds
           modifyPParams $ \pp ->
@@ -1274,6 +1284,7 @@ spec =
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
     describe "Committee actions validation" $ do
+      -- TODO: GovCertSpec
       it "A CC that has resigned will need to be first voted out and then voted in to be considered active" $ do
         (dRep, _, gaidCC) <- electBasicCommittee
         passNEpochs 2
@@ -1324,6 +1335,7 @@ spec =
         -- Confirm that after registering a hot key, they are active
         _hotKey <- registerCommitteeHotKey cc
         ccShouldNotBeResigned cc
+      -- MOVE: RatifySpec
       it "proposals to update the committee get delayed if the expiration exceeds the max term" $ do
         setPParams
         (drep, _, _) <- setupSingleDRep 1_000_000
