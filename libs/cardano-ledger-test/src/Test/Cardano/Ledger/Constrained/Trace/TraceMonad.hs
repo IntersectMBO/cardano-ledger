@@ -45,6 +45,7 @@ import Control.State.Transition.Trace.Generator.QuickCheck (
 import Data.Default.Class (Default (def))
 import Data.Foldable (toList)
 import qualified Data.Foldable as Fold (toList)
+import Data.Function (on)
 import qualified Data.HashSet as HashSet
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
@@ -93,7 +94,14 @@ import Test.Cardano.Ledger.Constrained.Rewrite (
 import Test.Cardano.Ledger.Constrained.Solver (solveOneVar)
 import Test.Cardano.Ledger.Constrained.Vars (currentSlot, newEpochStateT)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockBlock (..), MockChainState (..))
-import Test.Cardano.Ledger.Generic.PrettyCore (pcSlotNo, pcTx, ppList, ppPair, ppStrictSeq, summaryMapCompact)
+import Test.Cardano.Ledger.Generic.PrettyCore (
+  pcSlotNo,
+  pcTx,
+  ppList,
+  ppPair,
+  ppStrictSeq,
+  summaryMapCompact,
+ )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Trace (chooseIssuer)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
@@ -243,17 +251,20 @@ reqSig Conway txb = txb ^. reqSignerHashesTxBodyL
 --   First: Apply the Rewriter
 --   Second: appy the Subst
 --   Third: Construct the DependGraph
-compileTraceWithSubst :: Era era => OrderInfo -> Subst era -> [Pred era] -> TraceM era (DependGraph era)
+compileTraceWithSubst ::
+  Era era => OrderInfo -> Subst era -> [Pred era] -> TraceM era (DependGraph era)
 compileTraceWithSubst info subst0 cs0 = do
   simple <- liftCounter rewriteGen cs0
   graph <- liftTyped $ do
     let instanPreds = fmap (substPredWithVarTest subst0) simple
     orderedNames <- initialOrder info instanPreds
-    mkDependGraph (length orderedNames) [] HashSet.empty orderedNames [] (Prelude.filter notBefore instanPreds)
+    mkDependGraph (length orderedNames) [] HashSet.empty orderedNames [] $
+      Prelude.filter notBefore instanPreds
   pure graph
 
 -- | Use the tool chain to generate a Subst from a list of Pred, in the TraceM monad.
-toolChainTrace :: Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> TraceM era (Subst era)
+toolChainTrace ::
+  Era era => Proof era -> OrderInfo -> [Pred era] -> Subst era -> TraceM era (Subst era)
 toolChainTrace _proof order cs subst0 = do
   (DependGraph pairs) <- compileTraceWithSubst order subst0 cs
   Subst subst <- liftGen (foldlM' solveOneVar subst0 pairs)
@@ -401,12 +412,21 @@ genTraceParts ::
   Proof era ->
   Int ->
   (Proof era -> TraceM era (Tx era)) ->
-  TraceM era ([TraceStep era (Tx era)], Maybe (IRC (MOCKCHAIN era) -> Gen (Either a (MockChainState era))), PredGen era)
+  TraceM
+    era
+    ( [TraceStep era (Tx era)]
+    , Maybe (IRC (MOCKCHAIN era) -> Gen (Either a (MockChainState era)))
+    , PredGen era
+    )
 genTraceParts proof len genTx = do
   env0 <- genNewEpochStateEnv proof
   newepochstate <- liftTyped $ runTarget env0 (newEpochStateT proof)
   SlotNo currslot <- liftTyped $ runTerm env0 currentSlot
-  let initStateFun = Just (\(IRC ()) -> pure (Right (MockChainState newepochstate newepochstate (SlotNo currslot) 0)))
+  let initStateFun =
+        Just
+          ( \(IRC ()) ->
+              pure (Right (MockChainState newepochstate newepochstate (SlotNo currslot) 0))
+          )
   steps <- beforeAfterTrace len (\_ -> genTx proof)
   let getTx (TraceStep _ _ x) = x
   zs <- traceStepToVector getTx steps (currslot + 1) []
@@ -423,9 +443,10 @@ traceStepToVector getTx steps m prev = do
   n <- liftGen $ choose (1, 2)
   let steplist = take n steps
   nextslot <- liftGen ((+ m) <$> frequency [(2, pure 2), (1, pure 3), (1, pure 4)])
-  -- Longtraces, with large inter block slot changes may exceed the Maximum validity of the Validity interval in generated
-  -- scripts, so try for an average slot difference less than 3, that should suport Traces up to length 300
-  -- since  Sized (Range 900 1000) endSlotDelta, should always be at east 900
+  -- Longtraces, with large inter block slot changes may exceed the Maximum validity of
+  -- the Validity interval in generated scripts, so try for an average slot difference
+  -- less than 3, that should suport Traces up to length 300 since Sized (Range 900 1000)
+  -- endSlotDelta, should always be at east 900
   traceStepToVector getTx (drop n steps) nextslot ((map getTx steplist, SlotNo m) : prev)
 
 -- | Generate a Control.State.Transition.Trace(Trace) from a (TraceM era (Tx era))
@@ -467,7 +488,9 @@ mockChainProp proof n genTxAndUpdateEnv propf = do
 -- | Given trace [(sig0,state0),(sig1,state1),(sig2,state2),(sig3,state3)]
 --   conjoin [p pstate0 sig1 state1, p state0 sig2 state2, p state0 sig3 state3]
 -- test that 'p' holds between state0 and stateN for all N
-stepProp :: (MockChainState era -> MockBlock era -> MockChainState era -> Property) -> (Trace (MOCKCHAIN era) -> Property)
+stepProp ::
+  (MockChainState era -> MockBlock era -> MockChainState era -> Property) ->
+  (Trace (MOCKCHAIN era) -> Property)
 stepProp p tr = case zipWith (p state0) sigs states of
   [] -> property True
   (_ : more) -> conjoin more
@@ -479,7 +502,10 @@ stepProp p tr = case zipWith (p state0) sigs states of
 -- | Given trace [(sig0,state0),(sig1,state1),(sig2,state2),(sig3,state3)]
 --   conjoin [p pstate0 sig1 state1, p state1 sig2 state2, p state2 sig3 state3]
 --   test that 'p' holds bteween (state0 stateN sig(N+1) state(N+1) for all N
-deltaProp :: (MockChainState era -> MockBlock era -> MockChainState era -> Property) -> Trace (MOCKCHAIN era) -> Property
+deltaProp ::
+  (MockChainState era -> MockBlock era -> MockChainState era -> Property) ->
+  Trace (MOCKCHAIN era) ->
+  Property
 deltaProp p tr = case states of
   [] -> property True
   _ : more -> conjoin (zipWith3 p states sigs more)
@@ -489,52 +515,48 @@ deltaProp p tr = case states of
 
 -- | Given trace [(sig0,state0),(sig1,state1),(sig2,state2),(sig3,state3)]
 --   test that (p state0 stateN),  where stateN is the last state in the trace
-preserveProp :: (MockChainState era -> MockChainState era -> Property) -> (Trace (MOCKCHAIN era) -> Property)
+preserveProp ::
+  (MockChainState era -> MockChainState era -> Property) -> (Trace (MOCKCHAIN era) -> Property)
 preserveProp p tr = p state0 stateN
   where
     state0 = tr ^. traceInitState
     stateN = lastState tr
 
--- | Apply '(preserveProp p)' to each full Epoch in a Trace. A partial epoch at the end of the trace is not tested.
-epochProp :: ConwayEraGov era => (MockChainState era -> MockChainState era -> Property) -> (Trace (MOCKCHAIN era) -> Property)
-epochProp p tr = counterexample message $ conjoin (map (\(epoch, _n) -> (p (NE.head epoch) (NE.last epoch))) epochs)
+-- | Apply '(preserveProp p)' to each full Epoch in a Trace. A partial epoch at the end of
+-- the trace is not tested.
+epochProp ::
+  ConwayEraGov era =>
+  (MockChainState era -> MockChainState era -> Property) ->
+  (Trace (MOCKCHAIN era) -> Property)
+epochProp p tr =
+  counterexample message $ conjoin (map (\epoch -> (p (NE.head epoch) (NE.last epoch))) epochs)
   where
     states = traceStates OldestFirst tr
-    epochs = zip (splitEpochs states) [0 :: Int ..]
-    showEpoch (epoch, n) = unlines (("EPOCH " ++ show n) : map showPulserState (NE.toList epoch))
-    message = "Trace length " ++ show (length states) ++ unlines (map showEpoch epochs)
-
-splitE :: (a -> a -> Bool) -> [a] -> [a] -> [NE.NonEmpty a] -> [NE.NonEmpty a]
-splitE boundary source epoch epochs =
-  case (source, NE.nonEmpty epoch) of
-    ([], Just epochNE) -> reverse (NE.reverse epochNE : epochs)
-    ([], Nothing) -> epochs
-    ([x], Just epochNE) -> reverse (NE.reverse (NE.cons x epochNE) : epochs)
-    ([x], Nothing) -> pure x : epochs
-    (x : y : more, Just epochNE) ->
-      if boundary x y
-        then splitE boundary (y : more) [] (NE.reverse (NE.cons x epochNE) : epochs)
-        else splitE boundary (y : more) (x : epoch) epochs
-    (x : y : more, Nothing) ->
-      if boundary x y
-        then splitE boundary (y : more) [] (pure x : epochs)
-        else splitE boundary (y : more) (x : epoch) epochs
-
-splitTest :: [NE.NonEmpty (Int, Char)]
-splitTest = splitE boundary (zip [1, 1, 1, 2, 2, 1, 3, 3, 3, 3, 4, 4, 4, 5, 6, 6, 6, 8, 8] "abcdefghijklmnopqrstuvwxyz") [] []
-  where
-    boundary :: (Int, Char) -> (Int, Char) -> Bool
-    boundary (n, _) (m, _) = n + 1 <= m
+    epochs = splitEpochs states
+    showEpoch epoch n = unlines (("EPOCH " ++ show n) : map showPulserState (NE.toList epoch))
+    message =
+      unlines (("Trace length " ++ show (length states)) : zipWith showEpoch epochs [0 :: Int ..])
 
 splitEpochs :: [MockChainState era] -> [NE.NonEmpty (MockChainState era)]
-splitEpochs xs = init $ splitE boundary xs [] [] -- We only want full traces, so we drop the last potential trace
+splitEpochs xs =
+  -- We only want full traces, so we drop the last potential trace
+  reverse $ drop 1 $ reverse (removeFirst $ NE.groupBy ((==) `on` (nesEL . mcsNes)) xs)
   where
-    boundary mcs1 mcs2 = nesEL (mcsNes mcs1) + 1 <= nesEL (mcsNes mcs2)
+    -- FIXME: It seems that initialization of DRep pulser is not implemented correctly for
+    -- the first trace. Needs investigation and a fix.
+    removeFirst = drop 1
 
 -- =====================
 
 showPulserState :: ConwayEraGov era => MockChainState era -> String
-showPulserState (MockChainState nes _ slot _) = "Slot = " ++ show slot ++ "   " ++ getPulserInfo (nes ^. newEpochStateDRepPulsingStateL)
+showPulserState (MockChainState nes _ slot _) =
+  "Slot = " ++ show slot ++ "   " ++ getPulserInfo (nes ^. newEpochStateDRepPulsingStateL)
   where
-    getPulserInfo (DRPulsing x) = "Balance = " ++ show (summaryMapCompact (dpBalance x)) ++ "    DRepDistr = " ++ show (summaryMapCompact (dpDRepDistr x))
-    getPulserInfo (DRComplete psnap _) = "Complete DRepDistr = " ++ show (summaryMapCompact (psDRepDistr psnap))
+    getPulserInfo (DRPulsing x) =
+      "Balance = "
+        ++ show (summaryMapCompact (dpBalance x))
+        ++ "    DRepDistr = "
+        ++ show (summaryMapCompact (dpDRepDistr x))
+    getPulserInfo (DRComplete psnap _) =
+      "Complete DRepDistr = "
+        ++ show (summaryMapCompact (psDRepDistr psnap))

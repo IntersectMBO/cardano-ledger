@@ -265,6 +265,7 @@ import Data.Kind (Type)
 import Data.List (sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), pulse)
 import Data.Ratio ((%))
 import Data.Sequence (Seq)
@@ -866,7 +867,8 @@ votingDRepThresholdInternal pp isElectedCommittee action =
 -- Lenses for access to (DRepPulsingState era)
 
 newEpochStateDRepPulsingStateL :: ConwayEraGov era => Lens' (NewEpochState era) (DRepPulsingState era)
-newEpochStateDRepPulsingStateL = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
+newEpochStateDRepPulsingStateL =
+  nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
 
 epochStateDRepPulsingStateL :: ConwayEraGov era => Lens' (EpochState era) (DRepPulsingState era)
 epochStateDRepPulsingStateL = esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
@@ -876,19 +878,28 @@ epochStateDRepPulsingStateL = esLStateL . lsUTxOStateL . utxosGovStateL . drepPu
 -- ===============================================================================
 
 -- | Given three inputs
---   1) Map (Credential 'Staking c) (DRep c).   The delegation map. Inside the DRepUView of the UMap 'um' from the DState.
---   2) regDreps :: Map (Credential 'DRepRole c) (DRepState c). The map of registered DReps to their state. The first part of the VState.
---   3) stakeDistr :: VMap VB VP (Credential 'Staking c) (CompactForm Coin). The aggregated stake distr extracted from the
---      first component of the IncrementalStake i.e. (IStake credmap _) where credmap is converted to a VMap
+--
+--   1) Map (Credential 'Staking c) (DRep c). The delegation map. Inside the DRepUView of
+--   the UMap 'um' from the DState.
+--
+--   2) regDreps :: Map (Credential 'DRepRole c) (DRepState c). The map of registered
+--   DReps to their state. The first part of the VState.
+--
+--   3) stakeDistr :: VMap VB VP (Credential 'Staking c) (CompactForm Coin). The
+--   aggregated stake distr extracted from the first component of the IncrementalStake
+--   i.e. (IStake credmap _) where credmap is converted to a VMap
+--
 --  Compute the Drep distribution of stake(Coin)
 --  cost is expected to be O(size of 'stakeDistr' * log (size of 'um') * log (size of 'regDreps'))
---  This is going to be expensive, so we will want to pulse it. Without pulsing, we estimate 3-5 seconds
+--  This is going to be expensive, so we will want to pulse it. Without pulsing,
+--  we estimate 3-5 seconds
 computeDrepDistr ::
   UMap c ->
   Map (Credential 'DRepRole c) (DRepState c) ->
   Map (Credential 'Staking c) (CompactForm Coin) ->
   Map (DRep c) (CompactForm Coin)
-computeDrepDistr um regDreps stakeDistr = Map.foldlWithKey' (accumDRepDistr um regDreps) Map.empty stakeDistr
+computeDrepDistr um regDreps stakeDistr =
+  Map.foldlWithKey' (accumDRepDistr um regDreps) Map.empty stakeDistr
 
 -- | For each 'stakecred' and coin 'c', check if that credential is delegated to some DRep.
 --   If so then add that coin to the aggregated map 'ans', mapping DReps to compact Coin
@@ -901,13 +912,21 @@ accumDRepDistr ::
   Credential 'Staking c ->
   CompactForm Coin ->
   Map (DRep c) (CompactForm Coin)
-accumDRepDistr um regDreps ans stakecred c =
-  case UMap.lookup stakecred (DRepUView um) of
-    Nothing -> ans
-    Just drep@DRepAlwaysAbstain -> Map.insertWith UMap.addCompact drep c ans
-    Just drep@DRepAlwaysNoConfidence -> Map.insertWith UMap.addCompact drep c ans
-    Just (DRepCredential cred2) | Map.notMember cred2 regDreps -> ans
-    Just drep@(DRepCredential _) -> Map.insertWith UMap.addCompact drep c ans
+accumDRepDistr um regDreps ans stakeCred stake@(CompactCoin compactStake) = fromMaybe ans $ do
+  umElem <- Map.lookup stakeCred (umElems um)
+  drep <- umElemDRep umElem
+  let stakeWithRewards =
+        case umElemRDPair umElem of
+          Nothing -> stake
+          Just rdPair
+            | CompactCoin compactReward <- rdReward rdPair ->
+                CompactCoin (compactReward + compactStake)
+  pure $ case drep of
+    DRepAlwaysAbstain -> Map.insertWith UMap.addCompact drep stakeWithRewards ans
+    DRepAlwaysNoConfidence -> Map.insertWith UMap.addCompact drep stakeWithRewards ans
+    DRepCredential drepCred
+      | Map.member drepCred regDreps -> Map.insertWith UMap.addCompact drep stakeWithRewards ans
+      | otherwise -> ans
 
 -- | The type of a Pulser which uses 'accumDRepDistr' as its underlying function.
 --   'accumDRepDistr' will be partially applied to the components of type (UMap c)
