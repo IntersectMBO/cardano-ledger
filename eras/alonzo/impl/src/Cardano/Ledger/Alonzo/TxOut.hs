@@ -289,7 +289,7 @@ pattern AlonzoTxOut addr vl dh <-
       , Just (Refl, dataHash32) <- encodeDataHash32 dh =
           TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
     AlonzoTxOut addr vl mdh =
-      let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
+      let v = fromMaybe (error $ "Illegal value in TxOut: " ++ show vl) $ toCompact vl
           a = compactAddr addr
        in case mdh of
             SNothing -> TxOutCompact' a v

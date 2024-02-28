@@ -7,13 +7,15 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.AddressSpec (roundTripAddressSpec) where
+module Test.Cardano.Ledger.AddressSpec (spec) where
 
+import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Address
-import Cardano.Ledger.Binary (Version, decodeFull', natVersion, serialize')
+import Cardano.Ledger.Binary (Version, byronProtVer, decodeFull', natVersion, serialize')
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
+import Cardano.Ledger.Keys (BootstrapWitness (..), bootstrapWitKeyHash, coerceKeyRole, unpackByronVKey)
 import Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.Binary.Put as B
 import Data.Bits
@@ -33,9 +35,31 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
 import Test.Cardano.Ledger.Common hiding ((.&.))
 import Test.Cardano.Ledger.Core.Address
 import Test.Cardano.Ledger.Core.Arbitrary (genAddrBadPtr, genCompactAddrBadPtr)
+import Test.Cardano.Ledger.Core.KeyPair (genByronVKeyAddr)
+
+spec :: Spec
+spec =
+  describe "Address" $ do
+    roundTripAddressSpec
+    prop "rebuild the 'addr root' using a bootstrap witness" $ do
+      (byronVKey, byronAddr) <- genByronVKeyAddr
+      sig <- arbitrary
+      let addr = BootstrapAddress byronAddr
+          (shelleyVKey, chainCode) = unpackByronVKey @StandardCrypto byronVKey
+          witness :: BootstrapWitness StandardCrypto
+          witness =
+            BootstrapWitness
+              { bwKey = shelleyVKey
+              , bwChainCode = chainCode
+              , bwSig = sig
+              , bwAttributes = serialize' byronProtVer $ Byron.addrAttributes byronAddr
+              }
+      pure $
+        coerceKeyRole (bootstrapKeyHash @StandardCrypto addr)
+          === bootstrapWitKeyHash witness
 
 roundTripAddressSpec :: Spec
-roundTripAddressSpec = describe "Address" $ do
+roundTripAddressSpec = do
   describe "CompactAddr" $ do
     roundTripCborSpec @(CompactAddr StandardCrypto)
     prop "compactAddr/decompactAddr round trip" $

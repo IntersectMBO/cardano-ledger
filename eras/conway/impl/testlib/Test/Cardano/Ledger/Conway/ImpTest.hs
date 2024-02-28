@@ -77,7 +77,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getLastEnactedCommittee,
 ) where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..), Signable)
+import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock)
@@ -88,6 +88,7 @@ import Cardano.Ledger.BaseTypes (
   Network (..),
   ShelleyBase,
   StrictMaybe (..),
+  addEpochInterval,
   inject,
   textToUrl,
  )
@@ -181,13 +182,14 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (ConwayEra c)
   where
-  initImpNES rootCoin =
+  initImpNES =
     let nes =
-          initAlonzoImpNES rootCoin
+          initAlonzoImpNES
             & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
             & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
         epochState = nes ^. nesEsL
@@ -221,6 +223,7 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ConwayEraImp (ConwayEra c)
@@ -303,9 +306,10 @@ setupPoolWithStake delegCoin = do
   khPool <- registerPool
   credDelegatorPayment <- KeyHashObj <$> freshKeyHash
   credDelegatorStaking <- KeyHashObj <$> freshKeyHash
-  sendCoinTo
-    (Addr Testnet credDelegatorPayment (StakeRefBase credDelegatorStaking))
-    delegCoin
+  void $
+    sendCoinTo
+      (Addr Testnet credDelegatorPayment (StakeRefBase credDelegatorStaking))
+      delegCoin
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   submitTxAnn_ "Delegate to stake pool" $
     mkBasicTx mkBasicTxBody
@@ -412,13 +416,29 @@ submitProposal ::
 submitProposal proposal = trySubmitProposal proposal >>= expectRightExpr
 
 submitProposals ::
-  (ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =>
+  (ShelleyEraImp era, ConwayEraGov era, ConwayEraTxBody era, HasCallStack) =>
   NE.NonEmpty (ProposalProcedure era) ->
   ImpTestM era (NE.NonEmpty (GovActionId (EraCrypto era)))
 submitProposals proposals = do
+  curEpochNo <- getsNES nesELL
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
   tx <- trySubmitProposals proposals >>= expectRightExpr
   let txId = txIdTx tx
-  pure $ NE.zipWith (\ix _ -> GovActionId txId (GovActionIx ix)) (0 NE.:| [1 ..]) proposals
+      proposalsWithGovActionId =
+        NE.zipWith (\ix p -> (GovActionId txId (GovActionIx ix), p)) (0 NE.:| [1 ..]) proposals
+  forM proposalsWithGovActionId $ \(govActionId, proposal) -> do
+    govActionState <- getGovActionState govActionId
+    govActionState
+      `shouldBeExpr` GovActionState
+        { gasId = govActionId
+        , gasCommitteeVotes = mempty
+        , gasDRepVotes = mempty
+        , gasStakePoolVotes = mempty
+        , gasProposalProcedure = proposal
+        , gasProposedIn = curEpochNo
+        , gasExpiresAfter = addEpochInterval curEpochNo (pp ^. ppGovActionLifetimeL)
+        }
+    pure govActionId
 
 -- | Submits a transaction that proposes the given proposal
 trySubmitProposal ::

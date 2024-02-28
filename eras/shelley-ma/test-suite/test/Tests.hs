@@ -19,9 +19,6 @@ import Test.Cardano.Ledger.Mary.Golden (goldenScaledMinDeposit)
 import Test.Cardano.Ledger.Mary.Translation (maryTranslationTests)
 import Test.Cardano.Ledger.Mary.Value (valTests)
 import Test.Cardano.Ledger.MaryEraGen ()
-import qualified Test.Cardano.Ledger.Shelley.Address.Bootstrap as Bootstrap (
-  bootstrapHashTest,
- )
 import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley (commonTests)
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
 import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTraces (onlyValidChainSignalsAreGenerated, relevantCasesAreCovered)
@@ -65,7 +62,6 @@ allegraTests =
       )
     , AdaPreservation.tests @Allegra @(ShelleyLEDGER Allegra) (maxSuccess stdArgs)
     , ClassifyTraces.onlyValidChainSignalsAreGenerated @Allegra
-    , Bootstrap.bootstrapHashTest
     , WitVKeys.tests @(EraCrypto Allegra)
     , testScriptPostTranslation
     ]

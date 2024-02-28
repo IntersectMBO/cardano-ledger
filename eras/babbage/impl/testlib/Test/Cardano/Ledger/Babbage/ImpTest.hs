@@ -9,7 +9,7 @@
 
 module Test.Cardano.Ledger.Babbage.ImpTest () where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
+import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
 import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Core
@@ -27,6 +27,7 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (BabbageEra c)

@@ -24,6 +24,10 @@
 
 ### `testlib`
 
+* Add argument to `impSatisfyNativeScript` that accounts for already satisifed witnesses
+* Remove `impFreshIdxL`
+* Remove root coin argument from `initImpNES`, `initShelleyImpNES`
+* Adjust `sendCointTo` and `sendValueTo` to return `TxIn`
 * Added `ToExpr` instance for `ShelleyTxAuxDataRaw`
 * Add:
   * `PlutusArgs`

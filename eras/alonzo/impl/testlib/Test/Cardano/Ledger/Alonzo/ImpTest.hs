@@ -23,32 +23,22 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   fixupDatums,
 ) where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
+import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
 import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Core (AlonzoEraScript (..), AlonzoEraTxOut (..), AsIxItem, Era (..), EraGov)
-import Cardano.Ledger.Alonzo.PParams (AlonzoEraPParams, getLanguageView, ppCostModelsL, ppMaxTxExUnitsL, ppMaxValSizeL)
+import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Scripts (
-  AsItem (..),
   ExUnits (..),
   plutusScriptLanguage,
   toAsItem,
   toAsIx,
  )
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
-import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..))
-import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (
-  EraIndependentTxBody,
-  EraScript (..),
-  EraTx (..),
-  EraTxOut (..),
-  EraTxWits (..),
-  ScriptHash,
- )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), hashData)
@@ -72,10 +62,11 @@ import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
-import Lens.Micro.Mtl (use, (%=), (.=))
+import Lens.Micro.Mtl (use, (%=))
 import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
-import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (PlutusArgs (..), ScriptTestContext (..), testingCostModels)
 import Test.Cardano.Ledger.Shelley.ImpTest as ImpTest
 
@@ -86,10 +77,9 @@ initAlonzoImpNES ::
   , ShelleyEraImp era
   , AlonzoEraScript era
   ) =>
-  Coin ->
   NewEpochState era
-initAlonzoImpNES rootCoin =
-  initShelleyImpNES rootCoin
+initAlonzoImpNES =
+  initShelleyImpNES
     & nesEsL . curPParamsEpochStateL %~ initPParams
   where
     initPParams pp =
@@ -100,21 +90,26 @@ initAlonzoImpNES rootCoin =
           .~ testingCostModels
             [PlutusV1 .. eraMaxLanguage @era]
 
-makeCollateralInput :: ImpTestM era (TxIn (EraCrypto era))
+makeCollateralInput :: ShelleyEraImp era => ImpTestM era (TxIn (EraCrypto era))
 makeCollateralInput = do
-  x : xs <- use impCollateralTxIdsL
-  impCollateralTxIdsL .= xs
-  pure x
+  -- TODO: make more accurate
+  let collateral = Coin 10_000_000
+  (_, addr) <- freshKeyAddr
+  sendCoinTo addr collateral
 
 addCollateralInput ::
-  (AlonzoEraTxBody era, EraTx era) =>
+  (AlonzoEraTxBody era, ShelleyEraImp era, ScriptsNeeded era ~ AlonzoScriptsNeeded era) =>
   Tx era ->
   ImpTestM era (Tx era)
 addCollateralInput tx = do
-  collInput <- makeCollateralInput
-  pure $
-    tx
-      & bodyTxL . collateralInputsTxBodyL <>~ Set.singleton collInput
+  ctx <- impGetPlutusContexts tx
+  if null ctx
+    then pure tx
+    else do
+      collateralInput <- makeCollateralInput
+      pure $
+        tx
+          & bodyTxL . collateralInputsTxBodyL <>~ Set.singleton collateralInput
 
 impLookupPlutusScript ::
   AlonzoEraScript era =>
@@ -122,9 +117,7 @@ impLookupPlutusScript ::
   ImpTestM era (Maybe (PlutusScript era))
 impLookupPlutusScript sh = do
   mbyCtx <- getScriptTestContext sh
-  case mbyCtx of
-    Just (ScriptTestContext plutus _) -> pure $ mkPlutusScript plutus
-    Nothing -> pure Nothing
+  pure $ mbyCtx >>= \(ScriptTestContext plutus _) -> mkPlutusScript plutus
 
 impGetPlutusContexts ::
   (ScriptsNeeded era ~ AlonzoScriptsNeeded era, EraUTxO era) =>
@@ -269,6 +262,7 @@ alonzoFixupTx ::
   , AlonzoEraTxBody era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , AlonzoEraUTxO era
+  , HasCallStack
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
@@ -287,6 +281,7 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (AlonzoEra c)

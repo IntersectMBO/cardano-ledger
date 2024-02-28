@@ -1162,7 +1162,7 @@ spec =
           -- Bump up the UTxO delegated
           -- to barely make the threshold (51 %! 100)
           stakingKP1 <- lookupKeyPair stakingKH1
-          sendCoinTo (mkAddr (paymentKP1, stakingKP1)) (inject $ Coin 200_000)
+          _ <- sendCoinTo (mkAddr (paymentKP1, stakingKP1)) (inject $ Coin 200_000)
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
@@ -1230,9 +1230,10 @@ spec =
           getLastEnactedCommittee `shouldReturn` SNothing
           -- Bump up the UTxO delegated
           -- to barely make the threshold (51 %! 100)
-          sendCoinTo
-            (Addr Testnet delegatorCPayment1 (StakeRefBase delegatorCStaking1))
-            (Coin 200_000)
+          _ <-
+            sendCoinTo
+              (Addr Testnet delegatorCPayment1 (StakeRefBase delegatorCStaking1))
+              (Coin 200_000)
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)

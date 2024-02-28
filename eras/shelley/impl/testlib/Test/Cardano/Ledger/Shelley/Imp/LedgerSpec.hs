@@ -26,8 +26,6 @@ spec = describe "LEDGER" $ do
   it "Transactions update UTxO" $ do
     kpPayment1 <- lookupKeyPair =<< freshKeyHash
     kpStaking1 <- lookupKeyPair =<< freshKeyHash
-    UTxO utxo0 <- getUTxO
-    length utxo0 `shouldBe` 101
     let coin1 = Coin 1000
     tx1 <-
       submitTxAnn "First transaction" . mkBasicTx $

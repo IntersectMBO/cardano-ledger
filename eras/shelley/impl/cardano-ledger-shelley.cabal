@@ -142,6 +142,7 @@ library testlib
         Test.Cardano.Ledger.Shelley.Imp
         Test.Cardano.Ledger.Shelley.Imp.EpochSpec
         Test.Cardano.Ledger.Shelley.Imp.LedgerSpec
+        Test.Cardano.Ledger.Shelley.Imp.UtxowSpec
         Test.Cardano.Ledger.Shelley.TreeDiff
 
     visibility:       public

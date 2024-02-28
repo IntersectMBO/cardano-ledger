@@ -14,7 +14,6 @@ import Cardano.Ledger.Plutus.CostModels (CostModelError (..))
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap (RDPair)
-import Test.Cardano.Ledger.AddressSpec (roundTripAddressSpec)
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -39,7 +38,6 @@ spec = do
     roundTripCborSpec @TxIx
     roundTripCborSpec @CertIx
     roundTripCborSpec @(Anchor StandardCrypto)
-    roundTripAddressSpec
     roundTripAnnCborSpec @(BootstrapWitness StandardCrypto)
     roundTripCborSpec @(TxId StandardCrypto)
     roundTripCborSpec @(GenDelegPair StandardCrypto)

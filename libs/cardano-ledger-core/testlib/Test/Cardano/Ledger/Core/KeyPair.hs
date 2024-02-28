@@ -9,6 +9,7 @@
 
 module Test.Cardano.Ledger.Core.KeyPair (
   mkAddr,
+  mkScriptAddr,
   mkCred,
   KeyPair (..),
   KeyPairs,
@@ -17,18 +18,22 @@ module Test.Cardano.Ledger.Core.KeyPair (
   makeWitnessesFromScriptKeys,
   mkVKeyRewardAccount,
   mkKeyPair,
+  mkKeyPairWithSeed,
   mkKeyHash,
   ByronKeyPair (..),
-  mkScriptAddr,
+  mkBootKeyPairWithSeed,
+  genByronVKeyAddr,
+  genByronAddrFromVKey,
 
   -- * Deprecations
   mkVKeyRwdAcnt,
 )
 where
 
+import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash (hashToBytes)
-import qualified Cardano.Crypto.Hash as CH
+import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.Signing as Byron (
   SigningKey,
@@ -36,8 +41,8 @@ import qualified Cardano.Crypto.Signing as Byron (
   deterministicKeyGen,
  )
 import Cardano.Ledger.Address
-import Cardano.Ledger.BaseTypes (Network (Testnet), shelleyProtVer)
-import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder)
+import Cardano.Ledger.BaseTypes (Network (Testnet))
+import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
   Credential (..),
@@ -58,6 +63,8 @@ import Cardano.Ledger.Keys (
 import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Control.DeepSeq (NFData)
+import Control.Exception (assert)
+import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -66,8 +73,12 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
+import System.Random.Stateful
+import qualified Test.Cardano.Chain.Common.Gen as Byron
+import qualified Test.Cardano.Crypto.Gen as Byron
+import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.QuickCheck
+import Test.QuickCheck.Hedgehog (hedgehog)
 
 data KeyPair (kd :: KeyRole) c = KeyPair
   { vKey :: !(VKey kd c)
@@ -89,15 +100,13 @@ instance Crypto c => NoThunks (KeyPair kd c)
 
 instance HasKeyRole KeyPair
 
-instance DSIGN.DSIGNAlgorithm (DSIGN c) => Arbitrary (KeyPair kd c) where
-  arbitrary = do
-    seed <- mkSeedFromBytes <$> genByteString (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @(DSIGN c))))
-    let signKey = DSIGN.genKeyDSIGN seed
-    pure $
-      KeyPair
-        { vKey = VKey $ DSIGN.deriveVerKeyDSIGN signKey
-        , sKey = signKey
-        }
+instance Crypto c => Arbitrary (KeyPair kd c) where
+  arbitrary = uniformM QC
+
+instance Crypto c => Uniform (KeyPair kd c) where
+  uniformM g =
+    mkKeyPairWithSeed
+      <$> uniformByteStringM (fromIntegral (DSIGN.seedSizeDSIGN (Proxy @(DSIGN c)))) g
 
 mkAddr ::
   Crypto c =>
@@ -123,7 +132,7 @@ mkCred k = KeyHashObj . hashKey $ vKey k
 mkWitnessVKey ::
   forall c kr.
   ( Crypto c
-  , DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
+  , DSignable c (Hash.Hash (HASH c) EraIndependentTxBody)
   ) =>
   SafeHash c EraIndependentTxBody ->
   KeyPair kr c ->
@@ -135,7 +144,7 @@ mkWitnessVKey safe keys =
 mkWitnessesVKey ::
   forall c kr.
   ( Crypto c
-  , DSignable c (CH.Hash (HASH c) EraIndependentTxBody)
+  , DSignable c (Hash.Hash (HASH c) EraIndependentTxBody)
   ) =>
   SafeHash c EraIndependentTxBody ->
   [KeyPair kr c] ->
@@ -173,13 +182,14 @@ mkKeyHash :: Crypto c => Int -> KeyHash kd c
 mkKeyHash = hashKey . vKey . mkKeyPair
 
 mkKeyPair :: Crypto c => Int -> KeyPair r c
-mkKeyPair seed = KeyPair vk sk
+mkKeyPair = mkKeyPairWithSeed . Plain.serialize'
+
+mkKeyPairWithSeed :: forall r c. Crypto c => BS.ByteString -> KeyPair r c
+mkKeyPairWithSeed inputSeed = assert (seedSize == 32) $ KeyPair vk sk
   where
+    seedSize = DSIGN.seedSizeDSIGN (Proxy @(DSIGN c))
     vk = VKey (DSIGN.deriveVerKeyDSIGN sk)
-    sk =
-      DSIGN.genKeyDSIGN $
-        mkSeedFromBytes . hashToBytes $
-          hashWithEncoder @CH.Blake2b_256 shelleyProtVer encCBOR seed
+    sk = DSIGN.genKeyDSIGN $ mkSeedFromBytes $ ensure32ByteSeed inputSeed
 
 data ByronKeyPair = ByronKeyPair
   { bkpVerificationKey :: !Byron.VerificationKey
@@ -188,4 +198,28 @@ data ByronKeyPair = ByronKeyPair
   deriving (Generic, Show)
 
 instance Arbitrary ByronKeyPair where
-  arbitrary = uncurry ByronKeyPair . Byron.deterministicKeyGen <$> genByteString 32
+  arbitrary = uniformM QC
+
+instance Uniform ByronKeyPair where
+  uniformM g = mkBootKeyPairWithSeed <$> uniformByteStringM 32 g
+
+mkBootKeyPairWithSeed :: BS.ByteString -> ByronKeyPair
+mkBootKeyPairWithSeed = uncurry ByronKeyPair . Byron.deterministicKeyGen . ensure32ByteSeed
+
+ensure32ByteSeed :: BS.ByteString -> BS.ByteString
+ensure32ByteSeed inputSeed
+  | BS.length inputSeed /= seedSize =
+      hashToBytes $ Hash.hashWith @Hash.Blake2b_256 id inputSeed
+  | otherwise = inputSeed
+  where
+    seedSize = 32
+
+genByronVKeyAddr :: Gen (Byron.VerificationKey, Byron.Address)
+genByronVKeyAddr = do
+  vkey <- hedgehog Byron.genVerificationKey
+  addr <- genByronAddrFromVKey vkey
+  pure (vkey, addr)
+
+genByronAddrFromVKey :: Byron.VerificationKey -> Gen Byron.Address
+genByronAddrFromVKey vkey =
+  Byron.makeAddress (Byron.VerKeyASD vkey) <$> hedgehog Byron.genAddrAttributes
