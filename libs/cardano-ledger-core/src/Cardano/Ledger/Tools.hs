@@ -12,6 +12,7 @@ module Cardano.Ledger.Tools (
   estimateMinFeeTx,
   addDummyWitsTx,
   integralToByteStringN,
+  boom,
 )
 where
 
@@ -41,6 +42,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Proxy
 import qualified Data.Set as Set
+import GHC.Stack (HasCallStack)
 import Lens.Micro
 
 -- | Calculate and update the fee in the transaction until it has the smallest possible
@@ -255,3 +257,8 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
       BootstrapWitness key dummySig chainCode . serialize' byronProtVer
     dummyByronKeyWits =
       Set.fromList $ zipWith mkDummyByronKeyWit dummyKeys byronAttrs
+
+-- | A helpful placeholder to use during development.
+boom :: HasCallStack => a
+boom = error "Unimplemented"
+{-# WARNING boom "BOOM!" #-}
