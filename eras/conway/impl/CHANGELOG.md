@@ -2,6 +2,13 @@
 
 ## 1.13.0.0
 
+* Guard Conway-specific features in transactions that use Plutus v1 or v2. #4112
+  * Add `PlutusContextError` variants:
+    * `CurrentTreasuryValueFieldNotSupported`
+    * `VotingProceduresFieldNotSupported`
+    * `ProposalProceduresFieldNotSupported`
+    * `TreasuryDonationFieldNotSupported`
+  * Allow `RegDepositTxCert` and `UnRegDepositTxCert` to pass by ignoring the deposit or refund values, respectively.
 * Switch `EPOCH` rule environment back to `()`. Start using the latest stake pool
   distribution: #4115
 * Add:

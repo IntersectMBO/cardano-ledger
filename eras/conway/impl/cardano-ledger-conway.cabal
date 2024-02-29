@@ -133,7 +133,7 @@ library testlib
     build-depends:
         base,
         bytestring,
-        cardano-data:testlib,
+        cardano-data:{cardano-data, testlib},
         containers,
         plutus-ledger-api,
         deepseq,

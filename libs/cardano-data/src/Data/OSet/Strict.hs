@@ -47,6 +47,7 @@ import Cardano.Ledger.Binary (
   setTag,
  )
 import Control.DeepSeq (NFData)
+import Data.Aeson (ToJSON (toJSON))
 import Data.Foldable qualified as F
 import Data.Sequence.Strict qualified as SSeq
 import Data.Set qualified as Set
@@ -106,6 +107,9 @@ instance EncCBOR a => EncCBOR (OSet a) where
 
 instance (Show a, Ord a, DecCBOR a) => DecCBOR (OSet a) where
   decCBOR = decodeSetLikeEnforceNoDuplicates (flip snoc) (\oset -> (size oset, oset)) decCBOR
+
+instance ToJSON a => ToJSON (OSet a) where
+  toJSON = toJSON . F.toList
 
 -- | \( O(1) \). Shallow invariant using just `length` and `size`.
 invariantHolds :: OSet a -> Bool

@@ -15,9 +15,8 @@ import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
-import Cardano.Ledger.Conway.Rules (
-  ConwayGovPredFailure,
- )
+import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure)
+import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
@@ -32,6 +31,7 @@ spec ::
   , GovState era ~ ConwayGovState era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   , Inject (BabbageContextError era) (ContextError era)
+  , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>

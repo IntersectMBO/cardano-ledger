@@ -78,7 +78,6 @@ import Cardano.Ledger.TxIn (TxIn (..), txInToText)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (zero)
 import Cardano.Slotting.EpochInfo (EpochInfo)
-import Cardano.Slotting.Slot (EpochNo (..))
 import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
@@ -311,8 +310,8 @@ transTxCertCommon = \case
   RegPoolTxCert (PoolParams {ppId, ppVrf}) ->
     Just $
       PV1.DCertPoolRegister (transKeyHash ppId) (PV1.PubKeyHash (PV1.toBuiltin (hashToBytes ppVrf)))
-  RetirePoolTxCert poolId (EpochNo i) ->
-    Just $ PV1.DCertPoolRetire (transKeyHash poolId) (toInteger i)
+  RetirePoolTxCert poolId retireEpochNo ->
+    Just $ PV1.DCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
   _ -> Nothing
 
 transPlutusPurpose ::
