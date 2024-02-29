@@ -49,8 +49,9 @@ newtype Version = Version Word64
 -- | Minimum supported version
 type MinVersion = 0
 
--- | Maximum supported version. This is the protocol version of the next upcoming era
-type MaxVersion = 10
+-- | Maximum supported version. This is the major protocol version of the latest known
+-- protocol version that we want to support, including for development and testing.
+type MaxVersion = 11
 
 instance Enum Version where
   toEnum = errorFail . mkVersion

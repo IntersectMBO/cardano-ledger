@@ -2,6 +2,7 @@
 
 ## 1.3.1.0
 
+* Increase `MaxVersion` to `11`
 * Add `EncCBOR` and `DecCBOR` instances for `EpochInterval`
 
 ## 1.3.0.0
