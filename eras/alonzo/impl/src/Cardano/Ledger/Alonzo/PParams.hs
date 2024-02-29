@@ -468,9 +468,7 @@ alonzoPParamsPairs ::
   PParamsHKD Identity (AlonzoEra c) ->
   [a]
 alonzoPParamsPairs pp =
-  uncurry (.=)
-    <$> alonzoPParamsHKDPairs (Proxy @Identity) pp
-      ++ ["minUTxOValue" .= Aeson.Null]
+  uncurry (.=) <$> alonzoPParamsHKDPairs (Proxy @Identity) pp
 
 instance FromJSON (AlonzoPParams Identity era) where
   parseJSON =

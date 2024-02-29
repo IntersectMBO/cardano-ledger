@@ -102,7 +102,7 @@ import Data.Aeson as Aeson (
   Key,
   KeyValue ((.=)),
   ToJSON (..),
-  Value (Null),
+  Value,
   object,
   pairs,
   withObject,
@@ -350,12 +350,7 @@ babbagePParamsPairs ::
   PParamsHKD Identity era ->
   [a]
 babbagePParamsPairs pp =
-  uncurry (.=)
-    <$> babbagePParamsHKDPairs (Proxy @Identity) pp
-      ++ [ "decentralization" .= Aeson.Null
-         , "extraPraosEntropy" .= Aeson.Null
-         , "minUTxOValue" .= Aeson.Null
-         ]
+  uncurry (.=) <$> babbagePParamsHKDPairs (Proxy @Identity) pp
 
 instance FromJSON (BabbagePParams Identity era) where
   parseJSON =
