@@ -1,6 +1,7 @@
 # Version history for `cardano-ledger-shelley`
 
 * Modify `PParams` JSON instances to match `cardano-api`
+* Add wrapper to `PParams` in `ShelleyGenesis` to preserve the legacy behaviour of JSON instances
 ## 1.9.0.0
 
 * Add `getShelleyGenesisKeyHashCountTxBody`

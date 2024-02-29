@@ -50,6 +50,7 @@ import Cardano.Ledger.BaseTypes (
   EpochSize (..),
   Globals (..),
   Network,
+  Nonce (..),
   PositiveUnitInterval,
   Version,
   mkActiveSlotCoeff,
@@ -79,15 +80,17 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.PParams ()
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams (..))
 import Cardano.Ledger.Shelley.StabilityWindow
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (UTxO))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart (SystemStart))
-import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
+import Control.Monad.Identity (Identity)
+import Data.Aeson (FromJSON (..), ToJSON (..), object, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import Data.Aeson.Types (Parser, Value (..), typeMismatch)
 import Data.Fixed (Fixed (..), Micro, Pico)
 import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
@@ -247,6 +250,105 @@ instance Crypto c => ToJSON (ShelleyGenesis c) where
   toJSON = Aeson.object . toShelleyGenesisPairs
   toEncoding = Aeson.pairs . mconcat . toShelleyGenesisPairs
 
+--------------------------------------------------
+-- Legacy JSON representation of ShelleyGenesis --
+--------------------------------------------------
+newtype LegacyJSONPParams c = LegacyJSONPParams (PParamsHKD Identity (ShelleyEra c))
+
+legacyFromJSONPParams :: LegacyJSONPParams c -> PParams (ShelleyEra c)
+legacyFromJSONPParams (LegacyJSONPParams x) = PParams x
+
+instance FromJSON (LegacyJSONPParams c) where
+  parseJSON =
+    Aeson.withObject "ShelleyPParams" $ \obj -> do
+      LegacyJSONPParams
+        <$> ( ShelleyPParams
+                <$> obj .: "minFeeA"
+                <*> obj .: "minFeeB"
+                <*> obj .: "maxBlockBodySize"
+                <*> obj .: "maxTxSize"
+                <*> obj .: "maxBlockHeaderSize"
+                <*> obj .: "keyDeposit"
+                <*> obj .: "poolDeposit"
+                <*> obj .: "eMax"
+                <*> obj .: "nOpt"
+                <*> obj .: "a0"
+                <*> obj .: "rho"
+                <*> obj .: "tau"
+                <*> obj .: "decentralisationParam"
+                <*> (parseNonce =<< (obj .: "extraEntropy"))
+                <*> obj .: "protocolVersion"
+                <*> obj .:? "minUTxOValue" .!= mempty
+                <*> obj .:? "minPoolCost" .!= mempty
+            )
+    where
+      parseNonce :: Aeson.Value -> Parser Nonce
+      parseNonce =
+        Aeson.withObject
+          "Nonce"
+          ( \obj -> do
+              tag <- (obj .: "tag" :: Parser Text)
+              case tag of
+                "Nonce" -> Nonce <$> obj .: "contents"
+                "NeutralNonce" -> return NeutralNonce
+                _ -> typeMismatch "Nonce" (Object obj)
+          )
+
+legacyToJSONPParams :: PParams (ShelleyEra c) -> LegacyJSONPParams c
+legacyToJSONPParams (PParams x) = LegacyJSONPParams x
+
+instance ToJSON (LegacyJSONPParams c) where
+  toJSON
+    ( LegacyJSONPParams
+        ( ShelleyPParams
+            { sppMinFeeA
+            , sppMinFeeB
+            , sppMaxBBSize
+            , sppMaxTxSize
+            , sppMaxBHSize
+            , sppKeyDeposit
+            , sppPoolDeposit
+            , sppEMax
+            , sppNOpt
+            , sppA0
+            , sppRho
+            , sppTau
+            , sppD
+            , sppExtraEntropy
+            , sppProtocolVersion
+            , sppMinUTxOValue
+            , sppMinPoolCost
+            }
+          )
+      ) =
+      Aeson.object
+        [ "minFeeA" .= sppMinFeeA
+        , "minFeeB" .= sppMinFeeB
+        , "maxBlockBodySize" .= sppMaxBBSize
+        , "maxTxSize" .= sppMaxTxSize
+        , "maxBlockHeaderSize" .= sppMaxBHSize
+        , "keyDeposit" .= sppKeyDeposit
+        , "poolDeposit" .= sppPoolDeposit
+        , "eMax" .= sppEMax
+        , "nOpt" .= sppNOpt
+        , "a0" .= sppA0
+        , "rho" .= sppRho
+        , "tau" .= sppTau
+        , "decentralisationParam" .= sppD
+        , "extraEntropy"
+            .= object
+              ( case sppExtraEntropy of
+                  Nonce hash ->
+                    [ "tag" .= ("Nonce" :: Text)
+                    , "contents" .= hash
+                    ]
+                  NeutralNonce -> ["tag" .= ("NeutralNonce" :: Text)]
+              )
+        , "protocolVersion" .= sppProtocolVersion
+        , "minUTxOValue" .= sppMinUTxOValue
+        , "minPoolCost" .= sppMinPoolCost
+        ]
+
 toShelleyGenesisPairs :: (Aeson.KeyValue e a, Crypto c) => ShelleyGenesis c -> [a]
 toShelleyGenesisPairs
   ShelleyGenesis
@@ -279,7 +381,7 @@ toShelleyGenesisPairs
         , "slotLength" .= sgSlotLength
         , "updateQuorum" .= sgUpdateQuorum
         , "maxLovelaceSupply" .= sgMaxLovelaceSupply
-        , "protocolParams" .= sgProtocolParams
+        , "protocolParams" .= legacyToJSONPParams sgProtocolParams
         , "genDelegs" .= sgGenDelegs
         , "initialFunds" .= strictSgInitialFunds
         , "staking" .= strictSgStaking
@@ -300,7 +402,7 @@ instance Crypto c => FromJSON (ShelleyGenesis c) where
         <*> obj .: "slotLength"
         <*> obj .: "updateQuorum"
         <*> obj .: "maxLovelaceSupply"
-        <*> obj .: "protocolParams"
+        <*> (legacyFromJSONPParams <$> obj .: "protocolParams")
         <*> (forceElemsToWHNF <$> obj .: "genDelegs")
         <*> (forceElemsToWHNF <$> obj .: "initialFunds") -- TODO: disable. Move to EraTransition
         <*> obj .:? "staking" .!= emptyGenesisStaking -- TODO: remove. Move to EraTransition
