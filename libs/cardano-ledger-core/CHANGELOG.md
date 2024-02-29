@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Added `boom` placeholder
 * Add `EraRuleFailure` type family and `InjectRuleFailure` type class
 * Add `VoidFailure`
 * Fix `ToJSON`/`FromJSON` instances of `Prices`
