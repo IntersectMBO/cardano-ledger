@@ -21,6 +21,7 @@ import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as Gov
+import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
 import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp, withImpState)
@@ -43,3 +44,4 @@ spec = do
     Gov.spec @era
     Utxo.spec @era
     Utxos.spec @era
+    Ratify.spec @era

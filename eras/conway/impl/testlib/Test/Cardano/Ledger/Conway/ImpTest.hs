@@ -75,6 +75,11 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   ccShouldBeResigned,
   ccShouldNotBeResigned,
   getLastEnactedCommittee,
+  getLastEnactedConstitution,
+  submitParameterChange,
+  getLastEnactedParameterChange,
+  getConstitutionProposals,
+  getParameterChangeProposals,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -573,6 +578,14 @@ submitTreasuryWithdrawals wdrls = do
   policy <- getGovPolicy
   submitGovAction $ TreasuryWithdrawals (Map.fromList wdrls) policy
 
+submitParameterChange ::
+  ConwayEraImp era =>
+  StrictMaybe (GovPurposeId 'PParamUpdatePurpose era) ->
+  PParamsUpdate era ->
+  ImpTestM era (GovActionId (EraCrypto era))
+submitParameterChange parent ppu =
+  submitGovAction $ ParameterChange parent ppu SNothing
+
 getGovPolicy :: ConwayEraGov era => ImpTestM era (StrictMaybe (ScriptHash (EraCrypto era)))
 getGovPolicy =
   getsNES $
@@ -604,6 +617,40 @@ getLastEnactedCommittee :: ConwayEraGov era => ImpTestM era (StrictMaybe (GovPur
 getLastEnactedCommittee = do
   ps <- getProposals
   pure $ ps ^. pRootsL . grCommitteeL . prRootL
+
+getLastEnactedConstitution :: ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
+getLastEnactedConstitution = do
+  ps <- getProposals
+  pure $ ps ^. pRootsL . grConstitutionL . prRootL
+
+getLastEnactedParameterChange :: ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
+getLastEnactedParameterChange = do
+  ps <- getProposals
+  pure $ ps ^. pRootsL . grPParamUpdateL . prRootL
+
+getConstitutionProposals ::
+  ConwayEraGov era =>
+  ImpTestM
+    era
+    ( Map.Map
+        (GovPurposeId 'ConstitutionPurpose era)
+        (PEdges (GovPurposeId 'ConstitutionPurpose era))
+    )
+getConstitutionProposals = do
+  ps <- getProposals
+  pure $ ps ^. pGraphL . grConstitutionL . pGraphNodesL
+
+getParameterChangeProposals ::
+  ConwayEraGov era =>
+  ImpTestM
+    era
+    ( Map.Map
+        (GovPurposeId 'PParamUpdatePurpose era)
+        (PEdges (GovPurposeId 'PParamUpdatePurpose era))
+    )
+getParameterChangeProposals = do
+  ps <- getProposals
+  pure $ ps ^. pGraphL . grPParamUpdateL . pGraphNodesL
 
 logProposalsForestDiff ::
   (Era era, ToExpr (PParamsHKD StrictMaybe era)) =>

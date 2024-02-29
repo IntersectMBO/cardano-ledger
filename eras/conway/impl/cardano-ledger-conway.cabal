@@ -118,6 +118,7 @@ library testlib
         Test.Cardano.Ledger.Conway.Imp.GovSpec
         Test.Cardano.Ledger.Conway.Imp.UtxoSpec
         Test.Cardano.Ledger.Conway.Imp.UtxosSpec
+        Test.Cardano.Ledger.Conway.Imp.RatifySpec
         Test.Cardano.Ledger.Conway.Proposals
         Test.Cardano.Ledger.Conway.TreeDiff
 
