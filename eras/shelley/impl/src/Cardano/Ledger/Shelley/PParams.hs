@@ -78,7 +78,6 @@ import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), Key, KeyValue, ToJSON (..), object, pairs, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)
 import Data.List (nub)
@@ -259,15 +258,6 @@ shelleyPParamsPairs ::
 shelleyPParamsPairs pp =
   uncurry (.=)
     <$> shelleyPParamsHKDPairs (Proxy @Identity) pp
-      ++ [ "collateralPercentage" .= Aeson.Null
-         , "costModels" .= Aeson.emptyObject
-         , "executionUnitPrices" .= Aeson.Null
-         , "maxBlockExecutionUnits" .= Aeson.Null
-         , "maxCollateralInputs" .= Aeson.Null
-         , "maxTxExecutionUnits" .= Aeson.Null
-         , "maxValueSize" .= Aeson.Null
-         , "utxoCostPerByte" .= Aeson.Null
-         ]
 
 instance FromJSON (ShelleyPParams Identity era) where
   parseJSON =

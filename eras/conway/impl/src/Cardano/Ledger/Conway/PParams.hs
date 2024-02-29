@@ -845,8 +845,8 @@ instance Era era => FromJSON (ConwayPParams Identity era) where
         <*> obj .: "maxCollateralInputs"
         <*> obj .: "poolVotingThresholds"
         <*> obj .: "dRepVotingThresholds"
-        <*> obj .: "minCommitteeSize"
-        <*> obj .: "committeeTermLength"
+        <*> obj .: "committeeMinSize"
+        <*> obj .: "committeeMaxTermLength"
         <*> obj .: "govActionLifetime"
         <*> obj .: "govActionDeposit"
         <*> obj .: "dRepDeposit"
@@ -1059,8 +1059,8 @@ conwayUpgradePParamsHKDPairs ::
 conwayUpgradePParamsHKDPairs px pp =
   [ ("poolVotingThresholds", hkdMap px (toJSON @PoolVotingThresholds) (pp ^. hkdPoolVotingThresholdsL @era @f))
   , ("dRepVotingThresholds", hkdMap px (toJSON @DRepVotingThresholds) (pp ^. hkdDRepVotingThresholdsL @era @f))
-  , ("minCommitteeSize", hkdMap px (toJSON @Natural) (pp ^. hkdCommitteeMinSizeL @era @f))
-  , ("committeeTermLength", hkdMap px (toJSON @EpochInterval) (pp ^. hkdCommitteeMaxTermLengthL @era @f))
+  , ("committeeMinSize", hkdMap px (toJSON @Natural) (pp ^. hkdCommitteeMinSizeL @era @f))
+  , ("committeeMaxTermLength", hkdMap px (toJSON @EpochInterval) (pp ^. hkdCommitteeMaxTermLengthL @era @f))
   , ("govActionLifetime", hkdMap px (toJSON @EpochInterval) (pp ^. hkdGovActionLifetimeL @era @f))
   , ("govActionDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdGovActionDepositL @era @f))
   , ("dRepDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdDRepDepositL @era @f))
@@ -1079,8 +1079,8 @@ upgradeConwayPParamsHKDPairs :: UpgradeConwayPParams Identity -> [(Key, Aeson.Va
 upgradeConwayPParamsHKDPairs UpgradeConwayPParams {..} =
   [ ("poolVotingThresholds", (toJSON @PoolVotingThresholds) ucppPoolVotingThresholds)
   , ("dRepVotingThresholds", (toJSON @DRepVotingThresholds) ucppDRepVotingThresholds)
-  , ("minCommitteeSize", (toJSON @Natural) ucppCommitteeMinSize)
-  , ("committeeTermLength", (toJSON @EpochInterval) ucppCommitteeMaxTermLength)
+  , ("committeeMinSize", (toJSON @Natural) ucppCommitteeMinSize)
+  , ("committeeMaxTermLength", (toJSON @EpochInterval) ucppCommitteeMaxTermLength)
   , ("govActionLifetime", (toJSON @EpochInterval) ucppGovActionLifetime)
   , ("govActionDeposit", (toJSON @Coin) ucppGovActionDeposit)
   , ("dRepDeposit", (toJSON @Coin) ucppDRepDeposit)
