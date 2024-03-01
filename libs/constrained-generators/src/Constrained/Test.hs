@@ -87,14 +87,10 @@ prop_sound ::
   Spec fn a ->
   Property
 prop_sound spec =
-  checkCoverage $
-    QC.forAllBlind (strictGen $ genFromSpec spec) $ \ma ->
-      fromGE (\_ -> cover 80 False "successful" True) $ do
-        a <- ma
-        pure $
-          cover 80 True "successful" $
-            counterexample (show a) $
-              conformsToSpecProp a spec
+  QC.forAllBlind (strictGen $ genFromSpec spec) $ \ma ->
+    case ma of
+      Result _ a -> cover 80 True "successful" $ counterexample (show a) $ conformsToSpecProp a spec
+      _ -> cover 80 False "successful" True
 
 -- | `prop_complete ps` assumes that `ps` is satisfiable
 prop_complete :: HasSpec fn a => Spec fn a -> Property
@@ -236,7 +232,8 @@ testSpec n s = do
     AllSucceed
     [ -- NOTE: during development you want to uncomment the line below:
       -- testProperty "prop_complete" $ within 10_000_000 $ withMaxSuccess 100 $ prop_complete s,
-      testProperty "prop_sound" $ within 10_000_000 $ withMaxSuccess 100 $ prop_sound s
+      -- NOTE: doing `withMaxSuccess` here does nothing as we are using `checkCoverage`.
+      testProperty "prop_sound" $ within 10_000_000 $ checkCoverage $ prop_sound s
     ]
 
 -- Examples ---------------------------------------------------------------
