@@ -398,7 +398,7 @@ instance
   ) =>
   DecCBOR (AlonzoUtxosPredFailure era)
   where
-  decCBOR = decode (Summands "UtxosPredicateFailure" dec)
+  decCBOR = decode (Summands "AlonzoUtxosPredicateFailure" dec)
     where
       dec 0 = SumD ValidationTagMismatch <! From <! From
       dec 1 = SumD (CollectErrors @era) <! From

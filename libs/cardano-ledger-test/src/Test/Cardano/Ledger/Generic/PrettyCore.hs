@@ -122,6 +122,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayGovPredFailure (..),
   ConwayLedgerPredFailure (..),
   ConwayNewEpochPredFailure,
+  ConwayUtxosPredFailure,
   EnactSignal (..),
   GovEnv (..),
  )
@@ -1161,7 +1162,7 @@ ppUTXOW p@Conway x = ppBabbageUtxowPredFailure p x
 ppUTXOS :: Proof era -> PredicateFailure (EraRule "UTXOS" era) -> PDoc
 ppUTXOS Alonzo x = ppUtxosPredicateFailure x
 ppUTXOS Babbage x = ppUtxosPredicateFailure x
-ppUTXOS Conway x = ppUtxosPredicateFailure x
+ppUTXOS Conway x = prettyA x
 ppUTXOS proof _ =
   error
     ( "Only the AlonzoEra, BabbageEra, and ConwayEra have a (PredicateFailure (EraRule \"UTXOS\" era))."
@@ -1805,6 +1806,23 @@ ppUtxosPredicateFailure (Alonzo.UpdateFailure p) = ppPPUPPredFailure p
 
 instance Reflect era => PrettyA (AlonzoUtxosPredFailure era) where
   prettyA = ppUtxosPredicateFailure
+
+instance Reflect era => PrettyA (ConwayUtxosPredFailure era) where
+  prettyA = \case
+    ConwayRules.ValidationTagMismatch isvalid tag ->
+      ppRecord
+        "ValidationTagMismatch"
+        [ ("isValid tag", ppIsValid isvalid)
+        , ("mismatch description", ppTagMismatchDescription tag)
+        ]
+    ConwayRules.CollectErrors es ->
+      ppRecord'
+        mempty
+        [
+          ( "When collecting inputs for twophase scripts, these went wrong."
+          , ppList ppCollectError es
+          )
+        ]
 
 ppCollectError ::
   Reflect era =>

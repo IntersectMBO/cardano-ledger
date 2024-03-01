@@ -1,25 +1,37 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Rules.Utxos (ConwayUTXOS) where
+module Cardano.Ledger.Conway.Rules.Utxos (
+  ConwayUTXOS,
+  ConwayUtxosPredFailure (..),
+) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent (..),
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosEvent (..),
-  AlonzoUtxosPredFailure (..),
+  AlonzoUtxosPredFailure,
+  TagMismatchDescription,
   validBegin,
   validEnd,
  )
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxosPredFailure (..))
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO,
   AlonzoScriptsNeeded,
@@ -32,24 +44,113 @@ import Cardano.Ledger.Babbage.Rules (
  )
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.Binary (
+  DecCBOR (..),
+  EncCBOR (..),
+ )
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
-import Cardano.Ledger.Shelley.Rules (
-  UtxoEnv (..),
-  updateUTxOState,
- )
+import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), updateUTxOState)
 import Cardano.Ledger.UTxO (EraUTxO (..))
+import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Debug.Trace (traceEvent)
+import GHC.Generics (Generic)
 import Lens.Micro
+import NoThunks.Class (NoThunks)
 
-type instance EraRuleFailure "UTXOS" (ConwayEra c) = AlonzoUtxosPredFailure (ConwayEra c)
+data ConwayUtxosPredFailure era
+  = -- | The 'isValid' tag on the transaction is incorrect. The tag given
+    --   here is that provided on the transaction (whereas evaluation of the
+    --   scripts gives the opposite.). The Text tries to explain why it failed.
+    ValidationTagMismatch IsValid TagMismatchDescription
+  | -- | We could not find all the necessary inputs for a Plutus Script.
+    -- Previous PredicateFailure tests should make this impossible, but the
+    -- consequences of not detecting this means scripts get dropped, so things
+    -- might validate that shouldn't. So we double check in the function
+    -- collectTwoPhaseScriptInputs, it should find data for every Script.
+    CollectErrors [CollectError era]
+  deriving
+    (Generic)
 
-instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (ConwayEra c)
+type instance EraRuleFailure "UTXOS" (ConwayEra c) = ConwayUtxosPredFailure (ConwayEra c)
+
+instance InjectRuleFailure "UTXOS" ConwayUtxosPredFailure (ConwayEra c)
+
+instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (ConwayEra c) where
+  injectFailure = alonzoToConwayUtxosPredFailure
+
+alonzoToConwayUtxosPredFailure ::
+  forall era.
+  EraRuleFailure "PPUP" era ~ VoidEraRule "PPUP" era =>
+  Alonzo.AlonzoUtxosPredFailure era ->
+  ConwayUtxosPredFailure era
+alonzoToConwayUtxosPredFailure = \case
+  Alonzo.ValidationTagMismatch t x -> ValidationTagMismatch t x
+  Alonzo.CollectErrors x -> CollectErrors x
+  Alonzo.UpdateFailure x -> absurdEraRule @"PPUP" @era x
+
+instance
+  ( EraTxCert era
+  , ConwayEraScript era
+  , EncCBOR (ContextError era)
+  ) =>
+  EncCBOR (ConwayUtxosPredFailure era)
+  where
+  encCBOR =
+    encode . \case
+      ValidationTagMismatch v descr -> Sum ValidationTagMismatch 0 !> To v !> To descr
+      CollectErrors cs -> Sum (CollectErrors @era) 1 !> To cs
+
+instance
+  ( EraTxCert era
+  , ConwayEraScript era
+  , DecCBOR (ContextError era)
+  ) =>
+  DecCBOR (ConwayUtxosPredFailure era)
+  where
+  decCBOR = decode (Summands "ConwayUtxosPredicateFailure" dec)
+    where
+      dec 0 = SumD ValidationTagMismatch <! From <! From
+      dec 1 = SumD (CollectErrors @era) <! From
+      dec n = Invalid n
+
+deriving stock instance
+  ( ConwayEraScript era
+  , Show (TxCert era)
+  , Show (ContextError era)
+  , Show (UTxOState era)
+  ) =>
+  Show (ConwayUtxosPredFailure era)
+
+deriving stock instance
+  ( ConwayEraScript era
+  , Eq (TxCert era)
+  , Eq (ContextError era)
+  , Eq (UTxOState era)
+  ) =>
+  Eq (ConwayUtxosPredFailure era)
+
+instance
+  ( ConwayEraScript era
+  , NoThunks (TxCert era)
+  , NoThunks (ContextError era)
+  , NoThunks (UTxOState era)
+  ) =>
+  NoThunks (ConwayUtxosPredFailure era)
+
+instance
+  ( ConwayEraScript era
+  , NFData (TxCert era)
+  , NFData (ContextError era)
+  , NFData (UTxOState era)
+  ) =>
+  NFData (ConwayUtxosPredFailure era)
 
 instance
   ( AlonzoEraTx era
@@ -61,8 +162,8 @@ instance
   , GovState era ~ ConwayGovState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
-  , Eq (EraRuleFailure "PPUP" era)
-  , Show (EraRuleFailure "PPUP" era)
+  , EraRule "UTXOS" era ~ ConwayUTXOS era
+  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   ) =>
   STS (ConwayUTXOS era)
   where
@@ -70,7 +171,7 @@ instance
   type Environment (ConwayUTXOS era) = UtxoEnv era
   type State (ConwayUTXOS era) = UTxOState era
   type Signal (ConwayUTXOS era) = AlonzoTx era
-  type PredicateFailure (ConwayUTXOS era) = AlonzoUtxosPredFailure era
+  type PredicateFailure (ConwayUTXOS era) = ConwayUtxosPredFailure era
   type Event (ConwayUTXOS era) = AlonzoUtxosEvent era
 
   transitionRules = [utxosTransition]
@@ -84,11 +185,11 @@ instance
   , EraPlutusContext era
   , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
   , GovState era ~ ConwayGovState era
-  , PredicateFailure (EraRule "UTXOS" era) ~ AlonzoUtxosPredFailure era
+  , PredicateFailure (EraRule "UTXOS" era) ~ ConwayUtxosPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
-  , Eq (EraRuleFailure "PPUP" era)
-  , Show (EraRuleFailure "PPUP" era)
+  , EraRule "UTXOS" era ~ ConwayUTXOS era
+  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   ) =>
   Embed (ConwayUTXOS era) (BabbageUTXO era)
   where
@@ -101,14 +202,16 @@ utxosTransition ::
   , AlonzoEraUTxO era
   , ConwayEraTxBody era
   , EraPlutusContext era
-  , EraGov era
-  , GovState era ~ ConwayGovState era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (ConwayUTXOS era) ~ Tx era
-  , Eq (EraRuleFailure "PPUP" era)
-  , Show (EraRuleFailure "PPUP" era)
+  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , STS (EraRule "UTXOS" era)
+  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
+  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
+  , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   ) =>
-  TransitionRule (ConwayUTXOS era)
+  TransitionRule (EraRule "UTXOS" era)
 utxosTransition =
   judgmentContext >>= \(TRC (_, _, tx)) -> do
     case tx ^. isValidTxL of
@@ -122,10 +225,15 @@ conwayEvalScriptsTxValid ::
   , ConwayEraTxBody era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , Signal (ConwayUTXOS era) ~ Tx era
-  , STS (ConwayUTXOS era)
+  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , STS (EraRule "UTXOS" era)
+  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
+  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
+  , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   ) =>
-  TransitionRule (ConwayUTXOS era)
+  TransitionRule (EraRule "UTXOS" era)
 conwayEvalScriptsTxValid = do
   TRC (UtxoEnv _ pp certState, utxos@(UTxOState utxo _ _ govState _ _), tx) <-
     judgmentContext

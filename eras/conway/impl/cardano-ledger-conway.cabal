@@ -149,6 +149,7 @@ library testlib
         cardano-ledger-shelley,
         cardano-strict-containers,
         data-default-class,
+        generic-random,
         small-steps,
         text
 

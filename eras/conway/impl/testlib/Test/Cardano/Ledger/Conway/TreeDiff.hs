@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Conway.TreeDiff (
   module Test.Cardano.Ledger.Babbage.TreeDiff,
 ) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
@@ -136,11 +137,17 @@ instance ToExpr (ConwayGovCert c)
 
 instance ToExpr (ConwayTxCert c)
 
--- Rules/GovCert
+-- Rules
 instance ToExpr (ConwayGovCertPredFailure era)
 
--- Rules/Delegs
 instance ToExpr (ConwayDelegPredFailure era)
+
+instance
+  ( ToExpr (PlutusPurpose AsItem era)
+  , ToExpr (ContextError era)
+  , ToExpr (TxCert era)
+  ) =>
+  ToExpr (ConwayUtxosPredFailure era)
 
 -- TxBody
 instance (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (TxOut era)) => ToExpr (ConwayTxBodyRaw era)
