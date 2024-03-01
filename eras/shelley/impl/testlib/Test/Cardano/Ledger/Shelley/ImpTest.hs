@@ -91,9 +91,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
 
   -- * Combinators
   withNoFixup,
-
-  -- * Lenses
-  impCollateralTxIdsL,
   -- We only export getters, because internal state should not be accessed during testing
   impNESG,
   impLastTickG,
@@ -111,7 +108,6 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochSize (..),
   Globals (..),
-  Inject,
   Network (..),
   ShelleyBase,
   SlotNo,
@@ -213,7 +209,6 @@ import Test.Cardano.Ledger.Core.KeyPair (
   KeyPair (..),
   mkAddr,
   mkKeyHash,
-  mkKeyPair,
   mkWitnessesVKey,
  )
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals, txInAt)
@@ -238,7 +233,6 @@ import UnliftIO.Exception (
 data ImpTestState era = ImpTestState
   { impNES :: !(NewEpochState era)
   , impRootTxIn :: !(TxIn (EraCrypto era))
-  , impCollateralTxIds :: ![TxIn (EraCrypto era)]
   , impKeyPairs :: !(forall k. Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
   , impByronKeyPairs :: !(Map (BootstrapAddress (EraCrypto era)) ByronKeyPair)
   , impNativeScripts :: !(Map (ScriptHash (EraCrypto era)) (NativeScript era))
@@ -277,9 +271,6 @@ impNativeScriptsL = lens impNativeScripts (\x y -> x {impNativeScripts = y})
 
 impNativeScriptsG :: SimpleGetter (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (NativeScript era))
 impNativeScriptsG = impNativeScriptsL
-
-impCollateralTxIdsL :: Lens' (ImpTestState era) [TxIn (EraCrypto era)]
-impCollateralTxIdsL = lens impCollateralTxIds (\x y -> x {impCollateralTxIds = y})
 
 class
   ( Show (NewEpochState era)
@@ -391,14 +382,6 @@ mkHashVerKeyVRF =
 testKeyHash :: Crypto c => KeyHash kd c
 testKeyHash = mkKeyHash (-1)
 
-impAddr :: Crypto c => Int -> Addr c
-impAddr idx =
-  let KeyPair vk _ = mkKeyPair idx
-   in Addr
-        Testnet
-        (KeyHashObj $ hashKey vk)
-        StakeRefNull
-
 initShelleyImpNES ::
   forall era.
   ( Default (StashedAVVMAddresses era)
@@ -465,19 +448,6 @@ initShelleyImpNES =
 
 mkTxId :: Crypto c => Int -> TxId c
 mkTxId idx = TxId (mkDummySafeHash Proxy idx)
-
-mkCollateralUTxO ::
-  ( EraTxOut era
-  , Inject t (Value era)
-  ) =>
-  t ->
-  [(TxIn (EraCrypto era), TxOut era)]
-mkCollateralUTxO rootCoin =
-  [ ( TxIn (mkTxId idx) minBound
-    , mkBasicTxOut (impAddr idx) $ inject rootCoin
-    )
-  | idx <- [1 .. 100]
-  ]
 
 instance
   ( Crypto c
@@ -1034,7 +1004,6 @@ withImpState =
         , impGlobals = testGlobals
         , impLog = mempty
         , impGen = qcGen
-        , impCollateralTxIds = fst <$> mkCollateralUTxO @era rootCoin
         }
   where
     rootCoin = Coin 1_000_000_000

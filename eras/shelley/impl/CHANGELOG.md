@@ -41,7 +41,6 @@
   * `fixupFees`
   * `logFeeMismatch`
   * `impScriptsL`
-  * `impCollateralTxIdsL`
   * `impNativeScriptsG`
 * Add:
   * `expectRegisteredRewardAddress`
