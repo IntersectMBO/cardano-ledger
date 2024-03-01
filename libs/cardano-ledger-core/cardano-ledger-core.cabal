@@ -196,7 +196,8 @@ library testlib
         vector-map:{vector-map, testlib},
         time,
         cardano-slotting,
-        unliftio
+        unliftio,
+        small-steps
 
     if !impl(ghc >=9.2)
         ghc-options: -Wno-name-shadowing

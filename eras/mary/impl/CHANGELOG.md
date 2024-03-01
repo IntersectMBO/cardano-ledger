@@ -5,6 +5,10 @@
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Add implementation for `getMinFeeTxUtxo`
 
+### `testlib`
+
+* Add `RuleListEra` instance for Mary
+
 ## 1.5.0.0
 
 * Change return type of `mintedTxBodyF` to `Set PolicyID`

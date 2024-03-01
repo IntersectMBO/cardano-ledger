@@ -26,6 +26,7 @@ import Cardano.Ledger.Conway.Rules.GovCert
 import Cardano.Ledger.Conway.Rules.Ledger
 import Cardano.Ledger.Conway.Rules.Ledgers ()
 import Cardano.Ledger.Conway.Rules.NewEpoch
+import Cardano.Ledger.Conway.Rules.Pool ()
 import Cardano.Ledger.Conway.Rules.Ratify
 import Cardano.Ledger.Conway.Rules.Tickf
 import Cardano.Ledger.Conway.Rules.Utxo ()

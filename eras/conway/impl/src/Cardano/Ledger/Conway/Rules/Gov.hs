@@ -185,6 +185,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     8 -> SumD InvalidPrevGovActionId <! From
     9 -> SumD VotingOnExpiredGovAction <! From
     10 -> SumD ProposalCantFollow <! From <! From <! From
+    11 -> SumD InvalidPolicyHash <! From <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where

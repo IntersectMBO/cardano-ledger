@@ -29,6 +29,7 @@
 
 ### `testlib`
 
+* Add `RuleListEra` instance for Alonzo
 * Add:
   * `impLookupPlutusScriptMaybe`
   * `fixupOutputDatums`

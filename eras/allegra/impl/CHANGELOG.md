@@ -7,6 +7,10 @@
 * Add `NFData` instance for `AllegraUtxoPredFailure`
 * Add implementation for `getMinFeeTxUtxo`
 
+### `testlib`
+
+* Add `RuleListEra` instance for Allegra
+
 ## 1.3.0.0
 
 * Remove `ShelleyEraTxBody` superclass constraint on `AllegraEraTxBody`
