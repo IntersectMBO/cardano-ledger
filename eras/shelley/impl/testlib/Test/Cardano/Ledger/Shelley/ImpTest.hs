@@ -859,6 +859,7 @@ trySubmitTx tx = do
   logToExpr txFixed
   st <- gets impNES
   lEnv <- impLedgerEnv st
+  ImpTestState {impRootTxIn} <- get
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
   let txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
       outsSize = SSeq.length $ txFixed ^. bodyTxL . outputsTxBodyL
@@ -867,7 +868,16 @@ trySubmitTx tx = do
         | otherwise = error ("Expected at least 1 output after submitting tx: " <> show txId)
   forM res $ \st' -> do
     modify $ impNESL . nesEsL . esLStateL .~ st'
-    impRootTxInL .= TxIn txId (mkTxIxPartial (fromIntegral rootIndex))
+    UTxO utxo <- getUTxO
+    -- This TxIn is in the utxo, and thus can be the new root, only if the transaction was phase2-valid.
+    -- Otherwise, no utxo with this id would have been created, and so we need to set the new root
+    -- to what it was before the submission.
+    let assumedNewRoot = TxIn txId (mkTxIxPartial (fromIntegral rootIndex))
+    let newRoot
+          | Map.member assumedNewRoot utxo = assumedNewRoot
+          | Map.member impRootTxIn utxo = impRootTxIn
+          | otherwise = error "Root not found in UTxO"
+    impRootTxInL .= newRoot
     pure txFixed
 
 -- | Submit a transaction that is expected to be rejected. The inputs and
