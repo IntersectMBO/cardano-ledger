@@ -414,7 +414,7 @@ deriving stock instance
   ) =>
   Show (AlonzoUtxosPredFailure era)
 
-instance
+deriving stock instance
   ( AlonzoEraScript era
   , Eq (TxCert era)
   , Eq (ContextError era)
@@ -422,11 +422,6 @@ instance
   , Eq (EraRuleFailure "PPUP" era)
   ) =>
   Eq (AlonzoUtxosPredFailure era)
-  where
-  (ValidationTagMismatch a x) == (ValidationTagMismatch b y) = a == b && x == y
-  (CollectErrors x) == (CollectErrors y) = x == y
-  (UpdateFailure x) == (UpdateFailure y) = x == y
-  _ == _ = False
 
 instance
   ( AlonzoEraScript era
