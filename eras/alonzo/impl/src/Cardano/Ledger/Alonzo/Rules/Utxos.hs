@@ -65,7 +65,7 @@ import Cardano.Ledger.Plutus.Evaluate (
   ScriptFailure (..),
   ScriptResult (..),
  )
-import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
+import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), updateStakeDistribution)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -373,9 +373,6 @@ instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (AlonzoEra c)
 
 instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure (AlonzoEra c) where
   injectFailure = UpdateFailure
-
-instance EraRuleFailure "PPUP" era ~ () => Inject () (AlonzoUtxosPredFailure era) where
-  inject () = UpdateFailure ()
 
 instance
   ( EraTxCert era
