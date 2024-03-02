@@ -15,7 +15,7 @@ import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
+import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Crypto (Crypto)
@@ -89,7 +89,17 @@ instance
   ) =>
   Arbitrary (BabbageContextError era)
   where
-  arbitrary = genericArbitraryU
+  -- Switch to this implementation once #4110 is taken care of
+  -- arbitrary = genericArbitraryU
+  arbitrary =
+    oneof
+      [ AlonzoContextError <$> arbitrary
+      , ByronTxOutInContext <$> arbitrary
+      , -- , RedeemerPointerPointsToNothing <$> arbitrary -- see #4110
+        InlineDatumsNotSupported <$> arbitrary
+      , ReferenceScriptsNotSupported <$> arbitrary
+      , ReferenceInputsNotSupported <$> arbitrary
+      ]
 
 instance
   ( EraTxOut era
