@@ -142,6 +142,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   nesPdL,
   newEpochStateGovStateL,
+  utxosGovStateL,
   utxosStakeDistrL,
   vsCommitteeStateL,
   vsDRepsL,

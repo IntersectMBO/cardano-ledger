@@ -32,6 +32,7 @@ library
     exposed-modules:
         Cardano.Ledger.Conway.Genesis
         Cardano.Ledger.Conway.Governance
+        Cardano.Ledger.Conway.Governance.DRepPulser
         Cardano.Ledger.Conway.PParams
         Cardano.Ledger.Conway.Tx
         Cardano.Ledger.Conway.TxBody
@@ -50,6 +51,7 @@ library
     hs-source-dirs:   src
     other-modules:
         Cardano.Ledger.Conway.Era
+        Cardano.Ledger.Conway.Governance.Internal
         Cardano.Ledger.Conway.Governance.Procedures
         Cardano.Ledger.Conway.Governance.Proposals
         Cardano.Ledger.Conway.Rules.Bbody

@@ -2,6 +2,8 @@
 
 ## 1.13.0.0
 
+* Stop exporting `utxosGovStateL` from `Cardano.Ledger.Conway.Governance`
+* Remove deprecated `curPParamsConwayGovStateL` and `prevPParamsConwayGovStateL`
 * Add `ConwayUtxosPredFailure`
 * Support for intra-era hard fork with `ProtVerHigh` set to `10`
 * Guard Conway-specific features in transactions that use Plutus v1 or v2. #4112

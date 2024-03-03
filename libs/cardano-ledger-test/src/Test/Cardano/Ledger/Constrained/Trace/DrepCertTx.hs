@@ -21,7 +21,6 @@ import Cardano.Ledger.Conway.Governance (
   newEpochStateDRepPulsingStateL,
   proposalsActionsMap,
   proposalsGovStateL,
-  utxosGovStateL,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Crypto (HASH)
@@ -40,6 +39,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   esLStateL,
   lsUTxOStateL,
   nesEsL,
+  utxosGovStateL,
  )
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
