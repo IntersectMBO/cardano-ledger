@@ -28,12 +28,9 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
-  EpochState,
-  UTxOState (..),
-  esLState,
+  LedgerState,
   lsCertState,
   lsUTxOState,
-  pattern EpochState,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Rules.Newpp (
@@ -87,16 +84,14 @@ instance
   where
   type State (ShelleyUPEC era) = UpecState era
   type Signal (ShelleyUPEC era) = ()
-  type Environment (ShelleyUPEC era) = EpochState era
+  type Environment (ShelleyUPEC era) = LedgerState era
   type BaseM (ShelleyUPEC era) = ShelleyBase
   type PredicateFailure (ShelleyUPEC era) = ShelleyUpecPredFailure era
   initialRules = []
   transitionRules =
     [ do
         TRC
-          ( EpochState
-              { esLState = ls
-              }
+          ( ls
             , UpecState pp ppupState
             , _
             ) <-
@@ -105,7 +100,7 @@ instance
         coreNodeQuorum <- liftSTS $ asks quorum
 
         let utxoState = lsUTxOState ls
-            pup = proposals $ utxosGovState utxoState
+            pup = proposals ppupState
             ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
         NewppState pp' ppupState' <-
           trans @(ShelleyNEWPP era) $

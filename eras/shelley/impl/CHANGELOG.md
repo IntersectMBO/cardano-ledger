@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Change `UPEC` environment to `LedgerState`
 * Rename `currentPp` to `usCurPParams` and `ppupState` to `usGovState`
 * Change `ApplyTxError`, `TickTransitionError` and `BlockTransitionError`
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`

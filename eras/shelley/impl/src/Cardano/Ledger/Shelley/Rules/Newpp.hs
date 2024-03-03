@@ -33,6 +33,7 @@ import Cardano.Ledger.Shelley.PParams (
   hasLegalProtVerUpdate,
  )
 import Control.DeepSeq (NFData)
+import Control.Monad (forM_)
 import Control.State.Transition (
   STS (..),
   TRC (..),
@@ -100,9 +101,10 @@ newPpTransition = do
           (utxoState ^. utxosGovStateL)
 
   -- TODO: remove this predicate check. See #4158
-  obligationCurr
-    == utxosDeposited utxoState
-      ?! UnexpectedDepositPot obligationCurr (utxosDeposited utxoState)
+  forM_ mppNew $ \_ ->
+    obligationCurr
+      == utxosDeposited utxoState
+        ?! UnexpectedDepositPot obligationCurr (utxosDeposited utxoState)
 
   case mppNew of
     Just ppNew
