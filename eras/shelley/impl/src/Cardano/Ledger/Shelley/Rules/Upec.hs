@@ -125,24 +125,21 @@ votedValue ::
   -- | Quorum needed to change the protocol parameters.
   Int ->
   Maybe (PParams era)
-votedValue (ProposedPPUpdates pup) pps quorumN =
-  let incrGov vote gov = 1 + Map.findWithDefault 0 vote gov
-      votes =
+votedValue (ProposedPPUpdates pppu) pp quorumN =
+  let votes =
         Map.foldr
-          (\vote gov -> Map.insert vote (incrGov vote gov) gov)
+          (\vote -> Map.insertWith (+) vote 1)
           (Map.empty :: Map (PParamsUpdate era) Int)
-          pup
+          pppu
       consensus = Map.filter (>= quorumN) votes
-   in case length consensus of
+   in case Map.keys consensus of
         -- NOTE that `quorumN` is a global constant, and that we require
         -- it to be strictly greater than half the number of genesis nodes.
         -- The keys in the `pup` correspond to the genesis nodes,
         -- and therefore either:
         --   1) `consensus` is empty, or
         --   2) `consensus` has exactly one element.
-        1 ->
-          (Just . applyPPUpdates pps . fst . head . Map.toList)
-            consensus
+        [ppu] -> Just $ applyPPUpdates pp ppu
         -- NOTE that `updatePParams` corresponds to the union override right
         -- operation in the formal spec.
         _ -> Nothing
