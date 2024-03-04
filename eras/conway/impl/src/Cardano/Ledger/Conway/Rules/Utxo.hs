@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Rules.Utxos ()
+import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure)
 
@@ -39,8 +39,11 @@ instance InjectRuleFailure "UTXO" ShelleyUtxoPredFailure (ConwayEra c) where
 instance InjectRuleFailure "UTXO" Allegra.AllegraUtxoPredFailure (ConwayEra c) where
   injectFailure = AlonzoInBabbageUtxoPredFailure . allegraToConwayUtxoPredFailure
 
-instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure (ConwayEra c) where
+instance InjectRuleFailure "UTXO" ConwayUtxosPredFailure (ConwayEra c) where
   injectFailure = AlonzoInBabbageUtxoPredFailure . UtxosFailure
+
+instance InjectRuleFailure "UTXO" AlonzoUtxosPredFailure (ConwayEra c) where
+  injectFailure = AlonzoInBabbageUtxoPredFailure . UtxosFailure . injectFailure
 
 allegraToConwayUtxoPredFailure ::
   forall era.

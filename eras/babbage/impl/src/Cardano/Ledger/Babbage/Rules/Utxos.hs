@@ -104,6 +104,8 @@ instance
   , EncCBOR (EraRuleFailure "PPUP" era)
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
+  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
+  , EraRule "UTXOS" era ~ BabbageUTXOS era
   ) =>
   STS (BabbageUTXOS era)
   where
@@ -144,6 +146,8 @@ utxosTransition ::
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
   , EraPlutusContext era
+  , EraRule "UTXOS" era ~ BabbageUTXOS era
+  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
@@ -155,20 +159,20 @@ utxosTransition =
 -- ===================================================================
 
 expectScriptsToPass ::
-  forall era s.
+  forall era.
   ( AlonzoEraTx era
   , EraPlutusContext era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , STS (s era)
-  , Event (s era) ~ AlonzoUtxosEvent era
-  , PredicateFailure (s era) ~ AlonzoUtxosPredFailure era
-  , BaseM (s era) ~ ShelleyBase
+  , STS (EraRule "UTXOS" era)
+  , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
+  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
+  , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   ) =>
   PParams era ->
   Tx era ->
   UTxO era ->
-  Rule (s era) 'Transition ()
+  Rule (EraRule "UTXOS" era) 'Transition ()
 expectScriptsToPass pp tx utxo = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
@@ -180,11 +184,12 @@ expectScriptsToPass pp tx utxo = do
         when2Phase $ case evalPlutusScripts tx sLst of
           Fails _ fs ->
             failBecause $
-              ValidationTagMismatch
-                (tx ^. isValidTxL)
-                (FailedUnexpectedly (scriptFailureToFailureDescription <$> fs))
+              injectFailure $
+                ValidationTagMismatch
+                  (tx ^. isValidTxL)
+                  (FailedUnexpectedly (scriptFailureToFailureDescription <$> fs))
           Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
-    Left info -> failBecause (CollectErrors info)
+    Left info -> failBecause (injectFailure $ CollectErrors info)
 
 babbageEvalScriptsTxValid ::
   forall era.
@@ -200,6 +205,8 @@ babbageEvalScriptsTxValid ::
   , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , EraPlutusContext era
+  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
+  , EraRule "UTXOS" era ~ BabbageUTXOS era
   ) =>
   TransitionRule (BabbageUTXOS era)
 babbageEvalScriptsTxValid = do
@@ -229,21 +236,21 @@ babbageEvalScriptsTxValid = do
     (\a b -> tellEvent $ TxUTxODiff a b)
 
 babbageEvalScriptsTxInvalid ::
-  forall s era.
+  forall era.
   ( AlonzoEraTx era
   , BabbageEraTxBody era
   , EraPlutusContext era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , STS (s era)
-  , Environment (s era) ~ UtxoEnv era
-  , Signal (s era) ~ Tx era
-  , Event (s era) ~ AlonzoUtxosEvent era
-  , PredicateFailure (s era) ~ AlonzoUtxosPredFailure era
-  , State (s era) ~ UTxOState era
-  , BaseM (s era) ~ ShelleyBase
+  , STS (EraRule "UTXOS" era)
+  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
+  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
+  , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   ) =>
-  TransitionRule (s era)
+  TransitionRule (EraRule "UTXOS" era)
 babbageEvalScriptsTxInvalid = do
   TRC (UtxoEnv _ pp _, us@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
   {- txb := txbody tx -}
@@ -259,11 +266,14 @@ babbageEvalScriptsTxInvalid = do
       {- isValid tx = evalScripts tx sLst = False -}
       whenFailureFree $
         when2Phase $ case evalPlutusScripts tx sLst of
-          Passes _ -> failBecause $ ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
+          Passes _ ->
+            failBecause $
+              injectFailure $
+                ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
           Fails ps fs -> do
             mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
             tellEvent (FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs))
-    Left info -> failBecause (CollectErrors info)
+    Left info -> failBecause (injectFailure $ CollectErrors info)
 
   () <- pure $! traceEvent invalidEnd ()
 

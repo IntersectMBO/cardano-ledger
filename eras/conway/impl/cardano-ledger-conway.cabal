@@ -149,8 +149,10 @@ library testlib
         cardano-ledger-shelley,
         cardano-strict-containers,
         data-default-class,
+        generic-random,
         small-steps,
-        text
+        text,
+        small-steps
 
 test-suite tests
     type:             exitcode-stdio-1.0

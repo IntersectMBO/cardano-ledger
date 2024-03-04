@@ -54,6 +54,7 @@ import Cardano.Ledger.BaseTypes (
   mkTxIxPartial,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeCredential,
@@ -454,10 +455,10 @@ specialCont proof expected computed =
 findMismatch ::
   Proof era ->
   PredicateFailure (EraRule "UTXOW" era) ->
-  Maybe (AlonzoUtxosPredFailure era)
-findMismatch Alonzo (ShelleyInAlonzoUtxowPredFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
-findMismatch Babbage (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
-findMismatch Conway (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
+  Maybe (PredicateFailure (EraRule "UTXOS" era))
+findMismatch Alonzo (ShelleyInAlonzoUtxowPredFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just $ injectFailure x
+findMismatch Babbage (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just $ injectFailure x
+findMismatch Conway (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(Conway.ValidationTagMismatch _ _)))) = Just $ injectFailure x
 findMismatch _ _ = Nothing
 
 isSubset :: Eq t => [t] -> [t] -> Bool

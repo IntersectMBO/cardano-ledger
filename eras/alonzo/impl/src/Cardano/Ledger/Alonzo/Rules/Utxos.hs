@@ -65,7 +65,7 @@ import Cardano.Ledger.Plutus.Evaluate (
   ScriptFailure (..),
   ScriptResult (..),
  )
-import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
+import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), updateStakeDistribution)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
@@ -374,9 +374,6 @@ instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (AlonzoEra c)
 instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure (AlonzoEra c) where
   injectFailure = UpdateFailure
 
-instance EraRuleFailure "PPUP" era ~ () => Inject () (AlonzoUtxosPredFailure era) where
-  inject () = UpdateFailure ()
-
 instance
   ( EraTxCert era
   , AlonzoEraScript era
@@ -398,7 +395,7 @@ instance
   ) =>
   DecCBOR (AlonzoUtxosPredFailure era)
   where
-  decCBOR = decode (Summands "UtxosPredicateFailure" dec)
+  decCBOR = decode (Summands "AlonzoUtxosPredicateFailure" dec)
     where
       dec 0 = SumD ValidationTagMismatch <! From <! From
       dec 1 = SumD (CollectErrors @era) <! From
@@ -414,7 +411,7 @@ deriving stock instance
   ) =>
   Show (AlonzoUtxosPredFailure era)
 
-instance
+deriving stock instance
   ( AlonzoEraScript era
   , Eq (TxCert era)
   , Eq (ContextError era)
@@ -422,11 +419,6 @@ instance
   , Eq (EraRuleFailure "PPUP" era)
   ) =>
   Eq (AlonzoUtxosPredFailure era)
-  where
-  (ValidationTagMismatch a x) == (ValidationTagMismatch b y) = a == b && x == y
-  (CollectErrors x) == (CollectErrors y) = x == y
-  (UpdateFailure x) == (UpdateFailure y) = x == y
-  _ == _ = False
 
 instance
   ( AlonzoEraScript era
