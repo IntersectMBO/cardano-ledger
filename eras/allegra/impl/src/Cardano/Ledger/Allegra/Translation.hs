@@ -15,30 +15,25 @@ import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API (
+import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
   PState (..),
-  ProposedPPUpdates (..),
-  ShelleyGovState (..),
-  ShelleyTx (..),
-  ShelleyTxOut (..),
-  UTxO (..),
   UTxOState (..),
-  Update,
   VState (..),
- )
-import qualified Cardano.Ledger.Shelley.LedgerState as LS (
   returnRedeemAddrsToReserves,
  )
-import Cardano.Ledger.Shelley.PParams (Update (..))
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx)
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
 import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
+import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 
@@ -72,7 +67,7 @@ instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
         { nesEL = nesEL nes
         , nesBprev = nesBprev nes
         , nesBcur = nesBcur nes
-        , nesEs = translateEra' ctxt $ LS.returnRedeemAddrsToReserves . nesEs $ nes
+        , nesEs = translateEra' ctxt $ returnRedeemAddrsToReserves $ nesEs nes
         , nesRu = nesRu nes
         , nesPd = nesPd nes
         , -- At this point, the consensus layer has passed in our stashed AVVM
@@ -101,10 +96,10 @@ instance Crypto c => TranslateEra (AllegraEra c) ShelleyGovState where
   translateEra ctxt ps =
     return
       ShelleyGovState
-        { proposals = translateEra' ctxt $ proposals ps
-        , futureProposals = translateEra' ctxt $ futureProposals ps
-        , sgovPp = translateEra' ctxt $ sgovPp ps
-        , sgovPrevPp = translateEra' ctxt $ sgovPrevPp ps
+        { sgsCurProposals = translateEra' ctxt $ sgsCurProposals ps
+        , sgsFutureProposals = translateEra' ctxt $ sgsFutureProposals ps
+        , sgsCurPParams = translateEra' ctxt $ sgsCurPParams ps
+        , sgsPrevPParams = translateEra' ctxt $ sgsPrevPParams ps
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) ShelleyTxOut where

@@ -166,8 +166,8 @@ ppupTransitionNonEmpty = do
   TRC
     ( PPUPEnv slot pp (GenDelegs genDelegs)
       , pps@( ShelleyGovState
-                { proposals = ProposedPPUpdates pupS
-                , futureProposals = ProposedPPUpdates fpupS
+                { sgsCurProposals = ProposedPPUpdates pupS
+                , sgsFutureProposals = ProposedPPUpdates fpupS
                 }
               )
       , update
@@ -203,16 +203,16 @@ ppupTransitionNonEmpty = do
             ?! PPUpdateWrongEpoch currentEpochNo targetEpochNo VoteForThisEpoch
           pure $
             pps
-              { proposals = ProposedPPUpdates (eval (pupS ⨃ pup))
-              , futureProposals = ProposedPPUpdates fpupS
+              { sgsCurProposals = ProposedPPUpdates (eval (pupS ⨃ pup))
+              , sgsFutureProposals = ProposedPPUpdates fpupS
               }
         else do
           (succ currentEpochNo == targetEpochNo)
             ?! PPUpdateWrongEpoch currentEpochNo targetEpochNo VoteForNextEpoch
           pure $
             pps
-              { proposals = ProposedPPUpdates pupS
-              , futureProposals = ProposedPPUpdates (eval (fpupS ⨃ pup))
+              { sgsCurProposals = ProposedPPUpdates pupS
+              , sgsFutureProposals = ProposedPPUpdates (eval (fpupS ⨃ pup))
               }
 
 type PPUPPredFailure era = EraRuleFailure "PPUP" era

@@ -18,6 +18,12 @@ module Cardano.Ledger.Shelley.Governance (
   futureProposalsL,
   curPParamsShelleyGovStateL,
   prevPParamsShelleyGovStateL,
+
+  -- * Deprecations
+  proposals,
+  futureProposals,
+  sgovPp,
+  sgovPrevPp,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -86,7 +92,7 @@ class
 instance Crypto c => EraGov (ShelleyEra c) where
   type GovState (ShelleyEra c) = ShelleyGovState (ShelleyEra c)
 
-  getProposedPPUpdates = Just . proposals
+  getProposedPPUpdates = Just . sgsCurProposals
 
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
@@ -95,24 +101,37 @@ instance Crypto c => EraGov (ShelleyEra c) where
   obligationGovState = const mempty -- No GovState obigations in ShelleyEra
 
 data ShelleyGovState era = ShelleyGovState
-  { proposals :: !(ProposedPPUpdates era)
-  , futureProposals :: !(ProposedPPUpdates era)
-  , sgovPp :: !(PParams era)
-  , sgovPrevPp :: !(PParams era)
+  { sgsCurProposals :: !(ProposedPPUpdates era)
+  , sgsFutureProposals :: !(ProposedPPUpdates era)
+  , sgsCurPParams :: !(PParams era)
+  , sgsPrevPParams :: !(PParams era)
   }
   deriving (Generic)
 
+proposals :: ShelleyGovState era -> ProposedPPUpdates era
+proposals = sgsCurProposals
+{-# DEPRECATED proposals "In favor of `sgsCurProposals`" #-}
+futureProposals :: ShelleyGovState era -> ProposedPPUpdates era
+futureProposals = sgsFutureProposals
+{-# DEPRECATED futureProposals "In favor of `sgsFutureProposals`" #-}
+sgovPp :: ShelleyGovState era -> PParams era
+sgovPp = sgsCurPParams
+{-# DEPRECATED sgovPp "In favor of `sgsCurPParams`" #-}
+sgovPrevPp :: ShelleyGovState era -> PParams era
+sgovPrevPp = sgsPrevPParams
+{-# DEPRECATED sgovPrevPp "In favor of `sgsPrevPParams`" #-}
+
 proposalsL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
-proposalsL = lens proposals (\sgov x -> sgov {proposals = x})
+proposalsL = lens sgsCurProposals (\sgov x -> sgov {sgsCurProposals = x})
 
 futureProposalsL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
-futureProposalsL = lens futureProposals (\sgov x -> sgov {futureProposals = x})
+futureProposalsL = lens sgsFutureProposals (\sgov x -> sgov {sgsFutureProposals = x})
 
 curPParamsShelleyGovStateL :: Lens' (ShelleyGovState era) (PParams era)
-curPParamsShelleyGovStateL = lens sgovPp (\sps x -> sps {sgovPp = x})
+curPParamsShelleyGovStateL = lens sgsCurPParams (\sps x -> sps {sgsCurPParams = x})
 
 prevPParamsShelleyGovStateL :: Lens' (ShelleyGovState era) (PParams era)
-prevPParamsShelleyGovStateL = lens sgovPrevPp (\sps x -> sps {sgovPrevPp = x})
+prevPParamsShelleyGovStateL = lens sgsPrevPParams (\sps x -> sps {sgsPrevPParams = x})
 
 deriving instance
   ( Show (PParamsUpdate era)
@@ -201,10 +220,10 @@ instance EraPParams era => ToJSON (ShelleyGovState era) where
 
 toPPUPStatePairs :: (KeyValue e a, EraPParams era) => ShelleyGovState era -> [a]
 toPPUPStatePairs ShelleyGovState {..} =
-  [ "proposals" .= proposals
-  , "futureProposals" .= futureProposals
-  , "curPParams" .= sgovPp
-  , "prevPParams" .= sgovPrevPp
+  [ "proposals" .= sgsCurProposals
+  , "futureProposals" .= sgsFutureProposals
+  , "curPParams" .= sgsCurPParams
+  , "prevPParams" .= sgsPrevPParams
   ]
 
 instance EraPParams era => Default (ShelleyGovState era) where

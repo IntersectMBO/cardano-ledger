@@ -239,7 +239,7 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
     oldPoolDeposit = psDeposits . certPState . lsCertState $ lsOld
     newPoolDeposit = psDeposits . certPState . lsCertState $ lsNew
 
-    proposal = votedValue (proposals . utxosGovState . lsUTxOState $ lsOld) currPP 5
+    proposal = votedValue (sgsCurProposals . utxosGovState . lsUTxOState $ lsOld) currPP 5
     obligationMsgs = case proposal of
       Nothing -> []
       Just proposal' ->

@@ -130,7 +130,7 @@ updatePpup ppupState pp =
     & proposalsL .~ ps
     & futureProposalsL .~ emptyPPPUpdates
   where
-    ProposedPPUpdates newProposals = futureProposals ppupState
+    ProposedPPUpdates newProposals = sgsFutureProposals ppupState
     ps =
       if all (hasLegalProtVerUpdate pp) newProposals
         then ProposedPPUpdates newProposals

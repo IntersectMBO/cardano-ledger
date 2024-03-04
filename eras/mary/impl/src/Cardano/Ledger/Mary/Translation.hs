@@ -14,13 +14,26 @@ module Cardano.Ledger.Mary.Translation where
 
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
-import Cardano.Ledger.Mary.Tx ()
 import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
-import Cardano.Ledger.Shelley.API hiding (Metadata)
+import Cardano.Ledger.Shelley.LedgerState (
+  CertState (..),
+  DState (..),
+  EpochState (..),
+  LedgerState (..),
+  NewEpochState (..),
+  PState (..),
+  UTxOState (..),
+  VState (..),
+ )
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), Update (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx)
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut)
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits)
+import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 
@@ -113,10 +126,10 @@ instance Crypto c => TranslateEra (MaryEra c) ShelleyGovState where
   translateEra ctxt ps =
     return
       ShelleyGovState
-        { proposals = translateEra' ctxt $ proposals ps
-        , futureProposals = translateEra' ctxt $ futureProposals ps
-        , sgovPrevPp = translateEra' ctxt $ sgovPrevPp ps
-        , sgovPp = translateEra' ctxt $ sgovPp ps
+        { sgsCurProposals = translateEra' ctxt $ sgsCurProposals ps
+        , sgsFutureProposals = translateEra' ctxt $ sgsFutureProposals ps
+        , sgsCurPParams = translateEra' ctxt $ sgsCurPParams ps
+        , sgsPrevPParams = translateEra' ctxt $ sgsPrevPParams ps
         }
 
 instance Crypto c => TranslateEra (MaryEra c) UTxOState where

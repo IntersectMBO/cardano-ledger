@@ -2,6 +2,11 @@
 
 ## 1.10.0.0
 
+* Rename `ShelleyGovState` fields:
+  * `proposals` to `sgsCurProposals`
+  * `futureProposals` to `sgsFutureProposals`
+  * `sgovPp` to `sgsCurPParams`
+  * `sgovPrevPp` to `sgsPrevPParams`
 * Change `UPEC` environment to `LedgerState`
 * Rename `currentPp` to `usCurPParams` and `ppupState` to `usGovState`
 * Change `ApplyTxError`, `TickTransitionError` and `BlockTransitionError`

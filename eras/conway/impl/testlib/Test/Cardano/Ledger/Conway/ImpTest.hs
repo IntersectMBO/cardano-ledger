@@ -118,7 +118,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Core hiding (proposals)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
   EnactSignal,

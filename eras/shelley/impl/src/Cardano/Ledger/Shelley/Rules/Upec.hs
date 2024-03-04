@@ -100,7 +100,7 @@ instance
         coreNodeQuorum <- liftSTS $ asks quorum
 
         let utxoState = lsUTxOState ls
-            pup = proposals ppupState
+            pup = sgsCurProposals ppupState
             ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
         NewppState pp' ppupState' <-
           trans @(ShelleyNEWPP era) $

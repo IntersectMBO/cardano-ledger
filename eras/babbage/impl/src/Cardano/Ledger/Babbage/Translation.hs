@@ -17,20 +17,23 @@ import Cardano.Ledger.Babbage.Core hiding (Tx)
 import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.Core as Core (Tx)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Shelley.API (
+import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
   EpochState (..),
+  LedgerState (..),
   NewEpochState (..),
   PState (..),
-  StrictMaybe (..),
+  UTxOState (..),
   VState (..),
  )
-import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
+import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 
@@ -123,43 +126,43 @@ instance Crypto c => TranslateEra (BabbageEra c) CertState where
         , certVState = translateEra' ctxt $ certVState ls
         }
 
-instance Crypto c => TranslateEra (BabbageEra c) API.LedgerState where
+instance Crypto c => TranslateEra (BabbageEra c) LedgerState where
   translateEra ctxt ls =
     pure
-      API.LedgerState
-        { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls
-        , API.lsCertState = translateEra' ctxt $ API.lsCertState ls
+      LedgerState
+        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
+        , lsCertState = translateEra' ctxt $ lsCertState ls
         }
 
-instance Crypto c => TranslateEra (BabbageEra c) API.UTxOState where
+instance Crypto c => TranslateEra (BabbageEra c) UTxOState where
   translateEra ctxt us =
     pure
-      API.UTxOState
-        { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
-        , API.utxosDeposited = API.utxosDeposited us
-        , API.utxosFees = API.utxosFees us
-        , API.utxosGovState = translateEra' ctxt $ API.utxosGovState us
-        , API.utxosStakeDistr = API.utxosStakeDistr us
-        , API.utxosDonation = API.utxosDonation us
+      UTxOState
+        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
+        , utxosDeposited = utxosDeposited us
+        , utxosFees = utxosFees us
+        , utxosGovState = translateEra' ctxt $ utxosGovState us
+        , utxosStakeDistr = utxosStakeDistr us
+        , utxosDonation = utxosDonation us
         }
 
-instance Crypto c => TranslateEra (BabbageEra c) API.UTxO where
+instance Crypto c => TranslateEra (BabbageEra c) UTxO where
   translateEra _ctxt utxo =
-    pure $ API.UTxO $ translateTxOut `Map.map` API.unUTxO utxo
+    pure $ UTxO $ translateTxOut `Map.map` unUTxO utxo
 
-instance Crypto c => TranslateEra (BabbageEra c) API.ShelleyGovState where
+instance Crypto c => TranslateEra (BabbageEra c) ShelleyGovState where
   translateEra ctxt ps =
     pure
-      API.ShelleyGovState
-        { API.proposals = translateEra' ctxt $ API.proposals ps
-        , API.futureProposals = translateEra' ctxt $ API.futureProposals ps
-        , API.sgovPrevPp = upgradePParams () $ sgovPrevPp ps
-        , API.sgovPp = upgradePParams () $ sgovPp ps
+      ShelleyGovState
+        { sgsCurProposals = translateEra' ctxt $ sgsCurProposals ps
+        , sgsFutureProposals = translateEra' ctxt $ sgsFutureProposals ps
+        , sgsCurPParams = translateEra' ctxt $ sgsCurPParams ps
+        , sgsPrevPParams = translateEra' ctxt $ sgsPrevPParams ps
         }
 
-instance Crypto c => TranslateEra (BabbageEra c) API.ProposedPPUpdates where
-  translateEra _ctxt (API.ProposedPPUpdates ppup) =
-    pure $ API.ProposedPPUpdates $ fmap (upgradePParamsUpdate ()) ppup
+instance Crypto c => TranslateEra (BabbageEra c) ProposedPPUpdates where
+  translateEra _ctxt (ProposedPPUpdates ppup) =
+    pure $ ProposedPPUpdates $ fmap (upgradePParamsUpdate ()) ppup
 
 translateTxOut ::
   Crypto c =>

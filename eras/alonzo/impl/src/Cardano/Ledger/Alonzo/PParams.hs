@@ -385,7 +385,7 @@ instance Crypto c => EraGov (AlonzoEra c) where
       emptyPParams
       emptyPParams
 
-  getProposedPPUpdates = Just . proposals
+  getProposedPPUpdates = Just . sgsCurProposals
 
   curPParamsGovStateL = curPParamsShelleyGovStateL
 

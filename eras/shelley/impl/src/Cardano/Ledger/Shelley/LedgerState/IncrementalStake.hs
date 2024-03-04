@@ -224,8 +224,9 @@ incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
     step1 =
       if ignorePtrs
         then activeCreds
-        else -- Resolve inserts and delets which were indexed by ptrs, by looking them up in the ptrsMap
-        -- and combining the result of the lookup with the ordinary stake, keeping only the active credentials
+        else -- Resolve inserts and deletes which were indexed by ptrs, by looking them up
+        -- in the ptrsMap and combining the result of the lookup with the ordinary
+        -- stake, keeping only the active credentials
           Map.foldlWithKey' addResolvedPointer activeCreds ptrStake
     step2 = aggregateActiveStake triplesMap step1
     addResolvedPointer ans ptr ccoin =
