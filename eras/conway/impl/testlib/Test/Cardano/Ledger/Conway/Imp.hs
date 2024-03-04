@@ -17,6 +17,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure)
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
@@ -35,6 +36,7 @@ spec ::
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
   Spec
 spec = do

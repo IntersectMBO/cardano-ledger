@@ -2,6 +2,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -9,9 +11,13 @@
 module Test.Cardano.Ledger.Conway.Imp.UtxosSpec where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Allegra.Scripts (
+  pattern RequireTimeStart,
+ )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
@@ -30,6 +36,7 @@ import Cardano.Ledger.Plutus (
   hashPlutusScript,
  )
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
 import Data.Default.Class (def)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -44,7 +51,7 @@ import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (guessTheNumber3)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysFails2, alwaysSucceeds2, guessTheNumber3)
 
 spendDatum :: P1.Data
 spendDatum = P1.I 3
@@ -127,17 +134,19 @@ testPlutusV1V2Failure sh badField lenz errorField = do
 
 spec ::
   forall era.
-  ( Inject (BabbageContextError era) (ContextError era)
+  ( ConwayEraImp era
+  , Inject (BabbageContextError era) (ContextError era)
+  , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , ConwayEraImp era
-  , Inject (ConwayContextError era) (ContextError era)
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 spec =
   describe "UTXOS" $ do
     datumAndReferenceInputsSpec
     conwayFeaturesPlutusV1V2FailureSpec
+    govPolicySpec
 
 datumAndReferenceInputsSpec ::
   forall era.
@@ -485,3 +494,123 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             (drepKH, _delegatorKH, _spendingKP) <- setupSingleDRep 1_000
             let updateDRepTxCert = UpdateDRepTxCert @era (KeyHashObj drepKH) SNothing
             testCertificateNotSupportedV2 updateDRepTxCert
+
+govPolicySpec ::
+  forall era.
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  ) =>
+  SpecWith (ImpTestState era)
+govPolicySpec = do
+  describe "Gov policy scripts" $ do
+    it "failing native script govPolicy" $ do
+      (dRep, committeeMember, _) <- electBasicCommittee
+      scriptHash <- impAddNativeScript $ RequireTimeStart (SlotNo 1)
+      anchor <- arbitrary
+      void $ enactConstitution SNothing (Constitution anchor (SJust scriptHash)) dRep committeeMember
+      rewardAccount <- registerRewardAccount
+      pp <- getsNES $ nesEsL . curPParamsEpochStateL
+      impAnn "ParameterChange" $ do
+        let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
+        let govAction = ParameterChange SNothing pparamsUpdate (SJust scriptHash)
+        let proposal =
+              ProposalProcedure
+                { pProcReturnAddr = rewardAccount
+                , pProcGovAction = govAction
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = anchor
+                }
+        let tx =
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
+                & bodyTxL . vldtTxBodyL .~ ValidityInterval SNothing SNothing
+        submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
+
+      impAnn "TreasuryWithdrawals" $ do
+        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        let govAction = TreasuryWithdrawals withdrawals (SJust scriptHash)
+
+        let proposal =
+              ProposalProcedure
+                { pProcReturnAddr = rewardAccount
+                , pProcGovAction = govAction
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = anchor
+                }
+        let tx =
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
+                & bodyTxL . vldtTxBodyL .~ ValidityInterval SNothing SNothing
+        submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
+
+    it "alwaysSucceeds Plutus govPolicy validates" $ do
+      let alwaysSucceedsSh = hashPlutusScript (alwaysSucceeds2 SPlutusV3)
+      (dRep, committeeMember, _) <- electBasicCommittee
+      anchor <- arbitrary
+      pp <- getsNES $ nesEsL . curPParamsEpochStateL
+      void $ enactConstitution SNothing (Constitution anchor (SJust alwaysSucceedsSh)) dRep committeeMember
+      rewardAccount <- registerRewardAccount
+
+      impAnn "ParameterChange" $ do
+        let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
+        let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysSucceedsSh)
+        let proposal =
+              ProposalProcedure
+                { pProcReturnAddr = rewardAccount
+                , pProcGovAction = govAction
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = anchor
+                }
+        submitProposal_ proposal
+      impAnn "TreasuryWithdrawals" $ do
+        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        let govAction = TreasuryWithdrawals withdrawals (SJust alwaysSucceedsSh)
+
+        let proposal =
+              ProposalProcedure
+                { pProcReturnAddr = rewardAccount
+                , pProcGovAction = govAction
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = anchor
+                }
+        submitProposal_ proposal
+
+    it "alwaysFails Plutus govPolicy does not validate" $ do
+      let alwaysFailsSh = hashPlutusScript (alwaysFails2 SPlutusV3)
+      (dRep, committeeMember, _) <- electBasicCommittee
+      anchor <- arbitrary
+      pp <- getsNES $ nesEsL . curPParamsEpochStateL
+      void $ enactConstitution SNothing (Constitution anchor (SJust alwaysFailsSh)) dRep committeeMember
+
+      rewardAccount <- registerRewardAccount
+      impAnn "ParameterChange" $ do
+        let pparamsUpdate = def & ppuCommitteeMinSizeL .~ SJust 1
+        let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysFailsSh)
+        let proposal =
+              ProposalProcedure
+                { pProcReturnAddr = rewardAccount
+                , pProcGovAction = govAction
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = anchor
+                }
+        let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
+        res <- trySubmitTx tx
+        void $ expectLeft res
+        -- TODO: find a way to check that this is a PlutusFailure, without comparing the entire PredicateFailure
+        submitTx_ $ tx & isValidTxL .~ IsValid False
+
+      impAnn "TreasuryWithdrawals" $ do
+        let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
+        let govAction = TreasuryWithdrawals withdrawals (SJust alwaysFailsSh)
+        let proposal =
+              ProposalProcedure
+                { pProcReturnAddr = rewardAccount
+                , pProcGovAction = govAction
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = anchor
+                }
+        let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
+        res <- trySubmitTx tx
+        void $ expectLeft res
+        -- TODO: find a way to check that this is a PlutusFailure, without comparing the entire PredicateFailure
+        submitTx_ $ tx & isValidTxL .~ IsValid False

@@ -20,6 +20,20 @@ alwaysSucceedsDecl3args =
     alwaysSucceeds'3 _ _ _ = ()
     |]
 
+alwaysFailsDecl2args :: Q [Dec]
+alwaysFailsDecl2args =
+  [d|
+    alwaysFails'2 :: P.BuiltinData -> P.BuiltinData -> ()
+    alwaysFails'2 _ _ = P.error ()
+    |]
+
+alwaysFailsDecl3args :: Q [Dec]
+alwaysFailsDecl3args =
+  [d|
+    alwaysFails'3 :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
+    alwaysFails'3 _ _ _ = P.error ()
+    |]
+
 guessDecl :: Q [Dec]
 guessDecl =
   [d|

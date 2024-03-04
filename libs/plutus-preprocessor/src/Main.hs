@@ -8,9 +8,9 @@
 -- not have any dependency on the plutus-plugin.  Instead this package
 -- 'plutus-preprocessor' has that dependency, but one does not have to compile this
 -- package to build the system.  If the plutus package changes, we will have to regenerate
--- the PlutusScripts.hs file.  To regenerate PlutusScripts.hs, on a machine that can
--- depend upon plutus=plugin, then cd into the plutus-preprocessor directory and type
--- 'cabal run plutus-preprocessor'
+-- the Examples.hs file.
+-- To regenerate Examples.hs, on a machine that can depend upon plutus=plugin,
+-- run 'cabal run plutus-preprocessor'
 module Main where
 
 import Cardano.Ledger.Plutus.Language (Language (..))
@@ -74,6 +74,22 @@ displayScripts outh = do
             PlutusV3 -> PV3S.alwaysSucceeds3argsBytes
         , alwaysSucceedsDecl3args
         , "alwaysSucceeds3"
+        )
+      ,
+        ( \case
+            PlutusV1 -> PV1S.alwaysFails2argsBytes
+            PlutusV2 -> PV1S.alwaysFails2argsBytes
+            PlutusV3 -> PV3S.alwaysFails2argsBytes
+        , alwaysFailsDecl2args
+        , "alwaysFails2"
+        )
+      ,
+        ( \case
+            PlutusV1 -> PV1S.alwaysFails3argsBytes
+            PlutusV2 -> PV1S.alwaysFails3argsBytes
+            PlutusV3 -> PV3S.alwaysFails3argsBytes
+        , alwaysFailsDecl3args
+        , "alwaysFails3"
         )
       ,
         ( \case

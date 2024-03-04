@@ -44,6 +44,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Tree
 import Lens.Micro
+import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
@@ -628,58 +629,6 @@ spec =
           passNEpochs 3
           fmap (!! 3) getProposalsForest
             `shouldReturn` Node (SJust p116) []
-    describe "Proposals always have valid previous actions" $ do
-      context "Invalid proposals are rejected" $ do
-        it "Invalid Index in GovPurposeId" $ do
-          gaidConstitutionProp <- submitInitConstitutionGovAction
-          curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-          constitutionHash <- freshSafeHash
-          let constitutionActionNext =
-                NewConstitution
-                  (SJust $ GovPurposeId gaidConstitutionProp)
-                  ( Constitution
-                      ( Anchor
-                          (fromJust $ textToUrl 64 "constitution.1")
-                          constitutionHash
-                      )
-                      SNothing
-                  )
-          curConstitution' <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-          impAnn "Constitution has not been enacted yet" $
-            curConstitution' `shouldBe` curConstitution
-          submitGovAction_ constitutionActionNext
-        it "Enact Constitution and use valid GovPurposeId" $ do
-          (dRep, committeeMember, _) <- electBasicCommittee
-          constitutionHash <- freshSafeHash
-          let constitution =
-                Constitution
-                  ( Anchor
-                      (fromJust $ textToUrl 64 "constitution.0")
-                      constitutionHash
-                  )
-                  SNothing
-              constitutionAction =
-                NewConstitution SNothing constitution
-          gaidConstitutionProp <- submitGovAction constitutionAction
-          submitYesVote_ (DRepVoter dRep) gaidConstitutionProp
-          submitYesVote_ (CommitteeVoter committeeMember) gaidConstitutionProp
-          passEpoch
-          passEpoch
-          curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-          impAnn "Constitution has been enacted" $
-            curConstitution `shouldBe` constitution
-          constitutionHash1 <- freshSafeHash
-          let constitutionAction1 =
-                NewConstitution
-                  (SJust $ GovPurposeId gaidConstitutionProp)
-                  ( Constitution
-                      ( Anchor
-                          (fromJust $ textToUrl 64 "constitution.1")
-                          constitutionHash1
-                      )
-                      SNothing
-                  )
-          submitGovAction_ constitutionAction1
 
     describe "Voting" $ do
       context "fails for" $ do
@@ -851,13 +800,19 @@ spec =
         (pp ^. ppMinFeeAL) `shouldBe` newMinFeeA
 
     describe "Constitution proposals" $ do
-      context "accepted for" $
+      context "accepted for" $ do
         it "empty PrevGovId before the first constitution is enacted" $ do
           --  Initial proposal does not need a GovPurposeId but after it is enacted, the
           --  following ones are not
           _ <- submitConstitution SNothing
           -- Until the first proposal is enacted all proposals with empty GovPurposeIds are valid
           void $ submitConstitution SNothing
+        it "valid GovPurposeId" $ do
+          (dRep, committeeMember, _) <- electBasicCommittee
+          constitution <- arbitrary
+          gaidConstitutionProp <- enactConstitution SNothing constitution dRep committeeMember
+          constitution1 <- arbitrary
+          void $ enactConstitution (SJust $ GovPurposeId gaidConstitutionProp) constitution1 dRep committeeMember
 
       context "rejected for" $ do
         it "empty PrevGovId after the first constitution was enacted" $ do
@@ -866,7 +821,7 @@ spec =
           submitYesVote_ (DRepVoter dRep) govActionId
           submitYesVote_ (CommitteeVoter committeeMember) govActionId
           passNEpochs 2
-          constitution <- newConstitution
+          constitution <- arbitrary
           let invalidNewConstitutionGovAction =
                 NewConstitution
                   SNothing
@@ -880,7 +835,7 @@ spec =
           (_dRep, _committeeMember, _) <- electBasicCommittee
           (govActionId, _constitution) <- submitConstitution SNothing
           passNEpochs 2
-          constitution <- newConstitution
+          constitution <- arbitrary
           let invalidPrevGovActionId =
                 -- Expected Ix = 0
                 GovPurposeId (govActionId {gaidGovActionIx = GovActionIx 1})
@@ -995,15 +950,15 @@ spec =
           rsEnactState pulserRatifyState `shouldBe` enactState
 
       it "policy is respected by proposals" $ do
+        (dRep, committeeMember, _) <- electBasicCommittee
         keyHash <- freshKeyHash
         scriptHash <- impAddNativeScript $ RequireAllOf (SSeq.singleton (RequireSignature keyHash))
+        anchor <- arbitrary
+        _ <- enactConstitution SNothing (Constitution anchor (SJust scriptHash)) dRep committeeMember
         wrongScriptHash <-
           impAddNativeScript $
             RequireMOf 1 $
               SSeq.fromList [RequireAnyOf mempty, RequireAllOf mempty]
-        modifyNES $
-          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . constitutionGovStateL
-            .~ Constitution def (SJust scriptHash)
         pp <- getsNES $ nesEsL . curPParamsEpochStateL
         impAnn "ParameterChange with correct policy succeeds" $ do
           let
@@ -1034,7 +989,7 @@ spec =
               , pProcAnchor = def
               }
 
-        impAnn "ParameterChange with invalid policy succeeds" $ do
+        impAnn "ParameterChange with invalid policy fails" $ do
           rewardAccount <- registerRewardAccount
           let
             pparamsUpdate =
@@ -1053,7 +1008,7 @@ spec =
                               InvalidPolicyHash (SJust wrongScriptHash) (SJust scriptHash)
                            ]
 
-        impAnn "TreasuryWithdrawals with invalid policy succeeds" $ do
+        impAnn "TreasuryWithdrawals with invalid policy fails" $ do
           rewardAccount <- registerRewardAccount
           let
             withdrawals =
@@ -1518,24 +1473,13 @@ submitConstitution ::
   StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
   ImpTestM era (GovActionId (EraCrypto era), Constitution era)
 submitConstitution prevGovId = do
-  constitution <- newConstitution
+  constitution <- arbitrary
   let constitutionAction =
         NewConstitution
           prevGovId
           constitution
   govActionId <- submitGovAction constitutionAction
   pure (govActionId, constitution)
-
-newConstitution :: Era era => ImpTestM era (Constitution era)
-newConstitution = do
-  constitutionHash <- freshSafeHash
-  pure $
-    Constitution
-      ( Anchor
-          (fromJust $ textToUrl 64 "constitution.0")
-          constitutionHash
-      )
-      SNothing
 
 proposalWithRewardAccount ::
   forall era.

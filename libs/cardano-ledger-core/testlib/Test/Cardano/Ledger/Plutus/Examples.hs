@@ -44,6 +44,41 @@ alwaysSucceeds3 =
       )
 
 {- Preproceesed Plutus Script
+alwaysFails'2_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+                   PlutusTx.Builtins.Internal.BuiltinData -> ()
+alwaysFails'2_0 _ _ = PlutusTx.Builtins.error GHC.Tuple.Prim.()
+-}
+
+alwaysFails2 :: SLanguage l -> Plutus l
+alwaysFails2 =
+  Plutus
+    . PlutusBinary
+    . pack
+    . ( \case
+          SPlutusV1 -> [69, 1, 0, 0, 34, 97]
+          SPlutusV2 -> [69, 1, 0, 0, 34, 97]
+          SPlutusV3 -> [69, 1, 1, 0, 34, 97]
+      )
+
+{- Preproceesed Plutus Script
+alwaysFails'3_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+                   PlutusTx.Builtins.Internal.BuiltinData ->
+                   PlutusTx.Builtins.Internal.BuiltinData -> ()
+alwaysFails'3_0 _ _ _ = PlutusTx.Builtins.error GHC.Tuple.Prim.()
+-}
+
+alwaysFails3 :: SLanguage l -> Plutus l
+alwaysFails3 =
+  Plutus
+    . PlutusBinary
+    . pack
+    . ( \case
+          SPlutusV1 -> [70, 1, 0, 0, 34, 38, 1]
+          SPlutusV2 -> [70, 1, 0, 0, 34, 38, 1]
+          SPlutusV3 -> [70, 1, 1, 0, 34, 38, 1]
+      )
+
+{- Preproceesed Plutus Script
 guessTheNumber'2_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
                       PlutusTx.Builtins.Internal.BuiltinData -> ()
 guessTheNumber'2_0 d1_1 d2_2 = if d1_1 PlutusTx.Eq.== d2_2

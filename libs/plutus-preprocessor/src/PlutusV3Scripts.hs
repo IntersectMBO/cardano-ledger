@@ -19,6 +19,8 @@ import ScriptSource
 
 $alwaysSucceedsDecl2args
 $alwaysSucceedsDecl3args
+$alwaysFailsDecl2args
+$alwaysFailsDecl3args
 $guessDecl
 $guessDecl2args
 $evendataDecl
@@ -43,6 +45,16 @@ alwaysSucceeds3argsBytes :: ShortByteString
 alwaysSucceeds3argsBytes =
   PV3.serialiseCompiledCode
     $$(P.compile [||alwaysSucceeds'3||])
+
+alwaysFails2argsBytes :: ShortByteString
+alwaysFails2argsBytes =
+  PV3.serialiseCompiledCode
+    $$(P.compile [||alwaysFails'2||])
+
+alwaysFails3argsBytes :: ShortByteString
+alwaysFails3argsBytes =
+  PV3.serialiseCompiledCode
+    $$(P.compile [||alwaysFails'3||])
 
 guessTheNumberBytes :: ShortByteString
 guessTheNumberBytes =
