@@ -18,4 +18,5 @@ import Constrained.Instances ()
 import Constrained.Spec.Generics as X
 import Constrained.Spec.Maps as X
 import Constrained.Spec.Pairs as X
+import Constrained.Spec.Tree as X
 import Constrained.Univ ()

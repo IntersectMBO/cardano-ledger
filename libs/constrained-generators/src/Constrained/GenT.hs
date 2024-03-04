@@ -170,6 +170,18 @@ listOfT gen = do
   lst <- pureGen . listOf $ runGenT gen Loose
   catGEs lst
 
+-- | Generate a list of elements of length at most `goalLen`, but accepting failure
+-- to get that many elements so long as `validLen` is true.
+-- TODO: possibly one could return "more, fewer, ok" in the `validLen` instead
+-- of `Bool`
+listOfUntilLenT :: MonadGenError m => GenT GE a -> Int -> (Int -> Bool) -> GenT m [a]
+listOfUntilLenT gen goalLen validLen =
+  genList `suchThatT` validLen . length
+  where
+    genList = do
+      res <- pureGen . vectorOf goalLen $ runGenT gen Loose
+      catGEs res
+
 vectorOfT :: MonadGenError m => Int -> GenT GE a -> GenT m [a]
 vectorOfT i gen = GenT $ \mode -> do
   res <- fmap sequence . vectorOf i $ runGenT gen Strict
@@ -206,6 +218,12 @@ oneofT :: MonadGenError m => [GenT GE a] -> GenT m a
 oneofT gs = do
   mode <- getMode
   r <- explain ["suchThatT in oneofT"] $ pureGen (oneof [runGenT g mode | g <- gs]) `suchThatT` isOk
+  runGE r
+
+frequencyT :: MonadGenError m => [(Int, GenT GE a)] -> GenT m a
+frequencyT gs = do
+  mode <- getMode
+  r <- explain ["suchThatT in oneofT"] $ pureGen (frequency [(f, runGenT g mode) | (f, g) <- gs]) `suchThatT` isOk
   runGE r
 
 chooseT :: (Random a, Ord a, Show a, MonadGenError m) => (a, a) -> GenT m a
