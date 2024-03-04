@@ -299,7 +299,8 @@ addresses.
       \forall \var{s} \in (\fun{txscripts}~txw~\hldiff{utxo~\var{neededHashes}}) \cap \ScriptPhOne,
       \fun{validateScript}~\var{s}~\var{tx}\\~\\
       \var{neededHashes} - \hldiff{\dom (\fun{refScripts}~tx~utxo)} = \dom (\fun{txwitscripts}~txw) \\~\\
-      \var{inputHashes} \subseteq_{\{h \mid (\wcard, \wcard, h, \wcard)\in\fun{allOuts}~tx \cup \hldiff{\var{utxo}~(\fun{refInputs}~{tx})}\}} \dom (\fun{txdats}~{txw})  \\~\\
+      \var{inputHashes} \subseteq \dom (\fun{txdats}~{txw})  \\
+      \dom (\fun{txdats}~{txw}) \subseteq \var{inputHashes} \cup {\{h \mid (\wcard, \wcard, h, \wcard)\in\fun{allOuts}~tx \cup \hldiff{\var{utxo}~(\fun{refInputs}~{tx})}\}} \\~\\
       \\~\\
       \dom (\fun{txrdmrs}~tx) = \left\{ \fun{rdptr}~txb~sp \,\middle|
         {

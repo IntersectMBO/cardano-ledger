@@ -32,7 +32,7 @@ without the execution units budget.
         & ~~~~ [~ c_P \mid c \in \fun{txcerts}~{tx} ~] , \\
         & ~~~~ \{~(s_P,~c_P)\mid s\mapsto c \in \fun{txwdrls}~{tx}~\} , \\
         & ~~~~ \fun{transVITime} ~pp ~ei~ sysS~ (\fun{txvldt}~tx)  , \\
-        & ~~~~ \{~k_P\mid k \in \dom \fun{txwitsVKey}~{tx}~\} , \\
+        & ~~~~ \{~k_P\mid k \in \fun{reqSignerHashes}~{tx}~\} , \\
         & ~~~~ \hldiff{\{ (sp_P, d_P) \mid sp \mapsto (d, \_) \in \fun{indexedRdmrs}~tx \}}, \\
         & ~~~~ \{~(h_P,~d_P)\mid h\mapsto d \in \fun{txdats}~{tx}~\} , \\
         & ~~~~ (\fun{txid}~{tx})_P)
