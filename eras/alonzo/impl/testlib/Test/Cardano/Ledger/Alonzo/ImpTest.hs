@@ -363,6 +363,8 @@ plutusTestScripts lang =
   Map.fromList
     [ mkScriptTestEntry (alwaysSucceeds2 lang) $ PlutusArgs (P.I 0) Nothing
     , mkScriptTestEntry (alwaysSucceeds3 lang) $ PlutusArgs (P.I 0) (Just $ P.I 0)
+    , mkScriptTestEntry (alwaysFails2 lang) $ PlutusArgs (P.I 0) Nothing
+    , mkScriptTestEntry (alwaysFails3 lang) $ PlutusArgs (P.I 0) (Just $ P.I 0)
     , mkScriptTestEntry (guessTheNumber2 lang) $ PlutusArgs (P.I 3) Nothing
     , mkScriptTestEntry (guessTheNumber3 lang) $ PlutusArgs (P.I 3) (Just $ P.I 3)
     , mkScriptTestEntry (evendata3 lang) $ PlutusArgs (P.I 4) (Just $ P.I 0)
