@@ -67,6 +67,8 @@ instance ToExpr (ShelleyDelegCert c)
 -- TxWits
 instance (Era era, ToExpr (Script era)) => ToExpr (ShelleyTxWits era)
 
+instance (Era era, ToExpr (Script era)) => ToExpr (ShelleyTxWitsRaw era)
+
 -- Rules/Ppup
 instance ToExpr VotingPeriod
 

@@ -6,7 +6,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
@@ -16,6 +15,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.TxWits (
@@ -27,9 +27,7 @@ module Cardano.Ledger.Shelley.TxWits (
     bootWits,
     scriptWits
   ),
-  WitnessSetHKD (
-    txWitsBytes
-  ),
+  ShelleyTxWitsRaw,
   scriptShelleyTxWitsL,
   addrShelleyTxWitsL,
   bootAddrShelleyTxWitsL,
@@ -48,62 +46,56 @@ import Cardano.Ledger.Binary (
   Decoder,
   EncCBOR (encCBOR),
   decodeList,
-  decodeMapContents,
-  decodeWord,
-  encodeMapLen,
-  encodeWord,
-  invalidKey,
-  serialize,
-  withSlice,
  )
-import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR (..), encodePreEncoded)
+import Cardano.Ledger.Binary.Coders
+import qualified Cardano.Ledger.Binary.Plain as Plain (ToCBOR (..))
 import Cardano.Ledger.Core (
   Era (EraCrypto),
   EraScript (Script),
   EraTxWits (..),
   ScriptHash,
-  eraProtVerLow,
   hashScript,
  )
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
-import Cardano.Ledger.MemoBytes (EqRaw (..))
+import Cardano.Ledger.MemoBytes (
+  EqRaw (..),
+  Mem,
+  MemoBytes,
+  Memoized (..),
+  getMemoRawType,
+  lensMemoRawType,
+  mkMemoized,
+ )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Scripts ()
 import Cardano.Ledger.Shelley.TxAuxData ()
 import Control.DeepSeq (NFData)
-import qualified Data.ByteString.Lazy as BSL
-import Data.Foldable (fold)
 import Data.Functor.Classes (Eq1 (liftEq))
-import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.MapExtras as Map (fromElems)
-import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records ()
-import Lens.Micro (Lens', lens, (^.))
-import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
+import Lens.Micro (Lens', (^.))
+import NoThunks.Class (NoThunks (..))
 
-data WitnessSetHKD f era = WitnessSet'
-  { addrWits' :: !(HKD f (Set (WitVKey 'Witness (EraCrypto era))))
-  , scriptWits' :: !(HKD f (Map (ScriptHash (EraCrypto era)) (Script era)))
-  , bootWits' :: !(HKD f (Set (BootstrapWitness (EraCrypto era))))
-  , txWitsBytes :: BSL.ByteString
+data ShelleyTxWitsRaw era = ShelleyTxWitsRaw
+  { addrWits' :: !(Set (WitVKey 'Witness (EraCrypto era)))
+  , scriptWits' :: !(Map (ScriptHash (EraCrypto era)) (Script era))
+  , bootWits' :: !(Set (BootstrapWitness (EraCrypto era)))
   }
+  deriving (Generic)
 
-deriving instance EraScript era => Show (WitnessSetHKD Identity era)
+deriving instance EraScript era => Show (ShelleyTxWitsRaw era)
 
-deriving instance EraScript era => Eq (WitnessSetHKD Identity era)
-
-deriving instance Era era => Generic (WitnessSetHKD Identity era)
+deriving instance EraScript era => Eq (ShelleyTxWitsRaw era)
 
 instance
   ( Era era
@@ -111,24 +103,20 @@ instance
   , NFData (WitVKey 'Witness (EraCrypto era))
   , NFData (BootstrapWitness (EraCrypto era))
   ) =>
-  NFData (WitnessSetHKD Identity era)
+  NFData (ShelleyTxWitsRaw era)
 
-deriving via
-  AllowThunksIn
-    '[ "txWitsBytes"
-     ]
-    (WitnessSetHKD Identity era)
-  instance
-    (Era era, NoThunks (Script era)) =>
-    (NoThunks (WitnessSetHKD Identity era))
+instance EraScript era => NoThunks (ShelleyTxWitsRaw era)
 
-newtype ShelleyTxWits era = ShelleyTxWitsConstr (WitnessSetHKD Identity era)
+newtype ShelleyTxWits era = ShelleyTxWitsConstr (MemoBytes ShelleyTxWitsRaw era)
+  deriving (Generic)
+  deriving newtype (SafeToHash, Plain.ToCBOR)
+
+instance Memoized ShelleyTxWits where
+  type RawType ShelleyTxWits = ShelleyTxWitsRaw
 
 deriving newtype instance EraScript era => Eq (ShelleyTxWits era)
 
 deriving newtype instance EraScript era => Show (ShelleyTxWits era)
-
-deriving newtype instance Era era => Generic (ShelleyTxWits era)
 
 instance
   ( Era era
@@ -138,7 +126,7 @@ instance
   ) =>
   NFData (ShelleyTxWits era)
 
-instance (Era era, NoThunks (Script era)) => NoThunks (ShelleyTxWits era)
+instance EraScript era => NoThunks (ShelleyTxWits era)
 
 -- =======================================================
 -- Accessors
@@ -149,9 +137,7 @@ instance (Era era, NoThunks (Script era)) => NoThunks (ShelleyTxWits era)
 addrShelleyTxWitsL ::
   EraScript era => Lens' (ShelleyTxWits era) (Set (WitVKey 'Witness (EraCrypto era)))
 addrShelleyTxWitsL =
-  lens
-    (\(ShelleyTxWitsConstr w) -> addrWits' w)
-    (\w s -> w {addrWits = s})
+  lensMemoRawType addrWits' $ \witsRaw aw -> witsRaw {addrWits' = aw}
 {-# INLINEABLE addrShelleyTxWitsL #-}
 
 -- | Bootstrap Addresses witness setter and getter for `ShelleyTxWits`. The
@@ -160,9 +146,7 @@ bootAddrShelleyTxWitsL ::
   EraScript era =>
   Lens' (ShelleyTxWits era) (Set (BootstrapWitness (EraCrypto era)))
 bootAddrShelleyTxWitsL =
-  lens
-    (\(ShelleyTxWitsConstr w) -> bootWits' w)
-    (\w s -> w {bootWits = s})
+  lensMemoRawType bootWits' $ \witsRaw bw -> witsRaw {bootWits' = bw}
 {-# INLINEABLE bootAddrShelleyTxWitsL #-}
 
 -- | Script witness setter and getter for `ShelleyTxWits`. The
@@ -171,9 +155,7 @@ scriptShelleyTxWitsL ::
   EraScript era =>
   Lens' (ShelleyTxWits era) (Map (ScriptHash (EraCrypto era)) (Script era))
 scriptShelleyTxWitsL =
-  lens
-    (\(ShelleyTxWitsConstr w) -> scriptWits' w)
-    (\w s -> w {scriptWits = s})
+  lensMemoRawType scriptWits' $ \witsRaw sw -> witsRaw {scriptWits' = sw}
 {-# INLINEABLE scriptShelleyTxWitsL #-}
 
 instance Crypto c => EraTxWits (ShelleyEra c) where
@@ -197,8 +179,13 @@ instance Crypto c => EraTxWits (ShelleyEra c) where
 instance (TxWits era ~ ShelleyTxWits era, EraTxWits era) => EqRaw (ShelleyTxWits era) where
   eqRaw = shelleyEqTxWitsRaw
 
-instance Era era => Plain.ToCBOR (ShelleyTxWits era) where
-  toCBOR (ShelleyTxWitsConstr w) = Plain.encodePreEncoded $ BSL.toStrict $ txWitsBytes w
+instance (Era era, EncCBOR (Script era)) => EncCBOR (ShelleyTxWitsRaw era) where
+  encCBOR (ShelleyTxWitsRaw vkeys scripts boots) =
+    encode $
+      Keyed ShelleyTxWitsRaw
+        !> Omit null (Key 0 $ To vkeys)
+        !> Omit null (Key 1 $ E (encCBOR . Map.elems) scripts)
+        !> Omit null (Key 2 $ To boots)
 
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (ShelleyTxWits era)
@@ -219,27 +206,10 @@ pattern ShelleyTxWits ::
   Set (BootstrapWitness (EraCrypto era)) ->
   ShelleyTxWits era
 pattern ShelleyTxWits {addrWits, scriptWits, bootWits} <-
-  ShelleyTxWitsConstr (WitnessSet' addrWits scriptWits bootWits _)
+  (getMemoRawType -> ShelleyTxWitsRaw addrWits scriptWits bootWits)
   where
     ShelleyTxWits awits scriptWitMap bootstrapWits =
-      let encodeIndexedMaybe ix x =
-            if null x then Nothing else Just $ encodeWord ix <> encCBOR x
-          l =
-            catMaybes
-              [ encodeIndexedMaybe 0 awits
-              , encodeIndexedMaybe 1 (Map.elems scriptWitMap)
-              , encodeIndexedMaybe 2 bootstrapWits
-              ]
-          n = fromIntegral $ length l
-          witsBytes = serialize (eraProtVerLow @era) $ encodeMapLen n <> fold l
-       in ShelleyTxWitsConstr
-            ( WitnessSet'
-                { addrWits' = awits
-                , scriptWits' = scriptWitMap
-                , bootWits' = bootstrapWits
-                , txWitsBytes = witsBytes
-                }
-            )
+      mkMemoized $ ShelleyTxWitsRaw awits scriptWitMap bootstrapWits
 
 {-# COMPLETE ShelleyTxWits #-}
 
@@ -249,22 +219,25 @@ shelleyEqTxWitsRaw txWits1 txWits2 =
     && liftEq eqRaw (txWits1 ^. scriptTxWitsL) (txWits2 ^. scriptTxWitsL)
     && liftEq eqRaw (txWits1 ^. bootAddrTxWitsL) (txWits2 ^. bootAddrTxWitsL)
 
-instance SafeToHash (ShelleyTxWits era) where
-  originalBytes (ShelleyTxWitsConstr w) = BSL.toStrict $ txWitsBytes w
-
 -- | Exports the relevant parts from a (WintessSetHKD Identity era) for
 --     use by the pretty printer without all the horrible constraints.
 --     Uses the non-exported WitnessSet' constructor.
 prettyWitnessSetParts ::
+  EraScript era =>
   ShelleyTxWits era ->
   ( Set (WitVKey 'Witness (EraCrypto era))
   , Map (ScriptHash (EraCrypto era)) (Script era)
   , Set (BootstrapWitness (EraCrypto era))
   )
-prettyWitnessSetParts (ShelleyTxWitsConstr (WitnessSet' a b c _)) = (a, b, c)
+prettyWitnessSetParts (ShelleyTxWits a b c) = (a, b, c)
 
-instance EraScript era => DecCBOR (Annotator (ShelleyTxWits era)) where
+instance EraScript era => DecCBOR (Annotator (ShelleyTxWitsRaw era)) where
   decCBOR = decodeWits
+
+deriving via
+  (Mem ShelleyTxWitsRaw era)
+  instance
+    EraScript era => DecCBOR (Annotator (ShelleyTxWits era))
 
 -- | This type is only used to preserve the old buggy behavior where signature
 -- was ignored in the `Ord` instance for `WitVKey`s.
@@ -274,38 +247,43 @@ newtype IgnoreSigOrd kr c = IgnoreSigOrd {unIgnoreSigOrd :: WitVKey kr c}
 instance (Typeable kr, Crypto c) => Ord (IgnoreSigOrd kr c) where
   compare (IgnoreSigOrd w1) (IgnoreSigOrd w2) = compare (witVKeyHash w1) (witVKeyHash w2)
 
-decodeWits :: forall era s. EraScript era => Decoder s (Annotator (ShelleyTxWits era))
-decodeWits = do
-  (mapParts, annBytes) <-
-    withSlice $
-      decodeMapContents $
-        decodeWord >>= \case
-          0 ->
-            decodeList decCBOR >>= \x ->
-              pure
-                ( \ws ->
-                    ws
-                      { addrWits' =
-                          Set.map unIgnoreSigOrd . Set.fromList . fmap IgnoreSigOrd <$> sequence x
-                      }
-                )
-          1 ->
-            decodeList decCBOR >>= \x ->
-              pure (\ws -> ws {scriptWits' = Map.fromElems (hashScript @era) <$> sequence x})
-          2 ->
-            decodeList decCBOR >>= \x ->
-              pure (\ws -> ws {bootWits' = Set.fromList <$> sequence x})
-          k -> invalidKey k
-  let witSet = foldr ($) emptyWitnessSetHKD mapParts
-      emptyWitnessSetHKD :: WitnessSetHKD Annotator era
-      emptyWitnessSetHKD =
-        WitnessSet'
-          { addrWits' = pure mempty
-          , scriptWits' = pure mempty
-          , bootWits' = pure mempty
-          , txWitsBytes = mempty
-          }
-  pure $ ShelleyTxWitsConstr <$> (WitnessSet' <$> addrWits' witSet <*> scriptWits' witSet <*> bootWits' witSet <*> annBytes)
+decodeWits ::
+  forall era s.
+  EraScript era =>
+  Decoder s (Annotator (ShelleyTxWitsRaw era))
+decodeWits =
+  decode $
+    SparseKeyed
+      "ShelleyTxWitsRaw"
+      (pure emptyWitnessSet)
+      witField
+      []
+  where
+    emptyWitnessSet = ShelleyTxWitsRaw mempty mempty mempty
+    witField :: Word -> Field (Annotator (ShelleyTxWitsRaw era))
+    witField 0 =
+      fieldAA
+        (\x wits -> wits {addrWits' = x})
+        ( D $
+            mapTraverseableDecoderA
+              (decodeList decCBOR)
+              (Set.map unIgnoreSigOrd . Set.fromList . fmap IgnoreSigOrd)
+        )
+    witField 1 =
+      fieldAA
+        (\x wits -> wits {scriptWits' = x})
+        ( D $
+            mapTraverseableDecoderA
+              (decodeList decCBOR)
+              (Map.fromElems (hashScript @era))
+        )
+    witField 2 =
+      fieldAA
+        (\x wits -> wits {bootWits' = x})
+        (D $ mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
+    witField n = fieldAA (\_ wits -> wits) (Invalid n)
+    mapTraverseableDecoderA decList transformList =
+      fmap transformList . sequence <$> decList
 
 keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
