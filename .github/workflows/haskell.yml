@@ -46,7 +46,8 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+
     - name: Set NIGHTLY environment variable if the job was triggered by the scheduler
       if: ${{ github.event_name == 'schedule' }}
       run: |
@@ -87,7 +88,7 @@ jobs:
     - name: Cabal Configure
       run: cabal configure --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       if: matrix.os != 'macos-latest'
       name: Cache cabal store
       with:
@@ -139,7 +140,7 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install fourmolu
       run: |
@@ -163,7 +164,7 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Format all cabal files
       run: ./scripts/cabal-format.sh
 
@@ -180,7 +181,7 @@ jobs:
     steps:
     - name: Cache implicit-hie executable (gen-hie)
       id: cache-gen-hie
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cabal/bin/gen-hie
@@ -193,7 +194,7 @@ jobs:
     - name: Add cabal-bin to PATH
       run: echo "$HOME/.cabal/bin" >> $GITHUB_PATH
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Regenerate hie.yaml and confirm that it is in sync
       run: ./scripts/gen-hie.sh
