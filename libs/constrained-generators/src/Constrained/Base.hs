@@ -1326,6 +1326,8 @@ isLit = isJust . fromLit
 
 simplifyPred :: BaseUniverse fn => Pred fn -> Pred fn
 simplifyPred = \case
+  -- If the term simplifies away to a literal, that means there is no
+  -- more generation to do so we can get rid of `GenHint`
   GenHint h t -> case simplifyTerm t of
     Lit {} -> TruePred
     t' -> GenHint h t'
@@ -1597,6 +1599,8 @@ aggressiveInlining inlineable p
             tell $ Any True
             pure $ assertExplain es b
         | otherwise -> pure p
+      -- If the term turns into a literal, there is no more generation to do here
+      -- so we can ignore the `GenHint`
       GenHint _ t
         | not (isLit t)
         , Lit {} <- simplifyTerm $ substituteTerm sub t -> do

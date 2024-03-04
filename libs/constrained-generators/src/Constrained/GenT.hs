@@ -170,6 +170,8 @@ listOfT gen = do
   lst <- pureGen . listOf $ runGenT gen Loose
   catGEs lst
 
+-- | Generate a list of elements of length at most `goalLen`, but accepting failure
+-- to get that many elements so long as `validLen` is true.
 -- TODO: possibly one could return "more, fewer, ok" in the `validLen` instead
 -- of `Bool`
 listOfUntilLenT :: MonadGenError m => GenT GE a -> Int -> (Int -> Bool) -> GenT m [a]
