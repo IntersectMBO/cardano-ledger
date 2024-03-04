@@ -130,6 +130,7 @@ instance Crypto c => TranslateEra (MaryEra c) ShelleyGovState where
         , sgsFutureProposals = translateEra' ctxt $ sgsFutureProposals ps
         , sgsCurPParams = translateEra' ctxt $ sgsCurPParams ps
         , sgsPrevPParams = translateEra' ctxt $ sgsPrevPParams ps
+        , sgsFuturePParams = translateEra' ctxt <$> sgsFuturePParams ps
         }
 
 instance Crypto c => TranslateEra (MaryEra c) UTxOState where

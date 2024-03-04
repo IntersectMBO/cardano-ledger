@@ -306,7 +306,7 @@ instance
   ) =>
   Arbitrary (ShelleyGovState era)
   where
-  arbitrary = ShelleyGovState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = ShelleyGovState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
   shrink = genericShrink
 
 ------------------------------------------------------------------------------------------

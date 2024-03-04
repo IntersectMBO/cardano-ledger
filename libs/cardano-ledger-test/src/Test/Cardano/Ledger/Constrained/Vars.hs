@@ -408,6 +408,9 @@ futurePParamProposals p = Var (pV p "futurePParamProposals" (MapR GenHashR (PPar
 currPParams :: Era era => Proof era -> Term era (PParamsF era)
 currPParams p = Var (pV p "currPParams" (PParamsR p) No)
 
+futurePParams :: Era era => Proof era -> Term era (Maybe (PParamsF era))
+futurePParams p = Var (pV p "futurePParams" (MaybeR (PParamsR p)) No)
+
 prevPParams :: Gov.EraGov era => Proof era -> Term era (PParamsF era)
 prevPParams p =
   Var (V "prevPParams" (PParamsR p) (Yes NewEpochStateR (nesEsL . prevPParamsEpochStateL . ppFL p)))
@@ -425,6 +428,7 @@ ppupStateT p =
     :$ Lensed (futurePParamProposals p) (futureProposalsL . proposedMapL p)
     :$ Lensed (currPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
     :$ Lensed (prevPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
+    :$ Lensed (futurePParams p) (Gov.futurePParamsGovStateL . pparamsMaybeFL p)
   where
     ppupfun x y (PParamsF _ pp) (PParamsF _ prev) =
       ShelleyGovState
@@ -432,6 +436,7 @@ ppupStateT p =
         (ProposedPPUpdates (Map.map unPParamsUpdate y))
         pp
         prev
+        . fmap (\(PParamsF _ fpp) -> fpp)
 
 govL :: Lens' (GovState era) (Gov.GovState era)
 govL = lens f g
@@ -2141,6 +2146,12 @@ constitutionChildren = Var $ V "constitutionChildren" (SetR GovActionIdR) No
 
 pparamsFL :: Proof era -> Lens' (PParams era) (PParamsF era)
 pparamsFL p = lens (PParamsF p) (\_ (PParamsF _ x) -> x)
+
+pparamsMaybeFL :: Proof era -> Lens' (Maybe (PParams era)) (Maybe (PParamsF era))
+pparamsMaybeFL p =
+  lens
+    (fmap (PParamsF p))
+    (\_ -> fmap (\(PParamsF _ x) -> x))
 
 smCommL :: Lens' (StrictMaybe (Committee era)) (Committee era)
 smCommL = lens getter (\_ t -> SJust t)

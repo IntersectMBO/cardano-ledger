@@ -95,7 +95,7 @@ import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, HKDFunctor (..))
 import Cardano.Ledger.Orphans ()
-import Cardano.Ledger.Shelley.PParams (emptyPPPUpdates, shelleyCommonPParamsHKDPairsV8)
+import Cardano.Ledger.Shelley.PParams (shelleyCommonPParamsHKDPairsV8)
 import Control.DeepSeq (NFData)
 import Data.Aeson as Aeson (
   FromJSON (..),
@@ -263,18 +263,15 @@ instance Crypto c => BabbageEraPParams (BabbageEra c) where
 
 instance Crypto c => EraGov (BabbageEra c) where
   type GovState (BabbageEra c) = ShelleyGovState (BabbageEra c)
-  emptyGovState =
-    ShelleyGovState
-      emptyPPPUpdates
-      emptyPPPUpdates
-      emptyPParams
-      emptyPParams
+  emptyGovState = emptyShelleyGovState
 
   getProposedPPUpdates = Just . sgsCurProposals
 
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
+
+  futurePParamsGovStateL = futurePParamsShelleyGovStateL
 
   obligationGovState = const mempty
 

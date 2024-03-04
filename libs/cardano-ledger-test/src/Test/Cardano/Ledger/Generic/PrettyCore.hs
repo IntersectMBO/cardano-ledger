@@ -2808,14 +2808,15 @@ pcGovState p x = case whichGovState p of
   (GovStateConwayToConway) -> unReflect pcConwayGovState p x
 
 pcShelleyGovState :: Proof era -> ShelleyGovState era -> PDoc
-pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp) =
+pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp mfuturepp) =
   ppRecord
     "ShelleyGovState"
-    [ ("proposals", ppString "(Proposals ...)")
-    , ("futureProposals", ppString "(Proposals ...)")
-    , ("pparams", pcPParamsSynopsis p pp)
-    , ("prevParams", pcPParamsSynopsis p prevpp)
-    ]
+    $ [ ("proposals", ppString "(Proposals ...)")
+      , ("futureProposals", ppString "(Proposals ...)")
+      , ("pparams", pcPParamsSynopsis p pp)
+      , ("prevParams", pcPParamsSynopsis p prevpp)
+      ]
+      ++ [("futureParams", pcPParamsSynopsis p futurepp) | Just futurepp <- [mfuturepp]]
 
 instance Reflect era => PrettyA (ShelleyGovState era) where
   prettyA = pcShelleyGovState reify

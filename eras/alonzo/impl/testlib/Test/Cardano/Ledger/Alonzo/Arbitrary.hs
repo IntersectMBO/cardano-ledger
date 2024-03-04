@@ -337,7 +337,6 @@ instance Era era => Arbitrary (AlonzoContextError era) where
 
 instance
   ( EraTxOut era
-  , Era era
   , Arbitrary (Value era)
   , Arbitrary (TxOut era)
   , Arbitrary (PredicateFailure (EraRule "UTXOS" era))

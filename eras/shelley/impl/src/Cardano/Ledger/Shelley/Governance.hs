@@ -13,11 +13,13 @@
 module Cardano.Ledger.Shelley.Governance (
   EraGov (..),
   ShelleyGovState (..),
+  emptyShelleyGovState,
   -- Lens
   proposalsL,
   futureProposalsL,
   curPParamsShelleyGovStateL,
   prevPParamsShelleyGovStateL,
+  futurePParamsShelleyGovStateL,
 
   -- * Deprecations
   proposals,
@@ -87,6 +89,9 @@ class
   -- | Lens for accessing the previous protocol parameters
   prevPParamsGovStateL :: Lens' (GovState era) (PParams era)
 
+  -- | Lens for accessing the previous protocol parameters
+  futurePParamsGovStateL :: Lens' (GovState era) (Maybe (PParams era))
+
   obligationGovState :: GovState era -> Obligations
 
 instance Crypto c => EraGov (ShelleyEra c) where
@@ -98,6 +103,8 @@ instance Crypto c => EraGov (ShelleyEra c) where
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
+  futurePParamsGovStateL = futurePParamsShelleyGovStateL
+
   obligationGovState = const mempty -- No GovState obigations in ShelleyEra
 
 data ShelleyGovState era = ShelleyGovState
@@ -105,6 +112,10 @@ data ShelleyGovState era = ShelleyGovState
   , sgsFutureProposals :: !(ProposedPPUpdates era)
   , sgsCurPParams :: !(PParams era)
   , sgsPrevPParams :: !(PParams era)
+  , sgsFuturePParams :: Maybe (PParams era)
+  -- ^ Prediction of any parameter changes that might happen on the epoch boundary. The
+  -- field is lazy on purpose, since we only need to compute this field only towards the
+  -- end of the epoch.
   }
   deriving (Generic)
 
@@ -132,6 +143,10 @@ curPParamsShelleyGovStateL = lens sgsCurPParams (\sps x -> sps {sgsCurPParams = 
 
 prevPParamsShelleyGovStateL :: Lens' (ShelleyGovState era) (PParams era)
 prevPParamsShelleyGovStateL = lens sgsPrevPParams (\sps x -> sps {sgsPrevPParams = x})
+
+futurePParamsShelleyGovStateL :: Lens' (ShelleyGovState era) (Maybe (PParams era))
+futurePParamsShelleyGovStateL =
+  lens sgsFuturePParams (\sps x -> sps {sgsFuturePParams = x})
 
 deriving instance
   ( Show (PParamsUpdate era)
@@ -164,13 +179,14 @@ instance
   ) =>
   EncCBOR (ShelleyGovState era)
   where
-  encCBOR (ShelleyGovState ppup fppup pp ppp) =
+  encCBOR (ShelleyGovState ppup fppup pp ppp fpp) =
     encode $
       Rec ShelleyGovState
         !> To ppup
         !> To fppup
         !> To pp
         !> To ppp
+        !> To fpp
 
 instance
   ( Era era
@@ -182,6 +198,7 @@ instance
   decShareCBOR _ =
     decode $
       RecD ShelleyGovState
+        <! From
         <! From
         <! From
         <! From
@@ -227,9 +244,13 @@ toPPUPStatePairs ShelleyGovState {..} =
   ]
 
 instance EraPParams era => Default (ShelleyGovState era) where
-  def =
-    ShelleyGovState
-      emptyPPPUpdates
-      emptyPPPUpdates
-      emptyPParams
-      emptyPParams
+  def = emptyShelleyGovState
+
+emptyShelleyGovState :: EraPParams era => ShelleyGovState era
+emptyShelleyGovState =
+  ShelleyGovState
+    emptyPPPUpdates
+    emptyPPPUpdates
+    emptyPParams
+    emptyPParams
+    Nothing
