@@ -34,6 +34,63 @@ spec =
   describe "RATIFY" $ do
     votingSpec
     delayingActionsSpec
+    spoVotesForHardForkInitiation
+
+spoVotesForHardForkInitiation ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+spoVotesForHardForkInitiation =
+  describe "Counting of SPO votes" $ do
+    it "HardForkInitiation" $ do
+      (_dRepC, hotCC, _gpi) <- electBasicCommittee
+      (spoK1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000
+      (spoK2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000
+      (_spoK3, _paymentC3, _stakingC3) <- setupPoolWithStake $ Coin 1_000
+      (_spoK4, _paymentC4, _stakingC4) <- setupPoolWithStake $ Coin 1_000
+      modifyPParams $ ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 1 %! 2
+      protVer <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
+      gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+      submitYesVote_ (CommitteeVoter hotCC) gai
+      -- 1 % 4 stake yes; 3 % 4 stake no; yes / stake - abstain < 1 % 2
+      submitYesVote_ (StakePoolVoter spoK1) gai
+      passNEpochs 2
+      logRatificationChecks gai
+      isSpoAccepted gai `shouldReturn` False
+      getLastEnactedHardForkInitiation `shouldReturn` SNothing
+      -- 1 % 2 stake yes; 1 % 2 stake no; yes / stake - abstain = 1 % 2
+      submitYesVote_ (StakePoolVoter spoK2) gai
+      isSpoAccepted gai `shouldReturn` True
+      passNEpochs 2
+      getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
+    describe "All gov action other than HardForkInitiation" $ do
+      it "NoConfidence" $ do
+        (spoK1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000
+        (_spoK2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000
+        (_spoK3, _paymentC3, _stakingC3) <- setupPoolWithStake $ Coin 1_000
+        (_spoK4, _paymentC4, _stakingC4) <- setupPoolWithStake $ Coin 1_000
+        modifyPParams $ ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 1 %! 2
+        gai <- submitGovAction $ NoConfidence SNothing
+        -- 1 % 4 stake yes; 3 % 4 stake abstain; yes / stake - abstain > 1 % 2
+        submitYesVote_ (StakePoolVoter spoK1) gai
+        passNEpochs 2
+        getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gai)
+      it "CommitteeUpdate" $ do
+        (spoK1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000
+        (_spoK2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000
+        (_spoK3, _paymentC3, _stakingC3) <- setupPoolWithStake $ Coin 1_000
+        (_spoK4, _paymentC4, _stakingC4) <- setupPoolWithStake $ Coin 1_000
+        modifyPParams $ ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ 1 %! 2
+        modifyPParams $ ppCommitteeMaxTermLengthL .~ EpochInterval 10
+        committeeC <- KeyHashObj <$> freshKeyHash
+        gai <-
+          submitGovAction $
+            UpdateCommittee SNothing mempty (Map.singleton committeeC $ EpochNo 5) $
+              1 %! 2
+        -- 1 % 4 stake yes; 3 % 4 stake abstain; yes / stake - abstain > 1 % 2
+        submitYesVote_ (StakePoolVoter spoK1) gai
+        passNEpochs 2
+        getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gai)
 
 votingSpec ::
   forall era.
@@ -195,7 +252,7 @@ votingSpec =
           -- Setup Pool delegation #1
           (poolKH1, delegatorCPayment1, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
           -- Setup Pool delegation #2
-          (_poolKH2, _delegatorCPayment2, _delegatorCStaking2) <- setupPoolWithStake $ Coin 1_000_000
+          (poolKH2, _delegatorCPayment2, _delegatorCStaking2) <- setupPoolWithStake $ Coin 1_000_000
           passEpoch
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
@@ -203,6 +260,7 @@ votingSpec =
           addCCGaid <- submitGovAction addCCAction
           -- Submit the vote
           submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
+          submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
           passNEpochs 2
           -- The vote should not result in a ratification
           logRatificationChecks addCCGaid
@@ -230,7 +288,7 @@ votingSpec =
           -- Setup Pool delegation #1
           (poolKH1, _delegatorCPayment1, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
           -- Setup Pool delegation #2
-          (_poolKH2, _delegatorCPayment2, _delegatorCStaking2) <- setupPoolWithStake $ Coin 1_000_000
+          (poolKH2, _delegatorCPayment2, _delegatorCStaking2) <- setupPoolWithStake $ Coin 1_000_000
           passEpoch
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
@@ -238,6 +296,7 @@ votingSpec =
           addCCGaid <- submitGovAction addCCAction
           -- Submit the vote
           submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
+          submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
           passNEpochs 2
           -- The vote should not result in a ratification
           isSpoAccepted addCCGaid `shouldReturn` False

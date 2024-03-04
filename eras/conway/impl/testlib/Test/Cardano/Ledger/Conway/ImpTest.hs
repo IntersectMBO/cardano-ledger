@@ -79,6 +79,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getLastEnactedConstitution,
   submitParameterChange,
   getLastEnactedParameterChange,
+  getLastEnactedHardForkInitiation,
   getConstitutionProposals,
   getParameterChangeProposals,
   expectNumDormantEpochs,
@@ -88,6 +89,9 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   expectNoCurrentProposals,
   expectPulserProposals,
   expectNoPulserProposals,
+  minorFollow,
+  majorFollow,
+  cantFollow,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -99,10 +103,12 @@ import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo,
   Network (..),
+  ProtVer (..),
   ShelleyBase,
   StrictMaybe (..),
   addEpochInterval,
   inject,
+  succVersion,
   textToUrl,
  )
 import Cardano.Ledger.CertState (csCommitteeCredsL, vsNumDormantEpochsL)
@@ -638,6 +644,11 @@ getLastEnactedParameterChange :: ConwayEraGov era => ImpTestM era (StrictMaybe (
 getLastEnactedParameterChange = do
   ps <- getProposals
   pure $ ps ^. pRootsL . grPParamUpdateL . prRootL
+
+getLastEnactedHardForkInitiation :: ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'HardForkPurpose era))
+getLastEnactedHardForkInitiation = do
+  ps <- getProposals
+  pure $ ps ^. pRootsL . grHardForkL . prRootL
 
 getConstitutionProposals ::
   ConwayEraGov era =>
@@ -1237,3 +1248,17 @@ pulsingStateSnapshotL = lens getter setter
     getter state = fst (finishDRepPulser state)
     setter (DRComplete _ y) snap = DRComplete snap y
     setter state snap = DRComplete snap $ snd $ finishDRepPulser state
+
+-- | A legal ProtVer that differs in the minor Version
+minorFollow :: ProtVer -> ProtVer
+minorFollow (ProtVer x y) = ProtVer x (y + 1)
+
+-- | A legal ProtVer that moves to the next major Version
+majorFollow :: ProtVer -> ProtVer
+majorFollow pv@(ProtVer x _) = case succVersion x of
+  Just x' -> ProtVer x' 0
+  Nothing -> error ("The last major version can't be incremented. " ++ show pv)
+
+-- | An illegal ProtVer that skips 3 minor versions
+cantFollow :: ProtVer -> ProtVer
+cantFollow (ProtVer x y) = ProtVer x (y + 3)
