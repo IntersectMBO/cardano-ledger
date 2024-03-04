@@ -152,6 +152,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGovState where
         , sgsFutureProposals = translateEra' ctxt $ sgsFutureProposals ps
         , sgsCurPParams = translateEra' ctxt $ sgsCurPParams ps
         , sgsPrevPParams = translateEra' ctxt $ sgsPrevPParams ps
+        , sgsFuturePParams = translateEra' ctxt <$> sgsFuturePParams ps
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) ProposedPPUpdates where

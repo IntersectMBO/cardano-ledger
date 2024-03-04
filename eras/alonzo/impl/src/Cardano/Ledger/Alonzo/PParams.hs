@@ -120,7 +120,6 @@ import Cardano.Ledger.Plutus.ExUnits (
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Shelley.PParams (
   ShelleyPParams (..),
-  emptyPPPUpdates,
   shelleyCommonPParamsHKDPairs,
   shelleyCommonPParamsHKDPairsV6,
   shelleyCommonPParamsHKDPairsV8,
@@ -378,18 +377,15 @@ instance Crypto c => AlonzoEraPParams (AlonzoEra c) where
 
 instance Crypto c => EraGov (AlonzoEra c) where
   type GovState (AlonzoEra c) = ShelleyGovState (AlonzoEra c)
-  emptyGovState =
-    ShelleyGovState
-      emptyPPPUpdates
-      emptyPPPUpdates
-      emptyPParams
-      emptyPParams
+  emptyGovState = emptyShelleyGovState
 
   getProposedPPUpdates = Just . sgsCurProposals
 
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
+
+  futurePParamsGovStateL = futurePParamsShelleyGovStateL
 
   obligationGovState = const mempty
 
