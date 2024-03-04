@@ -304,31 +304,38 @@ ratifyTransition = do
   case rsig of
     gas@GovActionState {gasId, gasExpiresAfter} SSeq.:<| sigs -> do
       let govAction = gasAction gas
-      if prevActionAsExpected gas ensPrevGovActionIds
-        && validCommitteeTerm govAction ensCurPParams reCurrentEpoch
-        && not rsDelayed
-        && withdrawalCanWithdraw govAction ensTreasury
-        && committeeAccepted env st gas
-        && spoAccepted env st gas
-        && dRepAccepted env st gas
+          hasExpectedParent = prevActionAsExpected gas ensPrevGovActionIds
+          isExpired = gasExpiresAfter < reCurrentEpoch
+          isDelayed = not hasExpectedParent || rsDelayed
+          isAccepted =
+            and
+              [ committeeAccepted env st gas
+              , spoAccepted env st gas
+              , dRepAccepted env st gas
+              , {- These two conditions are part of ENACT in the spec. This is equivalent. -}
+                validCommitteeTerm govAction ensCurPParams reCurrentEpoch
+              , withdrawalCanWithdraw govAction ensTreasury
+              ]
+      if isAccepted && not isDelayed
         then do
           newEnactState <-
             trans @(EraRule "ENACT" era) $
               TRC ((), rsEnactState, EnactSignal gasId govAction)
           let
-            st' =
+            enactedSt =
               st
                 & rsEnactStateL .~ newEnactState
                 & rsDelayedL .~ delayingAction govAction
                 & rsEnactedL %~ (Seq.:|> gas)
-          trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
+          trans @(ConwayRATIFY era) $ TRC (env, enactedSt, RatifySignal sigs)
         else do
           -- This action hasn't been ratified yet. Process the remaining actions.
-          st' <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)
+          continuedSt <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)
           -- Finally, filter out actions that have expired.
-          if gasExpiresAfter < reCurrentEpoch
-            then pure $ st' & rsExpiredL %~ Set.insert gasId
-            else pure st'
+          if not isAccepted && isExpired
+            then pure $ continuedSt & rsExpiredL %~ Set.insert gasId
+            else -- (not isAccepted && not isExpired) || (isAccepted && isDelayed)
+              pure continuedSt
     SSeq.Empty -> pure $ st & rsEnactStateL . ensTreasuryL .~ Coin 0
 
 -- | Check that the previous governance action id specified in the proposal

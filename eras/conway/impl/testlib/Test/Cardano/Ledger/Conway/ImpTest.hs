@@ -81,6 +81,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getLastEnactedParameterChange,
   getConstitutionProposals,
   getParameterChangeProposals,
+  getCurrentTreasury,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -817,6 +818,9 @@ isSpoAccepted gaId = do
   action <- getGovActionState gaId
   pure $ spoAccepted ratifyEnv ratifyState action
 
+getCurrentTreasury :: ImpTestM era Coin
+getCurrentTreasury = getsNES $ nesEsL . esAccountStateL . asTreasuryL
+
 -- | Logs the results of each check required to make the governance action pass
 logRatificationChecks ::
   (ConwayEraGov era, ConwayEraPParams era) =>
@@ -829,7 +833,7 @@ logRatificationChecks gaId = do
   committee <- getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
   ratEnv <- getRatifyEnv
   let ratSt = RatifyState ens mempty mempty False
-  curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+  curTreasury <- getCurrentTreasury
   currentEpoch <- getsNES nesELL
   let
     members = foldMap' committeeMembers committee
