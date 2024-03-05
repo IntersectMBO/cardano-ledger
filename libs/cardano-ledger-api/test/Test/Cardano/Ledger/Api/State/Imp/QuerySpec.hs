@@ -130,12 +130,12 @@ spec = do
       [c2, c3, c5]
       mempty
       [Active, Unrecognized]
-      ( [ (c3, CommitteeMemberState MemberNotAuthorized Active (Just 7) NoChangeExpected)
-        , (c2, CommitteeMemberState (MemberAuthorized hk2) Active (Just 2) ToBeExpired)
-        ]
-      )
+      [ (c3, CommitteeMemberState MemberNotAuthorized Active (Just 7) NoChangeExpected)
+      , (c2, CommitteeMemberState (MemberAuthorized hk2) Active (Just 2) ToBeExpired)
+      ]
 
-    _ <- resignCommitteeColdKey c3
+    c3Anchor <- arbitrary
+    _ <- resignCommitteeColdKey c3 (SJust c3Anchor)
     hk5 <- registerCommitteeHotKey c5
     passTick
     -- hot cred status of resigned member becomes `Resigned`
@@ -144,7 +144,7 @@ spec = do
     expectNoFilterQueryResult
       [ (c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just 12) NoChangeExpected)
       , (c2, CommitteeMemberState (MemberAuthorized hk2) Active (Just 2) ToBeExpired)
-      , (c3, CommitteeMemberState MemberResigned Active (Just 7) NoChangeExpected)
+      , (c3, CommitteeMemberState (MemberResigned (Just c3Anchor)) Active (Just 7) NoChangeExpected)
       , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) NoChangeExpected)
       , (c5, CommitteeMemberState (MemberAuthorized hk5) Unrecognized Nothing ToBeRemoved)
       ]
@@ -163,7 +163,7 @@ spec = do
     expectNoFilterQueryResult
       [ (c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just 12) NoChangeExpected)
       , (c2, CommitteeMemberState (MemberAuthorized hk2) Expired (Just 2) NoChangeExpected)
-      , (c3, CommitteeMemberState MemberResigned Active (Just 7) NoChangeExpected)
+      , (c3, CommitteeMemberState (MemberResigned (Just c3Anchor)) Active (Just 7) NoChangeExpected)
       , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) NoChangeExpected)
       ]
 
@@ -190,7 +190,7 @@ spec = do
     expectNoFilterQueryResult
       [ (c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just 12) (TermAdjusted 13))
       , (c2, CommitteeMemberState (MemberAuthorized hk2) Expired (Just 2) ToBeRemoved)
-      , (c3, CommitteeMemberState MemberResigned Active (Just 7) NoChangeExpected)
+      , (c3, CommitteeMemberState (MemberResigned (Just c3Anchor)) Active (Just 7) NoChangeExpected)
       , -- though its term was adjusted, `ToBeExpired` takes precedence
         (c4, CommitteeMemberState MemberNotAuthorized Active (Just 5) ToBeExpired)
       , (c6, CommitteeMemberState (MemberAuthorized hk6) Unrecognized Nothing ToBeEnacted)
@@ -211,7 +211,7 @@ spec = do
     expectMembers [c1, c3, c4, c6, c7]
     expectNoFilterQueryResult
       [ (c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just 13) NoChangeExpected)
-      , (c3, CommitteeMemberState MemberResigned Active (Just 7) NoChangeExpected)
+      , (c3, CommitteeMemberState (MemberResigned (Just c3Anchor)) Active (Just 7) NoChangeExpected)
       , (c4, CommitteeMemberState MemberNotAuthorized Expired (Just 4) NoChangeExpected)
       , (c6, CommitteeMemberState (MemberAuthorized hk6) Active (Just 6) ToBeExpired)
       , (c7, CommitteeMemberState MemberNotAuthorized Active (Just 7) NoChangeExpected)
@@ -240,7 +240,7 @@ spec = do
     -- members whose term changed have next epoch change `TermAdjusted`
     expectNoFilterQueryResult
       [ (c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just 13) ToBeRemoved)
-      , (c3, CommitteeMemberState MemberResigned Active (Just 7) (TermAdjusted 9))
+      , (c3, CommitteeMemberState (MemberResigned (Just c3Anchor)) Active (Just 7) (TermAdjusted 9))
       , (c4, CommitteeMemberState MemberNotAuthorized Expired (Just 4) (TermAdjusted 9))
       , (c6, CommitteeMemberState (MemberAuthorized hk6) Expired (Just 6) (TermAdjusted 9))
       , (c7, CommitteeMemberState MemberNotAuthorized Active (Just 7) ToBeExpired)
@@ -248,7 +248,7 @@ spec = do
     passEpoch -- epoch 8
     expectMembers [c3, c4, c6, c7]
     expectNoFilterQueryResult
-      [ (c3, CommitteeMemberState MemberResigned Active (Just 9) NoChangeExpected)
+      [ (c3, CommitteeMemberState (MemberResigned (Just c3Anchor)) Active (Just 9) NoChangeExpected)
       , (c4, CommitteeMemberState MemberNotAuthorized Active (Just 9) NoChangeExpected)
       , (c6, CommitteeMemberState (MemberAuthorized hk6) Active (Just 9) NoChangeExpected)
       , (c7, CommitteeMemberState MemberNotAuthorized Expired (Just 7) NoChangeExpected)

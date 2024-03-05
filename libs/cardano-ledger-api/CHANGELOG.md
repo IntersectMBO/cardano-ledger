@@ -2,6 +2,7 @@
 
 ## 1.9.0.0
 
+* Add optional `Anchor` to `MemberResigned` in `CommitteeMembersState`
 * Change return type of `queryCommitteeMembersState` to `CommitteeMembersState`
 * Change type of `csThreshold` in `CommitteeMembersState` to `Maybe UnitInterval`
 * Remove `getNextEpochCommitteeMembers` from `EraGov`

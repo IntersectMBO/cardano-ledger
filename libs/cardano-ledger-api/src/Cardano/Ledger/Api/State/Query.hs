@@ -230,7 +230,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
       let hkStatus =
             case Map.lookup coldCred comStateMembers of
               Nothing -> MemberNotAuthorized
-              Just (CommitteeMemberResigned _) -> MemberResigned
+              Just (CommitteeMemberResigned anchor) -> MemberResigned (strictMaybeToMaybe anchor)
               Just (CommitteeHotCredential hk) -> MemberAuthorized hk
       pure $ CommitteeMemberState hkStatus status mbExpiry (nextEpochChange coldCred)
 

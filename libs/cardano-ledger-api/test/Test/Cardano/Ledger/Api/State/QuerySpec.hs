@@ -175,7 +175,7 @@ propResigned nes = do
     \_ (CommitteeState comStateMembers) _ noFilterResult -> do
       let resigned =
             [ ck
-            | (ck, CommitteeMemberState MemberResigned _ _ _) <- Map.toList (csCommittee noFilterResult)
+            | (ck, CommitteeMemberState (MemberResigned _) _ _ _) <- Map.toList (csCommittee noFilterResult)
             ]
       -- if the member is Resignd, it should appear in the commiteeState as Nothing
       resigned `shouldBe` [ck | (ck, CommitteeMemberResigned _) <- Map.toList comStateMembers]
