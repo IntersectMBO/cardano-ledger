@@ -48,9 +48,9 @@ import Cardano.Crypto.Hash (
   hashToBytes,
  )
 import Cardano.Crypto.KES (
-  KESAlgorithm (..),
-  deriveVerKeyKES,
-  genKeyKES,
+  UnsoundPureKESAlgorithm (..),
+  unsoundPureGenKeyKES,
+  unsoundPureDeriveVerKeyKES,
  )
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import Cardano.Crypto.VRF (
@@ -73,7 +73,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Crypto (Crypto (DSIGN))
+import Cardano.Ledger.Crypto (Crypto (DSIGN, KES))
 import Cardano.Ledger.Shelley.API (ApplyBlock, KeyRole (..), VKey (..))
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
@@ -208,12 +208,16 @@ mkCertifiedVRF a sk =
   coerce $ evalCertified () a sk
 
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
-mkKESKeyPair :: Crypto c => RawSeed -> KESKeyPair c
+mkKESKeyPair :: (UnsoundPureKESAlgorithm (KES c))
+             => RawSeed
+             -> KESKeyPair c
 mkKESKeyPair seed =
-  let sk = genKeyKES $ mkSeedFromWords seed
-   in KESKeyPair
+  let sk = unsoundPureGenKeyKES (mkSeedFromWords seed)
+      vk = unsoundPureDeriveVerKeyKES sk
+  in
+     KESKeyPair
         { kesSignKey = sk
-        , kesVerKey = deriveVerKeyKES sk
+        , kesVerKey = vk
         }
 
 runShelleyBase :: ShelleyBase a -> a

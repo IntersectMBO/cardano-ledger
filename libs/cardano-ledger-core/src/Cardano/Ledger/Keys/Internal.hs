@@ -67,6 +67,7 @@ module Cardano.Ledger.Keys.Internal (
   SignKeyDSIGN,
   SignedKES,
   SignKeyKES,
+  UnsoundPureSignKeyKES,
   SignKeyVRF,
   VerKeyKES,
   VerKeyVRF,
@@ -359,6 +360,8 @@ type SignKeyDSIGN c = DSIGN.SignKeyDSIGN (DSIGN c)
 type SignedKES c = KES.SignedKES (KES c)
 
 type SignKeyKES c = KES.SignKeyKES (KES c)
+
+type UnsoundPureSignKeyKES c = KES.UnsoundPureSignKeyKES (KES c)
 
 type VerKeyKES c = KES.VerKeyKES (KES c)
 

@@ -16,7 +16,7 @@
 module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Encoding (tests) where
 
 import qualified Cardano.Crypto.Hash as Monomorphic
-import Cardano.Crypto.KES (SignedKES)
+import Cardano.Crypto.KES (SignedKES, unsoundPureSignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
@@ -75,7 +75,6 @@ import Cardano.Ledger.Keys (
   hashKey,
   hashVerKeyVRF,
   signedDSIGN,
-  signedKES,
  )
 import Cardano.Ledger.PoolParams (
   PoolMetadata (..),
@@ -273,7 +272,7 @@ testKey1SigToken = e
 
 testOpCertSigTokens ::
   forall c.
-  Mock c =>
+  ExMock c =>
   Tokens ->
   Tokens
 testOpCertSigTokens = e
@@ -290,7 +289,7 @@ testKeyHash1 = (hashKey . vKey) testKey1
 testKeyHash2 :: Crypto c => KeyHash 'Staking c
 testKeyHash2 = (hashKey . vKey) testKey2
 
-testKESKeys :: Crypto c => KESKeyPair c
+testKESKeys :: PureGenCrypto c => KESKeyPair c
 testKESKeys = mkKESKeyPair (RawSeed 0 0 0 0 3)
 
 testAddrE :: Crypto c => Addr c
@@ -380,7 +379,7 @@ testBHBSigTokens ::
 testBHBSigTokens = e
   where
     s =
-      signedKES @(KES (EraCrypto era))
+      unsoundPureSignedKES @(KES (EraCrypto era))
         ()
         0
         (testBHB @era)
@@ -988,7 +987,7 @@ tests =
             )
     , -- checkEncodingCBOR "block_header"
       let sig :: (SignedKES (KES C_Crypto) (BHBody C_Crypto))
-          sig = signedKES () 0 (testBHB @C) (kesSignKey $ testKESKeys @C_Crypto)
+          sig = unsoundPureSignedKES () 0 (testBHB @C) (kesSignKey $ testKESKeys @C_Crypto)
        in checkEncodingCBORAnnotated
             shelleyProtVer
             "block_header"
@@ -999,7 +998,7 @@ tests =
             )
     , -- checkEncodingCBOR "empty_block"
       let sig :: (SignedKES (KES C_Crypto) (BHBody C_Crypto))
-          sig = signedKES () 0 (testBHB @C) (kesSignKey $ testKESKeys @C_Crypto)
+          sig = unsoundPureSignedKES () 0 (testBHB @C) (kesSignKey $ testKESKeys @C_Crypto)
           bh = BHeader (testBHB @C) sig
           txns = ShelleyTxSeq StrictSeq.Empty
        in checkEncodingCBORAnnotated
@@ -1012,7 +1011,7 @@ tests =
             )
     , -- checkEncodingCBOR "rich_block"
       let sig :: SignedKES (KES C_Crypto) (BHBody C_Crypto)
-          sig = signedKES () 0 (testBHB @C) (kesSignKey $ testKESKeys @C_Crypto)
+          sig = unsoundPureSignedKES () 0 (testBHB @C) (kesSignKey $ testKESKeys @C_Crypto)
           bh = BHeader (testBHB @C) sig
           tout = StrictSeq.singleton $ ShelleyTxOut @C testAddrE (Coin 2)
           txb :: Word64 -> ShelleyTxBody C

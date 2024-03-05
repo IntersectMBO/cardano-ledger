@@ -25,6 +25,10 @@ module Test.Cardano.Protocol.TPraos.Create (
 
 import Cardano.Crypto.DSIGN (Signable)
 import qualified Cardano.Crypto.KES.Class as KES
+import Cardano.Crypto.KES.Class (
+    UnsoundPureKESAlgorithm,
+    unsoundPureSignedKES,
+  )
 import qualified Cardano.Crypto.VRF.Class as VRF
 import Cardano.Ledger.BaseTypes (
   BlockNo,
@@ -44,7 +48,6 @@ import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
   signedDSIGN,
-  signedKES,
  )
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (..),
@@ -179,7 +182,11 @@ mkBHBodyWithVRF mkVrfEta mkVrfL protVer prev pKeys slotNo blockNo enonce oCert b
         }
 
 mkBHeader ::
-  (Crypto c, KES.Signable (KES c) (BHBody c)) =>
+  ( Crypto c
+  , KES.Signable (KES c) (BHBody c)
+  , KES.ContextKES (KES c) ~ ()
+  , UnsoundPureKESAlgorithm (KES c)
+  ) =>
   AllIssuerKeys c r ->
   Word ->
   -- | KES period of key registration
@@ -199,24 +206,24 @@ mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody =
               , "kpDiff: " ++ show kpDiff
               ]
         Just hKey -> hKey
-      sig = signedKES () kpDiff bhBody hotKey
+      sig = unsoundPureSignedKES () kpDiff bhBody hotKey
    in BHeader bhBody sig
 
 -- | Try to evolve KES key until specific KES period is reached, given the
 -- current KES period.
 evolveKESUntil ::
-  (KES.KESAlgorithm v, KES.ContextKES v ~ ()) =>
-  KES.SignKeyKES v ->
+  (KES.UnsoundPureKESAlgorithm v, KES.ContextKES v ~ ()) =>
+  KES.UnsoundPureSignKeyKES v ->
   -- | Current KES period
   KESPeriod ->
   -- | Target KES period
   KESPeriod ->
-  Maybe (KES.SignKeyKES v)
+  Maybe (KES.UnsoundPureSignKeyKES v)
 evolveKESUntil sk1 (KESPeriod current) (KESPeriod target) = go sk1 current target
   where
     go !_ c t | t < c = Nothing
     go !sk c t | c == t = Just sk
-    go !sk c t = case KES.updateKES () sk c of
+    go !sk c t = case KES.unsoundPureUpdateKES () sk c of
       Nothing -> Nothing
       Just sk' -> go sk' (c + 1) t
 
@@ -225,6 +232,7 @@ mkBlock ::
   ( EraSegWits era
   , VRF.Signable (VRF (EraCrypto era)) Seed
   , KES.Signable (KES (EraCrypto era)) (BHBody (EraCrypto era))
+  , UnsoundPureKESAlgorithm (KES (EraCrypto era))
   ) =>
   -- | Hash of previous block
   HashHeader (EraCrypto era) ->
@@ -260,6 +268,7 @@ mkBlockFakeVRF ::
   ( EraSegWits era
   , VRF.Signable (VRF (EraCrypto era)) (WithResult Seed)
   , KES.Signable (KES (EraCrypto era)) (BHBody (EraCrypto era))
+  , UnsoundPureKESAlgorithm (KES (EraCrypto era))
   ) =>
   -- | Hash of previous block
   HashHeader (EraCrypto era) ->

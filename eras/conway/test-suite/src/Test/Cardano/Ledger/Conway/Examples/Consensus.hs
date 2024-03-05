@@ -119,7 +119,7 @@ collateralOutput =
     NoDatum
     SNothing
 
-exampleConwayCerts :: Era era => OSet.OSet (ConwayTxCert era)
+exampleConwayCerts :: (Era era) => OSet.OSet (ConwayTxCert era)
 exampleConwayCerts =
   OSet.fromList -- TODO should I add the new certs here?
     [ ConwayTxCertPool (RegPool examplePoolParams)

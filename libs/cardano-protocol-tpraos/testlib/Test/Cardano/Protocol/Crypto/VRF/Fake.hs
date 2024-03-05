@@ -117,9 +117,9 @@ instance VRFAlgorithm FakeVRF where
   -- This implementation of 'verifyVRF' checks the real proof, which is contained
   -- in the certificate, but ignores the produced value, and insteads returns
   -- the output which is stored in the 'CertFakeVRF'.
-  verifyVRF () (VerKeyFakeVRF n) a (CertFakeVRF _ proof o)
-    | proof == recomputedProof = Just o
-    | otherwise = Nothing
+  verifyVRF () (VerKeyFakeVRF n) a (OutputVRF _, CertFakeVRF _ proof _)
+    | proof == recomputedProof = True
+    | otherwise = False
     where
       (OutputVRF recomputedProofBytes, _) = evalFakeVRF a (SignKeyFakeVRF n)
       recomputedProof = fromIntegral . bytesToNatural $ recomputedProofBytes

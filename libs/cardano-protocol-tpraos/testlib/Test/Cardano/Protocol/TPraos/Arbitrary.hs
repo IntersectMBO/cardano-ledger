@@ -17,6 +17,8 @@ module Test.Cardano.Protocol.TPraos.Arbitrary (
   genCoherentBlock,
 ) where
 
+import Data.Proxy (Proxy (..))
+import qualified Data.ByteString as BS
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN (Signable)
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
@@ -24,8 +26,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (BlockNo (..), Nonce, Seed, SlotNo (..))
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto (KES, VRF), DSIGN)
-import Cardano.Ledger.Keys (signedKES)
+import Cardano.Ledger.Crypto (Crypto (KES, VRF), DSIGN, PureGenCrypto)
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (BHBody),
@@ -60,7 +61,7 @@ instance Crypto c => Arbitrary (OBftSlot c) where
   shrink = genericShrink
 
 instance
-  ( Crypto c
+  ( PureGenCrypto c
   , VRF.Signable (VRF c) ~ SignableRepresentation
   , KES.Signable (KES c) ~ SignableRepresentation
   ) =>
@@ -69,14 +70,14 @@ instance
   arbitrary = do
     bhBody <- arbitrary
     hotKey <- arbitrary
-    let sig = signedKES () 1 bhBody hotKey
+    let sig = KES.unsoundPureSignedKES () 1 bhBody hotKey
     pure $ BHeader bhBody sig
 
 genBHeader ::
   ( DSIGN.Signable (DSIGN c) (OCertSignable c)
   , VRF.Signable (VRF c) Seed
   , KES.Signable (KES c) (BHBody c)
-  , Crypto c
+  , PureGenCrypto c
   ) =>
   [AllIssuerKeys c r] ->
   Gen (BHeader c)
@@ -97,7 +98,7 @@ genBHeader aiks = do
   return $ mkBHeader allPoolKeys kesPeriod keyRegKesPeriod bhBody
 
 instance
-  ( Crypto c
+  ( PureGenCrypto c
   , VRF.Signable (VRF c) ~ SignableRepresentation
   ) =>
   Arbitrary (BHBody c)
@@ -121,7 +122,7 @@ instance Crypto c => Arbitrary (PrevHash c) where
     hash <- arbitrary
     frequency [(1, pure GenesisHash), (9999, pure (BlockHash hash))]
 
-instance Crypto c => Arbitrary (OCert c) where
+instance PureGenCrypto c => Arbitrary (OCert c) where
   arbitrary =
     OCert
       <$> arbitrary
@@ -135,6 +136,7 @@ instance
   ( Era era
   , c ~ EraCrypto era
   , EraSegWits era
+  , PureGenCrypto c
   , KES.Signable (KES c) ~ SignableRepresentation
   , VRF.Signable (VRF c) ~ SignableRepresentation
   , Arbitrary (Tx era)
@@ -151,6 +153,7 @@ genBlock ::
   , EraSegWits era
   , Arbitrary (Tx era)
   , c ~ EraCrypto era
+  , PureGenCrypto c
   ) =>
   [AllIssuerKeys c r] ->
   Gen (Block (BHeader c) era)
@@ -171,6 +174,7 @@ genCoherentBlock ::
   , KES.Signable (KES (EraCrypto era)) ~ SignableRepresentation
   , DSIGN.Signable (DSIGN (EraCrypto era)) ~ SignableRepresentation
   , PraosCrypto (EraCrypto era)
+  , PureGenCrypto (EraCrypto era)
   ) =>
   [AllIssuerKeys (EraCrypto era) r] ->
   Gen (Block (BHeader (EraCrypto era)) era)

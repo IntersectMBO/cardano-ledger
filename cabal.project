@@ -12,13 +12,25 @@ repository cardano-haskell-packages
 
 source-repository-package
   type: git
+  location: https://github.com/input-output-hk/cardano-base
+  tag: 93896763979ce5e1d656cf61722959c1499da19d
+  --sha256: 0944wg2nqazmhlmsynwgdwxxj6ay0hb9qig9l128isb2cjia0hlp
+  subdir:
+    -- cardano-binary
+    cardano-crypto-class
+    cardano-crypto-tests
+    cardano-crypto-praos
+    cardano-mempool
+
+source-repository-package
+  type: git
   location: https://github.com/input-output-hk/cardano-ledger-executable-spec.git
   tag: ddfb7f4a311dcc52971b3bb847ba52b68d0b0a3f
   --sha256: sha256-dQVyvzVhVUOsLUuX8XQvN/wPGmbIvYeAmX7RpnT1gk8=
 
 index-state:
   -- Bump this if you need newer packages from Hackage
-  , hackage.haskell.org 2024-03-19T11:25:56Z
+  , hackage.haskell.org 2024-03-26T06:28:59Z
   -- Bump this if you need newer packages from CHaP
   , cardano-haskell-packages 2024-03-11T00:00:00Z
 
@@ -84,6 +96,21 @@ package cardano-ledger-mary
 
 package cardano-ledger-conway
   flags: +asserts
+
+package cardano-crypto-praos
+    flags: -external-libsodium-vrf
+package cardano-crypto-class
+    flags: -external-libsodium-vrf
+package cardano-crypto-tests
+    flags: -external-libsodium-vrf
+
+allow-newer:
+    -- Plutus-core has an upper bound on cardano-crypto-class that would prevent
+    -- us from depending on the updated KES API; however, these changes to
+    -- cardano-crypto-class are inconsequential for plutus-core, so until the
+    -- dependency from plutus-core to cardano-crypto-class is updated, we will
+    -- have to add this exemption.
+    plutus-core:cardano-crypto-class
 
 -- Always write GHC env files, because they are needed for repl and by the doctests.
 write-ghc-environment-files: always

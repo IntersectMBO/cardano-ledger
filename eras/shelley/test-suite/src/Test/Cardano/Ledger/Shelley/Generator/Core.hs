@@ -60,6 +60,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Core (
 where
 
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Crypto.KES (UnsoundPureKESAlgorithm)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
@@ -79,7 +80,7 @@ import Cardano.Ledger.Credential (
   pattern StakeRefBase,
   pattern StakeRefPtr,
  )
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (
   Hash,
   KeyHash,
@@ -458,7 +459,9 @@ unitIntervalToNatural ui =
   #-}
 
 mkBlockHeader ::
-  Mock c =>
+  ( UnsoundPureKESAlgorithm (KES c)
+  , Mock c
+  ) =>
   ProtVer ->
   -- | Hash of previous block
   HashHeader c ->
@@ -483,7 +486,7 @@ mkBlockHeader ::
   BHeader c
 mkBlockHeader protVer prev pKeys slotNo blockNo enonce kesPeriod c0 oCert bodySize bodyHash =
   let bhBody = mkBHBody protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
-   in mkBHeader pKeys kesPeriod c0 bhBody
+  in mkBHeader pKeys kesPeriod c0 bhBody
 {-# DEPRECATED mkBlockHeader "In favor of `mkBHeader` and `mkBHBody`" #-}
 
 -- | Takes a sequence of KES hot keys and checks to see whether there is one whose

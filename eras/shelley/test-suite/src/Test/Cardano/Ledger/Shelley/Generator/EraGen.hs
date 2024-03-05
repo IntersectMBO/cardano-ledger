@@ -37,7 +37,7 @@ import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
+import qualified Cardano.Ledger.Crypto as CC (Crypto (..), HASH)
 import Cardano.Ledger.Keys (KeyRole (Witness), WitVKey)
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.API (

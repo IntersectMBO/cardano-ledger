@@ -174,10 +174,10 @@ aliceCoinEx1 =
 feeTx1 :: Coin
 feeTx1 = Coin 3
 
-alicePoolParams' :: Crypto c => PoolParams c
+alicePoolParams' :: PureGenCrypto c => PoolParams c
 alicePoolParams' = Cast.alicePoolParams {ppRewardAccount = RewardAccount Testnet Cast.carlSHK}
 
-bobPoolParams' :: Crypto c => PoolParams c
+bobPoolParams' :: PureGenCrypto c => PoolParams c
 bobPoolParams' = Cast.bobPoolParams {ppRewardAccount = RewardAccount Testnet Cast.carlSHK}
 
 txbodyEx1 :: TxBody C
@@ -429,7 +429,7 @@ alicePoolStake = (unCoin aliceCoinEx1 + unCoin carlInitCoin) % activeStakeEx5
 bobPoolStake :: Rational
 bobPoolStake = unCoin bobInitCoin % activeStakeEx5
 
-pdEx5 :: forall c. Crypto c => PoolDistr c
+pdEx5 :: forall c. PureGenCrypto c => PoolDistr c
 pdEx5 =
   PoolDistr $
     Map.fromList

@@ -41,6 +41,7 @@ type ExMock c =
   , Num (DSIGN.SignKeyDSIGN (DSIGN c))
   , Num (VerKeyDSIGN (DSIGN c))
   , VRF c ~ FakeVRF
+  , KES.UnsoundPureKESAlgorithm (KES c)
   )
 
 type C = ShelleyEra C_Crypto

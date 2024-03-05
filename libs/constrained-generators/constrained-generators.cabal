@@ -9,7 +9,7 @@ synopsis:
     a subset of first order logic
 
 build-type:         Simple
-extra-source-files: CHANGELOG.md
+-- extra-source-files: CHANGELOG.md
 
 source-repository head
     type:     git

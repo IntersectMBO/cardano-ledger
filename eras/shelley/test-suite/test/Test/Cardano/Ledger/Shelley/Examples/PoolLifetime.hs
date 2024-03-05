@@ -148,7 +148,7 @@ mkStake ::
   EB.Stake c
 mkStake = EB.Stake . GHC.Exts.fromList . map (fmap toCompactCoinError)
 
-initUTxO :: Cr.Crypto c => UTxO (ShelleyEra c)
+initUTxO :: Cr.PureGenCrypto c => UTxO (ShelleyEra c)
 initUTxO =
   genesisCoins
     genesisId
@@ -156,7 +156,7 @@ initUTxO =
     , ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)
     ]
 
-initStPoolLifetime :: forall c. Cr.Crypto c => ChainState (ShelleyEra c)
+initStPoolLifetime :: forall c. Cr.PureGenCrypto c => ChainState (ShelleyEra c)
 initStPoolLifetime = initSt initUTxO
 
 --
@@ -179,7 +179,7 @@ dariaMIR = Coin 99
 feeTx1 :: Coin
 feeTx1 = Coin 3
 
-txbodyEx1 :: Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx1 :: Cr.PureGenCrypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -286,7 +286,7 @@ aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> feeTx2)
 
 -- | The transaction delegates Alice's and Bob's stake to Alice's pool.
 --   Additionally, we split Alice's ADA between a base address and a pointer address.
-txbodyEx2 :: forall c. Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx2 :: forall c. Cr.PureGenCrypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx2 =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn (txIdTxBody (txbodyEx1 @c)) minBound]
@@ -414,7 +414,7 @@ blockEx3 =
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110) 0 (KESPeriod 0))
 
-snapEx3 :: Cr.Crypto c => EB.SnapShot c
+snapEx3 :: Cr.PureGenCrypto c => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
     { EB.ssStake =
@@ -457,7 +457,7 @@ feeTx4 = Coin 5
 aliceCoinEx4Base :: Coin
 aliceCoinEx4Base = aliceCoinEx2Base <-> feeTx4
 
-txbodyEx4 :: forall c. Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx4 :: forall c. Cr.PureGenCrypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx4 =
   ShelleyTxBody
     { stbInputs = Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound]
@@ -557,7 +557,7 @@ blockEx5 =
     10
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 220) 1 (KESPeriod 10))
 
-snapEx5 :: forall c. Cr.Crypto c => EB.SnapShot c
+snapEx5 :: forall c. Cr.PureGenCrypto c => EB.SnapShot c
 snapEx5 =
   EB.SnapShot
     { EB.ssStake =
@@ -574,7 +574,7 @@ snapEx5 =
     , EB.ssPoolParams = [(aikColdKeyHash Cast.alicePoolKeys, Cast.alicePoolParams)]
     }
 
-pdEx5 :: forall c. Cr.Crypto c => PoolDistr c
+pdEx5 :: forall c. Cr.PureGenCrypto c => PoolDistr c
 pdEx5 =
   PoolDistr $
     Map.singleton
@@ -740,7 +740,7 @@ alicePerfEx8 = likelihood blocks t (epochSize $ EpochNo 3)
     relativeStake = fromRational (stake % tot)
     f = activeSlotCoeff testGlobals
 
-nonMyopicEx8 :: forall c. Cr.Crypto c => NonMyopic c
+nonMyopicEx8 :: forall c. Cr.PureGenCrypto c => NonMyopic c
 nonMyopicEx8 =
   NonMyopic
     (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) alicePerfEx8)
@@ -750,7 +750,7 @@ pulserEx8 :: forall c. ExMock c => PulsingRewUpdate c
 pulserEx8 =
   makeCompletedPulser (BlocksMade $ Map.singleton (aikColdKeyHash Cast.alicePoolKeys) 1) expectedStEx7
 
-rewardUpdateEx8 :: forall c. Cr.Crypto c => RewardUpdate c
+rewardUpdateEx8 :: forall c. Cr.PureGenCrypto c => RewardUpdate c
 rewardUpdateEx8 =
   RewardUpdate
     { deltaT = deltaT8
@@ -810,7 +810,7 @@ blockEx9 =
     20
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 410) 2 (KESPeriod 20))
 
-snapEx9 :: forall c. Cr.Crypto c => EB.SnapShot c
+snapEx9 :: forall c. Cr.PureGenCrypto c => EB.SnapShot c
 snapEx9 =
   snapEx5
     { EB.ssStake =
@@ -851,7 +851,7 @@ bobAda10 =
     <+> Coin 7
     <-> feeTx10
 
-txbodyEx10 :: Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx10 :: Cr.PureGenCrypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx10 =
   ShelleyTxBody
     (Set.fromList [mkTxInPartial genesisId 1])
@@ -917,7 +917,7 @@ aliceCoinEx11Ptr = aliceCoinEx4Base <-> feeTx11
 aliceRetireEpoch :: EpochNo
 aliceRetireEpoch = EpochNo 5
 
-txbodyEx11 :: forall c. Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx11 :: forall c. Cr.PureGenCrypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx11 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx4) minBound])
@@ -961,7 +961,7 @@ blockEx11 =
 reserves12 :: Coin
 reserves12 = addDeltaCoin reserves7 deltaR8
 
-alicePerfEx11 :: forall c. Cr.Crypto c => Likelihood
+alicePerfEx11 :: forall c. Cr.PureGenCrypto c => Likelihood
 alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
   where
     epoch4Likelihood = likelihood blocks t (epochSize $ EpochNo 4)
@@ -973,7 +973,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
     Coin supply = maxLLSupply <-> reserves12
     f = activeSlotCoeff testGlobals
 
-nonMyopicEx11 :: forall c. Cr.Crypto c => NonMyopic c
+nonMyopicEx11 :: forall c. Cr.PureGenCrypto c => NonMyopic c
 nonMyopicEx11 =
   NonMyopic
     (Map.singleton (aikColdKeyHash Cast.alicePoolKeys) (alicePerfEx11 @c))
@@ -982,7 +982,7 @@ nonMyopicEx11 =
 pulserEx11 :: forall c. ExMock c => PulsingRewUpdate c
 pulserEx11 = makeCompletedPulser (BlocksMade mempty) expectedStEx10
 
-rewardUpdateEx11 :: forall c. Cr.Crypto c => RewardUpdate c
+rewardUpdateEx11 :: forall c. Cr.PureGenCrypto c => RewardUpdate c
 rewardUpdateEx11 =
   RewardUpdate
     { deltaT = DeltaCoin 0
@@ -1032,7 +1032,7 @@ blockEx12 =
     25
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 510) 3 (KESPeriod 25))
 
-snapEx12 :: forall c. Cr.Crypto c => EB.SnapShot c
+snapEx12 :: forall c. Cr.PureGenCrypto c => EB.SnapShot c
 snapEx12 =
   snapEx9
     { EB.ssStake =
