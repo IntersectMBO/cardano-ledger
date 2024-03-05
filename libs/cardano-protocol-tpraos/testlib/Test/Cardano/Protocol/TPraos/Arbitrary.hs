@@ -25,7 +25,6 @@ import Cardano.Ledger.BaseTypes (BlockNo (..), Nonce, Seed, SlotNo (..))
 import Cardano.Ledger.Block (Block (Block))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (KES, VRF), DSIGN)
-import Cardano.Ledger.Keys (signedKES)
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Protocol.TPraos.BHeader (
   BHBody (BHBody),
@@ -69,7 +68,7 @@ instance
   arbitrary = do
     bhBody <- arbitrary
     hotKey <- arbitrary
-    let sig = signedKES () 1 bhBody hotKey
+    let sig = KES.unsoundPureSignedKES () 1 bhBody hotKey
     pure $ BHeader bhBody sig
 
 genBHeader ::
