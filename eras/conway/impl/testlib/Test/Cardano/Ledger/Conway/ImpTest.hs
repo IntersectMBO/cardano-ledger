@@ -81,6 +81,13 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getLastEnactedParameterChange,
   getConstitutionProposals,
   getParameterChangeProposals,
+  expectNumDormantEpochs,
+  submitConstitution,
+  expectExtraDRepExpiry,
+  expectCurrentProposals,
+  expectNoCurrentProposals,
+  expectPulserProposals,
+  expectNoPulserProposals,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -98,7 +105,7 @@ import Cardano.Ledger.BaseTypes (
   inject,
   textToUrl,
  )
-import Cardano.Ledger.CertState (DRep (..), csCommitteeCredsL)
+import Cardano.Ledger.CertState (csCommitteeCredsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
@@ -125,6 +132,7 @@ import Cardano.Ledger.Conway.TxCert (
  )
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -163,9 +171,10 @@ import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Tree
 import qualified GHC.Exts as GHC (fromList)
-import Lens.Micro (Lens', (%~), (&), (.~), (^.))
+import Lens.Micro
 import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
+import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
@@ -439,7 +448,7 @@ submitProposals proposals = do
   tx <- trySubmitProposals proposals >>= expectRightExpr
   let txId = txIdTx tx
       proposalsWithGovActionId =
-        NE.zipWith (\ix p -> (GovActionId txId (GovActionIx ix), p)) (0 NE.:| [1 ..]) proposals
+        NE.zipWith (\idx p -> (GovActionId txId (GovActionIx idx), p)) (0 NE.:| [1 ..]) proposals
   forM proposalsWithGovActionId $ \(govActionId, proposal) -> do
     govActionState <- getGovActionState govActionId
     govActionState
@@ -567,7 +576,7 @@ submitGovActions ::
 submitGovActions gas = do
   tx <- trySubmitGovActions gas >>= expectRightExpr
   let txId = txIdTx tx
-  pure $ NE.zipWith (\ix _ -> GovActionId txId (GovActionIx ix)) (0 NE.:| [1 ..]) gas
+  pure $ NE.zipWith (\idx _ -> GovActionId txId (GovActionIx idx)) (0 NE.:| [1 ..]) gas
 
 submitTreasuryWithdrawals ::
   ( ShelleyEraImp era
@@ -1142,3 +1151,89 @@ constitutionShouldBe cUrl = do
     getsNES $
       nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . constitutionGovStateL
   anchorUrl `shouldBe` fromJust (textToUrl 64 $ T.pack cUrl)
+
+expectNumDormantEpochs :: HasCallStack => EpochNo -> ImpTestM era ()
+expectNumDormantEpochs expected = do
+  nd <-
+    getsNES $
+      nesEsL . esLStateL . lsCertStateL . certVStateL . vsNumDormantEpochsL
+  nd `shouldBeExpr` expected
+
+submitConstitution ::
+  forall era.
+  ConwayEraImp era =>
+  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  ImpTestM era (GovActionId (EraCrypto era), Constitution era)
+submitConstitution prevGovId = do
+  constitution <- arbitrary
+  let constitutionAction =
+        NewConstitution
+          prevGovId
+          constitution
+  govActionId <- submitGovAction constitutionAction
+  pure (govActionId, constitution)
+
+expectExtraDRepExpiry ::
+  (HasCallStack, EraGov era, ConwayEraPParams era) =>
+  KeyHash 'DRepRole (EraCrypto era) ->
+  EpochNo ->
+  ImpTestM era ()
+expectExtraDRepExpiry kh expected = do
+  drepActivity <-
+    getsNES $
+      nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL . ppDRepActivityL
+  dsMap <-
+    getsNES $
+      nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+  let ds = Map.lookup (KeyHashObj kh) dsMap
+  (^. drepExpiryL)
+    <$> ds
+      `shouldBe` Just (addEpochInterval expected drepActivity)
+
+expectCurrentProposals :: (HasCallStack, ConwayEraGov era) => ImpTestM era ()
+expectCurrentProposals = do
+  props <- currentProposalIds
+  assertBool "Expected proposals in current gov state" (not (SSeq.null props))
+
+expectNoCurrentProposals :: (HasCallStack, ConwayEraGov era) => ImpTestM era ()
+expectNoCurrentProposals = do
+  props <- currentProposalIds
+  assertBool "Expected no proposals in current gov state" (SSeq.null props)
+
+expectPulserProposals :: (HasCallStack, ConwayEraGov era) => ImpTestM era ()
+expectPulserProposals = do
+  props <- lastEpochProposals
+  assertBool "Expected proposals in the pulser" (not (SSeq.null props))
+
+expectNoPulserProposals :: (HasCallStack, ConwayEraGov era) => ImpTestM era ()
+expectNoPulserProposals = do
+  props <- lastEpochProposals
+  assertBool "Expected no proposals in the pulser" (SSeq.null props)
+
+currentProposalIds :: ConwayEraGov era => ImpTestM era (SSeq.StrictSeq (GovActionId (EraCrypto era)))
+currentProposalIds =
+  proposalsIds
+    <$> getsNES (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL)
+
+lastEpochProposals ::
+  forall era.
+  ConwayEraGov era =>
+  ImpTestM era (SSeq.StrictSeq (GovActionId (EraCrypto era)))
+lastEpochProposals =
+  fmap (gasId @era) . psProposals
+    <$> getsNES
+      ( nesEsL
+          . esLStateL
+          . lsUTxOStateL
+          . utxosGovStateL
+          . drepPulsingStateGovStateL
+          . pulsingStateSnapshotL
+      )
+
+pulsingStateSnapshotL :: Lens' (DRepPulsingState era) (PulsingSnapshot era)
+pulsingStateSnapshotL = lens getter setter
+  where
+    getter (DRComplete x _) = x
+    getter state = fst (finishDRepPulser state)
+    setter (DRComplete _ y) snap = DRComplete snap y
+    setter state snap = DRComplete snap $ snd $ finishDRepPulser state

@@ -1,10 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
@@ -13,16 +13,7 @@ import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), textToUrl)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (
-  Anchor (..),
-  Constitution (..),
-  ConwayEraGov (..),
-  ConwayGovState,
-  GovAction (..),
-  ProposalProcedure (..),
-  Voter (..),
-  constitutionScriptL,
- )
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
@@ -39,6 +30,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
+import Data.Tree
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
@@ -46,12 +38,136 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ( ConwayEraImp era
-  , GovState era ~ ConwayGovState era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpTestState era)
 spec =
   describe "EPOCH" $ do
+    proposalsSpec
+    dRepSpec
+    treasurySpec
+
+proposalsSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+proposalsSpec =
+  describe "Proposals" $ do
+    it "Proposals survive multiple epochs without any activity" $ do
+      -- + 2 epochs to pass to get the desired effect
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
+      _tree <-
+        submitConstitutionGovActionTree SNothing $
+          Node
+            ()
+            [ Node
+                ()
+                [ Node () []
+                , Node () []
+                ]
+            , Node () []
+            ]
+
+      forest <- getProposals
+      passNEpochs 5
+      forest' <- getProposals
+      forest' `shouldBe` forest
+      passEpoch
+      forest'' <- getProposals
+      forest'' `shouldBe` def
+    it "Expired proposal deposit refunded" $ do
+      let deposit = Coin 999
+      modifyPParams $ \pp ->
+        pp
+          & ppGovActionLifetimeL .~ EpochInterval 1
+          & ppGovActionDepositL .~ deposit
+      rewardAcount <- registerRewardAccount
+
+      getRewardAccountAmount rewardAcount `shouldReturn` Coin 0
+
+      policy <-
+        getsNES $
+          nesEpochStateL . epochStateGovStateL . constitutionGovStateL . constitutionScriptL
+      govActionId <-
+        submitProposal $
+          ProposalProcedure
+            { pProcDeposit = deposit
+            , pProcReturnAddr = rewardAcount
+            , pProcGovAction = TreasuryWithdrawals [(rewardAcount, Coin 123_456_789)] policy
+            , pProcAnchor = def
+            }
+      expectPresentGovActionId govActionId
+      passEpoch
+      passEpoch
+      passEpoch
+      expectMissingGovActionId govActionId
+
+      getRewardAccountAmount rewardAcount `shouldReturn` deposit
+
+dRepSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+dRepSpec =
+  describe "DRep" $ do
+    it "is updated based on to number of dormant epochs" $ do
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+      (drep, _, _) <- setupSingleDRep 1_000_000
+
+      expectNumDormantEpochs 0
+
+      -- epoch 0
+      _ <- submitConstitution SNothing
+      expectCurrentProposals
+      expectNoPulserProposals
+      expectNumDormantEpochs 0
+      expectExtraDRepExpiry drep 0
+
+      passEpoch
+      -- epoch 1
+      expectCurrentProposals
+      expectPulserProposals
+      expectNumDormantEpochs 1
+      expectExtraDRepExpiry drep 0
+
+      passEpoch
+      -- epoch 2
+      expectCurrentProposals
+      expectPulserProposals
+      expectNumDormantEpochs 1
+      expectExtraDRepExpiry drep 0
+
+      passEpoch
+      -- epoch 3
+      expectCurrentProposals
+      expectPulserProposals
+      expectNumDormantEpochs 1
+      expectExtraDRepExpiry drep 0
+
+      passEpoch
+      -- epoch 4, proposals expired
+      expectNoCurrentProposals
+      expectNoPulserProposals
+      expectNumDormantEpochs 1
+      expectExtraDRepExpiry drep 0
+
+      passEpoch
+      -- epoch 5
+      expectNoCurrentProposals
+      expectNoPulserProposals
+      expectNumDormantEpochs 2
+      expectExtraDRepExpiry drep 0
+
+      _ <- submitConstitution SNothing
+      -- number of dormant epochs is added to the drep expiry and the reset
+      expectNumDormantEpochs 0
+      expectExtraDRepExpiry drep 2
+
+      passEpoch
+      -- epoch 6
+      expectCurrentProposals
+      expectPulserProposals
+      expectNumDormantEpochs 1
+      expectExtraDRepExpiry drep 2
     it "DRep registration should succeed" $ do
       logEntry "Stake distribution before DRep registration:"
       logStakeDistr
@@ -60,6 +176,12 @@ spec =
       logStakeDistr
       passEpoch
 
+treasurySpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+treasurySpec =
+  describe "Treasury" $ do
     it "constitution is accepted after two epochs" $ do
       constitutionHash <- freshSafeHash
       let
@@ -114,34 +236,6 @@ spec =
         , TreasuryWithdrawals (Map.singleton rewardAcountOther (Coin 668)) govPolicy
         ]
 
-    it "Expired proposal deposit refunded" $ do
-      let deposit = Coin 999
-      modifyPParams $ \pp ->
-        pp
-          & ppGovActionLifetimeL .~ EpochInterval 1
-          & ppGovActionDepositL .~ deposit
-      rewardAcount <- registerRewardAccount
-
-      getRewardAccountAmount rewardAcount `shouldReturn` Coin 0
-
-      policy <-
-        getsNES $
-          nesEpochStateL . epochStateGovStateL . constitutionGovStateL . constitutionScriptL
-      govActionId <-
-        submitProposal $
-          ProposalProcedure
-            { pProcDeposit = deposit
-            , pProcReturnAddr = rewardAcount
-            , pProcGovAction = TreasuryWithdrawals [(rewardAcount, Coin 123456789)] policy
-            , pProcAnchor = def
-            }
-      expectPresentGovActionId govActionId
-      passEpoch
-      passEpoch
-      passEpoch
-      expectMissingGovActionId govActionId
-
-      getRewardAccountAmount rewardAcount `shouldReturn` deposit
     it
       "deposit is moved to treasury when the reward address is not registered"
       depositMovesToTreasuryWhenStakingAddressUnregisters

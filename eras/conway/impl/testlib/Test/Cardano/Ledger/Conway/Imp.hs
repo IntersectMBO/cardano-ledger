@@ -21,6 +21,7 @@ import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
+import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GovCert
 import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as Gov
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
@@ -44,6 +45,7 @@ spec = do
     Enact.spec @era
     Epoch.spec @era
     Gov.spec @era
+    GovCert.spec @era
     Utxo.spec @era
     Utxos.spec @era
     Ratify.spec @era
