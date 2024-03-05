@@ -86,6 +86,13 @@ package cardano-ledger-mary
 package cardano-ledger-conway
   flags: +asserts
 
+package cardano-crypto-praos
+    flags: -external-libsodium-vrf
+package cardano-crypto-class
+    flags: -external-libsodium-vrf
+package cardano-crypto-tests
+    flags: -external-libsodium-vrf
+
 -- Always write GHC env files, because they are needed for repl and by the doctests.
 write-ghc-environment-files: always
 
@@ -95,3 +102,15 @@ benchmarks: true
 
 -- The only sensible test display option
 test-show-details: streaming
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/cardano-base
+  tag: fc1d6be3ecfc0ee500c5a15b0af1122307459dac
+  --sha256: 0944wg2nqazmhlmsynwgdwxxj6ay0hb9qig9l128isb2cjia0hlp
+  subdir:
+    cardano-binary
+    cardano-crypto-class
+    cardano-crypto-tests
+    cardano-crypto-praos
+    cardano-mempool

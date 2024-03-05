@@ -13,6 +13,7 @@
 module Test.Cardano.Ledger.Binary.RoundTrip (
   -- * Spec
   roundTripSpec,
+  roundTripSpecIO,
   roundTripCborSpec,
   roundTripAnnCborSpec,
   roundTripRangeSpec,
@@ -21,7 +22,9 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
 
   -- ** Trip
   roundTripExpectation,
+  roundTripExpectationIO,
   roundTripRangeExpectation,
+  roundTripRangeExpectationIO,
   roundTripFailureExpectation,
   roundTripRangeFailureExpectation,
 
@@ -48,12 +51,17 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   RoundTripFailure (..),
 
   -- * Tripping definitions
-  Trip (..),
+  Trip,
+  TripIO,
+  TripOf (..),
+  pureTrip,
   mkTrip,
   cborTrip,
+  cborTripIO,
 
   -- * Tripping functions
   roundTrip,
+  roundTripIO,
   roundTripTwiddled,
   roundTripAnn,
   roundTripAnnTwiddled,
@@ -62,13 +70,15 @@ module Test.Cardano.Ledger.Binary.RoundTrip (
   embedTripLabel,
   embedTripLabelExtra,
   decodeAnnExtra,
+
 )
 where
 
 import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import qualified Codec.CBOR.FlatTerm as CBOR
-import Control.Monad (forM_, guard)
+-- import Control.Monad (forM_, guard)
+import Control.Monad.Identity
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Functor
@@ -87,8 +97,8 @@ import Test.QuickCheck hiding (label)
 
 -- =====================================================================
 
--- | Tests the roundtrip property using QuickCheck generators for all possible versions
--- starting with `shelleyProtVer`.
+-- | Tests the roundtrip property using pure QuickCheck generators for all
+-- possible versions starting with `shelleyProtVer`.
 roundTripSpec ::
   forall t.
   (Show t, Eq t, Typeable t, Arbitrary t) =>
@@ -96,6 +106,17 @@ roundTripSpec ::
   Spec
 roundTripSpec trip =
   prop (show (typeRep $ Proxy @t)) $ roundTripExpectation trip
+
+-- | Tests the roundtrip property using QuickCheck generators in IO for all
+-- possible versions starting with `shelleyProtVer`. See 'roundTripSpec'.
+roundTripSpecIO ::
+  forall t s.
+  (Show s, Show t, Eq t, Typeable t, Arbitrary s) =>
+  TripIO s t t ->
+  Spec
+roundTripSpecIO trip =
+  prop (show (typeRep $ Proxy @t)) $ roundTripExpectationIO trip
+
 
 -- | Tests the roundtrip property using QuickCheck generators for all possible versions
 -- starting with `shelleyProtVer`.
@@ -147,6 +168,15 @@ roundTripExpectation ::
   t ->
   Expectation
 roundTripExpectation trip = roundTripRangeExpectation trip minBound maxBound
+
+-- | Verify that round triping through the binary form holds for all versions starting
+-- with `shelleyProtVer`.
+roundTripExpectationIO ::
+  (Show t, Eq t, Typeable t, HasCallStack) =>
+  TripIO s t t ->
+  s ->
+  Expectation
+roundTripExpectationIO trip = roundTripRangeExpectationIO trip minBound maxBound
 
 roundTripCborFailureExpectation ::
   forall t.
@@ -234,6 +264,30 @@ roundTripRangeExpectation ::
 roundTripRangeExpectation trip fromVersion toVersion t =
   forM_ [fromVersion .. toVersion] $ \version ->
     case roundTrip version trip t of
+      Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
+      Right tDecoded -> tDecoded `shouldBe` t
+
+
+-- | Verify that round triping through the binary form holds for a range of versions.
+--
+-- In other words check that:
+--
+-- > deserialize version . serialize version === id
+-- > serialize version . deserialize version . serialize version === serialize version
+roundTripRangeExpectationIO ::
+  forall t s.
+  (Show t, Eq t, Typeable t, HasCallStack) =>
+  TripIO s t t ->
+  -- | From Version
+  Version ->
+  -- | To Version
+  Version ->
+  s ->
+  Expectation
+roundTripRangeExpectationIO trip fromVersion toVersion s = do
+  forM_ [fromVersion .. toVersion] $ \version -> do
+    t <- tripGenerator trip s
+    roundTripIO version trip s >>= \case
       Left err -> expectationFailure $ "Failed to deserialize encoded:\n" ++ show err
       Right tDecoded -> tDecoded `shouldBe` t
 
@@ -402,19 +456,36 @@ instance Show RoundTripFailure where
 -- | A definition of a CBOR trip through binary representation of one type to
 -- another. In this module this is called an embed. When a source and target type is the
 -- exact same one then it would be a dual and is expected to round trip.
-data Trip a b = Trip
-  { tripEncoder :: a -> Encoding
-  , tripDecoder :: forall s. Decoder s b
-  , tripDropper :: forall s. Decoder s ()
+data TripOf m s a b = Trip
+  { tripGenerator :: s -> m a
+  , tripEncoder :: a -> Encoding
+  , tripDecoder :: forall e. Decoder e b
+  , tripDropper :: forall e. Decoder e ()
   }
 
+type Trip a b = TripOf Identity a a b
+
+type TripIO s a b = TripOf IO s a b
+
+pureTrip :: (a -> Encoding) -> (forall s. Decoder s b) -> (forall s. Decoder s ()) -> Trip a b
+pureTrip enc dec decDrop =
+  Trip pure enc dec decDrop
+
 cborTrip :: forall a b. (EncCBOR a, DecCBOR b) => Trip a b
-cborTrip = Trip encCBOR decCBOR (dropCBOR (Proxy @b))
+cborTrip = pureTrip encCBOR decCBOR (dropCBOR (Proxy @b))
+
+cborTripIO :: forall s a b. (EncCBOR a, DecCBOR b) => (s -> IO a) -> TripIO s a b
+cborTripIO generator = Trip generator encCBOR decCBOR (dropCBOR (Proxy @b))
 
 -- | Construct a `Trip` using encoder and decoder, with dropper set to the decoder which
 -- drops the value
 mkTrip :: forall a b. (a -> Encoding) -> (forall s. Decoder s b) -> Trip a b
-mkTrip encoder decoder = Trip encoder decoder (() <$ decoder)
+mkTrip encoder decoder = Trip pure encoder decoder (() <$ decoder)
+
+-- -- | Construct a `Trip` using encoder and decoder, with dropper set to the decoder which
+-- -- drops the value
+-- mkTripIO :: forall s a b. (s -> IO a) -> (a -> Encoding) -> (forall e. Decoder e b) -> TripIO s a b
+-- mkTripIO generator encoder decoder = Trip generator encoder decoder (() <$ decoder)
 
 -- | Check that serialization followed by deserialization of the value produces the same
 -- value back. We also check that re-serialization is idempotent. In other words, we
@@ -436,6 +507,28 @@ roundTrip version trip val = do
         RoundTripFailure version version encoding encodedBytes (Just reserialized) Nothing Nothing Nothing
     else Right val'
 
+-- | Check that serialization followed by deserialization of the value produces the same
+-- value back. We also check that re-serialization is idempotent. In other words, we
+-- ensure that deserialization does not modify the decoded value in a way that its binary
+-- representation has changed. Dropper is checked as well.
+roundTripIO ::
+  forall t s.
+  (Eq t, Typeable t) =>
+  Version ->
+  TripIO s t t ->
+  s ->
+  IO (Either RoundTripFailure t)
+roundTripIO version trip seed = do
+  val <- tripGenerator trip seed
+  return $ do
+    (val', encoding, encodedBytes) <- embedTripLabelExtra (typeLabel @t) version version trip val
+    let reserialized = serialize version (tripEncoder trip val')
+    if reserialized /= encodedBytes
+      then
+        Left $
+          RoundTripFailure version version encoding encodedBytes (Just reserialized) Nothing Nothing Nothing
+      else Right val'
+
 roundTripTwiddled ::
   forall t.
   (Twiddle t, DecCBOR t, Eq t) =>
@@ -444,7 +537,7 @@ roundTripTwiddled ::
   Gen (Either RoundTripFailure t)
 roundTripTwiddled version x = do
   tw <- twiddle version x
-  pure (roundTrip version (Trip (const (encodeTerm tw)) decCBOR (dropCBOR (Proxy @t))) x)
+  pure (roundTrip version (pureTrip (const (encodeTerm tw)) decCBOR (dropCBOR (Proxy @t))) x)
 
 roundTripAnn :: (ToCBOR t, DecCBOR (Annotator t)) => Version -> t -> Either RoundTripFailure t
 roundTripAnn v = embedTripAnn v v
@@ -504,17 +597,17 @@ embedTripLabel lbl encVersion decVersion trip s =
     (res, _, _) -> res
 
 embedTripLabelExtra ::
-  forall a b.
+  forall m s a b.
   Eq b =>
   T.Text ->
   -- | Version for the encoder
   Version ->
   -- | Version for the decoder
   Version ->
-  Trip a b ->
+  TripOf m s a b ->
   a ->
   Either RoundTripFailure (b, Plain.Encoding, BSL.ByteString)
-embedTripLabelExtra lbl encVersion decVersion (Trip encoder decoder dropper) s = result
+embedTripLabelExtra lbl encVersion decVersion (Trip _generator encoder decoder dropper) s = result
   where
     mkFailure = RoundTripFailure encVersion decVersion encoding encodedBytes Nothing
     result =
