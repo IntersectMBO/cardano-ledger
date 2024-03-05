@@ -34,6 +34,7 @@ module Cardano.Ledger.Shelley.TxWits (
   addrWits',
   prettyWitnessSetParts,
   shelleyEqTxWitsRaw,
+  mapTraverseableDecoderA,
 
   -- * Re-exports
   WitVKey (..),
@@ -282,9 +283,14 @@ decodeWits =
         (\x wits -> wits {bootWits' = x})
         (D $ mapTraverseableDecoderA (decodeList decCBOR) Set.fromList)
     witField n = fieldAA (\_ wits -> wits) (Invalid n)
-    mapTraverseableDecoderA decList transformList =
-      fmap transformList . sequence <$> decList
 
 keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 {-# DEPRECATED keyBy "In favor of `Data.MapExtras.fromElems`" #-}
+
+mapTraverseableDecoderA ::
+  Traversable f =>
+  Decoder s (f (Annotator a)) ->
+  (f a -> m b) ->
+  Decoder s (Annotator (m b))
+mapTraverseableDecoderA decList transformList = fmap transformList . sequence <$> decList
