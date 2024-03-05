@@ -28,7 +28,7 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
  )
 import qualified Cardano.Ledger.BaseTypes as Base (EpochInterval (..), Globals (..))
-import Cardano.Ledger.CertState (CommitteeState (..), csCommitteeCredsL, vsNumDormantEpochsL)
+import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..), csCommitteeCredsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Conway.PParams (
@@ -304,10 +304,10 @@ poolDeposits = Var $ V "poolDeposits" (MapR PoolHashR CoinR) (Yes NewEpochStateR
 poolDepositsL :: NELens era (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
 poolDepositsL = nesEsL . esLStateL . lsCertStateL . certPStateL . psDepositsL
 
-committeeState :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
-committeeState = Var $ V "committeeState" (MapR CommColdCredR (MaybeR CommHotCredR)) (Yes NewEpochStateR committeeStateL)
+committeeState :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (CommitteeAuthorization (EraCrypto era)))
+committeeState = Var $ V "committeeState" (MapR CommColdCredR CommitteeAuthorizationR) (Yes NewEpochStateR committeeStateL)
 
-committeeStateL :: NELens era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
+committeeStateL :: NELens era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (CommitteeAuthorization (EraCrypto era)))
 committeeStateL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
 
 numDormantEpochs :: Era era => Term era EpochNo
@@ -993,7 +993,7 @@ committeeL ::
   Lens'
     ( Map
         (Credential 'ColdCommitteeRole (EraCrypto era))
-        (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
+        (CommitteeAuthorization (EraCrypto era))
     )
     (CommitteeState era)
 committeeL = lens CommitteeState (\_ (CommitteeState x) -> x)
@@ -1660,13 +1660,13 @@ justPulser ::
     (DRepPulser era Identity (RatifyState era))
 justPulser p =
   Invert "DRepPulser" (typeRep @(DRepPulser era Identity (RatifyState era))) (initPulser p Map.empty)
-    :$ Virtual drepDelegation (ppString "prevDRepDelegations") (prevDRepDelegationsL)
-    :$ Virtual poolDistr (ppString "prevPoolDistr") (prevPoolDistrL)
-    :$ Virtual currentDRepState (ppString "prevDRepState") (prevDRepStateL)
-    :$ Virtual currentEpoch (ppString "prevEpoch") (prevEpochL)
-    :$ Virtual committeeState (ppString "prevCommitteeState") (prevCommitteeStateL)
-    :$ Shift enactStateT (prevEnactStateL)
-    :$ Virtual currGovStates (ppString "prevProposals") (ratifyGovActionStatesL)
+    :$ Virtual drepDelegation (ppString "prevDRepDelegations") prevDRepDelegationsL
+    :$ Virtual poolDistr (ppString "prevPoolDistr") prevPoolDistrL
+    :$ Virtual currentDRepState (ppString "prevDRepState") prevDRepStateL
+    :$ Virtual currentEpoch (ppString "prevEpoch") prevEpochL
+    :$ Virtual committeeState (ppString "prevCommitteeState") prevCommitteeStateL
+    :$ Shift enactStateT prevEnactStateL
+    :$ Virtual currGovStates (ppString "prevProposals") ratifyGovActionStatesL
 
 -- TODO access prevTreasury from the EnactState
 -- :$ Virtual treasury (ppString "prevTreasury") (prevTreasuryL)
@@ -1692,7 +1692,7 @@ prevPulsingPreds p =
   , select prevEpoch drepPulser prevEpochL
   , select prevCommitteeState drepPulser prevCommitteeStateL
   , select prevEnactState drepPulser prevEnactStateL
-  , currProposals p :=: (prevProposals p)
+  , currProposals p :=: prevProposals p
   -- TODO access prevTreasury from the EnactState
   -- , select prevTreasury drepPulser prevTreasuryL
   ]
@@ -1733,7 +1733,7 @@ initPulser ::
   Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)) ->
   Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)) ->
   EpochNo ->
-  Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))) ->
+  Map (Credential 'ColdCommitteeRole (EraCrypto era)) (CommitteeAuthorization (EraCrypto era)) ->
   EnactState era ->
   [GovActionState era] ->
   -- Coin ->
@@ -1742,7 +1742,7 @@ initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactsta
   let stakeSize = Map.size stakeDistr
       k = securityParameter testGlobals
       pp :: PParams era
-      pp = def & ppProtocolVersionL .~ (protocolVersion proof)
+      pp = def & ppProtocolVersionL .~ protocolVersion proof
       IStake stakeDistr _ = updateStakeDistribution pp mempty mempty (utx ^. utxoFL proof)
    in DRepPulser
         (max 1 (ceiling (toInteger stakeSize % (8 * toInteger k))))
@@ -1877,16 +1877,16 @@ prevDRepDelegationsL =
     )
 
 -- | Snapshot of 'committeeState' from the start of the current epoch
-prevCommitteeState :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
-prevCommitteeState = Var $ V "prevCommitteeState" (MapR CommColdCredR (MaybeR CommHotCredR)) No
+prevCommitteeState :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (CommitteeAuthorization (EraCrypto era)))
+prevCommitteeState = Var $ V "prevCommitteeState" (MapR CommColdCredR CommitteeAuthorizationR) No
 
 prevCommitteeStateL ::
   Lens'
     (DRepPulser era Identity (RatifyState era))
-    (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
+    (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (CommitteeAuthorization (EraCrypto era)))
 prevCommitteeStateL =
   lens
-    (\x -> csCommitteeCreds (dpCommitteeState x))
+    (csCommitteeCreds . dpCommitteeState)
     (\x y -> x {dpCommitteeState = CommitteeState y})
 
 -- | Snapshot of the enactState built by 'enactStateT' assembled from data at the start the current epoch

@@ -843,6 +843,9 @@ instance IsConwayUniv fn => HasSpec fn ValidityInterval
 instance HasSimpleRep (DRepState c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (DRepState c)
 
+instance HasSimpleRep (CommitteeAuthorization c)
+instance (IsConwayUniv fn, Crypto c) => HasSpec fn (CommitteeAuthorization c)
+
 instance HasSimpleRep (CommitteeState era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (CommitteeState era)
 

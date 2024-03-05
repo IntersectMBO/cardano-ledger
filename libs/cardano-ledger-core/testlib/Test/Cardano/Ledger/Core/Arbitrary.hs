@@ -78,6 +78,7 @@ import Cardano.Ledger.Binary (DecCBOR, EncCBOR, Sized, mkSized)
 import Cardano.Ledger.CertState (
   Anchor (..),
   CertState (..),
+  CommitteeAuthorization (..),
   CommitteeState (..),
   DState (..),
   FutureGenDeleg (..),
@@ -719,6 +720,13 @@ instance Crypto c => Arbitrary (Anchor c) where
     Anchor
       <$> arbitrary
       <*> arbitrary
+
+instance Crypto c => Arbitrary (CommitteeAuthorization c) where
+  arbitrary =
+    oneof
+      [ CommitteeHotCredential <$> arbitrary
+      , CommitteeMemberResigned <$> arbitrary
+      ]
 
 deriving instance Era era => Arbitrary (CommitteeState era)
 

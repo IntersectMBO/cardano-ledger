@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Ledger.Api.State.Query (
@@ -202,8 +203,11 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
       | otherwise = withFilteredColdCreds $ Map.keysSet comMembers
 
     relevantHotKeys =
-      Map.keysSet $
-        Map.filter (maybe False (`Set.member` hotCredsFilter)) comStateMembers
+      Set.fromList
+        [ ck
+        | (ck, CommitteeHotCredential hk) <- Map.toList comStateMembers
+        , hk `Set.member` hotCredsFilter
+        ]
 
     relevant
       | Set.null hotCredsFilter = relevantColdKeys
@@ -226,8 +230,8 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
       let hkStatus =
             case Map.lookup coldCred comStateMembers of
               Nothing -> MemberNotAuthorized
-              Just Nothing -> MemberResigned
-              Just (Just hk) -> MemberAuthorized hk
+              Just (CommitteeMemberResigned _) -> MemberResigned
+              Just (CommitteeHotCredential hk) -> MemberAuthorized hk
       pure $ CommitteeMemberState hkStatus status mbExpiry (nextEpochChange coldCred)
 
     nextEpochChange :: Credential 'ColdCommitteeRole (EraCrypto era) -> NextEpochChange

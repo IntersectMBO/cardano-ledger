@@ -241,6 +241,8 @@ instance ToExpr (FutureGenDeleg c)
 
 instance ToExpr (InstantaneousRewards c)
 
+instance ToExpr (CommitteeAuthorization c)
+
 instance ToExpr (CommitteeState era)
 
 -- UTxO

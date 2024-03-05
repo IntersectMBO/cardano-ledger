@@ -78,7 +78,7 @@ import Cardano.Ledger.BaseTypes (
   txIxToInt,
   unboundRational,
  )
-import Cardano.Ledger.CertState (CommitteeState (..))
+import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (
@@ -2828,8 +2828,17 @@ pcConstitution (Constitution x y) =
 instance PrettyA (Constitution c) where
   prettyA = pcConstitution
 
+ppCommitteeAuthorization :: CommitteeAuthorization c -> PDoc
+ppCommitteeAuthorization =
+  \case
+    CommitteeHotCredential hk -> ppSexp "CommitteeHotCredential" [pcCredential hk]
+    CommitteeMemberResigned anchor -> ppSexp "CommitteeMemberResigned" [ppStrictMaybe pcAnchor anchor]
+
+instance PrettyA (CommitteeAuthorization c) where
+  prettyA = ppCommitteeAuthorization
+
 pcCommitteeState :: CommitteeState era -> PDoc
-pcCommitteeState x = ppMap pcCredential (ppMaybe pcCredential) (csCommitteeCreds x)
+pcCommitteeState x = ppMap pcCredential ppCommitteeAuthorization (csCommitteeCreds x)
 
 instance (PrettyA (CommitteeState era)) where
   prettyA = pcCommitteeState
@@ -2872,11 +2881,11 @@ pcCertState (CertState vst pst dst) =
     ]
 
 pcVState :: VState era -> PDoc
-pcVState (VState dreps (CommitteeState committeeHotCreds) numDormantEpochs) =
+pcVState (VState dreps committeeState numDormantEpochs) =
   ppRecord
     "VState"
     [ ("DReps", ppMap pcCredential pcDRepState dreps)
-    , ("CC Hot Keys", ppMap pcCredential (ppMaybe pcCredential) committeeHotCreds)
+    , ("CC Hot Keys", pcCommitteeState committeeState)
     , ("Number of dormant epochs", ppEpochNo numDormantEpochs)
     ]
 
@@ -3245,7 +3254,7 @@ pcDRepPulser x =
     , ("partialDrepDistr", summaryMapCompact (dpDRepDistr x))
     , ("drepState", ppMap pcCredential pcDRepState (dpDRepState x))
     , ("epoch", ppEpochNo (dpCurrentEpoch x))
-    , ("committeeState", ppMap pcCredential (ppMaybe pcCredential) (csCommitteeCreds (dpCommitteeState x)))
+    , ("committeeState", pcCommitteeState (dpCommitteeState x))
     , ("proposals", ppStrictSeq pcGovActionState (dpProposals x))
     , ("globals", ppString "...")
     ]
