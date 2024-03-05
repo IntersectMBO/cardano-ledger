@@ -256,26 +256,27 @@ shelleyPParamsPairs ::
   PParamsHKD Identity era ->
   [a]
 shelleyPParamsPairs pp =
-  uncurry (.=) <$> shelleyPParamsHKDPairs (Proxy @Identity) pp
+  uncurry (.=)
+    <$> shelleyPParamsHKDPairs (Proxy @Identity) pp
 
 instance FromJSON (ShelleyPParams Identity era) where
   parseJSON =
-    Aeson.withObject "ShelleyPParams" $ \obj ->
+    Aeson.withObject "ShelleyPParams" $ \obj -> do
       ShelleyPParams
-        <$> obj .: "minFeeA"
-        <*> obj .: "minFeeB"
+        <$> obj .: "txFeePerByte"
+        <*> obj .: "txFeeFixed"
         <*> obj .: "maxBlockBodySize"
         <*> obj .: "maxTxSize"
         <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "keyDeposit"
-        <*> obj .: "poolDeposit"
-        <*> obj .: "eMax"
-        <*> obj .: "nOpt"
-        <*> obj .: "a0"
-        <*> obj .: "rho"
-        <*> obj .: "tau"
-        <*> obj .: "decentralisationParam"
-        <*> obj .: "extraEntropy"
+        <*> obj .: "stakeAddressDeposit"
+        <*> obj .: "stakePoolDeposit"
+        <*> obj .: "poolRetireMaxEpoch"
+        <*> obj .: "stakePoolTargetNum"
+        <*> obj .: "poolPledgeInfluence"
+        <*> obj .: "monetaryExpansion"
+        <*> obj .: "treasuryCut"
+        <*> obj .: "decentralization"
+        <*> obj .: "extraPraosEntropy"
         <*> obj .: "protocolVersion"
         <*> obj .:? "minUTxOValue" .!= mempty
         <*> obj .:? "minPoolCost" .!= mempty
@@ -457,8 +458,8 @@ shelleyCommonPParamsHKDPairsV6 ::
   PParamsHKD f era ->
   [(Key, HKD f Aeson.Value)]
 shelleyCommonPParamsHKDPairsV6 px pp =
-  [ ("decentralisationParam", hkdMap px (toJSON @UnitInterval) (pp ^. hkdDL @era @f))
-  , ("extraEntropy", hkdMap px (toJSON @Nonce) (pp ^. hkdExtraEntropyL @era @f))
+  [ ("decentralization", hkdMap px (toJSON @UnitInterval) (pp ^. hkdDL @era @f))
+  , ("extraPraosEntropy", hkdMap px (toJSON @Nonce) (pp ^. hkdExtraEntropyL @era @f))
   ]
 
 shelleyCommonPParamsHKDPairsV8 ::
@@ -479,18 +480,18 @@ shelleyCommonPParamsHKDPairs ::
   PParamsHKD f era ->
   [(Key, HKD f Aeson.Value)]
 shelleyCommonPParamsHKDPairs px pp =
-  [ ("minFeeA", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeAL @_ @f :: HKD f Coin))
-  , ("minFeeB", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeBL @era @f))
+  [ ("txFeePerByte", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeAL @_ @f :: HKD f Coin))
+  , ("txFeeFixed", hkdMap px (toJSON @Coin) (pp ^. hkdMinFeeBL @era @f))
   , ("maxBlockBodySize", hkdMap px (toJSON @Word32) (pp ^. hkdMaxBBSizeL @era @f))
   , ("maxTxSize", hkdMap px (toJSON @Word32) (pp ^. hkdMaxTxSizeL @era @f))
   , ("maxBlockHeaderSize", hkdMap px (toJSON @Word16) (pp ^. hkdMaxBHSizeL @era @f))
-  , ("keyDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdKeyDepositL @era @f))
-  , ("poolDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdPoolDepositL @era @f))
-  , ("eMax", hkdMap px (toJSON @EpochInterval) (pp ^. hkdEMaxL @era @f))
-  , ("nOpt", hkdMap px (toJSON @Natural) (pp ^. hkdNOptL @era @f))
-  , ("a0", hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdA0L @era @f))
-  , ("rho", hkdMap px (toJSON @UnitInterval) (pp ^. hkdRhoL @era @f))
-  , ("tau", hkdMap px (toJSON @UnitInterval) (pp ^. hkdTauL @era @f))
+  , ("stakeAddressDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdKeyDepositL @era @f))
+  , ("stakePoolDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdPoolDepositL @era @f))
+  , ("poolRetireMaxEpoch", hkdMap px (toJSON @EpochInterval) (pp ^. hkdEMaxL @era @f))
+  , ("stakePoolTargetNum", hkdMap px (toJSON @Natural) (pp ^. hkdNOptL @era @f))
+  , ("poolPledgeInfluence", hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdA0L @era @f))
+  , ("monetaryExpansion", hkdMap px (toJSON @UnitInterval) (pp ^. hkdRhoL @era @f))
+  , ("treasuryCut", hkdMap px (toJSON @UnitInterval) (pp ^. hkdTauL @era @f))
   , ("minPoolCost", hkdMap px (toJSON @Coin) (pp ^. hkdMinPoolCostL @era @f))
   ]
 

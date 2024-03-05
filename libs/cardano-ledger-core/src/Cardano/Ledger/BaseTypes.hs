@@ -6,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -338,11 +339,12 @@ instance
       Just u -> pure u
 
 instance Bounded (BoundedRatio b Word64) => ToJSON (BoundedRatio b Word64) where
-  toJSON = toRationalJSON . unboundRational
+  toJSON :: BoundedRatio b Word64 -> Value
+  toJSON br = case fromRationalRepetendLimited maxDecimalsWord64 r of
+    Right (s, Nothing) -> toJSON s
+    _ -> toJSON r
     where
-      toRationalJSON r = case fromRationalRepetendLimited maxDecimalsWord64 r of
-        Right (s, Nothing) -> toJSON s
-        _ -> toJSON r
+      r = unboundRational br
 
 instance Bounded (BoundedRatio b Word64) => FromJSON (BoundedRatio b Word64) where
   parseJSON = \case
@@ -486,9 +488,13 @@ instance FromCBOR Nonce where
         pure (2, Nonce x)
       k -> invalidKey k
 
-deriving anyclass instance ToJSON Nonce
+instance ToJSON Nonce where
+  toJSON NeutralNonce = Null
+  toJSON (Nonce n) = toJSON n
 
-deriving anyclass instance FromJSON Nonce
+instance FromJSON Nonce where
+  parseJSON Null = return NeutralNonce
+  parseJSON x = Nonce <$> parseJSON x
 
 -- | Evolve the nonce
 (⭒) :: Nonce -> Nonce -> Nonce

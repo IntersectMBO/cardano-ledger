@@ -46,6 +46,7 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData (..))
 import Control.Monad (when)
 import Data.Aeson (
@@ -108,14 +109,14 @@ instance ToJSON ExUnits where
   toJSON exUnits@(ExUnits _ _) =
     let ExUnits {exUnitsMem, exUnitsSteps} = exUnits
      in object
-          [ "exUnitsMem" .= toJSON exUnitsMem
-          , "exUnitsSteps" .= toJSON exUnitsSteps
+          [ "memory" .= toJSON exUnitsMem
+          , "steps" .= toJSON exUnitsSteps
           ]
 
 instance FromJSON ExUnits where
   parseJSON = withObject "exUnits" $ \o -> do
-    exUnitsMem <- checkWord64Bounds =<< o .: "exUnitsMem"
-    exUnitsSteps <- checkWord64Bounds =<< o .: "exUnitsSteps"
+    exUnitsMem <- checkWord64Bounds =<< (o .: "memory" <|> o .: "exUnitsMem")
+    exUnitsSteps <- checkWord64Bounds =<< (o .: "steps" <|> o .: "exUnitsSteps")
     pure $ ExUnits {exUnitsMem, exUnitsSteps}
     where
       checkWord64Bounds n =
@@ -163,9 +164,19 @@ instance NoThunks Prices
 
 instance NFData Prices
 
-instance ToJSON Prices
+instance ToJSON Prices where
+  toJSON Prices {prSteps, prMem} =
+    object
+      [ "priceSteps" .= prSteps
+      , "priceMemory" .= prMem
+      ]
 
-instance FromJSON Prices
+instance FromJSON Prices where
+  parseJSON =
+    withObject "prices" $ \o -> do
+      prSteps <- o .: "priceSteps" <|> o .: "prSteps"
+      prMem <- o .: "priceMemory" <|> o .: "prMem"
+      return Prices {prSteps, prMem}
 
 -- | Compute the cost of a script based upon prices and the number of execution
 -- units.

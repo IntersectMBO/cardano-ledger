@@ -27,6 +27,7 @@
 * Deprecate `deserialiseRewardAcnt` in favor of `deserialiseRewardAccount`
 * Deprecate `serialiseRewardAcnt` in favor of `serialiseRewardAccount`
 * Deprecate `RewardAcnt` in favor of `RewardAccount`
+* Modify `Prices` and `Nonce` JSON instances to match `cardano-api`
 
 ### `testlib`
 

@@ -21,6 +21,8 @@
 * Deprecate `RewardAcnt` in favor of `RewardAccount`
 * Remove `registerInitialFunds` and `registerInitialStaking`
 * Add `registerInitialFundsThenStaking`
+* Modify `PParams` JSON instances to match `cardano-api`
+* Add wrapper to `PParams` in `ShelleyGenesis` to preserve the legacy behaviour of JSON instances
 
 ### `testlib`
 

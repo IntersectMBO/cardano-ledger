@@ -25,6 +25,7 @@
 * Add `SpendingPurpose`, `MintingPurpose`, `CertifyingPurpose`, `RewardingPurpose` pattern synonyms.
 * Add `getSpendingScriptsNeeded`, `getRewardingScriptsNeeded`, `getMintingScriptsNeeded`
 * Add `zipAsIxItem`
+* Modify `PParams` JSON instances to match `cardano-api`
 
 ### `testlib`
 

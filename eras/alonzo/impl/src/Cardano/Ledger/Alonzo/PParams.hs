@@ -137,7 +137,7 @@ import Data.Aeson as Aeson (
   (.!=),
   (.:),
  )
-import qualified Data.Aeson as Aeson (Value)
+import qualified Data.Aeson.Types as Aeson
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Coerce (coerce)
@@ -474,28 +474,28 @@ instance FromJSON (AlonzoPParams Identity era) where
   parseJSON =
     Aeson.withObject "PParams" $ \obj ->
       AlonzoPParams
-        <$> obj .: "minFeeA"
-        <*> obj .: "minFeeB"
+        <$> obj .: "txFeePerByte"
+        <*> obj .: "txFeeFixed"
         <*> obj .: "maxBlockBodySize"
         <*> obj .: "maxTxSize"
         <*> obj .: "maxBlockHeaderSize"
-        <*> obj .: "keyDeposit"
-        <*> obj .: "poolDeposit"
-        <*> obj .: "eMax"
-        <*> obj .: "nOpt"
-        <*> obj .: "a0"
-        <*> obj .: "rho"
-        <*> obj .: "tau"
-        <*> obj .: "decentralisationParam"
-        <*> obj .: "extraEntropy"
+        <*> obj .: "stakeAddressDeposit"
+        <*> obj .: "stakePoolDeposit"
+        <*> obj .: "poolRetireMaxEpoch"
+        <*> obj .: "stakePoolTargetNum"
+        <*> obj .: "poolPledgeInfluence"
+        <*> obj .: "monetaryExpansion"
+        <*> obj .: "treasuryCut"
+        <*> obj .: "decentralization"
+        <*> obj .: "extraPraosEntropy"
         <*> obj .: "protocolVersion"
         <*> obj .: "minPoolCost" .!= mempty
-        <*> obj .: "lovelacePerUTxOWord"
-        <*> obj .: "costmdls"
-        <*> obj .: "prices"
-        <*> obj .: "maxTxExUnits"
-        <*> obj .: "maxBlockExUnits"
-        <*> obj .: "maxValSize"
+        <*> obj .: "utxoCostPerByte"
+        <*> obj .: "costModels"
+        <*> obj .: "executionUnitPrices"
+        <*> obj .: "maxTxExecutionUnits"
+        <*> obj .: "maxBlockExecutionUnits"
+        <*> obj .: "maxValueSize"
         <*> obj .: "collateralPercentage"
         <*> obj .: "maxCollateralInputs"
 
@@ -730,7 +730,7 @@ alonzoPParamsHKDPairs px pp =
   alonzoCommonPParamsHKDPairs px pp
     ++ shelleyCommonPParamsHKDPairsV8 px pp
     ++ shelleyCommonPParamsHKDPairsV6 px pp
-    ++ [("lovelacePerUTxOWord", hkdMap px (toJSON @CoinPerWord) (pp ^. hkdCoinsPerUTxOWordL @_ @f))]
+    ++ [("utxoCostPerByte", hkdMap px (toJSON @CoinPerWord) (pp ^. hkdCoinsPerUTxOWordL @_ @f))]
 
 -- | These are the fields that are common across all eras starting with Alonzo.
 alonzoCommonPParamsHKDPairs ::
@@ -741,11 +741,11 @@ alonzoCommonPParamsHKDPairs ::
   [(Key, HKD f Aeson.Value)]
 alonzoCommonPParamsHKDPairs px pp =
   shelleyCommonPParamsHKDPairs px pp
-    ++ [ ("costmdls", hkdMap px (toJSON @CostModels) (pp ^. hkdCostModelsL @era @f))
-       , ("prices", hkdMap px (toJSON @Prices) (pp ^. hkdPricesL @era @f))
-       , ("maxTxExUnits", hkdMap px (toJSON @ExUnits) (pp ^. hkdMaxTxExUnitsL @era @f))
-       , ("maxBlockExUnits", hkdMap px (toJSON @ExUnits) (pp ^. hkdMaxBlockExUnitsL @era @f))
-       , ("maxValSize", hkdMap px (toJSON @Natural) (pp ^. hkdMaxValSizeL @era @f))
+    ++ [ ("costModels", hkdMap px (toJSON @CostModels) (pp ^. hkdCostModelsL @era @f))
+       , ("executionUnitPrices", hkdMap px (toJSON @Prices) (pp ^. hkdPricesL @era @f))
+       , ("maxTxExecutionUnits", hkdMap px (toJSON @ExUnits) (pp ^. hkdMaxTxExUnitsL @era @f))
+       , ("maxBlockExecutionUnits", hkdMap px (toJSON @ExUnits) (pp ^. hkdMaxBlockExUnitsL @era @f))
+       , ("maxValueSize", hkdMap px (toJSON @Natural) (pp ^. hkdMaxValSizeL @era @f))
        , ("collateralPercentage", hkdMap px (toJSON @Natural) (pp ^. hkdCollateralPercentageL @era @f))
        , ("maxCollateralInputs", hkdMap px (toJSON @Natural) (pp ^. hkdMaxCollateralInputsL @era @f))
        ]
