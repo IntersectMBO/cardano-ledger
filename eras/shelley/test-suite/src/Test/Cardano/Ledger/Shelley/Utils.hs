@@ -49,9 +49,9 @@ import Cardano.Crypto.Hash (
   hashToBytes,
  )
 import Cardano.Crypto.KES (
-  KESAlgorithm (..),
-  deriveVerKeyKES,
-  genKeyKES,
+  UnsoundPureKESAlgorithm (..),
+  unsoundPureDeriveVerKeyKES,
+  unsoundPureGenKeyKES,
  )
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import Cardano.Crypto.VRF (
@@ -211,10 +211,11 @@ mkCertifiedVRF a sk =
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
 mkKESKeyPair :: Crypto c => RawSeed -> KESKeyPair c
 mkKESKeyPair seed =
-  let sk = genKeyKES $ mkSeedFromWords seed
+  let sk = unsoundPureGenKeyKES (mkSeedFromWords seed)
+      vk = unsoundPureDeriveVerKeyKES sk
    in KESKeyPair
         { kesSignKey = sk
-        , kesVerKey = deriveVerKeyKES sk
+        , kesVerKey = vk
         }
 
 runShelleyBase :: ShelleyBase a -> a

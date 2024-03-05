@@ -9,15 +9,14 @@ module Test.Cardano.Protocol.Crypto.KES (
 
 import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (
-  SignKeyKES,
-  VerKeyKES,
- )
+import Cardano.Ledger.Keys (VerKeyKES)
 
 data KESKeyPair c = KESKeyPair
-  { kesSignKey :: !(SignKeyKES c)
+  { kesSignKey :: !(KES.UnsoundPureSignKeyKES (KES c))
   , kesVerKey :: !(VerKeyKES c)
   }
 
-deriving instance
-  (Show (KES.SignKeyKES (KES c)), Show (KES.VerKeyKES (KES c))) => Show (KESKeyPair c)
+instance Show (KES.VerKeyKES (KES c)) => Show (KESKeyPair c) where
+  show (KESKeyPair _ vk) =
+    -- showing `SignKeyKES` is impossible for security reasons.
+    "KESKeyPair <SignKeyKES> " <> show vk
