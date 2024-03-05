@@ -2,6 +2,7 @@
 
 ## 1.10.0.0
 
+* Removed `prettyWitnessSetParts`
 * Re-implemented `ShelleyTxWits` with `MemoBytes`
 * Re-implemented `ShelleyTxAuxData` with `MemoBytes`
 * Remove `getNextEpochCommitteeMembers` from `EraGov`

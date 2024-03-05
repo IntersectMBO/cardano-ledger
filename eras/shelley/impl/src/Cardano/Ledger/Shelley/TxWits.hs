@@ -32,7 +32,6 @@ module Cardano.Ledger.Shelley.TxWits (
   addrShelleyTxWitsL,
   bootAddrShelleyTxWitsL,
   addrWits',
-  prettyWitnessSetParts,
   shelleyEqTxWitsRaw,
   mapTraverseableDecoderA,
 
@@ -219,18 +218,6 @@ shelleyEqTxWitsRaw txWits1 txWits2 =
   liftEq eqRaw (txWits1 ^. addrTxWitsL) (txWits2 ^. addrTxWitsL)
     && liftEq eqRaw (txWits1 ^. scriptTxWitsL) (txWits2 ^. scriptTxWitsL)
     && liftEq eqRaw (txWits1 ^. bootAddrTxWitsL) (txWits2 ^. bootAddrTxWitsL)
-
--- | Exports the relevant parts from a (WintessSetHKD Identity era) for
---     use by the pretty printer without all the horrible constraints.
---     Uses the non-exported WitnessSet' constructor.
-prettyWitnessSetParts ::
-  EraScript era =>
-  ShelleyTxWits era ->
-  ( Set (WitVKey 'Witness (EraCrypto era))
-  , Map (ScriptHash (EraCrypto era)) (Script era)
-  , Set (BootstrapWitness (EraCrypto era))
-  )
-prettyWitnessSetParts (ShelleyTxWits a b c) = (a, b, c)
 
 instance EraScript era => DecCBOR (Annotator (ShelleyTxWitsRaw era)) where
   decCBOR = decodeWits

@@ -238,7 +238,7 @@ import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxBodyRaw (..))
 import Cardano.Ledger.Shelley.TxCert (ShelleyDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
-import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits, prettyWitnessSetParts)
+import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
@@ -719,14 +719,13 @@ instance Crypto c => PrettyA (BootstrapWitness c) where
   prettyA = ppBootstrapWitness
 
 ppWitnessSetHKD :: forall era. Reflect era => ShelleyTxWits era -> PDoc
-ppWitnessSetHKD x =
-  let (addr, scr, boot) = prettyWitnessSetParts x
-   in ppRecord
-        "ShelleyTxWits"
-        [ ("addrWits", ppSet (pcWitVKey @era reify) addr)
-        , ("scriptWits", ppMap pcScriptHash (pcScript reify) scr)
-        , ("bootWits", ppSet ppBootstrapWitness boot)
-        ]
+ppWitnessSetHKD (ShelleyTxWits addr scr boot) =
+  ppRecord
+    "ShelleyTxWits"
+    [ ("addrWits", ppSet (pcWitVKey @era reify) addr)
+    , ("scriptWits", ppMap pcScriptHash (pcScript reify) scr)
+    , ("bootWits", ppSet ppBootstrapWitness boot)
+    ]
 
 instance Reflect era => PrettyA (ShelleyTxWits era) where
   prettyA = ppWitnessSetHKD
