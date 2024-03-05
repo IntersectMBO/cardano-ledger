@@ -80,6 +80,7 @@
           '';
 
           shell = {
+
             # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
             shellHook = ''
               export LANG=en_US.UTF-8
