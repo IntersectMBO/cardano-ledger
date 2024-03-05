@@ -122,7 +122,11 @@ import Cardano.Ledger.Plutus.Language (
   plutusLanguage,
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..), shelleyEqTxWitsRaw)
+import Cardano.Ledger.Shelley.TxWits (
+  ShelleyTxWits (..),
+  mapTraverseableDecoderA,
+  shelleyEqTxWitsRaw,
+ )
 import Control.DeepSeq (NFData)
 import Control.Monad (when, (>=>))
 import Data.Bifunctor (Bifunctor (first))
@@ -731,13 +735,6 @@ alonzoEqTxWitsRaw txWits1 txWits2 =
   shelleyEqTxWitsRaw txWits1 txWits2
     && eqRawType (txWits1 ^. datsTxWitsL) (txWits2 ^. datsTxWitsL)
     && eqRawType (txWits1 ^. rdmrsTxWitsL) (txWits2 ^. rdmrsTxWitsL)
-
-mapTraverseableDecoderA ::
-  Traversable f =>
-  Decoder s (f (Annotator a)) ->
-  (f a -> m b) ->
-  Decoder s (Annotator (m b))
-mapTraverseableDecoderA decList transformList = fmap transformList . sequence <$> decList
 
 encodeWithSetTag :: EncCBOR a => a -> Encoding
 encodeWithSetTag xs =

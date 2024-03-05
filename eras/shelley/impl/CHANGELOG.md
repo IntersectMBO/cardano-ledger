@@ -2,6 +2,8 @@
 
 ## 1.10.0.0
 
+* Removed `prettyWitnessSetParts`
+* Re-implemented `ShelleyTxWits` with `MemoBytes`
 * Re-implemented `ShelleyTxAuxData` with `MemoBytes`
 * Remove `getNextEpochCommitteeMembers` from `EraGov`
 * Deprecated `PPUPPredFailure`
@@ -26,6 +28,7 @@
 
 ### `testlib`
 
+* Added `ToExpr` instance for `ShelleyTxWitsRaw`
 * Add argument to `impSatisfyNativeScript` that accounts for already satisifed witnesses
 * Remove `impFreshIdxL`
 * Remove root coin argument from `initImpNES`, `initShelleyImpNES`
