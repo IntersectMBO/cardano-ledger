@@ -1,5 +1,11 @@
 # Version history for `cardano-protocol-tpraos`
 
+## 1.4.0.0
+
+### `testlib`
+
+* Change type of `kesSignKey` in `KESKeyPair` and result of `evolveKESUntil` from `SignKeyKES` to `UnsoundPureSignKeyKES`
+
 ## 1.3.0.0
 
 * Change the type of hashes that are contained in `WrongGenesisVRFKeyOVERLAY` and `VRFKeyWrongVRFKey` predicate failures
@@ -9,6 +15,7 @@
 *
 
 ## 1.2.0.0
+
 * Change `FutureLedgerViewError` and `ChainTransitionError`
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
 
