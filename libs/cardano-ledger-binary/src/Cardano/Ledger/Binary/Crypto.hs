@@ -16,6 +16,8 @@ module Cardano.Ledger.Binary.Crypto (
   decodeVerKeyKES,
   encodeSignKeyKES,
   decodeSignKeyKES,
+  encodeUnsoundPureSignKeyKES,
+  decodeUnsoundPureSignKeyKES,
   encodeSigKES,
   decodeSigKES,
   encodeSignedKES,
@@ -36,6 +38,9 @@ import qualified Cardano.Crypto.KES.Class as C
 import qualified Cardano.Crypto.VRF.Class as C
 import Cardano.Ledger.Binary.Decoding.Decoder (Decoder, fromPlainDecoder)
 import Cardano.Ledger.Binary.Encoding.Encoder (Encoding, fromPlainEncoding)
+
+import Control.Monad.Class.MonadST (MonadST)
+import Control.Monad.Class.MonadThrow (MonadThrow)
 
 --------------------------------------------------------------------------------
 -- DSIGN
@@ -85,13 +90,24 @@ decodeVerKeyKES :: C.KESAlgorithm v => Decoder s (C.VerKeyKES v)
 decodeVerKeyKES = fromPlainDecoder C.decodeVerKeyKES
 {-# INLINE decodeVerKeyKES #-}
 
-encodeSignKeyKES :: C.KESAlgorithm v => C.SignKeyKES v -> Encoding
-encodeSignKeyKES = fromPlainEncoding . C.encodeSignKeyKES
+encodeSignKeyKES :: (MonadST m, MonadThrow m, C.UnsoundKESAlgorithm v)
+                 => C.SignKeyKES v
+                 -> m Encoding
+encodeSignKeyKES = fmap fromPlainEncoding . C.encodeSignKeyKES
 {-# INLINE encodeSignKeyKES #-}
 
-decodeSignKeyKES :: C.KESAlgorithm v => Decoder s (C.SignKeyKES v)
+decodeSignKeyKES :: (MonadST m, MonadThrow m, C.UnsoundKESAlgorithm v)
+                 => Decoder s (m (Maybe (C.SignKeyKES v)))
 decodeSignKeyKES = fromPlainDecoder C.decodeSignKeyKES
 {-# INLINE decodeSignKeyKES #-}
+
+encodeUnsoundPureSignKeyKES :: C.UnsoundPureKESAlgorithm v => C.UnsoundPureSignKeyKES v -> Encoding
+encodeUnsoundPureSignKeyKES = fromPlainEncoding . C.encodeUnsoundPureSignKeyKES
+{-# INLINE encodeUnsoundPureSignKeyKES #-}
+
+decodeUnsoundPureSignKeyKES :: C.UnsoundPureKESAlgorithm v => Decoder s (C.UnsoundPureSignKeyKES v)
+decodeUnsoundPureSignKeyKES = fromPlainDecoder C.decodeUnsoundPureSignKeyKES
+{-# INLINE decodeUnsoundPureSignKeyKES #-}
 
 encodeSigKES :: C.KESAlgorithm v => C.SigKES v -> Encoding
 encodeSigKES = fromPlainEncoding . C.encodeSigKES

@@ -8,7 +8,7 @@ import Cardano.Ledger.Binary
 import Control.Monad (forM_)
 import Data.Proxy (Proxy (Proxy))
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Binary.RoundTrip (Trip (..), embedTripExpectation)
+import Test.Cardano.Ledger.Binary.RoundTrip (pureTrip, embedTripExpectation)
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
@@ -37,7 +37,7 @@ prop_setWithNoDuplicatesAndTag :: Property
 prop_setWithNoDuplicatesAndTag =
   forAllBlind genUniqueListEncoding $
     \(s, setEncoder) ->
-      let trip = Trip id (decCBOR @(Set.Set Int)) (dropCBOR (Proxy @(Set.Set Int)))
+      let trip = pureTrip id (decCBOR @(Set.Set Int)) (dropCBOR (Proxy @(Set.Set Int)))
        in property $
             forM_ [(natVersion @9) .. maxBound] $
               \v -> embedTripExpectation v v trip (\s' _ -> (s' `shouldBe` s)) setEncoder

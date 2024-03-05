@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- |
 -- Module      : Test.Cardano.Ledger.Shelley.Examples.Cast
@@ -39,6 +40,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Cast (
 )
 where
 
+import Cardano.Crypto.KES (UnsoundPureKESAlgorithm)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.BaseTypes (
   Network (..),
@@ -51,7 +53,7 @@ import Cardano.Ledger.Credential (
   Ptr (..),
   StakeReference (..),
  )
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (
   Hash,
   KeyRole (..),
@@ -96,7 +98,7 @@ aliceStake = KeyPair vk sk
     (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
 -- | Alice's stake pool keys (cold keys, VRF keys, hot KES keys)
-alicePoolKeys :: Crypto c => AllIssuerKeys c 'StakePool
+alicePoolKeys :: (Crypto c, UnsoundPureKESAlgorithm (KES c)) => AllIssuerKeys c 'StakePool
 alicePoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -123,7 +125,7 @@ alicePtrAddr :: Crypto c => Addr c
 alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) minBound minBound)
 
 -- | Alice's stake pool parameters
-alicePoolParams :: forall c. Crypto c => PoolParams c
+alicePoolParams :: forall c. (Crypto c, UnsoundPureKESAlgorithm (KES c)) => PoolParams c
 alicePoolParams =
   PoolParams
     { ppId = hashKey . vKey $ aikCold alicePoolKeys
@@ -145,7 +147,7 @@ alicePoolParams =
 -- | Alice's VRF key hash
 aliceVRFKeyHash ::
   forall c.
-  Crypto c =>
+  (Crypto c, UnsoundPureKESAlgorithm (KES c)) =>
   Hash c (VerKeyVRF c)
 aliceVRFKeyHash = hashVerKeyVRF (vrfVerKey $ aikVrf (alicePoolKeys @c))
 
@@ -170,7 +172,7 @@ bobSHK :: Crypto c => Credential 'Staking c
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
 
 -- | Bob's stake pool keys (cold keys, VRF keys, hot KES keys)
-bobPoolKeys :: Crypto c => AllIssuerKeys c 'StakePool
+bobPoolKeys :: (Crypto c, UnsoundPureKESAlgorithm (KES c)) => AllIssuerKeys c 'StakePool
 bobPoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
@@ -181,7 +183,7 @@ bobPoolKeys =
     (skCold, vkCold) = mkKeyPair (RawSeed 2 0 0 0 1)
 
 -- | Bob's stake pool parameters
-bobPoolParams :: forall c. Crypto c => PoolParams c
+bobPoolParams :: forall c. (Crypto c, UnsoundPureKESAlgorithm (KES c)) => PoolParams c
 bobPoolParams =
   PoolParams
     { ppId = hashKey . vKey $ aikCold bobPoolKeys
@@ -198,7 +200,7 @@ bobPoolParams =
 -- | Bob's VRF key hash
 bobVRFKeyHash ::
   forall c.
-  Crypto c =>
+  (Crypto c, UnsoundPureKESAlgorithm (KES c)) =>
   Hash c (VerKeyVRF c)
 bobVRFKeyHash = hashVerKeyVRF (vrfVerKey $ aikVrf (bobPoolKeys @c))
 

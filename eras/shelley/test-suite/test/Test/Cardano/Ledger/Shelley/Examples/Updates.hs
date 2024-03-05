@@ -96,7 +96,7 @@ initUTxO =
     , ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)
     ]
 
-initStUpdates :: Crypto c => ChainState (ShelleyEra c)
+initStUpdates :: PureGenCrypto c => ChainState (ShelleyEra c)
 initStUpdates = initSt initUTxO
 
 --
@@ -111,14 +111,14 @@ ppVoteA =
 
 collectVotes ::
   forall c.
-  Crypto c =>
+  PureGenCrypto c =>
   PParamsUpdate (ShelleyEra c) ->
   [Int] ->
   ProposedPPUpdates (ShelleyEra c)
 collectVotes vote =
   ProposedPPUpdates . Map.fromList . (fmap (\n -> (hashKey $ coreNodeVK n, vote)))
 
-ppVotes1 :: Crypto c => ProposedPPUpdates (ShelleyEra c)
+ppVotes1 :: PureGenCrypto c => ProposedPPUpdates (ShelleyEra c)
 ppVotes1 = collectVotes ppVoteA [0, 3, 4]
 
 feeTx1 :: Coin
@@ -127,7 +127,7 @@ feeTx1 = Coin 1
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> feeTx1
 
-txbodyEx1 :: Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx1 :: PureGenCrypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx1 =
   ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
@@ -190,10 +190,10 @@ updates1 = CHAINExample initStUpdates blockEx1 (Right expectedStEx1)
 -- Block 2, Slot 20, Epoch 0
 --
 
-ppVotes2 :: Era (ShelleyEra c) => ProposedPPUpdates (ShelleyEra c)
+ppVotes2 :: (Era (ShelleyEra c)) => ProposedPPUpdates (ShelleyEra c)
 ppVotes2 = collectVotes ppVoteA [1, 5]
 
-updateEx3B :: Era (ShelleyEra c) => Update (ShelleyEra c)
+updateEx3B :: (Era (ShelleyEra c)) => Update (ShelleyEra c)
 updateEx3B = Update ppVotes2 (EpochNo 0)
 
 feeTx2 :: Coin
@@ -202,7 +202,7 @@ feeTx2 = Coin 1
 aliceCoinEx2 :: Coin
 aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 
-txbodyEx2 :: forall c. Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx2 :: forall c. PureGenCrypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx2 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx1) minBound])
@@ -269,7 +269,7 @@ ppVoteB =
   emptyPParamsUpdate
     & ppuMinUTxOValueL .~ SJust (Coin 99)
 
-ppVotes3 :: Era (ShelleyEra c) => ProposedPPUpdates (ShelleyEra c)
+ppVotes3 :: (Era (ShelleyEra c)) => ProposedPPUpdates (ShelleyEra c)
 ppVotes3 = collectVotes ppVoteB [1]
 
 feeTx3 :: Coin
@@ -278,7 +278,7 @@ feeTx3 = Coin 1
 aliceCoinEx3 :: Coin
 aliceCoinEx3 = aliceCoinEx2 <-> feeTx3
 
-txbodyEx3 :: forall c. Crypto c => ShelleyTxBody (ShelleyEra c)
+txbodyEx3 :: forall c. PureGenCrypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx3 =
   ShelleyTxBody
     (Set.fromList [TxIn (txIdTxBody txbodyEx2) minBound])
