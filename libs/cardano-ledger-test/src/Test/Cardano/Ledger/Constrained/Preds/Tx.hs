@@ -978,7 +978,7 @@ oneTest sizes proof = do
       pure $
         whenFail
           (putStrLn msg >> goRepl proof env2 "")
-          (counterexample msg $ True === False)
+          (counterexample msg False)
 
 main1 :: IO ()
 main1 = quickCheck (withMaxSuccess 30 (oneTest def Babbage))
