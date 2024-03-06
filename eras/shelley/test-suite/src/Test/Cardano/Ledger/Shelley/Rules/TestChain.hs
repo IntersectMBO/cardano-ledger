@@ -55,15 +55,6 @@ import Cardano.Protocol.TPraos.BHeader (
  )
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.State.Transition
-import Control.State.Transition.Trace (
-  SourceSignalTarget (..),
-  Trace (..),
-  sourceSignalTargets,
-  splitTrace,
- )
-import qualified Control.State.Transition.Trace as Trace
-import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
@@ -86,6 +77,15 @@ import Test.Cardano.Ledger.Shelley.Utils (
   runShelleyBase,
   testGlobals,
  )
+import Test.Control.State.Transition.Trace (
+  SourceSignalTarget (..),
+  Trace (..),
+  sourceSignalTargets,
+  splitTrace,
+ )
+import qualified Test.Control.State.Transition.Trace as Trace
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (
   Property,
   Testable (..),

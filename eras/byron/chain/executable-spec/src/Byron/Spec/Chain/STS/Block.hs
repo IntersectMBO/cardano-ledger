@@ -13,7 +13,6 @@ import Byron.Spec.Ledger.Core (Hash (Hash), Sig (Sig), Slot, VKey, hash, owner)
 import Byron.Spec.Ledger.Delegation
 import Byron.Spec.Ledger.UTxO (Tx, TxIn, TxOut, Wit)
 import Byron.Spec.Ledger.Update (ProtVer, STag, UProp, Vote)
-import Control.State.Transition.Generator
 import Data.AbstractSize
 import Data.ByteString (ByteString)
 import Data.Data (Data, Typeable)
@@ -27,6 +26,7 @@ import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 import Lens.Micro.TH (makeLenses)
 import Numeric.Natural (Natural)
+import Test.Control.State.Transition.Generator
 
 data BlockHeader = BlockHeader
   { _bhPrevHash :: !Hash

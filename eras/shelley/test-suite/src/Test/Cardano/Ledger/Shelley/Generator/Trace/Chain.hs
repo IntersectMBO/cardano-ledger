@@ -45,14 +45,6 @@ import Cardano.Protocol.TPraos.Rules.Tickn (
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
-import Control.State.Transition.Trace.Generator.QuickCheck (
-  BaseEnv,
-  HasTrace,
-  envGen,
-  interpretSTS,
-  sigGen,
- )
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Functor.Identity (runIdentity)
 import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
@@ -78,6 +70,14 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (
  )
 import qualified Test.Cardano.Ledger.Shelley.Rules.Chain as STS (ChainState (ChainState))
 import Test.Cardano.Ledger.Shelley.Utils (maxLLSupply, mkHash)
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (
+  BaseEnv,
+  HasTrace,
+  envGen,
+  interpretSTS,
+  sigGen,
+ )
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (Gen)
 
 -- ======================================================

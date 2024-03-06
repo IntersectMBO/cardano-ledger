@@ -1,8 +1,8 @@
 # Revision history for `cardano-ledger-byron`
 
-## 1.0.0.5
+## 1.0.1.0
 
-*
+* Replaced `small-steps-test` dependency with `small-steps:testlib`
 
 ## 1.0.0.4
 

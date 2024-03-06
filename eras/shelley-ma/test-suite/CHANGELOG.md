@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-shelley-ma-test`
 
-## 1.2.1.7
+## 1.2.2.0
 
-*
+* Replaced `small-steps-test` dependency with `small-steps:testlib`
 
 ## 1.2.1.6
 

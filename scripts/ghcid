@@ -6,7 +6,6 @@ SNAME=cardano-ledger-ghcid
 
 PACKAGES=(
   libs/small-steps
-  libs/small-steps-test
   eras/shelley/impl
   eras/shelley/test-suite
   eras/shelley-ma/impl

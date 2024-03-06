@@ -82,7 +82,6 @@ import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
 import Control.DeepSeq (rnf)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
-import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Default.Class (def)
 import Data.List.NonEmpty (NonEmpty)
@@ -105,6 +104,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..), genesisCoins
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Utils
+import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import qualified Test.QuickCheck.Gen as QC
 import qualified Test.QuickCheck.Random as QC
 import Test.Tasty

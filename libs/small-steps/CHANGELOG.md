@@ -5,9 +5,9 @@
 * Change `applySTSOptsEither`, `Extended.applySTS`, `Simple.applySTS`
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
 
-## 1.0.1.1
+### `testlib`
 
-*
+* Moved `small-steps-test` library here (`small-steps:testlib`) as sublibrary
 
 ## 1.0.1.0
 

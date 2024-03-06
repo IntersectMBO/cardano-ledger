@@ -28,7 +28,6 @@ import Byron.Spec.Ledger.UTxO (UTxO, mapUTxOValues)
 import Byron.Spec.Ledger.Update hiding (delegationMap)
 import qualified Byron.Spec.Ledger.Update as Update
 import Control.State.Transition
-import Control.State.Transition.Generator
 import Data.Bimap (Bimap)
 import Data.Bits (shift)
 import Data.Data (Data, Typeable)
@@ -45,6 +44,7 @@ import qualified Hedgehog.Range as Range
 import Lens.Micro (Lens', (^.))
 import Lens.Micro.Internal (Field1 (..), Field5 (..))
 import Numeric.Natural (Natural)
+import Test.Control.State.Transition.Generator
 
 data CHAIN deriving (Data, Typeable)
 

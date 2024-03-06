@@ -5,7 +5,7 @@
 --
 -- This module provides functions to convert hedgehog 'Gen's to and from a
 -- 'Manual' generators, and functions to manipulate these manual generators.
-module Hedgehog.Extra.Manual (
+module Test.Hedgehog.Extra.Manual (
   Manual (Manual),
   unManual,
   toManual,

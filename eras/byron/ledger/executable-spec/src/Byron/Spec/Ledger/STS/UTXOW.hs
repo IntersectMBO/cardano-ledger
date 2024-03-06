@@ -43,12 +43,6 @@ import Control.State.Transition (
   wrapFailed,
   (?!),
  )
-import Control.State.Transition.Generator (
-  HasTrace,
-  coverFailures,
-  envGen,
-  sigGen,
- )
 import Data.Data (Data, Typeable)
 import qualified Data.Map as Map
 import GHC.Generics (Generic)
@@ -56,6 +50,12 @@ import GHC.Stack (HasCallStack)
 import Hedgehog (MonadTest)
 import Hedgehog.Internal.Property (CoverPercentage)
 import NoThunks.Class (NoThunks (..))
+import Test.Control.State.Transition.Generator (
+  HasTrace,
+  coverFailures,
+  envGen,
+  sigGen,
+ )
 
 data UTXOW deriving (Data, Typeable)
 

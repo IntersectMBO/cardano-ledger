@@ -30,6 +30,7 @@
 
 ### `testlib`
 
+* Replaced `small-steps-test` dependency with `small-steps:testlib`
 * Change `submitFailingTx`, `tryRunImpRule` and `trySubmitTx`
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
 * Added `ToExpr` instance for `ShelleyTxWitsRaw`

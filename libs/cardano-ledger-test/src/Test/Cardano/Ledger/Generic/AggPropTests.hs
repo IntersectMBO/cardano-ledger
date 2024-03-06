@@ -23,15 +23,6 @@ import Cardano.Ledger.UMap (UView (RewDepUView), depositMap, domain, fromCompact
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))
-import Control.State.Transition.Trace (
-  SourceSignalTarget (..),
-  Trace (..),
-  TraceOrder (..),
-  firstAndLastState,
-  sourceSignalTargets,
-  traceSignals,
- )
-import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Data.Default.Class (Default (def))
 import Data.List (foldl')
 import qualified Data.Map as Map
@@ -49,6 +40,15 @@ import Test.Cardano.Ledger.Generic.GenState (GenSize (..), initStableFields)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockBlock (..), MockChainState (..))
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..), Some (..), preBabbage, unReflect)
 import Test.Cardano.Ledger.Generic.Trace (Gen1, genTrace, testPropMax)
+import Test.Control.State.Transition.Trace (
+  SourceSignalTarget (..),
+  Trace (..),
+  TraceOrder (..),
+  firstAndLastState,
+  sourceSignalTargets,
+  traceSignals,
+ )
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Test.QuickCheck
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)

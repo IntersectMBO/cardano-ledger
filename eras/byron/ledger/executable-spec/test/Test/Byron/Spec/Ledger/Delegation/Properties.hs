@@ -54,29 +54,6 @@ import Control.State.Transition (
   wrapFailed,
   (?!),
  )
-import Control.State.Transition.Generator (
-  HasSizeInfo,
-  HasTrace,
-  classifySize,
-  classifyTraceLength,
-  envGen,
-  isTrivial,
-  nonTrivialTrace,
-  sigGen,
-  suchThatLastState,
-  trace,
-  traceLengthsAreClassified,
- )
-import qualified Control.State.Transition.Generator as Transition.Generator
-import Control.State.Transition.Trace (
-  Trace,
-  TraceOrder (OldestFirst),
-  lastState,
-  preStatesAndSignals,
-  traceEnv,
-  traceLength,
-  traceSignals,
- )
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import Data.Data (Data, Typeable)
@@ -101,6 +78,29 @@ import qualified Hedgehog.Range as Range
 import Lens.Micro (to, (&), (.~), (^.))
 import Lens.Micro.Extras (view)
 import Lens.Micro.TH (makeLenses)
+import Test.Control.State.Transition.Generator (
+  HasSizeInfo,
+  HasTrace,
+  classifySize,
+  classifyTraceLength,
+  envGen,
+  isTrivial,
+  nonTrivialTrace,
+  sigGen,
+  suchThatLastState,
+  trace,
+  traceLengthsAreClassified,
+ )
+import qualified Test.Control.State.Transition.Generator as Transition.Generator
+import Test.Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (OldestFirst),
+  lastState,
+  preStatesAndSignals,
+  traceEnv,
+  traceLength,
+  traceSignals,
+ )
 
 --------------------------------------------------------------------------------
 -- Delegation certification triggering tests

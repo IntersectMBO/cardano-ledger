@@ -2,6 +2,7 @@
 
 ## 1.4.0.0
 
+* Replaced `small-steps-test` dependency with `small-steps:testlib`
 * Change `testSTS` to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
 * Remove `testBootstrapSpending`, `testBootstrapNotSpending`, `bootstrapHashTest` and `genSignature`
 * Moved `genBootstrapAddress` to `cardano-ledger-core:testlib:Test.Cardano.Ledger.Core.KeyPairs`

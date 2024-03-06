@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               byron-spec-ledger
-version:            1.0.0.2
+version:            1.0.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -48,8 +48,7 @@ library
         microlens,
         microlens-th,
         nothunks,
-        small-steps >=1.1,
-        small-steps-test >=1.1,
+        small-steps:{small-steps, testlib} >=1.1,
         Unique >=0.4.7.6
 
 test-suite byron-spec-ledger-test
@@ -84,5 +83,4 @@ test-suite byron-spec-ledger-test
         tasty-hedgehog,
         Unique,
         byron-spec-ledger,
-        small-steps >=1.1,
-        small-steps-test >=1.1
+        small-steps:{small-steps, testlib} >=1.1

@@ -11,12 +11,12 @@ import Cardano.Ledger.Shelley ()
 import Cardano.Ledger.Shelley.Scripts ()
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended hiding (Assertion)
-import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Data.List.NonEmpty (NonEmpty)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, totalAda)
 import Test.Cardano.Ledger.Shelley.TreeDiff (expectExprEqual)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, maxLLSupply, runShelleyBase)
+import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Test.Tasty.HUnit (Assertion, (@?=))
 
 data CHAINExample h era = CHAINExample

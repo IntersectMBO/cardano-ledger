@@ -15,7 +15,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Control.State.Transition.Trace.Generator.QuickCheck (
+module Test.Control.State.Transition.Trace.Generator.QuickCheck (
   HasTrace (BaseEnv, envGen, sigGen, shrinkSignal, interpretSTS),
   traceFrom,
   traceFromInitState,
@@ -40,14 +40,14 @@ where
 
 import Control.State.Transition (Environment, IRC (IRC), STS, Signal, State, TRC (TRC))
 import qualified Control.State.Transition.Extended as STS
-import Control.State.Transition.Trace (Trace)
-import qualified Control.State.Transition.Trace as Trace
 import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe (fromMaybe)
 import Data.Word (Word64)
 import GHC.Stack
+import Test.Control.State.Transition.Trace (Trace)
+import qualified Test.Control.State.Transition.Trace as Trace
 import qualified Test.QuickCheck as QuickCheck
 
 -- | State transition systems for which traces can be generated, given a trace

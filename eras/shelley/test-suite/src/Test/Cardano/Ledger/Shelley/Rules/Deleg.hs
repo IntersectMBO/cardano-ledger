@@ -27,11 +27,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
 import qualified Cardano.Ledger.UMap as UM
 import Control.SetAlgebra (eval, rng, (∈))
-import Control.State.Transition.Trace (
-  SourceSignalTarget (..),
-  sourceSignalTargets,
- )
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Foldable (fold)
 import Data.List (foldl')
 import qualified Data.Map.Strict as Map
@@ -50,6 +45,11 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
  )
+import Test.Control.State.Transition.Trace (
+  SourceSignalTarget (..),
+  sourceSignalTargets,
+ )
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (
   Property,
   Testable (..),

@@ -29,19 +29,6 @@ import Control.Monad.Trans.Except
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.Monad.Trans.State.Strict hiding (State)
 import Control.State.Transition.Extended (IRC (..), STS, TRC (..))
-import Control.State.Transition.Trace (
-  Trace (..),
-  TraceOrder (OldestFirst),
-  lastState,
-  traceInitState,
-  traceSignals,
-  traceStates,
- )
-import Control.State.Transition.Trace.Generator.QuickCheck (
-  HasTrace (..),
-  shrinkTrace,
-  traceFromInitState,
- )
 import Data.Default.Class (Default (def))
 import Data.Foldable (toList)
 import qualified Data.Foldable as Fold (toList)
@@ -105,6 +92,19 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Trace (chooseIssuer)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
+import Test.Control.State.Transition.Trace (
+  Trace (..),
+  TraceOrder (OldestFirst),
+  lastState,
+  traceInitState,
+  traceSignals,
+  traceStates,
+ )
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (
+  HasTrace (..),
+  shrinkTrace,
+  traceFromInitState,
+ )
 import Test.Tasty.QuickCheck
 
 -- ================================

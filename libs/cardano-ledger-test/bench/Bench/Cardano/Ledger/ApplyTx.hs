@@ -32,7 +32,6 @@ import Cardano.Ledger.Shelley.API (
 import Cardano.Ledger.Shelley.Core
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
-import Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
 import Criterion
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence as Seq
@@ -43,6 +42,7 @@ import Test.Cardano.Ledger.MaryEraGen ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
 
 type ShelleyBench = ShelleyEra C_Crypto
 

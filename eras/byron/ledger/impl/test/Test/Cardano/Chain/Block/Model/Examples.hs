@@ -23,8 +23,8 @@ import Byron.Spec.Ledger.UTxO
 import Byron.Spec.Ledger.Update
 import Cardano.Prelude hiding (State, trace)
 import Control.State.Transition
-import Control.State.Transition.Trace
 import GHC.Exts
+import Test.Control.State.Transition.Trace
 
 -- | A trace example. When debugging conformance tests you can add such a
 -- trace, and use it in the repl. __NOTE__: Do not commit such trace.

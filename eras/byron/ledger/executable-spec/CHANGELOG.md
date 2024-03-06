@@ -1,8 +1,8 @@
 # Version history for `byron-spec-ledger`
 
-## 1.0.0.3
+## 1.0.1.0
 
-*
+* Replaced `small-steps-test` dependency with `small-steps:testlib`
 
 ## 1.0.0.2
 

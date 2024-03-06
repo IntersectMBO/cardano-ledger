@@ -31,8 +31,6 @@ import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.SetAlgebra (dom, eval)
-import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import qualified Data.List as List (find)
@@ -66,6 +64,8 @@ import Test.Cardano.Ledger.Shelley.Utils (
   testGlobals,
  )
 import Test.Cardano.Protocol.TPraos.Create (VRFKeyPair (..))
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (Gen, discard)
 import qualified Test.QuickCheck as QC (choose)
 

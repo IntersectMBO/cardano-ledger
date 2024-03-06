@@ -57,8 +57,6 @@ import Control.State.Transition (
   wrapEvent,
   wrapFailed,
  )
-import Control.State.Transition.Trace (TraceOrder (OldestFirst), lastState, traceSignals)
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Functor.Identity (runIdentity)
 import Data.List (partition)
 import qualified Data.Map.Strict as Map
@@ -73,6 +71,8 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
 import Test.Cardano.Ledger.Shelley.Generator.TxCert (CertCred (..), genTxCert)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
+import Test.Control.State.Transition.Trace (TraceOrder (OldestFirst), lastState, traceSignals)
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (Gen)
 
 -- | This is a non-spec STS used to generate a sequence of certificates with

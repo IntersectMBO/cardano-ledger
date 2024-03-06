@@ -10,8 +10,6 @@ import Byron.Spec.Ledger.Core hiding ((<|))
 import Byron.Spec.Ledger.Delegation (DCert)
 import Byron.Spec.Ledger.UTxO
 import Byron.Spec.Ledger.Update (ProtVer (..), UProp (..), Vote)
-import Control.State.Transition.Generator (trace)
-import Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import Data.AbstractSize
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -24,6 +22,8 @@ import Data.Word (Word64)
 import Hedgehog (MonadTest, Property, diff, forAll, property, withTests, (===))
 import Hedgehog.Internal.Property (PropertyName (..))
 import Numeric.Natural (Natural)
+import Test.Control.State.Transition.Generator (trace)
+import Test.Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 import Test.Tasty.Hedgehog hiding (testProperty)

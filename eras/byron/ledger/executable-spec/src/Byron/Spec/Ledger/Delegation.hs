@@ -140,13 +140,6 @@ import Control.State.Transition (
   wrapFailed,
   (?!),
  )
-import Control.State.Transition.Generator (
-  HasTrace,
-  envGen,
-  genTrace,
-  sigGen,
- )
-import Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import Data.AbstractSize
 import Data.Bimap (Bimap, (!>))
 import qualified Data.Bimap as Bimap
@@ -168,6 +161,13 @@ import qualified Hedgehog.Range as Range
 import Lens.Micro (Lens', lens, to, (%~), (&), (.~), (<>~), (^.), _1)
 import Lens.Micro.TH (makeFields)
 import NoThunks.Class (NoThunks (..), allNoThunks, noThunksInKeysAndValues)
+import Test.Control.State.Transition.Generator (
+  HasTrace,
+  envGen,
+  genTrace,
+  sigGen,
+ )
+import Test.Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 
 --------------------------------------------------------------------------------
 -- Abstract types

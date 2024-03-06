@@ -16,7 +16,6 @@ import qualified Cardano.Chain.Delegation.Validation.Scheduling as Scheduling
 import Cardano.Prelude
 import Control.Arrow (left)
 import qualified Control.State.Transition as STS
-import qualified Control.State.Transition.Generator as STS
 import Data.Coerce
 import Data.IORef
 import Hedgehog
@@ -24,6 +23,7 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import qualified Test.Cardano.Chain.Elaboration.Delegation as E
 import qualified Test.Cardano.Crypto.Dummy as Dummy
+import qualified Test.Control.State.Transition.Generator as STS
 import Prelude (id)
 
 --------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-alonzo-test
-version:       1.2.0.1
+version:       1.2.1.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -63,8 +63,7 @@ library
         QuickCheck,
         random,
         serialise,
-        small-steps >=1.1,
-        small-steps-test >=1.1,
+        small-steps:{small-steps, testlib} >=1.1,
         tasty-hunit,
         time,
         transformers
@@ -122,8 +121,7 @@ test-suite cardano-ledger-alonzo-test
         data-default-class,
         plutus-ledger-api,
         QuickCheck,
-        small-steps >=1.1,
-        small-steps-test >=1.1,
+        small-steps:{small-steps, testlib} >=1.1,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-shelley-test,
         microlens,

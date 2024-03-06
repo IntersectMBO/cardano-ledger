@@ -32,16 +32,16 @@ import Cardano.Ledger.Shelley.Rules.Reports (
 import Cardano.Ledger.UMap (depositMap)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>))
-import Control.State.Transition.Trace (
-  SourceSignalTarget (..),
- )
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Map.Strict as Map
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
+import Test.Control.State.Transition.Trace (
+  SourceSignalTarget (..),
+ )
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 
 import Test.Cardano.Ledger.Binary.TreeDiff (diffExpr)
 import Test.QuickCheck (

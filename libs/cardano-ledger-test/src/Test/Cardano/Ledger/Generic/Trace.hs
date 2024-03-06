@@ -55,8 +55,6 @@ import Control.Monad.Trans.RWS.Strict (get, gets)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import qualified Control.State.Transition as STS
 import Control.State.Transition.Extended (IRC (), STS (..), TRC (..))
-import Control.State.Transition.Trace (Trace (..), lastState, splitTrace)
-import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), traceFromInitState)
 import Data.Default.Class (Default (def))
 import qualified Data.Foldable as Fold
 import Data.Functor.Identity (Identity (runIdentity))
@@ -130,6 +128,8 @@ import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
+import Test.Control.State.Transition.Trace (Trace (..), lastState, splitTrace)
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), traceFromInitState)
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)

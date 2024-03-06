@@ -42,9 +42,9 @@ import Byron.Spec.Ledger.Update (
   _upAdptThd,
   _upTtl,
  )
-import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Data.Functor.Identity (runIdentity)
 import GHC.Exts (fromList)
+import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 

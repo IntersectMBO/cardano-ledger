@@ -14,13 +14,13 @@ import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), UTxOState (..), sma
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.UTxO (UTxO)
 import Control.State.Transition.Extended hiding (Assertion)
-import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Data.Default.Class (def)
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Stack
 import Lens.Micro
 import Test.Cardano.Ledger.Mary.TreeDiff ()
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
+import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Test.Tasty.HUnit (Assertion, (@?=))
 
 ignoreAllButUTxO ::

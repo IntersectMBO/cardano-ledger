@@ -52,11 +52,6 @@ import Byron.Spec.Ledger.Core.Omniscient (skey)
 import qualified Byron.Spec.Ledger.GlobalParams as GP
 import Control.Arrow (second, (&&&))
 import Control.State.Transition
-import Control.State.Transition.Generator (
-  HasTrace,
-  envGen,
-  sigGen,
- )
 import Data.AbstractSize (HasTypeReps)
 import Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
@@ -85,6 +80,11 @@ import Lens.Micro.Internal (Field1 (..), Field2 (..), Field3 (..))
 import Lens.Micro.TH (makeLenses)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural
+import Test.Control.State.Transition.Generator (
+  HasTrace,
+  envGen,
+  sigGen,
+ )
 import Prelude
 
 newtype FactorA = FactorA Int

@@ -48,11 +48,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Control.SetAlgebra (dom, eval, (▷), (◁))
-import Control.State.Transition.Trace (
-  SourceSignalTarget (..),
-  sourceSignalTargets,
- )
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Foldable (fold)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -68,6 +63,11 @@ import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
  )
 import Test.Cardano.Ledger.TerseTools (tersemapdiffs)
+import Test.Control.State.Transition.Trace (
+  SourceSignalTarget (..),
+  sourceSignalTargets,
+ )
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (
   Property,
   conjoin,

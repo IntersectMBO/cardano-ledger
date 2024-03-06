@@ -142,8 +142,7 @@ library
         plutus-ledger-api ^>=1.22.1,
         prettyprinter,
         QuickCheck,
-        small-steps >=1.1,
-        small-steps-test >=1.1,
+        small-steps:{small-steps, testlib} >=1.1,
         set-algebra,
         cardano-strict-containers,
         tasty,
@@ -216,8 +215,7 @@ benchmark bench
         microlens,
         mtl,
         random,
-        small-steps >=1.1,
-        small-steps-test >=1.1,
+        small-steps:{small-steps, testlib} >=1.1,
         cardano-strict-containers >=0.1.1,
         text
 

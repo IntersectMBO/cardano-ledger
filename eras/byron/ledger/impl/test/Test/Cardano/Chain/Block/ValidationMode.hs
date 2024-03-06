@@ -41,8 +41,6 @@ import Cardano.Crypto (Hash)
 import Cardano.Ledger.Binary (Annotated (..))
 import Cardano.Prelude hiding (State, trace)
 import Control.State.Transition
-import Control.State.Transition.Generator (trace)
-import qualified Control.State.Transition.Trace as Trace
 import qualified Data.Bimap as BM
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -62,6 +60,8 @@ import Test.Cardano.Chain.UTxO.Model (elaborateInitialUTxO)
 import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Crypto.Gen (feedPM, genAbstractHash)
 import Test.Cardano.Prelude
+import Test.Control.State.Transition.Generator (trace)
+import qualified Test.Control.State.Transition.Trace as Trace
 import Test.Options (TSGroup, TSProperty, withTestsTS)
 
 --------------------------------------------------------------------------------

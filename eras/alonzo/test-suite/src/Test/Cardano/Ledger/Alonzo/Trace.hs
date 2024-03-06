@@ -30,7 +30,6 @@ import Cardano.Ledger.UTxO (EraUTxO)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Data.Functor.Identity (runIdentity)
 import Data.Sequence (Seq)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
@@ -41,6 +40,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (genAccountState)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (CERTS)
 import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as TQC
 
 -- The AlonzoLEDGER STS combines utxo and delegation rules and allows for generating transactions
 -- with meaningful delegation certificates.

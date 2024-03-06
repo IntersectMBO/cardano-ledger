@@ -31,7 +31,6 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition
-import Control.State.Transition.Trace (SourceSignalTarget (..), sourceSignalTargets)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -53,6 +52,7 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   forAllChainTrace,
   ledgerTraceFromBlock,
  )
+import Test.Control.State.Transition.Trace (SourceSignalTarget (..), sourceSignalTargets)
 import Test.QuickCheck (
   Property,
   conjoin,
