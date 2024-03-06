@@ -85,11 +85,6 @@ Choreographing the dance.
 We need to tell nix, cabal, and ghc that we want to profile. We do this by changing a few of the
 files that build the system, and by passing the right flags to nix, cabal, and GHC.
 
-There is one big problem with doing this, and that is that the module 'plutus-core' uses
-template haskell, and happens to trigger a known bug in ghc. https://gitlab.haskell.org/ghc/ghc/-/issues/18320
-There are also a few slack threads about this. For example
-https://input-output-rnd.slack.com/archives/C21UF2WVC/p1624555583258300
-The workaround for this is quite convoluted, but I will try and give explicit directions here.
 
 First we must add (or change if you already have it) cabal.project.local  In the root of the
 ledger repository. Put this in cabal.project.local
@@ -97,17 +92,7 @@ ledger repository. Put this in cabal.project.local
 ignore-project: False
 profiling: True
 profiling-detail: all-functions
-
-package plutus-core
-   ghc-options: -fexternal-interpreter
 ---------------------
-
-Supposedly this makes things work. But I could never get the nix-shell to complete with this approach.
-To get that to happen I had to add the following line to the modules section of the flake.nix file
------------------------------
-       packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
------------------------------
-There are probaly more that a dozen lines just like this, so it is easy to figure out where to put it.
 
 The final step is to pass the right flags to cabal, ghc, and running the right `nix develop` shell. Here is a summary.
 
@@ -132,6 +117,23 @@ nix develop .#profiling
 When the `nix develop` shell completes (this can take a long time, since it must make sure
 every file in the Ledger is compiled with profiling enabled). This might take a
 while. Be patient. Take the dogs for a walk.
+
+If `nix develop .#profiling` fails to give you a nix shell this may be related to a problem
+with 'plutus-core' that uses template haskell, and happens to trigger a known bug in ghc.
+https://gitlab.haskell.org/ghc/ghc/-/issues/18320 There are also a few slack threads about this. For example
+https://input-output-rnd.slack.com/archives/C21UF2WVC/p1624555583258300
+The workaround for this is quite convoluted, but if you fail to get a nix-shell working there are two things
+you may need to do:
+
+1) add the following to `cabal.project.local`:
+```
+package plutus-core
+   ghc-options: -fexternal-interpreter
+```
+2) uncomment the following in `flake.nix`:
+```
+# packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
+```
 
 Now change directories to the root directory of the modlue that contains your
 modified Test file, and type
