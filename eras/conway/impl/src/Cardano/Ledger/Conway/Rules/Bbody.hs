@@ -32,6 +32,7 @@ import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure)
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerPredFailure)
 import Cardano.Ledger.Conway.Rules.Ledgers ()
+import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (
   ShelleyBbodyPredFailure (..),
@@ -70,6 +71,9 @@ instance InjectRuleFailure "BBODY" AlonzoUtxoPredFailure (ConwayEra c) where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
 instance InjectRuleFailure "BBODY" AlonzoUtxosPredFailure (ConwayEra c) where
+  injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+instance InjectRuleFailure "BBODY" ConwayUtxosPredFailure (ConwayEra c) where
   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
 
 instance InjectRuleFailure "BBODY" ShelleyUtxoPredFailure (ConwayEra c) where

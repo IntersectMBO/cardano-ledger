@@ -38,6 +38,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOW)
 import Cardano.Ledger.Conway.Rules.Utxo ()
+import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeeded)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -79,6 +80,9 @@ instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure (ConwayEra c) where
   injectFailure = UtxoFailure . injectFailure
 
 instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure (ConwayEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" ConwayUtxosPredFailure (ConwayEra c) where
   injectFailure = UtxoFailure . injectFailure
 
 instance InjectRuleFailure "UTXOW" ShelleyUtxoPredFailure (ConwayEra c) where
