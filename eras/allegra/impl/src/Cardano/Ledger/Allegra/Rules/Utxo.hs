@@ -161,6 +161,21 @@ data AllegraUtxoEvent era
       (UTxO era)
       -- | UTxO created
       (UTxO era)
+  deriving (Generic)
+
+deriving instance
+  ( Era era
+  , Eq (TxOut era)
+  , Eq (Event (EraRule "PPUP" era))
+  ) =>
+  Eq (AllegraUtxoEvent era)
+
+instance
+  ( Era era
+  , NFData (TxOut era)
+  , NFData (Event (EraRule "PPUP" era))
+  ) =>
+  NFData (AllegraUtxoEvent era)
 
 -- | The UTxO transition rule for the Allegra era.
 utxoTransition ::

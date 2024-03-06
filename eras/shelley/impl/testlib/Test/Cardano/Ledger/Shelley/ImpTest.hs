@@ -22,6 +22,7 @@
 
 module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
+  SomeSTSEvent (..),
   runImpTestM,
   runImpTestM_,
   evalImpTestM,
@@ -180,9 +181,11 @@ import Control.Monad.Reader (MonadReader (..), asks)
 import Control.Monad.State.Strict (MonadState (..), execStateT, gets, modify)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Reader (ReaderT (..))
-import Control.State.Transition (STS (..), TRC (..))
+import Control.Monad.Writer.Class (MonadWriter (..))
+import Control.State.Transition (STS (..), TRC (..), applySTSOptsEither)
+import Control.State.Transition.Extended (ApplySTSOpts (..), AssertionPolicy (..), SingEP (..), ValidationPolicy (..))
 import Data.Coerce (coerce)
-import Data.Data (Proxy (..))
+import Data.Data (Proxy (..), type (:~:) (..))
 import Data.Default.Class (Default (..))
 import Data.Foldable (toList)
 import Data.Functor (($>))
@@ -196,8 +199,9 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import Data.Type.Equality (TestEquality (..))
 import GHC.Stack (SrcLoc (..), getCallStack)
-import GHC.TypeLits (KnownSymbol, symbolVal)
+import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
 import Numeric.Natural (Natural)
@@ -216,13 +220,13 @@ import Test.Cardano.Ledger.Core.KeyPair (
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals, txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (PlutusArgs, ScriptTestContext)
-import Test.Cardano.Ledger.Shelley.TreeDiff ()
+import Test.Cardano.Ledger.Shelley.TreeDiff (Expr (..))
 import Test.Cardano.Slotting.Numeric ()
-import Test.Control.State.Transition.Trace (applySTSTest)
 import Test.HUnit.Lang (FailureReason (..), HUnitFailure (..))
 import Test.Hspec.Core.Spec (Example (..), Params, paramsQuickCheckArgs)
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Random (QCGen (..), mkQCGen)
+import Type.Reflection (Typeable, typeOf)
 import UnliftIO (MonadUnliftIO (..))
 import UnliftIO.Exception (
   Exception (..),
@@ -232,6 +236,22 @@ import UnliftIO.Exception (
   evaluateDeep,
   throwIO,
  )
+
+data SomeSTSEvent era
+  = forall (rule :: Symbol).
+    ( Typeable (Event (EraRule rule era))
+    , Eq (Event (EraRule rule era))
+    , ToExpr (Event (EraRule rule era))
+    ) =>
+    SomeSTSEvent (Event (EraRule rule era))
+
+instance Eq (SomeSTSEvent era) where
+  SomeSTSEvent x == SomeSTSEvent y
+    | Just Refl <- testEquality (typeOf x) (typeOf y) = x == y
+    | otherwise = False
+
+instance ToExpr (SomeSTSEvent era) where
+  toExpr (SomeSTSEvent ev) = App "SomeSTSEvent" [toExpr ev]
 
 data ImpTestState era = ImpTestState
   { impNES :: !(NewEpochState era)
@@ -243,6 +263,7 @@ data ImpTestState era = ImpTestState
   , impGlobals :: !Globals
   , impLog :: !(Doc ())
   , impGen :: !QCGen
+  , impEvents :: [SomeSTSEvent era]
   }
 
 impLogL :: Lens' (ImpTestState era) (Doc ())
@@ -275,6 +296,9 @@ impNativeScriptsL = lens impNativeScripts (\x y -> x {impNativeScripts = y})
 impNativeScriptsG :: SimpleGetter (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (NativeScript era))
 impNativeScriptsG = impNativeScriptsL
 
+impEventsL :: Lens' (ImpTestState era) [SomeSTSEvent era]
+impEventsL = lens impEvents (\x y -> x {impEvents = y})
+
 class
   ( Show (NewEpochState era)
   , ToExpr (NewEpochState era)
@@ -293,6 +317,8 @@ class
   , Eq (PParams era)
   , Eq (StashedAVVMAddresses era)
   , Eq (GovState era)
+  , Eq (Event (EraRule "LEDGER" era))
+  , Eq (Event (EraRule "TICK" era))
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , STS (EraRule "LEDGER" era)
@@ -302,6 +328,8 @@ class
   , DSIGN (EraCrypto era) ~ Ed25519DSIGN
   , ToExpr (PredicateFailure (EraRule "LEDGER" era))
   , ToExpr (PredicateFailure (EraRule "UTXOW" era))
+  , ToExpr (Event (EraRule "LEDGER" era))
+  , ToExpr (Event (EraRule "TICK" era))
   , EraUTxO era
   , ShelleyEraTxCert era
   , State (EraRule "LEDGER" era) ~ LedgerState era
@@ -317,9 +345,17 @@ class
   , NFData (Tx era)
   , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
   , NFData (PredicateFailure (EraRule "LEDGER" era))
+  , NFData (Event (EraRule "LEDGER" era))
+  , NFData (Event (EraRule "TICK" era))
   , VRF.VRFAlgorithm (VRF (EraCrypto era))
   , HashAlgorithm (HASH (EraCrypto era))
   , DSIGNAlgorithm (DSIGN (EraCrypto era))
+  , EraRuleEvent "LEDGER" era ~ Event (EraRule "LEDGER" era)
+  , EraRuleEvent "TICK" era ~ Event (EraRule "TICK" era)
+  , Typeable (EraRuleEvent "LEDGER" era)
+  , Typeable (EraRuleEvent "TICK" era)
+  , ToExpr (EraRuleEvent "LEDGER" era)
+  , ToExpr (EraRuleEvent "TICK" era)
   ) =>
   ShelleyEraImp era
   where
@@ -529,6 +565,19 @@ newtype ImpTestM era a = ImpTestM {unImpTestM :: ReaderT (ImpTestEnv era) (GenT 
     , MonadUnliftIO
     , MonadReader (ImpTestEnv era)
     )
+
+instance MonadWriter [SomeSTSEvent era] (ImpTestM era) where
+  writer (x, evs) = (impEventsL %= (<> evs)) $> x
+  listen act = do
+    oldEvs <- use impEventsL
+    impEventsL .= mempty
+    res <- act
+    newEvs <- use impEventsL
+    impEventsL .= oldEvs
+    pure (res, newEvs)
+  pass act = do
+    ((a, f), evs) <- listen act
+    writer (a, f evs)
 
 instance MonadFail (ImpTestM era) where
   fail = assertFailure
@@ -817,7 +866,10 @@ submitTx :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era (Tx era)
 submitTx tx = trySubmitTx tx >>= expectRightDeepExpr
 
 trySubmitTx ::
-  (ShelleyEraImp era, HasCallStack) =>
+  forall era.
+  ( ShelleyEraImp era
+  , HasCallStack
+  ) =>
   Tx era ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (Tx era))
 trySubmitTx tx = do
@@ -836,7 +888,8 @@ trySubmitTx tx = do
       rootIndex
         | outsSize > 0 = outsSize - 1
         | otherwise = error ("Expected at least 1 output after submitting tx: " <> show txId)
-  forM res $ \st' -> do
+  forM res $ \(st', events) -> do
+    tell $ fmap (SomeSTSEvent @era @"LEDGER") events
     modify $ impNESL . nesEsL . esLStateL .~ st'
     UTxO utxo <- getUTxO
     -- This TxIn is in the utxo, and thus can be the new root, only if the transaction was phase2-valid.
@@ -867,11 +920,23 @@ tryRunImpRule ::
   Environment (EraRule rule era) ->
   State (EraRule rule era) ->
   Signal (EraRule rule era) ->
-  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule rule era))) (State (EraRule rule era)))
+  ImpTestM
+    era
+    ( Either
+        (NonEmpty (PredicateFailure (EraRule rule era)))
+        (State (EraRule rule era), [Event (EraRule rule era)])
+    )
 tryRunImpRule stsEnv stsState stsSignal = do
   let trc = TRC (stsEnv, stsState, stsSignal)
   globals <- use $ to impGlobals
-  pure $ runShelleyBase globals (applySTSTest @(EraRule rule era) trc)
+  let
+    stsOpts =
+      ApplySTSOpts
+        { asoValidation = ValidateAll
+        , asoEvents = EPReturn
+        , asoAssertions = AssertionsAll
+        }
+  pure $ runShelleyBase globals (applySTSOptsEither @(EraRule rule era) stsOpts trc)
 
 runImpRule ::
   forall rule era.
@@ -880,6 +945,10 @@ runImpRule ::
   , STS (EraRule rule era)
   , BaseM (EraRule rule era) ~ ShelleyBase
   , NFData (State (EraRule rule era))
+  , NFData (Event (EraRule rule era))
+  , ToExpr (Event (EraRule rule era))
+  , Eq (Event (EraRule rule era))
+  , Typeable (Event (EraRule rule era))
   ) =>
   Environment (EraRule rule era) ->
   State (EraRule rule era) ->
@@ -887,18 +956,21 @@ runImpRule ::
   ImpTestM era (State (EraRule rule era))
 runImpRule stsEnv stsState stsSignal = do
   let ruleName = symbolVal (Proxy @rule)
-  tryRunImpRule @rule stsEnv stsState stsSignal >>= \case
-    Left fs ->
-      assertFailure $
-        unlines $
-          ("Failed to run " <> ruleName <> ":") : map show (toList fs)
-    Right res -> evaluateDeep res
+  (res, ev) <-
+    tryRunImpRule @rule stsEnv stsState stsSignal >>= \case
+      Left [] -> error "Impossible: STS rule failed without a predicate failure"
+      Left fs ->
+        assertFailure $
+          unlines $
+            ("Failed to run " <> ruleName <> ":") : map show (toList fs)
+      Right res -> evaluateDeep res
+  tell $ fmap (SomeSTSEvent @era @rule) ev
+  pure res
 
 -- | Runs the TICK rule once
 passTick ::
   forall era.
   ( HasCallStack
-  , NFData (State (EraRule "TICK" era))
   , ShelleyEraImp era
   ) =>
   ImpTestM era ()
@@ -1015,6 +1087,7 @@ withImpState =
         , impGlobals = testGlobals
         , impLog = mempty
         , impGen = qcGen
+        , impEvents = mempty
         }
   where
     rootCoin = Coin 1_000_000_000

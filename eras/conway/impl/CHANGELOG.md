@@ -2,6 +2,26 @@
 
 ## 1.13.0.0
 
+* Remove `ConwayDelegEvent`, `ConwayGovCertEvent`
+* Add `GovInfoEvent`
+* Add `ConwayUtxosEvent`
+* Add `Generic`, `Eq` and `NFData` instances for `ConwayEpochEvent`
+* Add `Eq` and `NFData` instances for:
+  * `ConwayGovEvent`
+  * `ConwayCertEvent`
+  * `ConwayCertsEvent`
+  * `ConwayLedgerEvent`
+  * `ConwayNewEpochEvent`
+* Add type `EraRuleEvent` instances for the event type of:
+  * `UPEC`
+  * `NEWPP`
+  * `PPUP`
+  * `MIR`
+  * `DELEGS`
+  * `TICK`
+  * `ENACT`
+  * `LEDGER`
+  * `UTXOS`
 * Add `ConwayDRepIncorrectRefund`
 * Stop exporting `utxosGovStateL` from `Cardano.Ledger.Conway.Governance`
 * Remove deprecated `curPParamsConwayGovStateL` and `prevPParamsConwayGovStateL`
@@ -66,6 +86,13 @@
 
 ### `testlib`
 
+* Add `ToExpr` instances for:
+  * `ConwayNewEpochEvent`
+  * `ConwayEpochEvent`
+  * `ConwayLedgerEvent`
+  * `ConwayCertsEvent`
+  * `ConwayCertEvent`
+  * `ConwayGovEvent`
 * Change the types of some functions in `Test.Cardano.Ledger.Conway.ImpTest`
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
   - `submitFailingVote`

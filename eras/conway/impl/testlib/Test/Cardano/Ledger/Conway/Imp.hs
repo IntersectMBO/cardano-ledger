@@ -15,9 +15,15 @@ import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
-import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure, ConwayGovPredFailure)
+import Cardano.Ledger.Conway.Rules (
+  ConwayEpochEvent,
+  ConwayGovCertPredFailure,
+  ConwayGovPredFailure,
+  ConwayNewEpochEvent,
+ )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
-import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.Shelley.Rules (Event, ShelleyUtxowPredFailure (..))
+import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
@@ -39,6 +45,13 @@ spec ::
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
+  , NFData (Event (EraRule "ENACT" era))
+  , ToExpr (Event (EraRule "ENACT" era))
+  , Eq (Event (EraRule "ENACT" era))
+  , Typeable (Event (EraRule "ENACT" era))
+  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   Spec
 spec = do

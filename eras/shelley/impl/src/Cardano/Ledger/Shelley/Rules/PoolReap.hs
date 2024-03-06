@@ -102,6 +102,11 @@ data ShelleyPoolreapEvent era = RetiredPools
   , unclaimedPools :: Map.Map (Credential 'Staking (EraCrypto era)) (Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin)
   , epochNo :: EpochNo
   }
+  deriving (Generic)
+
+deriving instance Eq (ShelleyPoolreapEvent era)
+
+instance NFData (ShelleyPoolreapEvent era)
 
 instance NoThunks (ShelleyPoolreapPredFailure era)
 

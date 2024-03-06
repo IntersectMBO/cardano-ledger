@@ -119,7 +119,10 @@ instance NoThunks (ShelleyPpupPredFailure era)
 
 instance NFData (ShelleyPpupPredFailure era)
 
-newtype PpupEvent era = NewEpoch EpochNo
+newtype PpupEvent era = PpupNewEpoch EpochNo
+  deriving (Generic, Eq)
+
+instance NFData (PpupEvent era)
 
 instance (EraPParams era, ProtVerAtMost era 8) => STS (ShelleyPPUP era) where
   type State (ShelleyPPUP era) = ShelleyGovState era
@@ -191,7 +194,7 @@ ppupTransitionNonEmpty = do
         epochInfo <- liftSTS $ asks epochInfoPure
         epochNo <- liftSTS $ epochInfoEpoch epochInfo slot
         let nextEpochNo = succ epochNo
-        tellEvent $ NewEpoch nextEpochNo
+        tellEvent $ PpupNewEpoch nextEpochNo
         liftSTS $ do
           (,) epochNo <$> epochInfoFirst epochInfo nextEpochNo
 

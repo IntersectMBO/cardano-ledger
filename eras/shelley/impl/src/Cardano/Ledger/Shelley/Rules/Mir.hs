@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -72,6 +73,11 @@ data ShelleyMirEvent era
     --   This event gives the rewards we wanted to pay, plus the available
     --   reserves and treasury.
     NoMirTransfer (InstantaneousRewards (EraCrypto era)) Coin Coin
+  deriving (Generic)
+
+deriving instance Eq (ShelleyMirEvent era)
+
+instance NFData (ShelleyMirEvent era)
 
 instance NoThunks (ShelleyMirPredFailure era)
 

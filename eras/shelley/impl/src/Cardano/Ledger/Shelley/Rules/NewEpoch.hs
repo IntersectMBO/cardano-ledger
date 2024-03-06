@@ -93,6 +93,21 @@ data ShelleyNewEpochEvent era
   | EpochEvent (Event (EraRule "EPOCH" era))
   | MirEvent (Event (EraRule "MIR" era))
   | TotalAdaPotsEvent AdaPots
+  deriving (Generic)
+
+deriving instance
+  ( Eq (Event (EraRule "EPOCH" era))
+  , Eq (Event (EraRule "MIR" era))
+  , Eq (Event (EraRule "RUPD" era))
+  ) =>
+  Eq (ShelleyNewEpochEvent era)
+
+instance
+  ( NFData (Event (EraRule "EPOCH" era))
+  , NFData (Event (EraRule "MIR" era))
+  , NFData (Event (EraRule "RUPD" era))
+  ) =>
+  NFData (ShelleyNewEpochEvent era)
 
 instance
   ( EraTxOut era

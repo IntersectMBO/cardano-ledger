@@ -52,20 +52,24 @@ type instance Value (ConwayEra c) = MaryValue c
 -------------------------------------------------------------------------------
 
 type instance EraRule "UPEC" (ConwayEra c) = VoidEraRule "UPEC" (ConwayEra c)
+type instance EraRuleFailure "UPEC" (ConwayEra c) = VoidEraRule "UPEC" (ConwayEra c)
+type instance EraRuleEvent "UPEC" (ConwayEra c) = VoidEraRule "UPEC" (ConwayEra c)
 
 type instance EraRule "NEWPP" (ConwayEra c) = VoidEraRule "NEWPP" (ConwayEra c)
+type instance EraRuleFailure "NEWPP" (ConwayEra c) = VoidEraRule "NEWPP" (ConwayEra c)
+type instance EraRuleEvent "NEWPP" (ConwayEra c) = VoidEraRule "NEWPP" (ConwayEra c)
 
 type instance EraRule "PPUP" (ConwayEra c) = VoidEraRule "PPUP" (ConwayEra c)
 type instance EraRuleFailure "PPUP" (ConwayEra c) = VoidEraRule "PPUP" (ConwayEra c)
+type instance EraRuleEvent "PPUP" (ConwayEra c) = VoidEraRule "PPUP" (ConwayEra c)
 
 type instance EraRule "MIR" (ConwayEra c) = VoidEraRule "MIR" (ConwayEra c)
 type instance EraRuleFailure "MIR" (ConwayEra c) = VoidEraRule "MIR" (ConwayEra c)
+type instance EraRuleEvent "MIR" (ConwayEra c) = VoidEraRule "MIR" (ConwayEra c)
 
 type instance EraRule "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (ConwayEra c)
 type instance EraRuleFailure "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (ConwayEra c)
-
-type instance EraRule "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (ConwayEra c)
-type instance EraRuleFailure "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (ConwayEra c)
+type instance EraRuleEvent "DELEGS" (ConwayEra c) = VoidEraRule "DELEGS" (ConwayEra c)
 
 -------------------------------------------------------------------------------
 -- Era Mapping

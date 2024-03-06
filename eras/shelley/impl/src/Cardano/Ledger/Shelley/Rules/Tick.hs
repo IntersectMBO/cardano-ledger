@@ -36,7 +36,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Cardano.Ledger.Keys (GenDelegs (..))
-import Cardano.Ledger.Shelley.Era (ShelleyTICK, ShelleyTICKF)
+import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyTICK, ShelleyTICKF)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
@@ -107,6 +107,20 @@ data ShelleyTickEvent era
   = TickNewEpochEvent (Event (EraRule "NEWEPOCH" era))
   | TickRupdEvent (Event (EraRule "RUPD" era))
   deriving (Generic)
+
+type instance EraRuleEvent "TICK" (ShelleyEra c) = ShelleyTickEvent (ShelleyEra c)
+
+deriving instance
+  ( Eq (Event (EraRule "NEWEPOCH" era))
+  , Eq (Event (EraRule "RUPD" era))
+  ) =>
+  Eq (ShelleyTickEvent era)
+
+instance
+  ( NFData (Event (EraRule "NEWEPOCH" era))
+  , NFData (Event (EraRule "RUPD" era))
+  ) =>
+  NFData (ShelleyTickEvent era)
 
 instance
   ( Era era

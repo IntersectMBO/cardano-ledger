@@ -175,7 +175,7 @@ library testlib
         prettyprinter,
         QuickCheck,
         random,
-        small-steps:{small-steps, testlib} >=1.1,
+        small-steps >=1.1,
         text,
         transformers,
         microlens,

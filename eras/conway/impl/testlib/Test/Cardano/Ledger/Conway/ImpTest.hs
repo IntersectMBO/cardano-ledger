@@ -121,6 +121,7 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core hiding (proposals)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (
+  ConwayGovEvent,
   EnactSignal,
   committeeAccepted,
   committeeAcceptedRatio,
@@ -212,6 +213,7 @@ instance
   , NFData (VerKeyDSIGN (DSIGN c))
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
+  , Eq (ConwayGovEvent (ConwayEra c))
   ) =>
   ShelleyEraImp (ConwayEra c)
   where
@@ -249,7 +251,6 @@ class
   , Environment (EraRule "ENACT" era) ~ ()
   , NativeScript era ~ Timelock era
   , Script era ~ AlonzoScript era
-  , ToExpr (PredicateFailure (EraRule "CERTS" era))
   ) =>
   ConwayEraImp era
 

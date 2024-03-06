@@ -18,7 +18,7 @@
 module Cardano.Ledger.Conway.Rules.Cert (
   ConwayCERT,
   ConwayCertPredFailure (..),
-  ConwayCertEvent,
+  ConwayCertEvent (..),
   CertEnv (..),
 ) where
 
@@ -32,10 +32,9 @@ import Cardano.Ledger.Conway.Era (
   ConwayEra,
   ConwayGOVCERT,
  )
-import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegEvent, ConwayDelegPredFailure (..))
+import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.Rules.GovCert (
   ConwayGovCertEnv (..),
-  ConwayGovCertEvent,
   ConwayGovCertPredFailure,
  )
 import Cardano.Ledger.Conway.TxCert (
@@ -63,6 +62,7 @@ import Control.State.Transition.Extended (
   wrapFailed,
  )
 import Data.Typeable (Typeable)
+import Data.Void (absurd)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
@@ -127,6 +127,21 @@ data ConwayCertEvent era
   = DelegEvent (Event (EraRule "DELEG" era))
   | PoolEvent (Event (EraRule "POOL" era))
   | GovCertEvent (Event (EraRule "GOVCERT" era))
+  deriving (Generic)
+
+deriving instance
+  ( Eq (Event (EraRule "DELEG" era))
+  , Eq (Event (EraRule "GOVCERT" era))
+  , Eq (Event (EraRule "POOL" era))
+  ) =>
+  Eq (ConwayCertEvent era)
+
+instance
+  ( NFData (Event (EraRule "DELEG" era))
+  , NFData (Event (EraRule "GOVCERT" era))
+  , NFData (Event (EraRule "POOL" era))
+  ) =>
+  NFData (ConwayCertEvent era)
 
 instance
   forall era.
@@ -190,13 +205,12 @@ certTransition = do
 instance
   ( Era era
   , STS (ConwayDELEG era)
-  , Event (EraRule "DELEG" era) ~ ConwayDelegEvent era
   , PredicateFailure (EraRule "DELEG" era) ~ ConwayDelegPredFailure era
   ) =>
   Embed (ConwayDELEG era) (ConwayCERT era)
   where
   wrapFailed = DelegFailure
-  wrapEvent = DelegEvent
+  wrapEvent = absurd
 
 instance
   ( Era era
@@ -214,13 +228,12 @@ instance
 instance
   ( Era era
   , STS (ConwayGOVCERT era)
-  , Event (EraRule "GOVCERT" era) ~ ConwayGovCertEvent era
   , PredicateFailure (EraRule "GOVCERT" era) ~ ConwayGovCertPredFailure era
   ) =>
   Embed (ConwayGOVCERT era) (ConwayCERT era)
   where
   wrapFailed = GovCertFailure
-  wrapEvent = GovCertEvent
+  wrapEvent = absurd
 
 instance
   ( Typeable era

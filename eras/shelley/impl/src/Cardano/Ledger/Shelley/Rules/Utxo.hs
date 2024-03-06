@@ -139,6 +139,16 @@ data UtxoEvent era
       (UTxO era)
       -- | UTxO created
       (UTxO era)
+  deriving (Generic)
+
+deriving instance
+  ( Era era
+  , Eq (TxOut era)
+  , Eq (Event (EraRule "PPUP" era))
+  ) =>
+  Eq (UtxoEvent era)
+
+instance (Era era, NFData (Event (EraRule "PPUP" era)), NFData (TxOut era)) => NFData (UtxoEvent era)
 
 data ShelleyUtxoPredFailure era
   = BadInputsUTxO

@@ -180,6 +180,8 @@ instance InjectRuleFailure "LEDGER" ConwayGovCertPredFailure (ConwayEra c) where
 instance InjectRuleFailure "LEDGER" ConwayGovPredFailure (ConwayEra c) where
   injectFailure = ConwayGovFailure
 
+type instance EraRuleEvent "LEDGER" (ConwayEra c) = ConwayLedgerEvent (ConwayEra c)
+
 deriving instance
   ( Era era
   , Eq (PredicateFailure (EraRule "UTXOW" era))
@@ -251,6 +253,21 @@ data ConwayLedgerEvent era
   = UtxowEvent (Event (EraRule "UTXOW" era))
   | CertsEvent (Event (EraRule "CERTS" era))
   | GovEvent (Event (EraRule "GOV" era))
+  deriving (Generic)
+
+deriving instance
+  ( Eq (Event (EraRule "CERTS" era))
+  , Eq (Event (EraRule "UTXOW" era))
+  , Eq (Event (EraRule "GOV" era))
+  ) =>
+  Eq (ConwayLedgerEvent era)
+
+instance
+  ( NFData (Event (EraRule "CERTS" era))
+  , NFData (Event (EraRule "UTXOW" era))
+  , NFData (Event (EraRule "GOV" era))
+  ) =>
+  NFData (ConwayLedgerEvent era)
 
 instance
   ( AlonzoEraTx era

@@ -17,7 +17,7 @@ module Cardano.Ledger.Conway.Rules.Enact (
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayENACT)
+import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayEra)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   EnactState (..),
@@ -48,6 +48,8 @@ import qualified Data.Set as Set
 import Data.Void (Void)
 import GHC.Generics
 import Lens.Micro
+
+type instance EraRuleEvent "ENACT" (ConwayEra c) = VoidEraRule "ENACT" (ConwayEra c)
 
 data EnactSignal era = EnactSignal
   { esGovActionId :: !(GovActionId (EraCrypto era))

@@ -2,6 +2,8 @@
 
 ## 1.4.0.0
 
+* Add type `EraRuleEvent` instances for `LEDGER` and `TICK` events
+* Add `Eq` and `NFData` instances for `AllegraUtxoEvent`
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Add `shelleyToAllegraUtxoPredFailure`
 * Add `NFData` instance for `AllegraUtxoPredFailure`
@@ -9,6 +11,7 @@
 
 ### `testlib`
 
+* Add `ToExpr` instance for `AllegraUtxoEvent`
 * Add `RuleListEra` instance for Allegra
 
 ## 1.3.0.0

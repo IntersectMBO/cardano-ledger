@@ -247,6 +247,11 @@ instance
 
 newtype AlonzoUtxoEvent era
   = UtxosEvent (Event (EraRule "UTXOS" era))
+  deriving (Generic)
+
+deriving instance Eq (Event (EraRule "UTXOS" era)) => Eq (AlonzoUtxoEvent era)
+
+instance NFData (Event (EraRule "UTXOS" era)) => NFData (AlonzoUtxoEvent era)
 
 -- | Returns true for VKey locked addresses, and false for any kind of
 -- script-locked address.

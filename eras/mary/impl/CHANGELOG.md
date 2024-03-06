@@ -2,6 +2,7 @@
 
 ## 1.5.1.0
 
+* Add type `EraRuleEvent` instances for the event type of `TICK` and `LEDGER`
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Add implementation for `getMinFeeTxUtxo`
 

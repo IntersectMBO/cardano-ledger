@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -17,6 +18,7 @@ import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.LedgerState
+import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
@@ -24,11 +26,16 @@ import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational
 import Test.Cardano.Ledger.Imp.Common
+import Type.Reflection (Typeable)
 
 spec ::
   forall era.
   ( ConwayEraImp era
   , GovState era ~ ConwayGovState era
+  , NFData (Event (EraRule "ENACT" era))
+  , ToExpr (Event (EraRule "ENACT" era))
+  , Eq (Event (EraRule "ENACT" era))
+  , Typeable (Event (EraRule "ENACT" era))
   ) =>
   SpecWith (ImpTestState era)
 spec =

@@ -122,6 +122,9 @@ instance (ShelleyEraTxCert era, EraPParams era) => STS (ShelleyPOOL era) where
 data PoolEvent era
   = RegisterPool (KeyHash 'StakePool (EraCrypto era))
   | ReregisterPool (KeyHash 'StakePool (EraCrypto era))
+  deriving (Generic, Eq)
+
+instance NFData (PoolEvent era)
 
 instance Era era => EncCBOR (ShelleyPoolPredFailure era) where
   encCBOR = \case

@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -9,6 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -41,6 +43,7 @@ import Cardano.Ledger.Conway.Governance (
   ConwayGovState (..),
   DRepPulsingState (..),
   EnactState (..),
+  GovActionId,
   GovActionState (..),
   RatifyEnv (..),
   RatifySignal (..),
@@ -100,6 +103,7 @@ import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.UMap (RDPair (..), UMap, UView (..), (∪+), (◁))
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (zero, (<->))
+import Control.DeepSeq (NFData)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition (
   Embed (..),
@@ -114,13 +118,35 @@ import Control.State.Transition (
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Void (Void, absurd)
+import GHC.Generics (Generic)
 import Lens.Micro ((%~), (&), (.~), (<>~), (^.))
 
 data ConwayEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
   | SnapEvent (Event (EraRule "SNAP" era))
   | EpochBoundaryRatifyState (RatifyState era)
+  | GovInfoEvent
+      (Set (GovActionState era)) -- enacted
+      (Set (GovActionState era)) -- expired
+      (Set (GovActionId (EraCrypto era))) -- unclaimed
+  deriving (Generic)
+
+deriving instance
+  ( EraPParams era
+  , Eq (Event (EraRule "POOLREAP" era))
+  , Eq (Event (EraRule "SNAP" era))
+  ) =>
+  Eq (ConwayEpochEvent era)
+
+instance
+  ( EraPParams era
+  , NFData (Event (EraRule "POOLREAP" era))
+  , NFData (Event (EraRule "SNAP" era))
+  ) =>
+  NFData (ConwayEpochEvent era)
 
 instance
   ( EraTxOut era
@@ -158,9 +184,9 @@ returnProposalDeposits ::
   Foldable f =>
   f (GovActionState era) ->
   UMap (EraCrypto era) ->
-  (UMap (EraCrypto era), Coin)
+  (UMap (EraCrypto era), Map.Map (GovActionId (EraCrypto era)) Coin)
 returnProposalDeposits removedProposals oldUMap =
-  foldr' processProposal (oldUMap, zero) removedProposals
+  foldr' processProposal (oldUMap, mempty) removedProposals
   where
     processProposal
       gas
@@ -172,7 +198,7 @@ returnProposalDeposits removedProposals oldUMap =
                 (RewDepUView um)
             , unclaimed
             )
-        | otherwise = (um, unclaimed <> gasDeposit gas)
+        | otherwise = (um, Map.insertWith (<>) (gasId gas) (gasDeposit gas) unclaimed)
     addReward c rd =
       -- Deposits have been validated at this point
       rd {rdReward = rdReward rd <> compactCoinOrError c}
@@ -314,6 +340,13 @@ epochTransition = do
       returnProposalDeposits allRemovedGovActions $
         dState2 ^. dsUnifiedL
 
+  tellEvent $
+    GovInfoEvent
+      (Set.fromList $ Map.elems enactedActions)
+      (Set.fromList $ Map.elems expiredActions)
+      (Map.keysSet unclaimed)
+
+  let
     certState =
       CertState
         { certPState = pState2
@@ -327,7 +360,7 @@ epochTransition = do
     accountState3 =
       accountState2
         -- Move donations and unclaimed rewards from proposals to treasury:
-        & asTreasuryL <>~ (utxoState0 ^. utxosDonationL <> unclaimed)
+        & asTreasuryL <>~ (utxoState0 ^. utxosDonationL <> mconcat (Map.elems unclaimed))
     utxoState2 =
       utxoState1
         & utxosDepositedL .~ totalObligation certState govState1

@@ -2,6 +2,9 @@
 
 ## 1.11.0.0
 
+* Add `EraRuleEvent`, `InjectRuleEvent`
+* Add `NFData` instance for `Obligations`, `PlutusWithContext`, `PlutusDatums`
+* Add `Eq`, `Show`, `Generic` instances for `PlutusDatums`
 * Add `CommitteeAuthorization` and use it to represent hot key credential in `CommitteeState`
 * Change `applySTSValidateSuchThat` and `applySTSNonStatic`
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
@@ -34,6 +37,7 @@
 
 ### `testlib`
 
+* Add `shouldContainExpr`
 * Add `EraRuleProof`, `UnliftRules`, `roundTripAllPredicateFailures`
 * Add `Test.Cardano.Ledger.Plutus.ScriptTestContext`
 * Add `genByronVKeyAddr`, `genByronAddrFromVKey`

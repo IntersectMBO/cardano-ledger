@@ -138,7 +138,8 @@ library testlib
         plutus-ledger-api,
         generic-random,
         microlens,
-        text
+        text,
+        tree-diff
 
 test-suite tests
     type:             exitcode-stdio-1.0
