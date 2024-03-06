@@ -24,7 +24,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Val (zero)
+import Cardano.Ledger.Val (zero, (<->))
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe
@@ -53,6 +53,78 @@ spec =
     constitutionSpec
     policySpec
     networkIdSpec
+    predicateFailuresSpec
+
+predicateFailuresSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  ) =>
+  SpecWith (ImpTestState era)
+predicateFailuresSpec =
+  describe "Predicate failures" $ do
+    it "ExpirationEpochTooSmall" $ do
+      pp <- getsNES $ nesEsL . curPParamsEpochStateL
+      committeeC <- KeyHashObj <$> freshKeyHash
+      rewardAccount <- registerRewardAccount
+      let expiration = EpochNo 1
+          action =
+            UpdateCommittee
+              SNothing
+              mempty
+              (Map.singleton committeeC expiration)
+              (0 %! 1)
+      passEpoch
+      submitFailingProposal
+        ( ProposalProcedure
+            { pProcReturnAddr = rewardAccount
+            , pProcGovAction = action
+            , pProcDeposit = pp ^. ppGovActionDepositL
+            , pProcAnchor = def
+            }
+        )
+        [injectFailure $ ExpirationEpochTooSmall $ Map.singleton committeeC expiration]
+    it "ProposalDepositIncorrect" $ do
+      committeeC <- KeyHashObj <$> freshKeyHash
+      rewardAccount <- registerRewardAccount
+      let expiration = EpochNo 1
+          actionDeposit = Coin 2
+          action =
+            UpdateCommittee
+              SNothing
+              mempty
+              (Map.singleton committeeC expiration)
+              (0 %! 1)
+      modifyPParams $ ppGovActionDepositL .~ actionDeposit
+      submitFailingProposal
+        ( ProposalProcedure
+            { pProcReturnAddr = rewardAccount
+            , pProcGovAction = action
+            , pProcDeposit = actionDeposit <-> Coin 1
+            , pProcAnchor = def
+            }
+        )
+        [injectFailure $ ProposalDepositIncorrect (actionDeposit <-> Coin 1) actionDeposit]
+    it "ConflictingCommitteeUpdate" $ do
+      pp <- getsNES $ nesEsL . curPParamsEpochStateL
+      committeeC <- KeyHashObj <$> freshKeyHash
+      rewardAccount <- registerRewardAccount
+      let expiration = EpochNo 1
+          action =
+            UpdateCommittee
+              SNothing
+              (Set.singleton committeeC)
+              (Map.singleton committeeC expiration)
+              (0 %! 1)
+      submitFailingProposal
+        ( ProposalProcedure
+            { pProcReturnAddr = rewardAccount
+            , pProcGovAction = action
+            , pProcDeposit = pp ^. ppGovActionDepositL
+            , pProcAnchor = def
+            }
+        )
+        [injectFailure $ ConflictingCommitteeUpdate $ Set.singleton committeeC]
 
 hardForkSpec ::
   forall era.
