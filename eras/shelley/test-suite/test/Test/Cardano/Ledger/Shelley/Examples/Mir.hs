@@ -37,12 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   emptyRewardUpdate,
  )
 import Cardano.Ledger.Shelley.Rules (
-  ShelleyBbodyPredFailure (..),
   ShelleyDelegPredFailure (..),
-  ShelleyDelegsPredFailure (..),
-  ShelleyDelplPredFailure (..),
-  ShelleyLedgerPredFailure (..),
-  ShelleyLedgersPredFailure (..),
   ShelleyUtxowPredFailure (..),
  )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
@@ -244,10 +239,8 @@ mirFailWits pot =
     (blockEx1' insufficientMIRWits pot)
     ( Left
         . pure
-        . BbodyFailure @(ShelleyEra c)
-        . LedgersFailure
-        . LedgerFailure
-        . UtxowFailure
+        . BbodyFailure
+        . injectFailure
         $ MIRInsufficientGenesisSigsUTXOW ws
     )
   where
@@ -270,11 +263,7 @@ mirFailFunds pot treasury llNeeded llReceived =
     ( Left
         . pure
         . BbodyFailure
-        . LedgersFailure
-        . LedgerFailure
-        . DelegsFailure
-        . DelplFailure
-        . DelegFailure
+        . injectFailure
         $ InsufficientForInstantaneousRewardsDELEG pot llNeeded llReceived
     )
 
