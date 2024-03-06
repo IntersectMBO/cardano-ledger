@@ -15,7 +15,7 @@ import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
-import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure)
+import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure, ConwayGovPredFailure)
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Test.Cardano.Ledger.Common
@@ -38,6 +38,7 @@ spec ::
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   ) =>
   Spec
 spec = do
@@ -49,3 +50,4 @@ spec = do
     Utxo.spec @era
     Utxos.spec @era
     Ratify.spec @era
+    GovCert.spec @era

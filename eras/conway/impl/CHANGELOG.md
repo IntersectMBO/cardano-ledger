@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Add `ConwayDRepIncorrectRefund`
 * Stop exporting `utxosGovStateL` from `Cardano.Ledger.Conway.Governance`
 * Remove deprecated `curPParamsConwayGovStateL` and `prevPParamsConwayGovStateL`
 * Add `EraRuleFailure "POOL"` type instance for `ConwayEra`
@@ -65,6 +66,7 @@
 
 ### `testlib`
 
+* Add `Test.Cardano.Ledger.Conway.Imp.GovCertSpec`
 * Add `RuleListEra` instance for Conway
 * Rename `canGovActionBeDRepAccepted` to `isDRepAccepted` and refactor #4097
   * Add `isSPOAccepted`
