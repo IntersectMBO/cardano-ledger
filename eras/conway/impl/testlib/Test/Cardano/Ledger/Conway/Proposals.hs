@@ -24,7 +24,7 @@ import Test.Cardano.Ledger.Conway.Arbitrary (
 spec :: Spec
 spec = do
   describe "Proposals" $ do
-    context "Construction" $ do
+    describe "Construction" $ do
       prop "Adding new nodes keeps Proposals consistent" $
         \(ProposalsNewActions ps actions :: ProposalsNewActions Conway) ->
           let ps' =
@@ -34,7 +34,7 @@ spec = do
                   actions
               actionsMap = foldl' (\accum gas -> Map.insert (gasId gas) gas accum) Map.empty actions
            in actionsMap `shouldBe` (actionsMap `Map.intersection` proposalsActionsMap ps')
-    context "Removal" $ do
+    describe "Removal" $ do
       prop "Removing leaf nodes keeps Proposals consistent" $
         \(ps :: Proposals Conway) -> do
           let gais = Set.fromList $ toList $ SSeq.takeLast 4 $ proposalsIds ps
@@ -49,7 +49,7 @@ spec = do
         \(ProposalsNewActions ps actions :: ProposalsNewActions Conway) ->
           (evaluate . force) (proposalsRemoveWithDescendants (Set.fromList $ gasId <$> actions) ps)
             `shouldThrow` \AssertionFailed {} -> True
-    context "Enactment" $ do
+    describe "Enactment" $ do
       prop "Adding votes preserves consistency" $
         \(ProposalsForEnactment ps gass _ :: ProposalsForEnactment Conway, voter :: Voter era, vote :: Vote) -> do
           case gass of

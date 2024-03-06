@@ -6,9 +6,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Conway.Imp.UtxoSpec (
-  spec,
-) where
+module Test.Cardano.Ledger.Conway.Imp.UtxoSpec (spec) where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Allegra.Scripts (

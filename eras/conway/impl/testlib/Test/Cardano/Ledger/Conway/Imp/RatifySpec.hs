@@ -1,17 +1,29 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Ledger.Conway.Imp.RatifySpec (spec) where
 
+import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Credential
+import Cardano.Ledger.Keys
+import Cardano.Ledger.Shelley.LedgerState
+import qualified Cardano.Ledger.UMap as UM
 import Data.Default.Class (def)
+import Data.Foldable
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.KeyPair
+import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Imp.Common
 
 spec ::
@@ -20,7 +32,227 @@ spec ::
   SpecWith (ImpTestState era)
 spec =
   describe "RATIFY" $ do
+    votingSpec
     delayingActionsSpec
+
+votingSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+votingSpec =
+  describe "Voting" $ do
+    it "SPO needs to vote on security-relevant parameter changes" $ do
+      (drep, ccCred, _) <- electBasicCommittee
+      (khPool, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      initMinFeeA <- getsNES $ nesEsL . curPParamsEpochStateL . ppMinFeeAL
+      gaidThreshold <- impAnn "Update StakePool thresholds" $ do
+        pp <- getsNES $ nesEsL . curPParamsEpochStateL
+        (pp ^. ppPoolVotingThresholdsL . pvtPPSecurityGroupL) `shouldBe` minBound
+        rew <- registerRewardAccount
+        let ppUpdate =
+              emptyPParamsUpdate
+                & ppuPoolVotingThresholdsL
+                  .~ SJust
+                    PoolVotingThresholds
+                      { pvtPPSecurityGroup = 1 %! 2
+                      , pvtMotionNoConfidence = 1 %! 2
+                      , pvtHardForkInitiation = 1 %! 2
+                      , pvtCommitteeNormal = 1 %! 2
+                      , pvtCommitteeNoConfidence = 1 %! 2
+                      }
+                & ppuGovActionLifetimeL .~ SJust (EpochInterval 100)
+        gaidThreshold <-
+          submitProposal $
+            ProposalProcedure
+              { pProcReturnAddr = rew
+              , pProcGovAction = ParameterChange SNothing ppUpdate SNothing
+              , pProcDeposit = pp ^. ppGovActionDepositL
+              , pProcAnchor = def
+              }
+        submitYesVote_ (DRepVoter drep) gaidThreshold
+        submitYesVote_ (CommitteeVoter ccCred) gaidThreshold
+        logAcceptedRatio gaidThreshold
+        pure gaidThreshold
+      passEpoch
+      logAcceptedRatio gaidThreshold
+      passEpoch
+      let newMinFeeA = Coin 12_345
+      gaidMinFee <- do
+        pp <- getsNES $ nesEsL . curPParamsEpochStateL
+        impAnn "Security group threshold should be 1/2" $
+          (pp ^. ppPoolVotingThresholdsL . pvtPPSecurityGroupL) `shouldBe` (1 %! 2)
+        rew <- registerRewardAccount
+        gaidMinFee <-
+          submitProposal $
+            ProposalProcedure
+              { pProcReturnAddr = rew
+              , pProcGovAction =
+                  ParameterChange
+                    (SJust (GovPurposeId gaidThreshold))
+                    ( emptyPParamsUpdate
+                        & ppuMinFeeAL .~ SJust newMinFeeA
+                    )
+                    SNothing
+              , pProcDeposit = pp ^. ppGovActionDepositL
+              , pProcAnchor = def
+              }
+        submitYesVote_ (DRepVoter drep) gaidMinFee
+        submitYesVote_ (CommitteeVoter ccCred) gaidMinFee
+        pure gaidMinFee
+      passEpoch
+      logAcceptedRatio gaidMinFee
+      passEpoch
+      do
+        pp <- getsNES $ nesEsL . curPParamsEpochStateL
+        (pp ^. ppMinFeeAL) `shouldBe` initMinFeeA
+        submitYesVote_ (StakePoolVoter khPool) gaidMinFee
+      passEpoch
+      logStakeDistr
+      logAcceptedRatio gaidMinFee
+      logRatificationChecks gaidMinFee
+      passEpoch
+      pp <- getsNES $ nesEsL . curPParamsEpochStateL
+      (pp ^. ppMinFeeAL) `shouldBe` newMinFeeA
+    describe "Active voting stake" $ do
+      describe "DRep" $ do
+        it "UTxOs contribute to active voting stake" $ do
+          -- Only modify the applicable thresholds
+          modifyPParams $ \pp ->
+            pp
+              & ppDRepVotingThresholdsL
+                .~ def
+                  { dvtCommitteeNormal = 51 %! 100
+                  , dvtCommitteeNoConfidence = 51 %! 100
+                  }
+              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+          -- Setup DRep delegation #1
+          (drepKH1, stakingKH1, paymentKP1) <- setupSingleDRep 1_000_000
+          -- Setup DRep delegation #2
+          (_drepKH2, _stakingKH2, _paymentKP2) <- setupSingleDRep 1_000_000
+          -- Submit a committee proposal
+          cc <- KeyHashObj <$> freshKeyHash
+          let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+          addCCGaid <- submitGovAction addCCAction
+          -- Submit the vote
+          submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
+          passNEpochs 2
+          -- The vote should not result in a ratification
+          isDRepAccepted addCCGaid `shouldReturn` False
+          getLastEnactedCommittee `shouldReturn` SNothing
+          -- Bump up the UTxO delegated
+          -- to barely make the threshold (51 %! 100)
+          stakingKP1 <- lookupKeyPair stakingKH1
+          _ <- sendCoinTo (mkAddr (paymentKP1, stakingKP1)) (inject $ Coin 200_000)
+          passNEpochs 2
+          -- The same vote should now successfully ratify the proposal
+          getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+        it "Rewards contribute to active voting stake" $ do
+          -- Only modify the applicable thresholds
+          modifyPParams $ \pp ->
+            pp
+              & ppDRepVotingThresholdsL
+                .~ def
+                  { dvtCommitteeNormal = 51 %! 100
+                  , dvtCommitteeNoConfidence = 51 %! 100
+                  }
+              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+          -- Setup DRep delegation #1
+          (drepKH1, stakingKH1, _paymentKP1) <- setupSingleDRep 1_000_000
+          -- Setup DRep delegation #2
+          (_drepKH2, _stakingKH2, _paymentKP2) <- setupSingleDRep 1_000_000
+          -- Submit a committee proposal
+          cc <- KeyHashObj <$> freshKeyHash
+          let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+          addCCGaid <- submitGovAction addCCAction
+          -- Submit the vote
+          submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
+          passNEpochs 2
+          -- The vote should not result in a ratification
+          isDRepAccepted addCCGaid `shouldReturn` False
+          getLastEnactedCommittee `shouldReturn` SNothing
+          -- Add to the rewards of the delegator to this DRep
+          -- to barely make the threshold (51 %! 100)
+          modifyNES $
+            nesEsL . epochStateUMapL
+              %~ UM.adjust
+                (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000) d)
+                (KeyHashObj stakingKH1)
+                . UM.RewDepUView
+          passNEpochs 2
+          -- The same vote should now successfully ratify the proposal
+          getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+      describe "StakePool" $ do
+        it "UTxOs contribute to active voting stake" $ do
+          -- Only modify the applicable thresholds
+          modifyPParams $ \pp ->
+            pp
+              & ppPoolVotingThresholdsL
+                .~ def
+                  { pvtCommitteeNormal = 51 %! 100
+                  , pvtCommitteeNoConfidence = 51 %! 100
+                  }
+              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+          -- Setup Pool delegation #1
+          (poolKH1, delegatorCPayment1, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
+          -- Setup Pool delegation #2
+          (_poolKH2, _delegatorCPayment2, _delegatorCStaking2) <- setupPoolWithStake $ Coin 1_000_000
+          passEpoch
+          -- Submit a committee proposal
+          cc <- KeyHashObj <$> freshKeyHash
+          let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+          addCCGaid <- submitGovAction addCCAction
+          -- Submit the vote
+          submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
+          passNEpochs 2
+          -- The vote should not result in a ratification
+          logRatificationChecks addCCGaid
+          isSpoAccepted addCCGaid `shouldReturn` False
+          getLastEnactedCommittee `shouldReturn` SNothing
+          -- Bump up the UTxO delegated
+          -- to barely make the threshold (51 %! 100)
+          _ <-
+            sendCoinTo
+              (Addr Testnet delegatorCPayment1 (StakeRefBase delegatorCStaking1))
+              (Coin 200_000)
+          passNEpochs 2
+          -- The same vote should now successfully ratify the proposal
+          getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+        it "Rewards contribute to active voting stake" $ do
+          -- Only modify the applicable thresholds
+          modifyPParams $ \pp ->
+            pp
+              & ppPoolVotingThresholdsL
+                .~ def
+                  { pvtCommitteeNormal = 51 %! 100
+                  , pvtCommitteeNoConfidence = 51 %! 100
+                  }
+              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+          -- Setup Pool delegation #1
+          (poolKH1, _delegatorCPayment1, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
+          -- Setup Pool delegation #2
+          (_poolKH2, _delegatorCPayment2, _delegatorCStaking2) <- setupPoolWithStake $ Coin 1_000_000
+          passEpoch
+          -- Submit a committee proposal
+          cc <- KeyHashObj <$> freshKeyHash
+          let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+          addCCGaid <- submitGovAction addCCAction
+          -- Submit the vote
+          submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
+          passNEpochs 2
+          -- The vote should not result in a ratification
+          isSpoAccepted addCCGaid `shouldReturn` False
+          getLastEnactedCommittee `shouldReturn` SNothing
+          -- Add to the rewards of the delegator to this SPO
+          -- to barely make the threshold (51 %! 100)
+          modifyNES $
+            nesEsL . epochStateUMapL
+              %~ UM.adjust
+                (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000) d)
+                delegatorCStaking1
+                . UM.RewDepUView
+          passNEpochs 2
+          -- The same vote should now successfully ratify the proposal
+          getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
 
 delayingActionsSpec ::
   forall era.
@@ -162,3 +394,103 @@ delayingActionsSpec =
         -- and nothing gets enacted
         getLastEnactedParameterChange `shouldReturn` SNothing
         getParameterChangeProposals `shouldReturn` Map.empty
+      it "proposals to update the committee get delayed if the expiration exceeds the max term" $ do
+        let expectMembers ::
+              HasCallStack => Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) -> ImpTestM era ()
+            expectMembers expKhs = do
+              committee <-
+                getsNES $
+                  nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+              let members = Map.keysSet $ foldMap' committeeMembers committee
+              impAnn "Expecting committee members" $ members `shouldBe` expKhs
+            setPParams :: HasCallStack => ImpTestM era ()
+            setPParams = do
+              modifyPParams $ \pp ->
+                pp
+                  & ppDRepVotingThresholdsL
+                    .~ def
+                      { dvtCommitteeNormal = 1 %! 1
+                      , dvtCommitteeNoConfidence = 1 %! 2
+                      , dvtUpdateToConstitution = 1 %! 2
+                      }
+                  & ppCommitteeMaxTermLengthL .~ EpochInterval 10
+                  & ppGovActionLifetimeL .~ EpochInterval 100
+                  & ppGovActionDepositL .~ Coin 123
+
+        setPParams
+        (drep, _, _) <- setupSingleDRep 1_000_000
+        maxTermLength <-
+          getsNES $
+            nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL . ppCommitteeMaxTermLengthL
+
+        (initialMembers, govIdCom1) <-
+          impAnn "Initial committee is enacted" $ do
+            c1 <- freshKeyHash
+            c2 <- freshKeyHash
+            currentEpoch <- getsNES nesELL
+            let maxExpiry = addEpochInterval currentEpoch maxTermLength
+            let initialMembers = [(KeyHashObj c1, maxExpiry), (KeyHashObj c2, maxExpiry)]
+            govIdCom1 <-
+              electCommittee
+                SNothing
+                drep
+                Set.empty
+                initialMembers
+            passEpoch >> passEpoch
+            expectMembers $ Map.keysSet initialMembers
+            pure (Map.keysSet initialMembers, govIdCom1)
+
+        (membersExceedingExpiry, exceedingExpiry) <-
+          impAnn "Committee with members exceeding the maxTerm is not enacted" $ do
+            -- submit a proposal for adding two members to the committee,
+            -- one of which has a max term exceeding the maximum
+            c3 <- freshKeyHash
+            c4 <- freshKeyHash
+            currentEpoch <- getsNES nesELL
+            let exceedingExpiry = addEpochInterval (addEpochInterval currentEpoch maxTermLength) (EpochInterval 7)
+            let membersExceedingExpiry = [(KeyHashObj c3, exceedingExpiry), (KeyHashObj c4, addEpochInterval currentEpoch maxTermLength)]
+            _ <-
+              electCommittee
+                (SJust govIdCom1)
+                drep
+                Set.empty
+                membersExceedingExpiry
+            passEpoch >> passEpoch
+            -- the new committee has not been enacted
+            expectMembers initialMembers
+            pure (Map.keysSet membersExceedingExpiry, exceedingExpiry)
+
+        -- other actions get ratified and enacted
+        govIdConst1 <- impAnn "Other actions are ratified and enacted" $ do
+          (govIdConst1, constitution) <- submitConstitution SNothing
+          submitYesVote_ (DRepVoter (KeyHashObj drep)) govIdConst1
+          hks <- traverse registerCommitteeHotKey (Set.toList initialMembers)
+          traverse_ (\m -> submitYesVote_ (CommitteeVoter m) govIdConst1) hks
+
+          passEpoch >> passEpoch
+          curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+          curConstitution `shouldBe` constitution
+          pure govIdConst1
+
+        -- after enough epochs pass, the expiration of the new members becomes acceptable
+        -- and the new committee is enacted
+        impAnn "New committee is enacted" $ do
+          currentEpoch <- getsNES nesELL
+          let delta =
+                fromIntegral (unEpochNo exceedingExpiry)
+                  - fromIntegral (unEpochNo (addEpochInterval currentEpoch maxTermLength))
+          replicateM_ delta passEpoch
+
+          -- pass one more epoch after ratification, in order to be enacted
+          passEpoch
+          expectMembers $ initialMembers <> membersExceedingExpiry
+
+        impAnn "New committee can vote" $ do
+          (govIdConst2, constitution) <- submitConstitution $ SJust (GovPurposeId govIdConst1)
+          submitYesVote_ (DRepVoter (KeyHashObj drep)) govIdConst2
+          hks <- traverse registerCommitteeHotKey (Set.toList membersExceedingExpiry)
+          traverse_ (\m -> submitYesVote_ (CommitteeVoter m) govIdConst2) hks
+
+          passEpoch >> passEpoch
+          curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+          curConstitution `shouldBe` constitution
