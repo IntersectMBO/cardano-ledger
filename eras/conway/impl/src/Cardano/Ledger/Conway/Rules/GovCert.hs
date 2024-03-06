@@ -77,6 +77,7 @@ data ConwayGovCertPredFailure era
   | ConwayDRepNotRegistered !(Credential 'DRepRole (EraCrypto era))
   | ConwayDRepIncorrectDeposit !Coin !Coin -- The first is the given and the second is the expected deposit
   | ConwayCommitteeHasPreviouslyResigned !(Credential 'ColdCommitteeRole (EraCrypto era))
+  | ConwayDRepIncorrectRefund !Coin !Coin -- The first is the given and the second is the expected refund
   deriving (Show, Eq, Generic)
 
 type instance EraRuleFailure "GOVCERT" (ConwayEra c) = ConwayGovCertPredFailure (ConwayEra c)
@@ -109,6 +110,11 @@ instance
       encodeListLen 2
         <> encCBOR (3 :: Word8)
         <> encCBOR keyH
+    ConwayDRepIncorrectRefund refund expectedRefund ->
+      encodeListLen 3
+        <> encCBOR (4 :: Word8)
+        <> encCBOR refund
+        <> encCBOR expectedRefund
 
 instance
   (Typeable era, Crypto (EraCrypto era)) =>
@@ -129,6 +135,10 @@ instance
       3 -> do
         keyH <- decCBOR
         pure (2, ConwayCommitteeHasPreviouslyResigned keyH)
+      4 -> do
+        refund <- decCBOR
+        expectedRefund <- decCBOR
+        pure (3, ConwayDRepIncorrectRefund refund expectedRefund)
       k -> invalidKey k
 
 newtype ConwayGovCertEvent era = GovCertEvent (Event (EraRule "GOVCERT" era))
@@ -173,8 +183,12 @@ conwayGovCertTransition = do
           { vsDReps =
               Map.insert cred (DRepState (addEpochInterval cgceCurrentEpoch ppDRepActivity) mAnchor ppDRepDeposit) vsDReps
           }
-    ConwayUnRegDRep cred deposit -> do
-      checkRegistrationAndDepositAgainstPaidDeposit vsDReps cred deposit
+    ConwayUnRegDRep cred refund -> do
+      case Map.lookup cred vsDReps of
+        Nothing -> failBecause $ ConwayDRepNotRegistered cred
+        Just drepState ->
+          let paidDeposit = drepState ^. drepDepositL
+           in refund == paidDeposit ?! ConwayDRepIncorrectRefund refund paidDeposit
       pure vState {vsDReps = Map.delete cred vsDReps}
     ConwayAuthCommitteeHotKey coldCred hotCred ->
       checkAndOverwriteCommitteeHotCred vState coldCred $ Just hotCred
@@ -199,12 +213,6 @@ conwayGovCertTransition = do
     checkColdCredHasNotResigned coldCred csCommitteeCreds =
       ((isNothing <$> Map.lookup coldCred csCommitteeCreds) /= Just True)
         ?! ConwayCommitteeHasPreviouslyResigned coldCred
-    checkRegistrationAndDepositAgainstPaidDeposit vsDReps cred deposit =
-      case Map.lookup cred vsDReps of
-        Nothing -> failBecause $ ConwayDRepNotRegistered cred
-        Just drepState ->
-          let paidDeposit = drepState ^. drepDepositL
-           in deposit == paidDeposit ?! ConwayDRepIncorrectDeposit deposit paidDeposit
     checkAndOverwriteCommitteeHotCred vState@VState {vsCommitteeState = CommitteeState csCommitteeCreds} coldCred hotCred = do
       checkColdCredHasNotResigned coldCred csCommitteeCreds
       pure

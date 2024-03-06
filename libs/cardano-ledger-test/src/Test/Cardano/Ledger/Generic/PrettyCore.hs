@@ -1342,8 +1342,9 @@ ppConwayGovCertPredFailure :: ConwayGovCertPredFailure era -> PDoc
 ppConwayGovCertPredFailure z = case z of
   ConwayDRepAlreadyRegistered x -> ppSexp "ConwayDRepAlreadyRegistered" [pcCredential x]
   ConwayDRepNotRegistered x -> ppSexp "ConwayDRepNotRegistered" [pcCredential x]
-  ConwayDRepIncorrectDeposit c1 c2 -> ppSexp " ConwayDRepIncorrectDeposit" [pcCoin c1, pcCoin c2]
+  ConwayDRepIncorrectDeposit c1 c2 -> ppSexp "ConwayDRepIncorrectDeposit" [pcCoin c1, pcCoin c2]
   ConwayCommitteeHasPreviouslyResigned x -> ppSexp "ConwayCommitteeHasPreviouslyResigned" [pcCredential x]
+  ConwayDRepIncorrectRefund c1 c2 -> ppSexp "ConwayDRepIncorrectRefund" [pcCoin c1, pcCoin c2]
 
 instance PrettyA (ConwayGovCertPredFailure era) where
   prettyA = ppConwayGovCertPredFailure
