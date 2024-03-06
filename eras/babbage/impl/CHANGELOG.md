@@ -10,6 +10,10 @@
   * Utxo rule raises that `PredicateFailure` in Conway and future Eras when they are not disjoint.
 * Modify `PParams` JSON instances to match `cardano-api`
 
+### `testlib`
+
+* Add `RuleListEra` instance for Babbage
+
 ## 1.6.0.0
 
 * Remove deprecated `getDatumBabbage`, `babbageTxScripts`, `refScripts`

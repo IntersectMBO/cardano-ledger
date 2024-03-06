@@ -4,6 +4,7 @@
 
 * Stop exporting `utxosGovStateL` from `Cardano.Ledger.Conway.Governance`
 * Remove deprecated `curPParamsConwayGovStateL` and `prevPParamsConwayGovStateL`
+* Add `EraRuleFailure "POOL"` type instance for `ConwayEra`
 * Add `ConwayUtxosPredFailure`
 * Support for intra-era hard fork with `ProtVerHigh` set to `10`
 * Guard Conway-specific features in transactions that use Plutus v1 or v2. #4112
@@ -64,6 +65,7 @@
 
 ### `testlib`
 
+* Add `RuleListEra` instance for Conway
 * Rename `canGovActionBeDRepAccepted` to `isDRepAccepted` and refactor #4097
   * Add `isSPOAccepted`
   * Change `setupSingleDRep` to return relevant keyhashes

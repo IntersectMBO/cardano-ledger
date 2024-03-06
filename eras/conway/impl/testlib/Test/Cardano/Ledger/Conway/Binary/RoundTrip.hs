@@ -1,9 +1,11 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conway.Binary.RoundTrip (
   roundTripConwayCommonSpec,
@@ -12,8 +14,10 @@ module Test.Cardano.Ledger.Conway.Binary.RoundTrip (
 
 import Cardano.Ledger.BaseTypes (StrictMaybe)
 import Cardano.Ledger.Compactible
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.LedgerState
 import Test.Cardano.Ledger.Alonzo.Arbitrary (FlexibleCostModels (..))
 import Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (roundTripAlonzoCommonSpec)
@@ -39,6 +43,7 @@ roundTripConwayCommonSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (PParamsHKD StrictMaybe era)
+  , RuleListEra era
   ) =>
   Spec
 roundTripConwayCommonSpec = do
@@ -69,3 +74,19 @@ roundTripConwayEraTypesSpec = do
     roundTripShareEraTypeSpec @era @DRepPulsingState
     roundTripShareEraTypeSpec @era @PulsingSnapshot
     roundTripShareEraTypeSpec @era @RatifyState
+
+instance Crypto c => RuleListEra (ConwayEra c) where
+  type
+    EraRules (ConwayEra c) =
+      '[ "GOV"
+       , "UTXOS"
+       , "LEDGER"
+       , "CERTS"
+       , "CERT"
+       , "DELEG"
+       , "GOVCERT"
+       , "UTXOW"
+       , "UTXO"
+       , "LEDGERS"
+       , "POOL"
+       ]

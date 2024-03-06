@@ -29,6 +29,7 @@
 ### `testlib`
 
 * Added `ToExpr` instance for `ShelleyTxWitsRaw`
+* Add `RuleListEra` instance for Shelley
 * Add argument to `impSatisfyNativeScript` that accounts for already satisifed witnesses
 * Remove `impFreshIdxL`
 * Remove root coin argument from `initImpNES`, `initShelleyImpNES`

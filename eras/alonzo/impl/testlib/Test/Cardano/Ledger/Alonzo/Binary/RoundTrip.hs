@@ -1,18 +1,21 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (
   roundTripAlonzoCommonSpec,
   roundTripAlonzoEraTypesSpec,
 ) where
 
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Plutus.Data
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
@@ -38,6 +41,7 @@ roundTripAlonzoCommonSpec ::
   , Arbitrary (GovState era)
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
+  , RuleListEra era
   ) =>
   Spec
 roundTripAlonzoCommonSpec = do
@@ -57,3 +61,18 @@ roundTripAlonzoEraTypesSpec = do
       -- It doesn't roundtrip because we do not en/decode NoDatum
       -- Possibly use peekAvailable, but haven't looked into the issue too deeply
       roundTripEraTypeSpec @era @Datum
+
+instance Crypto c => RuleListEra (AlonzoEra c) where
+  type
+    EraRules (AlonzoEra c) =
+      '[ "DELEG"
+       , "DELEGS"
+       , "DELPL"
+       , "LEDGER"
+       , "LEDGERS"
+       , "POOL"
+       , "PPUP"
+       , "UTXO"
+       , "UTXOW"
+       , "UTXOS"
+       ]
