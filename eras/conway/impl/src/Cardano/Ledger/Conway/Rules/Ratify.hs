@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
@@ -81,7 +80,6 @@ import Control.State.Transition.Extended (
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
 import Data.Monoid (Sum (..))
 import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
@@ -189,21 +187,34 @@ spoAccepted re rs gas =
 -- use:
 --
 -- t = y \/ (s - a) = (y \/ s) / (1 - a \/ s)
-spoAcceptedRatio :: RatifyEnv era -> GovActionState era -> Rational
-spoAcceptedRatio RatifyEnv {reStakePoolDistr} GovActionState {gasStakePoolVotes}
-  | abstainVotesRatio == 1 = 0 -- guard against the degenerate case when all abstain.
-  | otherwise = yesVotesRatio / (1 - abstainVotesRatio)
-  where
-    PoolDistr stakePoolDistr = reStakePoolDistr
-    (Sum yesVotesRatio, Sum abstainVotesRatio) =
-      Map.foldMapWithKey lookupStakePoolDistrForVotes gasStakePoolVotes
-
-    lookupStakePoolDistrForVotes poolId vote = fromMaybe (mempty, mempty) $ do
-      distr <- Sum . individualPoolStake <$> Map.lookup poolId stakePoolDistr
-      case vote of
-        VoteNo -> Nothing
-        VoteYes -> Just (distr, mempty)
-        Abstain -> Just (mempty, distr)
+--
+-- For `HardForkInitiation` all SPOs that didn't vote are considered as
+-- `No` votes. Whereas, for all other `GovAction`s, SPOs that didn't
+-- vote are considered as `Abstain` votes.
+spoAcceptedRatio :: forall era. RatifyEnv era -> GovActionState era -> Rational
+spoAcceptedRatio
+  RatifyEnv {reStakePoolDistr}
+  GovActionState
+    { gasStakePoolVotes
+    , gasProposalProcedure =
+      ProposalProcedure {pProcGovAction}
+    }
+    | abstainVotesRatio == 1 = 0 -- guard against the degenerate case when all abstain.
+    | otherwise = yesVotesRatio / (1 - abstainVotesRatio)
+    where
+      PoolDistr stakePoolDistr = reStakePoolDistr
+      (Sum yesVotesRatio, Sum abstainVotesRatio) =
+        Map.foldMapWithKey getVotesStakePerStakePoolDistr stakePoolDistr
+      getVotesStakePerStakePoolDistr poolId distr =
+        let d = Sum $ individualPoolStake distr
+            vote = Map.lookup poolId gasStakePoolVotes
+         in case vote of
+              Nothing
+                | HardForkInitiation {} <- pProcGovAction -> mempty
+                | otherwise -> (mempty, d)
+              Just VoteNo -> mempty
+              Just VoteYes -> (d, mempty)
+              Just Abstain -> (mempty, d)
 
 dRepAccepted :: ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
 dRepAccepted re rs GovActionState {gasDRepVotes, gasProposalProcedure} =

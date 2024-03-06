@@ -64,6 +64,8 @@ module Cardano.Ledger.Conway.PParams (
   PPGroups (..),
   StakePoolGroup (..),
   conwayModifiedPPGroups,
+  pvtHardForkInitiationL,
+  pvtMotionNoConfidenceL,
 )
 where
 
@@ -204,6 +206,9 @@ data PoolVotingThresholds = PoolVotingThresholds
   }
   deriving (Eq, Ord, Show, Generic)
 
+pvtMotionNoConfidenceL :: Lens' PoolVotingThresholds UnitInterval
+pvtMotionNoConfidenceL = lens pvtMotionNoConfidence (\x y -> x {pvtMotionNoConfidence = y})
+
 pvtCommitteeNormalL :: Lens' PoolVotingThresholds UnitInterval
 pvtCommitteeNormalL = lens pvtCommitteeNormal (\x y -> x {pvtCommitteeNormal = y})
 
@@ -212,6 +217,9 @@ pvtCommitteeNoConfidenceL = lens pvtCommitteeNoConfidence (\x y -> x {pvtCommitt
 
 pvtPPSecurityGroupL :: Lens' PoolVotingThresholds UnitInterval
 pvtPPSecurityGroupL = lens pvtPPSecurityGroup (\x y -> x {pvtPPSecurityGroup = y})
+
+pvtHardForkInitiationL :: Lens' PoolVotingThresholds UnitInterval
+pvtHardForkInitiationL = lens pvtHardForkInitiation (\x y -> x {pvtHardForkInitiation = y})
 
 instance NoThunks PoolVotingThresholds
 

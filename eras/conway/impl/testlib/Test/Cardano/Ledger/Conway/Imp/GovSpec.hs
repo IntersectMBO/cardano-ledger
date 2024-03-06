@@ -1015,20 +1015,6 @@ proposalWithRewardAccount action = do
 -- Proposing a HardFork should always use a new ProtVer that
 -- can follow the one installed in the previous HardFork action.
 
--- | A legal ProtVer that differs in the minor Version
-minorFollow :: ProtVer -> ProtVer
-minorFollow (ProtVer x y) = ProtVer x (y + 1)
-
--- | A legal ProtVer that moves to the next major Version
-majorFollow :: ProtVer -> ProtVer
-majorFollow pv@(ProtVer x _) = case succVersion x of
-  Just x' -> ProtVer x' 0
-  Nothing -> error ("The last major version can't be incremented. " ++ show pv)
-
--- | An illegal ProtVer that skips 3 minor versions
-cantFollow :: ProtVer -> ProtVer
-cantFollow (ProtVer x y) = ProtVer x (y + 3)
-
 -- | Tests the first hardfork in the Conway era where the PrevGovActionID is SNothing
 firstHardForkFollows ::
   forall era.
