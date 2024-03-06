@@ -125,6 +125,11 @@ instance
   NFData (ConwayCertsPredFailure era)
 
 newtype ConwayCertsEvent era = CertEvent (Event (EraRule "CERT" era))
+  deriving (Generic)
+
+deriving instance Eq (Event (EraRule "CERT" era)) => Eq (ConwayCertsEvent era)
+
+instance NFData (Event (EraRule "CERT" era)) => NFData (ConwayCertsEvent era)
 
 instance
   ( Era era

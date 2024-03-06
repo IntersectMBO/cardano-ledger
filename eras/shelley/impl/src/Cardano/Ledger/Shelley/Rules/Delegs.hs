@@ -137,6 +137,11 @@ instance InjectRuleFailure "DELEGS" ShelleyDelegPredFailure (ShelleyEra c) where
   injectFailure = DelplFailure . injectFailure
 
 newtype ShelleyDelegsEvent era = DelplEvent (Event (EraRule "DELPL" era))
+  deriving (Generic)
+
+deriving instance Eq (Event (EraRule "DELPL" era)) => Eq (ShelleyDelegsEvent era)
+
+instance NFData (Event (EraRule "DELPL" era)) => NFData (ShelleyDelegsEvent era)
 
 deriving stock instance
   Show (PredicateFailure (EraRule "DELPL" era)) =>

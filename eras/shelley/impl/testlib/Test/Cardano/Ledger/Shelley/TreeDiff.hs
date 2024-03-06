@@ -197,3 +197,66 @@ instance
 instance ToExpr Obligations
 
 instance ToExpr AdaPots
+
+-- Events
+instance
+  ( ToExpr (Event (EraRule "UTXOW" era))
+  , ToExpr (Event (EraRule "DELEGS" era))
+  ) =>
+  ToExpr (ShelleyLedgerEvent era)
+
+instance
+  ToExpr (Event (EraRule "UTXO" era)) =>
+  ToExpr (ShelleyUtxowEvent era)
+
+instance
+  ( ToExpr (Event (EraRule "PPUP" era))
+  , ToExpr (TxOut era)
+  ) =>
+  ToExpr (UtxoEvent era)
+
+instance ToExpr (PpupEvent era)
+
+instance ToExpr (Event (EraRule "DELPL" era)) => ToExpr (ShelleyDelegsEvent era)
+
+instance
+  ( ToExpr (Event (EraRule "DELEG" era))
+  , ToExpr (Event (EraRule "POOL" era))
+  ) =>
+  ToExpr (ShelleyDelplEvent era)
+
+instance ToExpr (ShelleyDelegEvent era)
+
+instance ToExpr (PoolEvent era)
+
+instance
+  ( ToExpr (Event (EraRule "NEWEPOCH" era))
+  , ToExpr (Event (EraRule "RUPD" era))
+  ) =>
+  ToExpr (ShelleyTickEvent era)
+
+instance ToExpr RewardType
+
+instance ToExpr (Reward c)
+
+instance
+  ( ToExpr (Event (EraRule "EPOCH" era))
+  , ToExpr (Event (EraRule "MIR" era))
+  , ToExpr (Event (EraRule "RUPD" era))
+  ) =>
+  ToExpr (ShelleyNewEpochEvent era)
+
+instance
+  ( ToExpr (Event (EraRule "POOLREAP" era))
+  , ToExpr (Event (EraRule "SNAP" era))
+  , ToExpr (Event (EraRule "UPEC" era))
+  ) =>
+  ToExpr (ShelleyEpochEvent era)
+
+instance ToExpr (ShelleyPoolreapEvent era)
+
+instance ToExpr (SnapEvent era)
+
+instance ToExpr (ShelleyMirEvent era)
+
+instance ToExpr (RupdEvent era)

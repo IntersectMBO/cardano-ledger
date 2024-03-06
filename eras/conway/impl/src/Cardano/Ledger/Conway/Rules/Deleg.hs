@@ -15,7 +15,6 @@
 
 module Cardano.Ledger.Conway.Rules.Deleg (
   ConwayDELEG,
-  ConwayDelegEvent (..),
   ConwayDelegPredFailure (..),
 ) where
 
@@ -58,6 +57,7 @@ import Control.State.Transition (
  )
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
@@ -101,8 +101,6 @@ instance Era era => DecCBOR (ConwayDelegPredFailure era) where
     5 -> SumD DRepAlreadyRegisteredForStakeKeyDELEG <! From
     n -> Invalid n
 
-newtype ConwayDelegEvent era = DelegEvent (Event (EraRule "DELEG" era))
-
 instance
   ( EraPParams era
   , State (EraRule "DELEG" era) ~ DState era
@@ -117,7 +115,7 @@ instance
   type Environment (ConwayDELEG era) = PParams era
   type BaseM (ConwayDELEG era) = ShelleyBase
   type PredicateFailure (ConwayDELEG era) = ConwayDelegPredFailure era
-  type Event (ConwayDELEG era) = ConwayDelegEvent era
+  type Event (ConwayDELEG era) = Void
 
   transitionRules = [conwayDelegTransition @era]
 

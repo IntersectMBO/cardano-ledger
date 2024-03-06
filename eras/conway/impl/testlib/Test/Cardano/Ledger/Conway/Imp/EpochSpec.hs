@@ -5,6 +5,8 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
@@ -14,6 +16,7 @@ import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), textToUrl)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Rules (ConwayEpochEvent (GovInfoEvent), ConwayNewEpochEvent (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
@@ -23,13 +26,17 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEpochStateL,
   nesEsL,
  )
+import Cardano.Ledger.Shelley.Rules (Event, ShelleyTickEvent (..))
 import Cardano.Ledger.Val
+import Control.Monad.Writer (listen)
+import Data.Data (cast)
 import Data.Default.Class (Default (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
 import Data.Tree
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -38,13 +45,18 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  ) =>
   SpecWith (ImpTestState era)
 spec =
   describe "EPOCH" $ do
     proposalsSpec
     dRepSpec
     treasurySpec
+    eventsSpec
 
 proposalsSpec ::
   forall era.
@@ -80,9 +92,9 @@ proposalsSpec =
         pp
           & ppGovActionLifetimeL .~ EpochInterval 1
           & ppGovActionDepositL .~ deposit
-      rewardAcount <- registerRewardAccount
+      rewardAccount <- registerRewardAccount
 
-      getRewardAccountAmount rewardAcount `shouldReturn` Coin 0
+      getRewardAccountAmount rewardAccount `shouldReturn` Coin 0
 
       policy <-
         getsNES $
@@ -91,8 +103,8 @@ proposalsSpec =
         submitProposal $
           ProposalProcedure
             { pProcDeposit = deposit
-            , pProcReturnAddr = rewardAcount
-            , pProcGovAction = TreasuryWithdrawals [(rewardAcount, Coin 123_456_789)] policy
+            , pProcReturnAddr = rewardAccount
+            , pProcGovAction = TreasuryWithdrawals [(rewardAccount, Coin 123_456_789)] policy
             , pProcAnchor = def
             }
       expectPresentGovActionId govActionId
@@ -101,7 +113,7 @@ proposalsSpec =
       passEpoch
       expectMissingGovActionId govActionId
 
-      getRewardAccountAmount rewardAcount `shouldReturn` deposit
+      getRewardAccountAmount rewardAccount `shouldReturn` deposit
 
 dRepSpec ::
   forall era.
@@ -228,12 +240,12 @@ treasurySpec =
       treasuryWithdrawalExpectation []
 
     it "TreasuryWithdrawalExtra" $ do
-      rewardAcount <- registerRewardAccount
-      rewardAcountOther <- registerRewardAccount
+      rewardAccount <- registerRewardAccount
+      rewardAccountOther <- registerRewardAccount
       govPolicy <- getGovPolicy
       treasuryWithdrawalExpectation
-        [ TreasuryWithdrawals (Map.singleton rewardAcount (Coin 667)) govPolicy
-        , TreasuryWithdrawals (Map.singleton rewardAcountOther (Coin 668)) govPolicy
+        [ TreasuryWithdrawals (Map.singleton rewardAccount (Coin 667)) govPolicy
+        , TreasuryWithdrawals (Map.singleton rewardAccountOther (Coin 668)) govPolicy
         ]
 
     it
@@ -248,24 +260,24 @@ treasuryWithdrawalExpectation ::
 treasuryWithdrawalExpectation extraWithdrawals = do
   (dRepCred, committeeHotCred, _) <- electBasicCommittee
   treasuryStart <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
-  rewardAcount <- registerRewardAccount
+  rewardAccount <- registerRewardAccount
   govPolicy <- getGovPolicy
   let withdrawalAmount = Coin 666
   (govActionId NE.:| _) <-
     submitGovActions $
-      TreasuryWithdrawals (Map.singleton rewardAcount withdrawalAmount) govPolicy
+      TreasuryWithdrawals (Map.singleton rewardAccount withdrawalAmount) govPolicy
         NE.:| extraWithdrawals
   submitYesVote_ (DRepVoter dRepCred) govActionId
   submitYesVote_ (CommitteeVoter committeeHotCred) govActionId
   passEpoch -- 1st epoch crossing starts DRep pulser
   impAnn "Withdrawal should not be received yet" $
-    lookupReward (raCredential rewardAcount) `shouldReturn` mempty
+    lookupReward (raCredential rewardAccount) `shouldReturn` mempty
   passEpoch -- 2nd epoch crossing enacts all the ratified actions
   treasuryEnd <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   impAnn "Withdrawal deducted from treasury" $
     treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
   impAnn "Withdrawal received by reward account" $
-    lookupReward (raCredential rewardAcount) `shouldReturn` withdrawalAmount
+    lookupReward (raCredential rewardAccount) `shouldReturn` withdrawalAmount
   expectMissingGovActionId govActionId
 
 depositMovesToTreasuryWhenStakingAddressUnregisters :: ConwayEraImp era => ImpTestM era ()
@@ -304,3 +316,78 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
   replicateM_ 5 passEpoch
   expectMissingGovActionId committeeActionId
   expectTreasury $ initialTreasury <> govActionDeposit
+
+eventsSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  ) =>
+  SpecWith (ImpTestState era)
+eventsSpec = describe "Events" $ do
+  describe "emits event" $ do
+    it "GovInfoEvent" $ do
+      (drepCred, ccCred, _) <- electBasicCommittee
+      let actionLifetime = 10
+      modifyPParams $ \pp ->
+        pp
+          & ppGovActionLifetimeL .~ EpochInterval actionLifetime
+          & ppDRepVotingThresholdsL .~ def {dvtPPEconomicGroup = 1 %! 2}
+      propDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+      let
+        proposeCostModel = do
+          newTau <- arbitrary
+          submitGovAction @era $
+            ParameterChange
+              SNothing
+              (def & ppuTauL .~ SJust newTau)
+              SNothing
+      proposalA <- impAnn "proposalA" proposeCostModel
+      proposalB <- impAnn "proposalB" proposeCostModel
+      rewardAccount@(RewardAccount _ rewardCred) <- registerRewardAccount
+      proposalC <- impAnn "proposalC" $ do
+        newTau <- arbitrary
+        submitProposal
+          ProposalProcedure
+            { pProcReturnAddr = rewardAccount
+            , pProcGovAction =
+                ParameterChange
+                  SNothing
+                  (def & ppuTauL .~ SJust newTau)
+                  SNothing
+            , pProcDeposit = propDeposit
+            , pProcAnchor = def
+            }
+      let
+        isGovInfoEvent (SomeSTSEvent ev)
+          | Just (TickNewEpochEvent (EpochEvent (GovInfoEvent {})) :: ShelleyTickEvent era) <- cast ev = True
+        isGovInfoEvent _ = False
+        passEpochWithNoDroppedActions = do
+          (_, evs) <- listen passEpoch
+          filter isGovInfoEvent evs
+            `shouldBeExpr` [ SomeSTSEvent @era @"TICK" . injectEvent $
+                              GovInfoEvent mempty mempty mempty
+                           ]
+      replicateM_ (fromIntegral actionLifetime) passEpochWithNoDroppedActions
+      logAcceptedRatio proposalA
+      submitYesVote_ (DRepVoter drepCred) proposalA
+      submitYesVote_ (CommitteeVoter ccCred) proposalA
+      gasA <- getGovActionState proposalA
+      gasB <- getGovActionState proposalB
+      gasC <- getGovActionState proposalC
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ SSeq.singleton (UnRegTxCert rewardCred)
+      passEpochWithNoDroppedActions
+      (_, evs) <- listen passEpoch
+      let
+        filteredEvs = filter isGovInfoEvent evs
+      filteredEvs
+        `shouldBeExpr` [ SomeSTSEvent @era @"TICK" . injectEvent $
+                          GovInfoEvent
+                            (Set.singleton gasA)
+                            (Set.fromList [gasB, gasC])
+                            (Set.singleton proposalC)
+                       ]

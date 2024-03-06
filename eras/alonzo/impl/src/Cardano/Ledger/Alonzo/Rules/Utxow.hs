@@ -197,6 +197,11 @@ instance
 
 newtype AlonzoUtxowEvent era
   = WrappedShelleyEraEvent (ShelleyUtxowEvent era)
+  deriving (Generic)
+
+deriving instance Eq (Event (EraRule "UTXO" era)) => Eq (AlonzoUtxowEvent era)
+
+instance NFData (Event (EraRule "UTXO" era)) => NFData (AlonzoUtxowEvent era)
 
 instance
   ( AlonzoEraScript era

@@ -36,6 +36,7 @@ module Test.Cardano.Ledger.Imp.Common (
   shouldBeLeft,
   shouldBeRightExpr,
   shouldBeLeftExpr,
+  shouldContainExpr,
   expectRight,
   expectRightDeep_,
   expectRightDeep,
@@ -131,6 +132,7 @@ import Control.Monad.State
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString)
 import Data.Kind
+import Data.List (isInfixOf)
 import Foreign.Storable
 import qualified System.Random.Stateful as R
 
@@ -211,6 +213,16 @@ shouldEndWith x y = liftIO $ H.shouldEndWith x y
 -- | Lifted version of `H.shouldContain`.
 shouldContain :: (HasCallStack, Show a, Eq a, MonadIO m) => [a] -> [a] -> m ()
 shouldContain x y = liftIO $ H.shouldContain x y
+
+shouldContainExpr :: (HasCallStack, ToExpr a, Eq a, MonadIO m) => [a] -> [a] -> m ()
+shouldContainExpr x y
+  | y `isInfixOf` x = pure ()
+  | otherwise =
+      assertFailure $
+        "First list does not contain the second list:\n"
+          <> show (toExpr x)
+          <> "\ndoes not contain\n"
+          <> show (toExpr y)
 
 -- | Lifted version of `H.shouldMatchList`.
 shouldMatchList :: (HasCallStack, Show a, Eq a, MonadIO m) => [a] -> [a] -> m ()

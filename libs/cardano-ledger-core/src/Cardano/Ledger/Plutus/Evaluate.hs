@@ -62,6 +62,7 @@ import Cardano.Ledger.Plutus.Language (
   plutusLanguage,
  )
 import Cardano.Ledger.Plutus.TxInfo
+import Control.DeepSeq (NFData (..))
 import Control.Monad (unless)
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.UTF8 as BSU
@@ -99,6 +100,15 @@ data PlutusWithContext c where
     PlutusWithContext c
 
 deriving instance Show (PlutusWithContext c)
+
+instance NFData (PlutusWithContext c) where
+  rnf PlutusWithContext {..} =
+    rnf pwcProtocolVersion `seq`
+      rnf pwcScript `seq`
+        rnf pwcScriptHash `seq`
+          rnf pwcDatums `seq`
+            rnf pwcExUnits `seq`
+              rnf pwcCostModel
 
 instance Eq (PlutusWithContext c) where
   pwc1@(PlutusWithContext {pwcScript = s1}) == pwc2@(PlutusWithContext {pwcScript = s2}) =
@@ -156,7 +166,9 @@ instance Monoid (ScriptResult c) where
   mempty = Passes mempty
 
 newtype PlutusDatums = PlutusDatums {unPlutusDatums :: [PV1.Data]}
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
+
+instance NFData PlutusDatums
 
 instance EncCBOR PlutusDatums where
   encCBOR (PlutusDatums d) = encCBOR d

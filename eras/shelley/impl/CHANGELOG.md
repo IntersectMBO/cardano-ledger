@@ -2,6 +2,23 @@
 
 ## 1.10.0.0
 
+* Add `NFData` instance for `AdaPots`, `ShelleyDelegEvent`
+* Add `Generic`, `Eq` and `NFData` instances for:
+  * `ShelleyDelegsEvent`
+  * `ShelleyDelplEvent`
+  * `ShelleyEpochEvent`
+  * `ShelleyLedgerEvent`
+  * `ShelleyMirEvent`
+  * `ShelleyNewEpochEvent`
+  * `PoolEvent`
+  * `PoolReap`
+  * `PpupEvent`
+  * `RupdEvent`
+  * `SnapEvent`
+  * `ShelleyTickEvent`
+  * `UtxoEvent`
+  * `ShelleyUtxowEvent`
+* Rename `NewEpoch` constructor of `ShelleyDelegEvent` to `DelegNewEpoch`
 * Rename `ShelleyGovState` fields:
   * `proposals` to `sgsCurProposals`
   * `futureProposals` to `sgsFutureProposals`
@@ -37,6 +54,22 @@
 
 ### `testlib`
 
+* Add `ToExpr` instances for:
+  * `ShelleyDelegsEvent`
+  * `ShelleyDelplEvent`
+  * `ShelleyEpochEvent`
+  * `ShelleyLedgerEvent`
+  * `ShelleyMirEvent`
+  * `ShelleyNewEpochEvent`
+  * `PoolEvent`
+  * `PoolReap`
+  * `PpupEvent`
+  * `RupdEvent`
+  * `SnapEvent`
+  * `ShelleyTickEvent`
+  * `UtxoEvent`
+  * `ShelleyUtxowEvent`
+* Add `SomeSTSEvent`
 * Replaced `small-steps-test` dependency with `small-steps:testlib`
 * Change `submitFailingTx`, `tryRunImpRule` and `trySubmitTx`
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`

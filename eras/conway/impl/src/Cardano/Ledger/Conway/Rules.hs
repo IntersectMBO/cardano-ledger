@@ -1,3 +1,8 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Cardano.Ledger.Conway.Rules (
   module Cardano.Ledger.Conway.Rules.Cert,
   module Cardano.Ledger.Conway.Rules.Deleg,
@@ -15,6 +20,8 @@ module Cardano.Ledger.Conway.Rules (
 )
 where
 
+import Cardano.Ledger.Conway.Core (EraRuleEvent, InjectRuleEvent (..))
+import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Rules.Bbody ()
 import Cardano.Ledger.Conway.Rules.Cert
 import Cardano.Ledger.Conway.Rules.Certs
@@ -32,3 +39,9 @@ import Cardano.Ledger.Conway.Rules.Tickf
 import Cardano.Ledger.Conway.Rules.Utxo ()
 import Cardano.Ledger.Conway.Rules.Utxos
 import Cardano.Ledger.Conway.Rules.Utxow
+import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent (..))
+
+type instance EraRuleEvent "TICK" (ConwayEra c) = ShelleyTickEvent (ConwayEra c)
+
+instance InjectRuleEvent "TICK" ConwayEpochEvent (ConwayEra c) where
+  injectEvent = TickNewEpochEvent . EpochEvent

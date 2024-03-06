@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -163,6 +162,11 @@ instance InjectRuleFailure "UTXOW" ShelleyPpupPredFailure (ShelleyEra c) where
 
 newtype ShelleyUtxowEvent era
   = UtxoEvent (Event (EraRule "UTXO" era))
+  deriving (Generic)
+
+deriving instance Eq (Event (EraRule "UTXO" era)) => Eq (ShelleyUtxowEvent era)
+
+instance NFData (Event (EraRule "UTXO" era)) => NFData (ShelleyUtxowEvent era)
 
 instance
   ( NoThunks (PredicateFailure (EraRule "UTXO" era))

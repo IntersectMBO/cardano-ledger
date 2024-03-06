@@ -116,6 +116,21 @@ data ShelleyEpochEvent era
   = PoolReapEvent (Event (EraRule "POOLREAP" era))
   | SnapEvent (Event (EraRule "SNAP" era))
   | UpecEvent (Event (EraRule "UPEC" era))
+  deriving (Generic)
+
+deriving instance
+  ( Eq (Event (EraRule "POOLREAP" era))
+  , Eq (Event (EraRule "SNAP" era))
+  , Eq (Event (EraRule "UPEC" era))
+  ) =>
+  Eq (ShelleyEpochEvent era)
+
+instance
+  ( NFData (Event (EraRule "POOLREAP" era))
+  , NFData (Event (EraRule "SNAP" era))
+  , NFData (Event (EraRule "UPEC" era))
+  ) =>
+  NFData (ShelleyEpochEvent era)
 
 instance
   ( EraTxOut era

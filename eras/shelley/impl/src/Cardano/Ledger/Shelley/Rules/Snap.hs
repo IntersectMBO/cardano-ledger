@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -62,6 +63,11 @@ instance NoThunks (ShelleySnapPredFailure era)
 
 newtype SnapEvent era
   = StakeDistEvent (Map (Credential 'Staking (EraCrypto era)) (Coin, KeyHash 'StakePool (EraCrypto era)))
+  deriving (Generic)
+
+deriving instance Eq (SnapEvent era)
+
+instance NFData (SnapEvent era)
 
 data SnapEnv era = SnapEnv !(LedgerState era) !(PParams era)
 

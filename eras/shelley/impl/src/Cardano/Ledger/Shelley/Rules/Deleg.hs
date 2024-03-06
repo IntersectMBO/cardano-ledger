@@ -5,7 +5,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -16,6 +15,7 @@ module Cardano.Ledger.Shelley.Rules.Deleg (
   DelegEnv (..),
   PredicateFailure,
   ShelleyDelegPredFailure (..),
+  ShelleyDelegEvent (..),
 )
 where
 
@@ -132,7 +132,10 @@ type instance EraRuleFailure "DELEG" (ShelleyEra c) = ShelleyDelegPredFailure (S
 
 instance InjectRuleFailure "DELEG" ShelleyDelegPredFailure (ShelleyEra c)
 
-newtype ShelleyDelegEvent era = NewEpoch EpochNo
+newtype ShelleyDelegEvent era = DelegNewEpoch EpochNo
+  deriving (Generic, Eq)
+
+instance NFData (ShelleyDelegEvent era)
 
 instance (EraPParams era, ShelleyEraTxCert era, ProtVerAtMost era 8) => STS (ShelleyDELEG era) where
   type State (ShelleyDELEG era) = DState era
@@ -387,7 +390,7 @@ checkSlotNotTooLate slot = do
   ei <- liftSTS $ asks epochInfoPure
   EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
   let newEpoch = EpochNo (currEpoch + 1)
-  tellEvent (NewEpoch newEpoch)
+  tellEvent (DelegNewEpoch newEpoch)
   firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
   let tooLate = firstSlot *- Duration sp
   slot < tooLate ?! MIRCertificateTooLateinEpochDELEG slot tooLate

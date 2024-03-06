@@ -227,6 +227,9 @@ instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
 
 data ConwayGovEvent era
   = GovNewProposals !(TxId (EraCrypto era)) !(Proposals era)
+  deriving (Generic, Eq)
+
+instance EraPParams era => NFData (ConwayGovEvent era)
 
 instance
   ( ConwayEraPParams era

@@ -63,6 +63,7 @@ import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), updateStakeDistributi
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (
   PpupEnv (..),
+  PpupEvent,
   ShelleyPPUP,
   ShelleyPpupPredFailure,
   UtxoEnv (..),
@@ -78,8 +79,11 @@ import Debug.Trace (traceEvent)
 import Lens.Micro
 
 type instance EraRuleFailure "UTXOS" (BabbageEra c) = AlonzoUtxosPredFailure (BabbageEra c)
+type instance EraRuleEvent "UTXOS" (BabbageEra c) = AlonzoUtxosEvent (BabbageEra c)
 
 instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (BabbageEra c)
+
+instance InjectRuleEvent "UTXOS" AlonzoUtxosEvent (BabbageEra c)
 
 instance InjectRuleFailure "UTXOS" ShelleyPpupPredFailure (BabbageEra c) where
   injectFailure = UpdateFailure
@@ -105,6 +109,7 @@ instance
   , Eq (EraRuleFailure "PPUP" era)
   , Show (EraRuleFailure "PPUP" era)
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
+  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , EraRule "UTXOS" era ~ BabbageUTXOS era
   ) =>
   STS (BabbageUTXOS era)
@@ -121,7 +126,7 @@ instance
   ( Era era
   , STS (ShelleyPPUP era)
   , EraRuleFailure "PPUP" era ~ ShelleyPpupPredFailure era
-  , Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
+  , EraRuleEvent "PPUP" era ~ PpupEvent era
   ) =>
   Embed (ShelleyPPUP era) (BabbageUTXOS era)
   where
@@ -148,6 +153,7 @@ utxosTransition ::
   , EraPlutusContext era
   , EraRule "UTXOS" era ~ BabbageUTXOS era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
+  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
@@ -165,9 +171,9 @@ expectScriptsToPass ::
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (EraRule "UTXOS" era)
-  , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
+  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   ) =>
   PParams era ->
   Tx era ->
@@ -188,7 +194,7 @@ expectScriptsToPass pp tx utxo = do
                 ValidationTagMismatch
                   (tx ^. isValidTxL)
                   (FailedUnexpectedly (scriptFailureToFailureDescription <$> fs))
-          Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
+          Passes ps -> mapM_ (tellEvent . injectEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
     Left info -> failBecause (injectFailure $ CollectErrors info)
 
 babbageEvalScriptsTxValid ::
@@ -207,6 +213,7 @@ babbageEvalScriptsTxValid ::
   , EraPlutusContext era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , EraRule "UTXOS" era ~ BabbageUTXOS era
+  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   ) =>
   TransitionRule (BabbageUTXOS era)
 babbageEvalScriptsTxValid = do
@@ -245,10 +252,10 @@ babbageEvalScriptsTxInvalid ::
   , STS (EraRule "UTXOS" era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , Signal (EraRule "UTXOS" era) ~ Tx era
-  , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
+  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 babbageEvalScriptsTxInvalid = do
@@ -271,8 +278,8 @@ babbageEvalScriptsTxInvalid = do
               injectFailure $
                 ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
           Fails ps fs -> do
-            mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
-            tellEvent (FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs))
+            mapM_ (tellEvent . injectEvent @"UTXOS" . SuccessfulPlutusScriptsEvent @era) (nonEmpty ps)
+            tellEvent (injectEvent $ FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs))
     Left info -> failBecause (injectFailure $ CollectErrors info)
 
   () <- pure $! traceEvent invalidEnd ()

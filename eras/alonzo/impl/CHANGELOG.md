@@ -2,6 +2,8 @@
 
 ## 1.7.0.0
 
+* Add type `EraRuleEvent` instances for `PPUP`, `LEDGER` and `TICK` events
+* Add `Eq` and `NFData` instances for `AlonzoUtxoEvent`, `AlonzoUtxowEvent` and `AlonzoUtxosEvent`
 * Add instances for `InjectRuleFailure` and switch to using `injectFailure`
 * Add `allegraToAlonzoUtxoPredFailure`
 * Add `NFData` instances for:
@@ -29,6 +31,7 @@
 
 ### `testlib`
 
+* Add `ToExpr` instances for `AlonzoUtxoEvent`, `AlonzoUtxowEvent` and `AlonzoUtxosEvent`
 * Add `RuleListEra` instance for Alonzo
 * Add:
   * `impLookupPlutusScriptMaybe`

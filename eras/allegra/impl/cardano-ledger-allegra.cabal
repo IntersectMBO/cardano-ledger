@@ -109,6 +109,7 @@ library testlib
         generic-random,
         microlens,
         mtl,
+        small-steps,
         QuickCheck
 
 test-suite tests

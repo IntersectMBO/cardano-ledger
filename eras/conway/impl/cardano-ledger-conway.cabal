@@ -155,8 +155,9 @@ library testlib
         cardano-strict-containers,
         data-default-class,
         generic-random,
-        small-steps >=1.1,
-        text
+        mtl,
+        text,
+        small-steps >=1.1
 
 test-suite tests
     type:             exitcode-stdio-1.0

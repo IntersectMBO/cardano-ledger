@@ -14,6 +14,7 @@ import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.PParams
+import Control.State.Transition.Extended (STS (..))
 import Test.Cardano.Ledger.Shelley.TreeDiff
 
 -- Scripts
@@ -51,3 +52,10 @@ instance
   , ToExpr (EraRuleFailure "PPUP" era)
   ) =>
   ToExpr (AllegraUtxoPredFailure era)
+
+instance
+  ( Era era
+  , ToExpr (TxOut era)
+  , ToExpr (Event (EraRule "PPUP" era))
+  ) =>
+  ToExpr (AllegraUtxoEvent era)

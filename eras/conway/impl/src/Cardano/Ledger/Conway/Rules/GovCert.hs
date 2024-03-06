@@ -16,7 +16,6 @@
 
 module Cardano.Ledger.Conway.Rules.GovCert (
   ConwayGOVCERT,
-  ConwayGovCertEvent (..),
   ConwayGovCertPredFailure (..),
   ConwayGovCertEnv (..),
 )
@@ -56,6 +55,7 @@ import Control.State.Transition.Extended (
  )
 import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
+import Data.Void (Void)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
@@ -140,8 +140,6 @@ instance
         pure (3, ConwayDRepIncorrectRefund refund expectedRefund)
       k -> invalidKey k
 
-newtype ConwayGovCertEvent era = GovCertEvent (Event (EraRule "GOVCERT" era))
-
 instance
   ( ConwayEraPParams era
   , State (EraRule "GOVCERT" era) ~ VState era
@@ -158,7 +156,7 @@ instance
   type Environment (ConwayGOVCERT era) = ConwayGovCertEnv era
   type BaseM (ConwayGOVCERT era) = ShelleyBase
   type PredicateFailure (ConwayGOVCERT era) = ConwayGovCertPredFailure era
-  type Event (ConwayGOVCERT era) = ConwayGovCertEvent era
+  type Event (ConwayGOVCERT era) = Void
 
   transitionRules = [conwayGovCertTransition @era]
 

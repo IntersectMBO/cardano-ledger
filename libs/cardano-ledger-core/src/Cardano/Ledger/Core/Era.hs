@@ -22,9 +22,11 @@ module Cardano.Ledger.Core.Era (
   -- ** Rules
   EraRule,
   EraRuleFailure,
+  EraRuleEvent,
   VoidEraRule,
   absurdEraRule,
   InjectRuleFailure (..),
+  InjectRuleEvent (..),
 
   -- ** Protocol Version
   AtMostEra,
@@ -50,7 +52,7 @@ import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto
 import Control.DeepSeq (NFData (..))
-import Control.State.Transition.Extended (PredicateFailure)
+import Control.State.Transition.Extended (PredicateFailure, STS (..))
 import Data.Kind (Constraint, Type)
 import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
@@ -130,6 +132,8 @@ type family EraRule (rule :: Symbol) era = (r :: Type) | r -> rule
 -- does not provide for us unfortunately.
 type family EraRuleFailure (rule :: Symbol) era = (r :: Type) | r -> rule era
 
+type family EraRuleEvent (rule :: Symbol) era = (r :: Type) | r -> rule era
+
 -- | This is a type with no inhabitans for the rules. It is used to indicate that a rule
 -- does not have a predicate failure as well as marking rules that have been disabled when
 -- comparing to prior eras.
@@ -171,6 +175,14 @@ class
   injectFailure :: t era -> EraRuleFailure rule era
   default injectFailure :: t era ~ EraRuleFailure rule era => t era -> EraRuleFailure rule era
   injectFailure = id
+
+class
+  EraRuleEvent rule era ~ Event (EraRule rule era) =>
+  InjectRuleEvent (rule :: Symbol) t era
+  where
+  injectEvent :: t era -> EraRuleEvent rule era
+  default injectEvent :: t era ~ EraRuleEvent rule era => t era -> EraRuleEvent rule era
+  injectEvent = id
 
 -----------------------------
 -- Protocol version bounds --

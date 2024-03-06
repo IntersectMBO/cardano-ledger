@@ -2,10 +2,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE QuantifiedConstraints #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -26,6 +24,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.HKD
+import Control.State.Transition.Extended (STS (..))
 import Data.Functor.Identity
 import Test.Cardano.Data.TreeDiff ()
 import Test.Cardano.Ledger.Babbage.TreeDiff
@@ -178,3 +177,44 @@ instance
   ToExpr (ConwayLedgerPredFailure era)
 
 instance ToExpr (Constitution era)
+
+instance
+  ( ToExpr (Event (EraRule "EPOCH" era))
+  , ToExpr (Event (EraRule "RUPD" era))
+  ) =>
+  ToExpr (ConwayNewEpochEvent era)
+
+instance
+  ( EraPParams era
+  , ToExpr (PParamsHKD Identity era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  , ToExpr (Event (EraRule "POOLREAP" era))
+  , ToExpr (Event (EraRule "SNAP" era))
+  ) =>
+  ToExpr (ConwayEpochEvent era)
+
+instance
+  ( ToExpr (Event (EraRule "CERTS" era))
+  , ToExpr (Event (EraRule "UTXOW" era))
+  , ToExpr (Event (EraRule "GOV" era))
+  ) =>
+  ToExpr (ConwayLedgerEvent era)
+
+instance
+  ToExpr (Event (EraRule "CERT" era)) =>
+  ToExpr (ConwayCertsEvent era)
+
+instance
+  ( ToExpr (Event (EraRule "DELEG" era))
+  , ToExpr (Event (EraRule "GOVCERT" era))
+  , ToExpr (Event (EraRule "POOL" era))
+  ) =>
+  ToExpr (ConwayCertEvent era)
+
+instance ToExpr (TxOut era) => ToExpr (ConwayUtxosEvent era)
+
+instance
+  ( Era era
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
+  ToExpr (ConwayGovEvent era)

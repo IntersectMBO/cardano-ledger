@@ -72,6 +72,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules (
   PpupEnv (..),
+  PpupEvent,
   ShelleyPPUP,
   ShelleyPpupPredFailure,
   UtxoEnv (..),
@@ -135,7 +136,7 @@ instance
   transitionRules = [utxosTransition]
 
 data AlonzoUtxosEvent era
-  = AlonzoPpupToUtxosEvent (Event (EraRule "PPUP" era))
+  = AlonzoPpupToUtxosEvent (EraRuleEvent "PPUP" era)
   | TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
   | SuccessfulPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
   | FailedPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
@@ -145,12 +146,28 @@ data AlonzoUtxosEvent era
       (UTxO era)
       -- | UTxO created
       (UTxO era)
+  deriving (Generic)
+
+deriving instance
+  ( Era era
+  , Eq (TxOut era)
+  , Eq (EraRuleEvent "PPUP" era)
+  ) =>
+  Eq (AlonzoUtxosEvent era)
+
+instance
+  ( Era era
+  , NFData (TxOut era)
+  , NFData (EraRuleEvent "PPUP" era)
+  ) =>
+  NFData (AlonzoUtxosEvent era)
 
 instance
   ( Era era
   , STS (ShelleyPPUP era)
   , EraRuleFailure "PPUP" era ~ ShelleyPpupPredFailure era
   , Event (EraRule "PPUP" era) ~ Event (ShelleyPPUP era)
+  , EraRuleEvent "PPUP" era ~ PpupEvent era
   ) =>
   Embed (ShelleyPPUP era) (AlonzoUTXOS era)
   where

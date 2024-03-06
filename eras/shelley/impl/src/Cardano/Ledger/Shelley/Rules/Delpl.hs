@@ -44,8 +44,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   certDState,
   certPState,
  )
-import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..), ShelleyDELEG, ShelleyDelegPredFailure)
+import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..), ShelleyDELEG, ShelleyDelegEvent, ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL, ShelleyPoolPredFailure)
+import qualified Cardano.Ledger.Shelley.Rules.Pool as Pool
 import Cardano.Ledger.Shelley.TxCert (GenesisDelegCert (..), ShelleyTxCert (..))
 import Cardano.Ledger.Slot (SlotNo)
 import Control.DeepSeq
@@ -82,8 +83,21 @@ instance InjectRuleFailure "DELPL" ShelleyDelegPredFailure (ShelleyEra c) where
   injectFailure = DelegFailure
 
 data ShelleyDelplEvent era
-  = PoolEvent (Event (ShelleyPOOL era))
-  | DelegEvent (Event (ShelleyDELEG era))
+  = PoolEvent (Event (EraRule "POOL" era))
+  | DelegEvent (Event (EraRule "DELEG" era))
+  deriving (Generic)
+
+instance
+  ( NFData (Event (EraRule "DELEG" era))
+  , NFData (Event (EraRule "POOL" era))
+  ) =>
+  NFData (ShelleyDelplEvent era)
+
+deriving instance
+  ( Eq (Event (EraRule "DELEG" era))
+  , Eq (Event (EraRule "POOL" era))
+  ) =>
+  Eq (ShelleyDelplEvent era)
 
 deriving stock instance
   ( Eq (PredicateFailure (EraRule "DELEG" era))
@@ -209,6 +223,7 @@ instance
   ( Era era
   , STS (ShelleyPOOL era)
   , PredicateFailure (EraRule "POOL" era) ~ ShelleyPoolPredFailure era
+  , Event (EraRule "POOL" era) ~ Pool.PoolEvent era
   ) =>
   Embed (ShelleyPOOL era) (ShelleyDELPL era)
   where
@@ -220,6 +235,7 @@ instance
   , EraPParams era
   , ProtVerAtMost era 8
   , PredicateFailure (EraRule "DELEG" era) ~ ShelleyDelegPredFailure era
+  , Event (EraRule "DELEG" era) ~ ShelleyDelegEvent era
   ) =>
   Embed (ShelleyDELEG era) (ShelleyDELPL era)
   where

@@ -506,6 +506,8 @@ data Obligations = Obligations
   }
   deriving (Eq, Ord, Generic)
 
+instance NFData Obligations
+
 -- | Calculate total possible refunds in the system that are related to certificates
 --
 -- There is an invariant that the sum of all the fields should be the same as the

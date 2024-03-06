@@ -105,6 +105,9 @@ data RupdEvent c
   = RupdEvent
       !EpochNo
       !(Map.Map (Credential 'Staking c) (Set (Reward c)))
+  deriving (Generic, Eq)
+
+instance NFData (RupdEvent c)
 
 -- | tell a RupdEvent only if the map is non-empty
 tellRupd :: String -> RupdEvent (EraCrypto era) -> Rule (ShelleyRUPD era) rtype ()

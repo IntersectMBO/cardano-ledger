@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -26,7 +27,9 @@ import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
+import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
 import Cardano.Ledger.Shelley.Rules
+import qualified Data.TreeDiff.OMap as OMap
 import Test.Cardano.Ledger.Mary.TreeDiff
 
 -- Scripts
@@ -145,3 +148,27 @@ instance
   , ToExpr (TxCert era)
   ) =>
   ToExpr (AlonzoUtxowPredFailure era)
+
+instance ToExpr (Event (EraRule "UTXO" era)) => ToExpr (AlonzoUtxowEvent era)
+
+instance ToExpr (Event (EraRule "UTXOS" era)) => ToExpr (AlonzoUtxoEvent era)
+
+instance
+  ( ToExpr (EraRuleEvent "PPUP" era)
+  , ToExpr (TxOut era)
+  , ToExpr (PlutusWithContext (EraCrypto era))
+  ) =>
+  ToExpr (AlonzoUtxosEvent era)
+
+instance
+  ToExpr (ScriptHash c) =>
+  ToExpr (PlutusWithContext c)
+  where
+  toExpr PlutusWithContext {..} =
+    Rec "PlutusWithContext" $
+      OMap.fromList
+        [ ("pwcProtocolVersion", toExpr pwcProtocolVersion)
+        , ("pwcScriptHash", toExpr pwcScriptHash)
+        , ("pwcExUnits", toExpr pwcExUnits)
+        , ("pwcCostModel", toExpr pwcCostModel)
+        ]

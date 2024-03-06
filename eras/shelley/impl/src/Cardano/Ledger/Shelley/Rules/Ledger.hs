@@ -127,9 +127,24 @@ instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure (ShelleyEra c) where
 instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure (ShelleyEra c) where
   injectFailure = DelegsFailure . injectFailure
 
+type instance EraRuleEvent "LEDGER" (ShelleyEra c) = ShelleyLedgerEvent (ShelleyEra c)
+
 data ShelleyLedgerEvent era
   = UtxowEvent (Event (EraRule "UTXOW" era))
   | DelegsEvent (Event (EraRule "DELEGS" era))
+  deriving (Generic)
+
+deriving instance
+  ( Eq (Event (EraRule "UTXOW" era))
+  , Eq (Event (EraRule "DELEGS" era))
+  ) =>
+  Eq (ShelleyLedgerEvent era)
+
+instance
+  ( NFData (Event (EraRule "UTXOW" era))
+  , NFData (Event (EraRule "DELEGS" era))
+  ) =>
+  NFData (ShelleyLedgerEvent era)
 
 deriving stock instance
   ( Show (PredicateFailure (EraRule "DELEGS" era))

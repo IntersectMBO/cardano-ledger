@@ -18,6 +18,7 @@
 module Cardano.Ledger.Conway.Rules.Utxos (
   ConwayUTXOS,
   ConwayUtxosPredFailure (..),
+  ConwayUtxosEvent (..),
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
@@ -25,13 +26,13 @@ import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent (..),
   AlonzoUtxoPredFailure (..),
-  AlonzoUtxosEvent (..),
+  AlonzoUtxosEvent,
   AlonzoUtxosPredFailure,
   TagMismatchDescription,
   validBegin,
   validEnd,
  )
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxosPredFailure (..))
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxosEvent (..), AlonzoUtxosPredFailure (..))
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO,
   AlonzoScriptsNeeded,
@@ -49,16 +50,19 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Conway.TxInfo ()
-import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Plutus (PlutusWithContext)
+import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), updateUTxOState)
-import Cardano.Ledger.UTxO (EraUTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
+import Data.List.NonEmpty (NonEmpty)
 import Debug.Trace (traceEvent)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -78,12 +82,35 @@ data ConwayUtxosPredFailure era
   deriving
     (Generic)
 
+data ConwayUtxosEvent era
+  = TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
+  | SuccessfulPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
+  | FailedPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
+  | -- | The UTxOs consumed and created by a signal tx
+    TxUTxODiff
+      -- | UTxO consumed
+      (UTxO era)
+      -- | UTxO created
+      (UTxO era)
+  deriving (Generic)
+
+deriving instance (Era era, Eq (TxOut era)) => Eq (ConwayUtxosEvent era)
+
+instance (Era era, NFData (TxOut era)) => NFData (ConwayUtxosEvent era)
+
 type instance EraRuleFailure "UTXOS" (ConwayEra c) = ConwayUtxosPredFailure (ConwayEra c)
+
+type instance EraRuleEvent "UTXOS" (ConwayEra c) = ConwayUtxosEvent (ConwayEra c)
 
 instance InjectRuleFailure "UTXOS" ConwayUtxosPredFailure (ConwayEra c)
 
+instance InjectRuleEvent "UTXOS" ConwayUtxosEvent (ConwayEra c)
+
 instance InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure (ConwayEra c) where
   injectFailure = alonzoToConwayUtxosPredFailure
+
+instance InjectRuleEvent "UTXOS" AlonzoUtxosEvent (ConwayEra c) where
+  injectEvent = alonzoToConwayUtxosEvent
 
 alonzoToConwayUtxosPredFailure ::
   forall era.
@@ -94,6 +121,18 @@ alonzoToConwayUtxosPredFailure = \case
   Alonzo.ValidationTagMismatch t x -> ValidationTagMismatch t x
   Alonzo.CollectErrors x -> CollectErrors x
   Alonzo.UpdateFailure x -> absurdEraRule @"PPUP" @era x
+
+alonzoToConwayUtxosEvent ::
+  forall era.
+  EraRuleEvent "PPUP" era ~ VoidEraRule "PPUP" era =>
+  Alonzo.AlonzoUtxosEvent era ->
+  ConwayUtxosEvent era
+alonzoToConwayUtxosEvent = \case
+  Alonzo.AlonzoPpupToUtxosEvent x -> absurdEraRule @"PPUP" @era x
+  Alonzo.TotalDeposits h c -> TotalDeposits h c
+  Alonzo.SuccessfulPlutusScriptsEvent l -> SuccessfulPlutusScriptsEvent l
+  Alonzo.FailedPlutusScriptsEvent l -> FailedPlutusScriptsEvent l
+  Alonzo.TxUTxODiff x y -> TxUTxODiff x y
 
 instance
   ( EraTxCert era
@@ -164,6 +203,8 @@ instance
   , Signal (ConwayUTXOS era) ~ Tx era
   , EraRule "UTXOS" era ~ ConwayUTXOS era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
+  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
   ) =>
   STS (ConwayUTXOS era)
   where
@@ -172,7 +213,7 @@ instance
   type State (ConwayUTXOS era) = UTxOState era
   type Signal (ConwayUTXOS era) = AlonzoTx era
   type PredicateFailure (ConwayUTXOS era) = ConwayUtxosPredFailure era
-  type Event (ConwayUTXOS era) = AlonzoUtxosEvent era
+  type Event (ConwayUTXOS era) = ConwayUtxosEvent era
 
   transitionRules = [utxosTransition]
 
@@ -183,13 +224,14 @@ instance
   , ConwayEraPParams era
   , EraGov era
   , EraPlutusContext era
-  , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
   , GovState era ~ ConwayGovState era
   , PredicateFailure (EraRule "UTXOS" era) ~ ConwayUtxosPredFailure era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (ConwayUTXOS era) ~ Tx era
   , EraRule "UTXOS" era ~ ConwayUTXOS era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
+  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
   ) =>
   Embed (ConwayUTXOS era) (BabbageUTXO era)
   where
@@ -207,9 +249,10 @@ utxosTransition ::
   , STS (EraRule "UTXOS" era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
-  , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
+  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 utxosTransition =
@@ -229,9 +272,10 @@ conwayEvalScriptsTxValid ::
   , STS (EraRule "UTXOS" era)
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , Event (EraRule "UTXOS" era) ~ AlonzoUtxosEvent era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
+  , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
+  , InjectRuleEvent "UTXOS" ConwayUtxosEvent era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 conwayEvalScriptsTxValid = do
@@ -250,6 +294,6 @@ conwayEvalScriptsTxValid = do
       txBody
       certState
       govState
-      (tellEvent . TotalDeposits (hashAnnotated txBody))
-      (\a b -> tellEvent $ TxUTxODiff a b)
+      (tellEvent . injectEvent . TotalDeposits (hashAnnotated txBody))
+      (\a b -> tellEvent . injectEvent $ TxUTxODiff a b)
   pure $! utxos' & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL
