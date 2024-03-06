@@ -62,8 +62,67 @@ conwayWitsVKeyNeeded = getConwayWitsVKeyNeeded
 {-# DEPRECATED conwayWitsVKeyNeeded "In favor of `getConwayWitsVKeyNeeded` or `getWitsVKeyNeeded`" #-}
 
 -- ================================
+data ConwayUtxowPredFailure era
+  = UtxoFailure (PredicateFailure (EraRule "UTXO" era))
+  | InvalidWitnessesUTXOW
+      ![VKey 'Witness (EraCrypto era)]
+  | -- | witnesses which failed in verifiedWits function
+    MissingVKeyWitnessesUTXOW
+      -- | witnesses which were needed and not supplied
+      !(Set (KeyHash 'Witness (EraCrypto era)))
+  | -- | missing scripts
+    MissingScriptWitnessesUTXOW
+      !(Set (ScriptHash (EraCrypto era)))
+  | -- | failed scripts
+    ScriptWitnessNotValidatingUTXOW
+      !(Set (ScriptHash (EraCrypto era)))
+  | -- | hash of the full metadata
+    MissingTxBodyMetadataHash
+      !(AuxiliaryDataHash (EraCrypto era))
+  | -- | hash of the metadata included in the transaction body
+    MissingTxMetadata
+      !(AuxiliaryDataHash (EraCrypto era))
+  | ConflictingMetadataHash
+      -- | hash of the metadata included in the transaction body
+      !(AuxiliaryDataHash (EraCrypto era))
+      -- | expected hash of the full metadata
+      !(AuxiliaryDataHash (EraCrypto era))
+  | -- | Contains out of range values (string`s too long)
+    InvalidMetadata
+  | -- | extraneous scripts
+    ExtraneousScriptWitnessesUTXOW
+      !(Set (ScriptHash (EraCrypto era)))
+  | MissingRedeemers
+      ![(PlutusPurpose AsItem era, ScriptHash (EraCrypto era))]
+  | MissingRequiredDatums
+      -- | Set of missing data hashes
+      !(Set (DataHash (EraCrypto era)))
+      -- | Set of received data hashes
+      !(Set (DataHash (EraCrypto era)))
+  | NotAllowedSupplementalDatums
+      -- | Set of unallowed data hashes
+      !(Set (DataHash (EraCrypto era)))
+      -- | Set of acceptable supplemental data hashes
+      !(Set (DataHash (EraCrypto era)))
+  | PPViewHashesDontMatch
+      -- | The PPHash in the TxBody
+      !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+      -- | Computed from the current Protocol Parameters
+      !(StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
+  | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
+    UnspendableUTxONoDatumHash
+      (Set (TxIn (EraCrypto era)))
+  | -- | List of redeemers not needed
+    ExtraRedeemers ![PlutusPurpose AsIx era]
+  | -- | Embed UTXO rule failures
+    MalformedScriptWitnesses
+      !(Set (ScriptHash (EraCrypto era)))
+  | -- | the set of malformed script witnesses
+    MalformedReferenceScripts
+      !(Set (ScriptHash (EraCrypto era)))
+  deriving (Generic)
 
-type instance EraRuleFailure "UTXOW" (ConwayEra c) = BabbageUtxowPredFailure (ConwayEra c)
+type instance EraRuleFailure "UTXOW" (ConwayEra c) = ConwayUtxowPredFailure (ConwayEra c)
 
 instance InjectRuleFailure "UTXOW" BabbageUtxowPredFailure (ConwayEra c)
 
@@ -77,6 +136,9 @@ instance InjectRuleFailure "UTXOW" BabbageUtxoPredFailure (ConwayEra c) where
   injectFailure = UtxoFailure
 
 instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure (ConwayEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
+instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure (ConwayEra c) where
   injectFailure = UtxoFailure . injectFailure
 
 instance InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure (ConwayEra c) where
@@ -116,7 +178,7 @@ instance
   type Signal (ConwayUTXOW era) = Tx era
   type Environment (ConwayUTXOW era) = UtxoEnv era
   type BaseM (ConwayUTXOW era) = ShelleyBase
-  type PredicateFailure (ConwayUTXOW era) = BabbageUtxowPredFailure era
+  type PredicateFailure (ConwayUTXOW era) = ConwayUtxowPredFailure era
   type Event (ConwayUTXOW era) = AlonzoUtxowEvent era
   transitionRules = [babbageUtxowTransition @era]
   initialRules = []
@@ -127,7 +189,7 @@ instance
   , PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era
   , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
   , BaseM (ConwayUTXOW era) ~ ShelleyBase
-  , PredicateFailure (ConwayUTXOW era) ~ BabbageUtxowPredFailure era
+  , PredicateFailure (ConwayUTXOW era) ~ ConwayUtxowPredFailure era
   , Event (ConwayUTXOW era) ~ AlonzoUtxowEvent era
   ) =>
   Embed (BabbageUTXO era) (ConwayUTXOW era)

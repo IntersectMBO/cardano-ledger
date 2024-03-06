@@ -23,7 +23,99 @@ import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure)
 
-type instance EraRuleFailure "UTXO" (ConwayEra c) = BabbageUtxoPredFailure (ConwayEra c)
+data ConwayUtxoPredFailure era
+  = -- | The bad transaction inputs
+    BadInputsUTxO
+      !(Set (TxIn (EraCrypto era)))
+  | OutsideValidityIntervalUTxO
+      -- | transaction's validity interval
+      !ValidityInterval
+      -- | current slot
+      !SlotNo
+  | MaxTxSizeUTxO
+      -- | the actual transaction size
+      !Integer
+      -- | the max transaction size
+      !Integer
+  | InputSetEmptyUTxO
+  | FeeTooSmallUTxO
+      -- | the minimum fee for this transaction
+      !Coin
+      -- | the fee supplied in this transaction
+      !Coin
+  | ValueNotConservedUTxO
+      -- | the Coin consumed by this transaction
+      !(Value era)
+      -- | the Coin produced by this transaction
+      !(Value era)
+  | -- | the set of addresses with incorrect network IDs
+    WrongNetwork
+      -- | the expected network id
+      !Network
+      -- | the set of addresses with incorrect network IDs
+      !(Set (Addr (EraCrypto era)))
+  | WrongNetworkWithdrawal
+      -- | the expected network id
+      !Network
+      -- | the set of reward addresses with incorrect network IDs
+      !(Set (RewardAccount (EraCrypto era)))
+  | -- | list of supplied transaction outputs that are too small
+    OutputTooSmallUTxO
+      ![TxOut era]
+  | -- | Subtransition Failures
+    UtxosFailure (PredicateFailure (EraRule "UTXOS" era))
+  | -- | list of supplied bad transaction outputs
+    OutputBootAddrAttrsTooBig
+      ![TxOut era]
+  | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
+    OutputTooBigUTxO
+      ![(Integer, Integer, TxOut era)]
+  | InsufficientCollateral
+      -- | balance computed
+      !Coin
+      -- | the required collateral for the given fee
+      !Coin
+  | -- | The UTxO entries which have the wrong kind of script
+    ScriptsNotPaidUTxO
+      !(UTxO era)
+  | ExUnitsTooBigUTxO
+      -- | Max EXUnits from the protocol parameters
+      !ExUnits
+      -- | EXUnits supplied
+      !ExUnits
+  | -- | The inputs marked for use as fees contain non-ADA tokens
+    CollateralContainsNonADA !(Value era)
+  | -- | Wrong Network ID in body
+    WrongNetworkInTxBody
+      -- | Actual Network ID
+      !Network
+      -- | Network ID in transaction body
+      !Network
+  | -- | slot number outside consensus forecast range
+    OutsideForecast
+      !SlotNo
+  | -- | There are too many collateral inputs
+    TooManyCollateralInputs
+      -- | Max allowed collateral inputs
+      !Natural
+      -- | Number of collateral inputs
+      !Natural
+  | NoCollateralInputs
+  | -- | The collateral is not equivalent to the total collateral asserted by the transaction
+    IncorrectTotalCollateralField
+      -- | collateral provided
+      !Coin
+      -- | collateral amount declared in transaction body
+      !Coin
+  | -- | list of supplied transaction outputs that are too small,
+    -- together with the minimum value for the given output.
+    BabbageOutputTooSmallUTxO
+      ![(TxOut era, Coin)]
+  | -- | TxIns that appear in both inputs and reference inputs
+    BabbageNonDisjointRefInputs
+      !(NonEmpty (TxIn (EraCrypto era)))
+
+type instance EraRuleFailure "UTXO" (ConwayEra c) = ConwayUtxoPredFailure (ConwayEra c)
 
 instance InjectRuleFailure "UTXO" BabbageUtxoPredFailure (ConwayEra c)
 
