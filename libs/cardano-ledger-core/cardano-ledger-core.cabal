@@ -122,7 +122,7 @@ library
         set-algebra,
         non-integral >=1.0,
         primitive,
-        small-steps >=1.0,
+        small-steps >=1.1,
         cardano-strict-containers,
         text,
         time,
@@ -197,7 +197,7 @@ library testlib
         time,
         cardano-slotting,
         unliftio,
-        small-steps
+        small-steps >=1.1
 
     if !impl(ghc >=9.2)
         ghc-options: -Wno-name-shadowing

@@ -85,7 +85,7 @@ library
         nothunks,
         plutus-ledger-api ^>=1.22.1,
         set-algebra,
-        small-steps,
+        small-steps >=1.1,
         text,
         transformers,
         validation-selective
@@ -117,7 +117,7 @@ library testlib
         cardano-ledger-binary,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         generic-random,
-        small-steps,
+        small-steps >=1.1,
         QuickCheck
 
 test-suite tests

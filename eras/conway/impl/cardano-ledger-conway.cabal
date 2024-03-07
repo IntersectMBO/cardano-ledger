@@ -101,7 +101,7 @@ library
         nothunks,
         plutus-ledger-api ^>=1.22.1,
         set-algebra,
-        small-steps,
+        small-steps >=1.1,
         text,
         transformers,
         validation-selective
@@ -154,9 +154,8 @@ library testlib
         cardano-strict-containers,
         data-default-class,
         generic-random,
-        small-steps,
-        text,
-        small-steps
+        small-steps >=1.1,
+        text
 
 test-suite tests
     type:             exitcode-stdio-1.0

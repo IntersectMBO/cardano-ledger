@@ -51,7 +51,7 @@ library
         quiet,
         non-integral,
         set-algebra,
-        small-steps,
+        small-steps >=1.1,
         transformers
 
 library testlib

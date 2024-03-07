@@ -47,7 +47,7 @@ library
         cardano-strict-containers,
         containers,
         data-default-class,
-        small-steps,
+        small-steps >=1.1,
         plutus-ledger-api,
         microlens
 
