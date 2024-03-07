@@ -117,7 +117,7 @@
           modules = [
             ({pkgs, ...}: {
               # packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
-              # uncomment when profiling
+              # uncomment if necessary when profiling
               packages.byron-spec-chain.configureFlags = ["--ghc-option=-Werror"];
               packages.byron-spec-ledger.configureFlags = ["--ghc-option=-Werror"];
               packages.delegation.configureFlags = ["--ghc-option=-Werror"];
