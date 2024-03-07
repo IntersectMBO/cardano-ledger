@@ -34,7 +34,7 @@ header_body =
   , block_body_size  : uint
   , block_body_hash  : $hash32 ; merkle triple root
   , operational_cert
-  , [ protocol_version ]
+  , protocol_version
   ]
 
 operational_cert =
@@ -48,7 +48,7 @@ next_major_protocol_version = 9
 
 major_protocol_version = 1..next_major_protocol_version
 
-protocol_version = (major_protocol_version, uint)
+protocol_version = [(major_protocol_version, uint)]
 
 transaction_body =
   { 0 : set<transaction_input>    ; inputs
@@ -280,7 +280,7 @@ protocol_param_update =
   , ? 9: nonnegative_interval ; pool pledge influence
   , ? 10: unit_interval       ; expansion rate
   , ? 11: unit_interval       ; treasury growth rate
-  , ? 14: [protocol_version]  ; protocol version
+  , ? 14: protocol_version    ; protocol version
   , ? 16: coin                ; min pool cost
   , ? 17: coin                ; ada per utxo byte
   , ? 18: costmdls            ; cost models for script languages
