@@ -17,9 +17,11 @@ import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Val ((<+>))
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
+import Data.Word (Word64)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational
@@ -75,6 +77,96 @@ treasuryWithdrawalsSpec =
                    , (raCredential rewardAcount2, Coin 222)
                    ]
       ensTreasury enactState'' `shouldBe` Coin 1
+
+    it "Multiple proposals in a single Tx that add up to more than the balance" $ do
+      (drepC, committeeC, _gpi) <- electBasicCommittee
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      Coin curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+      rewardAccount1 <- registerRewardAccount
+      rewardAccount2 <- registerRewardAccount
+      rewardAccount3 <- registerRewardAccount
+      rewardAccount4 <- registerRewardAccount
+      rewardAccount5 <- registerRewardAccount
+      let eachWithdrawal = curTreasury `div` 4
+      gpi <-
+        submitTreasuryWithdrawals
+          [ (rewardAccount1, Coin eachWithdrawal)
+          , (rewardAccount2, Coin eachWithdrawal)
+          , (rewardAccount3, Coin eachWithdrawal)
+          , (rewardAccount4, Coin eachWithdrawal)
+          , (rewardAccount5, Coin eachWithdrawal)
+          ]
+      submitYesVote_ (DRepVoter drepC) gpi
+      submitYesVote_ (CommitteeVoter committeeC) gpi
+      passNEpochs 2
+      getsNES (nesEsL . esAccountStateL . asTreasuryL)
+        `shouldReturn` Coin curTreasury
+      modifyNES $
+        nesEsL . esAccountStateL . asTreasuryL
+          %~ (<+> Coin eachWithdrawal)
+      passNEpochs 2
+      getsNES (nesEsL . esAccountStateL . asTreasuryL)
+        `shouldReturn` Coin 0
+    it "Multiple proposals in a single Tx that add up to more than maxBound Word64" $ do
+      (drepC, committeeC, _gpi) <- electBasicCommittee
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      modifyNES $
+        nesEsL . esAccountStateL . asTreasuryL
+          .~ Coin (fromIntegral (maxBound :: Word64))
+      Coin curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+      rewardAccount1 <- registerRewardAccount
+      rewardAccount2 <- registerRewardAccount
+      rewardAccount3 <- registerRewardAccount
+      rewardAccount4 <- registerRewardAccount
+      rewardAccount5 <- registerRewardAccount
+      let eachWithdrawal = curTreasury `div` 4
+      gpi <-
+        submitTreasuryWithdrawals
+          [ (rewardAccount1, Coin eachWithdrawal)
+          , (rewardAccount2, Coin eachWithdrawal)
+          , (rewardAccount3, Coin eachWithdrawal)
+          , (rewardAccount4, Coin eachWithdrawal)
+          , (rewardAccount5, Coin eachWithdrawal)
+          ]
+      submitYesVote_ (DRepVoter drepC) gpi
+      submitYesVote_ (CommitteeVoter committeeC) gpi
+      passNEpochs 2
+      getsNES (nesEsL . esAccountStateL . asTreasuryL)
+        `shouldReturn` Coin curTreasury
+    it "Proposals in multiple epochs" $ do
+      (drepC, committeeC, _gpi) <- electBasicCommittee
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      modifyNES $
+        nesEsL . esAccountStateL . asTreasuryL
+          .~ Coin (fromIntegral (maxBound :: Word64))
+      Coin curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+      rewardAccount1 <- registerRewardAccount
+      rewardAccount2 <- registerRewardAccount
+      rewardAccount3 <- registerRewardAccount
+      rewardAccount4 <- registerRewardAccount
+      rewardAccount5 <- registerRewardAccount
+      let eachWithdrawal = curTreasury `div` 4
+      gpi1 <-
+        submitTreasuryWithdrawals
+          [ (rewardAccount1, Coin eachWithdrawal)
+          , (rewardAccount2, Coin eachWithdrawal)
+          , (rewardAccount3, Coin eachWithdrawal)
+          ]
+      submitYesVote_ (DRepVoter drepC) gpi1
+      submitYesVote_ (CommitteeVoter committeeC) gpi1
+      passNEpochs 2
+      getsNES (nesEsL . esAccountStateL . asTreasuryL)
+        `shouldReturn` Coin (curTreasury - 3 * eachWithdrawal)
+      gpi2 <-
+        submitTreasuryWithdrawals
+          [ (rewardAccount4, Coin eachWithdrawal)
+          , (rewardAccount5, Coin eachWithdrawal)
+          ]
+      submitYesVote_ (DRepVoter drepC) gpi2
+      submitYesVote_ (CommitteeVoter committeeC) gpi2
+      passNEpochs 2
+      getsNES (nesEsL . esAccountStateL . asTreasuryL)
+        `shouldReturn` Coin (curTreasury - 3 * eachWithdrawal)
 
 hardForkInitiationSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
 hardForkInitiationSpec =
