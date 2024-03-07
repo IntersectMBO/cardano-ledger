@@ -605,8 +605,9 @@ submitParameterChange ::
   StrictMaybe (GovPurposeId 'PParamUpdatePurpose era) ->
   PParamsUpdate era ->
   ImpTestM era (GovActionId (EraCrypto era))
-submitParameterChange parent ppu =
-  submitGovAction $ ParameterChange parent ppu SNothing
+submitParameterChange parent ppu = do
+  policy <- getGovPolicy
+  submitGovAction $ ParameterChange parent ppu policy
 
 getGovPolicy :: ConwayEraGov era => ImpTestM era (StrictMaybe (ScriptHash (EraCrypto era)))
 getGovPolicy =

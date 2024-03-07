@@ -28,13 +28,12 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.DRep
-import Cardano.Ledger.Plutus (
-  Data (..),
-  SLanguage (..),
-  TxOutSource (..),
-  hashData,
-  hashPlutusScript,
+import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Mary.Value (
+  MultiAsset (..),
+  PolicyID (..),
  )
+import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
@@ -51,88 +50,8 @@ import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus (testingCostModels)
 import Test.Cardano.Ledger.Plutus.Examples (alwaysFails2, alwaysSucceeds2, guessTheNumber3)
-
-spendDatum :: P1.Data
-spendDatum = P1.I 3
-
-txWithPlutus ::
-  forall era.
-  ConwayEraImp era =>
-  ScriptHash (EraCrypto era) ->
-  ImpTestM era (Tx era)
-txWithPlutus sh = do
-  submitTxAnn "Submit a Plutus" $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . outputsTxBodyL
-        .~ SSeq.singleton (scriptLockedTxOut sh)
-
-scriptLockedTxOut ::
-  forall era.
-  AlonzoEraTxOut era =>
-  ScriptHash (EraCrypto era) ->
-  TxOut era
-scriptLockedTxOut shSpending =
-  mkBasicTxOut
-    (Addr Testnet (ScriptHashObj shSpending) StakeRefNull)
-    (inject $ Coin 1_000_000)
-    & dataHashTxOutL .~ SJust (hashData @era $ Data spendDatum)
-
-mkRefTxOut ::
-  ( BabbageEraTxOut era
-  , AlonzoEraImp era
-  ) =>
-  ScriptHash (EraCrypto era) ->
-  ImpTestM era (TxOut era)
-mkRefTxOut sh = do
-  kpPayment <- lookupKeyPair =<< freshKeyHash
-  kpStaking <- lookupKeyPair =<< freshKeyHash
-  let mbyPlutusScript = impLookupPlutusScriptMaybe sh
-  pure $
-    mkBasicTxOut (mkAddr (kpPayment, kpStaking)) (inject $ Coin 100)
-      & referenceScriptTxOutL .~ maybeToStrictMaybe (fromPlutusScript <$> mbyPlutusScript)
-
-setupRefTx ::
-  forall era.
-  ( BabbageEraTxOut era
-  , AlonzoEraImp era
-  ) =>
-  ImpTestM era (TxId (EraCrypto era))
-setupRefTx = do
-  let shSpending = hashPlutusScript (guessTheNumber3 SPlutusV1)
-  refTxOut <- mkRefTxOut shSpending
-  fmap txIdTx . submitTxAnn "Producing transaction" $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . outputsTxBodyL
-        .~ SSeq.fromList
-          [ refTxOut
-          , scriptLockedTxOut shSpending
-          , scriptLockedTxOut shSpending
-          ]
-
-testPlutusV1V2Failure ::
-  forall era a.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , HasCallStack
-  ) =>
-  ScriptHash (EraCrypto era) ->
-  a ->
-  Lens' (TxBody era) a ->
-  ContextError era ->
-  ImpTestM era ()
-testPlutusV1V2Failure sh badField lenz errorField = do
-  tx <- txWithPlutus @era sh
-  submitFailingTx
-    ( mkBasicTx mkBasicTxBody
-        & bodyTxL . inputsTxBodyL
-          .~ Set.singleton (txInAt (0 :: Int) tx)
-        & bodyTxL . lenz
-          .~ badField
-    )
-    ( pure . injectFailure $
-        CollectErrors [BadTranslation errorField]
-    )
 
 spec ::
   forall era.
@@ -149,6 +68,7 @@ spec =
     datumAndReferenceInputsSpec
     conwayFeaturesPlutusV1V2FailureSpec
     govPolicySpec
+    costModelsSpec
 
 datumAndReferenceInputsSpec ::
   forall era.
@@ -509,7 +429,8 @@ govPolicySpec = do
       (dRep, committeeMember, _) <- electBasicCommittee
       scriptHash <- impAddNativeScript $ RequireTimeStart (SlotNo 1)
       anchor <- arbitrary
-      void $ enactConstitution SNothing (Constitution anchor (SJust scriptHash)) dRep committeeMember
+      void $
+        enactConstitution SNothing (Constitution anchor (SJust scriptHash)) dRep committeeMember
       rewardAccount <- registerRewardAccount
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       impAnn "ParameterChange" $ do
@@ -550,7 +471,12 @@ govPolicySpec = do
       (dRep, committeeMember, _) <- electBasicCommittee
       anchor <- arbitrary
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
-      void $ enactConstitution SNothing (Constitution anchor (SJust alwaysSucceedsSh)) dRep committeeMember
+      void $
+        enactConstitution
+          SNothing
+          (Constitution anchor (SJust alwaysSucceedsSh))
+          dRep
+          committeeMember
       rewardAccount <- registerRewardAccount
 
       impAnn "ParameterChange" $ do
@@ -582,7 +508,8 @@ govPolicySpec = do
       (dRep, committeeMember, _) <- electBasicCommittee
       anchor <- arbitrary
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
-      void $ enactConstitution SNothing (Constitution anchor (SJust alwaysFailsSh)) dRep committeeMember
+      void $
+        enactConstitution SNothing (Constitution anchor (SJust alwaysFailsSh)) dRep committeeMember
 
       rewardAccount <- registerRewardAccount
       impAnn "ParameterChange" $ do
@@ -596,10 +523,7 @@ govPolicySpec = do
                 , pProcAnchor = anchor
                 }
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
-        res <- trySubmitTx tx
-        void $ expectLeft res
-        -- TODO: find a way to check that this is a PlutusFailure, without comparing the entire PredicateFailure
-        submitTx_ $ tx & isValidTxL .~ IsValid False
+        expectPhase2Invalid tx
 
       impAnn "TreasuryWithdrawals" $ do
         let withdrawals = Map.fromList [(rewardAccount, Coin 1000)]
@@ -612,7 +536,222 @@ govPolicySpec = do
                 , pProcAnchor = anchor
                 }
         let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
-        res <- trySubmitTx tx
-        void $ expectLeft res
-        -- TODO: find a way to check that this is a PlutusFailure, without comparing the entire PredicateFailure
-        submitTx_ $ tx & isValidTxL .~ IsValid False
+        expectPhase2Invalid tx
+
+costModelsSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  ) =>
+  SpecWith (ImpTestState era)
+costModelsSpec =
+  describe "PlutusV3 Initialization" $ do
+    it "Updating CostModels with alwaysFails govPolicy does not validate" $ do
+      -- no initial PlutusV3 CostModels
+      modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
+
+      (dRep, committeeMember, _) <- electBasicCommittee
+      anchor <- arbitrary
+      govIdConstitution1 <-
+        enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMember
+      -- propose and enact PlutusV3 Costmodels
+      govIdPPUpdate1 <-
+        enactCostModels SNothing (testingCostModels [PlutusV3]) dRep committeeMember
+
+      let alwaysFailsSh = hashPlutusScript (alwaysFails2 SPlutusV3)
+      void $
+        enactConstitution
+          (SJust (GovPurposeId govIdConstitution1))
+          (Constitution anchor (SJust alwaysFailsSh))
+          dRep
+          committeeMember
+
+      impAnn "Fail to update V3 Costmodels" $ do
+        let pparamsUpdate = def & ppuCostModelsL .~ SJust (testingCostModels [PlutusV3])
+        let govAction = ParameterChange (SJust govIdPPUpdate1) pparamsUpdate (SJust alwaysFailsSh)
+        rewardAccount <- registerRewardAccount
+        pp <- getsNES $ nesEsL . curPParamsEpochStateL
+        let proposal =
+              ProposalProcedure
+                { pProcReturnAddr = rewardAccount
+                , pProcGovAction = govAction
+                , pProcDeposit = pp ^. ppGovActionDepositL
+                , pProcAnchor = anchor
+                }
+        let tx = mkBasicTx mkBasicTxBody & bodyTxL . proposalProceduresTxBodyL .~ [proposal]
+        expectPhase2Invalid tx
+
+    it "Updating CostModels with alwaysSucceeds govPolicy but no PlutusV3 CostModels fails" $ do
+      modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
+
+      (dRep, committeeMember, _) <- electBasicCommittee
+      anchor <- arbitrary
+      let alwaysSucceedsSh = hashPlutusScript (alwaysSucceeds2 SPlutusV3)
+      void $
+        enactConstitution
+          SNothing
+          (Constitution anchor (SJust alwaysSucceedsSh))
+          dRep
+          committeeMember
+
+      let pparamsUpdate = def & ppuCostModelsL .~ SJust (testingCostModels [PlutusV3])
+      let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysSucceedsSh)
+
+      submitFailingGovAction govAction [injectFailure $ CollectErrors [NoCostModel PlutusV3]]
+
+    it "Updating CostModels and setting the govPolicy afterwards succeeds" $ do
+      modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
+
+      (dRep, committeeMember, _) <- electBasicCommittee
+      anchor <- arbitrary
+      govIdConstitution1 <-
+        enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMember
+
+      let guessTheNumberSh = hashPlutusScript (guessTheNumber3 SPlutusV3)
+
+      impAnn "Minting token fails" $ do
+        tx <- mintingTokenTx @era (mkBasicTx @era mkBasicTxBody) guessTheNumberSh
+        submitFailingTx tx [injectFailure $ CollectErrors [NoCostModel PlutusV3]]
+
+      govIdPPUpdate1 <-
+        enactCostModels
+          SNothing
+          (testingCostModels [PlutusV3])
+          dRep
+          committeeMember
+
+      let alwaysSucceedsSh = hashPlutusScript (alwaysSucceeds2 SPlutusV3)
+      void $
+        enactConstitution
+          (SJust (GovPurposeId govIdConstitution1))
+          (Constitution anchor (SJust alwaysSucceedsSh))
+          dRep
+          committeeMember
+
+      impAnn "Minting token succeeds" $ do
+        tx <- mintingTokenTx @era (mkBasicTx @era mkBasicTxBody) guessTheNumberSh
+        submitTx_ tx
+
+      impAnn "Updating CostModels succeeds" $ do
+        void $
+          enactCostModels
+            (SJust govIdPPUpdate1)
+            (testingCostModels [PlutusV3])
+            dRep
+            committeeMember
+
+txWithPlutus ::
+  forall era.
+  ConwayEraImp era =>
+  ScriptHash (EraCrypto era) ->
+  ImpTestM era (Tx era)
+txWithPlutus sh = do
+  submitTxAnn "Submit a Plutus" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . outputsTxBodyL
+        .~ SSeq.singleton (scriptLockedTxOut sh)
+
+scriptLockedTxOut ::
+  forall era.
+  AlonzoEraTxOut era =>
+  ScriptHash (EraCrypto era) ->
+  TxOut era
+scriptLockedTxOut shSpending =
+  mkBasicTxOut
+    (Addr Testnet (ScriptHashObj shSpending) StakeRefNull)
+    (inject $ Coin 1_000_000)
+    & dataHashTxOutL .~ SJust (hashData @era $ Data spendDatum)
+
+mkRefTxOut ::
+  ( BabbageEraTxOut era
+  , AlonzoEraImp era
+  ) =>
+  ScriptHash (EraCrypto era) ->
+  ImpTestM era (TxOut era)
+mkRefTxOut sh = do
+  kpPayment <- lookupKeyPair =<< freshKeyHash
+  kpStaking <- lookupKeyPair =<< freshKeyHash
+  let mbyPlutusScript = impLookupPlutusScriptMaybe sh
+  pure $
+    mkBasicTxOut (mkAddr (kpPayment, kpStaking)) (inject $ Coin 100)
+      & referenceScriptTxOutL .~ maybeToStrictMaybe (fromPlutusScript <$> mbyPlutusScript)
+
+setupRefTx ::
+  forall era.
+  ( BabbageEraTxOut era
+  , AlonzoEraImp era
+  ) =>
+  ImpTestM era (TxId (EraCrypto era))
+setupRefTx = do
+  let shSpending = hashPlutusScript (guessTheNumber3 SPlutusV1)
+  refTxOut <- mkRefTxOut shSpending
+  fmap txIdTx . submitTxAnn "Producing transaction" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . outputsTxBodyL
+        .~ SSeq.fromList
+          [ refTxOut
+          , scriptLockedTxOut shSpending
+          , scriptLockedTxOut shSpending
+          ]
+
+testPlutusV1V2Failure ::
+  forall era a.
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , HasCallStack
+  ) =>
+  ScriptHash (EraCrypto era) ->
+  a ->
+  Lens' (TxBody era) a ->
+  ContextError era ->
+  ImpTestM era ()
+testPlutusV1V2Failure sh badField lenz errorField = do
+  tx <- txWithPlutus @era sh
+  submitFailingTx
+    ( mkBasicTx mkBasicTxBody
+        & bodyTxL . inputsTxBodyL
+          .~ Set.singleton (txInAt (0 :: Int) tx)
+        & bodyTxL . lenz
+          .~ badField
+    )
+    ( pure . injectFailure $
+        CollectErrors [BadTranslation errorField]
+    )
+
+expectPhase2Invalid :: ConwayEraImp era => Tx era -> ImpTestM era ()
+expectPhase2Invalid tx = do
+  res <- trySubmitTx tx
+  -- TODO: find a way to check that this is a PlutusFailure
+  -- without comparing the entire PredicateFailure
+  void $ expectLeft res
+  submitTx_ $ tx & isValidTxL .~ IsValid False
+
+mintingTokenTx :: ConwayEraImp era => Tx era -> ScriptHash (EraCrypto era) -> ImpTestM era (Tx era)
+mintingTokenTx tx sh = do
+  name <- arbitrary
+  count <- choose (0, 10)
+  let policyId = PolicyID sh
+  let ma = MultiAsset $ Map.singleton policyId [(name, count)]
+  pure $ tx & bodyTxL . mintTxBodyL .~ ma
+
+enactCostModels ::
+  ConwayEraImp era =>
+  StrictMaybe (GovPurposeId 'PParamUpdatePurpose era) ->
+  CostModels ->
+  Credential 'DRepRole (EraCrypto era) ->
+  Credential 'HotCommitteeRole (EraCrypto era) ->
+  ImpTestM era (GovPurposeId 'PParamUpdatePurpose era)
+enactCostModels prevGovId cms dRep committeeMember = do
+  initialCms <- getsNES $ nesEsL . curPParamsEpochStateL . ppCostModelsL
+  let pparamsUpdate = def & ppuCostModelsL .~ SJust cms
+  govId <- submitParameterChange prevGovId pparamsUpdate
+  submitYesVote_ (DRepVoter dRep) govId
+  submitYesVote_ (CommitteeVoter committeeMember) govId
+  passNEpochs 2
+  enactedCms <- getsNES $ nesEsL . curPParamsEpochStateL . ppCostModelsL
+  enactedCms `shouldBe` (initialCms <> cms)
+  pure $ GovPurposeId govId
+
+spendDatum :: P1.Data
+spendDatum = P1.I 3
