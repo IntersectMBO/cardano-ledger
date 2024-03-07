@@ -49,6 +49,7 @@ import Cardano.Ledger.Val (Val (..), inject, (<+>))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (Default (..))
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
@@ -968,7 +969,7 @@ testU ::
   ) =>
   Proof era ->
   Tx era ->
-  Either [PredicateFailure (EraRule "UTXOW" era)] (State (EraRule "UTXOW" era)) ->
+  Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
   Assertion
 testU pf = testUTXOW (UTXOW pf) (initUTxO pf) (pp pf)
 

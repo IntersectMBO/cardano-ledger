@@ -156,7 +156,7 @@ alonzoBBODYexamplesP proof =
           (BBODY proof)
           (initialBBodyState proof (initUTxO proof))
           (testAlonzoBadPMDHBlock proof)
-          (Left [makeTooBig proof])
+          (Left . pure $ makeTooBig proof)
           (pp proof)
     ]
 

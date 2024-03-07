@@ -80,7 +80,7 @@ stsPropertyV2 specEnv specState specSig prop =
               runShelleyBase $ do
                 res <- applySTS @(EraRule r era) $ TRC (env, st, sig)
                 pure $ case res of
-                  Left pfailures -> counterexample (show $ ppList prettyA pfailures) $ property False
+                  Left pfailures -> counterexample (show $ prettyA pfailures) $ property False
                   Right st' ->
                     counterexample (show $ ppString "st' = " <> prettyA st') $
                       conformsToSpec @fn st' (specState env)

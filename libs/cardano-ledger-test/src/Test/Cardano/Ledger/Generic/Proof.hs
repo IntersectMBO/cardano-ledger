@@ -115,6 +115,7 @@ import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsNeeded)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Universe (Shape (..), Shaped (..), Singleton (..), Some (..), (:~:) (Refl))
 import GHC.TypeLits (Symbol)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
@@ -234,7 +235,7 @@ runSTS ::
   ) =>
   WitRule s e ->
   TRC (EraRule s e) ->
-  (Either [PredicateFailure (EraRule s e)] (State (EraRule s e)) -> ans) ->
+  (Either (NonEmpty (PredicateFailure (EraRule s e))) (State (EraRule s e)) -> ans) ->
   ans
 runSTS (UTXO _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (UTXOW _proof) x cont = cont (runShelleyBase (applySTSTest x))
@@ -254,7 +255,7 @@ runSTS' ::
   ) =>
   WitRule s e ->
   TRC (EraRule s e) ->
-  Either [PredicateFailure (EraRule s e)] (State (EraRule s e))
+  Either (NonEmpty (PredicateFailure (EraRule s e))) (State (EraRule s e))
 runSTS' (UTXO _proof) x = runShelleyBase (applySTSTest x)
 runSTS' (UTXOW _proof) x = runShelleyBase (applySTSTest x)
 runSTS' (LEDGER _proof) x = runShelleyBase (applySTSTest x)
@@ -293,7 +294,7 @@ goSTS ::
   env ->
   state ->
   sig ->
-  (Either [PredicateFailure (EraRule s e)] (State (EraRule s e)) -> ans) ->
+  (Either (NonEmpty (PredicateFailure (EraRule s e))) (State (EraRule s e)) -> ans) ->
   ans
 goSTS (UTXO _proof) env state sig cont =
   cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))

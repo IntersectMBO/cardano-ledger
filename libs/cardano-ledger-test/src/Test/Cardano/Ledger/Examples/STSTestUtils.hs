@@ -82,7 +82,8 @@ import Cardano.Ledger.Val (inject)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (Default (..))
-import qualified Data.List as List
+import Data.Foldable (toList)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.Map.Strict as Map
 import GHC.Natural (Natural)
 import GHC.Stack
@@ -91,7 +92,7 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
 import Test.Cardano.Ledger.Generic.Fields (
   TxOutField (..),
  )
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..), ppList)
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..), after, matchkey)
 import Test.Cardano.Ledger.Generic.Updaters
@@ -251,7 +252,7 @@ testBBODY ::
   WitRule "BBODY" era ->
   ShelleyBbodyState era ->
   Block (BHeaderView (EraCrypto era)) era ->
-  Either [PredicateFailure (AlonzoBBODY era)] (ShelleyBbodyState era) ->
+  Either (NonEmpty (PredicateFailure (AlonzoBBODY era))) (ShelleyBbodyState era) ->
   PParams era ->
   Assertion
 testBBODY wit@(BBODY proof) initialSt block expected pparams =
@@ -271,7 +272,7 @@ testUTXOW ::
   UTxO era ->
   PParams era ->
   Tx era ->
-  Either [PredicateFailure (EraRule "UTXOW" era)] (State (EraRule "UTXOW" era)) ->
+  Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
   Assertion
 
 -- | Use an equality test on the expected and computed [PredicateFailure]
@@ -291,7 +292,7 @@ testUTXOWsubset
     UTxO era ->
     PParams era ->
     Tx era ->
-    Either [PredicateFailure (EraRule "UTXOW" era)] (State (EraRule "UTXOW" era)) ->
+    Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era)) ->
     Assertion
 
 -- | Use a subset test on the expected and computed [PredicateFailure]
@@ -312,7 +313,7 @@ testUTXOspecialCase wit@(UTXOW proof) utxo pparam tx expected =
 
 -- | This type is what you get when you use runSTS in the UTXOW rule. It is also
 --   the type one uses for expected answers, to compare the 'computed' against 'expected'
-type Result era = Either [PredicateFailure (EraRule "UTXOW" era)] (State (EraRule "UTXOW" era))
+type Result era = Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era))
 
 testUTXOWwith ::
   forall era.
@@ -348,7 +349,7 @@ runLEDGER ::
   LedgerState era ->
   PParams era ->
   Tx era ->
-  Either [PredicateFailure (EraRule "LEDGER" era)] (State (EraRule "LEDGER" era))
+  Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (State (EraRule "LEDGER" era))
 runLEDGER wit@(LEDGER proof) state pparams tx =
   let env = LedgerEnv (SlotNo 0) minBound pparams def
    in case proof of
@@ -365,15 +366,16 @@ runLEDGER wit@(LEDGER proof) state pparams tx =
 
 -- | A small example of what a continuation for 'runSTS' might look like
 genericCont ::
-  ( Eq x
-  , PrettyA x
+  ( Foldable t
+  , Eq (t x)
   , Eq y
+  , PrettyA x
   , PrettyA y
   , HasCallStack
   ) =>
   String ->
-  Either [x] y ->
-  Either [x] y ->
+  Either (t x) y ->
+  Either (t x) y ->
   Assertion
 genericCont cause expected computed =
   case (computed, expected) of
@@ -391,20 +393,22 @@ genericCont cause expected computed =
       | null cause = ""
       | otherwise = "Caused by:\n" ++ cause ++ "\n"
     expectedToPass y = "Expected to pass with:\n" ++ show (prettyA y) ++ "\n"
-    expectedToFail y = "Expected to fail with:\n" ++ show (ppList prettyA y) ++ "\n"
-    failedWith x = "But failed with:\n" ++ show (ppList prettyA x)
-    passedWith x = "But passed with:\n" ++ show (prettyA x)
+    expectedToFail x = "Expected to fail with:\n" ++ show (prettyA $ toList x) ++ "\n"
+    failedWith x = "But failed with:\n" ++ show (prettyA $ toList x)
+    passedWith y = "But passed with:\n" ++ show (prettyA y)
 
 subsetCont ::
-  ( Eq x
-  , Show x
-  , PrettyA x
+  ( Foldable t
+  , Eq (t x)
+  , Eq x
   , Eq y
-  , Show y
+  , PrettyA x
   , PrettyA y
+  , Show (t x)
+  , Show y
   ) =>
-  Either [x] y ->
-  Either [x] y ->
+  Either (t x) y ->
+  Either (t x) y ->
   Assertion
 subsetCont expected computed =
   case (computed, expected) of
@@ -417,13 +421,13 @@ subsetCont expected computed =
         "expected to pass with "
           ++ show (prettyA y)
           ++ "\n\nBut failed with\n\n"
-          ++ show (ppList prettyA x)
-    (Right x, Left y) ->
+          ++ show (prettyA $ toList x)
+    (Right y, Left x) ->
       error $
         "expected to fail with "
-          ++ show (ppList prettyA y)
+          ++ show (prettyA $ toList x)
           ++ "\n\nBut passed with\n\n"
-          ++ show (prettyA x)
+          ++ show (prettyA y)
 
 specialCont ::
   ( Eq (PredicateFailure (EraRule "UTXOW" era))
@@ -433,12 +437,12 @@ specialCont ::
   , HasCallStack
   ) =>
   Proof era ->
-  Either [PredicateFailure (EraRule "UTXOW" era)] a ->
-  Either [PredicateFailure (EraRule "UTXOW" era)] a ->
+  Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) a ->
+  Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) a ->
   Assertion
 specialCont proof expected computed =
   case (computed, expected) of
-    (Left [x], Left [y]) ->
+    (Left (x :| []), Left (y :| [])) ->
       case (findMismatch proof x, findMismatch proof y) of
         (Just _, Just _) -> y @?= y
         (_, _) -> error "Not both ValidationTagMismatch case 1"
@@ -461,5 +465,5 @@ findMismatch Babbage (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (Utxos
 findMismatch Conway (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(Conway.ValidationTagMismatch _ _)))) = Just $ injectFailure x
 findMismatch _ _ = Nothing
 
-isSubset :: Eq t => [t] -> [t] -> Bool
-isSubset small big = List.all (`List.elem` big) small
+isSubset :: (Foldable t, Eq a) => t a -> t a -> Bool
+isSubset small big = all (`elem` big) small

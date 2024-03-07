@@ -61,6 +61,7 @@ import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import Control.State.Transition.Extended hiding (Assertion, trans)
 import Data.Data (Data, Typeable, cast, gmapQ)
 import Data.Foldable (toList)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe (catMaybes)
 import Data.Sequence.Strict (StrictSeq (Empty, (:<|), (:|>)))
 import qualified Data.Sequence.Strict as SS
@@ -450,7 +451,7 @@ checkTrace ::
   ReaderT
     ( State s ->
       Signal s ->
-      Either [PredicateFailure s] (State s)
+      Either (NonEmpty (PredicateFailure s)) (State s)
     )
     IO
     (State s) ->
@@ -526,7 +527,7 @@ applySTSTest ::
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
-  m (Either [PredicateFailure s] (State s))
+  m (Either (NonEmpty (PredicateFailure s)) (State s))
 applySTSTest = applySTSOptsEither defaultOpts
   where
     defaultOpts =

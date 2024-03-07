@@ -40,6 +40,7 @@ import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Exception (ErrorCall (ErrorCall), evaluate, try)
 import Control.State.Transition.Extended (PredicateFailure)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -108,15 +109,13 @@ makeMaryTxBody ins outs interval minted =
     & vldtTxBodyL .~ interval
     & mintTxBodyL .~ minted
 
-policyFailure :: PolicyID StandardCrypto -> Either [PredicateFailure (ShelleyLEDGER Mary)] (UTxO Mary)
+policyFailure :: PolicyID StandardCrypto -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER Mary))) (UTxO Mary)
 policyFailure p =
-  Left
-    [ UtxowFailure
-        (ScriptWitnessNotValidatingUTXOW (Set.singleton (policyID p)))
-    ]
+  Left . pure . UtxowFailure . ScriptWitnessNotValidatingUTXOW $ Set.singleton (policyID p)
 
-outTooBigFailure :: ShelleyTxOut Mary -> Either [PredicateFailure (ShelleyLEDGER Mary)] (UTxO Mary)
-outTooBigFailure out = Left [UtxowFailure (UtxoFailure (OutputTooBigUTxO [out]))]
+outTooBigFailure :: ShelleyTxOut Mary -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER Mary))) (UTxO Mary)
+outTooBigFailure out =
+  Left . pure . UtxowFailure . UtxoFailure $ OutputTooBigUTxO [out]
 
 ----------------------------------------------------
 -- Introduce a new Token Bundle, Purple Tokens

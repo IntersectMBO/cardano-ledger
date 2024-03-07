@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -11,7 +12,6 @@ import Control.Arrow (right)
 import Control.Monad.Reader
 import Control.State.Transition.Extended
 import Data.Foldable (foldl')
-import qualified Data.List.NonEmpty as NE
 import Data.Void (Void)
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -47,7 +47,7 @@ instance STS GSUM where
         TRC ((), st, xs) <- judgmentContext
         sum <- liftSTS $ reader opSum
         tellEvent $ ErrorEvent (error "Event has been evaluated!")
-        labeled ("testLabel" NE.:| []) $ (sum xs /= 56) ?! NoFailure
+        labeled ["testLabel"] $ (sum xs /= 56) ?! NoFailure
         sum xs /= 56 ?! NoFailure
         return $! st + sum xs
     ]

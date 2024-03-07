@@ -132,7 +132,7 @@ testAliceSignsAlone =
 
 testAliceDoesntSign :: Assertion
 testAliceDoesntSign =
-  utxoSt' @?= Left [ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript @C aliceOnly)]
+  utxoSt' @?= (Left . pure . ScriptWitnessNotValidatingUTXOW) wits
   where
     utxoSt' =
       applyTxWithScript
@@ -142,6 +142,7 @@ testAliceDoesntSign =
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay, asWitness Cast.carlPay, asWitness Cast.dariaPay]
+    wits = Set.singleton $ hashScript @C aliceOnly
 
 testEverybodySigns :: Assertion
 testEverybodySigns =
@@ -163,7 +164,7 @@ testEverybodySigns =
 
 testWrongScript :: Assertion
 testWrongScript =
-  utxoSt' @?= Left [MissingScriptWitnessesUTXOW (Set.singleton $ hashScript @C aliceOnly)]
+  utxoSt' @?= (Left . pure . MissingScriptWitnessesUTXOW) wits
   where
     utxoSt' =
       applyTxWithScript
@@ -173,6 +174,7 @@ testWrongScript =
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
+    wits = Set.singleton $ hashScript @C aliceOnly
 
 testAliceOrBob :: Assertion
 testAliceOrBob =
@@ -218,11 +220,7 @@ testAliceAndBob =
 
 testAliceAndBob' :: Assertion
 testAliceAndBob' =
-  utxoSt'
-    @?= Left
-      [ ScriptWitnessNotValidatingUTXOW
-          (Set.singleton $ hashScript @C aliceAndBob)
-      ]
+  utxoSt' @?= (Left . pure . ScriptWitnessNotValidatingUTXOW) wits
   where
     utxoSt' =
       applyTxWithScript
@@ -232,14 +230,11 @@ testAliceAndBob' =
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay]
+    wits = Set.singleton $ hashScript @C aliceAndBob
 
 testAliceAndBob'' :: Assertion
 testAliceAndBob'' =
-  utxoSt'
-    @?= Left
-      [ ScriptWitnessNotValidatingUTXOW
-          (Set.singleton $ hashScript @C aliceAndBob)
-      ]
+  utxoSt' @?= (Left . pure . ScriptWitnessNotValidatingUTXOW) wits
   where
     utxoSt' =
       applyTxWithScript
@@ -249,6 +244,7 @@ testAliceAndBob'' =
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay]
+    wits = Set.singleton $ hashScript @C aliceAndBob
 
 testAliceAndBobOrCarl :: Assertion
 testAliceAndBobOrCarl =
@@ -370,11 +366,7 @@ testTwoScripts =
 
 testTwoScripts' :: Assertion
 testTwoScripts' =
-  utxoSt'
-    @?= Left
-      [ ScriptWitnessNotValidatingUTXOW
-          (Set.singleton $ hashScript @C aliceAndBob)
-      ]
+  utxoSt' @?= (Left . pure . ScriptWitnessNotValidatingUTXOW) wits
   where
     utxoSt' =
       applyTxWithScript
@@ -388,6 +380,7 @@ testTwoScripts' =
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.bobPay, asWitness Cast.carlPay]
+    wits = Set.singleton $ hashScript @C aliceAndBob
 
 -- script and skey locked
 
@@ -407,11 +400,7 @@ testScriptAndSKey =
 
 testScriptAndSKey' :: Assertion
 testScriptAndSKey' =
-  utxoSt'
-    @?= Left
-      [ MissingVKeyWitnessesUTXOW $
-          wits
-      ]
+  utxoSt' @?= (Left . pure . MissingVKeyWitnessesUTXOW) wits
   where
     utxoSt' =
       applyTxWithScript
@@ -476,11 +465,7 @@ testRwdAliceSignsAlone =
 
 testRwdAliceSignsAlone' :: Assertion
 testRwdAliceSignsAlone' =
-  utxoSt'
-    @?= Left
-      [ ScriptWitnessNotValidatingUTXOW
-          (Set.singleton $ hashScript @C bobOnly)
-      ]
+  utxoSt' @?= (Left . pure . ScriptWitnessNotValidatingUTXOW) wits
   where
     utxoSt' =
       applyTxWithScript
@@ -499,6 +484,7 @@ testRwdAliceSignsAlone' =
         )
         (Coin 0)
         [asWitness Cast.alicePay]
+    wits = Set.singleton $ hashScript @C bobOnly
 
 testRwdAliceSignsAlone'' :: Assertion
 testRwdAliceSignsAlone'' =
@@ -525,13 +511,7 @@ testRwdAliceSignsAlone'' =
 
 testRwdAliceSignsAlone''' :: Assertion
 testRwdAliceSignsAlone''' =
-  utxoSt'
-    @?= Left
-      [ MissingScriptWitnessesUTXOW
-          ( Set.singleton $
-              hashScript @C bobOnly
-          )
-      ]
+  utxoSt' @?= (Left . pure . MissingScriptWitnessesUTXOW) wits
   where
     utxoSt' =
       applyTxWithScript
@@ -545,6 +525,7 @@ testRwdAliceSignsAlone''' =
         )
         (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
+    wits = Set.singleton $ hashScript @C bobOnly
 
 -- | The reward aggregation bug described in the Shelley ledger spec in
 -- section 17.4 (in the Errata) resulted in needing to use 'aggregatedRewards' to change

@@ -61,6 +61,7 @@ import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition
 import Data.Default.Class (Default (def))
 import Data.Foldable (fold)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (empty, fromList)
 import Data.Sequence.Strict (StrictSeq (..))
@@ -218,7 +219,7 @@ initialUTxOState ::
   [(MultiSig (ShelleyEra c), Coin)] ->
   ( TxId c
   , Either
-      [PredicateFailure (ShelleyUTXOW (ShelleyEra c))]
+      (NonEmpty (PredicateFailure (ShelleyUTXOW (ShelleyEra c))))
       (UTxOState (ShelleyEra c))
   )
 initialUTxOState aliceKeep msigs =
@@ -269,7 +270,7 @@ applyTxWithScript ::
   Withdrawals c ->
   Coin ->
   [KeyPair 'Witness c] ->
-  Either [PredicateFailure (ShelleyUTXOW (ShelleyEra c))] (UTxOState (ShelleyEra c))
+  Either (NonEmpty (PredicateFailure (ShelleyUTXOW (ShelleyEra c)))) (UTxOState (ShelleyEra c))
 applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where
     (txId, initUtxo) = initialUTxOState aliceKeep lockScripts

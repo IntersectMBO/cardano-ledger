@@ -102,7 +102,7 @@ ledgerStateEqProp proof env1 expectedLedgerState ledgerenv ledgerstate tx =
     Right ledgerState' ->
       ledgerState' === {- `ediffEq` -} expectedLedgerState
     Left errs ->
-      let errsLines = "" : "applySTS fails" : map show errs
+      let errsLines = "" : "applySTS fails" : map show (toList errs)
        in counterexample
             (unlines (errsLines ++ ["Tx =", show (pcTx proof tx)]))
             ( whenFail

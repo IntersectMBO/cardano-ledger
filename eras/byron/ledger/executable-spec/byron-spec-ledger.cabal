@@ -48,8 +48,8 @@ library
         microlens,
         microlens-th,
         nothunks,
-        small-steps,
-        small-steps-test,
+        small-steps >=1.1,
+        small-steps-test >=1.1,
         Unique >=0.4.7.6
 
 test-suite byron-spec-ledger-test
@@ -84,5 +84,5 @@ test-suite byron-spec-ledger-test
         tasty-hedgehog,
         Unique,
         byron-spec-ledger,
-        small-steps,
-        small-steps-test
+        small-steps >=1.1,
+        small-steps-test >=1.1

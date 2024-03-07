@@ -71,6 +71,7 @@ import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
+import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
@@ -318,7 +319,7 @@ class
           runReader (applySTS @(ConwayRATIFY era) (TRC (ratifyEnv, ratifyState, RatifySignal $ reorderActions ratifySig))) globals
      in case ratifyResult of
           Left ps ->
-            error (unlines ("Impossible: RATIFY rule never fails, but it did:" : map show ps))
+            error (unlines ("Impossible: RATIFY rule never fails, but it did:" : map show (toList ps)))
           Right ratifyState' -> ratifyState'
 
 finishDRepPulser :: DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)

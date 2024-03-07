@@ -164,9 +164,9 @@ spec = describe "GOVCERT" $ do
               .~ SSeq.singleton
                 (RegDRepTxCert (KeyHashObj khDRep) providedDRepDeposit SNothing)
         )
-        [ injectFailure $
+        ( pure . injectFailure $
             ConwayDRepIncorrectDeposit providedDRepDeposit expectedDRepDeposit
-        ]
+        )
     it "invalid refund provided with DRep deregistration cert" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
       drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
@@ -183,9 +183,9 @@ spec = describe "GOVCERT" $ do
               .~ SSeq.singleton
                 (UnRegDRepTxCert drepCred refund)
         )
-        [ injectFailure $
+        ( pure . injectFailure $
             ConwayDRepIncorrectRefund refund drepDeposit
-        ]
+        )
     it "DRep already registered" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
       drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
@@ -199,7 +199,7 @@ spec = describe "GOVCERT" $ do
       submitTx_ regTx
       submitFailingTx
         regTx
-        [injectFailure $ ConwayDRepAlreadyRegistered drepCred]
+        (pure . injectFailure $ ConwayDRepAlreadyRegistered drepCred)
     it "unregistering a nonexistent DRep" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
       drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
@@ -209,7 +209,7 @@ spec = describe "GOVCERT" $ do
             & bodyTxL . certsTxBodyL
               .~ SSeq.singleton (UnRegDRepTxCert drepCred drepDeposit)
         )
-        [injectFailure $ ConwayDRepNotRegistered drepCred]
+        (pure . injectFailure $ ConwayDRepNotRegistered drepCred)
     it "registering a resigned CC member hotkey" $ do
       ccCred <- electCommittee1
       ccHotCred <- KeyHashObj <$> freshKeyHash
@@ -225,4 +225,4 @@ spec = describe "GOVCERT" $ do
             .~ SSeq.singleton (ResignCommitteeColdTxCert ccCred SNothing)
       submitFailingTx
         registerHotKeyTx
-        [injectFailure $ ConwayCommitteeHasPreviouslyResigned ccCred]
+        (pure . injectFailure $ ConwayCommitteeHasPreviouslyResigned ccCred)

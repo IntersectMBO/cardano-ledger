@@ -66,6 +66,15 @@
 
 ### `testlib`
 
+* Change the types of some functions in `Test.Cardano.Ledger.Conway.ImpTest`
+  to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
+  - `submitFailingVote`
+  - `trySubmitVote`
+  - `trySubmitProposal`
+  - `trySubmitProposals`
+  - `submitFailingProposal`
+  - `trySubmitGovAction`
+  - `trySubmitGovActions`
 * Add `Test.Cardano.Ledger.Conway.Imp.GovCertSpec`
 * Add `RuleListEra` instance for Conway
 * Rename `canGovActionBeDRepAccepted` to `isDRepAccepted` and refactor #4097

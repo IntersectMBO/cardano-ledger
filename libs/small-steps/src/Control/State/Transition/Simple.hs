@@ -13,6 +13,7 @@ where
 import Control.Monad.Identity (Identity (..))
 import Control.State.Transition.Extended as Extended hiding (applySTS, applySTSIndifferently)
 import qualified Control.State.Transition.Extended as X
+import Data.List.NonEmpty (NonEmpty)
 
 applySTSIndifferently ::
   forall s rtype.
@@ -25,5 +26,5 @@ applySTS ::
   forall s rtype.
   (STS s, RuleTypeRep rtype, BaseM s ~ Identity) =>
   RuleContext rtype s ->
-  Either [PredicateFailure s] (State s)
+  Either (NonEmpty (PredicateFailure s)) (State s)
 applySTS ctx = runIdentity $ X.applySTS ctx

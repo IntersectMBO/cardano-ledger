@@ -73,6 +73,7 @@ import Control.State.Transition.Extended (
  )
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
+import Data.List.NonEmpty (NonEmpty)
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import Lens.Micro ((^.))
@@ -217,7 +218,7 @@ mkMempoolEnv
 mkMempoolState :: NewEpochState era -> MempoolState era
 mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} = LedgerState.esLState nesEs
 
-newtype ApplyTxError era = ApplyTxError [PredicateFailure (EraRule "LEDGER" era)]
+newtype ApplyTxError era = ApplyTxError (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))
 
 deriving stock instance
   Eq (PredicateFailure (EraRule "LEDGER" era)) =>

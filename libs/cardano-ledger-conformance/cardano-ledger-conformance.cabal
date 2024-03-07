@@ -48,7 +48,7 @@ library
         cardano-ledger-core:testlib,
         cardano-ledger-test,
         containers,
-        small-steps,
+        small-steps >=1.1,
         text
 
     if !impl(ghc >=9.2)

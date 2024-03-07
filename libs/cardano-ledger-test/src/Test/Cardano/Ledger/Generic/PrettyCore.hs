@@ -259,7 +259,6 @@ import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -337,8 +336,17 @@ instance PrettyA () where
 instance PrettyA Void where
   prettyA = absurd
 
+instance PrettyA Bool where
+  prettyA = ppBool
+
+instance PrettyA Int where
+  prettyA = ppInt
+
 instance PrettyA x => PrettyA [x] where
   prettyA = ppList prettyA
+
+instance PrettyA x => PrettyA (NonEmpty x) where
+  prettyA = prettyA . toList
 
 instance (PrettyA a, PrettyA b) => PrettyA (Map a b) where
   prettyA = ppMap prettyA prettyA
@@ -1359,9 +1367,6 @@ ppConwayCertsPredFailure proof x = case x of
 
 instance Reflect era => PrettyA (ConwayCertsPredFailure era) where
   prettyA = ppConwayCertsPredFailure reify
-
-instance PrettyA a => PrettyA (NonEmpty a) where
-  prettyA = prettyA . NE.toList
 
 ppConwayGovPredFailure :: ConwayGovPredFailure era -> PDoc
 ppConwayGovPredFailure x = case x of
@@ -3307,9 +3312,6 @@ pcGovEnv GovEnv {..} =
 
 instance Reflect era => PrettyA (GovEnv era) where
   prettyA = pcGovEnv
-
-instance PrettyA Int where
-  prettyA = ppInt
 
 instance Reflect era => PrettyA (LedgerEnv era) where
   prettyA LedgerEnv {..} =

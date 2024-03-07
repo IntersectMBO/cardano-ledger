@@ -12,6 +12,7 @@ import Cardano.Ledger.Shelley.Scripts ()
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
+import Data.List.NonEmpty (NonEmpty)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, totalAda)
 import Test.Cardano.Ledger.Shelley.TreeDiff (expectExprEqual)
@@ -23,7 +24,7 @@ data CHAINExample h era = CHAINExample
   -- ^ State to start testing with
   , newBlock :: Block h era
   -- ^ Block to run chain state transition system on
-  , intendedResult :: Either [PredicateFailure (CHAIN era)] (ChainState era)
+  , intendedResult :: Either (NonEmpty (PredicateFailure (CHAIN era))) (ChainState era)
   -- ^ type of fatal error, if failure expected and final chain state if success expected
   }
 

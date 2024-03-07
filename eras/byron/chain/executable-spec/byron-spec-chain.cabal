@@ -36,8 +36,8 @@ library
         hedgehog >=1.0.4,
         microlens,
         microlens-th,
-        small-steps,
-        small-steps-test
+        small-steps >=1.1,
+        small-steps-test >=1.1
 
 test-suite chain-rules-test
     type:             exitcode-stdio-1.0
@@ -64,5 +64,5 @@ test-suite chain-rules-test
         tasty-hunit,
         byron-spec-chain,
         byron-spec-ledger,
-        small-steps,
-        small-steps-test
+        small-steps >=1.1,
+        small-steps-test >=1.1

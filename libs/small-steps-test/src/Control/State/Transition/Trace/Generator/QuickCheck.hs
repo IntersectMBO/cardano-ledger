@@ -44,6 +44,7 @@ import Control.State.Transition.Trace (Trace)
 import qualified Control.State.Transition.Trace as Trace
 import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe (fromMaybe)
 import Data.Word (Word64)
 import GHC.Stack
@@ -134,7 +135,7 @@ traceFromInitState ::
   Word64 ->
   traceGenEnv ->
   -- | Optional generator of STS initial state
-  Maybe (IRC sts -> QuickCheck.Gen (Either [STS.PredicateFailure sts] (State sts))) ->
+  Maybe (IRC sts -> QuickCheck.Gen (Either (NonEmpty (STS.PredicateFailure sts)) (State sts))) ->
   QuickCheck.Gen (Trace sts)
 traceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 = do
   env <- envGen @sts @traceGenEnv traceGenEnv
@@ -145,7 +146,7 @@ traceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 = do
           . Trace.applySTSTest
       )
       genSt0
-      $ (IRC env)
+      $ IRC env
 
   case res of
     Left pf ->
@@ -171,7 +172,7 @@ forAllTraceFromInitState ::
   Word64 ->
   traceGenEnv ->
   -- | Optional generator of STS initial state
-  Maybe (IRC sts -> QuickCheck.Gen (Either [STS.PredicateFailure sts] (State sts))) ->
+  Maybe (IRC sts -> QuickCheck.Gen (Either (NonEmpty (STS.PredicateFailure sts)) (State sts))) ->
   (Trace sts -> prop) ->
   QuickCheck.Property
 forAllTraceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 prop =
@@ -262,7 +263,7 @@ onlyValidSignalsAreGeneratedFromInitState ::
   Word64 ->
   traceGenEnv ->
   -- | Optional generator of STS initial state
-  Maybe (IRC sts -> QuickCheck.Gen (Either [STS.PredicateFailure sts] (State sts))) ->
+  Maybe (IRC sts -> QuickCheck.Gen (Either (NonEmpty (STS.PredicateFailure sts)) (State sts))) ->
   QuickCheck.Property
 onlyValidSignalsAreGeneratedFromInitState baseEnv maxTraceLength traceGenEnv genSt0 =
   forAllTraceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 validSignalsAreGenerated

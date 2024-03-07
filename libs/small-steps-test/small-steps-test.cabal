@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               small-steps-test
-version:            1.0.1.0
+version:            1.1.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -41,7 +41,7 @@ library
         nothunks,
         transformers >=0.5,
         QuickCheck,
-        small-steps >=1.0,
+        small-steps >=1.1,
         cardano-strict-containers
 
 test-suite examples

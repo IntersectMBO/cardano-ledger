@@ -92,6 +92,7 @@ import Data.Data (Typeable)
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.List as L
+import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -604,7 +605,7 @@ trySubmitTxConform ::
   ImpTestM
     Conway
     ( Either
-        [PredicateFailure (EraRule "LEDGER" Conway)]
+        (NonEmpty (PredicateFailure (EraRule "LEDGER" Conway)))
         (Tx Conway)
     )
 trySubmitTxConform txPreFixup = do

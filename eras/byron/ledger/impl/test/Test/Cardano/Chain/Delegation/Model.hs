@@ -58,7 +58,7 @@ prop_commandSDELEG = withTests 25 . property $ do
 
 data StateSDELEG (v :: Type -> Type) = StateSDELEG
   { abstractState :: Abstract.DSState
-  , lastAbstractResult :: Either [STS.PredicateFailure SDELEG] (STS.State SDELEG)
+  , lastAbstractResult :: Either (NonEmpty (STS.PredicateFailure SDELEG)) (STS.State SDELEG)
   }
 
 initialState :: StateSDELEG v

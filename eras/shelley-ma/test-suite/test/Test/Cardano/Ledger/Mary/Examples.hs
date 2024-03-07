@@ -16,6 +16,7 @@ import Cardano.Ledger.UTxO (UTxO)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Data.Default.Class (def)
+import Data.List.NonEmpty (NonEmpty)
 import GHC.Stack
 import Lens.Micro
 import Test.Cardano.Ledger.Mary.TreeDiff ()
@@ -23,8 +24,8 @@ import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty.HUnit (Assertion, (@?=))
 
 ignoreAllButUTxO ::
-  Either [PredicateFailure (ShelleyLEDGER Mary)] (LedgerState Mary) ->
-  Either [PredicateFailure (ShelleyLEDGER Mary)] (UTxO Mary)
+  Either (NonEmpty (PredicateFailure (ShelleyLEDGER Mary))) (LedgerState Mary) ->
+  Either (NonEmpty (PredicateFailure (ShelleyLEDGER Mary))) (UTxO Mary)
 ignoreAllButUTxO = fmap (\(LedgerState (UTxOState utxo _ _ _ _ _) _) -> utxo)
 
 testMaryNoDelegLEDGER ::
@@ -32,7 +33,7 @@ testMaryNoDelegLEDGER ::
   UTxO Mary ->
   ShelleyTx Mary ->
   LedgerEnv Mary ->
-  Either [PredicateFailure (ShelleyLEDGER Mary)] (UTxO Mary) ->
+  Either (NonEmpty (PredicateFailure (ShelleyLEDGER Mary))) (UTxO Mary) ->
   Assertion
 testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
   checkTrace @(ShelleyLEDGER Mary) runShelleyBase env $

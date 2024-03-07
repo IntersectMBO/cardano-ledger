@@ -3,6 +3,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -84,6 +85,7 @@ import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Default.Class (def)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
@@ -252,7 +254,7 @@ testLEDGER ::
   LedgerState C ->
   ShelleyTx C ->
   LedgerEnv C ->
-  Either [PredicateFailure (ShelleyLEDGER C)] (LedgerState C) ->
+  Either (NonEmpty (PredicateFailure (ShelleyLEDGER C))) (LedgerState C) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
   checkTrace @(ShelleyLEDGER C) runShelleyBase env $ pure initSt .- tx .->> expectedSt
@@ -336,7 +338,7 @@ ledgerEnv :: LedgerEnv C
 ledgerEnv = LedgerEnv (SlotNo 0) minBound pp (AccountState (Coin 0) (Coin 0))
 
 testInvalidTx ::
-  [PredicateFailure (ShelleyLEDGER C)] ->
+  NonEmpty (PredicateFailure (ShelleyLEDGER C)) ->
   ShelleyTx C ->
   Assertion
 testInvalidTx errs tx =
