@@ -2,6 +2,8 @@
 
 ## 1.11.0.0
 
+* Change `applySTSValidateSuchThat` and `applySTSNonStatic`
+  to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
 * Added `boom` placeholder
 * Add `EraRuleFailure` type family and `InjectRuleFailure` type class
 * Add `VoidFailure`

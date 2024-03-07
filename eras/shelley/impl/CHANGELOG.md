@@ -2,6 +2,8 @@
 
 ## 1.10.0.0
 
+* Change `ApplyTxError`, `TickTransitionError` and `BlockTransitionError`
+  to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
 * Removed `prettyWitnessSetParts`
 * Re-implemented `ShelleyTxWits` with `MemoBytes`
 * Re-implemented `ShelleyTxAuxData` with `MemoBytes`
@@ -28,6 +30,8 @@
 
 ### `testlib`
 
+* Change `submitFailingTx`, `tryRunImpRule` and `trySubmitTx`
+  to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
 * Added `ToExpr` instance for `ShelleyTxWitsRaw`
 * Add `RuleListEra` instance for Shelley
 * Add argument to `impSatisfyNativeScript` that accounts for already satisifed witnesses

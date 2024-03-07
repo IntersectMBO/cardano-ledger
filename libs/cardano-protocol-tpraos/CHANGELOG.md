@@ -2,6 +2,8 @@
 
 ## 1.1.0.0
 
+* Change `FutureLedgerViewError` and `ChainTransitionError`
+  to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
 * Change the type of `bsize` and `hBbsize` to `Word32`
 
 ## 1.0.3.7
