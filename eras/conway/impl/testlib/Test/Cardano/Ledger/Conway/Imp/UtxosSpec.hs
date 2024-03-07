@@ -53,87 +53,6 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModels)
 import Test.Cardano.Ledger.Plutus.Examples (alwaysFails2, alwaysSucceeds2, guessTheNumber3)
 
-spendDatum :: P1.Data
-spendDatum = P1.I 3
-
-txWithPlutus ::
-  forall era.
-  ConwayEraImp era =>
-  ScriptHash (EraCrypto era) ->
-  ImpTestM era (Tx era)
-txWithPlutus sh = do
-  submitTxAnn "Submit a Plutus" $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . outputsTxBodyL
-        .~ SSeq.singleton (scriptLockedTxOut sh)
-
-scriptLockedTxOut ::
-  forall era.
-  AlonzoEraTxOut era =>
-  ScriptHash (EraCrypto era) ->
-  TxOut era
-scriptLockedTxOut shSpending =
-  mkBasicTxOut
-    (Addr Testnet (ScriptHashObj shSpending) StakeRefNull)
-    (inject $ Coin 1_000_000)
-    & dataHashTxOutL .~ SJust (hashData @era $ Data spendDatum)
-
-mkRefTxOut ::
-  ( BabbageEraTxOut era
-  , AlonzoEraImp era
-  ) =>
-  ScriptHash (EraCrypto era) ->
-  ImpTestM era (TxOut era)
-mkRefTxOut sh = do
-  kpPayment <- lookupKeyPair =<< freshKeyHash
-  kpStaking <- lookupKeyPair =<< freshKeyHash
-  let mbyPlutusScript = impLookupPlutusScriptMaybe sh
-  pure $
-    mkBasicTxOut (mkAddr (kpPayment, kpStaking)) (inject $ Coin 100)
-      & referenceScriptTxOutL .~ maybeToStrictMaybe (fromPlutusScript <$> mbyPlutusScript)
-
-setupRefTx ::
-  forall era.
-  ( BabbageEraTxOut era
-  , AlonzoEraImp era
-  ) =>
-  ImpTestM era (TxId (EraCrypto era))
-setupRefTx = do
-  let shSpending = hashPlutusScript (guessTheNumber3 SPlutusV1)
-  refTxOut <- mkRefTxOut shSpending
-  fmap txIdTx . submitTxAnn "Producing transaction" $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . outputsTxBodyL
-        .~ SSeq.fromList
-          [ refTxOut
-          , scriptLockedTxOut shSpending
-          , scriptLockedTxOut shSpending
-          ]
-
-testPlutusV1V2Failure ::
-  forall era a.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
-  , HasCallStack
-  ) =>
-  ScriptHash (EraCrypto era) ->
-  a ->
-  Lens' (TxBody era) a ->
-  ContextError era ->
-  ImpTestM era ()
-testPlutusV1V2Failure sh badField lenz errorField = do
-  tx <- txWithPlutus @era sh
-  submitFailingTx
-    ( mkBasicTx mkBasicTxBody
-        & bodyTxL . inputsTxBodyL
-          .~ Set.singleton (txInAt (0 :: Int) tx)
-        & bodyTxL . lenz
-          .~ badField
-    )
-    ( pure . injectFailure $
-        CollectErrors [BadTranslation errorField]
-    )
-
 spec ::
   forall era.
   ( ConwayEraImp era
@@ -722,6 +641,84 @@ costModelsSpec =
             dRep
             committeeMember
 
+txWithPlutus ::
+  forall era.
+  ConwayEraImp era =>
+  ScriptHash (EraCrypto era) ->
+  ImpTestM era (Tx era)
+txWithPlutus sh = do
+  submitTxAnn "Submit a Plutus" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . outputsTxBodyL
+        .~ SSeq.singleton (scriptLockedTxOut sh)
+
+scriptLockedTxOut ::
+  forall era.
+  AlonzoEraTxOut era =>
+  ScriptHash (EraCrypto era) ->
+  TxOut era
+scriptLockedTxOut shSpending =
+  mkBasicTxOut
+    (Addr Testnet (ScriptHashObj shSpending) StakeRefNull)
+    (inject $ Coin 1_000_000)
+    & dataHashTxOutL .~ SJust (hashData @era $ Data spendDatum)
+
+mkRefTxOut ::
+  ( BabbageEraTxOut era
+  , AlonzoEraImp era
+  ) =>
+  ScriptHash (EraCrypto era) ->
+  ImpTestM era (TxOut era)
+mkRefTxOut sh = do
+  kpPayment <- lookupKeyPair =<< freshKeyHash
+  kpStaking <- lookupKeyPair =<< freshKeyHash
+  let mbyPlutusScript = impLookupPlutusScriptMaybe sh
+  pure $
+    mkBasicTxOut (mkAddr (kpPayment, kpStaking)) (inject $ Coin 100)
+      & referenceScriptTxOutL .~ maybeToStrictMaybe (fromPlutusScript <$> mbyPlutusScript)
+
+setupRefTx ::
+  forall era.
+  ( BabbageEraTxOut era
+  , AlonzoEraImp era
+  ) =>
+  ImpTestM era (TxId (EraCrypto era))
+setupRefTx = do
+  let shSpending = hashPlutusScript (guessTheNumber3 SPlutusV1)
+  refTxOut <- mkRefTxOut shSpending
+  fmap txIdTx . submitTxAnn "Producing transaction" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . outputsTxBodyL
+        .~ SSeq.fromList
+          [ refTxOut
+          , scriptLockedTxOut shSpending
+          , scriptLockedTxOut shSpending
+          ]
+
+testPlutusV1V2Failure ::
+  forall era a.
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , HasCallStack
+  ) =>
+  ScriptHash (EraCrypto era) ->
+  a ->
+  Lens' (TxBody era) a ->
+  ContextError era ->
+  ImpTestM era ()
+testPlutusV1V2Failure sh badField lenz errorField = do
+  tx <- txWithPlutus @era sh
+  submitFailingTx
+    ( mkBasicTx mkBasicTxBody
+        & bodyTxL . inputsTxBodyL
+          .~ Set.singleton (txInAt (0 :: Int) tx)
+        & bodyTxL . lenz
+          .~ badField
+    )
+    ( pure . injectFailure $
+        CollectErrors [BadTranslation errorField]
+    )
+
 expectPhase2Invalid :: ConwayEraImp era => Tx era -> ImpTestM era ()
 expectPhase2Invalid tx = do
   res <- trySubmitTx tx
@@ -755,3 +752,6 @@ enactCostModels prevGovId cms dRep committeeMember = do
   enactedCms <- getsNES $ nesEsL . curPParamsEpochStateL . ppCostModelsL
   enactedCms `shouldBe` (initialCms <> cms)
   pure $ GovPurposeId govId
+
+spendDatum :: P1.Data
+spendDatum = P1.I 3
