@@ -4,6 +4,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -649,20 +650,19 @@ predConstr Before {} = "Before"
 predConstr Oneof {} = "Oneof"
 predConstr ListWhere {} = "ListWhere"
 
-constraintProperty :: Maybe Int -> Bool -> [String] -> OrderInfo -> ([Pred TestEra] -> DependGraph TestEra -> Env TestEra -> Property) -> Property
-constraintProperty timeout strict whitelist info prop =
+constraintProperty :: Bool -> [String] -> OrderInfo -> ([Pred TestEra] -> DependGraph TestEra -> Env TestEra -> Property) -> Property
+constraintProperty strict whitelist info prop =
   forAllShrink (genPreds $ initEnv info) shrinkPreds $ \(preds, genenv) ->
     counterexample ("\n-- Order --\n" ++ show info) $
       counterexample ("\n-- Constraints --\n" ++ unlines (map showPred preds)) $
         counterexample ("-- Model solution --\n" ++ showEnv (gEnv genenv)) $
-          maybe id within timeout $
-            checkTyped (compile info preds) $ \graph ->
-              forAllBlind (genDependGraph False testProof graph) . flip checkRight $ \subst ->
-                let env = errorTyped $ substToEnv subst emptyEnv
-                    n = let Env e = gEnv genenv in Map.size e
-                 in tabulate "Var count" [show n] $
-                      tabulate "Constraint types" (map predConstr preds) $
-                        prop preds graph env
+          checkTyped (compile info preds) $ \graph ->
+            forAllBlind (genDependGraph False testProof graph) . flip checkRight $ \subst ->
+              let env = errorTyped $ substToEnv subst emptyEnv
+                  n = let Env e = gEnv genenv in Map.size e
+               in tabulate "Var count" [show n] $
+                    tabulate "Constraint types" (map predConstr preds) $
+                      prop preds graph env
   where
     checkTyped
       | strict = checkWhitelist . runTyped
@@ -699,7 +699,7 @@ runPreds ps = do
 -- | Generate a set of satisfiable constraints and check that we can generate a solution and that it
 --   actually satisfies the constraints.
 prop_soundness :: OrderInfo -> Property
-prop_soundness = prop_soundness' False []
+prop_soundness x = prop_soundness' False [] x
 
 defaultWhitelist :: [String]
 defaultWhitelist = ["Size specifications", "The SetSpec's are inconsistent", "The MapSpec's are inconsistent"]
@@ -708,7 +708,7 @@ defaultWhitelist = ["Size specifications", "The SetSpec's are inconsistent", "Th
 --   constraints.
 prop_soundness' :: Bool -> [String] -> OrderInfo -> Property
 prop_soundness' strict whitelist info =
-  constraintProperty (Just 100000) strict whitelist info $ \preds _graph env ->
+  constraintProperty strict whitelist info $ \preds _graph env ->
     checkPredicates preds env
 
 -- | Check that shrinking is sound, i.e. that all shrink steps preserves constraint satisfaction.
@@ -717,7 +717,7 @@ prop_shrinking = prop_shrinking' False []
 
 prop_shrinking' :: Bool -> [String] -> OrderInfo -> Property
 prop_shrinking' strict whitelist info =
-  constraintProperty Nothing strict whitelist info $ \preds graph env ->
+  constraintProperty strict whitelist info $ \preds graph env ->
     counterexample ("-- Original solution --\n" ++ showEnv env) $
       let envs = shrinkEnv graph env
        in tabulate "Shrinkings" [show $ length envs] $
