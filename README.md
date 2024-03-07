@@ -164,8 +164,10 @@ nix develop --command make watch
 
 # Testing
 
-Before running tests with `cabal test`, the `CARDANO_MAINNET_MIRROR` environment variable should be set to the path to [mainnet epochs](https://github.com/input-output-hk/cardano-mainnet-mirror/tree/master/epochs) on your local storage.
-Note that this is only needed for the Byron tests.
+Run `cabal test all` to run all tests or `cabal test <package>` to run the tests for a specific package.
+
+Note: The `CARDANO_MAINNET_MIRROR` environment variable can be overriden in `flake.nix` if one desires to run
+the Byron tests with a different version of the [mainnet epochs](https://github.com/input-output-hk/cardano-mainnet-mirror/tree/master/epochs).
 
 # Submitting an issue
 
