@@ -200,7 +200,7 @@ treasurySpec =
       logEntry "Submitting new constitution"
       gaidConstitutionProp <- submitGovAction constitutionAction
 
-      (dRepCred, committeeHotCred, _) <- electBasicCommittee
+      (dRepCred, committeeHotCred, _, _) <- electBasicCommittee
 
       logRatificationChecks gaidConstitutionProp
       do
@@ -246,7 +246,7 @@ treasuryWithdrawalExpectation ::
   [GovAction era] ->
   ImpTestM era ()
 treasuryWithdrawalExpectation extraWithdrawals = do
-  (dRepCred, committeeHotCred, _) <- electBasicCommittee
+  (dRepCred, committeeHotCred, _, _) <- electBasicCommittee
   treasuryStart <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   rewardAcount <- registerRewardAccount
   govPolicy <- getGovPolicy

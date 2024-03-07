@@ -24,7 +24,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Val (zero, (<->))
+import Cardano.Ledger.Val
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe
@@ -304,7 +304,7 @@ proposalsSpec =
                          , Node SNothing [SJust <$> b]
                          ]
       it "Subtrees are pruned when competing proposals are enacted" $ do
-        (dRep, committeeMember, GovPurposeId committeeGovActionId) <- electBasicCommittee
+        (dRep, committeeMember, _, GovPurposeId committeeGovActionId) <- electBasicCommittee
         a@[ _
             , b@(Node p2 _)
             ] <-
@@ -512,7 +512,7 @@ proposalsSpec =
                          , Node SNothing []
                          ]
       it "Subtrees are pruned when competing proposals are enacted over multiple rounds" $ do
-        (dRep, committeeMember, _) <- electBasicCommittee
+        (dRep, committeeMember, _, _) <- electBasicCommittee
         a@[ c
             , Node
                 p2
@@ -602,7 +602,7 @@ proposalsSpec =
         proposalsSize props `shouldBe` 0
       it "Votes from subsequent epochs are considered for ratification" $ do
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
-        (dRep, committeeMember, _) <- electBasicCommittee
+        (dRep, committeeMember, _, _) <- electBasicCommittee
         [Node p1 []] <-
           submitConstitutionGovActionForest
             SNothing
@@ -616,7 +616,7 @@ proposalsSpec =
         fmap (!! 3) getProposalsForest
           `shouldReturn` Node (SJust p1) []
       it "Subtrees are pruned for both enactment and expiry over multiple rounds" $ do
-        (dRep, committeeMember, _) <- electBasicCommittee
+        (dRep, committeeMember, _, _) <- electBasicCommittee
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
         [ a@( Node
                 p1
@@ -736,7 +736,7 @@ votingSpec =
         "committee member voting on committee change"
         committeeMemberVotingOnCommitteeChange
       it "non-committee-member voting on committee change as a committee member" $ do
-        (_, _, prevGovActionId) <- electBasicCommittee
+        (_, _, _, prevGovActionId) <- electBasicCommittee
         credCandidate <- KeyHashObj <$> freshKeyHash
         credVoter <- KeyHashObj <$> freshKeyHash
         committeeUpdateId <-
@@ -772,7 +772,7 @@ constitutionSpec =
         -- Until the first proposal is enacted all proposals with empty GovPurposeIds are valid
         void $ submitConstitution SNothing
       it "valid GovPurposeId" $ do
-        (dRep, committeeMember, _) <- electBasicCommittee
+        (dRep, committeeMember, _, _) <- electBasicCommittee
         constitution <- arbitrary
         gaidConstitutionProp <- enactConstitution SNothing constitution dRep committeeMember
         constitution1 <- arbitrary
@@ -780,7 +780,7 @@ constitutionSpec =
 
     describe "rejected for" $ do
       it "empty PrevGovId after the first constitution was enacted" $ do
-        (dRep, committeeMember, _) <- electBasicCommittee
+        (dRep, committeeMember, _, _) <- electBasicCommittee
         (govActionId, _constitution) <- submitConstitution SNothing
         submitYesVote_ (DRepVoter dRep) govActionId
         submitYesVote_ (CommitteeVoter committeeMember) govActionId
@@ -796,7 +796,7 @@ constitutionSpec =
           [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
           ]
       it "invalid index in GovPurposeId" $ do
-        (_dRep, _committeeMember, _) <- electBasicCommittee
+        (_dRep, _committeeMember, _, _) <- electBasicCommittee
         (govActionId, _constitution) <- submitConstitution SNothing
         passNEpochs 2
         constitution <- arbitrary
@@ -813,7 +813,7 @@ constitutionSpec =
           [ injectFailure $ InvalidPrevGovActionId invalidNewConstitutionProposal
           ]
       it "valid GovPurposeId but invalid purpose" $ do
-        (_dRep, _committeeMember, _) <- electBasicCommittee
+        (_dRep, _committeeMember, _, _) <- electBasicCommittee
         (govActionId, _constitution) <- submitConstitution SNothing
         passNEpochs 2
         let invalidNoConfidenceAction =
@@ -864,7 +864,7 @@ policySpec ::
 policySpec =
   describe "Policy" $ do
     it "policy is respected by proposals" $ do
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (dRep, committeeMember, _, _) <- electBasicCommittee
       keyHash <- freshKeyHash
       scriptHash <- impAddNativeScript $ RequireAllOf (SSeq.singleton (RequireSignature keyHash))
       anchor <- arbitrary
@@ -1101,7 +1101,7 @@ committeeMemberVotingOnCommitteeChange ::
   ) =>
   ImpTestM era ()
 committeeMemberVotingOnCommitteeChange = do
-  (_, ccHot, prevGovActionId) <- electBasicCommittee
+  (_, ccHot, _, prevGovActionId) <- electBasicCommittee
   khCommittee <- KeyHashObj <$> freshKeyHash
   committeeUpdateId <-
     submitGovAction $
@@ -1124,7 +1124,7 @@ ccVoteOnConstitutionFailsWithMultipleVotes ::
   ) =>
   ImpTestM era ()
 ccVoteOnConstitutionFailsWithMultipleVotes = do
-  (drepCred, ccCred, prevCommitteeId) <- electBasicCommittee
+  (drepCred, ccCred, _, prevCommitteeId) <- electBasicCommittee
   drepCred2 <- KeyHashObj <$> registerDRep
   newCommitteeMember <- KeyHashObj <$> freshKeyHash
   committeeProposal <-

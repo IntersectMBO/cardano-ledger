@@ -92,6 +92,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   minorFollow,
   majorFollow,
   cantFollow,
+  checkProposalsEmpty,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -954,6 +955,7 @@ electBasicCommittee ::
     era
     ( Credential 'DRepRole (EraCrypto era)
     , Credential 'HotCommitteeRole (EraCrypto era)
+    , Credential 'ColdCommitteeRole (EraCrypto era)
     , GovPurposeId 'CommitteePurpose era
     )
 electBasicCommittee = do
@@ -1009,7 +1011,12 @@ electBasicCommittee = do
     impAnn "There should be a committee" $ committee `shouldSatisfy` isSJust
 
   credCommitteeMemberHot <- registerCommitteeHotKey khCommitteeMember
-  pure (KeyHashObj khDRep, credCommitteeMemberHot, GovPurposeId gaidCommitteeProp)
+  pure
+    ( KeyHashObj khDRep
+    , credCommitteeMemberHot
+    , khCommitteeMember
+    , GovPurposeId gaidCommitteeProp
+    )
 
 logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era ()
 logCurPParams = do
@@ -1273,3 +1280,9 @@ majorFollow pv@(ProtVer x _) = case succVersion x of
 -- | An illegal ProtVer that skips 3 minor versions
 cantFollow :: ProtVer -> ProtVer
 cantFollow (ProtVer x y) = ProtVer x (y + 3)
+
+checkProposalsEmpty :: ConwayEraGov era => ImpTestM era ()
+checkProposalsEmpty =
+  null . proposalsIds
+    <$> getProposals
+      `shouldReturn` True

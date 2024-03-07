@@ -75,7 +75,7 @@ spec ::
   SpecWith (ImpTestState era)
 spec = describe "GOVCERT" $ do
   it "A CC that has resigned will need to be first voted out and then voted in to be considered active" $ do
-    (dRep, _, gaidCC) <- electBasicCommittee
+    (dRep, _, _, gaidCC) <- electBasicCommittee
     passNEpochs 2
     -- Add a fresh CC
     cc <- KeyHashObj <$> freshKeyHash

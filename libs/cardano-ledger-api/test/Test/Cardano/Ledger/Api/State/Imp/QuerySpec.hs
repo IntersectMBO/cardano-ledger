@@ -70,7 +70,7 @@ spec = do
 
     it "members should remain authorized if authorized during the epoch after their election" $ do
       setPParams
-      (KeyHashObj drep, _, ga0) <- electBasicCommittee
+      (KeyHashObj drep, _, _, ga0) <- electBasicCommittee
 
       c1 <- KeyHashObj <$> freshKeyHash
       _ <- electCommittee (SJust ga0) drep Set.empty [(c1, EpochNo 12)]

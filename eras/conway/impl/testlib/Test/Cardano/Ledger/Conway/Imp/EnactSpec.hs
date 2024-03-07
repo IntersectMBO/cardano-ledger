@@ -17,9 +17,12 @@ import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Val
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
+import qualified Data.Set as Set
+import Data.Word (Word64)
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational
@@ -33,6 +36,169 @@ spec ::
   SpecWith (ImpTestState era)
 spec =
   describe "ENACT" $ do
+    basicSpec
+    treasuryWithdrawalsSpec
+    actionPrioritySpec
+
+actionPrioritySpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+actionPrioritySpec =
+  describe "Action priority" $ do
+    it "Only the first of proposals with same priority is enacted" $ do
+      (drepC, _ccCH, ccCC, gpi) <- electBasicCommittee
+      (poolKH, _paymentC, _stakingC) <- setupPoolWithStake $ Coin 1_000_000
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      gai1 <-
+        submitGovAction $
+          UpdateCommittee (SJust gpi) (Set.singleton ccCC) mempty $
+            1 %! 2
+      -- gai2 is the first action of a higher priority
+      gai2 <- submitGovAction $ NoConfidence $ SJust gpi
+      gai3 <- submitGovAction $ NoConfidence $ SJust gpi
+      submitYesVote_ (DRepVoter drepC) gai1
+      submitYesVote_ (StakePoolVoter poolKH) gai1
+      submitYesVote_ (DRepVoter drepC) gai2
+      submitYesVote_ (StakePoolVoter poolKH) gai2
+      submitYesVote_ (DRepVoter drepC) gai3
+      submitYesVote_ (StakePoolVoter poolKH) gai3
+      passNEpochs 2
+      getLastEnactedCommittee
+        `shouldReturn` SJust (GovPurposeId gai2)
+      checkProposalsEmpty
+    it "Contiguous ratified proposals are enacted in the same epoch, unless delayed" $ do
+      (drepC, ccCH, _ccCC, _gpi) <- electBasicCommittee
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      pGai0 <-
+        submitParameterChange
+          SNothing
+          $ def & ppuDRepDepositL .~ SJust (Coin 1_000_000)
+      pGai1 <-
+        submitParameterChange
+          (SJust $ GovPurposeId pGai0)
+          $ def & ppuDRepDepositL .~ SJust (Coin 1_000_001)
+      pGai2 <-
+        submitParameterChange
+          (SJust $ GovPurposeId pGai1)
+          $ def & ppuDRepDepositL .~ SJust (Coin 1_000_002)
+      submitYesVote_ (DRepVoter drepC) pGai0
+      submitYesVote_ (CommitteeVoter ccCH) pGai0
+      submitYesVote_ (DRepVoter drepC) pGai1
+      submitYesVote_ (CommitteeVoter ccCH) pGai1
+      submitYesVote_ (DRepVoter drepC) pGai2
+      submitYesVote_ (CommitteeVoter ccCH) pGai2
+      passNEpochs 2
+      getLastEnactedParameterChange
+        `shouldReturn` SJust (GovPurposeId pGai2)
+      checkProposalsEmpty
+
+treasuryWithdrawalsSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+treasuryWithdrawalsSpec =
+  describe "Treasury withdrawals" $ do
+    describe "Do not result in negative balance" $ do
+      it "Multiple proposals in a single Tx that add up to more than the balance" $ do
+        (drepC, committeeC, _, _gpi) <- electBasicCommittee
+        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+        Coin curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+        rewardAccount1 <- registerRewardAccount
+        rewardAccount2 <- registerRewardAccount
+        rewardAccount3 <- registerRewardAccount
+        rewardAccount4 <- registerRewardAccount
+        rewardAccount5 <- registerRewardAccount
+        let eachWithdrawal = curTreasury `div` 4
+        gpi <-
+          submitTreasuryWithdrawals
+            [ (rewardAccount1, Coin eachWithdrawal)
+            , (rewardAccount2, Coin eachWithdrawal)
+            , (rewardAccount3, Coin eachWithdrawal)
+            , (rewardAccount4, Coin eachWithdrawal)
+            , (rewardAccount5, Coin eachWithdrawal)
+            ]
+        submitYesVote_ (DRepVoter drepC) gpi
+        submitYesVote_ (CommitteeVoter committeeC) gpi
+        passNEpochs 2
+        getsNES (nesEsL . esAccountStateL . asTreasuryL)
+          `shouldReturn` Coin curTreasury
+        modifyNES $
+          nesEsL . esAccountStateL . asTreasuryL
+            %~ (<+> Coin eachWithdrawal)
+        passNEpochs 2
+        getsNES (nesEsL . esAccountStateL . asTreasuryL)
+          `shouldReturn` Coin 0
+      describe "Larger than maxBound" $ do
+        it "Multiple proposals in a single Tx" $ do
+          (drepC, committeeC, _, _gpi) <- electBasicCommittee
+          modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+          modifyNES $
+            nesEsL . esAccountStateL . asTreasuryL
+              .~ Coin (fromIntegral (maxBound :: Word64))
+          Coin curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+          rewardAccount1 <- registerRewardAccount
+          rewardAccount2 <- registerRewardAccount
+          rewardAccount3 <- registerRewardAccount
+          rewardAccount4 <- registerRewardAccount
+          rewardAccount5 <- registerRewardAccount
+          let eachWithdrawal = curTreasury `div` 4
+          gpi <-
+            submitTreasuryWithdrawals
+              [ (rewardAccount1, Coin eachWithdrawal)
+              , (rewardAccount2, Coin eachWithdrawal)
+              , (rewardAccount3, Coin eachWithdrawal)
+              , (rewardAccount4, Coin eachWithdrawal)
+              , (rewardAccount5, Coin eachWithdrawal)
+              ]
+          submitYesVote_ (DRepVoter drepC) gpi
+          submitYesVote_ (CommitteeVoter committeeC) gpi
+          passNEpochs 2
+          getsNES (nesEsL . esAccountStateL . asTreasuryL)
+            `shouldReturn` Coin curTreasury
+        it "Proposals in multiple epochs" $ do
+          (drepC, committeeC, _, _gpi) <- electBasicCommittee
+          modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+          modifyNES $
+            nesEsL . esAccountStateL . asTreasuryL
+              .~ Coin (fromIntegral (maxBound :: Word64))
+          Coin curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+          rewardAccount1 <- registerRewardAccount
+          rewardAccount2 <- registerRewardAccount
+          rewardAccount3 <- registerRewardAccount
+          rewardAccount4 <- registerRewardAccount
+          rewardAccount5 <- registerRewardAccount
+          let eachWithdrawal = curTreasury `div` 4
+          gpi1 <-
+            submitTreasuryWithdrawals
+              [ (rewardAccount1, Coin eachWithdrawal)
+              , (rewardAccount2, Coin eachWithdrawal)
+              , (rewardAccount3, Coin eachWithdrawal)
+              ]
+          submitYesVote_ (DRepVoter drepC) gpi1
+          submitYesVote_ (CommitteeVoter committeeC) gpi1
+          passNEpochs 2
+          getsNES (nesEsL . esAccountStateL . asTreasuryL)
+            `shouldReturn` Coin (curTreasury - 3 * eachWithdrawal)
+          gpi2 <-
+            submitTreasuryWithdrawals
+              [ (rewardAccount4, Coin eachWithdrawal)
+              , (rewardAccount5, Coin eachWithdrawal)
+              ]
+          submitYesVote_ (DRepVoter drepC) gpi2
+          submitYesVote_ (CommitteeVoter committeeC) gpi2
+          passNEpochs 2
+          getsNES (nesEsL . esAccountStateL . asTreasuryL)
+            `shouldReturn` Coin (curTreasury - 3 * eachWithdrawal)
+
+basicSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , GovState era ~ ConwayGovState era
+  ) =>
+  SpecWith (ImpTestState era)
+basicSpec =
+  describe "Basic" $ do
     it "TreasuryWithdrawal" $ do
       rewardAcount1 <- registerRewardAccount
       govActionId <- submitTreasuryWithdrawals [(rewardAcount1, Coin 666)]
@@ -73,7 +239,7 @@ spec =
                    ]
       ensTreasury enactState'' `shouldBe` Coin 1
     it "HardForkInitiation" $ do
-      (_, committeeMember, _) <- electBasicCommittee
+      (_, committeeMember, _, _) <- electBasicCommittee
       modifyPParams $ \pp ->
         pp
           & ppDRepVotingThresholdsL
@@ -160,7 +326,7 @@ spec =
       replicateM_ 4 passEpoch
       assertNoCommittee
     it "Constitution" $ do
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (dRep, committeeMember, _, _) <- electBasicCommittee
       (govActionId, constitution) <- submitConstitution SNothing
 
       ConwayGovState proposalsBeforeVotes enactStateBeforeVotes pulserBeforeVotes _ _ _ <-

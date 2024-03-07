@@ -426,7 +426,7 @@ govPolicySpec ::
 govPolicySpec = do
   describe "Gov policy scripts" $ do
     it "failing native script govPolicy" $ do
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (dRep, committeeMember, _, _) <- electBasicCommittee
       scriptHash <- impAddNativeScript $ RequireTimeStart (SlotNo 1)
       anchor <- arbitrary
       void $
@@ -468,7 +468,7 @@ govPolicySpec = do
 
     it "alwaysSucceeds Plutus govPolicy validates" $ do
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceeds2 SPlutusV3)
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (dRep, committeeMember, _, _) <- electBasicCommittee
       anchor <- arbitrary
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       void $
@@ -505,7 +505,7 @@ govPolicySpec = do
 
     it "alwaysFails Plutus govPolicy does not validate" $ do
       let alwaysFailsSh = hashPlutusScript (alwaysFails2 SPlutusV3)
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (dRep, committeeMember, _, _) <- electBasicCommittee
       anchor <- arbitrary
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       void $

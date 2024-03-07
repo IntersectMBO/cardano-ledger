@@ -43,7 +43,7 @@ spoVotesForHardForkInitiation ::
 spoVotesForHardForkInitiation =
   describe "Counting of SPO votes" $ do
     it "HardForkInitiation" $ do
-      (_dRepC, hotCC, _gpi) <- electBasicCommittee
+      (_dRepC, hotCC, _, _gpi) <- electBasicCommittee
       (spoK1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000
       (spoK2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000
       (_spoK3, _paymentC3, _stakingC3) <- setupPoolWithStake $ Coin 1_000
@@ -99,7 +99,7 @@ votingSpec ::
 votingSpec =
   describe "Voting" $ do
     it "SPO needs to vote on security-relevant parameter changes" $ do
-      (drep, ccCred, _) <- electBasicCommittee
+      (drep, ccCred, _, _) <- electBasicCommittee
       (khPool, _, _) <- setupPoolWithStake $ Coin 42_000_000
       initMinFeeA <- getsNES $ nesEsL . curPParamsEpochStateL . ppMinFeeAL
       gaidThreshold <- impAnn "Update StakePool thresholds" $ do
@@ -320,7 +320,7 @@ delayingActionsSpec ::
 delayingActionsSpec =
   describe "Delaying actions" $ do
     it "A delaying action delays its child even when both ere proposed and ratified in the same epoch" $ do
-      (dRep, committeeMember, _gpi) <- electBasicCommittee
+      (dRep, committeeMember, _, _gpi) <- electBasicCommittee
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       gai0 <- submitInitConstitutionGovAction
       gai1 <- submitChildConstitutionGovAction gai0
@@ -344,7 +344,7 @@ delayingActionsSpec =
       getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId gai3)
       getConstitutionProposals `shouldReturn` Map.empty
     it "A delaying action delays all other actions even when all of them may be ratified in the same epoch" $ do
-      (dRep, committeeMember, _gpi) <- electBasicCommittee
+      (dRep, committeeMember, _, _gpi) <- electBasicCommittee
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       pGai0 <-
         submitParameterChange
@@ -387,7 +387,7 @@ delayingActionsSpec =
       getParameterChangeProposals `shouldReturn` Map.empty
     describe "An action expires when delayed enough even after being ratified" $ do
       it "Same lineage" $ do
-        (dRep, committeeMember, _gpi) <- electBasicCommittee
+        (dRep, committeeMember, _, _gpi) <- electBasicCommittee
         gai0 <- submitInitConstitutionGovAction
         gai1 <- submitChildConstitutionGovAction gai0
         gai2 <- submitChildConstitutionGovAction gai1
@@ -410,7 +410,7 @@ delayingActionsSpec =
         passEpoch
         getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId gai2)
       it "Other lineage" $ do
-        (dRep, committeeMember, _gpi) <- electBasicCommittee
+        (dRep, committeeMember, _, _gpi) <- electBasicCommittee
         pGai0 <-
           submitParameterChange
             SNothing
