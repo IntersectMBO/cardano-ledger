@@ -1,8 +1,11 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -14,6 +17,7 @@
 
 module Cardano.Ledger.CertState (
   CertState (..),
+  CommitteeAuthorization (..),
   DState (..),
   PState (..),
   VState (..),
@@ -56,7 +60,7 @@ module Cardano.Ledger.CertState (
 )
 where
 
-import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData)
+import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData, StrictMaybe)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -283,16 +287,43 @@ toPStatePair PState {..} =
   , "deposits" .= psDeposits
   ]
 
+data CommitteeAuthorization c
+  = -- | Member authorized with a Hot credential acting on behalf of their Cold credential
+    CommitteeHotCredential !(Credential 'HotCommitteeRole c)
+  | -- | Member resigned with a potential explanation in Anchor
+    CommitteeMemberResigned !(StrictMaybe (Anchor c))
+  deriving (Eq, Ord, Show, Generic, ToJSON)
+
+instance NoThunks (CommitteeAuthorization c)
+instance Crypto c => NFData (CommitteeAuthorization c)
+
+instance Crypto c => EncCBOR (CommitteeAuthorization c) where
+  encCBOR =
+    encode . \case
+      CommitteeHotCredential cred -> Sum CommitteeHotCredential 0 !> To cred
+      CommitteeMemberResigned anchor -> Sum CommitteeMemberResigned 1 !> To anchor
+
+instance Crypto c => DecCBOR (CommitteeAuthorization c) where
+  decCBOR =
+    decode $ Summands "CommitteeAuthorization" $ \case
+      0 -> SumD CommitteeHotCredential <! From
+      1 -> SumD CommitteeMemberResigned <! From
+      k -> Invalid k
+
 newtype CommitteeState era = CommitteeState
   { csCommitteeCreds ::
       Map
         (Credential 'ColdCommitteeRole (EraCrypto era))
-        (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
-  -- ^ `Nothing` to indicate "resigned".
+        (CommitteeAuthorization (EraCrypto era))
   }
-  deriving (Eq, Ord, Show, Generic, NoThunks, NFData, Default)
+  deriving (Eq, Ord, Show, Generic)
 
-deriving instance Era era => EncCBOR (CommitteeState era)
+instance NoThunks (CommitteeState era)
+instance Default (CommitteeState era)
+
+instance Era era => NFData (CommitteeState era)
+
+deriving newtype instance Era era => EncCBOR (CommitteeState era)
 
 -- TODO: Implement sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance Era era => DecShareCBOR (CommitteeState era) where
@@ -301,7 +332,7 @@ instance Era era => DecShareCBOR (CommitteeState era) where
 instance Era era => DecCBOR (CommitteeState era) where
   decCBOR = decNoShareCBOR
 
-deriving instance Era era => ToJSON (CommitteeState era)
+deriving newtype instance Era era => ToJSON (CommitteeState era)
 
 instance Era era => ToCBOR (CommitteeState era) where
   toCBOR = toEraCBOR @era
@@ -593,6 +624,6 @@ csCommitteeCredsL ::
     (CommitteeState era)
     ( Map
         (Credential 'ColdCommitteeRole (EraCrypto era))
-        (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
+        (CommitteeAuthorization (EraCrypto era))
     )
 csCommitteeCredsL = lens csCommitteeCreds (\cs u -> cs {csCommitteeCreds = u})

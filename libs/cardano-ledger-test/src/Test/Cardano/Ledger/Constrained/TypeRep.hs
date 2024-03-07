@@ -348,6 +348,7 @@ data Rep era t where
   DRepHashR :: Era era => Rep era (KeyHash 'DRepRole (EraCrypto era))
   AnchorR :: Era era => Rep era (Anchor (EraCrypto era))
   CommitteeStateR :: Era era => Rep era (CommitteeState era)
+  CommitteeAuthorizationR :: Era era => Rep era (CommitteeAuthorization (EraCrypto era))
   VStateR :: Era era => Rep era (VState era)
   EnactStateR :: Reflect era => Rep era (EnactState era)
   DRepPulserR :: (RunConwayRatify era, Reflect era) => Rep era (DRepPulser era Identity (RatifyState era))
@@ -488,6 +489,7 @@ repHasInstances r = case r of
   GovActionIxR {} -> IsOrd
   GovActionStateR {} -> IsTypeable
   ProposalsR {} -> IsTypeable
+  CommitteeAuthorizationR {} -> IsOrd
   CommitteeStateR {} -> IsOrd
   UnitIntervalR {} -> IsOrd
   CommitteeR {} -> IsEq
@@ -671,6 +673,7 @@ synopsis PrevCommitteeR (GovPurposeId x) = synopsis @e GovActionIdR x
 synopsis PrevConstitutionR (GovPurposeId x) = synopsis @e GovActionIdR x
 synopsis RatifyStateR dr = show (pcRatifyState reify dr)
 synopsis NumDormantEpochsR x = show x
+synopsis CommitteeAuthorizationR x = show x
 synopsis CommitteeStateR x = show x
 synopsis VStateR x = show x
 synopsis DRepHashR k = "(KeyHash 'DRepRole " ++ show (keyHashSummary k) ++ ")"
@@ -912,6 +915,7 @@ genSizedRep n RatifyStateR =
     <*> pure mempty
     <*> arbitrary
 genSizedRep _ NumDormantEpochsR = arbitrary
+genSizedRep _ CommitteeAuthorizationR = arbitrary
 genSizedRep _ CommitteeStateR = arbitrary
 genSizedRep _ VStateR = arbitrary
 genSizedRep _ DRepHashR = arbitrary
@@ -938,7 +942,7 @@ genSizedRep _ DRepPulserR =
     <*> arbitrary -- committeestate
     <*> genRep EnactStateR
     <*> (SS.fromList . (: []) <$> genRep GovActionStateR) -- proposals
-    <*> (pure testGlobals)
+    <*> pure testGlobals
 genSizedRep n DelegateeR =
   oneof
     [ DelegStake <$> genSizedRep n (PoolHashR @era)
@@ -1092,6 +1096,7 @@ shrinkRep PrevHardForkR x = shrink x
 shrinkRep PrevCommitteeR x = shrink x
 shrinkRep PrevConstitutionR x = shrink x
 shrinkRep RatifyStateR _ = []
+shrinkRep CommitteeAuthorizationR _ = []
 shrinkRep CommitteeStateR _ = []
 shrinkRep VStateR x = shrink x
 shrinkRep EnactStateR _ = []

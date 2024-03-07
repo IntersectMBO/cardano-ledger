@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Add `CommitteeAuthorization` and use it to represent hot key credential in `CommitteeState`
 * Change `applySTSValidateSuchThat` and `applySTSNonStatic`
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
 * Added `boom` placeholder

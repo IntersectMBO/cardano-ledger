@@ -27,7 +27,7 @@ module Cardano.Ledger.Conway.Rules.Ratify (
 ) where
 
 import Cardano.Ledger.BaseTypes (BoundedRational (..), ShelleyBase, StrictMaybe (..), addEpochInterval)
-import Cardano.Ledger.CertState (CommitteeState (csCommitteeCreds))
+import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (csCommitteeCreds))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core (
   Era (EraCrypto),
@@ -155,8 +155,8 @@ committeeAcceptedRatio members votes committeeState currentEpoch
       | otherwise =
           case Map.lookup member (csCommitteeCreds committeeState) of
             Nothing -> (yes, tot) -- member is not registered, vote "abstain"
-            Just Nothing -> (yes, tot) -- member has resigned, vote "abstain"
-            Just (Just hotKey) ->
+            Just (CommitteeMemberResigned _) -> (yes, tot) -- member has resigned, vote "abstain"
+            Just (CommitteeHotCredential hotKey) ->
               case Map.lookup hotKey votes of
                 Nothing -> (yes, tot + 1) -- member hasn't voted, vote "no"
                 Just Abstain -> (yes, tot) -- member voted "abstain"

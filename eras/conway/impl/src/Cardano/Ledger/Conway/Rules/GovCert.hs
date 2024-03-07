@@ -29,7 +29,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (CommitteeState (..), VState (..))
+import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..), VState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT)
@@ -55,7 +55,6 @@ import Control.State.Transition.Extended (
   (?!),
  )
 import qualified Data.Map.Strict as Map
-import Data.Maybe (isNothing)
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
@@ -191,9 +190,9 @@ conwayGovCertTransition = do
            in refund == paidDeposit ?! ConwayDRepIncorrectRefund refund paidDeposit
       pure vState {vsDReps = Map.delete cred vsDReps}
     ConwayAuthCommitteeHotKey coldCred hotCred ->
-      checkAndOverwriteCommitteeHotCred vState coldCred $ Just hotCred
-    ConwayResignCommitteeColdKey coldCred _ ->
-      checkAndOverwriteCommitteeHotCred vState coldCred Nothing
+      checkAndOverwriteCommitteeHotCred vState coldCred $ CommitteeHotCredential hotCred
+    ConwayResignCommitteeColdKey coldCred anchor ->
+      checkAndOverwriteCommitteeHotCred vState coldCred $ CommitteeMemberResigned anchor
     -- Update a DRep expiry too along with its anchor.
     ConwayUpdateDRep cred mAnchor -> do
       Map.member cred vsDReps ?! ConwayDRepNotRegistered cred
@@ -211,8 +210,9 @@ conwayGovCertTransition = do
           }
   where
     checkColdCredHasNotResigned coldCred csCommitteeCreds =
-      ((isNothing <$> Map.lookup coldCred csCommitteeCreds) /= Just True)
-        ?! ConwayCommitteeHasPreviouslyResigned coldCred
+      case Map.lookup coldCred csCommitteeCreds of
+        Just (CommitteeMemberResigned _) -> failBecause $ ConwayCommitteeHasPreviouslyResigned coldCred
+        _ -> pure ()
     checkAndOverwriteCommitteeHotCred vState@VState {vsCommitteeState = CommitteeState csCommitteeCreds} coldCred hotCred = do
       checkColdCredHasNotResigned coldCred csCommitteeCreds
       pure

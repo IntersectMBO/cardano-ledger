@@ -42,7 +42,7 @@ import Cardano.Ledger.UMap (UMap)
 import Data.Default.Class (Default (..))
 import Data.Foldable (foldMap')
 import qualified Data.Map.Strict as Map
-import Data.Maybe (isJust, isNothing)
+import Data.Maybe (isNothing)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))
@@ -159,14 +159,11 @@ propAuthorized nes = do
   withCommitteeInfo nes $
     \_ (CommitteeState comStateMembers) _ noFilterResult -> do
       let ckHk =
-            Map.mapMaybe
-              ( \case
-                  CommitteeMemberState (MemberAuthorized hk) _ _ _ -> Just hk
-                  _ -> Nothing
-              )
-              (csCommittee noFilterResult)
+            [ (ck, hk)
+            | (ck, CommitteeMemberState (MemberAuthorized hk) _ _ _) <- Map.toList (csCommittee noFilterResult)
+            ]
       -- if the member is Authorized, it should appear in the commiteeState
-      Map.mapMaybe id comStateMembers `shouldBe` ckHk
+      ckHk `shouldBe` [(ck, hk) | (ck, CommitteeHotCredential hk) <- Map.toList comStateMembers]
 
 propResigned ::
   forall era.
@@ -177,14 +174,11 @@ propResigned nes = do
   withCommitteeInfo nes $
     \_ (CommitteeState comStateMembers) _ noFilterResult -> do
       let resigned =
-            Map.filter
-              ( \case
-                  CommitteeMemberState MemberResigned _ _ _ -> True
-                  _ -> False
-              )
-              (csCommittee noFilterResult)
+            [ ck
+            | (ck, CommitteeMemberState (MemberResigned _) _ _ _) <- Map.toList (csCommittee noFilterResult)
+            ]
       -- if the member is Resignd, it should appear in the commiteeState as Nothing
-      Map.keysSet (Map.filter isNothing comStateMembers) `shouldBe` Map.keysSet resigned
+      resigned `shouldBe` [ck | (ck, CommitteeMemberResigned _) <- Map.toList comStateMembers]
 
 propUnrecognized ::
   forall era.
@@ -242,7 +236,12 @@ propActiveAuthorized nes = do
       Map.intersection comMembers activeAuthorized
         `shouldSatisfy` all (>= epochNo)
       Map.intersection comStateMembers activeAuthorized
-        `shouldSatisfy` all isJust
+        `shouldSatisfy` all
+          ( \case
+              CommitteeHotCredential _ -> True
+              _ -> False
+          )
+
       csEpochNo noFilterResult `shouldBe` epochNo
 
 propFilters ::
@@ -393,7 +392,9 @@ genRelevantHotCredsFilter ::
   CommitteeState era ->
   Gen (Set.Set (Credential 'HotCommitteeRole (EraCrypto era)))
 genRelevantHotCredsFilter (CommitteeState comStateMembers) =
-  Set.fromList <$> genRetaining (Map.elems (Map.mapMaybe id comStateMembers))
+  Set.fromList
+    <$> genRetaining
+      [hk | (_, CommitteeHotCredential hk) <- Map.toList comStateMembers]
 
 genMembersRetaining ::
   forall era.

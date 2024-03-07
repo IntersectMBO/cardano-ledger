@@ -2,15 +2,18 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conway.CommitteeRatifySpec (spec) where
 
 import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe (..))
-import Cardano.Ledger.CertState (CommitteeState (..))
+import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -29,12 +32,10 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyRole (..))
-import Control.Monad (guard, join)
 import Data.Functor.Identity (Identity)
 import Data.List ((\\))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes)
 import Data.Ratio ((%))
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
@@ -239,7 +240,7 @@ genTestData ratios = do
   coldCreds <- genNonEmptyColdCreds @era
   committeeState@(CommitteeState {csCommitteeCreds}) <- genNonResignedCommitteeState @era coldCreds
   members <- genMembers @era coldCreds
-  let hotCreds = catMaybes $ Map.elems csCommitteeCreds
+  let hotCreds = [k | CommitteeHotCredential k <- Map.elems csCommitteeCreds]
       votes = distributeVotes @era ratios hotCreds
   pure $ TestData members votes committeeState
 
@@ -253,12 +254,17 @@ resignMembers hotCreds td@TestData {committeeState} =
     { committeeState =
         CommitteeState
           ( Map.map
-              (\mhk -> mhk >>= \hk -> hk <$ guard (hk `Set.notMember` hotCreds))
+              ( \case
+                  CommitteeHotCredential hk
+                    | hk `Set.member` hotCreds -> CommitteeMemberResigned SNothing
+                  x -> x
+              )
               (csCommitteeCreds committeeState)
           )
     }
 
 expireMembers ::
+  forall era.
   EpochNo ->
   Set.Set (Credential 'HotCommitteeRole (EraCrypto era)) ->
   TestData era ->
@@ -269,18 +275,16 @@ expireMembers newEpochNo hotCreds td@TestData {members, committeeState} =
         Map.mapWithKey (\ck epochNo -> if expire ck then newEpochNo else epochNo) members
     }
   where
-    expire ck = hk ck `Set.isSubsetOf` hotCreds
-    hk ck =
-      maybe Set.empty Set.singleton $
-        join $
-          Map.lookup ck (csCommitteeCreds committeeState)
+    expire ck = case Map.lookup ck (csCommitteeCreds committeeState) of
+      Just (CommitteeHotCredential k) | k `Set.member` hotCreds -> True
+      _ -> False
 
 totalVotes :: Votes era -> Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote
 totalVotes Votes {votedYes, votedNo, votedAbstain} =
-  Map.unions
-    [ Map.fromSet (const VoteYes) (Set.fromList votedYes)
-    , Map.fromSet (const VoteNo) (Set.fromList votedNo)
-    , Map.fromSet (const Abstain) (Set.fromList votedAbstain)
+  Map.unions @[]
+    [ Map.fromList $ (,VoteYes) <$> votedYes
+    , Map.fromList $ (,VoteNo) <$> votedNo
+    , Map.fromList $ (,Abstain) <$> votedAbstain
     ]
 
 genNonEmptyColdCreds :: Era era => Gen (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
@@ -309,7 +313,11 @@ genNonResignedCommitteeState ::
   Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
   Gen (CommitteeState era)
 genNonResignedCommitteeState coldCreds = do
-  hotCredsMap <- sequence $ Map.fromSet (\_ -> Just <$> arbitrary) coldCreds
+  hotCredsMap <-
+    sequence $
+      Map.fromSet
+        (const $ CommitteeHotCredential <$> arbitrary)
+        coldCreds
   frequency
     [ (9, pure $ CommitteeState hotCredsMap)
     , (1, CommitteeState <$> overwriteWithDuplicate hotCredsMap)

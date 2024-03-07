@@ -111,7 +111,11 @@ import Cardano.Ledger.BaseTypes (
   succVersion,
   textToUrl,
  )
-import Cardano.Ledger.CertState (csCommitteeCredsL, vsNumDormantEpochsL)
+import Cardano.Ledger.CertState (
+  CommitteeAuthorization (..),
+  csCommitteeCredsL,
+  vsNumDormantEpochsL,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
@@ -741,13 +745,17 @@ getRatifyEnv = do
 ccShouldBeResigned :: HasCallStack => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
 ccShouldBeResigned coldK = do
   committeeCreds <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
-  Map.lookup coldK committeeCreds `shouldBe` Just Nothing
+  authHk <$> Map.lookup coldK committeeCreds `shouldBe` Just Nothing
 
 -- | Test the resignation status for a CC cold key to not be resigned
 ccShouldNotBeResigned :: HasCallStack => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
 ccShouldNotBeResigned coldK = do
   committeeCreds <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
-  Map.lookup coldK committeeCreds `shouldSatisfy` maybe False isJust
+  (Map.lookup coldK committeeCreds >>= authHk) `shouldSatisfy` isJust
+
+authHk :: CommitteeAuthorization c -> Maybe (Credential 'HotCommitteeRole c)
+authHk (CommitteeHotCredential hk) = Just hk
+authHk _ = Nothing
 
 -- | Calculates the ratio of DReps that have voted for the governance action
 calculateDRepAcceptedRatio ::
@@ -906,12 +914,13 @@ registerCommitteeHotKey coldKey = do
 resignCommitteeColdKey ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
   Credential 'ColdCommitteeRole (EraCrypto era) ->
+  StrictMaybe (Anchor (EraCrypto era)) ->
   ImpTestM era ()
-resignCommitteeColdKey coldKey = do
+resignCommitteeColdKey coldKey anchor = do
   submitTxAnn_ "Resigning Committee Cold key" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
-        .~ SSeq.singleton (ResignCommitteeColdTxCert coldKey SNothing)
+        .~ SSeq.singleton (ResignCommitteeColdTxCert coldKey anchor)
 
 electCommittee ::
   forall era.

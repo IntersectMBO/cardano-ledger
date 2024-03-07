@@ -16,7 +16,7 @@ module Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   NextEpochChange (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (UnitInterval)
+import Cardano.Ledger.BaseTypes (Anchor, UnitInterval)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   EncCBOR (encCBOR),
@@ -56,7 +56,7 @@ data HotCredAuthStatus c
   = MemberAuthorized (Credential 'HotCommitteeRole c)
   | -- | Member enacted, but no hot credential for voting has been registered
     MemberNotAuthorized
-  | MemberResigned
+  | MemberResigned (Maybe (Anchor c))
   deriving (Show, Eq, Generic, Ord, ToJSON)
 
 instance Crypto c => EncCBOR (HotCredAuthStatus c) where
@@ -64,14 +64,14 @@ instance Crypto c => EncCBOR (HotCredAuthStatus c) where
     encode . \case
       MemberAuthorized cred -> Sum MemberAuthorized 0 !> To cred
       MemberNotAuthorized -> Sum MemberNotAuthorized 1
-      MemberResigned -> Sum MemberResigned 2
+      MemberResigned anchor -> Sum MemberResigned 2 !> To anchor
 
 instance Crypto c => DecCBOR (HotCredAuthStatus c) where
   decCBOR =
     decode $ Summands "HotCredAuthStatus" $ \case
       0 -> SumD MemberAuthorized <! From
       1 -> SumD MemberNotAuthorized
-      2 -> SumD MemberResigned
+      2 -> SumD MemberResigned <! From
       k -> Invalid k
 
 data NextEpochChange
