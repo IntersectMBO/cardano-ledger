@@ -36,6 +36,7 @@ spec =
     hardForkInitiationSpec
     noConfidenceSpec
     constitutionSpec
+    actionPrioritySpec
 
 treasuryWithdrawalsSpec :: forall era. ConwayEraImp era => SpecWith (ImpTestState era)
 treasuryWithdrawalsSpec =
@@ -318,3 +319,61 @@ constitutionSpec =
       rsEnacted pulserRatifyState `shouldBe` Seq.empty
       enactState <- getEnactState
       rsEnactState pulserRatifyState `shouldBe` enactState
+
+actionPrioritySpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+actionPrioritySpec =
+  describe "Action priority" $ do
+    it "Only the first of proposals with same priority is enacted" $ do
+      (drepC, _, gpi) <- electBasicCommittee
+      (poolKH, _, _) <- setupPoolWithStake $ Coin 1_000_000
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      cc <- KeyHashObj <$> freshKeyHash
+      gai1 <-
+        submitGovAction $
+          UpdateCommittee (SJust gpi) mempty (Map.singleton cc (EpochNo 30)) $
+            1 %! 2
+      -- gai2 is the first action of a higher priority
+      gai2 <- submitGovAction $ NoConfidence $ SJust gpi
+      gai3 <- submitGovAction $ NoConfidence $ SJust gpi
+      submitYesVote_ (DRepVoter drepC) gai1
+      submitYesVote_ (StakePoolVoter poolKH) gai1
+      submitYesVote_ (DRepVoter drepC) gai2
+      submitYesVote_ (StakePoolVoter poolKH) gai2
+      submitYesVote_ (DRepVoter drepC) gai3
+      submitYesVote_ (StakePoolVoter poolKH) gai3
+      passNEpochs 2
+      getLastEnactedCommittee
+        `shouldReturn` SJust (GovPurposeId gai2)
+      checkProposalsEmpty
+
+    it "Contiguous ratified proposals are enacted in the same epoch, unless delayed" $ do
+      (drepC, committeeC, _) <- electBasicCommittee
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      pGai0 <-
+        submitParameterChange
+          SNothing
+          $ def & ppuDRepDepositL .~ SJust (Coin 1_000_000)
+      pGai1 <-
+        submitParameterChange
+          (SJust $ GovPurposeId pGai0)
+          $ def & ppuDRepDepositL .~ SJust (Coin 1_000_001)
+      pGai2 <-
+        submitParameterChange
+          (SJust $ GovPurposeId pGai1)
+          $ def & ppuDRepDepositL .~ SJust (Coin 1_000_002)
+      submitYesVote_ (DRepVoter drepC) pGai0
+      submitYesVote_ (CommitteeVoter committeeC) pGai0
+      submitYesVote_ (DRepVoter drepC) pGai1
+      submitYesVote_ (CommitteeVoter committeeC) pGai1
+      submitYesVote_ (DRepVoter drepC) pGai2
+      submitYesVote_ (CommitteeVoter committeeC) pGai2
+      passNEpochs 2
+      getLastEnactedParameterChange
+        `shouldReturn` SJust (GovPurposeId pGai2)
+      checkProposalsEmpty
+
+checkProposalsEmpty :: ConwayEraGov era => ImpTestM era ()
+checkProposalsEmpty = null . proposalsIds <$> getProposals `shouldReturn` True
