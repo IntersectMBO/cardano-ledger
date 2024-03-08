@@ -40,7 +40,23 @@ spec ::
   SpecWith (ImpTestState era)
 spec =
   describe "ENACT" $ do
-    it "TreasuryWithdrawal" $ do
+    treasuryWithdrawalsSpec
+    hardForkInitiationSpec
+    noConfidenceSpec
+    constitutionSpec
+
+treasuryWithdrawalsSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , NFData (Event (EraRule "ENACT" era))
+  , ToExpr (Event (EraRule "ENACT" era))
+  , Eq (Event (EraRule "ENACT" era))
+  , Typeable (Event (EraRule "ENACT" era))
+  ) =>
+  SpecWith (ImpTestState era)
+treasuryWithdrawalsSpec =
+  describe "Treasury withdrawals" $ do
+    it "modify EnactState as expected" $ do
       rewardAcount1 <- registerRewardAccount
       govActionId <- submitTreasuryWithdrawals [(rewardAcount1, Coin 666)]
       gas <- getGovActionState govActionId
@@ -79,145 +95,159 @@ spec =
                    , (raCredential rewardAcount2, Coin 222)
                    ]
       ensTreasury enactState'' `shouldBe` Coin 1
-    it "HardForkInitiation" $ do
-      (_, committeeMember, _) <- electBasicCommittee
-      modifyPParams $ \pp ->
-        pp
-          & ppDRepVotingThresholdsL
-            %~ ( \dvt ->
-                  dvt
-                    { dvtHardForkInitiation = 2 %! 3
-                    }
-               )
-          & ppPoolVotingThresholdsL
-            %~ ( \pvt ->
-                  pvt
-                    { pvtHardForkInitiation = 2 %! 3
-                    }
-               )
-          & ppGovActionLifetimeL
-            .~ EpochInterval 20
-      _ <- setupPoolWithStake $ Coin 22_000_000
-      (stakePoolId1, _, _) <- setupPoolWithStake $ Coin 22_000_000
-      (stakePoolId2, _, _) <- setupPoolWithStake $ Coin 22_000_000
-      (dRep1, _, _) <- setupSingleDRep 11_000_000
-      (dRep2, _, _) <- setupSingleDRep 11_000_000
-      curProtVer <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
-      nextMajorVersion <- succVersion $ pvMajor curProtVer
-      let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
-      govActionId <- submitGovAction $ HardForkInitiation SNothing nextProtVer
-      submitYesVote_ (CommitteeVoter committeeMember) govActionId
-      submitYesVote_ (DRepVoter (KeyHashObj dRep1)) govActionId
-      submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
-      passNEpochs 2
-      getsNES (nesEsL . curPParamsEpochStateL . ppProtocolVersionL) `shouldReturn` curProtVer
-      submitYesVote_ (DRepVoter (KeyHashObj dRep2)) govActionId
-      passNEpochs 2
-      getsNES (nesEsL . curPParamsEpochStateL . ppProtocolVersionL) `shouldReturn` curProtVer
-      submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
-      passNEpochs 2
-      getsNES (nesEsL . curPParamsEpochStateL . ppProtocolVersionL) `shouldReturn` nextProtVer
-    it "NoConfidence" $ do
-      modifyPParams $ \pp ->
-        pp
-          & ppDRepVotingThresholdsL . dvtCommitteeNoConfidenceL .~ 1 %! 2
-          & ppPoolVotingThresholdsL . pvtCommitteeNoConfidenceL .~ 1 %! 2
-          & ppCommitteeMaxTermLengthL .~ EpochInterval 200
-      let
-        getCommittee =
-          getsNES $
-            nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-        assertNoCommittee :: HasCallStack => ImpTestM era ()
-        assertNoCommittee =
-          do
-            committee <- getCommittee
-            impAnn "There should not be a committee" $ committee `shouldBe` SNothing
-      assertNoCommittee
-      khCC <- freshKeyHash
-      (drep, _, _) <- setupSingleDRep 1_000_000
-      let committeeMap =
-            Map.fromList
-              [ (KeyHashObj khCC, EpochNo 50)
-              ]
-      prevGaidCommittee@(GovPurposeId gaidCommittee) <-
-        electCommittee
-          SNothing
-          drep
-          mempty
-          committeeMap
-      (khSPO, _, _) <- setupPoolWithStake $ Coin 42_000_000
-      logStakeDistr
-      submitYesVote_ (StakePoolVoter khSPO) gaidCommittee
-      replicateM_ 4 passEpoch
-      impAnn "Committee should be elected" $ do
-        committee <- getCommittee
-        committee `shouldBe` SJust (Committee committeeMap $ 1 %! 2)
-      pp <- getsNES $ nesEsL . curPParamsEpochStateL
-      returnAddr <- registerRewardAccount
-      gaidNoConf <-
-        submitProposal $
-          ProposalProcedure
-            { pProcReturnAddr = returnAddr
-            , pProcGovAction = NoConfidence (SJust prevGaidCommittee)
-            , pProcDeposit = pp ^. ppGovActionDepositL
-            , pProcAnchor = def
-            }
-      submitYesVote_ (StakePoolVoter khSPO) gaidNoConf
-      submitYesVote_ (DRepVoter $ KeyHashObj drep) gaidNoConf
-      replicateM_ 4 passEpoch
-      assertNoCommittee
-    it "Constitution" $ do
-      (dRep, committeeMember, _) <- electBasicCommittee
-      (govActionId, constitution) <- submitConstitution SNothing
 
-      ConwayGovState proposalsBeforeVotes enactStateBeforeVotes pulserBeforeVotes _ _ _ <-
-        getsNES $ newEpochStateGovStateL @era
-      submitYesVote_ (DRepVoter dRep) govActionId
-      submitYesVote_ (CommitteeVoter committeeMember) govActionId
-      ConwayGovState proposalsAfterVotes enactStateAfterVotes pulserAfterVotes _ _ _ <-
-        getsNES newEpochStateGovStateL
+hardForkInitiationSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
+hardForkInitiationSpec =
+  it "HardForkInitiation" $ do
+    (_, committeeMember, _) <- electBasicCommittee
+    modifyPParams $ \pp ->
+      pp
+        & ppDRepVotingThresholdsL
+          %~ ( \dvt ->
+                dvt
+                  { dvtHardForkInitiation = 2 %! 3
+                  }
+             )
+        & ppPoolVotingThresholdsL
+          %~ ( \pvt ->
+                pvt
+                  { pvtHardForkInitiation = 2 %! 3
+                  }
+             )
+        & ppGovActionLifetimeL
+          .~ EpochInterval 20
+    _ <- setupPoolWithStake $ Coin 22_000_000
+    (stakePoolId1, _, _) <- setupPoolWithStake $ Coin 22_000_000
+    (stakePoolId2, _, _) <- setupPoolWithStake $ Coin 22_000_000
+    (dRep1, _, _) <- setupSingleDRep 11_000_000
+    (dRep2, _, _) <- setupSingleDRep 11_000_000
+    curProtVer <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
+    nextMajorVersion <- succVersion $ pvMajor curProtVer
+    let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
+    govActionId <- submitGovAction $ HardForkInitiation SNothing nextProtVer
+    submitYesVote_ (CommitteeVoter committeeMember) govActionId
+    submitYesVote_ (DRepVoter (KeyHashObj dRep1)) govActionId
+    submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
+    passNEpochs 2
+    getsNES (nesEsL . curPParamsEpochStateL . ppProtocolVersionL) `shouldReturn` curProtVer
+    submitYesVote_ (DRepVoter (KeyHashObj dRep2)) govActionId
+    passNEpochs 2
+    getsNES (nesEsL . curPParamsEpochStateL . ppProtocolVersionL) `shouldReturn` curProtVer
+    submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
+    passNEpochs 2
+    getsNES (nesEsL . curPParamsEpochStateL . ppProtocolVersionL) `shouldReturn` nextProtVer
 
-      impAnn "Votes are recorded in the proposals" $ do
-        let proposalsWithVotes =
-              proposalsAddVote
-                (CommitteeVoter committeeMember)
-                VoteYes
-                govActionId
-                ( proposalsAddVote
-                    (DRepVoter dRep)
-                    VoteYes
-                    govActionId
-                    proposalsBeforeVotes
-                )
-        proposalsAfterVotes `shouldBe` proposalsWithVotes
+noConfidenceSpec :: forall era. ConwayEraImp era => SpecWith (ImpTestState era)
+noConfidenceSpec =
+  it "NoConfidence" $ do
+    modifyPParams $ \pp ->
+      pp
+        & ppDRepVotingThresholdsL . dvtCommitteeNoConfidenceL .~ 1 %! 2
+        & ppPoolVotingThresholdsL . pvtCommitteeNoConfidenceL .~ 1 %! 2
+        & ppCommitteeMaxTermLengthL .~ EpochInterval 200
+    let
+      getCommittee =
+        getsNES $
+          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+      assertNoCommittee :: HasCallStack => ImpTestM era ()
+      assertNoCommittee =
+        do
+          committee <- getCommittee
+          impAnn "There should not be a committee" $ committee `shouldBe` SNothing
+    assertNoCommittee
+    khCC <- freshKeyHash
+    (drep, _, _) <- setupSingleDRep 1_000_000
+    let committeeMap =
+          Map.fromList
+            [ (KeyHashObj khCC, EpochNo 50)
+            ]
+    prevGaidCommittee@(GovPurposeId gaidCommittee) <-
+      electCommittee
+        SNothing
+        drep
+        mempty
+        committeeMap
+    (khSPO, _, _) <- setupPoolWithStake $ Coin 42_000_000
+    logStakeDistr
+    submitYesVote_ (StakePoolVoter khSPO) gaidCommittee
+    replicateM_ 4 passEpoch
+    impAnn "Committee should be elected" $ do
+      committee <- getCommittee
+      committee `shouldBe` SJust (Committee committeeMap $ 1 %! 2)
+    pp <- getsNES $ nesEsL . curPParamsEpochStateL
+    returnAddr <- registerRewardAccount
+    gaidNoConf <-
+      submitProposal $
+        ProposalProcedure
+          { pProcReturnAddr = returnAddr
+          , pProcGovAction = NoConfidence (SJust prevGaidCommittee)
+          , pProcDeposit = pp ^. ppGovActionDepositL
+          , pProcAnchor = def
+          }
+    submitYesVote_ (StakePoolVoter khSPO) gaidNoConf
+    submitYesVote_ (DRepVoter $ KeyHashObj drep) gaidNoConf
+    replicateM_ 4 passEpoch
+    assertNoCommittee
 
-      impAnn "EnactState has not changed" $
-        enactStateAfterVotes `shouldBe` enactStateBeforeVotes
+constitutionSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , GovState era ~ ConwayGovState era
+  ) =>
+  SpecWith (ImpTestState era)
+constitutionSpec =
+  it "Constitution" $ do
+    (dRep, committeeMember, _) <- electBasicCommittee
+    (govActionId, constitution) <- submitConstitution SNothing
 
-      impAnn "Pulser has not changed" $
-        pulserAfterVotes `shouldBe` pulserBeforeVotes
+    ConwayGovState proposalsBeforeVotes enactStateBeforeVotes pulserBeforeVotes _ _ _ <-
+      getsNES $ newEpochStateGovStateL @era
+    submitYesVote_ (DRepVoter dRep) govActionId
+    submitYesVote_ (CommitteeVoter committeeMember) govActionId
+    ConwayGovState proposalsAfterVotes enactStateAfterVotes pulserAfterVotes _ _ _ <-
+      getsNES newEpochStateGovStateL
 
-      passEpoch
+    impAnn "Votes are recorded in the proposals" $ do
+      let proposalsWithVotes =
+            proposalsAddVote
+              (CommitteeVoter committeeMember)
+              VoteYes
+              govActionId
+              ( proposalsAddVote
+                  (DRepVoter dRep)
+                  VoteYes
+                  govActionId
+                  proposalsBeforeVotes
+              )
+      proposalsAfterVotes `shouldBe` proposalsWithVotes
 
-      impAnn "New constitution is not enacted after one epoch" $ do
-        constitutionAfterOneEpoch <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-        constitutionAfterOneEpoch `shouldBe` def
+    impAnn "EnactState has not changed" $
+      enactStateAfterVotes `shouldBe` enactStateBeforeVotes
 
-      impAnn "Pulser should reflect the constitution to be enacted" $ do
-        ConwayGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
-        let ratifyState = extractDRepPulsingState pulser
-        gasId <$> rsEnacted ratifyState `shouldBe` govActionId Seq.:<| Seq.Empty
-        rsEnactState ratifyState ^. ensConstitutionL `shouldBe` constitution
+    impAnn "Pulser has not changed" $
+      pulserAfterVotes `shouldBe` pulserBeforeVotes
 
-      passEpoch
+    passEpoch
 
-      impAnn "Constitution is enacted after two epochs" $ do
-        curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-        curConstitution `shouldBe` constitution
+    impAnn "New constitution is not enacted after one epoch" $ do
+      constitutionAfterOneEpoch <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+      constitutionAfterOneEpoch `shouldBe` def
 
-      impAnn "Pulser is reset" $ do
-        ConwayGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
-        let pulserRatifyState = extractDRepPulsingState pulser
-        rsEnacted pulserRatifyState `shouldBe` Seq.empty
-        enactState <- getEnactState
-        rsEnactState pulserRatifyState `shouldBe` enactState
+    impAnn "Pulser should reflect the constitution to be enacted" $ do
+      ConwayGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
+      let ratifyState = extractDRepPulsingState pulser
+      gasId <$> rsEnacted ratifyState `shouldBe` govActionId Seq.:<| Seq.Empty
+      rsEnactState ratifyState ^. ensConstitutionL `shouldBe` constitution
+
+    passEpoch
+
+    impAnn "Constitution is enacted after two epochs" $ do
+      curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
+      curConstitution `shouldBe` constitution
+
+    impAnn "Pulser is reset" $ do
+      ConwayGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
+      let pulserRatifyState = extractDRepPulsingState pulser
+      rsEnacted pulserRatifyState `shouldBe` Seq.empty
+      enactState <- getEnactState
+      rsEnactState pulserRatifyState `shouldBe` enactState
