@@ -137,15 +137,19 @@ notFn = injectFn $ Not @fn
 orFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool, Bool] Bool
 orFn = injectFn $ Or @fn
 
+-- | Operations on Bool.
+--   One might expect   And :: BoolFn fn '[Bool, Bool] Bool
+--   But this is problematic because a Term like ( p x &&. q y ) has to solve for
+--   x or y first, choose x, so once x is fixed, it might be impossible to solve for y
+--   Luckily we can get conjuction by using Preds, in fact using Preds, the x and y
+--   can even be the same variable.
+--   Or can be problematic too (by using a form of DeMorgan's laws: x && y = not(not x || not y))
+--   but while that is possible, there are many scenarios which can only be specified using Or.
+--   If one inadvertantly uses a form of DeMorgan's laws, the worst that can happen is an ErrorSpec
+--   is returned, and the user can reformulate using Preds. So Or is incomplete, but sound, when it works.
 data BoolFn (fn :: [Type] -> Type -> Type) as b where
   Not :: BoolFn fn '[Bool] Bool
   Or :: BoolFn fn '[Bool, Bool] Bool
-
--- One might expect   And :: BoolFn fn '[Bool, Bool] Bool
--- But this is problematic because a Term like ( p x &&. q y ) has to solve for
--- x or y first, choose x, so once x is fixed, it might be impossible to solve for y
--- Luckily we can get conjuction by using Preds, in fact using Preds, the x and y
--- can even be the same variable.
 
 deriving instance Eq (BoolFn fn as b)
 deriving instance Show (BoolFn fn as b)
@@ -300,7 +304,6 @@ instance FunctionLike (SetFn fn) where
     Member -> Set.member
     Singleton -> Set.singleton
     Union -> (<>)
-    --   SetSize -> MkSize . Set.size FIXME
     Elem -> elem
 
 ------------------------------------------------------------------------

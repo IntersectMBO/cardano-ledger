@@ -32,15 +32,15 @@ import Prettyprinter
 ------------------------------------------------------------------------
 
 mapSize :: Map k v -> Size
-mapSize m = MkSize (Map.size m)
+mapSize = toInteger . Map.size
 
 instance Ord a => Sized (Map.Map a b) where
   sizeOf = mapSize
-  liftSizeSpec sizespec@(SizeSpec _) = TypeSpec (MapSpec mempty mempty (typeSpec sizespec) TrueSpec NoFold) []
+  liftSizeSpec sizespec = TypeSpec (MapSpec mempty mempty (typeSpec sizespec) TrueSpec NoFold) []
   liftMemberSpec xs = typeSpec (MapSpec mempty mempty (MemberSpec xs) TrueSpec NoFold)
   sizeOfTypeSpec (MapSpec mustk mustv size _ _) =
-    typeSpec (atLeastInt (Set.size mustk))
-      <> typeSpec (atLeastInt (length mustv))
+    typeSpec (atLeastSize (setSize mustk))
+      <> typeSpec (atLeastSize (listSize mustv))
       <> size
 
 data MapSpec fn k v = MapSpec
@@ -101,7 +101,7 @@ instance
         size' = constrained $ \sz ->
           satisfies
             (sz + Lit (listSize mustMap))
-            (size <> specIntToSize (cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs)))
+            (size <> cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs))
         foldSpec' = case foldSpec of
           NoFold -> NoFold
           FoldSpec fn sumSpec -> FoldSpec fn $ propagateSpecFun (theAddFn @fn) (HOLE :? Value mustSum :> Nil) sumSpec

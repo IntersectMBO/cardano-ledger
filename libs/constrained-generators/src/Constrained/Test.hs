@@ -207,8 +207,8 @@ sizeTests =
     , testSpec "listSubSize" setSubSize
     , testSpec "listSubSize" mapSubSize
     , testSpec "hasSizeList" hasSizeList
-    , testSpec "hasSizeList" hasSizeSet
-    , testSpec "hasSizeList" hasSizeMap
+    , testSpec "hasSizeSet" hasSizeSet
+    , testSpec "hasSizeMap" hasSizeMap
     ]
 
 type Numbery a =
@@ -725,51 +725,64 @@ mapSubSize = constrained $ \s ->
   2 ==. 12 - (sizeOf_ s)
 
 hasSizeList :: Spec BaseFn [Int]
-hasSizeList = hasSize (rangeInt 0 4)
+hasSizeList = hasSize (rangeSize 0 4)
 
 hasSizeSet :: Spec BaseFn (Set Int)
-hasSizeSet = hasSize (rangeInt 1 3)
+hasSizeSet = hasSize (rangeSize 1 3)
 
 hasSizeMap :: Spec BaseFn (Map Int Int)
-hasSizeMap = hasSize (rangeInt 1 3)
+hasSizeMap = hasSize (rangeSize 1 3)
 
 -- ========================================================
 -- Test properties of the instance Num(NumSpec Integer)
 
 instance Arbitrary (NumSpec Integer) where
-  arbitrary = NumSpecInterval <$> arbitrary <*> arbitrary
-
-newtype Pos a = Pos a deriving (Show)
-
--- | multiplication is 'tight' only if there are no negative numbers, and lo < hi
---   hence this instance
-instance Arbitrary (Pos (NumSpec Integer)) where
   arbitrary = do
-    Positive lo <- arbitrary :: Gen (Positive Integer)
-    Positive hi <- suchThat (arbitrary :: Gen (Positive Integer)) (\(Positive x) -> x >= lo)
-    pure (Pos (NumSpecInterval (Just lo) (Just hi)))
+    lo <- arbitrary
+    hi <- next lo
+    pure $ NumSpecInterval lo hi
+    where
+      next Nothing = arbitrary
+      next (Just n) = frequency [(1, pure Nothing), (3, Just <$> suchThat arbitrary (> n))]
 
-plusNegate :: NumSpec Integer -> NumSpec Integer -> Bool
-plusNegate x y = x - y == x + negate y
+-- | When we multiply intervals, we get a bounding box, around the possible values.
+--   When the intervals have infinities, the bounding box can be very loose. In fact the
+--   order in which we multiply intervals with infinities can affect how loose the bounding box is.
+--   So ((NegInf, n) * (a, b)) * (c,d)  AND  (NegInf, n) * ((a, b) * (c,d)) may have different bounding boxes
+--   To test the associative laws we must have no infinities, and then the associative law will hold.
+noInfinity :: Gen (NumSpec Integer)
+noInfinity = do
+  lo <- arbitrary
+  hi <- suchThat arbitrary (> lo)
+  pure $ NumSpecInterval (Just lo) (Just hi)
 
-commutesNumSpec :: NumSpec Integer -> NumSpec Integer -> Bool
-commutesNumSpec x y = x + y == y + x
+plusNegate :: NumSpec Integer -> NumSpec Integer -> Property
+plusNegate x y = x - y === x + negate y
 
-assocNumSpec :: NumSpec Integer -> NumSpec Integer -> NumSpec Integer -> Bool
-assocNumSpec x y z = x + (y + z) == (x + y) + z
+commutesNumSpec :: NumSpec Integer -> NumSpec Integer -> Property
+commutesNumSpec x y = x + y === y + x
 
-assocNumSpecTimes :: Pos (NumSpec Integer) -> Pos (NumSpec Integer) -> Pos (NumSpec Integer) -> Bool
-assocNumSpecTimes (Pos x) (Pos y) (Pos z) = x * (y * z) == (x * y) * z
+assocNumSpec :: NumSpec Integer -> NumSpec Integer -> NumSpec Integer -> Property
+assocNumSpec x y z = x + (y + z) === (x + y) + z
 
-negNegate :: NumSpec Integer -> Bool
-negNegate x = x == negate (negate x)
+commuteTimes :: (NumSpec Integer) -> (NumSpec Integer) -> Property
+commuteTimes x y = x * y === y * x
 
--- | multiplication is 'tight' only if there are no negative numbers, and lo < hi
-scaleNumSpec :: Pos (NumSpec Integer) -> Bool
-scaleNumSpec (Pos y) = y + y == 2 * y
+assocNumSpecTimes :: Gen Property
+assocNumSpecTimes = do
+  x <- noInfinity
+  y <- noInfinity
+  z <- noInfinity
+  pure (x * (y * z) === (x * y) * z)
 
-scaleOne :: Pos (NumSpec Integer) -> Bool
-scaleOne (Pos y) = y == 1 * y
+negNegate :: NumSpec Integer -> Property
+negNegate x = x === negate (negate x)
+
+scaleNumSpec :: NumSpec Integer -> Property
+scaleNumSpec y = y + y === 2 * y
+
+scaleOne :: NumSpec Integer -> Property
+scaleOne y = y === 1 * y
 
 numNumSpecTree :: TestTree
 numNumSpecTree =
@@ -782,6 +795,7 @@ numNumSpecTree =
     , testProperty "commutesNumSpec(x+y = y+x)" commutesNumSpec
     , testProperty "assocNumSpec(x+(y+z) == (x+y)+z)" assocNumSpec
     , testProperty "assocNumSpecTimes(x*(y*z) == (x*y)*z)" assocNumSpecTimes
+    , testProperty "commuteTimes" commuteTimes
     ]
 
 -- ==========================================================
@@ -790,4 +804,4 @@ runTestSpec :: HasSpec BaseFn t => Spec BaseFn t -> IO ()
 runTestSpec spec = defaultMain (testSpec "interactive test with runTestSpec" spec)
 
 generateSpec :: forall fn a. HasSpec fn a => Spec fn a -> IO a
-generateSpec spec = generate (genFromGenT (genFromSpec @fn spec))
+generateSpec spec = generate (genFromSpec_ @fn spec)
