@@ -21,12 +21,6 @@ import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
-import Control.State.Transition.Trace (
-  SourceSignalTarget (signal, source),
-  Trace (..),
-  sourceSignalTargets,
- )
-import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (BaseEnv), traceFromInitState)
 import Data.Proxy (Proxy)
 import GHC.Generics (Generic)
 import Test.Cardano.Ledger.AllegraEraGen ()
@@ -37,6 +31,12 @@ import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
+import Test.Control.State.Transition.Trace (
+  SourceSignalTarget (signal, source),
+  Trace (..),
+  sourceSignalTargets,
+ )
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (BaseEnv), traceFromInitState)
 import Test.QuickCheck.Gen (unGen)
 import Test.QuickCheck.Random (mkQCGen)
 

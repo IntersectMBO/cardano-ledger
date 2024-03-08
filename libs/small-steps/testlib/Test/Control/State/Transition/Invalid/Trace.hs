@@ -8,13 +8,13 @@
 -- An invalid trace consists of an valid prefix, and a last signal that
 -- __might__ be invalid. The validity of the signal depends on the probability
 -- of the trace generators of generating invalid signals.
-module Control.State.Transition.Invalid.Trace where
+module Test.Control.State.Transition.Invalid.Trace where
 
 import Control.State.Transition (Environment, PredicateFailure, Signal, State)
-import qualified Control.State.Transition.Trace as Trace
 import Data.List.NonEmpty (NonEmpty)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import qualified Test.Control.State.Transition.Trace as Trace
 
 data Trace s = Trace
   { validPrefix :: !(Trace.Trace s)

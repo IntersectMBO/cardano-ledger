@@ -115,7 +115,6 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
 import Control.SetAlgebra (eval, (◁))
-import Control.State.Transition.Trace (SourceSignalTarget (..), getEvents, sourceSignalTargets)
 import Data.Foldable (fold, foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -147,6 +146,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
   unsafeBoundRational,
  )
 import Test.Cardano.Ledger.TerseTools (Terse (..), tersemapdiffs)
+import Test.Control.State.Transition.Trace (SourceSignalTarget (..), getEvents, sourceSignalTargets)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (
   Gen,

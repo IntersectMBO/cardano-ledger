@@ -9,11 +9,11 @@ module Byron.Spec.Ledger.Update.Test (
 where
 
 import Byron.Spec.Ledger.Update
-import qualified Control.State.Transition.Generator as Generator
 import Data.Data (Data)
 import GHC.Stack (HasCallStack)
 import Hedgehog (MonadTest)
 import Hedgehog.Internal.Property (CoverPercentage)
+import qualified Test.Control.State.Transition.Generator as Generator
 
 -- | Check that all the relevant predicate failures are covered.
 coverUpiregFailures ::

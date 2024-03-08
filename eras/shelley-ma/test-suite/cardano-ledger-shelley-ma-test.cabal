@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-shelley-ma-test
-version:       1.2.1.7
+version:       1.2.2.0
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -105,8 +105,7 @@ test-suite cardano-ledger-shelley-ma-test
         QuickCheck,
         cardano-ledger-shelley-test,
         cardano-ledger-shelley,
-        small-steps-test >=1.1,
-        small-steps >=1.1,
+        small-steps:{small-steps, testlib} >=1.1,
         cardano-strict-containers,
         tasty-hunit,
         tasty-quickcheck,

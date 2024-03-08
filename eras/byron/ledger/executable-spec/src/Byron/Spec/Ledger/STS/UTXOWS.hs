@@ -30,11 +30,11 @@ import Control.State.Transition (
   transitionRules,
   wrapFailed,
  )
-import Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
-import Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import Data.Data (Data, Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Test.Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
+import Test.Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 
 data UTXOWS deriving (Data, Typeable)
 

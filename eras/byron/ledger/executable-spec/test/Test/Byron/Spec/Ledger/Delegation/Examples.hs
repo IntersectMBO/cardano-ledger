@@ -36,11 +36,11 @@ import Byron.Spec.Ledger.Delegation (
   _dSEnvK,
   _dSEnvSlot,
  )
-import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Data.Functor.Identity (runIdentity)
 import Data.Set (Set, fromList)
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
+import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)
 

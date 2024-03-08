@@ -2,9 +2,9 @@
 
 -- TODO Remove use of deprecated function testProperty
 
-import qualified Control.State.Transition.Examples.CommitReveal as CommitReveal
-import qualified Control.State.Transition.Examples.GlobalSum as GSum
-import qualified Control.State.Transition.Examples.Sum as Sum
+import qualified Test.Control.State.Transition.Examples.CommitReveal as CommitReveal
+import qualified Test.Control.State.Transition.Examples.GlobalSum as GSum
+import qualified Test.Control.State.Transition.Examples.Sum as Sum
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.ExpectedFailure (expectFailBecause)
 import Test.Tasty.Hedgehog (testPropertyNamed)

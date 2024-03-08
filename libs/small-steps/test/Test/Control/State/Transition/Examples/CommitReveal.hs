@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Control.State.Transition.Examples.CommitReveal where
+module Test.Control.State.Transition.Examples.CommitReveal where
 
 import Cardano.Crypto.Hash (Hash, HashAlgorithm)
 import Cardano.Crypto.Hash.Short (ShortHash)
@@ -27,8 +27,6 @@ import Control.State.Transition (
   transitionRules,
   (?!),
  )
-import qualified Control.State.Transition.Trace as Trace
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
 import Data.Kind (Type)
 import Data.List.Unique (allUnique)
 import Data.Map.Strict (Map)
@@ -36,6 +34,8 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import qualified Test.Control.State.Transition.Trace as Trace
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
 import qualified Test.QuickCheck as QC
 import Prelude hiding (id)
 

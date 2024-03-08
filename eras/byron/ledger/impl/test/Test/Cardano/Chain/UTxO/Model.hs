@@ -27,19 +27,19 @@ import qualified Cardano.Chain.UTxO.UTxO as Concrete.UTxO
 import Cardano.Chain.ValidationMode (ValidationMode (..))
 import Cardano.Crypto (hashDecoded, serializeCborHash)
 import Cardano.Prelude hiding (trace, traceM, traceShow)
-import Control.State.Transition.Generator (classifyTraceLength, trace)
-import Control.State.Transition.Trace (
-  Trace,
-  TraceOrder (OldestFirst),
-  traceEnv,
-  traceSignals,
- )
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
 import Hedgehog (MonadTest, evalEither, forAll, property)
 import Lens.Micro ((^.))
 import qualified Test.Cardano.Chain.Elaboration.UTxO as E
 import Test.Cardano.Prelude
+import Test.Control.State.Transition.Generator (classifyTraceLength, trace)
+import Test.Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (OldestFirst),
+  traceEnv,
+  traceSignals,
+ )
 import Test.Options (TSGroup, TSProperty, withTestsTS)
 
 tests :: TSGroup

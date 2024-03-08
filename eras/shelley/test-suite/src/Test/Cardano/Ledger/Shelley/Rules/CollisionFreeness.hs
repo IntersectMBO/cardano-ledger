@@ -21,11 +21,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (UTxO (..), txins, txouts)
 import Control.SetAlgebra (eval, (∩))
-import Control.State.Transition.Trace (
-  SourceSignalTarget (..),
-  sourceSignalTargets,
- )
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
@@ -47,6 +42,11 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
 import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
  )
+import Test.Control.State.Transition.Trace (
+  SourceSignalTarget (..),
+  sourceSignalTargets,
+ )
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (
   Property,
   Testable (..),

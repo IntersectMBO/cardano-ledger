@@ -87,12 +87,6 @@ import Cardano.Slotting.EpochInfo (
 import Control.Monad.Reader.Class (asks)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended hiding (Assertion)
-import Control.State.Transition.Trace (
-  applySTSTest,
-  checkTrace,
-  (.-),
-  (.->>),
- )
 import Data.Coerce (Coercible, coerce)
 import Data.Functor.Identity (runIdentity)
 import Data.List.NonEmpty (NonEmpty)
@@ -104,6 +98,12 @@ import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.Cardano.Protocol.TPraos.Create (KESKeyPair (..), VRFKeyPair (..), evolveKESUntil)
+import Test.Control.State.Transition.Trace (
+  applySTSTest,
+  checkTrace,
+  (.-),
+  (.->>),
+ )
 import Test.Tasty.HUnit (
   Assertion,
   (@?=),

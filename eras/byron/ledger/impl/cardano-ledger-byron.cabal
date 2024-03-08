@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-byron
-version:            1.0.0.4
+version:            1.0.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -351,8 +351,7 @@ test-suite cardano-ledger-byron-test
         hedgehog >=1.0.4,
         microlens,
         resourcet,
-        small-steps >=1.1,
-        small-steps-test >=1.1,
+        small-steps:{small-steps, testlib} >=1.1,
         streaming,
         tasty,
         tasty-hedgehog,

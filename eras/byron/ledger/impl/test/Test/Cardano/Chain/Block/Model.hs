@@ -80,26 +80,6 @@ import Control.State.Transition (
   TRC (TRC),
   applySTS,
  )
-import Control.State.Transition.Generator (
-  SignalGenerator,
-  classifyTraceLength,
-  invalidTrace,
-  ofLengthAtLeast,
-  trace,
- )
-import qualified Control.State.Transition.Invalid.Trace as Invalid.Trace
-import Control.State.Transition.Trace (
-  Trace,
-  TraceOrder (NewestFirst, OldestFirst),
-  extractValues,
-  lastSignal,
-  lastState,
-  preStatesAndSignals,
-  traceEnv,
-  traceInit,
-  traceSignals,
-  _traceEnv,
- )
 import qualified Data.Set as Set
 import Data.String (fromString)
 import Hedgehog (
@@ -131,6 +111,26 @@ import Test.Cardano.Chain.Elaboration.Block (
 import Test.Cardano.Chain.Elaboration.Keys (elaborateVKeyGenesisHash)
 import Test.Cardano.Chain.UTxO.Model (elaborateInitialUTxO)
 import Test.Cardano.Prelude
+import Test.Control.State.Transition.Generator (
+  SignalGenerator,
+  classifyTraceLength,
+  invalidTrace,
+  ofLengthAtLeast,
+  trace,
+ )
+import qualified Test.Control.State.Transition.Invalid.Trace as Invalid.Trace
+import Test.Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (NewestFirst, OldestFirst),
+  extractValues,
+  lastSignal,
+  lastState,
+  preStatesAndSignals,
+  traceEnv,
+  traceInit,
+  traceSignals,
+  _traceEnv,
+ )
 import Test.Options (TSGroup, TSProperty, withTestsTS)
 import Prelude (String)
 

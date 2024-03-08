@@ -29,8 +29,6 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.RWS.Strict (gets)
 import Control.State.Transition.Extended hiding (Assertion)
-import Control.State.Transition.Trace (Trace (..), lastState)
-import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Data.Coerce (coerce)
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
@@ -72,6 +70,8 @@ import Test.Cardano.Ledger.Generic.TxGen (
   genUTxO,
  )
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
+import Test.Control.State.Transition.Trace (Trace (..), lastState)
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 

@@ -54,7 +54,6 @@ import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.DeepSeq (NFData (rnf))
 import Control.Monad.Except ()
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
@@ -65,6 +64,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block (BHeader (EraCrypto era)) era)
 

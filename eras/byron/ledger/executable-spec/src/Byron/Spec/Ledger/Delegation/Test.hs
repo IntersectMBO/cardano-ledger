@@ -5,11 +5,11 @@
 module Byron.Spec.Ledger.Delegation.Test (coverDelegFailures) where
 
 import Byron.Spec.Ledger.Delegation
-import qualified Control.State.Transition.Generator as Generator
 import Data.Data (Data)
 import GHC.Stack (HasCallStack)
 import Hedgehog (MonadTest)
 import Hedgehog.Internal.Property (CoverPercentage)
+import qualified Test.Control.State.Transition.Generator as Generator
 
 coverDelegFailures ::
   forall m a.

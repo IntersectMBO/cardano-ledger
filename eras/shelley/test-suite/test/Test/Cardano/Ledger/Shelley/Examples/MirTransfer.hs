@@ -28,13 +28,13 @@ import Cardano.Ledger.Shelley.Rules (ShelleyDelegPredFailure (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Cardano.Ledger.UMap as UM
 import Control.State.Transition.Extended hiding (Assertion)
-import Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Lens.Micro
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), applySTSTest, mkKeyPair, runShelleyBase)
+import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 

@@ -50,17 +50,6 @@ import Cardano.Protocol.TPraos.BHeader (
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.State.Transition (STS (State))
 import Control.State.Transition.Extended (Environment, Signal)
-import Control.State.Transition.Trace (
-  Trace,
-  TraceOrder (OldestFirst),
-  traceSignals,
- )
-import Control.State.Transition.Trace.Generator.QuickCheck (
-  forAllTraceFromInitState,
-  onlyValidSignalsAreGeneratedFromInitState,
-  traceFromInitState,
- )
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.ByteString as BS
 import Data.Foldable (foldMap', toList)
 import qualified Data.Map.Strict as Map
@@ -78,6 +67,17 @@ import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import Test.Cardano.Ledger.Shelley.Utils
+import Test.Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (OldestFirst),
+  traceSignals,
+ )
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (
+  forAllTraceFromInitState,
+  onlyValidSignalsAreGeneratedFromInitState,
+  traceFromInitState,
+ )
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (
   Property,
   checkCoverage,

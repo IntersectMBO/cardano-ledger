@@ -25,17 +25,6 @@ import Byron.Spec.Ledger.UTxO (
  )
 import Control.Arrow (second, (***))
 import Control.Monad (when)
-import Control.State.Transition.Generator (classifyTraceLength, trace, traceOfLength)
-import Control.State.Transition.Trace (
-  Trace,
-  TraceOrder (OldestFirst),
-  firstAndLastState,
-  preStatesAndSignals,
-  traceEnv,
-  traceLength,
-  traceSignals,
-  _traceInitState,
- )
 import Data.Foldable (foldl', traverse_)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set, empty, fromList, union)
@@ -52,6 +41,17 @@ import Hedgehog (
  )
 import Lens.Micro ((&), (^.), _2)
 import Lens.Micro.Extras (view)
+import Test.Control.State.Transition.Generator (classifyTraceLength, trace, traceOfLength)
+import Test.Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (OldestFirst),
+  firstAndLastState,
+  preStatesAndSignals,
+  traceEnv,
+  traceLength,
+  traceSignals,
+  _traceInitState,
+ )
 
 --------------------------------------------------------------------------------
 -- UTxO Properties

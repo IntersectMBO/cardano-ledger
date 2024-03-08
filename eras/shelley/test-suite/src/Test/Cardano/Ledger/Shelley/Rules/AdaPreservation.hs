@@ -73,12 +73,6 @@ import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txInsFilter, txouts)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (BHeader (..))
-import Control.State.Transition.Trace (
-  SourceSignalTarget (..),
-  Trace (..),
-  sourceSignalTargets,
- )
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Foldable (fold, foldl', toList)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -94,6 +88,12 @@ import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   runShelleyBase,
  )
+import Test.Control.State.Transition.Trace (
+  SourceSignalTarget (..),
+  Trace (..),
+  sourceSignalTargets,
+ )
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (
   Property,
   Testable (..),

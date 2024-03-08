@@ -33,13 +33,6 @@ import Cardano.Protocol.TPraos.BHeader (
   bheaderSlotNo,
  )
 import Control.SetAlgebra (dom, eval, (∈), (∉))
-import Control.State.Transition.Trace (
-  SourceSignalTarget (..),
-  TraceOrder (OldestFirst),
-  sourceSignalTargets,
-  traceStates,
- )
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro.Extras (view)
@@ -48,6 +41,13 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..))
+import Test.Control.State.Transition.Trace (
+  SourceSignalTarget (..),
+  TraceOrder (OldestFirst),
+  sourceSignalTargets,
+  traceStates,
+ )
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (Property, conjoin, counterexample, (===))
 
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (

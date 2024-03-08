@@ -39,10 +39,6 @@ import Cardano.Protocol.TPraos.BHeader (
   bheaderSlotNo,
  )
 import Control.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
-import Control.State.Transition.Trace (
-  SourceSignalTarget (..),
- )
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
@@ -53,6 +49,10 @@ import Test.Cardano.Ledger.Shelley.Utils (
   ChainProperty,
   epochFromSlotNo,
  )
+import Test.Control.State.Transition.Trace (
+  SourceSignalTarget (..),
+ )
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (
   Property,
   Testable (..),

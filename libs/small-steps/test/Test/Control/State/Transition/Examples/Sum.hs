@@ -4,15 +4,15 @@
 
 -- | Simple example of a transition system whose states contain the sum of the
 -- integers seen in the signals.
-module Control.State.Transition.Examples.Sum where
+module Test.Control.State.Transition.Examples.Sum where
 
 import Control.State.Transition
-import Control.State.Transition.Generator
-import Control.State.Transition.Trace
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
 import Hedgehog (Property, assert, forAll, property, withTests)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
+import Test.Control.State.Transition.Generator
+import Test.Control.State.Transition.Trace
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
 import qualified Test.QuickCheck as QC
 
 data SUM

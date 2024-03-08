@@ -20,11 +20,11 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules (LedgerEnv)
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.State.Transition
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Functor.Identity (Identity)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 
 import qualified Test.Cardano.Ledger.Shelley.ByronTranslation as ByronTranslation (testGroupByronTranslation)
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation

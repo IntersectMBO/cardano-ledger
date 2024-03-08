@@ -47,8 +47,6 @@ import qualified Cardano.Crypto.Hashing as H
 import Cardano.Ledger.Binary (decCBOR, encCBOR)
 import Cardano.Prelude
 import qualified Control.State.Transition as STS
-import qualified Control.State.Transition.Generator as STS
-import qualified Control.State.Transition.Trace as STS
 import Data.Coerce (coerce)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -71,6 +69,8 @@ import Test.Cardano.Chain.UTxO.Model (
 import qualified Test.Cardano.Chain.Update.Gen as UpdateIface
 import Test.Cardano.Crypto.Gen (feedPM)
 import Test.Cardano.Ledger.Binary.Vintage.Helpers.GoldenRoundTrip (roundTripsCBORShow)
+import qualified Test.Control.State.Transition.Generator as STS
+import qualified Test.Control.State.Transition.Trace as STS
 import Test.Options (TSGroup, TSProperty, eachOfTS, withTestsTS)
 
 tests :: TSGroup

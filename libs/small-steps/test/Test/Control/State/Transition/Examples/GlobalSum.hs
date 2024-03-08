@@ -6,7 +6,7 @@
 -- | Simple example of a transition system whose states contain the sum of the
 -- integers seen in the signals, where 'sum' is an abstract monoidal sum given
 -- in the enviroment.
-module Control.State.Transition.Examples.GlobalSum where
+module Test.Control.State.Transition.Examples.GlobalSum where
 
 import Control.Arrow (right)
 import Control.Monad.Reader

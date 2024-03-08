@@ -294,11 +294,11 @@ cradle:
     - path: "libs/small-steps/src"
       component: "lib:small-steps"
 
-    - path: "libs/small-steps-test/src"
-      component: "lib:small-steps-test"
+    - path: "libs/small-steps/testlib"
+      component: "small-steps:lib:testlib"
 
-    - path: "libs/small-steps-test/test"
-      component: "small-steps-test:test:examples"
+    - path: "libs/small-steps/test"
+      component: "small-steps:test:tests"
 
     - path: "libs/vector-map/src"
       component: "lib:vector-map"

@@ -41,7 +41,6 @@ import Cardano.Ledger.UTxO (EraUTxO)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
-import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Data.Functor.Identity (runIdentity)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -61,6 +60,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
   applySTSTest,
   runShelleyBase,
  )
+import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Test.QuickCheck (Gen)
 
 -- ======================================================

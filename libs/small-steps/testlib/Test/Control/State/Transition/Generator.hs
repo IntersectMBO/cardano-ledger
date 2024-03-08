@@ -20,7 +20,7 @@
 --   - We start with some initial base state.
 --   - We generate a stream of signals. These might be influenced by some running state
 --   - We run each signal through
-module Control.State.Transition.Generator (
+module Test.Control.State.Transition.Generator (
   HasTrace,
   SignalGenerator,
   BaseEnv,
@@ -79,19 +79,6 @@ import Control.State.Transition.Extended (
   State,
   TRC (TRC),
  )
-import qualified Control.State.Transition.Invalid.Trace as Invalid
-import Control.State.Transition.Trace (
-  Trace,
-  TraceOrder (OldestFirst),
-  applySTSTest,
-  closure,
-  extractValues,
-  lastState,
-  mkTrace,
-  traceLength,
-  traceSignals,
-  _traceEnv,
- )
 import Data.Data (Constr, Data, toConstr)
 import Data.Either (isLeft)
 import Data.Foldable (traverse_)
@@ -115,14 +102,27 @@ import Hedgehog (
   property,
   success,
  )
-import Hedgehog.Extra.Manual (Manual)
-import qualified Hedgehog.Extra.Manual as Manual
 import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Gen (integral_, runDiscardEffectT)
 import Hedgehog.Internal.Property (CoverPercentage)
 import Hedgehog.Internal.Tree (NodeT (NodeT), TreeT, nodeChildren, treeValue)
 import Hedgehog.Range (Size (Size))
 import qualified Hedgehog.Range as Range
+import qualified Test.Control.State.Transition.Invalid.Trace as Invalid
+import Test.Control.State.Transition.Trace (
+  Trace,
+  TraceOrder (OldestFirst),
+  applySTSTest,
+  closure,
+  extractValues,
+  lastState,
+  mkTrace,
+  traceLength,
+  traceSignals,
+  _traceEnv,
+ )
+import Test.Hedgehog.Extra.Manual (Manual)
+import qualified Test.Hedgehog.Extra.Manual as Manual
 
 class STS s => HasTrace s where
   type BaseEnv s :: Type

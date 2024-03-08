@@ -7,8 +7,6 @@ module Test.Byron.Spec.Ledger.AbstractSize.Properties (testTxHasTypeReps, testPr
 import Byron.Spec.Ledger.Core hiding ((<|))
 import Byron.Spec.Ledger.STS.UTXOW (UTXOW)
 import Byron.Spec.Ledger.UTxO
-import Control.State.Transition.Generator (trace)
-import Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import Data.AbstractSize
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -18,6 +16,8 @@ import Data.Typeable (TypeRep, Typeable, typeOf)
 import Hedgehog (MonadTest, Property, forAll, property, withTests, (===))
 import Hedgehog.Internal.Property (PropertyName (..))
 import Numeric.Natural (Natural)
+import Test.Control.State.Transition.Generator (trace)
+import Test.Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 import Test.Tasty.Hedgehog hiding (testProperty)

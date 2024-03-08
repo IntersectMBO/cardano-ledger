@@ -40,7 +40,6 @@ packages:
   libs/cardano-protocol-tpraos
   libs/non-integral
   libs/small-steps
-  libs/small-steps-test
   libs/cardano-data
   libs/set-algebra
   libs/vector-map
