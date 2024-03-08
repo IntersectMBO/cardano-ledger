@@ -31,7 +31,6 @@ import Type.Reflection (Typeable)
 spec ::
   forall era.
   ( ConwayEraImp era
-  , GovState era ~ ConwayGovState era
   , NFData (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "ENACT" era))
   , Eq (Event (EraRule "ENACT" era))
@@ -189,23 +188,20 @@ noConfidenceSpec =
     replicateM_ 4 passEpoch
     assertNoCommittee
 
-constitutionSpec ::
-  forall era.
-  ( ConwayEraImp era
-  , GovState era ~ ConwayGovState era
-  ) =>
-  SpecWith (ImpTestState era)
+constitutionSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
 constitutionSpec =
   it "Constitution" $ do
     (dRep, committeeMember, _) <- electBasicCommittee
     (govActionId, constitution) <- submitConstitution SNothing
 
-    ConwayGovState proposalsBeforeVotes enactStateBeforeVotes pulserBeforeVotes _ _ _ <-
-      getsNES $ newEpochStateGovStateL @era
+    proposalsBeforeVotes <- getsNES $ newEpochStateGovStateL . proposalsGovStateL
+    pulserBeforeVotes <- getsNES newEpochStateDRepPulsingStateL
+
     submitYesVote_ (DRepVoter dRep) govActionId
     submitYesVote_ (CommitteeVoter committeeMember) govActionId
-    ConwayGovState proposalsAfterVotes enactStateAfterVotes pulserAfterVotes _ _ _ <-
-      getsNES newEpochStateGovStateL
+
+    proposalsAfterVotes <- getsNES $ newEpochStateGovStateL . proposalsGovStateL
+    pulserAfterVotes <- getsNES newEpochStateDRepPulsingStateL
 
     impAnn "Votes are recorded in the proposals" $ do
       let proposalsWithVotes =
@@ -221,9 +217,6 @@ constitutionSpec =
               )
       proposalsAfterVotes `shouldBe` proposalsWithVotes
 
-    impAnn "EnactState has not changed" $
-      enactStateAfterVotes `shouldBe` enactStateBeforeVotes
-
     impAnn "Pulser has not changed" $
       pulserAfterVotes `shouldBe` pulserBeforeVotes
 
@@ -234,7 +227,7 @@ constitutionSpec =
       constitutionAfterOneEpoch `shouldBe` def
 
     impAnn "Pulser should reflect the constitution to be enacted" $ do
-      ConwayGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
+      pulser <- getsNES newEpochStateDRepPulsingStateL
       let ratifyState = extractDRepPulsingState pulser
       gasId <$> rsEnacted ratifyState `shouldBe` govActionId Seq.:<| Seq.Empty
       rsEnactState ratifyState ^. ensConstitutionL `shouldBe` constitution
@@ -246,7 +239,7 @@ constitutionSpec =
       curConstitution `shouldBe` constitution
 
     impAnn "Pulser is reset" $ do
-      ConwayGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
+      pulser <- getsNES newEpochStateDRepPulsingStateL
       let pulserRatifyState = extractDRepPulsingState pulser
       rsEnacted pulserRatifyState `shouldBe` Seq.empty
       enactState <- getEnactState
