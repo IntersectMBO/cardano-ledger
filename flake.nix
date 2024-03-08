@@ -74,6 +74,7 @@
           shell.shellHook = ''
             export LANG=en_US.UTF-8
             export LC_ALL=en_US.UTF-8
+            export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
           '' + lib.optionalString (nixpkgs.glibcLocales != null && nixpkgs.stdenv.hostPlatform.libc == "glibc") ''
             export LOCALE_ARCHIVE="${nixpkgs.glibcLocales}/lib/locale/locale-archive"
             DEFAULT_PS1="\n\[\033[1;32m\][nix-shell:\w]\$\[\033[0m\] "
