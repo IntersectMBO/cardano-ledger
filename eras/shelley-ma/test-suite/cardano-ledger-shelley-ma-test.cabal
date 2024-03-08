@@ -81,7 +81,7 @@ test-suite cardano-ledger-shelley-ma-test
         -Wall -Wcompat -Wincomplete-record-updates
         -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
         -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
-        "-with-rtsopts=-K4m -M350m"
+        "-with-rtsopts=-K4m -M650m"
 
     build-depends:
         base,
