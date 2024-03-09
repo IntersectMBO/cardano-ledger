@@ -195,7 +195,7 @@ validatingTickTransitionFORECAST ::
   , BaseM (tick era) ~ ShelleyBase
   , State (EraRule "UPEC" era) ~ UpecState era
   , Signal (EraRule "UPEC" era) ~ ()
-  , Environment (EraRule "UPEC" era) ~ EpochState era
+  , Environment (EraRule "UPEC" era) ~ LedgerState era
   , Embed (EraRule "UPEC" era) (tick era)
   , STS (tick era)
   , GovState era ~ ShelleyGovState era
@@ -234,10 +234,11 @@ validatingTickTransitionFORECAST nes slot = do
       -- return value here was used to validate their headers.
 
       let pp = es ^. curPParamsEpochStateL
-          updates = utxosGovState . lsUTxOState . esLState $ es
+          ls = esLState es
+          updates = utxosGovState $ lsUTxOState ls
       UpecState pp' _ <-
         trans @(EraRule "UPEC" era) $
-          TRC (es, UpecState pp updates, ())
+          TRC (ls, UpecState pp updates, ())
       let es' =
             adoptGenesisDelegs es slot
               & curPParamsEpochStateL .~ pp'
@@ -341,18 +342,14 @@ instance
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "UPEC" era) ~ ()
   , State (EraRule "UPEC" era) ~ UpecState era
-  , Environment (EraRule "UPEC" era) ~ EpochState era
+  , Environment (EraRule "UPEC" era) ~ LedgerState era
   , Embed (EraRule "UPEC" era) (ShelleyTICKF era)
   , GovState era ~ ShelleyGovState era
   ) =>
   STS (ShelleyTICKF era)
   where
-  type
-    State (ShelleyTICKF era) =
-      NewEpochState era
-  type
-    Signal (ShelleyTICKF era) =
-      SlotNo
+  type State (ShelleyTICKF era) = NewEpochState era
+  type Signal (ShelleyTICKF era) = SlotNo
   type Environment (ShelleyTICKF era) = ()
   type BaseM (ShelleyTICKF era) = ShelleyBase
   type PredicateFailure (ShelleyTICKF era) = ShelleyTickfPredFailure era

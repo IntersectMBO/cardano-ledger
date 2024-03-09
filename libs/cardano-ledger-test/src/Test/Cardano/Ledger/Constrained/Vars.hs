@@ -69,6 +69,7 @@ import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.SafeHash (SafeHash)
+import Cardano.Ledger.Shelley.Governance (futureProposalsL, proposalsL)
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState hiding (credMapL, delegations, deltaReserves, deltaTreasury, ptrMap, rewards)
@@ -378,8 +379,8 @@ ppupStateT ::
   RootTarget era (ShelleyGovState era) (ShelleyGovState era)
 ppupStateT p =
   Invert "PPUPState" (typeRep @(ShelleyGovState era)) ppupfun
-    :$ Lensed (pparamProposals p) (shellyGovStateProposedPPUpdatesL . proposedMapL p)
-    :$ Lensed (futurePParamProposals p) (futureproposalsL . proposedMapL p)
+    :$ Lensed (pparamProposals p) (proposalsL . proposedMapL p)
+    :$ Lensed (futurePParamProposals p) (futureProposalsL . proposedMapL p)
     :$ Lensed (currPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
     :$ Lensed (prevPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
   where
@@ -2026,12 +2027,6 @@ smCommL = lens getter (\_ t -> SJust t)
   where
     getter SNothing = Committee Map.empty maxBound
     getter (SJust x) = x
-
-shellyGovStateProposedPPUpdatesL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
-shellyGovStateProposedPPUpdatesL = lens proposals (\x y -> x {proposals = y})
-
-futureproposalsL :: Lens' (ShelleyGovState era) (ProposedPPUpdates era)
-futureproposalsL = lens futureProposals (\x y -> x {futureProposals = y})
 
 proposedMapL :: Proof era -> Lens' (ProposedPPUpdates era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 proposedMapL p =

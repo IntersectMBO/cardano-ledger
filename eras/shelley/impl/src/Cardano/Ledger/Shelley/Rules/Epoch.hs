@@ -27,6 +27,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
+  LedgerState,
   PState (..),
   UTxOState (utxosDeposited, utxosGovState),
   curPParamsEpochStateL,
@@ -43,7 +44,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   pattern CertState,
   pattern EpochState,
  )
-import Cardano.Ledger.Shelley.LedgerState.Types (esAccountStateL, prevPParamsEpochStateL)
+import Cardano.Ledger.Shelley.LedgerState.Types (prevPParamsEpochStateL)
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPOOLREAP,
@@ -129,7 +130,7 @@ instance
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "UPEC" era) (ShelleyEPOCH era)
-  , Environment (EraRule "UPEC" era) ~ EpochState era
+  , Environment (EraRule "UPEC" era) ~ LedgerState era
   , State (EraRule "UPEC" era) ~ UpecState era
   , Signal (EraRule "UPEC" era) ~ ()
   , Default (PParams era)
@@ -164,7 +165,7 @@ epochTransition ::
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "UPEC" era) (ShelleyEPOCH era)
-  , Environment (EraRule "UPEC" era) ~ EpochState era
+  , Environment (EraRule "UPEC" era) ~ LedgerState era
   , State (EraRule "UPEC" era) ~ UpecState era
   , Signal (EraRule "UPEC" era) ~ ()
   , GovState era ~ ShelleyGovState era
@@ -184,9 +185,8 @@ epochTransition = do
       ) <-
     judgmentContext
   let pp = es ^. curPParamsEpochStateL
-  let pr = es ^. prevPParamsEpochStateL
-  let utxoSt = lsUTxOState ls
-  let CertState vstate pstate dstate = lsCertState ls
+      utxoSt = lsUTxOState ls
+      CertState vstate pstate dstate = lsCertState ls
   ss' <-
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ls pp, ss, ())
 
@@ -202,18 +202,11 @@ epochTransition = do
       TRC (ShelleyPoolreapEnv vstate, PoolreapState utxoSt acnt dstate pstate', e)
 
   let adjustedCertState = CertState vstate pstate'' dstate'
-      epochState' =
-        EpochState
-          acnt'
-          (ls {lsUTxOState = utxoSt', lsCertState = adjustedCertState})
-          ss'
-          nm
-          & prevPParamsEpochStateL .~ pr
-          & curPParamsEpochStateL .~ pp
+      ls' = ls {lsUTxOState = utxoSt', lsCertState = adjustedCertState}
 
   UpecState pp' ppupSt' <-
     trans @(EraRule "UPEC" era) $
-      TRC (epochState', UpecState pp (utxosGovState utxoSt'), ())
+      TRC (ls', UpecState pp (utxosGovState utxoSt'), ())
   let utxoSt'' = utxoSt' {utxosGovState = ppupSt'}
 
   let
@@ -225,8 +218,7 @@ epochTransition = do
     oblgNew = totalObligation adjustedCertState (utxoSt'' ^. utxosGovStateL)
     utxoSt''' = utxoSt'' {utxosDeposited = oblgNew}
   pure $
-    epochState'
-      & esAccountStateL .~ acnt'
+    EpochState acnt' ls' ss' nm
       & esLStateL . lsUTxOStateL .~ utxoSt'''
       & prevPParamsEpochStateL .~ pp
       & curPParamsEpochStateL .~ pp'

@@ -727,7 +727,7 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
     ls = esLState es
     utxoSt = lsUTxOState ls
     ppupSt = utxosGovState utxoSt
-    ppupSt' = ppupSt {proposals = ps}
+    ppupSt' = ppupSt {sgsCurProposals = ps}
     utxoSt' = utxoSt {utxosGovState = ppupSt'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
@@ -749,7 +749,7 @@ setFutureProposals ps cs = cs {chainNes = nes'}
     ls = esLState es
     utxoSt = lsUTxOState ls
     ppupSt = utxosGovState utxoSt
-    ppupSt' = ppupSt {futureProposals = ps}
+    ppupSt' = ppupSt {sgsFutureProposals = ps}
     utxoSt' = utxoSt {utxosGovState = ppupSt'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}

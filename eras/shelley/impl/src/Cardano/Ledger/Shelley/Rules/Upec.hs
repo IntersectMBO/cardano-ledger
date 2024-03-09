@@ -28,13 +28,9 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
-  EpochState,
-  UTxOState (..),
-  esLState,
+  LedgerState,
   lsCertState,
   lsUTxOState,
-  pattern CertState,
-  pattern EpochState,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Rules.Newpp (
@@ -60,9 +56,9 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
 data UpecState era = UpecState
-  { currentPp :: !(PParams era)
+  { usCurPParams :: !(PParams era)
   -- ^ Current protocol parameters.
-  , ppupState :: !(ShelleyGovState era)
+  , usGovState :: !(ShelleyGovState era)
   -- ^ State of the protocol update transition system.
   }
 
@@ -88,32 +84,28 @@ instance
   where
   type State (ShelleyUPEC era) = UpecState era
   type Signal (ShelleyUPEC era) = ()
-  type Environment (ShelleyUPEC era) = EpochState era
+  type Environment (ShelleyUPEC era) = LedgerState era
   type BaseM (ShelleyUPEC era) = ShelleyBase
   type PredicateFailure (ShelleyUPEC era) = ShelleyUpecPredFailure era
   initialRules = []
   transitionRules =
     [ do
         TRC
-          ( EpochState
-              { esLState = ls
-              }
-            , UpecState pp ppupSt
+          ( ls
+            , UpecState pp ppupState
             , _
             ) <-
           judgmentContext
 
         coreNodeQuorum <- liftSTS $ asks quorum
 
-        let utxoSt = lsUTxOState ls
-            CertState _ pstate dstate = lsCertState ls
-            pup = proposals . utxosGovState $ utxoSt
+        let utxoState = lsUTxOState ls
+            pup = sgsCurProposals ppupState
             ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
-        NewppState pp' ppupSt' <-
+        NewppState pp' ppupState' <-
           trans @(ShelleyNEWPP era) $
-            TRC (NewppEnv dstate pstate utxoSt, NewppState pp ppupSt, ppNew)
-        pure $
-          UpecState pp' ppupSt'
+            TRC (NewppEnv (lsCertState ls) utxoState, NewppState pp ppupState, ppNew)
+        pure $! UpecState pp' ppupState'
     ]
 
 -- | If at least @n@ nodes voted to change __the same__ protocol parameters to
@@ -128,24 +120,21 @@ votedValue ::
   -- | Quorum needed to change the protocol parameters.
   Int ->
   Maybe (PParams era)
-votedValue (ProposedPPUpdates pup) pps quorumN =
-  let incrGov vote gov = 1 + Map.findWithDefault 0 vote gov
-      votes =
+votedValue (ProposedPPUpdates pppu) pp quorumN =
+  let votes =
         Map.foldr
-          (\vote gov -> Map.insert vote (incrGov vote gov) gov)
+          (\vote -> Map.insertWith (+) vote 1)
           (Map.empty :: Map (PParamsUpdate era) Int)
-          pup
+          pppu
       consensus = Map.filter (>= quorumN) votes
-   in case length consensus of
+   in case Map.keys consensus of
         -- NOTE that `quorumN` is a global constant, and that we require
         -- it to be strictly greater than half the number of genesis nodes.
         -- The keys in the `pup` correspond to the genesis nodes,
         -- and therefore either:
         --   1) `consensus` is empty, or
         --   2) `consensus` has exactly one element.
-        1 ->
-          (Just . applyPPUpdates pps . fst . head . Map.toList)
-            consensus
+        [ppu] -> Just $ applyPPUpdates pp ppu
         -- NOTE that `updatePParams` corresponds to the union override right
         -- operation in the formal spec.
         _ -> Nothing

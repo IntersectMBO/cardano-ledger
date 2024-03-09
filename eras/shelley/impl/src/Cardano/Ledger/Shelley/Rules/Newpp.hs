@@ -23,8 +23,6 @@ import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
-  DState (..),
-  PState (..),
   UTxOState (utxosDeposited),
   totalObligation,
   utxosGovStateL,
@@ -35,6 +33,7 @@ import Cardano.Ledger.Shelley.PParams (
   hasLegalProtVerUpdate,
  )
 import Control.DeepSeq (NFData)
+import Control.Monad (forM_)
 import Control.State.Transition (
   STS (..),
   TRC (..),
@@ -50,11 +49,10 @@ import NoThunks.Class (NoThunks (..))
 data ShelleyNewppState era
   = NewppState (PParams era) (ShelleyGovState era)
 
-data NewppEnv era
-  = NewppEnv
-      (DState era)
-      (PState era)
-      (UTxOState era)
+data NewppEnv era = NewppEnv
+  { neCertState :: !(CertState era)
+  , neUTxOState :: !(UTxOState era)
+  }
 
 data ShelleyNewppPredFailure era
   = UnexpectedDepositPot
@@ -92,26 +90,29 @@ newPpTransition ::
   TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
   TRC
-    ( NewppEnv dstate pstate utxoSt
-      , NewppState pp ppupSt
-      , ppNew
+    ( NewppEnv certState utxoState
+      , NewppState pp ppupState
+      , mppNew
       ) <-
     judgmentContext
+  let obligationCurr =
+        totalObligation
+          certState
+          (utxoState ^. utxosGovStateL)
 
-  case ppNew of
-    Just ppNew' -> do
-      let Coin oblgCurr =
-            totalObligation
-              (CertState def pstate dstate)
-              (utxoSt ^. utxosGovStateL)
-      Coin oblgCurr
-        == utxosDeposited utxoSt
-          ?! UnexpectedDepositPot (Coin oblgCurr) (utxosDeposited utxoSt)
+  -- TODO: remove this predicate check. See #4158
+  forM_ mppNew $ \_ ->
+    obligationCurr
+      == utxosDeposited utxoState
+        ?! UnexpectedDepositPot obligationCurr (utxosDeposited utxoState)
 
-      if toInteger (ppNew' ^. ppMaxTxSizeL) + toInteger (ppNew' ^. ppMaxBHSizeL) < toInteger (ppNew' ^. ppMaxBBSizeL)
-        then pure $ NewppState ppNew' (updatePpup ppupSt ppNew')
-        else pure $ NewppState pp (updatePpup ppupSt pp)
-    Nothing -> pure $ NewppState pp (updatePpup ppupSt pp)
+  case mppNew of
+    Just ppNew
+      | toInteger (ppNew ^. ppMaxTxSizeL)
+          + toInteger (ppNew ^. ppMaxBHSizeL)
+          < toInteger (ppNew ^. ppMaxBBSizeL) ->
+          pure $ NewppState ppNew $ updatePpup ppupState ppNew
+    _ -> pure $ NewppState pp $ updatePpup ppupState pp
 
 -- | Update the protocol parameter updates by clearing out the proposals
 -- and making the future proposals become the new proposals,
@@ -124,12 +125,12 @@ updatePpup ::
   GovState era ->
   PParams era ->
   ShelleyGovState era
-updatePpup ppupSt pp =
-  ppupSt
+updatePpup ppupState pp =
+  ppupState
     & proposalsL .~ ps
     & futureProposalsL .~ emptyPPPUpdates
   where
-    ProposedPPUpdates newProposals = futureProposals ppupSt
+    ProposedPPUpdates newProposals = sgsFutureProposals ppupState
     ps =
       if all (hasLegalProtVerUpdate pp) newProposals
         then ProposedPPUpdates newProposals

@@ -50,7 +50,7 @@ instance Crypto c => EraGov (AllegraEra c) where
       emptyPParams
       emptyPParams
 
-  getProposedPPUpdates = Just . proposals
+  getProposedPPUpdates = Just . sgsCurProposals
 
   curPParamsGovStateL = curPParamsShelleyGovStateL
 

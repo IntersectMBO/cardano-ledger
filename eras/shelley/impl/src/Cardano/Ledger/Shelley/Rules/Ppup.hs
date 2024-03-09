@@ -164,26 +164,20 @@ instance Era era => DecCBOR (ShelleyPpupPredFailure era) where
 ppupTransitionNonEmpty :: (EraPParams era, ProtVerAtMost era 8) => TransitionRule (ShelleyPPUP era)
 ppupTransitionNonEmpty = do
   TRC
-    ( PPUPEnv slot pp (GenDelegs _genDelegs)
+    ( PPUPEnv slot pp (GenDelegs genDelegs)
       , pps@( ShelleyGovState
-                (ProposedPPUpdates pupS)
-                (ProposedPPUpdates fpupS)
-                _
-                _
+                { sgsCurProposals = ProposedPPUpdates pupS
+                , sgsFutureProposals = ProposedPPUpdates fpupS
+                }
               )
-      , up
+      , update
       ) <-
     judgmentContext
 
-  case up of
-    SNothing ->
-      pure $
-        pps
-          { proposals = ProposedPPUpdates pupS
-          , futureProposals = ProposedPPUpdates fpupS
-          }
-    SJust (Update (ProposedPPUpdates pup) te) -> do
-      eval (dom pup ⊆ dom _genDelegs) ?! NonGenesisUpdatePPUP (eval (dom pup)) (eval (dom _genDelegs))
+  case update of
+    SNothing -> pure pps
+    SJust (Update (ProposedPPUpdates pup) targetEpochNo) -> do
+      eval (dom pup ⊆ dom genDelegs) ?! NonGenesisUpdatePPUP (eval (dom pup)) (eval (dom genDelegs))
 
       let firstIllegalProtVerUpdate = do
             ppu <- F.find (not . hasLegalProtVerUpdate pp) pup
@@ -193,32 +187,32 @@ ppupTransitionNonEmpty = do
       failOnJust firstIllegalProtVerUpdate PVCannotFollowPPUP
 
       sp <- liftSTS $ asks stabilityWindow
-      firstSlotNextEpoch <- do
-        ei <- liftSTS $ asks epochInfoPure
-        EpochNo e <- liftSTS $ epochInfoEpoch ei slot
-        let newEpochNo = EpochNo $ e + 1
-        tellEvent $ NewEpoch newEpochNo
-        liftSTS $ epochInfoFirst ei newEpochNo
-      let tooLate = firstSlotNextEpoch *- Duration (2 * sp)
+      (currentEpochNo, firstSlotNextEpoch) <- do
+        epochInfo <- liftSTS $ asks epochInfoPure
+        epochNo <- liftSTS $ epochInfoEpoch epochInfo slot
+        let nextEpochNo = succ epochNo
+        tellEvent $ NewEpoch nextEpochNo
+        liftSTS $ do
+          (,) epochNo <$> epochInfoFirst epochInfo nextEpochNo
 
-      currentEpoch <- liftSTS $ do
-        ei <- asks epochInfoPure
-        epochInfoEpoch ei slot
+      let tooLate = firstSlotNextEpoch *- Duration (2 * sp)
 
       if slot < tooLate
         then do
-          currentEpoch == te ?! PPUpdateWrongEpoch currentEpoch te VoteForThisEpoch
+          (currentEpochNo == targetEpochNo)
+            ?! PPUpdateWrongEpoch currentEpochNo targetEpochNo VoteForThisEpoch
           pure $
             pps
-              { proposals = ProposedPPUpdates (eval (pupS ⨃ pup))
-              , futureProposals = ProposedPPUpdates fpupS
+              { sgsCurProposals = ProposedPPUpdates (eval (pupS ⨃ pup))
+              , sgsFutureProposals = ProposedPPUpdates fpupS
               }
         else do
-          succ currentEpoch == te ?! PPUpdateWrongEpoch currentEpoch te VoteForNextEpoch
+          (succ currentEpochNo == targetEpochNo)
+            ?! PPUpdateWrongEpoch currentEpochNo targetEpochNo VoteForNextEpoch
           pure $
             pps
-              { proposals = ProposedPPUpdates pupS
-              , futureProposals = ProposedPPUpdates (eval (fpupS ⨃ pup))
+              { sgsCurProposals = ProposedPPUpdates pupS
+              , sgsFutureProposals = ProposedPPUpdates (eval (fpupS ⨃ pup))
               }
 
 type PPUPPredFailure era = EraRuleFailure "PPUP" era

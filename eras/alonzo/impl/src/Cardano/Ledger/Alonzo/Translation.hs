@@ -3,6 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -10,33 +11,29 @@
 
 module Cardano.Ledger.Alonzo.Translation where
 
+import Cardano.Ledger.Alonzo.Core hiding (Tx)
+import qualified Cardano.Ledger.Alonzo.Core as Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..), PState (..), VState (..))
-import Cardano.Ledger.Core (upgradePParams, upgradePParamsUpdate, upgradeTxOut)
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era (
-  TranslateEra (..),
-  TranslationContext,
-  translateEra',
- )
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Shelley.API (
+import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
   EpochState (..),
+  LedgerState (..),
   NewEpochState (..),
-  ShelleyGovState (..),
-  StrictMaybe (..),
+  UTxOState (..),
  )
-import qualified Cardano.Ledger.Shelley.API as API
-import qualified Cardano.Ledger.Shelley.Tx as LTX
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
+import Cardano.Ledger.UTxO (UTxO (..))
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
+import Lens.Micro ((^.))
 
 --------------------------------------------------------------------------------
 -- Translation from Mary to Alonzo
@@ -68,7 +65,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) NewEpochState where
         , stashedAVVMAddresses = ()
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) Core.PParams where
+instance Crypto c => TranslateEra (AlonzoEra c) PParams where
   translateEra (AlonzoGenesisWrapper upgradeArgs) = pure . upgradePParams upgradeArgs
 
 newtype Tx era = Tx {unTx :: Core.Tx era}
@@ -79,14 +76,12 @@ instance Crypto c => TranslateEra (AlonzoEra c) Tx where
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
-    txBody <- Core.translateEraThroughCBOR "TxBody" $ LTX.body tx
-    txWits <- Core.translateEraThroughCBOR "TxWits" $ LTX.wits tx
+    txBody <- translateEraThroughCBOR "TxBody" $ tx ^. bodyTxL
+    txWits <- translateEraThroughCBOR "TxWits" $ tx ^. witsTxL
+    txAuxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
     -- transactions from Mary era always pass script ("phase 2") validation
-    auxData <- case LTX.auxiliaryData tx of
-      SNothing -> pure SNothing
-      SJust auxData -> SJust <$> Core.translateEraThroughCBOR "AuxData" auxData
     let validating = IsValid True
-    pure $ Tx $ AlonzoTx txBody txWits validating auxData
+    pure $ Tx $ AlonzoTx txBody txWits validating txAuxData
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
@@ -125,47 +120,47 @@ instance Crypto c => TranslateEra (AlonzoEra c) CertState where
         , certVState = translateEra' ctxt $ certVState ls
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) API.LedgerState where
+instance Crypto c => TranslateEra (AlonzoEra c) LedgerState where
   translateEra ctxt ls =
     return
-      API.LedgerState
-        { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls
-        , API.lsCertState = translateEra' ctxt $ API.lsCertState ls
+      LedgerState
+        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
+        , lsCertState = translateEra' ctxt $ lsCertState ls
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) API.UTxOState where
+instance Crypto c => TranslateEra (AlonzoEra c) UTxOState where
   translateEra ctxt us =
     return
-      API.UTxOState
-        { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
-        , API.utxosDeposited = API.utxosDeposited us
-        , API.utxosFees = API.utxosFees us
-        , API.utxosGovState = translateEra' ctxt $ API.utxosGovState us
-        , API.utxosStakeDistr = API.utxosStakeDistr us
-        , API.utxosDonation = API.utxosDonation us
+      UTxOState
+        { utxosUtxo = translateEra' ctxt $ utxosUtxo us
+        , utxosDeposited = utxosDeposited us
+        , utxosFees = utxosFees us
+        , utxosGovState = translateEra' ctxt $ utxosGovState us
+        , utxosStakeDistr = utxosStakeDistr us
+        , utxosDonation = utxosDonation us
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) API.UTxO where
+instance Crypto c => TranslateEra (AlonzoEra c) UTxO where
   translateEra _ctxt utxo =
-    return $ API.UTxO $ translateTxOut `Map.map` API.unUTxO utxo
+    return $ UTxO $ translateTxOut `Map.map` unUTxO utxo
 
-instance Crypto c => TranslateEra (AlonzoEra c) API.ShelleyGovState where
-  translateEra ctxt@(AlonzoGenesisWrapper upgradeArgs) ps =
+instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGovState where
+  translateEra ctxt ps =
     return
-      API.ShelleyGovState
-        { API.proposals = translateEra' ctxt $ API.proposals ps
-        , API.futureProposals = translateEra' ctxt $ API.futureProposals ps
-        , API.sgovPrevPp = upgradePParams upgradeArgs $ sgovPrevPp ps
-        , API.sgovPp = upgradePParams upgradeArgs $ sgovPp ps
+      ShelleyGovState
+        { sgsCurProposals = translateEra' ctxt $ sgsCurProposals ps
+        , sgsFutureProposals = translateEra' ctxt $ sgsFutureProposals ps
+        , sgsCurPParams = translateEra' ctxt $ sgsCurPParams ps
+        , sgsPrevPParams = translateEra' ctxt $ sgsPrevPParams ps
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) API.ProposedPPUpdates where
-  translateEra _ctxt (API.ProposedPPUpdates ppup) =
-    return $ API.ProposedPPUpdates $ fmap (upgradePParamsUpdate def) ppup
+instance Crypto c => TranslateEra (AlonzoEra c) ProposedPPUpdates where
+  translateEra _ctxt (ProposedPPUpdates ppup) =
+    return $ ProposedPPUpdates $ fmap (upgradePParamsUpdate def) ppup
 
 translateTxOut ::
   Crypto c =>
-  Core.TxOut (MaryEra c) ->
-  Core.TxOut (AlonzoEra c)
+  TxOut (MaryEra c) ->
+  TxOut (AlonzoEra c)
 translateTxOut = upgradeTxOut
 {-# DEPRECATED translateTxOut "Use `upgradeTxOut` instead" #-}
