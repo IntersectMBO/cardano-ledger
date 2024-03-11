@@ -159,6 +159,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   produced,
   smartUTxOState,
   startStep,
+  utxosDonationL,
   utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
@@ -940,7 +941,10 @@ epochBoundaryCheck preNES postNES = do
       "Total ADA in the epoch state is not preserved\n\tpost - pre = "
         <> show (postSum <-> preSum)
   where
-    tot nes = sumAdaPots $ totalAdaPotsES $ nes ^. nesEsL
+    tot nes =
+      (<+>)
+        (sumAdaPots (totalAdaPotsES (nes ^. nesEsL)))
+        (nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosDonationL)
 
 -- | Runs the TICK rule until the `n` epochs are passed
 passNEpochs ::
