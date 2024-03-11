@@ -44,6 +44,15 @@ jobs:
         git config --local user.name ${{ github.actor }}
         git config --local user.email "${{ github.actor }}@users.noreply.github.com"
 
+        # Start a new version of the gh-pages branch
+        git for-each-ref refs/heads/gh-pages --format='%(refname:short)' |
+          while read -r REFNAME; do
+            git branch -D "$REFNAME"
+          done
+        git checkout -b gh-pages
+        git rm -rfq .
+        git commit -qm "Remove all files"
+
         # Preserve benchmark results, if any
         git ls-remote origin --heads gh-pages |
           while read -r _SHA REFNAME; do
