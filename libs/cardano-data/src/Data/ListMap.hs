@@ -91,11 +91,9 @@ instance (EncCBOR k, EncCBOR v) => EncCBOR (ListMap k v) where
 
 instance ToJSONKey k => ToJSON1 (ListMap k) where
   liftToJSON _ g _ = case toJSONKey of
-    ToJSONKeyText f _ -> Object . KM.fromList . unListMap . mapKeyValO f g
+    ToJSONKeyText f _ -> Object . KM.fromList . unListMap . bimap f g
     ToJSONKeyValue f _ -> Array . V.fromList . L.map (toJSONPair f g) . unListMap
     where
-      mapKeyValO :: (k1 -> k2) -> (v1 -> v2) -> ListMap k1 v1 -> ListMap k2 v2
-      mapKeyValO fk kv = ListMap . foldrWithKey (\(k, v) -> ((fk k, kv v) :)) []
       toJSONPair :: (a -> Value) -> (b -> Value) -> (a, b) -> Value
       toJSONPair a b = liftToJSON2 (const False) a (listValue a) (const False) b (listValue b)
 
