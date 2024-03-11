@@ -59,7 +59,7 @@ library
         containers,
         data-default-class,
         microlens,
-        plutus-ledger-api ^>=1.22.1,
+        plutus-ledger-api ^>=1.23.0,
         QuickCheck,
         random,
         serialise,
