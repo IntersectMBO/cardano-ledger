@@ -34,7 +34,7 @@ header_body =
   , block_body_size  : uint
   , block_body_hash  : $hash32 ; merkle triple root
   , operational_cert
-  , [ protocol_version ]
+  , protocol_version
   ]
 
 operational_cert =
@@ -48,7 +48,7 @@ next_major_protocol_version = 10
 
 major_protocol_version = 1..next_major_protocol_version
 
-protocol_version = (major_protocol_version, uint)
+protocol_version = [(major_protocol_version, uint)]
 
 transaction_body =
   { 0 : set<transaction_input>             ; inputs
@@ -105,7 +105,7 @@ policy_hash = scripthash
 
 parameter_change_action = (0, gov_action_id / null, protocol_param_update, policy_hash / null)
 
-hard_fork_initiation_action = (1, gov_action_id / null, [protocol_version])
+hard_fork_initiation_action = (1, gov_action_id / null, protocol_version)
 
 treasury_withdrawals_action = (2, { reward_account => coin }, policy_hash / null)
 
