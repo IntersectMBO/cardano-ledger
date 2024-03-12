@@ -200,8 +200,8 @@ sizeTests =
     [ testSpec "sizeAddOrSub1" sizeAddOrSub1
     , testSpec "sizeAddOrSub2" sizeAddOrSub2
     , testSpec "sizeAddOrSub3" sizeAddOrSub3
-    , -- This should fail, how do I state this , testSpec "sizeAddOrSub4" sizeAddOrSub4
-      testSpec "sizeAddOrSub5" sizeAddOrSub5
+    , testSpec "sizeAddOrSub4 returns Negative Size" sizeAddOrSub4
+    , testSpec "sizeAddOrSub5" sizeAddOrSub5
     , testSpec "sizeAddOrSub5" sizeAddOrSub5
     , testSpec "listSubSize" listSubSize
     , testSpec "listSubSize" setSubSize
@@ -375,7 +375,7 @@ mapPairSpec = constrained' $ \m s ->
 
 mapEmptyDomainSpec :: Spec BaseFn (Map Int Int)
 mapEmptyDomainSpec = constrained $ \m ->
-  subset_ (dom_ m) (Lit Set.empty)
+  subset_ (dom_ m) mempty -- mempty in the Monoid instance (Term fn (Set a))
 
 setPairSpec :: Spec BaseFn (Set Int, Set Int)
 setPairSpec = constrained' $ \s s' ->
@@ -692,23 +692,23 @@ listMustSizeIssue = constrained $ \xs ->
   , length_ xs ==. 1
   ]
 
-sizeAddOrSub1 :: Spec BaseFn Size
+sizeAddOrSub1 :: Spec BaseFn Integer
 sizeAddOrSub1 = constrained $ \s ->
   4 ==. s + 2
 
-sizeAddOrSub2 :: Spec BaseFn Size
+sizeAddOrSub2 :: Spec BaseFn Integer
 sizeAddOrSub2 = constrained $ \s ->
   4 ==. 2 + s
 
-sizeAddOrSub3 :: Spec BaseFn Size
+sizeAddOrSub3 :: Spec BaseFn Integer
 sizeAddOrSub3 = constrained $ \s ->
   4 ==. s - 2
 
-sizeAddOrSub4 :: Spec BaseFn Size
-sizeAddOrSub4 = constrained $ \s ->
-  4 ==. 2 - s
+-- | We expect a negative Integer, so ltSpec tests for that.
+sizeAddOrSub4 :: Spec BaseFn Integer
+sizeAddOrSub4 = ltSpec 0 <> (constrained $ \s -> 4 ==. 2 - s)
 
-sizeAddOrSub5 :: Spec BaseFn Size
+sizeAddOrSub5 :: Spec BaseFn Integer
 sizeAddOrSub5 = constrained $ \s ->
   2 ==. 12 - s
 
