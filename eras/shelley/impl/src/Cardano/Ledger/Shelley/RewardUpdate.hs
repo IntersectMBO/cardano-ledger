@@ -30,6 +30,8 @@ module Cardano.Ledger.Shelley.RewardUpdate (
   RewardPulser (..),
   clearRecent,
   PulsingRewUpdate (..),
+  encodeUsingInitial,
+  decodeFromInitial,
 ) where
 
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
@@ -74,6 +76,9 @@ import Data.Typeable
 import Data.VMap as VMap
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), allNoThunks)
+
+import Cardano.Ledger.Binary (Decoder, Encoding)
+import Cardano.Ledger.Binary.Version (Version)
 
 -- ===============================================================
 
@@ -287,10 +292,10 @@ data RewardPulser c (m :: Type -> Type) ans where
     (ans ~ RewardAns c, m ~ ShelleyBase) =>
     !Int ->
     !(FreeVars c) ->
+    -- | The initial value (used for serialisation)
     !(VMap.VMap VMap.VB VMap.VP (Credential 'Staking c) (CompactForm Coin)) ->
-    -- ^ The initial value (used for serialisation)
+    -- | The working value. Changed at every pulse.
     !(VMap.VMap VMap.VB VMap.VP (Credential 'Staking c) (CompactForm Coin)) ->
-    -- ^ The working value. Changed at every pulse.
     !ans ->
     RewardPulser c m ans
 
@@ -358,6 +363,31 @@ instance Crypto c => DecCBOR (PulsingRewUpdate c) where
       decPS 0 = SumD Pulsing <! From <! From
       decPS 1 = SumD Complete <! From
       decPS n = Invalid n
+
+-- ===============================
+
+initPulsing ::
+  RewardSnapShot c ->
+  Int ->
+  FreeVars c ->
+  VMap VB VP (Credential 'Staking c) (CompactForm Coin) ->
+  PulsingRewUpdate c
+initPulsing snap step free initial = (Pulsing snap (RSLP step free initial initial (RewardAns Map.empty Map.empty)))
+
+encodeUsingInitial :: Crypto c => PulsingRewUpdate c -> Encoding
+encodeUsingInitial (Pulsing s (RSLP step free initial _ (RewardAns _ _))) =
+  encode (Sum initPulsing 0 !> To s !> To step !> To free !> To initial)
+encodeUsingInitial (Complete r) = encode (Sum Complete 1 !> To r)
+
+decodeFromInitial :: Crypto c => Decoder Version (PulsingRewUpdate c)
+decodeFromInitial = decode (Summands "PulsingRewUpdate" decPS)
+  where
+    decPS 0 = SumD initPulsing <! From <! From <! From <! From
+    -- At this point we could complete the Pulser, as it has all the information needed.
+    decPS 1 = SumD Complete <! From
+    decPS n = Invalid n
+
+-- ======================================================
 
 instance NFData (PulsingRewUpdate c)
 
