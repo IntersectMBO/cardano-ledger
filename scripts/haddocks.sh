@@ -4,19 +4,19 @@
 # `cardano-ledger` repository.
 #
 # usage:
-# ./haddocks.sh directory [true|false]
+# ./haddocks.sh directory [components ...]
 #
 # $1 - where to put the generated pages, this directory contents will be wiped
 #      out (so don't pass `/` or `./` - the latter will delete your 'dist-newstyle')
 #      (the default is 'haddocks')
-# $2 - whether to re-build haddocks with `cabal haddock` command or a component name
-#      (the default is true)
+# $2 - the components to re-build haddocks for, or 'all'
+#      (the default is none)
 #
 
 set -euo pipefail
 
 OUTPUT_DIR=${1:-haddocks}
-REGENERATE=${2:-true}
+REGENERATE=("${@:2}")
 
 BUILD_DIR=dist-newstyle
 GHC_VERSION=$(ghc --numeric-version)
@@ -35,11 +35,9 @@ HADDOCK_OPTS=(
   --haddock-option="--base-url=.."
 )
 
-# build documentation of all modules
-if [ "${REGENERATE}" == "true" ]; then
-  cabal haddock "${HADDOCK_OPTS[@]}" all
-elif [ "${REGENERATE}" != "false" ]; then
-  cabal haddock "${HADDOCK_OPTS[@]}" "${REGENERATE}"
+# Rebuild documentation if requested
+if (( "${#REGENERATE[@]}" > 0 )); then
+  cabal haddock "${HADDOCK_OPTS[@]}" "${REGENERATE[@]}"
 fi
 
 if [[ ! -d "${OUTPUT_DIR}" ]]; then
