@@ -272,16 +272,18 @@ runProposalsAddAction gas ps = withGovActionParent gas (Just psWithGas) update
       Maybe (Proposals era)
     update govRelationL parent newId
       | parent == ps ^. pRootsL . govRelationL . prRootL =
-          Just $ psWithGas
-               & pRootsL . govRelationL . prChildrenL %~ Set.insert newId
-               & pGraphL . govRelationL . pGraphNodesL %~ Map.insert newId (PEdges parent Set.empty)
+          Just $
+            psWithGas
+              & pRootsL . govRelationL . prChildrenL %~ Set.insert newId
+              & pGraphL . govRelationL . pGraphNodesL %~ Map.insert newId (PEdges parent Set.empty)
       | SJust parentId <- parent
       , Map.member parentId $ ps ^. pGraphL . govRelationL . pGraphNodesL =
-          Just $ psWithGas
-               & pGraphL . govRelationL . pGraphNodesL
-                  %~ ( Map.insert newId (PEdges (SJust parentId) Set.empty)
-                        . Map.adjust (peChildrenL %~ Set.insert newId) parentId
-                     )
+          Just $
+            psWithGas
+              & pGraphL . govRelationL . pGraphNodesL
+                %~ ( Map.insert newId (PEdges (SJust parentId) Set.empty)
+                      . Map.adjust (peChildrenL %~ Set.insert newId) parentId
+                   )
       | otherwise = Nothing
 
 -- | Reconstruct the @`Proposals`@ forest from an @`OMap`@ of
@@ -317,7 +319,8 @@ unsafeMkProposals ::
   OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era) ->
   Proposals era
 unsafeMkProposals pgais omap = foldl' (flip unsafeProposalsAddAction) initialProposals omap
-  where initialProposals = def & pRootsL .~ fromPrevGovActionIds pgais
+  where
+    initialProposals = def & pRootsL .~ fromPrevGovActionIds pgais
 
 instance EraPParams era => EncCBOR (Proposals era) where
   encCBOR ps =
