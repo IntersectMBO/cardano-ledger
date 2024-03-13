@@ -12,15 +12,33 @@ jobs:
       contents: write
 
     steps:
-    - uses: actions/checkout@v3
-    - uses: cachix/install-nix-action@v18
+    - uses: actions/checkout@v4
+
+    - name: Install Haskell
+      uses: input-output-hk/setup-haskell@v1
+      id: setup-haskell
       with:
-        nix_path: nixpkgs=channel:nixos-unstable
-        extra_nix_config: |
-          trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
-          substituters = https://cache.iog.io https://cache.nixos.org/
+        ghc-version: "9.2.8"
+        cabal-version: latest
+
+    - name: Install system dependencies
+      uses: input-output-hk/actions/base@latest
+      with:
+        use-sodium-vrf: false # default is true
+
+    - name: Configure to use libsodium
+      run: |
+        cat >> cabal.project <<EOF
+        package cardano-crypto-praos
+          flags: -external-libsodium-vrf
+        EOF
+
+    - name: Cabal update
+      run: cabal update
+
     - name: Build haddocks
-      run: nix develop --command bash -c 'cabal update && ./scripts/haddocks.sh haddocks all'
+      run: scripts/haddocks.sh haddocks all
+
     - name: Add files
       run: |
         git config --local user.name ${{ github.actor }}
