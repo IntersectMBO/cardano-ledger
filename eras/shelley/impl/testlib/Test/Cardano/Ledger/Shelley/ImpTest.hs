@@ -136,7 +136,7 @@ import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, extractHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.AdaPots (AdaPots, sumAdaPots, totalAdaPotsES)
+import Cardano.Ledger.Shelley.AdaPots (sumAdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -159,6 +159,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   produced,
   smartUTxOState,
   startStep,
+  utxosDonationL,
   utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
@@ -486,9 +487,6 @@ instance
     pure $ satisfyScript script
 
   fixupTx = shelleyFixupTx
-
-getAdaPots :: (EraGov era, EraTxOut era) => ImpTestM era AdaPots
-getAdaPots = totalAdaPotsES <$> getsNES nesEsL
 
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
@@ -924,17 +922,29 @@ passEpoch = do
       passTick @era
       newEpoch <- getsNES nesELL
       unless (newEpoch > curEpoch) $ tickUntilNewEpoch newEpoch
-  preAdaPots <- getAdaPots
+  preNES <- gets impNES
+
   tickUntilNewEpoch startEpoch
+  gets impNES >>= epochBoundaryCheck preNES
+
+epochBoundaryCheck ::
+  (EraTxOut era, EraGov era) =>
+  NewEpochState era ->
+  NewEpochState era ->
+  ImpTestM era ()
+epochBoundaryCheck preNES postNES = do
   impAnn "Checking ADA preservation at the epoch boundary" $ do
-    postAdaPots <- getAdaPots
-    logEntry $ diffExpr preAdaPots postAdaPots
-    let
-      preSum = sumAdaPots preAdaPots
-      postSum = sumAdaPots postAdaPots
+    let preSum = tot preNES
+        postSum = tot postNES
+    logEntry $ diffExpr preSum postSum
     unless (preSum == postSum) . expectationFailure $
       "Total ADA in the epoch state is not preserved\n\tpost - pre = "
         <> show (postSum <-> preSum)
+  where
+    tot nes =
+      (<+>)
+        (sumAdaPots (totalAdaPotsES (nes ^. nesEsL)))
+        (nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosDonationL)
 
 -- | Runs the TICK rule until the `n` epochs are passed
 passNEpochs ::
