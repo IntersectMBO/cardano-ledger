@@ -102,13 +102,8 @@ haddock \
   "${interface_options[@]}"
 
 # Assemble a toplevel `doc-index.json` from package level ones.
-echo "[]" > "${OUTPUT_DIR}/doc-index.json"
 for file in "$OUTPUT_DIR"/*/doc-index.json; do
   project=$(basename "$(dirname "$file")");
-  jq -s \
-    ".[0] + [.[1][] | (. + {link: (\"${project}/\" + .link)}) ]" \
-    "${OUTPUT_DIR}/doc-index.json" \
-    "${file}" \
-    > /tmp/doc-index.json
-  mv /tmp/doc-index.json "${OUTPUT_DIR}/doc-index.json"
-done
+  jq ".[] | .link = \"${project}/\(.link)\"" "${file}"
+done |
+  jq -s . >"${OUTPUT_DIR}/doc-index.json"
