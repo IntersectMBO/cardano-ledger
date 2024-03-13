@@ -19,25 +19,30 @@ OUTPUT_DIR=${1:-haddocks}
 REGENERATE=("${@:2}")
 
 BUILD_DIR=dist-newstyle
-GHC_VERSION=$(ghc --numeric-version)
-OS_ARCH=$(jq -r '"\(.arch)-\(.os)"' "$BUILD_DIR/cache/plan.json")
+
+CABAL_OPTS=(
+  --builddir "${BUILD_DIR}"
+  --enable-benchmarks
+  --enable-documentation
+  --enable-tests
+)
 
 # Generate  `doc-index.json` and `doc-index.html` per package, to assemble them later at the top level.
 HADDOCK_OPTS=(
-  --builddir "${BUILD_DIR}"
   --haddock-all
-  --haddock-internal
   --haddock-html
-  --haddock-quickjump
   --haddock-hyperlink-source
+  --haddock-internal
   --haddock-option "--show-all"
   --haddock-option "--use-unicode"
   --haddock-option="--base-url=.."
+  --haddock-quickjump
 )
 
 # Rebuild documentation if requested
 if (( "${#REGENERATE[@]}" > 0 )); then
-  cabal haddock "${HADDOCK_OPTS[@]}" "${REGENERATE[@]}"
+  cabal build   "${CABAL_OPTS[@]}" "${REGENERATE[@]}"
+  cabal haddock "${CABAL_OPTS[@]}" "${REGENERATE[@]}" "${HADDOCK_OPTS[@]}"
 fi
 
 if [[ ! -d "${OUTPUT_DIR}" ]]; then
@@ -46,6 +51,9 @@ fi
 
 # make all files user writable
 chmod -R u+w "${OUTPUT_DIR}"
+
+GHC_VERSION=$(ghc --numeric-version)
+OS_ARCH=$(jq -r '"\(.arch)-\(.os)"' "$BUILD_DIR/cache/plan.json")
 
 # copy the new docs
 for package_dir in "${BUILD_DIR}/build/${OS_ARCH}/ghc-${GHC_VERSION}"/*; do

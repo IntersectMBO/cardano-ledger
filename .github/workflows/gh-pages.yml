@@ -19,8 +19,8 @@ jobs:
           extra_nix_config: |
             trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
             substituters = https://cache.iog.io https://cache.nixos.org/
-      - name: Build projects and haddocks
-        run: nix develop --command bash -c 'cabal update && cabal build --enable-documentation all && ./scripts/haddocks.sh haddocks all'
+      - name: Build haddocks
+        run: nix develop --command bash -c 'cabal update && ./scripts/haddocks.sh haddocks all'
       - name: Add files
         run: |
               git config --local user.name ${{ github.actor }}
