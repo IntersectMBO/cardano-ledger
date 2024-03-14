@@ -28,7 +28,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Coin (toDeltaCoin)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayNEWEPOCH)
+import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayNEWEPOCH)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
   ConwayGovState (..),
@@ -87,6 +87,8 @@ data ConwayNewEpochEvent era
   | EpochEvent !(Event (EraRule "EPOCH" era))
   | TotalAdaPotsEvent !AdaPots
   deriving (Generic)
+
+type instance EraRuleEvent "NEWEPOCH" (ConwayEra c) = ConwayNewEpochEvent (ConwayEra c)
 
 deriving instance
   ( Eq (Event (EraRule "EPOCH" era))

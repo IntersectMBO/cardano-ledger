@@ -65,6 +65,8 @@ conwayWitsVKeyNeeded = getConwayWitsVKeyNeeded
 
 type instance EraRuleFailure "UTXOW" (ConwayEra c) = BabbageUtxowPredFailure (ConwayEra c)
 
+type instance EraRuleEvent "UTXOW" (ConwayEra c) = AlonzoUtxowEvent (ConwayEra c)
+
 instance InjectRuleFailure "UTXOW" BabbageUtxowPredFailure (ConwayEra c)
 
 instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure (ConwayEra c) where

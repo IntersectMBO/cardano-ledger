@@ -35,7 +35,7 @@ import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.Era (ShelleyNEWEPOCH)
+import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyNEWEPOCH)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
@@ -108,6 +108,8 @@ instance
   , NFData (Event (EraRule "RUPD" era))
   ) =>
   NFData (ShelleyNewEpochEvent era)
+
+type instance EraRuleEvent "NEWEPOCH" (ShelleyEra c) = ShelleyNewEpochEvent (ShelleyEra c)
 
 instance
   ( EraTxOut era

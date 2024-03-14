@@ -36,7 +36,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin, compactCoinOrError)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayRATIFY)
+import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   Committee,
   ConwayEraGov (..),
@@ -133,6 +133,8 @@ data ConwayEpochEvent era
       (Set (GovActionState era)) -- expired
       (Set (GovActionId (EraCrypto era))) -- unclaimed
   deriving (Generic)
+
+type instance EraRuleEvent "EPOCH" (ConwayEra c) = ConwayEpochEvent (ConwayEra c)
 
 deriving instance
   ( EraPParams era

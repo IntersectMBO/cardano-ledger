@@ -69,6 +69,8 @@ newtype ShelleyLedgersPredFailure era
 
 type instance EraRuleFailure "LEDGERS" (ShelleyEra c) = ShelleyLedgersPredFailure (ShelleyEra c)
 
+type instance EraRuleEvent "LEDGERS" (ShelleyEra c) = ShelleyLedgersEvent (ShelleyEra c)
+
 instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure (ShelleyEra c)
 
 instance InjectRuleFailure "LEDGERS" ShelleyLedgerPredFailure (ShelleyEra c) where

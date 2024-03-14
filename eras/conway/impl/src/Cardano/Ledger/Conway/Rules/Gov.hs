@@ -166,6 +166,8 @@ data ConwayGovPredFailure era
 
 type instance EraRuleFailure "GOV" (ConwayEra c) = ConwayGovPredFailure (ConwayEra c)
 
+type instance EraRuleEvent "GOV" (ConwayEra c) = ConwayGovEvent (ConwayEra c)
+
 instance InjectRuleFailure "GOV" ConwayGovPredFailure (ConwayEra c)
 
 instance EraPParams era => NFData (ConwayGovPredFailure era)

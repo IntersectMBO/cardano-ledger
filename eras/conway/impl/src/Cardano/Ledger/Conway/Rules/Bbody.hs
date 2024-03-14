@@ -18,6 +18,7 @@ module Cardano.Ledger.Conway.Rules.Bbody () where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (
+  AlonzoBbodyEvent,
   AlonzoBbodyPredFailure (..),
   AlonzoUtxoPredFailure,
   AlonzoUtxosPredFailure,
@@ -43,6 +44,8 @@ import Cardano.Ledger.Shelley.Rules (
  )
 
 type instance EraRuleFailure "BBODY" (ConwayEra c) = AlonzoBbodyPredFailure (ConwayEra c)
+
+type instance EraRuleEvent "BBODY" (ConwayEra c) = AlonzoBbodyEvent (ConwayEra c)
 
 instance InjectRuleFailure "BBODY" AlonzoBbodyPredFailure (ConwayEra c)
 

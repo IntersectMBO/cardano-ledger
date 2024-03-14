@@ -338,11 +338,7 @@ eventsSpec = describe "Events" $ do
       let
         proposeCostModel = do
           newTau <- arbitrary
-          submitGovAction @era $
-            ParameterChange
-              SNothing
-              (def & ppuTauL .~ SJust newTau)
-              SNothing
+          submitParameterChange SNothing $ def & ppuTauL .~ SJust newTau
       proposalA <- impAnn "proposalA" proposeCostModel
       proposalB <- impAnn "proposalB" proposeCostModel
       rewardAccount@(RewardAccount _ rewardCred) <- registerRewardAccount

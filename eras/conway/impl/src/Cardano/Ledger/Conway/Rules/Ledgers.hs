@@ -22,6 +22,7 @@ import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (
+  ShelleyLedgersEvent,
   ShelleyLedgersPredFailure (..),
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
@@ -29,6 +30,8 @@ import Cardano.Ledger.Shelley.Rules (
  )
 
 type instance EraRuleFailure "LEDGERS" (ConwayEra c) = ShelleyLedgersPredFailure (ConwayEra c)
+
+type instance EraRuleEvent "LEDGERS" (ConwayEra c) = ShelleyLedgersEvent (ConwayEra c)
 
 instance InjectRuleFailure "LEDGERS" ShelleyLedgersPredFailure (ConwayEra c)
 
