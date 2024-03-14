@@ -50,8 +50,14 @@ jobs:
             git branch -D "$REFNAME"
           done
         git checkout -b gh-pages
+
         git rm -rfq .
-        git commit -qm "Remove all files"
+        git commit -qm "Remove all existing files"
+
+        echo "cardano-ledger.cardano.intersectmbo.org" >CNAME
+        touch .nojekyll
+        git add CNAME .nojekyll
+        git commit -qm "Add CNAME and .nojekyll"
 
         # Preserve benchmark results, if any
         git ls-remote origin --heads gh-pages |
