@@ -2447,25 +2447,6 @@ instance (Ord a, HasSpec fn a) => Semigroup (SetSpec fn a) where
 instance (Ord a, HasSpec fn a) => Monoid (SetSpec fn a) where
   mempty = SetSpec mempty mempty TrueSpec
 
--- | Suppose genFromSpec (Spec fn (Set a)) can generate 3 distinct sets {s1::Set a, s2::Set a, s3::Set a}
--- where (Set.size s1 = 4) (Set.size s2 = 12) and (Set.size s3 = 0)
--- then we want possibleSizes to generate the following things {4,12,0}
--- There are No guarantees that this is a tight spec!
-possibleSetSizes :: forall fn a. (Ord a, BaseUniverse fn, HasSpec fn a) => Spec fn (Set a) -> Spec fn Integer
-possibleSetSizes TrueSpec = TrueSpec
-possibleSetSizes (MemberSpec es) = MemberSpec (sizeOf <$> es)
-possibleSetSizes SuspendedSpec {} = TrueSpec
-possibleSetSizes (ErrorSpec es) = ErrorSpec es
-possibleSetSizes (TypeSpec (SetSpec must elemSpec szSpec) cant) =
-  cantSpec
-    <> szSpec
-    <> geqSpec @fn (sizeOf must)
-    <> maxSpec (cardinality elemSpec) -- Can't have more elements, than what (genFromSpec elemSpec) can produce
-  where
-    cantSpec
-      | mempty `elem` cant = notEqualSpec 0
-      | otherwise = TrueSpec
-
 instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
   type TypeSpec fn (Set a) = SetSpec fn a
 
@@ -2660,7 +2641,7 @@ instance HasSpec fn a => HasSpec fn [a] where
     lst <- listOfT $ genFromSpec elemS
     pureGen $ shuffle (must ++ lst)
   genFromTypeSpec (ListSpec must szSpec elemS NoFold) = do
-    sz0 <- genFromSizeSpec (szSpec <> geqSpec @fn (sizeOf must) <> maxSpec (cardinality elemS))
+    sz0 <- genFromSizeSpec (szSpec <> geqSpec @fn (sizeOf must))
     let sz = fromIntegral (sz0 - sizeOf must)
     lst <-
       listOfUntilLenT
