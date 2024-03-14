@@ -133,6 +133,8 @@ data ConwayLedgerPredFailure era
 
 type instance EraRuleFailure "LEDGER" (ConwayEra c) = ConwayLedgerPredFailure (ConwayEra c)
 
+type instance EraRuleEvent "LEDGER" (ConwayEra c) = ConwayLedgerEvent (ConwayEra c)
+
 instance InjectRuleFailure "LEDGER" ConwayLedgerPredFailure (ConwayEra c)
 
 instance InjectRuleFailure "LEDGER" BabbageUtxowPredFailure (ConwayEra c) where
@@ -179,8 +181,6 @@ instance InjectRuleFailure "LEDGER" ConwayGovCertPredFailure (ConwayEra c) where
 
 instance InjectRuleFailure "LEDGER" ConwayGovPredFailure (ConwayEra c) where
   injectFailure = ConwayGovFailure
-
-type instance EraRuleEvent "LEDGER" (ConwayEra c) = ConwayLedgerEvent (ConwayEra c)
 
 deriving instance
   ( Era era

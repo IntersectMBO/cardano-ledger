@@ -33,7 +33,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.PoolParams (ppRewardAccount)
-import Cardano.Ledger.Shelley.Era (ShelleyPOOLREAP)
+import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyPOOLREAP)
 import Cardano.Ledger.Shelley.Governance (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -112,6 +112,8 @@ instance NoThunks (ShelleyPoolreapPredFailure era)
 
 instance Default (UTxOState era) => Default (ShelleyPoolreapState era) where
   def = PoolreapState def def def def
+
+type instance EraRuleEvent "POOLREAP" (ShelleyEra c) = ShelleyPoolreapEvent (ShelleyEra c)
 
 instance
   ( Default (ShelleyPoolreapState era)

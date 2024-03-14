@@ -14,6 +14,7 @@ module Cardano.Ledger.Conway.Rules.Utxo (allegraToConwayUtxoPredFailure) where
 import Cardano.Ledger.Allegra.Rules (shelleyToAllegraUtxoPredFailure)
 import qualified Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
 import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxoEvent,
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure,
  )
@@ -24,6 +25,8 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure)
 
 type instance EraRuleFailure "UTXO" (ConwayEra c) = BabbageUtxoPredFailure (ConwayEra c)
+
+type instance EraRuleEvent "UTXO" (ConwayEra c) = AlonzoUtxoEvent (ConwayEra c)
 
 instance InjectRuleFailure "UTXO" BabbageUtxoPredFailure (ConwayEra c)
 

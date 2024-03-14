@@ -94,6 +94,8 @@ data ConwayCertsPredFailure era
 
 type instance EraRuleFailure "CERTS" (ConwayEra c) = ConwayCertsPredFailure (ConwayEra c)
 
+type instance EraRuleEvent "CERTS" (ConwayEra c) = ConwayCertsEvent (ConwayEra c)
+
 instance InjectRuleFailure "CERTS" ConwayCertsPredFailure (ConwayEra c)
 
 instance InjectRuleFailure "CERTS" ConwayCertPredFailure (ConwayEra c) where

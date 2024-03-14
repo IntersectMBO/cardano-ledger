@@ -72,6 +72,8 @@ data ConwayDelegPredFailure era
 
 type instance EraRuleFailure "DELEG" (ConwayEra c) = ConwayDelegPredFailure (ConwayEra c)
 
+type instance EraRuleEvent "DELEG" (ConwayEra c) = VoidEraRule "DELEG" (ConwayEra c)
+
 instance InjectRuleFailure "DELEG" ConwayDelegPredFailure (ConwayEra c)
 
 instance NoThunks (ConwayDelegPredFailure era)
