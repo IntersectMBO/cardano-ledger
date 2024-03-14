@@ -102,6 +102,7 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   pRootsL,
   pGraphL,
   mkProposals,
+  unsafeMkProposals,
   PRoot (..),
   prRootL,
   prChildrenL,
@@ -238,13 +239,19 @@ proposalsAddAction ::
   GovActionState era ->
   Proposals era ->
   Maybe (Proposals era)
-proposalsAddAction gas ps = withGovActionParent gas (Just psWithGas) update
+proposalsAddAction gas ps = checkInvariantAfterAddition gas ps <$> runProposalsAddAction gas ps
+
+runProposalsAddAction ::
+  forall era.
+  GovActionState era ->
+  Proposals era ->
+  Maybe (Proposals era)
+runProposalsAddAction gas ps = withGovActionParent gas (Just psWithGas) update
   where
     psWithGas = ps & pPropsL %~ (OMap.||> gas)
     -- Append a new GovActionState to the Proposals and then add it to the set of children
     -- for its parent as well as initiate an empty lineage for this new child.
     update ::
-      HasCallStack =>
       (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
       StrictMaybe (GovPurposeId p era) ->
       GovPurposeId p era ->
@@ -252,19 +259,17 @@ proposalsAddAction gas ps = withGovActionParent gas (Just psWithGas) update
     update govRelationL parent newId
       | parent == ps ^. pRootsL . govRelationL . prRootL =
           Just $
-            checkInvariantAfterAddition gas ps $
-              psWithGas
-                & pRootsL . govRelationL . prChildrenL %~ Set.insert newId
-                & pGraphL . govRelationL . pGraphNodesL %~ Map.insert newId (PEdges parent Set.empty)
+            psWithGas
+              & pRootsL . govRelationL . prChildrenL %~ Set.insert newId
+              & pGraphL . govRelationL . pGraphNodesL %~ Map.insert newId (PEdges parent Set.empty)
       | SJust parentId <- parent
       , Map.member parentId $ ps ^. pGraphL . govRelationL . pGraphNodesL =
           Just $
-            checkInvariantAfterAddition gas ps $
-              psWithGas
-                & pGraphL . govRelationL . pGraphNodesL
-                  %~ ( Map.insert newId (PEdges (SJust parentId) Set.empty)
-                        . Map.adjust (peChildrenL %~ Set.insert newId) parentId
-                     )
+            psWithGas
+              & pGraphL . govRelationL . pGraphNodesL
+                %~ ( Map.insert newId (PEdges (SJust parentId) Set.empty)
+                      . Map.adjust (peChildrenL %~ Set.insert newId) parentId
+                   )
       | otherwise = Nothing
 
 -- | Reconstruct the @`Proposals`@ forest from an @`OMap`@ of
@@ -288,6 +293,24 @@ mkProposals pgais omap = do
   pure ps
   where
     initialProposals = def & pRootsL .~ fromPrevGovActionIds pgais
+
+-- | Reconstruct the @`Proposals`@ forest from an @`OMap`@ of
+-- @`GovActionState`@s and the 4 roots (@`PrevGovActionIds`@).
+-- This function can fail and may return a malformed `Proposals`
+-- if not given correct inputs.
+--
+-- WARNING: Should only be used for testing!
+unsafeMkProposals ::
+  GovRelation StrictMaybe era ->
+  OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era) ->
+  Proposals era
+unsafeMkProposals pgais omap = foldl' (flip unsafeProposalsAddAction) initialProposals omap
+  where
+    initialProposals = def & pRootsL .~ fromPrevGovActionIds pgais
+    unsafeProposalsAddAction gas ps =
+      case runProposalsAddAction gas ps of
+        Just p -> p
+        Nothing -> error $ "unsafeMkProposals: runProposalsAddAction failed for " ++ show (gas ^. gasIdL)
 
 instance EraPParams era => EncCBOR (Proposals era) where
   encCBOR ps =
