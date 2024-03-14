@@ -16,6 +16,8 @@
     # non-flake nix compatibility
     flake-compat.url = "github:edolstra/flake-compat";
     flake-compat.flake = false;
+
+    pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
   };
 
   outputs = inputs: let
@@ -28,6 +30,13 @@
   in
     inputs.flake-utils.lib.eachSystem supportedSystems (
       system: let
+        pre-commit-check = inputs.pre-commit-hooks.lib.${system}.run {
+          src = ./.;
+          hooks = {
+            fourmolu.enable = true;
+          };
+        };
+
         # setup our nixpkgs with the haskell.nix overlays, and the iohk-nix
         # overlays...
         nixpkgs = import inputs.nixpkgs {
@@ -72,6 +81,13 @@
 
           # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
           shell.shellHook = ''
+            # Disable running `fourmolu` via `pre-commit` by default.
+            # If you want to opt-in and run it before each commit,
+            # then `unset` the `SKIP` environment variable in your shell.
+            # If you use `direnv`, `lorri`, `nix-direnv` etc.,
+            # then you can add `unset SKIP` to your `.envrc`
+            # after the nix shell is loaded (so after `use nix` / `use flake`).
+            export SKIP=fourmolu
             export LANG=en_US.UTF-8
             export LC_ALL=en_US.UTF-8
             export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
@@ -87,6 +103,7 @@
               fi
             }
             PROMPT_COMMAND=prompt
+            ${pre-commit-check.shellHook}
           '';
 
           # tools we want in our shell, from hackage
@@ -186,6 +203,7 @@
                 flake.hydraJobs
                 // {
                   inherit (legacyPackages) doc specs;
+                  inherit (checks) pre-commit-check;
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
                 };
@@ -227,6 +245,9 @@
               ];
             };
           };
+
+          checks.pre-commit-check = pre-commit-check;
+
           devShells = let
             profillingShell = p: {
               # `nix develop .#profiling` (or `.#ghc928.profiling): a shell with profiling enabled
