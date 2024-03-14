@@ -13,6 +13,12 @@
 
 module Constrained.Spec.Maps (MapSpec (..), dom_, rng_) where
 
+import Constrained.Base
+import Constrained.Core
+import Constrained.GenT
+import Constrained.Instances ()
+import Constrained.List
+import Constrained.Univ
 import Control.Monad
 import Data.List (nub)
 import Data.Map (Map)
@@ -21,21 +27,23 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Prettyprinter
 
-import Constrained.Base
-import Constrained.Core
-import Constrained.GenT
-import Constrained.Instances ()
-import Constrained.List
-import Constrained.Univ
-
 ------------------------------------------------------------------------
 -- HasSpec
 ------------------------------------------------------------------------
 
+instance Ord a => Sized (Map.Map a b) where
+  sizeOf = toInteger . Map.size
+  liftSizeSpec sizespec = TypeSpec (MapSpec mempty mempty (typeSpec sizespec) TrueSpec NoFold) []
+  liftMemberSpec xs = typeSpec (MapSpec mempty mempty (MemberSpec xs) TrueSpec NoFold)
+  sizeOfTypeSpec (MapSpec mustk mustv size _ _) =
+    typeSpec (atLeastSize (sizeOf mustk))
+      <> typeSpec (atLeastSize (sizeOf mustv))
+      <> size
+
 data MapSpec fn k v = MapSpec
   { mapSpecMustKeys :: Set k
   , mapSpecMustValues :: [v]
-  , mapSpecSize :: Spec fn Int
+  , mapSpecSize :: Spec fn Integer
   , mapSpecElem :: Spec fn (k, v)
   , mapSpecFold :: FoldSpec fn v
   }
@@ -75,7 +83,7 @@ instance
     and
       [ mustKeys `Set.isSubsetOf` Map.keysSet m
       , all (`elem` Map.elems m) mustVals
-      , Map.size m `conformsToSpec` size
+      , sizeOf m `conformsToSpec` size
       , all (`conformsToSpec` kvs) (Map.toList m)
       , Map.elems m `conformsToFoldSpec` foldSpec
       ]
@@ -88,7 +96,10 @@ instance
     let haveVals = map snd mustMap
         mustVals' = filter (`notElem` haveVals) mustVals
         size' = constrained $ \sz ->
-          satisfies (sz + Lit (length mustMap)) (size <> specSizeBound (mapSpec fstFn $ mapSpec toGenericFn kvs))
+          -- TODO, we should make sure size' is greater than or equal to 0
+          satisfies
+            (sz + Lit (sizeOf mustMap))
+            (size <> cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs))
         foldSpec' = case foldSpec of
           NoFold -> NoFold
           FoldSpec fn sumSpec -> FoldSpec fn $ propagateSpecFun (theAddFn @fn) (HOLE :? Value mustSum :> Nil) sumSpec
@@ -133,7 +144,7 @@ instance
       , forAll (Lit mustVals) $ \val ->
           app (elemFn @fn) val (app (rngFn @fn) m)
       , -- TODO: make nice
-        satisfies (app (injectFn $ ListSize @fn) $ app (rngFn @fn) m) size
+        satisfies (app (injectFn $ SizeOf @fn) $ app (rngFn @fn) m) size
       , forAll m $ \kv -> satisfies kv kvs
       , toPredsFoldSpec (app (rngFn @fn) m) foldSpec
       ]
@@ -160,9 +171,16 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
           , Evidence <- prerequisites @fn @(Map k v) ->
               case spec of
                 MemberSpec [s] ->
-                  typeSpec $ MapSpec s [] (equalSpec $ Set.size s) TrueSpec NoFold
+                  typeSpec $
+                    MapSpec s [] (exactSizeSpec $ sizeOf s) TrueSpec NoFold
                 TypeSpec (SetSpec must elemspec size) [] ->
-                  typeSpec $ MapSpec must [] size (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec) NoFold
+                  typeSpec $
+                    MapSpec
+                      must
+                      []
+                      size
+                      (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec)
+                      NoFold
                 _ -> ErrorSpec ["Dom on bad map spec", show spec]
     Rng ->
       -- No TypeAbstractions in ghc-8.10
@@ -172,7 +190,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
           , Evidence <- prerequisites @fn @(Map k v) ->
               case spec of
                 MemberSpec [r] ->
-                  typeSpec $ MapSpec Set.empty r (equalSpec $ length r) TrueSpec NoFold
+                  typeSpec $ MapSpec Set.empty r (equalSpec $ sizeOf r) TrueSpec NoFold
                 TypeSpec (ListSpec must size elemspec foldspec) [] ->
                   typeSpec $ MapSpec Set.empty must size (constrained $ \kv -> satisfies (app (sndFn @fn) (app (toGenericFn @fn) kv)) elemspec) foldspec
                 _ -> ErrorSpec ["Rng on bad map spec", show spec]

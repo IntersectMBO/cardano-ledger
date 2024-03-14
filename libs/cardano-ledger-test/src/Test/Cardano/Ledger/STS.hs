@@ -291,3 +291,11 @@ utxoTests =
     , testProperty "prop_UTXOW" prop_UTXOW
     , testProperty "prop_UTXOS" prop_UTXOS
     ]
+
+epoch :: TestTree
+epoch =
+  testGroup
+    "STS property tests"
+    [ govTests
+    , testProperty "prop_EPOCH" prop_EPOCH
+    ]

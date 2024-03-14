@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -133,15 +134,21 @@ instance FunctionLike (EqFn fn) where
 notFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool] Bool
 notFn = injectFn $ Not @fn
 
-andFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool, Bool] Bool
-andFn = injectFn $ And @fn
-
 orFn :: forall fn. Member (BoolFn fn) fn => fn '[Bool, Bool] Bool
 orFn = injectFn $ Or @fn
 
+-- | Operations on Bool.
+--   One might expect   And :: BoolFn fn '[Bool, Bool] Bool
+--   But this is problematic because a Term like ( p x &&. q y ) has to solve for
+--   x or y first, choose x, so once x is fixed, it might be impossible to solve for y
+--   Luckily we can get conjuction by using Preds, in fact using Preds, the x and y
+--   can even be the same variable.
+--   Or can be problematic too (by using a form of DeMorgan's laws: x && y = not(not x || not y))
+--   but while that is possible, there are many scenarios which can only be specified using Or.
+--   If one inadvertantly uses a form of DeMorgan's laws, the worst that can happen is an ErrorSpec
+--   is returned, and the user can reformulate using Preds. So Or is incomplete, but sound, when it works.
 data BoolFn (fn :: [Type] -> Type -> Type) as b where
   Not :: BoolFn fn '[Bool] Bool
-  And :: BoolFn fn '[Bool, Bool] Bool
   Or :: BoolFn fn '[Bool, Bool] Bool
 
 deriving instance Eq (BoolFn fn as b)
@@ -149,7 +156,6 @@ deriving instance Show (BoolFn fn as b)
 
 instance FunctionLike (BoolFn fn) where
   sem Not = not
-  sem And = (&&)
   sem Or = (||)
 
 ------------------------------------------------------------------------
@@ -280,16 +286,12 @@ elemFn = injectFn $ Elem @_ @fn
 disjointFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a, Set a] Bool
 disjointFn = injectFn $ Disjoint @_ @fn
 
-sizeFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a] Int
-sizeFn = injectFn $ Size @_ @fn
-
 data SetFn (fn :: [Type] -> Type -> Type) args res where
   Subset :: Ord a => SetFn fn '[Set a, Set a] Bool
   Disjoint :: Ord a => SetFn fn '[Set a, Set a] Bool
   Member :: Ord a => SetFn fn '[a, Set a] Bool
   Singleton :: Ord a => SetFn fn '[a] (Set a)
   Union :: Ord a => SetFn fn '[Set a, Set a] (Set a)
-  Size :: Ord a => SetFn fn '[Set a] Int
   Elem :: Eq a => SetFn fn '[a, [a]] Bool
 
 deriving instance Show (SetFn fn args res)
@@ -302,7 +304,6 @@ instance FunctionLike (SetFn fn) where
     Member -> Set.member
     Singleton -> Set.singleton
     Union -> (<>)
-    Size -> Set.size
     Elem -> elem
 
 ------------------------------------------------------------------------

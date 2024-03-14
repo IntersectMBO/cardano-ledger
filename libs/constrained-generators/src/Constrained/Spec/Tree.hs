@@ -39,7 +39,7 @@ data RoseTree a = RoseNode a [RoseTree a]
 -- HasSpec for BinTree
 ------------------------------------------------------------------------
 
-data BinTreeSpec fn a = BinTreeSpec Int (Spec fn (BinTree a, a, BinTree a))
+data BinTreeSpec fn a = BinTreeSpec Integer (Spec fn (BinTree a, a, BinTree a))
   deriving (Show)
 
 instance Forallable (BinTree a) (BinTree a, a, BinTree a) where
@@ -88,7 +88,7 @@ instance HasSpec fn a => HasSpec fn (BinTree a) where
       <> genHint sz t
 
 instance HasSpec fn a => HasGenHint fn (BinTree a) where
-  type Hint (BinTree a) = Int
+  type Hint (BinTree a) = Integer
   giveHint h = typeSpec $ BinTreeSpec h TrueSpec
 
 ------------------------------------------------------------------------
@@ -96,8 +96,8 @@ instance HasSpec fn a => HasGenHint fn (BinTree a) where
 ------------------------------------------------------------------------
 
 data RoseTreeSpec fn a = RoseTreeSpec
-  { roseTreeAvgLength :: Maybe Int
-  , roseTreeMaxSize :: Int
+  { roseTreeAvgLength :: Maybe Integer
+  , roseTreeMaxSize :: Integer
   , roseTreeRootSpec :: Spec fn a
   , roseTreeCtxSpec :: Spec fn (a, [RoseTree a])
   }
@@ -166,7 +166,7 @@ instance (HasSpec fn a, Member (RoseTreeFn fn) fn) => HasSpec fn (RoseTree a) wh
       <> genHint (mal, sz) t
 
 instance (Member (RoseTreeFn fn) fn, HasSpec fn a) => HasGenHint fn (RoseTree a) where
-  type Hint (RoseTree a) = (Maybe Int, Int)
+  type Hint (RoseTree a) = (Maybe Integer, Integer)
   giveHint (avgLen, sz) = typeSpec $ RoseTreeSpec avgLen sz TrueSpec TrueSpec
 
 data RoseTreeFn (fn :: [Type] -> Type -> Type) args res where

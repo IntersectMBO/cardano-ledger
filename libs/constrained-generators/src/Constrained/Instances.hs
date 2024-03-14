@@ -67,20 +67,10 @@ instance BaseUniverse fn => Functions (BoolFn fn) fn where
       let args = appendList (mapList (\(Value a) -> Lit a) pre) (v' :> mapList (\(Value a) -> Lit a) suf)
        in Let (App (injectFn fn) args) (v :-> ps)
   propagateSpecFun Not (NilCtx HOLE) spec = caseBoolSpec spec (equalSpec . not)
-  propagateSpecFun And (HOLE :? Value (s :: Bool) :> Nil) spec = caseBoolSpec spec (okAnd s)
-  propagateSpecFun And (Value (s :: Bool) :! NilCtx HOLE) spec = caseBoolSpec spec (okAnd s)
   propagateSpecFun Or (HOLE :? Value (s :: Bool) :> Nil) spec = caseBoolSpec spec (okOr s)
   propagateSpecFun Or (Value (s :: Bool) :! NilCtx HOLE) spec = caseBoolSpec spec (okOr s)
 
   mapTypeSpec Not _ = typeSpec ()
-
--- | We have something like ('constant' &&. HOLE) must evaluate to 'need'. Return a (Spec fn Bool) for HOLE, that makes that True.
-okAnd :: Bool -> Bool -> Spec fn Bool
-okAnd constant need = case (constant, need) of
-  (True, True) -> MemberSpec [True]
-  (True, False) -> MemberSpec [False]
-  (False, False) -> TrueSpec
-  (False, True) -> ErrorSpec ["(" ++ show constant ++ " &&. HOLE) must equal True. That cannot be the case."]
 
 -- | We have something like ('constant' ||. HOLE) must evaluate to 'need'. Return a (Spec fn Bool) for HOLE, that makes that True.
 okOr :: Bool -> Bool -> Spec fn Bool

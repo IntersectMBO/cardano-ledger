@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Constrained.Test where
 
@@ -164,8 +165,9 @@ tests =
     , testSpec "successiveChildren8" successiveChildren8
     , testSpec "roseTreeList" roseTreeList
     , numberyTests
-    , testSpec "andPair" andPair
     , testSpec "orPair" orPair
+    , sizeTests
+    , numNumSpecTree
     ]
       ++ [ testSpec ("intRangeSpec " ++ show i) (intRangeSpec i)
          | i <- [-1000, -100, -10, 0, 10, 100, 1000]
@@ -190,6 +192,23 @@ numberyTests =
     , testNumberyListSpec "listSumRangeUpper" listSumRangeUpper
     , testNumberyListSpec "listSumRangeRange" listSumRangeRange
     , testNumberyListSpec "listSumElemRange" listSumElemRange
+    ]
+
+sizeTests :: TestTree
+sizeTests =
+  testGroup "SizeTests" $
+    [ testSpec "sizeAddOrSub1" sizeAddOrSub1
+    , testSpec "sizeAddOrSub2" sizeAddOrSub2
+    , testSpec "sizeAddOrSub3" sizeAddOrSub3
+    , testSpec "sizeAddOrSub4 returns Negative Size" sizeAddOrSub4
+    , testSpec "sizeAddOrSub5" sizeAddOrSub5
+    , testSpec "sizeAddOrSub5" sizeAddOrSub5
+    , testSpec "listSubSize" listSubSize
+    , testSpec "listSubSize" setSubSize
+    , testSpec "listSubSize" mapSubSize
+    , testSpec "hasSizeList" hasSizeList
+    , testSpec "hasSizeSet" hasSizeSet
+    , testSpec "hasSizeMap" hasSizeMap
     ]
 
 type Numbery a =
@@ -356,7 +375,7 @@ mapPairSpec = constrained' $ \m s ->
 
 mapEmptyDomainSpec :: Spec BaseFn (Map Int Int)
 mapEmptyDomainSpec = constrained $ \m ->
-  subset_ (dom_ m) mempty
+  subset_ (dom_ m) mempty -- mempty in the Monoid instance (Term fn (Set a))
 
 setPairSpec :: Spec BaseFn (Set Int, Set Int)
 setPairSpec = constrained' $ \s s' ->
@@ -578,11 +597,6 @@ instance BaseUniverse fn => HasSpec fn Three
 mapSizeConstrained :: Spec BaseFn (Map Three Int)
 mapSizeConstrained = constrained $ \m -> size_ (dom_ m) <=. 3
 
-andPair :: Spec BaseFn [(Int, Int)]
-andPair = constrained $ \ps ->
-  forAll' ps $ \x y ->
-    x <=. 5 &&. y <=. 1
-
 orPair :: Spec BaseFn [(Int, Int)]
 orPair = constrained $ \ps ->
   forAll' ps $ \x y ->
@@ -677,3 +691,117 @@ listMustSizeIssue = constrained $ \xs ->
   [ 1 `elem_` xs
   , length_ xs ==. 1
   ]
+
+sizeAddOrSub1 :: Spec BaseFn Integer
+sizeAddOrSub1 = constrained $ \s ->
+  4 ==. s + 2
+
+sizeAddOrSub2 :: Spec BaseFn Integer
+sizeAddOrSub2 = constrained $ \s ->
+  4 ==. 2 + s
+
+sizeAddOrSub3 :: Spec BaseFn Integer
+sizeAddOrSub3 = constrained $ \s ->
+  4 ==. s - 2
+
+-- | We expect a negative Integer, so ltSpec tests for that.
+sizeAddOrSub4 :: Spec BaseFn Integer
+sizeAddOrSub4 = ltSpec 0 <> (constrained $ \s -> 4 ==. 2 - s)
+
+sizeAddOrSub5 :: Spec BaseFn Integer
+sizeAddOrSub5 = constrained $ \s ->
+  2 ==. 12 - s
+
+listSubSize :: Spec BaseFn [Int]
+listSubSize = constrained $ \s ->
+  2 ==. 12 - (sizeOf_ s)
+
+setSubSize :: Spec BaseFn (Set Int)
+setSubSize = constrained $ \s ->
+  2 ==. 12 - (sizeOf_ s)
+
+mapSubSize :: Spec BaseFn (Map Int Int)
+mapSubSize = constrained $ \s ->
+  2 ==. 12 - (sizeOf_ s)
+
+hasSizeList :: Spec BaseFn [Int]
+hasSizeList = hasSize (rangeSize 0 4)
+
+hasSizeSet :: Spec BaseFn (Set Int)
+hasSizeSet = hasSize (rangeSize 1 3)
+
+hasSizeMap :: Spec BaseFn (Map Int Int)
+hasSizeMap = hasSize (rangeSize 1 3)
+
+-- ========================================================
+-- Test properties of the instance Num(NumSpec Integer)
+
+instance Arbitrary (NumSpec Integer) where
+  arbitrary = do
+    lo <- arbitrary
+    hi <- next lo
+    pure $ NumSpecInterval lo hi
+    where
+      next Nothing = arbitrary
+      next (Just n) = frequency [(1, pure Nothing), (3, Just <$> suchThat arbitrary (> n))]
+
+-- | When we multiply intervals, we get a bounding box, around the possible values.
+--   When the intervals have infinities, the bounding box can be very loose. In fact the
+--   order in which we multiply intervals with infinities can affect how loose the bounding box is.
+--   So ((NegInf, n) * (a, b)) * (c,d)  AND  (NegInf, n) * ((a, b) * (c,d)) may have different bounding boxes
+--   To test the associative laws we must have no infinities, and then the associative law will hold.
+noInfinity :: Gen (NumSpec Integer)
+noInfinity = do
+  lo <- arbitrary
+  hi <- suchThat arbitrary (> lo)
+  pure $ NumSpecInterval (Just lo) (Just hi)
+
+plusNegate :: NumSpec Integer -> NumSpec Integer -> Property
+plusNegate x y = x - y === x + negate y
+
+commutesNumSpec :: NumSpec Integer -> NumSpec Integer -> Property
+commutesNumSpec x y = x + y === y + x
+
+assocNumSpec :: NumSpec Integer -> NumSpec Integer -> NumSpec Integer -> Property
+assocNumSpec x y z = x + (y + z) === (x + y) + z
+
+commuteTimes :: (NumSpec Integer) -> (NumSpec Integer) -> Property
+commuteTimes x y = x * y === y * x
+
+assocNumSpecTimes :: Gen Property
+assocNumSpecTimes = do
+  x <- noInfinity
+  y <- noInfinity
+  z <- noInfinity
+  pure (x * (y * z) === (x * y) * z)
+
+negNegate :: NumSpec Integer -> Property
+negNegate x = x === negate (negate x)
+
+scaleNumSpec :: NumSpec Integer -> Property
+scaleNumSpec y = y + y === 2 * y
+
+scaleOne :: NumSpec Integer -> Property
+scaleOne y = y === 1 * y
+
+numNumSpecTree :: TestTree
+numNumSpecTree =
+  testGroup
+    "Num (NumSpec Integer) properties"
+    [ testProperty "plusNegate(x - y == x + negate y)" plusNegate
+    , testProperty "scaleNumSpec(y + y = 2 * y)" scaleNumSpec
+    , testProperty "scaleOne(y = 1 * y)" scaleOne
+    , testProperty "negNagate(x = x == negate (negate x))" negNegate
+    , testProperty "commutesNumSpec(x+y = y+x)" commutesNumSpec
+    , testProperty "assocNumSpec(x+(y+z) == (x+y)+z)" assocNumSpec
+    , testProperty "assocNumSpecTimes(x*(y*z) == (x*y)*z)" assocNumSpecTimes
+    , testProperty "commuteTimes" commuteTimes
+    ]
+
+-- ==========================================================
+
+runTestSpec :: HasSpec BaseFn t => Spec BaseFn t -> IO ()
+runTestSpec spec = defaultMain (testSpec "interactive test with runTestSpec" spec)
+
+generateSpec :: forall fn a. HasSpec fn a => Spec fn a -> IO a
+generateSpec spec = generate (genFromSpec_ @fn spec)
