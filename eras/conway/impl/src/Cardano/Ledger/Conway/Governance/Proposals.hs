@@ -241,20 +241,6 @@ proposalsAddAction ::
   Maybe (Proposals era)
 proposalsAddAction gas ps = checkInvariantAfterAddition gas ps <$> runProposalsAddAction gas ps
 
--- | Add a single @`GovActionState`@ to the @`Proposals`@ forest.
--- The tree to which it is added is picked according to its
--- @`GovActionPurpose`@.
-unsafeProposalsAddAction ::
-  forall era.
-  HasCallStack =>
-  GovActionState era ->
-  Proposals era ->
-  Proposals era
-unsafeProposalsAddAction gas ps =
-  case runProposalsAddAction gas ps of
-    Just p -> p
-    Nothing -> error $ "unsafeProposalsAddAction: runProposalsAddAction failed for " ++ show (gas ^. gasIdL)
-
 runProposalsAddAction ::
   forall era.
   GovActionState era ->
@@ -321,6 +307,10 @@ unsafeMkProposals ::
 unsafeMkProposals pgais omap = foldl' (flip unsafeProposalsAddAction) initialProposals omap
   where
     initialProposals = def & pRootsL .~ fromPrevGovActionIds pgais
+    unsafeProposalsAddAction gas ps =
+      case runProposalsAddAction gas ps of
+        Just p -> p
+        Nothing -> error $ "unsafeMkProposals: runProposalsAddAction failed for " ++ show (gas ^. gasIdL)
 
 instance EraPParams era => EncCBOR (Proposals era) where
   encCBOR ps =
