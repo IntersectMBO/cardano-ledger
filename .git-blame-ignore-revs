@@ -3,6 +3,10 @@
 # from the repository's root to tell `git blame` to ignore
 # the commits below.
 
+# Fourmolize with `column-limit` rule enabled
+# CommitDate: Sun Mar 17 21:36:58 2024 +0100
+e4a1422d3f149f9c6070ca78f253d43f2cbfb607
+
 # Fourmolize with new version of fourmolu-0.13.1.0
 # CommitDate: Wed Jul 19 17:44:40 2023 +0100
 cda8146aee32e3c282f88bcd715cbf0e195287b2
