@@ -203,7 +203,10 @@
                 flake.hydraJobs
                 // {
                   inherit (legacyPackages) doc specs;
-                  inherit (checks) pre-commit-check;
+                  # Uncomment the line below if you want to run `pre-commit`
+                  # as a Hydra job.
+                  # inherit (checks) pre-commit-check;
+
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
                 };
