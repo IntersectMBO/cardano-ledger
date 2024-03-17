@@ -76,7 +76,18 @@ import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
-import Data.Aeson (FromJSON (..), Key, KeyValue, ToJSON (..), object, pairs, (.!=), (.:), (.:?), (.=))
+import Data.Aeson (
+  FromJSON (..),
+  Key,
+  KeyValue,
+  ToJSON (..),
+  object,
+  pairs,
+  (.!=),
+  (.:),
+  (.:?),
+  (.=),
+ )
 import qualified Data.Aeson as Aeson
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity)

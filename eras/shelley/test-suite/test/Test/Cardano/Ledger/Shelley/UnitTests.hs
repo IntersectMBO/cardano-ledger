@@ -96,8 +96,18 @@ import Data.Word (Word64)
 import GHC.Stack
 import Lens.Micro
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkVKeyRewardAccount, mkWitnessVKey, mkWitnessesVKey, vKey)
-import Test.Cardano.Ledger.Shelley.Arbitrary (ASC (ASC), StakeProportion (StakeProportion), VRFNatVal (VRFNatVal))
+import Test.Cardano.Ledger.Core.KeyPair (
+  KeyPair (..),
+  mkVKeyRewardAccount,
+  mkWitnessVKey,
+  mkWitnessesVKey,
+  vKey,
+ )
+import Test.Cardano.Ledger.Shelley.Arbitrary (
+  ASC (ASC),
+  StakeProportion (StakeProportion),
+  VRFNatVal (VRFNatVal),
+ )
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
 import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..), genesisCoins)

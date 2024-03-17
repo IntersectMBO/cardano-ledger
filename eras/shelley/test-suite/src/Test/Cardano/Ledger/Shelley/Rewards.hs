@@ -485,7 +485,12 @@ rewardOld
     where
       totalBlocks = sum b
       Coin activeStake = sumAllStake stake
-      results :: [(KeyHash 'StakePool (EraCrypto era), Maybe (Map (Credential 'Staking (EraCrypto era)) Coin), Likelihood)]
+      results ::
+        [ ( KeyHash 'StakePool (EraCrypto era)
+          , Maybe (Map (Credential 'Staking (EraCrypto era)) Coin)
+          , Likelihood
+          )
+        ]
       results = do
         (hk, pparams) <- VMap.toAscList poolParams
         let sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake

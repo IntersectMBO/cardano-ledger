@@ -64,7 +64,12 @@ import Cardano.Ledger.Keys (
   hashKey,
  )
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData, hashData)
-import Cardano.Ledger.Plutus.Language (Language (..), Plutus (..), PlutusBinary (..), PlutusLanguage)
+import Cardano.Ledger.Plutus.Language (
+  Language (..),
+  Plutus (..),
+  PlutusBinary (..),
+  PlutusLanguage,
+ )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (UTxO (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
@@ -100,7 +105,11 @@ import Test.Cardano.Ledger.Generic.Fields (
   WitnessesField (..),
  )
 import Test.Cardano.Ledger.Generic.Functions
-import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..), mkRedeemers, mkRedeemersFromTags)
+import Test.Cardano.Ledger.Generic.GenState (
+  PlutusPurposeTag (..),
+  mkRedeemers,
+  mkRedeemersFromTags,
+ )
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
@@ -728,7 +737,8 @@ inlineDatumRedundantDatumWit pf =
 -- Invalid:  Using inline datums with Plutus V1 script
 -- ====================================================================================
 
-inlineDatumWithPlutusV1Script :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+inlineDatumWithPlutusV1Script ::
+  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
 inlineDatumWithPlutusV1Script pf =
   TestCaseData
     { txBody =
@@ -764,7 +774,8 @@ inlineDatumWithPlutusV1Script pf =
 -- Invalid:  Using reference script with Plutus V1 script
 -- ====================================================================================
 
-referenceScriptWithPlutusV1Script :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+referenceScriptWithPlutusV1Script ::
+  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
 referenceScriptWithPlutusV1Script pf =
   TestCaseData
     { txBody =
@@ -772,7 +783,11 @@ referenceScriptWithPlutusV1Script pf =
           pf
           [ Inputs' [someTxIn]
           , Collateral' [anotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995), RefScript (SJust $ simpleScript pf)]]
+          , Outputs'
+              [ newTxOut
+                  pf
+                  [Address (plainAddr pf), Amount (inject $ Coin 4995), RefScript (SJust $ simpleScript pf)]
+              ]
           , Txfee (Coin 5)
           , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (validatingRedeemers pf) txDats)
           ]
@@ -801,7 +816,8 @@ referenceScriptWithPlutusV1Script pf =
 -- Invalid:  Using reference input with Plutus V1 script
 -- ====================================================================================
 
-referenceInputWithPlutusV1Script :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+referenceInputWithPlutusV1Script ::
+  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
 referenceInputWithPlutusV1Script pf =
   TestCaseData
     { txBody =
@@ -858,7 +874,8 @@ malformedScript pf s = case pf of
     bogusPlutus = mkPlutusScript' (Plutus @l (PlutusBinary ("nonsense " <> s)))
     er x = error $ "no malformedScript for " <> show x
 
-malformedPlutusRefScript :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
+malformedPlutusRefScript ::
+  forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 malformedPlutusRefScript pf =
   TestCaseData
     { txBody =
@@ -919,7 +936,8 @@ refScriptInOutput pf =
 --  Valid: Unlock Simple Scripts with a Reference Script
 -- ====================================================================================
 
-simpleScriptOutWithRefScriptUTxOState :: (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+simpleScriptOutWithRefScriptUTxOState ::
+  (Scriptic era, Reflect era) => Proof era -> TestCaseData era
 simpleScriptOutWithRefScriptUTxOState pf =
   TestCaseData
     { txBody =
@@ -1030,7 +1048,8 @@ malformedScriptWit pf =
 -- inline datum and have it count for the datum witness where ever it is needed.
 -- =============================================================================
 
-noSuchThingAsReferenceDatum :: forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
+noSuchThingAsReferenceDatum ::
+  forall era. (Scriptic era, Reflect era) => Proof era -> TestCaseData era
 noSuchThingAsReferenceDatum pf =
   TestCaseData
     { txBody =
@@ -1271,11 +1290,15 @@ genericBabbageFeatures pf =
         [ testCase "inline datum" $ testExpectSuccessValid pf (inlineDatum pf)
         , testCase "reference script" $ testExpectSuccessValid pf (referenceScript pf)
         , testCase "inline datum and ref script" $ testExpectSuccessValid pf (inlineDatumAndRefScript pf)
-        , testCase "reference input with data hash, no data witness" $ testExpectSuccessValid pf (refInputWithDataHashNoWit pf)
-        , testCase "reference input with data hash, with data witness" $ testExpectSuccessValid pf (refInputWithDataHashWithWit pf)
-        , testCase "reference script to authorize delegation certificate" $ testExpectSuccessValid pf (refscriptForDelegCert pf)
+        , testCase "reference input with data hash, no data witness" $
+            testExpectSuccessValid pf (refInputWithDataHashNoWit pf)
+        , testCase "reference input with data hash, with data witness" $
+            testExpectSuccessValid pf (refInputWithDataHashWithWit pf)
+        , testCase "reference script to authorize delegation certificate" $
+            testExpectSuccessValid pf (refscriptForDelegCert pf)
         , testCase "reference script in output" $ testExpectSuccessValid pf (refScriptInOutput pf)
-        , testCase "spend simple script output with reference script" $ testExpectSuccessValid pf (simpleScriptOutWithRefScriptUTxOState pf)
+        , testCase "spend simple script output with reference script" $
+            testExpectSuccessValid pf (simpleScriptOutWithRefScriptUTxOState pf)
         ]
     ]
 
@@ -1349,7 +1372,9 @@ genericBabbageFailures pf =
             testExpectFailure
               pf
               (inlineDatumAndRefScriptWithRedundantWitScript pf)
-              (injectFailure (Shelley.ExtraneousScriptWitnessesUTXOW (Set.singleton $ hashScript @era (alwaysAlt 3 pf))))
+              ( injectFailure
+                  (Shelley.ExtraneousScriptWitnessesUTXOW (Set.singleton $ hashScript @era (alwaysAlt 3 pf)))
+              )
         , testCase "inline datum with redundant datum witness" $
             testExpectFailure
               pf
@@ -1418,9 +1443,13 @@ babbageFeatures =
     , plutusV1RefScriptFailures Babbage
     , genericBabbageFeatures Conway
     , genericBabbageFailures Conway
-    , testCase "inputs and refinputs overlap in Babbage and don't Fail" $ testExpectSuccessValid Babbage (commonReferenceScript Babbage)
+    , testCase "inputs and refinputs overlap in Babbage and don't Fail" $
+        testExpectSuccessValid Babbage (commonReferenceScript Babbage)
     , testCase "inputs and refinputs overlap in Conway and Fail" $
-        testExpectUTXOFailure Conway (commonReferenceScript Conway) (BabbageNonDisjointRefInputs (pure commonTxIn))
+        testExpectUTXOFailure
+          Conway
+          (commonReferenceScript Conway)
+          (BabbageNonDisjointRefInputs (pure commonTxIn))
     ]
 
 testExpectUTXOFailure ::

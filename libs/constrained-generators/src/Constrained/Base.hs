@@ -666,7 +666,8 @@ class
      fn a` using `fromSimpleRepSpec`.
    -}
 
-  default emptySpec :: (HasSpec fn (SimpleRep a), TypeSpec fn a ~ TypeSpec fn (SimpleRep a)) => TypeSpec fn a
+  default emptySpec ::
+    (HasSpec fn (SimpleRep a), TypeSpec fn a ~ TypeSpec fn (SimpleRep a)) => TypeSpec fn a
   emptySpec = emptySpec @fn @(SimpleRep a)
 
   default combineSpec ::
@@ -748,7 +749,8 @@ class (HasSpec fn a, Show (Hint a)) => HasGenHint fn a where
 
 -- Semantics of specs -----------------------------------------------------
 
-conformsToSpecM :: forall fn a m. (HasSpec fn a, MonadGenError m, Alternative m) => a -> Spec fn a -> m ()
+conformsToSpecM ::
+  forall fn a m. (HasSpec fn a, MonadGenError m, Alternative m) => a -> Spec fn a -> m ()
 conformsToSpecM _ TrueSpec = pure ()
 conformsToSpecM a (MemberSpec as) = explain [show a ++ " not an element of " ++ show as] $ guard $ elem a as
 conformsToSpecM a (TypeSpec s cant) = guard $ notElem a cant && conformsTo @fn a s
@@ -767,7 +769,8 @@ satisfies e (MemberSpec as) = Assert [show e ++ " `elem` " ++ show as] $ elem_ e
 satisfies t (SuspendedSpec x p) = Subst x t p
 satisfies e (TypeSpec s cant)
   | null cant = toPreds e s
-  | otherwise = Assert [show e ++ " `notElem` " ++ show cant] (not_ (elem_ e $ Lit cant)) <> toPreds e s
+  | otherwise =
+      Assert [show e ++ " `notElem` " ++ show cant] (not_ (elem_ e $ Lit cant)) <> toPreds e s
 satisfies _ (ErrorSpec e) = FalsePred e
 
 ------------------------------------------------------------------------
@@ -919,7 +922,8 @@ computeTermDependencies t = noDependencies t
 -- We want to fail if A and B are independent.
 -- Consider: A + B = A + C, A <- B
 -- Here we want to consider this constraint defining for A
-linearize :: (MonadGenError m, BaseUniverse fn) => [Pred fn] -> DependGraph fn -> m [(Name fn, [Pred fn])]
+linearize ::
+  (MonadGenError m, BaseUniverse fn) => [Pred fn] -> DependGraph fn -> m [(Name fn, [Pred fn])]
 linearize preds graph = do
   sorted <- case topsort graph of
     Left cycle -> fatalError ["dependency cycle in graph", show cycle, show graph]
@@ -938,7 +942,8 @@ linearize preds graph = do
           if res
             then pure []
             else genError ["Linearize const False"]
-      | otherwise = fatalError $ "Dependency error in `linearize`: " : show graph : map (mappend "  " . show) ps
+      | otherwise =
+          fatalError $ "Dependency error in `linearize`: " : show graph : map (mappend "  " . show) ps
     go (n : ns) ps = do
       let (nps, ops) = partition (isLastVariable n . fst) ps
       ((n, map snd nps) :) <$> go ns ops
@@ -1077,7 +1082,8 @@ type DependGraph fn = Graph.Graph (Name fn)
 dependency :: HasVariables fn t => Name fn -> t -> DependGraph fn
 dependency x (freeVarSet -> xs) = Graph.dependency x xs
 
-irreflexiveDependencyOn :: forall fn t t'. (HasVariables fn t, HasVariables fn t') => t -> t' -> DependGraph fn
+irreflexiveDependencyOn ::
+  forall fn t t'. (HasVariables fn t, HasVariables fn t') => t -> t' -> DependGraph fn
 irreflexiveDependencyOn (freeVarSet -> xs) (freeVarSet -> ys) = Graph.irreflexiveDependencyOn xs ys
 
 noDependencies :: HasVariables fn t => t -> DependGraph fn
@@ -1234,7 +1240,8 @@ substituteTerm sub = \case
 substituteBinder :: HasSpec fn a => Var a -> Term fn a -> Binder fn b -> Binder fn b
 substituteBinder x tm (y :-> p) = y' :-> substitutePred x tm p'
   where
-    (y', p') = freshen y p (Set.singleton (nameOf x) <> freeVarNames tm <> Set.delete (nameOf y) (freeVarNames p))
+    (y', p') =
+      freshen y p (Set.singleton (nameOf x) <> freeVarNames tm <> Set.delete (nameOf y) (freeVarNames p))
 
 substitutePred :: HasSpec fn a => Var a -> Term fn a -> Pred fn -> Pred fn
 substitutePred x tm = \case
@@ -1414,7 +1421,8 @@ matchTerm (App (f :: f) as) (App (g :: g) bs) = do
   matchTerms as bs
 matchTerm _ _ = Nothing
 
-matchTerms :: forall fn as. All (HasSpec fn) as => List (Pattern fn) as -> List (Term fn) as -> Maybe (Subst fn)
+matchTerms ::
+  forall fn as. All (HasSpec fn) as => List (Pattern fn) as -> List (Term fn) as -> Maybe (Subst fn)
 matchTerms Nil Nil = pure []
 matchTerms (a :> as) (b :> bs) = (<>) <$> matchTerm a b <*> matchTerms as bs
 
@@ -1451,7 +1459,9 @@ rewriteRuleList k =
       mkNextVar :: forall a as. List Var as -> Var a
       mkNextVar Nil = Var 0
       mkNextVar (Var i :> _) = Var (i + 1)
-   in uncurry (RewriteRule (foldMapListC @(HasSpec fn) ((: []) . Name) vars)) (k $ mapListC @(HasSpec fn) V vars)
+   in uncurry
+        (RewriteRule (foldMapListC @(HasSpec fn) ((: []) . Name) vars))
+        (k $ mapListC @(HasSpec fn) V vars)
 
 type family RewriteArgumentTypes t where
   RewriteArgumentTypes (Term fn a -> b) = a : RewriteArgumentTypes b
@@ -1834,7 +1844,8 @@ instance
   where
   inject' k = inject' @c @(con : constrs) (k . SumRight)
 
-inject :: forall c constrs. Inject c constrs (SOP constrs) => FunTy (ConstrOf c constrs) (SOP constrs)
+inject ::
+  forall c constrs. Inject c constrs (SOP constrs) => FunTy (ConstrOf c constrs) (SOP constrs)
 inject = inject' @c @constrs id
 
 -- Deconstructing a SOP ---------------------------------------------------
@@ -1980,7 +1991,8 @@ combineFoldSpec (FoldSpec (f :: fn as b) s) (FoldSpec (f' :: fn' as' b') s')
   , Just Refl <- eqT @fn @fn'
   , f == f' =
       pure $ FoldSpec f (s <> s')
-  | otherwise = genError ["Can't combine fold specs on different functions", "  " ++ show f, "  " ++ show f']
+  | otherwise =
+      genError ["Can't combine fold specs on different functions", "  " ++ show f, "  " ++ show f']
 
 conformsToFoldSpec :: forall fn a. [a] -> FoldSpec fn a -> Bool
 conformsToFoldSpec _ NoFold = True
@@ -2003,7 +2015,8 @@ enumerateInterval (NumSpecInterval lo hi) =
     interleave [] ys = ys
     interleave (x : xs) ys = x : interleave ys xs
 
-isEmptyNumSpec :: (TypeSpec fn a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) => Spec fn a -> Bool
+isEmptyNumSpec ::
+  (TypeSpec fn a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) => Spec fn a -> Bool
 isEmptyNumSpec = \case
   ErrorSpec {} -> True
   TrueSpec -> False
@@ -2011,7 +2024,8 @@ isEmptyNumSpec = \case
   SuspendedSpec {} -> False
   TypeSpec i cant -> null $ enumerateInterval i \\ cant
 
-knownUpperBound :: (TypeSpec fn a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) => Spec fn a -> Maybe a
+knownUpperBound ::
+  (TypeSpec fn a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) => Spec fn a -> Maybe a
 knownUpperBound TrueSpec = upperBound
 knownUpperBound (MemberSpec []) = Nothing
 knownUpperBound (MemberSpec as) = Just $ maximum as
@@ -2025,7 +2039,8 @@ knownUpperBound (TypeSpec (NumSpecInterval lo hi) cant) = upper (lo <|> lowerBou
       | a == b = a <$ guard (a `notElem` cant)
       | otherwise = listToMaybe $ [b, b - 1 .. a] \\ cant
 
-knownLowerBound :: (TypeSpec fn a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) => Spec fn a -> Maybe a
+knownLowerBound ::
+  (TypeSpec fn a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) => Spec fn a -> Maybe a
 knownLowerBound TrueSpec = lowerBound
 knownLowerBound (MemberSpec []) = Nothing
 knownLowerBound (MemberSpec as) = Just $ minimum as
@@ -2206,7 +2221,8 @@ narrowFoldSpecs specs = maybe specs narrowFoldSpecs (go specs)
         , Just hiS <- knownUpperBound foldS
         , hi < loS
         , lo > hiS - lo ->
-            Just (ErrorSpec ["Can't solve diophantine equation"], ErrorSpec ["Can't solve diophantine equation"])
+            Just
+              (ErrorSpec ["Can't solve diophantine equation"], ErrorSpec ["Can't solve diophantine equation"])
       _ -> Nothing
 
 genNumList ::
@@ -2473,7 +2489,10 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
     where
       go 0 s = pure s
       go n s = do
-        e <- explain ["generate set member"] $ withMode Strict $ genFromSpec elemS `suchThatT` (`Set.notMember` s)
+        e <-
+          explain ["generate set member"] $
+            withMode Strict $
+              genFromSpec elemS `suchThatT` (`Set.notMember` s)
         go (n - 1) (Set.insert e s)
 
   toPreds s (SetSpec m es size) =
@@ -2515,7 +2534,8 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
                   | otherwise -> ErrorSpec ["propagateSpecFun Singleton with `must` of size > 1"]
                 MemberSpec es -> MemberSpec (Set.toList $ fold $ singletons es)
     Union
-      | Value s :! NilCtx HOLE <- ctx -> propagateSpecFun @(SetFn fn) @fn Union (HOLE :? Value s :> Nil) spec
+      | Value s :! NilCtx HOLE <- ctx ->
+          propagateSpecFun @(SetFn fn) @fn Union (HOLE :? Value s :> Nil) spec
       | HOLE :? Value (s :: Set a) :> Nil <- ctx
       , Evidence <- prerequisites @fn @(Set a) ->
           case spec of
@@ -2579,7 +2599,8 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
           True -> typeSpec $ ListSpec [e] mempty mempty NoFold
           False -> typeSpec $ ListSpec mempty mempty (notEqualSpec e) NoFold
     Disjoint
-      | HOLE :? Value (s :: Set a) :> Nil <- ctx -> propagateSpecFun @(SetFn fn) @fn Disjoint (Value s :! NilCtx HOLE) spec
+      | HOLE :? Value (s :: Set a) :> Nil <- ctx ->
+          propagateSpecFun @(SetFn fn) @fn Disjoint (Value s :! NilCtx HOLE) spec
       | Value (s :: Set a) :! NilCtx HOLE <- ctx
       , Evidence <- prerequisites @fn @(Set a) -> caseBoolSpec spec $ \case
           True -> typeSpec $ SetSpec mempty (notMemberSpec s) mempty
@@ -2744,7 +2765,8 @@ instance Random (Ratio Integer) where
 emptyNumSpec :: Ord a => NumSpec a
 emptyNumSpec = mempty
 
-combineNumSpec :: (HasSpec fn n, Ord n, TypeSpec fn n ~ NumSpec n) => NumSpec n -> NumSpec n -> Spec fn n
+combineNumSpec ::
+  (HasSpec fn n, Ord n, TypeSpec fn n ~ NumSpec n) => NumSpec n -> NumSpec n -> Spec fn n
 combineNumSpec s s' = case s <> s' of
   s''@(NumSpecInterval (Just a) (Just b)) | a > b -> ErrorSpec [show s'']
   s'' -> typeSpec s''
@@ -2757,7 +2779,8 @@ genFromNumSpec (NumSpecInterval ml mu) = do
   n <- sizeT
   pureGen . choose =<< constrainInterval (ml <|> lowerBound) (mu <|> upperBound) (fromIntegral n)
 
-constrainInterval :: (MonadGenError m, Ord a, Num a, Show a) => Maybe a -> Maybe a -> Integer -> m (a, a)
+constrainInterval ::
+  (MonadGenError m, Ord a, Num a, Show a) => Maybe a -> Maybe a -> Integer -> m (a, a)
 constrainInterval ml mu r =
   case (ml, mu) of
     (Nothing, Nothing) -> pure (-r', r')
@@ -2921,7 +2944,8 @@ instance BaseUniverse fn => HasSpec fn Float where
 -- that is an extension of the Base Universe.
 -----------------------------------------------------------------------------------
 
-type BaseFns = '[EqFn, SetFn, BoolFn, PairFn, IntFn, OrdFn, GenericsFn, ListFn, SumFn, MapFn, FunFn, SizeFn]
+type BaseFns =
+  '[EqFn, SetFn, BoolFn, PairFn, IntFn, OrdFn, GenericsFn, ListFn, SumFn, MapFn, FunFn, SizeFn]
 type BaseFn = Fix (OneofL BaseFns)
 
 -- | A minimal Universe contains functions for a bunch of different things.
@@ -3654,7 +3678,12 @@ parensIf False = id
 prettyPrec :: Pretty (WithPrec a) => Int -> a -> Doc ann
 prettyPrec p = pretty . WithPrec p
 
-ppList :: forall fn f as ann. All (HasSpec fn) as => (forall a. HasSpec fn a => f a -> Doc ann) -> List f as -> [Doc ann]
+ppList ::
+  forall fn f as ann.
+  All (HasSpec fn) as =>
+  (forall a. HasSpec fn a => f a -> Doc ann) ->
+  List f as ->
+  [Doc ann]
 ppList _ Nil = []
 ppList pp (a :> as) = pp a : ppList @fn pp as
 
@@ -3926,7 +3955,9 @@ cardinality TrueSpec = cardinalTrueSpec @fn @a
 cardinality (MemberSpec es) = exactSizeSpec (sizeOf (nub es))
 cardinality ErrorSpec {} = equalSpec 0
 cardinality (TypeSpec s cant) =
-  subSpecInt (cardinalTypeSpec @fn @a s) (exactSizeSpec (sizeOf (filter (\c -> conformsTo @fn @a c s) cant)))
+  subSpecInt
+    (cardinalTypeSpec @fn @a s)
+    (exactSizeSpec (sizeOf (filter (\c -> conformsTo @fn @a c s) cant)))
 cardinality SuspendedSpec {} = cardinalTrueSpec @fn @a
 
 -- | A generic function to use as an instance for the HasSpec method

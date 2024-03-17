@@ -558,7 +558,8 @@ instance Era era => NFData (Committee era)
 instance Default (Committee era) where
   def = Committee mempty minBound
 
-committeeMembersL :: Lens' (Committee era) (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+committeeMembersL ::
+  Lens' (Committee era) (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
 committeeMembersL = lens committeeMembers (\c m -> c {committeeMembers = m})
 
 committeeThresholdL :: Lens' (Committee era) UnitInterval
@@ -612,8 +613,10 @@ newtype GovPurposeId (p :: GovActionPurpose) era = GovPurposeId
 
 type role GovPurposeId nominal nominal
 
-deriving newtype instance (Era era, Typeable p) => EncCBOR (GovPurposeId (p :: GovActionPurpose) era)
-deriving newtype instance (Era era, Typeable p) => DecCBOR (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance
+  (Era era, Typeable p) => EncCBOR (GovPurposeId (p :: GovActionPurpose) era)
+deriving newtype instance
+  (Era era, Typeable p) => DecCBOR (GovPurposeId (p :: GovActionPurpose) era)
 deriving newtype instance Era era => NoThunks (GovPurposeId (p :: GovActionPurpose) era)
 deriving newtype instance Era era => NFData (GovPurposeId (p :: GovActionPurpose) era)
 deriving newtype instance Era era => ToJSONKey (GovPurposeId (p :: GovActionPurpose) era)
@@ -825,7 +828,11 @@ instance EraPParams era => ToJSON (GovAction era)
 instance EraPParams era => DecCBOR (GovAction era) where
   decCBOR =
     decode $ Summands "GovAction" $ \case
-      0 -> SumD ParameterChange <! D (decodeNullStrictMaybe decCBOR) <! From <! D (decodeNullStrictMaybe decCBOR)
+      0 ->
+        SumD ParameterChange
+          <! D (decodeNullStrictMaybe decCBOR)
+          <! From
+          <! D (decodeNullStrictMaybe decCBOR)
       1 -> SumD HardForkInitiation <! D (decodeNullStrictMaybe decCBOR) <! From
       2 -> SumD TreasuryWithdrawals <! From <! D (decodeNullStrictMaybe decCBOR)
       3 -> SumD NoConfidence <! D (decodeNullStrictMaybe decCBOR)
@@ -839,7 +846,10 @@ instance EraPParams era => EncCBOR (GovAction era) where
   encCBOR =
     encode . \case
       ParameterChange gid ppup pol ->
-        Sum ParameterChange 0 !> E (encodeNullStrictMaybe encCBOR) gid !> To ppup !> E (encodeNullStrictMaybe encCBOR) pol
+        Sum ParameterChange 0
+          !> E (encodeNullStrictMaybe encCBOR) gid
+          !> To ppup
+          !> E (encodeNullStrictMaybe encCBOR) pol
       HardForkInitiation gid pv ->
         Sum HardForkInitiation 1 !> E (encodeNullStrictMaybe encCBOR) gid !> To pv
       TreasuryWithdrawals ws pol ->

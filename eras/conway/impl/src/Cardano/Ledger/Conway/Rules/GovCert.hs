@@ -180,7 +180,10 @@ conwayGovCertTransition = do
       pure
         vState
           { vsDReps =
-              Map.insert cred (DRepState (addEpochInterval cgceCurrentEpoch ppDRepActivity) mAnchor ppDRepDeposit) vsDReps
+              Map.insert
+                cred
+                (DRepState (addEpochInterval cgceCurrentEpoch ppDRepActivity) mAnchor ppDRepDeposit)
+                vsDReps
           }
     ConwayUnRegDRep cred refund -> do
       case Map.lookup cred vsDReps of

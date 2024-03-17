@@ -25,7 +25,17 @@ import Data.Sequence.Strict (StrictSeq, fromList)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
 import Test.Cardano.Ledger.Shelley.Arbitrary (genMetadata')
-import Test.QuickCheck (Arbitrary (arbitrary, shrink), Gen, choose, genericShrink, listOf, oneof, resize, scale, vectorOf)
+import Test.QuickCheck (
+  Arbitrary (arbitrary, shrink),
+  Gen,
+  choose,
+  genericShrink,
+  listOf,
+  oneof,
+  resize,
+  scale,
+  vectorOf,
+ )
 
 maxTimelockDepth :: Int
 maxTimelockDepth = 3

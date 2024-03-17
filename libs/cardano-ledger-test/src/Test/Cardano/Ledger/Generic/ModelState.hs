@@ -428,7 +428,9 @@ pcModelNewEpochState proof x =
 
 epochBoundaryPDoc :: Proof era -> ModelNewEpochState era -> [Maybe (Text, PDoc)]
 epochBoundaryPDoc _proof x =
-  [ if Map.null futurepp then Nothing else Just ("future pparams", ppMap pcKeyHash pcPoolParams futurepp)
+  [ if Map.null futurepp
+      then Nothing
+      else Just ("future pparams", ppMap pcKeyHash pcPoolParams futurepp)
   , if Map.null retiring then Nothing else Just ("retiring", ppMap pcKeyHash ppEpochNo retiring)
   , if lastepoch == EpochNo 0 then Nothing else Just ("last epoch", ppEpochNo lastepoch)
   , if Map.null prevBlocks then Nothing else Just ("prev blocks", ppMap pcKeyHash ppNatural prevBlocks)

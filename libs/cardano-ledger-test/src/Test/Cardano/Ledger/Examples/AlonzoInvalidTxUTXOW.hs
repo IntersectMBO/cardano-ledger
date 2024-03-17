@@ -531,7 +531,12 @@ missing2phaseScriptWitnessTx pf =
 
 validatingManyScriptsBody ::
   forall era.
-  (HasTokens era, EraTxBody era, PostShelley era, Value era ~ MaryValue (EraCrypto era), ShelleyEraTxCert era) =>
+  ( HasTokens era
+  , EraTxBody era
+  , PostShelley era
+  , Value era ~ MaryValue (EraCrypto era)
+  , ShelleyEraTxCert era
+  ) =>
   Proof era ->
   TxBody era
 validatingManyScriptsBody pf =
@@ -609,7 +614,8 @@ wrongRedeemerLabelTx pf =
         , Collateral' [mkGenesisTxIn 11]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
         , Txfee (Coin 5)
-        , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] misPurposedRedeemer (mkTxDats (Data (PV1.I 123))))
+        , WppHash
+            (newScriptIntegrityHash pf (pp pf) [PlutusV1] misPurposedRedeemer (mkTxDats (Data (PV1.I 123))))
         ]
     misPurposedRedeemer =
       -- The label *should* be Spend, not Mint
@@ -885,7 +891,8 @@ extraRedeemersTx pf =
         , Collateral' [mkGenesisTxIn 11]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
         , Txfee (Coin 5)
-        , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] extraRedeemersEx (mkTxDats (Data (PV1.I 123))))
+        , WppHash
+            (newScriptIntegrityHash pf (pp pf) [PlutusV1] extraRedeemersEx (mkTxDats (Data (PV1.I 123))))
         ]
     extraRedeemersEx =
       mkRedeemersFromTags pf $

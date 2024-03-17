@@ -211,7 +211,8 @@ testAlonzoBlock pf =
     , trustMeP pf False $ notValidatingTxWithMint pf
     ]
 
-testAlonzoBadPMDHBlock :: GoodCrypto (EraCrypto era) => Proof era -> Block (BHeaderView (EraCrypto era)) era
+testAlonzoBadPMDHBlock ::
+  GoodCrypto (EraCrypto era) => Proof era -> Block (BHeaderView (EraCrypto era)) era
 testAlonzoBadPMDHBlock pf@Alonzo = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
 testAlonzoBadPMDHBlock pf@Babbage = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
 testAlonzoBadPMDHBlock pf@Conway = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
@@ -411,7 +412,8 @@ validatingTxWithCert pf =
         ]
     ]
 
-validatingBodyWithCert :: (Scriptic era, EraTxBody era, ShelleyEraTxCert era) => Proof era -> TxBody era
+validatingBodyWithCert ::
+  (Scriptic era, EraTxBody era, ShelleyEraTxCert era) => Proof era -> TxBody era
 validatingBodyWithCert pf =
   newTxBody
     pf
@@ -681,11 +683,21 @@ testBBodyState pf =
 
 makeTooBig :: Proof era -> AlonzoBbodyPredFailure era
 makeTooBig proof@Alonzo =
-  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
-    PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
+  ShelleyInAlonzoBbodyPredFailure
+    . LedgersFailure
+    . LedgerFailure
+    . DelegsFailure
+    . DelplFailure
+    . PoolFailure
+    $ PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof@Babbage =
-  ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
-    PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
+  ShelleyInAlonzoBbodyPredFailure
+    . LedgersFailure
+    . LedgerFailure
+    . DelegsFailure
+    . DelplFailure
+    . PoolFailure
+    $ PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 -- makeTooBig proof@Conway =
 --   ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . ConwayCertsFailure . CertFailure . PoolFailure $ ConwayPoolPredFailure -- FIXME: This needs fixing after POOL rules are implemented for Conway
 makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)

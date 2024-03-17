@@ -245,7 +245,9 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
   {-# INLINEABLE feeTxBodyL #-}
 
   auxDataHashTxBodyL =
-    lensMemoRawType atbrAuxDataHash (\txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash})
+    lensMemoRawType
+      atbrAuxDataHash
+      (\txBodyRaw auxDataHash -> txBodyRaw {atbrAuxDataHash = auxDataHash})
   {-# INLINEABLE auxDataHashTxBodyL #-}
 
   spendableInputsTxBodyF = allInputsTxBodyF
@@ -256,7 +258,9 @@ instance Crypto c => EraTxBody (AlonzoEra c) where
   {-# INLINEABLE allInputsTxBodyF #-}
 
   withdrawalsTxBodyL =
-    lensMemoRawType atbrWithdrawals (\txBodyRaw withdrawals_ -> txBodyRaw {atbrWithdrawals = withdrawals_})
+    lensMemoRawType
+      atbrWithdrawals
+      (\txBodyRaw withdrawals_ -> txBodyRaw {atbrWithdrawals = withdrawals_})
   {-# INLINEABLE withdrawalsTxBodyL #-}
 
   certsTxBodyL =

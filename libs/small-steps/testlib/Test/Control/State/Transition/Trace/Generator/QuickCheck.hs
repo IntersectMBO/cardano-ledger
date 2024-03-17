@@ -303,7 +303,11 @@ traceLengthsAreClassified ::
   traceGenEnv ->
   QuickCheck.Property
 traceLengthsAreClassified baseEnv maxTraceLength intervalSize traceGenEnv =
-  forAllTrace @sts baseEnv maxTraceLength traceGenEnv (classifyTraceLength maxTraceLength intervalSize)
+  forAllTrace @sts
+    baseEnv
+    maxTraceLength
+    traceGenEnv
+    (classifyTraceLength maxTraceLength intervalSize)
 
 -- | Classify the trace length as either:
 --

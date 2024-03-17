@@ -500,7 +500,13 @@ ppRecord' con fields =
   group $
     flatAlt
       (hang 1 (vcat [con, puncLeft lbrace (map (\(x, y) -> equate (text x) y) fields) comma rbrace]))
-      (con <> encloseSep (lbrace <> space) (space <> rbrace) (comma <> space) (map (\(x, y) -> equate (text x) y) fields))
+      ( con
+          <> encloseSep
+            (lbrace <> space)
+            (space <> rbrace)
+            (comma <> space)
+            (map (\(x, y) -> equate (text x) y) fields)
+      )
 
 -- | Vertical layout with commas aligned on the left hand side
 puncLeft :: Doc ann -> [Doc ann] -> Doc ann -> Doc ann -> Doc ann
@@ -939,7 +945,8 @@ instance
   where
   prettyA = ppShelleyTxBody
 
-ppAllegraTxBody :: forall era. (TxBody era ~ AllegraTxBody era, Reflect era) => AllegraTxBody era -> PDoc
+ppAllegraTxBody ::
+  forall era. (TxBody era ~ AllegraTxBody era, Reflect era) => AllegraTxBody era -> PDoc
 ppAllegraTxBody txbody = ppRecord ("TxBody " <> pack (show (reify @era))) pairs
   where
     fields = abstractTxBody reify txbody
@@ -948,7 +955,8 @@ ppAllegraTxBody txbody = ppRecord ("TxBody " <> pack (show (reify @era))) pairs
 instance (TxBody era ~ AllegraTxBody era, Reflect era) => PrettyA (AllegraTxBody era) where
   prettyA = ppAllegraTxBody
 
-ppAlonzoTxBody :: forall era. (TxBody era ~ AlonzoTxBody era, Reflect era) => AlonzoTxBody era -> PDoc
+ppAlonzoTxBody ::
+  forall era. (TxBody era ~ AlonzoTxBody era, Reflect era) => AlonzoTxBody era -> PDoc
 ppAlonzoTxBody txbody = ppRecord ("TxBody " <> pack (show (reify @era))) pairs
   where
     fields = abstractTxBody reify txbody
@@ -1319,7 +1327,9 @@ ppConwayLedgerPredFailure proof x = case x of
   ConwayTreasuryValueMismatch c1 c2 -> ppSexp "ConwayTreasuryValueMismatch" [pcCoin c1, pcCoin c2]
   ConwayGovFailure y -> case proof of
     Conway -> ppSexp "ConwayGovFailure" [ppConwayGovPredFailure y]
-    _ -> error ("Only the ConwayEra has a (PredicateFailure (EraRule \"GOV\" era)). This Era is " ++ show proof)
+    _ ->
+      error
+        ("Only the ConwayEra has a (PredicateFailure (EraRule \"GOV\" era)). This Era is " ++ show proof)
   ConwayUtxowFailure y -> ppUTXOW proof y
   {- case proof of -- (PredicateFailure (EraRule "UTXOW" era))
     Shelley -> ppShelleyUtxowPredFailure y
@@ -1330,7 +1340,9 @@ ppConwayLedgerPredFailure proof x = case x of
     Conway -> ppBabbageUtxowPredFailure proof y -}
   ConwayCertsFailure pf -> case proof of
     Conway -> ppConwayCertsPredFailure proof pf
-    _ -> error ("Only the ConwayEra has a (PredicateFailure (EraRule \"CERTS\" era)). This Era is " ++ show proof)
+    _ ->
+      error
+        ("Only the ConwayEra has a (PredicateFailure (EraRule \"CERTS\" era)). This Era is " ++ show proof)
 
 instance Reflect era => PrettyA (ConwayLedgerPredFailure era) where
   prettyA = ppConwayLedgerPredFailure reify
@@ -1341,7 +1353,10 @@ ppConwayCertPredFailure proof x = case x of
   ConwayRules.PoolFailure pf -> ppSexp ".PoolFailure" [ppPOOL proof pf] -- (PredicateFailure (EraRule "POOL" era))
   ConwayRules.GovCertFailure pf -> case proof of
     Conway -> ppSexp "GovCertFailure" [ppConwayGovCertPredFailure pf] -- (PredicateFailure (EraRule "GOVCERT" era))
-    _ -> error ("Only the ConwayEra has a (PredicateFailure (EraRule \"GOVCERT\" era)). This Era is " ++ show proof)
+    _ ->
+      error
+        ( "Only the ConwayEra has a (PredicateFailure (EraRule \"GOVCERT\" era)). This Era is " ++ show proof
+        )
 
 instance Reflect era => PrettyA (ConwayRules.ConwayCertPredFailure era) where
   prettyA = ppConwayCertPredFailure reify
@@ -1363,7 +1378,9 @@ ppConwayCertsPredFailure proof x = case x of
   WithdrawalsNotInRewardsCERTS m -> ppSexp "WithdrawalsNotInRewardsCERTS" [ppMap pcRewardAccount pcCoin m]
   CertFailure pf -> case proof of
     Conway -> ppSexp " CertFailure" [ppConwayCertPredFailure proof pf] -- !(PredicateFailure (EraRule "CERT" era))
-    _ -> error ("Only the ConwayEra has a (PredicateFailure (EraRule \"CERT\" era)). This Era is " ++ show proof)
+    _ ->
+      error
+        ("Only the ConwayEra has a (PredicateFailure (EraRule \"CERT\" era)). This Era is " ++ show proof)
 
 instance Reflect era => PrettyA (ConwayCertsPredFailure era) where
   prettyA = ppConwayCertsPredFailure reify
@@ -1629,14 +1646,18 @@ ppAlonzoUtxoPredFailure x = case x of
   Alonzo.WrongNetworkWithdrawal n accnt ->
     ppRecord
       "WrongNetworkWithdrawal"
-      [("expected network id", ppNetwork n), ("set reward address with wrong network id", ppSet pcRewardAccount accnt)]
+      [ ("expected network id", ppNetwork n)
+      , ("set reward address with wrong network id", ppSet pcRewardAccount accnt)
+      ]
   Alonzo.OutputTooSmallUTxO xs ->
     ppRecord
       "OutputTooSmallUTxO"
       [("list of supplied transaction outputs that are too small", ppList (pcTxOut reify) xs)]
   Alonzo.UtxosFailure yy -> ppSexp "UtxosFailure" [ppUTXOS @era reify yy]
   Alonzo.OutputBootAddrAttrsTooBig xs ->
-    ppRecord "OutputBootAddrAttrsTooBig" [("list of supplied bad transaction outputs", ppList (pcTxOut reify) xs)]
+    ppRecord
+      "OutputBootAddrAttrsTooBig"
+      [("list of supplied bad transaction outputs", ppList (pcTxOut reify) xs)]
   Alonzo.TriesToForgeADA -> ppString "TriesToForgeADA"
   Alonzo.OutputTooBigUTxO xs ->
     ppSexp
@@ -1936,7 +1957,9 @@ ppShelleyUtxoPredFailure (Shelley.OutputTooSmallUTxO xs) =
 ppShelleyUtxoPredFailure (Shelley.UpdateFailure x) =
   ppSexp "UpdateFailure" [ppPPUPPredFailure x]
 ppShelleyUtxoPredFailure (Shelley.OutputBootAddrAttrsTooBig xs) =
-  ppRecord "OutputBootAddrAttrsTooBig" [("list of supplied bad transaction outputs", ppList (pcTxOut reify) xs)]
+  ppRecord
+    "OutputBootAddrAttrsTooBig"
+    [("list of supplied bad transaction outputs", ppList (pcTxOut reify) xs)]
 
 instance Reflect era => PrettyA (ShelleyUtxoPredFailure era) where
   prettyA = ppShelleyUtxoPredFailure
@@ -2021,7 +2044,9 @@ ppAllegraUtxoPredFailure (Allegra.OutputTooSmallUTxO xs) =
 ppAllegraUtxoPredFailure (Allegra.UpdateFailure x) =
   ppSexp "UpdateFailure" [ppPPUPPredFailure x]
 ppAllegraUtxoPredFailure (Allegra.OutputBootAddrAttrsTooBig xs) =
-  ppRecord "OutputBootAddrAttrsTooBig" [("list of supplied bad transaction outputs", ppList (pcTxOut reify) xs)]
+  ppRecord
+    "OutputBootAddrAttrsTooBig"
+    [("list of supplied bad transaction outputs", ppList (pcTxOut reify) xs)]
 ppAllegraUtxoPredFailure (Allegra.TriesToForgeADA) = ppSexp "TriesToForgeADA" []
 ppAllegraUtxoPredFailure (Allegra.OutputTooBigUTxO outs) =
   ppRecord "OutputTooBigUTxO" [("list of TxOuts which are too big", ppList (pcTxOut reify) outs)]
@@ -2110,9 +2135,13 @@ txInSummary (TxIn (TxId h) n) = ppSexp "TxIn" [trim (ppSafeHash h), ppInt (txIxT
 
 txOutSummary :: Proof era -> TxOut era -> PDoc
 txOutSummary p@Conway (BabbageTxOut addr v d s) =
-  ppSexp "TxOut" [addrSummary addr, pcCoreValue p v, datumSummary d, ppStrictMaybe (scriptSummary p) s]
+  ppSexp
+    "TxOut"
+    [addrSummary addr, pcCoreValue p v, datumSummary d, ppStrictMaybe (scriptSummary p) s]
 txOutSummary p@Babbage (BabbageTxOut addr v d s) =
-  ppSexp "TxOut" [addrSummary addr, pcCoreValue p v, datumSummary d, ppStrictMaybe (scriptSummary p) s]
+  ppSexp
+    "TxOut"
+    [addrSummary addr, pcCoreValue p v, datumSummary d, ppStrictMaybe (scriptSummary p) s]
 txOutSummary p@Alonzo (AlonzoTxOut addr v md) =
   ppSexp "TxOut" [addrSummary addr, pcCoreValue p v, ppStrictMaybe dataHashSummary md]
 txOutSummary p@Mary (ShelleyTxOut addr v) = ppSexp "TxOut" [addrSummary addr, pcCoreValue p v]
@@ -2577,7 +2606,12 @@ instance PrettyA ExUnits where prettyA = pcExUnits
 pcPair :: (t1 -> PDoc) -> (t2 -> PDoc) -> (t1, t2) -> PDoc
 pcPair pp1 pp2 (x, y) = parens (hsep [pp1 x, ppString ",", pp2 y])
 
-pcWitVKey :: forall era keyrole. (Reflect era, Typeable keyrole) => Proof era -> WitVKey keyrole (EraCrypto era) -> PDoc
+pcWitVKey ::
+  forall era keyrole.
+  (Reflect era, Typeable keyrole) =>
+  Proof era ->
+  WitVKey keyrole (EraCrypto era) ->
+  PDoc
 pcWitVKey _p (WitVKey vk@(VKey x) sig) =
   ppSexp
     "WitVKey"

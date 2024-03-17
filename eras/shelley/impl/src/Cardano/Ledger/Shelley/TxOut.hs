@@ -138,7 +138,8 @@ pattern ShelleyTxOut addr vl <-
 
 {-# COMPLETE ShelleyTxOut #-}
 
-viewCompactTxOut :: (Era era, Val (Value era)) => ShelleyTxOut era -> (Addr (EraCrypto era), Value era)
+viewCompactTxOut ::
+  (Era era, Val (Value era)) => ShelleyTxOut era -> (Addr (EraCrypto era), Value era)
 viewCompactTxOut TxOutCompact {txOutCompactAddr, txOutCompactValue} =
   (decompactAddr txOutCompactAddr, fromCompact txOutCompactValue)
 

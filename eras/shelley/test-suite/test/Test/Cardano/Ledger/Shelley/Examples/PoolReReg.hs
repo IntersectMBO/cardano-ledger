@@ -205,7 +205,8 @@ word64SlotToKesPeriodWord :: Word64 -> Word
 word64SlotToKesPeriodWord slot =
   fromIntegral (toInteger slot) `div` fromIntegral (toInteger $ slotsPerKESPeriod testGlobals)
 
-blockEx2 :: forall c. ExMock (EraCrypto (ShelleyEra c)) => Word64 -> Block (BHeader c) (ShelleyEra c)
+blockEx2 ::
+  forall c. ExMock (EraCrypto (ShelleyEra c)) => Word64 -> Block (BHeader c) (ShelleyEra c)
 blockEx2 slot =
   mkBlockFakeVRF
     (bhHash $ bheader @(BHeader c) @(ShelleyEra c) blockEx1)

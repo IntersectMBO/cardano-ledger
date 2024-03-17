@@ -32,7 +32,10 @@ import Cardano.Ledger.Alonzo.Rules (
   validBegin,
   validEnd,
  )
-import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxosEvent (..), AlonzoUtxosPredFailure (..))
+import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
+  AlonzoUtxosEvent (..),
+  AlonzoUtxosPredFailure (..),
+ )
 import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO,
   AlonzoScriptsNeeded,

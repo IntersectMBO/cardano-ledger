@@ -24,7 +24,14 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.API
-import Cardano.Protocol.TPraos.BHeader (BHeader (..), LastAppliedBlock (..), hashHeaderToNonce, makeHeaderView, mkSeed, seedL)
+import Cardano.Protocol.TPraos.BHeader (
+  BHeader (..),
+  LastAppliedBlock (..),
+  hashHeaderToNonce,
+  makeHeaderView,
+  mkSeed,
+  seedL,
+ )
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..), OCertEnv (..), currentIssueNo, kesPeriod)
 import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot (..), lookupInOverlaySchedule)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))

@@ -54,7 +54,16 @@ import Debug.Trace
 import Lens.Micro (Lens', lens, (&), (.~), (^.))
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Combinators (setSized)
-import Test.Cardano.Ledger.Constrained.Env (Access (..), AnyF (..), Env (..), Field (..), Name (..), V (..), pV, sameName)
+import Test.Cardano.Ledger.Constrained.Env (
+  Access (..),
+  AnyF (..),
+  Env (..),
+  Field (..),
+  Name (..),
+  V (..),
+  pV,
+  sameName,
+ )
 import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed (..), failT, monadTyped)
 import Test.Cardano.Ledger.Constrained.Size
 import Test.Cardano.Ledger.Constrained.Size (genFromSize)
@@ -190,7 +199,8 @@ mkNewVar other = error ("mkNewVar should only be applied to variables: " ++ show
 addP :: Era era => Pred era -> [Pred era] -> [Pred era]
 addP p ps = List.nubBy cpeq (p : ps)
 
-addPred :: Era era => HashSet (Name era) -> Pred era -> [Name era] -> [Pred era] -> [Pred era] -> [Pred era]
+addPred ::
+  Era era => HashSet (Name era) -> Pred era -> [Name era] -> [Pred era] -> [Pred era] -> [Pred era]
 addPred bad orig names ans newps =
   if any (\x -> HashSet.member x bad) names
     then addP orig ans
@@ -356,7 +366,9 @@ nUniqueFromM :: Int -> Int -> Gen [Int]
 nUniqueFromM n m
   | n == 0 = pure []
   | n > m = pure [0 .. m]
-  | otherwise = Set.toList <$> setSized ["from Choose", "nUniqueFromM " ++ show n ++ " " ++ show m] n (choose (0, m))
+  | otherwise =
+      Set.toList
+        <$> setSized ["from Choose", "nUniqueFromM " ++ show n ++ " " ++ show m] n (choose (0, m))
 
 pickNunique :: Int -> [a] -> Gen [a]
 pickNunique n xs = do
@@ -561,7 +573,10 @@ splitMultiName n ((ms, p) : more) (unary, Nothing, bad) =
       splitMultiName
         n
         more
-        (unary, Nothing, ("A set of nary Multinames " ++ show ms ++ " does not contain the search name " ++ show n) : bad)
+        ( unary
+        , Nothing
+        , ("A set of nary Multinames " ++ show ms ++ " does not contain the search name " ++ show n) : bad
+        )
 splitMultiName n ((ms, p) : more) (unary, Just first, bad) =
   splitMultiName
     n
@@ -596,7 +611,14 @@ mkDependGraph count prev prevNames (n : more) badchoices cs =
   case partitionE okE cs of
     ([], _) -> mkDependGraph count prev prevNames more (n : badchoices) cs
     (possible, notPossible) -> case splitMultiName n possible ([], Nothing, []) of
-      (ps, Nothing, []) -> mkDependGraph count (([n], ps) : prev) (HashSet.insert n prevNames) (reverse badchoices ++ more) [] notPossible
+      (ps, Nothing, []) ->
+        mkDependGraph
+          count
+          (([n], ps) : prev)
+          (HashSet.insert n prevNames)
+          (reverse badchoices ++ more)
+          []
+          notPossible
       ([], Just (ns, p), []) ->
         mkDependGraph
           count
@@ -649,7 +671,12 @@ firstE f (x : xs) = case f x of
 
 -- | Add to the dependency map 'answer' constraints such that every Name in 'before'
 --   preceeds every Name in 'after' in the order in which Names are solved for.
-mkDeps :: Era era => HashSet (Name era) -> HashSet (Name era) -> Map (Name era) (HashSet (Name era)) -> Map (Name era) (HashSet (Name era))
+mkDeps ::
+  Era era =>
+  HashSet (Name era) ->
+  HashSet (Name era) ->
+  Map (Name era) (HashSet (Name era)) ->
+  Map (Name era) (HashSet (Name era))
 mkDeps before after answer = HashSet.foldl' accum answer after
   where
     accum ans left = Map.insertWith (HashSet.union) left before ans
@@ -669,7 +696,12 @@ standardOrderInfo =
     , setBeforeSubset = True
     }
 
-accumdep :: Era era => OrderInfo -> Map (Name era) (HashSet (Name era)) -> Pred era -> Map (Name era) (HashSet (Name era))
+accumdep ::
+  Era era =>
+  OrderInfo ->
+  Map (Name era) (HashSet (Name era)) ->
+  Pred era ->
+  Map (Name era) (HashSet (Name era))
 accumdep info answer c = case c of
   sub :⊆: set ->
     if setBeforeSubset info

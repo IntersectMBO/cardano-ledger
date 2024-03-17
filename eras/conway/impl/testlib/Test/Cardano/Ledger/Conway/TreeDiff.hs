@@ -112,9 +112,14 @@ instance
   ) =>
   ToExpr (RatifyState era)
 
-instance (EraPParams era, ToExpr (PParamsHKD Identity era), ToExpr (PParamsHKD StrictMaybe era)) => ToExpr (ConwayGovState era)
+instance
+  (EraPParams era, ToExpr (PParamsHKD Identity era), ToExpr (PParamsHKD StrictMaybe era)) =>
+  ToExpr (ConwayGovState era)
 
-instance (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (PParamsHKD Identity era)) => ToExpr (DRepPulsingState era) where
+instance
+  (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (PParamsHKD Identity era)) =>
+  ToExpr (DRepPulsingState era)
+  where
   toExpr (DRComplete x y) = App "DRComplete" [toExpr x, toExpr y]
   toExpr x@(DRPulsing (DRepPulser {})) = App "DRComplete" [toExpr a, toExpr b]
     where
@@ -149,7 +154,9 @@ instance
   ToExpr (ConwayUtxosPredFailure era)
 
 -- TxBody
-instance (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (TxOut era)) => ToExpr (ConwayTxBodyRaw era)
+instance
+  (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (TxOut era)) =>
+  ToExpr (ConwayTxBodyRaw era)
 
 instance
   (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (TxOut era)) =>

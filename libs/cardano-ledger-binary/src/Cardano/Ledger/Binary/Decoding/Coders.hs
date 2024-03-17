@@ -402,7 +402,8 @@ x <! y = ApplyD x y
 {-# INLINE (<!) #-}
 
 -- | Infix form of @ApplyAnn@ with the same infixity and precedence as @($)@.
-(<*!) :: Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
+(<*!) ::
+  Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
 x <*! y = ApplyAnn x y
 {-# INLINE (<*!) #-}
 

@@ -534,7 +534,8 @@ getDStateNoSharing dstateId = do
       rws <- selectList [RewardDstateId ==. dstateId] []
       forM rws $ \(Entity _ Reward {..}) -> do
         Credential credential <- getJust rewardCredentialId
-        pure (Keys.coerceKeyRole credential, UM.RDPair (UM.compactCoinOrError rewardCoin) (UM.CompactCoin 0))
+        pure
+          (Keys.coerceKeyRole credential, UM.RDPair (UM.compactCoinOrError rewardCoin) (UM.CompactCoin 0))
   -- FIXME the deposit is not accounted for ^
   -- The PR ts-keydeposit-intoUMap breaks this tool since it changes the CertState data type.
   -- https://github.com/intersectmbo/cardano-ledger/pull/3217
@@ -594,7 +595,8 @@ getDStateWithSharing dstateId = do
       rws <- selectList [RewardDstateId ==. dstateId] []
       forM rws $ \(Entity _ Reward {..}) -> do
         Credential credential <- getJust rewardCredentialId
-        pure (Keys.coerceKeyRole credential, UM.RDPair (UM.compactCoinOrError rewardCoin) (UM.CompactCoin 0))
+        pure
+          (Keys.coerceKeyRole credential, UM.RDPair (UM.compactCoinOrError rewardCoin) (UM.CompactCoin 0))
   -- FIXME the deposit is not accounted for ^
   delegations <-
     Map.fromList <$> do

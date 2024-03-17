@@ -214,9 +214,11 @@ data GenState era = GenState
   , gsModel :: !(ModelNewEpochState era)
   , gsInitialUtxo :: !(Map (TxIn (EraCrypto era)) (TxOut era))
   , gsInitialRewards :: !(Map (Credential 'Staking (EraCrypto era)) Coin)
-  , gsInitialDelegations :: !(Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
+  , gsInitialDelegations ::
+      !(Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era)))
   , gsInitialPoolParams :: !(Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
-  , gsInitialPoolDistr :: !(Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
+  , gsInitialPoolDistr ::
+      !(Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
   , -- Stable fields are stable from initialization to the end of the generation process
     gsStablePools :: !(Set (KeyHash 'StakePool (EraCrypto era)))
   , gsStableDelegators :: !(Set (StakeCredential (EraCrypto era)))
@@ -800,7 +802,12 @@ instance Reflect era => Show (GenState era) where
 initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
-    umap = UM.unify (Map.map rdpair (gsInitialRewards gstate)) Map.empty (gsInitialDelegations gstate) Map.empty
+    umap =
+      UM.unify
+        (Map.map rdpair (gsInitialRewards gstate))
+        Map.empty
+        (gsInitialDelegations gstate)
+        Map.empty
     utxostate = smartUTxOState pp (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) emptyGovState mempty
     dpstate = CertState def pstate dstate
     dstate =
@@ -1074,7 +1081,8 @@ genFreshCredential tries0 tag old = go tries0
         then go (tries - 1)
         else pure c
 
-genFreshRegCred :: Reflect era => PlutusPurposeTag -> GenRS era (Credential 'Staking (EraCrypto era))
+genFreshRegCred ::
+  Reflect era => PlutusPurposeTag -> GenRS era (Credential 'Staking (EraCrypto era))
 genFreshRegCred tag = do
   old <- gets (Map.keysSet . gsInitialRewards)
   avoid <- gets gsAvoidCred
@@ -1119,7 +1127,15 @@ genFreshCredentials n0 tries tag old0 ans0 = go n0 old0 ans0
       go (n - 1) (Set.insert c old) (c : ans)
 
 -- | Use this function to get a new pool that should not be used in the future transactions
-genNewPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (EraCrypto era), PoolParams (EraCrypto era), IndividualPoolStake (EraCrypto era))
+genNewPool ::
+  forall era.
+  Reflect era =>
+  GenRS
+    era
+    ( KeyHash 'StakePool (EraCrypto era)
+    , PoolParams (EraCrypto era)
+    , IndividualPoolStake (EraCrypto era)
+    )
 genNewPool = do
   poolId <- genFreshKeyHash
   poolParam <- genPoolParams poolId
@@ -1209,7 +1225,10 @@ genRetirementHash = do
       pure poolid
 
 -- Adds to the mPoolParams and the  mPoolDistr of the Model, and the initial set of objects for Traces
-genPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (EraCrypto era), PoolParams (EraCrypto era))
+genPool ::
+  forall era.
+  Reflect era =>
+  GenRS era (KeyHash 'StakePool (EraCrypto era), PoolParams (EraCrypto era))
 genPool = frequencyT [(10, genNew), (90, pickExisting)]
   where
     genNew = do

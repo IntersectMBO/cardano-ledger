@@ -422,7 +422,9 @@ instance Era era => EncCBOR (CertState era) where
       <> encCBOR certDState
 
 instance Era era => DecShareCBOR (CertState era) where
-  type Share (CertState era) = (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
+  type
+    Share (CertState era) =
+      (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
   decSharePlusCBOR = decodeRecordNamedT "CertState" (const 3) $ do
     certVState <- lift decNoShareCBOR -- TODO: add sharing of DRep credentials
     certPState <- decSharePlusLensCBOR _2
@@ -591,16 +593,19 @@ dsGenDelegsL = lens dsGenDelegs (\ds u -> ds {dsGenDelegs = u})
 dsIRewardsL :: Lens' (DState era) (InstantaneousRewards (EraCrypto era))
 dsIRewardsL = lens dsIRewards (\ds u -> ds {dsIRewards = u})
 
-dsFutureGenDelegsL :: Lens' (DState era) (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
+dsFutureGenDelegsL ::
+  Lens' (DState era) (Map (FutureGenDeleg (EraCrypto era)) (GenDelegPair (EraCrypto era)))
 dsFutureGenDelegsL = lens dsFutureGenDelegs (\ds u -> ds {dsFutureGenDelegs = u})
 
 -- ===================================
 -- PState
 
-psStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+psStakePoolParamsL ::
+  Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 psStakePoolParamsL = lens psStakePoolParams (\ds u -> ds {psStakePoolParams = u})
 
-psFutureStakePoolParamsL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+psFutureStakePoolParamsL ::
+  Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
 psFutureStakePoolParamsL = lens psFutureStakePoolParams (\ds u -> ds {psFutureStakePoolParams = u})
 
 psRetiringL :: Lens' (PState era) (Map (KeyHash 'StakePool (EraCrypto era)) EpochNo)
@@ -612,7 +617,8 @@ psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})
 -- ===================================
 -- VState
 
-vsDRepsL :: Lens' (VState era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+vsDRepsL ::
+  Lens' (VState era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
 
 vsCommitteeStateL :: Lens' (VState era) (CommitteeState era)

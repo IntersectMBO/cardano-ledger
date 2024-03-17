@@ -19,4 +19,5 @@ data KESKeyPair c = KESKeyPair
   , kesVerKey :: !(VerKeyKES c)
   }
 
-deriving instance (Show (KES.SignKeyKES (KES c)), Show (KES.VerKeyKES (KES c))) => Show (KESKeyPair c)
+deriving instance
+  (Show (KES.SignKeyKES (KES c)), Show (KES.VerKeyKES (KES c))) => Show (KESKeyPair c)

@@ -178,7 +178,15 @@ data VarSpec
 genTerm :: Era era => GenEnv era -> Rep era t -> VarSpec -> Gen (Term era t, GenEnv era)
 genTerm env rep vspec = genTerm' env rep (const True) (genLiteral env rep) vspec
 
-genTerm' :: forall era t. Era era => GenEnv era -> Rep era t -> (t -> Bool) -> Gen t -> VarSpec -> Gen (Term era t, GenEnv era)
+genTerm' ::
+  forall era t.
+  Era era =>
+  GenEnv era ->
+  Rep era t ->
+  (t -> Bool) ->
+  Gen t ->
+  VarSpec ->
+  Gen (Term era t, GenEnv era)
 genTerm' env rep valid genLit vspec =
   frequency $
     [(5, genFixed) | vspec == KnownTerm]
@@ -424,7 +432,10 @@ genPredicate env =
             partSums <- partition (fromI [] small) ["sumdToC in Tests.hs"] count val
             (parts, env'') <- genParts partSums env'
             -- At some point we should generate a random TestCond other than EQL
-            pure (SumsTo (Left (fromI [] small)) sumTm EQL parts, markSolved (foldMap (varsOfSum mempty) parts) d env'')
+            pure
+              ( SumsTo (Left (fromI [] small)) sumTm EQL parts
+              , markSolved (foldMap (varsOfSum mempty) parts) d env''
+              )
       -- FIXME Left means that sumTm is known. Not sure if that is what is needed here.
       | otherwise =
           oneof
@@ -604,7 +615,8 @@ initEnv info =
 
 showVal :: Rep era t -> t -> String
 showVal (SetR r) t = "{" ++ intercalate ", " (map (synopsis r) (Set.toList t)) ++ "}"
-showVal (MapR kr vr) t = "{" ++ intercalate ", " [synopsis kr k ++ " -> " ++ synopsis vr v | (k, v) <- Map.toList t] ++ "}"
+showVal (MapR kr vr) t =
+  "{" ++ intercalate ", " [synopsis kr k ++ " -> " ++ synopsis vr v | (k, v) <- Map.toList t] ++ "}"
 showVal rep t = synopsis rep t
 
 showTerm :: Term era t -> String
@@ -650,7 +662,12 @@ predConstr Before {} = "Before"
 predConstr Oneof {} = "Oneof"
 predConstr ListWhere {} = "ListWhere"
 
-constraintProperty :: Bool -> [String] -> OrderInfo -> ([Pred TestEra] -> DependGraph TestEra -> Env TestEra -> Property) -> Property
+constraintProperty ::
+  Bool ->
+  [String] ->
+  OrderInfo ->
+  ([Pred TestEra] -> DependGraph TestEra -> Env TestEra -> Property) ->
+  Property
 constraintProperty strict whitelist info prop =
   forAllShrink (genPreds $ initEnv info) shrinkPreds $ \(preds, genenv) ->
     counterexample ("\n-- Order --\n" ++ show info) $

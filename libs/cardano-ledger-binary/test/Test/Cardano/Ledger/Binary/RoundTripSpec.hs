@@ -31,7 +31,16 @@ import Cardano.Crypto.KES.CompactSum (
  )
 import Cardano.Crypto.KES.Mock (MockKES)
 import Cardano.Crypto.KES.Simple (SimpleKES)
-import Cardano.Crypto.KES.Sum (Sum0KES, Sum1KES, Sum2KES, Sum3KES, Sum4KES, Sum5KES, Sum6KES, Sum7KES)
+import Cardano.Crypto.KES.Sum (
+  Sum0KES,
+  Sum1KES,
+  Sum2KES,
+  Sum3KES,
+  Sum4KES,
+  Sum5KES,
+  Sum6KES,
+  Sum7KES,
+ )
 import Cardano.Crypto.VRF.Class (CertVRF, CertifiedVRF, OutputVRF, SignKeyVRF, VerKeyVRF)
 import Cardano.Crypto.VRF.Mock (MockVRF)
 import Cardano.Crypto.VRF.Praos (PraosVRF)

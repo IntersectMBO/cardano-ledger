@@ -233,7 +233,8 @@ data KeySpace era = KeySpace_
   -- ^ Index over the payment keys in 'ksKeyPairs'
   , ksIndexedStakingKeys :: Map (KeyHash 'Staking (EraCrypto era)) (KeyPair 'Staking (EraCrypto era))
   -- ^ Index over the staking keys in 'ksKeyPairs'
-  , ksIndexedGenDelegates :: Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate)
+  , ksIndexedGenDelegates ::
+      Map (KeyHash 'GenesisDelegate (EraCrypto era)) (AllIssuerKeys (EraCrypto era) 'GenesisDelegate)
   -- ^ Index over the cold key hashes in Genesis Delegates
   , ksIndexedPayScripts :: Map (ScriptHash (EraCrypto era)) (Script era, Script era)
   -- ^ Index over the pay script hashes in Script pairs

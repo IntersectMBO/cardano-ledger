@@ -130,7 +130,9 @@ elaborate abstractToConcreteIdMaps config dCert st abstractBlock =
         bb0
         (elaborateProtocolVersion $ Abstract._bProtVer $ Abstract._bBody abstractBlock)
         -- TODO: the Byron spec needs to incorporate a software version in the blocks
-        (elaborateSoftwareVersion $ Abstract.Update.SwVer (Abstract.Update.ApName "") (Abstract.Update.ApVer 0))
+        ( elaborateSoftwareVersion
+            $ Abstract.Update.SwVer (Abstract.Update.ApName "") (Abstract.Update.ApVer 0)
+        )
 
     prevHash :: Concrete.HeaderHash
     prevHash =

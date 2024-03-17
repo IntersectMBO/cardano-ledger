@@ -39,7 +39,8 @@ shrinkEnv (DependGraph vs) env =
     splits [] = []
     splits (x : xs) = ([], x, xs) : [(x : ys, y, zs) | (ys, y, zs) <- splits xs]
 
-shrinkOneVar :: Env era -> [Name era] -> Name era -> [Pred era] -> [(Name era, [Pred era])] -> [Env era]
+shrinkOneVar ::
+  Env era -> [Name era] -> Name era -> [Pred era] -> [(Name era, [Pred era])] -> [Env era]
 shrinkOneVar originalEnv before x cs after =
   [ env'
   | val' <- shrinkVar x cs' val

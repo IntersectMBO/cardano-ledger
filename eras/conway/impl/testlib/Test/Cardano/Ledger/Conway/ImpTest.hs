@@ -637,22 +637,26 @@ logProposalsForest = do
   proposals <- getProposals
   logEntry $ proposalsShowDebug proposals True
 
-getLastEnactedCommittee :: ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'CommitteePurpose era))
+getLastEnactedCommittee ::
+  ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'CommitteePurpose era))
 getLastEnactedCommittee = do
   ps <- getProposals
   pure $ ps ^. pRootsL . grCommitteeL . prRootL
 
-getLastEnactedConstitution :: ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
+getLastEnactedConstitution ::
+  ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
 getLastEnactedConstitution = do
   ps <- getProposals
   pure $ ps ^. pRootsL . grConstitutionL . prRootL
 
-getLastEnactedParameterChange :: ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
+getLastEnactedParameterChange ::
+  ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'PParamUpdatePurpose era))
 getLastEnactedParameterChange = do
   ps <- getProposals
   pure $ ps ^. pRootsL . grPParamUpdateL . prRootL
 
-getLastEnactedHardForkInitiation :: ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'HardForkPurpose era))
+getLastEnactedHardForkInitiation ::
+  ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'HardForkPurpose era))
 getLastEnactedHardForkInitiation = do
   ps <- getProposals
   pure $ ps ^. pRootsL . grHardForkL . prRootL
@@ -744,15 +748,19 @@ getRatifyEnv = do
       }
 
 -- | Test the resignation status for a CC cold key to be resigned
-ccShouldBeResigned :: HasCallStack => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
+ccShouldBeResigned ::
+  HasCallStack => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
 ccShouldBeResigned coldK = do
-  committeeCreds <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
+  committeeCreds <-
+    getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
   authHk <$> Map.lookup coldK committeeCreds `shouldBe` Just Nothing
 
 -- | Test the resignation status for a CC cold key to not be resigned
-ccShouldNotBeResigned :: HasCallStack => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
+ccShouldNotBeResigned ::
+  HasCallStack => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
 ccShouldNotBeResigned coldK = do
-  committeeCreds <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
+  committeeCreds <-
+    getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
   (Map.lookup coldK committeeCreds >>= authHk) `shouldSatisfy` isJust
 
 authHk :: CommitteeAuthorization c -> Maybe (Credential 'HotCommitteeRole c)
@@ -795,14 +803,16 @@ calculateCommitteeAcceptedRatio gaId = do
       reCommitteeState
       eNo
 
-calculatePoolAcceptedRatio :: ConwayEraGov era => GovActionId (EraCrypto era) -> ImpTestM era Rational
+calculatePoolAcceptedRatio ::
+  ConwayEraGov era => GovActionId (EraCrypto era) -> ImpTestM era Rational
 calculatePoolAcceptedRatio gaId = do
   ratEnv <- getRatifyEnv
   gas <- getGovActionState gaId
   pure $ spoAcceptedRatio ratEnv gas
 
 -- | Logs the ratios of accepted votes per category
-logAcceptedRatio :: (HasCallStack, ConwayEraGov era) => GovActionId (EraCrypto era) -> ImpTestM era ()
+logAcceptedRatio ::
+  (HasCallStack, ConwayEraGov era) => GovActionId (EraCrypto era) -> ImpTestM era ()
 logAcceptedRatio aId = do
   dRepRatio <- calculateDRepAcceptedRatio aId
   committeeRatio <- calculateCommitteeAcceptedRatio aId
@@ -1233,7 +1243,8 @@ expectNoPulserProposals = do
   props <- lastEpochProposals
   assertBool "Expected no proposals in the pulser" (SSeq.null props)
 
-currentProposalIds :: ConwayEraGov era => ImpTestM era (SSeq.StrictSeq (GovActionId (EraCrypto era)))
+currentProposalIds ::
+  ConwayEraGov era => ImpTestM era (SSeq.StrictSeq (GovActionId (EraCrypto era)))
 currentProposalIds =
   proposalsIds
     <$> getsNES (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL)

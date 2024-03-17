@@ -301,25 +301,31 @@ conwayFeaturesPlutusV1V2FailureSpec = do
           it "V1" $ do
             stakingC <- KeyHashObj <$> freshKeyHash
             let regDepositTxCert = RegDepositTxCert stakingC (Coin 0)
-            testCertificateTranslated regDepositTxCert =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV1)
+            testCertificateTranslated regDepositTxCert
+              =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV1)
           it "V2" $ do
             stakingC <- KeyHashObj <$> freshKeyHash
             let regDepositTxCert = RegDepositTxCert stakingC (Coin 0)
-            testCertificateTranslated regDepositTxCert =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV2)
+            testCertificateTranslated regDepositTxCert
+              =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV2)
         describe "UnRegDepositTxCert" $ do
           it "V1" $ do
             (_poolKH, _spendingC, stakingC) <- setupPoolWithStake $ Coin 1_000
             let unRegDepositTxCert = UnRegDepositTxCert stakingC (Coin 0)
-            testCertificateTranslated unRegDepositTxCert =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV1)
+            testCertificateTranslated unRegDepositTxCert
+              =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV1)
           it "V2" $ do
             (_poolKH, _spendingC, stakingC) <- setupPoolWithStake $ Coin 1_000
             let unRegDepositTxCert = UnRegDepositTxCert stakingC (Coin 0)
-            testCertificateTranslated unRegDepositTxCert =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV2)
+            testCertificateTranslated unRegDepositTxCert
+              =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV2)
       describe "Unsupported" $ do
         let testCertificateNotSupportedV1 badCert =
-              testCertificateNotSupported badCert =<< txWithPlutus @era (hashPlutusScript $ guessTheNumber3 SPlutusV1)
+              testCertificateNotSupported badCert
+                =<< txWithPlutus @era (hashPlutusScript $ guessTheNumber3 SPlutusV1)
             testCertificateNotSupportedV2 badCert =
-              testCertificateNotSupported badCert =<< txWithPlutus @era (hashPlutusScript $ guessTheNumber3 SPlutusV2)
+              testCertificateNotSupported badCert
+                =<< txWithPlutus @era (hashPlutusScript $ guessTheNumber3 SPlutusV2)
             testCertificateNotSupported badCert tx = do
               submitFailingTx
                 ( mkBasicTx mkBasicTxBody

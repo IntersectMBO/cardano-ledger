@@ -60,7 +60,10 @@ addUntilSize msgs base source n = do
         loop (Set.insert (Set.elemAt i extra) result) (Set.deleteAt i extra)
   case compare m n of
     EQ -> pure base
-    GT -> errorMess ("The size(" ++ show m ++ ") of the 'base' set exceeds the target size(" ++ show n ++ ")") msgs
+    GT ->
+      errorMess
+        ("The size(" ++ show m ++ ") of the 'base' set exceeds the target size(" ++ show n ++ ")")
+        msgs
     LT -> loop base possible
 
 -- | Generate a random set of a fixed size 'size', use 'gen' to pick the elements.

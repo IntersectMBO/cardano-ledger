@@ -74,7 +74,13 @@ stageToGraph n0 (Stage info ps) alreadyDefined = do
 
 -- | Merge a Pipeline into an existing DependGraph, given the set of variables
 --   that have aready been solved for, to get a larger DependGraph
-mergePipeline :: Era era => Int -> Pipeline era -> HashSet (Name era) -> DependGraph era -> Gen (Int, DependGraph era)
+mergePipeline ::
+  Era era =>
+  Int ->
+  Pipeline era ->
+  HashSet (Name era) ->
+  DependGraph era ->
+  Gen (Int, DependGraph era)
 mergePipeline n [] _ graph = pure (n, graph)
 mergePipeline n0 (pipe : more) defined (DependGraph xs) = do
   (n1, DependGraph ys) <- stageToGraph n0 pipe defined

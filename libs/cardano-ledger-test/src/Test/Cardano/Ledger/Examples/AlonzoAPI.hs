@@ -93,7 +93,14 @@ testEstimateMinFee =
         , Collateral' [mkGenesisTxIn 11]
         , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
         , Txfee (Coin 316)
-        , WppHash (newScriptIntegrityHash pf (newPParams pf defaultPPs) [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123))))
+        , WppHash
+            ( newScriptIntegrityHash
+                pf
+                (newPParams pf defaultPPs)
+                [PlutusV1]
+                redeemers
+                (mkTxDats (Data (PV1.I 123)))
+            )
         ]
     redeemers = mkSingleRedeemer pf Spending (Data (PV1.I 42))
 

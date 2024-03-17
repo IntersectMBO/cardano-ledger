@@ -436,7 +436,8 @@ utxoInductive = do
   runTest $ validateValueNotConservedUTxO pp utxo certState txBody
 
   -- process Protocol Parameter Update Proposals
-  ppup' <- trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txBody ^. updateTxBodyL)
+  ppup' <-
+    trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txBody ^. updateTxBodyL)
 
   {- ∀(_ → (_, c)) ∈ txouts txb, c ≥ (minUTxOValue pp) -}
   runTest $ validateOutputTooSmallUTxO pp outputs

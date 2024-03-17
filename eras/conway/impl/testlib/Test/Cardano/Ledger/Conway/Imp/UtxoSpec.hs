@@ -69,11 +69,13 @@ spec = describe "UTxO" $ do
       refScriptFee <- setRefScriptFee
       logEntry "lock an input with a script"
       scriptSpendIn <- createScriptUtxo scriptToSpend
-      logEntry "create outputs with reference scripts and the return them mapped to their corresponding inputs"
+      logEntry
+        "create outputs with reference scripts and the return them mapped to their corresponding inputs"
       refScriptInToScripts <- createRefScriptsUtxos refScripts
       logEntry "spend the initial input by passing the reference scripts"
       tx <- spendScriptUsingRefScripts scriptSpendIn $ Map.keysSet refScriptInToScripts
-      logEntry "compute the difference between the current-era minFee and that computed in pre-Conway eras"
+      logEntry
+        "compute the difference between the current-era minFee and that computed in pre-Conway eras"
       minFeeDiff <- conwayDiffMinFee tx
       logEntry "check that the difference is the sum of the sizes of the passed reference scripts"
       minFeeDiff
@@ -130,7 +132,8 @@ spec = describe "UTxO" $ do
       let refIns = (`txInAt` tx) <$> [0 .. length scripts - 1]
       pure $ Map.fromList $ refIns `zip` scripts
 
-    spendScriptUsingRefScripts :: TxIn (EraCrypto era) -> Set.Set (TxIn (EraCrypto era)) -> ImpTestM era (Tx era)
+    spendScriptUsingRefScripts ::
+      TxIn (EraCrypto era) -> Set.Set (TxIn (EraCrypto era)) -> ImpTestM era (Tx era)
     spendScriptUsingRefScripts scriptIn refIns =
       submitTxAnn "spendScriptUsingRefScripts" . mkBasicTx $
         mkBasicTxBody

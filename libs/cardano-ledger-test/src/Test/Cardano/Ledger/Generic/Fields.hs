@@ -476,11 +476,36 @@ abstractTxBody Babbage (BabbageTxBody inp col ref out colret totcol cert wdrl fe
   , Txnetworkid net
   ]
 abstractTxBody Shelley (ShelleyTxBody inp out cert wdrl fee ttlslot up adh) =
-  [Inputs inp, Outputs out, Certs cert, Withdrawals' wdrl, Txfee fee, TTL ttlslot, Update up, AdHash adh]
+  [ Inputs inp
+  , Outputs out
+  , Certs cert
+  , Withdrawals' wdrl
+  , Txfee fee
+  , TTL ttlslot
+  , Update up
+  , AdHash adh
+  ]
 abstractTxBody Mary (MaryTxBody inp out cert wdrl fee vldt up adh mnt) =
-  [Inputs inp, Outputs out, Certs cert, Withdrawals' wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh, Mint mnt]
+  [ Inputs inp
+  , Outputs out
+  , Certs cert
+  , Withdrawals' wdrl
+  , Txfee fee
+  , Vldt vldt
+  , Update up
+  , AdHash adh
+  , Mint mnt
+  ]
 abstractTxBody Allegra (AllegraTxBody inp out cert wdrl fee vldt up adh) =
-  [Inputs inp, Outputs out, Certs cert, Withdrawals' wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh]
+  [ Inputs inp
+  , Outputs out
+  , Certs cert
+  , Withdrawals' wdrl
+  , Txfee fee
+  , Vldt vldt
+  , Update up
+  , AdHash adh
+  ]
 
 abstractWitnesses :: Proof era -> TxWits era -> [WitnessesField era]
 abstractWitnesses Shelley (ShelleyTxWits keys scripts boot) = [AddrWits keys, ScriptWits scripts, BootWits boot]
@@ -538,7 +563,8 @@ toMapDat ds = TxDats (Map.fromList (map (\d -> (hashData d, d)) ds))
 fromMapScript :: forall era. Map (ScriptHash (EraCrypto era)) (Script era) -> [Script era]
 fromMapScript m = Map.elems m
 
-toMapScript :: forall era. EraScript era => [Script era] -> Map (ScriptHash (EraCrypto era)) (Script era)
+toMapScript ::
+  forall era. EraScript era => [Script era] -> Map (ScriptHash (EraCrypto era)) (Script era)
 toMapScript scripts = Map.fromList (map (\s -> (hashScript @era s, s)) scripts)
 
 -- =============================================================================

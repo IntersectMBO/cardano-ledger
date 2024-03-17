@@ -236,7 +236,11 @@ expectedStEx1 :: ChainState C
 expectedStEx1 =
   C.evolveNonceUnfrozen (getBlockNonce blockEx1)
     . C.newLab blockEx1
-    . C.feesAndDeposits ppEx feeTx1 [Cast.aliceSHK, Cast.bobSHK, Cast.carlSHK] [alicePoolParams', bobPoolParams']
+    . C.feesAndDeposits
+      ppEx
+      feeTx1
+      [Cast.aliceSHK, Cast.bobSHK, Cast.carlSHK]
+      [alicePoolParams', bobPoolParams']
     . C.newUTxO txbodyEx1
     . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 0))
     . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))

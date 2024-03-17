@@ -48,7 +48,8 @@ foldMapList :: Monoid b => (forall a. f a -> b) -> List f as -> b
 foldMapList _ Nil = mempty
 foldMapList f (a :> as) = f a <> foldMapList f as
 
-foldMapListC :: forall c as b f. (All c as, Monoid b) => (forall a. c a => f a -> b) -> List f as -> b
+foldMapListC ::
+  forall c as b f. (All c as, Monoid b) => (forall a. c a => f a -> b) -> List f as -> b
 foldMapListC _ Nil = mempty
 foldMapListC f (a :> as) = f a <> foldMapListC @c f as
 
@@ -86,7 +87,8 @@ pattern NilCtx c = ListCtx Nil c Nil
 {-# COMPLETE NilCtx #-}
 
 -- | A view of a `ListCtx` where you see the whole context at the same time.
-pattern ListCtx :: () => as'' ~ Append as (a : as') => List f as -> c a -> List f as' -> ListCtx f as'' c
+pattern ListCtx ::
+  () => as'' ~ Append as (a : as') => List f as -> c a -> List f as' -> ListCtx f as'' c
 pattern ListCtx as c as' <- (toWholeCtx -> ListCtxWhole as c as')
   where
     ListCtx as c as' = fromWholeCtx $ ListCtxWhole as c as'

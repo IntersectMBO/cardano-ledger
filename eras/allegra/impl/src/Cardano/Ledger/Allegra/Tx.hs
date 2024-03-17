@@ -17,7 +17,12 @@ import Cardano.Ledger.Allegra.Scripts (Timelock, evalTimelock)
 import Cardano.Ledger.Allegra.TxAuxData ()
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.TxWits ()
-import Cardano.Ledger.Core (EraTx (..), EraTxAuxData (upgradeTxAuxData), EraTxWits (..), upgradeTxBody)
+import Cardano.Ledger.Core (
+  EraTx (..),
+  EraTxAuxData (upgradeTxAuxData),
+  EraTxWits (..),
+  upgradeTxBody,
+ )
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.Shelley.Tx (

@@ -37,7 +37,9 @@ testMaryNoDelegLEDGER ::
   Assertion
 testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
   checkTrace @(ShelleyLEDGER Mary) runShelleyBase env $
-    pure (LedgerState (smartUTxOState (ledgerPp env) utxo (Coin 0) (Coin 0) def mempty) def) .- tx .->> expectedSt'
+    pure (LedgerState (smartUTxOState (ledgerPp env) utxo (Coin 0) (Coin 0) def mempty) def)
+      .- tx
+      .->> expectedSt'
   where
     txFee = tx ^. bodyTxL . feeTxBodyL
     expectedSt' = LedgerState (smartUTxOState (ledgerPp env) expectedUTxO (Coin 0) txFee def mempty) def

@@ -61,7 +61,8 @@ theWitVKey n hash = mkWitnessVKey hash (theKeyPair n)
 theKeyHashObj :: CC.Crypto c => Int -> Credential kr c
 theKeyHashObj n = KeyHashObj . hashKey . vKey $ theKeyPair n
 
-aScriptHashObj :: forall era kr. EraScript era => Proof era -> Script era -> Credential kr (EraCrypto era)
+aScriptHashObj ::
+  forall era kr. EraScript era => Proof era -> Script era -> Credential kr (EraCrypto era)
 aScriptHashObj _wit s = ScriptHashObj . hashScript @era $ s
 
 theStakeReference :: CC.Crypto c => Int -> StakeReference c

@@ -226,7 +226,9 @@ oneofT gs = do
 frequencyT :: MonadGenError m => [(Int, GenT GE a)] -> GenT m a
 frequencyT gs = do
   mode <- getMode
-  r <- explain ["suchThatT in oneofT"] $ pureGen (frequency [(f, runGenT g mode) | (f, g) <- gs]) `suchThatT` isOk
+  r <-
+    explain ["suchThatT in oneofT"] $
+      pureGen (frequency [(f, runGenT g mode) | (f, g) <- gs]) `suchThatT` isOk
   runGE r
 
 chooseT :: (Random a, Ord a, Show a, MonadGenError m) => (a, a) -> GenT m a

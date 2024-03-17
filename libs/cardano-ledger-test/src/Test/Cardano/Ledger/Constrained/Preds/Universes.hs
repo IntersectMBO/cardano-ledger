@@ -203,7 +203,9 @@ genAddrPair netwrk = do
 genByronUniv :: Crypto c => Network -> Gen (Map (KeyHash 'Payment c) (Addr c, Byron.SigningKey))
 genByronUniv netwrk = do
   list <- vectorOf 50 (genAddrPair netwrk)
-  pure $ Map.fromList (List.map (\(addr, signkey) -> (bootstrapKeyHash addr, (AddrBootstrap addr, signkey))) list)
+  pure $
+    Map.fromList
+      (List.map (\(addr, signkey) -> (bootstrapKeyHash addr, (AddrBootstrap addr, signkey))) list)
 
 -- | Given a list of Byron addresses, compute BootStrap witnesses of all of those addresses
 --   Can only be used with StandardCrypto
@@ -224,7 +226,8 @@ bootWitness hash bootaddrs byronuniv = List.foldl' accum Set.empty bootaddrs
 -- Datums
 
 -- | The universe of non-empty Datums. i.e. There are no NoDatum Datums in this list
-genDatums :: Era era => UnivSize -> Int -> Map (DataHash (EraCrypto era)) (Data era) -> Gen [Datum era]
+genDatums ::
+  Era era => UnivSize -> Int -> Map (DataHash (EraCrypto era)) (Data era) -> Gen [Datum era]
 genDatums sizes n datauniv = vectorOf n (genDatum sizes datauniv)
 
 -- | Only generate non-empty Datums. I.e. There are no NoDatum Datums generated.
@@ -281,7 +284,11 @@ genTxOut sizes genvalue p c addruniv scriptuniv spendscriptuniv datauniv =
             then BabbageTxOut addr v <$> genDatum sizes datauniv <*> pure maybescript
             else pure $ BabbageTxOut addr v NoDatum maybescript
 
-needsDatum :: EraScript era => Credential 'Payment (EraCrypto era) -> Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Bool
+needsDatum ::
+  EraScript era =>
+  Credential 'Payment (EraCrypto era) ->
+  Map (ScriptHash (EraCrypto era)) (ScriptF era) ->
+  Bool
 needsDatum (ScriptHashObj hash) spendScriptUniv = case Map.lookup hash spendScriptUniv of
   Nothing -> False
   Just (ScriptF _ script) -> not (isNativeScript script)
@@ -382,7 +389,12 @@ genPtr (SlotNo n) =
     <*> (TxIx <$> choose (0, 10))
     <*> (mkCertIxPartial <$> choose (1, 20))
 
-genStakeRefWith :: forall era. Proof era -> Set Ptr -> Set (Credential 'Staking (EraCrypto era)) -> Gen (StakeReference (EraCrypto era))
+genStakeRefWith ::
+  forall era.
+  Proof era ->
+  Set Ptr ->
+  Set (Credential 'Staking (EraCrypto era)) ->
+  Gen (StakeReference (EraCrypto era))
 genStakeRefWith proof ps cs =
   frequency
     [ (80, StakeRefBase <$> pick1 ["from genStakeRefWith StakeRefBase"] cs)
@@ -401,9 +413,16 @@ noScripts _ _ = True
 
 -- | Make some candidate DReps. The 'Always...' and one from each Credential.
 genDReps :: Set (Credential 'Staking c) -> Gen [DRep c]
-genDReps creds = shuffle (map (DRepCredential . coerceKeyRole) (Set.toList creds) ++ [DRepAlwaysAbstain, DRepAlwaysNoConfidence])
+genDReps creds =
+  shuffle
+    ( map (DRepCredential . coerceKeyRole) (Set.toList creds)
+        ++ [DRepAlwaysAbstain, DRepAlwaysNoConfidence]
+    )
 
-genDRepsT :: UnivSize -> Term era (Set (Credential 'Staking (EraCrypto era))) -> Target era (Gen (Set (DRep (EraCrypto era))))
+genDRepsT ::
+  UnivSize ->
+  Term era (Set (Credential 'Staking (EraCrypto era))) ->
+  Target era (Gen (Set (DRep (EraCrypto era))))
 genDRepsT sizes creds = Constr "listToSet" (\cs -> (Set.fromList . take (usNumDReps sizes)) <$> genDReps cs) ^$ creds
 
 -- ======================================================================
@@ -420,7 +439,9 @@ txOutT p x c = TxOutF p (mkBasicTxOut x (inject c))
 -- | The collateral consists only of VKey addresses
 --   and the collateral outputs in the UTxO do not contain any non-ADA part
 colTxOutT :: EraTxOut era => Proof era -> Set (Addr (EraCrypto era)) -> Gen (TxOutF era)
-colTxOutT p noScriptAddr = TxOutF p <$> (mkBasicTxOut <$> pick1 ["from colTxOutT noScriptAddr"] noScriptAddr <*> (inject <$> noZeroCoin))
+colTxOutT p noScriptAddr =
+  TxOutF p
+    <$> (mkBasicTxOut <$> pick1 ["from colTxOutT noScriptAddr"] noScriptAddr <*> (inject <$> noZeroCoin))
 
 -- | The collateral consists only of VKey addresses
 --   and the collateral outputs in the UTxO do not contain any non-ADA part
@@ -434,10 +455,12 @@ colTxOutSetT p noScriptAddr = Set.foldl' accum (pure Set.empty) noScriptAddr
 scriptHashObjT :: Term era (ScriptHash (EraCrypto era)) -> Target era (Credential k (EraCrypto era))
 scriptHashObjT x = Constr "ScriptHashObj" ScriptHashObj ^$ x
 
-keyHashObjT :: Term era (KeyHash 'Witness (EraCrypto era)) -> Target era (Credential k (EraCrypto era))
+keyHashObjT ::
+  Term era (KeyHash 'Witness (EraCrypto era)) -> Target era (Credential k (EraCrypto era))
 keyHashObjT x = Constr "KeyHashObj" (KeyHashObj . coerceKeyRole) ^$ x
 
-makeValidityT :: Term era SlotNo -> Term era SlotNo -> Term era SlotNo -> Target era ValidityInterval
+makeValidityT ::
+  Term era SlotNo -> Term era SlotNo -> Term era SlotNo -> Target era ValidityInterval
 makeValidityT begin current end =
   Constr
     "(-i)x(+j)"
@@ -521,7 +544,11 @@ universePreds size p =
   , Choose
       (ExactSize (usNumCredentials size))
       credList
-      [ (usCredScriptFreq size, scriptHashObjT scripthash, [Member (Left scripthash) (Dom (nonSpendScriptUniv p))])
+      [
+        ( usCredScriptFreq size
+        , scriptHashObjT scripthash
+        , [Member (Left scripthash) (Dom (nonSpendScriptUniv p))]
+        )
       , (1, keyHashObjT keyhash, [Member (Left keyhash) (Dom keymapUniv)])
       ]
   , credsUniv :<-: listToSetTarget credList
@@ -531,7 +558,11 @@ universePreds size p =
   , Choose
       (ExactSize 70)
       spendcredList
-      [ (usSpendScriptFreq size, scriptHashObjT scripthash, [Member (Left scripthash) (Dom (spendscriptUniv p))])
+      [
+        ( usSpendScriptFreq size
+        , scriptHashObjT scripthash
+        , [Member (Left scripthash) (Dom (spendscriptUniv p))]
+        )
       , (2, keyHashObjT keyhash, [Member (Left keyhash) (Dom keymapUniv)])
       ]
   , spendCredsUniv :<-: listToSetTarget spendcredList
@@ -542,8 +573,12 @@ universePreds size p =
     network :<-: constTarget (Utils.networkId Utils.testGlobals)
   , GenFrom ptrUniv (ptrUnivT (usNumPtr size) currentSlot)
   , GenFrom byronAddrUniv (Constr "byronUniv" genByronUniv ^$ network)
-  , GenFrom addrUniv (addrUnivT p (usNumAddr size) network spendCredsUniv ptrUniv credsUniv byronAddrUniv)
-  , GenFrom multiAssetUniv (Constr "multiAsset" (vectorOf (usNumMultiAsset size) . multiAsset size) ^$ (nonSpendScriptUniv p))
+  , GenFrom
+      addrUniv
+      (addrUnivT p (usNumAddr size) network spendCredsUniv ptrUniv credsUniv byronAddrUniv)
+  , GenFrom
+      multiAssetUniv
+      (Constr "multiAsset" (vectorOf (usNumMultiAsset size) . multiAsset size) ^$ (nonSpendScriptUniv p))
   , GenFrom
       preTxoutUniv
       ( Constr "genTxOuts" (genTxOuts size (genValueF size p) p (usNumTxOuts size))
@@ -601,9 +636,11 @@ universePreds size p =
     preGenesisDom = Var (V "preGenesisDom" (SetR GenHashR) No)
     preVoteUniv = Var (V "preVoteUniv" (SetR WitHashR) No)
 
-multiAsset :: UnivSize -> Map.Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Gen (MultiAsset (EraCrypto era))
+multiAsset ::
+  UnivSize -> Map.Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Gen (MultiAsset (EraCrypto era))
 multiAsset size scripts = do
-  let assets = Set.fromList [AssetName (fromString (show (n :: Int) ++ "Asset")) | n <- [0 .. (usMaxAssets size)]]
+  let assets =
+        Set.fromList [AssetName (fromString (show (n :: Int) ++ "Asset")) | n <- [0 .. (usMaxAssets size)]]
   n <- elements [0 .. (usMaxPolicyID size)]
   if n == 0
     then pure mempty -- About 1/3 of the list will be the empty MA
@@ -612,7 +649,8 @@ multiAsset size scripts = do
       xs <- vectorOf n (genMultiAssetTriple scripts assets (choose (1, 100)))
       pure $ multiAssetFromList xs
 
-genValueF :: UnivSize -> Proof era -> Coin -> Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Gen (Value era)
+genValueF ::
+  UnivSize -> Proof era -> Coin -> Map (ScriptHash (EraCrypto era)) (ScriptF era) -> Gen (Value era)
 genValueF size proof c scripts = case whichValue proof of
   ValueShelleyToAllegra -> pure c
   ValueMaryToConway -> MaryValue c <$> multiAsset size scripts

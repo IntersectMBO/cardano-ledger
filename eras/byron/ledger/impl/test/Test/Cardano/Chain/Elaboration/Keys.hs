@@ -21,7 +21,13 @@ import Byron.Spec.Ledger.Core (
   sKey,
  )
 import Cardano.Chain.Common (KeyHash, hashKey)
-import Cardano.Crypto.Signing (SafeSigner, SigningKey, VerificationKey, deterministicKeyGen, noPassSafeSigner)
+import Cardano.Crypto.Signing (
+  SafeSigner,
+  SigningKey,
+  VerificationKey,
+  deterministicKeyGen,
+  noPassSafeSigner,
+ )
 import Cardano.Prelude
 import qualified Data.ByteString as BS
 import Data.ByteString.Builder (integerDec, toLazyByteString)

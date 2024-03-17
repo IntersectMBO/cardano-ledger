@@ -150,7 +150,10 @@ type Mem t era = Annotator (MemoBytes t era)
 -- | Smart constructor
 mkMemoBytes :: forall era t. Era era => t era -> BSL.ByteString -> MemoBytes t era
 mkMemoBytes t bsl =
-  Memo' t (toShort bs) (makeHashWithExplicitProxys (Proxy @(EraCrypto era)) (Proxy @(MemoHashIndex t)) bs)
+  Memo'
+    t
+    (toShort bs)
+    (makeHashWithExplicitProxys (Proxy @(EraCrypto era)) (Proxy @(MemoHashIndex t)) bs)
   where
     bs = toStrict bsl
 

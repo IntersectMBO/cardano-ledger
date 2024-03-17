@@ -155,7 +155,9 @@ conwayDelegTransition = do
       -- (or overwritten) in the UMap. But since we are sure that the stake credential isn't a member yet
       -- it will still work. The reason we cannot use a right-biased union here is because UMap treats deposits specially
       -- in right-biased unions, and is unable to accept new deposits.
-      pure $ UM.RewDepUView dsUnified UM.∪ (stakeCred, UM.RDPair (UM.CompactCoin 0) (UM.compactCoinOrError deposit))
+      pure $
+        UM.RewDepUView dsUnified
+          UM.∪ (stakeCred, UM.RDPair (UM.CompactCoin 0) (UM.compactCoinOrError deposit))
     delegStake stakeCred sPool dsUnified =
       UM.SPoolUView dsUnified UM.⨃ Map.singleton stakeCred sPool
     delegVote stakeCred dRep dsUnified =
@@ -168,7 +170,9 @@ conwayDelegTransition = do
     checkDepositAgainstPParams ppKeyDeposit deposit =
       deposit == ppKeyDeposit ?! IncorrectDepositDELEG deposit
     checkDepositAgainstPaidDeposit stakeCred dsUnified deposit =
-      Just deposit == fmap (UM.fromCompact . UM.rdDeposit) (UM.lookup stakeCred $ UM.RewDepUView dsUnified) ?! IncorrectDepositDELEG deposit
+      Just deposit
+        == fmap (UM.fromCompact . UM.rdDeposit) (UM.lookup stakeCred $ UM.RewDepUView dsUnified)
+          ?! IncorrectDepositDELEG deposit
     checkStakeKeyNotRegistered stakeCred dsUnified =
       UM.notMember stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyRegisteredDELEG stakeCred
     checkStakeKeyIsRegistered stakeCred dsUnified =

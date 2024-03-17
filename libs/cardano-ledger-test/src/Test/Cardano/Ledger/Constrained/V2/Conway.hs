@@ -329,7 +329,9 @@ instance Era era => HasSimpleRep (BinaryData era) where
   type SimpleRep (BinaryData era) = Data era
   toSimpleRep = binaryDataToData
   fromSimpleRep = dataToBinaryData
-instance (IsConwayUniv fn, Era era, Crypto (EraCrypto era), HasSpec fn (Data era)) => HasSpec fn (BinaryData era)
+instance
+  (IsConwayUniv fn, Era era, Crypto (EraCrypto era), HasSpec fn (Data era)) =>
+  HasSpec fn (BinaryData era)
 
 instance HasSimpleRep (Datum era)
 instance (IsConwayUniv fn, Era era, HasSpec fn (Data era), Crypto (EraCrypto era)) => HasSpec fn (Datum era)
@@ -429,7 +431,9 @@ instance HasSimpleRep (BootstrapAddress c) where
       typ
   fromSimpleRep rep =
     algebra @(TheSop (BootstrapAddress c)) rep $
-      \root magic typ -> BootstrapAddress (Address root (Attributes (AddrAttributes Nothing magic) (UnparsedFields mempty)) typ)
+      \root magic typ ->
+        BootstrapAddress
+          (Address root (Attributes (AddrAttributes Nothing magic) (UnparsedFields mempty)) typ)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (BootstrapAddress c)
 
 instance HasSimpleRep NetworkMagic
@@ -463,10 +467,12 @@ instance IsConwayUniv fn => HasSpec fn CertIx
 instance HasSimpleRep (Credential r c)
 instance (IsConwayUniv fn, Typeable r, Crypto c) => HasSpec fn (Credential r c)
 
-cKeyHashObj :: (IsConwayUniv fn, Typeable r, Crypto c) => Term fn (KeyHash r c) -> Term fn (Credential r c)
+cKeyHashObj ::
+  (IsConwayUniv fn, Typeable r, Crypto c) => Term fn (KeyHash r c) -> Term fn (Credential r c)
 cKeyHashObj = con @"KeyHashObj"
 
-cScriptHashObj :: (IsConwayUniv fn, Typeable r, Crypto c) => Term fn (ScriptHash c) -> Term fn (Credential r c)
+cScriptHashObj ::
+  (IsConwayUniv fn, Typeable r, Crypto c) => Term fn (ScriptHash c) -> Term fn (Credential r c)
 cScriptHashObj = con @"ScriptHashObj"
 
 instance HasSimpleRep (ScriptHash c)
@@ -885,7 +891,10 @@ instance (IsConwayUniv fn, Crypto c) => HasSpec fn (UMap c)
 instance HasSimpleRep RDPair where
   type SimpleRep RDPair = SOP '["RDPair" ::: '[Coin, Coin]]
   toSimpleRep (RDPair rew dep) = inject @"RDPair" @'["RDPair" ::: '[Coin, Coin]] (toSimpleRep rew) (toSimpleRep dep)
-  fromSimpleRep rep = algebra @'["RDPair" ::: '[Coin, Coin]] rep (\rew dep -> RDPair (fromSimpleRep rew) (fromSimpleRep dep))
+  fromSimpleRep rep =
+    algebra @'["RDPair" ::: '[Coin, Coin]]
+      rep
+      (\rew dep -> RDPair (fromSimpleRep rew) (fromSimpleRep dep))
 instance IsConwayUniv fn => HasSpec fn RDPair
 
 instance HasSimpleRep (CertState era)
@@ -1021,7 +1030,10 @@ type DRepPulserTypes =
    , EnactState (ConwayEra StandardCrypto)
    , StrictSeq (GovActionState (ConwayEra StandardCrypto))
    ]
-instance HasSimpleRep (DRepPulser (ConwayEra StandardCrypto) Identity (RatifyState (ConwayEra StandardCrypto))) where
+instance
+  HasSimpleRep
+    (DRepPulser (ConwayEra StandardCrypto) Identity (RatifyState (ConwayEra StandardCrypto)))
+  where
   type
     SimpleRep (DRepPulser (ConwayEra StandardCrypto) Identity (RatifyState (ConwayEra StandardCrypto))) =
       SOP '["DRepPulser" ::: DRepPulserTypes]
@@ -1043,7 +1055,9 @@ instance HasSimpleRep (DRepPulser (ConwayEra StandardCrypto) Identity (RatifySta
       rep
       $ \ps um b sd spd dd ds ce cs es p ->
         DRepPulser ps um b sd spd dd ds ce cs es p testGlobals
-instance IsConwayUniv fn => HasSpec fn (DRepPulser (ConwayEra StandardCrypto) Identity (RatifyState (ConwayEra StandardCrypto)))
+instance
+  IsConwayUniv fn =>
+  HasSpec fn (DRepPulser (ConwayEra StandardCrypto) Identity (RatifyState (ConwayEra StandardCrypto)))
 
 instance HasSimpleRep (UtxoEnv (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (UtxoEnv (ConwayEra StandardCrypto))

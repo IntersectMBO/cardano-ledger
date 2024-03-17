@@ -5,7 +5,16 @@ module Test.Cardano.Ledger.EraClass (
   EraTx (Tx, mkBasicTx, bodyTxL, witsTxL),
   AlonzoEraTx (isValidTxL),
   -- TxBody
-  EraTxBody (TxBody, mkBasicTxBody, inputsTxBodyL, outputsTxBodyL, feeTxBodyL, withdrawalsTxBodyL, auxDataHashTxBodyL, certsTxBodyL),
+  EraTxBody (
+    TxBody,
+    mkBasicTxBody,
+    inputsTxBodyL,
+    outputsTxBodyL,
+    feeTxBodyL,
+    withdrawalsTxBodyL,
+    auxDataHashTxBodyL,
+    certsTxBodyL
+  ),
   AllegraEraTxBody (vldtTxBodyL),
   MaryEraTxBody (mintTxBodyL, mintValueTxBodyF, mintedTxBodyF),
   AlonzoEraTxBody (
@@ -16,9 +25,23 @@ module Test.Cardano.Ledger.EraClass (
     redeemerPointer,
     redeemerPointerInverse
   ),
-  ConwayEraTxBody (currentTreasuryValueTxBodyL, votingProceduresTxBodyL, proposalProceduresTxBodyL, treasuryDonationTxBodyL),
+  ConwayEraTxBody (
+    currentTreasuryValueTxBodyL,
+    votingProceduresTxBodyL,
+    proposalProceduresTxBodyL,
+    treasuryDonationTxBodyL
+  ),
   -- TxOut
-  EraTxOut (TxOut, mkBasicTxOut, valueTxOutL, compactValueTxOutL, valueEitherTxOutL, addrTxOutL, compactAddrTxOutL, addrEitherTxOutL),
+  EraTxOut (
+    TxOut,
+    mkBasicTxOut,
+    valueTxOutL,
+    compactValueTxOutL,
+    valueEitherTxOutL,
+    addrTxOutL,
+    compactAddrTxOutL,
+    addrEitherTxOutL
+  ),
   AlonzoEraTxOut (dataHashTxOutL, datumTxOutF),
   BabbageEraTxOut (referenceScriptTxOutL, dataTxOutL, datumTxOutL),
   coinTxOutL,
@@ -147,7 +170,11 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..))
 import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
-import Cardano.Ledger.Babbage.PParams (BabbageEraPParams (..), ppCoinsPerUTxOByteL, ppuCoinsPerUTxOByteL)
+import Cardano.Ledger.Babbage.PParams (
+  BabbageEraPParams (..),
+  ppCoinsPerUTxOByteL,
+  ppuCoinsPerUTxOByteL,
+ )
 import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..))
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))

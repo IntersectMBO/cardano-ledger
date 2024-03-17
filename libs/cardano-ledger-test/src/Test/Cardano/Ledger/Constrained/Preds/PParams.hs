@@ -66,7 +66,10 @@ nonNegativeInterval r = case (boundRational @NonNegativeInterval r) of
 
 genPParams :: Reflect era => Proof era -> Natural -> Natural -> Natural -> Gen (PParamsF era)
 genPParams proof tx bb bh = do
-  maxTxExUnits2 <- ExUnits <$> (fromIntegral <$> choose (100 :: Int, 10000)) <*> (fromIntegral <$> choose (100 :: Int, 10000))
+  maxTxExUnits2 <-
+    ExUnits
+      <$> (fromIntegral <$> choose (100 :: Int, 10000))
+      <*> (fromIntegral <$> choose (100 :: Int, 10000))
   maxCollateralInputs <- elements [3 .. 5]
   collateralPercentage2 <- fromIntegral <$> chooseInt (1, 200)
   minfeeA <- Coin <$> choose (0, 100)

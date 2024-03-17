@@ -237,7 +237,8 @@ update key delta = ProvM action2
 
 -- | Modify the value stored at the given key using a value in a BlackBox.
 -- if the key isn't found, or the PObject at that key has the wrong type, do nothing.
-updateWithBlackBox :: forall t m s. (Provenance t, Monad m) => Text -> BlackBox s -> (s -> t -> t) -> Prov m ()
+updateWithBlackBox ::
+  forall t m s. (Provenance t, Monad m) => Text -> BlackBox s -> (s -> t -> t) -> Prov m ()
 updateWithBlackBox key (Box s) delta = update key (delta s)
 updateWithBlackBox _ NoBox _ = pure ()
 {-# INLINE updateWithBlackBox #-}

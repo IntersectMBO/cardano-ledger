@@ -56,11 +56,21 @@ expectDecodingFailure action x =
     Left _ -> pure ()
     Right _ -> assertFailure $ "Did not expect successful decoding of " ++ show x
 
-roundtrip :: Version -> (a -> Encoding) -> (BSL.ByteString -> Either DecoderError a) -> a -> Either DecoderError a
+roundtrip ::
+  Version ->
+  (a -> Encoding) ->
+  (BSL.ByteString -> Either DecoderError a) ->
+  a ->
+  Either DecoderError a
 roundtrip v encode decode = decode . serialize v . encode
 
 roundTripSuccess ::
-  (Show a, Eq a) => Version -> (a -> Encoding) -> (BSL.ByteString -> Either DecoderError a) -> a -> Assertion
+  (Show a, Eq a) =>
+  Version ->
+  (a -> Encoding) ->
+  (BSL.ByteString -> Either DecoderError a) ->
+  a ->
+  Assertion
 roundTripSuccess v encode decode x = expectDecodingSuccess (roundtrip v encode decode) x
 
 roundTripFailure ::

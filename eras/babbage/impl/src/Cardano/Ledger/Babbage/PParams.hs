@@ -515,7 +515,10 @@ instance Era era => FromCBOR (BabbagePParams StrictMaybe era) where
   fromCBOR = fromEraCBOR @era
 
 instance
-  (PParamsHKD StrictMaybe era ~ BabbagePParams StrictMaybe era, BabbageEraPParams era, ProtVerAtMost era 8) =>
+  ( PParamsHKD StrictMaybe era ~ BabbagePParams StrictMaybe era
+  , BabbageEraPParams era
+  , ProtVerAtMost era 8
+  ) =>
   ToJSON (BabbagePParams StrictMaybe era)
   where
   toJSON = object . babbagePParamsUpdatePairs

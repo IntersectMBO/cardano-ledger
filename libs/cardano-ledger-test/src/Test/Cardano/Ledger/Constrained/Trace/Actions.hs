@@ -41,14 +41,21 @@ certAction p@Conway cert =
       epoch <- getTerm currentEpoch
       activity <- getTerm (drepActivity p)
       dep <- getTerm (drepDeposit p)
-      updateVar currentDRepState (Map.insert cred (DRepState (addEpochInterval epoch activity) manchor dep))
+      updateVar
+        currentDRepState
+        (Map.insert cred (DRepState (addEpochInterval epoch activity) manchor dep))
     ConwayTxCertGov (ConwayUnRegDRep cred dep) -> do
       updateVar currentDRepState (Map.delete cred)
       updateVar deposits (<-> dep)
     ConwayTxCertGov (ConwayUpdateDRep cred mAnchor) -> do
       epoch <- getTerm currentEpoch
       activity <- getTerm (drepActivity p)
-      updateVar currentDRepState (Map.adjust (\(DRepState _ _ deposit) -> DRepState (addEpochInterval epoch activity) mAnchor deposit) cred)
+      updateVar
+        currentDRepState
+        ( Map.adjust
+            (\(DRepState _ _ deposit) -> DRepState (addEpochInterval epoch activity) mAnchor deposit)
+            cred
+        )
     _ -> pure ()
 certAction _ _ = pure ()
 

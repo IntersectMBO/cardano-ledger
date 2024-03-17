@@ -21,7 +21,10 @@ import Test.Cardano.Ledger.Mary.Value (valTests)
 import Test.Cardano.Ledger.MaryEraGen ()
 import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley (commonTests)
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
-import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTraces (onlyValidChainSignalsAreGenerated, relevantCasesAreCovered)
+import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTraces (
+  onlyValidChainSignalsAreGenerated,
+  relevantCasesAreCovered,
+ )
 import qualified Test.Cardano.Ledger.Shelley.WitVKeys as WitVKeys (tests)
 import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.QuickCheck (Args (maxSuccess), stdArgs)

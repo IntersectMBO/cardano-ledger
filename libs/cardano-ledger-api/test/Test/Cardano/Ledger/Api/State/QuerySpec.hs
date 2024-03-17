@@ -285,7 +285,8 @@ propNextEpoch nes = do
         `shouldSatisfy` (\res -> Map.keysSet res == nextComMembers `Set.difference` comMembers)
 
       filterNext ToBeRemoved noFilterResult
-        `shouldSatisfy` (\res -> Map.keysSet res == (comMembers `Set.union` comStateMembers) `Set.difference` nextComMembers)
+        `shouldSatisfy` ( \res -> Map.keysSet res == (comMembers `Set.union` comStateMembers) `Set.difference` nextComMembers
+                        )
 
       -- members who are both in current and nextCommittee are either ToBeExpired, TermAdjusted or NoChangeExpected
       Set.unions
