@@ -1,5 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -7,9 +10,41 @@
 
 module Test.Cardano.Ledger.Conway.Binary.Regression where
 
-import Cardano.Ledger.Binary (decCBOR, decodeFullAnnotatorFromHexText)
-import Cardano.Ledger.Conway.Core (EraTx (..), eraProtVerLow)
-import Test.Cardano.Ledger.Common (NFData, Spec, describe, expectRightDeep_, it)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
+import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..), TxIx (..))
+import Cardano.Ledger.Binary (
+  EncCBOR (..),
+  decCBOR,
+  decodeFull,
+  decodeFullAnnotatorFromHexText,
+  mkVersion,
+  serialize,
+ )
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway.Core (
+  BabbageEraTxBody (..),
+  EraTx (..),
+  EraTxBody (..),
+  EraTxOut (..),
+  EraTxWits (..),
+  coinTxOutL,
+  eraProtVerLow,
+  txIdTx,
+ )
+import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..))
+import Cardano.Ledger.Plutus.Language (SLanguage (..), hashPlutusScript)
+import Cardano.Ledger.TxIn (TxIn (..))
+import Control.Monad ((<=<))
+import qualified Data.Sequence.Strict as SSeq
+import qualified Data.Set as Set
+import Lens.Micro ((%~), (&), (.~))
+import qualified Test.Cardano.Ledger.Common as Common
+import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.KeyPair (mkScriptAddr)
+import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus.Examples (guessTheNumber3)
 
 spec ::
   forall era.
@@ -19,7 +54,7 @@ spec ::
   Spec
 spec = describe "Regression" $ do
   it "DeserialiseFailure on resubmitting Conway Tx with invalid plutus script #4198" $ do
-    expectRightDeep_ $
+    Common.expectRightDeep_ $
       decodeFullAnnotatorFromHexText @(Tx era) (eraProtVerLow @era) "Unwitnessed Tx" decCBOR $
         mconcat
           [ "84a700d9010282825820745f04573e7429be1404f9b936d208b81159f3fc4b300"
@@ -55,3 +90,59 @@ spec = describe "Regression" $ do
           , "d0403d9010281581e581c01000033223232222350040071235002353003001498"
           , "49848004800504d9010281d8799f182aff0581840000d8799f182aff820000f4f6"
           ]
+  describe "ImpTest" $
+    withImpState @Conway $
+      it "InsufficientCollateral is not encoded with negative coin #4198" $ do
+        let lockedVal = inject $ Coin 100
+        (_, collateralAddress) <- freshKeyAddr
+        (_, skp) <- freshKeyPair
+        let
+          plutusVersion = SPlutusV2
+          scriptHash = hashPlutusScript $ guessTheNumber3 plutusVersion
+          lockScriptAddress = mkScriptAddr scriptHash skp
+        (_, collateralReturnAddr) <- freshKeyAddr
+        lockedTx <-
+          submitTxAnn @Conway "Script locked tx" $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . outputsTxBodyL
+                .~ SSeq.fromList
+                  [ mkBasicTxOut lockScriptAddress lockedVal
+                  , mkBasicTxOut collateralAddress (inject $ Coin 1)
+                  ]
+              & bodyTxL . collateralReturnTxBodyL
+                .~ SJust (mkBasicTxOut collateralReturnAddr . inject $ Coin 1)
+        let
+          modifyRootCoin = coinTxOutL .~ Coin 989482376
+          modifyRootTxOut (x SSeq.:<| SSeq.Empty) =
+            modifyRootCoin x SSeq.:<| SSeq.Empty
+          modifyRootTxOut (x SSeq.:<| xs) = x SSeq.:<| modifyRootTxOut xs
+          modifyRootTxOut (xs SSeq.:|> x) = xs SSeq.:|> modifyRootCoin x
+          modifyRootTxOut SSeq.Empty = SSeq.Empty
+          breakCollaterals tx =
+            pure $
+              tx
+                & bodyTxL . collateralReturnTxBodyL
+                  .~ SJust (mkBasicTxOut collateralReturnAddr . inject $ Coin 1_000_000_000)
+                & bodyTxL . feeTxBodyL .~ Coin 178349
+                & bodyTxL . outputsTxBodyL %~ modifyRootTxOut
+                & witsTxL . addrTxWitsL .~ mempty
+        res <-
+          impAnn "Consume the script locked output" $
+            withPostFixup (updateAddrTxWits <=< breakCollaterals) $ do
+              trySubmitTx @Conway $
+                mkBasicTx mkBasicTxBody
+                  & bodyTxL . inputsTxBodyL .~ Set.singleton (TxIn (txIdTx lockedTx) $ TxIx 0)
+        pFailure <- impAnn "Expecting failure" $ expectLeftDeepExpr res
+        let
+          hasInsufficientCollateral
+            (ConwayUtxowFailure (UtxoFailure (AlonzoInBabbageUtxoPredFailure (InsufficientCollateral _ _)))) = True
+          hasInsufficientCollateral _ = False
+        impAnn "Fails with InsufficientCollateral" $
+          pFailure `shouldSatisfyExpr` any hasInsufficientCollateral
+        let encoding = encCBOR pFailure
+        version <- mkVersion (11 :: Int)
+        let
+          bs = serialize version encoding
+          decoded = decodeFull version bs
+        impAnn "Expecting deserialization of predicate failure to succeed" $
+          decoded `shouldBe` Right pFailure

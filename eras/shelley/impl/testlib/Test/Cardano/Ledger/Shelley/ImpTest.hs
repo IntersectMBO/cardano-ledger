@@ -324,6 +324,7 @@ class
   , ToExpr (GovState era)
   , ToExpr (PParamsHKD StrictMaybe era)
   , ToExpr (PParamsHKD Identity era)
+  , ToExpr (Value era)
   , Show (TxOut era)
   , Show (PParams era)
   , Show (StashedAVVMAddresses era)
@@ -755,7 +756,7 @@ addNativeScriptTxWits ::
   ShelleyEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
-addNativeScriptTxWits tx = do
+addNativeScriptTxWits tx = impAnn "addNativeScriptTxWits" $ do
   scriptsRequired <- impNativeScriptsRequired tx
   utxo <- getUTxO
   let ScriptsProvided provided = getScriptsProvided utxo tx
@@ -771,7 +772,7 @@ updateAddrTxWits ::
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
-updateAddrTxWits tx = do
+updateAddrTxWits tx = impAnn "updateAddrTxWits" $ do
   let txBody = tx ^. bodyTxL
       txBodyHash = hashAnnotated txBody
   (bootAddrs, witsVKeyNeeded) <- impWitsVKeyNeeded txBody
@@ -803,10 +804,10 @@ updateAddrTxWits tx = do
 
 -- | This fixup step ensures that there are enough funds in the transaction.
 addRootTxIn ::
-  EraTx era =>
+  ShelleyEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
-addRootTxIn tx = do
+addRootTxIn tx = impAnn "addRootTxIn" $ do
   rootTxIn <- fst <$> lookupImpRootTxOut
   pure $
     tx
@@ -829,7 +830,7 @@ fixupFees ::
   (ShelleyEraImp era, HasCallStack) =>
   Tx era ->
   ImpTestM era (Tx era)
-fixupFees tx = do
+fixupFees tx = impAnn "fixupFees" $ do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
@@ -840,16 +841,26 @@ fixupFees tx = do
     nativeScriptKeyWits = Map.keysSet nativeScriptKeyPairs
     consumedValue = consumed pp certState utxo (tx ^. bodyTxL)
     producedValue = produced pp certState (tx ^. bodyTxL)
-    changeBeforeFee = consumedValue <-> producedValue
+    validateValue v
+      | pointwise (<=) zero v = pure v
+      | otherwise = do
+          logEntry $ "Failed to validate value: " <> show v
+          pure zero
+  logEntry "Validating changeBeforeFee"
+  changeBeforeFee <- validateValue $ consumedValue <-> producedValue
+  logToExpr changeBeforeFee
+  let
     changeBeforeFeeTxOut =
       mkBasicTxOut
         (mkAddr (kpSpending, kpStaking))
         changeBeforeFee
-  let
     txNoWits = tx & bodyTxL . outputsTxBodyL %~ (:|> changeBeforeFeeTxOut)
     outsBeforeFee = tx ^. bodyTxL . outputsTxBodyL
     fee = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
-    change = changeBeforeFeeTxOut ^. coinTxOutL <-> fee
+  logEntry "Validating change"
+  change <- validateValue $ changeBeforeFeeTxOut ^. coinTxOutL <-> fee
+  logToExpr change
+  let
     changeTxOut = changeBeforeFeeTxOut & coinTxOutL .~ change
     -- If the remainder is sufficently big we add it to outputs, otherwise we add the
     -- extraneous coin to the fee and discard the remainder TxOut

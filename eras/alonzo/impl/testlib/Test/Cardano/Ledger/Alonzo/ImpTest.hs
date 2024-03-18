@@ -27,6 +27,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   fixupOutputDatums,
   fixupPPHash,
   fixupRedeemers,
+  fixupScriptWits,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
@@ -126,13 +127,13 @@ makeCollateralInput = do
   -- TODO: make more accurate
   let collateral = Coin 10_000_000
   (_, addr) <- freshKeyAddr
-  sendCoinTo addr collateral
+  withPostFixup pure $ sendCoinTo addr collateral
 
 addCollateralInput ::
   (AlonzoEraImp era, ScriptsNeeded era ~ AlonzoScriptsNeeded era) =>
   Tx era ->
   ImpTestM era (Tx era)
-addCollateralInput tx = do
+addCollateralInput tx = impAnn "addCollateralInput" $ do
   ctx <- impGetPlutusContexts tx
   if null ctx
     then pure tx
@@ -170,7 +171,7 @@ fixupRedeemerIndices ::
   AlonzoEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
-fixupRedeemerIndices tx = do
+fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
   (rootTxIn, _) <- lookupImpRootTxOut
   let
     txInputs = tx ^. bodyTxL . inputsTxBodyL
@@ -190,7 +191,7 @@ fixupRedeemers ::
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
-fixupRedeemers tx = do
+fixupRedeemers tx = impAnn "fixupRedeemers" $ do
   contexts <- impGetPlutusContexts tx
   exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
   let
@@ -209,7 +210,7 @@ fixupScriptWits ::
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
-fixupScriptWits tx = do
+fixupScriptWits tx = impAnn "fixupScriptWits" $ do
   contexts <- impGetPlutusContexts tx
   utxo <- getUTxO
   let ScriptsProvided provided = getScriptsProvided utxo tx
@@ -238,7 +239,7 @@ fixupDatums ::
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
-fixupDatums tx = do
+fixupDatums tx = impAnn "fixupDatums" $ do
   contexts <- impGetPlutusContexts tx
   let purposes = (^. _1) <$> contexts
   datums <- traverse collectDatums purposes
@@ -272,7 +273,7 @@ fixupPPHash ::
   AlonzoEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
-fixupPPHash tx = do
+fixupPPHash tx = impAnn "fixupPPHash" $ do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
   let
@@ -297,7 +298,7 @@ fixupOutputDatums ::
   AlonzoEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
-fixupOutputDatums tx = do
+fixupOutputDatums tx = impAnn "fixupOutputDatums" $ do
   let
     isDatum (Datum _) = True
     isDatum _ = False
