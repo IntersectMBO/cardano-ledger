@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Add `geCommitteeState`
 * Remove `ConwayDelegEvent`, `ConwayGovCertEvent`
 * Add `GovInfoEvent`
 * Add `ConwayUtxosEvent`

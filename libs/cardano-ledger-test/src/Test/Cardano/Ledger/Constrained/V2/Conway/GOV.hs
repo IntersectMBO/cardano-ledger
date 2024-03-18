@@ -28,7 +28,7 @@ govEnvSpec ::
   IsConwayUniv fn =>
   Spec fn (GovEnv (ConwayEra StandardCrypto))
 govEnvSpec = constrained $ \ge ->
-  match ge $ \_ _ pp _ _ ->
+  match ge $ \_ _ pp _ _ _ ->
     satisfies pp pparamsSpec
 
 -- TODO:
@@ -258,7 +258,7 @@ govProceduresSpec ge@GovEnv {..} ps =
         , f (gasAction act)
         ]
       committeeVotableActionIds =
-        actions isCommitteeVotingAllowed
+        actions (isCommitteeVotingAllowed geCommitteeState)
       drepVotableActionIds =
         actions isDRepVotingAllowed
       stakepoolVotableActionIds =

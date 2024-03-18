@@ -704,6 +704,7 @@ votingSpec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  , GovState era ~ ConwayGovState era
   ) =>
   SpecWith (ImpTestState era)
 votingSpec =
@@ -754,6 +755,64 @@ votingSpec =
       it
         "committee member can't vote on committee update when sandwiched between other votes"
         ccVoteOnConstitutionFailsWithMultipleVotes
+      it "CC cannot ratify if below quorum" $ do
+        modifyPParams $ \pp ->
+          pp
+            & ppGovActionLifetimeL .~ EpochInterval 3
+            & ppDRepVotingThresholdsL
+              .~ def
+                { dvtUpdateToConstitution = 1 %! 2
+                }
+            & ppCommitteeMinSizeL .~ 2
+            & ppCommitteeMaxTermLengthL .~ EpochInterval 10
+        (khDRep, _, _) <- setupSingleDRep 1_000_000
+        let dRepCred = KeyHashObj khDRep
+        ccColdCred0 <- KeyHashObj <$> freshKeyHash
+        ccColdCred1 <- KeyHashObj <$> freshKeyHash
+        electionGovAction <-
+          submitGovAction $
+            UpdateCommittee
+              SNothing
+              mempty
+              ( Map.fromList
+                  [ (ccColdCred0, EpochNo 10)
+                  , (ccColdCred1, EpochNo 10)
+                  ]
+              )
+              (3 %! 5)
+        submitYesVote_ (DRepVoter dRepCred) electionGovAction
+        logAcceptedRatio electionGovAction
+        passNEpochs 3
+        expectNoCurrentProposals
+        ccHotKey0 <- registerCommitteeHotKey ccColdCred0
+        ccHotKey1 <- registerCommitteeHotKey ccColdCred1
+        anchor <- arbitrary
+        constitutionChangeId <-
+          submitGovAction $
+            NewConstitution
+              SNothing
+              Constitution
+                { constitutionScript = SNothing
+                , constitutionAnchor = anchor
+                }
+        submitYesVote_ (DRepVoter dRepCred) constitutionChangeId
+        resignCommitteeColdKey ccColdCred0 SNothing
+        submitYesVote_ (CommitteeVoter ccHotKey0) constitutionChangeId
+        submitYesVote_ (CommitteeVoter ccHotKey1) constitutionChangeId
+        passEpoch
+        logAcceptedRatio constitutionChangeId
+        logToExpr =<< lookupGovActionState constitutionChangeId
+        passNEpochs 4
+        conAnchor <-
+          getsNES $
+            nesEsL
+              . esLStateL
+              . lsUTxOStateL
+              . utxosGovStateL
+              . cgsConstitutionL
+              . constitutionAnchorL
+        expectNoCurrentProposals
+        conAnchor `shouldNotBe` anchor
 
 constitutionSpec ::
   forall era.

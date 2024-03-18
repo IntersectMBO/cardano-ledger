@@ -50,6 +50,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
+import Cardano.Ledger.CertState (CommitteeState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
@@ -122,6 +123,7 @@ data GovEnv era = GovEnv
   , gePParams :: !(PParams era)
   , gePrevGovActionIds :: !(GovRelation StrictMaybe era)
   , gePPolicy :: !(StrictMaybe (ScriptHash (EraCrypto era)))
+  , geCommitteeState :: !(CommitteeState era)
   }
   deriving (Generic)
 
@@ -264,11 +266,12 @@ checkVotesAreNotForExpiredActions curEpoch voters =
 checkVotersAreValid ::
   forall era.
   ConwayEraPParams era =>
+  CommitteeState era ->
   [(Voter (EraCrypto era), GovActionState era)] ->
   Test (ConwayGovPredFailure era)
-checkVotersAreValid voters =
+checkVotersAreValid committeeState voters =
   let canVoteOn voter govAction = case voter of
-        CommitteeVoter {} -> isCommitteeVotingAllowed govAction
+        CommitteeVoter {} -> isCommitteeVotingAllowed committeeState govAction
         DRepVoter {} -> isDRepVotingAllowed govAction
         StakePoolVoter {} -> isStakePoolVotingAllowed govAction
       disallowedVoters =
@@ -327,7 +330,7 @@ govTransition ::
   TransitionRule (EraRule "GOV" era)
 govTransition = do
   TRC
-    ( GovEnv txid currentEpoch pp prevGovActionIds constitutionPolicy
+    ( GovEnv txid currentEpoch pp prevGovActionIds constitutionPolicy committeeState
       , st
       , gp
       ) <-
@@ -424,7 +427,7 @@ govTransition = do
       curGovActionIds = proposalsActionsMap proposals
   failOnNonEmpty unknownGovActionIds GovActionsDoNotExist
   runTest $ checkVotesAreNotForExpiredActions currentEpoch knownVotes
-  runTest $ checkVotersAreValid knownVotes
+  runTest $ checkVotersAreValid committeeState knownVotes
 
   let
     addVoterVote ps voter govActionId VotingProcedure {vProcVote} =

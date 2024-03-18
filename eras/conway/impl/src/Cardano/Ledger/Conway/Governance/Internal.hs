@@ -79,7 +79,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (CommitteeState)
+import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Conway.PParams (
@@ -397,9 +397,9 @@ votingStakePoolThresholdInternal pp isElectedCommittee action =
         TreasuryWithdrawals {} -> NoVotingAllowed
         InfoAction {} -> NoVotingThreshold
 
-isCommitteeVotingAllowed :: ConwayEraPParams era => GovAction era -> Bool
-isCommitteeVotingAllowed =
-  isVotingAllowed . votingCommitteeThresholdInternal def committee
+isCommitteeVotingAllowed :: ConwayEraPParams era => CommitteeState era -> GovAction era -> Bool
+isCommitteeVotingAllowed committeeState =
+  isVotingAllowed . votingCommitteeThresholdInternal def committee committeeState
   where
     -- Information about presence of committee is irrelevant for knowing if voting is
     -- allowed or not
@@ -408,10 +408,11 @@ isCommitteeVotingAllowed =
 votingCommitteeThreshold ::
   ConwayEraPParams era =>
   RatifyState era ->
+  CommitteeState era ->
   GovAction era ->
   StrictMaybe UnitInterval
-votingCommitteeThreshold ratifyState =
-  toRatifyVotingThreshold . votingCommitteeThresholdInternal pp committee
+votingCommitteeThreshold ratifyState committeeState =
+  toRatifyVotingThreshold . votingCommitteeThresholdInternal pp committee committeeState
   where
     committee = ratifyState ^. rsEnactStateL . ensCommitteeL
     pp = ratifyState ^. rsEnactStateL . ensCurPParamsL
@@ -420,9 +421,10 @@ votingCommitteeThresholdInternal ::
   ConwayEraPParams era =>
   PParams era ->
   StrictMaybe (Committee era) ->
+  CommitteeState era ->
   GovAction era ->
   VotingThreshold
-votingCommitteeThresholdInternal pp committee = \case
+votingCommitteeThresholdInternal pp committee (CommitteeState hotKeys) = \case
   NoConfidence {} -> NoVotingAllowed
   UpdateCommittee {} -> NoVotingAllowed
   NewConstitution {} -> threshold
@@ -433,12 +435,19 @@ votingCommitteeThresholdInternal pp committee = \case
   where
     threshold =
       case committeeThreshold <$> committee of
-        -- if the committee size is smaller than the mnimimum given in pparams,
-        -- we treat it as if we had no committe
-        SJust t | committeeSize >= minSize -> VotingThreshold t
+        -- if the committee size is smaller than the minimum given in PParams,
+        -- we treat it as if we had no committee
+        SJust t | activeCommitteeSize >= minSize -> VotingThreshold t
         _ -> NoVotingThreshold
     minSize = pp ^. ppCommitteeMinSizeL
-    committeeSize = fromIntegral $ Map.size $ foldMap' committeeMembers committee
+    isActive coldKey _validUntil =
+      case Map.lookup coldKey hotKeys of
+        Just (CommitteeMemberResigned _) -> False
+        Just _ -> True -- TODO do we need to check if member's term is expired here?
+        Nothing -> False
+    activeCommitteeSize =
+      fromIntegral . Map.size . Map.filterWithKey isActive $
+        foldMap' committeeMembers committee
 
 isDRepVotingAllowed ::
   ConwayEraPParams era =>

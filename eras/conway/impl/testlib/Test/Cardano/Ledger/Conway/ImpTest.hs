@@ -178,6 +178,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
 import Data.Maybe.Strict (isSJust)
+import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -287,8 +288,7 @@ registerDRep = do
   dreps `shouldSatisfy` Map.member (KeyHashObj khDRep)
   pure khDRep
 
--- | Registers a new DRep and delegates 1 ADA to it. Returns the keyhash of the
--- DRep
+-- | Registers a new DRep and delegates the specified amount of ADA to it.
 setupSingleDRep ::
   forall era.
   ( ConwayEraTxCert era
@@ -889,7 +889,7 @@ logRatificationChecks gaId = do
           <> " [ To Pass: "
           <> show (committeeAcceptedRatio members gasCommitteeVotes committeeState currentEpoch)
           <> " >= "
-          <> show (votingCommitteeThreshold ratSt (gasAction gas))
+          <> show (votingCommitteeThreshold ratSt committeeState (gasAction gas))
           <> " ]"
       , "spoAccepted:\t\t"
           <> show (spoAccepted ratEnv ratSt gas)
@@ -1228,10 +1228,12 @@ expectCurrentProposals = do
   props <- currentProposalIds
   assertBool "Expected proposals in current gov state" (not (SSeq.null props))
 
-expectNoCurrentProposals :: (HasCallStack, ConwayEraGov era) => ImpTestM era ()
+expectNoCurrentProposals :: (HasCallStack, ConwayEraImp era) => ImpTestM era ()
 expectNoCurrentProposals = do
-  props <- currentProposalIds
-  assertBool "Expected no proposals in current gov state" (SSeq.null props)
+  proposals <- getProposals
+  case proposalsActions proposals of
+    Empty -> pure ()
+    xs -> assertFailure $ "Expected no active proposals, but got:\n" <> show (toExpr xs)
 
 expectPulserProposals :: (HasCallStack, ConwayEraGov era) => ImpTestM era ()
 expectPulserProposals = do
