@@ -12,6 +12,7 @@ module Cardano.Ledger.Binary.Decoding (
   decodeFullDecoder',
   decodeFullAnnotator,
   decodeFullAnnotatedBytes,
+  decodeFullAnnotatorFromHexText,
   module Cardano.Ledger.Binary.Version,
   module Cardano.Ledger.Binary.Decoding.DecCBOR,
   module Cardano.Ledger.Binary.Decoding.Sharing,
@@ -60,6 +61,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Internal as BSL
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text)
+import Cardano.Ledger.Binary.Plain (withHexText)
 
 -- | Deserialize a Haskell value from the external binary representation, which
 -- have been made using 'serialize' or a matching serialization functionilty in
@@ -187,6 +189,16 @@ decodeFullAnnotatedBytes ::
 decodeFullAnnotatedBytes v lbl decoder bytes =
   annotationBytes bytes <$> decodeFullDecoder v lbl decoder bytes
 {-# INLINE decodeFullAnnotatedBytes #-}
+
+decodeFullAnnotatorFromHexText ::
+  Version ->
+  Text ->
+  (forall s. Decoder s (Annotator a)) ->
+  Text ->
+  Either DecoderError a
+decodeFullAnnotatorFromHexText v desc dec =
+  withHexText $ decodeFullAnnotator v desc dec . BSL.fromStrict
+{-# INLINE decodeFullAnnotatorFromHexText #-}
 
 --------------------------------------------------------------------------------
 -- Nested CBOR-in-CBOR
