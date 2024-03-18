@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Test.Cardano.Ledger.Conway.BinarySpec (spec) where
 
@@ -30,3 +31,4 @@ spec = do
     roundTripConwayCommonSpec @Conway
     -- ConwayGenesis only makes sense in Conway era
     roundTripEraSpec @Conway @(ConwayGenesis StandardCrypto)
+

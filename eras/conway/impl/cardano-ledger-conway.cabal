@@ -109,6 +109,7 @@ library testlib
         Test.Cardano.Ledger.Conway.Arbitrary
         Test.Cardano.Ledger.Conway.Binary.Cddl
         Test.Cardano.Ledger.Conway.Binary.RoundTrip
+        Test.Cardano.Ledger.Conway.Binary.Bugs
         Test.Cardano.Ledger.Conway.ImpTest
         Test.Cardano.Ledger.Conway.Imp
         Test.Cardano.Ledger.Conway.Imp.EpochSpec
