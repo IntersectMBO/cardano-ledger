@@ -22,6 +22,7 @@ import Cardano.Ledger.Val (zero, (<->))
 import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (def)
 import Data.Foldable (foldl', traverse_)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
@@ -344,55 +345,95 @@ actionPrioritySpec ::
   ConwayEraImp era =>
   SpecWith (ImpTestState era)
 actionPrioritySpec =
-  describe "Action priority" $ do
-    it "Only the first of proposals with same priority is enacted" $ do
-      (drepC, _, gpi) <- electBasicCommittee
-      (poolKH, _, _) <- setupPoolWithStake $ Coin 1_000_000
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
-      cc <- KeyHashObj <$> freshKeyHash
-      gai1 <-
-        submitGovAction $
-          UpdateCommittee (SJust gpi) mempty (Map.singleton cc (EpochNo 30)) $
-            1 %! 2
-      -- gai2 is the first action of a higher priority
-      gai2 <- submitGovAction $ NoConfidence $ SJust gpi
-      gai3 <- submitGovAction $ NoConfidence $ SJust gpi
-      submitYesVote_ (DRepVoter drepC) gai1
-      submitYesVote_ (StakePoolVoter poolKH) gai1
-      submitYesVote_ (DRepVoter drepC) gai2
-      submitYesVote_ (StakePoolVoter poolKH) gai2
-      submitYesVote_ (DRepVoter drepC) gai3
-      submitYesVote_ (StakePoolVoter poolKH) gai3
-      passNEpochs 2
-      getLastEnactedCommittee
-        `shouldReturn` SJust (GovPurposeId gai2)
-      checkProposalsEmpty
+  describe "Competing proposals ratified in the same epoch" $ do
+    it
+      "higher action priority wins"
+      $ do
+        (drepC, _, gpi) <- electBasicCommittee
+        (poolKH, _, _) <- setupPoolWithStake $ Coin 1_000_000
+        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+        cc <- KeyHashObj <$> freshKeyHash
+        gai1 <-
+          submitGovAction $
+            UpdateCommittee (SJust gpi) mempty (Map.singleton cc (EpochNo 30)) $
+              1 %! 2
+        -- gai2 is the first action of a higher priority
+        gai2 <- submitGovAction $ NoConfidence $ SJust gpi
+        gai3 <- submitGovAction $ NoConfidence $ SJust gpi
+        traverse_ @[]
+          ( \gaid -> do
+              submitYesVote_ (DRepVoter drepC) gaid
+              submitYesVote_ (StakePoolVoter poolKH) gaid
+          )
+          [gai1, gai2, gai3]
+        passNEpochs 2
+        getLastEnactedCommittee
+          `shouldReturn` SJust (GovPurposeId gai2)
+        expectNoCurrentProposals
 
-    it "Contiguous ratified proposals are enacted in the same epoch, unless delayed" $ do
+        committee <-
+          getsNES $
+            nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+        committee `shouldBe` SNothing
+
+    let val1 = Coin 1_000_001
+    let val2 = Coin 1_000_002
+    let val3 = Coin 1_000_003
+
+    it "proposals of same priority are enacted in order of submission" $ do
       (drepC, committeeC, _) <- electBasicCommittee
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       pGai0 <-
         submitParameterChange
           SNothing
-          $ def & ppuDRepDepositL .~ SJust (Coin 1_000_000)
+          $ def & ppuDRepDepositL .~ SJust val1
       pGai1 <-
         submitParameterChange
           (SJust $ GovPurposeId pGai0)
-          $ def & ppuDRepDepositL .~ SJust (Coin 1_000_001)
+          $ def & ppuDRepDepositL .~ SJust val2
       pGai2 <-
         submitParameterChange
           (SJust $ GovPurposeId pGai1)
-          $ def & ppuDRepDepositL .~ SJust (Coin 1_000_002)
-      submitYesVote_ (DRepVoter drepC) pGai0
-      submitYesVote_ (CommitteeVoter committeeC) pGai0
-      submitYesVote_ (DRepVoter drepC) pGai1
-      submitYesVote_ (CommitteeVoter committeeC) pGai1
-      submitYesVote_ (DRepVoter drepC) pGai2
-      submitYesVote_ (CommitteeVoter committeeC) pGai2
+          $ def & ppuDRepDepositL .~ SJust val3
+      traverse_ @[]
+        ( \gaid -> do
+            submitYesVote_ (DRepVoter drepC) gaid
+            submitYesVote_ (CommitteeVoter committeeC) gaid
+        )
+        [pGai0, pGai1, pGai2]
       passNEpochs 2
       getLastEnactedParameterChange
         `shouldReturn` SJust (GovPurposeId pGai2)
-      checkProposalsEmpty
+      expectNoCurrentProposals
+      getsNES (nesEsL . curPParamsEpochStateL . ppDRepDepositL)
+        `shouldReturn` val3
 
-checkProposalsEmpty :: ConwayEraGov era => ImpTestM era ()
-checkProposalsEmpty = null . proposalsIds <$> getProposals `shouldReturn` True
+    it "only the first action of a transaction gets enacted" $ do
+      (drepC, committeeC, _) <- electBasicCommittee
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      gaids <-
+        submitGovActions $
+          NE.fromList
+            [ ParameterChange
+                SNothing
+                (def & ppuDRepDepositL .~ SJust val1)
+                SNothing
+            , ParameterChange
+                SNothing
+                (def & ppuDRepDepositL .~ SJust val2)
+                SNothing
+            , ParameterChange
+                SNothing
+                (def & ppuDRepDepositL .~ SJust val3)
+                SNothing
+            ]
+      traverse_
+        ( \gaid -> do
+            submitYesVote_ (DRepVoter drepC) gaid
+            submitYesVote_ (CommitteeVoter committeeC) gaid
+        )
+        gaids
+      passNEpochs 2
+      getsNES (nesEsL . curPParamsEpochStateL . ppDRepDepositL)
+        `shouldReturn` val1
+      expectNoCurrentProposals
