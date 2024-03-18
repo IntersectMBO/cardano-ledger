@@ -78,7 +78,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
   asTreasuryL,
+  certVStateL,
   utxosGovStateL,
+  vsCommitteeStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
@@ -383,6 +385,7 @@ ledgerTransition = do
                   pp
                   (utxoState ^. utxosGovStateL . proposalsGovStateL . pRootsL . L.to toPrevGovActionIds)
                   (utxoState ^. utxosGovStateL . constitutionGovStateL . constitutionScriptL)
+                  (certState ^. certVStateL . vsCommitteeStateL)
               , utxoState ^. utxosGovStateL . proposalsGovStateL
               , govProcedures
               )
