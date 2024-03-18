@@ -49,6 +49,7 @@ import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Decoding.Drop
 import Cardano.Ledger.Binary.Decoding.Sharing
 import Cardano.Ledger.Binary.Decoding.Sized
+import Cardano.Ledger.Binary.Plain (withHexText)
 import Cardano.Ledger.Binary.Version
 import Codec.CBOR.Read as Read (DeserialiseFailure, IDecode (..), deserialiseIncremental)
 import Codec.CBOR.Write (toStrictByteString)
@@ -61,7 +62,6 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Internal as BSL
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text)
-import Cardano.Ledger.Binary.Plain (withHexText)
 
 -- | Deserialize a Haskell value from the external binary representation, which
 -- have been made using 'serialize' or a matching serialization functionilty in

@@ -7,6 +7,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsS
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Conway.Binary.Bugs as Bugs
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
 import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatify
@@ -18,7 +19,6 @@ import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
-import qualified Test.Cardano.Ledger.Conway.Binary.Bugs as Bugs
 
 main :: IO ()
 main =

@@ -59,13 +59,13 @@ import Codec.CBOR.Term
 import Control.Monad (unless)
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
+import Data.ByteString (ByteString)
 import Data.ByteString.Base16 as B16
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import Data.Typeable
 import Formatting (build, formatToString)
 import qualified Formatting.Buildable as B (Buildable (..))
-import Data.ByteString (ByteString)
 
 showDecoderError :: B.Buildable e => e -> String
 showDecoderError = formatToString build
