@@ -25,7 +25,11 @@ import Cardano.Ledger.Conway.Governance (
   pPropsL,
   proposalsActions,
  )
-import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppuDRepDepositL, ppuMinFeeRefScriptCostPerByteL)
+import Cardano.Ledger.Conway.PParams (
+  ConwayEraPParams,
+  ppuDRepDepositL,
+  ppuMinFeeRefScriptCostPerByteL,
+ )
 import Cardano.Ledger.Core (
   Era (..),
   PParamsUpdate,
@@ -106,13 +110,20 @@ ledgerStatePreds _usize p =
   , Random hardForkChildren
   , Random committeeChildren
   , Random constitutionChildren
-  , proposalDeposits :<-: (Constr "sumActionStateDeposits" (foldMap gasDeposit . proposalsActions) :$ (Simple $ currProposals p))
+  , proposalDeposits
+      :<-: ( Constr "sumActionStateDeposits" (foldMap gasDeposit . proposalsActions)
+              :$ (Simple $ currProposals p)
+           )
   , -- TODO, introduce ProjList so we can write: SumsTo (Right (Coin 1)) proposalDeposits  EQL [ProjList CoinR gasDepositL currProposals]
     SumsTo
       (Right (Coin 1))
       deposits
       EQL
-      [SumMap stakeDeposits, SumMap poolDeposits, One proposalDeposits, ProjMap CoinR drepDepositL currentDRepState]
+      [ SumMap stakeDeposits
+      , SumMap poolDeposits
+      , One proposalDeposits
+      , ProjMap CoinR drepDepositL currentDRepState
+      ]
   , -- Some things we might want in the future.
     -- , SumsTo (Right (Coin 1)) utxoCoin EQL [ProjMap CoinR outputCoinL (utxo p)]
     -- , SumsTo (Right (Coin 1)) totalAda EQL [One utxoCoin, One treasury, One reserves, One fees, One deposits, SumMap rewards]
@@ -292,7 +303,8 @@ govStatePreds p =
     govActions = Var (pV p "govActions" (ListR GovActionR) No)
     govActionMap = Var (pV p "govActionMap" (MapR GovActionIdR GovActionStateR) No)
 
-toProposalMap :: forall era. [GovActionState era] -> Map.Map (GovActionId (EraCrypto era)) (GovActionState era)
+toProposalMap ::
+  forall era. [GovActionState era] -> Map.Map (GovActionId (EraCrypto era)) (GovActionState era)
 toProposalMap xs = Map.fromList (map pairup xs)
   where
     pairup gas = (gasId gas, gas)
@@ -366,7 +378,13 @@ genGovActionStates proof gaids = do
   states <- mapM genGovState pairs
   pure (Map.fromList (map (\x -> (gasId x, x)) states))
 
-genGovAction :: forall era. Era era => Proof era -> GovActionPurpose -> Maybe (GovActionId (EraCrypto era)) -> Gen (GovAction era)
+genGovAction ::
+  forall era.
+  Era era =>
+  Proof era ->
+  GovActionPurpose ->
+  Maybe (GovActionId (EraCrypto era)) ->
+  Gen (GovAction era)
 genGovAction proof purpose gaid = case purpose of
   PParamUpdatePurpose -> ParameterChange (liftId gaid) <$> (unPParamsUpdate <$> genPParamsUpdate proof) <*> arbitrary
   HardForkPurpose -> HardForkInitiation (liftId gaid) <$> arbitrary

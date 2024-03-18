@@ -38,7 +38,13 @@ import Test.Cardano.Ledger.Generic.Functions (
  )
 import Test.Cardano.Ledger.Generic.GenState (GenSize (..), initStableFields)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockBlock (..), MockChainState (..))
-import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..), Some (..), preBabbage, unReflect)
+import Test.Cardano.Ledger.Generic.Proof (
+  Proof (..),
+  Reflect (..),
+  Some (..),
+  preBabbage,
+  unReflect,
+ )
 import Test.Cardano.Ledger.Generic.Trace (Gen1, genTrace, testPropMax)
 import Test.Control.State.Transition.Trace (
   SourceSignalTarget (..),
@@ -55,7 +61,8 @@ import Test.Tasty.QuickCheck (testProperty)
 
 -- ============================================================
 
-aggProp :: agg -> (agg -> Signal sts -> agg) -> (State sts -> State sts -> agg -> prop) -> Trace sts -> prop
+aggProp ::
+  agg -> (agg -> Signal sts -> agg) -> (State sts -> State sts -> agg -> prop) -> Trace sts -> prop
 aggProp agg0 aggregate test trace = test firstState lastState (foldl' aggregate agg0 sigs)
   where
     sigs = traceSignals OldestFirst trace
@@ -106,7 +113,8 @@ aggTests =
 -- TODO. An analog of   Test.Cardano.Ledger.Shelley.Rules.TestChain(forAllChainTrace)
 -- We will add additional analogs (ledgerTraceFromBlock, poolTraceFromBlock) soon,
 -- and then redo the tests in that module in the Generic fashion
-forAllChainTrace :: (Testable prop, Reflect era) => Proof era -> Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
+forAllChainTrace ::
+  (Testable prop, Reflect era) => Proof era -> Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
 forAllChainTrace p@Conway n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 forAllChainTrace p@Babbage n propf =
@@ -159,15 +167,20 @@ rewardDepositDomainInvariant SourceSignalTarget {source = mockChainSt} =
         )
         (rewardDomain === depositDomain)
 
-itemPropToTraceProp :: (SourceSignalTarget (MOCKCHAIN era) -> Property) -> Trace (MOCKCHAIN era) -> Property
+itemPropToTraceProp ::
+  (SourceSignalTarget (MOCKCHAIN era) -> Property) -> Trace (MOCKCHAIN era) -> Property
 itemPropToTraceProp f trace1 = conjoin (map f (sourceSignalTargets trace1))
 
 depositEra :: forall era. Reflect era => Proof era -> TestTree
 depositEra proof =
   testGroup
     (show proof)
-    [ testProperty "Deposits = KeyDeposits + PoolDeposits" (forAllChainTrace proof 10 (itemPropToTraceProp (depositInvariant @era)))
-    , testProperty "Reward domain = Deposit domain" (forAllChainTrace proof 10 (itemPropToTraceProp (rewardDepositDomainInvariant @era)))
+    [ testProperty
+        "Deposits = KeyDeposits + PoolDeposits"
+        (forAllChainTrace proof 10 (itemPropToTraceProp (depositInvariant @era)))
+    , testProperty
+        "Reward domain = Deposit domain"
+        (forAllChainTrace proof 10 (itemPropToTraceProp (rewardDepositDomainInvariant @era)))
     ]
 
 -- | Build a TestTree that tests 'f' at all the Eras listed in 'ps'

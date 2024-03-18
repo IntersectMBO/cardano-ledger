@@ -238,7 +238,8 @@ incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
 --   UMap, and the IncrementalStake. Only keep the active stake. Active can
 --   be determined if there is a (SJust deleg) in the Tuple.  This is step2 =
 --   aggregate (dom activeDelegs ◁ rewards) step1
-aggregateActiveStake :: Ord k => Map k (UMElem c) -> Map k (CompactForm Coin) -> Map k (CompactForm Coin)
+aggregateActiveStake ::
+  Ord k => Map k (UMElem c) -> Map k (CompactForm Coin) -> Map k (CompactForm Coin)
 aggregateActiveStake m1 m2 = assert (Map.valid m) m
   where
     m =

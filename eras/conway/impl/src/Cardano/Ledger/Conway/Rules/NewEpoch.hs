@@ -83,7 +83,9 @@ data ConwayNewEpochEvent era
       !EpochNo
       !(Map.Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
       !(Set (Credential 'Staking (EraCrypto era)))
-  | TotalRewardEvent !EpochNo !(Map.Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
+  | TotalRewardEvent
+      !EpochNo
+      !(Map.Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))))
   | EpochEvent !(Event (EraRule "EPOCH" era))
   | TotalAdaPotsEvent !AdaPots
   deriving (Generic)

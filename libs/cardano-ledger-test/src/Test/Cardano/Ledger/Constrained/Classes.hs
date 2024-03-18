@@ -709,7 +709,8 @@ data ProposedPPUpdatesF era where
 unProposedPPUpdates :: ProposedPPUpdatesF era -> PP.ProposedPPUpdates era
 unProposedPPUpdates (ProposedPPUpdatesF _ x) = x
 
-proposedCoreL :: Lens' (PP.ProposedPPUpdates era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
+proposedCoreL ::
+  Lens' (PP.ProposedPPUpdates era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
 proposedCoreL = lens (\(PP.ProposedPPUpdates m) -> m) (\(PP.ProposedPPUpdates _) m -> PP.ProposedPPUpdates m)
 
 proposedWrapperL :: Lens' (ProposedPPUpdatesF era) (PP.ProposedPPUpdates era)
@@ -722,7 +723,8 @@ coreMapL ::
     (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 coreMapL p = lens (fmap (PParamsUpdateF p)) (\_ b -> fmap unPParamsUpdate b)
 
-proposedMapL :: Lens' (ProposedPPUpdatesF era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
+proposedMapL ::
+  Lens' (ProposedPPUpdatesF era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdateF era))
 proposedMapL =
   lens
     (\(ProposedPPUpdatesF p x) -> x ^. (proposedCoreL . coreMapL p))
@@ -958,7 +960,8 @@ integerPartition msgs typname smallest size total
       Nothing ->
         let mean = total `div` fromIntegral (size + 1)
             go 1 total1
-              | total1 < 1 && smallest > 0 = errorMess ("Ran out of choices(2), total went negative: " ++ show total1) msgs
+              | total1 < 1 && smallest > 0 =
+                  errorMess ("Ran out of choices(2), total went negative: " ++ show total1) msgs
               | otherwise = pure [total1]
             go 2 total1 = do
               z <- choose (smallest, total1 - 1)
@@ -1077,7 +1080,10 @@ varOnLeftNeg s cond n = AddsSpecSize s (negateSize (ordCondToSize (s, cond, n)))
 -- Translate some thing like [SumsTo 8 < 2 + (Negate x) + 3] where the
 -- variable 'x' is on the right, and we want to produce its negation.
 varOnRightNeg :: Adds a => a -> OrdCond -> a -> String -> AddsSpec c
-varOnRightNeg n cond m s = AddsSpecSize s (negateSize (ordCondToSize (s, reverseOrdCond cond, minus ["varOnRightNeg", s, show m] n m)))
+varOnRightNeg n cond m s =
+  AddsSpecSize
+    s
+    (negateSize (ordCondToSize (s, reverseOrdCond cond, minus ["varOnRightNeg", s, show m] n m)))
 
 -- | This function `reverseOrdCond` has been defined to handle the Pred SumsTo when the
 --   variable is on the right-hand-side (rhs) of the OrdCond operator. In order to do that

@@ -330,7 +330,11 @@ allScripts c =
     -- Quantifed scripts (All, Any, MofN)
 
     simple = baseScripts @era c
-    plutusPairs :: [TwoPhase3ArgInfo era] -> [TwoPhase2ArgInfo era] -> [(Script era, Script era)] -> [(Script era, Script era)]
+    plutusPairs ::
+      [TwoPhase3ArgInfo era] ->
+      [TwoPhase2ArgInfo era] ->
+      [(Script era, Script era)] ->
+      [(Script era, Script era)]
     plutusPairs [] _ _ = []
     plutusPairs _ [] _ = []
     plutusPairs _ _ [] = []

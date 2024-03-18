@@ -64,8 +64,12 @@ tests =
   testGroup
     "Deposit Invariants"
     [ testProperty "Non negative deposits" (shortChainTrace defaultConstants (nonNegativeDeposits @era))
-    , testProperty "Deposits = KeyDeposits + PoolDeposits" (shortChainTrace defaultConstants (depositInvariant @era))
-    , testProperty "Reward domain = Deposit domain" (shortChainTrace defaultConstants (rewardDepositDomainInvariant @era))
+    , testProperty
+        "Deposits = KeyDeposits + PoolDeposits"
+        (shortChainTrace defaultConstants (depositInvariant @era))
+    , testProperty
+        "Reward domain = Deposit domain"
+        (shortChainTrace defaultConstants (rewardDepositDomainInvariant @era))
     ]
 
 -- | Check that deposits are always non-negative

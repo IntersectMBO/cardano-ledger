@@ -201,7 +201,8 @@ certTransition = do
       newPState <- trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState, poolCert)
       pure $ cState {certPState = newPState}
     ConwayTxCertGov govCert -> do
-      newVState <- trans @(EraRule "GOVCERT" era) $ TRC (ConwayGovCertEnv pp currentEpoch, certVState, govCert)
+      newVState <-
+        trans @(EraRule "GOVCERT" era) $ TRC (ConwayGovCertEnv pp currentEpoch, certVState, govCert)
       pure $ cState {certVState = newVState}
 
 instance

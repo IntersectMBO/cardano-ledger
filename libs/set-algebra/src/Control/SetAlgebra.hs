@@ -109,7 +109,14 @@ module Control.SetAlgebra (
 )
 where
 
-import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Embed (..), Iter (..), List, Single (..))
+import Control.Iterate.BaseTypes (
+  BaseRep (..),
+  Basic (..),
+  Embed (..),
+  Iter (..),
+  List,
+  Single (..),
+ )
 import Control.Iterate.Exp (
   Exp (..),
   HasExp (..),

@@ -169,13 +169,18 @@ drestrict = (◁)
 dexclude = (⋪)
 
 -- | range restrict
-(▷), (|>), rrestrict :: (Ord k, Iter g, Ord v, HasExp s1 (f k v), HasExp s2 (g v ())) => s1 -> s2 -> Exp (f k v)
+(▷)
+  , (|>)
+  , rrestrict ::
+    (Ord k, Iter g, Ord v, HasExp s1 (f k v), HasExp s2 (g v ())) => s1 -> s2 -> Exp (f k v)
 (▷) x y = rRestrict (toExp x) (toExp y)
 rrestrict = (▷)
 (|>) = (▷)
 
 -- | range exclude
-(⋫), rexclude :: (Ord k, Iter g, Ord v, HasExp s1 (f k v), HasExp s2 (g v ())) => s1 -> s2 -> Exp (f k v)
+(⋫)
+  , rexclude ::
+    (Ord k, Iter g, Ord v, HasExp s1 (f k v), HasExp s2 (g v ())) => s1 -> s2 -> Exp (f k v)
 (⋫) x y = rExclude (toExp x) (toExp y)
 rexclude = (⋫)
 
@@ -189,7 +194,9 @@ rexclude = (⋫)
 notelem = (∉)
 
 -- | union two maps or sets. In the case of a map, keep the pair from the left, if the two have common keys.
-(∪), unionleft :: (Show k, Show v, Ord k, HasExp s1 (f k v), HasExp s2 (g k v)) => s1 -> s2 -> Exp (f k v)
+(∪)
+  , unionleft ::
+    (Show k, Show v, Ord k, HasExp s1 (f k v), HasExp s2 (g k v)) => s1 -> s2 -> Exp (f k v)
 (∪) x y = UnionOverrideLeft (toExp x) (toExp y)
 unionleft = (∪)
 
@@ -199,7 +206,9 @@ unionleft = (∪)
 unionright = (⨃)
 
 -- | union two maps or sets. In the case of a map, combine values with monoid (<>), if the two have common keys.
-(∪+), unionplus :: (Ord k, Monoid n, HasExp s1 (f k n), HasExp s2 (g k n)) => s1 -> s2 -> Exp (f k n)
+(∪+)
+  , unionplus ::
+    (Ord k, Monoid n, HasExp s1 (f k n), HasExp s2 (g k n)) => s1 -> s2 -> Exp (f k n)
 (∪+) x y = UnionPlus (toExp x) (toExp y)
 unionplus = (∪+)
 
@@ -212,7 +221,9 @@ setSingleton :: Ord k => k -> Exp (Single k ())
 setSingleton k = SetSingleton k
 
 -- | intersect two sets, or the intersection of the domain of two maps.
-(∩), intersect :: (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp (Sett k ())
+(∩)
+  , intersect ::
+    (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp (Sett k ())
 (∩) x y = Intersect (toExp x) (toExp y)
 intersect = (∩)
 
@@ -222,7 +233,9 @@ intersect = (∩)
 subset = (⊆)
 
 -- | @(x ➖ y)@ Everything in @x@ except for those pairs in @x@ where the domain of @x@ is an element of the domain of @y@.
-(➖), setdiff :: (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp (f k v)
+(➖)
+  , setdiff ::
+    (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp (f k v)
 (➖) x y = SetDiff (toExp x) (toExp y)
 setdiff = (➖)
 
@@ -454,7 +467,8 @@ projectQ :: (Ord k, HasQuery c k v) => c -> Fun (k -> v -> u) -> Query k u
 projectQ q fun = ProjectD (query q) fun
 
 -- Conjoin two Querys
-andQ :: (Ord k, HasQuery concrete1 k v, HasQuery concrete2 k w) => concrete1 -> concrete2 -> Query k (v, w)
+andQ ::
+  (Ord k, HasQuery concrete1 k v, HasQuery concrete2 k w) => concrete1 -> concrete2 -> Query k (v, w)
 andQ x y = AndD (query x) (query y)
 
 -- Disjoin two Queries

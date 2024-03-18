@@ -212,7 +212,10 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
           , "\n\nUnregistered Treasury MIR total "
           , show (fold unRegMirTre)
           , "\n\nPools Retiring This epoch\n"
-          , showMap (infoRetire oldPoolDeposit) show (Map.filter (\e -> e == (nesEL . chainNes $ target)) oldRetire)
+          , showMap
+              (infoRetire oldPoolDeposit)
+              show
+              (Map.filter (\e -> e == (nesEL . chainNes $ target)) oldRetire)
           ]
             ++ obligationMsgs
             ++ rewardUpdateMsgs
@@ -306,8 +309,10 @@ checkWithdrawalBound SourceSignalTarget {source, signal, target} =
   where
     rewardDelta :: Coin
     rewardDelta =
-      fromCompact (sumRewardsUView (rewards . certDState . lsCertState . esLState . nesEs . chainNes $ source))
-        <-> fromCompact (sumRewardsUView (rewards . certDState . lsCertState . esLState . nesEs . chainNes $ target))
+      fromCompact
+        (sumRewardsUView (rewards . certDState . lsCertState . esLState . nesEs . chainNes $ source))
+        <-> fromCompact
+          (sumRewardsUView (rewards . certDState . lsCertState . esLState . nesEs . chainNes $ target))
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits)
 -- increases by Withdrawals minus Fees (for all transactions in a block)

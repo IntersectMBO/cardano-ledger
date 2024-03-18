@@ -413,8 +413,10 @@ instance Shaped Proof any where
 -- for some type families
 
 data TxOutWit era where
-  TxOutShelleyToMary :: (TxOut era ~ ShelleyTxOut era, EraTxOut era, ProtVerAtMost era 8) => TxOutWit era
-  TxOutAlonzoToAlonzo :: (TxOut era ~ AlonzoTxOut era, AlonzoEraTxOut era, ProtVerAtMost era 8) => TxOutWit era
+  TxOutShelleyToMary ::
+    (TxOut era ~ ShelleyTxOut era, EraTxOut era, ProtVerAtMost era 8) => TxOutWit era
+  TxOutAlonzoToAlonzo ::
+    (TxOut era ~ AlonzoTxOut era, AlonzoEraTxOut era, ProtVerAtMost era 8) => TxOutWit era
   TxOutBabbageToConway :: (TxOut era ~ BabbageTxOut era, BabbageEraTxOut era) => TxOutWit era
 
 whichTxOut :: Proof era -> TxOutWit era
@@ -426,8 +428,10 @@ whichTxOut Babbage = TxOutBabbageToConway
 whichTxOut Conway = TxOutBabbageToConway
 
 data TxCertWit era where
-  TxCertShelleyToBabbage :: (TxCert era ~ ShelleyTxCert era, ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCertWit era
-  TxCertConwayToConway :: (TxCert era ~ ConwayTxCert era, ConwayEraTxCert era, ConwayEraPParams era) => TxCertWit era
+  TxCertShelleyToBabbage ::
+    (TxCert era ~ ShelleyTxCert era, ShelleyEraTxCert era, ProtVerAtMost era 8) => TxCertWit era
+  TxCertConwayToConway ::
+    (TxCert era ~ ConwayTxCert era, ConwayEraTxCert era, ConwayEraPParams era) => TxCertWit era
 
 whichTxCert :: Proof era -> TxCertWit era
 whichTxCert Shelley = TxCertShelleyToBabbage
@@ -450,10 +454,14 @@ whichValue Babbage = ValueMaryToConway
 whichValue Conway = ValueMaryToConway
 
 data PParamsWit era where
-  PParamsShelleyToMary :: (PParamsHKD Identity era ~ ShelleyPParams Identity era, EraPParams era) => PParamsWit era
-  PParamsAlonzoToAlonzo :: (PParamsHKD Identity era ~ AlonzoPParams Identity era, AlonzoEraPParams era) => PParamsWit era
-  PParamsBabbageToBabbage :: (PParamsHKD Identity era ~ BabbagePParams Identity era, BabbageEraPParams era) => PParamsWit era
-  PParamsConwayToConway :: (PParamsHKD Identity era ~ ConwayPParams Identity era, ConwayEraPParams era) => PParamsWit era
+  PParamsShelleyToMary ::
+    (PParamsHKD Identity era ~ ShelleyPParams Identity era, EraPParams era) => PParamsWit era
+  PParamsAlonzoToAlonzo ::
+    (PParamsHKD Identity era ~ AlonzoPParams Identity era, AlonzoEraPParams era) => PParamsWit era
+  PParamsBabbageToBabbage ::
+    (PParamsHKD Identity era ~ BabbagePParams Identity era, BabbageEraPParams era) => PParamsWit era
+  PParamsConwayToConway ::
+    (PParamsHKD Identity era ~ ConwayPParams Identity era, ConwayEraPParams era) => PParamsWit era
 
 whichPParams :: Proof era -> PParamsWit era
 whichPParams Shelley = PParamsShelleyToMary

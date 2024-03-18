@@ -294,7 +294,15 @@ data Delta era = Delta
 
 instance Show (Delta era) where
   show (Delta fee is _wit _change dvs ds) =
-    "(Delta" ++ show fee ++ " " ++ show (Set.size is) ++ " wit change " ++ show (length dvs) ++ " " ++ show (length ds) ++ ")"
+    "(Delta"
+      ++ show fee
+      ++ " "
+      ++ show (Set.size is)
+      ++ " wit change "
+      ++ show (length dvs)
+      ++ " "
+      ++ show (length ds)
+      ++ ")"
 
 -- | - We need this instance to know when delta has stopped growing. We don't
 --  actually need to compare all the fields, because if the extraInputs has not
@@ -574,7 +582,10 @@ converge
   keySpace
   tx = do
     delta <- genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx
-    genEraDone @era utxo pparams (applyDelta utxo scriptinfo pparams neededKeys neededScripts keySpace tx delta)
+    genEraDone @era
+      utxo
+      pparams
+      (applyDelta utxo scriptinfo pparams neededKeys neededScripts keySpace tx delta)
 
 -- | Return up to /k/ random elements from /items/
 -- (instead of the less efficient /take k <$> QC.shuffle items/)

@@ -59,7 +59,9 @@ fieldTests =
     [ testCase "inputs" (assertEqual "inputs" (txM ^. inputsTxBodyL) empty)
     , testCase "outputs" (assertEqual "outputs" (txM ^. outputsTxBodyL) StrictSeq.empty)
     , testCase "certs" (assertEqual "certs" (txM ^. certsTxBodyL) StrictSeq.empty)
-    , testCase "withdrawals" (assertEqual "withdrawals" (txM ^. withdrawalsTxBodyL) (Withdrawals Map.empty))
+    , testCase
+        "withdrawals"
+        (assertEqual "withdrawals" (txM ^. withdrawalsTxBodyL) (Withdrawals Map.empty))
     , testCase "txfree" (assertEqual "txfree" (txM ^. feeTxBodyL) (Coin 6))
     , testCase "vldt" $
         assertEqual "vldt" (txM ^. vldtTxBodyL) $

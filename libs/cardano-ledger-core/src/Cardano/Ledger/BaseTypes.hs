@@ -369,7 +369,8 @@ fromScientificBoundedRatioWord64 (normalize -> sci)
     coeff = coefficient sci
     exp10 = base10Exponent sci
 
-fromRationalEither :: Bounded (BoundedRatio b Word64) => Rational -> Either String (BoundedRatio b Word64)
+fromRationalEither ::
+  Bounded (BoundedRatio b Word64) => Rational -> Either String (BoundedRatio b Word64)
 fromRationalEither r = maybe (failWith "outside of bounds" r) Right $ boundRational r
 
 failWith :: Show a => String -> a -> Either String b

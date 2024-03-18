@@ -369,7 +369,8 @@ class
     let ProtVer version _ = pp ^. ppProtocolVersionL
      in getMinCoinSizedTxOut pp (mkSized version txOut)
 
-bootAddrTxOutF :: EraTxOut era => SimpleGetter (TxOut era) (Maybe (BootstrapAddress (EraCrypto era)))
+bootAddrTxOutF ::
+  EraTxOut era => SimpleGetter (TxOut era) (Maybe (BootstrapAddress (EraCrypto era)))
 bootAddrTxOutF = to $ \txOut ->
   case txOut ^. addrEitherTxOutL of
     Left (AddrBootstrap bootstrapAddr) -> Just bootstrapAddr

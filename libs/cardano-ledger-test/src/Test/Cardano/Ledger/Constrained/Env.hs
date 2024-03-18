@@ -168,7 +168,9 @@ findVar (V name rep1 _) (Env m) =
     Just (Payload rep2 t _) ->
       case testEql rep1 rep2 of
         Just Refl -> pure t
-        Nothing -> failT ["We found: " ++ name ++ ", but the types did not match. " ++ show rep1 ++ " =/= " ++ show rep2]
+        Nothing ->
+          failT
+            ["We found: " ++ name ++ ", but the types did not match. " ++ show rep1 ++ " =/= " ++ show rep2]
 
 storeVar :: V era t -> t -> Env era -> Env era
 storeVar (V name rep access) t (Env m) = Env (Map.insert name (Payload rep t access) m)

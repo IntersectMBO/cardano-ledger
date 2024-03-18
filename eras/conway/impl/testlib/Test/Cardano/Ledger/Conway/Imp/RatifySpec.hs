@@ -343,48 +343,50 @@ delayingActionsSpec =
       passEpoch
       getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId gai3)
       getConstitutionProposals `shouldReturn` Map.empty
-    it "A delaying action delays all other actions even when all of them may be ratified in the same epoch" $ do
-      (dRep, committeeMember, _gpi) <- electBasicCommittee
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
-      pGai0 <-
-        submitParameterChange
-          SNothing
-          $ def & ppuDRepDepositL .~ SJust (Coin 1_000_000)
-      pGai1 <-
-        submitParameterChange
-          (SJust $ GovPurposeId pGai0)
-          $ def & ppuDRepDepositL .~ SJust (Coin 1_000_001)
-      pGai2 <-
-        submitParameterChange
-          (SJust $ GovPurposeId pGai1)
-          $ def & ppuDRepDepositL .~ SJust (Coin 1_000_002)
-      cGai0 <- submitInitConstitutionGovAction
-      cGai1 <- submitChildConstitutionGovAction cGai0
-      submitYesVote_ (DRepVoter dRep) cGai0
-      submitYesVote_ (CommitteeVoter committeeMember) cGai0
-      submitYesVote_ (DRepVoter dRep) cGai1
-      submitYesVote_ (CommitteeVoter committeeMember) cGai1
-      submitYesVote_ (DRepVoter dRep) pGai0
-      submitYesVote_ (CommitteeVoter committeeMember) pGai0
-      submitYesVote_ (DRepVoter dRep) pGai1
-      submitYesVote_ (CommitteeVoter committeeMember) pGai1
-      submitYesVote_ (DRepVoter dRep) pGai2
-      submitYesVote_ (CommitteeVoter committeeMember) pGai2
-      passNEpochs 2
-      getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId cGai0)
-      getLastEnactedParameterChange `shouldReturn` SNothing
-      passEpoch
-      -- here 'ParameterChange' action does not get enacted even though
-      -- it is not related, since its priority is 4 while the priority
-      -- for 'NewConstitution' is 2, so it gets delayed a second time
-      getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId cGai1)
-      getConstitutionProposals `shouldReturn` Map.empty
-      getLastEnactedParameterChange `shouldReturn` SNothing
-      passEpoch
-      -- all three actions, pGai0, pGai1 and pGai2, are enacted one
-      -- after the other in the same epoch
-      getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId pGai2)
-      getParameterChangeProposals `shouldReturn` Map.empty
+    it
+      "A delaying action delays all other actions even when all of them may be ratified in the same epoch"
+      $ do
+        (dRep, committeeMember, _gpi) <- electBasicCommittee
+        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+        pGai0 <-
+          submitParameterChange
+            SNothing
+            $ def & ppuDRepDepositL .~ SJust (Coin 1_000_000)
+        pGai1 <-
+          submitParameterChange
+            (SJust $ GovPurposeId pGai0)
+            $ def & ppuDRepDepositL .~ SJust (Coin 1_000_001)
+        pGai2 <-
+          submitParameterChange
+            (SJust $ GovPurposeId pGai1)
+            $ def & ppuDRepDepositL .~ SJust (Coin 1_000_002)
+        cGai0 <- submitInitConstitutionGovAction
+        cGai1 <- submitChildConstitutionGovAction cGai0
+        submitYesVote_ (DRepVoter dRep) cGai0
+        submitYesVote_ (CommitteeVoter committeeMember) cGai0
+        submitYesVote_ (DRepVoter dRep) cGai1
+        submitYesVote_ (CommitteeVoter committeeMember) cGai1
+        submitYesVote_ (DRepVoter dRep) pGai0
+        submitYesVote_ (CommitteeVoter committeeMember) pGai0
+        submitYesVote_ (DRepVoter dRep) pGai1
+        submitYesVote_ (CommitteeVoter committeeMember) pGai1
+        submitYesVote_ (DRepVoter dRep) pGai2
+        submitYesVote_ (CommitteeVoter committeeMember) pGai2
+        passNEpochs 2
+        getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId cGai0)
+        getLastEnactedParameterChange `shouldReturn` SNothing
+        passEpoch
+        -- here 'ParameterChange' action does not get enacted even though
+        -- it is not related, since its priority is 4 while the priority
+        -- for 'NewConstitution' is 2, so it gets delayed a second time
+        getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId cGai1)
+        getConstitutionProposals `shouldReturn` Map.empty
+        getLastEnactedParameterChange `shouldReturn` SNothing
+        passEpoch
+        -- all three actions, pGai0, pGai1 and pGai2, are enacted one
+        -- after the other in the same epoch
+        getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId pGai2)
+        getParameterChangeProposals `shouldReturn` Map.empty
     describe "An action expires when delayed enough even after being ratified" $ do
       it "Same lineage" $ do
         (dRep, committeeMember, _gpi) <- electBasicCommittee

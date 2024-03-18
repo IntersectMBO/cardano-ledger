@@ -123,7 +123,11 @@ vKeyLockedAdaOnly txOut = vKeyLocked txOut && isAdaOnly (txOut ^. valueTxOutL)
 phase2scripts3Arg :: forall era. AlonzoEraScript era => [TwoPhase3ArgInfo era]
 phase2scripts3Arg =
   [ mkTwoPhase3ArgInfo (alwaysSucceeds @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) True
-  , mkTwoPhase3ArgInfo (mkPlutusScript' (guessTheNumber3 SPlutusV1)) (P.I 9) (P.I 9, bigMem, bigStep) True
+  , mkTwoPhase3ArgInfo
+      (mkPlutusScript' (guessTheNumber3 SPlutusV1))
+      (P.I 9)
+      (P.I 9, bigMem, bigStep)
+      True
   , mkTwoPhase3ArgInfo (mkPlutusScript' (evendata3 SPlutusV1)) (P.I 8) (P.I 8, bigMem, bigStep) True
   , mkTwoPhase3ArgInfo (mkPlutusScript' (odddata3 SPlutusV1)) (P.I 9) (P.I 9, bigMem, bigStep) True
   , mkTwoPhase3ArgInfo (mkPlutusScript' (sumsTo103 SPlutusV1)) (P.I 1) (P.I 9, bigMem, bigStep) True
@@ -208,7 +212,9 @@ instance Crypto c => ScriptClass (AlonzoEra c) where
   isOnePhase _ (PlutusScript _) = False
   quantify _ (TimelockScript x) = fmap (TimelockScript . translateTimelock) (quantify (Proxy @(MaryEra c)) (translateTimelock x))
   quantify _ x = Leaf x
-  unQuantify _ quant = TimelockScript . translateTimelock $ unQuantify (Proxy @(MaryEra c)) (fmap (translateTimelock . unTime) quant)
+  unQuantify _ quant =
+    TimelockScript . translateTimelock $
+      unQuantify (Proxy @(MaryEra c)) (fmap (translateTimelock . unTime) quant)
 
 unTime :: AlonzoScript era -> Timelock era
 unTime (TimelockScript x) = x

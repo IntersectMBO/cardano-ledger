@@ -68,7 +68,13 @@ import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Lenses (fstL, sndL)
-import Test.Cardano.Ledger.Constrained.Monad (Typed, errorTyped, failT, generateWithSeed, monadTyped)
+import Test.Cardano.Ledger.Constrained.Monad (
+  Typed,
+  errorTyped,
+  failT,
+  generateWithSeed,
+  monadTyped,
+ )
 import Test.Cardano.Ledger.Constrained.Preds.CertState (dstateStage, pstateStage, vstateStage)
 import Test.Cardano.Ledger.Constrained.Preds.Certs (certsStage)
 import Test.Cardano.Ledger.Constrained.Preds.LedgerState (ledgerStateStage)
@@ -85,7 +91,12 @@ import Test.Cardano.Ledger.Constrained.Solver (toolChainSub)
 import Test.Cardano.Ledger.Constrained.TypeRep
 import Test.Cardano.Ledger.Constrained.Vars hiding (totalAda)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
-import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
+import Test.Cardano.Ledger.Generic.Fields (
+  TxBodyField (..),
+  TxField (..),
+  abstractTx,
+  abstractTxBody,
+ )
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (totalAda), protocolVersion)
 import Test.Cardano.Ledger.Generic.GenState (mkRedeemers)
 import Test.Cardano.Ledger.Generic.PrettyCore (
@@ -132,7 +143,13 @@ predsTests :: TestTree
 predsTests =
   testGroup
     "Testing all Stages in the Preds directory"
-    [PParams.demoTest, Universes.demoTest, TxOut.demoTest, CertState.demoTest, Certs.demoTest, LedgerState.demoTest]
+    [ PParams.demoTest
+    , Universes.demoTest
+    , TxOut.demoTest
+    , CertState.demoTest
+    , Certs.demoTest
+    , LedgerState.demoTest
+    ]
 
 -- ===========================================================
 
@@ -372,7 +389,14 @@ makeKeyWitnessTarget ::
   Term era (Map (KeyHash 'Payment (EraCrypto era)) ((Addr (EraCrypto era)), SigningKey)) ->
   Target era (Set (WitVKey 'Witness (EraCrypto era)))
 makeKeyWitnessTarget txbparam necessary sufficient scripts byAdUniv =
-  Constr "makeKeyWitness" makeKeyWitness ^$ txbparam ^$ necessary ^$ sufficient ^$ keymapUniv ^$ scripts ^$ genDelegs ^$ byAdUniv
+  Constr "makeKeyWitness" makeKeyWitness
+    ^$ txbparam
+    ^$ necessary
+    ^$ sufficient
+    ^$ keymapUniv
+    ^$ scripts
+    ^$ genDelegs
+    ^$ byAdUniv
 
 makeKeyWitness ::
   forall era.
@@ -481,7 +505,13 @@ txoutSum xs = foldl' accum mempty xs
   where
     accum ans (TxOutF _ txout) = txout ^. valueTxOutL <+> ans
 
-minusMultiValue :: forall era. Reflect era => Proof era -> Value era -> Value era -> Map (ScriptHash (EraCrypto era)) (Map AssetName Integer)
+minusMultiValue ::
+  forall era.
+  Reflect era =>
+  Proof era ->
+  Value era ->
+  Value era ->
+  Map (ScriptHash (EraCrypto era)) (Map AssetName Integer)
 minusMultiValue p v1 v2 = case whichValue p of
   ValueMaryToConway -> case v1 <-> v2 of MaryValue _ (MultiAsset m) -> Map.mapKeys (\(PolicyID x) -> x) m
   ValueShelleyToAllegra -> mempty
@@ -493,7 +523,11 @@ minusMultiValue p v1 v2 = case whichValue p of
 txBodyPreds :: forall era. (HasCallStack, Reflect era) => UnivSize -> Proof era -> [Pred era]
 txBodyPreds sizes@UnivSize {..} p =
   (txOutPreds sizes p balanceCoin (outputs p))
-    ++ [ mint :<-: (Constr "sumAssets" (\out spend -> minusMultiValue p (txoutSum out) (txoutSum spend)) ^$ (outputs p) ^$ spending)
+    ++ [ mint
+          :<-: ( Constr "sumAssets" (\out spend -> minusMultiValue p (txoutSum out) (txoutSum spend))
+                  ^$ (outputs p)
+                  ^$ spending
+               )
        , networkID :<-: justTarget network
        , -- inputs
          Sized (Range usMinInputs usMaxInputs) inputs
@@ -558,7 +592,8 @@ txBodyPreds sizes@UnivSize {..} p =
          Random randomWppHash
        , tempWppHash :<-: justTarget randomWppHash
        , tempTxFee :<-: constTarget (Coin (fromIntegral (maxBound :: Word64)))
-       , tempTxBody :<-: txbodyTarget tempTxFee tempWppHash (Lit CoinR (Coin (fromIntegral (maxBound :: Word64))))
+       , tempTxBody
+          :<-: txbodyTarget tempTxFee tempWppHash (Lit CoinR (Coin (fromIntegral (maxBound :: Word64))))
        , tempTx :<-: txTarget tempTxBody tempBootWits tempKeyWits
        , -- Compute the real fee, and then recompute the TxBody and the Tx
          txfee :<-: (Constr "finalFee" computeFinalFee ^$ pparams p ^$ tempTx ^$ utxo p)
@@ -579,10 +614,13 @@ txBodyPreds sizes@UnivSize {..} p =
         , Elems (ProjM fstL IsValidR (Restrict (Dom scriptWits) plutusUniv)) :=: valids
         , tempBootWits :<-: (Constr "boots" (bootWitsT p) ^$ spending ^$ tempTxBody ^$ byronAddrUniv)
         , necessaryHashes :<-: necessaryKeyHashTarget @era tempTxBody (Lit (SetR WitHashR) Set.empty)
-        , sufficientHashes :<-: (Constr "sufficient" (sufficientKeyHashes p) ^$ scriptWits ^$ certs ^$ genDelegs)
-        , tempKeyWits :<-: makeKeyWitnessTarget tempTxBody necessaryHashes sufficientHashes scriptWits byronAddrUniv
+        , sufficientHashes
+            :<-: (Constr "sufficient" (sufficientKeyHashes p) ^$ scriptWits ^$ certs ^$ genDelegs)
+        , tempKeyWits
+            :<-: makeKeyWitnessTarget tempTxBody necessaryHashes sufficientHashes scriptWits byronAddrUniv
         , bootWits :<-: (Constr "boots" (bootWitsT p) ^$ spending ^$ txbodyterm ^$ byronAddrUniv)
-        , keyWits :<-: makeKeyWitnessTarget txbodyterm necessaryHashes sufficientHashes scriptWits byronAddrUniv
+        , keyWits
+            :<-: makeKeyWitnessTarget txbodyterm necessaryHashes sufficientHashes scriptWits byronAddrUniv
         , txbodyterm :<-: txbodyTarget txfee tempWppHash (Lit CoinR (Coin 0)) -- The WppHash and totalCol play no role in ShelleyToMary
         , txterm :<-: txTarget txbodyterm bootWits keyWits
         ]
@@ -594,7 +632,8 @@ txBodyPreds sizes@UnivSize {..} p =
         , -- Only the refAdjusted scripts need to be in the 'scriptWits' but if the refscripts that are
           -- excluded from 'scriptWits' are Timelock scripts, a sufficient set keys must be added to
           -- the sufficient key hashes.
-          refAdjusted :<-: (Constr "adjust" (adjustNeededByRefScripts p) ^$ inputs ^$ refInputs ^$ (utxo p) ^$ neededHashSet)
+          refAdjusted
+            :<-: (Constr "adjust" (adjustNeededByRefScripts p) ^$ inputs ^$ refInputs ^$ (utxo p) ^$ neededHashSet)
         , -- , scriptWits :=: Restrict refAdjusted (allScriptUniv p)
           Restrict refAdjusted (allScriptUniv p) :=: scriptWits
         , Elems (ProjM fstL IsValidR (Restrict neededHashSet plutusUniv)) :=: valids
@@ -619,9 +658,11 @@ txBodyPreds sizes@UnivSize {..} p =
                     ^$ certs
                     ^$ genDelegs
                  )
-        , tempKeyWits :<-: makeKeyWitnessTarget tempTxBody necessaryHashes sufficientHashes scriptWits byronAddrUniv
+        , tempKeyWits
+            :<-: makeKeyWitnessTarget tempTxBody necessaryHashes sufficientHashes scriptWits byronAddrUniv
         , bootWits :<-: (Constr "boots" (bootWitsT p) ^$ spending ^$ txbodyterm ^$ byronAddrUniv)
-        , keyWits :<-: makeKeyWitnessTarget txbodyterm necessaryHashes sufficientHashes scriptWits byronAddrUniv
+        , keyWits
+            :<-: makeKeyWitnessTarget txbodyterm necessaryHashes sufficientHashes scriptWits byronAddrUniv
         , -- 'langs' is not computed from the 'scriptWits' because that does not include needed
           -- scripts that are reference scripts, So get the scripts from the neededHashSet
           langs :<-: (Constr "languages" scriptWitsLangs ^$ (Restrict neededHashSet (allScriptUniv p)))
@@ -633,14 +674,17 @@ txBodyPreds sizes@UnivSize {..} p =
                  )
         , -- we need to add 'extraCol' to the colUtxo, to pay the collateral fee.
           -- we arrange this so adding the 'extraCol' will make the sum of the all the collateral inputs, one more than 'owed'
-          extraCol :<-: (Constr "extraCol" (\(Coin suminputs) (Coin owe) -> (Coin (owe + 1 - suminputs))) ^$ sumCol ^$ owed)
+          extraCol
+            :<-: (Constr "extraCol" (\(Coin suminputs) (Coin owe) -> (Coin (owe + 1 - suminputs))) ^$ sumCol ^$ owed)
         , totalCol :<-: (Constr "(<+>)" (\x y -> x <+> y <-> Coin 1) ^$ extraCol ^$ sumCol)
         , Member (Right colRetAddr) addrUniv
         , -- This ( collateralReturn) depends on the Coin in the TxOut being (Coin 1).
           -- The computation of 'owed' and 'extraCol" should ensure this.
-          collateralReturn p :<-: (Constr "colReturn" (\ad -> TxOutF p (mkBasicTxOut ad (inject (Coin 1)))) ^$ colRetAddr)
+          collateralReturn p
+            :<-: (Constr "colReturn" (\ad -> TxOutF p (mkBasicTxOut ad (inject (Coin 1)))) ^$ colRetAddr)
         , -- We compute this, so that we can test that the (Coin 1) invariant holds.
-          colRetCoin :<-: (Constr "-" (\sumc extra owe -> (sumc <> extra) <-> owe) ^$ sumCol ^$ extraCol ^$ owed)
+          colRetCoin
+            :<-: (Constr "-" (\sumc extra owe -> (sumc <> extra) <-> owe) ^$ sumCol ^$ extraCol ^$ owed)
         , txbodyterm :<-: txbodyTarget txfee wppHash totalCol
         , txterm :<-: txTarget txbodyterm bootWits keyWits
         ]
@@ -728,7 +772,8 @@ adjustColInput env = do
     Just newutxo -> do
       let env2 = storeVar utxoV newutxo env
       (env5, body) <- updateTarget override txbodyterm (txbodyTarget txfee wppHash totalCol) env2
-      (env6, _) <- updateTarget override txterm (txTarget (Lit (TxBodyR reify) body) bootWits keyWits) env5
+      (env6, _) <-
+        updateTarget override txterm (txTarget (Lit (TxBodyR reify) body) bootWits keyWits) env5
       pure (pure env6)
 
 -- | Adjust the part of the UTxO that maps the 'collateral' inputs, to pay the collateral fee.
@@ -905,7 +950,8 @@ pgenTxBodyField proof ut x = case x of
   RefInputs s -> [(pack "ref inputs", pcUtxoDoc (Map.restrictKeys ut s))]
   other -> pcTxBodyField proof other
 
-pgenTxBody :: Reflect era => Proof era -> TxBody era -> Map (TxIn (EraCrypto era)) (TxOutF era) -> PDoc
+pgenTxBody ::
+  Reflect era => Proof era -> TxBody era -> Map (TxIn (EraCrypto era)) (TxOutF era) -> PDoc
 pgenTxBody proof txBody ut = ppRecord (pack "TxBody " <> pack (show proof)) pairs
   where
     fields = abstractTxBody proof txBody

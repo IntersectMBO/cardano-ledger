@@ -102,14 +102,17 @@ acceptedRatioProp = do
           -- This can be also expressed as: yes/(yes + no + not voted + noconfidence)
           let expectedRephrased
                 | stakeYes <+> stakeNo <+> stakeNotVoted <+> stakeNoConfidence == Coin 0 = 0
-                | otherwise = unCoin stakeYes % unCoin (stakeYes <+> stakeNo <+> stakeNotVoted <+> stakeNoConfidence)
+                | otherwise =
+                    unCoin stakeYes % unCoin (stakeYes <+> stakeNo <+> stakeNotVoted <+> stakeNoConfidence)
           actual `shouldBe` expectedRephrased
 
           let actualNoConfidence = dRepAcceptedRatio @era ratifyEnv votes (NoConfidence SNothing)
               -- For NoConfidence action, we count the `NoConfidence` votes as Yes
               expectedNoConfidence
                 | totalStake == stakeAbstain <+> stakeAlwaysAbstain = 0
-                | otherwise = unCoin (stakeYes <+> stakeNoConfidence) % unCoin (totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
+                | otherwise =
+                    unCoin (stakeYes <+> stakeNoConfidence)
+                      % unCoin (totalStake <-> stakeAbstain <-> stakeAlwaysAbstain)
           actualNoConfidence `shouldBe` expectedNoConfidence
 
           let allExpiredDreps =
@@ -117,7 +120,12 @@ acceptedRatioProp = do
                   [(cred, DRepState (EpochNo 9) SNothing mempty) | DRepCredential cred <- Map.keys distr]
               actualAllExpired =
                 dRepAcceptedRatio @era
-                  ((emptyRatifyEnv @era) {reDRepDistr = distr, reDRepState = allExpiredDreps, reCurrentEpoch = EpochNo 10})
+                  ( (emptyRatifyEnv @era)
+                      { reDRepDistr = distr
+                      , reDRepState = allExpiredDreps
+                      , reCurrentEpoch = EpochNo 10
+                      }
+                  )
                   votes
                   InfoAction
           actualAllExpired `shouldBe` 0
@@ -134,45 +142,65 @@ acceptedRatioProp = do
 
               actualSomeExpired =
                 dRepAcceptedRatio @era
-                  ((emptyRatifyEnv @era) {reDRepDistr = distr, reDRepState = someExpiredDrepsState, reCurrentEpoch = EpochNo 5})
+                  ( (emptyRatifyEnv @era)
+                      { reDRepDistr = distr
+                      , reDRepState = someExpiredDrepsState
+                      , reCurrentEpoch = EpochNo 5
+                      }
+                  )
                   (votes `Map.union` Map.fromList [(cred, VoteYes) | DRepCredential cred <- expiredDreps])
                   InfoAction
 
           actualSomeExpired
             `shouldBe` dRepAcceptedRatio @era
-              ((emptyRatifyEnv @era) {reDRepDistr = distr, reDRepState = activeDrepsState, reCurrentEpoch = EpochNo 5})
+              ( (emptyRatifyEnv @era)
+                  { reDRepDistr = distr
+                  , reDRepState = activeDrepsState
+                  , reCurrentEpoch = EpochNo 5
+                  }
+              )
               votes
               InfoAction
 
 allAbstainProp :: forall era. Era era => Spec
 allAbstainProp =
-  prop "If all votes are abstain, accepted ratio is zero" $
-    forAll (genTestData @era (Ratios {yes = 0, no = 0, abstain = 50 % 100, alwaysAbstain = 50 % 100, noConfidence = 0})) $
-      \drepTestData ->
-        activeDRepAcceptedRatio drepTestData `shouldBe` 0
+  prop "If all votes are abstain, accepted ratio is zero"
+    $ forAll
+      ( genTestData @era
+          (Ratios {yes = 0, no = 0, abstain = 50 % 100, alwaysAbstain = 50 % 100, noConfidence = 0})
+      )
+    $ \drepTestData ->
+      activeDRepAcceptedRatio drepTestData `shouldBe` 0
 
 noConfidenceProp :: forall era. Era era => Spec
 noConfidenceProp =
-  prop "If all votes are no confidence, accepted ratio is zero" $
-    forAll (genTestData @era (Ratios {yes = 0, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 100 % 100})) $
-      \drepTestData ->
-        activeDRepAcceptedRatio drepTestData `shouldBe` 0
+  prop "If all votes are no confidence, accepted ratio is zero"
+    $ forAll
+      ( genTestData @era
+          (Ratios {yes = 0, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 100 % 100})
+      )
+    $ \drepTestData ->
+      activeDRepAcceptedRatio drepTestData `shouldBe` 0
 
 noVotesProp :: forall era. Era era => Spec
 noVotesProp =
-  prop "If there are no votes, accepted ratio is zero" $
-    forAll (genTestData @era (Ratios {yes = 0, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})) $
-      \drepTestData ->
-        activeDRepAcceptedRatio drepTestData `shouldBe` 0
+  prop "If there are no votes, accepted ratio is zero"
+    $ forAll
+      (genTestData @era (Ratios {yes = 0, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0}))
+    $ \drepTestData ->
+      activeDRepAcceptedRatio drepTestData `shouldBe` 0
 
 allYesProp :: forall era. Era era => Spec
 allYesProp =
-  prop "If all vote yes, accepted ratio is 1 (unless there is no stake) " $
-    forAll (genTestData @era (Ratios {yes = 100 % 100, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})) $
-      \drepTestData ->
-        if totalStake drepTestData == Coin 0
-          then activeDRepAcceptedRatio drepTestData `shouldBe` 0
-          else activeDRepAcceptedRatio drepTestData `shouldBe` 1
+  prop "If all vote yes, accepted ratio is 1 (unless there is no stake) "
+    $ forAll
+      ( genTestData @era
+          (Ratios {yes = 100 % 100, no = 0, abstain = 0, alwaysAbstain = 0, noConfidence = 0})
+      )
+    $ \drepTestData ->
+      if totalStake drepTestData == Coin 0
+        then activeDRepAcceptedRatio drepTestData `shouldBe` 0
+        else activeDRepAcceptedRatio drepTestData `shouldBe` 1
 
 noStakeProp ::
   forall era.
@@ -296,4 +324,5 @@ genPctsOf100 = do
   pure (a % s, b % s, c % s, d % s, e % s, f % s)
 
 emptyRatifyEnv :: forall era. RatifyEnv era
-emptyRatifyEnv = RatifyEnv Map.empty (PoolDistr Map.empty) Map.empty Map.empty (EpochNo 0) (CommitteeState Map.empty)
+emptyRatifyEnv =
+  RatifyEnv Map.empty (PoolDistr Map.empty) Map.empty Map.empty (EpochNo 0) (CommitteeState Map.empty)

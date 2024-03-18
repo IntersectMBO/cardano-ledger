@@ -220,7 +220,10 @@ instance Show key => Show (Sett key ()) where
 deriving instance Eq k => Eq (Sett k ())
 
 instance Iter Sett where
-  nxt (Sett m) = Collect (\ans f -> if Set.null m then ans else let (k, nextm) = Set.deleteFindMin m in f (k, (), Sett nextm) ans)
+  nxt (Sett m) =
+    Collect
+      ( \ans f -> if Set.null m then ans else let (k, nextm) = Set.deleteFindMin m in f (k, (), Sett nextm) ans
+      )
   lub key (Sett m) =
     Collect
       ( \ans f ->

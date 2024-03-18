@@ -479,7 +479,8 @@ countPStateStats PState {..} =
           <> statMapKeys psFutureStakePoolParams
           <> statMapKeys psRetiring
     , pssPoolParamsStats =
-        foldMap countPoolParamsStats psStakePoolParams <> foldMap countPoolParamsStats psFutureStakePoolParams
+        foldMap countPoolParamsStats psStakePoolParams
+          <> foldMap countPoolParamsStats psFutureStakePoolParams
     }
 
 data LedgerStateStats = LedgerStateStats

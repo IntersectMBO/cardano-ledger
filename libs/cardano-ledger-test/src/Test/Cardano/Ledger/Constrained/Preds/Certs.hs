@@ -80,7 +80,8 @@ sUnRegKey ::
   forall era.
   Typeable era =>
   RootTarget era (ShelleyTxCert era) (StakeCredential (EraCrypto era) -> ShelleyTxCert era)
-sUnRegKey = Invert "UnRegKey" (typeRep @(ShelleyTxCert era)) (\x -> ShelleyTxCertDelegCert (ShelleyUnRegCert x))
+sUnRegKey =
+  Invert "UnRegKey" (typeRep @(ShelleyTxCert era)) (\x -> ShelleyTxCertDelegCert (ShelleyUnRegCert x))
 
 sDelegStake ::
   forall era.
@@ -89,7 +90,11 @@ sDelegStake ::
     era
     (ShelleyTxCert era)
     (StakeCredential (EraCrypto era) -> KeyHash 'StakePool (EraCrypto era) -> ShelleyTxCert era)
-sDelegStake = Invert "sDelegStake" (typeRep @(ShelleyTxCert era)) (\x y -> ShelleyTxCertDelegCert (ShelleyDelegCert x y))
+sDelegStake =
+  Invert
+    "sDelegStake"
+    (typeRep @(ShelleyTxCert era))
+    (\x y -> ShelleyTxCertDelegCert (ShelleyDelegCert x y))
 
 sRegPool :: Target era (PoolParams (EraCrypto era) -> ShelleyTxCert era)
 sRegPool = Constr "sRegPool" (\x -> ShelleyTxCertPool (RegPool x))
@@ -97,8 +102,15 @@ sRegPool = Constr "sRegPool" (\x -> ShelleyTxCertPool (RegPool x))
 sRetirePool :: Target era (KeyHash 'StakePool (EraCrypto era) -> EpochNo -> ShelleyTxCert era)
 sRetirePool = Constr "sRetirePool" (\x e -> ShelleyTxCertPool (RetirePool x e))
 
-sMirShift :: forall era. Era era => RootTarget era (ShelleyTxCert era) (Coin -> MIRPot -> Coin -> ShelleyTxCert era)
-sMirShift = Invert "sMirShift" (typeRep @(ShelleyTxCert era)) (\_avail x c -> ShelleyTxCertMir (MIRCert x (SendToOppositePotMIR c)))
+sMirShift ::
+  forall era.
+  Era era =>
+  RootTarget era (ShelleyTxCert era) (Coin -> MIRPot -> Coin -> ShelleyTxCert era)
+sMirShift =
+  Invert
+    "sMirShift"
+    (typeRep @(ShelleyTxCert era))
+    (\_avail x c -> ShelleyTxCertMir (MIRCert x (SendToOppositePotMIR c)))
 
 sGovern ::
   Target
@@ -119,10 +131,14 @@ cRegKey = Constr "cRegKey" (\x y -> ConwayTxCertDeleg (ConwayRegCert x (maybeToS
 cUnRegKey :: Target era (StakeCredential (EraCrypto era) -> Maybe Coin -> ConwayTxCert era)
 cUnRegKey = Constr "cUnRegKey" (\x y -> ConwayTxCertDeleg (ConwayUnRegCert x (maybeToStrictMaybe y)))
 
-cDelegStake :: Target era (StakeCredential (EraCrypto era) -> KeyHash 'StakePool (EraCrypto era) -> ConwayTxCert era)
+cDelegStake ::
+  Target
+    era
+    (StakeCredential (EraCrypto era) -> KeyHash 'StakePool (EraCrypto era) -> ConwayTxCert era)
 cDelegStake = Constr "cDelegStake" (\x y -> ConwayTxCertDeleg (ConwayDelegCert x (DelegStake y)))
 
-cDelegVote :: Target era (StakeCredential (EraCrypto era) -> DRep (EraCrypto era) -> a -> ConwayTxCert era)
+cDelegVote ::
+  Target era (StakeCredential (EraCrypto era) -> DRep (EraCrypto era) -> a -> ConwayTxCert era)
 cDelegVote = Constr "cDelegVote" (\x y _ -> ConwayTxCertDeleg (ConwayDelegCert x (DelegVote y)))
 
 cDelegStakeVote ::
@@ -145,7 +161,10 @@ cRegDeleg = Constr "cRegDeleg" RegDepositDelegTxCert
 cDelegateeStake ::
   forall era.
   Era era =>
-  RootTarget era (Delegatee (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era) -> Delegatee (EraCrypto era))
+  RootTarget
+    era
+    (Delegatee (EraCrypto era))
+    (KeyHash 'StakePool (EraCrypto era) -> Delegatee (EraCrypto era))
 cDelegateeStake = Invert "cDelegateeStake" (typeRep @(Delegatee (EraCrypto era))) DelegStake
 
 cDelegateeVote ::
@@ -157,7 +176,10 @@ cDelegateeVote = Invert "cDelegateeVote" (typeRep @(Delegatee (EraCrypto era))) 
 cDelegateeStakeVote ::
   forall era.
   Era era =>
-  RootTarget era (Delegatee (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era) -> DRep (EraCrypto era) -> Delegatee (EraCrypto era))
+  RootTarget
+    era
+    (Delegatee (EraCrypto era))
+    (KeyHash 'StakePool (EraCrypto era) -> DRep (EraCrypto era) -> Delegatee (EraCrypto era))
 cDelegateeStakeVote = Invert "cDelegateeVote" (typeRep @(Delegatee (EraCrypto era))) DelegStakeVote
 
 cRegPool :: Target era (PoolParams (EraCrypto era) -> ConwayTxCert era)
@@ -215,8 +237,15 @@ availableForDistrC sumb p act irew = minusCoinDeltaCoin (availableAfterMIR p act
 txCertMir ::
   forall era any.
   Era era =>
-  RootTarget era (ShelleyTxCert era) (MIRPot -> Map (Credential 'Staking (EraCrypto era)) DeltaCoin -> any -> ShelleyTxCert era)
-txCertMir = Invert "txCertMir" (typeRep @(ShelleyTxCert era)) (\pot distr _ -> ShelleyTxCertMir (MIRCert pot (StakeAddressesMIR distr)))
+  RootTarget
+    era
+    (ShelleyTxCert era)
+    (MIRPot -> Map (Credential 'Staking (EraCrypto era)) DeltaCoin -> any -> ShelleyTxCert era)
+txCertMir =
+  Invert
+    "txCertMir"
+    (typeRep @(ShelleyTxCert era))
+    (\pot distr _ -> ShelleyTxCertMir (MIRCert pot (StakeAddressesMIR distr)))
 
 {-
 The  'mirdistr' has type (Map (Credential 'Staking c) DeltaCoin) In Eras Alonzo and Babbage
@@ -256,12 +285,14 @@ certsPreds UnivSize {..} p = case whichTxCert p of
                 shelleycert -- Can only have one of these at a time
                 [
                   ( 1
-                  , sRegKey :$ Partial stakeCred (\case (ShelleyTxCertDelegCert (ShelleyRegCert x)) -> Just x; _ -> Nothing)
+                  , sRegKey
+                      :$ Partial stakeCred (\case (ShelleyTxCertDelegCert (ShelleyRegCert x)) -> Just x; _ -> Nothing)
                   , [NotMember stakeCred (Dom rewards)]
                   )
                 ,
                   ( 1
-                  , sUnRegKey :$ Partial deregkey (\case (ShelleyTxCertDelegCert (ShelleyUnRegCert x)) -> Just x; _ -> Nothing)
+                  , sUnRegKey
+                      :$ Partial deregkey (\case (ShelleyTxCertDelegCert (ShelleyUnRegCert x)) -> Just x; _ -> Nothing)
                   , [MapMember deregkey (Lit CoinR (Coin 0)) (Left rewards)]
                   )
                 ,
@@ -311,13 +342,17 @@ certsPreds UnivSize {..} p = case whichTxCert p of
                   ( 1
                   , txCertMir
                       :$ Partial pot (\case (ShelleyTxCertMir (MIRCert pt (StakeAddressesMIR _))) -> Just pt; _ -> Nothing)
-                      :$ Partial mirdistr (\case (ShelleyTxCertMir (MIRCert _ (StakeAddressesMIR distr))) -> Just distr; _ -> Nothing)
+                      :$ Partial
+                        mirdistr
+                        (\case (ShelleyTxCertMir (MIRCert _ (StakeAddressesMIR distr))) -> Just distr; _ -> Nothing)
                       :$ Partial (Lit UnitR ()) (const (Just ()))
                   ,
                     [ Random pot -- choose Treasury or Reserves
                     , If
                         (Constr "hardfork" HardForks.allowMIRTransfer ^$ (protVer p))
-                        (available :<-: (Constr "available" availableAfterMIR ^$ pot :$ Mask accountStateT :$ Mask instantaneousRewardsT))
+                        ( available
+                            :<-: (Constr "available" availableAfterMIR ^$ pot :$ Mask accountStateT :$ Mask instantaneousRewardsT)
+                        )
                         ( If
                             (Constr "potIsTreasury" (== TreasuryMIR) ^$ pot)
                             (treasury :=: available)
@@ -341,7 +376,11 @@ certsPreds UnivSize {..} p = case whichTxCert p of
                         (Disjoint (Dom mirdistrC) (Dom instanTreasury))
                         (Disjoint (Dom mirdistrC) (Dom instanReserves))
                     , Before sumB mirdistrC
-                    , SumsTo (Left (DeltaCoin 1)) (Delta available) GTH [One (Delta instanSum), One sumB, SumMap mirdistrC]
+                    , SumsTo
+                        (Left (DeltaCoin 1))
+                        (Delta available)
+                        GTH
+                        [One (Delta instanSum), One sumB, SumMap mirdistrC]
                     , If
                         (Constr "hardfork" HardForks.allowMIRTransfer ^$ (protVer p))
                         (mirdistr :<-: (Constr "union" (Map.unionWith (<>)) ^$ mirdistrC ^$ mirdistrB))
@@ -351,12 +390,19 @@ certsPreds UnivSize {..} p = case whichTxCert p of
                 ,
                   ( if (HardForks.allowMIRTransfer (protocolVersion p)) then 1 else 0 -- Not allowed before Alonzo, so make frequency 0
                   , sMirShift
-                      :$ Partial available (\case (ShelleyTxCertMir (MIRCert _ (SendToOppositePotMIR _))) -> Just (Coin 99); _ -> Nothing)
-                      :$ Partial pot (\case (ShelleyTxCertMir (MIRCert pt (SendToOppositePotMIR _))) -> Just pt; _ -> Nothing)
-                      :$ Partial mircoin (\case (ShelleyTxCertMir (MIRCert _ (SendToOppositePotMIR c))) -> Just c; _ -> Nothing)
+                      :$ Partial
+                        available
+                        (\case (ShelleyTxCertMir (MIRCert _ (SendToOppositePotMIR _))) -> Just (Coin 99); _ -> Nothing)
+                      :$ Partial
+                        pot
+                        (\case (ShelleyTxCertMir (MIRCert pt (SendToOppositePotMIR _))) -> Just pt; _ -> Nothing)
+                      :$ Partial
+                        mircoin
+                        (\case (ShelleyTxCertMir (MIRCert _ (SendToOppositePotMIR c))) -> Just c; _ -> Nothing)
                   ,
                     [ Random pot
-                    , available :<-: (Constr "available" availableAfterMIR ^$ pot :$ Mask accountStateT :$ Mask instantaneousRewardsT)
+                    , available
+                        :<-: (Constr "available" availableAfterMIR ^$ pot :$ Mask accountStateT :$ Mask instantaneousRewardsT)
                     , SumsTo (Left (Coin 1)) available GTE [One mircoin]
                     ]
                   )
@@ -528,8 +574,17 @@ certsPreds UnivSize {..} p = case whichTxCert p of
     vote2 = Var $ pV p "vote2" VCredR No
     epochDelta = Var $ pV p "epochDelta" EpochR No
     poolId = Var (pV p "poolId" PoolHashR (Yes PoolParamsR (lens ppId (\x i -> x {ppId = i}))))
-    poolOwners = Var (pV p "poolOwners" (SetR StakeHashR) (Yes PoolParamsR (lens ppOwners (\x i -> x {ppOwners = i}))))
-    poolRewardAccount = Var (pV p "poolRewardAccount" RewardAccountR (Yes PoolParamsR (lens ppRewardAccount (\x r -> x {ppRewardAccount = r}))))
+    poolOwners =
+      Var
+        (pV p "poolOwners" (SetR StakeHashR) (Yes PoolParamsR (lens ppOwners (\x i -> x {ppOwners = i}))))
+    poolRewardAccount =
+      Var
+        ( pV
+            p
+            "poolRewardAccount"
+            RewardAccountR
+            (Yes PoolParamsR (lens ppRewardAccount (\x r -> x {ppRewardAccount = r})))
+        )
     localpool = Var (pV p "localpool" (PoolMetadataR p) No)
     rewCred = Var (pV p "rewCred" CredR No)
     available = Var (pV p "available" CoinR No)

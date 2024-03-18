@@ -158,7 +158,10 @@ consumed ::
   TxBody era ->
   Value era
 consumed pp certState =
-  getConsumedValue pp (lookupDepositDState $ certState ^. certDStateL) (lookupDepositVState $ certState ^. certVStateL)
+  getConsumedValue
+    pp
+    (lookupDepositDState $ certState ^. certDStateL)
+    (lookupDepositVState $ certState ^. certVStateL)
 
 -- | Compute the lovelace which are created by the transaction
 -- For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.

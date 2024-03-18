@@ -53,7 +53,12 @@ import Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPoolreapPredFailure,
   ShelleyPoolreapState (..),
  )
-import Cardano.Ledger.Shelley.Rules.Snap (ShelleySNAP, ShelleySnapPredFailure, SnapEnv (..), SnapEvent)
+import Cardano.Ledger.Shelley.Rules.Snap (
+  ShelleySNAP,
+  ShelleySnapPredFailure,
+  SnapEnv (..),
+  SnapEvent,
+ )
 import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure, UpecState (..))
 import Cardano.Ledger.Slot (EpochNo)
 import Control.DeepSeq (NFData)

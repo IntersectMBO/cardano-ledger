@@ -103,17 +103,31 @@ transVITimeUpperBoundIsClosed = do
   case transValidityInterval (def :: PParams Alonzo) ei ss interval of
     Left (e :: ContextError Alonzo) ->
       assertFailure $ "no translation error was expected, but got: " <> show e
-    Right t -> t @?= (PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) True))
+    Right t ->
+      t
+        @?= ( PV1.Interval
+                (PV1.LowerBound PV1.NegInf True)
+                (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) True)
+            )
 
 -- | The test checks that since protocol version 9 'transVITime' works correctly,
 -- by returning open upper bound of the validaty interval.
 transVITimeUpperBoundIsOpen :: Assertion
 transVITimeUpperBoundIsOpen = do
   let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-  case transValidityInterval (def & ppProtocolVersionL .~ BT.ProtVer (natVersion @9) 0 :: PParams Alonzo) ei ss interval of
+  case transValidityInterval
+    (def & ppProtocolVersionL .~ BT.ProtVer (natVersion @9) 0 :: PParams Alonzo)
+    ei
+    ss
+    interval of
     Left (e :: ContextError Alonzo) ->
       assertFailure $ "no translation error was expected, but got: " <> show e
-    Right t -> t @?= (PV1.Interval (PV1.LowerBound PV1.NegInf True) (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False))
+    Right t ->
+      t
+        @?= ( PV1.Interval
+                (PV1.LowerBound PV1.NegInf True)
+                (PV1.UpperBound (PV1.Finite (PV1.POSIXTime 40000)) False)
+            )
 
 tests :: TestTree
 tests =

@@ -192,7 +192,13 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
                 MemberSpec [r] ->
                   typeSpec $ MapSpec Set.empty r (equalSpec $ sizeOf r) TrueSpec NoFold
                 TypeSpec (ListSpec must size elemspec foldspec) [] ->
-                  typeSpec $ MapSpec Set.empty must size (constrained $ \kv -> satisfies (app (sndFn @fn) (app (toGenericFn @fn) kv)) elemspec) foldspec
+                  typeSpec $
+                    MapSpec
+                      Set.empty
+                      must
+                      size
+                      (constrained $ \kv -> satisfies (app (sndFn @fn) (app (toGenericFn @fn) kv)) elemspec)
+                      foldspec
                 _ -> ErrorSpec ["Rng on bad map spec", show spec]
 
   -- NOTE: this function over-approximates and returns a liberal spec.

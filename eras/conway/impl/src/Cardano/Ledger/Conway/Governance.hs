@@ -263,7 +263,8 @@ cgsPrevPParamsL = lens cgsPrevPParams (\x y -> x {cgsPrevPParams = y})
 govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe era
 govStatePrevGovActionIds = view $ proposalsGovStateL . pRootsL . to toPrevGovActionIds
 
-conwayGovStateDRepDistrG :: SimpleGetter (ConwayGovState era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
+conwayGovStateDRepDistrG ::
+  SimpleGetter (ConwayGovState era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
 conwayGovStateDRepDistrG = to (\govst -> (psDRepDistr . fst) $ finishDRepPulser (cgsDRepPulsingState govst))
 
 getRatifyState :: ConwayGovState era -> RatifyState era
@@ -373,7 +374,8 @@ instance Crypto c => ConwayEraGov (ConwayEra c) where
 -- ===================================================================
 -- Lenses for access to (DRepPulsingState era)
 
-newEpochStateDRepPulsingStateL :: ConwayEraGov era => Lens' (NewEpochState era) (DRepPulsingState era)
+newEpochStateDRepPulsingStateL ::
+  ConwayEraGov era => Lens' (NewEpochState era) (DRepPulsingState era)
 newEpochStateDRepPulsingStateL =
   nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
 

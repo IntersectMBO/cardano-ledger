@@ -225,7 +225,11 @@ splitProd ::
   Prod (ProdOver xs) (ProdOver ys)
 splitProd = go (listShape @xs) (listShape @ys)
   where
-    go :: List (Const ()) as -> List (Const ()) bs -> ProdOver (Append as bs) -> Prod (ProdOver as) (ProdOver bs)
+    go ::
+      List (Const ()) as ->
+      List (Const ()) bs ->
+      ProdOver (Append as bs) ->
+      Prod (ProdOver as) (ProdOver bs)
     go Nil _ p = Prod () p
     go (_ :> Nil) Nil p = Prod p ()
     go (_ :> Nil) (_ :> _) p = p

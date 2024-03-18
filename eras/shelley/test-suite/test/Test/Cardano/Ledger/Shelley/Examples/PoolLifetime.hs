@@ -232,7 +232,8 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: forall c. (HasCallStack, ExMock (EraCrypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
+blockEx1 ::
+  forall c. (HasCallStack, ExMock (EraCrypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash

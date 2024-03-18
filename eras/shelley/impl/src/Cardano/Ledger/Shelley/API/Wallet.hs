@@ -458,7 +458,10 @@ evaluateTransactionBalance ::
   Value era
 evaluateTransactionBalance pp dpstate u txb =
   consumed pp dpstate u txb <-> produced pp dpstate txb
-{-# DEPRECATED evaluateTransactionBalance "In favor of new API function `Cardano.Ledger.Api.Tx.Body.evalBalanceTxBody`" #-}
+{-# DEPRECATED
+  evaluateTransactionBalance
+  "In favor of new API function `Cardano.Ledger.Api.Tx.Body.evalBalanceTxBody`"
+  #-}
 
 --------------------------------------------------------------------------------
 -- Shelley specifics

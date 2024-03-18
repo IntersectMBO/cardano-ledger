@@ -68,10 +68,28 @@ longhashT :: SafeHash TestCrypto ByteString
 longhashT = makeHashWithExplicitProxys (Proxy @TestCrypto) (Proxy @ByteString) long
 
 test1, test2, test3, test4 :: TestTree
-test1 = testCase "short==long" (assertEqual "ShortByteString and ByteString don't hash the same" shorthash (castSafeHash longhash))
-test2 = testCase "newtype==underlyingtype" (assertEqual "A newtype and its underlying type dont hash the same" shorthash (castSafeHash foohash))
-test3 = testCase "short==long" (assertEqual "ShortByteString and ByteString don't hash the same" shorthashT (castSafeHash longhashT))
-test4 = testCase "newtype==underlyingtype" (assertEqual "A newtype and its underlying type dont hash the same" shorthashT (castSafeHash foohashT))
+test1 =
+  testCase
+    "short==long"
+    (assertEqual "ShortByteString and ByteString don't hash the same" shorthash (castSafeHash longhash))
+test2 =
+  testCase
+    "newtype==underlyingtype"
+    ( assertEqual "A newtype and its underlying type dont hash the same" shorthash (castSafeHash foohash)
+    )
+test3 =
+  testCase
+    "short==long"
+    ( assertEqual "ShortByteString and ByteString don't hash the same" shorthashT (castSafeHash longhashT)
+    )
+test4 =
+  testCase
+    "newtype==underlyingtype"
+    ( assertEqual
+        "A newtype and its underlying type dont hash the same"
+        shorthashT
+        (castSafeHash foohashT)
+    )
 
 safeHashTest :: TestTree
 safeHashTest =

@@ -83,7 +83,8 @@ class (Era era, Era (PreviousEra era)) => TranslateEra era f where
   -- The translation is a given the translation context of @era@.
   --
   -- A default instance is provided for when the two types are 'Coercible'.
-  translateEra :: TranslationContext era -> f (PreviousEra era) -> Except (TranslationError era f) (f era)
+  translateEra ::
+    TranslationContext era -> f (PreviousEra era) -> Except (TranslationError era f) (f era)
   default translateEra ::
     (Coercible (f (PreviousEra era)) (f era), TranslationContext era ~ ()) =>
     TranslationContext era ->

@@ -12,7 +12,14 @@ import Control.Monad (void)
 import qualified Data.HashSet as HashSet
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
-import Test.Cardano.Ledger.Constrained.Ast (Pred, Subst (..), SubstElem (..), makeTest, substToEnv, varsOfPred)
+import Test.Cardano.Ledger.Constrained.Ast (
+  Pred,
+  Subst (..),
+  SubstElem (..),
+  makeTest,
+  substToEnv,
+  varsOfPred,
+ )
 import Test.Cardano.Ledger.Constrained.Env (Env, Name (..), V (..), emptyEnv)
 import Test.Cardano.Ledger.Constrained.Monad (Typed, monadTyped)
 import Test.Tasty (TestTree)

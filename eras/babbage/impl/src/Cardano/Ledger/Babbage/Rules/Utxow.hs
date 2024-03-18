@@ -265,7 +265,8 @@ validateScriptsWellFormed ::
   Test (BabbageUtxowPredFailure era)
 validateScriptsWellFormed pp tx =
   sequenceA_
-    [ failureUnless (Map.null invalidScriptWits) $ MalformedScriptWitnesses (Map.keysSet invalidScriptWits)
+    [ failureUnless (Map.null invalidScriptWits) $
+        MalformedScriptWitnesses (Map.keysSet invalidScriptWits)
     , failureUnless (null invalidRefScripts) $ MalformedReferenceScripts invalidRefScriptHashes
     ]
   where

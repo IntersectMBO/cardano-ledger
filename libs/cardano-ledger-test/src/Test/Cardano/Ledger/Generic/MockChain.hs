@@ -159,7 +159,8 @@ instance
 
         let newblocksmade = BlocksMade (Map.unionWith (+) current (Map.singleton issuer 1))
 
-        newledgerState <- trans @(EraRule "LEDGERS" era) $ TRC (LedgersEnv slot pparams account, ledgerState, fromStrict txs)
+        newledgerState <-
+          trans @(EraRule "LEDGERS" era) $ TRC (LedgersEnv slot pparams account, ledgerState, fromStrict txs)
 
         let newEpochstate = epochState {esLState = newledgerState}
             newNewEpochState = nes' {nesEs = newEpochstate, nesBcur = newblocksmade}
@@ -204,7 +205,8 @@ deriving instance
   (Eq (ShelleyTickEvent era), Eq (ShelleyLedgersEvent era)) => Eq (MockChainEvent era)
 
 deriving instance
-  (Show (ShelleyTickPredFailure era), Show (ShelleyLedgersPredFailure era)) => Show (MockChainFailure era)
+  (Show (ShelleyTickPredFailure era), Show (ShelleyLedgersPredFailure era)) =>
+  Show (MockChainFailure era)
 
 deriving instance
   (Eq (ShelleyTickPredFailure era), Eq (ShelleyLedgersPredFailure era)) => Eq (MockChainFailure era)

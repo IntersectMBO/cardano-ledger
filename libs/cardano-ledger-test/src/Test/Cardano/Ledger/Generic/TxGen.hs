@@ -802,7 +802,8 @@ genRecipientsFrom txOuts = do
                 else coreTxOut reify fields : rs
   goNew extra txOuts []
 
-getTxCertCredential :: forall era. Reflect era => TxCert era -> Maybe (Credential 'Staking (EraCrypto era))
+getTxCertCredential ::
+  forall era. Reflect era => TxCert era -> Maybe (Credential 'Staking (EraCrypto era))
 getTxCertCredential = case reify @era of
   Shelley -> getShelleyTxCertCredential
   Mary -> getShelleyTxCertCredential
@@ -834,7 +835,8 @@ getConwayTxCertCredential (ConwayTxCertDeleg (ConwayDelegCert cred _)) = Just cr
 getConwayTxCertCredential (ConwayTxCertDeleg (ConwayRegDelegCert cred _ _)) = Just cred
 getConwayTxCertCredential (ConwayTxCertGov _) = Nothing
 
-genWithdrawals :: Reflect era => SlotNo -> GenRS era (Withdrawals (EraCrypto era), RewardAccounts (EraCrypto era))
+genWithdrawals ::
+  Reflect era => SlotNo -> GenRS era (Withdrawals (EraCrypto era), RewardAccounts (EraCrypto era))
 genWithdrawals slot =
   if epochFromSlotNo slot == EpochNo 0
     then do
@@ -1086,7 +1088,8 @@ genAlonzoTxAndInfo proof slot = do
   pure (UTxO utxo, validTx, feepair, maybeoldpair)
 
 -- | Keep only Script witnesses that are neccessary in 'era',
-onlyNecessaryScripts :: Proof era -> Set (ScriptHash (EraCrypto era)) -> [WitnessesField era] -> [WitnessesField era]
+onlyNecessaryScripts ::
+  Proof era -> Set (ScriptHash (EraCrypto era)) -> [WitnessesField era] -> [WitnessesField era]
 onlyNecessaryScripts _ _ [] = []
 onlyNecessaryScripts proof hashes (ScriptWits m : xs) =
   ScriptWits (Map.restrictKeys m hashes) : onlyNecessaryScripts proof hashes xs

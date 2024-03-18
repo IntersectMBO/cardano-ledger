@@ -65,8 +65,10 @@ data TranslationInstance era = TranslationInstance
   }
   deriving (Generic)
 
-deriving instance (Era era, Eq (PParams era), Eq (UTxO era), Eq (Core.Tx era)) => Eq (TranslationInstance era)
-deriving instance (Era era, Show (PParams era), Show (UTxO era), Show (Core.Tx era)) => Show (TranslationInstance era)
+deriving instance
+  (Era era, Eq (PParams era), Eq (UTxO era), Eq (Core.Tx era)) => Eq (TranslationInstance era)
+deriving instance
+  (Era era, Show (PParams era), Show (UTxO era), Show (Core.Tx era)) => Show (TranslationInstance era)
 
 instance Cborg.Serialise PV1.DCert
 instance Cborg.Serialise PV1.TxInInfo

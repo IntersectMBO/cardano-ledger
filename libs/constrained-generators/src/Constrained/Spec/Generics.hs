@@ -334,7 +334,9 @@ con ::
   , ConstrTerm fn (ConstrOf c (TheSop a))
   ) =>
   r
-con = curryList @(ConstrOf c (TheSop a)) @(Term fn) (app (fromGenericFn @_ @a) . inj_ @c @fn @(TheSop a) . prod_)
+con =
+  curryList @(ConstrOf c (TheSop a)) @(Term fn)
+    (app (fromGenericFn @_ @a) . inj_ @c @fn @(TheSop a) . prod_)
 
 type family Cases t where
   Cases (Sum a b) = a : Cases b

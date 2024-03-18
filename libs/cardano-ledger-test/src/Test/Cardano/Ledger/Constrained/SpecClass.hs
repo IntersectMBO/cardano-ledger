@@ -239,7 +239,14 @@ instance
   sizeForS = sizeForListSpec
   genFromS msgs _count g spec = genFromListSpec msgs g spec
 
-testSound :: forall spec t. Specification spec t => Lenses spec -> Reps spec -> Count spec -> Generators spec -> Gen Bool
+testSound ::
+  forall spec t.
+  Specification spec t =>
+  Lenses spec ->
+  Reps spec ->
+  Count spec ->
+  Generators spec ->
+  Gen Bool
 testSound l r c g = do
   spec <- genS @spec ["testSound"] c g r l
   ans <- genFromS @spec ["testSound"] 10 g spec

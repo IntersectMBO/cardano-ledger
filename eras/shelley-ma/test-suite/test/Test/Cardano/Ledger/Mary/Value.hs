@@ -118,17 +118,20 @@ insert2 combine pid aid new m1 =
 
 -- 3 functions that build Values from Policy Asset triples.
 
-valueFromList :: [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
+valueFromList ::
+  [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
 valueFromList list c = MaryValue (Coin c) $ foldr acc mempty list
   where
     acc (policy, asset, count) m = insertMultiAsset (+) policy asset count m
 
-valueFromList3 :: [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
+valueFromList3 ::
+  [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
 valueFromList3 list c = foldr acc (MaryValue (Coin c) mempty) list
   where
     acc (policy, asset, count) m = insert3 (+) policy asset count m
 
-valueFromList2 :: [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
+valueFromList2 ::
+  [(PolicyID StandardCrypto, AssetName, Integer)] -> Integer -> MaryValue StandardCrypto
 valueFromList2 list c = foldr acc (MaryValue (Coin c) mempty) list
   where
     acc (policy, asset, count) m = insert2 (+) policy asset count m
@@ -232,7 +235,10 @@ polyValueTests = testGroup "polyValueTests" (map f (proplist @(MaryValue Standar
 -- Testing that insert, lookup, and coin interact properly
 
 valuePropList ::
-  [(Integer -> Integer -> MaryValue StandardCrypto -> PolicyID StandardCrypto -> AssetName -> Bool, String)]
+  [ ( Integer -> Integer -> MaryValue StandardCrypto -> PolicyID StandardCrypto -> AssetName -> Bool
+    , String
+    )
+  ]
 valuePropList =
   [ (\_ _ x _ _ -> coin (modifyCoin f x) == modifyCoin f (coin x), "coinModify")
   , (\_ _ _ p a -> insertValue pickOld p a 0 zero == zero, "Nozeros")
@@ -308,11 +314,20 @@ valueGroup ::
     )
   ]
 valueGroup =
-  [ (\_ x y p a -> lookupMultiAsset p a (x <+> y) === lookupMultiAsset p a x + lookupMultiAsset p a y, "lookup over <+>")
-  , (\_ x y p a -> lookupMultiAsset p a (x <-> y) === lookupMultiAsset p a x - lookupMultiAsset p a y, "lookup over <->")
+  [
+    ( \_ x y p a -> lookupMultiAsset p a (x <+> y) === lookupMultiAsset p a x + lookupMultiAsset p a y
+    , "lookup over <+>"
+    )
+  ,
+    ( \_ x y p a -> lookupMultiAsset p a (x <-> y) === lookupMultiAsset p a x - lookupMultiAsset p a y
+    , "lookup over <->"
+    )
   , (\n x _ p a -> lookupMultiAsset p a (n <×> x) === n * lookupMultiAsset p a x, "lookup over <×>")
   , (\_ _ _ p a -> lookupMultiAsset p a zero === 0, "lookup over zero")
-  , (\_ x _ p a -> lookupMultiAsset p a (invert x) === (-1) * lookupMultiAsset p a x, "lookup over invert")
+  ,
+    ( \_ x _ p a -> lookupMultiAsset p a (invert x) === (-1) * lookupMultiAsset p a x
+    , "lookup over invert"
+    )
   ]
 
 valueGroupTests :: TestTree

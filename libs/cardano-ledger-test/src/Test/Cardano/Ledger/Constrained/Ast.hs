@@ -50,7 +50,14 @@ import Test.Cardano.Ledger.Constrained.Env (
  )
 import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed (..), failT, monadTyped)
 import Test.Cardano.Ledger.Constrained.Size (Size (..), runSize, seps)
-import Test.Cardano.Ledger.Constrained.TypeRep (Rep (..), format, hasEq, synopsis, testEql, (:~:) (Refl))
+import Test.Cardano.Ledger.Constrained.TypeRep (
+  Rep (..),
+  format,
+  hasEq,
+  synopsis,
+  testEql,
+  (:~:) (Refl),
+ )
 import Test.Cardano.Ledger.Generic.PrettyCore (PDoc, ppRecord, ppString)
 import Test.Cardano.Ledger.Generic.Proof (Reflect)
 import Test.QuickCheck (Gen, oneof)
@@ -128,11 +135,13 @@ data Pred era where
   CanFollow :: Count n => Term era n -> Term era n -> Pred era
   Member :: Ord a => Direct (Term era a) -> Term era (Set a) -> Pred era
   NotMember :: Ord a => Term era a -> Term era (Set a) -> Pred era
-  MapMember :: (Ord k, Eq v, Ord v) => Term era k -> Term era v -> (Direct (Term era (Map k v))) -> Pred era
+  MapMember ::
+    (Ord k, Eq v, Ord v) => Term era k -> Term era v -> (Direct (Term era (Map k v))) -> Pred era
   (:<-:) :: Term era t -> RootTarget era r t -> Pred era
   GenFrom :: Term era t -> RootTarget era r (Gen t) -> Pred era
   List :: FromList fs t => Term era fs -> [Term era t] -> Pred era
-  Choose :: (Era era, Eq t) => Term era Size -> Term era [t] -> [(Int, Target era t, [Pred era])] -> Pred era
+  Choose ::
+    (Era era, Eq t) => Term era Size -> Term era [t] -> [(Int, Target era t, [Pred era])] -> Pred era
   ForEach ::
     (Era era, FromList fs t, Eq t) =>
     Term era Size ->
@@ -140,12 +149,19 @@ data Pred era where
     Pat era t ->
     [Pred era] ->
     Pred era
-  Maybe :: forall r era t. (Era era, Typeable r) => Term era (Maybe t) -> RootTarget era r t -> [Pred era] -> Pred era
+  Maybe ::
+    forall r era t.
+    (Era era, Typeable r) =>
+    Term era (Maybe t) ->
+    RootTarget era r t ->
+    [Pred era] ->
+    Pred era
   Oneof :: (Eq t, Era era) => Term era t -> [(Int, RootTarget era t t, [Pred era])] -> Pred era
   SubMap :: (Ord k, Eq v, Ord v) => Term era (Map k v) -> Term era (Map k v) -> Pred era
   If :: RootTarget era r Bool -> Pred era -> Pred era -> Pred era
   Before :: Term era a -> Term era b -> Pred era
-  ListWhere :: (Era era, Eq t) => Term era Size -> Term era [t] -> RootTarget era t t -> [Pred era] -> Pred era
+  ListWhere ::
+    (Era era, Eq t) => Term era Size -> Term era [t] -> RootTarget era t t -> [Pred era] -> Pred era
 
 data Sum era c where
   SumMap :: Adds c => Term era (Map a c) -> Sum era c
@@ -219,7 +235,8 @@ select small big lenz = Proj lenz (termRep small) big :=: small
 --   such that it is bound to the 'lens' component of 'big'. Computes a 'Component' Pred
 select2 :: Era era => Term era t -> Term era big -> Lens' big t -> Pred era
 select2 (Var (V nm t _)) big lenz = Component (Left big) [AnyF (Field nm t (termRep big) lenz)]
-select2 t1 t2 _ = error ("In (select " ++ show t1 ++ " " ++ show t2 ++ " lens)  " ++ show t1 ++ " is not a Var term.")
+select2 t1 t2 _ =
+  error ("In (select " ++ show t1 ++ " " ++ show t2 ++ " lens)  " ++ show t1 ++ " is not a Var term.")
 
 -- ====================================================================
 
@@ -334,10 +351,12 @@ instance Show (Pred era) where
   show (List t xs) = "List " ++ show t ++ " [" ++ showL show ", " xs ++ "]"
   show (Choose s term xs) = unlines (("Choose " ++ show s ++ " " ++ show term) : map showchoices xs)
     where
-      showchoices (i, target, ps) = "(" ++ show i ++ ", " ++ showAllTarget target ++ showT target ++ " | " ++ showL show ", " ps ++ ")"
+      showchoices (i, target, ps) =
+        "(" ++ show i ++ ", " ++ showAllTarget target ++ showT target ++ " | " ++ showL show ", " ps ++ ")"
   show (Oneof term xs) = unlines (("Oneof " ++ " " ++ show term) : (map showchoices xs))
     where
-      showchoices (i, target, ps) = "(" ++ show i ++ ", " ++ showAllTarget target ++ showT target ++ " | " ++ showL show ", " ps ++ ")"
+      showchoices (i, target, ps) =
+        "(" ++ show i ++ ", " ++ showAllTarget target ++ showT target ++ " | " ++ showL show ", " ps ++ ")"
   show (ForEach s term pat ps) =
     unlines
       [ seps ["ForEach", show s, show term]
@@ -499,7 +518,8 @@ varsOfPred ans s = case s of
       pvs = List.foldl' varsOfPred HashSet.empty ps
       others = HashSet.difference pvs bound
 
-varsOfTrips :: Era era => HashSet (Name era) -> [(Int, RootTarget era r t2, [Pred era])] -> HashSet (Name era)
+varsOfTrips ::
+  Era era => HashSet (Name era) -> [(Int, RootTarget era r t2, [Pred era])] -> HashSet (Name era)
 varsOfTrips ans1 [] = ans1
 varsOfTrips ans1 ((_, t, ps) : more) = varsOfTrips (act ans1 t ps) more
   where
@@ -511,7 +531,8 @@ varsOfTrips ans1 ((_, t, ps) : more) = varsOfTrips (act ans1 t ps) more
         )
         ans2
 
-varsOfPairs :: Era era => HashSet (Name era) -> [(RootTarget era r t2, [Pred era])] -> HashSet (Name era)
+varsOfPairs ::
+  Era era => HashSet (Name era) -> [(RootTarget era r t2, [Pred era])] -> HashSet (Name era)
 varsOfPairs ans1 [] = ans1
 varsOfPairs ans1 ((t, ps) : more) = varsOfPairs (act ans1 t ps) more
   where
@@ -880,7 +901,12 @@ getTarget _ (Lensed _ _) env = env
 getTarget root (Partial (Var v) f) env =
   case f root of
     Just val -> storeVar v val env
-    Nothing -> error ("A Partial RootTarget returned Nothing: " ++ show v ++ "\n Maybe use 'targetMaybeEnv' instead of 'getTarget' ")
+    Nothing ->
+      error
+        ( "A Partial RootTarget returned Nothing: "
+            ++ show v
+            ++ "\n Maybe use 'targetMaybeEnv' instead of 'getTarget' "
+        )
 getTarget _ (Partial _ _) env = env
 getTarget root (x :$ y) env = getTarget root x (getTarget root y env)
 getTarget root (Shift x l) env = getTarget (root ^. l) x env

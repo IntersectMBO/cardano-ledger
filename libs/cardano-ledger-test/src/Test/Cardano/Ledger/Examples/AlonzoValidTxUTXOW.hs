@@ -75,7 +75,11 @@ import Test.Cardano.Ledger.Generic.Fields (
   TxOutField (..),
   WitnessesField (..),
  )
-import Test.Cardano.Ledger.Generic.GenState (PlutusPurposeTag (..), mkRedeemers, mkRedeemersFromTags)
+import Test.Cardano.Ledger.Generic.GenState (
+  PlutusPurposeTag (..),
+  mkRedeemers,
+  mkRedeemersFromTags,
+ )
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
@@ -304,7 +308,8 @@ validatingWithCertTx pf =
         ]
     ]
 
-validatingWithCertBody :: (Scriptic era, EraTxBody era, ShelleyEraTxCert era) => Proof era -> TxBody era
+validatingWithCertBody ::
+  (Scriptic era, EraTxBody era, ShelleyEraTxCert era) => Proof era -> TxBody era
 validatingWithCertBody pf =
   newTxBody
     pf
@@ -452,7 +457,11 @@ validatingWithWithdrawalState pf =
     def
     mempty
   where
-    utxo = expectedUTxO' pf (ExpectSuccess (validatingWithWithdrawalBody pf) (validatingWithWithdrawalTxOut pf)) 5
+    utxo =
+      expectedUTxO'
+        pf
+        (ExpectSuccess (validatingWithWithdrawalBody pf) (validatingWithWithdrawalTxOut pf))
+        5
 
 -- ===========================================================================
 --  Example 6: Process a WITHDRAWAL transaction with a failing Plutus script.
@@ -712,10 +721,14 @@ validatingManyScriptsRedeemers proof =
     , ((Minting, 0), (Data (PV1.I 104), ExUnits 5000 5000))
     ]
 
-validatingManyScriptsMint :: forall era. (PostShelley era, HasTokens era) => Proof era -> MultiAsset (EraCrypto era)
+validatingManyScriptsMint ::
+  forall era. (PostShelley era, HasTokens era) => Proof era -> MultiAsset (EraCrypto era)
 validatingManyScriptsMint pf = forge @era 1 (always 2 pf) <> forge @era 1 (timelockScript 1 pf)
 
-validatingManyScriptsTxOut :: (HasTokens era, EraTxOut era, PostShelley era, Value era ~ MaryValue (EraCrypto era)) => Proof era -> TxOut era
+validatingManyScriptsTxOut ::
+  (HasTokens era, EraTxOut era, PostShelley era, Value era ~ MaryValue (EraCrypto era)) =>
+  Proof era ->
+  TxOut era
 validatingManyScriptsTxOut pf =
   newTxOut
     pf
@@ -786,7 +799,8 @@ validatingSupplimentaryDatumBody pf =
 validatingSupplimentaryDatum :: Era era => Data era
 validatingSupplimentaryDatum = Data (PV1.I 123)
 
-validatingSupplimentaryDatumTxOut :: forall era. (EraTxBody era, Scriptic era) => Proof era -> TxOut era
+validatingSupplimentaryDatumTxOut ::
+  forall era. (EraTxBody era, Scriptic era) => Proof era -> TxOut era
 validatingSupplimentaryDatumTxOut pf =
   newTxOut
     pf
@@ -803,7 +817,11 @@ validatingSupplimentaryDatumState ::
 validatingSupplimentaryDatumState pf =
   smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def mempty
   where
-    utxo = expectedUTxO' pf (ExpectSuccess (validatingSupplimentaryDatumBody pf) (validatingSupplimentaryDatumTxOut pf)) 3
+    utxo =
+      expectedUTxO'
+        pf
+        (ExpectSuccess (validatingSupplimentaryDatumBody pf) (validatingSupplimentaryDatumTxOut pf))
+        3
 
 -- ====================================================================================
 --  Example 11: A transaction with multiple identical certificates
@@ -829,7 +847,8 @@ validatingMultipleEqualCertsTx pf =
         ]
     ]
 
-validatingMultipleEqualCertsBody :: (EraTxBody era, Scriptic era, ShelleyEraTxCert era) => Proof era -> TxBody era
+validatingMultipleEqualCertsBody ::
+  (EraTxBody era, Scriptic era, ShelleyEraTxCert era) => Proof era -> TxBody era
 validatingMultipleEqualCertsBody pf =
   newTxBody
     pf
@@ -864,7 +883,11 @@ validatingMultipleEqualCertsState ::
 validatingMultipleEqualCertsState pf =
   smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def mempty
   where
-    utxo = expectedUTxO' pf (ExpectSuccess (validatingMultipleEqualCertsBody pf) (validatingMultipleEqualCertsOut pf)) 3
+    utxo =
+      expectedUTxO'
+        pf
+        (ExpectSuccess (validatingMultipleEqualCertsBody pf) (validatingMultipleEqualCertsOut pf))
+        3
 
 -- ====================================================================================
 --  Example 12: Attaching a datum (hash) to a non-script output.
@@ -913,7 +936,11 @@ validatingNonScriptOutWithDatumState ::
 validatingNonScriptOutWithDatumState pf =
   smartUTxOState (pp pf) utxo (Coin 0) (Coin 5) def mempty
   where
-    utxo = expectedUTxO' pf (ExpectSuccess (validatingNonScriptOutWithDatumTxBody pf) (validatingNonScriptOutWithDatumTxOut pf)) 103
+    utxo =
+      expectedUTxO'
+        pf
+        (ExpectSuccess (validatingNonScriptOutWithDatumTxBody pf) (validatingNonScriptOutWithDatumTxOut pf))
+        103
 
 -- ============================== HELPER FUNCTIONS ===============================
 

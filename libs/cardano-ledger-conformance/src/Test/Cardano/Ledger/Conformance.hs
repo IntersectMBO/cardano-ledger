@@ -45,7 +45,11 @@ import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (GovAction (..), ProposalProcedure (..), VotingProcedures (..))
+import Cardano.Ledger.Conway.Governance (
+  GovAction (..),
+  ProposalProcedure (..),
+  VotingProcedures (..),
+ )
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
@@ -653,7 +657,8 @@ trySubmitTxConform txPreFixup = do
     expectationFailure "The final states of spec and implementation do not match"
   pure submitRes
 
-conformsWhen :: Bool -> (NewEpochState Conway -> Tx Conway -> Bool) -> ImpTestState Conway -> Property
+conformsWhen ::
+  Bool -> (NewEpochState Conway -> Tx Conway -> Bool) -> ImpTestState Conway -> Property
 conformsWhen makeTestsSmall condition impState =
   let
     smallerExamples x =
@@ -733,7 +738,15 @@ logTxSummary tx = do
     showTxIn txIn@(TxIn (TxId txId) (TxIx i)) = showTxId txId ++ " #" ++ show i ++ showScript (txInToOut txIn)
     bodyHash = hashAnnotated txb
     showTxOut :: BabbageTxOut Conway -> Int -> [Char]
-    showTxOut txOut i = "  " ++ show valCoin ++ " (" ++ show (getSum $ foldMap (Sum . sum) maMap) ++ ") #" ++ show @Int i ++ " " ++ showScript txOut
+    showTxOut txOut i =
+      "  "
+        ++ show valCoin
+        ++ " ("
+        ++ show (getSum $ foldMap (Sum . sum) maMap)
+        ++ ") #"
+        ++ show @Int i
+        ++ " "
+        ++ showScript txOut
       where
         MaryValue valCoin (MultiAsset maMap) = txOut ^. valueTxOutL
     showProposal (ProposalProcedure {pProcGovAction}) =

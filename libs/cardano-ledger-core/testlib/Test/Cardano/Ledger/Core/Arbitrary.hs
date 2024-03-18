@@ -640,7 +640,8 @@ genExcludingKey ks = do
     then genExcludingKey ks
     else pure k
 
-genInsertDeleteRoundtripRDPair :: Gen (UMap StandardCrypto, Credential 'Staking StandardCrypto, RDPair)
+genInsertDeleteRoundtripRDPair ::
+  Gen (UMap StandardCrypto, Credential 'Staking StandardCrypto, RDPair)
 genInsertDeleteRoundtripRDPair = do
   umap@UMap {umElems} <- genValidUMap
   k <- genExcludingKey umElems

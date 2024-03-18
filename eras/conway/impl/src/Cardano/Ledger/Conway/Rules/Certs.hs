@@ -23,7 +23,14 @@ module Cardano.Ledger.Conway.Rules.Certs (
   CertsEnv (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), Globals (..), ShelleyBase, SlotNo, addEpochInterval, binOpEpochNo)
+import Cardano.Ledger.BaseTypes (
+  EpochNo (EpochNo),
+  Globals (..),
+  ShelleyBase,
+  SlotNo,
+  addEpochInterval,
+  binOpEpochNo,
+ )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),

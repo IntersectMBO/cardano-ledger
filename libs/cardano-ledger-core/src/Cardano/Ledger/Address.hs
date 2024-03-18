@@ -151,7 +151,10 @@ serialiseAddr = BSL.toStrict . B.runPut . putAddr
 deserialiseAddr :: Crypto c => ByteString -> Maybe (Addr c)
 deserialiseAddr = decodeAddr
 {-# INLINE deserialiseAddr #-}
-{-# DEPRECATED deserialiseAddr "In favor of `Cardano.Ledger.Api.Tx.Address.decodeAddr` or `Cardano.Ledger.Api.Tx.Address.decodeAddrLenient`. Please choose the appropriate variant carefully depending on your use case" #-}
+{-# DEPRECATED
+  deserialiseAddr
+  "In favor of `Cardano.Ledger.Api.Tx.Address.decodeAddr` or `Cardano.Ledger.Api.Tx.Address.decodeAddrLenient`. Please choose the appropriate variant carefully depending on your use case"
+  #-}
 
 -- | Serialise a reward account to the external format.
 serialiseRewardAccount :: RewardAcnt c -> ByteString

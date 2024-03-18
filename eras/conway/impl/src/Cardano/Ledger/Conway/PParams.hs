@@ -130,7 +130,8 @@ class BabbageEraPParams era => ConwayEraPParams era where
   hkdGovActionDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
   hkdDRepDepositL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f Coin)
   hkdDRepActivityL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f EpochInterval)
-  hkdMinFeeRefScriptCostPerByteL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f NonNegativeInterval)
+  hkdMinFeeRefScriptCostPerByteL ::
+    HKDFunctor f => Lens' (PParamsHKD f era) (HKD f NonNegativeInterval)
 
 ppPoolVotingThresholdsL ::
   forall era. ConwayEraPParams era => Lens' (PParams era) PoolVotingThresholds
@@ -158,7 +159,8 @@ ppDRepDepositL = ppLens . hkdDRepDepositL @era @Identity
 ppDRepActivityL :: forall era. ConwayEraPParams era => Lens' (PParams era) EpochInterval
 ppDRepActivityL = ppLens . hkdDRepActivityL @era @Identity
 
-ppMinFeeRefScriptCostPerByteL :: forall era. ConwayEraPParams era => Lens' (PParams era) NonNegativeInterval
+ppMinFeeRefScriptCostPerByteL ::
+  forall era. ConwayEraPParams era => Lens' (PParams era) NonNegativeInterval
 ppMinFeeRefScriptCostPerByteL = ppLens . hkdMinFeeRefScriptCostPerByteL @era @Identity
 
 ppuPoolVotingThresholdsL ::
@@ -456,7 +458,11 @@ instance (Typeable t, ToJSON a) => ToJSON (THKD t StrictMaybe a) where
 instance (Typeable t, FromJSON a) => FromJSON (THKD t StrictMaybe a) where
   parseJSON = fmap THKD . parseJSON
 
-ppGroup :: forall t s a. (ToDRepGroup t, ToStakePoolGroup s) => THKD ('PPGroups t s) StrictMaybe a -> Set PPGroups
+ppGroup ::
+  forall t s a.
+  (ToDRepGroup t, ToStakePoolGroup s) =>
+  THKD ('PPGroups t s) StrictMaybe a ->
+  Set PPGroups
 ppGroup = \case
   THKD SNothing -> Set.empty
   THKD SJust {} -> Set.singleton $ PPGroups (toDRepGroup @t) (toStakePoolGroup @s)
@@ -534,7 +540,8 @@ data ConwayPParams f era = ConwayPParams
   -- ^ The amount of a DRep registration deposit
   , cppDRepActivity :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ The number of Epochs that a DRep can perform no activity without losing their @Active@ status.
-  , cppMinFeeRefScriptCostPerByte :: !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f NonNegativeInterval)
+  , cppMinFeeRefScriptCostPerByte ::
+      !(THKD ('PPGroups 'EconomicGroup 'SecurityGroup) f NonNegativeInterval)
   -- ^ Reference scripts fee for the minimum fee calculation
   }
   deriving (Generic)
@@ -1091,15 +1098,27 @@ conwayUpgradePParamsHKDPairs ::
   PParamsHKD f era ->
   [(Key, HKD f Aeson.Value)]
 conwayUpgradePParamsHKDPairs px pp =
-  [ ("poolVotingThresholds", hkdMap px (toJSON @PoolVotingThresholds) (pp ^. hkdPoolVotingThresholdsL @era @f))
-  , ("dRepVotingThresholds", hkdMap px (toJSON @DRepVotingThresholds) (pp ^. hkdDRepVotingThresholdsL @era @f))
+  [
+    ( "poolVotingThresholds"
+    , hkdMap px (toJSON @PoolVotingThresholds) (pp ^. hkdPoolVotingThresholdsL @era @f)
+    )
+  ,
+    ( "dRepVotingThresholds"
+    , hkdMap px (toJSON @DRepVotingThresholds) (pp ^. hkdDRepVotingThresholdsL @era @f)
+    )
   , ("committeeMinSize", hkdMap px (toJSON @Natural) (pp ^. hkdCommitteeMinSizeL @era @f))
-  , ("committeeMaxTermLength", hkdMap px (toJSON @EpochInterval) (pp ^. hkdCommitteeMaxTermLengthL @era @f))
+  ,
+    ( "committeeMaxTermLength"
+    , hkdMap px (toJSON @EpochInterval) (pp ^. hkdCommitteeMaxTermLengthL @era @f)
+    )
   , ("govActionLifetime", hkdMap px (toJSON @EpochInterval) (pp ^. hkdGovActionLifetimeL @era @f))
   , ("govActionDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdGovActionDepositL @era @f))
   , ("dRepDeposit", hkdMap px (toJSON @Coin) (pp ^. hkdDRepDepositL @era @f))
   , ("dRepActivity", hkdMap px (toJSON @EpochInterval) (pp ^. hkdDRepActivityL @era @f))
-  , ("minFeeRefScriptCostPerByte", hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdMinFeeRefScriptCostPerByteL @era @f))
+  ,
+    ( "minFeeRefScriptCostPerByte"
+    , hkdMap px (toJSON @NonNegativeInterval) (pp ^. hkdMinFeeRefScriptCostPerByteL @era @f)
+    )
   ]
 
 instance ToJSON (UpgradeConwayPParams Identity) where
@@ -1247,7 +1266,8 @@ conwayApplyPPUpdates pp ppu =
     , cppGovActionDeposit = ppUpdate (cppGovActionDeposit pp) (cppGovActionDeposit ppu)
     , cppDRepDeposit = ppUpdate (cppDRepDeposit pp) (cppDRepDeposit ppu)
     , cppDRepActivity = ppUpdate (cppDRepActivity pp) (cppDRepActivity ppu)
-    , cppMinFeeRefScriptCostPerByte = ppUpdate (cppMinFeeRefScriptCostPerByte pp) (cppMinFeeRefScriptCostPerByte ppu)
+    , cppMinFeeRefScriptCostPerByte =
+        ppUpdate (cppMinFeeRefScriptCostPerByte pp) (cppMinFeeRefScriptCostPerByte ppu)
     }
   where
     ppUpdate ::

@@ -42,7 +42,12 @@ import Test.Cardano.Ledger.Constrained.Classes (
 import Test.Cardano.Ledger.Constrained.Combinators (errorMess, genFromMap, itemFromSet, suchThatErr)
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Monad
-import Test.Cardano.Ledger.Constrained.Rewrite (DependGraph (..), OrderInfo, compileGenWithSubst, cpeq)
+import Test.Cardano.Ledger.Constrained.Rewrite (
+  DependGraph (..),
+  OrderInfo,
+  compileGenWithSubst,
+  cpeq,
+ )
 import Test.Cardano.Ledger.Constrained.Size (
   Size (..),
   genFromIntRange,
@@ -143,7 +148,8 @@ simplifyAtType r1 term = do
   Refl <- sameRep r1 (termRep term)
   pure t
 
-simplifySet :: (Ord rng, Era era) => Rep era rng -> Term era y -> Typed (HasConstraint Ord (Set rng))
+simplifySet ::
+  (Ord rng, Era era) => Rep era rng -> Term era y -> Typed (HasConstraint Ord (Set rng))
 simplifySet r1 term = do
   x <- simplify term
   Refl <- sameRep (SetR r1) (termRep term)
@@ -187,7 +193,8 @@ atLeast rep c = add c <$> genRep rep
 
 -- ================================================================
 -- Solver for variables of type (Map dom rng)
-solveMap :: forall dom rng era. Era era => V era (Map dom rng) -> Pred era -> Typed (MapSpec era dom rng)
+solveMap ::
+  forall dom rng era. Era era => V era (Map dom rng) -> Pred era -> Typed (MapSpec era dom rng)
 solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
   (Before (Lit _ _) (Var v2)) | Name v1 == Name v2 -> pure mempty
   (Sized (Lit SizeR sz) (Var v2))
@@ -216,11 +223,19 @@ solveMap v1@(V _ r@(MapR dom rng) _) predicate = explain msg $ case predicate of
   (ProjS lensbt trep (Dom (Var v2@(V _ (MapR brep _) _))) :=: Dom (Lit (MapR drep _) x))
     | Name v1 == Name v2 -> do
         Refl <- sameRep dom brep
-        mapSpec (SzExact (Map.size x)) (RelLens lensbt dom trep (relEqual drep (Map.keysSet x))) PairAny RngAny
+        mapSpec
+          (SzExact (Map.size x))
+          (RelLens lensbt dom trep (relEqual drep (Map.keysSet x)))
+          PairAny
+          RngAny
   (ProjS lensbt trep (Dom (Var v2@(V _ (MapR brep _) _))) `Subset` Dom (Lit (MapR drep _) x))
     | Name v1 == Name v2 -> do
         Refl <- sameRep dom brep
-        mapSpec (SzMost (Map.size x)) (RelLens lensbt dom trep (relSubset drep (Map.keysSet x))) PairAny RngAny
+        mapSpec
+          (SzMost (Map.size x))
+          (RelLens lensbt dom trep (relSubset drep (Map.keysSet x)))
+          PairAny
+          RngAny
   (Lit (SetR drep) x) :=: ProjS lensbt trep (Dom (Var v2@(V _ (MapR brep _) _))) | Name v1 == Name v2 -> do
     Refl <- sameRep dom brep
     mapSpec (SzExact (Set.size x)) (RelLens lensbt dom trep (relEqual drep x)) PairAny RngAny
@@ -556,12 +571,24 @@ solveSum v1@(V nam r _) predx =
             then pure (varOnRightNeg n cond (fromI ["solveSum-SumsTo 1"] rhsTotal) nam)
             else
               if rhsTotal < 0
-                then pure (varOnRight ["CASE1", show predx] (add n (Coin $ fromIntegral $ negate rhsTotal)) cond (Coin 0) nam)
-                else pure (varOnRight ["CASE2", show predx] n cond (fromI ["solveSum-SumsTo 2", show n, show rhsTotal, show x, show v1] rhsTotal) nam)
+                then
+                  pure
+                    (varOnRight ["CASE1", show predx] (add n (Coin $ fromIntegral $ negate rhsTotal)) cond (Coin 0) nam)
+                else
+                  pure
+                    ( varOnRight
+                        ["CASE2", show predx]
+                        n
+                        cond
+                        (fromI ["solveSum-SumsTo 2", show n, show rhsTotal, show x, show v1] rhsTotal)
+                        nam
+                    )
         DeltaCoinR ->
           if needsNeg
             then pure (varOnRightNeg (DeltaCoin i) cond (fromI ["solveSum-SumsTo 3"] rhsTotal) nam)
-            else pure (varOnRight ["CASE3", show predx] (DeltaCoin i) cond (fromI ["solveSum-SumsTo 4"] rhsTotal) nam)
+            else
+              pure
+                (varOnRight ["CASE3", show predx] (DeltaCoin i) cond (fromI ["solveSum-SumsTo 4"] rhsTotal) nam)
         other -> failT [show predx, show other ++ " should be either Coin or DeltaCoin"]
     (SumsTo _ (Lit r2 n) cond xs@(_ : _)) -> do
       (rhsTotal, needsNeg) <- intSumWithUniqueV v1 xs
@@ -631,7 +658,8 @@ summandsAsInt (x : xs) = do
 sameV :: V era s -> V era t -> Typed (s :~: t)
 sameV (V _ r1 _) (V _ r2 _) = sameRep r1 r2
 
-unique2 :: Adds c => V era t -> (Int, Bool, [Name era]) -> Sum era c -> Typed (Int, Bool, [Name era])
+unique2 ::
+  Adds c => V era t -> (Int, Bool, [Name era]) -> Sum era c -> Typed (Int, Bool, [Name era])
 unique2 v1 (c, b, ns) (One (Var v2)) =
   if Name v1 == Name v2
     then pure (c, b, Name v2 : ns)
@@ -816,28 +844,36 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ "\n"
       mt@(MapR ScriptHashR (ScriptR _)) -> do
         m <- simplifyAtType mt expr
         pure (snd <$> genFromMap ["dispatch " ++ show v1 ++ " " ++ show preds] m)
-      other -> failT ["The Pred: " ++ show pred1, "Can only be applied to a map whose range is 'Script'.", show other]
+      other ->
+        failT
+          ["The Pred: " ++ show pred1, "Can only be applied to a map whose range is 'Script'.", show other]
   [pred1@(Member (Right (HashS (Var v2@(V _ (ScriptR p) _)))) (Dom expr))] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 (ScriptR p)
     case termRep expr of
       mt@(MapR ScriptHashR (ScriptR _)) -> do
         m <- simplifyAtType mt expr
         pure (snd <$> genFromMap ["dispatch " ++ show v1 ++ " " ++ show preds] m)
-      other -> failT ["The Pred: " ++ show pred1, "Can only be applied to a map whose range is 'Script'.", show other]
+      other ->
+        failT
+          ["The Pred: " ++ show pred1, "Can only be applied to a map whose range is 'Script'.", show other]
   [pred1@(Member (Left (HashD (Var v2@(V _ DataR _)))) (Dom expr))] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 DataR
     case termRep expr of
       mt@(MapR DataHashR DataR) -> do
         m <- simplifyAtType mt expr
         pure (snd <$> genFromMap ["dispatch " ++ show v1 ++ " " ++ show preds] m)
-      other -> failT ["The Pred: " ++ show pred1, "Can only be applied to a map whose range is 'Data'.", show other]
+      other ->
+        failT
+          ["The Pred: " ++ show pred1, "Can only be applied to a map whose range is 'Data'.", show other]
   [pred1@(Member (Right (HashD (Var v2@(V _ DataR _)))) (Dom expr))] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 DataR
     case termRep expr of
       mt@(MapR DataHashR DataR) -> do
         m <- simplifyAtType mt expr
         pure (snd <$> genFromMap ["dispatch " ++ show v1 ++ " " ++ show preds] m)
-      other -> failT ["The Pred: " ++ show pred1, "Can only be applied to a map whose range is 'Data'.", show other]
+      other ->
+        failT
+          ["The Pred: " ++ show pred1, "Can only be applied to a map whose range is 'Data'.", show other]
   [Member (Left (Var v2@(V _ r2 _))) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
     set <- simplify expr
@@ -884,7 +920,12 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ "\n"
     , Just Refl <- sameName v1 v3 -> do
         yval <- simplify y
         zval <- simplify z
-        pure (fst <$> itemFromSet ["Solving (Member & NotMember), for variable " ++ nam, show p1, show p2] (Set.difference yval zval))
+        pure
+          ( fst
+              <$> itemFromSet
+                ["Solving (Member & NotMember), for variable " ++ nam, show p1, show p2]
+                (Set.difference yval zval)
+          )
   [nm@(NotMember {}), m@(Member {})] -> dispatch v1 [m, nm]
   [x, Random (Var v2)] | Name v1 == Name v2 -> dispatch v1 [x]
   [Random (Var v2), x] | Name v1 == Name v2 -> dispatch v1 [x]
@@ -964,7 +1005,12 @@ solveOneVar subst ([Name (v@(V _ r _))], ps) = do
 solveOneVar subst0 (names, preds) = case (names, map (substPred subst0) preds) of
   (ns, [SumSplit small tot EQL suml]) | length ns == length suml -> do
     !n <- monadTyped $ simplify tot
-    !zs <- partition small ["Partition, while solving multiple SumsTo vars.", show ns, show preds] (length ns) n
+    !zs <-
+      partition
+        small
+        ["Partition, while solving multiple SumsTo vars.", show ns, show preds]
+        (length ns)
+        n
     let rep = termRep tot
     foldlM' (\ !sub (!sumx, !x) -> genSum (substSum sub sumx) rep x sub) subst0 (zip suml zs)
   (ns, ps) -> errorMess "Not yet. multiple vars in solveOneVar" [show ns, show ps]

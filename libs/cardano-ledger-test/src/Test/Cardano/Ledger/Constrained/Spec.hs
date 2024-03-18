@@ -436,7 +436,8 @@ runRelSpec s (RelOper _ must (Just may) cant) = Set.isSubsetOf must s && Set.isS
 runRelSpec s (RelLens lensdb _ _ spec) = runRelSpec (Set.map (\x -> x ^. lensdb) s) spec
 
 -- | return a generator that always generates things that meet the RelSpec
-genFromRelSpec :: forall era t. (Era era, Ord t) => [String] -> Gen t -> Int -> RelSpec era t -> Gen (Set t)
+genFromRelSpec ::
+  forall era t. (Era era, Ord t) => [String] -> Gen t -> Int -> RelSpec era t -> Gen (Set t)
 genFromRelSpec msgs g n spec =
   let msg = "genFromRelSpec " ++ show n ++ " " ++ show spec
    in case spec of
@@ -481,13 +482,16 @@ genRelSpec _ _ r 0 = pure $ relEqual r Set.empty
 genRelSpec msg genD r n = do
   smaller <- choose (1, min 2 (n - 1))
   larger <- choose (n + 5, n + 7)
-  let msgs = (sepsP ["genRelSpec ", show n, show r, " smaller=", show smaller, ", larger=", show larger]) : msg
+  let msgs =
+        (sepsP ["genRelSpec ", show n, show r, " smaller=", show smaller, ", larger=", show larger]) : msg
   frequency
     [
       ( 1
       , do
           must <- setSized ("must of RelOper Nothing" : msgs) smaller genD
-          dis <- someSet (suchThatErr (("dis of RelOper Nothing " ++ synSet r must) : msgs) genD (`Set.notMember` must))
+          dis <-
+            someSet
+              (suchThatErr (("dis of RelOper Nothing " ++ synSet r must) : msgs) genD (`Set.notMember` must))
           monadTyped (relOper r must Nothing dis)
       )
     ,
@@ -499,7 +503,11 @@ genRelSpec msg genD r n = do
             setSized
               ("dis of RelOper Some" : msgs)
               3
-              (suchThatErr (("dis of RelOper Some must=" ++ synSet r must ++ " may=" ++ synSet r may) : msgs) genD (`Set.notMember` may))
+              ( suchThatErr
+                  (("dis of RelOper Some must=" ++ synSet r must ++ " may=" ++ synSet r may) : msgs)
+                  genD
+                  (`Set.notMember` may)
+              )
           monadTyped (relOper r must (Just may) dis)
       )
     , (1, pure RelAny)
@@ -1017,7 +1025,9 @@ mergeMapSpec spec1 spec2 = case (spec1, spec2) of
       RelNever msgs -> MapNever (["The MapSpec's are inconsistent.", "  " ++ show spec1, "  " ++ show spec2] ++ msgs)
       d -> case mergePairSpec p1 p2 of
         PairNever msgs -> MapNever (["The MapSpec's are inconsistent.", "  " ++ show spec1, "  " ++ show spec2] ++ msgs)
-        p -> dropT (explain ("While merging\n   " ++ show spec1 ++ "\n   " ++ show spec2) (mapSpec (s1 <> s2) d p r))
+        p ->
+          dropT
+            (explain ("While merging\n   " ++ show spec1 ++ "\n   " ++ show spec2) (mapSpec (s1 <> s2) d p r))
 
 -- | Use 'mapSpec' instead of 'MapSpec' to check size and PairSpec consistency at creation time.
 --   Runs in the type monad, so errors are caught and reported as Solver-time errors.
@@ -1025,7 +1035,8 @@ mergeMapSpec spec1 spec2 = case (spec1, spec2) of
 --   inconsistencies. We can also use this in mergeMapSpec, to catch size
 --   inconsistencies there as well as (\ a b c -> dropT (mapSpec a b c)) has the same
 --   type as MapSpec, but pushes the reports of inconsistencies into MapNever.
-mapSpec :: Ord d => Size -> RelSpec era d -> PairSpec era d r -> RngSpec era r -> Typed (MapSpec era d r)
+mapSpec ::
+  Ord d => Size -> RelSpec era d -> PairSpec era d r -> RngSpec era r -> Typed (MapSpec era d r)
 mapSpec sz1 rel pair rng =
   let sz2 = sizeForRel rel
       sz3 = sizeForRng rng
@@ -1232,7 +1243,8 @@ genFromMapSpec nm msgs genD genR ms@(MapSpec size rel (PairSpec dr rr varside m)
 --   Strategy depends on which term to (SubMap t1 t2) are variables.
 --   (SubMap xvar yexp) Break value of yexp into (x + extra), then answer: xvar = x
 --   (SubMap xexp yvar) Break value of xexp into (x + extra), then answer: yvar == x + extra
-pairSpecTransform :: (Ord d, Eq r) => PairSide -> Rep era d -> Rep era r -> Map d r -> ([d], [r]) -> [(d, r)]
+pairSpecTransform ::
+  (Ord d, Eq r) => PairSide -> Rep era d -> Rep era r -> Map d r -> ([d], [r]) -> [(d, r)]
 pairSpecTransform side drep rrep m (dlist, rlist) = zip doms rngs
   where
     accum (ds, rs) k v = (remove side "domain" drep k ds, remove side "range" rrep v rs)
@@ -1738,7 +1750,8 @@ testSoundElemSpec = do
   size <- genSize
   spec <- genElemSpec Word64R (SomeLens word64CoinL) size
   n <- genFromSize size
-  list <- genFromElemSpec @TT ["testSoundElemSpec " ++ show spec ++ " " ++ show n] (choose (1, 1000)) n spec
+  list <-
+    genFromElemSpec @TT ["testSoundElemSpec " ++ show spec ++ " " ++ show n] (choose (1, 1000)) n spec
   pure $
     counterexample
       ("size=" ++ show size ++ "\nspec=" ++ show spec ++ "\nlist=" ++ synopsis (ListR Word64R) list)
@@ -1877,7 +1890,8 @@ genSumsTo = do
   let v = Var testV
   rhs <- (Lit DeltaCoinR . DeltaCoin) <$> choose (-10, 10)
   lhs <- (Lit DeltaCoinR . DeltaCoin) <$> choose (-10, 10)
-  elements [SumsTo (Left (DeltaCoin 1)) v c [One rhs], SumsTo (Left (DeltaCoin 1)) lhs c [One rhs, One v]]
+  elements
+    [SumsTo (Left (DeltaCoin 1)) v c [One rhs], SumsTo (Left (DeltaCoin 1)) lhs c [One rhs, One v]]
 
 solveSumsTo :: Pred era -> AddsSpec DeltaCoin
 solveSumsTo (SumsTo _ (Lit DeltaCoinR n) cond [One (Lit DeltaCoinR m), One (Var (V nam _ _))]) =
@@ -1931,7 +1945,8 @@ sizeForAddsSpec (AddsSpecSize _ s) = s
 sizeForAddsSpec AddsSpecAny = SzAny
 sizeForAddsSpec (AddsSpecNever xs) = SzNever xs
 
-tryManyAddsSpec :: Gen (AddsSpec Int) -> ([String] -> AddsSpec Int -> Gen Int) -> Gen (Int, [String])
+tryManyAddsSpec ::
+  Gen (AddsSpec Int) -> ([String] -> AddsSpec Int -> Gen Int) -> Gen (Int, [String])
 tryManyAddsSpec genSum genFromSum = do
   xs <- vectorOf 25 genSum
   ys <- vectorOf 25 genSum
@@ -2173,7 +2188,8 @@ runPairSpec m1 (PairSpec _ _ VarOnRight m2) = Map.isSubmapOf m2 m1
 -- and insist that when solving 'var' it contains the pairs from 'm2' and possibly more pairs
 runPairSpec m1 (PairSpec _ _ VarOnLeft m2) = Map.isSubmapOf m1 m2
 
-genPairSpec :: forall era dom rng. (Ord dom, Eq rng) => Rep era dom -> Rep era rng -> Gen (PairSpec era dom rng)
+genPairSpec ::
+  forall era dom rng. (Ord dom, Eq rng) => Rep era dom -> Rep era rng -> Gen (PairSpec era dom rng)
 genPairSpec domr rngr =
   frequency
     [ (1, pure PairAny)
@@ -2235,7 +2251,8 @@ genConsistentPairSpec _ _ (PairSpec d r VarOnLeft m) =
       )
     ]
 
-genFromPairSpec :: forall era dom rng. Ord dom => [String] -> PairSpec era dom rng -> Gen (Map dom rng)
+genFromPairSpec ::
+  forall era dom rng. Ord dom => [String] -> PairSpec era dom rng -> Gen (Map dom rng)
 genFromPairSpec msgs (PairNever xs) = errorMess "genFromPairSpec failed due to PairNever" (msgs ++ xs)
 genFromPairSpec _msgs PairAny = pure $ Map.empty
 genFromPairSpec msgs p@(PairSpec domr rngr VarOnRight mp) = do

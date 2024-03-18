@@ -50,7 +50,11 @@ import Test.QuickCheck
 genTestCase ::
   Int -> -- The size of the utxo
   Int -> -- the number of addresses
-  Gen (DState (ShelleyEra StandardCrypto), PState (ShelleyEra StandardCrypto), UTxO (ShelleyEra StandardCrypto))
+  Gen
+    ( DState (ShelleyEra StandardCrypto)
+    , PState (ShelleyEra StandardCrypto)
+    , UTxO (ShelleyEra StandardCrypto)
+    )
 genTestCase numUTxO numAddr = do
   addrs :: [Addr StandardCrypto] <- replicateM numAddr arbitrary
   let packedAddrs = Seq.fromList addrs
@@ -71,7 +75,8 @@ genTestCase numUTxO numAddr = do
   creds :: [Credential 'Staking StandardCrypto] <- replicateM (m + m) arbitrary
   let ptrs' :: Map Ptr (Credential 'Staking StandardCrypto)
       ptrs' = Map.fromList (zip (liveptrs ++ moreptrs) creds)
-  rewards :: [(Credential 'Staking StandardCrypto, Coin)] <- replicateM (3 * (numUTxO `div` 4)) arbitrary
+  rewards :: [(Credential 'Staking StandardCrypto, Coin)] <-
+    replicateM (3 * (numUTxO `div` 4)) arbitrary
   let rewards' :: Map (Credential 'Staking StandardCrypto) Coin
       rewards' = Map.fromList rewards
 

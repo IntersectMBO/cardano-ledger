@@ -26,7 +26,9 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 
-import qualified Test.Cardano.Ledger.Shelley.ByronTranslation as ByronTranslation (testGroupByronTranslation)
+import qualified Test.Cardano.Ledger.Shelley.ByronTranslation as ByronTranslation (
+  testGroupByronTranslation,
+ )
 import qualified Test.Cardano.Ledger.Shelley.Rules.AdaPreservation as AdaPreservation
 import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTraces (
   onlyValidChainSignalsAreGenerated,
@@ -35,11 +37,15 @@ import qualified Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces as ClassifyTra
  )
 import qualified Test.Cardano.Ledger.Shelley.Rules.CollisionFreeness as ColllisionFree (tests)
 import qualified Test.Cardano.Ledger.Shelley.Rules.Deleg as Deleg (tests)
-import qualified Test.Cardano.Ledger.Shelley.Rules.IncrementalStake as IncrementalStake (incrStakeComputationTest)
+import qualified Test.Cardano.Ledger.Shelley.Rules.IncrementalStake as IncrementalStake (
+  incrStakeComputationTest,
+ )
 import qualified Test.Cardano.Ledger.Shelley.Rules.Pool as Pool (tests)
 import qualified Test.Cardano.Ledger.Shelley.Rules.PoolReap as PoolReap (tests)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
-import qualified Test.Cardano.Ledger.Shelley.ShelleyTranslation as ShelleyTranslation (testGroupShelleyTranslation)
+import qualified Test.Cardano.Ledger.Shelley.ShelleyTranslation as ShelleyTranslation (
+  testGroupShelleyTranslation,
+ )
 import Test.Cardano.Ledger.Shelley.Utils (ChainProperty)
 import Test.QuickCheck (Args (maxSuccess), stdArgs)
 import Test.Tasty (TestTree, localOption, testGroup)
@@ -62,7 +68,9 @@ commonTests ::
   ) =>
   [TestTree]
 commonTests =
-  [ (localOption (TQC.QuickCheckMaxRatio 100) $ (ClassifyTraces.relevantCasesAreCovered @era (maxSuccess stdArgs)))
+  [ ( localOption (TQC.QuickCheckMaxRatio 100) $
+        (ClassifyTraces.relevantCasesAreCovered @era (maxSuccess stdArgs))
+    )
   , Deleg.tests @era
   , Pool.tests @era
   , PoolReap.tests @era

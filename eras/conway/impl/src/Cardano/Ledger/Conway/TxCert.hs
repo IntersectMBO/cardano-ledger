@@ -66,7 +66,12 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance (Anchor)
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams, ppDRepDepositL)
-import Cardano.Ledger.Credential (Credential (..), StakeCredential, credKeyHashWitness, credScriptHash)
+import Cardano.Ledger.Credential (
+  Credential (..),
+  StakeCredential,
+  credKeyHashWitness,
+  credScriptHash,
+ )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -178,21 +183,32 @@ class ShelleyEraTxCert era => ConwayEraTxCert era where
     TxCert era -> Maybe (StakeCredential (EraCrypto era), Delegatee (EraCrypto era), Coin)
 
   mkAuthCommitteeHotKeyTxCert ::
-    Credential 'ColdCommitteeRole (EraCrypto era) -> Credential 'HotCommitteeRole (EraCrypto era) -> TxCert era
+    Credential 'ColdCommitteeRole (EraCrypto era) ->
+    Credential 'HotCommitteeRole (EraCrypto era) ->
+    TxCert era
   getAuthCommitteeHotKeyTxCert ::
-    TxCert era -> Maybe (Credential 'ColdCommitteeRole (EraCrypto era), Credential 'HotCommitteeRole (EraCrypto era))
+    TxCert era ->
+    Maybe (Credential 'ColdCommitteeRole (EraCrypto era), Credential 'HotCommitteeRole (EraCrypto era))
 
-  mkResignCommitteeColdTxCert :: Credential 'ColdCommitteeRole (EraCrypto era) -> StrictMaybe (Anchor (EraCrypto era)) -> TxCert era
-  getResignCommitteeColdTxCert :: TxCert era -> Maybe (Credential 'ColdCommitteeRole (EraCrypto era), StrictMaybe (Anchor (EraCrypto era)))
+  mkResignCommitteeColdTxCert ::
+    Credential 'ColdCommitteeRole (EraCrypto era) -> StrictMaybe (Anchor (EraCrypto era)) -> TxCert era
+  getResignCommitteeColdTxCert ::
+    TxCert era ->
+    Maybe (Credential 'ColdCommitteeRole (EraCrypto era), StrictMaybe (Anchor (EraCrypto era)))
 
-  mkRegDRepTxCert :: Credential 'DRepRole (EraCrypto era) -> Coin -> StrictMaybe (Anchor (EraCrypto era)) -> TxCert era
-  getRegDRepTxCert :: TxCert era -> Maybe (Credential 'DRepRole (EraCrypto era), Coin, StrictMaybe (Anchor (EraCrypto era)))
+  mkRegDRepTxCert ::
+    Credential 'DRepRole (EraCrypto era) -> Coin -> StrictMaybe (Anchor (EraCrypto era)) -> TxCert era
+  getRegDRepTxCert ::
+    TxCert era ->
+    Maybe (Credential 'DRepRole (EraCrypto era), Coin, StrictMaybe (Anchor (EraCrypto era)))
 
   mkUnRegDRepTxCert :: Credential 'DRepRole (EraCrypto era) -> Coin -> TxCert era
   getUnRegDRepTxCert :: TxCert era -> Maybe (Credential 'DRepRole (EraCrypto era), Coin)
 
-  mkUpdateDRepTxCert :: Credential 'DRepRole (EraCrypto era) -> StrictMaybe (Anchor (EraCrypto era)) -> TxCert era
-  getUpdateDRepTxCert :: TxCert era -> Maybe (Credential 'DRepRole (EraCrypto era), StrictMaybe (Anchor (EraCrypto era)))
+  mkUpdateDRepTxCert ::
+    Credential 'DRepRole (EraCrypto era) -> StrictMaybe (Anchor (EraCrypto era)) -> TxCert era
+  getUpdateDRepTxCert ::
+    TxCert era -> Maybe (Credential 'DRepRole (EraCrypto era), StrictMaybe (Anchor (EraCrypto era)))
 
 instance Crypto c => ConwayEraTxCert (ConwayEra c) where
   mkRegDepositTxCert cred c = ConwayTxCertDeleg $ ConwayRegCert cred $ SJust c

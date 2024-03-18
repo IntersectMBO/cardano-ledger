@@ -351,7 +351,8 @@ data Rep era t where
   CommitteeAuthorizationR :: Era era => Rep era (CommitteeAuthorization (EraCrypto era))
   VStateR :: Era era => Rep era (VState era)
   EnactStateR :: Reflect era => Rep era (EnactState era)
-  DRepPulserR :: (RunConwayRatify era, Reflect era) => Rep era (DRepPulser era Identity (RatifyState era))
+  DRepPulserR ::
+    (RunConwayRatify era, Reflect era) => Rep era (DRepPulser era Identity (RatifyState era))
   DelegateeR :: Era era => Rep era (Delegatee (EraCrypto era))
   VoteR :: Rep era Vote
 
@@ -567,7 +568,15 @@ synopsis (a :-> b) _ = "(Arrow " ++ show a ++ " " ++ show b ++ ")"
 synopsis Word64R w = show w
 synopsis rep@(MapR a b) mp = case Map.toList mp of
   [] -> "(empty::Map " ++ show a ++ " " ++ show b ++ ")"
-  ((d, r) : _) -> "Map{" ++ synopsis a d ++ " -> " ++ synopsis b r ++ " | size = " ++ show (Map.size mp) ++ synSum rep mp ++ "}"
+  ((d, r) : _) ->
+    "Map{"
+      ++ synopsis a d
+      ++ " -> "
+      ++ synopsis b r
+      ++ " | size = "
+      ++ show (Map.size mp)
+      ++ synSum rep mp
+      ++ "}"
 synopsis (SetR IntR) x = "Set" ++ show (Set.toList x)
 synopsis (SetR Word64R) x = "Set" ++ show (Set.toList x)
 synopsis rep@(SetR a) t = case Set.elems t of
@@ -743,7 +752,10 @@ genSizedRep _ Word64R = choose (0, 1000)
 genSizedRep n IntR = pure n
 genSizedRep n NaturalR = pure $ fromIntegral n
 genSizedRep _ FloatR = arbitrary
-genSizedRep n TxInR = TxIn <$> arbitrary <*> (mkTxIxPartial . fromIntegral <$> choose (2, min n (fromIntegral (maxBound :: Word16))))
+genSizedRep n TxInR =
+  TxIn
+    <$> arbitrary
+    <*> (mkTxIxPartial . fromIntegral <$> choose (2, min n (fromIntegral (maxBound :: Word16))))
 genSizedRep _ CharR = arbitrary
 genSizedRep _ (ValueR p) = genValue p
 genSizedRep _ (TxOutR p) = genTxOut p

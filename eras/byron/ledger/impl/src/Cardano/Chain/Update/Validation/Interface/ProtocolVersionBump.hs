@@ -59,4 +59,6 @@ tryBumpVersion env st =
     Environment {k, epochFirstSlot, candidateProtocolVersions} = env
 
     stableCandidates =
-      filter ((\x -> addSlotCount (kUpdateStabilityParam k) x <= epochFirstSlot) . cpuSlot) candidateProtocolVersions
+      filter
+        ((\x -> addSlotCount (kUpdateStabilityParam k) x <= epochFirstSlot) . cpuSlot)
+        candidateProtocolVersions

@@ -51,7 +51,13 @@ import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Version (Version, byronProtVer)
 import Cardano.Slotting.Block (BlockNo (..))
-import Cardano.Slotting.Slot (EpochInterval (..), EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (..))
+import Cardano.Slotting.Slot (
+  EpochInterval (..),
+  EpochNo (..),
+  EpochSize (..),
+  SlotNo (..),
+  WithOrigin (..),
+ )
 import Cardano.Slotting.Time (SystemStart (..))
 import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray, fromByteArray)

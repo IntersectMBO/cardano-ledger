@@ -98,7 +98,8 @@ import Test.QuickCheck (discard, shuffle)
 -- ===================================================
 
 -- | Given an (Env era) construct the pair the the LendgerEnv and the LedgerState
-getSTSLedgerEnv :: Reflect era => Proof era -> TxIx -> Env era -> Typed (LedgerEnv era, LedgerState era)
+getSTSLedgerEnv ::
+  Reflect era => Proof era -> TxIx -> Env era -> Typed (LedgerEnv era, LedgerState era)
 getSTSLedgerEnv proof txIx env = do
   ledgerstate <- runTarget env (ledgerStateT proof)
   slot <- runTerm env currentSlot
@@ -155,7 +156,13 @@ simpleTxBody proof feeEstimate = do
   (input, TxOutF _ out) <- do
     zs <- liftGen (shuffle utxopairs)
     case zs of
-      [] -> trace ("There are no entries in the UTxO that are big enough for the feeEstimate: " ++ show feeEstimate ++ " Discard") discard
+      [] ->
+        trace
+          ( "There are no entries in the UTxO that are big enough for the feeEstimate: "
+              ++ show feeEstimate
+              ++ " Discard"
+          )
+          discard
       (x : _) -> pure x
   let inputCoin = out ^. coinTxOutL
   addr <- fromSetTerm addrUniv

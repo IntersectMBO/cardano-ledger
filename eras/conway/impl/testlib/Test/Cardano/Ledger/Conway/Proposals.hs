@@ -77,6 +77,7 @@ spec = do
       prop "Enacting and expiring exhaustive lineages reduces Proposals to their roots" $
         \(ProposalsForEnactment ps toEnact toExpire :: ProposalsForEnactment Conway) -> do
           let (ps', enactedRemoved, expiredRemoved) = proposalsApplyEnactment toEnact toExpire ps
-          Set.fromList (toList toEnact) `shouldSatisfy` (`Set.isSubsetOf` Set.fromList (Map.elems enactedRemoved))
+          Set.fromList (toList toEnact)
+            `shouldSatisfy` (`Set.isSubsetOf` Set.fromList (Map.elems enactedRemoved))
           Set.fromList (toList toExpire) `shouldSatisfy` (`Set.isSubsetOf` Map.keysSet expiredRemoved)
           proposalsSize ps' `shouldBe` 0

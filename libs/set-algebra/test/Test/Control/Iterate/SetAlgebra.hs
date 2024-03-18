@@ -185,10 +185,16 @@ evalTests =
     , evalTest "m0" ((setSingleton 2) ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
     , evalTest "m0" (dom (singleton 2 'z') ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
     , evalTest "m0" (rng (singleton 'z' 2) ⋪ m0) (Map.fromList [(1, 'a'), (4, 'g')])
-    , evalTest "m0" ((Map.fromList [(1, 'a'), (2, 'n'), (3, 'r')]) ∪ (singleton 2 'b')) (Map.fromList [(1 :: Int, 'a'), (2, 'n'), (3, 'r')])
+    , evalTest
+        "m0"
+        ((Map.fromList [(1, 'a'), (2, 'n'), (3, 'r')]) ∪ (singleton 2 'b'))
+        (Map.fromList [(1 :: Int, 'a'), (2, 'n'), (3, 'r')])
     , evalTest "m0" ([(1, 'a'), (3, 'r')] ∪ singleton 3 'b') (UnSafeList [(1 :: Int, 'a'), (3, 'r')])
     , evalTest "m0" (70 ∉ dom m12) True
-    , evalTest "((dom stkcred) ◁ deleg) ▷ (dom stpool)" ((dom stkcred ◁ deleg) ▷ dom stpool) (Map.fromList [(5, 'F')])
+    , evalTest
+        "((dom stkcred) ◁ deleg) ▷ (dom stpool)"
+        ((dom stkcred ◁ deleg) ▷ dom stpool)
+        (Map.fromList [(5, 'F')])
     , evalTest "Range exclude 1" (l4 ⋫ Set.empty) (UnSafeList l4)
     , evalTest "Range exclude 2" (l4 ⋫ Fail) (UnSafeList l4)
     , evalTest
@@ -254,7 +260,12 @@ fromListD rep xs = BaseD rep (fromList rep (\l _r -> l) xs)
 -- Tests where we vary how we represent l1 and l2 (the f in (Iter f) )
 -- and see that we always get the same answer no matter how we store the data of l1 and l2
 
-testAnd1, testAnd2, testOr, testDiff1, testDiff2 :: Iter g => String -> BaseRep g Int String -> TestTree
+testAnd1
+  , testAnd2
+  , testOr
+  , testDiff1
+  , testDiff2 ::
+    Iter g => String -> BaseRep g Int String -> TestTree
 testAnd1 nm rep =
   testcase
     nm
@@ -272,7 +283,17 @@ testOr nm rep =
   testcase
     nm
     (OrD (fromListD rep l1) (fromListD rep l2) (lift (\x y -> x ++ "-" ++ y)))
-    [(1, "a"), (3, "c"), (4, "d-d"), (5, "e-e"), (6, "f"), (10, "j-j"), (11, "k"), (12, "l"), (21, "v-v"), (26, "z")]
+    [ (1, "a")
+    , (3, "c")
+    , (4, "d-d")
+    , (5, "e-e")
+    , (6, "f")
+    , (10, "j-j")
+    , (11, "k")
+    , (12, "l")
+    , (21, "v-v")
+    , (26, "z")
+    ]
 testDiff1 nm rep =
   testcase
     nm
@@ -313,7 +334,12 @@ testChain nm rep1 rep2 =
   testcase
     nm
     (ChainD (fromListD rep1 l4) (fromListD rep2 l5) (lift (\x (y, v) -> (x, y, v))))
-    [(1, (1, "m", 105)), (2, (2, "a", 101)), (6, (6, "b", 102)), (12, (12, "w", 108)), (50, (50, "q", 107))]
+    [ (1, (1, "m", 105))
+    , (2, (2, "a", 101))
+    , (6, (6, "b", 102))
+    , (12, (12, "w", 108))
+    , (50, (50, "q", 107))
+    ]
 
 testChain2 :: (Iter f, Iter g) => String -> BaseRep f String Int -> BaseRep g Int String -> TestTree
 testChain2 nm rep1 rep2 =
@@ -502,8 +528,14 @@ slowProperties k v m1 m2 s1 s2 rs ls =
       , (qtest (RExclude (Base ListR ls) (Base SetR (Sett rs))), "slow49")
       , (qtest (RExclude (Base ListR ls) (Base SingleR Fail)), "slow50")
       , (qtest (RRestrict (Base MapR m1) (SetSingleton v)), "slow52")
-      , (qtest (RRestrict (DRestrict (Dom (Base MapR m1)) (Base MapR m1)) (Dom (Base MapR (duplicate rs)))), "slow53")
-      , (qtest (RRestrict (DRestrict (Dom (Base MapR m1)) (Base MapR m2)) (Dom (Base ListR (flipRng ls)))), "slow54")
+      ,
+        ( qtest (RRestrict (DRestrict (Dom (Base MapR m1)) (Base MapR m1)) (Dom (Base MapR (duplicate rs))))
+        , "slow53"
+        )
+      ,
+        ( qtest (RRestrict (DRestrict (Dom (Base MapR m1)) (Base MapR m2)) (Dom (Base ListR (flipRng ls))))
+        , "slow54"
+        )
       , (btest (Elem k (Dom (Base ListR ls))), "slow56")
       , (btest (Elem k (Base SetR (Sett s1))), "slow57")
       , (btest (Elem k (Dom (Singleton k v))), "slow58")

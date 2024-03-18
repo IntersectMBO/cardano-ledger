@@ -62,7 +62,8 @@ instance NFData (ShelleySnapPredFailure era)
 instance NoThunks (ShelleySnapPredFailure era)
 
 newtype SnapEvent era
-  = StakeDistEvent (Map (Credential 'Staking (EraCrypto era)) (Coin, KeyHash 'StakePool (EraCrypto era)))
+  = StakeDistEvent
+      (Map (Credential 'Staking (EraCrypto era)) (Coin, KeyHash 'StakePool (EraCrypto era)))
   deriving (Generic)
 
 deriving instance Eq (SnapEvent era)

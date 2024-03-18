@@ -109,11 +109,15 @@ multisigExamples =
     , testCase "script and Key: Alice And Bob and alicePay" testScriptAndSKey
     , testCase "FAIL: script and Key: Alice And Bob and alicePay" testScriptAndSKey'
     , testCase "script and Key: Alice Or Bob and alicePay, only Alice" testScriptAndSKey''
-    , testCase "script and Key: Alice And Bob Or Carl and alicePay, Alice and Carl sign" testScriptAndSKey'''
+    , testCase
+        "script and Key: Alice And Bob Or Carl and alicePay, Alice and Carl sign"
+        testScriptAndSKey'''
     , testCase "withdraw from script locked account, same script" testRwdAliceSignsAlone
     , testCase "FAIL: withdraw from script locked account" testRwdAliceSignsAlone'
     , testCase "withdraw from script locked account, different script" testRwdAliceSignsAlone''
-    , testCase "FAIL: withdraw from script locked account, signed, missing script" testRwdAliceSignsAlone'''
+    , testCase
+        "FAIL: withdraw from script locked account, signed, missing script"
+        testRwdAliceSignsAlone'''
     ]
 
 testAliceSignsAlone :: Assertion

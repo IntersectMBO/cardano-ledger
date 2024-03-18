@@ -68,7 +68,9 @@ vstateGenPreds p = case whichPParams p of
         drepStateList
         (Pat DRepStateR [Arg expire, Arg anchor, Arg deposit])
         [ Random (fieldToTerm anchor)
-        , GenFrom (fieldToTerm expire) (Constr "+200To500" (\(EpochNo n) -> EpochNo <$> choose (n + 200, n + 500)) ^$ currentEpoch)
+        , GenFrom
+            (fieldToTerm expire)
+            (Constr "+200To500" (\(EpochNo n) -> EpochNo <$> choose (n + 200, n + 500)) ^$ currentEpoch)
         , drepDeposit p :=: (fieldToTerm deposit)
         ]
     , drepStateList :=: (Elems currentDRepState)
@@ -279,8 +281,16 @@ certStateGenPreds p =
   , NotMember (Lit CoinR (Coin 0)) (Rng instanTreasury)
   , SumsTo (Right (Coin 1)) instanTreasurySum EQL [SumMap instanTreasury]
   , SumsTo (Right (DeltaCoin 1)) (Delta instanTreasurySum) LTH [One (Delta treasury), One deltaTreasury]
-  , mirAvailTreasury :<-: (Constr "computeAvailTreasury" (availableAfterMIR TreasuryMIR) :$ Mask accountStateT :$ Mask instantaneousRewardsT)
-  , mirAvailReserves :<-: (Constr "computeAvailReserves" (availableAfterMIR ReservesMIR) :$ Mask accountStateT :$ Mask instantaneousRewardsT)
+  , mirAvailTreasury
+      :<-: ( Constr "computeAvailTreasury" (availableAfterMIR TreasuryMIR)
+              :$ Mask accountStateT
+              :$ Mask instantaneousRewardsT
+           )
+  , mirAvailReserves
+      :<-: ( Constr "computeAvailReserves" (availableAfterMIR ReservesMIR)
+              :$ Mask accountStateT
+              :$ Mask instantaneousRewardsT
+           )
   , Dom drepDelegation :⊆: credsUniv
   , Rng drepDelegation :⊆: drepUniv
   ]

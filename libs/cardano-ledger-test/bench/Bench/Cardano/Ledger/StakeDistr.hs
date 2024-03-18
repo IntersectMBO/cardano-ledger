@@ -32,7 +32,11 @@ import Cardano.Ledger.EpochBoundary (
   calculatePoolStake,
  )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), fromNominalDiffTimeMicro, mkShelleyGlobals)
+import Cardano.Ledger.Shelley.Genesis (
+  ShelleyGenesis (..),
+  fromNominalDiffTimeMicro,
+  mkShelleyGlobals,
+ )
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
   FilteredRewards (..),
@@ -62,7 +66,15 @@ import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo)
 import Cardano.Slotting.Time (mkSlotLength)
 import Control.Monad.Reader (Reader, runReader)
-import Control.State.Transition.Extended (Rule, RuleContext, RuleType (Transition), STS (..), TRC (TRC), applySTS, runRule)
+import Control.State.Transition.Extended (
+  Rule,
+  RuleContext,
+  RuleType (Transition),
+  STS (..),
+  TRC (TRC),
+  applySTS,
+  runRule,
+ )
 import Criterion (Benchmark, bench, bgroup, env, nf, whnf)
 import qualified Data.Aeson as Aeson (eitherDecode)
 import Data.ByteString.Lazy as Lazy (readFile)
@@ -147,7 +159,8 @@ mkGlobals genesis pp =
 -- To do this we need to lift them to values not embedded in STS things.
 
 -- | usd to run an action made by applying 'runRule' to an 'Rule' and a 'RuleContext'
-liftRule :: (STS s, BaseM s ~ Reader r) => r -> RuleContext 'Transition s -> Rule s 'Transition p -> p
+liftRule ::
+  (STS s, BaseM s ~ Reader r) => r -> RuleContext 'Transition s -> Rule s 'Transition p -> p
 liftRule globals context rule =
   case flip runReader globals (runRule context rule) of
     (es, []) -> es

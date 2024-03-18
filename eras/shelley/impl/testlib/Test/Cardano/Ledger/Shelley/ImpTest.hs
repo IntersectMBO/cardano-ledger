@@ -104,7 +104,12 @@ import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, seedSizeDSIGN)
 import Cardano.Crypto.Hash (Hash, HashAlgorithm)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as VRF
-import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), RewardAccount (..), bootstrapKeyHash)
+import Cardano.Ledger.Address (
+  Addr (..),
+  BootstrapAddress (..),
+  RewardAccount (..),
+  bootstrapKeyHash,
+ )
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   EpochSize (..),
@@ -183,7 +188,12 @@ import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Writer.Class (MonadWriter (..))
 import Control.State.Transition (STS (..), TRC (..), applySTSOptsEither)
-import Control.State.Transition.Extended (ApplySTSOpts (..), AssertionPolicy (..), SingEP (..), ValidationPolicy (..))
+import Control.State.Transition.Extended (
+  ApplySTSOpts (..),
+  AssertionPolicy (..),
+  SingEP (..),
+  ValidationPolicy (..),
+ )
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..), type (:~:) (..))
 import Data.Default.Class (Default (..))
@@ -293,7 +303,8 @@ impKeyPairsG = to impKeyPairs
 impNativeScriptsL :: Lens' (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (NativeScript era))
 impNativeScriptsL = lens impNativeScripts (\x y -> x {impNativeScripts = y})
 
-impNativeScriptsG :: SimpleGetter (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (NativeScript era))
+impNativeScriptsG ::
+  SimpleGetter (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (NativeScript era))
 impNativeScriptsG = impNativeScriptsL
 
 impEventsL :: Lens' (ImpTestState era) [SomeSTSEvent era]
@@ -1129,7 +1140,8 @@ addKeyPair keyPair@(KeyPair vk _) = do
 
 -- | Looks up the `KeyPair` corresponding to the `KeyHash`. The `KeyHash` must be
 -- created with `freshKeyHash` for this to work.
-lookupKeyPair :: HasCallStack => KeyHash r (EraCrypto era) -> ImpTestM era (KeyPair r (EraCrypto era))
+lookupKeyPair ::
+  HasCallStack => KeyHash r (EraCrypto era) -> ImpTestM era (KeyPair r (EraCrypto era))
 lookupKeyPair keyHash = do
   keyPairs <- gets impKeyPairs
   case Map.lookup keyHash keyPairs of

@@ -776,7 +776,8 @@ constitutionSpec =
         constitution <- arbitrary
         gaidConstitutionProp <- enactConstitution SNothing constitution dRep committeeMember
         constitution1 <- arbitrary
-        void $ enactConstitution (SJust $ GovPurposeId gaidConstitutionProp) constitution1 dRep committeeMember
+        void $
+          enactConstitution (SJust $ GovPurposeId gaidConstitutionProp) constitution1 dRep committeeMember
 
     describe "rejected for" $ do
       it "empty PrevGovId after the first constitution was enacted" $ do

@@ -7,7 +7,14 @@ import Data.Char (toLower)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import System.Console.Haskeline (InputT, defaultSettings, getInputLine, outputStrLn, runInputT, setComplete)
+import System.Console.Haskeline (
+  InputT,
+  defaultSettings,
+  getInputLine,
+  outputStrLn,
+  runInputT,
+  setComplete,
+ )
 import System.Console.Haskeline.Completion (completeWord, simpleCompletion)
 import Test.Cardano.Ledger.Constrained.Env
 import Test.Cardano.Ledger.Constrained.Size (seps)

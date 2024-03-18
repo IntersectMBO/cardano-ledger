@@ -98,8 +98,10 @@ data ShelleyPoolreapPredFailure era -- No predicate failures
 instance NFData (ShelleyPoolreapPredFailure era)
 
 data ShelleyPoolreapEvent era = RetiredPools
-  { refundPools :: Map.Map (Credential 'Staking (EraCrypto era)) (Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin)
-  , unclaimedPools :: Map.Map (Credential 'Staking (EraCrypto era)) (Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin)
+  { refundPools ::
+      Map.Map (Credential 'Staking (EraCrypto era)) (Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin)
+  , unclaimedPools ::
+      Map.Map (Credential 'Staking (EraCrypto era)) (Map.Map (KeyHash 'StakePool (EraCrypto era)) Coin)
   , epochNo :: EpochNo
   }
   deriving (Generic)
@@ -161,7 +163,8 @@ poolReapTransition = do
       Map.partitionWithKey (\k _ -> Set.member k retired) (psDeposits ps)
     rewardAccounts :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era))
     rewardAccounts = Map.map ppRewardAccount $ eval (retired ◁ psStakePoolParams ps)
-    rewardAccounts_ :: Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era), Coin)
+    rewardAccounts_ ::
+      Map.Map (KeyHash 'StakePool (EraCrypto era)) (RewardAccount (EraCrypto era), Coin)
     rewardAccounts_ = Map.intersectionWith (,) rewardAccounts retiringDeposits
     rewardAccounts' :: Map.Map (RewardAccount (EraCrypto era)) Coin
     rewardAccounts' =

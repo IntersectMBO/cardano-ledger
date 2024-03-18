@@ -313,7 +313,8 @@ testUTXOspecialCase wit@(UTXOW proof) utxo pparam tx expected =
 
 -- | This type is what you get when you use runSTS in the UTXOW rule. It is also
 --   the type one uses for expected answers, to compare the 'computed' against 'expected'
-type Result era = Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era))
+type Result era =
+  Either (NonEmpty (PredicateFailure (EraRule "UTXOW" era))) (State (EraRule "UTXOW" era))
 
 testUTXOWwith ::
   forall era.
@@ -462,7 +463,11 @@ findMismatch ::
   Maybe (PredicateFailure (EraRule "UTXOS" era))
 findMismatch Alonzo (ShelleyInAlonzoUtxowPredFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just $ injectFailure x
 findMismatch Babbage (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just $ injectFailure x
-findMismatch Conway (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(Conway.ValidationTagMismatch _ _)))) = Just $ injectFailure x
+findMismatch
+  Conway
+  ( Babbage.UtxoFailure
+      (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(Conway.ValidationTagMismatch _ _)))
+    ) = Just $ injectFailure x
 findMismatch _ _ = Nothing
 
 isSubset :: (Foldable t, Eq a) => t a -> t a -> Bool

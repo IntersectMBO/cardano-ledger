@@ -128,11 +128,19 @@ pipeToGraph :: Era era => Stage era -> HashSet (Name era) -> TraceM era (DependG
 pipeToGraph (Stage info ps) alreadyDefined = do
   simple <- liftCounter rewriteGen ps
   orderedNames <- liftTyped $ initialOrder info simple
-  liftTyped $ mkDependGraph (length orderedNames) [] alreadyDefined orderedNames [] (Prelude.filter notBefore simple)
+  liftTyped $
+    mkDependGraph
+      (length orderedNames)
+      []
+      alreadyDefined
+      orderedNames
+      []
+      (Prelude.filter notBefore simple)
 
 -- | Merge a Pipeline into an existing DependGraph, given the set of variables
 --   that have aready been solved for, to get a larger DependGraph
-mergePipeline :: Era era => Pipeline era -> HashSet (Name era) -> DependGraph era -> TraceM era (DependGraph era)
+mergePipeline ::
+  Era era => Pipeline era -> HashSet (Name era) -> DependGraph era -> TraceM era (DependGraph era)
 mergePipeline [] _ graph = pure graph
 mergePipeline (pipe : more) defined (DependGraph xs) = do
   DependGraph ys <- pipeToGraph pipe defined
@@ -152,7 +160,8 @@ solvePipeline2 pipes = do
 main :: IO ()
 main = do
   let proof = Babbage
-  ((env, DependGraph zs), _, _) <- generate (runTraceM 0 emptyEnv (solvePipeline2 (ledgerPipeline def proof)))
+  ((env, DependGraph zs), _, _) <-
+    generate (runTraceM 0 emptyEnv (solvePipeline2 (ledgerPipeline def proof)))
   let vs = varsOfTarget HashSet.empty dstateT
       ok = any (`HashSet.member` vs) . fst
   putStrLn (show (DependGraph (filter ok zs)))

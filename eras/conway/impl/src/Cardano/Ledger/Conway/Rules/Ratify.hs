@@ -26,7 +26,12 @@ module Cardano.Ledger.Conway.Rules.Ratify (
   withdrawalCanWithdraw,
 ) where
 
-import Cardano.Ledger.BaseTypes (BoundedRational (..), ShelleyBase, StrictMaybe (..), addEpochInterval)
+import Cardano.Ledger.BaseTypes (
+  BoundedRational (..),
+  ShelleyBase,
+  StrictMaybe (..),
+  addEpochInterval,
+ )
 import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (csCommitteeCreds))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core (
@@ -164,7 +169,8 @@ committeeAcceptedRatio members votes committeeState currentEpoch
                 Just VoteYes -> (yes + 1, tot + 1) -- member voted "yes"
     (yesVotes, totalExcludingAbstain) = Map.foldlWithKey' accumVotes (0, 0) members
 
-spoAccepted :: ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
+spoAccepted ::
+  ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
 spoAccepted re rs gas =
   case votingStakePoolThreshold rs (gasAction gas) of
     -- Short circuit on zero threshold in order to avoid redundant computation.
@@ -216,7 +222,8 @@ spoAcceptedRatio
               Just VoteYes -> (d, mempty)
               Just Abstain -> (mempty, d)
 
-dRepAccepted :: ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
+dRepAccepted ::
+  ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
 dRepAccepted re rs GovActionState {gasDRepVotes, gasProposalProcedure} =
   case votingDRepThreshold rs govAction of
     SJust r ->

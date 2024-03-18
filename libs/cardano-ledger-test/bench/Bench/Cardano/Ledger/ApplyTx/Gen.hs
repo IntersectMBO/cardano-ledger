@@ -36,7 +36,10 @@ import Test.Control.State.Transition.Trace (
   Trace (..),
   sourceSignalTargets,
  )
-import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (BaseEnv), traceFromInitState)
+import Test.Control.State.Transition.Trace.Generator.QuickCheck (
+  HasTrace (BaseEnv),
+  traceFromInitState,
+ )
 import Test.QuickCheck.Gen (unGen)
 import Test.QuickCheck.Random (mkQCGen)
 

@@ -362,7 +362,8 @@ referenceInputsBabbageTxBodyL =
     \txBodyRaw reference -> txBodyRaw {btbrReferenceInputs = reference}
 {-# INLINEABLE referenceInputsBabbageTxBodyL #-}
 
-totalCollateralBabbageTxBodyL :: BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe Coin)
+totalCollateralBabbageTxBodyL ::
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe Coin)
 totalCollateralBabbageTxBodyL =
   lensMemoRawType btbrTotalCollateral $
     \txBodyRaw totalCollateral -> txBodyRaw {btbrTotalCollateral = totalCollateral}

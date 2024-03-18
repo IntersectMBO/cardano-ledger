@@ -4,7 +4,12 @@
 module Test.Cardano.Ledger.Conway.GovActionReorderSpec (spec) where
 
 import Cardano.Ledger.Conway (Conway)
-import Cardano.Ledger.Conway.Governance (GovActionState (..), actionPriority, gasAction, reorderActions)
+import Cardano.Ledger.Conway.Governance (
+  GovActionState (..),
+  actionPriority,
+  gasAction,
+  reorderActions,
+ )
 import Data.Foldable (Foldable (..))
 import Data.List (sort)
 import qualified Data.Sequence.Strict as Seq

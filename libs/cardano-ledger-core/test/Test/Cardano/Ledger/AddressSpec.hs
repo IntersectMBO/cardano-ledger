@@ -15,7 +15,12 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.Binary (Version, byronProtVer, decodeFull', natVersion, serialize')
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH), StandardCrypto)
-import Cardano.Ledger.Keys (BootstrapWitness (..), bootstrapWitKeyHash, coerceKeyRole, unpackByronVKey)
+import Cardano.Ledger.Keys (
+  BootstrapWitness (..),
+  bootstrapWitKeyHash,
+  coerceKeyRole,
+  unpackByronVKey,
+ )
 import Control.Monad.Trans.Fail.String (errorFail)
 import qualified Data.Binary.Put as B
 import Data.Bits
@@ -225,7 +230,8 @@ propDecompactErrors addr = do
     $ isLeft
     $ decodeAddrEither @c badAddr
 
-propDeserializeRewardAccountErrors :: forall c. Crypto c => Version -> RewardAccount c -> Gen Property
+propDeserializeRewardAccountErrors ::
+  forall c. Crypto c => Version -> RewardAccount c -> Gen Property
 propDeserializeRewardAccountErrors v acnt = do
   let bs = serialize' v acnt
       flipHeaderBit b =

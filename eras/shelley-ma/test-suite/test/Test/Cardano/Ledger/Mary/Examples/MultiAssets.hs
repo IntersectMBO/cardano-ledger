@@ -109,11 +109,13 @@ makeMaryTxBody ins outs interval minted =
     & vldtTxBodyL .~ interval
     & mintTxBodyL .~ minted
 
-policyFailure :: PolicyID StandardCrypto -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER Mary))) (UTxO Mary)
+policyFailure ::
+  PolicyID StandardCrypto -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER Mary))) (UTxO Mary)
 policyFailure p =
   Left . pure . UtxowFailure . ScriptWitnessNotValidatingUTXOW $ Set.singleton (policyID p)
 
-outTooBigFailure :: ShelleyTxOut Mary -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER Mary))) (UTxO Mary)
+outTooBigFailure ::
+  ShelleyTxOut Mary -> Either (NonEmpty (PredicateFailure (ShelleyLEDGER Mary))) (UTxO Mary)
 outTooBigFailure out =
   Left . pure . UtxowFailure . UtxoFailure $ OutputTooBigUTxO [out]
 
@@ -360,7 +362,10 @@ expectedUTxOTimeEx2 :: UTxO Mary
 expectedUTxOTimeEx2 =
   UTxO $
     Map.fromList
-      [ (mkTxInPartial (txIdTxBody txbodyTimeEx2) 0, ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2))
+      [
+        ( mkTxInPartial (txIdTxBody txbodyTimeEx2) 0
+        , ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2)
+        )
       , (mkTxInPartial (txIdTxBody txbodyTimeEx2) 1, ShelleyTxOut Cast.bobAddr bobTokensTimeEx2)
       , (mkTxInPartial bootstrapTxId 1, ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]

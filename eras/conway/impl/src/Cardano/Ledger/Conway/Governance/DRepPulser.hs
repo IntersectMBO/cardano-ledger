@@ -102,7 +102,8 @@ psProposalsL = lens psProposals (\x y -> x {psProposals = y})
 psDRepDistrL :: Lens' (PulsingSnapshot era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
 psDRepDistrL = lens psDRepDistr (\x y -> x {psDRepDistr = y})
 
-psDRepStateL :: Lens' (PulsingSnapshot era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+psDRepStateL ::
+  Lens' (PulsingSnapshot era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 psDRepStateL = lens psDRepState (\x y -> x {psDRepState = y})
 
 deriving instance EraPParams era => Eq (PulsingSnapshot era)
@@ -313,10 +314,14 @@ class
   ) =>
   RunConwayRatify era
   where
-  runConwayRatify :: Globals -> RatifyEnv era -> RatifyState era -> RatifySignal era -> RatifyState era
+  runConwayRatify ::
+    Globals -> RatifyEnv era -> RatifyState era -> RatifySignal era -> RatifyState era
   runConwayRatify globals ratifyEnv ratifyState (RatifySignal ratifySig) =
     let ratifyResult =
-          runReader (applySTS @(ConwayRATIFY era) (TRC (ratifyEnv, ratifyState, RatifySignal $ reorderActions ratifySig))) globals
+          runReader
+            ( applySTS @(ConwayRATIFY era) (TRC (ratifyEnv, ratifyState, RatifySignal $ reorderActions ratifySig))
+            )
+            globals
      in case ratifyResult of
           Left ps ->
             error (unlines ("Impossible: RATIFY rule never fails, but it did:" : map show (toList ps)))

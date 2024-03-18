@@ -19,4 +19,5 @@ data VRFKeyPair c = VRFKeyPair
   , vrfVerKey :: !(VerKeyVRF c)
   }
 
-deriving instance (Show (VRF.SignKeyVRF (VRF c)), Show (VRF.VerKeyVRF (VRF c))) => Show (VRFKeyPair c)
+deriving instance
+  (Show (VRF.SignKeyVRF (VRF c)), Show (VRF.VerKeyVRF (VRF c))) => Show (VRFKeyPair c)

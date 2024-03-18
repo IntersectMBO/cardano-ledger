@@ -69,7 +69,15 @@ data Assembler era where
 stoi :: OrderInfo
 stoi = standardOrderInfo
 
-genMaybeCounterExample :: Reflect era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen (Maybe String)
+genMaybeCounterExample ::
+  Reflect era =>
+  Proof era ->
+  String ->
+  Bool ->
+  OrderInfo ->
+  [Pred era] ->
+  Assembler era ->
+  Gen (Maybe String)
 genMaybeCounterExample proof _testname loud order cs target = do
   let cs3 = removeEqual cs []
   let cs4 = removeSameVar cs3 []
@@ -114,7 +122,15 @@ genMaybeCounterExample proof _testname loud order cs target = do
     else pure ans
 
 -- | Test that 'cs' :: [Pred] has a solution
-testn :: Reflect era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> Gen Property
+testn ::
+  Reflect era =>
+  Proof era ->
+  String ->
+  Bool ->
+  OrderInfo ->
+  [Pred era] ->
+  Assembler era ->
+  Gen Property
 testn proof testname loud order cs target = do
   result <- genMaybeCounterExample proof testname loud order cs target
   case result of
@@ -122,7 +138,8 @@ testn proof testname loud order cs target = do
     Just xs -> pure $ counterexample xs False
 
 -- | Test that 'cs' :: [Pred] does NOT have a solution. We expect a failure
-failn :: Reflect era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> IO ()
+failn ::
+  Reflect era => Proof era -> String -> Bool -> OrderInfo -> [Pred era] -> Assembler era -> IO ()
 failn proof message loud order cs target = do
   shouldThrow
     ( do
@@ -588,7 +605,11 @@ utxostatePreds :: Reflect era => Proof era -> [Pred era]
 utxostatePreds proof =
   [ SumsTo (Right (Coin 1)) utxoCoin EQL [ProjMap CoinR outputCoinL (utxo proof)]
   , SumsTo (Right (Coin 1)) deposits EQL [SumMap stakeDeposits, SumMap poolDeposits]
-  , SumsTo (Right (Coin 1)) totalAda EQL [One utxoCoin, One treasury, One reserves, One fees, One deposits, SumMap rewards]
+  , SumsTo
+      (Right (Coin 1))
+      totalAda
+      EQL
+      [One utxoCoin, One treasury, One reserves, One fees, One deposits, SumMap rewards]
   , Random fees
   , Random (pparamProposals proof)
   , Random (futurePParamProposals proof)
@@ -612,7 +633,11 @@ epochstatePreds proof =
   , Sized (AtLeast 1) (maxBHSize proof)
   , Sized (AtLeast 1) (maxTxSize proof)
   , -- , Random (maxBBSize proof) -- This will cause underflow on Natural
-    SumsTo (Right (1 % 1000)) (Lit RationalR 1) EQL [ProjMap RationalR individualPoolStakeL markPoolDistr]
+    SumsTo
+      (Right (1 % 1000))
+      (Lit RationalR 1)
+      EQL
+      [ProjMap RationalR individualPoolStakeL markPoolDistr]
   , SumsTo (Right 1) (maxBBSize proof) LTE [One (maxBHSize proof), One (maxTxSize proof)]
   , Component
       (Right (pparams proof))

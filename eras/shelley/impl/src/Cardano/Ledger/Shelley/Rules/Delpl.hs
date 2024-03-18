@@ -44,7 +44,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   certDState,
   certPState,
  )
-import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..), ShelleyDELEG, ShelleyDelegEvent, ShelleyDelegPredFailure)
+import Cardano.Ledger.Shelley.Rules.Deleg (
+  DelegEnv (..),
+  ShelleyDELEG,
+  ShelleyDelegEvent,
+  ShelleyDelegPredFailure,
+ )
 import Cardano.Ledger.Shelley.Rules.Pool (PoolEnv (..), ShelleyPOOL, ShelleyPoolPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Pool as Pool
 import Cardano.Ledger.Shelley.TxCert (GenesisDelegCert (..), ShelleyTxCert (..))
