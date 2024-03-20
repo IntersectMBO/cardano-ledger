@@ -9,6 +9,10 @@ deriving instance Eq AgdaEmpty
 
 deriving instance Eq TxBody
 
+deriving instance Eq Tag
+
+deriving instance Ord Tag
+
 deriving instance Eq TxWitnesses
 
 deriving instance Eq Tx
