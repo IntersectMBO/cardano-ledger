@@ -231,6 +231,9 @@ cradle:
     - path: "libs/cardano-ledger-test/bench/Bench/Cardano/Ledger/StakeDistr.hs"
       component: "cardano-ledger-test:bench:bench"
 
+    - path: "libs/cardano-ledger-test/bench/Bench/Constrained/STS.hs"
+      component: "cardano-ledger-test:bench:bench"
+
     - path: "libs/cardano-ledger-test/benchProperty/Main.hs"
       component: "cardano-ledger-test:bench:benchProperty"
 
@@ -248,6 +251,9 @@ cradle:
 
     - path: "libs/constrained-generators/test"
       component: "constrained-generators:test:constrained"
+
+    - path: "libs/constrained-generators/bench/Main.hs"
+      component: "constrained-generators:bench:bench"
 
     - path: "libs/ledger-state/src"
       component: "lib:ledger-state"

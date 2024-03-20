@@ -15,6 +15,7 @@ module Constrained (
   OrdLike (..),
   Forallable (..),
   Foldy (..),
+  MaybeBounded (..),
   FunctionLike (..),
   Functions (..),
   HOLE (..),
@@ -38,10 +39,15 @@ module Constrained (
   FoldSpec (..),
   genFromSpec,
   genFromSpec_,
+  genFromSpecWithSeed,
   conformsToSpec,
   conformsToSpecProp,
+  giveHint,
   typeSpec,
   con,
+  isCon,
+  onCon,
+  sel,
   caseBoolSpec,
   constrained,
   constrained',
@@ -52,7 +58,11 @@ module Constrained (
   assertExplain,
   caseOn,
   branch,
+  ifElse,
+  onJust,
+  isJust,
   reify,
+  genHint,
   dependsOn,
   forAll,
   forAll',
@@ -65,6 +75,7 @@ module Constrained (
   (<.),
   (==.),
   (/=.),
+  (||.),
   member_,
   subset_,
   disjoint_,
@@ -83,6 +94,12 @@ module Constrained (
   injectFn,
   app,
   lit,
+  -- Working with number-like types
+  emptyNumSpec,
+  combineNumSpec,
+  genFromNumSpec,
+  conformsToNumSpec,
+  toPredsNumSpec,
   -- TODO: this is super yucky, it would be good to implement
   -- the linear lambda thing to get rid of this.
   composeFn,
@@ -102,3 +119,4 @@ where
 import Constrained.GenT as X
 import Constrained.Internals
 import Constrained.List as X
+import Constrained.Spec.Tree as X

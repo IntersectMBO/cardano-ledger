@@ -34,6 +34,7 @@ library
         Constrained.Spec.Tree
         Constrained.Test
         Constrained.Internals
+        Constrained.Bench
 
     hs-source-dirs:   src
     default-language: Haskell2010
@@ -50,7 +51,10 @@ library
         QuickCheck,
         random,
         tasty,
-        tasty-quickcheck
+        tasty-quickcheck,
+        ghc-prim,
+        deepseq,
+        criterion
 
 test-suite constrained
     type:             exitcode-stdio-1.0
@@ -66,3 +70,18 @@ test-suite constrained
         base,
         constrained-generators,
         tasty
+
+benchmark bench
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    hs-source-dirs:   bench
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages -threaded -rtsopts -O2
+
+    build-depends:
+        base,
+        criterion,
+        constrained-generators

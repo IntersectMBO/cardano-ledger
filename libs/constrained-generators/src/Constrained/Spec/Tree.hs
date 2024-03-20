@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -11,9 +12,11 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Constrained.Spec.Tree (BinTree (..), RoseTree (..), RoseTreeFn, roseRoot_) where
+module Constrained.Spec.Tree (BinTree (..), RoseTree (..), RoseTreeFn, roseRoot_, RoseTreeSpec (..)) where
 
+import Control.DeepSeq
 import Data.Kind
+import GHC.Generics
 
 import Constrained.Base
 import Constrained.Core
@@ -33,7 +36,9 @@ data BinTree a
   deriving (Ord, Eq, Show)
 
 data RoseTree a = RoseNode a [RoseTree a]
-  deriving (Ord, Eq, Show)
+  deriving (Ord, Eq, Show, Generic)
+
+instance NFData a => NFData (RoseTree a)
 
 ------------------------------------------------------------------------
 -- HasSpec for BinTree
@@ -108,11 +113,6 @@ instance Forallable (RoseTree a) (a, [RoseTree a]) where
   forAllSpec = guardRoseSpec . RoseTreeSpec Nothing 8000 TrueSpec
   forAllToList (RoseNode a children) = (a, children) : concatMap forAllToList children
 
-isErrorLike :: Spec fn a -> Bool
-isErrorLike ErrorSpec {} = True
-isErrorLike (MemberSpec []) = True
-isErrorLike _ = False
-
 -- TODO: get rid of this when we implement `cardinality`
 -- in `HasSpec`
 guardRoseSpec :: HasSpec fn (RoseTree a) => RoseTreeSpec fn a -> Spec fn (RoseTree a)
@@ -139,26 +139,26 @@ instance (HasSpec fn a, Member (RoseTreeFn fn) fn) => HasSpec fn (RoseTree a) wh
       rs'' = rs <> rs'
       s'' = s <> s'
 
-  conformsTo (RoseNode a children) spec@(RoseTreeSpec _ _ rs s) =
+  conformsTo (RoseNode a children) (RoseTreeSpec _ _ rs s) =
     and
       [ (a, children) `conformsToSpec` s
-      , all (`conformsTo` spec) children
+      , all (\(RoseNode a' children') -> (a', children') `conformsToSpec` s) children
       , a `conformsToSpec` rs
       ]
 
   genFromTypeSpec (RoseTreeSpec mal sz rs s) = do
     let sz' = maybe (sz `div` 4) (sz `div`) mal
+        childrenSpec =
+          typeSpec $
+            ListSpec
+              (Just sz')
+              []
+              TrueSpec
+              (typeSpec $ RoseTreeSpec mal sz' TrueSpec s)
+              NoFold
+        innerSpec = s <> typeSpec (Cartesian rs childrenSpec)
     fmap (uncurry RoseNode) $
-      genFromSpec @fn @(a, [RoseTree a]) $
-        constrained $ \ctx ->
-          [ forAll (snd_ ctx) $ \t ->
-              [ forAll t (`satisfies` s)
-              , genHint (mal, sz') t
-              ]
-          , assert $ length_ (snd_ ctx) <=. lit sz
-          , fst_ ctx `satisfies` rs
-          , ctx `satisfies` s
-          ]
+      genFromSpec @fn @(a, [RoseTree a]) innerSpec
 
   toPreds t (RoseTreeSpec mal sz rs s) =
     (forAll t $ \n -> n `satisfies` s)

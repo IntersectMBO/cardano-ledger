@@ -164,8 +164,11 @@ tests =
     , testSpec "successiveChildren" successiveChildren
     , testSpec "successiveChildren8" successiveChildren8
     , testSpec "roseTreeList" roseTreeList
-    , numberyTests
     , testSpec "orPair" orPair
+    , testSpec "roseTreePairs" roseTreePairs
+    , testSpec "roseTreeMaybe" roseTreeMaybe
+    , testSpec "badTreeInteraction" badTreeInteraction
+    , numberyTests
     , sizeTests
     , numNumSpecTree
     ]
@@ -690,6 +693,40 @@ listMustSizeIssue :: Spec BaseFn [Int]
 listMustSizeIssue = constrained $ \xs ->
   [ 1 `elem_` xs
   , length_ xs ==. 1
+  ]
+
+roseTreePairs :: Spec RoseFn (RoseTree ([Int], [Int]))
+roseTreePairs = constrained $ \t ->
+  [ assert $ roseRoot_ t ==. lit ([1 .. 10], [1 .. 10])
+  , forAll' t $ \p ts ->
+      forAll ts $ \t' ->
+        fst_ (roseRoot_ t') ==. snd_ p
+  , genHint (Nothing, 10) t
+  ]
+
+roseTreeMaybe :: Spec RoseFn (RoseTree (Maybe (Int, Int)))
+roseTreeMaybe = constrained $ \t ->
+  [ forAll' t $ \mp ts ->
+      forAll ts $ \t' ->
+        onJust mp $ \p ->
+          onJust (roseRoot_ t') $ \p' ->
+            fst_ p' ==. snd_ p
+  , forAll' t $ \mp _ -> isJust mp
+  , genHint (Nothing, 10) t
+  ]
+
+badTreeInteraction :: Spec RoseFn (RoseTree (Either Int Int))
+badTreeInteraction = constrained $ \t ->
+  [ forAll' t $ \n ts' ->
+      [ isCon @"Right" n
+      , forAll ts' $ \_ -> True
+      ]
+  , forAll' t $ \n ts' ->
+      forAll ts' $ \t' ->
+        [ genHint (Just 4, 10) t'
+        , assert $ roseRoot_ t' ==. n
+        ]
+  , genHint (Just 4, 10) t
   ]
 
 sizeAddOrSub1 :: Spec BaseFn Integer

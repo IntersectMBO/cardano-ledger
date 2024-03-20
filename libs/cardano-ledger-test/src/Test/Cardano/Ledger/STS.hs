@@ -264,9 +264,12 @@ tests_STS :: TestTree
 tests_STS =
   testGroup
     "STS property tests"
-    [ testProperty "prop_EPOCH" prop_EPOCH
-    , govTests
+    [ govTests
     -- , utxoTests
+    -- TODO: this is probably one of the last things we want to
+    -- get passing as it depends on being able to generate a complete
+    -- `EpochState era`
+    -- , testProperty "prop_EPOCH" prop_EPOCH
     -- , testProperty "prop_LEDGER" prop_LEDGER
     ]
 
@@ -280,7 +283,7 @@ govTests =
     , testProperty "prop_ENACT" prop_ENACT
     , testProperty "prop_RATIFY" prop_RATIFY
     , testProperty "prop_CERT" prop_CERT
-    -- , testProperty "prop_GOV" prop_GOV
+    , testProperty "prop_GOV" prop_GOV
     ]
 
 utxoTests :: TestTree

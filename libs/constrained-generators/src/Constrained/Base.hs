@@ -54,6 +54,7 @@ import Data.List (intersect, nub, partition, (\\))
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe
+import Data.Monoid qualified as Monoid
 import Data.Semigroup (Any (..), Max (..), getAll, getMax)
 import Data.Semigroup qualified as Semigroup
 import Data.Set (Set)
@@ -71,6 +72,8 @@ import Prettyprinter
 import System.Random
 import System.Random.Stateful
 import Test.QuickCheck hiding (Args, Fun, forAll)
+import Test.QuickCheck.Gen
+import Test.QuickCheck.Random
 
 import Constrained.Core
 import Constrained.Env
@@ -396,7 +399,7 @@ toCtx ::
   Var v ->
   Term fn a ->
   m (Ctx fn v a)
-toCtx v = go . simplifyTerm
+toCtx v = go -- . simplifyTerm
   where
     go :: forall b. Term fn b -> m (Ctx fn v b)
     go (Lit i) = fatalError ["toCtx (Lit " ++ show i ++ ")"]
@@ -548,8 +551,8 @@ instance HasSpec fn a => Semigroup (Spec fn a) where
         (filter (`notElem` cant) as)
   TypeSpec s cant <> MemberSpec as = MemberSpec as <> TypeSpec s cant
   SuspendedSpec v p <> SuspendedSpec v' p' = SuspendedSpec v (p <> rename v' v p')
-  SuspendedSpec v ps <> s = SuspendedSpec v (optimisePred $ ps <> satisfies (V v) s)
-  s <> SuspendedSpec v ps = SuspendedSpec v (optimisePred $ ps <> satisfies (V v) s)
+  SuspendedSpec v ps <> s = SuspendedSpec v (ps <> satisfies (V v) s)
+  s <> SuspendedSpec v ps = SuspendedSpec v (ps <> satisfies (V v) s)
   TypeSpec s cant <> TypeSpec s' cant' = case combineSpec s s' of
     -- NOTE: This might look like an unnecessary case, but doing
     -- it like this avoids looping.
@@ -803,6 +806,10 @@ genFromSpec_ spec = do
   res <- strictGen $ genFromSpec spec
   errorGE $ fmap pure res
 
+-- | A version of `genFromSpec` that takes a seed and a size and gives you a result
+genFromSpecWithSeed :: forall fn a. (HasCallStack, HasSpec fn a) => Int -> Int -> Spec fn a -> a
+genFromSpecWithSeed seed size spec = unGen (genFromSpec_ spec) (mkQCGen seed) size
+
 genInverse ::
   ( MonadGenError m
   , HasSpec fn a
@@ -839,7 +846,7 @@ flattenPred pIn = go (freeVarNames pIn) [pIn]
       -- before we solve the variables in `t`.
       Let t b -> goBinder fvs b ps (\x -> (assert (t ==. V x) :))
       Exists _ b -> goBinder fvs b ps (const id)
-      _ -> p : go (freeVarNames p <> fvs) ps
+      _ -> p : go fvs ps
 
     goBinder ::
       Set Int ->
@@ -851,27 +858,26 @@ flattenPred pIn = go (freeVarNames pIn) [pIn]
       where
         (x', p') = freshen x p fvs
 
-computeDependencies :: forall fn. Hints fn -> Pred fn -> DependGraph fn
-computeDependencies hints =
-  respecting hints . \case
-    Subst x t p -> computeDependencies hints (substitutePred x t p)
-    Assert _ t -> computeTermDependencies t
-    Reify t _ b ->
-      b `irreflexiveDependencyOn` t
-        <> computeBinderDependencies hints b
-    ForAll set b ->
-      set `irreflexiveDependencyOn` b
-        <> computeBinderDependencies hints b
-    x `DependsOn` y -> x `irreflexiveDependencyOn` y
-    Case t bs ->
-      t `irreflexiveDependencyOn` bs
-        <> foldMapList (computeBinderDependencies hints) bs
-    TruePred -> mempty
-    FalsePred {} -> mempty
-    Block ps -> foldMap (computeDependencies hints) ps
-    Exists _ b -> computeBinderDependencies hints b
-    Let t b -> noDependencies t <> computeBinderDependencies hints b
-    GenHint _ t -> noDependencies t
+computeDependencies :: Pred fn -> DependGraph fn
+computeDependencies = \case
+  Subst x t p -> computeDependencies (substitutePred x t p)
+  Assert _ t -> computeTermDependencies t
+  Reify t _ b ->
+    let innerG = computeBinderDependencies b
+     in innerG <> nodes innerG `irreflexiveDependencyOn` t
+  ForAll set b ->
+    let innerG = computeBinderDependencies b
+     in innerG <> set `irreflexiveDependencyOn` nodes innerG
+  x `DependsOn` y -> x `irreflexiveDependencyOn` y
+  Case t bs ->
+    let innerG = foldMapList (computeBinderDependencies) bs
+     in innerG <> t `irreflexiveDependencyOn` nodes innerG
+  TruePred -> mempty
+  FalsePred {} -> mempty
+  Block ps -> foldMap computeDependencies ps
+  Exists _ b -> computeBinderDependencies b
+  Let t b -> noDependencies t <> computeBinderDependencies b
+  GenHint _ t -> noDependencies t
 
 -- | Linearize a predicate, turning it into a list of variables to solve and
 -- their defining constraints such that each variable can be solved independently.
@@ -879,13 +885,13 @@ prepareLinearization :: BaseUniverse fn => Pred fn -> GE [(Name fn, [Pred fn])]
 prepareLinearization p = do
   let preds = flattenPred p
       hints = computeHints preds
-      graph = transitiveClosure $ hints <> foldMap (computeDependencies hints) preds
+      graph = transitiveClosure $ hints <> respecting hints (foldMap computeDependencies preds)
   linearize preds graph
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
 genFromPreds :: (MonadGenError m, BaseUniverse fn) => Pred fn -> GenT m Env
-genFromPreds preds = do
+genFromPreds (optimisePred -> preds) = do
   -- NOTE: this is just lazy enough that the work of flattening, computing dependencies,
   -- and linearizing is memoized in properties that use `genFromPreds`.
   linear <- runGE $ prepareLinearization preds
@@ -904,19 +910,24 @@ computeHints :: forall fn. [Pred fn] -> Hints fn
 computeHints ps =
   transitiveClosure $ fold [x `irreflexiveDependencyOn` y | DependsOn x y <- ps]
 
-computeBinderDependencies :: Hints fn -> Binder fn a -> DependGraph fn
-computeBinderDependencies hints (x :-> p) =
-  deleteNode (Name x) $ computeDependencies hints p
+computeBinderDependencies :: Binder fn a -> DependGraph fn
+computeBinderDependencies (x :-> p) =
+  deleteNode (Name x) $ computeDependencies p
 
 computeTermDependencies :: Term fn a -> DependGraph fn
-computeTermDependencies (App _ args) = go args
+computeTermDependencies = fst . computeTermDependencies'
+
+computeTermDependencies' :: Term fn a -> (DependGraph fn, Set (Name fn))
+computeTermDependencies' (App _ args) = go args
   where
-    go :: List (Term fn) as -> DependGraph fn
-    go Nil = mempty
+    go :: List (Term fn) as -> (DependGraph fn, Set (Name fn))
+    go Nil = (mempty, mempty)
     go (t :> ts) =
-      let gr = go ts
-       in t `irreflexiveDependencyOn` nodes gr <> computeTermDependencies t <> gr
-computeTermDependencies t = noDependencies t
+      let (gr, ngr) = go ts
+          (tgr, ntgr) = computeTermDependencies' t
+       in (ntgr `irreflexiveDependencyOn` ngr <> tgr <> gr, ngr <> ntgr)
+computeTermDependencies' Lit {} = (mempty, mempty)
+computeTermDependencies' (V x) = (noDependencies (Name x), Set.singleton (Name x))
 
 -- Consider: A + B = C + D
 -- We want to fail if A and B are independent.
@@ -955,23 +966,23 @@ linearize preds graph = do
 ------------------------------------------------------------------------
 
 -- | Precondition: the `Pred fn` defines the `Var a`
-computeSpec :: forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Spec fn a
-computeSpec x p = fromGE ErrorSpec $ case simplifyPred p of
+computeSpecSimplified :: forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Spec fn a
+computeSpecSimplified x p = fromGE ErrorSpec $ case p of
   GenHint h t -> propagateSpec (giveHint h) <$> toCtx x t -- NOTE: this implies you do need to actually propagate hints, e.g. propagate depth control in a `tail` or `cdr` like function
   Subst x' t p' -> pure $ computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
   FalsePred es -> genError es
-  Block ps -> pure $ foldMap (computeSpec x) ps
+  Block ps -> pure $ foldMap (computeSpecSimplified x) ps
   Let t b -> pure $ SuspendedSpec x (Let t b)
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert _ (Lit True) -> pure mempty
   Assert es (Lit False) -> genError (es ++ ["Assert False"])
   Assert es t -> explain es $ propagateSpec (equalSpec True) <$> toCtx x t
   ForAll (Lit s) b -> pure $ foldMap (\val -> computeSpec x $ unBind val b) (forAllToList s)
-  ForAll t b -> propagateSpec (forAllSpec $ computeSpecBinder b) <$> toCtx x t
+  ForAll t b -> propagateSpec (forAllSpec $ computeSpecBinderSimplified b) <$> toCtx x t
   Case (Lit val) bs -> pure $ runCaseOn val bs $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
   Case t branches ->
-    let branchSpecs = mapList computeSpecBinder branches
+    let branchSpecs = mapList computeSpecBinderSimplified branches
      in propagateSpec (caseSpec branchSpecs) <$> toCtx x t
   Reify (Lit val) f (x' :-> p) ->
     pure $ computeSpec x (substPred (singletonEnv x' (f val)) p)
@@ -979,8 +990,15 @@ computeSpec x p = fromGE ErrorSpec $ case simplifyPred p of
   DependsOn {} -> fatalError ["The impossible happened in computeSpec: DependsOn"]
   Reify {} -> fatalError ["The impossible happened in computeSpec: Reify", show x, show p]
 
+-- | Precondition: the `Pred fn` defines the `Var a`
+computeSpec :: forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Spec fn a
+computeSpec x p = computeSpecSimplified x (simplifyPred p)
+
 computeSpecBinder :: Binder fn a -> Spec fn a
 computeSpecBinder (x :-> p) = computeSpec x p
+
+computeSpecBinderSimplified :: Binder fn a -> Spec fn a
+computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 
 caseSpec ::
   forall fn as.
@@ -1033,8 +1051,9 @@ class
     , All (HasSpec fn) as
     ) =>
     f as b ->
-    [RewriteRule fn b]
-  rewriteRules _ = []
+    List (Term fn) as ->
+    Maybe (Term fn b)
+  rewriteRules _ _ = Nothing
 
   mapTypeSpec ::
     ( HasSpec fn a
@@ -1067,11 +1086,12 @@ caseBoolSpec spec cont = case possibleValues spec of
   [b] -> cont b
   _ -> mempty
   where
-    possibleValues TrueSpec = [True, False]
-    possibleValues (TypeSpec () cant) = filter (`notElem` cant) [True, False]
-    possibleValues (MemberSpec es) = es
-    possibleValues ErrorSpec {} = []
-    possibleValues s@(SuspendedSpec {}) = filter (flip conformsToSpec s) [True, False]
+    possibleValues s = filter (flip conformsToSpec s) [True, False]
+
+isErrorLike :: Spec fn a -> Bool
+isErrorLike ErrorSpec {} = True
+isErrorLike (MemberSpec []) = True
+isErrorLike _ = False
 
 ------------------------------------------------------------------------
 -- Dependency Graphs
@@ -1104,7 +1124,7 @@ solvableFrom x s g =
 ------------------------------------------------------------------------
 
 freeVarNames :: forall fn t. HasVariables fn t => t -> Set Int
-freeVarNames = Set.map (\(Name v) -> nameOf v) . freeVarSet
+freeVarNames = Set.mapMonotonic (\(Name v) -> nameOf v) . freeVarSet
 
 data Name fn where
   Name :: HasSpec fn a => Var a -> Name fn
@@ -1112,14 +1132,10 @@ data Name fn where
 deriving instance Show (Name fn)
 
 instance Eq (Name fn) where
-  Name v == Name v'
-    | Just v'' <- cast v = v' == v''
-    | otherwise = False
+  Name (Var i) == Name (Var j) = i == j
 
 instance Ord (Name fn) where
-  compare (Name v) (Name v')
-    | Just v'' <- cast v = compare v'' v'
-    | otherwise = compare (typeRep v) (typeRep v')
+  compare (Name (Var i)) (Name (Var j)) = compare i j
 
 newtype FreeVars fn = FreeVars {unFreeVars :: Map (Name fn) Int}
   deriving (Show)
@@ -1140,32 +1156,64 @@ instance Monoid (FreeVars fn) where
   mempty = FreeVars mempty
 
 freeVar :: Name fn -> FreeVars fn
-freeVar n = FreeVars $ Map.singleton n 1
+freeVar n = singleton n 1
+
+singleton :: Name fn -> Int -> FreeVars fn
+singleton n k = FreeVars $ Map.singleton n k
 
 without :: Foldable t => FreeVars fn -> t (Name fn) -> FreeVars fn
 without (FreeVars m) remove = FreeVars $ foldr Map.delete m (toList remove)
 
 class HasVariables fn a | a -> fn where
   freeVars :: a -> FreeVars fn
-
-freeVarSet :: HasVariables fn a => a -> Set (Name fn)
-freeVarSet = Map.keysSet . unFreeVars . freeVars
+  freeVarSet :: a -> Set (Name fn)
+  freeVarSet = Map.keysSet . unFreeVars . freeVars
+  countOf :: Name fn -> a -> Int
+  countOf n = count n . freeVars
+  appearsIn :: Name fn -> a -> Bool
+  appearsIn n = (> 0) . count n . freeVars
 
 instance (HasVariables f a, HasVariables f b) => HasVariables f (a, b) where
   freeVars (a, b) = freeVars a <> freeVars b
+  freeVarSet (a, b) = freeVarSet a <> freeVarSet b
+  countOf n (a, b) = countOf n a + countOf n b
+  appearsIn n (a, b) = appearsIn n a || appearsIn n b
 
 instance HasVariables fn (List (Term fn) as) where
   freeVars Nil = mempty
   freeVars (x :> xs) = freeVars x <> freeVars xs
+  freeVarSet Nil = mempty
+  freeVarSet (x :> xs) = freeVarSet x <> freeVarSet xs
+  countOf _ Nil = 0
+  countOf n (x :> xs) = countOf n x + countOf n xs
+  appearsIn _ Nil = False
+  appearsIn n (x :> xs) = appearsIn n x || appearsIn n xs
 
 instance HasVariables f (Name f) where
   freeVars = freeVar
+  freeVarSet = Set.singleton
+  countOf n n'
+    | n == n' = 1
+    | otherwise = 0
+  appearsIn n n' = n == n'
 
 instance HasVariables fn (Term fn a) where
   freeVars = \case
     Lit {} -> mempty
     V x -> freeVar (Name x)
     App _ ts -> freeVars ts
+  freeVarSet = \case
+    Lit {} -> mempty
+    V x -> freeVarSet (Name x)
+    App _ ts -> freeVarSet ts
+  countOf n = \case
+    Lit {} -> 0
+    V x -> countOf n (Name x)
+    App _ ts -> countOf n ts
+  appearsIn n = \case
+    Lit {} -> False
+    V x -> appearsIn n (Name x)
+    App _ ts -> appearsIn n ts
 
 instance HasVariables fn (Pred fn) where
   freeVars = \case
@@ -1181,19 +1229,81 @@ instance HasVariables fn (Pred fn) where
     Case t bs -> freeVars t <> freeVars bs
     TruePred -> mempty
     FalsePred _ -> mempty
+  freeVarSet = \case
+    GenHint _ t -> freeVarSet t
+    Subst x t p -> freeVarSet t <> Set.delete (Name x) (freeVarSet p)
+    Block ps -> foldMap freeVarSet ps
+    Let t b -> freeVarSet t <> freeVarSet b
+    Exists _ b -> freeVarSet b
+    Assert _ t -> freeVarSet t
+    Reify tm _ b -> freeVarSet tm <> freeVarSet b
+    DependsOn x y -> freeVarSet x <> freeVarSet y
+    ForAll set b -> freeVarSet set <> freeVarSet b
+    Case t bs -> freeVarSet t <> freeVarSet bs
+    TruePred -> mempty
+    FalsePred _ -> mempty
+  countOf n = \case
+    GenHint _ t -> countOf n t
+    Subst x t p
+      | n == Name x -> countOf n t
+      | otherwise -> countOf n t + countOf n p
+    Block ps -> sum $ map (countOf n) ps
+    Let t b -> countOf n t + countOf n b
+    Exists _ b -> countOf n b
+    Assert _ t -> countOf n t
+    Reify tm _ b -> countOf n tm + countOf n b
+    DependsOn x y -> countOf n x + countOf n y
+    ForAll set b -> countOf n set + countOf n b
+    Case t bs -> countOf n t + countOf n bs
+    TruePred -> 0
+    FalsePred _ -> 0
+  appearsIn n = \case
+    GenHint _ t -> appearsIn n t
+    Subst x t p
+      | n == Name x -> appearsIn n t
+      | otherwise -> appearsIn n t || appearsIn n p
+    Block ps -> any (appearsIn n) ps
+    Let t b -> appearsIn n t || appearsIn n b
+    Exists _ b -> appearsIn n b
+    Assert _ t -> appearsIn n t
+    Reify tm _ b -> appearsIn n tm || appearsIn n b
+    DependsOn x y -> appearsIn n x || appearsIn n y
+    ForAll set b -> appearsIn n set || appearsIn n b
+    Case t bs -> appearsIn n t || appearsIn n bs
+    TruePred -> False
+    FalsePred _ -> False
 
 instance HasVariables fn (Binder fn a) where
   freeVars (x :-> p) = freeVars p `without` [Name x]
+  freeVarSet (x :-> p) = Set.delete (Name x) (freeVarSet p)
+  countOf n (x :-> p)
+    | Name x == n = 0
+    | otherwise = countOf n p
+  appearsIn n (x :-> p)
+    | Name x == n = False
+    | otherwise = appearsIn n p
 
 instance HasVariables fn (List (Binder fn) as) where
   freeVars Nil = mempty
   freeVars (a :> as) = freeVars a <> freeVars as
+  freeVarSet Nil = mempty
+  freeVarSet (a :> as) = freeVarSet a <> freeVarSet as
+  countOf _ Nil = 0
+  countOf n (x :> xs) = countOf n x + countOf n xs
+  appearsIn _ Nil = False
+  appearsIn n (x :> xs) = appearsIn n x || appearsIn n xs
 
 instance {-# OVERLAPPABLE #-} (Foldable t, HasVariables f a) => HasVariables f (t a) where
   freeVars = foldMap freeVars
+  freeVarSet = foldMap freeVarSet
+  countOf n = Monoid.getSum . foldMap (Monoid.Sum . countOf n)
+  appearsIn n = any (appearsIn n)
 
 instance HasVariables f a => HasVariables f (Set a) where
   freeVars = foldMap freeVars
+  freeVarSet = foldMap freeVarSet
+  countOf n = sum . Set.map (countOf n)
+  appearsIn n = any (appearsIn n)
 
 ------------------------------------------------------------------------
 -- Substitutions
@@ -1217,10 +1327,23 @@ backwardsSubstitution sub t =
     findMatch :: Subst fn -> Term fn a -> Maybe (Var a)
     findMatch [] _ = Nothing
     findMatch (x := t' : sub) t
+      | fastInequality t t' = findMatch sub t
       | Just (x', t'') <- cast (x, t')
       , t == t'' =
           Just x'
       | otherwise = findMatch sub t
+
+-- | Sound but not complete inequality on terms
+fastInequality :: Term fn a -> Term fn b -> Bool
+fastInequality (V (Var i)) (V (Var j)) = i /= j
+fastInequality Lit {} Lit {} = False
+fastInequality (App _ as) (App _ bs) = go as bs
+  where
+    go :: List (Term fn) as -> List (Term fn) bs -> Bool
+    go Nil Nil = False
+    go (a :> as) (b :> bs) = fastInequality a b || go as bs
+    go _ _ = True
+fastInequality _ _ = True
 
 substituteTerm :: forall fn a. Subst fn -> Term fn a -> Term fn a
 substituteTerm sub = \case
@@ -1235,6 +1358,19 @@ substituteTerm sub = \case
     substVar [] x = V x
     substVar (y := t : sub) x
       | Just Refl <- eqVar x y = t
+      | otherwise = substVar sub x
+
+substituteTerm' :: forall fn a. Subst fn -> Term fn a -> Writer Any (Term fn a)
+substituteTerm' sub = \case
+  Lit a -> pure $ Lit a
+  V x -> substVar sub x
+  App f ts ->
+    App f <$> mapMList (substituteTerm' sub) ts
+  where
+    substVar :: HasSpec fn a => Subst fn -> Var a -> Writer Any (Term fn a)
+    substVar [] x = pure $ V x
+    substVar (y := t : sub) x
+      | Just Refl <- eqVar x y = t <$ tell (Any True)
       | otherwise = substVar sub x
 
 substituteBinder :: HasSpec fn a => Var a -> Term fn a -> Binder fn b -> Binder fn b
@@ -1335,7 +1471,7 @@ simplifyTerm = \case
   Lit l -> Lit l
   App f (mapList simplifyTerm -> ts)
     | Just vs <- fromLits ts -> Lit $ uncurryList_ unValue (sem f) vs
-    | Just t <- applyRewrites (rewriteRules f) (App f ts) -> simplifyTerm t
+    | Just t <- rewriteRules f ts -> simplifyTerm t
     | otherwise -> App f ts
 
 fromLits :: List (Term fn) as -> Maybe (List Value as)
@@ -1358,15 +1494,18 @@ simplifyPred = \case
   Subst x t p -> simplifyPred $ substitutePred x t p
   Assert es t -> assertExplain es (simplifyTerm t)
   Reify tm f b -> mkReify (simplifyTerm tm) f (simplifyBinder b)
-  ForAll set b
-    | Lit as <- simplifyTerm set -> foldMap (`unBind` b) (forAllToList as)
-    | otherwise -> ForAll (simplifyTerm set) (simplifyBinder b)
+  ForAll set b -> case simplifyTerm set of
+    Lit as -> foldMap (`unBind` b) (forAllToList as)
+    set' -> ForAll set' (simplifyBinder b)
   DependsOn x y -> DependsOn x y
   Case t bs -> mkCase (simplifyTerm t) (mapList simplifyBinder bs)
   TruePred -> TruePred
   FalsePred es -> FalsePred es
   Block ps -> fold (simplifyPreds ps)
-  Let t b -> Let (simplifyTerm t) (simplifyBinder b)
+  Let t b -> case simplifyTerm t of
+    t'@App {} -> Let t' (simplifyBinder b)
+    -- Variable or literal
+    t' | x :-> p <- b -> simplifyPred $ substitutePred x t' p
   Exists k b -> Exists k (simplifyBinder b)
 
 simplifyPreds :: BaseUniverse fn => [Pred fn] -> [Pred fn]
@@ -1380,93 +1519,6 @@ simplifyPreds = go [] . map simplifyPred
 simplifyBinder :: Binder fn a -> Binder fn a
 simplifyBinder (x :-> p) = x :-> simplifyPred p
 
--- Rewrite rules ----------------------------------------------------------
-
--- NOTE: The `RewriteArgumentTypes` constraint that GHC complains about is not
--- in fact redundant. It's necessary to make the compiler infer types correctly.
-rewriteRule_ ::
-  forall as fn r b.
-  ( All (HasSpec fn) as
-  , HasSpec fn b
-  , TypeList as
-  , r ~ FunTy (MapList (Term fn) as) (PatternPair fn b)
-  , RewriteArgumentTypes r ~ as
-  ) =>
-  r ->
-  RewriteRule fn b
-rewriteRule_ k = case rewriteRuleList (uncurryList @as k) of
-  r@(RewriteRule _ lhs _)
-    | all (<= 1) $ unFreeVars $ freeVars lhs -> r
-    | otherwise -> error $ "Rewrite rule: " ++ show r ++ " is not linear in the left hand side."
-
-data RewriteRule fn a where
-  RewriteRule :: HasSpec fn a => [Name fn] -> Pattern fn a -> Term fn a -> RewriteRule fn a
-
-instance Show (RewriteRule fn a) where
-  show (RewriteRule _ lhs rhs) = show $ pretty lhs <+> "~>" <+> pretty rhs
-
-type Pattern = Term
-
-type PatternPair fn a = (Pattern fn a, Term fn a)
-
-(~>) :: Pattern fn a -> Term fn a -> PatternPair fn a
-(~>) = (,)
-
-matchTerm :: forall fn a. HasSpec fn a => Pattern fn a -> Term fn a -> Maybe (Subst fn)
-matchTerm (V x) t = pure [x := t]
-matchTerm (Lit a) (Lit b) = [] <$ guard (a == b)
-matchTerm (App (f :: f) as) (App (g :: g) bs) = do
-  Refl <- eqT @f @g
-  guard (f == g)
-  matchTerms as bs
-matchTerm _ _ = Nothing
-
-matchTerms ::
-  forall fn as. All (HasSpec fn) as => List (Pattern fn) as -> List (Term fn) as -> Maybe (Subst fn)
-matchTerms Nil Nil = pure []
-matchTerms (a :> as) (b :> bs) = (<>) <$> matchTerm a b <*> matchTerms as bs
-
-applyRewrite :: forall fn a. HasSpec fn a => RewriteRule fn a -> Term fn a -> Maybe (Term fn a)
-applyRewrite (RewriteRule _ lhs (rhs :: Term fn b)) t
-  | Just Refl <- eqT @a @b = do
-      sub <- matchTerm lhs t
-      pure $ substituteTerm sub rhs
-  | otherwise = Nothing
-
-applyRewrites :: HasSpec fn a => [RewriteRule fn a] -> Term fn a -> Maybe (Term fn a)
-applyRewrites rules t = foldr (<|>) empty $ map (`applyRewrite` t) rules
-
-mkRewriteRule ::
-  HasSpec fn a =>
-  [Name fn] ->
-  Pattern fn a ->
-  Term fn a ->
-  RewriteRule fn a
-mkRewriteRule nms lhs rhs
-  | all (<= 1) $ unFreeVars $ freeVars lhs = RewriteRule nms lhs rhs
-  | otherwise = error $ "Rewrite-rules should be linear:\n  " ++ show lhs ++ "\n  " ++ show rhs
-
-rewriteRuleList ::
-  forall as fn b.
-  ( TypeList as
-  , All (HasSpec fn) as
-  , HasSpec fn b
-  ) =>
-  (List (Term fn) as -> PatternPair fn b) ->
-  RewriteRule fn b
-rewriteRuleList k =
-  let vars = unfoldList mkNextVar
-      mkNextVar :: forall a as. List Var as -> Var a
-      mkNextVar Nil = Var 0
-      mkNextVar (Var i :> _) = Var (i + 1)
-   in uncurry
-        (RewriteRule (foldMapListC @(HasSpec fn) ((: []) . Name) vars))
-        (k $ mapListC @(HasSpec fn) V vars)
-
-type family RewriteArgumentTypes t where
-  RewriteArgumentTypes (Term fn a -> b) = a : RewriteArgumentTypes b
-  RewriteArgumentTypes a = '[]
-
 -- Arcane magic -----------------------------------------------------------
 
 -- TODO: it might be necessary to run aggressiveInlining again after the let floating etc.
@@ -1475,7 +1527,7 @@ optimisePred p =
   simplifyPred
     . letSubexpressionElimination
     . letFloating
-    . aggressiveInlining (Set.toList $ freeVarSet p)
+    . aggressiveInlining
     . simplifyPred
     $ p
 
@@ -1487,7 +1539,7 @@ letSubexpressionElimination = go []
       [ x' := t | x' := t <- sub, isNothing $ eqVar x x',
       -- TODO: possibly freshen the binder where
       -- `x` appears instead?
-      count (Name x) (freeVars t) == 0
+      not $ Name x `appearsIn` t
       ]
 
     goBinder :: Subst fn -> Binder fn a -> Binder fn a
@@ -1509,7 +1561,7 @@ letSubexpressionElimination = go []
         DependsOn t t'
           <> DependsOn (backwardsSubstitution sub t) (backwardsSubstitution sub t')
       ForAll t b -> ForAll (backwardsSubstitution sub t) (goBinder sub b)
-      Case t bs -> Case t (mapList (goBinder sub) bs)
+      Case t bs -> Case (backwardsSubstitution sub t) (mapList (goBinder sub) bs)
       TruePred -> TruePred
       FalsePred es -> FalsePred es
 
@@ -1518,15 +1570,17 @@ letSubexpressionElimination = go []
 letFloating :: BaseUniverse fn => Pred fn -> Pred fn
 letFloating = fold . go []
   where
-    goBlock ctx [] = ctx
-    goBlock ctx (Let t (x :-> p) : ps) =
-      -- We can do `goBlock` here because we've already done let floating
+    goBlock ctx ps = goBlock' (freeVarNames ctx <> freeVarNames ps) ctx ps
+
+    goBlock' _ ctx [] = ctx
+    goBlock' fvs ctx (Let t (x :-> p) : ps) =
+      -- We can do `goBlock'` here because we've already done let floating
       -- on the inner `p`
-      [Let t (x' :-> fold (goBlock ctx (p' : ps)))]
+      [Let t (x' :-> fold (goBlock' (Set.insert (nameOf x') fvs) ctx (p' : ps)))]
       where
-        (x', p') = freshen x p (freeVarNames ps <> freeVarNames ctx <> Set.delete (nameOf x) (freeVarNames p))
-    goBlock ctx (Block ps : ps') = goBlock ctx (ps ++ ps')
-    goBlock ctx (p : ps) = goBlock (p : ctx) ps
+        (x', p') = freshen x p fvs
+    goBlock' fvs ctx (Block ps : ps') = goBlock' fvs ctx (ps ++ ps')
+    goBlock' fvs ctx (p : ps) = goBlock' fvs (p : ctx) ps
 
     goExists ::
       HasSpec fn a =>
@@ -1536,11 +1590,8 @@ letFloating = fold . go []
       Pred fn ->
       [Pred fn]
     goExists ctx ex x (Let t (y :-> p))
-      | count (Name x) (freeVars t) == 0 =
-          -- freeVarNames t is not strictly necessary here (because lets don't work like in haskell)
-          -- but it makes the resulting code much easier to read as we won't invent a variable name
-          -- that shadows a variable used in the term.
-          let (y', p') = freshen y p (Set.insert (nameOf x) $ Set.delete (nameOf x) (freeVarNames p) <> freeVarNames t)
+      | not $ Name x `appearsIn` t =
+          let (y', p') = freshen y p (Set.insert (nameOf x) $ freeVarNames p <> freeVarNames t)
            in go ctx (Let t (y' :-> ex (x :-> p')))
     goExists ctx ex x p = ex (x :-> p) : ctx
 
@@ -1562,14 +1613,14 @@ letFloating = fold . go []
       TruePred -> TruePred : ctx
       FalsePred es -> FalsePred es : ctx
 
-aggressiveInlining :: BaseUniverse fn => [Name fn] -> Pred fn -> Pred fn
-aggressiveInlining inlineable p
-  | inlined = aggressiveInlining inlineable (simplifyPred pInlined)
+aggressiveInlining :: BaseUniverse fn => Pred fn -> Pred fn
+aggressiveInlining p
+  | inlined = aggressiveInlining pInlined
   | otherwise = p
   where
-    (pInlined, Any inlined) = runWriter $ go (freeVars p `restrictedTo` Set.fromList inlineable) [] p
+    (pInlined, Any inlined) = runWriter $ go (freeVars p) [] p
 
-    underBinder fvs x p = fvs `without` [Name x] <> freeVars p `restrictedTo` (Set.singleton $ Name x)
+    underBinder fvs x p = fvs `without` [Name x] <> singleton (Name x) (countOf (Name x) p)
 
     underBinderSub sub x =
       [ x' := t
@@ -1586,23 +1637,23 @@ aggressiveInlining inlineable p
       Subst x t p -> go fvs sub (substitutePred x t p)
       Reify tm f b
         | not (isLit tm)
-        , Lit a <- simplifyTerm $ substituteTerm sub tm -> do
+        , Lit a <- substituteAndSimplifyTerm sub tm -> do
             tell $ Any True
             pure $ mkReify (Lit a) f b
         | otherwise -> Reify tm f <$> goBinder fvs sub b
       ForAll set b
         | not (isLit set)
-        , Lit a <- simplifyTerm $ substituteTerm sub set -> do
+        , Lit a <- substituteAndSimplifyTerm sub set -> do
             tell $ Any True
-            pure $ ForAll (Lit a) b
+            pure $ foldMap (`unBind` b) (forAllToList a)
         | otherwise -> ForAll set <$> goBinder fvs sub b
       Case t bs
         | not (isLit t)
-        , Lit a <- simplifyTerm $ substituteTerm sub t -> do
+        , Lit a <- substituteAndSimplifyTerm sub t -> do
             tell $ Any True
             pure $ runCaseOn a bs $ \x v p -> substPred (singletonEnv x v) p
         | (x :-> p :> Nil) <- bs -> do
-            let t' = simplifyTerm $ substituteTerm sub t
+            let t' = substituteAndSimplifyTerm sub t
             p' <- go (underBinder fvs x p) (x := t' : sub) p
             pure $ Case t (x :-> p' :> Nil)
         | otherwise -> Case t <$> mapMList (goBinder fvs sub) bs
@@ -1610,11 +1661,11 @@ aggressiveInlining inlineable p
         | all (\n -> count n fvs <= 1) (freeVarSet t) -> do
             tell $ Any True
             pure $ substitutePred x t p
-        | count (Name x) (freeVars p) == 0 -> do
+        | not $ Name x `appearsIn` p -> do
             tell $ Any True
             pure p
         | not (isLit t)
-        , Lit a <- simplifyTerm $ substituteTerm sub t -> do
+        , Lit a <- substituteAndSimplifyTerm sub t -> do
             tell $ Any True
             pure $ unBind a (x :-> p)
         | otherwise -> Let t . (x :->) <$> go (underBinder fvs x p) (x := t : sub) p
@@ -1622,7 +1673,7 @@ aggressiveInlining inlineable p
       Block ps -> fold <$> mapM (go fvs sub) ps
       Assert es t
         | not (isLit t)
-        , Lit b <- simplifyTerm $ substituteTerm sub t -> do
+        , Lit b <- substituteAndSimplifyTerm sub t -> do
             tell $ Any True
             pure $ assertExplain es b
         | otherwise -> pure p
@@ -1630,22 +1681,31 @@ aggressiveInlining inlineable p
       -- so we can ignore the `GenHint`
       GenHint _ t
         | not (isLit t)
-        , Lit {} <- simplifyTerm $ substituteTerm sub t -> do
+        , Lit {} <- substituteAndSimplifyTerm sub t -> do
             tell $ Any True
             pure TruePred
         | otherwise -> pure p
       DependsOn t t'
         | not (isLit t)
-        , Lit {} <- simplifyTerm $ substituteTerm sub t -> do
+        , Lit {} <- substituteAndSimplifyTerm sub t -> do
             tell $ Any True
             pure $ TruePred
         | not (isLit t')
-        , Lit {} <- simplifyTerm $ substituteTerm sub t' -> do
+        , Lit {} <- substituteAndSimplifyTerm sub t' -> do
             tell $ Any True
             pure $ TruePred
         | otherwise -> pure p
       TruePred -> pure p
       FalsePred {} -> pure p
+
+-- | Apply a substitution and simplify the resulting term if the substitution changed the
+-- term.
+substituteAndSimplifyTerm :: BaseUniverse fn => Subst fn -> Term fn a -> Term fn a
+substituteAndSimplifyTerm sub t =
+  case runWriter $ substituteTerm' sub t of
+    (t', Any b)
+      | b -> simplifyTerm t'
+      | otherwise -> t'
 
 ------------------------------------------------------------------------
 -- Generics
@@ -2396,23 +2456,31 @@ genFromFold must size elemS fn foldS = do
 -- Instances of HasSpec
 ------------------------------------------------------------------------
 
--- Bool -------------------------------------------------------------------
+-- () ---------------------------------------------------------------------
 
-instance BaseUniverse fn => HasSpec fn Bool where
-  type TypeSpec fn Bool = ()
+instance BaseUniverse fn => HasSpec fn () where
+  type TypeSpec fn () = ()
   emptySpec = ()
   combineSpec _ _ = typeSpec ()
   _ `conformsTo` _ = True
-  genFromTypeSpec _ = pureGen arbitrary
+  genFromTypeSpec _ = pure ()
   toPreds _ _ = TruePred
-  cardinalTypeSpec _ = MemberSpec [2]
-  cardinalTrueSpec = exactSizeSpec 2 -- there are exactly two, True and False
-  typeSpecOpt _ bad = MemberSpec (filter (`notElem` bad) [True, False])
+  cardinalTypeSpec _ = MemberSpec [1]
+  cardinalTrueSpec = exactSizeSpec 1 -- there are exactly two, True and False
+  typeSpecOpt _ [] = TrueSpec
+  typeSpecOpt _ (_ : _) = MemberSpec []
 
--- Not Sure what happens if we have some thing like [True,True,False. ...]
--- Any way we get the same semantics if we just used 'typeSpec', so thats ok.
+-- Bool -------------------------------------------------------------------
+
+instance HasSimpleRep Bool
+instance (BaseUniverse fn, HasSpec fn ()) => HasSpec fn Bool
 
 -- Sum --------------------------------------------------------------------
+
+guardSumSpec :: (HasSpec fn a, HasSpec fn b) => SumSpec fn a b -> Spec fn (Sum a b)
+guardSumSpec s@(SumSpec sa sb)
+  | isErrorLike sa, isErrorLike sb = ErrorSpec ["empty SumSpec"]
+  | otherwise = typeSpec s
 
 data SumSpec fn a b = SumSpec (Spec fn a) (Spec fn b)
 
@@ -2429,16 +2497,23 @@ instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Sum a b) where
 
   emptySpec = mempty
 
-  combineSpec s s' = typeSpec $ s <> s'
+  combineSpec s s' = guardSumSpec $ s <> s'
 
   conformsTo (SumLeft a) (SumSpec sa _) = conformsToSpec a sa
   conformsTo (SumRight b) (SumSpec _ sb) = conformsToSpec b sb
 
-  genFromTypeSpec (SumSpec sa sb) =
-    oneofT
-      [ SumLeft <$> genFromSpec sa
-      , SumRight <$> genFromSpec sb
-      ]
+  genFromTypeSpec (SumSpec sa sb)
+    | emptyA, emptyB = genError ["genFromTypeSpec @SumSpec: empty"]
+    | emptyA = SumRight <$> genFromSpec sb
+    | emptyB = SumLeft <$> genFromSpec sa
+    | otherwise =
+        oneofT
+          [ SumLeft <$> genFromSpec sa
+          , SumRight <$> genFromSpec sb
+          ]
+    where
+      emptyA = isErrorLike sa
+      emptyB = isErrorLike sb
 
   toPreds ct (SumSpec sa sb) =
     Case
@@ -2596,8 +2671,8 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
           True -> MemberSpec es
           False -> notMemberSpec es
       | Value e :! NilCtx HOLE <- ctx -> caseBoolSpec spec $ \case
-          True -> typeSpec $ ListSpec [e] mempty mempty NoFold
-          False -> typeSpec $ ListSpec mempty mempty (notEqualSpec e) NoFold
+          True -> typeSpec $ ListSpec Nothing [e] mempty mempty NoFold
+          False -> typeSpec $ ListSpec Nothing mempty mempty (notEqualSpec e) NoFold
     Disjoint
       | HOLE :? Value (s :: Set a) :> Nil <- ctx ->
           propagateSpecFun @(SetFn fn) @fn Disjoint (Value s :! NilCtx HOLE) spec
@@ -2611,27 +2686,11 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
               , assert $ member_ e set
               ]
 
-  rewriteRules f@Elem =
-    -- No TypeAbstractions in ghc-8.10 (otherwise we could bind a in the head with
-    -- `rewriteRules (Elem @a)`. Without it we need this song and dance with the case.
-    case f of
-      (_ :: SetFn fn '[a, [a]] Bool) ->
-        [ rewriteRule_ $ \x -> elem_ @a x (Lit []) ~> Lit False
-        ]
-  rewriteRules f@Member =
-    -- No TypeAbstractions in ghc-8.10
-    case f of
-      (_ :: SetFn fn '[a, Set a] Bool) ->
-        [ rewriteRule_ $ \x -> member_ @a x mempty ~> Lit False
-        ]
-  rewriteRules f@Union =
-    -- No TypeAbstractions in ghc-8.10
-    case f of
-      (_ :: SetFn fn '[Set a, Set a] (Set a)) ->
-        [ rewriteRule_ @'[Set a] $ \x -> (mempty <> x) ~> x
-        , rewriteRule_ @'[Set a] $ \x -> (x <> mempty) ~> x
-        ]
-  rewriteRules _ = []
+  rewriteRules Elem (_ :> Lit [] :> Nil) = Just $ Lit False
+  rewriteRules Member (_ :> Lit s :> Nil) | null s = Just $ Lit False
+  rewriteRules Union (x :> Lit s :> Nil) | null s = Just x
+  rewriteRules Union (Lit s :> x :> Nil) | null s = Just x
+  rewriteRules _ _ = Nothing
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of
@@ -2642,27 +2701,32 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
 
 -- List -------------------------------------------------------------------
 
-data ListSpec fn a = ListSpec [a] (Spec fn Integer) (Spec fn a) (FoldSpec fn a)
+data ListSpec fn a = ListSpec (Maybe Integer) [a] (Spec fn Integer) (Spec fn a) (FoldSpec fn a)
 
 deriving instance Show (FoldSpec fn a)
 deriving instance HasSpec fn a => Show (ListSpec fn a)
 
 instance HasSpec fn a => HasSpec fn [a] where
   type TypeSpec fn [a] = ListSpec fn a
-  emptySpec = ListSpec [] mempty mempty NoFold
-  combineSpec (ListSpec must size elemS foldS) (ListSpec must' size' elemS' foldS') = fromGE ErrorSpec $ do
+  emptySpec = ListSpec Nothing [] mempty mempty NoFold
+  combineSpec (ListSpec msz must size elemS foldS) (ListSpec msz' must' size' elemS' foldS') = fromGE ErrorSpec $ do
     let must'' = nub $ must <> must'
         elemS'' = elemS <> elemS'
         size'' = size <> size'
     unless (all (`conformsToSpec` elemS'') must'') $
       genError ["combineSpec ListSpec failed with <REASON>"]
-    typeSpec . ListSpec must'' size'' elemS'' <$> combineFoldSpec foldS foldS'
+    typeSpec . ListSpec (unionWithMaybe min msz msz') must'' size'' elemS''
+      <$> combineFoldSpec foldS foldS'
 
-  genFromTypeSpec (ListSpec must TrueSpec elemS NoFold) = do
-    lst <- listOfT $ genFromSpec elemS
+  genFromTypeSpec (ListSpec msz must TrueSpec elemS NoFold) = do
+    lst <- case msz of
+      Nothing -> listOfT $ genFromSpec elemS
+      Just szHint -> do
+        sz <- genFromSizeSpec (leqSpec @fn szHint)
+        listOfUntilLenT (genFromSpec elemS) (fromIntegral sz) (const True)
     pureGen $ shuffle (must ++ lst)
-  genFromTypeSpec (ListSpec must szSpec elemS NoFold) = do
-    sz0 <- genFromSizeSpec (szSpec <> geqSpec @fn (sizeOf must))
+  genFromTypeSpec (ListSpec msz must szSpec elemS NoFold) = do
+    sz0 <- genFromSizeSpec (szSpec <> geqSpec @fn (sizeOf must) <> maybe TrueSpec leqSpec msz)
     let sz = fromIntegral (sz0 - sizeOf must)
     lst <-
       listOfUntilLenT
@@ -2670,22 +2734,28 @@ instance HasSpec fn a => HasSpec fn [a] where
         sz
         ((`conformsToSpec` szSpec) . (+ sizeOf must) . fromIntegral)
     pureGen $ shuffle (must ++ lst)
-  genFromTypeSpec (ListSpec must size elemS (FoldSpec f foldS)) = do
-    genFromFold must size elemS f foldS
+  genFromTypeSpec (ListSpec msz must size elemS (FoldSpec f foldS)) = do
+    genFromFold must (size <> maybe TrueSpec leqSpec msz) elemS f foldS
 
-  conformsTo xs (ListSpec must size elemS foldS) =
+  conformsTo xs (ListSpec _ must size elemS foldS) =
     sizeOf xs `conformsToSpec` size
       && all (`elem` xs) must
       && all (`conformsToSpec` elemS) xs
       && xs `conformsToFoldSpec` foldS
 
-  toPreds x (ListSpec must size elemS foldS) =
-    (forAll x $ \x' -> assert (elem_ x' (Lit must)) <> satisfies x' elemS)
+  toPreds x (ListSpec msz must size elemS foldS) =
+    (forAll x $ \x' -> satisfies x' elemS)
+      <> (forAll (lit must) $ \x' -> assert (elem_ x' x))
       <> toPredsFoldSpec x foldS
       <> satisfies (sizeOf_ x) size
+      <> maybe TruePred (flip genHint x) msz
+
+instance HasSpec fn a => HasGenHint fn [a] where
+  type Hint [a] = Integer
+  giveHint szHint = typeSpec $ ListSpec (Just szHint) [] mempty mempty NoFold
 
 instance Forallable [a] a where
-  forAllSpec es = typeSpec (ListSpec [] mempty es NoFold)
+  forAllSpec es = typeSpec (ListSpec Nothing [] mempty es NoFold)
   forAllToList = id
 
 -- Numbers ----------------------------------------------------------------
@@ -3041,13 +3111,8 @@ instance (BaseUniverse fn, Member (FunFn fn) fn) => Functions (FunFn fn) fn wher
     Id -> typeSpec ts
     Compose g h -> mapSpec g . mapSpec h $ typeSpec ts
 
-  rewriteRules f@Id =
-    -- No TypeAbstractions in ghc-8.10
-    case f of
-      (_ :: FunFn fn '[a] a) ->
-        [rewriteRule_ $ \x -> app (injectFn $ Id @fn @a) x ~> x]
-  rewriteRules (Compose f g) =
-    [rewriteRule_ $ \x -> app (injectFn $ Compose f g) x ~> app f (app g x)]
+  rewriteRules Id (x :> Nil) = Just x
+  rewriteRules (Compose f g) (x :> Nil) = Just $ app f (app g x)
 
 -- TODO: to solve this problem we need to generalize mapSpec to work on contexts, which means
 -- we need to generalize mapTypeSpec to work on contexts too
@@ -3186,7 +3251,7 @@ instance BaseUniverse fn => Functions (ListFn fn) fn where
           constrained $ \v' ->
             let args = appendList (mapList (\(Value a) -> Lit a) pre) (v' :> mapList (\(Value a) -> Lit a) suf)
              in Let (App (injectFn fn) args) (x :-> p)
-    FoldMap f | NilCtx HOLE <- ctx -> typeSpec (ListSpec [] TrueSpec TrueSpec $ FoldSpec f spec)
+    FoldMap f | NilCtx HOLE <- ctx -> typeSpec (ListSpec Nothing [] TrueSpec TrueSpec $ FoldSpec f spec)
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of
@@ -3509,7 +3574,7 @@ constrained ::
   Spec fn a
 constrained body =
   let x :-> p = bind body
-   in computeSpec x (optimisePred p)
+   in computeSpecSimplified x (optimisePred p)
 
 assertExplain ::
   (BaseUniverse fn, IsPred p fn) =>
@@ -3696,7 +3761,7 @@ instance HasSpec fn a => Pretty (WithPrec (Term fn a)) where
     Lit n -> fromString $ showsPrec p n ""
     V x -> viaShow x
     App f Nil -> viaShow f
-    App f as -> parensIf (p > 10) $ viaShow f <+> fillSep (ppList @fn (prettyPrec 11) as)
+    App f as -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList @fn (prettyPrec 11) as))
 
 instance HasSpec fn a => Pretty (Term fn a) where
   pretty = prettyPrec 0
@@ -3720,7 +3785,7 @@ instance Pretty (Pred fn) where
     ForAll t (x :-> p) -> "forall" <+> viaShow x <+> "in" <+> pretty t <+> "$" /> pretty p
     Case t bs -> "case" <+> pretty t <+> "of" /> vsep' (ppList_ pretty bs)
     Subst x t p -> "[" <> pretty t <> "/" <> viaShow x <> "]" <> pretty p
-    GenHint h t -> "genHint " <+> fromString (showsPrec 11 h "") <+> "$" <+> pretty t
+    GenHint h t -> "genHint" <+> fromString (showsPrec 11 h "") <+> "$" <+> pretty t
     TruePred -> "True"
     FalsePred {} -> "False"
 
@@ -3761,7 +3826,7 @@ instance HasSpec fn a => Show (Spec fn a) where
 -- | Because Sizes should always be >= 0, We provide this alternate generator
 --   that can be used to replace (genFromSpec @Integer), to ensure this important property
 genFromSizeSpec :: (BaseUniverse fn, MonadGenError m) => Spec fn Integer -> GenT m Integer
-genFromSizeSpec integerspec = genFromSpec (integerspec <> geqSpec 0)
+genFromSizeSpec integerSpec = genFromSpec (integerSpec <> geqSpec 0)
 
 data SizeFn (fn :: [Type] -> Type -> Type) as b where
   SizeOf :: forall fn a. (Sized a, HasSpec fn a) => SizeFn fn '[a] Integer
@@ -3850,10 +3915,10 @@ instance Ord a => Sized (Set.Set a) where
 
 instance Sized [a] where
   sizeOf = toInteger . length
-  liftSizeSpec spec = typeSpec (ListSpec mempty (typeSpec spec) TrueSpec NoFold)
-  liftMemberSpec xs = typeSpec (ListSpec mempty (MemberSpec xs) TrueSpec NoFold)
-  sizeOfTypeSpec (ListSpec _ _ ErrorSpec {} _) = equalSpec 0
-  sizeOfTypeSpec (ListSpec must sizespec _ _) = sizespec <> (TypeSpec (atLeastSize (sizeOf must)) [])
+  liftSizeSpec spec = typeSpec (ListSpec Nothing mempty (typeSpec spec) TrueSpec NoFold)
+  liftMemberSpec xs = typeSpec (ListSpec Nothing mempty (MemberSpec xs) TrueSpec NoFold)
+  sizeOfTypeSpec (ListSpec _ _ _ ErrorSpec {} _) = equalSpec 0
+  sizeOfTypeSpec (ListSpec _ must sizespec _ _) = sizespec <> (TypeSpec (atLeastSize (sizeOf must)) [])
 
 -- How to constrain the size of any type, with a Sized instance
 hasSize :: (HasSpec fn t, Sized t) => SizeSpec -> Spec fn t
