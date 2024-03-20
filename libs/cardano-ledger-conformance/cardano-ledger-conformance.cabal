@@ -21,7 +21,10 @@ flag asserts
 library
     exposed-modules:  Test.Cardano.Ledger.Conformance
     hs-source-dirs:   src
-    other-modules:    Test.Cardano.Ledger.Conformance.Orphans
+    other-modules:
+      Test.Cardano.Ledger.Conformance.Orphans
+      Test.Cardano.Ledger.Conformance.SpecTranslate
+      Test.Cardano.Ledger.Conformance.ExecutableSpecRule
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -30,24 +33,11 @@ library
 
     build-depends:
         base >=4.14 && <5,
-        bytestring,
-        cardano-strict-containers,
-        microlens,
-        mtl,
-        bytestring,
-        data-default-class,
-        cardano-ledger-binary,
         cardano-ledger-core,
-        cardano-ledger-mary,
-        cardano-ledger-shelley,
-        cardano-ledger-alonzo,
-        cardano-ledger-babbage,
-        cardano-ledger-conway:{cardano-ledger-conway, testlib},
+        cardano-ledger-shelley:{testlib},
         cardano-ledger-executable-spec,
-        cardano-crypto-class,
         cardano-ledger-core:testlib,
-        cardano-ledger-test,
-        containers,
+        constrained-generators,
         small-steps >=1.1,
         text
 
@@ -69,5 +59,3 @@ test-suite tests
 
     build-depends:
         base >=4.14 && <5,
-        cardano-ledger-conformance,
-        cardano-ledger-core:testlib
