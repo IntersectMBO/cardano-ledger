@@ -107,6 +107,7 @@ library
         base >=4.14 && <5,
         bech32,
         bytestring,
+        binary,
         cardano-data,
         cardano-crypto-class,
         cardano-crypto-wrapper,

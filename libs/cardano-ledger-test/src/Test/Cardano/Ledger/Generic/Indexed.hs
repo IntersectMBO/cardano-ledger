@@ -22,36 +22,48 @@ module Test.Cardano.Ledger.Generic.Indexed where
 import Cardano.Crypto.DSIGN.Class ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), SignKeyDSIGN, VKey, WitVKey (..), hashKey)
-import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey)
-import Test.Cardano.Ledger.Generic.Proof (GoodCrypto, Proof(..))
+
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey,mkKeyPair)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 import Cardano.Ledger.DRep (DRep(DRepCredential))
 import Cardano.Ledger.Crypto(StandardCrypto)
-import Cardano.Ledger.UTxO(UTxO(..))
-import Cardano.Ledger.TxIn(TxIn(..),TxId(..),mkTxInPartial)
-import Cardano.Ledger.Address(Addr(..),RewardAccount(..))
-import Cardano.Ledger.Credential(Credential(..),PaymentCredential)
-import Cardano.Ledger.BaseTypes(Network(..),StrictMaybe(..),boundRational)
-import Cardano.Ledger.Mary(MaryValue(..))
-import Cardano.Ledger.Coin(Coin(..),CompactForm(CompactCoin))
-import Cardano.Ledger.Compactible(CompactForm(..))
 
+import Cardano.Ledger.Address(Addr(..))
+
+import Cardano.Ledger.BaseTypes(Network(..))
+import Cardano.Ledger.Coin(Coin(..))
+import Cardano.Ledger.SafeHash (SafeHash,unsafeMakeSafeHash)
 import Cardano.Ledger.Val(Val(..))
 import qualified Cardano.Ledger.Conway as X(Conway)
 import Cardano.Crypto.Hash(Hash(UnsafeHash),Blake2b_256)
-import Cardano.Ledger.Crypto(HASH(..))
 import Data.Binary(encode)
-import Data.ByteString.Short(ShortByteString,toShort)
-import qualified Data.ByteString.Lazy as Lazy(length,toStrict,replicate,reverse)
-import Cardano.Crypto.Hash.Class(HashAlgorithm(..))
-import qualified Data.Map.Strict as Map
-import Data.Map.Strict(Map)
+import Data.ByteString.Short(toShort)
+import qualified Data.ByteString.Lazy as Lazy(toStrict,replicate,reverse)
+
+import Cardano.Ledger.Crypto (Crypto)
+
+import Cardano.Ledger.TxIn(TxIn(..),TxId(..),mkTxInPartial)
+
+{-
+import Test.Cardano.Ledger.Generic.Proof (GoodCrypto, Proof(..))
 import Data.Word(Word64)
 import Data.Ratio((%))
+import Data.Map.Strict(Map)
+import Cardano.Crypto.Hash.Class(HashAlgorithm(..))
+import qualified Data.Map.Strict as Map
+import qualified Data.ByteString.Lazy as Lazy(length,toStrict,replicate,reverse)
+import Cardano.Ledger.Crypto(HASH(..))
+import Cardano.Ledger.Compactible(CompactForm(..))
+import Cardano.Ledger.Coin(Coin(..),CompactForm(CompactCoin))
+import Cardano.Ledger.Mary(MaryValue(..))
+import Cardano.Ledger.BaseTypes(Network(..),StrictMaybe(..),boundRational)
+import Cardano.Ledger.Address(Addr(..),RewardAccount(..))
+import Cardano.Ledger.Credential(Credential(..),PaymentCredential,StakeCredential)
+import Cardano.Ledger.UTxO(UTxO(..))
+import Cardano.Ledger.TxIn(TxIn(..),TxId(..),mkTxInPartial)
+import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 
 import Test.Cardano.Ledger.Generic.PrettyCore(pcUTxO,pcDState,pcPState,ppMap,pcCredential,pcCoin)
 import Cardano.Ledger.UMap(UMap(..),RDPair(..),CompactForm,unify)
@@ -66,12 +78,14 @@ import Cardano.Ledger.Shelley.LedgerState
   (incrementalStakeDistr,IncrementalStake(..),updateStakeDistribution)
 import Cardano.Ledger.EpochBoundary (SnapShot (..),Stake(..))
 import qualified Data.VMap as VMap
-
+import Cardano.Ledger.Shelley.RewardUpdate (RewardUpdate (..))
 --  ppMap pcCredential (pcCoin . fromCompact) (VMap.toMap (unStake (ssStake ss))))
 
 go = ppMap pcCredential (pcCoin . fromCompact) (VMap.toMap (unStake (ssStake snapshot)))
   where incstake = (updateStakeDistribution pparams mempty mempty utxo)
         snapshot = incrementalStakeDistr pparams incstake dstate pstate
+
+-}
 -- =======================================================
 -- Keys and KeyHashes
 
@@ -93,28 +107,27 @@ theSKey n = SKey (sKey (theKeyPair @c n))
 theKeyHash :: CC.Crypto c => Int -> KeyHash kr c
 theKeyHash n = hashKey (theVKey n)
 
+{-
 theWitVKey ::
   GoodCrypto c =>
   Int ->
   SafeHash c EraIndependentTxBody ->
   WitVKey 'Witness c
-theWitVKey n hash = mkWitnessVKey hash (theKeyPair n)
+theWitVKey n hashfun = mkWitnessVKey hashfun (theKeyPair n)
+-}
 
 theKeyHashObj :: CC.Crypto c => Int -> Credential kr c
 theKeyHashObj n = KeyHashObj . hashKey . vKey $ theKeyPair n
 
 aScriptHashObj ::
-  forall era kr. EraScript era => Proof era -> Script era -> Credential kr (EraCrypto era)
-aScriptHashObj _wit s = ScriptHashObj . hashScript @era $ s
+  forall era kr. EraScript era => Script era -> Credential kr (EraCrypto era)
+aScriptHashObj s = ScriptHashObj . hashScript @era $ s
 
 theStakeReference :: CC.Crypto c => Int -> StakeReference c
 theStakeReference 0 = StakeRefNull
 theStakeReference n = (StakeRefBase . KeyHashObj . hashKey) (theVKey n)
 
 -- =============================================================
-
--- inject :: forall era. Coin -> Value era
--- inject c = modifyCoin @(Value era) (const c) zero
 
 stakeCred:: Int -> Credential 'Staking StandardCrypto
 stakeCred n = theKeyHashObj n
@@ -131,17 +144,16 @@ addr i j = Addr Testnet (theKeyHashObj i) (theStakeReference j)
 txOut :: Addr StandardCrypto -> Coin -> TxOut X.Conway
 txOut add c = mkBasicTxOut add (modifyCoin (const c) zero)
 
+safeHash :: Int -> SafeHash StandardCrypto a
+safeHash n = unsafeMakeSafeHash $ UnsafeHash $ toShort $ Lazy.toStrict (Lazy.reverse(encode @Int (maxBound - n)) <> Lazy.replicate 248 35)
 
-hash :: Int -> SafeHash StandardCrypto a
-hash n = unsafeMakeSafeHash $ UnsafeHash $ toShort $ Lazy.toStrict (Lazy.reverse(encode @Int n) <> Lazy.replicate 248 35)
+hash :: Int -> Hash Blake2b_256 a
+hash n = UnsafeHash $ toShort $ Lazy.toStrict (Lazy.reverse(encode @Int (maxBound - n)) <> Lazy.replicate 248 35)
 
 txIn :: Int -> Int -> TxIn StandardCrypto
-txIn i j = mkTxInPartial (TxId (hash i)) (fromIntegral j)
+txIn i j = mkTxInPartial (TxId (safeHash i)) (fromIntegral j)
 
-addr1 = addr 3 4
-addr2 = addr 5 0 -- 0 means No staking credential
-addr3 = addr 6 0 -- 0 means No staking credential
-
+{-
 -- =====================================
 
 -- There are 2 Pools
@@ -157,16 +169,16 @@ mary = stakeCred 5
 
 -- They each own an address
 tomAddr = addr 1 0 -- 0 means tomAddr  does not have a StakeReference
-annAddr = addr 2 20
-ronAddr = addr 3 21
-johnAddr = addr 4 22
+annAddr = addr 2 2
+ronAddr = addr 3 3
+johnAddr = addr 4 4
 maryAddr = addr 5 0 -- 0 means maryAddr  does not have a StakeReference
 
 -- Each wallet has registered its credential,
 rewards :: Map (Credential 'Staking StandardCrypto) RDPair
 rewards = Map.fromList  -- (rdpair reward deposit) 
     [ (tom,rdpair 5 6)  -- only rewards should be distributed
-    , (ann,rdpair 7 6)  -- sowe should see 53 distributed
+    , (ann,rdpair 7 6)  -- so we should see 53 distributed
     , (ron,rdpair 11 6)
     , (john,rdpair 13 6)
     , (mary,rdpair 17 6) ]
@@ -188,12 +200,12 @@ delegations = Map.fromList
 -- Since tom and mary use a StakeRefNull those entries will not be distributed
 utxo = UTxO(Map.fromList
    [(txIn 40 1,txOut tomAddr (Coin 23))  -- Not distrubuted 23
-   ,(txIn 40 2,txOut tomAddr (Coin 29))
+   ,(txIn 40 2,txOut tomAddr (Coin 29))  -- Not distributed 29
    ,(txIn 42 4,txOut annAddr (Coin 31))
    ,(txIn 43 1,txOut ronAddr (Coin 33))
    ,(txIn 44 2,txOut johnAddr (Coin 41))
    ,(txIn 45 1,txOut maryAddr (Coin 43)) -- Not distributed 43
-   ])                 --total 200 - 66   134 should be distributed     
+   ])                 --total 200 - 95  105 should be distributed     
 
 umap :: UMap StandardCrypto
 umap = unify rewards Map.empty delegations Map.empty
@@ -207,7 +219,7 @@ pstate = pStateZero{psStakePoolParams =
 
 poolParams x n =
   PoolParams x
-    (UnsafeHash $ toShort $ Lazy.toStrict (Lazy.reverse(encode @Int 77) <> Lazy.replicate 248 35))
+    (extractHash(safeHash 77))
     (Coin 1)
     (Coin 3)
     (fromJust(boundRational (1 % 2)))
@@ -218,6 +230,7 @@ poolParams x n =
 
 pparams :: PParams X.Conway
 pparams = emptyPParams & ppProtocolVersionL .~ (protocolVersion Conway)
+-}
 
 {-
 ghci> pcDState dstate
@@ -280,6 +293,13 @@ Map
  , (TxIn #"2d000000 1) ->
      (TxOut (Addr TestNet (Key #"c53d0ffe) Null) (Value ₳ 43 {}) NoDatum ?-) }
 
+
+IStake {credMap = fromList 
+   [(KeyHashObj (KeyHash "0fad15e74b6918bb48331250db66eac802ff7d06d0aa053e0e213694"),CompactCoin 33)
+   ,(KeyHashObj (KeyHash "24083eec64cc2f442ca377d0c0543d07f3d85fad5f2170a31f61dffa"),CompactCoin 41)
+   ,(KeyHashObj (KeyHash "5d43e1f1048b2619f51abc0cf505e4d4f9cb84becefd468d1a2fe335"),CompactCoin 31)]
+, ptrMap = fromList []}
+
 ghci> pcPState pstate
 PState
  { regPools =
@@ -299,5 +319,20 @@ Map
  , (Key #"5d43e1f1) -> ₳ 7
  , (Key #"c53d0ffe) -> ₳ 17
  , (Key #"c6852b6a) -> ₳ 5 }
+
+
+Move this to Test.Cardano.Ledger.Core.Arbitrary
+
+data RawSeed = RawSeed !Word64 !Word64 !Word64 !Word64 !Word64
+  deriving (Eq, Show)
+
+instance Arbitrary RawSeed where
+  arbitrary =
+    RawSeed
+      <$> chooseAny
+      <*> chooseAny
+      <*> chooseAny
+      <*> chooseAny
+      <*> chooseAny
 
 -}
