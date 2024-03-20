@@ -701,8 +701,8 @@ instance IsConwayUniv fn => HasSpec fn ProtVer
 -- We do this like this to get the right bounds for `VersionRep`
 -- while ensuring that we don't have to add instances for e.g. `Num`
 -- to version.
-newtype VersionRep = VersionRep Word64
-  deriving (Show, Eq, Ord, Num, Random) via Word64
+newtype VersionRep = VersionRep Word8
+  deriving (Show, Eq, Ord, Num, Random) via Word8
 instance BaseUniverse fn => HasSpec fn VersionRep where
   type TypeSpec fn VersionRep = NumSpec VersionRep
   emptySpec = emptyNumSpec
@@ -711,13 +711,13 @@ instance BaseUniverse fn => HasSpec fn VersionRep where
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 instance Bounded VersionRep where
-  minBound = VersionRep $ getVersion64 minBound
-  maxBound = VersionRep $ getVersion64 maxBound
+  minBound = VersionRep $ getVersion minBound
+  maxBound = VersionRep $ getVersion maxBound
 instance MaybeBounded VersionRep
 
 instance HasSimpleRep Version where
   type SimpleRep Version = VersionRep
-  fromSimpleRep (VersionRep rep) = case mkVersion64 rep of
+  fromSimpleRep (VersionRep rep) = case mkVersion rep of
     Left err ->
       error $
         unlines
@@ -726,7 +726,7 @@ instance HasSimpleRep Version where
           , err
           ]
     Right a -> a
-  toSimpleRep = VersionRep . getVersion64
+  toSimpleRep = VersionRep . getVersion
 instance BaseUniverse fn => HasSpec fn Version
 instance BaseUniverse fn => OrdLike fn Version
 
