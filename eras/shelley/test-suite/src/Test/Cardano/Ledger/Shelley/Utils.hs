@@ -42,17 +42,15 @@ where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash (
-  Blake2b_256,
   Hash,
   HashAlgorithm,
-  hashToBytes,
  )
 import Cardano.Crypto.KES (
   KESAlgorithm (..),
   deriveVerKeyKES,
   genKeyKES,
  )
-import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
+import Test.Cardano.Ledger.Core.KeyPair(mkSeedFromWords,RawSeed(..))
 import Cardano.Crypto.VRF (
   CertifiedVRF,
   SignKeyVRF,
@@ -90,11 +88,9 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Data.Coerce (Coercible, coerce)
 import Data.Functor.Identity (runIdentity)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Typeable (Proxy (Proxy))
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils as CoreUtils
-import Test.Cardano.Ledger.Shelley.Arbitrary (RawSeed (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.Cardano.Protocol.TPraos.Create (KESKeyPair (..), VRFKeyPair (..), evolveKESUntil)
@@ -142,20 +138,6 @@ instance Split Coin where
     | otherwise = (take (fromIntegral m) (repeat (Coin (n `div` m))), Coin (n `rem` m))
 
 type GenesisKeyPair c = KeyPair 'Genesis c
-
-instance EncCBOR RawSeed where
-  encCBOR (RawSeed w1 w2 w3 w4 w5) = encCBOR (w1, w2, w3, w4, w5)
-  encodedSizeExpr size _ = 1 + size (Proxy :: Proxy Word64) * 5
-
--- | Construct a seed from a bunch of Word64s
---
---   We multiply these words by some extra stuff to make sure they contain
---   enough bits for our seed.
-mkSeedFromWords ::
-  RawSeed ->
-  Seed
-mkSeedFromWords stuff =
-  mkSeedFromBytes . hashToBytes $ hashWithEncoder @Blake2b_256 shelleyProtVer encCBOR stuff
 
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
 mkGenKey ::

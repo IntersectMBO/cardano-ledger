@@ -37,6 +37,7 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genValidCostModel,
 
   -- * Utils
+  RawSeed(..),
 
   -- | Will need to find a better home in the future
   uniformSubset,
@@ -88,6 +89,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
+import Test.Cardano.Ledger.Core.KeyPair(RawSeed(..))
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (DSIGN), StandardCrypto)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -891,3 +893,12 @@ genCostModelValues lang = do
     listAtLeast x = do
       NonNegative y <- arbitrary
       replicateM (x + y) arbitrary
+
+instance Arbitrary RawSeed where
+  arbitrary =
+    RawSeed
+      <$> chooseAny
+      <*> chooseAny
+      <*> chooseAny
+      <*> chooseAny
+      <*> chooseAny

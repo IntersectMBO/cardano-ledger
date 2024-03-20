@@ -25,6 +25,7 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
   VRFNatVal (..),
 ) where
 
+import Test.Cardano.Ledger.Core.Arbitrary(RawSeed(..))
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
@@ -724,15 +725,3 @@ instance
   where
   arbitrary = genericArbitraryU
   shrink _ = []
-
-data RawSeed = RawSeed !Word64 !Word64 !Word64 !Word64 !Word64
-  deriving (Eq, Show)
-
-instance Arbitrary RawSeed where
-  arbitrary =
-    RawSeed
-      <$> chooseAny
-      <*> chooseAny
-      <*> chooseAny
-      <*> chooseAny
-      <*> chooseAny
