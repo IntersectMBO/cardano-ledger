@@ -672,7 +672,6 @@ firstE f (x : xs) = case f x of
 -- | Add to the dependency map 'answer' constraints such that every Name in 'before'
 --   preceeds every Name in 'after' in the order in which Names are solved for.
 mkDeps ::
-  Era era =>
   HashSet (Name era) ->
   HashSet (Name era) ->
   Map (Name era) (HashSet (Name era)) ->
