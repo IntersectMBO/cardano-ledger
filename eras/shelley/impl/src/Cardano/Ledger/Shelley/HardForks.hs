@@ -6,7 +6,6 @@ module Cardano.Ledger.Shelley.HardForks (
   aggregatedRewards,
   allowMIRTransfer,
   validatePoolRewardAccountNetID,
-  missingScriptsSymmetricDifference,
   forgoRewardPrefilter,
   translateUpperBoundForPlutusScripts,
   forgoPointerAddressResolution,
@@ -38,13 +37,6 @@ validatePoolRewardAccountNetID ::
   ProtVer ->
   Bool
 validatePoolRewardAccountNetID pv = pvMajor pv > natVersion @4
-
--- | Starting with protocol version 7, the UTXO rule predicate failure
--- MissingScriptWitnessesUTXOW will not be used for extraneous scripts
-missingScriptsSymmetricDifference ::
-  ProtVer ->
-  Bool
-missingScriptsSymmetricDifference pv = pvMajor pv > natVersion @6
 
 -- | Starting with protocol version 7, the reward calculation no longer
 -- filters out unregistered stake addresses at the moment the calculation begins.
