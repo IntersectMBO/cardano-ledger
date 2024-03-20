@@ -433,8 +433,8 @@ votingCommitteeThresholdInternal pp committee = \case
   where
     threshold =
       case committeeThreshold <$> committee of
-        -- if the committee size is smaller than the mnimimum given in pparams,
-        -- we treat it as if we had no committe
+        -- if the committee size is smaller than the minimum given in PParams,
+        -- we treat it as if we had no committee
         SJust t | committeeSize >= minSize -> VotingThreshold t
         _ -> NoVotingThreshold
     minSize = pp ^. ppCommitteeMinSizeL

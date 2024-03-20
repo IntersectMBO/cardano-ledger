@@ -12,6 +12,7 @@ module Cardano.Ledger.Binary.Decoding (
   decodeFullDecoder',
   decodeFullAnnotator,
   decodeFullAnnotatedBytes,
+  decodeFullAnnotatorFromHexText,
   module Cardano.Ledger.Binary.Version,
   module Cardano.Ledger.Binary.Decoding.DecCBOR,
   module Cardano.Ledger.Binary.Decoding.Sharing,
@@ -48,6 +49,7 @@ import Cardano.Ledger.Binary.Decoding.Decoder
 import Cardano.Ledger.Binary.Decoding.Drop
 import Cardano.Ledger.Binary.Decoding.Sharing
 import Cardano.Ledger.Binary.Decoding.Sized
+import Cardano.Ledger.Binary.Plain (withHexText)
 import Cardano.Ledger.Binary.Version
 import Codec.CBOR.Read as Read (DeserialiseFailure, IDecode (..), deserialiseIncremental)
 import Codec.CBOR.Write (toStrictByteString)
@@ -187,6 +189,16 @@ decodeFullAnnotatedBytes ::
 decodeFullAnnotatedBytes v lbl decoder bytes =
   annotationBytes bytes <$> decodeFullDecoder v lbl decoder bytes
 {-# INLINE decodeFullAnnotatedBytes #-}
+
+decodeFullAnnotatorFromHexText ::
+  Version ->
+  Text ->
+  (forall s. Decoder s (Annotator a)) ->
+  Text ->
+  Either DecoderError a
+decodeFullAnnotatorFromHexText v desc dec =
+  withHexText $ decodeFullAnnotator v desc dec . BSL.fromStrict
+{-# INLINE decodeFullAnnotatorFromHexText #-}
 
 --------------------------------------------------------------------------------
 -- Nested CBOR-in-CBOR

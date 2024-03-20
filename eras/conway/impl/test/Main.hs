@@ -7,6 +7,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsS
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Conway.Binary.Bugs as Bugs
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
 import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatify
@@ -41,3 +42,4 @@ main =
         TxWitsSpec.spec @Conway
       describe "Plutus" $ do
         PlutusSpec.spec
+      Bugs.spec @Conway
