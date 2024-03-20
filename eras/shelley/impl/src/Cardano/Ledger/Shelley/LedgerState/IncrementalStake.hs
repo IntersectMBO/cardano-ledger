@@ -51,9 +51,7 @@ import Cardano.Ledger.EpochBoundary (
   SnapShot (..),
   Stake (..),
  )
-import Cardano.Ledger.Keys (
-  KeyRole (..),
- )
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Governance (EraGov (GovState))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types
@@ -175,29 +173,33 @@ smartUTxOState pp utxo c1 c2 st =
 -- =======================================================================
 
 -- | This computes a Snapshot using IncrementalStake (which is an
---   aggregate of the current UTxO) and UMap (which tracks Coin,
---   SPoolUView, and Ptrs simultaneously).  Note that logically:
+--   aggregate of the current UTxO) and UMap (which tracks rewards, deposits, 
+--   active pools, active dreps, Ptrs simultaneously).  Note that logically:
 --   1) IncrementalStake = (credStake, ptrStake)
---   2) UMap = (rewards, activeDelegs, ptrmap :: Map ptr cred)
+--   2) UMap = (rewards, poolDelegs, drepDelegs, ptrmap :: Map ptr cred)
+--      Note that (dom poolDelegs) `isSubsetOf` (dom rewards)
+--      Note that (dom drepDelegs) `isSubsetOf` (dom rewards)
+--      Note that membership in (dom poolDelegs) or (dom drepDelegs) is the defintive
+--      source of which Pools or Dreps are actively delegated to.
 --
 --   Using this scheme the logic can do 3 things in one go, without touching the UTxO.
 --   1) Resolve Pointers
---   2) Throw away things not actively delegated
+--   2) Throw away credentials not actively delegated to a pool
 --   3) Add up the coin
 --
 --   The Stake distribution function (Map cred coin) (the first component of a SnapShot)
 --   is defined by this SetAlgebra expression:
---   (dom activeDelegs) ◁ (aggregate+ (credStake ∪ ptrStake ∪ rewards))
+--   (dom poolDelegs) ◁ (aggregate+ (credStake ∪ ptrStake ∪ rewards))
 --
 --   We can apply meaning preserving operations to get equivalent expressions
 --
---   (dom activeDelegs) ◁ (aggregate+ (credStake ∪ ptrStake ∪ rewards))
---   aggregate+ (dom activeDelegs ◁ (credStake ∪ ptrStake ∪ rewards))
---   aggregate+ ((dom activeDelegs ◁ credStake) ∪ (dom activeDelegs ◁ ptrStake) ∪ (dom activeDelegs ◁ rewards))
+--   (dom poolDelegs) ◁ (aggregate+ (credStake ∪ ptrStake ∪ rewards))
+--   aggregate+ (dom poolDelegs ◁ (credStake ∪ ptrStake ∪ rewards))
+--   aggregate+ ((dom poolDelegs ◁ credStake) ∪ (dom poolDelegs ◁ ptrStake) ∪ (dom poolDelegs ◁ rewards))
 --
 --   We will compute this in several steps
---   step1 = (dom activeDelegs ◁ credStake) ∪ (dom activeDelegs ◁ ptrStake)
---   step2 =  aggregate (dom activeDelegs ◁ rewards) step1
+--   step1 = (dom poolDelegs ◁ credStake) ∪ (dom poolDelegs ◁ ptrStake)
+--   step2 =  aggregate (dom poolDelegs ◁ rewards) step1
 --   This function has a non-incremental analog, 'stakeDistr', mosty used in tests, which does use the UTxO.
 incrementalStakeDistr ::
   forall era.
@@ -215,12 +217,13 @@ incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
   where
     UMap triplesMap ptrsMap = dsUnified ds
     PState {psStakePoolParams = poolParams} = ps
-    delegs_ = UM.unUnifyToVMap (delegations ds)
-    -- A credential is active, only if it is being delegated
+    -- delegs_ :: VMap (Credential 'Staking c) (KeyHash 'StakePool c)
+    delegs_ = UM.unUnifyToVMap (delegations ds) 
+    -- A credential is active, only if it is delegated to some pool
     activeCreds = Map.filterWithKey (\k _ -> VMap.member k delegs_) credStake
     ignorePtrs = HardForks.forgoPointerAddressResolution (pp ^. ppProtocolVersionL)
-    -- pre Conway: (dom activeDelegs ◁ credStake) ∪ (dom activeDelegs ◁ ptrStake)
-    -- afterwards we forgo ptr resolution: (dom activeDelegs ◁ credStake)
+    -- pre Conway: (dom poolDelegs ◁ credStake) ∪ (dom poolDelegs ◁ ptrStake)
+    -- afterwards we forgo ptr resolution: (dom poolDelegs ◁ credStake)
     step1 =
       if ignorePtrs
         then activeCreds
@@ -237,7 +240,7 @@ incrementalStakeDistr pp (IStake credStake ptrStake) ds ps =
 -- | Aggregate active stake by merging two maps. The triple map from the
 --   UMap, and the IncrementalStake. Only keep the active stake. Active can
 --   be determined if there is a (SJust deleg) in the Tuple.  This is step2 =
---   aggregate (dom activeDelegs ◁ rewards) step1
+--   aggregate (dom poolDelegs ◁ rewards) step1
 aggregateActiveStake ::
   Ord k => Map k (UMElem c) -> Map k (CompactForm Coin) -> Map k (CompactForm Coin)
 aggregateActiveStake m1 m2 = assert (Map.valid m) m
