@@ -7,6 +7,7 @@
 
 ### `testlib`
 
+* Change `invalidSignalsAreGenerated`, `Trace`, `checkTrace`, `applySTSTest`, `traceFromInitState`, `forAllTraceFromInitState`,`onlyValidSignalsAreGeneratedFromInitState` to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`
 * Moved `small-steps-test` library here (`small-steps:testlib`) as sublibrary
 
 ## 1.0.1.0
