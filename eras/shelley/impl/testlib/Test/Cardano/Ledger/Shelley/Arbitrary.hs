@@ -262,7 +262,7 @@ instance Crypto c => Arbitrary (RewardAns c) where
   shrink = genericShrink
 
 instance (Crypto c, a ~ RewardAns c) => Arbitrary (RewardPulser c ShelleyBase a) where
-  arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (PulsingRewUpdate c) where
   arbitrary =
