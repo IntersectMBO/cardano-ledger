@@ -37,8 +37,7 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genValidCostModel,
 
   -- * Utils
-  RawSeed(..),
-
+  RawSeed (..),
   -- | Will need to find a better home in the future
   uniformSubset,
 )
@@ -89,7 +88,6 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Core
-import Test.Cardano.Ledger.Core.KeyPair(RawSeed(..))
 import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (DSIGN), StandardCrypto)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -157,6 +155,7 @@ import System.Random.Stateful (StatefulGen, uniformRM)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
 import Test.Cardano.Ledger.Binary.Random (QC (..))
+import Test.Cardano.Ledger.Core.KeyPair (RawSeed (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck
 import Test.QuickCheck.Hedgehog (hedgehog)

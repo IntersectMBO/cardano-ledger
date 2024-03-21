@@ -492,11 +492,14 @@ genNextDeltaTilFixPoint ::
   Tx era ->
   Gen (Delta era)
 genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx = do
-  addr <- genRecipients @era 1 keys scripts
-  fix
-    0
-    (genNextDelta scriptinfo utxo pparams keySpace tx)
-    (deltaZero initialfee pparams (head addr))
+  addrs <- genRecipients @era 1 keys scripts
+  case addrs of
+    [] -> discard
+    (addr : _) ->
+      fix
+        0
+        (genNextDelta scriptinfo utxo pparams keySpace tx)
+        (deltaZero initialfee pparams addr)
 
 applyDelta ::
   forall era.

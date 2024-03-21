@@ -26,19 +26,18 @@ module Test.Cardano.Ledger.Core.KeyPair (
   genByronAddrFromVKey,
   mkSeedFromWords,
   mkKeyPairWithRawSeed,
-  RawSeed(..),
+  RawSeed (..),
 
   -- * Deprecations
   mkVKeyRwdAcnt,
 )
 where
 
-import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash (hashToBytes)
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Crypto.Seed (mkSeedFromBytes,Seed)
+import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import qualified Cardano.Crypto.Signing as Byron (
   SigningKey,
   VerificationKey (..),
@@ -46,6 +45,7 @@ import qualified Cardano.Crypto.Signing as Byron (
  )
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (Testnet))
+import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
@@ -75,6 +75,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import System.Random.Stateful
@@ -83,7 +84,6 @@ import qualified Test.Cardano.Crypto.Gen as Byron
 import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.QuickCheck
 import Test.QuickCheck.Hedgehog (hedgehog)
-import Data.Word(Word64)
 
 data KeyPair (kd :: KeyRole) c = KeyPair
   { vKey :: !(VKey kd c)

@@ -25,7 +25,6 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
   VRFNatVal (..),
 ) where
 
-import Test.Cardano.Ledger.Core.Arbitrary(RawSeed(..))
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
@@ -85,7 +84,7 @@ import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary (RawSeed (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck.Hedgehog (hedgehog)
 
@@ -164,9 +163,10 @@ instance
   shrink LedgerState {..} =
     -- We drop the first element in the list so the list does not contain the
     -- original LedgerState which would cause `shrink` to loop indefinitely.
-    -- This call of `tail` is safe since the list guaranteed to have at least
-    -- one element.
-    tail $
+    -- We expect both the UtxOState and the CertState to have at least one shrink.
+    -- So the LedgerState shrink should have at least one shrink, and (drop 1),
+    -- throws the original LedgerState away.
+    drop 1 $
       LedgerState
         <$> (lsUTxOState : shrink lsUTxOState)
         <*> (lsCertState : shrink lsCertState)

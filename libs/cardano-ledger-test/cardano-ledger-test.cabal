@@ -73,7 +73,6 @@ library
         Test.Cardano.Ledger.EraClass
         Test.Cardano.Ledger.Generic.AggPropTests
         Test.Cardano.Ledger.Generic.ApplyTx
-        Test.Cardano.Ledger.Generic.Indexed
         Test.Cardano.Ledger.Generic.Fields
         Test.Cardano.Ledger.Generic.Functions
         Test.Cardano.Ledger.Generic.GenState
@@ -107,7 +106,6 @@ library
         base >=4.14 && <5,
         bech32,
         bytestring,
-        binary,
         cardano-data,
         cardano-crypto-class,
         cardano-crypto-wrapper,

@@ -50,7 +50,6 @@ import Cardano.Crypto.KES (
   deriveVerKeyKES,
   genKeyKES,
  )
-import Test.Cardano.Ledger.Core.KeyPair(mkSeedFromWords,RawSeed(..))
 import Cardano.Crypto.VRF (
   CertifiedVRF,
   SignKeyVRF,
@@ -89,7 +88,7 @@ import Data.Coerce (Coercible, coerce)
 import Data.Functor.Identity (runIdentity)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Word (Word64)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair, pattern KeyPair)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair, RawSeed (..), mkSeedFromWords, pattern KeyPair)
 import Test.Cardano.Ledger.Core.Utils as CoreUtils
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.TreeDiff (ToExpr)

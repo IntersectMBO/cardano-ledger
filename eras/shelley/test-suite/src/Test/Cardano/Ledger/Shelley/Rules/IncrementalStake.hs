@@ -10,6 +10,7 @@
 module Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (
   incrStakeComputationTest,
   incrStakeComparisonTest,
+  incrStakeUnitTest,
   stakeDistr,
   aggregateUtxoCoinByCredential,
 ) where
@@ -21,15 +22,16 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
   longTraceLen,
   traceLen,
  )
+import Test.Cardano.Ledger.UnitTestTools
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (natVersion)
+import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), Ptr, StakeReference (StakeRefBase, StakeRefPtr))
+import Cardano.Ledger.Credential (Ptr, StakeReference (StakeRefBase, StakeRefPtr))
 import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
@@ -44,10 +46,12 @@ import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
   incrementalStakeDistr,
   ptrsMap,
+  updateStakeDistribution,
  )
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance)
 import Control.SetAlgebra (dom, eval, (▷), (◁))
+import Data.Default.Class (Default (..))
 import Data.Foldable (fold)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -74,7 +78,8 @@ import Test.QuickCheck (
   counterexample,
   (===),
  )
-import Test.Tasty (TestTree)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (assertEqual, testCase)
 import Test.Tasty.QuickCheck (testProperty)
 
 incrStakeComputationTest ::
@@ -196,18 +201,18 @@ stakeDistr u ds ps =
   SnapShot
     (Stake $ VMap.fromMap (UM.compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
     (VMap.fromMap delegs)
-    (VMap.fromMap poolParams)
+    (VMap.fromMap poolPs)
   where
     rewards' :: Map.Map (Credential 'Staking (EraCrypto era)) Coin
     rewards' = UM.rewardMap (dsUnified ds)
     delegs :: Map.Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
     delegs = UM.sPoolMap (dsUnified ds)
     ptrs' = ptrsMap ds
-    PState {psStakePoolParams = poolParams} = ps
+    PState {psStakePoolParams = poolPs} = ps
     stakeRelation :: Map (Credential 'Staking (EraCrypto era)) Coin
     stakeRelation = aggregateUtxoCoinByCredential ptrs' u rewards'
     activeDelegs :: Map.Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
-    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
+    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolPs)
 
 -- | Sum up all the Coin for each staking Credential. This function has an
 --   incremental analog. See 'incrementalAggregateUtxoCoinByCredential'
@@ -228,3 +233,113 @@ aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
               | Just cred <- Map.lookup p ptrs -> Map.insertWith (<>) cred c ans
             Addr _ _ (StakeRefBase hk) -> Map.insertWith (<>) hk c ans
             _other -> ans
+
+-- =================================================================
+-- Incremental Stake Unit test
+
+-- There are 2 Pools
+pool1, pool2 :: KeyHash 'StakePool StandardCrypto
+pool1 = poolHash 30
+pool2 = poolHash 31
+
+-- There are 5 wallets, each with its own Credential
+tom, ann, ron, john, mary :: Credential 'Staking StandardCrypto
+tom = stakeCred 1
+ann = stakeCred 2
+ron = stakeCred 3
+john = stakeCred 4
+mary = stakeCred 5
+
+-- They each own an address
+tomAddr, annAddr, ronAddr, johnAddr, maryAddr :: Addr StandardCrypto
+tomAddr = addr 1 0 -- 0 means tomAddr  does not have a StakeReference
+annAddr = addr 2 2
+ronAddr = addr 3 3
+johnAddr = addr 4 4
+maryAddr = addr 5 0 -- 0 means maryAddr  does not have a StakeReference
+
+-- Each wallet has registered its credential,
+rewards :: Map (Credential 'Staking StandardCrypto) UM.RDPair
+rewards =
+  Map.fromList -- (rdpair reward deposit)
+    [ (tom, rdpair 5 6) -- only rewards should be distributed
+    , (ann, rdpair 7 6) -- so we should see 53 distributed
+    , (ron, rdpair 11 6)
+    , (john, rdpair 13 6)
+    , (mary, rdpair 17 6)
+    ]
+
+rdpair :: Word64 -> Word64 -> UM.RDPair
+rdpair x y = UM.RDPair (CompactCoin x) (CompactCoin y)
+
+-- Each wallet delegates to one of the pools
+delegations :: Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto)
+delegations =
+  Map.fromList
+    [ (tom, pool1) -- since every one is delegated
+    , (ann, pool2) -- no ones stake should be left out
+    , (ron, pool1)
+    , (john, pool2)
+    , (mary, pool2)
+    ]
+
+-- Each wallet has one or more UTxO entries
+-- Since tom and mary use a StakeRefNull those entries will not be distributed
+utxo1 :: UTxO (ShelleyEra StandardCrypto)
+utxo1 =
+  UTxO
+    ( Map.fromList
+        [ (txIn 40 1, txOut tomAddr (Coin 23)) -- Not distrubuted 23
+        , (txIn 40 2, txOut tomAddr (Coin 29)) -- Not distributed 29
+        , (txIn 42 4, txOut annAddr (Coin 31))
+        , (txIn 43 1, txOut ronAddr (Coin 33))
+        , (txIn 44 2, txOut johnAddr (Coin 41))
+        , (txIn 45 1, txOut maryAddr (Coin 43)) -- Not distributed 43
+        ] -- total 200 - 95  105 should be distributed
+    )
+
+pparams :: PParams (ShelleyEra StandardCrypto)
+pparams = emptyPParams & ppProtocolVersionL .~ ProtVer (natVersion @2) 0 -- Shelley
+
+incrementalStake :: IncrementalStake StandardCrypto
+incrementalStake = updateStakeDistribution pparams (IStake mempty mempty) mempty utxo1
+
+umap :: UM.UMap StandardCrypto
+umap = UM.unify rewards Map.empty delegations Map.empty
+
+dState :: DState (ShelleyEra StandardCrypto)
+dState = def {dsUnified = umap}
+
+pState :: PState (ShelleyEra StandardCrypto)
+pState =
+  def
+    { psStakePoolParams =
+        Map.fromList [(pool1, poolParams pool1 30), (pool2, poolParams pool2 31)]
+    }
+
+testStakeDistr :: Map (Credential 'Staking StandardCrypto) Coin
+testStakeDistr = Map.map fromCompact (VMap.toMap (unStake (ssStake snap)))
+  where
+    snap = incrementalStakeDistr pparams incrementalStake dState pState
+
+expected :: Map (Credential 'Staking StandardCrypto) Coin
+expected =
+  Map.fromList -- Coin Part is (utxoCoin <> rewardCoin)
+    [ (tom, Coin 0 <> Coin 5) -- tom uxtxoCoin is zero because address has StakeRefNull
+    , (ann, Coin 31 <> Coin 7)
+    , (ron, Coin 33 <> Coin 11)
+    , (john, Coin 41 <> Coin 13)
+    , (mary, Coin 0 <> Coin 17) -- mary uxtxoCoin is zero because address has StakeRefNull
+    ]
+
+incrStakeUnitTest :: TestTree
+incrStakeUnitTest =
+  testGroup
+    "IncrementalStake unit tests"
+    [ testCase
+        "Reward part is counted if delegated"
+        (assertEqual "manual and computed naps disagree" expected testStakeDistr)
+    , testCase
+        "Correct sum is computed"
+        (assertEqual "sum is not expected value of 158" (Coin 158) (fold testStakeDistr))
+    ]

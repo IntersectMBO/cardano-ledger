@@ -65,8 +65,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (GovProcedures (..))
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..), WitVKey (..), hashKey)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..), WitVKey (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (MultiAsset (..))
@@ -89,9 +88,8 @@ import qualified Data.Set as Set
 import Data.Word (Word16, Word32)
 import Lens.Micro ((^.))
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..))
-import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
 import Test.Cardano.Ledger.Generic.Proof
+import qualified Test.Cardano.Ledger.UnitTestTools as Tools (addr)
 
 -- =======================================================
 -- Fields are used to hold a single field of record. So the Field
@@ -391,11 +389,7 @@ initialTx era@Conway = mkBasicTx (initialTxBody era)
 
 -- | A Meaningless Addr.
 initialAddr :: Era era => Proof era -> Addr (EraCrypto era)
-initialAddr _wit = Addr Testnet pCred sCred
-  where
-    (KeyPair svk _ssk) = theKeyPair 0
-    pCred = KeyHashObj . hashKey . vKey $ theKeyPair 1
-    sCred = StakeRefBase . KeyHashObj . hashKey $ svk
+initialAddr _wit = Tools.addr 1 0
 
 initialTxOut :: Era era => Proof era -> TxOut era
 initialTxOut wit@Shelley = mkBasicTxOut (initialAddr wit) mempty
