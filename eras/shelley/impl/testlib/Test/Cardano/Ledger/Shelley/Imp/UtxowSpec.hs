@@ -2,12 +2,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.UtxowSpec (spec) where
 
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
-import Cardano.Ledger.BaseTypes (inject)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
@@ -23,6 +24,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest
 spec ::
   forall era.
   ( ShelleyEraImp era
+  , Arbitrary (TxAuxData era)
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
   SpecWith (ImpTestState era)
@@ -70,3 +72,13 @@ spec = describe "UTXOW" $ do
           [ injectFailure $
               MissingVKeyWitnessesUTXOW [coerceKeyRole aliceKh]
           ]
+
+  it "MissingTxBodyMetadataHash" $ do
+    auxData <- arbitrary @(TxAuxData era)
+    let auxDataHash = hashTxAuxData auxData
+    let tx = mkBasicTx mkBasicTxBody & auxDataTxL .~ SJust auxData
+    submitFailingTx
+      tx
+      [ injectFailure $
+          MissingTxBodyMetadataHash auxDataHash
+      ]
