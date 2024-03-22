@@ -37,6 +37,7 @@
 
 ### `testlib`
 
+* Add `arbitraryStrictMap`
 * Add `shouldContainExpr`
 * Add `EraRuleProof`, `UnliftRules`, `roundTripAllPredicateFailures`
 * Add `Test.Cardano.Ledger.Plutus.ScriptTestContext`

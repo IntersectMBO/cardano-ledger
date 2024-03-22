@@ -31,11 +31,15 @@ module Test.Cardano.Ledger.Common (
   expectLeftDeep,
   expectLeftDeep_,
   expectLeftDeepExpr,
+
+  -- * Support for defining Arbitrary instances
+  arbitraryStrictMap,
 )
 where
 
 import Control.DeepSeq (NFData)
 import Control.Monad as X (forM_, replicateM, replicateM_, unless, void, when, (>=>))
+import qualified Data.Map.Strict as Map
 import System.IO (
   BufferMode (LineBuffering),
   hSetBuffering,
@@ -141,3 +145,12 @@ shouldBeLeft e x = expectLeft e >>= (`shouldBe` x)
 -- | Same as `shouldBeExpr`, except it checks that the value is `Left`
 shouldBeLeftExpr :: (HasCallStack, ToExpr a, ToExpr b, Eq a) => Either a b -> a -> Expectation
 shouldBeLeftExpr e x = expectLeftExpr e >>= (`shouldBeExpr` x)
+
+-- | A workaround for the standard `Arbitrary` instance for Maps.
+--
+-- Strict and lazy Maps share the same type so it's not possible to have separate instances for
+-- them. The standard instance (from `Test.QuickCheck`) uses the lazy interface and thus produces
+-- lazy values. This function uses the strict `fromList` to ensure that all the generated values are
+-- strict.
+arbitraryStrictMap :: (Ord k, Arbitrary k, Arbitrary v) => Gen (Map.Map k v)
+arbitraryStrictMap = Map.fromList <$> arbitrary
