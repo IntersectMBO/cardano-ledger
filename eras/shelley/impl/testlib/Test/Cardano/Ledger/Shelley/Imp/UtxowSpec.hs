@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.Shelley.Imp.UtxowSpec (spec) where
 
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -91,4 +92,18 @@ spec = describe "UTXOW" $ do
       tx
       [ injectFailure $
           MissingTxMetadata auxDataHash
+      ]
+
+  it "ConflictingMetadataHash" $ do
+    auxData <- arbitrary @(TxAuxData era)
+    let auxDataHash = hashTxAuxData auxData
+    wrongAuxDataHash <- arbitrary @(AuxiliaryDataHash (EraCrypto era))
+    let tx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . auxDataHashTxBodyL .~ SJust wrongAuxDataHash
+            & auxDataTxL .~ SJust auxData
+    submitFailingTx
+      tx
+      [ injectFailure $
+          ConflictingMetadataHash wrongAuxDataHash auxDataHash
       ]
