@@ -20,6 +20,7 @@ spec ::
   ( MaryEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , Arbitrary (TxAuxData era)
   ) =>
   Spec
 spec = do

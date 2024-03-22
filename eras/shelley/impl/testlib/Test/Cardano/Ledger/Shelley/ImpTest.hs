@@ -104,6 +104,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impLastTickG,
   impKeyPairsG,
   impNativeScriptsG,
+  impRootKh,
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -739,6 +740,14 @@ lookupImpRootTxOut = do
   case txinLookup impRootTxIn utxo of
     Nothing -> error "Root txId no longer points to an existing unspent output"
     Just rootTxOut -> pure (impRootTxIn, rootTxOut)
+
+impRootKh ::
+  forall era. (EraTxOut era, HasCallStack) => ImpTestM era (KeyHash 'Payment (EraCrypto era))
+impRootKh = do
+  rootTxOut <- snd <$> lookupImpRootTxOut
+  pure $ case rootTxOut ^. addrTxOutL @era of
+    Addr _ (KeyHashObj kh) _ -> kh
+    _ -> error "Missing expected root key hash"
 
 impAddNativeScript ::
   forall era.

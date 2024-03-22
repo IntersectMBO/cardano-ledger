@@ -11,7 +11,7 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as Utxos
 import Test.Cardano.Ledger.Alonzo.ImpTest (MaryEraImp, withImpState)
-import Test.Cardano.Ledger.Common (Spec, describe)
+import Test.Cardano.Ledger.Common (Arbitrary, Spec, describe)
 import qualified Test.Cardano.Ledger.Mary.Imp as MaryImp
 
 spec ::
@@ -20,6 +20,7 @@ spec ::
   , AlonzoEraTx era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , Arbitrary (TxAuxData era)
   ) =>
   Spec
 spec = do

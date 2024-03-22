@@ -57,6 +57,7 @@ spec ::
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Arbitrary (TxAuxData era)
   ) =>
   Spec
 spec = do
