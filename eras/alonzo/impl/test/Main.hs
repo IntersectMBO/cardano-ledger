@@ -3,6 +3,7 @@
 module Main where
 
 import Cardano.Ledger.Alonzo (Alonzo)
+import qualified Test.Cardano.Ledger.Allegra.Imp as AllegraImp
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
@@ -21,8 +22,9 @@ main =
       CddlSpec.spec
       roundTripJsonEraSpec @Alonzo
       describe "Imp" $ do
-        ShelleyImp.spec @Alonzo
+        AllegraImp.spec @Alonzo
         AlonzoImp.spec @Alonzo
+        ShelleyImp.spec @Alonzo
       describe "CostModels" $ do
         CostModelsSpec.spec @Alonzo
       describe "TxWits" $ do

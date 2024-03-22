@@ -86,6 +86,8 @@ library testlib
         Test.Cardano.Ledger.Allegra.Binary.Cddl
         Test.Cardano.Ledger.Allegra.ImpTest
         Test.Cardano.Ledger.Allegra.TreeDiff
+        Test.Cardano.Ledger.Allegra.Imp
+        Test.Cardano.Ledger.Allegra.Imp.UtxowSpec
 
     visibility:       public
     hs-source-dirs:   testlib

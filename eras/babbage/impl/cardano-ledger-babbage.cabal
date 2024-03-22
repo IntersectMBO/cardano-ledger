@@ -137,7 +137,7 @@ test-suite tests
     build-depends:
         base,
         cardano-ledger-alonzo,
-        cardano-ledger-allegra,
+        cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
         cardano-ledger-babbage,
         cardano-ledger-core,
         cardano-ledger-binary:testlib,
