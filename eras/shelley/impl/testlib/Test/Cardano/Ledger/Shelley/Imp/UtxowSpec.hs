@@ -82,3 +82,13 @@ spec = describe "UTXOW" $ do
       [ injectFailure $
           MissingTxBodyMetadataHash auxDataHash
       ]
+
+  it "MissingTxMetadata" $ do
+    auxData <- arbitrary @(TxAuxData era)
+    let auxDataHash = hashTxAuxData auxData
+    let tx = mkBasicTx mkBasicTxBody & bodyTxL . auxDataHashTxBodyL .~ SJust auxDataHash
+    submitFailingTx
+      tx
+      [ injectFailure $
+          MissingTxMetadata auxDataHash
+      ]
