@@ -1,22 +1,27 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.UtxowSpec (spec) where
 
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
+import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Keys.Bootstrap
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
+import qualified Data.Sequence.Strict as SSeq
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (ByronKeyPair (..))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
 spec ::
+  forall era.
   ( ShelleyEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
@@ -49,3 +54,19 @@ spec = describe "UTXOW" $ do
             mkBasicTx txBody
               & (witsTxL %~ (bootAddrTxWitsL .~ [aliceBadWitness]))
       submitFailingTx txBad [injectFailure $ InvalidWitnessesUTXOW [aliceVKey]]
+
+  it "MissingVKeyWitnessesUTXOW" $ do
+    tx <- impAnn "Build a transaction and fix it up minimally" $ do
+      bobAddr <- snd <$> freshKeyAddr
+      let tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut bobAddr (inject (Coin 10)))
+      (addRootTxIn >=> fixupFees) tx
+    aliceKh <- impRootKh
+    void $
+      withNoFixup $
+        submitFailingTx
+          tx
+          [ injectFailure $
+              MissingVKeyWitnessesUTXOW [coerceKeyRole aliceKh]
+          ]
