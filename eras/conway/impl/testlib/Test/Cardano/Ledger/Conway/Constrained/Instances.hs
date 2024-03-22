@@ -26,12 +26,14 @@
 -- | This module provides the necessary instances of `HasSpec`
 -- and `HasSimpleRep` to write specs for the environments,
 -- states, and signals in the conway STS rules.
-module Test.Cardano.Ledger.Conway.Constrained
+module Test.Cardano.Ledger.Conway.Constrained.Instances
   ( ConwayFn
   , onJust'
   , onSized
   , cKeyHashObj
   , cScriptHashObj
+  , strLen_
+  , IsConwayUniv
   ) where
 
 import Cardano.Chain.Common (

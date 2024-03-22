@@ -54,15 +54,6 @@ library
         Test.Cardano.Ledger.Constrained.Scripts
         Test.Cardano.Ledger.Constrained.Size
         Test.Cardano.Ledger.Constrained.Solver
-        Test.Cardano.Ledger.Constrained.V2.Conway
-        Test.Cardano.Ledger.Constrained.V2.Conway.CERT
-        Test.Cardano.Ledger.Constrained.V2.Conway.DELEG
-        Test.Cardano.Ledger.Constrained.V2.Conway.GOV
-        Test.Cardano.Ledger.Constrained.V2.Conway.GOVCERT
-        Test.Cardano.Ledger.Constrained.V2.Conway.LEDGER
-        Test.Cardano.Ledger.Constrained.V2.Conway.POOL
-        Test.Cardano.Ledger.Constrained.V2.Conway.PParams
-        Test.Cardano.Ledger.Constrained.V2.Conway.UTXO
         Test.Cardano.Ledger.Examples.BabbageFeatures
         Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
         Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW
@@ -102,7 +93,6 @@ library
         -Wunused-packages
 
     build-depends:
-        cryptonite,
         array,
         base >=4.14 && <5,
         bech32,
@@ -111,7 +101,7 @@ library
         cardano-crypto-class,
         cardano-crypto-wrapper,
         cardano-crypto,
-        cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
+        cardano-ledger-allegra,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-alonzo-test,
         cardano-ledger-api,
@@ -126,7 +116,7 @@ library
         cardano-ledger-shelley-test,
         cardano-ledger-shelley-ma-test,
         cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
-        cardano-slotting:{cardano-slotting, testlib},
+        cardano-slotting,
         deepseq,
         containers,
         formatting,

@@ -7,7 +7,7 @@
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the GOV rule
-module Test.Cardano.Ledger.Constrained.V2.Conway.GOV where
+module Test.Cardano.Ledger.Conway.Constrained.Spec.Gov where
 
 import Data.Foldable
 
@@ -24,8 +24,11 @@ import Lens.Micro
 
 import Constrained
 
-import Test.Cardano.Ledger.Constrained.V2.Conway
-import Test.Cardano.Ledger.Constrained.V2.Conway.PParams
+import Test.Cardano.Ledger.Conway.Constrained.Instances
+import Test.Cardano.Ledger.Conway.Constrained.Spec.PParams
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Conway.Core
 
 govEnvSpec ::
   IsConwayUniv fn =>
