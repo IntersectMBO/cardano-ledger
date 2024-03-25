@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Allegra.Imp.UtxowSpec (spec) where
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.SafeHash (HashAnnotated (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import qualified Data.Set as Set
@@ -46,6 +47,21 @@ spec = describe "UTXOW" $ do
           [ injectFailure $
               MissingScriptWitnessesUTXOW [scriptHash]
           ]
+
+  it "ExtraneousScriptWitnessesUTXOW" $ do
+    rootKh <- impRootKh
+    let script = fromNativeScript $ RequireSignature $ coerceKeyRole rootKh
+    let scriptHash = hashScript @era script
+    tx <-
+      shelleyFixupTx $
+        mkBasicTx mkBasicTxBody
+          & witsTxL . scriptTxWitsL .~ [(scriptHash, script)]
+    withNoFixup $
+      submitFailingTx
+        tx
+        [ injectFailure $
+            ExtraneousScriptWitnessesUTXOW [scriptHash]
+        ]
   where
     witVKey tx keyPair =
       let bodyHash = hashAnnotated $ tx ^. bodyTxL
