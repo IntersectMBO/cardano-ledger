@@ -72,7 +72,6 @@ import Cardano.Ledger.Rules.ValidationMode (
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyUTXOW)
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.Shelley.Rules.Ppup (ShelleyPpupPredFailure)
@@ -330,7 +329,7 @@ transitionRulesUTXOW = do
 
   {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
   let scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
-  runTest $ validateMissingScripts pp scriptsNeeded scriptsProvided
+  runTest $ validateMissingScripts scriptsNeeded scriptsProvided
 
   -- check VKey witnesses
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
@@ -406,23 +405,16 @@ validateFailedNativeScripts (ScriptsProvided scriptsProvided) tx = do
 {-  sNeeded := scriptsNeeded utxo tx                             -}
 {-  sProvided := Map.keysSet (tx ^. witsTxL . scriptTxWitsL)     -}
 validateMissingScripts ::
-  EraPParams era =>
-  PParams era ->
   ShelleyScriptsNeeded era ->
   ScriptsProvided era ->
   Test (ShelleyUtxowPredFailure era)
-validateMissingScripts pp (ShelleyScriptsNeeded sNeeded) scriptsprovided =
-  if HardForks.missingScriptsSymmetricDifference (pp ^. ppProtocolVersionL)
-    then
-      sequenceA_
-        [ failureUnless (sNeeded `Set.isSubsetOf` sProvided) $
-            MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sProvided)
-        , failureUnless (sProvided `Set.isSubsetOf` sNeeded) $
-            ExtraneousScriptWitnessesUTXOW (sProvided `Set.difference` sNeeded)
-        ]
-    else
-      failureUnless (sNeeded == sProvided) $
+validateMissingScripts (ShelleyScriptsNeeded sNeeded) scriptsprovided =
+  sequenceA_
+    [ failureUnless (sNeeded `Set.isSubsetOf` sProvided) $
         MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sProvided)
+    , failureUnless (sProvided `Set.isSubsetOf` sNeeded) $
+        ExtraneousScriptWitnessesUTXOW (sProvided `Set.difference` sNeeded)
+    ]
   where
     sProvided = Map.keysSet $ unScriptsProvided scriptsprovided
 

@@ -362,7 +362,7 @@ alonzoStyleWitness = do
   let scriptsNeeded = getScriptsNeeded utxo txBody
       scriptsHashesNeeded = getScriptsHashesNeeded scriptsNeeded
       shelleyScriptsNeeded = ShelleyScriptsNeeded scriptsHashesNeeded
-  runTest $ Shelley.validateMissingScripts pp shelleyScriptsNeeded scriptsProvided
+  runTest $ Shelley.validateMissingScripts shelleyScriptsNeeded scriptsProvided
 
   {- inputHashes := { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} -}
   {-  inputHashes ⊆ dom(txdats txw)  -}

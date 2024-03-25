@@ -168,7 +168,7 @@ testEverybodySigns =
 
 testWrongScript :: Assertion
 testWrongScript =
-  utxoSt' @?= (Left . pure . MissingScriptWitnessesUTXOW) wits
+  utxoSt' @?= Left (pure extraneous <> pure missing)
   where
     utxoSt' =
       applyTxWithScript
@@ -178,7 +178,9 @@ testWrongScript =
         (Withdrawals Map.empty)
         (Coin 0)
         [asWitness Cast.alicePay, asWitness Cast.bobPay]
-    wits = Set.singleton $ hashScript @C aliceOnly
+    asHashes = Set.singleton . hashScript @C
+    extraneous = ExtraneousScriptWitnessesUTXOW $ asHashes aliceOrBob
+    missing = MissingScriptWitnessesUTXOW $ asHashes aliceOnly
 
 testAliceOrBob :: Assertion
 testAliceOrBob =
