@@ -28,6 +28,7 @@
 -- states, and signals in the conway STS rules.
 module Test.Cardano.Ledger.Conway.Constrained.Instances
   ( ConwayFn
+  , StringFn
   , onJust'
   , onSized
   , cKeyHashObj

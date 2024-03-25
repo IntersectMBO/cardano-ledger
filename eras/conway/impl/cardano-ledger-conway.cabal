@@ -125,7 +125,9 @@ library testlib
         Test.Cardano.Ledger.Conway.Constrained.Spec.Pool
         Test.Cardano.Ledger.Conway.Constrained.Spec.PParams
         Test.Cardano.Ledger.Conway.Constrained.Spec.Utxo
+        Test.Cardano.Ledger.Conway.Conformance
         Test.Cardano.Ledger.Conway.Conformance.SpecTranslate
+        Test.Cardano.Ledger.Conway.Conformance.ExecutableSpecRule
         Test.Cardano.Ledger.Conway.ImpTest
         Test.Cardano.Ledger.Conway.Imp
         Test.Cardano.Ledger.Conway.Imp.EpochSpec

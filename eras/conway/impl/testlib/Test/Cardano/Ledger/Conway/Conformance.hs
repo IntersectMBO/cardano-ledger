@@ -1,6 +1,14 @@
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
 module Test.Cardano.Ledger.Conway.Conformance (spec) where
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Conformance (conformsToImpl)
+import Cardano.Ledger.Conway (Conway)
+import Test.Cardano.Ledger.Conway.ImpTest (withImpState)
+import Test.Cardano.Ledger.Conway.Constrained.Instances (ConwayFn)
+import Test.Cardano.Ledger.Conway.Conformance.ExecutableSpecRule ()
 
 spec :: Spec
 spec = describe "Conway conformance tests" $ do
-  undefined
+  withImpState @Conway $ do
+    it "" $ conformsToImpl @"UTXO" @ConwayFn

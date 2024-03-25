@@ -8,12 +8,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Test.Cardano.Ledger.Conformance.ExecutableSpecRule
-  ( EraUniv
-  , ExecutableSpecRule (..)
+  ( ExecutableSpecRule (..)
   , conformsToImpl
+  , computationResultToEither
   ) where
 
-import Data.Kind (Type)
 import qualified Constrained as CV2
 import Control.State.Transition.Extended (STS(..))
 import Cardano.Ledger.Core (EraRule)
@@ -31,13 +30,12 @@ import Test.Cardano.Ledger.Shelley.ImpTest
   , impAnn
   , tryRunImpRule
   )
-
-type family EraUniv era :: [Type] -> Type -> Type
+import qualified Lib as Agda
 
 class
-  ( CV2.HasSpec (EraUniv era) (Environment (EraRule rule era))
-  , CV2.HasSpec (EraUniv era) (State (EraRule rule era))
-  , CV2.HasSpec (EraUniv era) (Signal (EraRule rule era))
+  ( CV2.HasSpec fn (Environment (EraRule rule era))
+  , CV2.HasSpec fn (State (EraRule rule era))
+  , CV2.HasSpec fn (Signal (EraRule rule era))
   , SpecTranslate (Environment (EraRule rule era))
   , SpecTranslate (State (EraRule rule era))
   , SpecTranslate (Signal (EraRule rule era))
@@ -59,19 +57,19 @@ class
   , STS (EraRule rule era)
   , BaseM (EraRule rule era) ~ ShelleyBase
   ) =>
-  ExecutableSpecRule rule era
+  ExecutableSpecRule fn rule era
   where
   environmentSpec ::
-    CV2.Spec (EraUniv era) (Environment (EraRule rule era))
+    CV2.Spec fn (Environment (EraRule rule era))
 
   stateSpec ::
     Environment (EraRule rule era) ->
-    CV2.Spec (EraUniv era) (State (EraRule rule era))
+    CV2.Spec fn (State (EraRule rule era))
 
   signalSpec ::
     Environment (EraRule rule era) ->
     State (EraRule rule era) ->
-    CV2.Spec (EraUniv era) (Signal (EraRule rule era))
+    CV2.Spec fn (Signal (EraRule rule era))
 
   runAgdaRule ::
     SpecRep (Environment (EraRule rule era)) ->
@@ -81,15 +79,15 @@ class
       (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
       (SpecRep (State (EraRule rule era)))
 
-conformsToImpl :: forall era (rule :: Symbol).
-  ExecutableSpecRule rule era =>
+conformsToImpl :: forall (rule :: Symbol) fn era.
+  ExecutableSpecRule fn rule era =>
   ImpTestM era ()
 conformsToImpl = do
-  env <- liftGen . CV2.genFromSpec_ $ environmentSpec @rule @era
-  st <- liftGen . CV2.genFromSpec_ $ stateSpec @rule @era env
-  sig <- liftGen . CV2.genFromSpec_ $ signalSpec @rule @era env st
+  env <- liftGen . CV2.genFromSpec_ $ environmentSpec @fn @rule @era
+  st <- liftGen . CV2.genFromSpec_ $ stateSpec @fn @rule @era env
+  sig <- liftGen . CV2.genFromSpec_ $ signalSpec @fn @rule @era env st
   agdaRes <- impAnn "Translating spec values to SpecRep" . expectRightExpr $
-    runAgdaRule @rule @era <$> toSpecRep env <*> toSpecRep st <*> toSpecRep sig
+    runAgdaRule @fn @rule @era <$> toSpecRep env <*> toSpecRep st <*> toSpecRep sig
   implRes <- fmap fst <$> tryRunImpRule @rule @era env st sig
   implResTest <- impAnn "Translating implementation values to SpecRep" . expectRightExpr $
     bimapM (traverse toTestRep) toTestRep implRes
@@ -100,3 +98,7 @@ conformsToImpl = do
         (specToTestRep @(State (EraRule rule era)))
         agdaRes
   agdaResTest `shouldBeExpr` implResTest
+
+computationResultToEither :: Agda.ComputationResult e a -> Either e a
+computationResultToEither (Agda.Success x) = Right x
+computationResultToEither (Agda.Failure e) = Left e

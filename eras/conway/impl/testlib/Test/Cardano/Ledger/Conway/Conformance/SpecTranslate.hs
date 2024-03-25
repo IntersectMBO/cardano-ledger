@@ -81,6 +81,7 @@ import Lens.Micro
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance (SpecTranslate (..), SpecTranslationError)
 import Cardano.Ledger.Tools (byteStringToNum)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
 
 instance SpecTranslate TxIx where
   type SpecRep TxIx = Integer
@@ -531,3 +532,8 @@ instance
       <$> toAgdaTxBody @era tx
       <*> toSpecRep (wits tx)
       <*> toSpecRep (auxiliaryData tx)
+
+instance SpecTranslate (BabbageUtxoPredFailure era) where
+  type SpecRep (BabbageUtxoPredFailure era) = ()
+
+  toSpecRep _ = pure ()

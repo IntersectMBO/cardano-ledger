@@ -4,6 +4,7 @@
 module Test.Cardano.Ledger.Conformance.Orphans () where
 
 import Lib
+import Test.Cardano.Ledger.Common (NFData)
 
 deriving instance Eq AgdaEmpty
 
@@ -20,3 +21,5 @@ deriving instance Eq Tx
 deriving instance Eq PParams
 
 deriving instance Eq UTxOState
+
+instance NFData UTxOState
