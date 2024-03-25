@@ -300,24 +300,23 @@ wfGovAction GovEnv {..} ps govAction =
     ( branch $ \mPrevActionId protVer ->
         [ assert $ mPrevActionId `elem_` lit hardForkIds
         , match protVer $ \majorVersion minorVersion ->
-            reify mPrevActionId hfIdMajorVer $ \p ->
-              match p $ \currentMajorVersion mSuccMajorVersion ->
-                reify mPrevActionId hfIdMinorVer $ \currentMinorVersion ->
-                  caseOn
-                    mSuccMajorVersion
-                    ( branch $ \_ ->
-                        [ majorVersion ==. currentMajorVersion
-                        , minorVersion ==. currentMinorVersion + 1
-                        ]
-                    )
-                    ( branch $ \majorVersion' ->
-                        [ assert $ majorVersion `member_` (singleton_ currentMajorVersion <> singleton_ majorVersion')
-                        , ifElse
-                            (currentMajorVersion <. majorVersion)
-                            (minorVersion ==. 0)
-                            (minorVersion ==. currentMinorVersion + 1)
-                        ]
-                    )
+            reify' mPrevActionId hfIdMajorVer $ \currentMajorVersion mSuccMajorVersion ->
+              reify mPrevActionId hfIdMinorVer $ \currentMinorVersion ->
+                caseOn
+                  mSuccMajorVersion
+                  ( branch $ \_ ->
+                      [ majorVersion ==. currentMajorVersion
+                      , minorVersion ==. currentMinorVersion + 1
+                      ]
+                  )
+                  ( branch $ \majorVersion' ->
+                      [ assert $ majorVersion `member_` (singleton_ currentMajorVersion <> singleton_ majorVersion')
+                      , ifElse
+                          (currentMajorVersion <. majorVersion)
+                          (minorVersion ==. 0)
+                          (minorVersion ==. currentMinorVersion + 1)
+                      ]
+                  )
         ]
     )
     -- TreasuryWithdrawals
