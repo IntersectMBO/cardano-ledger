@@ -308,14 +308,18 @@ umap :: UM.UMap StandardCrypto
 umap = UM.unify rewards Map.empty delegations Map.empty
 
 dState :: DState (ShelleyEra StandardCrypto)
-dState = def {dsUnified = umap}
+dState = dZero {dsUnified = umap}
+  where
+    dZero = def @(DState (ShelleyEra StandardCrypto))
 
 pState :: PState (ShelleyEra StandardCrypto)
 pState =
-  def
+  pZero
     { psStakePoolParams =
         Map.fromList [(pool1, poolParams pool1 30), (pool2, poolParams pool2 31)]
     }
+  where
+    pZero = def @(PState (ShelleyEra StandardCrypto))
 
 testStakeDistr :: Map (Credential 'Staking StandardCrypto) Coin
 testStakeDistr = Map.map fromCompact (VMap.toMap (unStake (ssStake snap)))
