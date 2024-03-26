@@ -2,6 +2,7 @@
 
 ## 1.11.0.0
 
+* Remove `maxMajorPV` from `Globals`
 * Add `EraRuleEvent`, `InjectRuleEvent`
 * Add `NFData` instance for `Obligations`, `PlutusWithContext`, `PlutusDatums`
 * Add `Eq`, `Show`, `Generic` instances for `PlutusDatums`

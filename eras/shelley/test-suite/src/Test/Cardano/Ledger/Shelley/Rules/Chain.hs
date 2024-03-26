@@ -28,7 +28,6 @@ module Test.Cardano.Ledger.Shelley.Rules.Chain (
 import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
-  Globals (..),
   Nonce (..),
   ShelleyBase,
   StrictMaybe (..),
@@ -109,7 +108,6 @@ import Cardano.Protocol.TPraos.Rules.Prtcl (
 import Cardano.Protocol.TPraos.Rules.Tickn
 import Cardano.Slotting.Slot (SlotNo, WithOrigin (..))
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -117,7 +115,6 @@ import Control.State.Transition (
   TransitionRule,
   failBecause,
   judgmentContext,
-  liftSTS,
   trans,
  )
 import Data.Default.Class (Default, def)
@@ -297,8 +294,7 @@ instance
 
 chainTransition ::
   forall era.
-  ( STS (CHAIN era)
-  , Embed (EraRule "BBODY" era) (CHAIN era)
+  ( Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
@@ -340,8 +336,7 @@ chainTransition =
             chainChecksData = pparamsToChainChecksPParams pp
             bhView = makeHeaderView bh
 
-        maxpv <- liftSTS $ asks maxMajorPV
-        case chainChecks maxpv chainChecksData bhView of
+        case chainChecks chainChecksData bhView of
           Right () -> pure ()
           Left e -> failBecause (RealChainPredicateFailure e)
 

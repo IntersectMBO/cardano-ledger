@@ -2,6 +2,9 @@
 
 ## 1.10.0.0
 
+* Remove protocol version argument from (`maxMajorPV` was removed from `Globals`):
+  * `chainChecks`
+  * `mkShelleyGlobals`
 * Remove the `PParams` param from `validateMissingScripts`
 * Remove the `missingScriptsSymmetricDifference` function
 * Add `NFData` instance for `AdaPots`, `ShelleyDelegEvent`
