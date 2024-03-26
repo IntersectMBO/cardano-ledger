@@ -153,7 +153,7 @@ utxoTxSpec env st =
                                   foldMap_
                                     (composeFn fstFn toGenericFn)
                                     proposalsList
-                             in outputSum + depositSum + ctbTxfee + ctbTreasuryDonation ==. totalValueConsumed
+                             in depositSum + ctbTxfee + ctbTreasuryDonation + outputSum ==. totalValueConsumed
                           ]
                     , forAll outputList (flip onSized correctAddrAndWFCoin)
                     ]
@@ -183,3 +183,42 @@ correctAddrAndWFCoin txOut =
                 (branch $ \_ -> True)
         )
     ]
+
+--- TEMP DEBUG
+
+-- signalSpec ::
+--   UtxoEnv (ConwayEra StandardCrypto) ->
+--   UTxOState (ConwayEra StandardCrypto) ->
+--   Spec ConwayFn (Tx (ConwayEra StandardCrypto))
+-- signalSpec env st = constrained agdaConstraints <> utxoTxSpec env st
+--     where
+--       agdaConstraints :: Term ConwayFn (Tx (ConwayEra StandardCrypto)) -> Pred ConwayFn
+--       agdaConstraints tx = match tx $ \txBody _ _ _ ->
+--         match txBody $
+--           \_ctbSpendInputs
+--            _ctbCollateralInputs
+--            _ctbReferenceInputs
+--            ctbOutputs
+--            _ctbCollateralReturn
+--            _ctbTotalCollateral
+--            _ctbCerts
+--            _ctbWithdrawals
+--            _ctbTxfee
+--            _ctbVldt
+--            _ctbReqSignerHashes
+--            _ctbMint
+--            _ctbScriptIntegrityHash
+--            _ctbAdHash
+--            _ctbTxNetworkId
+--            _ctbVotingProcedures
+--            _ctbProposalProcedures
+--            _ctbCurrentTreasuryValue
+--            _ctbTreasuryDonation ->
+--              match ctbOutputs $
+--                \outs -> forAll outs $
+--                  \x -> match x $
+--                    \txOut _ -> match txOut $
+--                      \_ _ dat _ -> caseOn dat
+--                        (branch $ const True)
+--                        (branch $ const True)
+--                        (branch $ const False)

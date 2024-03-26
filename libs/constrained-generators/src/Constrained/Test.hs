@@ -770,6 +770,29 @@ hasSizeSet = hasSize (rangeSize 1 3)
 hasSizeMap :: Spec BaseFn (Map Int Int)
 hasSizeMap = hasSize (rangeSize 1 3)
 
+reifyFusion :: Spec BaseFn (Int, [(Int, Either Int Int)])
+reifyFusion = spec1 <> spec0
+  where
+    spec0 = constrained' $ \x list ->
+      [ assert $ 0 <. x
+      , reify x (* 2) $ \x' ->
+          forAll' list $ \a _ -> a ==. x'
+      ]
+    spec1 = constrained' $ \_ list ->
+      forAll' list $ \_ e ->
+        isCon @"Left" e
+
+instance HasSimpleRep Ordering
+instance BaseUniverse fn => HasSpec fn Ordering
+
+threeConstructors :: Spec BaseFn Ordering
+threeConstructors = constrained $ \o ->
+  caseOn
+    o
+    (branch $ const True)
+    (branch $ const True)
+    (branch $ const False)
+
 -- ========================================================
 -- Test properties of the instance Num(NumSpec Integer)
 
