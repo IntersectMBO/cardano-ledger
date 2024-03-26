@@ -51,7 +51,6 @@ import Lens.Micro
 import qualified PlutusLedgerApi.V1 as P1
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
-import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModels)
 import Test.Cardano.Ledger.Plutus.Examples (alwaysFails2, alwaysSucceeds2, guessTheNumber3)
@@ -298,11 +297,11 @@ conwayFeaturesPlutusV1V2FailureSpec = do
           $ Coin 10_000
     describe "Certificates" $ do
       describe "Translated" $ do
-        let testCertificateTranslated okCert tx = do
+        let testCertificateTranslated okCert txIn = do
               submitTx_
                 ( mkBasicTx mkBasicTxBody
                     & bodyTxL . inputsTxBodyL
-                      .~ Set.singleton (txInAt (0 :: Int) tx)
+                      .~ Set.singleton txIn
                     & bodyTxL . certsTxBodyL
                       .~ SSeq.singleton okCert
                 )
@@ -311,35 +310,35 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             stakingC <- KeyHashObj <$> freshKeyHash
             let regDepositTxCert = RegDepositTxCert stakingC (Coin 0)
             testCertificateTranslated regDepositTxCert
-              =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV1)
+              =<< produceScript (hashPlutusScript $ guessTheNumber3 SPlutusV1)
           it "V2" $ do
             stakingC <- KeyHashObj <$> freshKeyHash
             let regDepositTxCert = RegDepositTxCert stakingC (Coin 0)
             testCertificateTranslated regDepositTxCert
-              =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV2)
+              =<< produceScript (hashPlutusScript $ guessTheNumber3 SPlutusV2)
         describe "UnRegDepositTxCert" $ do
           it "V1" $ do
             (_poolKH, _spendingC, stakingC) <- setupPoolWithStake $ Coin 1_000
             let unRegDepositTxCert = UnRegDepositTxCert stakingC (Coin 0)
             testCertificateTranslated unRegDepositTxCert
-              =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV1)
+              =<< produceScript (hashPlutusScript $ guessTheNumber3 SPlutusV1)
           it "V2" $ do
             (_poolKH, _spendingC, stakingC) <- setupPoolWithStake $ Coin 1_000
             let unRegDepositTxCert = UnRegDepositTxCert stakingC (Coin 0)
             testCertificateTranslated unRegDepositTxCert
-              =<< txWithPlutus (hashPlutusScript $ guessTheNumber3 SPlutusV2)
+              =<< produceScript (hashPlutusScript $ guessTheNumber3 SPlutusV2)
       describe "Unsupported" $ do
         let testCertificateNotSupportedV1 badCert =
               testCertificateNotSupported badCert
-                =<< txWithPlutus @era (hashPlutusScript $ guessTheNumber3 SPlutusV1)
+                =<< produceScript @era (hashPlutusScript $ guessTheNumber3 SPlutusV1)
             testCertificateNotSupportedV2 badCert =
               testCertificateNotSupported badCert
-                =<< txWithPlutus @era (hashPlutusScript $ guessTheNumber3 SPlutusV2)
-            testCertificateNotSupported badCert tx = do
+                =<< produceScript @era (hashPlutusScript $ guessTheNumber3 SPlutusV2)
+            testCertificateNotSupported badCert txIn = do
               submitFailingTx
                 ( mkBasicTx mkBasicTxBody
                     & bodyTxL . inputsTxBodyL
-                      .~ Set.singleton (txInAt (0 :: Int) tx)
+                      .~ Set.singleton txIn
                     & bodyTxL . certsTxBodyL
                       .~ SSeq.singleton badCert
                 )
@@ -662,17 +661,6 @@ costModelsSpec =
             dRep
             committeeMember
 
-txWithPlutus ::
-  forall era.
-  ConwayEraImp era =>
-  ScriptHash (EraCrypto era) ->
-  ImpTestM era (Tx era)
-txWithPlutus sh = do
-  submitTxAnn "Submit a Plutus" $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . outputsTxBodyL
-        .~ SSeq.singleton (scriptLockedTxOut sh)
-
 scriptLockedTxOut ::
   forall era.
   AlonzoEraTxOut era =>
@@ -728,11 +716,11 @@ testPlutusV1V2Failure ::
   ContextError era ->
   ImpTestM era ()
 testPlutusV1V2Failure sh badField lenz errorField = do
-  tx <- txWithPlutus @era sh
+  txIn <- produceScript @era sh
   submitFailingTx
     ( mkBasicTx mkBasicTxBody
         & bodyTxL . inputsTxBodyL
-          .~ Set.singleton (txInAt (0 :: Int) tx)
+          .~ Set.singleton txIn
         & bodyTxL . lenz
           .~ badField
     )

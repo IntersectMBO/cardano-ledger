@@ -9,22 +9,30 @@
 module Test.Cardano.Ledger.Allegra.ImpTest (
   impAllegraSatisfyNativeScript,
   module Test.Cardano.Ledger.Shelley.ImpTest,
+  produceScript,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
 import Cardano.Crypto.Hash.Class (Hash)
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad.State.Strict (get)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq (..))
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
-import Lens.Micro ((^.))
+import Lens.Micro ((&), (.~), (^.))
 import Test.Cardano.Ledger.Allegra.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair)
+import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
@@ -78,3 +86,14 @@ impAllegraSatisfyNativeScript providedVKeyHashes script = do
         | slotNo > prevSlotNo -> Just mempty
         | otherwise -> Nothing
   pure $ satisfyScript script
+
+produceScript ::
+  ShelleyEraImp era =>
+  ScriptHash (EraCrypto era) ->
+  ImpTestM era (TxIn (EraCrypto era))
+produceScript scriptHash = do
+  let addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
+  let tx =
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr (inject (Coin 10)))
+  txInAt (0 :: Int) <$> submitTx tx
