@@ -1,10 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MonoLocalBinds #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -19,10 +15,10 @@ import Cardano.Ledger.Api.Era
 import Cardano.Ledger.Api.PParams
 import Cardano.Ledger.Api.Tx
 import Cardano.Ledger.Binary
-import Cardano.Ledger.Coin
 import Cardano.Ledger.Core (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, hashKey, makeBootstrapWitness)
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
+import Cardano.Ledger.Val (Val ((<×>)))
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -98,11 +94,13 @@ txSpec = describe (eraName @era) $ do
         -- Overestimating transaction size can lead to the overestimated fee affecting the
         -- size of the transaction, which in turn affects the overestimation. For this
         -- reason we can only check `>=`
-        tabulate "Attrs overestimation in bytes" (map show overestimations) $
-          estimateMinFeeTx pp tx (Map.size keyPairs) (Map.size byronKeyPairs) 0
-            >= ( (setMinFeeTx pp txSigned 0 ^. bodyTxL . feeTxBodyL)
-                  <> Coin (toInteger (sum overestimations))
-               )
+        let
+          overestimatedMinFeeA = toInteger (sum overestimations) <×> pp ^. ppMinFeeAL
+          estimation = estimateMinFeeTx pp tx (Map.size keyPairs) (Map.size byronKeyPairs) 0
+          actual = setMinFeeTx pp txSigned 0 ^. bodyTxL . feeTxBodyL
+         in
+          tabulate "Attrs overestimation in bytes" (map show overestimations) $
+            estimation >= actual <> overestimatedMinFeeA
 
 spec :: Spec
 spec = do
