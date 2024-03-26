@@ -62,17 +62,13 @@ instance NoThunks ChainPredicateFailure
 
 chainChecks ::
   MonadError ChainPredicateFailure m =>
-  Version ->
   ChainChecksPParams ->
   BHeaderView c ->
   m ()
-chainChecks maxpv ccd bhv = do
-  unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
+chainChecks ccd bhv = do
   unless (bhviewHSize bhv <= (fromIntegral :: Word16 -> Int) (ccMaxBHSize ccd)) $
     throwError $
       HeaderSizeTooLargeCHAIN (bhviewHSize bhv) (ccMaxBHSize ccd)
   unless (bhviewBSize bhv <= ccMaxBBSize ccd) $
     throwError $
       BlockSizeTooLargeCHAIN (bhviewBSize bhv) (ccMaxBBSize ccd)
-  where
-    ProtVer m _ = ccProtocolVersion ccd

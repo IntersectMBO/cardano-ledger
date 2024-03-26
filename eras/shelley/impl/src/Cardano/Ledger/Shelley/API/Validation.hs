@@ -26,7 +26,7 @@ module Cardano.Ledger.Shelley.API.Validation (
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
-import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, Version)
+import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Binary (EncCBORGroup)
 import Cardano.Ledger.Block (Block)
 import qualified Cardano.Ledger.Chain as STS
@@ -202,8 +202,6 @@ instance
 chainChecks ::
   forall c m.
   MonadError STS.ChainPredicateFailure m =>
-  -- | Max major protocol version
-  Version ->
   STS.ChainChecksPParams ->
   BHeaderView c ->
   m ()
