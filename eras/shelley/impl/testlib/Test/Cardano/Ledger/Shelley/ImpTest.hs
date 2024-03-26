@@ -571,12 +571,11 @@ defaultInitImpTestState nes = do
       nes & nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL <>~ UTxO (Map.singleton rootTxIn rootTxOut)
   prepState <- get
   let StateGen qcGen = getSubState prepState
-      majProtVer = pvMajor (nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL)
       epochInfoE =
         fixedEpochInfo
           (sgEpochLength shelleyGenesis)
           (mkSlotLength . fromNominalDiffTimeMicro $ sgSlotLength shelleyGenesis)
-      globals = mkShelleyGlobals shelleyGenesis epochInfoE majProtVer
+      globals = mkShelleyGlobals shelleyGenesis epochInfoE
       epochNo = nesWithRoot ^. nesELL
       slotNo = runIdentity $ runReaderT (epochInfoFirst (epochInfoPure globals) epochNo) globals
   pure $

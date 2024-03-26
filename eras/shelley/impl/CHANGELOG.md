@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Remove protocol version argument from `mkShelleyGlobals` (`maxMajorPV` was removed from `Globals`)
 * Added `EncCBOR` instances for:
   * `UtxoEnv`
   * `CertEnv`

@@ -682,8 +682,6 @@ data Globals = Globals
   -- ^ Maximum number of KES iterations
   , quorum :: !Word64
   -- ^ Quorum for update system votes and MIR certificates
-  , maxMajorPV :: !Version
-  -- ^ All blocks invalid after this protocol version
   , maxLovelaceSupply :: !Word64
   -- ^ Maximum number of lovelace in the system
   , activeSlotCoeff :: !ActiveSlotCoeff

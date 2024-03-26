@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-core`
 
-## 1.14.0.1
+## 1.15.0.0
 
-*
+* Remove `maxMajorPV` from `Globals`
 
 ## 1.14.0.0
 
