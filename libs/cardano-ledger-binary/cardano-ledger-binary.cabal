@@ -137,12 +137,12 @@ test-suite tests
         Test.Cardano.Ledger.Binary.PlainSpec
         Test.Cardano.Ledger.Binary.Success
         Test.Cardano.Ledger.Binary.RoundTripSpec
-        Test.Cardano.Ledger.Binary.Vintage.Coders
         Test.Cardano.Ledger.Binary.Vintage.Drop
         Test.Cardano.Ledger.Binary.Vintage.Failure
         Test.Cardano.Ledger.Binary.Vintage.RoundTrip
         Test.Cardano.Ledger.Binary.Vintage.Serialization
         Test.Cardano.Ledger.Binary.Vintage.SizeBounds
+        Test.Cardano.Ledger.Binary.Vintage.Coders
 
     default-language: Haskell2010
     ghc-options:

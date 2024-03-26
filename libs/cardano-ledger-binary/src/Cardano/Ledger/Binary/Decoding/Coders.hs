@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
@@ -20,7 +21,7 @@ module Cardano.Ledger.Binary.Decoding.Coders (
   -- $Decoders
   Decode (..),
   (<!),
-  (<*!),
+  (<!>),
   (<?),
   decode,
   decodeSparse,
@@ -64,12 +65,15 @@ where
 import Cardano.Ledger.Binary.Decoding.Annotated (Annotator (..), decodeAnnSet)
 import Cardano.Ledger.Binary.Decoding.DecCBOR (DecCBOR (decCBOR))
 import Cardano.Ledger.Binary.Decoding.Decoder
+import Cardano.Ledger.Binary.Decoding.Sharing
 import Cardano.Ledger.Binary.Encoding.EncCBOR (EncCBOR (encCBOR))
 import Cardano.Ledger.Binary.Version (Version)
 #if ! MIN_VERSION_base(4,18,0)
-import Control.Applicative (liftA2)
+import Control.Applicative (Applicative(..),liftA2)
 #endif
 import Control.Monad (when)
+import Control.Monad.Trans (lift)
+import Control.Monad.Trans.State.Strict (StateT, evalStateT)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set, insert, member)
@@ -77,6 +81,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import Data.Typeable (Typeable, typeOf)
 import Data.Void (Void)
+import Lens.Micro
 
 -- ====================================================================
 
@@ -378,34 +383,48 @@ data Decode (w :: Wrapped) t where
   -- | Lift a @(Decode w t)@ to a @(Decode w (Annotator t))@. Used on a (component, field,
   -- argument) that was not Annotator encoded, but contained in Record or Sum which is
   -- Annotator encoded.
-  Ann :: Decode w t -> Decode w (Annotator t)
+  Pure :: Applicative f => Decode w t -> Decode w (f t)
   -- | Apply a functional decoding (arising from 'RecD' or 'SumD' that needs to be
   -- Annotator decoded) to get (type wise) smaller decoding.
-  ApplyAnn ::
-    -- | A functional Decode
-    Decode w1 (Annotator (a -> t)) ->
-    -- | An Decoder for an Annotator
-    Decode ('Closed d) (Annotator a) ->
-    Decode w1 (Annotator t)
+  ApplyApplicative ::
+    Applicative f =>
+    -- | A functional Decode in some Applicative Functor f
+    Decode w1 (f (a -> t)) ->
+    -- | An Decoder for an (f a)
+    Decode ('Closed d) (f a) ->
+    Decode w1 (f t)
+  RunShare ::
+    DecShareCBOR b =>
+    (forall s. Decode ('Closed d) (StateT (Share b) (Decoder s) b)) ->
+    Decode ('Closed d) b
   -- | the function to Either can raise an error when applied by returning (Left errorMessage)
   ApplyErr :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
+  NoShare :: DecShareCBOR b => Decode w (StateT (Share a) (Decoder s) b)
+  ReadShare :: DecShareCBOR b => SimpleGetter bs (Share b) -> Decode w (StateT bs (Decoder s) b)
+  WriteShare :: DecShareCBOR b => Lens' bs (Share b) -> Decode w (StateT bs (Decoder s) b)
+
+-- ==============================================
+-- infix operators to make Coders easy to use
+
+infixl 4 <?
 
 infixl 4 <!
 
-infixl 4 <*!
-
-infixl 4 <?
+infixl 4 <!>
 
 -- | Infix form of @ApplyD@ with the same infixity and precedence as @($)@.
 (<!) :: Decode w1 (a -> t) -> Decode ('Closed w) a -> Decode w1 t
 x <! y = ApplyD x y
 {-# INLINE (<!) #-}
 
--- | Infix form of @ApplyAnn@ with the same infixity and precedence as @($)@.
-(<*!) ::
-  Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
-x <*! y = ApplyAnn x y
-{-# INLINE (<*!) #-}
+-- | Infix form of @ApplyApplicative@ with the same infixity and precedence as @($)@.
+(<!>) ::
+  Applicative f =>
+  Decode w1 (f (a -> t)) ->
+  Decode ('Closed d) (f a) ->
+  Decode w1 (f t)
+x <!> y = ApplyApplicative x y
+{-# INLINE (<!>) #-}
 
 -- | Infix form of @ApplyErr@ with the same infixity and precedence as @($)@.
 (<?) :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
@@ -425,9 +444,13 @@ hsize (Map _ x) = hsize x
 hsize (Emit _) = 0
 hsize SparseKeyed {} = 1
 hsize (TagD _ _) = 1
-hsize (Ann x) = hsize x
-hsize (ApplyAnn f x) = hsize f + hsize x
+hsize (Pure x) = hsize x
+hsize (ApplyApplicative f x) = hsize f + hsize x
+hsize (RunShare x) = hsize x
 hsize (ApplyErr f x) = hsize f + hsize x
+hsize NoShare = 1
+hsize (ReadShare _) = 1
+hsize (WriteShare _) = 1
 {-# INLINE hsize #-}
 
 decode :: Decode w t -> Decoder s t
@@ -453,26 +476,32 @@ decodeCount (TagD expectedTag decoder) n = do
   decodeCount decoder n
 decodeCount (SparseKeyed name initial pick required) n =
   (n + 1,) <$> decodeSparse name initial pick required
-decodeCount (Ann x) n = do (m, y) <- decodeCount x n; pure (m, pure y)
-decodeCount (ApplyAnn g x) n = do
-  (i, f) <- decodeCount g (n + hsize x)
-  y <- decodeClosed x
-  pure (i, f <*> y)
+decodeCount (RunShare x) n = do
+  y <- decodeClosed @_ @_ @s x
+  (n,) <$> evalStateT y (undefined :: Share t)
 decodeCount (ApplyD cn g) n = do
   (i, f) <- decodeCount cn (n + hsize g)
   y <- decodeClosed g
   pure (i, f y)
+decodeCount (Pure x) n = do (m, y) <- decodeCount x n; pure (m, pure y)
+decodeCount (ApplyApplicative g x) n = do
+  (i, f) <- decodeCount g (n + hsize x)
+  y <- decodeClosed x
+  pure (i, f <*> y)
 decodeCount (ApplyErr cn g) n = do
   (i, f) <- decodeCount cn (n + hsize g)
   y <- decodeClosed g
   case f y of
     Right z -> pure (i, z)
     Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack message)
+decodeCount NoShare n = pure (n, lift decNoShareCBOR)
+decodeCount (ReadShare getter) n = pure (n, decShareLensCBOR getter)
+decodeCount (WriteShare lenze) n = pure (n, decSharePlusLensCBOR lenze)
 {-# INLINE decodeCount #-}
 
 -- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
 
-decodeClosed :: Decode ('Closed d) t -> Decoder s t
+decodeClosed :: forall t d s. Decode ('Closed d) t -> Decoder s t
 decodeClosed (Summands nm f) = decodeRecordSum nm (decodE . f)
 decodeClosed (KeyedD cn) = pure cn
 decodeClosed (RecD cn) = pure cn
@@ -490,8 +519,11 @@ decodeClosed (TagD expectedTag decoder) = do
   decodeClosed decoder
 decodeClosed (SparseKeyed name initial pick required) =
   decodeSparse name initial pick required
-decodeClosed (Ann x) = fmap pure (decodeClosed x)
-decodeClosed (ApplyAnn g x) = do
+decodeClosed (RunShare _x) = undefined {- do
+                                       y <- decodeClosed _x
+                                       pure (evalState (mempty :: Share t) y) -}
+decodeClosed (Pure x) = fmap pure (decodeClosed x)
+decodeClosed (ApplyApplicative g x) = do
   f <- decodeClosed g
   y <- decodeClosed x
   pure (f <*> y)
@@ -501,6 +533,9 @@ decodeClosed (ApplyErr cn g) = do
   case f y of
     Right z -> pure z
     Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack message)
+decodeClosed NoShare = pure (lift decNoShareCBOR)
+decodeClosed (ReadShare getter) = pure (decShareLensCBOR getter)
+decodeClosed (WriteShare lenze) = pure (decSharePlusLensCBOR lenze)
 {-# INLINE decodeClosed #-}
 
 decodeSparse ::
@@ -569,7 +604,7 @@ instance Applicative (Decode ('Closed d)) where
   {-# INLINE (<*>) #-}
 
 -- | Use `Cardano.Ledger.Binary.Coders.encodeDual` and `decodeDual`, when you want to
--- guarantee that a type has both `EncCBOR` and `FromCBR` instances.
+-- guarantee that a type has both `EncCBOR` and `DecCBOR` instances.
 decodeDual :: forall t. (EncCBOR t, DecCBOR t) => Decode ('Closed 'Dense) t
 decodeDual = D decCBOR
   where
