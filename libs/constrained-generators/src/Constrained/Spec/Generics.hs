@@ -351,6 +351,7 @@ type family Cases t where
   Cases (Sum a b) = a : Cases b
   Cases a = '[a]
 
+-- | Like `forAll` but pattern matches on the `Term fn a`
 forAll' ::
   forall fn t a p.
   ( Forallable t a
@@ -369,6 +370,7 @@ forAll' ::
   Pred fn
 forAll' xs f = forAll xs $ \x -> match @fn @p x f
 
+-- | Like `constrained` but pattern matches on the bound `Term fn a`
 constrained' ::
   forall fn a p.
   ( Cases (SimpleRep a) ~ '[SimpleRep a]
@@ -384,6 +386,7 @@ constrained' ::
   Spec fn a
 constrained' f = constrained $ \x -> match @fn @p x f
 
+-- | Like `reify` but pattern matches on the bound `Term fn b`
 reify' ::
   forall fn a b p.
   ( Cases (SimpleRep b) ~ '[SimpleRep b]
