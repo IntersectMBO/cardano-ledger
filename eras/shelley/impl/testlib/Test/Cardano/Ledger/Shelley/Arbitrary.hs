@@ -221,7 +221,10 @@ instance Arbitrary PerformanceEstimate where
   arbitrary = PerformanceEstimate <$> arbitrary
 
 instance Crypto c => Arbitrary (NonMyopic c) where
-  arbitrary = NonMyopic <$> arbitrary <*> arbitrary
+  arbitrary =
+    NonMyopic
+      <$> arbitraryStrictMap
+      <*> arbitrary
   shrink = genericShrink
 
 ------------------------------------------------------------------------------------------
@@ -281,8 +284,8 @@ instance Crypto c => Arbitrary (RewardSnapShot c) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
+      <*> arbitraryStrictMap
+      <*> arbitraryStrictMap
   shrink = genericShrink
 
 instance Crypto c => Arbitrary (FreeVars c) where
