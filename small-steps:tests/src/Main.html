@@ -1,0 +1,113 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- TODO Remove use of deprecated function testProperty</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.CommitReveal.html"><span class="hs-identifier">Test.Control.State.Transition.Examples.CommitReveal</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">CommitReveal</span></span><span>
+</span><span id="line-6"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.GlobalSum.html"><span class="hs-identifier">Test.Control.State.Transition.Examples.GlobalSum</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">GSum</span></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="Test.Control.State.Transition.Examples.Sum.html"><span class="hs-identifier">Test.Control.State.Transition.Examples.Sum</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Sum</span></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-1.5-ff85b8414051a95d68d815509b354336674d1a02b69191ec60ffb0f62e633862/share/doc/html/src"><span class="hs-identifier">Test.Tasty</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-1.5-ff85b8414051a95d68d815509b354336674d1a02b69191ec60ffb0f62e633862/share/doc/html/src"><span class="hs-identifier">defaultMain</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-1.5-ff85b8414051a95d68d815509b354336674d1a02b69191ec60ffb0f62e633862/share/doc/html/src"><span class="hs-identifier">testGroup</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-expected-failure-0.12.3-d986544847069d54dbf60b538059ac9ac2c8dff89694f3c68cc257d47220aadb/share/doc/html/src"><span class="hs-identifier">Test.Tasty.ExpectedFailure</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-expected-failure-0.12.3-d986544847069d54dbf60b538059ac9ac2c8dff89694f3c68cc257d47220aadb/share/doc/html/src"><span class="hs-identifier">expectFailBecause</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-hedgehog-1.4.0.2-1e62ba6c395c0b8734a68c7bd7b59d600b1a48396de22beb554757eeee16617d/share/doc/html/src"><span class="hs-identifier">Test.Tasty.Hedgehog</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-hedgehog-1.4.0.2-1e62ba6c395c0b8734a68c7bd7b59d600b1a48396de22beb554757eeee16617d/share/doc/html/src"><span class="hs-identifier">testPropertyNamed</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-quickcheck-0.10.3-eda2d6c347a0ba8fd48752c912f720ad06df979f9ab862626402ba0d2ffa4d41/share/doc/html/src"><span class="hs-identifier">Test.Tasty.QuickCheck</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Tasty.QuickCheck</span></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="annot"><a href="Main.html#main"><span class="hs-identifier hs-type">main</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">IO</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span id="main"><span class="annot"><span class="annottext">IO ()
+</span><a href="Main.html#main"><span class="hs-identifier hs-var hs-var hs-var">main</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-15"></span><span>  </span><span class="annot"><span class="annottext">TestTree -&gt; IO ()
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-1.5-ff85b8414051a95d68d815509b354336674d1a02b69191ec60ffb0f62e633862/share/doc/html/src"><span class="hs-identifier hs-var">defaultMain</span></a></span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="#local-6989586621679203600"><span class="hs-identifier hs-var">tests</span></a></span><span>
+</span><span id="line-16"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-17"></span><span>    </span><span id="local-6989586621679203600"><span class="annot"><span class="annottext">tests :: TestTree
+</span><a href="#local-6989586621679203600"><span class="hs-identifier hs-var hs-var">tests</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-18"></span><span>      </span><span class="annot"><span class="annottext">TestName -&gt; [TestTree] -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-1.5-ff85b8414051a95d68d815509b354336674d1a02b69191ec60ffb0f62e633862/share/doc/html/src"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-19"></span><span>        </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;All&quot;</span></span><span>
+</span><span id="line-20"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; [TestTree] -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-1.5-ff85b8414051a95d68d815509b354336674d1a02b69191ec60ffb0f62e633862/share/doc/html/src"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-21"></span><span>            </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Sum&quot;</span></span><span>
+</span><span id="line-22"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; TestTree -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-expected-failure-0.12.3-d986544847069d54dbf60b538059ac9ac2c8dff89694f3c68cc257d47220aadb/share/doc/html/src"><span class="hs-identifier hs-var">expectFailBecause</span></a></span><span>
+</span><span id="line-23"></span><span>                </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;it allows to inspect generated trace counterexamples&quot;</span></span><span>
+</span><span id="line-24"></span><span>                </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">TestName -&gt; PropertyName -&gt; Property -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-hedgehog-1.4.0.2-1e62ba6c395c0b8734a68c7bd7b59d600b1a48396de22beb554757eeee16617d/share/doc/html/src"><span class="hs-identifier hs-var">testPropertyNamed</span></a></span><span>
+</span><span id="line-25"></span><span>                  </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;False (Hedgehog)&quot;</span></span><span>
+</span><span id="line-26"></span><span>                  </span><span class="annot"><span class="annottext">PropertyName
+</span><span class="hs-string">&quot;prop_Bounded&quot;</span></span><span>
+</span><span id="line-27"></span><span>                  </span><span class="annot"><span class="annottext">Property
+</span><a href="Test.Control.State.Transition.Examples.Sum.html#prop_Bounded"><span class="hs-identifier hs-var">Sum.prop_Bounded</span></a></span><span>
+</span><span id="line-28"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; PropertyName -&gt; Property -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-hedgehog-1.4.0.2-1e62ba6c395c0b8734a68c7bd7b59d600b1a48396de22beb554757eeee16617d/share/doc/html/src"><span class="hs-identifier hs-var">testPropertyNamed</span></a></span><span>
+</span><span id="line-29"></span><span>                </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Only valid traces are generated&quot;</span></span><span>
+</span><span id="line-30"></span><span>                </span><span class="annot"><span class="annottext">PropertyName
+</span><span class="hs-string">&quot;prop_onlyValidTracesAreGenerated&quot;</span></span><span>
+</span><span id="line-31"></span><span>                </span><span class="annot"><span class="annottext">Property
+</span><a href="Test.Control.State.Transition.Examples.Sum.html#prop_onlyValidTracesAreGenerated"><span class="hs-identifier hs-var">Sum.prop_onlyValidTracesAreGenerated</span></a></span><span>
+</span><span id="line-32"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; PropertyName -&gt; Property -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-hedgehog-1.4.0.2-1e62ba6c395c0b8734a68c7bd7b59d600b1a48396de22beb554757eeee16617d/share/doc/html/src"><span class="hs-identifier hs-var">testPropertyNamed</span></a></span><span>
+</span><span id="line-33"></span><span>                </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Classified&quot;</span></span><span>
+</span><span id="line-34"></span><span>                </span><span class="annot"><span class="annottext">PropertyName
+</span><span class="hs-string">&quot;prop_Classified&quot;</span></span><span>
+</span><span id="line-35"></span><span>                </span><span class="annot"><span class="annottext">Property
+</span><a href="Test.Control.State.Transition.Examples.Sum.html#prop_Classified"><span class="hs-identifier hs-var">Sum.prop_Classified</span></a></span><span>
+</span><span id="line-36"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Testable a =&gt; TestName -&gt; a -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-quickcheck-0.10.3-eda2d6c347a0ba8fd48752c912f720ad06df979f9ab862626402ba0d2ffa4d41/share/doc/html/src"><span class="hs-identifier hs-var">Tasty.QuickCheck.testProperty</span></a></span><span>
+</span><span id="line-37"></span><span>                </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Classified (QuickCheck)&quot;</span></span><span>
+</span><span id="line-38"></span><span>                </span><span class="annot"><span class="annottext">Property
+</span><a href="Test.Control.State.Transition.Examples.Sum.html#prop_qc_Classified"><span class="hs-identifier hs-var">Sum.prop_qc_Classified</span></a></span><span>
+</span><span id="line-39"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; TestTree -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-expected-failure-0.12.3-d986544847069d54dbf60b538059ac9ac2c8dff89694f3c68cc257d47220aadb/share/doc/html/src"><span class="hs-identifier hs-var">expectFailBecause</span></a></span><span>
+</span><span id="line-40"></span><span>                </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;it allows to inspect generated trace counterexamples (QuickCheck)&quot;</span></span><span>
+</span><span id="line-41"></span><span>                </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Testable a =&gt; TestName -&gt; a -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-quickcheck-0.10.3-eda2d6c347a0ba8fd48752c912f720ad06df979f9ab862626402ba0d2ffa4d41/share/doc/html/src"><span class="hs-identifier hs-var">Tasty.QuickCheck.testProperty</span></a></span><span>
+</span><span id="line-42"></span><span>                  </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;False (QuickCheck)&quot;</span></span><span>
+</span><span id="line-43"></span><span>                  </span><span class="annot"><span class="annottext">Property
+</span><a href="Test.Control.State.Transition.Examples.Sum.html#prop_qc_Bounded"><span class="hs-identifier hs-var">Sum.prop_qc_Bounded</span></a></span><span>
+</span><span id="line-44"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. Testable a =&gt; TestName -&gt; a -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-quickcheck-0.10.3-eda2d6c347a0ba8fd48752c912f720ad06df979f9ab862626402ba0d2ffa4d41/share/doc/html/src"><span class="hs-identifier hs-var">Tasty.QuickCheck.testProperty</span></a></span><span>
+</span><span id="line-45"></span><span>                </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Only valid traces are generated (QuickCheck)&quot;</span></span><span>
+</span><span id="line-46"></span><span>                </span><span class="annot"><span class="annottext">Property
+</span><a href="Test.Control.State.Transition.Examples.Sum.html#prop_qc_onlyValidSignalsAreGenerated"><span class="hs-identifier hs-var">Sum.prop_qc_onlyValidSignalsAreGenerated</span></a></span><span>
+</span><span id="line-47"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-48"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; [TestTree] -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-1.5-ff85b8414051a95d68d815509b354336674d1a02b69191ec60ffb0f62e633862/share/doc/html/src"><span class="hs-identifier hs-var">testGroup</span></a></span><span>
+</span><span id="line-49"></span><span>            </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;CommitReveal&quot;</span></span><span>
+</span><span id="line-50"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; TestTree -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-expected-failure-0.12.3-d986544847069d54dbf60b538059ac9ac2c8dff89694f3c68cc257d47220aadb/share/doc/html/src"><span class="hs-identifier hs-var">expectFailBecause</span></a></span><span>
+</span><span id="line-51"></span><span>                </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;we're inspecting generated counterexamples&quot;</span></span><span>
+</span><span id="line-52"></span><span>                </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Testable a =&gt; TestName -&gt; a -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-quickcheck-0.10.3-eda2d6c347a0ba8fd48752c912f720ad06df979f9ab862626402ba0d2ffa4d41/share/doc/html/src"><span class="hs-identifier hs-var">Tasty.QuickCheck.testProperty</span></a></span><span>
+</span><span id="line-53"></span><span>                  </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Unique Data (QuickCheck)&quot;</span></span><span>
+</span><span id="line-54"></span><span>                  </span><span class="annot"><span class="annottext">Property
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#prop_qc_UniqueData"><span class="hs-identifier hs-var">CommitReveal.prop_qc_UniqueData</span></a></span><span>
+</span><span id="line-55"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestName -&gt; TestTree -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-expected-failure-0.12.3-d986544847069d54dbf60b538059ac9ac2c8dff89694f3c68cc257d47220aadb/share/doc/html/src"><span class="hs-identifier hs-var">expectFailBecause</span></a></span><span>
+</span><span id="line-56"></span><span>                </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;a counterexample of an invalid signal should be found&quot;</span></span><span>
+</span><span id="line-57"></span><span>                </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Testable a =&gt; TestName -&gt; a -&gt; TestTree
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/tasty-quickcheck-0.10.3-eda2d6c347a0ba8fd48752c912f720ad06df979f9ab862626402ba0d2ffa4d41/share/doc/html/src"><span class="hs-identifier hs-var">Tasty.QuickCheck.testProperty</span></a></span><span>
+</span><span id="line-58"></span><span>                  </span><span class="annot"><span class="annottext">TestName
+</span><span class="hs-string">&quot;Only valid signals are generated (QuickCheck)&quot;</span></span><span>
+</span><span id="line-59"></span><span>                  </span><span class="annot"><span class="annottext">Property
+</span><a href="Test.Control.State.Transition.Examples.CommitReveal.html#prop_qc_OnlyValidSignals"><span class="hs-identifier hs-var">CommitReveal.prop_qc_OnlyValidSignals</span></a></span><span>
+</span><span id="line-60"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-61"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">TestTree
+</span><a href="Test.Control.State.Transition.Examples.GlobalSum.html#tests"><span class="hs-identifier hs-var">GSum.tests</span></a></span><span>
+</span><span id="line-62"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-63"></span></pre></body></html>
