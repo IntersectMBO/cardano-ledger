@@ -3,26 +3,24 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
-module Test.Cardano.Ledger.Shelley.Imp (spec) where
+module Test.Cardano.Ledger.Allegra.Imp where
 
+import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure)
-import Test.Cardano.Ledger.Common
-import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
-import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as Ledger
-import qualified Test.Cardano.Ledger.Shelley.Imp.UtxowSpec as Utxow
+import qualified Test.Cardano.Ledger.Allegra.Imp.UtxowSpec as Utxow
+import Test.Cardano.Ledger.Common (Spec, describe)
 import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp, withImpState)
 
 spec ::
   forall era.
   ( ShelleyEraImp era
-  , Arbitrary (TxAuxData era)
+  , NativeScript era ~ Timelock era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
   Spec
 spec =
-  describe "ShelleyImpSpec" $ withImpState @era $ do
-    Ledger.spec @era
-    Epoch.spec @era
+  describe "AllegraImpTest" . withImpState @era $ do
     Utxow.spec @era

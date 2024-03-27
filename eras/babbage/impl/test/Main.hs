@@ -3,6 +3,7 @@
 module Main where
 
 import Cardano.Ledger.Babbage (Babbage)
+import qualified Test.Cardano.Ledger.Allegra.Imp as AllegraImp
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
@@ -21,6 +22,7 @@ main =
       CddlSpec.spec
       roundTripJsonEraSpec @Babbage
       describe "Imp" $ do
+        AllegraImp.spec @Babbage
         AlonzoImp.spec @Babbage
         ShelleyImp.spec @Babbage
       describe "CostModels" $ do
