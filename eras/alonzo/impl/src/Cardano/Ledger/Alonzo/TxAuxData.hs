@@ -196,18 +196,18 @@ instance Era era => DecCBOR (Annotator (AlonzoTxAuxDataRaw era)) where
     where
       decodeShelley =
         decode
-          ( Ann (Emit AlonzoTxAuxDataRaw)
-              <*! Ann From
-              <*! Ann (Emit StrictSeq.empty)
-              <*! Ann (Emit Map.empty)
+          ( Pure (Emit AlonzoTxAuxDataRaw)
+              <!> Pure From
+              <!> Pure (Emit StrictSeq.empty)
+              <!> Pure (Emit Map.empty)
           )
       decodeShelleyMA =
         decode
-          ( Ann (RecD AlonzoTxAuxDataRaw)
-              <*! Ann From
-              <*! D
+          ( Pure (RecD AlonzoTxAuxDataRaw)
+              <!> Pure From
+              <!> D
                 (sequence <$> decodeStrictSeq decCBOR)
-              <*! Ann (Emit Map.empty)
+              <!> Pure (Emit Map.empty)
           )
       decodeAlonzo =
         decode $

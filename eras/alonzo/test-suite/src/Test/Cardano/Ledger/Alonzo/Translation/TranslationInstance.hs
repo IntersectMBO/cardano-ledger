@@ -38,7 +38,7 @@ import Cardano.Ledger.Binary.Coders (
   decode,
   encode,
   (!>),
-  (<*!),
+  (<!>),
  )
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Codec.Serialise as Cborg (Serialise (..))
@@ -155,12 +155,12 @@ instance
   where
   decCBOR =
     decode $
-      Ann (RecD TranslationInstance)
-        <*! Ann From
-        <*! Ann From
-        <*! Ann From
-        <*! From
-        <*! Ann From
+      Pure (RecD TranslationInstance)
+        <!> Pure From
+        <!> Pure From
+        <!> Pure From
+        <!> From
+        <!> Pure From
 
 deserializeTranslationInstances ::
   forall era.

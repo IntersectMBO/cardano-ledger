@@ -473,11 +473,11 @@ instance
   where
   decCBOR =
     decode $
-      Ann (RecD AlonzoTx)
-        <*! From
-        <*! From
-        <*! Ann From
-        <*! D
+      Pure (RecD AlonzoTx)
+        <!> From
+        <!> From
+        <!> Pure From
+        <!> D
           ( sequence . maybeToStrictMaybe
               <$> decodeNullMaybe decCBOR
           )
