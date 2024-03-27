@@ -22,8 +22,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Generic.Indexed (theKeyHash)
 import Test.Cardano.Ledger.Generic.Proof
+import Test.Cardano.Ledger.UnitTestTools (keyHash)
 
 -- =============================================
 -- Making era parameterized Scripts
@@ -159,7 +159,7 @@ instance Crypto c => PostShelley (ConwayEra c) where
 -- =======================================
 -- Some examples that work in multiple Eras
 matchkey :: Scriptic era => Int -> Proof era -> NativeScript era
-matchkey n era = require (theKeyHash n) era
+matchkey n era = require (keyHash n) era
 
 test21 :: Scriptic era => Proof era -> Script era
 test21 wit = fromNativeScript $ allOf [matchkey 1, anyOf [matchkey 2, matchkey 3]] wit

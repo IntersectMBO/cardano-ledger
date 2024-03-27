@@ -400,10 +400,10 @@ onlyValidChainSignalsAreGenerated =
 -- | Counts the epochs spanned by this trace
 epochsInTrace :: forall era. Era era => [Block (BHeader (EraCrypto era)) era] -> Int
 epochsInTrace [] = 0
-epochsInTrace bs =
+epochsInTrace bs@(b : _) =
   fromIntegral $ toEpoch - fromEpoch + 1
   where
-    fromEpoch = atEpoch . blockSlot $ head bs
+    fromEpoch = atEpoch . blockSlot $ b
     toEpoch = atEpoch . blockSlot $ last bs
     EpochSize slotsPerEpoch = runShelleyBase $ (epochInfoSize . epochInfoPure) testGlobals undefined
     blockSlot = bheaderSlotNo . bhbody . bheader

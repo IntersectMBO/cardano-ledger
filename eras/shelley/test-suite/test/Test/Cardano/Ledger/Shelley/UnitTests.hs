@@ -113,6 +113,7 @@ import Test.Cardano.Ledger.Shelley.Fees (sizeTests)
 import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..), genesisCoins)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rules.IncrementalStake (incrStakeUnitTest)
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.Control.State.Transition.Trace (checkTrace, (.-), (.->>))
 import qualified Test.QuickCheck.Gen as QC
@@ -704,4 +705,5 @@ unitTests =
     , testsPParams
     , sizeTests
     , testCheckLeaderVal
+    , incrStakeUnitTest
     ]

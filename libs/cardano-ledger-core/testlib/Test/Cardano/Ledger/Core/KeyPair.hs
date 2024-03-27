@@ -24,6 +24,9 @@ module Test.Cardano.Ledger.Core.KeyPair (
   mkBootKeyPairWithSeed,
   genByronVKeyAddr,
   genByronAddrFromVKey,
+  mkSeedFromWords,
+  mkKeyPairWithRawSeed,
+  RawSeed (..),
 
   -- * Deprecations
   mkVKeyRwdAcnt,
@@ -34,7 +37,7 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Crypto.Hash (hashToBytes)
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Crypto.Seed (mkSeedFromBytes)
+import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
 import qualified Cardano.Crypto.Signing as Byron (
   SigningKey,
   VerificationKey (..),
@@ -42,6 +45,7 @@ import qualified Cardano.Crypto.Signing as Byron (
  )
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (Testnet))
+import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (
@@ -71,6 +75,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import System.Random.Stateful
@@ -223,3 +228,31 @@ genByronVKeyAddr = do
 genByronAddrFromVKey :: Byron.VerificationKey -> Gen Byron.Address
 genByronAddrFromVKey vkey =
   Byron.makeAddress (Byron.VerKeyASD vkey) <$> hedgehog Byron.genAddrAttributes
+
+-- ===============================================================
+
+data RawSeed = RawSeed !Word64 !Word64 !Word64 !Word64 !Word64
+  deriving (Eq, Show)
+
+instance EncCBOR RawSeed where
+  encCBOR (RawSeed w1 w2 w3 w4 w5) = encCBOR (w1, w2, w3, w4, w5)
+  encodedSizeExpr size _ = 1 + size (Proxy :: Proxy Word64) * 5
+
+mkKeyPairWithRawSeed ::
+  forall c kd.
+  DSIGN.DSIGNAlgorithm (DSIGN c) =>
+  RawSeed ->
+  (DSIGN.SignKeyDSIGN (DSIGN c), VKey kd c)
+mkKeyPairWithRawSeed seed =
+  let sk = DSIGN.genKeyDSIGN $ mkSeedFromWords seed
+   in (sk, VKey $ DSIGN.deriveVerKeyDSIGN sk)
+
+-- | Construct a seed from a bunch of Word64s
+--
+--   We multiply these words by some extra stuff to make sure they contain
+--   enough bits for our seed.
+mkSeedFromWords ::
+  RawSeed ->
+  Seed
+mkSeedFromWords stuff =
+  mkSeedFromBytes . hashToBytes $ hashWithEncoder @Hash.Blake2b_256 shelleyProtVer encCBOR stuff

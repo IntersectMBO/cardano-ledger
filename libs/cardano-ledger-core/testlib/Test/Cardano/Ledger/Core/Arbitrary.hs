@@ -37,7 +37,7 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genValidCostModel,
 
   -- * Utils
-
+  RawSeed (..),
   -- | Will need to find a better home in the future
   uniformSubset,
 )
@@ -155,6 +155,7 @@ import System.Random.Stateful (StatefulGen, uniformRM)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Ledger.Binary.Arbitrary
 import Test.Cardano.Ledger.Binary.Random (QC (..))
+import Test.Cardano.Ledger.Core.KeyPair (RawSeed (..))
 import Test.Cardano.Ledger.Core.Utils (unsafeBoundRational)
 import Test.QuickCheck
 import Test.QuickCheck.Hedgehog (hedgehog)
@@ -891,3 +892,12 @@ genCostModelValues lang = do
     listAtLeast x = do
       NonNegative y <- arbitrary
       replicateM (x + y) arbitrary
+
+instance Arbitrary RawSeed where
+  arbitrary =
+    RawSeed
+      <$> chooseAny
+      <*> chooseAny
+      <*> chooseAny
+      <*> chooseAny
+      <*> chooseAny
