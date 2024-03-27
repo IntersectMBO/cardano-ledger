@@ -29,12 +29,21 @@
 module Test.Cardano.Ledger.Conway.Constrained.Instances
   ( ConwayFn
   , StringFn
+  , ProposalTree
   , onJust'
   , onSized
   , cKeyHashObj
   , cScriptHashObj
+  , cSNothing_
+  , cSJust_
+  , succV_
   , strLen_
+  , pProcGovAction_
   , IsConwayUniv
+  , gasId_
+  , gasCommitteeVotes_
+  , gasDRepVotes_
+  , gasProposalProcedure_
   ) where
 
 import Cardano.Chain.Common (

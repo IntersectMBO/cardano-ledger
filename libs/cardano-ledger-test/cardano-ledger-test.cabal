@@ -192,7 +192,7 @@ benchmark bench
         cardano-ledger-alonzo,
         cardano-ledger-alonzo-test,
         cardano-ledger-binary,
-        cardano-ledger-conway,
+        cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-test,
         cardano-ledger-core,
         cardano-ledger-shelley-ma-test,
@@ -208,11 +208,11 @@ benchmark bench
         cardano-slotting:{cardano-slotting, testlib},
         microlens,
         mtl,
-        random,
         small-steps:{small-steps, testlib} >=1.1,
         cardano-strict-containers >=0.1.1,
         text,
-        constrained-generators
+        constrained-generators,
+        random
 
 benchmark benchProperty
     type:             exitcode-stdio-1.0

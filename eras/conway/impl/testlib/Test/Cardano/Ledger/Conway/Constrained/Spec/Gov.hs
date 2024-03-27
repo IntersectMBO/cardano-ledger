@@ -13,7 +13,6 @@ import Data.Foldable
 
 import Data.Coerce
 
-import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams

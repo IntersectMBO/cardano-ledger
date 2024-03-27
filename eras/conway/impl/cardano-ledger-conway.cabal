@@ -116,18 +116,7 @@ library testlib
         Test.Cardano.Ledger.Conway.Binary.RoundTrip
         Test.Cardano.Ledger.Conway.Binary.Regression
         Test.Cardano.Ledger.Conway.Constrained
-        Test.Cardano.Ledger.Conway.Constrained.Instances
-        Test.Cardano.Ledger.Conway.Constrained.Spec.Cert
-        Test.Cardano.Ledger.Conway.Constrained.Spec.Deleg
-        Test.Cardano.Ledger.Conway.Constrained.Spec.GovCert
-        Test.Cardano.Ledger.Conway.Constrained.Spec.Gov
-        Test.Cardano.Ledger.Conway.Constrained.Spec.Ledger
-        Test.Cardano.Ledger.Conway.Constrained.Spec.Pool
-        Test.Cardano.Ledger.Conway.Constrained.Spec.PParams
-        Test.Cardano.Ledger.Conway.Constrained.Spec.Utxo
         Test.Cardano.Ledger.Conway.Conformance
-        Test.Cardano.Ledger.Conway.Conformance.SpecTranslate
-        Test.Cardano.Ledger.Conway.Conformance.ExecutableSpecRule
         Test.Cardano.Ledger.Conway.ImpTest
         Test.Cardano.Ledger.Conway.Imp
         Test.Cardano.Ledger.Conway.Imp.EpochSpec
@@ -143,7 +132,19 @@ library testlib
 
     visibility:       public
     hs-source-dirs:   testlib
-    other-modules:    Paths_cardano_ledger_conway
+    other-modules:
+      Paths_cardano_ledger_conway
+      Test.Cardano.Ledger.Conway.Constrained.Instances
+      Test.Cardano.Ledger.Conway.Constrained.Spec.Cert
+      Test.Cardano.Ledger.Conway.Constrained.Spec.Deleg
+      Test.Cardano.Ledger.Conway.Constrained.Spec.GovCert
+      Test.Cardano.Ledger.Conway.Constrained.Spec.Gov
+      Test.Cardano.Ledger.Conway.Constrained.Spec.Ledger
+      Test.Cardano.Ledger.Conway.Constrained.Spec.Pool
+      Test.Cardano.Ledger.Conway.Constrained.Spec.PParams
+      Test.Cardano.Ledger.Conway.Constrained.Spec.Utxo
+      Test.Cardano.Ledger.Conway.Conformance.SpecTranslate
+      Test.Cardano.Ledger.Conway.Conformance.ExecutableSpecRule
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -160,6 +161,7 @@ library testlib
         plutus-ledger-api,
         deepseq,
         microlens,
+        random,
         cardano-crypto-class,
         cardano-crypto-wrapper,
         cardano-ledger-executable-spec,
