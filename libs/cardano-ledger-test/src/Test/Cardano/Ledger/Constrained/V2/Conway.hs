@@ -80,6 +80,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
+import Control.Monad.Trans.Fail.String
 import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS
 import Data.ByteString.Short (ShortByteString)
@@ -717,7 +718,7 @@ instance MaybeBounded VersionRep
 
 instance HasSimpleRep Version where
   type SimpleRep Version = VersionRep
-  fromSimpleRep (VersionRep rep) = case mkVersion rep of
+  fromSimpleRep (VersionRep rep) = case runFail $ mkVersion rep of
     Left err ->
       error $
         unlines
@@ -1035,10 +1036,6 @@ instance HasSimpleRep (Proposals (ConwayEra StandardCrypto)) where
          in unsafeMkProposals root oMap
     where
       mkOMap (RoseNode a ts) = a OMap.<| foldMap mkOMap ts
-
--- TODO: this is a temporary workaround
-instance MonadFail (Either String) where
-  fail = Left
 
 instance IsConwayUniv fn => HasSpec fn (Proposals (ConwayEra StandardCrypto))
 

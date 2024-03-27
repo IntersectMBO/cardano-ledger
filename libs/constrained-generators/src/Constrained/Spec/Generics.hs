@@ -35,6 +35,7 @@ module Constrained.Spec.Generics (
   branch,
   forAll',
   constrained',
+  reify',
   con,
   onCon,
   isCon,
@@ -350,6 +351,7 @@ type family Cases t where
   Cases (Sum a b) = a : Cases b
   Cases a = '[a]
 
+-- | Like `forAll` but pattern matches on the `Term fn a`
 forAll' ::
   forall fn t a p.
   ( Forallable t a
@@ -368,6 +370,7 @@ forAll' ::
   Pred fn
 forAll' xs f = forAll xs $ \x -> match @fn @p x f
 
+-- | Like `constrained` but pattern matches on the bound `Term fn a`
 constrained' ::
   forall fn a p.
   ( Cases (SimpleRep a) ~ '[SimpleRep a]
@@ -382,6 +385,25 @@ constrained' ::
   FunTy (MapList (Term fn) (Args (SimpleRep a))) p ->
   Spec fn a
 constrained' f = constrained $ \x -> match @fn @p x f
+
+-- | Like `reify` but pattern matches on the bound `Term fn b`
+reify' ::
+  forall fn a b p.
+  ( Cases (SimpleRep b) ~ '[SimpleRep b]
+  , TypeSpec fn b ~ TypeSpec fn (SimpleRep b)
+  , HasSpec fn (SimpleRep b)
+  , HasSimpleRep b
+  , All (HasSpec fn) (Args (SimpleRep b))
+  , IsProd (SimpleRep b)
+  , HasSpec fn a
+  , HasSpec fn b
+  , IsPred p fn
+  ) =>
+  Term fn a ->
+  (a -> b) ->
+  FunTy (MapList (Term fn) (Args (SimpleRep b))) p ->
+  Pred fn
+reify' a r f = reify a r $ \x -> match @fn @p x f
 
 class (BaseUniverse fn, HasSpec fn (SOP sop)) => SOPTerm c fn sop where
   inj_ :: Term fn (ProdOver (ConstrOf c sop)) -> Term fn (SOP sop)

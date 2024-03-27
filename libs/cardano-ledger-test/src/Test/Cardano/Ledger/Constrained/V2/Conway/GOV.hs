@@ -1,12 +1,15 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the GOV rule
 module Test.Cardano.Ledger.Constrained.V2.Conway.GOV where
+
+import Data.Foldable
 
 import Data.Coerce
 
@@ -31,12 +34,6 @@ govEnvSpec = constrained $ \ge ->
   match ge $ \_ _ pp _ _ _ ->
     satisfies pp pparamsSpec
 
--- TODO:
---  - check `toGovRelationTree` invariants here
---  - check `checkInvariantOnAddition` invariants here
---  - check `checkInvariantOnDeletion` invariants here
---  - check `toPTree` invariants here
-
 -- NOTE: it is probably OK not to check uniqueness of ids here, because a clash
 -- is never going to be generated, and the real representation of `Proposals` doesn't
 -- allow the id to appear twice.
@@ -44,7 +41,7 @@ govProposalsSpec ::
   IsConwayUniv fn =>
   GovEnv (ConwayEra StandardCrypto) ->
   Spec fn (Proposals (ConwayEra StandardCrypto))
-govProposalsSpec GovEnv {..} =
+govProposalsSpec GovEnv {geEpoch, gePPolicy, gePrevGovActionIds} =
   constrained $ \props ->
     match props $ \ppupTree hardForkTree committeeTree constitutionTree unorderedProposals ->
       [ -- Protocol parameter updates
@@ -79,9 +76,6 @@ govProposalsSpec GovEnv {..} =
                         (minV' ==. 0)
                     , minV' `dependsOn` majV'
                     ]
-          , -- TODO: get rid of this when we've fixed the performance problem around deep forall
-            -- fusion
-            isCon @"HardForkInitiation" (pProcGovAction_ . gasProposalProcedure_ $ gas)
           ]
       , forAll (snd_ hardForkTree) (genHint treeGenHint)
       , genHint listSizeHint (snd_ hardForkTree)
@@ -283,51 +277,47 @@ govProceduresSpec ge@GovEnv {..} ps =
                 [ assert $ deposit ==. lit (gePParams ^. ppGovActionDepositL)
                 , match returnAddr $ \net _cred ->
                     net ==. lit Testnet
-                , wfGovAction ge govAction
+                , wfGovAction ge ps govAction
                 ]
           ]
 
--- TODO: The pointer to the previous action could also point to a
--- key in the `Proposals`, need a more flexible way to say what previous
--- action id is correct
 wfGovAction ::
   IsConwayUniv fn =>
   GovEnv (ConwayEra StandardCrypto) ->
+  Proposals (ConwayEra StandardCrypto) ->
   Term fn (GovAction (ConwayEra StandardCrypto)) ->
   Pred fn
-wfGovAction GovEnv {..} govAction =
+wfGovAction GovEnv {gePPolicy, geEpoch, gePrevGovActionIds, gePParams} ps govAction =
   caseOn
     govAction
     -- ParameterChange
     ( branch $ \mPrevActionId ppUpdate policy ->
-        -- TODO: this should be any ppup proposal in the tree
-        [ assert $ mPrevActionId ==. lit (gePrevGovActionIds ^. grPParamUpdateL)
+        [ assert $ mPrevActionId `elem_` lit ppupIds
         , wfPParamsUpdate ppUpdate
         , assert $ policy ==. lit gePPolicy
         ]
     )
     -- HardForkInitiation
     ( branch $ \mPrevActionId protVer ->
-        [ -- TODO: this needs to be loosened to be any hard for proposal in the tree
-          assert $ mPrevActionId ==. lit (gePrevGovActionIds ^. grHardForkL)
-        , -- TODO: here we need to say that the `protVer` can follow the last prot ver
-          --        - the tricky thing about this is that it's not enough to say that you
-          --        follow what is in the Env, you actually have to follow what is in the
-          --        node above you in the tree
-          let ProtVer currentMajorVersion currentMinorVersion = gePParams ^. ppProtocolVersionL
-           in match protVer $ \majorVersion minorVersion ->
-                case succVersion currentMajorVersion of
-                  Nothing ->
-                    [ assert $ majorVersion ==. lit currentMajorVersion
-                    , assert $ minorVersion ==. lit currentMinorVersion + 1
-                    ]
-                  Just majorVersion' ->
-                    [ assert $ majorVersion `elem_` lit [currentMajorVersion, majorVersion']
-                    , ifElse
-                        (lit currentMajorVersion <. majorVersion)
-                        (minorVersion ==. 0)
-                        (minorVersion ==. lit currentMinorVersion + 1)
-                    ]
+        [ assert $ mPrevActionId `elem_` lit hardForkIds
+        , match protVer $ \majorVersion minorVersion ->
+            reify' mPrevActionId hfIdMajorVer $ \currentMajorVersion mSuccMajorVersion ->
+              reify mPrevActionId hfIdMinorVer $ \currentMinorVersion ->
+                caseOn
+                  mSuccMajorVersion
+                  ( branch $ \_ ->
+                      [ majorVersion ==. currentMajorVersion
+                      , minorVersion ==. currentMinorVersion + 1
+                      ]
+                  )
+                  ( branch $ \majorVersion' ->
+                      [ assert $ majorVersion `member_` (singleton_ currentMajorVersion <> singleton_ majorVersion')
+                      , ifElse
+                          (currentMajorVersion <. majorVersion)
+                          (minorVersion ==. 0)
+                          (minorVersion ==. currentMinorVersion + 1)
+                      ]
+                  )
         ]
     )
     -- TreasuryWithdrawals
@@ -338,27 +328,64 @@ wfGovAction GovEnv {..} govAction =
         ]
     )
     -- NoConfidence
-    ( branch $ \mPrevActionId ->
-        -- TODO: this should be any committee purpose in the tree
-        [ assert $ mPrevActionId ==. lit (gePrevGovActionIds ^. grCommitteeL)
-        ]
+    ( branch $ \mPrevActionId -> mPrevActionId `elem_` lit committeeIds
     )
     -- UpdateCommittee
     ( branch $ \mPrevActionId _removed added _quorum ->
-        -- TODO: this should be any committee purpose in the tree
-        [ assert $ mPrevActionId ==. lit (gePrevGovActionIds ^. grCommitteeL)
+        [ assert $ mPrevActionId `elem_` lit committeeIds
         , forAll (rng_ added) $ \epoch ->
             lit geEpoch <. epoch
         ]
     )
     -- NewConstitution
-    ( branch $ \mPrevActionId _c ->
-        -- TODO: this should be any constitution purpose in the tree
-        [ assert $ mPrevActionId ==. lit (gePrevGovActionIds ^. grConstitutionL)
-        ]
-    )
+    (branch $ \mPrevActionId _c -> mPrevActionId `elem_` lit constitutionIds)
     -- InfoAction
     (branch $ \_ -> True)
+  where
+    constitutionIds =
+      (gePrevGovActionIds ^. grConstitutionL)
+        : [ SJust $ coerce $ gasId gas
+          | gas <- actions
+          , NewConstitution {} <- [pProcGovAction $ gasProposalProcedure gas]
+          ]
+    committeeIds =
+      (gePrevGovActionIds ^. grCommitteeL)
+        : [ SJust $ coerce $ gasId gas
+          | gas <- actions
+          , isCommiteeAction (pProcGovAction $ gasProposalProcedure gas)
+          ]
+    ppupIds =
+      (gePrevGovActionIds ^. grPParamUpdateL)
+        : [ SJust $ coerce $ gasId gas
+          | gas <- actions
+          , ParameterChange {} <- [pProcGovAction $ gasProposalProcedure gas]
+          ]
+    hardForkIds =
+      (gePrevGovActionIds ^. grHardForkL)
+        : [ SJust $ coerce $ gasId gas
+          | gas <- actions
+          , HardForkInitiation {} <- [pProcGovAction $ gasProposalProcedure gas]
+          ]
+    isCommiteeAction UpdateCommittee {} = True
+    isCommiteeAction NoConfidence {} = True
+    isCommiteeAction _ = False
+
+    findProtVer SNothing = gePParams ^. ppProtocolVersionL
+    findProtVer (SJust hid) =
+      case proposalsLookupId hid ps of
+        Just gas
+          | HardForkInitiation _ protVer <- pProcGovAction $ gasProposalProcedure gas -> protVer
+        _ -> gePParams ^. ppProtocolVersionL
+
+    hfIdMajorVer mId =
+      let ProtVer currentMajorVersion _ = findProtVer (coerce mId)
+       in (currentMajorVersion, succVersion @Maybe currentMajorVersion)
+
+    hfIdMinorVer mId =
+      let ProtVer _ currentMinorVersion = findProtVer (coerce mId)
+       in currentMinorVersion
+
+    actions = toList $ proposalsActions ps
 
 wfPParamsUpdate ::
   IsConwayUniv fn =>
