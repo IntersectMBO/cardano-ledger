@@ -18,4 +18,5 @@ main =
       CddlSpec.spec
       describe "Imp" $ do
         AllegraImp.spec @Allegra
+        AllegraImp.allegraSpec
         ShelleyImp.spec @Allegra

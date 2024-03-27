@@ -6,8 +6,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Allegra.Imp (spec) where
+module Test.Cardano.Ledger.Allegra.Imp (allegraSpec, spec) where
 
+import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
@@ -29,3 +30,7 @@ spec = do
   ShelleyImp.spec @era
   describe "AllegraImpTest" . withImpState @era $ do
     Utxow.spec @era
+
+allegraSpec :: Spec
+allegraSpec = describe "AllegraOnly ImpTest" . withImpState $ do
+  Utxow.specAllegra @Allegra

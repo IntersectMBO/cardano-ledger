@@ -6,14 +6,24 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Allegra.Imp.UtxowSpec (spec) where
+module Test.Cardano.Ledger.Allegra.Imp.UtxowSpec (
+  spec,
+  specAllegra,
+  genInvalidMetadatum,
+) where
 
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
+import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.SafeHash (HashAnnotated (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..))
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.Map as Map
+import qualified Data.Text as T
+import Data.Word (Word64)
 import Lens.Micro
 import Test.Cardano.Ledger.Allegra.ImpTest (produceScript)
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
@@ -60,3 +70,31 @@ spec = describe "UTXOW" $ do
     witVKey keyPair tx =
       let bodyHash = hashAnnotated $ tx ^. bodyTxL
        in mkWitnessVKey bodyHash keyPair
+
+specAllegra ::
+  forall era.
+  ( ShelleyEraImp era
+  , TxAuxData era ~ AllegraTxAuxData era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  ) =>
+  SpecWith (ImpTestState era)
+specAllegra = describe "UTXOW - Allegra" $ do
+  it "InvalidMetadata" $ do
+    invalidMetadatum <- genInvalidMetadatum
+    let auxData = AllegraTxAuxData @era invalidMetadatum []
+    let auxDataHash = hashTxAuxData auxData
+    let tx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . auxDataHashTxBodyL .~ SJust auxDataHash
+            & auxDataTxL .~ SJust auxData
+    submitFailingTx tx [injectFailure InvalidMetadata]
+
+genInvalidMetadatum :: ImpTestM era (Map.Map Word64 Metadatum)
+genInvalidMetadatum = do
+  size <- choose (65, 1000)
+  let genM =
+        oneof
+          [ B . BS.pack <$> vectorOf size arbitrary
+          , S . T.pack <$> vectorOf size arbitrary
+          ]
+  Map.fromList <$> listOf1 ((,) <$> arbitrary <*> genM)
