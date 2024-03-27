@@ -41,7 +41,7 @@ govProposalsSpec ::
   IsConwayUniv fn =>
   GovEnv (ConwayEra StandardCrypto) ->
   Spec fn (Proposals (ConwayEra StandardCrypto))
-govProposalsSpec GovEnv {..} =
+govProposalsSpec GovEnv {geEpoch, gePPolicy, gePrevGovActionIds} =
   constrained $ \props ->
     match props $ \ppupTree hardForkTree committeeTree constitutionTree unorderedProposals ->
       [ -- Protocol parameter updates
