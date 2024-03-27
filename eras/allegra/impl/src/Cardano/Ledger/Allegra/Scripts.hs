@@ -59,7 +59,7 @@ import Cardano.Ledger.Binary.Coders (
   encode,
   (!>),
   (<!),
-  (<*!),
+  (<!>),
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, HASH)
@@ -163,12 +163,12 @@ instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
   decCBOR = decode (Summands "TimelockRaw" decRaw)
     where
       decRaw :: Word -> Decode 'Open (Annotator (TimelockRaw era))
-      decRaw 0 = Ann (SumD Signature <! From)
-      decRaw 1 = Ann (SumD AllOf) <*! D (sequence <$> decCBOR)
-      decRaw 2 = Ann (SumD AnyOf) <*! D (sequence <$> decCBOR)
-      decRaw 3 = Ann (SumD MOfN) <*! Ann From <*! D (sequence <$> decCBOR)
-      decRaw 4 = Ann (SumD TimeStart <! From)
-      decRaw 5 = Ann (SumD TimeExpire <! From)
+      decRaw 0 = Pure (SumD Signature <! From)
+      decRaw 1 = Pure (SumD AllOf) <!> D (sequence <$> decCBOR)
+      decRaw 2 = Pure (SumD AnyOf) <!> D (sequence <$> decCBOR)
+      decRaw 3 = Pure (SumD MOfN) <!> Pure From <!> D (sequence <$> decCBOR)
+      decRaw 4 = Pure (SumD TimeStart <! From)
+      decRaw 5 = Pure (SumD TimeExpire <! From)
       decRaw n = Invalid n
 
 -- =================================================================
