@@ -10,7 +10,6 @@ module Test.Cardano.Ledger.Conway.Constrained.Spec.Gov where
 
 import Data.Coerce
 
-import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
