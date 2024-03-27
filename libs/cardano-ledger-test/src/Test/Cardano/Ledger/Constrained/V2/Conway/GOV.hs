@@ -286,7 +286,7 @@ wfGovAction ::
   Proposals (ConwayEra StandardCrypto) ->
   Term fn (GovAction (ConwayEra StandardCrypto)) ->
   Pred fn
-wfGovAction GovEnv {..} ps govAction =
+wfGovAction GovEnv {gePPolicy, geEpoch, gePrevGovActionIds, gePParams} ps govAction =
   caseOn
     govAction
     -- ParameterChange
