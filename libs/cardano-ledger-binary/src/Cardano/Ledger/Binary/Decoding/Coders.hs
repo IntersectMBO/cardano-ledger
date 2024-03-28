@@ -8,11 +8,13 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Ledger.Binary.Decoding.Coders (
   -- * Creating decoders.
@@ -25,6 +27,7 @@ module Cardano.Ledger.Binary.Decoding.Coders (
   (<?),
   decode,
   decodeSparse,
+  decShareFromDecode,
 
   -- * Index types for well-formed Coders.
 
@@ -59,6 +62,11 @@ module Cardano.Ledger.Binary.Decoding.Coders (
   unusedRequiredKeys,
   duplicateKey,
   guardUntilAtLeast,
+
+  -- * Deprecated
+  pattern ApplyAnn,
+  pattern Ann,
+  (<!*),
 )
 where
 
@@ -74,6 +82,7 @@ import Control.Applicative (Applicative(..),liftA2)
 import Control.Monad (when)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State.Strict (StateT, evalStateT)
+import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set, insert, member)
@@ -341,6 +350,9 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 data Decode (w :: Wrapped) t where
   -- | Label the constructor of a Record-like datatype (one with exactly 1 constructor) as a Decode.
   RecD :: t -> Decode ('Closed 'Dense) t
+  -- | Label the constructor of a newtype construcor (which must have exactly 1 constructor) as a Decode.
+  --   DONOT use NewtypeD if the type is not a Newtype.
+  NewtypeD :: (t -> new) -> Decode ('Closed 'Dense) (t -> new)
   -- | Label the constructor of a Record-like datatype (one with multiple constructors) as an Decode.
   SumD :: t -> Decode 'Open t
   -- | Lift a Word to Decode function into a DeCode for a type with multiple constructors.
@@ -365,7 +377,7 @@ data Decode (w :: Wrapped) t where
   From :: DecCBOR t => Decode w t
   -- | Label a (component, field, argument). It will be decoded using the given decoder.
   D :: (forall s. Decoder s t) -> Decode ('Closed 'Dense) t
-  -- | Apply a functional decoding (arising from 'RecD' or 'SumD') to get (type wise)
+  -- | Apply a functional decoding (arising from 'RecD' or 'SumD' or 'NewtypeD') to get (type wise)
   -- smaller decoding.
   ApplyD :: Decode w1 (a -> t) -> Decode ('Closed d) a -> Decode w1 t
   -- | Mark a Word as a Decoding which is not a valid Decoding. Used when decoding sums
@@ -384,7 +396,7 @@ data Decode (w :: Wrapped) t where
   -- argument) that was not Annotator encoded, but contained in Record or Sum which is
   -- Annotator encoded.
   Pure :: Applicative f => Decode w t -> Decode w (f t)
-  -- | Apply a functional decoding (arising from 'RecD' or 'SumD' that needs to be
+  -- | Apply a functional decoding (arising from 'RecD' or 'SumD' or 'NewtypeD' that needs to be
   -- Annotator decoded) to get (type wise) smaller decoding.
   ApplyApplicative ::
     Applicative f =>
@@ -395,13 +407,15 @@ data Decode (w :: Wrapped) t where
     Decode w1 (f t)
   RunShare ::
     DecShareCBOR b =>
+    Share b ->
     (forall s. Decode ('Closed d) (StateT (Share b) (Decoder s) b)) ->
     Decode ('Closed d) b
   -- | the function to Either can raise an error when applied by returning (Left errorMessage)
   ApplyErr :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
   NoShare :: DecShareCBOR b => Decode w (StateT (Share a) (Decoder s) b)
   ReadShare :: DecShareCBOR b => SimpleGetter bs (Share b) -> Decode w (StateT bs (Decoder s) b)
-  WriteShare :: DecShareCBOR b => Lens' bs (Share b) -> Decode w (StateT bs (Decoder s) b)
+  WriteShare ::
+    forall b bs w s. DecShareCBOR b => Lens' bs (Share b) -> Decode w (StateT bs (Decoder s) b)
 
 -- ==============================================
 -- infix operators to make Coders easy to use
@@ -435,6 +449,7 @@ hsize :: Decode w t -> Int
 hsize (Summands _ _) = 1
 hsize (SumD _) = 0
 hsize (RecD _) = 0
+hsize (NewtypeD _) = 0
 hsize (KeyedD _) = 0
 hsize From = 1
 hsize (D _) = 1
@@ -446,7 +461,7 @@ hsize SparseKeyed {} = 1
 hsize (TagD _ _) = 1
 hsize (Pure x) = hsize x
 hsize (ApplyApplicative f x) = hsize f + hsize x
-hsize (RunShare x) = hsize x
+hsize (RunShare _ x) = hsize x
 hsize (ApplyErr f x) = hsize f + hsize x
 hsize NoShare = 1
 hsize (ReadShare _) = 1
@@ -465,7 +480,8 @@ decodeCount :: forall (w :: Wrapped) s t. Decode w t -> Int -> Decoder s (Int, t
 decodeCount (Summands nm f) n = (n + 1,) <$> decodeRecordSum nm (decodE . f)
 decodeCount (SumD cn) n = pure (n + 1, cn)
 decodeCount (KeyedD cn) n = pure (n + 1, cn)
-decodeCount (RecD cn) n = decodeRecordNamed "RecD" (const n) (pure (n, cn))
+decodeCount (RecD cn) n = (n,) <$> decodeRecordNamed "RecD" (const n) (pure cn)
+decodeCount (NewtypeD cn) n = (pure (n, cn))
 decodeCount From n = (n,) <$> decCBOR
 decodeCount (D dec) n = (n,) <$> dec
 decodeCount (Invalid k) _ = invalidKey k
@@ -476,9 +492,9 @@ decodeCount (TagD expectedTag decoder) n = do
   decodeCount decoder n
 decodeCount (SparseKeyed name initial pick required) n =
   (n + 1,) <$> decodeSparse name initial pick required
-decodeCount (RunShare x) n = do
+decodeCount (RunShare share x) n = do
   y <- decodeClosed @_ @_ @s x
-  (n,) <$> evalStateT y (undefined :: Share t)
+  (n + hsize x,) <$> evalStateT y share
 decodeCount (ApplyD cn g) n = do
   (i, f) <- decodeCount cn (n + hsize g)
   y <- decodeClosed g
@@ -494,9 +510,9 @@ decodeCount (ApplyErr cn g) n = do
   case f y of
     Right z -> pure (i, z)
     Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack message)
-decodeCount NoShare n = pure (n, lift decNoShareCBOR)
-decodeCount (ReadShare getter) n = pure (n, decShareLensCBOR getter)
-decodeCount (WriteShare lenze) n = pure (n, decSharePlusLensCBOR lenze)
+decodeCount NoShare n = pure (n + 1, lift decNoShareCBOR)
+decodeCount (ReadShare getter) n = pure (n + 1, decShareLensCBOR getter)
+decodeCount (WriteShare lenze) n = pure (n + 1, decSharePlusLensCBOR lenze)
 {-# INLINE decodeCount #-}
 
 -- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
@@ -505,6 +521,7 @@ decodeClosed :: forall t d s. Decode ('Closed d) t -> Decoder s t
 decodeClosed (Summands nm f) = decodeRecordSum nm (decodE . f)
 decodeClosed (KeyedD cn) = pure cn
 decodeClosed (RecD cn) = pure cn
+decodeClosed (NewtypeD cn) = pure cn
 decodeClosed From = decCBOR
 decodeClosed (D dec) = dec
 decodeClosed (ApplyD cn g) = do
@@ -519,9 +536,9 @@ decodeClosed (TagD expectedTag decoder) = do
   decodeClosed decoder
 decodeClosed (SparseKeyed name initial pick required) =
   decodeSparse name initial pick required
-decodeClosed (RunShare _x) = undefined {- do
-                                       y <- decodeClosed _x
-                                       pure (evalState (mempty :: Share t) y) -}
+decodeClosed (RunShare share x) = do
+  y <- decodeClosed @_ @_ @s x
+  evalStateT y share
 decodeClosed (Pure x) = fmap pure (decodeClosed x)
 decodeClosed (ApplyApplicative g x) = do
   f <- decodeClosed g
@@ -663,3 +680,48 @@ unusedRequiredKeys used required name =
 guardUntilAtLeast :: DecCBOR a => String -> Version -> Decode ('Closed 'Dense) a
 guardUntilAtLeast errMessage v = D (unlessDecoderVersionAtLeast v (fail errMessage) >> decCBOR)
 {-# INLINE guardUntilAtLeast #-}
+
+-- | decShareFromDecode is designed to make (DecShareCBOR b) instances easily using the Coders library.
+--   1) Construct a Coders obect 'decoder' with type (Decode w (StateT (Share b) (Decoder s) b))
+--      Use combinators like Pure, (<!>), NoShare, ReadShare, WriteShare, etc.
+--   2) Then making the instance is easy, by defining the DecShareCBOR method 'decShareCBOR' as follows:
+--      instance DecShareCBOR b where
+--         type (Share b) = ....
+--         decShareCBOR share = decShareFromDecode share decoder
+--
+--   The function works by decoding the decoder to get an object with type (Decoder s (StateT bs (Decoder s) b))
+--   running it in the (Decode s) monad, and then supplying the 'share' using evalStateT.
+decShareFromDecode :: Share b -> Decode w (StateT (Share b) (Decoder s) b) -> Decoder s b
+decShareFromDecode share decoder = do x <- decode decoder; evalStateT x share
+
+-- ==============================================
+-- Deprecated operations
+
+{-# DEPRECATED ApplyAnn "In favor of `ApplyApplicative`" #-}
+pattern ApplyAnn ::
+  forall (w :: Wrapped) t.
+  () =>
+  forall (f :: Type -> Type) a t1 (d :: Density).
+  (t ~ f t1, Applicative f) =>
+  Decode w (f (a -> t1)) ->
+  Decode ('Closed d) (f a) ->
+  Decode w t
+pattern ApplyAnn x y = ApplyApplicative x y
+
+{-# DEPRECATED Ann "In favor of `Pure`. 'Ann' worked for Annotator, 'Pure' works for any Applicative." #-}
+pattern Ann ::
+  forall (w :: Wrapped) t.
+  () =>
+  forall (f :: Type -> Type) t1.
+  (t ~ f t1, Applicative f) =>
+  Decode w t1 ->
+  Decode w t
+pattern Ann x = Pure x
+
+{-# DEPRECATED (<!*) "In favor of `(<!>)`.  `(<!*)` worked for Annotator,  `(<!>)` works for any Applicative." #-}
+(<!*) ::
+  Applicative f =>
+  Decode w1 (f (a -> t)) ->
+  Decode ('Closed d) (f a) ->
+  Decode w1 (f t)
+(<!*) = (<!>)

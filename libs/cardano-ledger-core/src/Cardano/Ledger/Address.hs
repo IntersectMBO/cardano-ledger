@@ -12,6 +12,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Ledger.Address (
@@ -86,7 +87,12 @@ import Cardano.Ledger.Binary (
   decodeFull',
   ifDecoderVersionAtLeast,
   serialize,
+  DecShareCBOR(..),
+  Interns,
+  decodeRecordNamedT,
+  interns
  )
+import Control.Monad.Trans (lift)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (
   Credential (..),
@@ -401,6 +407,15 @@ instance Crypto c => EncCBOR (RewardAcnt c) where
 instance Crypto c => DecCBOR (RewardAcnt c) where
   decCBOR = fromCborRewardAcnt
   {-# INLINE decCBOR #-}
+
+instance Crypto c => DecShareCBOR (RewardAccount c) where
+  type Share (RewardAccount c) = Interns (Credential 'Staking c)
+  decSharePlusCBOR = decodeRecordNamedT "RewardAccount" (const 2) $ do
+    network <- lift decCBOR
+    x <- get
+    cred <- interns x <$> lift decCBOR
+    pure(RewardAccount network cred)
+
 
 newtype BootstrapAddress c = BootstrapAddress
   { unBootstrapAddress :: Byron.Address

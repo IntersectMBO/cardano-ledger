@@ -8,6 +8,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Credential (
   Credential (KeyHashObj, ScriptHashObj),
@@ -37,6 +38,9 @@ import Cardano.Ledger.Binary (
   EncCBORGroup (..),
   FromCBOR (..),
   ToCBOR (..),
+  DecShareCBOR(..),
+  Interns,
+  interns,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto (Crypto)
@@ -282,6 +286,10 @@ ptrCertIx (Ptr _ _ cIx) = cIx
 instance (Typeable kr, Crypto c) => EncCBOR (Credential kr c)
 
 instance (Typeable kr, Crypto c) => DecCBOR (Credential kr c)
+
+instance (Typeable kr, Crypto c) => DecShareCBOR (Credential kr c) where
+  type Share (Credential kr c) = Interns (Credential kr c)
+  decShareCBOR a = interns a <$> decCBOR
 
 instance (Typeable kr, Crypto c) => ToCBOR (Credential kr c) where
   toCBOR = \case

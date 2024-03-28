@@ -84,6 +84,9 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   decodeRecordNamed,
   encodeListLen,
+  DecShareCBOR(..),
+  Interns,
+  interns,
  )
 import Cardano.Ledger.Binary.Crypto
 import Cardano.Ledger.Crypto (ADDRHASH, Crypto, DSIGN, HASH, KES, VRF)
@@ -246,6 +249,10 @@ deriving instance
 deriving instance
   (Crypto c, Typeable disc) =>
   DecCBOR (KeyHash disc c)
+
+instance (Typeable kr, Crypto c) => DecShareCBOR (KeyHash kr c) where
+  type Share (KeyHash kr c) = Interns (KeyHash kr c)
+  decShareCBOR a = interns a <$> decCBOR
 
 deriving newtype instance
   Crypto c =>

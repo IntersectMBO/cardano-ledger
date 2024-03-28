@@ -18,9 +18,15 @@ module Cardano.Ledger.Binary.Decoding.Sharing (
   decNoShareCBOR,
   interns,
   internsFromMap,
+  internsFromSet,
   internsFromVMap,
   toMemptyLens,
   decShareMonadCBOR,
+  Iso (..),
+  flipIso,
+  isoL,
+  castInterns,
+  decShareMapWithIso,
 )
 where
 
@@ -36,6 +42,7 @@ import Data.Map.Strict.Internal (Map (..))
 import Data.Primitive.Types (Prim)
 import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
+import qualified Data.Set.Internal as Set(Set(..),size)
 import Lens.Micro
 
 -- =======================================
@@ -71,6 +78,22 @@ interns (Interns is) !k = go is
         Just kx -> kx
         Nothing -> go xs
 {-# INLINE interns #-}
+
+internsFromSet :: Ord k => Set.Set k -> Interns k
+internsFromSet m =
+  Interns
+    [ Intern
+        { internMaybe = \k ->
+            let go Set.Tip = Nothing
+                go (Set.Bin _ kx l r) =
+                  case compare k kx of
+                    LT -> go l
+                    GT -> go r
+                    EQ -> Just kx
+             in go m
+        , internWeight = Set.size m
+        }
+    ]
 
 internsFromMap :: Ord k => Map k a -> Interns k
 internsFromMap m =
@@ -179,6 +202,12 @@ decSharePlusLensCBOR l = do
 decNoShareCBOR :: DecShareCBOR a => Decoder s a
 decNoShareCBOR = decShareCBOR mempty
 
+instance (Ord k, DecCBOR k) => DecShareCBOR (Set.Set k) where
+  type Share (Set.Set k) = Interns k
+  decShareCBOR kis = do
+    decodeSet (interns kis <$> decCBOR) 
+  getShare !m = internsFromSet m
+
 instance (Ord k, DecCBOR k, DecCBOR v) => DecShareCBOR (Map k v) where
   type Share (Map k v) = (Interns k, Interns v)
   decShareCBOR (kis, vis) = do
@@ -202,3 +231,44 @@ decShareMonadCBOR :: (DecCBOR (f b), Monad f) => Interns b -> Decoder s (f b)
 decShareMonadCBOR kis = do
   sm <- decCBOR
   pure (interns kis <$!> sm)
+
+-- ==================================================================================
+-- Sometimes we have twoTypes (hidden and k) which have the same representaion but different indexes. E.g.
+--      hidden=(Credential 'Staking c) and k=(Credential 'Voting c)
+--   OR
+--     hidden=(KeyHash 'Witness) and k=(KeyHash 'StakePool)
+-- We want to Intern with one type, and Lookup with another.
+
+-- | Store a pair of inverse functions inside Iso. It is the users
+--   responsility to ensure they are inverses. Useful to Share types
+--   where one side of the Iso is stored in the Share, and the other is being Decoded
+data Iso a b where Iso :: {isoTo :: (a -> b), isoFrom :: (b -> a)} -> Iso a b
+
+flipIso :: Iso a b -> Iso b a
+flipIso (Iso a b) = Iso b a
+
+castIntern :: Iso a b -> Intern a -> Intern b
+castIntern iso (Intern lookUp size) = (Intern newLookUp size)
+  where
+    newLookUp x = isoTo iso <$> lookUp (isoFrom iso x)
+
+castInterns :: Iso a b -> Interns a -> Interns b
+castInterns iso (Interns xs) = Interns (map (castIntern iso) xs)
+
+isoL :: Iso a b -> Lens' (Interns a) (Interns b)
+isoL iso = lens getter setter
+  where
+    getter x = castInterns iso x
+    setter _ y = castInterns (flipIso iso) y
+
+-- | Decode a map where the state interns a 'hidden' type, and the map has the type 'k' as its domain.
+decShareMapWithIso ::
+  (Ord k, DecCBOR k, DecCBOR v) =>
+  Iso hidden k ->
+  StateT (Interns hidden) (Decoder s) (Map k v)
+decShareMapWithIso iso = do
+  kis <- get
+  let newkis = castInterns iso kis
+  m <- lift $ decodeMap (interns newkis <$> decCBOR) decCBOR
+  put (castInterns (flipIso iso) (internsFromMap m) <> kis)
+  pure m

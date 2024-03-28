@@ -4,7 +4,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.SerialiseLedger (
   serialNES,
@@ -22,7 +26,6 @@ import Cardano.Ledger.Binary (
   Interns (..),
   decNoShareCBOR,
   decodeMap,
-  decodeRecordNamed,
   encodeMap,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -38,12 +41,42 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Core (Era (..), EraTxOut (..), TxOut)
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.EpochBoundary ()
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Governance (EraGov (..), GovState)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UTxO (UTxO (..))
-import Control.Monad.Trans (lift)
 import Lens.Micro (Lens', lens, _1, _2)
+
+{-
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..), coerceKeyRole)
+import Test.Cardano.Ledger.Binary.RoundTrip(Trip,mkTrip,roundTrip, RoundTripFailure)
+import Test.Tasty
+import Test.Tasty.QuickCheck
+import Test.Cardano.Ledger.Core.Arbitrary()
+import Cardano.Ledger.Binary
+ (toMemptyLens,
+  decodeRecordNamedT,
+  decShareMapWithIso,
+  decSharePlusLensCBOR,
+  mkVersion,
+  Iso (..),
+ )
+import Cardano.Ledger.Allegra(Allegra)
+import Control.Monad.Trans.State.Strict (StateT, runStateT, get, put,evalStateT)
+import Cardano.Ledger.Crypto(Crypto)
+import Control.Monad.Trans(lift)
+import qualified Data.Map as Map
+import Data.Typeable(Typeable)
+import Data.Map.Strict.Internal (Map (..))
+-}
+-- =======================================================
+
+idL :: Lens' x x
+idL = lens getter setter
+  where
+    getter x = x
+    setter _ x = x
 
 -- =============================================
 
@@ -125,45 +158,6 @@ deSerialNES decTxOut =
       <! From
   )
 
-{-
-instance
-  ( Era era
-  , EraTxOut era
-  , EraGov era
-  , StashedAVVMAddresses era ~ ()
-  ) => DecShareCBOR (NewEpochState era) where
-  type
-    Share (NewEpochState era) =
-      (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
-  decShareCBOR interns@(cred,khash) = decode $ RunShare $
-      (Pure (RecD NewEpochState)
-         <!> Pure From -- EpochNo
-         <!> Pure From -- prevBlocks
-         <!> Pure From -- currBlocks
-         <!> (Pure (RecD EpochState)
-                <!> Pure From
-                <!> (Pure (RecD (\cert utxo -> LedgerState utxo cert))
-                      <!> WriteShare idL -- CertState (Credential 'Staking c,KeyHash 'StakePool c)
-                      <!> (Pure (RecD UTxOState)  -- WriteShare _1 -- UTxOState
-                             <!> WriteShare _1  -- UTxO   (Credential 'Staking c)
-                             <!> Pure From      -- deposited
-                             <!> Pure From      -- fees
-                             <!> Pure From      -- govState
-                             <!> WriteShare _1  -- stakeDistr (Credential 'Staking c)
-                             <!> Pure From))    -- donation
-                <!> Pure From --Snapshots lots of sharing in here
-                <!> WriteShare _2 ) -- NonMyopic (KeyHash 'StakePool c)
-         <!> Pure From  -- pulser
-         <!> Pure From  -- poolDistr
-         <!> Pure From) -- stashed
--}
-
-idL :: Lens' x x
-idL = lens getter setter
-  where
-    getter x = x
-    setter _ x = x
-
 instance
   ( Era era
   , EraTxOut era
@@ -175,9 +169,9 @@ instance
   type
     Share (NewEpochState era) =
       (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
-  decShareCBOR interns@(cred, khash) =
+  decShareCBOR share@(_cred, _khash) =
     decode $
-      RunShare $
+      RunShare share $
         ( Pure (RecD NewEpochState)
             <!> Pure From -- EpochNo
             <!> Pure From -- prevBlocks
@@ -190,12 +184,13 @@ instance
                                     <!> WriteShare _1 -- UTxO   (Credential 'Staking c)
                                     <!> Pure From -- deposited
                                     <!> Pure From -- fees
-                                    <!> Pure From -- govState
+                                    <!> Pure From -- WriteShare idL    --
+                                    -- govState
                                     <!> WriteShare _1 -- stakeDistr (Credential 'Staking c)
                                     <!> Pure From -- donation
                                 )
                         )
-                    <!> Pure From -- Snapshots
+                    <!> WriteShare idL -- Snapshots
                     <!> WriteShare _2 -- NonMyopic (KeyHash 'StakePool c)
                 )
             <!> Pure From -- pulser
@@ -244,4 +239,40 @@ type instance Share (UTxO era)
 type instance Share (ShelleyGovState era) = ()
         -- Defined in ‘Cardano.Ledger.Shelley.Governance’
 
+-}
+
+{-
+foo6 :: Era era => Interns (KeyHash 'StakePool (EraCrypto era)) -> Decoder s (PState era)
+foo6 share = decShareFromDecode share $
+   (Pure (RecD PState))
+      <!> WriteShare (toMemptyLens _1 id)
+      <!> WriteShare (toMemptyLens _1 id)
+      <!> WriteShare (toMemptyLens _1 id)
+      <!> WriteShare (toMemptyLens _1 id)
+
+-- | decShareFromDecode is designed to make (DecShareCBOR b) instances easily using the Coders library.
+--   1) Construct a Coders obect 'decoder' with type (Decode w (StateT (Share b) (Decoder s) b))
+--      Use combinators like Pure, (<!>), NoShare, ReadShare, WriteShare, etc.
+--   2) Then making the instance is easy, by defining the DecShareCBOR method 'decShareCBOR' as follows:
+--      instance DecShareCBOR b where
+--         type (Share b) = ....
+--         decShareCBOR share = decShareFromDecode share decoder
+--
+--   The function works by decoding the decoder to get an object with type (Decoder s (StateT bs (Decoder s) b))
+--   running it in the (Decode s) monad, and then supplying the 'share' using evalStateT.
+decShareFromDecode :: Share b -> Decode w (StateT (Share b) (Decoder s) b) -> Decoder s b
+decShareFromDecode share decoder = do {x <- decode decoder;  evalStateT x share}
+
+Just allegra = mkVersion 3
+
+go :: Either RoundTripFailure (PState Allegra)
+go = roundTrip allegra (mkTrip encCBOR (foo6 mempty)) (PState mempty mempty mempty mempty)
+
+test1 :: Era era => PState era -> Property
+test1 pstate = case roundTrip allegra (mkTrip encCBOR (foo6 mempty)) pstate of
+   Right _ -> property True
+   Left x -> counterexample (show x) (property False)
+
+main = defaultMain $
+  testGroup "Serial" [ testProperty "VState" (test1 @Allegra) ]
 -}

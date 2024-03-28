@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies  #-}
 
 module Cardano.Ledger.PoolParams (
   PoolParams (..),
@@ -40,6 +41,7 @@ import Cardano.Ledger.Binary (
   Size,
   decodeNullMaybe,
   decodeRecordNamed,
+  decodeRecordNamedT,
   decodeRecordSum,
   encodeListLen,
   encodeNullMaybe,
@@ -54,6 +56,17 @@ import Cardano.Ledger.Keys (
   VerKeyVRF,
  )
 import Cardano.Ledger.Orphans ()
+
+import Cardano.Ledger.Sharing 
+  ( lift,
+    DecShareCBOR(..),
+    decSharePlusLensCBOR,
+    psCRStakingL,
+    psHKStakingL,
+    psKHStakePoolL,  
+    interns,
+    PShare(..),
+  )  
 import Control.DeepSeq (NFData ())
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -71,8 +84,8 @@ import qualified Data.Text.Encoding as Text
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Control.Monad.Trans.State.Strict(get)
 
--- ========================================================================
 
 data PoolMetadata = PoolMetadata
   { pmUrl :: !Url
@@ -215,6 +228,22 @@ data PoolParams c = PoolParams
   deriving (Show, Generic, Eq, Ord)
   deriving (EncCBOR) via CBORGroup (PoolParams c)
   deriving (DecCBOR) via CBORGroup (PoolParams c)
+
+
+instance Crypto c => DecShareCBOR (PoolParams c) where
+  type Share (PoolParams c) = PShare c 
+  decSharePlusCBOR = decodeRecordNamedT "PoolParams" (const 9) $ do
+    ident <- decSharePlusLensCBOR psKHStakePoolL
+    share <- get
+    vrf <- interns (psVrf share) <$> lift decCBOR 
+    pledge <- lift decCBOR
+    cost <- lift decCBOR
+    margin <- lift decCBOR
+    rewardAccount <- decSharePlusLensCBOR psCRStakingL
+    owners <- decSharePlusLensCBOR psHKStakingL
+    relays <- lift decCBOR
+    metadata <- lift decCBOR
+    pure (PoolParams ident vrf pledge cost margin rewardAccount owners relays metadata)
 
 ppRewardAcnt :: PoolParams c -> RewardAccount c
 ppRewardAcnt = ppRewardAccount

@@ -11,7 +11,7 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.DRep (drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..), asWitness, coerceKeyRole)
-import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
+import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR,CertState)
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..))
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
@@ -340,6 +340,22 @@ mainD :: Int -> IO ()
 mainD seed = defaultMain $ testIO "Testing DState Stage" (demoD Interactive seed)
 
 -- ===============================================
+
+genCertState :: Reflect era => Proof era -> (CertState era -> t) -> IO t
+genCertState proof proj = do
+  env <-
+    generate
+      ( pure emptySubst
+          >>= pParamsStage proof
+          >>= universeStage def proof
+          >>= vstateStage proof
+          >>= pstateStage proof
+          >>= dstateStage proof
+          >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
+      )
+  certState <- monadTyped $ runTarget env certstateT
+  pure (proj certState)
+  
 
 demoC :: ReplMode -> IO ()
 demoC mode = do

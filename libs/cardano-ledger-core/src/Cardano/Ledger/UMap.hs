@@ -114,8 +114,9 @@ import Cardano.Ledger.Credential (Credential (..), Ptr)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Sharing (keyhashL)
 import Control.DeepSeq (NFData (..))
-import Control.Monad.Trans.State.Strict (StateT (..))
+import Control.Monad.Trans.State.Strict (StateT (..), evalStateT)
 import Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
 import Data.Foldable (Foldable (..))
@@ -132,6 +133,7 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
 import Prelude hiding (lookup, null)
+import Cardano.Ledger.Binary.Coders
 
 -- | A Reward-Deposit Pair
 -- Used to represent the reward and the deposit for a given (Credential 'Staking c)
@@ -218,6 +220,9 @@ instance Crypto c => EncCBOR (UMElem c) where
   encCBOR (UMElem rd ptrSet sPool dRep) =
     encodeListLen 4 <> encCBOR rd <> encCBOR ptrSet <> encCBOR sPool <> encCBOR dRep
 
+instance Crypto c => DecCBOR (UMElem c) where
+  decCBOR = decode $ RecD UMElem <! From <! From <! From <! From
+
 instance Crypto c => DecShareCBOR (UMElem c) where
   type Share (UMElem c) = Interns (KeyHash 'StakePool c)
   decShareCBOR is =
@@ -226,7 +231,7 @@ instance Crypto c => DecShareCBOR (UMElem c) where
         <$> decCBOR
         <*> decCBOR
         <*> decShareMonadCBOR is
-        <*> decCBOR
+        <*> decodeStrictMaybe (evalStateT (decShareLensCBOR keyhashL) is)
 
 -- | A n-Tuple view of the `UMElem`.
 -- We can view all of the constructors as an `UMElem`.
@@ -417,6 +422,9 @@ toUMapPair (UMap !m1 !m2) =
 instance Crypto c => EncCBOR (UMap c) where
   encCBOR UMap {umElems, umPtrs} =
     encodeListLen 2 <> encodeMap encCBOR encCBOR umElems <> encodeMap encCBOR encCBOR umPtrs
+
+instance Crypto c => DecCBOR (UMap c) where
+  decCBOR = decode $ RecD UMap <! From <! From
 
 instance Crypto c => DecShareCBOR (UMap c) where
   type Share (UMap c) = (Interns (Credential 'Staking c), Interns (KeyHash 'StakePool c))

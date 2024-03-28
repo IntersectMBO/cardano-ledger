@@ -69,6 +69,7 @@ library
         Cardano.Ledger.UTxO
         Cardano.Ledger.Val
         Cardano.Ledger.UMap
+        Cardano.Ledger.Sharing
 
     hs-source-dirs:   src
     other-modules:
