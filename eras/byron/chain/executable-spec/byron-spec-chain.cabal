@@ -31,7 +31,7 @@ library
         bimap >=0.4 && <0.6,
         bytestring,
         containers,
-        byron-spec-ledger >=1.0,
+        byron-spec-ledger >=1.0.1,
         hashable,
         hedgehog >=1.0.4,
         microlens,
