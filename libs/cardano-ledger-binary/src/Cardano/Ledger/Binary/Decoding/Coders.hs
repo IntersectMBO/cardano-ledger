@@ -8,11 +8,13 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Cardano.Ledger.Binary.Decoding.Coders (
   -- * Creating decoders.
@@ -59,6 +61,11 @@ module Cardano.Ledger.Binary.Decoding.Coders (
   unusedRequiredKeys,
   duplicateKey,
   guardUntilAtLeast,
+
+  -- * Deprecated
+  pattern ApplyAnn,
+  pattern Ann,
+  (<!*),
 )
 where
 
@@ -74,6 +81,7 @@ import Control.Applicative (Applicative(..),liftA2)
 import Control.Monad (when)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State.Strict (StateT, evalStateT)
+import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set, insert, member)
@@ -395,6 +403,7 @@ data Decode (w :: Wrapped) t where
     Decode w1 (f t)
   RunShare ::
     DecShareCBOR b =>
+    Share b ->
     (forall s. Decode ('Closed d) (StateT (Share b) (Decoder s) b)) ->
     Decode ('Closed d) b
   -- | the function to Either can raise an error when applied by returning (Left errorMessage)
@@ -446,7 +455,7 @@ hsize SparseKeyed {} = 1
 hsize (TagD _ _) = 1
 hsize (Pure x) = hsize x
 hsize (ApplyApplicative f x) = hsize f + hsize x
-hsize (RunShare x) = hsize x
+hsize (RunShare _ x) = hsize x
 hsize (ApplyErr f x) = hsize f + hsize x
 hsize NoShare = 1
 hsize (ReadShare _) = 1
@@ -476,9 +485,9 @@ decodeCount (TagD expectedTag decoder) n = do
   decodeCount decoder n
 decodeCount (SparseKeyed name initial pick required) n =
   (n + 1,) <$> decodeSparse name initial pick required
-decodeCount (RunShare x) n = do
+decodeCount (RunShare share x) n = do
   y <- decodeClosed @_ @_ @s x
-  (n,) <$> evalStateT y (undefined :: Share t)
+  (n,) <$> evalStateT y share
 decodeCount (ApplyD cn g) n = do
   (i, f) <- decodeCount cn (n + hsize g)
   y <- decodeClosed g
@@ -519,9 +528,9 @@ decodeClosed (TagD expectedTag decoder) = do
   decodeClosed decoder
 decodeClosed (SparseKeyed name initial pick required) =
   decodeSparse name initial pick required
-decodeClosed (RunShare _x) = undefined {- do
-                                       y <- decodeClosed _x
-                                       pure (evalState (mempty :: Share t) y) -}
+decodeClosed (RunShare share x) = do
+  y <- decodeClosed @_ @_ @s x
+  evalStateT y share
 decodeClosed (Pure x) = fmap pure (decodeClosed x)
 decodeClosed (ApplyApplicative g x) = do
   f <- decodeClosed g
@@ -663,3 +672,35 @@ unusedRequiredKeys used required name =
 guardUntilAtLeast :: DecCBOR a => String -> Version -> Decode ('Closed 'Dense) a
 guardUntilAtLeast errMessage v = D (unlessDecoderVersionAtLeast v (fail errMessage) >> decCBOR)
 {-# INLINE guardUntilAtLeast #-}
+
+-- ==============================================
+-- Deprecated operations
+
+{-# DEPRECATED ApplyAnn "In favor of `ApplyApplicative`" #-}
+pattern ApplyAnn ::
+  forall (w :: Wrapped) t.
+  () =>
+  forall (f :: Type -> Type) a t1 (d :: Density).
+  (t ~ f t1, Applicative f) =>
+  Decode w (f (a -> t1)) ->
+  Decode ('Closed d) (f a) ->
+  Decode w t
+pattern ApplyAnn x y = ApplyApplicative x y
+
+{-# DEPRECATED Ann "In favor of `Pure`. 'Ann' worked for Annotator, 'Pure' works for any Applicative." #-}
+pattern Ann ::
+  forall (w :: Wrapped) t.
+  () =>
+  forall (f :: Type -> Type) t1.
+  (t ~ f t1, Applicative f) =>
+  Decode w t1 ->
+  Decode w t
+pattern Ann x = Pure x
+
+{-# DEPRECATED (<!*) "In favor of `(<!>)`.  `(<!*)` worked for Annotator,  `(<!>)` works for any Applicative." #-}
+(<!*) ::
+  Applicative f =>
+  Decode w1 (f (a -> t)) ->
+  Decode ('Closed d) (f a) ->
+  Decode w1 (f t)
+(<!*) = (<!>)

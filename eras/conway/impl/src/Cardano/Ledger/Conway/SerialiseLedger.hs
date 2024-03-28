@@ -4,7 +4,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.SerialiseLedger (
   serialNES,
@@ -20,9 +24,10 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   Encoding,
   Interns (..),
+  Iso (..),
   decNoShareCBOR,
+  decShareMapWithIso,
   decodeMap,
-  decodeRecordNamed,
   encodeMap,
  )
 import Cardano.Ledger.Binary.Coders (
@@ -37,13 +42,30 @@ import Cardano.Ledger.Binary.Coders (
   (<!>),
  )
 import Cardano.Ledger.Core (Era (..), EraTxOut (..), TxOut)
+
+-- import Cardano.Ledger.Crypto(Crypto)
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.EpochBoundary ()
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..), coerceKeyRole)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), GovState)
 import Cardano.Ledger.Shelley.LedgerState
+
+-- SnapShots,SnapShot)
 import Cardano.Ledger.UTxO (UTxO (..))
-import Control.Monad.Trans (lift)
+
+-- import Control.Monad.Trans(lift)
 import Lens.Micro (Lens', lens, _1, _2)
+
+-- import qualified Data.Map as Map
+-- import Data.Typeable(Typeable)
+-- import Control.Monad.Trans.State.Strict (StateT, runStateT, get, put)
+-- import Data.Map.Strict.Internal (Map (..))
+
+idL :: Lens' x x
+idL = lens getter setter
+  where
+    getter x = x
+    setter _ x = x
 
 -- =============================================
 
@@ -125,45 +147,6 @@ deSerialNES decTxOut =
       <! From
   )
 
-{-
-instance
-  ( Era era
-  , EraTxOut era
-  , EraGov era
-  , StashedAVVMAddresses era ~ ()
-  ) => DecShareCBOR (NewEpochState era) where
-  type
-    Share (NewEpochState era) =
-      (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
-  decShareCBOR interns@(cred,khash) = decode $ RunShare $
-      (Pure (RecD NewEpochState)
-         <!> Pure From -- EpochNo
-         <!> Pure From -- prevBlocks
-         <!> Pure From -- currBlocks
-         <!> (Pure (RecD EpochState)
-                <!> Pure From
-                <!> (Pure (RecD (\cert utxo -> LedgerState utxo cert))
-                      <!> WriteShare idL -- CertState (Credential 'Staking c,KeyHash 'StakePool c)
-                      <!> (Pure (RecD UTxOState)  -- WriteShare _1 -- UTxOState
-                             <!> WriteShare _1  -- UTxO   (Credential 'Staking c)
-                             <!> Pure From      -- deposited
-                             <!> Pure From      -- fees
-                             <!> Pure From      -- govState
-                             <!> WriteShare _1  -- stakeDistr (Credential 'Staking c)
-                             <!> Pure From))    -- donation
-                <!> Pure From --Snapshots lots of sharing in here
-                <!> WriteShare _2 ) -- NonMyopic (KeyHash 'StakePool c)
-         <!> Pure From  -- pulser
-         <!> Pure From  -- poolDistr
-         <!> Pure From) -- stashed
--}
-
-idL :: Lens' x x
-idL = lens getter setter
-  where
-    getter x = x
-    setter _ x = x
-
 instance
   ( Era era
   , EraTxOut era
@@ -175,9 +158,9 @@ instance
   type
     Share (NewEpochState era) =
       (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
-  decShareCBOR interns@(cred, khash) =
+  decShareCBOR share@(_cred, _khash) =
     decode $
-      RunShare $
+      RunShare share $
         ( Pure (RecD NewEpochState)
             <!> Pure From -- EpochNo
             <!> Pure From -- prevBlocks
@@ -190,18 +173,35 @@ instance
                                     <!> WriteShare _1 -- UTxO   (Credential 'Staking c)
                                     <!> Pure From -- deposited
                                     <!> Pure From -- fees
-                                    <!> Pure From -- govState
+                                    <!> Pure From -- WriteShare idL    --
+                                    -- govState
                                     <!> WriteShare _1 -- stakeDistr (Credential 'Staking c)
                                     <!> Pure From -- donation
                                 )
                         )
-                    <!> Pure From -- Snapshots
+                    <!> WriteShare idL -- Snapshots
                     <!> WriteShare _2 -- NonMyopic (KeyHash 'StakePool c)
                 )
             <!> Pure From -- pulser
             <!> Pure From -- poolDistr
             <!> Pure From -- stashed
         )
+
+newtype VState' era = VState' (VState era)
+
+instance Era era => DecShareCBOR (VState' era) where
+  type Share (VState' era) = (Interns (Credential 'Staking (EraCrypto era)))
+  decShareCBOR interns =
+    decode $
+      RunShare interns $
+        ( Pure (RecD (\x y z -> VState' (VState x y z)))
+            <!> Emit (decShareMapWithIso credIso) -- credIso :: Iso (Credential 'Staking c) (Credential Voting c)
+            <!> Pure From
+            <!> Pure From
+        )
+
+credIso :: Iso (Credential 'Staking c) (Credential kr c)
+credIso = Iso coerceKeyRole coerceKeyRole
 
 {-
 :i Share
