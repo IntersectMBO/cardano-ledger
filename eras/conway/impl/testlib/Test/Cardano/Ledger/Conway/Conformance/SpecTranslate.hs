@@ -82,6 +82,11 @@ import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance (SpecTranslate (..), SpecTranslationError)
 import Cardano.Ledger.Tools (byteStringToNum)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
+import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure, GovEnv (..))
+import Cardano.Ledger.Conway.Governance (GovProcedures (..), Proposals, EnactState (..), VotingProcedures (..), ProposalProcedure (..), pPropsL, GovActionState, GovActionId, Voter, VotingProcedure (..), Vote, foldrVotingProcedures)
+import Data.OSet.Strict (OSet)
+import Data.OMap.Strict (OMap, toListKV)
+import Lens.Micro.Extras (view)
 
 instance SpecTranslate TxIx where
   type SpecRep TxIx = Integer
@@ -537,3 +542,117 @@ instance SpecTranslate (BabbageUtxoPredFailure era) where
   type SpecRep (BabbageUtxoPredFailure era) = ()
 
   toSpecRep _ = pure ()
+
+instance
+  SpecTranslate (ConwayGovPredFailure era)
+  where
+  type SpecRep (ConwayGovPredFailure era) = ()
+
+  toSpecRep _ = pure ()
+
+instance SpecTranslate (EnactState era) where
+  type SpecRep (EnactState era) = Agda.EnactState
+
+  toSpecRep EnactState {..} =
+    Agda.MkEnactState
+      <$> undefined
+      <*> undefined
+      <*> undefined
+      <*> undefined
+      <*> undefined
+
+instance
+  ( SpecTranslate (PParamsHKD Identity era)
+  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  ) =>
+  SpecTranslate (GovEnv era)
+  where
+  type SpecRep (GovEnv era) = Agda.GovEnv
+
+  toSpecRep GovEnv {..} =
+    Agda.MkGovEnv
+      <$> toSpecRep geTxId
+      <*> toSpecRep geEpoch
+      <*> toSpecRep gePParams
+      <*> toSpecRep gePPolicy
+      <*> toSpecRep EnactState
+        { ensWithdrawals=undefined
+        , ensTreasury=undefined
+        , ensPrevPParams=undefined
+        , ensPrevGovActionIds=undefined
+        , ensCurPParams=undefined
+        , ensConstitution=undefined
+        , ensCommittee=undefined
+        }
+
+instance SpecTranslate (Voter era) where
+  type SpecRep (Voter era) = Agda.Voter
+
+  toSpecRep = undefined
+
+instance SpecTranslate Vote where
+  type SpecRep Vote = Agda.Vote
+
+  toSpecRep = undefined
+
+instance SpecTranslate (VotingProcedures era) where
+  type SpecRep (VotingProcedures era) = [Agda.GovSignal]
+
+  toSpecRep = foldrVotingProcedures go (pure [])
+    where
+      go ::
+        Voter (EraCrypto era) ->
+        GovActionId (EraCrypto era) ->
+        VotingProcedure era ->
+        Either SpecTranslationError [Agda.GovSignal] ->
+        Either SpecTranslationError [Agda.GovSignal]
+      go voter gaId votingProcedure m =
+        (:)
+          <$>
+            fmap Agda.GovSignalVote
+            ( Agda.MkGovVote
+                <$> toSpecRep gaId
+                <*> toSpecRep voter
+                <*> toSpecRep (vProcVote votingProcedure)
+                <*> toSpecRep (vProcAnchor votingProcedure)
+            )
+          <*> m
+
+instance SpecTranslate (ProposalProcedure era) where
+  type SpecRep (ProposalProcedure era) = Agda.GovSignal
+
+  toSpecRep ProposalProcedure {..} = undefined
+
+instance SpecTranslate a => SpecTranslate (OSet a) where
+  type SpecRep (OSet a) = [SpecRep a]
+
+  toSpecRep = traverse toSpecRep . toList
+
+instance (SpecTranslate k, SpecTranslate v) => SpecTranslate (OMap k v) where
+  type SpecRep (OMap k v) = [(SpecRep k, SpecRep v)]
+
+  toSpecRep = traverse (bimapM toSpecRep toSpecRep) . toListKV
+
+instance SpecTranslate (GovProcedures era) where
+  type SpecRep (GovProcedures era) = [Agda.GovSignal]
+
+  toSpecRep GovProcedures {..} =
+    (++)
+      <$> toSpecRep gpVotingProcedures
+      <*> toSpecRep gpProposalProcedures
+
+instance SpecTranslate (GovActionState era) where
+  type SpecRep (GovActionState era) = Agda.GovActionState
+
+  toSpecRep = undefined
+
+instance SpecTranslate (GovActionId era) where
+  type SpecRep (GovActionId era) = Agda.GovActionID
+
+  toSpecRep = undefined
+
+instance SpecTranslate (Proposals era) where
+  type SpecRep (Proposals era) = Agda.GovState
+
+  toSpecRep = toSpecRep . view pPropsL
+

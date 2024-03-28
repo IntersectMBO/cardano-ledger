@@ -32,8 +32,6 @@ import Cardano.Ledger.Conway.Tx (AlonzoTx)
 instance
   ( NFData (SpecRep (Proposals Conway))
   , NFData (SpecRep (ConwayGovPredFailure Conway))
-  , NFData (TestRep (ConwayGovPredFailure Conway))
-  , NFData (TestRep (Proposals Conway))
   , SpecTranslate (ConwayGovPredFailure Conway)
   , SpecTranslate (GovEnv Conway)
   , SpecTranslate (GovProcedures Conway)
@@ -53,7 +51,8 @@ instance
 
   signalSpec = govProceduresSpec
 
-  runAgdaRule = undefined
+  runAgdaRule env st sig =
+    first (const $ () NE.:| []) . computationResultToEither $ Agda.govStep env st sig
 
 instance
   forall fn.

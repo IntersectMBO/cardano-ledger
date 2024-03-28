@@ -26,6 +26,7 @@ module Data.OMap.Strict (
   fromFoldable,
   fromFoldableDuplicates,
   toMap,
+  toListKV,
   toStrictSeq,
   toStrictSeqOKeys,
   toStrictSeqOfPairs,
@@ -374,6 +375,9 @@ instance HasOKey k v => IsList (OMap k v) where
   type Item (OMap k v) = v
   fromList = fromFoldable
   toList = F.toList
+
+toListKV :: OMap k v -> [(k, v)]
+toListKV = Map.toList . toMap
 
 instance (HasOKey k v, ToJSON v) => ToJSON (OMap k v) where
   toJSON = toJSON . toStrictSeq
