@@ -163,15 +163,15 @@ instance Era era => DecCBOR (Annotator (AllegraTxAuxDataRaw era)) where
     where
       decodeFromMap =
         decode
-          ( Ann (Emit AllegraTxAuxDataRaw)
-              <*! Ann From
-              <*! Ann (Emit StrictSeq.empty)
+          ( Pure (Emit AllegraTxAuxDataRaw)
+              <!> Pure From
+              <!> Pure (Emit StrictSeq.empty)
           )
       decodeFromList =
         decode
-          ( Ann (RecD AllegraTxAuxDataRaw)
-              <*! Ann From
-              <*! D (sequence <$> decCBOR)
+          ( Pure (RecD AllegraTxAuxDataRaw)
+              <!> Pure From
+              <!> D (sequence <$> decCBOR)
           )
 
 deriving via

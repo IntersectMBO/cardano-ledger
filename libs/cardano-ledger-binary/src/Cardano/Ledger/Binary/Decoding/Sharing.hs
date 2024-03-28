@@ -21,6 +21,11 @@ module Cardano.Ledger.Binary.Decoding.Sharing (
   internsFromVMap,
   toMemptyLens,
   decShareMonadCBOR,
+  Iso (..),
+  flipIso,
+  isoL,
+  castInterns,
+  decShareMapWithIso,
 )
 where
 
@@ -202,3 +207,44 @@ decShareMonadCBOR :: (DecCBOR (f b), Monad f) => Interns b -> Decoder s (f b)
 decShareMonadCBOR kis = do
   sm <- decCBOR
   pure (interns kis <$!> sm)
+
+-- ==================================================================================
+-- Sometimes we have twoTypes (hidden and k) which have the same representaion but different indexes. E.g.
+--      hidden=(Credential 'Staking c) and k=(Credential 'Voting c)
+--   OR
+--     hidden=(KeyHash 'Witness) and k=(KeyHash 'StakePool)
+-- We want to Intern with one type, and Lookup with another.
+
+-- | Store a pair of inverse functions inside Iso. It is the users
+--   responsility to ensure they are inverses. Useful to Share types
+--   where one side of the Iso is stored in the Share, and the other is being Decoded
+data Iso a b where Iso :: {isoTo :: (a -> b), isoFrom :: (b -> a)} -> Iso a b
+
+flipIso :: Iso a b -> Iso b a
+flipIso (Iso a b) = Iso b a
+
+castIntern :: Iso a b -> Intern a -> Intern b
+castIntern iso (Intern lookUp size) = (Intern newLookUp size)
+  where
+    newLookUp x = isoTo iso <$> lookUp (isoFrom iso x)
+
+castInterns :: Iso a b -> Interns a -> Interns b
+castInterns iso (Interns xs) = Interns (map (castIntern iso) xs)
+
+isoL :: Iso a b -> Lens' (Interns a) (Interns b)
+isoL iso = lens getter setter
+  where
+    getter x = castInterns iso x
+    setter _ y = castInterns (flipIso iso) y
+
+-- | Decode a map where the state interns a 'hidden' type, and the map has the type 'k' as its domain.
+decShareMapWithIso ::
+  (Ord k, DecCBOR k, DecCBOR v) =>
+  Iso hidden k ->
+  StateT (Interns hidden) (Decoder s) (Map k v)
+decShareMapWithIso iso = do
+  kis <- get
+  let newkis = castInterns iso kis
+  m <- lift $ decodeMap (interns newkis <$> decCBOR) decCBOR
+  put (castInterns (flipIso iso) (internsFromMap m) <> kis)
+  pure m
