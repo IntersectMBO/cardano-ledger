@@ -76,7 +76,7 @@ library testlib
         nothunks,
         transformers >=0.5,
         QuickCheck,
-        small-steps >=1.0,
+        small-steps >=1.1,
         cardano-strict-containers
 
 test-suite tests
