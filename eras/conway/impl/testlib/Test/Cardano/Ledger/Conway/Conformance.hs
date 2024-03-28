@@ -11,4 +11,5 @@ import Test.Cardano.Ledger.Conway.Conformance.ExecutableSpecRule ()
 spec :: Spec
 spec = describe "Conway conformance tests" $ do
   withImpState @Conway $ do
-    it "UTXO" . replicateM_ 100 $ conformsToImpl @"UTXO" @ConwayFn
+    --it "UTXO" . replicateM_ 100 $ conformsToImpl @"UTXO" @ConwayFn
+    it "GOV" . replicateM_ 100 $ conformsToImpl @"GOV" @ConwayFn

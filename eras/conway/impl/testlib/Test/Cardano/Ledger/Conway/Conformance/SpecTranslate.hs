@@ -82,6 +82,8 @@ import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance (SpecTranslate (..), SpecTranslationError)
 import Cardano.Ledger.Tools (byteStringToNum)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
+import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure, GovEnv)
+import Cardano.Ledger.Conway.Governance (GovProcedures, Proposals)
 
 instance SpecTranslate TxIx where
   type SpecRep TxIx = Integer
@@ -537,3 +539,24 @@ instance SpecTranslate (BabbageUtxoPredFailure era) where
   type SpecRep (BabbageUtxoPredFailure era) = ()
 
   toSpecRep _ = pure ()
+
+instance SpecTranslate (ConwayGovPredFailure era) where
+  type SpecRep (ConwayGovPredFailure era) = ()
+
+  toSpecRep _ = pure ()
+
+instance SpecTranslate (GovEnv era) where
+  type SpecRep (GovEnv era) = Agda.GovEnv
+
+  toSpecRep = undefined
+
+instance SpecTranslate (GovProcedures era) where
+  type SpecRep (GovProcedures era) = [Agda.GovSignal]
+
+  toSpecRep = undefined
+
+instance SpecTranslate (Proposals era) where
+  type SpecRep (Proposals era) = Agda.GovState
+
+  toSpecRep = undefined
+
