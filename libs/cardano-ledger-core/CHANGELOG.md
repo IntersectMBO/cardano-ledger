@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.11.0.1
+
+*
+
 ## 1.11.0.0
 
 * Add `EraRuleEvent`, `InjectRuleEvent`

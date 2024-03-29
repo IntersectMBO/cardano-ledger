@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-binary`
 
+## 1.3.1.1
+
+*
+
 ## 1.3.1.0
 
 * Increase `MaxVersion` to `11`

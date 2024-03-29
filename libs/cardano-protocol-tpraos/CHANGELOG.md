@@ -1,5 +1,9 @@
 # Version history for `cardano-protocol-tpraos`
 
+## 1.2.0.1
+
+*
+
 ## 1.2.0.0
 * Change `FutureLedgerViewError` and `ChainTransitionError`
   to use `NonEmpty (PredicateFailure _)` instead of `[PredicateFailure _]`

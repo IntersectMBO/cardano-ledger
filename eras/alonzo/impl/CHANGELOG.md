@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.7.0.1
+
+*
+
 ## 1.7.0.0
 
 * Add type `EraRuleEvent` instances for `PPUP`, `LEDGER` and `TICK` events

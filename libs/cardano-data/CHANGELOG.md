@@ -1,5 +1,9 @@
 # Version history for `cardano-data`
 
+## 1.2.1.1
+
+*
+
 ## 1.2.1.0
 
 * Add `ToJSON` instance for `OSet` #4112
