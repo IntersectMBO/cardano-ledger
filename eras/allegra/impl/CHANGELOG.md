@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.4.0.1
+
+*
+
 ## 1.4.0.0
 
 * Add type `EraRuleEvent` instances for `LEDGER` and `TICK` events

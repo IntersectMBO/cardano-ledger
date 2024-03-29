@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.5.1.1
+
+*
+
 ## 1.5.1.0
 
 * Add type `EraRuleEvent` instances for the event type of `TICK` and `LEDGER`

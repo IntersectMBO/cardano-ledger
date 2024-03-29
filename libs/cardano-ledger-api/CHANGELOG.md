@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-api`
 
+## 1.9.0.1
+
+*
+
 ## 1.9.0.0
 
 * Add optional `Anchor` to `MemberResigned` in `CommitteeMembersState`
