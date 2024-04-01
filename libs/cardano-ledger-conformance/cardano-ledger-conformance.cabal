@@ -22,9 +22,10 @@ library
     exposed-modules:  Test.Cardano.Ledger.Conformance
     hs-source-dirs:   src
     other-modules:
-      Test.Cardano.Ledger.Conformance.Orphans
-      Test.Cardano.Ledger.Conformance.SpecTranslate
-      Test.Cardano.Ledger.Conformance.ExecutableSpecRule
+        Test.Cardano.Ledger.Conformance.Orphans
+        Test.Cardano.Ledger.Conformance.SpecTranslate
+        Test.Cardano.Ledger.Conformance.ExecutableSpecRule
+
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -34,11 +35,12 @@ library
     build-depends:
         base >=4.14 && <5,
         cardano-ledger-core,
-        cardano-ledger-shelley:{testlib},
+        cardano-ledger-shelley:testlib,
         cardano-ledger-executable-spec,
         cardano-ledger-core:testlib,
         constrained-generators,
         small-steps >=1.1,
+        mtl,
         text
 
     if !impl(ghc >=9.2)
@@ -46,16 +48,3 @@ library
 
     if flag(asserts)
         ghc-options: -fno-ignore-asserts
-
-test-suite tests
-    type:             exitcode-stdio-1.0
-    main-is:          Main.hs
-    hs-source-dirs:   test
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
-
-    build-depends:
-        base >=4.14 && <5,

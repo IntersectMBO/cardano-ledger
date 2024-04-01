@@ -225,3 +225,11 @@ instance
   , ToExpr (PParamsHKD StrictMaybe era)
   ) =>
   ToExpr (ConwayGovEvent era)
+
+instance
+  ( EraPParams era
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
+  ToExpr (GovProcedures era)
+
+instance ToExpr (PParamsHKD Identity era) => ToExpr (GovEnv era)

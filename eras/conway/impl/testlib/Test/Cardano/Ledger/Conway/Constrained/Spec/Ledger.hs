@@ -9,11 +9,11 @@ import Cardano.Ledger.Shelley.API.Types
 
 import Constrained
 
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Conway.Constrained.Instances
 import Test.Cardano.Ledger.Conway.Constrained.Spec.Utxo
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Conway.Core
 
 ledgerTxSpec ::
   IsConwayUniv fn =>

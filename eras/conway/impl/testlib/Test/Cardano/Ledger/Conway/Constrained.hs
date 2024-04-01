@@ -1,7 +1,7 @@
-module Test.Cardano.Ledger.Conway.Constrained
-  ( module X
-  )
-  where
+module Test.Cardano.Ledger.Conway.Constrained (
+  module X,
+)
+where
 
 import Test.Cardano.Ledger.Conway.Constrained.Instances as X
 import Test.Cardano.Ledger.Conway.Constrained.Spec.Cert as X

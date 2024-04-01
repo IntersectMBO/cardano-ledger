@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.10.0.1
+## 1.10.1.0
 
 *
+
+### `testlib`
+
+* Add `ToExpr` and `NFData` instances for `UtxoEnv`
 
 ## 1.10.0.0
 

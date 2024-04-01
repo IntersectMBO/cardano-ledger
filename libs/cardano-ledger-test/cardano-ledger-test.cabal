@@ -143,9 +143,7 @@ library
         transformers,
         unordered-containers,
         vector,
-        constrained-generators,
-        random,
-        FailT
+        constrained-generators
 
 test-suite cardano-ledger-test
     type:             exitcode-stdio-1.0

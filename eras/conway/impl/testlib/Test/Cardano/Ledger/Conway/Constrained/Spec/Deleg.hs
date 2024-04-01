@@ -14,10 +14,10 @@ import Lens.Micro
 
 import Constrained
 
-import Test.Cardano.Ledger.Conway.Constrained.Instances
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Core (PParams, ppKeyDepositL)
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Test.Cardano.Ledger.Conway.Constrained.Instances
 
 dStateSpec ::
   IsConwayUniv fn =>

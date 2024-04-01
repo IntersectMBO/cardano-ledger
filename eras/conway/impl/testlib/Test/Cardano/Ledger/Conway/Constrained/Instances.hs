@@ -26,25 +26,25 @@
 -- | This module provides the necessary instances of `HasSpec`
 -- and `HasSimpleRep` to write specs for the environments,
 -- states, and signals in the conway STS rules.
-module Test.Cardano.Ledger.Conway.Constrained.Instances
-  ( ConwayFn
-  , StringFn
-  , ProposalTree
-  , onJust'
-  , onSized
-  , cKeyHashObj
-  , cScriptHashObj
-  , cSNothing_
-  , cSJust_
-  , succV_
-  , strLen_
-  , pProcGovAction_
-  , IsConwayUniv
-  , gasId_
-  , gasCommitteeVotes_
-  , gasDRepVotes_
-  , gasProposalProcedure_
-  ) where
+module Test.Cardano.Ledger.Conway.Constrained.Instances (
+  ConwayFn,
+  StringFn,
+  ProposalTree,
+  onJust',
+  onSized,
+  cKeyHashObj,
+  cScriptHashObj,
+  cSNothing_,
+  cSJust_,
+  succV_,
+  strLen_,
+  pProcGovAction_,
+  IsConwayUniv,
+  gasId_,
+  gasCommitteeVotes_,
+  gasDRepVotes_,
+  gasProposalProcedure_,
+) where
 
 import Cardano.Chain.Common (
   AddrAttributes (..),
@@ -80,7 +80,14 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.HKD
-import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..), KeyHash, KeyRole (..), WitVKey, BootstrapWitness)
+import Cardano.Ledger.Keys (
+  BootstrapWitness,
+  GenDelegPair (..),
+  GenDelegs (..),
+  KeyHash,
+  KeyRole (..),
+  WitVKey,
+ )
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus.CostModels
@@ -130,12 +137,12 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils
 import Test.QuickCheck hiding (Args, Fun, forAll)
 
-import Constrained hiding (Value)
-import Constrained qualified as C
+import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), AuxiliaryDataHash)
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Alonzo.TxAuxData (AuxiliaryDataHash, AlonzoTxAuxData (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
+import Constrained hiding (Value)
+import Constrained qualified as C
 
 type ConwayUnivFns = StringFn : RoseTreeFn : BaseFns
 type ConwayFn = Fix (OneofL ConwayUnivFns)

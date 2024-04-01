@@ -23,11 +23,11 @@ import Lens.Micro
 
 import Constrained
 
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Conway.Constrained.Instances
 import Test.Cardano.Ledger.Conway.Constrained.Spec.PParams
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Conway.Core
 
 govEnvSpec ::
   IsConwayUniv fn =>

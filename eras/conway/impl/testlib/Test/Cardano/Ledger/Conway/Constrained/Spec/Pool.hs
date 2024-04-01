@@ -21,10 +21,10 @@ import Constrained
 import Test.Cardano.Ledger.Conway.Constrained.Instances
 import Test.Cardano.Ledger.Conway.Constrained.Spec.PParams
 
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Slotting.Numeric ()
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Crypto (StandardCrypto, Crypto (..))
 
 currentEpoch :: SlotNo -> EpochNo
 currentEpoch = runIdentity . EI.epochInfoEpoch (epochInfoPure testGlobals)

@@ -8,10 +8,10 @@ import Cardano.Ledger.Conway.PParams
 
 import Constrained
 
-import Test.Cardano.Ledger.Conway.Constrained.Instances (IsConwayUniv)
-import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Test.Cardano.Ledger.Conway.Constrained.Instances (IsConwayUniv)
 
 pparamsSpec :: IsConwayUniv fn => Spec fn (PParams (ConwayEra StandardCrypto))
 pparamsSpec =

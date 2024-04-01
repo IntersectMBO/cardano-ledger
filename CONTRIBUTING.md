@@ -280,9 +280,12 @@ To update the conformance test, do the following:
 2. Run `nix-build -A ledger.hsSrc` in the cloned repo, mark down the output path
    in the nix store
 3. Clone the [executable spec repo](https://github.com/input-output-hk/cardano-ledger-executable-spec)
-4. Delete all the files in the repo and copy
-   `/nix/store/<output of the nix-build>/haskell/Ledger/*` into the executable
-   spec repo. Then commit and push to origin.
+4. Replace the content of the repo cloned above with the files at `/nix/store/<output of the nix-build>/haskell/Ledger/*`
+   ```bash
+   rm -rf cardano-ledger-executable-spec/*
+   cp -r  /nix/store/<output of the nix-build>/haskell/Ledger/*  cardano-ledger-executable-spec
+   ```
+   Then make a commit and push it.
 5. In the `cardano-ledger` repo, edit `cabal.project`. Look for
    `source-repository-package` that points to the executable spec repo, and
    update the `tag` and `sha256` entries in that block.
