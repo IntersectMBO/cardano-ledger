@@ -61,7 +61,9 @@ toMap ::
   (VG.Vector kv k, VG.Vector vv v) =>
   KVVector kv vv (k, v) ->
   Map.Map k v
-toMap = Map.fromDistinctAscList . VG.toList
+toMap = Map.fromDistinctAscList . map evalSecond . VG.toList
+  where
+    evalSecond kv@(_, !_) = kv
 {-# INLINE toMap #-}
 
 -- | Convert a `Map.Map` into a sorted key/value vector.
