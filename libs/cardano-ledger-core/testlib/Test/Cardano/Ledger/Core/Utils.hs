@@ -37,7 +37,6 @@ testGlobals =
     , securityParameter = 10
     , maxKESEvo = 10
     , quorum = 5
-    , maxMajorPV = maxBound
     , maxLovelaceSupply = 45 * 1000 * 1000 * 1000 * 1000 * 1000
     , activeSlotCoeff = mkActiveSlotCoeff . unsafeBoundRational $ 0.9
     , networkId = Testnet
