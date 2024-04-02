@@ -3,6 +3,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -19,6 +20,7 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Val (zero, (<->))
+import Control.Monad (forM)
 import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (def)
 import Data.Foldable (foldl', traverse_)
@@ -106,17 +108,12 @@ treasuryWithdrawalsSpec =
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       initialTreasury <- getTreasury
       numWithdrawals <- choose (1, 10)
-      withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals 100
+      withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
 
-      gaId <- submitTreasuryWithdrawals withdrawals
-      submitYesVote_ (DRepVoter drepC) gaId
-      submitYesVote_ (CommitteeVoter committeeC) gaId
-      passNEpochs 2
-      getTreasury `shouldReturn` initialTreasury
-      -- reward accounts are empty
-      sumRewardAccounts withdrawals `shouldReturn` zero
+      void $ enactTreasuryWithdrawals withdrawals drepC committeeC
+      checkNoWithdrawal initialTreasury withdrawals
 
-      let sumRequested = mconcat $ snd <$> withdrawals
+      let sumRequested = foldMap snd withdrawals
 
       impAnn "Submit a treasury donation that can cover the withdrawals" $ do
         let tx =
@@ -132,29 +129,16 @@ treasuryWithdrawalsSpec =
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       initialTreasury <- getTreasury
       numWithdrawals <- choose (1, 10)
-      withdrawals <- genWithdrawalsExceeding (Coin (fromIntegral (maxBound :: Word64))) numWithdrawals 100
-      gaId <- submitTreasuryWithdrawals withdrawals
-
-      submitYesVote_ (DRepVoter drepC) gaId
-      submitYesVote_ (CommitteeVoter committeeC) gaId
-      passNEpochs 2
-      getTreasury `shouldReturn` initialTreasury
-      sumRewardAccounts withdrawals `shouldReturn` zero
+      withdrawals <- genWithdrawalsExceeding (Coin (fromIntegral (maxBound :: Word64))) numWithdrawals
+      void $ enactTreasuryWithdrawals withdrawals drepC committeeC
+      checkNoWithdrawal initialTreasury withdrawals
 
     it "Withdrawals exceeding treasury submitted in several proposals within the same epoch" $ do
       (drepC, committeeC, _) <- electBasicCommittee
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       initialTreasury <- getTreasury
-      -- generate withdrawals which individually do not exceed the treasury, but their sum does
       numWithdrawals <- choose (1, 10)
-      withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals 50
-
-      impAnn "submit in the same proposal, with no effect on the treasury" $ do
-        gaId <- submitTreasuryWithdrawals withdrawals
-        submitYesVote_ (DRepVoter drepC) gaId
-        submitYesVote_ (CommitteeVoter committeeC) gaId
-        passNEpochs 2
-        getTreasury `shouldReturn` initialTreasury
+      withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
 
       impAnn "submit in individual proposals in the same epoch" $ do
         traverse_
@@ -169,7 +153,7 @@ treasuryWithdrawalsSpec =
         let expectedTreasury =
               foldl'
                 ( \acc (_, x) ->
-                    if acc <-> x >= zero
+                    if acc >= x
                       then acc <-> x
                       else acc
                 )
@@ -182,13 +166,15 @@ treasuryWithdrawalsSpec =
   where
     getTreasury = getsNES (nesEsL . esAccountStateL . asTreasuryL)
     sumRewardAccounts withdrawals = mconcat <$> traverse (getRewardAccountAmount . fst) withdrawals
-    genWithdrawalsExceeding (Coin val) n maxExcess = do
-      accounts <- replicateM n $ registerRewardAccount @era
-      pcts <- replicateM n (choose (1, 100) :: ImpTestM era Integer)
+    genWithdrawalsExceeding (Coin val) n = do
+      pcts <- replicateM (n - 1) $ choose (1, 100)
       let tot = sum pcts
-      excess <- choose (1, maxExcess) :: ImpTestM era Integer
-      let amounts = fmap (\x -> Coin $ ceiling ((x + excess) % tot * fromIntegral val)) pcts
-      pure $ zip accounts amounts
+      Positive excess <- arbitrary
+      let amounts = Coin excess : map (\x -> Coin $ ceiling ((x * val) % tot)) pcts
+      forM amounts $ \amount -> (,amount) <$> registerRewardAccount
+    checkNoWithdrawal initialTreasury withdrawals = do
+      getTreasury `shouldReturn` initialTreasury
+      sumRewardAccounts withdrawals `shouldReturn` zero
 
 hardForkInitiationSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
 hardForkInitiationSpec =
