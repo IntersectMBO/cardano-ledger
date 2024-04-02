@@ -301,13 +301,14 @@ mkProposals pgais omap = do
 --
 -- WARNING: Should only be used for testing!
 unsafeMkProposals ::
+  HasCallStack =>
   GovRelation StrictMaybe era ->
   OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era) ->
   Proposals era
-unsafeMkProposals pgais omap = foldl' (flip unsafeProposalsAddAction) initialProposals omap
+unsafeMkProposals pgais omap = foldl' unsafeProposalsAddAction initialProposals omap
   where
     initialProposals = def & pRootsL .~ fromPrevGovActionIds pgais
-    unsafeProposalsAddAction gas ps =
+    unsafeProposalsAddAction ps gas =
       case runProposalsAddAction gas ps of
         Just p -> p
         Nothing -> error $ "unsafeMkProposals: runProposalsAddAction failed for " ++ show (gas ^. gasIdL)
