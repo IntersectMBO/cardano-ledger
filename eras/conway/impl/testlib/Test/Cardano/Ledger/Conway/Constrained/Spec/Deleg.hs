@@ -1,12 +1,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the DELEG rule
-module Test.Cardano.Ledger.Constrained.V2.Conway.DELEG where
+module Test.Cardano.Ledger.Conway.Constrained.Spec.Deleg where
 
-import Cardano.Ledger.Api
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Shelley.API.Types
@@ -16,7 +14,10 @@ import Lens.Micro
 
 import Constrained
 
-import Test.Cardano.Ledger.Constrained.V2.Conway
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Core (PParams, ppKeyDepositL)
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Test.Cardano.Ledger.Conway.Constrained.Instances
 
 dStateSpec ::
   IsConwayUniv fn =>

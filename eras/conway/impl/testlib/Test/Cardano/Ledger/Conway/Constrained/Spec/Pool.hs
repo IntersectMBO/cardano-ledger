@@ -4,10 +4,9 @@
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the POOL rule
-module Test.Cardano.Ledger.Constrained.V2.Conway.POOL where
+module Test.Cardano.Ledger.Conway.Constrained.Spec.Pool where
 
 import Cardano.Crypto.Hash.Class qualified as Hash
-import Cardano.Ledger.Api
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.Core
@@ -19,9 +18,11 @@ import Lens.Micro
 
 import Constrained
 
-import Test.Cardano.Ledger.Constrained.V2.Conway
-import Test.Cardano.Ledger.Constrained.V2.Conway.PParams
+import Test.Cardano.Ledger.Conway.Constrained.Instances
+import Test.Cardano.Ledger.Conway.Constrained.Spec.PParams
 
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Slotting.Numeric ()
 
