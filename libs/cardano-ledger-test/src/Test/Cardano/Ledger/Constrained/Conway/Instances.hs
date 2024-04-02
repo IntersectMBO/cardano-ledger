@@ -261,6 +261,7 @@ instance (IsConwayUniv fn, Crypto c, Typeable index) => HasSpec fn (SafeHash c i
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -275,6 +276,7 @@ instance (IsConwayUniv fn, Typeable r, Crypto c) => HasSpec fn (KeyHash r c) whe
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -356,6 +358,7 @@ instance IsConwayUniv fn => HasSpec fn PV1.Data where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -443,6 +446,7 @@ instance (IsConwayUniv fn, Crypto (EraCrypto era), Era era) => HasSpec fn (Timel
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -489,6 +493,7 @@ instance (IsConwayUniv fn, Typeable b) => HasSpec fn (AbstractHash Blake2b_224 b
   genFromTypeSpec _ = do
     bytes <- pureGen $ vectorOf 28 arbitrary
     pure $ fromJust $ abstractHashFromBytes (BS.pack bytes)
+  shrinkWithTypeSpec _ _ = []
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -523,6 +528,7 @@ instance (IsConwayUniv fn, HashAlgorithm a, Typeable b) => HasSpec fn (Hash a b)
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -546,6 +552,7 @@ instance IsConwayUniv fn => HasSpec fn StakePoolRelay where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -559,6 +566,7 @@ instance IsConwayUniv fn => HasSpec fn UnitInterval where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -569,6 +577,7 @@ instance IsConwayUniv fn => HasSpec fn NonNegativeInterval where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -586,6 +595,7 @@ instance IsConwayUniv fn => HasSpec fn Text where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -606,6 +616,7 @@ instance IsConwayUniv fn => HasSpec fn ByteString where
   genFromTypeSpec (StringSpec ls) = do
     len <- genFromSpec ls
     BS.pack <$> vectorOfT len (pureGen arbitrary)
+  shrinkWithTypeSpec _ = shrink
   conformsTo bs (StringSpec ls) = BS.length bs `conformsToSpec` ls
   toPreds str (StringSpec len) = satisfies (strLen_ str) len
 
@@ -616,6 +627,7 @@ instance IsConwayUniv fn => HasSpec fn ShortByteString where
   genFromTypeSpec (StringSpec ls) = do
     len <- genFromSpec ls
     SBS.pack <$> vectorOfT len (pureGen arbitrary)
+  shrinkWithTypeSpec _ = shrink
   conformsTo bs (StringSpec ls) = SBS.length bs `conformsToSpec` ls
   toPreds str (StringSpec len) = satisfies (strLen_ str) len
 
@@ -730,12 +742,13 @@ instance IsConwayUniv fn => HasSpec fn ProtVer
 -- while ensuring that we don't have to add instances for e.g. `Num`
 -- to version.
 newtype VersionRep = VersionRep Word8
-  deriving (Show, Eq, Ord, Num, Random) via Word8
+  deriving (Show, Eq, Ord, Num, Random, Arbitrary) via Word8
 instance BaseUniverse fn => HasSpec fn VersionRep where
   type TypeSpec fn VersionRep = NumSpec VersionRep
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 instance Bounded VersionRep where
@@ -851,6 +864,7 @@ instance IsConwayUniv fn => HasSpec fn Char where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -859,6 +873,7 @@ instance IsConwayUniv fn => HasSpec fn CostModel where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -1256,6 +1271,7 @@ instance (IsConwayUniv fn, Crypto c, Typeable r) => HasSpec fn (WitVKey r c) whe
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -1264,6 +1280,7 @@ instance (IsConwayUniv fn, Crypto c) => HasSpec fn (BootstrapWitness c) where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 

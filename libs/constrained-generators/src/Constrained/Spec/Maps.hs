@@ -27,6 +27,7 @@ import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Prettyprinter
+import Test.QuickCheck (shrinkList)
 
 ------------------------------------------------------------------------
 -- HasSpec
@@ -130,6 +131,8 @@ instance
               $ genFromSpec keySpec
           go (Map.insert k v m) restVals'
     go (Map.fromList mustMap) restVals
+
+  shrinkWithTypeSpec (MapSpec _ _ _ kvs _) m = map Map.fromList $ shrinkList (shrinkWithSpec kvs) (Map.toList m)
 
   toPreds m (MapSpec mustKeys mustVals size kvs foldSpec) =
     toPred

@@ -102,6 +102,18 @@ prop_complete s =
     -- or fall into an inifinite loop
     pure $ length (show a) > 0
 
+prop_shrink_sound :: HasSpec fn a => Spec fn a -> Property
+prop_shrink_sound s =
+  QC.forAll (strictGen $ genFromSpec s) $ \ma -> fromGEDiscard $ do
+    a <- ma
+    let shrinks = shrinkWithSpec s a
+    pure $
+      cover 40 (not $ null shrinks) "non-null shrinks" $
+        if null shrinks
+          then property True
+          else QC.forAll (QC.elements shrinks) $ \a' ->
+            conformsToSpecProp a' s
+
 -- Test suite -------------------------------------------------------------
 
 genTest :: HasSpec BaseFn a => Spec BaseFn a -> IO a
@@ -116,7 +128,7 @@ tests =
     [ testSpec "setSpec" setSpec
     , testSpec "leqPair" leqPair
     , testSpec "setPair" setPair
-    , testSpec "listEmpty" listEmpty
+    , testSpecNoShrink "listEmpty" listEmpty
     , testSpec "compositionalSpec" compositionalSpec
     , testSpec "simplePairSpec" simplePairSpec
     , testSpec "trickyCompositional" trickyCompositional
@@ -125,45 +137,53 @@ tests =
     , testSpec "maybeSpec" maybeSpec
     , testSpec "eitherSetSpec" eitherSetSpec
     , testSpec "fooSpec" fooSpec
-    , testSpec "intSpec" intSpec
+    , -- TODO: this spec needs double shrinking to shrink properly
+      -- so we need to figure something out about double-shrinking
+      testSpecNoShrink "intSpec" intSpec
     , testSpec "mapElemSpec" mapElemSpec
     , testSpec "mapElemKeySpec" mapElemKeySpec
     , testSpec "mapPairSpec" mapPairSpec
-    , testSpec "mapEmptyDomainSpec" mapEmptyDomainSpec
-    , testSpec "setPairSpec" setPairSpec
+    , testSpecNoShrink "mapEmptyDomainSpec" mapEmptyDomainSpec
+    , -- TODO: this _can_ be shrunk, but it's incredibly expensive to do
+      -- so and it's not obvious if there is a faster way without implementing
+      -- more detailed shrinking of `SuspendedSpec`s
+      testSpecNoShrink "setPairSpec" setPairSpec
     , testSpec "fixedSetSpec" fixedSetSpec
     , testSpec "setOfPairLetSpec" setOfPairLetSpec
-    , testSpec "emptyEitherSpec" emptyEitherSpec
-    , testSpec "emptyEitherMemberSpec" emptyEitherMemberSpec
+    , testSpecNoShrink "emptyEitherSpec" emptyEitherSpec
+    , testSpecNoShrink "emptyEitherMemberSpec" emptyEitherMemberSpec
     , testSpec "setSingletonSpec" setSingletonSpec
     , testSpec "pairSingletonSpec" pairSingletonSpec
     , testSpec "eitherSimpleSetSpec" eitherSimpleSetSpec
-    , testSpec "emptySetSpec" emptySetSpec
+    , testSpecNoShrink "emptySetSpec" emptySetSpec
     , testSpec "forAllAnySpec" forAllAnySpec
     , testSpec "notSubsetSpec" notSubsetSpec
     , testSpec "maybeJustSetSpec" maybeJustSetSpec
     , testSpec "weirdSetPairSpec" weirdSetPairSpec
     , testSpec "knownDomainMap" knownDomainMap
-    , testSpec "testRewriteSpec" testRewriteSpec
+    , -- TODO: figure out double-shrinking
+      testSpecNoShrink "testRewriteSpec" testRewriteSpec
     , testSpec "parallelLet" parallelLet
     , testSpec "letExists" letExists
     , testSpec "letExistsLet" letExistsLet
     , testSpec "notSubset" notSubset
     , testSpec "unionSized" unionSized
-    , testSpec "dependencyWeirdness" dependencyWeirdness
+    , -- TODO: figure out double-shrinking
+      testSpecNoShrink "dependencyWeirdness" dependencyWeirdness
     , testSpec "foldTrueCases" foldTrueCases
     , testSpec "foldSingleCase" foldSingleCase
     , testSpec "listSumPair" (listSumPair @Int)
-    , testSpec "parallelLetPair" parallelLetPair
+    , -- TODO: figure out double-shrinking
+      testSpecNoShrink "parallelLetPair" parallelLetPair
     , testSpec "mapSizeConstrained" mapSizeConstrained
     , testSpec "allZeroTree" allZeroTree
     , testSpec "noChildrenSameTree" noChildrenSameTree
     , testSpec "isBST" isBST
-    , testSpec "pairListError" pairListError
-    , testSpec "listMustSizeIssue" listMustSizeIssue
+    , testSpecNoShrink "pairListError" pairListError
+    , testSpecNoShrink "listMustSizeIssue" listMustSizeIssue
     , testSpec "successiveChildren" successiveChildren
     , testSpec "successiveChildren8" successiveChildren8
-    , testSpec "roseTreeList" roseTreeList
+    , testSpecNoShrink "roseTreeList" roseTreeList
     , testSpec "orPair" orPair
     , testSpec "roseTreePairs" roseTreePairs
     , testSpec "roseTreeMaybe" roseTreeMaybe
@@ -190,7 +210,7 @@ numberyTests =
   testGroup
     "numbery tests"
     [ testNumberyListSpec "listSum" listSum
-    , testNumberyListSpec "listSumForall" listSumForall
+    , testNumberyListSpecNoShrink "listSumForall" listSumForall
     , testNumberyListSpec "listSumRange" listSumRange
     , testNumberyListSpec "listSumRangeUpper" listSumRangeUpper
     , testNumberyListSpec "listSumRangeRange" listSumRangeRange
@@ -200,12 +220,12 @@ numberyTests =
 sizeTests :: TestTree
 sizeTests =
   testGroup "SizeTests" $
-    [ testSpec "sizeAddOrSub1" sizeAddOrSub1
-    , testSpec "sizeAddOrSub2" sizeAddOrSub2
-    , testSpec "sizeAddOrSub3" sizeAddOrSub3
-    , testSpec "sizeAddOrSub4 returns Negative Size" sizeAddOrSub4
-    , testSpec "sizeAddOrSub5" sizeAddOrSub5
-    , testSpec "sizeAddOrSub5" sizeAddOrSub5
+    [ testSpecNoShrink "sizeAddOrSub1" sizeAddOrSub1
+    , testSpecNoShrink "sizeAddOrSub2" sizeAddOrSub2
+    , testSpecNoShrink "sizeAddOrSub3" sizeAddOrSub3
+    , testSpecNoShrink "sizeAddOrSub4 returns Negative Size" sizeAddOrSub4
+    , testSpecNoShrink "sizeAddOrSub5" sizeAddOrSub5
+    , testSpecNoShrink "sizeAddOrSub5" sizeAddOrSub5
     , testSpec "listSubSize" listSubSize
     , testSpec "listSubSize" setSubSize
     , testSpec "listSubSize" mapSubSize
@@ -226,10 +246,16 @@ data NumberyType where
   N :: (Typeable a, Numbery a) => Proxy a -> NumberyType
 
 testNumberyListSpec :: String -> (forall a. Numbery a => Spec BaseFn [a]) -> TestTree
-testNumberyListSpec n p =
+testNumberyListSpec = testNumberyListSpec' True
+
+testNumberyListSpecNoShrink :: String -> (forall a. Numbery a => Spec BaseFn [a]) -> TestTree
+testNumberyListSpecNoShrink = testNumberyListSpec' False
+
+testNumberyListSpec' :: Bool -> String -> (forall a. Numbery a => Spec BaseFn [a]) -> TestTree
+testNumberyListSpec' withShrink n p =
   testGroup
     n
-    [ testSpec (show $ typeRep proxy) (p @a)
+    [ testSpec' withShrink (show $ typeRep proxy) (p @a)
     | N (proxy :: Proxy a) <- numberyTypes
     ]
   where
@@ -248,15 +274,20 @@ testNumberyListSpec n p =
       ]
 
 testSpec :: HasSpec fn a => String -> Spec fn a -> TestTree
-testSpec n s = do
+testSpec = testSpec' True
+
+testSpecNoShrink :: HasSpec fn a => String -> Spec fn a -> TestTree
+testSpecNoShrink = testSpec' False
+
+testSpec' :: HasSpec fn a => Bool -> String -> Spec fn a -> TestTree
+testSpec' withShrink n s = do
   sequentialTestGroup
     n
     AllSucceed
-    [ -- NOTE: during development you want to uncomment the line below:
-      -- testProperty "prop_complete" $ within 10_000_000 $ withMaxSuccess 100 $ prop_complete s,
-      -- NOTE: doing `withMaxSuccess` here does nothing as we are using `checkCoverage`.
-      testProperty "prop_sound" $ within 10_000_000 $ checkCoverage $ prop_sound s
-    ]
+    $ [testProperty "prop_sound" $ within 10_000_000 $ checkCoverage $ prop_sound s]
+      ++ [ testProperty "prop_shrink_sound" $ within 10_000_000 $ checkCoverage $ prop_shrink_sound s
+         | withShrink
+         ]
 
 -- Examples ---------------------------------------------------------------
 
@@ -605,7 +636,6 @@ orPair = constrained $ \ps ->
   forAll' ps $ \x y ->
     x <=. 5 ||. y <=. 5
 
--- TODO: how on earth does this terminate with such a high likelihood?!
 allZeroTree :: Spec BaseFn (BinTree Int)
 allZeroTree = constrained $ \t ->
   [ forAll' t $ \_ a _ -> a ==. 0
