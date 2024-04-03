@@ -247,6 +247,10 @@
             profillingShell = p: {
               # `nix develop .#profiling` (or `.#ghc928.profiling): a shell with profiling enabled
               profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
+              # `nix develop .#pre-commit` (or `.#ghc928.pre-commit): a shell with pre-commit enabled
+              pre-commit = p.shell // (nixpkgs.mkShell {
+                shellHook = p.shell.shellHook + pre-commit-check.shellHook;
+              });
             };
           in
             profillingShell cabalProject
