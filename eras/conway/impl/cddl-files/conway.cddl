@@ -307,10 +307,6 @@ pool_retirement = (4, pool_keyhash, epoch)
 reg_cert = (7, stake_credential, coin)
 unreg_cert = (8, stake_credential, coin)
 vote_deleg_cert = (9, stake_credential, drep)
-stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, drep)
-stake_reg_deleg_cert = (11, stake_credential, pool_keyhash, coin)
-vote_reg_deleg_cert = (12, stake_credential, drep, coin)
-stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
 
 ; GOVCERT
 auth_committee_hot_cert = (14, committee_cold_credential, committee_hot_credential)
