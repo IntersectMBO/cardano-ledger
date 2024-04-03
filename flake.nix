@@ -81,13 +81,6 @@
 
           # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
           shell.shellHook = ''
-            # Disable running `fourmolu` via `pre-commit` by default.
-            # If you want to opt-in and run it before each commit,
-            # then `unset` the `SKIP` environment variable in your shell.
-            # If you use `direnv`, `lorri`, `nix-direnv` etc.,
-            # then you can add `unset SKIP` to your `.envrc`
-            # after the nix shell is loaded (so after `use nix` / `use flake`).
-            export SKIP=fourmolu
             export LANG=en_US.UTF-8
             export LC_ALL=en_US.UTF-8
             export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
@@ -103,7 +96,6 @@
               fi
             }
             PROMPT_COMMAND=prompt
-            ${pre-commit-check.shellHook}
           '';
 
           # tools we want in our shell, from hackage
