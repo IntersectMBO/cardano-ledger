@@ -755,7 +755,7 @@ votingSpec =
       it
         "committee member can't vote on committee update when sandwiched between other votes"
         ccVoteOnConstitutionFailsWithMultipleVotes
-      it "CC cannot ratify if below quorum" $ do
+      it "CC cannot ratify if below threshold" $ do
         modifyPParams $ \pp ->
           pp
             & ppGovActionLifetimeL .~ EpochInterval 3
