@@ -162,7 +162,7 @@ propAuthorized nes = do
             [ (ck, hk)
             | (ck, CommitteeMemberState (MemberAuthorized hk) _ _ _) <- Map.toList (csCommittee noFilterResult)
             ]
-      -- if the member is Authorized, it should appear in the commiteeState
+      -- if the member is Authorized, it should appear in the committeeState
       ckHk `shouldBe` [(ck, hk) | (ck, CommitteeHotCredential hk) <- Map.toList comStateMembers]
 
 propResigned ::
@@ -177,7 +177,7 @@ propResigned nes = do
             [ ck
             | (ck, CommitteeMemberState (MemberResigned _) _ _ _) <- Map.toList (csCommittee noFilterResult)
             ]
-      -- if the member is Resignd, it should appear in the commiteeState as Nothing
+      -- if the member is Resignd, it should appear in the committeeState as Nothing
       resigned `shouldBe` [ck | (ck, CommitteeMemberResigned _) <- Map.toList comStateMembers]
 
 propUnrecognized ::

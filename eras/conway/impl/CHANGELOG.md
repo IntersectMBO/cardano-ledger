@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.13.0.1
+## 1.13.1.0
 
-*
+* Fix typo in `ToJSON` instance of `ConwayGovState`
 
 ## 1.13.0.0
 

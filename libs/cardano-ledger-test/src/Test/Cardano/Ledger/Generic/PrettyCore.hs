@@ -2770,7 +2770,7 @@ pcForest (GovRelation a b c d) =
     "Forest PGraph"
     [ ("pparamupdate", ppMap pcGovPurposeId pcPEdges (unPGraph a))
     , ("hardfork", ppMap pcGovPurposeId pcPEdges (unPGraph b))
-    , ("commitee", ppMap pcGovPurposeId pcPEdges (unPGraph c))
+    , ("committee", ppMap pcGovPurposeId pcPEdges (unPGraph c))
     , ("constitution", ppMap pcGovPurposeId pcPEdges (unPGraph d))
     ]
 
