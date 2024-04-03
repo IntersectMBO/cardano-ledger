@@ -114,7 +114,7 @@ instance
 
 -- Compute the ratio yes/(yes + no), where
 -- yes:
---      - the number of registered, unexpired, unresigned commitee members that voted yes
+--      - the number of registered, unexpired, unresigned committee members that voted yes
 -- no:
 --      - the number of registered, unexpired, unresigned committee members that voted no, plus
 --      - the number of registered, unexpired, unresigned committee members that did not vote for this action

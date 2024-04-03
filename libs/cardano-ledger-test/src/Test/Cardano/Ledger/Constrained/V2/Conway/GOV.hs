@@ -352,7 +352,7 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePrevGovActionIds, gePParams} ps govAct
       (gePrevGovActionIds ^. grCommitteeL)
         : [ SJust $ coerce $ gasId gas
           | gas <- actions
-          , isCommiteeAction (pProcGovAction $ gasProposalProcedure gas)
+          , isCommitteeAction (pProcGovAction $ gasProposalProcedure gas)
           ]
     ppupIds =
       (gePrevGovActionIds ^. grPParamUpdateL)
@@ -366,9 +366,9 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePrevGovActionIds, gePParams} ps govAct
           | gas <- actions
           , HardForkInitiation {} <- [pProcGovAction $ gasProposalProcedure gas]
           ]
-    isCommiteeAction UpdateCommittee {} = True
-    isCommiteeAction NoConfidence {} = True
-    isCommiteeAction _ = False
+    isCommitteeAction UpdateCommittee {} = True
+    isCommitteeAction NoConfidence {} = True
+    isCommitteeAction _ = False
 
     findProtVer SNothing = gePParams ^. ppProtocolVersionL
     findProtVer (SJust hid) =
