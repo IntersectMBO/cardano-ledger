@@ -380,7 +380,7 @@ data NewEpochState era = NewEpochState
   , nesBcur :: !(BlocksMade (EraCrypto era))
   -- ^ Blocks made in current epoch
   , nesEs :: !(EpochState era)
-  -- ^ Epoch state before current
+  -- ^ Epoch state
   , nesRu :: !(StrictMaybe (PulsingRewUpdate (EraCrypto era)))
   -- ^ Possible reward update
   , nesPd :: !(PoolDistr (EraCrypto era))
