@@ -244,7 +244,7 @@
           checks.pre-commit-check = pre-commit-check;
 
           devShells = let
-            profillingShell = p: {
+            mkDevShells = p: {
               # `nix develop .#profiling` (or `.#ghc928.profiling): a shell with profiling enabled
               profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
               # `nix develop .#pre-commit` (or `.#ghc928.pre-commit): a shell with pre-commit enabled
@@ -253,12 +253,12 @@
               });
             };
           in
-            profillingShell cabalProject
+            mkDevShells cabalProject
             # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc928`
             // lib.mapAttrs (compiler-nix-name: _: let
               p = cabalProject.appendModule {inherit compiler-nix-name;};
             in
-              p.shell // (profillingShell p))
+              p.shell // (mkDevShells p))
             nixpkgs.haskell-nix.compiler;
           # formatter used by nix fmt
           formatter = nixpkgs.alejandra;
