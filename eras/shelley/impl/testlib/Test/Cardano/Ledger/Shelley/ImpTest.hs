@@ -969,7 +969,6 @@ runImpRule stsEnv stsState stsSignal = do
   let ruleName = symbolVal (Proxy @rule)
   (res, ev) <-
     tryRunImpRule @rule stsEnv stsState stsSignal >>= \case
-      Left [] -> error "Impossible: STS rule failed without a predicate failure"
       Left fs ->
         assertFailure $
           unlines $

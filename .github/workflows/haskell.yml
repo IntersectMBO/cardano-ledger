@@ -158,9 +158,7 @@ jobs:
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     - name: Run fourmolu
-      run: |
-        git fetch --no-tags --prune --depth=1 origin +refs/heads/master:refs/remotes/origin/master
-        ./scripts/fourmolize.sh --changes
+      run: ./scripts/fourmolize.sh
 
   cabal-format:
     runs-on: ubuntu-latest

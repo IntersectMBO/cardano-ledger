@@ -362,7 +362,7 @@ epochTransition = do
     accountState3 =
       accountState2
         -- Move donations and unclaimed rewards from proposals to treasury:
-        & asTreasuryL <>~ (utxoState0 ^. utxosDonationL <> mconcat (Map.elems unclaimed))
+        & asTreasuryL <>~ (utxoState0 ^. utxosDonationL <> fold unclaimed)
     utxoState2 =
       utxoState1
         & utxosDepositedL .~ totalObligation certState govState1

@@ -456,7 +456,7 @@ isDRepVotingAllowed ::
 isDRepVotingAllowed =
   isVotingAllowed . votingDRepThresholdInternal pp isElectedCommittee
   where
-    -- Information about presence of committe or values in PParams are irrelevant for
+    -- Information about presence of committee or values in PParams are irrelevant for
     -- knowing if voting is allowed or not:
     pp = emptyPParams
     isElectedCommittee = False
