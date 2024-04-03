@@ -12,6 +12,7 @@ import Test.Cardano.Ledger.Babbage.ImpTest ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
+import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 
 main :: IO ()
 main =
@@ -23,6 +24,7 @@ main =
       describe "Imp" $ do
         AlonzoImp.spec @Babbage
         ShelleyImp.spec @Babbage
+        BabbageImp.spec @Babbage
       describe "CostModels" $ do
         CostModelsSpec.spec @Babbage
       describe "TxWits" $ do

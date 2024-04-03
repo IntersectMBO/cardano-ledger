@@ -96,6 +96,8 @@ library testlib
         Test.Cardano.Ledger.Babbage.Binary.Cddl
         Test.Cardano.Ledger.Babbage.ImpTest
         Test.Cardano.Ledger.Babbage.TreeDiff
+        Test.Cardano.Ledger.Babbage.Imp
+        Test.Cardano.Ledger.Babbage.Imp.BabbageFeatures
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -109,15 +111,19 @@ library testlib
     build-depends:
         base,
         bytestring,
+        containers,
         cardano-ledger-allegra:testlib,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
-        cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+        cardano-ledger-shelley,
         cardano-crypto-class,
         cardano-ledger-babbage,
         cardano-ledger-binary,
         cardano-ledger-core:{cardano-ledger-core, testlib},
+        microlens,
         generic-random,
         small-steps >=1.1,
+        cardano-strict-containers,
+        plutus-ledger-api,
         QuickCheck
 
 test-suite tests

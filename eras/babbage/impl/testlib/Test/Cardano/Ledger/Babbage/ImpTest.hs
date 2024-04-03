@@ -6,8 +6,12 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
-module Test.Cardano.Ledger.Babbage.ImpTest () where
+module Test.Cardano.Ledger.Babbage.ImpTest
+  ( module ImpTest
+  , BabbageEraImp
+  ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
 import Cardano.Crypto.Hash (Hash)
@@ -16,15 +20,10 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
-import Test.Cardano.Ledger.Alonzo.ImpTest (
-  AlonzoEraImp (..),
-  alonzoFixupTx,
-  initAlonzoImpNES,
-  plutusTestScripts,
- )
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp (..))
+import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
+import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 
 instance
   ( Crypto c
@@ -41,3 +40,11 @@ instance
 
 instance ShelleyEraImp (BabbageEra c) => AlonzoEraImp (BabbageEra c) where
   scriptTestContexts = plutusTestScripts SPlutusV1 <> plutusTestScripts SPlutusV2
+
+class
+  ( AlonzoEraImp era
+  , BabbageEraTxBody era
+  ) =>
+  BabbageEraImp era
+
+instance AlonzoEraImp (BabbageEra c) => BabbageEraImp (BabbageEra c)
