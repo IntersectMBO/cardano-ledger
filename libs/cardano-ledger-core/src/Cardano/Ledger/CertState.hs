@@ -89,6 +89,8 @@ import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
 
 -- import Control.Monad.Trans (lift)
+
+import Control.Monad.Trans.State.Strict (modify)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (def))
 import Data.Foldable (foldl')
@@ -201,13 +203,13 @@ instance Era era => DecShareCBOR (DState era) where
     umap <-
       decSharePlusLensCBOR
         ( pairL
-            (dsPShareL . psCRStakingL)
-            (dsPShareL . psKHStakePoolL)
+            (dShareToPShareL . credentialStakingL)
+            (dShareToPShareL . keyHashStakePoolL)
         )
     -- (Interns (Credential 'Staking c),Interns (KeyHash 'StakePool c'))
     fdeleg <- lift decCBOR
     deleg <- lift decCBOR
-    insta <- decSharePlusLensCBOR (dsPShareL . psCRStakingL) -- Interns (Credential 'Staking c)
+    insta <- decSharePlusLensCBOR (dShareToPShareL . credentialStakingL) -- Interns (Credential 'Staking c)
     pure (DState umap fdeleg deleg insta)
 
 instance Era era => ToJSON (DState era) where
@@ -272,10 +274,15 @@ encodePState (PState a b c d) = Rec PState !> To a !> To b !> To c !> To d
 instance Era era => DecShareCBOR (PState era) where
   type Share (PState era) = PShare (EraCrypto era)
   decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
-    poolparams <- decSharePlusLensCBOR (shareMapL psKHStakePoolL)
-    futurepool <- decSharePlusLensCBOR (shareMapL psKHStakePoolL)
-    retiring <- decSharePlusLensCBOR (shareMapL psKHStakePoolL)
-    deposits <- decSharePlusLensCBOR (shareMapL psKHStakePoolL)
+    poolparams0 <- decSharePlusLensCBOR (shareMapL keyHashStakePoolL)
+    futurepool0 <- decSharePlusLensCBOR (shareMapL keyHashStakePoolL)
+    -- Construct the sharing from the PoolParams (the range of the maps)
+    let (poolparams, share1) = mapShare poolparams0 mempty
+        (futurepool, share2) = mapShare futurepool0 share1
+    -- add that PoolParam sharing to the underlying PShare
+    modify (merge share2)
+    retiring <- decSharePlusLensCBOR (shareMapL keyHashStakePoolL)
+    deposits <- decSharePlusLensCBOR (shareMapL keyHashStakePoolL)
     pure (PState poolparams futurepool retiring deposits)
 
 instance (Era era, DecCBOR (PState era)) => DecCBOR (PState era) where
@@ -398,8 +405,8 @@ instance Era era => DecCBOR (VState era) where
 instance Era era => DecShareCBOR (VState era) where
   type Share (VState era) = VShare era
   decSharePlusCBOR = decodeRecordNamedT "VState" (const 3) $ do
-    reps <- decSharePlusLensCBOR (shareMapL vsDRepL)
-    comm <- decSharePlusLensCBOR vsCommitteeL
+    reps <- decSharePlusLensCBOR (shareMapL credentialDRepRoleL)
+    comm <- decSharePlusLensCBOR credentialColdCommitteeRoleL
     dorm <- lift decCBOR
     pure (VState reps comm dorm)
 
@@ -457,9 +464,9 @@ instance Era era => DecShareCBOR (CertState era) where
     Share (CertState era) =
       CertShare era
   decSharePlusCBOR = decodeRecordNamedT "CertState" (const 3) $ do
-    vstate <- decSharePlusLensCBOR csVShareL -- VState needs: VShare
-    pstate <- decSharePlusLensCBOR (csDShareL . dsPShareL) -- PState needs: PShare
-    dstate <- decSharePlusLensCBOR csDShareL -- DState needs: DShare
+    vstate <- decSharePlusLensCBOR certShareToVShareL -- VState needs: VShare
+    pstate <- decSharePlusLensCBOR (certShareToDShareL . dShareToPShareL) -- PState needs: PShare
+    dstate <- decSharePlusLensCBOR certShareToDShareL -- DState needs: DShare
     pure (CertState vstate pstate dstate)
 
 instance Default (CertState era) where

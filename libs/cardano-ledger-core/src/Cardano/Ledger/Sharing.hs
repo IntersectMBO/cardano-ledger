@@ -5,6 +5,7 @@
 module Cardano.Ledger.Sharing (
   Interns,
   interns,
+  liftInternsL,
   Iso (..),
   isoL,
   toMemptyLens,
@@ -29,20 +30,20 @@ module Cardano.Ledger.Sharing (
   PShare (..),
   DShare (..),
   CertShare (..),
-  psCRStakingL,
-  psVrfL,
-  psHKStakingL,
-  psKHStakePoolL,
+  credentialStakingL,
+  hashVerKeyVRFL,
+  keyHashStakingL,
+  keyHashStakePoolL,
   dsKHStakePoolL,
-  dsPShareL,
+  dShareToPShareL,
   dsCRStakingL,
   dsVrfL,
-  dsKHGenesisL,
-  dsKHGenesisDelegateL,
-  csDShareL,
-  vsDRepL,
-  vsCommitteeL,
-  csVShareL,
+  keyHashGenesisL,
+  keyHashGenesisDelegateL,
+  certShareToDShareL,
+  credentialDRepRoleL,
+  credentialColdCommitteeRoleL,
+  certShareToVShareL,
   decShareLensSet,
   findOrAdd,
   findOrAddLens,
@@ -168,10 +169,10 @@ pairL xa xb = lens getter setter
 -- PoolParams -> PState -> DState -> VState -> CertState
 
 data PoolParamShare c = PoolParamShare
-  { ppsKeyHashStakePool :: Set (KeyHash 'StakePool c)
-  , ppsHash :: Set (Hash c (VerKeyVRF c))
-  , ppsKeyHashStaking :: Set (KeyHash 'Staking c)
-  , ppsCredStaking :: Set (Credential 'Staking c)
+  { ppKeyHashStakePool :: Set (KeyHash 'StakePool c)
+  , ppHashVerKeyVRF :: Set (Hash c (VerKeyVRF c))
+  , ppKeyHashStaking :: Set (KeyHash 'Staking c)
+  , ppCredentialStaking :: Set (Credential 'Staking c)
   }
 
 instance Semigroup (PoolParamShare c) where
@@ -183,7 +184,11 @@ instance Monoid (PoolParamShare c) where
 -- Add what ever sharing info exists in a PoolParamShare to a PShare
 merge :: PoolParamShare c -> PShare c -> PShare c
 merge (PoolParamShare w x y z) (PShare a b c d) =
-  PShare (a <> internsFromSet w) (b <> internsFromSet x) (c <> internsFromSet y) (d <> internsFromSet z)
+  PShare
+    (a <> internsFromSet w)
+    (b <> internsFromSet x)
+    (c <> internsFromSet y)
+    (d <> internsFromSet z)
 
 class DecShareCBOR t => Shareable t where
   makeShare :: t -> Share t -> (t, Share t)
@@ -209,8 +214,8 @@ makeShareList xs s = foldr' accum ([], s) xs
 
 -- | Extend the 'Share v', by adding all the info from each 'v' in the Map.
 --   This also use the sharing info on the range of the Map.
-mapShare :: Shareable v => Map.Map k v -> Share v -> (Share v, Map.Map k v)
-mapShare m s = Map.mapAccum foo s m
+mapShare :: Shareable v => Map.Map k v -> Share v -> (Map.Map k v, Share v)
+mapShare m s = switch (Map.mapAccum foo s m)
   where
     foo sh rng = switch (makeShare rng sh)
     switch (x, y) = (y, x)
@@ -218,10 +223,10 @@ mapShare m s = Map.mapAccum foo s m
 -- =====================================================
 
 data PShare c = PShare
-  { psKHStakePool :: Interns (KeyHash 'StakePool c)
-  , psVrf :: Interns (Hash c (VerKeyVRF c))
-  , psHKStaking :: Interns (KeyHash 'Staking c)
-  , psCRStaking :: Interns (Credential 'Staking c)
+  { keyHashStakePool :: Interns (KeyHash 'StakePool c)
+  , hashVerKeyVRF :: Interns (Hash c (VerKeyVRF c))
+  , keyHashStaking :: Interns (KeyHash 'Staking c)
+  , credentialStaking :: Interns (Credential 'Staking c)
   }
 
 instance Semigroup (PShare c) where
@@ -230,24 +235,24 @@ instance Semigroup (PShare c) where
 instance Monoid (PShare c) where
   mempty = PShare mempty mempty mempty mempty
 
-psKHStakePoolL :: Lens' (PShare c) (Interns (KeyHash 'StakePool c))
-psKHStakePoolL = lens psKHStakePool (\x y -> x {psKHStakePool = y})
+keyHashStakePoolL :: Lens' (PShare c) (Interns (KeyHash 'StakePool c))
+keyHashStakePoolL = lens keyHashStakePool (\x y -> x {keyHashStakePool = y})
 
-psVrfL :: Lens' (PShare c) (Interns (Hash c (VerKeyVRF c)))
-psVrfL = lens psVrf (\x y -> x {psVrf = y})
+hashVerKeyVRFL :: Lens' (PShare c) (Interns (Hash c (VerKeyVRF c)))
+hashVerKeyVRFL = lens hashVerKeyVRF (\x y -> x {hashVerKeyVRF = y})
 
-psHKStakingL :: Lens' (PShare c) (Interns (KeyHash 'Staking c))
-psHKStakingL = lens psHKStaking (\x y -> x {psHKStaking = y})
+keyHashStakingL :: Lens' (PShare c) (Interns (KeyHash 'Staking c))
+keyHashStakingL = lens keyHashStaking (\x y -> x {keyHashStaking = y})
 
-psCRStakingL :: Lens' (PShare c) (Interns (Credential 'Staking c))
-psCRStakingL = lens psCRStaking (\x y -> x {psCRStaking = y})
+credentialStakingL :: Lens' (PShare c) (Interns (Credential 'Staking c))
+credentialStakingL = lens credentialStaking (\x y -> x {credentialStaking = y})
 
 -- =======================================================
 
 data DShare era = DShare
-  { dsPShare :: PShare (EraCrypto era)
-  , dsKHGenesisDelegate :: Interns (KeyHash 'GenesisDelegate (EraCrypto era))
-  , dsKHGenesis :: Interns (KeyHash 'Genesis (EraCrypto era))
+  { dShareToPShare :: PShare (EraCrypto era)
+  , keyHashGenesisDelegate :: Interns (KeyHash 'GenesisDelegate (EraCrypto era))
+  , keyHashGenesis :: Interns (KeyHash 'Genesis (EraCrypto era))
   }
 
 instance Semigroup (DShare c) where
@@ -256,29 +261,29 @@ instance Semigroup (DShare c) where
 instance Monoid (DShare c) where
   mempty = DShare mempty mempty mempty
 
-dsPShareL :: Lens' (DShare era) (PShare (EraCrypto era))
-dsPShareL = lens dsPShare (\x y -> x {dsPShare = y})
+dShareToPShareL :: Lens' (DShare era) (PShare (EraCrypto era))
+dShareToPShareL = lens dShareToPShare (\x y -> x {dShareToPShare = y})
 
 dsCRStakingL :: Lens' (DShare era) (Interns (Credential 'Staking (EraCrypto era)))
-dsCRStakingL = dsPShareL . psCRStakingL
+dsCRStakingL = dShareToPShareL . credentialStakingL
 
 dsVrfL :: Lens' (DShare era) (Interns (Hash (EraCrypto era) (VerKeyVRF (EraCrypto era))))
-dsVrfL = dsPShareL . psVrfL
+dsVrfL = dShareToPShareL . hashVerKeyVRFL
 
 dsKHStakePoolL :: Lens' (DShare era) (Interns (KeyHash 'StakePool (EraCrypto era)))
-dsKHStakePoolL = dsPShareL . psKHStakePoolL
+dsKHStakePoolL = dShareToPShareL . keyHashStakePoolL
 
-dsKHGenesisDelegateL :: Lens' (DShare era) (Interns (KeyHash 'GenesisDelegate (EraCrypto era)))
-dsKHGenesisDelegateL = lens dsKHGenesisDelegate (\x y -> x {dsKHGenesisDelegate = y})
+keyHashGenesisDelegateL :: Lens' (DShare era) (Interns (KeyHash 'GenesisDelegate (EraCrypto era)))
+keyHashGenesisDelegateL = lens keyHashGenesisDelegate (\x y -> x {keyHashGenesisDelegate = y})
 
-dsKHGenesisL :: Lens' (DShare era) (Interns (KeyHash 'Genesis (EraCrypto era)))
-dsKHGenesisL = lens dsKHGenesis (\x y -> x {dsKHGenesis = y})
+keyHashGenesisL :: Lens' (DShare era) (Interns (KeyHash 'Genesis (EraCrypto era)))
+keyHashGenesisL = lens keyHashGenesis (\x y -> x {keyHashGenesis = y})
 
 -- ========================
 
 data VShare era = VShare
-  { vsDRep :: Interns (Credential 'DRepRole (EraCrypto era))
-  , vsCommittee :: Interns (Credential 'ColdCommitteeRole (EraCrypto era))
+  { credentialDRepRole :: Interns (Credential 'DRepRole (EraCrypto era))
+  , credentialColdCommitteeRole :: Interns (Credential 'ColdCommitteeRole (EraCrypto era))
   }
 
 instance Semigroup (VShare c) where
@@ -287,17 +292,18 @@ instance Semigroup (VShare c) where
 instance Monoid (VShare c) where
   mempty = VShare mempty mempty
 
-vsDRepL :: Lens' (VShare era) (Interns (Credential 'DRepRole (EraCrypto era)))
-vsDRepL = lens vsDRep (\x y -> x {vsDRep = y})
+credentialDRepRoleL :: Lens' (VShare era) (Interns (Credential 'DRepRole (EraCrypto era)))
+credentialDRepRoleL = lens credentialDRepRole (\x y -> x {credentialDRepRole = y})
 
-vsCommitteeL :: Lens' (VShare era) (Interns (Credential 'ColdCommitteeRole (EraCrypto era)))
-vsCommitteeL = lens vsCommittee (\x y -> x {vsCommittee = y})
+credentialColdCommitteeRoleL ::
+  Lens' (VShare era) (Interns (Credential 'ColdCommitteeRole (EraCrypto era)))
+credentialColdCommitteeRoleL = lens credentialColdCommitteeRole (\x y -> x {credentialColdCommitteeRole = y})
 
 -- ===================================
 
 data CertShare era = CertShare
-  { csDShare :: DShare era
-  , csVShare :: VShare era
+  { certShareToDShare :: DShare era
+  , certShareToVShare :: VShare era
   }
 
 instance Semigroup (CertShare c) where
@@ -306,11 +312,36 @@ instance Semigroup (CertShare c) where
 instance Monoid (CertShare c) where
   mempty = CertShare mempty mempty
 
-csDShareL :: Lens' (CertShare era) (DShare era)
-csDShareL = lens csDShare (\x y -> x {csDShare = y})
+certShareToDShareL :: Lens' (CertShare era) (DShare era)
+certShareToDShareL = lens certShareToDShare (\x y -> x {certShareToDShare = y})
 
-csVShareL :: Lens' (CertShare era) (VShare era)
-csVShareL = lens csVShare (\x y -> x {csVShare = y})
+certShareToVShareL :: Lens' (CertShare era) (VShare era)
+certShareToVShareL = lens certShareToVShare (\x y -> x {certShareToVShare = y})
+
+{-
+getInterns :: ( Interns (Credential 'Staking (EraCrypto era))
+               , Interns (KeyHash 'StakePool (EraCrypto era))) -> CertShare era
+getInterns (cred,keyhash) =
+    mempty & certShareToDShareL . dShareToPShareL . credentialStakingL .~ cred
+           & certShareToDShareL . dShareToPShareL . keyHashStakePoolL .~ keyHashGenesis
+-}
+
+liftInternsL ::
+  Lens'
+    ( Interns (Credential 'Staking (EraCrypto era))
+    , Interns (KeyHash 'StakePool (EraCrypto era))
+    )
+    (CertShare era)
+liftInternsL = lens getInterns setInterns
+  where
+    getInterns (cred, keyhash) =
+      mempty
+        & certShareToDShareL . dShareToPShareL . credentialStakingL .~ cred
+        & certShareToDShareL . dShareToPShareL . keyHashStakePoolL .~ keyhash
+    setInterns _ certshare =
+      ( certshare ^. certShareToDShareL . dShareToPShareL . credentialStakingL
+      , certshare ^. certShareToDShareL . dShareToPShareL . keyHashStakePoolL
+      )
 
 -- ==================================
 

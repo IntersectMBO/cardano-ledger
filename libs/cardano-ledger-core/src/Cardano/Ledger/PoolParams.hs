@@ -236,11 +236,12 @@ instance Crypto c => DecShareCBOR (PoolParams c) where
 instance Crypto c => Shareable (PoolParams c) where
   makeShare pp s0 = (pnew, sharenew)
     where
-      (khsp, s1) = findOrAdd (ppId pp) (ppsKeyHashStakePool s0)
-      (h, s2) = findOrAdd (ppVrf pp) (ppsHash s0)
-      (khs, s3) = findOrAddLens raCredentialL (ppRewardAccount pp) (ppsCredStaking s0)
-      (cs, s4) = findOrAddSet (ppOwners pp) (ppsKeyHashStaking s0)
-      sharenew = s0 {ppsKeyHashStakePool = s1, ppsHash = s2, ppsCredStaking = s3, ppsKeyHashStaking = s4}
+      (khsp, s1) = findOrAdd (ppId pp) (ppKeyHashStakePool s0)
+      (h, s2) = findOrAdd (ppVrf pp) (ppHashVerKeyVRF s0)
+      (khs, s3) = findOrAddLens raCredentialL (ppRewardAccount pp) (ppCredentialStaking s0)
+      (cs, s4) = findOrAddSet (ppOwners pp) (ppKeyHashStaking s0)
+      sharenew =
+        s0 {ppKeyHashStakePool = s1, ppHashVerKeyVRF = s2, ppCredentialStaking = s3, ppKeyHashStaking = s4}
       pnew = pp {ppId = khsp, ppVrf = h, ppRewardAccount = khs, ppOwners = cs}
 
 ppRewardAcnt :: PoolParams c -> RewardAccount c

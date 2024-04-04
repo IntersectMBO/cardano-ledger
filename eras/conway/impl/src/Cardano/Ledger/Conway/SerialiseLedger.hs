@@ -43,6 +43,7 @@ import Cardano.Ledger.Core (Era (..), EraTxOut (..), TxOut)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.EpochBoundary ()
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Sharing (liftInternsL)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), GovState)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -179,7 +180,7 @@ instance
             <!> ( Pure (RecD EpochState)
                     <!> Pure From
                     <!> ( Pure (RecD (\cert utxo -> LedgerState utxo cert))
-                            <!> WriteShare idL -- CertState (Credential 'Staking c,KeyHash 'StakePool c)
+                            <!> WriteShare liftInternsL -- CertState (Credential 'Staking c,KeyHash 'StakePool c)
                             <!> ( Pure (RecD UTxOState) -- WriteShare _1 -- UTxOState
                                     <!> WriteShare _1 -- UTxO   (Credential 'Staking c)
                                     <!> Pure From -- deposited
