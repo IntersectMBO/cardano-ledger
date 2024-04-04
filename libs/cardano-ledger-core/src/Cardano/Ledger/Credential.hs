@@ -34,12 +34,12 @@ import Cardano.Ledger.Binary (
   CBORGroup (..),
   DecCBOR (..),
   DecCBORGroup (..),
+  DecShareCBOR (..),
   EncCBOR (..),
   EncCBORGroup (..),
   FromCBOR (..),
-  ToCBOR (..),
-  DecShareCBOR(..),
   Interns,
+  ToCBOR (..),
   interns,
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain

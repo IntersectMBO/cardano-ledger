@@ -79,13 +79,13 @@ import qualified Cardano.Crypto.KES as KES
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Binary (
   DecCBOR (..),
+  DecShareCBOR (..),
   EncCBOR (..),
   FromCBOR (..),
+  Interns,
   ToCBOR (..),
   decodeRecordNamed,
   encodeListLen,
-  DecShareCBOR(..),
-  Interns,
   interns,
  )
 import Cardano.Ledger.Binary.Crypto

@@ -63,14 +63,9 @@ where
 import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData, StrictMaybe)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
-  DecShareCBOR (..),
   EncCBOR (..),
-  Interns,
   ToCBOR (..),
-  decNoShareCBOR,
-  decSharePlusLensCBOR,
   encodeListLen,
-  toMemptyLens,
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (
@@ -79,17 +74,12 @@ import Cardano.Ledger.Coin (
  )
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Credential (Credential (..), Ptr, StakeCredential)
+import Cardano.Ledger.Credential (Ptr, StakeCredential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.Keys (
-  GenDelegPair (..),
-  GenDelegs (..),
-  KeyHash (..),
-  KeyRole (..),
- )
+import Cardano.Ledger.Keys (GenDelegPair (..), GenDelegs (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.Sharing (credL, fstL, idL, sndL)
+import Cardano.Ledger.Sharing
 import Cardano.Ledger.Slot (
   EpochNo (..),
   SlotNo (..),
@@ -97,7 +87,8 @@ import Cardano.Ledger.Slot (
 import Cardano.Ledger.UMap (RDPair (..), UMap (UMap), UView (RewDepUView, SPoolUView))
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData (..))
-import Control.Monad.Trans (lift)
+
+-- import Control.Monad.Trans (lift)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (def))
 import Data.Foldable (foldl')
@@ -200,17 +191,23 @@ encDState (DState unified fgs gs ir) =
     !> To ir
 
 instance Era era => DecCBOR (DState era) where
-   decCBOR = decode $ RecD DState <! From <! From <! From <! From
+  decCBOR = decode $ RecD DState <! From <! From <! From <! From
 
 instance Era era => DecShareCBOR (DState era) where
   type
     Share (DState era) =
-      (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
+      DShare era
   decSharePlusCBOR = decodeRecordNamedT "DState" (const 4) $ do
-    umap <- decSharePlusLensCBOR idL
+    umap <-
+      decSharePlusLensCBOR
+        ( pairL
+            (dsPShareL . psCRStakingL)
+            (dsPShareL . psKHStakePoolL)
+        )
+    -- (Interns (Credential 'Staking c),Interns (KeyHash 'StakePool c'))
     fdeleg <- lift decCBOR
     deleg <- lift decCBOR
-    insta <- decSharePlusLensCBOR fstL
+    insta <- decSharePlusLensCBOR (dsPShareL . psCRStakingL) -- Interns (Credential 'Staking c)
     pure (DState umap fdeleg deleg insta)
 
 instance Era era => ToJSON (DState era) where
@@ -273,21 +270,21 @@ encodePState (PState a b c d) = Rec PState !> To a !> To b !> To c !> To d
 --   take a pair of Shares, we genup a bogus Share for the range
 --   using the Lens (toMemptyLens fstL id)
 instance Era era => DecShareCBOR (PState era) where
-  type Share (PState era) = Interns (KeyHash 'StakePool (EraCrypto era))
+  type Share (PState era) = PShare (EraCrypto era)
   decSharePlusCBOR = decodeRecordNamedT "PState" (const 4) $ do
-    psStakePoolParams <- decSharePlusLensCBOR (toMemptyLens fstL id)
-    psFutureStakePoolParams <- decSharePlusLensCBOR (toMemptyLens fstL id)
-    psRetiring <- decSharePlusLensCBOR (toMemptyLens fstL id)
-    psDeposits <- decSharePlusLensCBOR (toMemptyLens fstL id)
-    pure PState {psStakePoolParams, psFutureStakePoolParams, psRetiring, psDeposits}
+    poolparams <- decSharePlusLensCBOR (shareMapL psKHStakePoolL)
+    futurepool <- decSharePlusLensCBOR (shareMapL psKHStakePoolL)
+    retiring <- decSharePlusLensCBOR (shareMapL psKHStakePoolL)
+    deposits <- decSharePlusLensCBOR (shareMapL psKHStakePoolL)
+    pure (PState poolparams futurepool retiring deposits)
 
-instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
-   decCBOR = decode $  RecD PState <! From <! From <! From <! From
+instance (Era era, DecCBOR (PState era)) => DecCBOR (PState era) where
+  decCBOR = decode $ RecD PState <! From <! From <! From <! From
+
 {-
 instance (Era era, DecShareCBOR (PState era)) => DecCBOR (PState era) where
   decCBOR = decNoShareCBOR
 -}
-
 
 instance Era era => ToJSON (PState era) where
   toJSON = object . toPStatePair
@@ -399,10 +396,10 @@ instance Era era => DecCBOR (VState era) where
 --   This lets us intern  (Credential 'Voting c) in the (Credential 'Staking c) Share
 --   because they have the same representation, and only differ in their indexe
 instance Era era => DecShareCBOR (VState era) where
-  type Share (VState era) = (Interns (Credential 'DRepRole (EraCrypto era)))
+  type Share (VState era) = VShare era
   decSharePlusCBOR = decodeRecordNamedT "VState" (const 3) $ do
-    reps <- decSharePlusLensCBOR (toMemptyLens fstL id)
-    comm <- decSharePlusLensCBOR credL
+    reps <- decSharePlusLensCBOR (shareMapL vsDRepL)
+    comm <- decSharePlusLensCBOR vsCommitteeL
     dorm <- lift decCBOR
     pure (VState reps comm dorm)
 
@@ -458,11 +455,11 @@ instance Era era => DecCBOR (CertState era) where
 instance Era era => DecShareCBOR (CertState era) where
   type
     Share (CertState era) =
-      (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
+      CertShare era
   decSharePlusCBOR = decodeRecordNamedT "CertState" (const 3) $ do
-    vstate <- decSharePlusLensCBOR (fstL . credL) -- VState needs: Interns (Credential 'DRepRole (EraCrypto era)
-    pstate <- decSharePlusLensCBOR sndL -- PState needs: Interns (KeyHash 'StakePool (EraCrypto era)
-    dstate <- decSharePlusLensCBOR idL -- DState needs: Both so use the identity lens
+    vstate <- decSharePlusLensCBOR csVShareL -- VState needs: VShare
+    pstate <- decSharePlusLensCBOR (csDShareL . dsPShareL) -- PState needs: PShare
+    dstate <- decSharePlusLensCBOR csDShareL -- DState needs: DShare
     pure (CertState vstate pstate dstate)
 
 instance Default (CertState era) where

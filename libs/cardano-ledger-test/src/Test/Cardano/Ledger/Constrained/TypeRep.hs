@@ -94,7 +94,7 @@ import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..)
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), dataToBinaryData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
-import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams(..))
+import Cardano.Ledger.PoolParams (PoolMetadata (..), PoolParams (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks (restrictPoolMetadataHash)
@@ -744,17 +744,21 @@ genSizedRep _ PoolHashR = arbitrary
 genSizedRep _ WitHashR = arbitrary
 genSizedRep _ GenHashR = arbitrary
 genSizedRep _ GenDelegHashR = arbitrary
-genSizedRep _ PoolParamsR = PoolParams <$> arbitrary
-              <*> arbitrary
-              <*> arbitrary
-              <*> arbitrary
-              <*> arbitrary
-              <*> arbitrary
-              <*> (do n <- chooseInt(1,3)
-                      list <- vectorOf n arbitrary 
-                      pure(Set.fromList list))
-              <*> arbitrary
-              <*> arbitrary              
+genSizedRep _ PoolParamsR =
+  PoolParams
+    <$> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> ( do
+            n <- chooseInt (1, 3)
+            list <- vectorOf n arbitrary
+            pure (Set.fromList list)
+        )
+    <*> arbitrary
+    <*> arbitrary
 genSizedRep n EpochR = pure $ EpochNo $ fromIntegral n
 genSizedRep n EpochIntervalR = pure $ EpochInterval $ fromIntegral n
 genSizedRep _ RationalR = arbitrary

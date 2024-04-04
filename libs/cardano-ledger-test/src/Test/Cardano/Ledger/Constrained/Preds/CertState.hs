@@ -11,7 +11,7 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.DRep (drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Era (Era, EraCrypto)
 import Cardano.Ledger.Keys (GenDelegPair (..), KeyHash, KeyRole (..), asWitness, coerceKeyRole)
-import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR,CertState)
+import Cardano.Ledger.Shelley.LedgerState (CertState, availableAfterMIR)
 import Cardano.Ledger.Shelley.TxCert (MIRPot (..))
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
@@ -355,7 +355,6 @@ genCertState proof proj = do
       )
   certState <- monadTyped $ runTarget env certstateT
   pure (proj certState)
-  
 
 demoC :: ReplMode -> IO ()
 demoC mode = do

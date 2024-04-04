@@ -40,9 +40,9 @@ import Data.Kind
 import qualified Data.Map.Strict as Map (size)
 import Data.Map.Strict.Internal (Map (..))
 import Data.Primitive.Types (Prim)
+import qualified Data.Set.Internal as Set (Set (..), size)
 import Data.VMap (VB, VMap, VP)
 import qualified Data.VMap as VMap
-import qualified Data.Set.Internal as Set(Set(..),size)
 import Lens.Micro
 
 -- =======================================
@@ -205,7 +205,7 @@ decNoShareCBOR = decShareCBOR mempty
 instance (Ord k, DecCBOR k) => DecShareCBOR (Set.Set k) where
   type Share (Set.Set k) = Interns k
   decShareCBOR kis = do
-    decodeSet (interns kis <$> decCBOR) 
+    decodeSet (interns kis <$> decCBOR)
   getShare !m = internsFromSet m
 
 instance (Ord k, DecCBOR k, DecCBOR v) => DecShareCBOR (Map k v) where

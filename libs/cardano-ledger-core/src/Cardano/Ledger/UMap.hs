@@ -108,6 +108,7 @@ module Cardano.Ledger.UMap (
 where
 
 import Cardano.Ledger.Binary
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), compactCoinOrError)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Credential (Credential (..), Ptr)
@@ -133,7 +134,6 @@ import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
 import Prelude hiding (lookup, null)
-import Cardano.Ledger.Binary.Coders
 
 -- | A Reward-Deposit Pair
 -- Used to represent the reward and the deposit for a given (Credential 'Staking c)
