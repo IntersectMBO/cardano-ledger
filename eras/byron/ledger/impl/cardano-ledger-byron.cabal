@@ -242,7 +242,7 @@ library
         containers,
         contra-tracer,
         cryptonite,
-        Cabal,
+        Cabal-syntax,
         digest,
         directory,
         filepath,
