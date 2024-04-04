@@ -252,8 +252,8 @@
                   };
                 };
               in
-                p.shell // (nixpkgs.mkShell {
-                shellHook = p.shell.shellHook + pre-commit-check.shellHook;
+                p.shell.overrideAttrs (old: {
+                  shellHook = old.shellHook + pre-commit-check.shellHook;
               });
             };
           in
