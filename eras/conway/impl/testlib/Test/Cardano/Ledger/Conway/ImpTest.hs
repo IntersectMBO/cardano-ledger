@@ -21,6 +21,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   module ImpTest,
   ConwayEraImp,
   enactConstitution,
+  enactTreasuryWithdrawals,
   submitGovAction,
   submitGovAction_,
   submitGovActions,
@@ -600,6 +601,19 @@ submitTreasuryWithdrawals ::
 submitTreasuryWithdrawals wdrls = do
   policy <- getGovPolicy
   submitGovAction $ TreasuryWithdrawals (Map.fromList wdrls) policy
+
+enactTreasuryWithdrawals ::
+  ConwayEraImp era =>
+  [(RewardAccount (EraCrypto era), Coin)] ->
+  Credential 'DRepRole (EraCrypto era) ->
+  Credential 'HotCommitteeRole (EraCrypto era) ->
+  ImpTestM era (GovActionId (EraCrypto era))
+enactTreasuryWithdrawals withdrawals dRep cm = do
+  gaId <- submitTreasuryWithdrawals withdrawals
+  submitYesVote_ (DRepVoter dRep) gaId
+  submitYesVote_ (CommitteeVoter cm) gaId
+  passNEpochs 2
+  pure gaId
 
 submitParameterChange ::
   ConwayEraImp era =>
