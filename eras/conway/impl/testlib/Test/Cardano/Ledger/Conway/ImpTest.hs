@@ -93,6 +93,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   minorFollow,
   majorFollow,
   cantFollow,
+  getsPParams,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -323,6 +324,9 @@ setupSingleDRep stake = do
               zero
           ]
   pure (drepKH, delegatorKH, spendingKP)
+
+getsPParams :: EraGov era => Lens' (PParams era) a -> ImpTestM era a
+getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
 
 -- | Sets up a stake pool with coin delegated to it.
 --
@@ -996,23 +1000,23 @@ electBasicCommittee = do
       & ppCommitteeMaxTermLengthL .~ EpochInterval 20
       & ppGovActionLifetimeL .~ EpochInterval 2
       & ppGovActionDepositL .~ Coin 123
-  (khDRep, _, _) <- setupSingleDRep 1_000_000
+  (drepKH, _, _) <- setupSingleDRep 1_000_000
 
   logEntry "Registering committee member"
-  khCommitteeMember <- KeyHashObj <$> freshKeyHash
+  coldCommitteeC <- KeyHashObj <$> freshKeyHash
   let
     committeeAction =
       UpdateCommittee
         SNothing
         mempty
-        (Map.singleton khCommitteeMember 20)
+        (Map.singleton coldCommitteeC 20)
         (1 %! 2)
   (gaidCommitteeProp NE.:| _) <-
     submitGovActions
       [ committeeAction
       , UpdateCommittee SNothing mempty mempty (1 %! 10)
       ]
-  submitYesVote_ (DRepVoter $ KeyHashObj khDRep) gaidCommitteeProp
+  submitYesVote_ (DRepVoter $ KeyHashObj drepKH) gaidCommitteeProp
 
   let
     assertNoCommittee = do
@@ -1033,8 +1037,8 @@ electBasicCommittee = do
         nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
     impAnn "There should be a committee" $ committee `shouldSatisfy` isSJust
 
-  credCommitteeMemberHot <- registerCommitteeHotKey khCommitteeMember
-  pure (KeyHashObj khDRep, credCommitteeMemberHot, GovPurposeId gaidCommitteeProp)
+  hotCommitteeC <- registerCommitteeHotKey coldCommitteeC
+  pure (KeyHashObj drepKH, hotCommitteeC, GovPurposeId gaidCommitteeProp)
 
 logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era ()
 logCurPParams = do

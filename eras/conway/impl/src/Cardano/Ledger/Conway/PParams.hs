@@ -47,6 +47,7 @@ module Cardano.Ledger.Conway.PParams (
   pvtPPSecurityGroupL,
   DRepVotingThresholds (..),
   dvtCommitteeNoConfidenceL,
+  dvtCommitteeNormalL,
   dvtPPNetworkGroupL,
   dvtPPGovGroupL,
   dvtPPTechnicalGroupL,
@@ -341,6 +342,9 @@ dvtUpdateToConstitutionL = lens dvtUpdateToConstitution (\x y -> x {dvtUpdateToC
 
 dvtCommitteeNoConfidenceL :: Lens' DRepVotingThresholds UnitInterval
 dvtCommitteeNoConfidenceL = lens dvtCommitteeNoConfidence (\x y -> x {dvtCommitteeNoConfidence = y})
+
+dvtCommitteeNormalL :: Lens' DRepVotingThresholds UnitInterval
+dvtCommitteeNormalL = lens dvtCommitteeNormal (\x y -> x {dvtCommitteeNormal = y})
 
 instance EncCBOR DRepVotingThresholds where
   encCBOR DRepVotingThresholds {..} =
