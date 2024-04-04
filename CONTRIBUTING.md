@@ -302,10 +302,6 @@ When running `fourmolu` manually via the `fourmolize.sh` script,
 you can instruct the script to run it only on changed files (compared to `origin/master`)
 by providing the `--changes` flag. If you omit it, then `fourmolu` will format everything.
 
-You can also just check the formatting without modifying anything by running `nix flake check`
-or if that doesn't work `nix build .#checks.${system}.pre-commit-check`
-(e.g: `nix build .#checks.x86_64-linux.pre-commit-check`).
-
 ### Compiler warnings
 
 The CI builds Haskell code with -Werror, so will fail if there are any compiler warnings.

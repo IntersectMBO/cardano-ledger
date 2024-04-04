@@ -30,13 +30,6 @@
   in
     inputs.flake-utils.lib.eachSystem supportedSystems (
       system: let
-        pre-commit-check = inputs.pre-commit-hooks.lib.${system}.run {
-          src = ./.;
-          hooks = {
-            fourmolu.enable = true;
-          };
-        };
-
         # setup our nixpkgs with the haskell.nix overlays, and the iohk-nix
         # overlays...
         nixpkgs = import inputs.nixpkgs {
@@ -195,9 +188,6 @@
                 flake.hydraJobs
                 // {
                   inherit (legacyPackages) doc specs;
-                  # Uncomment the line below if you want to run `pre-commit`
-                  # as a Hydra job.
-                  # inherit (checks) pre-commit-check;
 
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
@@ -241,14 +231,20 @@
             };
           };
 
-          checks.pre-commit-check = pre-commit-check;
-
           devShells = let
             mkDevShells = p: {
               # `nix develop .#profiling` (or `.#ghc928.profiling): a shell with profiling enabled
               profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
               # `nix develop .#pre-commit` (or `.#ghc928.pre-commit): a shell with pre-commit enabled
-              pre-commit = p.shell // (nixpkgs.mkShell {
+              pre-commit = let
+                pre-commit-check = inputs.pre-commit-hooks.lib.${system}.run {
+                  src = ./.;
+                  hooks = {
+                    fourmolu.enable = true;
+                  };
+                };
+              in
+                p.shell // (nixpkgs.mkShell {
                 shellHook = p.shell.shellHook + pre-commit-check.shellHook;
               });
             };
