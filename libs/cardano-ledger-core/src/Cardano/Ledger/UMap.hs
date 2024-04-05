@@ -25,6 +25,8 @@
 module Cardano.Ledger.UMap (
   -- * Constructing a `UMap`
   RDPair (..),
+  rdRewardCoin,
+  rdDepositCoin,
   UMElem (UMElem),
   umElemRDPair,
   umElemRDActive,
@@ -140,6 +142,14 @@ data RDPair = RDPair
   , rdDeposit :: {-# UNPACK #-} !(CompactForm Coin)
   }
   deriving (Show, Eq, Ord, Generic, NoThunks, NFData)
+
+-- rdReward and rdDeposit return a (CompactForm Coin), These return a Coin.
+
+rdRewardCoin :: RDPair -> Coin
+rdRewardCoin rdp = fromCompact (rdReward rdp)
+
+rdDepositCoin :: RDPair -> Coin
+rdDepositCoin rdp = fromCompact (rdDeposit rdp)
 
 instance EncCBOR RDPair where
   encCBOR RDPair {rdReward, rdDeposit} =

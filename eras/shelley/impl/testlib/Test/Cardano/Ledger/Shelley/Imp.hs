@@ -13,6 +13,7 @@ import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Shelley.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Shelley.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp, withImpState)
+import qualified Test.Cardano.Ledger.Shelley.UnitTests.IncrementalStakeTest as Incremental
 
 spec ::
   forall era.
@@ -20,8 +21,10 @@ spec ::
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
   Spec
-spec =
+spec = do
   describe "ShelleyImpSpec" $ withImpState @era $ do
     Ledger.spec @era
     Epoch.spec @era
     Utxow.spec @era
+  describe "ShelleyPureTests" $ do
+    Incremental.spec @era
