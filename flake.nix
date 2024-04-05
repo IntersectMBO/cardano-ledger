@@ -7,15 +7,21 @@
     iohkNix.url = "github:input-output-hk/iohk-nix";
     flake-utils.url = "github:hamishmack/flake-utils/hkm/nested-hydraJobs";
 
-    CHaP.url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
-    CHaP.flake = false;
+    CHaP = {
+      url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
+      flake = false;
+    };
 
-    cardano-mainnet-mirror.url = "github:input-output-hk/cardano-mainnet-mirror";
-    cardano-mainnet-mirror.flake = false;
+    cardano-mainnet-mirror = {
+      url = "github:input-output-hk/cardano-mainnet-mirror";
+      flake = false;
+    };
 
     # non-flake nix compatibility
-    flake-compat.url = "github:edolstra/flake-compat";
-    flake-compat.flake = false;
+    flake-compat = {
+      url = "github:edolstra/flake-compat";
+      flake = false;
+    };
 
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
   };
@@ -30,13 +36,6 @@
   in
     inputs.flake-utils.lib.eachSystem supportedSystems (
       system: let
-        pre-commit-check = inputs.pre-commit-hooks.lib.${system}.run {
-          src = ./.;
-          hooks = {
-            fourmolu.enable = true;
-          };
-        };
-
         # setup our nixpkgs with the haskell.nix overlays, and the iohk-nix
         # overlays...
         nixpkgs = import inputs.nixpkgs {
@@ -79,56 +78,50 @@
             active-repositories: hackage.haskell.org, cardano-haskell-packages-local
           '';
 
-          # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
-          shell.shellHook = ''
-            # Disable running `fourmolu` via `pre-commit` by default.
-            # If you want to opt-in and run it before each commit,
-            # then `unset` the `SKIP` environment variable in your shell.
-            # If you use `direnv`, `lorri`, `nix-direnv` etc.,
-            # then you can add `unset SKIP` to your `.envrc`
-            # after the nix shell is loaded (so after `use nix` / `use flake`).
-            export SKIP=fourmolu
-            export LANG=en_US.UTF-8
-            export LC_ALL=en_US.UTF-8
-            export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
-          '' + lib.optionalString (nixpkgs.glibcLocales != null && nixpkgs.stdenv.hostPlatform.libc == "glibc") ''
-            export LOCALE_ARCHIVE="${nixpkgs.glibcLocales}/lib/locale/locale-archive"
-            DEFAULT_PS1="\n\[\033[1;32m\][nix-shell:\w]\$\[\033[0m\] "
-            prompt() {
-              local EXIT="$?"
-              if [ $EXIT != 0 ]; then
-                PS1="$DEFAULT_PS1\[\033[1;31m\]($EXIT)\[\033[00m\] "
-              else
-                PS1="$DEFAULT_PS1"
-              fi
-            }
-            PROMPT_COMMAND=prompt
-            ${pre-commit-check.shellHook}
-          '';
+          shell = {
+            # force LANG to be UTF-8, otherwise GHC might choke on UTF encoded data.
+            shellHook = ''
+              export LANG=en_US.UTF-8
+              export LC_ALL=en_US.UTF-8
+              export CARDANO_MAINNET_MIRROR="${inputs.cardano-mainnet-mirror}/epochs"
+            '' + lib.optionalString (nixpkgs.glibcLocales != null && nixpkgs.stdenv.hostPlatform.libc == "glibc") ''
+              export LOCALE_ARCHIVE="${nixpkgs.glibcLocales}/lib/locale/locale-archive"
+              DEFAULT_PS1="\n\[\033[1;32m\][nix-shell:\w]\$\[\033[0m\] "
+              prompt() {
+                local EXIT="$?"
+                if [ $EXIT != 0 ]; then
+                  PS1="$DEFAULT_PS1\[\033[1;31m\]($EXIT)\[\033[00m\] "
+                else
+                  PS1="$DEFAULT_PS1"
+                fi
+              }
+              PROMPT_COMMAND=prompt
+            '';
 
-          # tools we want in our shell, from hackage
-          shell.tools =
-            {
-              cabal = "3.10.2.1";
-              ghcid = "0.8.9";
-            }
-            // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
-              # tools that work only with default compiler
-              fourmolu = "0.14.0.0";
-              hlint = "3.6.1";
-              haskell-language-server = "2.4.0.0";
-            };
+            # tools we want in our shell, from hackage
+            tools =
+              {
+                cabal = "3.10.2.1";
+                ghcid = "0.8.9";
+              }
+              // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
+                # tools that work only with default compiler
+                fourmolu = "0.14.0.0";
+                hlint = "3.6.1";
+                haskell-language-server = "2.4.0.0";
+              };
 
-          # and from nixpkgs or other inputs
-          shell.nativeBuildInputs = with nixpkgs;
-            [
-              (python3.withPackages (ps: with ps; [sphinx sphinx_rtd_theme recommonmark sphinx-markdown-tables sphinxemoji]))
-              haskellPackages.implicit-hie
-            ];
-          # disable Hoogle until someone request it
-          shell.withHoogle = false;
-          # Skip cross compilers for the shell
-          shell.crossPlatforms = _: [];
+            # and from nixpkgs or other inputs
+            nativeBuildInputs = with nixpkgs;
+              [
+                (python3.withPackages (ps: with ps; [sphinx sphinx_rtd_theme recommonmark sphinx-markdown-tables sphinxemoji]))
+                haskellPackages.implicit-hie
+              ];
+            # disable Hoogle until someone request it
+            withHoogle = false;
+            # Skip cross compilers for the shell
+            crossPlatforms = _: [];
+          };
 
           # package customizations as needed. Where cabal.project is not
           # specific enough, or doesn't allow setting these.
@@ -203,9 +196,6 @@
                 flake.hydraJobs
                 // {
                   inherit (legacyPackages) doc specs;
-                  # Uncomment the line below if you want to run `pre-commit`
-                  # as a Hydra job.
-                  # inherit (checks) pre-commit-check;
 
                   # This ensure hydra send a status for the required job (even if no change other than commit hash)
                   revision = nixpkgs.writeText "revision" (inputs.self.rev or "dirty");
@@ -249,20 +239,30 @@
             };
           };
 
-          checks.pre-commit-check = pre-commit-check;
-
           devShells = let
-            profillingShell = p: {
+            mkDevShells = p: {
               # `nix develop .#profiling` (or `.#ghc928.profiling): a shell with profiling enabled
               profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
+              # `nix develop .#pre-commit` (or `.#ghc928.pre-commit): a shell with pre-commit enabled
+              pre-commit = let
+                pre-commit-check = inputs.pre-commit-hooks.lib.${system}.run {
+                  src = ./.;
+                  hooks = {
+                    fourmolu.enable = true;
+                  };
+                };
+              in
+                p.shell.overrideAttrs (old: {
+                  shellHook = old.shellHook + pre-commit-check.shellHook;
+              });
             };
           in
-            profillingShell cabalProject
+            mkDevShells cabalProject
             # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc928`
             // lib.mapAttrs (compiler-nix-name: _: let
               p = cabalProject.appendModule {inherit compiler-nix-name;};
             in
-              p.shell // (profillingShell p))
+              p.shell // (mkDevShells p))
             nixpkgs.haskell-nix.compiler;
           # formatter used by nix fmt
           formatter = nixpkgs.alejandra;
