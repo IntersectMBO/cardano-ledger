@@ -18,7 +18,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conway.Conformance.SpecTranslate (
+module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (
   SpecTranslate (..),
   SpecTranslationError,
   OpaqueErrorString (..),
@@ -112,7 +112,7 @@ import Data.Foldable (Foldable (..))
 import qualified Data.List as L
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.OMap.Strict (OMap, toListKV)
+import Data.OMap.Strict (OMap, assocList)
 import Data.OSet.Strict (OSet)
 import Data.Ratio (denominator, numerator)
 import Data.Sequence.Strict (StrictSeq)
@@ -133,7 +133,7 @@ import Test.Cardano.Ledger.Conformance (
 import Test.Cardano.Ledger.Conway.Constrained (IsConwayUniv)
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..))
 
--- | OpaqueErrorString is behaves like unit in comparisons, but contains an
+-- | OpaqueErrorString behaves like unit in comparisons, but contains an
 -- error string that can be displayed.
 newtype OpaqueErrorString = OpaqueErrorString String
   deriving (Generic)
@@ -268,7 +268,6 @@ instance
   ( SpecTranslate ctx (HKD f a)
   , Eq (SpecRep (HKD f a))
   , ToExpr (SpecRep (HKD f a))
-  , NFData (SpecRep (HKD f a))
   ) =>
   SpecTranslate ctx (THKD r f a)
   where
@@ -314,7 +313,6 @@ instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , Eq (SpecRep (PParamsHKD Identity era))
   , ToExpr (SpecRep (PParamsHKD Identity era))
-  , NFData (SpecRep (PParamsHKD Identity era))
   ) =>
   SpecTranslate ctx (PParams era)
   where
@@ -811,7 +809,7 @@ instance
   type SpecRep (OMap k v) = [(SpecRep k, SpecRep v)]
   type TestRep (OMap k v) = [(TestRep k, TestRep v)]
 
-  toSpecRep = traverse (bimapM toSpecRep toSpecRep) . toListKV
+  toSpecRep = traverse (bimapM toSpecRep toSpecRep) . assocList
   specToTestRep = fmap (bimap (specToTestRep @ctx @k) (specToTestRep @ctx @v))
 
 data GovProceduresSpecTransCtx c

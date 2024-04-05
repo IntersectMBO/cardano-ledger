@@ -1,12 +1,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conway.Conformance (spec) where
+module Test.Cardano.Ledger.Conformance.Spec.Conway (spec) where
 
 import Cardano.Ledger.Conway (Conway)
 import Test.Cardano.Ledger.Conformance (conformsToImpl)
-import Test.Cardano.Ledger.Conway.Conformance.ExecutableSpecRule ()
-import Test.Cardano.Ledger.Conway.Constrained.Instances (ConwayFn)
+import Test.Cardano.Ledger.Conformance.ExecutableSpecRule.Conway ()
+import Test.Cardano.Ledger.Conway.Constrained (ConwayFn)
 import Test.Cardano.Ledger.Conway.ImpTest (withImpState)
 import Test.Cardano.Ledger.Imp.Common
 

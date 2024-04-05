@@ -9,7 +9,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Conformance.SpecTranslate (
+module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   SpecTranslationError,
   SpecTranslate (..),
   SpecTransM,

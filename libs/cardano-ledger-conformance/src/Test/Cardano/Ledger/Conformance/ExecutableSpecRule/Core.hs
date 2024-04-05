@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Conformance.ExecutableSpecRule (
+module Test.Cardano.Ledger.Conformance.ExecutableSpecRule.Core (
   ExecutableSpecRule (..),
   conformsToImpl,
   computationResultToEither,
@@ -27,7 +27,7 @@ import Data.Typeable (Typeable)
 import GHC.Base (Constraint, NonEmpty, Symbol, Type)
 import GHC.TypeLits (KnownSymbol)
 import qualified Lib as Agda
-import Test.Cardano.Ledger.Conformance.SpecTranslate (SpecTranslate (..), runSpecTransM)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (SpecTranslate (..), runSpecTransM)
 import Test.Cardano.Ledger.Imp.Common (
   MonadGen (..),
   NFData,

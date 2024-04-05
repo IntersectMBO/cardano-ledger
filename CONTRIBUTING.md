@@ -277,7 +277,7 @@ from [the Shelley ledger spec](./eras/shelley/formal-spec)).
 To update the conformance test, do the following:
 
 1. Clone the [Agda specification repo](https://github.com/IntersectMBO/formal-ledger-specifications)
-2. Run `nix-build -A ledger.hsSrc` in the cloned repo, mark down the output path
+2. Run `nix-build -A ledger.hsSrc` in the cloned repo, take note of the output path
    in the nix store
 3. Clone the [executable spec repo](https://github.com/input-output-hk/cardano-ledger-executable-spec)
 4. Replace the content of the repo cloned above with the files at `/nix/store/<output of the nix-build>/haskell/Ledger/*`

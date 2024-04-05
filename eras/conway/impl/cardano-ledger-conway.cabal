@@ -116,7 +116,6 @@ library testlib
         Test.Cardano.Ledger.Conway.Binary.RoundTrip
         Test.Cardano.Ledger.Conway.Binary.Regression
         Test.Cardano.Ledger.Conway.Constrained
-        Test.Cardano.Ledger.Conway.Conformance
         Test.Cardano.Ledger.Conway.ImpTest
         Test.Cardano.Ledger.Conway.Imp
         Test.Cardano.Ledger.Conway.Imp.EpochSpec
@@ -142,8 +141,6 @@ library testlib
         Test.Cardano.Ledger.Conway.Constrained.Spec.Pool
         Test.Cardano.Ledger.Conway.Constrained.Spec.PParams
         Test.Cardano.Ledger.Conway.Constrained.Spec.Utxo
-        Test.Cardano.Ledger.Conway.Conformance.SpecTranslate
-        Test.Cardano.Ledger.Conway.Conformance.ExecutableSpecRule
 
     default-language: Haskell2010
     ghc-options:
@@ -164,8 +161,6 @@ library testlib
         random,
         cardano-crypto-class,
         cardano-crypto-wrapper,
-        cardano-ledger-executable-spec,
-        cardano-ledger-conformance,
         cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-binary,

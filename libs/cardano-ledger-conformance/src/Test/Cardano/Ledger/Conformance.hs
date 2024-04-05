@@ -8,10 +8,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Conformance (
-  module Test.Cardano.Ledger.Conformance.ExecutableSpecRule,
-  module Test.Cardano.Ledger.Conformance.SpecTranslate,
+  module Test.Cardano.Ledger.Conformance.ExecutableSpecRule.Core,
+  module Test.Cardano.Ledger.Conformance.SpecTranslate.Core,
 ) where
 
-import Test.Cardano.Ledger.Conformance.ExecutableSpecRule
+import Test.Cardano.Ledger.Conformance.ExecutableSpecRule.Core
 import Test.Cardano.Ledger.Conformance.Orphans ()
-import Test.Cardano.Ledger.Conformance.SpecTranslate
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Core

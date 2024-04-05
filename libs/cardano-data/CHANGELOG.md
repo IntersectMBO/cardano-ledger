@@ -2,7 +2,7 @@
 
 ## 1.2.2.0
 
-* Add `toListKV`
+* Add `assocList`
 
 ## 1.2.1.0
 

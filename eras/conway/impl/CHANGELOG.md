@@ -8,9 +8,6 @@
 ### `testlib`
 
 * Add modules:
-  * `Test.Cardano.Ledger.Conway.Conformance`
-  * `Test.Cardano.Ledger.Conway.Conformance.ExecutableSpecRule`
-  * `Test.Cardano.Ledger.Conway.Conformance.SpecTranslate`
   * `Test.Cardano.Ledger.Conway.Constrained`
   * `Test.Cardano.Ledger.Conway.Constrained.Instances`
   * `Test.Cardano.Ledger.Conway.Constrained.Spec.Cert`

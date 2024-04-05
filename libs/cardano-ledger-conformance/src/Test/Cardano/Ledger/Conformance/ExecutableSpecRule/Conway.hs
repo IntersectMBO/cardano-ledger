@@ -12,7 +12,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conway.Conformance.ExecutableSpecRule () where
+module Test.Cardano.Ledger.Conformance.ExecutableSpecRule.Conway () where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Conway (Conway)
@@ -32,17 +32,19 @@ import Test.Cardano.Ledger.Conformance (
   SpecTranslate (..),
   computationResultToEither,
  )
-import Test.Cardano.Ledger.Conway.Conformance.SpecTranslate (
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (
   GovProceduresSpecTransCtx,
   OpaqueErrorString (..),
  )
-import Test.Cardano.Ledger.Conway.Constrained.Instances (IsConwayUniv)
-import Test.Cardano.Ledger.Conway.Constrained.Spec.Gov (
+import Test.Cardano.Ledger.Conway.Constrained (
+  IsConwayUniv,
   govEnvSpec,
   govProceduresSpec,
   govProposalsSpec,
+  utxoEnvSpec,
+  utxoStateSpec,
+  utxoTxSpec,
  )
-import Test.Cardano.Ledger.Conway.Constrained.Spec.Utxo (utxoEnvSpec, utxoStateSpec, utxoTxSpec)
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 
 data ConwayGovExecContext era
