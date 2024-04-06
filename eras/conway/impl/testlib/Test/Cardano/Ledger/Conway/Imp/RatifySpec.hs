@@ -17,6 +17,7 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.UMap as UM
+import Cardano.Ledger.Val ((<->))
 import Data.Default.Class (def)
 import Data.Foldable
 import qualified Data.Map.Strict as Map
@@ -36,6 +37,7 @@ spec =
     votingSpec
     delayingActionsSpec
     spoVotesForHardForkInitiation
+    committeeMinSizeAffectsInFlightProposalsSpec
     paramChangeAffectsProposalsSpec
 
 paramChangeAffectsProposalsSpec ::
@@ -222,6 +224,66 @@ paramChangeAffectsProposalsSpec =
       getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId parentGai)
       Map.member (GovPurposeId childGai) <$> getParameterChangeProposals `shouldReturn` True
       isDRepAccepted childGai `shouldReturn` False
+
+committeeMinSizeAffectsInFlightProposalsSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+committeeMinSizeAffectsInFlightProposalsSpec =
+  describe "CommitteeMinSize affects in-flight proposals" $ do
+    let setCommitteeMinSize n = modifyPParams $ ppCommitteeMinSizeL .~ n
+        submitATreasuryWithdrawal = do
+          rewardAccount <- registerRewardAccount
+          submitTreasuryWithdrawals [(rewardAccount, Coin 1_000)]
+    it "TreasuryWithdrawal fails to ratify due to an increase in CommitteeMinSize" $ do
+      (drepC, hotCommitteeC, _gpiCC) <- electBasicCommittee
+      setCommitteeMinSize 1
+      gaiTW <- submitATreasuryWithdrawal
+      submitYesVote_ (CommitteeVoter hotCommitteeC) gaiTW
+      submitYesVote_ (DRepVoter drepC) gaiTW
+      isCommitteeAccepted gaiTW `shouldReturn` True
+      gaiPC <-
+        submitParameterChange SNothing $
+          emptyPParamsUpdate
+            & ppuCommitteeMinSizeL .~ SJust 2
+      submitYesVote_ (CommitteeVoter hotCommitteeC) gaiPC
+      submitYesVote_ (DRepVoter drepC) gaiPC
+      treasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+      passNEpochs 2
+      -- The ParameterChange prevents the TreasuryWithdrawal from being enacted,
+      -- because it has higher priority.
+      getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId gaiPC)
+      isCommitteeAccepted gaiTW `shouldReturn` False
+      currentProposalsShouldContain gaiTW
+      getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` treasury
+    it "TreasuryWithdrawal ratifies due to a decrease in CommitteeMinSize" $ do
+      (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
+      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 10
+      treasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+      gaiTW <- submitATreasuryWithdrawal
+      submitYesVote_ (CommitteeVoter hotCommitteeC) gaiTW
+      submitYesVote_ (DRepVoter drepC) gaiTW
+      setCommitteeMinSize 2
+      isCommitteeAccepted gaiTW `shouldReturn` False
+      passNEpochs 2
+      getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` treasury
+      -- We do not enact the ParameterChange here because that does not pass
+      -- ratification as the CC size is smaller than MinSize.
+      -- We instead just add another Committee member to reach the CommitteeMinSize.
+      coldCommitteeC' <- KeyHashObj <$> freshKeyHash
+      gaiCC <-
+        submitGovAction $
+          UpdateCommittee
+            (SJust gpiCC)
+            Set.empty
+            (Map.singleton coldCommitteeC' $ EpochNo 10)
+            (1 %! 2)
+      submitYesVote_ (DRepVoter drepC) gaiCC
+      passNEpochs 2
+      _hotCommitteeC' <- registerCommitteeHotKey coldCommitteeC'
+      isCommitteeAccepted gaiTW `shouldReturn` True
+      passNEpochs 2
+      getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` (treasury <-> Coin 1_000)
 
 spoVotesForHardForkInitiation ::
   forall era.
