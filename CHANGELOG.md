@@ -7,6 +7,29 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 8.10
+
+- Retention of Anchor for proposal procedures in the ledger state in order for users to be able to query the node for those anchors
+- The minimum fee calculation has been updated to take into consideration a new protocol parameter controlling the contribution of reference scripts sizes
+- Redeemers serialization improvement: encode redeemers as a Map, instead of a list for Conway
+- Support for intra-era hardfork initiation and necessary updates to the SPO stake distribution calculation.
+- Fail translation when Conway features are present in transactions that use Plutus v1/v2
+- New Conway predicate failure: `ConwayUtxosPredFailure` (to decouple Conway from `PPUP` dependency)
+- Remove `small-steps-test` package and convert it into a sublibrary of `small-steps`
+- Support for injecting transition configuration data in `NewEpochState`, to decouple this concern from Consensus
+- Query-related changes:
+  - Era-specific queries: Conway functionality supported only starting with Conway era
+  - Change committee query to return non-optional `CommitteeMembersState`
+  - Add optional `Anchor` to resigned status in `CommitteeMembersState`
+
+- Important bug fixes:
+  - Use the correct stake pool distribution for voting (instead of one that is an epoch too old)
+  - Fix DRep stake distribution to correctly add rewards to deleged stake
+  - JSON serialization of rational numbers in protocol parameters and governance procedures are encoded without loss of precision
+    (`BoundedRatio` and `Prices`)
+  - JSON serialization fix for `ConwayGovState`
+  - Fixed the intermittent failure of Github page containing haddock documentation
+
 ## 8.8
 
 - Full PlutusV3 support
