@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
@@ -35,6 +36,192 @@ spec =
     votingSpec
     delayingActionsSpec
     spoVotesForHardForkInitiation
+    paramChangeAffectsProposalsSpec
+
+paramChangeAffectsProposalsSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+paramChangeAffectsProposalsSpec =
+  describe "ParameterChange affects existing proposals" $ do
+    let largerThreshold :: UnitInterval
+        largerThreshold = 51 %! 100
+        smallerThreshold :: UnitInterval
+        smallerThreshold = 1 %! 2
+    describe "DRep" $ do
+      let setThreshold :: UnitInterval -> ImpTestM era ()
+          setThreshold threshold = do
+            drepVotingThresholds <- getsPParams ppDRepVotingThresholdsL
+            modifyPParams $
+              ppDRepVotingThresholdsL
+                .~ (drepVotingThresholds & dvtCommitteeNormalL .~ threshold)
+          enactThreshold ::
+            UnitInterval ->
+            Credential 'DRepRole (EraCrypto era) ->
+            Credential 'HotCommitteeRole (EraCrypto era) ->
+            ImpTestM era ()
+          enactThreshold threshold drepC hotCommitteeC = do
+            drepVotingThresholds <- getsPParams ppDRepVotingThresholdsL
+            let paramChange =
+                  ParameterChange
+                    SNothing
+                    ( emptyPParamsUpdate
+                        & ppuDRepVotingThresholdsL
+                          .~ SJust (drepVotingThresholds & dvtCommitteeNormalL .~ threshold)
+                    )
+                    SNothing
+            pcGai <- submitGovAction paramChange
+            submitYesVote_ (DRepVoter drepC) pcGai
+            submitYesVote_ (CommitteeVoter hotCommitteeC) pcGai
+            passNEpochs 2
+          submitTwoExampleProposalsAndVoteOnTheChild ::
+            GovPurposeId 'CommitteePurpose era ->
+            KeyHash 'DRepRole (EraCrypto era) ->
+            ImpTestM era (GovActionId (EraCrypto era), GovActionId (EraCrypto era))
+          submitTwoExampleProposalsAndVoteOnTheChild gpiCC drepKH = do
+            committeeC <- KeyHashObj <$> freshKeyHash
+            let updateCC parent = UpdateCommittee parent mempty (Map.singleton committeeC $ EpochNo 5) $ 1 %! 2
+            gaiParent <- submitGovAction $ updateCC $ SJust gpiCC
+            -- We submit a descendent proposal so that even though it is sufficiently
+            -- voted on, it cannot be ratified before the ParameterChange proposal
+            -- is enacted.
+            gaiChild <- submitGovAction $ updateCC $ SJust $ GovPurposeId gaiParent
+            submitYesVote_ (DRepVoter $ KeyHashObj drepKH) gaiChild
+            passEpoch -- Make the votes count
+            pure (gaiParent, gaiChild)
+      it "Increasing the threshold prevents a hitherto-ratifiable proposal from being ratified" $ do
+        (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
+        setThreshold smallerThreshold
+        (drepKH, _stakingKH, _paymentKP) <- setupSingleDRep 1_000_000
+        (_gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC drepKH
+        isDRepAccepted gaiChild `shouldReturn` True
+        enactThreshold largerThreshold drepC hotCommitteeC
+        isDRepAccepted gaiChild `shouldReturn` False
+      it "Decreasing the threshold ratifies a hitherto-unratifiable proposal" $ do
+        (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
+        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+        setThreshold largerThreshold
+        (drepKH, _stakingKH, _paymentKP) <- setupSingleDRep 1_000_000
+        (gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC drepKH
+        isDRepAccepted gaiChild `shouldReturn` False
+        enactThreshold smallerThreshold drepC hotCommitteeC
+        isDRepAccepted gaiChild `shouldReturn` True
+        -- Not vote on the parent too to make sure both get enacted
+        submitYesVote_ (DRepVoter $ KeyHashObj drepKH) gaiParent
+        passNEpochs 2
+        getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiParent)
+        passEpoch -- UpdateCommittee is a delaying action
+        getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiChild)
+    describe "SPO" $ do
+      let setThreshold :: UnitInterval -> ImpTestM era ()
+          setThreshold threshold = do
+            poolVotingThresholds <- getsPParams ppPoolVotingThresholdsL
+            modifyPParams $
+              ppPoolVotingThresholdsL
+                .~ (poolVotingThresholds & pvtCommitteeNormalL .~ threshold)
+          enactThreshold ::
+            UnitInterval ->
+            Credential 'DRepRole (EraCrypto era) ->
+            Credential 'HotCommitteeRole (EraCrypto era) ->
+            ImpTestM era ()
+          enactThreshold threshold drepC hotCommitteeC = do
+            poolVotingThresholds <- getsPParams ppPoolVotingThresholdsL
+            let paramChange =
+                  ParameterChange
+                    SNothing
+                    ( emptyPParamsUpdate
+                        & ppuPoolVotingThresholdsL
+                          .~ SJust (poolVotingThresholds & pvtCommitteeNormalL .~ threshold)
+                    )
+                    SNothing
+            pcGai <- submitGovAction paramChange
+            submitYesVote_ (DRepVoter drepC) pcGai
+            submitYesVote_ (CommitteeVoter hotCommitteeC) pcGai
+            passNEpochs 2
+          submitTwoExampleProposalsAndVoteOnTheChild ::
+            GovPurposeId 'CommitteePurpose era ->
+            KeyHash 'StakePool (EraCrypto era) ->
+            KeyHash 'StakePool (EraCrypto era) ->
+            Credential 'DRepRole (EraCrypto era) ->
+            ImpTestM era (GovActionId (EraCrypto era), GovActionId (EraCrypto era))
+          submitTwoExampleProposalsAndVoteOnTheChild gpiCC poolKH1 poolKH2 drepC = do
+            committeeC <- KeyHashObj <$> freshKeyHash
+            let updateCC parent = UpdateCommittee parent mempty (Map.singleton committeeC $ EpochNo 5) $ 1 %! 2
+            gaiParent <- submitGovAction $ updateCC $ SJust gpiCC
+            -- We submit a descendent proposal so that even though it is sufficiently
+            -- voted on, it cannot be ratified before the ParameterChange proposal
+            -- is enacted.
+            gaiChild <- submitGovAction $ updateCC $ SJust $ GovPurposeId gaiParent
+            submitYesVote_ (DRepVoter drepC) gaiChild
+            submitYesVote_ (StakePoolVoter poolKH1) gaiChild
+            -- Abstained stake is not counted in the total stake in case of SPOs
+            submitVote_ VoteNo (StakePoolVoter poolKH2) gaiChild
+            passEpoch -- Make the votes count do
+            pure (gaiParent, gaiChild)
+      it "Increasing the threshold prevents a hitherto-ratifiable proposal from being ratified" $ do
+        (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
+        setThreshold smallerThreshold
+        (poolKH1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000_000
+        (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
+        passEpoch -- Make the new pool distribution count
+        (_gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC poolKH1 poolKH2 drepC
+        isSpoAccepted gaiChild `shouldReturn` True
+        enactThreshold largerThreshold drepC hotCommitteeC
+        isSpoAccepted gaiChild `shouldReturn` False
+      it "Decreasing the threshold ratifies a hitherto-unratifiable proposal" $ do
+        (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
+        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+        setThreshold largerThreshold
+        (poolKH1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000_000
+        (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
+        (gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC poolKH1 poolKH2 drepC
+        isSpoAccepted gaiChild `shouldReturn` False
+        enactThreshold smallerThreshold drepC hotCommitteeC
+        isSpoAccepted gaiChild `shouldReturn` True
+        -- Not vote on the parent too to make sure both get enacted
+        submitYesVote_ (DRepVoter drepC) gaiParent
+        submitYesVote_ (StakePoolVoter poolKH1) gaiParent
+        logRatificationChecks gaiParent
+        logRatificationChecks gaiChild
+        passNEpochs 2
+        getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiParent)
+        passEpoch -- UpdateCommittee is a delaying action
+        getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiChild)
+    it "A parent ParameterChange proposal can prevent its child from being enacted" $ do
+      (drepC, hotCommitteeC, _gpiCC) <- electBasicCommittee
+      -- Setup one other DRep with equal stake
+      (_drepKH, _, _) <- setupSingleDRep 1_000_000
+      -- Set a smaller DRep threshold
+      drepVotingThresholds <- getsPParams ppDRepVotingThresholdsL
+      modifyPParams $
+        ppDRepVotingThresholdsL
+          .~ (drepVotingThresholds & dvtPPGovGroupL .~ smallerThreshold)
+      -- Submit a parent-child sequence of ParameterChange proposals and vote on
+      -- both equally, so that both may be ratified. But, the parent increases
+      -- the threshold, and it should prevent the child from being ratified.
+      let paramChange parent threshold =
+            ParameterChange
+              parent
+              ( emptyPParamsUpdate
+                  & ppuDRepVotingThresholdsL
+                    .~ SJust (drepVotingThresholds & dvtPPGovGroupL .~ threshold)
+              )
+              SNothing
+      parentGai <- submitGovAction $ paramChange SNothing largerThreshold
+      childGai <- submitGovAction $ paramChange (SJust $ GovPurposeId parentGai) smallerThreshold
+      submitYesVote_ (DRepVoter drepC) parentGai
+      submitYesVote_ (CommitteeVoter hotCommitteeC) parentGai
+      submitYesVote_ (DRepVoter drepC) childGai
+      submitYesVote_ (CommitteeVoter hotCommitteeC) childGai
+      passEpoch
+      logRatificationChecks parentGai
+      logRatificationChecks childGai
+      isDRepAccepted parentGai `shouldReturn` True
+      isDRepAccepted childGai `shouldReturn` True
+      passEpoch
+      getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId parentGai)
+      Map.member (GovPurposeId childGai) <$> getParameterChangeProposals `shouldReturn` True
+      isDRepAccepted childGai `shouldReturn` False
 
 spoVotesForHardForkInitiation ::
   forall era.
