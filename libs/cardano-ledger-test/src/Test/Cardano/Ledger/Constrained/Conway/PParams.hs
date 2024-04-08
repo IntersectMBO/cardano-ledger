@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Test.Cardano.Ledger.Conway.Constrained.Spec.PParams where
+module Test.Cardano.Ledger.Constrained.Conway.PParams where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.PParams
@@ -11,7 +11,7 @@ import Constrained
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Test.Cardano.Ledger.Conway.Constrained.Instances (IsConwayUniv)
+import Test.Cardano.Ledger.Constrained.Conway.Instances (IsConwayUniv)
 
 pparamsSpec :: IsConwayUniv fn => Spec fn (PParams (ConwayEra StandardCrypto))
 pparamsSpec =

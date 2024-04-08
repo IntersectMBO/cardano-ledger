@@ -7,17 +7,6 @@
 
 ### `testlib`
 
-* Add modules:
-  * `Test.Cardano.Ledger.Conway.Constrained`
-  * `Test.Cardano.Ledger.Conway.Constrained.Instances`
-  * `Test.Cardano.Ledger.Conway.Constrained.Spec.Cert`
-  * `Test.Cardano.Ledger.Conway.Constrained.Spec.Deleg`
-  * `Test.Cardano.Ledger.Conway.Constrained.Spec.Gov`
-  * `Test.Cardano.Ledger.Conway.Constrained.Spec.GovCert`
-  * `Test.Cardano.Ledger.Conway.Constrained.Spec.Ledger`
-  * `Test.Cardano.Ledger.Conway.Constrained.Spec.PParams`
-  * `Test.Cardano.Ledger.Conway.Constrained.Spec.Pool`
-  * `Test.Cardano.Ledger.Conway.Constrained.Spec.Utxo`
 * Add `ToExpr` instance for `GovProcedures`
 
 ## 1.13.0.0

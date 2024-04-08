@@ -22,13 +22,14 @@ library
     exposed-modules:
         Test.Cardano.Ledger.Conformance
         Test.Cardano.Ledger.Conformance.Spec.Conway
+
     hs-source-dirs:   src
     other-modules:
         Test.Cardano.Ledger.Conformance.Orphans
         Test.Cardano.Ledger.Conformance.SpecTranslate.Core
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway
-        Test.Cardano.Ledger.Conformance.ExecutableSpecRule.Core
-        Test.Cardano.Ledger.Conformance.ExecutableSpecRule.Conway
+        Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
+        Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
 
     default-language: Haskell2010
     ghc-options:
@@ -38,23 +39,24 @@ library
 
     build-depends:
         base >=4.14 && <5,
-        containers,
-        cardano-crypto-class,
         cardano-data,
         cardano-strict-containers,
-        cardano-ledger-core,
+        microlens,
+        mtl,
         cardano-ledger-binary,
+        cardano-ledger-core,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-alonzo,
         cardano-ledger-babbage,
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-executable-spec,
+        cardano-crypto-class,
         cardano-ledger-core:testlib,
+        cardano-ledger-test,
+        containers,
         constrained-generators,
         deepseq,
         small-steps >=1.1,
-        microlens,
-        mtl,
         text
 
     if !impl(ghc >=9.2)
@@ -67,7 +69,6 @@ test-suite tests
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
     hs-source-dirs:   test
-
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates

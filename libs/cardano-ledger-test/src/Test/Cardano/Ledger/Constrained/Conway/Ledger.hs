@@ -3,7 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Test.Cardano.Ledger.Conway.Constrained.Spec.Ledger where
+module Test.Cardano.Ledger.Constrained.Conway.Ledger where
 
 import Cardano.Ledger.Shelley.API.Types
 
@@ -12,8 +12,8 @@ import Constrained
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Test.Cardano.Ledger.Conway.Constrained.Instances
-import Test.Cardano.Ledger.Conway.Constrained.Spec.Utxo
+import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Utxo
 
 ledgerTxSpec ::
   IsConwayUniv fn =>

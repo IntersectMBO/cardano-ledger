@@ -3,7 +3,7 @@
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the GOVCERT rule
-module Test.Cardano.Ledger.Conway.Constrained.Spec.GovCert where
+module Test.Cardano.Ledger.Constrained.Conway.GovCert where
 
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.PParams
@@ -16,8 +16,8 @@ import Constrained
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Test.Cardano.Ledger.Conway.Constrained.Instances
-import Test.Cardano.Ledger.Conway.Constrained.Spec.PParams
+import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.PParams
 
 vStateSpec :: Spec fn (VState (ConwayEra StandardCrypto))
 vStateSpec = TrueSpec

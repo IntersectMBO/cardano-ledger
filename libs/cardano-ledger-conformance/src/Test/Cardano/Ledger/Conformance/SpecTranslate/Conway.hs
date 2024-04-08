@@ -130,7 +130,7 @@ import Test.Cardano.Ledger.Conformance (
   SpecTranslationError,
   askTransCtx,
  )
-import Test.Cardano.Ledger.Conway.Constrained (IsConwayUniv)
+import Test.Cardano.Ledger.Constrained.Conway.Instances (IsConwayUniv)
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..))
 
 -- | OpaqueErrorString behaves like unit in comparisons, but contains an
@@ -268,6 +268,7 @@ instance
   ( SpecTranslate ctx (HKD f a)
   , Eq (SpecRep (HKD f a))
   , ToExpr (SpecRep (HKD f a))
+  , NFData (SpecRep (HKD f a))
   ) =>
   SpecTranslate ctx (THKD r f a)
   where
@@ -286,7 +287,7 @@ instance SpecTranslate ctx (ConwayPParams Identity era) where
       <*> pure (toInteger . unTHKD $ cppMaxTxSize x)
       <*> pure (toInteger . unTHKD $ cppMaxBHSize x)
       <*> pure (toInteger . unTHKD $ cppMaxValSize x)
-      <*> pure 0
+      <*> pure 0 -- minUTxOValue has been deprecated and is not supported in Conway
       <*> toSpecRep (cppPoolDeposit x)
       <*> toSpecRep (cppEMax x)
       <*> toSpecRep (toInteger . unTHKD $ cppNOpt x)
@@ -313,6 +314,7 @@ instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , Eq (SpecRep (PParamsHKD Identity era))
   , ToExpr (SpecRep (PParamsHKD Identity era))
+  , NFData (SpecRep (PParamsHKD Identity era))
   ) =>
   SpecTranslate ctx (PParams era)
   where

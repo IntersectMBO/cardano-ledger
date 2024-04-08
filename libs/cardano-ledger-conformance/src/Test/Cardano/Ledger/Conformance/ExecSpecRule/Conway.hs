@@ -9,10 +9,11 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conformance.ExecutableSpecRule.Conway () where
+module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway () where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Cardano.Ledger.Conway (Conway)
@@ -28,7 +29,7 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance (
-  ExecutableSpecRule (..),
+  ExecSpecRule (..),
   SpecTranslate (..),
   computationResultToEither,
  )
@@ -36,7 +37,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (
   GovProceduresSpecTransCtx,
   OpaqueErrorString (..),
  )
-import Test.Cardano.Ledger.Conway.Constrained (
+import Test.Cardano.Ledger.Constrained.Conway (
   IsConwayUniv,
   govEnvSpec,
   govProceduresSpec,
@@ -45,7 +46,6 @@ import Test.Cardano.Ledger.Conway.Constrained (
   utxoStateSpec,
   utxoTxSpec,
  )
-import Test.Cardano.Ledger.Conway.TreeDiff ()
 
 data ConwayGovExecContext era
   = ConwayGovExecContext
@@ -76,7 +76,7 @@ instance
   ( NFData (SpecRep (ConwayGovPredFailure Conway))
   , IsConwayUniv fn
   ) =>
-  ExecutableSpecRule fn "GOV" Conway
+  ExecSpecRule fn "GOV" Conway
   where
   type ExecContext fn "GOV" Conway = ConwayGovExecContext Conway
 
@@ -96,7 +96,7 @@ instance
 instance
   forall fn.
   IsConwayUniv fn =>
-  ExecutableSpecRule fn "UTXO" Conway
+  ExecSpecRule fn "UTXO" Conway
   where
   environmentSpec = utxoEnvSpec
 

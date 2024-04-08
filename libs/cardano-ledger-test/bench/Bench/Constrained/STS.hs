@@ -14,7 +14,7 @@ import Cardano.Ledger.Crypto
 import Constrained
 import Constrained.Bench
 import Criterion
-import Test.Cardano.Ledger.Conway.Constrained
+import Test.Cardano.Ledger.Constrained.Conway
 
 govEnv :: GovEnv (ConwayEra StandardCrypto)
 govEnv = genFromSpecWithSeed 10 30 (govEnvSpec @ConwayFn)

@@ -6,7 +6,7 @@
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the UTXO rule
-module Test.Cardano.Ledger.Conway.Constrained.Spec.Utxo where
+module Test.Cardano.Ledger.Constrained.Conway.Utxo where
 
 import Cardano.Ledger.Babbage.TxOut
 import Cardano.Ledger.BaseTypes
@@ -26,8 +26,8 @@ import Constrained
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core (EraTx (..), ppMaxCollateralInputsL)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Test.Cardano.Ledger.Conway.Constrained.Instances
-import Test.Cardano.Ledger.Conway.Constrained.Spec.PParams
+import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.PParams
 
 utxoEnvSpec :: IsConwayUniv fn => Spec fn (UtxoEnv (ConwayEra StandardCrypto))
 utxoEnvSpec =

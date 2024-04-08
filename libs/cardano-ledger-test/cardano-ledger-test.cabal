@@ -54,6 +54,16 @@ library
         Test.Cardano.Ledger.Constrained.Scripts
         Test.Cardano.Ledger.Constrained.Size
         Test.Cardano.Ledger.Constrained.Solver
+        Test.Cardano.Ledger.Constrained.Conway
+        Test.Cardano.Ledger.Constrained.Conway.Instances
+        Test.Cardano.Ledger.Constrained.Conway.Cert
+        Test.Cardano.Ledger.Constrained.Conway.Ledger
+        Test.Cardano.Ledger.Constrained.Conway.Deleg
+        Test.Cardano.Ledger.Constrained.Conway.Pool
+        Test.Cardano.Ledger.Constrained.Conway.GovCert
+        Test.Cardano.Ledger.Constrained.Conway.PParams
+        Test.Cardano.Ledger.Constrained.Conway.Gov
+        Test.Cardano.Ledger.Constrained.Conway.Utxo
         Test.Cardano.Ledger.Examples.BabbageFeatures
         Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
         Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW
@@ -93,6 +103,7 @@ library
         -Wunused-packages
 
     build-depends:
+        cryptonite,
         array,
         base >=4.14 && <5,
         bech32,
@@ -101,7 +112,7 @@ library
         cardano-crypto-class,
         cardano-crypto-wrapper,
         cardano-crypto,
-        cardano-ledger-allegra,
+        cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-alonzo-test,
         cardano-ledger-api,
@@ -116,7 +127,7 @@ library
         cardano-ledger-shelley-test,
         cardano-ledger-shelley-ma-test,
         cardano-protocol-tpraos:{cardano-protocol-tpraos, testlib},
-        cardano-slotting,
+        cardano-slotting:{cardano-slotting, testlib},
         deepseq,
         containers,
         formatting,
@@ -143,7 +154,9 @@ library
         transformers,
         unordered-containers,
         vector,
-        constrained-generators
+        constrained-generators,
+        random,
+        FailT
 
 test-suite cardano-ledger-test
     type:             exitcode-stdio-1.0
@@ -190,7 +203,7 @@ benchmark bench
         cardano-ledger-alonzo,
         cardano-ledger-alonzo-test,
         cardano-ledger-binary,
-        cardano-ledger-conway:{cardano-ledger-conway, testlib},
+        cardano-ledger-conway,
         cardano-ledger-test,
         cardano-ledger-core,
         cardano-ledger-shelley-ma-test,
@@ -206,11 +219,11 @@ benchmark bench
         cardano-slotting:{cardano-slotting, testlib},
         microlens,
         mtl,
+        random,
         small-steps:{small-steps, testlib} >=1.1,
         cardano-strict-containers >=0.1.1,
         text,
-        constrained-generators,
-        random
+        constrained-generators
 
 benchmark benchProperty
     type:             exitcode-stdio-1.0

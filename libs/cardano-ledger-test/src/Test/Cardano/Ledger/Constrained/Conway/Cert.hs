@@ -3,7 +3,7 @@
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the CERT rule
-module Test.Cardano.Ledger.Conway.Constrained.Spec.Cert where
+module Test.Cardano.Ledger.Constrained.Conway.Cert where
 
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.Rules
@@ -14,11 +14,11 @@ import Constrained
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Test.Cardano.Ledger.Conway.Constrained.Instances
-import Test.Cardano.Ledger.Conway.Constrained.Spec.Deleg
-import Test.Cardano.Ledger.Conway.Constrained.Spec.GovCert
-import Test.Cardano.Ledger.Conway.Constrained.Spec.PParams
-import Test.Cardano.Ledger.Conway.Constrained.Spec.Pool
+import Test.Cardano.Ledger.Constrained.Conway.Deleg
+import Test.Cardano.Ledger.Constrained.Conway.GovCert
+import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.PParams
+import Test.Cardano.Ledger.Constrained.Conway.Pool
 
 certEnvSpec ::
   IsConwayUniv fn =>

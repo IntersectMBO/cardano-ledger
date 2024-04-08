@@ -21,7 +21,15 @@ import Control.State.Transition.Extended
 
 import Constrained
 
-import Test.Cardano.Ledger.Conway.Constrained
+import Test.Cardano.Ledger.Constrained.Conway.Cert
+import Test.Cardano.Ledger.Constrained.Conway.Deleg
+import Test.Cardano.Ledger.Constrained.Conway.Gov
+import Test.Cardano.Ledger.Constrained.Conway.GovCert
+import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Ledger
+import Test.Cardano.Ledger.Constrained.Conway.PParams
+import Test.Cardano.Ledger.Constrained.Conway.Pool
+import Test.Cardano.Ledger.Constrained.Conway.Utxo
 
 import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Shelley.Utils

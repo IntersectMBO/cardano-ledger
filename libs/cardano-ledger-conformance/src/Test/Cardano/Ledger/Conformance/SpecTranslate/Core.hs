@@ -40,7 +40,6 @@ class
   ( Eq (TestRep a)
   , ToExpr (TestRep a)
   , NFData (TestRep a)
-  , NFData (SpecRep a)
   , Inject ctx (SpecTransContext a)
   ) =>
   SpecTranslate ctx a

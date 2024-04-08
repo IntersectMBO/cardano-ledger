@@ -10,8 +10,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Conformance.ExecutableSpecRule.Core (
-  ExecutableSpecRule (..),
+module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
+  ExecSpecRule (..),
   conformsToImpl,
   computationResultToEither,
 ) where
@@ -67,7 +67,7 @@ class
   , NFData (TestRep (PredicateFailure (EraRule rule era)))
   , SpecTranslate (ExecContext fn rule era) (PredicateFailure (EraRule rule era))
   ) =>
-  ExecutableSpecRule fn (rule :: Symbol) era
+  ExecSpecRule fn (rule :: Symbol) era
   where
   type ExecContext fn rule era
   type ExecContext fn rule era = ()
@@ -100,7 +100,10 @@ class
 
 conformsToImpl ::
   forall (rule :: Symbol) fn era.
-  ExecutableSpecRule fn rule era =>
+  ( ExecSpecRule fn rule era
+  , NFData (SpecRep (PredicateFailure (EraRule rule era)))
+  , NFData (SpecRep (State (EraRule rule era)))
+  ) =>
   ImpTestM era ()
 conformsToImpl = impAnn "conformsToImpl" . resize 5 $ do
   env <- liftGen . CV2.genFromSpec_ $ environmentSpec @fn @rule @era

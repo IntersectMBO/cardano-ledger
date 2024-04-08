@@ -115,7 +115,6 @@ library testlib
         Test.Cardano.Ledger.Conway.Binary.Cddl
         Test.Cardano.Ledger.Conway.Binary.RoundTrip
         Test.Cardano.Ledger.Conway.Binary.Regression
-        Test.Cardano.Ledger.Conway.Constrained
         Test.Cardano.Ledger.Conway.ImpTest
         Test.Cardano.Ledger.Conway.Imp
         Test.Cardano.Ledger.Conway.Imp.EpochSpec
@@ -130,18 +129,7 @@ library testlib
 
     visibility:       public
     hs-source-dirs:   testlib
-    other-modules:
-        Paths_cardano_ledger_conway
-        Test.Cardano.Ledger.Conway.Constrained.Instances
-        Test.Cardano.Ledger.Conway.Constrained.Spec.Cert
-        Test.Cardano.Ledger.Conway.Constrained.Spec.Deleg
-        Test.Cardano.Ledger.Conway.Constrained.Spec.GovCert
-        Test.Cardano.Ledger.Conway.Constrained.Spec.Gov
-        Test.Cardano.Ledger.Conway.Constrained.Spec.Ledger
-        Test.Cardano.Ledger.Conway.Constrained.Spec.Pool
-        Test.Cardano.Ledger.Conway.Constrained.Spec.PParams
-        Test.Cardano.Ledger.Conway.Constrained.Spec.Utxo
-
+    other-modules:    Paths_cardano_ledger_conway
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -153,33 +141,23 @@ library testlib
         bytestring,
         cardano-data:{cardano-data, testlib},
         containers,
-        cryptonite,
-        constrained-generators,
         plutus-ledger-api,
         deepseq,
         microlens,
-        random,
         cardano-crypto-class,
-        cardano-crypto-wrapper,
         cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-binary,
         cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
-        cardano-ledger-byron,
         cardano-ledger-conway,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-mary,
         cardano-ledger-shelley,
         cardano-strict-containers,
-        cardano-slotting:{cardano-slotting, testlib},
         data-default-class,
         generic-random,
         mtl,
         text,
-        vector-map,
-        QuickCheck,
-        FailT,
-        random,
         small-steps >=1.1
 
 test-suite tests

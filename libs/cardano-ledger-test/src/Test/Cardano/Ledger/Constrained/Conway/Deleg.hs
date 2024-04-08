@@ -3,7 +3,7 @@
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the DELEG rule
-module Test.Cardano.Ledger.Conway.Constrained.Spec.Deleg where
+module Test.Cardano.Ledger.Constrained.Conway.Deleg where
 
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.TxCert
@@ -17,7 +17,7 @@ import Constrained
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core (PParams, ppKeyDepositL)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Test.Cardano.Ledger.Conway.Constrained.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Instances
 
 dStateSpec ::
   IsConwayUniv fn =>
