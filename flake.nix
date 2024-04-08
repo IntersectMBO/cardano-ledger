@@ -101,14 +101,14 @@
             # tools we want in our shell, from hackage
             tools =
               {
-                cabal = "3.10.2.1";
+                cabal = "3.10.3.0";
                 ghcid = "0.8.9";
               }
               // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
                 # tools that work only with default compiler
                 fourmolu = "0.14.0.0";
                 hlint = "3.6.1";
-                haskell-language-server = "2.4.0.0";
+                haskell-language-server = "2.7.0.0";
               };
 
             # and from nixpkgs or other inputs
@@ -180,7 +180,7 @@
           cabalProject.flake (
             lib.optionalAttrs (system == "x86_64-linux") {
               # on linux, build/test other supported compilers
-              variants = lib.genAttrs ["ghc8107" "ghc962"] (compiler-nix-name: {
+              variants = lib.genAttrs ["ghc8107" "ghc964"] (compiler-nix-name: {
                 inherit compiler-nix-name;
               });
             }
