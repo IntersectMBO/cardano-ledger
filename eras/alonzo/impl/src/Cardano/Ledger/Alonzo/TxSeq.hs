@@ -70,7 +70,7 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks)
 -- TxSeq provides an alternate way of formatting transactions in a block, in
 -- order to support segregated witnessing.
 
-data AlonzoTxSeq era = TxSeq'
+data AlonzoTxSeq era = AlonzoTxSeqRaw
   { txSeqTxns :: !(StrictSeq (Tx era))
   , txSeqBodyBytes :: BSL.ByteString
   -- ^ Bytes encoding @Seq ('AlonzoTxBody' era)@
@@ -100,7 +100,7 @@ pattern AlonzoTxSeq ::
   StrictSeq (Tx era) ->
   AlonzoTxSeq era
 pattern AlonzoTxSeq xs <-
-  TxSeq' xs _ _ _ _
+  AlonzoTxSeqRaw xs _ _ _ _
   where
     AlonzoTxSeq txns =
       let version = eraProtVerLow @era
@@ -110,7 +110,7 @@ pattern AlonzoTxSeq xs <-
           metaChunk index m = encodeIndexed <$> strictMaybeToMaybe m
             where
               encodeIndexed metadata = encCBOR index <> encodePreEncoded metadata
-       in TxSeq'
+       in AlonzoTxSeqRaw
             { txSeqTxns = txns
             , txSeqBodyBytes =
                 serializeFoldablePreEncoded $ originalBytes . view bodyTxL <$> txns
@@ -148,12 +148,8 @@ deriving stock instance Eq (Tx era) => Eq (TxSeq era)
 -- Serialisation and hashing
 --------------------------------------------------------------------------------
 
-instance
-  forall era.
-  Era era =>
-  EncCBORGroup (TxSeq era)
-  where
-  encCBORGroup (TxSeq' _ bodyBytes witsBytes metadataBytes invalidBytes) =
+instance Era era => EncCBORGroup (TxSeq era) where
+  encCBORGroup (AlonzoTxSeqRaw _ bodyBytes witsBytes metadataBytes invalidBytes) =
     encodePreEncoded $
       BSL.toStrict $
         bodyBytes <> witsBytes <> metadataBytes <> invalidBytes
@@ -179,7 +175,7 @@ hashAlonzoTxSeq ::
   Era era =>
   AlonzoTxSeq era ->
   Hash (EraCrypto era) EraIndependentBlockBody
-hashAlonzoTxSeq (TxSeq' _ bodies ws md vs) =
+hashAlonzoTxSeq (AlonzoTxSeqRaw _ bodies ws md vs) =
   coerce $
     hashStrict $
       BSL.toStrict $
@@ -239,7 +235,7 @@ instance AlonzoEraTx era => DecCBOR (Annotator (TxSeq era)) where
             StrictSeq.forceToStrict $
               Seq.zipWith4 alonzoSegwitTx bodies ws vs auxData
     pure $
-      TxSeq'
+      AlonzoTxSeqRaw
         <$> txns
         <*> bodiesAnn
         <*> witsAnn
