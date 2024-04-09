@@ -167,14 +167,18 @@ treasuryWithdrawalsSpec =
     getTreasury = getsNES (nesEsL . esAccountStateL . asTreasuryL)
     sumRewardAccounts withdrawals = mconcat <$> traverse (getRewardAccountAmount . fst) withdrawals
     genWithdrawalsExceeding (Coin val) n = do
-      pcts <- replicateM (n - 1) $ choose (1, 100)
-      let tot = sum pcts
-      Positive excess <- arbitrary
-      let amounts = Coin excess : map (\x -> Coin $ ceiling ((x * val) % tot)) pcts
-      forM amounts $ \amount -> (,amount) <$> registerRewardAccount
+      vals <- genValuesExceeding val n
+      forM (Coin <$> vals) $ \coin -> (,coin) <$> registerRewardAccount
     checkNoWithdrawal initialTreasury withdrawals = do
       getTreasury `shouldReturn` initialTreasury
       sumRewardAccounts withdrawals `shouldReturn` zero
+    genValuesExceeding val n = do
+      pcts <- replicateM (n - 1) $ choose (1, 100)
+      let tot = sum pcts
+      let amounts = map (\x -> ceiling ((x * val) % tot)) pcts
+      let minNeeded = max 0 (val - sum amounts + 1)
+      excess <- choose (minNeeded, val + 1)
+      pure $ excess : amounts
 
 hardForkInitiationSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
 hardForkInitiationSpec =
