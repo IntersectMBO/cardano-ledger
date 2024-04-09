@@ -74,7 +74,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.Coin (Coin (unCoin), rationalToCoinViaCeiling)
+import Cardano.Ledger.Coin (Coin (unCoin), DeltaCoin, rationalToCoinViaCeiling, toDeltaCoin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Rules.ValidationMode (
@@ -164,7 +164,7 @@ data AlonzoUtxoPredFailure era
       ![(Integer, Integer, TxOut era)]
   | InsufficientCollateral
       -- | balance computed
-      !Coin
+      !DeltaCoin
       -- | the required collateral for the given fee
       !Coin
   | -- | The UTxO entries which have the wrong kind of script
@@ -325,7 +325,7 @@ validateCollateral pp txb utxoCollateral =
       failureIf (null utxoCollateral) NoCollateralInputs
     ]
   where
-    bal = coinBalance (UTxO utxoCollateral)
+    bal = toDeltaCoin $ coinBalance (UTxO utxoCollateral)
 
 -- > (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
 validateScriptsNotPaidUTxO ::
@@ -343,10 +343,10 @@ validateInsufficientCollateral ::
   ) =>
   PParams era ->
   TxBody era ->
-  Coin ->
+  DeltaCoin ->
   Test (AlonzoUtxoPredFailure era)
 validateInsufficientCollateral pp txBody bal =
-  failureUnless (Val.scale (100 :: Int) bal >= Val.scale collPerc txfee) $
+  failureUnless (Val.scale (100 :: Int) bal >= Val.scale collPerc (toDeltaCoin txfee)) $
     InsufficientCollateral bal $
       rationalToCoinViaCeiling $
         (fromIntegral collPerc * unCoin txfee) % 100

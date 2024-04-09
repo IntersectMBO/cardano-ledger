@@ -54,7 +54,7 @@ import Cardano.Ledger.BaseTypes (
   mkTxIx,
   mkTxIxPartial,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto
@@ -1248,9 +1248,9 @@ testExpectSuccessInvalid
         tx' = txFromTestCaseData pf tc
         (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
         initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
-        colBallance = Collateral.collAdaBalance txBody' (Map.fromList collateral')
+        DeltaCoin colBallance = Collateral.collAdaBalance txBody' (Map.fromList collateral')
         expectedUtxo = UTxO $ Map.fromList (inputs' ++ refInputs' ++ newColReturn txBody')
-        expectedState = smartUTxOState (pp pf) expectedUtxo (Coin 0) colBallance def mempty
+        expectedState = smartUTxOState (pp pf) expectedUtxo (Coin 0) (Coin colBallance) def mempty
         assumedInvalidTx = trustMeP pf False tx'
      in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedInvalidTx (Right expectedState)
 
@@ -1367,7 +1367,7 @@ genericBabbageFailures pf =
             testExpectFailure
               pf
               (incorrectCollateralTotal pf)
-              (injectFailure (IncorrectTotalCollateralField (Coin 5) (Coin 6)))
+              (injectFailure (IncorrectTotalCollateralField (DeltaCoin 5) (Coin 6)))
         , testCase "inline datum and ref script and redundant script witness" $
             testExpectFailure
               pf

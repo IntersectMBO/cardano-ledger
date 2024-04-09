@@ -40,7 +40,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   natVersion,
  )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Credential (
   Credential (..),
@@ -319,7 +319,7 @@ alonzoUTXOWTests pf =
               (initUTxO pf)
               (newPParams pf $ defaultPPs ++ [CollateralPercentage 150])
               (trustMeP pf True $ validatingTx pf)
-              ( Left [injectFailure (InsufficientCollateral (Coin 5) (Coin 8))]
+              ( Left [injectFailure (InsufficientCollateral (DeltaCoin 5) (Coin 8))]
               )
         , testCase "two-phase UTxO with no datum hash" $
             testU

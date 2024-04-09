@@ -40,7 +40,6 @@ import Control.Monad ((<=<))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((%~), (&), (.~))
-import qualified Test.Cardano.Ledger.Common as Common
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.KeyPair (mkScriptAddr)
 import Test.Cardano.Ledger.Imp.Common
@@ -54,7 +53,7 @@ spec ::
   Spec
 spec = describe "Regression" $ do
   it "DeserialiseFailure on resubmitting Conway Tx with invalid plutus script #4198" $ do
-    Common.expectRightDeep_ $
+    io . expectRightDeep_ $
       decodeFullAnnotatorFromHexText @(Tx era) (eraProtVerLow @era) "Unwitnessed Tx" decCBOR $
         mconcat
           [ "84a700d9010282825820745f04573e7429be1404f9b936d208b81159f3fc4b300"

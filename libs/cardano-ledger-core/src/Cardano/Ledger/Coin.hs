@@ -19,6 +19,7 @@ module Cardano.Ledger.Coin (
   rationalToCoinViaCeiling,
   addDeltaCoin,
   toDeltaCoin,
+  fromDeltaCoin,
   integerToWord64,
   decodePositiveCoin,
   compactCoinOrError,
@@ -96,6 +97,11 @@ addDeltaCoin (Coin x) (DeltaCoin y) = Coin (x + y)
 
 toDeltaCoin :: Coin -> DeltaCoin
 toDeltaCoin (Coin x) = DeltaCoin x
+
+fromDeltaCoin :: DeltaCoin -> Maybe Coin
+fromDeltaCoin (DeltaCoin x)
+  | x < 0 = Nothing
+  | otherwise = Just $ Coin x
 
 word64ToCoin :: Word64 -> Coin
 word64ToCoin = Coin . fromIntegral

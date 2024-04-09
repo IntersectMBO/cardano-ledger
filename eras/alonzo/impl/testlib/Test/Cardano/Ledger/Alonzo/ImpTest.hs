@@ -127,7 +127,7 @@ makeCollateralInput = do
   -- TODO: make more accurate
   let collateral = Coin 10_000_000
   (_, addr) <- freshKeyAddr
-  withPostFixup pure $ sendCoinTo addr collateral
+  withFixup fixupTx $ sendCoinTo addr collateral
 
 addCollateralInput ::
   (AlonzoEraImp era, ScriptsNeeded era ~ AlonzoScriptsNeeded era) =>

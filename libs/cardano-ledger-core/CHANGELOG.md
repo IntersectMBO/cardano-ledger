@@ -2,6 +2,7 @@
 
 ## 1.11.1.0
 
+* Add `fromDeltaCoin`
 * Add trivial `Inject` instances for `()` and `Void`
 * Add `byteStringToNum`
 * Add functions `rdRewardCoin`, `rdDepositCoin` in UMap.hs
@@ -9,6 +10,7 @@
 
 ## 1.11.0.0
 
+* Add `shouldSatisfyExpr`
 * Add `EraRuleEvent`, `InjectRuleEvent`
 * Add `NFData` instance for `Obligations`, `PlutusWithContext`, `PlutusDatums`
 * Add `Eq`, `Show`, `Generic` instances for `PlutusDatums`
