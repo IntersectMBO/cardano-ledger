@@ -36,7 +36,16 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import qualified Test.Control.State.Transition.Trace as Trace
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
-import qualified Test.QuickCheck as QC
+import Test.QuickCheck (
+  Arbitrary,
+  Property,
+  arbitrary,
+  choose,
+  elements,
+  oneof,
+  shrink,
+  withMaxSuccess,
+ )
 import Prelude hiding (id)
 
 -- | Commit-reveal transition system, where data hashes are committed and then
@@ -103,10 +112,10 @@ isCommit Commit {} = True
 isCommit _ = False
 
 newtype Data = Data {getData :: (Id, Int)}
-  deriving (Eq, Show, EncCBOR, Ord, QC.Arbitrary)
+  deriving (Eq, Show, EncCBOR, Ord, Arbitrary)
 
 newtype Id = Id {getId :: Int}
-  deriving (Eq, Show, EncCBOR, Ord, QC.Arbitrary)
+  deriving (Eq, Show, EncCBOR, Ord, Arbitrary)
 
 data CRPredicateFailure hashAlgo (hashToDataMap :: Type -> Type -> Type) commitData
   = InvalidReveal Data
@@ -181,26 +190,26 @@ instance
   sigGen () () CRSt {hashToData, committedHashes} =
     if Set.null committedHashes
       then genCommit
-      else QC.oneof [genCommit, genReveal]
+      else oneof [genCommit, genReveal]
     where
       genCommit = do
-        id <- Id <$> QC.arbitrary
-        n <- QC.choose (-2, 2)
+        id <- Id <$> arbitrary
+        n <- choose (-2, 2)
         let newData = Data (id, n)
         pure $! Commit (hashEncCBOR minBound newData) newData
       genReveal = do
-        hashToReveal <- QC.elements $ Set.toList committedHashes
+        hashToReveal <- elements $ Set.toList committedHashes
         let dataToReveal = hashToData Map.! hashToReveal
         pure $! Reveal dataToReveal
 
   shrinkSignal (Commit _ someData) =
-    recalculateCommit <$> QC.shrink someData
+    recalculateCommit <$> shrink someData
     where
       recalculateCommit shrunkData =
         Commit
           (hashEncCBOR minBound shrunkData)
           shrunkData
-  shrinkSignal (Reveal someData) = Reveal <$> QC.shrink someData
+  shrinkSignal (Reveal someData) = Reveal <$> shrink someData
 
 -- | Check that unique data is generated. This is supposed to fail, since
 -- there's nothing in the STS that prevents two commits of the same data. The
@@ -209,7 +218,7 @@ instance
 -- > commit (hash d0) -> reveal d0 -> commit (hash d0)
 --
 -- where it shouldn't be possible to shrink @d0@ any further.
-prop_qc_UniqueData :: QC.Property
+prop_qc_UniqueData :: Property
 prop_qc_UniqueData =
   STS.Gen.forAllTrace @(CR ShortHash Map Data) @()
     ()
@@ -229,9 +238,9 @@ prop_qc_UniqueData =
 -- > commit (hash d0) -> commit (hash d0)
 --
 -- where it shouldn't be possible to shrink @d0@ any further.
-prop_qc_OnlyValidSignals :: QC.Property
+prop_qc_OnlyValidSignals :: Property
 prop_qc_OnlyValidSignals =
-  QC.withMaxSuccess 5000 $ -- We need to test a large
+  withMaxSuccess 5000 $ -- We need to test a large
   -- number of times to make sure
   -- we get a collision in the
   -- generated data
