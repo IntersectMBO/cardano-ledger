@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-alonzo-test
-version:       1.2.1.0
+version:       1.2.1.1
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -59,7 +59,7 @@ library
         containers,
         data-default-class,
         microlens,
-        plutus-ledger-api ^>=1.23.0,
+        plutus-ledger-api ^>=1.25.0,
         QuickCheck,
         random,
         serialise,

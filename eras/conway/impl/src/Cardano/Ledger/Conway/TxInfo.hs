@@ -410,11 +410,11 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
         , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
         , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
         , PV2.txInfoDCert = txCerts
-        , PV2.txInfoWdrl = PV2.fromList $ Alonzo.transTxBodyWithdrawals txBody
+        , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
         , PV2.txInfoValidRange = timeRange
         , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
         , PV2.txInfoRedeemers = plutusRedeemers
-        , PV2.txInfoData = PV2.fromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+        , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
         , PV2.txInfoId = Alonzo.transTxBodyId txBody
         }
     where
@@ -451,7 +451,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
         , PV3.txInfoValidRange = timeRange
         , PV3.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
         , PV3.txInfoRedeemers = plutusRedeemers
-        , PV3.txInfoData = PV3.fromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+        , PV3.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
         , PV3.txInfoId = transTxBodyId txBody
         , PV3.txInfoVotes = transVotingProcedures (txBody ^. votingProceduresTxBodyL)
         , PV3.txInfoProposalProcedures =
@@ -607,7 +607,7 @@ transGovAction proxy = \case
 
 transMap :: (t1 -> k) -> (t2 -> v) -> Map.Map t1 t2 -> PV3.Map k v
 transMap transKey transValue =
-  PV3.fromList . map (\(k, v) -> (transKey k, transValue v)) . Map.toList
+  PV3.unsafeFromList . map (\(k, v) -> (transKey k, transValue v)) . Map.toList
 
 transVotingProcedures ::
   VotingProcedures era -> PV3.Map PV3.Voter (PV3.Map PV3.GovernanceActionId PV3.Vote)

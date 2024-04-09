@@ -199,7 +199,7 @@ transTxRedeemers ::
   Tx era ->
   Either (ContextError era) (PV2.Map (PlutusScriptPurpose l) PV2.Redeemer)
 transTxRedeemers proxy tx =
-  PV2.fromList
+  PV2.unsafeFromList
     <$> mapM
       (transRedeemerPtr proxy (tx ^. bodyTxL))
       (Map.toList (unRedeemers $ tx ^. witsTxL . rdmrsTxWitsL))
@@ -341,11 +341,11 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV2 (BabbageEra c) where
         , PV2.txInfoFee = transCoinToValue (txBody ^. feeTxBodyL)
         , PV2.txInfoMint = Alonzo.transMintValue (txBody ^. mintTxBodyL)
         , PV2.txInfoDCert = txCerts
-        , PV2.txInfoWdrl = PV2.fromList $ Alonzo.transTxBodyWithdrawals txBody
+        , PV2.txInfoWdrl = PV2.unsafeFromList $ Alonzo.transTxBodyWithdrawals txBody
         , PV2.txInfoValidRange = timeRange
         , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
         , PV2.txInfoRedeemers = plutusRedeemers
-        , PV2.txInfoData = PV2.fromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+        , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
         , PV2.txInfoId = Alonzo.transTxBodyId txBody
         }
     where
