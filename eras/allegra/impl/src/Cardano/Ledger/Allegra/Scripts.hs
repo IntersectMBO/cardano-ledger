@@ -78,6 +78,8 @@ import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
+import Data.Aeson (ToJSON (..), (.=))
+import qualified Data.Aeson as Aeson
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (fromShort)
 import Data.Sequence.Strict as Seq (StrictSeq (Empty, (:<|)), fromList)
@@ -105,6 +107,16 @@ decodeVI = RecD ValidityInterval <! From <! From
 
 instance DecCBOR ValidityInterval where
   decCBOR = decode decodeVI
+
+instance ToJSON ValidityInterval where
+  toJSON vi =
+    Aeson.object $
+      [ k .= v
+      | (k, SJust v) <-
+          [ ("invalidBefore", invalidBefore vi)
+          , ("invalidHereafter", invalidHereafter vi)
+          ]
+      ]
 
 -- ==================================================================
 

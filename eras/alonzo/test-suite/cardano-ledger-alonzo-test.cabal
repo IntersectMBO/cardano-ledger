@@ -14,7 +14,7 @@ category:      Network
 build-type:    Simple
 data-files:
     golden/*.cbor
-    golden/mainnet-alonzo-genesis.json
+    golden/*.json
 
 source-repository head
     type:     git

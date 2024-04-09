@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.7.0.1
+## 1.7.1.0
 
-*
+* Add `ToJSON` instances for `FailureDescription` and `TagMismatchDescription`
 
 ## 1.7.0.0
 

@@ -133,6 +133,7 @@ import qualified Cardano.Ledger.UTxO as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData (..))
+import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (
@@ -153,7 +154,7 @@ import NoThunks.Class (NoThunks)
 -- to validate. This is added by the block creator when constructing the block.
 newtype IsValid = IsValid Bool
   deriving (Eq, Show, Generic)
-  deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR)
+  deriving newtype (NoThunks, NFData, ToCBOR, EncCBOR, DecCBOR, ToJSON)
 
 data AlonzoTx era = AlonzoTx
   { body :: !(TxBody era)
