@@ -7,13 +7,12 @@
 module Test.Control.State.Transition.Examples.Sum where
 
 import Control.State.Transition
-import Hedgehog (Property, assert, forAll, property, withTests)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import Test.Control.State.Transition.Generator
 import Test.Control.State.Transition.Trace
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as STS.Gen
-import qualified Test.QuickCheck as QC
+import Test.QuickCheck (Property, arbitrary, shrink, withMaxSuccess)
 
 data SUM
 
@@ -44,26 +43,7 @@ instance HasTrace SUM where
 
 -- | This property is intended to be used to manually inspect the
 -- counterexamples that we get.
-prop_Bounded :: Property
-prop_Bounded = property $ do
-  tr <- forAll (trace @SUM () 100)
-  assert (lastState tr < 10)
-
-prop_onlyValidTracesAreGenerated :: Property
-prop_onlyValidTracesAreGenerated =
-  withTests 300 $ onlyValidSignalsAreGenerated @SUM () 100
-
--- | Property that simply classifies the trace length distribution.
-prop_Classified :: Property
-prop_Classified = withTests 300 $
-  property $ do
-    let tl = 100
-    tr <- forAll (trace @SUM () tl)
-    classifyTraceLength tr tl 10
-    assert True
-
--- | See 'prop_Bounded'
-prop_qc_Bounded :: QC.Property
+prop_qc_Bounded :: Property
 prop_qc_Bounded =
   STS.Gen.forAllTrace @SUM @()
     ()
@@ -71,19 +51,19 @@ prop_qc_Bounded =
     ()
     ((< 10) . lastState)
 
--- | See 'prop_Classified'.
-prop_qc_Classified :: QC.Property
+-- | Property that simply classifies the trace length distribution.
+prop_qc_Classified :: Property
 prop_qc_Classified =
   STS.Gen.traceLengthsAreClassified @SUM () 100 10 ()
 
-prop_qc_onlyValidSignalsAreGenerated :: QC.Property
+prop_qc_onlyValidSignalsAreGenerated :: Property
 prop_qc_onlyValidSignalsAreGenerated =
-  QC.withMaxSuccess 300 $
+  withMaxSuccess 300 $
     STS.Gen.onlyValidSignalsAreGenerated @SUM @() () 100 ()
 
 instance STS.Gen.HasTrace SUM () where
   envGen _ = pure ()
 
-  sigGen _traceEnv _env _st = QC.arbitrary
+  sigGen _traceEnv _env _st = arbitrary
 
-  shrinkSignal = QC.shrink
+  shrinkSignal = shrink

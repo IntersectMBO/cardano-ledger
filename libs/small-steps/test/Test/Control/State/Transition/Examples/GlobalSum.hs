@@ -13,11 +13,10 @@ import Control.Monad.Reader
 import Control.State.Transition.Extended
 import Data.Foldable (foldl')
 import Data.Void (Void)
-import Test.Tasty
-import Test.Tasty.HUnit
+import Test.Hspec
 import Prelude hiding (sum)
 
-data Ops = Ops
+newtype Ops = Ops
   { opSum :: [Int] -> Int
   }
 
@@ -52,23 +51,19 @@ instance STS GSUM where
         return $! st + sum xs
     ]
 
-tests :: TestTree
-tests =
-  testGroup
-    "STS.Extended"
-    [ testCase "Sum" $ withSum @=? Right 55
-    , testCase "Product" $ withProduct @=? Right 3628800
-    , testCase "Sum/Lazy Events" $ withLazyEventsSum @=? Right 55
-    , testGroup
-        "Sum/Validate"
-        [ testCase "Filtered" $
-            withLblSum (ValidateSuchThat ("testLabel" `notElem`)) @=? Left [NoFailure]
-        , testCase "Unfiltered" $
-            withLblSum (ValidateSuchThat (const True)) @=? Left [NoFailure, NoFailure]
-        , testCase "None" $
-            withLblSum ValidateNone @=? Right 56
-        ]
-    ]
+spec :: Spec
+spec =
+  describe "STS.Extended" $ do
+    it "Sum" $ withSum `shouldBe` Right 55
+    it "Product" $ withProduct `shouldBe` Right 3628800
+    it "Sum/Lazy Events" $ withLazyEventsSum `shouldBe` Right 55
+    describe "Sum/Validate" $ do
+      it "Filtered" $
+        withLblSum (ValidateSuchThat ("testLabel" `notElem`)) `shouldBe` Left [NoFailure]
+      it "Unfiltered" $
+        withLblSum (ValidateSuchThat (const True)) `shouldBe` Left [NoFailure, NoFailure]
+      it "None" $
+        withLblSum ValidateNone `shouldBe` Right 56
   where
     inputs = [1 .. 10]
     ctx = TRC ((), 0, inputs)
