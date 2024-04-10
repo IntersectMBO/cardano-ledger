@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -16,7 +17,7 @@ module Cardano.Ledger.Shelley.Rules.Newpp (
   PredicateFailure,
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (Globals (quorum), ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
@@ -32,18 +33,22 @@ import Cardano.Ledger.Shelley.PParams (
   emptyPPPUpdates,
   hasLegalProtVerUpdate,
  )
+import Cardano.Ledger.Shelley.Rules.Ppup (votedFuturePParams)
 import Control.DeepSeq (NFData)
 import Control.Monad (forM_)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   STS (..),
   TRC (..),
   TransitionRule,
   judgmentContext,
+  liftSTS,
   (?!),
  )
 import Data.Default.Class (Default, def)
+import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyNewppState era
@@ -106,13 +111,14 @@ newPpTransition = do
       == utxosDeposited utxoState
         ?! UnexpectedDepositPot obligationCurr (utxosDeposited utxoState)
 
+  coreNodeQuorum <- liftSTS $ asks quorum
   case mppNew of
     Just ppNew
       | toInteger (ppNew ^. ppMaxTxSizeL)
           + toInteger (ppNew ^. ppMaxBHSizeL)
           < toInteger (ppNew ^. ppMaxBBSizeL) ->
-          pure $ NewppState ppNew $ updatePpup ppupState ppNew
-    _ -> pure $ NewppState pp $ updatePpup ppupState pp
+          pure $ NewppState ppNew $ updatePpup coreNodeQuorum ppupState ppNew
+    _ -> pure $ NewppState pp $ updatePpup coreNodeQuorum ppupState pp
 
 -- | Update the protocol parameter updates by clearing out the proposals
 -- and making the future proposals become the new proposals,
@@ -122,16 +128,19 @@ updatePpup ::
   , GovState era ~ ShelleyGovState era
   , ProtVerAtMost era 8
   ) =>
+  Word64 ->
   GovState era ->
   PParams era ->
   ShelleyGovState era
-updatePpup ppupState pp =
+updatePpup !coreNodeQuorum ppupState pp =
   ppupState
-    & proposalsL .~ ps
-    & futureProposalsL .~ emptyPPPUpdates
+    { sgsCurProposals = curProposals
+    , sgsFutureProposals = emptyPPPUpdates
+    , sgsFuturePParams = votedFuturePParams curProposals pp coreNodeQuorum
+    }
   where
     ProposedPPUpdates newProposals = sgsFutureProposals ppupState
-    ps =
+    curProposals =
       if all (hasLegalProtVerUpdate pp) newProposals
         then ProposedPPUpdates newProposals
         else emptyPPPUpdates

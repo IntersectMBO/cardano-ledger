@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -19,11 +20,12 @@ module Cardano.Ledger.Shelley.Rules.Ppup (
   PredicateFailure,
   VotingPeriod (..),
   PPUPPredFailure,
+  votedFuturePParams,
 )
 where
 
 import Cardano.Ledger.BaseTypes (
-  Globals (stabilityWindow),
+  Globals (quorum, stabilityWindow),
   ProtVer,
   ShelleyBase,
   StrictMaybe (..),
@@ -59,8 +61,9 @@ import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
 import qualified Data.Foldable as F (find)
+import qualified Data.Map as Map
 import Data.Set (Set)
-import Data.Word (Word8)
+import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -204,10 +207,13 @@ ppupTransitionNonEmpty = do
         then do
           (currentEpochNo == targetEpochNo)
             ?! PPUpdateWrongEpoch currentEpochNo targetEpochNo VoteForThisEpoch
+          let curProposals = ProposedPPUpdates (eval (pupS ⨃ pup))
+          !coreNodeQuorum <- liftSTS $ asks quorum
           pure $
             pps
-              { sgsCurProposals = ProposedPPUpdates (eval (pupS ⨃ pup))
+              { sgsCurProposals = curProposals
               , sgsFutureProposals = ProposedPPUpdates fpupS
+              , sgsFuturePParams = votedFuturePParams curProposals pp coreNodeQuorum
               }
         else do
           (succ currentEpochNo == targetEpochNo)
@@ -220,3 +226,34 @@ ppupTransitionNonEmpty = do
 
 type PPUPPredFailure era = EraRuleFailure "PPUP" era
 {-# DEPRECATED PPUPPredFailure "In favor of `EraRuleFailure` PPUP era" #-}
+
+-- | If at least @n@ nodes voted to change __the same__ protocol parameters to
+-- __the same__ values, return the given protocol parameters updated to these
+-- values. Here @n@ is the quorum needed.
+votedFuturePParams ::
+  forall era.
+  EraPParams era =>
+  ProposedPPUpdates era ->
+  -- | Protocol parameters to which the change will be applied.
+  PParams era ->
+  -- | Quorum needed to change the protocol parameters.
+  Word64 ->
+  Maybe (PParams era)
+votedFuturePParams (ProposedPPUpdates pppu) pp quorumN =
+  let votes =
+        Map.foldr
+          (\vote -> Map.insertWith (+) vote 1)
+          (Map.empty :: Map.Map (PParamsUpdate era) Word64)
+          pppu
+      consensus = Map.filter (>= quorumN) votes
+   in case Map.keys consensus of
+        -- NOTE that `quorumN` is a global constant, and that we require
+        -- it to be strictly greater than half the number of genesis nodes.
+        -- The keys in the `pup` correspond to the genesis nodes,
+        -- and therefore either:
+        --   1) `consensus` is empty, or
+        --   2) `consensus` has exactly one element.
+        [ppu] -> Just $ applyPPUpdates pp ppu
+        -- NOTE that `updatePParams` corresponds to the union override right
+        -- operation in the formal spec.
+        _ -> Nothing
