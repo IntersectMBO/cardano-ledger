@@ -3,6 +3,7 @@
 ## 1.11.0.0
 
 * Introduce `futurePParamsGovStateL`, `futurePParamsShelleyGovStateL` and `sgsFuturePParams`
+* Deprecate `votedValue` in favor of `votedFuturePParams`.
 
 ### `testlib`
 

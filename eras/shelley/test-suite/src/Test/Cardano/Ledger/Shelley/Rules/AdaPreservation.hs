@@ -57,9 +57,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   rs,
  )
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
-import Cardano.Ledger.Shelley.Rules (
-  votedValue,
- )
+import Cardano.Ledger.Shelley.Rules (votedFuturePParams)
 import Cardano.Ledger.Shelley.Rules.Reports (
   showCred,
   showIR,
@@ -242,7 +240,7 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
     oldPoolDeposit = psDeposits . certPState . lsCertState $ lsOld
     newPoolDeposit = psDeposits . certPState . lsCertState $ lsNew
 
-    proposal = votedValue (sgsCurProposals . utxosGovState . lsUTxOState $ lsOld) currPP 5
+    proposal = votedFuturePParams (sgsCurProposals . utxosGovState $ lsUTxOState lsOld) currPP 5
     obligationMsgs = case proposal of
       Nothing -> []
       Just proposal' ->
