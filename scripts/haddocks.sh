@@ -32,7 +32,6 @@ HADDOCK_OPTS=(
   --haddock-all
   --haddock-html
   --haddock-hyperlink-source
-  --haddock-internal
   --haddock-option "--show-all"
   --haddock-option "--use-unicode"
   --haddock-option="--base-url=.."
