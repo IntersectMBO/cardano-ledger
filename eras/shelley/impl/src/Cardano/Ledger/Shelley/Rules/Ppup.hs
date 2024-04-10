@@ -57,6 +57,7 @@ import Cardano.Ledger.Slot (
   (*-),
  )
 import Control.DeepSeq (NFData)
+import Control.Monad (guard)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
@@ -239,21 +240,24 @@ votedFuturePParams ::
   -- | Quorum needed to change the protocol parameters.
   Word64 ->
   Maybe (PParams era)
-votedFuturePParams (ProposedPPUpdates pppu) pp quorumN =
+votedFuturePParams (ProposedPPUpdates pppu) pp quorumN = do
   let votes =
         Map.foldr
           (\vote -> Map.insertWith (+) vote 1)
           (Map.empty :: Map.Map (PParamsUpdate era) Word64)
           pppu
       consensus = Map.filter (>= quorumN) votes
-   in case Map.keys consensus of
-        -- NOTE that `quorumN` is a global constant, and that we require
-        -- it to be strictly greater than half the number of genesis nodes.
-        -- The keys in the `pup` correspond to the genesis nodes,
-        -- and therefore either:
-        --   1) `consensus` is empty, or
-        --   2) `consensus` has exactly one element.
-        [ppu] -> Just $ applyPPUpdates pp ppu
-        -- NOTE that `updatePParams` corresponds to the union override right
-        -- operation in the formal spec.
-        _ -> Nothing
+  -- NOTE that `quorumN` is a global constant, and that we require
+  -- it to be strictly greater than half the number of genesis nodes.
+  -- The keys in the `pup` correspond to the genesis nodes,
+  -- and therefore either:
+  --   1) `consensus` is empty, or
+  --   2) `consensus` has exactly one element.
+  [ppu] <- Just $ Map.keys consensus
+  -- NOTE that `applyPPUpdates` corresponds to the union override right
+  -- operation in the formal spec.
+  let ppNew = applyPPUpdates pp ppu
+  guard $
+    toInteger (ppNew ^. ppMaxTxSizeL) + toInteger (ppNew ^. ppMaxBHSizeL)
+      < toInteger (ppNew ^. ppMaxBBSizeL)
+  pure ppNew

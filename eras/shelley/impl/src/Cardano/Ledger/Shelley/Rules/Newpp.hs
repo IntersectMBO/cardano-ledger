@@ -46,6 +46,7 @@ import Control.State.Transition (
   (?!),
  )
 import Data.Default.Class (Default, def)
+import Data.Maybe (fromMaybe)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -112,13 +113,7 @@ newPpTransition = do
         ?! UnexpectedDepositPot obligationCurr (utxosDeposited utxoState)
 
   coreNodeQuorum <- liftSTS $ asks quorum
-  case mppNew of
-    Just ppNew
-      | toInteger (ppNew ^. ppMaxTxSizeL)
-          + toInteger (ppNew ^. ppMaxBHSizeL)
-          < toInteger (ppNew ^. ppMaxBBSizeL) ->
-          pure $ NewppState ppNew $ updatePpup coreNodeQuorum ppupState ppNew
-    _ -> pure $ NewppState pp $ updatePpup coreNodeQuorum ppupState pp
+  pure $ updatePpup coreNodeQuorum ppupState $ fromMaybe pp mppNew
 
 -- | Update the protocol parameter updates by clearing out the proposals
 -- and making the future proposals become the new proposals,
@@ -131,13 +126,14 @@ updatePpup ::
   Word64 ->
   GovState era ->
   PParams era ->
-  ShelleyGovState era
+  ShelleyNewppState era
 updatePpup !coreNodeQuorum ppupState pp =
-  ppupState
-    { sgsCurProposals = curProposals
-    , sgsFutureProposals = emptyPPPUpdates
-    , sgsFuturePParams = votedFuturePParams curProposals pp coreNodeQuorum
-    }
+  NewppState pp $
+    ppupState
+      { sgsCurProposals = curProposals
+      , sgsFutureProposals = emptyPPPUpdates
+      , sgsFuturePParams = votedFuturePParams curProposals pp coreNodeQuorum
+      }
   where
     ProposedPPUpdates newProposals = sgsFutureProposals ppupState
     curProposals =
