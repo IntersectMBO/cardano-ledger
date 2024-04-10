@@ -100,14 +100,29 @@ import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Core (EraPParams (..))
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.HKD (HKD, HKDFunctor (..), HKDNoUpdate, NoUpdate (..))
-import Cardano.Ledger.Plutus.CostModels (decodeValidAndUnknownCostModels)
+import Cardano.Ledger.HKD (
+  HKD,
+  HKDApplicative (hkdLiftA2),
+  HKDFunctor (..),
+  HKDNoUpdate,
+  NoUpdate (..),
+ )
+import Cardano.Ledger.Plutus.CostModels (
+  CostModel,
+  decodeCostModelFailHard,
+  decodeValidAndUnknownCostModels,
+  encodeCostModel,
+  mkCostModel,
+  mkCostModels,
+ )
+import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson hiding (Encoding, Value, decode, encode)
 import qualified Data.Aeson as Aeson
 import Data.Default.Class (Default (def))
 import Data.Functor.Identity (Identity)
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..), isSNothing)
 import Data.Proxy
 import Data.Set (Set)
@@ -580,6 +595,7 @@ data UpgradeConwayPParams f = UpgradeConwayPParams
   , ucppDRepDeposit :: !(HKD f Coin)
   , ucppDRepActivity :: !(HKD f EpochInterval)
   , ucppMinFeeRefScriptCostPerByte :: !(HKD f NonNegativeInterval)
+  , ucppPlutusV3CostModel :: !(HKD f CostModel)
   }
   deriving (Generic)
 
@@ -603,20 +619,6 @@ instance NoThunks (UpgradeConwayPParams StrictMaybe)
 
 instance NFData (UpgradeConwayPParams StrictMaybe)
 
-instance Default (UpgradeConwayPParams Identity) where
-  def =
-    UpgradeConwayPParams
-      { ucppPoolVotingThresholds = def
-      , ucppDRepVotingThresholds = def
-      , ucppCommitteeMinSize = 0
-      , ucppCommitteeMaxTermLength = EpochInterval 0
-      , ucppGovActionLifetime = EpochInterval 0
-      , ucppGovActionDeposit = Coin 0
-      , ucppDRepDeposit = Coin 0
-      , ucppDRepActivity = EpochInterval 0
-      , ucppMinFeeRefScriptCostPerByte = minBound
-      }
-
 instance Default (UpgradeConwayPParams StrictMaybe) where
   def =
     UpgradeConwayPParams
@@ -629,6 +631,7 @@ instance Default (UpgradeConwayPParams StrictMaybe) where
       , ucppDRepDeposit = SNothing
       , ucppDRepActivity = SNothing
       , ucppMinFeeRefScriptCostPerByte = SNothing
+      , ucppPlutusV3CostModel = SNothing
       }
 
 instance EncCBOR (UpgradeConwayPParams Identity) where
@@ -644,6 +647,7 @@ instance EncCBOR (UpgradeConwayPParams Identity) where
         !> To ucppDRepDeposit
         !> To ucppDRepActivity
         !> To ucppMinFeeRefScriptCostPerByte
+        !> E encodeCostModel ucppPlutusV3CostModel
 
 instance DecCBOR (UpgradeConwayPParams Identity) where
   decCBOR =
@@ -658,6 +662,7 @@ instance DecCBOR (UpgradeConwayPParams Identity) where
         <! From
         <! From
         <! From
+        <! D (decodeCostModelFailHard PlutusV3)
 
 instance Crypto c => EraPParams (ConwayEra c) where
   type PParamsHKD f (ConwayEra c) = ConwayPParams f (ConwayEra c)
@@ -1144,6 +1149,7 @@ upgradeConwayPParamsHKDPairs UpgradeConwayPParams {..} =
   , ("dRepDeposit", (toJSON @Coin) ucppDRepDeposit)
   , ("dRepActivity", (toJSON @EpochInterval) ucppDRepActivity)
   , ("minFeeRefScriptCostPerByte", (toJSON @NonNegativeInterval) ucppMinFeeRefScriptCostPerByte)
+  , ("plutusV3CostModel", (toJSON @CostModel) ucppPlutusV3CostModel)
   ]
 
 instance FromJSON (UpgradeConwayPParams Identity) where
@@ -1159,10 +1165,11 @@ instance FromJSON (UpgradeConwayPParams Identity) where
         <*> o .: "dRepDeposit"
         <*> o .: "dRepActivity"
         <*> o .: "minFeeRefScriptCostPerByte"
+        <*> (either (fail . show) pure . mkCostModel PlutusV3 =<< o .: "plutusV3CostModel")
 
 upgradeConwayPParams ::
   forall f c.
-  HKDFunctor f =>
+  HKDApplicative f =>
   UpgradeConwayPParams f ->
   PParamsHKD f (BabbageEra c) ->
   ConwayPParams f (ConwayEra c)
@@ -1183,7 +1190,17 @@ upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
     , cppProtocolVersion = toNoUpdate @f @ProtVer bppProtocolVersion
     , cppMinPoolCost = THKD bppMinPoolCost
     , cppCoinsPerUTxOByte = THKD bppCoinsPerUTxOByte
-    , cppCostModels = THKD bppCostModels
+    , cppCostModels =
+        THKD $
+          -- We add the PlutusV3 CostModel from ConwayGenesis to the ConwayPParams here
+          hkdLiftA2 @f
+            updateCostModels
+            bppCostModels
+            ( hkdMap
+                (Proxy @f)
+                (mkCostModels . Map.singleton PlutusV3)
+                ucppPlutusV3CostModel
+            )
     , cppPrices = THKD bppPrices
     , cppMaxTxExUnits = THKD bppMaxTxExUnits
     , cppMaxBlockExUnits = THKD bppMaxBlockExUnits

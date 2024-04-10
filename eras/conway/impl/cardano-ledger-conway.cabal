@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-conway
-version:            1.13.1.0
+version:            1.14.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -90,7 +90,7 @@ library
         cardano-ledger-allegra ^>=1.4,
         cardano-ledger-alonzo ^>=1.8,
         cardano-ledger-babbage ^>=1.8,
-        cardano-ledger-core ^>=1.11,
+        cardano-ledger-core ^>=1.11.1,
         cardano-ledger-mary ^>=1.5,
         cardano-ledger-shelley ^>=1.10,
         cardano-slotting,
@@ -126,6 +126,7 @@ library testlib
         Test.Cardano.Ledger.Conway.Imp.RatifySpec
         Test.Cardano.Ledger.Conway.Proposals
         Test.Cardano.Ledger.Conway.TreeDiff
+        Test.Cardano.Ledger.Conway.Genesis
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -183,7 +184,6 @@ test-suite tests
     build-depends:
         aeson,
         base,
-        cardano-data,
         cardano-ledger-core:testlib,
         cardano-ledger-allegra,
         cardano-ledger-alonzo:testlib,
