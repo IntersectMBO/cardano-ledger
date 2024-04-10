@@ -67,6 +67,7 @@ import Cardano.Ledger.Conway.Rules.Gov (
   GovEnv (..),
  )
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
+import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow ()
 import Cardano.Ledger.Credential (Credential)
@@ -146,6 +147,9 @@ instance InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure (ConwayEra c) where
   injectFailure = ConwayUtxowFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (ConwayEra c) where
+  injectFailure = ConwayUtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ConwayUtxoPredFailure (ConwayEra c) where
   injectFailure = ConwayUtxowFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" BabbageUtxoPredFailure (ConwayEra c) where

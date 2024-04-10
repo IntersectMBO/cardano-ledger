@@ -10,8 +10,7 @@
 
 module Test.Cardano.Ledger.Conway.Binary.Regression where
 
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure (..))
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..), TxIx (..))
 import Cardano.Ledger.Binary (
   EncCBOR (..),
@@ -33,7 +32,7 @@ import Cardano.Ledger.Conway.Core (
   eraProtVerLow,
   txIdTx,
  )
-import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..))
+import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..), ConwayUtxoPredFailure (..))
 import Cardano.Ledger.Plutus.Language (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Monad ((<=<))
@@ -134,7 +133,7 @@ spec = describe "Regression" $ do
         pFailure <- impAnn "Expecting failure" $ expectLeftDeepExpr res
         let
           hasInsufficientCollateral
-            (ConwayUtxowFailure (UtxoFailure (AlonzoInBabbageUtxoPredFailure (InsufficientCollateral _ _)))) = True
+            (ConwayUtxowFailure (UtxoFailure (InsufficientCollateral _ _))) = True
           hasInsufficientCollateral _ = False
         impAnn "Fails with InsufficientCollateral" $
           pFailure `shouldSatisfyExpr` any hasInsufficientCollateral

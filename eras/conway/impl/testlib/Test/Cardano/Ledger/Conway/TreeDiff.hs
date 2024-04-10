@@ -233,3 +233,10 @@ instance
   ToExpr (GovProcedures era)
 
 instance ToExpr (PParamsHKD Identity era) => ToExpr (GovEnv era)
+
+instance
+  ( ToExpr (Value era)
+  , ToExpr (TxOut era)
+  , ToExpr (PredicateFailure (EraRule "UTXOS" era))
+  ) =>
+  ToExpr (ConwayUtxoPredFailure era)

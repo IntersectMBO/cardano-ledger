@@ -29,15 +29,14 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Rules (
-  BabbageUTXO,
   BabbageUtxoPredFailure,
   BabbageUtxowPredFailure (..),
   babbageUtxowTransition,
  )
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOW)
-import Cardano.Ledger.Conway.Rules.Utxo ()
+import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXO, ConwayUTXOW)
+import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeeded)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
@@ -75,8 +74,11 @@ instance InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure (ConwayEra c) where
 instance InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure (ConwayEra c) where
   injectFailure = AlonzoInBabbageUtxowPredFailure . ShelleyInAlonzoUtxowPredFailure
 
+instance InjectRuleFailure "UTXOW" ConwayUtxoPredFailure (ConwayEra c) where
+  injectFailure = UtxoFailure . injectFailure
+
 instance InjectRuleFailure "UTXOW" BabbageUtxoPredFailure (ConwayEra c) where
-  injectFailure = UtxoFailure
+  injectFailure = UtxoFailure . injectFailure
 
 instance InjectRuleFailure "UTXOW" AlonzoUtxoPredFailure (ConwayEra c) where
   injectFailure = UtxoFailure . injectFailure
@@ -125,14 +127,14 @@ instance
 
 instance
   ( Era era
-  , STS (BabbageUTXO era)
-  , PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era
+  , STS (ConwayUTXO era)
+  , PredicateFailure (EraRule "UTXO" era) ~ ConwayUtxoPredFailure era
   , Event (EraRule "UTXO" era) ~ AlonzoUtxoEvent era
   , BaseM (ConwayUTXOW era) ~ ShelleyBase
   , PredicateFailure (ConwayUTXOW era) ~ BabbageUtxowPredFailure era
   , Event (ConwayUTXOW era) ~ AlonzoUtxowEvent era
   ) =>
-  Embed (BabbageUTXO era) (ConwayUTXOW era)
+  Embed (ConwayUTXO era) (ConwayUTXOW era)
   where
   wrapFailed = UtxoFailure
   wrapEvent = WrappedShelleyEraEvent . UtxoEvent

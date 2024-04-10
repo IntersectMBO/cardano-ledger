@@ -466,7 +466,7 @@ findMismatch Babbage (Babbage.UtxoFailure (AlonzoInBabbageUtxoPredFailure (Utxos
 findMismatch
   Conway
   ( Babbage.UtxoFailure
-      (AlonzoInBabbageUtxoPredFailure (UtxosFailure x@(Conway.ValidationTagMismatch _ _)))
+      (Conway.UtxosFailure x@(Conway.ValidationTagMismatch _ _))
     ) = Just $ injectFailure x
 findMismatch _ _ = Nothing
 

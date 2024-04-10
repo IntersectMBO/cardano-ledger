@@ -55,6 +55,7 @@ import Cardano.Ledger.BaseTypes (
   mkTxIxPartial,
  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway (ConwayUtxoPredFailure (..))
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto
@@ -1449,7 +1450,7 @@ babbageFeatures =
         testExpectUTXOFailure
           Conway
           (commonReferenceScript Conway)
-          (BabbageNonDisjointRefInputs (pure commonTxIn))
+          (Conway.BabbageNonDisjointRefInputs (pure commonTxIn))
     ]
 
 testExpectUTXOFailure ::

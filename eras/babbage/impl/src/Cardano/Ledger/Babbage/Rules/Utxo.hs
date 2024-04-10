@@ -346,13 +346,17 @@ utxoTransition ::
   , BabbageEraTxBody era
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
-  , EraRule "UTXO" era ~ BabbageUTXO era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
   , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
+  , Environment (EraRule "UTXO" era) ~ UtxoEnv era
+  , State (EraRule "UTXO" era) ~ UTxOState era
+  , Signal (EraRule "UTXO" era) ~ AlonzoTx era
+  , BaseM (EraRule "UTXO" era) ~ ShelleyBase
+  , STS (EraRule "UTXO" era)
   , -- In this function we we call the UTXOS rule, so we need some assumptions
-    Embed (EraRule "UTXOS" era) (BabbageUTXO era)
+    Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era

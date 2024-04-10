@@ -1228,7 +1228,7 @@ ppUTXO Allegra x = ppAllegraUtxoPredFailure x
 ppUTXO Mary x = ppAllegraUtxoPredFailure x
 ppUTXO Alonzo x = ppAlonzoUtxoPredFailure x
 ppUTXO Babbage x = ppBabbageUtxoPredFailure x
-ppUTXO Conway x = ppBabbageUtxoPredFailure x
+ppUTXO Conway x = ppConwayUtxoPredFailure x
 
 ppLEDGERS :: Proof era -> PredicateFailure (EraRule "LEDGERS" era) -> PDoc
 ppLEDGERS p@Shelley x = unReflect ppShelleyLedgersPredFailure p x
@@ -1300,6 +1300,107 @@ ppShelleyDelegsPredFailure p (DelplFailure x) = ppDELPL p x
 
 instance Reflect era => PrettyA (ShelleyDelegsPredFailure era) where
   prettyA = ppShelleyDelegsPredFailure reify
+
+ppConwayUtxoPredFailure ::
+  forall era.
+  Reflect era =>
+  ConwayRules.ConwayUtxoPredFailure era ->
+  PDoc
+ppConwayUtxoPredFailure = \case
+  ConwayRules.UtxosFailure yy -> ppSexp "UtxosFailure" [ppUTXOS @era reify yy]
+  ConwayRules.BadInputsUTxO txins -> ppSexp "BadInputsUTxO" [ppSet pcTxIn txins]
+  ConwayRules.OutsideValidityIntervalUTxO vi slot ->
+    ppRecord
+      "OutsideValidityIntervalUTxO"
+      [ ("provided interval", ppValidityInterval vi)
+      , ("current slot", pcSlotNo slot)
+      ]
+  ConwayRules.MaxTxSizeUTxO actual maxs ->
+    ppRecord "MaxTxSizeUTxO" [("Actual", ppInteger actual), ("max transaction size", ppInteger maxs)]
+  ConwayRules.InputSetEmptyUTxO -> ppString "InputSetEmptyUTxO"
+  ConwayRules.FeeTooSmallUTxO computed supplied ->
+    ppRecord
+      "FeeTooSmallUTxO"
+      [ ("min fee for this transaction", pcCoin computed)
+      , ("fee supplied by this transaction", pcCoin supplied)
+      ]
+  ConwayRules.ValueNotConservedUTxO consumed produced ->
+    ppRecord
+      "ValueNotConservedUTxO"
+      [("coin consumed", pcVal @era reify consumed), ("coin produced", pcVal @era reify produced)]
+  ConwayRules.WrongNetwork n add ->
+    ppRecord
+      "WrongNetwork"
+      [ ("expected network id", ppNetwork n)
+      , ("set of addresses with wrong network id", ppSet pcAddr add)
+      ]
+  ConwayRules.WrongNetworkWithdrawal n accnt ->
+    ppRecord
+      "WrongNetworkWithdrawal"
+      [ ("expected network id", ppNetwork n)
+      , ("set reward address with wrong network id", ppSet pcRewardAccount accnt)
+      ]
+  ConwayRules.OutputTooSmallUTxO xs ->
+    ppRecord
+      "OutputTooSmallUTxO"
+      [("list of supplied transaction outputs that are too small", ppList (pcTxOut reify) xs)]
+  ConwayRules.OutputBootAddrAttrsTooBig xs ->
+    ppRecord
+      "OutputBootAddrAttrsTooBig"
+      [("list of supplied bad transaction outputs", ppList (pcTxOut reify) xs)]
+  ConwayRules.OutputTooBigUTxO xs ->
+    ppSexp
+      "OutputTooBigUTxO"
+      [ ppList
+          ( \(a, b, c) ->
+              ppRecord'
+                ""
+                [("actual size", ppInt a), ("PParam max value", ppInt b), ("TxOut", pcTxOut reify c)]
+          )
+          xs
+      ]
+  ConwayRules.InsufficientCollateral c1 c2 ->
+    ppRecord
+      "InsufficientCollateral"
+      [ ("balance computed", prettyA c1)
+      , ("the required collateral for the given fee", pcCoin c2)
+      ]
+  ConwayRules.ScriptsNotPaidUTxO u -> ppSexp "ScriptsNotPaidUTxO" [pcUTxO reify u]
+  ConwayRules.ExUnitsTooBigUTxO e1 e2 ->
+    ppRecord
+      "ExUnitsTooBigUTxO"
+      [ ("Max EXUnits from the protocol parameters", pcExUnits e1)
+      , ("EXUnits supplied", pcExUnits e2)
+      ]
+  ConwayRules.CollateralContainsNonADA v -> ppSexp "CollateralContainsNonADA" [pcVal (reify @era) v]
+  ConwayRules.WrongNetworkInTxBody n1 n2 ->
+    ppRecord
+      "WrongNetworkInTxBody"
+      [ ("Actual Network ID", ppNetwork n1)
+      , ("Network ID in transaction body", ppNetwork n2)
+      ]
+  ConwayRules.OutsideForecast slot -> ppRecord "OutsideForecast" [("slot number outside consensus forecast range", pcSlotNo slot)]
+  ConwayRules.TooManyCollateralInputs n1 n2 ->
+    ppRecord
+      "TooManyCollateralInputs"
+      [ ("Max allowed collateral inputs", ppNatural n1)
+      , ("Number of collateral inputs", ppNatural n2)
+      ]
+  ConwayRules.NoCollateralInputs -> ppSexp " NoCollateralInputs" []
+  ConwayRules.IncorrectTotalCollateralField c1 c2 ->
+    ppRecord
+      "IncorrectTotalCollateralField"
+      [("collateral provided", prettyA c1), ("collateral declared", pcCoin c2)]
+  ConwayRules.BabbageOutputTooSmallUTxO xs ->
+    ppSexp "BabbageOutputTooSmallUTxO" [ppList (ppPair (pcTxOut reify) pcCoin) xs]
+  ConwayRules.BabbageNonDisjointRefInputs xs ->
+    ppSexp "BabbageNonDisjointRefInputs" [ppList pcTxIn (toList xs)]
+
+instance
+  Reflect era =>
+  PrettyA (ConwayRules.ConwayUtxoPredFailure era)
+  where
+  prettyA = ppConwayUtxoPredFailure
 
 ppBabbageUtxoPredFailure :: Reflect era => BabbageUtxoPredFailure era -> PDoc
 ppBabbageUtxoPredFailure (AlonzoInBabbageUtxoPredFailure x) = ppAlonzoUtxoPredFailure x
