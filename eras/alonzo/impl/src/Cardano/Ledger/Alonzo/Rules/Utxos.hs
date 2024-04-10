@@ -49,6 +49,7 @@ import Cardano.Ledger.BaseTypes (
   ShelleyBase,
   StrictMaybe,
   epochInfo,
+  kindObject,
   systemStart,
  )
 import Cardano.Ledger.Binary (
@@ -89,6 +90,8 @@ import Cardano.Slotting.Slot (SlotNo)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (ReaderT, asks)
 import Control.State.Transition.Extended
+import Data.Aeson (ToJSON (..), (.=))
+import qualified Data.Aeson as Aeson
 import Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base64 as B64
 import Data.List (intercalate)
@@ -347,6 +350,16 @@ instance DecCBOR FailureDescription where
     1 -> SumD PlutusFailure <! From <! From
     n -> Invalid n
 
+instance ToJSON FailureDescription where
+  toJSON (PlutusFailure t _bs) =
+    kindObject
+      "FailureDescription"
+      [ "error" .= Aeson.String "PlutusFailure"
+      , "description" .= t
+      -- Plutus context can be pretty big, therefore it's omitted in JSON
+      -- "reconstructionDetail" .= bs
+      ]
+
 scriptFailureToFailureDescription :: Crypto c => ScriptFailure c -> FailureDescription
 scriptFailureToFailureDescription (ScriptFailure msg pwc) =
   PlutusFailure msg (B64.encode $ Plain.serialize' pwc)
@@ -368,6 +381,19 @@ instance DecCBOR TagMismatchDescription where
       dec 0 = SumD PassedUnexpectedly
       dec 1 = SumD FailedUnexpectedly <! From
       dec n = Invalid n
+
+instance ToJSON TagMismatchDescription where
+  toJSON = \case
+    PassedUnexpectedly ->
+      kindObject
+        "TagMismatchDescription"
+        ["error" .= Aeson.String "PassedUnexpectedly"]
+    FailedUnexpectedly forReasons ->
+      kindObject
+        "TagMismatchDescription"
+        [ "error" .= Aeson.String "FailedUnexpectedly"
+        , "reconstruction" .= forReasons
+        ]
 
 data AlonzoUtxosPredFailure era
   = -- | The 'isValid' tag on the transaction is incorrect. The tag given
