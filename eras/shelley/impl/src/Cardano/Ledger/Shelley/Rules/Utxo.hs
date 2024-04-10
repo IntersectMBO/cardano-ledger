@@ -130,6 +130,8 @@ utxoEnvCertStateL = lens ueCertState $ \x y -> x {ueCertState = y}
 deriving instance Show (PParams era) => Show (UtxoEnv era)
 deriving instance Eq (PParams era) => Eq (UtxoEnv era)
 
+instance (Era era, NFData (PParams era)) => NFData (UtxoEnv era)
+
 data UtxoEvent era
   = TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
   | UpdateEvent (Event (EraRule "PPUP" era))

@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -12,6 +11,7 @@ module Cardano.Ledger.Tools (
   estimateMinFeeTx,
   addDummyWitsTx,
   integralToByteStringN,
+  byteStringToNum,
   boom,
 )
 where
@@ -34,7 +34,7 @@ import Cardano.Ledger.Keys (
   asWitness,
  )
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
-import Data.Bits (Bits, shiftR)
+import Data.Bits (Bits (..), shiftR)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.Default.Class (def)
@@ -207,6 +207,9 @@ estimateMinFeeTx pp tx numKeyWits numByronKeyWits refScriptsSize =
 
 integralToByteStringN :: (Integral i, Bits i) => Int -> i -> ByteString
 integralToByteStringN len = fst . BS.unfoldrN len (\n -> Just (fromIntegral n, n `shiftR` 8))
+
+byteStringToNum :: (Bits i, Num i) => ByteString -> i
+byteStringToNum = BS.foldr (\w i -> i `shiftL` 8 + fromIntegral w) 0
 
 -- | Create dummy witnesses and add them to the transaction
 addDummyWitsTx ::

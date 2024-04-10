@@ -1,8 +1,9 @@
 # Version history for `cardano-ledger-core`
 
-## 1.11.0.1
+## 1.11.1.0
 
-*
+* Add trivial `Inject` instances for `()` and `Void`
+* Add `byteStringToNum`
 
 ## 1.11.0.0
 

@@ -272,6 +272,24 @@ from [the Shelley ledger spec](./eras/shelley/formal-spec)).
 4. Add a link to the package near the bottom of [flake.nix](./flake.nix),
    following the existing examples.
 
+### To update the conformance test
+
+To update the conformance test, do the following:
+
+1. Clone the [Agda specification repo](https://github.com/IntersectMBO/formal-ledger-specifications)
+2. Run `nix-build -A ledger.hsSrc` in the cloned repo, take note of the output path
+   in the nix store
+3. Clone the [executable spec repo](https://github.com/input-output-hk/cardano-ledger-executable-spec)
+4. Replace the content of the repo cloned above with the files at `/nix/store/<output of the nix-build>/haskell/Ledger/*`
+   ```bash
+   rm -rf cardano-ledger-executable-spec/*
+   cp -r  /nix/store/<output of the nix-build>/haskell/Ledger/*  cardano-ledger-executable-spec
+   ```
+   Then make a commit and push it.
+5. In the `cardano-ledger` repo, edit `cabal.project`. Look for
+   `source-repository-package` that points to the executable spec repo, and
+   update the `tag` and `sha256` entries in that block.
+
 ### Additional documentation
 
 You can find additional documentation on the nix infrastructure used in this

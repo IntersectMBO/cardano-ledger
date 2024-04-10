@@ -2,7 +2,12 @@
 
 ## 1.13.1.0
 
+* Add `foldrVotingProcedures`
 * Fix typo in `ToJSON` instance of `ConwayGovState`
+
+### `testlib`
+
+* Add `ToExpr` instance for `GovProcedures`
 
 ## 1.13.0.0
 

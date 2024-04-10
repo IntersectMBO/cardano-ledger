@@ -1,19 +1,19 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Constrained.V2.Conway.LEDGER where
+module Test.Cardano.Ledger.Constrained.Conway.Ledger where
 
-import Cardano.Ledger.Api
 import Cardano.Ledger.Shelley.API.Types
 
 import Constrained
 
-import Test.Cardano.Ledger.Constrained.V2.Conway
-import Test.Cardano.Ledger.Constrained.V2.Conway.UTXO
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.Utxo
 
 ledgerTxSpec ::
   IsConwayUniv fn =>

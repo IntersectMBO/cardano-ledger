@@ -1,10 +1,10 @@
-module Main where
+module Main (main) where
 
-import qualified Test.Cardano.Ledger.Conformance as Conformance
-import Test.Cardano.Ledger.Imp.Common (describe, ledgerTestMain)
+import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Conformance.Spec.Conway as Conway
 
 main :: IO ()
 main =
   ledgerTestMain $
     describe "Conformance" $ do
-      Conformance.spec
+      Conway.spec
