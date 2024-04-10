@@ -177,9 +177,9 @@ bbodyTransition =
               , UnserialisedBlock bhview txsSeq
               )
           ) -> do
-        let txs = fromTxSeq @era txsSeq
-            actualBodySize = bBodySize @era (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashTxSeq @era txsSeq
+        let txs = fromTxSeq txsSeq
+            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
+            actualBodyHash = hashTxSeq txsSeq
 
         actualBodySize
           == fromIntegral (bhviewBSize bhview)
@@ -196,7 +196,7 @@ bbodyTransition =
         -- Note that this may not actually be a stake pool - it could be a genesis key
         -- delegate. However, this would only entail an overhead of 7 counts, and it's
         -- easier than differentiating here.
-        let hkAsStakePool = coerceKeyRole . bhviewID $ bhview
+        let hkAsStakePool = coerceKeyRole $ bhviewID bhview
             slot = bhviewSlot bhview
         firstSlotNo <- liftSTS $ do
           ei <- asks epochInfoPure
