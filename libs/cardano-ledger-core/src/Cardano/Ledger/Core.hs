@@ -39,6 +39,7 @@ module Cardano.Ledger.Core (
   hashScriptTxWitsL,
   Value,
   EraPParams (..),
+  mkCoinTxOut,
 
   -- * Era
   module Cardano.Ledger.Core.Era,
@@ -104,7 +105,7 @@ import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.Val (Val (..))
+import Cardano.Ledger.Val (Val (..), inject)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString as BS
@@ -424,6 +425,10 @@ isAdaOnlyTxOutF = to $ \txOut ->
 toCompactPartial :: (HasCallStack, Val a) => a -> CompactForm a
 toCompactPartial v =
   fromMaybe (error $ "Illegal value in TxOut: " <> show v) $ toCompact v
+
+-- A version of mkBasicTxOut, which has only a Coin (no multiAssets) for every EraTxOut era.
+mkCoinTxOut :: EraTxOut era => Addr (EraCrypto era) -> Coin -> TxOut era
+mkCoinTxOut addr = mkBasicTxOut addr . inject
 
 -- | A value is something which quantifies a transaction output.
 type family Value era :: Type

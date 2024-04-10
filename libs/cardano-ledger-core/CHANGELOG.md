@@ -4,6 +4,8 @@
 
 * Add trivial `Inject` instances for `()` and `Void`
 * Add `byteStringToNum`
+* Add functions `rdRewardCoin`, `rdDepositCoin` in UMap.hs
+* Add function `mkCoinTxOut` in Core.hs
 
 ## 1.11.0.0
 

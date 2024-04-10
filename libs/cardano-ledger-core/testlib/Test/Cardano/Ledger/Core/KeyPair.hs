@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Core.KeyPair (
   mkWitnessVKey,
   mkWitnessesVKey,
   makeWitnessesFromScriptKeys,
+  mkKeyHashWitFunPair,
   mkVKeyRewardAccount,
   mkKeyPair,
   mkKeyPairWithSeed,
@@ -162,6 +163,24 @@ makeWitnessesFromScriptKeys ::
 makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
   let witKeys = Map.restrictKeys hashKeyMap scriptHashes
    in mkWitnessesVKey txbodyHash (Map.elems witKeys)
+
+-- | When wrting a test which needs a KeyHash, and you will also later need a witness
+--   for that function, use 'keyHashWitFunPair'. Since one cannot make a witness until
+--   one has SafeHash of the TxBody that the KeyHash is embedded. The second part of the
+--   pair is a (SafeHash to WitVKey) function. Use it something like this
+--   do (key,witfun) <- keyHashWitFunPair
+--      txbody <- ... key ...
+--      let safehash = hashAnnotated txbody
+--          tx = ... txbody ... (witfun safehash) ...
+mkKeyHashWitFunPair ::
+  forall kr.
+  Gen
+    ( KeyHash kr StandardCrypto
+    , SafeHash StandardCrypto EraIndependentTxBody -> WitVKey 'Witness StandardCrypto
+    )
+mkKeyHashWitFunPair = do
+  keyPair@(KeyPair vk _) <- arbitrary @(KeyPair kr StandardCrypto)
+  pure (hashKey vk, \safehash -> mkWitnessVKey safehash keyPair)
 
 mkVKeyRewardAccount ::
   Crypto c =>
