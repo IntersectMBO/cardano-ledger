@@ -991,7 +991,8 @@ prepareLinearization p = do
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
 genFromPreds :: (MonadGenError m, BaseUniverse fn) => Pred fn -> GenT m Env
-genFromPreds (optimisePred -> preds) = do
+-- TODO: remove this once optimisePred does a proper fixpoint computation
+genFromPreds (optimisePred . optimisePred -> preds) = do
   -- NOTE: this is just lazy enough that the work of flattening, computing dependencies,
   -- and linearizing is memoized in properties that use `genFromPreds`.
   linear <- runGE $ prepareLinearization preds

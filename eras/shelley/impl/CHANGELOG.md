@@ -6,6 +6,7 @@
 
 ### `testlib`
 
+* Add `Testable` instance for `ImpTestM`
 * Export `impNESL` instead of of `impNESG` from `ImpTest`
 * Replace `initImpNES` with `initImpTestState` and change its return type to MonadState
 * Add functions to Shelley `ImpTest`:

@@ -569,6 +569,14 @@ newtype ImpTestM era a = ImpTestM {_unImpTestM :: ReaderT (ImpTestEnv era) IO a}
     , MonadReader (ImpTestEnv era)
     )
 
+instance (Testable a, ShelleyEraImp era) => Testable (ImpTestM era a) where
+  property m = property $ MkGen $ \qcGen qcSize ->
+    ioProperty $ do
+      preppedState <-
+        execImpTestM (Just qcSize) (mixinCurrentGen def qcGen) $
+          addRootTxOut >> initImpTestState
+      evalImpTestM (Just qcSize) preppedState m
+
 instance MonadWriter [SomeSTSEvent era] (ImpTestM era) where
   writer (x, evs) = (impEventsL %= (<> evs)) $> x
   listen act = do
@@ -1107,43 +1115,53 @@ logEntry e = impLogL %= (<> pretty loc <> "\t" <> pretty e <> line)
 logToExpr :: (HasCallStack, ToExpr a) => a -> ImpTestM era ()
 logToExpr e = logEntry (showExpr e)
 
+instance ShelleyEraImp era => Default (ImpTestState era) where
+  def =
+    ImpTestState
+      { impNES = initShelleyImpNES
+      , impRootTxIn = TxIn (mkTxId 0) minBound
+      , impKeyPairs = mempty
+      , impByronKeyPairs = mempty
+      , impNativeScripts = mempty
+      , impLastTick = 0
+      , impGlobals = testGlobals
+      , impLog = mempty
+      , impGen = mkQCGen 2024
+      , impEvents = mempty
+      }
+
 withImpState ::
   ShelleyEraImp era =>
   SpecWith (ImpTestState era) ->
   Spec
 withImpState = withImpStateModified id
 
+addRootTxOut ::
+  forall era m.
+  ( MonadGen m
+  , MonadState (ImpTestState era) m
+  , ShelleyEraImp era
+  ) =>
+  m ()
+addRootTxOut = do
+  (rootKeyHash, _) <- freshKeyPair @era
+  let rootAddr = Addr Testnet (KeyHashObj rootKeyHash) StakeRefNull
+      rootTxOut = mkBasicTxOut rootAddr $ inject rootCoin
+  impNESL . nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+    %= (<> UTxO (Map.singleton (impRootTxIn @era def) rootTxOut))
+  where
+    rootCoin = Coin 1_000_000_000
+
 withImpStateModified ::
+  forall era.
   ShelleyEraImp era =>
   (ImpTestState era -> ImpTestState era) ->
   SpecWith (ImpTestState era) ->
   Spec
 withImpStateModified f =
   beforeAll $
-    execImpTestM Nothing (f impTestState0) $
+    execImpTestM Nothing (f def) $
       addRootTxOut >> initImpTestState
-  where
-    impTestState0 =
-      ImpTestState
-        { impNES = initShelleyImpNES
-        , impRootTxIn = rootTxIn
-        , impKeyPairs = mempty
-        , impByronKeyPairs = mempty
-        , impNativeScripts = mempty
-        , impLastTick = 0
-        , impGlobals = testGlobals
-        , impLog = mempty
-        , impGen = mkQCGen 2024
-        , impEvents = mempty
-        }
-    rootCoin = Coin 1_000_000_000
-    rootTxIn = TxIn (mkTxId 0) minBound
-    addRootTxOut = do
-      (rootKeyHash, _) <- freshKeyPair
-      let rootAddr = Addr Testnet (KeyHashObj rootKeyHash) StakeRefNull
-          rootTxOut = mkBasicTxOut rootAddr $ inject rootCoin
-      impNESL . nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
-        %= (<> UTxO (Map.singleton rootTxIn rootTxOut))
 
 -- | Creates a fresh @SafeHash@
 freshSafeHash :: Era era => ImpTestM era (SafeHash (EraCrypto era) a)

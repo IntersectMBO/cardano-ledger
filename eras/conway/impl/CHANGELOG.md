@@ -2,6 +2,7 @@
 
 ## 1.14.0 0
 
+* Remove `gePrevGovActionIds` from `GovEnv`
 * Add lenses:
   * `dvtHardForkInitiationL`
   * `dvtMotionNoConfidenceL`

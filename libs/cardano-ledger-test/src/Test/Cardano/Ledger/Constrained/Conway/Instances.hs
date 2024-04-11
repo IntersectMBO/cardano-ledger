@@ -2,12 +2,12 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -49,6 +49,9 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances (
   gasCommitteeVotes_,
   gasDRepVotes_,
   gasProposalProcedure_,
+  ProposalsSplit (..),
+  genProposalsSplit,
+  proposalSplitSum,
 ) where
 
 import Cardano.Chain.Common (
@@ -115,6 +118,7 @@ import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
 import Constrained hiding (Value)
 import Constrained qualified as C
+import Constrained.Base (HasGenHint (..))
 import Constrained.Spec.Map
 import Control.Monad.Trans.Fail.String
 import Crypto.Hash (Blake2b_224)
@@ -142,12 +146,14 @@ import Data.Typeable
 import Data.VMap (VMap)
 import Data.VMap qualified as VMap
 import Data.Word
+import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 import PlutusLedgerApi.V1 qualified as PV1
 import System.Random
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils
+import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.QuickCheck hiding (Args, Fun, forAll)
 
 type ConwayUnivFns = StringFn : TreeFn : BaseFns
@@ -760,7 +766,8 @@ instance HasSimpleRep Vote
 instance IsConwayUniv fn => HasSpec fn Vote
 
 instance HasSimpleRep (GovActionId c)
-instance (IsConwayUniv fn, Crypto c) => HasSpec fn (GovActionId c)
+instance (IsConwayUniv fn, Crypto c) => HasSpec fn (GovActionId c) where
+  shrinkWithTypeSpec _ _ = []
 
 instance HasSimpleRep GovActionIx
 instance IsConwayUniv fn => HasSpec fn GovActionIx
@@ -917,7 +924,7 @@ instance HasSimpleRep (NoUpdate a)
 instance (IsConwayUniv fn, Typeable a) => HasSpec fn (NoUpdate a)
 
 instance HasSimpleRep (THKD tag StrictMaybe a) where
-  type SimpleRep (THKD tag StrictMaybe a) = SimpleRep (StrictMaybe a)
+  type SimpleRep (THKD tag StrictMaybe a) = SOP (TheSop (StrictMaybe a))
   fromSimpleRep = THKD . fromSimpleRep
   toSimpleRep (THKD sm) = toSimpleRep sm
 instance (IsConwayUniv fn, Typeable tag, HasSpec fn a) => HasSpec fn (THKD tag StrictMaybe a)
@@ -1116,6 +1123,78 @@ instance HasSimpleRep (Proposals (ConwayEra StandardCrypto)) where
       mkOMap (Node a ts) = a OMap.<| foldMap mkOMap ts
 
 instance IsConwayUniv fn => HasSpec fn (Proposals (ConwayEra StandardCrypto))
+
+data ProposalsSplit = ProposalsSplit
+  { psPPChange :: Integer
+  , psHFInitiation :: Integer
+  , psUpdateCommittee :: Integer
+  , psNewConstitution :: Integer
+  , psOthers :: Integer
+  }
+  deriving (Show, Eq, Generic)
+
+instance ToExpr ProposalsSplit
+
+proposalSplitSum :: ProposalsSplit -> Integer
+proposalSplitSum ProposalsSplit {..} =
+  sum
+    [ psPPChange
+    , psHFInitiation
+    , psUpdateCommittee
+    , psNewConstitution
+    , psOthers
+    ]
+
+-- | Randomly splits a number into the given number of terms. Might undershoot
+-- due to rounding
+splitInto :: Integer -> Int -> Gen [Integer]
+splitInto budget numSplits = do
+  splits <- vectorOf numSplits $ arbitrary @(NonNegative Int)
+  let unwrappedSplits = fmap getNonNegative splits
+  let splitsTotal = toInteger $ sum unwrappedSplits
+  pure $
+    if splitsTotal == 0 || budget == 0
+      then replicate numSplits 0
+      else (* (budget `div` splitsTotal)) . toInteger <$> unwrappedSplits
+
+genProposalsSplit :: Integer -> Gen ProposalsSplit
+genProposalsSplit maxTotal = do
+  actualMaxTotal <- choose (0, maxTotal)
+  splits <- actualMaxTotal `splitInto` 5
+  case splits of
+    [ psPPChange
+      , psHFInitiation
+      , psUpdateCommittee
+      , psNewConstitution
+      , psOthers
+      ] -> pure ProposalsSplit {..}
+    l ->
+      error $
+        "impossible: should have exactly 5 values, but has "
+          <> show (length l)
+
+instance
+  ( HasSpec fn (SimpleRep (Proposals era))
+  , HasSpec fn (Proposals era)
+  , HasSimpleRep (Proposals era)
+  , IsConwayUniv fn
+  , era ~ ConwayEra StandardCrypto
+  ) =>
+  HasGenHint fn (Proposals era)
+  where
+  type Hint (Proposals era) = ProposalsSplit
+  giveHint ProposalsSplit {..} = constrained' $ \ppuTree hfTree comTree conTree others ->
+    [ limitForest psPPChange ppuTree
+    , limitForest psHFInitiation hfTree
+    , limitForest psUpdateCommittee comTree
+    , limitForest psNewConstitution conTree
+    , [genHint psOthers others]
+    ]
+    where
+      limitForest limit forest =
+        [ genHint limit (snd_ forest)
+        , forAll (snd_ forest) $ genHint (Just 2, limit)
+        ]
 
 instance HasSimpleRep (EnactSignal (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (EnactSignal (ConwayEra StandardCrypto))

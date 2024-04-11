@@ -2,11 +2,13 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conformance.Orphans () where
+module Test.Cardano.Ledger.Conformance.Orphans where
 
 import GHC.Generics (Generic)
 import Lib
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
+import Test.Cardano.Ledger.Conformance.Utils
+import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr (..))
 
 deriving instance Generic GovActionState
 
@@ -62,6 +64,8 @@ deriving instance Eq UTxOEnv
 
 instance NFData GovAction
 
+instance NFData TxId
+
 instance NFData UTxOState
 
 instance NFData Vote
@@ -100,9 +104,18 @@ instance NFData Tx
 
 instance NFData UTxOEnv
 
+instance ToExpr Credential where
+  toExpr (KeyHashObj h) = App "KeyHashObj" [agdaHashToExpr h]
+  toExpr (ScriptObj h) = App "ScriptObj" [agdaHashToExpr h]
+
 instance ToExpr GovAction
 
+instance ToExpr GovRole
+
 instance ToExpr Vote
+
+instance ToExpr TxId where
+  toExpr (MkTxId x) = App "TxId" [agdaHashToExpr x]
 
 instance ToExpr GovActionState
 
@@ -112,6 +125,26 @@ instance ToExpr GovVote
 
 instance ToExpr GovSignal
 
+instance ToExpr PParams
+
 instance ToExpr GovEnv
 
 instance ToExpr EnactState
+
+instance ToExpr VDeleg
+
+instance ToExpr TxCert
+
+instance ToExpr TxBody
+
+instance ToExpr AgdaEmpty
+
+instance ToExpr Tag
+
+instance ToExpr TxWitnesses
+
+instance ToExpr Tx
+
+instance ToExpr UTxOState
+
+instance ToExpr UTxOEnv

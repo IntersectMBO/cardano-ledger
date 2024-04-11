@@ -27,6 +27,7 @@ import Constrained
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Lens.Micro qualified as L
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 
@@ -34,7 +35,7 @@ govEnvSpec ::
   IsConwayUniv fn =>
   Specification fn (GovEnv (ConwayEra StandardCrypto))
 govEnvSpec = constrained $ \ge ->
-  match ge $ \_ _ pp _ _ _ ->
+  match ge $ \_ _ pp _ _ ->
     satisfies pp pparamsSpec
 
 -- NOTE: it is probably OK not to check uniqueness of ids here, because a clash
@@ -44,11 +45,11 @@ govProposalsSpec ::
   IsConwayUniv fn =>
   GovEnv (ConwayEra StandardCrypto) ->
   Specification fn (Proposals (ConwayEra StandardCrypto))
-govProposalsSpec GovEnv {geEpoch, gePPolicy, gePrevGovActionIds} =
+govProposalsSpec GovEnv {geEpoch, gePPolicy} =
   constrained $ \props ->
     match props $ \ppupTree hardForkTree committeeTree constitutionTree unorderedProposals ->
       [ -- Protocol parameter updates
-        wellFormedChildren (lit $ coerce grPParamUpdate) ppupTree
+        wellFormedChildren ppupTree
       , allGASInTree ppupTree $ \gas ->
           [ isCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas)
           , onCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas) $
@@ -60,7 +61,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy, gePrevGovActionIds} =
       , forAll (snd_ ppupTree) (genHint treeGenHint)
       , genHint listSizeHint (snd_ ppupTree)
       , -- Hard forks
-        wellFormedChildren (lit $ coerce grHardFork) hardForkTree
+        wellFormedChildren hardForkTree
       , allGASInTree hardForkTree $ \gas ->
           isCon @"HardForkInitiation" (pProcGovAction_ . gasProposalProcedure_ $ gas)
       , allGASAndChildInTree hardForkTree $ \gas gas' ->
@@ -82,7 +83,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy, gePrevGovActionIds} =
       , forAll (snd_ hardForkTree) (genHint treeGenHint)
       , genHint listSizeHint (snd_ hardForkTree)
       , -- Committee
-        wellFormedChildren (lit $ coerce grCommittee) committeeTree
+        wellFormedChildren committeeTree
       , -- TODO: it would be nice to have a trick like `isCon` that can
         -- do disjunction without having to write down all the cases.
         allGASInTree committeeTree $ \gas ->
@@ -102,7 +103,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy, gePrevGovActionIds} =
       , forAll (snd_ committeeTree) (genHint treeGenHint)
       , genHint listSizeHint (snd_ committeeTree)
       , -- Constitution
-        wellFormedChildren (lit $ coerce grConstitution) constitutionTree
+        wellFormedChildren constitutionTree
       , allGASInTree constitutionTree $ \gas ->
           isCon @"NewConstitution" (pProcGovAction_ . gasProposalProcedure_ $ gas)
       , forAll (snd_ constitutionTree) (genHint treeGenHint)
@@ -128,7 +129,6 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy, gePrevGovActionIds} =
       , genHint listSizeHint unorderedProposals
       ]
   where
-    GovRelation {..} = gePrevGovActionIds
     treeGenHint = (Just 2, 10)
     listSizeHint = 5
 
@@ -158,13 +158,11 @@ allGASAndChildInTree t k =
 
 wellFormedChildren ::
   IsConwayUniv fn =>
-  Term fn (StrictMaybe (GovActionId StandardCrypto)) ->
   Term fn ProposalTree ->
   Pred fn
-wellFormedChildren root rootAndTrees =
-  match rootAndTrees $ \root' trees ->
-    [ assert $ root ==. root' -- The root matches the root given in the environment
-    , forAll trees $ \t ->
+wellFormedChildren rootAndTrees =
+  match rootAndTrees $ \root trees ->
+    [ forAll trees $ \t ->
         [ -- Every node just below the root has the root as its parent
           withPrevActId (rootLabel_ t) (assert . (==. root))
         , -- Every node's children have the id of the node as its parent
@@ -289,7 +287,7 @@ wfGovAction ::
   Proposals (ConwayEra StandardCrypto) ->
   Term fn (GovAction (ConwayEra StandardCrypto)) ->
   Pred fn
-wfGovAction GovEnv {gePPolicy, geEpoch, gePrevGovActionIds, gePParams} ps govAction =
+wfGovAction GovEnv {gePPolicy, geEpoch, gePParams} ps govAction =
   caseOn
     govAction
     -- ParameterChange
@@ -353,26 +351,27 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePrevGovActionIds, gePParams} ps govAct
     -- InfoAction
     (branch $ \_ -> True)
   where
+    prevGovActionIds = ps ^. pRootsL . L.to toPrevGovActionIds
     constitutionIds =
-      (gePrevGovActionIds ^. grConstitutionL)
+      (prevGovActionIds ^. grConstitutionL)
         : [ SJust $ coerce $ gasId gas
           | gas <- actions
           , NewConstitution {} <- [pProcGovAction $ gasProposalProcedure gas]
           ]
     committeeIds =
-      (gePrevGovActionIds ^. grCommitteeL)
+      (prevGovActionIds ^. grCommitteeL)
         : [ SJust $ coerce $ gasId gas
           | gas <- actions
           , isCommitteeAction (pProcGovAction $ gasProposalProcedure gas)
           ]
     ppupIds =
-      (gePrevGovActionIds ^. grPParamUpdateL)
+      (prevGovActionIds ^. grPParamUpdateL)
         : [ SJust $ coerce $ gasId gas
           | gas <- actions
           , ParameterChange {} <- [pProcGovAction $ gasProposalProcedure gas]
           ]
     hardForkIds =
-      (gePrevGovActionIds ^. grHardForkL)
+      (prevGovActionIds ^. grHardForkL)
         : [ SJust $ coerce $ gasId gas
           | gas <- actions
           , HardForkInitiation {} <- [pProcGovAction $ gasProposalProcedure gas]

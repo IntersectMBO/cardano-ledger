@@ -50,9 +50,7 @@ import Cardano.Ledger.Conway.Governance (
   GovProcedures (..),
   Proposals,
   constitutionScriptL,
-  pRootsL,
   proposalsGovStateL,
-  toPrevGovActionIds,
  )
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv, ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Certs (
@@ -390,7 +388,6 @@ ledgerTransition = do
                   (txIdTxBody txBody)
                   currentEpoch
                   pp
-                  (utxoState ^. utxosGovStateL . proposalsGovStateL . pRootsL . L.to toPrevGovActionIds)
                   (utxoState ^. utxosGovStateL . constitutionGovStateL . constitutionScriptL)
                   (certState ^. certVStateL . vsCommitteeStateL)
               , utxoState ^. utxosGovStateL . proposalsGovStateL

@@ -13,8 +13,8 @@ repository cardano-haskell-packages
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-executable-spec.git
-  tag: 324fafa887b7b6b38e15d2b505c4eec5a3247176
-  --sha256: sha256-zpQToGA04NQ3TfkeWBJXIzisvoGLfYdWNbVQ/2BfeEI=
+  tag: ac7af152d7d4c7b3ef1f3513e637c2c1e86ca30e
+  --sha256: sha256-hOdJTXA+vxm2Gh7t0hKXtSJ+3/iCoNyrzEiMzWGs6s4=
 
 index-state:
   -- Bump this if you need newer packages from Hackage

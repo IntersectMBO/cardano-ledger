@@ -1,17 +1,35 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conformance.Spec.Conway (spec) where
 
 import Cardano.Ledger.Conway (Conway)
-import Test.Cardano.Ledger.Conformance (conformsToImpl)
+import qualified Constrained as CV2
+import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), conformsToImpl, generatesWithin)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway
-import Test.Cardano.Ledger.Conway.ImpTest (withImpState)
+import Test.Cardano.Ledger.Conway.ImpTest ()
 import Test.Cardano.Ledger.Imp.Common
 
 spec :: Spec
 spec = describe "Conway conformance tests" $ do
-  withImpState @Conway $ do
-    xit "UTXO" . replicateM_ 100 $ conformsToImpl @"UTXO" @ConwayFn
-    xit "GOV" . replicateM_ 100 $ conformsToImpl @"GOV" @ConwayFn
+  xprop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
+  prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
+  describe "Generators" $ do
+    let
+      genEnv = do
+        ctx <- genExecContext @ConwayFn @"GOV" @Conway
+        CV2.genFromSpec_ $ environmentSpec @ConwayFn @"GOV" @Conway ctx
+      genSt = do
+        ctx <- genExecContext @ConwayFn @"GOV" @Conway
+        env <- genEnv
+        CV2.genFromSpec_ $ stateSpec @ConwayFn @"GOV" @Conway ctx env
+      genSig = do
+        ctx <- genExecContext @ConwayFn @"GOV" @Conway
+        env <- genEnv
+        st <- genSt
+        CV2.genFromSpec_ $ signalSpec @ConwayFn @"GOV" @Conway ctx env st
+    genEnv `generatesWithin` 3_000_000
+    genSt `generatesWithin` 40_000_000
+    genSig `generatesWithin` 60_000_000
