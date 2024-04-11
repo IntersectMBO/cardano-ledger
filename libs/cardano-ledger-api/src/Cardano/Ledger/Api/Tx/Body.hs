@@ -47,6 +47,8 @@ module Cardano.Ledger.Api.Tx.Body (
   reqSignerHashesTxBodyL,
   scriptIntegrityHashTxBodyL,
   networkIdTxBodyL,
+  redeemerPointer,
+  redeemerPointerInverse,
 
   -- * Babbage Era
   BabbageEraTxBody,

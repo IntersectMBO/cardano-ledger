@@ -3,6 +3,7 @@
 ## 1.7.1.0
 
 * Add `ToJSON` instances for `FailureDescription` and `TagMismatchDescription`
+* Undeprecate `redeemerPointer`.
 
 ## 1.7.0.0
 
