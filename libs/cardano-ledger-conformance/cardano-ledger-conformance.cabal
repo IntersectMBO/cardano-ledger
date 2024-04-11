@@ -21,7 +21,9 @@ flag asserts
 library
     exposed-modules:
         Test.Cardano.Ledger.Conformance
+        Test.Cardano.Ledger.Conformance.ConformanceSpec
         Test.Cardano.Ledger.Conformance.Spec.Conway
+        Test.Cardano.Ledger.Conformance.Utils
 
     hs-source-dirs:   src
     other-modules:
@@ -39,8 +41,10 @@ library
 
     build-depends:
         base >=4.14 && <5,
+        base16-bytestring,
         cardano-data,
         cardano-strict-containers,
+        data-default-class,
         microlens,
         mtl,
         cardano-ledger-binary,
@@ -57,7 +61,8 @@ library
         constrained-generators,
         deepseq,
         small-steps >=1.1,
-        text
+        text,
+        unliftio
 
     if !impl(ghc >=9.2)
         ghc-options: -Wno-incomplete-patterns

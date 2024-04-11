@@ -7,7 +7,6 @@
 
 module Bench.Constrained.STS where
 
-import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Crypto
@@ -21,7 +20,7 @@ govEnv = genFromSpecWithSeed 10 30 (govEnvSpec @ConwayFn)
 
 singleProposalTreeSpec :: Specification ConwayFn ProposalTree
 singleProposalTreeSpec = constrained $ \ppupTree ->
-  [ wellFormedChildren (lit SNothing) ppupTree
+  [ wellFormedChildren ppupTree
   , allGASInTree ppupTree $ \gas ->
       isCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas)
   , forAll (snd_ ppupTree) (genHint $ (Just 2, 10))

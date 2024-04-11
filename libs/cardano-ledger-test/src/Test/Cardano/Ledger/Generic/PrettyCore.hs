@@ -3514,7 +3514,6 @@ pcGovEnv GovEnv {..} =
     [ ("TxId", pcTxId geTxId)
     , ("Epoch", ppEpochNo geEpoch)
     , ("PParams", pcPParams reify gePParams)
-    , ("PrevGovActionId", pcPrevGovActionIds gePrevGovActionIds)
     ]
 
 instance Reflect era => PrettyA (GovEnv era) where

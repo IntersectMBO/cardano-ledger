@@ -71,10 +71,12 @@ import Cardano.Ledger.Conway.Governance (
   isCommitteeVotingAllowed,
   isDRepVotingAllowed,
   isStakePoolVotingAllowed,
+  pRootsL,
   proposalsActionsMap,
   proposalsAddAction,
   proposalsAddVote,
   proposalsLookupId,
+  toPrevGovActionIds,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (GovAction (..), foldrVotingProcedures)
 import Cardano.Ledger.Conway.PParams (
@@ -112,6 +114,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro
+import qualified Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
@@ -119,7 +122,6 @@ data GovEnv era = GovEnv
   { geTxId :: !(TxId (EraCrypto era))
   , geEpoch :: !EpochNo
   , gePParams :: !(PParams era)
-  , gePrevGovActionIds :: !(GovRelation StrictMaybe era)
   , gePPolicy :: !(StrictMaybe (ScriptHash (EraCrypto era)))
   , geCommitteeState :: !(CommitteeState era)
   }
@@ -357,11 +359,12 @@ govTransition ::
   TransitionRule (EraRule "GOV" era)
 govTransition = do
   TRC
-    ( GovEnv txid currentEpoch pp prevGovActionIds constitutionPolicy committeeState
+    ( GovEnv txid currentEpoch pp constitutionPolicy committeeState
       , st
       , gp
       ) <-
     judgmentContext
+  let prevGovActionIds = st ^. pRootsL . L.to toPrevGovActionIds
 
   expectedNetworkId <- liftSTS $ asks networkId
 

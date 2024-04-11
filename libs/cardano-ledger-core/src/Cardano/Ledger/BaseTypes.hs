@@ -855,6 +855,9 @@ instance Inject t () where
 instance Inject Void s where
   inject = absurd
 
+instance (Inject c a, Inject c b) => Inject c (a, b) where
+  inject x = (inject x, inject x)
+
 -- | Helper function for a common pattern of creating objects
 kindObject :: Text -> [Pair] -> Value
 kindObject name obj = object $ ("kind" .= name) : obj

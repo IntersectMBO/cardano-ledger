@@ -2,6 +2,7 @@
 
 ## 1.11.1.0
 
+* Add `Inject` instances for tuples
 * Add `umElemDRepDelegatedReward` to `UMap`. #4273
 * Add `fromDeltaCoin`
 * Add trivial `Inject` instances for `()` and `Void`
