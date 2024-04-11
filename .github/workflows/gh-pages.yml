@@ -75,7 +75,7 @@ jobs:
         git commit -qm "Updated from ${GITHUB_SHA} via ${GITHUB_EVENT_NAME}"
 
     - name: Push to gh-pages
-      uses: ad-m/github-push-action@v0.6.0
+      uses: ad-m/github-push-action@v0.8.0
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         branch: gh-pages
