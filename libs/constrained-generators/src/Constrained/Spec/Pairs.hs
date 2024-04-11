@@ -49,6 +49,10 @@ instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Prod a b) where
 
   genFromTypeSpec (Cartesian sa sb) = Prod <$> genFromSpec sa <*> genFromSpec sb
 
+  shrinkWithTypeSpec (Cartesian sa sb) (Prod a b) =
+    [Prod a' b | a' <- shrinkWithSpec sa a]
+      ++ [Prod a b' | b' <- shrinkWithSpec sb b]
+
   toPreds x (Cartesian sf ss) =
     satisfies (app fstFn x) sf
       <> satisfies (app sndFn x) ss

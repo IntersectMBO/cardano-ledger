@@ -17,6 +17,7 @@ module Constrained.Spec.Tree (BinTree (..), RoseTree (..), RoseTreeFn, roseRoot_
 import Control.DeepSeq
 import Data.Kind
 import GHC.Generics
+import Test.QuickCheck (shrinkList)
 
 import Constrained.Base
 import Constrained.Core
@@ -87,6 +88,14 @@ instance HasSpec fn a => HasSpec fn (BinTree a) where
               pure $ BinNode left a right
           , pure BinTip
           ]
+
+  shrinkWithTypeSpec _ BinTip = []
+  shrinkWithTypeSpec s (BinNode left a right) =
+    BinTip
+      : left
+      : right
+      : (BinNode left a <$> shrinkWithTypeSpec s right)
+      ++ ((\l -> BinNode l a right) <$> shrinkWithTypeSpec s left)
 
   toPreds t (BinTreeSpec sz s) =
     (forAll t $ \n -> n `satisfies` s)
@@ -159,6 +168,15 @@ instance (HasSpec fn a, Member (RoseTreeFn fn) fn) => HasSpec fn (RoseTree a) wh
         innerSpec = s <> typeSpec (Cartesian rs childrenSpec)
     fmap (uncurry RoseNode) $
       genFromSpec @fn @(a, [RoseTree a]) innerSpec
+
+  shrinkWithTypeSpec (RoseTreeSpec _ _ rs ctxSpec) (RoseNode a ts) =
+    [RoseNode a [] | not $ null ts]
+      ++ ts
+      ++ [RoseNode a' ts | a' <- shrinkWithSpec rs a]
+      ++ [RoseNode a [t] | t <- ts]
+      ++ [ RoseNode a ts'
+         | ts' <- shrinkList (shrinkWithTypeSpec (RoseTreeSpec Nothing 8000 TrueSpec ctxSpec)) ts
+         ]
 
   toPreds t (RoseTreeSpec mal sz rs s) =
     (forAll t $ \n -> n `satisfies` s)

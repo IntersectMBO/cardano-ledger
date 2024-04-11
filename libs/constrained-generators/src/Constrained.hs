@@ -40,6 +40,7 @@ module Constrained (
   genFromSpec,
   genFromSpec_,
   genFromSpecWithSeed,
+  shrinkWithSpec,
   conformsToSpec,
   conformsToSpecProp,
   giveHint,
@@ -99,6 +100,7 @@ module Constrained (
   emptyNumSpec,
   combineNumSpec,
   genFromNumSpec,
+  shrinkWithNumSpec,
   conformsToNumSpec,
   toPredsNumSpec,
   -- TODO: this is super yucky, it would be good to implement

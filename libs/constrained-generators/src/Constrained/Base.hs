@@ -620,6 +620,9 @@ class
   -- | Check conformance to the spec.
   conformsTo :: HasCallStack => a -> TypeSpec fn a -> Bool
 
+  -- | Shrink an `a` with the aide of a `TypeSpec`
+  shrinkWithTypeSpec :: TypeSpec fn a -> a -> [a]
+
   -- | Convert a spec to predicates:
   -- The key property here is:
   --   ∀ a. a `conformsTo` spec == a `conformsTo` constrained (\t -> toPreds t spec)
@@ -714,6 +717,16 @@ class
     Pred fn
   toPreds v s = toPreds (toGeneric_ v) s
 
+  default shrinkWithTypeSpec ::
+    ( HasSpec fn (SimpleRep a)
+    , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
+    , HasSimpleRep a
+    ) =>
+    TypeSpec fn a ->
+    a ->
+    [a]
+  shrinkWithTypeSpec spec a = map fromSimpleRep $ shrinkWithTypeSpec @fn spec (toSimpleRep a)
+
 data WithHasSpec fn f a where
   WithHasSpec :: HasSpec fn a => f a -> WithHasSpec fn f a
 
@@ -799,6 +812,21 @@ genFromSpec ts@(TypeSpec s cant) =
     -- starts giving us trouble.
     genFromTypeSpec @fn s `suchThatT` (`notElem` cant)
 genFromSpec (ErrorSpec e) = genError e
+
+shrinkWithSpec :: forall fn a. HasSpec fn a => Spec fn a -> a -> [a]
+-- TODO: possibly allow for ignoring the `conformsToSpec` check in the `TypeSpec`
+-- case when you know what you're doing
+shrinkWithSpec spec a = filter (`conformsToSpec` spec) $ case spec of
+  -- TODO: filter on can't if we have a known to be sound shrinker
+  TypeSpec s _ -> shrinkWithTypeSpec @fn s a
+  -- TODO: The better way of doing this is to compute the dependency graph,
+  -- shrink one variable at a time, and fixup the rest of the variables
+  SuspendedSpec {} -> shr a
+  MemberSpec {} -> shr a
+  TrueSpec -> shr a
+  ErrorSpec {} -> []
+  where
+    shr = shrinkWithTypeSpec @fn (emptySpec @fn @a)
 
 -- | A version of `genFromSpec` that simply errors if the generator fails
 genFromSpec_ :: forall fn a. (HasCallStack, HasSpec fn a) => Spec fn a -> Gen a
@@ -2463,17 +2491,19 @@ instance BaseUniverse fn => HasSpec fn () where
   emptySpec = ()
   combineSpec _ _ = typeSpec ()
   _ `conformsTo` _ = True
+  shrinkWithTypeSpec _ _ = []
   genFromTypeSpec _ = pure ()
   toPreds _ _ = TruePred
   cardinalTypeSpec _ = MemberSpec [1]
-  cardinalTrueSpec = exactSizeSpec 1 -- there are exactly two, True and False
+  cardinalTrueSpec = exactSizeSpec 1 -- there is exactly one, ()
   typeSpecOpt _ [] = TrueSpec
   typeSpecOpt _ (_ : _) = MemberSpec []
 
 -- Bool -------------------------------------------------------------------
 
 instance HasSimpleRep Bool
-instance (BaseUniverse fn, HasSpec fn ()) => HasSpec fn Bool
+instance (BaseUniverse fn, HasSpec fn ()) => HasSpec fn Bool where
+  shrinkWithTypeSpec _ = shrink
 
 -- Sum --------------------------------------------------------------------
 
@@ -2514,6 +2544,9 @@ instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Sum a b) where
     where
       emptyA = isErrorLike sa
       emptyB = isErrorLike sb
+
+  shrinkWithTypeSpec (SumSpec sa _) (SumLeft a) = SumLeft <$> shrinkWithSpec sa a
+  shrinkWithTypeSpec (SumSpec _ sb) (SumRight b) = SumRight <$> shrinkWithSpec sb b
 
   toPreds ct (SumSpec sa sb) =
     Case
@@ -2569,6 +2602,8 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
             withMode Strict $
               genFromSpec elemS `suchThatT` (`Set.notMember` s)
         go (n - 1) (Set.insert e s)
+
+  shrinkWithTypeSpec (SetSpec _ es _) as = map Set.fromList $ shrinkList (shrinkWithSpec es) (Set.toList as)
 
   toPreds s (SetSpec m es size) =
     (Assert ["Subset of " ++ show m] $ subset_ (Lit m) s)
@@ -2737,6 +2772,9 @@ instance HasSpec fn a => HasSpec fn [a] where
   genFromTypeSpec (ListSpec msz must size elemS (FoldSpec f foldS)) = do
     genFromFold must (size <> maybe TrueSpec leqSpec msz) elemS f foldS
 
+  shrinkWithTypeSpec (ListSpec _ _ _ es _) as =
+    shrinkList (shrinkWithSpec es) as
+
   conformsTo xs (ListSpec _ must size elemS foldS) =
     sizeOf xs `conformsToSpec` size
       && all (`elem` xs) must
@@ -2849,6 +2887,10 @@ genFromNumSpec (NumSpecInterval ml mu) = do
   n <- sizeT
   pureGen . choose =<< constrainInterval (ml <|> lowerBound) (mu <|> upperBound) (fromIntegral n)
 
+-- TODO: fixme (?)
+shrinkWithNumSpec :: Arbitrary n => NumSpec n -> n -> [n]
+shrinkWithNumSpec _ = shrink
+
 constrainInterval ::
   (MonadGenError m, Ord a, Num a, Show a) => Maybe a -> Maybe a -> Integer -> m (a, a)
 constrainInterval ml mu r =
@@ -2895,6 +2937,7 @@ instance BaseUniverse fn => HasSpec fn Int where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
@@ -2903,6 +2946,7 @@ instance BaseUniverse fn => HasSpec fn Integer where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalSizeSpec
@@ -2912,6 +2956,7 @@ instance BaseUniverse fn => HasSpec fn (Ratio Integer) where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
@@ -2920,6 +2965,7 @@ instance BaseUniverse fn => HasSpec fn Natural where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec (NumSpecInterval (Just lo) (Just hi)) =
@@ -2933,6 +2979,7 @@ instance BaseUniverse fn => HasSpec fn Word8 where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalSizeSpec
@@ -2943,6 +2990,7 @@ instance BaseUniverse fn => HasSpec fn Word16 where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalSizeSpec
@@ -2952,6 +3000,7 @@ instance BaseUniverse fn => HasSpec fn Word32 where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalSizeSpec
@@ -2961,6 +3010,7 @@ instance BaseUniverse fn => HasSpec fn Word64 where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
@@ -2969,6 +3019,7 @@ instance BaseUniverse fn => HasSpec fn Int8 where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalSizeSpec
@@ -2978,6 +3029,7 @@ instance BaseUniverse fn => HasSpec fn Int16 where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalSizeSpec
@@ -2987,6 +3039,7 @@ instance BaseUniverse fn => HasSpec fn Int32 where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalSizeSpec
@@ -2996,6 +3049,7 @@ instance BaseUniverse fn => HasSpec fn Int64 where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
   cardinalTypeSpec = cardinalSizeSpec
@@ -3005,6 +3059,7 @@ instance BaseUniverse fn => HasSpec fn Float where
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
+  shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
 
