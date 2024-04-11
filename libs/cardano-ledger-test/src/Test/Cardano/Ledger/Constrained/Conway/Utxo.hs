@@ -10,26 +10,25 @@ module Test.Cardano.Ledger.Constrained.Conway.Utxo where
 
 import Cardano.Ledger.Babbage.TxOut
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core (EraTx (..), ppMaxCollateralInputsL)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.UTxO
+import Constrained
 import Data.Foldable
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
 import Data.Word
 import Lens.Micro
-
-import Constrained
-
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core (EraTx (..), ppMaxCollateralInputsL)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
-import Test.Cardano.Ledger.Constrained.Conway.PParams
+import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 
-utxoEnvSpec :: IsConwayUniv fn => Specification fn (UtxoEnv (ConwayEra StandardCrypto))
+utxoEnvSpec ::
+  IsConwayUniv fn =>
+  Specification fn (UtxoEnv (ConwayEra StandardCrypto))
 utxoEnvSpec =
   constrained $ \utxoEnv ->
     match utxoEnv $
@@ -37,43 +36,9 @@ utxoEnvSpec =
        uePParams
        _ueCertState ->
           [ satisfies uePParams pparamsSpec
-          , match uePParams $ \cpp ->
-              match cpp $
-                \_cppMinFeeA
-                 _cppMinFeeB
-                 _cppMaxBBSize
-                 cppMaxTxSize
-                 _cppMaxBHSize
-                 _cppKeyDeposit
-                 _cppPoolDeposit
-                 _cppEMax
-                 _cppNOpt
-                 _cppA0
-                 _cppRho
-                 _cppTau
-                 _cppProtocolVersion
-                 _cppMinPoolCost
-                 _cppCoinsPerUTxOByte
-                 _cppCostModels
-                 _cppPrices
-                 _cppMaxTxExUnits
-                 _cppMaxBlockExUnits
-                 _cppMaxValSize
-                 _cppCollateralPercentage
-                 _cppMaxCollateralInputs
-                 _cppPoolVotingThresholds
-                 _cppDRepVotingThresholds
-                 _cppCommitteeMinSize
-                 _cppCommitteeMaxTermLength
-                 _cppGovActionLifetime
-                 _cppGovActionDeposit
-                 _cppDRepDeposit
-                 _cppDRepActivity
-                 _cppMinFeeRefScriptCoinsPerByte ->
-                    -- NOTE: this is for testing only! We should figure out a nicer way
-                    -- of splitting generation and checking constraints here!
-                    [ assert $ lit (THKD 3000) ==. cppMaxTxSize
-                    ]
+          , -- NOTE: this is for testing only! We should figure out a nicer way
+            -- of splitting generation and checking constraints here!
+            match uePParams $ \cpp -> [assert $ (lit 3000) <=. maxTxSize_ cpp]
           ]
 
 utxoStateSpec ::

@@ -1,13 +1,23 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+-- {-# LANGUAGE TemplateHaskell #-}
+-- {-# LANGUAGE ViewPatterns #-}
+-- {-# LANGUAGE QuasiQuotes #-}
+{-# OPTIONS_GHC -Wno-unused-binds #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the GOV rule
 module Test.Cardano.Ledger.Constrained.Conway.Gov where
+
+import Test.QuickCheck (generate)
 
 import Cardano.Ledger.Shelley.HardForks qualified as HardForks
 import Data.Foldable
@@ -24,12 +34,15 @@ import Lens.Micro
 
 import Constrained
 
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Constrained.Base (printPlan)
 import Lens.Micro qualified as L
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
 
 govEnvSpec ::
   IsConwayUniv fn =>
@@ -239,6 +252,16 @@ onHardFork ::
   Pred fn
 onHardFork gas k = onCon @"HardForkInitiation" (pProcGovAction_ . gasProposalProcedure_ $ gas) k
 
+{-
+main :: IO ()
+main = do
+  env <- generate $ genFromSpec $ govEnvSpec @ConwayFn
+  propose <- generate $ genFromSpec $ govProposalsSpec @ConwayFn env
+  procedures <- generate $ genFromSpec $ govProceduresSpec @ConwayFn env propose
+  -- printPlan $ govProceduresSpec @ConwayFn env propose
+  putStrLn (show (prettyA procedures))
+-}
+
 govProceduresSpec ::
   IsConwayUniv fn =>
   GovEnv (ConwayEra StandardCrypto) ->
@@ -264,7 +287,8 @@ govProceduresSpec ge@GovEnv {..} ps =
                 match kvp $ \voter mapActVote ->
                   (caseOn voter)
                     ( branch $ \_c ->
-                        subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
+                        [ assert $ subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
+                        ]
                     )
                     ( branch $ \_c ->
                         subset_ (dom_ mapActVote) (lit $ Set.fromList drepVotableActionIds)
@@ -401,52 +425,64 @@ wfPParamsUpdate ::
   IsConwayUniv fn =>
   Term fn (PParamsUpdate (ConwayEra StandardCrypto)) ->
   Pred fn
-wfPParamsUpdate ppu =
+wfPParamsUpdate pparamsUpdate =
   toPred
-    [ assert $ ppu /=. lit emptyPParamsUpdate
-    , match ppu $
-        \_cppMinFeeA
-         _cppMinFeeB
-         cppMaxBBSize
-         cppMaxTxSize
-         cppMaxBHSize
-         _cppKeyDeposit
-         cppPoolDeposit
-         _cppEMax
-         _cppNOpt
-         _cppA0
-         _cppRho
-         _cppTau
-         _cppProtocolVersion
-         _cppMinPoolCost
-         _cppCoinsPerUTxOByte
-         cppCostModels
-         _cppPrices
-         _cppMaxTxExUnits
-         _cppMaxBlockExUnits
-         cppMaxValSize
-         cppCollateralPercentage
-         _cppMaxCollateralInputs
-         _cppPoolVotingThresholds
-         _cppDRepVotingThresholds
-         _cppCommitteeMinSize
-         cppCommitteeMaxTermLength
-         cppGovActionLifetime
-         cppGovActionDeposit
-         cppDRepDeposit
-         _cppDRepActivity
-         _cppMinFeeRefScriptCoinsPerByte ->
-            [ cppMaxBBSize /=. lit (THKD $ SJust 0)
-            , cppMaxTxSize /=. lit (THKD $ SJust 0)
-            , cppMaxBHSize /=. lit (THKD $ SJust 0)
-            , cppMaxValSize /=. lit (THKD $ SJust 0)
-            , cppCollateralPercentage /=. lit (THKD $ SJust 0)
-            , cppCommitteeMaxTermLength /=. lit (THKD $ SJust $ EpochInterval 0)
-            , cppGovActionLifetime /=. lit (THKD $ SJust $ EpochInterval 0)
-            , cppPoolDeposit /=. lit (THKD $ SJust mempty)
-            , cppGovActionDeposit /=. lit (THKD $ SJust mempty)
-            , cppDRepDeposit /=. lit (THKD $ SJust mempty)
-            , cppCostModels ==. lit (THKD SNothing) -- NOTE: this is because the cost
-            -- model generator is way too slow
-            ]
+    [ assert $ pparamsUpdate /=. lit emptyPParamsUpdate
+    , match
+        pparamsUpdate
+        ( \ppupdate ->
+            match
+              ppupdate
+              ( \_feeA
+                 _feeB
+                 maxBBSize
+                 maxTxSize
+                 maxBHSize
+                 _keyDeposit
+                 poolDeposit
+                 _emax
+                 _nOpt
+                 _nAo
+                 _nrho
+                 _ntau
+                 _ndecentral
+                 _protocol
+                 _minUtxoVal
+                 _minPoolCost
+                 -- Alonzo
+                 _coinsPerUTxo
+                 costModels
+                 _prices
+                 _maxTx
+                 _maxBlock
+                 maxValSize
+                 collateralPercentage
+                 _maxColInputs
+                 -- Babbage
+                 _coinsperbyte
+                 -- Conway
+                 _poolthresh
+                 _drepthresh
+                 _commMinSize
+                 committeeMaxTermLength
+                 govActionLifetime
+                 govActionDeposit
+                 drepDeposit
+                 _drepAct
+                 _refscriptPerByte ->
+                    [ maxBBSize /=. lit (SJust 0)
+                    , maxTxSize /=. lit (SJust 0)
+                    , maxBHSize /=. lit (SJust 0)
+                    , maxValSize /=. lit (SJust 0)
+                    , collateralPercentage /=. lit (SJust 0)
+                    , committeeMaxTermLength /=. lit (SJust $ EpochInterval 0)
+                    , govActionLifetime /=. lit (SJust $ EpochInterval 0)
+                    , poolDeposit /=. lit (SJust (Coin 0))
+                    , govActionDeposit /=. lit (SJust (Coin 0))
+                    , drepDeposit /=. lit (SJust (Coin 0))
+                    , costModels ==. lit SNothing -- NOTE: this is because the cost
+                    -- model generator is way too slow
+                    ]
+              )
+        )
     ]

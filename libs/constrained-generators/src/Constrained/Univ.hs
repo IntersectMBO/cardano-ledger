@@ -379,6 +379,7 @@ data MapFn (fn :: [Type] -> Type -> Type) args res where
   Dom :: Ord k => MapFn fn '[Map k v] (Set k)
   Rng :: MapFn fn '[Map k v] [v]
   Lookup :: Ord k => MapFn fn '[k, Map k v] (Maybe v)
+  RngSet :: Ord v => MapFn fn '[Map k v] (Set v)
 
 deriving instance Show (MapFn fn args res)
 deriving instance Eq (MapFn fn args res)
@@ -388,6 +389,7 @@ instance FunctionLike (MapFn fn) where
     Dom -> Map.keysSet
     Rng -> Map.elems
     Lookup -> Map.lookup
+    RngSet -> Set.fromList . Map.elems
 
 domFn :: forall fn k v. (Member (MapFn fn) fn, Ord k) => fn '[Map k v] (Set k)
 domFn = injectFn $ Dom @_ @fn
@@ -397,3 +399,6 @@ rngFn = injectFn $ Rng @fn
 
 lookupFn :: forall fn k v. (Member (MapFn fn) fn, Ord k) => fn '[k, Map k v] (Maybe v)
 lookupFn = injectFn $ Lookup @_ @fn
+
+rngSetFn :: forall fn k v. (Member (MapFn fn) fn, Ord v) => fn '[Map k v] (Set v)
+rngSetFn = injectFn $ RngSet @_ @fn

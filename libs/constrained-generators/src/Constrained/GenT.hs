@@ -33,6 +33,7 @@ import Control.Applicative
 import Control.Monad
 import Data.Foldable
 import GHC.Stack
+import Prettyprinter
 import System.Random
 import Test.QuickCheck hiding (Args, Fun)
 import Test.QuickCheck.Gen
@@ -104,8 +105,8 @@ errorGE :: GE a -> a
 errorGE = fromGE (error . unlines)
 
 isOk :: GE a -> Bool
-isOk GenError {} = False
-isOk FatalError {} = False
+isOk (GenError {}) = False
+isOk (FatalError {}) = False
 isOk Result {} = True
 
 runGE :: MonadGenError m => GE r -> m r
@@ -179,7 +180,9 @@ listOfT gen = do
 -- of `Bool`
 listOfUntilLenT :: MonadGenError m => GenT GE a -> Int -> (Int -> Bool) -> GenT m [a]
 listOfUntilLenT gen goalLen validLen =
-  genList `suchThatT` validLen . length
+  explain
+    ["listOfUntilLenT fails finding lists with valid length where goalLen = " ++ show goalLen]
+    (genList `suchThatT` validLen . length)
   where
     genList = do
       res <- pureGen . vectorOf goalLen $ runGenT gen Loose
@@ -200,13 +203,13 @@ suchThatT g p = do
   mode <- getMode
   let (n, cont) = case mode of
         Strict -> (100, fatalError)
-        Loose -> (1 :: Int, genError) -- TODO: Maybe 1 is not the right number here!
-  go n cont
-  where
-    go 0 cont = cont ["Ran out of tries on suchThatT"]
-    go n cont = do
-      a <- g
-      if p a then pure a else scaleT (+ 1) $ go (n - 1) cont
+        Loose -> (100 :: Int, genError) -- TODO: Maybe 1 is not the right number here!
+      message = ["Ran out of tries (" ++ show n ++ ") in suchThatT with mode = " ++ show mode]
+      go 0 = cont message
+      go m = do
+        a <- g
+        if p a then pure a else scaleT (+ 1) $ go (m - 1)
+  go n
 
 scaleT :: (Int -> Int) -> GenT m a -> GenT m a
 scaleT sc (GenT gen) = GenT $ \mode -> scale sc $ gen mode
@@ -246,3 +249,8 @@ tryGen g = do
     FatalError es err -> foldr explain (fatalError err) es
     GenError _ _ -> pure Nothing
     Result _ a -> pure $ Just a
+
+instance Show a => Pretty (GE a) where
+  pretty (Result _ x) = "Result " <> viaShow x
+  pretty (FatalError es err) = vsep [viaShow ("FatalError" :: String), pretty $ unlines (concat es), pretty $ unlines err]
+  pretty (GenError es err) = vsep [viaShow ("GenError" :: String), pretty $ unlines (concat es), pretty $ unlines err]

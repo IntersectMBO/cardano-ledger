@@ -38,6 +38,8 @@ import Cardano.Ledger.Conway.Governance (
   gasAction,
   pRootsL,
   toPrevGovActionIds,
+  -- GovAction(..),
+  -- ProposalProcedure(..),
  )
 import Cardano.Ledger.Conway.Rules (
   ConwayGovPredFailure,
@@ -52,6 +54,8 @@ import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.TxIn (TxId)
 import Constrained
+
+-- import Constrained.Base (Pred (Block))
 import Control.Monad.Identity (Identity)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default.Class (Default (..))
@@ -97,7 +101,8 @@ import Test.Cardano.Ledger.Constrained.Conway (
   utxoTxSpec,
   vStateSpec,
  )
-import Test.Cardano.Ledger.Constrained.Conway.Instances ()
+
+-- import Test.Cardano.Ledger.Constrained.Conway.Instances (PPUpdate)
 import Test.Cardano.Ledger.Conway.ImpTest (impAnn, logEntry)
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop)
 
@@ -137,6 +142,148 @@ instance EraCrypto era ~ c => Inject (ConwayGovTransContext era) (TxId c) where
 
 instance EraCrypto era ~ c => Inject (ConwayGovTransContext era) (Proposals era) where
   inject (ConwayGovTransContext _ _ x) = x
+
+{-
+agdaCompatibleGovAction ::
+  IsConwayUniv fn =>
+  Term fn (GovAction Conway) ->
+  Pred fn
+agdaCompatibleGovAction govAction =
+  caseOn
+    govAction
+    (branch $ \_ ppup _ -> match ppup (\p -> satisfies p agdaCompatiblePPU))
+    (branch $ \_ _ -> True)
+    (branch $ \_ _ -> True)
+    (branch $ const True)
+    (branch $ \_ _ _ _ -> True)
+    (branch $ \_ _ -> True)
+    (branch $ const True)
+
+isUnmodified ::
+  forall fn t.
+  (IsConwayUniv fn, HasSpec fn t, IsNormalType t) =>
+  Term fn (StrictMaybe t) ->
+  Pred fn
+isUnmodified x =
+  caseOn
+    x
+    (branch $ const True)
+    (branch $ const False)
+
+isModified ::
+  forall fn t.
+  (IsConwayUniv fn, HasSpec fn t, IsNormalType t) =>
+  Term fn (StrictMaybe t) ->
+  Pred fn
+isModified x =
+  caseOn
+    x
+    (branch $ const False)
+    (branch $ const True)
+
+-- | Recall the PPUpdate is the SimpleRep of PParamsUpdate. So we constrain
+--   the that SimpleRep, instead of constraining PParamsUpdate
+agdaCompatiblePPU :: forall fn. IsConwayUniv fn => Specification fn PPUpdate
+agdaCompatiblePPU =
+  constrained
+    ( \ppupx ->
+        match
+          (ppupx :: Term fn PPUpdate)
+          ( \cppMinFeeA
+             cppMinFeeB
+             cppMaxBBSize
+             cppMaxTxSize
+             cppMaxBHSize
+             cppKeyDeposit
+             cppPoolDeposit
+             cppEMax
+             cppNOpt
+             cppA0
+             cppRho
+             cppTau
+             _decentral
+             _cppProtocolVersion
+             _minUTxOVal
+             cppMinPoolCost
+             cppCoinsPerUTxOByte
+             cppCostModels
+             cppPrices
+             cppMaxTxExUnits
+             cppMaxBlockExUnits
+             cppMaxValSize
+             cppCollateralPercentage
+             cppMaxCollateralInputs
+             _coinsPerUTxOByte
+             cppPoolVotingThresholds
+             cppDRepVotingThresholds
+             cppCommitteeMinSize
+             cppCommitteeMaxTermLength
+             cppGovActionLifetime
+             cppGovActionDeposit
+             cppDRepDeposit
+             cppDRepActivity
+             cppMinFeeRefScriptCostPerByte ->
+                -- TODO enable pparam updates once they're properly
+                -- implemented in the spec
+                Block
+                  [ isModified cppMinFeeA
+                  , isUnmodified cppMinFeeB
+                  , isUnmodified cppMaxBBSize
+                  , isUnmodified cppMaxTxSize
+                  , isUnmodified cppMaxBHSize
+                  , isUnmodified cppKeyDeposit
+                  , isUnmodified cppPoolDeposit
+                  , isUnmodified cppEMax
+                  , isUnmodified cppNOpt
+                  , isUnmodified cppA0
+                  , isUnmodified cppRho
+                  , isUnmodified cppTau
+                  , isUnmodified cppMinPoolCost
+                  , isUnmodified cppCoinsPerUTxOByte
+                  , isUnmodified cppCostModels
+                  , isUnmodified cppPrices
+                  , isUnmodified cppMaxTxExUnits
+                  , isUnmodified cppMaxBlockExUnits
+                  , isUnmodified cppMaxValSize
+                  , isUnmodified cppCollateralPercentage
+                  , isUnmodified cppMaxCollateralInputs
+                  , isUnmodified cppPoolVotingThresholds
+                  , isUnmodified cppDRepVotingThresholds
+                  , isUnmodified cppCommitteeMinSize
+                  , isUnmodified cppCommitteeMaxTermLength
+                  , isUnmodified cppGovActionLifetime
+                  , isUnmodified cppGovActionDeposit
+                  , isUnmodified cppDRepDeposit
+                  , isUnmodified cppDRepActivity
+                  , isUnmodified cppMinFeeRefScriptCostPerByte
+                  ]
+          )
+    )
+
+agdaCompatibleProposal ::
+  IsConwayUniv fn =>
+  Term fn (ProposalProcedure Conway) ->
+  Pred fn
+agdaCompatibleProposal prop =
+  match prop $ \_ _ govAction _ ->
+    caseOn
+      govAction
+      --  match against (ppup::PParamsUpdate) to get its SimpleRep (x::PPUpdate)
+      (branch $ \_ ppup _ -> match ppup (\x -> satisfies x agdaCompatiblePPU))
+      (branch $ \_ _ -> True)
+      (branch $ \_ _ -> True)
+      (branch $ const True)
+      (branch $ \_ _ _ _ -> True)
+      (branch $ \_ _ -> True)
+      (branch $ const True)
+
+agdaCompatibleGAS ::
+  IsConwayUniv fn =>
+  Term fn (GovActionState Conway) ->
+  Pred fn
+agdaCompatibleGAS gas =
+  match gas $ \_ _ _ _ prop _ _ -> agdaCompatibleProposal prop
+-}
 
 instance
   ( NFData (SpecRep (ConwayGovPredFailure Conway))

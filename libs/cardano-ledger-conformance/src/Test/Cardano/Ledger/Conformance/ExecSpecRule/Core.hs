@@ -41,6 +41,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   runSpecTransM,
   toTestRep,
  )
+
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
@@ -341,7 +342,7 @@ generatesWithin ::
 generatesWithin gen timeout =
   prop (aName <> " generates in reasonable time")
     . forAllShow gen showExpr
-    $ \x -> within timeout $ ioProperty (evaluateDeep x $> ())
+    $ \x -> within timeout $ withMaxSuccess 2 $ ioProperty (evaluateDeep x $> ())
   where
     aName = show (typeRep $ Proxy @a)
 

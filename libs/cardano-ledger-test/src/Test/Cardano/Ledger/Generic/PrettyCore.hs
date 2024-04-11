@@ -87,7 +87,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import qualified Cardano.Ledger.CertState as DP
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   Constitution (..),
@@ -208,6 +208,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState (..),
   PState (..),
   RewardUpdate (..),
+  StashedAVVMAddresses,
   UTxOState (..),
   VState (..),
  )
@@ -276,7 +277,7 @@ import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Maybe.Strict (StrictMaybe (..), isSJust)
 import Data.OSet.Strict (OSet)
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
@@ -330,15 +331,12 @@ import Test.Cardano.Ledger.Generic.Fields (
  )
 import qualified Test.Cardano.Ledger.Generic.Fields as Fields
 import Test.Cardano.Ledger.Generic.Proof (
-  AllegraEra,
   AlonzoEra,
   BabbageEra,
   ConwayEra,
   GovStateWit (..),
-  MaryEra,
   Proof (..),
   Reflect (..),
-  ShelleyEra,
   unReflect,
   whichGovState,
  )
@@ -762,43 +760,57 @@ ppWitnessSetHKD (ShelleyTxWits addr scr boot) =
 instance Reflect era => PrettyA (ShelleyTxWits era) where
   prettyA = ppWitnessSetHKD
 
--- TODO Redo this with Fields?
+-- | Print only the fields where the valuse is SJust, the SNothing fields are not being updated.
 ppPParamsUpdate ::
-  (ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8, EraPParams era) =>
+  Reflect era =>
+  Proof era ->
   PParamsUpdate era ->
   PDoc
-ppPParamsUpdate pp =
-  ppRecord
-    "PParamsUdate"
-    [ ("minfeeA", ppStrictMaybe pcCoin $ pp ^. ppuMinFeeAL)
-    , ("minfeeB", ppStrictMaybe pcCoin $ pp ^. ppuMinFeeBL)
-    , ("maxBBSize", ppStrictMaybe ppWord32 $ pp ^. ppuMaxBBSizeL)
-    , ("maxTxSize", ppStrictMaybe ppWord32 $ pp ^. ppuMaxTxSizeL)
-    , ("maxBHSize", ppStrictMaybe ppWord16 $ pp ^. ppuMaxBHSizeL)
-    , ("keyDeposit", ppStrictMaybe pcCoin $ pp ^. ppuKeyDepositL)
-    , ("poolDeposit", ppStrictMaybe pcCoin $ pp ^. ppuPoolDepositL)
-    , ("eMax", ppStrictMaybe ppEpochInterval $ pp ^. ppuEMaxL)
-    , ("nOpt", ppStrictMaybe ppNatural $ pp ^. ppuNOptL)
-    , ("a0", ppStrictMaybe (ppRational . unboundRational) $ pp ^. ppuA0L)
-    , ("rho", ppStrictMaybe ppUnitInterval $ pp ^. ppuRhoL)
-    , ("tau", ppStrictMaybe ppUnitInterval $ pp ^. ppuTauL)
-    , ("d", ppStrictMaybe ppUnitInterval $ pp ^. ppuDL)
-    , ("extraEntropy", ppStrictMaybe ppNonce $ pp ^. ppuExtraEntropyL)
-    , ("protocolVersion", ppStrictMaybe ppProtVer $ pp ^. ppuProtocolVersionL)
-    , ("minUTxOValue", ppStrictMaybe pcCoin $ pp ^. ppuMinUTxOValueL)
-    , ("minPoolCost", ppStrictMaybe pcCoin $ pp ^. ppuMinPoolCostL)
-    ]
+ppPParamsUpdate proof pp = ppRecord "PParamsUpdate" (foldr accum [] (paramsUpdateFields proof pp))
+  where
+    accum (name, doc, True) ans = (name, doc) : ans
+    accum (_, _, False) ans = ans
 
--- TODO Do we need all these instances?
--- Does this resolve the constraints  (ProtVerAtMost era 4, ProtVerAtMost era 6, ProtVerAtMost era 8)
-instance Crypto c => PrettyA (PParamsUpdate (ShelleyEra c)) where
-  prettyA = ppPParamsUpdate
+-- | Process a field, set the Bool to False, if that field is not being updated.
+present :: (Text, StrictMaybe x -> PDoc, StrictMaybe x) -> (Text, PDoc, Bool)
+present (name, f, x) = (name, f x, isSJust x)
 
-instance Crypto c => PrettyA (PParamsUpdate (AllegraEra c)) where
-  prettyA = ppPParamsUpdate
+-- | Compute a list of Triples, we will filter out the triples with False, since they aren't being updated
+paramsUpdateFields ::
+  EraPParams era =>
+  Proof era ->
+  PParamsUpdate era ->
+  [(Text, PDoc, Bool)]
+paramsUpdateFields proof pp =
+  [ present ("minfeeA", ppStrictMaybe pcCoin, pp ^. ppuMinFeeAL)
+  , present ("minfeeB", ppStrictMaybe pcCoin, pp ^. ppuMinFeeBL)
+  , present ("maxBBSize", ppStrictMaybe ppWord32, pp ^. ppuMaxBBSizeL)
+  , present ("maxTxSize", ppStrictMaybe ppWord32, pp ^. ppuMaxTxSizeL)
+  , present ("maxBHSize", ppStrictMaybe ppWord16, pp ^. ppuMaxBHSizeL)
+  , present ("keyDeposit", ppStrictMaybe pcCoin, pp ^. ppuKeyDepositL)
+  , present ("poolDeposit", ppStrictMaybe pcCoin, pp ^. ppuPoolDepositL)
+  , present ("eMax", ppStrictMaybe ppEpochInterval, pp ^. ppuEMaxL)
+  , present ("nOpt", ppStrictMaybe ppNatural, pp ^. ppuNOptL)
+  , present ("a0", ppStrictMaybe (ppRational . unboundRational), pp ^. ppuA0L)
+  , present ("rho", ppStrictMaybe ppUnitInterval, pp ^. ppuRhoL)
+  , present ("tau", ppStrictMaybe ppUnitInterval, pp ^. ppuTauL)
+  , present ("minPoolCost", ppStrictMaybe pcCoin, pp ^. ppuMinPoolCostL)
+  ]
+    ++ ( case proof of
+          Conway -> []
+          Babbage -> [present ("protocolVersion", ppStrictMaybe ppProtVer, pp ^. ppuProtocolVersionL)] -- ProVerAtMost era 8
+          Alonzo ->
+            [ present ("protocolVersion", ppStrictMaybe ppProtVer, pp ^. ppuProtocolVersionL) -- ProVerAtMost era 8
+            , present ("d", ppStrictMaybe ppUnitInterval, pp ^. ppuDL) -- ProtVerAtMost era 6
+            , present ("extraEntropy", ppStrictMaybe ppNonce, pp ^. ppuExtraEntropyL) -- ProtVerAtMost era 6
+            ]
+          Mary -> [present ("minUTxOValue", ppStrictMaybe pcCoin, pp ^. ppuMinUTxOValueL)] -- ProtVerAtMost era 4 ]
+          Allegra -> [present ("minUTxOValue", ppStrictMaybe pcCoin, pp ^. ppuMinUTxOValueL)] -- ProtVerAtMost era 4 ]
+          Shelley -> [present ("minUTxOValue", ppStrictMaybe pcCoin, pp ^. ppuMinUTxOValueL)] -- ProtVerAtMost era 4 ]
+       )
 
-instance Crypto c => PrettyA (PParamsUpdate (MaryEra c)) where
-  prettyA = ppPParamsUpdate
+ppUpdate :: Reflect era => PParams.Update era -> PDoc
+ppUpdate (PParams.Update prop epn) = ppSexp "Update" [ppProposedPPUpdates reify prop, ppEpochNo epn]
 
 instance Crypto c => PrettyA (PParamsUpdate (AlonzoEra c)) where
   prettyA _ = ppString ("PParamsUpdate (AlonzoEra c)")
@@ -809,17 +821,14 @@ instance Crypto c => PrettyA (PParamsUpdate (BabbageEra c)) where
 instance Crypto c => PrettyA (PParamsUpdate (ConwayEra c)) where
   prettyA _ = ppString ("PParamsUpdate (ConwayEra c)")
 
-ppUpdate :: PrettyA (PParamsUpdate era) => PParams.Update era -> PDoc
-ppUpdate (PParams.Update prop epn) = ppSexp "Update" [ppProposedPPUpdates prop, ppEpochNo epn]
-
-instance PrettyA (PParamsUpdate e) => PrettyA (PParams.Update e) where
+instance Reflect era => PrettyA (PParams.Update era) where
   prettyA = ppUpdate
 
-ppProposedPPUpdates :: PrettyA (PParamsUpdate era) => ProposedPPUpdates era -> PDoc
-ppProposedPPUpdates (ProposedPPUpdates m) = ppMap pcKeyHash prettyA m
+ppProposedPPUpdates :: Proof era -> ProposedPPUpdates era -> PDoc
+ppProposedPPUpdates p (ProposedPPUpdates m) = ppMap pcKeyHash (unReflect ppPParamsUpdate p) m
 
-instance PrettyA (PParamsUpdate e) => PrettyA (ProposedPPUpdates e) where
-  prettyA = ppProposedPPUpdates
+instance Reflect era => PrettyA (ProposedPPUpdates era) where
+  prettyA = ppProposedPPUpdates reify
 
 ppMetadatum :: Metadatum -> PDoc
 ppMetadatum (Map m) =
@@ -949,9 +958,7 @@ instance
   prettyA = ppAlonzoTx
 
 ppShelleyTxBody ::
-  ( Reflect era
-  , PrettyA (PParamsUpdate era)
-  ) =>
+  Reflect era =>
   ShelleyTxBody era ->
   PDoc
 ppShelleyTxBody (TxBodyConstr (Memo (ShelleyTxBodyRaw ins outs cs withdrawals fee ttl upd mdh) _)) =
@@ -969,7 +976,6 @@ ppShelleyTxBody (TxBodyConstr (Memo (ShelleyTxBodyRaw ins outs cs withdrawals fe
 
 instance
   ( EraTxOut era
-  , PrettyA (PParamsUpdate era)
   , Reflect era
   ) =>
   PrettyA (ShelleyTxBody era)
@@ -1074,7 +1080,7 @@ pcTxBody proof txbody = ppRecord ("TxBody " <> pack (show proof)) pairs
     pairs = concatMap (pcTxBodyField proof) fields
 
 pcPParams :: Proof era -> PParams era -> PDoc
-pcPParams proof pp = ppRecord ("TxBody " <> pack (show proof)) pairs
+pcPParams proof pp = ppRecord ("PParams " <> pack (show proof)) pairs
   where
     fields = abstractPParams proof pp
     pairs = concatMap pcPParamsField fields
@@ -2872,22 +2878,22 @@ pcGovState p x = case whichGovState p of
   (GovStateShelleyToBabbage) -> pcShelleyGovState p x
   (GovStateConwayToConway) -> unReflect pcConwayGovState p x
 
-pcShelleyGovState :: Proof era -> ShelleyGovState era -> PDoc
-pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp futurepp) =
-  ppRecord
-    "ShelleyGovState"
-    $ [ ("proposals", ppString "(Proposals ...)")
-      , ("futureProposals", ppString "(Proposals ...)")
-      , ("pparams", pcPParamsSynopsis p pp)
-      , ("prevParams", pcPParamsSynopsis p prevpp)
-      , ("futureParams", pcFuturePParams p futurepp)
-      ]
-
 pcFuturePParams :: Proof era -> FuturePParams era -> PDoc
 pcFuturePParams p = \case
   NoPParamsUpdate -> ppSexp "NoPParamsUpdate" []
   PotentialPParamsUpdate mpp -> ppSexp "PotentialPParamsUpdate" [ppMaybe (pcPParamsSynopsis p) mpp]
   DefinitePParamsUpdate pp -> ppSexp "DefinitePParamsUpdate" [pcPParamsSynopsis p pp]
+
+pcShelleyGovState :: Proof era -> ShelleyGovState era -> PDoc
+pcShelleyGovState p (ShelleyGovState proposal futproposal pp prevpp futurepp) =
+  ppRecord
+    "ShelleyGovState"
+    [ ("proposals", ppProposedPPUpdates p proposal)
+    , ("futureProposals", ppProposedPPUpdates p futproposal)
+    , ("pparams", pcPParamsSynopsis p pp)
+    , ("prevParams", pcPParamsSynopsis p prevpp)
+    , ("futureParams", pcFuturePParams p futurepp)
+    ]
 
 instance Reflect era => PrettyA (ShelleyGovState era) where
   prettyA = pcShelleyGovState reify
@@ -3261,13 +3267,22 @@ showProtver :: ProtVer -> String
 showProtver (ProtVer x y) = "(" ++ show x ++ " " ++ show y ++ ")"
 
 pcEpochState :: Reflect era => Proof era -> EpochState era -> PDoc
-pcEpochState proof es@(EpochState (AccountState tre res) ls sss _) =
+pcEpochState proof es@(EpochState (AccountState tre res) ls sss nonmyop) =
   ppRecord
     "EpochState"
     [ ("AccountState", ppRecord' "" [("treasury", pcCoin tre), ("reserves", pcCoin res)])
     , ("LedgerState", pcLedgerState proof ls)
     , ("SnapShots", pcSnapShots sss)
+    , ("NonMyopic", pcNonMyopic nonmyop)
     , ("AdaPots", pcAdaPot es)
+    ]
+
+pcNonMyopic :: NonMyopic c -> PDoc
+pcNonMyopic (NonMyopic lmap rewpot) =
+  ppRecord
+    "NonMyopic"
+    [ ("likelihoods", ppString ("count = " ++ show (Map.size lmap)))
+    , ("rewpot", pcCoin rewpot)
     ]
 
 instance Reflect era => PrettyA (EpochState era) where
@@ -3291,28 +3306,40 @@ psEpochState proof es@(EpochState (AccountState tre res) ls sss _) =
     ]
 
 pcNewEpochState :: Reflect era => Proof era -> NewEpochState era -> PDoc
-pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (PoolDistr pd _) _) =
+pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es pulrew pd avm) =
   ppRecord
     "NewEpochState"
     [ ("EpochState", pcEpochState proof es)
-    , ("PoolDistr", ppMap pcKeyHash pcIndividualPoolStake pd)
+    , ("PoolDistr", pcPoolDistr pd)
     , ("Prev Blocks", ppMap pcKeyHash ppNatural pbm)
     , ("Current Blocks", ppMap pcKeyHash ppNatural cbm)
     , ("EpochNo", ppEpochNo en)
+    , ("PulsingRewUpdate", ppStrictMaybe (\_ -> ppString "...") pulrew)
+    , ("Stashed AVVM", pcAvm proof avm)
     ]
+
+pcAvm :: Proof era -> StashedAVVMAddresses era -> PDoc
+pcAvm Shelley (UTxO mp) = summaryMapCompact (Map.map (\x -> x ^. compactCoinTxOutL) mp)
+pcAvm Allegra _ = ppString "()"
+pcAvm Mary _ = ppString "()"
+pcAvm Alonzo _ = ppString "()"
+pcAvm Babbage _ = ppString "()"
+pcAvm Conway _ = ppString "()"
 
 instance Reflect era => PrettyA (NewEpochState era) where prettyA = pcNewEpochState reify
 
 -- | Like pcEpochState.but it only prints a summary of the UTxO
 psNewEpochState :: Reflect era => Proof era -> NewEpochState era -> PDoc
-psNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (PoolDistr pd _) _) =
+psNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es pulrew pd avm) =
   ppRecord
     "NewEpochState"
     [ ("EpochState", psEpochState proof es)
-    , ("PoolDistr", ppMap pcKeyHash pcIndividualPoolStake pd)
+    , ("PoolDistr", pcPoolDistr pd)
     , ("Prev Blocks", ppMap pcKeyHash ppNatural pbm)
     , ("Current Blocks", ppMap pcKeyHash ppNatural cbm)
     , ("EpochNo", ppEpochNo en)
+    , ("PulsingRewUpdate", ppStrictMaybe (\_ -> ppString "...") pulrew)
+    , ("Stashed AVVM", pcAvm proof avm)
     ]
 
 pcUTxOState :: Proof era -> UTxOState era -> PDoc
@@ -3323,7 +3350,7 @@ pcUTxOState proof (UTxOState u dep fs gs (IStake m _) don) =
     , ("deposited", pcCoin dep)
     , ("fees", pcCoin fs)
     , ("govState", pcGovState proof gs)
-    , ("incremental stake distr", ppString ("size = " ++ show (Map.size m))) -- This is not part of the model
+    , ("incremental stake distr", summaryMapCompact m)
     , ("donation", pcCoin don)
     ]
 
@@ -3339,7 +3366,7 @@ psUTxOState proof (UTxOState (UTxO u) dep fs gs (IStake m _) don) =
     , ("deposited", pcCoin dep)
     , ("fees", pcCoin fs)
     , ("govState", pcGovState proof gs)
-    , ("incremental stake distr", ppString ("size = " ++ show (Map.size m))) -- This is not part of the model
+    , ("incremental stake distr", summaryMapCompact m)
     , ("donation", pcCoin don)
     ]
 
@@ -3533,7 +3560,7 @@ pcDRepPulser x =
     , ("globals", ppString "...")
     ]
 
-summaryMapCompact :: Map a (CompactForm Coin) -> PDoc
+summaryMapCompact :: (Show x, Monoid x) => Map a x -> PDoc
 summaryMapCompact x = ppString ("Count " ++ show (Map.size x) ++ ", Total " ++ show (Map.foldl' (<>) mempty x))
 
 -- ========================
@@ -3590,6 +3617,8 @@ pcGovEnv GovEnv {..} =
     [ ("TxId", pcTxId geTxId)
     , ("Epoch", ppEpochNo geEpoch)
     , ("PParams", pcPParams reify gePParams)
+    , ("PolicyHash", ppStrictMaybe pcScriptHash gePPolicy)
+    , ("CommitteeState", pcCommitteeState geCommitteeState)
     ]
 
 instance Reflect era => PrettyA (GovEnv era) where

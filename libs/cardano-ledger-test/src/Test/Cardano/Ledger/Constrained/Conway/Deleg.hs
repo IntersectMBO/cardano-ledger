@@ -27,8 +27,8 @@ dStateSpec ::
   IsConwayUniv fn =>
   Specification fn (DState (ConwayEra StandardCrypto))
 dStateSpec = constrained $ \ds ->
-  match ds $ \rewardMap _futureGenDelegs _genDelegs _rewards ->
-    match rewardMap $ \rdMap ptrMap sPoolMap _dRepMap ->
+  match ds $ \umap _futureGenDelegs _genDelegs _rewards ->
+    match umap $ \rdMap ptrMap sPoolMap _dRepMap ->
       [ assertExplain ["dom sPoolMap is a subset of dom rdMap"] $ dom_ sPoolMap `subset_` dom_ rdMap
       , assertExplain ["dom ptrMap is empty"] $ dom_ ptrMap ==. mempty
       ]

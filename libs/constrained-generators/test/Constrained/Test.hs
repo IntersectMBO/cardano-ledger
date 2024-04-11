@@ -126,6 +126,19 @@ tests nightly =
     testSpecNoShrink "reifyYucky" reifyYucky
     testSpec "fixedRange" fixedRange
     testSpec "rangeHint" rangeHint
+    testSpec "rngSetSpec" rngSetSpec
+    testSpec "richRngSetSpec" richRngSetSpec
+    testSpec "rngSetWithHint" rngSetWithHint
+    testSpec "richRngSetSpec" richRngSetSpec
+
+    testSpec "sizeOfMap" sizeOfMap
+    testSpec "sizeOfDomMap" sizeOfDomMap
+    testSpec "sizeDomMap" sizeDomMap
+    testSpec "sizeOfRngMap" sizeOfRngMap
+    testSpec "sizeOfRngSetMap" sizeOfRngSetMap
+    testSpec "sizeNotEqualEmpty" sizeNotEqualEmpty
+    testSpecNoShrink "sizeEqualEmpty" sizeEqualEmpty
+
     testSpec "basicSpec" basicSpec
     testSpec "canFollowLike" canFollowLike
     testSpec "ifElseBackwards" ifElseBackwards
@@ -193,6 +206,15 @@ negativeTests =
             explanation ["You can't constrain the variable introduced by reify as its already decided"] $
               reify x id $
                 \y -> y ==. 10
+    prop "rngSetWithHintInconsistent" $
+      expectFailure $
+        prop_complete @BaseFn @(Map Int Int) $
+          constrained $ \m ->
+            explanation ["Hint (5) is inconsistent with minimum rngSet size. (6)"] $
+              Block
+                [ assert $ 6 <=. sizeOf_ (rngSet_ m)
+                , genHint 5 m
+                ]
 
 numberyTests :: Spec
 numberyTests =

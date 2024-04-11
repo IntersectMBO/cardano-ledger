@@ -101,6 +101,7 @@ module Constrained (
   sum_,
   size_,
   rng_,
+  rngSet_,
   dom_,
   lookup_,
   flip_,

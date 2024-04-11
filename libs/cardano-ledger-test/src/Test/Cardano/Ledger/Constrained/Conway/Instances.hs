@@ -8,6 +8,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -16,6 +17,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- RecordWildCards cause name shadowing warnings in ghc-8.10.
@@ -29,6 +31,12 @@
 module Test.Cardano.Ledger.Constrained.Conway.Instances (
   ConwayFn,
   StringFn,
+  CoinFn (..),
+  toDelta_,
+  toDeltaFn,
+  EraPP (..),
+  PParamSubset (..),
+  PPUpdate (..),
   ProposalTree,
   onJust',
   onSized,
@@ -52,6 +60,8 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances (
   ProposalsSplit (..),
   genProposalsSplit,
   proposalSplitSum,
+  protocolVersion_,
+  maxTxSize_,
 ) where
 
 import Cardano.Chain.Common (
@@ -66,20 +76,23 @@ import Cardano.Chain.Common (
 import Cardano.Crypto.Hash hiding (Blake2b_224)
 import Cardano.Crypto.Hashing (AbstractHash, abstractHashFromBytes)
 import Cardano.Ledger.Address
+import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Allegra.Scripts
+import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), AuxiliaryDataHash)
 import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.Alonzo.TxWits
+import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes hiding (inject)
 import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
@@ -99,6 +112,7 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
   WitVKey,
  )
+import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes
 import Cardano.Ledger.Plutus.CostModels
@@ -108,18 +122,24 @@ import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash
+import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.LedgerState hiding (ptrMap)
+import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+
+-- import Cardano.Ledger.UMap(UMap(..),RDPair(..),UMElem(..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
 import Constrained hiding (Value)
 import Constrained qualified as C
-import Constrained.Base (HasGenHint (..))
+import Constrained.Base (Binder (..), HasGenHint (..), Pred (..), Term (..))
 import Constrained.Spec.Map
+import Constrained.Univ ()
 import Control.Monad.Trans.Fail.String
 import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS
@@ -134,6 +154,7 @@ import Data.Map.Strict qualified as Map
 import Data.Maybe
 import Data.OMap.Strict qualified as OMap
 import Data.OSet.Strict qualified as SOS
+import Data.Ratio ((%))
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
 import Data.Sequence.Strict (StrictSeq)
@@ -147,25 +168,40 @@ import Data.VMap (VMap)
 import Data.VMap qualified as VMap
 import Data.Word
 import GHC.Generics (Generic)
+import Lens.Micro
 import Numeric.Natural (Natural)
 import PlutusLedgerApi.V1 qualified as PV1
 import System.Random
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils
+import Test.Cardano.Ledger.Shelley.Utils
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.QuickCheck hiding (Args, Fun, forAll)
 
-type ConwayUnivFns = StringFn : TreeFn : BaseFns
+type ConwayUnivFns = CoinFn : StringFn : MapFn : FunFn : TreeFn : BaseFns
 type ConwayFn = Fix (OneofL ConwayUnivFns)
 
 type IsConwayUniv fn =
   ( BaseUniverse fn
+  , Member (CoinFn fn) fn
   , Member (StringFn fn) fn
   , Member (MapFn fn) fn
   , Member (FunFn fn) fn
   , Member (TreeFn fn) fn
   )
+
+-- =============================================================
+-- Making Intervals based on Ratios, These can fail be careful
+
+makePrices :: Integer -> Integer -> Prices
+makePrices x y = Prices (fromJust (boundRational (x % 1))) (fromJust (boundRational (y % 1)))
+
+makeUnitInterval :: Integer -> Integer -> UnitInterval
+makeUnitInterval i j = fromJust (boundRational (i % j))
+
+makeNonNegativeInterval :: Integer -> Integer -> NonNegativeInterval
+makeNonNegativeInterval i j = fromJust (boundRational (i % j))
 
 -- TxBody HasSpec instance ------------------------------------------------
 
@@ -194,7 +230,7 @@ type ConwayTxBodyTypes c =
    , StrictMaybe Coin
    , Coin
    ]
-instance (IsConwayUniv fn, Crypto c) => HasSpec fn (ConwayTxBody (ConwayEra c))
+instance (EraPP (ConwayEra c), IsConwayUniv fn, Crypto c) => HasSpec fn (ConwayTxBody (ConwayEra c))
 
 instance Crypto c => HasSimpleRep (ConwayTxBody (ConwayEra c)) where
   type SimpleRep (ConwayTxBody (ConwayEra c)) = SOP '["ConwayTxBody" ::: ConwayTxBodyTypes c]
@@ -228,7 +264,9 @@ instance HasSimpleRep Coin where
     Nothing -> error "The impossible happened in toSimpleRep for `Coin`"
     Just w -> w
   fromSimpleRep = word64ToCoin
+
 instance IsConwayUniv fn => HasSpec fn Coin
+
 instance IsConwayUniv fn => OrdLike fn Coin
 instance IsConwayUniv fn => NumLike fn Coin
 instance IsConwayUniv fn => Foldy fn Coin where
@@ -245,11 +283,19 @@ instance HasSimpleRep DeltaCoin where
   fromSimpleRep = DeltaCoin
   toSimpleRep (DeltaCoin c) = c
 instance IsConwayUniv fn => HasSpec fn DeltaCoin
+instance IsConwayUniv fn => OrdLike fn DeltaCoin
+instance IsConwayUniv fn => NumLike fn DeltaCoin
+instance IsConwayUniv fn => Foldy fn DeltaCoin where
+  genList s s' = map fromSimpleRep <$> genList @fn @Integer (toSimpleRepSpec s) (toSimpleRepSpec s')
+  theAddFn = addFn
+  theZero = DeltaCoin 0
+
+deriving via Integer instance Num DeltaCoin
 
 instance HasSimpleRep (GovProcedures era)
 instance
-  ( Era era
-  , EraPParams era
+  ( EraPParams era
+  , EraPP era
   , IsConwayUniv fn
   , HasSimpleRep (PParamsHKD StrictMaybe era)
   , TypeSpec fn (SimpleRep (PParamsHKD StrictMaybe era)) ~ TypeSpec fn (PParamsHKD StrictMaybe era)
@@ -330,6 +376,38 @@ instance IsConwayUniv fn => HasSpec fn Addr28Extra
 instance HasSimpleRep DataHash32
 instance IsConwayUniv fn => HasSpec fn DataHash32
 
+type ShelleyTxOutTypes era =
+  '[ Addr (EraCrypto era)
+   , Value era
+   ]
+instance (Era era, Val (Value era)) => HasSimpleRep (ShelleyTxOut era) where
+  type SimpleRep (ShelleyTxOut era) = SOP '["ShelleyTxOut" ::: ShelleyTxOutTypes era]
+  toSimpleRep (ShelleyTxOut addr val) =
+    inject @"ShelleyTxOut" @'["ShelleyTxOut" ::: ShelleyTxOutTypes era]
+      addr
+      val
+  fromSimpleRep rep =
+    algebra @'["ShelleyTxOut" ::: ShelleyTxOutTypes era] rep ShelleyTxOut
+
+instance (EraTxOut era, HasSpec fn (Value era), IsConwayUniv fn) => HasSpec fn (ShelleyTxOut era)
+
+type AlonzoTxOutTypes era =
+  '[ Addr (EraCrypto era)
+   , Value era
+   , StrictMaybe (DataHash (EraCrypto era))
+   ]
+instance (Era era, Val (Value era)) => HasSimpleRep (AlonzoTxOut era) where
+  type SimpleRep (AlonzoTxOut era) = SOP '["AlonzoTxOut" ::: AlonzoTxOutTypes era]
+  toSimpleRep (AlonzoTxOut addr val mdat) =
+    inject @"AlonzoTxOut" @'["AlonzoTxOut" ::: AlonzoTxOutTypes era]
+      addr
+      val
+      mdat
+  fromSimpleRep rep =
+    algebra @'["AlonzoTxOut" ::: AlonzoTxOutTypes era] rep AlonzoTxOut
+
+instance (EraTxOut era, HasSpec fn (Value era), IsConwayUniv fn) => HasSpec fn (AlonzoTxOut era)
+
 type BabbageTxOutTypes era =
   '[ Addr (EraCrypto era)
    , Value era
@@ -349,11 +427,9 @@ instance (Era era, Val (Value era)) => HasSimpleRep (BabbageTxOut era) where
 
 instance
   ( IsConwayUniv fn
+  , EraTxOut era
   , HasSpec fn (Value era)
-  , Era era
   , HasSpec fn (Data era)
-  , Val (Value era)
-  , Crypto (EraCrypto era)
   , HasSpec fn (Script era)
   , IsNormalType (Script era)
   ) =>
@@ -845,6 +921,7 @@ instance (Typeable p, IsConwayUniv fn, Era era) => HasSpec fn (GovPurposeId p er
 instance HasSimpleRep (GovAction era)
 instance
   ( IsConwayUniv fn
+  , EraPP era
   , EraPParams era
   , HasSimpleRep (PParamsHKD StrictMaybe era)
   , TypeSpec fn (SimpleRep (PParamsHKD StrictMaybe era)) ~ TypeSpec fn (PParamsHKD StrictMaybe era)
@@ -854,20 +931,6 @@ instance
 
 instance HasSimpleRep (Constitution era)
 instance (IsConwayUniv fn, EraPParams era) => HasSpec fn (Constitution era)
-
-instance HasSimpleRep (PParamsHKD StrictMaybe era) => HasSimpleRep (PParamsUpdate era) where
-  type SimpleRep (PParamsUpdate era) = SimpleRep (PParamsHKD StrictMaybe era)
-  toSimpleRep (PParamsUpdate hkd) = toSimpleRep hkd
-  fromSimpleRep = PParamsUpdate . fromSimpleRep
-instance
-  ( IsConwayUniv fn
-  , EraPParams era
-  , HasSimpleRep (PParamsHKD StrictMaybe era)
-  , TypeSpec fn (SimpleRep (PParamsHKD StrictMaybe era)) ~ TypeSpec fn (PParamsHKD StrictMaybe era)
-  , HasSpec fn (SimpleRep (PParamsHKD StrictMaybe era))
-  , Show (TypeSpec fn (PParamsHKD StrictMaybe era))
-  ) =>
-  HasSpec fn (PParamsUpdate era)
 
 instance HasSimpleRep EpochInterval
 instance IsConwayUniv fn => OrdLike fn EpochInterval
@@ -882,9 +945,6 @@ instance
 
 instance HasSimpleRep (ConwayPParams Identity era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (ConwayPParams Identity era)
-
-instance HasSimpleRep (PParams (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (PParams (ConwayEra StandardCrypto))
 
 instance HasSimpleRep ExUnits where
   type SimpleRep ExUnits = SimpleRep (Natural, Natural)
@@ -987,6 +1047,7 @@ instance Ord a => Forallable (SOS.OSet a) a
 instance HasSimpleRep (ProposalProcedure era)
 instance
   ( IsConwayUniv fn
+  , EraPP era
   , EraPParams era
   , HasSimpleRep (PParamsHKD StrictMaybe era)
   , TypeSpec fn (SimpleRep (PParamsHKD StrictMaybe era)) ~ TypeSpec fn (PParamsHKD StrictMaybe era)
@@ -1024,7 +1085,7 @@ instance (IsConwayUniv fn, Era era) => HasSpec fn (VState era)
 instance HasSimpleRep (PState era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (PState era)
 
-instance HasSimpleRep (DState era)
+instance Era era => HasSimpleRep (DState era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (DState era)
 
 instance HasSimpleRep (FutureGenDeleg c)
@@ -1059,6 +1120,9 @@ instance HasSimpleRep RDPair where
       rep
       (\rew dep -> RDPair (fromSimpleRep rew) (fromSimpleRep dep))
 instance IsConwayUniv fn => HasSpec fn RDPair
+
+instance HasSimpleRep (UMElem c)
+instance (IsConwayUniv fn, Crypto c) => HasSpec fn (UMElem c)
 
 instance HasSimpleRep (CertState era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (CertState era)
@@ -1263,8 +1327,45 @@ instance IsConwayUniv fn => HasSpec fn (PoolEnv (ConwayEra StandardCrypto))
 instance HasSimpleRep (CertEnv (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (CertEnv (ConwayEra StandardCrypto))
 
-instance HasSimpleRep (EpochState (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (EpochState (ConwayEra StandardCrypto))
+instance Era era => HasSimpleRep (EpochState era)
+instance
+  ( EraTxOut era
+  , IsConwayUniv fn
+  , HasSpec fn (TxOut era)
+  , IsNormalType (TxOut era)
+  , HasSpec fn (GovState era)
+  ) =>
+  HasSpec fn (EpochState era)
+
+instance Crypto c => HasSimpleRep (BlocksMade c)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (BlocksMade c)
+
+instance HasSimpleRep RewardType
+instance IsConwayUniv fn => HasSpec fn RewardType
+
+instance Crypto c => HasSimpleRep (Reward c)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (Reward c)
+
+instance Crypto c => HasSimpleRep (RewardUpdate c)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (RewardUpdate c)
+
+instance Crypto c => HasSimpleRep (PulsingRewUpdate c) where
+  type SimpleRep (PulsingRewUpdate c) = SimpleRep (RewardUpdate c)
+  toSimpleRep (Complete x) = toSimpleRep x
+  toSimpleRep x@(Pulsing _ _) = toSimpleRep (runShelleyBase (fst <$> (completeRupd x)))
+  fromSimpleRep x = Complete (fromSimpleRep x)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (PulsingRewUpdate c)
+
+instance Era era => HasSimpleRep (NewEpochState era)
+instance
+  ( EraTxOut era
+  , IsConwayUniv fn
+  , HasSpec fn (TxOut era)
+  , IsNormalType (TxOut era)
+  , HasSpec fn (GovState era)
+  , HasSpec fn (StashedAVVMAddresses era)
+  ) =>
+  HasSpec fn (NewEpochState era)
 
 instance HasSimpleRep (NonMyopic c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (NonMyopic c)
@@ -1295,6 +1396,8 @@ instance
   , Typeable vk
   , Typeable vv
   , Ord k
+  , IsNormalType k
+  , IsNormalType v
   , Eq (vv v)
   , Eq (vk k)
   , HasSpec fn k
@@ -1305,20 +1408,36 @@ instance
 instance HasSimpleRep (SnapShots c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (SnapShots c)
 
-instance HasSimpleRep (LedgerState (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (LedgerState (ConwayEra StandardCrypto))
+instance EraTxOut era => HasSimpleRep (LedgerState era)
+instance
+  ( EraTxOut era
+  , IsConwayUniv fn
+  , HasSpec fn (TxOut era)
+  , IsNormalType (TxOut era)
+  , HasSpec fn (GovState era)
+  ) =>
+  HasSpec fn (LedgerState era)
 
-instance HasSimpleRep (UTxOState (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (UTxOState (ConwayEra StandardCrypto))
+instance HasSimpleRep (UTxOState era)
+instance
+  ( EraTxOut era
+  , HasSpec fn (TxOut era)
+  , IsNormalType (TxOut era)
+  , HasSpec fn (GovState era)
+  , IsConwayUniv fn
+  ) =>
+  HasSpec fn (UTxOState era)
 
 instance HasSimpleRep (IncrementalStake c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (IncrementalStake c)
 
-instance HasSimpleRep (UTxO (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (UTxO (ConwayEra StandardCrypto))
+instance HasSimpleRep (UTxO era)
+instance
+  (Era era, HasSpec fn (TxOut era), IsNormalType (TxOut era), IsConwayUniv fn) =>
+  HasSpec fn (UTxO era)
 
-instance HasSimpleRep (FuturePParams (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (FuturePParams (ConwayEra StandardCrypto))
+instance HasSimpleRep (FuturePParams era)
+instance (EraPP era, IsConwayUniv fn) => HasSpec fn (FuturePParams era)
 
 instance HasSimpleRep (ConwayGovState (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (ConwayGovState (ConwayEra StandardCrypto))
@@ -1462,3 +1581,496 @@ onSized sz p = match sz $ \a _ -> p a
 
 instance HasSimpleRep (ConwayDelegEnv era)
 instance (IsConwayUniv fn, HasSpec fn (PParams era), Era era) => HasSpec fn (ConwayDelegEnv era)
+
+-- =================================================
+
+data CoinFn (fn :: [Type] -> Type -> Type) args res where
+  ToDelta :: CoinFn fn '[Coin] DeltaCoin
+
+deriving instance Show (CoinFn fn args res)
+deriving instance Eq (CoinFn fn args res)
+
+instance FunctionLike (CoinFn fn) where
+  sem = \case
+    ToDelta -> DeltaCoin . unCoin
+
+toDeltaFn :: forall fn. Member (CoinFn fn) fn => fn '[Coin] DeltaCoin
+toDeltaFn = injectFn $ ToDelta @fn
+
+toDelta_ ::
+  (HasSpec fn Coin, HasSpec fn DeltaCoin, Member (CoinFn fn) fn) =>
+  Term fn Coin ->
+  Term fn DeltaCoin
+toDelta_ = app toDeltaFn
+
+instance (Typeable fn, Member (CoinFn fn) fn) => Functions (CoinFn fn) fn where
+  propagateSpecFun _ _ TrueSpec = TrueSpec
+  propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
+  propagateSpecFun fn (ListCtx pre HOLE suf) (SuspendedSpec x p) =
+    constrained $ \x' ->
+      let args =
+            appendList
+              (mapList (\(C.Value a) -> Lit a) pre)
+              (x' :> mapList (\(C.Value a) -> Lit a) suf)
+       in Let (App (injectFn fn) args) (x :-> p)
+  propagateSpecFun ToDelta (NilCtx HOLE) (MemberSpec xs) = MemberSpec (map deltaToCoin xs)
+  propagateSpecFun ToDelta (NilCtx HOLE) (TypeSpec (NumSpecInterval l h) cant) =
+    ( TypeSpec
+        (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))
+        (map deltaToCoin cant)
+    )
+
+  mapTypeSpec ToDelta (NumSpecInterval l h) = typeSpec (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))
+
+deltaToCoin :: DeltaCoin -> Coin
+deltaToCoin (DeltaCoin i) = Coin i
+
+-- ===========================================================================
+
+-- \| EraPP era means we can go back and forth between PParamSubset and (PParams era)
+--   This allow us to use PParamsSubset as the (SimpleRep (PParams era))
+--   Much easier to constrain PParamSubset than (PParams era) with all the THKD stuff.
+class
+  ( Era era
+  , Eq (PParamsHKD Identity era)
+  , Show (PParamsHKD Identity era)
+  , Eq (PParamsHKD StrictMaybe era)
+  , Show (PParamsHKD StrictMaybe era)
+  ) =>
+  EraPP era
+  where
+  subsetToPP :: PParamSubset -> PParams era
+  ppToSubset :: PParams era -> PParamSubset
+  updateToPPU :: PPUpdate -> PParamsUpdate era
+  ppuToUpdate :: PParamsUpdate era -> PPUpdate
+
+instance EraPP Shelley where
+  subsetToPP = liftShelley
+  ppToSubset x = dropAtMost4 x $ dropShelley x
+  updateToPPU x = (uLiftProtVer x . uLiftShelley) x
+  ppuToUpdate x = uDropProtVer x $ uDropShelley x
+
+instance EraPP Allegra where
+  subsetToPP = liftShelley
+  ppToSubset x = dropAtMost4 x $ dropShelley x
+  updateToPPU x = (uLiftProtVer x . uLiftShelley) x
+  ppuToUpdate x = uDropProtVer x $ uDropShelley x
+
+instance EraPP Mary where
+  subsetToPP x = liftShelley x
+  ppToSubset x = dropAtMost4 x $ dropShelley x
+  updateToPPU x = (uLiftProtVer x . uLiftShelley) x
+  ppuToUpdate x = uDropProtVer x $ uDropShelley x
+
+instance EraPP Alonzo where
+  subsetToPP x = (liftAlonzo x . liftShelley) x
+  ppToSubset x = dropAlonzo x $ dropAtMost6 x $ dropShelley x
+  updateToPPU x = (uLiftAlonzo x . uLiftProtVer x . uLiftShelley) x
+  ppuToUpdate x = uDropAlonzo x $ uDropProtVer x $ uDropShelley x
+
+instance EraPP Babbage where
+  subsetToPP x = (liftBabbage x . liftAlonzo x . liftShelley) x
+  ppToSubset x = dropBabbage x $ dropAlonzo x $ dropShelley x
+  updateToPPU x = (uLiftBabbage x . uLiftAlonzo x . uLiftProtVer x . uLiftShelley) x
+  ppuToUpdate x = uDropBabbage x $ uDropAlonzo x $ uDropProtVer x $ uDropShelley x
+
+instance EraPP Conway where
+  subsetToPP x = (liftConway x . liftBabbage x . liftAlonzo x . liftShelley) x
+  ppToSubset x = dropConway x $ dropBabbage x $ dropAlonzo x $ dropShelley x
+  updateToPPU x = (uLiftConway x . uLiftBabbage x . uLiftAlonzo x . uLiftShelley) x
+  ppuToUpdate x = uDropConway x $ uDropBabbage x $ uDropAlonzo x $ uDropShelley x
+
+-- ===============================================================
+
+-- | SimpleRep instance for PParams
+instance EraPP era => HasSimpleRep (PParams era) where
+  type SimpleRep (PParams era) = PParamSubset
+  toSimpleRep = ppToSubset
+  fromSimpleRep = subsetToPP
+
+-- | HasSpec instance for PParams
+instance (IsConwayUniv fn, EraPP era) => HasSpec fn (PParams era) where
+  genFromTypeSpec x = fromSimpleRep <$> genFromTypeSpec x
+
+-- =======================================
+
+-- | Use this as the (SimpleRep (PParams era))
+data PParamSubset = PParamSubset
+  { minFeeA :: Coin
+  , minFeeB :: Coin
+  , maxBBSize :: Word32
+  , maxTxSize :: Word32
+  , maxBHSize :: Word32 -- Need to be downsized inside reify to Word16
+  , keyDeposit :: Coin
+  , poolDeposit :: Coin
+  , eMax :: EpochInterval
+  , nOpt :: Natural
+  , a0 :: NonNegativeInterval
+  , rho :: UnitInterval
+  , tau :: UnitInterval
+  , decentral :: UnitInterval
+  , protocolVersion :: ProtVer
+  , minUTxOValue :: Coin
+  , minPoolCost :: Coin
+  -- ^ Alonzo
+  , coinsPerUTxOWord :: Coin
+  , costModels :: CostModels
+  , prices :: Prices
+  , maxTxExUnits :: ExUnits
+  , maxBlockExUnits :: ExUnits
+  , maxValSize :: Natural
+  , collateralPercentage :: Natural
+  , maxCollateralInputs :: Natural
+  -- ^  Babbage
+  , coinsPerUTxOByte :: Coin
+  -- ^ Conway
+  , poolVotingThresholds :: PoolVotingThresholds
+  , drepVotingThresholds :: DRepVotingThresholds
+  , committeeMinSize :: Natural
+  , committeeMaxTermLength :: EpochInterval
+  , govActionLifetime :: EpochInterval
+  , govActionDeposit :: Coin
+  , dRepDeposit :: Coin
+  , dRepActivity :: EpochInterval
+  , minFeeRefScriptCostPerByte :: NonNegativeInterval
+  }
+  deriving (Eq, Show, Generic)
+
+protocolVersion_ :: IsConwayUniv fn => Term fn PParamSubset -> Term fn ProtVer
+protocolVersion_ = sel @13
+
+maxTxSize_ :: IsConwayUniv fn => Term fn PParamSubset -> Term fn Word32
+maxTxSize_ = sel @3
+
+-- | Use then generic HasSimpleRep and HasSpec instances for PParamSubset
+instance HasSimpleRep PParamSubset
+
+instance IsConwayUniv fn => HasSpec fn PParamSubset
+
+-- ====================================================================
+unitI :: UnitInterval
+unitI = makeUnitInterval 0 1
+
+dropAtMost6 :: (EraPParams era, ProtVerAtMost era 6) => PParams era -> PParamSubset -> PParamSubset
+dropAtMost6 pp x = x {decentral = pp ^. ppDL}
+
+dropAtMost4 ::
+  (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) =>
+  PParams era ->
+  PParamSubset ->
+  PParamSubset
+dropAtMost4 pp x =
+  x
+    { minUTxOValue = pp ^. ppMinUTxOValueL
+    , decentral = pp ^. ppDL
+    }
+
+-- Magic functions used to implement (EraPP era). Example use for Conway
+--  subsetToPP x = (toPP . liftConway x . liftBabbage x . liftAlonzo x . liftShelley) x
+--  ppToSubset x = dropConway x $ dropAlonzo x $ dropAlonzo x $ dropShelley x
+dropShelley :: EraPParams era => PParams era -> PParamSubset
+dropShelley pp =
+  PParamSubset
+    { minFeeA = pp ^. ppMinFeeAL
+    , minFeeB = pp ^. ppMinFeeBL
+    , maxBBSize = pp ^. ppMaxBBSizeL
+    , maxTxSize = pp ^. ppMaxTxSizeL
+    , maxBHSize = fromIntegral (pp ^. ppMaxBHSizeL)
+    , keyDeposit = pp ^. ppKeyDepositL
+    , poolDeposit = pp ^. ppPoolDepositL
+    , eMax = pp ^. ppEMaxL
+    , nOpt = pp ^. ppNOptL
+    , a0 = pp ^. ppA0L
+    , rho = pp ^. ppRhoL
+    , tau = pp ^. ppTauL
+    , protocolVersion = pp ^. ppProtocolVersionL
+    , minPoolCost = pp ^. ppMinPoolCostL
+    , -- \^ In Shelley these are given default values
+      decentral = unitI -- in some Eras, dropAtMost6 will over ride this default
+    , minUTxOValue = Coin 0 -- in some Eras, dropAtMost4 will over ride this default
+    , coinsPerUTxOWord = Coin 0
+    , costModels = mempty
+    , prices = makePrices 0 0
+    , maxTxExUnits = mempty
+    , maxBlockExUnits = mempty
+    , maxValSize = 0
+    , collateralPercentage = 0
+    , maxCollateralInputs = 0
+    , coinsPerUTxOByte = Coin 0
+    , poolVotingThresholds = PoolVotingThresholds unitI unitI unitI unitI unitI
+    , drepVotingThresholds =
+        DRepVotingThresholds unitI unitI unitI unitI unitI unitI unitI unitI unitI unitI
+    , committeeMinSize = 0
+    , committeeMaxTermLength = EpochInterval 0
+    , govActionLifetime = EpochInterval 0
+    , govActionDeposit = Coin 0
+    , dRepDeposit = Coin 0
+    , dRepActivity = EpochInterval 0
+    , minFeeRefScriptCostPerByte = makeNonNegativeInterval 0 1
+    }
+
+dropAlonzo :: AlonzoEraPParams era => PParams era -> PParamSubset -> PParamSubset
+dropAlonzo pp psub =
+  psub
+    { coinsPerUTxOWord = Coin 0
+    , costModels = pp ^. ppCostModelsL
+    , prices = pp ^. ppPricesL
+    , maxTxExUnits = pp ^. ppMaxTxExUnitsL
+    , maxBlockExUnits = pp ^. ppMaxBlockExUnitsL
+    , maxValSize = pp ^. ppMaxValSizeL
+    , collateralPercentage = pp ^. ppCollateralPercentageL
+    }
+
+dropBabbage :: BabbageEraPParams era => PParams era -> PParamSubset -> PParamSubset
+dropBabbage pp psub =
+  psub {coinsPerUTxOByte = unCoinPerByte (pp ^. ppCoinsPerUTxOByteL)}
+
+dropConway :: ConwayEraPParams era => PParams era -> PParamSubset -> PParamSubset
+dropConway pp psub =
+  psub
+    { poolVotingThresholds = pp ^. ppPoolVotingThresholdsL
+    , drepVotingThresholds = pp ^. ppDRepVotingThresholdsL
+    , committeeMinSize = pp ^. ppCommitteeMinSizeL
+    , committeeMaxTermLength = pp ^. ppCommitteeMaxTermLengthL
+    , govActionLifetime = pp ^. ppGovActionLifetimeL
+    , govActionDeposit = pp ^. ppGovActionDepositL
+    , dRepDeposit = pp ^. ppDRepDepositL
+    , dRepActivity = pp ^. ppDRepActivityL
+    , minFeeRefScriptCostPerByte = pp ^. ppMinFeeRefScriptCostPerByteL
+    }
+
+-- ========================
+
+liftShelley :: EraPParams era => PParamSubset -> PParams era
+liftShelley pps =
+  emptyPParams
+    & ppMinFeeAL .~ (minFeeA pps)
+    & ppMinFeeBL .~ (minFeeB pps)
+    & ppMaxBBSizeL .~ (maxBBSize pps)
+    & ppMaxTxSizeL .~ (maxTxSize pps)
+    & ppMaxBHSizeL .~ (fromIntegral (maxBHSize pps))
+    & ppKeyDepositL .~ (keyDeposit pps)
+    & ppPoolDepositL .~ (poolDeposit pps)
+    & ppEMaxL .~ (eMax pps)
+    & ppNOptL .~ (nOpt pps)
+    & ppA0L .~ (a0 pps)
+    & ppRhoL .~ (rho pps)
+    & ppTauL .~ (tau pps)
+    -- & ppDL .~ (decentral pps)
+    & ppProtocolVersionL .~ (protocolVersion pps)
+    -- & ppMinUTxOValueL .~ (minUTxOValue pps)
+    & ppMinPoolCostL .~ (minPoolCost pps)
+
+liftAlonzo :: AlonzoEraPParams era => PParamSubset -> PParams era -> PParams era
+liftAlonzo pps pp =
+  pp -- & ppCoinsPerUTxOWordL .~  CoinPerWord (coinsPerUTxOWord pps)
+    & ppCostModelsL .~ (costModels pps)
+    & ppPricesL .~ (prices pps)
+    & ppMaxTxExUnitsL .~ (maxTxExUnits pps)
+    & ppMaxBlockExUnitsL .~ (maxBlockExUnits pps)
+    & ppMaxValSizeL .~ (maxValSize pps)
+    & ppCollateralPercentageL .~ (collateralPercentage pps)
+    & ppMaxCollateralInputsL .~ (maxCollateralInputs pps)
+
+liftBabbage :: BabbageEraPParams era => PParamSubset -> PParams era -> PParams era
+liftBabbage pps pp = pp & ppCoinsPerUTxOByteL .~ CoinPerByte (coinsPerUTxOByte pps)
+
+liftConway :: ConwayEraPParams era => PParamSubset -> PParams era -> PParams era
+liftConway pps pp =
+  pp
+    & ppPoolVotingThresholdsL .~ (poolVotingThresholds pps)
+    & ppDRepVotingThresholdsL .~ (drepVotingThresholds pps)
+    & ppCommitteeMinSizeL .~ (committeeMinSize pps)
+    & ppCommitteeMaxTermLengthL .~ (committeeMaxTermLength pps)
+    & ppGovActionLifetimeL .~ (govActionLifetime pps)
+    & ppGovActionDepositL .~ (govActionDeposit pps)
+    & ppDRepDepositL .~ (dRepDeposit pps)
+    & ppDRepActivityL .~ (dRepActivity pps)
+    & ppMinFeeRefScriptCostPerByteL .~ (minFeeRefScriptCostPerByte pps)
+
+-- ================================================================
+
+data PPUpdate = PPUpdate
+  { uminFeeA :: StrictMaybe Coin
+  , uminFeeB :: StrictMaybe Coin
+  , umaxBBSize :: StrictMaybe Word32
+  , umaxTxSize :: StrictMaybe Word32
+  , umaxBHSize :: StrictMaybe Word32 -- Need to be downsized inside reify to Word16
+  , ukeyDeposit :: StrictMaybe Coin
+  , upoolDeposit :: StrictMaybe Coin
+  , ueMax :: StrictMaybe EpochInterval
+  , unOpt :: StrictMaybe Natural
+  , ua0 :: StrictMaybe NonNegativeInterval
+  , urho :: StrictMaybe UnitInterval
+  , utau :: StrictMaybe UnitInterval
+  , udecentral :: StrictMaybe UnitInterval
+  , uprotocolVersion :: StrictMaybe ProtVer
+  , uminUTxOValue :: StrictMaybe Coin
+  , uminPoolCost :: StrictMaybe Coin
+  , -- Alonzo
+    ucoinsPerUTxOWord :: StrictMaybe Coin
+  , ucostModels :: StrictMaybe CostModels
+  , uprices :: StrictMaybe Prices
+  , umaxTxExUnits :: StrictMaybe ExUnits
+  , umaxBlockExUnits :: StrictMaybe ExUnits
+  , umaxValSize :: StrictMaybe Natural
+  , ucollateralPercentage :: StrictMaybe Natural
+  , umaxCollateralInputs :: StrictMaybe Natural
+  , -- Babbage
+    ucoinsPerUTxOByte :: StrictMaybe Coin
+  , -- Conway
+    upoolVotingThresholds :: StrictMaybe PoolVotingThresholds
+  , udrepVotingThresholds :: StrictMaybe DRepVotingThresholds
+  , ucommitteeMinSize :: StrictMaybe Natural
+  , ucommitteeMaxTermLength :: StrictMaybe EpochInterval
+  , ugovActionLifetime :: StrictMaybe EpochInterval
+  , ugovActionDeposit :: StrictMaybe Coin
+  , udRepDeposit :: StrictMaybe Coin
+  , udRepActivity :: StrictMaybe EpochInterval
+  , uminFeeRefScriptCostPerByte :: StrictMaybe NonNegativeInterval
+  }
+  deriving (Eq, Show, Generic)
+
+uDropShelley :: EraPParams era => PParamsUpdate era -> PPUpdate
+uDropShelley pp =
+  PPUpdate
+    { uminFeeA = pp ^. ppuMinFeeAL
+    , uminFeeB = pp ^. ppuMinFeeBL
+    , umaxBBSize = pp ^. ppuMaxBBSizeL
+    , umaxTxSize = pp ^. ppuMaxTxSizeL
+    , umaxBHSize = fromIntegral <$> (pp ^. ppuMaxBHSizeL)
+    , ukeyDeposit = pp ^. ppuKeyDepositL
+    , upoolDeposit = pp ^. ppuPoolDepositL
+    , ueMax = pp ^. ppuEMaxL
+    , unOpt = pp ^. ppuNOptL
+    , ua0 = pp ^. ppuA0L
+    , urho = pp ^. ppuRhoL
+    , utau = pp ^. ppuTauL
+    , uminPoolCost = pp ^. ppuMinPoolCostL
+    , -- In Shelley these are given SNothing values
+      udecentral = SNothing -- in some Eras, dropAtMost6 will over ride this default
+    , uprotocolVersion = SNothing
+    , uminUTxOValue = SNothing -- in some Eras, dropAtMost4 will over ride this default
+    , ucoinsPerUTxOWord = SNothing
+    , ucostModels = SNothing
+    , uprices = SNothing
+    , umaxTxExUnits = SNothing
+    , umaxBlockExUnits = SNothing
+    , umaxValSize = SNothing
+    , ucollateralPercentage = SNothing
+    , umaxCollateralInputs = SNothing
+    , ucoinsPerUTxOByte = SNothing
+    , upoolVotingThresholds = SNothing
+    , udrepVotingThresholds = SNothing
+    , ucommitteeMinSize = SNothing
+    , ucommitteeMaxTermLength = SNothing
+    , ugovActionLifetime = SNothing
+    , ugovActionDeposit = SNothing
+    , udRepDeposit = SNothing
+    , udRepActivity = SNothing
+    , uminFeeRefScriptCostPerByte = SNothing
+    }
+
+uDropProtVer :: (EraPParams era, ProtVerAtMost era 8) => PParamsUpdate era -> PPUpdate -> PPUpdate
+uDropProtVer pp psub = psub {uprotocolVersion = pp ^. ppuProtocolVersionL}
+
+uDropAlonzo :: AlonzoEraPParams era => PParamsUpdate era -> PPUpdate -> PPUpdate
+uDropAlonzo pp psub =
+  psub
+    { -- ucoinsPerUTxOWord = unCoinPerWord <$> pp ^. ppuCoinsPerUTxOWordL
+      ucostModels = pp ^. ppuCostModelsL
+    , uprices = pp ^. ppuPricesL
+    , umaxTxExUnits = pp ^. ppuMaxTxExUnitsL
+    , umaxBlockExUnits = pp ^. ppuMaxBlockExUnitsL
+    , umaxValSize = pp ^. ppuMaxValSizeL
+    , ucollateralPercentage = pp ^. ppuCollateralPercentageL
+    , umaxCollateralInputs = pp ^. ppuMaxCollateralInputsL
+    }
+
+uDropBabbage :: BabbageEraPParams era => PParamsUpdate era -> PPUpdate -> PPUpdate
+uDropBabbage pp psub =
+  psub {ucoinsPerUTxOByte = unCoinPerByte <$> (pp ^. ppuCoinsPerUTxOByteL)}
+
+uDropConway :: ConwayEraPParams era => PParamsUpdate era -> PPUpdate -> PPUpdate
+uDropConway pp psub =
+  psub
+    { upoolVotingThresholds = pp ^. ppuPoolVotingThresholdsL
+    , udrepVotingThresholds = pp ^. ppuDRepVotingThresholdsL
+    , ucommitteeMinSize = pp ^. ppuCommitteeMinSizeL
+    , ucommitteeMaxTermLength = pp ^. ppuCommitteeMaxTermLengthL
+    , ugovActionLifetime = pp ^. ppuGovActionLifetimeL
+    , ugovActionDeposit = pp ^. ppuGovActionDepositL
+    , udRepDeposit = pp ^. ppuDRepDepositL
+    , udRepActivity = pp ^. ppuDRepActivityL
+    , uminFeeRefScriptCostPerByte = pp ^. ppuMinFeeRefScriptCostPerByteL
+    }
+
+uLiftShelley :: EraPParams era => PPUpdate -> PParamsUpdate era
+uLiftShelley pps =
+  emptyPParamsUpdate
+    & ppuMinFeeAL .~ (uminFeeA pps)
+    & ppuMinFeeBL .~ (uminFeeB pps)
+    & ppuMaxBBSizeL .~ (umaxBBSize pps)
+    & ppuMaxTxSizeL .~ (umaxTxSize pps)
+    & ppuMaxBHSizeL .~ (fromIntegral <$> (umaxBHSize pps))
+    & ppuKeyDepositL .~ (ukeyDeposit pps)
+    & ppuPoolDepositL .~ (upoolDeposit pps)
+    & ppuEMaxL .~ (ueMax pps)
+    & ppuNOptL .~ (unOpt pps)
+    & ppuA0L .~ (ua0 pps)
+    & ppuRhoL .~ (urho pps)
+    & ppuTauL .~ (utau pps)
+    & ppuMinPoolCostL .~ (uminPoolCost pps)
+    & ppuMinPoolCostL .~ (uminPoolCost pps)
+
+uLiftProtVer ::
+  (EraPParams era, ProtVerAtMost era 8) => PPUpdate -> PParamsUpdate era -> PParamsUpdate era
+uLiftProtVer pps pp = pp & ppuProtocolVersionL .~ (uprotocolVersion pps)
+
+uLiftAlonzo :: AlonzoEraPParams era => PPUpdate -> PParamsUpdate era -> PParamsUpdate era
+uLiftAlonzo pps pp =
+  pp
+    & ppuCostModelsL .~ (ucostModels pps)
+    & ppuPricesL .~ (uprices pps)
+    & ppuMaxTxExUnitsL .~ (umaxTxExUnits pps)
+    & ppuMaxBlockExUnitsL .~ (umaxBlockExUnits pps)
+    & ppuMaxValSizeL .~ (umaxValSize pps)
+    & ppuCollateralPercentageL .~ (ucollateralPercentage pps)
+    & ppuMaxCollateralInputsL .~ (umaxCollateralInputs pps)
+
+uLiftBabbage :: BabbageEraPParams era => PPUpdate -> PParamsUpdate era -> PParamsUpdate era
+uLiftBabbage pps pp = pp & ppuCoinsPerUTxOByteL .~ (CoinPerByte <$> (ucoinsPerUTxOByte pps))
+
+uLiftConway :: ConwayEraPParams era => PPUpdate -> PParamsUpdate era -> PParamsUpdate era
+uLiftConway pps pp =
+  pp
+    & ppuPoolVotingThresholdsL .~ (upoolVotingThresholds pps)
+    & ppuDRepVotingThresholdsL .~ (udrepVotingThresholds pps)
+    & ppuCommitteeMinSizeL .~ (ucommitteeMinSize pps)
+    & ppuCommitteeMaxTermLengthL .~ (ucommitteeMaxTermLength pps)
+    & ppuGovActionLifetimeL .~ (ugovActionLifetime pps)
+    & ppuGovActionDepositL .~ (ugovActionDeposit pps)
+    & ppuDRepDepositL .~ (udRepDeposit pps)
+    & ppuDRepActivityL .~ (udRepActivity pps)
+    & ppuMinFeeRefScriptCostPerByteL .~ (uminFeeRefScriptCostPerByte pps)
+
+-- | Use then generic HasSimpleRep and HasSpec instances for PParamSubset
+instance HasSimpleRep PPUpdate
+
+instance IsConwayUniv fn => HasSpec fn PPUpdate
+
+-- | SimpleRep instance for PParamsUpdate
+instance EraPP era => HasSimpleRep (PParamsUpdate era) where
+  type SimpleRep (PParamsUpdate era) = PPUpdate
+  toSimpleRep = ppuToUpdate
+  fromSimpleRep = updateToPPU
+
+-- | HasSpec instance for PParams
+instance (IsConwayUniv fn, EraPP era) => HasSpec fn (PParamsUpdate era) where
+  genFromTypeSpec x = fromSimpleRep <$> genFromTypeSpec x
+
+instance EraPP era => HasSimpleRep (ProposedPPUpdates era)
+instance (EraPP era, IsConwayUniv fn) => HasSpec fn (ProposedPPUpdates era)
+
+instance EraPP era => HasSimpleRep (ShelleyGovState era)
+instance (EraPP era, IsConwayUniv fn) => HasSpec fn (ShelleyGovState era)
