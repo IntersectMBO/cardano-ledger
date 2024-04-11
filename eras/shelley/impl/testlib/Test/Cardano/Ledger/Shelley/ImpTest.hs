@@ -91,7 +91,11 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   logFeeMismatch,
 
   -- * Combinators
+  withCustomFixup,
+  withFixup,
   withNoFixup,
+  withPostFixup,
+  withPreFixup,
   -- We only export getters, because internal state should not be accessed during testing
   impNESG,
   impLastTickG,
@@ -559,13 +563,11 @@ impWitsVKeyNeeded txBody = do
 
 data ImpTestEnv era = ImpTestEnv
   { iteState :: !(IORef (ImpTestState era))
-  , iteDoTxFixup :: !Bool
-  -- ^ This flag is used to toggle the fixing up of transactions. If it
-  -- is set to False then any transaction should be submitted as-is.
+  , iteFixup :: Tx era -> ImpTestM era (Tx era)
   }
 
-iteDoTxFixupL :: Lens' (ImpTestEnv era) Bool
-iteDoTxFixupL = lens iteDoTxFixup (\x y -> x {iteDoTxFixup = y})
+iteFixupL :: Lens' (ImpTestEnv era) (Tx era -> ImpTestM era (Tx era))
+iteFixupL = lens iteFixup (\x y -> x {iteFixup = y})
 
 newtype ImpTestM era a = ImpTestM {unImpTestM :: ReaderT (ImpTestEnv era) (GenT IO) a}
   deriving
@@ -599,13 +601,13 @@ instance MonadState (ImpTestState era) (ImpTestM era) where
   put x = ImpTestM $ do
     liftIO . flip writeIORef x . iteState =<< ask
 
-instance Example (ImpTestM era ()) where
+instance ShelleyEraImp era => Example (ImpTestM era ()) where
   type Arg (ImpTestM era ()) = ImpTestState era
 
   evaluateExample impTest params =
     evaluateExample (\s -> evalImpTestM (getParamsQCGen params) s impTest) params
 
-instance (Arbitrary a, Show a) => Example (a -> ImpTestM era ()) where
+instance (ShelleyEraImp era, Arbitrary a, Show a) => Example (a -> ImpTestM era ()) where
   type Arg (a -> ImpTestM era ()) = ImpTestState era
 
   evaluateExample impTest params =
@@ -631,28 +633,42 @@ instance HasSubState (ImpTestState era) where
 getParamsQCGen :: Params -> Maybe (QCGen, Int)
 getParamsQCGen params = replay (paramsQuickCheckArgs params)
 
-evalImpTestGenM :: ImpTestState era -> ImpTestM era b -> Gen (IO b)
+evalImpTestGenM :: ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO b)
 evalImpTestGenM impState = fmap (fmap fst) . runImpTestGenM impState
 
-evalImpTestM :: Maybe (QCGen, Int) -> ImpTestState era -> ImpTestM era b -> IO b
+evalImpTestM ::
+  ShelleyEraImp era => Maybe (QCGen, Int) -> ImpTestState era -> ImpTestM era b -> IO b
 evalImpTestM qc impState = fmap fst . runImpTestM qc impState
 
-execImpTestGenM :: ImpTestState era -> ImpTestM era b -> Gen (IO (ImpTestState era))
+execImpTestGenM ::
+  ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO (ImpTestState era))
 execImpTestGenM impState = fmap (fmap snd) . runImpTestGenM impState
 
-execImpTestM :: Maybe (QCGen, Int) -> ImpTestState era -> ImpTestM era b -> IO (ImpTestState era)
+execImpTestM ::
+  ShelleyEraImp era =>
+  Maybe (QCGen, Int) ->
+  ImpTestState era ->
+  ImpTestM era b ->
+  IO (ImpTestState era)
 execImpTestM qc impState = fmap snd . runImpTestM qc impState
 
-runImpTestGenM_ :: ImpTestState era -> ImpTestM era b -> Gen (IO ())
+runImpTestGenM_ :: ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO ())
 runImpTestGenM_ impState = fmap void . runImpTestGenM impState
 
-runImpTestM_ :: Maybe (QCGen, Int) -> ImpTestState era -> ImpTestM era b -> IO ()
+runImpTestM_ ::
+  ShelleyEraImp era => Maybe (QCGen, Int) -> ImpTestState era -> ImpTestM era b -> IO ()
 runImpTestM_ qc impState = void . runImpTestM qc impState
 
-runImpTestGenM :: ImpTestState era -> ImpTestM era b -> Gen (IO (b, ImpTestState era))
+runImpTestGenM ::
+  ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO (b, ImpTestState era))
 runImpTestGenM impState m = MkGen $ \qcGen qcSz -> runImpTestM (Just (qcGen, qcSz)) impState m
 
-runImpTestM :: Maybe (QCGen, Int) -> ImpTestState era -> ImpTestM era b -> IO (b, ImpTestState era)
+runImpTestM ::
+  ShelleyEraImp era =>
+  Maybe (QCGen, Int) ->
+  ImpTestState era ->
+  ImpTestM era b ->
+  IO (b, ImpTestState era)
 runImpTestM mQCGen impState (ImpTestM m) = do
   let
     (qcGen, qcSize, impState') =
@@ -665,7 +681,7 @@ runImpTestM mQCGen impState (ImpTestM m) = do
     env =
       ImpTestEnv
         { iteState = ioRef
-        , iteDoTxFixup = True
+        , iteFixup = fixupTx
         }
   res <-
     unGenT (runReaderT m env) qcGen qcSize `catchAny` \exc -> do
@@ -884,11 +900,7 @@ trySubmitTx ::
   Tx era ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (Tx era))
 trySubmitTx tx = do
-  doFixup <- asks iteDoTxFixup
-  txFixed <-
-    if doFixup
-      then fixupTx tx
-      else pure tx
+  txFixed <- asks iteFixup >>= ($ tx)
   logToExpr txFixed
   st <- gets impNES
   lEnv <- impLedgerEnv st
@@ -1307,9 +1319,37 @@ registerPool = do
       & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert poolParams)
   pure khPool
 
+-- | Compose given function with the configured fixup
+withCustomFixup ::
+  ((Tx era -> ImpTestM era (Tx era)) -> Tx era -> ImpTestM era (Tx era)) ->
+  ImpTestM era a ->
+  ImpTestM era a
+withCustomFixup f = local $ iteFixupL %~ f
+
+-- | Replace all fixup with the given function
+withFixup ::
+  (Tx era -> ImpTestM era (Tx era)) ->
+  ImpTestM era a ->
+  ImpTestM era a
+withFixup f = withCustomFixup (const f)
+
 -- | Performs the action without running the fix-up function on any transactions
 withNoFixup :: ImpTestM era a -> ImpTestM era a
-withNoFixup = local $ iteDoTxFixupL .~ False
+withNoFixup = withFixup pure
+
+-- | Apply given fixup function before the configured fixup
+withPreFixup ::
+  (Tx era -> ImpTestM era (Tx era)) ->
+  ImpTestM era a ->
+  ImpTestM era a
+withPreFixup f = withCustomFixup (f >=>)
+
+-- | Apply given fixup function after the configured fixup
+withPostFixup ::
+  (Tx era -> ImpTestM era (Tx era)) ->
+  ImpTestM era a ->
+  ImpTestM era a
+withPostFixup f = withCustomFixup (>=> f)
 
 expectRegisteredRewardAddress :: RewardAccount (EraCrypto era) -> ImpTestM era ()
 expectRegisteredRewardAddress (RewardAccount _ cred) = do

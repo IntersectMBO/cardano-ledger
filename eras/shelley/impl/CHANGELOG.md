@@ -6,6 +6,11 @@
 
 ### `testlib`
 
+* Add functions to Shelley `ImpTest`:
+  * `withFixup`
+  * `withCustomFixup`
+  * `withPreFixup`
+  * `withPostFixup`
 * Add `ToExpr` and `NFData` instances for `UtxoEnv`
 
 ## 1.10.0.0
