@@ -19,7 +19,7 @@ ledgerTxSpec ::
   IsConwayUniv fn =>
   LedgerEnv (ConwayEra StandardCrypto) ->
   LedgerState (ConwayEra StandardCrypto) ->
-  Spec fn (Tx (ConwayEra StandardCrypto))
+  Specification fn (Tx (ConwayEra StandardCrypto))
 ledgerTxSpec env st =
   constrained $ \tx ->
     [ satisfies tx (utxoTxSpec utxoEnv (lsUTxOState st))

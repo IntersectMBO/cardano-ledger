@@ -47,8 +47,8 @@ module Constrained.Spec.Generics (
 ) where
 
 import Data.Typeable
+import GHC.TypeLits (Symbol)
 import GHC.TypeNats
-import GHC.Types (Symbol)
 
 import Constrained.Base
 import Constrained.Core
@@ -383,7 +383,7 @@ constrained' ::
   , IsPred p fn
   ) =>
   FunTy (MapList (Term fn) (Args (SimpleRep a))) p ->
-  Spec fn a
+  Specification fn a
 constrained' f = constrained $ \x -> match @fn @p x f
 
 -- | Like `reify` but pattern matches on the bound `Term fn b`

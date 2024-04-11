@@ -62,6 +62,7 @@ import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx
+import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), AuxiliaryDataHash)
 import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
@@ -70,6 +71,7 @@ import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
@@ -78,6 +80,7 @@ import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys (
@@ -100,10 +103,13 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.LedgerState hiding (ptrMap)
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.Rules
+import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
+import Constrained hiding (Value)
+import Constrained qualified as C
 import Control.Monad.Trans.Fail.String
 import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS
@@ -137,14 +143,7 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils
 import Test.QuickCheck hiding (Args, Fun, forAll)
 
-import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), AuxiliaryDataHash)
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
-import Constrained hiding (Value)
-import Constrained qualified as C
-
-type ConwayUnivFns = StringFn : RoseTreeFn : BaseFns
+type ConwayUnivFns = StringFn : TreeFn : BaseFns
 type ConwayFn = Fix (OneofL ConwayUnivFns)
 
 type IsConwayUniv fn =
@@ -152,7 +151,7 @@ type IsConwayUniv fn =
   , Member (StringFn fn) fn
   , Member (MapFn fn) fn
   , Member (FunFn fn) fn
-  , Member (RoseTreeFn fn) fn
+  , Member (TreeFn fn) fn
   )
 
 -- TxBody HasSpec instance ------------------------------------------------
@@ -399,7 +398,7 @@ However, when you do that some questions arise:
 Sum and Prod things (with some global index of sizes: `TypeRep -> Int`). Potentially
 you could solve this by having size constraints in the language. There the question is
 how you design those constraints - their semantics could be `const True` while still
-changing the `Spec` - thus giving you the ability to provide a generation time hint!
+changing the `Specification` - thus giving you the ability to provide a generation time hint!
 
 Solving (1) is more tricky however. The best guess I have is that you would need
 to push any constraint you have into functions `MyConstraint :: MyUniv fn '[Timelock era] Bool`
@@ -599,7 +598,7 @@ instance IsConwayUniv fn => HasSpec fn Text where
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
-data StringSpec fn = StringSpec {strSpecLen :: Spec fn Int}
+data StringSpec fn = StringSpec {strSpecLen :: Specification fn Int}
 
 deriving instance IsConwayUniv fn => Show (StringSpec fn)
 
@@ -682,8 +681,8 @@ instance IsConwayUniv fn => Functions (StringFn fn) fn where
       (_ :: StringFn fn '[s] Int) -> getLengthSpec @s ss
 
 class StringLike s where
-  lengthSpec :: IsConwayUniv fn => Spec fn Int -> TypeSpec fn s
-  getLengthSpec :: TypeSpec fn s -> Spec fn Int
+  lengthSpec :: IsConwayUniv fn => Specification fn Int -> TypeSpec fn s
+  getLengthSpec :: TypeSpec fn s -> Specification fn Int
   getLength :: s -> Int
 
 instance HasSimpleRep (Delegatee c)
@@ -1020,7 +1019,7 @@ gasProposalProcedure_ ::
 gasProposalProcedure_ = sel @4
 
 type GAS = GovActionState (ConwayEra StandardCrypto)
-type ProposalTree = (StrictMaybe (GovActionId StandardCrypto), [RoseTree GAS])
+type ProposalTree = (StrictMaybe (GovActionId StandardCrypto), [Tree GAS])
 type ProposalsType =
   '[ ProposalTree -- PParamUpdate
    , ProposalTree -- HardFork
@@ -1059,8 +1058,8 @@ instance HasSimpleRep (Proposals (ConwayEra StandardCrypto)) where
       buildProposalTree :: TreeMaybe (GovActionId StandardCrypto) -> ProposalTree
       buildProposalTree (TreeMaybe (Node mId cs)) = (mId, map buildTree cs)
 
-      buildTree :: Tree (StrictMaybe (GovActionId StandardCrypto)) -> RoseTree GAS
-      buildTree (Node (SJust gid) cs) | Just gas <- Map.lookup gid idMap = RoseNode gas (map buildTree cs)
+      buildTree :: Tree (StrictMaybe (GovActionId StandardCrypto)) -> Tree GAS
+      buildTree (Node (SJust gid) cs) | Just gas <- Map.lookup gid idMap = Node gas (map buildTree cs)
       buildTree _ =
         error "toSimpleRep @Proposals: toGovRelationTree returned trees with Nothing nodes below the root"
 
@@ -1077,7 +1076,7 @@ instance HasSimpleRep (Proposals (ConwayEra StandardCrypto)) where
             oMap = foldMap (foldMap mkOMap) [ppupTree, hfTree, comTree, conTree] <> OMap.fromFoldable others
          in unsafeMkProposals root oMap
     where
-      mkOMap (RoseNode a ts) = a OMap.<| foldMap mkOMap ts
+      mkOMap (Node a ts) = a OMap.<| foldMap mkOMap ts
 
 instance IsConwayUniv fn => HasSpec fn (Proposals (ConwayEra StandardCrypto))
 

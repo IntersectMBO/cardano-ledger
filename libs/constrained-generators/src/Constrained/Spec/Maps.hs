@@ -45,8 +45,8 @@ instance Ord a => Sized (Map.Map a b) where
 data MapSpec fn k v = MapSpec
   { mapSpecMustKeys :: Set k
   , mapSpecMustValues :: [v]
-  , mapSpecSize :: Spec fn Integer
-  , mapSpecElem :: Spec fn (k, v)
+  , mapSpecSize :: Specification fn Integer
+  , mapSpecElem :: Specification fn (k, v)
   , mapSpecFold :: FoldSpec fn v
   }
 

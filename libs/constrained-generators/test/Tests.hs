@@ -2,7 +2,7 @@ module Main where
 
 import Constrained.Test
 
-import Test.Tasty
+import Test.Hspec
 
 main :: IO ()
-main = defaultMain tests
+main = hspec tests

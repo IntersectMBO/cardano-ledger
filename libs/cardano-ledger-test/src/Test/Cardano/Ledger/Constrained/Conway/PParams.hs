@@ -13,7 +13,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances (IsConwayUniv)
 
-pparamsSpec :: IsConwayUniv fn => Spec fn (PParams (ConwayEra StandardCrypto))
+pparamsSpec :: IsConwayUniv fn => Specification fn (PParams (ConwayEra StandardCrypto))
 pparamsSpec =
   constrained $ \pp ->
     match pp $ \cpp ->

@@ -27,14 +27,18 @@ import Constrained.Univ
 
 -- HasSpec ----------------------------------------------------------------
 
-cartesian :: (HasSpec fn a, HasSpec fn b) => Spec fn a -> Spec fn b -> Spec fn (Prod a b)
+cartesian ::
+  (HasSpec fn a, HasSpec fn b) =>
+  Specification fn a ->
+  Specification fn b ->
+  Specification fn (Prod a b)
 cartesian (MemberSpec []) _ = MemberSpec []
 cartesian _ (MemberSpec []) = MemberSpec []
 cartesian (ErrorSpec es) _ = ErrorSpec es
 cartesian _ (ErrorSpec es) = ErrorSpec es
 cartesian s s' = typeSpec $ Cartesian s s'
 
-data PairSpec fn a b = Cartesian (Spec fn a) (Spec fn b)
+data PairSpec fn a b = Cartesian (Specification fn a) (Specification fn b)
 
 instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Prod a b) where
   type TypeSpec fn (Prod a b) = PairSpec fn a b

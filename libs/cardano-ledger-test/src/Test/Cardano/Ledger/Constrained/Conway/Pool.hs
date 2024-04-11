@@ -31,7 +31,7 @@ currentEpoch = runIdentity . EI.epochInfoEpoch (epochInfoPure testGlobals)
 
 poolEnvSpec ::
   IsConwayUniv fn =>
-  Spec fn (PoolEnv (ConwayEra StandardCrypto))
+  Specification fn (PoolEnv (ConwayEra StandardCrypto))
 poolEnvSpec =
   constrained $ \pe ->
     match pe $ \_ pp ->
@@ -39,7 +39,7 @@ poolEnvSpec =
 
 pStateSpec ::
   IsConwayUniv fn =>
-  Spec fn (PState (ConwayEra StandardCrypto))
+  Specification fn (PState (ConwayEra StandardCrypto))
 pStateSpec = constrained $ \ps ->
   match ps $ \stakePoolParams futureStakePoolParams retiring deposits ->
     [ assertExplain ["dom of retiring is a subset of dom of stakePoolParams"] $
@@ -57,7 +57,7 @@ poolCertSpec ::
   IsConwayUniv fn =>
   PoolEnv (ConwayEra StandardCrypto) ->
   PState (ConwayEra StandardCrypto) ->
-  Spec fn (PoolCert StandardCrypto)
+  Specification fn (PoolCert StandardCrypto)
 poolCertSpec (PoolEnv s pp) ps =
   constrained $ \pc ->
     (caseOn pc)

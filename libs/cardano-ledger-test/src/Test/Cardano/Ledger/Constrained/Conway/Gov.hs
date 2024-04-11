@@ -31,7 +31,7 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams
 
 govEnvSpec ::
   IsConwayUniv fn =>
-  Spec fn (GovEnv (ConwayEra StandardCrypto))
+  Specification fn (GovEnv (ConwayEra StandardCrypto))
 govEnvSpec = constrained $ \ge ->
   match ge $ \_ _ pp _ _ _ ->
     satisfies pp pparamsSpec
@@ -42,7 +42,7 @@ govEnvSpec = constrained $ \ge ->
 govProposalsSpec ::
   IsConwayUniv fn =>
   GovEnv (ConwayEra StandardCrypto) ->
-  Spec fn (Proposals (ConwayEra StandardCrypto))
+  Specification fn (Proposals (ConwayEra StandardCrypto))
 govProposalsSpec GovEnv {geEpoch, gePPolicy, gePrevGovActionIds} =
   constrained $ \props ->
     match props $ \ppupTree hardForkTree committeeTree constitutionTree unorderedProposals ->
@@ -154,7 +154,7 @@ allGASAndChildInTree t k =
   forAll (snd_ t) $ \t' ->
     forAll' t' $ \gas cs ->
       forAll cs $ \t'' ->
-        k gas (roseRoot_ t'')
+        k gas (rootLabel_ t'')
 
 wellFormedChildren ::
   IsConwayUniv fn =>
@@ -166,11 +166,11 @@ wellFormedChildren root rootAndTrees =
     [ assert $ root ==. root' -- The root matches the root given in the environment
     , forAll trees $ \t ->
         [ -- Every node just below the root has the root as its parent
-          withPrevActId (roseRoot_ t) (assert . (==. root))
+          withPrevActId (rootLabel_ t) (assert . (==. root))
         , -- Every node's children have the id of the node as its parent
           forAll' t $ \gas children ->
             [ forAll children $ \t' ->
-                [ withPrevActId (roseRoot_ t') (assert . (==. cSJust_ (gasId_ gas)))
+                [ withPrevActId (rootLabel_ t') (assert . (==. cSJust_ (gasId_ gas)))
                 -- TODO: figure out why this causes a crash!
                 -- , t' `dependsOn` gas
                 ]
@@ -245,7 +245,7 @@ govProceduresSpec ::
   IsConwayUniv fn =>
   GovEnv (ConwayEra StandardCrypto) ->
   Proposals (ConwayEra StandardCrypto) ->
-  Spec fn (GovProcedures (ConwayEra StandardCrypto))
+  Specification fn (GovProcedures (ConwayEra StandardCrypto))
 govProceduresSpec ge@GovEnv {..} ps =
   let actions f =
         [ gid

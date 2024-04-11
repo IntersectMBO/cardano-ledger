@@ -29,7 +29,7 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 
-utxoEnvSpec :: IsConwayUniv fn => Spec fn (UtxoEnv (ConwayEra StandardCrypto))
+utxoEnvSpec :: IsConwayUniv fn => Specification fn (UtxoEnv (ConwayEra StandardCrypto))
 utxoEnvSpec =
   constrained $ \utxoEnv ->
     match utxoEnv $
@@ -79,7 +79,7 @@ utxoEnvSpec =
 utxoStateSpec ::
   IsConwayUniv fn =>
   UtxoEnv (ConwayEra StandardCrypto) ->
-  Spec fn (UTxOState (ConwayEra StandardCrypto))
+  Specification fn (UTxOState (ConwayEra StandardCrypto))
 utxoStateSpec _env =
   constrained $ \utxoState ->
     match utxoState $
@@ -98,7 +98,7 @@ utxoTxSpec ::
   IsConwayUniv fn =>
   UtxoEnv (ConwayEra StandardCrypto) ->
   UTxOState (ConwayEra StandardCrypto) ->
-  Spec fn (Tx (ConwayEra StandardCrypto))
+  Specification fn (Tx (ConwayEra StandardCrypto))
 utxoTxSpec env st =
   constrained $ \tx ->
     match tx $ \bdy _wits isValid _auxData ->

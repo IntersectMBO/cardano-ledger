@@ -21,7 +21,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Instances
 
 dStateSpec ::
   IsConwayUniv fn =>
-  Spec fn (DState (ConwayEra StandardCrypto))
+  Specification fn (DState (ConwayEra StandardCrypto))
 dStateSpec = constrained $ \ds ->
   match ds $ \rewardMap _futureGenDelegs _genDelegs _rewards ->
     match rewardMap $ \rdMap ptrMap sPoolMap _dRepMap ->
@@ -33,7 +33,7 @@ delegCertSpec ::
   IsConwayUniv fn =>
   PParams (ConwayEra StandardCrypto) ->
   DState (ConwayEra StandardCrypto) ->
-  Spec fn (ConwayDelegCert StandardCrypto)
+  Specification fn (ConwayDelegCert StandardCrypto)
 delegCertSpec pp ds =
   let rewardMap = unUnify $ rewards ds
       delegMap = unUnify $ delegations ds

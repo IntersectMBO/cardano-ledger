@@ -12,14 +12,14 @@ import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Crypto
 import Constrained
-import Constrained.Bench
+import Control.DeepSeq
 import Criterion
 import Test.Cardano.Ledger.Constrained.Conway
 
 govEnv :: GovEnv (ConwayEra StandardCrypto)
 govEnv = genFromSpecWithSeed 10 30 (govEnvSpec @ConwayFn)
 
-singleProposalTreeSpec :: Spec ConwayFn ProposalTree
+singleProposalTreeSpec :: Specification ConwayFn ProposalTree
 singleProposalTreeSpec = constrained $ \ppupTree ->
   [ wellFormedChildren (lit SNothing) ppupTree
   , allGASInTree ppupTree $ \gas ->
@@ -38,3 +38,8 @@ stsBenchmarks =
     ]
   where
     govPropSpec = govProposalsSpec @ConwayFn govEnv
+
+benchSpec :: (HasSpec fn a, NFData a) => Int -> Int -> String -> Specification fn a -> Benchmark
+benchSpec seed size nm spec =
+  bench (unlines [nm, show (genFromSpecWithSeed seed size spec)]) $
+    nf (genFromSpecWithSeed seed size) spec

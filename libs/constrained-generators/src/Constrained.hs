@@ -5,7 +5,7 @@
 -- It is supposed to contain everything you need to write constraints
 -- and implement `HasSpec` and `HasSimpleRep` instances.
 module Constrained (
-  Spec (..), -- TODO: it would be nice not to expose this whole thing
+  Specification (..), -- TODO: it would be nice not to expose this whole thing
   Pred (..), -- TODO: it would be nice not to expose this whole thing
   Term,
   Binder (..), -- TODO: it would be nice not to expose this whole thing
@@ -93,6 +93,8 @@ module Constrained (
   right_,
   toGeneric_,
   fromGeneric_,
+  sizeOf_,
+  length_,
   injectFn,
   app,
   lit,
