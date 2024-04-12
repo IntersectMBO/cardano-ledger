@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Imp.Common (
   expectationFailure,
   shouldBe,
   shouldSatisfy,
+  shouldSatisfyExpr,
   shouldStartWith,
   shouldEndWith,
   shouldContain,
@@ -202,6 +203,11 @@ shouldBeExpr expected actual = liftIO $ expectExprEqualWithMessage "" expected a
 shouldSatisfy :: (HasCallStack, Show a, MonadIO m) => a -> (a -> Bool) -> m ()
 shouldSatisfy x f = liftIO $ H.shouldSatisfy x f
 
+shouldSatisfyExpr :: (HasCallStack, MonadIO m, ToExpr a) => a -> (a -> Bool) -> m ()
+shouldSatisfyExpr x f
+  | f x = pure ()
+  | otherwise = assertFailure $ "predicate failed on:\n" <> showExpr x
+
 -- | Lifted version of `H.shouldStartWith`.
 shouldStartWith :: (HasCallStack, Show a, Eq a, MonadIO m) => [a] -> [a] -> m ()
 shouldStartWith x y = liftIO $ H.shouldStartWith x y
@@ -220,9 +226,9 @@ shouldContainExpr x y
   | otherwise =
       assertFailure $
         "First list does not contain the second list:\n"
-          <> show (toExpr x)
+          <> showExpr x
           <> "\ndoes not contain\n"
-          <> show (toExpr y)
+          <> showExpr y
 
 -- | Lifted version of `H.shouldMatchList`.
 shouldMatchList :: (HasCallStack, Show a, Eq a, MonadIO m) => [a] -> [a] -> m ()
@@ -319,7 +325,7 @@ expectJust Nothing = assertFailure "Expected Just, got Nothing"
 expectNothingExpr :: (HasCallStack, MonadIO m, ToExpr a) => Maybe a -> m ()
 expectNothingExpr (Just x) =
   assertFailure $
-    "Expected Nothing, got Just:\n" <> show (toExpr x)
+    "Expected Nothing, got Just:\n" <> showExpr x
 expectNothingExpr Nothing = pure ()
 
 ---------------------------

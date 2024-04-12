@@ -61,7 +61,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..))
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Rules.ValidationMode (
   Test,
   runTest,
@@ -111,7 +111,7 @@ data BabbageUtxoPredFailure era
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField
       -- | collateral provided
-      !Coin
+      !DeltaCoin
       -- | collateral amount declared in transaction body
       !Coin
   | -- | list of supplied transaction outputs that are too small,
@@ -310,11 +310,11 @@ validateCollateralContainsNonADA txBody utxoCollateral =
 
 -- > (txcoll tx ≠ ◇) => balance == txcoll tx
 validateCollateralEqBalance ::
-  Coin -> StrictMaybe Coin -> Validation (NonEmpty (BabbageUtxoPredFailure era)) ()
+  DeltaCoin -> StrictMaybe Coin -> Validation (NonEmpty (BabbageUtxoPredFailure era)) ()
 validateCollateralEqBalance bal txcoll =
   case txcoll of
     SNothing -> pure ()
-    SJust tc -> failureUnless (bal == tc) (IncorrectTotalCollateralField bal tc)
+    SJust tc -> failureUnless (bal == toDeltaCoin tc) (IncorrectTotalCollateralField bal tc)
 
 -- > getValue txout ≥ inject ( serSize txout ∗ coinsPerUTxOByte pp )
 validateOutputTooSmallUTxO ::

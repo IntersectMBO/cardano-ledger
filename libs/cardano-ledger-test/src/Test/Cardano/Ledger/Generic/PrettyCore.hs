@@ -1306,7 +1306,7 @@ ppBabbageUtxoPredFailure (AlonzoInBabbageUtxoPredFailure x) = ppAlonzoUtxoPredFa
 ppBabbageUtxoPredFailure (IncorrectTotalCollateralField c1 c2) =
   ppRecord
     "IncorrectTotalCollateralField"
-    [("collateral provided", pcCoin c1), ("collateral declared", pcCoin c2)]
+    [("collateral provided", prettyA c1), ("collateral declared", prettyA c2)]
 ppBabbageUtxoPredFailure (BabbageOutputTooSmallUTxO xs) =
   ppSexp "BabbageOutputTooSmallUTxO" [ppList (ppPair (pcTxOut reify) pcCoin) xs]
 ppBabbageUtxoPredFailure (BabbageNonDisjointRefInputs xs) =
@@ -1673,7 +1673,7 @@ ppAlonzoUtxoPredFailure x = case x of
   InsufficientCollateral c1 c2 ->
     ppRecord
       "InsufficientCollateral"
-      [ ("balance computed", pcCoin c1)
+      [ ("balance computed", prettyA c1)
       , ("the required collateral for the given fee", pcCoin c2)
       ]
   ScriptsNotPaidUTxO u -> ppSexp "ScriptsNotPaidUTxO" [pcUTxO reify u]

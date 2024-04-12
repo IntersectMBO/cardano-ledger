@@ -1,7 +1,8 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.7.1.0
+## 1.8.0.0
 
+* Change the type of the balance field in `InsufficientCollateral` to `DeltaCoin`
 * Add `ToJSON` instances for `FailureDescription` and `TagMismatchDescription`
 * Undeprecate `redeemerPointer`.
 

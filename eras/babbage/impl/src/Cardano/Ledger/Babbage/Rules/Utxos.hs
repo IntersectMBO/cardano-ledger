@@ -54,6 +54,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (EncCBOR (..))
 import Cardano.Ledger.CertState (certDState, dsGenDelegs)
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Plutus.Evaluate (
   ScriptFailure (..),
   ScriptResult (..),
@@ -288,11 +289,11 @@ babbageEvalScriptsTxInvalid = do
   {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
   let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
       UTxO collouts = collOuts txBody
-      collateralFees = collAdaBalance txBody utxoDel -- NEW to Babbage
+      DeltaCoin collateralFees = collAdaBalance txBody utxoDel -- NEW to Babbage
   pure $!
     us {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
       { utxosUtxo = UTxO (Map.union utxoKeep collouts) -- NEW to Babbage
       {- fees + collateralFees -}
-      , utxosFees = fees <> collateralFees -- NEW to Babbage
+      , utxosFees = fees <> Coin collateralFees -- NEW to Babbage
       , utxosStakeDistr = updateStakeDistribution pp (utxosStakeDistr us) (UTxO utxoDel) (UTxO collouts)
       }

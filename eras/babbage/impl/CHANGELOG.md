@@ -1,8 +1,10 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.7.0.1
+## 1.8.0.0
 
-*
+* Change the return type of `collAdaBalance` to `DeltaCoin`
+* Change the type of the provided collateral field in `IncorrectTotalCollateralField` to `DeltaCoin`
+* Change the type of `validateCollateralEqBalance`
 
 ## 1.7.0.0
 
