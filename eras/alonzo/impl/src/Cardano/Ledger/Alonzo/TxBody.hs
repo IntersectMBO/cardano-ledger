@@ -173,7 +173,6 @@ class (MaryEraTxBody era, AlonzoEraTxOut era) => AlonzoEraTxBody era where
     TxBody era ->
     PlutusPurpose AsIx era ->
     StrictMaybe (PlutusPurpose AsIxItem era)
-{-# DEPRECATED redeemerPointer "As no longer needed" #-}
 
 -- ======================================
 

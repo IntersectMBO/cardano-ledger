@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.9.0.1
+## 1.9.1.0
 
-*
+* Add `redeemerPointer` and `redeemerPointerInverse`.
 
 ## 1.9.0.0
 
