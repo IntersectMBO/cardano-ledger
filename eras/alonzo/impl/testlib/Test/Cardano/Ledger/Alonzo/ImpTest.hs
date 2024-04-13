@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -16,6 +17,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   AlonzoEraImp (..),
   initAlonzoImpNES,
   impLookupPlutusScriptMaybe,
+  malformedPlutus,
   addCollateralInput,
   impGetPlutusContexts,
   alonzoFixupTx,
@@ -53,7 +55,8 @@ import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), hashData)
 import Cardano.Ledger.Plutus.Language (
   Language (..),
-  Plutus,
+  Plutus (..),
+  PlutusBinary (..),
   PlutusLanguage,
  )
 import Cardano.Ledger.Shelley.LedgerState (
@@ -343,6 +346,7 @@ mkScriptTestEntry script args =
   )
 
 plutusTestScripts ::
+  forall c l.
   (Crypto c, PlutusLanguage l) =>
   SLanguage l ->
   Map.Map (ScriptHash c) ScriptTestContext
@@ -362,7 +366,11 @@ plutusTestScripts lang =
     , mkScriptTestEntry (oddRedeemer2 lang) $ PlutusArgs (P.I 0) Nothing
     , mkScriptTestEntry (evenRedeemer2 lang) $ PlutusArgs (P.I 0) Nothing
     , mkScriptTestEntry (redeemerIs102 lang) $ PlutusArgs (P.I 0) Nothing
+    , mkScriptTestEntry (malformedPlutus @l) $ PlutusArgs (P.I 0) (Just $ P.I 0)
     ]
+
+malformedPlutus :: Plutus l
+malformedPlutus = Plutus (PlutusBinary "invalid")
 
 instance
   ( Crypto c
