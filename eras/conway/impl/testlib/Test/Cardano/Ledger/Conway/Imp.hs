@@ -11,7 +11,7 @@ module Test.Cardano.Ledger.Conway.Imp (spec) where
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject, natVersion)
 import Cardano.Ledger.Conway.Core
@@ -48,6 +48,7 @@ spec ::
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era

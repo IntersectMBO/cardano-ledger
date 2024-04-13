@@ -7,6 +7,7 @@ import qualified Test.Cardano.Ledger.Allegra.Imp as AllegraImp
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
+import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Conway.Binary.Regression as Regression
@@ -36,6 +37,7 @@ main =
       describe "Imp" $ do
         AllegraImp.spec @Conway
         AlonzoImp.spec @Conway
+        BabbageImp.spec @Conway
         ConwayImp.spec @Conway
         ShelleyImp.spec @Conway
       describe "CostModels" $ do
