@@ -76,6 +76,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Lens.Micro.Mtl ((%=))
 import qualified PlutusLedgerApi.Common as P
+import Test.Cardano.Ledger.Alonzo.Arbitrary (mkPlutusScript')
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common
@@ -209,18 +210,9 @@ fixupScriptWits tx = impAnn "fixupScriptWits" $ do
   utxo <- getUTxO
   let ScriptsProvided provided = getScriptsProvided utxo tx
   let contextsToAdd = filter (\(_, sh, _) -> not (Map.member sh provided)) contexts
-  let
-    plutusToScript ::
-      forall l.
-      PlutusLanguage l =>
-      Plutus l ->
-      ImpTestM era (Script era)
-    plutusToScript p =
-      case mkPlutusScript @era p of
-        Just x -> pure $ fromPlutusScript x
-        Nothing -> error "Plutus version not supported by era"
-  scriptWits <- forM contextsToAdd $ \(_, sh, ScriptTestContext plutus _) ->
-    (sh,) <$> plutusToScript plutus
+  let scriptWits =
+        contextsToAdd <&> \(_, sh, ScriptTestContext plutus _) ->
+          (sh, mkPlutusScript' plutus)
   pure $
     tx
       & witsTxL . scriptTxWitsL <>~ Map.fromList scriptWits
