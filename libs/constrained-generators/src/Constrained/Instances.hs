@@ -67,6 +67,10 @@ instance BaseUniverse fn => Functions (EqFn fn) fn where
         True -> equalSpec a
         False -> notEqualSpec a
 
+  rewriteRules Equal (t :> t' :> Nil)
+    | t == t' = Just $ lit True
+    | otherwise = Nothing
+
   mapTypeSpec f _ = case f of {}
 
 instance BaseUniverse fn => Functions (BoolFn fn) fn where

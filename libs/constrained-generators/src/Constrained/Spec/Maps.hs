@@ -112,14 +112,16 @@ instance
             Nothing
             mustVals'
             size'
-            (constrained $ \v -> unsafeExists $ \p -> p `satisfies` kvs <> assert (v ==. snd_ p))
+            (constrained $ \v -> unsafeExists $ \k -> pair_ k v `satisfies` kvs)
             foldSpec'
 
     restVals <-
-      explain ["Make the restVals"] $
-        explain [show $ "size' = " <> pretty size'] $
-          genFromTypeSpec $
-            valsSpec
+      explain
+        [ "Make the restVals"
+        , "  valsSpec = " ++ show valsSpec
+        ]
+        $ genFromTypeSpec
+        $ valsSpec
     let go m [] = pure m
         go m (v : restVals') = do
           let keySpec = notMemberSpec (Map.keysSet m) <> constrained (\k -> pair_ k (lit v) `satisfies` kvs)
