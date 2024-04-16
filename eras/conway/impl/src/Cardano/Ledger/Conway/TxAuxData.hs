@@ -4,8 +4,9 @@
 module Cardano.Ledger.Conway.TxAuxData () where
 
 import Cardano.Ledger.Alonzo.TxAuxData (
-  AlonzoTxAuxData,
+  AlonzoTxAuxData (..),
   hashAlonzoTxAuxData,
+  metadataAlonzoTxAuxDataL,
   translateAlonzoTxAuxData,
   validateAlonzoTxAuxData,
  )
@@ -16,6 +17,10 @@ import Cardano.Ledger.Crypto
 
 instance Crypto c => EraTxAuxData (ConwayEra c) where
   type TxAuxData (ConwayEra c) = AlonzoTxAuxData (ConwayEra c)
+
+  mkBasicTxAuxData = AlonzoTxAuxData mempty mempty mempty
+
+  metadataTxAuxDataL = metadataAlonzoTxAuxDataL
 
   upgradeTxAuxData = translateAlonzoTxAuxData
 

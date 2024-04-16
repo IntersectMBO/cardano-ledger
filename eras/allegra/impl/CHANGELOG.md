@@ -3,6 +3,7 @@
 ## 1.4.1.0
 
 * Add a `ToJSON` instance for `ValidityInterval`
+* Add `metadataAllegraTxAuxDataL`
 
 ## 1.4.0.0
 

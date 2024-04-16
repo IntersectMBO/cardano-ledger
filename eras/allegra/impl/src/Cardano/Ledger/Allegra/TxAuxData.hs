@@ -19,6 +19,7 @@
 module Cardano.Ledger.Allegra.TxAuxData (
   AllegraTxAuxData (AllegraTxAuxData),
   AllegraTxAuxDataRaw,
+  metadataAllegraTxAuxDataL,
 
   -- * Deprecations
   AuxiliaryData,
@@ -51,6 +52,7 @@ import Cardano.Ledger.MemoBytes (
   Memoized (RawType),
   getMemoRawType,
   getMemoSafeHash,
+  lensMemoRawType,
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
@@ -71,6 +73,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import Lens.Micro (Lens')
 import NoThunks.Class (NoThunks)
 
 -- =======================================
@@ -90,11 +93,19 @@ data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
 instance Crypto c => EraTxAuxData (AllegraEra c) where
   type TxAuxData (AllegraEra c) = AllegraTxAuxData (AllegraEra c)
 
+  mkBasicTxAuxData = AllegraTxAuxData mempty mempty
+
+  metadataTxAuxDataL = metadataAllegraTxAuxDataL
+
   upgradeTxAuxData (ShelleyTxAuxData md) = AllegraTxAuxData md mempty
 
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
 
   hashTxAuxData aux = AuxiliaryDataHash (hashAnnotated aux)
+
+metadataAllegraTxAuxDataL :: Era era => Lens' (AllegraTxAuxData era) (Map Word64 Metadatum)
+metadataAllegraTxAuxDataL =
+  lensMemoRawType atadrMetadata $ \txAuxDataRaw md -> txAuxDataRaw {atadrMetadata = md}
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (AllegraTxAuxDataRaw era)
 

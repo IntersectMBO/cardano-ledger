@@ -47,6 +47,7 @@ import Cardano.Ledger.MemoBytes (
   Memoized (RawType),
   getMemoRawType,
   getMemoSafeHash,
+  lensMemoRawType,
   mkMemoized,
  )
 import Cardano.Ledger.Metadata (Metadatum (..), validMetadatum)
@@ -106,6 +107,11 @@ type Metadata era = ShelleyTxAuxData era
 
 instance Crypto c => EraTxAuxData (ShelleyEra c) where
   type TxAuxData (ShelleyEra c) = ShelleyTxAuxData (ShelleyEra c)
+
+  mkBasicTxAuxData = ShelleyTxAuxData mempty
+
+  metadataTxAuxDataL =
+    lensMemoRawType stadrMetadata $ \txAuxDataRaw md -> txAuxDataRaw {stadrMetadata = md}
 
   -- Calling this partial function will result in compilation error, since ByronEra has
   -- no instance for EraTxOut type class.

@@ -102,6 +102,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
 import Cardano.Ledger.MemoBytes
+import Cardano.Ledger.Metadata
 import Cardano.Ledger.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -448,6 +449,10 @@ class
   EraTxAuxData era
   where
   type TxAuxData era = (r :: Type) | r -> era
+
+  mkBasicTxAuxData :: TxAuxData era
+
+  metadataTxAuxDataL :: Lens' (TxAuxData era) (Map Word64 Metadatum)
 
   -- | Every era, except Shelley, must be able to upgrade a `TxAuxData` from a previous
   -- era.

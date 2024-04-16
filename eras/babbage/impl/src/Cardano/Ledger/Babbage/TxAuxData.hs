@@ -4,8 +4,9 @@
 module Cardano.Ledger.Babbage.TxAuxData () where
 
 import Cardano.Ledger.Alonzo.TxAuxData (
-  AlonzoTxAuxData,
+  AlonzoTxAuxData (..),
   hashAlonzoTxAuxData,
+  metadataAlonzoTxAuxDataL,
   translateAlonzoTxAuxData,
   validateAlonzoTxAuxData,
  )
@@ -16,6 +17,10 @@ import Cardano.Ledger.Crypto
 
 instance Crypto c => EraTxAuxData (BabbageEra c) where
   type TxAuxData (BabbageEra c) = AlonzoTxAuxData (BabbageEra c)
+
+  mkBasicTxAuxData = AlonzoTxAuxData mempty mempty mempty
+
+  metadataTxAuxDataL = metadataAlonzoTxAuxDataL
 
   upgradeTxAuxData = translateAlonzoTxAuxData
 

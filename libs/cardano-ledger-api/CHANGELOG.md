@@ -3,6 +3,7 @@
 ## 1.9.1.0
 
 * Add `redeemerPointer` and `redeemerPointerInverse`.
+* Export `mkBasicTxAuxData` and `metadataTxAuxDataL`.
 
 ## 1.9.0.0
 

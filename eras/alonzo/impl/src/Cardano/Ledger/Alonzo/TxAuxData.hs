@@ -37,6 +37,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   validateAlonzoTxAuxData,
   getAlonzoTxAuxDataScripts,
   translateAlonzoTxAuxData,
+  metadataAlonzoTxAuxDataL,
 
   -- * Deprecated
   AuxiliaryData,
@@ -77,6 +78,7 @@ import Cardano.Ledger.MemoBytes (
   Memoized (RawType),
   getMemoRawType,
   getMemoSafeHash,
+  lensMemoRawType,
   mkMemoized,
  )
 import Cardano.Ledger.Plutus.Language (Language (..), PlutusBinary (..), guardPlutus)
@@ -93,6 +95,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Stack
+import Lens.Micro (Lens')
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 
 -- =============================================================================
@@ -254,6 +257,10 @@ type AuxiliaryData era = AlonzoTxAuxData era
 instance Crypto c => EraTxAuxData (AlonzoEra c) where
   type TxAuxData (AlonzoEra c) = AlonzoTxAuxData (AlonzoEra c)
 
+  mkBasicTxAuxData = AlonzoTxAuxData mempty mempty mempty
+
+  metadataTxAuxDataL = metadataAlonzoTxAuxDataL
+
   upgradeTxAuxData (AllegraTxAuxData md scripts) =
     mkMemoized $
       AlonzoTxAuxDataRaw
@@ -265,6 +272,10 @@ instance Crypto c => EraTxAuxData (AlonzoEra c) where
   hashTxAuxData = hashAlonzoTxAuxData
 
   validateTxAuxData = validateAlonzoTxAuxData
+
+metadataAlonzoTxAuxDataL :: Era era => Lens' (AlonzoTxAuxData era) (Map Word64 Metadatum)
+metadataAlonzoTxAuxDataL =
+  lensMemoRawType atadrMetadata $ \txAuxDataRaw md -> txAuxDataRaw {atadrMetadata = md}
 
 hashAlonzoTxAuxData ::
   (HashAlgorithm (HASH c), HashAnnotated x EraIndependentTxAuxData c) =>
