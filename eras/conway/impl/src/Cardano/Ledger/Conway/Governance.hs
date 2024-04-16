@@ -231,6 +231,10 @@ data ConwayGovState era = ConwayGovState
   , cgsConstitution :: !(Constitution era)
   , cgsCurPParams :: !(PParams era)
   , cgsPrevPParams :: !(PParams era)
+  , cgsFuturePParams :: Maybe (PParams era)
+  -- ^ Prediction of any parameter changes that might happen on the epoch boundary. The
+  -- field is lazy on purpose, since we need to compute this field only towards the
+  -- end of the epoch.
   , cgsDRepPulsingState :: !(DRepPulsingState era)
   -- ^ The 'cgsDRepPulsingState' field is a pulser that incrementally computes the stake
   -- distribution of the DReps over the Epoch following the close of voting at end of

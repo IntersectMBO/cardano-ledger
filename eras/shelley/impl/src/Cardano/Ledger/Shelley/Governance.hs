@@ -114,7 +114,7 @@ data ShelleyGovState era = ShelleyGovState
   , sgsPrevPParams :: !(PParams era)
   , sgsFuturePParams :: Maybe (PParams era)
   -- ^ Prediction of any parameter changes that might happen on the epoch boundary. The
-  -- field is lazy on purpose, since we only need to compute this field only towards the
+  -- field is lazy on purpose, since we need to compute this field only towards the
   -- end of the epoch.
   }
   deriving (Generic)
