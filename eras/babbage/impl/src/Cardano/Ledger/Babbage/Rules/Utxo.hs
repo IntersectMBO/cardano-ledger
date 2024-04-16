@@ -456,7 +456,6 @@ instance
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , State (EraRule "UTXOS" era) ~ UTxOState era
   , Signal (EraRule "UTXOS" era) ~ Tx era
-  , PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPredFailure era
   ) =>
   STS (BabbageUTXO era)
   where
