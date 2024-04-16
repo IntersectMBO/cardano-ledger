@@ -31,7 +31,7 @@ import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), kindObject, natVersion)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Plutus.CostModels (costModelsValid)
-import Cardano.Ledger.Plutus.Data (getPlutusData)
+import Cardano.Ledger.Plutus.Data (fromMaybeData, getPlutusData)
 import Cardano.Ledger.Plutus.Evaluate (
   PlutusDatums (..),
   PlutusWithContext (..),
@@ -187,7 +187,9 @@ collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
       case mkPlutusScriptContext plutusScript plutusPurpose pp epochInfo sysStart utxo tx of
         Right scriptContext ->
           let spendingDatum = getSpendingDatum utxo tx $ hoistPlutusPurpose toAsItem plutusPurpose
-              datums = maybe id (:) spendingDatum [d, scriptContext]
+              datums
+                | protVerMajor < natVersion @9 = maybe id (:) spendingDatum [d, scriptContext]
+                | otherwise = [fromMaybeData spendingDatum, d, scriptContext]
            in Right $
                 withPlutusScript plutusScript $ \plutus ->
                   PlutusWithContext

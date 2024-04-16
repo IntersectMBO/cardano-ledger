@@ -24,6 +24,7 @@ module Cardano.Ledger.Plutus.Data (
   PlutusData (..),
   Data (Data),
   unData,
+  fromMaybeData,
   DataHash,
   upgradeData,
   hashData,
@@ -103,6 +104,12 @@ instance Typeable era => DecCBOR (Annotator (PlutusData era)) where
 newtype Data era = DataConstr (MemoBytes PlutusData era)
   deriving (Eq, Generic)
   deriving newtype (SafeToHash, ToCBOR, NFData)
+
+-- | Convert Maybe data to a List
+fromMaybeData :: Era era => Maybe (Data era) -> Data era
+fromMaybeData = \case
+  Nothing -> Data (PV1.List [])
+  Just (Data d) -> Data (PV1.List [d])
 
 -- | Encodes memoized bytes created upon construction.
 instance Typeable era => EncCBOR (Data era)
