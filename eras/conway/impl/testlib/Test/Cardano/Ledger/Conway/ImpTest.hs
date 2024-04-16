@@ -56,6 +56,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   logAcceptedRatio,
   isDRepAccepted,
   isSpoAccepted,
+  isCommitteeAccepted,
   logRatificationChecks,
   resignCommitteeColdKey,
   registerCommitteeHotKey,
@@ -94,6 +95,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   majorFollow,
   cantFollow,
   getsPParams,
+  currentProposalsShouldContain,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -877,6 +879,15 @@ isSpoAccepted gaId = do
   action <- getGovActionState gaId
   pure $ spoAccepted ratifyEnv ratifyState action
 
+isCommitteeAccepted ::
+  (HasCallStack, ConwayEraGov era, ConwayEraPParams era) =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era Bool
+isCommitteeAccepted gaId = do
+  (ratifyEnv, ratifyState) <- getRatifyEnvAndState
+  action <- getGovActionState gaId
+  pure $ committeeAccepted ratifyEnv ratifyState action
+
 -- | Logs the results of each check required to make the governance action pass
 logRatificationChecks ::
   (ConwayEraGov era, ConwayEraPParams era) =>
@@ -1240,6 +1251,15 @@ expectExtraDRepExpiry kh expected = do
   (^. drepExpiryL)
     <$> ds
       `shouldBe` Just (addEpochInterval expected drepActivity)
+
+currentProposalsShouldContain ::
+  ( HasCallStack
+  , ConwayEraGov era
+  ) =>
+  GovActionId (EraCrypto era) ->
+  ImpTestM era ()
+currentProposalsShouldContain gai =
+  currentProposalIds >>= flip shouldContain [gai] . toList
 
 expectCurrentProposals :: (HasCallStack, ConwayEraGov era) => ImpTestM era ()
 expectCurrentProposals = do
