@@ -12,7 +12,12 @@ module Cardano.Ledger.Mary.TxAuxData (
 )
 where
 
-import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..), metadataAllegraTxAuxDataL)
+import Cardano.Ledger.Allegra.TxAuxData (
+  AllegraEraTxAuxData (..),
+  AllegraTxAuxData (..),
+  metadataAllegraTxAuxDataL,
+  timelockScriptsAllegraTxAuxDataL,
+ )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Core (EraTxAuxData (..), upgradeScript)
 import Cardano.Ledger.Crypto (Crypto)
@@ -36,3 +41,6 @@ instance Crypto c => EraTxAuxData (MaryEra c) where
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
 
   hashTxAuxData aux = AuxiliaryDataHash (hashAnnotated aux)
+
+instance Crypto c => AllegraEraTxAuxData (MaryEra c) where
+  timelockScriptsTxAuxDataL = timelockScriptsAllegraTxAuxDataL

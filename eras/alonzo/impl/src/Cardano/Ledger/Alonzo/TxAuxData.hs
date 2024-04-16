@@ -38,6 +38,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   getAlonzoTxAuxDataScripts,
   translateAlonzoTxAuxData,
   metadataAlonzoTxAuxDataL,
+  timelockScriptsAlonzoTxAuxDataL,
 
   -- * Deprecated
   AuxiliaryData,
@@ -46,7 +47,7 @@ where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
-import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
+import Cardano.Ledger.Allegra.TxAuxData (AllegraEraTxAuxData (..), AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
@@ -291,6 +292,14 @@ validateAlonzoTxAuxData ::
 validateAlonzoTxAuxData pv auxData@AlonzoTxAuxData {atadMetadata = metadata} =
   all validMetadatum metadata
     && all (validScript pv) (getAlonzoTxAuxDataScripts auxData)
+
+instance Crypto c => AllegraEraTxAuxData (AlonzoEra c) where
+  timelockScriptsTxAuxDataL = timelockScriptsAlonzoTxAuxDataL
+
+timelockScriptsAlonzoTxAuxDataL ::
+  Era era => Lens' (AlonzoTxAuxData era) (StrictSeq (Timelock era))
+timelockScriptsAlonzoTxAuxDataL =
+  lensMemoRawType atadrTimelock $ \txAuxDataRaw ts -> txAuxDataRaw {atadrTimelock = ts}
 
 instance EraCrypto era ~ c => HashAnnotated (AuxiliaryData era) EraIndependentTxAuxData c where
   hashAnnotated = getMemoSafeHash

@@ -11,6 +11,8 @@ module Cardano.Ledger.Api.Tx.AuxData (
   Metadatum (..),
 
   -- * Allegra
+  AllegraEraTxAuxData,
+  timelockScriptsTxAuxDataL,
   AllegraTxAuxData (..),
 
   -- * Alonzo
@@ -20,7 +22,7 @@ module Cardano.Ledger.Api.Tx.AuxData (
 )
 where
 
-import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
+import Cardano.Ledger.Allegra.TxAuxData (AllegraEraTxAuxData (..), AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData (..),
   getAlonzoTxAuxDataScripts,

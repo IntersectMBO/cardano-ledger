@@ -54,7 +54,7 @@ library
         base >=4.14 && <5,
         aeson >=2.2,
         bytestring,
-        cardano-ledger-allegra ^>=1.4,
+        cardano-ledger-allegra ^>=1.4.1,
         cardano-ledger-alonzo ^>=1.8,
         cardano-ledger-babbage ^>=1.8,
         cardano-ledger-binary ^>=1.3,

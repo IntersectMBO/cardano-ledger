@@ -4,6 +4,7 @@
 
 * Add `redeemerPointer` and `redeemerPointerInverse`.
 * Export `mkBasicTxAuxData` and `metadataTxAuxDataL`.
+* Export `AllegraEraTxAuxData` and `timelockScriptsTxAuxDataL`
 
 ## 1.9.0.0
 

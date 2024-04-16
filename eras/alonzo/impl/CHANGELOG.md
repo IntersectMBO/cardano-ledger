@@ -5,7 +5,7 @@
 * Change the type of the balance field in `InsufficientCollateral` to `DeltaCoin`
 * Add `ToJSON` instances for `FailureDescription` and `TagMismatchDescription`
 * Undeprecate `redeemerPointer`.
-* Add `metadataAlonzoTxAuxDataL`.
+* Add `metadataAlonzoTxAuxDataL`, `timelockScriptsAlonzoTxAuxDataL`.
 
 ## 1.7.0.0
 
