@@ -8,6 +8,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (
   AlonzoTxAuxData (..),
   hashAlonzoTxAuxData,
   metadataAlonzoTxAuxDataL,
+  plutusScriptsAllegraTxAuxDataL,
   timelockScriptsAlonzoTxAuxDataL,
   translateAlonzoTxAuxData,
   validateAlonzoTxAuxData,
@@ -31,3 +32,6 @@ instance Crypto c => EraTxAuxData (ConwayEra c) where
 
 instance Crypto c => AllegraEraTxAuxData (ConwayEra c) where
   timelockScriptsTxAuxDataL = timelockScriptsAlonzoTxAuxDataL
+
+instance Crypto c => AlonzoEraTxAuxData (ConwayEra c) where
+  plutusScriptsTxAuxDataL = plutusScriptsAllegraTxAuxDataL

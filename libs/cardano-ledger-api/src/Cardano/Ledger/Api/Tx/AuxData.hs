@@ -16,6 +16,8 @@ module Cardano.Ledger.Api.Tx.AuxData (
   AllegraTxAuxData (..),
 
   -- * Alonzo
+  AlonzoEraTxAuxData,
+  plutusScriptsTxAuxDataL,
   AlonzoTxAuxData (..),
   mkAlonzoTxAuxData,
   getAlonzoTxAuxDataScripts,
@@ -24,6 +26,7 @@ where
 
 import Cardano.Ledger.Allegra.TxAuxData (AllegraEraTxAuxData (..), AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo.TxAuxData (
+  AlonzoEraTxAuxData (..),
   AlonzoTxAuxData (..),
   getAlonzoTxAuxDataScripts,
   mkAlonzoTxAuxData,
