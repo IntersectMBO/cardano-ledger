@@ -10,7 +10,6 @@
 
 module Test.Cardano.Ledger.Conway.Binary.Regression where
 
-import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..), TxIx (..))
 import Cardano.Ledger.Binary (
   EncCBOR (..),
@@ -32,7 +31,11 @@ import Cardano.Ledger.Conway.Core (
   eraProtVerLow,
   txIdTx,
  )
-import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..), ConwayUtxoPredFailure (..))
+import Cardano.Ledger.Conway.Rules (
+  ConwayLedgerPredFailure (..),
+  ConwayUtxoPredFailure (..),
+  ConwayUtxowPredFailure (..),
+ )
 import Cardano.Ledger.Plutus.Language (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Monad ((<=<))

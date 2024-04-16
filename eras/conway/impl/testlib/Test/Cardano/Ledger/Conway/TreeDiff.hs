@@ -240,3 +240,12 @@ instance
   , ToExpr (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   ToExpr (ConwayUtxoPredFailure era)
+
+instance
+  ( Era era
+  , ToExpr (PredicateFailure (EraRule "UTXO" era))
+  , ToExpr (PlutusPurpose AsIx era)
+  , ToExpr (PlutusPurpose AsItem era)
+  , ToExpr (TxCert era)
+  ) =>
+  ToExpr (ConwayUtxowPredFailure era)

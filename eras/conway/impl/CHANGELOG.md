@@ -2,6 +2,24 @@
 
 ## 1.14.0 0
 
+* Add `ConwayUtxowPredFailure` era rule failure:
+  * Implement its `InjectRuleFailure` instances for:
+    * `BBODY`
+    * `LEDGER`
+    * `LEDGERS`
+    * `UTXOW`
+  * Implement instances:
+    * `Generic`
+    * `Show`
+    * `Eq`
+    * `EncCBOR`
+    * `DecCBOR`
+    * `NFData`
+  * Add mappings:
+    * `babbageToConwayUtxowPredFailure`
+    * `alonzoToConwayUtxowPredFailure`
+    * `shelleyToConwayUtxowPredFailure`
+  * Update `Embed (ConwayUTXO era) (ConwayUTXOW era)` instance
 * Add `ConwayUtxoPredFailure` era rule failure:
   * Implement its `InjectRuleFailure` instances for:
     * `BBODY`
@@ -31,6 +49,9 @@
 
 ### `testlib`
 
+* Implement `ConwayUtxowPredFailure` instances:
+  * `Arbitrary`
+  * `ToExpr`
 * Implement `ConwayUtxoPredFailure` instances:
   * `Arbitrary`
   * `ToExpr`

@@ -1172,7 +1172,7 @@ ppUTXOW Allegra x = ppShelleyUtxowPredFailure x
 ppUTXOW Mary x = ppShelleyUtxowPredFailure x
 ppUTXOW Alonzo x = ppAlonzoUtxowPredFailure x
 ppUTXOW p@Babbage x = ppBabbageUtxowPredFailure p x
-ppUTXOW p@Conway x = ppBabbageUtxowPredFailure p x
+ppUTXOW p@Conway x = ppConwayUtxowPredFailure p x
 
 ppUTXOS :: Proof era -> PredicateFailure (EraRule "UTXOS" era) -> PDoc
 ppUTXOS Alonzo x = ppUtxosPredicateFailure x
@@ -1517,6 +1517,66 @@ ppShelleyLedgerPredFailure proof (DelegsFailure x) = ppDELEGS proof x
 
 instance Reflect era => PrettyA (ShelleyLedgerPredFailure era) where
   prettyA = ppShelleyLedgerPredFailure reify
+
+ppConwayUtxowPredFailure ::
+  Reflect era =>
+  Proof era ->
+  ConwayRules.ConwayUtxowPredFailure era ->
+  PDoc
+ppConwayUtxowPredFailure proof = \case
+  ConwayRules.UtxoFailure x -> ppSexp "UtxoFailure" [ppUTXO proof x]
+  ConwayRules.InvalidWitnessesUTXOW vkeyws ->
+    ppSexp "InvalidWitnessesUTXOW" [ppList ppVKey vkeyws]
+  ConwayRules.MissingVKeyWitnessesUTXOW whs ->
+    ppSexp "MissingVKeyWitnessesUTXOW" [ppWitHashes whs]
+  ConwayRules.MissingScriptWitnessesUTXOW m ->
+    ppSexp "MissingScriptWitnessesUTXOW" [ppSet pcScriptHash m]
+  ConwayRules.ScriptWitnessNotValidatingUTXOW m ->
+    ppSexp "ScriptWitnessNotValidatingUTXOW" [ppSet pcScriptHash m]
+  ConwayRules.MissingTxBodyMetadataHash m ->
+    ppSexp " MissingTxMetadata" [ppAuxiliaryDataHash m]
+  ConwayRules.MissingTxMetadata m ->
+    ppSexp " MissingTxMetadata" [ppAuxiliaryDataHash m]
+  ConwayRules.ConflictingMetadataHash h1 h2 ->
+    ppRecord
+      "ConflictingMetadataHash"
+      [("Hash in the body", ppAuxiliaryDataHash h1), ("Hash of full metadata", ppAuxiliaryDataHash h2)]
+  ConwayRules.InvalidMetadata ->
+    ppSexp "InvalidMetadata" []
+  ConwayRules.ExtraneousScriptWitnessesUTXOW m ->
+    ppSexp "ExtraneousScriptWitnessesUTXOW" [ppSet pcScriptHash m]
+  ConwayRules.MissingRedeemers xs ->
+    ppSexp "MissingRedeemers" [ppList (ppPair ppPlutusPurposeAsItem prettyA) xs]
+  ConwayRules.MissingRequiredDatums s1 s2 ->
+    ppRecord
+      "MissingRequiredDatums"
+      [ ("missing data hashes", ppSet ppSafeHash s1)
+      , ("received data hashes", ppSet ppSafeHash s2)
+      ]
+  ConwayRules.NotAllowedSupplementalDatums s1 s2 ->
+    ppRecord
+      "NotAllowedSupplementalDatums"
+      [ ("unallowed data hashes", ppSet ppSafeHash s1)
+      , ("acceptable data hashes", ppSet ppSafeHash s2)
+      ]
+  ConwayRules.PPViewHashesDontMatch h1 h2 ->
+    ppRecord
+      "PPViewHashesDontMatch"
+      [ ("PPHash in the TxBody", ppStrictMaybe ppSafeHash h1)
+      , ("PPHash Computed from the current Protocol Parameters", ppStrictMaybe ppSafeHash h2)
+      ]
+  ConwayRules.UnspendableUTxONoDatumHash x ->
+    ppSexp "UnspendableUTxONoDatumHash" [ppSet pcTxIn x]
+  ConwayRules.ExtraRedeemers x ->
+    ppSexp "ExtraRedeemers" [ppList ppPlutusPurposeAsIx x]
+  ConwayRules.MalformedScriptWitnesses x -> ppSexp "MalformedScriptWitnesses" [ppSet pcScriptHash x]
+  ConwayRules.MalformedReferenceScripts x -> ppSexp "MalformedReferenceScripts" [ppSet pcScriptHash x] -- !(Set (ScriptHash (EraCrypto era)))
+
+instance
+  Reflect era =>
+  PrettyA (ConwayRules.ConwayUtxowPredFailure era)
+  where
+  prettyA = ppConwayUtxowPredFailure reify
 
 ppBabbageUtxowPredFailure ::
   Reflect era =>
