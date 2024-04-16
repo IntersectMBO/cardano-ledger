@@ -39,7 +39,6 @@ import Data.Aeson (
   (.:),
   (.:?),
  )
-import Data.Default.Class (Default (def))
 import Data.Functor.Identity (Identity)
 import Data.ListMap (ListMap)
 import GHC.Generics (Generic)
@@ -98,6 +97,3 @@ toConwayGenesisPairs cg@(ConwayGenesis _ _ _ _ _) =
         ++ ["delegs" .= cgDelegs | not (null cgDelegs)]
         ++ ["initialDReps" .= cgInitialDReps | not (null cgInitialDReps)]
         ++ toUpgradeConwayPParamsUpdatePairs cgUpgradePParams
-
-instance Crypto c => Default (ConwayGenesis c) where
-  def = ConwayGenesis def def def mempty mempty

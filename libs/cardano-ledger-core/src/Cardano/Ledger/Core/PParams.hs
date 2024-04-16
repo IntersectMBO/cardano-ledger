@@ -90,7 +90,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR, FromCBOR, ToCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core.Era (Era (..), PreviousEra, ProtVerAtMost)
-import Cardano.Ledger.HKD (HKD, HKDFunctor (..), NoUpdate (..))
+import Cardano.Ledger.HKD (HKD, HKDApplicative, HKDFunctor (..), NoUpdate (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Identity (Identity)
@@ -283,7 +283,7 @@ class
 
   -- | Upgrade PParams from previous era to the current one
   upgradePParamsHKD ::
-    (HKDFunctor f, EraPParams (PreviousEra era)) =>
+    (HKDApplicative f, EraPParams (PreviousEra era)) =>
     UpgradePParams f era ->
     PParamsHKD f (PreviousEra era) ->
     PParamsHKD f era

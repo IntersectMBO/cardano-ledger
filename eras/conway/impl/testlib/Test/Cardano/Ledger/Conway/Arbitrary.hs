@@ -51,6 +51,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.HKD (HKD, NoUpdate (..))
+import Cardano.Ledger.Plutus (Language (PlutusV3))
 import Control.State.Transition.Extended (STS (Event))
 import Data.Default.Class (def)
 import Data.Foldable (toList)
@@ -67,6 +68,7 @@ import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary (
   genValidAndUnknownCostModels,
+  genValidCostModel,
   unFlexibleCostModels,
  )
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
@@ -116,6 +118,7 @@ instance Arbitrary (UpgradeConwayPParams Identity) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> genValidCostModel PlutusV3
 
 instance Crypto c => Arbitrary (Delegatee c) where
   arbitrary =

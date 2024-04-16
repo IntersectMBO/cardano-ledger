@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -14,9 +15,12 @@ module Cardano.Ledger.HKD (
   HKDNoUpdate,
   HKDFunctor (..),
   NoUpdate (..),
+  HKDApplicative (..),
 )
 where
-
+#if __GLASGOW_HASKELL__ < 906
+import Control.Applicative (liftA2)
+#endif
 import Control.DeepSeq (NFData)
 import Data.Functor.Identity (Identity)
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -62,3 +66,19 @@ instance HKDFunctor StrictMaybe where
   hkdMap _ = fmap
   toNoUpdate _ = NoUpdate
   fromNoUpdate _ = SNothing
+
+class HKDFunctor f => HKDApplicative f where
+  hkdPure :: a -> HKD f a
+  hkdLiftA2 :: forall a b c. (a -> b -> c) -> HKD f a -> HKD f b -> HKD f c
+
+instance HKDApplicative Identity where
+  hkdPure = id
+  hkdLiftA2 g = g
+
+instance HKDApplicative Maybe where
+  hkdPure = pure
+  hkdLiftA2 = liftA2
+
+instance HKDApplicative StrictMaybe where
+  hkdPure = pure
+  hkdLiftA2 = liftA2

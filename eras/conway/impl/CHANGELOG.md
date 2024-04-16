@@ -1,8 +1,17 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.14.0 0
+
+* Add `ucppPlutusV3CostModel` to `UpgradeConwayPParams`. #4252
+  * Remove the `Default` instance for `ConwayGenesis`.
+* Add `foldrVotingProcedures`.
+
+### `testlib`
+
+* Updated `exampleConwayGenesis` to `conway-genesis.json`. #4252
+
 ## 1.13.1.0
 
-* Add `foldrVotingProcedures`
 * Fix typo in `ToJSON` instance of `ConwayGovState`
 
 ### `testlib`

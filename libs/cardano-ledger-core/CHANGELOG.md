@@ -7,6 +7,10 @@
 * Add `byteStringToNum`
 * Add functions `rdRewardCoin`, `rdDepositCoin` in UMap.hs
 * Add function `mkCoinTxOut` in Core.hs
+* Add typeclass `HKDApplicative` and make instances for the following: #4252
+  * `HKD Identity`
+  * `HKD Maybe`
+  * `HKD StrictMaybe`
 
 ## 1.11.0.0
 

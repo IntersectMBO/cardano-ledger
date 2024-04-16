@@ -17,7 +17,7 @@ import Cardano.Ledger.Alonzo.TxAuxData (
  )
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
@@ -29,10 +29,10 @@ import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.Translation ()
 import Cardano.Ledger.Conway.Tx (AlonzoTx (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
-import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
+import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Conway.TxWits (AlonzoTxWits (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (
@@ -45,7 +45,6 @@ import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (..),
-  Network (..),
   NewEpochState (..),
   ProposedPPUpdates (..),
   RewardAccount (..),
@@ -53,7 +52,6 @@ import Cardano.Ledger.Shelley.API (
  )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
-import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended (Embed (..))
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
@@ -64,6 +62,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Conway.Genesis (expectedConwayGenesis)
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessesVKey)
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
@@ -202,5 +201,5 @@ exampleConwayNewEpochState =
     emptyPParams
     (emptyPParams & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1))
 
-exampleConwayGenesis :: Crypto c => ConwayGenesis c
-exampleConwayGenesis = def
+exampleConwayGenesis :: ConwayGenesis StandardCrypto
+exampleConwayGenesis = expectedConwayGenesis
