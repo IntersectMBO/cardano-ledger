@@ -539,10 +539,11 @@ instance HasSpec fn a => Semigroup (Spec fn a) where
   ErrorSpec e <> ErrorSpec e' = ErrorSpec (e ++ "" : (replicate 20 '-') : "" : e')
   ErrorSpec e <> _ = ErrorSpec e
   _ <> ErrorSpec e = ErrorSpec e
-  MemberSpec [a] <> spec
-    | a `conformsToSpec` spec = MemberSpec [a]
-    | otherwise = ErrorSpec [show a, "does not conform to", show spec]
-  spec <> MemberSpec [a] = MemberSpec [a] <> spec
+  -- TODO: these can interact poorly with unsafeExists!
+  -- MemberSpec [a] <> spec
+  --   | a `conformsToSpec` spec = MemberSpec [a]
+  --   | otherwise = ErrorSpec [show a, "does not conform to", show spec]
+  -- spec <> MemberSpec [a] = MemberSpec [a] <> spec
   MemberSpec as <> MemberSpec as' = MemberSpec $ intersect as as'
   MemberSpec as <> TypeSpec s cant =
     MemberSpec $
@@ -803,9 +804,18 @@ genFromSpec TrueSpec = genFromSpec @fn (typeSpec $ emptySpec @fn @a)
 genFromSpec spec@(MemberSpec as)
   | null as = genError ["MemberSpec {}"]
   | otherwise = explain ["genFromSpec " ++ show spec] $ pureGen (elements as)
-genFromSpec (SuspendedSpec x p) = do
-  env <- genFromPreds p
-  findEnv env x
+genFromSpec (SuspendedSpec x p)
+  -- NOTE: If `x` isn't free in `p` we still have to try to generate things
+  -- from `p` to make sure `p` is sat and then we can throw it away. A better
+  -- approach would be to only do this in the case where we don't know if `p`
+  -- is sat. The proper way to implement such a sat check is to remove
+  -- sat-but-unnecessary variables in the optimiser.
+  | not $ Name x `appearsIn` p = do
+      _ <- genFromPreds p
+      genFromSpec @fn TrueSpec
+  | otherwise = do
+      env <- genFromPreds p
+      findEnv env x
 genFromSpec ts@(TypeSpec s cant) =
   explain ["", "genFromSpec", "    " ++ show (typeRep cant), "    " ++ show ts] $
     -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
@@ -1534,7 +1544,12 @@ simplifyPred = \case
     t'@App {} -> Let t' (simplifyBinder b)
     -- Variable or literal
     t' | x :-> p <- b -> simplifyPred $ substitutePred x t' p
-  Exists k b -> Exists k (simplifyBinder b)
+  Exists k b -> case simplifyBinder b of
+    _ :-> TruePred -> TruePred
+    -- This is to get rid of exisentials like:
+    -- `constrained $ \ x -> exists $ \ y -> [x ==. y, y + 2 <. 10]`
+    x :-> p | Just t <- pinnedBy x p -> simplifyPred $ substitutePred x t p
+    b' -> Exists k b'
 
 simplifyPreds :: BaseUniverse fn => [Pred fn] -> [Pred fn]
 simplifyPreds = go [] . map simplifyPred
@@ -1548,6 +1563,16 @@ simplifyBinder :: Binder fn a -> Binder fn a
 simplifyBinder (x :-> p) = x :-> simplifyPred p
 
 -- Arcane magic -----------------------------------------------------------
+
+-- | Is the variable x pinned to some free term in p? (free term
+-- meaning that all the variables in the term are free in p).
+--
+-- TODO: complete this with more cases!
+pinnedBy :: forall fn a. (BaseUniverse fn, Typeable a) => Var a -> Pred fn -> Maybe (Term fn a)
+pinnedBy x (Assert _ (App (extractFn @(EqFn fn) @fn -> Just Equal) (t :> t' :> Nil)))
+  | V x' <- t, Just Refl <- eqVar x x' = Just t'
+  | V x' <- t', Just Refl <- eqVar x x' = Just t
+pinnedBy _ _ = Nothing
 
 -- TODO: it might be necessary to run aggressiveInlining again after the let floating etc.
 optimisePred :: BaseUniverse fn => Pred fn -> Pred fn
@@ -2201,9 +2226,27 @@ narrowByFuelAndSize fuel size specs =
     go (elemS, foldS)
       -- There is nothing we can do
       | fuel == 0 = Nothing
+      -- Give up as early as possible
+      | Just 0 <- knownUpperBound elemS
+      , Just 0 <- knownLowerBound elemS
+      , not $ 0 `conformsToSpec` foldS =
+          Just (ErrorSpec ["only 0 left"], foldS)
+      -- Make sure we try to generate the smallest possible list
+      -- that gives you the right result - don't put a bunch of zeroes in
+      -- a _small_ (size 0) list.
       | size == 0
       , 0 `conformsToSpec` elemS =
           Just (elemS <> notEqualSpec 0, foldS)
+      -- Member specs with non-zero elements, TODO: explain
+      | MemberSpec xs <- elemS
+      , Just u <- knownUpperBound foldS
+      , all (0 <=) xs
+      , any (0 <) xs
+      , let xMinP = minimum $ filter (0 <) xs
+            possible x = x == u || xMinP <= u - x
+            xs' = filter possible xs
+      , xs' /= xs =
+          Just (MemberSpec xs', foldS)
       -- The lower bound on the number of elements is too low
       | Just e <- knownLowerBound elemS
       , e > 0
@@ -2330,15 +2373,25 @@ genNumList ::
   Spec fn a ->
   GenT m [a]
 genNumList elemSIn foldSIn = do
-  normElemS <- normalize elemSIn
+  let extraElemConstraints
+        | Just l <- knownLowerBound elemSIn
+        , 0 <= l
+        , Just u <- knownUpperBound foldSIn =
+            leqSpec u
+        | otherwise = TrueSpec
+      elemSIn' = elemSIn <> extraElemConstraints
+  normElemS <- normalize elemSIn'
   normFoldS <- normalize foldSIn
+  let narrowedSpecs = narrowFoldSpecs (normElemS, normFoldS)
   explain
     [ "Can't generate list of ints with fold constraint"
     , show $ "  elemSpec =" <+> pretty elemSIn
+    , show $ "  elemSpec <> extra =" <+> pretty elemSIn'
     , show $ "  normElemSpec =" <+> pretty normElemS
     , show $ "  foldSpec =" <+> pretty foldSIn
+    , show $ "  narrowedSpecs =" <+> pretty narrowedSpecs
     ]
-    $ gen (narrowFoldSpecs (normElemS, normFoldS)) 50 [] >>= pureGen . shuffle
+    $ gen narrowedSpecs 50 [] >>= pureGen . shuffle
   where
     normalize spec@SuspendedSpec {} = do
       sz <- sizeT
@@ -2371,7 +2424,7 @@ genNumList elemSIn foldSIn = do
             [ "Ran out of fuel in genNumList"
             , "  " ++ show ("elemSpec =" <+> pretty elemSIn)
             , "  foldSpec = " ++ show foldSIn
-            , "  lst = " ++ show lst
+            , "  lst = " ++ show (reverse lst)
             ]
       | ErrorSpec err <- foldS = genError err
       | ErrorSpec {} <- elemS = pure lst -- At this point we know that foldS admits 0 (also this should be redundant)
@@ -2387,7 +2440,7 @@ genNumList elemSIn foldSIn = do
               , "  elemS = " ++ show elemS
               , "  foldS = " ++ show foldS
               , "  fuel  = " ++ show fuel
-              , "  lst   = " ++ show lst
+              , "  lst   = " ++ show (reverse lst)
               ]
               $ do
                 sz <- sizeT
@@ -2722,7 +2775,10 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
               ]
 
   rewriteRules Elem (_ :> Lit [] :> Nil) = Just $ Lit False
-  rewriteRules Member (_ :> Lit s :> Nil) | null s = Just $ Lit False
+  rewriteRules Elem (t :> Lit [a] :> Nil) = Just $ t ==. lit a
+  rewriteRules Member (t :> Lit s :> Nil)
+    | null s = Just $ Lit False
+    | [a] <- Set.toList s = Just $ t ==. lit a
   rewriteRules Union (x :> Lit s :> Nil) | null s = Just x
   rewriteRules Union (Lit s :> x :> Nil) | null s = Just x
   rewriteRules _ _ = Nothing

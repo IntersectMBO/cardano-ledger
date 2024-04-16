@@ -188,6 +188,10 @@ tests =
     , testSpec "roseTreePairs" roseTreePairs
     , testSpec "roseTreeMaybe" roseTreeMaybe
     , testSpec "badTreeInteraction" badTreeInteraction
+    , testSpec "sumRange" sumRange
+    , testSpec "sumListBad" sumListBad
+    , testSpec "listExistsUnfree" listExistsUnfree
+    , testSpec "existsUnfree" existsUnfree
     , numberyTests
     , sizeTests
     , numNumSpecTree
@@ -744,6 +748,24 @@ roseTreeMaybe = constrained $ \t ->
   , forAll' t $ \mp _ -> isJust mp
   , genHint (Nothing, 10) t
   ]
+
+sumRange :: Spec BaseFn (Map Word64 Word64)
+sumRange = constrained $ \m -> sum_ (rng_ m) ==. lit 10
+
+sumListBad :: Spec BaseFn [Word64]
+sumListBad = constrained $ \xs ->
+  [ forAll xs $ \x -> unsafeExists $ \y -> y ==. x
+  , assert $ sum_ xs ==. lit 10
+  ]
+
+listExistsUnfree :: Spec BaseFn [Int]
+listExistsUnfree = constrained $ \xs ->
+  [ forAll xs $ \x -> x `satisfies` existsUnfree
+  , assert $ sizeOf_ xs ==. 3
+  ]
+
+existsUnfree :: Spec BaseFn Int
+existsUnfree = constrained $ \_ -> exists (\_ -> pure 1) $ \y -> y `elem_` lit [1, 2 :: Int]
 
 badTreeInteraction :: Spec RoseFn (RoseTree (Either Int Int))
 badTreeInteraction = constrained $ \t ->
