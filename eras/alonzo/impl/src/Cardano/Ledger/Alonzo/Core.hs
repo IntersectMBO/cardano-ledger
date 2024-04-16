@@ -32,6 +32,7 @@ module Cardano.Ledger.Alonzo.Core (
   ppuMaxValSizeL,
   ppuCollateralPercentageL,
   ppuMaxCollateralInputsL,
+  AlonzoEraTxAuxData (..),
   module Cardano.Ledger.Mary.Core,
 )
 where
@@ -67,6 +68,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   pattern SpendingPurpose,
  )
 import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
+import Cardano.Ledger.Alonzo.TxAuxData (AlonzoEraTxAuxData (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxOut (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))

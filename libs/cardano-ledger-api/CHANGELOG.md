@@ -3,6 +3,9 @@
 ## 1.9.1.0
 
 * Add `redeemerPointer` and `redeemerPointerInverse`.
+* Export `mkBasicTxAuxData` and `metadataTxAuxDataL`.
+* Export `AllegraEraTxAuxData` and `timelockScriptsTxAuxDataL`
+* Export `AlonzoEraTxAuxData` and `plutusScriptsTxAuxDataL`
 
 ## 1.9.0.0
 
@@ -20,7 +23,8 @@
 * Deprecate `deserialiseRewardAcnt` in favor of `deserialiseRewardAccount`
 * Deprecate `serialiseRewardAcnt` in favor of `serialiseRewardAccount`
 * Deprecate `RewardAcnt` in favor of `RewardAccount`
-* Remove `registerInitialFunds`, `registerInitialStaking`, `registerInitialDReps`, and `registerDelegs` in favor of `injectIntoTestState`.
+* Remove `registerInitialFunds`, `registerInitialStaking`, `registerInitialDReps`, and
+  `registerDelegs` in favor of `injectIntoTestState`.
 * Change the semantics of `createInitialState` to not register any initial funds or delegates.
 
 ## 1.8.0.0

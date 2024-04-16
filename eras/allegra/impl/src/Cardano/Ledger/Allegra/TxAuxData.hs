@@ -13,12 +13,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Allegra.TxAuxData (
   AllegraTxAuxData (AllegraTxAuxData),
   AllegraTxAuxDataRaw,
+  metadataAllegraTxAuxDataL,
+  AllegraEraTxAuxData (..),
+  timelockScriptsAllegraTxAuxDataL,
 
   -- * Deprecations
   AuxiliaryData,
@@ -51,6 +55,7 @@ import Cardano.Ledger.MemoBytes (
   Memoized (RawType),
   getMemoRawType,
   getMemoSafeHash,
+  lensMemoRawType,
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
@@ -71,6 +76,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import Lens.Micro (Lens')
 import NoThunks.Class (NoThunks)
 
 -- =======================================
@@ -87,14 +93,33 @@ data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
   }
   deriving (Generic, Eq)
 
+class EraTxAuxData era => AllegraEraTxAuxData era where
+  timelockScriptsTxAuxDataL :: Lens' (TxAuxData era) (StrictSeq (Timelock era))
+
 instance Crypto c => EraTxAuxData (AllegraEra c) where
   type TxAuxData (AllegraEra c) = AllegraTxAuxData (AllegraEra c)
+
+  mkBasicTxAuxData = AllegraTxAuxData mempty mempty
+
+  metadataTxAuxDataL = metadataAllegraTxAuxDataL
 
   upgradeTxAuxData (ShelleyTxAuxData md) = AllegraTxAuxData md mempty
 
   validateTxAuxData _ (AllegraTxAuxData md as) = as `deepseq` all validMetadatum md
 
   hashTxAuxData aux = AuxiliaryDataHash (hashAnnotated aux)
+
+metadataAllegraTxAuxDataL :: Era era => Lens' (AllegraTxAuxData era) (Map Word64 Metadatum)
+metadataAllegraTxAuxDataL =
+  lensMemoRawType atadrMetadata $ \txAuxDataRaw md -> txAuxDataRaw {atadrMetadata = md}
+
+instance Crypto c => AllegraEraTxAuxData (AllegraEra c) where
+  timelockScriptsTxAuxDataL = timelockScriptsAllegraTxAuxDataL
+
+timelockScriptsAllegraTxAuxDataL ::
+  Era era => Lens' (AllegraTxAuxData era) (StrictSeq (Timelock era))
+timelockScriptsAllegraTxAuxDataL =
+  lensMemoRawType atadrTimelock $ \txAuxDataRaw ts -> txAuxDataRaw {atadrTimelock = ts}
 
 deriving instance HashAlgorithm (HASH (EraCrypto era)) => Show (AllegraTxAuxDataRaw era)
 

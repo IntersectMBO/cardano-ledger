@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -30,6 +31,7 @@ module Cardano.Ledger.Alonzo.TxAuxData (
     atadTimelock',
     atadPlutus'
   ),
+  AlonzoEraTxAuxData (..),
   AlonzoTxAuxDataRaw,
   mkAlonzoTxAuxData,
   AuxiliaryDataHash (..),
@@ -37,6 +39,9 @@ module Cardano.Ledger.Alonzo.TxAuxData (
   validateAlonzoTxAuxData,
   getAlonzoTxAuxDataScripts,
   translateAlonzoTxAuxData,
+  metadataAlonzoTxAuxDataL,
+  timelockScriptsAlonzoTxAuxDataL,
+  plutusScriptsAllegraTxAuxDataL,
 
   -- * Deprecated
   AuxiliaryData,
@@ -45,7 +50,7 @@ where
 
 import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
-import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
+import Cardano.Ledger.Allegra.TxAuxData (AllegraEraTxAuxData (..), AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoEraScript (..),
@@ -77,6 +82,7 @@ import Cardano.Ledger.MemoBytes (
   Memoized (RawType),
   getMemoRawType,
   getMemoSafeHash,
+  lensMemoRawType,
   mkMemoized,
  )
 import Cardano.Ledger.Plutus.Language (Language (..), PlutusBinary (..), guardPlutus)
@@ -93,10 +99,11 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Stack
+import Lens.Micro (Lens')
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 
--- =============================================================================
--- Version without serialized bytes
+class AllegraEraTxAuxData era => AlonzoEraTxAuxData era where
+  plutusScriptsTxAuxDataL :: Lens' (TxAuxData era) (Map Language (NE.NonEmpty PlutusBinary))
 
 data AlonzoTxAuxDataRaw era = AlonzoTxAuxDataRaw
   { atadrMetadata :: !(Map Word64 Metadatum)
@@ -254,6 +261,10 @@ type AuxiliaryData era = AlonzoTxAuxData era
 instance Crypto c => EraTxAuxData (AlonzoEra c) where
   type TxAuxData (AlonzoEra c) = AlonzoTxAuxData (AlonzoEra c)
 
+  mkBasicTxAuxData = AlonzoTxAuxData mempty mempty mempty
+
+  metadataTxAuxDataL = metadataAlonzoTxAuxDataL
+
   upgradeTxAuxData (AllegraTxAuxData md scripts) =
     mkMemoized $
       AlonzoTxAuxDataRaw
@@ -265,6 +276,10 @@ instance Crypto c => EraTxAuxData (AlonzoEra c) where
   hashTxAuxData = hashAlonzoTxAuxData
 
   validateTxAuxData = validateAlonzoTxAuxData
+
+metadataAlonzoTxAuxDataL :: Era era => Lens' (AlonzoTxAuxData era) (Map Word64 Metadatum)
+metadataAlonzoTxAuxDataL =
+  lensMemoRawType atadrMetadata $ \txAuxDataRaw md -> txAuxDataRaw {atadrMetadata = md}
 
 hashAlonzoTxAuxData ::
   (HashAlgorithm (HASH c), HashAnnotated x EraIndependentTxAuxData c) =>
@@ -280,6 +295,22 @@ validateAlonzoTxAuxData ::
 validateAlonzoTxAuxData pv auxData@AlonzoTxAuxData {atadMetadata = metadata} =
   all validMetadatum metadata
     && all (validScript pv) (getAlonzoTxAuxDataScripts auxData)
+
+instance Crypto c => AllegraEraTxAuxData (AlonzoEra c) where
+  timelockScriptsTxAuxDataL = timelockScriptsAlonzoTxAuxDataL
+
+timelockScriptsAlonzoTxAuxDataL ::
+  Era era => Lens' (AlonzoTxAuxData era) (StrictSeq (Timelock era))
+timelockScriptsAlonzoTxAuxDataL =
+  lensMemoRawType atadrTimelock $ \txAuxDataRaw ts -> txAuxDataRaw {atadrTimelock = ts}
+
+instance Crypto c => AlonzoEraTxAuxData (AlonzoEra c) where
+  plutusScriptsTxAuxDataL = plutusScriptsAllegraTxAuxDataL
+
+plutusScriptsAllegraTxAuxDataL ::
+  Era era => Lens' (AlonzoTxAuxData era) (Map Language (NE.NonEmpty PlutusBinary))
+plutusScriptsAllegraTxAuxDataL =
+  lensMemoRawType atadrPlutus $ \txAuxDataRaw ts -> txAuxDataRaw {atadrPlutus = ts}
 
 instance EraCrypto era ~ c => HashAnnotated (AuxiliaryData era) EraIndependentTxAuxData c where
   hashAnnotated = getMemoSafeHash

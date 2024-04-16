@@ -3,6 +3,9 @@
 ## 1.4.1.0
 
 * Add a `ToJSON` instance for `ValidityInterval`
+* Add `metadataAllegraTxAuxDataL`
+* Add `AllegraEraTxAuxData` with `timelockScriptsTxAuxDataL` and helper
+  `timelockScriptsAllegraTxAuxDataL`
 
 ## 1.4.0.0
 

@@ -11,6 +11,8 @@
   * `HKD Identity`
   * `HKD Maybe`
   * `HKD StrictMaybe`
+* Move `Metadatum` from `cardano-ledger-shelley` into a new module `Cardano.Ledger.Metadata`
+* Add `mkBasicTxAuxData` and `metadataTxAuxDataL` to `EraTxAuxData` type class.
 
 ## 1.11.0.0
 
