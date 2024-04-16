@@ -19,6 +19,7 @@ module Cardano.Ledger.Conway.Governance (
   RatifyEnv (..),
   RatifySignal (..),
   ConwayGovState (..),
+  predictFuturePParams,
   Committee (..),
   committeeMembersL,
   committeeThresholdL,
@@ -170,6 +171,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
+  decNoShareCBOR,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -213,6 +215,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..))
+import Control.Monad (guard)
 import Control.Monad.Trans.Reader (ReaderT, ask)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
@@ -225,7 +228,7 @@ import Lens.Micro
 import Lens.Micro.Extras (view)
 import NoThunks.Class (NoThunks (..))
 
--- =============================================
+-- | Conway governance state
 data ConwayGovState era = ConwayGovState
   { cgsProposals :: !(Proposals era)
   , cgsCommittee :: !(StrictMaybe (Committee era))
@@ -273,6 +276,18 @@ conwayGovStateDRepDistrG = to (\govst -> (psDRepDistr . fst) $ finishDRepPulser 
 getRatifyState :: ConwayGovState era -> RatifyState era
 getRatifyState (ConwayGovState {cgsDRepPulsingState}) = snd $ finishDRepPulser cgsDRepPulsingState
 
+predictFuturePParams :: ConwayGovState era -> Maybe (PParams era)
+predictFuturePParams govState = do
+  guard (any hasChangesToPParams (rsEnacted ratifyState))
+  pure (ensCurPParams (rsEnactState ratifyState))
+  where
+    ratifyState = extractDRepPulsingState (cgsDRepPulsingState govState)
+    hasChangesToPParams gas =
+      case pProcGovAction (gasProposalProcedure gas) of
+        ParameterChange {} -> True
+        HardForkInitiation {} -> True
+        _ -> False
+
 mkEnactState :: ConwayEraGov era => GovState era -> EnactState era
 mkEnactState gs =
   EnactState
@@ -298,15 +313,7 @@ instance EraPParams era => DecShareCBOR (ConwayGovState era) where
         <! From
 
 instance EraPParams era => DecCBOR (ConwayGovState era) where
-  decCBOR =
-    decode $
-      RecD ConwayGovState
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
+  decCBOR = decNoShareCBOR
 
 instance EraPParams era => EncCBOR (ConwayGovState era) where
   encCBOR ConwayGovState {..} =
@@ -353,6 +360,8 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
   curPParamsGovStateL = cgsCurPParamsL
 
   prevPParamsGovStateL = cgsPrevPParamsL
+
+  futurePParamsGovStateG = to predictFuturePParams
 
   obligationGovState st =
     Obligations

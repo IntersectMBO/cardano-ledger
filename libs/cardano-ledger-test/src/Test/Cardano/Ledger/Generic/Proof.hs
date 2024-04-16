@@ -80,7 +80,7 @@ import Cardano.Ledger.Babbage.TxOut (BabbageEraTxOut (..), BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Governance (ConwayGovState (..), RunConwayRatify (..))
+import Cardano.Ledger.Conway.Governance (ConwayGovState, RunConwayRatify (..))
 import Cardano.Ledger.Conway.PParams (ConwayEraPParams (..), ConwayPParams (..))
 import Cardano.Ledger.Conway.TxCert (ConwayEraTxCert, ConwayTxCert (..))
 import Cardano.Ledger.Core (

@@ -31,7 +31,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayNEWEPOCH)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
-  ConwayGovState (..),
+  ConwayGovState,
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
@@ -170,7 +170,7 @@ newEpochTransition = do
       ) <-
     judgmentContext
   if eNo /= succ eL
-    then pure (nes & newEpochStateDRepPulsingStateL %~ pulseDRepPulsingState)
+    then pure $ nes & newEpochStateDRepPulsingStateL %~ pulseDRepPulsingState
     else do
       es1 <- case ru of -- Here is where we extract the result of Reward pulsing.
         SNothing -> pure es0

@@ -428,7 +428,7 @@ ppupStateT p =
     :$ Lensed (futurePParamProposals p) (futureProposalsL . proposedMapL p)
     :$ Lensed (currPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
     :$ Lensed (prevPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
-    :$ Lensed (futurePParams p) (Gov.futurePParamsGovStateL . pparamsMaybeFL p)
+    :$ Lensed (futurePParams p) (Gov.futurePParamsGovStateG . pparamsMaybeFL p)
   where
     ppupfun x y (PParamsF _ pp) (PParamsF _ prev) =
       ShelleyGovState

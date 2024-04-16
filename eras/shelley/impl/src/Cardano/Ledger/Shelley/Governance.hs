@@ -53,7 +53,7 @@ import Data.Aeson (
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens)
+import Lens.Micro (Lens', SimpleGetter, lens)
 import NoThunks.Class (NoThunks (..))
 
 class
@@ -89,8 +89,17 @@ class
   -- | Lens for accessing the previous protocol parameters
   prevPParamsGovStateL :: Lens' (GovState era) (PParams era)
 
-  -- | Lens for accessing the previous protocol parameters
-  futurePParamsGovStateL :: Lens' (GovState era) (Maybe (PParams era))
+  -- | Getter for accessing the future protocol parameters.
+  --
+  -- This getter is only reliable and efficient 2 stability before the end of the
+  -- epoch. Depending on the era, if called earlier in the epoch, it will either produce
+  -- unreliable results or getting those results will be somewhat costly.
+  --
+  -- Whenever called at the earliest two stability before the end of the epoch, then the
+  -- results will be 100% reliable and they will contain either a `Just` value with the
+  -- new `PParams`, when there was an update proposed and `Nothing` whenever PParams will
+  -- reamin unchanged at the next epoch boundary.
+  futurePParamsGovStateG :: SimpleGetter (GovState era) (Maybe (PParams era))
 
   obligationGovState :: GovState era -> Obligations
 
@@ -103,7 +112,7 @@ instance Crypto c => EraGov (ShelleyEra c) where
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
-  futurePParamsGovStateL = futurePParamsShelleyGovStateL
+  futurePParamsGovStateG = futurePParamsShelleyGovStateL
 
   obligationGovState = const mempty -- No GovState obigations in ShelleyEra
 
@@ -114,7 +123,7 @@ data ShelleyGovState era = ShelleyGovState
   , sgsPrevPParams :: !(PParams era)
   , sgsFuturePParams :: Maybe (PParams era)
   -- ^ Prediction of any parameter changes that might happen on the epoch boundary. The
-  -- field is lazy on purpose, since we only need to compute this field only towards the
+  -- field is lazy on purpose, since we need to compute this field only towards the
   -- end of the epoch.
   }
   deriving (Generic)
