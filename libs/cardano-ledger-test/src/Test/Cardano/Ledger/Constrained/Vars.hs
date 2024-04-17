@@ -427,7 +427,7 @@ ppupStateT p =
     :$ Lensed (futurePParamProposals p) (futureProposalsL . proposedMapL p)
     :$ Lensed (currPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
     :$ Lensed (prevPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
-    :$ Lensed (futurePParams p) (Gov.futurePParamsGovStateL . pparamsMaybeFL p)
+    :$ Lensed (futurePParams p) (Gov.futurePParamsGovStateG . pparamsMaybeFL p)
   where
     ppupfun x y (PParamsF _ pp) (PParamsF _ prev) =
       ShelleyGovState
@@ -2047,7 +2047,7 @@ conwayGovStateT p =
   Invert
     "ConwayGovState"
     (typeRep @(ConwayGovState era))
-    ( \pr com con (PParamsF _ cpp) (PParamsF _ ppp) pu -> ConwayGovState pr (maybeToStrictMaybe com) con cpp ppp pu
+    ( \pr com con (PParamsF _ cpp) (PParamsF _ ppp) pu -> mkConwayGovState pr (maybeToStrictMaybe com) con cpp ppp pu
     )
     :$ Lensed (currProposals p) cgsProposalsL
     :$ Lensed committeeVar (cgsCommitteeL . strictMaybeToMaybeL) -- see 'committeeT' to construct a binding for committeeVar

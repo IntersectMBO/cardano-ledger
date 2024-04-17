@@ -159,7 +159,7 @@ instance
   Arbitrary (ConwayGovState era)
   where
   arbitrary =
-    ConwayGovState
+    mkConwayGovState
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary

@@ -21,7 +21,8 @@ module Cardano.Ledger.Api.Governance (
   constitutionScriptL,
 
   -- ** Governance State
-  ConwayGovState (..),
+  ConwayGovState,
+  mkConwayGovState,
   cgsProposalsL,
   RatifyState (..),
   EnactState (..),
@@ -54,7 +55,7 @@ import Cardano.Ledger.Conway.Governance (
   Anchor (..),
   AnchorData (..),
   Constitution (..),
-  ConwayGovState (..),
+  ConwayGovState,
   EnactState (..),
   GovAction (..),
   GovActionId (..),
@@ -74,6 +75,7 @@ import Cardano.Ledger.Conway.Governance (
   constitutionScriptL,
   govActionIdToText,
   hoistGovRelation,
+  mkConwayGovState,
   withGovActionParent,
  )
 import Cardano.Ledger.Shelley.Governance (

@@ -40,7 +40,7 @@ import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   Committee,
   ConwayEraGov (..),
-  ConwayGovState (..),
+  ConwayGovState,
   DRepPulsingState (..),
   EnactState (..),
   GovActionId,

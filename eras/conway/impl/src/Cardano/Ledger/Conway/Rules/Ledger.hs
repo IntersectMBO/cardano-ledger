@@ -46,7 +46,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayEra, ConwayGOV, ConwayLEDGER, ConwayUTXOW)
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
-  ConwayGovState (..),
+  ConwayGovState,
   GovProcedures (..),
   Proposals,
   constitutionScriptL,

@@ -56,7 +56,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
-import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
+import Cardano.Ledger.Conway.Governance (ConwayGovState)
 import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.Plutus (PlutusWithContext)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)

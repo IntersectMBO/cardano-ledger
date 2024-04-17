@@ -53,7 +53,7 @@ import Data.Aeson (
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens)
+import Lens.Micro (Lens', SimpleGetter, lens)
 import NoThunks.Class (NoThunks (..))
 
 class
@@ -90,7 +90,7 @@ class
   prevPParamsGovStateL :: Lens' (GovState era) (PParams era)
 
   -- | Lens for accessing the previous protocol parameters
-  futurePParamsGovStateL :: Lens' (GovState era) (Maybe (PParams era))
+  futurePParamsGovStateG :: SimpleGetter (GovState era) (Maybe (PParams era))
 
   obligationGovState :: GovState era -> Obligations
 
@@ -103,7 +103,7 @@ instance Crypto c => EraGov (ShelleyEra c) where
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
-  futurePParamsGovStateL = futurePParamsShelleyGovStateL
+  futurePParamsGovStateG = futurePParamsShelleyGovStateL
 
   obligationGovState = const mempty -- No GovState obigations in ShelleyEra
 

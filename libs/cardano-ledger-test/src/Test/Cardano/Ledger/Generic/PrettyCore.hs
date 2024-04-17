@@ -84,7 +84,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   Constitution (..),
-  ConwayGovState (..),
+  ConwayGovState,
   DRepPulser (..),
   DRepPulsingState (..),
   EnactState (..),
@@ -107,6 +107,13 @@ import Cardano.Ledger.Conway.Governance (
   Voter (..),
   VotingProcedure (..),
   VotingProcedures (..),
+  cgsCommitteeL,
+  cgsConstitutionL,
+  cgsCurPParamsL,
+  cgsDRepPulsingStateL,
+  cgsFuturePParamsG,
+  cgsPrevPParamsL,
+  cgsProposalsL,
   pGraphL,
   pRootsL,
   proposalsActionsMap,
@@ -2861,15 +2868,16 @@ instance PrettyA (GovRelation StrictMaybe era) where
   prettyA = pcPrevGovActionIds
 
 pcConwayGovState :: Reflect era => Proof era -> ConwayGovState era -> PDoc
-pcConwayGovState p (ConwayGovState ss cmt con cpp ppp dr) =
+pcConwayGovState p govState =
   ppRecord
     "ConwayGovState"
-    [ ("proposals", pcProposals ss)
-    , ("drepPulsingState", pcDRepPulsingState p dr)
-    , ("committee", ppStrictMaybe prettyA cmt)
-    , ("constitution", prettyA con)
-    , ("currentPParams", prettyA cpp)
-    , ("prevPParams", prettyA ppp)
+    [ ("proposals", pcProposals (govState ^. cgsProposalsL))
+    , ("committee", ppStrictMaybe prettyA (govState ^. cgsCommitteeL))
+    , ("constitution", prettyA (govState ^. cgsConstitutionL))
+    , ("currentPParams", prettyA (govState ^. cgsCurPParamsL))
+    , ("prevPParams", prettyA (govState ^. cgsPrevPParamsL))
+    , ("futurePParams", maybe "Unchanged" prettyA (govState ^. cgsFuturePParamsG))
+    , ("drepPulsingState", pcDRepPulsingState p (govState ^. cgsDRepPulsingStateL))
     ]
 
 instance Reflect era => PrettyA (ConwayGovState era) where
