@@ -171,11 +171,7 @@ newEpochTransition = do
       ) <-
     judgmentContext
   if eNo /= succ eL
-    then
-      pure $
-        nes -- Order of updates matter. Pulser needs to be updated first:
-          & newEpochStateDRepPulsingStateL %~ pulseDRepPulsingState
-          & newEpochStateGovStateL %~ predictFuturePParams
+    then pure $ nes & newEpochStateDRepPulsingStateL %~ pulseDRepPulsingState
     else do
       es1 <- case ru of -- Here is where we extract the result of Reward pulsing.
         SNothing -> pure es0

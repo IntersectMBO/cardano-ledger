@@ -18,8 +18,7 @@ module Cardano.Ledger.Conway.Governance (
   RatifyState (..),
   RatifyEnv (..),
   RatifySignal (..),
-  ConwayGovState,
-  mkConwayGovState,
+  ConwayGovState (..),
   predictFuturePParams,
   Committee (..),
   committeeMembersL,
@@ -89,7 +88,6 @@ module Cardano.Ledger.Conway.Governance (
   cgsDRepPulsingStateL,
   cgsCurPParamsL,
   cgsPrevPParamsL,
-  cgsFuturePParamsG,
   cgsCommitteeL,
   cgsConstitutionL,
   ensCommitteeL,
@@ -229,18 +227,13 @@ import Lens.Micro
 import Lens.Micro.Extras (view)
 import NoThunks.Class (NoThunks (..))
 
--- | Conway governance. Constructor is not exported and smart constructor
--- `mkConwayGovState` should be used instead
+-- | Conway governance state
 data ConwayGovState era = ConwayGovState
   { cgsProposals :: !(Proposals era)
   , cgsCommittee :: !(StrictMaybe (Committee era))
   , cgsConstitution :: !(Constitution era)
   , cgsCurPParams :: !(PParams era)
   , cgsPrevPParams :: !(PParams era)
-  , cgsFuturePParams :: Maybe (PParams era)
-  -- ^ Prediction of any parameter changes that might happen on the epoch boundary. The
-  -- field is lazy on purpose, since we need to compute this field only towards the
-  -- end of the epoch.
   , cgsDRepPulsingState :: !(DRepPulsingState era)
   -- ^ The 'cgsDRepPulsingState' field is a pulser that incrementally computes the stake
   -- distribution of the DReps over the Epoch following the close of voting at end of
@@ -251,18 +244,6 @@ data ConwayGovState era = ConwayGovState
   -- system is NOT at the epoch boundary.
   }
   deriving (Generic, Show)
-
-mkConwayGovState ::
-  Proposals era ->
-  StrictMaybe (Committee era) ->
-  Constitution era ->
-  PParams era ->
-  PParams era ->
-  DRepPulsingState era ->
-  ConwayGovState era
-mkConwayGovState cgsProposals cgsCommittee cgsConstitution cgsCurPParams cgsPrevPParams cgsDRepPulsingState =
-  let cgsFuturePParams = Nothing
-   in predictFuturePParams $ ConwayGovState {..}
 
 deriving instance EraPParams era => Eq (ConwayGovState era)
 
@@ -284,9 +265,6 @@ cgsCurPParamsL = lens cgsCurPParams (\x y -> x {cgsCurPParams = y})
 cgsPrevPParamsL :: Lens' (ConwayGovState era) (PParams era)
 cgsPrevPParamsL = lens cgsPrevPParams (\x y -> x {cgsPrevPParams = y})
 
-cgsFuturePParamsG :: SimpleGetter (ConwayGovState era) (Maybe (PParams era))
-cgsFuturePParamsG = lens cgsFuturePParams (\x y -> x {cgsFuturePParams = y})
-
 govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe era
 govStatePrevGovActionIds = view $ proposalsGovStateL . pRootsL . to toPrevGovActionIds
 
@@ -297,20 +275,17 @@ conwayGovStateDRepDistrG = to (\govst -> (psDRepDistr . fst) $ finishDRepPulser 
 getRatifyState :: ConwayGovState era -> RatifyState era
 getRatifyState (ConwayGovState {cgsDRepPulsingState}) = snd $ finishDRepPulser cgsDRepPulsingState
 
-predictFuturePParams :: ConwayGovState era -> ConwayGovState era
-predictFuturePParams govState =
-  -- let bindings allow us to ensure that the update is done lazily. Ensure not to
-  -- force any bindings here.
-  let ratifyState = extractDRepPulsingState (cgsDRepPulsingState govState)
-      hasChangesToPParams gas =
-        case pProcGovAction (gasProposalProcedure gas) of
-          ParameterChange {} -> True
-          HardForkInitiation {} -> True
-          _ -> False
-      futurePParams = do
-        guard (any hasChangesToPParams (rsEnacted ratifyState))
-        pure (ensCurPParams (rsEnactState ratifyState))
-   in govState {cgsFuturePParams = futurePParams}
+predictFuturePParams :: ConwayGovState era -> Maybe (PParams era)
+predictFuturePParams govState = do
+  guard (any hasChangesToPParams (rsEnacted ratifyState))
+  pure (ensCurPParams (rsEnactState ratifyState))
+  where
+    ratifyState = extractDRepPulsingState (cgsDRepPulsingState govState)
+    hasChangesToPParams gas =
+      case pProcGovAction (gasProposalProcedure gas) of
+        ParameterChange {} -> True
+        HardForkInitiation {} -> True
+        _ -> False
 
 mkEnactState :: ConwayEraGov era => GovState era -> EnactState era
 mkEnactState gs =
@@ -328,7 +303,7 @@ mkEnactState gs =
 instance EraPParams era => DecShareCBOR (ConwayGovState era) where
   decShareCBOR _ =
     decode $
-      RecD mkConwayGovState
+      RecD ConwayGovState
         <! From
         <! From
         <! From
@@ -342,7 +317,7 @@ instance EraPParams era => DecCBOR (ConwayGovState era) where
 instance EraPParams era => EncCBOR (ConwayGovState era) where
   encCBOR ConwayGovState {..} =
     encode $
-      Rec mkConwayGovState
+      Rec ConwayGovState
         !> To cgsProposals
         !> To cgsCommittee
         !> To cgsConstitution
@@ -357,7 +332,7 @@ instance EraPParams era => FromCBOR (ConwayGovState era) where
   fromCBOR = fromEraCBOR @era
 
 instance EraPParams era => Default (ConwayGovState era) where
-  def = mkConwayGovState def def def def def (DRComplete def def)
+  def = ConwayGovState def def def def def (DRComplete def def)
 
 instance EraPParams era => NFData (ConwayGovState era)
 
@@ -368,7 +343,7 @@ instance EraPParams era => ToJSON (ConwayGovState era) where
   toEncoding = pairs . mconcat . toConwayGovPairs
 
 toConwayGovPairs :: (KeyValue e a, EraPParams era) => ConwayGovState era -> [a]
-toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _ _) =
+toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _) =
   let ConwayGovState {..} = cg
    in [ "proposals" .= cgsProposals
       , "nextRatifyState" .= extractDRepPulsingState cgsDRepPulsingState
@@ -376,7 +351,6 @@ toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _ _) =
       , "constitution" .= cgsConstitution
       , "currentPParams" .= cgsCurPParams
       , "previousPParams" .= cgsPrevPParams
-      , "futurePParams" .= cgsFuturePParams
       ]
 
 instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
@@ -386,7 +360,7 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
 
   prevPParamsGovStateL = cgsPrevPParamsL
 
-  futurePParamsGovStateG = cgsFuturePParamsG
+  futurePParamsGovStateG = to predictFuturePParams
 
   obligationGovState st =
     Obligations
