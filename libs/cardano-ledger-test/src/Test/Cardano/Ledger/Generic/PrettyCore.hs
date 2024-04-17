@@ -3443,7 +3443,7 @@ pcDRepPulser x =
     "DRepPulser"
     [ ("pulseSize", ppInt (dpPulseSize x))
     , ("DRepUView Map", ppMap pcCredential pcDRep (dRepMap (dpUMap x)))
-    , ("balance", ppMap pcCredential (pcCoin . fromCompact) (dpBalance x))
+    , ("index", ppInt (dpIndex x))
     , ("stakeDistr", summaryMapCompact (dpStakeDistr x))
     , ("poolDistr", pcPoolDistr (dpStakePoolDistr x))
     , ("partialDrepDistr", summaryMapCompact (dpDRepDistr x))

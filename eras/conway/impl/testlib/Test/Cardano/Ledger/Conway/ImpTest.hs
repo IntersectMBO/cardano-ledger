@@ -42,6 +42,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   registerDRep,
   setupSingleDRep,
   setupPoolWithStake,
+  setupPoolWithoutStake,
   conwayModifyPParams,
   getProposals,
   getEnactState,
@@ -99,6 +100,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   cantFollow,
   getsPParams,
   currentProposalsShouldContain,
+  setupDRepWithoutStake,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -303,6 +305,33 @@ registerDRep = do
   dreps `shouldSatisfy` Map.member (KeyHashObj khDRep)
   pure khDRep
 
+-- | In contrast to `setupSingleDRep`, this function does not make a UTxO entry
+-- that could count as delegated stake to the DRep, so that we can test that
+-- rewards are also calculated nonetheless.
+setupDRepWithoutStake ::
+  forall era.
+  ( ConwayEraTxCert era
+  , ShelleyEraImp era
+  ) =>
+  ImpTestM
+    era
+    ( KeyHash 'DRepRole (EraCrypto era)
+    , KeyHash 'Staking (EraCrypto era)
+    )
+setupDRepWithoutStake = do
+  drepKH <- registerDRep
+  delegatorKH <- freshKeyHash
+  submitTxAnn_ "Delegate to DRep" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.fromList
+          [ mkRegDepositDelegTxCert @era
+              (KeyHashObj delegatorKH)
+              (DelegVote (DRepCredential $ KeyHashObj drepKH))
+              zero
+          ]
+  pure (drepKH, delegatorKH)
+
 -- | Registers a new DRep and delegates the specified amount of ADA to it.
 setupSingleDRep ::
   forall era.
@@ -373,6 +402,28 @@ setupPoolWithStake delegCoin = do
               (pp ^. ppKeyDepositL)
           ]
   pure (khPool, credDelegatorPayment, credDelegatorStaking)
+
+setupPoolWithoutStake ::
+  (ShelleyEraImp era, ConwayEraTxCert era) =>
+  ImpTestM
+    era
+    ( KeyHash 'StakePool (EraCrypto era)
+    , Credential 'Staking (EraCrypto era)
+    )
+setupPoolWithoutStake = do
+  khPool <- registerPool
+  credDelegatorStaking <- KeyHashObj <$> freshKeyHash
+  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+  submitTxAnn_ "Delegate to stake pool" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.fromList
+          [ RegDepositDelegTxCert
+              credDelegatorStaking
+              (DelegStake khPool)
+              deposit
+          ]
+  pure (khPool, credDelegatorStaking)
 
 -- | Submits a transaction with a Vote for the given governance action as
 -- some voter

@@ -30,6 +30,7 @@ module Cardano.Ledger.UMap (
   UMElem (UMElem),
   umElemRDPair,
   umElemRDActive,
+  umElemDRepDelegatedReward,
   umElemPtrs,
   umElemSPool,
   umElemDRep,
@@ -261,6 +262,20 @@ umElemAsTuple = \case
   TFFFE r p s -> (SJust r, p, SJust s, SNothing)
   TFFFF r p s v -> (SJust r, p, SJust s, SJust v)
 {-# INLINE umElemAsTuple #-}
+
+-- | Extract a DRep delegated reward if it is present.
+-- We can tell that the pair is present and active when Txxxx has
+-- an F in the 1st position (present) and 4rd position (DRep delegated).
+--
+-- This is equivalent to the pattern (ElemP (SJust r) _ _ (SJust drep)) -> Just (r, drep)
+umElemDRepDelegatedReward :: UMElem c -> Maybe (CompactForm Coin, DRep c)
+umElemDRepDelegatedReward = \case
+  TFEEF RDPair {rdReward} dRep -> Just (rdReward, dRep)
+  TFEFF RDPair {rdReward} _ dRep -> Just (rdReward, dRep)
+  TFFEF RDPair {rdReward} _ dRep -> Just (rdReward, dRep)
+  TFFFF RDPair {rdReward} _ _ dRep -> Just (rdReward, dRep)
+  _ -> Nothing
+{-# INLINE umElemDRepDelegatedReward #-}
 
 -- | Extract a delegated reward-deposit pair if it is present.
 -- We can tell that the pair is present and active when Txxxx has

@@ -1844,15 +1844,16 @@ initPulser ::
   -- Coin ->
   DRepPulser era Identity (RatifyState era)
 initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactstate govstates {- treas -} =
-  let stakeSize = Map.size stakeDistr
+  let umap = unify Map.empty Map.empty Map.empty credDRepMap
+      umapSize = Map.size credDRepMap
       k = securityParameter testGlobals
       pp :: PParams era
       pp = def & ppProtocolVersionL .~ protocolVersion proof
       IStake stakeDistr _ = updateStakeDistribution pp mempty mempty (utx ^. utxoFL proof)
    in DRepPulser
-        (max 1 (ceiling (toInteger stakeSize % (8 * toInteger k))))
-        (unify Map.empty Map.empty Map.empty credDRepMap)
-        stakeDistr
+        (max 1 (ceiling (toInteger umapSize % (8 * toInteger k))))
+        umap
+        0
         stakeDistr
         (PoolDistr poold)
         Map.empty

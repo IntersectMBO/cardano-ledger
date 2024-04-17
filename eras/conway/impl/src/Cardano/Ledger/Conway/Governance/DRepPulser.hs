@@ -28,7 +28,7 @@ module Cardano.Ledger.Conway.Governance.DRepPulser (
   completeDRepPulsingState,
   extractDRepPulsingState,
   finishDRepPulser,
-  computeDrepDistr,
+  computeDRepDistr,
   psDRepDistrG,
   dormantEpoch,
   PulsingSnapshot (..),
@@ -160,78 +160,57 @@ instance EraPParams era => ToCBOR (PulsingSnapshot era) where
 instance EraPParams era => FromCBOR (PulsingSnapshot era) where
   fromCBOR = fromEraCBOR @era
 
--- ===============================================================================
--- Algorithm for computing the DRep stake distrubution, with and without pulsing.
--- ===============================================================================
-
--- | Given three inputs
+-- | We iterate over a pulse-sized chunk of the UMap. For each StakingCredential
+-- in the chunk that has delegated to a DRep, add the StakeDistr and rewards
+-- for that Credential to the DRep Distribution, if the DRep is a DRepCredential
+-- (also, AlwaysAbstain or AlwaysNoConfidence) and a member of the registered
+-- DReps. If the DRepCredential is not a member of the registered DReps, ignore
+-- and skip that DRep.
 --
---   1) Map (Credential 'Staking c) (DRep c). The delegation map. Inside the DRepUView of
---   the UMap 'um' from the DState.
---
---   2) regDreps :: Map (Credential 'DRepRole c) (DRepState c). The map of registered
---   DReps to their state. The first part of the VState.
---
---   3) stakeDistr :: VMap VB VP (Credential 'Staking c) (CompactForm Coin). The
---   aggregated stake distr extracted from the first component of the IncrementalStake
---   i.e. (IStake credmap _) where credmap is converted to a VMap
---
---  Compute the Drep distribution of stake(Coin)
---  cost is expected to be O(size of 'stakeDistr' * log (size of 'um') * log (size of 'regDreps'))
---  This is going to be expensive, so we will want to pulse it. Without pulsing,
---  we estimate 3-5 seconds
-computeDrepDistr ::
-  UMap c ->
-  Map (Credential 'DRepRole c) (DRepState c) ->
+-- Give or take, this operation has roughly O(a * (log(b) + log(c))) complexity,
+-- where,
+--   (a) is the size of the chunk of the UMap, which is expected to be the pulse-size,
+--   (b) is the size of the StakeDistr, and
+--   (c) is the size of the DRepDistr, this grows as the accumulator
+computeDRepDistr ::
+  forall c.
   Map (Credential 'Staking c) (CompactForm Coin) ->
-  Map (DRep c) (CompactForm Coin)
-computeDrepDistr um regDreps stakeDistr =
-  Map.foldlWithKey' (accumDRepDistr um regDreps) Map.empty stakeDistr
-
--- | For each 'stakecred' and coin 'c', check if that credential is delegated to some DRep.
---   If so then add that coin to the aggregated map 'ans', mapping DReps to compact Coin
---   If the DRep is a DRepCredential (rather than AwaysAbstain or AlwaysNoConfidence) then check
---   that the credential is a member of the registered DRep map ('regDreps') before adding it to 'ans'
-accumDRepDistr ::
-  UMap c ->
   Map (Credential 'DRepRole c) (DRepState c) ->
   Map (DRep c) (CompactForm Coin) ->
-  Credential 'Staking c ->
-  CompactForm Coin ->
+  Map (Credential 'Staking c) (UMElem c) ->
   Map (DRep c) (CompactForm Coin)
-accumDRepDistr um regDreps ans stakeCred stake@(CompactCoin compactStake) = fromMaybe ans $ do
-  umElem <- Map.lookup stakeCred (umElems um)
-  drep <- umElemDRep umElem
-  let stakeWithRewards =
-        case umElemRDPair umElem of
-          Nothing -> stake
-          Just rdPair
-            | CompactCoin compactReward <- rdReward rdPair ->
-                CompactCoin (compactReward + compactStake)
-  pure $ case drep of
-    DRepAlwaysAbstain -> Map.insertWith UMap.addCompact drep stakeWithRewards ans
-    DRepAlwaysNoConfidence -> Map.insertWith UMap.addCompact drep stakeWithRewards ans
-    DRepCredential drepCred
-      | Map.member drepCred regDreps -> Map.insertWith UMap.addCompact drep stakeWithRewards ans
-      | otherwise -> ans
+computeDRepDistr stakeDistr regDReps dRepDistr uMapChunk =
+  Map.foldlWithKey' go dRepDistr uMapChunk
+  where
+    go accum stakeCred umElem =
+      let stake = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred stakeDistr
+       in case umElemDRepDelegatedReward umElem of
+            Just (r, drep@DRepAlwaysAbstain) ->
+              Map.insertWith addCompact drep (addCompact stake r) accum
+            Just (r, drep@DRepAlwaysNoConfidence) ->
+              Map.insertWith addCompact drep (addCompact stake r) accum
+            Just (r, drep@(DRepCredential drepCred))
+              | Map.member drepCred regDReps ->
+                  Map.insertWith addCompact drep (addCompact stake r) accum
+              | otherwise -> accum
+            Nothing -> accum
 
--- | The type of a Pulser which uses 'accumDRepDistr' as its underlying function.
---   'accumDRepDistr' will be partially applied to the components of type (UMap c)
---   and (Map (Credential 'DRepRole c) (DRepState c)) when pulsing. Note that we use two type
---   equality (~) constraints to fix both the monad 'm' and the 'ans' type, to
---   the context where we will use the type as a Pulser. The type DRepPulser must
---   have 'm' and 'ans' as its last two parameters so we can make a Pulsable instance.
---   We will always use this instantiation (DRepPulser era Identity (RatifyState era))
+-- | The type of a Pulser which uses 'computeDRepDistr' as its underlying
+-- function. Note that we use two type equality (~) constraints to fix both
+-- the monad 'm' and the 'ans' type, to the context where we will use the
+-- type as a Pulser. The type DRepPulser must have 'm' and 'ans' as its last
+-- two parameters so we can make a Pulsable instance. We will always use this
+-- instantiation (DRepPulser era Identity (RatifyState era))
 data DRepPulser era (m :: Type -> Type) ans where
   DRepPulser ::
     forall era ans m.
     (ans ~ RatifyState era, m ~ Identity, RunConwayRatify era) =>
     { dpPulseSize :: !Int
-    -- ^ How many elements of 'dpBalance' to consume each pulse.
+    -- ^ How many elements of 'dpUMap' to consume each pulse.
     , dpUMap :: !(UMap (EraCrypto era))
-    -- ^ Snapshot containing the mapping of stake credentials to Pools.
-    , dpBalance :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
-    -- ^ The object we are iterating over. Shrinks with each pulse
+    -- ^ Snapshot containing the mapping of stake credentials to DReps, Pools and Rewards.
+    , dpIndex :: !Int
+    -- ^ The index of the iterator over `dpUMap`. Grows with each pulse.
     , dpStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
     -- ^ Snapshot of the stake distr (comes from the IncrementalStake)
     , dpStakePoolDistr :: PoolDistr (EraCrypto era)
@@ -242,7 +221,7 @@ data DRepPulser era (m :: Type -> Type) ans where
     , dpDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
     -- ^ Snapshot of registered DRep credentials
     , dpCurrentEpoch :: !EpochNo
-    -- ^ Snapshot of the Epoch this pulser will complete in.
+    -- ^ Snapshot of the EpochNo this pulser will complete in.
     , dpCommitteeState :: !(CommitteeState era)
     -- ^ Snapshot of the CommitteeState
     , dpEnactState :: !(EnactState era)
@@ -257,16 +236,16 @@ instance EraPParams era => Eq (DRepPulser era Identity (RatifyState era)) where
   x == y = finishDRepPulser (DRPulsing x) == finishDRepPulser (DRPulsing y)
 
 instance Pulsable (DRepPulser era) where
-  done DRepPulser {dpBalance} = Map.null dpBalance
+  done DRepPulser {dpUMap, dpIndex} = dpIndex >= Map.size (UMap.umElems dpUMap)
 
   current x@(DRepPulser {}) = snd $ finishDRepPulser (DRPulsing x)
 
   pulseM pulser@(DRepPulser {..})
-    | Map.null dpBalance = pure pulser
+    | done pulser = pure pulser {dpIndex = 0}
     | otherwise =
-        let !(!steps, !balance') = Map.splitAt dpPulseSize dpBalance
-            drep' = Map.foldlWithKey' (accumDRepDistr dpUMap dpDRepState) dpDRepDistr steps
-         in pure (pulser {dpBalance = balance', dpDRepDistr = drep'})
+        let !chunk = Map.drop dpIndex $ Map.take (dpIndex + dpPulseSize) $ UMap.umElems dpUMap
+            dRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpDRepDistr chunk
+         in pure (pulser {dpIndex = dpIndex + dpPulseSize, dpDRepDistr = dRepDistr})
 
   completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
 
@@ -278,7 +257,7 @@ instance EraPParams era => NoThunks (DRepPulser era Identity (RatifyState era)) 
     allNoThunks
       [ noThunks ctxt (dpPulseSize drp)
       , noThunks ctxt (dpUMap drp)
-      , noThunks ctxt (dpBalance drp)
+      , noThunks ctxt (dpIndex drp)
       , noThunks ctxt (dpStakeDistr drp)
       , -- dpStakePoolDistr is allowed to have thunks
         noThunks ctxt (dpDRepDistr drp)
@@ -332,7 +311,7 @@ finishDRepPulser (DRComplete snap ratifyState) = (snap, ratifyState)
 finishDRepPulser (DRPulsing (DRepPulser {..})) =
   (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
   where
-    !finalDRepDistr = Map.foldlWithKey' (accumDRepDistr dpUMap dpDRepState) dpDRepDistr dpBalance
+    !finalDRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpDRepDistr $ Map.drop dpIndex $ umElems dpUMap
     !ratifyEnv =
       RatifyEnv
         { reStakeDistr = dpStakeDistr

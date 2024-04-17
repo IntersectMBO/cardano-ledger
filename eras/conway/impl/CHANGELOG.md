@@ -2,6 +2,8 @@
 
 ## 1.14.0 0
 
+* Make `DRepDistr` calculation include rewards when no UTxO stake is delegated. #4273
+  * Rename `computeDrepPulser` to `computeDRepPulser`.
 * Implement `NoThunks` instance for:
   * `ConwayUtxoPredFailure`
   * `ConwayUtxowPredFailure`
@@ -52,6 +54,7 @@
 
 ### `testlib`
 
+* Add `setupDRepWithoutStake` to `Conway.ImpTest`. #4273
 * Implement `ConwayUtxowPredFailure` instances:
   * `Arbitrary`
   * `ToExpr`
