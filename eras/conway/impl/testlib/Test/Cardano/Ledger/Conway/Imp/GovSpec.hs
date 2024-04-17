@@ -23,6 +23,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
+import Cardano.Ledger.Plutus.CostModels (updateCostModels)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Val (zero, (<->))
 import Data.Default.Class (Default (..))
@@ -34,6 +35,7 @@ import Data.Tree
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.Arbitrary (FlexibleCostModels (..))
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common hiding (Success)
 
@@ -54,6 +56,27 @@ spec =
     policySpec
     networkIdSpec
     predicateFailuresSpec
+    unknownCostModelsSpec
+
+unknownCostModelsSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+unknownCostModelsSpec =
+  describe "Unknown CostModels" $ do
+    it "Are accepted" $ do
+      costModels <- getsPParams ppCostModelsL
+      FlexibleCostModels newCostModels <- arbitrary
+      (drepC, hotCommitteeC, _gpi) <- electBasicCommittee
+      gai <-
+        submitParameterChange SNothing $
+          emptyPParamsUpdate
+            & ppuCostModelsL .~ SJust newCostModels
+      submitYesVote_ (DRepVoter drepC) gai
+      submitYesVote_ (CommitteeVoter hotCommitteeC) gai
+      passNEpochs 2
+      getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId gai)
+      getsPParams ppCostModelsL `shouldReturn` updateCostModels costModels newCostModels
 
 predicateFailuresSpec ::
   forall era.
