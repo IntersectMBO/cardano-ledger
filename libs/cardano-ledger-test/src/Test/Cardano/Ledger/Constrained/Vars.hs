@@ -2047,7 +2047,7 @@ conwayGovStateT p =
   Invert
     "ConwayGovState"
     (typeRep @(ConwayGovState era))
-    ( \pr com con (PParamsF _ cpp) (PParamsF _ ppp) pu -> mkConwayGovState pr (maybeToStrictMaybe com) con cpp ppp pu
+    ( \pr com con (PParamsF _ cpp) (PParamsF _ ppp) pu -> ConwayGovState pr (maybeToStrictMaybe com) con cpp ppp pu
     )
     :$ Lensed (currProposals p) cgsProposalsL
     :$ Lensed committeeVar (cgsCommitteeL . strictMaybeToMaybeL) -- see 'committeeT' to construct a binding for committeeVar
