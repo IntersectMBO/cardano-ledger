@@ -89,7 +89,16 @@ class
   -- | Lens for accessing the previous protocol parameters
   prevPParamsGovStateL :: Lens' (GovState era) (PParams era)
 
-  -- | Lens for accessing the previous protocol parameters
+  -- | Getter for accessing the future protocol parameters.
+  --
+  -- This getter is only reliable and efficient 2 stability before the end of the
+  -- epoch. Depending on the era, if called earlier in the epoch, it will either produce
+  -- unreliable results or getting those results will be somewhat costly.
+  --
+  -- Whenever called at the earliest two stability before the end of the epoch, then the
+  -- results will be 100% reliable and they will contain either a `Just` value with the
+  -- new `PParams`, when there was an update proposed and `Nothing` whenever PParams will
+  -- reamin unchanged at the next epoch boundary.
   futurePParamsGovStateG :: SimpleGetter (GovState era) (Maybe (PParams era))
 
   obligationGovState :: GovState era -> Obligations
