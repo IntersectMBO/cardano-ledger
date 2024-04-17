@@ -111,7 +111,6 @@ import Cardano.Ledger.Conway.Governance (
   cgsConstitutionL,
   cgsCurPParamsL,
   cgsDRepPulsingStateL,
-  cgsFuturePParamsG,
   cgsPrevPParamsL,
   cgsProposalsL,
   pGraphL,
@@ -2876,7 +2875,6 @@ pcConwayGovState p govState =
     , ("constitution", prettyA (govState ^. cgsConstitutionL))
     , ("currentPParams", prettyA (govState ^. cgsCurPParamsL))
     , ("prevPParams", prettyA (govState ^. cgsPrevPParamsL))
-    , ("futurePParams", maybe "Unchanged" prettyA (govState ^. cgsFuturePParamsG))
     , ("drepPulsingState", pcDRepPulsingState p (govState ^. cgsDRepPulsingStateL))
     ]
 
