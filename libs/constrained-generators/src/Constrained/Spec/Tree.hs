@@ -11,11 +11,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Constrained.Spec.Tree (BinTree (..), RoseTree (..), RoseTreeFn, roseRoot_, RoseTreeSpec (..)) where
+module Constrained.Spec.Tree (BinTree (..), TreeFn, rootLabel_, TreeSpec (..)) where
 
-import Control.DeepSeq
 import Data.Kind
+import Data.Tree
 import GHC.Generics
 import Test.QuickCheck (shrinkList)
 
@@ -34,18 +35,13 @@ import Constrained.Univ
 data BinTree a
   = BinTip
   | BinNode (BinTree a) a (BinTree a)
-  deriving (Ord, Eq, Show)
-
-data RoseTree a = RoseNode a [RoseTree a]
   deriving (Ord, Eq, Show, Generic)
-
-instance NFData a => NFData (RoseTree a)
 
 ------------------------------------------------------------------------
 -- HasSpec for BinTree
 ------------------------------------------------------------------------
 
-data BinTreeSpec fn a = BinTreeSpec Integer (Spec fn (BinTree a, a, BinTree a))
+data BinTreeSpec fn a = BinTreeSpec Integer (Specification fn (BinTree a, a, BinTree a))
   deriving (Show)
 
 instance Forallable (BinTree a) (BinTree a, a, BinTree a) where
@@ -106,40 +102,40 @@ instance HasSpec fn a => HasGenHint fn (BinTree a) where
   giveHint h = typeSpec $ BinTreeSpec h TrueSpec
 
 ------------------------------------------------------------------------
--- HasSpec for RoseTree
+-- HasSpec for Tree
 ------------------------------------------------------------------------
 
-data RoseTreeSpec fn a = RoseTreeSpec
+data TreeSpec fn a = TreeSpec
   { roseTreeAvgLength :: Maybe Integer
   , roseTreeMaxSize :: Integer
-  , roseTreeRootSpec :: Spec fn a
-  , roseTreeCtxSpec :: Spec fn (a, [RoseTree a])
+  , roseTreeRootSpec :: Specification fn a
+  , roseTreeCtxSpec :: Specification fn (a, [Tree a])
   }
 
-deriving instance (HasSpec fn a, Member (RoseTreeFn fn) fn) => Show (RoseTreeSpec fn a)
+deriving instance (HasSpec fn a, Member (TreeFn fn) fn) => Show (TreeSpec fn a)
 
-instance Forallable (RoseTree a) (a, [RoseTree a]) where
-  forAllSpec = guardRoseSpec . RoseTreeSpec Nothing 8000 TrueSpec
-  forAllToList (RoseNode a children) = (a, children) : concatMap forAllToList children
+instance Forallable (Tree a) (a, [Tree a]) where
+  forAllSpec = guardRoseSpec . TreeSpec Nothing 8000 TrueSpec
+  forAllToList (Node a children) = (a, children) : concatMap forAllToList children
 
 -- TODO: get rid of this when we implement `cardinality`
 -- in `HasSpec`
-guardRoseSpec :: HasSpec fn (RoseTree a) => RoseTreeSpec fn a -> Spec fn (RoseTree a)
-guardRoseSpec spec@(RoseTreeSpec _ _ rs s)
+guardRoseSpec :: HasSpec fn (Tree a) => TreeSpec fn a -> Specification fn (Tree a)
+guardRoseSpec spec@(TreeSpec _ _ rs s)
   | isErrorLike rs = ErrorSpec ["guardRoseSpec: rootSpec is error"]
   | isErrorLike s = ErrorSpec ["guardRoseSpec: ctxSpec is error"]
   | otherwise = TypeSpec spec []
 
-instance (HasSpec fn a, Member (RoseTreeFn fn) fn) => HasSpec fn (RoseTree a) where
-  type TypeSpec fn (RoseTree a) = RoseTreeSpec fn a
+instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
+  type TypeSpec fn (Tree a) = TreeSpec fn a
 
-  emptySpec = RoseTreeSpec Nothing 8000 TrueSpec TrueSpec
+  emptySpec = TreeSpec Nothing 8000 TrueSpec TrueSpec
 
-  combineSpec (RoseTreeSpec mal sz rs s) (RoseTreeSpec mal' sz' rs' s')
+  combineSpec (TreeSpec mal sz rs s) (TreeSpec mal' sz' rs' s')
     | isErrorLike (typeSpec (Cartesian rs'' TrueSpec) <> s'') = ErrorSpec []
     | otherwise =
         guardRoseSpec $
-          RoseTreeSpec
+          TreeSpec
             (unionWithMaybe max mal mal')
             (min sz sz')
             rs''
@@ -148,14 +144,14 @@ instance (HasSpec fn a, Member (RoseTreeFn fn) fn) => HasSpec fn (RoseTree a) wh
       rs'' = rs <> rs'
       s'' = s <> s'
 
-  conformsTo (RoseNode a children) (RoseTreeSpec _ _ rs s) =
+  conformsTo (Node a children) (TreeSpec _ _ rs s) =
     and
       [ (a, children) `conformsToSpec` s
-      , all (\(RoseNode a' children') -> (a', children') `conformsToSpec` s) children
+      , all (\(Node a' children') -> (a', children') `conformsToSpec` s) children
       , a `conformsToSpec` rs
       ]
 
-  genFromTypeSpec (RoseTreeSpec mal sz rs s) = do
+  genFromTypeSpec (TreeSpec mal sz rs s) = do
     let sz' = maybe (sz `div` 4) (sz `div`) mal
         childrenSpec =
           typeSpec $
@@ -163,40 +159,40 @@ instance (HasSpec fn a, Member (RoseTreeFn fn) fn) => HasSpec fn (RoseTree a) wh
               (Just sz')
               []
               TrueSpec
-              (typeSpec $ RoseTreeSpec mal sz' TrueSpec s)
+              (typeSpec $ TreeSpec mal sz' TrueSpec s)
               NoFold
         innerSpec = s <> typeSpec (Cartesian rs childrenSpec)
-    fmap (uncurry RoseNode) $
-      genFromSpec @fn @(a, [RoseTree a]) innerSpec
+    fmap (uncurry Node) $
+      genFromSpec @fn @(a, [Tree a]) innerSpec
 
-  shrinkWithTypeSpec (RoseTreeSpec _ _ rs ctxSpec) (RoseNode a ts) =
-    [RoseNode a [] | not $ null ts]
+  shrinkWithTypeSpec (TreeSpec _ _ rs ctxSpec) (Node a ts) =
+    [Node a [] | not $ null ts]
       ++ ts
-      ++ [RoseNode a' ts | a' <- shrinkWithSpec rs a]
-      ++ [RoseNode a [t] | t <- ts]
-      ++ [ RoseNode a ts'
-         | ts' <- shrinkList (shrinkWithTypeSpec (RoseTreeSpec Nothing 8000 TrueSpec ctxSpec)) ts
+      ++ [Node a' ts | a' <- shrinkWithSpec rs a]
+      ++ [Node a [t] | t <- ts]
+      ++ [ Node a ts'
+         | ts' <- shrinkList (shrinkWithTypeSpec (TreeSpec Nothing 8000 TrueSpec ctxSpec)) ts
          ]
 
-  toPreds t (RoseTreeSpec mal sz rs s) =
+  toPreds t (TreeSpec mal sz rs s) =
     (forAll t $ \n -> n `satisfies` s)
-      <> roseRoot_ t `satisfies` rs
+      <> rootLabel_ t `satisfies` rs
       <> genHint (mal, sz) t
 
-instance (Member (RoseTreeFn fn) fn, HasSpec fn a) => HasGenHint fn (RoseTree a) where
-  type Hint (RoseTree a) = (Maybe Integer, Integer)
-  giveHint (avgLen, sz) = typeSpec $ RoseTreeSpec avgLen sz TrueSpec TrueSpec
+instance (Member (TreeFn fn) fn, HasSpec fn a) => HasGenHint fn (Tree a) where
+  type Hint (Tree a) = (Maybe Integer, Integer)
+  giveHint (avgLen, sz) = typeSpec $ TreeSpec avgLen sz TrueSpec TrueSpec
 
-data RoseTreeFn (fn :: [Type] -> Type -> Type) args res where
-  RoseRoot :: RoseTreeFn fn '[RoseTree a] a
+data TreeFn (fn :: [Type] -> Type -> Type) args res where
+  RootLabel :: TreeFn fn '[Tree a] a
 
-deriving instance Eq (RoseTreeFn fn args res)
-deriving instance Show (RoseTreeFn fn args res)
+deriving instance Eq (TreeFn fn args res)
+deriving instance Show (TreeFn fn args res)
 
-instance FunctionLike (RoseTreeFn fn) where
-  sem RoseRoot = \(RoseNode a _) -> a
+instance FunctionLike (TreeFn fn) where
+  sem RootLabel = \(Node a _) -> a
 
-instance (Member (RoseTreeFn fn) fn, BaseUniverse fn) => Functions (RoseTreeFn fn) fn where
+instance (Member (TreeFn fn) fn, BaseUniverse fn) => Functions (TreeFn fn) fn where
   propagateSpecFun _ _ TrueSpec = TrueSpec
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun _ _ (MemberSpec []) = MemberSpec []
@@ -207,23 +203,23 @@ instance (Member (RoseTreeFn fn) fn, BaseUniverse fn) => Functions (RoseTreeFn f
           constrained $ \v' ->
             let args = appendList (mapList (\(Value a) -> Lit a) pre) (v' :> mapList (\(Value a) -> Lit a) suf)
              in Let (App (injectFn fn) args) (v :-> ps)
-    RoseRoot ->
+    RootLabel ->
       -- No TypeAbstractions in ghc-8.10
       case fn of
-        (_ :: RoseTreeFn fn '[RoseTree a] a)
-          | NilCtx HOLE <- ctx -> typeSpec $ RoseTreeSpec Nothing 8000 spec TrueSpec
+        (_ :: TreeFn fn '[Tree a] a)
+          | NilCtx HOLE <- ctx -> typeSpec $ TreeSpec Nothing 8000 spec TrueSpec
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of
-    RoseRoot ->
+    RootLabel ->
       -- No TypeAbstractions in ghc-8.10
       case f of
-        (_ :: RoseTreeFn fn '[RoseTree a] a)
-          | RoseTreeSpec _ _ rs _ <- ts -> rs
+        (_ :: TreeFn fn '[Tree a] a)
+          | TreeSpec _ _ rs _ <- ts -> rs
 
-roseRoot_ ::
+rootLabel_ ::
   forall fn a.
-  (Member (RoseTreeFn fn) fn, HasSpec fn a) =>
-  Term fn (RoseTree a) ->
+  (Member (TreeFn fn) fn, HasSpec fn a) =>
+  Term fn (Tree a) ->
   Term fn a
-roseRoot_ = app (injectFn $ RoseRoot @fn)
+rootLabel_ = app (injectFn $ RootLabel @fn)

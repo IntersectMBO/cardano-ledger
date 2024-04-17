@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
 import Cardano.Ledger.BaseTypes (Inject, ShelleyBase)
 import Cardano.Ledger.Core (EraRule)
 import qualified Constrained as CV2
-import Constrained.Base (Spec (..))
+import Constrained.Base (Specification (..))
 import Control.State.Transition.Extended (STS (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
@@ -73,21 +73,21 @@ class
   type ExecContext fn rule era = ()
 
   environmentSpec ::
-    CV2.Spec fn (Environment (EraRule rule era))
+    CV2.Specification fn (Environment (EraRule rule era))
 
   stateSpec ::
     Environment (EraRule rule era) ->
-    CV2.Spec fn (State (EraRule rule era))
+    CV2.Specification fn (State (EraRule rule era))
 
   signalSpec ::
     Environment (EraRule rule era) ->
     State (EraRule rule era) ->
-    CV2.Spec fn (Signal (EraRule rule era))
+    CV2.Specification fn (Signal (EraRule rule era))
 
-  execContextSpec :: CV2.Spec fn (ExecContext fn rule era)
+  execContextSpec :: CV2.Specification fn (ExecContext fn rule era)
   default execContextSpec ::
     ExecContext fn rule era ~ () =>
-    CV2.Spec fn (ExecContext fn rule era)
+    CV2.Specification fn (ExecContext fn rule era)
   execContextSpec = TrueSpec
 
   runAgdaRule ::

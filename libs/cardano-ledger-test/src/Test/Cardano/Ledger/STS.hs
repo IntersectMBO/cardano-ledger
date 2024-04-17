@@ -44,7 +44,7 @@ import Test.Tasty.QuickCheck
 
 type GenShrink a = (Gen a, a -> [a])
 
-genShrinkFromSpec :: forall fn a. HasSpec fn a => Spec fn a -> GenShrink a
+genShrinkFromSpec :: forall fn a. HasSpec fn a => Specification fn a -> GenShrink a
 genShrinkFromSpec spec = (genFromSpec_ @fn spec, shrinkWithSpec @fn spec)
 
 stsPropertyV2 ::
@@ -65,9 +65,9 @@ stsPropertyV2 ::
   , HasSpec fn st
   , HasSpec fn sig
   ) =>
-  Spec fn env ->
-  (env -> Spec fn st) ->
-  (env -> st -> Spec fn sig) ->
+  Specification fn env ->
+  (env -> Specification fn st) ->
+  (env -> st -> Specification fn sig) ->
   (env -> st -> sig -> st -> p) ->
   Property
 stsPropertyV2 specEnv specState specSig prop =

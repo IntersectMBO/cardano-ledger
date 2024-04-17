@@ -85,8 +85,8 @@ instance BaseUniverse fn => Functions (BoolFn fn) fn where
 
   mapTypeSpec Not (SumSpec a b) = typeSpec $ SumSpec b a
 
--- | We have something like ('constant' ||. HOLE) must evaluate to 'need'. Return a (Spec fn Bool) for HOLE, that makes that True.
-okOr :: Bool -> Bool -> Spec fn Bool
+-- | We have something like ('constant' ||. HOLE) must evaluate to 'need'. Return a (Specification fn Bool) for HOLE, that makes that True.
+okOr :: Bool -> Bool -> Specification fn Bool
 okOr constant need = case (constant, need) of
   (True, True) -> TrueSpec
   (True, False) -> ErrorSpec ["(" ++ show constant ++ "||. HOLE) must equal False. That cannot be the case."]

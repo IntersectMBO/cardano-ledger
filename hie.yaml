@@ -255,6 +255,9 @@ cradle:
     - path: "libs/constrained-generators/bench/Main.hs"
       component: "constrained-generators:bench:bench"
 
+    - path: "libs/constrained-generators/bench/Constrained/Bench.hs"
+      component: "constrained-generators:bench:bench"
+
     - path: "libs/ledger-state/src"
       component: "lib:ledger-state"
 

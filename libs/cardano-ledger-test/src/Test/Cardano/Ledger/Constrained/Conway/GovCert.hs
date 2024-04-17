@@ -19,14 +19,14 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 
-vStateSpec :: Spec fn (VState (ConwayEra StandardCrypto))
+vStateSpec :: Specification fn (VState (ConwayEra StandardCrypto))
 vStateSpec = TrueSpec
 
 govCertSpec ::
   IsConwayUniv fn =>
   ConwayGovCertEnv (ConwayEra StandardCrypto) ->
   VState (ConwayEra StandardCrypto) ->
-  Spec fn (ConwayGovCert StandardCrypto)
+  Specification fn (ConwayGovCert StandardCrypto)
 govCertSpec ConwayGovCertEnv {..} vs =
   let reps = lit $ Map.keysSet $ vsDReps vs
       deposits = lit [(k, drepDeposit dep) | (k, dep) <- Map.toList $ vsDReps vs]
@@ -54,7 +54,7 @@ govCertSpec ConwayGovCertEnv {..} vs =
 
 govCertEnvSpec ::
   IsConwayUniv fn =>
-  Spec fn (ConwayGovCertEnv (ConwayEra StandardCrypto))
+  Specification fn (ConwayGovCertEnv (ConwayEra StandardCrypto))
 govCertEnvSpec =
   constrained $ \gce ->
     match gce $ \pp _ ->

@@ -22,7 +22,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Pool
 
 certEnvSpec ::
   IsConwayUniv fn =>
-  Spec fn (CertEnv (ConwayEra StandardCrypto))
+  Specification fn (CertEnv (ConwayEra StandardCrypto))
 certEnvSpec =
   constrained $ \ce ->
     match ce $ \_ pp _ ->
@@ -30,7 +30,7 @@ certEnvSpec =
 
 certStateSpec ::
   IsConwayUniv fn =>
-  Spec fn (CertState (ConwayEra StandardCrypto))
+  Specification fn (CertState (ConwayEra StandardCrypto))
 certStateSpec =
   constrained $ \cs ->
     match cs $ \vState pState dState ->
@@ -43,7 +43,7 @@ txCertSpec ::
   IsConwayUniv fn =>
   CertEnv (ConwayEra StandardCrypto) ->
   CertState (ConwayEra StandardCrypto) ->
-  Spec fn (ConwayTxCert (ConwayEra StandardCrypto))
+  Specification fn (ConwayTxCert (ConwayEra StandardCrypto))
 txCertSpec (CertEnv slot pp ce) CertState {..} =
   constrained $ \txCert ->
     caseOn
