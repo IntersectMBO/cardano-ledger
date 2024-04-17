@@ -36,7 +36,6 @@ import Cardano.Ledger.Conway.Governance (
   RatifySignal (..),
   RatifyState (..),
   newEpochStateDRepPulsingStateL,
-  predictFuturePParams,
   pulseDRepPulsingState,
  )
 import Cardano.Ledger.Conway.Rules.Epoch (ConwayEpochEvent)
