@@ -37,7 +37,12 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances (
   cSNothing_,
   cSJust_,
   succV_,
+  maryValueCoin_,
   strLen_,
+  sizedValue_,
+  sizedSize_,
+  txOutVal_,
+  pProcDeposit_,
   pProcGovAction_,
   IsConwayUniv,
   gasId_,
@@ -117,6 +122,7 @@ import Data.ByteString.Short (ShortByteString)
 import Data.ByteString.Short qualified as SBS
 import Data.Coerce
 import Data.Foldable
+import Data.Int
 import Data.Kind
 import Data.Map (Map)
 import Data.Map.Strict qualified as Map
@@ -303,6 +309,12 @@ cSJust_ = con @"SJust"
 instance HasSimpleRep (Sized a)
 instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (Sized a)
 
+sizedValue_ :: (HasSpec fn (Sized a), HasSpec fn a) => Term fn (Sized a) -> Term fn a
+sizedValue_ = sel @0
+
+sizedSize_ :: (HasSpec fn (Sized a), HasSpec fn a) => Term fn (Sized a) -> Term fn Int64
+sizedSize_ = sel @1
+
 instance HasSimpleRep Addr28Extra
 instance IsConwayUniv fn => HasSpec fn Addr28Extra
 
@@ -316,7 +328,7 @@ type BabbageTxOutTypes era =
    , StrictMaybe (Script era)
    ]
 instance (Era era, Val (Value era)) => HasSimpleRep (BabbageTxOut era) where
-  type SimpleRep (BabbageTxOut era) = SOP '["BabbageTxOut" ::: BabbageTxOutTypes era]
+  type TheSop (BabbageTxOut era) = '["BabbageTxOut" ::: BabbageTxOutTypes era]
   toSimpleRep (BabbageTxOut addr val dat msc) =
     inject @"BabbageTxOut" @'["BabbageTxOut" ::: BabbageTxOutTypes era]
       addr
@@ -337,6 +349,19 @@ instance
   ) =>
   HasSpec fn (BabbageTxOut era)
 
+txOutVal_ ::
+  ( HasSpec fn (Value era)
+  , Era era
+  , HasSpec fn (Data era)
+  , Val (Value era)
+  , HasSpec fn (Script era)
+  , IsConwayUniv fn
+  , HasSpec fn (BabbageTxOut era)
+  ) =>
+  Term fn (BabbageTxOut era) ->
+  Term fn (Value era)
+txOutVal_ = sel @1
+
 instance (Typeable a, Show a, Compactible a) => HasSimpleRep (CompactForm a) where
   type SimpleRep (CompactForm a) = a
   toSimpleRep = fromCompact
@@ -346,10 +371,13 @@ instance (Typeable a, Show a, Compactible a) => HasSimpleRep (CompactForm a) whe
 instance (IsConwayUniv fn, Compactible a, HasSpec fn a) => HasSpec fn (CompactForm a)
 
 instance HasSimpleRep (MaryValue c) where
-  type SimpleRep (MaryValue c) = SOP '["MaryValue" ::: '[Coin]]
+  type TheSop (MaryValue c) = '["MaryValue" ::: '[Coin]]
   toSimpleRep (MaryValue c _) = c
   fromSimpleRep c = MaryValue c mempty
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (MaryValue c)
+
+maryValueCoin_ :: (IsConwayUniv fn, Crypto c) => Term fn (MaryValue c) -> Term fn Coin
+maryValueCoin_ = sel @0
 
 instance HasSimpleRep PV1.Data
 instance IsConwayUniv fn => HasSpec fn PV1.Data where
@@ -921,6 +949,12 @@ instance
   , HasSpec fn (SimpleRep (PParamsHKD StrictMaybe era))
   ) =>
   HasSpec fn (ProposalProcedure era)
+
+pProcDeposit_ ::
+  IsConwayUniv fn =>
+  Term fn (ProposalProcedure (ConwayEra StandardCrypto)) ->
+  Term fn Coin
+pProcDeposit_ = sel @0
 
 pProcGovAction_ ::
   IsConwayUniv fn =>
