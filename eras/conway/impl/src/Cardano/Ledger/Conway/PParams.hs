@@ -48,10 +48,13 @@ module Cardano.Ledger.Conway.PParams (
   DRepVotingThresholds (..),
   dvtCommitteeNoConfidenceL,
   dvtCommitteeNormalL,
+  dvtHardForkInitiationL,
+  dvtMotionNoConfidenceL,
   dvtPPNetworkGroupL,
   dvtPPGovGroupL,
   dvtPPTechnicalGroupL,
   dvtPPEconomicGroupL,
+  dvtTreasuryWithdrawalL,
   dvtUpdateToConstitutionL,
   ConwayPParams (..),
   getLanguageView,
@@ -360,6 +363,15 @@ dvtCommitteeNoConfidenceL = lens dvtCommitteeNoConfidence (\x y -> x {dvtCommitt
 
 dvtCommitteeNormalL :: Lens' DRepVotingThresholds UnitInterval
 dvtCommitteeNormalL = lens dvtCommitteeNormal (\x y -> x {dvtCommitteeNormal = y})
+
+dvtMotionNoConfidenceL :: Lens' DRepVotingThresholds UnitInterval
+dvtMotionNoConfidenceL = lens dvtMotionNoConfidence (\x y -> x {dvtMotionNoConfidence = y})
+
+dvtHardForkInitiationL :: Lens' DRepVotingThresholds UnitInterval
+dvtHardForkInitiationL = lens dvtHardForkInitiation (\x y -> x {dvtHardForkInitiation = y})
+
+dvtTreasuryWithdrawalL :: Lens' DRepVotingThresholds UnitInterval
+dvtTreasuryWithdrawalL = lens dvtTreasuryWithdrawal (\x y -> x {dvtTreasuryWithdrawal = y})
 
 instance EncCBOR DRepVotingThresholds where
   encCBOR DRepVotingThresholds {..} =

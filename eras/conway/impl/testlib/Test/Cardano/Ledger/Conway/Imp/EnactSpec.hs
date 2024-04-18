@@ -187,20 +187,9 @@ hardForkInitiationSpec =
     (committeeMember :| _) <- registerInitialCommittee
     modifyPParams $ \pp ->
       pp
-        & ppDRepVotingThresholdsL
-          %~ ( \dvt ->
-                dvt
-                  { dvtHardForkInitiation = 2 %! 3
-                  }
-             )
-        & ppPoolVotingThresholdsL
-          %~ ( \pvt ->
-                pvt
-                  { pvtHardForkInitiation = 2 %! 3
-                  }
-             )
-        & ppGovActionLifetimeL
-          .~ EpochInterval 20
+        & ppDRepVotingThresholdsL . dvtHardForkInitiationL .~ 2 %! 3
+        & ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 2 %! 3
+        & ppGovActionLifetimeL .~ EpochInterval 20
     _ <- setupPoolWithStake $ Coin 22_000_000
     (stakePoolId1, _, _) <- setupPoolWithStake $ Coin 22_000_000
     (stakePoolId2, _, _) <- setupPoolWithStake $ Coin 22_000_000
