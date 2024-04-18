@@ -33,6 +33,7 @@ import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
 
 import Constrained.Internals
+import Constrained.TypeErrors
 
 -- Properties -------------------------------------------------------------
 
@@ -872,3 +873,4 @@ runTestSpec spec = defaultMain (testSpec "interactive test with runTestSpec" spe
 
 generateSpec :: forall fn a. HasSpec fn a => Spec fn a -> IO a
 generateSpec spec = generate (genFromSpec_ @fn spec)
+

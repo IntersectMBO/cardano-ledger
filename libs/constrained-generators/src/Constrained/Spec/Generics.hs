@@ -55,6 +55,7 @@ import Constrained.Core
 import Constrained.List
 import Constrained.Spec.Pairs ()
 import Constrained.Univ
+import Constrained.TypeErrors
 
 ------------------------------------------------------------------------
 -- Generics
@@ -229,18 +230,51 @@ right_ ::
   Term fn (Either a b)
 right_ = fromGeneric_ . app injRightFn
 
+type family IsList (err :: Constraint) (xs :: [Type]) :: Constraint where
+  IsList _ '[] = ((), ())
+  IsList err (_ ': xs) = IsList err xs
+  IsList _ _ = ()
+
+type family Break (err :: Constraint) a :: Constraint where
+  Break _ Int = ((), ())
+  Break _ _ = ()
+
+type GoodType a = Break (TypeError ('Text "bad type: " :<>: 'ShowType a)) a
+-- type GoodType a = ( IsList (TypeError ('Text "bad type: " :<>: 'ShowType a)) (Cases a)
+--                   , IsList (TypeError ('Text "bad args: " :<>: 'ShowType a)) (Args a)
+--                   )
+
 caseOn ::
   forall fn a.
   ( HasSpec fn a
   , HasSpec fn (SimpleRep a)
   , HasSimpleRep a
   , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
+  , GoodType a
   , SimpleRep a ~ SumOver (Cases (SimpleRep a))
   , TypeList (Cases (SimpleRep a))
   ) =>
   Term fn a ->
   FunTy (MapList (Binder fn) (Cases (SimpleRep a))) (Pred fn)
 caseOn tm = curryList @(Cases (SimpleRep a)) (mkCase (toGeneric_ tm))
+
+onJust' ::
+  forall fn a p.
+  (BaseUniverse fn, HasSpec fn a, {-IsNormalType a,-} IsPred p fn) =>
+  Term fn (Maybe a) ->
+  (Term fn a -> p) ->
+  Pred fn
+onJust' x f = caseOn x
+  (branch $ \ _ -> True)
+  (branch $ \ y -> f y) -- Con @"Just"
+
+-- onJust'' ::
+--   forall fn a p.
+--   (BaseUniverse fn, HasSpec fn a, IsPred p fn) =>
+--   Term fn (Maybe a) ->
+--   (Term fn a -> p) ->
+--   Pred fn
+-- onJust'' = onCon @"Just"
 
 branch ::
   forall fn p a.
@@ -266,6 +300,7 @@ match ::
   ( HasSpec fn a
   , HasSpec fn (SimpleRep a)
   , HasSimpleRep a
+  , GoodType a
   , Cases (SimpleRep a) ~ '[SimpleRep a]
   , SimpleRep a ~ SumOver (Cases (SimpleRep a))
   , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
@@ -351,12 +386,17 @@ type family Cases t where
   Cases (Sum a b) = a : Cases b
   Cases a = '[a]
 
+type family IsSumOfProd a where
+  IsSumOfProd (Sum a b) = IsSumOfProd b
+  IsSumOfProd b = ()
+
 -- | Like `forAll` but pattern matches on the `Term fn a`
 forAll' ::
   forall fn t a p.
   ( Forallable t a
   , Cases (SimpleRep a) ~ '[SimpleRep a]
   , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
+  , GoodType a
   , HasSpec fn t
   , HasSpec fn (SimpleRep a)
   , HasSimpleRep a
@@ -376,6 +416,7 @@ constrained' ::
   ( Cases (SimpleRep a) ~ '[SimpleRep a]
   , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
   , HasSpec fn (SimpleRep a)
+  , GoodType a
   , HasSimpleRep a
   , All (HasSpec fn) (Args (SimpleRep a))
   , IsProd (SimpleRep a)
@@ -392,6 +433,7 @@ reify' ::
   ( Cases (SimpleRep b) ~ '[SimpleRep b]
   , TypeSpec fn b ~ TypeSpec fn (SimpleRep b)
   , HasSpec fn (SimpleRep b)
+  , GoodType b
   , HasSimpleRep b
   , All (HasSpec fn) (Args (SimpleRep b))
   , IsProd (SimpleRep b)

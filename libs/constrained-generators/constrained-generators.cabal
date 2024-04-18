@@ -33,6 +33,7 @@ library
         Constrained.Spec.Maps
         Constrained.Spec.Tree
         Constrained.Test
+        Constrained.TypeErrors
         Constrained.Internals
         Constrained.Bench
 
