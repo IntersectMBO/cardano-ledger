@@ -270,11 +270,12 @@ decodeCostModels =
     decodeCostModelsFailingOnError
 {-# INLINEABLE decodeCostModels #-}
 
--- | Number of parameters in a CostModel for a specific language
+-- | Number of parameters in a CostModel for a specific language. Starting with `PlutusV3`
+-- we support variable number of parameters.
 costModelParamsCount :: Language -> Int
 costModelParamsCount PlutusV1 = 166
 costModelParamsCount PlutusV2 = 175
-costModelParamsCount PlutusV3 = 233
+costModelParamsCount lang = length $ plutusVXParamNames lang
 
 -- | Prior to version 9, each 'CostModel' was expected to be serialized as
 -- an array of integers of a specific length (depending on the version of Plutus).
@@ -290,6 +291,8 @@ costModelParamsCount PlutusV3 = 233
 -- and https://github.com/intersectmbo/cardano-ledger/blob/master/docs/adr/2022-12-05_006-cost-model-serialization.md
 legacyDecodeCostModel :: Language -> Decoder s CostModel
 legacyDecodeCostModel lang = do
+  when (lang > PlutusV2) $
+    fail $ "Legacy CostModel decoding is not supported for " ++ show lang ++ " language version"
   values <- decCBOR
   let numValues = length values
       expectedNumValues = costModelParamsCount lang
@@ -428,7 +431,7 @@ updateCostModels (CostModels oldValid oldErrors oldUnk) (CostModels modValid mod
 mkCostModels :: Map Language CostModel -> CostModels
 mkCostModels cms = CostModels cms mempty mempty
 
--- | This function attempts to convert a Map with potential cost models to into validated
+-- | This function attempts to convert a Map with potential cost models into validated
 -- 'CostModels'.  If it is a valid cost model for a known version of Plutus, it is added
 -- to 'costModelsValid'. If it is an invalid cost model for a known version of Plutus, the
 -- error is stored in 'costModelsErrors' and the cost model is stored in
