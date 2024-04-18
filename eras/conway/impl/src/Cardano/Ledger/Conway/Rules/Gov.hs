@@ -86,6 +86,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
+import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.TxIn (TxId (..))
 import Control.DeepSeq (NFData)
@@ -323,6 +324,16 @@ checkPolicy expectedPolicyHash actualPolicyHash =
   failureUnless (actualPolicyHash == expectedPolicyHash) $
     InvalidPolicyHash actualPolicyHash expectedPolicyHash
 
+checkBootstrapProposal ::
+  EraPParams era =>
+  PParams era ->
+  ProposalProcedure era ->
+  Test (ConwayGovPredFailure era)
+checkBootstrapProposal pp proposal@ProposalProcedure {pProcGovAction}
+  | HF.bootstrapPhase (pp ^. ppProtocolVersionL) =
+      failureUnless (isBootstrapAction pProcGovAction) $ DisallowedProposalDuringBootstrap proposal
+  | otherwise = pure ()
+
 govTransition ::
   forall era.
   ( ConwayEraPParams era
@@ -347,6 +358,8 @@ govTransition = do
   expectedNetworkId <- liftSTS $ asks networkId
 
   let processProposal ps (idx, proposal@ProposalProcedure {..}) = do
+        runTest $ checkBootstrapProposal pp proposal
+
         let newGaid = GovActionId txid idx
 
         -- In a HardFork, check that the ProtVer can follow
@@ -446,6 +459,14 @@ govTransition = do
   tellEvent $ GovNewProposals txid updatedProposalStates
 
   pure updatedProposalStates
+
+isBootstrapAction :: GovAction era -> Bool
+isBootstrapAction =
+  \case
+    ParameterChange {} -> True
+    HardForkInitiation {} -> True
+    InfoAction -> True
+    _ -> False
 
 -- | If the GovAction is a HardFork, then return 3 things (if they exist)
 -- 1) The (StrictMaybe GovPurposeId), pointed to by the HardFork proposal
