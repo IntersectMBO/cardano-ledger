@@ -37,6 +37,12 @@ module Cardano.Ledger.Api.State.Query (
   MemberStatus (..),
   NextEpochChange (..),
 
+  -- * @GetCurrentPParams@
+  queryCurrentPParams,
+
+  -- * @GetFuturePParams@
+  queryFuturePParams,
+
   -- * For testing
   getNextEpochCommitteeMembers,
 ) where
@@ -67,11 +73,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.Governance (
-  EraGov (
-    GovState
-  ),
- )
+import Cardano.Ledger.Shelley.Governance (EraGov (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UMap (
   StakeCredentials (scRewards, scSPools),
@@ -274,3 +276,18 @@ getNextEpochCommitteeMembers nes =
   let ratifyState = snd . finishDRepPulser $ queryGovState nes ^. drepPulsingStateGovStateL
       committee = ratifyState ^. rsEnactStateL . ensCommitteeL
    in foldMap' committeeMembers committee
+
+-- | This is a simple lookup into the state for the values of current protocol
+-- parameters. These values can change on the epoch boundary. Use `queryFuturePParams` to
+-- see if we are aware of any upcoming changes.
+queryCurrentPParams :: EraGov era => NewEpochState era -> PParams era
+queryCurrentPParams nes = queryGovState nes ^. curPParamsGovStateL
+
+-- | This query will return values for protocol parameters that will be after the next
+-- epoch boundary, but only when there was a protocol parameter update initiated in this
+-- epoch. Otherwise it will return `Nothing`.
+--
+-- Semantics of this query are such that it will produce reliable results and efficiently
+-- only two stability windows before the end of the epoch.
+queryFuturePParams :: EraGov era => NewEpochState era -> Maybe (PParams era)
+queryFuturePParams nes = queryGovState nes ^. futurePParamsGovStateG
