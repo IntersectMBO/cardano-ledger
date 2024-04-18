@@ -639,6 +639,9 @@ curPParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGo
 prevPParamsEpochStateL :: EraGov era => Lens' (EpochState era) (PParams era)
 prevPParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovStateL . prevPParamsGovStateL
 
+futurePParamsEpochStateL :: EraGov era => Lens' (EpochState era) (FuturePParams era)
+futurePParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovStateL . futurePParamsGovStateL
+
 -- ==========================================
 -- AccountState
 

@@ -390,7 +390,7 @@ expectedStEx2 =
 --
 -- In the second block Alice and Bob both delegation to Alice's Pool.
 poolLifetime2 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
-poolLifetime2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
+poolLifetime2 = CHAINExample expectedStEx1 blockEx2 (Right (C.solidifyProposals expectedStEx2))
 
 --
 -- Block 3, Slot 110, Epoch 1
@@ -531,7 +531,7 @@ expectedStEx4 =
 -- preparing the way for the first non-empty pool distribution in this running example.
 -- Additionally, in order to have the stake distribution change, Carl delegates his stake.
 poolLifetime4 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
-poolLifetime4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
+poolLifetime4 = CHAINExample expectedStEx3 blockEx4 (Right (C.solidifyProposals expectedStEx4))
 
 epoch2Nonce :: forall c. ExMock (EraCrypto (ShelleyEra c)) => Nonce
 epoch2Nonce =
@@ -647,7 +647,7 @@ expectedStEx6 =
 --
 -- Create a decentralized Praos block (ie one not in the overlay schedule)
 poolLifetime6 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
-poolLifetime6 = CHAINExample expectedStEx5 blockEx6 (Right expectedStEx6)
+poolLifetime6 = CHAINExample expectedStEx5 blockEx6 (Right (C.solidifyProposals expectedStEx6))
 
 --
 -- Block 7, Slot 310, Epoch 3
@@ -784,7 +784,7 @@ expectedStEx8 =
 --
 -- Create the first non-trivial reward update.
 poolLifetime8 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
-poolLifetime8 = CHAINExample expectedStEx7 blockEx8 (Right expectedStEx8)
+poolLifetime8 = CHAINExample expectedStEx7 blockEx8 (Right (C.solidifyProposals expectedStEx8))
 
 --
 -- Block 9, Slot 410, Epoch 4
@@ -1006,7 +1006,7 @@ expectedStEx11 =
 --
 -- Stage the retirement of Alice's stake pool.
 poolLifetime11 :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
-poolLifetime11 = CHAINExample expectedStEx10 blockEx11 (Right expectedStEx11)
+poolLifetime11 = CHAINExample expectedStEx10 blockEx11 (Right (C.solidifyProposals expectedStEx11))
 
 --
 -- Block 12, Slot 510, Epoch 5

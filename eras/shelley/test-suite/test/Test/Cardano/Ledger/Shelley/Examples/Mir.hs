@@ -306,7 +306,7 @@ expectedStEx2 pot =
   C.evolveNonceUnfrozen (getBlockNonce (blockEx2 @c pot))
     . C.newLab (blockEx2 pot)
     . C.pulserUpdate (pulserEx2 pot)
-    $ (expectedStEx1 pot)
+    $ expectedStEx1 pot
 
 -- === Block 2, Slot 50, Epoch 0
 --
@@ -319,7 +319,7 @@ mir2 pot =
   CHAINExample
     (expectedStEx1 pot)
     (blockEx2 pot)
-    (Right $ expectedStEx2 pot)
+    (Right $ C.solidifyProposals (expectedStEx2 pot))
 
 --
 -- Block 3, Slot 110, Epoch 1
@@ -361,7 +361,7 @@ expectedStEx3 pot =
     . C.newSnapshot emptySnapShot feeTx1
     . C.applyRewardUpdate emptyRewardUpdate
     . C.applyMIR pot (Map.singleton Cast.aliceSHK aliceMIRCoin)
-    $ (expectedStEx2 pot)
+    $ expectedStEx2 pot
 
 -- === Block 3, Slot 110, Epoch 1
 --

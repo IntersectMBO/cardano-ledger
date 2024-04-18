@@ -509,7 +509,7 @@ shelleyCommonPParamsHKDPairs px pp =
 -- | Update operation for protocol parameters structure @PParams@
 newtype ProposedPPUpdates era
   = ProposedPPUpdates (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
-  deriving (Generic)
+  deriving (Generic, Semigroup, Monoid)
 
 deriving instance Eq (PParamsUpdate era) => Eq (ProposedPPUpdates era)
 
