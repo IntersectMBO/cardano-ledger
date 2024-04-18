@@ -12,6 +12,7 @@ import Cardano.Ledger.Shelley.Scripts ()
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.List.NonEmpty (NonEmpty)
+import GHC.Stack
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, totalAda)
 import Test.Cardano.Ledger.Shelley.TreeDiff (expectExprEqual)
@@ -30,7 +31,7 @@ data CHAINExample h era = CHAINExample
 
 -- | Runs example, applies chain state transition system rule (STS),
 --   and checks that trace ends with expected state or expected error.
-testCHAINExample :: CHAINExample (BHeader C_Crypto) C -> Assertion
+testCHAINExample :: HasCallStack => CHAINExample (BHeader C_Crypto) C -> Assertion
 testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
   (checkTrace @(CHAIN C) runShelleyBase () $ pure initSt .- block .->> expectedSt)
     >> expectExprEqual (totalAda expectedSt) maxLLSupply
