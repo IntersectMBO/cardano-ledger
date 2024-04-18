@@ -10,7 +10,7 @@
 module Test.Cardano.Ledger.Constrained.Conway.Gov where
 
 import Data.Foldable
-
+import Data.Typeable
 import Data.Coerce
 
 import Cardano.Ledger.BaseTypes
@@ -22,12 +22,14 @@ import Data.Set qualified as Set
 import Lens.Micro
 
 import Constrained
+import Constrained.Properties
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
+import Test.QuickCheck qualified as QC
 
 govEnvSpec ::
   IsConwayUniv fn =>
@@ -442,3 +444,119 @@ wfPParamsUpdate ppu =
             -- model generator is way too slow
             ]
     ]
+
+type Conway = ConwayEra StandardCrypto
+
+agdaCompatiblePPU :: IsConwayUniv fn => Term fn (PParamsUpdate Conway) -> Pred fn
+agdaCompatiblePPU ppup =
+  match ppup $
+    \cppMinFeeA
+     cppMinFeeB
+     cppMaxBBSize
+     cppMaxTxSize
+     cppMaxBHSize
+     cppKeyDeposit
+     cppPoolDeposit
+     cppEMax
+     cppNOpt
+     cppA0
+     cppRho
+     cppTau
+     _cppProtocolVersion
+     cppMinPoolCost
+     cppCoinsPerUTxOByte
+     cppCostModels
+     cppPrices
+     cppMaxTxExUnits
+     cppMaxBlockExUnits
+     cppMaxValSize
+     cppCollateralPercentage
+     cppMaxCollateralInputs
+     cppPoolVotingThresholds
+     cppDRepVotingThresholds
+     cppCommitteeMinSize
+     cppCommitteeMaxTermLength
+     cppGovActionLifetime
+     cppGovActionDeposit
+     cppDRepDeposit
+     cppDRepActivity
+     cppMinFeeRefScriptCostPerByte ->
+        -- TODO enable pparam updates once they're properly
+        -- implemented in the spec
+        mconcat
+          [ isModified cppMinFeeA
+          , isUnmodified cppMinFeeB
+          , isUnmodified cppMaxBBSize
+          , isUnmodified cppMaxTxSize
+          , isUnmodified cppMaxBHSize
+          , isUnmodified cppKeyDeposit
+          , isUnmodified cppPoolDeposit
+          , isUnmodified cppEMax
+          , isUnmodified cppNOpt
+          , isUnmodified cppA0
+          , isUnmodified cppRho
+          , isUnmodified cppTau
+          , isUnmodified cppMinPoolCost
+          , isUnmodified cppCoinsPerUTxOByte
+          , isUnmodified cppCostModels
+          , isUnmodified cppPrices
+          , isUnmodified cppMaxTxExUnits
+          , isUnmodified cppMaxBlockExUnits
+          , isUnmodified cppMaxValSize
+          , isUnmodified cppCollateralPercentage
+          , isUnmodified cppMaxCollateralInputs
+          , isUnmodified cppPoolVotingThresholds
+          , isUnmodified cppDRepVotingThresholds
+          , isUnmodified cppCommitteeMinSize
+          , isUnmodified cppCommitteeMaxTermLength
+          , isUnmodified cppGovActionLifetime
+          , isUnmodified cppGovActionDeposit
+          , isUnmodified cppDRepDeposit
+          , isUnmodified cppDRepActivity
+          , isUnmodified cppMinFeeRefScriptCostPerByte
+          ]
+  where
+    isUnmodified ::
+      ( HasSpec fn a
+      , Typeable gs
+      , IsNormalType a
+      , IsConwayUniv fn
+      ) =>
+      Term fn (THKD gs StrictMaybe a) ->
+      Pred fn
+    isUnmodified x =
+      caseOn
+        x
+        (branch $ const True)
+        (branch $ const False)
+    isModified ::
+      ( HasSpec fn a
+      , Typeable gs
+      , IsNormalType a
+      , IsConwayUniv fn
+      ) =>
+      Term fn (THKD gs StrictMaybe a) ->
+      Pred fn
+    isModified x =
+      caseOn
+        x
+        (branch $ const False)
+        (branch $ const True)
+
+agdaCompatibleProposal :: IsConwayUniv fn => Term fn (ProposalProcedure Conway) -> Pred fn
+agdaCompatibleProposal prop =
+  match prop $ \_ _ govAction _ ->
+    caseOn
+      govAction
+      (branch $ \_ ppup _ -> agdaCompatiblePPU ppup)
+      (branch $ \_ _ -> True)
+      (branch $ \_ _ -> True)
+      (branch $ const True)
+      (branch $ \_ _ _ _ -> True)
+      (branch $ \_ _ -> True)
+      (branch $ const True)
+
+prop_stuff :: QC.Property
+prop_stuff =
+  QC.forAll (genFromSpec_ @ConwayFn govEnvSpec) $ \ env ->
+  prop_complete (govProposalsSpec @ConwayFn env)

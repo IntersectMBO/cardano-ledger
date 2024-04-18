@@ -114,3 +114,18 @@ badTreeInteraction = constrained $ \t ->
         ]
   , genHint (Just 4, 10) t
   ]
+
+compositionIssue :: Specification RoseFn (Int, [Tree (Either Int Int)])
+compositionIssue = spec1 <> spec2
+  where
+    spec1 = constrained' $ \n ts ->
+      [ forAll ts $ \t ->
+          [ forAll' t $ \e _ -> isCon @"Left" e
+          , forAll' t $ \e _ -> onCon @"Left" e $ \ x -> x <. 10
+          , genHint (Just 4, 10) t
+          ]
+      , reify ts length (n ==.)
+      ]
+    spec2 = constrained' $ \_ ts ->
+      forAll ts $ \t ->
+        forAll' t $ \e _ -> onCon @"Left" e $ \ x -> 0 <. x
