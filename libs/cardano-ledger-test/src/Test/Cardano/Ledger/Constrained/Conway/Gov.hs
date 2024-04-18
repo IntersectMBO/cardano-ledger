@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -9,9 +10,9 @@
 -- for the GOV rule
 module Test.Cardano.Ledger.Constrained.Conway.Gov where
 
+import Data.Coerce
 import Data.Foldable
 import Data.Typeable
-import Data.Coerce
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Conway.Governance
@@ -556,7 +557,43 @@ agdaCompatibleProposal prop =
       (branch $ \_ _ -> True)
       (branch $ const True)
 
+agdaConstraints :: IsConwayUniv fn => Term fn (Proposals Conway) -> Pred fn
+agdaConstraints props = match props $ \ppups _ _ _ _ ->
+  match ppups $ \_ ppupForest ->
+    forAll ppupForest $ \ppupTree ->
+      forAll ppupTree $ \ppupLeaf -> match ppupLeaf $ \gas _ ->
+        match gas $ \_ _ _ _ prop _ _ -> agdaCompatibleProposal prop
+
+specPPU :: IsConwayUniv fn => Specification fn (PParamsUpdate Conway)
+specPPU = constrained wfPParamsUpdate <> constrained agdaCompatiblePPU
+
+specProptree :: GovEnv Conway -> Specification ConwayFn ProposalTree
+specProptree GovEnv {..} = mainSpec <> agdaSpec
+  where
+    agdaSpec = constrained' $ \_ ppupForest ->
+      forAll ppupForest $ \ppupTree ->
+        forAll ppupTree $ \ppupLeaf -> match ppupLeaf $ \gas _ ->
+          match gas $ \_ _ _ _ prop _ _ -> agdaCompatibleProposal prop
+    mainSpec = constrained $ \ppupTree ->
+      -- Protocol parameter updates
+      [ wellFormedChildren (lit $ coerce grPParamUpdate) ppupTree
+      , allGASInTree ppupTree $ \gas ->
+          [ isCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas)
+          , onCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas) $
+              \_ ppup policy ->
+                [ wfPParamsUpdate ppup
+                , assert $ policy ==. lit gePPolicy
+                ]
+          ]
+      , forAll (snd_ ppupTree) (genHint treeGenHint)
+      , genHint listSizeHint (snd_ ppupTree)
+      ]
+    GovRelation {..} = gePrevGovActionIds
+    treeGenHint = (Just 2, 10)
+    listSizeHint = 5
+
 prop_stuff :: QC.Property
 prop_stuff =
-  QC.forAll (genFromSpec_ @ConwayFn govEnvSpec) $ \ env ->
-  prop_complete (govProposalsSpec @ConwayFn env)
+  QC.forAll (genFromSpec_ @ConwayFn govEnvSpec) $ \env ->
+    let theSpec = govProposalsSpec @ConwayFn env <> constrained agdaConstraints
+     in QC.counterexample (show theSpec) $ prop_complete theSpec
