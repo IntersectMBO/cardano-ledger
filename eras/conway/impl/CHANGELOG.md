@@ -2,6 +2,7 @@
 
 ## 1.14.0 0
 
+* Add`DisallowedProposalDuringBootstrap` and `DisallowedVotesDuringBootstrap` to `ConwayGovPredFailure`
 * Make `DRepDistr` calculation include rewards when no UTxO stake is delegated. #4273
   * Rename `computeDrepPulser` to `computeDRepPulser`.
 * Implement `NoThunks` instance for:

@@ -163,6 +163,9 @@ data ConwayGovPredFailure era
       (StrictMaybe (ScriptHash (EraCrypto era)))
       -- | The policy script hash of the current constitution
       (StrictMaybe (ScriptHash (EraCrypto era)))
+  | DisallowedProposalDuringBootstrap (ProposalProcedure era)
+  | DisallowedVotesDuringBootstrap
+      (NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)))
   deriving (Eq, Show, Generic)
 
 type instance EraRuleFailure "GOV" (ConwayEra c) = ConwayGovPredFailure (ConwayEra c)
@@ -189,6 +192,8 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     9 -> SumD VotingOnExpiredGovAction <! From
     10 -> SumD ProposalCantFollow <! From <! From <! From
     11 -> SumD InvalidPolicyHash <! From <! From
+    12 -> SumD DisallowedProposalDuringBootstrap <! From
+    13 -> SumD DisallowedVotesDuringBootstrap <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -221,6 +226,10 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum InvalidPolicyHash 11
           !> To got
           !> To expected
+      DisallowedProposalDuringBootstrap proposal ->
+        Sum DisallowedProposalDuringBootstrap 12 !> To proposal
+      DisallowedVotesDuringBootstrap votes ->
+        Sum DisallowedVotesDuringBootstrap 13 !> To votes
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
