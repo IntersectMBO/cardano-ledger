@@ -104,7 +104,6 @@ import Control.State.Transition.Extended (
   tellEvent,
   (?!),
  )
-import Data.Bifunctor (Bifunctor (..))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
@@ -266,10 +265,9 @@ checkVotesAreNotForExpiredActions ::
   EpochNo ->
   [(Voter (EraCrypto era), GovActionState era)] ->
   Test (ConwayGovPredFailure era)
-checkVotesAreNotForExpiredActions curEpoch voters =
-  let votesOnExpiredActions = filter (\(_, GovActionState {gasExpiresAfter}) -> curEpoch > gasExpiresAfter) voters
-   in failureOnNonEmpty votesOnExpiredActions $
-        VotingOnExpiredGovAction . fmap (second gasId)
+checkVotesAreNotForExpiredActions curEpoch votes =
+  checkDisallowedVotes votes VotingOnExpiredGovAction $ \GovActionState {gasExpiresAfter} _ ->
+    curEpoch <= gasExpiresAfter
 
 checkVotersAreValid ::
   forall era.
@@ -278,17 +276,12 @@ checkVotersAreValid ::
   CommitteeState era ->
   [(Voter (EraCrypto era), GovActionState era)] ->
   Test (ConwayGovPredFailure era)
-checkVotersAreValid currentEpoch committeeState voters =
-  let canVoteOn voter govAction = case voter of
-        CommitteeVoter {} -> isCommitteeVotingAllowed currentEpoch committeeState govAction
-        DRepVoter {} -> isDRepVotingAllowed govAction
-        StakePoolVoter {} -> isStakePoolVotingAllowed govAction
-      disallowedVoters =
-        filter
-          (\(voter, action) -> not $ voter `canVoteOn` gasAction action)
-          voters
-   in failureOnNonEmpty disallowedVoters $
-        DisallowedVoters . fmap (second gasId)
+checkVotersAreValid currentEpoch committeeState votes =
+  checkDisallowedVotes votes DisallowedVoters $ \gas ->
+    \case
+      CommitteeVoter {} -> isCommitteeVotingAllowed currentEpoch committeeState (gasAction gas)
+      DRepVoter {} -> isDRepVotingAllowed (gasAction gas)
+      StakePoolVoter {} -> isStakePoolVotingAllowed (gasAction gas)
 
 actionWellFormed :: ConwayEraPParams era => GovAction era -> Test (ConwayGovPredFailure era)
 actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
@@ -467,6 +460,18 @@ isBootstrapAction =
     HardForkInitiation {} -> True
     InfoAction -> True
     _ -> False
+
+checkDisallowedVotes ::
+  [(Voter (EraCrypto era), GovActionState era)] ->
+  (NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)) -> ConwayGovPredFailure era) ->
+  (GovActionState era -> Voter (EraCrypto era) -> Bool) ->
+  Test (ConwayGovPredFailure era)
+checkDisallowedVotes votes failure canBeVotedOnBy =
+  failureOnNonEmpty disallowedVotes failure
+  where
+    disallowedVotes =
+      [(voter, gasId gas) | (voter, gas) <- votes, not (gas `canBeVotedOnBy` voter)]
+
 
 -- | If the GovAction is a HardFork, then return 3 things (if they exist)
 -- 1) The (StrictMaybe GovPurposeId), pointed to by the HardFork proposal
