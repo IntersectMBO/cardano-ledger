@@ -2786,6 +2786,8 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
     | [a] <- Set.toList s = Just $ t ==. lit a
   rewriteRules Union (x :> Lit s :> Nil) | null s = Just x
   rewriteRules Union (Lit s :> x :> Nil) | null s = Just x
+  rewriteRules Subset (Lit s :> _ :> Nil) | null s = Just $ Lit True
+  rewriteRules Subset (x :> Lit s :> Nil) | null s = Just $ x ==. mempty
   rewriteRules _ _ = Nothing
 
   -- NOTE: this function over-approximates and returns a liberal spec.
