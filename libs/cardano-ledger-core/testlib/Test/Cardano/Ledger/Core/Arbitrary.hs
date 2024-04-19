@@ -103,8 +103,6 @@ import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
-  CostModelApplyError (..),
-  CostModelError (..),
   CostModels,
   costModelParamsCount,
   mkCostModel,
@@ -138,6 +136,7 @@ import Cardano.Ledger.UMap (
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad (replicateM)
 import Control.Monad.Identity (Identity)
+import Control.Monad.Trans.Fail.String (errorFail)
 import Data.GenValidity
 import Data.Int (Int64)
 import Data.Map.Strict (Map)
@@ -802,16 +801,6 @@ instance Crypto c => Arbitrary (PoolCert c) where
 instance Arbitrary Language where
   arbitrary = elements nonNativeLanguages
 
-instance Arbitrary CostModelError where
-  arbitrary =
-    CostModelError
-      <$> oneof
-        [ CMUnknownParamError <$> arbitrary
-        , pure CMInternalReadError
-        , CMInternalWriteError <$> arbitrary
-        , CMTooFewParamsError <$> arbitrary <*> arbitrary
-        ]
-
 instance Arbitrary ExUnits where
   arbitrary = ExUnits <$> genUnit <*> genUnit
     where
@@ -836,7 +825,7 @@ genValidAndUnknownCostModels :: Gen CostModels
 genValidAndUnknownCostModels = do
   langs <- sublistOf nonNativeLanguages
   validCms <- genValidCostModels $ Set.fromList langs
-  unknownCms <- mkCostModelsLenient <$> genUnknownCostModels
+  unknownCms <- errorFail . mkCostModelsLenient <$> genUnknownCostModels
   pure $ updateCostModels validCms unknownCms
 
 -- | This Arbitrary instance assumes the inflexible deserialization
@@ -857,7 +846,7 @@ instance Arbitrary FlexibleCostModels where
     known <- genKnownCostModels
     unknown <- genUnknownCostModels
     let cms = known `Map.union` unknown
-    pure . FlexibleCostModels $ mkCostModelsLenient cms
+    pure . FlexibleCostModels . errorFail $ mkCostModelsLenient cms
 
 genUnknownCostModels :: Gen (Map Word8 [Int64])
 genUnknownCostModels = Map.fromList <$> listOf genUnknownCostModelValues

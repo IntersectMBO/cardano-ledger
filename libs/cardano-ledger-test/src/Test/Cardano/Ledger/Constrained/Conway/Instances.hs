@@ -112,6 +112,7 @@ import Cardano.Ledger.Shelley.LedgerState hiding (ptrMap)
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
+import Cardano.Ledger.Tools (boom)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO
@@ -882,19 +883,15 @@ instance IsConwayUniv fn => HasSpec fn CostModels where
   emptySpec =
     Cartesian
       (constrained $ \m -> size_ (dom_ m) <=. 3)
-      (constrained $ \p -> size_ (dom_ (fst_ $ fromGeneric_ p)) <=. 3)
+      boom
+
+-- (constrained $ \p -> size_ (dom_ (fst_ $ fromGeneric_ p)) <=. 3)
 
 instance HasSimpleRep PoolVotingThresholds
 instance IsConwayUniv fn => HasSpec fn PoolVotingThresholds
 
 instance HasSimpleRep DRepVotingThresholds
 instance IsConwayUniv fn => HasSpec fn DRepVotingThresholds
-
-instance HasSimpleRep CostModelError
-instance IsConwayUniv fn => HasSpec fn CostModelError
-
-instance HasSimpleRep CostModelApplyError
-instance IsConwayUniv fn => HasSpec fn CostModelApplyError
 
 instance IsConwayUniv fn => HasSpec fn Char where
   type TypeSpec fn Char = ()

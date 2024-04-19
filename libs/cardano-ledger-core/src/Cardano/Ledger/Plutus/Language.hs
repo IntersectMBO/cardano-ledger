@@ -103,6 +103,7 @@ import qualified PlutusLedgerApi.Common as P (
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import System.Random.Stateful (Random, Uniform (..), UniformRange (..), uniformEnumM, uniformEnumRM)
 
 -- | This is a deserialized version of the `Plutus` type that can be used directly with
 -- evaluation functions that rely on `evaluatePlutusRunnable`.
@@ -214,6 +215,14 @@ data Language
 instance NoThunks Language
 
 instance NFData Language
+
+instance Random Language
+
+instance Uniform Language where
+  uniformM = uniformEnumM
+
+instance UniformRange Language where
+  uniformRM = uniformEnumRM
 
 -- | Make a language from its `Enum` index.
 mkLanguageEnum :: Int -> Maybe Language

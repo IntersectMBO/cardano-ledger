@@ -216,10 +216,11 @@ instance
       <*> arbitrary
       <*> arbitrary
 
+genEraLanguage :: forall era. AlonzoEraScript era => Gen Language
+genEraLanguage = choose (minBound, eraMaxLanguage @era)
+
 instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => Arbitrary (AlonzoScript era) where
-  arbitrary = do
-    lang <- elements [minBound .. eraMaxLanguage @era]
-    genAlonzoScript lang
+  arbitrary = genEraLanguage @era >>= genAlonzoScript
 
 genAlonzoScript ::
   ( AlonzoEraScript era

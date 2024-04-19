@@ -113,7 +113,6 @@ import Cardano.Ledger.HKD (
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
   decodeCostModelFailHard,
-  decodeValidAndUnknownCostModels,
   encodeCostModel,
   mkCostModel,
   mkCostModels,
@@ -1055,7 +1054,7 @@ updateField = \case
   11 -> field (\x up -> up {cppTau = THKD (SJust x)}) From
   16 -> field (\x up -> up {cppMinPoolCost = THKD (SJust x)}) From
   17 -> field (\x up -> up {cppCoinsPerUTxOByte = THKD (SJust x)}) From
-  18 -> field (\x up -> up {cppCostModels = THKD (SJust x)}) $ D decodeValidAndUnknownCostModels
+  18 -> field (\x up -> up {cppCostModels = THKD (SJust x)}) From
   19 -> field (\x up -> up {cppPrices = THKD (SJust x)}) From
   20 -> field (\x up -> up {cppMaxTxExUnits = THKD (SJust x)}) From
   21 -> field (\x up -> up {cppMaxBlockExUnits = THKD (SJust x)}) From

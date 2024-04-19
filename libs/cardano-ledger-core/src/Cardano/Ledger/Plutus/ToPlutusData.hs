@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -77,8 +78,10 @@ instance ToPlutusData NonNegativeInterval where
   fromPlutusData _ = Nothing
 
 instance ToPlutusData CostModels where
-  toPlutusData cmdls = toPlutusData $ fmap (fmap toInteger) (flattenCostModels cmdls)
-  fromPlutusData x = mkCostModelsLenient . fmap (fmap fromInteger) <$> fromPlutusData x
+  toPlutusData costModels = toPlutusData $ fmap toInteger <$> flattenCostModels costModels
+  fromPlutusData costModelsData = do
+    costModels :: Map.Map Word8 [Integer] <- fromPlutusData costModelsData
+    mkCostModelsLenient (Map.map (map fromInteger) costModels)
 
 instance ToPlutusData ExUnits where
   toPlutusData (ExUnits a b) = List [toPlutusData a, toPlutusData b]

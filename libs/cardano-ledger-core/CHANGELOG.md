@@ -21,6 +21,7 @@
   * `HKD StrictMaybe`
 * Move `Metadatum` from `cardano-ledger-shelley` into a new module `Cardano.Ledger.Metadata`
 * Add `mkBasicTxAuxData` and `metadataTxAuxDataL` to `EraTxAuxData` type class.
+* Add `Random`, `Uniform` and `UniformRange` instances for `Language`
 
 ### `testlib`
 
