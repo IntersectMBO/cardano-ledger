@@ -32,9 +32,9 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genInsertDeleteRoundtripDRep,
 
   -- * Plutus
-  FlexibleCostModels (..),
   genValidAndUnknownCostModels,
   genValidCostModel,
+  genValidCostModels,
 
   -- * Utils
 
@@ -74,7 +74,7 @@ import Cardano.Ledger.BaseTypes (
   textToDns,
   textToUrl,
  )
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR, Sized, mkSized)
+import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
 import Cardano.Ledger.CertState (
   Anchor (..),
   CertState (..),
@@ -832,21 +832,10 @@ genValidAndUnknownCostModels = do
 -- scheme prior to version 9.
 instance Arbitrary CostModels where
   arbitrary = do
-    langs <- sublistOf nonNativeLanguages
-    genValidCostModels $ Set.fromList langs
-
--- | This Arbitrary instance assumes the flexible deserialization
--- scheme of 'CostModels' starting at version 9.
-newtype FlexibleCostModels = FlexibleCostModels {unFlexibleCostModels :: CostModels}
-  deriving stock (Show, Eq, Ord)
-  deriving newtype (EncCBOR, DecCBOR)
-
-instance Arbitrary FlexibleCostModels where
-  arbitrary = do
     known <- genKnownCostModels
     unknown <- genUnknownCostModels
     let cms = known `Map.union` unknown
-    pure . FlexibleCostModels . errorFail $ mkCostModelsLenient cms
+    pure . errorFail $ mkCostModelsLenient cms
 
 genUnknownCostModels :: Gen (Map Word8 [Int64])
 genUnknownCostModels = Map.fromList <$> listOf genUnknownCostModelValues

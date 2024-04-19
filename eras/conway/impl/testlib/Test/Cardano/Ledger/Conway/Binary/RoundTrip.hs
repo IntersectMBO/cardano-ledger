@@ -18,8 +18,8 @@ import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Plutus (CostModels)
 import Cardano.Ledger.Shelley.LedgerState
-import Test.Cardano.Ledger.Alonzo.Arbitrary (FlexibleCostModels (..))
 import Test.Cardano.Ledger.Alonzo.Binary.RoundTrip (roundTripAlonzoCommonSpec)
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -65,8 +65,7 @@ roundTripConwayEraTypesSpec = do
     roundTripEraTypeSpec @era @VotingProcedures
     roundTripEraTypeSpec @era @ProposalProcedure
     roundTripEraTypeSpec @era @Constitution
-    -- Conway adds ability to serialize unknown cost models, i.e. FlexibleCostModels
-    prop "CostModels" $ roundTripEraExpectation @era . unFlexibleCostModels
+    prop "CostModels" $ roundTripEraExpectation @era @CostModels
   describe "Conway State Types" $ do
     roundTripShareEraTypeSpec @era @EnactState
     roundTripShareEraTypeSpec @era @GovActionState

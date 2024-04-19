@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -16,12 +17,18 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Plutus.Data
+import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Core.Binary.RoundTrip
+import Test.Cardano.Ledger.Core.Arbitrary (genValidCostModels)
+import Test.Cardano.Ledger.Core.Binary.RoundTrip (
+  RuleListEra (..),
+  roundTripAnnEraTypeSpec,
+  roundTripEraExpectation,
+  roundTripEraTypeSpec,
+ )
 import Test.Cardano.Ledger.Shelley.Binary.RoundTrip (roundTripShelleyCommonSpec)
 
 roundTripAlonzoCommonSpec ::
@@ -56,6 +63,11 @@ roundTripAlonzoEraTypesSpec = do
   describe "Alonzo era types" $ do
     roundTripAnnEraTypeSpec @era @Data
     roundTripEraTypeSpec @era @BinaryData
+    -- CostModel serialization changes drastically for Conway, which requires a different
+    -- QuickCheck generator, hence Arbitrary can't be reused
+    prop "CostModels" $
+      forAll (genValidCostModels [PlutusV1, PlutusV2]) $
+        roundTripEraExpectation @era
     xdescribe "Datum doesn't roundtrip" $ do
       -- TODO: Adjust Datum implementation somehow to avoid this situtaiton
       -- It doesn't roundtrip because we do not en/decode NoDatum

@@ -106,6 +106,12 @@ import qualified PlutusLedgerApi.V3 as PV3 (ParamName, mkEvaluationContext)
 data CostModel = CostModel
   { cmLanguage :: !Language
   , cmValues :: ![Int64]
+  -- ^ We retain the original values for parameters for the purpose of
+  -- reserialization. Starting with the Conway era there might not be the exact number
+  -- of parameters in this list that Plutus' smart constructor `mkEvaluationContext`
+  -- expects. This functionality is intentional for allowing the addition of new
+  -- primitives on a hardfork boundary. When less than the expected number is
+  -- supplied, `maxBound` will be used instead by the Plutus smart constructor.
   , cmEvalCtx :: !P.EvaluationContext
   }
   deriving (Generic)
@@ -135,8 +141,8 @@ instance FromJSON CostModels where
     cms <- mapM (parseCostModel o) nonNativeLanguages
     let cmsMap = Map.fromList [(cmLanguage cm, cm) | Just cm <- cms]
     unknown <- o .:? "Unknown" .!= mempty
-    unknwonCostmodels <- mkCostModelsLenient unknown
-    pure $ mkCostModels cmsMap <> unknwonCostmodels
+    unknownCostModels <- mkCostModelsLenient unknown
+    pure $ mkCostModels cmsMap <> unknownCostModels
 
 -- | The costmodel parameters in Alonzo Genesis are represented as a map.  Plutus API does
 -- no longer require the map as a parameter to `mkEvaluationContext`, but the list of
@@ -204,6 +210,8 @@ validateCostModel lang cmps =
 
 -- | Convert cost model parameters to a cost model, making use of the
 --  conversion function mkEvaluationContext from the Plutus API.
+--
+-- Note that we always retain the original values that were supplied.
 mkCostModel :: Language -> [Int64] -> Either P.CostModelApplyError CostModel
 mkCostModel lang cm =
   case eCostModel of
@@ -248,22 +256,22 @@ decodeCostModels =
     decodeCostModelsFailing
 {-# INLINEABLE decodeCostModels #-}
 
--- | Number of parameters in a CostModel for a specific language. Starting with `PlutusV3`
--- we support variable number of parameters.
+-- | Initial number of parameters in a CostModel for a specific language when the language was
+-- introduced. Starting with Conway we support variable number of parameters, therefore
+-- do not expect this number to reflect the reality on the number of supported parameters.
 costModelParamsCount :: Language -> Int
 costModelParamsCount PlutusV1 = 166
 costModelParamsCount PlutusV2 = 175
-costModelParamsCount lang = length $ plutusVXParamNames lang
+costModelParamsCount PlutusV3 = 233
 
--- | Prior to version 9, each 'CostModel' was expected to be serialized as
--- an array of integers of a specific length (depending on the version of Plutus).
--- Starting in version 9, we allow the decoders to accept lists longer than what they
--- require, so that new fields can be added in the future.
--- For this reason, we must hard code the length expectation into the deserializers
--- prior to version 9.
+-- | Prior to version 9, each 'CostModel' was expected to be serialized as an array of
+-- integers of a specific length (depending on the version of Plutus).  Starting in
+-- version 9, we allow the decoders to accept lists longer or shorter than what they
+-- require, so that new fields can be added in the future. For this reason, we must hard
+-- code the length expectation into the deserializers prior to version 9.
 --
--- Note that the number of elements in the V1 and V2 cost models
--- may change in the future, they are only fixed prior to version 9.
+-- Note that the number of elements in the V1 and V2 cost models may change in the future,
+-- they are only fixed prior to version 9.
 --
 -- See https://github.com/intersectmbo/cardano-ledger/issues/2902
 -- and https://github.com/intersectmbo/cardano-ledger/blob/master/docs/adr/2022-12-05_006-cost-model-serialization.md
@@ -354,9 +362,8 @@ mkCostModels cms = CostModels cms mempty
 -- | This function attempts to convert a Map with potential cost models into validated
 -- 'CostModels'.  If it is a valid cost model for a known version of Plutus, it is added
 -- to 'costModelsValid'. If it is an invalid cost model for a known version of Plutus, the
--- function will fail witha string version of 'P.CostModelApplyError' and the cost model
--- is stored in 'costModelsUnknown'. Lastly, if the Plutus version is unknown, the cost
--- model is also stored in 'costModelsUnknown'.
+-- function will fail with a string version of 'P.CostModelApplyError'. Lastly, if the
+-- Plutus version is unknown, the cost model is also stored in 'costModelsUnknown'.
 mkCostModelsLenient :: MonadFail m => Map Word8 [Int64] -> m CostModels
 mkCostModelsLenient = Map.foldrWithKey addRawCostModel (pure (CostModels mempty mempty))
   where
@@ -365,18 +372,24 @@ mkCostModelsLenient = Map.foldrWithKey addRawCostModel (pure (CostModels mempty 
       CostModels validCostModels unknownCostModels <- costModelsM
       case mkLanguageEnum (fromIntegral langW8) of
         Just lang ->
+          -- Note that we also retain the original values for the known languages as well,
+          -- which are stored in the `CostModel.cmValues` instead of the unknown
+          -- `CostModel._costModelsUnknown` Map.
           case mkCostModel lang cmIds of
             Right cm -> pure $ CostModels (Map.insert lang cm validCostModels) unknownCostModels
-            Left err -> fail $ "CostModel contruction failure: " ++ show err
+            Left err -> fail $ "CostModel construction failure: " ++ show err
         Nothing -> pure $ CostModels validCostModels (Map.insert langW8 cmIds unknownCostModels)
 
--- | Turn a 'CostModels' into a mapping of potential language versions and
--- cost model values, with no distinction between valid and invalid cost models.
--- This is used for serialization, so that judgements about validity can be made
--- upon deserialization.
+-- | Turn a 'CostModels' into a mapping of potential language versions and cost model
+-- values, with no distinction between valid and unknown cost models. This is used for
+-- serialization, so that judgements about known languages can be made upon
+-- deserialization.
 flattenCostModels :: CostModels -> Map Word8 [Int64]
 flattenCostModels (CostModels validCostModels unknownCostModels) =
-  Map.foldrWithKey (\lang cm -> Map.insert (languageToWord8 lang) (cmValues cm)) unknownCostModels validCostModels
+  Map.foldrWithKey
+    (\lang cm -> Map.insert (languageToWord8 lang) (cmValues cm))
+    unknownCostModels
+    validCostModels
 
 languageToWord8 :: Language -> Word8
 languageToWord8 lang
