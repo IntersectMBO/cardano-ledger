@@ -96,6 +96,9 @@ jobs:
         restore-keys: |
           cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
 
+    - name: Check workflow test matrix
+      run: cabal build all --dry-run && scripts/check-workflow-test-matrix.hs
+
     - name: Build dependencies
       run: cabal build all --only-dependencies
 
