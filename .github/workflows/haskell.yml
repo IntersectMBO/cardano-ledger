@@ -89,7 +89,6 @@ jobs:
       with:
         path: |
           ${{ steps.setup-haskell.outputs.cabal-store }}
-          dist-newstyle
         # cache is invalidated upon a change to cabal.project (and/or cabal.project.local), a bump to
         # CABAL_CACHE_VERSION or after a week of inactivity
         key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
@@ -102,6 +101,17 @@ jobs:
 
     - name: Build
       run: cabal build all
+
+    # Pass working directory to test jobs
+    - name: Archive working directory
+      run: tar --format pax -cf /var/tmp/state.tar . && mv /var/tmp/state.tar .
+    - name: Upload working directory archive
+      uses: actions/upload-artifact@v4
+      with:
+        name: state-${{ matrix.ghc }}-${{ matrix.os }}
+        path: state.tar
+        overwrite: true
+        retention-days: 1
 
   test:
     needs: build
@@ -158,8 +168,6 @@ jobs:
         shell: bash
 
     steps:
-    - uses: actions/checkout@v4
-
     - name: Install Haskell
       uses: input-output-hk/setup-haskell@v1
       id: setup-haskell
@@ -181,13 +189,6 @@ jobs:
       run: |
         gem install cddl -v 0.10.3
         gem install cbor-diag
-
-    - name: Configure to use libsodium
-      run: |
-        cat >> cabal.project <<EOF
-        package cardano-crypto-praos
-          flags: -external-libsodium-vrf
-        EOF
 
     - name: Download Mainnet Mirror
       run: |
@@ -212,11 +213,13 @@ jobs:
       run: |
         echo "NIGHTLY=true" >> $GITHUB_ENV
 
-    - name: Cabal update
-      run: cabal update
-
-    - name: Cabal configure
-      run: cabal configure --enable-tests --enable-benchmarks --write-ghc-environment-files=always
+    # Retrieve working directory from build jobs
+    - name: Download working directory archive
+      uses: actions/download-artifact@v4
+      with:
+        name: state-${{ matrix.ghc }}-${{ matrix.os }}
+    - name: Unarchive working directory
+      run: tar -xf state.tar && rm state.tar
 
     - uses: actions/cache@v4
       if: matrix.os != 'macos-latest'
@@ -224,13 +227,15 @@ jobs:
       with:
         path: |
           ${{ steps.setup-haskell.outputs.cabal-store }}
-          dist-newstyle
         # cache is invalidated upon a change to cabal.project (and/or cabal.project.local), a bump to
         # CABAL_CACHE_VERSION or after a week of inactivity
         key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
         # Restoring attempts are from current branch then master
         restore-keys: |
           cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
+
+    - name: Cabal update
+      run: cabal update
 
     - name: Run tests
       run: |
