@@ -115,8 +115,6 @@ import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Validation (failureUnless)
 
--- ===========================================
-
 data GovEnv era = GovEnv
   { geTxId :: !(TxId (EraCrypto era))
   , geEpoch :: !EpochNo
@@ -266,12 +264,13 @@ checkVotesAreNotForExpiredActions curEpoch voters =
 checkVotersAreValid ::
   forall era.
   ConwayEraPParams era =>
+  EpochNo ->
   CommitteeState era ->
   [(Voter (EraCrypto era), GovActionState era)] ->
   Test (ConwayGovPredFailure era)
-checkVotersAreValid committeeState voters =
+checkVotersAreValid currentEpoch committeeState voters =
   let canVoteOn voter govAction = case voter of
-        CommitteeVoter {} -> isCommitteeVotingAllowed committeeState govAction
+        CommitteeVoter {} -> isCommitteeVotingAllowed currentEpoch committeeState govAction
         DRepVoter {} -> isDRepVotingAllowed govAction
         StakePoolVoter {} -> isStakePoolVotingAllowed govAction
       disallowedVoters =
@@ -427,7 +426,7 @@ govTransition = do
       curGovActionIds = proposalsActionsMap proposals
   failOnNonEmpty unknownGovActionIds GovActionsDoNotExist
   runTest $ checkVotesAreNotForExpiredActions currentEpoch knownVotes
-  runTest $ checkVotersAreValid committeeState knownVotes
+  runTest $ checkVotersAreValid currentEpoch committeeState knownVotes
 
   let
     addVoterVote ps voter govActionId VotingProcedure {vProcVote} =

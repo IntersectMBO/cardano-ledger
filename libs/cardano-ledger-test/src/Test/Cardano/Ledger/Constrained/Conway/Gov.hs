@@ -254,7 +254,7 @@ govProceduresSpec ge@GovEnv {..} ps =
         , f (gasAction act)
         ]
       committeeVotableActionIds =
-        actions (isCommitteeVotingAllowed geCommitteeState)
+        actions (isCommitteeVotingAllowed geEpoch geCommitteeState)
       drepVotableActionIds =
         actions isDRepVotingAllowed
       stakepoolVotableActionIds =

@@ -75,6 +75,9 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   logProposalsForest,
   logProposalsForestDiff,
   constitutionShouldBe,
+  getCCExpiry,
+  ccShouldBeExpired,
+  ccShouldNotBeExpired,
   ccShouldBeResigned,
   ccShouldNotBeResigned,
   getLastEnactedCommittee,
@@ -767,6 +770,37 @@ getRatifyEnv = do
       , reCommitteeState = committeeState
       }
 
+ccShouldNotBeExpired ::
+  (HasCallStack, ConwayEraGov era) =>
+  Credential 'ColdCommitteeRole (EraCrypto era) ->
+  ImpTestM era ()
+ccShouldNotBeExpired coldC = do
+  curEpochNo <- getsNES nesELL
+  ccExpiryEpochNo <- getCCExpiry coldC
+  curEpochNo `shouldSatisfy` (<= ccExpiryEpochNo)
+
+ccShouldBeExpired ::
+  (HasCallStack, ConwayEraGov era) =>
+  Credential 'ColdCommitteeRole (EraCrypto era) ->
+  ImpTestM era ()
+ccShouldBeExpired coldC = do
+  curEpochNo <- getsNES nesELL
+  ccExpiryEpochNo <- getCCExpiry coldC
+  curEpochNo `shouldSatisfy` (> ccExpiryEpochNo)
+
+getCCExpiry ::
+  (HasCallStack, ConwayEraGov era) =>
+  Credential 'ColdCommitteeRole (EraCrypto era) ->
+  ImpTestM era EpochNo
+getCCExpiry coldC = do
+  committee <- getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
+  case committee of
+    SNothing -> assertFailure "There is no committee"
+    SJust Committee {committeeMembers} ->
+      case Map.lookup coldC committeeMembers of
+        Nothing -> assertFailure $ "Committee not found for cold credential: " <> show coldC
+        Just epochNo -> pure epochNo
+
 -- | Test the resignation status for a CC cold key to be resigned
 ccShouldBeResigned ::
   HasCallStack => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
@@ -898,7 +932,7 @@ logRatificationChecks gaId = do
   let govAction = gasAction gas
   ens@EnactState {..} <- getEnactState
   committee <- getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
-  ratEnv <- getRatifyEnv
+  ratEnv@RatifyEnv {reCurrentEpoch} <- getRatifyEnv
   let ratSt = RatifyState ens mempty mempty False
   curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   currentEpoch <- getsNES nesELL
@@ -918,7 +952,7 @@ logRatificationChecks gaId = do
           <> " [ To Pass: "
           <> show (committeeAcceptedRatio members gasCommitteeVotes committeeState currentEpoch)
           <> " >= "
-          <> show (votingCommitteeThreshold ratSt committeeState (gasAction gas))
+          <> show (votingCommitteeThreshold reCurrentEpoch ratSt committeeState (gasAction gas))
           <> " ]"
       , "spoAccepted:\t\t"
           <> show (spoAccepted ratEnv ratSt gas)
