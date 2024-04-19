@@ -138,21 +138,13 @@ utxoTxSpec env st =
                               ]
                         )
                         $ \totalValueConsumed ->
-                          [ -- TODO: the yuck here needs to be the selector Fn for the
-                            -- spending field in the outputs. Need to make selectors work!
-                            let outputSum =
+                          [ let outputSum =
                                   foldMap_
-                                    ( composeFn toGenericFn $
-                                        composeFn fstFn $
-                                          composeFn sndFn $
-                                            composeFn toGenericFn $
-                                              composeFn fstFn $
-                                                toGenericFn
-                                    )
+                                    (maryValueCoin_ . txOutVal_ . sizedValue_)
                                     outputList
                                 depositSum =
                                   foldMap_
-                                    (composeFn fstFn toGenericFn)
+                                    pProcDeposit_
                                     proposalsList
                              in outputSum + depositSum + ctbTxfee + ctbTreasuryDonation ==. totalValueConsumed
                           ]

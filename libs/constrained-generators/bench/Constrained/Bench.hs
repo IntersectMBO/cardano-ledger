@@ -47,7 +47,7 @@ roseTreeMaybe = constrained $ \t ->
 
 listSumPair :: Specification BaseFn [(Int, Int)]
 listSumPair = constrained $ \xs ->
-  [ assert $ foldMap_ (composeFn fstFn toGenericFn) xs ==. 100
+  [ assert $ foldMap_ fst_ xs ==. 100
   , forAll' xs $ \x y -> [20 <. x, x <. 30, y <. 100]
   ]
 

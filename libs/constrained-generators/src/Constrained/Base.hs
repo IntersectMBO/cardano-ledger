@@ -3672,17 +3672,26 @@ sum_ ::
   ) =>
   Term fn [a] ->
   Term fn a
-sum_ = app (foldMapFn idFn)
+sum_ = foldMap_ id
 
 foldMap_ ::
+  forall fn a b.
   ( BaseUniverse fn
   , Foldy fn b
   , HasSpec fn a
   ) =>
-  fn '[a] b ->
+  (Term fn a -> Term fn b) ->
   Term fn [a] ->
   Term fn b
-foldMap_ fn = app (foldMapFn fn)
+foldMap_ f = app $ foldMapFn $ toFn $ f (V v)
+  where
+    v = Var (-1) :: Var a
+    -- Turn `f (V v) = fn (gn (hn v))` into `composeFn fn (composeFn gn hn)`
+    toFn :: forall b. HasCallStack => Term fn b -> fn '[a] b
+    toFn (App fn (V v' :> Nil)) | Just Refl <- eqVar v v' = fn
+    toFn (App fn (t :> Nil)) = injectFn $ Compose fn (toFn t)
+    toFn (V v') | Just Refl <- eqVar v v' = idFn
+    toFn _ = error "foldMap_ has not been given a function of the form \\ x -> f (g ... (h x))"
 
 -- Language constructs ----------------------------------------------------
 
