@@ -51,3 +51,9 @@ mapSizeConstrained = constrained $ \m -> size_ (dom_ m) <=. 3
 
 sumRange :: Specification BaseFn (Map Word64 Word64)
 sumRange = constrained $ \m -> sum_ (rng_ m) ==. lit 10
+
+fixedRange :: Specification BaseFn (Map Int Int)
+fixedRange = constrained $ \m ->
+  [ forAll (rng_ m) (\x -> x ==. 5)
+  , assert $ (sizeOf_ m) ==. 1
+  ]
