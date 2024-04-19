@@ -111,6 +111,7 @@ tests =
     testSpec "sumListBad" sumListBad
     testSpec "listExistsUnfree" listExistsUnfree
     testSpec "existsUnfree" existsUnfree
+    testSpec "fixedRangeElements" fixedRange
     numberyTests
     sizeTests
     numNumSpecTree
