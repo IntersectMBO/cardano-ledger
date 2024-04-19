@@ -1,67 +1,67 @@
-                        How To Profile Ledger
-                            last edited
-                            May 7, 2022
-                            Tim Sheard
+# How To Profile Ledger
+*Tim Sheard*
 
-Motivation
-Profiling the ledger is an intricate dance between nix, cabal, and ghc. This document
+## Motivation
+
+Profiling the ledger is an intricate dance between `nix`, `cabal`, and `ghc`. This document
 describes how I set all this up to profile some of the property tests in the
-cardano-ledger-test module. I hope this is useful to others who want to profile
-other parts of the Ledger code.
+`cardano-ledger-test` module. I hope this is useful to others who want to profile
+other parts of the ledger codebase.
 
-Background
-Profiling is an important tool to analyze performance (time and space) in Haskel code.
-I recommend reading through the GHC users guide. Here is a link to the appropriates section
-https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/profiling.html
-This is great background, but the gude says almost nothing about how to make it all work
-in a repository that uses nix and cabal. Hence this document
+## Background
 
+Profiling is an important tool to analyze performance (time and space) in Haskell code.
+I recommend reading through the [GHC users guide](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/profiling.html).
 
-Summary
+This is great background, but the guide says almost nothing about how to make it all work
+in a repository that uses `nix` and `cabal`. Hence this document
+
+## Summary
+
 We list here a high level description of the steps needed. In further sections we go into
 greater detail about each step
 
 1. Decide what you want to profile, and arrange the code so this is possible
-2. Choreograph the dance between nix, cabal, and ghc. This has two parts
-   a. Adding stuff to files like cabal.project, cabal.project.local
-   b. Passing the right flags to cabal, and ghc, running the right `nix develop` shell,
+2. Choreograph the dance between `nix`, `cabal`, and `ghc`. This has two parts
+   1. Adding stuff to files like `cabal.project`, `cabal.project.local`
+   2. Passing the right flags to `cabal`, and `ghc`, running the right `nix develop` shell,
 3. Recompiling everything so it can be profiled. This takes a very long time (greater than
    30 minutes when I did it)
-4. Start up the profiling. I used "cabal test" with just the right command line arguments.
-5. Inspect the produced .prof file, and decide what to do
+4. Start up the profiling. I used `cabal test` with just the right command line arguments.
+5. Inspect the produced `.prof` file, and decide what to do
 6. Repeat steps 3-5, until satisfied.
 7. Undo all the changes (from steps 1 and 2) made just for profiling.
 
-Deciding what to profile
-Usually one wants to profile code that appears to be using too many resoures (space or time).
-Because of the difficulty in getting nix, cabal, and ghc to work together, I have found that
-co-opting an existing Test file is the way to go. Here are the reasons why this is a good idea
+## Deciding what to profile
+Usually one wants to profile code that appears to be using too many resources (space or time).
+Because of the difficulty in getting `nix`, `cabal`, and `ghc` to work together, I have found that
+co-opting an existing `Test.hs` file is the way to go. Here are the reasons why this is a good idea
 
-1) Everything is already set up to compile and run the test file by simply typing:  cabal test
+1) Everything is already set up to compile and run the test file by simply typing: `cabal test`
    in the root directory of the module that contains the test.
-2) Is is usually quite easy to rename the 'main' variable in the test file to something else
-   and add your own 'main', that contains the code you want to profile
-3) Using a quick check property test, allows for your code to consist of mutltiple "tests" each
+2) Is is usually quite easy to rename the `main` variable in the test file to something else
+   and add your own `main`, that contains the code you want to profile
+3) Using a quick check property test, allows for your code to consist of multiple "tests" each
    with a different random input. This means your profiling results are less likely to be biased
    by a bad choice of input.
 
-Here is how I did it.  I edited the file cardano-ledger/libs/cardano-ledger-test/test/Test.hs
+Here is how I did it. I edited the file `cardano-ledger/libs/cardano-ledger-test/test/Test.hs`
 Here is a synopsis of what it originally looked like, and what it looked like after I edited it.
 
 BEFORE
 ------------------------
-...
-
+```haskell
 -- main entry point
 main :: IO ()
 main = do
   hSetEncoding stdout utf8
   defaultMain tests
+```
 ------------------------
 
 AFTER
 -----------------------
-...
+```haskell
 import Test.Cardano.Ledger.Generic.Properties (adaIsPreservedBabbage)
 
 mainSave :: IO ()
@@ -71,87 +71,89 @@ mainSave = do
 
 main :: IO ()
 main = defaultMain adaIsPreservedBabbage
+```
 -----------------------
 
-The variable 'adaIsPreservedBabbage' is a property test of type 'TestTree' that takes
+The variable `adaIsPreservedBabbage` is a property test of type `TestTree` that takes
 about 1 minute to run. Similar tests took about 10-20 seconds, so I was interested why
-it took so long. So now I have a 'main' that runs just this one test. I could see that I
-have set things up properly by changing directory to  cardano-ledger/libs/cardano-ledger-test
-The root directory of the module. This is the directory that contains the cardano-ledger-test.cabal file.
-So I can simply type:  cabal test, and the test runs.  Now all I need to do is get it to be profiled.
+it took so long. So now I have a `main` that runs just this one test. I could see that I
+have set things up properly by changing directory to `cardano-ledger/libs/cardano-ledger-test`,
+the root directory of the module. This is the directory that contains the `cardano-ledger-test.cabal` file.
+So I can simply type: `cabal test`, and the test runs.  Now all I need to do is get it to be profiled.
 
-Choreographing the dance.
+## Choreographing the dance
 
-We need to tell nix, cabal, and ghc that we want to profile. We do this by changing a few of the
-files that build the system, and by passing the right flags to nix, cabal, and GHC.
+We need to tell `nix`, `cabal`, and `ghc` that we want to profile. We do this by changing a few of the
+files that build the system, and by passing the right flags to each of the
+programs.
 
 
-First we must add (or change if you already have it) cabal.project.local  In the root of the
-ledger repository. Put this in cabal.project.local
----------------------
+First we must add (or change if you already have it) `cabal.project.local` In the root of the
+ledger repository. Put this in `cabal.project.local`
+```cabal
 ignore-project: False
 profiling: True
 profiling-detail: all-functions
----------------------
+```
 
-The final step is to pass the right flags to cabal, ghc, and running the right `nix develop` shell. Here is a summary.
+The final step is to pass the right flags to `cabal`, `ghc`, and running the right `nix develop` shell. Here is a summary.
 
-1) to start nix, we must use
+1) to start `nix`, we must use
    `nix develop .#profiling`
-2) to build with cabal, we must use
+2) to build with `cabal`, we must use
    `cabal build --enable-profiling`
-3) to run the test, we must pass extra flags to ghc, so we must use
+3) to run the test, we must pass extra flags to `ghc`, so we must use
    `cabal test --test-options="+RTS  -i60 -p"`
 
-How to build the system for profiling
+## How to build the system for profiling
 
-Be sure you have set up the files cabal.project.local and nix/haskell.nix as described above.
-Exit the nix shell, if you are running it. Now change directories to the root of the Ledger repository.
+Be sure you have set up the files `cabal.project.local` and `nix/haskell.nix` as described above.
+Exit the `nix` shell, if you are running it. Now change directories to the root of the `cardano-ledger` repository.
 
-Now to start nix type
-```
+Now to start `nix` type
+```bash
 nix develop .#profiling
 ```
-(or, eg. `nix develop .#ghc8107.profiling` for alternative compiler)
+(or, e.g. `nix develop .#ghc8107.profiling` for alternative compiler)
 
 When the `nix develop` shell completes (this can take a long time, since it must make sure
-every file in the Ledger is compiled with profiling enabled). This might take a
+every file in the ledger is compiled with profiling enabled). This might take a
 while. Be patient. Take the dogs for a walk.
 
 If `nix develop .#profiling` fails to give you a nix shell this may be related to a problem
-with 'plutus-core' that uses template haskell, and happens to trigger a known bug in ghc.
-https://gitlab.haskell.org/ghc/ghc/-/issues/18320 There are also a few slack threads about this. For example
-https://input-output-rnd.slack.com/archives/C21UF2WVC/p1624555583258300
-The workaround for this is quite convoluted, but if you fail to get a nix-shell working there are two things
+with `plutus-core` that uses template Haskell, and happens to trigger a
+[known bug](https://gitlab.haskell.org/ghc/ghc/-/issues/18320) in `ghc`.
+
+The workaround for this is quite convoluted, but if you fail to get a `nix-shell` working there are two things
 you may need to do:
 
 1) add the following to `cabal.project.local`:
-```
+```cabal
 package plutus-core
    ghc-options: -fexternal-interpreter
 ```
 2) uncomment the following in `flake.nix`:
-```
-# packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
+```nix
+packages.plutus-core.components.library.ghcOptions = [ "-fexternal-interpreter" ];
 ```
 
-Now change directories to the root directory of the modlue that contains your
-modified Test file, and type
-```
+Now change directories to the root directory of the module that contains your
+modified `Test.hs` file, and type
+```bash
 cabal build --enable-profiling
 ```
 This might also take a while. Take the dogs for second walk.  When this completes
-you are ready to start profiing!
+you are ready to start profiling!
 
-How to run a profile.
+## How to run a profile
 
-In the same directory where you did (cabal build --enable-profiling) type
-```
+In the same directory where you did (`cabal build --enable-profiling`) type
+```bash
 cabal test --test-options="+RTS  -i60 -p"
 ```
 This should take slightly longer than running the test without profiling.
 When it is done, there will be a file in this same directory with extension .prof
-When I did it, the file was called   cardano-ledger-test.prof  . It is a big file
+When I did it, the file was called `cardano-ledger-test.prof`. It is a big file
 Here are the first few lines.
 ```
 ----------------------------------------------------------------------------------------------------------
@@ -183,8 +185,8 @@ toLazyByteString          Codec.CBOR.Write                      src/Codec/CBOR/W
 ---------------------------------------------------------------------------------------------------------------------
 ```
 
-The problem with my test, was that evalScripts was inadvertantly showing a large data structure
-using tellEvent. This was added when debugging and never removed. After fixing this, we had much better results.
+The problem with my test, was that `evalScripts` was inadvertently showing a large data structure
+using `tellEvent`. This was added when debugging and never removed. After fixing this, we had much better results.
 I hope you experience is just as rewarding.
 
-Don't forget to revert cabal.project.local, nix/haskell.nix  and your Test file to their original state.
+Don't forget to revert `cabal.project.local`, `nix/haskell.nix`  and your `Test.hs` file to their original state.
