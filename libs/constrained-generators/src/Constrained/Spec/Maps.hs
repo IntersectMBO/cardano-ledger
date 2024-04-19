@@ -138,13 +138,12 @@ instance
 
   toPreds m (MapSpec mustKeys mustVals size kvs foldSpec) =
     toPred
-      [ assert $ app (subsetFn @fn) (app (domFn @fn) m) (Lit mustKeys)
+      [ assert $ lit mustKeys `subset_` dom_ m
       , forAll (Lit mustVals) $ \val ->
-          app (elemFn @fn) val (app (rngFn @fn) m)
-      , -- TODO: make nice
-        satisfies (app (injectFn $ SizeOf @fn) $ app (rngFn @fn) m) size
+          val `elem_` rng_ m
+      , sizeOf_ (rng_ m) `satisfies` size
       , forAll m $ \kv -> satisfies kv kvs
-      , toPredsFoldSpec (app (rngFn @fn) m) foldSpec
+      , toPredsFoldSpec (rng_ m) foldSpec
       ]
 
 ------------------------------------------------------------------------

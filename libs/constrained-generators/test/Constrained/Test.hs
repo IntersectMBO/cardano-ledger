@@ -191,7 +191,14 @@ testSpecNoShrink = testSpec' False
 testSpec' :: HasSpec fn a => Bool -> String -> Specification fn a -> Spec
 testSpec' withShrink n s =
   describe n $ do
-    prop "prop_sound" $ within 10_000_000 $ checkCoverage $ prop_sound s
+    prop "prop_sound" $
+      within 10_000_000 $
+        checkCoverage $
+          prop_sound s
+    prop "prop_constrained_satisfies_sound" $
+      within 10_000_000 $
+        checkCoverage $
+          prop_constrained_satisfies_sound s
     when withShrink $
       prop "prop_shrink_sound" $
         within 10_000_000 $
