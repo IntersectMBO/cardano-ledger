@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Make `utxoTransition` more general
 * Change the return type of `collAdaBalance` to `DeltaCoin`
 * Change the type of the provided collateral field in `IncorrectTotalCollateralField` to `DeltaCoin`
 * Change the type of `validateCollateralEqBalance`

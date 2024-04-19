@@ -67,8 +67,9 @@ import Cardano.Ledger.Conway.Rules.Gov (
   GovEnv (..),
  )
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
+import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
-import Cardano.Ledger.Conway.Rules.Utxow ()
+import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -139,13 +140,19 @@ type instance EraRuleEvent "LEDGER" (ConwayEra c) = ConwayLedgerEvent (ConwayEra
 
 instance InjectRuleFailure "LEDGER" ConwayLedgerPredFailure (ConwayEra c)
 
-instance InjectRuleFailure "LEDGER" BabbageUtxowPredFailure (ConwayEra c) where
+instance InjectRuleFailure "LEDGER" ConwayUtxowPredFailure (ConwayEra c) where
   injectFailure = ConwayUtxowFailure
+
+instance InjectRuleFailure "LEDGER" BabbageUtxowPredFailure (ConwayEra c) where
+  injectFailure = ConwayUtxowFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure (ConwayEra c) where
   injectFailure = ConwayUtxowFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (ConwayEra c) where
+  injectFailure = ConwayUtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ConwayUtxoPredFailure (ConwayEra c) where
   injectFailure = ConwayUtxowFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" BabbageUtxoPredFailure (ConwayEra c) where
@@ -422,10 +429,10 @@ instance
   , TxOut era ~ BabbageTxOut era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXO" era) ~ Tx era
-  , PredicateFailure (EraRule "UTXOW" era) ~ BabbageUtxowPredFailure era
+  , PredicateFailure (EraRule "UTXOW" era) ~ ConwayUtxowPredFailure era
   , Event (EraRule "UTXOW" era) ~ AlonzoUtxowEvent era
   , STS (ConwayUTXOW era)
-  , PredicateFailure (ConwayUTXOW era) ~ BabbageUtxowPredFailure era
+  , PredicateFailure (ConwayUTXOW era) ~ ConwayUtxowPredFailure era
   , Event (ConwayUTXOW era) ~ AlonzoUtxowEvent era
   ) =>
   Embed (ConwayUTXOW era) (ConwayLEDGER era)

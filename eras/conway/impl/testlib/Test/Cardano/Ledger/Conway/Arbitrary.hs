@@ -205,6 +205,27 @@ instance
       <*> arbitrary
       <*> arbitrary
 
+instance
+  ( EraTxOut era
+  , Arbitrary (Value era)
+  , Arbitrary (TxOut era)
+  , Arbitrary (PredicateFailure (EraRule "UTXOS" era))
+  ) =>
+  Arbitrary (ConwayUtxoPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
+instance
+  ( Era era
+  , Arbitrary (PredicateFailure (EraRule "UTXO" era))
+  , Arbitrary (TxCert era)
+  , Arbitrary (PlutusPurpose AsItem era)
+  , Arbitrary (PlutusPurpose AsIx era)
+  ) =>
+  Arbitrary (ConwayUtxowPredFailure era)
+  where
+  arbitrary = genericArbitraryU
+
 _uniqueIdGovActions ::
   (Era era, Arbitrary (PParamsUpdate era)) =>
   Gen (SSeq.StrictSeq (GovActionState era))

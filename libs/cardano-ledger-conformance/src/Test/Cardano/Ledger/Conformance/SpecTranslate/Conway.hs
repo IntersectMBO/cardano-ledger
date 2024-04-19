@@ -33,7 +33,6 @@ import Cardano.Ledger.Alonzo.PParams (OrdExUnits (OrdExUnits))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes (
   Anchor,
@@ -76,7 +75,11 @@ import Cardano.Ledger.Conway.Governance (
   pPropsL,
  )
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
-import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure, GovEnv (..))
+import Cardano.Ledger.Conway.Rules (
+  ConwayGovPredFailure,
+  ConwayUtxoPredFailure,
+  GovEnv (..),
+ )
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
   ConwayDelegCert (..),
@@ -636,9 +639,9 @@ instance
   , ToExpr (TxOut era)
   , ToExpr (PredicateFailure (EraRule "UTXOS" era))
   ) =>
-  SpecTranslate ctx (BabbageUtxoPredFailure era)
+  SpecTranslate ctx (ConwayUtxoPredFailure era)
   where
-  type SpecRep (BabbageUtxoPredFailure era) = OpaqueErrorString
+  type SpecRep (ConwayUtxoPredFailure era) = OpaqueErrorString
 
   toSpecRep e = pure . OpaqueErrorString . show $ toExpr e
 

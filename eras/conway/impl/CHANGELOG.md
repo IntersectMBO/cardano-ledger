@@ -2,12 +2,59 @@
 
 ## 1.14.0 0
 
+* Add `ConwayUtxowPredFailure` era rule failure:
+  * Implement its `InjectRuleFailure` instances for:
+    * `BBODY`
+    * `LEDGER`
+    * `LEDGERS`
+    * `UTXOW`
+  * Implement instances:
+    * `Generic`
+    * `Show`
+    * `Eq`
+    * `EncCBOR`
+    * `DecCBOR`
+    * `NFData`
+  * Add mappings:
+    * `babbageToConwayUtxowPredFailure`
+    * `alonzoToConwayUtxowPredFailure`
+    * `shelleyToConwayUtxowPredFailure`
+  * Update `Embed (ConwayUTXO era) (ConwayUTXOW era)` instance
+* Add `ConwayUtxoPredFailure` era rule failure:
+  * Implement its `InjectRuleFailure` instances for:
+    * `BBODY`
+    * `LEDGER`
+    * `LEDGERS`
+    * `UTXO`
+    * `UTXOW`
+  * Implement instances:
+    * `Generic`
+    * `Show`
+    * `Eq`
+    * `EncCBOR`
+    * `DecCBOR`
+    * `NFData`
+  * Add mappings:
+    * `babbageToConwayUtxoPredFailure`
+    * `alonzoToConwayUtxoPredFailure`
+  * Update `allegraToConwayUtxoPredFailure` mapping
+* Add `ConwayUTXO` era rule:
+  * Implement instances:
+    * `STS`
+    * `Embed (ConwayUTXOS era) (ConwayUTXO era)`
+    * `Embed (ConwayUTXO era) (ConwayUTXOW era)`
 * Add `ucppPlutusV3CostModel` to `UpgradeConwayPParams`. #4252
   * Remove the `Default` instance for `ConwayGenesis`.
 * Add `foldrVotingProcedures`.
 
 ### `testlib`
 
+* Implement `ConwayUtxowPredFailure` instances:
+  * `Arbitrary`
+  * `ToExpr`
+* Implement `ConwayUtxoPredFailure` instances:
+  * `Arbitrary`
+  * `ToExpr`
 * Updated `exampleConwayGenesis` to `conway-genesis.json`. #4252
 
 ## 1.13.1.0
