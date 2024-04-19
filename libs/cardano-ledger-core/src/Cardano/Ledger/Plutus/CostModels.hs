@@ -89,6 +89,7 @@ import Data.Aeson (
  )
 import Data.Aeson.Key (fromString)
 import Data.Aeson.Types (Parser)
+import Data.Int
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text as T (Text, pack, unpack)
@@ -115,7 +116,7 @@ import qualified PlutusLedgerApi.V3 as PV3 (ParamName, mkEvaluationContext)
 -- to hide the evaluation context.
 data CostModel = CostModel
   { cmLanguage :: !Language
-  , cmValues :: ![Integer]
+  , cmValues :: ![Int64]
   , cmEvalCtx :: !P.EvaluationContext
   }
   deriving (Generic)
@@ -149,7 +150,7 @@ instance FromJSON CostModels where
 
 -- | The costmodel parameters in Alonzo Genesis are represented as a map.  Plutus API does
 -- no longer require the map as a parameter to `mkEvaluationContext`, but the list of
--- Integers representing the values of the map.  The expectation on this list of Integers
+-- integers representing the values of the map.  The expectation on this list of integers
 -- is that they are sorted in the order given by the `ParamName` enum, so even though we
 -- just have to pass the list to plutus, we still need to use the names of the parameters
 -- in order to sort the list.  In new versions, we want to represent the costmodel
@@ -163,7 +164,7 @@ parseCostModel o lang = do
       Array _ -> validateCostModel lang =<< parseJSON plutusCostModelValue
       _ -> fail $ "Expected either an Array or an Object, but got: " ++ show plutusCostModelValue
 
-costModelFromMap :: MonadFail m => Language -> Map Text Integer -> m CostModel
+costModelFromMap :: MonadFail m => Language -> Map Text Int64 -> m CostModel
 costModelFromMap lang cmMap =
   mapM lookupFail paramNames >>= validateCostModel lang
   where
@@ -173,7 +174,7 @@ costModelFromMap lang cmMap =
         Nothing -> fail $ "Unrecognized cost model parameter name: " ++ show paramName
         Just v -> pure v
 
-costModelToMap :: CostModel -> Map Text Integer
+costModelToMap :: CostModel -> Map Text Int64
 costModelToMap cm =
   Map.fromList $ zip (costModelParamNames (cmLanguage cm)) (cmValues cm)
 
@@ -205,7 +206,7 @@ plutusVXParamNames PlutusV1 = P.showParamName <$> [minBound .. maxBound :: PV1.P
 plutusVXParamNames PlutusV2 = P.showParamName <$> [minBound .. maxBound :: PV2.ParamName]
 plutusVXParamNames PlutusV3 = P.showParamName <$> [minBound .. maxBound :: PV3.ParamName]
 
-validateCostModel :: MonadFail m => Language -> [Integer] -> m CostModel
+validateCostModel :: MonadFail m => Language -> [Int64] -> m CostModel
 validateCostModel lang cmps =
   case mkCostModel lang cmps of
     Left err -> fail $ show err
@@ -213,7 +214,7 @@ validateCostModel lang cmps =
 
 -- | Convert cost model parameters to a cost model, making use of the
 --  conversion function mkEvaluationContext from the Plutus API.
-mkCostModel :: Language -> [Integer] -> Either P.CostModelApplyError CostModel
+mkCostModel :: Language -> [Int64] -> Either P.CostModelApplyError CostModel
 mkCostModel lang cm =
   case eCostModel of
     Right (evalCtx, _) -> Right (CostModel lang cm evalCtx)
@@ -225,12 +226,12 @@ mkCostModel lang cm =
         PlutusV2 -> PV2.mkEvaluationContext
         PlutusV3 -> PV3.mkEvaluationContext
     eCostModel :: Either P.CostModelApplyError (P.EvaluationContext, [P.CostModelApplyWarn])
-    eCostModel = runWriterT (mkEvaluationContext cm)
+    eCostModel = runWriterT (mkEvaluationContext $ map toInteger cm)
 
 getCostModelLanguage :: CostModel -> Language
 getCostModelLanguage (CostModel lang _ _) = lang
 
-getCostModelParams :: CostModel -> [Integer]
+getCostModelParams :: CostModel -> [Int64]
 getCostModelParams (CostModel _ cm _) = cm
 
 getCostModelEvaluationContext :: CostModel -> P.EvaluationContext
@@ -250,13 +251,13 @@ decodeValidAndUnknownCostModels = do
   validAndUnkonwnCms <- decodeMapByKey decCBOR decodeValidOrUnknownCm
   pure $ Map.foldrWithKey addValidOrUnknownCm emptyCostModels validAndUnkonwnCms
   where
-    decodeValidOrUnknownCm :: Word8 -> Decoder s (Either [Integer] CostModel)
+    decodeValidOrUnknownCm :: Word8 -> Decoder s (Either [Int64] CostModel)
     decodeValidOrUnknownCm langW8 = do
       case mkLanguageEnum (fromIntegral langW8) of
         Just lang -> Right <$> decodeCostModelFailHard lang
         Nothing -> Left <$> decCBOR
 
-    addValidOrUnknownCm :: Word8 -> Either [Integer] CostModel -> CostModels -> CostModels
+    addValidOrUnknownCm :: Word8 -> Either [Int64] CostModel -> CostModels -> CostModels
     addValidOrUnknownCm langW8 unknownOrCm (CostModels validCms errors invalidCms) =
       case unknownOrCm of
         Left cmIds -> CostModels validCms errors (Map.insert langW8 cmIds invalidCms)
@@ -292,7 +293,8 @@ costModelParamsCount lang = length $ plutusVXParamNames lang
 legacyDecodeCostModel :: Language -> Decoder s CostModel
 legacyDecodeCostModel lang = do
   when (lang > PlutusV2) $
-    fail $ "Legacy CostModel decoding is not supported for " ++ show lang ++ " language version"
+    fail $
+      "Legacy CostModel decoding is not supported for " ++ show lang ++ " language version"
   values <- decCBOR
   let numValues = length values
       expectedNumValues = costModelParamsCount lang
@@ -376,7 +378,7 @@ instance NFData CostModelError
 -- too few parameters (depending on the version) will result in an error.
 -- 'CostModelApplyError' exists to collect these errors in the 'CostModels' type.
 -- The 'CostModels' type itself needs to be flexible enough to accept any map
--- of 'Word8' to '[Integer]', so that cost models can be placed in the protocol parameters
+-- of 'Word8' to '[Int64]', so that cost models can be placed in the protocol parameters
 -- ahead of changes to the Plutus evaluation context. In this way, serializing a cost model,
 -- updating software, and deserializing can result in errors going away.
 --
@@ -386,7 +388,7 @@ instance NFData CostModelError
 data CostModels = CostModels
   { _costModelsValid :: !(Map Language CostModel)
   , _costModelsErrors :: !(Map Language CostModelError)
-  , _costModelsUnknown :: !(Map Word8 [Integer])
+  , _costModelsUnknown :: !(Map Word8 [Int64])
   }
   deriving stock (Eq, Ord, Show, Generic)
 
@@ -402,7 +404,7 @@ costModelsValid = _costModelsValid
 costModelsErrors :: CostModels -> Map Language CostModelError
 costModelsErrors = _costModelsErrors
 
-costModelsUnknown :: CostModels -> Map Word8 [Integer]
+costModelsUnknown :: CostModels -> Map Word8 [Int64]
 costModelsUnknown = _costModelsUnknown
 
 emptyCostModels :: CostModels
@@ -437,10 +439,10 @@ mkCostModels cms = CostModels cms mempty mempty
 -- error is stored in 'costModelsErrors' and the cost model is stored in
 -- 'costModelsUnknown'. Lastly, if the Plutus version is unknown, the cost model is also
 -- stored in 'costModelsUnknown'.
-mkCostModelsLenient :: Map Word8 [Integer] -> CostModels
+mkCostModelsLenient :: Map Word8 [Int64] -> CostModels
 mkCostModelsLenient = Map.foldrWithKey addRawCostModel (CostModels mempty mempty mempty)
   where
-    addRawCostModel :: Word8 -> [Integer] -> CostModels -> CostModels
+    addRawCostModel :: Word8 -> [Int64] -> CostModels -> CostModels
     addRawCostModel langW8 cmIds (CostModels validCMs errs invalidCMs) =
       case mkLanguageEnum (fromIntegral langW8) of
         Just lang ->
@@ -455,7 +457,7 @@ mkCostModelsLenient = Map.foldrWithKey addRawCostModel (CostModels mempty mempty
 -- cost model values, with no distinction between valid and invalid cost models.
 -- This is used for serialization, so that judgements about validity can be made
 -- upon deserialization.
-flattenCostModels :: CostModels -> Map Word8 [Integer]
+flattenCostModels :: CostModels -> Map Word8 [Int64]
 flattenCostModels (CostModels validCMs _ invalidCMs) =
   Map.foldrWithKey (\lang cm -> Map.insert (languageToWord8 lang) (cmValues cm)) invalidCMs validCMs
 

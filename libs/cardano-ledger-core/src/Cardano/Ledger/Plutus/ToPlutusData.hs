@@ -77,8 +77,8 @@ instance ToPlutusData NonNegativeInterval where
   fromPlutusData _ = Nothing
 
 instance ToPlutusData CostModels where
-  toPlutusData cmdls = toPlutusData (flattenCostModels cmdls)
-  fromPlutusData x = mkCostModelsLenient <$> fromPlutusData x
+  toPlutusData cmdls = toPlutusData $ fmap (fmap toInteger) (flattenCostModels cmdls)
+  fromPlutusData x = mkCostModelsLenient . fmap (fmap fromInteger) <$> fromPlutusData x
 
 instance ToPlutusData ExUnits where
   toPlutusData (ExUnits a b) = List [toPlutusData a, toPlutusData b]

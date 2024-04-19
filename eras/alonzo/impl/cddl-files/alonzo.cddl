@@ -319,7 +319,7 @@ costmdls = { * language => cost_model } ; New
 ; The values in the serialization are assumed to be ordered
 ; lexicographically by their correpsonding key value.
 ; See Plutus' `ParamName` for parameter ordering
-cost_model = [ 166*166 int ] ; New
+cost_model = [ 166*166 int64 ] ; New
 
 transaction_metadatum =
     { * transaction_metadatum => transaction_metadatum }

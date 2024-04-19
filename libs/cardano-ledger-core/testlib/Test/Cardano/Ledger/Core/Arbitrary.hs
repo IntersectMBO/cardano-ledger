@@ -825,7 +825,7 @@ instance Arbitrary CostModel where
 
 genValidCostModel :: Language -> Gen CostModel
 genValidCostModel lang = do
-  newParamValues <- vectorOf (costModelParamsCount lang) (arbitrary :: Gen Integer)
+  newParamValues <- vectorOf (costModelParamsCount lang) arbitrary
   either (\err -> error $ "Corrupt cost model: " ++ show err) pure $
     mkCostModel lang newParamValues
 
@@ -859,16 +859,16 @@ instance Arbitrary FlexibleCostModels where
     let cms = known `Map.union` unknown
     pure . FlexibleCostModels $ mkCostModelsLenient cms
 
-genUnknownCostModels :: Gen (Map Word8 [Integer])
+genUnknownCostModels :: Gen (Map Word8 [Int64])
 genUnknownCostModels = Map.fromList <$> listOf genUnknownCostModelValues
 
-genKnownCostModels :: Gen (Map Word8 [Integer])
+genKnownCostModels :: Gen (Map Word8 [Int64])
 genKnownCostModels = do
   langs <- sublistOf nonNativeLanguages
   cms <- mapM genCostModelValues langs
   return $ Map.fromList cms
 
-genUnknownCostModelValues :: Gen (Word8, [Integer])
+genUnknownCostModelValues :: Gen (Word8, [Int64])
 genUnknownCostModelValues = do
   lang <- chooseInt (firstInvalid, fromIntegral (maxBound :: Word8))
   vs <- arbitrary
@@ -876,7 +876,7 @@ genUnknownCostModelValues = do
   where
     firstInvalid = fromEnum (maxBound :: Language) + 1
 
-genCostModelValues :: Language -> Gen (Word8, [Integer])
+genCostModelValues :: Language -> Gen (Word8, [Int64])
 genCostModelValues lang = do
   Positive sub <- arbitrary
   (,) lang'
@@ -887,7 +887,7 @@ genCostModelValues lang = do
   where
     lang' = fromIntegral (fromEnum lang)
     tooFew sub = costModelParamsCount lang - sub
-    listAtLeast :: Int -> Gen [Integer]
+    listAtLeast :: Int -> Gen [Int64]
     listAtLeast x = do
       NonNegative y <- arbitrary
       replicateM (x + y) arbitrary
