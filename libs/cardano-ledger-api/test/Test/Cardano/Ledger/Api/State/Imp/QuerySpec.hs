@@ -70,10 +70,10 @@ spec = do
 
     it "members should remain authorized if authorized during the epoch after their election" $ do
       setPParams
-      (KeyHashObj drep, _, ga0) <- electBasicCommittee
+      (drep, _, _) <- setupSingleDRep 1_000_000
 
       c1 <- KeyHashObj <$> freshKeyHash
-      _ <- electCommittee (SJust ga0) drep Set.empty [(c1, EpochNo 12)]
+      _ <- electCommittee SNothing drep Set.empty [(c1, EpochNo 12)]
       passEpoch
       hk1 <- registerCommitteeHotKey c1
       expectQueryResult (Set.singleton c1) mempty mempty $
@@ -99,16 +99,17 @@ spec = do
           , (c3, EpochNo 7)
           , (c4, EpochNo 5)
           ]
+    initialMembers <- getCommitteeMembers
+
     ga1 <-
       electCommittee
         SNothing
         drep
-        Set.empty
+        initialMembers
         newMembers
 
-    expectMembers Set.empty
-    expectNoFilterQueryResult Map.empty
-    passEpoch >> passEpoch -- epoch 2
+    expectMembers initialMembers
+    passNEpochs 2 -- epoch 2
     expectMembers $ Map.keysSet newMembers
     -- members for which the expiration epoch is the current epoch are `ToBeExpired`
     expectNoFilterQueryResult
@@ -206,7 +207,7 @@ spec = do
           (CommitteeMemberState (MemberAuthorized hk2) Expired (Just 2) ToBeRemoved)
       )
 
-    passEpoch >> passEpoch -- epoch 6
+    passNEpochs 2 -- epoch 6
     -- the new committee is in place with the adjusted terms
     expectMembers [c1, c3, c4, c6, c7]
     expectNoFilterQueryResult

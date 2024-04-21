@@ -433,11 +433,16 @@ govPolicySpec ::
 govPolicySpec = do
   describe "Gov policy scripts" $ do
     it "failing native script govPolicy" $ do
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (committeeMember :| _) <- registerInitialCommittee
+      (drepKh, _, _) <- setupSingleDRep 1_000_000
       scriptHash <- impAddNativeScript $ RequireTimeStart (SlotNo 1)
       anchor <- arbitrary
       void $
-        enactConstitution SNothing (Constitution anchor (SJust scriptHash)) dRep committeeMember
+        enactConstitution
+          SNothing
+          (Constitution anchor (SJust scriptHash))
+          (KeyHashObj drepKh)
+          committeeMember
       rewardAccount <- registerRewardAccount
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       impAnn "ParameterChange" $ do
@@ -475,14 +480,15 @@ govPolicySpec = do
 
     it "alwaysSucceeds Plutus govPolicy validates" $ do
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceeds2 SPlutusV3)
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (committeeMember :| _) <- registerInitialCommittee
+      (drepKh, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       void $
         enactConstitution
           SNothing
           (Constitution anchor (SJust alwaysSucceedsSh))
-          dRep
+          (KeyHashObj drepKh)
           committeeMember
       rewardAccount <- registerRewardAccount
 
@@ -512,11 +518,16 @@ govPolicySpec = do
 
     it "alwaysFails Plutus govPolicy does not validate" $ do
       let alwaysFailsSh = hashPlutusScript (alwaysFails2 SPlutusV3)
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (committeeMember :| _) <- registerInitialCommittee
+      (drepKh, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       void $
-        enactConstitution SNothing (Constitution anchor (SJust alwaysFailsSh)) dRep committeeMember
+        enactConstitution
+          SNothing
+          (Constitution anchor (SJust alwaysFailsSh))
+          (KeyHashObj drepKh)
+          committeeMember
 
       rewardAccount <- registerRewardAccount
       impAnn "ParameterChange" $ do
@@ -558,20 +569,21 @@ costModelsSpec =
       -- no initial PlutusV3 CostModels
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (committeeMember :| _) <- registerInitialCommittee
+      (drepKh, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       govIdConstitution1 <-
-        enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMember
+        enactConstitution SNothing (Constitution anchor SNothing) (KeyHashObj drepKh) committeeMember
       -- propose and enact PlutusV3 Costmodels
       govIdPPUpdate1 <-
-        enactCostModels SNothing (testingCostModels [PlutusV3]) dRep committeeMember
+        enactCostModels SNothing (testingCostModels [PlutusV3]) (KeyHashObj drepKh) committeeMember
 
       let alwaysFailsSh = hashPlutusScript (alwaysFails2 SPlutusV3)
       void $
         enactConstitution
           (SJust (GovPurposeId govIdConstitution1))
           (Constitution anchor (SJust alwaysFailsSh))
-          dRep
+          (KeyHashObj drepKh)
           committeeMember
 
       impAnn "Fail to update V3 Costmodels" $ do
@@ -592,14 +604,15 @@ costModelsSpec =
     it "Updating CostModels with alwaysSucceeds govPolicy but no PlutusV3 CostModels fails" $ do
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (committeeMember :| _) <- registerInitialCommittee
+      (drepKh, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceeds2 SPlutusV3)
       void $
         enactConstitution
           SNothing
           (Constitution anchor (SJust alwaysSucceedsSh))
-          dRep
+          (KeyHashObj drepKh)
           committeeMember
 
       let pparamsUpdate = def & ppuCostModelsL .~ SJust (testingCostModels [PlutusV3])
@@ -610,10 +623,11 @@ costModelsSpec =
     it "Updating CostModels and setting the govPolicy afterwards succeeds" $ do
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (committeeMember :| _) <- registerInitialCommittee
+      (drepKh, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       govIdConstitution1 <-
-        enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMember
+        enactConstitution SNothing (Constitution anchor SNothing) (KeyHashObj drepKh) committeeMember
 
       let guessTheNumberSh = hashPlutusScript (guessTheNumber3 SPlutusV3)
 
@@ -625,7 +639,7 @@ costModelsSpec =
         enactCostModels
           SNothing
           (testingCostModels [PlutusV3])
-          dRep
+          (KeyHashObj drepKh)
           committeeMember
 
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceeds2 SPlutusV3)
@@ -633,7 +647,7 @@ costModelsSpec =
         enactConstitution
           (SJust (GovPurposeId govIdConstitution1))
           (Constitution anchor (SJust alwaysSucceedsSh))
-          dRep
+          (KeyHashObj drepKh)
           committeeMember
 
       impAnn "Minting token succeeds" $ do
@@ -645,7 +659,7 @@ costModelsSpec =
           enactCostModels
             (SJust govIdPPUpdate1)
             (testingCostModels [PlutusV3])
-            dRep
+            (KeyHashObj drepKh)
             committeeMember
 
 txWithPlutus ::

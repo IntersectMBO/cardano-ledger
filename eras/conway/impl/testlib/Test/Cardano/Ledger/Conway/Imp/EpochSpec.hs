@@ -31,6 +31,7 @@ import Cardano.Ledger.Val
 import Control.Monad.Writer (listen)
 import Data.Data (cast)
 import Data.Default.Class (Default (..))
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -38,7 +39,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Tree
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((%~), (&), (.~))
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
@@ -121,7 +122,7 @@ dRepSpec ::
   SpecWith (ImpTestState era)
 dRepSpec =
   describe "DRep" $ do
-    it "is updated based on to number of dormant epochs" $ do
+    it "expiry is updated based on the number of dormant epochs" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
       (drep, _, _) <- setupSingleDRep 1_000_000
 
@@ -187,14 +188,18 @@ dRepSpec =
       logEntry "Stake distribution after DRep registration:"
       logStakeDistr
       passEpoch
-
-treasurySpec ::
-  forall era.
-  ConwayEraImp era =>
-  SpecWith (ImpTestState era)
-treasurySpec =
-  describe "Treasury" $ do
     it "constitution is accepted after two epochs" $ do
+      modifyPParams $ \pp ->
+        pp
+          & ppDRepVotingThresholdsL
+            %~ ( \dvt ->
+                  dvt
+                    { dvtCommitteeNormal = 1 %! 1
+                    , dvtCommitteeNoConfidence = 1 %! 2
+                    , dvtUpdateToConstitution = 1 %! 2
+                    }
+               )
+
       constitutionHash <- freshSafeHash
       let
         constitutionAction =
@@ -212,13 +217,14 @@ treasurySpec =
       logEntry "Submitting new constitution"
       gaidConstitutionProp <- submitGovAction constitutionAction
 
-      (dRepCred, committeeHotCred, _) <- electBasicCommittee
-
+      (committeeHotCred :| _) <- registerInitialCommittee
+      (drepKh, _, _) <- setupSingleDRep 1_000_000
+      passEpoch
       logRatificationChecks gaidConstitutionProp
       do
         isAccepted <- isDRepAccepted gaidConstitutionProp
         assertBool "Gov action should not be accepted" $ not isAccepted
-      submitYesVote_ (DRepVoter dRepCred) gaidConstitutionProp
+      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gaidConstitutionProp
       submitYesVote_ (CommitteeVoter committeeHotCred) gaidConstitutionProp
       logAcceptedRatio gaidConstitutionProp
       do
@@ -236,6 +242,12 @@ treasurySpec =
       passEpoch
       constitutionShouldBe "constitution.0"
 
+treasurySpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+treasurySpec =
+  describe "Treasury" $ do
     it "TreasuryWithdrawal" $ do
       treasuryWithdrawalExpectation []
 
@@ -258,7 +270,8 @@ treasuryWithdrawalExpectation ::
   [GovAction era] ->
   ImpTestM era ()
 treasuryWithdrawalExpectation extraWithdrawals = do
-  (dRepCred, committeeHotCred, _) <- electBasicCommittee
+  (committeeHotCred :| _) <- registerInitialCommittee
+  (drepKh, _, _) <- setupSingleDRep 1_000_000
   treasuryStart <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   rewardAccount <- registerRewardAccount
   govPolicy <- getGovPolicy
@@ -267,7 +280,7 @@ treasuryWithdrawalExpectation extraWithdrawals = do
     submitGovActions $
       TreasuryWithdrawals (Map.singleton rewardAccount withdrawalAmount) govPolicy
         NE.:| extraWithdrawals
-  submitYesVote_ (DRepVoter dRepCred) govActionId
+  submitYesVote_ (DRepVoter (KeyHashObj drepKh)) govActionId
   submitYesVote_ (CommitteeVoter committeeHotCred) govActionId
   passEpoch -- 1st epoch crossing starts DRep pulser
   impAnn "Withdrawal should not be received yet" $
@@ -328,7 +341,8 @@ eventsSpec ::
 eventsSpec = describe "Events" $ do
   describe "emits event" $ do
     it "GovInfoEvent" $ do
-      (drepCred, ccCred, _) <- electBasicCommittee
+      (ccCred :| _) <- registerInitialCommittee
+      (drepKh, _, _) <- setupSingleDRep 1_000_000
       let actionLifetime = 10
       modifyPParams $ \pp ->
         pp
@@ -367,7 +381,7 @@ eventsSpec = describe "Events" $ do
                            ]
       replicateM_ (fromIntegral actionLifetime) passEpochWithNoDroppedActions
       logAcceptedRatio proposalA
-      submitYesVote_ (DRepVoter drepCred) proposalA
+      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) proposalA
       submitYesVote_ (CommitteeVoter ccCred) proposalA
       gasA <- getGovActionState proposalA
       gasB <- getGovActionState proposalB

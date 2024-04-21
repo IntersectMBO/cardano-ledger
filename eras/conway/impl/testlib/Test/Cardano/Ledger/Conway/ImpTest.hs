@@ -186,7 +186,6 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
-import Data.Maybe.Strict (isSJust)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -927,7 +926,7 @@ getRatifyEnvAndState = do
   pure (ratifyEnv, ratifyState)
 
 -- | Checks whether the governance action has enough DRep votes to be accepted in the next
--- epoch. (Note that no other checks execept DRep votes is used)
+-- epoch. (Note that no other checks except DRep votes are used)
 isDRepAccepted ::
   (HasCallStack, ConwayEraGov era, ConwayEraPParams era) =>
   GovActionId (EraCrypto era) ->
@@ -1095,26 +1094,8 @@ electBasicCommittee = do
       , UpdateCommittee SNothing mempty mempty (1 %! 10)
       ]
   submitYesVote_ (DRepVoter $ KeyHashObj drepKH) gaidCommitteeProp
-
-  let
-    assertNoCommittee = do
-      committee <-
-        getsNES $
-          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-      impAnn "There should not be a committee" $ committee `shouldBe` SNothing
-  logRatificationChecks gaidCommitteeProp
-  assertNoCommittee
-
   passEpoch
-  logRatificationChecks gaidCommitteeProp
-  assertNoCommittee
   passEpoch
-  do
-    committee <-
-      getsNES $
-        nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-    impAnn "There should be a committee" $ committee `shouldSatisfy` isSJust
-
   hotCommitteeC <- registerCommitteeHotKey coldCommitteeC
   pure (KeyHashObj drepKH, hotCommitteeC, GovPurposeId gaidCommitteeProp)
 
