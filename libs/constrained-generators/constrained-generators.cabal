@@ -54,10 +54,10 @@ library
         containers,
         mtl,
         prettyprinter,
-        QuickCheck ^>=2.14,
+        QuickCheck ^>=2.15,
         random
 
-test-suite constrained
+test-suite
     type:             exitcode-stdio-1.0
     main-is:          Tests.hs
     hs-source-dirs:   test
