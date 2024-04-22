@@ -777,7 +777,7 @@ conformsToSpecM a (SuspendedSpec v ps) = guard =<< checkPred (singletonEnv v a) 
 conformsToSpecM _ (ErrorSpec es) = explain es $ guard False
 
 conformsToSpecProp :: forall fn a. HasSpec fn a => a -> Specification fn a -> Property
-conformsToSpecProp a s = fromGEProp $ conformsToSpecM a s
+conformsToSpecProp a s = fromGEProp $ conformsToSpecM a (simplifySpec s)
 
 conformsToSpec :: forall fn a. HasSpec fn a => a -> Specification fn a -> Bool
 conformsToSpec a s = isOk $ conformsToSpecM a s
@@ -803,33 +803,34 @@ satisfies _ (ErrorSpec e) = FalsePred e
 -- generators are not flexible enough.
 genFromSpec ::
   forall fn a m. (HasCallStack, HasSpec fn a, MonadGenError m) => Specification fn a -> GenT m a
-genFromSpec TrueSpec = genFromSpec @fn (typeSpec $ emptySpec @fn @a)
-genFromSpec spec@(MemberSpec as)
-  | null as = genError ["MemberSpec {}"]
-  | otherwise = explain ["genFromSpec " ++ show spec] $ pureGen (elements as)
-genFromSpec (SuspendedSpec x p)
-  -- NOTE: If `x` isn't free in `p` we still have to try to generate things
-  -- from `p` to make sure `p` is sat and then we can throw it away. A better
-  -- approach would be to only do this in the case where we don't know if `p`
-  -- is sat. The proper way to implement such a sat check is to remove
-  -- sat-but-unnecessary variables in the optimiser.
-  | not $ Name x `appearsIn` p = do
-      _ <- genFromPreds p
-      genFromSpec @fn TrueSpec
-  | otherwise = do
-      env <- genFromPreds p
-      findEnv env x
-genFromSpec ts@(TypeSpec s cant) =
-  explain ["", "genFromSpec", "    " ++ show (typeRep cant), "    " ++ show ts] $
-    -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
-    -- starts giving us trouble.
-    genFromTypeSpec @fn s `suchThatT` (`notElem` cant)
-genFromSpec (ErrorSpec e) = genError e
+genFromSpec (simplifySpec -> spec) = case spec of
+  TrueSpec -> genFromSpec @fn (typeSpec $ emptySpec @fn @a)
+  MemberSpec as
+    | null as -> genError ["MemberSpec {}"]
+    | otherwise -> explain ["genFromSpec " ++ show spec] $ pureGen (elements as)
+  SuspendedSpec x p
+    -- NOTE: If `x` isn't free in `p` we still have to try to generate things
+    -- from `p` to make sure `p` is sat and then we can throw it away. A better
+    -- approach would be to only do this in the case where we don't know if `p`
+    -- is sat. The proper way to implement such a sat check is to remove
+    -- sat-but-unnecessary variables in the optimiser.
+    | not $ Name x `appearsIn` p -> do
+        _ <- genFromPreds p
+        genFromSpec @fn TrueSpec
+    | otherwise -> do
+        env <- genFromPreds p
+        findEnv env x
+  TypeSpec s cant ->
+    explain ["", "genFromSpec", "    " ++ show (typeRep cant), "    " ++ show spec] $
+      -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
+      -- starts giving us trouble.
+      genFromTypeSpec @fn s `suchThatT` (`notElem` cant)
+  ErrorSpec e -> genError e
 
 shrinkWithSpec :: forall fn a. HasSpec fn a => Specification fn a -> a -> [a]
 -- TODO: possibly allow for ignoring the `conformsToSpec` check in the `TypeSpec`
 -- case when you know what you're doing
-shrinkWithSpec spec a = filter (`conformsToSpec` spec) $ case spec of
+shrinkWithSpec (simplifySpec -> spec) a = filter (`conformsToSpec` spec) $ case spec of
   -- TODO: filter on can't if we have a known to be sound shrinker
   TypeSpec s _ -> shrinkWithTypeSpec @fn s a
   -- TODO: The better way of doing this is to compute the dependency graph,
@@ -1005,6 +1006,14 @@ linearize preds graph = do
 -- Computing specs
 ------------------------------------------------------------------------
 
+simplifySpec :: HasSpec fn a => Specification fn a -> Specification fn a
+simplifySpec = \case
+  SuspendedSpec x p -> computeSpecSimplified x (optimisePred p)
+  MemberSpec xs -> MemberSpec (nub xs)
+  ErrorSpec es -> ErrorSpec es
+  TypeSpec ts cant -> TypeSpec ts (nub cant)
+  TrueSpec -> TrueSpec
+
 -- | Precondition: the `Pred fn` defines the `Var a`
 computeSpecSimplified ::
   forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Specification fn a
@@ -1128,7 +1137,7 @@ caseBoolSpec spec cont = case possibleValues spec of
   [b] -> cont b
   _ -> mempty
   where
-    possibleValues s = filter (flip conformsToSpec s) [True, False]
+    possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]
 
 isErrorLike :: Specification fn a -> Bool
 isErrorLike ErrorSpec {} = True
@@ -2527,7 +2536,9 @@ genFromFold must size elemS fn foldS = do
   let elemS' = mapSpec fn elemS
       mustVal = adds @fn (map (sem fn) must)
       foldS' = propagateSpecFun (theAddFn @fn) (HOLE :? Value mustVal :> Nil) foldS
-  results <- genList elemS' foldS' `suchThatT` (\xs -> sizeOf xs `conformsToSpec` size)
+  results <-
+    genList (simplifySpec elemS') (simplifySpec foldS')
+      `suchThatT` (\xs -> sizeOf xs `conformsToSpec` size)
   explain
     [ "genInverse"
     , "  fn = " ++ show fn
@@ -3700,7 +3711,7 @@ constrained ::
   Specification fn a
 constrained body =
   let x :-> p = bind body
-   in computeSpecSimplified x (optimisePred p)
+   in SuspendedSpec x p
 
 assertExplain ::
   (BaseUniverse fn, IsPred p fn) =>
@@ -3802,7 +3813,7 @@ bind body = x :-> p
     boundBinder :: Binder fn a -> Int
     boundBinder (x :-> p) = max (nameOf x) (bound p)
 
-    bound (Subst _ _ p) = bound p
+    bound (Subst x _ p) = max (nameOf x) (bound p)
     bound (Block ps) = maximum $ map bound ps
     bound (Exists _ b) = boundBinder b
     bound (Let _ b) = boundBinder b

@@ -145,19 +145,8 @@ reifyYucky = constrained' $ \x y z ->
   , z `dependsOn` y
   ]
 
--- TODO: these are all fucked up right now!! Something is very wrong here!
-
-basicSpec :: Term BaseFn Int -> Specification BaseFn Int
-basicSpec t = constrained $ \x ->
-  exists (\eval -> pure $ eval x + eval t) $ \y ->
-    x + t <=. y
-
-basicSpec' :: Specification BaseFn (Int, Int)
-basicSpec' = constrained' $ \x y ->
-  y `satisfies` basicSpec x
-
-reifySatisfies :: Specification BaseFn (Int, Int)
-reifySatisfies = constrained' $ \x y ->
-  [ x `satisfies` basicSpec (lit 0)
-  , reify x id $ \x' -> y `satisfies` basicSpec x'
-  ]
+basicSpec :: Specification BaseFn Int
+basicSpec = constrained $ \x ->
+  unsafeExists $ \y ->
+    satisfies x $ constrained $ \x' ->
+      x' <=. 1 + y
