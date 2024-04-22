@@ -69,12 +69,12 @@ unknownCostModelsSpec =
       costModels <- getsPParams ppCostModelsL
       FlexibleCostModels newCostModels <- arbitrary
       (hotCommitteeC :| _) <- registerInitialCommittee
-      (drepKh, _, _) <- setupSingleDRep 1_000_000
+      (drepC, _, _) <- setupSingleDRep 1_000_000
       gai <-
         submitParameterChange SNothing $
           emptyPParamsUpdate
             & ppuCostModelsL .~ SJust newCostModels
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gai
+      submitYesVote_ (DRepVoter drepC) gai
       submitYesVote_ (CommitteeVoter hotCommitteeC) gai
       passNEpochs 2
       getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId gai)
@@ -538,7 +538,7 @@ proposalsSpec =
                          ]
       it "Subtrees are pruned when competing proposals are enacted over multiple rounds" $ do
         (committeeMember :| _) <- registerInitialCommittee
-        (drepKh, _, _) <- setupSingleDRep 1_000_000
+        (drepC, _, _) <- setupSingleDRep 1_000_000
         a@[ c
             , Node
                 p2
@@ -564,11 +564,11 @@ proposalsSpec =
                 ]
             , Node () []
             ]
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) p2
+        submitYesVote_ (DRepVoter drepC) p2
         submitYesVote_ (CommitteeVoter committeeMember) p2
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) p21
+        submitYesVote_ (DRepVoter drepC) p21
         submitYesVote_ (CommitteeVoter committeeMember) p21
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) p3
+        submitYesVote_ (DRepVoter drepC) p3
         submitYesVote_ (CommitteeVoter committeeMember) p3 -- Two competing proposals break the tie based on proposal order
         fmap (!! 3) getProposalsForest
           `shouldReturn` Node SNothing (fmap SJust <$> a)
@@ -607,7 +607,7 @@ proposalsSpec =
             ]
         p2131 <- submitChildConstitutionGovAction p213
         p2141 <- submitChildConstitutionGovAction p214
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) p212
+        submitYesVote_ (DRepVoter drepC) p212
         submitYesVote_ (CommitteeVoter committeeMember) p212
         fmap (!! 3) getProposalsForest
           `shouldReturn` Node
@@ -629,7 +629,7 @@ proposalsSpec =
       it "Votes from subsequent epochs are considered for ratification" $ do
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
         (committeeMember :| _) <- registerInitialCommittee
-        (drepKh, _, _) <- setupSingleDRep 1_000_000
+        (dRep, _, _) <- setupSingleDRep 1_000_000
         [Node p1 []] <-
           submitConstitutionGovActionForest
             SNothing
@@ -637,14 +637,14 @@ proposalsSpec =
         fmap (!! 3) getProposalsForest
           `shouldReturn` Node SNothing [Node (SJust p1) []]
         passNEpochs 2
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) p1
+        submitYesVote_ (DRepVoter dRep) p1
         submitYesVote_ (CommitteeVoter committeeMember) p1
         passNEpochs 2
         fmap (!! 3) getProposalsForest
           `shouldReturn` Node (SJust p1) []
       it "Subtrees are pruned for both enactment and expiry over multiple rounds" $ do
         (committeeMember :| _) <- registerInitialCommittee
-        (drepKh, _, _) <- setupSingleDRep 1_000_000
+        (dRep, _, _) <- setupSingleDRep 1_000_000
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
         [ a@( Node
                 p1
@@ -681,11 +681,11 @@ proposalsSpec =
             , Node () []
             ]
         passNEpochs 2
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) p1
+        submitYesVote_ (DRepVoter dRep) p1
         submitYesVote_ (CommitteeVoter committeeMember) p1
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) p11
+        submitYesVote_ (DRepVoter dRep) p11
         submitYesVote_ (CommitteeVoter committeeMember) p11
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) p3
+        submitYesVote_ (DRepVoter dRep) p3
         submitYesVote_ (CommitteeVoter committeeMember) p3 -- Two competing proposals break the tie based on proposal order
         passNEpochs 2
         fmap (!! 3) getProposalsForest
@@ -722,7 +722,7 @@ proposalsSpec =
         passNEpochs 2
         fmap (!! 3) getProposalsForest
           `shouldReturn` Node (SJust p11) (fmap SJust <$> d)
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) p116
+        submitYesVote_ (DRepVoter dRep) p116
         submitYesVote_ (CommitteeVoter committeeMember) p116
         passNEpochs 3
         fmap (!! 3) getProposalsForest
@@ -741,24 +741,22 @@ votingSpec =
       it "expired gov-actions" $ do
         -- Voting after the 3rd epoch should fail
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-        (khDRep, _, _) <- setupSingleDRep 1_000_000
+        (drep, _, _) <- setupSingleDRep 1_000_000
         (govActionId, _) <- submitConstitution SNothing
         passEpoch
         passEpoch
         passEpoch
-        let voter = DRepVoter $ KeyHashObj khDRep
         submitFailingVote
-          voter
+          (DRepVoter drep)
           govActionId
-          [ injectFailure $ VotingOnExpiredGovAction [(voter, govActionId)]
+          [ injectFailure $ VotingOnExpiredGovAction [(DRepVoter drep, govActionId)]
           ]
       it "non-existent gov-actions" $ do
-        (khDRep, _, _) <- setupSingleDRep 1_000_000
+        (drep, _, _) <- setupSingleDRep 1_000_000
         (govActionId, _) <- submitConstitution SNothing
-        let voter = DRepVoter $ KeyHashObj khDRep
-            dummyGaid = govActionId {gaidGovActionIx = GovActionIx 99} -- non-existent `GovActionId`
+        let dummyGaid = govActionId {gaidGovActionIx = GovActionIx 99} -- non-existent `GovActionId`
         submitFailingVote
-          voter
+          (DRepVoter drep)
           dummyGaid
           [injectFailure $ GovActionsDoNotExist $ pure dummyGaid]
       it
@@ -792,8 +790,7 @@ votingSpec =
                 }
             & ppCommitteeMinSizeL .~ 2
             & ppCommitteeMaxTermLengthL .~ EpochInterval 10
-        (khDRep, _, _) <- setupSingleDRep 1_000_000
-        let dRepCred = KeyHashObj khDRep
+        (dRepCred, _, _) <- setupSingleDRep 1_000_000
         ccColdCred0 <- KeyHashObj <$> freshKeyHash
         ccColdCred1 <- KeyHashObj <$> freshKeyHash
         electionGovAction <-
@@ -859,23 +856,23 @@ constitutionSpec =
         void $ submitConstitution SNothing
       it "valid GovPurposeId" $ do
         (committeeMember :| _) <- registerInitialCommittee
-        (drepKh, _, _) <- setupSingleDRep 1_000_000
+        (dRep, _, _) <- setupSingleDRep 1_000_000
         constitution <- arbitrary
-        gaidConstitutionProp <- enactConstitution SNothing constitution (KeyHashObj drepKh) committeeMember
+        gaidConstitutionProp <- enactConstitution SNothing constitution dRep committeeMember
         constitution1 <- arbitrary
         void $
           enactConstitution
             (SJust $ GovPurposeId gaidConstitutionProp)
             constitution1
-            (KeyHashObj drepKh)
+            dRep
             committeeMember
 
     describe "rejected for" $ do
       it "empty PrevGovId after the first constitution was enacted" $ do
         (committeeMember :| _) <- registerInitialCommittee
-        (drepKh, _, _) <- setupSingleDRep 1_000_000
+        (dRep, _, _) <- setupSingleDRep 1_000_000
         (govActionId, _constitution) <- submitConstitution SNothing
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) govActionId
+        submitYesVote_ (DRepVoter dRep) govActionId
         submitYesVote_ (CommitteeVoter committeeMember) govActionId
         passNEpochs 2
         constitution <- arbitrary
@@ -956,7 +953,7 @@ policySpec =
   describe "Policy" $ do
     it "policy is respected by proposals" $ do
       (committeeMember :| _) <- registerInitialCommittee
-      (drepKh, _, _) <- setupSingleDRep 1_000_000
+      (dRep, _, _) <- setupSingleDRep 1_000_000
       keyHash <- freshKeyHash
       scriptHash <- impAddNativeScript $ RequireAllOf (SSeq.singleton (RequireSignature keyHash))
       anchor <- arbitrary
@@ -964,7 +961,7 @@ policySpec =
         enactConstitution
           SNothing
           (Constitution anchor (SJust scriptHash))
-          (KeyHashObj drepKh)
+          dRep
           committeeMember
       wrongScriptHash <-
         impAddNativeScript $
@@ -1222,7 +1219,7 @@ ccVoteOnConstitutionFailsWithMultipleVotes ::
   ImpTestM era ()
 ccVoteOnConstitutionFailsWithMultipleVotes = do
   (ccCred :| _) <- registerInitialCommittee
-  (drepKh, _, _) <- setupSingleDRep 1_000_000
+  (drepCred, _, _) <- setupSingleDRep 1_000_000
   drepCred2 <- KeyHashObj <$> registerDRep
   newCommitteeMember <- KeyHashObj <$> freshKeyHash
   committeeProposal <-
@@ -1248,7 +1245,7 @@ ccVoteOnConstitutionFailsWithMultipleVotes = do
                     , Map.singleton committeeProposal $ VotingProcedure VoteNo SNothing
                     )
                   ,
-                    ( DRepVoter (KeyHashObj drepKh)
+                    ( DRepVoter drepCred
                     , Map.singleton committeeProposal $ VotingProcedure VoteYes SNothing
                     )
                   ]

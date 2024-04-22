@@ -59,7 +59,7 @@ committeeExpiryResignationDiscountSpec =
               }
           & ppCommitteeMinSizeL .~ 2
           & ppCommitteeMaxTermLengthL .~ EpochInterval 10
-      (drepKH, _stakingKH, _paymentKP) <- setupSingleDRep 1_000_000
+      (drep, _, _) <- setupSingleDRep 1_000_000
       -- Elect a committee of 2 members
       committeeColdC1 <- KeyHashObj <$> freshKeyHash
       committeeColdC2 <- KeyHashObj <$> freshKeyHash
@@ -70,7 +70,7 @@ committeeExpiryResignationDiscountSpec =
             mempty
             (Map.fromList [(committeeColdC1, EpochNo 10), (committeeColdC2, EpochNo 2)])
             (1 %! 2)
-      submitYesVote_ (DRepVoter $ KeyHashObj drepKH) gaiCC
+      submitYesVote_ (DRepVoter drep) gaiCC
       passNEpochs 2
       getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiCC)
       committeeHotC1 <- registerCommitteeHotKey committeeColdC1
@@ -97,7 +97,7 @@ committeeExpiryResignationDiscountSpec =
               }
           & ppCommitteeMinSizeL .~ 2
           & ppCommitteeMaxTermLengthL .~ EpochInterval 10
-      (drepKH, _stakingKH, _paymentKP) <- setupSingleDRep 1_000_000
+      (drep, _, _) <- setupSingleDRep 1_000_000
       -- Elect a committee of 2 members
       committeeColdC1 <- KeyHashObj <$> freshKeyHash
       committeeColdC2 <- KeyHashObj <$> freshKeyHash
@@ -108,7 +108,7 @@ committeeExpiryResignationDiscountSpec =
             mempty
             (Map.fromList [(committeeColdC1, EpochNo 10), (committeeColdC2, EpochNo 10)])
             (1 %! 2)
-      submitYesVote_ (DRepVoter $ KeyHashObj drepKH) gaiCC
+      submitYesVote_ (DRepVoter drep) gaiCC
       passNEpochs 2
       getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiCC)
       committeeHotC1 <- registerCommitteeHotKey committeeColdC1
@@ -163,9 +163,9 @@ paramChangeAffectsProposalsSpec =
             passNEpochs 2
           submitTwoExampleProposalsAndVoteOnTheChild ::
             GovPurposeId 'CommitteePurpose era ->
-            KeyHash 'DRepRole (EraCrypto era) ->
+            Credential 'DRepRole (EraCrypto era) ->
             ImpTestM era (GovActionId (EraCrypto era), GovActionId (EraCrypto era))
-          submitTwoExampleProposalsAndVoteOnTheChild gpiCC drepKH = do
+          submitTwoExampleProposalsAndVoteOnTheChild gpiCC drep = do
             committeeC <- KeyHashObj <$> freshKeyHash
             let updateCC parent = UpdateCommittee parent mempty (Map.singleton committeeC $ EpochNo 5) $ 1 %! 2
             gaiParent <- submitGovAction $ updateCC $ SJust gpiCC
@@ -173,14 +173,14 @@ paramChangeAffectsProposalsSpec =
             -- voted on, it cannot be ratified before the ParameterChange proposal
             -- is enacted.
             gaiChild <- submitGovAction $ updateCC $ SJust $ GovPurposeId gaiParent
-            submitYesVote_ (DRepVoter $ KeyHashObj drepKH) gaiChild
+            submitYesVote_ (DRepVoter drep) gaiChild
             passEpoch -- Make the votes count
             pure (gaiParent, gaiChild)
       it "Increasing the threshold prevents a hitherto-ratifiable proposal from being ratified" $ do
         (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
         setThreshold smallerThreshold
-        (drepKH, _stakingKH, _paymentKP) <- setupSingleDRep 1_000_000
-        (_gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC drepKH
+        (drep, _, _) <- setupSingleDRep 1_000_000
+        (_gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC drep
         isDRepAccepted gaiChild `shouldReturn` True
         enactThreshold largerThreshold drepC hotCommitteeC
         isDRepAccepted gaiChild `shouldReturn` False
@@ -188,13 +188,13 @@ paramChangeAffectsProposalsSpec =
         (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
         setThreshold largerThreshold
-        (drepKH, _stakingKH, _paymentKP) <- setupSingleDRep 1_000_000
-        (gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC drepKH
+        (drep, _, _) <- setupSingleDRep 1_000_000
+        (gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC drep
         isDRepAccepted gaiChild `shouldReturn` False
         enactThreshold smallerThreshold drepC hotCommitteeC
         isDRepAccepted gaiChild `shouldReturn` True
         -- Not vote on the parent too to make sure both get enacted
-        submitYesVote_ (DRepVoter $ KeyHashObj drepKH) gaiParent
+        submitYesVote_ (DRepVoter drep) gaiParent
         passNEpochs 2
         getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiParent)
         passEpoch -- UpdateCommittee is a delaying action
@@ -276,7 +276,7 @@ paramChangeAffectsProposalsSpec =
         getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiChild)
     it "A parent ParameterChange proposal can prevent its child from being enacted" $ do
       (hotCommitteeC :| _) <- registerInitialCommittee
-      (drepKh, _, _) <- setupSingleDRep 1_000_000
+      (drepC, _, _) <- setupSingleDRep 1_000_000
       -- Setup one other DRep with equal stake
       _ <- setupSingleDRep 1_000_000
       -- Set a smaller DRep threshold
@@ -297,9 +297,9 @@ paramChangeAffectsProposalsSpec =
               SNothing
       parentGai <- submitGovAction $ paramChange SNothing largerThreshold
       childGai <- submitGovAction $ paramChange (SJust $ GovPurposeId parentGai) smallerThreshold
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) parentGai
+      submitYesVote_ (DRepVoter drepC) parentGai
       submitYesVote_ (CommitteeVoter hotCommitteeC) parentGai
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) childGai
+      submitYesVote_ (DRepVoter drepC) childGai
       submitYesVote_ (CommitteeVoter hotCommitteeC) childGai
       passEpoch
       logRatificationChecks parentGai
@@ -323,19 +323,19 @@ committeeMinSizeAffectsInFlightProposalsSpec =
           submitTreasuryWithdrawals [(rewardAccount, Coin 1_000)]
     it "TreasuryWithdrawal fails to ratify due to an increase in CommitteeMinSize" $ do
       (hotCommitteeC :| _) <- registerInitialCommittee
-      (drepKh, _, _) <- setupSingleDRep 1_000_000
+      (drepC, _, _) <- setupSingleDRep 1_000_000
       passEpoch
       setCommitteeMinSize 1
       gaiTW <- submitATreasuryWithdrawal
       submitYesVote_ (CommitteeVoter hotCommitteeC) gaiTW
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gaiTW
+      submitYesVote_ (DRepVoter drepC) gaiTW
       isCommitteeAccepted gaiTW `shouldReturn` True
       gaiPC <-
         submitParameterChange SNothing $
           emptyPParamsUpdate
             & ppuCommitteeMinSizeL .~ SJust 2
       submitYesVote_ (CommitteeVoter hotCommitteeC) gaiPC
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gaiPC
+      submitYesVote_ (DRepVoter drepC) gaiPC
       treasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
       passNEpochs 2
       -- The ParameterChange prevents the TreasuryWithdrawal from being enacted,
@@ -437,7 +437,7 @@ votingSpec =
   describe "Voting" $ do
     it "SPO needs to vote on security-relevant parameter changes" $ do
       (ccCred :| _) <- registerInitialCommittee
-      (drepKh, _, _) <- setupSingleDRep 1_000_000
+      (drep, _, _) <- setupSingleDRep 1_000_000
       (khPool, _, _) <- setupPoolWithStake $ Coin 42_000_000
       initMinFeeA <- getsNES $ nesEsL . curPParamsEpochStateL . ppMinFeeAL
       gaidThreshold <- impAnn "Update StakePool thresholds" $ do
@@ -464,7 +464,7 @@ votingSpec =
               , pProcDeposit = pp ^. ppGovActionDepositL
               , pProcAnchor = def
               }
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gaidThreshold
+        submitYesVote_ (DRepVoter drep) gaidThreshold
         submitYesVote_ (CommitteeVoter ccCred) gaidThreshold
         logAcceptedRatio gaidThreshold
         pure gaidThreshold
@@ -491,7 +491,7 @@ votingSpec =
               , pProcDeposit = pp ^. ppGovActionDepositL
               , pProcAnchor = def
               }
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gaidMinFee
+        submitYesVote_ (DRepVoter drep) gaidMinFee
         submitYesVote_ (CommitteeVoter ccCred) gaidMinFee
         pure gaidMinFee
       passEpoch
@@ -521,15 +521,15 @@ votingSpec =
                   }
               & ppCommitteeMaxTermLengthL .~ EpochInterval 20
           -- Setup DRep delegation #1
-          (drepKH1, stakingKH1, paymentKP1) <- setupSingleDRep 1_000_000
+          (drep1, KeyHashObj stakingKH1, paymentKP1) <- setupSingleDRep 1_000_000
           -- Setup DRep delegation #2
-          (_drepKH2, _stakingKH2, _paymentKP2) <- setupSingleDRep 1_000_000
+          _ <- setupSingleDRep 1_000_000
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
           let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
           addCCGaid <- submitGovAction addCCAction
           -- Submit the vote
-          submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
+          submitVote_ VoteYes (DRepVoter drep1) addCCGaid
           passNEpochs 2
           -- The vote should not result in a ratification
           isDRepAccepted addCCGaid `shouldReturn` False
@@ -552,15 +552,15 @@ votingSpec =
                   }
               & ppCommitteeMaxTermLengthL .~ EpochInterval 20
           -- Setup DRep delegation #1
-          (drepKH1, stakingKH1, _paymentKP1) <- setupSingleDRep 1_000_000
+          (drep1, staking1, _) <- setupSingleDRep 1_000_000
           -- Setup DRep delegation #2
-          (_drepKH2, _stakingKH2, _paymentKP2) <- setupSingleDRep 1_000_000
+          _ <- setupSingleDRep 1_000_000
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
           let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
           addCCGaid <- submitGovAction addCCAction
           -- Submit the vote
-          submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
+          submitVote_ VoteYes (DRepVoter drep1) addCCGaid
           passNEpochs 2
           -- The vote should not result in a ratification
           isDRepAccepted addCCGaid `shouldReturn` False
@@ -571,7 +571,7 @@ votingSpec =
             nesEsL . epochStateUMapL
               %~ UM.adjust
                 (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000) d)
-                (KeyHashObj stakingKH1)
+                staking1
                 . UM.RewDepUView
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
@@ -659,19 +659,19 @@ delayingActionsSpec =
   describe "Delaying actions" $ do
     it "A delaying action delays its child even when both ere proposed and ratified in the same epoch" $ do
       (committeeMember :| _) <- registerInitialCommittee
-      (drepKh, _, _) <- setupSingleDRep 1_000_000
+      (dRep, _, _) <- setupSingleDRep 1_000_000
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       gai0 <- submitInitConstitutionGovAction
       gai1 <- submitChildConstitutionGovAction gai0
       gai2 <- submitChildConstitutionGovAction gai1
       gai3 <- submitChildConstitutionGovAction gai2
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gai0
+      submitYesVote_ (DRepVoter dRep) gai0
       submitYesVote_ (CommitteeVoter committeeMember) gai0
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gai1
+      submitYesVote_ (DRepVoter dRep) gai1
       submitYesVote_ (CommitteeVoter committeeMember) gai1
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gai2
+      submitYesVote_ (DRepVoter dRep) gai2
       submitYesVote_ (CommitteeVoter committeeMember) gai2
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gai3
+      submitYesVote_ (DRepVoter dRep) gai3
       submitYesVote_ (CommitteeVoter committeeMember) gai3
       passNEpochs 2
       getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId gai0)
@@ -686,7 +686,7 @@ delayingActionsSpec =
       "A delaying action delays all other actions even when all of them may be ratified in the same epoch"
       $ do
         (committeeMember :| _) <- registerInitialCommittee
-        (drepKh, _, _) <- setupSingleDRep 1_000_000
+        (dRep, _, _) <- setupSingleDRep 1_000_000
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
         pGai0 <-
           submitParameterChange
@@ -702,15 +702,15 @@ delayingActionsSpec =
             $ def & ppuDRepDepositL .~ SJust (Coin 1_000_002)
         cGai0 <- submitInitConstitutionGovAction
         cGai1 <- submitChildConstitutionGovAction cGai0
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) cGai0
+        submitYesVote_ (DRepVoter dRep) cGai0
         submitYesVote_ (CommitteeVoter committeeMember) cGai0
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) cGai1
+        submitYesVote_ (DRepVoter dRep) cGai1
         submitYesVote_ (CommitteeVoter committeeMember) cGai1
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) pGai0
+        submitYesVote_ (DRepVoter dRep) pGai0
         submitYesVote_ (CommitteeVoter committeeMember) pGai0
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) pGai1
+        submitYesVote_ (DRepVoter dRep) pGai1
         submitYesVote_ (CommitteeVoter committeeMember) pGai1
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) pGai2
+        submitYesVote_ (DRepVoter dRep) pGai2
         submitYesVote_ (CommitteeVoter committeeMember) pGai2
         passNEpochs 2
         getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId cGai0)
@@ -730,19 +730,19 @@ delayingActionsSpec =
     describe "An action expires when delayed enough even after being ratified" $ do
       it "Same lineage" $ do
         (committeeMember :| _) <- registerInitialCommittee
-        (drepKh, _, _) <- setupSingleDRep 1_000_000
+        (dRep, _, _) <- setupSingleDRep 1_000_000
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
         gai0 <- submitInitConstitutionGovAction
         gai1 <- submitChildConstitutionGovAction gai0
         gai2 <- submitChildConstitutionGovAction gai1
         gai3 <- submitChildConstitutionGovAction gai2
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gai0
+        submitYesVote_ (DRepVoter dRep) gai0
         submitYesVote_ (CommitteeVoter committeeMember) gai0
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gai1
+        submitYesVote_ (DRepVoter dRep) gai1
         submitYesVote_ (CommitteeVoter committeeMember) gai1
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gai2
+        submitYesVote_ (DRepVoter dRep) gai2
         submitYesVote_ (CommitteeVoter committeeMember) gai2
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gai3
+        submitYesVote_ (DRepVoter dRep) gai3
         submitYesVote_ (CommitteeVoter committeeMember) gai3
         passNEpochs 2
         getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId gai0)
@@ -755,7 +755,7 @@ delayingActionsSpec =
         getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId gai2)
       it "Other lineage" $ do
         (committeeMember :| _) <- registerInitialCommittee
-        (drepKh, _, _) <- setupSingleDRep 1_000_000
+        (dRep, _, _) <- setupSingleDRep 1_000_000
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
         pGai0 <-
           submitParameterChange
@@ -772,17 +772,17 @@ delayingActionsSpec =
         cGai0 <- submitInitConstitutionGovAction
         cGai1 <- submitChildConstitutionGovAction cGai0
         cGai2 <- submitChildConstitutionGovAction cGai1
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) cGai0
+        submitYesVote_ (DRepVoter dRep) cGai0
         submitYesVote_ (CommitteeVoter committeeMember) cGai0
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) cGai1
+        submitYesVote_ (DRepVoter dRep) cGai1
         submitYesVote_ (CommitteeVoter committeeMember) cGai1
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) cGai2
+        submitYesVote_ (DRepVoter dRep) cGai2
         submitYesVote_ (CommitteeVoter committeeMember) cGai2
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) pGai0
+        submitYesVote_ (DRepVoter dRep) pGai0
         submitYesVote_ (CommitteeVoter committeeMember) pGai0
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) pGai1
+        submitYesVote_ (DRepVoter dRep) pGai1
         submitYesVote_ (CommitteeVoter committeeMember) pGai1
-        submitYesVote_ (DRepVoter (KeyHashObj drepKh)) pGai2
+        submitYesVote_ (DRepVoter dRep) pGai2
         submitYesVote_ (CommitteeVoter committeeMember) pGai2
         passNEpochs 2
         getLastEnactedConstitution `shouldReturn` SJust (GovPurposeId cGai0)
@@ -854,7 +854,7 @@ delayingActionsSpec =
         -- other actions get ratified and enacted
         govIdConst1 <- impAnn "Other actions are ratified and enacted" $ do
           (govIdConst1, constitution) <- submitConstitution SNothing
-          submitYesVote_ (DRepVoter (KeyHashObj drep)) govIdConst1
+          submitYesVote_ (DRepVoter drep) govIdConst1
           hks <- traverse registerCommitteeHotKey (Set.toList initialMembers)
           traverse_ (\m -> submitYesVote_ (CommitteeVoter m) govIdConst1) hks
 
@@ -878,7 +878,7 @@ delayingActionsSpec =
 
         impAnn "New committee can vote" $ do
           (govIdConst2, constitution) <- submitConstitution $ SJust (GovPurposeId govIdConst1)
-          submitYesVote_ (DRepVoter (KeyHashObj drep)) govIdConst2
+          submitYesVote_ (DRepVoter drep) govIdConst2
           hks <- traverse registerCommitteeHotKey (Set.toList membersExceedingExpiry)
           traverse_ (\m -> submitYesVote_ (CommitteeVoter m) govIdConst2) hks
 

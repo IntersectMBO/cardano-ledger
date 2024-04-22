@@ -329,8 +329,8 @@ setupSingleDRep ::
   Integer ->
   ImpTestM
     era
-    ( KeyHash 'DRepRole (EraCrypto era)
-    , KeyHash 'Staking (EraCrypto era)
+    ( Credential 'DRepRole (EraCrypto era)
+    , Credential 'Staking (EraCrypto era)
     , KeyPair 'Payment (EraCrypto era)
     )
 setupSingleDRep stake = do
@@ -352,7 +352,7 @@ setupSingleDRep stake = do
               (DelegVote (DRepCredential $ KeyHashObj drepKH))
               zero
           ]
-  pure (drepKH, delegatorKH, spendingKP)
+  pure (KeyHashObj drepKH, KeyHashObj delegatorKH, spendingKP)
 
 getsPParams :: EraGov era => Lens' (PParams era) a -> ImpTestM era a
 getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
@@ -1035,7 +1035,7 @@ electCommittee ::
   , ConwayEraImp era
   ) =>
   StrictMaybe (GovPurposeId 'CommitteePurpose era) ->
-  KeyHash 'DRepRole (EraCrypto era) ->
+  Credential 'DRepRole (EraCrypto era) ->
   Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
   Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
   ImpTestM era (GovPurposeId 'CommitteePurpose era)
@@ -1048,7 +1048,7 @@ electCommittee prevGovId drep toRemove toAdd = impAnn "Electing committee" $ do
         toAdd
         (1 %! 2)
   gaidCommitteeProp <- submitGovAction committeeAction
-  submitYesVote_ (DRepVoter $ KeyHashObj drep) gaidCommitteeProp
+  submitYesVote_ (DRepVoter drep) gaidCommitteeProp
   pure (GovPurposeId gaidCommitteeProp)
 
 electBasicCommittee ::
@@ -1077,7 +1077,7 @@ electBasicCommittee = do
       & ppCommitteeMaxTermLengthL .~ EpochInterval 20
       & ppGovActionLifetimeL .~ EpochInterval 2
       & ppGovActionDepositL .~ Coin 123
-  (drepKH, _, _) <- setupSingleDRep 1_000_000
+  (drep, _, _) <- setupSingleDRep 1_000_000
 
   logEntry "Registering committee member"
   coldCommitteeC <- KeyHashObj <$> freshKeyHash
@@ -1093,11 +1093,11 @@ electBasicCommittee = do
       [ committeeAction
       , UpdateCommittee SNothing mempty mempty (1 %! 10)
       ]
-  submitYesVote_ (DRepVoter $ KeyHashObj drepKH) gaidCommitteeProp
+  submitYesVote_ (DRepVoter drep) gaidCommitteeProp
   passEpoch
   passEpoch
   hotCommitteeC <- registerCommitteeHotKey coldCommitteeC
-  pure (KeyHashObj drepKH, hotCommitteeC, GovPurposeId gaidCommitteeProp)
+  pure (drep, hotCommitteeC, GovPurposeId gaidCommitteeProp)
 
 logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era ()
 logCurPParams = do
@@ -1285,17 +1285,17 @@ submitConstitution prevGovId = do
 
 expectExtraDRepExpiry ::
   (HasCallStack, EraGov era, ConwayEraPParams era) =>
-  KeyHash 'DRepRole (EraCrypto era) ->
+  Credential 'DRepRole (EraCrypto era) ->
   EpochNo ->
   ImpTestM era ()
-expectExtraDRepExpiry kh expected = do
+expectExtraDRepExpiry drep expected = do
   drepActivity <-
     getsNES $
       nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL . ppDRepActivityL
   dsMap <-
     getsNES $
       nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
-  let ds = Map.lookup (KeyHashObj kh) dsMap
+  let ds = Map.lookup drep dsMap
   (^. drepExpiryL)
     <$> ds
       `shouldBe` Just (addEpochInterval expected drepActivity)

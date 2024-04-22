@@ -67,13 +67,13 @@ spec = describe "GOVCERT" $ do
     "A CC that has resigned will need to be first voted out and then voted in to be considered active"
     $ do
       modifyPParams $ \pp -> pp & ppCommitteeMaxTermLengthL .~ EpochInterval 20
-      (drepKh, _, _) <- setupSingleDRep 1_000_000
+      (drepCred, _, _) <- setupSingleDRep 1_000_000
       passNEpochs 2
       -- Add a fresh CC
       cc <- KeyHashObj <$> freshKeyHash
       let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (1 %! 2)
       addCCGaid <- submitGovAction addCCAction
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) addCCGaid
+      submitYesVote_ (DRepVoter drepCred) addCCGaid
       passNEpochs 2
       -- Confirm that they are added
       SJust committee <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
@@ -93,14 +93,14 @@ spec = describe "GOVCERT" $ do
       -- Re-add the same CC
       let reAddCCAction = UpdateCommittee (SJust $ GovPurposeId addCCGaid) mempty (Map.singleton cc 20) (1 %! 2)
       reAddCCGaid <- submitGovAction reAddCCAction
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) reAddCCGaid
+      submitYesVote_ (DRepVoter drepCred) reAddCCGaid
       passNEpochs 2
       -- Confirm that they are still resigned
       ccShouldBeResigned cc
       -- Remove them
       let removeCCAction = UpdateCommittee (SJust $ GovPurposeId reAddCCGaid) (Set.singleton cc) mempty (1 %! 2)
       removeCCGaid <- submitGovAction removeCCAction
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) removeCCGaid
+      submitYesVote_ (DRepVoter drepCred) removeCCGaid
       passNEpochs 2
       -- Confirm that they have been removed
       SJust committeeAfterRemove <-
@@ -109,7 +109,7 @@ spec = describe "GOVCERT" $ do
       -- Add the same CC back a second time
       let secondAddCCAction = UpdateCommittee (SJust $ GovPurposeId removeCCGaid) mempty (Map.singleton cc 20) (1 %! 2)
       secondAddCCGaid <- submitGovAction secondAddCCAction
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) secondAddCCGaid
+      submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
       passNEpochs 2
       -- Confirm that they have been added
       SJust committeeAfterRemoveAndAdd <-

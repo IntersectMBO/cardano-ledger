@@ -218,13 +218,13 @@ dRepSpec =
       gaidConstitutionProp <- submitGovAction constitutionAction
 
       (committeeHotCred :| _) <- registerInitialCommittee
-      (drepKh, _, _) <- setupSingleDRep 1_000_000
+      (dRepCred, _, _) <- setupSingleDRep 1_000_000
       passEpoch
       logRatificationChecks gaidConstitutionProp
       do
         isAccepted <- isDRepAccepted gaidConstitutionProp
         assertBool "Gov action should not be accepted" $ not isAccepted
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) gaidConstitutionProp
+      submitYesVote_ (DRepVoter dRepCred) gaidConstitutionProp
       submitYesVote_ (CommitteeVoter committeeHotCred) gaidConstitutionProp
       logAcceptedRatio gaidConstitutionProp
       do
@@ -271,7 +271,7 @@ treasuryWithdrawalExpectation ::
   ImpTestM era ()
 treasuryWithdrawalExpectation extraWithdrawals = do
   (committeeHotCred :| _) <- registerInitialCommittee
-  (drepKh, _, _) <- setupSingleDRep 1_000_000
+  (dRepCred, _, _) <- setupSingleDRep 1_000_000
   treasuryStart <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   rewardAccount <- registerRewardAccount
   govPolicy <- getGovPolicy
@@ -280,7 +280,7 @@ treasuryWithdrawalExpectation extraWithdrawals = do
     submitGovActions $
       TreasuryWithdrawals (Map.singleton rewardAccount withdrawalAmount) govPolicy
         NE.:| extraWithdrawals
-  submitYesVote_ (DRepVoter (KeyHashObj drepKh)) govActionId
+  submitYesVote_ (DRepVoter dRepCred) govActionId
   submitYesVote_ (CommitteeVoter committeeHotCred) govActionId
   passEpoch -- 1st epoch crossing starts DRep pulser
   impAnn "Withdrawal should not be received yet" $
@@ -342,7 +342,7 @@ eventsSpec = describe "Events" $ do
   describe "emits event" $ do
     it "GovInfoEvent" $ do
       (ccCred :| _) <- registerInitialCommittee
-      (drepKh, _, _) <- setupSingleDRep 1_000_000
+      (dRepCred, _, _) <- setupSingleDRep 1_000_000
       let actionLifetime = 10
       modifyPParams $ \pp ->
         pp
@@ -381,7 +381,7 @@ eventsSpec = describe "Events" $ do
                            ]
       replicateM_ (fromIntegral actionLifetime) passEpochWithNoDroppedActions
       logAcceptedRatio proposalA
-      submitYesVote_ (DRepVoter (KeyHashObj drepKh)) proposalA
+      submitYesVote_ (DRepVoter dRepCred) proposalA
       submitYesVote_ (CommitteeVoter ccCred) proposalA
       gasA <- getGovActionState proposalA
       gasB <- getGovActionState proposalB

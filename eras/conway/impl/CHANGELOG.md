@@ -52,6 +52,7 @@
 
 ### `testlib`
 
+* Change return type of `setupSingleDRep` to Credential instead of KeyHash
 * Add `registerInitialCommittee` and `getCommitteeMembers` to Conway ImpTest
 * Implement `ConwayUtxowPredFailure` instances:
   * `Arbitrary`
