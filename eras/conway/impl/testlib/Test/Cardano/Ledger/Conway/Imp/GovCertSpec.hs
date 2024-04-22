@@ -11,7 +11,6 @@
 
 module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
   EraGov (..),
@@ -26,7 +25,6 @@ import Cardano.Ledger.Conway.Governance (
   Voter (..),
   committeeMembersL,
  )
-import Cardano.Ledger.Conway.PParams (ppCommitteeMaxTermLengthL)
 import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure (..))
 import Cardano.Ledger.Conway.TxCert (
   pattern AuthCommitteeHotKeyTxCert,
@@ -66,7 +64,6 @@ spec = describe "GOVCERT" $ do
   it
     "A CC that has resigned will need to be first voted out and then voted in to be considered active"
     $ do
-      modifyPParams $ \pp -> pp & ppCommitteeMaxTermLengthL .~ EpochInterval 20
       (drepCred, _, _) <- setupSingleDRep 1_000_000
       passNEpochs 2
       -- Add a fresh CC

@@ -260,7 +260,6 @@ proposalsSpec =
         let mkCorruptGovActionId :: GovActionId c -> GovActionId c
             mkCorruptGovActionId (GovActionId txi (GovActionIx gaix)) =
               GovActionId txi $ GovActionIx $ gaix + 999
-        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
         Node p1 [Node _p11 []] <-
           submitConstitutionGovActionTree
             SNothing
@@ -789,7 +788,6 @@ votingSpec =
                 { dvtUpdateToConstitution = 1 %! 2
                 }
             & ppCommitteeMinSizeL .~ 2
-            & ppCommitteeMaxTermLengthL .~ EpochInterval 10
         (dRepCred, _, _) <- setupSingleDRep 1_000_000
         ccColdCred0 <- KeyHashObj <$> freshKeyHash
         ccColdCred1 <- KeyHashObj <$> freshKeyHash

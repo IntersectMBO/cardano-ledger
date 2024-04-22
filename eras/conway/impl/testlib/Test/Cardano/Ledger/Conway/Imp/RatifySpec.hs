@@ -49,16 +49,7 @@ committeeExpiryResignationDiscountSpec ::
 committeeExpiryResignationDiscountSpec =
   describe "Expired and resigned committee members are discounted from quorum" $ do
     it "Expired" $ do
-      modifyPParams $ \pp ->
-        pp
-          & ppGovActionLifetimeL .~ EpochInterval 10
-          & ppDRepVotingThresholdsL
-            .~ def
-              { dvtCommitteeNormal = 1 %! 10
-              , dvtUpdateToConstitution = 1 %! 10
-              }
-          & ppCommitteeMinSizeL .~ 2
-          & ppCommitteeMaxTermLengthL .~ EpochInterval 10
+      modifyPParams $ ppCommitteeMinSizeL .~ 2
       (drep, _, _) <- setupSingleDRep 1_000_000
       -- Elect a committee of 2 members
       committeeColdC1 <- KeyHashObj <$> freshKeyHash
@@ -87,16 +78,7 @@ committeeExpiryResignationDiscountSpec =
       ccShouldBeExpired committeeColdC2
       isCommitteeAccepted gaiConstitution `shouldReturn` False
     it "Resigned" $ do
-      modifyPParams $ \pp ->
-        pp
-          & ppGovActionLifetimeL .~ EpochInterval 10
-          & ppDRepVotingThresholdsL
-            .~ def
-              { dvtCommitteeNormal = 1 %! 10
-              , dvtUpdateToConstitution = 1 %! 10
-              }
-          & ppCommitteeMinSizeL .~ 2
-          & ppCommitteeMaxTermLengthL .~ EpochInterval 10
+      modifyPParams $ ppCommitteeMinSizeL .~ 2
       (drep, _, _) <- setupSingleDRep 1_000_000
       -- Elect a committee of 2 members
       committeeColdC1 <- KeyHashObj <$> freshKeyHash
@@ -186,7 +168,6 @@ paramChangeAffectsProposalsSpec =
         isDRepAccepted gaiChild `shouldReturn` False
       it "Decreasing the threshold ratifies a hitherto-unratifiable proposal" $ do
         (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
-        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
         setThreshold largerThreshold
         (drep, _, _) <- setupSingleDRep 1_000_000
         (gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC drep
@@ -257,7 +238,6 @@ paramChangeAffectsProposalsSpec =
         isSpoAccepted gaiChild `shouldReturn` False
       it "Decreasing the threshold ratifies a hitherto-unratifiable proposal" $ do
         (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
-        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
         setThreshold largerThreshold
         (poolKH1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000_000
         (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
@@ -346,7 +326,6 @@ committeeMinSizeAffectsInFlightProposalsSpec =
       getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` treasury
     it "TreasuryWithdrawal ratifies due to a decrease in CommitteeMinSize" $ do
       (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 10
       treasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
       gaiTW <- submitATreasuryWithdrawal
       submitYesVote_ (CommitteeVoter hotCommitteeC) gaiTW
@@ -406,7 +385,10 @@ spoVotesForHardForkInitiation =
         (_spoK2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000
         (_spoK3, _paymentC3, _stakingC3) <- setupPoolWithStake $ Coin 1_000
         (_spoK4, _paymentC4, _stakingC4) <- setupPoolWithStake $ Coin 1_000
-        modifyPParams $ ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 1 %! 2
+        modifyPParams $ \pp ->
+          pp
+            & ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 1 %! 2
+            & ppDRepVotingThresholdsL .~ def
         gai <- submitGovAction $ NoConfidence SNothing
         -- 1 % 4 stake yes; 3 % 4 stake abstain; yes / stake - abstain > 1 % 2
         submitYesVote_ (StakePoolVoter spoK1) gai
@@ -417,8 +399,11 @@ spoVotesForHardForkInitiation =
         (_spoK2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000
         (_spoK3, _paymentC3, _stakingC3) <- setupPoolWithStake $ Coin 1_000
         (_spoK4, _paymentC4, _stakingC4) <- setupPoolWithStake $ Coin 1_000
-        modifyPParams $ ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ 1 %! 2
-        modifyPParams $ ppCommitteeMaxTermLengthL .~ EpochInterval 10
+        modifyPParams $ \pp ->
+          pp
+            & ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ 1 %! 2
+            & ppDRepVotingThresholdsL .~ def
+
         committeeC <- KeyHashObj <$> freshKeyHash
         gai <-
           submitGovAction $
@@ -519,7 +504,6 @@ votingSpec =
                   { dvtCommitteeNormal = 51 %! 100
                   , dvtCommitteeNoConfidence = 51 %! 100
                   }
-              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
           -- Setup DRep delegation #1
           (drep1, KeyHashObj stakingKH1, paymentKP1) <- setupSingleDRep 1_000_000
           -- Setup DRep delegation #2
@@ -550,7 +534,6 @@ votingSpec =
                   { dvtCommitteeNormal = 51 %! 100
                   , dvtCommitteeNoConfidence = 51 %! 100
                   }
-              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
           -- Setup DRep delegation #1
           (drep1, staking1, _) <- setupSingleDRep 1_000_000
           -- Setup DRep delegation #2
@@ -586,11 +569,11 @@ votingSpec =
                   { pvtCommitteeNormal = 51 %! 100
                   , pvtCommitteeNoConfidence = 51 %! 100
                   }
-              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+              & ppDRepVotingThresholdsL .~ def
           -- Setup Pool delegation #1
           (poolKH1, delegatorCPayment1, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
           -- Setup Pool delegation #2
-          (poolKH2, _delegatorCPayment2, _delegatorCStaking2) <- setupPoolWithStake $ Coin 1_000_000
+          (poolKH2, _, _) <- setupPoolWithStake $ Coin 1_000_000
           passEpoch
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
@@ -622,11 +605,11 @@ votingSpec =
                   { pvtCommitteeNormal = 51 %! 100
                   , pvtCommitteeNoConfidence = 51 %! 100
                   }
-              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+              & ppDRepVotingThresholdsL .~ def
           -- Setup Pool delegation #1
-          (poolKH1, _delegatorCPayment1, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
+          (poolKH1, _, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
           -- Setup Pool delegation #2
-          (poolKH2, _delegatorCPayment2, _delegatorCStaking2) <- setupPoolWithStake $ Coin 1_000_000
+          (poolKH2, _, _) <- setupPoolWithStake $ Coin 1_000_000
           passEpoch
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
@@ -660,7 +643,6 @@ delayingActionsSpec =
     it "A delaying action delays its child even when both ere proposed and ratified in the same epoch" $ do
       (committeeMember :| _) <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       gai0 <- submitInitConstitutionGovAction
       gai1 <- submitChildConstitutionGovAction gai0
       gai2 <- submitChildConstitutionGovAction gai1
@@ -687,7 +669,6 @@ delayingActionsSpec =
       $ do
         (committeeMember :| _) <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
-        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
         pGai0 <-
           submitParameterChange
             SNothing
@@ -808,21 +789,6 @@ delayingActionsSpec =
                   nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
               let members = Map.keysSet $ foldMap' committeeMembers committee
               impAnn "Expecting committee members" $ members `shouldBe` expKhs
-            setPParams :: HasCallStack => ImpTestM era ()
-            setPParams = do
-              modifyPParams $ \pp ->
-                pp
-                  & ppDRepVotingThresholdsL
-                    .~ def
-                      { dvtCommitteeNormal = 1 %! 1
-                      , dvtCommitteeNoConfidence = 1 %! 2
-                      , dvtUpdateToConstitution = 1 %! 2
-                      }
-                  & ppCommitteeMaxTermLengthL .~ EpochInterval 10
-                  & ppGovActionLifetimeL .~ EpochInterval 100
-                  & ppGovActionDepositL .~ Coin 123
-
-        setPParams
         (drep, _, _) <- setupSingleDRep 1_000_000
         maxTermLength <-
           getsNES $

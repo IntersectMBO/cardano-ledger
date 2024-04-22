@@ -107,7 +107,6 @@ treasuryWithdrawalsSpec =
     it "Withdrawals exceeding treasury submitted in a single proposal" $ do
       (committeeC :| _) <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       initialTreasury <- getTreasury
       numWithdrawals <- choose (1, 10)
       withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
@@ -129,7 +128,6 @@ treasuryWithdrawalsSpec =
     it "Withdrawals exceeding maxBound Word64 submitted in a single proposal" $ do
       (committeeC :| _) <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       initialTreasury <- getTreasury
       numWithdrawals <- choose (1, 10)
       withdrawals <- genWithdrawalsExceeding (Coin (fromIntegral (maxBound :: Word64))) numWithdrawals
@@ -139,7 +137,6 @@ treasuryWithdrawalsSpec =
     it "Withdrawals exceeding treasury submitted in several proposals within the same epoch" $ do
       (committeeC :| _) <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       initialTreasury <- getTreasury
       numWithdrawals <- choose (1, 10)
       withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
@@ -347,7 +344,6 @@ actionPrioritySpec =
       $ do
         (drepC, _, _) <- setupSingleDRep 1_000_000
         (poolKH, _, _) <- setupPoolWithStake $ Coin 1_000_000
-        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
         cc <- KeyHashObj <$> freshKeyHash
         gai1 <-
           submitGovAction $
@@ -379,7 +375,6 @@ actionPrioritySpec =
     it "proposals of same priority are enacted in order of submission" $ do
       (committeeC :| _) <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       pGai0 <-
         submitParameterChange
           SNothing
@@ -408,7 +403,6 @@ actionPrioritySpec =
     it "only the first action of a transaction gets enacted" $ do
       (committeeC :| _) <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
       gaids <-
         submitGovActions $
           NE.fromList

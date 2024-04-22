@@ -39,7 +39,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Tree
-import Lens.Micro ((%~), (&), (.~))
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
@@ -189,17 +189,6 @@ dRepSpec =
       logStakeDistr
       passEpoch
     it "constitution is accepted after two epochs" $ do
-      modifyPParams $ \pp ->
-        pp
-          & ppDRepVotingThresholdsL
-            %~ ( \dvt ->
-                  dvt
-                    { dvtCommitteeNormal = 1 %! 1
-                    , dvtCommitteeNoConfidence = 1 %! 2
-                    , dvtUpdateToConstitution = 1 %! 2
-                    }
-               )
-
       constitutionHash <- freshSafeHash
       let
         constitutionAction =
@@ -300,6 +289,7 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
     pp
       & ppGovActionLifetimeL .~ EpochInterval 8
       & ppGovActionDepositL .~ Coin 100
+      & ppCommitteeMaxTermLengthL .~ EpochInterval 0
   returnAddr <- registerRewardAccount
   govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
   khCC <- KeyHashObj <$> freshKeyHash

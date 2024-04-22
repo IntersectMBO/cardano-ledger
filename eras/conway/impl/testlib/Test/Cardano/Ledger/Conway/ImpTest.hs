@@ -236,6 +236,17 @@ instance
               (initAlonzoImpNES nes)
                 & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
                 & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
+                & nesEsL . curPParamsEpochStateL . ppGovActionDepositL .~ Coin 123
+                & nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL .~ EpochInterval 20
+                & nesEsL . curPParamsEpochStateL . ppCommitteeMinSizeL .~ 1
+                & nesEsL . curPParamsEpochStateL . ppDRepVotingThresholdsL
+                  %~ ( \dvt ->
+                        dvt
+                          { dvtCommitteeNormal = 1 %! 1
+                          , dvtCommitteeNoConfidence = 1 %! 2
+                          , dvtUpdateToConstitution = 1 %! 2
+                          }
+                     )
                 & nesEsL . epochStateGovStateL . committeeGovStateL .~ SJust committee
             epochState = newNes ^. nesEsL
             ratifyState =
@@ -1063,20 +1074,7 @@ electBasicCommittee ::
     , GovPurposeId 'CommitteePurpose era
     )
 electBasicCommittee = do
-  logEntry "Setting up PParams and DRep"
-  modifyPParams $ \pp ->
-    pp
-      & ppDRepVotingThresholdsL
-        %~ ( \dvt ->
-              dvt
-                { dvtCommitteeNormal = 1 %! 1
-                , dvtCommitteeNoConfidence = 1 %! 2
-                , dvtUpdateToConstitution = 1 %! 2
-                }
-           )
-      & ppCommitteeMaxTermLengthL .~ EpochInterval 20
-      & ppGovActionLifetimeL .~ EpochInterval 2
-      & ppGovActionDepositL .~ Coin 123
+  logEntry "Setting up a DRep"
   (drep, _, _) <- setupSingleDRep 1_000_000
 
   logEntry "Registering committee member"
