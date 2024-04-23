@@ -205,7 +205,7 @@ exists $ \ x ->
   tm == x
   preds
 
--- Reify ----------------------------------------------------------------
+-- Reifies ----------------------------------------------------------------
 
 Sometimes it's important to be able to perform complex calculations on data
 to obtain values that further constrain later variables. For this purpose
@@ -303,15 +303,15 @@ data Pred (fn :: [Type] -> Type -> Type) where
     [String] ->
     Term fn Bool ->
     Pred fn
-  Reify ::
+  Reifies ::
     ( HasSpec fn a
     , HasSpec fn b
     ) =>
+    -- | This depends on the `a` term
+    Term fn b ->
     Term fn a ->
     -- | Recover a useable value from the `a` term.
     (a -> b) ->
-    -- | Everything in here depends on the `a` term.
-    Binder fn b ->
     Pred fn
   DependsOn ::
     ( HasSpec fn a
@@ -449,9 +449,10 @@ checkPred env = \case
   Assert [] t -> runTerm env t
   Assert es t -> explain ("assert:" : map ("  " ++) es) $ runTerm env t
   GenHint {} -> pure True
-  Reify t f (x :-> p) -> do
+  p@(Reifies t' t f) -> do
     val <- runTerm env t
-    checkPred (extendEnv x (f val) env) p
+    val' <- runTerm env t'
+    explain ["Reification:", "  " ++ show p] $ pure (f val == val')
   ForAll t (x :-> p) -> do
     set <- runTerm env t
     and
@@ -776,7 +777,7 @@ conformsToSpecM a (SuspendedSpec v ps) = guard =<< checkPred (singletonEnv v a) 
 conformsToSpecM _ (ErrorSpec es) = explain es $ guard False
 
 conformsToSpecProp :: forall fn a. HasSpec fn a => a -> Specification fn a -> Property
-conformsToSpecProp a s = fromGEProp $ conformsToSpecM a s
+conformsToSpecProp a s = fromGEProp $ conformsToSpecM a (simplifySpec s)
 
 conformsToSpec :: forall fn a. HasSpec fn a => a -> Specification fn a -> Bool
 conformsToSpec a s = isOk $ conformsToSpecM a s
@@ -802,33 +803,34 @@ satisfies _ (ErrorSpec e) = FalsePred e
 -- generators are not flexible enough.
 genFromSpec ::
   forall fn a m. (HasCallStack, HasSpec fn a, MonadGenError m) => Specification fn a -> GenT m a
-genFromSpec TrueSpec = genFromSpec @fn (typeSpec $ emptySpec @fn @a)
-genFromSpec spec@(MemberSpec as)
-  | null as = genError ["MemberSpec {}"]
-  | otherwise = explain ["genFromSpec " ++ show spec] $ pureGen (elements as)
-genFromSpec (SuspendedSpec x p)
-  -- NOTE: If `x` isn't free in `p` we still have to try to generate things
-  -- from `p` to make sure `p` is sat and then we can throw it away. A better
-  -- approach would be to only do this in the case where we don't know if `p`
-  -- is sat. The proper way to implement such a sat check is to remove
-  -- sat-but-unnecessary variables in the optimiser.
-  | not $ Name x `appearsIn` p = do
-      _ <- genFromPreds p
-      genFromSpec @fn TrueSpec
-  | otherwise = do
-      env <- genFromPreds p
-      findEnv env x
-genFromSpec ts@(TypeSpec s cant) =
-  explain ["", "genFromSpec", "    " ++ show (typeRep cant), "    " ++ show ts] $
-    -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
-    -- starts giving us trouble.
-    genFromTypeSpec @fn s `suchThatT` (`notElem` cant)
-genFromSpec (ErrorSpec e) = genError e
+genFromSpec (simplifySpec -> spec) = case spec of
+  TrueSpec -> genFromSpec @fn (typeSpec $ emptySpec @fn @a)
+  MemberSpec as
+    | null as -> genError ["MemberSpec {}"]
+    | otherwise -> explain ["genFromSpec " ++ show spec] $ pureGen (elements as)
+  SuspendedSpec x p
+    -- NOTE: If `x` isn't free in `p` we still have to try to generate things
+    -- from `p` to make sure `p` is sat and then we can throw it away. A better
+    -- approach would be to only do this in the case where we don't know if `p`
+    -- is sat. The proper way to implement such a sat check is to remove
+    -- sat-but-unnecessary variables in the optimiser.
+    | not $ Name x `appearsIn` p -> do
+        _ <- genFromPreds p
+        genFromSpec @fn TrueSpec
+    | otherwise -> do
+        env <- genFromPreds p
+        findEnv env x
+  TypeSpec s cant ->
+    explain ["", "genFromSpec", "    " ++ show (typeRep cant), "    " ++ show spec] $
+      -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
+      -- starts giving us trouble.
+      genFromTypeSpec @fn s `suchThatT` (`notElem` cant)
+  ErrorSpec e -> genError e
 
 shrinkWithSpec :: forall fn a. HasSpec fn a => Specification fn a -> a -> [a]
 -- TODO: possibly allow for ignoring the `conformsToSpec` check in the `TypeSpec`
 -- case when you know what you're doing
-shrinkWithSpec spec a = filter (`conformsToSpec` spec) $ case spec of
+shrinkWithSpec (simplifySpec -> spec) a = filter (`conformsToSpec` spec) $ case spec of
   -- TODO: filter on can't if we have a known to be sound shrinker
   TypeSpec s _ -> shrinkWithTypeSpec @fn s a
   -- TODO: The better way of doing this is to compute the dependency graph,
@@ -903,9 +905,7 @@ computeDependencies :: Pred fn -> DependGraph fn
 computeDependencies = \case
   Subst x t p -> computeDependencies (substitutePred x t p)
   Assert _ t -> computeTermDependencies t
-  Reify t _ b ->
-    let innerG = computeBinderDependencies b
-     in innerG <> nodes innerG `irreflexiveDependencyOn` t
+  Reifies t' t _ -> t' `irreflexiveDependencyOn` t
   ForAll set b ->
     let innerG = computeBinderDependencies b
      in innerG <> set `irreflexiveDependencyOn` nodes innerG
@@ -1006,6 +1006,14 @@ linearize preds graph = do
 -- Computing specs
 ------------------------------------------------------------------------
 
+simplifySpec :: HasSpec fn a => Specification fn a -> Specification fn a
+simplifySpec = \case
+  SuspendedSpec x p -> computeSpecSimplified x (optimisePred p)
+  MemberSpec xs -> MemberSpec (nub xs)
+  ErrorSpec es -> ErrorSpec es
+  TypeSpec ts cant -> TypeSpec ts (nub cant)
+  TrueSpec -> TrueSpec
+
 -- | Precondition: the `Pred fn` defines the `Var a`
 computeSpecSimplified ::
   forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Specification fn a
@@ -1026,11 +1034,11 @@ computeSpecSimplified x p = fromGE ErrorSpec $ case p of
   Case t branches ->
     let branchSpecs = mapList computeSpecBinderSimplified branches
      in propagateSpec (caseSpec branchSpecs) <$> toCtx x t
-  Reify (Lit val) f (x' :-> p) ->
-    pure $ computeSpec x (substPred (singletonEnv x' (f val)) p)
+  Reifies t' (Lit val) f ->
+    propagateSpec (equalSpec (f val)) <$> toCtx x t'
   -- Impossible cases that should be ruled out by the dependency analysis and linearizer
   DependsOn {} -> fatalError ["The impossible happened in computeSpec: DependsOn"]
-  Reify {} -> fatalError ["The impossible happened in computeSpec: Reify", show x, show p]
+  Reifies {} -> fatalError ["The impossible happened in computeSpec: Reifies", show x, show p]
 
 -- | Precondition: the `Pred fn` defines the `Var a`
 computeSpec :: forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Specification fn a
@@ -1129,7 +1137,7 @@ caseBoolSpec spec cont = case possibleValues spec of
   [b] -> cont b
   _ -> mempty
   where
-    possibleValues s = filter (flip conformsToSpec s) [True, False]
+    possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]
 
 isErrorLike :: Specification fn a -> Bool
 isErrorLike ErrorSpec {} = True
@@ -1266,7 +1274,7 @@ instance HasVariables fn (Pred fn) where
     Let t b -> freeVars t <> freeVars b
     Exists _ b -> freeVars b
     Assert _ t -> freeVars t
-    Reify tm _ b -> freeVars tm <> freeVars b
+    Reifies t' t _ -> freeVars t' <> freeVars t
     DependsOn x y -> freeVars x <> freeVars y
     ForAll set b -> freeVars set <> freeVars b
     Case t bs -> freeVars t <> freeVars bs
@@ -1279,7 +1287,7 @@ instance HasVariables fn (Pred fn) where
     Let t b -> freeVarSet t <> freeVarSet b
     Exists _ b -> freeVarSet b
     Assert _ t -> freeVarSet t
-    Reify tm _ b -> freeVarSet tm <> freeVarSet b
+    Reifies t' t _ -> freeVarSet t' <> freeVarSet t
     DependsOn x y -> freeVarSet x <> freeVarSet y
     ForAll set b -> freeVarSet set <> freeVarSet b
     Case t bs -> freeVarSet t <> freeVarSet bs
@@ -1294,7 +1302,7 @@ instance HasVariables fn (Pred fn) where
     Let t b -> countOf n t + countOf n b
     Exists _ b -> countOf n b
     Assert _ t -> countOf n t
-    Reify tm _ b -> countOf n tm + countOf n b
+    Reifies t' t _ -> countOf n t' + countOf n t
     DependsOn x y -> countOf n x + countOf n y
     ForAll set b -> countOf n set + countOf n b
     Case t bs -> countOf n t + countOf n bs
@@ -1309,7 +1317,7 @@ instance HasVariables fn (Pred fn) where
     Let t b -> appearsIn n t || appearsIn n b
     Exists _ b -> appearsIn n b
     Assert _ t -> appearsIn n t
-    Reify tm _ b -> appearsIn n tm || appearsIn n b
+    Reifies t' t _ -> appearsIn n t' || appearsIn n t
     DependsOn x y -> appearsIn n x || appearsIn n y
     ForAll set b -> appearsIn n set || appearsIn n b
     Case t bs -> appearsIn n t || appearsIn n bs
@@ -1432,7 +1440,7 @@ substitutePred x tm = \case
   Let t b -> Let (substituteTerm [x := tm] t) (substituteBinder x tm b)
   ForAll t b -> ForAll (substituteTerm [x := tm] t) (substituteBinder x tm b)
   Case t bs -> Case (substituteTerm [x := tm] t) (mapList (substituteBinder x tm) bs)
-  Reify t f b -> Reify (substituteTerm [x := tm] t) f (substituteBinder x tm b)
+  Reifies t' t f -> Reifies (substituteTerm [x := tm] t') (substituteTerm [x := tm] t) f
   DependsOn t t' -> DependsOn (substituteTerm [x := tm] t) (substituteTerm [x := tm] t')
   TruePred -> TruePred
   FalsePred es -> FalsePred es
@@ -1457,7 +1465,7 @@ instance Rename (Pred fn) where
         Block ps -> Block (rename v v' ps)
         Exists k b -> Exists (\eval -> k $ eval . rename v v') (rename v v' b)
         Let t b -> Let (rename v v' t) (rename v v' b)
-        Reify t f b -> Reify (rename v v' t) f (rename v v' b)
+        Reifies t' t f -> Reifies (rename v v' t') (rename v v' t) f
         Assert es t -> Assert es (rename v v' t)
         DependsOn x y -> DependsOn (rename v v' x) (rename v v' y)
         ForAll set b -> ForAll (rename v v' set) (rename v v' b)
@@ -1489,7 +1497,7 @@ substPred env = \case
   GenHint h t -> GenHint h (substTerm env t)
   Subst x t p -> substPred env $ substitutePred x t p
   Assert es t -> assertExplain es (substTerm env t)
-  Reify t f b -> Reify (substTerm env t) f (substBinder env b)
+  Reifies t' t f -> Reifies (substTerm env t') (substTerm env t) f
   ForAll set b -> ForAll (substTerm env set) (substBinder env b)
   Case t bs -> Case (substTerm env t) (mapList (substBinder env) bs)
   DependsOn x y -> DependsOn (substTerm env x) (substTerm env y)
@@ -1536,7 +1544,7 @@ simplifyPred = \case
     t' -> GenHint h t'
   Subst x t p -> simplifyPred $ substitutePred x t p
   Assert es t -> assertExplain es (simplifyTerm t)
-  Reify tm f b -> mkReify (simplifyTerm tm) f (simplifyBinder b)
+  Reifies t' t f -> Reifies (simplifyTerm t') (simplifyTerm t) f
   ForAll set b -> case simplifyTerm set of
     Lit as -> foldMap (`unBind` b) (forAllToList as)
     set' -> ForAll set' (simplifyBinder b)
@@ -1613,7 +1621,7 @@ letSubexpressionElimination = go []
       Exists k b -> Exists k (goBinder sub b)
       Subst x t p -> go sub (substitutePred x t p)
       Assert es t -> Assert es (backwardsSubstitution sub t)
-      Reify t k b -> Reify (backwardsSubstitution sub t) k (goBinder sub b)
+      Reifies t' t f -> Reifies (backwardsSubstitution sub t') (backwardsSubstitution sub t) f
       -- TODO: this is almost certainly not the right thing to do!
       DependsOn t t' ->
         DependsOn t t'
@@ -1658,8 +1666,7 @@ letFloating = fold . go []
       Let t (x :-> p) -> goBlock ctx [Let t (x :-> letFloating p)]
       Exists k (x :-> p) -> goExists ctx (Exists k) x (letFloating p)
       Subst x t p -> go ctx (substitutePred x t p)
-      -- TODO: float let through reify if possible
-      Reify t k (x :-> p) -> Reify t k (x :-> letFloating p) : ctx
+      Reifies t' t f -> Reifies t' t f : ctx
       -- TODO: float let through forall if possible
       ForAll t (x :-> p) -> ForAll t (x :-> letFloating p) : ctx
       -- TODO: float let through the cases if possible
@@ -1693,12 +1700,12 @@ aggressiveInlining p
 
     go fvs sub p = case p of
       Subst x t p -> go fvs sub (substitutePred x t p)
-      Reify tm f b
-        | not (isLit tm)
-        , Lit a <- substituteAndSimplifyTerm sub tm -> do
+      Reifies t' t f
+        | not (isLit t)
+        , Lit a <- substituteAndSimplifyTerm sub t -> do
             tell $ Any True
-            pure $ mkReify (Lit a) f b
-        | otherwise -> Reify tm f <$> goBinder fvs sub b
+            pure $ Reifies t' (Lit a) f
+        | otherwise -> pure $ Reifies t' t f
       ForAll set b
         | not (isLit set)
         , Lit a <- substituteAndSimplifyTerm sub set -> do
@@ -2529,7 +2536,9 @@ genFromFold must size elemS fn foldS = do
   let elemS' = mapSpec fn elemS
       mustVal = adds @fn (map (sem fn) must)
       foldS' = propagateSpecFun (theAddFn @fn) (HOLE :? Value mustVal :> Nil) foldS
-  results <- genList elemS' foldS' `suchThatT` (\xs -> sizeOf xs `conformsToSpec` size)
+  results <-
+    genList (simplifySpec elemS') (simplifySpec foldS')
+      `suchThatT` (\xs -> sizeOf xs `conformsToSpec` size)
   explain
     [ "genInverse"
     , "  fn = " ++ show fn
@@ -3702,7 +3711,7 @@ constrained ::
   Specification fn a
 constrained body =
   let x :-> p = bind body
-   in computeSpecSimplified x (optimisePred p)
+   in SuspendedSpec x p
 
 assertExplain ::
   (BaseUniverse fn, IsPred p fn) =>
@@ -3763,8 +3772,14 @@ reify ::
   (a -> b) ->
   (Term fn b -> p) ->
   Pred fn
-reify tm f body =
-  mkReify tm f (bind body)
+reify t f body =
+  exists (\eval -> pure $ f (eval t)) $ \x ->
+    [ reifies x t f
+    , toPred $ body x
+    ]
+
+reifies :: (HasSpec fn a, HasSpec fn b) => Term fn b -> Term fn a -> (a -> b) -> Pred fn
+reifies = Reifies
 
 dependsOn :: (HasSpec fn a, HasSpec fn b) => Term fn a -> Term fn b -> Pred fn
 dependsOn = DependsOn
@@ -3798,22 +3813,18 @@ bind body = x :-> p
     boundBinder :: Binder fn a -> Int
     boundBinder (x :-> p) = max (nameOf x) (bound p)
 
-    bound (Subst _ _ p) = bound p
+    bound (Subst x _ p) = max (nameOf x) (bound p)
     bound (Block ps) = maximum $ map bound ps
     bound (Exists _ b) = boundBinder b
     bound (Let _ b) = boundBinder b
     bound (ForAll _ b) = boundBinder b
     bound (Case _ cs) = getMax $ foldMapList (Max . boundBinder) cs
-    bound (Reify _ _ b) = boundBinder b
+    bound Reifies {} = -1
     bound GenHint {} = -1
     bound Assert {} = -1
     bound DependsOn {} = -1
     bound TruePred = -1
     bound FalsePred {} = -1
-
-mkReify :: (HasSpec fn a, HasSpec fn b) => Term fn a -> (a -> b) -> Binder fn b -> Pred fn
-mkReify (Lit a) f b = unBind (f a) b
-mkReify t f b = Reify t f b
 
 mkCase :: HasSpec fn (SumOver as) => Term fn (SumOver as) -> List (Binder fn) as -> Pred fn
 mkCase tm cs
@@ -3908,7 +3919,7 @@ instance Pretty (Pred fn) where
     Let t (x :-> p) -> align $ sep ["let" <+> viaShow x <+> "=" /> pretty t <+> "in", pretty p]
     Block ps -> braces $ vsep' $ map pretty ps
     Assert _err t -> "assert $" <+> pretty t
-    Reify t _ b -> "reify" <+> pretty (WithPrec 11 t) <+> "$ \\" <+> pretty b
+    Reifies t' t _ -> "reifies" <+> pretty (WithPrec 11 t') <+> pretty (WithPrec 11 t)
     DependsOn a b -> pretty a <+> "<-" /> pretty b
     ForAll t (x :-> p) -> "forall" <+> viaShow x <+> "in" <+> pretty t <+> "$" /> pretty p
     Case t bs -> "case" <+> pretty t <+> "of" /> vsep' (ppList_ pretty bs)

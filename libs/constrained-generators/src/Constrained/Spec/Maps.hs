@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Constrained.Spec.Maps (MapSpec (..), dom_, rng_) where
@@ -90,9 +91,9 @@ instance
       , Map.elems m `conformsToFoldSpec` foldSpec
       ]
 
-  genFromTypeSpec (MapSpec mustKeys mustVals size kvs foldSpec) = do
+  genFromTypeSpec (MapSpec mustKeys mustVals size (simplifySpec -> kvs) foldSpec) = do
     mustMap <- explain ["Make the mustMap"] $ forM (Set.toList mustKeys) $ \k -> do
-      let vSpec = constrained $ \v -> satisfies (app (fromGenericFn @fn) $ app (pairFn @fn) (Lit k) v) kvs
+      let vSpec = constrained $ \v -> satisfies (pair_ (lit k) v) kvs
       v <- explain [show $ "vSpec =" <+> pretty vSpec] $ genFromSpec vSpec
       pure (k, v)
     let haveVals = map snd mustMap
@@ -112,7 +113,7 @@ instance
             Nothing
             mustVals'
             size'
-            (constrained $ \v -> unsafeExists $ \k -> pair_ k v `satisfies` kvs)
+            (simplifySpec $ constrained $ \v -> unsafeExists $ \k -> pair_ k v `satisfies` kvs)
             foldSpec'
 
     restVals <-

@@ -111,6 +111,8 @@ tests =
     testSpec "sumListBad" sumListBad
     testSpec "listExistsUnfree" listExistsUnfree
     testSpec "existsUnfree" existsUnfree
+    -- TODO: double shrinking
+    testSpecNoShrink "reifyYucky" reifyYucky
     testSpec "fixedRangeElements" fixedRange
     numberyTests
     sizeTests

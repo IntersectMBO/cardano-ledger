@@ -135,3 +135,18 @@ parallelLetPair = constrained $ \p ->
 
 existsUnfree :: Specification BaseFn Int
 existsUnfree = constrained $ \_ -> exists (\_ -> pure 1) $ \y -> y `elem_` lit [1, 2 :: Int]
+
+reifyYucky :: Specification BaseFn (Int, Int, Int)
+reifyYucky = constrained' $ \x y z ->
+  [ reify x id $ \w ->
+      [ y ==. w
+      , z ==. w
+      ]
+  , z `dependsOn` y
+  ]
+
+basicSpec :: Specification BaseFn Int
+basicSpec = constrained $ \x ->
+  unsafeExists $ \y ->
+    satisfies x $ constrained $ \x' ->
+      x' <=. 1 + y
