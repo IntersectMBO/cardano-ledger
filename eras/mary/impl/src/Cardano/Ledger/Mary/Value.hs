@@ -113,7 +113,7 @@ import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
 import Prelude hiding (lookup)
 
 -- | Asset Name
-newtype AssetName = AssetName {assetName :: SBS.ShortByteString}
+newtype AssetName = AssetName {assetNameBytes :: SBS.ShortByteString}
   deriving newtype
     ( Eq
     , EncCBOR
@@ -126,7 +126,7 @@ instance Show AssetName where
   show = show . assetNameToBytesAsHex
 
 assetNameToBytesAsHex :: AssetName -> BS.ByteString
-assetNameToBytesAsHex = BS16.encode . SBS.fromShort . assetName
+assetNameToBytesAsHex = BS16.encode . SBS.fromShort . assetNameBytes
 
 assetNameToTextAsHex :: AssetName -> Text
 assetNameToTextAsHex = decodeLatin1 . assetNameToBytesAsHex
@@ -650,7 +650,7 @@ to v@(MaryValue _ ma) = do
     -- is last, so the associated offset is pointing to the end of the array
     assetNames = Set.toDescList $ Set.fromList $ (\(_, an, _) -> an) <$> triples
 
-    assetNameLengths = fromIntegral . SBS.length . assetName <$> assetNames
+    assetNameLengths = fromIntegral . SBS.length . assetNameBytes <$> assetNames
 
     assetNameOffsetMap :: Map AssetName Word16
     assetNameOffsetMap =
@@ -698,7 +698,7 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
 
     assetNames = Set.fromList $ (\(_, an, _) -> an) <$> xs
     anameBlockSize =
-      Semigroup.getSum $ foldMap' (Semigroup.Sum . SBS.length . assetName) assetNames
+      Semigroup.getSum $ foldMap' (Semigroup.Sum . SBS.length . assetNameBytes) assetNames
 
 from :: forall c. Crypto c => CompactValue c -> MaryValue c
 from (CompactValueAdaOnly c) = MaryValue (fromCompact c) (MultiAsset Map.empty)

@@ -5,6 +5,7 @@
 * Change how we report tokens burned in `ValueNotConservedUTxO`: #4288
 * Add `getProducedMaryValue`, `pruneZeroMultiAsset`, `filterMultiAsset` and `mapMaybeMultiAsset`
 * Deprecate `prune`
+* Rename `assetName` to `assetNameBytes`
 
 ### `testlib`
 
