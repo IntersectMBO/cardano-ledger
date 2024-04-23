@@ -324,6 +324,7 @@ class
   , ShelleyEraTxCert era
   , ToExpr (Tx era)
   , NFData (Tx era)
+  , ToExpr (TxBody era)
   , ToExpr (TxOut era)
   , ToExpr (Value era)
   , ToExpr (PParams era)
@@ -842,24 +843,24 @@ fixupFees tx = impAnn "fixupFees" $ do
     nativeScriptKeyWits = Map.keysSet nativeScriptKeyPairs
     consumedValue = consumed pp certState utxo (tx ^. bodyTxL)
     producedValue = produced pp certState (tx ^. bodyTxL)
-    validateValue v
+    ensureNonNegativeCoin v
       | pointwise (<=) zero v = pure v
       | otherwise = do
-          logEntry $ "Failed to validate value: " <> show v
+          logEntry $ "Failed to validate coin: " <> show v
           pure zero
   logEntry "Validating changeBeforeFee"
-  changeBeforeFee <- validateValue $ consumedValue <-> producedValue
+  changeBeforeFee <- ensureNonNegativeCoin $ coin consumedValue <-> coin producedValue
   logToExpr changeBeforeFee
   let
     changeBeforeFeeTxOut =
       mkBasicTxOut
         (mkAddr (kpSpending, kpStaking))
-        changeBeforeFee
+        (inject changeBeforeFee)
     txNoWits = tx & bodyTxL . outputsTxBodyL %~ (:|> changeBeforeFeeTxOut)
     outsBeforeFee = tx ^. bodyTxL . outputsTxBodyL
     fee = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
   logEntry "Validating change"
-  change <- validateValue $ changeBeforeFeeTxOut ^. coinTxOutL <-> fee
+  change <- ensureNonNegativeCoin $ changeBeforeFeeTxOut ^. coinTxOutL <-> fee
   logToExpr change
   let
     changeTxOut = changeBeforeFeeTxOut & coinTxOutL .~ change
@@ -873,7 +874,7 @@ fixupFees tx = impAnn "fixupFees" $ do
       | otherwise =
           txNoWits
             & bodyTxL . outputsTxBodyL .~ outsBeforeFee
-            & bodyTxL . feeTxBodyL .~ (fee <> changeTxOut ^. coinTxOutL)
+            & bodyTxL . feeTxBodyL .~ (fee <> change)
   pure txWithFee
 
 shelleyFixupTx ::
