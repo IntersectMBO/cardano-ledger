@@ -12,7 +12,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Alonzo.ImpTest (
-  module ImpTest,
+  module Test.Cardano.Ledger.Mary.ImpTest,
   AlonzoEraImp (..),
   initAlonzoImpNES,
   impLookupPlutusScriptMaybe,
@@ -77,22 +77,19 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusLedgerApi.Common as P
-import Test.Cardano.Ledger.Allegra.ImpTest (
-  impAllegraSatisfyNativeScript,
- )
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Mary.ImpTest
 import Test.Cardano.Ledger.Plutus (
   PlutusArgs (..),
   ScriptTestContext (..),
   testingCostModels,
  )
 import Test.Cardano.Ledger.Plutus.Examples
-import Test.Cardano.Ledger.Shelley.ImpTest as ImpTest
 
 class
-  ( ShelleyEraImp era
+  ( MaryEraImp era
   , AlonzoEraScript era
   , AlonzoEraTxWits era
   , AlonzoEraTx era
@@ -391,7 +388,16 @@ instance
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = alonzoFixupTx
 
-instance ShelleyEraImp (AlonzoEra c) => AlonzoEraImp (AlonzoEra c) where
+instance
+  ( Crypto c
+  , NFData (SigDSIGN (DSIGN c))
+  , NFData (VerKeyDSIGN (DSIGN c))
+  , DSIGN c ~ Ed25519DSIGN
+  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
+  ) =>
+  MaryEraImp (AlonzoEra c)
+
+instance MaryEraImp (AlonzoEra c) => AlonzoEraImp (AlonzoEra c) where
   scriptTestContexts = plutusTestScripts SPlutusV1
 
 impGetScriptContextMaybe ::

@@ -84,6 +84,7 @@ library testlib
     exposed-modules:
         Test.Cardano.Ledger.Allegra.Arbitrary
         Test.Cardano.Ledger.Allegra.Binary.Cddl
+        Test.Cardano.Ledger.Allegra.Imp
         Test.Cardano.Ledger.Allegra.ImpTest
         Test.Cardano.Ledger.Allegra.TreeDiff
 

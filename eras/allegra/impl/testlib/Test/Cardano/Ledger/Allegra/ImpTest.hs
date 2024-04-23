@@ -6,7 +6,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript) where
+module Test.Cardano.Ledger.Allegra.ImpTest (
+  impAllegraSatisfyNativeScript,
+  module Test.Cardano.Ledger.Shelley.ImpTest,
+) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
 import Cardano.Crypto.Hash.Class (Hash)

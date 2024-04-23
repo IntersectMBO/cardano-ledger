@@ -835,8 +835,8 @@ fixupFees tx = impAnn "fixupFees" $ do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-  kpSpending <- lookupKeyPair =<< freshKeyHash
-  kpStaking <- lookupKeyPair =<< freshKeyHash
+  (_, kpSpending) <- freshKeyPair
+  (_, kpStaking) <- freshKeyPair
   nativeScriptKeyPairs <- impNativeScriptKeyPairs tx
   let
     nativeScriptKeyWits = Map.keysSet nativeScriptKeyPairs
@@ -1286,7 +1286,7 @@ registerRewardAccount ::
 registerRewardAccount = do
   khDelegator <- freshKeyHash
   kpDelegator <- lookupKeyPair khDelegator
-  kpSpending <- lookupKeyPair =<< freshKeyHash
+  (_, kpSpending) <- freshKeyPair
   let stakingCredential = KeyHashObj khDelegator
   submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText stakingCredential)) $
     mkBasicTx mkBasicTxBody

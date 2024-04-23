@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.5.1.1
+## 1.5.2.0
 
 *
+
+### `testlib`
+
+* Add `MaryEraImp`
 
 ## 1.5.1.0
 

@@ -22,8 +22,9 @@ import Cardano.Ledger.Conway.Rules (
   ConwayNewEpochEvent,
  )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
-import Cardano.Ledger.Shelley.Rules (Event, ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.Shelley.Rules (Event, ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import Data.Typeable (Typeable)
+import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
@@ -43,6 +44,7 @@ spec ::
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   , NFData (Event (EraRule "ENACT" era))
@@ -55,6 +57,7 @@ spec ::
   ) =>
   Spec
 spec = do
+  BabbageImp.spec @era
   describe "ConwayImpSpec" $ withImpState @era $ do
     Enact.spec @era
     Epoch.spec @era

@@ -146,7 +146,7 @@ library testlib
         deepseq,
         microlens,
         cardano-crypto-class,
-        cardano-ledger-allegra:{cardano-ledger-allegra, testlib},
+        cardano-ledger-allegra,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
         cardano-ledger-binary,
         cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
