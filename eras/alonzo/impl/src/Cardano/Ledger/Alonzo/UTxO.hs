@@ -46,14 +46,13 @@ import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Credential (credScriptHash)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
-import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
+import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
 import Cardano.Ledger.Shelley.TxBody (raCredential)
 import Cardano.Ledger.Shelley.UTxO (
   getShelleyMinFeeTxUtxo,
   getShelleyWitsVKeyNeeded,
-  shelleyProducedValue,
  )
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UTxO (
@@ -84,7 +83,7 @@ instance Crypto c => EraUTxO (AlonzoEra c) where
 
   getConsumedValue = getConsumedMaryValue
 
-  getProducedValue = shelleyProducedValue
+  getProducedValue = getProducedMaryValue
 
   getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 

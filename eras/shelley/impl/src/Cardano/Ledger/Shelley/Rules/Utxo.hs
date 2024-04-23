@@ -556,11 +556,11 @@ validateValueNotConservedUTxO ::
   CertState era ->
   TxBody era ->
   Test (ShelleyUtxoPredFailure era)
-validateValueNotConservedUTxO pp utxo dpstate txb =
+validateValueNotConservedUTxO pp utxo certState txBody =
   failureUnless (consumedValue == producedValue) $ ValueNotConservedUTxO consumedValue producedValue
   where
-    consumedValue = consumed pp dpstate utxo txb
-    producedValue = produced pp dpstate txb
+    consumedValue = consumed pp certState utxo txBody
+    producedValue = produced pp certState txBody
 
 -- | Ensure there are no `TxOut`s that have less than @minUTxOValue@
 --

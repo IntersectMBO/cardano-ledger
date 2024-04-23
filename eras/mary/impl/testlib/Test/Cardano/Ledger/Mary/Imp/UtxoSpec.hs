@@ -12,19 +12,15 @@ import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
-import Cardano.Ledger.Shelley.Rules
-import Cardano.Ledger.Val
-import Data.Sequence.Strict (StrictSeq (..))
-
--- import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure (..))
-
+import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure (..))
 import qualified Data.Map.Strict as Map
+import Data.Sequence.Strict (StrictSeq (..))
 import Lens.Micro
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.ImpTest
 
-mintBasicToken :: forall era. MaryEraImp era => ImpTestM era (Tx era)
+mintBasicToken :: forall era. (HasCallStack, MaryEraImp era) => ImpTestM era (Tx era)
 mintBasicToken = do
   (_, addr) <- freshKeyAddr
   keyHash <- freshKeyHash
@@ -41,7 +37,8 @@ mintBasicToken = do
   submitTx $ mkBasicTx txBody
 
 spec ::
-  ( MaryEraImp era
+  ( HasCallStack
+  , MaryEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   ) =>
   SpecWith (ImpTestState era)
@@ -50,15 +47,16 @@ spec = describe "UTXO" $ do
   describe "ShelleyUtxoPredFailure" $ do
     it "ValueNotConservedUTxO" $ do
       -- Burn too much
+      Positive tooMuch <- arbitrary
       txMinted <- mintBasicToken
       let MaryValue c (MultiAsset mintedMultiAsset) =
             case txMinted ^. bodyTxL . outputsTxBodyL of
               Empty -> error "Empty outputs was unexpected"
-              txOut :<| _ ->
-                case txOut ^. valueTxOutL of
-                  MaryValue negCoin (MultiAsset ma) ->
-                    MaryValue negCoin $ MultiAsset ma
-          burnTooMuchMultiAsset = MultiAsset (Map.map (Map.map (subtract 1 . negate)) mintedMultiAsset)
+              txOut :<| _ -> txOut ^. valueTxOutL
+          burnTooMuchMultiAsset@(MultiAsset burnTooMuch) =
+            MultiAsset (Map.map (Map.map (subtract tooMuch . negate)) mintedMultiAsset)
+          -- Produced should contain positive value that was atttempted to be burned
+          burnTooMuchProducedMultiAsset = MultiAsset (Map.map (Map.map negate) burnTooMuch)
           txBody =
             mkBasicTxBody
               & inputsTxBodyL .~ [txInAt (0 :: Int) txMinted]
@@ -69,7 +67,6 @@ spec = describe "UTXO" $ do
       predFailures
         `shouldBe` [ injectFailure $
                       ValueNotConservedUTxO
-                        (rootTxOutValue <> MaryValue c (MultiAsset (Map.map (Map.map (const (-1))) mintedMultiAsset)))
-                        (rootTxOutValue <> inject c)
+                        (rootTxOutValue <> MaryValue c (MultiAsset mintedMultiAsset))
+                        (rootTxOutValue <> MaryValue c burnTooMuchProducedMultiAsset)
                    ]
-      pure ()

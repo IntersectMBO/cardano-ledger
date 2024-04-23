@@ -45,9 +45,10 @@ import Cardano.Ledger.Conway.Governance.Procedures (
 import Cardano.Ledger.Credential (credKeyHashWitness, credScriptHash)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
-import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
+import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
+import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov, shelleyProducedValue)
+import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..))
 import Cardano.Ledger.Val (Val (..), inject)
 import qualified Data.Map.Strict as Map
@@ -102,13 +103,13 @@ getConwayScriptsNeeded utxo txBody =
             _ -> Nothing
 
 conwayProducedValue ::
-  ConwayEraTxBody era =>
+  (ConwayEraTxBody era, Value era ~ MaryValue (EraCrypto era)) =>
   PParams era ->
   (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
   TxBody era ->
   Value era
 conwayProducedValue pp isStakePool txBody =
-  shelleyProducedValue pp isStakePool txBody
+  getProducedMaryValue pp isStakePool txBody
     <+> inject (txBody ^. treasuryDonationTxBodyL)
 
 instance Crypto c => EraUTxO (ConwayEra c) where

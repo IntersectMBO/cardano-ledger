@@ -5,15 +5,18 @@
 {-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Mary.UTxO (getConsumedMaryValue) where
+module Cardano.Ledger.Mary.UTxO (
+  getConsumedMaryValue,
+  getProducedMaryValue,
+) where
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Keys (KeyRole (DRepRole, Staking))
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
-import Cardano.Ledger.Mary.Value (MaryValue, policyID)
+import Cardano.Ledger.Mary.Value (MaryValue (..), filterMultiAsset, mapMaybeMultiAsset, policyID)
 import Cardano.Ledger.Shelley.UTxO (
   ShelleyScriptsNeeded (..),
   getShelleyMinFeeTxUtxo,
@@ -38,7 +41,7 @@ instance Crypto c => EraUTxO (MaryEra c) where
 
   getConsumedValue = getConsumedMaryValue
 
-  getProducedValue = shelleyProducedValue
+  getProducedValue = getProducedMaryValue
 
   getScriptsProvided _ tx = ScriptsProvided (tx ^. witsTxL . scriptTxWitsL)
 
@@ -68,14 +71,29 @@ getConsumedMaryValue ::
   TxBody era ->
   MaryValue (EraCrypto era)
 getConsumedMaryValue pp lookupStakingDeposit lookupDRepDeposit utxo txBody =
-  consumedValue <> txBody ^. mintValueTxBodyF
+  consumedValue <> MaryValue mempty mintedMultiAsset
   where
+    mintedMultiAsset = filterMultiAsset (\_ _ -> (> 0)) $ txBody ^. mintTxBodyL
     {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
     consumedValue =
       balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
         <> inject (refunds <> withdrawals)
     refunds = getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody
     withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
+
+getProducedMaryValue ::
+  (MaryEraTxBody era, Value era ~ MaryValue (EraCrypto era)) =>
+  PParams era ->
+  -- | Check whether a pool with a supplied PoolStakeId is already registered.
+  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  TxBody era ->
+  MaryValue (EraCrypto era)
+getProducedMaryValue pp isPoolRegistered txBody =
+  shelleyProducedValue pp isPoolRegistered txBody <> MaryValue mempty burnedMultiAsset
+  where
+    burnedMultiAsset =
+      mapMaybeMultiAsset (\_ _ v -> if v < 0 then Just (negate v) else Nothing) $
+        txBody ^. mintTxBodyL
 
 -- | Computes the set of script hashes required to unlock the transaction inputs and the
 -- withdrawals. Unlike the one from Shelley, this one also includes script hashes needed

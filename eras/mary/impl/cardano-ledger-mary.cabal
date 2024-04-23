@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-mary
-version:            1.5.2.0
+version:            1.6.0.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
