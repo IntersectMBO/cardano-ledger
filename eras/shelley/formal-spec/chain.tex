@@ -8,7 +8,7 @@ also covers the transitions that keep track of produced blocks in order to
 calculate rewards and penalties for stake pools.
 
 The main transition rule is $\mathsf{CHAIN}$ which calls the subrules
-$\mathsf{NEWEPOCH}$ and $\mathsf{UPDN}$, $\mathsf{VRF}$ and $\mathsf{BBODY}$.
+$\mathsf{TICK}$, $\mathsf{TICKN}$, $\mathsf{PRTCL}$, and $\mathsf{BBODY}$.
 
 \subsection{Block Definitions}
 \label{sec:defs-blocks}
@@ -1342,7 +1342,7 @@ followed by the transition to update the evolving and candidate nonces.
   \emph{Protocol Transitions}
   \begin{equation*}
     \_ \vdash \var{\_} \trans{prtcl}{\_} \var{\_} \subseteq
-    \powerset (\powerset{\PrtclEnv} \times \PrtclState \times \BHeader \times \PrtclState)
+    \powerset (\PrtclEnv \times \PrtclState \times \BHeader \times \PrtclState)
   \end{equation*}
   \caption{Protocol transition-system types}
   \label{fig:ts-types:prtcl}
@@ -1367,7 +1367,7 @@ The states for this transition consists of:
   \begin{equation}\label{eq:prtcl}
     \inference[PRTCL]
     {
-      \eta\leteq\fun{bnonce}~(\bhbody{bhb})
+      \eta\leteq\fun{bnonce}~(\bhbody{bh})
       \\~\\
       {
         \eta
@@ -1566,7 +1566,7 @@ The BBODY rule has two predicate failures:
 \label{sec:chain-trans}
 
 The $\mathsf{CHAIN}$ transition rule is the main rule of the blockchain layer
-part of the STS. It calls $\mathsf{BHEAD}$, $\mathsf{PRTCL}$, and $\mathsf{BBODY}$ as sub-rules.
+part of the STS. It calls $\mathsf{TICK}$, $\mathsf{TICKN}$, $\mathsf{PRTCL}$, and $\mathsf{BBODY}$ as sub-rules.
 
 The chain rule has no environment.
 
@@ -1737,7 +1737,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
       } \\~\\
       (\var{e_1},~\wcard,~\wcard,~\wcard,~\wcard,~\wcard)
         \leteq\var{nes} \\
-      (\var{e_2},~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\wcard,~\var{pd})
+      (\var{e_2},~\wcard,~\var{b_{cur}},~\var{es},~\wcard,~\var{pd})
         \leteq\var{nes'} \\
         (\var{acnt},~\wcard,\var{ls},~\wcard,~\var{pp})\leteq\var{es}\\
         ( \wcard,
@@ -1804,7 +1804,7 @@ The transition uses a few helper functions defined in Figure~\ref{fig:funcs:chai
         \end{array}\right)}
       }\\~\\
       \var{nes''}\leteq\fun{updateNES}~\var{nes'}~\var{b_{cur}'},~\var{ls'} \\
-      \var{lab'}\leteq (\bblockno{bhb},~\var{s},~\bhash{bh} ) \\
+      \var{lab'}\leteq (\bblockno{bhb},~\var{s},~\bhash{bhb} ) \\
     }
     {
       \vdash
