@@ -642,7 +642,13 @@ applyParamsQCGen :: Params -> ImpTestState era -> (Maybe Int, ImpTestState era)
 applyParamsQCGen params impTestState =
   case replay (paramsQuickCheckArgs params) of
     Nothing -> (Nothing, impTestState)
-    Just (qcGen, qcSize) -> (Just qcSize, impTestState {impGen = qcGen})
+    Just (qcGen, qcSize) -> (Just qcSize, mixinCurrentGen impTestState qcGen)
+
+-- | Instead of reqplacing the curren QC generator in the state, we use the current and
+-- the supplied to make the new generator
+mixinCurrentGen :: ImpTestState era -> QCGen -> ImpTestState era
+mixinCurrentGen impTestState qcGen =
+  impTestState {impGen = integerVariant (fst (Random.random (impGen impTestState))) qcGen}
 
 evalImpTestGenM :: ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO b)
 evalImpTestGenM impState = fmap (fmap fst) . runImpTestGenM impState
@@ -672,7 +678,8 @@ runImpTestM_ qcSize impState = void . runImpTestM qcSize impState
 
 runImpTestGenM ::
   ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO (b, ImpTestState era))
-runImpTestGenM impState m = MkGen $ \qcGen qcSz -> runImpTestM (Just qcSz) (impState {impGen = qcGen}) m
+runImpTestGenM impState m =
+  MkGen $ \qcGen qcSz -> runImpTestM (Just qcSz) (mixinCurrentGen impState qcGen) m
 
 runImpTestM ::
   ShelleyEraImp era =>
