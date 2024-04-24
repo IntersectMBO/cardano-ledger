@@ -318,9 +318,8 @@ setupSingleDRep ::
     )
 setupSingleDRep stake = do
   drepKH <- registerDRep
-  delegatorKH <- freshKeyHash
-  delegatorKP <- lookupKeyPair delegatorKH
-  spendingKP <- lookupKeyPair =<< freshKeyHash
+  (delegatorKH, delegatorKP) <- freshKeyPair
+  (_, spendingKP) <- freshKeyPair
   submitTxAnn_ "Delegate to DRep" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . outputsTxBodyL
