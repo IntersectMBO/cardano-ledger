@@ -22,9 +22,14 @@ on:
         type: boolean
         default: false
 
-# Cancel running actions when a new action on the same PR is started
+# Cancel running workflows when a new workflow on the same PR or branch is started,
+# but put scheduled workflows into their own group
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{
+    format('{0}-{1}{2}',
+      github.workflow,
+      github.event.pull_request.number || github.ref,
+      github.event_name == 'schedule' && '-scheduled' || '')}}
   cancel-in-progress: true
 
 jobs:
