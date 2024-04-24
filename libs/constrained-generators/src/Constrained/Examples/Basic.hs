@@ -147,9 +147,31 @@ reifyYucky = constrained' $ \x y z ->
 
 basicSpec :: Specification BaseFn Int
 basicSpec = constrained $ \x ->
-  unsafeExists $ \y ->
+  exists (\eval -> pure $ eval x) $ \y ->
     satisfies x $ constrained $ \x' ->
       x' <=. 1 + y
+
+canFollowLike :: Specification BaseFn ((Int, Int), (Int, Int))
+canFollowLike = constrained' $ \p q ->
+  match p $ \ma mi ->
+    match q $ \ma' mi' ->
+      [ ifElse
+          (ma' ==. ma)
+          (mi' ==. mi + 1)
+          (mi' ==. 0)
+      , assert $ ma' <=. ma + 1
+      , assert $ ma <=. ma'
+      , ma' `dependsOn` ma
+      ]
+
+ifElseBackwards :: Specification BaseFn (Int, Int)
+ifElseBackwards = constrained' $ \p q ->
+  [ ifElse
+      (p ==. 1)
+      (q <=. 0)
+      (0 <. q)
+  , p `dependsOn` q
+  ]
 
 assertReal :: Specification BaseFn Int
 assertReal = constrained $ \x ->

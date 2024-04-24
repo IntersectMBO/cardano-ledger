@@ -117,6 +117,9 @@ tests =
     testSpecNoShrink "reifyYucky" reifyYucky
     testSpec "fixedRange" fixedRange
     testSpec "rangeHint" rangeHint
+    testSpec "basicSpec" basicSpec
+    testSpec "canFollowLike" canFollowLike
+    testSpec "ifElseBackwards" ifElseBackwards
     numberyTests
     sizeTests
     numNumSpecTree
