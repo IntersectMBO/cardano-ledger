@@ -2,6 +2,9 @@
 
 ## 1.14.0 0
 
+* Implement `NoThunks` instance for:
+  * `ConwayUtxoPredFailure`
+  * `ConwayUtxowPredFailure`
 * Add `ConwayUtxowPredFailure` era rule failure:
   * Implement its `InjectRuleFailure` instances for:
     * `BBODY`

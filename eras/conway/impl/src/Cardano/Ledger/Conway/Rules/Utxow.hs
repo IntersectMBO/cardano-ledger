@@ -78,6 +78,7 @@ import Control.State.Transition.Extended (Embed (..), STS (..))
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Set (Set)
 import GHC.Generics (Generic)
+import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 conwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>
@@ -197,6 +198,11 @@ deriving instance
   , Eq (PredicateFailure (EraRule "UTXO" era))
   ) =>
   Eq (ConwayUtxowPredFailure era)
+
+deriving via
+  InspectHeapNamed "ConwayUtxowPred" (ConwayUtxowPredFailure era)
+  instance
+    NoThunks (ConwayUtxowPredFailure era)
 
 instance
   ( ConwayEraScript era

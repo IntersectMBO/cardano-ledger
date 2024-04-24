@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -69,6 +70,7 @@ import Data.List.NonEmpty (NonEmpty)
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
+import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 -- ======================================================
 
@@ -214,6 +216,11 @@ deriving instance
   , Eq (TxIn (EraCrypto era))
   ) =>
   Eq (ConwayUtxoPredFailure era)
+
+deriving via
+  InspectHeapNamed "ConwayUtxoPred" (ConwayUtxoPredFailure era)
+  instance
+    NoThunks (ConwayUtxoPredFailure era)
 
 instance
   ( Era era
