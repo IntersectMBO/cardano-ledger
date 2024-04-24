@@ -189,7 +189,6 @@ import Control.Monad (forM)
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader (..), asks)
 import Control.Monad.State.Strict (MonadState (..), execStateT, gets, modify)
-import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Writer.Class (MonadWriter (..))
 import Control.State.Transition (STS (..), TRC (..), applySTSOptsEither)
@@ -241,7 +240,7 @@ import Test.Cardano.Slotting.Numeric ()
 import Test.HUnit.Lang (FailureReason (..), HUnitFailure (..))
 import Test.Hspec.Core.Spec (Example (..), Params, paramsQuickCheckArgs)
 import Test.QuickCheck.Gen (Gen (..))
-import Test.QuickCheck.Random (QCGen (..), mkQCGen)
+import Test.QuickCheck.Random (QCGen (..), integerVariant, mkQCGen)
 import Type.Reflection (Typeable, typeOf)
 import UnliftIO (MonadUnliftIO (..))
 import UnliftIO.Exception (
@@ -567,12 +566,13 @@ impWitsVKeyNeeded txBody = do
 data ImpTestEnv era = ImpTestEnv
   { iteState :: !(IORef (ImpTestState era))
   , iteFixup :: Tx era -> ImpTestM era (Tx era)
+  , iteQuickCheckSize :: !Int
   }
 
 iteFixupL :: Lens' (ImpTestEnv era) (Tx era -> ImpTestM era (Tx era))
 iteFixupL = lens iteFixup (\x y -> x {iteFixup = y})
 
-newtype ImpTestM era a = ImpTestM {unImpTestM :: ReaderT (ImpTestEnv era) (GenT IO) a}
+newtype ImpTestM era a = ImpTestM {_unImpTestM :: ReaderT (ImpTestEnv era) IO a}
   deriving
     ( Functor
     , Applicative
@@ -617,13 +617,18 @@ instance (ShelleyEraImp era, Arbitrary a, Show a) => Example (a -> ImpTestM era 
     evaluateExample (\s -> property $ evalImpTestM (getParamsQCGen params) s . impTest) params
 
 instance MonadGen (ImpTestM era) where
-  liftGen = ImpTestM . lift . liftGen
-  variant n (ImpTestM f) = ImpTestM $ ask >>= lift . variant n . runReaderT f
-  sized f = ImpTestM $ do
-    env <- ask
-    lift $ sized (\n -> runReaderT (unImpTestM (f n)) env)
-  resize n (ImpTestM f) = ImpTestM $ ask >>= lift . resize n . runReaderT f
-  choose = ImpTestM . lift . choose
+  liftGen (MkGen f) = do
+    qcSize <- iteQuickCheckSize <$> ask
+    StateGen qcGen <- subState split
+    pure $ f qcGen qcSize
+  variant n action = do
+    subState (\(StateGen qcGen) -> ((), StateGen (integerVariant (toInteger n) qcGen)))
+    action
+  sized f = do
+    qcSize <- iteQuickCheckSize <$> ask
+    f qcSize
+  resize n = local (\env -> env {iteQuickCheckSize = n})
+  choose r = subState (Random.randomR r)
 
 instance HasStatefulGen (StateGenM (ImpTestState era)) (ImpTestM era) where
   askStatefulGen = pure StateGenM
@@ -673,21 +678,17 @@ runImpTestM ::
   ImpTestM era b ->
   IO (b, ImpTestState era)
 runImpTestM mQCGen impState (ImpTestM m) = do
-  let
-    (qcGen, qcSize, impState') =
-      case fromMaybe (impGen impState, 30) mQCGen of
-        (initGen, sz) ->
-          case split initGen of
-            (qc, stdGen) -> (qc, sz, impState {impGen = stdGen})
-  ioRef <- newIORef impState'
+  let (initGen, qcSize) = fromMaybe (impGen impState, 30) mQCGen
+  ioRef <- newIORef $ impState {impGen = initGen}
   let
     env =
       ImpTestEnv
         { iteState = ioRef
         , iteFixup = fixupTx
+        , iteQuickCheckSize = qcSize
         }
   res <-
-    unGenT (runReaderT m env) qcGen qcSize `catchAny` \exc -> do
+    runReaderT m env `catchAny` \exc -> do
       logsDoc <- impLog <$> readIORef ioRef
       let logs = renderString (layoutPretty defaultLayoutOptions logsDoc)
           adjustHUnitExc header (HUnitFailure srcLoc failReason) =
