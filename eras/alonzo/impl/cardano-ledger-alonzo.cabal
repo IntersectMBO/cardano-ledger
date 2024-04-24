@@ -80,7 +80,7 @@ library
         cardano-crypto-class,
         cardano-ledger-binary ^>=1.3,
         cardano-ledger-core ^>=1.12,
-        cardano-ledger-mary ^>=1.5,
+        cardano-ledger-mary ^>=1.6.0,
         cardano-ledger-shelley ^>=1.10,
         cardano-slotting,
         cardano-strict-containers,
@@ -127,7 +127,6 @@ library testlib
         containers,
         cardano-crypto-class,
         cardano-data,
-        cardano-ledger-allegra:testlib,
         cardano-ledger-alonzo,
         cardano-ledger-binary,
         cardano-ledger-mary:testlib,
@@ -161,5 +160,4 @@ test-suite tests
         cardano-ledger-alonzo,
         cardano-ledger-binary:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-ledger-shelley:testlib,
         testlib

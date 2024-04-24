@@ -24,7 +24,9 @@ module Cardano.Ledger.Mary.Value (
   lookupMultiAsset,
   multiAssetFromList,
   policies,
-  prune,
+  mapMaybeMultiAsset,
+  filterMultiAsset,
+  pruneZeroMultiAsset,
   representationSize,
   showValue,
   flattenMultiAsset,
@@ -33,6 +35,9 @@ module Cardano.Ledger.Mary.Value (
   CompactForm (CompactValue),
   isMultiAssetSmallEnough,
   assetNameToTextAsHex,
+
+  -- * Deprecated
+  prune,
 )
 where
 
@@ -67,7 +72,7 @@ import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Exception (assert)
-import Control.Monad (forM_, unless, when)
+import Control.Monad (forM_, guard, unless, when)
 import Control.Monad.ST (runST)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON (..), object, (.=))
 import qualified Data.Aeson as Aeson
@@ -108,7 +113,7 @@ import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
 import Prelude hiding (lookup)
 
 -- | Asset Name
-newtype AssetName = AssetName {assetName :: SBS.ShortByteString}
+newtype AssetName = AssetName {assetNameBytes :: SBS.ShortByteString}
   deriving newtype
     ( Eq
     , EncCBOR
@@ -121,7 +126,7 @@ instance Show AssetName where
   show = show . assetNameToBytesAsHex
 
 assetNameToBytesAsHex :: AssetName -> BS.ByteString
-assetNameToBytesAsHex = BS16.encode . SBS.fromShort . assetName
+assetNameToBytesAsHex = BS16.encode . SBS.fromShort . assetNameBytes
 
 assetNameToTextAsHex :: AssetName -> Text
 assetNameToTextAsHex = decodeLatin1 . assetNameToBytesAsHex
@@ -320,21 +325,20 @@ decodeValuePair decodeMultiAssetAmount =
 decodeMultiAsset :: Crypto c => (forall t. Decoder t Integer) -> Decoder s (MultiAsset c)
 decodeMultiAsset decodeAmount = do
   ma <-
-    MultiAsset
-      <$> ifDecoderVersionAtLeast
-        (natVersion @9)
-        decodeWithEnforcing
-        decodeWithPrunning
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      decodeWithEnforcing
+      decodeWithPrunning
   ma <$ unless (isMultiAssetSmallEnough ma) (fail "MultiAsset is too big to compact")
   where
     decodeWithEnforcing =
-      decodeMap decCBOR $ do
+      fmap MultiAsset $ decodeMap decCBOR $ do
         m <- decodeMap decCBOR $ do
           amount <- decodeAmount
           amount <$ when (amount == 0) (fail "MultiAsset cannot contain zeros")
         m <$ when (Map.null m) (fail "Empty Assets are not allowed")
     decodeWithPrunning =
-      prune <$> decodeMap decCBOR (decodeMap decCBOR decodeAmount)
+      pruneZeroMultiAsset . MultiAsset <$> decodeMap decCBOR (decodeMap decCBOR decodeAmount)
 
 instance Crypto c => EncCBOR (MaryValue c) where
   encCBOR (MaryValue c ma@(MultiAsset m)) =
@@ -646,7 +650,7 @@ to v@(MaryValue _ ma) = do
     -- is last, so the associated offset is pointing to the end of the array
     assetNames = Set.toDescList $ Set.fromList $ (\(_, an, _) -> an) <$> triples
 
-    assetNameLengths = fromIntegral . SBS.length . assetName <$> assetNames
+    assetNameLengths = fromIntegral . SBS.length . assetNameBytes <$> assetNames
 
     assetNameOffsetMap :: Map AssetName Word16
     assetNameOffsetMap =
@@ -694,7 +698,7 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
 
     assetNames = Set.fromList $ (\(_, an, _) -> an) <$> xs
     anameBlockSize =
-      Semigroup.getSum $ foldMap' (Semigroup.Sum . SBS.length . assetName) assetNames
+      Semigroup.getSum $ foldMap' (Semigroup.Sum . SBS.length . assetNameBytes) assetNames
 
 from :: forall c. Crypto c => CompactValue c -> MaryValue c
 from (CompactValueAdaOnly c) = MaryValue (fromCompact c) (MultiAsset Map.empty)
@@ -853,12 +857,49 @@ insertMultiAsset combine pid aid new (MultiAsset m1) =
 
 -- ========================================================
 
--- | Remove 0 assets from a map
+-- | Remove 0 assets from a `MultiAsset`
 prune ::
   Map (PolicyID c) (Map AssetName Integer) ->
   Map (PolicyID c) (Map AssetName Integer)
 prune assets =
   Map.filter (not . null) $ Map.filter (/= 0) <$> assets
+{-# DEPRECATED prune "In favor of `pruneZeroMultiAsset`" #-}
+
+-- | Remove all assets with that have zero amount specified
+pruneZeroMultiAsset :: MultiAsset c -> MultiAsset c
+pruneZeroMultiAsset = filterMultiAsset (\_ _ -> (/= 0))
+
+-- | Filter multi assets. Canonical form is preserved.
+filterMultiAsset ::
+  -- | Predicate that needs to return `True` whenever an asset should be retained.
+  (PolicyID c -> AssetName -> Integer -> Bool) ->
+  MultiAsset c ->
+  MultiAsset c
+filterMultiAsset f (MultiAsset ma) =
+  MultiAsset $ Map.mapMaybeWithKey modifyAsset ma
+  where
+    modifyAsset policyId assetMap = do
+      let newAssetMap = Map.filterWithKey (f policyId) assetMap
+      guard (not (null newAssetMap))
+      Just newAssetMap
+
+-- | Map a function over each multi asset value while optionally filtering values
+-- out. Canonical form is preserved.
+mapMaybeMultiAsset ::
+  (PolicyID c -> AssetName -> Integer -> Maybe Integer) ->
+  MultiAsset c ->
+  MultiAsset c
+mapMaybeMultiAsset f (MultiAsset ma) =
+  MultiAsset $ Map.mapMaybeWithKey modifyAsset ma
+  where
+    modifyAsset policyId assetMap = do
+      let newAssetMap = Map.mapMaybeWithKey (modifyValue policyId) assetMap
+      guard (not (null newAssetMap))
+      Just newAssetMap
+    modifyValue policyId assetName assetValue = do
+      newAssetValue <- f policyId assetName assetValue
+      guard (newAssetValue /= 0)
+      Just newAssetValue
 
 -- | Rather than using prune to remove 0 assets, when can avoid adding them in the
 --   first place by using valueFromList to construct a MultiAsset

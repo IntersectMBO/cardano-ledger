@@ -30,6 +30,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Mary.Value (
+  MaryValue (..),
   MultiAsset (..),
   PolicyID (..),
  )
@@ -739,7 +740,11 @@ mintingTokenTx tx sh = do
   count <- choose (0, 10)
   let policyId = PolicyID sh
   let ma = MultiAsset $ Map.singleton policyId [(name, count)]
-  pure $ tx & bodyTxL . mintTxBodyL .~ ma
+  (_, addr) <- freshKeyAddr
+  pure $
+    tx
+      & bodyTxL . mintTxBodyL .~ ma
+      & bodyTxL . outputsTxBodyL <>~ [mkBasicTxOut addr (MaryValue (Coin 12345) ma)]
 
 enactCostModels ::
   ConwayEraImp era =>

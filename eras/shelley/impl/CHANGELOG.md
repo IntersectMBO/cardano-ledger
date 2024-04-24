@@ -12,6 +12,7 @@
   * `withPreFixup`
   * `withPostFixup`
 * Add `ToExpr` and `NFData` instances for `UtxoEnv`
+* Stop fixing up multi assets in the transaction.
 
 ## 1.10.0.0
 

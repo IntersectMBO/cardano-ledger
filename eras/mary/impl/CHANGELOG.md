@@ -1,8 +1,15 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.5.1.1
+## 1.6.0.0
 
-*
+* Change how we report tokens burned in `ValueNotConservedUTxO`: #4288
+* Add `getProducedMaryValue`, `pruneZeroMultiAsset`, `filterMultiAsset` and `mapMaybeMultiAsset`
+* Deprecate `prune`
+* Rename `assetName` to `assetNameBytes`
+
+### `testlib`
+
+* Add `MaryEraImp`
 
 ## 1.5.1.0
 

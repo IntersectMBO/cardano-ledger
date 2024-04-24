@@ -126,6 +126,7 @@ import Cardano.Ledger.BaseTypes (
   inject,
   mkTxIxPartial,
  )
+import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -224,6 +225,7 @@ import Prettyprinter.Render.String (renderString)
 import System.Random
 import qualified System.Random as Random
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
 import Test.Cardano.Ledger.Core.KeyPair (
   ByronKeyPair (..),
   KeyPair (..),
@@ -315,63 +317,63 @@ impEventsL :: Lens' (ImpTestState era) [SomeSTSEvent era]
 impEventsL = lens impEvents (\x y -> x {impEvents = y})
 
 class
-  ( Show (NewEpochState era)
-  , ToExpr (NewEpochState era)
-  , ToExpr (Tx era)
-  , ToExpr (TxOut era)
-  , ToExpr (PParams era)
-  , ToExpr (StashedAVVMAddresses era)
-  , ToExpr (GovState era)
-  , ToExpr (PParamsHKD StrictMaybe era)
-  , ToExpr (PParamsHKD Identity era)
-  , ToExpr (Value era)
-  , Show (TxOut era)
-  , Show (PParams era)
-  , Show (StashedAVVMAddresses era)
-  , Show (GovState era)
-  , Eq (TxOut era)
-  , Eq (PParams era)
-  , Eq (StashedAVVMAddresses era)
-  , Eq (GovState era)
-  , Eq (Event (EraRule "LEDGER" era))
-  , Eq (Event (EraRule "TICK" era))
-  , Signal (EraRule "LEDGER" era) ~ Tx era
-  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
-  , STS (EraRule "LEDGER" era)
-  , Signable
-      (DSIGN (EraCrypto era))
-      (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , DSIGN (EraCrypto era) ~ Ed25519DSIGN
-  , ToExpr (PredicateFailure (EraRule "LEDGER" era))
-  , ToExpr (PredicateFailure (EraRule "UTXOW" era))
-  , ToExpr (Event (EraRule "LEDGER" era))
-  , ToExpr (Event (EraRule "TICK" era))
+  ( EraGov era
   , EraUTxO era
+  , EraTxOut era
+  , EraPParams era
   , ShelleyEraTxCert era
+  , ToExpr (Tx era)
+  , NFData (Tx era)
+  , ToExpr (TxBody era)
+  , ToExpr (TxOut era)
+  , ToExpr (Value era)
+  , ToExpr (PParams era)
+  , ToExpr (PParamsHKD Identity era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  , Show (NewEpochState era)
+  , ToExpr (NewEpochState era)
+  , ToExpr (GovState era)
+  , Eq (StashedAVVMAddresses era)
+  , Show (StashedAVVMAddresses era)
+  , ToExpr (StashedAVVMAddresses era)
+  , NFData (StashedAVVMAddresses era)
+  , -- For the LEDGER rule
+    STS (EraRule "LEDGER" era)
+  , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
+  , Signal (EraRule "LEDGER" era) ~ Tx era
   , State (EraRule "LEDGER" era) ~ LedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , EraGov era
+  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Show (PredicateFailure (EraRule "LEDGER" era))
+  , ToExpr (PredicateFailure (EraRule "LEDGER" era))
+  , NFData (PredicateFailure (EraRule "LEDGER" era))
+  , EncCBOR (PredicateFailure (EraRule "LEDGER" era))
+  , DecCBOR (PredicateFailure (EraRule "LEDGER" era))
+  , EraRuleEvent "LEDGER" era ~ Event (EraRule "LEDGER" era)
+  , Eq (EraRuleEvent "LEDGER" era)
+  , ToExpr (EraRuleEvent "LEDGER" era)
+  , NFData (EraRuleEvent "LEDGER" era)
+  , Typeable (EraRuleEvent "LEDGER" era)
+  , -- For the TICK rule
+    STS (EraRule "TICK" era)
   , BaseM (EraRule "TICK" era) ~ ShelleyBase
   , Signal (EraRule "TICK" era) ~ SlotNo
-  , Environment (EraRule "TICK" era) ~ ()
   , State (EraRule "TICK" era) ~ NewEpochState era
-  , STS (EraRule "TICK" era)
+  , Environment (EraRule "TICK" era) ~ ()
   , NFData (PredicateFailure (EraRule "TICK" era))
-  , NFData (StashedAVVMAddresses era)
-  , NFData (Tx era)
+  , EraRuleEvent "TICK" era ~ Event (EraRule "TICK" era)
+  , Eq (EraRuleEvent "TICK" era)
+  , ToExpr (EraRuleEvent "TICK" era)
+  , NFData (EraRuleEvent "TICK" era)
+  , Typeable (EraRuleEvent "TICK" era)
+  , ToExpr (PredicateFailure (EraRule "UTXOW" era))
+  , -- Necessary Crypto
+    DSIGN (EraCrypto era) ~ Ed25519DSIGN
   , NFData (VerKeyDSIGN (DSIGN (EraCrypto era)))
-  , NFData (PredicateFailure (EraRule "LEDGER" era))
-  , NFData (Event (EraRule "LEDGER" era))
-  , NFData (Event (EraRule "TICK" era))
   , VRF.VRFAlgorithm (VRF (EraCrypto era))
   , HashAlgorithm (HASH (EraCrypto era))
   , DSIGNAlgorithm (DSIGN (EraCrypto era))
-  , EraRuleEvent "LEDGER" era ~ Event (EraRule "LEDGER" era)
-  , EraRuleEvent "TICK" era ~ Event (EraRule "TICK" era)
-  , Typeable (EraRuleEvent "LEDGER" era)
-  , Typeable (EraRuleEvent "TICK" era)
-  , ToExpr (EraRuleEvent "LEDGER" era)
-  , ToExpr (EraRuleEvent "TICK" era)
+  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   ) =>
   ShelleyEraImp era
   where
@@ -834,31 +836,31 @@ fixupFees tx = impAnn "fixupFees" $ do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-  kpSpending <- lookupKeyPair =<< freshKeyHash
-  kpStaking <- lookupKeyPair =<< freshKeyHash
+  (_, kpSpending) <- freshKeyPair
+  (_, kpStaking) <- freshKeyPair
   nativeScriptKeyPairs <- impNativeScriptKeyPairs tx
   let
     nativeScriptKeyWits = Map.keysSet nativeScriptKeyPairs
     consumedValue = consumed pp certState utxo (tx ^. bodyTxL)
     producedValue = produced pp certState (tx ^. bodyTxL)
-    validateValue v
+    ensureNonNegativeCoin v
       | pointwise (<=) zero v = pure v
       | otherwise = do
-          logEntry $ "Failed to validate value: " <> show v
+          logEntry $ "Failed to validate coin: " <> show v
           pure zero
   logEntry "Validating changeBeforeFee"
-  changeBeforeFee <- validateValue $ consumedValue <-> producedValue
+  changeBeforeFee <- ensureNonNegativeCoin $ coin consumedValue <-> coin producedValue
   logToExpr changeBeforeFee
   let
     changeBeforeFeeTxOut =
       mkBasicTxOut
         (mkAddr (kpSpending, kpStaking))
-        changeBeforeFee
+        (inject changeBeforeFee)
     txNoWits = tx & bodyTxL . outputsTxBodyL %~ (:|> changeBeforeFeeTxOut)
     outsBeforeFee = tx ^. bodyTxL . outputsTxBodyL
     fee = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
   logEntry "Validating change"
-  change <- validateValue $ changeBeforeFeeTxOut ^. coinTxOutL <-> fee
+  change <- ensureNonNegativeCoin $ changeBeforeFeeTxOut ^. coinTxOutL <-> fee
   logToExpr change
   let
     changeTxOut = changeBeforeFeeTxOut & coinTxOutL .~ change
@@ -872,7 +874,7 @@ fixupFees tx = impAnn "fixupFees" $ do
       | otherwise =
           txNoWits
             & bodyTxL . outputsTxBodyL .~ outsBeforeFee
-            & bodyTxL . feeTxBodyL .~ (fee <> changeTxOut ^. coinTxOutL)
+            & bodyTxL . feeTxBodyL .~ (fee <> change)
   pure txWithFee
 
 shelleyFixupTx ::
@@ -917,25 +919,30 @@ trySubmitTx tx = do
   lEnv <- impLedgerEnv st
   ImpTestState {impRootTxIn} <- get
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
-  let txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
-      outsSize = SSeq.length $ txFixed ^. bodyTxL . outputsTxBodyL
-      rootIndex
-        | outsSize > 0 = outsSize - 1
-        | otherwise = error ("Expected at least 1 output after submitting tx: " <> show txId)
-  forM res $ \(st', events) -> do
-    tell $ fmap (SomeSTSEvent @era @"LEDGER") events
-    modify $ impNESL . nesEsL . esLStateL .~ st'
-    UTxO utxo <- getUTxO
-    -- This TxIn is in the utxo, and thus can be the new root, only if the transaction was phase2-valid.
-    -- Otherwise, no utxo with this id would have been created, and so we need to set the new root
-    -- to what it was before the submission.
-    let assumedNewRoot = TxIn txId (mkTxIxPartial (fromIntegral rootIndex))
-    let newRoot
-          | Map.member assumedNewRoot utxo = assumedNewRoot
-          | Map.member impRootTxIn utxo = impRootTxIn
-          | otherwise = error "Root not found in UTxO"
-    impRootTxInL .= newRoot
-    pure txFixed
+  case res of
+    Left predFailures -> do
+      -- Verify that produced predicate failures are ready for the node-to-client protocol
+      liftIO $ forM_ predFailures $ roundTripEraExpectation @era
+      pure $ Left predFailures
+    Right (st', events) -> do
+      let txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
+          outsSize = SSeq.length $ txFixed ^. bodyTxL . outputsTxBodyL
+          rootIndex
+            | outsSize > 0 = outsSize - 1
+            | otherwise = error ("Expected at least 1 output after submitting tx: " <> show txId)
+      tell $ fmap (SomeSTSEvent @era @"LEDGER") events
+      modify $ impNESL . nesEsL . esLStateL .~ st'
+      UTxO utxo <- getUTxO
+      -- This TxIn is in the utxo, and thus can be the new root, only if the transaction
+      -- was phase2-valid.  Otherwise, no utxo with this id would have been created, and
+      -- so we need to set the new root to what it was before the submission.
+      let assumedNewRoot = TxIn txId (mkTxIxPartial (fromIntegral rootIndex))
+      let newRoot
+            | Map.member assumedNewRoot utxo = assumedNewRoot
+            | Map.member impRootTxIn utxo = impRootTxIn
+            | otherwise = error "Root not found in UTxO"
+      impRootTxInL .= newRoot
+      pure $ Right txFixed
 
 -- | Submit a transaction that is expected to be rejected. The inputs and
 -- outputs are automatically balanced.
@@ -1280,7 +1287,7 @@ registerRewardAccount ::
 registerRewardAccount = do
   khDelegator <- freshKeyHash
   kpDelegator <- lookupKeyPair khDelegator
-  kpSpending <- lookupKeyPair =<< freshKeyHash
+  (_, kpSpending) <- freshKeyPair
   let stakingCredential = KeyHashObj khDelegator
   submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText stakingCredential)) $
     mkBasicTx mkBasicTxBody

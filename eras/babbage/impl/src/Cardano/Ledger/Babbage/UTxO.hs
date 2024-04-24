@@ -24,9 +24,9 @@ import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Crypto
-import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
+import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Plutus.Data (Data)
-import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo, shelleyProducedValue)
+import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Control.Applicative
@@ -43,7 +43,7 @@ instance Crypto c => EraUTxO (BabbageEra c) where
 
   getConsumedValue = getConsumedMaryValue
 
-  getProducedValue = shelleyProducedValue
+  getProducedValue = getProducedMaryValue
 
   getScriptsProvided = getBabbageScriptsProvided
 

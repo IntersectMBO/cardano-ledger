@@ -18,7 +18,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conway.ImpTest (
-  module ImpTest,
+  module Test.Cardano.Ledger.Babbage.ImpTest,
   ConwayEraImp,
   enactConstitution,
   enactTreasuryWithdrawals,
@@ -192,8 +192,7 @@ import qualified Data.Text as T
 import Data.Tree
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro
-import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
-import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
+import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
@@ -241,6 +240,15 @@ instance
   modifyPParams = conwayModifyPParams
 
   fixupTx = alonzoFixupTx
+
+instance
+  ( Crypto c
+  , NFData (SigDSIGN (DSIGN c))
+  , NFData (VerKeyDSIGN (DSIGN c))
+  , DSIGN c ~ Ed25519DSIGN
+  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
+  ) =>
+  MaryEraImp (ConwayEra c)
 
 instance ShelleyEraImp (ConwayEra c) => AlonzoEraImp (ConwayEra c) where
   scriptTestContexts =
@@ -310,9 +318,8 @@ setupSingleDRep ::
     )
 setupSingleDRep stake = do
   drepKH <- registerDRep
-  delegatorKH <- freshKeyHash
-  delegatorKP <- lookupKeyPair delegatorKH
-  spendingKP <- lookupKeyPair =<< freshKeyHash
+  (delegatorKH, delegatorKP) <- freshKeyPair
+  (_, spendingKP) <- freshKeyPair
   submitTxAnn_ "Delegate to DRep" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . outputsTxBodyL

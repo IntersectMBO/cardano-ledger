@@ -6,9 +6,9 @@ import Cardano.Ledger.Mary (Mary)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Mary.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Mary.BinarySpec as BinarySpec
+import qualified Test.Cardano.Ledger.Mary.Imp as Imp
 import Test.Cardano.Ledger.Mary.ImpTest ()
 import qualified Test.Cardano.Ledger.Mary.ValueSpec as ValueSpec
-import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 
 main :: IO ()
 main =
@@ -18,4 +18,4 @@ main =
       BinarySpec.spec
       CddlSpec.spec
       describe "Imp" $ do
-        ShelleyImp.spec @Mary
+        Imp.spec @Mary
