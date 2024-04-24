@@ -66,8 +66,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   runImpRule,
   tryRunImpRule,
   registerRewardAccount,
+  getRewardAccountFor,
   lookupReward,
   registerPool,
+  registerAndRetirePoolToMakeReward,
   getRewardAccountAmount,
   withImpState,
   shelleyFixupTx,
@@ -114,18 +116,7 @@ import Cardano.Ledger.Address (
   RewardAccount (..),
   bootstrapKeyHash,
  )
-import Cardano.Ledger.BaseTypes (
-  BlocksMade (..),
-  EpochSize (..),
-  Globals (..),
-  Network (..),
-  ShelleyBase,
-  SlotNo,
-  StrictMaybe (..),
-  TxIx (..),
-  inject,
-  mkTxIxPartial,
- )
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
 import Cardano.Ledger.Coin (Coin (..))
@@ -1288,6 +1279,13 @@ submitTxAnn_ ::
   (HasCallStack, ShelleyEraImp era) => String -> Tx era -> ImpTestM era ()
 submitTxAnn_ msg = void . submitTxAnn msg
 
+getRewardAccountFor ::
+  Credential 'Staking (EraCrypto era) ->
+  ImpTestM era (RewardAccount (EraCrypto era))
+getRewardAccountFor stakingC = do
+  networkId <- use (to impGlobals . to networkId)
+  pure $ RewardAccount networkId stakingC
+
 registerRewardAccount ::
   forall era.
   ( HasCallStack
@@ -1346,6 +1344,39 @@ registerPool = do
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert poolParams)
   pure khPool
+
+registerAndRetirePoolToMakeReward ::
+  ShelleyEraImp era =>
+  Credential 'Staking (EraCrypto era) ->
+  ImpTestM era ()
+registerAndRetirePoolToMakeReward stakingC = do
+  poolKH <- freshKeyHash
+  networkId <- use (to impGlobals . to networkId)
+  vrfKH <- freshKeyHashVRF
+  Positive pledge <- arbitrary
+  Positive cost <- arbitrary
+  let poolParams =
+        PoolParams
+          { ppVrf = vrfKH
+          , ppId = poolKH
+          , ppRewardAccount = RewardAccount networkId stakingC
+          , ppPledge = Coin pledge
+          , ppCost = Coin cost
+          , ppOwners = mempty
+          , ppMetadata = SNothing
+          , ppMargin = def
+          , ppRelays = mempty
+          }
+  submitTxAnn_ "Registering a temporary stake pool" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert poolParams)
+  passEpoch
+  currentEpochNo <- getsNES nesELL
+  submitTxAnn_ "Retiring the temporary stake pool" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.singleton (RetirePoolTxCert poolKH $ addEpochInterval currentEpochNo $ EpochInterval 2)
+  passEpoch
 
 -- | Compose given function with the configured fixup
 withCustomFixup ::

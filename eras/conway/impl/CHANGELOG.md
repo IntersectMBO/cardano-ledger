@@ -54,7 +54,14 @@
 
 ### `testlib`
 
-* Add `setupDRepWithoutStake` to `Conway.ImpTest`. #4273
+* Add the following utilities. #4273
+  * to `Conway.ImpTest`
+    * `setupDRepWithoutStake`
+    * `setupPoolWithoutStake` 
+    * `submitAndExpireProposalToMakeReward`
+  * to `Shelley.ImpTest`
+    * `getRewardAccountFor`
+    * `registerAndRetirePoolToMakeReward`
 * Implement `ConwayUtxowPredFailure` instances:
   * `Arbitrary`
   * `ToExpr`

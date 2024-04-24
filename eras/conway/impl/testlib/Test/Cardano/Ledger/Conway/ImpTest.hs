@@ -26,6 +26,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   submitGovAction_,
   submitGovActions,
   submitProposal,
+  submitAndExpireProposalToMakeReward,
   submitProposal_,
   submitProposals,
   submitFailingProposal,
@@ -321,6 +322,7 @@ setupDRepWithoutStake ::
 setupDRepWithoutStake = do
   drepKH <- registerDRep
   delegatorKH <- freshKeyHash
+  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
   submitTxAnn_ "Delegate to DRep" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
@@ -328,7 +330,7 @@ setupDRepWithoutStake = do
           [ mkRegDepositDelegTxCert @era
               (KeyHashObj delegatorKH)
               (DelegVote (DRepCredential $ KeyHashObj drepKH))
-              zero
+              deposit
           ]
   pure (drepKH, delegatorKH)
 
@@ -604,6 +606,25 @@ trySubmitGovAction ::
 trySubmitGovAction ga = do
   let mkGovActionId tx = GovActionId (txIdTx tx) (GovActionIx 0)
   fmap mkGovActionId <$> trySubmitGovActions (pure ga)
+
+submitAndExpireProposalToMakeReward ::
+  ConwayEraImp era =>
+  Int ->
+  Credential 'Staking (EraCrypto era) ->
+  ImpTestM era ()
+submitAndExpireProposalToMakeReward expectedReward stakingC = do
+  rewardAccount <- getRewardAccountFor stakingC
+  EpochInterval lifetime <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL
+  gai <-
+    submitProposal $
+      ProposalProcedure
+        { pProcDeposit = Coin $ fromIntegral expectedReward
+        , pProcReturnAddr = rewardAccount
+        , pProcGovAction = TreasuryWithdrawals mempty def
+        , pProcAnchor = def
+        }
+  passNEpochs $ 2 + fromIntegral lifetime
+  expectMissingGovActionId gai
 
 -- | Submits a transaction that proposes the given governance action
 trySubmitGovActions ::

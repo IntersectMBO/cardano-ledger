@@ -243,7 +243,7 @@ instance Pulsable (DRepPulser era) where
   pulseM pulser@(DRepPulser {..})
     | done pulser = pure pulser {dpIndex = 0}
     | otherwise =
-        let !chunk = Map.drop dpIndex $ Map.take (dpIndex + dpPulseSize) $ UMap.umElems dpUMap
+        let !chunk = Map.take dpPulseSize $ Map.drop dpIndex $ UMap.umElems dpUMap
             dRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpDRepDistr chunk
          in pure (pulser {dpIndex = dpIndex + dpPulseSize, dpDRepDistr = dRepDistr})
 
