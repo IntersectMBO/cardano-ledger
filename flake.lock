@@ -1,15 +1,15 @@
 {
   "nodes": {
     "CHaP": {
-       "flake": false,
-       "locked": {
-         "lastModified": 1712334766,
-         "narHash": "sha256-ug8REKybXwr7IMeMCcvfKzNFaHdPtb0A2jlO3FCxgBk=",
-         "owner": "intersectmbo",
-         "repo": "cardano-haskell-packages",
-         "rev": "fc2da4589f09787dcb2278de12f619b706ccd76d",
-         "type": "github"
-       },
+      "flake": false,
+      "locked": {
+        "lastModified": 1713778255,
+        "narHash": "sha256-Z42YG0UR5vrOj+/Sy6ZoiV40mM5KpeN6+rmcfEvMU2Y=",
+        "owner": "intersectmbo",
+        "repo": "cardano-haskell-packages",
+        "rev": "09ca4d3118cf1451d9e8612f6c40cc320ba1e469",
+        "type": "github"
+      },
       "original": {
         "owner": "intersectmbo",
         "ref": "repo",
