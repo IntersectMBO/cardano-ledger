@@ -397,9 +397,19 @@ votingStakePoolThresholdInternal pp isElectedCommittee action =
         TreasuryWithdrawals {} -> NoVotingAllowed
         InfoAction {} -> NoVotingThreshold
 
-isCommitteeVotingAllowed :: ConwayEraPParams era => CommitteeState era -> GovAction era -> Bool
-isCommitteeVotingAllowed committeeState =
-  isVotingAllowed . votingCommitteeThresholdInternal def committee committeeState
+isCommitteeVotingAllowed ::
+  ConwayEraPParams era =>
+  EpochNo ->
+  CommitteeState era ->
+  GovAction era ->
+  Bool
+isCommitteeVotingAllowed currentEpoch committeeState =
+  isVotingAllowed
+    . votingCommitteeThresholdInternal
+      currentEpoch
+      def
+      committee
+      committeeState
   where
     -- Information about presence of committee is irrelevant for knowing if voting is
     -- allowed or not
@@ -407,24 +417,31 @@ isCommitteeVotingAllowed committeeState =
 
 votingCommitteeThreshold ::
   ConwayEraPParams era =>
+  EpochNo ->
   RatifyState era ->
   CommitteeState era ->
   GovAction era ->
   StrictMaybe UnitInterval
-votingCommitteeThreshold ratifyState committeeState =
-  toRatifyVotingThreshold . votingCommitteeThresholdInternal pp committee committeeState
+votingCommitteeThreshold currentEpoch ratifyState committeeState =
+  toRatifyVotingThreshold
+    . votingCommitteeThresholdInternal
+      currentEpoch
+      pp
+      committee
+      committeeState
   where
     committee = ratifyState ^. rsEnactStateL . ensCommitteeL
     pp = ratifyState ^. rsEnactStateL . ensCurPParamsL
 
 votingCommitteeThresholdInternal ::
   ConwayEraPParams era =>
+  EpochNo ->
   PParams era ->
   StrictMaybe (Committee era) ->
   CommitteeState era ->
   GovAction era ->
   VotingThreshold
-votingCommitteeThresholdInternal pp committee (CommitteeState hotKeys) = \case
+votingCommitteeThresholdInternal currentEpoch pp committee (CommitteeState hotKeys) = \case
   NoConfidence {} -> NoVotingAllowed
   UpdateCommittee {} -> NoVotingAllowed
   NewConstitution {} -> threshold
@@ -440,10 +457,10 @@ votingCommitteeThresholdInternal pp committee (CommitteeState hotKeys) = \case
         SJust t | activeCommitteeSize >= minSize -> VotingThreshold t
         _ -> NoVotingThreshold
     minSize = pp ^. ppCommitteeMinSizeL
-    isActive coldKey _validUntil =
+    isActive coldKey validUntil =
       case Map.lookup coldKey hotKeys of
         Just (CommitteeMemberResigned _) -> False
-        Just _ -> True -- TODO do we need to check if member's term is expired here?
+        Just _ -> currentEpoch <= validUntil
         Nothing -> False
     activeCommitteeSize =
       fromIntegral . Map.size . Map.filterWithKey isActive $

@@ -39,6 +39,90 @@ spec =
     spoVotesForHardForkInitiation
     committeeMinSizeAffectsInFlightProposalsSpec
     paramChangeAffectsProposalsSpec
+    committeeExpiryResignationDiscountSpec
+
+committeeExpiryResignationDiscountSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+committeeExpiryResignationDiscountSpec =
+  describe "Expired and resigned committee members are discounted from quorum" $ do
+    it "Expired" $ do
+      modifyPParams $ \pp ->
+        pp
+          & ppGovActionLifetimeL .~ EpochInterval 10
+          & ppDRepVotingThresholdsL
+            .~ def
+              { dvtCommitteeNormal = 1 %! 10
+              , dvtUpdateToConstitution = 1 %! 10
+              }
+          & ppCommitteeMinSizeL .~ 2
+          & ppCommitteeMaxTermLengthL .~ EpochInterval 10
+      (drepKH, _stakingKH, _paymentKP) <- setupSingleDRep 1_000_000
+      -- Elect a committee of 2 members
+      committeeColdC1 <- KeyHashObj <$> freshKeyHash
+      committeeColdC2 <- KeyHashObj <$> freshKeyHash
+      gaiCC <-
+        submitGovAction $
+          UpdateCommittee
+            SNothing
+            mempty
+            (Map.fromList [(committeeColdC1, EpochNo 10), (committeeColdC2, EpochNo 2)])
+            (1 %! 2)
+      submitYesVote_ (DRepVoter $ KeyHashObj drepKH) gaiCC
+      passNEpochs 2
+      getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiCC)
+      committeeHotC1 <- registerCommitteeHotKey committeeColdC1
+      _committeeHotC2 <- registerCommitteeHotKey committeeColdC2
+      -- Submit a constitution with a CC vote
+      (gaiConstitution, _constitution) <- submitConstitution SNothing
+      submitYesVote_ (CommitteeVoter committeeHotC1) gaiConstitution
+      -- Check for CC acceptance
+      ccShouldNotBeExpired committeeColdC2
+      isCommitteeAccepted gaiConstitution `shouldReturn` True
+      -- expire the second CC
+      passNEpochs 2
+      -- Check for CC acceptance should fail
+      ccShouldBeExpired committeeColdC2
+      isCommitteeAccepted gaiConstitution `shouldReturn` False
+    it "Resigned" $ do
+      modifyPParams $ \pp ->
+        pp
+          & ppGovActionLifetimeL .~ EpochInterval 10
+          & ppDRepVotingThresholdsL
+            .~ def
+              { dvtCommitteeNormal = 1 %! 10
+              , dvtUpdateToConstitution = 1 %! 10
+              }
+          & ppCommitteeMinSizeL .~ 2
+          & ppCommitteeMaxTermLengthL .~ EpochInterval 10
+      (drepKH, _stakingKH, _paymentKP) <- setupSingleDRep 1_000_000
+      -- Elect a committee of 2 members
+      committeeColdC1 <- KeyHashObj <$> freshKeyHash
+      committeeColdC2 <- KeyHashObj <$> freshKeyHash
+      gaiCC <-
+        submitGovAction $
+          UpdateCommittee
+            SNothing
+            mempty
+            (Map.fromList [(committeeColdC1, EpochNo 10), (committeeColdC2, EpochNo 10)])
+            (1 %! 2)
+      submitYesVote_ (DRepVoter $ KeyHashObj drepKH) gaiCC
+      passNEpochs 2
+      getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiCC)
+      committeeHotC1 <- registerCommitteeHotKey committeeColdC1
+      _committeeHotC2 <- registerCommitteeHotKey committeeColdC2
+      -- Submit a constitution with a CC vote
+      (gaiConstitution, _constitution) <- submitConstitution SNothing
+      submitYesVote_ (CommitteeVoter committeeHotC1) gaiConstitution
+      -- Check for CC acceptance
+      ccShouldNotBeResigned committeeColdC2
+      isCommitteeAccepted gaiConstitution `shouldReturn` True
+      -- Resign the second CC
+      resignCommitteeColdKey committeeColdC2 SNothing
+      -- Check for CC acceptance should fail
+      ccShouldBeResigned committeeColdC2
+      isCommitteeAccepted gaiConstitution `shouldReturn` False
 
 paramChangeAffectsProposalsSpec ::
   forall era.

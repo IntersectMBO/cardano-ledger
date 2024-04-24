@@ -128,7 +128,7 @@ committeeAccepted ::
   GovActionState era ->
   Bool
 committeeAccepted RatifyEnv {reCommitteeState, reCurrentEpoch} rs gas =
-  case votingCommitteeThreshold rs reCommitteeState (gasAction gas) of
+  case votingCommitteeThreshold reCurrentEpoch rs reCommitteeState (gasAction gas) of
     SNothing -> False -- this happens if we have no committee, or if the committee is too small,
     -- in which case the committee vote is `no`
     SJust r ->
