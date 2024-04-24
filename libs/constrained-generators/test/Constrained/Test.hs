@@ -113,7 +113,8 @@ tests =
     testSpec "existsUnfree" existsUnfree
     -- TODO: double shrinking
     testSpecNoShrink "reifyYucky" reifyYucky
-    testSpec "fixedRangeElements" fixedRange
+    testSpec "fixedRange" fixedRange
+    testSpec "rangeHint" rangeHint
     numberyTests
     sizeTests
     numNumSpecTree

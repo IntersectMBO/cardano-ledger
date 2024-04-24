@@ -115,6 +115,7 @@ import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
 import Constrained hiding (Value)
 import Constrained qualified as C
+import Constrained.Spec.Map
 import Control.Monad.Trans.Fail.String
 import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS
@@ -730,10 +731,12 @@ instance IsConwayUniv fn => HasSpec fn Network
 
 instance HasSimpleRep (MultiAsset c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (MultiAsset c) where
-  emptySpec = flip (MapSpec mempty [] mempty) NoFold $
-    constrained' $ \_ innerMap ->
-      forAll innerMap $ \kv' ->
-        lit 0 <=. snd_ kv'
+  emptySpec =
+    defaultMapSpec
+      { mapSpecElem = constrained' $ \_ innerMap ->
+          forAll innerMap $ \kv' ->
+            lit 0 <=. snd_ kv'
+      }
 
 instance HasSimpleRep AssetName where
   type SimpleRep AssetName = ShortByteString

@@ -16,7 +16,7 @@ module Constrained.Spec (
 import Constrained.Base as X
 import Constrained.Instances ()
 import Constrained.Spec.Generics as X
-import Constrained.Spec.Maps as X
+import Constrained.Spec.Map as X
 import Constrained.Spec.Pairs as X
 import Constrained.Spec.Tree as X
 import Constrained.Univ ()

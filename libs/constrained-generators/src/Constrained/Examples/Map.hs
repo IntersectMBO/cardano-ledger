@@ -57,3 +57,7 @@ fixedRange = constrained $ \m ->
   [ forAll (rng_ m) (\x -> x ==. 5)
   , assert $ (sizeOf_ m) ==. 1
   ]
+
+rangeHint :: Specification BaseFn (Map Int Int)
+rangeHint = constrained $ \m ->
+  genHint 10 (rng_ m)
