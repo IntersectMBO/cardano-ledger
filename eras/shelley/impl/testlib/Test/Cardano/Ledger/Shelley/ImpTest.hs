@@ -188,7 +188,7 @@ import Cardano.Ledger.Val (Val (..))
 import Control.Monad (forM)
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader (..), asks)
-import Control.Monad.State.Strict (MonadState (..), execStateT, gets, modify)
+import Control.Monad.State.Strict (MonadState (..), gets, modify)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Writer.Class (MonadWriter (..))
 import Control.State.Transition (STS (..), TRC (..), applySTSOptsEither)
@@ -608,13 +608,13 @@ instance ShelleyEraImp era => Example (ImpTestM era ()) where
   type Arg (ImpTestM era ()) = ImpTestState era
 
   evaluateExample impTest params =
-    evaluateExample (\s -> evalImpTestM (getParamsQCGen params) s impTest) params
+    evaluateExample (\s -> uncurry evalImpTestM (applyParamsQCGen params s) impTest) params
 
 instance (ShelleyEraImp era, Arbitrary a, Show a) => Example (a -> ImpTestM era ()) where
   type Arg (a -> ImpTestM era ()) = ImpTestState era
 
   evaluateExample impTest params =
-    evaluateExample (\s -> property $ evalImpTestM (getParamsQCGen params) s . impTest) params
+    evaluateExample (\s -> property $ uncurry evalImpTestM (applyParamsQCGen params s) . impTest) params
 
 instance MonadGen (ImpTestM era) where
   liftGen (MkGen f) = do
@@ -638,14 +638,17 @@ instance HasSubState (ImpTestState era) where
   getSubState = StateGen . impGen
   setSubState s (StateGen g) = s {impGen = g}
 
-getParamsQCGen :: Params -> Maybe (QCGen, Int)
-getParamsQCGen params = replay (paramsQuickCheckArgs params)
+applyParamsQCGen :: Params -> ImpTestState era -> (Maybe Int, ImpTestState era)
+applyParamsQCGen params impTestState =
+  case replay (paramsQuickCheckArgs params) of
+    Nothing -> (Nothing, impTestState)
+    Just (qcGen, qcSize) -> (Just qcSize, impTestState {impGen = qcGen})
 
 evalImpTestGenM :: ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO b)
 evalImpTestGenM impState = fmap (fmap fst) . runImpTestGenM impState
 
 evalImpTestM ::
-  ShelleyEraImp era => Maybe (QCGen, Int) -> ImpTestState era -> ImpTestM era b -> IO b
+  ShelleyEraImp era => Maybe Int -> ImpTestState era -> ImpTestM era b -> IO b
 evalImpTestM qc impState = fmap fst . runImpTestM qc impState
 
 execImpTestGenM ::
@@ -654,32 +657,32 @@ execImpTestGenM impState = fmap (fmap snd) . runImpTestGenM impState
 
 execImpTestM ::
   ShelleyEraImp era =>
-  Maybe (QCGen, Int) ->
+  Maybe Int ->
   ImpTestState era ->
   ImpTestM era b ->
   IO (ImpTestState era)
-execImpTestM qc impState = fmap snd . runImpTestM qc impState
+execImpTestM qcSize impState = fmap snd . runImpTestM qcSize impState
 
 runImpTestGenM_ :: ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO ())
 runImpTestGenM_ impState = fmap void . runImpTestGenM impState
 
 runImpTestM_ ::
-  ShelleyEraImp era => Maybe (QCGen, Int) -> ImpTestState era -> ImpTestM era b -> IO ()
-runImpTestM_ qc impState = void . runImpTestM qc impState
+  ShelleyEraImp era => Maybe Int -> ImpTestState era -> ImpTestM era b -> IO ()
+runImpTestM_ qcSize impState = void . runImpTestM qcSize impState
 
 runImpTestGenM ::
   ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO (b, ImpTestState era))
-runImpTestGenM impState m = MkGen $ \qcGen qcSz -> runImpTestM (Just (qcGen, qcSz)) impState m
+runImpTestGenM impState m = MkGen $ \qcGen qcSz -> runImpTestM (Just qcSz) (impState {impGen = qcGen}) m
 
 runImpTestM ::
   ShelleyEraImp era =>
-  Maybe (QCGen, Int) ->
+  Maybe Int ->
   ImpTestState era ->
   ImpTestM era b ->
   IO (b, ImpTestState era)
-runImpTestM mQCGen impState (ImpTestM m) = do
-  let (initGen, qcSize) = fromMaybe (impGen impState, 30) mQCGen
-  ioRef <- newIORef $ impState {impGen = initGen}
+runImpTestM mQCSize impState (ImpTestM m) = do
+  let qcSize = fromMaybe 30 mQCSize
+  ioRef <- newIORef impState
   let
     env =
       ImpTestEnv
@@ -1116,8 +1119,9 @@ withImpState ::
   SpecWith (ImpTestState era) ->
   Spec
 withImpState =
-  beforeAll $
-    execStateT addRootTxOut $
+  beforeAll $ execImpTestM Nothing initImpTestState addRootTxOut
+  where
+    initImpTestState =
       ImpTestState
         { impNES = initImpNES
         , impRootTxIn = rootTxIn
@@ -1127,15 +1131,13 @@ withImpState =
         , impLastTick = 0
         , impGlobals = testGlobals
         , impLog = mempty
-        , impGen = qcGen
+        , impGen = mkQCGen 2024
         , impEvents = mempty
         }
-  where
     rootCoin = Coin 1_000_000_000
     rootTxIn = TxIn (mkTxId 0) minBound
-    (rootKeyPair, qcGen) = Random.uniform (mkQCGen 2024)
     addRootTxOut = do
-      rootKeyHash <- addKeyPair rootKeyPair
+      (rootKeyHash, _) <- freshKeyPair
       let rootAddr = Addr Testnet (KeyHashObj rootKeyHash) StakeRefNull
           rootTxOut = mkBasicTxOut rootAddr $ inject rootCoin
       impNESL . nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
