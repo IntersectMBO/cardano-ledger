@@ -245,6 +245,13 @@ jobs:
         export CARDANO_MAINNET_MIRROR="$(pwd)/epochs"
         cabal test ${{ matrix.package }}
 
+  complete:
+    name: Tests completed
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+    - run: echo 'All tests completed successfully'
+
   fourmolu:
     runs-on: ubuntu-latest
 
