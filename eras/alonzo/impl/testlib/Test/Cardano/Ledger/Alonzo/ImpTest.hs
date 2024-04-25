@@ -58,7 +58,6 @@ import Cardano.Ledger.Plutus.Language (
  )
 import Cardano.Ledger.Shelley.LedgerState (
   NewEpochState,
-  StashedAVVMAddresses,
   curPParamsEpochStateL,
   esLStateL,
   lsUTxOStateL,
@@ -68,7 +67,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ScriptsProvided (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (forM)
-import Data.Default.Class (Default)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromElems)
@@ -76,6 +74,7 @@ import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
+import Lens.Micro.Mtl ((%=))
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -102,14 +101,12 @@ class
 initAlonzoImpNES ::
   forall era.
   ( AlonzoEraPParams era
-  , Default (StashedAVVMAddresses era)
   , ShelleyEraImp era
   , AlonzoEraScript era
   ) =>
+  NewEpochState era ->
   NewEpochState era
-initAlonzoImpNES =
-  initShelleyImpNES
-    & nesEsL . curPParamsEpochStateL %~ initPParams
+initAlonzoImpNES = nesEsL . curPParamsEpochStateL %~ initPParams
   where
     initPParams pp =
       pp
@@ -384,7 +381,7 @@ instance
   ) =>
   ShelleyEraImp (AlonzoEra c)
   where
-  initImpNES = initAlonzoImpNES
+  initImpTestState = impNESL %= initAlonzoImpNES
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = alonzoFixupTx
 

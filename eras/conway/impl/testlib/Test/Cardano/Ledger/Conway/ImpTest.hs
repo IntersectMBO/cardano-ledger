@@ -192,6 +192,7 @@ import qualified Data.Text as T
 import Data.Tree
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro
+import Lens.Micro.Mtl ((%=))
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
@@ -224,16 +225,19 @@ instance
   ) =>
   ShelleyEraImp (ConwayEra c)
   where
-  initImpNES =
-    let nes =
-          initAlonzoImpNES
-            & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
-            & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
-        epochState = nes ^. nesEsL
-        ratifyState =
-          def
-            & rsEnactStateL .~ mkEnactState (epochState ^. epochStateGovStateL)
-     in nes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState
+  initImpTestState =
+    impNESL %= initConwayNES
+    where
+      initConwayNES nes =
+        let newNes =
+              (initAlonzoImpNES nes)
+                & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
+                & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
+            epochState = newNes ^. nesEsL
+            ratifyState =
+              def
+                & rsEnactStateL .~ mkEnactState (epochState ^. epochStateGovStateL)
+         in newNes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState
 
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
 

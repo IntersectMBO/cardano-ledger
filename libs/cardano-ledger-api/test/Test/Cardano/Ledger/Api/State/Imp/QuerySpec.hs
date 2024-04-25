@@ -271,7 +271,7 @@ spec = do
       Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) (CommitteeMemberState (EraCrypto era)) ->
       ImpTestM era ()
     expectQueryResult ckFilter hkFilter statusFilter expResult = do
-      nes <- use impNESG
+      nes <- use impNESL
       let CommitteeMembersState {csCommittee} =
             queryCommitteeMembersState
               ckFilter

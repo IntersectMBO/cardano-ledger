@@ -37,7 +37,7 @@ instance
   ) =>
   ShelleyEraImp (AllegraEra c)
   where
-  initImpNES = initShelleyImpNES
+  initImpTestState = pure ()
 
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
 
