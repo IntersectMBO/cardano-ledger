@@ -52,6 +52,7 @@ data MapSpec fn k v = MapSpec
   , mapSpecFold :: FoldSpec fn v
   }
 
+-- | emptySpec without all the constraints
 defaultMapSpec :: Ord k => MapSpec fn k v
 defaultMapSpec = MapSpec Nothing mempty mempty TrueSpec TrueSpec NoFold
 
@@ -80,6 +81,9 @@ instance
     (MapSpec mHint' mustKeys' mustVals' size' kvs' foldSpec') = fromGE ErrorSpec $ do
       typeSpec
         . MapSpec
+          -- This is min because that allows more compositionality - if a spec specifies a
+          -- low upper bound because some part of the spec will be slow it doesn't make sense
+          -- to increase it somewhere else because that part isn't slow.
           (unionWithMaybe min mHint mHint')
           (mustKeys <> mustKeys')
           (nub $ mustVals <> mustVals')
