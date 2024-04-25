@@ -14,6 +14,10 @@
 * Move `Metadatum` from `cardano-ledger-shelley` into a new module `Cardano.Ledger.Metadata`
 * Add `mkBasicTxAuxData` and `metadataTxAuxDataL` to `EraTxAuxData` type class.
 
+### `testlib`
+
+* Export `subState`
+
 ## 1.11.0.0
 
 * Add `shouldSatisfyExpr`

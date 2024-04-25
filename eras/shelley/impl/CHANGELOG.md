@@ -13,6 +13,7 @@
   * `withPostFixup`
 * Add `ToExpr` and `NFData` instances for `UtxoEnv`
 * Stop fixing up multi assets in the transaction.
+* Change how quickcheck generator is initialized in `runImpTestM` and others derived from it.
 
 ## 1.10.0.0
 

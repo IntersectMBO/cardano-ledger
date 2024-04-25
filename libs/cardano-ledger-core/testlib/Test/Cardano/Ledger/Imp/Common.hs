@@ -60,6 +60,7 @@ module Test.Cardano.Ledger.Imp.Common (
   HasStatefulGen (..),
   HasGenEnv (..),
   HasSubState (..),
+  subState,
   R.StatefulGen,
   StateGen (..),
   StateGenM (..),
