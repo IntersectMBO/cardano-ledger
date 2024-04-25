@@ -10,6 +10,7 @@ module Constrained.Examples.Basic where
 import GHC.Generics
 
 import Constrained
+import Constrained.Base
 
 leqPair :: Specification BaseFn (Int, Int)
 leqPair = constrained $ \p ->
@@ -150,3 +151,23 @@ basicSpec = constrained $ \x ->
   unsafeExists $ \y ->
     satisfies x $ constrained $ \x' ->
       x' <=. 1 + y
+
+newtype Listy a = Listy [a] deriving (Ord, Eq, Show, Generic)
+instance HasSimpleRep (Listy a)
+instance HasSpec fn a => HasSpec fn (Listy a)
+
+matchMatch :: Specification BaseFn (Listy Int, Listy Int)
+matchMatch = constrained' $ \wxs wys ->
+  match wxs $ \xs ->
+    match wys $ \ys ->
+      [ satisfies xs $ liftSizeSpec (rangeSize 1 2)
+      , satisfies ys $ liftSizeSpec (rangeSize 1 2)
+      ]
+
+matchMatch' :: Specification BaseFn (Listy Int, Listy Int)
+matchMatch' = constrained' $ \wxs wys ->
+  match wxs $ \xs ->
+    [ satisfies xs $ liftSizeSpec (rangeSize 1 2)
+    , match wys $ \ys ->
+        satisfies ys $ liftSizeSpec (rangeSize 1 2)
+    ]
