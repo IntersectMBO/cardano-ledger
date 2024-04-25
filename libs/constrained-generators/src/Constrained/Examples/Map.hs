@@ -14,6 +14,7 @@ import Data.Word
 import GHC.Generics
 
 import Constrained
+import Constrained.Base
 
 mapElemSpec :: Specification BaseFn (Map Int (Bool, Int))
 mapElemSpec = constrained $ \m ->
@@ -57,3 +58,23 @@ fixedRange = constrained $ \m ->
   [ forAll (rng_ m) (\x -> x ==. 5)
   , assert $ (sizeOf_ m) ==. 1
   ]
+
+newtype Mappy a = Mappy (Map Int a) deriving (Ord, Eq, Show, Generic)
+instance HasSimpleRep (Mappy a)
+instance HasSpec fn a => HasSpec fn (Mappy a)
+
+matchMatch :: Specification BaseFn (Mappy Int, Mappy Int)
+matchMatch = constrained' $ \wxs wys ->
+  match wxs $ \xs ->
+    match wys $ \ys ->
+      [ satisfies xs $ liftSizeSpec (rangeSize 1 2)
+      , satisfies ys $ liftSizeSpec (rangeSize 1 2)
+      ]
+
+matchMatch' :: Specification BaseFn (Mappy Int, Mappy Int)
+matchMatch' = constrained' $ \wxs wys ->
+  match wxs $ \xs ->
+    [ satisfies xs $ liftSizeSpec (rangeSize 1 2)
+    , match wys $ \ys ->
+        satisfies ys $ liftSizeSpec (rangeSize 1 2)
+    ]
