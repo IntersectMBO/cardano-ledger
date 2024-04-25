@@ -374,7 +374,10 @@ toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _ _) =
 -- | New Epoch state and environment
 data NewEpochState era = NewEpochState
   { nesEL :: !EpochNo
-  -- ^ Last epoch
+  -- ^ Number of the epoch when this NewEpochState was modified last. With respect to
+  -- block and transactions validation this will always be the current epoch
+  -- number. However, when it comes to the TICK rule, it will be the epoch number of the
+  -- previous epoch whenever we are crossing the epoch boundary.
   , nesBprev :: !(BlocksMade (EraCrypto era))
   -- ^ Blocks made before current epoch
   , nesBcur :: !(BlocksMade (EraCrypto era))
