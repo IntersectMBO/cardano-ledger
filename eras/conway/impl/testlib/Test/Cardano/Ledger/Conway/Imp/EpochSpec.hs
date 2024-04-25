@@ -12,20 +12,13 @@
 module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..), textToUrl)
+import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayEpochEvent (GovInfoEvent), ConwayNewEpochEvent (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Shelley.LedgerState (
-  asTreasuryL,
-  curPParamsEpochStateL,
-  epochStateGovStateL,
-  esAccountStateL,
-  nesEpochStateL,
-  nesEsL,
- )
+import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (Event, ShelleyTickEvent (..))
 import Cardano.Ledger.Val
 import Control.Monad.Writer (listen)
@@ -34,7 +27,6 @@ import Data.Default.Class (Default (..))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -189,22 +181,14 @@ dRepSpec =
       logStakeDistr
       passEpoch
     it "constitution is accepted after two epochs" $ do
-      constitutionHash <- freshSafeHash
-      let
-        constitutionAction =
-          NewConstitution
-            SNothing
-            ( Constitution
-                ( Anchor
-                    (fromJust $ textToUrl 64 "constitution.0")
-                    constitutionHash
-                )
-                SNothing
-            )
+      initialConstitution <- getConstitution
+      newAnchor <- arbitrary
+      let proposedConstitution = Constitution newAnchor SNothing
+
       -- Submit NewConstitution proposal two epoch too early to check that the action
       -- doesn't expire prematurely (ppGovActionLifetimeL is set to two epochs)
       logEntry "Submitting new constitution"
-      gaidConstitutionProp <- submitGovAction constitutionAction
+      gaidConstitutionProp <- submitGovAction $ NewConstitution SNothing proposedConstitution
 
       (committeeHotCred :| _) <- registerInitialCommittee
       (dRepCred, _, _) <- setupSingleDRep 1_000_000
@@ -226,10 +210,9 @@ dRepSpec =
         assertBool "Gov action should be accepted" isAccepted
       logAcceptedRatio gaidConstitutionProp
       logRatificationChecks gaidConstitutionProp
-      constitutionShouldBe ""
-
+      getConstitution `shouldReturn` initialConstitution
       passEpoch
-      constitutionShouldBe "constitution.0"
+      getConstitution `shouldReturn` proposedConstitution
 
 treasurySpec ::
   forall era.

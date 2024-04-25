@@ -58,6 +58,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   isSpoAccepted,
   isCommitteeAccepted,
   getCommitteeMembers,
+  getConstitution,
   registerInitialCommittee,
   logRatificationChecks,
   resignCommitteeColdKey,
@@ -227,11 +228,13 @@ instance
   ShelleyEraImp (ConwayEra c)
   where
   initImpTestState = do
-    kh <- fst <$> freshKeyPairA$
+    kh <- fst <$> freshKeyPair
     let committee = Committee [(KeyHashObj kh, EpochNo 15)] (1 %! 1)
-    impNESL %= initConwayNES committee
+    anchor <- arbitrary
+    let constitution = Constitution anchor SNothing
+    impNESL %= initConwayNES committee constitution
     where
-      initConwayNES committee nes =
+      initConwayNES committee constitution nes =
         let newNes =
               (initAlonzoImpNES nes)
                 & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
@@ -248,6 +251,7 @@ instance
                           }
                      )
                 & nesEsL . epochStateGovStateL . committeeGovStateL .~ SJust committee
+                & nesEsL . epochStateGovStateL . constitutionGovStateL .~ constitution
             epochState = newNes ^. nesEsL
             ratifyState =
               def
@@ -708,6 +712,12 @@ getLastEnactedCommittee ::
 getLastEnactedCommittee = do
   ps <- getProposals
   pure $ ps ^. pRootsL . grCommitteeL . prRootL
+
+getConstitution ::
+  ConwayEraImp era =>
+  ImpTestM era (Constitution era)
+getConstitution =
+  getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . constitutionGovStateL
 
 getLastEnactedConstitution ::
   ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))

@@ -281,6 +281,7 @@ constitutionSpec =
     (committeeMember :| _) <- registerInitialCommittee
     (dRep, _, _) <- setupSingleDRep 1_000_000
     (govActionId, constitution) <- submitConstitution SNothing
+    initialConstitution <- getConstitution
 
     proposalsBeforeVotes <- getsNES $ newEpochStateGovStateL . proposalsGovStateL
     pulserBeforeVotes <- getsNES newEpochStateDRepPulsingStateL
@@ -312,7 +313,7 @@ constitutionSpec =
 
     impAnn "New constitution is not enacted after one epoch" $ do
       constitutionAfterOneEpoch <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-      constitutionAfterOneEpoch `shouldBe` def
+      constitutionAfterOneEpoch `shouldBe` initialConstitution
 
     impAnn "Pulser should reflect the constitution to be enacted" $ do
       pulser <- getsNES newEpochStateDRepPulsingStateL
