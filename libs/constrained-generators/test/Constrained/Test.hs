@@ -45,6 +45,7 @@ tests :: Spec
 tests =
   describe "constrained" $ do
     testSpec "assertReal" assertReal
+    testSpec "assertRealMultiple" assertRealMultiple
     testSpec "setSpec" setSpec
     testSpec "leqPair" leqPair
     testSpec "setPair" setPair

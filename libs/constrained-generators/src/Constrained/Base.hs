@@ -978,7 +978,15 @@ linearize ::
   (MonadGenError m, BaseUniverse fn) => [Pred fn] -> DependGraph fn -> m [(Name fn, [Pred fn])]
 linearize preds graph = do
   sorted <- case topsort graph of
-    Left cycle -> fatalError ["dependency cycle in graph", show cycle, show graph]
+    Left cycle ->
+      fatalError $
+        [ "linearize: Dependency cycle in graph: "
+        , "  cycle: " ++ show cycle
+        , "  preds:"
+        ]
+          ++ [show $ indent 4 (pretty p) | p <- preds]
+          ++ [ "  graph: " ++ show graph
+             ]
     Right sorted -> pure sorted
   go sorted [(freeVarSet ps, ps) | ps <- filter isRelevantPred preds]
   where
@@ -995,7 +1003,12 @@ linearize preds graph = do
             then pure []
             else genError ["Linearize const False"]
       | otherwise =
-          fatalError $ "Dependency error in `linearize`: " : show graph : map (mappend "  " . show) ps
+          fatalError $
+            [ "Dependency error in `linearize`: "
+            , "  graph: " ++ show graph
+            , "  the following left-over constraints are not defining constraints for a unique variable: "
+            ]
+              ++ [show $ indent 4 (pretty p) | (_, p) <- ps]
     go (n : ns) ps = do
       let (nps, ops) = partition (isLastVariable n . fst) ps
       ((n, map snd nps) :) <$> go ns ops
@@ -3783,7 +3796,11 @@ reify t f body =
     ]
 
 assertReified :: HasSpec fn a => Term fn a -> (a -> Bool) -> Pred fn
-assertReified = reifies (lit True)
+-- Note, it is necessary to introduce the extra variable from the `exists` here
+-- to make things like `assertRealMultiple` work, if you don't have it then the
+-- `reifies` isn't a defining constraint for anything any more.
+assertReified t f =
+  reify t f assert
 
 reifies :: (HasSpec fn a, HasSpec fn b) => Term fn b -> Term fn a -> (a -> b) -> Pred fn
 reifies = Reifies
