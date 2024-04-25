@@ -305,7 +305,7 @@ genNonExpiredEpoch :: Gen EpochNo
 genNonExpiredEpoch = EpochNo <$> choose (1000, maxBound)
 
 genExpiredEpoch :: Gen EpochNo
-genExpiredEpoch = EpochNo <$> choose (0, 100)
+genExpiredEpoch = EpochNo <$> choose (0, 99)
 
 genNonResignedCommitteeState ::
   forall era.
