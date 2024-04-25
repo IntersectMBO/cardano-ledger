@@ -156,3 +156,10 @@ assertReal = constrained $ \x ->
   [ assert $ x <=. 10
   , assertReified x (<= 10)
   ]
+
+assertRealMultiple :: Specification BaseFn (Int, Int)
+assertRealMultiple = constrained' $ \x y ->
+  [ assert $ x <=. 10
+  , assert $ 11 <=. y
+  , assertReified (pair_ x y) $ uncurry (/=)
+  ]
