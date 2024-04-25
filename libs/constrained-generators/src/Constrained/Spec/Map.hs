@@ -12,7 +12,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Constrained.Spec.Maps (MapSpec (..), dom_, rng_) where
+module Constrained.Spec.Map (MapSpec (..), defaultMapSpec, dom_, rng_) where
 
 import Constrained.Base
 import Constrained.Core
@@ -36,20 +36,25 @@ import Test.QuickCheck (shrinkList)
 
 instance Ord a => Sized (Map.Map a b) where
   sizeOf = toInteger . Map.size
-  liftSizeSpec sz = TypeSpec (MapSpec mempty mempty (typeSpec sz) TrueSpec NoFold) []
-  liftMemberSpec xs = typeSpec (MapSpec mempty mempty (MemberSpec xs) TrueSpec NoFold)
-  sizeOfTypeSpec (MapSpec mustk mustv size _ _) =
+  liftSizeSpec sz = typeSpec $ defaultMapSpec {mapSpecSize = typeSpec sz}
+  liftMemberSpec xs = typeSpec $ defaultMapSpec {mapSpecSize = MemberSpec xs}
+  sizeOfTypeSpec (MapSpec _ mustk mustv size _ _) =
     typeSpec (atLeastSize (sizeOf mustk))
       <> typeSpec (atLeastSize (sizeOf mustv))
       <> size
 
 data MapSpec fn k v = MapSpec
-  { mapSpecMustKeys :: Set k
+  { mapSpecHint :: Maybe Integer
+  , mapSpecMustKeys :: Set k
   , mapSpecMustValues :: [v]
   , mapSpecSize :: Specification fn Integer
   , mapSpecElem :: Specification fn (k, v)
   , mapSpecFold :: FoldSpec fn v
   }
+
+-- | emptySpec without all the constraints
+defaultMapSpec :: Ord k => MapSpec fn k v
+defaultMapSpec = MapSpec Nothing mempty mempty TrueSpec TrueSpec NoFold
 
 deriving instance
   ( HasSpec fn (k, v)
@@ -59,7 +64,7 @@ deriving instance
   ) =>
   Show (MapSpec fn k v)
 instance Ord k => Forallable (Map k v) (k, v) where
-  forAllSpec kvs = typeSpec $ MapSpec mempty [] TrueSpec kvs NoFold
+  forAllSpec kvs = typeSpec $ defaultMapSpec {mapSpecElem = kvs}
   forAllToList = Map.toList
 
 instance
@@ -69,20 +74,24 @@ instance
   type TypeSpec fn (Map k v) = MapSpec fn k v
   type Prerequisites fn (Map k v) = (HasSpec fn k, HasSpec fn v)
 
-  emptySpec = MapSpec mempty mempty mempty mempty NoFold
+  emptySpec = defaultMapSpec
 
   combineSpec
-    (MapSpec mustKeys mustVals size kvs foldSpec)
-    (MapSpec mustKeys' mustVals' size' kvs' foldSpec') = fromGE ErrorSpec $ do
+    (MapSpec mHint mustKeys mustVals size kvs foldSpec)
+    (MapSpec mHint' mustKeys' mustVals' size' kvs' foldSpec') = fromGE ErrorSpec $ do
       typeSpec
         . MapSpec
+          -- This is min because that allows more compositionality - if a spec specifies a
+          -- low upper bound because some part of the spec will be slow it doesn't make sense
+          -- to increase it somewhere else because that part isn't slow.
+          (unionWithMaybe min mHint mHint')
           (mustKeys <> mustKeys')
           (nub $ mustVals <> mustVals')
           (size <> size')
           (kvs <> kvs')
         <$> combineFoldSpec foldSpec foldSpec'
 
-  conformsTo m (MapSpec mustKeys mustVals size kvs foldSpec) =
+  conformsTo m (MapSpec _ mustKeys mustVals size kvs foldSpec) =
     and
       [ mustKeys `Set.isSubsetOf` Map.keysSet m
       , all (`elem` Map.elems m) mustVals
@@ -91,7 +100,7 @@ instance
       , Map.elems m `conformsToFoldSpec` foldSpec
       ]
 
-  genFromTypeSpec (MapSpec mustKeys mustVals size (simplifySpec -> kvs) foldSpec) = do
+  genFromTypeSpec (MapSpec mHint mustKeys mustVals size (simplifySpec -> kvs) foldSpec) = do
     mustMap <- explain ["Make the mustMap"] $ forM (Set.toList mustKeys) $ \k -> do
       let vSpec = constrained $ \v -> satisfies (pair_ (lit k) v) kvs
       v <- explain [show $ "vSpec =" <+> pretty vSpec] $ genFromSpec vSpec
@@ -102,7 +111,7 @@ instance
           -- TODO, we should make sure size' is greater than or equal to 0
           satisfies
             (sz + Lit (sizeOf mustMap))
-            (size <> cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs))
+            (maybe TrueSpec leqSpec mHint <> size <> cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs))
         foldSpec' = case foldSpec of
           NoFold -> NoFold
           FoldSpec fn sumSpec -> FoldSpec fn $ propagateSpecFun (theAddFn @fn) (HOLE :? Value mustSum :> Nil) sumSpec
@@ -135,9 +144,9 @@ instance
           go (Map.insert k v m) restVals'
     go (Map.fromList mustMap) restVals
 
-  shrinkWithTypeSpec (MapSpec _ _ _ kvs _) m = map Map.fromList $ shrinkList (shrinkWithSpec kvs) (Map.toList m)
+  shrinkWithTypeSpec (MapSpec _ _ _ _ kvs _) m = map Map.fromList $ shrinkList (shrinkWithSpec kvs) (Map.toList m)
 
-  toPreds m (MapSpec mustKeys mustVals size kvs foldSpec) =
+  toPreds m (MapSpec mHint mustKeys mustVals size kvs foldSpec) =
     toPred
       [ assert $ lit mustKeys `subset_` dom_ m
       , forAll (Lit mustVals) $ \val ->
@@ -145,7 +154,15 @@ instance
       , sizeOf_ (rng_ m) `satisfies` size
       , forAll m $ \kv -> satisfies kv kvs
       , toPredsFoldSpec (rng_ m) foldSpec
+      , maybe TruePred (`genHint` m) mHint
       ]
+
+instance
+  (Ord k, HasSpec fn (Prod k v), HasSpec fn k, HasSpec fn v, HasSpec fn [v]) =>
+  HasGenHint fn (Map k v)
+  where
+  type Hint (Map k v) = Integer
+  giveHint h = typeSpec $ defaultMapSpec {mapSpecHint = Just h}
 
 ------------------------------------------------------------------------
 -- Functions
@@ -170,10 +187,11 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
               case spec of
                 MemberSpec [s] ->
                   typeSpec $
-                    MapSpec s [] (exactSizeSpec $ sizeOf s) TrueSpec NoFold
+                    MapSpec Nothing s [] (exactSizeSpec $ sizeOf s) TrueSpec NoFold
                 TypeSpec (SetSpec must elemspec size) [] ->
                   typeSpec $
                     MapSpec
+                      Nothing
                       must
                       []
                       size
@@ -188,10 +206,11 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
           , Evidence <- prerequisites @fn @(Map k v) ->
               case spec of
                 MemberSpec [r] ->
-                  typeSpec $ MapSpec Set.empty r (equalSpec $ sizeOf r) TrueSpec NoFold
-                TypeSpec (ListSpec Nothing must size elemspec foldspec) [] ->
+                  typeSpec $ MapSpec Nothing Set.empty r (equalSpec $ sizeOf r) TrueSpec NoFold
+                TypeSpec (ListSpec listHint must size elemspec foldspec) [] ->
                   typeSpec $
                     MapSpec
+                      listHint
                       Set.empty
                       must
                       size
@@ -207,14 +226,14 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
       -- No TypeAbstractions in ghc-8.10
       case f of
         (_ :: MapFn fn '[Map k v] (Set k))
-          | MapSpec mustSet _ sz kvSpec _ <- ts
+          | MapSpec _ mustSet _ sz kvSpec _ <- ts
           , Evidence <- prerequisites @fn @(Map k v) ->
               typeSpec $ SetSpec mustSet (mapSpec (fstFn @fn) $ toSimpleRepSpec kvSpec) sz
     Rng ->
       -- No TypeAbstractions in ghc-8.10
       case f of
         (_ :: MapFn fn '[Map k v] [v])
-          | MapSpec _ mustList sz kvSpec foldSpec <- ts
+          | MapSpec _ _ mustList sz kvSpec foldSpec <- ts
           , Evidence <- prerequisites @fn @(Map k v) ->
               typeSpec $ ListSpec Nothing mustList sz (mapSpec (sndFn @fn) $ toSimpleRepSpec kvSpec) foldSpec
 

@@ -30,7 +30,7 @@ library
         Constrained.Graph
         Constrained.Spec.Generics
         Constrained.Spec.Pairs
-        Constrained.Spec.Maps
+        Constrained.Spec.Map
         Constrained.Spec.Tree
         Constrained.Internals
         Constrained.Examples
