@@ -1034,8 +1034,12 @@ computeSpecSimplified x p = fromGE ErrorSpec $ case p of
   Case t branches ->
     let branchSpecs = mapList computeSpecBinderSimplified branches
      in propagateSpec (caseSpec branchSpecs) <$> toCtx x t
+  Reifies (Lit a) (Lit val) f
+    | f val == a -> pure TrueSpec
+    | otherwise -> genError ["Value does not reify to literal: " ++ show val ++ " -/> " ++ show a]
   Reifies t' (Lit val) f ->
     propagateSpec (equalSpec (f val)) <$> toCtx x t'
+  Reifies Lit {} _ _ -> pure TrueSpec
   -- Impossible cases that should be ruled out by the dependency analysis and linearizer
   DependsOn {} -> fatalError ["The impossible happened in computeSpec: DependsOn"]
   Reifies {} -> fatalError ["The impossible happened in computeSpec: Reifies", show x, show p]
@@ -3777,6 +3781,9 @@ reify t f body =
     [ reifies x t f
     , toPred $ body x
     ]
+
+assertReified :: HasSpec fn a => Term fn a -> (a -> Bool) -> Pred fn
+assertReified = reifies (lit True)
 
 reifies :: (HasSpec fn a, HasSpec fn b) => Term fn b -> Term fn a -> (a -> b) -> Pred fn
 reifies = Reifies
