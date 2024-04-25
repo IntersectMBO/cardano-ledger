@@ -44,6 +44,7 @@ testAll = hspec tests
 tests :: Spec
 tests =
   describe "constrained" $ do
+    testSpec "assertReal" assertReal
     testSpec "setSpec" setSpec
     testSpec "leqPair" leqPair
     testSpec "setPair" setPair

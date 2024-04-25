@@ -65,6 +65,8 @@ module Constrained (
   isJust,
   reify,
   reify',
+  reifies,
+  assertReified,
   genHint,
   dependsOn,
   forAll,

@@ -150,3 +150,9 @@ basicSpec = constrained $ \x ->
   unsafeExists $ \y ->
     satisfies x $ constrained $ \x' ->
       x' <=. 1 + y
+
+assertReal :: Specification BaseFn Int
+assertReal = constrained $ \x ->
+  [ assert $ x <=. 10
+  , assertReified x (<= 10)
+  ]
