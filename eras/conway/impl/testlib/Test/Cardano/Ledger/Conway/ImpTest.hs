@@ -57,6 +57,8 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   isDRepAccepted,
   isSpoAccepted,
   isCommitteeAccepted,
+  getCommitteeMembers,
+  registerInitialCommittee,
   logRatificationChecks,
   resignCommitteeColdKey,
   registerCommitteeHotKey,
@@ -108,7 +110,7 @@ import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
-  EpochNo,
+  EpochNo (..),
   Network (..),
   ProtVer (..),
   ShelleyBase,
@@ -225,14 +227,17 @@ instance
   ) =>
   ShelleyEraImp (ConwayEra c)
   where
-  initImpTestState =
-    impNESL %= initConwayNES
+  initImpTestState = do
+    kh <- fst <$> freshKeyPairA$
+    let committee = Committee [(KeyHashObj kh, EpochNo 15)] (1 %! 1)
+    impNESL %= initConwayNES committee
     where
-      initConwayNES nes =
+      initConwayNES committee nes =
         let newNes =
               (initAlonzoImpNES nes)
                 & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
                 & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
+                & nesEsL . epochStateGovStateL . committeeGovStateL .~ SJust committee
             epochState = newNes ^. nesEsL
             ratifyState =
               def
@@ -282,6 +287,15 @@ instance
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ConwayEraImp (ConwayEra c)
+
+registerInitialCommittee ::
+  (HasCallStack, ConwayEraImp era) =>
+  ImpTestM era (NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)))
+registerInitialCommittee = do
+  committeeMembers <- Set.toList <$> getCommitteeMembers
+  case committeeMembers of
+    x : xs -> traverse registerCommitteeHotKey $ x NE.:| xs
+    _ -> error "Expected an initial committee"
 
 -- | Submit a transaction that registers a new DRep and return the keyhash
 -- belonging to that DRep
@@ -670,6 +684,14 @@ logProposalsForest :: ConwayEraGov era => ImpTestM era ()
 logProposalsForest = do
   proposals <- getProposals
   logEntry $ proposalsShowDebug proposals True
+
+getCommitteeMembers ::
+  ConwayEraImp era =>
+  ImpTestM era (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+getCommitteeMembers = do
+  committee <-
+    getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+  pure $ Map.keysSet $ foldMap' committeeMembers committee
 
 getLastEnactedCommittee ::
   ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'CommitteePurpose era))

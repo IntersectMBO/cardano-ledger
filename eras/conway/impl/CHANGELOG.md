@@ -52,6 +52,7 @@
 
 ### `testlib`
 
+* Add `registerInitialCommittee` and `getCommitteeMembers` to Conway ImpTest
 * Implement `ConwayUtxowPredFailure` instances:
   * `Arbitrary`
   * `ToExpr`
