@@ -424,7 +424,10 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
   -- window. We must ensure for secure operation of the Hard Fork Combinator that we have
   -- the new EnactState available 2 stability windows before the end of the epoch, while
   -- spreading out stake distribution computation throughout the first 8 stability
-  -- windows. Therefore, we divide the number of stake credentials by 8*k
+  -- windows. That being said, there is are slots that do not mint any blocks, which means
+  -- we need to underestimate how many ticks we will have, thus we will try to finish the
+  -- pulser 2 stability windows prior to the time when the results are needed. Therefore,
+  -- we divide the number of stake credentials by 6*k
   globals <- ask
   let ledgerState = epochState ^. esLStateL
       utxoState = lsUTxOState ledgerState
@@ -437,7 +440,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
       k = securityParameter globals
       umap = dsUnified dState
       umapSize = Map.size $ umElems umap
-      pulseSize = max 1 (ceiling (toInteger umapSize % (8 * toInteger k)))
+      pulseSize = max 1 (ceiling (toInteger umapSize % (6 * toInteger k)))
       epochState' =
         epochState
           & epochStateGovStateL . cgsDRepPulsingStateL
