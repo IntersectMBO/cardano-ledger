@@ -24,6 +24,7 @@ import Control.Monad (forM)
 import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (def)
 import Data.Foldable (foldl', traverse_)
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
@@ -104,8 +105,8 @@ treasuryWithdrawalsSpec =
       ensTreasury enactState'' `shouldBe` Coin 1
 
     it "Withdrawals exceeding treasury submitted in a single proposal" $ do
-      (drepC, committeeC, _) <- electBasicCommittee
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      (committeeC :| _) <- registerInitialCommittee
+      (drepC, _, _) <- setupSingleDRep 1_000_000
       initialTreasury <- getTreasury
       numWithdrawals <- choose (1, 10)
       withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
@@ -125,8 +126,8 @@ treasuryWithdrawalsSpec =
       sumRewardAccounts withdrawals `shouldReturn` sumRequested
 
     it "Withdrawals exceeding maxBound Word64 submitted in a single proposal" $ do
-      (drepC, committeeC, _) <- electBasicCommittee
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      (committeeC :| _) <- registerInitialCommittee
+      (drepC, _, _) <- setupSingleDRep 1_000_000
       initialTreasury <- getTreasury
       numWithdrawals <- choose (1, 10)
       withdrawals <- genWithdrawalsExceeding (Coin (fromIntegral (maxBound :: Word64))) numWithdrawals
@@ -134,8 +135,8 @@ treasuryWithdrawalsSpec =
       checkNoWithdrawal initialTreasury withdrawals
 
     it "Withdrawals exceeding treasury submitted in several proposals within the same epoch" $ do
-      (drepC, committeeC, _) <- electBasicCommittee
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      (committeeC :| _) <- registerInitialCommittee
+      (drepC, _, _) <- setupSingleDRep 1_000_000
       initialTreasury <- getTreasury
       numWithdrawals <- choose (1, 10)
       withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals
@@ -183,7 +184,7 @@ treasuryWithdrawalsSpec =
 hardForkInitiationSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
 hardForkInitiationSpec =
   it "HardForkInitiation" $ do
-    (_, committeeMember, _) <- electBasicCommittee
+    (committeeMember :| _) <- registerInitialCommittee
     modifyPParams $ \pp ->
       pp
         & ppDRepVotingThresholdsL
@@ -210,11 +211,11 @@ hardForkInitiationSpec =
     let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
     govActionId <- submitGovAction $ HardForkInitiation SNothing nextProtVer
     submitYesVote_ (CommitteeVoter committeeMember) govActionId
-    submitYesVote_ (DRepVoter (KeyHashObj dRep1)) govActionId
+    submitYesVote_ (DRepVoter dRep1) govActionId
     submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
     passNEpochs 2
     getsNES (nesEsL . curPParamsEpochStateL . ppProtocolVersionL) `shouldReturn` curProtVer
-    submitYesVote_ (DRepVoter (KeyHashObj dRep2)) govActionId
+    submitYesVote_ (DRepVoter dRep2) govActionId
     passNEpochs 2
     getsNES (nesEsL . curPParamsEpochStateL . ppProtocolVersionL) `shouldReturn` curProtVer
     submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
@@ -238,8 +239,9 @@ noConfidenceSpec =
         do
           committee <- getCommittee
           impAnn "There should not be a committee" $ committee `shouldBe` SNothing
-    assertNoCommittee
     khCC <- freshKeyHash
+    initialCommitteeMembers <- getCommitteeMembers
+
     (drep, _, _) <- setupSingleDRep 1_000_000
     let committeeMap =
           Map.fromList
@@ -249,7 +251,7 @@ noConfidenceSpec =
       electCommittee
         SNothing
         drep
-        mempty
+        initialCommitteeMembers
         committeeMap
     (khSPO, _, _) <- setupPoolWithStake $ Coin 42_000_000
     logStakeDistr
@@ -269,15 +271,17 @@ noConfidenceSpec =
           , pProcAnchor = def
           }
     submitYesVote_ (StakePoolVoter khSPO) gaidNoConf
-    submitYesVote_ (DRepVoter $ KeyHashObj drep) gaidNoConf
+    submitYesVote_ (DRepVoter drep) gaidNoConf
     replicateM_ 4 passEpoch
     assertNoCommittee
 
 constitutionSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
 constitutionSpec =
   it "Constitution" $ do
-    (dRep, committeeMember, _) <- electBasicCommittee
+    (committeeMember :| _) <- registerInitialCommittee
+    (dRep, _, _) <- setupSingleDRep 1_000_000
     (govActionId, constitution) <- submitConstitution SNothing
+    initialConstitution <- getConstitution
 
     proposalsBeforeVotes <- getsNES $ newEpochStateGovStateL . proposalsGovStateL
     pulserBeforeVotes <- getsNES newEpochStateDRepPulsingStateL
@@ -309,7 +313,7 @@ constitutionSpec =
 
     impAnn "New constitution is not enacted after one epoch" $ do
       constitutionAfterOneEpoch <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
-      constitutionAfterOneEpoch `shouldBe` def
+      constitutionAfterOneEpoch `shouldBe` initialConstitution
 
     impAnn "Pulser should reflect the constitution to be enacted" $ do
       pulser <- getsNES newEpochStateDRepPulsingStateL
@@ -339,17 +343,16 @@ actionPrioritySpec =
     it
       "higher action priority wins"
       $ do
-        (drepC, _, gpi) <- electBasicCommittee
+        (drepC, _, _) <- setupSingleDRep 1_000_000
         (poolKH, _, _) <- setupPoolWithStake $ Coin 1_000_000
-        modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
         cc <- KeyHashObj <$> freshKeyHash
         gai1 <-
           submitGovAction $
-            UpdateCommittee (SJust gpi) mempty (Map.singleton cc (EpochNo 30)) $
+            UpdateCommittee SNothing mempty (Map.singleton cc (EpochNo 30)) $
               1 %! 2
         -- gai2 is the first action of a higher priority
-        gai2 <- submitGovAction $ NoConfidence $ SJust gpi
-        gai3 <- submitGovAction $ NoConfidence $ SJust gpi
+        gai2 <- submitGovAction $ NoConfidence SNothing
+        gai3 <- submitGovAction $ NoConfidence SNothing
         traverse_ @[]
           ( \gaid -> do
               submitYesVote_ (DRepVoter drepC) gaid
@@ -371,8 +374,8 @@ actionPrioritySpec =
     let val3 = Coin 1_000_003
 
     it "proposals of same priority are enacted in order of submission" $ do
-      (drepC, committeeC, _) <- electBasicCommittee
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      (committeeC :| _) <- registerInitialCommittee
+      (drepC, _, _) <- setupSingleDRep 1_000_000
       pGai0 <-
         submitParameterChange
           SNothing
@@ -399,8 +402,8 @@ actionPrioritySpec =
         `shouldReturn` val3
 
     it "only the first action of a transaction gets enacted" $ do
-      (drepC, committeeC, _) <- electBasicCommittee
-      modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 5
+      (committeeC :| _) <- registerInitialCommittee
+      (drepC, _, _) <- setupSingleDRep 1_000_000
       gaids <-
         submitGovActions $
           NE.fromList

@@ -81,7 +81,7 @@ library
         cardano-ledger-binary ^>=1.3,
         cardano-ledger-core ^>=1.12,
         cardano-ledger-mary ^>=1.6.0,
-        cardano-ledger-shelley ^>=1.10,
+        cardano-ledger-shelley ^>=1.11,
         cardano-slotting,
         cardano-strict-containers,
         containers,
@@ -133,10 +133,10 @@ library testlib
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-strict-containers,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
-        data-default-class,
         plutus-ledger-api,
         generic-random,
         microlens,
+        microlens-mtl,
         text,
         tree-diff
 

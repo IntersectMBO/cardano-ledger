@@ -61,7 +61,7 @@ library
         cardano-ledger-conway >=1.13 && <1.15,
         cardano-ledger-core ^>=1.12,
         cardano-ledger-mary >=1.5 && <1.7,
-        cardano-ledger-shelley ^>=1.10,
+        cardano-ledger-shelley ^>=1.11,
         cardano-slotting,
         containers,
         FailT,

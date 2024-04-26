@@ -57,6 +57,9 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   isDRepAccepted,
   isSpoAccepted,
   isCommitteeAccepted,
+  getCommitteeMembers,
+  getConstitution,
+  registerInitialCommittee,
   logRatificationChecks,
   resignCommitteeColdKey,
   registerCommitteeHotKey,
@@ -108,7 +111,7 @@ import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
-  EpochNo,
+  EpochNo (..),
   Network (..),
   ProtVer (..),
   ShelleyBase,
@@ -184,7 +187,6 @@ import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
-import Data.Maybe.Strict (isSJust)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -192,6 +194,7 @@ import qualified Data.Text as T
 import Data.Tree
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro
+import Lens.Micro.Mtl ((%=))
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
@@ -224,16 +227,36 @@ instance
   ) =>
   ShelleyEraImp (ConwayEra c)
   where
-  initImpNES =
-    let nes =
-          initAlonzoImpNES
-            & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
-            & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
-        epochState = nes ^. nesEsL
-        ratifyState =
-          def
-            & rsEnactStateL .~ mkEnactState (epochState ^. epochStateGovStateL)
-     in nes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState
+  initImpTestState = do
+    kh <- fst <$> freshKeyPair
+    let committee = Committee [(KeyHashObj kh, EpochNo 15)] (1 %! 1)
+    anchor <- arbitrary
+    let constitution = Constitution anchor SNothing
+    impNESL %= initConwayNES committee constitution
+    where
+      initConwayNES committee constitution nes =
+        let newNes =
+              (initAlonzoImpNES nes)
+                & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
+                & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
+                & nesEsL . curPParamsEpochStateL . ppGovActionDepositL .~ Coin 123
+                & nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL .~ EpochInterval 20
+                & nesEsL . curPParamsEpochStateL . ppCommitteeMinSizeL .~ 1
+                & nesEsL . curPParamsEpochStateL . ppDRepVotingThresholdsL
+                  %~ ( \dvt ->
+                        dvt
+                          { dvtCommitteeNormal = 1 %! 1
+                          , dvtCommitteeNoConfidence = 1 %! 2
+                          , dvtUpdateToConstitution = 1 %! 2
+                          }
+                     )
+                & nesEsL . epochStateGovStateL . committeeGovStateL .~ SJust committee
+                & nesEsL . epochStateGovStateL . constitutionGovStateL .~ constitution
+            epochState = newNes ^. nesEsL
+            ratifyState =
+              def
+                & rsEnactStateL .~ mkEnactState (epochState ^. epochStateGovStateL)
+         in newNes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState
 
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
 
@@ -279,6 +302,15 @@ instance
   ) =>
   ConwayEraImp (ConwayEra c)
 
+registerInitialCommittee ::
+  (HasCallStack, ConwayEraImp era) =>
+  ImpTestM era (NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)))
+registerInitialCommittee = do
+  committeeMembers <- Set.toList <$> getCommitteeMembers
+  case committeeMembers of
+    x : xs -> traverse registerCommitteeHotKey $ x NE.:| xs
+    _ -> error "Expected an initial committee"
+
 -- | Submit a transaction that registers a new DRep and return the keyhash
 -- belonging to that DRep
 registerDRep ::
@@ -312,8 +344,8 @@ setupSingleDRep ::
   Integer ->
   ImpTestM
     era
-    ( KeyHash 'DRepRole (EraCrypto era)
-    , KeyHash 'Staking (EraCrypto era)
+    ( Credential 'DRepRole (EraCrypto era)
+    , Credential 'Staking (EraCrypto era)
     , KeyPair 'Payment (EraCrypto era)
     )
 setupSingleDRep stake = do
@@ -335,7 +367,7 @@ setupSingleDRep stake = do
               (DelegVote (DRepCredential $ KeyHashObj drepKH))
               zero
           ]
-  pure (drepKH, delegatorKH, spendingKP)
+  pure (KeyHashObj drepKH, KeyHashObj delegatorKH, spendingKP)
 
 getsPParams :: EraGov era => Lens' (PParams era) a -> ImpTestM era a
 getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
@@ -667,11 +699,25 @@ logProposalsForest = do
   proposals <- getProposals
   logEntry $ proposalsShowDebug proposals True
 
+getCommitteeMembers ::
+  ConwayEraImp era =>
+  ImpTestM era (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+getCommitteeMembers = do
+  committee <-
+    getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+  pure $ Map.keysSet $ foldMap' committeeMembers committee
+
 getLastEnactedCommittee ::
   ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'CommitteePurpose era))
 getLastEnactedCommittee = do
   ps <- getProposals
   pure $ ps ^. pRootsL . grCommitteeL . prRootL
+
+getConstitution ::
+  ConwayEraImp era =>
+  ImpTestM era (Constitution era)
+getConstitution =
+  getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . constitutionGovStateL
 
 getLastEnactedConstitution ::
   ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
@@ -901,7 +947,7 @@ getRatifyEnvAndState = do
   pure (ratifyEnv, ratifyState)
 
 -- | Checks whether the governance action has enough DRep votes to be accepted in the next
--- epoch. (Note that no other checks execept DRep votes is used)
+-- epoch. (Note that no other checks except DRep votes are used)
 isDRepAccepted ::
   (HasCallStack, ConwayEraGov era, ConwayEraPParams era) =>
   GovActionId (EraCrypto era) ->
@@ -1010,7 +1056,7 @@ electCommittee ::
   , ConwayEraImp era
   ) =>
   StrictMaybe (GovPurposeId 'CommitteePurpose era) ->
-  KeyHash 'DRepRole (EraCrypto era) ->
+  Credential 'DRepRole (EraCrypto era) ->
   Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
   Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
   ImpTestM era (GovPurposeId 'CommitteePurpose era)
@@ -1023,7 +1069,7 @@ electCommittee prevGovId drep toRemove toAdd = impAnn "Electing committee" $ do
         toAdd
         (1 %! 2)
   gaidCommitteeProp <- submitGovAction committeeAction
-  submitYesVote_ (DRepVoter $ KeyHashObj drep) gaidCommitteeProp
+  submitYesVote_ (DRepVoter drep) gaidCommitteeProp
   pure (GovPurposeId gaidCommitteeProp)
 
 electBasicCommittee ::
@@ -1038,21 +1084,8 @@ electBasicCommittee ::
     , GovPurposeId 'CommitteePurpose era
     )
 electBasicCommittee = do
-  logEntry "Setting up PParams and DRep"
-  modifyPParams $ \pp ->
-    pp
-      & ppDRepVotingThresholdsL
-        %~ ( \dvt ->
-              dvt
-                { dvtCommitteeNormal = 1 %! 1
-                , dvtCommitteeNoConfidence = 1 %! 2
-                , dvtUpdateToConstitution = 1 %! 2
-                }
-           )
-      & ppCommitteeMaxTermLengthL .~ EpochInterval 20
-      & ppGovActionLifetimeL .~ EpochInterval 2
-      & ppGovActionDepositL .~ Coin 123
-  (drepKH, _, _) <- setupSingleDRep 1_000_000
+  logEntry "Setting up a DRep"
+  (drep, _, _) <- setupSingleDRep 1_000_000
 
   logEntry "Registering committee member"
   coldCommitteeC <- KeyHashObj <$> freshKeyHash
@@ -1068,29 +1101,11 @@ electBasicCommittee = do
       [ committeeAction
       , UpdateCommittee SNothing mempty mempty (1 %! 10)
       ]
-  submitYesVote_ (DRepVoter $ KeyHashObj drepKH) gaidCommitteeProp
-
-  let
-    assertNoCommittee = do
-      committee <-
-        getsNES $
-          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-      impAnn "There should not be a committee" $ committee `shouldBe` SNothing
-  logRatificationChecks gaidCommitteeProp
-  assertNoCommittee
-
+  submitYesVote_ (DRepVoter drep) gaidCommitteeProp
   passEpoch
-  logRatificationChecks gaidCommitteeProp
-  assertNoCommittee
   passEpoch
-  do
-    committee <-
-      getsNES $
-        nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-    impAnn "There should be a committee" $ committee `shouldSatisfy` isSJust
-
   hotCommitteeC <- registerCommitteeHotKey coldCommitteeC
-  pure (KeyHashObj drepKH, hotCommitteeC, GovPurposeId gaidCommitteeProp)
+  pure (drep, hotCommitteeC, GovPurposeId gaidCommitteeProp)
 
 logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era ()
 logCurPParams = do
@@ -1278,17 +1293,17 @@ submitConstitution prevGovId = do
 
 expectExtraDRepExpiry ::
   (HasCallStack, EraGov era, ConwayEraPParams era) =>
-  KeyHash 'DRepRole (EraCrypto era) ->
+  Credential 'DRepRole (EraCrypto era) ->
   EpochNo ->
   ImpTestM era ()
-expectExtraDRepExpiry kh expected = do
+expectExtraDRepExpiry drep expected = do
   drepActivity <-
     getsNES $
       nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL . ppDRepActivityL
   dsMap <-
     getsNES $
       nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
-  let ds = Map.lookup (KeyHashObj kh) dsMap
+  let ds = Map.lookup drep dsMap
   (^. drepExpiryL)
     <$> ds
       `shouldBe` Just (addEpochInterval expected drepActivity)

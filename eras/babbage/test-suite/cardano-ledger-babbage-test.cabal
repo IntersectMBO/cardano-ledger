@@ -41,7 +41,7 @@ library
         cardano-ledger-shelley-ma-test >=1.1,
         cardano-ledger-mary >=1.4,
         cardano-ledger-shelley-test >=1.1,
-        cardano-ledger-shelley >=1.6 && <1.11,
+        cardano-ledger-shelley >=1.6 && <1.12,
         cardano-strict-containers,
         cardano-slotting,
         containers,

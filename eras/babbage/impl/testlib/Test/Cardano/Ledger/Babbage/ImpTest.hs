@@ -17,6 +17,7 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
+import Lens.Micro.Mtl ((%=))
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Common
@@ -30,7 +31,7 @@ instance
   ) =>
   ShelleyEraImp (BabbageEra c)
   where
-  initImpNES = initAlonzoImpNES
+  initImpTestState = impNESL %= initAlonzoImpNES
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = alonzoFixupTx
 

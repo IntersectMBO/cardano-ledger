@@ -1,11 +1,13 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.10.1.0
+## 1.11.0.0
 
 *
 
 ### `testlib`
 
+* Export `impNESL` instead of of `impNESG` from `ImpTest`
+* Replace `initImpNES` with `initImpTestState` and change its return type to MonadState
 * Add functions to Shelley `ImpTest`:
   * `withFixup`
   * `withCustomFixup`
