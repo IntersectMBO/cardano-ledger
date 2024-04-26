@@ -58,17 +58,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install Haskell
-      uses: input-output-hk/setup-haskell@v1
-      id: setup-haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: latest
-
     - name: Install system dependencies
       uses: input-output-hk/actions/base@latest
       with:
         use-sodium-vrf: false # default is true
+
+    - name: Install Haskell
+      id: install-haskell
+      uses: input-output-hk/actions/haskell@latest
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: latest
 
     - name: Configure to use libsodium
       run: |
@@ -88,7 +88,7 @@ jobs:
       name: Cache cabal store
       with:
         path: |
-          ${{ steps.setup-haskell.outputs.cabal-store }}
+          ${{ steps.install-haskell.outputs.cabal-store }}
         # cache is invalidated upon a change to cabal.project (and/or cabal.project.local), a bump to
         # CABAL_CACHE_VERSION or after a week of inactivity
         key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
@@ -171,17 +171,17 @@ jobs:
         shell: bash
 
     steps:
-    - name: Install Haskell
-      uses: input-output-hk/setup-haskell@v1
-      id: setup-haskell
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: latest
-
     - name: Install system dependencies
       uses: input-output-hk/actions/base@latest
       with:
         use-sodium-vrf: false # default is true
+
+    - name: Install Haskell
+      id: install-haskell
+      uses: input-output-hk/actions/haskell@latest
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: latest
 
     - name: Set up Ruby 2.7
       uses: ruby/setup-ruby@v1
@@ -229,7 +229,7 @@ jobs:
       name: Cache cabal store
       with:
         path: |
-          ${{ steps.setup-haskell.outputs.cabal-store }}
+          ${{ steps.install-haskell.outputs.cabal-store }}
         # cache is invalidated upon a change to cabal.project (and/or cabal.project.local), a bump to
         # CABAL_CACHE_VERSION or after a week of inactivity
         key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
