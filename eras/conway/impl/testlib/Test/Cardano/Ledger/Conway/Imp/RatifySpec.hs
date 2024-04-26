@@ -568,7 +568,6 @@ votingSpec =
                   { dvtCommitteeNormal = 51 %! 100
                   , dvtCommitteeNoConfidence = 51 %! 100
                   }
-              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
               & ppGovActionDepositL .~ Coin 1_000_000
               & ppPoolDepositL .~ Coin 200_000
               & ppEMaxL .~ EpochInterval 5
@@ -690,11 +689,11 @@ votingSpec =
                   { pvtCommitteeNormal = 51 %! 100
                   , pvtCommitteeNoConfidence = 51 %! 100
                   }
-              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
               & ppGovActionDepositL .~ Coin 1_000_000
               & ppPoolDepositL .~ Coin 200_000
               & ppEMaxL .~ EpochInterval 5
               & ppGovActionLifetimeL .~ EpochInterval 5
+              & ppDRepVotingThresholdsL .~ def
           -- Setup Pool delegation #1
           (poolKH1, delegatorCStaking1) <- setupPoolWithoutStake
           -- Add rewards to delegation #1
