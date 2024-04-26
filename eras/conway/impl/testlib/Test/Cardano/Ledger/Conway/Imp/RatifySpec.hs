@@ -5,7 +5,10 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Cardano.Ledger.Conway.Imp.RatifySpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.RatifySpec (
+  spec,
+  relevantDuringBootstrapSpec,
+) where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
@@ -35,12 +38,20 @@ spec ::
   SpecWith (ImpTestState era)
 spec =
   describe "RATIFY" $ do
+    relevantDuringBootstrapSpec
     votingSpec
     delayingActionsSpec
-    spoVotesForHardForkInitiation
+    spoVotesCommitteeUpdates
     committeeMinSizeAffectsInFlightProposalsSpec
     paramChangeAffectsProposalsSpec
     committeeExpiryResignationDiscountSpec
+
+relevantDuringBootstrapSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+relevantDuringBootstrapSpec =
+  spoVotesForHardForkInitiation
 
 committeeExpiryResignationDiscountSpec ::
   forall era.
@@ -352,39 +363,18 @@ committeeMinSizeAffectsInFlightProposalsSpec =
       passNEpochs 2
       getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` (treasury <-> Coin 1_000)
 
-spoVotesForHardForkInitiation ::
+spoVotesCommitteeUpdates ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpTestState era)
-spoVotesForHardForkInitiation =
+spoVotesCommitteeUpdates =
   describe "Counting of SPO votes" $ do
-    it "HardForkInitiation" $ do
-      (hotCC :| _) <- registerInitialCommittee
-      (spoK1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000
-      (spoK2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000
-      (_spoK3, _paymentC3, _stakingC3) <- setupPoolWithStake $ Coin 1_000
-      (_spoK4, _paymentC4, _stakingC4) <- setupPoolWithStake $ Coin 1_000
-      modifyPParams $ ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 1 %! 2
-      protVer <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
-      gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
-      submitYesVote_ (CommitteeVoter hotCC) gai
-      -- 1 % 4 stake yes; 3 % 4 stake no; yes / stake - abstain < 1 % 2
-      submitYesVote_ (StakePoolVoter spoK1) gai
-      passNEpochs 2
-      logRatificationChecks gai
-      isSpoAccepted gai `shouldReturn` False
-      getLastEnactedHardForkInitiation `shouldReturn` SNothing
-      -- 1 % 2 stake yes; 1 % 2 stake no; yes / stake - abstain = 1 % 2
-      submitYesVote_ (StakePoolVoter spoK2) gai
-      isSpoAccepted gai `shouldReturn` True
-      passNEpochs 2
-      getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
     describe "All gov action other than HardForkInitiation" $ do
       it "NoConfidence" $ do
-        (spoK1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000
-        (_spoK2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000
-        (_spoK3, _paymentC3, _stakingC3) <- setupPoolWithStake $ Coin 1_000
-        (_spoK4, _paymentC4, _stakingC4) <- setupPoolWithStake $ Coin 1_000
+        (spoK1, _, _) <- setupPoolWithStake $ Coin 1_000
+        _ <- setupPoolWithStake $ Coin 1_000
+        _ <- setupPoolWithStake $ Coin 1_000
+        _ <- setupPoolWithStake $ Coin 1_000
         modifyPParams $ \pp ->
           pp
             & ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 1 %! 2
@@ -395,10 +385,10 @@ spoVotesForHardForkInitiation =
         passNEpochs 2
         getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gai)
       it "CommitteeUpdate" $ do
-        (spoK1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000
-        (_spoK2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000
-        (_spoK3, _paymentC3, _stakingC3) <- setupPoolWithStake $ Coin 1_000
-        (_spoK4, _paymentC4, _stakingC4) <- setupPoolWithStake $ Coin 1_000
+        (spoK1, _, _) <- setupPoolWithStake $ Coin 1_000
+        _ <- setupPoolWithStake $ Coin 1_000
+        _ <- setupPoolWithStake $ Coin 1_000
+        _ <- setupPoolWithStake $ Coin 1_000
         modifyPParams $ \pp ->
           pp
             & ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ 1 %! 2
@@ -413,6 +403,34 @@ spoVotesForHardForkInitiation =
         submitYesVote_ (StakePoolVoter spoK1) gai
         passNEpochs 2
         getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gai)
+
+spoVotesForHardForkInitiation ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+spoVotesForHardForkInitiation =
+  describe "Counting of SPO votes" $ do
+    it "HardForkInitiation" $ do
+      (hotCC :| _) <- registerInitialCommittee
+      (spoK1, _, _) <- setupPoolWithStake $ Coin 1_000
+      (spoK2, _, _) <- setupPoolWithStake $ Coin 1_000
+      _ <- setupPoolWithStake $ Coin 1_000
+      _ <- setupPoolWithStake $ Coin 1_000
+      modifyPParams $ ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 1 %! 2
+      protVer <- getProtVer
+      gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+      submitYesVote_ (CommitteeVoter hotCC) gai
+      -- 1 % 4 stake yes; 3 % 4 stake no; yes / stake - abstain < 1 % 2
+      submitYesVote_ (StakePoolVoter spoK1) gai
+      passNEpochs 2
+      logRatificationChecks gai
+      isSpoAccepted gai `shouldReturn` False
+      getLastEnactedHardForkInitiation `shouldReturn` SNothing
+      -- 1 % 2 stake yes; 1 % 2 stake no; yes / stake - abstain = 1 % 2
+      submitYesVote_ (StakePoolVoter spoK2) gai
+      isSpoAccepted gai `shouldReturn` True
+      passNEpochs 2
+      getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
 
 votingSpec ::
   forall era.
@@ -741,10 +759,10 @@ delayingActionsSpec =
     it "A delaying action delays its child even when both ere proposed and ratified in the same epoch" $ do
       (committeeMember :| _) <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
-      gai0 <- submitInitConstitutionGovAction
-      gai1 <- submitChildConstitutionGovAction gai0
-      gai2 <- submitChildConstitutionGovAction gai1
-      gai3 <- submitChildConstitutionGovAction gai2
+      gai0 <- submitConstitutionGovAction SNothing
+      gai1 <- submitConstitutionGovAction $ SJust gai0
+      gai2 <- submitConstitutionGovAction $ SJust gai1
+      gai3 <- submitConstitutionGovAction $ SJust gai2
       submitYesVote_ (DRepVoter dRep) gai0
       submitYesVote_ (CommitteeVoter committeeMember) gai0
       submitYesVote_ (DRepVoter dRep) gai1
@@ -773,14 +791,14 @@ delayingActionsSpec =
             $ def & ppuDRepDepositL .~ SJust (Coin 1_000_000)
         pGai1 <-
           submitParameterChange
-            (SJust $ GovPurposeId pGai0)
+            (SJust pGai0)
             $ def & ppuDRepDepositL .~ SJust (Coin 1_000_001)
         pGai2 <-
           submitParameterChange
-            (SJust $ GovPurposeId pGai1)
+            (SJust pGai1)
             $ def & ppuDRepDepositL .~ SJust (Coin 1_000_002)
-        cGai0 <- submitInitConstitutionGovAction
-        cGai1 <- submitChildConstitutionGovAction cGai0
+        cGai0 <- submitConstitutionGovAction SNothing
+        cGai1 <- submitConstitutionGovAction $ SJust cGai0
         submitYesVote_ (DRepVoter dRep) cGai0
         submitYesVote_ (CommitteeVoter committeeMember) cGai0
         submitYesVote_ (DRepVoter dRep) cGai1
@@ -811,10 +829,10 @@ delayingActionsSpec =
         (committeeMember :| _) <- registerInitialCommittee
         (dRep, _, _) <- setupSingleDRep 1_000_000
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-        gai0 <- submitInitConstitutionGovAction
-        gai1 <- submitChildConstitutionGovAction gai0
-        gai2 <- submitChildConstitutionGovAction gai1
-        gai3 <- submitChildConstitutionGovAction gai2
+        gai0 <- submitConstitutionGovAction SNothing
+        gai1 <- submitConstitutionGovAction $ SJust gai0
+        gai2 <- submitConstitutionGovAction $ SJust gai1
+        gai3 <- submitConstitutionGovAction $ SJust gai2
         submitYesVote_ (DRepVoter dRep) gai0
         submitYesVote_ (CommitteeVoter committeeMember) gai0
         submitYesVote_ (DRepVoter dRep) gai1
@@ -842,15 +860,15 @@ delayingActionsSpec =
             $ def & ppuDRepDepositL .~ SJust (Coin 1_000_000)
         pGai1 <-
           submitParameterChange
-            (SJust $ GovPurposeId pGai0)
+            (SJust pGai0)
             $ def & ppuDRepDepositL .~ SJust (Coin 1_000_001)
         pGai2 <-
           submitParameterChange
-            (SJust $ GovPurposeId pGai1)
+            (SJust pGai1)
             $ def & ppuDRepDepositL .~ SJust (Coin 1_000_002)
-        cGai0 <- submitInitConstitutionGovAction
-        cGai1 <- submitChildConstitutionGovAction cGai0
-        cGai2 <- submitChildConstitutionGovAction cGai1
+        cGai0 <- submitConstitutionGovAction SNothing
+        cGai1 <- submitConstitutionGovAction $ SJust cGai0
+        cGai2 <- submitConstitutionGovAction $ SJust cGai1
         submitYesVote_ (DRepVoter dRep) cGai0
         submitYesVote_ (CommitteeVoter committeeMember) cGai0
         submitYesVote_ (DRepVoter dRep) cGai1

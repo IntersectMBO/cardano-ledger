@@ -8,7 +8,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Conway.Imp.EnactSpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.EnactSpec (
+  spec,
+  relevantDuringBootstrapSpec,
+) where
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
@@ -47,11 +50,19 @@ spec ::
   SpecWith (ImpTestState era)
 spec =
   describe "ENACT" $ do
+    relevantDuringBootstrapSpec
     treasuryWithdrawalsSpec
-    hardForkInitiationSpec
     noConfidenceSpec
     constitutionSpec
-    actionPrioritySpec
+    actionPriorityCommitteePurposeSpec
+    hardForkInitiationSpec
+
+relevantDuringBootstrapSpec ::
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+relevantDuringBootstrapSpec = do
+  actionPrioritySpec
+  hardForkInitiationNoDRepsSpec
 
 treasuryWithdrawalsSpec ::
   forall era.
@@ -189,13 +200,12 @@ hardForkInitiationSpec =
       pp
         & ppDRepVotingThresholdsL . dvtHardForkInitiationL .~ 2 %! 3
         & ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 2 %! 3
-        & ppGovActionLifetimeL .~ EpochInterval 20
     _ <- setupPoolWithStake $ Coin 22_000_000
     (stakePoolId1, _, _) <- setupPoolWithStake $ Coin 22_000_000
     (stakePoolId2, _, _) <- setupPoolWithStake $ Coin 22_000_000
     (dRep1, _, _) <- setupSingleDRep 11_000_000
     (dRep2, _, _) <- setupSingleDRep 11_000_000
-    curProtVer <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
+    curProtVer <- getProtVer
     nextMajorVersion <- succVersion $ pvMajor curProtVer
     let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
     govActionId <- submitGovAction $ HardForkInitiation SNothing nextProtVer
@@ -203,13 +213,36 @@ hardForkInitiationSpec =
     submitYesVote_ (DRepVoter dRep1) govActionId
     submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
     passNEpochs 2
-    getsNES (nesEsL . curPParamsEpochStateL . ppProtocolVersionL) `shouldReturn` curProtVer
+    getProtVer `shouldReturn` curProtVer
     submitYesVote_ (DRepVoter dRep2) govActionId
     passNEpochs 2
-    getsNES (nesEsL . curPParamsEpochStateL . ppProtocolVersionL) `shouldReturn` curProtVer
+    getProtVer `shouldReturn` curProtVer
     submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
     passNEpochs 2
-    getsNES (nesEsL . curPParamsEpochStateL . ppProtocolVersionL) `shouldReturn` nextProtVer
+    getProtVer `shouldReturn` nextProtVer
+
+hardForkInitiationNoDRepsSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
+hardForkInitiationNoDRepsSpec =
+  it "HardForkInitiation without DRep voting" $ do
+    (committeeMember :| _) <- registerInitialCommittee
+    modifyPParams $ \pp ->
+      pp
+        & ppDRepVotingThresholdsL . dvtHardForkInitiationL .~ def
+        & ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 2 %! 3
+    _ <- setupPoolWithStake $ Coin 22_000_000
+    (stakePoolId1, _, _) <- setupPoolWithStake $ Coin 22_000_000
+    (stakePoolId2, _, _) <- setupPoolWithStake $ Coin 22_000_000
+    curProtVer <- getProtVer
+    nextMajorVersion <- succVersion $ pvMajor curProtVer
+    let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
+    govActionId <- submitGovAction $ HardForkInitiation SNothing nextProtVer
+    submitYesVote_ (CommitteeVoter committeeMember) govActionId
+    submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
+    passNEpochs 2
+    getProtVer `shouldReturn` curProtVer
+    submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
+    passNEpochs 2
+    getProtVer `shouldReturn` nextProtVer
 
 noConfidenceSpec :: forall era. ConwayEraImp era => SpecWith (ImpTestState era)
 noConfidenceSpec =
@@ -323,12 +356,12 @@ constitutionSpec =
       enactState <- getEnactState
       rsEnactState pulserRatifyState `shouldBe` enactState
 
-actionPrioritySpec ::
+actionPriorityCommitteePurposeSpec ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpTestState era)
-actionPrioritySpec =
-  describe "Competing proposals ratified in the same epoch" $ do
+actionPriorityCommitteePurposeSpec =
+  describe "Competing proposals with different priorities" $ do
     it
       "higher action priority wins"
       $ do
@@ -358,28 +391,39 @@ actionPrioritySpec =
             nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
         committee `shouldBe` SNothing
 
+actionPrioritySpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+actionPrioritySpec =
+  describe "Competing proposals ratified in the same epoch" $ do
     let val1 = Coin 1_000_001
     let val2 = Coin 1_000_002
     let val3 = Coin 1_000_003
 
     it "proposals of same priority are enacted in order of submission" $ do
+      modifyPParams $ \pp ->
+        pp
+          & ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def
+          & ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
+
       (committeeC :| _) <- registerInitialCommittee
-      (drepC, _, _) <- setupSingleDRep 1_000_000
+      (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
       pGai0 <-
         submitParameterChange
           SNothing
-          $ def & ppuDRepDepositL .~ SJust val1
+          $ def & ppuMinFeeAL .~ SJust val1
       pGai1 <-
         submitParameterChange
-          (SJust $ GovPurposeId pGai0)
-          $ def & ppuDRepDepositL .~ SJust val2
+          (SJust pGai0)
+          $ def & ppuMinFeeAL .~ SJust val2
       pGai2 <-
         submitParameterChange
-          (SJust $ GovPurposeId pGai1)
-          $ def & ppuDRepDepositL .~ SJust val3
+          (SJust pGai1)
+          $ def & ppuMinFeeAL .~ SJust val3
       traverse_ @[]
         ( \gaid -> do
-            submitYesVote_ (DRepVoter drepC) gaid
+            submitYesVote_ (StakePoolVoter spoC) gaid
             submitYesVote_ (CommitteeVoter committeeC) gaid
         )
         [pGai0, pGai1, pGai2]
@@ -387,35 +431,39 @@ actionPrioritySpec =
       getLastEnactedParameterChange
         `shouldReturn` SJust (GovPurposeId pGai2)
       expectNoCurrentProposals
-      getsNES (nesEsL . curPParamsEpochStateL . ppDRepDepositL)
+      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
         `shouldReturn` val3
 
     it "only the first action of a transaction gets enacted" $ do
+      modifyPParams $ \pp ->
+        pp
+          & ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def
+          & ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
       (committeeC :| _) <- registerInitialCommittee
-      (drepC, _, _) <- setupSingleDRep 1_000_000
+      (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
       gaids <-
         submitGovActions $
           NE.fromList
             [ ParameterChange
                 SNothing
-                (def & ppuDRepDepositL .~ SJust val1)
+                (def & ppuMinFeeAL .~ SJust val1)
                 SNothing
             , ParameterChange
                 SNothing
-                (def & ppuDRepDepositL .~ SJust val2)
+                (def & ppuMinFeeAL .~ SJust val2)
                 SNothing
             , ParameterChange
                 SNothing
-                (def & ppuDRepDepositL .~ SJust val3)
+                (def & ppuMinFeeAL .~ SJust val3)
                 SNothing
             ]
       traverse_
         ( \gaid -> do
-            submitYesVote_ (DRepVoter drepC) gaid
+            submitYesVote_ (StakePoolVoter spoC) gaid
             submitYesVote_ (CommitteeVoter committeeC) gaid
         )
         gaids
       passNEpochs 2
-      getsNES (nesEsL . curPParamsEpochStateL . ppDRepDepositL)
+      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
         `shouldReturn` val1
       expectNoCurrentProposals

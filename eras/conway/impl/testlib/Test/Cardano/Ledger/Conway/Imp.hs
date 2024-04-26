@@ -12,9 +12,10 @@ import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
-import Cardano.Ledger.BaseTypes (Inject)
+import Cardano.Ledger.BaseTypes (Inject, natVersion)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
+import Cardano.Ledger.Conway.PParams (ConwayPParams)
 import Cardano.Ledger.Conway.Rules (
   ConwayEpochEvent,
   ConwayGovCertPredFailure,
@@ -23,6 +24,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Shelley.Rules (Event, ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
+import Data.Functor.Identity
 import Data.Typeable (Typeable)
 import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 import Test.Cardano.Ledger.Common
@@ -33,12 +35,13 @@ import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as Gov
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
-import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp, withImpState)
+import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp, withImpState, withImpStateWithProtVer)
 
 spec ::
   forall era.
   ( ConwayEraImp era
   , GovState era ~ ConwayGovState era
+  , PParamsHKD Identity era ~ ConwayPParams Identity era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
@@ -58,11 +61,21 @@ spec ::
   Spec
 spec = do
   BabbageImp.spec @era
-  describe "ConwayImpSpec" $ withImpState @era $ do
-    Enact.spec @era
-    Epoch.spec @era
-    Gov.spec @era
-    GovCert.spec @era
-    Utxo.spec @era
-    Utxos.spec @era
-    Ratify.spec @era
+  describe "ConwayImpSpec - post bootstrap (protocol version 10)" $
+    withImpStateWithProtVer @era (natVersion @10) $ do
+      Enact.spec @era
+      Epoch.spec @era
+      Gov.spec @era
+      GovCert.spec @era
+      Utxo.spec @era
+      Utxos.spec @era
+      Ratify.spec @era
+  describe "ConwayImpSpec - bootstrap phase (protocol version 9)" $
+    withImpState @era $ do
+      Enact.relevantDuringBootstrapSpec @era
+      Epoch.relevantDuringBootstrapSpec @era
+      Gov.relevantDuringBootstrapSpec @era
+      GovCert.relevantDuringBootstrapSpec @era
+      Utxo.spec @era
+      Utxos.relevantDuringBootstrapSpec @era
+      Ratify.relevantDuringBootstrapSpec @era
