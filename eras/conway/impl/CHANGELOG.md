@@ -62,6 +62,9 @@
   * to `Shelley.ImpTest`
     * `getRewardAccountFor`
     * `registerAndRetirePoolToMakeReward`
+* Add `getConstitution` to Conway ImpTest
+* Change return type of `setupSingleDRep` to Credential instead of KeyHash
+* Add `registerInitialCommittee` and `getCommitteeMembers` to Conway ImpTest
 * Implement `ConwayUtxowPredFailure` instances:
   * `Arbitrary`
   * `ToExpr`

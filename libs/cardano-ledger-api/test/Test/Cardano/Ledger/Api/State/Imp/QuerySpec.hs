@@ -17,21 +17,11 @@ import Cardano.Ledger.Api.State.Query (
   queryCommitteeMembersState,
  )
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov (..),
   ConwayGovState,
   EraGov (..),
- )
-import Cardano.Ledger.Conway.PParams (
-  dvtCommitteeNoConfidence,
-  dvtCommitteeNormal,
-  dvtUpdateToConstitution,
-  ppCommitteeMaxTermLengthL,
-  ppDRepVotingThresholdsL,
-  ppGovActionDepositL,
-  ppGovActionLifetimeL,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
@@ -39,14 +29,11 @@ import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Cardano.Ledger.Shelley.LedgerState
-import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Lens.Micro ((&), (.~))
 import Lens.Micro.Mtl
 import Test.Cardano.Ledger.Conway.ImpTest
-import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 
 spec ::
@@ -59,8 +46,6 @@ spec ::
 spec = do
   describe "Committee members hot key pre-authorization" $ do
     it "authorized members not elected get removed in the next epoch" $ do
-      setPParams
-
       c1 <- KeyHashObj <$> freshKeyHash
       hk1 <- registerCommitteeHotKey c1
       expectQueryResult (Set.singleton c1) mempty mempty $
@@ -69,11 +54,10 @@ spec = do
       expectQueryResult (Set.singleton c1) mempty mempty Map.empty
 
     it "members should remain authorized if authorized during the epoch after their election" $ do
-      setPParams
-      (KeyHashObj drep, _, ga0) <- electBasicCommittee
+      (drep, _, _) <- setupSingleDRep 1_000_000
 
       c1 <- KeyHashObj <$> freshKeyHash
-      _ <- electCommittee (SJust ga0) drep Set.empty [(c1, EpochNo 12)]
+      _ <- electCommittee SNothing drep Set.empty [(c1, EpochNo 12)]
       passEpoch
       hk1 <- registerCommitteeHotKey c1
       expectQueryResult (Set.singleton c1) mempty mempty $
@@ -83,7 +67,6 @@ spec = do
         [(c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just 12) NoChangeExpected)]
 
   it "Committee queries" $ do
-    setPParams
     (drep, _, _) <- setupSingleDRep 1_000_000
     c1 <- KeyHashObj <$> freshKeyHash
     c2 <- KeyHashObj <$> freshKeyHash
@@ -99,16 +82,17 @@ spec = do
           , (c3, EpochNo 7)
           , (c4, EpochNo 5)
           ]
+    initialMembers <- getCommitteeMembers
+
     ga1 <-
       electCommittee
         SNothing
         drep
-        Set.empty
+        initialMembers
         newMembers
 
-    expectMembers Set.empty
-    expectNoFilterQueryResult Map.empty
-    passEpoch >> passEpoch -- epoch 2
+    expectMembers initialMembers
+    passNEpochs 2 -- epoch 2
     expectMembers $ Map.keysSet newMembers
     -- members for which the expiration epoch is the current epoch are `ToBeExpired`
     expectNoFilterQueryResult
@@ -206,7 +190,7 @@ spec = do
           (CommitteeMemberState (MemberAuthorized hk2) Expired (Just 2) ToBeRemoved)
       )
 
-    passEpoch >> passEpoch -- epoch 6
+    passNEpochs 2 -- epoch 6
     -- the new committee is in place with the adjusted terms
     expectMembers [c1, c3, c4, c6, c7]
     expectNoFilterQueryResult
@@ -271,7 +255,7 @@ spec = do
       Map.Map (Credential 'ColdCommitteeRole (EraCrypto era)) (CommitteeMemberState (EraCrypto era)) ->
       ImpTestM era ()
     expectQueryResult ckFilter hkFilter statusFilter expResult = do
-      nes <- use impNESG
+      nes <- use impNESL
       let CommitteeMembersState {csCommittee} =
             queryCommitteeMembersState
               ckFilter
@@ -287,22 +271,3 @@ spec = do
       ImpTestM era ()
     expectNoFilterQueryResult =
       expectQueryResult mempty mempty mempty
-
-setPParams ::
-  forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  ) =>
-  ImpTestM era ()
-setPParams = do
-  modifyPParams $ \pp ->
-    pp
-      & ppDRepVotingThresholdsL
-        .~ def
-          { dvtCommitteeNormal = 1 %! 1
-          , dvtCommitteeNoConfidence = 1 %! 2
-          , dvtUpdateToConstitution = 1 %! 2
-          }
-      & ppCommitteeMaxTermLengthL .~ EpochInterval 100
-      & ppGovActionLifetimeL .~ EpochInterval 2
-      & ppGovActionDepositL .~ Coin 123

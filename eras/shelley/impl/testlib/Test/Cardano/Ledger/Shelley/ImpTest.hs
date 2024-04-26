@@ -98,8 +98,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withNoFixup,
   withPostFixup,
   withPreFixup,
-  -- We only export getters, because internal state should not be accessed during testing
-  impNESG,
+  impNESL,
   impLastTickG,
   impKeyPairsG,
   impNativeScriptsG,
@@ -278,9 +277,6 @@ impLogL = lens impLog (\x y -> x {impLog = y})
 impNESL :: Lens' (ImpTestState era) (NewEpochState era)
 impNESL = lens impNES (\x y -> x {impNES = y})
 
-impNESG :: SimpleGetter (ImpTestState era) (NewEpochState era)
-impNESG = impNESL
-
 impLastTickL :: Lens' (ImpTestState era) SlotNo
 impLastTickL = lens impLastTick (\x y -> x {impLastTick = y})
 
@@ -327,6 +323,7 @@ class
   , Show (StashedAVVMAddresses era)
   , ToExpr (StashedAVVMAddresses era)
   , NFData (StashedAVVMAddresses era)
+  , Default (StashedAVVMAddresses era)
   , -- For the LEDGER rule
     STS (EraRule "LEDGER" era)
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
@@ -367,7 +364,8 @@ class
   ) =>
   ShelleyEraImp era
   where
-  initImpNES :: NewEpochState era
+  initImpTestState ::
+    (MonadState (ImpTestState era) m, MonadGen m) => m ()
 
   -- | Try to find a sufficient number of KeyPairs that would satisfy a native script.
   -- Whenever script can't be satisfied, Nothing is returned
@@ -430,11 +428,7 @@ testKeyHash :: Crypto c => KeyHash kd c
 testKeyHash = mkKeyHash (-1)
 
 initShelleyImpNES ::
-  forall era.
-  ( Default (StashedAVVMAddresses era)
-  , ShelleyEraImp era
-  ) =>
-  NewEpochState era
+  forall era. ShelleyEraImp era => NewEpochState era
 initShelleyImpNES =
   NewEpochState
     { stashedAVVMAddresses = def
@@ -505,7 +499,7 @@ instance
   ) =>
   ShelleyEraImp (ShelleyEra c)
   where
-  initImpNES = initShelleyImpNES
+  initImpTestState = pure ()
 
   impSatisfyNativeScript providedVKeyHashes script = do
     keyPairs <- gets impKeyPairs
@@ -1117,11 +1111,13 @@ withImpState ::
   SpecWith (ImpTestState era) ->
   Spec
 withImpState =
-  beforeAll $ execImpTestM Nothing initImpTestState addRootTxOut
+  beforeAll $
+    execImpTestM Nothing impTestState0 $
+      addRootTxOut >> initImpTestState
   where
-    initImpTestState =
+    impTestState0 =
       ImpTestState
-        { impNES = initImpNES
+        { impNES = initShelleyImpNES
         , impRootTxIn = rootTxIn
         , impKeyPairs = mempty
         , impByronKeyPairs = mempty

@@ -30,7 +30,7 @@ instance
   ) =>
   ShelleyEraImp (MaryEra c)
   where
-  initImpNES = initShelleyImpNES
+  initImpTestState = pure ()
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = shelleyFixupTx
 
