@@ -223,7 +223,7 @@ import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Ratio ((%))
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
@@ -446,9 +446,10 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
   -- gathering the data, which we will snapshot inside the pulser. We expect approximately
   -- 10*k-many blocks to be produced each epoch, where `k` value is the stability
   -- window. We must ensure for secure operation of the Hard Fork Combinator that we have
-  -- the new EnactState available 2 stability windows before the end of the epoch, while
-  -- spreading out stake distribution computation throughout the first 8 stability
-  -- windows. Therefore, we divide the number of stake credentials by 8*k
+  -- the new EnactState available `6k/f` slots before the end of the epoch, while
+  -- spreading out stake distribution computation throughout the `4k/f` slots. In this
+  -- formula `f` stands for the active slot coefficient, which means that there will be
+  -- approximately `4k` blocks created during that period.
   globals <- ask
   let ledgerState = epochState ^. esLStateL
       utxoState = lsUTxOState ledgerState
@@ -458,11 +459,11 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
       vState = certVState certState
       govState = epochState ^. epochStateGovStateL
       props = govState ^. cgsProposalsL
-      -- Maximum number of blocks we are allowed to roll back
-      k = securityParameter globals
+      -- Maximum number of blocks we are allowed to roll back: usually a small positive number
+      k = securityParameter globals -- On mainnet set to 2160
       umap = dsUnified dState
       umapSize = Map.size $ umElems umap
-      pulseSize = max 1 (ceiling (toInteger umapSize % (8 * toInteger k)))
+      pulseSize = max 1 (umapSize `div` (fromIntegral :: Word64 -> Int) (4 * k))
       epochState' =
         epochState
           & epochStateGovStateL . cgsDRepPulsingStateL
