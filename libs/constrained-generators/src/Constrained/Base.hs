@@ -279,6 +279,7 @@ data Binder fn a where
 deriving instance Show (Binder fn a)
 
 data Pred (fn :: [Type] -> Type -> Type) where
+  Monitor :: ((forall a. Term fn a -> a) -> Property -> Property) -> Pred fn
   Block ::
     [Pred fn] ->
     Pred fn
@@ -452,8 +453,45 @@ runTerm env = \case
     vs <- mapMList (fmap Identity . runTerm env) ts
     pure $ uncurryList_ runIdentity (sem f) vs
 
+monitorSpec :: FunctionLike fn => Specification fn a -> a -> Property -> Property
+monitorSpec (SuspendedSpec x p) a =
+  errorGE (monitorPred (singletonEnv x a) p)
+monitorSpec _ _ = id
+
+monitorPred ::
+  forall fn m. (FunctionLike fn, MonadGenError m) => Env -> Pred fn -> m (Property -> Property)
+monitorPred env = \case
+  Monitor m -> pure (m $ errorGE . explain ["monitorPred: Monitor"] . runTerm env)
+  Subst x t p -> monitorPred env $ substitutePred x t p
+  Assert {} -> pure id
+  GenHint {} -> pure id
+  Reifies {} -> pure id
+  ForAll t (x :-> p) -> do
+    set <- runTerm env t
+    foldr (.) id
+      <$> sequence
+        [ monitorPred env' p
+        | v <- forAllToList set
+        , let env' = extendEnv x v env
+        ]
+  Case t bs -> do
+    v <- runTerm env t
+    runCaseOn v bs (\x val ps -> monitorPred (extendEnv x val env) ps)
+  TruePred -> pure id
+  FalsePred {} -> pure id
+  DependsOn {} -> pure id
+  Block ps -> foldr (.) id <$> mapM (monitorPred env) ps
+  Let t (x :-> p) -> do
+    val <- runTerm env t
+    monitorPred (extendEnv x val env) p
+  Exists k (x :-> p) -> do
+    case k (errorGE . explain ["monitorPred: Exists"] . runTerm env) of
+      Result _ a -> monitorPred (extendEnv x a env) p
+      _ -> pure id
+
 checkPred :: forall fn m. (FunctionLike fn, MonadGenError m) => Env -> Pred fn -> m Bool
 checkPred env = \case
+  Monitor {} -> pure True
   Subst x t p -> checkPred env $ substitutePred x t p
   Assert [] t -> runTerm env t
   Assert es t -> explain ("assert:" : map ("  " ++) es) $ runTerm env t
@@ -915,6 +953,7 @@ flattenPred pIn = go (freeVarNames pIn) [pIn]
 
 computeDependencies :: Pred fn -> DependGraph fn
 computeDependencies = \case
+  Monitor {} -> mempty
   Subst x t p -> computeDependencies (substitutePred x t p)
   Assert _ t -> computeTermDependencies t
   Reifies t' t _ -> t' `irreflexiveDependencyOn` t
@@ -1047,6 +1086,7 @@ simplifySpec = \case
 computeSpecSimplified ::
   forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Specification fn a
 computeSpecSimplified x p = fromGE ErrorSpec $ case p of
+  Monitor {} -> pure mempty
   GenHint h t -> propagateSpec (giveHint h) <$> toCtx x t -- NOTE: this implies you do need to actually propagate hints, e.g. propagate depth control in a `tail` or `cdr` like function
   Subst x' t p' -> pure $ computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
@@ -1323,6 +1363,7 @@ instance HasVariables fn (Pred fn) where
     IfElse b p q -> freeVars b <> freeVars p <> freeVars q
     TruePred -> mempty
     FalsePred _ -> mempty
+    Monitor {} -> mempty
   freeVarSet = \case
     GenHint _ t -> freeVarSet t
     Subst x t p -> freeVarSet t <> Set.delete (Name x) (freeVarSet p)
@@ -1337,6 +1378,7 @@ instance HasVariables fn (Pred fn) where
     IfElse b p q -> freeVarSet b <> freeVarSet p <> freeVarSet q
     TruePred -> mempty
     FalsePred _ -> mempty
+    Monitor {} -> mempty
   countOf n = \case
     GenHint _ t -> countOf n t
     Subst x t p
@@ -1353,6 +1395,7 @@ instance HasVariables fn (Pred fn) where
     IfElse b p q -> countOf n b + countOf n p + countOf n q
     TruePred -> 0
     FalsePred _ -> 0
+    Monitor {} -> 0
   appearsIn n = \case
     GenHint _ t -> appearsIn n t
     Subst x t p
@@ -1369,6 +1412,7 @@ instance HasVariables fn (Pred fn) where
     IfElse b p q -> appearsIn n b || appearsIn n p || appearsIn n q
     TruePred -> False
     FalsePred _ -> False
+    Monitor {} -> False
 
 instance HasVariables fn (Binder fn a) where
   freeVars (x :-> p) = freeVars p `without` [Name x]
@@ -1491,6 +1535,7 @@ substitutePred x tm = \case
   DependsOn t t' -> DependsOn (substituteTerm [x := tm] t) (substituteTerm [x := tm] t')
   TruePred -> TruePred
   FalsePred es -> FalsePred es
+  Monitor m -> Monitor m
 
 instance Rename (Name f) where
   rename v v' (Name v'') = Name $ rename v v' v''
@@ -1520,6 +1565,7 @@ instance Rename (Pred fn) where
         IfElse b p q -> IfElse (rename v v' b) (rename v v' p) (rename v v' q)
         TruePred -> TruePred
         FalsePred es -> FalsePred es
+        Monitor m -> Monitor m
 
 instance Rename (Binder fn a) where
   rename v v' (va :-> psa) = va' :-> rename v v' psa'
@@ -1555,6 +1601,7 @@ substPred env = \case
   Block ps -> fold (substPred env <$> ps)
   Exists k b -> Exists (\eval -> k $ eval . substTerm env) (substBinder env b)
   Let t b -> Let (substTerm env t) (substBinder env b)
+  Monitor m -> Monitor m
 
 unBind :: a -> Binder fn a -> Pred fn
 unBind a (x :-> p) = substPred (singletonEnv x a) p
@@ -1613,6 +1660,7 @@ simplifyPred = \case
     -- `constrained $ \ x -> exists $ \ y -> [x ==. y, y + 2 <. 10]`
     x :-> p | Just t <- pinnedBy x p -> simplifyPred $ substitutePred x t p
     b' -> Exists k b'
+  Monitor {} -> TruePred
 
 simplifyPreds :: BaseUniverse fn => [Pred fn] -> [Pred fn]
 simplifyPreds = go [] . map simplifyPred
@@ -1701,6 +1749,7 @@ letSubexpressionElimination = go []
       IfElse b p q -> IfElse (backwardsSubstitution sub b) (go sub p) (go sub q)
       TruePred -> TruePred
       FalsePred es -> FalsePred es
+      Monitor m -> Monitor m
 
 -- TODO: this can probably be cleaned up and generalized along with generalizing
 -- to make sure we float lets in some missing cases.
@@ -1750,6 +1799,7 @@ letFloating = fold . go []
       DependsOn t t' -> DependsOn t t' : ctx
       TruePred -> TruePred : ctx
       FalsePred es -> FalsePred es : ctx
+      Monitor m -> Monitor m : ctx
 
 aggressiveInlining :: BaseUniverse fn => Pred fn -> Pred fn
 aggressiveInlining p
@@ -1841,6 +1891,7 @@ aggressiveInlining p
         | otherwise -> pure p
       TruePred -> pure p
       FalsePred {} -> pure p
+      Monitor {} -> pure p
 
 -- | Apply a substitution and simplify the resulting term if the substitution changed the
 -- term.
@@ -3857,6 +3908,9 @@ reify t f body =
     , toPred $ body x
     ]
 
+monitor :: ((forall a. Term fn a -> a) -> Property -> Property) -> Pred fn
+monitor = Monitor
+
 assertReified :: HasSpec fn a => Term fn a -> (a -> Bool) -> Pred fn
 -- Note, it is necessary to introduce the extra variable from the `exists` here
 -- to make things like `assertRealMultiple` work, if you don't have it then the
@@ -3920,6 +3974,7 @@ bind body = x :-> p
     bound DependsOn {} = -1
     bound TruePred = -1
     bound FalsePred {} = -1
+    bound Monitor {} = -1
 
 mkCase :: HasSpec fn (SumOver as) => Term fn (SumOver as) -> List (Binder fn) as -> Pred fn
 mkCase tm cs
@@ -4029,6 +4084,7 @@ instance Pretty (Pred fn) where
     GenHint h t -> "genHint" <+> fromString (showsPrec 11 h "") <+> "$" <+> pretty t
     TruePred -> "True"
     FalsePred {} -> "False"
+    Monitor {} -> "monitor"
 
 instance Pretty (Binder fn a) where
   pretty (x :-> p) = viaShow x <+> "->" <+> pretty p

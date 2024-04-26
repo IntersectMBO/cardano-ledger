@@ -18,7 +18,11 @@ prop_sound ::
 prop_sound spec =
   QC.forAllBlind (strictGen $ genFromSpec spec) $ \ma ->
     case ma of
-      Result _ a -> QC.cover 80 True "successful" $ QC.counterexample (show a) $ conformsToSpecProp a spec
+      Result _ a ->
+        QC.cover 80 True "successful" $
+          QC.counterexample (show a) $
+            monitorSpec spec a $
+              conformsToSpecProp a spec
       _ -> QC.cover 80 False "successful" True
 
 prop_constrained_satisfies_sound :: HasSpec fn a => Specification fn a -> QC.Property
