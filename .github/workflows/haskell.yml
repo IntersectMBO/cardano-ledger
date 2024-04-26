@@ -34,6 +34,12 @@ concurrency:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        ghc: ["8.10.7", "9.2.8", "9.6.4", "9.8.2"]
+        os: [ubuntu-latest]
+      fail-fast: false
+
     runs-on: ${{ matrix.os }}
 
     env:
@@ -49,31 +55,8 @@ jobs:
       run:
         shell: bash
 
-    strategy:
-      fail-fast: false
-      matrix:
-        ghc: ["8.10.7", "9.2.8", "9.6.4", "9.8.2"]
-        os: [ubuntu-latest]
-
     steps:
     - uses: actions/checkout@v4
-
-    - name: Set NIGHTLY environment variable if the job was triggered by the scheduler
-      if: "${{ github.event_name == 'schedule'
-            || contains(github.event.pull_request.title, 'nightly')
-            || github.event_name == 'workflow_dispatch' && github.event.inputs.nightly }}"
-      run: |
-        echo "NIGHTLY=true" >> $GITHUB_ENV
-
-    - name: Set up Ruby 2.7
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: 2.7
-
-    - name: Install cbor-diag and cddl
-      run: |
-        gem install cddl -v 0.10.3
-        gem install cbor-diag
 
     - name: Install Haskell
       uses: input-output-hk/setup-haskell@v1
@@ -97,7 +80,7 @@ jobs:
     - name: Cabal update
       run: cabal update
 
-    - name: Cabal Configure
+    - name: Cabal configure
       run: cabal configure --enable-tests --enable-benchmarks --write-ghc-environment-files=always
 
     - uses: actions/cache@v4
@@ -106,7 +89,6 @@ jobs:
       with:
         path: |
           ${{ steps.setup-haskell.outputs.cabal-store }}
-          dist-newstyle
         # cache is invalidated upon a change to cabal.project (and/or cabal.project.local), a bump to
         # CABAL_CACHE_VERSION or after a week of inactivity
         key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
@@ -114,11 +96,102 @@ jobs:
         restore-keys: |
           cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
 
-    - name: Install dependencies
+    - name: Check workflow test matrix
+      run: cabal build all --dry-run && scripts/check-workflow-test-matrix.hs
+
+    - name: Build dependencies
       run: cabal build all --only-dependencies
 
     - name: Build
       run: cabal build all
+
+    # Pass working directory to test jobs
+    - name: Archive working directory
+      run: tar --format pax -cf /var/tmp/state.tar . && mv /var/tmp/state.tar .
+    - name: Upload working directory archive
+      uses: actions/upload-artifact@v4
+      with:
+        name: state-${{ matrix.ghc }}-${{ matrix.os }}
+        path: state.tar
+        overwrite: true
+        retention-days: 1
+
+  test:
+    needs: build
+
+    strategy:
+      matrix:
+        package:
+        - byron-spec-chain
+        - byron-spec-ledger
+        - cardano-crypto-wrapper
+        - cardano-data
+        - cardano-ledger-allegra
+        - cardano-ledger-alonzo
+        - cardano-ledger-alonzo-test
+        - cardano-ledger-api
+        - cardano-ledger-babbage
+        - cardano-ledger-babbage-test
+        - cardano-ledger-binary
+        - cardano-ledger-byron
+        - cardano-ledger-conformance
+        - cardano-ledger-conway
+        - cardano-ledger-conway-test
+        - cardano-ledger-core
+        - cardano-ledger-mary
+        - cardano-ledger-shelley
+        - cardano-ledger-shelley-ma-test
+        - cardano-ledger-shelley-test
+        - cardano-ledger-test
+        - cardano-protocol-tpraos
+        - constrained-generators
+        - non-integral
+        - set-algebra
+        - small-steps
+        - vector-map
+        ghc: ["8.10.7", "9.2.8", "9.6.4", "9.8.2"]
+        os: [ubuntu-latest]
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+
+    name: ${{ matrix.package }}-${{ matrix.ghc }}-${{ matrix.os }}
+
+    env:
+      # Modify this value to "invalidate" the cabal cache.
+      CABAL_CACHE_VERSION: "2023-07-17"
+
+      # current ref from: 27.02.2022
+      SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
+
+      SECP_CACHE_VERSION: "2022-12-30"
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: Install Haskell
+      uses: input-output-hk/setup-haskell@v1
+      id: setup-haskell
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: latest
+
+    - name: Install system dependencies
+      uses: input-output-hk/actions/base@latest
+      with:
+        use-sodium-vrf: false # default is true
+
+    - name: Set up Ruby 2.7
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 2.7
+
+    - name: Install cbor-diag and cddl
+      run: |
+        gem install cddl -v 0.10.3
+        gem install cbor-diag
 
     - name: Download Mainnet Mirror
       run: |
@@ -136,10 +209,48 @@ jobs:
           cd ..
         }
 
+    - name: Set NIGHTLY environment variable if the job was triggered by the scheduler
+      if: "${{ github.event_name == 'schedule'
+            || contains(github.event.pull_request.title, 'nightly')
+            || github.event_name == 'workflow_dispatch' && github.event.inputs.nightly }}"
+      run: |
+        echo "NIGHTLY=true" >> $GITHUB_ENV
+
+    # Retrieve working directory from build jobs
+    - name: Download working directory archive
+      uses: actions/download-artifact@v4
+      with:
+        name: state-${{ matrix.ghc }}-${{ matrix.os }}
+    - name: Unarchive working directory
+      run: tar -xf state.tar && rm state.tar
+
+    - uses: actions/cache@v4
+      if: matrix.os != 'macos-latest'
+      name: Cache cabal store
+      with:
+        path: |
+          ${{ steps.setup-haskell.outputs.cabal-store }}
+        # cache is invalidated upon a change to cabal.project (and/or cabal.project.local), a bump to
+        # CABAL_CACHE_VERSION or after a week of inactivity
+        key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
+        # Restoring attempts are from current branch then master
+        restore-keys: |
+          cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
+
+    - name: Cabal update
+      run: cabal update
+
     - name: Run tests
       run: |
         export CARDANO_MAINNET_MIRROR="$(pwd)/epochs"
-        cabal test all
+        cabal test ${{ matrix.package }}
+
+  complete:
+    name: Tests completed
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+    - run: echo 'All tests completed successfully'
 
   fourmolu:
     runs-on: ubuntu-latest
@@ -215,8 +326,8 @@ jobs:
     name: Send a slack notification on \#ledger-internal if the nightly build failed
     runs-on: ubuntu-latest
     needs:
-      - build
-    if: always() && github.event_name == 'schedule' && needs.build.result == 'failure'
+      - test
+    if: always() && github.event_name == 'schedule' && needs.test.result == 'failure'
     steps:
       - name: Send slack notification
         id: slack
