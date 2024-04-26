@@ -559,6 +559,54 @@ votingSpec =
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+        it "Rewards contribute to active voting stake even in the absence of StakeDistr" $ do
+          -- Only modify the applicable thresholds
+          modifyPParams $ \pp ->
+            pp
+              & ppDRepVotingThresholdsL
+                .~ def
+                  { dvtCommitteeNormal = 51 %! 100
+                  , dvtCommitteeNoConfidence = 51 %! 100
+                  }
+              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+              & ppGovActionDepositL .~ Coin 1_000_000
+              & ppPoolDepositL .~ Coin 200_000
+              & ppEMaxL .~ EpochInterval 5
+              & ppGovActionLifetimeL .~ EpochInterval 5
+          -- Setup DRep delegation #1
+          (drepKH1, stakingKH1) <- setupDRepWithoutStake
+          -- Add rewards to delegation #1
+          submitAndExpireProposalToMakeReward 1_000_000 $ KeyHashObj stakingKH1
+          lookupReward (KeyHashObj stakingKH1) `shouldReturn` Coin 1_000_000
+          -- Setup DRep delegation #2
+          (_drepKH2, stakingKH2) <- setupDRepWithoutStake
+          -- Add rewards to delegation #2
+          submitAndExpireProposalToMakeReward 1_000_000 $ KeyHashObj stakingKH2
+          lookupReward (KeyHashObj stakingKH2) `shouldReturn` Coin 1_000_000
+          -- Submit a committee proposal
+          cc <- KeyHashObj <$> freshKeyHash
+          let addCCAction =
+                UpdateCommittee
+                  SNothing
+                  mempty
+                  (Map.singleton cc $ 10 + 2 * 5) -- some + 2 * GovActionLifetime
+                  (75 %! 100)
+          addCCGaid <- submitGovAction addCCAction
+          -- Submit the vote
+          submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
+          passNEpochs 2
+          -- The vote should not result in a ratification
+          isDRepAccepted addCCGaid `shouldReturn` False
+          getLastEnactedCommittee `shouldReturn` SNothing
+          -- Increase the rewards of the delegator to this DRep
+          -- to barely make the threshold (51 %! 100)
+          registerAndRetirePoolToMakeReward $ KeyHashObj stakingKH1
+          passEpoch
+          lookupReward (KeyHashObj stakingKH1) `shouldReturn` Coin 1_200_000
+          isDRepAccepted addCCGaid `shouldReturn` True
+          -- The same vote should now successfully ratify the proposal
+          passEpoch
+          getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
       describe "StakePool" $ do
         it "UTxOs contribute to active voting stake" $ do
           -- Only modify the applicable thresholds
@@ -632,6 +680,57 @@ votingSpec =
                 . UM.RewDepUView
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
+          getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+        it "Rewards contribute to active voting stake even in the absence of StakeDistr" $ do
+          -- Only modify the applicable thresholds
+          modifyPParams $ \pp ->
+            pp
+              & ppPoolVotingThresholdsL
+                .~ def
+                  { pvtCommitteeNormal = 51 %! 100
+                  , pvtCommitteeNoConfidence = 51 %! 100
+                  }
+              & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+              & ppGovActionDepositL .~ Coin 1_000_000
+              & ppPoolDepositL .~ Coin 200_000
+              & ppEMaxL .~ EpochInterval 5
+              & ppGovActionLifetimeL .~ EpochInterval 5
+          -- Setup Pool delegation #1
+          (poolKH1, delegatorCStaking1) <- setupPoolWithoutStake
+          -- Add rewards to delegation #1
+          submitAndExpireProposalToMakeReward 1_000_000 delegatorCStaking1
+          lookupReward delegatorCStaking1 `shouldReturn` Coin 1_000_000
+          -- Setup Pool delegation #2
+          (poolKH2, delegatorCStaking2) <- setupPoolWithoutStake
+          -- Add rewards to delegation #2
+          submitAndExpireProposalToMakeReward 1_000_000 delegatorCStaking2
+          lookupReward delegatorCStaking2 `shouldReturn` Coin 1_000_000
+          -- Submit a committee proposal
+          cc <- KeyHashObj <$> freshKeyHash
+          let addCCAction =
+                UpdateCommittee
+                  SNothing
+                  mempty
+                  (Map.singleton cc $ 10 + 2 * 5) -- some + 2 * GovActionLifetime
+                  (75 %! 100)
+          addCCGaid <- submitGovAction addCCAction
+          -- Submit the vote
+          submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
+          submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
+          passNEpochs 2
+          -- The vote should not result in a ratification
+          isSpoAccepted addCCGaid `shouldReturn` False
+          getLastEnactedCommittee `shouldReturn` SNothing
+          logRatificationChecks addCCGaid
+          -- Add to the rewards of the delegator to this SPO
+          -- to barely make the threshold (51 %! 100)
+          registerAndRetirePoolToMakeReward $ delegatorCStaking1
+          passEpoch
+          lookupReward delegatorCStaking1 `shouldReturn` Coin 1_200_000
+          -- The same vote should now successfully ratify the proposal
+          -- NOTE: It takes 2 epochs for SPO votes as opposed to 1 epoch
+          -- for DRep votes to ratify a proposal.
+          passNEpochs 2
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
 
 delayingActionsSpec ::

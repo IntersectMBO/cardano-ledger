@@ -2,6 +2,8 @@
 
 ## 1.14.0 0
 
+* Make `DRepDistr` calculation include rewards when no UTxO stake is delegated. #4273
+  * Rename `computeDrepPulser` to `computeDRepPulser`.
 * Implement `NoThunks` instance for:
   * `ConwayUtxoPredFailure`
   * `ConwayUtxowPredFailure`
@@ -52,6 +54,14 @@
 
 ### `testlib`
 
+* Add the following utilities. #4273
+  * to `Conway.ImpTest`
+    * `setupDRepWithoutStake`
+    * `setupPoolWithoutStake` 
+    * `submitAndExpireProposalToMakeReward`
+  * to `Shelley.ImpTest`
+    * `getRewardAccountFor`
+    * `registerAndRetirePoolToMakeReward`
 * Add `getConstitution` to Conway ImpTest
 * Change return type of `setupSingleDRep` to Credential instead of KeyHash
 * Add `registerInitialCommittee` and `getCommitteeMembers` to Conway ImpTest

@@ -2,6 +2,7 @@
 
 ## 1.11.1.0
 
+* Add `umElemDRepDelegatedReward` to `UMap`. #4273
 * Add `fromDeltaCoin`
 * Add trivial `Inject` instances for `()` and `Void`
 * Add `byteStringToNum`
