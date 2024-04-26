@@ -59,6 +59,7 @@
 
 ### `testlib`
 
+* Add `withPostBootstrap` to Conway ImpTest
 * Add `withImpStateWithProtVer` to Conway ImpTest
 * Add the following utilities. #4273
   * to `Conway.ImpTest`

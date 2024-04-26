@@ -106,6 +106,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   currentProposalsShouldContain,
   setupDRepWithoutStake,
   withImpStateWithProtVer,
+  whenPostBootstrap,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -162,6 +163,7 @@ import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
+import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
   asTreasuryL,
@@ -1472,3 +1474,8 @@ majorFollow pv@(ProtVer x _) = case succVersion x of
 -- | An illegal ProtVer that skips 3 minor versions
 cantFollow :: ProtVer -> ProtVer
 cantFollow (ProtVer x y) = ProtVer x (y + 3)
+
+whenPostBootstrap :: EraGov era => ImpTestM era () -> ImpTestM era ()
+whenPostBootstrap a = do
+  pv <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
+  unless (HardForks.bootstrapPhase pv) a
