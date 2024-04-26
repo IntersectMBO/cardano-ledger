@@ -2,6 +2,9 @@ module Cardano.Ledger.Api.Governance (
   EraGov (GovState),
   emptyGovState,
   getProposedPPUpdates,
+  curPParamsGovStateL,
+  prevPParamsGovStateL,
+  futurePParamsGovStateG,
 
   -- * Shelley
   ShelleyGovState (..),
