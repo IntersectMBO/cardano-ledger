@@ -72,6 +72,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   registerAndRetirePoolToMakeReward,
   getRewardAccountAmount,
   withImpState,
+  withImpStateModified,
   shelleyFixupTx,
   lookupImpRootTxOut,
   sendValueTo,
@@ -1106,13 +1107,19 @@ logToExpr :: (HasCallStack, ToExpr a) => a -> ImpTestM era ()
 logToExpr e = logEntry (showExpr e)
 
 withImpState ::
-  forall era.
   ShelleyEraImp era =>
   SpecWith (ImpTestState era) ->
   Spec
-withImpState =
+withImpState = withImpStateModified id
+
+withImpStateModified ::
+  ShelleyEraImp era =>
+  (ImpTestState era -> ImpTestState era) ->
+  SpecWith (ImpTestState era) ->
+  Spec
+withImpStateModified f =
   beforeAll $
-    execImpTestM Nothing impTestState0 $
+    execImpTestM Nothing (f impTestState0) $
       addRootTxOut >> initImpTestState
   where
     impTestState0 =

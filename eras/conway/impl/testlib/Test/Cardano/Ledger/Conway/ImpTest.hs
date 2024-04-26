@@ -105,6 +105,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getsPParams,
   currentProposalsShouldContain,
   setupDRepWithoutStake,
+  withImpStateWithProtVer,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -119,6 +120,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   ShelleyBase,
   StrictMaybe (..),
+  Version,
   addEpochInterval,
   inject,
   succVersion,
@@ -133,6 +135,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core hiding (proposals)
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.PParams (ConwayPParams (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayGovEvent,
   EnactSignal,
@@ -219,6 +222,22 @@ conwayModifyPParams f = modifyNES $ \nes ->
       case finishDRepPulser pulser of
         (snapshot, ratifyState) ->
           DRComplete snapshot (ratifyState & rsEnactStateL . ensCurPParamsL %~ f)
+
+withImpStateWithProtVer ::
+  forall era.
+  ( ConwayEraImp era
+  , GovState era ~ ConwayGovState era
+  , PParamsHKD Identity era ~ ConwayPParams Identity era
+  ) =>
+  Version ->
+  SpecWith (ImpTestState era) ->
+  Spec
+withImpStateWithProtVer ver = do
+  withImpStateModified $
+    impNESL . nesEsL . esLStateL . lsUTxOStateL . (utxosGovStateL @era) . cgsCurPParamsL
+      %~ ( \(PParams pp) ->
+            PParams (pp {cppProtocolVersion = ProtVer ver 0})
+         )
 
 instance
   ( Crypto c

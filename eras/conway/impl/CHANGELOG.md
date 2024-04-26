@@ -59,10 +59,11 @@
 
 ### `testlib`
 
+* Add `withImpStateWithProtVer` to Conway ImpTest
 * Add the following utilities. #4273
   * to `Conway.ImpTest`
     * `setupDRepWithoutStake`
-    * `setupPoolWithoutStake` 
+    * `setupPoolWithoutStake`
     * `submitAndExpireProposalToMakeReward`
   * to `Shelley.ImpTest`
     * `getRewardAccountFor`
