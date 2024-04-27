@@ -355,7 +355,7 @@ govTransition = do
         -- Deposit check
         let expectedDep = pp ^. ppGovActionDepositL
          in pProcDeposit
-              == expectedDep
+              >= expectedDep
                 ?! ProposalDepositIncorrect pProcDeposit expectedDep
 
         -- Return address network id check
