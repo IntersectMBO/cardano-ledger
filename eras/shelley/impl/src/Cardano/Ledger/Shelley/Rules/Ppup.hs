@@ -214,7 +214,9 @@ ppupTransitionNonEmpty = do
             pps
               { sgsCurProposals = curProposals
               , sgsFutureProposals = ProposedPPUpdates fpupS
-              , sgsFuturePParams = votedFuturePParams curProposals pp coreNodeQuorum
+              , sgsFuturePParams =
+                  maybe NoPParamsUpdate PotentialPParamsUpdate $
+                    votedFuturePParams curProposals pp coreNodeQuorum
               }
         else do
           (succ currentEpochNo == targetEpochNo)

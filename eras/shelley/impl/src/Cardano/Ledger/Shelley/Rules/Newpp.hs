@@ -132,7 +132,9 @@ updatePpup !coreNodeQuorum ppupState pp =
     ppupState
       { sgsCurProposals = curProposals
       , sgsFutureProposals = emptyPPPUpdates
-      , sgsFuturePParams = votedFuturePParams curProposals pp coreNodeQuorum
+      , sgsFuturePParams =
+          maybe NoPParamsUpdate PotentialPParamsUpdate $
+            votedFuturePParams curProposals pp coreNodeQuorum
       }
   where
     ProposedPPUpdates newProposals = sgsFutureProposals ppupState

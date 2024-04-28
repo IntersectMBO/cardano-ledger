@@ -50,6 +50,7 @@ import Control.State.Transition (
  )
 import Data.Default.Class (Default)
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data UpecState era = UpecState
@@ -95,7 +96,7 @@ instance
           judgmentContext
 
         let utxoState = lsUTxOState ls
-            ppNew = sgsFuturePParams ppupState
+            ppNew = ppupState ^. futurePParamsGovStateG
         NewppState pp' ppupState' <-
           trans @(ShelleyNEWPP era) $
             TRC (NewppEnv (lsCertState ls) utxoState, NewppState pp ppupState, ppNew)

@@ -1,6 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -14,6 +16,8 @@ module Cardano.Ledger.Shelley.Governance (
   EraGov (..),
   ShelleyGovState (..),
   emptyShelleyGovState,
+  FuturePParams(..),
+  maybeFuturePParams,
   -- Lens
   proposalsL,
   futureProposalsL,
@@ -42,7 +46,8 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
-import Control.DeepSeq (NFData)
+import Cardano.Ledger.Tools
+import Control.DeepSeq (NFData (..))
 import Data.Aeson (
   KeyValue,
   ToJSON (..),
@@ -52,8 +57,9 @@ import Data.Aeson (
  )
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
+import Data.Typeable
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', SimpleGetter, lens)
+import Lens.Micro (Lens', SimpleGetter, lens, to)
 import NoThunks.Class (NoThunks (..))
 
 class
@@ -91,14 +97,9 @@ class
 
   -- | Getter for accessing the future protocol parameters.
   --
-  -- This getter is only reliable and efficient 2 stability before the end of the
-  -- epoch. Depending on the era, if called earlier in the epoch, it will either produce
-  -- unreliable results or getting those results will be somewhat costly.
-  --
-  -- Whenever called at the earliest two stability before the end of the epoch, then the
-  -- results will be 100% reliable and they will contain either a `Just` value with the
-  -- new `PParams`, when there was an update proposed and `Nothing` whenever PParams will
-  -- reamin unchanged at the next epoch boundary.
+  -- This getter will produce `Nothing` unless we are absolutely sure that the new PParams
+  -- will be updated. Which means there will be no chance of a `Just` value until we are
+  -- past the point of no return, whcih is 2 stability windows before the end of the epoch
   futurePParamsGovStateG :: SimpleGetter (GovState era) (Maybe (PParams era))
 
   obligationGovState :: GovState era -> Obligations
@@ -112,7 +113,7 @@ instance Crypto c => EraGov (ShelleyEra c) where
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
-  futurePParamsGovStateG = futurePParamsShelleyGovStateL
+  futurePParamsGovStateG = to $ maybeFuturePParams . sgsFuturePParams
 
   obligationGovState = const mempty -- No GovState obigations in ShelleyEra
 
@@ -121,12 +122,38 @@ data ShelleyGovState era = ShelleyGovState
   , sgsFutureProposals :: !(ProposedPPUpdates era)
   , sgsCurPParams :: !(PParams era)
   , sgsPrevPParams :: !(PParams era)
-  , sgsFuturePParams :: Maybe (PParams era)
-  -- ^ Prediction of any parameter changes that might happen on the epoch boundary. The
-  -- field is lazy on purpose, since we need to compute this field only towards the
-  -- end of the epoch.
+  , sgsFuturePParams :: !(FuturePParams era)
+  -- ^ Prediction of parameter changes that might happen on the epoch boundary.
   }
   deriving (Generic)
+
+data FuturePParams era
+  = NoPParamsUpdate
+  | -- | There is no guarantee that these will be the new PParams, no user outside of
+    -- ledger should rely on this value and should use `futurePParamsGovStateG`
+    -- instead. The field is lazy on purpose, since we need to compute this field only
+    -- towards the end of the epoch.
+    PotentialPParamsUpdate (PParams era)
+  | DefinitePParamsUpdate !(PParams era)
+  deriving (Generic)
+
+maybeFuturePParams :: FuturePParams era -> Maybe (PParams era)
+maybeFuturePParams = \case
+  DefinitePParamsUpdate pp -> Just pp
+  _ -> Nothing
+
+deriving stock instance Eq (PParams era) => Eq (FuturePParams era)
+deriving stock instance Show (PParams era) => Show (FuturePParams era)
+instance NoThunks (PParams era) => NoThunks (FuturePParams era) -- TODO allow thunks to WHNF
+instance Typeable era => EncCBOR (FuturePParams era) where
+  encCBOR = boom
+instance Typeable era => DecCBOR (FuturePParams era) where
+  decCBOR = boom
+instance NFData (PParams era) => NFData (FuturePParams era) where
+  rnf = \case
+    NoPParamsUpdate -> ()
+    PotentialPParamsUpdate pp -> rnf pp
+    DefinitePParamsUpdate pp -> rnf pp
 
 proposals :: ShelleyGovState era -> ProposedPPUpdates era
 proposals = sgsCurProposals
@@ -153,7 +180,7 @@ curPParamsShelleyGovStateL = lens sgsCurPParams (\sps x -> sps {sgsCurPParams = 
 prevPParamsShelleyGovStateL :: Lens' (ShelleyGovState era) (PParams era)
 prevPParamsShelleyGovStateL = lens sgsPrevPParams (\sps x -> sps {sgsPrevPParams = x})
 
-futurePParamsShelleyGovStateL :: Lens' (ShelleyGovState era) (Maybe (PParams era))
+futurePParamsShelleyGovStateL :: Lens' (ShelleyGovState era) (FuturePParams era)
 futurePParamsShelleyGovStateL =
   lens sgsFuturePParams (\sps x -> sps {sgsFuturePParams = x})
 
@@ -262,4 +289,4 @@ emptyShelleyGovState =
     emptyPPPUpdates
     emptyPParams
     emptyPParams
-    Nothing
+    NoPParamsUpdate
