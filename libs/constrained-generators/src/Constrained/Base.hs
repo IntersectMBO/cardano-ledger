@@ -339,6 +339,7 @@ data Pred (fn :: [Type] -> Type -> Type) where
     -- encoded with `ProdOver` (c.f. `Constrained.Univ`).
     List (Binder fn) as ->
     Pred fn
+  -- if-then-else where the branches depend on the scrutinee.
   IfElse ::
     HasSpec fn Bool =>
     Term fn Bool ->
