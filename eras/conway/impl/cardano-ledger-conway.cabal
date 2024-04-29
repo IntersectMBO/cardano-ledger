@@ -92,7 +92,7 @@ library
         cardano-ledger-babbage ^>=1.8,
         cardano-ledger-core ^>=1.12,
         cardano-ledger-mary ^>=1.6,
-        cardano-ledger-shelley ^>=1.10,
+        cardano-ledger-shelley ^>=1.11,
         cardano-slotting,
         cardano-strict-containers,
         containers,
@@ -157,6 +157,7 @@ library testlib
         cardano-strict-containers,
         data-default-class,
         generic-random,
+        microlens-mtl,
         mtl,
         text,
         small-steps >=1.1

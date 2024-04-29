@@ -66,4 +66,3 @@ spec = do
     Utxo.spec @era
     Utxos.spec @era
     Ratify.spec @era
-    GovCert.spec @era

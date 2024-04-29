@@ -1216,7 +1216,7 @@ instance IsConwayUniv fn => HasSpec fn (PulsingSnapshot (ConwayEra StandardCrypt
 type DRepPulserTypes =
   '[ Int
    , UMap StandardCrypto
-   , Map (Credential 'Staking StandardCrypto) (CompactForm Coin)
+   , Int
    , Map (Credential 'Staking StandardCrypto) (CompactForm Coin)
    , PoolDistr StandardCrypto
    , Map (DRep StandardCrypto) (CompactForm Coin)
@@ -1237,7 +1237,7 @@ instance
     inject @"DRepPulser" @'["DRepPulser" ::: DRepPulserTypes]
       dpPulseSize
       dpUMap
-      dpBalance
+      dpIndex
       dpStakeDistr
       dpStakePoolDistr
       dpDRepDistr

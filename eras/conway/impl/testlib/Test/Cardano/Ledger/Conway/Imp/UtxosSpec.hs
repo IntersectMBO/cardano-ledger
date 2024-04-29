@@ -344,36 +344,36 @@ conwayFeaturesPlutusV1V2FailureSpec = do
                 )
         describe "DelegTxCert" $ do
           it "V1" $ do
-            (drepKH, delegatorKH, _spendingKP) <- setupSingleDRep 1_000
+            (drep, delegator, _) <- setupSingleDRep 1_000
             let delegTxCert =
                   DelegTxCert @era
-                    (KeyHashObj delegatorKH)
-                    (DelegVote (DRepCredential $ KeyHashObj drepKH))
+                    delegator
+                    (DelegVote (DRepCredential drep))
             testCertificateNotSupportedV1 delegTxCert
           it "V2" $ do
-            (drepKH, delegatorKH, _spendingKP) <- setupSingleDRep 1_000
+            (drep, delegator, _) <- setupSingleDRep 1_000
             let delegTxCert =
                   DelegTxCert @era
-                    (KeyHashObj delegatorKH)
-                    (DelegVote (DRepCredential $ KeyHashObj drepKH))
+                    delegator
+                    (DelegVote (DRepCredential drep))
             testCertificateNotSupportedV2 delegTxCert
         describe "RegDepositDelegTxCert" $ do
           it "V1" $ do
-            (drepKH, _delegatorKH, _spendingKP) <- setupSingleDRep 1_000
+            (drep, _, _) <- setupSingleDRep 1_000
             unregisteredDelegatorKH <- freshKeyHash
             let regDepositDelegTxCert =
                   RegDepositDelegTxCert @era
                     (KeyHashObj unregisteredDelegatorKH)
-                    (DelegVote (DRepCredential $ KeyHashObj drepKH))
+                    (DelegVote (DRepCredential drep))
                     (Coin 0)
             testCertificateNotSupportedV1 regDepositDelegTxCert
           it "V2" $ do
-            (drepKH, _delegatorKH, _spendingKP) <- setupSingleDRep 1_000
+            (drep, _, _) <- setupSingleDRep 1_000
             unregisteredDelegatorKH <- freshKeyHash
             let regDepositDelegTxCert =
                   RegDepositDelegTxCert @era
                     (KeyHashObj unregisteredDelegatorKH)
-                    (DelegVote (DRepCredential $ KeyHashObj drepKH))
+                    (DelegVote (DRepCredential drep))
                     (Coin 0)
             testCertificateNotSupportedV2 regDepositDelegTxCert
         describe "AuthCommitteeHotKeyTxCert" $ do
@@ -407,21 +407,21 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             testCertificateNotSupportedV2 regDRepTxCert
         describe "UnRegDRepTxCert" $ do
           it "V1" $ do
-            (drepKH, _delegatorKH, _spendingKP) <- setupSingleDRep 1_000
-            let unRegDRepTxCert = UnRegDRepTxCert @era (KeyHashObj drepKH) (Coin 0)
+            (drepKH, _, _) <- setupSingleDRep 1_000
+            let unRegDRepTxCert = UnRegDRepTxCert @era drepKH (Coin 0)
             testCertificateNotSupportedV1 unRegDRepTxCert
           it "V1" $ do
-            (drepKH, _delegatorKH, _spendingKP) <- setupSingleDRep 1_000
-            let unRegDRepTxCert = UnRegDRepTxCert @era (KeyHashObj drepKH) (Coin 0)
+            (drepKH, _, _) <- setupSingleDRep 1_000
+            let unRegDRepTxCert = UnRegDRepTxCert @era drepKH (Coin 0)
             testCertificateNotSupportedV2 unRegDRepTxCert
         describe "UpdateDRepTxCert" $ do
           it "V1" $ do
-            (drepKH, _delegatorKH, _spendingKP) <- setupSingleDRep 1_000
-            let updateDRepTxCert = UpdateDRepTxCert @era (KeyHashObj drepKH) SNothing
+            (drepKH, _, _) <- setupSingleDRep 1_000
+            let updateDRepTxCert = UpdateDRepTxCert @era drepKH SNothing
             testCertificateNotSupportedV1 updateDRepTxCert
           it "V2" $ do
-            (drepKH, _delegatorKH, _spendingKP) <- setupSingleDRep 1_000
-            let updateDRepTxCert = UpdateDRepTxCert @era (KeyHashObj drepKH) SNothing
+            (drepKH, _, _) <- setupSingleDRep 1_000
+            let updateDRepTxCert = UpdateDRepTxCert @era drepKH SNothing
             testCertificateNotSupportedV2 updateDRepTxCert
 
 govPolicySpec ::
@@ -433,7 +433,8 @@ govPolicySpec ::
 govPolicySpec = do
   describe "Gov policy scripts" $ do
     it "failing native script govPolicy" $ do
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (committeeMember :| _) <- registerInitialCommittee
+      (dRep, _, _) <- setupSingleDRep 1_000_000
       scriptHash <- impAddNativeScript $ RequireTimeStart (SlotNo 1)
       anchor <- arbitrary
       void $
@@ -475,7 +476,8 @@ govPolicySpec = do
 
     it "alwaysSucceeds Plutus govPolicy validates" $ do
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceeds2 SPlutusV3)
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (committeeMember :| _) <- registerInitialCommittee
+      (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       void $
@@ -512,7 +514,8 @@ govPolicySpec = do
 
     it "alwaysFails Plutus govPolicy does not validate" $ do
       let alwaysFailsSh = hashPlutusScript (alwaysFails2 SPlutusV3)
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (committeeMember :| _) <- registerInitialCommittee
+      (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       void $
@@ -558,7 +561,8 @@ costModelsSpec =
       -- no initial PlutusV3 CostModels
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (committeeMember :| _) <- registerInitialCommittee
+      (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       govIdConstitution1 <-
         enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMember
@@ -592,7 +596,8 @@ costModelsSpec =
     it "Updating CostModels with alwaysSucceeds govPolicy but no PlutusV3 CostModels fails" $ do
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (committeeMember :| _) <- registerInitialCommittee
+      (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceeds2 SPlutusV3)
       void $
@@ -610,7 +615,8 @@ costModelsSpec =
     it "Updating CostModels and setting the govPolicy afterwards succeeds" $ do
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
-      (dRep, committeeMember, _) <- electBasicCommittee
+      (committeeMember :| _) <- registerInitialCommittee
+      (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       govIdConstitution1 <-
         enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMember

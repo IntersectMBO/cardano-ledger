@@ -84,6 +84,7 @@ import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockBlock (..), MockCha
 import Test.Cardano.Ledger.Generic.PrettyCore (
   pcSlotNo,
   pcTx,
+  ppInt,
   ppList,
   ppPair,
   ppStrictSeq,
@@ -553,8 +554,8 @@ showPulserState (MockChainState nes _ slot _) =
   "Slot = " ++ show slot ++ "   " ++ getPulserInfo (nes ^. newEpochStateDRepPulsingStateL)
   where
     getPulserInfo (DRPulsing x) =
-      "Balance = "
-        ++ show (summaryMapCompact (dpBalance x))
+      "Index = "
+        ++ show (ppInt (dpIndex x))
         ++ "    DRepDistr = "
         ++ show (summaryMapCompact (dpDRepDistr x))
     getPulserInfo (DRComplete psnap _) =

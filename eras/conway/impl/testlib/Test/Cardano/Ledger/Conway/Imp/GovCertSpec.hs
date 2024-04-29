@@ -1,20 +1,20 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (spec) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
   EraGov (..),
   InjectRuleFailure (..),
-  ppCommitteeMaxTermLengthL,
   ppDRepDepositL,
  )
 import Cardano.Ledger.Conway.Governance (
@@ -23,7 +23,6 @@ import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovPurposeId (..),
   Voter (..),
-  committeeMembers,
   committeeMembersL,
  )
 import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure (..))
@@ -33,9 +32,8 @@ import Cardano.Ledger.Conway.TxCert (
   pattern ResignCommitteeColdTxCert,
   pattern UnRegDRepTxCert,
  )
-import Cardano.Ledger.Core (Era (..), EraTx (..), EraTxBody (..))
+import Cardano.Ledger.Core (EraTx (..), EraTxBody (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (
   curPParamsEpochStateL,
   esLStateL,
@@ -55,22 +53,6 @@ import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 
-electCommittee1 :: ConwayEraImp era => ImpTestM era (Credential 'ColdCommitteeRole (EraCrypto era))
-electCommittee1 = do
-  modifyPParams $ ppCommitteeMaxTermLengthL .~ EpochInterval 100
-  drep <- registerDRep
-  EpochInterval ccTerm <- getsNES $ nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
-  ccCred <- KeyHashObj <$> freshKeyHash
-  let
-    committee = Map.singleton ccCred (EpochNo $ fromIntegral ccTerm)
-  _ <- electCommittee SNothing drep mempty committee
-  passNEpochs 3
-  newCommittee <-
-    getsNES $
-      nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-  fmap committeeMembers newCommittee `shouldBe` SJust committee
-  pure ccCred
-
 spec ::
   forall era.
   ( ConwayEraImp era
@@ -82,13 +64,13 @@ spec = describe "GOVCERT" $ do
   it
     "A CC that has resigned will need to be first voted out and then voted in to be considered active"
     $ do
-      (dRep, _, gaidCC) <- electBasicCommittee
+      (drepCred, _, _) <- setupSingleDRep 1_000_000
       passNEpochs 2
       -- Add a fresh CC
       cc <- KeyHashObj <$> freshKeyHash
-      let addCCAction = UpdateCommittee (SJust gaidCC) mempty (Map.singleton cc 20) (1 %! 2)
+      let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (1 %! 2)
       addCCGaid <- submitGovAction addCCAction
-      submitYesVote_ (DRepVoter dRep) addCCGaid
+      submitYesVote_ (DRepVoter drepCred) addCCGaid
       passNEpochs 2
       -- Confirm that they are added
       SJust committee <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
@@ -108,14 +90,14 @@ spec = describe "GOVCERT" $ do
       -- Re-add the same CC
       let reAddCCAction = UpdateCommittee (SJust $ GovPurposeId addCCGaid) mempty (Map.singleton cc 20) (1 %! 2)
       reAddCCGaid <- submitGovAction reAddCCAction
-      submitYesVote_ (DRepVoter dRep) reAddCCGaid
+      submitYesVote_ (DRepVoter drepCred) reAddCCGaid
       passNEpochs 2
       -- Confirm that they are still resigned
       ccShouldBeResigned cc
       -- Remove them
       let removeCCAction = UpdateCommittee (SJust $ GovPurposeId reAddCCGaid) (Set.singleton cc) mempty (1 %! 2)
       removeCCGaid <- submitGovAction removeCCAction
-      submitYesVote_ (DRepVoter dRep) removeCCGaid
+      submitYesVote_ (DRepVoter drepCred) removeCCGaid
       passNEpochs 2
       -- Confirm that they have been removed
       SJust committeeAfterRemove <-
@@ -124,7 +106,7 @@ spec = describe "GOVCERT" $ do
       -- Add the same CC back a second time
       let secondAddCCAction = UpdateCommittee (SJust $ GovPurposeId removeCCGaid) mempty (Map.singleton cc 20) (1 %! 2)
       secondAddCCGaid <- submitGovAction secondAddCCAction
-      submitYesVote_ (DRepVoter dRep) secondAddCCGaid
+      submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
       passNEpochs 2
       -- Confirm that they have been added
       SJust committeeAfterRemoveAndAdd <-
@@ -154,13 +136,15 @@ spec = describe "GOVCERT" $ do
               .~ SSeq.singleton (ResignCommitteeColdTxCert someCred SNothing)
         )
     it "re-registering a CC hot key" $ do
-      ccCred <- electCommittee1
-      replicateM_ 10 $ do
-        ccHotCred <- KeyHashObj <$> freshKeyHash
-        submitTx_ $
-          mkBasicTx mkBasicTxBody
-            & bodyTxL . certsTxBodyL
-              .~ SSeq.singleton (AuthCommitteeHotKeyTxCert ccCred ccHotCred)
+      void registerInitialCommittee
+      initialCommittee <- getCommitteeMembers
+      forM_ initialCommittee $ \kh ->
+        replicateM_ 10 $ do
+          ccHotCred <- KeyHashObj <$> freshKeyHash
+          submitTx_ $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ SSeq.singleton (AuthCommitteeHotKeyTxCert kh ccHotCred)
   describe "fails for" $ do
     it "invalid deposit provided with DRep registration cert" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100
@@ -220,18 +204,20 @@ spec = describe "GOVCERT" $ do
         )
         (pure . injectFailure $ ConwayDRepNotRegistered drepCred)
     it "registering a resigned CC member hotkey" $ do
-      ccCred <- electCommittee1
-      ccHotCred <- KeyHashObj <$> freshKeyHash
-      let
-        registerHotKeyTx =
+      void registerInitialCommittee
+      initialCommittee <- getCommitteeMembers
+      forM_ initialCommittee $ \ccCred -> do
+        ccHotCred <- KeyHashObj <$> freshKeyHash
+        let
+          registerHotKeyTx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ SSeq.singleton (AuthCommitteeHotKeyTxCert ccCred ccHotCred)
+        submitTx_ registerHotKeyTx
+        submitTx_ $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
-              .~ SSeq.singleton (AuthCommitteeHotKeyTxCert ccCred ccHotCred)
-      submitTx_ registerHotKeyTx
-      submitTx_ $
-        mkBasicTx mkBasicTxBody
-          & bodyTxL . certsTxBodyL
-            .~ SSeq.singleton (ResignCommitteeColdTxCert ccCred SNothing)
-      submitFailingTx
-        registerHotKeyTx
-        (pure . injectFailure $ ConwayCommitteeHasPreviouslyResigned ccCred)
+              .~ SSeq.singleton (ResignCommitteeColdTxCert ccCred SNothing)
+        submitFailingTx
+          registerHotKeyTx
+          (pure . injectFailure $ ConwayCommitteeHasPreviouslyResigned ccCred)

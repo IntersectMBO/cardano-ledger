@@ -15,7 +15,7 @@ import Cardano.Ledger.Conway.Governance (
   GovActionId,
   GovActionState,
   PulsingSnapshot (..),
-  computeDrepDistr,
+  computeDRepDistr,
   curPParamsGovStateL,
   finishDRepPulser,
   newEpochStateDRepPulsingStateL,
@@ -41,6 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   utxosGovStateL,
  )
+import qualified Cardano.Ledger.UMap as UMap
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -215,7 +216,7 @@ pulserWorks mcsfirst mcslast =
     (bruteForceDRepDistr (mcsTickNes mcsfirst) === extractPulsingDRepDistr (mcsNes mcslast))
 
 bruteForceDRepDistr :: NewEpochState era -> Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
-bruteForceDRepDistr nes = computeDrepDistr umap dreps incstk
+bruteForceDRepDistr nes = computeDRepDistr incstk dreps Map.empty $ UMap.umElems umap
   where
     ls = esLState (nesEs nes)
     cs = lsCertState ls

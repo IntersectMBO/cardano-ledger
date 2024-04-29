@@ -136,7 +136,7 @@ module Cardano.Ledger.Conway.Governance (
   extractDRepPulsingState,
   forceDRepPulsingState,
   finishDRepPulser,
-  computeDrepDistr,
+  computeDRepDistr,
   getRatifyState,
   conwayGovStateDRepDistrG,
   psDRepDistrG,
@@ -424,10 +424,11 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
       dState = certDState certState
       vState = certVState certState
       govState = epochState ^. epochStateGovStateL
-      stakeSize = Map.size stakeDistr
       -- Maximum number of blocks we are allowed to roll back
       k = securityParameter globals
-      pulseSize = max 1 (ceiling (toInteger stakeSize % (8 * toInteger k)))
+      umap = dsUnified dState
+      umapSize = Map.size $ umElems umap
+      pulseSize = max 1 (ceiling (toInteger umapSize % (8 * toInteger k)))
       epochState' =
         epochState
           & epochStateGovStateL . cgsDRepPulsingStateL
@@ -435,7 +436,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
               ( DRepPulser
                   { dpPulseSize = pulseSize
                   , dpUMap = dsUnified dState
-                  , dpBalance = stakeDistr -- used as the balance of things left to iterate over
+                  , dpIndex = 0 -- used as the index of the remaining UMap
                   , dpStakeDistr = stakeDistr -- used as part of the snapshot
                   , dpStakePoolDistr = stakePoolDistr
                   , dpDRepDistr = Map.empty -- The partial result starts as the empty map
