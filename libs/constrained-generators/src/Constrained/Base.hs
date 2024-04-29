@@ -313,6 +313,8 @@ data Pred (fn :: [Type] -> Type -> Type) where
     -- | Recover a useable value from the `a` term.
     (a -> b) ->
     Pred fn
+  -- TODO: there is good cause for not limiting this to `Term fn a` and `Term fn b`.
+  -- However, changing it requires re-working quite a lot of code.
   DependsOn ::
     ( HasSpec fn a
     , HasSpec fn b
@@ -336,6 +338,13 @@ data Pred (fn :: [Type] -> Type -> Type) where
     -- Constructors with multiple arguments are
     -- encoded with `ProdOver` (c.f. `Constrained.Univ`).
     List (Binder fn) as ->
+    Pred fn
+  -- if-then-else where the branches depend on the scrutinee.
+  IfElse ::
+    HasSpec fn Bool =>
+    Term fn Bool ->
+    Pred fn ->
+    Pred fn ->
     Pred fn
   GenHint ::
     HasGenHint fn a =>
@@ -464,6 +473,9 @@ checkPred env = \case
   Case t bs -> do
     v <- runTerm env t
     runCaseOn v bs (\x val ps -> checkPred (extendEnv x val env) ps)
+  IfElse bt p q -> do
+    b <- runTerm env bt
+    if b then checkPred env p else checkPred env q
   TruePred -> pure True
   FalsePred es -> explain es $ pure False
   DependsOn {} -> pure True
@@ -913,6 +925,10 @@ computeDependencies = \case
   Case t bs ->
     let innerG = foldMapList (computeBinderDependencies) bs
      in innerG <> t `irreflexiveDependencyOn` nodes innerG
+  IfElse b p q ->
+    let pG = computeDependencies p
+        qG = computeDependencies q
+     in (nodes pG <> nodes qG) `irreflexiveDependencyOn` b <> pG <> qG
   TruePred -> mempty
   FalsePred {} -> mempty
   Block ps -> foldMap computeDependencies ps
@@ -1047,6 +1063,11 @@ computeSpecSimplified x p = fromGE ErrorSpec $ case p of
   Case t branches ->
     let branchSpecs = mapList computeSpecBinderSimplified branches
      in propagateSpec (caseSpec branchSpecs) <$> toCtx x t
+  IfElse (Lit b) tp fp -> if b then pure $ computeSpecSimplified x tp else pure $ computeSpecSimplified x fp
+  -- TODO: Fix this by having a pass that figures out if `p` or `q` are trivially true or false (thus constraining
+  -- the scrutinee of the ifElse)
+  IfElse {} ->
+    fatalError ["Dependency error in computeSpec: IfElse", "  " ++ show x, show $ indent 2 (pretty p)]
   Reifies (Lit a) (Lit val) f
     | f val == a -> pure TrueSpec
     | otherwise -> genError ["Value does not reify to literal: " ++ show val ++ " -/> " ++ show a]
@@ -1054,8 +1075,12 @@ computeSpecSimplified x p = fromGE ErrorSpec $ case p of
     propagateSpec (equalSpec (f val)) <$> toCtx x t'
   Reifies Lit {} _ _ -> pure TrueSpec
   -- Impossible cases that should be ruled out by the dependency analysis and linearizer
-  DependsOn {} -> fatalError ["The impossible happened in computeSpec: DependsOn"]
-  Reifies {} -> fatalError ["The impossible happened in computeSpec: Reifies", show x, show p]
+  DependsOn {} ->
+    fatalError
+      ["The impossible happened in computeSpec: DependsOn", "  " ++ show x, show $ indent 2 (pretty p)]
+  Reifies {} ->
+    fatalError
+      ["The impossible happened in computeSpec: Reifies", "  " ++ show x, show $ indent 2 (pretty p)]
 
 -- | Precondition: the `Pred fn` defines the `Var a`
 computeSpec :: forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Specification fn a
@@ -1295,6 +1320,7 @@ instance HasVariables fn (Pred fn) where
     DependsOn x y -> freeVars x <> freeVars y
     ForAll set b -> freeVars set <> freeVars b
     Case t bs -> freeVars t <> freeVars bs
+    IfElse b p q -> freeVars b <> freeVars p <> freeVars q
     TruePred -> mempty
     FalsePred _ -> mempty
   freeVarSet = \case
@@ -1308,6 +1334,7 @@ instance HasVariables fn (Pred fn) where
     DependsOn x y -> freeVarSet x <> freeVarSet y
     ForAll set b -> freeVarSet set <> freeVarSet b
     Case t bs -> freeVarSet t <> freeVarSet bs
+    IfElse b p q -> freeVarSet b <> freeVarSet p <> freeVarSet q
     TruePred -> mempty
     FalsePred _ -> mempty
   countOf n = \case
@@ -1323,6 +1350,7 @@ instance HasVariables fn (Pred fn) where
     DependsOn x y -> countOf n x + countOf n y
     ForAll set b -> countOf n set + countOf n b
     Case t bs -> countOf n t + countOf n bs
+    IfElse b p q -> countOf n b + countOf n p + countOf n q
     TruePred -> 0
     FalsePred _ -> 0
   appearsIn n = \case
@@ -1338,6 +1366,7 @@ instance HasVariables fn (Pred fn) where
     DependsOn x y -> appearsIn n x || appearsIn n y
     ForAll set b -> appearsIn n set || appearsIn n b
     Case t bs -> appearsIn n t || appearsIn n bs
+    IfElse b p q -> appearsIn n b || appearsIn n p || appearsIn n q
     TruePred -> False
     FalsePred _ -> False
 
@@ -1457,6 +1486,7 @@ substitutePred x tm = \case
   Let t b -> Let (substituteTerm [x := tm] t) (substituteBinder x tm b)
   ForAll t b -> ForAll (substituteTerm [x := tm] t) (substituteBinder x tm b)
   Case t bs -> Case (substituteTerm [x := tm] t) (mapList (substituteBinder x tm) bs)
+  IfElse b p q -> IfElse (substituteTerm [x := tm] b) (substitutePred x tm p) (substitutePred x tm q)
   Reifies t' t f -> Reifies (substituteTerm [x := tm] t') (substituteTerm [x := tm] t) f
   DependsOn t t' -> DependsOn (substituteTerm [x := tm] t) (substituteTerm [x := tm] t')
   TruePred -> TruePred
@@ -1487,6 +1517,7 @@ instance Rename (Pred fn) where
         DependsOn x y -> DependsOn (rename v v' x) (rename v v' y)
         ForAll set b -> ForAll (rename v v' set) (rename v v' b)
         Case t bs -> Case (rename v v' t) (rename v v' bs)
+        IfElse b p q -> IfElse (rename v v' b) (rename v v' p) (rename v v' q)
         TruePred -> TruePred
         FalsePred es -> FalsePred es
 
@@ -1517,6 +1548,7 @@ substPred env = \case
   Reifies t' t f -> Reifies (substTerm env t') (substTerm env t) f
   ForAll set b -> ForAll (substTerm env set) (substBinder env b)
   Case t bs -> Case (substTerm env t) (mapList (substBinder env) bs)
+  IfElse b p q -> IfElse (substTerm env b) (substPred env p) (substPred env q)
   DependsOn x y -> DependsOn (substTerm env x) (substTerm env y)
   TruePred -> TruePred
   FalsePred es -> FalsePred es
@@ -1567,6 +1599,7 @@ simplifyPred = \case
     set' -> ForAll set' (simplifyBinder b)
   DependsOn x y -> DependsOn x y
   Case t bs -> mkCase (simplifyTerm t) (mapList simplifyBinder bs)
+  IfElse b p q -> ifElse (simplifyTerm b) (simplifyPred p) (simplifyPred q)
   TruePred -> TruePred
   FalsePred es -> FalsePred es
   Block ps -> fold (simplifyPreds ps)
@@ -1602,6 +1635,7 @@ pinnedBy :: forall fn a. (BaseUniverse fn, Typeable a) => Var a -> Pred fn -> Ma
 pinnedBy x (Assert _ (App (extractFn @(EqFn fn) @fn -> Just Equal) (t :> t' :> Nil)))
   | V x' <- t, Just Refl <- eqVar x x' = Just t'
   | V x' <- t', Just Refl <- eqVar x x' = Just t
+pinnedBy x (Block ps) = listToMaybe $ catMaybes $ map (pinnedBy x) ps
 pinnedBy _ _ = Nothing
 
 -- TODO: it might be necessary to run aggressiveInlining again after the let floating etc.
@@ -1639,12 +1673,32 @@ letSubexpressionElimination = go []
       Subst x t p -> go sub (substitutePred x t p)
       Assert es t -> Assert es (backwardsSubstitution sub t)
       Reifies t' t f -> Reifies (backwardsSubstitution sub t') (backwardsSubstitution sub t) f
-      -- TODO: this is almost certainly not the right thing to do!
-      DependsOn t t' ->
-        DependsOn t t'
-          <> DependsOn (backwardsSubstitution sub t) (backwardsSubstitution sub t')
+      -- NOTE: this is a tricky case. One possible thing to do here is to keep the old `DependsOn t t'`
+      -- and have the new DependsOn if `backwardsSubstitution` changed something. With this semantics you
+      -- risk running into unintuitive behaviour if you have something like:
+      -- ```
+      -- let x = y + z in
+      --  {y + z `dependsOn` w
+      --   assert $ w <. y + 2
+      --   ...}
+      -- ```
+      -- This will be rewritten as:
+      -- ```
+      -- let x = y + z in
+      --  {z `dependsOn` w
+      --   assert $ w <. y + 2
+      --   ...}
+      -- ```
+      -- which changes the dependency order of `w` and `y`. However, fixing
+      -- this behaviour in turn makes it more difficult to detect when
+      -- variables are no longer used after being substituted away - which
+      -- blocks some other optimizations. As we strongly encourage users not to
+      -- use `letBind` in their own code most users will never encounter this issue
+      -- so the tradeoff is probably worth it.
+      DependsOn t t' -> DependsOn (backwardsSubstitution sub t) (backwardsSubstitution sub t')
       ForAll t b -> ForAll (backwardsSubstitution sub t) (goBinder sub b)
       Case t bs -> Case (backwardsSubstitution sub t) (mapList (goBinder sub) bs)
+      IfElse b p q -> IfElse (backwardsSubstitution sub b) (go sub p) (go sub q)
       TruePred -> TruePred
       FalsePred es -> FalsePred es
 
@@ -1688,6 +1742,8 @@ letFloating = fold . go []
       ForAll t (x :-> p) -> ForAll t (x :-> letFloating p) : ctx
       -- TODO: float let through the cases if possible
       Case t bs -> Case t (mapList (\(x :-> p) -> x :-> letFloating p) bs) : ctx
+      -- TODO: float let through if possible
+      IfElse b p q -> IfElse b (letFloating p) (letFloating q) : ctx
       -- Boring cases
       Assert es t -> Assert es t : ctx
       GenHint h t -> GenHint h t : ctx
@@ -1739,6 +1795,12 @@ aggressiveInlining p
             p' <- go (underBinder fvs x p) (x := t' : sub) p
             pure $ Case t (x :-> p' :> Nil)
         | otherwise -> Case t <$> mapMList (goBinder fvs sub) bs
+      IfElse b tp fp
+        | not (isLit b)
+        , Lit a <- substituteAndSimplifyTerm sub b -> do
+            tell $ Any True
+            pure $ if a then tp else fp
+        | otherwise -> ifElse b <$> go fvs sub tp <*> go fvs sub fp
       Let t (x :-> p)
         | all (\n -> count n fvs <= 1) (freeVarSet t) -> do
             tell $ Any True
@@ -3811,6 +3873,14 @@ dependsOn = DependsOn
 lit :: Show a => a -> Term fn a
 lit = Lit
 
+ifElse :: (BaseUniverse fn, IsPred p fn, IsPred q fn) => Term fn Bool -> p -> q -> Pred fn
+ifElse (Lit True) (toPred -> p) _ = p
+ifElse (Lit False) _ (toPred -> q) = q
+ifElse b (toPred -> p) (toPred -> q)
+  | FalsePred _ <- p = assert (not_ b) <> q
+  | FalsePred _ <- q = assert b <> p
+  | otherwise = IfElse b p q
+
 genHint :: forall fn t. HasGenHint fn t => Hint t -> Term fn t -> Pred fn
 genHint = GenHint
 
@@ -3843,6 +3913,7 @@ bind body = x :-> p
     bound (Let _ b) = boundBinder b
     bound (ForAll _ b) = boundBinder b
     bound (Case _ cs) = getMax $ foldMapList (Max . boundBinder) cs
+    bound (IfElse _ p q) = max (bound p) (bound q)
     bound Reifies {} = -1
     bound GenHint {} = -1
     bound Assert {} = -1
@@ -3947,6 +4018,13 @@ instance Pretty (Pred fn) where
     DependsOn a b -> pretty a <+> "<-" /> pretty b
     ForAll t (x :-> p) -> "forall" <+> viaShow x <+> "in" <+> pretty t <+> "$" /> pretty p
     Case t bs -> "case" <+> pretty t <+> "of" /> vsep' (ppList_ pretty bs)
+    IfElse b p q ->
+      vsep
+        [ "if" <+> pretty b <+> "then"
+        , indent 2 (pretty p)
+        , "else"
+        , indent 2 (pretty q)
+        ]
     Subst x t p -> "[" <> pretty t <> "/" <> viaShow x <> "]" <> pretty p
     GenHint h t -> "genHint" <+> fromString (showsPrec 11 h "") <+> "$" <+> pretty t
     TruePred -> "True"

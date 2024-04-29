@@ -76,7 +76,6 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy, gePrevGovActionIds} =
                         (majV ==. majV')
                         (minV' ==. minV + 1)
                         (minV' ==. 0)
-                    , minV' `dependsOn` majV'
                     ]
           ]
       , forAll (snd_ hardForkTree) (genHint treeGenHint)

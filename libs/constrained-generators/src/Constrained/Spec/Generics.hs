@@ -564,6 +564,3 @@ isJust ::
   Term fn (Maybe a) ->
   Pred fn
 isJust = isCon @"Just"
-
-ifElse :: (BaseUniverse fn, IsPred p fn, IsPred q fn) => Term fn Bool -> p -> q -> Pred fn
-ifElse b p q = caseOn b (branch $ \_ -> q) (branch $ \_ -> p)
