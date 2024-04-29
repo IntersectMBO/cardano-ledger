@@ -27,6 +27,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Plutus.CostModels (updateCostModels)
+import qualified Cardano.Ledger.Shelley.HardForks as HF
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Val (zero, (<->))
 import Data.Default.Class (Default (..))
@@ -71,6 +72,7 @@ relevantDuringBootstrapSpec = do
   pparamUpdateSpec
   proposalsSpec
   networkIdSpec
+  bootstrapPhaseSpec
 
 unknownCostModelsSpec ::
   forall era.
@@ -1290,3 +1292,73 @@ ccVoteOnConstitutionFailsWithMultipleVotes = do
       [ injectFailure $
           DisallowedVoters [(CommitteeVoter ccCred, committeeProposal)]
       ]
+
+bootstrapPhaseSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  ) =>
+  SpecWith (ImpTestState era)
+bootstrapPhaseSpec =
+  describe "Proposing and voting during bootstrap phase" $ do
+    it "Parameter change" $ do
+      gid <- submitParameterChange SNothing (def & ppuMinFeeAL .~ SJust (Coin 3000))
+      (committee :| _) <- registerInitialCommittee
+      (drep, _, _) <- setupSingleDRep 1_000_000
+      (spo, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      checkVotingFailure (DRepVoter drep) gid
+      submitYesVote_ (StakePoolVoter spo) gid
+      submitYesVote_ (CommitteeVoter committee) gid
+    it "Hardfork initiation" $ do
+      curProtVer <- getProtVer
+      nextMajorVersion <- succVersion $ pvMajor curProtVer
+      gid <-
+        submitGovAction $
+          HardForkInitiation SNothing (curProtVer {pvMajor = nextMajorVersion})
+      (committee :| _) <- registerInitialCommittee
+      (drep, _, _) <- setupSingleDRep 1_000_000
+      (spo, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      checkVotingFailure (DRepVoter drep) gid
+      submitYesVote_ (StakePoolVoter spo) gid
+      submitYesVote_ (CommitteeVoter committee) gid
+    it "Info action" $ do
+      gid <- submitGovAction InfoAction
+      (committee :| _) <- registerInitialCommittee
+      (drep, _, _) <- setupSingleDRep 1_000_000
+      (spo, _, _) <- setupPoolWithStake $ Coin 42_000_000
+      submitYesVote_ (DRepVoter drep) gid
+      submitYesVote_ (StakePoolVoter spo) gid
+      submitYesVote_ (CommitteeVoter committee) gid
+    it "Treasury withdrawal" $ do
+      rewardAccount <- registerRewardAccount
+      govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+      let action = TreasuryWithdrawals [(rewardAccount, Coin 1000)] SNothing
+      let proposal =
+            ProposalProcedure
+              { pProcDeposit = govActionDeposit
+              , pProcReturnAddr = rewardAccount
+              , pProcGovAction = action
+              , pProcAnchor = def
+              }
+      checkProposalFailure proposal
+    it "NoConfidence" $ do
+      proposal <- proposalWithRewardAccount $ NoConfidence SNothing
+      checkProposalFailure proposal
+    it "UpdateCommittee" $ do
+      cCred <- KeyHashObj <$> freshKeyHash
+      let action = UpdateCommittee SNothing mempty [(cCred, EpochNo 30)] (1 %! 1)
+      proposal <- proposalWithRewardAccount action
+      checkProposalFailure proposal
+    it "NewConstitution" $ do
+      constitution <- arbitrary
+      proposal <- proposalWithRewardAccount $ NewConstitution SNothing constitution
+      checkProposalFailure proposal
+  where
+    checkProposalFailure proposal = do
+      curProtVer <- getProtVer
+      when (HF.bootstrapPhase curProtVer) $
+        submitFailingProposal proposal [injectFailure $ DisallowedProposalDuringBootstrap proposal]
+    checkVotingFailure voter gid = do
+      curProtVer <- getProtVer
+      when (HF.bootstrapPhase curProtVer) $
+        submitFailingVote voter gid [injectFailure $ DisallowedVotesDuringBootstrap [(voter, gid)]]
