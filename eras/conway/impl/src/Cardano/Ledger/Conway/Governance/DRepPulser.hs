@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -7,7 +8,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -38,6 +38,7 @@ module Cardano.Ledger.Conway.Governance.DRepPulser (
   RunConwayRatify (..),
 ) where
 
+import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (EpochNo (..), Globals (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -58,7 +59,7 @@ import Cardano.Ledger.CertState (CommitteeState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance.Internal
-import Cardano.Ledger.Conway.Governance.Procedures (GovActionState)
+import Cardano.Ledger.Conway.Governance.Procedures (GovActionState, gasDepositL, gasReturnAddrL)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -71,7 +72,7 @@ import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
-import Data.Foldable (toList)
+import Data.Foldable (foldl', toList)
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
@@ -173,25 +174,42 @@ instance EraPParams era => FromCBOR (PulsingSnapshot era) where
 --   (b) is the size of the StakeDistr, and
 --   (c) is the size of the DRepDistr, this grows as the accumulator
 computeDRepDistr ::
-  forall c.
-  Map (Credential 'Staking c) (CompactForm Coin) ->
-  Map (Credential 'DRepRole c) (DRepState c) ->
-  Map (DRep c) (CompactForm Coin) ->
-  Map (Credential 'Staking c) (UMElem c) ->
-  Map (DRep c) (CompactForm Coin)
-computeDRepDistr stakeDistr regDReps dRepDistr uMapChunk =
+  forall era.
+  Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin) ->
+  Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)) ->
+  StrictSeq (GovActionState era) ->
+  Map (DRep (EraCrypto era)) (CompactForm Coin) ->
+  Map (Credential 'Staking (EraCrypto era)) (UMElem (EraCrypto era)) ->
+  Map (DRep (EraCrypto era)) (CompactForm Coin)
+computeDRepDistr stakeDistr regDReps gass dRepDistr uMapChunk =
   Map.foldlWithKey' go dRepDistr uMapChunk
   where
+    -- QUESTION: Can I memoize this as a field in DRepPulsar? That causes a
+    -- type-error, though that does _not_ get resolved even with AllowAmbiguousTypes
+    -- as `EraCrypto era` is a non-injective type-family
+    proposalDeposits =
+      foldl'
+        ( \gasMap gas ->
+            Map.insertWith
+              addCompact
+              (gas ^. gasReturnAddrL . rewardAccountCredentialL)
+              (fromMaybe (CompactCoin 0) $ toCompact $ gas ^. gasDepositL)
+              gasMap
+        )
+        mempty
+        gass
     go accum stakeCred umElem =
       let stake = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred stakeDistr
+          proposalDeposit = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred proposalDeposits
+          stakeAndDeposits = addCompact stake proposalDeposit
        in case umElemDRepDelegatedReward umElem of
             Just (r, drep@DRepAlwaysAbstain) ->
-              Map.insertWith addCompact drep (addCompact stake r) accum
+              Map.insertWith addCompact drep (addCompact stakeAndDeposits r) accum
             Just (r, drep@DRepAlwaysNoConfidence) ->
-              Map.insertWith addCompact drep (addCompact stake r) accum
+              Map.insertWith addCompact drep (addCompact stakeAndDeposits r) accum
             Just (r, drep@(DRepCredential drepCred))
               | Map.member drepCred regDReps ->
-                  Map.insertWith addCompact drep (addCompact stake r) accum
+                  Map.insertWith addCompact drep (addCompact stakeAndDeposits r) accum
               | otherwise -> accum
             Nothing -> accum
 
@@ -244,7 +262,7 @@ instance Pulsable (DRepPulser era) where
     | done pulser = pure pulser {dpIndex = 0}
     | otherwise =
         let !chunk = Map.take dpPulseSize $ Map.drop dpIndex $ UMap.umElems dpUMap
-            dRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpDRepDistr chunk
+            dRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpProposals dpDRepDistr chunk
          in pure (pulser {dpIndex = dpIndex + dpPulseSize, dpDRepDistr = dRepDistr})
 
   completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
@@ -298,12 +316,16 @@ class
   runConwayRatify globals ratifyEnv ratifyState (RatifySignal ratifySig) =
     let ratifyResult =
           runReader
-            ( applySTS @(ConwayRATIFY era) (TRC (ratifyEnv, ratifyState, RatifySignal $ reorderActions ratifySig))
+            ( applySTS @(ConwayRATIFY era) $
+                TRC (ratifyEnv, ratifyState, RatifySignal $ reorderActions ratifySig)
             )
             globals
      in case ratifyResult of
           Left ps ->
-            error (unlines ("Impossible: RATIFY rule never fails, but it did:" : map show (toList ps)))
+            error $
+              unlines $
+                "Impossible: RATIFY rule never fails, but it did:"
+                  : map show (toList ps)
           Right ratifyState' -> ratifyState'
 
 finishDRepPulser :: DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
@@ -311,7 +333,14 @@ finishDRepPulser (DRComplete snap ratifyState) = (snap, ratifyState)
 finishDRepPulser (DRPulsing (DRepPulser {..})) =
   (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
   where
-    !finalDRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpDRepDistr $ Map.drop dpIndex $ umElems dpUMap
+    !finalDRepDistr =
+      computeDRepDistr
+        dpStakeDistr
+        dpDRepState
+        dpProposals
+        dpDRepDistr
+        $ Map.drop dpIndex
+        $ umElems dpUMap
     !ratifyEnv =
       RatifyEnv
         { reStakeDistr = dpStakeDistr

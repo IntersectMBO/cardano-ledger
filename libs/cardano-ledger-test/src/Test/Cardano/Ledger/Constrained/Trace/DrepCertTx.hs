@@ -2,7 +2,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 -- | Generate a Simple Tx with 1 inout, 1 output, and 1 DRep related Cert
 module Test.Cardano.Ledger.Constrained.Trace.DrepCertTx where
@@ -19,6 +18,7 @@ import Cardano.Ledger.Conway.Governance (
   curPParamsGovStateL,
   finishDRepPulser,
   newEpochStateDRepPulsingStateL,
+  proposalsActions,
   proposalsActionsMap,
   proposalsGovStateL,
  )
@@ -215,10 +215,12 @@ pulserWorks mcsfirst mcslast =
     )
     (bruteForceDRepDistr (mcsTickNes mcsfirst) === extractPulsingDRepDistr (mcsNes mcslast))
 
-bruteForceDRepDistr :: NewEpochState era -> Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
-bruteForceDRepDistr nes = computeDRepDistr incstk dreps Map.empty $ UMap.umElems umap
+bruteForceDRepDistr ::
+  ConwayEraGov era => NewEpochState era -> Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
+bruteForceDRepDistr nes = computeDRepDistr incstk dreps props Map.empty $ UMap.umElems umap
   where
     ls = esLState (nesEs nes)
+    props = proposalsActions $ ls ^. lsUTxOStateL . utxosGovStateL . proposalsGovStateL
     cs = lsCertState ls
     IStake incstk _ = utxosStakeDistr (lsUTxOState ls)
     umap = dsUnified (certDState cs)

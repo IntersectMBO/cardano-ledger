@@ -64,6 +64,8 @@ module Cardano.Ledger.Address (
   putRewardAcnt,
   decodeRewardAcnt,
   fromCborRewardAcnt,
+  rewardAccountCredentialL,
+  rewardAccountNetworkL,
 )
 where
 
@@ -129,6 +131,7 @@ import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics (Generic)
 import GHC.Show (intToDigit)
 import GHC.Stack (HasCallStack)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Numeric (showIntAtBase)
 import Quiet (Quiet (Quiet))
@@ -219,6 +222,12 @@ data RewardAccount c = RewardAccount
   , raCredential :: !(Credential 'Staking c)
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
+
+rewardAccountCredentialL :: Lens' (RewardAccount c) (Credential 'Staking c)
+rewardAccountCredentialL = lens raCredential $ \x y -> x {raCredential = y}
+
+rewardAccountNetworkL :: Lens' (RewardAccount c) Network
+rewardAccountNetworkL = lens raNetwork $ \x y -> x {raNetwork = y}
 
 pattern RewardAcnt :: Network -> Credential 'Staking c -> RewardAccount c
 pattern RewardAcnt {getRwdNetwork, getRwdCred} = RewardAccount getRwdNetwork getRwdCred

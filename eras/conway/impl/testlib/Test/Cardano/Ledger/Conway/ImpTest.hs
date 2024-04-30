@@ -42,6 +42,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   trySubmitVote,
   registerDRep,
   setupSingleDRep,
+  setupDRepWithoutStake,
   setupPoolWithStake,
   setupPoolWithoutStake,
   conwayModifyPParams,
@@ -102,7 +103,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   cantFollow,
   getsPParams,
   currentProposalsShouldContain,
-  setupDRepWithoutStake,
   withImpStateWithProtVer,
   whenPostBootstrap,
 ) where
