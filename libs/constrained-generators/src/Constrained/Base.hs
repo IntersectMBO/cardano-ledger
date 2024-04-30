@@ -480,6 +480,9 @@ monitorPred env = \case
   Case t bs -> do
     v <- runTerm env t
     runCaseOn v bs (\x val ps -> monitorPred (extendEnv x val env) ps)
+  IfElse b p q -> do
+    v <- runTerm env b
+    if v then monitorPred env p else monitorPred env q
   TruePred -> pure id
   FalsePred {} -> pure id
   DependsOn {} -> pure id
