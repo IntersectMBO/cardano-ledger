@@ -216,7 +216,7 @@ mkCostModel lang cm =
         PlutusV2 -> PV2.mkEvaluationContext
         PlutusV3 -> PV3.mkEvaluationContext
     eCostModel :: Either P.CostModelApplyError (P.EvaluationContext, [P.CostModelApplyWarn])
-    eCostModel = runWriterT (mkEvaluationContext $ map toInteger cm)
+    eCostModel = runWriterT (mkEvaluationContext cm)
 
 getCostModelLanguage :: CostModel -> Language
 getCostModelLanguage (CostModel lang _ _) = lang
