@@ -86,6 +86,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
+import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.TxIn (TxId (..))
 import Control.DeepSeq (NFData)
@@ -103,7 +104,6 @@ import Control.State.Transition.Extended (
   tellEvent,
   (?!),
  )
-import Data.Bifunctor (Bifunctor (..))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
@@ -163,6 +163,9 @@ data ConwayGovPredFailure era
       (StrictMaybe (ScriptHash (EraCrypto era)))
       -- | The policy script hash of the current constitution
       (StrictMaybe (ScriptHash (EraCrypto era)))
+  | DisallowedProposalDuringBootstrap (ProposalProcedure era)
+  | DisallowedVotesDuringBootstrap
+      (NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)))
   deriving (Eq, Show, Generic)
 
 type instance EraRuleFailure "GOV" (ConwayEra c) = ConwayGovPredFailure (ConwayEra c)
@@ -189,6 +192,8 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     9 -> SumD VotingOnExpiredGovAction <! From
     10 -> SumD ProposalCantFollow <! From <! From <! From
     11 -> SumD InvalidPolicyHash <! From <! From
+    12 -> SumD DisallowedProposalDuringBootstrap <! From
+    13 -> SumD DisallowedVotesDuringBootstrap <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -221,6 +226,10 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum InvalidPolicyHash 11
           !> To got
           !> To expected
+      DisallowedProposalDuringBootstrap proposal ->
+        Sum DisallowedProposalDuringBootstrap 12 !> To proposal
+      DisallowedVotesDuringBootstrap votes ->
+        Sum DisallowedVotesDuringBootstrap 13 !> To votes
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -256,10 +265,9 @@ checkVotesAreNotForExpiredActions ::
   EpochNo ->
   [(Voter (EraCrypto era), GovActionState era)] ->
   Test (ConwayGovPredFailure era)
-checkVotesAreNotForExpiredActions curEpoch voters =
-  let votesOnExpiredActions = filter (\(_, GovActionState {gasExpiresAfter}) -> curEpoch > gasExpiresAfter) voters
-   in failureOnNonEmpty votesOnExpiredActions $
-        VotingOnExpiredGovAction . fmap (second gasId)
+checkVotesAreNotForExpiredActions curEpoch votes =
+  checkDisallowedVotes votes VotingOnExpiredGovAction $ \GovActionState {gasExpiresAfter} _ ->
+    curEpoch <= gasExpiresAfter
 
 checkVotersAreValid ::
   forall era.
@@ -268,17 +276,27 @@ checkVotersAreValid ::
   CommitteeState era ->
   [(Voter (EraCrypto era), GovActionState era)] ->
   Test (ConwayGovPredFailure era)
-checkVotersAreValid currentEpoch committeeState voters =
-  let canVoteOn voter govAction = case voter of
-        CommitteeVoter {} -> isCommitteeVotingAllowed currentEpoch committeeState govAction
-        DRepVoter {} -> isDRepVotingAllowed govAction
-        StakePoolVoter {} -> isStakePoolVotingAllowed govAction
-      disallowedVoters =
-        filter
-          (\(voter, action) -> not $ voter `canVoteOn` gasAction action)
-          voters
-   in failureOnNonEmpty disallowedVoters $
-        DisallowedVoters . fmap (second gasId)
+checkVotersAreValid currentEpoch committeeState votes =
+  checkDisallowedVotes votes DisallowedVoters $ \gas ->
+    \case
+      CommitteeVoter {} -> isCommitteeVotingAllowed currentEpoch committeeState (gasAction gas)
+      DRepVoter {} -> isDRepVotingAllowed (gasAction gas)
+      StakePoolVoter {} -> isStakePoolVotingAllowed (gasAction gas)
+
+checkBootstrapVotes ::
+  forall era.
+  EraPParams era =>
+  PParams era ->
+  [(Voter (EraCrypto era), GovActionState era)] ->
+  Test (ConwayGovPredFailure era)
+checkBootstrapVotes pp votes
+  | HF.bootstrapPhase (pp ^. ppProtocolVersionL) =
+      checkDisallowedVotes votes DisallowedVotesDuringBootstrap $ \gas ->
+        \case
+          DRepVoter {} | gasAction gas == InfoAction -> True
+          DRepVoter {} -> False
+          _ -> isBootstrapAction $ gasAction gas
+  | otherwise = pure ()
 
 actionWellFormed :: ConwayEraPParams era => GovAction era -> Test (ConwayGovPredFailure era)
 actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
@@ -314,6 +332,16 @@ checkPolicy expectedPolicyHash actualPolicyHash =
   failureUnless (actualPolicyHash == expectedPolicyHash) $
     InvalidPolicyHash actualPolicyHash expectedPolicyHash
 
+checkBootstrapProposal ::
+  EraPParams era =>
+  PParams era ->
+  ProposalProcedure era ->
+  Test (ConwayGovPredFailure era)
+checkBootstrapProposal pp proposal@ProposalProcedure {pProcGovAction}
+  | HF.bootstrapPhase (pp ^. ppProtocolVersionL) =
+      failureUnless (isBootstrapAction pProcGovAction) $ DisallowedProposalDuringBootstrap proposal
+  | otherwise = pure ()
+
 govTransition ::
   forall era.
   ( ConwayEraPParams era
@@ -338,6 +366,8 @@ govTransition = do
   expectedNetworkId <- liftSTS $ asks networkId
 
   let processProposal ps (idx, proposal@ProposalProcedure {..}) = do
+        runTest $ checkBootstrapProposal pp proposal
+
         let newGaid = GovActionId txid idx
 
         -- In a HardFork, check that the ProtVer can follow
@@ -424,7 +454,9 @@ govTransition = do
           ([], [])
           votingProcedures
       curGovActionIds = proposalsActionsMap proposals
+
   failOnNonEmpty unknownGovActionIds GovActionsDoNotExist
+  runTest $ checkBootstrapVotes pp knownVotes
   runTest $ checkVotesAreNotForExpiredActions currentEpoch knownVotes
   runTest $ checkVotersAreValid currentEpoch committeeState knownVotes
 
@@ -437,6 +469,25 @@ govTransition = do
   tellEvent $ GovNewProposals txid updatedProposalStates
 
   pure updatedProposalStates
+
+isBootstrapAction :: GovAction era -> Bool
+isBootstrapAction =
+  \case
+    ParameterChange {} -> True
+    HardForkInitiation {} -> True
+    InfoAction -> True
+    _ -> False
+
+checkDisallowedVotes ::
+  [(Voter (EraCrypto era), GovActionState era)] ->
+  (NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)) -> ConwayGovPredFailure era) ->
+  (GovActionState era -> Voter (EraCrypto era) -> Bool) ->
+  Test (ConwayGovPredFailure era)
+checkDisallowedVotes votes failure canBeVotedOnBy =
+  failureOnNonEmpty disallowedVotes failure
+  where
+    disallowedVotes =
+      [(voter, gasId gas) | (voter, gas) <- votes, not (gas `canBeVotedOnBy` voter)]
 
 -- | If the GovAction is a HardFork, then return 3 things (if they exist)
 -- 1) The (StrictMaybe GovPurposeId), pointed to by the HardFork proposal

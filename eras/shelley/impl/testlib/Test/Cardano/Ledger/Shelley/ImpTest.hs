@@ -59,6 +59,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   submitFailingTx,
   trySubmitTx,
   modifyNES,
+  getProtVer,
   getsNES,
   getUTxO,
   impAddNativeScript,
@@ -72,6 +73,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   registerAndRetirePoolToMakeReward,
   getRewardAccountAmount,
   withImpState,
+  withImpStateModified,
   shelleyFixupTx,
   lookupImpRootTxOut,
   sendValueTo,
@@ -1106,13 +1108,19 @@ logToExpr :: (HasCallStack, ToExpr a) => a -> ImpTestM era ()
 logToExpr e = logEntry (showExpr e)
 
 withImpState ::
-  forall era.
   ShelleyEraImp era =>
   SpecWith (ImpTestState era) ->
   Spec
-withImpState =
+withImpState = withImpStateModified id
+
+withImpStateModified ::
+  ShelleyEraImp era =>
+  (ImpTestState era -> ImpTestState era) ->
+  SpecWith (ImpTestState era) ->
+  Spec
+withImpStateModified f =
   beforeAll $
-    execImpTestM Nothing impTestState0 $
+    execImpTestM Nothing (f impTestState0) $
       addRootTxOut >> initImpTestState
   where
     impTestState0 =
@@ -1263,6 +1271,9 @@ getsNES l = gets . view $ impNESL . l
 
 getUTxO :: ImpTestM era (UTxO era)
 getUTxO = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+
+getProtVer :: EraGov era => ImpTestM era ProtVer
+getProtVer = getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 
 submitTxAnn ::
   (HasCallStack, ShelleyEraImp era) =>

@@ -71,11 +71,9 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   proposalsShowDebug,
   getGovPolicy,
   submitFailingGovAction,
-  submitInitConstitutionGovAction,
-  submitChildConstitutionGovAction,
   submitConstitutionGovAction,
-  submitConstitutionGovActionTree,
-  submitConstitutionGovActionForest,
+  submitGovActionForest,
+  submitGovActionTree,
   getProposalsForest,
   logProposalsForest,
   logProposalsForestDiff,
@@ -105,6 +103,8 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getsPParams,
   currentProposalsShouldContain,
   setupDRepWithoutStake,
+  withImpStateWithProtVer,
+  whenPostBootstrap,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -119,6 +119,7 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   ShelleyBase,
   StrictMaybe (..),
+  Version,
   addEpochInterval,
   inject,
   succVersion,
@@ -133,6 +134,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core hiding (proposals)
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.PParams (ConwayPParams (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayGovEvent,
   EnactSignal,
@@ -159,6 +161,7 @@ import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
+import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
   asTreasuryL,
@@ -219,6 +222,22 @@ conwayModifyPParams f = modifyNES $ \nes ->
       case finishDRepPulser pulser of
         (snapshot, ratifyState) ->
           DRComplete snapshot (ratifyState & rsEnactStateL . ensCurPParamsL %~ f)
+
+withImpStateWithProtVer ::
+  forall era.
+  ( ConwayEraImp era
+  , GovState era ~ ConwayGovState era
+  , PParamsHKD Identity era ~ ConwayPParams Identity era
+  ) =>
+  Version ->
+  SpecWith (ImpTestState era) ->
+  Spec
+withImpStateWithProtVer ver = do
+  withImpStateModified $
+    impNESL . nesEsL . esLStateL . lsUTxOStateL . (utxosGovStateL @era) . cgsCurPParamsL
+      %~ ( \(PParams pp) ->
+            PParams (pp {cppProtocolVersion = ProtVer ver 0})
+         )
 
 instance
   ( Crypto c
@@ -737,12 +756,12 @@ enactTreasuryWithdrawals withdrawals dRep cm = do
 
 submitParameterChange ::
   ConwayEraImp era =>
-  StrictMaybe (GovPurposeId 'PParamUpdatePurpose era) ->
+  StrictMaybe (GovActionId (EraCrypto era)) ->
   PParamsUpdate era ->
   ImpTestM era (GovActionId (EraCrypto era))
 submitParameterChange parent ppu = do
   policy <- getGovPolicy
-  submitGovAction $ ParameterChange parent ppu policy
+  submitGovAction $ ParameterChange (GovPurposeId <$> parent) ppu policy
 
 getGovPolicy :: ConwayEraGov era => ImpTestM era (StrictMaybe (ScriptHash (EraCrypto era)))
 getGovPolicy =
@@ -1227,28 +1246,15 @@ proposalsShowDebug ps showRoots =
          )
       <> ["----- Proposals End -----"]
 
-submitInitConstitutionGovAction ::
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
-  ImpTestM era (GovActionId (EraCrypto era))
-submitInitConstitutionGovAction = do
-  submitConstitutionGovAction SNothing
-
-submitChildConstitutionGovAction ::
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
-  GovActionId (EraCrypto era) ->
-  ImpTestM era (GovActionId (EraCrypto era))
-submitChildConstitutionGovAction gai =
-  submitConstitutionGovAction $ SJust $ GovPurposeId gai
-
 submitConstitutionGovAction ::
   (ShelleyEraImp era, ConwayEraTxBody era) =>
-  StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
+  StrictMaybe (GovActionId (EraCrypto era)) ->
   ImpTestM era (GovActionId (EraCrypto era))
-submitConstitutionGovAction pgai = do
+submitConstitutionGovAction gid = do
   constitutionHash <- freshSafeHash
   let constitutionAction =
         NewConstitution
-          pgai
+          (GovPurposeId <$> gid)
           ( Constitution
               ( Anchor
                   (fromJust $ textToUrl 64 "constitution.dummy.0")
@@ -1286,28 +1292,28 @@ getProposalsForest = do
           go c = (SJust c, getOrderedChildren $ h Map.! GovPurposeId c ^. peChildrenL)
        in unfoldForest go (getOrderedChildren $ ps ^. pRootsL . forestL . prChildrenL)
 
-submitConstitutionGovActionTree ::
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
+submitGovActionTree ::
+  (StrictMaybe (GovActionId (EraCrypto era)) -> ImpTestM era (GovActionId (EraCrypto era))) ->
   StrictMaybe (GovActionId (EraCrypto era)) ->
   Tree () ->
   ImpTestM era (Tree (GovActionId (EraCrypto era)))
-submitConstitutionGovActionTree p tree =
+submitGovActionTree submitAction p tree =
   unfoldTreeM go $ fmap (const p) tree
   where
     go (Node parent children) = do
-      n <- submitConstitutionGovAction $ GovPurposeId <$> parent
+      n <- submitAction parent
       pure (n, fmap (\(Node _child subtree) -> Node (SJust n) subtree) children)
 
-submitConstitutionGovActionForest ::
-  ConwayEraImp era =>
+submitGovActionForest ::
+  (StrictMaybe (GovActionId (EraCrypto era)) -> ImpTestM era (GovActionId (EraCrypto era))) ->
   StrictMaybe (GovActionId (EraCrypto era)) ->
   Forest () ->
   ImpTestM era (Forest (GovActionId (EraCrypto era)))
-submitConstitutionGovActionForest p forest =
+submitGovActionForest submitAction p forest =
   unfoldForestM go $ fmap (fmap $ const p) forest
   where
     go (Node parent children) = do
-      n <- submitConstitutionGovAction $ GovPurposeId <$> parent
+      n <- submitAction parent
       pure (n, fmap (\(Node _child subtree) -> Node (SJust n) subtree) children)
 
 enactConstitution ::
@@ -1453,3 +1459,8 @@ majorFollow pv@(ProtVer x _) = case succVersion x of
 -- | An illegal ProtVer that skips 3 minor versions
 cantFollow :: ProtVer -> ProtVer
 cantFollow (ProtVer x y) = ProtVer x (y + 3)
+
+whenPostBootstrap :: EraGov era => ImpTestM era () -> ImpTestM era ()
+whenPostBootstrap a = do
+  pv <- getProtVer
+  unless (HardForks.bootstrapPhase pv) a

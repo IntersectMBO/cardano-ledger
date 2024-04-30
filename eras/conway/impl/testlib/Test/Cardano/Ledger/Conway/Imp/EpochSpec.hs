@@ -9,13 +9,17 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Conway.Imp.EpochSpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.EpochSpec (
+  spec,
+  relevantDuringBootstrapSpec,
+) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules (ConwayEpochEvent (GovInfoEvent), ConwayNewEpochEvent (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState
@@ -33,7 +37,7 @@ import qualified Data.Set as Set
 import Data.Tree
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.ImpTest
-import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
+import Test.Cardano.Ledger.Core.Rational (IsRatio (..), (%!))
 import Test.Cardano.Ledger.Imp.Common
 
 spec ::
@@ -46,10 +50,22 @@ spec ::
   SpecWith (ImpTestState era)
 spec =
   describe "EPOCH" $ do
-    proposalsSpec
-    dRepSpec
+    relevantDuringBootstrapSpec
+    dRepVotingSpec
     treasurySpec
-    eventsSpec
+
+relevantDuringBootstrapSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  ) =>
+  SpecWith (ImpTestState era)
+relevantDuringBootstrapSpec = do
+  proposalsSpec
+  dRepSpec
+  eventsSpec
 
 proposalsSpec ::
   forall era.
@@ -61,7 +77,7 @@ proposalsSpec =
       -- + 2 epochs to pass to get the desired effect
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 4
       _tree <-
-        submitConstitutionGovActionTree SNothing $
+        submitParameterChangeTree SNothing $
           Node
             ()
             [ Node
@@ -87,7 +103,7 @@ proposalsSpec =
           & ppGovActionDepositL .~ deposit
       rewardAccount <- registerRewardAccount
 
-      getRewardAccountAmount rewardAccount `shouldReturn` Coin 0
+      initialValue <- getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
 
       policy <-
         getsNES $
@@ -97,7 +113,11 @@ proposalsSpec =
           ProposalProcedure
             { pProcDeposit = deposit
             , pProcReturnAddr = rewardAccount
-            , pProcGovAction = TreasuryWithdrawals [(rewardAccount, Coin 123_456_789)] policy
+            , pProcGovAction =
+                ParameterChange
+                  SNothing
+                  (def & ppuMinFeeAL .~ SJust (Coin 3000))
+                  policy
             , pProcAnchor = def
             }
       expectPresentGovActionId govActionId
@@ -106,7 +126,12 @@ proposalsSpec =
       passEpoch
       expectMissingGovActionId govActionId
 
+      getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL) `shouldReturn` initialValue
       getRewardAccountAmount rewardAccount `shouldReturn` deposit
+  where
+    submitParameterChangeTree = submitGovActionTree $ submitGovAction . paramAction
+    paramAction p =
+      ParameterChange (GovPurposeId <$> p) (def & ppuMinFeeAL .~ SJust (Coin 10)) SNothing
 
 dRepSpec ::
   forall era.
@@ -118,10 +143,12 @@ dRepSpec =
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
       (drep, _, _) <- setupSingleDRep 1_000_000
 
+      let submitParamChangeProposal =
+            submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
       expectNumDormantEpochs 0
 
       -- epoch 0
-      _ <- submitConstitution SNothing
+      _ <- submitParamChangeProposal
       expectCurrentProposals
       expectNoPulserProposals
       expectNumDormantEpochs 0
@@ -162,7 +189,7 @@ dRepSpec =
       expectNumDormantEpochs 2
       expectExtraDRepExpiry drep 0
 
-      _ <- submitConstitution SNothing
+      _ <- submitParamChangeProposal
       -- number of dormant epochs is added to the drep expiry and the reset
       expectNumDormantEpochs 0
       expectExtraDRepExpiry drep 2
@@ -180,39 +207,54 @@ dRepSpec =
       logEntry "Stake distribution after DRep registration:"
       logStakeDistr
       passEpoch
-    it "constitution is accepted after two epochs" $ do
-      initialConstitution <- getConstitution
-      newAnchor <- arbitrary
-      let proposedConstitution = Constitution newAnchor SNothing
+
+dRepVotingSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+dRepVotingSpec =
+  describe "DRep" $ do
+    it "proposal is accepted after two epochs" $ do
+      modifyPParams $ \pp ->
+        pp
+          & ppDRepVotingThresholdsL
+            .~ def
+              { dvtPPEconomicGroup = 1 %! 1
+              }
+      let getParamValue = getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
+      initialParamValue <- getParamValue
+
+      let proposedValue = initialParamValue <+> Coin 300
+      let proposedUpdate = def & ppuMinFeeAL .~ SJust proposedValue
 
       -- Submit NewConstitution proposal two epoch too early to check that the action
       -- doesn't expire prematurely (ppGovActionLifetimeL is set to two epochs)
-      logEntry "Submitting new constitution"
-      gaidConstitutionProp <- submitGovAction $ NewConstitution SNothing proposedConstitution
+      logEntry "Submitting new minFee proposal"
+      gid <- submitParameterChange SNothing proposedUpdate
 
       (committeeHotCred :| _) <- registerInitialCommittee
       (dRepCred, _, _) <- setupSingleDRep 1_000_000
       passEpoch
-      logRatificationChecks gaidConstitutionProp
+      logRatificationChecks gid
       do
-        isAccepted <- isDRepAccepted gaidConstitutionProp
+        isAccepted <- isDRepAccepted gid
         assertBool "Gov action should not be accepted" $ not isAccepted
-      submitYesVote_ (DRepVoter dRepCred) gaidConstitutionProp
-      submitYesVote_ (CommitteeVoter committeeHotCred) gaidConstitutionProp
-      logAcceptedRatio gaidConstitutionProp
+      submitYesVote_ (DRepVoter dRepCred) gid
+      submitYesVote_ (CommitteeVoter committeeHotCred) gid
+      logAcceptedRatio gid
       do
-        isAccepted <- isDRepAccepted gaidConstitutionProp
+        isAccepted <- isDRepAccepted gid
         assertBool "Gov action should be accepted" isAccepted
 
       passEpoch
       do
-        isAccepted <- isDRepAccepted gaidConstitutionProp
+        isAccepted <- isDRepAccepted gid
         assertBool "Gov action should be accepted" isAccepted
-      logAcceptedRatio gaidConstitutionProp
-      logRatificationChecks gaidConstitutionProp
-      getConstitution `shouldReturn` initialConstitution
+      logAcceptedRatio gid
+      logRatificationChecks gid
+      getParamValue `shouldReturn` initialParamValue
       passEpoch
-      getConstitution `shouldReturn` proposedConstitution
+      getParamValue `shouldReturn` proposedValue
 
 treasurySpec ::
   forall era.
@@ -315,29 +357,31 @@ eventsSpec = describe "Events" $ do
   describe "emits event" $ do
     it "GovInfoEvent" $ do
       (ccCred :| _) <- registerInitialCommittee
-      (dRepCred, _, _) <- setupSingleDRep 1_000_000
+      (spoCred, _, _) <- setupPoolWithStake $ Coin 42_000_000
+
       let actionLifetime = 10
       modifyPParams $ \pp ->
         pp
           & ppGovActionLifetimeL .~ EpochInterval actionLifetime
-          & ppDRepVotingThresholdsL .~ def {dvtPPEconomicGroup = 1 %! 2}
+          & ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def
+          & ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
       propDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
       let
         proposeCostModel = do
-          newTau <- arbitrary
-          submitParameterChange SNothing $ def & ppuTauL .~ SJust newTau
+          newVal <- arbitrary
+          submitParameterChange SNothing $ def & ppuCoinsPerUTxOByteL .~ SJust newVal
       proposalA <- impAnn "proposalA" proposeCostModel
       proposalB <- impAnn "proposalB" proposeCostModel
       rewardAccount@(RewardAccount _ rewardCred) <- registerRewardAccount
       proposalC <- impAnn "proposalC" $ do
-        newTau <- arbitrary
+        newVal <- arbitrary
         submitProposal
           ProposalProcedure
             { pProcReturnAddr = rewardAccount
             , pProcGovAction =
                 ParameterChange
                   SNothing
-                  (def & ppuTauL .~ SJust newTau)
+                  (def & ppuCoinsPerUTxOByteL .~ SJust newVal)
                   SNothing
             , pProcDeposit = propDeposit
             , pProcAnchor = def
@@ -354,7 +398,7 @@ eventsSpec = describe "Events" $ do
                            ]
       replicateM_ (fromIntegral actionLifetime) passEpochWithNoDroppedActions
       logAcceptedRatio proposalA
-      submitYesVote_ (DRepVoter dRepCred) proposalA
+      submitYesVote_ (StakePoolVoter spoCred) proposalA
       submitYesVote_ (CommitteeVoter ccCred) proposalA
       gasA <- getGovActionState proposalA
       gasB <- getGovActionState proposalB

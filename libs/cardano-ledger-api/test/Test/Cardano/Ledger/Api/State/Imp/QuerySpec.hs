@@ -53,20 +53,21 @@ spec = do
       passEpoch
       expectQueryResult (Set.singleton c1) mempty mempty Map.empty
 
-    it "members should remain authorized if authorized during the epoch after their election" $ do
-      (drep, _, _) <- setupSingleDRep 1_000_000
+    it "members should remain authorized if authorized during the epoch after their election" $
+      whenPostBootstrap $ do
+        (drep, _, _) <- setupSingleDRep 1_000_000
 
-      c1 <- KeyHashObj <$> freshKeyHash
-      _ <- electCommittee SNothing drep Set.empty [(c1, EpochNo 12)]
-      passEpoch
-      hk1 <- registerCommitteeHotKey c1
-      expectQueryResult (Set.singleton c1) mempty mempty $
-        [(c1, CommitteeMemberState (MemberAuthorized hk1) Unrecognized Nothing ToBeEnacted)]
-      passEpoch
-      expectQueryResult (Set.singleton c1) mempty mempty $
-        [(c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just 12) NoChangeExpected)]
+        c1 <- KeyHashObj <$> freshKeyHash
+        _ <- electCommittee SNothing drep Set.empty [(c1, EpochNo 12)]
+        passEpoch
+        hk1 <- registerCommitteeHotKey c1
+        expectQueryResult (Set.singleton c1) mempty mempty $
+          [(c1, CommitteeMemberState (MemberAuthorized hk1) Unrecognized Nothing ToBeEnacted)]
+        passEpoch
+        expectQueryResult (Set.singleton c1) mempty mempty $
+          [(c1, CommitteeMemberState (MemberAuthorized hk1) Active (Just 12) NoChangeExpected)]
 
-  it "Committee queries" $ do
+  it "Committee queries" $ whenPostBootstrap $ do
     (drep, _, _) <- setupSingleDRep 1_000_000
     c1 <- KeyHashObj <$> freshKeyHash
     c2 <- KeyHashObj <$> freshKeyHash

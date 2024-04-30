@@ -8,7 +8,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conway.Imp.UtxosSpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.UtxosSpec (
+  spec,
+  relevantDuringBootstrapSpec,
+) where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (
@@ -48,7 +51,6 @@ import Lens.Micro
 import qualified PlutusLedgerApi.V1 as P1
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
-import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModels)
@@ -66,10 +68,22 @@ spec ::
   SpecWith (ImpTestState era)
 spec =
   describe "UTXOS" $ do
-    datumAndReferenceInputsSpec
-    conwayFeaturesPlutusV1V2FailureSpec
+    relevantDuringBootstrapSpec
     govPolicySpec
     costModelsSpec
+
+relevantDuringBootstrapSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , Inject (BabbageContextError era) (ContextError era)
+  , Inject (ConwayContextError era) (ContextError era)
+  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  ) =>
+  SpecWith (ImpTestState era)
+relevantDuringBootstrapSpec = do
+  datumAndReferenceInputsSpec
+  conwayFeaturesPlutusV1V2FailureSpec
 
 datumAndReferenceInputsSpec ::
   forall era.
@@ -214,16 +228,14 @@ conwayFeaturesPlutusV1V2FailureSpec = do
           $ CurrentTreasuryFieldNotSupported @era
           $ Coin 10_000
       describe "VotingProcedures" $ do
+        let action = ParameterChange SNothing (def & ppuMinFeeAL .~ SJust (Coin 10)) SNothing
         it "V1" $ do
-          drepC <- KeyHashObj <$> registerDRep
-          cc <- KeyHashObj <$> freshKeyHash
-          proposal <-
-            submitGovAction $
-              UpdateCommittee SNothing mempty (Map.singleton cc $ EpochNo 10) (1 %! 2)
+          (ccCred :| _) <- registerInitialCommittee
+          proposal <- submitGovAction action
           let badField =
                 VotingProcedures
                   $ Map.singleton
-                    (DRepVoter drepC)
+                    (CommitteeVoter ccCred)
                   $ Map.singleton proposal
                   $ VotingProcedure VoteYes SNothing
           testPlutusV1V2Failure
@@ -233,15 +245,12 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             $ inject
             $ VotingProceduresFieldNotSupported badField
         it "V2" $ do
-          drepC <- KeyHashObj <$> registerDRep
-          cc <- KeyHashObj <$> freshKeyHash
-          proposal <-
-            submitGovAction $
-              UpdateCommittee SNothing mempty (Map.singleton cc $ EpochNo 10) (1 %! 2)
+          (ccCred :| _) <- registerInitialCommittee
+          proposal <- submitGovAction action
           let badField =
                 VotingProcedures
                   $ Map.singleton
-                    (DRepVoter drepC)
+                    (CommitteeVoter ccCred)
                   $ Map.singleton proposal
                   $ VotingProcedure VoteYes SNothing
           testPlutusV1V2Failure
@@ -762,7 +771,7 @@ enactCostModels ::
 enactCostModels prevGovId cms dRep committeeMember = do
   initialCms <- getsNES $ nesEsL . curPParamsEpochStateL . ppCostModelsL
   let pparamsUpdate = def & ppuCostModelsL .~ SJust cms
-  govId <- submitParameterChange prevGovId pparamsUpdate
+  govId <- submitParameterChange (unGovPurposeId <$> prevGovId) pparamsUpdate
   submitYesVote_ (DRepVoter dRep) govId
   submitYesVote_ (CommitteeVoter committeeMember) govId
   passNEpochs 2

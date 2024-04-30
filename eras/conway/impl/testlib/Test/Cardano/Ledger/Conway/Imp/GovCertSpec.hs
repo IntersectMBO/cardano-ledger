@@ -9,7 +9,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (
+  spec,
+  relevantDuringBootstrapSpec,
+) where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
@@ -60,9 +63,11 @@ spec ::
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   ) =>
   SpecWith (ImpTestState era)
-spec = describe "GOVCERT" $ do
-  it
-    "A CC that has resigned will need to be first voted out and then voted in to be considered active"
+spec = do
+  relevantDuringBootstrapSpec
+  describe "GOVCERT"
+    $ it
+      "A CC that has resigned will need to be first voted out and then voted in to be considered active"
     $ do
       (drepCred, _, _) <- setupSingleDRep 1_000_000
       passNEpochs 2
@@ -115,6 +120,14 @@ spec = describe "GOVCERT" $ do
       -- Confirm that after registering a hot key, they are active
       _hotKey <- registerCommitteeHotKey cc
       ccShouldNotBeResigned cc
+
+relevantDuringBootstrapSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
+  ) =>
+  SpecWith (ImpTestState era)
+relevantDuringBootstrapSpec = do
   describe "succeeds for" $ do
     it "registering and unregistering a DRep" $ do
       modifyPParams $ ppDRepDepositL .~ Coin 100

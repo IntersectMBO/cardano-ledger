@@ -1489,7 +1489,7 @@ instance Reflect era => PrettyA (ConwayCertsPredFailure era) where
 ppConwayGovPredFailure :: ConwayGovPredFailure era -> PDoc
 ppConwayGovPredFailure x = case x of
   GovActionsDoNotExist c -> ppSexp "GovActionsDoNotExist" [prettyA c]
-  MalformedProposal ga -> ppSexp " MalformedProposal" [pcGovAction ga] -- (GovAction era)
+  MalformedProposal ga -> ppSexp "MalformedProposal" [pcGovAction ga]
   ProposalProcedureNetworkIdMismatch racnt nw ->
     ppSexp "ProposalProcedureNetworkIdMismatch" [pcRewardAccount racnt, pcNetwork nw]
   TreasuryWithdrawalsNetworkIdMismatch sr nw ->
@@ -1498,7 +1498,7 @@ ppConwayGovPredFailure x = case x of
   DisallowedVoters m -> ppSexp "DisallowedVoters" [prettyA m]
   ConflictingCommitteeUpdate s ->
     ppSexp "ConflictingCommitteeUpdate" [ppSet pcCredential s]
-  ExpirationEpochTooSmall m -> ppSexp " ExpirationEpochTooSmall" [ppMap pcCredential ppEpochNo m]
+  ExpirationEpochTooSmall m -> ppSexp "ExpirationEpochTooSmall" [ppMap pcCredential ppEpochNo m]
   InvalidPrevGovActionId p -> ppSexp "InvalidPrevGovActionId" [pcProposalProcedure p]
   VotingOnExpiredGovAction m ->
     ppSexp "VotingOnExpiredGovAction" [prettyA m]
@@ -1506,6 +1506,9 @@ ppConwayGovPredFailure x = case x of
     ppSexp "ProposalCantFollow" [ppStrictMaybe pcGovPurposeId s1, ppProtVer p1, ppProtVer p2]
   InvalidPolicyHash a b ->
     ppSexp "InvalidPolicyHash" [ppStrictMaybe prettyA a, ppStrictMaybe prettyA b]
+  DisallowedProposalDuringBootstrap p ->
+    ppSexp "DisallowedProposalDuringBootstrap" [pcProposalProcedure p]
+  DisallowedVotesDuringBootstrap m -> ppSexp "DisallowedVotesDuringBootstrap" [prettyA m]
 
 instance PrettyA (ConwayGovPredFailure era) where
   prettyA = ppConwayGovPredFailure

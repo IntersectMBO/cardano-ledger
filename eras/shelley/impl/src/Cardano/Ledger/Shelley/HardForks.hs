@@ -5,6 +5,7 @@
 module Cardano.Ledger.Shelley.HardForks (
   aggregatedRewards,
   allowMIRTransfer,
+  bootstrapPhase,
   validatePoolRewardAccountNetID,
   forgoRewardPrefilter,
   translateUpperBoundForPlutusScripts,
@@ -64,3 +65,9 @@ forgoPointerAddressResolution ::
   ProtVer ->
   Bool
 forgoPointerAddressResolution pv = pvMajor pv > natVersion @8
+
+-- | Bootstrap phase
+bootstrapPhase ::
+  ProtVer ->
+  Bool
+bootstrapPhase pv = pvMajor pv == natVersion @9

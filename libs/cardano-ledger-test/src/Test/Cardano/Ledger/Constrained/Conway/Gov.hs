@@ -9,6 +9,7 @@
 -- for the GOV rule
 module Test.Cardano.Ledger.Constrained.Conway.Gov where
 
+import Cardano.Ledger.Shelley.HardForks qualified as HardForks
 import Data.Foldable
 
 import Data.Coerce
@@ -326,20 +327,29 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePrevGovActionIds, gePParams} ps govAct
         [ forAll (dom_ withdrawMap) $ \rewAcnt ->
             match rewAcnt $ \net _ -> net ==. lit Testnet
         , assert $ policy ==. lit gePPolicy
+        , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
         ]
     )
     -- NoConfidence
-    ( branch $ \mPrevActionId -> mPrevActionId `elem_` lit committeeIds
+    ( branch $ \mPrevActionId ->
+        [ assert $ mPrevActionId `elem_` lit committeeIds
+        , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
+        ]
     )
     -- UpdateCommittee
     ( branch $ \mPrevActionId _removed added _quorum ->
         [ assert $ mPrevActionId `elem_` lit committeeIds
         , forAll (rng_ added) $ \epoch ->
             lit geEpoch <. epoch
+        , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
         ]
     )
     -- NewConstitution
-    (branch $ \mPrevActionId _c -> mPrevActionId `elem_` lit constitutionIds)
+    ( branch $ \mPrevActionId _c ->
+        [ assert $ mPrevActionId `elem_` lit constitutionIds
+        , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
+        ]
+    )
     -- InfoAction
     (branch $ \_ -> True)
   where
