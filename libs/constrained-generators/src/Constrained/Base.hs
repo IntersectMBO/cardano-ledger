@@ -453,10 +453,13 @@ runTerm env = \case
     vs <- mapMList (fmap Identity . runTerm env) ts
     pure $ uncurryList_ runIdentity (sem f) vs
 
-monitorSpec :: FunctionLike fn => Specification fn a -> a -> Property -> Property
+-- | Collect the 'monitor' calls from a specification instantiated to the given value. Typically,
+--
+--   >>> quickCheck $ forAll (genFromSpec_ spec) $ \ x -> monitorSpec spec x $ ...
+monitorSpec :: (FunctionLike fn, Testable p) => Specification fn a -> a -> p -> Property
 monitorSpec (SuspendedSpec x p) a =
-  errorGE (monitorPred (singletonEnv x a) p)
-monitorSpec _ _ = id
+  errorGE (monitorPred (singletonEnv x a) p) . property
+monitorSpec _ _ = property
 
 monitorPred ::
   forall fn m. (FunctionLike fn, MonadGenError m) => Env -> Pred fn -> m (Property -> Property)
@@ -3908,6 +3911,9 @@ reify t f body =
     , toPred $ body x
     ]
 
+-- | Add QuickCheck monitoring (e.g. 'Test.QuickCheck.collect' or 'Test.QuickCheck.counterexample')
+--   to a predicate. To use the monitoring in a property call 'monitorSpec' on the 'Specification'
+--   containing the monitoring and a value generated from the specification.
 monitor :: ((forall a. Term fn a -> a) -> Property -> Property) -> Pred fn
 monitor = Monitor
 
