@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
@@ -33,6 +34,8 @@ import Cardano.Ledger.Val (zero, (<->))
 import Data.Default.Class (Default (..))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
+import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Tree
@@ -264,7 +267,9 @@ pparamUpdateSpec =
 
 proposalsWithVotingSpec ::
   forall era.
-  ConwayEraImp era =>
+  ( ConwayEraImp era
+  , GovState era ~ ConwayGovState era
+  ) =>
   SpecWith (ImpTestState era)
 proposalsWithVotingSpec =
   describe "Proposals" $ do
@@ -497,6 +502,38 @@ proposalsWithVotingSpec =
         passNEpochs 3
         fmap (!! 3) getProposalsForest
           `shouldReturn` Node (SJust p116) []
+    it "Proposals are stored in the expected order" $ do
+      modifyPParams $
+        ppMaxValSizeL .~ 1_000_000_000
+      returnAddr <- registerRewardAccount
+      deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+      ens <- getEnactState
+      withdrawals <- arbitrary
+      let
+        mkProp name action = do
+          ProposalProcedure
+            { pProcReturnAddr = returnAddr
+            , pProcGovAction = action
+            , pProcDeposit = deposit
+            , pProcAnchor = Anchor (fromJust $ textToUrl 16 name) def
+            }
+        prop0 = mkProp "prop0" InfoAction
+        prop1 = mkProp "prop1" $ NoConfidence (ens ^. ensPrevCommitteeL)
+        prop2 = mkProp "prop2" InfoAction
+        prop3 = mkProp "prop3" $ TreasuryWithdrawals withdrawals SNothing
+      submitProposal_ prop0
+      submitProposal_ prop1
+      let
+        checkProps l = do
+          props <-
+            getsNES $
+              nesEsL . epochStateGovStateL @era . cgsProposalsL . pPropsL
+          fmap (pProcAnchor . gasProposalProcedure . snd) (OMap.assocList props)
+            `shouldBe` fmap pProcAnchor l
+      checkProps [prop0, prop1]
+      submitProposal_ prop2
+      submitProposal_ prop3
+      checkProps [prop0, prop1, prop2, prop3]
   where
     submitConstitutionForest = submitGovActionForest submitConstitutionGovAction
 

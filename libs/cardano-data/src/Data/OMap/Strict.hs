@@ -27,6 +27,7 @@ module Data.OMap.Strict (
   fromFoldableDuplicates,
   toMap,
   assocList,
+  elems,
   toStrictSeq,
   toStrictSeqOKeys,
   toStrictSeqOfPairs,
@@ -63,7 +64,7 @@ import Data.Maybe (isJust)
 import Data.Sequence.Strict qualified as SSeq
 import Data.Set qualified as Set
 import Data.Typeable (Typeable)
-import GHC.Exts (IsList (..))
+import GHC.Exts qualified as Exts
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
@@ -371,13 +372,16 @@ omapl ><| omapr = case omapl of
 
 infixr 5 ><|
 
-instance HasOKey k v => IsList (OMap k v) where
+instance HasOKey k v => Exts.IsList (OMap k v) where
   type Item (OMap k v) = v
   fromList = fromFoldable
   toList = F.toList
 
-assocList :: OMap k v -> [(k, v)]
-assocList = Map.toList . toMap
+assocList :: Ord k => OMap k v -> [(k, v)]
+assocList = F.toList . toStrictSeqOfPairs
+
+elems :: Ord k => OMap k v -> [v]
+elems = F.toList . toStrictSeq
 
 instance (HasOKey k v, ToJSON v) => ToJSON (OMap k v) where
   toJSON = toJSON . toStrictSeq
