@@ -2,7 +2,7 @@
 
 ## 1.2.2.0
 
-* Add `assocList`
+* Add `assocList`, `elems`
 * Add module Data.MonoTuple
 
 ## 1.2.1.0

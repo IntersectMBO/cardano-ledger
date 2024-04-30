@@ -808,6 +808,7 @@ instance SpecTranslate ctx a => SpecTranslate ctx (OSet a) where
 instance
   ( SpecTranslate ctx k
   , SpecTranslate ctx v
+  , Ord k
   ) =>
   SpecTranslate ctx (OMap k v)
   where
