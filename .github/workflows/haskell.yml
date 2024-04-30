@@ -332,6 +332,20 @@ jobs:
     - name: Regenerate hie.yaml and confirm that it is in sync
       run: ./scripts/gen-hie.sh
 
+  branch-history:
+    name: Check branch history
+    runs-on: ubuntu-latest
+    if: ${{ github.base_ref != '' && github.head_ref != '' }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Ensure the branch doesn't contain any merges
+      run: |
+        git fetch origin ${{ github.base_ref }} ${{ github.head_ref }}
+        if git log --merges --oneline --decorate origin/${{ github.base_ref }}..origin/${{ github.head_ref }} | grep .; then
+          echo 'Branch must not contain merges'
+          false
+        fi
+
   notify-nightly-failure:
     name: Send a slack notification on \#ledger-internal if the nightly build failed
     runs-on: ubuntu-latest
