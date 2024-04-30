@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -8,6 +9,8 @@
 module Constrained.Examples.Basic where
 
 import GHC.Generics
+
+import Test.QuickCheck qualified as QC
 
 import Constrained
 
@@ -19,8 +22,14 @@ leqPair = constrained $ \p ->
 simplePairSpec :: Specification BaseFn (Int, Int)
 simplePairSpec = constrained $ \p ->
   match p $ \x y ->
-    [ x /=. 0
-    , y /=. 0
+    [ assert $ x /=. 0
+    , assert $ y /=. 0
+    , -- You can use `monitor` to add QuickCheck property modifiers for
+      -- monitoring distribution, like classify, label, and cover, to your
+      -- specification
+      monitor $ \eval ->
+        QC.classify (eval y > 0) "positive y"
+          . QC.classify (eval x > 0) "positive x"
     ]
 
 sizeAddOrSub1 :: Specification BaseFn Integer
@@ -64,8 +73,16 @@ instance BaseUniverse fn => HasSpec fn Foo
 fooSpec :: Specification BaseFn Foo
 fooSpec = constrained $ \foo ->
   (caseOn foo)
-    (branch $ \i -> 0 <=. i)
-    (branch $ \i j -> i <=. j)
+    ( branch $ \i ->
+        [ assert $ 0 <=. i
+        , monitor $ \_ -> QC.cover 40 True "Foo"
+        ]
+    )
+    ( branch $ \i j ->
+        [ assert $ i <=. j
+        , monitor $ \_ -> QC.cover 40 True "Bar"
+        ]
+    )
 
 intSpec :: Specification BaseFn (Int, Int)
 intSpec = constrained' $ \a b ->
