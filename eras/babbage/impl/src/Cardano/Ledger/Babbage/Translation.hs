@@ -97,8 +97,8 @@ instance Crypto c => TranslateEra (BabbageEra c) PParams where
 instance Crypto c => TranslateEra (BabbageEra c) FuturePParams where
   translateEra ctxt = \case
     NoPParamsUpdate -> pure NoPParamsUpdate
-    PotentialPParamsUpdate pp -> PotentialPParamsUpdate <$> translateEra ctxt pp
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
+    PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
 instance Crypto c => TranslateEra (BabbageEra c) EpochState where
   translateEra ctxt es =

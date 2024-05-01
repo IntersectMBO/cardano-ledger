@@ -177,14 +177,14 @@ instance (Typeable era, EncCBOR (PParams era)) => EncCBOR (FuturePParams era) wh
   encCBOR =
     encode . \case
       NoPParamsUpdate -> Sum NoPParamsUpdate 0
-      PotentialPParamsUpdate pp -> Sum PotentialPParamsUpdate 1 !> To pp
-      DefinitePParamsUpdate pp -> Sum DefinitePParamsUpdate 2 !> To pp
+      DefinitePParamsUpdate pp -> Sum DefinitePParamsUpdate 1 !> To pp
+      PotentialPParamsUpdate pp -> Sum PotentialPParamsUpdate 2 !> To pp
 
 instance (Typeable era, DecCBOR (PParams era)) => DecCBOR (FuturePParams era) where
   decCBOR = decode . Summands "FuturePParams" $ \case
     0 -> SumD NoPParamsUpdate
-    1 -> SumD PotentialPParamsUpdate <! From
-    2 -> SumD DefinitePParamsUpdate <! From
+    1 -> SumD DefinitePParamsUpdate <! From
+    2 -> SumD PotentialPParamsUpdate <! From
 
 instance NFData (PParams era) => NFData (FuturePParams era) where
   rnf = \case

@@ -72,8 +72,8 @@ instance Crypto c => TranslateEra (AlonzoEra c) PParams where
 instance Crypto c => TranslateEra (AlonzoEra c) FuturePParams where
   translateEra ctxt = \case
     NoPParamsUpdate -> pure NoPParamsUpdate
-    PotentialPParamsUpdate pp -> PotentialPParamsUpdate <$> translateEra ctxt pp
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
+    PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
 newtype Tx era = Tx {unTx :: Core.Tx era}
 

@@ -734,8 +734,7 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
       govState
         { sgsCurProposals = ps
         , sgsFuturePParams =
-            maybe NoPParamsUpdate PotentialPParamsUpdate $
-              votedFuturePParams ps pp (quorum testGlobals)
+            PotentialPParamsUpdate $ votedFuturePParams ps pp (quorum testGlobals)
         }
     utxoSt' = utxoSt {utxosGovState = govState'}
     ls' = ls {lsUTxOState = utxoSt'}

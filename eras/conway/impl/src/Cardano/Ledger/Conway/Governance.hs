@@ -235,9 +235,7 @@ data ConwayGovState era = ConwayGovState
   , cgsConstitution :: !(Constitution era)
   , cgsCurPParams :: !(PParams era)
   , cgsPrevPParams :: !(PParams era)
-  , cgsFuturePParams :: FuturePParams era
-  -- ^ This field is lazy on purpose. It is essential for efficient PParams prediction,
-  -- otherwise we would force the DRep pulser on the very first TICK.
+  , cgsFuturePParams :: !(FuturePParams era)
   , cgsDRepPulsingState :: !(DRepPulsingState era)
   -- ^ The 'cgsDRepPulsingState' field is a pulser that incrementally computes the stake
   -- distribution of the DReps over the Epoch following the close of voting at end of
@@ -285,16 +283,19 @@ getRatifyState (ConwayGovState {cgsDRepPulsingState}) = snd $ finishDRepPulser c
 
 predictFuturePParams :: ConwayGovState era -> ConwayGovState era
 predictFuturePParams govState =
-  govState
-    { cgsFuturePParams = case cgsFuturePParams govState of
-        DefinitePParamsUpdate pp -> DefinitePParamsUpdate pp
-        _ -> newFuturePParams
-    }
+  case cgsFuturePParams govState of
+    DefinitePParamsUpdate _ -> govState
+    _ ->
+      govState
+        { cgsFuturePParams = PotentialPParamsUpdate newFuturePParams
+        }
   where
-    newFuturePParams =
-      maybe NoPParamsUpdate PotentialPParamsUpdate $ do
-        guard (any hasChangesToPParams (rsEnacted ratifyState))
-        pure (ensCurPParams (rsEnactState ratifyState))
+    -- This binding is not forced until a call to `solidifyNextEpochPParams` in the TICK
+    -- rule two stability windows before the end of the epoch, therefore it is safe to
+    -- create thunks here throughout the epoch
+    newFuturePParams = do
+      guard (any hasChangesToPParams (rsEnacted ratifyState))
+      pure (ensCurPParams (rsEnactState ratifyState))
     ratifyState = extractDRepPulsingState (cgsDRepPulsingState govState)
     hasChangesToPParams gas =
       case pProcGovAction (gasProposalProcedure gas) of

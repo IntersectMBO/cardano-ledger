@@ -92,8 +92,8 @@ instance Crypto c => TranslateEra (AllegraEra c) PParamsUpdate
 instance Crypto c => TranslateEra (AllegraEra c) FuturePParams where
   translateEra ctxt = \case
     NoPParamsUpdate -> pure NoPParamsUpdate
-    PotentialPParamsUpdate pp -> PotentialPParamsUpdate <$> translateEra ctxt pp
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
+    PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
 instance Crypto c => TranslateEra (AllegraEra c) ProposedPPUpdates where
   translateEra ctxt (ProposedPPUpdates ppup) =

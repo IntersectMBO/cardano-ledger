@@ -300,8 +300,7 @@ instance Crypto c => Arbitrary (FreeVars c) where
 ------------------------------------------------------------------------------------------
 
 instance Arbitrary (PParams era) => Arbitrary (FuturePParams era) where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
+  arbitrary = scale (`div` 10) genericArbitraryU
 
 instance
   ( Era era

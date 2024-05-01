@@ -81,8 +81,8 @@ instance Crypto c => TranslateEra (MaryEra c) PParamsUpdate
 instance Crypto c => TranslateEra (MaryEra c) FuturePParams where
   translateEra ctxt = \case
     NoPParamsUpdate -> pure NoPParamsUpdate
-    PotentialPParamsUpdate pp -> PotentialPParamsUpdate <$> translateEra ctxt pp
     DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
+    PotentialPParamsUpdate mpp -> PotentialPParamsUpdate <$> mapM (translateEra ctxt) mpp
 
 instance Crypto c => TranslateEra (MaryEra c) EpochState where
   translateEra ctxt es =

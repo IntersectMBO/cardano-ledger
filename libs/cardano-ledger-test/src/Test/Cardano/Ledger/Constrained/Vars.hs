@@ -427,7 +427,7 @@ ppupStateT p =
     :$ Lensed (pparamProposals p) (proposalsL . proposedMapL p)
     :$ Lensed (futurePParamProposals p) (futureProposalsL . proposedMapL p)
     :$ Lensed (currPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
-    :$ Lensed (prevPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
+    :$ Lensed (prevPParams p) (Gov.prevPParamsGovStateL . pparamsFL p)
     :$ Lensed (futurePParams p) (Gov.futurePParamsGovStateL . futurePParamsFL p)
   where
     ppupfun x y (PParamsF _ pp) (PParamsF _ prev) =
@@ -2055,6 +2055,7 @@ conwayGovStateT p =
     :$ Lensed constitution cgsConstitutionL
     :$ Lensed (currPParams reify) (cgsCurPParamsL . pparamsFL reify)
     :$ Lensed (prevPParams reify) (cgsPrevPParamsL . pparamsFL reify)
+    :$ Lensed (futurePParams reify) (cgsFuturePParamsL . futurePParamsFL reify)
     :$ Shift pulsingPulsingStateT cgsDRepPulsingStateL
 
 -- | The sum of all the 'gasDeposit' fields of 'currProposals'

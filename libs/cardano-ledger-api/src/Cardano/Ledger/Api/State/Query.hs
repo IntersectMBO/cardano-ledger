@@ -283,15 +283,12 @@ getNextEpochCommitteeMembers nes =
 queryCurrentPParams :: EraGov era => NewEpochState era -> PParams era
 queryCurrentPParams nes = queryGovState nes ^. curPParamsGovStateL
 
--- | This query will return values for protocol parameters that will be at the next
--- epoch boundary, but only when there was a protocol parameter update initiated in this
--- epoch. Otherwise it will return `Nothing`.
---
--- Semantics of this query are such that it will produce reliable results and efficiently
--- only two stability windows before the end of the epoch.
+-- | This query will return values for protocol parameters that are likely to be adopted
+-- at the next epoch boundary. It is only when we passed 2 stability windows before the
+-- end of the epoch that users can rely on this query to produce stable results.
 queryFuturePParams :: EraGov era => NewEpochState era -> Maybe (PParams era)
 queryFuturePParams nes =
   case queryGovState nes ^. futurePParamsGovStateL of
     NoPParamsUpdate -> Nothing
-    PotentialPParamsUpdate pp -> Just pp
+    PotentialPParamsUpdate mpp -> mpp
     DefinitePParamsUpdate pp -> Just pp
