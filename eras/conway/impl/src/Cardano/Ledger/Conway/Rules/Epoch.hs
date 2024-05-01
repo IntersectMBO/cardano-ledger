@@ -52,6 +52,7 @@ import Cardano.Ledger.Conway.Governance (
   cgsCommitteeL,
   cgsConstitutionL,
   cgsCurPParamsL,
+  cgsFuturePParamsL,
   cgsPrevPParamsL,
   cgsProposalsL,
   dormantEpoch,
@@ -334,8 +335,9 @@ epochTransition = do
         & cgsProposalsL .~ newProposals
         & cgsCommitteeL .~ ensCommittee
         & cgsConstitutionL .~ ensConstitution
-        & cgsCurPParamsL .~ ensCurPParams
+        & cgsCurPParamsL .~ nextEpochPParams govState0
         & cgsPrevPParamsL .~ curPParams
+        & cgsFuturePParamsL .~ NoPParamsUpdate
 
     allRemovedGovActions = expiredActions `Map.union` enactedActions
     (newUMap, unclaimed) =

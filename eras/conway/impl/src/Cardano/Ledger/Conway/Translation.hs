@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -28,6 +29,7 @@ import Cardano.Ledger.Conway.Governance (
   cgsCommitteeL,
   cgsConstitutionL,
   cgsCurPParamsL,
+  cgsFuturePParamsL,
   cgsPrevPParamsL,
   mkEnactState,
   rsEnactStateL,
@@ -119,6 +121,12 @@ instance Crypto c => TranslateEra (ConwayEra c) Tx where
 instance Crypto c => TranslateEra (ConwayEra c) PParams where
   translateEra ConwayGenesis {cgUpgradePParams} = pure . upgradePParams cgUpgradePParams
 
+instance Crypto c => TranslateEra (ConwayEra c) FuturePParams where
+  translateEra ctxt = \case
+    NoPParamsUpdate -> pure NoPParamsUpdate
+    PotentialPParamsUpdate pp -> PotentialPParamsUpdate <$> translateEra ctxt pp
+    DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
+
 instance Crypto c => TranslateEra (ConwayEra c) EpochState where
   translateEra ctxt es =
     pure $
@@ -168,9 +176,11 @@ translateGovState ::
 translateGovState ctxt@ConwayGenesis {..} sgov =
   let curPParams = translateEra' ctxt (sgov ^. curPParamsGovStateL)
       prevPParams = translateEra' ctxt (sgov ^. prevPParamsGovStateL)
+      futurePParams = translateEra' ctxt (sgov ^. futurePParamsGovStateL)
    in emptyGovState
         & cgsCurPParamsL .~ curPParams
         & cgsPrevPParamsL .~ prevPParams
+        & cgsFuturePParamsL .~ futurePParams
         & cgsCommitteeL .~ SJust cgCommittee
         & cgsConstitutionL .~ cgConstitution
 
@@ -181,9 +191,7 @@ instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
         { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
-        , API.utxosGovState =
-            translateGovState ctxt $
-              API.utxosGovState us
+        , API.utxosGovState = translateGovState ctxt $ API.utxosGovState us
         , API.utxosStakeDistr = API.utxosStakeDistr us
         , API.utxosDonation = API.utxosDonation us
         }

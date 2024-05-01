@@ -24,9 +24,7 @@ import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
-  UTxOState (utxosDeposited),
-  totalObligation,
-  utxosGovStateL,
+  UTxOState,
  )
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (ProposedPPUpdates),
@@ -35,7 +33,6 @@ import Cardano.Ledger.Shelley.PParams (
  )
 import Cardano.Ledger.Shelley.Rules.Ppup (votedFuturePParams)
 import Control.DeepSeq (NFData)
-import Control.Monad (forM_)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   STS (..),
@@ -43,13 +40,10 @@ import Control.State.Transition (
   TransitionRule,
   judgmentContext,
   liftSTS,
-  (?!),
  )
 import Data.Default.Class (Default, def)
-import Data.Maybe (fromMaybe)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyNewppState era
@@ -78,7 +72,7 @@ instance
   STS (ShelleyNEWPP era)
   where
   type State (ShelleyNEWPP era) = ShelleyNewppState era
-  type Signal (ShelleyNEWPP era) = Maybe (PParams era)
+  type Signal (ShelleyNEWPP era) = PParams era
   type Environment (ShelleyNEWPP era) = NewppEnv era
   type BaseM (ShelleyNEWPP era) = ShelleyBase
   type PredicateFailure (ShelleyNEWPP era) = ShelleyNewppPredFailure era
@@ -96,24 +90,13 @@ newPpTransition ::
   TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
   TRC
-    ( NewppEnv certState utxoState
-      , NewppState pp ppupState
-      , mppNew
+    ( NewppEnv _certState _utxoState
+      , NewppState _pp ppupState
+      , ppNew
       ) <-
     judgmentContext
-  let obligationCurr =
-        totalObligation
-          certState
-          (utxoState ^. utxosGovStateL)
-
-  -- TODO: remove this predicate check. See #4158
-  forM_ mppNew $ \_ ->
-    obligationCurr
-      == utxosDeposited utxoState
-        ?! UnexpectedDepositPot obligationCurr (utxosDeposited utxoState)
-
   coreNodeQuorum <- liftSTS $ asks quorum
-  pure $ updatePpup coreNodeQuorum ppupState $ fromMaybe pp mppNew
+  pure $ updatePpup coreNodeQuorum ppupState ppNew
 
 -- | Update the protocol parameter updates by clearing out the proposals
 -- and making the future proposals become the new proposals,

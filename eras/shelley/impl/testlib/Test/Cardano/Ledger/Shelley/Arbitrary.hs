@@ -299,6 +299,10 @@ instance Crypto c => Arbitrary (FreeVars c) where
 -- Cardano.Ledger.Shelley.Governance -----------------------------------------------------
 ------------------------------------------------------------------------------------------
 
+instance Arbitrary (PParams era) => Arbitrary (FuturePParams era) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
 instance
   ( Era era
   , Arbitrary (PParamsUpdate era)

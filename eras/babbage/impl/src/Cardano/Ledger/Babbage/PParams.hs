@@ -271,7 +271,7 @@ instance Crypto c => EraGov (BabbageEra c) where
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
-  futurePParamsGovStateG = futurePParamsShelleyGovStateL
+  futurePParamsGovStateL = futurePParamsShelleyGovStateL
 
   obligationGovState = const mempty
 

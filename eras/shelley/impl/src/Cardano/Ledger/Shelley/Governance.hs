@@ -16,8 +16,10 @@ module Cardano.Ledger.Shelley.Governance (
   EraGov (..),
   ShelleyGovState (..),
   emptyShelleyGovState,
-  FuturePParams(..),
+  FuturePParams (..),
+  solidifyFuturePParams,
   maybeFuturePParams,
+  nextEpochPParams,
   -- Lens
   proposalsL,
   futureProposalsL,
@@ -57,9 +59,10 @@ import Data.Aeson (
  )
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
+import Data.Maybe (fromMaybe)
 import Data.Typeable
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', SimpleGetter, lens, to)
+import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks (..))
 
 class
@@ -95,12 +98,13 @@ class
   -- | Lens for accessing the previous protocol parameters
   prevPParamsGovStateL :: Lens' (GovState era) (PParams era)
 
-  -- | Getter for accessing the future protocol parameters.
+  -- | Lens for accessing the future protocol parameters.
   --
-  -- This getter will produce `Nothing` unless we are absolutely sure that the new PParams
-  -- will be updated. Which means there will be no chance of a `Just` value until we are
-  -- past the point of no return, whcih is 2 stability windows before the end of the epoch
-  futurePParamsGovStateG :: SimpleGetter (GovState era) (Maybe (PParams era))
+  -- This lens will produce `DefinitePParamsUpdate` whenever we are absolutely sure that
+  -- the new PParams will be updated. Which means there will be no chance of a
+  -- `DefinitePParamsUpdate` value until we are past the point of no return, which is 2
+  -- stability windows before the end of the epoch.
+  futurePParamsGovStateL :: Lens' (GovState era) (FuturePParams era)
 
   obligationGovState :: GovState era -> Obligations
 
@@ -113,7 +117,7 @@ instance Crypto c => EraGov (ShelleyEra c) where
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
 
-  futurePParamsGovStateG = to $ maybeFuturePParams . sgsFuturePParams
+  futurePParamsGovStateL = futurePParamsShelleyGovStateL
 
   obligationGovState = const mempty -- No GovState obigations in ShelleyEra
 
@@ -122,33 +126,64 @@ data ShelleyGovState era = ShelleyGovState
   , sgsFutureProposals :: !(ProposedPPUpdates era)
   , sgsCurPParams :: !(PParams era)
   , sgsPrevPParams :: !(PParams era)
-  , sgsFuturePParams :: !(FuturePParams era)
-  -- ^ Prediction of parameter changes that might happen on the epoch boundary.
+  , sgsFuturePParams :: FuturePParams era
+  -- ^ Prediction of parameter changes that might happen on the epoch boundary. The field
+  -- is lazy on purpose, since we truly need to compute this field only towards the end of
+  -- the epoch, which is deon by `solidifyFuturePParams`.
   }
   deriving (Generic)
 
 data FuturePParams era
   = NoPParamsUpdate
   | -- | There is no guarantee that these will be the new PParams, no user outside of
-    -- ledger should rely on this value and should use `futurePParamsGovStateG`
-    -- instead. The field is lazy on purpose, since we need to compute this field only
-    -- towards the end of the epoch.
-    PotentialPParamsUpdate (PParams era)
+    -- ledger should rely on this value to be computed efficiently either and should use
+    -- `nextEpochPParams` instead.
+    PotentialPParamsUpdate !(PParams era)
   | DefinitePParamsUpdate !(PParams era)
   deriving (Generic)
 
+instance Default (FuturePParams era) where
+  def = NoPParamsUpdate
+
+instance ToJSON (PParams era) => ToJSON (FuturePParams era)
+
+-- | Return new PParams only when it is known tha there was an update and it is guaranteed to be applied
 maybeFuturePParams :: FuturePParams era -> Maybe (PParams era)
 maybeFuturePParams = \case
   DefinitePParamsUpdate pp -> Just pp
   _ -> Nothing
 
+-- | This function is guaranteed to produce `PParams` that will be adopted at the next
+-- epoch boundary, whenever this function is applied to the `GovState` that was produced
+-- by ledger at any point that is two stability windows before the end of the epoch.
+nextEpochPParams :: EraGov era => GovState era -> PParams era
+nextEpochPParams govState =
+  fromMaybe (govState ^. curPParamsGovStateL) $
+    maybeFuturePParams (govState ^. futurePParamsGovStateL)
+
+solidifyFuturePParams :: FuturePParams era -> FuturePParams era
+solidifyFuturePParams = \case
+  NoPParamsUpdate -> NoPParamsUpdate
+  -- Here we convert a potential to a definite update:
+  PotentialPParamsUpdate pp -> DefinitePParamsUpdate pp
+  DefinitePParamsUpdate pp -> DefinitePParamsUpdate pp
+
 deriving stock instance Eq (PParams era) => Eq (FuturePParams era)
 deriving stock instance Show (PParams era) => Show (FuturePParams era)
-instance NoThunks (PParams era) => NoThunks (FuturePParams era) -- TODO allow thunks to WHNF
-instance Typeable era => EncCBOR (FuturePParams era) where
-  encCBOR = boom
-instance Typeable era => DecCBOR (FuturePParams era) where
-  decCBOR = boom
+instance NoThunks (PParams era) => NoThunks (FuturePParams era)
+instance (Typeable era, EncCBOR (PParams era)) => EncCBOR (FuturePParams era) where
+  encCBOR =
+    encode . \case
+      NoPParamsUpdate -> Sum NoPParamsUpdate 0
+      PotentialPParamsUpdate pp -> Sum PotentialPParamsUpdate 1 !> To pp
+      DefinitePParamsUpdate pp -> Sum DefinitePParamsUpdate 2 !> To pp
+
+instance (Typeable era, DecCBOR (PParams era)) => DecCBOR (FuturePParams era) where
+  decCBOR = decode . Summands "FuturePParams" $ \case
+    0 -> SumD NoPParamsUpdate
+    1 -> SumD PotentialPParamsUpdate <! From
+    2 -> SumD DefinitePParamsUpdate <! From
+
 instance NFData (PParams era) => NFData (FuturePParams era) where
   rnf = \case
     NoPParamsUpdate -> ()

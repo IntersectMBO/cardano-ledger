@@ -73,7 +73,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.Governance (EraGov (..))
+import Cardano.Ledger.Shelley.Governance (EraGov (..), FuturePParams (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UMap (
   StakeCredentials (scRewards, scSPools),
@@ -283,11 +283,15 @@ getNextEpochCommitteeMembers nes =
 queryCurrentPParams :: EraGov era => NewEpochState era -> PParams era
 queryCurrentPParams nes = queryGovState nes ^. curPParamsGovStateL
 
--- | This query will return values for protocol parameters that will be after the next
+-- | This query will return values for protocol parameters that will be at the next
 -- epoch boundary, but only when there was a protocol parameter update initiated in this
 -- epoch. Otherwise it will return `Nothing`.
 --
 -- Semantics of this query are such that it will produce reliable results and efficiently
 -- only two stability windows before the end of the epoch.
 queryFuturePParams :: EraGov era => NewEpochState era -> Maybe (PParams era)
-queryFuturePParams nes = queryGovState nes ^. futurePParamsGovStateG
+queryFuturePParams nes =
+  case queryGovState nes ^. futurePParamsGovStateL of
+    NoPParamsUpdate -> Nothing
+    PotentialPParamsUpdate pp -> Just pp
+    DefinitePParamsUpdate pp -> Just pp

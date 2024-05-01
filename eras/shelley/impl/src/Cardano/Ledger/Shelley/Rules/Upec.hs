@@ -50,7 +50,6 @@ import Control.State.Transition (
  )
 import Data.Default.Class (Default)
 import GHC.Generics (Generic)
-import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data UpecState era = UpecState
@@ -96,7 +95,7 @@ instance
           judgmentContext
 
         let utxoState = lsUTxOState ls
-            ppNew = ppupState ^. futurePParamsGovStateG
+            ppNew = nextEpochPParams ppupState
         NewppState pp' ppupState' <-
           trans @(ShelleyNEWPP era) $
             TRC (NewppEnv (lsCertState ls) utxoState, NewppState pp ppupState, ppNew)
@@ -117,4 +116,4 @@ votedValue ::
   Int ->
   Maybe (PParams era)
 votedValue ppups pp = votedFuturePParams ppups pp . fromIntegral
-{-# DEPRECATED votedValue "In favo of `votedFuturePParams`" #-}
+{-# DEPRECATED votedValue "In favor of `votedFuturePParams`" #-}

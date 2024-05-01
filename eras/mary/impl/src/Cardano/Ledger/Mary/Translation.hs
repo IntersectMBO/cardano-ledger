@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PartialTypeSignatures #-}
@@ -77,6 +78,12 @@ instance Crypto c => TranslateEra (MaryEra c) PParams
 
 instance Crypto c => TranslateEra (MaryEra c) PParamsUpdate
 
+instance Crypto c => TranslateEra (MaryEra c) FuturePParams where
+  translateEra ctxt = \case
+    NoPParamsUpdate -> pure NoPParamsUpdate
+    PotentialPParamsUpdate pp -> PotentialPParamsUpdate <$> translateEra ctxt pp
+    DefinitePParamsUpdate pp -> DefinitePParamsUpdate <$> translateEra ctxt pp
+
 instance Crypto c => TranslateEra (MaryEra c) EpochState where
   translateEra ctxt es =
     return
@@ -130,7 +137,7 @@ instance Crypto c => TranslateEra (MaryEra c) ShelleyGovState where
         , sgsFutureProposals = translateEra' ctxt $ sgsFutureProposals ps
         , sgsCurPParams = translateEra' ctxt $ sgsCurPParams ps
         , sgsPrevPParams = translateEra' ctxt $ sgsPrevPParams ps
-        , sgsFuturePParams = translateEra' ctxt <$> sgsFuturePParams ps
+        , sgsFuturePParams = translateEra' ctxt $ sgsFuturePParams ps
         }
 
 instance Crypto c => TranslateEra (MaryEra c) UTxOState where

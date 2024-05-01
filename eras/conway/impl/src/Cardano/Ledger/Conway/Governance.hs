@@ -88,6 +88,7 @@ module Cardano.Ledger.Conway.Governance (
   cgsDRepPulsingStateL,
   cgsCurPParamsL,
   cgsPrevPParamsL,
+  cgsFuturePParamsL,
   cgsCommitteeL,
   cgsConstitutionL,
   ensCommitteeL,
@@ -234,6 +235,9 @@ data ConwayGovState era = ConwayGovState
   , cgsConstitution :: !(Constitution era)
   , cgsCurPParams :: !(PParams era)
   , cgsPrevPParams :: !(PParams era)
+  , cgsFuturePParams :: FuturePParams era
+  -- ^ This field is lazy on purpose. It is essential for efficient PParams prediction,
+  -- otherwise we would force the DRep pulser on the very first TICK.
   , cgsDRepPulsingState :: !(DRepPulsingState era)
   -- ^ The 'cgsDRepPulsingState' field is a pulser that incrementally computes the stake
   -- distribution of the DReps over the Epoch following the close of voting at end of
@@ -265,6 +269,10 @@ cgsCurPParamsL = lens cgsCurPParams (\x y -> x {cgsCurPParams = y})
 cgsPrevPParamsL :: Lens' (ConwayGovState era) (PParams era)
 cgsPrevPParamsL = lens cgsPrevPParams (\x y -> x {cgsPrevPParams = y})
 
+cgsFuturePParamsL :: Lens' (ConwayGovState era) (FuturePParams era)
+cgsFuturePParamsL =
+  lens cgsFuturePParams (\cgs futurePParams -> cgs {cgsFuturePParams = futurePParams})
+
 govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe era
 govStatePrevGovActionIds = view $ proposalsGovStateL . pRootsL . to toPrevGovActionIds
 
@@ -275,11 +283,18 @@ conwayGovStateDRepDistrG = to (\govst -> (psDRepDistr . fst) $ finishDRepPulser 
 getRatifyState :: ConwayGovState era -> RatifyState era
 getRatifyState (ConwayGovState {cgsDRepPulsingState}) = snd $ finishDRepPulser cgsDRepPulsingState
 
-predictFuturePParams :: ConwayGovState era -> Maybe (PParams era)
-predictFuturePParams govState = do
-  guard (any hasChangesToPParams (rsEnacted ratifyState))
-  pure (ensCurPParams (rsEnactState ratifyState))
+predictFuturePParams :: ConwayGovState era -> ConwayGovState era
+predictFuturePParams govState =
+  govState
+    { cgsFuturePParams = case cgsFuturePParams govState of
+        DefinitePParamsUpdate pp -> DefinitePParamsUpdate pp
+        _ -> newFuturePParams
+    }
   where
+    newFuturePParams =
+      maybe NoPParamsUpdate PotentialPParamsUpdate $ do
+        guard (any hasChangesToPParams (rsEnacted ratifyState))
+        pure (ensCurPParams (rsEnactState ratifyState))
     ratifyState = extractDRepPulsingState (cgsDRepPulsingState govState)
     hasChangesToPParams gas =
       case pProcGovAction (gasProposalProcedure gas) of
@@ -310,6 +325,7 @@ instance EraPParams era => DecShareCBOR (ConwayGovState era) where
         <! From
         <! From
         <! From
+        <! From
 
 instance EraPParams era => DecCBOR (ConwayGovState era) where
   decCBOR = decNoShareCBOR
@@ -323,6 +339,7 @@ instance EraPParams era => EncCBOR (ConwayGovState era) where
         !> To cgsConstitution
         !> To cgsCurPParams
         !> To cgsPrevPParams
+        !> To cgsFuturePParams
         !> To cgsDRepPulsingState
 
 instance EraPParams era => ToCBOR (ConwayGovState era) where
@@ -332,7 +349,7 @@ instance EraPParams era => FromCBOR (ConwayGovState era) where
   fromCBOR = fromEraCBOR @era
 
 instance EraPParams era => Default (ConwayGovState era) where
-  def = ConwayGovState def def def def def (DRComplete def def)
+  def = ConwayGovState def def def def def def (DRComplete def def)
 
 instance EraPParams era => NFData (ConwayGovState era)
 
@@ -343,7 +360,7 @@ instance EraPParams era => ToJSON (ConwayGovState era) where
   toEncoding = pairs . mconcat . toConwayGovPairs
 
 toConwayGovPairs :: (KeyValue e a, EraPParams era) => ConwayGovState era -> [a]
-toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _) =
+toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _ _) =
   let ConwayGovState {..} = cg
    in [ "proposals" .= cgsProposals
       , "nextRatifyState" .= extractDRepPulsingState cgsDRepPulsingState
@@ -351,6 +368,7 @@ toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _) =
       , "constitution" .= cgsConstitution
       , "currentPParams" .= cgsCurPParams
       , "previousPParams" .= cgsPrevPParams
+      , "futurePParams" .= cgsFuturePParams
       ]
 
 instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
@@ -360,7 +378,7 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
 
   prevPParamsGovStateL = cgsPrevPParamsL
 
-  futurePParamsGovStateG = to predictFuturePParams
+  futurePParamsGovStateL = cgsFuturePParamsL
 
   obligationGovState st =
     Obligations
