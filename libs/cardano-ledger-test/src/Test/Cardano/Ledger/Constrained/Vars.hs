@@ -74,7 +74,7 @@ import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.Governance (futureProposalsL, proposalsL)
+import Cardano.Ledger.Shelley.Governance (FuturePParams (..), futureProposalsL, proposalsL)
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState hiding (
@@ -114,6 +114,7 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (
+  FuturePParamsF (..),
   GovState (..),
   PParamsF (..),
   PParamsUpdateF (..),
@@ -407,8 +408,8 @@ futurePParamProposals p = Var (pV p "futurePParamProposals" (MapR GenHashR (PPar
 currPParams :: Era era => Proof era -> Term era (PParamsF era)
 currPParams p = Var (pV p "currPParams" (PParamsR p) No)
 
-futurePParams :: Era era => Proof era -> Term era (Maybe (PParamsF era))
-futurePParams p = Var (pV p "futurePParams" (MaybeR (PParamsR p)) No)
+futurePParams :: Era era => Proof era -> Term era (FuturePParamsF era)
+futurePParams p = Var (pV p "futurePParams" (FuturePParamsR p) No)
 
 prevPParams :: Gov.EraGov era => Proof era -> Term era (PParamsF era)
 prevPParams p =
@@ -427,7 +428,7 @@ ppupStateT p =
     :$ Lensed (futurePParamProposals p) (futureProposalsL . proposedMapL p)
     :$ Lensed (currPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
     :$ Lensed (prevPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
-    :$ Lensed (futurePParams p) (Gov.futurePParamsGovStateG . pparamsMaybeFL p)
+    :$ Lensed (futurePParams p) (Gov.futurePParamsGovStateL . futurePParamsFL p)
   where
     ppupfun x y (PParamsF _ pp) (PParamsF _ prev) =
       ShelleyGovState
@@ -2144,6 +2145,9 @@ constitutionChildren = Var $ V "constitutionChildren" (SetR GovActionIdR) No
 
 pparamsFL :: Proof era -> Lens' (PParams era) (PParamsF era)
 pparamsFL p = lens (PParamsF p) (\_ (PParamsF _ x) -> x)
+
+futurePParamsFL :: Proof era -> Lens' (FuturePParams era) (FuturePParamsF era)
+futurePParamsFL p = lens (FuturePParamsF p) (\_ (FuturePParamsF _ x) -> x)
 
 pparamsMaybeFL :: Proof era -> Lens' (Maybe (PParams era)) (Maybe (PParamsF era))
 pparamsMaybeFL p =

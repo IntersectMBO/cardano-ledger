@@ -18,7 +18,7 @@ module Cardano.Ledger.Shelley.Governance (
   emptyShelleyGovState,
   FuturePParams (..),
   solidifyFuturePParams,
-  maybeFuturePParams,
+  knownFuturePParams,
   nextEpochPParams,
   -- Lens
   proposalsL,
@@ -126,20 +126,22 @@ data ShelleyGovState era = ShelleyGovState
   , sgsFutureProposals :: !(ProposedPPUpdates era)
   , sgsCurPParams :: !(PParams era)
   , sgsPrevPParams :: !(PParams era)
-  , sgsFuturePParams :: FuturePParams era
-  -- ^ Prediction of parameter changes that might happen on the epoch boundary. The field
-  -- is lazy on purpose, since we truly need to compute this field only towards the end of
-  -- the epoch, which is deon by `solidifyFuturePParams`.
+  , sgsFuturePParams :: !(FuturePParams era)
+  -- ^ Prediction of parameter changes that might happen on the epoch boundary.
   }
   deriving (Generic)
 
 data FuturePParams era
-  = NoPParamsUpdate
-  | -- | There is no guarantee that these will be the new PParams, no user outside of
-    -- ledger should rely on this value to be computed efficiently either and should use
-    -- `nextEpochPParams` instead.
-    PotentialPParamsUpdate !(PParams era)
+  = -- | This indicates that there is no update to PParams expected at the next epoch boundary.
+    NoPParamsUpdate
+    -- | This case specifies the PParams that will be adopted at the next epoch boundary.
   | DefinitePParamsUpdate !(PParams era)
+  | -- | With this case there is no guarantee that these will be the new PParams, users
+    -- should not rely on this value to be computed efficiently and should use
+    -- `nextEpochPParams` instead. The field is lazy on purpose, since we truly need to
+    -- compute this field only towards the end of the epoch, which is done by
+    -- `solidifyFuturePParams` two stability windows before the end of the epoch.
+    PotentialPParamsUpdate (Maybe (PParams era))
   deriving (Generic)
 
 instance Default (FuturePParams era) where
@@ -148,8 +150,8 @@ instance Default (FuturePParams era) where
 instance ToJSON (PParams era) => ToJSON (FuturePParams era)
 
 -- | Return new PParams only when it is known tha there was an update and it is guaranteed to be applied
-maybeFuturePParams :: FuturePParams era -> Maybe (PParams era)
-maybeFuturePParams = \case
+knownFuturePParams :: FuturePParams era -> Maybe (PParams era)
+knownFuturePParams = \case
   DefinitePParamsUpdate pp -> Just pp
   _ -> Nothing
 
@@ -159,14 +161,14 @@ maybeFuturePParams = \case
 nextEpochPParams :: EraGov era => GovState era -> PParams era
 nextEpochPParams govState =
   fromMaybe (govState ^. curPParamsGovStateL) $
-    maybeFuturePParams (govState ^. futurePParamsGovStateL)
+    knownFuturePParams (govState ^. futurePParamsGovStateL)
 
 solidifyFuturePParams :: FuturePParams era -> FuturePParams era
 solidifyFuturePParams = \case
-  NoPParamsUpdate -> NoPParamsUpdate
   -- Here we convert a potential to a definite update:
-  PotentialPParamsUpdate pp -> DefinitePParamsUpdate pp
-  DefinitePParamsUpdate pp -> DefinitePParamsUpdate pp
+  PotentialPParamsUpdate Nothing -> NoPParamsUpdate
+  PotentialPParamsUpdate (Just pp) -> DefinitePParamsUpdate pp
+  fpp -> fpp
 
 deriving stock instance Eq (PParams era) => Eq (FuturePParams era)
 deriving stock instance Show (PParams era) => Show (FuturePParams era)
