@@ -4,7 +4,7 @@ module Cardano.Ledger.Api.Governance (
   getProposedPPUpdates,
   curPParamsGovStateL,
   prevPParamsGovStateL,
-  futurePParamsGovStateG,
+  futurePParamsGovStateL,
 
   -- * Shelley
   ShelleyGovState (..),
@@ -80,7 +80,7 @@ import Cardano.Ledger.Conway.Governance (
   withGovActionParent,
  )
 import Cardano.Ledger.Shelley.Governance (
-  EraGov (GovState),
+  EraGov (..),
   ShelleyGovState (..),
   emptyGovState,
   getProposedPPUpdates,

@@ -25,11 +25,10 @@ module Cardano.Ledger.Shelley.Rules.Ppup (
 where
 
 import Cardano.Ledger.BaseTypes (
-  Globals (quorum, stabilityWindow),
+  Globals (quorum),
   ProtVer,
   ShelleyBase,
   StrictMaybe (..),
-  epochInfoPure,
   invalidKey,
  )
 import Cardano.Ledger.Binary (
@@ -49,12 +48,9 @@ import Cardano.Ledger.Shelley.PParams (
   hasLegalProtVerUpdate,
  )
 import Cardano.Ledger.Slot (
-  Duration (Duration),
   EpochNo (..),
   SlotNo,
-  epochInfoEpoch,
-  epochInfoFirst,
-  (*-),
+  getTheSlotOfNoReturn,
  )
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -193,32 +189,25 @@ ppupTransitionNonEmpty = do
             Just newBadProtVer
       failOnJust firstIllegalProtVerUpdate PVCannotFollowPPUP
 
-      sp <- liftSTS $ asks stabilityWindow
-      (currentEpochNo, firstSlotNextEpoch) <- do
-        epochInfo <- liftSTS $ asks epochInfoPure
-        epochNo <- liftSTS $ epochInfoEpoch epochInfo slot
-        let nextEpochNo = succ epochNo
-        tellEvent $ PpupNewEpoch nextEpochNo
-        liftSTS $ do
-          (,) epochNo <$> epochInfoFirst epochInfo nextEpochNo
-
-      let tooLate = firstSlotNextEpoch *- Duration (2 * sp)
+      (curEpochNo, tooLate, nextEpochNo) <- liftSTS $ getTheSlotOfNoReturn slot
+      tellEvent $ PpupNewEpoch nextEpochNo
 
       if slot < tooLate
         then do
-          (currentEpochNo == targetEpochNo)
-            ?! PPUpdateWrongEpoch currentEpochNo targetEpochNo VoteForThisEpoch
+          (curEpochNo == targetEpochNo)
+            ?! PPUpdateWrongEpoch curEpochNo targetEpochNo VoteForThisEpoch
           let curProposals = ProposedPPUpdates (eval (pupS ⨃ pup))
           !coreNodeQuorum <- liftSTS $ asks quorum
           pure $
             pps
               { sgsCurProposals = curProposals
               , sgsFutureProposals = ProposedPPUpdates fpupS
-              , sgsFuturePParams = votedFuturePParams curProposals pp coreNodeQuorum
+              , sgsFuturePParams =
+                  PotentialPParamsUpdate $ votedFuturePParams curProposals pp coreNodeQuorum
               }
         else do
-          (succ currentEpochNo == targetEpochNo)
-            ?! PPUpdateWrongEpoch currentEpochNo targetEpochNo VoteForNextEpoch
+          (succ curEpochNo == targetEpochNo)
+            ?! PPUpdateWrongEpoch curEpochNo targetEpochNo VoteForNextEpoch
           pure $
             pps
               { sgsCurProposals = ProposedPPUpdates pupS

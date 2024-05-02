@@ -58,7 +58,7 @@ utxoStage ::
 utxoStage usize proof subst0 = do
   let preds = utxoPreds usize proof
   subst <- toolChainSub proof standardOrderInfo preds subst0
-  (_env, status) <- pure (undefined, Nothing) -- monadTyped $ checkForSoundness preds subst
+  (_env, status) <- pure (error "not used in utxoStage", Nothing) -- monadTyped $ checkForSoundness preds subst
   case status of
     Nothing -> pure subst
     Just msg -> error msg

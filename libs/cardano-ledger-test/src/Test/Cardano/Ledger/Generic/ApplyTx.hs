@@ -168,7 +168,7 @@ applyCert = case reify @era of
   Allegra -> applyShelleyCert
   Alonzo -> applyShelleyCert
   Babbage -> applyShelleyCert
-  Conway -> undefined -- TODO once Conway era is done
+  Conway -> error "applyCert, not yet in Conway"
 
 applyShelleyCert :: forall era. EraPParams era => Model era -> ShelleyTxCert era -> Model era
 applyShelleyCert model dcert = case dcert of

@@ -26,7 +26,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
-import Cardano.Ledger.Shelley.Governance (ShelleyGovState (..))
+import Cardano.Ledger.Shelley.Governance (FuturePParams (..), ShelleyGovState (..))
 import qualified Cardano.Ledger.Shelley.Governance as Gov (GovState (..))
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import qualified Cardano.Ledger.Shelley.PParams as PP (ProposedPPUpdates (..))
@@ -800,6 +800,15 @@ genPParams p = case p of
   Alonzo -> PParamsF p <$> arbitrary
   Babbage -> PParamsF p <$> arbitrary
   Conway -> PParamsF p <$> arbitrary
+
+genFuturePParams :: Proof era -> Gen (FuturePParams era)
+genFuturePParams p =
+  frequency
+    [ (2, pure NoPParamsUpdate)
+    , (2, DefinitePParamsUpdate . unPParams <$> genPParams p)
+    , (1, pure (PotentialPParamsUpdate Nothing))
+    , (1, PotentialPParamsUpdate . Just . unPParams <$> genPParams p)
+    ]
 
 genPParamsUpdate :: Proof era -> Gen (PParamsUpdateF era)
 genPParamsUpdate p = case p of

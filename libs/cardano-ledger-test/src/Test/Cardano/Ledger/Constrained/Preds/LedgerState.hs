@@ -140,11 +140,13 @@ ledgerStatePreds _usize p =
           GovStateConwayToConway ->
             [ Random randomProposals
             , currProposals p :<-: (Constr "reasonable" reasonable ^$ randomProposals)
+            , Random (futurePParams p)
             ]
               ++ prevPulsingPreds p -- Constraints to generate a valid Pulser
           GovStateShelleyToBabbage ->
             [ Sized (Range 0 1) (pparamProposals p)
             , Sized (Range 0 1) (futurePParamProposals p)
+            , Random (futurePParams p)
             ]
        )
   where
@@ -159,7 +161,7 @@ ledgerStateStage ::
 ledgerStateStage usize proof subst0 = do
   let preds = ledgerStatePreds usize proof
   subst <- toolChainSub proof standardOrderInfo preds subst0
-  (_env, status) <- pure (undefined, Nothing) -- monadTyped $ checkForSoundness preds subst
+  (_env, status) <- pure (error "not used in ledgerStateStage", Nothing) -- monadTyped $ checkForSoundness preds subst
   case status of
     Nothing -> pure subst
     Just msg -> error msg

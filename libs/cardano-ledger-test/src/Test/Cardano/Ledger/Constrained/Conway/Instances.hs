@@ -1283,6 +1283,9 @@ instance (IsConwayUniv fn, Crypto c) => HasSpec fn (IncrementalStake c)
 instance HasSimpleRep (UTxO (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (UTxO (ConwayEra StandardCrypto))
 
+instance HasSimpleRep (FuturePParams (ConwayEra StandardCrypto))
+instance IsConwayUniv fn => HasSpec fn (FuturePParams (ConwayEra StandardCrypto))
+
 instance HasSimpleRep (ConwayGovState (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (ConwayGovState (ConwayEra StandardCrypto))
 

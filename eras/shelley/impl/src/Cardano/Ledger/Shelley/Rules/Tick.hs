@@ -29,10 +29,11 @@ module Cardano.Ledger.Shelley.Rules.Tick (
   ShelleyTickfPredFailure,
   validatingTickTransition,
   validatingTickTransitionFORECAST,
+  solidifyNextEpochPParams,
 )
 where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMark, ssStakeMarkPoolDistr))
 import Cardano.Ledger.Keys (GenDelegs (..))
@@ -48,6 +49,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   PulsingRewUpdate,
   UTxOState (..),
   curPParamsEpochStateL,
+  newEpochStateGovStateL,
  )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (
   ShelleyNEWEPOCH,
@@ -61,15 +63,14 @@ import Cardano.Ledger.Shelley.Rules.Rupd (
   ShelleyRupdPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules.Upec (ShelleyUPEC, ShelleyUpecPredFailure, UpecState (..))
-import Cardano.Ledger.Slot (EpochNo (unEpochNo), SlotNo, epochInfoEpoch)
+import Cardano.Ledger.Slot (EpochNo, SlotNo, getTheSlotOfNoReturn)
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import GHC.Generics (Generic)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro ((%~), (&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 -- ==================================================
@@ -123,7 +124,7 @@ instance
   NFData (ShelleyTickEvent era)
 
 instance
-  ( Era era
+  ( EraGov era
   , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
   , Embed (EraRule "RUPD" era) (ShelleyTICK era)
   , State (ShelleyTICK era) ~ NewEpochState era
@@ -176,11 +177,29 @@ adoptGenesisDelegs es slot = es'
     ls' = ls {lsCertState = dp'}
     es' = es {esLState = ls'}
 
+-- | This action ensures that once the current slot number is at the point of no return we
+-- mark the future PParams to be updated at the next epoch boundary. Also returns the
+-- current epoch number for convenience.
+solidifyNextEpochPParams ::
+  EraGov era =>
+  NewEpochState era ->
+  SlotNo ->
+  ShelleyBase (EpochNo, NewEpochState era)
+solidifyNextEpochPParams nes slot = do
+  (curEpochNo, slotOfNoReturn, _) <- getTheSlotOfNoReturn slot
+  pure
+    ( curEpochNo
+    , if slot < slotOfNoReturn
+        then nes
+        else nes & newEpochStateGovStateL . futurePParamsGovStateL %~ solidifyFuturePParams
+    )
+
 -- | This is a limited version of 'bheadTransition' which is suitable for the
 -- future ledger view.
 validatingTickTransition ::
   forall tick era.
-  ( Embed (EraRule "NEWEPOCH" era) (tick era)
+  ( EraGov era
+  , Embed (EraRule "NEWEPOCH" era) (tick era)
   , STS (tick era)
   , State (tick era) ~ NewEpochState era
   , BaseM (tick era) ~ ShelleyBase
@@ -191,12 +210,10 @@ validatingTickTransition ::
   NewEpochState era ->
   SlotNo ->
   TransitionRule (tick era)
-validatingTickTransition nes slot = do
-  epoch <- liftSTS $ do
-    ei <- asks epochInfoPure
-    epochInfoEpoch ei slot
+validatingTickTransition nes0 slot = do
+  (curEpochNo, nes) <- liftSTS $ solidifyNextEpochPParams nes0 slot
 
-  nes' <- trans @(EraRule "NEWEPOCH" era) $ TRC ((), nes, epoch)
+  nes' <- trans @(EraRule "NEWEPOCH" era) $ TRC ((), nes, curEpochNo)
   let es'' = adoptGenesisDelegs (nesEs nes') slot
 
   pure $ nes' {nesEs = es''}
@@ -218,16 +235,14 @@ validatingTickTransitionFORECAST ::
   NewEpochState era ->
   SlotNo ->
   TransitionRule (tick era)
-validatingTickTransitionFORECAST nes slot = do
+validatingTickTransitionFORECAST nes0 slot = do
   -- This whole function is a specialization of an inlined 'NEWEPOCH'.
   --
   -- The ledger view, 'LedgerView', is built entirely from the 'nesPd' and 'esPp' and
   -- 'dsGenDelegs', so the correctness of 'validatingTickTransitionFORECAST' only
   -- depends on getting these three fields correct.
 
-  epoch <- liftSTS $ do
-    ei <- asks epochInfoPure
-    epochInfoEpoch ei slot
+  (curEpochNo, nes) <- liftSTS $ solidifyNextEpochPParams nes0 slot
 
   let es = nesEs nes
       ss = esSnapshots es
@@ -236,7 +251,7 @@ validatingTickTransitionFORECAST nes slot = do
   let pd' = ssStakeMarkPoolDistr ss
 
   -- note that the genesis delegates are updated not only on the epoch boundary.
-  if unEpochNo epoch /= unEpochNo (nesEL nes) + 1
+  if curEpochNo /= succ (nesEL nes)
     then pure $ nes {nesEs = adoptGenesisDelegs es slot}
     else do
       -- We can skip 'SNAP'; we already have the equivalent pd'.
@@ -265,7 +280,8 @@ validatingTickTransitionFORECAST nes slot = do
 
 bheadTransition ::
   forall era.
-  ( Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
+  ( EraGov era
+  , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
   , Embed (EraRule "RUPD" era) (ShelleyTICK era)
   , STS (ShelleyTICK era)
   , State (ShelleyTICK era) ~ NewEpochState era
@@ -351,14 +367,13 @@ newtype ShelleyTickfEvent era
   = TickfUpecEvent (Event (EraRule "UPEC" era)) -- Subtransition Events
 
 instance
-  ( Era era
-  , EraGov era
+  ( EraGov era
+  , GovState era ~ ShelleyGovState era
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "UPEC" era) ~ ()
   , State (EraRule "UPEC" era) ~ UpecState era
   , Environment (EraRule "UPEC" era) ~ LedgerState era
   , Embed (EraRule "UPEC" era) (ShelleyTICKF era)
-  , GovState era ~ ShelleyGovState era
   ) =>
   STS (ShelleyTICKF era)
   where

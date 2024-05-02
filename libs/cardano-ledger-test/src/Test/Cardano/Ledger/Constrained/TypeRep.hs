@@ -142,6 +142,7 @@ import Test.Cardano.Ledger.Constrained.Classes (
   TxOutF (..),
   TxWitsF (..),
   ValueF (..),
+  genFuturePParams,
   genPParams,
   genPParamsUpdate,
   genScriptF,
@@ -184,6 +185,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcDelegatee,
   pcEnactState,
   pcFutureGenDeleg,
+  pcFuturePParams,
   pcGenDelegPair,
   pcGovAction,
   pcGovActionId,
@@ -278,6 +280,7 @@ data Rep era t where
   UTxOR :: Era era => Proof era -> Rep era (UTxO era)
   TxOutR :: Era era => Proof era -> Rep era (TxOutF era)
   PParamsR :: Era era => Proof era -> Rep era (PParamsF era)
+  FuturePParamsR :: Era era => Proof era -> Rep era (FuturePParams era)
   PParamsUpdateR :: Era era => Proof era -> Rep era (PParamsUpdateF era)
   --
   DeltaCoinR :: Rep era DeltaCoin
@@ -478,6 +481,7 @@ repHasInstances r = case r of
   UTxOR {} -> IsTypeable
   TxOutR {} -> IsOrd
   PParamsR {} -> IsTypeable
+  FuturePParamsR {} -> IsTypeable
   PParamsUpdateR {} -> IsTypeable
   DeltaCoinR {} -> IsOrd
   GenDelegPairR {} -> IsOrd
@@ -607,6 +611,7 @@ synopsis (ValueR p) (ValueF _ x) = show (pcVal p x)
 synopsis (TxOutR p) (TxOutF _ x) = show ((unReflect pcTxOut p x) :: PDoc)
 synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map.map (TxOutF p) mp) ++ " )"
 synopsis (PParamsR _) (PParamsF p x) = show $ pcPParams p x
+synopsis (FuturePParamsR p) x = show $ pcFuturePParams p x
 synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
 synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
 synopsis GenDelegPairR x = show (pcGenDelegPair x)
@@ -765,6 +770,7 @@ genSizedRep _ (ValueR p) = genValue p
 genSizedRep _ (TxOutR p) = genTxOut p
 genSizedRep _n (UTxOR p) = genUTxO p
 genSizedRep _ (PParamsR p) = genPParams p
+genSizedRep _ (FuturePParamsR p) = genFuturePParams p
 genSizedRep _ (PParamsUpdateR p) = genPParamsUpdate p
 genSizedRep _ DeltaCoinR = DeltaCoin <$> choose (-1000, 1000)
 genSizedRep _ GenDelegPairR = arbitrary
@@ -777,7 +783,7 @@ genSizedRep _ UnitR = arbitrary
 genSizedRep n (PairR a b) = (,) <$> genSizedRep n a <*> genSizedRep n b
 genSizedRep _ RewardR = arbitrary
 genSizedRep n (MaybeR x) = frequency [(1, pure Nothing), (5, Just <$> genSizedRep n x)]
-genSizedRep _ NewEpochStateR = undefined
+genSizedRep _ NewEpochStateR = error "no way to gen a random NewEpochState"
 genSizedRep _ (ProtVerR proof) = genProtVer proof
 genSizedRep n SlotNoR = pure $ SlotNo (fromIntegral n)
 genSizedRep _ SizeR = do lo <- choose (1, 6); hi <- choose (6, 10); pure (SzRng lo hi)
@@ -1030,6 +1036,7 @@ shrinkRep (ValueR _) _ = []
 shrinkRep (TxOutR _) _ = []
 shrinkRep (UTxOR _) _ = []
 shrinkRep (PParamsR _) _ = []
+shrinkRep (FuturePParamsR _) _ = []
 shrinkRep (PParamsUpdateR _) _ = []
 shrinkRep CharR t = shrink t
 shrinkRep DeltaCoinR t = shrink t
