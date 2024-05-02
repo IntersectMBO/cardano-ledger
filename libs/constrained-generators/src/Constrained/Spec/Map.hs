@@ -78,7 +78,7 @@ instance
 
   combineSpec
     (MapSpec mHint mustKeys mustVals size kvs foldSpec)
-    (MapSpec mHint' mustKeys' mustVals' size' kvs' foldSpec') = fromGE ErrorSpec $ do
+    (MapSpec mHint' mustKeys' mustVals' size' kvs' foldSpec') = fromGESpec $ do
       typeSpec
         . MapSpec
           -- This is min because that allows more compositionality - if a spec specifies a

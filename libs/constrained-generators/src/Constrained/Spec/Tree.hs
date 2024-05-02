@@ -41,21 +41,21 @@ data BinTree a
 -- HasSpec for BinTree
 ------------------------------------------------------------------------
 
-data BinTreeSpec fn a = BinTreeSpec Integer (Specification fn (BinTree a, a, BinTree a))
+data BinTreeSpec fn a = BinTreeSpec (Maybe Integer) (Specification fn (BinTree a, a, BinTree a))
   deriving (Show)
 
 instance Forallable (BinTree a) (BinTree a, a, BinTree a) where
-  forAllSpec = typeSpec . BinTreeSpec 1000
+  forAllSpec = typeSpec . BinTreeSpec Nothing
   forAllToList BinTip = []
   forAllToList (BinNode left a right) = (left, a, right) : forAllToList left ++ forAllToList right
 
 instance HasSpec fn a => HasSpec fn (BinTree a) where
   type TypeSpec fn (BinTree a) = BinTreeSpec fn a
 
-  emptySpec = BinTreeSpec 1000 TrueSpec
+  emptySpec = BinTreeSpec Nothing TrueSpec
 
   combineSpec (BinTreeSpec sz s) (BinTreeSpec sz' s') =
-    typeSpec $ BinTreeSpec (min sz sz') (s <> s')
+    typeSpec $ BinTreeSpec (unionWithMaybe min sz sz') (s <> s')
 
   conformsTo BinTip _ = True
   conformsTo (BinNode left a right) s@(BinTreeSpec _ es) =
@@ -65,10 +65,11 @@ instance HasSpec fn a => HasSpec fn (BinTree a) where
       , right `conformsTo` s
       ]
 
-  genFromTypeSpec (BinTreeSpec sz s)
-    | sz <= 0 = pure BinTip
+  genFromTypeSpec (BinTreeSpec msz s)
+    | Just sz <- msz, sz <= 0 = pure BinTip
     | otherwise = do
-        let sz' = sz `div` 2
+        let sz = maybe 20 id msz
+            sz' = sz `div` 2
         oneofT
           [ do
               (left, a, right) <- genFromSpec @fn @(BinTree a, a, BinTree a) $
@@ -93,13 +94,13 @@ instance HasSpec fn a => HasSpec fn (BinTree a) where
       : (BinNode left a <$> shrinkWithTypeSpec s right)
       ++ ((\l -> BinNode l a right) <$> shrinkWithTypeSpec s left)
 
-  toPreds t (BinTreeSpec sz s) =
+  toPreds t (BinTreeSpec msz s) =
     (forAll t $ \n -> n `satisfies` s)
-      <> genHint sz t
+      <> maybe TruePred (flip genHint t) msz
 
 instance HasSpec fn a => HasGenHint fn (BinTree a) where
   type Hint (BinTree a) = Integer
-  giveHint h = typeSpec $ BinTreeSpec h TrueSpec
+  giveHint h = typeSpec $ BinTreeSpec (Just h) TrueSpec
 
 ------------------------------------------------------------------------
 -- HasSpec for Tree
@@ -107,7 +108,7 @@ instance HasSpec fn a => HasGenHint fn (BinTree a) where
 
 data TreeSpec fn a = TreeSpec
   { roseTreeAvgLength :: Maybe Integer
-  , roseTreeMaxSize :: Integer
+  , roseTreeMaxSize :: Maybe Integer
   , roseTreeRootSpec :: Specification fn a
   , roseTreeCtxSpec :: Specification fn (a, [Tree a])
   }
@@ -115,7 +116,7 @@ data TreeSpec fn a = TreeSpec
 deriving instance (HasSpec fn a, Member (TreeFn fn) fn) => Show (TreeSpec fn a)
 
 instance Forallable (Tree a) (a, [Tree a]) where
-  forAllSpec = guardRoseSpec . TreeSpec Nothing 8000 TrueSpec
+  forAllSpec = guardRoseSpec . TreeSpec Nothing Nothing TrueSpec
   forAllToList (Node a children) = (a, children) : concatMap forAllToList children
 
 -- TODO: get rid of this when we implement `cardinality`
@@ -129,7 +130,7 @@ guardRoseSpec spec@(TreeSpec _ _ rs s)
 instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
   type TypeSpec fn (Tree a) = TreeSpec fn a
 
-  emptySpec = TreeSpec Nothing 8000 TrueSpec TrueSpec
+  emptySpec = TreeSpec Nothing Nothing TrueSpec TrueSpec
 
   combineSpec (TreeSpec mal sz rs s) (TreeSpec mal' sz' rs' s')
     | isErrorLike (typeSpec (Cartesian rs'' TrueSpec) <> s'') = ErrorSpec []
@@ -137,7 +138,7 @@ instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
         guardRoseSpec $
           TreeSpec
             (unionWithMaybe max mal mal')
-            (min sz sz')
+            (unionWithMaybe min sz sz')
             rs''
             s''
     where
@@ -151,15 +152,16 @@ instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
       , a `conformsToSpec` rs
       ]
 
-  genFromTypeSpec (TreeSpec mal sz rs s) = do
-    let sz' = maybe (sz `div` 4) (sz `div`) mal
+  genFromTypeSpec (TreeSpec mal msz rs s) = do
+    let sz = maybe 20 id msz
+        sz' = maybe (sz `div` 4) (sz `div`) mal
         childrenSpec =
           typeSpec $
             ListSpec
               (Just sz')
               []
               TrueSpec
-              (typeSpec $ TreeSpec mal sz' TrueSpec s)
+              (typeSpec $ TreeSpec mal (Just sz') TrueSpec s)
               NoFold
         innerSpec = s <> typeSpec (Cartesian rs childrenSpec)
     fmap (uncurry Node) $
@@ -171,17 +173,17 @@ instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
       ++ [Node a' ts | a' <- shrinkWithSpec rs a]
       ++ [Node a [t] | t <- ts]
       ++ [ Node a ts'
-         | ts' <- shrinkList (shrinkWithTypeSpec (TreeSpec Nothing 8000 TrueSpec ctxSpec)) ts
+         | ts' <- shrinkList (shrinkWithTypeSpec (TreeSpec Nothing Nothing TrueSpec ctxSpec)) ts
          ]
 
-  toPreds t (TreeSpec mal sz rs s) =
+  toPreds t (TreeSpec mal msz rs s) =
     (forAll t $ \n -> n `satisfies` s)
       <> rootLabel_ t `satisfies` rs
-      <> genHint (mal, sz) t
+      <> maybe TruePred (\sz -> genHint (mal, sz) t) msz
 
 instance (Member (TreeFn fn) fn, HasSpec fn a) => HasGenHint fn (Tree a) where
   type Hint (Tree a) = (Maybe Integer, Integer)
-  giveHint (avgLen, sz) = typeSpec $ TreeSpec avgLen sz TrueSpec TrueSpec
+  giveHint (avgLen, sz) = typeSpec $ TreeSpec avgLen (Just sz) TrueSpec TrueSpec
 
 data TreeFn (fn :: [Type] -> Type -> Type) args res where
   RootLabel :: TreeFn fn '[Tree a] a
@@ -207,7 +209,7 @@ instance (Member (TreeFn fn) fn, BaseUniverse fn) => Functions (TreeFn fn) fn wh
       -- No TypeAbstractions in ghc-8.10
       case fn of
         (_ :: TreeFn fn '[Tree a] a)
-          | NilCtx HOLE <- ctx -> typeSpec $ TreeSpec Nothing 8000 spec TrueSpec
+          | NilCtx HOLE <- ctx -> typeSpec $ TreeSpec Nothing Nothing spec TrueSpec
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of

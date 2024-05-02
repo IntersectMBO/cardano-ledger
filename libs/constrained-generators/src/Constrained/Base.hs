@@ -1080,6 +1080,12 @@ linearize preds graph = do
 -- Computing specs
 ------------------------------------------------------------------------
 
+fromGESpec :: GE (Specification fn a) -> Specification fn a
+fromGESpec ge = case ge of
+  Result es (ErrorSpec es') -> ErrorSpec (concatMap (++ [""]) es ++ es')
+  Result es (MemberSpec []) -> ErrorSpec (concatMap (++ [""]) es ++ ["MemberSpec []"])
+  _ -> fromGE ErrorSpec ge
+
 simplifySpec :: HasSpec fn a => Specification fn a -> Specification fn a
 simplifySpec = \case
   SuspendedSpec x p -> computeSpecSimplified x (optimisePred p)
@@ -1091,7 +1097,7 @@ simplifySpec = \case
 -- | Precondition: the `Pred fn` defines the `Var a`
 computeSpecSimplified ::
   forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Specification fn a
-computeSpecSimplified x p = fromGE ErrorSpec $ case p of
+computeSpecSimplified x p = fromGESpec $ case p of
   Monitor {} -> pure mempty
   GenHint h t -> propagateSpec (giveHint h) <$> toCtx x t -- NOTE: this implies you do need to actually propagate hints, e.g. propagate depth control in a `tail` or `cdr` like function
   Subst x' t p' -> pure $ computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
@@ -2953,7 +2959,7 @@ deriving instance HasSpec fn a => Show (ListSpec fn a)
 instance HasSpec fn a => HasSpec fn [a] where
   type TypeSpec fn [a] = ListSpec fn a
   emptySpec = ListSpec Nothing [] mempty mempty NoFold
-  combineSpec (ListSpec msz must size elemS foldS) (ListSpec msz' must' size' elemS' foldS') = fromGE ErrorSpec $ do
+  combineSpec (ListSpec msz must size elemS foldS) (ListSpec msz' must' size' elemS' foldS') = fromGESpec $ do
     let must'' = nub $ must <> must'
         elemS'' = elemS <> elemS'
         size'' = size <> size'
@@ -3331,21 +3337,6 @@ data FunFn fn args res where
     fn '[a] b ->
     FunFn fn '[a] c
 
--- TODO: Doing this opens up a few issues:
--- 1. You need the functions to be linear
--- 2. You will need to track free variables
---    in functions
--- 3. You will need to sort out dependencies
---    in functions (just do it the normal way,
---    left depends on right)
--- 4. You need to turn `mapSpec` into something that
---    takes a whole context instead of just a `fn`
--- Another option to avoid (2) and (3) is to simply
--- require that lambdas are closed. This might be a
--- workeable first step that we can get quite far on.
--- Lam :: (HasSpec fn a, HasSpec fn b)
---       => Var a -> Term fn b -> FunFn fn '[a] b
-
 deriving instance Show (FunFn fn args res)
 
 instance Typeable fn => Eq (FunFn fn args res) where
@@ -3360,15 +3351,11 @@ instance FunctionLike fn => FunctionLike (FunFn fn) where
     Id -> id
     Compose f g -> sem f . sem g
 
--- Lam x t -> \ a -> errorGE $ runTerm (singletonEnv x a) t
-
 instance (BaseUniverse fn, Member (FunFn fn) fn) => Functions (FunFn fn) fn where
   propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
   propagateSpecFun fn ctx spec = case fn of
     Id | NilCtx HOLE <- ctx -> spec
     Compose f g | NilCtx HOLE <- ctx -> propagateSpecFun g (NilCtx HOLE) $ propagateSpecFun f (NilCtx HOLE) spec
-
-  -- Lam x t | NilCtx HOLE <- ctx -> fromGE ErrorSpec $ propagateSpec spec <$> toCtx x t
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of
@@ -3377,10 +3364,6 @@ instance (BaseUniverse fn, Member (FunFn fn) fn) => Functions (FunFn fn) fn wher
 
   rewriteRules Id (x :> Nil) = Just x
   rewriteRules (Compose f g) (x :> Nil) = Just $ app f (app g x)
-
--- TODO: to solve this problem we need to generalize mapSpec to work on contexts, which means
--- we need to generalize mapTypeSpec to work on contexts too
--- Lam x t -> _
 
 -- Ord functions ----------------------------------------------------------
 
