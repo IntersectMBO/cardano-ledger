@@ -14,11 +14,13 @@ import Cardano.Ledger.BaseTypes (ShelleyBase, SlotNo, epochInfoPure)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMarkPoolDistr))
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Slot (epochInfoEpoch)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import GHC.Generics (Generic)
+import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 -- ==================================================
@@ -46,7 +48,7 @@ instance NoThunks (ConwayTickfPredFailure era)
 data ConwayTickfEvent era
 
 instance
-  Era era =>
+  EraGov era =>
   STS (ConwayTICKF era)
   where
   type State (ConwayTICKF era) = NewEpochState era
@@ -75,10 +77,17 @@ instance
     -- the relevant 'NEWEPOCH' logic
     let pd' = ssStakeMarkPoolDistr ss
 
-    -- note that the genesis delegates are updated not only on the epoch boundary.
     if epoch /= succ (nesEL nes)
       then pure nes
       else do
+        let govState = nes ^. newEpochStateGovStateL
+            -- TICKF is only ever called at most one stability window into the future,
+            -- which means that `futurePParamsGovStateG` will be known at this point at
+            -- will be O(1) lookup.
+            newPParams =
+              case govState ^. futurePParamsGovStateG of
+                Nothing -> govState ^. curPParamsGovStateL
+                Just futurePParams -> futurePParams
         -- We can skip 'SNAP'; we already have the equivalent pd'.
 
         -- We can skip 'POOLREAP';
@@ -88,6 +97,4 @@ instance
         -- return value here was used to validate their headers.
 
         pure $!
-          nes
-            { nesPd = pd'
-            }
+          nes {nesPd = pd'} & newEpochStateGovStateL . curPParamsGovStateL .~ newPParams
