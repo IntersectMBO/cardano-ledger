@@ -45,6 +45,8 @@ module Constrained (
   conformsToSpec,
   conformsToSpecProp,
   monitorSpec,
+  forAllSpec,
+  forAllSpecShow,
   giveHint,
   typeSpec,
   con,
@@ -129,4 +131,5 @@ where
 import Constrained.GenT as X
 import Constrained.Internals
 import Constrained.List as X
+import Constrained.Properties
 import Constrained.Spec.Tree as X

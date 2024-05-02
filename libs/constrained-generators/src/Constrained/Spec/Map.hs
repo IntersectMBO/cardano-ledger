@@ -64,7 +64,7 @@ deriving instance
   ) =>
   Show (MapSpec fn k v)
 instance Ord k => Forallable (Map k v) (k, v) where
-  forAllSpec kvs = typeSpec $ defaultMapSpec {mapSpecElem = kvs}
+  fromForAllSpec kvs = typeSpec $ defaultMapSpec {mapSpecElem = kvs}
   forAllToList = Map.toList
 
 instance
@@ -78,7 +78,7 @@ instance
 
   combineSpec
     (MapSpec mHint mustKeys mustVals size kvs foldSpec)
-    (MapSpec mHint' mustKeys' mustVals' size' kvs' foldSpec') = fromGE ErrorSpec $ do
+    (MapSpec mHint' mustKeys' mustVals' size' kvs' foldSpec') = fromGESpec $ do
       typeSpec
         . MapSpec
           -- This is min because that allows more compositionality - if a spec specifies a
