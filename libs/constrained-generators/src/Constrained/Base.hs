@@ -597,9 +597,9 @@ instance HasSpec fn a => Semigroup (Specification fn a) where
   ErrorSpec e <> _ = ErrorSpec e
   _ <> ErrorSpec e = ErrorSpec e
   MemberSpec as <> MemberSpec as' =
-    fromGESpec $
-      explain ["Intersecting: ", "  MemberSpec " ++ show as, "  MemberSpec " ++ show as'] $
-        pure (MemberSpec $ intersect as as')
+    explainSpec ["Intersecting: ", "  MemberSpec " ++ show as, "  MemberSpec " ++ show as'] $
+      MemberSpec $
+        intersect as as'
   MemberSpec as <> TypeSpec s cant =
     MemberSpec $
       filter
@@ -1000,7 +1000,8 @@ genFromPreds (optimisePred -> preds) = do
     go :: (MonadGenError m, BaseUniverse fn) => Env -> [(Name fn, [Pred fn])] -> GenT m Env
     go env [] = pure env
     go env ((Name v, ps) : nps) = do
-      let spec = foldMap (computeSpec v) (substPred env <$> ps)
+      let ps' = substPred env <$> ps
+          spec = explainSpec ("Computing specs for" : map show ps') $ foldMap (computeSpec v) ps'
       val <- genFromSpec spec
       go (extendEnv v val env) nps
 
@@ -1080,13 +1081,17 @@ linearize preds graph = do
 
 fromGESpec :: GE (Specification fn a) -> Specification fn a
 fromGESpec ge = case ge of
-  Result es (ErrorSpec es') -> ErrorSpec (concatMap (++ [""]) es ++ es')
-  Result es (MemberSpec []) -> ErrorSpec (concatMap (++ [""]) es ++ ["MemberSpec []"])
+  Result es s -> explainSpec (concatMap (++ [""]) es) s
   _ -> fromGE ErrorSpec ge
 
+explainSpec :: [String] -> Specification fn a -> Specification fn a
+explainSpec es (ErrorSpec es') = ErrorSpec (es ++ es')
+explainSpec es (MemberSpec []) = ErrorSpec (es ++ ["MemberSpec []"])
+explainSpec _ s = s
+
 simplifySpec :: HasSpec fn a => Specification fn a -> Specification fn a
-simplifySpec = \case
-  SuspendedSpec x p -> computeSpecSimplified x (optimisePred p)
+simplifySpec spec = case spec of
+  SuspendedSpec x p -> explainSpec [show $ "Simplifying" /> pretty spec] $ computeSpecSimplified x (optimisePred p)
   MemberSpec xs -> MemberSpec (nub xs)
   ErrorSpec es -> ErrorSpec es
   TypeSpec ts cant -> TypeSpec ts (nub cant)
@@ -1105,8 +1110,8 @@ computeSpecSimplified x p = fromGESpec $ case p of
   Let t b -> pure $ SuspendedSpec x (Let t b)
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert _ (Lit True) -> pure mempty
-  Assert es (Lit False) -> genError (es ++ ["Assert False"])
-  Assert es t -> explain es $ propagateSpec (equalSpec True) <$> toCtx x t
+  Assert _ (Lit False) -> genError [show p]
+  Assert _ t -> explain [show p] $ propagateSpec (equalSpec True) <$> toCtx x t
   ForAll (Lit s) b -> pure $ foldMap (\val -> computeSpec x $ unBind val b) (forAllToList s)
   ForAll t b -> propagateSpec (fromForAllSpec $ computeSpecBinderSimplified b) <$> toCtx x t
   Case (Lit val) bs -> pure $ runCaseOn val bs $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
@@ -4436,11 +4441,6 @@ multT (Ok _) PosInf = PosInf
 multT PosInf PosInf = PosInf
 multT PosInf NegInf = NegInf
 multT PosInf (Ok _) = PosInf
-
--- | Add information to a Specification, if it is an ErrorSpec, otherwise just return the Specification
-explainSpec :: String -> Specification fn t -> Specification fn t
-explainSpec msg (ErrorSpec xs) = ErrorSpec (msg : xs)
-explainSpec _ spec = spec
 
 -- ====================================================================================
 -- Generally useful functions
