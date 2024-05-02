@@ -2614,8 +2614,10 @@ pcPoolParams :: PoolParams era -> PDoc
 pcPoolParams x =
   ppRecord
     "PoolParams"
-    [ ("Id", keyHashSummary (ppId x))
+    [ ("id", pcKeyHash (ppId x))
+    , ("vrf", trim (ppHash (ppVrf x)))
     , ("reward accnt", pcCredential (raCredential (ppRewardAccount x)))
+    , ("owners", ppSet pcKeyHash (ppOwners x))
     ]
 
 instance PrettyA (PoolParams era) where prettyA = pcPoolParams

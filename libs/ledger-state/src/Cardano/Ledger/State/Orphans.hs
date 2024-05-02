@@ -126,8 +126,8 @@ deriving via Enc (BabbageTxOut CurrentEra) instance PersistField (BabbageTxOut C
 
 deriving via Enc (BabbageTxOut CurrentEra) instance PersistFieldSql (BabbageTxOut CurrentEra)
 
-instance DecCBOR (DState CurrentEra) where
-  decCBOR = decNoShareCBOR
+-- instance DecCBOR (DState CurrentEra) where
+--  decCBOR = decNoShareCBOR
 
 deriving via Enc (DState CurrentEra) instance PersistField (DState CurrentEra)
 

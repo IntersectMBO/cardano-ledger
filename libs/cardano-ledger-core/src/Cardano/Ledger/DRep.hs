@@ -5,6 +5,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.DRep (
@@ -16,13 +18,14 @@ module Cardano.Ledger.DRep (
 ) where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordSum)
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Credential (Credential (..), credToText, parseCredential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.Sharing (DecShareCBOR (..), Interns, interns)
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (
   FromJSON (..),
@@ -70,6 +73,16 @@ instance Crypto c => EncCBOR (DRep c) where
   encCBOR DRepAlwaysNoConfidence =
     encode $
       Sum DRepAlwaysNoConfidence 3
+
+instance Crypto c => DecShareCBOR (DRep c) where
+  type Share (DRep c) = Interns (KeyHash 'DRepRole c)
+  decShareCBOR share = decodeRecordSum "DRep" get
+    where
+      get 0 = ((2,) . DRepKeyHash . interns share <$> decCBOR)
+      get 1 = (\x -> (2, DRepScriptHash x)) <$> decCBOR
+      get 2 = pure (1, DRepAlwaysAbstain)
+      get 3 = pure (1, DRepAlwaysNoConfidence)
+      get n = invalidKey n
 
 instance Crypto c => DecCBOR (DRep c) where
   decCBOR = decode $

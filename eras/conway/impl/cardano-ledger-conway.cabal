@@ -47,6 +47,7 @@ library
         Cardano.Ledger.Conway.TxCert
         Cardano.Ledger.Conway.UTxO
         Cardano.Ledger.Conway.Plutus.Context
+        Cardano.Ledger.Conway.SerialiseLedger
 
     hs-source-dirs:   src
     other-modules:

@@ -65,6 +65,7 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.PoolParams
+import Cardano.Ledger.Sharing (decSharePlusLensCBOR, liftInternsL)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
@@ -537,7 +538,7 @@ instance
       )
   decSharePlusCBOR =
     decodeRecordNamedT "LedgerState" (const 2) $ do
-      lsCertState <- decSharePlusCBOR
+      lsCertState <- decSharePlusLensCBOR liftInternsL
       lsUTxOState <- decShareLensCBOR _1
       pure LedgerState {lsUTxOState, lsCertState}
 

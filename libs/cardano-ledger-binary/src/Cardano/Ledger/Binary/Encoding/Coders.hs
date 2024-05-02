@@ -122,6 +122,8 @@ import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 data Encode (w :: Wrapped) t where
   -- | Label the constructor of a Record-like datatype (one with exactly 1 constructor) as an Encode.
   Rec :: t -> Encode ('Closed 'Dense) t
+  -- | Label the constructor of a newtype. It better be a newtype, uses Rec otherwise
+  Newtype :: (t -> new) -> Encode ('Closed 'Dense) (t -> new)
   -- | Label one of the constructors of a sum datatype (one with multiple constructors) as an Encode
   Sum :: t -> Word -> Encode 'Open t
   -- | Label the constructor of a Record-like datatype as being encoded sparsely (storing only non-default values).
@@ -159,6 +161,7 @@ x !> y = ApplyE x y
 runE :: Encode w t -> t
 runE (Sum cn _) = cn
 runE (Rec cn) = cn
+runE (Newtype cn) = cn
 runE (ApplyE f x) = runE f (runE x)
 runE (To x) = x
 runE (E _ x) = x
@@ -172,6 +175,7 @@ runE (Keyed cn) = cn
 gsize :: Encode w t -> Word
 gsize (Sum _ _) = 0
 gsize (Rec _) = 0
+gsize (Newtype _) = 0
 gsize (To _) = 1
 gsize (E _ _) = 1
 gsize (MapE _ x) = gsize x
@@ -191,6 +195,7 @@ encode = encodeCountPrefix 0
     encodeCountPrefix n (Sum _ tag) = encodeListLen (n + 1) <> encodeWord tag
     encodeCountPrefix n (Keyed _) = encodeMapLen n
     encodeCountPrefix n (Rec _) = encodeListLen n
+    encodeCountPrefix _ (Newtype _) = mempty
     encodeCountPrefix _ (To x) = encCBOR x
     encodeCountPrefix _ (E enc x) = enc x
     encodeCountPrefix n (MapE _ x) = encodeCountPrefix n x
@@ -203,6 +208,7 @@ encode = encodeCountPrefix 0
       where
         encodeClosed :: Encode ('Closed d) t -> Encoding
         encodeClosed (Rec _) = mempty
+        encodeClosed (Newtype _) = mempty
         encodeClosed (To x) = encCBOR x
         encodeClosed (E enc x) = enc x
         encodeClosed (MapE _ x) = encodeClosed x

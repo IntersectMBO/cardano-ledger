@@ -10,8 +10,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 module Cardano.Ledger.Address (
@@ -25,6 +27,8 @@ module Cardano.Ledger.Address (
   isBootstrapRedeemer,
   getNetwork,
   RewardAccount (.., RewardAcnt, getRwdNetwork, getRwdCred),
+  raCredentialL,
+  raNetworkL,
   serialiseRewardAccount,
   deserialiseRewardAccount,
   bootstrapKeyHash,
@@ -81,10 +85,14 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
+  DecShareCBOR (..),
   Decoder,
   EncCBOR (..),
+  Interns,
   decodeFull',
+  decodeRecordNamedT,
   ifDecoderVersionAtLeast,
+  interns,
   serialize,
  )
 import Cardano.Ledger.Coin (Coin)
@@ -101,6 +109,7 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Prelude (unsafeShortByteStringIndex)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard, unless, when)
+import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Fail (runFail)
 import Control.Monad.Trans.State.Strict (StateT, evalStateT, get, modify', state)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
@@ -129,6 +138,7 @@ import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics (Generic)
 import GHC.Show (intToDigit)
 import GHC.Stack (HasCallStack)
+import Lens.Micro (Lens', lens)
 import NoThunks.Class (NoThunks (..))
 import Numeric (showIntAtBase)
 import Quiet (Quiet (Quiet))
@@ -219,6 +229,12 @@ data RewardAccount c = RewardAccount
   , raCredential :: !(Credential 'Staking c)
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
+
+raNetworkL :: Lens' (RewardAccount c) Network
+raNetworkL = lens raNetwork (\x y -> x {raNetwork = y})
+
+raCredentialL :: Lens' (RewardAccount c) (Credential 'Staking c)
+raCredentialL = lens raCredential (\x y -> x {raCredential = y})
 
 pattern RewardAcnt :: Network -> Credential 'Staking c -> RewardAccount c
 pattern RewardAcnt {getRwdNetwork, getRwdCred} = RewardAccount getRwdNetwork getRwdCred
@@ -401,6 +417,14 @@ instance Crypto c => EncCBOR (RewardAcnt c) where
 instance Crypto c => DecCBOR (RewardAcnt c) where
   decCBOR = fromCborRewardAcnt
   {-# INLINE decCBOR #-}
+
+instance Crypto c => DecShareCBOR (RewardAccount c) where
+  type Share (RewardAccount c) = Interns (Credential 'Staking c)
+  decSharePlusCBOR = decodeRecordNamedT "RewardAccount" (const 2) $ do
+    network <- lift decCBOR
+    x <- get
+    cred <- interns x <$> lift decCBOR
+    pure (RewardAccount network cred)
 
 newtype BootstrapAddress c = BootstrapAddress
   { unBootstrapAddress :: Byron.Address

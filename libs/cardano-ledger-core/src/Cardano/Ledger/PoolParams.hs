@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.PoolParams (
   PoolParams (..),
@@ -19,7 +20,7 @@ module Cardano.Ledger.PoolParams (
 )
 where
 
-import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Address (RewardAccount (..), raCredentialL)
 import Cardano.Ledger.BaseTypes (
   DnsName,
   Port,
@@ -40,6 +41,7 @@ import Cardano.Ledger.Binary (
   Size,
   decodeNullMaybe,
   decodeRecordNamed,
+  -- decodeRecordNamedT,
   decodeRecordSum,
   encodeListLen,
   encodeNullMaybe,
@@ -49,11 +51,14 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   Hash,
-  KeyHash (..),
-  KeyRole (..),
+  -- KeyHash (..),
+  -- KeyRole (..),
   VerKeyVRF,
  )
 import Cardano.Ledger.Orphans ()
+
+import Cardano.Ledger.Sharing
+
 import Control.DeepSeq (NFData ())
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -67,12 +72,14 @@ import Data.IP (IPv4, IPv6)
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
+
+-- import qualified Data.Set as Set
+
+import Control.Monad.Trans.State.Strict (get, put)
 import qualified Data.Text.Encoding as Text
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-
--- ========================================================================
 
 data PoolMetadata = PoolMetadata
   { pmUrl :: !Url
@@ -215,6 +222,27 @@ data PoolParams c = PoolParams
   deriving (Show, Generic, Eq, Ord)
   deriving (EncCBOR) via CBORGroup (PoolParams c)
   deriving (DecCBOR) via CBORGroup (PoolParams c)
+
+instance Crypto c => DecShareCBOR (PoolParams c) where
+  type Share (PoolParams c) = PoolParamShare c
+  decSharePlusCBOR = do
+    poolparam0 <- lift decCBOR -- Decode without Sharing
+    s0 <- get -- Get the current (SharePoolParams c)
+    let (poolparam1, s1) = makeShare poolparam0 s0 -- Add Sharing to poolparam0
+    put s1 -- Store the updated (SharePoolParams c)
+    pure poolparam1 -- Return the copy with Sharing added.
+  getShare t = snd (makeShare t mempty)
+
+instance Crypto c => Shareable (PoolParams c) where
+  makeShare pp s0 = (pnew, sharenew)
+    where
+      (khsp, s1) = findOrAdd (ppId pp) (ppKeyHashStakePool s0)
+      (h, s2) = findOrAdd (ppVrf pp) (ppHashVerKeyVRF s0)
+      (khs, s3) = findOrAddLens raCredentialL (ppRewardAccount pp) (ppCredentialStaking s0)
+      (cs, s4) = findOrAddSet (ppOwners pp) (ppKeyHashStaking s0)
+      sharenew =
+        s0 {ppKeyHashStakePool = s1, ppHashVerKeyVRF = s2, ppCredentialStaking = s3, ppKeyHashStaking = s4}
+      pnew = pp {ppId = khsp, ppVrf = h, ppRewardAccount = khs, ppOwners = cs}
 
 ppRewardAcnt :: PoolParams c -> RewardAccount c
 ppRewardAcnt = ppRewardAccount
