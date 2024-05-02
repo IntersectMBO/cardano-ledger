@@ -11,6 +11,16 @@ module Constrained.Properties where
 import Constrained.Internals
 import Test.QuickCheck qualified as QC
 
+forAllSpecShow ::
+  (HasSpec fn a, QC.Testable p) => Specification fn a -> (a -> String) -> (a -> p) -> QC.Property
+forAllSpecShow spec pp prop =
+  let sspec = simplifySpec spec
+   in QC.forAllShrinkShow (genFromSpec_ sspec) (shrinkWithSpec sspec) pp $ \a ->
+        monitorSpec spec a $ prop a
+
+forAllSpec :: (HasSpec fn a, QC.Testable p) => Specification fn a -> (a -> p) -> QC.Property
+forAllSpec spec prop = forAllSpecShow spec show prop
+
 prop_sound ::
   HasSpec fn a =>
   Specification fn a ->

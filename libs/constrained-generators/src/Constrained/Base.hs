@@ -791,9 +791,9 @@ data WithHasSpec fn f a where
 -- The Forallable class ---------------------------------------------------
 
 class Forallable t e | t -> e where
-  forAllSpec ::
+  fromForAllSpec ::
     (HasSpec fn t, HasSpec fn e, BaseUniverse fn) => Specification fn e -> Specification fn t
-  default forAllSpec ::
+  default fromForAllSpec ::
     ( HasSpec fn t
     , HasSpec fn e
     , HasSimpleRep t
@@ -803,7 +803,7 @@ class Forallable t e | t -> e where
     ) =>
     Specification fn e ->
     Specification fn t
-  forAllSpec es = fromSimpleRepSpec $ forAllSpec @(SimpleRep t) @e es
+  fromForAllSpec es = fromSimpleRepSpec $ fromForAllSpec @(SimpleRep t) @e es
 
   forAllToList :: t -> [e]
   default forAllToList ::
@@ -1110,7 +1110,7 @@ computeSpecSimplified x p = fromGESpec $ case p of
   Assert es (Lit False) -> genError (es ++ ["Assert False"])
   Assert es t -> explain es $ propagateSpec (equalSpec True) <$> toCtx x t
   ForAll (Lit s) b -> pure $ foldMap (\val -> computeSpec x $ unBind val b) (forAllToList s)
-  ForAll t b -> propagateSpec (forAllSpec $ computeSpecBinderSimplified b) <$> toCtx x t
+  ForAll t b -> propagateSpec (fromForAllSpec $ computeSpecBinderSimplified b) <$> toCtx x t
   Case (Lit val) bs -> pure $ runCaseOn val bs $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
   Case t branches ->
     let branchSpecs = mapList computeSpecBinderSimplified branches
@@ -2820,7 +2820,7 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
       <> satisfies (size_ s) size
 
 instance Ord a => Forallable (Set a) a where
-  forAllSpec (e :: Specification fn a)
+  fromForAllSpec (e :: Specification fn a)
     | Evidence <- prerequisites @fn @(Set a) = typeSpec $ SetSpec mempty e TrueSpec
   forAllToList = Set.toList
 
@@ -3008,7 +3008,7 @@ instance HasSpec fn a => HasGenHint fn [a] where
   giveHint szHint = typeSpec $ ListSpec (Just szHint) [] mempty mempty NoFold
 
 instance Forallable [a] a where
-  forAllSpec es = typeSpec (ListSpec Nothing [] mempty es NoFold)
+  fromForAllSpec es = typeSpec (ListSpec Nothing [] mempty es NoFold)
   forAllToList = id
 
 -- Numbers ----------------------------------------------------------------

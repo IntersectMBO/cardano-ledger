@@ -64,7 +64,7 @@ deriving instance
   ) =>
   Show (MapSpec fn k v)
 instance Ord k => Forallable (Map k v) (k, v) where
-  forAllSpec kvs = typeSpec $ defaultMapSpec {mapSpecElem = kvs}
+  fromForAllSpec kvs = typeSpec $ defaultMapSpec {mapSpecElem = kvs}
   forAllToList = Map.toList
 
 instance

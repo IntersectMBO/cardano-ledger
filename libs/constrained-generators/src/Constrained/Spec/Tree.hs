@@ -45,7 +45,7 @@ data BinTreeSpec fn a = BinTreeSpec (Maybe Integer) (Specification fn (BinTree a
   deriving (Show)
 
 instance Forallable (BinTree a) (BinTree a, a, BinTree a) where
-  forAllSpec = typeSpec . BinTreeSpec Nothing
+  fromForAllSpec = typeSpec . BinTreeSpec Nothing
   forAllToList BinTip = []
   forAllToList (BinNode left a right) = (left, a, right) : forAllToList left ++ forAllToList right
 
@@ -116,7 +116,7 @@ data TreeSpec fn a = TreeSpec
 deriving instance (HasSpec fn a, Member (TreeFn fn) fn) => Show (TreeSpec fn a)
 
 instance Forallable (Tree a) (a, [Tree a]) where
-  forAllSpec = guardRoseSpec . TreeSpec Nothing Nothing TrueSpec
+  fromForAllSpec = guardRoseSpec . TreeSpec Nothing Nothing TrueSpec
   forAllToList (Node a children) = (a, children) : concatMap forAllToList children
 
 -- TODO: get rid of this when we implement `cardinality`
