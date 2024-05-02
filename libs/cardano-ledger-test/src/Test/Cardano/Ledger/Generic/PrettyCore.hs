@@ -2827,7 +2827,7 @@ pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp futurepp) 
 pcFuturePParams :: Proof era -> FuturePParams era -> PDoc
 pcFuturePParams p = \case
   NoPParamsUpdate -> ppSexp "NoPParamsUpdate" []
-  PotentialPParamsUpdate mpp -> ppSexp "PotentialPParamsUpdate" [pcPParamsSynopsis p pp | Just pp <- [mpp]]
+  PotentialPParamsUpdate mpp -> ppSexp "PotentialPParamsUpdate" [ppMaybe (pcPParamsSynopsis p) mpp]
   DefinitePParamsUpdate pp -> ppSexp "DefinitePParamsUpdate" [pcPParamsSynopsis p pp]
 
 instance Reflect era => PrettyA (ShelleyGovState era) where

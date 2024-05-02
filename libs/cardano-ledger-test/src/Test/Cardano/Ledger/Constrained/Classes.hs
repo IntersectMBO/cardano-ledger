@@ -690,16 +690,6 @@ unPParams (PParamsF _ p) = p
 pparamsWrapperL :: Lens' (PParamsF era) (PParams era)
 pparamsWrapperL = lens unPParams (\(PParamsF p _) pp -> PParamsF p pp)
 
--- ======
-data FuturePParamsF era where
-  FuturePParamsF :: Proof era -> FuturePParams era -> FuturePParamsF era
-
-unFuturePParams :: FuturePParamsF era -> FuturePParams era
-unFuturePParams (FuturePParamsF _ p) = p
-
-futurePParamsWrapperL :: Lens' (FuturePParamsF era) (FuturePParams era)
-futurePParamsWrapperL = lens unFuturePParams (\(FuturePParamsF p _) pp -> FuturePParamsF p pp)
-
 -- =======
 
 data PParamsUpdateF era where
@@ -811,14 +801,14 @@ genPParams p = case p of
   Babbage -> PParamsF p <$> arbitrary
   Conway -> PParamsF p <$> arbitrary
 
-genFuturePParams :: Proof era -> Gen (FuturePParamsF era)
-genFuturePParams p = case p of
-  Shelley -> FuturePParamsF p <$> arbitrary
-  Allegra -> FuturePParamsF p <$> arbitrary
-  Mary -> FuturePParamsF p <$> arbitrary
-  Alonzo -> FuturePParamsF p <$> arbitrary
-  Babbage -> FuturePParamsF p <$> arbitrary
-  Conway -> FuturePParamsF p <$> arbitrary
+genFuturePParams :: Proof era -> Gen (FuturePParams era)
+genFuturePParams p =
+  frequency
+    [ (2, pure NoPParamsUpdate)
+    , (2, DefinitePParamsUpdate . unPParams <$> genPParams p)
+    , (1, pure (PotentialPParamsUpdate Nothing))
+    , (1, PotentialPParamsUpdate . Just . unPParams <$> genPParams p)
+    ]
 
 genPParamsUpdate :: Proof era -> Gen (PParamsUpdateF era)
 genPParamsUpdate p = case p of

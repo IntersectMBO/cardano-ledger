@@ -125,7 +125,6 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary (genAlonzoPlutusPurposePointer)
 import Test.Cardano.Ledger.Binary.Arbitrary (genByteString)
 import Test.Cardano.Ledger.Constrained.Classes (
   Adds (add, zero),
-  FuturePParamsF (..),
   PParamsF (..),
   PParamsUpdateF (..),
   PlutusPointerF (..),
@@ -277,7 +276,7 @@ data Rep era t where
   UTxOR :: Era era => Proof era -> Rep era (UTxO era)
   TxOutR :: Era era => Proof era -> Rep era (TxOutF era)
   PParamsR :: Era era => Proof era -> Rep era (PParamsF era)
-  FuturePParamsR :: Era era => Proof era -> Rep era (FuturePParamsF era)
+  FuturePParamsR :: Era era => Proof era -> Rep era (FuturePParams era)
   PParamsUpdateR :: Era era => Proof era -> Rep era (PParamsUpdateF era)
   --
   DeltaCoinR :: Rep era DeltaCoin
@@ -608,7 +607,7 @@ synopsis (ValueR p) (ValueF _ x) = show (pcVal p x)
 synopsis (TxOutR p) (TxOutF _ x) = show ((unReflect pcTxOut p x) :: PDoc)
 synopsis (UTxOR p) (UTxO mp) = "UTxO( " ++ synopsis (MapR TxInR (TxOutR p)) (Map.map (TxOutF p) mp) ++ " )"
 synopsis (PParamsR _) (PParamsF p x) = show $ pcPParams p x
-synopsis (FuturePParamsR _) (FuturePParamsF p x) = show $ pcFuturePParams p x
+synopsis (FuturePParamsR p) x = show $ pcFuturePParams p x
 synopsis (PParamsUpdateR _) _ = "PParamsUpdate ..."
 synopsis DeltaCoinR (DeltaCoin n) = show (hsep [ppString "▵₳", ppInteger n])
 synopsis GenDelegPairR x = show (pcGenDelegPair x)
@@ -780,7 +779,7 @@ genSizedRep _ UnitR = arbitrary
 genSizedRep n (PairR a b) = (,) <$> genSizedRep n a <*> genSizedRep n b
 genSizedRep _ RewardR = arbitrary
 genSizedRep n (MaybeR x) = frequency [(1, pure Nothing), (5, Just <$> genSizedRep n x)]
-genSizedRep _ NewEpochStateR = undefined
+genSizedRep _ NewEpochStateR = error "no way to gen a random NewEpochState"
 genSizedRep _ (ProtVerR proof) = genProtVer proof
 genSizedRep n SlotNoR = pure $ SlotNo (fromIntegral n)
 genSizedRep _ SizeR = do lo <- choose (1, 6); hi <- choose (6, 10); pure (SzRng lo hi)
