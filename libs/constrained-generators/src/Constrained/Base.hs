@@ -596,12 +596,10 @@ instance HasSpec fn a => Semigroup (Specification fn a) where
   ErrorSpec e <> ErrorSpec e' = ErrorSpec (e ++ "" : (replicate 20 '-') : "" : e')
   ErrorSpec e <> _ = ErrorSpec e
   _ <> ErrorSpec e = ErrorSpec e
-  -- TODO: these can interact poorly with unsafeExists!
-  -- MemberSpec [a] <> spec
-  --   | a `conformsToSpec` spec = MemberSpec [a]
-  --   | otherwise = ErrorSpec [show a, "does not conform to", show spec]
-  -- spec <> MemberSpec [a] = MemberSpec [a] <> spec
-  MemberSpec as <> MemberSpec as' = MemberSpec $ intersect as as'
+  MemberSpec as <> MemberSpec as' =
+    fromGESpec $
+      explain ["Intersecting: ", "  MemberSpec " ++ show as, "  MemberSpec " ++ show as'] $
+        pure (MemberSpec $ intersect as as')
   MemberSpec as <> TypeSpec s cant =
     MemberSpec $
       filter
