@@ -20,6 +20,7 @@ module Cardano.Ledger.Shelley.Governance (
   solidifyFuturePParams,
   knownFuturePParams,
   nextEpochPParams,
+  nextEpochUpdatedPParams,
   -- Lens
   proposalsL,
   futureProposalsL,
@@ -34,6 +35,7 @@ module Cardano.Ledger.Shelley.Governance (
   sgovPrevPp,
 ) where
 
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), fromSMaybe, maybeToStrictMaybe)
 import Cardano.Ledger.Binary (
   DecCBOR (decCBOR),
   DecShareCBOR (..),
@@ -48,7 +50,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, emptyPPPUpdates)
-import Cardano.Ledger.Tools
 import Control.DeepSeq (NFData (..))
 import Data.Aeson (
   KeyValue,
@@ -59,7 +60,6 @@ import Data.Aeson (
  )
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
-import Data.Maybe (fromMaybe)
 import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
@@ -134,8 +134,8 @@ data ShelleyGovState era = ShelleyGovState
 data FuturePParams era
   = -- | This indicates that there is no update to PParams expected at the next epoch boundary.
     NoPParamsUpdate
-    -- | This case specifies the PParams that will be adopted at the next epoch boundary.
-  | DefinitePParamsUpdate !(PParams era)
+  | -- | This case specifies the PParams that will be adopted at the next epoch boundary.
+    DefinitePParamsUpdate !(PParams era)
   | -- | With this case there is no guarantee that these will be the new PParams, users
     -- should not rely on this value to be computed efficiently and should use
     -- `nextEpochPParams` instead. The field is lazy on purpose, since we truly need to
@@ -149,7 +149,8 @@ instance Default (FuturePParams era) where
 
 instance ToJSON (PParams era) => ToJSON (FuturePParams era)
 
--- | Return new PParams only when it is known tha there was an update and it is guaranteed to be applied
+-- | Return new PParams only when it is known that there was an update proposed and it is
+-- guaranteed to be applied
 knownFuturePParams :: FuturePParams era -> Maybe (PParams era)
 knownFuturePParams = \case
   DefinitePParamsUpdate pp -> Just pp
@@ -157,11 +158,20 @@ knownFuturePParams = \case
 
 -- | This function is guaranteed to produce `PParams` that will be adopted at the next
 -- epoch boundary, whenever this function is applied to the `GovState` that was produced
--- by ledger at any point that is two stability windows before the end of the epoch.
+-- by ledger at any point that is two stability windows before the end of the epoch. If
+-- you need to know if there was any changes to those PParams then use
+-- `nextEpochUpdatedPParams` instead.
 nextEpochPParams :: EraGov era => GovState era -> PParams era
 nextEpochPParams govState =
-  fromMaybe (govState ^. curPParamsGovStateL) $
-    knownFuturePParams (govState ^. futurePParamsGovStateL)
+  fromSMaybe (govState ^. curPParamsGovStateL) $ nextEpochUpdatedPParams govState
+
+-- | This function is guaranteed to return `Nothing` when it is called during the first 8
+-- stability windows of the epoch (i.e. not in the last two stability windows) and when
+-- there was no proposals to update PParams that everyone reached consensus on. Otherwise
+-- it will return `PParams` that will be adopted at the next epoch boundary.
+nextEpochUpdatedPParams :: EraGov era => GovState era -> StrictMaybe (PParams era)
+nextEpochUpdatedPParams govState =
+  maybeToStrictMaybe $ knownFuturePParams (govState ^. futurePParamsGovStateL)
 
 solidifyFuturePParams :: FuturePParams era -> FuturePParams era
 solidifyFuturePParams = \case
@@ -185,6 +195,7 @@ instance (Typeable era, DecCBOR (PParams era)) => DecCBOR (FuturePParams era) wh
     0 -> SumD NoPParamsUpdate
     1 -> SumD DefinitePParamsUpdate <! From
     2 -> SumD PotentialPParamsUpdate <! From
+    k -> Invalid k
 
 instance NFData (PParams era) => NFData (FuturePParams era) where
   rnf = \case
