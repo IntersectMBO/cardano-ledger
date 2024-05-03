@@ -1129,7 +1129,8 @@ computeSpecSimplified x p = fromGESpec $ case p of
     | otherwise -> genError ["Value does not reify to literal: " ++ show val ++ " -/> " ++ show a]
   Reifies t' (Lit val) f ->
     propagateSpec (equalSpec (f val)) <$> toCtx x t'
-  Reifies Lit {} _ _ -> pure TrueSpec
+  Reifies Lit {} _ _ ->
+    fatalError ["Dependency error in computeSpec: Reifies", "  " ++ show p]
   -- Impossible cases that should be ruled out by the dependency analysis and linearizer
   DependsOn {} ->
     fatalError

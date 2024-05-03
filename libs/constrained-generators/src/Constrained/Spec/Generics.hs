@@ -372,7 +372,7 @@ forAll' xs f = forAll xs $ \x -> match @fn @p x f
 
 -- | Like `constrained` but pattern matches on the bound `Term fn a`
 constrained' ::
-  forall fn a p.
+  forall a fn p.
   ( Cases (SimpleRep a) ~ '[SimpleRep a]
   , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
   , HasSpec fn (SimpleRep a)

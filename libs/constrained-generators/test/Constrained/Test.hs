@@ -133,6 +133,12 @@ tests =
       prop "Map Int Int" $ prop_conformEmpty @BaseFn @(Map Int Int)
       prop "[Int]" $ prop_conformEmpty @BaseFn @[Int]
       prop "[(Int, Int)]" $ prop_conformEmpty @BaseFn @[(Int, Int)]
+    negativeTests
+
+negativeTests :: Spec
+negativeTests =
+  describe "negative tests" $ do
+    prop "reifies 10 x id" $ expectFailure $ prop_complete @BaseFn @Int $ constrained $ \x -> reifies 10 x id
 
 numberyTests :: Spec
 numberyTests =
