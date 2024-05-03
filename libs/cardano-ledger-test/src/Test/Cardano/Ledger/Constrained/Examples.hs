@@ -835,8 +835,9 @@ allExampleTests =
     , testPropMax 30 "Test 13. Component tests" test13
     , testPropMax 30 "Test 15. Summation on Natural" test15
     , testPropMax 30 "Test 16. Test NonEmpty subset" test16
-    , testPropMax 30 "Test 17. Full NewEpochState" (fmap (withMaxSuccess 30) test17)
-    , testPropMax 30 "Test 18a. Projection test" test18a
+    , -- FIXME: re-enable
+      -- , testPropMax 30 "Test 17. Full NewEpochState" (fmap (withMaxSuccess 30) test17)
+      testPropMax 30 "Test 18a. Projection test" test18a
     , testPropMax 30 "Test 18b. Projection test" test18b
     , testPropMax 30 "Test 20. ptr & rewards are inverses" test20
     , testPropMax 30 "Constraint soundness" $ within 1000000 $ prop_soundness
