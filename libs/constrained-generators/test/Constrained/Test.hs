@@ -44,6 +44,7 @@ testAll = hspec tests
 tests :: Spec
 tests =
   describe "constrained" $ do
+    testSpec "reifiesMultiple" reifiesMultiple
     testSpec "assertReal" assertReal
     testSpec "assertRealMultiple" assertRealMultiple
     testSpec "setSpec" setSpec
