@@ -14,7 +14,7 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec :: Spec
 spec = describe "Conway conformance tests" $ do
-  xprop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
+  prop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
   prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
   describe "Generators" $ do
     let
