@@ -76,7 +76,6 @@ import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.Proxy (Proxy (Proxy))
 import Data.Pulse (Pulsable (..), pulse)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SS
@@ -173,15 +172,14 @@ instance EraPParams era => FromCBOR (PulsingSnapshot era) where
 --   (b) is the size of the StakeDistr, and
 --   (c) is the size of the DRepDistr, this grows as the accumulator
 computeDRepDistr ::
-  forall era.
-  Proxy era ->
-  Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin) ->
-  Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)) ->
-  Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin) ->
-  Map (DRep (EraCrypto era)) (CompactForm Coin) ->
-  Map (Credential 'Staking (EraCrypto era)) (UMElem (EraCrypto era)) ->
-  Map (DRep (EraCrypto era)) (CompactForm Coin)
-computeDRepDistr _ stakeDistr regDReps proposalDeposits dRepDistr uMapChunk =
+  forall c.
+  Map (Credential 'Staking c) (CompactForm Coin) ->
+  Map (Credential 'DRepRole c) (DRepState c) ->
+  Map (Credential 'Staking c) (CompactForm Coin) ->
+  Map (DRep c) (CompactForm Coin) ->
+  Map (Credential 'Staking c) (UMElem c) ->
+  Map (DRep c) (CompactForm Coin)
+computeDRepDistr stakeDistr regDReps proposalDeposits dRepDistr uMapChunk =
   Map.foldlWithKey' go dRepDistr uMapChunk
   where
     go accum stakeCred umElem =
@@ -250,7 +248,7 @@ instance Pulsable (DRepPulser era) where
     | done pulser = pure pulser {dpIndex = 0}
     | otherwise =
         let !chunk = Map.take dpPulseSize $ Map.drop dpIndex $ UMap.umElems dpUMap
-            dRepDistr = computeDRepDistr (Proxy @era) dpStakeDistr dpDRepState dpProposalDeposits dpDRepDistr chunk
+            dRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpDRepDistr chunk
          in pure (pulser {dpIndex = dpIndex + dpPulseSize, dpDRepDistr = dRepDistr})
 
   completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
@@ -324,7 +322,7 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
   (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
   where
     !leftOver = Map.drop dpIndex $ umElems dpUMap
-    !finalDRepDistr = computeDRepDistr (Proxy @era) dpStakeDistr dpDRepState dpProposalDeposits dpDRepDistr leftOver
+    !finalDRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpDRepDistr leftOver
     !ratifyEnv =
       RatifyEnv
         { reStakeDistr = dpStakeDistr

@@ -46,7 +46,6 @@ import qualified Cardano.Ledger.UMap as UMap
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Proxy (Proxy (Proxy))
 import qualified Data.Set as Set
 import Debug.Trace (trace)
 import Lens.Micro
@@ -222,7 +221,7 @@ bruteForceDRepDistr ::
   ConwayEraGov era =>
   NewEpochState era ->
   Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
-bruteForceDRepDistr nes = computeDRepDistr (Proxy @era) incstk dreps propDeps Map.empty $ UMap.umElems umap
+bruteForceDRepDistr nes = computeDRepDistr incstk dreps propDeps Map.empty $ UMap.umElems umap
   where
     ls = esLState (nesEs nes)
     propDeps = proposalsDeposits $ ls ^. lsUTxOStateL . utxosGovStateL . proposalsGovStateL
