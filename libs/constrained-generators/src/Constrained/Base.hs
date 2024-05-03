@@ -1098,7 +1098,7 @@ simplifySpec spec = case spec of
     let optP = optimisePred p
      in fromGESpec
           $ explain
-            [ show $ "Simplifying" /> pretty spec
+            [ show $ "Simplifying: " /> pretty spec
             , show $ "optimisePred =>" /> pretty optP
             ]
           $ computeSpecSimplified x optP
@@ -1110,7 +1110,7 @@ simplifySpec spec = case spec of
 -- | Precondition: the `Pred fn` defines the `Var a`
 computeSpecSimplified ::
   forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> GE (Specification fn a)
-computeSpecSimplified x p = case p of
+computeSpecSimplified x p = localGESpec $ case p of
   Monitor {} -> pure mempty
   GenHint h t -> propagateSpec (giveHint h) <$> toCtx x t -- NOTE: this implies you do need to actually propagate hints, e.g. propagate depth control in a `tail` or `cdr` like function
   Subst x' t p' -> computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
@@ -1137,7 +1137,8 @@ computeSpecSimplified x p = case p of
     fatalError ["Dependency error in computeSpec: IfElse", "  " ++ show x, show $ indent 2 (pretty p)]
   Reifies (Lit a) (Lit val) f
     | f val == a -> pure TrueSpec
-    | otherwise -> genError ["Value does not reify to literal: " ++ show val ++ " -/> " ++ show a]
+    | otherwise ->
+        pure $ ErrorSpec ["Value does not reify to literal: " ++ show val ++ " -/> " ++ show a]
   Reifies t' (Lit val) f ->
     propagateSpec (equalSpec (f val)) <$> toCtx x t'
   Reifies Lit {} _ _ ->
@@ -1149,6 +1150,10 @@ computeSpecSimplified x p = case p of
   Reifies {} ->
     fatalError
       ["The impossible happened in computeSpec: Reifies", "  " ++ show x, show $ indent 2 (pretty p)]
+  where
+    -- We want `genError` to turn into `ErrorSpec` and we want `FatalError` to turn into `FatalError`
+    localGESpec ge@FatalError {} = ge
+    localGESpec ge = pure $ fromGESpec ge
 
 -- | Precondition: the `Pred fn` defines the `Var a`
 computeSpec ::

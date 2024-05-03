@@ -148,11 +148,6 @@ negativeTests =
         prop_complete @BaseFn @Int $
           constrained $ \x ->
             reify x id $ \y -> y ==. 10
-    prop "reify overconstrained" $
-      expectFailure $
-        prop_complete @BaseFn @Int $
-          constrained $ \x ->
-            reify x id $ \y -> y ==. 10
 
 numberyTests :: Spec
 numberyTests =
