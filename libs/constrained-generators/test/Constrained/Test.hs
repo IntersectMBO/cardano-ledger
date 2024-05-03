@@ -138,7 +138,21 @@ tests =
 negativeTests :: Spec
 negativeTests =
   describe "negative tests" $ do
-    prop "reifies 10 x id" $ expectFailure $ prop_complete @BaseFn @Int $ constrained $ \x -> reifies 10 x id
+    prop "reifies 10 x id" $
+      expectFailure $
+        prop_complete @BaseFn @Int $
+          constrained $
+            \x -> reifies 10 x id
+    prop "reify overconstrained" $
+      expectFailure $
+        prop_complete @BaseFn @Int $
+          constrained $ \x ->
+            reify x id $ \y -> y ==. 10
+    prop "reify overconstrained" $
+      expectFailure $
+        prop_complete @BaseFn @Int $
+          constrained $ \x ->
+            reify x id $ \y -> y ==. 10
 
 numberyTests :: Spec
 numberyTests =

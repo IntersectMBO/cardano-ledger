@@ -1002,7 +1002,9 @@ genFromPreds (optimisePred . optimisePred -> preds) = do
     go env [] = pure env
     go env ((Name v, ps) : nps) = do
       let ps' = substPred env <$> ps
-          spec = explainSpec ("Computing specs for" : map show ps') $ foldMap (computeSpec v) ps'
+          spec = fromGESpec $ explain ("Computing specs for" : map show ps') $ do
+            specs <- mapM (computeSpec v) ps'
+            explain ("Folding over: " : map (show . indent 2 . pretty) specs) $ pure $ fold specs
       val <- genFromSpec spec
       go (extendEnv v val env) nps
 
@@ -1092,7 +1094,14 @@ explainSpec _ s = s
 
 simplifySpec :: HasSpec fn a => Specification fn a -> Specification fn a
 simplifySpec spec = case spec of
-  SuspendedSpec x p -> explainSpec [show $ "Simplifying" /> pretty spec] $ computeSpecSimplified x (optimisePred p)
+  SuspendedSpec x p ->
+    let optP = optimisePred p
+     in fromGESpec
+          $ explain
+            [ show $ "Simplifying" /> pretty spec
+            , show $ "optimisePred =>" /> pretty optP
+            ]
+          $ computeSpecSimplified x optP
   MemberSpec xs -> MemberSpec (nub xs)
   ErrorSpec es -> ErrorSpec es
   TypeSpec ts cant -> TypeSpec ts (nub cant)
@@ -1100,26 +1109,28 @@ simplifySpec spec = case spec of
 
 -- | Precondition: the `Pred fn` defines the `Var a`
 computeSpecSimplified ::
-  forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Specification fn a
-computeSpecSimplified x p = fromGESpec $ case p of
+  forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> GE (Specification fn a)
+computeSpecSimplified x p = case p of
   Monitor {} -> pure mempty
   GenHint h t -> propagateSpec (giveHint h) <$> toCtx x t -- NOTE: this implies you do need to actually propagate hints, e.g. propagate depth control in a `tail` or `cdr` like function
-  Subst x' t p' -> pure $ computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
+  Subst x' t p' -> computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
   FalsePred es -> genError es
-  Block ps -> pure $ foldMap (computeSpecSimplified x) ps
+  Block ps -> fold <$> mapM (computeSpecSimplified x) ps
   Let t b -> pure $ SuspendedSpec x (Let t b)
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert _ (Lit True) -> pure mempty
   Assert _ (Lit False) -> genError [show p]
   Assert _ t -> explain [show p] $ propagateSpec (equalSpec True) <$> toCtx x t
-  ForAll (Lit s) b -> pure $ foldMap (\val -> computeSpec x $ unBind val b) (forAllToList s)
-  ForAll t b -> propagateSpec (fromForAllSpec $ computeSpecBinderSimplified b) <$> toCtx x t
-  Case (Lit val) bs -> pure $ runCaseOn val bs $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
-  Case t branches ->
-    let branchSpecs = mapList computeSpecBinderSimplified branches
-     in propagateSpec (caseSpec branchSpecs) <$> toCtx x t
-  IfElse (Lit b) tp fp -> if b then pure $ computeSpecSimplified x tp else pure $ computeSpecSimplified x fp
+  ForAll (Lit s) b -> fold <$> mapM (\val -> computeSpec x $ unBind val b) (forAllToList s)
+  ForAll t b -> do
+    bSpec <- computeSpecBinderSimplified b
+    propagateSpec (fromForAllSpec bSpec) <$> toCtx x t
+  Case (Lit val) bs -> runCaseOn val bs $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
+  Case t branches -> do
+    branchSpecs <- mapMList computeSpecBinderSimplified branches
+    propagateSpec (caseSpec branchSpecs) <$> toCtx x t
+  IfElse (Lit b) tp fp -> if b then computeSpecSimplified x tp else computeSpecSimplified x fp
   -- TODO: Fix this by having a pass that figures out if `p` or `q` are trivially true or false (thus constraining
   -- the scrutinee of the ifElse)
   IfElse {} ->
@@ -1140,13 +1151,14 @@ computeSpecSimplified x p = fromGESpec $ case p of
       ["The impossible happened in computeSpec: Reifies", "  " ++ show x, show $ indent 2 (pretty p)]
 
 -- | Precondition: the `Pred fn` defines the `Var a`
-computeSpec :: forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Specification fn a
+computeSpec ::
+  forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> GE (Specification fn a)
 computeSpec x p = computeSpecSimplified x (simplifyPred p)
 
-computeSpecBinder :: Binder fn a -> Specification fn a
+computeSpecBinder :: Binder fn a -> GE (Specification fn a)
 computeSpecBinder (x :-> p) = computeSpec x p
 
-computeSpecBinderSimplified :: Binder fn a -> Specification fn a
+computeSpecBinderSimplified :: Binder fn a -> GE (Specification fn a)
 computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 
 caseSpec ::
