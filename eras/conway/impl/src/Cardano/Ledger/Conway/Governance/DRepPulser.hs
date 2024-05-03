@@ -1,4 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -38,7 +37,6 @@ module Cardano.Ledger.Conway.Governance.DRepPulser (
   RunConwayRatify (..),
 ) where
 
-import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (EpochNo (..), Globals (..))
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -59,7 +57,7 @@ import Cardano.Ledger.CertState (CommitteeState)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance.Internal
-import Cardano.Ledger.Conway.Governance.Procedures (GovActionState, gasDepositL, gasReturnAddrL)
+import Cardano.Ledger.Conway.Governance.Procedures (GovActionState)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -72,12 +70,13 @@ import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
-import Data.Foldable (foldl', toList)
+import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Proxy (Proxy (Proxy))
 import Data.Pulse (Pulsable (..), pulse)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SS
@@ -175,29 +174,16 @@ instance EraPParams era => FromCBOR (PulsingSnapshot era) where
 --   (c) is the size of the DRepDistr, this grows as the accumulator
 computeDRepDistr ::
   forall era.
+  Proxy era ->
   Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin) ->
   Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)) ->
-  StrictSeq (GovActionState era) ->
+  Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin) ->
   Map (DRep (EraCrypto era)) (CompactForm Coin) ->
   Map (Credential 'Staking (EraCrypto era)) (UMElem (EraCrypto era)) ->
   Map (DRep (EraCrypto era)) (CompactForm Coin)
-computeDRepDistr stakeDistr regDReps gass dRepDistr uMapChunk =
+computeDRepDistr _ stakeDistr regDReps proposalDeposits dRepDistr uMapChunk =
   Map.foldlWithKey' go dRepDistr uMapChunk
   where
-    -- QUESTION: Can I memoize this as a field in DRepPulsar? That causes a
-    -- type-error, though that does _not_ get resolved even with AllowAmbiguousTypes
-    -- as `EraCrypto era` is a non-injective type-family
-    proposalDeposits =
-      foldl'
-        ( \gasMap gas ->
-            Map.insertWith
-              addCompact
-              (gas ^. gasReturnAddrL . rewardAccountCredentialL)
-              (fromMaybe (CompactCoin 0) $ toCompact $ gas ^. gasDepositL)
-              gasMap
-        )
-        mempty
-        gass
     go accum stakeCred umElem =
       let stake = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred stakeDistr
           proposalDeposit = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred proposalDeposits
@@ -246,6 +232,8 @@ data DRepPulser era (m :: Type -> Type) ans where
     -- ^ Snapshot of the EnactState, Used to build the Env of the RATIFY rule
     , dpProposals :: !(StrictSeq (GovActionState era))
     -- ^ Snapshot of the proposals. This is the Signal for the RATIFY rule
+    , dpProposalDeposits :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+    -- ^ Snapshot of the proposal-deposits per reward-account-staking-credential
     , dpGlobals :: !Globals
     } ->
     DRepPulser era m ans
@@ -262,7 +250,7 @@ instance Pulsable (DRepPulser era) where
     | done pulser = pure pulser {dpIndex = 0}
     | otherwise =
         let !chunk = Map.take dpPulseSize $ Map.drop dpIndex $ UMap.umElems dpUMap
-            dRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpProposals dpDRepDistr chunk
+            dRepDistr = computeDRepDistr (Proxy @era) dpStakeDistr dpDRepState dpProposalDeposits dpDRepDistr chunk
          in pure (pulser {dpIndex = dpIndex + dpPulseSize, dpDRepDistr = dRepDistr})
 
   completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
@@ -271,7 +259,7 @@ deriving instance (EraPParams era, Show ans) => Show (DRepPulser era m ans)
 
 instance EraPParams era => NoThunks (DRepPulser era Identity (RatifyState era)) where
   showTypeOf _ = "DRepPulser"
-  wNoThunks ctxt drp@(DRepPulser _ _ _ _ _ _ _ _ _ _ _ _) =
+  wNoThunks ctxt drp@(DRepPulser _ _ _ _ _ _ _ _ _ _ _ _ _) =
     allNoThunks
       [ noThunks ctxt (dpPulseSize drp)
       , noThunks ctxt (dpUMap drp)
@@ -284,11 +272,12 @@ instance EraPParams era => NoThunks (DRepPulser era Identity (RatifyState era)) 
       , noThunks ctxt (dpCommitteeState drp)
       , noThunks ctxt (dpEnactState drp)
       , noThunks ctxt (dpProposals drp)
+      , noThunks ctxt (dpProposalDeposits drp)
       , noThunks ctxt (dpGlobals drp)
       ]
 
 instance EraPParams era => NFData (DRepPulser era Identity (RatifyState era)) where
-  rnf (DRepPulser n um bal stake pool drep dstate ep cs es as gs) =
+  rnf (DRepPulser n um bal stake pool drep dstate ep cs es as pds gs) =
     n `deepseq`
       um `deepseq`
         bal `deepseq`
@@ -300,7 +289,8 @@ instance EraPParams era => NFData (DRepPulser era Identity (RatifyState era)) wh
                     cs `deepseq`
                       es `deepseq`
                         as `deepseq`
-                          rnf gs
+                          pds `deepseq`
+                            rnf gs
 
 class
   ( STS (ConwayRATIFY era)
@@ -328,19 +318,13 @@ class
                   : map show (toList ps)
           Right ratifyState' -> ratifyState'
 
-finishDRepPulser :: DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
+finishDRepPulser :: forall era. DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
 finishDRepPulser (DRComplete snap ratifyState) = (snap, ratifyState)
 finishDRepPulser (DRPulsing (DRepPulser {..})) =
   (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
   where
-    !finalDRepDistr =
-      computeDRepDistr
-        dpStakeDistr
-        dpDRepState
-        dpProposals
-        dpDRepDistr
-        $ Map.drop dpIndex
-        $ umElems dpUMap
+    !leftOver = Map.drop dpIndex $ umElems dpUMap
+    !finalDRepDistr = computeDRepDistr (Proxy @era) dpStakeDistr dpDRepState dpProposalDeposits dpDRepDistr leftOver
     !ratifyEnv =
       RatifyEnv
         { reStakeDistr = dpStakeDistr

@@ -75,6 +75,7 @@ module Cardano.Ledger.Conway.Governance (
   grCommitteeL,
   grConstitutionL,
   proposalsActions,
+  proposalsDeposits,
   proposalsAddAction,
   proposalsRemoveWithDescendants,
   proposalsAddVote,
@@ -424,6 +425,7 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
       dState = certDState certState
       vState = certVState certState
       govState = epochState ^. epochStateGovStateL
+      props = govState ^. cgsProposalsL
       -- Maximum number of blocks we are allowed to roll back
       k = securityParameter globals
       umap = dsUnified dState
@@ -446,7 +448,8 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
                   , dpEnactState =
                       mkEnactState govState
                         & ensTreasuryL .~ epochState ^. epochStateTreasuryL
-                  , dpProposals = proposalsActions (govState ^. cgsProposalsL)
+                  , dpProposals = proposalsActions props
+                  , dpProposalDeposits = proposalsDeposits props
                   , dpGlobals = globals
                   }
               )

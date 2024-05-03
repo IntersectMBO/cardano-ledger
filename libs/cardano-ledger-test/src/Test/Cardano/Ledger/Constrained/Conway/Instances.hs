@@ -1304,6 +1304,7 @@ type DRepPulserTypes =
    , CommitteeState (ConwayEra StandardCrypto)
    , EnactState (ConwayEra StandardCrypto)
    , StrictSeq (GovActionState (ConwayEra StandardCrypto))
+   , Map (Credential 'Staking StandardCrypto) (CompactForm Coin)
    ]
 instance
   HasSimpleRep
@@ -1325,11 +1326,12 @@ instance
       dpCommitteeState
       dpEnactState
       dpProposals
+      dpProposalDeposits
   fromSimpleRep rep =
     algebra @'["DRepPulser" ::: DRepPulserTypes]
       rep
-      $ \ps um b sd spd dd ds ce cs es p ->
-        DRepPulser ps um b sd spd dd ds ce cs es p testGlobals
+      $ \ps um b sd spd dd ds ce cs es p pds ->
+        DRepPulser ps um b sd spd dd ds ce cs es p pds testGlobals
 instance
   IsConwayUniv fn =>
   HasSpec fn (DRepPulser (ConwayEra StandardCrypto) Identity (RatifyState (ConwayEra StandardCrypto)))

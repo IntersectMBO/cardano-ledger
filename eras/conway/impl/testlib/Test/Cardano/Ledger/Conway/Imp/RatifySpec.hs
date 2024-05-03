@@ -633,11 +633,7 @@ votingSpec =
             modifyPParams $ \pp ->
               pp
                 & ppDRepVotingThresholdsL
-                  .~ def
-                    { dvtCommitteeNormal = 51 %! 100
-                    , dvtCommitteeNoConfidence = 51 %! 100
-                    }
-                & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+                  .~ def {dvtCommitteeNormal = 51 %! 100}
                 & ppGovActionDepositL .~ Coin 600_000
             -- Setup DRep delegation without stake #1
             (drepKH1, stakingKH1) <- setupDRepWithoutStake
@@ -666,14 +662,13 @@ votingSpec =
             -- Submit another proposal to bump up the active voting stake
             anotherCC <- KeyHashObj <$> freshKeyHash
             let anotherAddCCAction = UpdateCommittee SNothing mempty (Map.singleton anotherCC 10) (75 %! 100)
-            _anotherAddCCGaid <-
-              submitProposal $
-                ProposalProcedure
-                  { pProcDeposit = Coin 600_000
-                  , pProcReturnAddr = dRepRewardAccount
-                  , pProcGovAction = anotherAddCCAction
-                  , pProcAnchor = def
-                  }
+            submitProposal_ $
+              ProposalProcedure
+                { pProcDeposit = Coin 600_000
+                , pProcReturnAddr = dRepRewardAccount
+                , pProcGovAction = anotherAddCCAction
+                , pProcAnchor = def
+                }
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
@@ -682,11 +677,7 @@ votingSpec =
             modifyPParams $ \pp ->
               pp
                 & ppDRepVotingThresholdsL
-                  .~ def
-                    { dvtCommitteeNormal = 51 %! 100
-                    , dvtCommitteeNoConfidence = 51 %! 100
-                    }
-                & ppCommitteeMaxTermLengthL .~ EpochInterval 20
+                  .~ def {dvtCommitteeNormal = 51 %! 100}
                 & ppGovActionDepositL .~ Coin 1_000_000
             -- Setup DRep delegation without stake #1
             (drepKH1, stakingKH1) <- setupDRepWithoutStake
@@ -712,14 +703,13 @@ votingSpec =
                   }
             anotherCC <- KeyHashObj <$> freshKeyHash
             let anotherAddCCAction = UpdateCommittee SNothing mempty (Map.singleton anotherCC 10) (75 %! 100)
-            _anotherAddCCGaid <-
-              submitProposal $
-                ProposalProcedure
-                  { pProcDeposit = Coin 1_000_000
-                  , pProcReturnAddr = dRepRewardAccount3
-                  , pProcGovAction = anotherAddCCAction
-                  , pProcAnchor = def
-                  }
+            submitProposal_ $
+              ProposalProcedure
+                { pProcDeposit = Coin 1_000_000
+                , pProcReturnAddr = dRepRewardAccount3
+                , pProcGovAction = anotherAddCCAction
+                , pProcAnchor = def
+                }
             -- Submit the vote from DRep #1
             submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
             passNEpochs 2

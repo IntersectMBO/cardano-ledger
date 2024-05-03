@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Generate a Simple Tx with 1 inout, 1 output, and 1 DRep related Cert
 module Test.Cardano.Ledger.Constrained.Trace.DrepCertTx where
@@ -18,8 +19,8 @@ import Cardano.Ledger.Conway.Governance (
   curPParamsGovStateL,
   finishDRepPulser,
   newEpochStateDRepPulsingStateL,
-  proposalsActions,
   proposalsActionsMap,
+  proposalsDeposits,
   proposalsGovStateL,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
@@ -45,6 +46,7 @@ import qualified Cardano.Ledger.UMap as UMap
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Proxy (Proxy (Proxy))
 import qualified Data.Set as Set
 import Debug.Trace (trace)
 import Lens.Micro
@@ -216,11 +218,14 @@ pulserWorks mcsfirst mcslast =
     (bruteForceDRepDistr (mcsTickNes mcsfirst) === extractPulsingDRepDistr (mcsNes mcslast))
 
 bruteForceDRepDistr ::
-  ConwayEraGov era => NewEpochState era -> Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
-bruteForceDRepDistr nes = computeDRepDistr incstk dreps props Map.empty $ UMap.umElems umap
+  forall era.
+  ConwayEraGov era =>
+  NewEpochState era ->
+  Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
+bruteForceDRepDistr nes = computeDRepDistr (Proxy @era) incstk dreps propDeps Map.empty $ UMap.umElems umap
   where
     ls = esLState (nesEs nes)
-    props = proposalsActions $ ls ^. lsUTxOStateL . utxosGovStateL . proposalsGovStateL
+    propDeps = proposalsDeposits $ ls ^. lsUTxOStateL . utxosGovStateL . proposalsGovStateL
     cs = lsCertState ls
     IStake incstk _ = utxosStakeDistr (lsUTxOState ls)
     umap = dsUnified (certDState cs)

@@ -82,6 +82,8 @@ import Cardano.Ledger.Conway.Governance (
   RatifyState (..),
   RunConwayRatify (..),
   Vote (..),
+  pPropsL,
+  proposalsDeposits,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..), Delegatee (..))
 import qualified Cardano.Ledger.Core as Core
@@ -107,10 +109,12 @@ import Cardano.Ledger.Val (Val ((<+>)))
 import Control.Monad.Identity (Identity)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import Data.Default.Class (def)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
+import qualified Data.OMap.Strict as OMap
 import qualified Data.Sequence.Strict as SS
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -936,12 +940,13 @@ genSizedRep _ EnactStateR =
   EnactState
     <$> arbitrary
     <*> arbitrary
-    <*> (unPParams <$> (genPParams reify))
-    <*> (unPParams <$> (genPParams reify))
+    <*> (unPParams <$> genPParams reify)
+    <*> (unPParams <$> genPParams reify)
     <*> arbitrary
     <*> arbitrary
     <*> arbitrary
-genSizedRep _ DRepPulserR =
+genSizedRep _ DRepPulserR = do
+  props <- SS.fromList . (: []) <$> genRep GovActionStateR
   DRepPulser
     <$> arbitrary -- pulsesize
     <*> arbitrary -- umap
@@ -953,7 +958,8 @@ genSizedRep _ DRepPulserR =
     <*> arbitrary -- epoch
     <*> arbitrary -- committeestate
     <*> genRep EnactStateR
-    <*> (SS.fromList . (: []) <$> genRep GovActionStateR) -- proposals
+    <*> pure props
+    <*> pure (proposalsDeposits $ def & pPropsL .~ OMap.fromFoldable props)
     <*> pure testGlobals
 genSizedRep n DelegateeR =
   oneof

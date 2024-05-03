@@ -110,8 +110,10 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   peChildrenL,
   PGraph (..),
   pGraphNodesL,
+  proposalsDeposits,
 ) where
 
+import Cardano.Ledger.Address (rewardAccountCredentialL)
 import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   isSJust,
@@ -123,8 +125,12 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
  )
+import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
 import Cardano.Ledger.Conway.Governance.Procedures
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Keys (KeyRole (Staking))
+import Cardano.Ledger.UMap (addCompact, toCompact)
 import Control.DeepSeq (NFData)
 import Control.Exception (assert)
 import Control.Monad (unless)
@@ -134,6 +140,7 @@ import Data.Either (partitionEithers)
 import Data.Foldable (foldl', foldrM, toList)
 import qualified Data.Map as Map
 import Data.Map.Strict (Map)
+import Data.Maybe (fromMaybe)
 import qualified Data.OMap.Strict as OMap
 import qualified Data.OSet.Strict as OSet
 import Data.Pulse (foldlM')
@@ -475,6 +482,23 @@ proposalsActions ::
   Proposals era ->
   StrictSeq (GovActionState era)
 proposalsActions (Proposals omap _ _) = OMap.toStrictSeq omap
+
+-- | Get a mapping from the reward-account staking credentials to deposits of
+-- all proposals.
+proposalsDeposits ::
+  Proposals era ->
+  Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)
+proposalsDeposits =
+  foldl'
+    ( \gasMap gas ->
+        Map.insertWith
+          addCompact
+          (gas ^. gasReturnAddrL . rewardAccountCredentialL)
+          (fromMaybe (CompactCoin 0) $ toCompact $ gas ^. gasDepositL)
+          gasMap
+    )
+    mempty
+    . proposalsActions
 
 -- | Get the sequence of `GovActionId`s
 proposalsIds ::
