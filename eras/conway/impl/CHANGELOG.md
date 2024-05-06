@@ -2,6 +2,8 @@
 
 ## 1.14.0 0
 
+* Include proposal deposits in the DRep active voting stake. #4309
+  * Change `computeDRepDistr` to also take `dpProposals` as an argument.
 * Remove `gePrevGovActionIds` from `GovEnv`
 * Add lenses:
   * `dvtHardForkInitiationL`

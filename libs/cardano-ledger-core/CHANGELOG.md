@@ -1,5 +1,11 @@
 # Version history for `cardano-ledger-core`
 
+## 1.12.0.0
+
+* Add lenses to `RewardAccount`. #4309
+  * `rewardAccountCredentialL`
+  * `rewardAccountNetworkL`
+
 ## 1.11.1.0
 
 * Add `Inject` instances for tuples
