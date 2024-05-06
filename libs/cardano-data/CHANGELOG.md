@@ -5,6 +5,10 @@
 * Add `assocList`, `elems`
 * Add module Data.MonoTuple
 
+### `testlib`
+
+* Add `genOSet`
+
 ## 1.2.1.0
 
 * Add `ToJSON` instance for `OSet` #4112

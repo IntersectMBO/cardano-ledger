@@ -11,8 +11,10 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript, AsIx (..), PlutusPurpose)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
+import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus (Data (..), ExUnits, Language (..), SLanguage (..))
@@ -20,6 +22,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (fromList)
 import qualified Data.Set as Set
+import Test.Cardano.Data.Arbitrary (genOSet)
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TranslatableGen (..),
   TxInfoLanguage (..),
@@ -49,17 +52,40 @@ genTxBody l = do
                 <$> BabbageTranslatableGen.genTxOut @(ConwayEra c) l
             )
   let genTxIns = Set.fromList <$> listOf1 (arbitrary :: Gen (TxIn c))
+      offPrePlutusV3 freq = if l >= PlutusV3 then freq else 0
+      genDelegatee =
+        frequency
+          [ (33, DelegStake <$> arbitrary)
+          , (offPrePlutusV3 33, DelegVote <$> arbitrary)
+          , (offPrePlutusV3 33, DelegStakeVote <$> arbitrary <*> arbitrary)
+          ]
+      genDelegCert =
+        frequency
+          [ (25, ConwayRegCert <$> arbitrary <*> arbitrary)
+          , (25, ConwayUnRegCert <$> arbitrary <*> arbitrary)
+          , (25, ConwayDelegCert <$> arbitrary <*> genDelegatee)
+          , (offPrePlutusV3 25, ConwayRegDelegCert <$> arbitrary <*> genDelegatee <*> arbitrary)
+          ]
+      genTxCerts =
+        genOSet $
+          frequency
+            [ (33, ConwayTxCertDeleg <$> genDelegCert)
+            , (33, ConwayTxCertPool <$> arbitrary)
+            , (offPrePlutusV3 33, ConwayTxCertGov <$> arbitrary)
+            ]
+      genForPlutusV3 :: Arbitrary a => a -> Gen a
+      genForPlutusV3 d =
+        case l of
+          PlutusV3 -> arbitrary
+          _ -> pure d
   ConwayTxBody
     <$> genTxIns
     <*> arbitrary
-    <*> ( case l of -- refinputs
-            PlutusV1 -> pure Set.empty
-            _ -> arbitrary
-        )
+    <*> arbitrary
     <*> genTxOuts
     <*> arbitrary
     <*> arbitrary
-    <*> arbitrary
+    <*> genTxCerts
     <*> arbitrary
     <*> arbitrary
     <*> scale (`div` 15) arbitrary
@@ -68,10 +94,10 @@ genTxBody l = do
     <*> arbitrary
     <*> arbitrary
     <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
-    <*> arbitrary
+    <*> genForPlutusV3 (VotingProcedures mempty)
+    <*> genForPlutusV3 mempty
+    <*> genForPlutusV3 mempty
+    <*> genForPlutusV3 mempty
 
 genRedeemers ::
   forall era.
