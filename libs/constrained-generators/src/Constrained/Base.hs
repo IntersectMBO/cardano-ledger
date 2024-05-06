@@ -1113,6 +1113,8 @@ simplifySpec spec = case spec of
   TrueSpec -> TrueSpec
 
 -- | Precondition: the `Pred fn` defines the `Var a`
+--
+-- Runs in `GE` in order for us to have detailed context on failure.
 computeSpecSimplified ::
   forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> GE (Specification fn a)
 computeSpecSimplified x p = localGESpec $ case p of
@@ -1160,7 +1162,9 @@ computeSpecSimplified x p = localGESpec $ case p of
     localGESpec ge@FatalError {} = ge
     localGESpec ge = pure $ fromGESpec ge
 
--- | Precondition: the `Pred fn` defines the `Var a`
+-- | Precondition: the `Pred fn` defines the `Var a`.
+--
+-- Runs in `GE` in order for us to have detailed context on failure.
 computeSpec ::
   forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> GE (Specification fn a)
 computeSpec x p = computeSpecSimplified x (simplifyPred p)
