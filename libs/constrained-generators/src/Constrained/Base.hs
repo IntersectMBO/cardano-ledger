@@ -998,8 +998,8 @@ genFromPreds (optimisePred . optimisePred -> preds) = explain [show $ "genFromPr
   -- and linearizing is memoized in properties that use `genFromPreds`.
   (linear, deps) <- runGE $ prepareLinearization preds
   explain [show $ "With graph:" /> pretty deps] $
-    explain [show $ "With linearization:" /> prettyLinear linear]
-          $ go mempty linear
+    explain [show $ "With linearization:" /> prettyLinear linear] $
+      go mempty linear
   where
     go :: (MonadGenError m, BaseUniverse fn) => Env -> [(Name fn, [Pred fn])] -> GenT m Env
     go env [] = pure env
@@ -1010,7 +1010,6 @@ genFromPreds (optimisePred . optimisePred -> preds) = explain [show $ "genFromPr
         pure $ fold specs
       val <- genFromSpec spec
       go (extendEnv v val env) nps
-
 
 -- TODO: here we can compute both the explicit hints (i.e. constraints that
 -- define the order of two variables) and any whole-program smarts.
@@ -1048,10 +1047,11 @@ linearize preds graph = do
     Left cycle ->
       fatalError $
         [ show $
-            "linearize: Dependency cycle in graph:" />
-              vcat ["cycle:" /> pretty cycle
-                   ,"graph:" /> pretty graph
-                   ]
+            "linearize: Dependency cycle in graph:"
+              /> vcat
+                [ "cycle:" /> pretty cycle
+                , "graph:" /> pretty graph
+                ]
         ]
     Right sorted -> pure sorted
   go sorted [(freeVarSet ps, ps) | ps <- filter isRelevantPred preds]
@@ -1072,8 +1072,10 @@ linearize preds graph = do
           fatalError $
             [ "Dependency error in `linearize`: "
             , show $ indent 2 $ "graph: " /> pretty graph
-            , show $ indent 2 $ "the following left-over constraints are not defining constraints for a unique variable:" />
-                            vcat (map (pretty . snd) ps)
+            , show $
+                indent 2 $
+                  "the following left-over constraints are not defining constraints for a unique variable:"
+                    /> vcat (map (pretty . snd) ps)
             ]
     go (n : ns) ps = do
       let (nps, ops) = partition (isLastVariable n . fst) ps
@@ -4138,8 +4140,7 @@ instance Pretty (Name fn) where
   pretty (Name v) = pretty v
 
 prettyLinear :: [(Name fn, [Pred fn])] -> Doc ann
-prettyLinear ln = vcat [ pretty n <+> "<-" /> vcat (map pretty ps) | (Name n, ps) <- ln ]
-
+prettyLinear ln = vcat [pretty n <+> "<-" /> vcat (map pretty ps) | (Name n, ps) <- ln]
 
 -- ======================================================================
 -- Size and its 'generic' operations over Sized types.
