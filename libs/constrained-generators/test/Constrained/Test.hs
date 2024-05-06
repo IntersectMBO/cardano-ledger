@@ -44,6 +44,8 @@ testAll = hspec tests
 tests :: Spec
 tests =
   describe "constrained" $ do
+    -- TODO: double-shrinking
+    testSpecNoShrink "reifiesMultiple" reifiesMultiple
     testSpec "assertReal" assertReal
     testSpec "assertRealMultiple" assertRealMultiple
     testSpec "setSpec" setSpec
@@ -133,6 +135,21 @@ tests =
       prop "Map Int Int" $ prop_conformEmpty @BaseFn @(Map Int Int)
       prop "[Int]" $ prop_conformEmpty @BaseFn @[Int]
       prop "[(Int, Int)]" $ prop_conformEmpty @BaseFn @[(Int, Int)]
+    negativeTests
+
+negativeTests :: Spec
+negativeTests =
+  describe "negative tests" $ do
+    prop "reifies 10 x id" $
+      expectFailure $
+        prop_complete @BaseFn @Int $
+          constrained $
+            \x -> reifies 10 x id
+    prop "reify overconstrained" $
+      expectFailure $
+        prop_complete @BaseFn @Int $
+          constrained $ \x ->
+            reify x id $ \y -> y ==. 10
 
 numberyTests :: Spec
 numberyTests =

@@ -202,3 +202,9 @@ assertRealMultiple = constrained' $ \x y ->
   , assert $ 11 <=. y
   , assertReified (pair_ x y) $ uncurry (/=)
   ]
+
+reifiesMultiple :: Specification BaseFn (Int, Int, Int)
+reifiesMultiple = constrained' $ \x y z ->
+  [ reifies (x + y) z id
+  , x `dependsOn` y
+  ]

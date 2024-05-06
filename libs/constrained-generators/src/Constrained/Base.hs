@@ -971,7 +971,8 @@ computeDependencies = \case
   IfElse b p q ->
     let pG = computeDependencies p
         qG = computeDependencies q
-     in (nodes pG <> nodes qG) `irreflexiveDependencyOn` b <> pG <> qG
+        oG = (nodes pG <> nodes qG) `irreflexiveDependencyOn` b
+     in oG <> pG <> qG
   TruePred -> mempty
   FalsePred {} -> mempty
   Block ps -> foldMap computeDependencies ps
@@ -981,28 +982,32 @@ computeDependencies = \case
 
 -- | Linearize a predicate, turning it into a list of variables to solve and
 -- their defining constraints such that each variable can be solved independently.
-prepareLinearization :: BaseUniverse fn => Pred fn -> GE [(Name fn, [Pred fn])]
+prepareLinearization :: BaseUniverse fn => Pred fn -> GE ([(Name fn, [Pred fn])], Graph (Name fn))
 prepareLinearization p = do
   let preds = flattenPred p
       hints = computeHints preds
       graph = transitiveClosure $ hints <> respecting hints (foldMap computeDependencies preds)
-  linearize preds graph
+  (,graph) <$> linearize preds graph
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
 genFromPreds :: (MonadGenError m, BaseUniverse fn) => Pred fn -> GenT m Env
 -- TODO: remove this once optimisePred does a proper fixpoint computation
-genFromPreds (optimisePred . optimisePred -> preds) = do
+genFromPreds (optimisePred . optimisePred -> preds) = explain [show $ "genFromPreds: " /> pretty preds] $ do
   -- NOTE: this is just lazy enough that the work of flattening, computing dependencies,
   -- and linearizing is memoized in properties that use `genFromPreds`.
-  linear <- runGE $ prepareLinearization preds
-  go mempty linear
+  (linear, deps) <- runGE $ prepareLinearization preds
+  explain [show $ "With graph:" /> pretty deps] $
+    explain [show $ "With linearization:" /> prettyLinear linear] $
+      go mempty linear
   where
     go :: (MonadGenError m, BaseUniverse fn) => Env -> [(Name fn, [Pred fn])] -> GenT m Env
     go env [] = pure env
     go env ((Name v, ps) : nps) = do
       let ps' = substPred env <$> ps
-          spec = explainSpec ("Computing specs for" : map show ps') $ foldMap (computeSpec v) ps'
+      spec <- runGE $ explain [show $ "Computing specs for:" /> vsep (map pretty ps')] $ do
+        specs <- mapM (computeSpec v) ps'
+        pure $ fold specs
       val <- genFromSpec spec
       go (extendEnv v val env) nps
 
@@ -1041,13 +1046,13 @@ linearize preds graph = do
   sorted <- case topsort graph of
     Left cycle ->
       fatalError $
-        [ "linearize: Dependency cycle in graph: "
-        , "  cycle: " ++ show cycle
-        , "  preds:"
+        [ show $
+            "linearize: Dependency cycle in graph:"
+              /> vsep
+                [ "cycle:" /> pretty cycle
+                , "graph:" /> pretty graph
+                ]
         ]
-          ++ [show $ indent 4 (pretty p) | p <- preds]
-          ++ [ "  graph: " ++ show graph
-             ]
     Right sorted -> pure sorted
   go sorted [(freeVarSet ps, ps) | ps <- filter isRelevantPred preds]
   where
@@ -1066,10 +1071,12 @@ linearize preds graph = do
       | otherwise =
           fatalError $
             [ "Dependency error in `linearize`: "
-            , "  graph: " ++ show graph
-            , "  the following left-over constraints are not defining constraints for a unique variable: "
+            , show $ indent 2 $ "graph: " /> pretty graph
+            , show $
+                indent 2 $
+                  "the following left-over constraints are not defining constraints for a unique variable:"
+                    /> vsep (map (pretty . snd) ps)
             ]
-              ++ [show $ indent 4 (pretty p) | (_, p) <- ps]
     go (n : ns) ps = do
       let (nps, ops) = partition (isLastVariable n . fst) ps
       ((n, map snd nps) :) <$> go ns ops
@@ -1080,7 +1087,7 @@ linearize preds graph = do
 -- Computing specs
 ------------------------------------------------------------------------
 
-fromGESpec :: GE (Specification fn a) -> Specification fn a
+fromGESpec :: HasCallStack => GE (Specification fn a) -> Specification fn a
 fromGESpec ge = case ge of
   Result es s -> explainSpec (concatMap (++ [""]) es) s
   _ -> fromGE ErrorSpec ge
@@ -1092,44 +1099,57 @@ explainSpec _ s = s
 
 simplifySpec :: HasSpec fn a => Specification fn a -> Specification fn a
 simplifySpec spec = case spec of
-  SuspendedSpec x p -> explainSpec [show $ "Simplifying" /> pretty spec] $ computeSpecSimplified x (optimisePred p)
+  SuspendedSpec x p ->
+    let optP = optimisePred p
+     in fromGESpec
+          $ explain
+            [ show $ "Simplifying: " /> pretty spec
+            , show $ "optimisePred =>" /> pretty optP
+            ]
+          $ computeSpecSimplified x optP
   MemberSpec xs -> MemberSpec (nub xs)
   ErrorSpec es -> ErrorSpec es
   TypeSpec ts cant -> TypeSpec ts (nub cant)
   TrueSpec -> TrueSpec
 
 -- | Precondition: the `Pred fn` defines the `Var a`
+--
+-- Runs in `GE` in order for us to have detailed context on failure.
 computeSpecSimplified ::
-  forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Specification fn a
-computeSpecSimplified x p = fromGESpec $ case p of
+  forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> GE (Specification fn a)
+computeSpecSimplified x p = localGESpec $ case p of
   Monitor {} -> pure mempty
   GenHint h t -> propagateSpec (giveHint h) <$> toCtx x t -- NOTE: this implies you do need to actually propagate hints, e.g. propagate depth control in a `tail` or `cdr` like function
-  Subst x' t p' -> pure $ computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
+  Subst x' t p' -> computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
   FalsePred es -> genError es
-  Block ps -> pure $ foldMap (computeSpecSimplified x) ps
+  Block ps -> fold <$> mapM (computeSpecSimplified x) ps
   Let t b -> pure $ SuspendedSpec x (Let t b)
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert _ (Lit True) -> pure mempty
   Assert _ (Lit False) -> genError [show p]
   Assert _ t -> explain [show p] $ propagateSpec (equalSpec True) <$> toCtx x t
-  ForAll (Lit s) b -> pure $ foldMap (\val -> computeSpec x $ unBind val b) (forAllToList s)
-  ForAll t b -> propagateSpec (fromForAllSpec $ computeSpecBinderSimplified b) <$> toCtx x t
-  Case (Lit val) bs -> pure $ runCaseOn val bs $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
-  Case t branches ->
-    let branchSpecs = mapList computeSpecBinderSimplified branches
-     in propagateSpec (caseSpec branchSpecs) <$> toCtx x t
-  IfElse (Lit b) tp fp -> if b then pure $ computeSpecSimplified x tp else pure $ computeSpecSimplified x fp
+  ForAll (Lit s) b -> fold <$> mapM (\val -> computeSpec x $ unBind val b) (forAllToList s)
+  ForAll t b -> do
+    bSpec <- computeSpecBinderSimplified b
+    propagateSpec (fromForAllSpec bSpec) <$> toCtx x t
+  Case (Lit val) bs -> runCaseOn val bs $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
+  Case t branches -> do
+    branchSpecs <- mapMList computeSpecBinderSimplified branches
+    propagateSpec (caseSpec branchSpecs) <$> toCtx x t
+  IfElse (Lit b) tp fp -> if b then computeSpecSimplified x tp else computeSpecSimplified x fp
   -- TODO: Fix this by having a pass that figures out if `p` or `q` are trivially true or false (thus constraining
   -- the scrutinee of the ifElse)
   IfElse {} ->
     fatalError ["Dependency error in computeSpec: IfElse", "  " ++ show x, show $ indent 2 (pretty p)]
   Reifies (Lit a) (Lit val) f
     | f val == a -> pure TrueSpec
-    | otherwise -> genError ["Value does not reify to literal: " ++ show val ++ " -/> " ++ show a]
+    | otherwise ->
+        pure $ ErrorSpec ["Value does not reify to literal: " ++ show val ++ " -/> " ++ show a]
   Reifies t' (Lit val) f ->
     propagateSpec (equalSpec (f val)) <$> toCtx x t'
-  Reifies Lit {} _ _ -> pure TrueSpec
+  Reifies Lit {} _ _ ->
+    fatalError ["Dependency error in computeSpec: Reifies", "  " ++ show p]
   -- Impossible cases that should be ruled out by the dependency analysis and linearizer
   DependsOn {} ->
     fatalError
@@ -1137,15 +1157,22 @@ computeSpecSimplified x p = fromGESpec $ case p of
   Reifies {} ->
     fatalError
       ["The impossible happened in computeSpec: Reifies", "  " ++ show x, show $ indent 2 (pretty p)]
+  where
+    -- We want `genError` to turn into `ErrorSpec` and we want `FatalError` to turn into `FatalError`
+    localGESpec ge@FatalError {} = ge
+    localGESpec ge = pure $ fromGESpec ge
 
--- | Precondition: the `Pred fn` defines the `Var a`
-computeSpec :: forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> Specification fn a
+-- | Precondition: the `Pred fn` defines the `Var a`.
+--
+-- Runs in `GE` in order for us to have detailed context on failure.
+computeSpec ::
+  forall fn a. (HasSpec fn a, HasCallStack) => Var a -> Pred fn -> GE (Specification fn a)
 computeSpec x p = computeSpecSimplified x (simplifyPred p)
 
-computeSpecBinder :: Binder fn a -> Specification fn a
+computeSpecBinder :: Binder fn a -> GE (Specification fn a)
 computeSpecBinder (x :-> p) = computeSpec x p
 
-computeSpecBinderSimplified :: Binder fn a -> Specification fn a
+computeSpecBinderSimplified :: Binder fn a -> GE (Specification fn a)
 computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 
 caseSpec ::
@@ -4109,6 +4136,15 @@ instance HasSpec fn a => Pretty (Specification fn a) where
 
 instance HasSpec fn a => Show (Specification fn a) where
   showsPrec d = shows . pretty . WithPrec d
+
+instance Pretty (Var a) where
+  pretty = fromString . show
+
+instance Pretty (Name fn) where
+  pretty (Name v) = pretty v
+
+prettyLinear :: [(Name fn, [Pred fn])] -> Doc ann
+prettyLinear ln = vsep [pretty n <+> "<-" /> vsep (map pretty ps) | (Name n, ps) <- ln]
 
 -- ======================================================================
 -- Size and its 'generic' operations over Sized types.
