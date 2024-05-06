@@ -249,3 +249,7 @@ instance
   , ToExpr (TxCert era)
   ) =>
   ToExpr (ConwayUtxowPredFailure era)
+
+instance ToExpr (PParamsHKD Identity era) => ToExpr (CertEnv era)
+
+instance ToExpr (PParams era) => ToExpr (ConwayDelegEnv era)

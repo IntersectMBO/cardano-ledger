@@ -7,7 +7,7 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Data.List (isInfixOf)
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Conformance (SpecTranslate (..), runSpecTransM)
+import Test.Cardano.Ledger.Conformance (runSpecTransM, toTestRep)
 import Test.Cardano.Ledger.Conformance.Spec.Conway ()
 import Test.Cardano.Ledger.Conformance.Utils (agdaHashToBytes)
 

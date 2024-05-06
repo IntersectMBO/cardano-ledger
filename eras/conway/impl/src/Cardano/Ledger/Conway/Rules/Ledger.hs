@@ -43,7 +43,14 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayEra, ConwayGOV, ConwayLEDGER, ConwayUTXOW)
+import Cardano.Ledger.Conway.Era (
+  ConwayCERTS,
+  ConwayDELEG,
+  ConwayEra,
+  ConwayGOV,
+  ConwayLEDGER,
+  ConwayUTXOW,
+ )
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   ConwayGovState,
@@ -52,11 +59,11 @@ import Cardano.Ledger.Conway.Governance (
   constitutionScriptL,
   proposalsGovStateL,
  )
-import Cardano.Ledger.Conway.Rules.Cert (CertEnv, ConwayCertPredFailure)
+import Cardano.Ledger.Conway.Rules.Cert (CertEnv, ConwayCertEvent (..), ConwayCertPredFailure (..))
 import Cardano.Ledger.Conway.Rules.Certs (
   CertsEnv (CertsEnv),
-  ConwayCertsEvent,
-  ConwayCertsPredFailure,
+  ConwayCertsEvent (..),
+  ConwayCertsPredFailure (..),
  )
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (
@@ -495,3 +502,16 @@ instance
   where
   wrapFailed = ConwayGovFailure
   wrapEvent = GovEvent
+
+instance
+  ( EraPParams era
+  , EraRule "DELEG" era ~ ConwayDELEG era
+  , PredicateFailure (EraRule "CERTS" era) ~ ConwayCertsPredFailure era
+  , PredicateFailure (EraRule "CERT" era) ~ ConwayCertPredFailure era
+  , Event (EraRule "CERTS" era) ~ ConwayCertsEvent era
+  , Event (EraRule "CERT" era) ~ ConwayCertEvent era
+  ) =>
+  Embed (ConwayDELEG era) (ConwayLEDGER era)
+  where
+  wrapFailed = ConwayCertsFailure . CertFailure . DelegFailure
+  wrapEvent = CertsEvent . CertEvent . DelegEvent

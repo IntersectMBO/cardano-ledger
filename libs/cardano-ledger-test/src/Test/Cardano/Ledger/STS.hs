@@ -27,7 +27,6 @@ import Test.Cardano.Ledger.Constrained.Conway.Gov
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.Ledger
-import Test.Cardano.Ledger.Constrained.Conway.PParams
 import Test.Cardano.Ledger.Constrained.Conway.Pool
 import Test.Cardano.Ledger.Constrained.Conway.Utxo
 
@@ -179,7 +178,7 @@ prop_CERT =
 prop_DELEG :: Property
 prop_DELEG =
   stsPropertyV2 @"DELEG" @ConwayFn
-    pparamsSpec
+    delegEnvSpec
     (\_env -> dStateSpec)
     delegCertSpec
     $ \_env _st _sig _st' -> True

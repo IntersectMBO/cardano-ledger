@@ -7,6 +7,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -16,6 +17,7 @@
 module Cardano.Ledger.Conway.Rules.Deleg (
   ConwayDELEG,
   ConwayDelegPredFailure (..),
+  ConwayDelegEnv (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
@@ -36,7 +38,8 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (DelegStake, DelegStakeVote, DelegVote),
  )
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyRole (Staking))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.Shelley.LedgerState (DState (..))
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
@@ -55,6 +58,7 @@ import Control.State.Transition (
   transitionRules,
   (?!),
  )
+import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Void (Void)
@@ -62,12 +66,27 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
 
+data ConwayDelegEnv era = ConwayDelegEnv
+  { cdePParams :: PParams era
+  , cdePools ::
+      !( Map
+          (KeyHash 'StakePool (EraCrypto era))
+          (PoolParams (EraCrypto era))
+       )
+  }
+  deriving (Generic)
+
+deriving instance Eq (PParams era) => Eq (ConwayDelegEnv era)
+
+deriving instance Show (PParams era) => Show (ConwayDelegEnv era)
+
 data ConwayDelegPredFailure era
   = IncorrectDepositDELEG !Coin
   | StakeKeyRegisteredDELEG !(Credential 'Staking (EraCrypto era))
   | StakeKeyNotRegisteredDELEG !(Credential 'Staking (EraCrypto era))
   | StakeKeyHasNonZeroRewardAccountBalanceDELEG !Coin
   | DRepAlreadyRegisteredForStakeKeyDELEG !(Credential 'Staking (EraCrypto era))
+  | DelegateeNotRegisteredDELEG !(KeyHash 'StakePool (EraCrypto era))
   deriving (Show, Eq, Generic)
 
 type instance EraRuleFailure "DELEG" (ConwayEra c) = ConwayDelegPredFailure (ConwayEra c)
@@ -93,6 +112,8 @@ instance Era era => EncCBOR (ConwayDelegPredFailure era) where
         Sum (StakeKeyHasNonZeroRewardAccountBalanceDELEG @era) 4 !> To mCoin
       DRepAlreadyRegisteredForStakeKeyDELEG stakeCred ->
         Sum (DRepAlreadyRegisteredForStakeKeyDELEG @era) 5 !> To stakeCred
+      DelegateeNotRegisteredDELEG delegatee ->
+        Sum (DelegateeNotRegisteredDELEG @era) 6 !> To delegatee
 
 instance Era era => DecCBOR (ConwayDelegPredFailure era) where
   decCBOR = decode $ Summands "ConwayDelegPredFailure" $ \case
@@ -101,20 +122,21 @@ instance Era era => DecCBOR (ConwayDelegPredFailure era) where
     3 -> SumD StakeKeyNotRegisteredDELEG <! From
     4 -> SumD StakeKeyHasNonZeroRewardAccountBalanceDELEG <! From
     5 -> SumD DRepAlreadyRegisteredForStakeKeyDELEG <! From
+    6 -> SumD DelegateeNotRegisteredDELEG <! From
     n -> Invalid n
 
 instance
   ( EraPParams era
   , State (EraRule "DELEG" era) ~ DState era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
-  , Environment (EraRule "DELEG" era) ~ PParams era
+  , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
   , EraRule "DELEG" era ~ ConwayDELEG era
   ) =>
   STS (ConwayDELEG era)
   where
   type State (ConwayDELEG era) = DState era
   type Signal (ConwayDELEG era) = ConwayDelegCert (EraCrypto era)
-  type Environment (ConwayDELEG era) = PParams era
+  type Environment (ConwayDELEG era) = ConwayDelegEnv era
   type BaseM (ConwayDELEG era) = ShelleyBase
   type PredicateFailure (ConwayDELEG era) = ConwayDelegPredFailure era
   type Event (ConwayDELEG era) = Void
@@ -124,7 +146,7 @@ instance
 conwayDelegTransition :: forall era. EraPParams era => TransitionRule (ConwayDELEG era)
 conwayDelegTransition = do
   TRC
-    ( pp
+    ( ConwayDelegEnv pp pools
       , dState@DState {dsUnified}
       , c
       ) <-
@@ -144,10 +166,18 @@ conwayDelegTransition = do
       checkStakeKeyIsRegistered stakeCred dsUnified
       pure $ dState {dsUnified = processDelegation stakeCred delegatee dsUnified}
     ConwayRegDelegCert stakeCred delegatee deposit -> do
+      checkStakeDelegateeRegistered pools delegatee
       checkDepositAgainstPParams ppKeyDeposit deposit
       dsUnified' <- checkAndAcceptDepositForStakeCred stakeCred deposit dsUnified
       pure $ dState {dsUnified = processDelegation stakeCred delegatee dsUnified'}
   where
+    checkStakeDelegateeRegistered pools =
+      let checkPoolRegistered targetPool =
+            targetPool `Map.member` pools ?! DelegateeNotRegisteredDELEG targetPool
+       in \case
+            DelegStake targetPool -> checkPoolRegistered targetPool
+            DelegStakeVote targetPool _ -> checkPoolRegistered targetPool
+            DelegVote _ -> pure ()
     -- Whenever we want to accept new deposit, we must always check if the stake credential isn't already registered.
     checkAndAcceptDepositForStakeCred stakeCred deposit dsUnified = do
       checkStakeKeyNotRegistered stakeCred dsUnified

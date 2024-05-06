@@ -17,7 +17,6 @@
 * Add lenses to `RewardAccount`. #4309
   * `rewardAccountCredentialL`
   * `rewardAccountNetworkL`
-* Add `Inject` instances for tuples
 * Add `umElemDRepDelegatedReward` to `UMap`. #4273
 * Add `fromDeltaCoin`
 * Add trivial `Inject` instances for `()` and `Void`

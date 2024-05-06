@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -7,7 +6,6 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -18,7 +16,8 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway () where
 
-import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Inject (..), Network, StrictMaybe (..))
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParamsUpdate)
 import Cardano.Ledger.Conway.Governance (
@@ -26,6 +25,7 @@ import Cardano.Ledger.Conway.Governance (
   GovProcedures (..),
   ProposalProcedure,
   Proposals,
+  VotingProcedures,
   ensPrevGovActionIdsL,
   pRootsL,
   toPrevGovActionIds,
@@ -33,7 +33,10 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.PParams (THKD (..))
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure)
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
+import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.TxIn (TxId)
 import Constrained
 import Control.Monad.Identity (Identity)
@@ -41,36 +44,40 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.List.NonEmpty as NE
+import Data.Map.Strict (Map)
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
 import qualified Lib as Agda
+import Test.Cardano.Ledger.Common (Arbitrary (..))
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
+  OpaqueErrorString (..),
   SpecTranslate (..),
   checkConformance,
   computationResultToEither,
   runConformance,
   runSpecTransM,
  )
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (
-  OpaqueErrorString (..),
- )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway (
   IsConwayUniv,
   ProposalsSplit,
+  certEnvSpec,
+  certStateSpec,
   genProposalsSplit,
   govEnvSpec,
   govProceduresSpec,
   govProposalsSpec,
+  txCertSpec,
   utxoEnvSpec,
   utxoStateSpec,
   utxoTxSpec,
  )
 import Test.Cardano.Ledger.Conway.ImpTest (impAnn, logEntry)
-import Test.Cardano.Ledger.Imp.Common hiding (forAll, prop)
+import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop)
 
 data ConwayGovTransContext era
   = ConwayGovTransContext
@@ -231,10 +238,12 @@ instance
 
   environmentSpec _ = govEnvSpec
 
-  stateSpec (_, propSplit) env = govProposalsSpec env <> constrained agdaConstraints
+  stateSpec (_, propSplit) env =
+    govProposalsSpec env
+      <> constrained onlyMinFeeAUpdates
     where
-      agdaConstraints :: Term fn (Proposals Conway) -> Pred fn
-      agdaConstraints props =
+      onlyMinFeeAUpdates :: Term fn (Proposals Conway) -> Pred fn
+      onlyMinFeeAUpdates props =
         fold
           [ match @fn props $
               \ppups _ _ _ _ ->
@@ -243,13 +252,15 @@ instance
                       forAll' ppupTree $ \gas _ ->
                         match gas $ \_ _ _ _ prop _ _ -> agdaCompatibleProposal prop
                 ]
-          , genHint propSplit props
+          , genHint propSplit props -- Limit the total number of proposals
           ]
 
-  signalSpec _ env st = govProceduresSpec env st <> constrained agdaConstraints
+  signalSpec _ env st =
+    govProceduresSpec env st
+      <> constrained onlyMinFeeAUpdates
     where
-      agdaConstraints :: Term fn (GovProcedures Conway) -> Pred fn
-      agdaConstraints procs = match @fn procs $ \_ props ->
+      onlyMinFeeAUpdates :: Term fn (GovProcedures Conway) -> Pred fn
+      onlyMinFeeAUpdates procs = match @fn procs $ \_ props ->
         forAll props agdaCompatibleProposal
 
   genExecContext = (,) <$> arbitrary <*> genProposalsSplit 20
@@ -275,8 +286,8 @@ instance
     logEntry $ "agdaSig:\n" <> showExpr agdaSig
     pure (agdaEnv, agdaSt, agdaSig)
 
-  testConformance env st sig = property $ do
-    (implResTest, agdaResTest) <- runConformance @"GOV" @fn @Conway env st sig
+  testConformance ctx env st sig = property $ do
+    (implResTest, agdaResTest) <- runConformance @"GOV" @fn @Conway ctx env st sig
     checkConformance @"GOV" implResTest agdaResTest
     let numInputProps = OSet.size $ gpProposalProcedures sig
     pure $ label ("n input proposals = " <> show numInputProps) ()
@@ -290,10 +301,12 @@ instance
 
   stateSpec _ = utxoStateSpec
 
-  signalSpec _ env st = utxoTxSpec env st <> constrained agdaConstraints
+  signalSpec _ env st =
+    utxoTxSpec env st
+      <> constrained disableInlineDatums
     where
-      agdaConstraints :: Term fn (AlonzoTx Conway) -> Pred fn
-      agdaConstraints tx = match @fn tx $ \txBody _ _ _ ->
+      disableInlineDatums :: Term fn (AlonzoTx Conway) -> Pred fn
+      disableInlineDatums tx = match @fn tx $ \txBody _ _ _ ->
         match txBody $
           \_ctbSpendInputs
            _ctbCollateralInputs
@@ -328,3 +341,77 @@ instance
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.utxoStep env st sig
+
+data ConwayCertExecContext era = ConwayCertExecContext
+  { ccecWithdrawals :: !(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
+  , ccecVotes :: !(VotingProcedures era)
+  }
+  deriving (Generic, Eq, Show)
+
+instance Era era => Arbitrary (ConwayCertExecContext era) where
+  arbitrary =
+    ConwayCertExecContext
+      <$> arbitrary
+      <*> arbitrary
+
+instance
+  c ~ EraCrypto era =>
+  Inject
+    (ConwayCertExecContext era)
+    (Map (Network, Credential 'Staking c) Coin)
+  where
+  inject = ccecWithdrawals
+
+instance Inject (ConwayCertExecContext era) (VotingProcedures era) where
+  inject = ccecVotes
+
+instance Era era => ToExpr (ConwayCertExecContext era)
+
+instance
+  IsConwayUniv fn =>
+  ExecSpecRule fn "CERT" Conway
+  where
+  type ExecContext fn "CERT" Conway = ConwayCertExecContext Conway
+
+  environmentSpec _ = certEnvSpec
+  stateSpec _ _ = certStateSpec
+  signalSpec _ env st =
+    txCertSpec env st
+      <> constrained disableRegCerts
+      <> constrained disableDRepRegCerts
+    where
+      disableRegCerts :: Term fn (ConwayTxCert Conway) -> Pred fn
+      disableRegCerts cert =
+        (caseOn cert)
+          ( branch $ \delegCert ->
+              (caseOn delegCert)
+                (branch $ \_ _ -> False)
+                (branch $ \_ _ -> True)
+                (branch $ \_ _ -> True)
+                (branch $ \_ _ _ -> True)
+          )
+          (branch $ \_ -> True)
+          (branch $ \_ -> True)
+      -- ConwayRegDRep certificates seem to trigger some kind of a bug in the
+      -- MAlonzo code where it somehow reaches an uncovered case.
+      --
+      -- TODO investigate what's causing this bug and try to get rid of this
+      -- constraint
+      disableDRepRegCerts :: Term fn (ConwayTxCert Conway) -> Pred fn
+      disableDRepRegCerts cert =
+        (caseOn cert)
+          (branch $ \_ -> True)
+          (branch $ \_ -> True)
+          ( branch $ \govCert ->
+              (caseOn govCert)
+                (branch $ \_ _ _ -> False)
+                (branch $ \_ _ -> True)
+                (branch $ \_ _ -> False)
+                (branch $ \_ _ -> True)
+                (branch $ \_ _ -> True)
+          )
+
+  runAgdaRule env st sig =
+    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
+      . computationResultToEither
+      $ Agda.certStep env st sig
