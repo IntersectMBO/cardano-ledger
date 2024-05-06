@@ -6,13 +6,15 @@ module Test.Cardano.Ledger.Conformance.Orphans where
 
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default.Class (Default)
-import Data.List (sortOn)
+import Data.List (sort, sortOn)
 import GHC.Generics (Generic)
 import Lib
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (FixupSpecRep (..), OpaqueErrorString)
 import Test.Cardano.Ledger.Conformance.Utils
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr (..))
+
+deriving instance Generic (HSSet a)
 
 deriving instance Generic GovActionState
 
@@ -40,17 +42,33 @@ deriving instance Generic GState
 
 deriving instance Generic CertState
 
-deriving instance Eq AgdaEmpty
+deriving instance Generic RatifyEnv
 
-deriving instance Eq TxBody
+deriving instance Generic RatifyState
 
-deriving instance Eq Tag
+deriving instance Generic StakeDistrs
 
 deriving instance Ord Tag
 
 deriving instance Ord Credential
 
 deriving instance Ord GovRole
+
+deriving instance Ord VDeleg
+
+deriving instance Ord Vote
+
+deriving instance Ord GovAction
+
+deriving instance Ord GovActionState
+
+deriving instance Eq a => Eq (HSSet a)
+
+deriving instance Eq AgdaEmpty
+
+deriving instance Eq TxBody
+
+deriving instance Eq Tag
 
 deriving instance Eq TxWitnesses
 
@@ -88,7 +106,11 @@ deriving instance Eq GState
 
 deriving instance Eq CertState
 
+deriving instance Eq RatifyState
+
 instance (NFData k, NFData v) => NFData (HSMap k v)
+
+instance NFData a => NFData (HSSet a)
 
 instance NFData GovAction
 
@@ -142,9 +164,17 @@ instance NFData GState
 
 instance NFData CertState
 
+instance NFData StakeDistrs
+
+instance NFData RatifyEnv
+
+instance NFData RatifyState
+
+instance ToExpr a => ToExpr (HSSet a)
+
 instance ToExpr Credential where
-  toExpr (KeyHashObj h) = App "KeyHashObj" [agdaHashToExpr h]
-  toExpr (ScriptObj h) = App "ScriptObj" [agdaHashToExpr h]
+  toExpr (KeyHashObj h) = App "KeyHashObj" [agdaHashToExpr 28 h]
+  toExpr (ScriptObj h) = App "ScriptObj" [agdaHashToExpr 28 h]
 
 instance (ToExpr k, ToExpr v) => ToExpr (HSMap k v)
 
@@ -155,7 +185,7 @@ instance ToExpr GovRole
 instance ToExpr Vote
 
 instance ToExpr TxId where
-  toExpr (MkTxId x) = App "TxId" [agdaHashToExpr x]
+  toExpr (MkTxId x) = App "TxId" [agdaHashToExpr 32 x]
 
 instance ToExpr GovActionState
 
@@ -199,6 +229,12 @@ instance ToExpr GState
 
 instance ToExpr CertState
 
+instance ToExpr StakeDistrs
+
+instance ToExpr RatifyEnv
+
+instance ToExpr RatifyState
+
 instance Default (HSMap k v)
 
 instance FixupSpecRep OpaqueErrorString
@@ -217,6 +253,9 @@ instance
   where
   fixup (MkHSMap l) = MkHSMap . sortOn fst $ bimap fixup fixup <$> l
 
+instance (Ord a, FixupSpecRep a) => FixupSpecRep (HSSet a) where
+  fixup (MkHSSet l) = MkHSSet . sort $ fixup <$> l
+
 instance (FixupSpecRep a, FixupSpecRep b) => FixupSpecRep (a, b)
 
 instance FixupSpecRep a => FixupSpecRep (Maybe a)
@@ -225,6 +264,8 @@ instance (FixupSpecRep a, FixupSpecRep b) => FixupSpecRep (Either a b)
 
 instance FixupSpecRep Integer where
   fixup = id
+
+instance FixupSpecRep Bool
 
 instance FixupSpecRep TxId
 
@@ -251,3 +292,15 @@ instance FixupSpecRep Vote
 instance FixupSpecRep GovAction
 
 instance FixupSpecRep GovActionState
+
+instance FixupSpecRep AgdaEmpty
+
+instance FixupSpecRep StakeDistrs
+
+instance FixupSpecRep PParams
+
+instance FixupSpecRep EnactState
+
+instance FixupSpecRep RatifyEnv
+
+instance FixupSpecRep RatifyState

@@ -49,7 +49,8 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm)
+import Cardano.Ledger.Compactible (Compactible)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
   Committee (Committee),
@@ -64,6 +65,8 @@ import Cardano.Ledger.Conway.Governance (
   GovRelation (..),
   ProposalProcedure (..),
   Proposals,
+  RatifyEnv (..),
+  RatifySignal (..),
   Vote (..),
   Voter (..),
   VotingProcedure (..),
@@ -84,6 +87,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayGovPredFailure,
   ConwayUtxoPredFailure,
   GovEnv (..),
+  RatifyState (..),
  )
 import Cardano.Ledger.Conway.Scripts (AlonzoScript, ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
@@ -112,7 +116,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (Identity, UtxoEnv (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Cardano.Ledger.UMap (dRepMap, rewardMap, sPoolMap)
+import Cardano.Ledger.UMap (dRepMap, fromCompact, rewardMap, sPoolMap)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Monad.Except (MonadError (..))
@@ -130,7 +134,9 @@ import Data.Ratio (denominator, numerator)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import Data.Traversable (forM)
+import Data.Void (Void, absurd)
 import Data.Word (Word32, Word64)
 import Lens.Micro
 import Lens.Micro.Extras (view)
@@ -143,6 +149,16 @@ import Test.Cardano.Ledger.Conformance (
   askCtx,
  )
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
+
+instance SpecTranslate ctx Void where
+  type SpecRep Void = Agda.AgdaEmpty
+
+  toSpecRep = absurd
+
+instance SpecTranslate ctx a => SpecTranslate ctx [a] where
+  type SpecRep [a] = [SpecRep a]
+
+  toSpecRep = traverse toSpecRep
 
 instance SpecTranslate ctx TxIx where
   type SpecRep TxIx = Integer
@@ -351,9 +367,9 @@ instance
       <*> toSpecRep (uePParams x)
 
 instance SpecTranslate ctx a => SpecTranslate ctx (Set a) where
-  type SpecRep (Set a) = [SpecRep a]
+  type SpecRep (Set a) = Agda.HSSet (SpecRep a)
 
-  toSpecRep = traverse toSpecRep . Set.toList
+  toSpecRep = fmap Agda.MkHSSet . traverse toSpecRep . Set.toList
 
 instance SpecTranslate ctx a => SpecTranslate ctx (StrictSeq a) where
   type SpecRep (StrictSeq a) = [SpecRep a]
@@ -476,7 +492,7 @@ instance
 
   toSpecRep x =
     Agda.MkTxWitnesses
-      <$> toSpecRep (txwitsVKey x)
+      <$> toSpecRep (toList $ txwitsVKey x)
       <*> pure []
       <*> toSpecRep (txdats x)
       <*> toSpecRep (txrdmrs x)
@@ -595,15 +611,15 @@ toAgdaTxBody ::
   SpecTransM ctx Agda.TxBody
 toAgdaTxBody tx =
   Agda.MkTxBody
-    <$> toSpecRep (tx ^. bodyTxL . inputsTxBodyL)
-    <*> toSpecRep (tx ^. bodyTxL . referenceInputsTxBodyL)
+    <$> toSpecRep (toList $ tx ^. bodyTxL . inputsTxBodyL)
+    <*> toSpecRep (toList $ tx ^. bodyTxL . referenceInputsTxBodyL)
     <*> (Agda.MkHSMap . zip [0 ..] <$> toSpecRep (tx ^. bodyTxL . outputsTxBodyL))
     <*> toSpecRep (tx ^. bodyTxL . feeTxBodyL)
     <*> toSpecRep (tx ^. bodyTxL . vldtTxBodyL)
     <*> pure (tx ^. sizeTxF)
     <*> toSpecRep (txIdTx tx)
-    <*> toSpecRep (tx ^. bodyTxL . collateralInputsTxBodyL)
-    <*> toSpecRep (tx ^. bodyTxL . reqSignerHashesTxBodyL)
+    <*> toSpecRep (toList $ tx ^. bodyTxL . collateralInputsTxBodyL)
+    <*> toSpecRep (toList $ tx ^. bodyTxL . reqSignerHashesTxBodyL)
     <*> toSpecRep (tx ^. bodyTxL . scriptIntegrityHashTxBodyL)
     <*> toSpecRep (tx ^. bodyTxL . certsTxBodyL)
 
@@ -789,7 +805,7 @@ instance EraPParams era => SpecTranslate ctx (GovAction era) where
   toSpecRep (UpdateCommittee _ remove add threshold) =
     Agda.NewCommittee
       <$> toSpecRep add
-      <*> toSpecRep remove
+      <*> toSpecRep (toList remove)
       <*> toSpecRep threshold
   toSpecRep (NewConstitution _ (Constitution anchor policy)) =
     Agda.NewConstitution
@@ -990,3 +1006,98 @@ instance SpecTranslate ctx (CertState era) where
       <$> toSpecRep certDState
       <*> toSpecRep certPState
       <*> toSpecRep certVState
+
+instance (SpecTranslate ctx a, Compactible a) => SpecTranslate ctx (CompactForm a) where
+  type SpecRep (CompactForm a) = SpecRep a
+
+  toSpecRep = toSpecRep . fromCompact
+
+instance SpecTranslate ctx (CommitteeAuthorization c) where
+  type
+    SpecRep (CommitteeAuthorization c) =
+      SpecRep (Maybe (Credential 'HotCommitteeRole c))
+
+  toSpecRep (CommitteeHotCredential c) = toSpecRep $ Just c
+  toSpecRep (CommitteeMemberResigned _) =
+    toSpecRep $
+      Nothing @(Credential 'HotCommitteeRole c)
+
+instance SpecTranslate ctx (CommitteeState era) where
+  type
+    SpecRep (CommitteeState era) =
+      SpecRep
+        ( Map
+            (Credential 'ColdCommitteeRole (EraCrypto era))
+            (CommitteeAuthorization (EraCrypto era))
+        )
+
+  toSpecRep = toSpecRep . csCommitteeCreds
+
+instance
+  Inject ctx Coin =>
+  SpecTranslate ctx (RatifyEnv era)
+  where
+  type SpecRep (RatifyEnv era) = Agda.RatifyEnv
+
+  toSpecRep RatifyEnv {..} = do
+    let
+      transStakeDistr (c, s) = do
+        c' <- toSpecRep c
+        s' <- toSpecRep s
+        pure (Agda.CredVoter Agda.SPO c', s')
+      stakeDistrsMap = traverse transStakeDistr $ Map.toList reStakeDistr
+      stakeDistrs = Agda.MkStakeDistrs . Agda.MkHSMap <$> stakeDistrsMap
+      dreps = toSpecRep $ Map.map drepExpiry reDRepState
+    treasury <- askCtx @Coin
+    Agda.MkRatifyEnv
+      <$> stakeDistrs
+      <*> toSpecRep reCurrentEpoch
+      <*> dreps
+      <*> toSpecRep reCommitteeState
+      <*> toSpecRep treasury
+
+instance SpecTranslate ctx Bool where
+  type SpecRep Bool = Bool
+
+  toSpecRep = pure
+
+instance
+  ( EraPParams era
+  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecTranslate ctx (PParamsHKD Identity era)
+  , Inject ctx (Map (GovActionId (EraCrypto era)) (GovActionState era))
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
+  SpecTranslate ctx (RatifyState era)
+  where
+  type SpecRep (RatifyState era) = Agda.RatifyState
+
+  toSpecRep RatifyState {..} = do
+    govActionMap <-
+      askCtx
+        @(Map (GovActionId (EraCrypto era)) (GovActionState era))
+    let
+      lookupGAS gaId m = do
+        case Map.lookup gaId govActionMap of
+          Just x -> Set.insert (gaId, x) <$> m
+          Nothing ->
+            throwError $
+              "gaId: "
+                <> T.pack (showExpr gaId)
+                <> "\n\ngovActionMap: "
+                <> T.pack (showExpr govActionMap)
+                <> "\n\nGovActionId is not contained in the govActionMap"
+      expired = toSpecRep =<< Set.foldr' lookupGAS (pure Set.empty) rsExpired
+    Agda.MkRatifyState
+      <$> toSpecRep rsEnactState
+      <*> expired
+      <*> toSpecRep rsDelayed
+
+instance EraPParams era => SpecTranslate ctx (RatifySignal era) where
+  type
+    SpecRep (RatifySignal era) =
+      SpecRep [(GovActionId (EraCrypto era), GovActionState era)]
+
+  toSpecRep (RatifySignal x) =
+    toSpecRep $
+      (\gas@GovActionState {gasId} -> (gasId, gas)) <$> x

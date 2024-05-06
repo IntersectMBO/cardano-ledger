@@ -1,10 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -22,16 +25,20 @@ import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParamsUpdate)
 import Cardano.Ledger.Conway.Governance (
   EnactState,
+  GovActionId,
+  GovActionState (..),
   GovProcedures (..),
   ProposalProcedure,
   Proposals,
+  RatifyEnv,
+  RatifySignal,
   VotingProcedures,
   ensPrevGovActionIdsL,
   pRootsL,
   toPrevGovActionIds,
  )
 import Cardano.Ledger.Conway.PParams (THKD (..))
-import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure)
+import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure, RatifyState)
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 import Cardano.Ledger.Credential (Credential)
@@ -45,6 +52,7 @@ import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
@@ -76,6 +84,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   utxoStateSpec,
   utxoTxSpec,
  )
+import Test.Cardano.Ledger.Constrained.Conway.Instances ()
 import Test.Cardano.Ledger.Conway.ImpTest (impAnn, logEntry)
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop)
 
@@ -228,6 +237,13 @@ agdaCompatibleProposal prop =
       (branch $ \_ _ -> True)
       (branch $ const True)
 
+agdaCompatibleGAS ::
+  IsConwayUniv fn =>
+  Term fn (GovActionState Conway) ->
+  Pred fn
+agdaCompatibleGAS gas =
+  match gas $ \_ _ _ _ prop _ _ -> agdaCompatibleProposal prop
+
 instance
   ( NFData (SpecRep (ConwayGovPredFailure Conway))
   , IsConwayUniv fn
@@ -249,8 +265,7 @@ instance
               \ppups _ _ _ _ ->
                 [ match ppups $ \_ ppupForest ->
                     forAll ppupForest $ \ppupTree ->
-                      forAll' ppupTree $ \gas _ ->
-                        match gas $ \_ _ _ _ prop _ _ -> agdaCompatibleProposal prop
+                      forAll' ppupTree $ \gas _ -> agdaCompatibleGAS gas
                 ]
           , genHint propSplit props -- Limit the total number of proposals
           ]
@@ -415,3 +430,107 @@ instance
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.certStep env st sig
+
+data ConwayRatifyExecContext era = ConwayRatifyExecContext
+  { crecTreasury :: Coin
+  , crecGovActionMap :: Map (GovActionId (EraCrypto era)) (GovActionState era)
+  }
+  deriving (Generic, Eq, Show)
+
+instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (ConwayRatifyExecContext era)
+
+instance
+  ( Era era
+  , Arbitrary (PParamsHKD StrictMaybe era)
+  ) =>
+  Arbitrary (ConwayRatifyExecContext era)
+  where
+  arbitrary =
+    ConwayRatifyExecContext
+      <$> arbitrary
+      <*> (Map.mapWithKey fixupGAIDs <$> arbitrary)
+    where
+      fixupGAIDs gaId gas = gas {gasId = gaId}
+
+instance Inject (ConwayRatifyExecContext era) Coin where
+  inject = crecTreasury
+
+instance
+  c ~ EraCrypto era =>
+  Inject
+    (ConwayRatifyExecContext era)
+    (Map (GovActionId c) (GovActionState era))
+  where
+  inject = crecGovActionMap
+
+instance HasSimpleRep (ConwayRatifyExecContext era)
+instance
+  ( IsConwayUniv fn
+  , EraPParams era
+  , HasSpec fn (GovActionState era)
+  ) =>
+  HasSpec fn (ConwayRatifyExecContext era)
+
+ratifyEnvSpec :: Specification fn (RatifyEnv era)
+ratifyEnvSpec = TrueSpec
+
+ratifyStateSpec ::
+  IsConwayUniv fn =>
+  ConwayRatifyExecContext Conway ->
+  Specification fn (RatifyState Conway)
+ratifyStateSpec ConwayRatifyExecContext {crecGovActionMap} =
+  constrained $ \st ->
+    match st $ \_ _ expired _ ->
+      expired `subset_` dom_ (lit crecGovActionMap)
+
+ratifySignalSpec ::
+  IsConwayUniv fn =>
+  ConwayRatifyExecContext Conway ->
+  Specification fn (RatifySignal Conway)
+ratifySignalSpec ConwayRatifyExecContext {crecGovActionMap} =
+  constrained $ \sig ->
+    match sig $ \gasS ->
+      match gasS $ \gasL ->
+        forAll' gasL $ \gaId _ _ _ _ _ _ ->
+          gaId `member_` dom_ (lit crecGovActionMap)
+
+instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
+  type ExecContext fn "RATIFY" Conway = ConwayRatifyExecContext Conway
+
+  genExecContext = genFromSpec_ @fn
+    . constrained
+    $ \ctx ->
+      match ctx $ \_ gasMap ->
+        forAll' gasMap $ \_ gas ->
+          agdaCompatibleGAS gas
+
+  environmentSpec _ = ratifyEnvSpec
+
+  stateSpec ctx _ =
+    mconcat
+      [ ratifyStateSpec ctx
+      , onlyMinFeeAUpdates
+      ]
+    where
+      onlyMinFeeAUpdates :: Specification fn (RatifyState Conway)
+      onlyMinFeeAUpdates = constrained $ \st ->
+        match st $ \_ ratified _ _ ->
+          match ratified $ \ratifiedL ->
+            forAll ratifiedL agdaCompatibleGAS
+
+  signalSpec ctx _ _ =
+    mconcat
+      [ onlyMinFeeAUpdates
+      , ratifySignalSpec ctx
+      ]
+    where
+      onlyMinFeeAUpdates :: Specification fn (RatifySignal Conway)
+      onlyMinFeeAUpdates = constrained $ \sig ->
+        match sig $ \gasS ->
+          match gasS $ \gasL ->
+            forAll gasL agdaCompatibleGAS
+
+  runAgdaRule env st sig =
+    first (\case {})
+      . computationResultToEither
+      $ Agda.ratifyStep env st sig

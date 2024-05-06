@@ -5,11 +5,8 @@ import Cardano.Crypto.Util (naturalToBytes)
 import qualified Data.ByteString.Base16 as B16
 import Test.Cardano.Ledger.TreeDiff (Expr, ToExpr (..))
 
-agdaHashToBytes :: Integer -> ByteString
-agdaHashToBytes = B16.encode . naturalToBytes hashSize . fromInteger
-  where
-    -- TODO is there a way to get this from a `Crypto` instead of hard-coding?
-    hashSize = 28
+agdaHashToBytes :: Int -> Integer -> ByteString
+agdaHashToBytes hashSize = B16.encode . naturalToBytes hashSize . fromInteger
 
-agdaHashToExpr :: Integer -> Expr
-agdaHashToExpr = toExpr . agdaHashToBytes
+agdaHashToExpr :: Int -> Integer -> Expr
+agdaHashToExpr hashSize = toExpr . agdaHashToBytes hashSize
