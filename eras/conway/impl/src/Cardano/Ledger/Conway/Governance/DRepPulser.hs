@@ -70,15 +70,16 @@ import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
-import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), pulse)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SS
+import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..), allNoThunks)
@@ -296,6 +297,7 @@ class
   , BaseM (ConwayRATIFY era) ~ Reader Globals
   , Environment (ConwayRATIFY era) ~ RatifyEnv era
   , State (ConwayRATIFY era) ~ RatifyState era
+  , PredicateFailure (ConwayRATIFY era) ~ Void
   ) =>
   RunConwayRatify era
   where
@@ -309,11 +311,7 @@ class
             )
             globals
      in case ratifyResult of
-          Left ps ->
-            error $
-              unlines $
-                "Impossible: RATIFY rule never fails, but it did:"
-                  : map show (toList ps)
+          Left (x :| _) -> absurd x
           Right ratifyState' -> ratifyState'
 
 finishDRepPulser :: forall era. DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
