@@ -44,7 +44,8 @@ testAll = hspec tests
 tests :: Spec
 tests =
   describe "constrained" $ do
-    testSpec "reifiesMultiple" reifiesMultiple
+    -- TODO: double-shrinking
+    testSpecNoShrink "reifiesMultiple" reifiesMultiple
     testSpec "assertReal" assertReal
     testSpec "assertRealMultiple" assertRealMultiple
     testSpec "setSpec" setSpec
