@@ -30,7 +30,7 @@ instance Ord node => Monoid (Graph node) where
   mempty = Graph mempty mempty
 
 instance Pretty n => Pretty (Graph n) where
-  pretty gr = vcat [nest 2 $ pretty n <> " <- " <> pretty (Set.toList ns) | (n, ns) <- Map.toList (edges gr)]
+  pretty gr = vsep [nest 2 $ pretty n <> " <- " <> pretty (Set.toList ns) | (n, ns) <- Map.toList (edges gr)]
 
 nodes :: Graph node -> Set node
 nodes (Graph e _) = Map.keysSet e

@@ -1005,7 +1005,7 @@ genFromPreds (optimisePred . optimisePred -> preds) = explain [show $ "genFromPr
     go env [] = pure env
     go env ((Name v, ps) : nps) = do
       let ps' = substPred env <$> ps
-      spec <- runGE $ explain [show $ "Computing specs for:" /> vcat (map pretty ps')] $ do
+      spec <- runGE $ explain [show $ "Computing specs for:" /> vsep (map pretty ps')] $ do
         specs <- mapM (computeSpec v) ps'
         pure $ fold specs
       val <- genFromSpec spec
@@ -1048,7 +1048,7 @@ linearize preds graph = do
       fatalError $
         [ show $
             "linearize: Dependency cycle in graph:"
-              /> vcat
+              /> vsep
                 [ "cycle:" /> pretty cycle
                 , "graph:" /> pretty graph
                 ]
@@ -1075,7 +1075,7 @@ linearize preds graph = do
             , show $
                 indent 2 $
                   "the following left-over constraints are not defining constraints for a unique variable:"
-                    /> vcat (map (pretty . snd) ps)
+                    /> vsep (map (pretty . snd) ps)
             ]
     go (n : ns) ps = do
       let (nps, ops) = partition (isLastVariable n . fst) ps
@@ -4140,7 +4140,7 @@ instance Pretty (Name fn) where
   pretty (Name v) = pretty v
 
 prettyLinear :: [(Name fn, [Pred fn])] -> Doc ann
-prettyLinear ln = vcat [pretty n <+> "<-" /> vcat (map pretty ps) | (Name n, ps) <- ln]
+prettyLinear ln = vsep [pretty n <+> "<-" /> vsep (map pretty ps) | (Name n, ps) <- ln]
 
 -- ======================================================================
 -- Size and its 'generic' operations over Sized types.
