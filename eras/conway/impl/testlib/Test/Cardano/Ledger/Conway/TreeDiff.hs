@@ -103,21 +103,21 @@ instance ToExpr (ConwayPParams StrictMaybe era)
 -- Governance
 instance (EraPParams era, ToExpr (PParamsHKD StrictMaybe era)) => ToExpr (PulsingSnapshot era)
 
-instance (Era era, ToExpr (PParamsHKD Identity era)) => ToExpr (EnactState era)
+instance (Era era, ToExpr (PParams era)) => ToExpr (EnactState era)
 
 instance
   ( EraPParams era
-  , ToExpr (PParamsHKD Identity era)
+  , ToExpr (PParams era)
   , ToExpr (PParamsHKD StrictMaybe era)
   ) =>
   ToExpr (RatifyState era)
 
 instance
-  (EraPParams era, ToExpr (PParamsHKD Identity era), ToExpr (PParamsHKD StrictMaybe era)) =>
+  (EraPParams era, ToExpr (PParams era), ToExpr (PParamsHKD StrictMaybe era)) =>
   ToExpr (ConwayGovState era)
 
 instance
-  (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (PParamsHKD Identity era)) =>
+  (EraPParams era, ToExpr (PParamsHKD StrictMaybe era), ToExpr (PParams era)) =>
   ToExpr (DRepPulsingState era)
   where
   toExpr (DRComplete x y) = App "DRComplete" [toExpr x, toExpr y]
@@ -193,7 +193,7 @@ instance
 
 instance
   ( EraPParams era
-  , ToExpr (PParamsHKD Identity era)
+  , ToExpr (PParams era)
   , ToExpr (PParamsHKD StrictMaybe era)
   , ToExpr (Event (EraRule "POOLREAP" era))
   , ToExpr (Event (EraRule "SNAP" era))
@@ -232,7 +232,7 @@ instance
   ) =>
   ToExpr (GovProcedures era)
 
-instance ToExpr (PParamsHKD Identity era) => ToExpr (GovEnv era)
+instance ToExpr (PParams era) => ToExpr (GovEnv era)
 
 instance
   ( ToExpr (Value era)
@@ -250,6 +250,8 @@ instance
   ) =>
   ToExpr (ConwayUtxowPredFailure era)
 
-instance ToExpr (PParamsHKD Identity era) => ToExpr (CertEnv era)
+instance ToExpr (PParams era) => ToExpr (CertEnv era)
 
 instance ToExpr (PParams era) => ToExpr (ConwayDelegEnv era)
+
+instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (RatifySignal era)

@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.14.0.1
+## 1.14.1.0
 
-*
+* Add `NFData` instance for `RatifySignal`
+
+### `testlib`
+
+* Add `ToExpr` instance for `RatifySignal`
 
 ## 1.14.0.0
 

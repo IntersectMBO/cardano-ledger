@@ -11,7 +11,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -533,6 +532,8 @@ reorderActions = SS.fromList . sortOn (actionPriority . gasAction) . toList
 
 newtype RatifySignal era = RatifySignal (StrictSeq (GovActionState era))
   deriving (Eq, Show, Generic)
+
+instance EraPParams era => NFData (RatifySignal era)
 
 data RatifyEnv era = RatifyEnv
   { reStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
