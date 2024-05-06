@@ -971,7 +971,8 @@ computeDependencies = \case
   IfElse b p q ->
     let pG = computeDependencies p
         qG = computeDependencies q
-     in (nodes pG <> nodes qG) `irreflexiveDependencyOn` b <> pG <> qG
+        oG = (nodes pG <> nodes qG) `irreflexiveDependencyOn` b
+     in oG <> pG <> qG
   TruePred -> mempty
   FalsePred {} -> mempty
   Block ps -> foldMap computeDependencies ps
@@ -981,32 +982,35 @@ computeDependencies = \case
 
 -- | Linearize a predicate, turning it into a list of variables to solve and
 -- their defining constraints such that each variable can be solved independently.
-prepareLinearization :: BaseUniverse fn => Pred fn -> GE [(Name fn, [Pred fn])]
+prepareLinearization :: BaseUniverse fn => Pred fn -> GE ([(Name fn, [Pred fn])], Graph (Name fn))
 prepareLinearization p = do
   let preds = flattenPred p
       hints = computeHints preds
       graph = transitiveClosure $ hints <> respecting hints (foldMap computeDependencies preds)
-  linearize preds graph
+  (,graph) <$> linearize preds graph
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
 genFromPreds :: (MonadGenError m, BaseUniverse fn) => Pred fn -> GenT m Env
 -- TODO: remove this once optimisePred does a proper fixpoint computation
-genFromPreds (optimisePred . optimisePred -> preds) = do
+genFromPreds (optimisePred . optimisePred -> preds) = explain [show $ "genFromPreds: " /> pretty preds] $ do
   -- NOTE: this is just lazy enough that the work of flattening, computing dependencies,
   -- and linearizing is memoized in properties that use `genFromPreds`.
-  linear <- runGE $ prepareLinearization preds
-  go mempty linear
+  (linear, deps) <- runGE $ prepareLinearization preds
+  explain [show $ "With graph:" /> pretty deps] $
+    explain [show $ "With linearization:" /> prettyLinear linear]
+          $ go mempty linear
   where
     go :: (MonadGenError m, BaseUniverse fn) => Env -> [(Name fn, [Pred fn])] -> GenT m Env
     go env [] = pure env
     go env ((Name v, ps) : nps) = do
       let ps' = substPred env <$> ps
-          spec = fromGESpec $ explain ("Computing specs for" : map show ps') $ do
-            specs <- mapM (computeSpec v) ps'
-            explain ("Folding over: " : map (show . indent 2 . pretty) specs) $ pure $ fold specs
+      spec <- runGE $ explain [show $ "Computing specs for:" /> vcat (map pretty ps')] $ do
+        specs <- mapM (computeSpec v) ps'
+        pure $ fold specs
       val <- genFromSpec spec
       go (extendEnv v val env) nps
+
 
 -- TODO: here we can compute both the explicit hints (i.e. constraints that
 -- define the order of two variables) and any whole-program smarts.
@@ -1043,13 +1047,12 @@ linearize preds graph = do
   sorted <- case topsort graph of
     Left cycle ->
       fatalError $
-        [ "linearize: Dependency cycle in graph: "
-        , "  cycle: " ++ show cycle
-        , "  preds:"
+        [ show $
+            "linearize: Dependency cycle in graph:" />
+              vcat ["cycle:" /> pretty cycle
+                   ,"graph:" /> pretty graph
+                   ]
         ]
-          ++ [show $ indent 4 (pretty p) | p <- preds]
-          ++ [ "  graph: " ++ show graph
-             ]
     Right sorted -> pure sorted
   go sorted [(freeVarSet ps, ps) | ps <- filter isRelevantPred preds]
   where
@@ -1068,10 +1071,10 @@ linearize preds graph = do
       | otherwise =
           fatalError $
             [ "Dependency error in `linearize`: "
-            , "  graph: " ++ show graph
-            , "  the following left-over constraints are not defining constraints for a unique variable: "
+            , show $ indent 2 $ "graph: " /> pretty graph
+            , show $ indent 2 $ "the following left-over constraints are not defining constraints for a unique variable:" />
+                            vcat (map (pretty . snd) ps)
             ]
-              ++ [show $ indent 4 (pretty p) | (_, p) <- ps]
     go (n : ns) ps = do
       let (nps, ops) = partition (isLastVariable n . fst) ps
       ((n, map snd nps) :) <$> go ns ops
@@ -1082,7 +1085,7 @@ linearize preds graph = do
 -- Computing specs
 ------------------------------------------------------------------------
 
-fromGESpec :: GE (Specification fn a) -> Specification fn a
+fromGESpec :: HasCallStack => GE (Specification fn a) -> Specification fn a
 fromGESpec ge = case ge of
   Result es s -> explainSpec (concatMap (++ [""]) es) s
   _ -> fromGE ErrorSpec ge
@@ -4127,6 +4130,16 @@ instance HasSpec fn a => Pretty (Specification fn a) where
 
 instance HasSpec fn a => Show (Specification fn a) where
   showsPrec d = shows . pretty . WithPrec d
+
+instance Pretty (Var a) where
+  pretty = fromString . show
+
+instance Pretty (Name fn) where
+  pretty (Name v) = pretty v
+
+prettyLinear :: [(Name fn, [Pred fn])] -> Doc ann
+prettyLinear ln = vcat [ pretty n <+> "<-" /> vcat (map pretty ps) | (Name n, ps) <- ln ]
+
 
 -- ======================================================================
 -- Size and its 'generic' operations over Sized types.

@@ -1,15 +1,18 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Constrained.Graph where
 
 import Control.Monad
+import Data.List (sortOn)
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set (Set)
 import Data.Set qualified as Set
+import Prettyprinter
 
 data Graph node = Graph
   { edges :: !(Map node (Set node))
@@ -25,6 +28,9 @@ instance Ord node => Semigroup (Graph node) where
 
 instance Ord node => Monoid (Graph node) where
   mempty = Graph mempty mempty
+
+instance Pretty n => Pretty (Graph n) where
+  pretty gr = vcat [nest 2 $ pretty n <> " <- " <> pretty (Set.toList ns) | (n, ns) <- Map.toList (edges gr) ]
 
 nodes :: Graph node -> Set node
 nodes (Graph e _) = Map.keysSet e
@@ -54,12 +60,10 @@ irreflexiveDependencyOn :: Ord node => Set node -> Set node -> Graph node
 irreflexiveDependencyOn xs ys =
   deps <> noDependencies ys
   where
-    diff = Set.difference ys xs
     deps =
       Graph
-        (Map.fromDistinctAscList [(x, diff) | x <- Set.toList xs])
-        ( Map.fromDistinctAscList [(a, xs) | a <- Set.toList diff]
-            <> Map.fromDistinctAscList [(a, mempty) | a <- Set.toList xs]
+        (Map.fromDistinctAscList [(x, Set.delete x ys) | x <- Set.toList xs])
+        ( Map.fromDistinctAscList [(a, Set.delete a xs) | a <- Set.toList ys]
         )
 
 transitiveDependencies :: Ord node => node -> Graph node -> Set node
@@ -89,9 +93,10 @@ topsort gr@(Graph e _) = go [] e
               removeNode n ds = Set.difference ds noDeps <$ guard (not $ n `Set.member` noDeps)
           if not $ null noDeps
             then go (Set.toList noDeps ++ order) (Map.mapMaybeWithKey removeNode g)
-            else Left . concat . take 1 . filter (not . null) . map (findCycle gr) $ Map.keys e
+            else Left . concat . take 1 . sortOn length . filter (not . null) . map (findCycle gr) $ Map.keys e
 
 -- | Simple DFS cycle finding
+-- TODO: tests for this, currently it can produce a stem with a cycle after it
 findCycle :: Ord node => Graph node -> node -> [node]
 findCycle (Graph e _) node = concat . take 1 $ go mempty node
   where
