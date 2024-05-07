@@ -708,7 +708,7 @@ synSum (MapR _ IntR) m = ", sum = " ++ show (Map.foldl' (+) 0 m)
 synSum (MapR _ Word64R) m = ", sum = " ++ show (Map.foldl' (+) 0 m)
 synSum (MapR _ IPoolStakeR) m = ", sum = " ++ show (Map.foldl' accum 0 m)
   where
-    accum z (IndividualPoolStake rat _) = z + rat
+    accum z (IndividualPoolStake rat _ _) = z + rat
 synSum (MapR _ (TxOutR proof)) m = ", sum = " ++ show (Map.foldl' (accumTxOut proof) (Coin 0) m)
 synSum (MapR _ ExUnitsR) m = ", sum = " ++ show (Map.foldl' add zero m)
 synSum (SetR CoinR) m = ", sum = " ++ show (pcCoin (Set.foldl' (<>) mempty m))

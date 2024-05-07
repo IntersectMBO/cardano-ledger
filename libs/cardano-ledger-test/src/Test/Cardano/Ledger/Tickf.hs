@@ -8,7 +8,7 @@
 --   the code that was replaced.
 module Test.Cardano.Ledger.Tickf (oldCalculatePoolDistr, calcPoolDistOldEqualsNew) where
 
-import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.Coin (Coin (Coin), CompactForm (CompactCoin))
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.EpochBoundary (SnapShot (..), Stake (..), sumAllStake)
@@ -45,19 +45,21 @@ calcPoolDistOldEqualsNew =
 -- | The original version of calculatePoolDistr
 oldCalculatePoolDistr :: forall c. (KeyHash 'StakePool c -> Bool) -> SnapShot c -> PoolDistr c
 oldCalculatePoolDistr includeHash (SnapShot stake delegs poolParams) =
-  let Coin totalc = sumAllStake stake
+  let Coin totalc = fromCompact $ sumAllStake stake
       -- totalc could be zero (in particular when shrinking)
       nonZeroTotal = if totalc == 0 then 1 else totalc
       sd =
-        Map.fromListWith (+) $
-          [ (d, c % nonZeroTotal)
+        Map.fromListWith (\(cc, rat) (cc', rat') -> (cc <> cc', rat + rat')) $
+          [ (d, (compactCoin, c % nonZeroTotal))
           | (hk, compactCoin) <- VMap.toAscList (unStake stake)
           , let Coin c = fromCompact compactCoin
           , Just d <- [VMap.lookup hk delegs]
           , includeHash d
           ]
-   in PoolDistr $
-        Map.intersectionWith
-          IndividualPoolStake
-          sd
-          (VMap.toMap (VMap.map ppVrf poolParams))
+   in PoolDistr
+        ( Map.intersectionWith
+            (\(cc, rat) vrf -> IndividualPoolStake rat cc vrf)
+            sd
+            (VMap.toMap (VMap.map ppVrf poolParams))
+        )
+        (CompactCoin $ fromIntegral nonZeroTotal)

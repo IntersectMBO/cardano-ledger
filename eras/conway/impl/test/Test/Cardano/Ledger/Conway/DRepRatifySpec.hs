@@ -323,4 +323,10 @@ genPctsOf100 = do
 
 emptyRatifyEnv :: forall era. RatifyEnv era
 emptyRatifyEnv =
-  RatifyEnv Map.empty (PoolDistr Map.empty) Map.empty Map.empty (EpochNo 0) (CommitteeState Map.empty)
+  RatifyEnv
+    Map.empty
+    (PoolDistr Map.empty mempty)
+    Map.empty
+    Map.empty
+    (EpochNo 0)
+    (CommitteeState Map.empty)

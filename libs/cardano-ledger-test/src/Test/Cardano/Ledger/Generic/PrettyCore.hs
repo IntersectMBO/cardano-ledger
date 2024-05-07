@@ -3158,10 +3158,12 @@ pcSnapShots sss =
 instance PrettyA (SnapShots c) where prettyA = pcSnapShots
 
 pcPoolDistr :: PoolDistr c -> PDoc
-pcPoolDistr (PoolDistr pdistr) =
+pcPoolDistr (PoolDistr pdistr tot) =
   ppMap pcKeyHash pcIndividualPoolStake pdistr
     <> ppString " total = "
     <> ppRational (Map.foldl' (+) 0 (fmap individualPoolStake pdistr))
+    <> ppString " actualTotal = "
+    <> pcCoin (fromCompact tot)
 
 instance PrettyA (PoolDistr c) where prettyA = pcPoolDistr
 
@@ -3223,7 +3225,7 @@ psEpochState proof es@(EpochState (AccountState tre res) ls sss _) =
     ]
 
 pcNewEpochState :: Reflect era => Proof era -> NewEpochState era -> PDoc
-pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (PoolDistr pd) _) =
+pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (PoolDistr pd _) _) =
   ppRecord
     "NewEpochState"
     [ ("EpochState", pcEpochState proof es)
@@ -3237,7 +3239,7 @@ instance Reflect era => PrettyA (NewEpochState era) where prettyA = pcNewEpochSt
 
 -- | Like pcEpochState.but it only prints a summary of the UTxO
 psNewEpochState :: Reflect era => Proof era -> NewEpochState era -> PDoc
-psNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (PoolDistr pd) _) =
+psNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (PoolDistr pd _) _) =
   ppRecord
     "NewEpochState"
     [ ("EpochState", psEpochState proof es)

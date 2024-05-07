@@ -248,15 +248,18 @@ exampleProposedPParamsUpdates =
 
 examplePoolDistr :: forall c. PraosCrypto c => PoolDistr c
 examplePoolDistr =
-  PoolDistr $
-    Map.fromList
-      [
-        ( mkKeyHash 1
-        , IndividualPoolStake
-            1
-            (hashVerKeyVRF (vrfVerKey (aikVrf (exampleKeys @c))))
-        )
-      ]
+  PoolDistr
+    ( Map.fromList
+        [
+          ( mkKeyHash 1
+          , IndividualPoolStake
+              1
+              (CompactCoin 1)
+              (hashVerKeyVRF (vrfVerKey (aikVrf (exampleKeys @c))))
+          )
+        ]
+    )
+    (CompactCoin 1)
 
 exampleNonMyopicRewards ::
   forall c.

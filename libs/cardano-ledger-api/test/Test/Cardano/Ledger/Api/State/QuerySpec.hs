@@ -92,7 +92,8 @@ committeeMembersStateSpec =
               nextRatifyState =
                 (def @(RatifyState era))
                   & rsEnactStateL . ensCommitteeL .~ maybeToStrictMaybe nextCommittee
-              defNewEpochState = NewEpochState @era (EpochNo 0) (BlocksMade def) (BlocksMade def) def def (PoolDistr def) def
+              defNewEpochState =
+                NewEpochState @era (EpochNo 0) (BlocksMade def) (BlocksMade def) def def (PoolDistr def mempty) def
           -- replace some cold and hot keys from the filter with known ones from both
           -- committee and committeeState
           forAll (genRelevantColdCredsFilter committee committeeState) $ \ckFilter ->

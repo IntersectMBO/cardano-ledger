@@ -121,7 +121,6 @@ library
         quiet,
         serialise,
         scientific,
-        set-algebra,
         non-integral >=1.0,
         primitive,
         small-steps >=1.1,

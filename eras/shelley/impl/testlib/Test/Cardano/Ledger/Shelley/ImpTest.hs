@@ -444,15 +444,18 @@ initShelleyImpNES =
             (activeSlotCoeff testGlobals)
             10
     , nesPd =
-        PoolDistr $
-          Map.fromList
-            [
-              ( testKeyHash
-              , IndividualPoolStake
-                  1
-                  (mkHashVerKeyVRF @era 0)
-              )
-            ]
+        PoolDistr
+          ( Map.fromList
+              [
+                ( testKeyHash
+                , IndividualPoolStake
+                    1
+                    (CompactCoin 1)
+                    (mkHashVerKeyVRF @era 0)
+                )
+              ]
+          )
+          (CompactCoin 1)
     , nesEs = epochState
     , nesEL = 0
     , nesBprev = BlocksMade (Map.singleton testKeyHash 10)

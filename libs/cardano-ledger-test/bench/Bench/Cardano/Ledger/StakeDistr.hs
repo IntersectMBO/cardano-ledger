@@ -138,7 +138,7 @@ bogusNewEpochState =
     (BlocksMade Map.empty)
     def
     (SJust (Complete (RewardUpdate (DeltaCoin 0) (DeltaCoin 0) def (DeltaCoin 0) def)))
-    (PoolDistr Map.empty)
+    (PoolDistr Map.empty mempty)
     def
 
 mkGlobals :: ShelleyGenesis StandardCrypto -> PParams CurrentEra -> Globals

@@ -548,7 +548,7 @@ deriving instance Show (RatifyEnv era)
 deriving instance Eq (RatifyEnv era)
 
 instance Default (RatifyEnv era) where
-  def = RatifyEnv Map.empty (PoolDistr Map.empty) Map.empty Map.empty (EpochNo 0) def
+  def = RatifyEnv Map.empty (PoolDistr Map.empty mempty) Map.empty Map.empty (EpochNo 0) def
 
 instance Typeable era => NoThunks (RatifyEnv era) where
   showTypeOf _ = "RatifyEnv"

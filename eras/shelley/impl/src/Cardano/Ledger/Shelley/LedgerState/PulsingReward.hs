@@ -161,7 +161,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           delegs
           stakePerPool
           totalStake
-          activestake
+          $ UM.fromCompact activestake
       -- We map over the registered stake pools to compute the revelant
       -- stake pool specific values.
       allPoolInfo = VMap.map mkPoolRewardInfoCurry poolParams

@@ -33,7 +33,13 @@ import Cardano.Ledger.BaseTypes (
   (⭒),
  )
 import Cardano.Ledger.Block (Block, bheader)
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
+import Cardano.Ledger.Coin (
+  Coin (..),
+  CompactForm (CompactCoin),
+  DeltaCoin (..),
+  addDeltaCoin,
+  toDeltaCoin,
+ )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential, Ptr (..))
 import qualified Cardano.Ledger.Crypto as Cr
@@ -576,10 +582,16 @@ snapEx5 =
 
 pdEx5 :: forall c. Cr.Crypto c => PoolDistr c
 pdEx5 =
-  PoolDistr $
-    Map.singleton
-      (aikColdKeyHash $ Cast.alicePoolKeys @c)
-      (IndividualPoolStake 1 (Cast.aliceVRFKeyHash @c))
+  PoolDistr
+    ( Map.singleton
+        (aikColdKeyHash $ Cast.alicePoolKeys @c)
+        ( IndividualPoolStake
+            1
+            (CompactCoin 1)
+            (Cast.aliceVRFKeyHash @c)
+        )
+    )
+    (CompactCoin 1)
 
 expectedStEx5 ::
   forall c.
@@ -968,7 +980,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
     blocks = 0
     t = leaderProbability f relativeStake (unsafeBoundRational 0.5)
     -- everyone has delegated to Alice's Pool
-    Coin stake = EB.sumAllStake (EB.ssStake $ snapEx5 @c)
+    Coin stake = fromCompact $ EB.sumAllStake (EB.ssStake $ snapEx5 @c)
     relativeStake = fromRational (stake % supply)
     Coin supply = maxLLSupply <-> reserves12
     f = activeSlotCoeff testGlobals

@@ -8,6 +8,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | The stake distribution, aggregated by stake pool (as opposed to stake credential),
@@ -20,17 +21,22 @@
 module Cardano.Ledger.PoolDistr (
   IndividualPoolStake (..),
   PoolDistr (..),
+  poolDistrDistrL,
+  poolDistrTotalL,
+  individualPoolStakeCoinL,
 )
 where
 
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), decodeRecordNamed, encodeListLen)
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
 import Control.DeepSeq (NFData)
-import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (..))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 
 -- | The 'IndividualPoolStake' contains all the stake controlled
@@ -48,16 +54,21 @@ import NoThunks.Class (NoThunks (..))
 -- delegated to a registered stake pool.
 data IndividualPoolStake c = IndividualPoolStake
   { individualPoolStake :: !Rational
+  , individualPoolStakeCoin :: !(CompactForm Coin)
   , individualPoolStakeVrf :: !(Hash c (VerKeyVRF c))
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NFData, NoThunks)
 
+individualPoolStakeCoinL :: Lens' (IndividualPoolStake c) (CompactForm Coin)
+individualPoolStakeCoinL = lens individualPoolStakeCoin $ \x y -> x {individualPoolStakeCoin = y}
+
 instance Crypto c => EncCBOR (IndividualPoolStake c) where
-  encCBOR (IndividualPoolStake stake vrf) =
+  encCBOR (IndividualPoolStake stake stakeCoin vrf) =
     mconcat
-      [ encodeListLen 2
+      [ encodeListLen 3 -- TODO: This needs versioning!
       , encCBOR stake
+      , encCBOR stakeCoin
       , encCBOR vrf
       ]
 
@@ -67,46 +78,70 @@ instance Crypto c => DecCBOR (IndividualPoolStake c) where
       IndividualPoolStake
         <$> decCBOR
         <*> decCBOR
+        <*> decCBOR
 
 instance Crypto c => ToJSON (IndividualPoolStake c) where
   toJSON = object . toIndividualPoolStakePair
   toEncoding = pairs . mconcat . toIndividualPoolStakePair
 
 toIndividualPoolStakePair :: (KeyValue e a, Crypto c) => IndividualPoolStake c -> [a]
-toIndividualPoolStakePair indivPoolStake@(IndividualPoolStake _ _) =
+toIndividualPoolStakePair indivPoolStake@(IndividualPoolStake _ _ _) =
   let IndividualPoolStake {..} = indivPoolStake
    in [ "individualPoolStake" .= individualPoolStake
+      , "individualPoolStakeCoin" .= individualPoolStakeCoin
       , "individualPoolStakeVrf" .= individualPoolStakeVrf
       ]
 
 -- | A map of stake pool IDs (the hash of the stake pool operator's
 -- verification key) to 'IndividualPoolStake'.
-newtype PoolDistr c = PoolDistr
+data PoolDistr c = PoolDistr
   { unPoolDistr :: Map (KeyHash 'StakePool c) (IndividualPoolStake c)
+  , pdTotal :: !(CompactForm Coin)
   }
   deriving stock (Show, Eq, Generic)
-  deriving newtype (EncCBOR, DecCBOR, NFData, NoThunks, ToJSON)
+  deriving (NFData, NoThunks, ToJSON)
 
--- ===============================
+poolDistrDistrL :: Lens' (PoolDistr c) (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
+poolDistrDistrL = lens unPoolDistr $ \x y -> x {unPoolDistr = y}
 
-instance
-  HasExp
-    (PoolDistr c)
-    ( Map
-        (KeyHash 'StakePool c)
-        (IndividualPoolStake c)
-    )
-  where
-  toExp (PoolDistr x) = Base MapR x
+poolDistrTotalL :: Lens' (PoolDistr c) (CompactForm Coin)
+poolDistrTotalL = lens pdTotal $ \x y -> x {pdTotal = y}
 
--- | We can Embed a Newtype around a Map (or other Iterable type) and then use it in a set expression.
-instance
-  Embed
-    (PoolDistr c)
-    ( Map
-        (KeyHash 'StakePool c)
-        (IndividualPoolStake c)
-    )
-  where
-  toBase (PoolDistr x) = x
-  fromBase = PoolDistr
+instance Crypto c => EncCBOR (PoolDistr c) where
+  encCBOR (PoolDistr distr total) =
+    -- TODO: @aniketd: This needs versioning!
+    encode $
+      Rec PoolDistr
+        !> To distr
+        !> To total
+
+instance Crypto c => DecCBOR (PoolDistr c) where
+  decCBOR =
+    decode $
+      RecD PoolDistr
+        <! From
+        <! From
+
+-- -- ===============================
+
+-- instance
+--   HasExp
+--     (PoolDistr c)
+--     ( Map
+--         (KeyHash 'StakePool c)
+--         (IndividualPoolStake c)
+--     )
+--   where
+--   toExp (PoolDistr x) = Base MapR x
+
+-- -- | We can Embed a Newtype around a Map (or other Iterable type) and then use it in a set expression.
+-- instance
+--   Embed
+--     (PoolDistr c)
+--     ( Map
+--         (KeyHash 'StakePool c)
+--         (IndividualPoolStake c)
+--     )
+--   where
+--   toBase (PoolDistr x) = x
+--   fromBase = PoolDistr

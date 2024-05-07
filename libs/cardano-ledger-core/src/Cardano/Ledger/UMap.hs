@@ -30,7 +30,9 @@ module Cardano.Ledger.UMap (
   UMElem (UMElem),
   umElemRDPair,
   umElemRDActive,
+  RewardDelegation (..),
   umElemDRepDelegatedReward,
+  umElemDelegations,
   umElemPtrs,
   umElemSPool,
   umElemDRep,
@@ -290,6 +292,25 @@ umElemRDActive = \case
   TFFFF rdA _ _ _ -> Just rdA
   _ -> Nothing
 {-# INLINE umElemRDActive #-}
+
+data RewardDelegation c
+  = RewardDelegationSPO (KeyHash 'StakePool c) (CompactForm Coin)
+  | RewardDelegationDRep (DRep c) (CompactForm Coin)
+  | RewardDelegationBoth (KeyHash 'StakePool c) (DRep c) (CompactForm Coin)
+
+-- | Extract rewards that are either delegated to a DRep or an SPO (or both).
+-- We can tell that the pair is present and active when Txxxx has
+-- F's in the 1st, 3rd and 4th positions
+umElemDelegations :: UMElem c -> Maybe (RewardDelegation c)
+umElemDelegations = \case
+  TFEEF RDPair {rdReward} drep -> Just $ RewardDelegationDRep drep rdReward
+  TFEFE RDPair {rdReward} spo -> Just $ RewardDelegationSPO spo rdReward
+  TFEFF RDPair {rdReward} spo drep -> Just $ RewardDelegationBoth spo drep rdReward
+  TFFEF RDPair {rdReward} _ drep -> Just $ RewardDelegationDRep drep rdReward
+  TFFFE RDPair {rdReward} _ spo -> Just $ RewardDelegationSPO spo rdReward
+  TFFFF RDPair {rdReward} _ spo drep -> Just $ RewardDelegationBoth spo drep rdReward
+  _ -> Nothing
+{-# INLINE umElemDelegations #-}
 
 -- | Extract the reward-deposit pair if it is present.
 -- We can tell that the reward is present when Txxxx has an F in the first position

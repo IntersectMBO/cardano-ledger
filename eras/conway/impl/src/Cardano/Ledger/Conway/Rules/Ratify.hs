@@ -71,7 +71,7 @@ import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
+import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStakeCoin)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.Val (Val (..), (<+>))
 import Control.State.Transition.Extended (
@@ -85,7 +85,6 @@ import Control.State.Transition.Extended (
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Monoid (Sum (..))
 import Data.Ratio ((%))
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
@@ -208,19 +207,23 @@ spoAcceptedRatio
     | abstainVotesRatio == 1 = 0 -- guard against the degenerate case when all abstain.
     | otherwise = yesVotesRatio / (1 - abstainVotesRatio)
     where
-      PoolDistr stakePoolDistr = reStakePoolDistr
-      (Sum yesVotesRatio, Sum abstainVotesRatio) =
-        Map.foldMapWithKey getVotesStakePerStakePoolDistr stakePoolDistr
-      getVotesStakePerStakePoolDistr poolId distr =
-        let d = Sum $ individualPoolStake distr
+      PoolDistr stakePoolDistr (CompactCoin totalActiveStake) = reStakePoolDistr
+      (yesVotesRatio, abstainVotesRatio) =
+        ( toInteger yesVotes % toInteger totalActiveStake
+        , toInteger abstainVotes % toInteger totalActiveStake
+        )
+      (CompactCoin yesVotes, CompactCoin abstainVotes) =
+        Map.foldlWithKey' getVotesStakePerStakePoolDistr (mempty, mempty) stakePoolDistr
+      getVotesStakePerStakePoolDistr (!yess, !abstains) poolId distr =
+        let d = individualPoolStakeCoin distr
             vote = Map.lookup poolId gasStakePoolVotes
          in case vote of
               Nothing
-                | HardForkInitiation {} <- pProcGovAction -> mempty
-                | otherwise -> (mempty, d)
-              Just VoteNo -> mempty
-              Just VoteYes -> (d, mempty)
-              Just Abstain -> (mempty, d)
+                | HardForkInitiation {} <- pProcGovAction -> (yess, abstains)
+                | otherwise -> (yess, abstains <> d)
+              Just VoteNo -> (yess, abstains)
+              Just VoteYes -> (yess <> d, abstains)
+              Just Abstain -> (yess, abstains <> d)
 
 dRepAccepted ::
   ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool

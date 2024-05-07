@@ -178,7 +178,7 @@ blocksMadeZero :: BlocksMade c
 blocksMadeZero = BlocksMade Map.empty
 
 poolDistrZero :: PoolDistr c
-poolDistrZero = PoolDistr Map.empty
+poolDistrZero = PoolDistr Map.empty mempty
 
 accountStateZero :: AccountState
 accountStateZero = AccountState (Coin 0) (Coin 0)
@@ -367,7 +367,7 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
       (BlocksMade (mBcur x))
       (extract x)
       (Complete <$> mRu x)
-      (PoolDistr (mPoolDistr x))
+      (PoolDistr (mPoolDistr x) mempty)
       (stashedAVVMAddressesZero (reify :: Proof era))
 
 abstract :: EraGov era => NewEpochState era -> ModelNewEpochState era

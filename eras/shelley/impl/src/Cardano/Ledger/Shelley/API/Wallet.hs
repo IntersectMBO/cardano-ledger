@@ -201,19 +201,19 @@ poolsByTotalStakeFraction ::
   NewEpochState era ->
   PoolDistr (EraCrypto era)
 poolsByTotalStakeFraction globals ss =
-  PoolDistr poolsByTotalStake
+  PoolDistr poolsByTotalStake activeStake -- QESTION: Should the denominator be `totalStake` here instead?
   where
     snap@(EB.SnapShot stake _ _) = currentSnapshot ss
     Coin totalStake = getTotalStake globals ss
-    Coin activeStake = EB.sumAllStake stake
-    stakeRatio = activeStake % totalStake
-    PoolDistr poolsByActiveStake = calculatePoolDistr snap
+    activeStake = EB.sumAllStake stake
+    stakeRatio = unCoin (fromCompact activeStake) % totalStake
+    PoolDistr poolsByActiveStake _totalActiveStake = calculatePoolDistr snap
     poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
     toTotalStakeFrac ::
       IndividualPoolStake (EraCrypto era) ->
       IndividualPoolStake (EraCrypto era)
-    toTotalStakeFrac (IndividualPoolStake s vrf) =
-      IndividualPoolStake (s * stakeRatio) vrf
+    toTotalStakeFrac (IndividualPoolStake s c vrf) =
+      IndividualPoolStake (s * stakeRatio) c vrf
 
 -- | Calculate the current total stake.
 getTotalStake :: Globals -> NewEpochState era -> Coin
@@ -255,7 +255,7 @@ getNonMyopicMemberRewards globals ss =
           ,
             ( percentile' (histLookup k)
             , p
-            , toShare . EB.sumAllStake $ EB.poolStake k delegs stake
+            , toShare . fromCompact . EB.sumAllStake $ EB.poolStake k delegs stake
             )
           )
         | (k, p) <- VMap.toAscList poolParams
@@ -392,7 +392,7 @@ getRewardInfoPools globals ss =
             unPerformanceEstimate $ percentile' $ histLookup key
         }
       where
-        pstake = EB.sumAllStake $ EB.poolStake key delegs stakes
+        pstake = fromCompact $ EB.sumAllStake $ EB.poolStake key delegs stakes
         ostake = sumPoolOwnersStake poolp stakes
 
 -- | Calculate stake pool rewards from the snapshot labeled `go`.

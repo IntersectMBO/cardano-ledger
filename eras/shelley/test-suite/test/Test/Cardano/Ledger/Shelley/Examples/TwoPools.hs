@@ -38,6 +38,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (
   Coin (..),
+  CompactForm (CompactCoin),
   DeltaCoin (..),
   rationalToCoinViaFloor,
   toDeltaCoin,
@@ -431,17 +432,25 @@ bobPoolStake = unCoin bobInitCoin % activeStakeEx5
 
 pdEx5 :: forall c. Crypto c => PoolDistr c
 pdEx5 =
-  PoolDistr $
-    Map.fromList
-      [
-        ( aikColdKeyHash $ Cast.alicePoolKeys @c
-        , IndividualPoolStake alicePoolStake (Cast.aliceVRFKeyHash @c)
-        )
-      ,
-        ( aikColdKeyHash $ Cast.bobPoolKeys @c
-        , IndividualPoolStake bobPoolStake (Cast.bobVRFKeyHash @c)
-        )
-      ]
+  PoolDistr
+    ( Map.fromList
+        [
+          ( aikColdKeyHash $ Cast.alicePoolKeys @c
+          , IndividualPoolStake
+              alicePoolStake
+              (CompactCoin $ fromIntegral $ unCoin aliceCoinEx1 + unCoin carlInitCoin)
+              (Cast.aliceVRFKeyHash @c)
+          )
+        ,
+          ( aikColdKeyHash $ Cast.bobPoolKeys @c
+          , IndividualPoolStake
+              bobPoolStake
+              (CompactCoin $ fromIntegral $ unCoin bobInitCoin)
+              (Cast.bobVRFKeyHash @c)
+          )
+        ]
+    )
+    (CompactCoin $ fromIntegral activeStakeEx5)
 
 expectedStEx5 :: ChainState C
 expectedStEx5 =

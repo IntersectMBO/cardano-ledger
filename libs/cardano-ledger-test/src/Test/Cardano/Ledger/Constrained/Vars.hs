@@ -212,7 +212,7 @@ poolDistrL ::
 poolDistrL = nesPdL . unPoolDistrL
 
 unPoolDistrL :: Lens' (PoolDistr c) (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
-unPoolDistrL = lens unPoolDistr (\(PoolDistr _) x -> PoolDistr x)
+unPoolDistrL = lens unPoolDistr (\(PoolDistr _ y) x -> PoolDistr x y)
 
 -- CertState - DState
 
@@ -680,7 +680,7 @@ markPoolDistrL ::
 markPoolDistrL = nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL . pooldistrHelpL
 
 pooldistrHelpL :: Lens' (PoolDistr c) (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
-pooldistrHelpL = lens unPoolDistr (\_ u -> PoolDistr u)
+pooldistrHelpL = lens unPoolDistr (\x y -> x {unPoolDistr = y})
 
 snapShotFee :: Era era => Term era Coin
 snapShotFee = Var (V "snapShotFee" CoinR No)
@@ -695,7 +695,7 @@ snapShotsT =
     :$ Shift goSnapShotT ssStakeGoL
     :$ Lensed snapShotFee ssFeeL
   where
-    shotsfun w x = SnapShots w (PoolDistr x)
+    shotsfun w x = SnapShots w (PoolDistr x mempty)
 
 -- ==================================================================
 -- RewardUpdate
@@ -977,7 +977,7 @@ newEpochStateConstr
       (BlocksMade nesBcur')
       nesEs'
       SNothing
-      (PoolDistr nesPd')
+      (PoolDistr nesPd' mempty)
       ( case proof of
           Shelley -> UTxO Map.empty
           Allegra -> ()
@@ -1861,7 +1861,7 @@ initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactsta
         umap
         0
         stakeDistr
-        (PoolDistr poold)
+        (PoolDistr poold mempty)
         Map.empty
         credDRepStateMap
         epoch
@@ -1971,7 +1971,7 @@ prevPoolDistrL ::
 prevPoolDistrL =
   lens
     (\x -> unPoolDistr (dpStakePoolDistr x))
-    (\x y -> x {dpStakePoolDistr = PoolDistr y})
+    (\x y -> x {dpStakePoolDistr = PoolDistr y mempty})
 
 -- | Snapshot of the 'drepDelegation' from he start of the current epoch.
 prevDRepDelegations ::

@@ -102,8 +102,8 @@ instance Crypto c => DecShareCBOR (Stake c) where
   getShare = getShare . unStake
   decShareCBOR = fmap Stake . decShareCBOR
 
-sumAllStake :: Stake c -> Coin
-sumAllStake = fromCompact . CompactCoin . VMap.foldl (\acc (CompactCoin c) -> acc + c) 0 . unStake
+sumAllStake :: Stake c -> CompactForm Coin
+sumAllStake = VMap.foldl (<>) mempty . unStake
 {-# INLINE sumAllStake #-}
 
 -- | Get stake of one pool
@@ -297,17 +297,24 @@ calculatePoolDistr = calculatePoolDistr' (const True)
 
 calculatePoolDistr' :: forall c. (KeyHash 'StakePool c -> Bool) -> SnapShot c -> PoolDistr c
 calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
-  let Coin total = sumAllStake stake
+  let total = sumAllStake stake
       -- total could be zero (in particular when shrinking)
       nonZeroTotal :: Integer
-      nonZeroTotal = if total == 0 then 1 else total
+      nonZeroTotal = if total == mempty then 1 else unCoin $ fromCompact total
       poolStakeMap :: Map.Map (KeyHash 'StakePool c) Word64
       poolStakeMap = calculatePoolStake includeHash delegs stake
-   in PoolDistr $
-        Map.intersectionWith
-          (\word64 poolparam -> IndividualPoolStake (toInteger word64 % nonZeroTotal) (ppVrf poolparam))
-          poolStakeMap
-          (VMap.toMap poolParams)
+   in PoolDistr
+        ( Map.intersectionWith
+            ( \word64 poolparam ->
+                IndividualPoolStake
+                  (toInteger word64 % nonZeroTotal)
+                  (CompactCoin word64)
+                  (ppVrf poolparam)
+            )
+            poolStakeMap
+            (VMap.toMap poolParams)
+        )
+        (if total == mempty then CompactCoin 1 else total)
 
 -- ======================================================
 -- Lenses

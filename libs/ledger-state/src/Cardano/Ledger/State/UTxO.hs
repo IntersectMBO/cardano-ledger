@@ -301,7 +301,7 @@ instance AggregateStat PoolDistrStats where
       }
 
 calcPoolDistrStats :: PoolDistr C -> PoolDistrStats
-calcPoolDistrStats (PoolDistr pd) =
+calcPoolDistrStats (PoolDistr pd _tot) =
   PoolDistrStats
     { pdsStakePoolKeyHash = statMapKeys pd
     , pdsStakePoolStakeVrf = statFoldable (individualPoolStakeVrf <$> Map.elems pd)

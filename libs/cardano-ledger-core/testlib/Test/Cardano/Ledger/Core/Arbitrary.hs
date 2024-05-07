@@ -503,10 +503,11 @@ instance Arbitrary SizeOfPoolOwners where
 -- Cardano.Ledger.PoolDistr --------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-deriving instance Crypto c => Arbitrary (PoolDistr c)
+instance Crypto c => Arbitrary (PoolDistr c) where
+  arbitrary = PoolDistr <$> arbitrary <*> arbitrary
 
 instance Crypto c => Arbitrary (IndividualPoolStake c) where
-  arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary
+  arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary <*> arbitrary
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.DRepDistr --------------------------------------------------------------

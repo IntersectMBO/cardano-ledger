@@ -364,8 +364,8 @@ class (Show x, Adds x) => Sums t x | t -> x where
   genT :: [String] -> x -> Gen t
 
 instance GoodCrypto c => Sums (IndividualPoolStake c) Rational where
-  getSum (IndividualPoolStake r _) = r
-  genT _ r = IndividualPoolStake r <$> arbitrary
+  getSum (IndividualPoolStake r _ _) = r
+  genT _ r = IndividualPoolStake r mempty <$> arbitrary
 
 instance Reflect era => Sums (TxOutF era) Coin where
   getSum (TxOutF _ txout) = coin (txout ^. valueTxOutL)

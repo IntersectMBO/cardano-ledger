@@ -26,6 +26,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.DRep hiding (drepDeposit)
+import Cardano.Ledger.EpochBoundary (ssStakeMarkPoolDistrL)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
@@ -38,6 +39,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   VState (..),
   allObligations,
   esLStateL,
+  esSnapshotsL,
   lsUTxOStateL,
   nesEsL,
   utxosGovStateL,
@@ -226,10 +228,12 @@ bruteForceDRepDistr ::
   ConwayEraGov era =>
   NewEpochState era ->
   Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
-bruteForceDRepDistr nes = computeDRepDistr incstk dreps propDeps Map.empty $ UMap.umElems umap
+bruteForceDRepDistr nes =
+  fst $ computeDRepDistr incstk dreps propDeps poolD Map.empty $ UMap.umElems umap
   where
     ls = esLState (nesEs nes)
     propDeps = proposalsDeposits $ ls ^. lsUTxOStateL . utxosGovStateL . proposalsGovStateL
+    poolD = nes ^. nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL
     cs = lsCertState ls
     IStake incstk _ = utxosStakeDistr (lsUTxOState ls)
     umap = dsUnified (certDState cs)

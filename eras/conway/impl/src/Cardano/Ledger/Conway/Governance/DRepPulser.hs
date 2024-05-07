@@ -62,7 +62,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
+import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.UMap
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData (..), deepseq)
@@ -177,26 +177,49 @@ computeDRepDistr ::
   Map (Credential 'Staking c) (CompactForm Coin) ->
   Map (Credential 'DRepRole c) (DRepState c) ->
   Map (Credential 'Staking c) (CompactForm Coin) ->
+  PoolDistr c ->
   Map (DRep c) (CompactForm Coin) ->
   Map (Credential 'Staking c) (UMElem c) ->
-  Map (DRep c) (CompactForm Coin)
-computeDRepDistr stakeDistr regDReps proposalDeposits dRepDistr uMapChunk =
-  Map.foldlWithKey' go dRepDistr uMapChunk
+  (Map (DRep c) (CompactForm Coin), PoolDistr c)
+computeDRepDistr stakeDistr regDReps proposalDeposits poolDistr dRepDistr uMapChunk =
+  Map.foldlWithKey' go (dRepDistr, poolDistr) uMapChunk
   where
-    go accum stakeCred umElem =
+    go (drepAccum, poolAccum) stakeCred umElem =
       let stake = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred stakeDistr
           proposalDeposit = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred proposalDeposits
           stakeAndDeposits = addCompact stake proposalDeposit
-       in case umElemDRepDelegatedReward umElem of
-            Just (r, drep@DRepAlwaysAbstain) ->
-              Map.insertWith addCompact drep (addCompact stakeAndDeposits r) accum
-            Just (r, drep@DRepAlwaysNoConfidence) ->
-              Map.insertWith addCompact drep (addCompact stakeAndDeposits r) accum
-            Just (r, drep@(DRepCredential drepCred))
-              | Map.member drepCred regDReps ->
-                  Map.insertWith addCompact drep (addCompact stakeAndDeposits r) accum
-              | otherwise -> accum
-            Nothing -> accum
+       in case umElemDelegations umElem of
+            Nothing -> (drepAccum, poolAccum)
+            Just (RewardDelegationSPO spo _r) ->
+              ( drepAccum
+              , addToPoolDistr spo proposalDeposit poolAccum
+              )
+            Just (RewardDelegationDRep drep r) ->
+              ( addToDRepDistr drep (addCompact stakeAndDeposits r) drepAccum
+              , poolAccum
+              )
+            Just (RewardDelegationBoth spo drep r) ->
+              ( addToDRepDistr drep (addCompact stakeAndDeposits r) drepAccum
+              , addToPoolDistr spo proposalDeposit poolAccum
+              )
+    addToPoolDistr spo ccoin distr =
+      -- Only add the proposal deposits to the CompactCoin numerator and
+      -- denominator and not the rational In order not to interfere with rewards
+      -- calculation of any kind.
+      case Map.lookup spo $ distr ^. poolDistrDistrL of
+        Nothing -> distr -- Impossible! Because, a delegation to an SPO would also appear in the PoolDistr
+        Just ips ->
+          distr
+            & poolDistrDistrL %~ Map.insert spo (ips & individualPoolStakeCoinL <>~ ccoin)
+            & poolDistrTotalL <>~ ccoin
+    addToDRepDistr drep ccoin distr =
+      let updatedDistr = Map.insertWith addCompact drep ccoin distr
+       in case drep of
+            DRepAlwaysAbstain -> updatedDistr
+            DRepAlwaysNoConfidence -> updatedDistr
+            DRepCredential cred
+              | Map.member cred regDReps -> updatedDistr
+              | otherwise -> distr
 
 -- | The type of a Pulser which uses 'computeDRepDistr' as its underlying
 -- function. Note that we use two type equality (~) constraints to fix both
@@ -249,8 +272,14 @@ instance Pulsable (DRepPulser era) where
     | done pulser = pure pulser {dpIndex = 0}
     | otherwise =
         let !chunk = Map.take dpPulseSize $ Map.drop dpIndex $ UMap.umElems dpUMap
-            dRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpDRepDistr chunk
-         in pure (pulser {dpIndex = dpIndex + dpPulseSize, dpDRepDistr = dRepDistr})
+            (dRepDistr, poolDistr) =
+              computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpStakePoolDistr dpDRepDistr chunk
+         in pure $
+              pulser
+                { dpIndex = dpIndex + dpPulseSize
+                , dpDRepDistr = dRepDistr
+                , dpStakePoolDistr = poolDistr
+                }
 
   completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
 
@@ -320,11 +349,12 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
   (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
   where
     !leftOver = Map.drop dpIndex $ umElems dpUMap
-    !finalDRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpDRepDistr leftOver
+    (!finalDRepDistr, !finalStakePoolDistr) =
+      computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpStakePoolDistr dpDRepDistr leftOver
     !ratifyEnv =
       RatifyEnv
         { reStakeDistr = dpStakeDistr
-        , reStakePoolDistr = dpStakePoolDistr
+        , reStakePoolDistr = finalStakePoolDistr
         , reDRepDistr = finalDRepDistr
         , reDRepState = dpDRepState
         , reCurrentEpoch = dpCurrentEpoch
