@@ -49,6 +49,7 @@ module Constrained.Spec.Generics (
 import Data.Typeable
 import GHC.TypeLits (Symbol)
 import GHC.TypeNats
+import Test.QuickCheck (Arbitrary (..), oneof)
 
 import Constrained.Base
 import Constrained.Core
@@ -564,3 +565,18 @@ isJust ::
   Term fn (Maybe a) ->
   Pred fn
 isJust = isCon @"Just"
+
+-- Arbitrary instances ----------------------------------------------------
+
+instance
+  (HasSpec fn a, HasSpec fn b, Arbitrary (FoldSpec fn a), Arbitrary (FoldSpec fn b)) =>
+  Arbitrary (FoldSpec fn (a, b))
+  where
+  arbitrary =
+    oneof
+      [ preMapFoldSpec (composeFn fstFn toGenericFn) <$> arbitrary
+      , preMapFoldSpec (composeFn sndFn toGenericFn) <$> arbitrary
+      , pure NoFold
+      ]
+  shrink NoFold = []
+  shrink FoldSpec {} = [NoFold]

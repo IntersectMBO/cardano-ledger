@@ -28,7 +28,7 @@ import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Prettyprinter
-import Test.QuickCheck (shrinkList)
+import Test.QuickCheck (Arbitrary (..), shrinkList)
 
 ------------------------------------------------------------------------
 -- HasSpec
@@ -36,7 +36,7 @@ import Test.QuickCheck (shrinkList)
 
 instance Ord a => Sized (Map.Map a b) where
   sizeOf = toInteger . Map.size
-  liftSizeSpec sz = typeSpec $ defaultMapSpec {mapSpecSize = typeSpec sz}
+  liftSizeSpec sz cant = typeSpec $ defaultMapSpec {mapSpecSize = TypeSpec sz cant}
   liftMemberSpec xs = typeSpec $ defaultMapSpec {mapSpecSize = MemberSpec xs}
   sizeOfTypeSpec (MapSpec _ mustk mustv size _ _) =
     typeSpec (atLeastSize (sizeOf mustk))
@@ -56,13 +56,49 @@ data MapSpec fn k v = MapSpec
 defaultMapSpec :: Ord k => MapSpec fn k v
 defaultMapSpec = MapSpec Nothing mempty mempty TrueSpec TrueSpec NoFold
 
-deriving instance
+instance
+  ( Arbitrary k
+  , Arbitrary v
+  , Arbitrary (TypeSpec fn k)
+  , Arbitrary (TypeSpec fn v)
+  , Ord k
+  , HasSpec fn k
+  , HasSpec fn v
+  ) =>
+  Arbitrary (MapSpec fn k v)
+  where
+  arbitrary = MapSpec <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> pure NoFold
+
+instance
+  ( HasSpec fn (k, v)
+  , HasSpec fn k
+  , HasSpec fn v
+  , HasSpec fn [v]
+  ) =>
+  Pretty (WithPrec (MapSpec fn k v))
+  where
+  pretty (WithPrec d s) =
+    parensIf (d > 10) $
+      "MapSpec"
+        /> vsep
+          [ "hint       =" <+> viaShow (mapSpecHint s)
+          , "mustKeys   =" <+> viaShow (mapSpecMustKeys s)
+          , "mustValues =" <+> viaShow (mapSpecMustValues s)
+          , "size       =" <+> pretty (mapSpecSize s)
+          , "elem       =" <+> pretty (mapSpecElem s)
+          , "fold       =" <+> viaShow (mapSpecFold s)
+          ]
+
+instance
   ( HasSpec fn (k, v)
   , HasSpec fn k
   , HasSpec fn v
   , HasSpec fn [v]
   ) =>
   Show (MapSpec fn k v)
+  where
+  showsPrec d = shows . prettyPrec d
+
 instance Ord k => Forallable (Map k v) (k, v) where
   fromForAllSpec kvs = typeSpec $ defaultMapSpec {mapSpecElem = kvs}
   forAllToList = Map.toList
@@ -205,8 +241,6 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
           | NilCtx HOLE <- ctx
           , Evidence <- prerequisites @fn @(Map k v) ->
               case spec of
-                MemberSpec [r] ->
-                  typeSpec $ MapSpec Nothing Set.empty r (equalSpec $ sizeOf r) TrueSpec NoFold
                 TypeSpec (ListSpec listHint must size elemspec foldspec) [] ->
                   typeSpec $
                     MapSpec
@@ -216,6 +250,9 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
                       size
                       (constrained $ \kv -> satisfies (app (sndFn @fn) (app (toGenericFn @fn) kv)) elemspec)
                       foldspec
+                -- NOTE: you'd think `MemberSpec [r]` was a safe and easy case. However, that requires not only that the elements
+                -- of the map are fixed to what is in `r`, but they appear in the order that they are in `r`. That's
+                -- very difficult to achieve!
                 _ -> ErrorSpec ["Rng on bad map spec", show spec]
 
   -- NOTE: this function over-approximates and returns a liberal spec.
