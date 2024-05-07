@@ -17,6 +17,7 @@ module Constrained.List where
 
 import Data.Functor.Const
 import Data.Kind
+import Data.Semigroup (Sum (..))
 
 -- | A heterogeneous list / an inductive tuple.
 -- We use this heavily to represent arguments to
@@ -44,6 +45,15 @@ mapMList :: Applicative m => (forall a. f a -> m (g a)) -> List f as -> m (List 
 mapMList _ Nil = pure Nil
 mapMList f (x :> xs) = (:>) <$> f x <*> mapMList f xs
 
+mapMListC ::
+  forall c as f g m.
+  (Applicative m, All c as) =>
+  (forall a. c a => f a -> m (g a)) ->
+  List f as ->
+  m (List g as)
+mapMListC _ Nil = pure Nil
+mapMListC f (x :> xs) = (:>) <$> f x <*> mapMListC @c f xs
+
 foldMapList :: Monoid b => (forall a. f a -> b) -> List f as -> b
 foldMapList _ Nil = mempty
 foldMapList f (a :> as) = f a <> foldMapList f as
@@ -56,6 +66,9 @@ foldMapListC f (a :> as) = f a <> foldMapListC @c f as
 appendList :: List f as -> List f bs -> List f (Append as bs)
 appendList Nil bs = bs
 appendList (a :> as) bs = a :> appendList as bs
+
+lengthList :: List f as -> Int
+lengthList = getSum . foldMapList (const $ Sum 1)
 
 -- | Append two type-level lists
 type family Append as as' where
@@ -112,6 +125,17 @@ toWholeCtx (x :! xs)
 fromWholeCtx :: ListCtxWhole f as c -> ListCtx f as c
 fromWholeCtx (ListCtxWhole Nil hole suf) = hole :? suf
 fromWholeCtx (ListCtxWhole (x :> pre) hole suf) = x :! fromWholeCtx (ListCtxWhole pre hole suf)
+
+fillListCtx :: ListCtx f as c -> (forall a. c a -> f a) -> List f as
+fillListCtx (ListCtx pre c post) f = appendList pre (f c :> post)
+
+mapListCtx :: (forall a. f a -> g a) -> ListCtx f as c -> ListCtx g as c
+mapListCtx nt (ListCtx pre c post) = ListCtx (mapList nt pre) c (mapList nt post)
+
+mapListCtxC ::
+  forall c as f g h. All c as => (forall a. c a => f a -> g a) -> ListCtx f as h -> ListCtx g as h
+mapListCtxC nt (h :? as) = h :? mapListC @c nt as
+mapListCtxC nt (a :! ctx) = nt a :! mapListCtxC @c nt ctx
 
 -- | A function type from `ts` to `res`:
 --    FunTy '[Int, Bool] Double = Int -> Bool -> Double

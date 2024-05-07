@@ -618,6 +618,34 @@ instance HasSpec fn a => Semigroup (Specification fn a) where
 instance HasSpec fn a => Monoid (Specification fn a) where
   mempty = TrueSpec
 
+instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification fn a) where
+  arbitrary = do
+    baseSpec <-
+      frequency
+        [ (2, pure TrueSpec)
+        , (7, MemberSpec <$> listOf1 (genFromSpec_ @fn TrueSpec))
+        , (7, typeSpec <$> arbitrary)
+        , (2, TypeSpec <$> arbitrary <*> listOf (genFromSpec_ @fn TrueSpec))
+        , (1, ErrorSpec <$> arbitrary)
+        , (1, pure $ MemberSpec [])
+        ]
+    -- TODO: we probably want smarter ways of generating constraints
+    frequency
+      [ (1, pure $ constrained $ \x -> x `satisfies` baseSpec)
+      , (5, pure baseSpec)
+      ]
+
+  shrink TrueSpec = []
+  shrink (MemberSpec xs) = TrueSpec : (MemberSpec <$> shrinkList (shrinkWithSpec @fn TrueSpec) xs)
+  shrink (TypeSpec ts cant)
+    | null cant = TrueSpec : MemberSpec [] : map typeSpec (shrink ts)
+    | otherwise =
+        [TrueSpec, typeSpec ts, MemberSpec cant]
+          ++ map typeSpec (shrink ts)
+          ++ map (TypeSpec ts) (shrinkList (shrinkWithSpec @fn TrueSpec) cant)
+  shrink (SuspendedSpec x p) = [TrueSpec, MemberSpec []] ++ [s | Result _ s <- [computeSpec x p]]
+  shrink ErrorSpec {} = [TrueSpec, MemberSpec []]
+
 equalSpec :: a -> Specification fn a
 equalSpec = MemberSpec . pure
 
@@ -1687,6 +1715,8 @@ simplifyPred = \case
   ForAll set b -> case simplifyTerm set of
     Lit as -> foldMap (`unBind` b) (forAllToList as)
     set' -> ForAll set' (simplifyBinder b)
+  DependsOn _ Lit {} -> TruePred
+  DependsOn Lit {} _ -> TruePred
   DependsOn x y -> DependsOn x y
   Case t bs -> mkCase (simplifyTerm t) (mapList simplifyBinder bs)
   IfElse b p q -> ifElse (simplifyTerm b) (simplifyPred p) (simplifyPred q)
@@ -2282,6 +2312,16 @@ data FoldSpec (fn :: [Type] -> Type -> Type) a where
     Specification fn b ->
     FoldSpec fn a
 
+instance {-# OVERLAPPABLE #-} (Arbitrary a, Arbitrary (TypeSpec fn a), Foldy fn a, BaseUniverse fn) => Arbitrary (FoldSpec fn a) where
+  arbitrary = oneof [FoldSpec idFn <$> arbitrary, pure NoFold]
+  shrink NoFold = []
+  -- Consider trying to shrink the spec
+  shrink FoldSpec {} = [NoFold]
+
+preMapFoldSpec :: HasSpec fn a => fn '[a] b -> FoldSpec fn b -> FoldSpec fn a
+preMapFoldSpec _ NoFold = NoFold
+preMapFoldSpec f (FoldSpec g s) = FoldSpec (composeFn g f) s
+
 combineFoldSpec :: MonadGenError m => FoldSpec fn a -> FoldSpec fn a -> m (FoldSpec fn a)
 combineFoldSpec NoFold s = pure s
 combineFoldSpec s NoFold = pure s
@@ -2705,20 +2745,22 @@ genFromFold ::
   fn '[a] b ->
   Specification fn b ->
   GenT m [a]
-genFromFold must size elemS fn foldS = do
+genFromFold (nub -> must) size elemS fn foldS = do
   let elemS' = mapSpec fn elemS
       mustVal = adds @fn (map (sem fn) must)
       foldS' = propagateSpecFun (theAddFn @fn) (HOLE :? Value mustVal :> Nil) foldS
-  results <-
+  results0 <-
     genList (simplifySpec elemS') (simplifySpec foldS')
-      `suchThatT` (\xs -> sizeOf xs `conformsToSpec` size)
-  explain
-    [ "genInverse"
-    , "  fn = " ++ show fn
-    , "  results = " ++ show results
-    , show $ "  elemS =" <+> pretty elemS
-    ]
-    $ mapM (genInverse fn elemS) results
+      `suchThatT` (\xs -> (sizeOf must + sizeOf xs) `conformsToSpec` size)
+  results <-
+    explain
+      [ "genInverse"
+      , "  fn = " ++ show fn
+      , "  results0 = " ++ show results0
+      , show $ "  elemS =" <+> pretty elemS
+      ]
+      $ mapM (genInverse fn elemS) results0
+  pureGen $ shuffle $ must ++ results
 
 ------------------------------------------------------------------------
 -- Instances of HasSpec
@@ -2744,6 +2786,9 @@ instance BaseUniverse fn => HasSpec fn () where
 instance HasSimpleRep Bool
 instance (BaseUniverse fn, HasSpec fn ()) => HasSpec fn Bool where
   shrinkWithTypeSpec _ = shrink
+  cardinalTypeSpec (SumSpec a b) =
+    MemberSpec [0, 1, 2] <> addSpecInt (cardinality a) (cardinality b)
+  cardinalTrueSpec = MemberSpec [2]
 
 -- Sum --------------------------------------------------------------------
 
@@ -2753,6 +2798,10 @@ guardSumSpec s@(SumSpec sa sb)
   | otherwise = typeSpec s
 
 data SumSpec fn a b = SumSpec (Specification fn a) (Specification fn b)
+
+instance (Arbitrary (Specification fn a), Arbitrary (Specification fn b)) => Arbitrary (SumSpec fn a b) where
+  arbitrary = SumSpec <$> arbitrary <*> arbitrary
+  shrink (SumSpec a b) = uncurry SumSpec <$> shrink (a, b)
 
 instance (HasSpec fn a, HasSpec fn b) => Semigroup (SumSpec fn a b) where
   SumSpec sa sb <> SumSpec sa' sb' = SumSpec (sa <> sa') (sb <> sb')
@@ -2804,6 +2853,14 @@ deriving instance (HasSpec fn a, HasSpec fn b) => Show (SumSpec fn a b)
 
 data SetSpec fn a = SetSpec (Set a) (Specification fn a) (Specification fn Integer)
 
+instance (BaseUniverse fn, Ord a, Arbitrary (Specification fn a), Arbitrary a) => Arbitrary (SetSpec fn a) where
+  arbitrary = SetSpec <$> arbitrary <*> arbitrary <*> arbitrary
+  shrink (SetSpec a b c) = [SetSpec a' b' c' | (a', b', c') <- shrink (a, b, c)]
+
+-- TODO: consider improving this
+instance Arbitrary (FoldSpec fn (Set a)) where
+  arbitrary = pure NoFold
+
 instance (Ord a, HasSpec fn a) => Semigroup (SetSpec fn a) where
   SetSpec must es size <> SetSpec must' es' size' =
     SetSpec (must <> must') (es <> es') (size <> size')
@@ -2828,6 +2885,8 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
       , all (`conformsToSpec` es) s
       ]
 
+  genFromTypeSpec (SetSpec must e _)
+    | any (not . (`conformsToSpec` e)) must = genError ["Failed to generate set: inconsistent spec"] -- TODO: improve error message
   genFromTypeSpec (SetSpec must e TrueSpec) = (must <>) . Set.fromList <$> listOfT (genFromSpec e)
   genFromTypeSpec (SetSpec must elemS szSpec) = do
     n <-
@@ -2875,9 +2934,11 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
           let singletons = filter ((1 ==) . Set.size)
            in case spec of
                 TypeSpec (SetSpec must es size) cant
+                  -- TODO: improve error message
+                  | not $ 1 `conformsToSpec` size ->
+                      ErrorSpec ["propagateSpecFun Singleton with spec that doesn't accept 1 size set"]
                   | [a] <- Set.toList must
                   , a `conformsToSpec` es
-                  , 1 `conformsToSpec` size
                   , Set.singleton a `notElem` cant ->
                       equalSpec a
                   | null must -> es <> notMemberSpec (Set.toList $ fold $ singletons cant)
@@ -2889,6 +2950,7 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
       | HOLE :? Value (s :: Set a) :> Nil <- ctx
       , Evidence <- prerequisites @fn @(Set a) ->
           case spec of
+            _ | null s -> spec
             TypeSpec (SetSpec must es size) cant
               | not $ all (`conformsToSpec` es) s ->
                   ErrorSpec
@@ -2905,11 +2967,16 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
                       , assert $ disjoint `disjoint_` Lit s
                       , satisfies (size_ disjoint + Lit (sizeOf s)) size
                       , assert $ x ==. overlap <> disjoint
+                      , forAll disjoint $ \e -> e `satisfies` es
+                      , assert $ lit (must Set.\\ s) `subset_` disjoint
                       ]
             -- TODO: shortcut more cases?
             --    Lower bound and |s| >= bound: mempty
             --    Upper bound and |s| == bound: X `subset` s
-            MemberSpec [e] -> typeSpec (SetSpec (Set.difference e s) (MemberSpec $ Set.toList e) mempty)
+            MemberSpec [e]
+              | s `Set.isSubsetOf` e -> typeSpec (SetSpec (Set.difference e s) (MemberSpec $ Set.toList e) mempty)
+              -- TODO: improve this error message
+              | otherwise -> ErrorSpec ["propagateSpecFun Union MemberSpec singleton with bad literal"]
             -- This risks blowing up too much, don't build sets of sets
             MemberSpec {} -> ErrorSpec ["propagateSpecFun Union MemberSpec"]
     Subset
@@ -2984,6 +3051,17 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
 data ListSpec fn a
   = ListSpec (Maybe Integer) [a] (Specification fn Integer) (Specification fn a) (FoldSpec fn a)
 
+instance
+  ( Arbitrary a
+  , Arbitrary (FoldSpec fn a)
+  , Arbitrary (TypeSpec fn a)
+  , HasSpec fn a
+  ) =>
+  Arbitrary (ListSpec fn a)
+  where
+  arbitrary = ListSpec <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  shrink (ListSpec a b c d e) = [ListSpec a' b' c' d' e' | (a', b', c', d', e') <- shrink (a, b, c, d, e)]
+
 deriving instance Show (FoldSpec fn a)
 deriving instance HasSpec fn a => Show (ListSpec fn a)
 
@@ -2999,6 +3077,9 @@ instance HasSpec fn a => HasSpec fn [a] where
     typeSpec . ListSpec (unionWithMaybe min msz msz') must'' size'' elemS''
       <$> combineFoldSpec foldS foldS'
 
+  genFromTypeSpec (ListSpec _ must _ elemS _)
+    | any (not . (`conformsToSpec` elemS)) must =
+        genError ["genTypeSpecSpec @ListSpec: must do not conform to elemS"]
   genFromTypeSpec (ListSpec msz must TrueSpec elemS NoFold) = do
     lst <- case msz of
       Nothing -> listOfT $ genFromSpec elemS
@@ -3081,7 +3162,15 @@ instance MaybeBounded Float where
   upperBound = Nothing
 
 data NumSpec n = NumSpecInterval (Maybe n) (Maybe n)
-  deriving (Ord, Eq)
+
+instance Ord n => Eq (NumSpec n) where
+  NumSpecInterval ml mh == NumSpecInterval ml' mh'
+    | isEmpty ml mh = isEmpty ml' mh'
+    | isEmpty ml' mh' = isEmpty ml mh
+    | otherwise = ml == ml' && mh == mh'
+    where
+      isEmpty (Just a) (Just b) = a > b
+      isEmpty _ _ = False
 
 instance Show n => Show (NumSpec n) where
   show (NumSpecInterval ml mu) = lb ++ ".." ++ ub
@@ -3097,6 +3186,17 @@ instance Ord n => Semigroup (NumSpec n) where
 
 instance Ord n => Monoid (NumSpec n) where
   mempty = NumSpecInterval Nothing Nothing
+
+instance (Arbitrary a, Ord a) => Arbitrary (NumSpec a) where
+  arbitrary = do
+    m <- arbitrary
+    m' <- arbitrary
+    frequency [(10, pure $ mkLoHiInterval m m'), (1, pure $ NumSpecInterval m m')]
+    where
+      mkLoHiInterval (Just a) (Just b) = NumSpecInterval (Just $ min a b) (Just $ max a b)
+      mkLoHiInterval m m' = NumSpecInterval m m'
+  shrink (NumSpecInterval m m') =
+    uncurry NumSpecInterval <$> shrink (m, m')
 
 instance Arbitrary Natural where
   arbitrary = wordToNatural . abs <$> arbitrary
@@ -4128,8 +4228,10 @@ instance HasSpec fn a => Pretty (WithPrec (Specification fn a)) where
     TypeSpec ts cant ->
       parensIf (d > 10) $
         "TypeSpec"
-          <+> fromString (showsPrec 11 ts "")
-          <+> viaShow cant
+          /> vsep
+            [ fromString (showsPrec 11 ts "")
+            , viaShow cant
+            ]
 
 instance HasSpec fn a => Pretty (Specification fn a) where
   pretty = pretty . WithPrec 0
@@ -4178,7 +4280,8 @@ instance (BaseUniverse fn, HasSpec fn Integer) => Functions (SizeFn fn) fn where
     constrained $ \x' ->
       let args = appendList (mapList (\(Value a) -> Lit a) pre) (x' :> mapList (\(Value a) -> Lit a) suf)
        in Let (App (injectFn fn) args) (x :-> p)
-  propagateSpecFun SizeOf (NilCtx HOLE) (TypeSpec x _) = liftSizeSpec x
+  -- TODO: there is a bug here! Need to account for the `cant` set!
+  propagateSpecFun SizeOf (NilCtx HOLE) (TypeSpec x cant) = liftSizeSpec x cant
   propagateSpecFun SizeOf (NilCtx HOLE) (MemberSpec xs) = liftMemberSpec xs
 
   mapTypeSpec f ts = mapTypeSpecSize f ts
@@ -4232,40 +4335,55 @@ maxSpec (TypeSpec (NumSpecInterval _ hi) bad) = TypeSpec (NumSpecInterval Nothin
 
 class Sized t where
   sizeOf :: t -> Integer
-  liftSizeSpec :: HasSpec fn t => SizeSpec -> Specification fn t
+  liftSizeSpec :: HasSpec fn t => SizeSpec -> [Integer] -> Specification fn t
   liftMemberSpec :: HasSpec fn t => OrdSet Integer -> Specification fn t
   sizeOfTypeSpec :: HasSpec fn t => TypeSpec fn t -> Specification fn Integer
 
 instance Ord a => Sized (Set.Set a) where
   sizeOf = toInteger . Set.size
-  liftSizeSpec spec = typeSpec (SetSpec mempty TrueSpec (typeSpec spec))
+  liftSizeSpec spec cant = typeSpec (SetSpec mempty TrueSpec (TypeSpec spec cant))
   liftMemberSpec xs = typeSpec (SetSpec mempty TrueSpec (MemberSpec xs))
   sizeOfTypeSpec (SetSpec must _ sz) = sz <> (TypeSpec (atLeastSize (sizeOf must)) [])
 
 instance Sized [a] where
   sizeOf = toInteger . length
-  liftSizeSpec spec = typeSpec (ListSpec Nothing mempty (typeSpec spec) TrueSpec NoFold)
+  liftSizeSpec spec cant = typeSpec (ListSpec Nothing mempty (TypeSpec spec cant) TrueSpec NoFold)
   liftMemberSpec xs = typeSpec (ListSpec Nothing mempty (MemberSpec xs) TrueSpec NoFold)
   sizeOfTypeSpec (ListSpec _ _ _ ErrorSpec {} _) = equalSpec 0
   sizeOfTypeSpec (ListSpec _ must sizespec _ _) = sizespec <> (TypeSpec (atLeastSize (sizeOf must)) [])
 
 -- How to constrain the size of any type, with a Sized instance
 hasSize :: (HasSpec fn t, Sized t) => SizeSpec -> Specification fn t
-hasSize sz = liftSizeSpec sz
+hasSize sz = liftSizeSpec sz []
 
 -- ==================================================================================
 -- (NumSpec Integer) can support interval arithmetic, so we can make a (Num (NumSpec fn Integer)) instance
 -- Given operator ☉, then (a,b) ☉ (c,d) = (minimum s, maximum s) where s = [a ☉ c, a ☉ d, b ☉ c, b ☉ d]
 -- There are simpler rules for (+) and (-), but for (*) we need to use the general rule.
 
+guardEmpty :: Maybe Integer -> Maybe Integer -> NumSpec Integer -> NumSpec Integer
+guardEmpty (Just a) (Just b) s
+  | a <= b = s
+  | otherwise = NumSpecInterval (Just 1) (Just 0)
+guardEmpty _ _ s = s
+
 addNumSpec :: NumSpec Integer -> NumSpec Integer -> NumSpec Integer
-addNumSpec (NumSpecInterval x y) (NumSpecInterval a b) = NumSpecInterval ((+) <$> x <*> a) ((+) <$> y <*> b)
+addNumSpec (NumSpecInterval x y) (NumSpecInterval a b) =
+  guardEmpty x y $
+    guardEmpty a b $
+      NumSpecInterval ((+) <$> x <*> a) ((+) <$> y <*> b)
 
 subNumSpec :: NumSpec Integer -> NumSpec Integer -> NumSpec Integer
-subNumSpec (NumSpecInterval x y) (NumSpecInterval a b) = NumSpecInterval ((-) <$> x <*> b) ((-) <$> y <*> a)
+subNumSpec (NumSpecInterval x y) (NumSpecInterval a b) =
+  guardEmpty x y $
+    guardEmpty a b $
+      NumSpecInterval ((-) <$> x <*> b) ((-) <$> y <*> a)
 
 multNumSpec :: NumSpec Integer -> NumSpec Integer -> NumSpec Integer
-multNumSpec (NumSpecInterval a b) (NumSpecInterval c d) = NumSpecInterval (unT (minimum s)) (unT (maximum s))
+multNumSpec (NumSpecInterval a b) (NumSpecInterval c d) =
+  guardEmpty a b $
+    guardEmpty c d $
+      NumSpecInterval (unT (minimum s)) (unT (maximum s))
   where
     s = [multT (neg a) (neg c), multT (neg a) (pos d), multT (pos b) (neg c), multT (pos b) (pos d)]
 
@@ -4355,7 +4473,7 @@ cardinality ErrorSpec {} = equalSpec 0
 cardinality (TypeSpec s cant) =
   subSpecInt
     (cardinalTypeSpec @fn @a s)
-    (exactSizeSpec (sizeOf (filter (\c -> conformsTo @fn @a c s) cant)))
+    (exactSizeSpec (sizeOf (nub $ filter (\c -> conformsTo @fn @a c s) cant)))
 cardinality SuspendedSpec {} = cardinalTrueSpec @fn @a
 
 -- | A generic function to use as an instance for the HasSpec method

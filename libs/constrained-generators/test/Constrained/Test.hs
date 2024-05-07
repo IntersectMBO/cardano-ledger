@@ -135,6 +135,22 @@ tests =
       prop "Map Int Int" $ prop_conformEmpty @BaseFn @(Map Int Int)
       prop "[Int]" $ prop_conformEmpty @BaseFn @[Int]
       prop "[(Int, Int)]" $ prop_conformEmpty @BaseFn @[(Int, Int)]
+    prop "prop_univSound @BaseFn" $ withMaxSuccess 10000 $ prop_univSound @BaseFn
+    describe "prop_gen_sound @BaseFn" $ do
+      modifyMaxSuccess (const 1000) $ do
+        prop "Int" $ prop_gen_sound @BaseFn @Int
+        prop "Bool" $ prop_gen_sound @BaseFn @Bool
+        prop "(Int, Int)" $ prop_gen_sound @BaseFn @(Int, Int)
+        prop "Map Int Int" $ prop_gen_sound @BaseFn @(Map Int Int)
+        prop "Set Int" $ prop_gen_sound @BaseFn @(Set Int)
+        prop "Set Bool" $ prop_gen_sound @BaseFn @(Set Bool)
+        prop "[Int]" $ prop_gen_sound @BaseFn @[Int]
+        prop "[(Int, Int)]" $ prop_gen_sound @BaseFn @[(Int, Int)]
+        prop "Map Bool Int" $ prop_gen_sound @BaseFn @(Map Bool Int)
+      -- Slow tests that shouldn't run 1000 times
+      prop "Map (Set Int) Int" $ prop_gen_sound @BaseFn @(Map (Set Int) Int)
+      prop "[(Set Int, Set Bool)]" $ prop_gen_sound @BaseFn @[(Set Int, Set Bool)]
+      prop "Set (Set Bool)" $ prop_gen_sound @BaseFn @(Set (Set Bool))
     negativeTests
 
 negativeTests :: Spec
@@ -235,15 +251,6 @@ testSpec' withShrink n s =
 -- Test properties of the instance Num (NumSpec Integer)
 ------------------------------------------------------------------------
 
-instance Arbitrary (NumSpec Integer) where
-  arbitrary = do
-    lo <- arbitrary
-    hi <- next lo
-    pure $ NumSpecInterval lo hi
-    where
-      next Nothing = arbitrary
-      next (Just n) = frequency [(1, pure Nothing), (3, Just <$> suchThat arbitrary (> n))]
-
 -- | When we multiply intervals, we get a bounding box, around the possible values.
 --   When the intervals have infinities, the bounding box can be very loose. In fact the
 --   order in which we multiply intervals with infinities can affect how loose the bounding box is.
@@ -285,15 +292,16 @@ scaleOne y = y === 1 * y
 
 numNumSpecTree :: Spec
 numNumSpecTree =
-  describe "Num (NumSpec Integer) properties" $ do
-    prop "plusNegate(x - y == x + negate y)" plusNegate
-    prop "scaleNumSpec(y + y = 2 * y)" scaleNumSpec
-    prop "scaleOne(y = 1 * y)" scaleOne
-    prop "negNagate(x = x == negate (negate x))" negNegate
-    prop "commutesNumSpec(x+y = y+x)" commutesNumSpec
-    prop "assocNumSpec(x+(y+z) == (x+y)+z)" assocNumSpec
-    prop "assocNumSpecTimes(x*(y*z) == (x*y)*z)" assocNumSpecTimes
-    prop "commuteTimes" commuteTimes
+  describe "Num (NumSpec Integer) properties" $
+    modifyMaxSuccess (const 10000) $ do
+      prop "plusNegate(x - y == x + negate y)" plusNegate
+      prop "scaleNumSpec(y + y = 2 * y)" scaleNumSpec
+      prop "scaleOne(y = 1 * y)" scaleOne
+      prop "negNagate(x = x == negate (negate x))" negNegate
+      prop "commutesNumSpec(x+y = y+x)" commutesNumSpec
+      prop "assocNumSpec(x+(y+z) == (x+y)+z)" assocNumSpec
+      prop "assocNumSpecTimes(x*(y*z) == (x*y)*z)" assocNumSpecTimes
+      prop "commuteTimes" commuteTimes
 
 ------------------------------------------------------------------------
 -- Tests for `hasSize`

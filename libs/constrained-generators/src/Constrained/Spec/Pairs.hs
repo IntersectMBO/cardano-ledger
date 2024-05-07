@@ -24,6 +24,7 @@ import Constrained.Base
 import Constrained.Core
 import Constrained.List
 import Constrained.Univ
+import Test.QuickCheck
 
 -- HasSpec ----------------------------------------------------------------
 
@@ -39,6 +40,10 @@ cartesian _ (ErrorSpec es) = ErrorSpec es
 cartesian s s' = typeSpec $ Cartesian s s'
 
 data PairSpec fn a b = Cartesian (Specification fn a) (Specification fn b)
+
+instance (Arbitrary (Specification fn a), Arbitrary (Specification fn b)) => Arbitrary (PairSpec fn a b) where
+  arbitrary = Cartesian <$> arbitrary <*> arbitrary
+  shrink (Cartesian a b) = uncurry Cartesian <$> shrink (a, b)
 
 instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Prod a b) where
   type TypeSpec fn (Prod a b) = PairSpec fn a b
@@ -95,12 +100,18 @@ instance BaseUniverse fn => Functions (PairFn fn) fn where
       | HOLE :? Value b :> Nil <- ctx ->
           let sameSnd ps = [a | Prod a b' <- ps, b == b']
            in case spec of
-                TypeSpec (Cartesian sa _) cant -> sa <> foldMap notEqualSpec (sameSnd cant)
+                TypeSpec (Cartesian sa sb) cant
+                  | b `conformsToSpec` sb -> sa <> foldMap notEqualSpec (sameSnd cant)
+                  -- TODO: better error message
+                  | otherwise -> ErrorSpec ["propagateSpecFun Pair"]
                 MemberSpec es -> MemberSpec (sameSnd es)
       | Value a :! NilCtx HOLE <- ctx ->
           let sameFst ps = [b | Prod a' b <- ps, a == a']
            in case spec of
-                TypeSpec (Cartesian _ sb) cant -> sb <> foldMap notEqualSpec (sameFst cant)
+                TypeSpec (Cartesian sa sb) cant
+                  | a `conformsToSpec` sa -> sb <> foldMap notEqualSpec (sameFst cant)
+                  -- TODO: better error message
+                  | otherwise -> ErrorSpec ["propagateSpecFun Pair"]
                 MemberSpec es -> MemberSpec (sameFst es)
 
   rewriteRules Fst ((pairView -> Just (x, _)) :> Nil) = Just x
