@@ -30,6 +30,7 @@
   signatures of all functions that work on raw cost model parameter values.
 * `mkCostModelsLenient` was changed to work in `MonadFail`, since failures during
   construction is now again possible.
+* Deprecate `decodeCostModelFailHard` in favor of new `decodeCostModel`.
 
 ### `testlib`
 

@@ -112,7 +112,7 @@ import Cardano.Ledger.HKD (
  )
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
-  decodeCostModelFailHard,
+  decodeCostModel,
   encodeCostModel,
   mkCostModel,
   mkCostModels,
@@ -673,7 +673,7 @@ instance DecCBOR (UpgradeConwayPParams Identity) where
         <! From
         <! From
         <! From
-        <! D (decodeCostModelFailHard PlutusV3)
+        <! D (decodeCostModel PlutusV3)
 
 instance Crypto c => EraPParams (ConwayEra c) where
   type PParamsHKD f (ConwayEra c) = ConwayPParams f (ConwayEra c)

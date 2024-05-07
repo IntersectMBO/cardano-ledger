@@ -46,7 +46,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
-  decodeCostModelFailHard,
+  decodeCostModel,
   encodeCostModel,
   getEvaluationContext,
  )
@@ -202,7 +202,7 @@ instance Crypto c => FromCBOR (PlutusWithContext c) where
             <> show scriptHash
       pwcDatums <- decCBOR
       pwcExUnits <- decCBOR
-      pwcCostModel <- decodeCostModelFailHard lang
+      pwcCostModel <- decodeCostModel lang
       pure PlutusWithContext {..}
 
 data PlutusDebugInfo c

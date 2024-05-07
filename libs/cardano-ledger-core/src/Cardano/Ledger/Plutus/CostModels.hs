@@ -32,6 +32,7 @@ module Cardano.Ledger.Plutus.CostModels (
   costModelToMap,
   costModelFromMap,
   costModelParamsCount,
+  decodeCostModel,
   decodeCostModelFailHard,
 
   -- * Cost Models
@@ -241,7 +242,7 @@ decodeCostModelsLenient = decCBOR >>= mkCostModelsLenient
 
 decodeCostModelsFailing :: Decoder s CostModels
 decodeCostModelsFailing =
-  CostModels <$> decodeMapByKey decCBOR legacyDecodeCostModel <*> pure mempty
+  CostModels <$> decodeMapByKey decCBOR decodeCostModelLegacy <*> pure mempty
 {-# INLINE decodeCostModelsFailing #-}
 
 decodeValidAndUnknownCostModels :: Decoder s CostModels
@@ -264,19 +265,8 @@ costModelParamsCount PlutusV1 = 166
 costModelParamsCount PlutusV2 = 175
 costModelParamsCount PlutusV3 = 233
 
--- | Prior to version 9, each 'CostModel' was expected to be serialized as an array of
--- integers of a specific length (depending on the version of Plutus).  Starting in
--- version 9, we allow the decoders to accept lists longer or shorter than what they
--- require, so that new fields can be added in the future. For this reason, we must hard
--- code the length expectation into the deserializers prior to version 9.
---
--- Note that the number of elements in the V1 and V2 cost models may change in the future,
--- they are only fixed prior to version 9.
---
--- See https://github.com/intersectmbo/cardano-ledger/issues/2902
--- and https://github.com/intersectmbo/cardano-ledger/blob/master/docs/adr/2022-12-05_006-cost-model-serialization.md
-legacyDecodeCostModel :: Language -> Decoder s CostModel
-legacyDecodeCostModel lang = do
+decodeCostModelLegacy :: Language -> Decoder s CostModel
+decodeCostModelLegacy lang = do
   when (lang > PlutusV2) $
     fail $
       "Legacy CostModel decoding is not supported for " ++ show lang ++ " language version"
@@ -293,15 +283,36 @@ legacyDecodeCostModel lang = do
   case mkCostModel lang values of
     Left e -> fail $ show e
     Right cm -> pure cm
-{-# INLINEABLE legacyDecodeCostModel #-}
+{-# INLINEABLE decodeCostModelLegacy #-}
+
+-- | Prior to version 9, each 'CostModel' was expected to be serialized as an array of
+-- integers of a specific length (depending on the version of Plutus).  Starting in
+-- version 9, we allow the decoders to accept lists longer or shorter than what they
+-- require, so that new fields can be added in the future. For this reason, we must hard
+-- code the length expectation into the deserializers prior to version 9.
+--
+-- Note that the number of elements in the V1 and V2 cost models are allowed to change in
+-- the future, they are only fixed prior to version 9.
+--
+-- See https://github.com/intersectmbo/cardano-ledger/issues/2902
+-- and https://github.com/intersectmbo/cardano-ledger/blob/master/docs/adr/2022-12-05_006-cost-model-serialization.md
+decodeCostModel :: Language -> Decoder s CostModel
+decodeCostModel lang = do
+  ifDecoderVersionAtLeast
+    (natVersion @9)
+    decodeCostModelLenient
+    (decodeCostModelLegacy lang)
+  where
+    decodeCostModelLenient = do
+      checked <- mkCostModel lang <$> decCBOR
+      case checked of
+        Left e -> fail $ show e
+        Right cm -> pure cm
+{-# INLINEABLE decodeCostModel #-}
 
 decodeCostModelFailHard :: Language -> Decoder s CostModel
-decodeCostModelFailHard lang = do
-  checked <- mkCostModel lang <$> decCBOR
-  case checked of
-    Left e -> fail $ show e
-    Right cm -> pure cm
-{-# INLINEABLE decodeCostModelFailHard #-}
+decodeCostModelFailHard = decodeCostModel
+{-# DEPRECATED decodeCostModelFailHard "In favor of `decodeCostModel`" #-}
 
 getEvaluationContext :: CostModel -> P.EvaluationContext
 getEvaluationContext (CostModel _ _ ec) = ec
