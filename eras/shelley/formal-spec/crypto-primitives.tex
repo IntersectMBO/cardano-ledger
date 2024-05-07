@@ -231,7 +231,7 @@ Figure~\ref{fig:defs-vrf} shows the cryptographic abstractions needed for Verifi
   \begin{equation*}
     \begin{array}{r@{~\in~}lr}
       \seedOp & \Seed \to \Seed \to \Seed & \text{binary seed operation} \\
-      \vrf{\T}{}{} & \SKey \to \Seed \to \T\times\Proof
+      \vrf{\T}{}{} & \SKey \to \Seed \to \Proof\times\T
                    & \text{verifiable random function} \\
                    %
       \verifyVrf{\T}{}{}{} & \VKey \to \Seed \to \Proof\times\T \to \Bool
