@@ -796,7 +796,7 @@ votingSpec =
           logRatificationChecks addCCGaid
           -- Add to the rewards of the delegator to this SPO
           -- to barely make the threshold (51 %! 100)
-          registerAndRetirePoolToMakeReward $ delegatorCStaking1
+          registerAndRetirePoolToMakeReward delegatorCStaking1
           passEpoch
           lookupReward delegatorCStaking1 `shouldReturn` Coin 1_200_000
           -- The same vote should now successfully ratify the proposal
@@ -804,6 +804,122 @@ votingSpec =
           -- for DRep votes to ratify a proposal.
           passNEpochs 2
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+        describe "Proposal deposits contribute to active voting stake" $ do
+          it "Directly" $ do
+            -- Only modify the applicable thresholds
+            modifyPParams $ \pp ->
+              pp
+                & ppPoolVotingThresholdsL
+                  .~ def
+                    { pvtCommitteeNormal = 51 %! 100
+                    , pvtCommitteeNoConfidence = 51 %! 100
+                    }
+                & ppDRepVotingThresholdsL
+                  .~ def
+                    { dvtCommitteeNormal = 0 %! 1
+                    , dvtCommitteeNoConfidence = 0 %! 1
+                    }
+                & ppGovActionDepositL .~ Coin 600_000
+            -- Setup Pool delegation #1
+            (poolKH1, stakingC1) <- setupPoolWithoutStake
+            -- Setup Pool delegation #2
+            (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
+            -- Make a note of the reward account for the delegator to SPO #1
+            spoRewardAccount <- getRewardAccountFor stakingC1
+            -- Submit the first committee proposal, the one we will test active voting stake against.
+            -- The proposal deposit comes from the root UTxO
+            cc <- KeyHashObj <$> freshKeyHash
+            let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+            addCCGaid <-
+              submitProposal $
+                ProposalProcedure
+                  { pProcDeposit = Coin 600_000
+                  , pProcReturnAddr = spoRewardAccount
+                  , pProcGovAction = addCCAction
+                  , pProcAnchor = def
+                  }
+            -- Submit the vote from SPO #1
+            submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
+            submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
+            passNEpochs 2
+            -- The vote should not result in a ratification
+            getLastEnactedCommittee `shouldReturn` SNothing
+            -- Submit another proposal to bump up the active voting stake
+            anotherCC <- KeyHashObj <$> freshKeyHash
+            let anotherAddCCAction = UpdateCommittee SNothing mempty (Map.singleton anotherCC 10) (75 %! 100)
+            submitProposal_ $
+              ProposalProcedure
+                { pProcDeposit = Coin 600_000
+                , pProcReturnAddr = spoRewardAccount
+                , pProcGovAction = anotherAddCCAction
+                , pProcAnchor = def
+                }
+            passNEpochs 2
+            -- The same vote should now successfully ratify the proposal
+            getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+          it "After switching delegations" $ do
+            -- Only modify the applicable thresholds
+            modifyPParams $ \pp ->
+              pp
+                & ppPoolVotingThresholdsL
+                  .~ def
+                    { pvtCommitteeNormal = 51 %! 100
+                    , pvtCommitteeNoConfidence = 51 %! 100
+                    }
+                & ppDRepVotingThresholdsL
+                  .~ def
+                    { dvtCommitteeNormal = 0 %! 1
+                    , dvtCommitteeNoConfidence = 0 %! 1
+                    }
+                & ppGovActionDepositL .~ Coin 1_000_000
+            -- Setup Pool delegation #1
+            (poolKH1, stakingC1) <- setupPoolWithoutStake
+            -- Setup Pool delegation #2
+            (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
+            -- Setup Pool delegation #3
+            (_poolKH3, stakingC3) <- setupPoolWithoutStake
+            -- Make a note of the reward accounts for the delegators to SPOs #1 and #3
+            spoRewardAccount1 <- getRewardAccountFor stakingC1
+            spoRewardAccount3 <- getRewardAccountFor stakingC3
+            -- Submit committee proposals
+            -- The proposal deposits comes from the root UTxO
+            -- After this both stakingC1 and stakingC3 are expected to have 1_000_000 ADA of stake, each
+            cc <- KeyHashObj <$> freshKeyHash
+            let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+            addCCGaid <-
+              submitProposal $
+                ProposalProcedure
+                  { pProcDeposit = Coin 1_000_000
+                  , pProcReturnAddr = spoRewardAccount1
+                  , pProcGovAction = addCCAction
+                  , pProcAnchor = def
+                  }
+            anotherCC <- KeyHashObj <$> freshKeyHash
+            let anotherAddCCAction = UpdateCommittee SNothing mempty (Map.singleton anotherCC 10) (75 %! 100)
+            submitProposal_ $
+              ProposalProcedure
+                { pProcDeposit = Coin 1_000_000
+                , pProcReturnAddr = spoRewardAccount3
+                , pProcGovAction = anotherAddCCAction
+                , pProcAnchor = def
+                }
+            -- Submit a yes vote from SPO #1 and a no vote from SPO #2
+            submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
+            submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
+            passNEpochs 2
+            -- The vote should not result in a ratification
+            getLastEnactedCommittee `shouldReturn` SNothing
+            submitTxAnn_ "Switch the delegation from SPO #3 to SPO #1" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ SSeq.fromList
+                    [ mkDelegTxCert
+                        stakingC3
+                        (DelegStake poolKH1)
+                    ]
+            passNEpochs 2
+            -- The same vote should now successfully ratify the proposal
+            getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
 
 delayingActionsSpec ::
   forall era.

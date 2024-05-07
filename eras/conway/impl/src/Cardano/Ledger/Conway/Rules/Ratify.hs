@@ -207,13 +207,13 @@ spoAcceptedRatio
     | abstainVotesRatio == 1 = 0 -- guard against the degenerate case when all abstain.
     | otherwise = yesVotesRatio / (1 - abstainVotesRatio)
     where
-      PoolDistr stakePoolDistr (CompactCoin totalActiveStake) = reStakePoolDistr
+      PoolDistr individualPoolStake (CompactCoin totalActiveStake) = reStakePoolDistr
       (yesVotesRatio, abstainVotesRatio) =
         ( toInteger yesVotes % toInteger totalActiveStake
         , toInteger abstainVotes % toInteger totalActiveStake
         )
       (CompactCoin yesVotes, CompactCoin abstainVotes) =
-        Map.foldlWithKey' getVotesStakePerStakePoolDistr (mempty, mempty) stakePoolDistr
+        Map.foldlWithKey' getVotesStakePerStakePoolDistr (mempty, mempty) individualPoolStake
       getVotesStakePerStakePoolDistr (!yess, !abstains) poolId distr =
         let d = individualPoolStakeCoin distr
             vote = Map.lookup poolId gasStakePoolVotes
