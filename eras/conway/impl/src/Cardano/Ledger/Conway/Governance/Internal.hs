@@ -111,6 +111,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
+import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateIncrStakeDistrL,
   epochStateRegDrepL,
@@ -502,7 +503,9 @@ votingDRepThresholdInternal pp isElectedCommittee action =
         , dvtUpdateToConstitution
         , dvtHardForkInitiation
         , dvtTreasuryWithdrawal
-        } = pp ^. ppDRepVotingThresholdsL
+        } -- We reset all (except InfoAction) DRep thresholds to 0 during bootstrap phase
+          | HF.bootstrapPhase (pp ^. ppProtocolVersionL) = def
+          | otherwise = pp ^. ppDRepVotingThresholdsL
    in case action of
         NoConfidence {} -> VotingThreshold dvtCommitteeNoConfidence
         UpdateCommittee {} ->
