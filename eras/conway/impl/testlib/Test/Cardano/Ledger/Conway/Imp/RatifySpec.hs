@@ -838,13 +838,13 @@ votingSpec =
                   , pProcGovAction = addCCAction
                   , pProcAnchor = def
                   }
-            -- Submit the vote from SPO #1
+            -- Submit a yes vote from SPO #1 and a no vote from SPO #2
             submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
             submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
             passNEpochs 2
             -- The vote should not result in a ratification
             getLastEnactedCommittee `shouldReturn` SNothing
-            -- Submit another proposal to bump up the active voting stake
+            -- Submit another proposal to bump up the active voting stake of SPO #1
             anotherCC <- KeyHashObj <$> freshKeyHash
             let anotherAddCCAction = UpdateCommittee SNothing mempty (Map.singleton anotherCC 10) (75 %! 100)
             submitProposal_ $
@@ -882,7 +882,7 @@ votingSpec =
             spoRewardAccount1 <- getRewardAccountFor stakingC1
             spoRewardAccount3 <- getRewardAccountFor stakingC3
             -- Submit committee proposals
-            -- The proposal deposits comes from the root UTxO
+            -- The proposal deposits come from the root UTxO
             -- After this both stakingC1 and stakingC3 are expected to have 1_000_000 ADA of stake, each
             cc <- KeyHashObj <$> freshKeyHash
             let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
@@ -911,12 +911,7 @@ votingSpec =
             getLastEnactedCommittee `shouldReturn` SNothing
             submitTxAnn_ "Switch the delegation from SPO #3 to SPO #1" $
               mkBasicTx mkBasicTxBody
-                & bodyTxL . certsTxBodyL
-                  .~ SSeq.fromList
-                    [ mkDelegTxCert
-                        stakingC3
-                        (DelegStake poolKH1)
-                    ]
+                & bodyTxL . certsTxBodyL .~ SSeq.fromList [mkDelegTxCert stakingC3 (DelegStake poolKH1)]
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)

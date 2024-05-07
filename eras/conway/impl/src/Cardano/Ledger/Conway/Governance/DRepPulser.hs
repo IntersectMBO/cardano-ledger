@@ -160,18 +160,31 @@ instance EraPParams era => ToCBOR (PulsingSnapshot era) where
 instance EraPParams era => FromCBOR (PulsingSnapshot era) where
   fromCBOR = fromEraCBOR @era
 
--- | We iterate over a pulse-sized chunk of the UMap. For each StakingCredential
--- in the chunk that has delegated to a DRep, add the StakeDistr and rewards
--- for that Credential to the DRep Distribution, if the DRep is a DRepCredential
--- (also, AlwaysAbstain or AlwaysNoConfidence) and a member of the registered
--- DReps. If the DRepCredential is not a member of the registered DReps, ignore
--- and skip that DRep.
+-- | We iterate over a pulse-sized chunk of the UMap.
 --
--- Give or take, this operation has roughly O(a * (log(b) + log(c))) complexity,
--- where,
---   (a) is the size of the chunk of the UMap, which is expected to be the pulse-size,
---   (b) is the size of the StakeDistr, and
---   (c) is the size of the DRepDistr, this grows as the accumulator
+-- For each staking credential in the chunk that has delegated to a DRep, add
+-- the stake distribution, rewards, and proposal deposits for that credential to
+-- the DRep distribution, if the DRep is a DRepCredential (also, AlwaysAbstain
+-- or AlwaysNoConfidence) and a member of the registered DReps. If the
+-- DRepCredential is not a member of the registered DReps, ignore and skip that
+-- DRep.
+--
+-- For each staking credential in the chunk that has delegated to an SPO,
+-- add only the proposal deposits for that credential to the stake pool
+-- distribution, since the rewards and stake are already added to it by the
+-- SNAP rule.
+--
+-- Give or take, this operation has roughly
+-- @
+--   O (a * (log(b) + log(c) + log(d) + log(e) + log(f)))
+-- @
+-- complexity, where,
+--   (a) is the size of the chunk of the UMap, which is the pulse-size, iterate over
+--   (b) is the size of the StakeDistr, lookup
+--   (c) is the size of the DRepDistr, insertWith
+--   (d) is the size of the dpProposalDeposits, lookup
+--   (e) is the size of the registered DReps, lookup
+--   (f) is the size of the PoolDistr, insert
 computeDRepDistr ::
   forall c.
   Map (Credential 'Staking c) (CompactForm Coin) ->
@@ -203,11 +216,13 @@ computeDRepDistr stakeDistr regDReps proposalDeposits poolDistr dRepDistr uMapCh
               , addToPoolDistr spo proposalDeposit poolAccum
               )
     addToPoolDistr spo ccoin distr =
-      -- Only add the proposal deposits to the CompactCoin numerator and
-      -- denominator and not the rational In order not to interfere with rewards
-      -- calculation of any kind.
+      -- Avoid adding the proposal deposits to anything other than the numerator
+      -- and denominator in order not to interfere with rewards calculation,
+      -- although this is an isolated copy inside the DRepPulser, we want to
+      -- just be sure we do not confuse ourselves over which representations are
+      -- used where.
       case Map.lookup spo $ distr ^. poolDistrDistrL of
-        Nothing -> distr -- Impossible! Because, a delegation to an SPO would also appear in the PoolDistr
+        Nothing -> distr -- Impossible! Because a delegation to an SPO would also appear in the PoolDistr.
         Just ips ->
           distr
             & poolDistrDistrL %~ Map.insert spo (ips & individualPoolStakeCoinL <>~ ccoin)

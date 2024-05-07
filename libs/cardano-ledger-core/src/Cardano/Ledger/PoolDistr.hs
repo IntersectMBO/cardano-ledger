@@ -54,7 +54,7 @@ import NoThunks.Class (NoThunks (..))
 -- delegated to a registered stake pool.
 data IndividualPoolStake c = IndividualPoolStake
   { individualPoolStake :: !Rational
-  , individualPoolStakeCoin :: !(CompactForm Coin)
+  , individualPoolStakeCoin :: !(CompactForm Coin) -- TODO: Document
   , individualPoolStakeVrf :: !(Hash c (VerKeyVRF c))
   }
   deriving stock (Show, Eq, Generic)

@@ -198,20 +198,16 @@ spoAccepted re rs gas =
 -- vote are considered as `Abstain` votes.
 spoAcceptedRatio :: forall era. RatifyEnv era -> GovActionState era -> Rational
 spoAcceptedRatio
-  RatifyEnv {reStakePoolDistr}
+  RatifyEnv {reStakePoolDistr = PoolDistr individualPoolStake (CompactCoin totalActiveStake)}
   GovActionState
     { gasStakePoolVotes
-    , gasProposalProcedure =
-      ProposalProcedure {pProcGovAction}
+    , gasProposalProcedure = ProposalProcedure {pProcGovAction}
     }
     | abstainVotesRatio == 1 = 0 -- guard against the degenerate case when all abstain.
     | otherwise = yesVotesRatio / (1 - abstainVotesRatio)
     where
-      PoolDistr individualPoolStake (CompactCoin totalActiveStake) = reStakePoolDistr
-      (yesVotesRatio, abstainVotesRatio) =
-        ( toInteger yesVotes % toInteger totalActiveStake
-        , toInteger abstainVotes % toInteger totalActiveStake
-        )
+      yesVotesRatio = toInteger yesVotes % toInteger totalActiveStake
+      abstainVotesRatio = toInteger abstainVotes % toInteger totalActiveStake
       (CompactCoin yesVotes, CompactCoin abstainVotes) =
         Map.foldlWithKey' getVotesStakePerStakePoolDistr (mempty, mempty) individualPoolStake
       getVotesStakePerStakePoolDistr (!yess, !abstains) poolId distr =
@@ -221,9 +217,9 @@ spoAcceptedRatio
               Nothing
                 | HardForkInitiation {} <- pProcGovAction -> (yess, abstains)
                 | otherwise -> (yess, abstains <> d)
+              Just Abstain -> (yess, abstains <> d)
               Just VoteNo -> (yess, abstains)
               Just VoteYes -> (yess <> d, abstains)
-              Just Abstain -> (yess, abstains <> d)
 
 dRepAccepted ::
   ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
