@@ -50,6 +50,9 @@ instance ToExpr (ShelleyTxAuxDataRaw era)
 instance ToExpr (ShelleyTxAuxData era)
 
 -- Governance
+
+instance ToExpr (PParams era) => ToExpr (FuturePParams era)
+
 instance
   ( ToExpr (PParamsUpdate era)
   , ToExpr (PParams era)

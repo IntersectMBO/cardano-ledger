@@ -23,7 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Upec (
   votedValue,
 ) where
 
-import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
 import Cardano.Ledger.Shelley.Governance
@@ -39,19 +39,16 @@ import Cardano.Ledger.Shelley.Rules.Newpp (
   ShelleyNewppPredFailure,
   ShelleyNewppState (..),
  )
+import Cardano.Ledger.Shelley.Rules.Ppup (votedFuturePParams)
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   Embed (..),
   STS (..),
   TRC (..),
   judgmentContext,
-  liftSTS,
   trans,
  )
 import Data.Default.Class (Default)
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -97,50 +94,26 @@ instance
             ) <-
           judgmentContext
 
-        coreNodeQuorum <- liftSTS $ asks quorum
-
         let utxoState = lsUTxOState ls
-            pup = sgsCurProposals ppupState
-            ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
+            ppNew = nextEpochPParams ppupState
         NewppState pp' ppupState' <-
           trans @(ShelleyNEWPP era) $
             TRC (NewppEnv (lsCertState ls) utxoState, NewppState pp ppupState, ppNew)
         pure $! UpecState pp' ppupState'
     ]
 
--- | If at least @n@ nodes voted to change __the same__ protocol parameters to
--- __the same__ values, return the given protocol parameters updated to these
--- values. Here @n@ is the quorum needed.
-votedValue ::
-  forall era.
-  EraPParams era =>
-  ProposedPPUpdates era ->
-  -- | Protocol parameters to which the change will be applied.
-  PParams era ->
-  -- | Quorum needed to change the protocol parameters.
-  Int ->
-  Maybe (PParams era)
-votedValue (ProposedPPUpdates pppu) pp quorumN =
-  let votes =
-        Map.foldr
-          (\vote -> Map.insertWith (+) vote 1)
-          (Map.empty :: Map (PParamsUpdate era) Int)
-          pppu
-      consensus = Map.filter (>= quorumN) votes
-   in case Map.keys consensus of
-        -- NOTE that `quorumN` is a global constant, and that we require
-        -- it to be strictly greater than half the number of genesis nodes.
-        -- The keys in the `pup` correspond to the genesis nodes,
-        -- and therefore either:
-        --   1) `consensus` is empty, or
-        --   2) `consensus` has exactly one element.
-        [ppu] -> Just $ applyPPUpdates pp ppu
-        -- NOTE that `updatePParams` corresponds to the union override right
-        -- operation in the formal spec.
-        _ -> Nothing
-
 instance
   (Era era, STS (ShelleyNEWPP era)) =>
   Embed (ShelleyNEWPP era) (ShelleyUPEC era)
   where
   wrapFailed = NewPpFailure
+
+votedValue ::
+  forall era.
+  EraPParams era =>
+  ProposedPPUpdates era ->
+  PParams era ->
+  Int ->
+  Maybe (PParams era)
+votedValue ppups pp = votedFuturePParams ppups pp . fromIntegral
+{-# DEPRECATED votedValue "In favor of `votedFuturePParams`" #-}

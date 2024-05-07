@@ -721,6 +721,7 @@ expectedStEx9 pp =
     . C.newLab blockEx9
     . C.setOCertCounter coreNodeHK 2
     . C.pulserUpdate (pulserEx9 pp)
+    . C.solidifyProposals
     $ expectedStEx8
   where
     coreNodeHK = coerceKeyRole . aikColdKeyHash $ coreNodeKeysBySchedule @C ppEx 390
@@ -753,7 +754,7 @@ expectedStEx8Agg :: ChainState C
 expectedStEx8Agg = C.setPrevPParams ppProtVer3 expectedStEx8
 
 expectedStEx9Agg :: ChainState C
-expectedStEx9Agg = C.setPrevPParams ppProtVer3 (expectedStEx9 ppProtVer3)
+expectedStEx9Agg = C.solidifyProposals $ C.setPrevPParams ppProtVer3 (expectedStEx9 ppProtVer3)
 
 -- Create the first non-trivial reward update. The rewards demonstrate the
 -- results of the delegation scenario that was constructed in the first and only transaction.

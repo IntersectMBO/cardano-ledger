@@ -328,6 +328,7 @@ expectedStEx3 =
     . C.newUTxO txbodyEx3
     . C.pulserUpdate pulserEx3
     . C.setFutureProposals (collectVotes ppVoteB [1])
+    . C.solidifyProposals
     $ expectedStEx2
 
 -- === Block 3, Slot 80, Epoch 0

@@ -19,6 +19,7 @@ module Cardano.Ledger.Conway.Governance (
   RatifyEnv (..),
   RatifySignal (..),
   ConwayGovState (..),
+  predictFuturePParams,
   Committee (..),
   committeeMembersL,
   committeeThresholdL,
@@ -88,6 +89,7 @@ module Cardano.Ledger.Conway.Governance (
   cgsDRepPulsingStateL,
   cgsCurPParamsL,
   cgsPrevPParamsL,
+  cgsFuturePParamsL,
   cgsCommitteeL,
   cgsConstitutionL,
   ensCommitteeL,
@@ -170,6 +172,7 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
   FromCBOR (..),
   ToCBOR (..),
+  decNoShareCBOR,
  )
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -213,25 +216,27 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.UMap
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..))
+import Control.Monad (guard)
 import Control.Monad.Trans.Reader (ReaderT, ask)
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Ratio ((%))
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import NoThunks.Class (NoThunks (..))
 
--- =============================================
+-- | Conway governance state
 data ConwayGovState era = ConwayGovState
   { cgsProposals :: !(Proposals era)
   , cgsCommittee :: !(StrictMaybe (Committee era))
   , cgsConstitution :: !(Constitution era)
   , cgsCurPParams :: !(PParams era)
   , cgsPrevPParams :: !(PParams era)
+  , cgsFuturePParams :: !(FuturePParams era)
   , cgsDRepPulsingState :: !(DRepPulsingState era)
   -- ^ The 'cgsDRepPulsingState' field is a pulser that incrementally computes the stake
   -- distribution of the DReps over the Epoch following the close of voting at end of
@@ -263,6 +268,10 @@ cgsCurPParamsL = lens cgsCurPParams (\x y -> x {cgsCurPParams = y})
 cgsPrevPParamsL :: Lens' (ConwayGovState era) (PParams era)
 cgsPrevPParamsL = lens cgsPrevPParams (\x y -> x {cgsPrevPParams = y})
 
+cgsFuturePParamsL :: Lens' (ConwayGovState era) (FuturePParams era)
+cgsFuturePParamsL =
+  lens cgsFuturePParams (\cgs futurePParams -> cgs {cgsFuturePParams = futurePParams})
+
 govStatePrevGovActionIds :: ConwayEraGov era => GovState era -> GovRelation StrictMaybe era
 govStatePrevGovActionIds = view $ proposalsGovStateL . pRootsL . to toPrevGovActionIds
 
@@ -272,6 +281,32 @@ conwayGovStateDRepDistrG = to (\govst -> (psDRepDistr . fst) $ finishDRepPulser 
 
 getRatifyState :: ConwayGovState era -> RatifyState era
 getRatifyState (ConwayGovState {cgsDRepPulsingState}) = snd $ finishDRepPulser cgsDRepPulsingState
+
+-- | This function updates the thunk, which will contain new PParams once evaluated or
+-- Nothing when there was no update. At the same time if we already know the future of
+-- PParams, then it will act as an identity function.
+predictFuturePParams :: ConwayGovState era -> ConwayGovState era
+predictFuturePParams govState =
+  case cgsFuturePParams govState of
+    NoPParamsUpdate -> govState
+    DefinitePParamsUpdate _ -> govState
+    _ ->
+      govState
+        { cgsFuturePParams = PotentialPParamsUpdate newFuturePParams
+        }
+  where
+    -- This binding is not forced until a call to `solidifyNextEpochPParams` in the TICK
+    -- rule two stability windows before the end of the epoch, therefore it is safe to
+    -- create thunks here throughout the epoch
+    newFuturePParams = do
+      guard (any hasChangesToPParams (rsEnacted ratifyState))
+      pure (ensCurPParams (rsEnactState ratifyState))
+    ratifyState = extractDRepPulsingState (cgsDRepPulsingState govState)
+    hasChangesToPParams gas =
+      case pProcGovAction (gasProposalProcedure gas) of
+        ParameterChange {} -> True
+        HardForkInitiation {} -> True
+        _ -> False
 
 mkEnactState :: ConwayEraGov era => GovState era -> EnactState era
 mkEnactState gs =
@@ -296,17 +331,10 @@ instance EraPParams era => DecShareCBOR (ConwayGovState era) where
         <! From
         <! From
         <! From
+        <! From
 
 instance EraPParams era => DecCBOR (ConwayGovState era) where
-  decCBOR =
-    decode $
-      RecD ConwayGovState
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
+  decCBOR = decNoShareCBOR
 
 instance EraPParams era => EncCBOR (ConwayGovState era) where
   encCBOR ConwayGovState {..} =
@@ -317,6 +345,7 @@ instance EraPParams era => EncCBOR (ConwayGovState era) where
         !> To cgsConstitution
         !> To cgsCurPParams
         !> To cgsPrevPParams
+        !> To cgsFuturePParams
         !> To cgsDRepPulsingState
 
 instance EraPParams era => ToCBOR (ConwayGovState era) where
@@ -326,7 +355,7 @@ instance EraPParams era => FromCBOR (ConwayGovState era) where
   fromCBOR = fromEraCBOR @era
 
 instance EraPParams era => Default (ConwayGovState era) where
-  def = ConwayGovState def def def def def (DRComplete def def)
+  def = ConwayGovState def def def def def def (DRComplete def def)
 
 instance EraPParams era => NFData (ConwayGovState era)
 
@@ -337,7 +366,7 @@ instance EraPParams era => ToJSON (ConwayGovState era) where
   toEncoding = pairs . mconcat . toConwayGovPairs
 
 toConwayGovPairs :: (KeyValue e a, EraPParams era) => ConwayGovState era -> [a]
-toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _) =
+toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _ _) =
   let ConwayGovState {..} = cg
    in [ "proposals" .= cgsProposals
       , "nextRatifyState" .= extractDRepPulsingState cgsDRepPulsingState
@@ -345,6 +374,7 @@ toConwayGovPairs cg@(ConwayGovState _ _ _ _ _ _) =
       , "constitution" .= cgsConstitution
       , "currentPParams" .= cgsCurPParams
       , "previousPParams" .= cgsPrevPParams
+      , "futurePParams" .= cgsFuturePParams
       ]
 
 instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
@@ -353,6 +383,8 @@ instance EraPParams (ConwayEra c) => EraGov (ConwayEra c) where
   curPParamsGovStateL = cgsCurPParamsL
 
   prevPParamsGovStateL = cgsPrevPParamsL
+
+  futurePParamsGovStateL = cgsFuturePParamsL
 
   obligationGovState st =
     Obligations
@@ -414,9 +446,10 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
   -- gathering the data, which we will snapshot inside the pulser. We expect approximately
   -- 10*k-many blocks to be produced each epoch, where `k` value is the stability
   -- window. We must ensure for secure operation of the Hard Fork Combinator that we have
-  -- the new EnactState available 2 stability windows before the end of the epoch, while
-  -- spreading out stake distribution computation throughout the first 8 stability
-  -- windows. Therefore, we divide the number of stake credentials by 8*k
+  -- the new EnactState available `6k/f` slots before the end of the epoch, while
+  -- spreading out stake distribution computation throughout the `4k/f` slots. In this
+  -- formula `f` stands for the active slot coefficient, which means that there will be
+  -- approximately `4k` blocks created during that period.
   globals <- ask
   let ledgerState = epochState ^. esLStateL
       utxoState = lsUTxOState ledgerState
@@ -426,11 +459,11 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
       vState = certVState certState
       govState = epochState ^. epochStateGovStateL
       props = govState ^. cgsProposalsL
-      -- Maximum number of blocks we are allowed to roll back
-      k = securityParameter globals
+      -- Maximum number of blocks we are allowed to roll back: usually a small positive number
+      k = securityParameter globals -- On mainnet set to 2160
       umap = dsUnified dState
       umapSize = Map.size $ umElems umap
-      pulseSize = max 1 (ceiling (toInteger umapSize % (8 * toInteger k)))
+      pulseSize = max 1 (umapSize `div` (fromIntegral :: Word64 -> Int) (4 * k))
       epochState' =
         epochState
           & epochStateGovStateL . cgsDRepPulsingStateL

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -16,34 +17,33 @@ module Cardano.Ledger.Shelley.Rules.Newpp (
   PredicateFailure,
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (Globals (quorum), ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
-  UTxOState (utxosDeposited),
-  totalObligation,
-  utxosGovStateL,
+  UTxOState,
  )
 import Cardano.Ledger.Shelley.PParams (
   ProposedPPUpdates (ProposedPPUpdates),
   emptyPPPUpdates,
   hasLegalProtVerUpdate,
  )
+import Cardano.Ledger.Shelley.Rules.Ppup (votedFuturePParams)
 import Control.DeepSeq (NFData)
-import Control.Monad (forM_)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   STS (..),
   TRC (..),
   TransitionRule,
   judgmentContext,
-  (?!),
+  liftSTS,
  )
 import Data.Default.Class (Default, def)
+import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 data ShelleyNewppState era
@@ -72,7 +72,7 @@ instance
   STS (ShelleyNEWPP era)
   where
   type State (ShelleyNEWPP era) = ShelleyNewppState era
-  type Signal (ShelleyNEWPP era) = Maybe (PParams era)
+  type Signal (ShelleyNEWPP era) = PParams era
   type Environment (ShelleyNEWPP era) = NewppEnv era
   type BaseM (ShelleyNEWPP era) = ShelleyBase
   type PredicateFailure (ShelleyNEWPP era) = ShelleyNewppPredFailure era
@@ -90,29 +90,13 @@ newPpTransition ::
   TransitionRule (ShelleyNEWPP era)
 newPpTransition = do
   TRC
-    ( NewppEnv certState utxoState
-      , NewppState pp ppupState
-      , mppNew
+    ( NewppEnv _certState _utxoState
+      , NewppState _pp ppupState
+      , ppNew
       ) <-
     judgmentContext
-  let obligationCurr =
-        totalObligation
-          certState
-          (utxoState ^. utxosGovStateL)
-
-  -- TODO: remove this predicate check. See #4158
-  forM_ mppNew $ \_ ->
-    obligationCurr
-      == utxosDeposited utxoState
-        ?! UnexpectedDepositPot obligationCurr (utxosDeposited utxoState)
-
-  case mppNew of
-    Just ppNew
-      | toInteger (ppNew ^. ppMaxTxSizeL)
-          + toInteger (ppNew ^. ppMaxBHSizeL)
-          < toInteger (ppNew ^. ppMaxBBSizeL) ->
-          pure $ NewppState ppNew $ updatePpup ppupState ppNew
-    _ -> pure $ NewppState pp $ updatePpup ppupState pp
+  coreNodeQuorum <- liftSTS $ asks quorum
+  pure $ updatePpup coreNodeQuorum ppupState ppNew
 
 -- | Update the protocol parameter updates by clearing out the proposals
 -- and making the future proposals become the new proposals,
@@ -122,16 +106,21 @@ updatePpup ::
   , GovState era ~ ShelleyGovState era
   , ProtVerAtMost era 8
   ) =>
+  Word64 ->
   GovState era ->
   PParams era ->
-  ShelleyGovState era
-updatePpup ppupState pp =
-  ppupState
-    & proposalsL .~ ps
-    & futureProposalsL .~ emptyPPPUpdates
+  ShelleyNewppState era
+updatePpup !coreNodeQuorum ppupState pp =
+  NewppState pp $
+    ppupState
+      { sgsCurProposals = curProposals
+      , sgsFutureProposals = emptyPPPUpdates
+      , sgsFuturePParams =
+          PotentialPParamsUpdate $ votedFuturePParams curProposals pp coreNodeQuorum
+      }
   where
     ProposedPPUpdates newProposals = sgsFutureProposals ppupState
-    ps =
+    curProposals =
       if all (hasLegalProtVerUpdate pp) newProposals
         then ProposedPPUpdates newProposals
         else emptyPPPUpdates

@@ -43,17 +43,14 @@ instance Crypto c => EraPParams (AllegraEra c) where
 
 instance Crypto c => EraGov (AllegraEra c) where
   type GovState (AllegraEra c) = ShelleyGovState (AllegraEra c)
-  emptyGovState =
-    ShelleyGovState
-      emptyPPPUpdates
-      emptyPPPUpdates
-      emptyPParams
-      emptyPParams
+  emptyGovState = emptyShelleyGovState
 
   getProposedPPUpdates = Just . sgsCurProposals
 
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
+
+  futurePParamsGovStateL = futurePParamsShelleyGovStateL
 
   obligationGovState = const mempty

@@ -249,6 +249,7 @@ expectedStEx2 =
     . C.newLab blockEx2
     . C.adoptFutureGenDeleg newGenDeleg
     . C.pulserUpdate pulserEx2
+    . C.solidifyProposals
     $ expectedStEx1
 
 -- === Block 2, Slot 50, Epoch 0

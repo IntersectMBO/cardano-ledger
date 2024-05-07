@@ -10,15 +10,16 @@ module Cardano.Ledger.Conway.Rules.Tickf (
 )
 where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, SlotNo, epochInfoPure)
+import Cardano.Ledger.BaseTypes (ShelleyBase, SlotNo)
 import Cardano.Ledger.Conway.Era
 import Cardano.Ledger.Core
 import Cardano.Ledger.EpochBoundary (SnapShots (ssStakeMarkPoolDistr))
+import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Slot (epochInfoEpoch)
-import Control.Monad.Trans.Reader (asks)
+import Cardano.Ledger.Shelley.Rules (solidifyNextEpochPParams)
 import Control.State.Transition
 import GHC.Generics (Generic)
+import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 
 -- ==================================================
@@ -46,7 +47,7 @@ instance NoThunks (ConwayTickfPredFailure era)
 data ConwayTickfEvent era
 
 instance
-  Era era =>
+  EraGov era =>
   STS (ConwayTICKF era)
   where
   type State (ConwayTICKF era) = NewEpochState era
@@ -58,16 +59,14 @@ instance
 
   initialRules = []
   transitionRules = pure $ do
-    TRC ((), nes, slot) <- judgmentContext
+    TRC ((), nes0, slot) <- judgmentContext
     -- This whole function is a specialization of an inlined 'NEWEPOCH'.
     --
     -- The ledger view, 'LedgerView', is built entirely from the 'nesPd' and 'esPp' and
     -- 'dsGenDelegs', so the correctness of 'validatingTickTransitionFORECAST' only
     -- depends on getting these three fields correct.
 
-    epoch <- liftSTS $ do
-      ei <- asks epochInfoPure
-      epochInfoEpoch ei slot
+    (curEpochNo, nes) <- liftSTS $ solidifyNextEpochPParams nes0 slot
 
     let es = nesEs nes
         ss = esSnapshots es
@@ -75,10 +74,10 @@ instance
     -- the relevant 'NEWEPOCH' logic
     let pd' = ssStakeMarkPoolDistr ss
 
-    -- note that the genesis delegates are updated not only on the epoch boundary.
-    if epoch /= succ (nesEL nes)
+    if curEpochNo /= succ (nesEL nes)
       then pure nes
       else do
+        let govState = nes ^. newEpochStateGovStateL
         -- We can skip 'SNAP'; we already have the equivalent pd'.
 
         -- We can skip 'POOLREAP';
@@ -88,6 +87,7 @@ instance
         -- return value here was used to validate their headers.
 
         pure $!
-          nes
-            { nesPd = pd'
-            }
+          nes {nesPd = pd'}
+            & newEpochStateGovStateL . curPParamsGovStateL .~ nextEpochPParams govState
+            & newEpochStateGovStateL . prevPParamsGovStateL .~ (govState ^. curPParamsGovStateL)
+            & newEpochStateGovStateL . futurePParamsGovStateL .~ NoPParamsUpdate

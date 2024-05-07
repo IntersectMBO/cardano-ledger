@@ -988,8 +988,9 @@ constitutionSpec =
       impAnn "Constitution has not been enacted yet" $
         curConstitution' `shouldBe` curConstitution
 
-      ConwayGovState expectedProposals _ _ _ _ expectedPulser <-
-        getsNES newEpochStateGovStateL
+      govState <- getsNES newEpochStateGovStateL
+      let expectedProposals = govState ^. cgsProposalsL
+          expectedPulser = govState ^. cgsDRepPulsingStateL
       expectedEnactState <- getEnactState
 
       impAnn "EnactState reflects the submitted governance action" $ do
@@ -1003,8 +1004,8 @@ constitutionSpec =
 
       passEpoch >> passEpoch
       impAnn "Proposal gets removed after expiry" $ do
-        ConwayGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
-        let ratifyState = extractDRepPulsingState pulser
+        govStateFinal <- getsNES newEpochStateGovStateL
+        let ratifyState = extractDRepPulsingState (govStateFinal ^. cgsDRepPulsingStateL)
         rsExpired ratifyState `shouldBe` Set.singleton govActionId
 
 policySpec ::

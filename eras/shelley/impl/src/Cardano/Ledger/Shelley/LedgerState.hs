@@ -91,6 +91,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   esNonMyopicL,
   curPParamsEpochStateL,
   prevPParamsEpochStateL,
+  futurePParamsEpochStateL,
   asTreasuryL,
   asReservesL,
   lsUTxOStateL,

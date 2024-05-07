@@ -1,10 +1,13 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Ledger.Slot (
   SlotNo (..),
+  getTheSlotOfNoReturn,
   Duration (..),
   (-*),
   (+*),
@@ -20,12 +23,13 @@ module Cardano.Ledger.Slot (
 )
 where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (Globals (Globals, stabilityWindow), ShelleyBase, epochInfoPure)
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import qualified Cardano.Slotting.EpochInfo as EI
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.Monad.Trans (lift)
+import Control.Monad.Trans.Reader (ask)
 import Data.Functor.Identity (Identity)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -74,3 +78,20 @@ epochInfoSize ::
   EpochNo ->
   ShelleyBase EpochSize
 epochInfoSize ei = lift . EI.epochInfoSize ei
+
+-- | Figure out a slot number that is two stability windows before the end of the next
+-- epoch. Together with the slot number we also return the current epoch number and the
+-- next epoch number.
+--
+-- The reason why it is called the point of no return, is because that is the point when
+-- HardForkCombinator (HFC) initiates a controlled hard fork, if there is a major protocol
+-- version update that forks into a new era.
+getTheSlotOfNoReturn :: HasCallStack => SlotNo -> ShelleyBase (EpochNo, SlotNo, EpochNo)
+getTheSlotOfNoReturn slot = do
+  globals@Globals {stabilityWindow} <- ask
+  let !epochInfo = epochInfoPure globals
+  epochNo <- epochInfoEpoch epochInfo slot
+  let !nextEpochNo = succ epochNo
+  firstSlotNextEpoch <- epochInfoFirst epochInfo nextEpochNo
+  let !pointOfNoReturn = firstSlotNextEpoch *- Duration (2 * stabilityWindow)
+  pure (epochNo, pointOfNoReturn, nextEpochNo)

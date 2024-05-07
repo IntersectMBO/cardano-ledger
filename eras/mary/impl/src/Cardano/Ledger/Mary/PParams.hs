@@ -10,6 +10,8 @@ import Cardano.Ledger.Shelley.Governance (
   EraGov (..),
   ShelleyGovState (..),
   curPParamsShelleyGovStateL,
+  emptyShelleyGovState,
+  futurePParamsShelleyGovStateL,
   prevPParamsShelleyGovStateL,
  )
 import Cardano.Ledger.Shelley.PParams
@@ -48,17 +50,14 @@ instance Crypto c => EraPParams (MaryEra c) where
 
 instance Crypto c => EraGov (MaryEra c) where
   type GovState (MaryEra c) = ShelleyGovState (MaryEra c)
-  emptyGovState =
-    ShelleyGovState
-      emptyPPPUpdates
-      emptyPPPUpdates
-      emptyPParams
-      emptyPParams
+  emptyGovState = emptyShelleyGovState
 
   getProposedPPUpdates = Just . sgsCurProposals
 
   curPParamsGovStateL = curPParamsShelleyGovStateL
 
   prevPParamsGovStateL = prevPParamsShelleyGovStateL
+
+  futurePParamsGovStateL = futurePParamsShelleyGovStateL
 
   obligationGovState = const mempty

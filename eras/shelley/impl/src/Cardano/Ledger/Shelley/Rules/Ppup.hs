@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -19,15 +20,15 @@ module Cardano.Ledger.Shelley.Rules.Ppup (
   PredicateFailure,
   VotingPeriod (..),
   PPUPPredFailure,
+  votedFuturePParams,
 )
 where
 
 import Cardano.Ledger.BaseTypes (
-  Globals (stabilityWindow),
+  Globals (quorum),
   ProtVer,
   ShelleyBase,
   StrictMaybe (..),
-  epochInfoPure,
   invalidKey,
  )
 import Cardano.Ledger.Binary (
@@ -47,20 +48,19 @@ import Cardano.Ledger.Shelley.PParams (
   hasLegalProtVerUpdate,
  )
 import Cardano.Ledger.Slot (
-  Duration (Duration),
   EpochNo (..),
   SlotNo,
-  epochInfoEpoch,
-  epochInfoFirst,
-  (*-),
+  getTheSlotOfNoReturn,
  )
 import Control.DeepSeq (NFData)
+import Control.Monad (guard)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
 import qualified Data.Foldable as F (find)
+import qualified Data.Map as Map
 import Data.Set (Set)
-import Data.Word (Word8)
+import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -189,29 +189,25 @@ ppupTransitionNonEmpty = do
             Just newBadProtVer
       failOnJust firstIllegalProtVerUpdate PVCannotFollowPPUP
 
-      sp <- liftSTS $ asks stabilityWindow
-      (currentEpochNo, firstSlotNextEpoch) <- do
-        epochInfo <- liftSTS $ asks epochInfoPure
-        epochNo <- liftSTS $ epochInfoEpoch epochInfo slot
-        let nextEpochNo = succ epochNo
-        tellEvent $ PpupNewEpoch nextEpochNo
-        liftSTS $ do
-          (,) epochNo <$> epochInfoFirst epochInfo nextEpochNo
-
-      let tooLate = firstSlotNextEpoch *- Duration (2 * sp)
+      (curEpochNo, tooLate, nextEpochNo) <- liftSTS $ getTheSlotOfNoReturn slot
+      tellEvent $ PpupNewEpoch nextEpochNo
 
       if slot < tooLate
         then do
-          (currentEpochNo == targetEpochNo)
-            ?! PPUpdateWrongEpoch currentEpochNo targetEpochNo VoteForThisEpoch
+          (curEpochNo == targetEpochNo)
+            ?! PPUpdateWrongEpoch curEpochNo targetEpochNo VoteForThisEpoch
+          let curProposals = ProposedPPUpdates (eval (pupS ⨃ pup))
+          !coreNodeQuorum <- liftSTS $ asks quorum
           pure $
             pps
-              { sgsCurProposals = ProposedPPUpdates (eval (pupS ⨃ pup))
+              { sgsCurProposals = curProposals
               , sgsFutureProposals = ProposedPPUpdates fpupS
+              , sgsFuturePParams =
+                  PotentialPParamsUpdate $ votedFuturePParams curProposals pp coreNodeQuorum
               }
         else do
-          (succ currentEpochNo == targetEpochNo)
-            ?! PPUpdateWrongEpoch currentEpochNo targetEpochNo VoteForNextEpoch
+          (succ curEpochNo == targetEpochNo)
+            ?! PPUpdateWrongEpoch curEpochNo targetEpochNo VoteForNextEpoch
           pure $
             pps
               { sgsCurProposals = ProposedPPUpdates pupS
@@ -220,3 +216,42 @@ ppupTransitionNonEmpty = do
 
 type PPUPPredFailure era = EraRuleFailure "PPUP" era
 {-# DEPRECATED PPUPPredFailure "In favor of `EraRuleFailure` PPUP era" #-}
+
+-- | If at least @n@ nodes voted to change __the same__ protocol parameters to
+-- __the same__ values, return the given protocol parameters updated to these
+-- values. Here @n@ is the quorum needed.
+votedFuturePParams ::
+  forall era.
+  EraPParams era =>
+  ProposedPPUpdates era ->
+  -- | Protocol parameters to which the change will be applied.
+  PParams era ->
+  -- | Quorum needed to change the protocol parameters.
+  Word64 ->
+  Maybe (PParams era)
+votedFuturePParams (ProposedPPUpdates pppu) pp quorumN = do
+  let votes =
+        Map.foldr
+          (\vote -> Map.insertWith (+) vote 1)
+          (Map.empty :: Map.Map (PParamsUpdate era) Word64)
+          pppu
+      consensus = Map.filter (>= quorumN) votes
+  -- NOTE that `quorumN` is a global constant, and that we require
+  -- it to be strictly greater than half the number of genesis nodes.
+  -- The keys in the `pup` correspond to the genesis nodes,
+  -- and therefore either:
+  --   1) `consensus` is empty, or
+  --   2) `consensus` has exactly one element.
+  [ppu] <- Just $ Map.keys consensus
+  -- NOTE that `applyPPUpdates` corresponds to the union override right
+  -- operation in the formal spec.
+  let ppNew = applyPPUpdates pp ppu
+  -- TODO: Remove this incorrect check from the code and the spec. It is incorrect because
+  -- block header size is not part of the block body size, therefore this relation makes
+  -- no sense. My hypothesis is that at initial design phase there was a block size that
+  -- included the block header size, which later got changed to block body size. See
+  -- relevant spec ticket: https://github.com/IntersectMBO/cardano-ledger/issues/4251
+  guard $
+    toInteger (ppNew ^. ppMaxTxSizeL) + toInteger (ppNew ^. ppMaxBHSizeL)
+      < toInteger (ppNew ^. ppMaxBBSizeL)
+  pure ppNew

@@ -2808,14 +2808,21 @@ pcGovState p x = case whichGovState p of
   (GovStateConwayToConway) -> unReflect pcConwayGovState p x
 
 pcShelleyGovState :: Proof era -> ShelleyGovState era -> PDoc
-pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp) =
+pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp futurepp) =
   ppRecord
     "ShelleyGovState"
-    [ ("proposals", ppString "(Proposals ...)")
-    , ("futureProposals", ppString "(Proposals ...)")
-    , ("pparams", pcPParamsSynopsis p pp)
-    , ("prevParams", pcPParamsSynopsis p prevpp)
-    ]
+    $ [ ("proposals", ppString "(Proposals ...)")
+      , ("futureProposals", ppString "(Proposals ...)")
+      , ("pparams", pcPParamsSynopsis p pp)
+      , ("prevParams", pcPParamsSynopsis p prevpp)
+      , ("futureParams", pcFuturePParams p futurepp)
+      ]
+
+pcFuturePParams :: Proof era -> FuturePParams era -> PDoc
+pcFuturePParams p = \case
+  NoPParamsUpdate -> ppSexp "NoPParamsUpdate" []
+  PotentialPParamsUpdate mpp -> ppSexp "PotentialPParamsUpdate" [ppMaybe (pcPParamsSynopsis p) mpp]
+  DefinitePParamsUpdate pp -> ppSexp "DefinitePParamsUpdate" [pcPParamsSynopsis p pp]
 
 instance Reflect era => PrettyA (ShelleyGovState era) where
   prettyA = pcShelleyGovState reify
@@ -2860,15 +2867,16 @@ instance PrettyA (GovRelation StrictMaybe era) where
   prettyA = pcPrevGovActionIds
 
 pcConwayGovState :: Reflect era => Proof era -> ConwayGovState era -> PDoc
-pcConwayGovState p (ConwayGovState ss cmt con cpp ppp dr) =
+pcConwayGovState p (ConwayGovState ss cmt con cpp ppp fpp dr) =
   ppRecord
     "ConwayGovState"
     [ ("proposals", pcProposals ss)
-    , ("drepPulsingState", pcDRepPulsingState p dr)
     , ("committee", ppStrictMaybe prettyA cmt)
     , ("constitution", prettyA con)
     , ("currentPParams", prettyA cpp)
     , ("prevPParams", prettyA ppp)
+    , ("futurePParams", pcFuturePParams p fpp)
+    , ("drepPulsingState", pcDRepPulsingState p dr)
     ]
 
 instance Reflect era => PrettyA (ConwayGovState era) where

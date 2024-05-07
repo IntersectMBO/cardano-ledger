@@ -70,6 +70,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   StashedAVVMAddresses,
   curPParamsEpochStateL,
   dsGenDelegs,
+  futurePParamsEpochStateL,
   nesEpochStateL,
   prevPParamsEpochStateL,
   smartUTxOState,
@@ -229,6 +230,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
             def
             & curPParamsEpochStateL .~ pp
             & prevPParamsEpochStateL .~ pp
+            & futurePParamsEpochStateL .~ PotentialPParamsUpdate Nothing
         )
         SNothing
         (PoolDistr Map.empty)

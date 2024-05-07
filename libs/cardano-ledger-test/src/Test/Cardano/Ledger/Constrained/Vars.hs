@@ -74,7 +74,7 @@ import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.Governance (futureProposalsL, proposalsL)
+import Cardano.Ledger.Shelley.Governance (FuturePParams (..), futureProposalsL, proposalsL)
 import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState hiding (
@@ -408,6 +408,9 @@ futurePParamProposals p = Var (pV p "futurePParamProposals" (MapR GenHashR (PPar
 currPParams :: Era era => Proof era -> Term era (PParamsF era)
 currPParams p = Var (pV p "currPParams" (PParamsR p) No)
 
+futurePParams :: Era era => Proof era -> Term era (FuturePParams era)
+futurePParams p = Var (pV p "futurePParams" (FuturePParamsR p) No)
+
 prevPParams :: Gov.EraGov era => Proof era -> Term era (PParamsF era)
 prevPParams p =
   Var (V "prevPParams" (PParamsR p) (Yes NewEpochStateR (nesEsL . prevPParamsEpochStateL . ppFL p)))
@@ -424,14 +427,16 @@ ppupStateT p =
     :$ Lensed (pparamProposals p) (proposalsL . proposedMapL p)
     :$ Lensed (futurePParamProposals p) (futureProposalsL . proposedMapL p)
     :$ Lensed (currPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
-    :$ Lensed (prevPParams p) (Gov.curPParamsGovStateL . pparamsFL p)
+    :$ Lensed (prevPParams p) (Gov.prevPParamsGovStateL . pparamsFL p)
+    :$ Lensed (futurePParams p) (Gov.futurePParamsGovStateL)
   where
-    ppupfun x y (PParamsF _ pp) (PParamsF _ prev) =
+    ppupfun x y (PParamsF _ pp) (PParamsF _ prev) z =
       ShelleyGovState
         (ProposedPPUpdates (Map.map unPParamsUpdate x))
         (ProposedPPUpdates (Map.map unPParamsUpdate y))
         pp
         prev
+        z
 
 govL :: Lens' (GovState era) (Gov.GovState era)
 govL = lens f g
@@ -2051,6 +2056,7 @@ conwayGovStateT p =
     :$ Lensed constitution cgsConstitutionL
     :$ Lensed (currPParams reify) (cgsCurPParamsL . pparamsFL reify)
     :$ Lensed (prevPParams reify) (cgsPrevPParamsL . pparamsFL reify)
+    :$ Lensed (futurePParams reify) cgsFuturePParamsL
     :$ Shift pulsingPulsingStateT cgsDRepPulsingStateL
 
 -- | The sum of all the 'gasDeposit' fields of 'currProposals'
@@ -2141,6 +2147,12 @@ constitutionChildren = Var $ V "constitutionChildren" (SetR GovActionIdR) No
 
 pparamsFL :: Proof era -> Lens' (PParams era) (PParamsF era)
 pparamsFL p = lens (PParamsF p) (\_ (PParamsF _ x) -> x)
+
+pparamsMaybeFL :: Proof era -> Lens' (Maybe (PParams era)) (Maybe (PParamsF era))
+pparamsMaybeFL p =
+  lens
+    (fmap (PParamsF p))
+    (\_ -> fmap (\(PParamsF _ x) -> x))
 
 smCommL :: Lens' (StrictMaybe (Committee era)) (Committee era)
 smCommL = lens getter (\_ t -> SJust t)

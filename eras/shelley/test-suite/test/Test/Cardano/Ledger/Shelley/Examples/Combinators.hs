@@ -40,6 +40,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators (
   newEpoch,
   setCurrentProposals,
   setFutureProposals,
+  solidifyProposals,
   setPParams,
   setPrevPParams,
   setFutureGenDeleg,
@@ -52,6 +53,7 @@ import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Nonce (..),
   StrictMaybe (..),
+  quorum,
   (⭒),
  )
 import Cardano.Ledger.Block (
@@ -89,12 +91,13 @@ import Cardano.Ledger.Shelley.LedgerState (
   applyRUpd,
   curPParamsEpochStateL,
   delegations,
+  futurePParamsEpochStateL,
   prevPParamsEpochStateL,
   rewards,
   updateStakeDistribution,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates)
-import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards)
+import Cardano.Ledger.Shelley.Rules (emptyInstantaneousRewards, votedFuturePParams)
 import Cardano.Ledger.UMap (
   RDPair (..),
   UView (PtrUView, RewDepUView, SPoolUView),
@@ -120,10 +123,10 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Word (Word64)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro ((%~), (&), (.~), (^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce)
+import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce, testGlobals)
 
 -- ======================================================
 
@@ -717,7 +720,7 @@ newEpoch b cs = cs'
 -- Set the current protocol parameter proposals.
 setCurrentProposals ::
   forall era.
-  GovState era ~ ShelleyGovState era =>
+  (GovState era ~ ShelleyGovState era, EraPParams era) =>
   ProposedPPUpdates era ->
   ChainState era ->
   ChainState era
@@ -727,9 +730,15 @@ setCurrentProposals ps cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     utxoSt = lsUTxOState ls
-    ppupSt = utxosGovState utxoSt
-    ppupSt' = ppupSt {sgsCurProposals = ps}
-    utxoSt' = utxoSt {utxosGovState = ppupSt'}
+    govState = utxosGovState utxoSt
+    pp = sgsCurPParams govState
+    govState' =
+      govState
+        { sgsCurProposals = ps
+        , sgsFuturePParams =
+            PotentialPParamsUpdate $ votedFuturePParams ps pp (quorum testGlobals)
+        }
+    utxoSt' = utxoSt {utxosGovState = govState'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
@@ -749,12 +758,22 @@ setFutureProposals ps cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     utxoSt = lsUTxOState ls
-    ppupSt = utxosGovState utxoSt
-    ppupSt' = ppupSt {sgsFutureProposals = ps}
-    utxoSt' = utxoSt {utxosGovState = ppupSt'}
+    govState = utxosGovState utxoSt
+    govState' = govState {sgsFutureProposals = ps}
+    utxoSt' = utxoSt {utxosGovState = govState'}
     ls' = ls {lsUTxOState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}
+
+solidifyProposals ::
+  forall era.
+  EraGov era =>
+  ChainState era ->
+  ChainState era
+solidifyProposals cs = cs {chainNes = nes {nesEs = es}}
+  where
+    nes = chainNes cs
+    es = nesEs nes & futurePParamsEpochStateL %~ solidifyFuturePParams
 
 -- | = Set the Protocol Proposals
 --

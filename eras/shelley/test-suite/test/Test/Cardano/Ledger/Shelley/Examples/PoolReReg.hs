@@ -262,7 +262,7 @@ blockEx2B = blockEx2 90
 -- In the second block Alice re-registers with new pool parameters
 -- late in the epoch.
 poolReReg2B :: ExMock (EraCrypto (ShelleyEra c)) => CHAINExample (BHeader c) (ShelleyEra c)
-poolReReg2B = CHAINExample expectedStEx1 blockEx2B (Right expectedStEx2B)
+poolReReg2B = CHAINExample expectedStEx1 blockEx2B (Right (C.solidifyProposals expectedStEx2B))
 
 --
 -- Block 3, Slot 110, Epoch 1
