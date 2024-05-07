@@ -16,7 +16,9 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
+import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.UMap as UM
@@ -25,6 +27,7 @@ import Data.Default.Class (def)
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -624,6 +627,107 @@ votingSpec =
           -- The same vote should now successfully ratify the proposal
           passEpoch
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+        describe "Proposal deposits contribute to active voting stake" $ do
+          it "Directly" $ do
+            -- Only modify the applicable thresholds
+            modifyPParams $ \pp ->
+              pp
+                & ppDRepVotingThresholdsL
+                  .~ def {dvtCommitteeNormal = 51 %! 100}
+                & ppGovActionDepositL .~ Coin 600_000
+            -- Setup DRep delegation without stake #1
+            (drepKH1, stakingKH1) <- setupDRepWithoutStake
+            -- Setup DRep delegation #2
+            (_drepKH2, _stakingKH2, _paymentKP2) <- setupSingleDRep 1_000_000
+            -- Make a note of the reward account for the delegator to DRep #1
+            dRepRewardAccount <- getRewardAccountFor $ KeyHashObj stakingKH1
+            -- Submit the first committee proposal, the one we will test active voting stake against.
+            -- The proposal deposit comes from the root UTxO
+            cc <- KeyHashObj <$> freshKeyHash
+            let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+            addCCGaid <-
+              submitProposal $
+                ProposalProcedure
+                  { pProcDeposit = Coin 600_000
+                  , pProcReturnAddr = dRepRewardAccount
+                  , pProcGovAction = addCCAction
+                  , pProcAnchor = def
+                  }
+            -- Submit the vote from DRep #1
+            submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
+            passNEpochs 2
+            -- The vote should not result in a ratification
+            isDRepAccepted addCCGaid `shouldReturn` False
+            getLastEnactedCommittee `shouldReturn` SNothing
+            -- Submit another proposal to bump up the active voting stake
+            anotherCC <- KeyHashObj <$> freshKeyHash
+            let anotherAddCCAction = UpdateCommittee SNothing mempty (Map.singleton anotherCC 10) (75 %! 100)
+            submitProposal_ $
+              ProposalProcedure
+                { pProcDeposit = Coin 600_000
+                , pProcReturnAddr = dRepRewardAccount
+                , pProcGovAction = anotherAddCCAction
+                , pProcAnchor = def
+                }
+            passNEpochs 2
+            -- The same vote should now successfully ratify the proposal
+            getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+          it "After switching delegations" $ do
+            -- Only modify the applicable thresholds
+            modifyPParams $ \pp ->
+              pp
+                & ppDRepVotingThresholdsL
+                  .~ def {dvtCommitteeNormal = 51 %! 100}
+                & ppGovActionDepositL .~ Coin 1_000_000
+            -- Setup DRep delegation without stake #1
+            (drepKH1, stakingKH1) <- setupDRepWithoutStake
+            -- Setup DRep delegation #2
+            (_drepKH2, _stakingKH2, _paymentKP2) <- setupSingleDRep 1_000_000
+            -- Setup DRep delegation #3
+            (_drepKH3, stakingKH3) <- setupDRepWithoutStake
+            -- Make a note of the reward accounts for the delegators to DReps #1 and #3
+            dRepRewardAccount1 <- getRewardAccountFor $ KeyHashObj stakingKH1
+            dRepRewardAccount3 <- getRewardAccountFor $ KeyHashObj stakingKH3
+            -- Submit committee proposals
+            -- The proposal deposits comes from the root UTxO
+            -- After this both stakingKH1 and stakingKH3 are expected to have 1_000_000 ADA of stake, each
+            cc <- KeyHashObj <$> freshKeyHash
+            let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+            addCCGaid <-
+              submitProposal $
+                ProposalProcedure
+                  { pProcDeposit = Coin 1_000_000
+                  , pProcReturnAddr = dRepRewardAccount1
+                  , pProcGovAction = addCCAction
+                  , pProcAnchor = def
+                  }
+            anotherCC <- KeyHashObj <$> freshKeyHash
+            let anotherAddCCAction = UpdateCommittee SNothing mempty (Map.singleton anotherCC 10) (75 %! 100)
+            submitProposal_ $
+              ProposalProcedure
+                { pProcDeposit = Coin 1_000_000
+                , pProcReturnAddr = dRepRewardAccount3
+                , pProcGovAction = anotherAddCCAction
+                , pProcAnchor = def
+                }
+            -- Submit the vote from DRep #1
+            submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
+            passNEpochs 2
+            -- The vote should not result in a ratification
+            isDRepAccepted addCCGaid `shouldReturn` False
+            getLastEnactedCommittee `shouldReturn` SNothing
+            -- Switch the delegation from DRep #3 to DRep #1
+            submitTxAnn_ "Switch the delegation from DRep #3 to DRep #1" $
+              mkBasicTx mkBasicTxBody
+                & bodyTxL . certsTxBodyL
+                  .~ SSeq.fromList
+                    [ mkDelegTxCert
+                        (KeyHashObj stakingKH3)
+                        (DelegVote (DRepCredential $ KeyHashObj drepKH1))
+                    ]
+            passNEpochs 2
+            -- The same vote should now successfully ratify the proposal
+            getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
       describe "StakePool" $ do
         it "UTxOs contribute to active voting stake" $ do
           -- Only modify the applicable thresholds

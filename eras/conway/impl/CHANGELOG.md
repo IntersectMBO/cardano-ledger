@@ -3,6 +3,11 @@
 ## 1.14.0 0
 
 * Remove `gePrevGovActionIds` from `GovEnv`
+* Include proposal deposits in the DRep active voting stake. #4309
+  * Add `proposalsDeposits` to `Governance.Proposals`.
+    * This extracts a `Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)` from reward-account-staking-credential to deposit amounts
+  * Add `dpProposalDeposits` field to `DRepPulser`.
+  * Change `computeDRepDistr` to also take as argument the `dpProposalDeposits`.
 * Add lenses:
   * `dvtHardForkInitiationL`
   * `dvtMotionNoConfidenceL`

@@ -20,6 +20,7 @@ import Cardano.Ledger.Conway.Governance (
   finishDRepPulser,
   newEpochStateDRepPulsingStateL,
   proposalsActionsMap,
+  proposalsDeposits,
   proposalsGovStateL,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
@@ -215,10 +216,15 @@ pulserWorks mcsfirst mcslast =
     )
     (bruteForceDRepDistr (mcsTickNes mcsfirst) === extractPulsingDRepDistr (mcsNes mcslast))
 
-bruteForceDRepDistr :: NewEpochState era -> Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
-bruteForceDRepDistr nes = computeDRepDistr incstk dreps Map.empty $ UMap.umElems umap
+bruteForceDRepDistr ::
+  forall era.
+  ConwayEraGov era =>
+  NewEpochState era ->
+  Map.Map (DRep (EraCrypto era)) (CompactForm Coin)
+bruteForceDRepDistr nes = computeDRepDistr incstk dreps propDeps Map.empty $ UMap.umElems umap
   where
     ls = esLState (nesEs nes)
+    propDeps = proposalsDeposits $ ls ^. lsUTxOStateL . utxosGovStateL . proposalsGovStateL
     cs = lsCertState ls
     IStake incstk _ = utxosStakeDistr (lsUTxOState ls)
     umap = dsUnified (certDState cs)

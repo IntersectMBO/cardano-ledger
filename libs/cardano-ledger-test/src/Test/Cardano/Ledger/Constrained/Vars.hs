@@ -103,6 +103,7 @@ import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (maybeToStrictMaybe, strictMaybeToMaybe)
+import qualified Data.OMap.Strict as OMap
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as SS
 import Data.Set (Set)
@@ -1862,6 +1863,7 @@ initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactsta
         (CommitteeState commstate)
         enactstate
         (SS.fromList govstates)
+        (proposalsDeposits $ def & pPropsL .~ OMap.fromFoldable govstates)
         -- treas
         testGlobals
 

@@ -7,7 +7,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -71,15 +70,16 @@ import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (..))
-import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty ((:|)))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), pulse)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SS
+import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..), allNoThunks)
@@ -176,22 +176,25 @@ computeDRepDistr ::
   forall c.
   Map (Credential 'Staking c) (CompactForm Coin) ->
   Map (Credential 'DRepRole c) (DRepState c) ->
+  Map (Credential 'Staking c) (CompactForm Coin) ->
   Map (DRep c) (CompactForm Coin) ->
   Map (Credential 'Staking c) (UMElem c) ->
   Map (DRep c) (CompactForm Coin)
-computeDRepDistr stakeDistr regDReps dRepDistr uMapChunk =
+computeDRepDistr stakeDistr regDReps proposalDeposits dRepDistr uMapChunk =
   Map.foldlWithKey' go dRepDistr uMapChunk
   where
     go accum stakeCred umElem =
       let stake = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred stakeDistr
+          proposalDeposit = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred proposalDeposits
+          stakeAndDeposits = addCompact stake proposalDeposit
        in case umElemDRepDelegatedReward umElem of
             Just (r, drep@DRepAlwaysAbstain) ->
-              Map.insertWith addCompact drep (addCompact stake r) accum
+              Map.insertWith addCompact drep (addCompact stakeAndDeposits r) accum
             Just (r, drep@DRepAlwaysNoConfidence) ->
-              Map.insertWith addCompact drep (addCompact stake r) accum
+              Map.insertWith addCompact drep (addCompact stakeAndDeposits r) accum
             Just (r, drep@(DRepCredential drepCred))
               | Map.member drepCred regDReps ->
-                  Map.insertWith addCompact drep (addCompact stake r) accum
+                  Map.insertWith addCompact drep (addCompact stakeAndDeposits r) accum
               | otherwise -> accum
             Nothing -> accum
 
@@ -228,6 +231,8 @@ data DRepPulser era (m :: Type -> Type) ans where
     -- ^ Snapshot of the EnactState, Used to build the Env of the RATIFY rule
     , dpProposals :: !(StrictSeq (GovActionState era))
     -- ^ Snapshot of the proposals. This is the Signal for the RATIFY rule
+    , dpProposalDeposits :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+    -- ^ Snapshot of the proposal-deposits per reward-account-staking-credential
     , dpGlobals :: !Globals
     } ->
     DRepPulser era m ans
@@ -244,7 +249,7 @@ instance Pulsable (DRepPulser era) where
     | done pulser = pure pulser {dpIndex = 0}
     | otherwise =
         let !chunk = Map.take dpPulseSize $ Map.drop dpIndex $ UMap.umElems dpUMap
-            dRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpDRepDistr chunk
+            dRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpDRepDistr chunk
          in pure (pulser {dpIndex = dpIndex + dpPulseSize, dpDRepDistr = dRepDistr})
 
   completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
@@ -253,7 +258,7 @@ deriving instance (EraPParams era, Show ans) => Show (DRepPulser era m ans)
 
 instance EraPParams era => NoThunks (DRepPulser era Identity (RatifyState era)) where
   showTypeOf _ = "DRepPulser"
-  wNoThunks ctxt drp@(DRepPulser _ _ _ _ _ _ _ _ _ _ _ _) =
+  wNoThunks ctxt drp@(DRepPulser _ _ _ _ _ _ _ _ _ _ _ _ _) =
     allNoThunks
       [ noThunks ctxt (dpPulseSize drp)
       , noThunks ctxt (dpUMap drp)
@@ -266,11 +271,12 @@ instance EraPParams era => NoThunks (DRepPulser era Identity (RatifyState era)) 
       , noThunks ctxt (dpCommitteeState drp)
       , noThunks ctxt (dpEnactState drp)
       , noThunks ctxt (dpProposals drp)
+      , noThunks ctxt (dpProposalDeposits drp)
       , noThunks ctxt (dpGlobals drp)
       ]
 
 instance EraPParams era => NFData (DRepPulser era Identity (RatifyState era)) where
-  rnf (DRepPulser n um bal stake pool drep dstate ep cs es as gs) =
+  rnf (DRepPulser n um bal stake pool drep dstate ep cs es as pds gs) =
     n `deepseq`
       um `deepseq`
         bal `deepseq`
@@ -282,7 +288,8 @@ instance EraPParams era => NFData (DRepPulser era Identity (RatifyState era)) wh
                     cs `deepseq`
                       es `deepseq`
                         as `deepseq`
-                          rnf gs
+                          pds `deepseq`
+                            rnf gs
 
 class
   ( STS (ConwayRATIFY era)
@@ -290,6 +297,7 @@ class
   , BaseM (ConwayRATIFY era) ~ Reader Globals
   , Environment (ConwayRATIFY era) ~ RatifyEnv era
   , State (ConwayRATIFY era) ~ RatifyState era
+  , PredicateFailure (ConwayRATIFY era) ~ Void
   ) =>
   RunConwayRatify era
   where
@@ -298,20 +306,21 @@ class
   runConwayRatify globals ratifyEnv ratifyState (RatifySignal ratifySig) =
     let ratifyResult =
           runReader
-            ( applySTS @(ConwayRATIFY era) (TRC (ratifyEnv, ratifyState, RatifySignal $ reorderActions ratifySig))
+            ( applySTS @(ConwayRATIFY era) $
+                TRC (ratifyEnv, ratifyState, RatifySignal $ reorderActions ratifySig)
             )
             globals
      in case ratifyResult of
-          Left ps ->
-            error (unlines ("Impossible: RATIFY rule never fails, but it did:" : map show (toList ps)))
+          Left (x :| _) -> absurd x
           Right ratifyState' -> ratifyState'
 
-finishDRepPulser :: DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
+finishDRepPulser :: forall era. DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
 finishDRepPulser (DRComplete snap ratifyState) = (snap, ratifyState)
 finishDRepPulser (DRPulsing (DRepPulser {..})) =
   (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
   where
-    !finalDRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpDRepDistr $ Map.drop dpIndex $ umElems dpUMap
+    !leftOver = Map.drop dpIndex $ umElems dpUMap
+    !finalDRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpDRepDistr leftOver
     !ratifyEnv =
       RatifyEnv
         { reStakeDistr = dpStakeDistr
