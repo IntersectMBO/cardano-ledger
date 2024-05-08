@@ -48,14 +48,13 @@ spec ::
   , Typeable (Event (EraRule "ENACT" era))
   ) =>
   SpecWith (ImpTestState era)
-spec =
-  describe "ENACT" $ do
-    relevantDuringBootstrapSpec
-    treasuryWithdrawalsSpec
-    noConfidenceSpec
-    constitutionSpec
-    actionPriorityCommitteePurposeSpec
-    hardForkInitiationSpec
+spec = do
+  relevantDuringBootstrapSpec
+  treasuryWithdrawalsSpec
+  noConfidenceSpec
+  constitutionSpec
+  actionPriorityCommitteePurposeSpec
+  hardForkInitiationSpec
 
 relevantDuringBootstrapSpec ::
   ConwayEraImp era =>
@@ -225,10 +224,8 @@ hardForkInitiationNoDRepsSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
 hardForkInitiationNoDRepsSpec =
   it "HardForkInitiation without DRep voting" $ do
     (committeeMember :| _) <- registerInitialCommittee
-    modifyPParams $ \pp ->
-      pp
-        & ppDRepVotingThresholdsL . dvtHardForkInitiationL .~ def
-        & ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 2 %! 3
+    modifyPParams $ ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 2 %! 3
+    whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtHardForkInitiationL .~ def)
     _ <- setupPoolWithStake $ Coin 22_000_000
     (stakePoolId1, _, _) <- setupPoolWithStake $ Coin 22_000_000
     (stakePoolId2, _, _) <- setupPoolWithStake $ Coin 22_000_000
@@ -402,10 +399,8 @@ actionPrioritySpec =
     let val3 = Coin 1_000_003
 
     it "proposals of same priority are enacted in order of submission" $ do
-      modifyPParams $ \pp ->
-        pp
-          & ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def
-          & ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
+      modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
+      whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
 
       (committeeC :| _) <- registerInitialCommittee
       (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
@@ -435,10 +430,9 @@ actionPrioritySpec =
         `shouldReturn` val3
 
     it "only the first action of a transaction gets enacted" $ do
-      modifyPParams $ \pp ->
-        pp
-          & ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def
-          & ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
+      modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
+      whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
+
       (committeeC :| _) <- registerInitialCommittee
       (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
       gaids <-

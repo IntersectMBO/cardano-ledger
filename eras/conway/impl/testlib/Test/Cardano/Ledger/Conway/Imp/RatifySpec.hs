@@ -39,15 +39,14 @@ spec ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpTestState era)
-spec =
-  describe "RATIFY" $ do
-    relevantDuringBootstrapSpec
-    votingSpec
-    delayingActionsSpec
-    spoVotesCommitteeUpdates
-    committeeMinSizeAffectsInFlightProposalsSpec
-    paramChangeAffectsProposalsSpec
-    committeeExpiryResignationDiscountSpec
+spec = do
+  relevantDuringBootstrapSpec
+  votingSpec
+  delayingActionsSpec
+  spoVotesCommitteeUpdates
+  committeeMinSizeAffectsInFlightProposalsSpec
+  paramChangeAffectsProposalsSpec
+  committeeExpiryResignationDiscountSpec
 
 relevantDuringBootstrapSpec ::
   forall era.
@@ -132,18 +131,10 @@ paramChangeAffectsProposalsSpec =
         smallerThreshold :: UnitInterval
         smallerThreshold = 1 %! 2
     describe "DRep" $ do
-      let setThreshold :: UnitInterval -> ImpTestM era ()
-          setThreshold threshold = do
-            drepVotingThresholds <- getsPParams ppDRepVotingThresholdsL
-            modifyPParams $
-              ppDRepVotingThresholdsL
-                .~ (drepVotingThresholds & dvtCommitteeNormalL .~ threshold)
-          enactThreshold ::
-            UnitInterval ->
-            Credential 'DRepRole (EraCrypto era) ->
-            Credential 'HotCommitteeRole (EraCrypto era) ->
-            ImpTestM era ()
+      let setThreshold threshold =
+            modifyPParams $ ppDRepVotingThresholdsL . dvtCommitteeNormalL .~ threshold
           enactThreshold threshold drepC hotCommitteeC = do
+            modifyPParams $ ppDRepVotingThresholdsL . dvtPPGovGroupL .~ 1 %! 10
             drepVotingThresholds <- getsPParams ppDRepVotingThresholdsL
             let paramChange =
                   ParameterChange
@@ -196,16 +187,8 @@ paramChangeAffectsProposalsSpec =
         getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiChild)
     describe "SPO" $ do
       let setThreshold :: UnitInterval -> ImpTestM era ()
-          setThreshold threshold = do
-            poolVotingThresholds <- getsPParams ppPoolVotingThresholdsL
-            modifyPParams $
-              ppPoolVotingThresholdsL
-                .~ (poolVotingThresholds & pvtCommitteeNormalL .~ threshold)
-          enactThreshold ::
-            UnitInterval ->
-            Credential 'DRepRole (EraCrypto era) ->
-            Credential 'HotCommitteeRole (EraCrypto era) ->
-            ImpTestM era ()
+          setThreshold threshold =
+            modifyPParams $ ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ threshold
           enactThreshold threshold drepC hotCommitteeC = do
             poolVotingThresholds <- getsPParams ppPoolVotingThresholdsL
             let paramChange =
@@ -378,10 +361,8 @@ spoVotesCommitteeUpdates =
         _ <- setupPoolWithStake $ Coin 1_000
         _ <- setupPoolWithStake $ Coin 1_000
         _ <- setupPoolWithStake $ Coin 1_000
-        modifyPParams $ \pp ->
-          pp
-            & ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 1 %! 2
-            & ppDRepVotingThresholdsL .~ def
+        modifyPParams $ ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 1 %! 2
+        whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
         gai <- submitGovAction $ NoConfidence SNothing
         -- 1 % 4 stake yes; 3 % 4 stake abstain; yes / stake - abstain > 1 % 2
         submitYesVote_ (StakePoolVoter spoK1) gai
@@ -392,10 +373,8 @@ spoVotesCommitteeUpdates =
         _ <- setupPoolWithStake $ Coin 1_000
         _ <- setupPoolWithStake $ Coin 1_000
         _ <- setupPoolWithStake $ Coin 1_000
-        modifyPParams $ \pp ->
-          pp
-            & ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ 1 %! 2
-            & ppDRepVotingThresholdsL .~ def
+        modifyPParams $ ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ 1 %! 2
+        whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
 
         committeeC <- KeyHashObj <$> freshKeyHash
         gai <-
@@ -414,6 +393,7 @@ spoVotesForHardForkInitiation ::
 spoVotesForHardForkInitiation =
   describe "Counting of SPO votes" $ do
     it "HardForkInitiation" $ do
+      whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtHardForkInitiationL .~ def)
       (hotCC :| _) <- registerInitialCommittee
       (spoK1, _, _) <- setupPoolWithStake $ Coin 1_000
       (spoK2, _, _) <- setupPoolWithStake $ Coin 1_000
@@ -517,14 +497,6 @@ votingSpec =
     describe "Active voting stake" $ do
       describe "DRep" $ do
         it "UTxOs contribute to active voting stake" $ do
-          -- Only modify the applicable thresholds
-          modifyPParams $ \pp ->
-            pp
-              & ppDRepVotingThresholdsL
-                .~ def
-                  { dvtCommitteeNormal = 51 %! 100
-                  , dvtCommitteeNoConfidence = 51 %! 100
-                  }
           -- Setup DRep delegation #1
           (drep1, KeyHashObj stakingKH1, paymentKP1) <- setupSingleDRep 1_000_000
           -- Setup DRep delegation #2
@@ -547,14 +519,6 @@ votingSpec =
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
         it "Rewards contribute to active voting stake" $ do
-          -- Only modify the applicable thresholds
-          modifyPParams $ \pp ->
-            pp
-              & ppDRepVotingThresholdsL
-                .~ def
-                  { dvtCommitteeNormal = 51 %! 100
-                  , dvtCommitteeNoConfidence = 51 %! 100
-                  }
           -- Setup DRep delegation #1
           (drep1, staking1, _) <- setupSingleDRep 1_000_000
           -- Setup DRep delegation #2
@@ -584,11 +548,6 @@ votingSpec =
           -- Only modify the applicable thresholds
           modifyPParams $ \pp ->
             pp
-              & ppDRepVotingThresholdsL
-                .~ def
-                  { dvtCommitteeNormal = 51 %! 100
-                  , dvtCommitteeNoConfidence = 51 %! 100
-                  }
               & ppGovActionDepositL .~ Coin 1_000_000
               & ppPoolDepositL .~ Coin 200_000
               & ppEMaxL .~ EpochInterval 5
@@ -630,11 +589,7 @@ votingSpec =
         describe "Proposal deposits contribute to active voting stake" $ do
           it "Directly" $ do
             -- Only modify the applicable thresholds
-            modifyPParams $ \pp ->
-              pp
-                & ppDRepVotingThresholdsL
-                  .~ def {dvtCommitteeNormal = 51 %! 100}
-                & ppGovActionDepositL .~ Coin 600_000
+            modifyPParams $ ppGovActionDepositL .~ Coin 600_000
             -- Setup DRep delegation without stake #1
             (drepKH1, stakingKH1) <- setupDRepWithoutStake
             -- Setup DRep delegation #2
@@ -674,11 +629,7 @@ votingSpec =
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
           it "After switching delegations" $ do
             -- Only modify the applicable thresholds
-            modifyPParams $ \pp ->
-              pp
-                & ppDRepVotingThresholdsL
-                  .~ def {dvtCommitteeNormal = 51 %! 100}
-                & ppGovActionDepositL .~ Coin 1_000_000
+            modifyPParams $ ppGovActionDepositL .~ Coin 1_000_000
             -- Setup DRep delegation without stake #1
             (drepKH1, stakingKH1) <- setupDRepWithoutStake
             -- Setup DRep delegation #2
@@ -731,14 +682,13 @@ votingSpec =
       describe "StakePool" $ do
         it "UTxOs contribute to active voting stake" $ do
           -- Only modify the applicable thresholds
-          modifyPParams $ \pp ->
-            pp
-              & ppPoolVotingThresholdsL
-                .~ def
-                  { pvtCommitteeNormal = 51 %! 100
-                  , pvtCommitteeNoConfidence = 51 %! 100
-                  }
-              & ppDRepVotingThresholdsL .~ def
+          modifyPParams $
+            ppPoolVotingThresholdsL
+              .~ def
+                { pvtCommitteeNormal = 51 %! 100
+                , pvtCommitteeNoConfidence = 51 %! 100
+                }
+          whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
           -- Setup Pool delegation #1
           (poolKH1, delegatorCPayment1, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
           -- Setup Pool delegation #2
@@ -767,14 +717,14 @@ votingSpec =
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
         it "Rewards contribute to active voting stake" $ do
           -- Only modify the applicable thresholds
-          modifyPParams $ \pp ->
-            pp
-              & ppPoolVotingThresholdsL
-                .~ def
-                  { pvtCommitteeNormal = 51 %! 100
-                  , pvtCommitteeNoConfidence = 51 %! 100
-                  }
-              & ppDRepVotingThresholdsL .~ def
+          modifyPParams $
+            ppPoolVotingThresholdsL
+              .~ def
+                { pvtCommitteeNormal = 51 %! 100
+                , pvtCommitteeNoConfidence = 51 %! 100
+                }
+          whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
+
           -- Setup Pool delegation #1
           (poolKH1, _, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
           -- Setup Pool delegation #2
@@ -815,7 +765,8 @@ votingSpec =
               & ppPoolDepositL .~ Coin 200_000
               & ppEMaxL .~ EpochInterval 5
               & ppGovActionLifetimeL .~ EpochInterval 5
-              & ppDRepVotingThresholdsL .~ def
+          whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
+
           -- Setup Pool delegation #1
           (poolKH1, delegatorCStaking1) <- setupPoolWithoutStake
           -- Add rewards to delegation #1

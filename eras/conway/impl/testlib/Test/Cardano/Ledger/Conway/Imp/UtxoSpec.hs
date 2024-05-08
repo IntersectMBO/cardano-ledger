@@ -44,7 +44,7 @@ spec ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpTestState era)
-spec = describe "UTxO" $ do
+spec =
   describe "Reference scripts" $ do
     it "required reference script counts towards the minFee calculation" $ do
       spendingScript <- nativeScript

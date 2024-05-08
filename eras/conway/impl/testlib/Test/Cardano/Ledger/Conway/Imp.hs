@@ -63,19 +63,19 @@ spec = do
   BabbageImp.spec @era
   describe "ConwayImpSpec - post bootstrap (protocol version 10)" $
     withImpStateWithProtVer @era (natVersion @10) $ do
-      Enact.spec @era
-      Epoch.spec @era
-      Gov.spec @era
-      GovCert.spec @era
-      Utxo.spec @era
-      Utxos.spec @era
-      Ratify.spec @era
+      describe "ENACT" $ Enact.spec @era
+      describe "EPOCH" $ Epoch.spec @era
+      describe "GOV" $ Gov.spec @era
+      describe "GOVCERT" $ GovCert.spec @era
+      describe "UTXO" $ Utxo.spec @era
+      describe "UTXOS" $ Utxos.spec @era
+      describe "RATIFY" $ Ratify.spec @era
   describe "ConwayImpSpec - bootstrap phase (protocol version 9)" $
     withImpState @era $ do
-      Enact.relevantDuringBootstrapSpec @era
-      Epoch.relevantDuringBootstrapSpec @era
-      Gov.relevantDuringBootstrapSpec @era
-      GovCert.relevantDuringBootstrapSpec @era
-      Utxo.spec @era
-      Utxos.relevantDuringBootstrapSpec @era
-      Ratify.relevantDuringBootstrapSpec @era
+      describe "ENACT" $ Enact.relevantDuringBootstrapSpec @era
+      describe "EPOCH" $ Epoch.relevantDuringBootstrapSpec @era
+      describe "GOV" $ Gov.relevantDuringBootstrapSpec @era
+      describe "GOVCERT" $ GovCert.relevantDuringBootstrapSpec @era
+      describe "UTXO" $ Utxo.spec @era
+      describe "UTXOS" $ Utxos.relevantDuringBootstrapSpec @era
+      describe "RATIFY" $ Ratify.relevantDuringBootstrapSpec @era

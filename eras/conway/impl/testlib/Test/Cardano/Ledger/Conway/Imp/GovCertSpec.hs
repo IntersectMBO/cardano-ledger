@@ -65,9 +65,8 @@ spec ::
   SpecWith (ImpTestState era)
 spec = do
   relevantDuringBootstrapSpec
-  describe "GOVCERT"
-    $ it
-      "A CC that has resigned will need to be first voted out and then voted in to be considered active"
+  it
+    "A CC that has resigned will need to be first voted out and then voted in to be considered active"
     $ do
       (drepCred, _, _) <- setupSingleDRep 1_000_000
       passNEpochs 2

@@ -52,16 +52,15 @@ spec ::
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
-spec =
-  describe "GOV" $ do
-    relevantDuringBootstrapSpec
-    constitutionSpec
-    proposalsWithVotingSpec
-    votingSpec
-    policySpec
-    networkIdWithdrawalsSpec
-    predicateFailuresSpec
-    unknownCostModelsSpec
+spec = do
+  relevantDuringBootstrapSpec
+  constitutionSpec
+  proposalsWithVotingSpec
+  votingSpec
+  policySpec
+  networkIdWithdrawalsSpec
+  predicateFailuresSpec
+  unknownCostModelsSpec
 
 relevantDuringBootstrapSpec ::
   forall era.
@@ -848,10 +847,6 @@ votingSpec =
         modifyPParams $ \pp ->
           pp
             & ppGovActionLifetimeL .~ EpochInterval 3
-            & ppDRepVotingThresholdsL
-              .~ def
-                { dvtUpdateToConstitution = 1 %! 2
-                }
             & ppCommitteeMinSizeL .~ 2
         (dRepCred, _, _) <- setupSingleDRep 1_000_000
         ccColdCred0 <- KeyHashObj <$> freshKeyHash
