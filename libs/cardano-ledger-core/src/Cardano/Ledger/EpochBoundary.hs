@@ -22,6 +22,7 @@
 module Cardano.Ledger.EpochBoundary (
   Stake (..),
   sumAllStake,
+  sumAllStakeCompact,
   sumStakePerPool,
   SnapShot (..),
   SnapShots (..),
@@ -102,9 +103,13 @@ instance Crypto c => DecShareCBOR (Stake c) where
   getShare = getShare . unStake
   decShareCBOR = fmap Stake . decShareCBOR
 
-sumAllStake :: Stake c -> CompactForm Coin
-sumAllStake = VMap.foldl (<>) mempty . unStake
+sumAllStake :: Stake c -> Coin
+sumAllStake = fromCompact . sumAllStakeCompact
 {-# INLINE sumAllStake #-}
+
+sumAllStakeCompact :: Stake c -> CompactForm Coin
+sumAllStakeCompact = VMap.foldl (<>) mempty . unStake
+{-# INLINE sumAllStakeCompact #-}
 
 -- | Get stake of one pool
 poolStake ::
@@ -297,24 +302,23 @@ calculatePoolDistr = calculatePoolDistr' (const True)
 
 calculatePoolDistr' :: forall c. (KeyHash 'StakePool c -> Bool) -> SnapShot c -> PoolDistr c
 calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
-  let total = sumAllStake stake
+  let total = sumAllStakeCompact stake
       -- total could be zero (in particular when shrinking)
-      nonZeroTotal :: Integer
-      nonZeroTotal = if total == mempty then 1 else unCoin $ fromCompact total
-      poolStakeMap :: Map.Map (KeyHash 'StakePool c) Word64
+      nonZeroTotalCompact = if total == mempty then CompactCoin 1 else total
+      nonZeroTotalInteger = unCoin $ fromCompact nonZeroTotalCompact
       poolStakeMap = calculatePoolStake includeHash delegs stake
    in PoolDistr
         ( Map.intersectionWith
             ( \word64 poolparam ->
                 IndividualPoolStake
-                  (toInteger word64 % nonZeroTotal)
+                  (toInteger word64 % nonZeroTotalInteger)
                   (CompactCoin word64)
                   (ppVrf poolparam)
             )
             poolStakeMap
             (VMap.toMap poolParams)
         )
-        (if total == mempty then CompactCoin 1 else total)
+        nonZeroTotalCompact
 
 -- ======================================================
 -- Lenses

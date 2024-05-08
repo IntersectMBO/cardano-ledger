@@ -45,7 +45,7 @@ calcPoolDistOldEqualsNew =
 -- | The original version of calculatePoolDistr
 oldCalculatePoolDistr :: forall c. (KeyHash 'StakePool c -> Bool) -> SnapShot c -> PoolDistr c
 oldCalculatePoolDistr includeHash (SnapShot stake delegs poolParams) =
-  let Coin totalc = fromCompact $ sumAllStake stake
+  let Coin totalc = sumAllStake stake
       -- totalc could be zero (in particular when shrinking)
       nonZeroTotal = if totalc == 0 then 1 else totalc
       sd =

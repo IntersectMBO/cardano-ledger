@@ -3,11 +3,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -193,6 +191,9 @@ getPoolParameters = Map.restrictKeys . f
 -- saturation for rewards purposes. For that, it needs the fraction of total
 -- stake.
 --
+-- The fields `individualTotalPoolStake` and `pdTotalActiveStake` continue to
+-- remain based on active stake and not total stake.
+--
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
   forall era.
@@ -201,13 +202,12 @@ poolsByTotalStakeFraction ::
   NewEpochState era ->
   PoolDistr (EraCrypto era)
 poolsByTotalStakeFraction globals ss =
-  PoolDistr poolsByTotalStake activeStake -- QESTION: Should the denominator be `totalStake` here instead?
+  PoolDistr poolsByTotalStake totalActiveStake
   where
-    snap@(EB.SnapShot stake _ _) = currentSnapshot ss
+    snap = currentSnapshot ss
     Coin totalStake = getTotalStake globals ss
-    activeStake = EB.sumAllStake stake
-    stakeRatio = unCoin (fromCompact activeStake) % totalStake
-    PoolDistr poolsByActiveStake _totalActiveStake = calculatePoolDistr snap
+    stakeRatio = unCoin (fromCompact totalActiveStake) % totalStake
+    PoolDistr poolsByActiveStake totalActiveStake = calculatePoolDistr snap
     poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
     toTotalStakeFrac ::
       IndividualPoolStake (EraCrypto era) ->
@@ -255,7 +255,7 @@ getNonMyopicMemberRewards globals ss =
           ,
             ( percentile' (histLookup k)
             , p
-            , toShare . fromCompact . EB.sumAllStake $ EB.poolStake k delegs stake
+            , toShare . EB.sumAllStake $ EB.poolStake k delegs stake
             )
           )
         | (k, p) <- VMap.toAscList poolParams
@@ -392,7 +392,7 @@ getRewardInfoPools globals ss =
             unPerformanceEstimate $ percentile' $ histLookup key
         }
       where
-        pstake = fromCompact $ EB.sumAllStake $ EB.poolStake key delegs stakes
+        pstake = EB.sumAllStake $ EB.poolStake key delegs stakes
         ostake = sumPoolOwnersStake poolp stakes
 
 -- | Calculate stake pool rewards from the snapshot labeled `go`.

@@ -71,7 +71,7 @@ import Cardano.Ledger.Conway.Rules.Enact (EnactSignal (..), EnactState (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStakeCoin)
+import Cardano.Ledger.PoolDistr (PoolDistr (..), individualTotalPoolStake)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.Val (Val (..), (<+>))
 import Control.State.Transition.Extended (
@@ -211,7 +211,7 @@ spoAcceptedRatio
       (CompactCoin yesVotes, CompactCoin abstainVotes) =
         Map.foldlWithKey' getVotesStakePerStakePoolDistr (mempty, mempty) individualPoolStake
       getVotesStakePerStakePoolDistr (!yess, !abstains) poolId distr =
-        let d = individualPoolStakeCoin distr
+        let d = individualTotalPoolStake distr
             vote = Map.lookup poolId gasStakePoolVotes
          in case vote of
               Nothing

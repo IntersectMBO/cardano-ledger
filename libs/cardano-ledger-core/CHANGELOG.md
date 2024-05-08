@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Add `UMap.umElemDelegations` to extract SPO, DRep and rewards for a given stake credential. #4324
 * Add lenses to `RewardAccount`. #4309
   * `rewardAccountCredentialL`
   * `rewardAccountNetworkL`

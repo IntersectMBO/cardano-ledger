@@ -294,13 +294,14 @@ umElemRDActive = \case
 {-# INLINE umElemRDActive #-}
 
 data RewardDelegation c
-  = RewardDelegationSPO (KeyHash 'StakePool c) (CompactForm Coin)
-  | RewardDelegationDRep (DRep c) (CompactForm Coin)
-  | RewardDelegationBoth (KeyHash 'StakePool c) (DRep c) (CompactForm Coin)
+  = RewardDelegationSPO !(KeyHash 'StakePool c) !(CompactForm Coin)
+  | RewardDelegationDRep !(DRep c) !(CompactForm Coin)
+  | RewardDelegationBoth !(KeyHash 'StakePool c) !(DRep c) !(CompactForm Coin)
 
 -- | Extract rewards that are either delegated to a DRep or an SPO (or both).
--- We can tell that the pair is present and active when Txxxx has
--- F's in the 1st, 3rd and 4th positions
+-- We can tell that the pair is present and active when Txxxx has F's in the 1st
+-- and either 3rd or 4th or both positions. If there are no rewards or deposits
+-- but the delegations still exist, then we return zero coin as reward.
 umElemDelegations :: UMElem c -> Maybe (RewardDelegation c)
 umElemDelegations = \case
   TFEEF RDPair {rdReward} drep -> Just $ RewardDelegationDRep drep rdReward
@@ -309,6 +310,12 @@ umElemDelegations = \case
   TFFEF RDPair {rdReward} _ drep -> Just $ RewardDelegationDRep drep rdReward
   TFFFE RDPair {rdReward} _ spo -> Just $ RewardDelegationSPO spo rdReward
   TFFFF RDPair {rdReward} _ spo drep -> Just $ RewardDelegationBoth spo drep rdReward
+  TEEEF drep -> Just $ RewardDelegationDRep drep mempty
+  TEEFE spo -> Just $ RewardDelegationSPO spo mempty
+  TEEFF spo drep -> Just $ RewardDelegationBoth spo drep mempty
+  TEFEF _ drep -> Just $ RewardDelegationDRep drep mempty
+  TEFFE _ spo -> Just $ RewardDelegationSPO spo mempty
+  TEFFF _ spo drep -> Just $ RewardDelegationBoth spo drep mempty
   _ -> Nothing
 {-# INLINE umElemDelegations #-}
 

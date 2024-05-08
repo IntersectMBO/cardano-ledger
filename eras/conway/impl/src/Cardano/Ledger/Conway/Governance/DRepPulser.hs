@@ -66,6 +66,7 @@ import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.UMap
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData (..), deepseq)
+import Control.Monad (guard)
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
@@ -197,7 +198,7 @@ computeDRepDistr ::
 computeDRepDistr stakeDistr regDReps proposalDeposits poolDistr dRepDistr uMapChunk =
   Map.foldlWithKey' go (dRepDistr, poolDistr) uMapChunk
   where
-    go (drepAccum, poolAccum) stakeCred umElem =
+    go (!drepAccum, !poolAccum) stakeCred umElem =
       let stake = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred stakeDistr
           proposalDeposit = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred proposalDeposits
           stakeAndDeposits = addCompact stake proposalDeposit
@@ -215,18 +216,18 @@ computeDRepDistr stakeDistr regDReps proposalDeposits poolDistr dRepDistr uMapCh
               ( addToDRepDistr drep (addCompact stakeAndDeposits r) drepAccum
               , addToPoolDistr spo proposalDeposit poolAccum
               )
-    addToPoolDistr spo ccoin distr =
+    addToPoolDistr spo proposalDeposit distr = fromMaybe distr $ do
       -- Avoid adding the proposal deposits to anything other than the numerator
       -- and denominator in order not to interfere with rewards calculation,
       -- although this is an isolated copy inside the DRepPulser, we want to
       -- just be sure we do not confuse ourselves over which representations are
       -- used where.
-      case Map.lookup spo $ distr ^. poolDistrDistrL of
-        Nothing -> distr -- Impossible! Because a delegation to an SPO would also appear in the PoolDistr.
-        Just ips ->
-          distr
-            & poolDistrDistrL %~ Map.insert spo (ips & individualPoolStakeCoinL <>~ ccoin)
-            & poolDistrTotalL <>~ ccoin
+      guard (proposalDeposit /= mempty)
+      ips <- Map.lookup spo $ distr ^. poolDistrDistrL
+      pure $
+        distr
+          & poolDistrDistrL %~ Map.insert spo (ips & individualTotalPoolStakeL <>~ proposalDeposit)
+          & poolDistrTotalL <>~ proposalDeposit
     addToDRepDistr drep ccoin distr =
       let updatedDistr = Map.insertWith addCompact drep ccoin distr
        in case drep of

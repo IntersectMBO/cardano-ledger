@@ -484,7 +484,7 @@ rewardOld
   slotsPerEpoch = (rewards', hs)
     where
       totalBlocks = sum b
-      Coin activeStake = fromCompact $ sumAllStake stake
+      Coin activeStake = sumAllStake stake
       results ::
         [ ( KeyHash 'StakePool (EraCrypto era)
           , Maybe (Map (Credential 'Staking (EraCrypto era)) Coin)
@@ -497,7 +497,7 @@ rewardOld
             sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
             blocksProduced = Map.lookup hk b
             actgr = poolStake hk delegs stake
-            Coin pstake = fromCompact $ sumAllStake actgr
+            Coin pstake = sumAllStake actgr
             rewardMap = case blocksProduced of
               Nothing -> Nothing -- This is equivalent to calling rewarOnePool with n = 0
               Just n ->
@@ -784,7 +784,7 @@ reward
           delegs
           stakePerPool
           totalStake
-          (fromCompact activeStake)
+          activeStake
           pool
       free =
         FreeVars
