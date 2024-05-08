@@ -66,11 +66,7 @@ import Generic.Random (genericArbitraryU)
 import Lens.Micro
 import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Data.Arbitrary ()
-import Test.Cardano.Ledger.Alonzo.Arbitrary (
-  genValidAndUnknownCostModels,
-  genValidCostModel,
-  unFlexibleCostModels,
- )
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidAndUnknownCostModels, genValidCostModel)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
 
@@ -719,7 +715,7 @@ instance Era era => Arbitrary (ConwayPParams Identity era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> (THKD . unFlexibleCostModels <$> arbitrary)
+      <*> (THKD <$> arbitrary)
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

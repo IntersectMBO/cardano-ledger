@@ -42,7 +42,6 @@ import Data.Tree
 import Lens.Micro
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
-import Test.Cardano.Ledger.Core.Arbitrary (FlexibleCostModels (..))
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common hiding (Success)
 
@@ -85,7 +84,7 @@ unknownCostModelsSpec =
   describe "Unknown CostModels" $ do
     it "Are accepted" $ do
       costModels <- getsPParams ppCostModelsL
-      FlexibleCostModels newCostModels <- arbitrary
+      newCostModels <- arbitrary
       (hotCommitteeC :| _) <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
       gai <-

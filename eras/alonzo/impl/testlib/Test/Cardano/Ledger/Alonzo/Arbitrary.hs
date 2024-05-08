@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -19,7 +20,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   alwaysSucceedsLang,
   alwaysFails,
   alwaysFailsLang,
-  FlexibleCostModels (..),
+  genEraLanguage,
   genAlonzoScript,
   genNativeScript,
   genPlutusScript,
@@ -63,7 +64,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   Redeemers (Redeemers),
   TxDats (TxDats),
  )
-import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Plutus.Data (
   BinaryData,
   Data (..),
@@ -93,9 +94,9 @@ import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary (
-  FlexibleCostModels (..),
   genValidAndUnknownCostModels,
   genValidCostModel,
+  genValidCostModels,
  )
 import Test.Cardano.Ledger.Mary.Arbitrary ()
 import Test.Cardano.Ledger.Plutus (alwaysFailsPlutus, alwaysSucceedsPlutus)
@@ -216,10 +217,11 @@ instance
       <*> arbitrary
       <*> arbitrary
 
+genEraLanguage :: forall era. AlonzoEraScript era => Gen Language
+genEraLanguage = choose (minBound, eraMaxLanguage @era)
+
 instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => Arbitrary (AlonzoScript era) where
-  arbitrary = do
-    lang <- elements [minBound .. eraMaxLanguage @era]
-    genAlonzoScript lang
+  arbitrary = genEraLanguage @era >>= genAlonzoScript
 
 genAlonzoScript ::
   ( AlonzoEraScript era
@@ -268,7 +270,7 @@ instance Arbitrary (AlonzoPParams Identity era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> genValidCostModels [PlutusV1, PlutusV2]
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -298,7 +300,7 @@ instance Arbitrary (AlonzoPParams StrictMaybe era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> oneof [pure SNothing, SJust <$> genValidCostModels [PlutusV1, PlutusV2]]
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -448,7 +450,7 @@ instance Arbitrary AlonzoGenesis where
   arbitrary =
     AlonzoGenesis
       <$> arbitrary
-      <*> arbitrary
+      <*> genValidCostModels [PlutusV1, PlutusV2]
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

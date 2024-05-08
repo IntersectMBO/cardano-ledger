@@ -52,7 +52,9 @@ costModelsSpec :: Spec
 costModelsSpec = do
   describe "CostModels" $ do
     prop "flattenCostModels . mkCostModelsLenient" $ \valid unknown -> do
-      let cms1 = flattenCostModels valid <> unknown
-          cms2 = unknown <> flattenCostModels valid
-      flattenCostModels (mkCostModelsLenient cms1) `shouldBe` cms1
-      flattenCostModels (mkCostModelsLenient cms2) `shouldBe` cms2
+      let cms1Flat = flattenCostModels valid <> unknown
+          cms2Flat = unknown <> flattenCostModels valid
+      cms1 <- mkCostModelsLenient cms1Flat
+      cms2 <- mkCostModelsLenient cms2Flat
+      flattenCostModels cms1 `shouldBe` cms1Flat
+      flattenCostModels cms2 `shouldBe` cms2Flat

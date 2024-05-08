@@ -45,6 +45,7 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as B16L
 import qualified Data.ByteString.Lazy as BSL
 import Data.Either (fromRight)
+import Data.Int
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -406,7 +407,7 @@ expectedCostModelV2 =
     (error ("Error creating CostModel from known PlutusV2 parameters" <> show expectedPParams))
     (mkCostModel PlutusV2 (expectedPParams ++ (replicate 9 0)))
 
-expectedPParams :: [Integer]
+expectedPParams :: [Int64]
 expectedPParams =
   [ 197209
   , 0

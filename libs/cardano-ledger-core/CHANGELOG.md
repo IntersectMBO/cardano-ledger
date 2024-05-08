@@ -5,9 +5,6 @@
 * Add lenses to `RewardAccount`. #4309
   * `rewardAccountCredentialL`
   * `rewardAccountNetworkL`
-
-## 1.11.1.0
-
 * Add `Inject` instances for tuples
 * Add `umElemDRepDelegatedReward` to `UMap`. #4273
 * Add `fromDeltaCoin`
@@ -21,10 +18,24 @@
   * `HKD StrictMaybe`
 * Move `Metadatum` from `cardano-ledger-shelley` into a new module `Cardano.Ledger.Metadata`
 * Add `mkBasicTxAuxData` and `metadataTxAuxDataL` to `EraTxAuxData` type class.
+* Add `Random`, `Uniform` and `UniformRange` instances for `Language`
+* Add `decodeCostModelsLenient` and `decodeCostModelsFailing`
+* Make decoder for `CostModels` very lenient starting with protocol version `9`.
+* Deprecate `decodeValidAndUnknownCostModels`
+* Disable deserialization of `CostModels` for `PlutusV3` and newer whenever current
+  protocol version is not set to at least version `9`
+* Remove `CostModelError` and `costModelsErrors`
+* Stop re-exporting `CostModelApplyError`
+* Change `CostModel` parameter value type from `Integer` to `Int64`. Affects type
+  signatures of all functions that work on raw cost model parameter values.
+* `mkCostModelsLenient` was changed to work in `MonadFail`, since failures during
+  construction is now again possible.
+* Deprecate `decodeCostModelFailHard` in favor of new `decodeCostModel`.
 
 ### `testlib`
 
 * Export `subState`
+* Remove `FlexibleCostModels` and make `Arbitrary` instance for `CostModels` more flexible.
 
 ## 1.11.0.0
 

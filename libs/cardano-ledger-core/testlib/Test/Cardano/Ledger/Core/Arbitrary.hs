@@ -32,9 +32,9 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   genInsertDeleteRoundtripDRep,
 
   -- * Plutus
-  FlexibleCostModels (..),
   genValidAndUnknownCostModels,
   genValidCostModel,
+  genValidCostModels,
 
   -- * Utils
 
@@ -74,7 +74,7 @@ import Cardano.Ledger.BaseTypes (
   textToDns,
   textToUrl,
  )
-import Cardano.Ledger.Binary (DecCBOR, EncCBOR, Sized, mkSized)
+import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
 import Cardano.Ledger.CertState (
   Anchor (..),
   CertState (..),
@@ -103,8 +103,6 @@ import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
-  CostModelApplyError (..),
-  CostModelError (..),
   CostModels,
   costModelParamsCount,
   mkCostModel,
@@ -138,6 +136,7 @@ import Cardano.Ledger.UMap (
 import Cardano.Ledger.UTxO (UTxO (..))
 import Control.Monad (replicateM)
 import Control.Monad.Identity (Identity)
+import Control.Monad.Trans.Fail.String (errorFail)
 import Data.GenValidity
 import Data.Int (Int64)
 import Data.Map.Strict (Map)
@@ -802,16 +801,6 @@ instance Crypto c => Arbitrary (PoolCert c) where
 instance Arbitrary Language where
   arbitrary = elements nonNativeLanguages
 
-instance Arbitrary CostModelError where
-  arbitrary =
-    CostModelError
-      <$> oneof
-        [ CMUnknownParamError <$> arbitrary
-        , pure CMInternalReadError
-        , CMInternalWriteError <$> arbitrary
-        , CMTooFewParamsError <$> arbitrary <*> arbitrary
-        ]
-
 instance Arbitrary ExUnits where
   arbitrary = ExUnits <$> genUnit <*> genUnit
     where
@@ -825,7 +814,7 @@ instance Arbitrary CostModel where
 
 genValidCostModel :: Language -> Gen CostModel
 genValidCostModel lang = do
-  newParamValues <- vectorOf (costModelParamsCount lang) (arbitrary :: Gen Integer)
+  newParamValues <- vectorOf (costModelParamsCount lang) arbitrary
   either (\err -> error $ "Corrupt cost model: " ++ show err) pure $
     mkCostModel lang newParamValues
 
@@ -836,39 +825,28 @@ genValidAndUnknownCostModels :: Gen CostModels
 genValidAndUnknownCostModels = do
   langs <- sublistOf nonNativeLanguages
   validCms <- genValidCostModels $ Set.fromList langs
-  unknownCms <- mkCostModelsLenient <$> genUnknownCostModels
+  unknownCms <- errorFail . mkCostModelsLenient <$> genUnknownCostModels
   pure $ updateCostModels validCms unknownCms
 
 -- | This Arbitrary instance assumes the inflexible deserialization
 -- scheme prior to version 9.
 instance Arbitrary CostModels where
   arbitrary = do
-    langs <- sublistOf nonNativeLanguages
-    genValidCostModels $ Set.fromList langs
-
--- | This Arbitrary instance assumes the flexible deserialization
--- scheme of 'CostModels' starting at version 9.
-newtype FlexibleCostModels = FlexibleCostModels {unFlexibleCostModels :: CostModels}
-  deriving stock (Show, Eq, Ord)
-  deriving newtype (EncCBOR, DecCBOR)
-
-instance Arbitrary FlexibleCostModels where
-  arbitrary = do
     known <- genKnownCostModels
     unknown <- genUnknownCostModels
     let cms = known `Map.union` unknown
-    pure . FlexibleCostModels $ mkCostModelsLenient cms
+    pure . errorFail $ mkCostModelsLenient cms
 
-genUnknownCostModels :: Gen (Map Word8 [Integer])
+genUnknownCostModels :: Gen (Map Word8 [Int64])
 genUnknownCostModels = Map.fromList <$> listOf genUnknownCostModelValues
 
-genKnownCostModels :: Gen (Map Word8 [Integer])
+genKnownCostModels :: Gen (Map Word8 [Int64])
 genKnownCostModels = do
   langs <- sublistOf nonNativeLanguages
   cms <- mapM genCostModelValues langs
   return $ Map.fromList cms
 
-genUnknownCostModelValues :: Gen (Word8, [Integer])
+genUnknownCostModelValues :: Gen (Word8, [Int64])
 genUnknownCostModelValues = do
   lang <- chooseInt (firstInvalid, fromIntegral (maxBound :: Word8))
   vs <- arbitrary
@@ -876,7 +854,7 @@ genUnknownCostModelValues = do
   where
     firstInvalid = fromEnum (maxBound :: Language) + 1
 
-genCostModelValues :: Language -> Gen (Word8, [Integer])
+genCostModelValues :: Language -> Gen (Word8, [Int64])
 genCostModelValues lang = do
   Positive sub <- arbitrary
   (,) lang'
@@ -887,7 +865,7 @@ genCostModelValues lang = do
   where
     lang' = fromIntegral (fromEnum lang)
     tooFew sub = costModelParamsCount lang - sub
-    listAtLeast :: Int -> Gen [Integer]
+    listAtLeast :: Int -> Gen [Int64]
     listAtLeast x = do
       NonNegative y <- arbitrary
       replicateM (x + y) arbitrary

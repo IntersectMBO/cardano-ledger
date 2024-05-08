@@ -502,10 +502,10 @@ potential_languages = 0 .. 255
 ; versions in the future.
 ;
 costmdls =
-  { ? 0 : [ 166* int ] ; Plutus v1, only 166 integers are used, but more are accepted (and ignored)
-  , ? 1 : [ 175* int ] ; Plutus v2, only 175 integers are used, but more are accepted (and ignored)
-  , ? 2 : [ 233* int ] ; Plutus v3, only 233 integers are used, but more are accepted (and ignored)
-  , ? 3 : [ int ] ; Any 8-bit unsigned number can be used as a key.
+  { ? 0 : [ int64 ] ; Plutus v1
+  , ? 1 : [ int64 ] ; Plutus v2
+  , ? 2 : [ int64 ] ; Plutus v3
+  , ? 3 : [ int64 ] ; Any 8-bit unsigned number can be used as a key.
   }
 
 transaction_metadatum =

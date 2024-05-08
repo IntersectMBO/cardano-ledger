@@ -18,40 +18,37 @@ import qualified Data.Map as Map
 import Data.Text (Text)
 import Data.Word (Word8)
 import Lens.Micro
-import Test.Cardano.Ledger.Alonzo.Arbitrary ()
+import Test.Cardano.Ledger.Alonzo.Arbitrary (genEraLanguage)
 import Test.Cardano.Ledger.Common
 
-spec :: forall era. AlonzoEraPParams era => Spec
+spec :: forall era. (AlonzoEraPParams era, AlonzoEraScript era) => Spec
 spec = do
   describe "CBOR deserialization" $ do
     validCostModelProp @era
-    invalidCostModelProp @era
+    underspecifiedCostModelProp @era
     unknownCostModelProp @era
   prop "applyPPUpdates" $ \valid validUpdate unknown unknownUpdate -> do
+    original <- mkCostModelsLenient (flattenCostModels valid <> unknown)
+    originalUpdate <- mkCostModelsLenient (flattenCostModels validUpdate <> unknownUpdate)
     let
-      validExpected = mkCostModels (costModelsValid validUpdate <> costModelsValid valid)
-      unknownExpected = unknownUpdate <> unknown
-      original = mkCostModelsLenient (flattenCostModels valid <> unknown)
-      update = mkCostModelsLenient (flattenCostModels validUpdate <> unknownUpdate)
-      expected = mkCostModelsLenient (flattenCostModels validExpected <> unknownExpected)
-      pp =
-        emptyPParams & ppCostModelsL .~ original
-      ppUpdate =
-        emptyPParamsUpdate & ppuCostModelsL .~ SJust update
+      pp = emptyPParams & ppCostModelsL .~ original
+      ppUpdate = emptyPParamsUpdate & ppuCostModelsL .~ SJust originalUpdate
+      updated = applyPPUpdates @era pp ppUpdate
     -- Starting with Conway we update CostModel on per-language basis, while before
     -- that CostModels where overwritten completely
-    applyPPUpdates @era pp ppUpdate
-      `shouldBe` if eraProtVerLow @era >= natVersion @9
-        then pp & ppCostModelsL .~ expected
-        else pp & ppCostModelsL .~ update
+    if eraProtVerLow @era >= natVersion @9
+      then do
+        expected <- mkCostModelsLenient (flattenCostModels originalUpdate <> flattenCostModels original)
+        updated `shouldBe` (pp & ppCostModelsL .~ expected)
+      else updated `shouldBe` (pp & ppCostModelsL .~ originalUpdate)
 
 validCostModelProp ::
   forall era.
-  AlonzoEraPParams era =>
+  (AlonzoEraPParams era, AlonzoEraScript era) =>
   Spec
 validCostModelProp = do
   prop "valid CostModels deserialize correctly, both independently and within PParamsUpdate" $
-    \(lang :: Language) -> do
+    forAll (genEraLanguage @era) $ \(lang :: Language) -> do
       forAllShow (genValidCostModelEnc lang) (showEnc @era) $
         \validCmEnc -> do
           encodeAndCheckDecoded @era validCmEnc $
@@ -62,37 +59,34 @@ validCostModelProp = do
   where
     genValidCostModelEnc lang = genCostModelEncForLanguage lang (costModelParamsCount lang)
     validCm cms =
-      not (null (costModelsValid cms)) && null (costModelsErrors cms) && null (costModelsUnknown cms)
+      not (null (costModelsValid cms)) && null (costModelsUnknown cms)
 
-invalidCostModelProp ::
+-- | Underspecified is a CostModel that has less than the normal number of parameters
+underspecifiedCostModelProp ::
   forall era.
   AlonzoEraPParams era =>
   Spec
-invalidCostModelProp = do
-  prop "invalid CostModels fail within PParamsUpdate" $
+underspecifiedCostModelProp = do
+  prop "CostModels with less than expected parameters within PParamsUpdate" $
     \(lang :: Language) -> do
-      forAllShow (genInvalidCostModelEnc lang) (showEnc @era) $
-        \invalidCmEnc -> do
-          encodeAndCheckDecoded @era invalidCmEnc $
+      forAllShow (genUnderspecifiedCostModelEnc lang) (showEnc @era) $
+        \shortCmEnc -> do
+          encodeAndCheckDecoded @era shortCmEnc $
             \cmDecoded ppuDecoded -> do
-              -- pre-Conway we are failing when deserializing invalid costmodels
+              -- pre-Conway we are failing when deserializing underspecified costmodels
               if eraProtVerHigh @era < natVersion @9
-                then expectDeserialiseFailure cmDecoded (Just "CostModels")
+                then do
+                  expectDeserialiseFailure cmDecoded (Just "CostModels")
+                  expectDeserialiseFailure ppuDecoded Nothing
                 else do
-                  -- post-Conway, we are collecting CostModels deserialization errors
+                  -- post-Conway, we are retaining CostModels that specified less parameters than expected
                   cmRes <- expectRight cmDecoded
-                  cmRes `shouldSatisfy` invalidCm
-
-              -- in no era are we deserializing invalid costmodels within PParamsUpdate
-              expectDeserialiseFailure ppuDecoded Nothing
+                  cmRes `shouldSatisfy` not . null . costModelsValid
   where
-    genInvalidCostModelEnc lang = do
+    genUnderspecifiedCostModelEnc lang = do
       let validCount = costModelParamsCount lang
       count <- choose (0, validCount - 1)
       genCostModelEncForLanguage lang count
-
-    invalidCm cms =
-      null (costModelsValid cms) && not (null (costModelsErrors cms))
 
 unknownCostModelProp ::
   forall era.
@@ -122,7 +116,7 @@ unknownCostModelProp = do
       NonNegative count <- arbitrary
       genCostModelsEnc lang count
     unknownCm cms =
-      null (costModelsValid cms) && null (costModelsErrors cms) && not (null (costModelsUnknown cms))
+      null (costModelsValid cms) && not (null (costModelsUnknown cms))
 
 encodeAndCheckDecoded ::
   forall era.

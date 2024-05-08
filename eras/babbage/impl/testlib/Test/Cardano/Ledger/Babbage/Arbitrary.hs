@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -16,14 +17,15 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPr
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Plutus.TxInfo (TxOutSource)
+import Cardano.Ledger.Plutus
 import Control.State.Transition (STS (PredicateFailure))
 import Data.Functor.Identity (Identity)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
+import Test.Cardano.Ledger.Core.Arbitrary (genValidCostModels)
 import Test.QuickCheck
 
 deriving instance Arbitrary CoinPerByte
@@ -46,7 +48,7 @@ instance Arbitrary (BabbagePParams Identity era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> genValidCostModels [PlutusV1, PlutusV2]
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -72,7 +74,7 @@ instance Arbitrary (BabbagePParams StrictMaybe era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
+      <*> oneof [pure SNothing, SJust <$> genValidCostModels [PlutusV1, PlutusV2]]
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

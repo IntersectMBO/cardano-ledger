@@ -62,17 +62,17 @@ mkCostModelConst lang x =
     PlutusV2 -> mkCostModel' lang (x <$ PV2.costModelParamsForTesting)
     PlutusV3 -> mkCostModel' lang (x <$ PV3.costModelParamsForTesting)
 
-mkCostModel' :: HasCallStack => Language -> [Integer] -> CostModel
+mkCostModel' :: (Integral i, Show i, HasCallStack) => Language -> [i] -> CostModel
 mkCostModel' lang params =
-  case mkCostModel lang params of
+  case mkCostModel lang $ map fromIntegral params of
     Left err ->
       error $
-        "Number of CostModel parameters "
-          ++ show (length params)
-          ++ " is not well-formed for "
+        "CostModel parameters are not well-formed for "
           ++ show lang
           ++ ": "
           ++ show err
+          ++ "\n"
+          ++ show params
     Right costModel -> costModel
 
 -- | Test CostModels for all available languages with zero values for all parameters

@@ -10,7 +10,6 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Hashes (EraIndependentData, ScriptHash)
 import Cardano.Ledger.Keys
-import Cardano.Ledger.Plutus.CostModels (CostModelError (..))
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.TxIn
 import Cardano.Ledger.UMap (RDPair)
@@ -47,4 +46,3 @@ spec = do
     roundTripCborSpec @RDPair
     roundTripCborSpec @(ScriptHash StandardCrypto)
     roundTripCborSpec @(SafeHash StandardCrypto EraIndependentData)
-    roundTripCborSpec @CostModelError

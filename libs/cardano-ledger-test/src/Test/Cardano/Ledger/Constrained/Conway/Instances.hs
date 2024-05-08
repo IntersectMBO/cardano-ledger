@@ -879,22 +879,25 @@ instance IsConwayUniv fn => HasSpec fn CoinPerByte
 
 instance HasSimpleRep CostModels
 instance IsConwayUniv fn => HasSpec fn CostModels where
-  emptySpec =
-    Cartesian
-      (constrained $ \m -> size_ (dom_ m) <=. 3)
-      (constrained $ \p -> size_ (dom_ (fst_ $ fromGeneric_ p)) <=. 3)
+  type TypeSpec fn CostModels = ()
+  emptySpec = ()
+  combineSpec _ _ = TrueSpec
+  genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
+  conformsTo _ _ = True
+  toPreds _ _ = toPred True
+
+-- FIXME: previous implementation no longer builds
+-- emptySpec =
+--   Cartesian
+--     (constrained $ \m -> size_ (dom_ m) <=. 3)
+--     (constrained $ \p -> size_ (dom_ (fst_ $ fromGeneric_ p)) <=. 3)
 
 instance HasSimpleRep PoolVotingThresholds
 instance IsConwayUniv fn => HasSpec fn PoolVotingThresholds
 
 instance HasSimpleRep DRepVotingThresholds
 instance IsConwayUniv fn => HasSpec fn DRepVotingThresholds
-
-instance HasSimpleRep CostModelError
-instance IsConwayUniv fn => HasSpec fn CostModelError
-
-instance HasSimpleRep CostModelApplyError
-instance IsConwayUniv fn => HasSpec fn CostModelApplyError
 
 instance IsConwayUniv fn => HasSpec fn Char where
   type TypeSpec fn Char = ()

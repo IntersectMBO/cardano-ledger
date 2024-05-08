@@ -96,9 +96,6 @@ instance ToExpr (VoidEraRule (rule :: Symbol) era) where
 
 instance ToExpr (ScriptHash c)
 
-instance ToExpr CostModelError where
-  toExpr = toExpr . show
-
 instance ToExpr CostModel where
   toExpr costModel =
     App
