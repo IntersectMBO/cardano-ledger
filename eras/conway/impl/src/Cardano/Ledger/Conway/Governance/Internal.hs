@@ -305,17 +305,17 @@ toRatifyStatePairs cg@(RatifyState _ _ _ _) =
 pparamsUpdateThreshold ::
   forall era.
   ConwayEraPParams era =>
-  PParams era ->
+  DRepVotingThresholds ->
   PParamsUpdate era ->
   UnitInterval
-pparamsUpdateThreshold pp ppu =
+pparamsUpdateThreshold thresholds ppu =
   let thresholdLens = \case
         NetworkGroup -> dvtPPNetworkGroupL
         GovGroup -> dvtPPGovGroupL
         TechnicalGroup -> dvtPPTechnicalGroupL
         EconomicGroup -> dvtPPEconomicGroupL
       lookupGroupThreshold (PPGroups grp _) =
-        pp ^. ppDRepVotingThresholdsL . thresholdLens grp
+        thresholds ^. thresholdLens grp
    in Set.foldr' max minBound $
         Set.map lookupGroupThreshold $
           modifiedPPGroups @era ppu
@@ -497,7 +497,7 @@ votingDRepThresholdInternal ::
   GovAction era ->
   VotingThreshold
 votingDRepThresholdInternal pp isElectedCommittee action =
-  let DRepVotingThresholds
+  let thresholds@DRepVotingThresholds
         { dvtCommitteeNoConfidence
         , dvtCommitteeNormal
         , dvtUpdateToConstitution
@@ -515,7 +515,7 @@ votingDRepThresholdInternal pp isElectedCommittee action =
               else dvtCommitteeNoConfidence
         NewConstitution {} -> VotingThreshold dvtUpdateToConstitution
         HardForkInitiation {} -> VotingThreshold dvtHardForkInitiation
-        ParameterChange _ ppu _ -> VotingThreshold $ pparamsUpdateThreshold pp ppu
+        ParameterChange _ ppu _ -> VotingThreshold $ pparamsUpdateThreshold thresholds ppu
         TreasuryWithdrawals {} -> VotingThreshold dvtTreasuryWithdrawal
         InfoAction {} -> NoVotingThreshold
 
