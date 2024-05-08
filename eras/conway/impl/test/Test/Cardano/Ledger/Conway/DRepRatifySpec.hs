@@ -43,7 +43,6 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Set as Set
 import Data.Word (Word64)
-import Lens.Micro
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -63,13 +62,12 @@ spec = do
 correctThresholdsProp ::
   forall era.
   ( ConwayEraPParams era
-  , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   ) =>
   Spec
 correctThresholdsProp = do
-  prop "PParamsUpdateThreshold always selects a threshold" $ \(pp :: PParams era) ppu -> do
-    let DRepVotingThresholds {..} = pp ^. ppDRepVotingThresholdsL
+  prop "PParamsUpdateThreshold always selects a threshold" $ \thresholds ppu -> do
+    let DRepVotingThresholds {..} = thresholds
         allDRepThresholds =
           Set.fromList
             [ dvtPPNetworkGroup
@@ -78,8 +76,8 @@ correctThresholdsProp = do
             , dvtPPGovGroup
             ]
     when (ppu /= emptyPParamsUpdate) $
-      pparamsUpdateThreshold pp ppu `shouldSatisfy` (`Set.member` allDRepThresholds)
-    pparamsUpdateThreshold pp emptyPParamsUpdate `shouldBe` (0 %! 1)
+      pparamsUpdateThreshold @era thresholds ppu `shouldSatisfy` (`Set.member` allDRepThresholds)
+    pparamsUpdateThreshold @era thresholds emptyPParamsUpdate `shouldBe` (0 %! 1)
 
 acceptedRatioProp :: forall era. Era era => Spec
 acceptedRatioProp = do

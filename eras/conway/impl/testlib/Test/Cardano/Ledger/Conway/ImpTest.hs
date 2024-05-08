@@ -258,20 +258,25 @@ instance
     where
       initConwayNES committee constitution nes =
         let newNes =
-              (initAlonzoImpNES nes)
+              initAlonzoImpNES nes
                 & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
                 & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
                 & nesEsL . curPParamsEpochStateL . ppGovActionDepositL .~ Coin 123
                 & nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL .~ EpochInterval 20
                 & nesEsL . curPParamsEpochStateL . ppCommitteeMinSizeL .~ 1
                 & nesEsL . curPParamsEpochStateL . ppDRepVotingThresholdsL
-                  %~ ( \dvt ->
-                        dvt
-                          { dvtCommitteeNormal = 1 %! 1
-                          , dvtCommitteeNoConfidence = 1 %! 2
-                          , dvtUpdateToConstitution = 1 %! 2
-                          }
-                     )
+                  .~ DRepVotingThresholds
+                    { dvtMotionNoConfidence = 51 %! 100
+                    , dvtCommitteeNormal = 51 %! 100
+                    , dvtCommitteeNoConfidence = 51 %! 100
+                    , dvtUpdateToConstitution = 51 %! 100
+                    , dvtHardForkInitiation = 51 %! 100
+                    , dvtPPNetworkGroup = 51 %! 100
+                    , dvtPPEconomicGroup = 51 %! 100
+                    , dvtPPTechnicalGroup = 51 %! 100
+                    , dvtPPGovGroup = 51 %! 100
+                    , dvtTreasuryWithdrawal = 51 %! 100
+                    }
                 & nesEsL . epochStateGovStateL . committeeGovStateL .~ SJust committee
                 & nesEsL . epochStateGovStateL . constitutionGovStateL .~ constitution
             epochState = newNes ^. nesEsL
@@ -1195,6 +1200,9 @@ electBasicCommittee = do
   submitYesVote_ (DRepVoter drep) gaidCommitteeProp
   passEpoch
   passEpoch
+  committeeMembers <- getCommitteeMembers
+  impAnn "The committee should be enacted" $
+    committeeMembers `shouldSatisfy` Set.member coldCommitteeC
   hotCommitteeC <- registerCommitteeHotKey coldCommitteeC
   pure (drep, hotCommitteeC, GovPurposeId gaidCommitteeProp)
 

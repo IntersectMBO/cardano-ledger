@@ -66,11 +66,10 @@ spec ::
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
   SpecWith (ImpTestState era)
-spec =
-  describe "UTXOS" $ do
-    relevantDuringBootstrapSpec
-    govPolicySpec
-    costModelsSpec
+spec = do
+  relevantDuringBootstrapSpec
+  govPolicySpec
+  costModelsSpec
 
 relevantDuringBootstrapSpec ::
   forall era.

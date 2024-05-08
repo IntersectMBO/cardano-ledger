@@ -111,6 +111,7 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
+import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateIncrStakeDistrL,
   epochStateRegDrepL,
@@ -304,17 +305,17 @@ toRatifyStatePairs cg@(RatifyState _ _ _ _) =
 pparamsUpdateThreshold ::
   forall era.
   ConwayEraPParams era =>
-  PParams era ->
+  DRepVotingThresholds ->
   PParamsUpdate era ->
   UnitInterval
-pparamsUpdateThreshold pp ppu =
+pparamsUpdateThreshold thresholds ppu =
   let thresholdLens = \case
         NetworkGroup -> dvtPPNetworkGroupL
         GovGroup -> dvtPPGovGroupL
         TechnicalGroup -> dvtPPTechnicalGroupL
         EconomicGroup -> dvtPPEconomicGroupL
       lookupGroupThreshold (PPGroups grp _) =
-        pp ^. ppDRepVotingThresholdsL . thresholdLens grp
+        thresholds ^. thresholdLens grp
    in Set.foldr' max minBound $
         Set.map lookupGroupThreshold $
           modifiedPPGroups @era ppu
@@ -496,13 +497,15 @@ votingDRepThresholdInternal ::
   GovAction era ->
   VotingThreshold
 votingDRepThresholdInternal pp isElectedCommittee action =
-  let DRepVotingThresholds
+  let thresholds@DRepVotingThresholds
         { dvtCommitteeNoConfidence
         , dvtCommitteeNormal
         , dvtUpdateToConstitution
         , dvtHardForkInitiation
         , dvtTreasuryWithdrawal
-        } = pp ^. ppDRepVotingThresholdsL
+        } -- We reset all (except InfoAction) DRep thresholds to 0 during bootstrap phase
+          | HF.bootstrapPhase (pp ^. ppProtocolVersionL) = def
+          | otherwise = pp ^. ppDRepVotingThresholdsL
    in case action of
         NoConfidence {} -> VotingThreshold dvtCommitteeNoConfidence
         UpdateCommittee {} ->
@@ -512,7 +515,7 @@ votingDRepThresholdInternal pp isElectedCommittee action =
               else dvtCommitteeNoConfidence
         NewConstitution {} -> VotingThreshold dvtUpdateToConstitution
         HardForkInitiation {} -> VotingThreshold dvtHardForkInitiation
-        ParameterChange _ ppu _ -> VotingThreshold $ pparamsUpdateThreshold pp ppu
+        ParameterChange _ ppu _ -> VotingThreshold $ pparamsUpdateThreshold thresholds ppu
         TreasuryWithdrawals {} -> VotingThreshold dvtTreasuryWithdrawal
         InfoAction {} -> NoVotingThreshold
 

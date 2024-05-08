@@ -48,11 +48,10 @@ spec ::
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpTestState era)
-spec =
-  describe "EPOCH" $ do
-    relevantDuringBootstrapSpec
-    dRepVotingSpec
-    treasurySpec
+spec = do
+  relevantDuringBootstrapSpec
+  dRepVotingSpec
+  treasurySpec
 
 relevantDuringBootstrapSpec ::
   forall era.
@@ -215,12 +214,7 @@ dRepVotingSpec ::
 dRepVotingSpec =
   describe "DRep" $ do
     it "proposal is accepted after two epochs" $ do
-      modifyPParams $ \pp ->
-        pp
-          & ppDRepVotingThresholdsL
-            .~ def
-              { dvtPPEconomicGroup = 1 %! 1
-              }
+      modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ 1 %! 1
       let getParamValue = getsNES (nesEsL . curPParamsEpochStateL . ppMinFeeAL)
       initialParamValue <- getParamValue
 
@@ -363,8 +357,8 @@ eventsSpec = describe "Events" $ do
       modifyPParams $ \pp ->
         pp
           & ppGovActionLifetimeL .~ EpochInterval actionLifetime
-          & ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def
           & ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
+      whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
       propDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
       let
         proposeCostModel = do
