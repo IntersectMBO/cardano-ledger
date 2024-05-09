@@ -52,9 +52,7 @@ import NoThunks.Class (NoThunks (..))
 -- delegated to a registered stake pool.
 data IndividualPoolStake c = IndividualPoolStake
   { individualPoolStake :: !Rational
-  -- ^ Pool stake distribution. This is a ratio of
-  -- (individualTotalPoolStake - proposal deposits) to
-  -- (pdTotalActiveStake - proposal deposits)
+  -- ^ Pool stake distribution. This is a ratio of `individualTotalPoolStake`/`pdTotalActiveStake`
   , individualTotalPoolStake :: !(CompactForm Coin)
   -- ^ Total stake delegated to this pool. In addition to all the stake  that
   -- is part of `individualPoolStake` we also add proposal-deposits to this

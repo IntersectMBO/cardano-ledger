@@ -217,11 +217,6 @@ computeDRepDistr stakeDistr regDReps proposalDeposits poolDistr dRepDistr uMapCh
               , addToPoolDistr spo proposalDeposit poolAccum
               )
     addToPoolDistr spo proposalDeposit distr = fromMaybe distr $ do
-      -- Avoid adding the proposal deposits to anything other than the numerator
-      -- and denominator in order not to interfere with rewards calculation,
-      -- although this is an isolated copy inside the DRepPulser, we want to
-      -- just be sure we do not confuse ourselves over which representations are
-      -- used where.
       guard (proposalDeposit /= mempty)
       ips <- Map.lookup spo $ distr ^. poolDistrDistrL
       pure $
@@ -365,7 +360,7 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
   (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
   where
     !leftOver = Map.drop dpIndex $ umElems dpUMap
-    (!finalDRepDistr, !finalStakePoolDistr) =
+    (finalDRepDistr, finalStakePoolDistr) =
       computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpStakePoolDistr dpDRepDistr leftOver
     !ratifyEnv =
       RatifyEnv

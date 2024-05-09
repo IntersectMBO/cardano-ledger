@@ -71,7 +71,7 @@ import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
+import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..), poolDistrDistrL)
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance (FuturePParams (..), futureProposalsL, proposalsL)
@@ -677,10 +677,7 @@ markPoolDistr = Var (V "markPoolDistr" (MapR PoolHashR IPoolStakeR) No)
 
 markPoolDistrL ::
   NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
-markPoolDistrL = nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL . pooldistrHelpL
-
-pooldistrHelpL :: Lens' (PoolDistr c) (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
-pooldistrHelpL = lens unPoolDistr (\x y -> x {unPoolDistr = y})
+markPoolDistrL = nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL . poolDistrDistrL
 
 snapShotFee :: Era era => Term era Coin
 snapShotFee = Var (V "snapShotFee" CoinR No)
@@ -690,7 +687,7 @@ snapShotsT ::
 snapShotsT =
   Invert "SnapShots" (typeRep @(SnapShots (EraCrypto era))) shotsfun
     :$ Shift markSnapShotT ssStakeMarkL
-    :$ Lensed markPoolDistr (ssStakeMarkPoolDistrL . pooldistrHelpL)
+    :$ Lensed markPoolDistr (ssStakeMarkPoolDistrL . poolDistrDistrL)
     :$ Shift setSnapShotT ssStakeSetL
     :$ Shift goSnapShotT ssStakeGoL
     :$ Lensed snapShotFee ssFeeL

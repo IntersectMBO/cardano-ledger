@@ -2,14 +2,14 @@
 
 ## 1.12.0.0
 
-* Add `UMap.umElemDelegations` to extract SPO, DRep and rewards for a given stake credential. #4324
-  * Add `sumAllStakeCompact` and redefine `sumAllStake` as a composition of it.
-  * Change `computeDRepPulser` to also process proposal-deposits for SPOs.
-    * Add `pdTotalActiveStake` field to `PoolDistr`, to hold the total active stake delegated to pools, including proposal deposits.
-    * Add `individualTotalPoolStake` to `IndividualPoolStake` to hold the delegated stake as an absolute number, including proposal deposits.
-    * Add lenses:
-      * `individualTotalPoolStakeL`
-      * `poolDistrTotalL`
+* Change `computeDRepPulser` to also process proposal-deposits for SPOs. #4324
+  * Add `sumAllStakeCompact`.
+  * Add `UMap.umElemDelegations` to extract SPO, DRep and rewards for a given stake credential.
+  * Add `pdTotalActiveStake` field to `PoolDistr`, to hold the total active stake delegated to pools, including proposal deposits.
+  * Add `individualTotalPoolStake` to `IndividualPoolStake` to hold the delegated stake as an absolute number, including proposal deposits.
+  * Add lenses:
+    * `individualTotalPoolStakeL`
+    * `poolDistrTotalL`
 * Add lenses to `RewardAccount`. #4309
   * `rewardAccountCredentialL`
   * `rewardAccountNetworkL`
