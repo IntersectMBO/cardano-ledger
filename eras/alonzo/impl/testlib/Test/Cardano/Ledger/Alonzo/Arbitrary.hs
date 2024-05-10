@@ -30,6 +30,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   genAlonzoPlutusPurposePointer,
 ) where
 
+import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
@@ -220,12 +221,19 @@ instance
 genEraLanguage :: forall era. AlonzoEraScript era => Gen Language
 genEraLanguage = choose (minBound, eraMaxLanguage @era)
 
-instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => Arbitrary (AlonzoScript era) where
+instance
+  ( AlonzoEraScript era
+  , Script era ~ AlonzoScript era
+  , NativeScript era ~ Timelock era
+  ) =>
+  Arbitrary (AlonzoScript era)
+  where
   arbitrary = genEraLanguage @era >>= genAlonzoScript
 
 genAlonzoScript ::
   ( AlonzoEraScript era
   , Script era ~ AlonzoScript era
+  , NativeScript era ~ Timelock era
   ) =>
   Language ->
   Gen (AlonzoScript era)
@@ -235,7 +243,11 @@ genAlonzoScript lang =
     , (8, genNativeScript)
     ]
 
-genNativeScript :: AlonzoEraScript era => Gen (AlonzoScript era)
+genNativeScript ::
+  ( AlonzoEraScript era
+  , NativeScript era ~ Timelock era
+  ) =>
+  Gen (AlonzoScript era)
 genNativeScript = TimelockScript <$> arbitrary
 
 genPlutusScript ::

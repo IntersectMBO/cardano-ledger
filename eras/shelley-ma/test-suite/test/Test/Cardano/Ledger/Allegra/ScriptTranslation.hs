@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Allegra.ScriptTranslation (
@@ -11,6 +12,10 @@ import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as S
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
+import Cardano.Ledger.Shelley.Scripts (
+  MultiSig,
+  pattern RequireAllOf,
+ )
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Except (runExcept)
@@ -32,8 +37,8 @@ fromRight :: HasCallStack => Either e a -> a
 fromRight (Right x) = x
 fromRight _ = error "Expected Right"
 
-script :: S.MultiSig Shelley
-script = S.RequireAllOf []
+script :: MultiSig Shelley
+script = RequireAllOf StrictSeq.empty
 
 scriptHash :: S.ScriptHash StandardCrypto
 scriptHash = hashScript @Shelley script

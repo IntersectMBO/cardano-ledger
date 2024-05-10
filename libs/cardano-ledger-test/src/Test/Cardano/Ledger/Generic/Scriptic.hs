@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -10,13 +11,21 @@
 
 module Test.Cardano.Ledger.Generic.Scriptic where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock (..))
+import Cardano.Ledger.Allegra.Scripts (
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus.Language (Language (..))
-import qualified Cardano.Ledger.Shelley.Scripts as Multi
+import Cardano.Ledger.Shelley.Scripts (
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq (fromList)
@@ -48,13 +57,13 @@ class HasTokens era where
   forge :: Integer -> Script era -> MultiAsset (EraCrypto era)
 
 instance Crypto c => Scriptic (ShelleyEra c) where
-  never _ Shelley = Multi.RequireAnyOf mempty -- always False
-  always _ Shelley = Multi.RequireAllOf mempty -- always True
-  alwaysAlt _ Shelley = Multi.RequireAllOf mempty -- always True
-  require key Shelley = Multi.RequireSignature key
-  allOf xs Shelley = Multi.RequireAllOf (map ($ Shelley) xs)
-  anyOf xs Shelley = Multi.RequireAnyOf (map ($ Shelley) xs)
-  mOf n xs Shelley = Multi.RequireMOf n (map ($ Shelley) xs)
+  never _ Shelley = RequireAnyOf mempty -- always False
+  always _ Shelley = RequireAllOf mempty -- always True
+  alwaysAlt _ Shelley = RequireAllOf mempty -- always True
+  require key Shelley = RequireSignature key
+  allOf xs Shelley = RequireAllOf (Seq.fromList (map ($ Shelley) xs))
+  anyOf xs Shelley = RequireAnyOf (Seq.fromList (map ($ Shelley) xs))
+  mOf n xs Shelley = RequireMOf n (Seq.fromList (map ($ Shelley) xs))
 
 -- Make Scripts in AllegraEra
 

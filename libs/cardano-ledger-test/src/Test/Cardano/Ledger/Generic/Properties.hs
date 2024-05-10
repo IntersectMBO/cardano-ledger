@@ -16,6 +16,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTxBody (..), IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import qualified Cardano.Ledger.Shelley as S (Shelley)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -110,6 +111,16 @@ genTxAndUTXOState proof@Shelley gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <-
     genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
+
+genTxAndLEDGERStateShelley ::
+  GenSize -> Gen (TRC (EraRule "LEDGER" S.Shelley), GenState S.Shelley)
+genTxAndLEDGERStateShelley genSize = do
+  Box _ trc genState <- genTxAndLEDGERState Shelley genSize
+  pure (trc, genState)
+
+testTxValidForLEDGERShelley :: (TRC (EraRule "LEDGER" S.Shelley), GenState S.Shelley) -> Property
+testTxValidForLEDGERShelley (trc, genState) =
+  testTxValidForLEDGER Shelley (Box Shelley trc genState)
 
 genTxAndLEDGERState ::
   forall era.
@@ -230,8 +241,8 @@ txPreserveAda :: GenSize -> TestTree
 txPreserveAda genSize =
   testGroup
     "Individual Tx's preserve Ada"
-    [ testPropMax 30 "Shelley Tx preserves ADA" $
-        forAll (genTxAndLEDGERState Shelley genSize) (testTxValidForLEDGER Shelley)
+    [ testPropMax 30 "Shelley Tx preservers Ada" $
+        forAll (genTxAndLEDGERStateShelley genSize) (testTxValidForLEDGERShelley)
     , testPropMax 30 "Allegra Tx preserves ADA" $
         forAll (genTxAndLEDGERState Allegra genSize) (testTxValidForLEDGER Allegra)
     , testPropMax 30 "Mary Tx preserves ADA" $
@@ -391,7 +402,7 @@ test n proof = defaultMain $
         withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     Shelley ->
       testPropMax 30 "Shelley ValidTx preserves ADA" $
-        withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
+        withMaxSuccess n (forAll (genTxAndLEDGERStateShelley def) testTxValidForLEDGERShelley)
     other -> error ("NO Test in era " ++ show other)
 
 -- ===============================================================

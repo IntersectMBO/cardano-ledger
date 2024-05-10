@@ -1,8 +1,22 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.11.0.1
+## 1.12.0.0
 
-*
+* Introduce `ShelleyEraScript` class
+* Add `ShelleyEraScript` for `ShelleyEra`
+* Replace patterns within `MultiSig` with `ShelleyEraScript`-constrained ones:
+  * `RequireSignature`
+  * `RequireAllOf`
+  * `RequireAnyOf`
+  * `RequireMOf`
+* Change signatures of `evalMultiSig` and `validateMultiSig`:
+  * replace `Era` constraint with `ShelleyEraScript`
+  * replace `MultiSig` with `NativeScript`
+
+### testlib
+* Change signatures of `Arbitrary` instances for `MultiSig`:
+  * replace `Era` constraint with `ShelleyEraScript`
+  * add `NativeScript era ~ MultiSig era` constraint
 
 ## 1.11.0.0
 

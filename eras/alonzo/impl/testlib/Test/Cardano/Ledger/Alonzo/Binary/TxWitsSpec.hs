@@ -10,6 +10,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec (spec) where
 
+import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..))
@@ -28,6 +29,7 @@ spec ::
   forall era.
   ( AlonzoEraScript era
   , Script era ~ AlonzoScript era
+  , NativeScript era ~ Timelock era
   ) =>
   Spec
 spec = do
@@ -100,6 +102,7 @@ nativeScriptsProp ::
   forall era.
   ( AlonzoEraScript era
   , Script era ~ AlonzoScript era
+  , NativeScript era ~ Timelock era
   ) =>
   Spec
 nativeScriptsProp = do

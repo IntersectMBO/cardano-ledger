@@ -2,9 +2,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -14,25 +17,31 @@ module Test.Cardano.Ledger.Allegra.Arbitrary (
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
-import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Allegra.Scripts (
+  AllegraEraScript (..),
+  Timelock (..),
+  ValidityInterval (..),
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
+import Cardano.Ledger.Shelley.Scripts (
+  pattern RequireSignature,
+ )
+
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (AllegraTxBody))
-import Cardano.Ledger.Binary (EncCBOR)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Shelley.API (KeyHash (KeyHash), ShelleyTxAuxData (ShelleyTxAuxData))
+import Cardano.Ledger.Shelley.API (ShelleyTxAuxData (ShelleyTxAuxData))
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Generic.Random (genericArbitraryU)
-import Test.Cardano.Ledger.Binary.Random (mkDummyHash)
-import Test.Cardano.Ledger.Shelley.Arbitrary (genMetadata')
+import Test.Cardano.Ledger.Shelley.Arbitrary (genMetadata', sizedNativeScriptGens)
 import Test.QuickCheck (
   Arbitrary (arbitrary, shrink),
   Gen,
   choose,
   genericShrink,
-  listOf,
   oneof,
-  resize,
   scale,
   vectorOf,
  )
@@ -40,41 +49,23 @@ import Test.QuickCheck (
 maxTimelockDepth :: Int
 maxTimelockDepth = 3
 
-maxTimelockListLens :: Int
-maxTimelockListLens = 5
-
 sizedTimelock ::
-  Era era =>
+  AllegraEraScript era =>
   Int ->
-  Gen (Timelock era)
-sizedTimelock 0 = RequireSignature . KeyHash . mkDummyHash <$> (arbitrary :: Gen Int)
+  Gen (NativeScript era)
+sizedTimelock 0 = RequireSignature <$> arbitrary
 sizedTimelock n =
-  oneof
-    [ RequireSignature . KeyHash . mkDummyHash <$> (arbitrary :: Gen Int)
-    , RequireAllOf
-        <$> ( fromList
-                <$> resize
-                  maxTimelockListLens
-                  (listOf (sizedTimelock (n - 1)))
-            )
-    , RequireAnyOf
-        <$> ( fromList
-                <$> resize
-                  maxTimelockListLens
-                  (listOf (sizedTimelock (n - 1)))
-            )
-    , do
-        subs <- resize maxTimelockListLens (listOf (sizedTimelock (n - 1)))
-        let i = length subs
-        RequireMOf <$> choose (0, i) <*> pure (fromList subs)
-    , RequireTimeStart <$> arbitrary
-    , RequireTimeExpire <$> arbitrary
-    ]
+  oneof $
+    sizedNativeScriptGens n
+      <> [ RequireTimeStart <$> arbitrary
+         , RequireTimeExpire <$> arbitrary
+         ]
 
 -- TODO Generate metadata with script preimages
 instance
   forall era.
-  ( EncCBOR (Script era)
+  ( AllegraEraScript era
+  , NativeScript era ~ Timelock era
   , Arbitrary (Script era)
   , Era era
   ) =>
@@ -95,7 +86,7 @@ instance
     genMetadata' @era >>= \case
       ShelleyTxAuxData m -> AllegraTxAuxData m <$> (genScriptSeq @era)
 
-genScriptSeq :: Era era => Gen (StrictSeq (Timelock era))
+genScriptSeq :: Arbitrary (NativeScript era) => Gen (StrictSeq (NativeScript era))
 genScriptSeq = do
   n <- choose (0, 3)
   l <- vectorOf n arbitrary
@@ -131,7 +122,12 @@ instance
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
 
-instance Era era => Arbitrary (Timelock era) where
+instance
+  ( AllegraEraScript era
+  , NativeScript era ~ Timelock era
+  ) =>
+  Arbitrary (Timelock era)
+  where
   arbitrary = sizedTimelock maxTimelockDepth
 
 instance Arbitrary ValidityInterval where

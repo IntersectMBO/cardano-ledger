@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Allegra.Examples.Consensus where
 
@@ -14,6 +15,7 @@ import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Shelley.PParams (Update (..))
+import Cardano.Ledger.Shelley.Scripts
 import Cardano.Slotting.Slot
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
@@ -57,7 +59,7 @@ exampleAllegraTxBody value =
     auxiliaryDataHash =
       AuxiliaryDataHash $ mkDummySafeHash (Proxy @(EraCrypto era)) 30
 
-exampleTimelock :: Era era => Timelock era
+exampleTimelock :: AllegraEraScript era => NativeScript era
 exampleTimelock =
   RequireMOf 2 $
     StrictSeq.fromList
@@ -74,5 +76,6 @@ exampleTimelock =
       , RequireSignature (mkKeyHash 100)
       ]
 
-exampleAllegraTxAuxData :: Era era => AllegraTxAuxData era
+exampleAllegraTxAuxData ::
+  (AllegraEraScript era, NativeScript era ~ Timelock era) => AllegraTxAuxData era
 exampleAllegraTxAuxData = AllegraTxAuxData exampleAuxDataMap (StrictSeq.fromList [exampleTimelock])

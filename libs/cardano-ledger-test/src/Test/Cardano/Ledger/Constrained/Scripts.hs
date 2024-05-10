@@ -1,24 +1,26 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
-module Test.Cardano.Ledger.Constrained.Scripts where
+module Test.Cardano.Ledger.Constrained.Scripts (
+  allPlutusScripts,
+  genCoreScript,
+  spendPlutusScripts,
+  sufficientScript,
+) where
 
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
-import qualified Cardano.Ledger.Allegra.Scripts as Time (Timelock (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Core (Era (..), Script, hashScript)
+import Cardano.Ledger.Core (Era (..), NativeScript, Script, getNativeScript, hashScript)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyRole (..),
-  coerceKeyRole,
-  hashKey,
  )
-import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (replicateM)
 import Data.Foldable (toList)
@@ -41,19 +43,34 @@ import Test.Cardano.Ledger.Generic.GenState
 import Test.Cardano.Ledger.Generic.Proof
 import Test.QuickCheck
 
+import Cardano.Ledger.Allegra.Scripts (
+  AllegraEraScript,
+  Timelock,
+  ValidityInterval (..),
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
+import Cardano.Ledger.Shelley.Scripts (
+  MultiSig,
+  ShelleyEraScript,
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
+
 -- ======================================
 
 type KeyMap era = Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))
 
-genKeyMap :: Era era => Proof era -> Gen (KeyMap era)
-genKeyMap _proof = do
-  keyPairs <- vectorOf 100 arbitrary
-  let keyHash keyPair = ((coerceKeyRole . hashKey . vKey) keyPair, keyPair)
-  pure (Map.fromList (map keyHash keyPairs))
-
-genMultiSig :: forall era. Era era => KeyMap era -> Proof era -> Gen (Shelley.MultiSig era)
+genMultiSig ::
+  forall era.
+  (ShelleyEraScript era, NativeScript era ~ MultiSig era) =>
+  KeyMap era ->
+  Proof era ->
+  Gen (MultiSig era)
 genMultiSig keymap _proof = do
-  let genNestedMultiSig :: Natural -> Gen (Shelley.MultiSig era)
+  let genNestedMultiSig :: Natural -> Gen (MultiSig era)
       genNestedMultiSig k
         | k > 0 =
             oneof $
@@ -61,21 +78,26 @@ genMultiSig keymap _proof = do
         | otherwise = oneof nonRecTimelocks
       nonRecTimelocks = [requireSignature]
       requireSignature =
-        Shelley.RequireSignature @era . fst <$> genFromMap ["from requiresSignature in genMultiSig"] keymap
+        RequireSignature @era . fst <$> genFromMap ["from requiresSignature in genMultiSig"] keymap
       requireAllOf k = do
         n <- nonNegativeSingleDigitInt
-        Shelley.RequireAllOf <$> replicateM n (genNestedMultiSig (k - 1))
+        RequireAllOf . Seq.fromList <$> replicateM n (genNestedMultiSig (k - 1))
       requireAnyOf k = do
         n <- positiveSingleDigitInt
-        Shelley.RequireAnyOf <$> replicateM n (genNestedMultiSig (k - 1))
+        RequireAnyOf . Seq.fromList <$> replicateM n (genNestedMultiSig (k - 1))
       requireMOf k = do
         n <- nonNegativeSingleDigitInt
         m <- choose (0, n)
-        Shelley.RequireMOf m <$> replicateM n (genNestedMultiSig (k - 1))
+        RequireMOf m . Seq.fromList <$> replicateM n (genNestedMultiSig (k - 1))
   genNestedMultiSig (2 :: Natural)
 
 genTimelock ::
-  forall era. Era era => KeyMap era -> ValidityInterval -> Proof era -> Gen (Time.Timelock era)
+  forall era.
+  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
+  KeyMap era ->
+  ValidityInterval ->
+  Proof era ->
+  Gen (Timelock era)
 genTimelock keymap (ValidityInterval mBefore mAfter) _proof = do
   -- We need to limit how deep these timelocks can go, otherwise this generator will
   -- diverge. It also has to stay very shallow because it grows too fast.
@@ -84,7 +106,7 @@ genTimelock keymap (ValidityInterval mBefore mAfter) _proof = do
             oneof $
               nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
         | otherwise = oneof nonRecTimelocks
-      nonRecTimelocks :: [Gen (Time.Timelock era)]
+      nonRecTimelocks :: [Gen (Timelock era)]
       nonRecTimelocks =
         [ r
         | SJust r <-
@@ -93,23 +115,23 @@ genTimelock keymap (ValidityInterval mBefore mAfter) _proof = do
             , SJust requireSignature
             ]
         ]
-      requireSignature = Time.RequireSignature . fst <$> genFromMap ["from requiresSignature in genTimelock"] keymap
+      requireSignature = RequireSignature . fst <$> genFromMap ["from requiresSignature in genTimelock"] keymap
       requireAllOf k = do
         n <- nonNegativeSingleDigitInt
-        Time.RequireAllOf . Seq.fromList <$> replicateM n (genNestedTimelock (k - 1))
+        RequireAllOf . Seq.fromList <$> replicateM n (genNestedTimelock (k - 1))
       requireAnyOf k = do
         n <- positiveSingleDigitInt
-        Time.RequireAnyOf . Seq.fromList <$> replicateM n (genNestedTimelock (k - 1))
+        RequireAnyOf . Seq.fromList <$> replicateM n (genNestedTimelock (k - 1))
       requireMOf k = do
         n <- nonNegativeSingleDigitInt
         m <- choose (0, n)
-        Time.RequireMOf m . Seq.fromList <$> replicateM n (genNestedTimelock (k - 1))
+        RequireMOf m . Seq.fromList <$> replicateM n (genNestedTimelock (k - 1))
       requireTimeStart (SlotNo validFrom) = do
         minSlotNo <- choose (minBound, validFrom)
-        pure $ Time.RequireTimeStart (SlotNo minSlotNo)
+        pure $ RequireTimeStart (SlotNo minSlotNo)
       requireTimeExpire (SlotNo validTill) = do
         maxSlotNo <- choose (validTill, maxBound)
-        pure $ Time.RequireTimeExpire (SlotNo maxSlotNo)
+        pure $ RequireTimeExpire (SlotNo maxSlotNo)
   genNestedTimelock (2 :: Natural)
 
 genPlutusScript ::
@@ -207,47 +229,46 @@ plutusByTag proof tag = trueS ++ falseS
 -- So we need to compute the smallest set possible for Scripts. A MultiSig (Timelock) scripts
 -- needs enough key witnesses, so that some subset of the Signature scripts to make it True.
 
-sufficientMultiSig :: Era era => Shelley.MultiSig era -> Set (KeyHash 'Witness (EraCrypto era))
+sufficientMultiSig ::
+  (ShelleyEraScript era, NativeScript era ~ MultiSig era) =>
+  MultiSig era ->
+  Set (KeyHash 'Witness (EraCrypto era))
 sufficientMultiSig x = case x of
-  Shelley.RequireSignature kh -> Set.singleton kh
-  Shelley.RequireAllOf xs -> Set.unions (map sufficientMultiSig xs)
-  Shelley.RequireAnyOf xs ->
-    case List.sortBy p (filter (not . Set.null) (map sufficientMultiSig (toList xs))) of
+  RequireSignature kh -> Set.singleton kh
+  RequireAllOf xs -> Set.unions (sufficientMultiSig <$> xs)
+  RequireAnyOf xs ->
+    case List.sortBy p (filter (not . Set.null) (sufficientMultiSig <$> (toList xs))) of
       [] -> Set.empty
       (s : _) -> s
-  Shelley.RequireMOf n xs -> Set.unions (take n (List.sortBy p (map sufficientMultiSig xs)))
+  RequireMOf n xs -> Set.unions (take n (List.sortBy p (sufficientMultiSig <$> (toList xs))))
+  _ -> error "Impossible: All NativeScripts should have been accounted for"
   where
     p a b = compare (Set.size a) (Set.size b)
 
-smallest :: [Set x] -> Set x
-smallest xs = help Set.empty xs
-  where
-    help small1 [] = small1
-    help small1 (y : ys) =
-      if Set.size small1 < Set.size y
-        then help small1 ys
-        else help y ys
-
 -- | Return sufficient KeyHash to make the Timelock succeed. Note that some Timelock
 --   scripts need no KeyHashes to succeed (RequireTimeExpire, RequireTimeStart)
-sufficientTimelock :: Era era => Time.Timelock era -> Set (KeyHash 'Witness (EraCrypto era))
+sufficientTimelock ::
+  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
+  Timelock era ->
+  Set (KeyHash 'Witness (EraCrypto era))
 sufficientTimelock x = case x of
-  Time.RequireSignature kh -> Set.singleton kh
-  Time.RequireAllOf xs -> Set.unions (fmap sufficientTimelock xs)
-  Time.RequireAnyOf xs ->
+  RequireSignature kh -> Set.singleton kh
+  RequireAllOf xs -> Set.unions (fmap sufficientTimelock xs)
+  RequireAnyOf xs ->
     case List.sortBy p (filter (not . Set.null) (map sufficientTimelock (toList xs))) of
       [] -> Set.empty
       (s : _) -> s
-  Time.RequireMOf n xs -> Set.unions (take n (List.sortBy p (map sufficientTimelock (toList xs))))
-  Time.RequireTimeExpire {} -> Set.empty
-  Time.RequireTimeStart {} -> Set.empty
+  RequireMOf n xs -> Set.unions (take n (List.sortBy p (map sufficientTimelock (toList xs))))
+  RequireTimeExpire {} -> Set.empty
+  RequireTimeStart {} -> Set.empty
   where
     p a b = compare (Set.size a) (Set.size b)
 
 sufficientScript :: Proof era -> Script era -> Set (KeyHash 'Witness (EraCrypto era))
-sufficientScript p s = case whichScript p of
-  ScriptShelleyToShelley -> sufficientMultiSig s
-  ScriptAllegraToMary -> sufficientTimelock s
-  ScriptAlonzoToConway -> case s of
-    TimelockScript tl -> sufficientTimelock tl
-    PlutusScript _ -> Set.empty
+sufficientScript p s = case p of
+  Shelley -> sufficientMultiSig s
+  Allegra -> sufficientTimelock s
+  Mary -> sufficientTimelock s
+  Alonzo -> maybe Set.empty sufficientTimelock (getNativeScript s)
+  Babbage -> maybe Set.empty sufficientTimelock (getNativeScript s)
+  Conway -> maybe Set.empty sufficientTimelock (getNativeScript s)

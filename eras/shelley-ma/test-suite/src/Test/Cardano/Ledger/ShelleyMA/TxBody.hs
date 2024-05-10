@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.ShelleyMA.TxBody (
 )
 where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin (..))
@@ -23,6 +23,7 @@ import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.TxBody (MaryEraTxBody (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes (getMemoRawBytes)
+import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Withdrawals (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString.Short as Short

@@ -15,12 +15,6 @@ module Test.Cardano.Ledger.Conway.Imp.GovSpec (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.Allegra.Scripts (
-  pattern RequireAllOf,
-  pattern RequireAnyOf,
-  pattern RequireMOf,
-  pattern RequireSignature,
- )
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Core
@@ -30,6 +24,12 @@ import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Plutus.CostModels (updateCostModels)
 import qualified Cardano.Ledger.Shelley.HardForks as HF
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.Scripts (
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
 import Cardano.Ledger.Val (zero, (<->))
 import Data.Default.Class (Default (..))
 import Data.List.NonEmpty (NonEmpty (..))

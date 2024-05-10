@@ -27,7 +27,13 @@ module Test.Cardano.Ledger.Generic.TxGen (
 )
 where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Allegra.Scripts (
+  AllegraEraScript,
+  Timelock (..),
+  ValidityInterval (..),
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
@@ -58,7 +64,14 @@ import Cardano.Ledger.Shelley.API (
   Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.LedgerState (RewardAccounts)
-import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
+import Cardano.Ledger.Shelley.Scripts (
+  MultiSig,
+  ShelleyEraScript,
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
 import Cardano.Ledger.Shelley.TxCert (
   ShelleyTxCert (..),
   pattern DelegStakeTxCert,
@@ -261,24 +274,25 @@ mkWitVKey era mTag (ScriptHashObj scriptHash) =
 -- | Used in Shelley Eras
 mkMultiSigWit ::
   forall era.
-  Reflect era =>
+  (ShelleyEraScript era, NativeScript era ~ MultiSig era, Reflect era) =>
   Proof era ->
   Maybe PlutusPurposeTag ->
-  Shelley.MultiSig era ->
+  MultiSig era ->
   GenRS era (SafeHash (EraCrypto era) EraIndependentTxBody -> [WitnessesField era])
-mkMultiSigWit era mTag (Shelley.RequireSignature keyHash) = mkWitVKey era mTag (KeyHashObj keyHash)
-mkMultiSigWit era mTag (Shelley.RequireAllOf timelocks) = F.fold <$> mapM (mkMultiSigWit era mTag) timelocks
-mkMultiSigWit era mTag (Shelley.RequireAnyOf timelocks)
+mkMultiSigWit era mTag (RequireSignature keyHash) = mkWitVKey era mTag (KeyHashObj keyHash)
+mkMultiSigWit era mTag (RequireAllOf timelocks) = F.fold <$> mapM (mkMultiSigWit era mTag) timelocks
+mkMultiSigWit era mTag (RequireAnyOf timelocks)
   | F.null timelocks = pure (const [])
   | otherwise = mkMultiSigWit era mTag =<< lift (elements (F.toList timelocks))
-mkMultiSigWit era mTag (Shelley.RequireMOf m timelocks) = do
+mkMultiSigWit era mTag (RequireMOf m timelocks) = do
   ts <- take m <$> lift (shuffle (F.toList timelocks))
   F.fold <$> mapM (mkMultiSigWit era mTag) ts
+mkMultiSigWit _ _ _ = error "Impossible: All NativeScripts should have been accounted for"
 
 -- | Timeock scripts are used in Mary and subsequent Eras.
 mkTimelockWit ::
   forall era.
-  Reflect era =>
+  (AllegraEraScript era, NativeScript era ~ Timelock era, Reflect era) =>
   Proof era ->
   Maybe PlutusPurposeTag ->
   Timelock era ->

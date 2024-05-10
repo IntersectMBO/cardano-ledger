@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -22,7 +23,13 @@ module Test.Cardano.Ledger.Generic.PrettyCore where
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
-import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Allegra.Scripts (
+  AllegraEraScript (..),
+  Timelock,
+  ValidityInterval (..),
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.Alonzo.Core (CoinPerWord (..))
@@ -233,7 +240,14 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyUtxoPredFailure (..),
   ShelleyUtxowPredFailure (..),
  )
-import qualified Cardano.Ledger.Shelley.Scripts as SS (MultiSig (..))
+import Cardano.Ledger.Shelley.Scripts (
+  MultiSig,
+  ShelleyEraScript,
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum (..), ShelleyTxAuxData (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..), ShelleyTxBodyRaw (..))
@@ -819,7 +833,8 @@ ppShelleyTxAuxData (ShelleyTxAuxData m) = ppMap' (text "ShelleyTxAuxData") ppWor
 instance Era era => PrettyA (ShelleyTxAuxData era) where
   prettyA = ppShelleyTxAuxData
 
-ppAllegraTxAuxData :: Reflect era => AllegraTxAuxData era -> PDoc
+ppAllegraTxAuxData ::
+  (AllegraEraScript era, Reflect era, NativeScript era ~ Timelock era) => AllegraTxAuxData era -> PDoc
 ppAllegraTxAuxData (AllegraTxAuxData m sp) =
   ppRecord
     "AllegraTxAuxData"
@@ -827,7 +842,10 @@ ppAllegraTxAuxData (AllegraTxAuxData m sp) =
     , ("auxiliaryScripts", ppStrictSeq prettyA sp)
     ]
 
-instance Reflect era => PrettyA (AllegraTxAuxData era) where
+instance
+  (AllegraEraScript era, Reflect era, NativeScript era ~ Timelock era) =>
+  PrettyA (AllegraTxAuxData era)
+  where
   prettyA = ppAllegraTxAuxData
 
 ppAlonzoTxAuxData ::
@@ -2383,25 +2401,27 @@ keyPairSummary (KeyPair x y) =
 vKeySummary :: Crypto c => VKey r c -> PDoc
 vKeySummary vk@(VKey x) = viaShow x <> " (hash " <> keyHashSummary (hashKey vk) <> ")"
 
-timelockSummary :: Era era => Timelock era -> PDoc
+timelockSummary :: (AllegraEraScript era, NativeScript era ~ Timelock era) => Timelock era -> PDoc
 timelockSummary (RequireSignature akh) =
   ppSexp "Signature" [keyHashSummary akh]
 timelockSummary (RequireAllOf ms) =
-  ppSexp "AllOf" (foldr (:) [] (fmap timelockSummary ms))
+  ppSexp "AllOf" (foldr (:) [] (timelockSummary <$> ms))
 timelockSummary (RequireAnyOf ms) =
-  ppSexp "AnyOf" (foldr (:) [] (fmap timelockSummary ms))
+  ppSexp "AnyOf" (foldr (:) [] (timelockSummary <$> ms))
 timelockSummary (RequireMOf m ms) =
-  ppSexp "MOfN" (ppInteger (fromIntegral m) : foldr (:) [] (fmap timelockSummary ms))
+  ppSexp "MOfN" (ppInteger (fromIntegral m) : foldr (:) [] (timelockSummary <$> ms))
 timelockSummary (RequireTimeExpire mslot) =
   ppSexp "Expires" [pcSlotNo mslot]
 timelockSummary (RequireTimeStart mslot) =
   ppSexp "Starts" [pcSlotNo mslot]
 
-multiSigSummary :: Era era => SS.MultiSig era -> PDoc
-multiSigSummary (SS.RequireSignature hk) = ppSexp "ReqSig" [keyHashSummary hk]
-multiSigSummary (SS.RequireAllOf ps) = ppSexp "AllOf" (map multiSigSummary ps)
-multiSigSummary (SS.RequireAnyOf ps) = ppSexp "AnyOf" (map multiSigSummary ps)
-multiSigSummary (SS.RequireMOf m ps) = ppSexp "MOf" (ppInt m : map multiSigSummary ps)
+multiSigSummary ::
+  (ShelleyEraScript era, NativeScript era ~ MultiSig era) => MultiSig era -> PDoc
+multiSigSummary (RequireSignature hk) = ppSexp "ReqSig" [keyHashSummary hk]
+multiSigSummary (RequireAllOf ps) = ppSexp "AllOf" (map multiSigSummary (toList ps))
+multiSigSummary (RequireAnyOf ps) = ppSexp "AnyOf" (map multiSigSummary (toList ps))
+multiSigSummary (RequireMOf m ps) = ppSexp "MOf" (ppInt m : map multiSigSummary (toList ps))
+multiSigSummary _ = error "Impossible: All NativeScripts should have been accounted for"
 
 plutusSummary :: forall era. Proof era -> AlonzoScript era -> PDoc
 plutusSummary Conway s@(PlutusScript plutusScript) =
@@ -2563,7 +2583,11 @@ pcData d@(Data (PV1.B bytes)) =
 
 instance Era era => PrettyA (Data era) where prettyA = pcData
 
-pcTimelock :: forall era. Reflect era => Timelock era -> PDoc
+pcTimelock ::
+  forall era.
+  (AllegraEraScript era, Reflect era, NativeScript era ~ Timelock era) =>
+  Timelock era ->
+  PDoc
 pcTimelock (RequireSignature akh) = ppSexp "Sign" [pcKeyHash akh]
 pcTimelock (RequireAllOf ts) = ppSexp "AllOf" [ppList pcTimelock (toList ts)]
 pcTimelock (RequireAnyOf ts) = ppSexp "AnyOf" [ppList pcTimelock (toList ts)]
@@ -2571,16 +2595,33 @@ pcTimelock (RequireMOf m ts) = ppSexp "MOfN" (ppInteger (fromIntegral m) : [ppLi
 pcTimelock (RequireTimeExpire mslot) = ppSexp "Expires" [pcSlotNo mslot]
 pcTimelock (RequireTimeStart mslot) = ppSexp "Starts" [pcSlotNo mslot]
 
-instance Reflect era => PrettyA (Timelock era) where
+instance
+  ( AllegraEraScript era
+  , Reflect era
+  , NativeScript era ~ Timelock era
+  ) =>
+  PrettyA (Timelock era)
+  where
   prettyA = pcTimelock
 
-pcMultiSig :: Reflect era => PDoc -> SS.MultiSig era -> PDoc
-pcMultiSig h (SS.RequireSignature hk) = ppSexp "ReqSig" [keyHashSummary hk, h]
-pcMultiSig h (SS.RequireAllOf _) = ppSexp "AllOf" [h]
-pcMultiSig h (SS.RequireAnyOf _) = ppSexp "AnyOf" [h]
-pcMultiSig h (SS.RequireMOf m _) = ppSexp "MOf" [ppInt m, h]
+pcMultiSig ::
+  (ShelleyEraScript era, Reflect era, NativeScript era ~ MultiSig era) =>
+  PDoc ->
+  MultiSig era ->
+  PDoc
+pcMultiSig h (RequireSignature hk) = ppSexp "ReqSig" [keyHashSummary hk, h]
+pcMultiSig h (RequireAllOf _) = ppSexp "AllOf" [h]
+pcMultiSig h (RequireAnyOf _) = ppSexp "AnyOf" [h]
+pcMultiSig h (RequireMOf m _) = ppSexp "MOf" [ppInt m, h]
+pcMultiSig _ _ = error "Impossible: All NativeScripts should have been accounted for"
 
-instance Reflect era => PrettyA (SS.MultiSig era) where
+instance
+  ( AllegraEraScript era
+  , Reflect era
+  , NativeScript era ~ MultiSig era
+  ) =>
+  PrettyA (MultiSig era)
+  where
   prettyA = pcMultiSig mempty
 
 pcScriptHash :: ScriptHash era -> PDoc

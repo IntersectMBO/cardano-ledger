@@ -26,7 +26,7 @@ module Cardano.Ledger.Conway.Scripts (
 where
 
 import Cardano.Ledger.Address (RewardAccount)
-import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
+import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
   AlonzoScript (..),
@@ -52,6 +52,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Value (PolicyID)
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.SafeHash (SafeToHash (..))
+import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
@@ -142,6 +143,8 @@ instance Crypto c => AlonzoEraScript (ConwayEra c) where
     AlonzoRewarding (AsIx ix) -> ConwayRewarding (AsIx ix)
 
 instance Crypto c => ConwayEraScript (ConwayEra c) where
+  {-# SPECIALIZE instance ConwayEraScript (ConwayEra StandardCrypto) #-}
+
   mkVotingPurpose = ConwayVoting
 
   toVotingPurpose (ConwayVoting i) = Just i
@@ -151,6 +154,30 @@ instance Crypto c => ConwayEraScript (ConwayEra c) where
 
   toProposingPurpose (ConwayProposing i) = Just i
   toProposingPurpose _ = Nothing
+
+instance Crypto c => ShelleyEraScript (ConwayEra c) where
+  {-# SPECIALIZE instance ShelleyEraScript (ConwayEra StandardCrypto) #-}
+
+  mkRequireSignature = mkRequireSignatureTimelock
+  getRequireSignature = getRequireSignatureTimelock
+
+  mkRequireAllOf = mkRequireAllOfTimelock
+  getRequireAllOf = getRequireAllOfTimelock
+
+  mkRequireAnyOf = mkRequireAnyOfTimelock
+  getRequireAnyOf = getRequireAnyOfTimelock
+
+  mkRequireMOf = mkRequireMOfTimelock
+  getRequireMOf = getRequireMOfTimelock
+
+instance Crypto c => AllegraEraScript (ConwayEra c) where
+  {-# SPECIALIZE instance AllegraEraScript (ConwayEra StandardCrypto) #-}
+
+  mkTimeStart = mkTimeStartTimelock
+  getTimeStart = getTimeStartTimelock
+
+  mkTimeExpire = mkTimeExpireTimelock
+  getTimeExpire = getTimeExpireTimelock
 
 instance NFData (PlutusScript (ConwayEra c)) where
   rnf = rwhnf

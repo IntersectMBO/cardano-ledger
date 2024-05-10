@@ -60,7 +60,7 @@ module Cardano.Ledger.Alonzo.Scripts (
 where
 
 import Cardano.Ledger.Address (RewardAccount)
-import Cardano.Ledger.Allegra.Scripts (Timelock, eqTimelockRaw, translateTimelock)
+import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.TxCert ()
 import Cardano.Ledger.BaseTypes (ProtVer (..), kindObject)
@@ -88,7 +88,7 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.Binary.Plain (serializeAsHexText)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Value (PolicyID)
 import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.CostModels
@@ -106,7 +106,7 @@ import Cardano.Ledger.Plutus.Language (
   withSLanguage,
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
+import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..), nativeMultiSigTag)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (guard)
@@ -147,6 +147,7 @@ class
   , Show (PlutusPurpose AsIxItem era)
   , NoThunks (PlutusPurpose AsIxItem era)
   , NFData (PlutusPurpose AsIxItem era)
+  , AllegraEraScript era
   ) =>
   AlonzoEraScript era
   where
@@ -460,7 +461,33 @@ alonzoScriptPrefixTag = \case
   TimelockScript _ -> nativeMultiSigTag -- "\x00"
   PlutusScript plutusScript -> BS.singleton (withPlutusScript plutusScript plutusLanguageTag)
 
+instance Crypto c => ShelleyEraScript (AlonzoEra c) where
+  {-# SPECIALIZE instance ShelleyEraScript (AlonzoEra StandardCrypto) #-}
+
+  mkRequireSignature = mkRequireSignatureTimelock
+  getRequireSignature = getRequireSignatureTimelock
+
+  mkRequireAllOf = mkRequireAllOfTimelock
+  getRequireAllOf = getRequireAllOfTimelock
+
+  mkRequireAnyOf = mkRequireAnyOfTimelock
+  getRequireAnyOf = getRequireAnyOfTimelock
+
+  mkRequireMOf = mkRequireMOfTimelock
+  getRequireMOf = getRequireMOfTimelock
+
+instance Crypto c => AllegraEraScript (AlonzoEra c) where
+  {-# SPECIALIZE instance AllegraEraScript (AlonzoEra StandardCrypto) #-}
+
+  mkTimeStart = mkTimeStartTimelock
+  getTimeStart = getTimeStartTimelock
+
+  mkTimeExpire = mkTimeExpireTimelock
+  getTimeExpire = getTimeExpireTimelock
+
 instance Crypto c => AlonzoEraScript (AlonzoEra c) where
+  {-# SPECIALIZE instance AlonzoEraScript (AlonzoEra StandardCrypto) #-}
+
   newtype PlutusScript (AlonzoEra c) = AlonzoPlutusV1 (Plutus 'PlutusV1)
     deriving newtype (Eq, Ord, Show, NFData, NoThunks, SafeToHash, Generic)
 
