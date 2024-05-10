@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.4.1.1
+
+*
+
 ## 1.4.1.0
 
 * Add a `ToJSON` instance for `ValidityInterval`

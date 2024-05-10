@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.12.0.1
+
+*
+
 ## 1.12.0.0
 
 * Change `computeDRepPulser` to also process proposal-deposits for SPOs. #4324

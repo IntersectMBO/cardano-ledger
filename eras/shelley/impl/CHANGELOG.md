@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.11.0.1
+
+*
+
 ## 1.11.0.0
 
 * Introduce `futurePParamsGovStateL`, `futurePParamsShelleyGovStateL` and `sgsFuturePParams`

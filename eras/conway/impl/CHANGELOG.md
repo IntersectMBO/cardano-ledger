@@ -1,6 +1,10 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.14.0 0
+## 1.14.0.1
+
+*
+
+## 1.14.0.0
 
 * Remove `gePrevGovActionIds` from `GovEnv`
 * Include proposal deposits in the DRep active voting stake. #4309
