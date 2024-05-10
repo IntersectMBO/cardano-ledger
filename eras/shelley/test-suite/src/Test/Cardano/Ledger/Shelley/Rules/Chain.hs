@@ -23,6 +23,7 @@ module Test.Cardano.Ledger.Shelley.Rules.Chain (
   initialShelleyState,
   totalAda,
   totalAdaPots,
+  chainStateNesL,
 ) where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
@@ -127,7 +128,7 @@ import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro (Lens', lens, (&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
 import Test.Cardano.Ledger.Shelley.TreeDiff ()
 import Test.Cardano.Ledger.TreeDiff (ToExpr (toExpr), defaultExprViaShow)
@@ -152,6 +153,9 @@ deriving stock instance Show (NewEpochState era) => Show (ChainState era)
 deriving stock instance Eq (NewEpochState era) => Eq (ChainState era)
 
 instance NFData (NewEpochState era) => NFData (ChainState era)
+
+chainStateNesL :: Lens' (ChainState era) (NewEpochState era)
+chainStateNesL = lens chainNes $ \x y -> x {chainNes = y}
 
 data TestChainPredicateFailure era
   = RealChainPredicateFailure !ChainPredicateFailure
