@@ -34,7 +34,7 @@ import Cardano.Ledger.CertState (
   csCommitteeCredsL,
   vsNumDormantEpochsL,
  )
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
@@ -209,10 +209,7 @@ mockPoolDistr = Var $ V "mockPoolDistr" (MapR PoolHashR RationalR) No
 
 poolDistrL ::
   NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
-poolDistrL = nesPdL . unPoolDistrL
-
-unPoolDistrL :: Lens' (PoolDistr c) (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
-unPoolDistrL = lens unPoolDistr (\(PoolDistr _ y) x -> PoolDistr x y)
+poolDistrL = nesPdL . poolDistrDistrL
 
 -- CertState - DState
 
@@ -692,7 +689,7 @@ snapShotsT =
     :$ Shift goSnapShotT ssStakeGoL
     :$ Lensed snapShotFee ssFeeL
   where
-    shotsfun w x = SnapShots w (PoolDistr x mempty)
+    shotsfun w x = SnapShots w (PoolDistr x $ CompactCoin 1)
 
 -- ==================================================================
 -- RewardUpdate
@@ -974,7 +971,7 @@ newEpochStateConstr
       (BlocksMade nesBcur')
       nesEs'
       SNothing
-      (PoolDistr nesPd' mempty)
+      (PoolDistr nesPd' $ CompactCoin 1)
       ( case proof of
           Shelley -> UTxO Map.empty
           Allegra -> ()
@@ -993,7 +990,7 @@ newEpochStateT proof =
     :$ Lensed prevBlocksMade nesBprevL
     :$ Lensed currBlocksMade nesBcurL
     :$ Shift (epochStateT proof) nesEsL
-    :$ Lensed poolDistr (nesPdL . unPoolDistrL)
+    :$ Lensed poolDistr (nesPdL . poolDistrDistrL)
 
 -- | Target for EpochState
 epochStateT ::
@@ -1858,7 +1855,7 @@ initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactsta
         umap
         0
         stakeDistr
-        (PoolDistr poold mempty)
+        (PoolDistr poold $ CompactCoin 1)
         Map.empty
         credDRepStateMap
         epoch
@@ -1968,7 +1965,7 @@ prevPoolDistrL ::
 prevPoolDistrL =
   lens
     (\x -> unPoolDistr (dpStakePoolDistr x))
-    (\x y -> x {dpStakePoolDistr = PoolDistr y mempty})
+    (\x y -> x {dpStakePoolDistr = PoolDistr y $ CompactCoin 1})
 
 -- | Snapshot of the 'drepDelegation' from he start of the current epoch.
 prevDRepDelegations ::

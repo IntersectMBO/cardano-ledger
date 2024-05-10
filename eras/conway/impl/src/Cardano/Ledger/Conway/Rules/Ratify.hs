@@ -206,8 +206,9 @@ spoAcceptedRatio
     | abstainVotesRatio == 1 = 0 -- guard against the degenerate case when all abstain.
     | otherwise = yesVotesRatio / (1 - abstainVotesRatio)
     where
-      yesVotesRatio = toInteger yesVotes % toInteger totalActiveStake
-      abstainVotesRatio = toInteger abstainVotes % toInteger totalActiveStake
+      yesVotesRatio = toInteger yesVotes % toInteger nonZeroTotalActiveStake
+      abstainVotesRatio = toInteger abstainVotes % toInteger nonZeroTotalActiveStake
+      nonZeroTotalActiveStake = if 0 == totalActiveStake then 1 else totalActiveStake
       (CompactCoin yesVotes, CompactCoin abstainVotes) =
         Map.foldlWithKey' getVotesStakePerStakePoolDistr (mempty, mempty) individualPoolStake
       getVotesStakePerStakePoolDistr (!yess, !abstains) poolId distr =

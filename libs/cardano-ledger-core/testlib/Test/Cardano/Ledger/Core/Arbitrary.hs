@@ -504,7 +504,9 @@ instance Arbitrary SizeOfPoolOwners where
 ------------------------------------------------------------------------------------------
 
 instance Crypto c => Arbitrary (PoolDistr c) where
-  arbitrary = PoolDistr <$> arbitrary <*> arbitrary
+  arbitrary = do
+    Positive denominator <- arbitrary
+    PoolDistr <$> arbitrary <*> pure (CompactCoin denominator)
 
 instance Crypto c => Arbitrary (IndividualPoolStake c) where
   arbitrary = IndividualPoolStake <$> arbitrary <*> arbitrary <*> arbitrary
