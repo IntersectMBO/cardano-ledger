@@ -269,7 +269,7 @@ umElemAsTuple = \case
 -- We can tell that the pair is present and active when Txxxx has
 -- an F in the 1st position (present) and 4rd position (DRep delegated).
 --
--- This is equivalent to the pattern (ElemP (SJust r) _ _ (SJust drep)) -> Just (r, drep)
+-- This is equivalent to the pattern (UMElem (SJust r) _ _ (SJust d)) -> Just (r, d)
 umElemDRepDelegatedReward :: UMElem c -> Maybe (CompactForm Coin, DRep c)
 umElemDRepDelegatedReward = \case
   TFEEF RDPair {rdReward} dRep -> Just (rdReward, dRep)
@@ -283,7 +283,7 @@ umElemDRepDelegatedReward = \case
 -- We can tell that the pair is present and active when Txxxx has
 -- an F in the 1st position (present) and 3rd position (delegated).
 --
--- This is equivalent to the pattern (ElemP (SJust r) _ (SJust _) _) -> Just r
+-- This is equivalent to the pattern (UMElem (SJust r) _ (SJust _) _) -> Just r
 umElemRDActive :: UMElem c -> Maybe RDPair
 umElemRDActive = \case
   TFEFE rdA _ -> Just rdA
@@ -322,7 +322,7 @@ umElemDelegations = \case
 -- | Extract the reward-deposit pair if it is present.
 -- We can tell that the reward is present when Txxxx has an F in the first position
 --
--- This is equivalent to the pattern (ElemP (SJust r) _ _ _) -> Just r
+-- This is equivalent to the pattern (UMElem (SJust r) _ _ _) -> Just r
 umElemRDPair :: UMElem c -> Maybe RDPair
 umElemRDPair = \case
   TFEEE r -> Just r
@@ -339,7 +339,7 @@ umElemRDPair = \case
 -- | Extract the set of pointers if it is non-empty.
 -- We can tell that the reward is present when Txxxx has an F in the second position
 --
--- This is equivalent to the pattern (ElemP _ ptrs _ _) | not (Set.null ptrs) -> Just ptrs
+-- This is equivalent to the pattern (UMElem _ p _ _) -> Just p
 umElemPtrs :: UMElem c -> Maybe (Set.Set Ptr)
 umElemPtrs = \case
   TEFEE p | not (Set.null p) -> Just p
@@ -356,7 +356,7 @@ umElemPtrs = \case
 -- | Extract the stake delegatee pool id, if present.
 -- We can tell that the pool id is present when Txxxx has an F in the third position
 --
--- This is equivalent to the pattern (ElemP _ _ (SJust s) _) -> Just s
+-- This is equivalent to the pattern (UMElem _ _ (SJust s) _) -> Just s
 umElemSPool :: UMElem c -> Maybe (KeyHash 'StakePool c)
 umElemSPool = \case
   TEEFE s -> Just s
@@ -373,7 +373,7 @@ umElemSPool = \case
 -- | Extract the voting delegatee id, if present.
 -- We can tell that the delegatee is present when Txxxx has an F in the fourth position
 --
--- This is equivalent to the pattern (ElemP _ _ _ (SJust v)) -> Just v
+-- This is equivalent to the pattern (UMElem _ _ _ (SJust d)) -> Just d
 umElemDRep :: UMElem c -> Maybe (DRep c)
 umElemDRep = \case
   TEEEF d -> Just d
