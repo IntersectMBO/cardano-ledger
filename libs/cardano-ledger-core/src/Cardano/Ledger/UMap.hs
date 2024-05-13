@@ -112,6 +112,7 @@ module Cardano.Ledger.UMap (
 )
 where
 
+import Cardano.Ledger.BaseTypes (strictMaybe)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), compactCoinOrError)
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -303,20 +304,13 @@ data RewardDelegation c
 -- and either 3rd or 4th or both positions. If there are no rewards or deposits
 -- but the delegations still exist, then we return zero coin as reward.
 umElemDelegations :: UMElem c -> Maybe (RewardDelegation c)
-umElemDelegations = \case
-  TFEEF RDPair {rdReward} drep -> Just $ RewardDelegationDRep drep rdReward
-  TFEFE RDPair {rdReward} spo -> Just $ RewardDelegationSPO spo rdReward
-  TFEFF RDPair {rdReward} spo drep -> Just $ RewardDelegationBoth spo drep rdReward
-  TFFEF RDPair {rdReward} _ drep -> Just $ RewardDelegationDRep drep rdReward
-  TFFFE RDPair {rdReward} _ spo -> Just $ RewardDelegationSPO spo rdReward
-  TFFFF RDPair {rdReward} _ spo drep -> Just $ RewardDelegationBoth spo drep rdReward
-  TEEEF drep -> Just $ RewardDelegationDRep drep mempty
-  TEEFE spo -> Just $ RewardDelegationSPO spo mempty
-  TEEFF spo drep -> Just $ RewardDelegationBoth spo drep mempty
-  TEFEF _ drep -> Just $ RewardDelegationDRep drep mempty
-  TEFFE _ spo -> Just $ RewardDelegationSPO spo mempty
-  TEFFF _ spo drep -> Just $ RewardDelegationBoth spo drep mempty
-  _ -> Nothing
+umElemDelegations (UMElem r _p s d) =
+  let reward = strictMaybe mempty rdReward r
+   in case (s, d) of
+        (SJust spo, SJust drep) -> Just $ RewardDelegationBoth spo drep reward
+        (SJust spo, SNothing) -> Just $ RewardDelegationSPO spo reward
+        (SNothing, SJust drep) -> Just $ RewardDelegationDRep drep reward
+        (SNothing, SNothing) -> Nothing
 {-# INLINE umElemDelegations #-}
 
 -- | Extract the reward-deposit pair if it is present.
