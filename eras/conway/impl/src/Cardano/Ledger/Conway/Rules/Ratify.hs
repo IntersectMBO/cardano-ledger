@@ -90,7 +90,6 @@ import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Void (Void, absurd)
-import Data.Word (Word64)
 import Lens.Micro
 
 instance
@@ -182,20 +181,11 @@ spoAccepted re rs gas =
 --  * `a` - total delegated stake that voted Abstain
 --  * `s` - total delegated stake
 --
--- However, computing the total stake again would be wasteful, since we already have
--- distributions per pool computed. So, values that we have available are not exactly
--- what we need, because we have:
---  * `y/s` - stake that votes yes over the total stake
---  * `a/s` - stake that voted abstain over the total stake
---
--- We divide both numerator and denominator by `s` and we'll get a formula that we can
--- use:
---
--- t = y \/ (s - a) = (y \/ s) / (1 - a \/ s)
---
 -- For `HardForkInitiation` all SPOs that didn't vote are considered as
 -- `No` votes. Whereas, for all other `GovAction`s, SPOs that didn't
 -- vote are considered as `Abstain` votes.
+--
+-- `No` votes are not counted.
 spoAcceptedRatio :: forall era. RatifyEnv era -> GovActionState era -> Rational
 spoAcceptedRatio
   RatifyEnv {reStakePoolDistr = PoolDistr individualPoolStake (CompactCoin totalActiveStake)}
@@ -203,24 +193,22 @@ spoAcceptedRatio
     { gasStakePoolVotes
     , gasProposalProcedure = ProposalProcedure {pProcGovAction}
     }
-    | abstainVotesRatio == 1 = 0 -- guard against the degenerate case when all abstain.
-    | otherwise = yesVotesRatio / (1 - abstainVotesRatio)
+    | totalActiveStake == 0 = 0 -- guard against the degenerate case when active stake is zero.
+    | totalActiveStake == abstainStake = 0 -- guard against the degenerate case when all abstain.
+    | otherwise = toInteger yesStake % toInteger (totalActiveStake - abstainStake)
     where
-      yesVotesRatio = toInteger yesVotes % toInteger nonZeroTotalActiveStake
-      abstainVotesRatio = toInteger abstainVotes % toInteger nonZeroTotalActiveStake
-      nonZeroTotalActiveStake = if 0 == totalActiveStake then 1 else totalActiveStake
-      (CompactCoin yesVotes, CompactCoin abstainVotes) =
-        Map.foldlWithKey' getVotesStakePerStakePoolDistr (mempty, mempty) individualPoolStake
-      getVotesStakePerStakePoolDistr (!yess, !abstains) poolId distr =
-        let d = individualTotalPoolStake distr
+      accumStake (!yes, !abstain) poolId distr =
+        let CompactCoin stake = individualTotalPoolStake distr
             vote = Map.lookup poolId gasStakePoolVotes
          in case vote of
               Nothing
-                | HardForkInitiation {} <- pProcGovAction -> (yess, abstains)
-                | otherwise -> (yess, abstains <> d)
-              Just Abstain -> (yess, abstains <> d)
-              Just VoteNo -> (yess, abstains)
-              Just VoteYes -> (yess <> d, abstains)
+                | HardForkInitiation {} <- pProcGovAction -> (yes, abstain)
+                | otherwise -> (yes, abstain + stake)
+              Just Abstain -> (yes, abstain + stake)
+              Just VoteNo -> (yes, abstain)
+              Just VoteYes -> (yes + stake, abstain)
+      (yesStake, abstainStake) =
+        Map.foldlWithKey' accumStake (0, 0) individualPoolStake
 
 dRepAccepted ::
   ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
@@ -256,7 +244,6 @@ dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVo
   | totalExcludingAbstainStake == 0 = 0
   | otherwise = toInteger yesStake % toInteger totalExcludingAbstainStake
   where
-    accumStake :: (Word64, Word64) -> DRep (EraCrypto era) -> CompactForm Coin -> (Word64, Word64)
     accumStake (!yes, !tot) drep (CompactCoin stake) =
       case drep of
         DRepCredential cred ->
@@ -277,7 +264,6 @@ dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVo
             NoConfidence _ -> (yes + stake, tot + stake)
             _ -> (yes, tot + stake)
         DRepAlwaysAbstain -> (yes, tot)
-
     (yesStake, totalExcludingAbstainStake) = Map.foldlWithKey' accumStake (0, 0) reDRepDistr
 
 delayingAction :: GovAction era -> Bool
