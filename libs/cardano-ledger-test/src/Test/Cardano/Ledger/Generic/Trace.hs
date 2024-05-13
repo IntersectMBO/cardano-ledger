@@ -23,6 +23,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (body))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody (certs')
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
+import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.EpochBoundary (SnapShots (..), calculatePoolDistr)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
@@ -203,7 +204,7 @@ initialMockChainState proof gstate =
         , nesBcur = BlocksMade Map.empty
         , nesEs = makeEpochState gstate ledgerstate
         , nesRu = SNothing
-        , nesPd = PoolDistr (gsInitialPoolDistr gstate)
+        , nesPd = PoolDistr (gsInitialPoolDistr gstate) (CompactCoin 1)
         , stashedAVVMAddresses = stashedAVVMAddressesZero proof
         }
 
@@ -453,7 +454,7 @@ mapProportion epochnum lastSlot count m =
     pairs = [(n, pure k) | (k, n) <- Map.toList m]
 
 chooseIssuer :: EpochNo -> Word64 -> Int -> PoolDistr c -> Gen (KeyHash 'StakePool c)
-chooseIssuer epochnum lastSlot count (PoolDistr m) = mapProportion epochnum lastSlot count (getInt <$> m)
+chooseIssuer epochnum lastSlot count (PoolDistr m _) = mapProportion epochnum lastSlot count (getInt <$> m)
   where
     getInt x = floor (individualPoolStake x * 1000)
 

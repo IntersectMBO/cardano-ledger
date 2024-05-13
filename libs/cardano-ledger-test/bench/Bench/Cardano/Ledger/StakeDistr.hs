@@ -22,7 +22,7 @@ where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..), pvMajor)
 import Cardano.Ledger.Binary.Plain as Plain (FromCBOR (..), decodeFullDecoder)
-import Cardano.Ledger.Coin (DeltaCoin (..))
+import Cardano.Ledger.Coin (CompactForm (CompactCoin), DeltaCoin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.EpochBoundary (
@@ -138,7 +138,7 @@ bogusNewEpochState =
     (BlocksMade Map.empty)
     def
     (SJust (Complete (RewardUpdate (DeltaCoin 0) (DeltaCoin 0) def (DeltaCoin 0) def)))
-    (PoolDistr Map.empty)
+    (PoolDistr Map.empty $ CompactCoin 1)
     def
 
 mkGlobals :: ShelleyGenesis StandardCrypto -> PParams CurrentEra -> Globals

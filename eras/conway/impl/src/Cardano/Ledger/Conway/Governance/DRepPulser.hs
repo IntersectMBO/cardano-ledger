@@ -62,10 +62,11 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
+import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.UMap
 import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData (..), deepseq)
+import Control.Monad (guard)
 import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.State.Transition.Extended
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
@@ -160,43 +161,76 @@ instance EraPParams era => ToCBOR (PulsingSnapshot era) where
 instance EraPParams era => FromCBOR (PulsingSnapshot era) where
   fromCBOR = fromEraCBOR @era
 
--- | We iterate over a pulse-sized chunk of the UMap. For each StakingCredential
--- in the chunk that has delegated to a DRep, add the StakeDistr and rewards
--- for that Credential to the DRep Distribution, if the DRep is a DRepCredential
--- (also, AlwaysAbstain or AlwaysNoConfidence) and a member of the registered
--- DReps. If the DRepCredential is not a member of the registered DReps, ignore
--- and skip that DRep.
+-- | We iterate over a pulse-sized chunk of the UMap.
 --
--- Give or take, this operation has roughly O(a * (log(b) + log(c))) complexity,
--- where,
---   (a) is the size of the chunk of the UMap, which is expected to be the pulse-size,
---   (b) is the size of the StakeDistr, and
---   (c) is the size of the DRepDistr, this grows as the accumulator
+-- For each staking credential in the chunk that has delegated to a DRep, add
+-- the stake distribution, rewards, and proposal deposits for that credential to
+-- the DRep distribution, if the DRep is a DRepCredential (also, AlwaysAbstain
+-- or AlwaysNoConfidence) and a member of the registered DReps. If the
+-- DRepCredential is not a member of the registered DReps, ignore and skip that
+-- DRep.
+--
+-- For each staking credential in the chunk that has delegated to an SPO,
+-- add only the proposal deposits for that credential to the stake pool
+-- distribution, since the rewards and stake are already added to it by the
+-- SNAP rule.
+--
+-- Give or take, this operation has roughly
+-- @
+--   O (a * (log(b) + log(c) + log(d) + log(e) + log(f)))
+-- @
+-- complexity, where,
+--   (a) is the size of the chunk of the UMap, which is the pulse-size, iterate over
+--   (b) is the size of the StakeDistr, lookup
+--   (c) is the size of the DRepDistr, insertWith
+--   (d) is the size of the dpProposalDeposits, lookup
+--   (e) is the size of the registered DReps, lookup
+--   (f) is the size of the PoolDistr, insert
 computeDRepDistr ::
   forall c.
   Map (Credential 'Staking c) (CompactForm Coin) ->
   Map (Credential 'DRepRole c) (DRepState c) ->
   Map (Credential 'Staking c) (CompactForm Coin) ->
+  PoolDistr c ->
   Map (DRep c) (CompactForm Coin) ->
   Map (Credential 'Staking c) (UMElem c) ->
-  Map (DRep c) (CompactForm Coin)
-computeDRepDistr stakeDistr regDReps proposalDeposits dRepDistr uMapChunk =
-  Map.foldlWithKey' go dRepDistr uMapChunk
+  (Map (DRep c) (CompactForm Coin), PoolDistr c)
+computeDRepDistr stakeDistr regDReps proposalDeposits poolDistr dRepDistr uMapChunk =
+  Map.foldlWithKey' go (dRepDistr, poolDistr) uMapChunk
   where
-    go accum stakeCred umElem =
+    go (!drepAccum, !poolAccum) stakeCred umElem =
       let stake = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred stakeDistr
           proposalDeposit = fromMaybe (CompactCoin 0) $ Map.lookup stakeCred proposalDeposits
           stakeAndDeposits = addCompact stake proposalDeposit
-       in case umElemDRepDelegatedReward umElem of
-            Just (r, drep@DRepAlwaysAbstain) ->
-              Map.insertWith addCompact drep (addCompact stakeAndDeposits r) accum
-            Just (r, drep@DRepAlwaysNoConfidence) ->
-              Map.insertWith addCompact drep (addCompact stakeAndDeposits r) accum
-            Just (r, drep@(DRepCredential drepCred))
-              | Map.member drepCred regDReps ->
-                  Map.insertWith addCompact drep (addCompact stakeAndDeposits r) accum
-              | otherwise -> accum
-            Nothing -> accum
+       in case umElemDelegations umElem of
+            Nothing -> (drepAccum, poolAccum)
+            Just (RewardDelegationSPO spo _r) ->
+              ( drepAccum
+              , addToPoolDistr spo proposalDeposit poolAccum
+              )
+            Just (RewardDelegationDRep drep r) ->
+              ( addToDRepDistr drep (addCompact stakeAndDeposits r) drepAccum
+              , poolAccum
+              )
+            Just (RewardDelegationBoth spo drep r) ->
+              ( addToDRepDistr drep (addCompact stakeAndDeposits r) drepAccum
+              , addToPoolDistr spo proposalDeposit poolAccum
+              )
+    addToPoolDistr spo proposalDeposit distr = fromMaybe distr $ do
+      guard (proposalDeposit /= mempty)
+      ips <- Map.lookup spo $ distr ^. poolDistrDistrL
+      pure $
+        distr
+          & poolDistrDistrL %~ Map.insert spo (ips & individualTotalPoolStakeL <>~ proposalDeposit)
+          & poolDistrTotalL <>~ proposalDeposit
+    addToDRepDistr drep ccoin distr =
+      let updatedDistr = Map.insertWith addCompact drep ccoin distr
+       in case drep of
+            DRepAlwaysAbstain -> updatedDistr
+            DRepAlwaysNoConfidence -> updatedDistr
+            DRepCredential cred
+              | Map.member cred regDReps -> updatedDistr
+              | otherwise -> distr
 
 -- | The type of a Pulser which uses 'computeDRepDistr' as its underlying
 -- function. Note that we use two type equality (~) constraints to fix both
@@ -249,8 +283,14 @@ instance Pulsable (DRepPulser era) where
     | done pulser = pure pulser {dpIndex = 0}
     | otherwise =
         let !chunk = Map.take dpPulseSize $ Map.drop dpIndex $ UMap.umElems dpUMap
-            dRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpDRepDistr chunk
-         in pure (pulser {dpIndex = dpIndex + dpPulseSize, dpDRepDistr = dRepDistr})
+            (dRepDistr, poolDistr) =
+              computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpStakePoolDistr dpDRepDistr chunk
+         in pure $
+              pulser
+                { dpIndex = dpIndex + dpPulseSize
+                , dpDRepDistr = dRepDistr
+                , dpStakePoolDistr = poolDistr
+                }
 
   completeM x@(DRepPulser {}) = pure (snd $ finishDRepPulser @era (DRPulsing x))
 
@@ -320,11 +360,12 @@ finishDRepPulser (DRPulsing (DRepPulser {..})) =
   (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
   where
     !leftOver = Map.drop dpIndex $ umElems dpUMap
-    !finalDRepDistr = computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpDRepDistr leftOver
+    (finalDRepDistr, finalStakePoolDistr) =
+      computeDRepDistr dpStakeDistr dpDRepState dpProposalDeposits dpStakePoolDistr dpDRepDistr leftOver
     !ratifyEnv =
       RatifyEnv
         { reStakeDistr = dpStakeDistr
-        , reStakePoolDistr = dpStakePoolDistr
+        , reStakePoolDistr = finalStakePoolDistr
         , reDRepDistr = finalDRepDistr
         , reDRepState = dpDRepState
         , reCurrentEpoch = dpCurrentEpoch

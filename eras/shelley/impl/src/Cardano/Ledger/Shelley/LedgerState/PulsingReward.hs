@@ -148,7 +148,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       _R = Coin $ rPot - deltaT1
       -- We now compute stake pool specific values that are needed for computing
       -- member and leader rewards.
-      activestake = sumAllStake stake
+      activeStake = sumAllStake stake
       totalStake = circulation es maxSupply
       stakePerPool = sumStakePerPool delegs stake
       mkPoolRewardInfoCurry =
@@ -161,7 +161,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
           delegs
           stakePerPool
           totalStake
-          activestake
+          activeStake
       -- We map over the registered stake pools to compute the revelant
       -- stake pool specific values.
       allPoolInfo = VMap.map mkPoolRewardInfoCurry poolParams

@@ -100,7 +100,7 @@ initialStateFromGenesis sg ag =
         def
     )
     SNothing
-    (PoolDistr Map.empty)
+    (PoolDistr Map.empty mempty)
     def
   where
     initialEpochNo = EpochNo 0

@@ -1140,7 +1140,7 @@ genNewPool = do
   poolId <- genFreshKeyHash
   poolParam <- genPoolParams poolId
   percent <- lift $ choose (0, 1 :: Float)
-  let stake = IndividualPoolStake @(EraCrypto era) (toRational percent) (ppVrf poolParam)
+  let stake = IndividualPoolStake @(EraCrypto era) (toRational percent) mempty (ppVrf poolParam)
   modifyGenStateAvoidKey (Set.insert (coerceKeyRole poolId))
   pure (poolId, poolParam, stake)
 

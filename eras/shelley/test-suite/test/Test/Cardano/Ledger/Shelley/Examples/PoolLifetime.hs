@@ -33,7 +33,13 @@ import Cardano.Ledger.BaseTypes (
   (⭒),
  )
 import Cardano.Ledger.Block (Block, bheader)
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
+import Cardano.Ledger.Coin (
+  Coin (..),
+  CompactForm (CompactCoin),
+  DeltaCoin (..),
+  addDeltaCoin,
+  toDeltaCoin,
+ )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Credential (Credential, Ptr (..))
 import qualified Cardano.Ledger.Crypto as Cr
@@ -576,10 +582,16 @@ snapEx5 =
 
 pdEx5 :: forall c. Cr.Crypto c => PoolDistr c
 pdEx5 =
-  PoolDistr $
-    Map.singleton
-      (aikColdKeyHash $ Cast.alicePoolKeys @c)
-      (IndividualPoolStake 1 (Cast.aliceVRFKeyHash @c))
+  PoolDistr
+    ( Map.singleton
+        (aikColdKeyHash $ Cast.alicePoolKeys @c)
+        ( IndividualPoolStake
+            1
+            (CompactCoin 1)
+            (Cast.aliceVRFKeyHash @c)
+        )
+    )
+    (CompactCoin 1)
 
 expectedStEx5 ::
   forall c.

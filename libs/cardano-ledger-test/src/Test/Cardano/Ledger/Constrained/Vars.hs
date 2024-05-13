@@ -34,7 +34,7 @@ import Cardano.Ledger.CertState (
   csCommitteeCredsL,
   vsNumDormantEpochsL,
  )
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (CompactCoin), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
@@ -71,7 +71,7 @@ import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
+import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..), poolDistrDistrL)
 import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance (FuturePParams (..), futureProposalsL, proposalsL)
@@ -209,10 +209,7 @@ mockPoolDistr = Var $ V "mockPoolDistr" (MapR PoolHashR RationalR) No
 
 poolDistrL ::
   NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
-poolDistrL = nesPdL . unPoolDistrL
-
-unPoolDistrL :: Lens' (PoolDistr c) (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
-unPoolDistrL = lens unPoolDistr (\(PoolDistr _) x -> PoolDistr x)
+poolDistrL = nesPdL . poolDistrDistrL
 
 -- CertState - DState
 
@@ -677,10 +674,7 @@ markPoolDistr = Var (V "markPoolDistr" (MapR PoolHashR IPoolStakeR) No)
 
 markPoolDistrL ::
   NELens era (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
-markPoolDistrL = nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL . pooldistrHelpL
-
-pooldistrHelpL :: Lens' (PoolDistr c) (Map (KeyHash 'StakePool c) (IndividualPoolStake c))
-pooldistrHelpL = lens unPoolDistr (\_ u -> PoolDistr u)
+markPoolDistrL = nesEsL . esSnapshotsL . ssStakeMarkPoolDistrL . poolDistrDistrL
 
 snapShotFee :: Era era => Term era Coin
 snapShotFee = Var (V "snapShotFee" CoinR No)
@@ -690,12 +684,12 @@ snapShotsT ::
 snapShotsT =
   Invert "SnapShots" (typeRep @(SnapShots (EraCrypto era))) shotsfun
     :$ Shift markSnapShotT ssStakeMarkL
-    :$ Lensed markPoolDistr (ssStakeMarkPoolDistrL . pooldistrHelpL)
+    :$ Lensed markPoolDistr (ssStakeMarkPoolDistrL . poolDistrDistrL)
     :$ Shift setSnapShotT ssStakeSetL
     :$ Shift goSnapShotT ssStakeGoL
     :$ Lensed snapShotFee ssFeeL
   where
-    shotsfun w x = SnapShots w (PoolDistr x)
+    shotsfun w x = SnapShots w (PoolDistr x $ CompactCoin 1)
 
 -- ==================================================================
 -- RewardUpdate
@@ -977,7 +971,7 @@ newEpochStateConstr
       (BlocksMade nesBcur')
       nesEs'
       SNothing
-      (PoolDistr nesPd')
+      (PoolDistr nesPd' $ CompactCoin 1)
       ( case proof of
           Shelley -> UTxO Map.empty
           Allegra -> ()
@@ -996,7 +990,7 @@ newEpochStateT proof =
     :$ Lensed prevBlocksMade nesBprevL
     :$ Lensed currBlocksMade nesBcurL
     :$ Shift (epochStateT proof) nesEsL
-    :$ Lensed poolDistr (nesPdL . unPoolDistrL)
+    :$ Lensed poolDistr (nesPdL . poolDistrDistrL)
 
 -- | Target for EpochState
 epochStateT ::
@@ -1861,7 +1855,7 @@ initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactsta
         umap
         0
         stakeDistr
-        (PoolDistr poold)
+        (PoolDistr poold $ CompactCoin 1)
         Map.empty
         credDRepStateMap
         epoch
@@ -1971,7 +1965,7 @@ prevPoolDistrL ::
 prevPoolDistrL =
   lens
     (\x -> unPoolDistr (dpStakePoolDistr x))
-    (\x y -> x {dpStakePoolDistr = PoolDistr y})
+    (\x y -> x {dpStakePoolDistr = PoolDistr y $ CompactCoin 1})
 
 -- | Snapshot of the 'drepDelegation' from he start of the current epoch.
 prevDRepDelegations ::

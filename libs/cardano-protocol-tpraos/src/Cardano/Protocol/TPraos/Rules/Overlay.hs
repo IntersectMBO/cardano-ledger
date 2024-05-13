@@ -207,11 +207,11 @@ praosVrfChecks ::
   ActiveSlotCoeff ->
   BHBody c ->
   Either (PredicateFailure (OVERLAY c)) ()
-praosVrfChecks eta0 (PoolDistr pd) f bhb = do
+praosVrfChecks eta0 (PoolDistr pd _tot) f bhb = do
   let sigma' = Map.lookup hk pd
   case sigma' of
     Nothing -> throwError $ VRFKeyUnknown hk
-    Just (IndividualPoolStake sigma vrfHK) -> do
+    Just (IndividualPoolStake sigma _ vrfHK) -> do
       unless
         (vrfHK == hashVerKeyVRF vrfK)
         (throwError $ VRFKeyWrongVRFKey hk vrfHK (hashVerKeyVRF vrfK))
@@ -284,7 +284,7 @@ overlayTransition =
 
         let oce =
               OCertEnv
-                { ocertEnvStPools = eval (dom pd)
+                { ocertEnvStPools = eval (dom $ unPoolDistr pd)
                 , ocertEnvGenDelegs = Set.map genDelegKeyHash $ range genDelegs
                 }
 

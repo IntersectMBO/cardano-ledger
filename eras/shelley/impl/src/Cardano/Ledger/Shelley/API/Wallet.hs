@@ -3,11 +3,9 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -193,6 +191,9 @@ getPoolParameters = Map.restrictKeys . f
 -- saturation for rewards purposes. For that, it needs the fraction of total
 -- stake.
 --
+-- The fields `individualTotalPoolStake` and `pdTotalActiveStake` continue to
+-- remain based on active stake and not total stake.
+--
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
   forall era.
@@ -201,19 +202,18 @@ poolsByTotalStakeFraction ::
   NewEpochState era ->
   PoolDistr (EraCrypto era)
 poolsByTotalStakeFraction globals ss =
-  PoolDistr poolsByTotalStake
+  PoolDistr poolsByTotalStake totalActiveStake
   where
-    snap@(EB.SnapShot stake _ _) = currentSnapshot ss
+    snap = currentSnapshot ss
     Coin totalStake = getTotalStake globals ss
-    Coin activeStake = EB.sumAllStake stake
-    stakeRatio = activeStake % totalStake
-    PoolDistr poolsByActiveStake = calculatePoolDistr snap
+    stakeRatio = unCoin (fromCompact totalActiveStake) % totalStake
+    PoolDistr poolsByActiveStake totalActiveStake = calculatePoolDistr snap
     poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
     toTotalStakeFrac ::
       IndividualPoolStake (EraCrypto era) ->
       IndividualPoolStake (EraCrypto era)
-    toTotalStakeFrac (IndividualPoolStake s vrf) =
-      IndividualPoolStake (s * stakeRatio) vrf
+    toTotalStakeFrac (IndividualPoolStake s c vrf) =
+      IndividualPoolStake (s * stakeRatio) c vrf
 
 -- | Calculate the current total stake.
 getTotalStake :: Globals -> NewEpochState era -> Coin
