@@ -28,7 +28,7 @@ import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Prettyprinter
-import Test.QuickCheck (Arbitrary (..), shrinkList)
+import Test.QuickCheck (Arbitrary (..), frequency, shrinkList)
 
 ------------------------------------------------------------------------
 -- HasSpec
@@ -56,6 +56,8 @@ data MapSpec fn k v = MapSpec
 defaultMapSpec :: Ord k => MapSpec fn k v
 defaultMapSpec = MapSpec Nothing mempty mempty TrueSpec TrueSpec NoFold
 
+-- TODO: consider making this more interesting to get fewer discarded tests
+-- in `prop_gen_sound`
 instance
   ( Arbitrary k
   , Arbitrary v
@@ -63,11 +65,21 @@ instance
   , Arbitrary (TypeSpec fn v)
   , Ord k
   , HasSpec fn k
-  , HasSpec fn v
+  , Foldy fn v
   ) =>
   Arbitrary (MapSpec fn k v)
   where
-  arbitrary = MapSpec <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> pure NoFold
+  arbitrary =
+    MapSpec
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> frequency [(5, pure NoFold), (1, arbitrary)]
+
+instance Arbitrary (FoldSpec fn (Map k v)) where
+  arbitrary = pure NoFold
 
 instance
   ( HasSpec fn (k, v)

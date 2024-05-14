@@ -622,17 +622,44 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
   arbitrary = do
     baseSpec <-
       frequency
-        [ (2, pure TrueSpec)
+        [ (1, pure TrueSpec)
         , (7, MemberSpec <$> listOf1 (genFromSpec_ @fn TrueSpec))
-        , (7, typeSpec <$> arbitrary)
-        , (2, TypeSpec <$> arbitrary <*> listOf (genFromSpec_ @fn TrueSpec))
+        , (10, typeSpec <$> arbitrary)
+        , (5, TypeSpec <$> arbitrary <*> listOf (genFromSpec_ @fn TrueSpec))
         , (1, ErrorSpec <$> arbitrary)
         , (1, pure $ MemberSpec [])
         ]
     -- TODO: we probably want smarter ways of generating constraints
     frequency
       [ (1, pure $ constrained $ \x -> x `satisfies` baseSpec)
-      , (5, pure baseSpec)
+      ,
+        ( 1
+        , pure $ constrained $ \x -> exists (\eval -> pure $ eval x) $ \y ->
+            [ assert $ x ==. y
+            , y `satisfies` baseSpec
+            ]
+        )
+      , (1, pure $ constrained $ \x -> letBind x $ \y -> y `satisfies` baseSpec)
+      ,
+        ( 1
+        , pure $ constrained $ \x -> exists (\_ -> pure True) $ \b ->
+            ifElse b (x `satisfies` baseSpec) (x `satisfies` baseSpec)
+        )
+      ,
+        ( 1
+        , pure $ constrained $ \x -> exists (\_ -> pure True) $ \b ->
+            [ ifElse b True (x `satisfies` baseSpec)
+            , x `satisfies` baseSpec
+            ]
+        )
+      ,
+        ( 1
+        , pure $ constrained $ \x -> exists (\_ -> pure False) $ \b ->
+            [ ifElse b (x `satisfies` baseSpec) True
+            , x `satisfies` baseSpec
+            ]
+        )
+      , (10, pure baseSpec)
       ]
 
   shrink TrueSpec = []
