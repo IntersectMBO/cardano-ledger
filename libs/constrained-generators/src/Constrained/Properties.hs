@@ -112,13 +112,22 @@ prop_univSound (TestableFn fn) =
 prop_gen_sound :: forall fn a. HasSpec fn a => Specification fn a -> QC.Property
 prop_gen_sound spec =
   let sspec = simplifySpec spec
-   in QC.counterexample ("\n" ++ show ("simplifySpec spec =" /> pretty sspec)) $
-        QC.forAllBlind (strictGen $ genFromSpec @_ @_ @GE sspec) $ \ge ->
-          fromGEDiscard $ do
-            a <- ge
-            pure $
-              QC.counterexample ("\ngenerated value: a = " ++ show a) $
-                conformsToSpecProp a spec
+   in QC.tabulate "specType spec" [specType spec] $
+        QC.tabulate "specType (simplifySpec spec)" [specType sspec] $
+          QC.counterexample ("\n" ++ show ("simplifySpec spec =" /> pretty sspec)) $
+            QC.forAllBlind (strictGen $ genFromSpec @_ @_ @GE sspec) $ \ge ->
+              fromGEDiscard $ do
+                a <- ge
+                pure $
+                  QC.counterexample ("\ngenerated value: a = " ++ show a) $
+                    conformsToSpecProp a spec
+
+specType :: Specification fn a -> String
+specType TrueSpec {} = "TrueSpec"
+specType SuspendedSpec {} = "SuspendedSpec"
+specType ErrorSpec {} = "ErrorSpec"
+specType MemberSpec {} = "MemberSpec"
+specType TypeSpec {} = "TypeSpec"
 
 showCtxWith ::
   forall fn as b.
