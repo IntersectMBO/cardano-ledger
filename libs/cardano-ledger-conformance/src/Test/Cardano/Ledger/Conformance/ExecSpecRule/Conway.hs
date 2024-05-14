@@ -39,9 +39,9 @@ import Constrained
 import Control.Monad.Identity (Identity)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default.Class (Default (..))
+import Data.Either (isRight)
 import Data.Foldable (Foldable (..))
 import qualified Data.List.NonEmpty as NE
-import qualified Data.OSet.Strict as OSet
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
@@ -278,8 +278,11 @@ instance
   testConformance env st sig = property $ do
     (implResTest, agdaResTest) <- runConformance @"GOV" @fn @Conway env st sig
     checkConformance @"GOV" implResTest agdaResTest
-    let numInputProps = OSet.size $ gpProposalProcedures sig
-    pure $ label ("n input proposals = " <> show numInputProps) ()
+    let
+      isSuccessful
+        | isRight implResTest = "successful transition"
+        | otherwise = "failed transition"
+    pure $ label isSuccessful ()
 
 instance
   forall fn.
@@ -290,7 +293,7 @@ instance
 
   stateSpec _ = utxoStateSpec
 
-  signalSpec _ env st = utxoTxSpec env st <> constrained agdaConstraints
+  signalSpec _ env st = utxoTxSpec env st -- <> constrained agdaConstraints
     where
       agdaConstraints :: Term fn (AlonzoTx Conway) -> Pred fn
       agdaConstraints tx = match @fn tx $ \txBody _ _ _ ->
