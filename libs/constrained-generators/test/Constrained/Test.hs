@@ -39,11 +39,11 @@ import Constrained.Properties
 ------------------------------------------------------------------------
 
 testAll :: IO ()
-testAll = hspec tests
+testAll = hspec $ tests False
 
-tests :: Spec
-tests =
-  describe "constrained" $ do
+tests :: Bool -> Spec
+tests nightly =
+  describe "constrained" . modifyMaxSuccess (\ms -> if nightly then ms * 10 else ms) $ do
     -- TODO: double-shrinking
     testSpecNoShrink "reifiesMultiple" reifiesMultiple
     testSpec "assertReal" assertReal
@@ -135,9 +135,11 @@ tests =
       prop "Map Int Int" $ prop_conformEmpty @BaseFn @(Map Int Int)
       prop "[Int]" $ prop_conformEmpty @BaseFn @[Int]
       prop "[(Int, Int)]" $ prop_conformEmpty @BaseFn @[(Int, Int)]
-    prop "prop_univSound @BaseFn" $ withMaxSuccess 10000 $ prop_univSound @BaseFn
+    prop "prop_univSound @BaseFn" $
+      withMaxSuccess (if nightly then 100_000 else 10_000) $
+        prop_univSound @BaseFn
     describe "prop_gen_sound @BaseFn" $ do
-      modifyMaxSuccess (const 1000) $ do
+      modifyMaxSuccess (const $ if nightly then 10_000 else 1000) $ do
         prop "Int" $ prop_gen_sound @BaseFn @Int
         prop "Bool" $ prop_gen_sound @BaseFn @Bool
         prop "(Int, Int)" $ prop_gen_sound @BaseFn @(Int, Int)
