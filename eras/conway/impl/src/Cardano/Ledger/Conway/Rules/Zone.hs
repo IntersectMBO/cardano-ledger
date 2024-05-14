@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -12,26 +13,30 @@
 
 module Cardano.Ledger.Conway.Rules.Zone where
 
+import Cardano.Ledger.Alonzo.Core (AlonzoEraTx)
+import Cardano.Ledger.Alonzo.Tx (IsValid (IsValid))
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
  )
 import Cardano.Ledger.Conway.Core (
-  ConwayEraTxBody (fulfillsTxBodyL),
+  ConwayEraTxBody (fulfillsTxBodyL, requiredTxsTxBodyL),
   Era (EraCrypto),
   EraRule,
   EraTx (Tx, bodyTxL),
   EraTxBody (TxBody, inputsTxBodyL),
-  txIdTx,
+  isValidTxL,
  )
 import Cardano.Ledger.Conway.Era (ConwayZONE)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
  )
+import Cardano.Ledger.Core (txIdTx)
 import Cardano.Ledger.Shelley.API (
   LedgerState (LedgerState),
   ShelleyLedgersEnv (LedgersEnv),
   TxIn (TxIn),
  )
+import Cardano.Ledger.TxIn (TxId)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
@@ -40,8 +45,10 @@ import Control.State.Transition.Extended (
   judgmentContext,
   trans,
  )
+import qualified Data.Foldable as Foldable
 import Data.Sequence (Seq)
 import Data.Set (Set, toList)
+import qualified Data.Set as Set
 import Data.Void (Void)
 import Lens.Micro ((^.))
 import Lens.Micro.Type (Lens')
@@ -55,6 +62,7 @@ instance
   , Embed (EraRule "LEDGERS" era) (ConwayZONE era)
   , EraTx era
   , ConwayEraTxBody era
+  , AlonzoEraTx era
   ) =>
   STS (ConwayZONE era)
   where
@@ -70,22 +78,20 @@ instance
 -- We'll build the zones in the ZONES rule (turn the [Tx era] into [[Tx era]])?
 zoneTransition ::
   forall era.
-  ( --   EraCrypto era ~ era
-    -- , EraTx era
-    -- , ConwayEraTxBody era
-    -- , ConwayEraPParams era
-    -- ,
-    Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  ( Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , Embed (EraRule "LEDGERS" era) (ConwayZONE era)
+  , ConwayEraTxBody era
+  , AlonzoEraTx era
+  , EraCrypto era ~ era
   ) =>
   TransitionRule (ConwayZONE era)
 zoneTransition =
   judgmentContext
     -- I guess we want UTxOStateTemp here?
-    >>= \(TRC (LedgersEnv slotNo pParams accountState, LedgerState utxoState certState, txs :: Seq (Tx era))) -> do
-      if chkLinear txs
+    >>= \(TRC s@(LedgersEnv slotNo pParams accountState, LedgerState utxoState certState, txs :: Seq (Tx era))) -> do
+      if chkLinear (Foldable.toList txs)
         && all (chkRqTx txs) txs
         && all chkIsValid txs
         then -- ZONE-V
@@ -93,22 +99,41 @@ zoneTransition =
           trans @(EraRule "LEDGERS" era) $
             TRC (LedgersEnv slotNo pParams accountState, LedgerState utxoState certState, txs)
         else -- ZONE-N
-          undefined
+        -- TODO
+          trans @(ConwayZONE era) $ TRC s
   where
-    chkLinear :: Seq (Tx era) -> Bool
-    chkLinear = undefined
-    -- chkRqTx tb tx = ∀[ txrid ∈ tx .Tx.body .TxBody.requiredTxs ] Any (txrid ≡_) ( getIDs tb )
+    chkLinear :: [Tx era] -> Bool
+    chkLinear txs =
+      topSortTxs
+        (mkAllEdges txs txs)
+        (mkAllEdges txs txs)
+        (nodesWithNoIncomingEdge txs (mkAllEdges txs txs))
+        []
+        == Just []
+    -- chkRqTx txs tx = ∀[ txrid ∈ tx .Tx.body .TxBody.requiredTxs ] Any (txrid ≡_) ( getIDs txs )
     chkRqTx :: Seq (Tx era) -> Tx era -> Bool
-    chkRqTx _tb _tx = undefined
+    chkRqTx txs tx = all chk txrids
+      where
+        chk txrid = txrid `elem` ids
+        txrids = fmap txInTxId $ toList $ tx ^. bodyTxL . requiredTxsTxBodyL
+        ids :: Set (TxId era)
+        ids = getIDs $ Foldable.toList txs
     -- chkIsValid tx = tx .Tx.isValid ≡ true
     chkIsValid :: Tx era -> Bool
-    chkIsValid _tx = undefined
+    chkIsValid tx = tx ^. isValidTxL == IsValid True
 
 -- This should be moved to LEDGERS rule at the point where you figure out how to do it
 -- isThisUseful :: UTxO era -> Seq (Tx era) -> (UTxO era, UTxO era)
 -- isThisUseful utxo txs =
 --   over both UTxO $
 --     Map.partitionWithKey (\k _ -> k `notElem` (requiredTxs =<< toList txs)) (unUTxO utxo)
+
+txInTxId :: TxIn era -> TxId era
+txInTxId (TxIn x _) = x
+
+-- get a set of TxIds containing all IDs of transaction in given list tb
+getIDs :: (EraCrypto era ~ era, EraTx era) => [Tx era] -> Set (TxId (EraCrypto era))
+getIDs = foldr (\tx ls -> ls `Set.union` Set.singleton (txIdTx tx)) mempty
 
 mkEdges ::
   EraTx era =>
@@ -162,7 +187,7 @@ removeTx tx (n : ne) =
     then ne
     else n : removeTx tx ne
 
--- -- remove a transaction from a list if it has no incoming edges
+-- remove a transaction from a list if it has no incoming edges
 ifNoEdgeRemove :: EraTx era => Tx era -> [(Tx era, Tx era)] -> [Tx era] -> [Tx era]
 ifNoEdgeRemove tx edges s = case hasIncEdges tx edges of
   [] -> removeTx tx s
