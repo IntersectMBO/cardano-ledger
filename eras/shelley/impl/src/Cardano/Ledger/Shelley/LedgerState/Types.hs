@@ -58,6 +58,7 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary (SnapShots (..), ssStakeDistrL, ssStakeMarkL)
+import Cardano.Ledger.FRxO (FRxO)
 import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyPair,
@@ -276,6 +277,7 @@ toIncrementalStakePairs iStake@(IStake _ _) =
 --   this invariant. This happens in the UTxO rule.
 data UTxOState era = UTxOState
   { utxosUtxo :: !(UTxO era)
+  , utxosFrxo :: !(FRxO era)
   , utxosDeposited :: Coin
   -- ^ This field is left lazy, because we only use it for assertions
   , utxosFees :: !Coin
@@ -309,6 +311,7 @@ deriving via
     (UTxOState era)
   instance
     ( NoThunks (UTxO era)
+    , NoThunks (FRxO era)
     , NoThunks (GovState era)
     , Era era
     ) =>
@@ -320,10 +323,11 @@ instance
   ) =>
   EncCBOR (UTxOState era)
   where
-  encCBOR (UTxOState ut dp fs us sd don) =
+  encCBOR (UTxOState ut fr dp fs us sd don) =
     encode $
       Rec UTxOState
         !> To ut
+        !> To fr
         !> To dp
         !> To fs
         !> To us
@@ -342,6 +346,7 @@ instance
   decShareCBOR credInterns =
     decodeRecordNamed "UTxOState" (const 6) $ do
       utxosUtxo <- decShareCBOR credInterns
+      utxosFrxo <- decShareCBOR credInterns
       utxosDeposited <- decCBOR
       utxosFees <- decCBOR
       -- TODO: implement proper sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
@@ -362,9 +367,10 @@ instance (EraTxOut era, EraGov era) => ToJSON (UTxOState era) where
 
 toUTxOStatePairs ::
   (EraTxOut era, EraGov era, KeyValue e a) => UTxOState era -> [a]
-toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _ _) =
+toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _ _ _) =
   let UTxOState {..} = utxoState
    in [ "utxo" .= utxosUtxo
+      , "frxo" .= utxosFrxo
       , "deposited" .= utxosDeposited
       , "fees" .= utxosFees
       , "ppups" .= utxosGovState
@@ -481,6 +487,37 @@ instance
   ) =>
   NoThunks (NewEpochState era)
 
+-- type family Ledger era
+
+-- class LedgerStateConstraint era where
+--   data Ledger era
+--   ledgerStateL :: Lens' (Ledger era) (LedgerState era)
+
+-- instance LedgerStateConstraint (ShelleyEra c) where
+--   data Ledger (ShelleyEra c) = ShelleyLedger (LedgerState (ShelleyEra c)) deriving (Generic)
+--   ledgerStateL = lens getter setter
+--     where
+--       getter (ShelleyLedger l) = l
+--       setter (ShelleyLedger _) = ShelleyLedger
+
+-- instance Crypto c => Show (Ledger (ShelleyEra c)) where
+--   show (ShelleyLedger l) = show l
+
+-- instance Crypto c => Eq (Ledger (ShelleyEra c)) where
+--   ShelleyLedger l == ShelleyLedger l' = l == l'
+
+-- instance
+--   ( EraTxOut era
+--   , NoThunks (GovState era)
+--   ) =>
+--   NoThunks (Ledger era)
+
+-- instance
+--   ( EraTxOut era
+--   , NFData (GovState era)
+--   ) =>
+--   NFData (Ledger era)
+
 -- | The state associated with a 'Ledger'.
 data LedgerState era = LedgerState
   { lsUTxOState :: !(UTxOState era)
@@ -566,7 +603,7 @@ toLedgerStatePairs ls@(LedgerState _ _) =
 --------------------------------------------------------------------------------
 
 instance EraGov era => Default (UTxOState era) where
-  def = UTxOState mempty mempty mempty def mempty mempty
+  def = UTxOState mempty mempty mempty mempty def mempty mempty
 
 instance
   Default (LedgerState era) =>

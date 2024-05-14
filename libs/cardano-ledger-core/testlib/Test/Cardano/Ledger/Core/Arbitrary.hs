@@ -92,6 +92,7 @@ import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..)
 import Cardano.Ledger.Crypto (Crypto (DSIGN), StandardCrypto)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary
+import Cardano.Ledger.FRxO (FRxO (..))
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -521,6 +522,12 @@ instance Crypto c => Arbitrary (DRepState c) where
 ------------------------------------------------------------------------------------------
 
 deriving instance (EraTxOut era, Arbitrary (TxOut era)) => Arbitrary (UTxO era)
+
+------------------------------------------------------------------------------------------
+-- Cardano.Ledger.FRxO -------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+
+deriving instance (EraTxOut era, Arbitrary (TxOut era)) => Arbitrary (FRxO era)
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Core.PParams -----------------------------------------------------------

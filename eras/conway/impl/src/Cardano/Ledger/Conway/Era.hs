@@ -17,6 +17,7 @@ module Cardano.Ledger.Conway.Era (
   ConwayTICKF,
   ConwayLEDGER,
   ConwayRATIFY,
+  ConwayZONE,
 ) where
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
@@ -94,6 +95,14 @@ type instance EraRule "ENACT" (ConwayEra c) = ConwayENACT (ConwayEra c)
 data ConwayUTXOS era
 
 type instance EraRule "UTXOS" (ConwayEra c) = ConwayUTXOS (ConwayEra c)
+
+data ConwayZONE era
+
+type instance EraRule "ZONE" (ConwayEra c) = ConwayZONE (ConwayEra c)
+
+data ConwayZONES era
+
+type instance EraRule "ZONES" (ConwayEra c) = ConwayZONES (ConwayEra c)
 
 data ConwayLEDGER era
 

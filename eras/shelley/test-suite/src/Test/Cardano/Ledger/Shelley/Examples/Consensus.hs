@@ -339,6 +339,7 @@ exampleNewEpochState value ppp pp =
                               , mkBasicTxOut addr value
                               )
                             ]
+                    , utxosFrxo = mempty
                     , utxosDeposited = Coin 1000
                     , utxosFees = Coin 1
                     , utxosGovState = emptyGovState
@@ -349,8 +350,10 @@ exampleNewEpochState value ppp pp =
               }
         , esNonMyopic = def
         }
-        & prevPParamsEpochStateL .~ ppp
-        & curPParamsEpochStateL .~ pp
+        & prevPParamsEpochStateL
+        .~ ppp
+        & curPParamsEpochStateL
+        .~ pp
       where
         addr :: Addr (EraCrypto era)
         addr =

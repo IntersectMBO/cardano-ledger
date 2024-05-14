@@ -113,7 +113,7 @@ import Cardano.Ledger.MemoBytes (
   mkMemoized,
  )
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash)
-import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.TxIn (Fulfill, TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
@@ -150,6 +150,10 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrProposalProcedures :: !(OSet.OSet (ProposalProcedure era))
   , ctbrCurrentTreasuryValue :: !(StrictMaybe Coin)
   , ctbrTreasuryDonation :: !Coin
+  , -- Tx body fields for intents (babel-fees)
+    bftbrFulfills :: !(Set (Fulfill (EraCrypto era)))
+  , bftbrRequests :: !(StrictSeq (Sized (TxOut era)))
+  , bftbrRequiredTxs :: !(Set (TxIn (EraCrypto era)))
   }
   deriving (Generic, Typeable)
 
@@ -253,6 +257,9 @@ instance
         ofield
           (\x tx -> tx {ctbrTreasuryDonation = fromSMaybe zero x})
           (D (decodePositiveCoin $ emptyFailure "Treasury Donation" "non-zero"))
+      bodyFields 23 = field (\x tx -> tx {bftbrFulfills = x}) From
+      bodyFields 24 = field (\x tx -> tx {bftbrRequests = x}) From
+      bodyFields 25 = field (\x tx -> tx {bftbrRequiredTxs = x}) From
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields :: [(Word, String)]
       requiredFields =
@@ -331,6 +338,9 @@ basicConwayTxBodyRaw =
     (VotingProcedures mempty)
     OSet.empty
     SNothing
+    mempty
+    mempty
+    mempty
     mempty
 
 data ConwayTxBodyUpgradeError c
@@ -417,6 +427,9 @@ instance Crypto c => EraTxBody (ConwayEra c) where
         , ctbProposalProcedures = OSet.empty
         , ctbVotingProcedures = VotingProcedures mempty
         , ctbTreasuryDonation = Coin 0
+        , bftbFulfills = mempty
+        , bftbRequests = mempty
+        , bftbRequiredTxs = mempty
         }
 
 -- ==========================================
@@ -532,6 +545,12 @@ instance Crypto c => ConwayEraTxBody (ConwayEra c) where
   treasuryDonationTxBodyL =
     lensMemoRawType ctbrTreasuryDonation (\txb x -> txb {ctbrTreasuryDonation = x})
   {-# INLINE treasuryDonationTxBodyL #-}
+  fulfillsTxBodyL = undefined
+  {-# INLINE fulfillsTxBodyL #-}
+  requestsTxBodyL = undefined
+  {-# INLINE requestsTxBodyL #-}
+  requiredTxsTxBodyL = undefined
+  {-# INLINE requiredTxsTxBodyL #-}
 
 instance
   (EraPParams era, Eq (TxOut era), Eq (TxCert era)) =>
@@ -558,6 +577,9 @@ pattern ConwayTxBody ::
   OSet.OSet (ProposalProcedure era) ->
   StrictMaybe Coin ->
   Coin ->
+  Set (Fulfill (EraCrypto era)) ->
+  StrictSeq (Sized (TxOut era)) ->
+  Set (TxIn (EraCrypto era)) ->
   ConwayTxBody era
 pattern ConwayTxBody
   { ctbSpendInputs
@@ -579,6 +601,9 @@ pattern ConwayTxBody
   , ctbProposalProcedures
   , ctbCurrentTreasuryValue
   , ctbTreasuryDonation
+  , bftbFulfills
+  , bftbRequests
+  , bftbRequiredTxs
   } <-
   ( getMemoRawType ->
       ConwayTxBodyRaw
@@ -601,6 +626,9 @@ pattern ConwayTxBody
         , ctbrProposalProcedures = ctbProposalProcedures
         , ctbrCurrentTreasuryValue = ctbCurrentTreasuryValue
         , ctbrTreasuryDonation = ctbTreasuryDonation
+        , bftbrFulfills = bftbFulfills
+        , bftbrRequests = bftbRequests
+        , bftbrRequiredTxs = bftbRequiredTxs
         }
     )
   where
@@ -623,7 +651,10 @@ pattern ConwayTxBody
       votingProcedures
       proposalProcedures
       currentTreasuryValue
-      treasuryDonation =
+      treasuryDonation
+      fulfills
+      requests
+      requiredTxs =
         mkMemoized $
           ConwayTxBodyRaw
             inputsX
@@ -645,6 +676,9 @@ pattern ConwayTxBody
             proposalProcedures
             currentTreasuryValue
             treasuryDonation
+            fulfills
+            requests
+            requiredTxs
 
 {-# COMPLETE ConwayTxBody #-}
 
@@ -682,6 +716,9 @@ encodeTxBodyRaw ConwayTxBodyRaw {..} =
         !> Omit OSet.null (Key 20 (To ctbrProposalProcedures))
         !> encodeKeyedStrictMaybe 21 ctbrCurrentTreasuryValue
         !> Omit (== mempty) (Key 22 $ To ctbrTreasuryDonation)
+        !> Omit (== mempty) (Key 23 (To bftbrFulfills))
+        !> Omit (== mempty) (Key 24 (To bftbrRequests))
+        !> Omit (== mempty) (Key 25 (To bftbrRequiredTxs))
 
 instance ConwayEraTxBody era => EncCBOR (ConwayTxBodyRaw era) where
   encCBOR = encode . encodeTxBodyRaw
@@ -704,6 +741,12 @@ class
   proposalProceduresTxBodyL :: Lens' (TxBody era) (OSet.OSet (ProposalProcedure era))
 
   treasuryDonationTxBodyL :: Lens' (TxBody era) Coin
+
+  fulfillsTxBodyL :: Lens' (TxBody era) (Set (Fulfill (EraCrypto era)))
+
+  requestsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxOut era))
+
+  requiredTxsTxBodyL :: Lens' (TxBody era) (Set (TxIn (EraCrypto era)))
 
 conwayRedeemerPointer ::
   forall era.

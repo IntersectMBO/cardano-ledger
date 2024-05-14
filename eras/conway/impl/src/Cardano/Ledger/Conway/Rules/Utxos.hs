@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -5,6 +6,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -43,7 +45,6 @@ import Cardano.Ledger.Alonzo.UTxO (
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,
   BabbageUtxoPredFailure (..),
-  babbageEvalScriptsTxInvalid,
   expectScriptsToPass,
  )
 import Cardano.Ledger.Babbage.Tx
@@ -53,19 +54,30 @@ import Cardano.Ledger.Binary (
   EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.CertState (certsTotalDepositsTxBody, certsTotalRefundsTxBody)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayUTXOS)
+import Cardano.Ledger.Conway.FRxO (txfrxo)
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Conway.TxInfo ()
+import Cardano.Ledger.FRxO (FRxO (FRxO, unFRxO))
 import Cardano.Ledger.Plutus (PlutusWithContext)
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), utxosDonationL)
-import Cardano.Ledger.Shelley.Rules (UtxoEnv (..), updateUTxOState)
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
+import Cardano.Ledger.Shelley.LedgerState (
+  CertState,
+  UTxOState (..),
+  updateStakeDistribution,
+  utxosDonationL,
+ )
+import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (UTxO, unUTxO))
+import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map as Map
+import Data.MapExtras (extractKeys)
 import Debug.Trace (traceEvent)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -262,7 +274,7 @@ utxosTransition =
   judgmentContext >>= \(TRC (_, _, tx)) -> do
     case tx ^. isValidTxL of
       IsValid True -> conwayEvalScriptsTxValid
-      IsValid False -> babbageEvalScriptsTxInvalid
+      IsValid False -> undefined -- babbageEvalScriptsTxInvalid
 
 conwayEvalScriptsTxValid ::
   forall era.
@@ -282,7 +294,7 @@ conwayEvalScriptsTxValid ::
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 conwayEvalScriptsTxValid = do
-  TRC (UtxoEnv _ pp certState, utxos@(UTxOState utxo _ _ govState _ _), tx) <-
+  TRC (UtxoEnv _ pp certState, utxos@(UTxOState utxo _frxo _ _ govState _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
 
@@ -300,3 +312,59 @@ conwayEvalScriptsTxValid = do
       (tellEvent . injectEvent . TotalDeposits (hashAnnotated txBody))
       (\a b -> tellEvent . injectEvent $ TxUTxODiff a b)
   pure $! utxos' & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL
+
+-- | This monadic action captures the final stages of the UTXO(S) rule. In particular it
+-- applies all of the UTxO related aditions and removals, gathers all of the fees into the
+-- fee pot `utxosFees` and updates the `utxosDeposited` field. Continuation supplied will
+-- be called on the @deposit - refund@ change, which is normally used to emit the
+-- `TotalDeposits` event.
+
+-- TODO WG: This shouldn't be here. Need to figure out how to alter original without changing tons of callsites
+updateUTxOState ::
+  (ConwayEraTxBody era, Monad m) =>
+  PParams era ->
+  UTxOState era ->
+  TxBody era ->
+  CertState era ->
+  GovState era ->
+  (Coin -> m ()) ->
+  (UTxO era -> UTxO era -> m ()) ->
+  m (UTxOState era)
+updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent = do
+  let UTxOState
+        { utxosUtxo
+        , utxosFrxo
+        , utxosDeposited
+        , utxosFees
+        , utxosStakeDistr
+        , utxosDonation
+        } = utxos
+      UTxO utxo = utxosUtxo
+      !utxoAdd = txouts txBody -- These will be inserted into the UTxO
+      {- utxoDel  = txins txb ◁ utxo -}
+      !(utxoWithout, utxoDel) = extractKeys utxo (txBody ^. inputsTxBodyL)
+      {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
+      newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
+      FRxO frxo = utxosFrxo
+      !frxoAdd = txfrxo txBody -- These will be inserted into the FRxO
+      {- utxoDel  = txins txb ◁ utxo -}
+      !(frxoWithout, _frxoDel) = extractKeys frxo (txBody ^. fulfillsTxBodyL)
+      {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
+      newFRxO = frxoWithout `Map.union` unFRxO frxoAdd
+      deletedUTxO = UTxO utxoDel
+      newIncStakeDistro = updateStakeDistribution pp utxosStakeDistr deletedUTxO utxoAdd
+      totalRefunds = certsTotalRefundsTxBody pp certState txBody
+      totalDeposits = certsTotalDepositsTxBody pp certState txBody
+      depositChange = totalDeposits <-> totalRefunds
+  depositChangeEvent depositChange
+  txUtxODiffEvent deletedUTxO utxoAdd
+  pure $!
+    UTxOState
+      { utxosUtxo = UTxO newUTxO
+      , utxosFrxo = FRxO newFRxO
+      , utxosDeposited = utxosDeposited <> depositChange
+      , utxosFees = utxosFees <> txBody ^. feeTxBodyL
+      , utxosGovState = govState
+      , utxosStakeDistr = newIncStakeDistro
+      , utxosDonation = utxosDonation
+      }

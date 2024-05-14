@@ -41,6 +41,7 @@ library
         Cardano.Ledger.DRep
         Cardano.Ledger.EpochBoundary
         Cardano.Ledger.Era
+        Cardano.Ledger.FRxO
         Cardano.Ledger.Hashes
         Cardano.Ledger.HKD
         Cardano.Ledger.Keys

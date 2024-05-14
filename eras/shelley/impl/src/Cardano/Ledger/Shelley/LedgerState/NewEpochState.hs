@@ -73,6 +73,7 @@ genesisState genDelegs0 utxo0 =
   LedgerState
     ( UTxOState
         utxo0
+        mempty
         (Coin 0)
         (Coin 0)
         emptyGovState
@@ -126,8 +127,10 @@ updateNES
         { nesBcur = bcur
         , nesEs =
             EpochState acnt ls ss nm
-              & curPParamsEpochStateL .~ pp
-              & prevPParamsEpochStateL .~ pr
+              & curPParamsEpochStateL
+              .~ pp
+              & prevPParamsEpochStateL
+              .~ pr
         }
 
 returnRedeemAddrsToReserves ::

@@ -325,6 +325,7 @@ utxoState =
         , ShelleyTxOut bobAddr (Coin 1000)
         ]
     )
+    mempty
     (Coin 0)
     (Coin 0)
     def
