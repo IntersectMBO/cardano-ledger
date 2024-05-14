@@ -5,10 +5,9 @@
 -- It is supposed to contain everything you need to write constraints
 -- and implement `HasSpec` and `HasSimpleRep` instances.
 module Constrained (
-  Specification (..), -- TODO: it would be nice not to expose this whole thing
-  Pred (..), -- TODO: it would be nice not to expose this whole thing
+  Specification (..),
+  Pred,
   Term,
-  Binder (..), -- TODO: it would be nice not to expose this whole thing
   HasSpec (..),
   HasSimpleRep (..),
   NumLike (..),
@@ -112,13 +111,8 @@ module Constrained (
   shrinkWithNumSpec,
   conformsToNumSpec,
   toPredsNumSpec,
-  -- TODO: this is super yucky, it would be good to implement
-  -- the linear lambda thing to get rid of this.
-  composeFn,
-  fstFn,
-  sndFn,
   addFn,
-  toGenericFn,
+  -- Working with generics
   toSimpleRepSpec,
   fromSimpleRepSpec,
   algebra,
