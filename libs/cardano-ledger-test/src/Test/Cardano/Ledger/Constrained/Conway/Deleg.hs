@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the DELEG rule
@@ -14,10 +16,12 @@ import Lens.Micro
 
 import Constrained
 
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Core (PParams, ppKeyDepositL)
+import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
+import Cardano.Ledger.Core (ppKeyDepositL)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 
 dStateSpec ::
   IsConwayUniv fn =>
@@ -30,11 +34,12 @@ dStateSpec = constrained $ \ds ->
       ]
 
 delegCertSpec ::
+  forall fn.
   IsConwayUniv fn =>
-  PParams (ConwayEra StandardCrypto) ->
+  ConwayDelegEnv (ConwayEra StandardCrypto) ->
   DState (ConwayEra StandardCrypto) ->
   Specification fn (ConwayDelegCert StandardCrypto)
-delegCertSpec pp ds =
+delegCertSpec (ConwayDelegEnv pp pools) ds =
   let rewardMap = unUnify $ rewards ds
       delegMap = unUnify $ delegations ds
       zeroReward = (== 0) . fromCompact . rdReward
@@ -42,6 +47,14 @@ delegCertSpec pp ds =
         case fromCompact . rdDeposit <$> Map.lookup k rewardMap of
           Just d | d > 0 -> SJust d
           _ -> SNothing
+      delegateeInPools :: Term fn (Delegatee StandardCrypto) -> Pred fn
+      delegateeInPools delegatee =
+        (caseOn delegatee)
+          (branch $ \kh -> isInPools kh)
+          (branch $ \_ -> True)
+          (branch $ \kh _ -> isInPools kh)
+        where
+          isInPools = (`member_` lit (Map.keysSet pools))
    in constrained $ \dc ->
         (caseOn dc)
           -- ConwayRegCert !(StakeCredential c) !(StrictMaybe Coin)
@@ -56,8 +69,21 @@ delegCertSpec pp ds =
               ]
           )
           -- ConwayDelegCert !(StakeCredential c) !(Delegatee c)
-          (branch $ \sc _ -> member_ sc $ lit (Map.keysSet delegMap))
-          -- ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
-          ( branch $ \_ _ c ->
-              c ==. lit (pp ^. ppKeyDepositL)
+          ( branch $ \sc delegatee ->
+              [ assert . member_ sc $ lit (Map.keysSet delegMap)
+              , delegateeInPools delegatee
+              ]
           )
+          -- ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
+          ( branch $ \_ delegatee c ->
+              [ assert $ c ==. lit (pp ^. ppKeyDepositL)
+              , delegateeInPools delegatee
+              ]
+          )
+
+delegEnvSpec ::
+  IsConwayUniv fn =>
+  Specification fn (ConwayDelegEnv Conway)
+delegEnvSpec = constrained $ \env ->
+  match env $ \pp _ ->
+    pp `satisfies` pparamsSpec

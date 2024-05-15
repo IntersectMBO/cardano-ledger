@@ -6,6 +6,9 @@
 
 ## 1.14.0.0
 
+* Added `ConwayDelegEnv`
+* Changed the `Environment` of `ConwayDELEG` rule to `ConwayDelegEnv`
+* Moved `DelegateeNotRegisteredDELEG` to `ConwayDelegPredFailure`
 * Remove `gePrevGovActionIds` from `GovEnv`
 * Include proposal deposits in the DRep active voting stake. #4309
   * Add `proposalsDeposits` to `Governance.Proposals`.
@@ -69,6 +72,7 @@
 
 ### `testlib`
 
+* Add `ToExpr` instances for `CertEnv` and `ConwayDelegEnv`
 * Add `withPostBootstrap` to Conway ImpTest
 * Add `withImpStateWithProtVer` to Conway ImpTest
 * Add the following utilities. #4273

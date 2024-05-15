@@ -32,7 +32,10 @@ import Cardano.Ledger.Conway.Era (
   ConwayEra,
   ConwayGOVCERT,
  )
-import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure (..))
+import Cardano.Ledger.Conway.Rules.Deleg (
+  ConwayDelegEnv (..),
+  ConwayDelegPredFailure (..),
+ )
 import Cardano.Ledger.Conway.Rules.GovCert (
   ConwayGovCertEnv (..),
   ConwayGovCertPredFailure,
@@ -45,7 +48,7 @@ import Cardano.Ledger.Conway.TxCert (
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   DState,
-  PState,
+  PState (..),
   PoolEnv (PoolEnv),
   VState,
  )
@@ -75,6 +78,8 @@ data CertEnv era = CertEnv
 
 deriving instance Eq (PParams era) => Eq (CertEnv era)
 deriving instance Show (PParams era) => Show (CertEnv era)
+
+instance NFData (PParams era) => NFData (CertEnv era)
 
 data ConwayCertPredFailure era
   = DelegFailure (PredicateFailure (EraRule "DELEG" era))
@@ -151,7 +156,7 @@ instance
   , State (EraRule "DELEG" era) ~ DState era
   , State (EraRule "POOL" era) ~ PState era
   , State (EraRule "GOVCERT" era) ~ VState era
-  , Environment (EraRule "DELEG" era) ~ PParams era
+  , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
@@ -178,7 +183,7 @@ certTransition ::
   ( State (EraRule "DELEG" era) ~ DState era
   , State (EraRule "POOL" era) ~ PState era
   , State (EraRule "GOVCERT" era) ~ VState era
-  , Environment (EraRule "DELEG" era) ~ PParams era
+  , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
   , Environment (EraRule "POOL" era) ~ PoolEnv era
   , Environment (EraRule "GOVCERT" era) ~ ConwayGovCertEnv era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
@@ -192,10 +197,12 @@ certTransition ::
   TransitionRule (ConwayCERT era)
 certTransition = do
   TRC (CertEnv slot pp currentEpoch, cState, c) <- judgmentContext
-  let CertState {certDState, certPState, certVState} = cState
+  let
+    CertState {certDState, certPState, certVState} = cState
+    pools = psStakePoolParams certPState
   case c of
     ConwayTxCertDeleg delegCert -> do
-      newDState <- trans @(EraRule "DELEG" era) $ TRC (pp, certDState, delegCert)
+      newDState <- trans @(EraRule "DELEG" era) $ TRC (ConwayDelegEnv pp pools, certDState, delegCert)
       pure $ cState {certDState = newDState}
     ConwayTxCertPool poolCert -> do
       newPState <- trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState, poolCert)

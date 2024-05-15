@@ -1,31 +1,53 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   SpecTranslationError,
   SpecTranslate (..),
+  FixupSpecRep (..),
   SpecTransM,
   runSpecTransM,
-  askTransCtx,
+  askCtx,
+  toTestRep,
+  OpaqueErrorString (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Constrained.Base ()
+import Control.DeepSeq (NFData)
 import Control.Monad.Except (ExceptT, MonadError, runExceptT)
 import Control.Monad.Reader (MonadReader (..), Reader, asks, runReader)
-import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
 import Data.Text (Text)
-import Test.Cardano.Ledger.Common (NFData)
-import Test.Cardano.Ledger.TreeDiff (ToExpr)
+import GHC.Generics (Generic (..), K1 (..), M1 (..), U1 (..), V1, (:*:) (..), (:+:) (..))
+import Test.Cardano.Ledger.TreeDiff (Expr (..), ToExpr (..))
+
+-- | OpaqueErrorString behaves like unit in comparisons, but contains an
+-- error string that can be displayed.
+newtype OpaqueErrorString = OpaqueErrorString String
+  deriving (Generic)
+
+instance Eq OpaqueErrorString where
+  _ == _ = True
+
+instance ToExpr OpaqueErrorString where
+  -- Using `toExpr` on a `String` displays escape codes in place of unicode
+  -- characters (e.g. "≡" becomes "\8802")
+  -- TODO figure out a less hacky way to solve this problem
+  toExpr (OpaqueErrorString x) = App "OpaqueErrorString" [App x []]
+
+instance NFData OpaqueErrorString
 
 type SpecTranslationError = Text
 
@@ -36,30 +58,40 @@ newtype SpecTransM ctx a
 runSpecTransM :: ctx -> SpecTransM ctx a -> Either SpecTranslationError a
 runSpecTransM ctx (SpecTransM m) = runReader (runExceptT m) ctx
 
-class
-  ( Eq (TestRep a)
-  , ToExpr (TestRep a)
-  , NFData (TestRep a)
-  , Inject ctx (SpecTransContext a)
-  ) =>
-  SpecTranslate ctx a
-  where
+class SpecTranslate ctx a where
   type SpecRep a :: Type
-
-  type TestRep a :: Type
-  type TestRep a = SpecRep a
-
-  type SpecTransContext a :: Type
-  type SpecTransContext a = ()
 
   toSpecRep :: a -> SpecTransM ctx (SpecRep a)
 
-  specToTestRep :: SpecRep a -> TestRep a
-  default specToTestRep :: Coercible (SpecRep a) (TestRep a) => SpecRep a -> TestRep a
-  specToTestRep = coerce
+class GFixupSpecRep f where
+  genericFixupSpecRep :: f a -> f a
 
-  toTestRep :: a -> SpecTransM ctx (TestRep a)
-  toTestRep x = specToTestRep @ctx @a <$> toSpecRep x
+instance GFixupSpecRep U1 where
+  genericFixupSpecRep U1 = U1
 
-askTransCtx :: forall a ctx. SpecTranslate ctx a => SpecTransM ctx (SpecTransContext a)
-askTransCtx = asks inject
+instance GFixupSpecRep V1 where
+  genericFixupSpecRep = \case {}
+
+instance (GFixupSpecRep f, GFixupSpecRep g) => GFixupSpecRep (f :*: g) where
+  genericFixupSpecRep (f :*: g) = genericFixupSpecRep f :*: genericFixupSpecRep g
+
+instance (GFixupSpecRep f, GFixupSpecRep g) => GFixupSpecRep (f :+: g) where
+  genericFixupSpecRep (L1 f) = L1 $ genericFixupSpecRep f
+  genericFixupSpecRep (R1 f) = R1 $ genericFixupSpecRep f
+
+instance GFixupSpecRep a => GFixupSpecRep (M1 i c a) where
+  genericFixupSpecRep (M1 x) = M1 $ genericFixupSpecRep x
+
+instance FixupSpecRep a => GFixupSpecRep (K1 i a) where
+  genericFixupSpecRep (K1 x) = K1 $ fixup x
+
+class FixupSpecRep a where
+  fixup :: a -> a
+  default fixup :: (Generic a, GFixupSpecRep (Rep a)) => a -> a
+  fixup = to . genericFixupSpecRep . from
+
+toTestRep :: (SpecTranslate ctx a, FixupSpecRep (SpecRep a)) => a -> SpecTransM ctx (SpecRep a)
+toTestRep = fmap fixup . toSpecRep
+
+askCtx :: forall b ctx. Inject ctx b => SpecTransM ctx b
+askCtx = asks inject

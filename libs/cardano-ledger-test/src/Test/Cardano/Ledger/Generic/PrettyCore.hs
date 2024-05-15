@@ -116,6 +116,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Rules (
   CertEnv (..),
   ConwayCertsPredFailure (..),
+  ConwayDelegEnv (..),
   ConwayDelegPredFailure (..),
   ConwayGovCertEnv (..),
   ConwayGovCertPredFailure (..),
@@ -1475,7 +1476,6 @@ instance PrettyA (ConwayGovCertPredFailure era) where
 
 ppConwayCertsPredFailure :: Proof era -> ConwayCertsPredFailure era -> PDoc
 ppConwayCertsPredFailure proof x = case x of
-  ConwayRules.DelegateeNotRegisteredDELEG kh -> ppSexp "DelegateeNotRegisteredDELEG" [pcKeyHash kh]
   WithdrawalsNotInRewardsCERTS m -> ppSexp "WithdrawalsNotInRewardsCERTS" [ppMap pcRewardAccount pcCoin m]
   CertFailure pf -> case proof of
     Conway -> ppSexp " CertFailure" [ppConwayCertPredFailure proof pf] -- !(PredicateFailure (EraRule "CERT" era))
@@ -1912,6 +1912,7 @@ ppConwayDelegPredFailure x = case x of
     ppSexp "StakeKeyHasNonZeroRewardAccountBalanceDELEG" [pcCoin c]
   DRepAlreadyRegisteredForStakeKeyDELEG cred ->
     ppSexp "DRepAlreadyRegisteredForStakeKeyDELEG" [pcCredential cred]
+  ConwayRules.DelegateeNotRegisteredDELEG kh -> ppSexp "DelegateeNotRegisteredDELEG" [pcKeyHash kh]
 
 instance PrettyA (ConwayDelegPredFailure era) where
   prettyA = ppConwayDelegPredFailure
@@ -2691,6 +2692,14 @@ pcConwayDelegCert (ConwayRegDelegCert cred d c) =
 
 instance PrettyA (ConwayDelegCert c) where
   prettyA = pcConwayDelegCert
+
+instance Reflect era => PrettyA (ConwayDelegEnv era) where
+  prettyA ConwayDelegEnv {..} =
+    ppRecord
+      "ConwayDelegEnv"
+      [ ("cdePParams", prettyA cdePParams)
+      , ("cdePools", prettyA cdePools)
+      ]
 
 pcDelegatee :: Delegatee c -> PDoc
 pcDelegatee (DelegStake kh) = ppSexp "DelegStake" [pcKeyHash kh]

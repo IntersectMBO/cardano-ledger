@@ -47,19 +47,15 @@ import Cardano.Ledger.Conway.Governance (Voter (DRepVoter), VotingProcedures (un
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
-import Cardano.Ledger.Conway.TxCert (getDelegateeTxCert, getStakePoolDelegatee)
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   Coin,
-  KeyHash,
-  KeyRole (..),
   RewardAccount,
  )
 import Cardano.Ledger.Shelley.Rules (
   ShelleyPoolPredFailure,
   drainWithdrawals,
-  validateStakePoolDelegateeRegistered,
   validateZeroRewards,
  )
 import Control.DeepSeq (NFData)
@@ -89,10 +85,7 @@ data CertsEnv era = CertsEnv
   }
 
 data ConwayCertsPredFailure era
-  = -- | Target pool which is not registered
-    DelegateeNotRegisteredDELEG
-      !(KeyHash 'StakePool (EraCrypto era))
-  | -- | Withdrawals that are missing or do not withdrawal the entire amount
+  = -- | Withdrawals that are missing or do not withdrawal the entire amount
     WithdrawalsNotInRewardsCERTS
       !(Map.Map (RewardAccount (EraCrypto era)) Coin)
   | -- | CERT rule subtransition Failures
@@ -148,9 +141,8 @@ instance
   where
   encCBOR =
     encode . \case
-      DelegateeNotRegisteredDELEG kh -> Sum (DelegateeNotRegisteredDELEG @era) 0 !> To kh
-      WithdrawalsNotInRewardsCERTS rs -> Sum (WithdrawalsNotInRewardsCERTS @era) 1 !> To rs
-      CertFailure x -> Sum (CertFailure @era) 2 !> To x
+      WithdrawalsNotInRewardsCERTS rs -> Sum (WithdrawalsNotInRewardsCERTS @era) 0 !> To rs
+      CertFailure x -> Sum (CertFailure @era) 1 !> To x
 
 instance
   ( Era era
@@ -159,9 +151,8 @@ instance
   DecCBOR (ConwayCertsPredFailure era)
   where
   decCBOR = decode $ Summands "ConwayGovPredFailure" $ \case
-    0 -> SumD DelegateeNotRegisteredDELEG <! From
-    1 -> SumD WithdrawalsNotInRewardsCERTS <! From
-    2 -> SumD CertFailure <! From
+    0 -> SumD WithdrawalsNotInRewardsCERTS <! From
+    1 -> SumD CertFailure <! From
     k -> Invalid k
 
 instance
@@ -249,11 +240,6 @@ conwayCertsTransition = do
     gamma :|> txCert -> do
       certState' <-
         trans @(ConwayCERTS era) $ TRC (env, certState, gamma)
-      validateTrans DelegateeNotRegisteredDELEG $
-        case getDelegateeTxCert txCert >>= getStakePoolDelegatee of
-          Nothing -> pure ()
-          Just targetPool ->
-            validateStakePoolDelegateeRegistered (certPState certState') targetPool
       trans @(EraRule "CERT" era) $
         TRC (CertEnv slot pp currentEpoch, certState', txCert)
 

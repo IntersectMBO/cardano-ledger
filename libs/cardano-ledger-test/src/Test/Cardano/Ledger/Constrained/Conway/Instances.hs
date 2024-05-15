@@ -1426,3 +1426,6 @@ onSized ::
   (Term fn a -> p) ->
   Pred fn
 onSized sz p = match sz $ \a _ -> p a
+
+instance HasSimpleRep (ConwayDelegEnv era)
+instance (IsConwayUniv fn, HasSpec fn (PParams era), Era era) => HasSpec fn (ConwayDelegEnv era)

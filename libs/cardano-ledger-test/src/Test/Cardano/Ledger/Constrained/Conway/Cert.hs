@@ -48,6 +48,8 @@ txCertSpec (CertEnv slot pp ce) CertState {..} =
   constrained $ \txCert ->
     caseOn
       txCert
-      (branch $ \delegCert -> satisfies delegCert $ delegCertSpec pp certDState)
+      (branch $ \delegCert -> satisfies delegCert $ delegCertSpec delegEnv certDState)
       (branch $ \poolCert -> satisfies poolCert $ poolCertSpec (PoolEnv slot pp) certPState)
       (branch $ \govCert -> satisfies govCert $ govCertSpec (ConwayGovCertEnv pp ce) certVState)
+  where
+    delegEnv = ConwayDelegEnv pp (psStakePoolParams certPState)
