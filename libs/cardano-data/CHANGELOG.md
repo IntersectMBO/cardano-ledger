@@ -1,5 +1,9 @@
 # Version history for `cardano-data`
 
+## 1.2.2.1
+
+*
+
 ## 1.2.2.0
 
 * Add `assocList`, `elems`

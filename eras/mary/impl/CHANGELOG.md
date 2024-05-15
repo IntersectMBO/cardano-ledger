@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.6.0.1
+
+*
+
 ## 1.6.0.0
 
 * Change how we report tokens burned in `ValueNotConservedUTxO`: #4288

@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.8.0.1
+
+*
+
 ## 1.8.0.0
 
 * Change the type of the balance field in `InsufficientCollateral` to `DeltaCoin`
