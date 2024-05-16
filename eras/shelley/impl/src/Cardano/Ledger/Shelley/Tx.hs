@@ -68,7 +68,7 @@ import Cardano.Ledger.MemoBytes (
  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
-import Cardano.Ledger.Shelley.Scripts (MultiSig (..), validateMultiSig)
+import Cardano.Ledger.Shelley.Scripts (MultiSig, validateMultiSig)
 import Cardano.Ledger.Shelley.TxAuxData ()
 import Cardano.Ledger.Shelley.TxBody ()
 import Cardano.Ledger.Shelley.TxWits ()

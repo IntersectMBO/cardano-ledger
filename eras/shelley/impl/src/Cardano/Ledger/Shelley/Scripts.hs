@@ -19,7 +19,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Scripts (
-  MultiSig (..),
+  MultiSig,
   ShelleyEraScript (..),
   pattern RequireSignature,
   pattern RequireAllOf,

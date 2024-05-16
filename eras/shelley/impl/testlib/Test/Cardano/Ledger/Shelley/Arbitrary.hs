@@ -35,7 +35,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (ApplyTxError),
-  MultiSig (..),
+  MultiSig,
   NominalDiffTimeMicro (..),
   ShelleyDelegCert,
   ShelleyGenesis (..),
