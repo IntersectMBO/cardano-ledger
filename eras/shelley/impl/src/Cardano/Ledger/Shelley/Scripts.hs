@@ -61,9 +61,7 @@ import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
-import Data.Foldable (toList)
-import Data.Functor.Classes (Eq1 (liftEq))
-import Data.Sequence.Strict (StrictSeq)
+import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
@@ -89,11 +87,11 @@ data MultiSigRaw era
     --   corresponding to the given verification key hash.
     RequireSignature' !(KeyHash 'Witness (EraCrypto era))
   | -- | Require all the sub-terms to be satisfied.
-    RequireAllOf' ![MultiSig era]
+    RequireAllOf' !(StrictSeq (MultiSig era))
   | -- | Require any one of the sub-terms to be satisfied.
-    RequireAnyOf' ![MultiSig era]
+    RequireAnyOf' !(StrictSeq (MultiSig era))
   | -- | Require M of the given sub-terms to be satisfied.
-    RequireMOf' !Int ![MultiSig era]
+    RequireMOf' !Int !(StrictSeq (MultiSig era))
   deriving (Eq, Generic)
   deriving anyclass (NoThunks)
 
@@ -152,18 +150,18 @@ instance Crypto c => ShelleyEraScript (ShelleyEra c) where
   getRequireSignature _ = Nothing
 
   mkRequireAllOf ms =
-    MultiSigConstr $ memoBytes (Sum RequireAllOf' 1 !> To (toList ms))
-  getRequireAllOf (MultiSigConstr (Memo (RequireAllOf' ms) _)) = Just (StrictSeq.fromList ms)
+    MultiSigConstr $ memoBytes (Sum RequireAllOf' 1 !> To ms)
+  getRequireAllOf (MultiSigConstr (Memo (RequireAllOf' ms) _)) = Just ms
   getRequireAllOf _ = Nothing
 
   mkRequireAnyOf ms =
-    MultiSigConstr $ memoBytes (Sum RequireAnyOf' 2 !> To (toList ms))
-  getRequireAnyOf (MultiSigConstr (Memo (RequireAnyOf' ms) _)) = Just (StrictSeq.fromList ms)
+    MultiSigConstr $ memoBytes (Sum RequireAnyOf' 2 !> To ms)
+  getRequireAnyOf (MultiSigConstr (Memo (RequireAnyOf' ms) _)) = Just ms
   getRequireAnyOf _ = Nothing
 
   mkRequireMOf n ms =
-    MultiSigConstr $ memoBytes (Sum RequireMOf' 3 !> To n !> To (toList ms))
-  getRequireMOf (MultiSigConstr (Memo (RequireMOf' n ms) _)) = Just (n, StrictSeq.fromList ms)
+    MultiSigConstr $ memoBytes (Sum RequireMOf' 3 !> To n !> To ms)
+  getRequireMOf (MultiSigConstr (Memo (RequireMOf' n ms) _)) = Just (n, ms)
   getRequireMOf _ = Nothing
 
 deriving newtype instance NFData (MultiSig era)
@@ -222,10 +220,13 @@ instance Era era => DecCBOR (Annotator (MultiSigRaw era)) where
 eqMultiSigRaw :: MultiSig era -> MultiSig era -> Bool
 eqMultiSigRaw t1 t2 = go (getMemoRawType t1) (getMemoRawType t2)
   where
+    seqEq Empty Empty = True
+    seqEq (x :<| xs) (y :<| ys) = eqMultiSigRaw x y && seqEq xs ys
+    seqEq _ _ = False
     go (RequireSignature' kh1) (RequireSignature' kh2) = kh1 == kh2
-    go (RequireAllOf' ts1) (RequireAllOf' ts2) = liftEq eqMultiSigRaw ts1 ts2
-    go (RequireAnyOf' ts1) (RequireAnyOf' ts2) = liftEq eqMultiSigRaw ts1 ts2
-    go (RequireMOf' n1 ts1) (RequireMOf' n2 ts2) = n1 == n2 && liftEq eqMultiSigRaw ts1 ts2
+    go (RequireAllOf' ts1) (RequireAllOf' ts2) = seqEq ts1 ts2
+    go (RequireAnyOf' ts1) (RequireAnyOf' ts2) = seqEq ts1 ts2
+    go (RequireMOf' n1 ts1) (RequireMOf' n2 ts2) = n1 == n2 && seqEq ts1 ts2
     go _ _ = False
 
 -- | Script evaluator for native multi-signature scheme. 'vhks' is the set of
