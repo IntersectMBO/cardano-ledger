@@ -487,37 +487,6 @@ instance
   ) =>
   NoThunks (NewEpochState era)
 
--- type family Ledger era
-
--- class LedgerStateConstraint era where
---   data Ledger era
---   ledgerStateL :: Lens' (Ledger era) (LedgerState era)
-
--- instance LedgerStateConstraint (ShelleyEra c) where
---   data Ledger (ShelleyEra c) = ShelleyLedger (LedgerState (ShelleyEra c)) deriving (Generic)
---   ledgerStateL = lens getter setter
---     where
---       getter (ShelleyLedger l) = l
---       setter (ShelleyLedger _) = ShelleyLedger
-
--- instance Crypto c => Show (Ledger (ShelleyEra c)) where
---   show (ShelleyLedger l) = show l
-
--- instance Crypto c => Eq (Ledger (ShelleyEra c)) where
---   ShelleyLedger l == ShelleyLedger l' = l == l'
-
--- instance
---   ( EraTxOut era
---   , NoThunks (GovState era)
---   ) =>
---   NoThunks (Ledger era)
-
--- instance
---   ( EraTxOut era
---   , NFData (GovState era)
---   ) =>
---   NFData (Ledger era)
-
 -- | The state associated with a 'Ledger'.
 data LedgerState era = LedgerState
   { lsUTxOState :: !(UTxOState era)

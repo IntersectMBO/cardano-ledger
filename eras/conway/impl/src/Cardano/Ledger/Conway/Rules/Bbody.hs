@@ -76,14 +76,6 @@ data ConwayBbodyPredFailure era
   | ShellyInConwayBbodyPredFailure (ShelleyBbodyPredFailure era)
   deriving (Generic)
 
--- newtype ConwayZonesPredFailure era
---   = ZoneFailure (PredicateFailure (EraRule "ZONE" era)) -- Subtransition Failures
---   deriving (Generic)
-
--- newtype ConwayZonePredFailure era
---   = LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
---   deriving (Generic)
-
 type instance EraRuleFailure "BBODY" (ConwayEra c) = ConwayBbodyPredFailure (ConwayEra c)
 
 instance InjectRuleFailure "BBODY" ConwayBbodyPredFailure (ConwayEra c)

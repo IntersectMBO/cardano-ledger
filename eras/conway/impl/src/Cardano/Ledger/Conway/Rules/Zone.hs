@@ -257,12 +257,6 @@ zoneTransition =
     chkIsValid :: Tx era -> Bool
     chkIsValid tx = tx ^. isValidTxL == IsValid True
 
--- This should be moved to LEDGERS rule at the point where you figure out how to do it
--- isThisUseful :: UTxO era -> Seq (Tx era) -> (UTxO era, UTxO era)
--- isThisUseful utxo txs =
---   over both UTxO $
---     Map.partitionWithKey (\k _ -> k `notElem` (requiredTxs =<< toList txs)) (unUTxO utxo)
-
 txInTxId :: TxIn era -> TxId era
 txInTxId (TxIn x _) = x
 
@@ -351,37 +345,3 @@ topSortTxs ((tx1, _) : dges) (r : em) (tx : rls) srtd =
   topSortTxs dges (fst updRES) (snd updRES) (srtd ++ [tx1])
   where
     updRES = updateRES tx1 (r : em) (removeTx tx1 (tx : rls))
-
--- -- TOP SORT original
--- -- L ← Empty list that will contain the sorted elements
--- -- S ← Set of all nodes with no incoming edge
--- --
--- -- while S is not empty do
--- --     remove a node n from S
--- --     add n to L
--- --     for each node m with an edge e from n to m do
--- --         remove edge e from the graph
--- --         if m has no other incoming edges then
--- --             insert m into S
--- --
--- -- if graph has edges then
--- --     return error   (graph has at least one cycle)
--- -- else
--- --     return L   (a topologically sorted order)
-
--- -- TOP SORT implemented
--- -- L ← Empty list that will contain the sorted elements
--- -- S ← Set of all nodes with no incoming edge
--- -- --
--- -- for each (tx1 , tx2) in edges do
--- --           remove tx1 from S
--- --           add tx1 to L
--- --           for all tx such that (tx1 , tx) in edges,
--- --             remove (tx1 , tx) from the graph
--- --             if tx has no other incoming edges then
--- --               insert tx into S
--- --
--- -- if graph has edges then
--- --     return error   (graph has at least one cycle)
--- -- else
--- --     return L   (a topologically sorted order)
