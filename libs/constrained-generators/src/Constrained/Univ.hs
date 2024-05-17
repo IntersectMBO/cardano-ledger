@@ -346,6 +346,9 @@ elemFn = injectFn $ Elem @_ @fn
 disjointFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[Set a, Set a] Bool
 disjointFn = injectFn $ Disjoint @_ @fn
 
+fromListFn :: forall fn a. (Member (SetFn fn) fn, Ord a) => fn '[[a]] (Set a)
+fromListFn = injectFn $ FromList @_ @fn
+
 data SetFn (fn :: [Type] -> Type -> Type) args res where
   Subset :: Ord a => SetFn fn '[Set a, Set a] Bool
   Disjoint :: Ord a => SetFn fn '[Set a, Set a] Bool
@@ -353,6 +356,7 @@ data SetFn (fn :: [Type] -> Type -> Type) args res where
   Singleton :: Ord a => SetFn fn '[a] (Set a)
   Union :: Ord a => SetFn fn '[Set a, Set a] (Set a)
   Elem :: Eq a => SetFn fn '[a, [a]] Bool
+  FromList :: Ord a => SetFn fn '[[a]] (Set a)
 
 deriving instance Show (SetFn fn args res)
 deriving instance Eq (SetFn fn args res)
@@ -365,6 +369,7 @@ instance FunctionLike (SetFn fn) where
     Singleton -> Set.singleton
     Union -> (<>)
     Elem -> elem
+    FromList -> Set.fromList
 
 ------------------------------------------------------------------------
 -- Maps

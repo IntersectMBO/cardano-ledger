@@ -3054,6 +3054,38 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
               , assert $ member_ e (Lit s)
               , assert $ member_ e set
               ]
+    fl@FromList -> case fl of
+      -- NOTE: this is a super ugly hack to get around
+      -- type arguments not being bindable in ghc 8.10.7.
+      -- In later ghc versions we could replace this fl... stuff
+      -- with just
+      --  FromList @a @_
+      --    | Nil...
+      --    , Evidence <- ...
+      FromList :: SetFn fn '[[a]] (Set a)
+        | NilCtx HOLE <- ctx
+        , Evidence <- prerequisites @fn @[a] ->
+            case spec of
+              MemberSpec [xs] -> typeSpec $ ListSpec Nothing (Set.toList xs) TrueSpec (MemberSpec $ Set.toList xs) NoFold
+              TypeSpec (SetSpec must elemSpec sizeSpec) []
+                | TrueSpec <- sizeSpec -> typeSpec $ ListSpec Nothing (Set.toList must) TrueSpec elemSpec NoFold
+                | TypeSpec (NumSpecInterval (Just l) Nothing) cantSize <- sizeSpec
+                , l <= sizeOf must
+                , all (< sizeOf must) cantSize ->
+                    typeSpec $ ListSpec Nothing (Set.toList must) TrueSpec elemSpec NoFold
+              _ ->
+                -- Here we simply defer to basically generating the universe that we can
+                -- draw from according to `spec` first and then fold that into the spec for the list.
+                -- The tricky thing about this is that it may not play super nicely with other constraints
+                -- on the list. For this reason it's important to try to find as many possible work-arounds
+                -- in the above cases as possible.
+                constrained $ \xs ->
+                  exists (\eval -> pure $ Set.fromList (eval xs)) $ \s ->
+                    [ s `satisfies` spec
+                    , xs `DependsOn` s
+                    , forAll xs $ \e -> e `member_` s
+                    , forAll s $ \e -> e `elem_` xs
+                    ]
 
   rewriteRules Elem (_ :> Lit [] :> Nil) = Just $ Lit False
   rewriteRules Elem (t :> Lit [a] :> Nil) = Just $ t ==. lit a
@@ -3072,6 +3104,14 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
       constrained $ \x ->
         unsafeExists $ \x' ->
           assert (x ==. singleton_ x') <> toPreds x' ts
+    fl@FromList -> case fl of
+      -- NOTE: this is a super ugly hack to get around
+      -- type arguments not being bindable in ghc 8.10.7
+      FromList :: SetFn fn '[[a]] (Set a)
+        | Evidence <- prerequisites @fn @(Set a) ->
+            constrained $ \x ->
+              unsafeExists $ \x' ->
+                assert (x ==. fromList_ @a x') <> toPreds x' ts
 
 -- List -------------------------------------------------------------------
 
@@ -3094,6 +3134,7 @@ deriving instance HasSpec fn a => Show (ListSpec fn a)
 
 instance HasSpec fn a => HasSpec fn [a] where
   type TypeSpec fn [a] = ListSpec fn a
+  type Prerequisites fn [a] = HasSpec fn a
   emptySpec = ListSpec Nothing [] mempty mempty NoFold
   combineSpec (ListSpec msz must size elemS foldS) (ListSpec msz' must' size' elemS' foldS') = fromGESpec $ do
     let must'' = nub $ must <> must'
@@ -3888,6 +3929,15 @@ union_ ::
   Term fn (Set a) ->
   Term fn (Set a)
 union_ = app unionFn
+
+fromList_ ::
+  forall a fn.
+  ( HasSpec fn a
+  , Ord a
+  ) =>
+  Term fn [a] ->
+  Term fn (Set a)
+fromList_ = app fromListFn
 
 sizeOf_ ::
   forall a fn.
