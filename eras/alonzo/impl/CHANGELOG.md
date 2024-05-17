@@ -3,6 +3,7 @@
 ## 1.8.1.0
 
 * Add `AllegraEraScript` and `ShelleyEraScript` instances for `AlonzoEra`
+* Add `Inject` instance for `AlonzoTx`
 
 ## testlib
 

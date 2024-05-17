@@ -2,6 +2,9 @@
 
 ## 1.14.1.0
 
+* Add `NFData` instances for:
+  * `RatifySignal`
+  * `EnactSignal`
 * Add instances for `ConwayGovCertEnv`. #4348
   * `NFData`
   * `ToExpr`
@@ -10,7 +13,9 @@
 
 ### `testlib`
 
-* Add `ToExpr` instance for `RatifySignal`
+* Add `ToExpr` instances for:
+  * `RatifySignal`
+  * `EnactSignal`
 
 ## 1.14.0.0
 

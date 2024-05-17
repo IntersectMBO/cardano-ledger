@@ -12,6 +12,9 @@
 * Change signatures of `evalMultiSig` and `validateMultiSig`:
   * replace `Era` constraint with `ShelleyEraScript`
   * replace `MultiSig` with `NativeScript`
+* Add `Inject` instances for:
+  * `UTxOState`
+  * `UtxoEnv`
 
 ### testlib
 * Add `withCborRoundTripFailures`

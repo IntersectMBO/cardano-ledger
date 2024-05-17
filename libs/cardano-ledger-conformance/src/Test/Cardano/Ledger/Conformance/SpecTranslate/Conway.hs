@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -20,6 +21,7 @@
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (
   SpecTranslate (..),
   SpecTranslationError,
+  ConwayExecEnactEnv (..),
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
@@ -37,7 +39,7 @@ import Cardano.Ledger.BaseTypes (
   BoundedRational (..),
   EpochInterval (..),
   EpochNo (..),
-  Inject,
+  Inject (..),
   Network,
   ProtVer (..),
   SlotNo (..),
@@ -88,6 +90,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
   ConwayUtxoPredFailure,
+  EnactSignal (..),
   GovEnv (..),
   RatifyState (..),
  )
@@ -121,6 +124,8 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (dRepMap, fromCompact, rewardMap, sPoolMap)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val (..))
+import Constrained (HasSimpleRep, HasSpec)
+import Control.DeepSeq (NFData)
 import Control.Monad.Except (MonadError (..))
 import Control.State.Transition.Extended (STS (..))
 import Data.Bifunctor (Bifunctor (..))
@@ -140,6 +145,7 @@ import qualified Data.Text as T
 import Data.Traversable (forM)
 import Data.Void (Void, absurd)
 import Data.Word (Word32, Word64)
+import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
 import qualified Lib as Agda
@@ -150,6 +156,7 @@ import Test.Cardano.Ledger.Conformance (
   SpecTranslationError,
   askCtx,
  )
+import Test.Cardano.Ledger.Constrained.Conway (IsConwayUniv)
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
 
 instance SpecTranslate ctx Void where
@@ -1136,3 +1143,33 @@ instance EraPParams era => SpecTranslate ctx (RatifySignal era) where
   toSpecRep (RatifySignal x) =
     toSpecRep $
       (\gas@GovActionState {gasId} -> (gasId, gas)) <$> x
+
+instance EraPParams era => SpecTranslate ctx (EnactSignal era) where
+  type SpecRep (EnactSignal era) = SpecRep (GovAction era)
+
+  toSpecRep (EnactSignal _ ga) = toSpecRep ga
+
+data ConwayExecEnactEnv era = ConwayExecEnactEnv
+  { ceeeGid :: GovActionId (EraCrypto era)
+  , ceeeTreasury :: Coin
+  , ceeeEpoch :: EpochNo
+  }
+  deriving (Generic, Eq, Show)
+
+instance Inject (ConwayExecEnactEnv era) () where
+  inject _ = ()
+
+instance ToExpr (ConwayExecEnactEnv era)
+instance Era era => NFData (ConwayExecEnactEnv era)
+
+instance HasSimpleRep (ConwayExecEnactEnv era)
+instance (IsConwayUniv fn, Era era) => HasSpec fn (ConwayExecEnactEnv era)
+
+instance SpecTranslate ctx (ConwayExecEnactEnv era) where
+  type SpecRep (ConwayExecEnactEnv era) = Agda.EnactEnv
+
+  toSpecRep ConwayExecEnactEnv {..} =
+    Agda.MkEnactEnv
+      <$> toSpecRep ceeeGid
+      <*> toSpecRep ceeeTreasury
+      <*> toSpecRep ceeeEpoch

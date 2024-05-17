@@ -25,6 +25,7 @@ import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParamsUpdate)
 import Cardano.Ledger.Conway.Governance (
   EnactState,
+  GovAction,
   GovActionState (..),
   GovProcedures (..),
   ProposalProcedure,
@@ -37,7 +38,7 @@ import Cardano.Ledger.Conway.Governance (
   toPrevGovActionIds,
  )
 import Cardano.Ledger.Conway.PParams (THKD (..))
-import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure, RatifyState)
+import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure, EnactSignal, RatifyState)
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert, ConwayTxCert)
 import Cardano.Ledger.Credential (Credential)
@@ -67,7 +68,7 @@ import Test.Cardano.Ledger.Conformance (
   runConformance,
   runSpecTransM,
  )
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (ConwayExecEnactEnv)
 import Test.Cardano.Ledger.Constrained.Conway (
   IsConwayUniv,
   ProposalsSplit,
@@ -220,20 +221,27 @@ agdaCompatiblePPU ppup =
         (branch $ \_ -> False)
         (branch $ \_ -> True)
 
+agdaCompatibleGovAction ::
+  IsConwayUniv fn =>
+  Term fn (GovAction Conway) ->
+  Pred fn
+agdaCompatibleGovAction govAction =
+  caseOn
+    govAction
+    (branch $ \_ ppup _ -> agdaCompatiblePPU ppup)
+    (branch $ \_ _ -> True)
+    (branch $ \_ _ -> True)
+    (branch $ const True)
+    (branch $ \_ _ _ _ -> True)
+    (branch $ \_ _ -> True)
+    (branch $ const True)
+
 agdaCompatibleProposal ::
   IsConwayUniv fn =>
   Term fn (ProposalProcedure Conway) ->
   Pred fn
 agdaCompatibleProposal prop =
-  match prop $ \_ _ govAction _ ->
-    (caseOn govAction)
-      (branch $ \_ ppup _ -> agdaCompatiblePPU ppup)
-      (branch $ \_ _ -> True)
-      (branch $ \_ _ -> True)
-      (branch $ \_ -> True)
-      (branch $ \_ _ _ _ -> True)
-      (branch $ \_ _ -> True)
-      (branch $ \_ -> True)
+  match prop $ \_ _ govAction _ -> agdaCompatibleGovAction govAction
 
 agdaCompatibleGAS ::
   IsConwayUniv fn =>
@@ -529,3 +537,18 @@ instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.govCertStep env st sig
+
+instance IsConwayUniv fn => ExecSpecRule fn "ENACT" Conway where
+  type ExecEnvironment fn "ENACT" Conway = ConwayExecEnactEnv Conway
+
+  environmentSpec _ = TrueSpec
+  stateSpec _ _ = TrueSpec
+  signalSpec _ _ _ = onlyMinFeeAUpdates
+    where
+      onlyMinFeeAUpdates :: Specification fn (EnactSignal Conway)
+      onlyMinFeeAUpdates = constrained $ \sig ->
+        match sig $ \_ ga -> agdaCompatibleGovAction ga
+  runAgdaRule env st sig =
+    first (error "ENACT failed")
+      . computationResultToEither
+      $ Agda.enactStep env st sig
