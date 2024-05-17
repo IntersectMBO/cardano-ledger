@@ -25,7 +25,6 @@ import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParamsUpdate)
 import Cardano.Ledger.Conway.Governance (
   EnactState,
-  GovActionId,
   GovActionState (..),
   GovProcedures (..),
   ProposalProcedure,
@@ -52,7 +51,6 @@ import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
@@ -433,7 +431,7 @@ instance
 
 data ConwayRatifyExecContext era = ConwayRatifyExecContext
   { crecTreasury :: Coin
-  , crecGovActionMap :: Map (GovActionId (EraCrypto era)) (GovActionState era)
+  , crecGovActionMap :: [GovActionState era]
   }
   deriving (Generic, Eq, Show)
 
@@ -448,18 +446,15 @@ instance
   arbitrary =
     ConwayRatifyExecContext
       <$> arbitrary
-      <*> (Map.mapWithKey fixupGAIDs <$> arbitrary)
-    where
-      fixupGAIDs gaId gas = gas {gasId = gaId}
+      <*> arbitrary
 
 instance Inject (ConwayRatifyExecContext era) Coin where
   inject = crecTreasury
 
 instance
-  c ~ EraCrypto era =>
   Inject
     (ConwayRatifyExecContext era)
-    (Map (GovActionId c) (GovActionState era))
+    [GovActionState era]
   where
   inject = crecGovActionMap
 
@@ -478,10 +473,13 @@ ratifyStateSpec ::
   IsConwayUniv fn =>
   ConwayRatifyExecContext Conway ->
   Specification fn (RatifyState Conway)
-ratifyStateSpec ConwayRatifyExecContext {crecGovActionMap} =
+ratifyStateSpec _ =
   constrained $ \st ->
-    match st $ \_ _ expired _ ->
-      expired `subset_` dom_ (lit crecGovActionMap)
+    match st $ \_ enacted expired _ ->
+      mconcat
+        [ assert $ enacted ==. lit mempty
+        , assert $ expired ==. lit mempty
+        ]
 
 ratifySignalSpec ::
   IsConwayUniv fn =>
@@ -491,8 +489,8 @@ ratifySignalSpec ConwayRatifyExecContext {crecGovActionMap} =
   constrained $ \sig ->
     match sig $ \gasS ->
       match gasS $ \gasL ->
-        forAll' gasL $ \gaId _ _ _ _ _ _ ->
-          gaId `member_` dom_ (lit crecGovActionMap)
+        forAll gasL $ \gas ->
+          gas `elem_` lit crecGovActionMap
 
 instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
   type ExecContext fn "RATIFY" Conway = ConwayRatifyExecContext Conway
@@ -501,34 +499,13 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
     . constrained
     $ \ctx ->
       match ctx $ \_ gasMap ->
-        forAll' gasMap $ \_ gas ->
-          agdaCompatibleGAS gas
+        forAll gasMap agdaCompatibleGAS
 
-  environmentSpec _ = ratifyEnvSpec
+  environmentSpec _ctx = ratifyEnvSpec
 
-  stateSpec ctx _ =
-    mconcat
-      [ ratifyStateSpec ctx
-      , onlyMinFeeAUpdates
-      ]
-    where
-      onlyMinFeeAUpdates :: Specification fn (RatifyState Conway)
-      onlyMinFeeAUpdates = constrained $ \st ->
-        match st $ \_ ratified _ _ ->
-          match ratified $ \ratifiedL ->
-            forAll ratifiedL agdaCompatibleGAS
+  stateSpec ctx _env = ratifyStateSpec ctx
 
-  signalSpec ctx _ _ =
-    mconcat
-      [ onlyMinFeeAUpdates
-      , ratifySignalSpec ctx
-      ]
-    where
-      onlyMinFeeAUpdates :: Specification fn (RatifySignal Conway)
-      onlyMinFeeAUpdates = constrained $ \sig ->
-        match sig $ \gasS ->
-          match gasS $ \gasL ->
-            forAll gasL agdaCompatibleGAS
+  signalSpec ctx _env _st = ratifySignalSpec ctx
 
   runAgdaRule env st sig =
     first (\case {})
