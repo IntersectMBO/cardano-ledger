@@ -52,10 +52,32 @@ import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyBbodyPredFailure,
   ShelleyLedgersEvent,
+  ShelleyLedgersPredFailure,
+  ShelleyPoolPredFailure,
+  ShelleyUtxoPredFailure,
+  ShelleyUtxowPredFailure,
  )
 
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxoPredFailure,
+  AlonzoUtxosPredFailure,
+  AlonzoUtxowPredFailure,
+ )
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (txIxFromIntegral, txIxToInt)
+import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
+import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsPredFailure)
+import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
+import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure)
+import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
+import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerPredFailure)
 import Cardano.Ledger.Conway.Rules.Ledgers (ConwayLedgersEnv (ConwayLedgersEnv))
+import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
+import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
+import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
+import Cardano.Ledger.Conway.Rules.Zone (ConwayZonePredFailure)
+import Cardano.Ledger.Core (EraRuleEvent)
 import Cardano.Ledger.Shelley.API (TxIx)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Control.Monad (foldM)
@@ -76,6 +98,70 @@ data ConwayZonesEvent era
 type instance EraRuleFailure "ZONES" (ConwayEra c) = ConwayZonesPredFailure (ConwayEra c)
 
 instance InjectRuleFailure "ZONES" ConwayZonesPredFailure (ConwayEra c)
+
+type instance EraRuleFailure "ZONES" (ConwayEra c) = ConwayZonesPredFailure (ConwayEra c)
+
+type instance EraRuleEvent "ZONES" (ConwayEra c) = ConwayZonesEvent (ConwayEra c)
+
+instance InjectRuleFailure "ZONES" ConwayZonePredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure
+
+instance InjectRuleFailure "ZONES" ShelleyLedgersPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" ConwayLedgerPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" ConwayUtxowPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" BabbageUtxowPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" AlonzoUtxowPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" ShelleyUtxowPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" ConwayUtxoPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" BabbageUtxoPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" AlonzoUtxoPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" AlonzoUtxosPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" ConwayUtxosPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" ShelleyUtxoPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" AllegraUtxoPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" ConwayCertsPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" ConwayCertPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" ConwayDelegPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" ShelleyPoolPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" ConwayGovCertPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
+
+instance InjectRuleFailure "ZONES" ConwayGovPredFailure (ConwayEra c) where
+  injectFailure = ZoneFailure . injectFailure
 
 deriving stock instance
   ( Era era

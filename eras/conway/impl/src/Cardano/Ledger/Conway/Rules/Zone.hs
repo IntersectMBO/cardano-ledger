@@ -58,13 +58,30 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import Lens.Micro.Type (Lens')
 
+import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxoPredFailure,
+  AlonzoUtxosPredFailure,
+  AlonzoUtxowPredFailure,
+ )
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
+import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
+import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsPredFailure)
+import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
+import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure)
+import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerPredFailure)
 import Cardano.Ledger.Conway.Rules.Ledgers (ConwayLedgersEnv (ConwayLedgersEnv))
+import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
+import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Core (EraRuleEvent, EraRuleFailure)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersEvent,
   ShelleyLedgersPredFailure (..),
+  ShelleyPoolPredFailure,
+  ShelleyUtxoPredFailure,
+  ShelleyUtxowPredFailure,
  )
 import NoThunks.Class (NoThunks)
 
@@ -88,58 +105,58 @@ instance InjectRuleFailure "ZONE" ShelleyLedgersPredFailure (ConwayEra c) where
 
 instance InjectRuleFailure "ZONE" ConwayLedgerPredFailure (ConwayEra c) where
   injectFailure :: ConwayLedgerPredFailure (ConwayEra c) -> ConwayZonePredFailure (ConwayEra c)
-  injectFailure = undefined -- LedgersFailure . injectFailure
+  injectFailure = LedgersFailure . injectFailure
 
 instance InjectRuleFailure "ZONE" ConwayUtxowPredFailure (ConwayEra c) where
-  injectFailure = undefined -- ShelleyInConwayPredFailure . Shelley.LedgersFailure . injectFailure
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" BabbageUtxowPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" BabbageUtxowPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" AlonzoUtxowPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" AlonzoUtxowPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" ShelleyUtxowPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" ShelleyUtxowPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" ConwayUtxoPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" ConwayUtxoPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" BabbageUtxoPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" BabbageUtxoPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" AlonzoUtxoPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" AlonzoUtxoPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" AlonzoUtxosPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" AlonzoUtxosPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" ConwayUtxosPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" ConwayUtxosPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" ShelleyUtxoPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" ShelleyUtxoPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" AllegraUtxoPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" AllegraUtxoPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" ConwayCertsPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" ConwayCertsPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" ConwayCertPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" ConwayCertPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" ConwayDelegPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" ConwayDelegPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" ShelleyPoolPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" ShelleyPoolPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" ConwayGovCertPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" ConwayGovCertPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
--- instance InjectRuleFailure "ZONE" ConwayGovPredFailure (ConwayEra c) where
---   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+instance InjectRuleFailure "ZONE" ConwayGovPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure . injectFailure
 
 deriving instance
   ( Era era
