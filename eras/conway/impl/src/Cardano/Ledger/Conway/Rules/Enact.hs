@@ -36,6 +36,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Val (Val (..))
+import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   STS (..),
   TRC (..),
@@ -56,6 +57,8 @@ data EnactSignal era = EnactSignal
   , esGovAction :: !(GovAction era)
   }
   deriving (Eq, Show, Generic)
+
+instance EraPParams era => NFData (EnactSignal era)
 
 instance EraGov era => STS (ConwayENACT era) where
   type Environment (ConwayENACT era) = ()

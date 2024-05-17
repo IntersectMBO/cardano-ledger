@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -48,6 +50,8 @@ deriving instance Generic RatifyEnv
 deriving instance Generic RatifyState
 
 deriving instance Generic StakeDistrs
+
+deriving instance Generic EnactEnv
 
 deriving instance Ord Tag
 
@@ -171,6 +175,8 @@ instance NFData RatifyEnv
 
 instance NFData RatifyState
 
+instance NFData EnactEnv
+
 instance ToExpr a => ToExpr (HSSet a)
 
 instance ToExpr Credential where
@@ -235,6 +241,8 @@ instance ToExpr StakeDistrs
 instance ToExpr RatifyEnv
 
 instance ToExpr RatifyState
+
+instance ToExpr EnactEnv
 
 instance Default (HSMap k v)
 
