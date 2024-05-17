@@ -86,8 +86,6 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
   ShelleyLEDGERS,
-  ShelleyLedgersEvent (..),
-  ShelleyLedgersPredFailure (..),
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
@@ -398,7 +396,9 @@ ledgerTransition = do
               )
         let utxoState' =
               utxoState
-                & utxosGovStateL . proposalsGovStateL .~ proposalsState
+                & utxosGovStateL
+                . proposalsGovStateL
+                .~ proposalsState
         pure (utxoState', certStateAfterCERTS)
       else pure (utxoState, certState)
 
@@ -478,13 +478,13 @@ instance
   , State (EraRule "GOV" era) ~ Proposals era
   , EraRule "GOV" era ~ ConwayGOV era
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
-  , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
+  , Event (EraRule "ZONES" era) ~ ConwayLedgerEvent era
   , EraGov era
   ) =>
   Embed (ConwayLEDGER era) (ShelleyLEDGERS era)
   where
-  wrapFailed = LedgerFailure
-  wrapEvent = LedgerEvent
+  wrapFailed = undefined -- LedgerFailure
+  wrapEvent = undefined -- LedgerEvent
 
 instance
   ( ConwayEraPParams era

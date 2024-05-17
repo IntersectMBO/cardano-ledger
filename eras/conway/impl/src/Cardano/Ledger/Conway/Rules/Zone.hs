@@ -1,10 +1,15 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -24,16 +29,16 @@ import Cardano.Ledger.Conway.Core (
   EraRule,
   EraTx (Tx, bodyTxL),
   EraTxBody (TxBody, inputsTxBodyL),
+  InjectRuleFailure (..),
   isValidTxL,
  )
-import Cardano.Ledger.Conway.Era (ConwayZONE)
+import Cardano.Ledger.Conway.Era (ConwayEra, ConwayZONE)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
  )
 import Cardano.Ledger.Core (txIdTx)
 import Cardano.Ledger.Shelley.API (
   LedgerState (LedgerState),
-  ShelleyLedgersEnv (LedgersEnv),
   TxIn (TxIn),
  )
 import Cardano.Ledger.TxIn (TxId)
@@ -49,14 +54,120 @@ import qualified Data.Foldable as Foldable
 import Data.Sequence (Seq)
 import Data.Set (Set, toList)
 import qualified Data.Set as Set
-import Data.Void (Void)
+import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import Lens.Micro.Type (Lens')
 
+import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerPredFailure)
+import Cardano.Ledger.Conway.Rules.Ledgers (ConwayLedgersEnv (ConwayLedgersEnv))
+import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
+import Cardano.Ledger.Core (EraRuleEvent, EraRuleFailure)
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyLedgersEvent,
+  ShelleyLedgersPredFailure (..),
+ )
+import NoThunks.Class (NoThunks)
+
+data ConwayZonePredFailure era
+  = LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
+  | -- | ShelleyInConwayPredFailure (ShelleyLedgersPredFailure era) -- Subtransition Failures
+    ShelleyInConwayPredFailure (ShelleyLedgersPredFailure era) -- Subtransition Failures
+  deriving (Generic)
+
+newtype ConwayZoneEvent era
+  = ShelleyInConwayEvent (ShelleyLedgersEvent era)
+
+type instance EraRuleFailure "ZONE" (ConwayEra c) = ConwayZonePredFailure (ConwayEra c)
+
+instance InjectRuleFailure "ZONE" ConwayZonePredFailure (ConwayEra c)
+
+type instance EraRuleEvent "ZONE" (ConwayEra c) = ConwayZoneEvent (ConwayEra c)
+
+instance InjectRuleFailure "ZONE" ShelleyLedgersPredFailure (ConwayEra c) where
+  injectFailure = LedgersFailure
+
+instance InjectRuleFailure "ZONE" ConwayLedgerPredFailure (ConwayEra c) where
+  injectFailure :: ConwayLedgerPredFailure (ConwayEra c) -> ConwayZonePredFailure (ConwayEra c)
+  injectFailure = undefined -- LedgersFailure . injectFailure
+
+instance InjectRuleFailure "ZONE" ConwayUtxowPredFailure (ConwayEra c) where
+  injectFailure = undefined -- ShelleyInConwayPredFailure . Shelley.LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" BabbageUtxowPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" AlonzoUtxowPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" ShelleyUtxowPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" ConwayUtxoPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" BabbageUtxoPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" AlonzoUtxoPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" AlonzoUtxosPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" ConwayUtxosPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" ShelleyUtxoPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" AllegraUtxoPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" ConwayCertsPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" ConwayCertPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" ConwayDelegPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" ShelleyPoolPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" ConwayGovCertPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+-- instance InjectRuleFailure "ZONE" ConwayGovPredFailure (ConwayEra c) where
+--   injectFailure = ShelleyInAlonzoBbodyPredFailure . LedgersFailure . injectFailure
+
+deriving instance
+  ( Era era
+  , Show (PredicateFailure (EraRule "LEDGER" era))
+  , Show (PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  Show (ConwayZonePredFailure era)
+
+deriving instance
+  ( Era era
+  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Eq (PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  Eq (ConwayZonePredFailure era)
+
+deriving anyclass instance
+  ( Era era
+  , NoThunks (PredicateFailure (EraRule "LEDGER" era))
+  , NoThunks (PredicateFailure (EraRule "LEDGERS" era))
+  ) =>
+  NoThunks (ConwayZonePredFailure era)
+
 instance
   ( EraCrypto era ~ era
+  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Show (PredicateFailure (EraRule "LEDGER" era))
   , ConwayEraPParams era
-  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Environment (EraRule "LEDGERS" era) ~ ConwayLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , Embed (EraRule "LEDGERS" era) (ConwayZONE era)
@@ -66,8 +177,8 @@ instance
   ) =>
   STS (ConwayZONE era)
   where
-  type Environment (ConwayZONE era) = ShelleyLedgersEnv era
-  type PredicateFailure (ConwayZONE era) = Void
+  type Environment (ConwayZONE era) = ConwayLedgersEnv era
+  type PredicateFailure (ConwayZONE era) = ConwayZonePredFailure era
   type Signal (ConwayZONE era) = Seq (Tx era)
   type State (ConwayZONE era) = LedgerState era
   type BaseM (ConwayZONE era) = ShelleyBase
@@ -78,29 +189,36 @@ instance
 -- We'll build the zones in the ZONES rule (turn the [Tx era] into [[Tx era]])?
 zoneTransition ::
   forall era.
-  ( Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  ( Environment (EraRule "LEDGERS" era) ~ ConwayLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , Embed (EraRule "LEDGERS" era) (ConwayZONE era)
   , ConwayEraTxBody era
   , AlonzoEraTx era
   , EraCrypto era ~ era
+  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Show (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   TransitionRule (ConwayZONE era)
 zoneTransition =
   judgmentContext
     -- I guess we want UTxOStateTemp here?
-    >>= \(TRC s@(LedgersEnv slotNo pParams accountState, LedgerState utxoState certState, txs :: Seq (Tx era))) -> do
-      if chkLinear (Foldable.toList txs)
-        && all (chkRqTx txs) txs
-        && all chkIsValid txs
-        then -- ZONE-V
+    >>= \( TRC
+            s@( ConwayLedgersEnv slotNo ixRange pParams accountState
+                , LedgerState utxoState certState
+                , txs :: Seq (Tx era)
+                )
+          ) -> do
+        if chkLinear (Foldable.toList txs)
+          && all (chkRqTx txs) txs
+          && all chkIsValid txs
+          then -- ZONE-V
 
-          trans @(EraRule "LEDGERS" era) $
-            TRC (LedgersEnv slotNo pParams accountState, LedgerState utxoState certState, txs)
-        else -- ZONE-N
-        -- TODO
-          trans @(ConwayZONE era) $ TRC s
+            trans @(EraRule "LEDGERS" era) $
+              TRC (ConwayLedgersEnv slotNo ixRange pParams accountState, LedgerState utxoState certState, txs)
+          else -- ZONE-N
+          -- TODO
+            trans @(ConwayZONE era) $ TRC s
   where
     chkLinear :: [Tx era] -> Bool
     chkLinear txs =

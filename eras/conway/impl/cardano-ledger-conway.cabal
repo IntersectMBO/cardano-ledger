@@ -52,6 +52,9 @@ library
 
     hs-source-dirs:   src
     other-modules:
+        Cardano.Ledger.Conway.API.Genesis
+        Cardano.Ledger.Conway.API.Mempool
+        Cardano.Ledger.Conway.API.Validation
         Cardano.Ledger.Conway.Era
         Cardano.Ledger.Conway.Governance.Internal
         Cardano.Ledger.Conway.Governance.Procedures
@@ -73,6 +76,8 @@ library
         Cardano.Ledger.Conway.Rules.Utxo
         Cardano.Ledger.Conway.Rules.Utxos
         Cardano.Ledger.Conway.Rules.Utxow
+        Cardano.Ledger.Conway.Rules.Zone
+        Cardano.Ledger.Conway.Rules.Zones
         Cardano.Ledger.Conway.TxAuxData
         Cardano.Ledger.Conway.TxOut
 
@@ -100,6 +105,7 @@ library
         containers,
         deepseq,
         microlens,
+        mtl,
         nothunks,
         plutus-ledger-api ^>=1.26.0,
         set-algebra,

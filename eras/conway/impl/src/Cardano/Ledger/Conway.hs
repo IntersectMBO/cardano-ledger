@@ -4,6 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- CanStartFromGenesis
@@ -16,8 +17,13 @@ module Cardano.Ledger.Conway (
 )
 where
 
-import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Babbage.TxBody ()
+import Cardano.Ledger.Conway.API.Genesis (CanStartFromGenesis (..))
+import Cardano.Ledger.Conway.API.Mempool (
+  ApplyTx (reapplyTx),
+  ApplyTxError (ApplyTxError),
+  extractTx,
+ )
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
@@ -31,7 +37,11 @@ import Cardano.Ledger.Conway.TxOut ()
 import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
-import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
+import Control.Arrow (left)
+import Control.Monad.Error.Class (liftEither)
+import Control.Monad.Reader (runReader)
+import Control.State.Transition (TRC (TRC))
 
 type Conway = ConwayEra StandardCrypto
 
@@ -41,17 +51,17 @@ instance
   ( Crypto c
   , DSignable c (Hash c EraIndependentTxBody)
   ) =>
-  API.ApplyTx (ConwayEra c)
+  ApplyTx (ConwayEra c)
   where
-  reapplyTx = reapplyAlonzoTx
+  reapplyTx globals env state vtx =
+    let res =
+          flip runReader globals
+            . applySTSNonStatic
+              @(EraRule "LEDGER" (ConwayEra c))
+            $ TRC (env, state, extractTx vtx)
+     in liftEither . left ApplyTxError $ res
 
-instance
-  ( Crypto c
-  , DSignable c (Hash c EraIndependentTxBody)
-  ) =>
-  API.ApplyBlock (ConwayEra c)
-
-instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
+instance Crypto c => CanStartFromGenesis (ConwayEra c) where
   type AdditionalGenesisConfig (ConwayEra c) = ConwayGenesis c
   fromShelleyPParams =
     error "Unimplemented: Current interface is too limited and needs replacement for Conway to work"

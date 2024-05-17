@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Conway.Era (
+  ConwayBBODY,
   ConwayEra,
   ConwayCERT,
   ConwayDELEG,
@@ -11,6 +12,7 @@ module Cardano.Ledger.Conway.Era (
   ConwayNEWEPOCH,
   ConwayEPOCH,
   ConwayENACT,
+  ConwayLEDGERS,
   ConwayUTXO,
   ConwayUTXOS,
   ConwayUTXOW,
@@ -18,9 +20,9 @@ module Cardano.Ledger.Conway.Era (
   ConwayLEDGER,
   ConwayRATIFY,
   ConwayZONE,
+  ConwayZONES,
 ) where
 
-import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -96,17 +98,21 @@ data ConwayUTXOS era
 
 type instance EraRule "UTXOS" (ConwayEra c) = ConwayUTXOS (ConwayEra c)
 
-data ConwayZONE era
-
-type instance EraRule "ZONE" (ConwayEra c) = ConwayZONE (ConwayEra c)
-
 data ConwayZONES era
 
 type instance EraRule "ZONES" (ConwayEra c) = ConwayZONES (ConwayEra c)
 
+data ConwayZONE era
+
+type instance EraRule "ZONE" (ConwayEra c) = ConwayZONE (ConwayEra c)
+
 data ConwayLEDGER era
 
 type instance EraRule "LEDGER" (ConwayEra c) = ConwayLEDGER (ConwayEra c)
+
+data ConwayLEDGERS era
+
+type instance EraRule "LEDGERS" (ConwayEra c) = ConwayLEDGERS (ConwayEra c)
 
 data ConwayTICKF era
 
@@ -140,13 +146,11 @@ data ConwayUTXO era
 
 type instance EraRule "UTXO" (ConwayEra c) = ConwayUTXO (ConwayEra c)
 
--- Rules inherited from Alonzo
+data ConwayBBODY era
 
-type instance EraRule "BBODY" (ConwayEra c) = AlonzoBBODY (ConwayEra c)
+type instance EraRule "BBODY" (ConwayEra c) = ConwayBBODY (ConwayEra c)
 
 -- Rules inherited from Shelley
-
-type instance EraRule "LEDGERS" (ConwayEra c) = API.ShelleyLEDGERS (ConwayEra c)
 
 type instance EraRule "POOLREAP" (ConwayEra c) = API.ShelleyPOOLREAP (ConwayEra c)
 
