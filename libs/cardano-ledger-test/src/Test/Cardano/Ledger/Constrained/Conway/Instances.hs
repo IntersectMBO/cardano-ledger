@@ -305,12 +305,12 @@ instance HasSimpleRep (Seq a) where
 instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (Seq a)
 
 instance HasSimpleRep (StrictMaybe a)
-instance HasSpec fn a => HasSpec fn (StrictMaybe a)
+instance (HasSpec fn a, IsNormalType a) => HasSpec fn (StrictMaybe a)
 
-cSNothing_ :: HasSpec fn a => Term fn (StrictMaybe a)
+cSNothing_ :: (HasSpec fn a, IsNormalType a) => Term fn (StrictMaybe a)
 cSNothing_ = con @"SNothing" (lit ())
 
-cSJust_ :: HasSpec fn a => Term fn a -> Term fn (StrictMaybe a)
+cSJust_ :: (HasSpec fn a, IsNormalType a) => Term fn a -> Term fn (StrictMaybe a)
 cSJust_ = con @"SJust"
 
 instance HasSimpleRep (Sized a)
@@ -353,6 +353,7 @@ instance
   , Val (Value era)
   , Crypto (EraCrypto era)
   , HasSpec fn (Script era)
+  , IsNormalType (Script era)
   ) =>
   HasSpec fn (BabbageTxOut era)
 
@@ -364,6 +365,7 @@ txOutVal_ ::
   , HasSpec fn (Script era)
   , IsConwayUniv fn
   , HasSpec fn (BabbageTxOut era)
+  , IsNormalType (Script era)
   ) =>
   Term fn (BabbageTxOut era) ->
   Term fn (Value era)
@@ -943,13 +945,13 @@ instance HasSimpleRep (THKD tag StrictMaybe a) where
   type SimpleRep (THKD tag StrictMaybe a) = SOP (TheSop (StrictMaybe a))
   fromSimpleRep = THKD . fromSimpleRep
   toSimpleRep (THKD sm) = toSimpleRep sm
-instance (IsConwayUniv fn, Typeable tag, HasSpec fn a) => HasSpec fn (THKD tag StrictMaybe a)
+instance (IsConwayUniv fn, IsNormalType a, Typeable tag, HasSpec fn a) => HasSpec fn (THKD tag StrictMaybe a)
 
 instance HasSimpleRep (THKD tag Identity a) where
   type SimpleRep (THKD tag Identity a) = a
   fromSimpleRep = THKD
   toSimpleRep (THKD a) = a
-instance (IsConwayUniv fn, Typeable tag, HasSpec fn a) => HasSpec fn (THKD tag Identity a)
+instance (IsConwayUniv fn, IsNormalType a, Typeable tag, HasSpec fn a) => HasSpec fn (THKD tag Identity a)
 
 instance HasSimpleRep GovActionPurpose
 instance IsConwayUniv fn => HasSpec fn GovActionPurpose

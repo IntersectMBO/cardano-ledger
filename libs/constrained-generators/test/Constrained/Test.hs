@@ -122,6 +122,11 @@ tests nightly =
     testSpec "basicSpec" basicSpec
     testSpec "canFollowLike" canFollowLike
     testSpec "ifElseBackwards" ifElseBackwards
+    testSpecNoShrink "three" three
+    testSpecNoShrink "three'" three'
+    testSpecNoShrink "threeSpecific" threeSpecific
+    testSpecNoShrink "threeSpecific'" threeSpecific'
+    testSpecNoShrink "trueSpecUniform" trueSpecUniform
     numberyTests
     sizeTests
     numNumSpecTree

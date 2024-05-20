@@ -62,6 +62,8 @@ module Constrained (
   assertExplain,
   caseOn,
   branch,
+  branchW,
+  chooseSpec,
   ifElse,
   onJust,
   isJust,

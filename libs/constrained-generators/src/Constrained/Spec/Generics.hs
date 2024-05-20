@@ -33,6 +33,7 @@ module Constrained.Spec.Generics (
   right_,
   caseOn,
   branch,
+  branchW,
   forAll',
   constrained',
   reify',
@@ -44,6 +45,7 @@ module Constrained.Spec.Generics (
   onJust,
   isJust,
   ifElse,
+  chooseSpec,
 ) where
 
 import Data.Typeable
@@ -148,11 +150,13 @@ instance
   ) =>
   HasSpec fn (a, b, c, d, e, g, h)
 instance
-  HasSpec fn a =>
+  (IsNormalType a, HasSpec fn a) =>
   HasSpec fn (Maybe a)
 instance
   ( HasSpec fn a
+  , IsNormalType a
   , HasSpec fn b
+  , IsNormalType b
   ) =>
   HasSpec fn (Either a b)
 
@@ -171,16 +175,17 @@ instance BaseUniverse fn => Functions (SumFn fn) fn where
             let args = appendList (mapList (\(Value a) -> Lit a) pre) (v' :> mapList (\(Value a) -> Lit a) suf)
              in Let (App (injectFn fn) args) (v :-> ps)
     InjLeft | NilCtx HOLE <- ctx -> case spec of
-      TypeSpec (SumSpec sl _) cant -> sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
+      TypeSpec (SumSpec _ sl _) cant -> sl <> foldMap notEqualSpec [a | SumLeft a <- cant]
       MemberSpec es -> MemberSpec [a | SumLeft a <- es]
     InjRight | NilCtx HOLE <- ctx -> case spec of
-      TypeSpec (SumSpec _ sr) cant -> sr <> foldMap notEqualSpec [a | SumRight a <- cant]
+      TypeSpec (SumSpec _ _ sr) cant -> sr <> foldMap notEqualSpec [a | SumRight a <- cant]
       MemberSpec es -> MemberSpec [a | SumRight a <- es]
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of
-    InjLeft -> typeSpec $ SumSpec (typeSpec ts) (ErrorSpec ["mapTypeSpec InjLeft"])
-    InjRight -> typeSpec $ SumSpec (ErrorSpec ["mapTypeSpec InjRight"]) (typeSpec ts)
+    -- TODO possibly not the right counts??
+    InjLeft -> typeSpec $ SumSpec Nothing (typeSpec ts) (ErrorSpec ["mapTypeSpec InjLeft"])
+    InjRight -> typeSpec $ SumSpec Nothing (ErrorSpec ["mapTypeSpec InjRight"]) (typeSpec ts)
 
 ------------------------------------------------------------------------
 -- Syntax
@@ -217,6 +222,8 @@ pair_ a b = fromGeneric_ $ app pairFn a b
 left_ ::
   ( HasSpec fn a
   , HasSpec fn b
+  , IsNormalType a
+  , IsNormalType b
   ) =>
   Term fn a ->
   Term fn (Either a b)
@@ -225,6 +232,8 @@ left_ = fromGeneric_ . app injLeftFn
 right_ ::
   ( HasSpec fn a
   , HasSpec fn b
+  , IsNormalType a
+  , IsNormalType b
   ) =>
   Term fn b ->
   Term fn (Either a b)
@@ -240,7 +249,7 @@ caseOn ::
   , TypeList (Cases (SimpleRep a))
   ) =>
   Term fn a ->
-  FunTy (MapList (Binder fn) (Cases (SimpleRep a))) (Pred fn)
+  FunTy (MapList (Weighted (Binder fn)) (Cases (SimpleRep a))) (Pred fn)
 caseOn tm = curryList @(Cases (SimpleRep a)) (mkCase (toGeneric_ tm))
 
 branch ::
@@ -251,7 +260,7 @@ branch ::
   , IsProd a
   ) =>
   FunTy (MapList (Term fn) (Args a)) p ->
-  Binder fn a
+  Weighted (Binder fn) a
 branch body =
   -- NOTE: It's not sufficient to simply apply `body` to all the arguments
   -- with `uncurryList` because that will mean that `var` is repeated in the
@@ -260,7 +269,20 @@ branch body =
   -- will blow up at generation time. If we instead do: `p :-> Let x (fst p) (Let y (snd p) (x <=. y))`
   -- the solver will solve `x` and `y` separately (`y` before `x` in this case) and things
   -- will work just fine.
-  bind (buildBranch @p @fn body . toArgs @a @fn)
+  Weighted Nothing (bind (buildBranch @p @fn body . toArgs @a @fn))
+
+branchW ::
+  forall fn p a.
+  ( HasSpec fn a
+  , All (HasSpec fn) (Args a)
+  , IsPred p fn
+  , IsProd a
+  ) =>
+  Int ->
+  FunTy (MapList (Term fn) (Args a)) p ->
+  Weighted (Binder fn) a
+branchW w body =
+  Weighted (Just w) (bind (buildBranch @p @fn body . toArgs @a @fn))
 
 match ::
   forall fn p a.
@@ -415,6 +437,7 @@ instance HasSpec fn (ProdOver constr) => SOPTerm c fn (c ::: constr : '[]) where
 instance
   ( HasSpec fn (SOP (con : sop))
   , HasSpec fn (ProdOver constr)
+  , KnownNat (CountCases (SOP (con : sop)))
   ) =>
   SOPTerm c fn (c ::: constr : con : sop)
   where
@@ -425,6 +448,7 @@ instance
   ( HasSpec fn (ProdOver con)
   , SOPTerm c fn (con' : sop)
   , ConstrOf c (con' : sop) ~ ConstrOf c ((c' ::: con) : con' : sop)
+  , KnownNat (CountCases (SOP (con' : sop)))
   ) =>
   SOPTerm c fn ((c' ::: con) : con' : sop)
   where
@@ -474,7 +498,7 @@ class IsConstrOf (c :: Symbol) b sop where
     (HasSpec fn b, All (HasSpec fn) (Cases (SOP sop))) =>
     (forall a. Term fn a -> Pred fn) ->
     (Term fn b -> Pred fn) ->
-    List (Binder fn) (Cases (SOP sop))
+    List (Weighted (Binder fn)) (Cases (SOP sop))
 
 instance
   ( b ~ ProdOver as
@@ -482,7 +506,9 @@ instance
   ) =>
   IsConstrOf c b ((c ::: as) : con : sop)
   where
-  mkCases r (k :: Term fn b -> Pred fn) = bind k :> mapListC @(HasSpec fn) (\_ -> bind r) (listShape @(Cases (SOP (con : sop))))
+  mkCases r (k :: Term fn b -> Pred fn) =
+    Weighted Nothing (bind k)
+      :> mapListC @(HasSpec fn) (\_ -> Weighted Nothing (bind r)) (listShape @(Cases (SOP (con : sop))))
 
 instance
   ( b ~ ProdOver as
@@ -490,7 +516,7 @@ instance
   ) =>
   IsConstrOf c b '[c ::: as]
   where
-  mkCases _ (k :: Term fn b -> Pred fn) = bind k :> Nil
+  mkCases _ (k :: Term fn b -> Pred fn) = Weighted Nothing (bind k) :> Nil
 
 instance
   {-# OVERLAPPABLE #-}
@@ -499,7 +525,7 @@ instance
   ) =>
   IsConstrOf c b ((c' ::: as) : cs)
   where
-  mkCases r k = bind (r @(ProdOver as)) :> mkCases @c @_ @cs r k
+  mkCases r k = Weighted Nothing (bind (r @(ProdOver as))) :> mkCases @c @_ @cs r k
 
 -- TODO: the constraints around this are horrible!! We should figure out a way to make these things nicer.
 onCon ::
@@ -549,7 +575,7 @@ isCon tm =
         (const $ assert True)
     )
 
-type IsNormalType a = (Cases a ~ '[a], Args a ~ '[a], IsProd a)
+type IsNormalType a = (Cases a ~ '[a], Args a ~ '[a], IsProd a, CountCases a ~ 1)
 
 onJust ::
   forall fn a p.
@@ -565,6 +591,24 @@ isJust ::
   Term fn (Maybe a) ->
   Pred fn
 isJust = isCon @"Just"
+
+chooseSpec ::
+  HasSpec fn a =>
+  (Int, Specification fn a) ->
+  (Int, Specification fn a) ->
+  Specification fn a
+chooseSpec (w, s) (w', s') =
+  constrained $ \x ->
+    exists (\eval -> pure $ eval x `conformsToSpec` s) $ \b ->
+      [ ifElse
+          b
+          (x `satisfies` s)
+          (x `satisfies` s')
+      , caseOn
+          b
+          (branchW w' $ \_ -> True)
+          (branchW w $ \_ -> True)
+      ]
 
 -- Arbitrary instances ----------------------------------------------------
 
