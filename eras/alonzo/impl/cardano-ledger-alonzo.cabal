@@ -132,7 +132,6 @@ library testlib
         cardano-ledger-binary,
         cardano-ledger-mary:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-strict-containers,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         plutus-ledger-api,
         generic-random,

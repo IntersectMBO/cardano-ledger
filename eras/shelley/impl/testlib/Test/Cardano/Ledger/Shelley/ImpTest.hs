@@ -105,6 +105,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impLastTickG,
   impKeyPairsG,
   impNativeScriptsG,
+  produceScript,
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -1473,3 +1474,14 @@ impLookupUTxO txIn = impAnn "Looking up TxOut" $ do
   case txinLookup txIn utxo of
     Just txOut -> pure txOut
     Nothing -> error $ "Failed to get TxOut for " <> show txIn
+
+produceScript ::
+  ShelleyEraImp era =>
+  ScriptHash (EraCrypto era) ->
+  ImpTestM era (TxIn (EraCrypto era))
+produceScript scriptHash = do
+  let addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
+  let tx =
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr (inject (Coin 10)))
+  txInAt (0 :: Int) <$> submitTx tx
