@@ -305,11 +305,11 @@ conformsToImpl =
   let genCtx = genExecContext @fn @rule @era
    in forAllShow genCtx showExpr $ \ctx ->
         let envSpec = simplifySpec $ environmentSpec @fn @rule @era ctx
-         in forAllShrinkShow (CV2.genFromSpec_ envSpec) (shrinkWithSpec envSpec) showExpr $ \env ->
+         in forAllShrinkShow (CV2.genFromSpec envSpec) (shrinkWithSpec envSpec) showExpr $ \env ->
               let stSpec = simplifySpec $ stateSpec @fn @rule @era ctx env
-               in forAllShrinkShow (CV2.genFromSpec_ stSpec) (shrinkWithSpec stSpec) showExpr $ \st ->
+               in forAllShrinkShow (CV2.genFromSpec stSpec) (shrinkWithSpec stSpec) showExpr $ \st ->
                     let sigSpec = simplifySpec $ signalSpec @fn @rule @era ctx env st
-                     in forAllShrinkShow (CV2.genFromSpec_ sigSpec) (shrinkWithSpec sigSpec) showExpr $ \sig -> do
+                     in forAllShrinkShow (CV2.genFromSpec sigSpec) (shrinkWithSpec sigSpec) showExpr $ \sig -> do
                           _ <- impAnn @_ @era "Deep evaluating env" $ evaluateDeep env
                           _ <- impAnn "Deep evaluating st" $ evaluateDeep st
                           _ <- impAnn "Deep evaluating sig" $ evaluateDeep sig

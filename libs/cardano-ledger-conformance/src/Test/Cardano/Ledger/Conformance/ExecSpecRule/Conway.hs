@@ -506,7 +506,7 @@ ratifySignalSpec ConwayRatifyExecContext {crecGovActionMap} =
 instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
   type ExecContext fn "RATIFY" Conway = ConwayRatifyExecContext Conway
 
-  genExecContext = genFromSpec_ @fn
+  genExecContext = genFromSpec @fn
     . constrained
     $ \ctx ->
       match ctx $ \_ gasMap ->

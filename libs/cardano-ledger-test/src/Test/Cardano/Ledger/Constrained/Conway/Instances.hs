@@ -663,7 +663,7 @@ instance IsConwayUniv fn => HasSpec fn ByteString where
   emptySpec = mempty
   combineSpec s s' = typeSpec $ s <> s'
   genFromTypeSpec (StringSpec ls) = do
-    len <- genFromSpec ls
+    len <- genFromSpecT ls
     BS.pack <$> vectorOfT len (pureGen arbitrary)
   shrinkWithTypeSpec _ = shrink
   conformsTo bs (StringSpec ls) = BS.length bs `conformsToSpec` ls
@@ -674,7 +674,7 @@ instance IsConwayUniv fn => HasSpec fn ShortByteString where
   emptySpec = mempty
   combineSpec s s' = typeSpec $ s <> s'
   genFromTypeSpec (StringSpec ls) = do
-    len <- genFromSpec ls
+    len <- genFromSpecT ls
     SBS.pack <$> vectorOfT len (pureGen arbitrary)
   shrinkWithTypeSpec _ = shrink
   conformsTo bs (StringSpec ls) = SBS.length bs `conformsToSpec` ls

@@ -26,7 +26,7 @@ forAllSpecShow ::
   (HasSpec fn a, QC.Testable p) => Specification fn a -> (a -> String) -> (a -> p) -> QC.Property
 forAllSpecShow spec pp prop =
   let sspec = simplifySpec spec
-   in QC.forAllShrinkShow (genFromSpec_ sspec) (shrinkWithSpec sspec) pp $ \a ->
+   in QC.forAllShrinkShow (genFromSpec sspec) (shrinkWithSpec sspec) pp $ \a ->
         monitorSpec spec a $ prop a
 
 forAllSpec :: (HasSpec fn a, QC.Testable p) => Specification fn a -> (a -> p) -> QC.Property
@@ -36,7 +36,7 @@ forAllSpecDiscard :: (HasSpec fn a, QC.Testable p) => Specification fn a -> (a -
 forAllSpecDiscard spec prop =
   let sspec = simplifySpec spec
    in QC.forAllShrinkBlind
-        (strictGen $ genFromSpec @_ @_ @GE sspec)
+        (strictGen $ genFromSpecT @_ @_ @GE sspec)
         (map pure . shrinkWithSpec sspec . errorGE)
         $ \ge ->
           fromGEDiscard $ do
@@ -48,7 +48,7 @@ prop_sound ::
   Specification fn a ->
   QC.Property
 prop_sound spec =
-  QC.forAllBlind (strictGen $ genFromSpec spec) $ \ma ->
+  QC.forAllBlind (strictGen $ genFromSpecT spec) $ \ma ->
     case ma of
       Result _ a ->
         QC.cover 80 True "successful" $
@@ -63,7 +63,7 @@ prop_constrained_satisfies_sound spec = prop_sound (constrained $ \a -> satisfie
 -- | `prop_complete ps` assumes that `ps` is satisfiable
 prop_complete :: HasSpec fn a => Specification fn a -> QC.Property
 prop_complete s =
-  QC.forAllBlind (strictGen $ genFromSpec s) $ \ma -> fromGEProp $ do
+  QC.forAllBlind (strictGen $ genFromSpecT s) $ \ma -> fromGEProp $ do
     a <- ma
     -- Force the value to make sure we don't crash with `error` somewhere
     -- or fall into an inifinite loop
@@ -74,7 +74,7 @@ prop_constrained_satisfies_complete spec = prop_complete (constrained $ \a -> sa
 
 prop_shrink_sound :: HasSpec fn a => Specification fn a -> QC.Property
 prop_shrink_sound s =
-  QC.forAll (strictGen $ genFromSpec s) $ \ma -> fromGEDiscard $ do
+  QC.forAll (strictGen $ genFromSpecT s) $ \ma -> fromGEDiscard $ do
     a <- ma
     let shrinks = shrinkWithSpec s a
     pure $
@@ -100,7 +100,7 @@ prop_univSound (TestableFn fn) =
           QC.counterexample (show $ "\nspec =" <+> pretty spec) $
             let sspec = simplifySpec (propagateSpecFun fn ctx spec)
              in QC.counterexample ("\n" ++ show ("propagateSpecFun fn ctx spec =" /> pretty sspec)) $
-                  QC.forAllBlind (strictGen $ genFromSpec @_ @_ @GE sspec) $ \ge ->
+                  QC.forAllBlind (strictGen $ genFromSpecT @_ @_ @GE sspec) $ \ge ->
                     fromGEDiscard $ do
                       a <- ge
                       let res = uncurryList_ unValue (sem fn) $ fillListCtx ctx $ \HOLE -> Value a
@@ -115,7 +115,7 @@ prop_gen_sound spec =
    in QC.tabulate "specType spec" [specType spec] $
         QC.tabulate "specType (simplifySpec spec)" [specType sspec] $
           QC.counterexample ("\n" ++ show ("simplifySpec spec =" /> pretty sspec)) $
-            QC.forAllBlind (strictGen $ genFromSpec @_ @_ @GE sspec) $ \ge ->
+            QC.forAllBlind (strictGen $ genFromSpecT @_ @_ @GE sspec) $ \ge ->
               fromGEDiscard $ do
                 a <- ge
                 pure $
@@ -172,10 +172,10 @@ instance forall fn as. (All (HasSpec fn) as, TypeList as) => QC.Arbitrary (Testa
     where
       go :: forall f as'. All (HasSpec fn) as' => Int -> List f as' -> QC.Gen (TestableCtx fn as')
       go 0 (_ :> as) =
-        TestableCtx . (HOLE :?) <$> mapMListC @(HasSpec fn) (\_ -> Value <$> genFromSpec_ @fn TrueSpec) as
+        TestableCtx . (HOLE :?) <$> mapMListC @(HasSpec fn) (\_ -> Value <$> genFromSpec @fn TrueSpec) as
       go n (_ :> as) = do
         TestableCtx ctx <- go (n - 1) as
-        TestableCtx . (:! ctx) . Value <$> genFromSpec_ @fn TrueSpec
+        TestableCtx . (:! ctx) . Value <$> genFromSpec @fn TrueSpec
       go _ _ = error "The impossible happened in Arbitrary for TestableCtx"
 
   shrink (TestableCtx ctx) = TestableCtx <$> shrinkCtx ctx
@@ -225,7 +225,7 @@ prop_mapSpec ::
   Specification fn a ->
   QC.Property
 prop_mapSpec fn spec =
-  QC.forAll (strictGen $ genFromSpec spec) $ \ma -> fromGEDiscard $ do
+  QC.forAll (strictGen $ genFromSpecT spec) $ \ma -> fromGEDiscard $ do
     a <- ma
     pure $ conformsToSpec (sem fn a) (mapSpec fn spec)
 

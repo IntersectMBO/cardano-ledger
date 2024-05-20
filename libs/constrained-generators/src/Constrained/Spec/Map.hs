@@ -151,7 +151,7 @@ instance
   genFromTypeSpec (MapSpec mHint mustKeys mustVals size (simplifySpec -> kvs) foldSpec) = do
     mustMap <- explain ["Make the mustMap"] $ forM (Set.toList mustKeys) $ \k -> do
       let vSpec = constrained $ \v -> satisfies (pair_ (lit k) v) kvs
-      v <- explain [show $ "vSpec =" <+> pretty vSpec] $ genFromSpec vSpec
+      v <- explain [show $ "vSpec =" <+> pretty vSpec] $ genFromSpecT vSpec
       pure (k, v)
     let haveVals = map snd mustMap
         mustVals' = filter (`notElem` haveVals) mustVals
@@ -188,7 +188,7 @@ instance
               [ "Make a key"
               , show $ indent 4 $ "keySpec =" <+> pretty keySpec
               ]
-              $ genFromSpec keySpec
+              $ genFromSpecT keySpec
           go (Map.insert k v m) restVals'
     go (Map.fromList mustMap) restVals
 

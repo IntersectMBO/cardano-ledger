@@ -56,7 +56,7 @@ instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Prod a b) where
 
   conformsTo (Prod a b) (Cartesian sa sb) = conformsToSpec a sa && conformsToSpec b sb
 
-  genFromTypeSpec (Cartesian sa sb) = Prod <$> genFromSpec sa <*> genFromSpec sb
+  genFromTypeSpec (Cartesian sa sb) = Prod <$> genFromSpecT sa <*> genFromSpecT sb
 
   shrinkWithTypeSpec (Cartesian sa sb) (Prod a b) =
     [Prod a' b | a' <- shrinkWithSpec sa a]

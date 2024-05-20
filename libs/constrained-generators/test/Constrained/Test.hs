@@ -29,6 +29,7 @@ import GHC.Natural
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck hiding (Args, Fun, forAll)
+import Test.QuickCheck qualified as QC
 
 import Constrained.Examples
 import Constrained.Internals
@@ -168,12 +169,16 @@ negativeTests =
       expectFailure $
         prop_complete @BaseFn @Int $
           constrained $
-            \x -> reifies 10 x id
+            \x ->
+              explanation ["The value is decided before reifies happens"] $
+                reifies 10 x id
     prop "reify overconstrained" $
       expectFailure $
         prop_complete @BaseFn @Int $
           constrained $ \x ->
-            reify x id $ \y -> y ==. 10
+            explanation ["You can't constrain the variable introduced by reify as its already decided"] $
+              reify x id $
+                \y -> y ==. 10
 
 numberyTests :: Spec
 numberyTests =
@@ -249,6 +254,11 @@ testSpec' withShrink n s =
       within 10_000_000 $
         checkCoverage $
           prop_constrained_satisfies_sound s
+    prop "prop_constrained_explained" $
+      within 10_000_0000 $
+        checkCoverage $
+          QC.forAll arbitrary $ \es ->
+            prop_sound $ constrained $ \x -> explanation es $ x `satisfies` s
     when withShrink $
       prop "prop_shrink_sound" $
         within 10_000_000 $
