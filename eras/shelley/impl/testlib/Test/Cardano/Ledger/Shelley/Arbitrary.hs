@@ -20,6 +20,7 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
   metadataMaxSize,
   genMetadata,
   genMetadata',
+  genUtf8StringOfSize,
   RawSeed (..),
   ASC (..),
   StakeProportion (..),
