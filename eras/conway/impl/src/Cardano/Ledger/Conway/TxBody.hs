@@ -545,11 +545,11 @@ instance Crypto c => ConwayEraTxBody (ConwayEra c) where
   treasuryDonationTxBodyL =
     lensMemoRawType ctbrTreasuryDonation (\txb x -> txb {ctbrTreasuryDonation = x})
   {-# INLINE treasuryDonationTxBodyL #-}
-  fulfillsTxBodyL = undefined
+  fulfillsTxBodyL = lensMemoRawType bftbrFulfills (\txb x -> txb {bftbrFulfills = x})
   {-# INLINE fulfillsTxBodyL #-}
-  requestsTxBodyL = undefined
+  requestsTxBodyL = lensMemoRawType bftbrRequests (\txb x -> txb {bftbrRequests = x})
   {-# INLINE requestsTxBodyL #-}
-  requiredTxsTxBodyL = undefined
+  requiredTxsTxBodyL = lensMemoRawType bftbrRequiredTxs (\txb x -> txb {bftbrRequiredTxs = x})
   {-# INLINE requiredTxsTxBodyL #-}
 
 instance
