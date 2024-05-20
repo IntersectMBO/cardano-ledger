@@ -17,6 +17,7 @@
 
 module Cardano.Ledger.Conway.FRxO where
 
+import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Conway.TxBody (
   ConwayEraTxBody (fulfillsTxBodyL, requestsTxBodyL, requiredTxsTxBodyL),
  )
@@ -46,13 +47,16 @@ txfrxo txBody =
   FRxO $
     Map.fromList
       [ (TxIn transId idx, out)
-      | (out, idx) <- zip (toList $ txBody ^. requestsTxBodyL) [minBound ..]
+      | (out, idx) <-
+          zip
+            (toList $ fmap sizedValue $ txBody ^. requestsTxBodyL)
+            [minBound ..]
       ]
   where
     transId = txIdTxBody txBody
 
 txrequests :: ConwayEraTxBody era => TxBody era -> SSeq.StrictSeq (TxOut era)
-txrequests = (^. requestsTxBodyL)
+txrequests = fmap sizedValue . (^. requestsTxBodyL)
 
 txrequired :: ConwayEraTxBody era => TxBody era -> Set (TxIn (EraCrypto era))
 txrequired = (^. requiredTxsTxBodyL)

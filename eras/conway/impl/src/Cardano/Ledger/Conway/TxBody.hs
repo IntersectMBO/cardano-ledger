@@ -744,7 +744,7 @@ class
 
   fulfillsTxBodyL :: Lens' (TxBody era) (Set (Fulfill (EraCrypto era)))
 
-  requestsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxOut era))
+  requestsTxBodyL :: Lens' (TxBody era) (StrictSeq (Sized (TxOut era)))
 
   requiredTxsTxBodyL :: Lens' (TxBody era) (Set (TxIn (EraCrypto era)))
 
