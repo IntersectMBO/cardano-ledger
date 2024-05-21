@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -81,7 +82,13 @@ module Test.Cardano.Ledger.Generic.GenState (
 ) where
 
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
-import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Allegra.Scripts (
+  AllegraEraScript,
+  Timelock (..),
+  ValidityInterval (..),
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
 import Cardano.Ledger.Alonzo.Scripts hiding (Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
@@ -109,7 +116,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   totalObligation,
   utxosGovStateL,
  )
-import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
+import Cardano.Ledger.Shelley.Scripts (
+  MultiSig,
+  ShelleyEraScript,
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -862,16 +876,19 @@ genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash col
 -- Adds to gsScripts and gsPlutusScripts
 genScript :: Reflect era => Proof era -> PlutusPurposeTag -> GenRS era (ScriptHash (EraCrypto era))
 genScript proof tag = case proof of
-  Conway -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
-  Babbage -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
-  Alonzo -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
-  Mary -> genTimelockScript proof
-  Allegra -> genTimelockScript proof
-  Shelley -> genMultiSigScript proof
+  Conway -> elementsT [genTimelockScript, genPlutusScript proof tag]
+  Babbage -> elementsT [genTimelockScript, genPlutusScript proof tag]
+  Alonzo -> elementsT [genTimelockScript, genPlutusScript proof tag]
+  Mary -> genTimelockScript
+  Allegra -> genTimelockScript
+  Shelley -> genMultiSigScript
 
 -- Adds to gsScripts
-genTimelockScript :: forall era. Reflect era => Proof era -> GenRS era (ScriptHash (EraCrypto era))
-genTimelockScript proof = do
+genTimelockScript ::
+  forall era.
+  (AllegraEraScript era, Reflect era, NativeScript era ~ Timelock era) =>
+  GenRS era (ScriptHash (EraCrypto era))
+genTimelockScript = do
   vi@(ValidityInterval mBefore mAfter) <- gets gsValidityInterval
   -- We need to limit how deep these timelocks can go, otherwise this generator will
   -- diverge. It also has to stay very shallow because it grows too fast.
@@ -907,15 +924,7 @@ genTimelockScript proof = do
         maxSlotNo <- lift $ choose (validTill, maxBound)
         pure $ RequireTimeExpire (SlotNo maxSlotNo)
   tlscript <- genNestedTimelock (2 :: Natural)
-  let corescript :: Script era
-      corescript = case proof of
-        Conway -> TimelockScript tlscript
-        Babbage -> TimelockScript tlscript
-        Alonzo -> TimelockScript tlscript
-        Mary -> tlscript
-        Allegra -> tlscript
-        Shelley -> error "Shelley does not have TimeLock scripts"
-
+  let corescript = fromNativeScript tlscript
   let scriptHash = hashScript @era corescript
       insertOrCreate x Nothing = Just (Set.singleton x)
       insertOrCreate x (Just s) = Just (Set.insert x s)
@@ -924,30 +933,30 @@ genTimelockScript proof = do
   pure scriptHash
 
 -- Adds to gsScripts
-genMultiSigScript :: forall era. Reflect era => Proof era -> GenRS era (ScriptHash (EraCrypto era))
-genMultiSigScript proof = do
+genMultiSigScript ::
+  forall era.
+  (Reflect era, ShelleyEraScript era, NativeScript era ~ MultiSig era) =>
+  GenRS era (ScriptHash (EraCrypto era))
+genMultiSigScript = do
   let genNestedMultiSig k
         | k > 0 =
             elementsT $
               nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
         | otherwise = elementsT nonRecTimelocks
       nonRecTimelocks = [requireSignature]
-      requireSignature = Shelley.RequireSignature @era <$> genKeyHash
+      requireSignature = RequireSignature @era <$> genKeyHash
       requireAllOf k = do
         n <- lift nonNegativeSingleDigitInt
-        Shelley.RequireAllOf <$> replicateM n (genNestedMultiSig (k - 1))
+        RequireAllOf . Seq.fromList <$> replicateM n (genNestedMultiSig (k - 1))
       requireAnyOf k = do
         n <- lift positiveSingleDigitInt
-        Shelley.RequireAnyOf <$> replicateM n (genNestedMultiSig (k - 1))
+        RequireAnyOf . Seq.fromList <$> replicateM n (genNestedMultiSig (k - 1))
       requireMOf k = do
         n <- lift nonNegativeSingleDigitInt
         m <- lift $ choose (0, n)
-        Shelley.RequireMOf m <$> replicateM n (genNestedMultiSig (k - 1))
+        RequireMOf m . Seq.fromList <$> replicateM n (genNestedMultiSig (k - 1))
   msscript <- genNestedMultiSig (2 :: Natural)
-  let corescript :: Script era
-      corescript = case proof of
-        Shelley -> msscript
-        _ -> error (show proof ++ " does not have MultiSig scripts")
+  let corescript = fromNativeScript msscript
   let scriptHash = hashScript @era corescript
   modifyGenStateScripts (Map.insert scriptHash corescript)
   pure scriptHash

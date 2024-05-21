@@ -1,8 +1,14 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.8.0.1
+## 1.8.1.0
 
-*
+* Add `AllegraEraScript` and `ShelleyEraScript` instances for `AlonzoEra`
+
+## testlib
+
+* Change signatures of `Arbitrary` instances for `AlonzoScript`:
+  * replace `Era` constraint with `AllegraEraScript`
+  * replace `Timelock` with `NativeScript`
 
 ## 1.8.0.0
 

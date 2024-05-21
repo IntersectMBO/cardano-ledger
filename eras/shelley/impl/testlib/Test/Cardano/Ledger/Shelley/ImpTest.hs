@@ -12,6 +12,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -166,7 +167,13 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
-import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
+import Cardano.Ledger.Shelley.Scripts (
+  ShelleyEraScript,
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
 import Cardano.Ledger.Tools (calcMinFeeTxNativeScriptWits, integralToByteStringN)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
@@ -501,6 +508,7 @@ instance
   , NFData (VerKeyDSIGN (DSIGN c))
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
+  , ShelleyEraScript (ShelleyEra c)
   ) =>
   ShelleyEraImp (ShelleyEra c)
   where
@@ -509,10 +517,10 @@ instance
   impSatisfyNativeScript providedVKeyHashes script = do
     keyPairs <- gets impKeyPairs
     let
-      satisfyMOf m []
+      satisfyMOf m Empty
         | m <= 0 = Just mempty
         | otherwise = Nothing
-      satisfyMOf m (x : xs) =
+      satisfyMOf m (x :<| xs) =
         case satisfyScript x of
           Nothing -> satisfyMOf m xs
           Just kps -> do
@@ -527,6 +535,8 @@ instance
         RequireAllOf ss -> satisfyMOf (length ss) ss
         RequireAnyOf ss -> satisfyMOf 1 ss
         RequireMOf m ss -> satisfyMOf m ss
+        _ -> error "Impossible: All NativeScripts should have been accounted for"
+
     pure $ satisfyScript script
 
   fixupTx = shelleyFixupTx

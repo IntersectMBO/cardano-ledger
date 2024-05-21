@@ -1,3 +1,4 @@
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -17,12 +18,16 @@ module Test.Cardano.Ledger.Mary.Golden (
 )
 where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock (..))
+import Cardano.Ledger.Allegra.Scripts (
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (hashScript)
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.TxOut (scaledMinDeposit)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map

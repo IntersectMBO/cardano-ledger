@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,7 +14,13 @@
 module Test.Cardano.Ledger.Alonzo.AlonzoEraGen where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Allegra.Scripts (Timelock (..), translateTimelock)
+import Cardano.Ledger.Allegra.Scripts (
+  AllegraEraScript,
+  Timelock (..),
+  translateTimelock,
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
@@ -67,6 +74,7 @@ import Cardano.Ledger.Mary.Value (
 import Cardano.Ledger.Plutus.Data (Data (..))
 import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (
   EraUTxO (..),
@@ -537,7 +545,9 @@ addMaybeDataHashToTxOut (AlonzoTxOut addr val _) = AlonzoTxOut addr val (dataFro
 
 someLeaf ::
   forall era.
-  Era era =>
+  ( AllegraEraScript era
+  , NativeScript era ~ Timelock era
+  ) =>
   Proxy era ->
   KeyHash 'Witness (EraCrypto era) ->
   AlonzoScript era

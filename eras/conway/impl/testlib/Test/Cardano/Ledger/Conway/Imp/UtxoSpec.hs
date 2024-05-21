@@ -9,10 +9,6 @@
 module Test.Cardano.Ledger.Conway.Imp.UtxoSpec (spec) where
 
 import Cardano.Ledger.Address
-import Cardano.Ledger.Allegra.Scripts (
-  pattern RequireAllOf,
-  pattern RequireSignature,
- )
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Babbage.TxBody (referenceInputsTxBodyL)
 import Cardano.Ledger.Babbage.TxOut (referenceScriptTxOutL)
@@ -23,6 +19,10 @@ import Cardano.Ledger.MemoBytes (getMemoRawBytes)
 import Cardano.Ledger.Plutus.Language (SLanguage (..), hashPlutusScript, plutusBinary)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.Scripts (
+  pattern RequireAllOf,
+  pattern RequireSignature,
+ )
 import Cardano.Ledger.Shelley.UTxO (getShelleyMinFeeTxUtxo)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UTxO (getMinFeeTxUtxo)

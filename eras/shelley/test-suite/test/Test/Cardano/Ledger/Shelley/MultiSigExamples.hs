@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Shelley.MultiSigExamples (
   applyTxWithScript,
@@ -46,6 +47,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.Shelley.Rules (ShelleyUTXOW, UtxoEnv (..))
 import Cardano.Ledger.Shelley.Scripts (
   MultiSig,
+  ShelleyEraScript,
   pattern RequireAllOf,
   pattern RequireAnyOf,
   pattern RequireMOf,
@@ -95,39 +97,43 @@ _assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) =
   KeyHash (Hash.castHash h)
 
 -- Multi-signature scripts
-singleKeyOnly :: Era era => Addr (EraCrypto era) -> MultiSig era
+singleKeyOnly :: ShelleyEraScript era => Addr (EraCrypto era) -> NativeScript era
 singleKeyOnly (Addr _ (KeyHashObj pk) _) = RequireSignature $ asWitness pk
 singleKeyOnly _ = error "use VKey address"
 
-aliceOnly :: Era era => MultiSig era
+aliceOnly :: ShelleyEraScript era => NativeScript era
 aliceOnly = singleKeyOnly Cast.aliceAddr
 
-bobOnly :: Era era => MultiSig era
+bobOnly :: ShelleyEraScript era => NativeScript era
 bobOnly = singleKeyOnly Cast.bobAddr
 
-aliceOrBob :: Era era => MultiSig era
-aliceOrBob = RequireAnyOf [aliceOnly, singleKeyOnly Cast.bobAddr]
+aliceOrBob :: ShelleyEraScript era => NativeScript era
+aliceOrBob = RequireAnyOf (StrictSeq.fromList [aliceOnly, singleKeyOnly Cast.bobAddr])
 
-aliceAndBob :: Era era => MultiSig era
-aliceAndBob = RequireAllOf [aliceOnly, singleKeyOnly Cast.bobAddr]
+aliceAndBob :: ShelleyEraScript era => NativeScript era
+aliceAndBob = RequireAllOf (StrictSeq.fromList [aliceOnly, singleKeyOnly Cast.bobAddr])
 
-aliceAndBobOrCarl :: Era era => MultiSig era
-aliceAndBobOrCarl = RequireMOf 1 [aliceAndBob, singleKeyOnly Cast.carlAddr]
+aliceAndBobOrCarl :: ShelleyEraScript era => NativeScript era
+aliceAndBobOrCarl = RequireMOf 1 (StrictSeq.fromList [aliceAndBob, singleKeyOnly Cast.carlAddr])
 
-aliceAndBobOrCarlAndDaria :: Era era => MultiSig era
+aliceAndBobOrCarlAndDaria :: ShelleyEraScript era => NativeScript era
 aliceAndBobOrCarlAndDaria =
-  RequireAnyOf
-    [ aliceAndBob
-    , RequireAllOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
-    ]
+  RequireAnyOf $
+    StrictSeq.fromList
+      [ aliceAndBob
+      , RequireAllOf (StrictSeq.fromList [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr])
+      ]
 
-aliceAndBobOrCarlOrDaria :: Era era => MultiSig era
+aliceAndBobOrCarlOrDaria ::
+  ShelleyEraScript era =>
+  NativeScript era
 aliceAndBobOrCarlOrDaria =
   RequireMOf
     1
-    [ aliceAndBob
-    , RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
-    ]
+    $ StrictSeq.fromList
+      [ aliceAndBob
+      , RequireAnyOf (StrictSeq.fromList [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr])
+      ]
 
 initTxBody ::
   ( EraTxOut era

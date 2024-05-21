@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-mary`
 
-## 1.6.0.1
+## 1.6.1.0
 
-*
+* Add `AllegraEraScript` and `ShelleyEraScript` instances for `MaryEra`
 
 ## 1.6.0.0
 

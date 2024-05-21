@@ -21,7 +21,7 @@ module Cardano.Ledger.Babbage.Scripts (
 )
 where
 
-import Cardano.Ledger.Allegra.Scripts (Timelock, translateTimelock)
+import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
@@ -35,6 +35,7 @@ import Cardano.Ledger.Babbage.TxCert ()
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.SafeHash (SafeToHash (..))
+import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import GHC.Generics
 import NoThunks.Class (NoThunks (..))
@@ -104,6 +105,30 @@ instance Crypto c => AlonzoEraScript (BabbageEra c) where
     AlonzoSpending (AsIx ix) -> AlonzoSpending (AsIx ix)
     AlonzoRewarding (AsIx ix) -> AlonzoRewarding (AsIx ix)
     AlonzoCertifying (AsIx ix) -> AlonzoCertifying (AsIx ix)
+
+instance Crypto c => ShelleyEraScript (BabbageEra c) where
+  {-# SPECIALIZE instance ShelleyEraScript (BabbageEra StandardCrypto) #-}
+
+  mkRequireSignature = mkRequireSignatureTimelock
+  getRequireSignature = getRequireSignatureTimelock
+
+  mkRequireAllOf = mkRequireAllOfTimelock
+  getRequireAllOf = getRequireAllOfTimelock
+
+  mkRequireAnyOf = mkRequireAnyOfTimelock
+  getRequireAnyOf = getRequireAnyOfTimelock
+
+  mkRequireMOf = mkRequireMOfTimelock
+  getRequireMOf = getRequireMOfTimelock
+
+instance Crypto c => AllegraEraScript (BabbageEra c) where
+  {-# SPECIALIZE instance AllegraEraScript (BabbageEra StandardCrypto) #-}
+
+  mkTimeStart = mkTimeStartTimelock
+  getTimeStart = getTimeStartTimelock
+
+  mkTimeExpire = mkTimeExpireTimelock
+  getTimeExpire = getTimeExpireTimelock
 
 instance NFData (PlutusScript (BabbageEra c)) where
   rnf = rwhnf

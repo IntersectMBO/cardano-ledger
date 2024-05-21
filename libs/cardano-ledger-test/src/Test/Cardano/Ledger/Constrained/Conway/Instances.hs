@@ -419,7 +419,13 @@ instance HasSimpleRep (AlonzoScript era) where
   toSimpleRep (TimelockScript tl) = tl
   toSimpleRep (PlutusScript _) = error "toSimpleRep for AlonzoScript on a PlutusScript"
   fromSimpleRep = TimelockScript
-instance (IsConwayUniv fn, EraScript era, Script era ~ AlonzoScript era) => HasSpec fn (AlonzoScript era)
+instance
+  ( IsConwayUniv fn
+  , AlonzoEraScript era
+  , Script era ~ AlonzoScript era
+  , NativeScript era ~ Timelock era
+  ) =>
+  HasSpec fn (AlonzoScript era)
 
 {-
 NOTE:
@@ -475,7 +481,14 @@ instance Era era => HasSimpleRep (Timelock era) where
       RequireTimeStart
 -}
 
-instance (IsConwayUniv fn, Crypto (EraCrypto era), Era era) => HasSpec fn (Timelock era) where
+instance
+  ( IsConwayUniv fn
+  , Crypto (EraCrypto era)
+  , AlonzoEraScript era
+  , NativeScript era ~ Timelock era
+  ) =>
+  HasSpec fn (Timelock era)
+  where
   type TypeSpec fn (Timelock era) = ()
   emptySpec = ()
   combineSpec _ _ = TrueSpec

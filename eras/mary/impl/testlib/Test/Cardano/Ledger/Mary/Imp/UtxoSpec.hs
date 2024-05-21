@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -13,6 +14,9 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure (..))
+import Cardano.Ledger.Shelley.Scripts (
+  pattern RequireSignature,
+ )
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq (..))
 import Lens.Micro
@@ -20,7 +24,8 @@ import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.ImpTest
 
-mintBasicToken :: forall era. (HasCallStack, MaryEraImp era) => ImpTestM era (Tx era)
+mintBasicToken ::
+  forall era. (HasCallStack, AllegraEraScript era, MaryEraImp era) => ImpTestM era (Tx era)
 mintBasicToken = do
   (_, addr) <- freshKeyAddr
   keyHash <- freshKeyHash
@@ -39,6 +44,7 @@ mintBasicToken = do
 spec ::
   ( HasCallStack
   , MaryEraImp era
+  , AllegraEraScript era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   ) =>
   SpecWith (ImpTestState era)

@@ -13,7 +13,7 @@ where
 
 import Cardano.Ledger.Allegra.Era (AllegraEra)
 import Cardano.Ledger.Allegra.PParams ()
-import Cardano.Ledger.Allegra.Scripts (Timelock, evalTimelock)
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..), evalTimelock)
 import Cardano.Ledger.Allegra.TxAuxData ()
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.TxWits ()
@@ -21,6 +21,7 @@ import Cardano.Ledger.Core (
   EraTx (..),
   EraTxAuxData (upgradeTxAuxData),
   EraTxWits (..),
+  NativeScript,
   upgradeTxBody,
  )
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
@@ -75,7 +76,7 @@ instance Crypto c => EraTx (AllegraEra c) where
 -- We still need to correctly compute the witness set for TxBody as well.
 
 validateTimelock ::
-  (EraTx era, AllegraEraTxBody era) => Tx era -> Timelock era -> Bool
+  (EraTx era, AllegraEraTxBody era, AllegraEraScript era) => Tx era -> NativeScript era -> Bool
 validateTimelock tx timelock = evalTimelock vhks (tx ^. bodyTxL . vldtTxBodyL) timelock
   where
     vhks = Set.map witVKeyHash (tx ^. witsTxL . addrTxWitsL)

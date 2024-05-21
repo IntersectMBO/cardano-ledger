@@ -3,6 +3,7 @@
 ## 1.14.1.0
 
 * Add `NFData` instance for `RatifySignal`
+* Add `AllegraEraScript` and `ShelleyEraScript` instances for `ConwayEra`
 
 ### `testlib`
 

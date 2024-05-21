@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -23,7 +24,13 @@ import Cardano.Ledger.Shelley.API (
   Coin (..),
   Update,
  )
-import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
+import Cardano.Ledger.Shelley.Scripts (
+  MultiSig,
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
 import Cardano.Ledger.Shelley.TxBody (
   ShelleyTxBody (ShelleyTxBody, stbInputs, stbOutputs, stbTxFee),
   Withdrawals (..),
@@ -35,7 +42,8 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Control.Monad (replicateM)
-import Data.Sequence.Strict (StrictSeq ((:|>)))
+import Data.Foldable (toList)
+import Data.Sequence.Strict (StrictSeq ((:|>)), fromList)
 import Data.Set (Set)
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
@@ -91,13 +99,13 @@ instance CC.Crypto c => ScriptClass (ShelleyEra c) where
   basescript _proxy = RequireSignature
   isKey _ (RequireSignature hk) = Just hk
   isKey _ _ = Nothing
-  quantify _ (RequireAllOf xs) = AllOf xs
-  quantify _ (RequireAnyOf xs) = AnyOf xs
-  quantify _ (RequireMOf n xs) = MOf n xs
+  quantify _ (RequireAllOf xs) = AllOf (toList xs)
+  quantify _ (RequireAnyOf xs) = AnyOf (toList xs)
+  quantify _ (RequireMOf n xs) = MOf n (toList xs)
   quantify _ t = Leaf t
-  unQuantify _ (AllOf xs) = RequireAllOf xs
-  unQuantify _ (AnyOf xs) = RequireAnyOf xs
-  unQuantify _ (MOf n xs) = RequireMOf n xs
+  unQuantify _ (AllOf xs) = RequireAllOf (fromList xs)
+  unQuantify _ (AnyOf xs) = RequireAnyOf (fromList xs)
+  unQuantify _ (MOf n xs) = RequireMOf n (fromList xs)
   unQuantify _ (Leaf t) = t
 
 {------------------------------------------------------------------------------

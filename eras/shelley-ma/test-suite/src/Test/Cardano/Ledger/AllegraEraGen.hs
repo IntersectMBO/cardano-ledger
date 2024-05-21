@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -21,7 +22,12 @@ where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core
-import Cardano.Ledger.Allegra.Scripts (Timelock (..))
+import Cardano.Ledger.Allegra.Scripts (
+  AllegraEraScript,
+  Timelock (..),
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -31,6 +37,12 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
 import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.Scripts (
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
 import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx)
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
@@ -126,13 +138,16 @@ instance CryptoClass.Crypto c => MinGenTxout (AllegraEra c) where
   ShelleyMA helpers, shared by Allegra and Mary
 ------------------------------------------------------------------------------}
 
-quantifyTL :: Era era => Timelock era -> Quantifier (Timelock era)
+quantifyTL ::
+  AllegraEraScript era =>
+  NativeScript era ->
+  Quantifier (NativeScript era)
 quantifyTL (RequireAllOf xs) = AllOf (foldr (:) [] xs)
 quantifyTL (RequireAnyOf xs) = AnyOf (foldr (:) [] xs)
 quantifyTL (RequireMOf n xs) = MOf n (foldr (:) [] xs)
 quantifyTL t = Leaf t
 
-unQuantifyTL :: Era era => Quantifier (Timelock era) -> Timelock era
+unQuantifyTL :: AllegraEraScript era => Quantifier (NativeScript era) -> NativeScript era
 unQuantifyTL (AllOf xs) = RequireAllOf (fromList xs)
 unQuantifyTL (AnyOf xs) = RequireAnyOf (fromList xs)
 unQuantifyTL (MOf n xs) = RequireMOf n (fromList xs)
@@ -180,19 +195,19 @@ genValidityInterval cs@(SlotNo currentSlot) =
 -- valid sub-branch of script.
 someLeaf ::
   forall era.
-  Era era =>
+  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
   KeyHash 'Witness (EraCrypto era) ->
-  Timelock era
+  NativeScript era
 someLeaf x =
   let n = mod (hash (serialize' (eraProtVerLow @era) (encCBOR x))) 200
    in partition @era [n] [RequireSignature x]
 
 partition ::
   forall era.
-  Era era =>
+  AllegraEraScript era =>
   [Int] ->
-  [Timelock era] ->
-  Timelock era
+  [NativeScript era] ->
+  NativeScript era
 partition splits scripts =
   RequireAnyOf . fromList $
     zipWith pair (intervals @era splits) (cycle scripts)
@@ -201,9 +216,9 @@ partition splits scripts =
 
 intervals ::
   forall era.
-  Era era =>
+  AllegraEraScript era =>
   [Int] ->
-  [Timelock era]
+  [NativeScript era]
 intervals xs = zipWith mkInterval padded (tail padded)
   where
     padded = Nothing : (Just . SlotNo . fromIntegral <$> xs) ++ [Nothing]

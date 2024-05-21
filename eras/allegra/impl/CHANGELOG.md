@@ -1,8 +1,26 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.4.1.1
+## 1.5.0.0
 
-*
+* Replace patterns within `Timelock` with `AllegraEraScript`- constrained ones:
+  * `RequireTimeExpire`
+  * `RequireTimeStart`
+* Remove `Timelock` patterns:
+  * `RequireSignature`
+  * `RequireAllOf`
+  * `RequireAnyOf`
+  * `RequireMOf`
+* Introduce `AllegraEraScript` class
+* Add `AllegraEraScript` and `ShelleyEraScript` instances for `AllegraEra`
+* Change signatures of `evalTimelock` and `validateTimelock`:
+  * replace `Era` constraint with `AllegraEraScript`
+  * replace `Timelock` with `NativeScript`
+
+### testlib
+
+* Change signatures of `Arbitrary` instances for `Timelock` and `AllegraTxAuxData era`:
+  * replace `Era` constraint with `AllegraEraScript`
+  * add `NativeScript era ~ Timelock era` constraint
 
 ## 1.4.1.0
 

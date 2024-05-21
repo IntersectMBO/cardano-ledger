@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -23,6 +24,7 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
   ASC (..),
   StakeProportion (..),
   VRFNatVal (..),
+  sizedNativeScriptGens,
 ) where
 
 import qualified Cardano.Chain.UTxO as Byron
@@ -33,7 +35,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (
   ApplyTxError (ApplyTxError),
-  MultiSig (..),
+  MultiSig,
   NominalDiffTimeMicro (..),
   ShelleyDelegCert,
   ShelleyGenesis (..),
@@ -64,6 +66,13 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxowPredFailure,
   VotingPeriod,
  )
+import Cardano.Ledger.Shelley.Scripts (
+  ShelleyEraScript (..),
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
+ )
 import Cardano.Ledger.Shelley.TxAuxData
 import Cardano.Ledger.Shelley.TxCert (
   GenesisDelegCert (..),
@@ -77,6 +86,7 @@ import qualified Data.ByteString.Char8 as BS (length, pack)
 import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map (fromList)
 import Data.Proxy (Proxy (Proxy))
+import Data.Sequence.Strict (fromList)
 import qualified Data.Text as T (pack)
 import qualified Data.Text.Encoding as T (encodeUtf8)
 import Data.Word (Word64)
@@ -502,6 +512,7 @@ newtype StakeProportion = StakeProportion Rational
 
 instance
   ( EraTxOut era
+  , ShelleyEraScript era
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (TxOut era)
   , Arbitrary (TxCert era)
@@ -575,7 +586,12 @@ instance (Arbitrary k, Arbitrary v) => Arbitrary (LM.ListMap k v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance Era era => Arbitrary (MultiSig era) where
+instance
+  ( ShelleyEraScript era
+  , NativeScript era ~ MultiSig era
+  ) =>
+  Arbitrary (MultiSig era)
+  where
   arbitrary = sizedMultiSig maxMultiSigDepth
 
 maxMultiSigDepth :: Int
@@ -584,15 +600,20 @@ maxMultiSigDepth = 3
 maxMultiSigListLens :: Int
 maxMultiSigListLens = 5
 
-sizedMultiSig :: Era era => Int -> Gen (MultiSig era)
+sizedMultiSig :: ShelleyEraScript era => Int -> Gen (NativeScript era)
 sizedMultiSig 0 = RequireSignature <$> arbitrary
-sizedMultiSig n =
-  oneof
-    [ RequireSignature <$> arbitrary
-    , RequireAllOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
-    , RequireAnyOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
-    , RequireMOf <$> arbitrary <*> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
-    ]
+sizedMultiSig n = oneof $ sizedNativeScriptGens n
+
+sizedNativeScriptGens :: ShelleyEraScript era => Int -> [Gen (NativeScript era)]
+sizedNativeScriptGens n =
+  [ RequireSignature <$> arbitrary
+  , RequireAllOf <$> (fromList <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1))))
+  , RequireAnyOf <$> (fromList <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1))))
+  , do
+      subs <- resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
+      let i = length subs
+      RequireMOf <$> choose (0, i) <*> pure (fromList subs)
+  ]
 
 instance
   (Crypto c, Arbitrary (PParams (ShelleyEra c))) =>
