@@ -14,6 +14,7 @@
   * replace `MultiSig` with `NativeScript`
 
 ### testlib
+* Add `withCborRoundTripFailures`
 * Change signatures of `Arbitrary` instances for `MultiSig`:
   * replace `Era` constraint with `ShelleyEraScript`
   * add `NativeScript era ~ MultiSig era` constraint
