@@ -318,6 +318,7 @@ class
   , EraTxOut era
   , EraPParams era
   , ShelleyEraTxCert era
+  , ShelleyEraScript era
   , ToExpr (Tx era)
   , NFData (Tx era)
   , ToExpr (TxBody era)

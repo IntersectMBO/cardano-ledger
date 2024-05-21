@@ -39,7 +39,8 @@ import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp, withImpState, withImpSt
 
 spec ::
   forall era.
-  ( ConwayEraImp era
+  ( Arbitrary (TxAuxData era)
+  , ConwayEraImp era
   , GovState era ~ ConwayGovState era
   , PParamsHKD Identity era ~ ConwayPParams Identity era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era

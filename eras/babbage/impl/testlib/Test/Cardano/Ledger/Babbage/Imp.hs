@@ -15,7 +15,8 @@ import Test.Cardano.Ledger.Common
 
 spec ::
   forall era.
-  ( AlonzoEraImp era
+  ( Arbitrary (TxAuxData era)
+  , AlonzoEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
