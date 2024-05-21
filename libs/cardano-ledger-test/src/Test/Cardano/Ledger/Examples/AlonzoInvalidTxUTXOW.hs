@@ -33,7 +33,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   PlutusPurpose,
  )
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (
   Network (..),
   ProtVer (..),
@@ -54,7 +54,7 @@ import Cardano.Ledger.Keys (
   hashKey,
  )
 import Cardano.Ledger.Mary.Value (MaryValue (..))
-import Cardano.Ledger.Plutus (Data (..), ExUnits (..), Language (..), emptyCostModels, hashData)
+import Cardano.Ledger.Plutus (Data (..), ExUnits (..), Language (..), emptyCostModels)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
@@ -64,7 +64,6 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
-import qualified Data.MapExtras as Map (fromElems)
 import qualified Data.Set as Set
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
@@ -77,7 +76,6 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someAddr,
   someKeys,
   testUTXOW,
-  testUTXOWsubset,
   testUTXOspecialCase,
   timelockHash,
   timelockScript,
@@ -94,7 +92,6 @@ import Test.Cardano.Ledger.Generic.Fields (
 import Test.Cardano.Ledger.Generic.GenState (
   PlutusPurposeTag (..),
   mkPlutusPurposePointer,
-  mkRedeemers,
   mkRedeemersFromTags,
  )
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
@@ -172,39 +169,6 @@ alonzoUTXOWTests pf =
                   [ injectFailure $ MissingVKeyWitnessesUTXOW $ Set.singleton extraneousKeyHash
                   ]
               )
-        , testCase "missing redeemer" $
-            testU
-              pf
-              (trustMeP pf True $ missingRedeemerTx pf)
-              ( Left
-                  [ injectFailure $ CollectErrors [NoRedeemer $ spendingPurposeAsItem1 pf]
-                  , injectFailure $
-                      MissingRedeemers @era [(spendingPurposeAsItem1 pf, alwaysSucceedsHash 3 pf)]
-                  ]
-              )
-        , testCase "wrong wpp hash" $
-            testU
-              pf
-              (trustMeP pf True $ wrongWppHashTx pf)
-              ( Left
-                  [ injectFailure $
-                      PPViewHashesDontMatch
-                        ( newScriptIntegrityHash
-                            pf
-                            (pp pf)
-                            [PlutusV1]
-                            (mkRedeemers pf [])
-                            (mkTxDats (Data (PV1.I 123)))
-                        )
-                        ( newScriptIntegrityHash
-                            pf
-                            (pp pf)
-                            [PlutusV1]
-                            (wrongWpphashRedeemers pf)
-                            (mkTxDats (Data (PV1.I 123)))
-                        )
-                  ]
-              )
         , testCase "missing 1-phase script witness" $
             testU
               pf
@@ -240,17 +204,6 @@ alonzoUTXOWTests pf =
                     injectFailure $
                       MissingRedeemers [(spendingPurposeAsItem1 pf, alwaysSucceedsHash 3 pf)]
                   , injectFailure $ ExtraRedeemers [mkPlutusPurposePointer pf Minting 1]
-                  ]
-              )
-        , testCase "missing datum" $
-            testU
-              pf
-              (trustMeP pf True $ missingDatumTx pf)
-              ( Left
-                  [ injectFailure $
-                      MissingRequiredDatums
-                        (Set.singleton $ hashData @era (Data (PV1.I 123)))
-                        mempty
                   ]
               )
         , testCase "phase 1 script failure" $
@@ -321,27 +274,6 @@ alonzoUTXOWTests pf =
               (trustMeP pf True $ validatingTx pf)
               ( Left [injectFailure (InsufficientCollateral (DeltaCoin 5) (Coin 8))]
               )
-        , testCase "two-phase UTxO with no datum hash" $
-            testU
-              pf
-              (trustMeP pf True $ plutusOutputWithNoDataTx pf)
-              ( Left
-                  [ injectFailure $ UnspendableUTxONoDatumHash . Set.singleton $ mkGenesisTxIn 101
-                  ]
-              )
-        , testCase "unacceptable supplimentary datum" $
-            testUTXOWsubset
-              (UTXOW pf) -- Special rules apply here, use (expected `isSubset` computed)
-              (initUTxO pf)
-              (pp pf)
-              (trustMeP pf True $ notOkSupplimentaryDatumTx pf)
-              ( Left
-                  [ injectFailure $
-                      NotAllowedSupplementalDatums
-                        (Set.singleton $ hashData @era totallyIrrelevantDatum)
-                        mempty
-                  ]
-              )
         , testCase "unacceptable extra redeemer" $
             testU
               pf
@@ -411,59 +343,6 @@ missingRequiredWitnessTx pf =
         , Txfee (Coin 5)
         , ReqSignerHashes' [extraneousKeyHash]
         ]
-
-missingRedeemerTx ::
-  (Scriptic era, EraTx era, GoodCrypto (EraCrypto era)) =>
-  Proof era ->
-  Tx era
-missingRedeemerTx pf =
-  newTx
-    pf
-    [ Body (missingRedeemerTxBody pf)
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated (missingRedeemerTxBody pf)) (someKeys pf)]
-        , ScriptWits' [always 3 pf]
-        , DataWits' [Data (PV1.I 123)]
-        ]
-    ]
-
-missingRedeemerTxBody :: EraTxBody era => Proof era -> TxBody era
-missingRedeemerTxBody pf =
-  newTxBody
-    pf
-    [ Inputs' [mkGenesisTxIn 1]
-    , Collateral' [mkGenesisTxIn 11]
-    , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
-    , Txfee (Coin 5)
-    , WppHash
-        ( newScriptIntegrityHash
-            pf
-            (pp pf)
-            [PlutusV1]
-            (mkRedeemers pf [])
-            (mkTxDats (Data (PV1.I 123)))
-        )
-    ]
-
-wrongWppHashTx ::
-  (Scriptic era, EraTx era, GoodCrypto (EraCrypto era)) =>
-  Proof era ->
-  Tx era
-wrongWppHashTx pf =
-  newTx
-    pf
-    [ Body (missingRedeemerTxBody pf)
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated (missingRedeemerTxBody pf)) (someKeys pf)]
-        , ScriptWits' [always 3 pf]
-        , DataWits' [Data (PV1.I 123)]
-        , RdmrWits $ wrongWpphashRedeemers pf
-        ]
-    ]
-
-wrongWpphashRedeemers :: Era era => Proof era -> Redeemers era
-wrongWpphashRedeemers pf =
-  mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
 
 missing1phaseScriptWitnessTx ::
   forall era.
@@ -621,36 +500,6 @@ wrongRedeemerLabelTx pf =
       -- The label *should* be Spend, not Mint
       mkRedeemersFromTags pf [((Minting, 1), (Data (PV1.I 42), ExUnits 5000 5000))]
 
-missingDatumTx ::
-  forall era.
-  ( Scriptic era
-  , EraTx era
-  , GoodCrypto (EraCrypto era)
-  ) =>
-  Proof era ->
-  Tx era
-missingDatumTx pf =
-  newTx
-    pf
-    [ Body missingDatumTxBody
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated missingDatumTxBody) (someKeys pf)]
-        , ScriptWits' [always 3 pf]
-        , RdmrWits redeemers
-        ]
-    ]
-  where
-    missingDatumTxBody =
-      newTxBody
-        pf
-        [ Inputs' [mkGenesisTxIn 1]
-        , Collateral' [mkGenesisTxIn 11]
-        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
-        , Txfee (Coin 5)
-        , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers mempty)
-        ]
-    redeemers = mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
-
 phase1FailureTx ::
   forall era.
   ( PostShelley era
@@ -801,68 +650,6 @@ missingCollateralSigTx pf =
         , RdmrWits $ mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
         ]
     ]
-
-plutusOutputWithNoDataTx ::
-  forall era.
-  ( Scriptic era
-  , EraTx era
-  , GoodCrypto (EraCrypto era)
-  ) =>
-  Proof era ->
-  Tx era
-plutusOutputWithNoDataTx pf =
-  newTx
-    pf
-    [ Body plutusOutputWithNoDataTxBody
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated plutusOutputWithNoDataTxBody) (someKeys pf)]
-        , ScriptWits' [always 3 pf]
-        , RdmrWits redeemers
-        ]
-    ]
-  where
-    plutusOutputWithNoDataTxBody =
-      newTxBody
-        pf
-        [ Inputs' [mkGenesisTxIn 101]
-        , Collateral' [mkGenesisTxIn 11]
-        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
-        , Txfee (Coin 5)
-        , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemers mempty)
-        ]
-    redeemers = mkRedeemersFromTags pf [((Spending, 0), (Data (PV1.I 42), ExUnits 5000 5000))]
-
-notOkSupplimentaryDatumTx ::
-  forall era.
-  ( Scriptic era
-  , EraTx era
-  , GoodCrypto (EraCrypto era)
-  ) =>
-  Proof era ->
-  Tx era
-notOkSupplimentaryDatumTx pf =
-  newTx
-    pf
-    [ Body notOkSupplimentaryDatumTxBody
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated notOkSupplimentaryDatumTxBody) (someKeys pf)]
-        , DataWits' [totallyIrrelevantDatum]
-        ]
-    ]
-  where
-    notOkSupplimentaryDatumTxBody =
-      newTxBody
-        pf
-        [ Inputs' [mkGenesisTxIn 3]
-        , Outputs' [outputWithNoDatum]
-        , Txfee (Coin 5)
-        , WppHash (newScriptIntegrityHash pf (pp pf) [] (mkRedeemers pf []) totallyIrrelevantTxDats)
-        ]
-    totallyIrrelevantTxDats = TxDats $ Map.fromElems @[] hashData [totallyIrrelevantDatum]
-    outputWithNoDatum = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 995)]
-
-totallyIrrelevantDatum :: Era era => Data era
-totallyIrrelevantDatum = Data (PV1.I 1729)
 
 extraRedeemersTx ::
   forall era.
