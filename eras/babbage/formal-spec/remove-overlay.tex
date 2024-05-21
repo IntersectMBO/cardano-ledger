@@ -155,8 +155,8 @@ to re-use the single VRF value.
   \begin{equation}\label{eq:prtcl}
     \inference[PRTCL]
     {
-      \var{bhb}\leteq\bheader{bh} &
-      \eta\leteq\fun{bnonce}~(\bhbody{bhb})
+      \var{bhb}\leteq\bhbody{bh} &
+      \eta\leteq\fun{bnonce}~\var{bhb}
       \\~\\
       {
         \eta
@@ -165,7 +165,7 @@ to re-use the single VRF value.
         \eta_v \\
         \eta_c \\
         \end{array}\right)}
-        \trans{\hyperref[fig:rules:update-nonce]{updn}}{\var{slot}}
+        \trans{\hyperref[fig:rules:update-nonce]{updn}}{\fun{bslot}~\var{bhb}}
         {\left(\begin{array}{c}
         \eta_v' \\
         \eta_c' \\
