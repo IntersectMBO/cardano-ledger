@@ -39,7 +39,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.PParams (THKD (..))
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure, RatifyState)
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
+import Cardano.Ledger.Conway.TxCert (ConwayGovCert, ConwayTxCert)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -74,6 +74,8 @@ import Test.Cardano.Ledger.Constrained.Conway (
   certEnvSpec,
   certStateSpec,
   genProposalsSplit,
+  govCertEnvSpec,
+  govCertSpec,
   govEnvSpec,
   govProceduresSpec,
   govProposalsSpec,
@@ -81,6 +83,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   utxoEnvSpec,
   utxoStateSpec,
   utxoTxSpec,
+  vStateSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.Instances ()
 import Test.Cardano.Ledger.Conway.ImpTest (impAnn, logEntry)
@@ -511,3 +514,58 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
     first (\case {})
       . computationResultToEither
       $ Agda.ratifyStep env st sig
+
+data ConwayGovCertExecContext era = ConwayGovCertExecContext
+  { cgcecWithdrawals :: !(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
+  , cgcecVotes :: !(VotingProcedures era)
+  }
+  deriving (Generic, Eq, Show)
+
+instance Era era => Arbitrary (ConwayGovCertExecContext era) where
+  arbitrary =
+    ConwayGovCertExecContext
+      <$> arbitrary
+      <*> arbitrary
+
+instance
+  c ~ EraCrypto era =>
+  Inject
+    (ConwayGovCertExecContext era)
+    (Map (Network, Credential 'Staking c) Coin)
+  where
+  inject = cgcecWithdrawals
+
+instance Inject (ConwayGovCertExecContext era) (VotingProcedures era) where
+  inject = cgcecVotes
+
+instance Era era => ToExpr (ConwayGovCertExecContext era)
+
+instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
+  type ExecContext fn "GOVCERT" Conway = ConwayGovCertExecContext Conway
+
+  environmentSpec _ctx = govCertEnvSpec
+
+  stateSpec _ctx _env = vStateSpec
+
+  signalSpec _ctx env st =
+    govCertSpec env st
+      <> constrained disableDRepRegCerts
+    where
+      -- ConwayRegDRep certificates seem to trigger some kind of a bug in the
+      -- MAlonzo code where it somehow reaches an uncovered case.
+      --
+      -- TODO investigate what's causing this bug and try to get rid of this
+      -- constraint
+      disableDRepRegCerts :: Term fn (ConwayGovCert StandardCrypto) -> Pred fn
+      disableDRepRegCerts govCert =
+        (caseOn govCert)
+          (branch $ \_ _ _ -> False)
+          (branch $ \_ _ -> True)
+          (branch $ \_ _ -> False)
+          (branch $ \_ _ -> True)
+          (branch $ \_ _ -> True)
+
+  runAgdaRule env st sig =
+    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
+      . computationResultToEither
+      $ Agda.govCertStep env st sig
