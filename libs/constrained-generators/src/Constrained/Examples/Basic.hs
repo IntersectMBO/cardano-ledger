@@ -256,3 +256,14 @@ posNegDistr =
     [ monitor $ \eval -> QC.cover 60 (0 < eval x) "x positive"
     , x `satisfies` chooseSpec (1, constrained (<. 0)) (2, constrained (0 <.))
     ]
+
+ifElseMany :: Specification BaseFn (Bool, Int, Int)
+ifElseMany = constrained' $ \b x y ->
+  ifElse
+    b
+    [ x <. 0
+    , y <. 10
+    ]
+    [ 0 <. x
+    , 10 <. y
+    ]

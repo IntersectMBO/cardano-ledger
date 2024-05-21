@@ -65,6 +65,7 @@ module Constrained (
   branchW,
   chooseSpec,
   ifElse,
+  whenTrue,
   onJust,
   isJust,
   reify,

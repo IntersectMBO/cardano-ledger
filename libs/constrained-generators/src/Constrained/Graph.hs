@@ -6,6 +6,7 @@
 module Constrained.Graph where
 
 import Control.Monad
+import Data.Foldable
 import Data.List (sortOn)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -30,7 +31,11 @@ instance Ord node => Monoid (Graph node) where
   mempty = Graph mempty mempty
 
 instance Pretty n => Pretty (Graph n) where
-  pretty gr = vsep [nest 2 $ pretty n <> " <- " <> pretty (Set.toList ns) | (n, ns) <- Map.toList (edges gr)]
+  pretty gr =
+    fold $
+      punctuate
+        hardline
+        [nest 2 $ pretty n <> " <- " <> pretty (Set.toList ns) | (n, ns) <- Map.toList (edges gr)]
 
 nodes :: Graph node -> Set node
 nodes (Graph e _) = Map.keysSet e
