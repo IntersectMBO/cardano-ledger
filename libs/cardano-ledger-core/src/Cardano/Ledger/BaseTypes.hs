@@ -714,7 +714,7 @@ instance DecCBOR Network where
       Just n -> pure n
   {-# INLINE decCBOR #-}
 
--- | Blocks made
+-- | Number of blocks which have been created by stake pools in the current epoch.
 newtype BlocksMade c = BlocksMade
   { unBlocksMade :: Map (KeyHash 'StakePool c) Natural
   }
