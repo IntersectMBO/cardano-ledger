@@ -20,8 +20,8 @@ import Constrained
 
 specInt :: Specification BaseFn Int
 specInt = constrained $ \i ->
-  [ i <. 10
-  , 0 <. i
+  [ assert $ i <. 10
+  , assert $ 0 <. i
   ]
 
 -- TODO: talk about what's going on here:
@@ -73,7 +73,7 @@ specProd = constrained $ \p ->
 -- However, product types can also be a bit finicky:
 
 specProd0 :: Specification BaseFn (Int, Int)
-specProd0 = constrained $ \p -> fst_ p <. snd_ p
+specProd0 = constrained $ \p -> assert $ fst_ p <. snd_ p
 
 -- λ> sample $ genFromSpec_ specProd0
 
