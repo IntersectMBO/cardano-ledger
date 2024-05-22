@@ -394,38 +394,29 @@ instance
   signalSpec _ env st =
     txCertSpec env st
       <> constrained disableRegCerts
-      <> constrained disableDRepRegCerts
+      <> constrained disableDRepRegCerts'
     where
       disableRegCerts :: Term fn (ConwayTxCert Conway) -> Pred fn
       disableRegCerts cert =
-        (caseOn cert)
+        caseOn
+          cert
           ( branch $ \delegCert ->
-              (caseOn delegCert)
+              caseOn
+                delegCert
                 (branch $ \_ _ -> False)
                 (branch $ \_ _ -> True)
                 (branch $ \_ _ -> True)
                 (branch $ \_ _ _ -> True)
           )
-          (branch $ \_ -> True)
-          (branch $ \_ -> True)
-      -- ConwayRegDRep certificates seem to trigger some kind of a bug in the
-      -- MAlonzo code where it somehow reaches an uncovered case.
-      --
-      -- TODO investigate what's causing this bug and try to get rid of this
-      -- constraint
-      disableDRepRegCerts :: Term fn (ConwayTxCert Conway) -> Pred fn
-      disableDRepRegCerts cert =
-        (caseOn cert)
-          (branch $ \_ -> True)
-          (branch $ \_ -> True)
-          ( branch $ \govCert ->
-              (caseOn govCert)
-                (branch $ \_ _ _ -> False)
-                (branch $ \_ _ -> True)
-                (branch $ \_ _ -> False)
-                (branch $ \_ _ -> True)
-                (branch $ \_ _ -> True)
-          )
+          (branch $ const True)
+          (branch $ const True)
+      disableDRepRegCerts' :: Term fn (ConwayTxCert Conway) -> Pred fn
+      disableDRepRegCerts' cert =
+        caseOn
+          cert
+          (branch $ const True)
+          (branch $ const True)
+          (branch disableDRepRegCerts)
 
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
@@ -527,6 +518,22 @@ instance Era era => Arbitrary (ConwayGovCertExecContext era) where
       <$> arbitrary
       <*> arbitrary
 
+-- ConwayRegDRep certificates seem to trigger some kind of a bug in the
+-- MAlonzo code where it somehow reaches an uncovered case.
+--
+-- TODO investigate what's causing this bug and try to get rid of this
+-- constraint
+disableDRepRegCerts ::
+  IsConwayUniv fn => Term fn (ConwayGovCert StandardCrypto) -> Pred fn
+disableDRepRegCerts govCert =
+  caseOn
+    govCert
+    (branch $ \_ _ _ -> False)
+    (branch $ \_ _ -> True)
+    (branch $ \_ _ -> False)
+    (branch $ \_ _ -> True)
+    (branch $ \_ _ -> True)
+
 instance
   c ~ EraCrypto era =>
   Inject
@@ -550,20 +557,6 @@ instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
   signalSpec _ctx env st =
     govCertSpec env st
       <> constrained disableDRepRegCerts
-    where
-      -- ConwayRegDRep certificates seem to trigger some kind of a bug in the
-      -- MAlonzo code where it somehow reaches an uncovered case.
-      --
-      -- TODO investigate what's causing this bug and try to get rid of this
-      -- constraint
-      disableDRepRegCerts :: Term fn (ConwayGovCert StandardCrypto) -> Pred fn
-      disableDRepRegCerts govCert =
-        (caseOn govCert)
-          (branch $ \_ _ _ -> False)
-          (branch $ \_ _ -> True)
-          (branch $ \_ _ -> False)
-          (branch $ \_ _ -> True)
-          (branch $ \_ _ -> True)
 
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
