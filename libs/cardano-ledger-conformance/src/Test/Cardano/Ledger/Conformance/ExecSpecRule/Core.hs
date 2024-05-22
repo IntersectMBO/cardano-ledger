@@ -149,6 +149,7 @@ class
     , ToExpr (SpecRep (State (EraRule rule era)))
     , ToExpr (SpecRep (Signal (EraRule rule era)))
     , ToExpr (SpecRep (PredicateFailure (EraRule rule era)))
+    , ToExpr (ExecContext fn rule era)
     , FixupSpecRep (SpecRep (PredicateFailure (EraRule rule era)))
     , FixupSpecRep (SpecRep (State (EraRule rule era)))
     , Eq (SpecRep (PredicateFailure (EraRule rule era)))
@@ -249,16 +250,17 @@ runConformance execContext env st sig = do
   logEntry $ "specEnv:\n" <> showExpr specEnv
   logEntry $ "specSt:\n" <> showExpr specSt
   logEntry $ "specSig:\n" <> showExpr specSig
-  agdaRes <-
-    impAnn "Deep evaluating Agda output"
-      . evaluateDeep
-      $ runAgdaRule @fn @rule @era specEnv specSt specSig
+  agdaResTest <-
+    fmap (bimap (fixup <$>) fixup) $
+      impAnn "Deep evaluating Agda output" $
+        evaluateDeep $
+          runAgdaRule @fn @rule @era specEnv specSt specSig
   implRes <- tryRunImpRule @rule @era env st sig
   implResTest <-
-    impAnn "Translating implementation values to SpecRep" . expectRightExpr . runSpecTransM execContext $
-      bimapM (traverse toTestRep) toTestRep (fst <$> implRes)
-  let
-    agdaResTest = bimap (fixup <$>) fixup agdaRes
+    impAnn "Translating implementation values to SpecRep" $
+      expectRightExpr $
+        runSpecTransM execContext $
+          bimapM (traverse toTestRep) toTestRep (fst <$> implRes)
   pure (implResTest, agdaResTest)
 
 conformsToImpl ::

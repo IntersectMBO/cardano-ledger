@@ -1065,7 +1065,7 @@ instance
   ( EraPParams era
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecTranslate ctx (PParamsHKD Identity era)
-  , Inject ctx (Map (GovActionId (EraCrypto era)) (GovActionState era))
+  , Inject ctx [GovActionState era]
   , ToExpr (PParamsHKD StrictMaybe era)
   ) =>
   SpecTranslate ctx (RatifyState era)
@@ -1074,8 +1074,8 @@ instance
 
   toSpecRep RatifyState {..} = do
     govActionMap <-
-      askCtx
-        @(Map (GovActionId (EraCrypto era)) (GovActionState era))
+      foldl' (\acc gas -> Map.insert (gasId gas) gas acc) mempty
+        <$> askCtx @[GovActionState era]
     let
       lookupGAS gaId m = do
         case Map.lookup gaId govActionMap of
@@ -1087,10 +1087,14 @@ instance
                 <> "\n\ngovActionMap: "
                 <> T.pack (showExpr govActionMap)
                 <> "\n\nGovActionId is not contained in the govActionMap"
-      expired = toSpecRep =<< Set.foldr' lookupGAS (pure Set.empty) rsExpired
+    removed <-
+      Set.foldr'
+        lookupGAS
+        (pure Set.empty)
+        (rsExpired `Set.union` Set.fromList (gasId <$> toList rsEnacted))
     Agda.MkRatifyState
       <$> toSpecRep rsEnactState
-      <*> expired
+      <*> toSpecRep removed
       <*> toSpecRep rsDelayed
 
 instance EraPParams era => SpecTranslate ctx (RatifySignal era) where

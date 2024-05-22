@@ -10,11 +10,15 @@ repository cardano-haskell-packages
     c00aae8461a256275598500ea0e187588c35a5d5d7454fb57eac18d9edb86a56
     d4a35cd3121aa00d18544bb0ac01c3e1691d618f462c46129271bccf39f7e8ee
 
+-- While using SRPs one can obtain the `--sha256` value for a package
+-- by first setting it to some random value and letting the tooling
+-- tell you what it should be, for example, using `nix develop` will
+-- throw an error with the correct value to use
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-executable-spec.git
-  tag: 81b976c40c2726998a4828220231acf75b3a685e
-  --sha256: sha256-1CiTiLzROoHz8GxVPCouofUFzwzWUclQUq5AthtwPz4=
+  tag: d6effa703ed06ffc6239a963fdbccccd25dfa663
+  --sha256: sha256-b+HRjMrriceFM/fUn9Qn+LJjMh3I3/F9PtYxrmGOiug=
 
 index-state:
   -- Bump this if you need newer packages from Hackage

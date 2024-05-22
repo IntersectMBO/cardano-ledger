@@ -6,7 +6,8 @@ module Test.Cardano.Ledger.Conformance.Orphans where
 
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default.Class (Default)
-import Data.List (sort, sortOn)
+import Data.List (sortOn)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lib
 import Test.Cardano.Ledger.Common (NFData, ToExpr)
@@ -254,7 +255,7 @@ instance
   fixup (MkHSMap l) = MkHSMap . sortOn fst $ bimap fixup fixup <$> l
 
 instance (Ord a, FixupSpecRep a) => FixupSpecRep (HSSet a) where
-  fixup (MkHSSet l) = MkHSSet . sort $ fixup <$> l
+  fixup (MkHSSet l) = MkHSSet . Set.toList . Set.fromList $ fixup <$> l
 
 instance (FixupSpecRep a, FixupSpecRep b) => FixupSpecRep (a, b)
 
