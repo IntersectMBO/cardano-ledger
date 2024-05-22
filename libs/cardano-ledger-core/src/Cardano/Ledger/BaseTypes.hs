@@ -846,14 +846,15 @@ instance Default Network where
 
 class Inject t s where
   inject :: t -> s
-  default inject :: t ~ s => t -> s
-  inject = id
 
 instance Inject t () where
   inject = const ()
 
 instance Inject Void s where
   inject = absurd
+
+instance Inject a a where
+  inject = id
 
 -- | Helper function for a common pattern of creating objects
 kindObject :: Text -> [Pair] -> Value

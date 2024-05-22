@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-core`
 
-## 1.12.0.1
+## 1.13.0.0
 
-*
+* Create a catch all `Inject a a` instance for the same type
 
 ## 1.12.0.0
 

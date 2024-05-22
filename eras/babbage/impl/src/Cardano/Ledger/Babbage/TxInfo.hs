@@ -232,8 +232,6 @@ instance NoThunks (PlutusPurpose AsIx era) => NoThunks (BabbageContextError era)
 
 instance (Era era, NFData (PlutusPurpose AsIx era)) => NFData (BabbageContextError era)
 
-instance Inject (BabbageContextError era) (BabbageContextError era)
-
 instance Inject (AlonzoContextError era) (BabbageContextError era) where
   inject = AlonzoContextError
 

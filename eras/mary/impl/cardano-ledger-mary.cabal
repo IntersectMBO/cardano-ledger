@@ -76,7 +76,7 @@ library
         cardano-data ^>=1.2,
         cardano-ledger-allegra ^>=1.5,
         cardano-ledger-binary ^>=1.3,
-        cardano-ledger-core ^>=1.12,
+        cardano-ledger-core ^>=1.13,
         cardano-ledger-shelley ^>=1.12,
         containers,
         deepseq,

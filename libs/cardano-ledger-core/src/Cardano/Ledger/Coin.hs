@@ -71,8 +71,6 @@ newtype Coin = Coin {unCoin :: Integer}
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
   deriving newtype (PartialOrd, ToCBOR, EncCBOR, HeapWords)
 
-instance Inject Coin Coin
-
 instance FromCBOR Coin where
   fromCBOR = Coin . toInteger <$> Plain.decodeWord64
 
