@@ -101,6 +101,7 @@ module Constrained (
   fromGeneric_,
   sizeOf_,
   length_,
+  null_,
   injectFn,
   app,
   lit,

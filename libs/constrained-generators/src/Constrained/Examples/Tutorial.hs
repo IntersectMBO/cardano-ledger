@@ -1,4 +1,5 @@
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -6,6 +7,7 @@
 module Constrained.Examples.Tutorial where
 
 import Data.Set (Set)
+import Data.Set qualified as Set
 import GHC.Generics
 
 import Constrained
@@ -419,8 +421,18 @@ forAllFollow = constrained' $ \ p qs ->
 -- ((20,3),fromList [(20,4),(21,0)])
 -- ((16,29),fromList [(16,30),(17,0)])
 
--- TODO:
---  - exists
+-- We also have existential quantification in the language. The first argument to
+-- `exists` tells you how to reconstruct the value from known values.
+
+existentials :: Specification BaseFn (Set Int, Set Int)
+existentials = constrained' $ \ xs ys ->
+  exists (\ eval -> pure $ Set.intersection (eval xs) (eval ys)) $ \ zs ->
+    [ assert $ not_ $ null_ zs
+    , assert $ zs `subset_` xs
+    , assert $ zs `subset_` ys
+    , xs `dependsOn` zs
+    , ys `dependsOn` zs
+    ]
 
 -- You can work with your own types relatively easily. If they are `Generic`
 -- you even get all the machinery of sum and product types for free!
