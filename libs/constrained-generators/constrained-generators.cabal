@@ -40,6 +40,7 @@ library
         Constrained.Examples.List
         Constrained.Examples.Tree
         Constrained.Examples.Either
+        Constrained.Examples.Tutorial
         Constrained.Properties
 
     hs-source-dirs:   src
