@@ -17,7 +17,6 @@ repository cardano-haskell-packages
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-executable-spec.git
-  -- branch: aniketd/govcert
   tag: c8651e5332b2d99e1f0ae0e1287c10bc187e91a8
   --sha256: sha256-AOmMVq7GWixd9KnIRgo9p6oaSalSVHoITHRtlJUTJgg=
 
