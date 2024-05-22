@@ -405,11 +405,15 @@ toCtx ::
   , Typeable v
   , MonadGenError m
   , HasCallStack
+  , HasSpec fn a
+  , HasSpec fn v
   ) =>
   Var v ->
   Term fn a ->
   m (Ctx fn v a)
-toCtx v = go -- . simplifyTerm
+toCtx v t
+  | countOf (Name v) t > 1 = fatalError ["Can't build a single-hole context for variable " ++ show v ++ " in term " ++ show t]
+  | otherwise = go t
   where
     go :: forall b. Term fn b -> m (Ctx fn v b)
     go (Lit i) = fatalError ["toCtx (Lit " ++ show i ++ ")"]
@@ -420,13 +424,13 @@ toCtx v = go -- . simplifyTerm
 
 toCtxList ::
   forall m fn v as.
-  (BaseUniverse fn, Typeable v, MonadGenError m, HasCallStack) =>
+  (BaseUniverse fn, All (HasSpec fn) as, HasSpec fn v, Typeable v, MonadGenError m, HasCallStack) =>
   Var v ->
   List (Term fn) as ->
   m (ListCtx Value as (Ctx fn v))
 toCtxList v = prefix
   where
-    prefix :: forall as'. HasCallStack => List (Term fn) as' -> m (ListCtx Value as' (Ctx fn v))
+    prefix :: forall as'. (All (HasSpec fn) as', HasCallStack) => List (Term fn) as' -> m (ListCtx Value as' (Ctx fn v))
     prefix Nil = fatalError ["toCtxList without hole"]
     prefix (Lit l :> ts) = do
       ctx <- prefix ts

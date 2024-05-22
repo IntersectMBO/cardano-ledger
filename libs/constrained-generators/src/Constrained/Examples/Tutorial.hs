@@ -79,11 +79,12 @@ specProd0 = constrained $ \p -> fst_ p <. snd_ p
 
 -- *** Exception: Simplifying:
 
+-- λ> sample $ genFromSpec_ specProd0
+-- *** Exception: Simplifying:
 --   constrained $ \ v0 -> assert $ Less (Fst (ToGeneric v0)) (Snd (ToGeneric v0))
 -- optimisePred => assert $ Less (Fst (ToGeneric v0)) (Snd (ToGeneric v0))
 -- assert $ Less (Fst (ToGeneric v0)) (Snd (ToGeneric v0))
--- toCtxList with too many holes
--- TODO: fix this error message so that it is more clear!
+-- Can't build a single-hole context for variable v0 in term Less (Fst (ToGeneric v0)) (Snd (ToGeneric v0))
 
 -- This gives us the _fundamental restriction_:
 --   A variable can not appear twice in the same constraint
