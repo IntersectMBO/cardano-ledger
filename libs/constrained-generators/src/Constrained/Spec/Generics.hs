@@ -286,20 +286,26 @@ branchW ::
 branchW w body =
   Weighted (Just w) (bind (buildBranch @p @fn body . toArgs @a @fn))
 
+type IsProductType fn a =
+  ( HasSimpleRep a
+  , Cases (SimpleRep a) ~ '[SimpleRep a]
+  , SimpleRep a ~ SumOver (Cases (SimpleRep a))
+  , IsProd (SimpleRep a)
+  , HasSpec fn (SimpleRep a)
+  , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
+  , All (HasSpec fn) (ProductAsList a)
+  )
+
+type ProductAsList a = Args (SimpleRep a)
+
 match ::
   forall fn p a.
   ( HasSpec fn a
-  , HasSpec fn (SimpleRep a)
-  , HasSimpleRep a
-  , Cases (SimpleRep a) ~ '[SimpleRep a]
-  , SimpleRep a ~ SumOver (Cases (SimpleRep a))
-  , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
-  , IsProd (SimpleRep a)
-  , All (HasSpec fn) (Args (SimpleRep a))
+  , IsProductType fn a
   , IsPred p fn
   ) =>
   Term fn a ->
-  FunTy (MapList (Term fn) (Args (SimpleRep a))) p ->
+  FunTy (MapList (Term fn) (ProductAsList a)) p ->
   Pred fn
 match p m = caseOn p (branch @fn @p m)
 

@@ -425,11 +425,16 @@ toCtx ::
   , Typeable v
   , MonadGenError m
   , HasCallStack
+  , HasSpec fn a
+  , HasSpec fn v
   ) =>
   Var v ->
   Term fn a ->
   m (Ctx fn v a)
-toCtx v = go
+toCtx v t
+  | countOf (Name v) t > 1 =
+      fatalError1 ("Can't build a single-hole context for variable " ++ show v ++ " in term " ++ show t)
+  | otherwise = go t
   where
     go :: forall b. Term fn b -> m (Ctx fn v b)
     go (Lit i) = fatalError1 ("toCtx has literal: (Lit " ++ show i ++ ")")
@@ -451,13 +456,17 @@ toCtx v = go
 
 toCtxList ::
   forall m fn v as.
-  (BaseUniverse fn, Typeable v, MonadGenError m, HasCallStack) =>
+  (BaseUniverse fn, All (HasSpec fn) as, HasSpec fn v, Typeable v, MonadGenError m, HasCallStack) =>
   Var v ->
   List (Term fn) as ->
   m (ListCtx Value as (Ctx fn v))
 toCtxList v = prefix
   where
-    prefix :: forall as'. HasCallStack => List (Term fn) as' -> m (ListCtx Value as' (Ctx fn v))
+    prefix ::
+      forall as'.
+      (HasCallStack, All (HasSpec fn) as') =>
+      List (Term fn) as' ->
+      m (ListCtx Value as' (Ctx fn v))
     prefix Nil = fatalError1 "toCtxList without hole"
     prefix (Lit l :> ts) = do
       ctx <- prefix ts
@@ -1041,7 +1050,7 @@ genFromSpecT (simplifySpec -> spec) = case spec of
       -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
       -- starts giving us trouble.
       genFromTypeSpec @fn s `suchThatT` (`notElem` cant)
-  ErrorSpec e -> genError e
+  ErrorSpec e -> explain1 "genFromSpecT ErrorSpec{} with explanation:" $ genError e
 
 shrinkWithSpec :: forall fn a. HasSpec fn a => Specification fn a -> a -> [a]
 -- TODO: possibly allow for ignoring the `conformsToSpec` check in the `TypeSpec`
@@ -1295,7 +1304,7 @@ isEmptyPlan (SolverPlan plan _) = null plan
 
 stepPlan :: MonadGenError m => SolverPlan fn -> GenT m (Env, SolverPlan fn)
 stepPlan plan@(SolverPlan [] _) = pure (mempty, plan)
-stepPlan plan@(SolverPlan (SolverStage x ps spec : pl) gr) = explain1 (show $ pretty plan) $ do
+stepPlan (SolverPlan (SolverStage x ps spec : pl) gr) = do
   spec' <- runGE $ explain1 (show $ "Computing specs for:" /> vsep' (map pretty ps)) $ do
     specs <- mapM (computeSpec x) ps
     pure $ fold specs
@@ -1320,8 +1329,9 @@ genFromPreds (optimisePred . optimisePred -> preds) = explain1 (show $ "genFromP
     go :: MonadGenError m => Env -> SolverPlan fn -> GenT m Env
     go env plan | isEmptyPlan plan = pure env
     go env plan = do
-      (env', plan') <- explain1 (show env) $ stepPlan plan
-      explain1 (show $ pretty plan') $ go (env <> env') plan'
+      (env', plan') <-
+        explain1 (show $ "Stepping the plan:" /> vsep [pretty plan, viaShow env]) $ stepPlan plan
+      go (env <> env') plan'
 
 -- TODO: here we can compute both the explicit hints (i.e. constraints that
 -- define the order of two variables) and any whole-program smarts.

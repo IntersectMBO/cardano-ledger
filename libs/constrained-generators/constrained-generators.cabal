@@ -40,6 +40,7 @@ library
         Constrained.Examples.List
         Constrained.Examples.Tree
         Constrained.Examples.Either
+        Constrained.Examples.CheatSheet
         Constrained.Properties
         Constrained.Syntax
 
