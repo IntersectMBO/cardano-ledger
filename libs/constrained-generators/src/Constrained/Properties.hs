@@ -214,6 +214,7 @@ instance fn ~ BaseFn => QC.Arbitrary (TestableFn fn) where
       , TestableFn $ foldMapFn @fn @Int idFn
       , TestableFn $ rngFn @fn @Int @Int
       , TestableFn $ domFn @fn @Int @Int
+      , TestableFn $ fromListFn @fn @Int
       ]
 
 prop_mapSpec ::
