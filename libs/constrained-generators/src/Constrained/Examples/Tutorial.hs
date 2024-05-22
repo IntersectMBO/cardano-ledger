@@ -124,6 +124,16 @@ specProd1 = constrained $ \p ->
 -- (-11,17)
 -- (-53,-14)
 
+-- Let's look under the hood of `match`, it introduces two auxilliary variables `v0` and `v1`
+-- that circumvents the fundamental restriction by allowing us to generate values for `v1` and
+-- `v0` before we generate a value for `v3`.
+
+-- λ> simplifySpec specProd1
+-- constrained $ \ v3 ->
+--   let v1 = Fst (ToGeneric v3) in
+--   let v0 = Snd (ToGeneric v3) in
+--   assert $ Less v1 v0
+
 -- This pattern of `constrained $ \ p -> match p $ \ x y -> ...` is very common
 -- and has a shorthand in the form of `constrained'`:
 
@@ -188,7 +198,7 @@ solverOrder = constrained' $ \x y ->
 --  - Finaly, the "Linearization" tells us _what constraints define what varible_. This is an important aspect of the
 --    system: variables are only constrained by assertions that talk about the variable itself and variables that
 --    are solved before it. In this case `v0` (y) is defined by `y <. 10`, `v1` (x) by `x <. y` and `v3` by the equalities
---    in the `Let` constructs (we will get back to how they work later on). (TODO: get back to how they work later on)
+--    in the `Let` constructs.
 --
 -- As the generator executes this plan it will pick the variables in the order in which they appear in the linearization
 -- and generate the corresponding values. For example, an execution trace could go like the following pseudo-trace (the details of how
