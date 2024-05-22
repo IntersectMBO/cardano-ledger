@@ -264,11 +264,42 @@ tightFit1 = constrained' $ \x y ->
 --     assert $ Equal (Snd (ToGeneric v3)) v0
 
 -- This gives us more balanced constraints that solve `v1` before they solve `v0`!
+-- Consequently, this constraint generates reasonable values:
 
--- TODO:
---  - Booleans
---    - ifElse (only show simple example here, more complex example once
---      fix has been merged)
+-- λ> sample $ genFromSpec_ tightFit1
+-- (1,2)
+-- (2,3)
+-- (9,15)
+-- (4,10)
+-- (12,27)
+-- (15,21)
+-- (10,30)
+-- (23,51)
+-- (7,34)
+-- (21,46)
+-- (28,49)
+
+-- We also support booleans with `ifElse :: Term fn Bool -> Pred fn -> Pred fn -> Pred fn`
+-- where the branches of the `ifElse` depend on the scrutinee.
+
+booleanExample :: Specification BaseFn (Int, Int)
+booleanExample = constrained' $ \ x y ->
+  ifElse (0 <. x)
+    (y ==. 10)
+    (y ==. 20)
+
+-- sample $ genFromSpec_ booleanExample
+-- (0,20)
+-- (2,10)
+-- (4,10)
+-- (1,10)
+-- (-2,20)
+-- (3,10)
+-- (7,10)
+-- (-8,20)
+-- (-5,20)
+-- (-2,20)
+-- (-19,20)
 
 -- We can combine `ifElse` and `dependsOn` to write a nice example saying
 -- that a PVP version pair `q` can follow a pair `p`.
