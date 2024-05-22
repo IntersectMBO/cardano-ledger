@@ -56,7 +56,7 @@ import Control.State.Transition (
   (?!),
  )
 import Control.State.Transition.Simple (Embed (wrapFailed))
-import Data.Sequence (Seq, fromList)
+import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -172,9 +172,9 @@ bbodyTransition =
               , UnserialisedBlock bhview txsSeq
               )
           ) -> do
-        let txs = fromTxSeq txsSeq
+        let txs = fromTxZones txsSeq
             actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashTxSeq txsSeq
+            actualBodyHash = hashTxZones txsSeq
 
         actualBodySize
           == fromIntegral (bhviewBSize bhview)
@@ -186,7 +186,11 @@ bbodyTransition =
 
         ls' <-
           trans @(EraRule "ZONES" era) $
-            TRC (LedgersEnv (bhviewSlot bhview) pp account, ls, fromList [StrictSeq.fromStrict txs]) -- TODO WG obviously when we have incoming zones this can be a seq of seqs
+            TRC
+              ( LedgersEnv (bhviewSlot bhview) pp account
+              , ls
+              , StrictSeq.fromStrict <$> StrictSeq.fromStrict txs
+              )
 
         -- Note that this may not actually be a stake pool - it could be a genesis key
         -- delegate. However, this would only entail an overhead of 7 counts, and it's

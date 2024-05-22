@@ -596,29 +596,29 @@ hashScript =
 --   (Tx era)', witnessed by 'fromTxSeq' and 'toTxSeq'.
 class
   ( EraTx era
-  , Eq (TxSeq era)
-  , Show (TxSeq era)
-  , EncCBORGroup (TxSeq era)
-  , DecCBOR (Annotator (TxSeq era))
+  , Eq (TxZones era)
+  , Show (TxZones era)
+  , EncCBORGroup (TxZones era)
+  , DecCBOR (Annotator (TxZones era))
   ) =>
   EraSegWits era
   where
-  type TxSeq era = (r :: Type) | r -> era
+  type TxZones era = (r :: Type) | r -> era
 
-  fromTxSeq :: TxSeq era -> StrictSeq (Tx era)
-  toTxSeq :: StrictSeq (Tx era) -> TxSeq era
+  fromTxZones :: TxZones era -> StrictSeq (StrictSeq (Tx era))
+  toTxZones :: StrictSeq (StrictSeq (Tx era)) -> TxZones era
 
   -- | Get the block body hash from the TxSeq. Note that this is not a regular
   -- "hash the stored bytes" function since the block body hash forms a small
   -- Merkle tree.
-  hashTxSeq ::
-    TxSeq era ->
+  hashTxZones ::
+    TxZones era ->
     Hash.Hash (CC.HASH (EraCrypto era)) EraIndependentBlockBody
 
   -- | The number of segregated components
   numSegComponents :: Word64
 
-bBodySize :: forall era. EraSegWits era => ProtVer -> TxSeq era -> Int
+bBodySize :: forall era. EraSegWits era => ProtVer -> TxZones era -> Int
 bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
 txIdTx :: EraTx era => Tx era -> TxId (EraCrypto era)

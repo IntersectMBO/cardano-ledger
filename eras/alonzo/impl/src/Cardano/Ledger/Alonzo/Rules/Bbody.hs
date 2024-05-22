@@ -189,7 +189,7 @@ bbodyTransition ::
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , EraSegWits era
   , AlonzoEraTxWits era
-  , Era.TxSeq era ~ AlonzoTxSeq era
+  , Era.TxZones era ~ AlonzoTxSeq era
   , Tx era ~ AlonzoTx era
   , AlonzoEraPParams era
   ) =>
@@ -204,7 +204,7 @@ bbodyTransition =
           ) -> do
         let txs = txSeqTxns txsSeq
             actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashTxSeq @era txsSeq
+            actualBodyHash = hashTxZones @era txsSeq
 
         actualBodySize
           == fromIntegral (bhviewBSize bh)
@@ -260,7 +260,7 @@ instance
   , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
-  , Era.TxSeq era ~ AlonzoTxSeq era
+  , Era.TxZones era ~ AlonzoTxSeq era
   , Tx era ~ AlonzoTx era
   , EraSegWits era
   , AlonzoEraPParams era

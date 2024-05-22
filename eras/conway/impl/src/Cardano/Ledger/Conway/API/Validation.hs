@@ -73,7 +73,7 @@ class
   , Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era
   , State (EraRule "BBODY" era) ~ ConwayBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
-  , EncCBORGroup (TxSeq era)
+  , EncCBORGroup (TxZones era)
   , State (EraRule "ZONES" era) ~ LedgerState era
   ) =>
   ApplyBlock era

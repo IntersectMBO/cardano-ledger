@@ -25,6 +25,8 @@ import Cardano.Ledger.Babbage.TxWits ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Control.Arrow (left)
+import Control.Monad ((<=<))
+import qualified Data.Sequence.Strict as StrictSeq
 
 newtype BabbageTxUpgradeError
   = BTUEBodyUpgradeError BabbageTxBodyUpgradeError
@@ -69,8 +71,8 @@ instance Crypto c => AlonzoEraTx (BabbageEra c) where
   {-# INLINE isValidTxL #-}
 
 instance Crypto c => EraSegWits (BabbageEra c) where
-  type TxSeq (BabbageEra c) = AlonzoTxSeq (BabbageEra c)
-  fromTxSeq = txSeqTxns
-  toTxSeq = AlonzoTxSeq
-  hashTxSeq = hashAlonzoTxSeq
+  type TxZones (BabbageEra c) = AlonzoTxSeq (BabbageEra c)
+  fromTxZones = fmap StrictSeq.singleton . txSeqTxns
+  toTxZones = AlonzoTxSeq . StrictSeq.forceToStrict . (StrictSeq.fromStrict <=< StrictSeq.fromStrict)
+  hashTxZones = hashAlonzoTxSeq
   numSegComponents = 4
