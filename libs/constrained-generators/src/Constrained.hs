@@ -112,6 +112,7 @@ module Constrained (
   length_,
   cNothing_,
   cJust_,
+  null_,
   injectFn,
   app,
   lit,
@@ -130,6 +131,9 @@ module Constrained (
   algebra,
   inject,
   toPred,
+  -- Understanding the execution of specs
+  printPlan,
+  -- Re-exports
   module X,
 )
 where
