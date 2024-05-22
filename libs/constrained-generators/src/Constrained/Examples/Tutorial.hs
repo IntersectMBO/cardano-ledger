@@ -91,7 +91,6 @@ specProd0 = constrained $ \p -> fst_ p <. snd_ p
 -- extend the system. However, for now suffice to say that it's a lot easier to solve
 -- constraints that look like `2 * x <. 10` than it is to solve constraints
 -- like `x <. 10 - x`.
--- TODO: better example here!
 
 -- To overcome the fundamental restrction we can use `match`:
 -- match ::
@@ -318,13 +317,34 @@ canFollowExample = constrained' $ \p q ->
 -- ((23,21),(23,22))
 -- ((26,14),(26,15))
 
--- TODO:
---  - Sum types
+-- We have native support for sum types using `caseOn` and `branch`:
 
--- TODO:
---  - start off with a simpler example for sets (union and disjont?)
+sumExample :: Specification BaseFn (Either Int Bool)
+sumExample = constrained $ \e ->
+  (caseOn e)
+    (branch $ \ i -> i <. 0)
+    (branch $ \ b -> not_ b)
 
--- We can also quantify over constraints using `
+-- Furthermore, cases are solved _inside-out_ by default:
+
+sumExampleTwo :: Specification BaseFn (Int, Either Int Bool)
+sumExampleTwo = constrained' $ \i e ->
+  [ caseOn e
+      (branch $ \ j -> i <. j)
+      (branch $ \ b -> not_ b)
+  , assert $ 20 <. i
+  ]
+
+-- We can work with sets with operations like `subset_`, `union_` (or `<>`), `disjoint_`, and `singleton_`:
+
+setExample :: Specification BaseFn (Set Int, Set Int, Set Int)
+setExample = constrained' $ \ xs ys zs ->
+  [ xs `subset_` (ys <> zs)
+  , sizeOf_ ys <=. 10
+  ]
+
+-- We can also quantify over things like sets with `forAll`:
+
 forAllFollow0 :: Specification BaseFn ((Int, Int), Set (Int, Int))
 forAllFollow0 = constrained' $ \ p qs ->
   [ forAll qs $ \ q -> pair_ p q `satisfies` canFollowExample
@@ -405,5 +425,6 @@ fooBarBaz = constrained $ \ fbb ->
 --  - reify
 --  - monitor
 --  - Extending the function universe
+--    - Needs explaining how propagateSpecFun works
 --  - More complicated work with your own types (e.g. treating a sum type as a product type like we do with some types that have patterns
 --  that unify multiple constructors).
