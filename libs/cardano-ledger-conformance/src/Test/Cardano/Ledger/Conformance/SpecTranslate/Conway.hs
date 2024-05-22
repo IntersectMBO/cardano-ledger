@@ -574,27 +574,7 @@ instance SpecTranslate ctx (ConwayTxCert era) where
     Agda.RetirePool
       <$> toSpecRep (KeyHashObj kh)
       <*> toSpecRep e
-  toSpecRep (ConwayTxCertGov (ConwayRegDRep c d _)) =
-    Agda.RegDRep
-      <$> toSpecRep c
-      <*> toSpecRep d
-      <*> pure ()
-  toSpecRep (ConwayTxCertGov (ConwayUnRegDRep c _)) =
-    Agda.DeRegDRep
-      <$> toSpecRep c
-  toSpecRep (ConwayTxCertGov (ConwayUpdateDRep c _)) =
-    Agda.RegDRep
-      <$> toSpecRep c
-      <*> pure 0
-      <*> pure ()
-  toSpecRep (ConwayTxCertGov (ConwayAuthCommitteeHotKey c h)) =
-    Agda.CCRegHot
-      <$> toSpecRep c
-      <*> toSpecRep (SJust h)
-  toSpecRep (ConwayTxCertGov (ConwayResignCommitteeColdKey c _)) =
-    Agda.CCRegHot
-      <$> toSpecRep c
-      <*> toSpecRep (SNothing @(Credential _ _))
+  toSpecRep (ConwayTxCertGov c) = toSpecRep c
 
 instance SpecTranslate ctx (ConwayGovCert era) where
   type SpecRep (ConwayGovCert era) = Agda.TxCert
