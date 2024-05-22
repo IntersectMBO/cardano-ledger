@@ -1044,6 +1044,15 @@ prepareLinearization p = do
       graph = transitiveClosure $ hints <> respecting hints (foldMap computeDependencies preds)
   (,graph) <$> linearize preds graph
 
+printPlan :: HasSpec fn a => Specification fn a -> IO ()
+printPlan = \case
+  (simplifySpec -> spec@(SuspendedSpec _ p))
+    | Result _ (lin, graph) <- prepareLinearization p -> do
+        print $ "Simplified spec:" /> pretty spec
+        print $ "Graph:" /> pretty graph
+        print $ "Linearization:" /> prettyLinear lin
+  _ -> putStrLn "No plan."
+
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
 genFromPreds :: (MonadGenError m, BaseUniverse fn) => Pred fn -> GenT m Env

@@ -262,14 +262,15 @@ branch body =
   -- will work just fine.
   bind (buildBranch @p @fn body . toArgs @a @fn)
 
-type IsProductType fn a = ( HasSimpleRep a
-                          , Cases (SimpleRep a) ~ '[SimpleRep a]
-                          , SimpleRep a ~ SumOver (Cases (SimpleRep a))
-                          , IsProd (SimpleRep a)
-                          , HasSpec fn (SimpleRep a)
-                          , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
-                          , All (HasSpec fn) (ProductAsList a)
-                          )
+type IsProductType fn a =
+  ( HasSimpleRep a
+  , Cases (SimpleRep a) ~ '[SimpleRep a]
+  , SimpleRep a ~ SumOver (Cases (SimpleRep a))
+  , IsProd (SimpleRep a)
+  , HasSpec fn (SimpleRep a)
+  , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
+  , All (HasSpec fn) (ProductAsList a)
+  )
 
 type ProductAsList a = Args (SimpleRep a)
 

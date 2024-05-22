@@ -119,6 +119,8 @@ module Constrained (
   inject,
   toPred,
   module X,
+  -- Helpers
+  printPlan,
 )
 where
 
