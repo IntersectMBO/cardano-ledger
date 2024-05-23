@@ -88,7 +88,7 @@ data PlutusWithContext c where
     -- that preserves deserialized `PlutusRunnable` after verifying wellformedness of
     -- plutus scripts during transaction validation (yet to be implemented).
     , pwcScriptHash :: !(ScriptHash c)
-    , pwcDatums :: !PlutusDatums
+    , pwcArgs :: !(PlutusArgs l)
     -- ^ All of the arguments to the Plutus scripts, including the redeemer and the
     -- Plutus context that was obtained from the transaction translation
     , pwcExUnits :: !ExUnits
@@ -106,7 +106,7 @@ instance NFData (PlutusWithContext c) where
     rnf pwcProtocolVersion `seq`
       rnf pwcScript `seq`
         rnf pwcScriptHash `seq`
-          rnf pwcDatums `seq`
+          rnf pwcArgs `seq`
             rnf pwcExUnits `seq`
               rnf pwcCostModel
 
@@ -114,7 +114,7 @@ instance Eq (PlutusWithContext c) where
   pwc1@(PlutusWithContext {pwcScript = s1}) == pwc2@(PlutusWithContext {pwcScript = s2}) =
     pwcProtocolVersion pwc1 == pwcProtocolVersion pwc2
       && pwcScriptHash pwc1 == pwcScriptHash pwc2
-      && pwcDatums pwc1 == pwcDatums pwc2
+      && pwcArgs pwc1 == pwcArgs pwc2
       && pwcExUnits pwc1 == pwcExUnits pwc2
       && pwcCostModel pwc1 == pwcCostModel pwc2
       && eqScripts s1 s2
@@ -165,24 +165,13 @@ instance Semigroup (ScriptResult c) where
 instance Monoid (ScriptResult c) where
   mempty = Passes mempty
 
-newtype PlutusDatums = PlutusDatums {unPlutusDatums :: [PV1.Data]}
-  deriving (Eq, Show, Generic)
-
-instance NFData PlutusDatums
-
-instance EncCBOR PlutusDatums where
-  encCBOR (PlutusDatums d) = encCBOR d
-
-instance DecCBOR PlutusDatums where
-  decCBOR = PlutusDatums <$> decCBOR
-
 instance Crypto c => ToCBOR (PlutusWithContext c) where
   toCBOR (PlutusWithContext {..}) =
     Plain.encodeListLen 6
       <> toCBOR pwcProtocolVersion
       <> toPlainEncoding pwcProtocolVersion (either encCBOR encCBOR pwcScript)
       <> toPlainEncoding pwcProtocolVersion (encCBOR pwcScriptHash)
-      <> toPlainEncoding pwcProtocolVersion (encCBOR pwcDatums)
+      <> toPlainEncoding pwcProtocolVersion (encCBOR pwcArgs)
       <> toPlainEncoding pwcProtocolVersion (encCBOR pwcExUnits)
       <> toPlainEncoding pwcProtocolVersion (encodeCostModel pwcCostModel)
 
@@ -200,7 +189,7 @@ instance Crypto c => FromCBOR (PlutusWithContext c) where
             <> show pwcScriptHash
             <> " doesn't match the actual: "
             <> show scriptHash
-      pwcDatums <- decCBOR
+      pwcArgs <- decCBOR
       pwcExUnits <- decCBOR
       pwcCostModel <- decodeCostModel lang
       pure PlutusWithContext {..}
@@ -222,14 +211,13 @@ debugPlutus db =
         Right pwc@(PlutusWithContext {..}) ->
           let cm = getEvaluationContext pwcCostModel
               eu = transExUnits pwcExUnits
-              PlutusDatums d = pwcDatums
               onDecoderError err = DebugFailure [] err pwc
               toDebugInfo = \case
                 (logs, Left err) -> DebugFailure logs err pwc
                 (logs, Right ex) -> DebugSuccess logs ex
            in withRunnablePlutusWithContext pwc onDecoderError $ \plutusRunnable ->
                 toDebugInfo $
-                  evaluatePlutusRunnable pwcProtocolVersion PV1.Verbose cm eu plutusRunnable d
+                  evaluatePlutusRunnable pwcProtocolVersion PV1.Verbose cm eu plutusRunnable pwcArgs
 
 runPlutusScript :: PlutusWithContext c -> ScriptResult c
 runPlutusScript = snd . runPlutusScriptWithLogs
@@ -255,13 +243,15 @@ evaluatePlutusWithContext mode pwc@PlutusWithContext {..} =
       (getEvaluationContext pwcCostModel)
       (transExUnits pwcExUnits)
       plutusRunnable
-      (unPlutusDatums pwcDatums)
+      pwcArgs
 
--- | Explain why a script might fail. Scripts come in two flavors:
+-- | Explain why a script might fail. Scripts come in three flavors:
 --
--- (1) with 3 data arguments [data,redeemer,context]
+-- (1) with 3 data arguments @[data,redeemer,context]@ for `PlutusV1` and `PlustuV2`
 --
--- (2) with 2 data arguments [redeemer,context].
+-- (2) with 2 data arguments @[redeemer,context]@ for `PlutusV1` and `PlustuV2`
+--
+-- (3) with 1 argument @context@ for `PlutusV3` onwards
 --
 -- It pays to decode the context data into a real context because that provides
 -- way more information. But there is no guarantee the context data really can
@@ -270,7 +260,7 @@ explainPlutusEvaluationError ::
   PlutusWithContext c ->
   P.EvaluationError ->
   ScriptResult c
-explainPlutusEvaluationError pwc@PlutusWithContext {pwcProtocolVersion, pwcScript, pwcDatums} e =
+explainPlutusEvaluationError pwc@PlutusWithContext {pwcProtocolVersion, pwcScript, pwcArgs} e =
   let lang = either plutusLanguage plutusLanguage pwcScript
       Plutus binaryScript = either id plutusFromRunnable pwcScript
       firstLines =
@@ -298,7 +288,7 @@ explainPlutusEvaluationError pwc@PlutusWithContext {pwcProtocolVersion, pwcScrip
               ]
           Just ctx -> "The script context is:\n" ++ ctx
       dataLines =
-        case unPlutusDatums pwcDatums of
+        case unPlutusDatums pwcArgs of
           [dat, redeemer, info] ->
             [ "The datum is: " ++ show dat
             , "The redeemer is: " ++ show redeemer

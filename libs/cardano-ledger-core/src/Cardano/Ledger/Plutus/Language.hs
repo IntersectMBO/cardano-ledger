@@ -12,6 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | This module provides data structures and operations for talking about
 --     Non-native Script languages. It is expected that new languages (or new
@@ -83,6 +84,7 @@ import qualified Data.ByteString.Base64 as B64 (encode)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Either (isRight)
 import Data.Ix (Ix)
+import Data.Kind (Type)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
@@ -304,6 +306,9 @@ plutusLanguage _ = case isLanguage @l of
 -- | For implicit reflection on '@SLanguage@'
 -- See "Cardano.Ledger.Alonzo.Plutus.TxInfo" for example usage
 class Typeable l => PlutusLanguage (l :: Language) where
+  type PlutusArgs l :: Type
+  type PlutusArgs l = P.Data
+
   isLanguage :: SLanguage l
 
   -- | Tag that will be used as a prefix to compute the `ScriptHash`
@@ -328,7 +333,7 @@ class Typeable l => PlutusLanguage (l :: Language) where
     -- | The script to evaluate
     PlutusRunnable l ->
     -- | The arguments to the script
-    [P.Data] ->
+    PlutusArgs l ->
     (P.LogOutput, Either P.EvaluationError P.ExBudget)
 
   -- | Similar to `evaluatePlutusRunnable`, except does not require `P.ExBudget` to be
@@ -344,10 +349,11 @@ class Typeable l => PlutusLanguage (l :: Language) where
     -- | The script to evaluate
     PlutusRunnable l ->
     -- | The arguments to the script
-    [P.Data] ->
+    PlutusArgs l ->
     (P.LogOutput, Either P.EvaluationError P.ExBudget)
 
 instance PlutusLanguage 'PlutusV1 where
+  type PlutusArgs 'PlutusV1 = [P.Data]
   isLanguage = SPlutusV1
   plutusLanguageTag _ = 0x01
   decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
@@ -358,6 +364,7 @@ instance PlutusLanguage 'PlutusV1 where
     PV1.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
 
 instance PlutusLanguage 'PlutusV2 where
+  type PlutusArgs 'PlutusV2 = [P.Data]
   isLanguage = SPlutusV2
   plutusLanguageTag _ = 0x02
   decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
