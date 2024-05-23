@@ -234,6 +234,8 @@ instance
 
 instance ToExpr (PParams era) => ToExpr (GovEnv era)
 
+instance ToExpr (PParams era) => ToExpr (ConwayGovCertEnv era)
+
 instance
   ( ToExpr (Value era)
   , ToExpr (TxOut era)

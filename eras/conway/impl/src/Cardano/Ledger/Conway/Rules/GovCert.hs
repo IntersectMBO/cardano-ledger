@@ -67,6 +67,8 @@ data ConwayGovCertEnv era = ConwayGovCertEnv
   }
   deriving (Generic)
 
+instance (NFData (PParams era), Era era) => NFData (ConwayGovCertEnv era)
+
 deriving instance Show (PParams era) => Show (ConwayGovCertEnv era)
 
 deriving instance Eq (PParams era) => Eq (ConwayGovCertEnv era)

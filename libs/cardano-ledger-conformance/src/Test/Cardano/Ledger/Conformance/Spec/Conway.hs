@@ -18,6 +18,7 @@ spec = describe "Conway conformance tests" $ do
   prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
   prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
   xprop "RATIFY" $ conformsToImpl @"RATIFY" @ConwayFn @Conway
+  prop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
   describe "Generators" $ do
     let
       genEnv = do

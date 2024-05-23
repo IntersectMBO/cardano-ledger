@@ -39,7 +39,7 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.PParams (THKD (..))
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure, RatifyState)
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
+import Cardano.Ledger.Conway.TxCert (ConwayGovCert, ConwayTxCert)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -74,6 +74,8 @@ import Test.Cardano.Ledger.Constrained.Conway (
   certEnvSpec,
   certStateSpec,
   genProposalsSplit,
+  govCertEnvSpec,
+  govCertSpec,
   govEnvSpec,
   govProceduresSpec,
   govProposalsSpec,
@@ -81,6 +83,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   utxoEnvSpec,
   utxoStateSpec,
   utxoTxSpec,
+  vStateSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.Instances ()
 import Test.Cardano.Ledger.Conway.ImpTest (impAnn, logEntry)
@@ -201,10 +204,9 @@ agdaCompatiblePPU ppup =
       Term fn (THKD gs StrictMaybe a) ->
       Pred fn
     isUnmodified x =
-      caseOn
-        x
-        (branch $ const True)
-        (branch $ const False)
+      (caseOn x)
+        (branch $ \_ -> True)
+        (branch $ \_ -> False)
     isModified ::
       ( HasSpec fn a
       , Typeable gs
@@ -214,10 +216,9 @@ agdaCompatiblePPU ppup =
       Term fn (THKD gs StrictMaybe a) ->
       Pred fn
     isModified x =
-      caseOn
-        x
-        (branch $ const False)
-        (branch $ const True)
+      (caseOn x)
+        (branch $ \_ -> False)
+        (branch $ \_ -> True)
 
 agdaCompatibleProposal ::
   IsConwayUniv fn =>
@@ -225,15 +226,14 @@ agdaCompatibleProposal ::
   Pred fn
 agdaCompatibleProposal prop =
   match prop $ \_ _ govAction _ ->
-    caseOn
-      govAction
+    (caseOn govAction)
       (branch $ \_ ppup _ -> agdaCompatiblePPU ppup)
       (branch $ \_ _ -> True)
       (branch $ \_ _ -> True)
-      (branch $ const True)
+      (branch $ \_ -> True)
       (branch $ \_ _ _ _ -> True)
       (branch $ \_ _ -> True)
-      (branch $ const True)
+      (branch $ \_ -> True)
 
 agdaCompatibleGAS ::
   IsConwayUniv fn =>
@@ -344,11 +344,10 @@ instance
                 \outs -> forAll' outs $
                   \txOut _ -> match txOut $
                     \_ _ dat _ ->
-                      caseOn
-                        dat
-                        (branch $ const True)
-                        (branch $ const True)
-                        (branch $ const False)
+                      (caseOn dat)
+                        (branch $ \_ -> True)
+                        (branch $ \_ -> True)
+                        (branch $ \_ -> False)
 
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
@@ -391,7 +390,7 @@ instance
   signalSpec _ env st =
     txCertSpec env st
       <> constrained disableRegCerts
-      <> constrained disableDRepRegCerts
+      <> constrained disableDRepRegCerts'
     where
       disableRegCerts :: Term fn (ConwayTxCert Conway) -> Pred fn
       disableRegCerts cert =
@@ -405,24 +404,12 @@ instance
           )
           (branch $ \_ -> True)
           (branch $ \_ -> True)
-      -- ConwayRegDRep certificates seem to trigger some kind of a bug in the
-      -- MAlonzo code where it somehow reaches an uncovered case.
-      --
-      -- TODO investigate what's causing this bug and try to get rid of this
-      -- constraint
-      disableDRepRegCerts :: Term fn (ConwayTxCert Conway) -> Pred fn
-      disableDRepRegCerts cert =
+      disableDRepRegCerts' :: Term fn (ConwayTxCert Conway) -> Pred fn
+      disableDRepRegCerts' cert =
         (caseOn cert)
           (branch $ \_ -> True)
           (branch $ \_ -> True)
-          ( branch $ \govCert ->
-              (caseOn govCert)
-                (branch $ \_ _ _ -> False)
-                (branch $ \_ _ -> True)
-                (branch $ \_ _ -> False)
-                (branch $ \_ _ -> True)
-                (branch $ \_ _ -> True)
-          )
+          (branch disableDRepRegCerts)
 
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
@@ -511,3 +498,34 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
     first (\case {})
       . computationResultToEither
       $ Agda.ratifyStep env st sig
+
+-- ConwayRegDRep certificates seem to trigger some kind of a bug in the
+-- MAlonzo code where it somehow reaches an uncovered case.
+--
+-- TODO investigate what's causing this bug and try to get rid of this
+-- constraint
+disableDRepRegCerts ::
+  IsConwayUniv fn => Term fn (ConwayGovCert StandardCrypto) -> Pred fn
+disableDRepRegCerts govCert =
+  (caseOn govCert)
+    (branch $ \_ _ _ -> False)
+    (branch $ \_ _ -> True)
+    (branch $ \_ _ -> False)
+    (branch $ \_ _ -> True)
+    (branch $ \_ _ -> True)
+
+instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
+  type ExecContext fn "GOVCERT" Conway = ConwayCertExecContext Conway
+
+  environmentSpec _ctx = govCertEnvSpec
+
+  stateSpec _ctx _env = vStateSpec
+
+  signalSpec _ctx env st =
+    govCertSpec env st
+      <> constrained disableDRepRegCerts
+
+  runAgdaRule env st sig =
+    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
+      . computationResultToEither
+      $ Agda.govCertStep env st sig
