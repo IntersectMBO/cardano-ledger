@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Add `Generic` and `NFData` instances for `DelegEnv`
 * Introduce `ShelleyEraScript` class
 * Add `ShelleyEraScript` for `ShelleyEra`
 * Replace patterns within `MultiSig` with `ShelleyEraScript`-constrained ones:
