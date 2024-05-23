@@ -32,6 +32,7 @@ module Cardano.Ledger.Plutus.Evaluate (
 )
 where
 
+import Data.Tagged
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -60,6 +61,7 @@ import Cardano.Ledger.Plutus.Language (
   hashPlutusScript,
   plutusFromRunnable,
   plutusLanguage,
+  withSamePlutusLanguage,
  )
 import Cardano.Ledger.Plutus.TxInfo
 import Control.DeepSeq (NFData (..))
@@ -67,6 +69,7 @@ import Control.Monad (unless)
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.UTF8 as BSU
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import PlutusLedgerApi.Common as P (EvaluationError (CodecError), ExBudget, VerboseMode)
@@ -111,19 +114,21 @@ instance NFData (PlutusWithContext c) where
               rnf pwcCostModel
 
 instance Eq (PlutusWithContext c) where
-  pwc1@(PlutusWithContext {pwcScript = s1}) == pwc2@(PlutusWithContext {pwcScript = s2}) =
-    pwcProtocolVersion pwc1 == pwcProtocolVersion pwc2
-      && pwcScriptHash pwc1 == pwcScriptHash pwc2
-      && pwcArgs pwc1 == pwcArgs pwc2
-      && pwcExUnits pwc1 == pwcExUnits pwc2
-      && pwcCostModel pwc1 == pwcCostModel pwc2
-      && eqScripts s1 s2
-    where
-      eqScripts (Left p1) (Left p2) =
-        plutusLanguage p1 == plutusLanguage p2 && plutusBinary p1 == plutusBinary p2
-      eqScripts (Right p1) (Right p2) =
-        plutusLanguage p1 == plutusLanguage p2 && plutusRunnable p1 == plutusRunnable p2
-      eqScripts _ _ = False
+  pwc1@(PlutusWithContext {pwcScript = s1, pwcArgs = args1})
+    == pwc2@(PlutusWithContext {pwcScript = s2, pwcArgs = args2}) =
+      pwcProtocolVersion pwc1 == pwcProtocolVersion pwc2
+        && pwcScriptHash pwc1 == pwcScriptHash pwc2
+        && eqArgs (mkTagged s1 args1) (mkTagged s2 args2)
+        && pwcExUnits pwc1 == pwcExUnits pwc2
+        && pwcCostModel pwc1 == pwcCostModel pwc2
+        && eqScripts s1 s2
+      where
+        eqArgs a1 a2 = fromMaybe False $ withSamePlutusLanguage a1 a2 (==)
+        eqScripts (Left p1) (Left p2) =
+          plutusLanguage p1 == plutusLanguage p2 && plutusBinary p1 == plutusBinary p2
+        eqScripts (Right p1) (Right p2) =
+          plutusLanguage p1 == plutusLanguage p2 && plutusRunnable p1 == plutusRunnable p2
+        eqScripts _ _ = False
 
 data ScriptFailure c = ScriptFailure
   { scriptFailureMessage :: Text
@@ -146,14 +151,14 @@ withRunnablePlutusWithContext ::
   PlutusWithContext c ->
   -- | Handle the decoder failure
   (P.EvaluationError -> a) ->
-  (forall l. PlutusLanguage l => PlutusRunnable l -> a) ->
+  (forall l. PlutusLanguage l => PlutusRunnable l -> PlutusArgs l -> a) ->
   a
-withRunnablePlutusWithContext PlutusWithContext {pwcProtocolVersion, pwcScript} onError f =
+withRunnablePlutusWithContext PlutusWithContext {pwcProtocolVersion, pwcScript, pwcArgs} onError f =
   case pwcScript of
-    Right pr -> f pr
+    Right pr -> f pr pwcArgs
     Left plutus ->
       case decodePlutusRunnable pwcProtocolVersion plutus of
-        Right pr -> f pr
+        Right pr -> f pr pwcArgs
         Left err -> onError (P.CodecError err)
 
 instance Semigroup (ScriptResult c) where
@@ -215,9 +220,9 @@ debugPlutus db =
               toDebugInfo = \case
                 (logs, Left err) -> DebugFailure logs err pwc
                 (logs, Right ex) -> DebugSuccess logs ex
-           in withRunnablePlutusWithContext pwc onDecoderError $ \plutusRunnable ->
+           in withRunnablePlutusWithContext pwc onDecoderError $ \plutusRunnable args ->
                 toDebugInfo $
-                  evaluatePlutusRunnable pwcProtocolVersion PV1.Verbose cm eu plutusRunnable pwcArgs
+                  evaluatePlutusRunnable pwcProtocolVersion PV1.Verbose cm eu plutusRunnable args
 
 runPlutusScript :: PlutusWithContext c -> ScriptResult c
 runPlutusScript = snd . runPlutusScriptWithLogs
@@ -236,26 +241,20 @@ evaluatePlutusWithContext ::
   PlutusWithContext c ->
   ([Text], Either P.EvaluationError P.ExBudget)
 evaluatePlutusWithContext mode pwc@PlutusWithContext {..} =
-  withRunnablePlutusWithContext pwc (([],) . Left) $ \plutusRunnable ->
+  withRunnablePlutusWithContext pwc (([],) . Left) $
     evaluatePlutusRunnable
       pwcProtocolVersion
       mode
       (getEvaluationContext pwcCostModel)
       (transExUnits pwcExUnits)
-      plutusRunnable
-      pwcArgs
 
 -- | Explain why a script might fail. Scripts come in three flavors:
 --
--- (1) with 3 data arguments @[data,redeemer,context]@ for `PlutusV1` and `PlustuV2`
+-- (1) with 3 arguments @[data,redeemer,context]@ for `PlutusV1` and `PlustuV2`
 --
--- (2) with 2 data arguments @[redeemer,context]@ for `PlutusV1` and `PlustuV2`
+-- (2) with 2 arguments @[redeemer,context]@ for `PlutusV1` and `PlustuV2`
 --
 -- (3) with 1 argument @context@ for `PlutusV3` onwards
---
--- It pays to decode the context data into a real context because that provides
--- way more information. But there is no guarantee the context data really can
--- be decoded.
 explainPlutusEvaluationError ::
   PlutusWithContext c ->
   P.EvaluationError ->
@@ -277,30 +276,7 @@ explainPlutusEvaluationError pwc@PlutusWithContext {pwcProtocolVersion, pwcScrip
         PlutusV2 -> show . pretty <$> (PV2.fromData d :: Maybe PV2.ScriptContext)
         PlutusV3 -> show . pretty <$> (PV3.fromData d :: Maybe PV3.ScriptContext)
 
-      ctxMessage info =
-        case getCtxAsString info lang of
-          Nothing ->
-            concat
-              [ "The third data argument does not translate to a "
-              , show lang
-              , " script context\n"
-              , show info
-              ]
-          Just ctx -> "The script context is:\n" ++ ctx
-      dataLines =
-        case unPlutusDatums pwcArgs of
-          [dat, redeemer, info] ->
-            [ "The datum is: " ++ show dat
-            , "The redeemer is: " ++ show redeemer
-            , ctxMessage info
-            ]
-          [redeemer, info] ->
-            [ "The redeemer is: " ++ show redeemer
-            , ctxMessage info
-            ]
-          ds ->
-            [ "Received an unexpected number of Data"
-            , "The data is:\n" ++ show ds
-            ]
-      line = pack . unlines $ "" : firstLines ++ show binaryScript : shLine : plutusError : pvLine : dataLines
+      dataLines = show (pretty pwcArgs)
+      line =
+        pack . unlines $ "" : firstLines ++ show binaryScript : shLine : plutusError : pvLine : [dataLines]
    in scriptFail $ ScriptFailure line pwc

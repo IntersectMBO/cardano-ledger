@@ -12,7 +12,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module provides data structures and operations for talking about
 --     Non-native Script languages. It is expected that new languages (or new
@@ -44,6 +46,7 @@ module Cardano.Ledger.Plutus.Language (
   toSLanguage,
   withSLanguage,
   asSLanguage,
+  withSamePlutusLanguage,
 ) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash (castHash, hashWith)
@@ -85,8 +88,9 @@ import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Either (isRight)
 import Data.Ix (Ix)
 import Data.Kind (Type)
+import Data.Proxy (Proxy (..))
 import Data.Text (Text)
-import Data.Typeable (Typeable)
+import Data.Typeable (Typeable, gcast)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -105,6 +109,7 @@ import qualified PlutusLedgerApi.Common as P (
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import Prettyprinter (Doc, Pretty (..), align, indent, line, vsep, (<+>))
 import System.Random.Stateful (Random, Uniform (..), UniformRange (..), uniformEnumM, uniformEnumRM)
 
 -- | This is a deserialized version of the `Plutus` type that can be used directly with
@@ -303,11 +308,112 @@ plutusLanguage _ = case isLanguage @l of
   SPlutusV2 -> PlutusV2
   SPlutusV3 -> PlutusV3
 
+type family ScriptContext (l :: Language) = r | r -> l where
+  ScriptContext 'PlutusV1 = PV1.ScriptContext
+  ScriptContext 'PlutusV2 = PV2.ScriptContext
+  ScriptContext 'PlutusV3 = PV3.ScriptContext
+
+data LegacyPlutusArgs l
+  = LegacyPlutusArgs2
+      -- | Redeemer
+      !P.Data
+      -- | ScriptContext
+      !(ScriptContext l)
+  | LegacyPlutusArgs3
+      -- | Mandatory Spending Datum
+      !P.Data
+      -- | Redeemer
+      !P.Data
+      -- | ScriptContext
+      !(ScriptContext l)
+
+deriving instance Eq (ScriptContext l) => Eq (LegacyPlutusArgs l)
+deriving instance Show (ScriptContext l) => Show (LegacyPlutusArgs l)
+
+instance EncCBOR PV1.ScriptContext where
+  encCBOR = encCBOR . PV3.toData
+
+instance DecCBOR PV1.ScriptContext where
+  decCBOR = decCBOR >>= decodeScriptContextData
+
+instance EncCBOR PV2.ScriptContext where
+  encCBOR = encCBOR . PV3.toData
+
+instance DecCBOR PV2.ScriptContext where
+  decCBOR = decCBOR >>= decodeScriptContextData
+
+instance EncCBOR PV3.ScriptContext where
+  encCBOR = encCBOR . PV3.toData
+
+instance DecCBOR PV3.ScriptContext where
+  decCBOR = decCBOR >>= decodeScriptContextData
+
+decodeScriptContextData :: (PV3.FromData a, MonadFail m) => PV3.Data -> m a
+decodeScriptContextData scriptContextData =
+  case PV3.fromData scriptContextData of
+    Nothing -> fail $ "ScriptContext cannot be decoded from Data: " <> show scriptContextData
+    Just scriptContext -> pure scriptContext
+
+instance (PlutusLanguage l, PV3.ToData (ScriptContext l)) => EncCBOR (LegacyPlutusArgs l) where
+  encCBOR = encCBOR . legacyPlutusArgsToData
+
+instance (PlutusLanguage l, PV3.FromData (ScriptContext l)) => DecCBOR (LegacyPlutusArgs l) where
+  decCBOR =
+    decCBOR >>= \case
+      [redeemer, scriptContextData] ->
+        LegacyPlutusArgs2 redeemer <$> decodeScriptContextData scriptContextData
+      [datum, redeemer, scriptContextData] ->
+        LegacyPlutusArgs3 datum redeemer <$> decodeScriptContextData scriptContextData
+      args ->
+        fail $ "Invalid number of aruments " <> show (length args) <> " is encoded for " <> show lang
+    where
+      lang = plutusLanguage (Proxy @l)
+
+instance Pretty (ScriptContext l) => Pretty (LegacyPlutusArgs l) where
+  pretty = \case
+    LegacyPlutusArgs2 redeemer scriptContext ->
+      let argsList =
+            [ "Redeemer:"
+            , indent i (pretty redeemer)
+            , "ScriptContext:"
+            , indent i (pretty scriptContext)
+            ]
+       in argsHeader 2 argsList
+    LegacyPlutusArgs3 datum redeemer scriptContext ->
+      let argsList =
+            [ "Datum:"
+            , indent i (pretty datum)
+            , "Redeemer:"
+            , indent i (pretty redeemer)
+            , "ScriptContext:"
+            , indent i (pretty scriptContext)
+            ]
+       in argsHeader 3 argsList
+    where
+      argsHeader :: Int -> [Doc ann] -> Doc ann
+      argsHeader n argsList =
+        "LegacyPlutusArgs" <+> pretty n <+> ":" <+> line <+> "  " <+> align (vsep argsList)
+      i = 5
+
+legacyPlutusArgsToData :: PV3.ToData (ScriptContext l) => LegacyPlutusArgs l -> [P.Data]
+legacyPlutusArgsToData = \case
+  LegacyPlutusArgs2 redeemer scriptContext -> [redeemer, PV3.toData scriptContext]
+  LegacyPlutusArgs3 datum redeemer scriptContext -> [datum, redeemer, PV3.toData scriptContext]
+
 -- | For implicit reflection on '@SLanguage@'
 -- See "Cardano.Ledger.Alonzo.Plutus.TxInfo" for example usage
-class Typeable l => PlutusLanguage (l :: Language) where
+class
+  ( Typeable l
+  , EncCBOR (PlutusArgs l)
+  , DecCBOR (PlutusArgs l)
+  , Pretty (PlutusArgs l)
+  , Show (PlutusArgs l)
+  , Eq (PlutusArgs l)
+  ) =>
+  PlutusLanguage (l :: Language)
+  where
   type PlutusArgs l :: Type
-  type PlutusArgs l = P.Data
+  type PlutusArgs l = ScriptContext l
 
   isLanguage :: SLanguage l
 
@@ -353,26 +459,26 @@ class Typeable l => PlutusLanguage (l :: Language) where
     (P.LogOutput, Either P.EvaluationError P.ExBudget)
 
 instance PlutusLanguage 'PlutusV1 where
-  type PlutusArgs 'PlutusV1 = [P.Data]
+  type PlutusArgs 'PlutusV1 = LegacyPlutusArgs 'PlutusV1
   isLanguage = SPlutusV1
   plutusLanguageTag _ = 0x01
   decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
     PlutusRunnable <$> PV1.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
-    PV1.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
+    PV1.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs . legacyPlutusArgsToData
   evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
-    PV1.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
+    PV1.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs . legacyPlutusArgsToData
 
 instance PlutusLanguage 'PlutusV2 where
-  type PlutusArgs 'PlutusV2 = [P.Data]
+  type PlutusArgs 'PlutusV2 = LegacyPlutusArgs 'PlutusV2
   isLanguage = SPlutusV2
   plutusLanguageTag _ = 0x02
   decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
     PlutusRunnable <$> PV2.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
-    PV2.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
+    PV2.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs . legacyPlutusArgsToData
   evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
-    PV2.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
+    PV2.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs . legacyPlutusArgsToData
 
 instance PlutusLanguage 'PlutusV3 where
   isLanguage = SPlutusV3
@@ -380,9 +486,9 @@ instance PlutusLanguage 'PlutusV3 where
   decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
     PlutusRunnable <$> PV3.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
-    PV3.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
+    PV3.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs . PV3.toData
   evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
-    PV3.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
+    PV3.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs . PV3.toData
 
 toSLanguage :: forall l m. (PlutusLanguage l, MonadFail m) => Language -> m (SLanguage l)
 toSLanguage lang
@@ -417,3 +523,12 @@ guardPlutus lang =
         PlutusV3 -> natVersion @9
    in unlessDecoderVersionAtLeast v $
         fail (show lang <> " is not supported until " <> show v <> " major protocol version")
+
+withSamePlutusLanguage ::
+  forall f1 f2 l1 l2 a.
+  (PlutusLanguage l1, PlutusLanguage l2) =>
+  f1 l1 ->
+  f2 l2 ->
+  (forall l. PlutusLanguage l => f1 l -> f2 l -> a) ->
+  Maybe a
+withSamePlutusLanguage x1 x2 f = f x1 <$> gcast x2
