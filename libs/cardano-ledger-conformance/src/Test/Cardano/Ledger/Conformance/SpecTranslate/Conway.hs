@@ -86,6 +86,8 @@ import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
 import Cardano.Ledger.Conway.Rules (
   CertEnv (..),
   ConwayCertPredFailure,
+  ConwayDelegEnv (..),
+  ConwayDelegPredFailure,
   ConwayGovCertEnv (..),
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
@@ -558,21 +560,6 @@ instance SpecTranslate ctx (Anchor c) where
 instance SpecTranslate ctx (ConwayTxCert era) where
   type SpecRep (ConwayTxCert era) = Agda.TxCert
 
-  toSpecRep (ConwayTxCertDeleg (ConwayRegCert _ _)) = throwError "RegCert not supported"
-  toSpecRep (ConwayTxCertDeleg (ConwayUnRegCert c _)) =
-    Agda.Dereg <$> toSpecRep c
-  toSpecRep (ConwayTxCertDeleg (ConwayDelegCert c d)) =
-    Agda.Delegate
-      <$> toSpecRep c
-      <*> toSpecRep (getVoteDelegatee d)
-      <*> toSpecRep (KeyHashObj <$> getStakePoolDelegatee d)
-      <*> pure 0
-  toSpecRep (ConwayTxCertDeleg (ConwayRegDelegCert s d c)) =
-    Agda.Delegate
-      <$> toSpecRep s
-      <*> toSpecRep (getVoteDelegatee d)
-      <*> toSpecRep (KeyHashObj <$> getStakePoolDelegatee d)
-      <*> toSpecRep c
   toSpecRep (ConwayTxCertPool (RegPool p@PoolParams {ppId})) =
     Agda.RegPool
       <$> toSpecRep (KeyHashObj ppId)
@@ -582,6 +569,7 @@ instance SpecTranslate ctx (ConwayTxCert era) where
       <$> toSpecRep (KeyHashObj kh)
       <*> toSpecRep e
   toSpecRep (ConwayTxCertGov c) = toSpecRep c
+  toSpecRep (ConwayTxCertDeleg x) = toSpecRep x
 
 instance SpecTranslate ctx (ConwayGovCert era) where
   type SpecRep (ConwayGovCert era) = Agda.TxCert
@@ -1173,3 +1161,40 @@ instance SpecTranslate ctx (ConwayExecEnactEnv era) where
       <$> toSpecRep ceeeGid
       <*> toSpecRep ceeeTreasury
       <*> toSpecRep ceeeEpoch
+
+instance
+  ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecTranslate ctx (PParamsHKD Identity era)
+  ) =>
+  SpecTranslate ctx (ConwayDelegEnv era)
+  where
+  type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv
+
+  toSpecRep ConwayDelegEnv {..} =
+    Agda.MkDelegEnv
+      <$> toSpecRep cdePParams
+      <*> toSpecRep (Map.mapKeys KeyHashObj cdePools)
+
+instance SpecTranslate ctx (ConwayDelegCert era) where
+  type SpecRep (ConwayDelegCert era) = Agda.TxCert
+
+  toSpecRep (ConwayRegCert _ _) = throwError "RegCert not supported"
+  toSpecRep (ConwayUnRegCert c _) =
+    Agda.Dereg <$> toSpecRep c
+  toSpecRep (ConwayDelegCert c d) =
+    Agda.Delegate
+      <$> toSpecRep c
+      <*> toSpecRep (getVoteDelegatee d)
+      <*> toSpecRep (KeyHashObj <$> getStakePoolDelegatee d)
+      <*> pure 0
+  toSpecRep (ConwayRegDelegCert s d c) =
+    Agda.Delegate
+      <$> toSpecRep s
+      <*> toSpecRep (getVoteDelegatee d)
+      <*> toSpecRep (KeyHashObj <$> getStakePoolDelegatee d)
+      <*> toSpecRep c
+
+instance SpecTranslate ctx (ConwayDelegPredFailure era) where
+  type SpecRep (ConwayDelegPredFailure era) = OpaqueErrorString
+
+  toSpecRep e = pure . OpaqueErrorString . show $ toExpr e

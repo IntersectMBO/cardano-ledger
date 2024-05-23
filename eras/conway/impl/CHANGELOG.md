@@ -2,6 +2,7 @@
 
 ## 1.14.1.0
 
+* Add `NFData` instance for `ConwayDelegEnv`
 * Add `NFData` instances for:
   * `RatifySignal`
   * `EnactSignal`

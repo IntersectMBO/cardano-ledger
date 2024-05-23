@@ -76,6 +76,8 @@ data ConwayDelegEnv era = ConwayDelegEnv
   }
   deriving (Generic)
 
+instance NFData (PParams era) => NFData (ConwayDelegEnv era)
+
 deriving instance Eq (PParams era) => Eq (ConwayDelegEnv era)
 
 deriving instance Show (PParams era) => Show (ConwayDelegEnv era)

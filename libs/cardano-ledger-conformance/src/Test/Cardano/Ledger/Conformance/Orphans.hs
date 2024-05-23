@@ -53,6 +53,8 @@ deriving instance Generic StakeDistrs
 
 deriving instance Generic EnactEnv
 
+deriving instance Generic DelegEnv
+
 deriving instance Ord Tag
 
 deriving instance Ord Credential
@@ -177,6 +179,8 @@ instance NFData RatifyState
 
 instance NFData EnactEnv
 
+instance NFData DelegEnv
+
 instance ToExpr a => ToExpr (HSSet a)
 
 instance ToExpr Credential where
@@ -243,6 +247,8 @@ instance ToExpr RatifyEnv
 instance ToExpr RatifyState
 
 instance ToExpr EnactEnv
+
+instance ToExpr DelegEnv
 
 instance Default (HSMap k v)
 

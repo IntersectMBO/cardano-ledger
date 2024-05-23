@@ -83,10 +83,13 @@ data DelegEnv era = DelegEnv
   , acnt_ :: !AccountState
   , ppDE :: !(PParams era) -- The protocol parameters are only used for the HardFork mechanism
   }
+  deriving (Generic)
 
 deriving instance Show (PParams era) => Show (DelegEnv era)
 
 deriving instance Eq (PParams era) => Eq (DelegEnv era)
+
+instance NFData (PParams era) => NFData (DelegEnv era)
 
 data ShelleyDelegPredFailure era
   = StakeKeyAlreadyRegisteredDELEG
