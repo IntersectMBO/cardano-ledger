@@ -204,10 +204,9 @@ agdaCompatiblePPU ppup =
       Term fn (THKD gs StrictMaybe a) ->
       Pred fn
     isUnmodified x =
-      caseOn
-        x
-        (branch $ const True)
-        (branch $ const False)
+      (caseOn x)
+        (branch $ \_ -> True)
+        (branch $ \_ -> False)
     isModified ::
       ( HasSpec fn a
       , Typeable gs
@@ -217,10 +216,9 @@ agdaCompatiblePPU ppup =
       Term fn (THKD gs StrictMaybe a) ->
       Pred fn
     isModified x =
-      caseOn
-        x
-        (branch $ const False)
-        (branch $ const True)
+      (caseOn x)
+        (branch $ \_ -> False)
+        (branch $ \_ -> True)
 
 agdaCompatibleProposal ::
   IsConwayUniv fn =>
@@ -228,15 +226,14 @@ agdaCompatibleProposal ::
   Pred fn
 agdaCompatibleProposal prop =
   match prop $ \_ _ govAction _ ->
-    caseOn
-      govAction
+    (caseOn govAction)
       (branch $ \_ ppup _ -> agdaCompatiblePPU ppup)
       (branch $ \_ _ -> True)
       (branch $ \_ _ -> True)
-      (branch $ const True)
+      (branch $ \_ -> True)
       (branch $ \_ _ _ _ -> True)
       (branch $ \_ _ -> True)
-      (branch $ const True)
+      (branch $ \_ -> True)
 
 agdaCompatibleGAS ::
   IsConwayUniv fn =>
@@ -347,11 +344,10 @@ instance
                 \outs -> forAll' outs $
                   \txOut _ -> match txOut $
                     \_ _ dat _ ->
-                      caseOn
-                        dat
-                        (branch $ const True)
-                        (branch $ const True)
-                        (branch $ const False)
+                      (caseOn dat)
+                        (branch $ \_ -> True)
+                        (branch $ \_ -> True)
+                        (branch $ \_ -> False)
 
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
@@ -398,24 +394,21 @@ instance
     where
       disableRegCerts :: Term fn (ConwayTxCert Conway) -> Pred fn
       disableRegCerts cert =
-        caseOn
-          cert
+        (caseOn cert)
           ( branch $ \delegCert ->
-              caseOn
-                delegCert
+              (caseOn delegCert)
                 (branch $ \_ _ -> False)
                 (branch $ \_ _ -> True)
                 (branch $ \_ _ -> True)
                 (branch $ \_ _ _ -> True)
           )
-          (branch $ const True)
-          (branch $ const True)
+          (branch $ \_ -> True)
+          (branch $ \_ -> True)
       disableDRepRegCerts' :: Term fn (ConwayTxCert Conway) -> Pred fn
       disableDRepRegCerts' cert =
-        caseOn
-          cert
-          (branch $ const True)
-          (branch $ const True)
+        (caseOn cert)
+          (branch $ \_ -> True)
+          (branch $ \_ -> True)
           (branch disableDRepRegCerts)
 
   runAgdaRule env st sig =
@@ -506,18 +499,6 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
       . computationResultToEither
       $ Agda.ratifyStep env st sig
 
-data ConwayGovCertExecContext era = ConwayGovCertExecContext
-  { cgcecWithdrawals :: !(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-  , cgcecVotes :: !(VotingProcedures era)
-  }
-  deriving (Generic, Eq, Show)
-
-instance Era era => Arbitrary (ConwayGovCertExecContext era) where
-  arbitrary =
-    ConwayGovCertExecContext
-      <$> arbitrary
-      <*> arbitrary
-
 -- ConwayRegDRep certificates seem to trigger some kind of a bug in the
 -- MAlonzo code where it somehow reaches an uncovered case.
 --
@@ -526,29 +507,15 @@ instance Era era => Arbitrary (ConwayGovCertExecContext era) where
 disableDRepRegCerts ::
   IsConwayUniv fn => Term fn (ConwayGovCert StandardCrypto) -> Pred fn
 disableDRepRegCerts govCert =
-  caseOn
-    govCert
+  (caseOn govCert)
     (branch $ \_ _ _ -> False)
     (branch $ \_ _ -> True)
     (branch $ \_ _ -> False)
     (branch $ \_ _ -> True)
     (branch $ \_ _ -> True)
 
-instance
-  c ~ EraCrypto era =>
-  Inject
-    (ConwayGovCertExecContext era)
-    (Map (Network, Credential 'Staking c) Coin)
-  where
-  inject = cgcecWithdrawals
-
-instance Inject (ConwayGovCertExecContext era) (VotingProcedures era) where
-  inject = cgcecVotes
-
-instance Era era => ToExpr (ConwayGovCertExecContext era)
-
 instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
-  type ExecContext fn "GOVCERT" Conway = ConwayGovCertExecContext Conway
+  type ExecContext fn "GOVCERT" Conway = ConwayCertExecContext Conway
 
   environmentSpec _ctx = govCertEnvSpec
 
