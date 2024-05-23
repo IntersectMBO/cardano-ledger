@@ -7,6 +7,7 @@
   * `ansiWlPretty`
   * `ppEditExpr`
   * `ediff`
+* Add `EncCBOR` and `DecCBOR` instances for `ScriptContext` for PlutusV1/V2/V3
 
 ## 1.3.2.0
 

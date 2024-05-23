@@ -22,7 +22,6 @@ module Cardano.Ledger.Plutus.Evaluate (
   ScriptResult (..),
   scriptPass,
   scriptFail,
-  PlutusDatums (..),
   PlutusDebugInfo (..),
   debugPlutus,
   runPlutusScript,
@@ -32,7 +31,6 @@ module Cardano.Ledger.Plutus.Evaluate (
 )
 where
 
-import Data.Tagged
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -53,7 +51,6 @@ import Cardano.Ledger.Plutus.CostModels (
  )
 import Cardano.Ledger.Plutus.ExUnits (ExUnits)
 import Cardano.Ledger.Plutus.Language (
-  Language (..),
   Plutus (..),
   PlutusLanguage (..),
   PlutusRunnable (..),
@@ -72,11 +69,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
 import Data.Text (Text, pack)
 import GHC.Generics (Generic)
-import PlutusLedgerApi.Common as P (EvaluationError (CodecError), ExBudget, VerboseMode)
-import qualified PlutusLedgerApi.V1 as PV1
-import PlutusLedgerApi.V1.Contexts ()
-import qualified PlutusLedgerApi.V2 as PV2
-import qualified PlutusLedgerApi.V3 as PV3
+import PlutusLedgerApi.Common as P (EvaluationError (CodecError), ExBudget, VerboseMode (..))
 import Prettyprinter (Pretty (..))
 
 -- | This type contains all that is necessary from Ledger to evaluate a plutus script.
@@ -118,12 +111,11 @@ instance Eq (PlutusWithContext c) where
     == pwc2@(PlutusWithContext {pwcScript = s2, pwcArgs = args2}) =
       pwcProtocolVersion pwc1 == pwcProtocolVersion pwc2
         && pwcScriptHash pwc1 == pwcScriptHash pwc2
-        && eqArgs (mkTagged s1 args1) (mkTagged s2 args2)
+        && fromMaybe False (withSamePlutusLanguage args1 args2 (==))
         && pwcExUnits pwc1 == pwcExUnits pwc2
         && pwcCostModel pwc1 == pwcCostModel pwc2
         && eqScripts s1 s2
       where
-        eqArgs a1 a2 = fromMaybe False $ withSamePlutusLanguage a1 a2 (==)
         eqScripts (Left p1) (Left p2) =
           plutusLanguage p1 == plutusLanguage p2 && plutusBinary p1 == plutusBinary p2
         eqScripts (Right p1) (Right p2) =
@@ -202,7 +194,7 @@ instance Crypto c => FromCBOR (PlutusWithContext c) where
 data PlutusDebugInfo c
   = DebugBadHex String
   | DebugCannotDecode String
-  | DebugSuccess [Text] PV1.ExBudget
+  | DebugSuccess [Text] P.ExBudget
   | DebugFailure [Text] P.EvaluationError (PlutusWithContext c)
   deriving (Show)
 
@@ -222,7 +214,7 @@ debugPlutus db =
                 (logs, Right ex) -> DebugSuccess logs ex
            in withRunnablePlutusWithContext pwc onDecoderError $ \plutusRunnable args ->
                 toDebugInfo $
-                  evaluatePlutusRunnable pwcProtocolVersion PV1.Verbose cm eu plutusRunnable args
+                  evaluatePlutusRunnable pwcProtocolVersion P.Verbose cm eu plutusRunnable args
 
 runPlutusScript :: PlutusWithContext c -> ScriptResult c
 runPlutusScript = snd . runPlutusScriptWithLogs
@@ -230,7 +222,7 @@ runPlutusScript = snd . runPlutusScriptWithLogs
 runPlutusScriptWithLogs ::
   PlutusWithContext c ->
   ([Text], ScriptResult c)
-runPlutusScriptWithLogs pwc = toScriptResult <$> evaluatePlutusWithContext PV1.Quiet pwc
+runPlutusScriptWithLogs pwc = toScriptResult <$> evaluatePlutusWithContext P.Quiet pwc
   where
     toScriptResult = \case
       Left evalError -> explainPlutusEvaluationError pwc evalError
@@ -270,13 +262,7 @@ explainPlutusEvaluationError pwc@PlutusWithContext {pwcProtocolVersion, pwcScrip
       pvLine = "The protocol version is: " ++ show pwcProtocolVersion
       plutusError = "The plutus evaluation error is: " ++ show e
 
-      getCtxAsString :: PV1.Data -> Language -> Maybe String
-      getCtxAsString d = \case
-        PlutusV1 -> show . pretty <$> (PV1.fromData d :: Maybe PV1.ScriptContext)
-        PlutusV2 -> show . pretty <$> (PV2.fromData d :: Maybe PV2.ScriptContext)
-        PlutusV3 -> show . pretty <$> (PV3.fromData d :: Maybe PV3.ScriptContext)
-
       dataLines = show (pretty pwcArgs)
       line =
-        pack . unlines $ "" : firstLines ++ show binaryScript : shLine : plutusError : pvLine : [dataLines]
+        pack . unlines $ "" : firstLines ++ [show binaryScript, shLine, plutusError, pvLine, dataLines]
    in scriptFail $ ScriptFailure line pwc

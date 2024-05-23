@@ -59,6 +59,7 @@ import Cardano.Ledger.Binary (
   ToCBOR (..),
   Version,
   decodeRecordNamed,
+  decodeScriptContextFromData,
   encodeEnum,
   encodeListLen,
   getDecoderVersion,
@@ -70,7 +71,7 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
 import Control.Monad (when)
 import Data.Aeson (
   FromJSON (parseJSON),
@@ -330,29 +331,20 @@ data LegacyPlutusArgs l
 deriving instance Eq (ScriptContext l) => Eq (LegacyPlutusArgs l)
 deriving instance Show (ScriptContext l) => Show (LegacyPlutusArgs l)
 
-instance EncCBOR PV1.ScriptContext where
-  encCBOR = encCBOR . PV3.toData
+instance NFData (ScriptContext l) => NFData (LegacyPlutusArgs l) where
+  rnf = \case
+    LegacyPlutusArgs2 redeemer scriptContext -> redeemer `deepseq` rnf scriptContext
+    LegacyPlutusArgs3 datum redeemer scriptContext -> datum `deepseq` redeemer `deepseq` rnf scriptContext
 
-instance DecCBOR PV1.ScriptContext where
-  decCBOR = decCBOR >>= decodeScriptContextData
+-- TODO: Change NFData instances to not go through Data and move to Plutus repo
+instance NFData PV1.ScriptContext where
+  rnf = rnf . PV3.toData
 
-instance EncCBOR PV2.ScriptContext where
-  encCBOR = encCBOR . PV3.toData
+instance NFData PV2.ScriptContext where
+  rnf = rnf . PV3.toData
 
-instance DecCBOR PV2.ScriptContext where
-  decCBOR = decCBOR >>= decodeScriptContextData
-
-instance EncCBOR PV3.ScriptContext where
-  encCBOR = encCBOR . PV3.toData
-
-instance DecCBOR PV3.ScriptContext where
-  decCBOR = decCBOR >>= decodeScriptContextData
-
-decodeScriptContextData :: (PV3.FromData a, MonadFail m) => PV3.Data -> m a
-decodeScriptContextData scriptContextData =
-  case PV3.fromData scriptContextData of
-    Nothing -> fail $ "ScriptContext cannot be decoded from Data: " <> show scriptContextData
-    Just scriptContext -> pure scriptContext
+instance NFData PV3.ScriptContext where
+  rnf = rnf . PV3.toData
 
 instance (PlutusLanguage l, PV3.ToData (ScriptContext l)) => EncCBOR (LegacyPlutusArgs l) where
   encCBOR = encCBOR . legacyPlutusArgsToData
@@ -361,9 +353,9 @@ instance (PlutusLanguage l, PV3.FromData (ScriptContext l)) => DecCBOR (LegacyPl
   decCBOR =
     decCBOR >>= \case
       [redeemer, scriptContextData] ->
-        LegacyPlutusArgs2 redeemer <$> decodeScriptContextData scriptContextData
+        LegacyPlutusArgs2 redeemer <$> decodeScriptContextFromData scriptContextData
       [datum, redeemer, scriptContextData] ->
-        LegacyPlutusArgs3 datum redeemer <$> decodeScriptContextData scriptContextData
+        LegacyPlutusArgs3 datum redeemer <$> decodeScriptContextFromData scriptContextData
       args ->
         fail $ "Invalid number of aruments " <> show (length args) <> " is encoded for " <> show lang
     where
@@ -404,6 +396,7 @@ legacyPlutusArgsToData = \case
 -- See "Cardano.Ledger.Alonzo.Plutus.TxInfo" for example usage
 class
   ( Typeable l
+  , NFData (PlutusArgs l)
   , EncCBOR (PlutusArgs l)
   , DecCBOR (PlutusArgs l)
   , Pretty (PlutusArgs l)
@@ -412,8 +405,7 @@ class
   ) =>
   PlutusLanguage (l :: Language)
   where
-  type PlutusArgs l :: Type
-  type PlutusArgs l = ScriptContext l
+  data PlutusArgs l :: Type
 
   isLanguage :: SLanguage l
 
@@ -459,36 +451,52 @@ class
     (P.LogOutput, Either P.EvaluationError P.ExBudget)
 
 instance PlutusLanguage 'PlutusV1 where
-  type PlutusArgs 'PlutusV1 = LegacyPlutusArgs 'PlutusV1
+  newtype PlutusArgs 'PlutusV1 = PlutusV1Args {unPlutusV1Args :: LegacyPlutusArgs 'PlutusV1}
+    deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
   isLanguage = SPlutusV1
   plutusLanguageTag _ = 0x01
   decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
     PlutusRunnable <$> PV1.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
-    PV1.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs . legacyPlutusArgsToData
+    PV1.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
+      . legacyPlutusArgsToData
+      . unPlutusV1Args
   evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
-    PV1.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs . legacyPlutusArgsToData
+    PV1.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
+      . legacyPlutusArgsToData
+      . unPlutusV1Args
 
 instance PlutusLanguage 'PlutusV2 where
-  type PlutusArgs 'PlutusV2 = LegacyPlutusArgs 'PlutusV2
+  newtype PlutusArgs 'PlutusV2 = PlutusV2Args {unPlutusV2Args :: LegacyPlutusArgs 'PlutusV2}
+    deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
   isLanguage = SPlutusV2
   plutusLanguageTag _ = 0x02
   decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
     PlutusRunnable <$> PV2.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
-    PV2.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs . legacyPlutusArgsToData
+    PV2.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
+      . legacyPlutusArgsToData
+      . unPlutusV2Args
   evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
-    PV2.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs . legacyPlutusArgsToData
+    PV2.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
+      . legacyPlutusArgsToData
+      . unPlutusV2Args
 
 instance PlutusLanguage 'PlutusV3 where
+  newtype PlutusArgs 'PlutusV3 = PlutusV3Args {unPlutusV3Args :: PV3.ScriptContext}
+    deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
   isLanguage = SPlutusV3
   plutusLanguageTag _ = 0x03
   decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
     PlutusRunnable <$> PV3.deserialiseScript (toMajorProtocolVersion pv) bs
   evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
-    PV3.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs . PV3.toData
+    PV3.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
+      . PV3.toData
+      . unPlutusV3Args
   evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
-    PV3.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs . PV3.toData
+    PV3.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
+      . PV3.toData
+      . unPlutusV3Args
 
 toSLanguage :: forall l m. (PlutusLanguage l, MonadFail m) => Language -> m (SLanguage l)
 toSLanguage lang
