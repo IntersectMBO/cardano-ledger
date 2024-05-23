@@ -170,7 +170,6 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Typeable (Typeable)
-import Data.Void (Void, absurd)
 import Data.Word (Word16, Word64, Word8)
 import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
@@ -715,7 +714,7 @@ instance DecCBOR Network where
       Just n -> pure n
   {-# INLINE decCBOR #-}
 
--- | Blocks made
+-- | Number of blocks which have been created by stake pools in the current epoch.
 newtype BlocksMade c = BlocksMade
   { unBlocksMade :: Map (KeyHash 'StakePool c) Natural
   }
@@ -846,14 +845,9 @@ instance Default Network where
 
 class Inject t s where
   inject :: t -> s
-  default inject :: t ~ s => t -> s
+
+instance Inject a a where
   inject = id
-
-instance Inject t () where
-  inject = const ()
-
-instance Inject Void s where
-  inject = absurd
 
 -- | Helper function for a common pattern of creating objects
 kindObject :: Text -> [Pair] -> Value

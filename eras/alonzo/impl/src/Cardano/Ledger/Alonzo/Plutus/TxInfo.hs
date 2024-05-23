@@ -139,8 +139,6 @@ data AlonzoContextError era
 
 instance NoThunks (AlonzoContextError era)
 
-instance Inject (AlonzoContextError era) (AlonzoContextError era)
-
 instance Era era => NFData (AlonzoContextError era)
 
 instance Era era => EncCBOR (AlonzoContextError era) where

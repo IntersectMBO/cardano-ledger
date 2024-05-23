@@ -158,8 +158,6 @@ deriving instance
   ) =>
   Show (ConwayContextError era)
 
-instance Inject (ConwayContextError era) (ConwayContextError era)
-
 instance Inject (BabbageContextError era) (ConwayContextError era) where
   inject = BabbageContextError
 
