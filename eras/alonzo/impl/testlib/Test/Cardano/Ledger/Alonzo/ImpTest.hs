@@ -206,18 +206,14 @@ fixupRedeemers tx = impAnn "fixupRedeemers" $ do
       tx & witsTxL . rdmrsTxWitsL .~ Redeemers newMaxRedeemers
   utxo <- getUTxO
   Globals {systemStart, epochInfo} <- use impGlobalsL
+  let reports = evalTxExUnits pp txWithMaxExUnits utxo epochInfo systemStart
   exUnitsPerPurpose <-
-    case evalTxExUnits pp txWithMaxExUnits utxo epochInfo systemStart of
-      Left contextError -> do
-        logEntry $ show contextError
-        pure mempty
-      Right reports -> do
-        fmap (Map.mapMaybe id) $ forM reports $ \case
-          Left err -> do
-            logEntry $ "Execution Units estimation error: " ++ show err
-            pure Nothing
-          Right exUnits ->
-            pure $ Just exUnits
+    fmap (Map.mapMaybe id) $ forM reports $ \case
+      Left err -> do
+        logEntry $ "Execution Units estimation error: " ++ show err
+        pure Nothing
+      Right exUnits ->
+        pure $ Just exUnits
   let
     mkNewRedeemers (prpIdx, _, ScriptTestContext _ (PlutusArgs dat _)) =
       let ptr = hoistPlutusPurpose @era toAsIx prpIdx

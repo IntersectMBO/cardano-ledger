@@ -315,7 +315,7 @@ epochTransition = do
     (accountState2, dState2, EnactState {..}) =
       applyEnactedWithdrawals accountState1 dState1 rsEnactState
 
-    -- NOTE: It is important that we apply the results of ratifcation
+    -- NOTE: It is important that we apply the results of ratification
     -- and enactment from the pulser to the working copy of proposals.
     -- The proposals in the pulser are a subset of the current
     -- proposals, in that, in addition to the proposals in the pulser,

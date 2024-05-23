@@ -5,14 +5,16 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Cardano.Ledger.Alonzo.Plutus.Context (
+  LedgerTxInfo (..),
   EraPlutusTxInfo (..),
   EraPlutusContext (..),
-  mkPlutusLanguageContext,
+  toPlutusWithContext,
 
   -- * Language dependent translation
   PlutusTxInfo,
@@ -27,23 +29,46 @@ import Cardano.Ledger.Alonzo.Scripts (
   AsIxItem (..),
   PlutusPurpose,
   PlutusScript (..),
+  hoistPlutusPurpose,
+  toAsItem,
  )
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum))
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Plutus.Data (Data (..))
-import Cardano.Ledger.Plutus.Language (Language (..), PlutusLanguage)
+import Cardano.Ledger.Plutus (
+  CostModel,
+  Data,
+  ExUnits,
+  Language (..),
+  Plutus,
+  PlutusArgs,
+  PlutusLanguage,
+  PlutusRunnable,
+  PlutusScriptContext,
+  PlutusWithContext (..),
+ )
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 import Data.Kind (Type)
+import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import NoThunks.Class (NoThunks)
-import qualified PlutusLedgerApi.V1 as P (ToData, toData)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+
+-- | All information that is necessary from the ledger to construct Plutus' TxInfo.
+data LedgerTxInfo era = LedgerTxInfo
+  { ltiProtVer :: !ProtVer
+  , ltiEpochInfo :: !(EpochInfo (Either Text))
+  , ltiSystemStart :: !SystemStart
+  , ltiUTxO :: !(UTxO era)
+  , ltiTx :: !(Tx era)
+  }
 
 class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language) era where
   toPlutusTxCert :: proxy l -> TxCert era -> Either (ContextError era) (PlutusTxCert l)
@@ -55,18 +80,16 @@ class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language
 
   toPlutusTxInfo ::
     proxy l ->
-    PParams era ->
-    EpochInfo (Either Text) ->
-    SystemStart ->
-    UTxO era ->
-    Tx era ->
+    LedgerTxInfo era ->
     Either (ContextError era) (PlutusTxInfo l)
 
-  toPlutusScriptContext ::
+  toPlutusArgs ::
     proxy l ->
     PlutusTxInfo l ->
     PlutusPurpose AsIxItem era ->
-    Either (ContextError era) (PlutusScriptContext l)
+    Maybe (Data era) ->
+    Data era ->
+    Either (ContextError era) (PlutusArgs l)
 
 class
   ( AlonzoEraScript era
@@ -82,30 +105,40 @@ class
   where
   type ContextError era = (r :: Type) | r -> era
 
-  mkPlutusScriptContext ::
+  mkPlutusWithContext ::
     PlutusScript era ->
+    ScriptHash (EraCrypto era) ->
     PlutusPurpose AsIxItem era ->
-    PParams era ->
-    EpochInfo (Either Text) ->
-    SystemStart ->
-    UTxO era ->
-    Tx era ->
-    Either (ContextError era) (Data era)
+    LedgerTxInfo era ->
+    (Data era, ExUnits) ->
+    CostModel ->
+    Either (ContextError era) (PlutusWithContext (EraCrypto era))
 
-mkPlutusLanguageContext ::
-  (EraPlutusTxInfo l era, P.ToData (PlutusScriptContext l)) =>
-  proxy l ->
+toPlutusWithContext ::
+  forall l era.
+  (EraPlutusTxInfo l era, AlonzoEraUTxO era) =>
+  Either (Plutus l) (PlutusRunnable l) ->
+  ScriptHash (EraCrypto era) ->
   PlutusPurpose AsIxItem era ->
-  PParams era ->
-  EpochInfo (Either Text) ->
-  SystemStart ->
-  UTxO era ->
-  Tx era ->
-  Either (ContextError era) (Data era)
-mkPlutusLanguageContext proxy scriptPurpose pp epochInfo sysStart utxo tx = do
-  txInfo <- toPlutusTxInfo proxy pp epochInfo sysStart utxo tx
-  scriptContext <- toPlutusScriptContext proxy txInfo scriptPurpose
-  pure $ Data $ P.toData scriptContext
+  LedgerTxInfo era ->
+  (Data era, ExUnits) ->
+  CostModel ->
+  Either (ContextError era) (PlutusWithContext (EraCrypto era))
+toPlutusWithContext script scriptHash plutusPurpose lti (redeemerData, exUnits) costModel = do
+  let proxy = Proxy @l
+      maybeSpendingDatum =
+        getSpendingDatum (ltiUTxO lti) (ltiTx lti) (hoistPlutusPurpose toAsItem plutusPurpose)
+  txInfo <- toPlutusTxInfo proxy lti
+  plutusArgs <- toPlutusArgs proxy txInfo plutusPurpose maybeSpendingDatum redeemerData
+  pure $
+    PlutusWithContext
+      { pwcProtocolVersion = pvMajor (ltiProtVer lti)
+      , pwcScript = script
+      , pwcScriptHash = scriptHash
+      , pwcArgs = plutusArgs
+      , pwcExUnits = exUnits
+      , pwcCostModel = costModel
+      }
 
 -- =============================================
 -- Type families that specify Plutus types that are different from one version to another
@@ -119,11 +152,6 @@ type family PlutusScriptPurpose (l :: Language) where
   PlutusScriptPurpose 'PlutusV1 = PV1.ScriptPurpose
   PlutusScriptPurpose 'PlutusV2 = PV2.ScriptPurpose
   PlutusScriptPurpose 'PlutusV3 = PV3.ScriptPurpose
-
-type family PlutusScriptContext (l :: Language) where
-  PlutusScriptContext 'PlutusV1 = PV1.ScriptContext
-  PlutusScriptContext 'PlutusV2 = PV2.ScriptContext
-  PlutusScriptContext 'PlutusV3 = PV3.ScriptContext
 
 type family PlutusTxInfo (l :: Language) where
   PlutusTxInfo 'PlutusV1 = PV1.TxInfo

@@ -8,13 +8,12 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
   assertTranslationResultsMatchGolden,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, toPlutusTxInfo)
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, LedgerTxInfo (..), toPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
 import Cardano.Ledger.Binary.Encoding (serialize)
 import Cardano.Ledger.Core
 import Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as BSL
-import Data.Functor.Identity (Identity)
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TranslatableGen (..),
@@ -28,7 +27,6 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   TranslationInstance (..),
   deserializeTranslationInstances,
  )
-import Test.QuickCheck (Arbitrary)
 import Test.Tasty.HUnit (Assertion, assertEqual)
 
 -- | Generates arguments for `ExtendedUTxO.txInfo`, applies them to it
@@ -38,7 +36,6 @@ generateGoldenFile ::
   ( Show (ContextError era)
   , AlonzoEraScript era
   , TranslatableGen era
-  , Arbitrary (PParamsHKD Identity era)
   ) =>
   FilePath ->
   IO ()
@@ -69,17 +66,25 @@ assertTranslationComparison ::
   ) =>
   TranslationInstance era ->
   Assertion
-assertTranslationComparison (TranslationInstance pp lang utxo tx expected) =
+assertTranslationComparison (TranslationInstance protVer lang utxo tx expected) =
   case mkTxInfoLanguage @era lang of
     TxInfoLanguage slang -> do
-      case toPlutusTxInfo slang pp epochInfo systemStart utxo tx of
+      case toPlutusTxInfo slang lti of
         Left e -> error $ show e
         Right actual -> assertEqual errorMessage expected $ toVersionedTxInfo slang actual
   where
+    lti =
+      LedgerTxInfo
+        { ltiProtVer = protVer
+        , ltiEpochInfo = epochInfo
+        , ltiSystemStart = systemStart
+        , ltiUTxO = utxo
+        , ltiTx = tx
+        }
     errorMessage =
       unlines
         [ "Unexpected txinfo with arguments: "
-        , " pp: " <> show pp
+        , " ProtVer: " <> show protVer
         , " language: " <> show lang
         , " utxo: " <> show utxo
         , " tx: " <> show tx

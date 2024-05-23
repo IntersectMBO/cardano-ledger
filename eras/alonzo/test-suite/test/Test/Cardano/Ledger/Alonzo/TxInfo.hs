@@ -1,4 +1,6 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -9,12 +11,17 @@ module Test.Cardano.Ledger.Alonzo.TxInfo (
 import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, toPlutusTxInfo)
-import Cardano.Ledger.Alonzo.Plutus.TxInfo (transValidityInterval)
+import Cardano.Ledger.Alonzo.Plutus.Context (
+  ContextError,
+  EraPlutusContext,
+  LedgerTxInfo (..),
+  toPlutusTxInfo,
+ )
+import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), transValidityInterval)
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), natVersion)
-import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
+import qualified Cardano.Ledger.BaseTypes as BT (Inject (..), ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -25,12 +32,11 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap (aliceByronAddr)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePHK)
@@ -91,17 +97,30 @@ txEx i o = AlonzoTx (txb i o) mempty (IsValid True) SNothing
 
 silentlyIgnore :: Tx Alonzo -> Assertion
 silentlyIgnore tx =
-  case toPlutusTxInfo SPlutusV1 def ei ss utxo tx of
-    Right _ -> pure ()
-    Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
+  let lti =
+        LedgerTxInfo
+          { ltiProtVer = BT.ProtVer (eraProtVerLow @Alonzo) 0
+          , ltiEpochInfo = ei
+          , ltiSystemStart = ss
+          , ltiUTxO = utxo
+          , ltiTx = tx
+          }
+   in case toPlutusTxInfo SPlutusV1 lti of
+        Right _ -> pure ()
+        Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
 
 -- | The test checks that the old implementation of 'transVITime' stays intentionally incorrect,
 -- by returning close upper bound of the validaty interval.
-transVITimeUpperBoundIsClosed :: Assertion
+transVITimeUpperBoundIsClosed ::
+  forall era.
+  ( EraPlutusContext era
+  , BT.Inject (AlonzoContextError era) (ContextError era)
+  ) =>
+  Assertion
 transVITimeUpperBoundIsClosed = do
   let interval = ValidityInterval SNothing (SJust (SlotNo 40))
-  case transValidityInterval (def :: PParams Alonzo) ei ss interval of
-    Left (e :: ContextError Alonzo) ->
+  case transValidityInterval (Proxy @era) (BT.ProtVer (eraProtVerLow @era) 0) ei ss interval of
+    Left (e :: ContextError era) ->
       assertFailure $ "no translation error was expected, but got: " <> show e
     Right t ->
       t
@@ -112,15 +131,21 @@ transVITimeUpperBoundIsClosed = do
 
 -- | The test checks that since protocol version 9 'transVITime' works correctly,
 -- by returning open upper bound of the validaty interval.
-transVITimeUpperBoundIsOpen :: Assertion
+transVITimeUpperBoundIsOpen ::
+  forall era.
+  ( EraPlutusContext era
+  , BT.Inject (AlonzoContextError era) (ContextError era)
+  ) =>
+  Assertion
 transVITimeUpperBoundIsOpen = do
   let interval = ValidityInterval SNothing (SJust (SlotNo 40))
   case transValidityInterval
-    (def & ppProtocolVersionL .~ BT.ProtVer (natVersion @9) 0 :: PParams Alonzo)
+    (Proxy @era)
+    (BT.ProtVer (natVersion @9) 0)
     ei
     ss
     interval of
-    Left (e :: ContextError Alonzo) ->
+    Left (e :: ContextError era) ->
       assertFailure $ "no translation error was expected, but got: " <> show e
     Right t ->
       t
@@ -142,7 +167,11 @@ tests =
         ]
     , testGroup
         "transVITime"
-        [ testCase "validity interval's upper bound is close when protocol < 9" transVITimeUpperBoundIsClosed
-        , testCase "validity interval's upper bound is open when protocol >= 9" transVITimeUpperBoundIsOpen
+        [ testCase
+            "validity interval's upper bound is close when protocol < 9"
+            (transVITimeUpperBoundIsClosed @Alonzo)
+        , testCase
+            "validity interval's upper bound is open when protocol >= 9"
+            (transVITimeUpperBoundIsOpen @Alonzo)
         ]
     ]
