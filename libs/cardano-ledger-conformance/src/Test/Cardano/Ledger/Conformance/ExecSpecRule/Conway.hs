@@ -511,3 +511,12 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
     first (\case {})
       . computationResultToEither
       $ Agda.ratifyStep env st sig
+
+instance IsConwayUniv fn => ExecSpecRule fn "EPOCH" Conway where
+  environmentSpec = undefined
+
+  stateSpec = undefined
+
+  signalSpec = undefined
+
+  runAgdaRule = undefined

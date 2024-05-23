@@ -110,6 +110,7 @@ import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
+  EpochState,
   PState (..),
   UTxOState (..),
   VState (..),
@@ -1105,3 +1106,8 @@ instance EraPParams era => SpecTranslate ctx (RatifySignal era) where
   toSpecRep (RatifySignal x) =
     toSpecRep $
       (\gas@GovActionState {gasId} -> (gasId, gas)) <$> x
+
+instance SpecTranslate ctx (EpochState era) where
+  type SpecRep (EpochState era) = Agda.EpochState
+
+  toSpecRep = undefined
