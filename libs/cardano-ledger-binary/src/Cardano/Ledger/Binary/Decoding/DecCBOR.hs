@@ -16,7 +16,7 @@
 module Cardano.Ledger.Binary.Decoding.DecCBOR (
   DecCBOR (..),
   fromByronCBOR,
-  decodeScriptContextFromData
+  decodeScriptContextFromData,
 )
 where
 

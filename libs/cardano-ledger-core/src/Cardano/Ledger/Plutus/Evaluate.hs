@@ -84,6 +84,8 @@ data PlutusWithContext c where
     -- that preserves deserialized `PlutusRunnable` after verifying wellformedness of
     -- plutus scripts during transaction validation (yet to be implemented).
     , pwcScriptHash :: !(ScriptHash c)
+    -- ^ Hash of the above script as it would appear on-chain. In other words it is not
+    -- just a hash of the script contents. (See `Cardano.Ledger.Core.hashScript` for more info)
     , pwcArgs :: !(PlutusArgs l)
     -- ^ All of the arguments to the Plutus scripts, including the redeemer and the
     -- Plutus context that was obtained from the transaction translation

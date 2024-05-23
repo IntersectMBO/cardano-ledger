@@ -315,12 +315,14 @@ type family ScriptContext (l :: Language) = r | r -> l where
   ScriptContext 'PlutusV3 = PV3.ScriptContext
 
 data LegacyPlutusArgs l
-  = LegacyPlutusArgs2
+  = -- | Scripts that require 2 arguments.
+    LegacyPlutusArgs2
       -- | Redeemer
       !P.Data
       -- | ScriptContext
       !(ScriptContext l)
-  | LegacyPlutusArgs3
+  | -- | Scripts that require 3 arguments. Which is only PlutusV1/V2 spending scripts
+    LegacyPlutusArgs3
       -- | Mandatory Spending Datum
       !P.Data
       -- | Redeemer
