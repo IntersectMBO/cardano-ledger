@@ -28,7 +28,7 @@ import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Text.PrettyPrint.ANSI.Leijen (Doc, align, parens, text, vsep, (<+>))
+import Prettyprinter (Doc, align, parens, pretty, vsep, (<+>))
 import Prelude hiding (lookup)
 
 -- $Deep embedding
@@ -535,15 +535,15 @@ instance Ord k => HasQuery (Single k v) k v where
 -- =================================================
 -- Show Instance of Query
 
-ppQuery :: Query k v -> Doc
-ppQuery (BaseD rep _f) = parens $ text (show rep)
-ppQuery (ProjectD f p) = parens $ text "Proj" <+> align (vsep [ppQuery f, text (show p)])
-ppQuery (AndD f g) = parens $ text "And" <+> align (vsep [ppQuery f, ppQuery g])
-ppQuery (ChainD f g p) = parens $ text "Chain" <+> align (vsep [ppQuery f, ppQuery g, text (show p)])
-ppQuery (OrD f g p) = parens $ text "Or" <+> align (vsep [ppQuery f, ppQuery g, text (show p)])
-ppQuery (GuardD f p) = parens $ text "Guard" <+> align (vsep [ppQuery f, text (show p)])
-ppQuery (DiffD f g) = parens $ text "Diff" <+> align (vsep [ppQuery f, ppQuery g])
-ppQuery (AndPD f g p) = parens $ text "AndP" <+> align (vsep [ppQuery f, ppQuery g, text (show p)])
+ppQuery :: Query k v -> Doc a
+ppQuery (BaseD rep _f) = parens $ pretty (show rep)
+ppQuery (ProjectD f p) = parens $ pretty "Proj" <+> align (vsep [ppQuery f, pretty (show p)])
+ppQuery (AndD f g) = parens $ pretty "And" <+> align (vsep [ppQuery f, ppQuery g])
+ppQuery (ChainD f g p) = parens $ pretty "Chain" <+> align (vsep [ppQuery f, ppQuery g, pretty (show p)])
+ppQuery (OrD f g p) = parens $ pretty "Or" <+> align (vsep [ppQuery f, ppQuery g, pretty (show p)])
+ppQuery (GuardD f p) = parens $ pretty "Guard" <+> align (vsep [ppQuery f, pretty (show p)])
+ppQuery (DiffD f g) = parens $ pretty "Diff" <+> align (vsep [ppQuery f, ppQuery g])
+ppQuery (AndPD f g p) = parens $ pretty "AndP" <+> align (vsep [ppQuery f, ppQuery g, pretty (show p)])
 
 instance Show (Query k v) where
   show x = show (ppQuery x)
