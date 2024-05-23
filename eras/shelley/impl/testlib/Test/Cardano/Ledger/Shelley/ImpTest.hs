@@ -101,10 +101,12 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withNoFixup,
   withPostFixup,
   withPreFixup,
+  withCborRoundTripFailures,
   impNESL,
   impLastTickG,
   impKeyPairsG,
   impNativeScriptsG,
+  produceScript,
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -222,6 +224,7 @@ import Prettyprinter (Doc, Pretty (..), defaultLayoutOptions, layoutPretty, line
 import Prettyprinter.Render.String (renderString)
 import System.Random
 import qualified System.Random as Random
+import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborRangeFailureExpectation)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
 import Test.Cardano.Ledger.Core.KeyPair (
@@ -317,6 +320,7 @@ class
   , EraTxOut era
   , EraPParams era
   , ShelleyEraTxCert era
+  , ShelleyEraScript era
   , ToExpr (Tx era)
   , NFData (Tx era)
   , ToExpr (TxBody era)
@@ -567,10 +571,15 @@ data ImpTestEnv era = ImpTestEnv
   { iteState :: !(IORef (ImpTestState era))
   , iteFixup :: Tx era -> ImpTestM era (Tx era)
   , iteQuickCheckSize :: !Int
+  , iteCborRoundTripFailures :: !Bool
+  -- ^ Expect failures in CBOR round trip serialization tests for predicate failures
   }
 
 iteFixupL :: Lens' (ImpTestEnv era) (Tx era -> ImpTestM era (Tx era))
 iteFixupL = lens iteFixup (\x y -> x {iteFixup = y})
+
+iteCborRoundTripFailuresL :: Lens' (ImpTestEnv era) Bool
+iteCborRoundTripFailuresL = lens iteCborRoundTripFailures (\x y -> x {iteCborRoundTripFailures = y})
 
 newtype ImpTestM era a = ImpTestM {_unImpTestM :: ReaderT (ImpTestEnv era) IO a}
   deriving
@@ -704,6 +713,7 @@ runImpTestM mQCSize impState (ImpTestM m) = do
         { iteState = ioRef
         , iteFixup = fixupTx
         , iteQuickCheckSize = qcSize
+        , iteCborRoundTripFailures = True
         }
   res <-
     runReaderT m env `catchAny` \exc -> do
@@ -938,10 +948,18 @@ trySubmitTx tx = do
   lEnv <- impLedgerEnv st
   ImpTestState {impRootTxIn} <- get
   res <- tryRunImpRule @"LEDGER" lEnv (st ^. nesEsL . esLStateL) txFixed
+  roundTripCheck <- asks iteCborRoundTripFailures
   case res of
     Left predFailures -> do
       -- Verify that produced predicate failures are ready for the node-to-client protocol
-      liftIO $ forM_ predFailures $ roundTripEraExpectation @era
+      if roundTripCheck
+        then liftIO $ forM_ predFailures $ roundTripEraExpectation @era
+        else
+          liftIO $
+            roundTripCborRangeFailureExpectation
+              (eraProtVerLow @era)
+              (eraProtVerHigh @era)
+              predFailures
       pure $ Left predFailures
     Right (st', events) -> do
       let txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
@@ -1416,6 +1434,9 @@ registerAndRetirePoolToMakeReward stakingC = do
         .~ SSeq.singleton (RetirePoolTxCert poolKH $ addEpochInterval currentEpochNo $ EpochInterval 2)
   passEpoch
 
+withCborRoundTripFailures :: ImpTestM era a -> ImpTestM era a
+withCborRoundTripFailures = local $ iteCborRoundTripFailuresL .~ False
+
 -- | Compose given function with the configured fixup
 withCustomFixup ::
   ((Tx era -> ImpTestM era (Tx era)) -> Tx era -> ImpTestM era (Tx era)) ->
@@ -1473,3 +1494,14 @@ impLookupUTxO txIn = impAnn "Looking up TxOut" $ do
   case txinLookup txIn utxo of
     Just txOut -> pure txOut
     Nothing -> error $ "Failed to get TxOut for " <> show txIn
+
+produceScript ::
+  ShelleyEraImp era =>
+  ScriptHash (EraCrypto era) ->
+  ImpTestM era (TxIn (EraCrypto era))
+produceScript scriptHash = do
+  let addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
+  let tx =
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr (inject (Coin 10)))
+  txInAt (0 :: Int) <$> submitTx tx

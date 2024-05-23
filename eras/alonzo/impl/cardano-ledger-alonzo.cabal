@@ -109,6 +109,7 @@ library testlib
         Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec
         Test.Cardano.Ledger.Alonzo.Imp
         Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec
+        Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec
         Test.Cardano.Ledger.Alonzo.ImpTest
         Test.Cardano.Ledger.Alonzo.TreeDiff
 
@@ -132,8 +133,8 @@ library testlib
         cardano-ledger-binary,
         cardano-ledger-mary:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},
-        cardano-strict-containers,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
+        cardano-strict-containers,
         plutus-ledger-api,
         generic-random,
         microlens,

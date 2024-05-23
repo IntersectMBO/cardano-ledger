@@ -91,7 +91,6 @@ multisigExamples =
     [ testCase "Alice uses SingleSig script" testAliceSignsAlone
     , testCase "FAIL: Alice doesn't sign in multi-sig" testAliceDoesntSign
     , testCase "Everybody signs in multi-sig" testEverybodySigns
-    , testCase "FAIL: Wrong script for correct signatures" testWrongScript
     , testCase "Alice || Bob, Alice signs" testAliceOrBob
     , testCase "Alice || Bob, Bob signs" testAliceOrBob'
     , testCase "Alice && Bob, both sign" testAliceAndBob
@@ -165,22 +164,6 @@ testEverybodySigns =
         , asWitness Cast.dariaPay
         ]
     s = "problem: " ++ show utxoSt'
-
-testWrongScript :: Assertion
-testWrongScript =
-  utxoSt' @?= Left (pure extraneous <> pure missing)
-  where
-    utxoSt' =
-      applyTxWithScript
-        @C_Crypto
-        [(aliceOnly, Coin 11000)]
-        [aliceOrBob]
-        (Withdrawals Map.empty)
-        (Coin 0)
-        [asWitness Cast.alicePay, asWitness Cast.bobPay]
-    asHashes = Set.singleton . hashScript @C
-    extraneous = ExtraneousScriptWitnessesUTXOW $ asHashes aliceOrBob
-    missing = MissingScriptWitnessesUTXOW $ asHashes aliceOnly
 
 testAliceOrBob :: Assertion
 testAliceOrBob =

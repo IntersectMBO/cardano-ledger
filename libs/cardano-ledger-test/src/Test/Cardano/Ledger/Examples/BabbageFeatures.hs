@@ -79,7 +79,7 @@ import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS
-import Data.ByteString.Short as SBS (ShortByteString, pack)
+import Data.ByteString.Short as SBS (pack)
 import Data.Default.Class (Default (..))
 import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty ((:|)))
@@ -174,13 +174,6 @@ scriptAddr :: forall era. Reflect era => Proof era -> Script era -> Addr (EraCry
 scriptAddr _pf s = Addr Testnet pCred sCred
   where
     pCred = ScriptHashObj . hashScript @era $ s
-    (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 0)
-    sCred = StakeRefBase . KeyHashObj . hashKey $ svk
-
-malformedScriptAddr :: forall era. EraScript era => Proof era -> Addr (EraCrypto era)
-malformedScriptAddr pf = Addr Testnet pCred sCred
-  where
-    pCred = ScriptHashObj . hashScript @era $ malformedScript pf "malfoy"
     (_ssk, svk) = mkKeyPair @(EraCrypto era) (RawSeed 0 0 0 0 0)
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
@@ -859,50 +852,6 @@ referenceInputWithPlutusV1Script pf =
     }
 
 -- ====================================================================================
--- Invalid: Malformed plutus reference script creation
--- ====================================================================================
-
-malformedScript :: forall era. Proof era -> ShortByteString -> Script era
-malformedScript pf s = case pf of
-  Conway {} -> bogusPlutus @'PlutusV3
-  Babbage {} -> bogusPlutus @'PlutusV2
-  Alonzo {} -> bogusPlutus @'PlutusV1
-  x@Shelley {} -> er x
-  x@Mary {} -> er x
-  x@Allegra {} -> er x
-  where
-    bogusPlutus :: forall l era'. (PlutusLanguage l, AlonzoEraScript era') => Script era'
-    bogusPlutus = mkPlutusScript' (Plutus @l (PlutusBinary ("nonsense " <> s)))
-    er x = error $ "no malformedScript for " <> show x
-
-malformedPlutusRefScript ::
-  forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
-malformedPlutusRefScript pf =
-  TestCaseData
-    { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Outputs'
-              [ newTxOut
-                  pf
-                  [ Address (plainAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  , RefScript' [malformedScript pf "rs"]
-                  ]
-              ]
-          ]
-    , initOutputs =
-        InitOutputs
-          { ofInputs = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 5000)]]
-          , ofRefInputs = []
-          , ofCollateral = []
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields = []
-    }
-
--- ====================================================================================
 --  Valid: Don't run reference scripts in output for validation
 -- ====================================================================================
 
@@ -1006,41 +955,6 @@ largeOutput pf =
           }
     , keysForAddrWits = [someKeysPaymentKeyRole pf]
     , otherWitsFields = []
-    }
-
--- ====================================================================================
--- Invalid:  Malformed plutus script witness
--- ====================================================================================
-
-malformedScriptWit :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
-malformedScriptWit pf =
-  TestCaseData
-    { txBody =
-        newTxBody
-          pf
-          [ Inputs' [someTxIn]
-          , Collateral' [anotherTxIn]
-          , Outputs' [newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 5000)]]
-          , WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (validatingRedeemers pf) mempty)
-          ]
-    , initOutputs =
-        InitOutputs
-          { ofInputs =
-              [ newTxOut
-                  pf
-                  [ Address (malformedScriptAddr pf)
-                  , Amount (inject $ Coin 5000)
-                  , FDatum (Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
-                  ]
-              ]
-          , ofRefInputs = []
-          , ofCollateral = [newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]]
-          }
-    , keysForAddrWits = [someKeysPaymentKeyRole pf]
-    , otherWitsFields =
-        [ ScriptWits' [malformedScript pf "malfoy"]
-        , RdmrWits (validatingRedeemers pf)
-        ]
     }
 
 -- =============================================================================
@@ -1395,28 +1309,6 @@ genericBabbageFailures pf =
                       [badTranslation pf $ InlineDatumsNotSupported (TxOutFromInput someTxIn)]
                   )
               )
-        , testCase "malformed reference script" $
-            testExpectFailure
-              pf
-              (malformedPlutusRefScript pf)
-              ( injectFailure $
-                  MalformedReferenceScripts $
-                    Set.singleton (hashScript @era $ malformedScript pf "rs")
-              )
-        , case pf of
-            Babbage ->
-              testCase "malformed script witness" $
-                testExpectFailure
-                  pf
-                  (malformedScriptWit pf)
-                  ( injectFailure $
-                      MalformedScriptWitnesses $
-                        Set.singleton
-                          (hashScript @era $ malformedScript pf "malfoy")
-                  )
-            -- The current code does not construct the right witnesses for plutus version 3, so skip this test in Conway
-            Conway -> testCase "malformed script witness" $ pure ()
-            _ -> error "Babbage features used before BabbageEra"
         , testCase "min-utxo value with output too large" $
             testExpectFailure
               pf
