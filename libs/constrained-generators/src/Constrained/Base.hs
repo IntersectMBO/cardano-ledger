@@ -3,6 +3,8 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -338,7 +340,7 @@ data Pred (fn :: [Type] -> Type -> Type) where
     -- only one variable because `as` are types.
     -- Constructors with multiple arguments are
     -- encoded with `ProdOver` (c.f. `Constrained.Univ`).
-    List (Binder fn) as ->
+    List (Weighted (Binder fn)) as ->
     Pred fn
   -- if-then-else where the branches depend on the scrutinee.
   IfElse ::
@@ -354,6 +356,15 @@ data Pred (fn :: [Type] -> Type -> Type) where
     Pred fn
   TruePred :: Pred fn
   FalsePred :: [String] -> Pred fn
+
+data Weighted f a = Weighted {weight :: Maybe Int, thing :: f a}
+  deriving (Functor, Traversable, Foldable)
+
+mapWeighted :: (f a -> g b) -> Weighted f a -> Weighted g b
+mapWeighted f (Weighted w t) = Weighted w (f t)
+
+traverseWeighted :: Applicative m => (f a -> m (g a)) -> Weighted f a -> m (Weighted g a)
+traverseWeighted f (Weighted w t) = Weighted w <$> f t
 
 instance BaseUniverse fn => Semigroup (Pred fn) where
   FalsePred es <> _ = FalsePred es
@@ -479,7 +490,7 @@ monitorPred env = \case
         ]
   Case t bs -> do
     v <- runTerm env t
-    runCaseOn v bs (\x val ps -> monitorPred (extendEnv x val env) ps)
+    runCaseOn v (mapList thing bs) (\x val ps -> monitorPred (extendEnv x val env) ps)
   IfElse b p q -> do
     v <- runTerm env b
     if v then monitorPred env p else monitorPred env q
@@ -516,7 +527,7 @@ checkPred env = \case
         ]
   Case t bs -> do
     v <- runTerm env t
-    runCaseOn v bs (\x val ps -> checkPred (extendEnv x val env) ps)
+    runCaseOn v (mapList thing bs) (\x val ps -> checkPred (extendEnv x val env) ps)
   IfElse bt p q -> do
     b <- runTerm env bt
     if b then checkPred env p else checkPred env q
@@ -1021,7 +1032,7 @@ computeDependencies = \case
      in innerG <> set `irreflexiveDependencyOn` nodes innerG
   x `DependsOn` y -> x `irreflexiveDependencyOn` y
   Case t bs ->
-    let innerG = foldMapList (computeBinderDependencies) bs
+    let innerG = foldMapList (computeBinderDependencies . thing) bs
      in innerG <> t `irreflexiveDependencyOn` nodes innerG
   IfElse b p q ->
     let pG = computeDependencies p
@@ -1188,9 +1199,9 @@ computeSpecSimplified x p = localGESpec $ case p of
   ForAll t b -> do
     bSpec <- computeSpecBinderSimplified b
     propagateSpec (fromForAllSpec bSpec) <$> toCtx x t
-  Case (Lit val) bs -> runCaseOn val bs $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
+  Case (Lit val) bs -> runCaseOn val (mapList thing bs) $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
   Case t branches -> do
-    branchSpecs <- mapMList computeSpecBinderSimplified branches
+    branchSpecs <- mapMList (traverseWeighted computeSpecBinderSimplified) branches
     propagateSpec (caseSpec branchSpecs) <$> toCtx x t
   IfElse (Lit b) tp fp -> if b then computeSpecSimplified x tp else computeSpecSimplified x fp
   -- TODO: Fix this by having a pass that figures out if `p` or `q` are trivially true or false (thus constraining
@@ -1233,12 +1244,21 @@ computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 caseSpec ::
   forall fn as.
   HasSpec fn (SumOver as) =>
-  List (Specification fn) as ->
+  List (Weighted (Specification fn)) as ->
   Specification fn (SumOver as)
 caseSpec Nil = error "The impossible happened in caseSpec"
-caseSpec (s :> Nil) = s
+caseSpec (s :> Nil) = thing s
 caseSpec (s :> ss@(_ :> _))
-  | Evidence <- prerequisites @fn @(SumOver as) = typeSpec $ SumSpec s (caseSpec ss)
+  | Evidence <- prerequisites @fn @(SumOver as) =
+      typeSpec $ SumSpec theWeights (thing s) (caseSpec ss)
+  where
+    theWeights =
+      case (weight s, totalWeight ss) of
+        (Nothing, Nothing) -> Nothing
+        (a, b) -> Just (fromMaybe 1 a, fromMaybe (lengthList ss) b)
+
+totalWeight :: List (Weighted f) as -> Maybe Int
+totalWeight = fmap Semigroup.getSum . foldMapList (fmap Semigroup.Sum . weight)
 
 propagateSpec ::
   forall fn v a.
@@ -1522,7 +1542,13 @@ instance HasVariables fn (Binder fn a) where
     | Name x == n = False
     | otherwise = appearsIn n p
 
-instance HasVariables fn (List (Binder fn) as) where
+instance HasVariables fn (f a) => HasVariables fn (Weighted f a) where
+  freeVars = freeVars . thing
+  freeVarSet = freeVarSet . thing
+  countOf n = countOf n . thing
+  appearsIn n = appearsIn n . thing
+
+instance HasVariables fn (List (Weighted (Binder fn)) as) where
   freeVars Nil = mempty
   freeVars (a :> as) = freeVars a <> freeVars as
   freeVarSet Nil = mempty
@@ -1627,13 +1653,13 @@ substitutePred x tm = \case
   Exists k b -> Exists (\eval -> k (eval . substituteTerm [x := tm])) (substituteBinder x tm b)
   Let t b -> Let (substituteTerm [x := tm] t) (substituteBinder x tm b)
   ForAll t b -> ForAll (substituteTerm [x := tm] t) (substituteBinder x tm b)
-  Case t bs -> Case (substituteTerm [x := tm] t) (mapList (substituteBinder x tm) bs)
+  Case t bs -> Case (substituteTerm [x := tm] t) (mapList (mapWeighted $ substituteBinder x tm) bs)
   IfElse b p q -> IfElse (substituteTerm [x := tm] b) (substitutePred x tm p) (substitutePred x tm q)
   Reifies t' t f -> Reifies (substituteTerm [x := tm] t') (substituteTerm [x := tm] t) f
   DependsOn t t' -> DependsOn (substituteTerm [x := tm] t) (substituteTerm [x := tm] t')
   TruePred -> TruePred
   FalsePred es -> FalsePred es
-  Monitor m -> Monitor m
+  Monitor m -> Monitor (\eval -> m (eval . substituteTerm [x := tm]))
 
 instance Rename (Name f) where
   rename v v' (Name v'') = Name $ rename v v' v''
@@ -1670,6 +1696,9 @@ instance Rename (Binder fn a) where
     where
       (va', psa') = freshen va psa (Set.fromList [nameOf v, nameOf v'] <> Set.delete (nameOf va) (freeVarNames psa))
 
+instance Rename (f a) => Rename (Weighted f a) where
+  rename v v' (Weighted w t) = Weighted w (rename v v' t)
+
 substTerm :: Env -> Term fn a -> Term fn a
 substTerm env = \case
   Lit a -> Lit a
@@ -1691,7 +1720,7 @@ substPred env = \case
   Assert es t -> assertExplain es (substTerm env t)
   Reifies t' t f -> Reifies (substTerm env t') (substTerm env t) f
   ForAll set b -> ForAll (substTerm env set) (substBinder env b)
-  Case t bs -> Case (substTerm env t) (mapList (substBinder env) bs)
+  Case t bs -> Case (substTerm env t) (mapList (mapWeighted $ substBinder env) bs)
   IfElse b p q -> IfElse (substTerm env b) (substPred env p) (substPred env q)
   DependsOn x y -> DependsOn (substTerm env x) (substTerm env y)
   TruePred -> TruePred
@@ -1745,7 +1774,7 @@ simplifyPred = \case
   DependsOn _ Lit {} -> TruePred
   DependsOn Lit {} _ -> TruePred
   DependsOn x y -> DependsOn x y
-  Case t bs -> mkCase (simplifyTerm t) (mapList simplifyBinder bs)
+  Case t bs -> mkCase (simplifyTerm t) (mapList (mapWeighted simplifyBinder) bs)
   IfElse b p q -> ifElse (simplifyTerm b) (simplifyPred p) (simplifyPred q)
   TruePred -> TruePred
   FalsePred es -> FalsePred es
@@ -1845,7 +1874,7 @@ letSubexpressionElimination = go []
       -- so the tradeoff is probably worth it.
       DependsOn t t' -> DependsOn (backwardsSubstitution sub t) (backwardsSubstitution sub t')
       ForAll t b -> ForAll (backwardsSubstitution sub t) (goBinder sub b)
-      Case t bs -> Case (backwardsSubstitution sub t) (mapList (goBinder sub) bs)
+      Case t bs -> Case (backwardsSubstitution sub t) (mapList (mapWeighted $ goBinder sub) bs)
       IfElse b p q -> IfElse (backwardsSubstitution sub b) (go sub p) (go sub q)
       TruePred -> TruePred
       FalsePred es -> FalsePred es
@@ -1890,7 +1919,7 @@ letFloating = fold . go []
       -- TODO: float let through forall if possible
       ForAll t (x :-> p) -> ForAll t (x :-> letFloating p) : ctx
       -- TODO: float let through the cases if possible
-      Case t bs -> Case t (mapList (\(x :-> p) -> x :-> letFloating p) bs) : ctx
+      Case t bs -> Case t (mapList (mapWeighted (\(x :-> p) -> x :-> letFloating p)) bs) : ctx
       -- TODO: float let through if possible
       IfElse b p q -> IfElse b (letFloating p) (letFloating q) : ctx
       -- Boring cases
@@ -1921,6 +1950,17 @@ aggressiveInlining p
     goBinder :: FreeVars fn -> Subst fn -> Binder fn a -> Writer Any (Binder fn a)
     goBinder fvs sub (x :-> p) = (x :->) <$> go (underBinder fvs x p) (underBinderSub sub x) p
 
+    -- Check that the name `n` is only ever used as the only variable
+    -- in the expressions where it appears. This ensures that it doesn't
+    -- interact with anything.
+    onlyUsedUniquely n p = case p of
+      Assert _ t
+        | n `appearsIn` t -> Set.size (freeVarSet t) == 1
+        | otherwise -> True
+      Block ps -> all (onlyUsedUniquely n) ps
+      -- TODO: we can (and should) probably add a bunch of cases to this.
+      _ -> False
+
     go fvs sub p = case p of
       Subst x t p -> go fvs sub (substitutePred x t p)
       Reifies t' t f
@@ -1939,12 +1979,12 @@ aggressiveInlining p
         | not (isLit t)
         , Lit a <- substituteAndSimplifyTerm sub t -> do
             tell $ Any True
-            pure $ runCaseOn a bs $ \x v p -> substPred (singletonEnv x v) p
-        | (x :-> p :> Nil) <- bs -> do
+            pure $ runCaseOn a (mapList thing bs) $ \x v p -> substPred (singletonEnv x v) p
+        | (Weighted w (x :-> p) :> Nil) <- bs -> do
             let t' = substituteAndSimplifyTerm sub t
             p' <- go (underBinder fvs x p) (x := t' : sub) p
-            pure $ Case t (x :-> p' :> Nil)
-        | otherwise -> Case t <$> mapMList (goBinder fvs sub) bs
+            pure $ Case t (Weighted w (x :-> p') :> Nil)
+        | otherwise -> Case t <$> mapMList (traverseWeighted $ goBinder fvs sub) bs
       IfElse b tp fp
         | not (isLit b)
         , Lit a <- substituteAndSimplifyTerm sub b -> do
@@ -1953,6 +1993,9 @@ aggressiveInlining p
         | otherwise -> ifElse b <$> go fvs sub tp <*> go fvs sub fp
       Let t (x :-> p)
         | all (\n -> count n fvs <= 1) (freeVarSet t) -> do
+            tell $ Any True
+            pure $ substitutePred x t p
+        | onlyUsedUniquely (Name x) p -> do
             tell $ Any True
             pure $ substitutePred x t p
         | not $ Name x `appearsIn` p -> do
@@ -2813,30 +2856,53 @@ instance BaseUniverse fn => HasSpec fn () where
 instance HasSimpleRep Bool
 instance (BaseUniverse fn, HasSpec fn ()) => HasSpec fn Bool where
   shrinkWithTypeSpec _ = shrink
-  cardinalTypeSpec (SumSpec a b) =
+  cardinalTypeSpec (SumSpec _ a b) =
     MemberSpec [0, 1, 2] <> addSpecInt (cardinality a) (cardinality b)
   cardinalTrueSpec = MemberSpec [2]
 
 -- Sum --------------------------------------------------------------------
 
-guardSumSpec :: (HasSpec fn a, HasSpec fn b) => SumSpec fn a b -> Specification fn (Sum a b)
-guardSumSpec s@(SumSpec sa sb)
+guardSumSpec ::
+  (HasSpec fn a, HasSpec fn b, KnownNat (CountCases b)) =>
+  SumSpec fn a b ->
+  Specification fn (Sum a b)
+guardSumSpec s@(SumSpec _ sa sb)
   | isErrorLike sa, isErrorLike sb = ErrorSpec ["empty SumSpec"]
   | otherwise = typeSpec s
 
-data SumSpec fn a b = SumSpec (Specification fn a) (Specification fn b)
+data SumSpec fn a b = SumSpec (Maybe (Int, Int)) (Specification fn a) (Specification fn b)
 
 instance (Arbitrary (Specification fn a), Arbitrary (Specification fn b)) => Arbitrary (SumSpec fn a b) where
-  arbitrary = SumSpec <$> arbitrary <*> arbitrary
-  shrink (SumSpec a b) = uncurry SumSpec <$> shrink (a, b)
+  arbitrary =
+    SumSpec
+      <$> frequency
+        [ (3, pure Nothing)
+        , (10, Just <$> ((,) <$> choose (0, 100) <*> choose (0, 100)))
+        , (1, arbitrary)
+        ]
+      <*> arbitrary
+      <*> arbitrary
+  shrink (SumSpec h a b) = [SumSpec h' a' b' | (h', a', b') <- shrink (h, a, b)]
+
+type family CountCases a where
+  CountCases (Sum a b) = 1 + CountCases b
+  CountCases _ = 1
+
+countCases :: forall a. KnownNat (CountCases a) => Int
+countCases = fromIntegral (natVal @(CountCases a) Proxy)
 
 instance (HasSpec fn a, HasSpec fn b) => Semigroup (SumSpec fn a b) where
-  SumSpec sa sb <> SumSpec sa' sb' = SumSpec (sa <> sa') (sb <> sb')
+  SumSpec h sa sb <> SumSpec h' sa' sb' = SumSpec (unionWithMaybe mergeH h h') (sa <> sa') (sb <> sb')
+    where
+      -- TODO: think more carefully about this, now weights like 2 2 and 10 15 give more weight to 10 15
+      -- than would be the case if you had 2 2 and 2 3. But on the other hand this approach is associative
+      -- whereas actually averaging the ratios is not. One could keep a list. Future work.
+      mergeH (fA, fB) (fA', fB') = (fA + fA', fB + fB')
 
-instance (HasSpec fn a, HasSpec fn b) => Monoid (SumSpec fn a b) where
-  mempty = SumSpec mempty mempty
+instance forall fn a b. (HasSpec fn a, HasSpec fn b, KnownNat (CountCases b)) => Monoid (SumSpec fn a b) where
+  mempty = SumSpec Nothing mempty mempty
 
-instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Sum a b) where
+instance (HasSpec fn a, HasSpec fn b, KnownNat (CountCases b)) => HasSpec fn (Sum a b) where
   type TypeSpec fn (Sum a b) = SumSpec fn a b
 
   type Prerequisites fn (Sum a b) = (HasSpec fn a, HasSpec fn b)
@@ -2845,34 +2911,36 @@ instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Sum a b) where
 
   combineSpec s s' = guardSumSpec $ s <> s'
 
-  conformsTo (SumLeft a) (SumSpec sa _) = conformsToSpec a sa
-  conformsTo (SumRight b) (SumSpec _ sb) = conformsToSpec b sb
+  conformsTo (SumLeft a) (SumSpec _ sa _) = conformsToSpec a sa
+  conformsTo (SumRight b) (SumSpec _ _ sb) = conformsToSpec b sb
 
-  genFromTypeSpec (SumSpec sa sb)
+  genFromTypeSpec (SumSpec h sa sb)
     | emptyA, emptyB = genError ["genFromTypeSpec @SumSpec: empty"]
     | emptyA = SumRight <$> genFromSpec sb
     | emptyB = SumLeft <$> genFromSpec sa
+    | fA == 0, fB == 0 = genError ["All frequencies 0"]
     | otherwise =
-        oneofT
-          [ SumLeft <$> genFromSpec sa
-          , SumRight <$> genFromSpec sb
+        frequencyT
+          [ (fA, SumLeft <$> genFromSpec sa)
+          , (fB, SumRight <$> genFromSpec sb)
           ]
     where
+      (max 0 -> fA, max 0 -> fB) = fromMaybe (1, countCases @b) h
       emptyA = isErrorLike sa
       emptyB = isErrorLike sb
 
-  shrinkWithTypeSpec (SumSpec sa _) (SumLeft a) = SumLeft <$> shrinkWithSpec sa a
-  shrinkWithTypeSpec (SumSpec _ sb) (SumRight b) = SumRight <$> shrinkWithSpec sb b
+  shrinkWithTypeSpec (SumSpec _ sa _) (SumLeft a) = SumLeft <$> shrinkWithSpec sa a
+  shrinkWithTypeSpec (SumSpec _ _ sb) (SumRight b) = SumRight <$> shrinkWithSpec sb b
 
-  toPreds ct (SumSpec sa sb) =
+  toPreds ct (SumSpec h sa sb) =
     Case
       ct
-      ( (bind $ \a -> satisfies a sa)
-          :> (bind $ \b -> satisfies b sb)
+      ( (Weighted (fst <$> h) $ bind $ \a -> satisfies a sa)
+          :> (Weighted (snd <$> h) $ bind $ \b -> satisfies b sb)
           :> Nil
       )
 
-  cardinalTypeSpec (SumSpec leftspec rightspec) = addSpecInt (cardinality leftspec) (cardinality rightspec)
+  cardinalTypeSpec (SumSpec _ leftspec rightspec) = addSpecInt (cardinality leftspec) (cardinality rightspec)
 
 deriving instance (HasSpec fn a, HasSpec fn b) => Show (SumSpec fn a b)
 
@@ -4166,7 +4234,7 @@ bind body = x :-> p
     bound (Exists _ b) = boundBinder b
     bound (Let _ b) = boundBinder b
     bound (ForAll _ b) = boundBinder b
-    bound (Case _ cs) = getMax $ foldMapList (Max . boundBinder) cs
+    bound (Case _ cs) = getMax $ foldMapList (Max . boundBinder . thing) cs
     bound (IfElse _ p q) = max (bound p) (bound q)
     bound Reifies {} = -1
     bound GenHint {} = -1
@@ -4176,15 +4244,17 @@ bind body = x :-> p
     bound FalsePred {} = -1
     bound Monitor {} = -1
 
-mkCase :: HasSpec fn (SumOver as) => Term fn (SumOver as) -> List (Binder fn) as -> Pred fn
+mkCase ::
+  HasSpec fn (SumOver as) => Term fn (SumOver as) -> List (Weighted (Binder fn)) as -> Pred fn
 mkCase tm cs
-  | x :-> p :> Nil <- cs = Subst x tm p
+  | Weighted _ (x :-> p) :> Nil <- cs = Subst x tm p
+  -- TODO: all equal maybe?
   | getAll $ foldMapList isTrueBinder cs = TruePred
-  | getAll $ foldMapList isFalseBinder cs = FalsePred ["mkCase on all False"]
-  | Lit a <- tm = runCaseOn a cs (\x val p -> substPred (singletonEnv x val) p)
+  | getAll $ foldMapList (isFalseBinder . thing) cs = FalsePred ["mkCase on all False"]
+  | Lit a <- tm = runCaseOn a (mapList thing cs) (\x val p -> substPred (singletonEnv x val) p)
   | otherwise = Case tm cs
   where
-    isTrueBinder (_ :-> TruePred) = Semigroup.All True
+    isTrueBinder (Weighted Nothing (_ :-> TruePred)) = Semigroup.All True
     isTrueBinder _ = Semigroup.All False
 
     isFalseBinder (_ :-> FalsePred {}) = Semigroup.All True
@@ -4285,6 +4355,11 @@ instance Pretty (Pred fn) where
     TruePred -> "True"
     FalsePred {} -> "False"
     Monitor {} -> "monitor"
+
+-- TODO: make nicer
+instance Pretty (f a) => Pretty (Weighted f a) where
+  pretty (Weighted Nothing t) = pretty t
+  pretty (Weighted (Just w) t) = viaShow w <> "~" <> pretty t
 
 instance Pretty (Binder fn a) where
   pretty (x :-> p) = viaShow x <+> "->" <+> pretty p

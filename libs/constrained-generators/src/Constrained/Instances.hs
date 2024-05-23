@@ -83,7 +83,7 @@ instance BaseUniverse fn => Functions (BoolFn fn) fn where
   propagateSpecFun Or (HOLE :? Value (s :: Bool) :> Nil) spec = caseBoolSpec spec (okOr s)
   propagateSpecFun Or (Value (s :: Bool) :! NilCtx HOLE) spec = caseBoolSpec spec (okOr s)
 
-  mapTypeSpec Not (SumSpec a b) = typeSpec $ SumSpec b a
+  mapTypeSpec Not (SumSpec h a b) = typeSpec $ SumSpec h b a
 
 -- | We have something like ('constant' ||. HOLE) must evaluate to 'need'. Return a (Specification fn Bool) for HOLE, that makes that True.
 okOr :: Bool -> Bool -> Specification fn Bool

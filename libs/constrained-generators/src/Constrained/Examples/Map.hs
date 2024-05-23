@@ -11,9 +11,9 @@ import Data.Map (Map)
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word
-import GHC.Generics
 
 import Constrained
+import Constrained.Examples.Basic
 
 mapElemSpec :: Specification BaseFn (Map Int (Bool, Int))
 mapElemSpec = constrained $ \m ->
@@ -39,12 +39,6 @@ knownDomainMap = constrained $ \m ->
   [ dom_ m ==. lit (Set.fromList [1, 2])
   , not_ $ 0 `elem_` rng_ m
   ]
-
-data Three = One | Two | Three
-  deriving (Ord, Eq, Show, Generic)
-
-instance HasSimpleRep Three
-instance BaseUniverse fn => HasSpec fn Three
 
 mapSizeConstrained :: Specification BaseFn (Map Three Int)
 mapSizeConstrained = constrained $ \m -> size_ (dom_ m) <=. 3

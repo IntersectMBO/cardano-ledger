@@ -208,3 +208,51 @@ reifiesMultiple = constrained' $ \x y z ->
   [ reifies (x + y) z id
   , x `dependsOn` y
   ]
+
+data Three = One | Two | Three deriving (Ord, Eq, Show, Generic)
+instance HasSimpleRep Three
+instance BaseUniverse fn => HasSpec fn Three
+
+trueSpecUniform :: Specification BaseFn Three
+trueSpecUniform = constrained $ \o -> monitor $ \eval -> QC.cover 30 True (show $ eval o)
+
+three :: Specification BaseFn Three
+three = constrained $ \o ->
+  [ caseOn
+      o
+      ( branchW 1 $ \_ -> True
+      )
+      ( branchW 1 $ \_ -> True
+      )
+      ( branchW 1 $ \_ -> True
+      )
+  , monitor $ \eval -> QC.cover 30 True (show $ eval o)
+  ]
+
+three' :: Specification BaseFn Three
+three' = three <> three
+
+threeSpecific :: Specification BaseFn Three
+threeSpecific = constrained $ \o ->
+  [ caseOn
+      o
+      ( branchW 1 $ \_ -> True
+      )
+      ( branchW 1 $ \_ -> True
+      )
+      ( branchW 2 $ \_ -> True
+      )
+  , monitor $ \eval ->
+      QC.coverTable "TheValue" [("One", 22), ("Two", 22), ("Three", 47)]
+        . QC.tabulate "TheValue" [show $ eval o]
+  ]
+
+threeSpecific' :: Specification BaseFn Three
+threeSpecific' = threeSpecific <> threeSpecific
+
+posNegDistr :: Specification BaseFn Int
+posNegDistr =
+  constrained $ \x ->
+    [ monitor $ \eval -> QC.cover 60 (0 < eval x) "x positive"
+    , x `satisfies` chooseSpec (1, constrained (<. 0)) (2, constrained (0 <.))
+    ]
