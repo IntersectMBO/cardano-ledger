@@ -40,6 +40,7 @@ module Cardano.Ledger.Plutus.TxInfo (
   transBoundedRational,
   transEpochNo,
   transEpochInterval,
+  transDatum,
 )
 where
 
@@ -210,3 +211,6 @@ transEpochNo = toInteger . unEpochNo
 
 transEpochInterval :: EpochInterval -> Integer
 transEpochInterval = toInteger . unEpochInterval
+
+transDatum :: Data era -> PV3.Datum
+transDatum = PV1.Datum . PV1.dataToBuiltinData . getPlutusData

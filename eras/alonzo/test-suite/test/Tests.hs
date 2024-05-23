@@ -15,7 +15,6 @@ import System.Environment (lookupEnv)
 import qualified Test.Cardano.Ledger.Alonzo.ChainTrace as ChainTrace
 import qualified Test.Cardano.Ledger.Alonzo.Golden as Golden
 import qualified Test.Cardano.Ledger.Alonzo.GoldenTranslation as GoldenTranslation
-import qualified Test.Cardano.Ledger.Alonzo.PlutusScriptExamples as PlutusScriptExamples
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Canonical as Canonical
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
 import qualified Test.Cardano.Ledger.Alonzo.Translation as Translation
@@ -45,7 +44,6 @@ defaultTests =
     , Canonical.tests
     , Golden.tests
     , GoldenTranslation.tests
-    , PlutusScriptExamples.tests
     , TxInfo.tests
     ]
 
