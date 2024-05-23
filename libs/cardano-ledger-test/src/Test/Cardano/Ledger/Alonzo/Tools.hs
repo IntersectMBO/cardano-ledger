@@ -15,7 +15,7 @@ import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded)
-import Cardano.Ledger.Api.Tx (TransactionScriptFailure (..), evalTxExUnits)
+import Cardano.Ledger.Api.Tx (RedeemerReport, TransactionScriptFailure (..), evalTxExUnits)
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto
@@ -169,20 +169,15 @@ exampleInvalidExUnitCalc ::
   ) =>
   Proof era ->
   IO ()
-exampleInvalidExUnitCalc proof = do
-  let result =
+exampleInvalidExUnitCalc proof =
+  let report =
         evalTxExUnits @era
           testPParams
           (exampleTx proof (AlonzoSpending (AsIx 1)))
           (initUTxO proof)
           exampleEpochInfo
           testSystemStart
-  case result of
-    Left err ->
-      assertFailure $
-        "evalTxExUnits should not have failed, but it did with: " ++ show err
-    Right report ->
-      case [(rdmrPtr, failure) | (rdmrPtr, Left failure) <- Map.toList report] of
+   in case [(rdmrPtr, failure) | (rdmrPtr, Left failure) <- Map.toList report] of
         [] ->
           assertFailure "evalTxExUnits should have produced a failing report"
         [(_, failure)] ->
@@ -276,16 +271,9 @@ updateTxExUnits ::
   (forall a. String -> m a) ->
   m (Tx era)
 updateTxExUnits tx utxo ei ss err =
-  let res = evalTxExUnits testPParams tx utxo ei ss
-   in case res of
-        Left e -> err (show e)
-        Right
-          ( rdmrs ::
-              Map
-                (PlutusPurpose AsIx era)
-                (Either (TransactionScriptFailure era) ExUnits)
-            ) ->
-            replaceRdmrs tx <$> traverse (failLeft err) rdmrs
+  let res :: RedeemerReport era
+      res = evalTxExUnits testPParams tx utxo ei ss
+   in replaceRdmrs tx <$> traverse (failLeft err) res
 
 replaceRdmrs ::
   forall era.

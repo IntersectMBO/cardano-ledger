@@ -2,6 +2,10 @@
 
 ## 1.3.3.0
 
+* Add `EncCBOR` and `DecCBOR` instances for `ScriptContext` for PlutusV1/V2/V3
+
+### `testlib`
+
 * Re-export:
   * `Pretty`
   * `ansiWlPretty`

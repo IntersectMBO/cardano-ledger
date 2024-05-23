@@ -27,14 +27,16 @@ module Cardano.Ledger.Conway.TxInfo (
   transMap,
   transTxInInfoV1,
   transTxOutV1,
+  toPlutusV3Args,
 ) where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (..),
   EraPlutusTxInfo (..),
+  LedgerTxInfo (..),
   PlutusTxCert,
-  mkPlutusLanguageContext,
+  toPlutusWithContext,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
@@ -84,18 +86,21 @@ import Cardano.Ledger.Conway.Plutus.Context (
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..), PlutusScript (..))
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Conway.UTxO ()
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Mary (MaryValue)
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Data (Data)
+import Cardano.Ledger.Plutus.Language (Language (..), PlutusArgs (..))
 import Cardano.Ledger.Plutus.ToPlutusData (ToPlutusData (..))
 import Cardano.Ledger.Plutus.TxInfo (
   transBoundedRational,
   transCoinToLovelace,
   transCoinToValue,
   transCred,
+  transDatum,
   transEpochNo,
   transKeyHash,
   transRewardAccount,
@@ -125,10 +130,10 @@ import qualified PlutusLedgerApi.V3 as PV3
 instance Crypto c => EraPlutusContext (ConwayEra c) where
   type ContextError (ConwayEra c) = ConwayContextError (ConwayEra c)
 
-  mkPlutusScriptContext = \case
-    ConwayPlutusV1 p -> mkPlutusLanguageContext p
-    ConwayPlutusV2 p -> mkPlutusLanguageContext p
-    ConwayPlutusV3 p -> mkPlutusLanguageContext p
+  mkPlutusWithContext = \case
+    ConwayPlutusV1 p -> toPlutusWithContext $ Left p
+    ConwayPlutusV2 p -> toPlutusWithContext $ Left p
+    ConwayPlutusV3 p -> toPlutusWithContext $ Left p
 
 data ConwayContextError era
   = BabbageContextError !(BabbageContextError era)
@@ -353,11 +358,12 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
 
   toPlutusScriptPurpose proxy = transPlutusPurposeV1V2 proxy . hoistPlutusPurpose toAsItem
 
-  toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
-    guardConwayFeaturesForPlutusV1V2 tx
-    timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
-    inputs <- mapM (transTxInInfoV1 utxo) (Set.toList (txBody ^. inputsTxBodyL))
-    mapM_ (transTxInInfoV1 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
+  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
+    guardConwayFeaturesForPlutusV1V2 ltiTx
+    timeRange <-
+      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+    inputs <- mapM (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
+    mapM_ (transTxInInfoV1 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-
       zipWithM
         (transTxOutV1 . TxOutFromOutput)
@@ -374,32 +380,32 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
         , PV1.txInfoWdrl = Alonzo.transTxBodyWithdrawals txBody
         , PV1.txInfoValidRange = timeRange
         , PV1.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
-        , PV1.txInfoData = Alonzo.transTxWitsDatums (tx ^. witsTxL)
+        , PV1.txInfoData = Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
         , PV1.txInfoId = Alonzo.transTxBodyId txBody
         }
     where
-      txBody = tx ^. bodyTxL
+      txBody = ltiTx ^. bodyTxL
 
-  toPlutusScriptContext proxy txInfo scriptPurpose =
-    PV1.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
+  toPlutusArgs = Alonzo.toPlutusV1Args
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
   toPlutusTxCert _ = transTxCertV1V2
 
   toPlutusScriptPurpose proxy = transPlutusPurposeV1V2 proxy . hoistPlutusPurpose toAsItem
 
-  toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
-    guardConwayFeaturesForPlutusV1V2 tx
-    timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
-    inputs <- mapM (Babbage.transTxInInfoV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
-    refInputs <- mapM (Babbage.transTxInInfoV2 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
+  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
+    guardConwayFeaturesForPlutusV1V2 ltiTx
+    timeRange <-
+      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+    inputs <- mapM (Babbage.transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
+    refInputs <- mapM (Babbage.transTxInInfoV2 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-
       zipWithM
         (Babbage.transTxOutV2 . TxOutFromOutput)
         [minBound ..]
         (F.toList (txBody ^. outputsTxBodyL))
     txCerts <- Alonzo.transTxBodyCerts proxy txBody
-    plutusRedeemers <- Babbage.transTxRedeemers proxy tx
+    plutusRedeemers <- Babbage.transTxRedeemers proxy ltiTx
     pure
       PV2.TxInfo
         { PV2.txInfoInputs = inputs
@@ -412,31 +418,31 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
         , PV2.txInfoValidRange = timeRange
         , PV2.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
         , PV2.txInfoRedeemers = plutusRedeemers
-        , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+        , PV2.txInfoData = PV2.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
         , PV2.txInfoId = Alonzo.transTxBodyId txBody
         }
     where
-      txBody = tx ^. bodyTxL
+      txBody = ltiTx ^. bodyTxL
 
-  toPlutusScriptContext proxy txInfo scriptPurpose =
-    PV2.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
+  toPlutusArgs = Babbage.toPlutusV2Args
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
   toPlutusTxCert _ = pure . transTxCert
 
   toPlutusScriptPurpose = transScriptPurpose
 
-  toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
-    timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
-    inputs <- mapM (transTxInInfoV3 utxo) (Set.toList (txBody ^. inputsTxBodyL))
-    refInputs <- mapM (transTxInInfoV3 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
+  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
+    timeRange <-
+      Alonzo.transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+    inputs <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList (txBody ^. inputsTxBodyL))
+    refInputs <- mapM (transTxInInfoV3 ltiUTxO) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-
       zipWithM
         (Babbage.transTxOutV2 . TxOutFromOutput)
         [minBound ..]
         (F.toList (txBody ^. outputsTxBodyL))
     txCerts <- Alonzo.transTxBodyCerts proxy txBody
-    plutusRedeemers <- Babbage.transTxRedeemers proxy tx
+    plutusRedeemers <- Babbage.transTxRedeemers proxy ltiTx
     pure
       PV3.TxInfo
         { PV3.txInfoInputs = inputs
@@ -449,7 +455,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
         , PV3.txInfoValidRange = timeRange
         , PV3.txInfoSignatories = Alonzo.transTxBodyReqSignerHashes txBody
         , PV3.txInfoRedeemers = plutusRedeemers
-        , PV3.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (tx ^. witsTxL)
+        , PV3.txInfoData = PV3.unsafeFromList $ Alonzo.transTxWitsDatums (ltiTx ^. witsTxL)
         , PV3.txInfoId = transTxBodyId txBody
         , PV3.txInfoVotes = transVotingProcedures (txBody ^. votingProceduresTxBodyL)
         , PV3.txInfoProposalProcedures =
@@ -462,10 +468,9 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
               coin -> Just $ transCoinToLovelace coin
         }
     where
-      txBody = tx ^. bodyTxL
+      txBody = ltiTx ^. bodyTxL
 
-  toPlutusScriptContext proxy txInfo scriptPurpose =
-    PV3.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
+  toPlutusArgs = toPlutusV3Args
 
 transTxId :: TxId c -> PV3.TxId
 transTxId txId = PV3.TxId (transSafeHash (unTxId txId))
@@ -649,6 +654,38 @@ transPlutusPurposeV1V2 proxy = \case
 transProtVer :: ProtVer -> PV3.ProtocolVersion
 transProtVer (ProtVer major minor) =
   PV3.ProtocolVersion (toInteger (getVersion64 major)) (toInteger minor)
+
+toPlutusV3Args ::
+  EraPlutusTxInfo 'PlutusV3 era =>
+  proxy 'PlutusV3 ->
+  PV3.TxInfo ->
+  PlutusPurpose AsIxItem era ->
+  Maybe (Data era) ->
+  Data era ->
+  Either (ContextError era) (PlutusArgs 'PlutusV3)
+toPlutusV3Args proxy txInfo plutusPurpose maybeSpendingData redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy plutusPurpose
+  let scriptInfo =
+        scriptPurposeToScriptInfo
+          scriptPurpose
+          (transDatum <$> maybeSpendingData)
+  pure $
+    PlutusV3Args $
+      PV3.ScriptContext
+        { PV3.scriptContextTxInfo = txInfo
+        , PV3.scriptContextRedeemer = Babbage.transRedeemer redeemerData
+        , PV3.scriptContextScriptInfo = scriptInfo
+        }
+
+scriptPurposeToScriptInfo :: PV3.ScriptPurpose -> Maybe PV1.Datum -> PV3.ScriptInfo
+scriptPurposeToScriptInfo sp maybeSpendingData =
+  case sp of
+    PV3.Spending txIn -> PV3.SpendingScript txIn maybeSpendingData
+    PV3.Minting policyId -> PV3.MintingScript policyId
+    PV3.Certifying ix txCert -> PV3.CertifyingScript ix txCert
+    PV3.Rewarding rewardAccount -> PV3.RewardingScript rewardAccount
+    PV3.Voting voter -> PV3.VotingScript voter
+    PV3.Proposing ix proposal -> PV3.ProposingScript ix proposal
 
 -- ==========================
 -- Instances

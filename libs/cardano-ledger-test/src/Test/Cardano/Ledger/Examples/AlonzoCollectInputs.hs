@@ -14,23 +14,18 @@
 module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 
 import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, mkPlutusScriptContext)
+import Cardano.Ledger.Alonzo.Plutus.Context (LedgerTxInfo (..), toPlutusArgs, toPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..), collectPlutusScriptsWithContext)
-import Cardano.Ledger.Alonzo.Scripts (
-  AlonzoEraScript (..),
-  AlonzoScript (..),
-  AsIxItem (..),
-  ExUnits (..),
- )
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
-import Cardano.Ledger.Plutus.Data (Data (..), unData)
-import Cardano.Ledger.Plutus.Evaluate (
-  PlutusDatums (..),
+import Cardano.Ledger.Plutus (
+  Data (..),
+  ExUnits (..),
+  Language (..),
   PlutusWithContext (..),
+  hashPlutusScript,
  )
-import Cardano.Ledger.Plutus.Language (Language (..), hashPlutusScript)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val (inject)
@@ -62,7 +57,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
-import Test.Cardano.Ledger.Plutus (zeroTestingCostModel, zeroTestingCostModels)
+import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus, zeroTestingCostModel, zeroTestingCostModels)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
@@ -80,32 +75,33 @@ collectTwoPhaseScriptInputsOutputOrdering ::
 collectTwoPhaseScriptInputsOutputOrdering = do
   collectInputs apf testEpochInfo testSystemStart (pp apf) (validatingTx apf) (initUTxO apf)
     @?= Right
-      [ withPlutusScript plutusScript $ \plutus ->
-          PlutusWithContext
-            { pwcProtocolVersion = pvMajor (pp apf ^. ppProtocolVersionL)
-            , pwcScript = Left plutus
-            , pwcScriptHash = hashPlutusScript plutus
-            , pwcDatums = PlutusDatums [unData @Alonzo datum, unData @Alonzo redeemer, context]
-            , pwcExUnits = ExUnits 5000 5000
-            , pwcCostModel = zeroTestingCostModel PlutusV1
-            }
+      [ PlutusWithContext
+          { pwcProtocolVersion = pvMajor (pp apf ^. ppProtocolVersionL)
+          , pwcScript = Left plutus
+          , pwcScriptHash = hashPlutusScript plutus
+          , pwcArgs = either (error . show) id $ do
+              txInfo <- toPlutusTxInfo plutus lti
+              toPlutusArgs
+                plutus
+                txInfo
+                (spendingPurpose1 apf)
+                (Just (datum @Alonzo))
+                (redeemer @Alonzo)
+          , pwcExUnits = ExUnits 5000 5000
+          , pwcCostModel = zeroTestingCostModel PlutusV1
+          }
       ]
   where
     apf = Alonzo
-    plutusScript = case always 3 apf of
-      TimelockScript _ -> error "always was not a Plutus script"
-      PlutusScript ps -> ps
-    Data context =
-      either (\err -> error $ "Translation error: " ++ show err) id $
-        mkPlutusScriptContext'
-          apf
-          plutusScript
-          (spendingPurpose1 apf)
-          (pp apf)
-          testEpochInfo
-          testSystemStart
-          (initUTxO apf)
-          (validatingTx apf)
+    plutus = alwaysSucceedsPlutus @'PlutusV1 3
+    lti =
+      LedgerTxInfo
+        { ltiProtVer = pp apf ^. ppProtocolVersionL
+        , ltiEpochInfo = testEpochInfo
+        , ltiSystemStart = testSystemStart
+        , ltiUTxO = initUTxO apf
+        , ltiTx = validatingTx apf
+        }
 
 -- ============================== DATA ===============================
 
@@ -166,21 +162,6 @@ collectInputs Alonzo = collectPlutusScriptsWithContext
 collectInputs Babbage = collectPlutusScriptsWithContext
 collectInputs Conway = collectPlutusScriptsWithContext
 collectInputs x = error ("collectInputs Not defined in era " ++ show x)
-
-mkPlutusScriptContext' ::
-  Proof era ->
-  PlutusScript era ->
-  PlutusPurpose AsIxItem era ->
-  PParams era ->
-  EpochInfo (Either Text) ->
-  SystemStart ->
-  UTxO era ->
-  Tx era ->
-  Either (ContextError era) (Data era)
-mkPlutusScriptContext' Alonzo = mkPlutusScriptContext
-mkPlutusScriptContext' Babbage = mkPlutusScriptContext
-mkPlutusScriptContext' Conway = mkPlutusScriptContext
-mkPlutusScriptContext' era = error ("mkPlutusScriptContext is not defined in era " ++ show era)
 
 testEpochInfo :: EpochInfo (Either Text)
 testEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)

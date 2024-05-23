@@ -16,6 +16,7 @@
 module Cardano.Ledger.Binary.Decoding.DecCBOR (
   DecCBOR (..),
   fromByronCBOR,
+  decodeScriptContextFromData,
 )
 where
 
@@ -94,6 +95,8 @@ import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.TypeNats (KnownNat, type (*))
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusLedgerApi.V2 as PV2
+import qualified PlutusLedgerApi.V3 as PV3
 import Prelude hiding (decodeFloat)
 
 class Typeable a => DecCBOR a where
@@ -661,3 +664,18 @@ deriving instance DecCBOR EpochInterval
 instance DecCBOR PV1.Data where
   decCBOR = fromPlainDecoder decode
   {-# INLINE decCBOR #-}
+
+instance DecCBOR PV1.ScriptContext where
+  decCBOR = decCBOR >>= decodeScriptContextFromData
+
+instance DecCBOR PV2.ScriptContext where
+  decCBOR = decCBOR >>= decodeScriptContextFromData
+
+instance DecCBOR PV3.ScriptContext where
+  decCBOR = decCBOR >>= decodeScriptContextFromData
+
+decodeScriptContextFromData :: (PV3.FromData a, MonadFail m) => PV3.Data -> m a
+decodeScriptContextFromData scriptContextData =
+  case PV3.fromData scriptContextData of
+    Nothing -> fail $ "ScriptContext cannot be decoded from Data: " <> show scriptContextData
+    Just scriptContext -> pure scriptContext

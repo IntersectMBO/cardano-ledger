@@ -109,7 +109,7 @@ class EraUTxO era => AlonzoEraUTxO era where
   -- spending that input. This function will return `Nothing` for all script purposes,
   -- except spending, because only spending scripts require an extra datum.
   --
-  -- This is the same function as in the spec:
+  -- This is similar to @getDatum@ function as in the spec:
   --
   -- @
   --   getDatum :: Tx era -> UTxO era -> ScriptPurpose era -> [Data era]
@@ -174,11 +174,11 @@ getInputDataHashesTxBody ::
   TxBody era ->
   ScriptsProvided era ->
   (Set.Set (DataHash (EraCrypto era)), Set.Set (TxIn (EraCrypto era)))
-getInputDataHashesTxBody (UTxO mp) txBody (ScriptsProvided scriptsProvided) =
+getInputDataHashesTxBody (UTxO utxo) txBody (ScriptsProvided scriptsProvided) =
   Map.foldlWithKey' accum (Set.empty, Set.empty) spendUTxO
   where
     spendInputs = txBody ^. inputsTxBodyL
-    spendUTxO = eval (spendInputs ◁ mp)
+    spendUTxO = eval (spendInputs ◁ utxo)
     accum ans@(!hashSet, !inputSet) txIn txOut =
       let addr = txOut ^. addrTxOutL
           isTwoPhaseScriptAddress = isTwoPhaseScriptAddressFromMap scriptsProvided addr
