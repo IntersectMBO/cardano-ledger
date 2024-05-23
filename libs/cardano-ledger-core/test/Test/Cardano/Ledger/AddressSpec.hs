@@ -37,7 +37,7 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
   roundTripCborSpec,
   roundTripRangeExpectation,
  )
-import Test.Cardano.Ledger.Common hiding ((.&.))
+import Test.Cardano.Ledger.Common hiding ((.&.), witness)
 import Test.Cardano.Ledger.Core.Address
 import Test.Cardano.Ledger.Core.Arbitrary (genAddrBadPtr, genCompactAddrBadPtr)
 import Test.Cardano.Ledger.Core.KeyPair (genByronVKeyAddr)
