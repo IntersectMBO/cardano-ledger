@@ -38,14 +38,22 @@ govEnvSpec = constrained $ \ge ->
   match ge $ \_ _ pp _ _ ->
     satisfies pp pparamsSpec
 
+govProposalsSpecSTS ::
+  IsConwayUniv fn =>
+  GovEnv (ConwayEra StandardCrypto) ->
+  Specification fn (Proposals (ConwayEra StandardCrypto))
+govProposalsSpecSTS GovEnv {geEpoch, gePPolicy} =
+  govProposalsSpec (lit geEpoch) (lit gePPolicy)
+
 -- NOTE: it is probably OK not to check uniqueness of ids here, because a clash
 -- is never going to be generated, and the real representation of `Proposals` doesn't
 -- allow the id to appear twice.
 govProposalsSpec ::
   IsConwayUniv fn =>
-  GovEnv (ConwayEra StandardCrypto) ->
+  Term fn EpochNo ->
+  Term fn (StrictMaybe (ScriptHash StandardCrypto)) ->
   Specification fn (Proposals (ConwayEra StandardCrypto))
-govProposalsSpec GovEnv {geEpoch, gePPolicy} =
+govProposalsSpec geEpoch gePPolicy =
   constrained $ \props ->
     match props $ \ppupTree hardForkTree committeeTree constitutionTree unorderedProposals ->
       [ -- Protocol parameter updates
@@ -55,7 +63,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy} =
           , onCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas) $
               \_ ppup policy ->
                 [ wfPParamsUpdate ppup
-                , assert $ policy ==. lit gePPolicy
+                , assert $ policy ==. gePPolicy
                 ]
           ]
       , forAll (snd_ ppupTree) (genHint treeGenHint)
@@ -96,7 +104,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy} =
             -- UpdateCommittee
             ( branch $ \_ _ added _ ->
                 forAll (rng_ added) $ \epoch ->
-                  lit geEpoch <. epoch
+                  geEpoch <. epoch
             )
             (branch $ \_ _ -> False)
             (branch $ \_ -> False)
@@ -118,7 +126,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy} =
             ( branch $ \withdrawMap policy ->
                 [ forAll (dom_ withdrawMap) $ \rewAcnt ->
                     match rewAcnt $ \net _ -> net ==. lit Testnet
-                , assert $ policy ==. lit gePPolicy
+                , assert $ policy ==. gePPolicy
                 ]
             )
             (branch $ \_ -> False)

@@ -91,7 +91,7 @@ prop_GOV :: Property
 prop_GOV =
   stsPropertyV2 @"GOV" @ConwayFn
     govEnvSpec
-    govProposalsSpec
+    govProposalsSpecSTS
     govProceduresSpec
     -- TODO: we should probably check more things here
     $ \_env _st _sig _st' -> True
