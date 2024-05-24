@@ -19,6 +19,7 @@ module Cardano.Ledger.Shelley.Rules.Snap (
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.Shelley.Governance (GovState)
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -71,6 +72,10 @@ deriving instance Eq (SnapEvent era)
 instance NFData (SnapEvent era)
 
 data SnapEnv era = SnapEnv !(LedgerState era) !(PParams era)
+  deriving (Generic)
+
+deriving instance (EraTxOut era, Show (GovState era)) => Show (SnapEnv era)
+deriving instance (EraTxOut era, Eq (GovState era)) => Eq (SnapEnv era)
 
 instance EraTxOut era => STS (ShelleySNAP era) where
   type State (ShelleySNAP era) = SnapShots (EraCrypto era)

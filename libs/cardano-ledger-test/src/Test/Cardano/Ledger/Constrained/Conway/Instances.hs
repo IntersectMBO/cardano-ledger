@@ -54,6 +54,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances (
   proposalSplitSum,
 ) where
 
+import Cardano.Ledger.Shelley.RewardUpdate
 import Cardano.Chain.Common (
   AddrAttributes (..),
   AddrType (..),
@@ -1462,3 +1463,37 @@ onSized sz p = match sz $ \a _ -> p a
 
 instance HasSimpleRep (ConwayDelegEnv era)
 instance (IsConwayUniv fn, HasSpec fn (PParams era), Era era) => HasSpec fn (ConwayDelegEnv era)
+
+instance HasSimpleRep (SnapEnv (ConwayEra StandardCrypto))
+instance IsConwayUniv fn => HasSpec fn (SnapEnv (ConwayEra StandardCrypto))
+
+instance HasSimpleRep (BlocksMade StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (BlocksMade StandardCrypto)
+
+-- TODO: this should probably have a proper instance based on HasSimpleRep
+instance BaseUniverse fn => HasSpec fn (RewardPulser StandardCrypto ShelleyBase (RewardAns StandardCrypto)) where
+  type TypeSpec fn (RewardPulser StandardCrypto ShelleyBase (RewardAns StandardCrypto)) = ()
+  emptySpec = ()
+  combineSpec _ _ = TrueSpec
+  genFromTypeSpec _ = pureGen arbitrary
+  shrinkWithTypeSpec _ = shrink
+  conformsTo _ _ = True
+  toPreds _ _ = toPred True
+
+instance HasSimpleRep RewardType
+instance IsConwayUniv fn => HasSpec fn RewardType
+
+instance HasSimpleRep (Reward StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (Reward StandardCrypto)
+
+instance HasSimpleRep (RewardSnapShot StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (RewardSnapShot StandardCrypto)
+
+instance HasSimpleRep (RewardUpdate StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (RewardUpdate StandardCrypto)
+
+instance HasSimpleRep (PulsingRewUpdate StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (PulsingRewUpdate StandardCrypto)
+
+instance HasSimpleRep (NewEpochState (ConwayEra StandardCrypto))
+instance IsConwayUniv fn => HasSpec fn (NewEpochState (ConwayEra StandardCrypto))

@@ -239,21 +239,21 @@ prop_UTXO =
 --     (\_env _st -> TrueSpec)
 --     $ \_env _st _sig _st' -> True
 
--- prop_SNAP :: Property
--- prop_SNAP =
---   stsPropertyV2 @"SNAP" @ConwayFn
---     TrueSpec
---     (\_env -> TrueSpec)
---     (\_env _st -> TrueSpec)
---     $ \_env _st _sig _st' -> True
+prop_SNAP :: Property
+prop_SNAP =
+  stsPropertyV2 @"SNAP" @ConwayFn
+    TrueSpec
+    (\_env -> TrueSpec)
+    (\_env _st -> TrueSpec)
+    $ \_env _st _sig _st' -> True
 
--- prop_TICK :: Property
--- prop_TICK =
---   stsPropertyV2 @"TICK" @ConwayFn
---     TrueSpec
---     (\_env -> TrueSpec)
---     (\_env _st -> TrueSpec)
---     $ \_env _st _sig _st' -> True
+prop_TICK :: Property
+prop_TICK =
+  stsPropertyV2 @"TICK" @ConwayFn
+    TrueSpec
+    (\_env -> TrueSpec)
+    (\_env _st -> TrueSpec)
+    $ \_env _st _sig _st' -> True
 
 ------------------------------------------------------------------------
 -- Test Tree
@@ -264,6 +264,7 @@ tests_STS =
   testGroup
     "STS property tests"
     [ govTests
+    , testProperty "prop_SNAP" prop_SNAP
     -- , utxoTests
     -- TODO: this is probably one of the last things we want to
     -- get passing as it depends on being able to generate a complete

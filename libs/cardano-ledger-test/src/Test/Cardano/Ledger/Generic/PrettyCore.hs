@@ -220,6 +220,7 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgerPredFailure (..),
   UpecPredFailure,
   UtxoEnv (..),
+  SnapEnv (..)
  )
 import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyBbodyPredFailure (..),
@@ -3240,6 +3241,10 @@ withEraPParams Allegra x = x
 withEraPParams Alonzo x = x
 withEraPParams Babbage x = x
 withEraPParams Conway x = x
+
+-- TODO: fixme
+instance Show (SnapEnv era) => PrettyA (SnapEnv era) where
+  prettyA = viaShow
 
 -- | Print just a few of the PParams fields
 pcPParamsSynopsis :: forall era. Proof era -> Core.PParams era -> PDoc
