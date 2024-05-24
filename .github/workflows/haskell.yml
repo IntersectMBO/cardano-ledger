@@ -243,7 +243,12 @@ jobs:
     - name: Run tests
       run: |
         export CARDANO_MAINNET_MIRROR="$(pwd)/epochs"
-        cabal test ${{ matrix.package }}
+        if [ -z "$NIGHTLY" ]; then
+          cabal test "${{ matrix.package }}"
+        else
+          TRIES=3
+          scripts/cabal-test-with-retries.sh "${{ matrix.package }}" "$TRIES"
+        fi
 
   complete:
     name: Tests completed
