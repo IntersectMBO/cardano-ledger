@@ -23,7 +23,8 @@ module Cardano.Ledger.Babbage.TxInfo (
   transTxInInfoV1,
   transTxInInfoV2,
   transTxRedeemers,
-  toLegacyPlutusV2Args,
+  transRedeemer,
+  toPlutusV2Args,
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (
@@ -36,7 +37,6 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (
   AlonzoContextError (..),
   toLegacyPlutusArgs,
-  toLegacyPlutusV1Args,
  )
 import qualified Cardano.Ledger.Alonzo.Plutus.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (toAsItem)
@@ -321,7 +321,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (BabbageEra c) where
     where
       txBody = ltiTx ^. bodyTxL
 
-  toPlutusArgs = toLegacyPlutusV1Args
+  toPlutusArgs = Alonzo.toPlutusV1Args
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV2 (BabbageEra c) where
   toPlutusTxCert _ = pure . Alonzo.transTxCert
@@ -358,16 +358,16 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV2 (BabbageEra c) where
     where
       txBody = ltiTx ^. bodyTxL
 
-  toPlutusArgs = toLegacyPlutusV2Args
+  toPlutusArgs = toPlutusV2Args
 
-toLegacyPlutusV2Args ::
+toPlutusV2Args ::
   EraPlutusTxInfo 'PlutusV2 era =>
   proxy 'PlutusV2 ->
   PV2.TxInfo ->
   PlutusPurpose AsIxItem era ->
-  Maybe PV2.Data ->
-  PV2.Data ->
+  Maybe (Data era) ->
+  Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV2)
-toLegacyPlutusV2Args proxy txInfo scriptPurpose maybeSpendingData redeemerData =
+toPlutusV2Args proxy txInfo scriptPurpose maybeSpendingData redeemerData =
   PlutusV2Args
     <$> toLegacyPlutusArgs proxy (PV2.ScriptContext txInfo) scriptPurpose maybeSpendingData redeemerData

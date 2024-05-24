@@ -47,7 +47,6 @@ import Cardano.Ledger.Plutus (
   PlutusRunnable,
   PlutusScriptContext,
   PlutusWithContext (..),
-  getPlutusData,
  )
 import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -58,7 +57,6 @@ import Data.Kind (Type)
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import NoThunks.Class (NoThunks)
-import qualified PlutusLedgerApi.Common as P
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
@@ -89,8 +87,8 @@ class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language
     proxy l ->
     PlutusTxInfo l ->
     PlutusPurpose AsIxItem era ->
-    Maybe P.Data ->
-    P.Data ->
+    Maybe (Data era) ->
+    Data era ->
     Either (ContextError era) (PlutusArgs l)
 
 class
@@ -129,10 +127,9 @@ toPlutusWithContext ::
 toPlutusWithContext script scriptHash plutusPurpose lti (redeemerData, exUnits) costModel = do
   let proxy = Proxy @l
       spendingDatum =
-        getPlutusData
-          <$> getSpendingDatum (ltiUTxO lti) (ltiTx lti) (hoistPlutusPurpose toAsItem plutusPurpose)
+        getSpendingDatum (ltiUTxO lti) (ltiTx lti) (hoistPlutusPurpose toAsItem plutusPurpose)
   txInfo <- toPlutusTxInfo proxy lti
-  plutusArgs <- toPlutusArgs proxy txInfo plutusPurpose spendingDatum (getPlutusData redeemerData)
+  plutusArgs <- toPlutusArgs proxy txInfo plutusPurpose spendingDatum redeemerData
   pure $
     PlutusWithContext
       { pwcProtocolVersion = pvMajor (ltiProtVer lti)

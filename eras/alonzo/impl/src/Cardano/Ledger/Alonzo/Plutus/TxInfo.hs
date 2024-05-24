@@ -44,8 +44,8 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   transTxWitsDatums,
 
   -- * LgacyPlutusArgs helpers
+  toPlutusV1Args,
   toLegacyPlutusArgs,
-  toLegacyPlutusV1Args,
 )
 where
 
@@ -73,6 +73,7 @@ import Cardano.Ledger.Mary.Value (
   MultiAsset (..),
   PolicyID (..),
  )
+import Cardano.Ledger.Plutus.Data (Data, getPlutusData)
 import Cardano.Ledger.Plutus.Language (Language (..), LegacyPlutusArgs (..), PlutusArgs (..))
 import Cardano.Ledger.Plutus.TxInfo
 import Cardano.Ledger.PoolParams (PoolParams (..))
@@ -129,17 +130,17 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
     where
       txBody = ltiTx ^. bodyTxL
 
-  toPlutusArgs = toLegacyPlutusV1Args
+  toPlutusArgs = toPlutusV1Args
 
-toLegacyPlutusV1Args ::
+toPlutusV1Args ::
   EraPlutusTxInfo 'PlutusV1 era =>
   proxy 'PlutusV1 ->
   PV1.TxInfo ->
   PlutusPurpose AsIxItem era ->
-  Maybe PV1.Data ->
-  PV1.Data ->
+  Maybe (Data era) ->
+  Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV1)
-toLegacyPlutusV1Args proxy txInfo scriptPurpose maybeSpendingData redeemerData =
+toPlutusV1Args proxy txInfo scriptPurpose maybeSpendingData redeemerData =
   PlutusV1Args
     <$> toLegacyPlutusArgs proxy (PV1.ScriptContext txInfo) scriptPurpose maybeSpendingData redeemerData
 
@@ -148,14 +149,15 @@ toLegacyPlutusArgs ::
   proxy l ->
   (PlutusScriptPurpose l -> PlutusScriptContext l) ->
   PlutusPurpose AsIxItem era ->
-  Maybe PV1.Data ->
-  PV1.Data ->
+  Maybe (Data era) ->
+  Data era ->
   Either (ContextError era) (LegacyPlutusArgs l)
 toLegacyPlutusArgs proxy mkScriptContext scriptPurpose maybeSpendingData redeemerData = do
   scriptContext <- mkScriptContext <$> toPlutusScriptPurpose proxy scriptPurpose
+  let redeemer = getPlutusData redeemerData
   pure $ case maybeSpendingData of
-    Nothing -> LegacyPlutusArgs2 redeemerData scriptContext
-    Just spendingData -> LegacyPlutusArgs3 spendingData redeemerData scriptContext
+    Nothing -> LegacyPlutusArgs2 redeemer scriptContext
+    Just spendingData -> LegacyPlutusArgs3 (getPlutusData spendingData) redeemer scriptContext
 
 instance Crypto c => EraPlutusContext (AlonzoEra c) where
   type ContextError (AlonzoEra c) = AlonzoContextError (AlonzoEra c)

@@ -192,20 +192,13 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
               }
       costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang costModels
       first BadTranslation $
-        mkPlutusWithContext plutusScript plutusScriptHash plutusPurpose ledgerTxInfo (redeemerData, exUnits) costModel
-
--- let spendingDatum = getSpendingDatum utxo tx $ hoistPlutusPurpose toAsItem plutusPurpose
---     datums = maybe id (:) spendingDatum [redeemerData, scriptContext]
---  in Right $
---       withPlutusScript plutusScript $ \plutus ->
---         PlutusWithContext
---           { pwcProtocolVersion = protVerMajor
---           , pwcScript = Left plutus
---           , pwcScriptHash = plutusScriptHash
---           , pwcArgs = PlutusDatums (getPlutusData <$> datums)
---           , pwcExUnits = exUnits
---           , pwcCostModel = costModel
---           }
+        mkPlutusWithContext
+          plutusScript
+          plutusScriptHash
+          plutusPurpose
+          ledgerTxInfo
+          (redeemerData, exUnits)
+          costModel
 
 -- | Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
 --   but if there are none, use 'f' to construct a success.
