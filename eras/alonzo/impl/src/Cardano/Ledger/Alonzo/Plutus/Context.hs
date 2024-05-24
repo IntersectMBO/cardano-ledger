@@ -14,7 +14,7 @@ module Cardano.Ledger.Alonzo.Plutus.Context (
   LedgerTxInfo (..),
   EraPlutusTxInfo (..),
   EraPlutusContext (..),
-  mkPlutusLanguageWithContext,
+  toPlutusWithContext,
 
   -- * Language dependent translation
   PlutusTxInfo,
@@ -63,6 +63,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 
+-- | All information that is necessary from the ledger to construct Plutus' TxInfo.
 data LedgerTxInfo era = LedgerTxInfo
   { ltiProtVer :: !ProtVer
   , ltiEpochInfo :: !(EpochInfo (Either Text))
@@ -115,7 +116,7 @@ class
     CostModel ->
     Either (ContextError era) (PlutusWithContext (EraCrypto era))
 
-mkPlutusLanguageWithContext ::
+toPlutusWithContext ::
   forall l era.
   (EraPlutusTxInfo l era, AlonzoEraUTxO era) =>
   Either (Plutus l) (PlutusRunnable l) ->
@@ -125,7 +126,7 @@ mkPlutusLanguageWithContext ::
   (Data era, ExUnits) ->
   CostModel ->
   Either (ContextError era) (PlutusWithContext (EraCrypto era))
-mkPlutusLanguageWithContext script scriptHash plutusPurpose lti (redeemerData, exUnits) costModel = do
+toPlutusWithContext script scriptHash plutusPurpose lti (redeemerData, exUnits) costModel = do
   let proxy = Proxy @l
       spendingDatum =
         getPlutusData

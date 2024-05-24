@@ -42,6 +42,7 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   transTxBodyWithdrawals,
   transTxBodyReqSignerHashes,
   transTxWitsDatums,
+
   -- * LgacyPlutusArgs helpers
   toLegacyPlutusArgs,
   toLegacyPlutusV1Args,
@@ -103,7 +104,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
 
   toPlutusScriptPurpose proxy = transPlutusPurpose proxy . hoistPlutusPurpose toAsItem
 
-  toPlutusTxInfo proxy LedgerTxInfo {..} = do
+  toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
       transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ \txIn -> do
@@ -159,8 +160,7 @@ toLegacyPlutusArgs proxy mkScriptContext scriptPurpose maybeSpendingData redeeme
 instance Crypto c => EraPlutusContext (AlonzoEra c) where
   type ContextError (AlonzoEra c) = AlonzoContextError (AlonzoEra c)
 
-  mkPlutusWithContext (AlonzoPlutusV1 p) =
-    mkPlutusLanguageWithContext (Left p)
+  mkPlutusWithContext (AlonzoPlutusV1 p) = toPlutusWithContext (Left p)
 
 data AlonzoContextError era
   = TranslationLogicMissingInput !(TxIn (EraCrypto era))
