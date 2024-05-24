@@ -127,6 +127,7 @@ tests nightly =
     testSpecNoShrink "threeSpecific" threeSpecific
     testSpecNoShrink "threeSpecific'" threeSpecific'
     testSpecNoShrink "trueSpecUniform" trueSpecUniform
+    testSpec "ifElseMany" ifElseMany
     numberyTests
     sizeTests
     numNumSpecTree

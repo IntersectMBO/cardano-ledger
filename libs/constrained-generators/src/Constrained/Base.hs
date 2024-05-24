@@ -342,11 +342,11 @@ data Pred (fn :: [Type] -> Type -> Type) where
     -- encoded with `ProdOver` (c.f. `Constrained.Univ`).
     List (Weighted (Binder fn)) as ->
     Pred fn
-  -- if-then-else where the branches depend on the scrutinee.
-  IfElse ::
+  -- monadic-style `when` - if the first argument is False the second
+  -- doesn't apply.
+  When ::
     HasSpec fn Bool =>
     Term fn Bool ->
-    Pred fn ->
     Pred fn ->
     Pred fn
   GenHint ::
@@ -491,9 +491,9 @@ monitorPred env = \case
   Case t bs -> do
     v <- runTerm env t
     runCaseOn v (mapList thing bs) (\x val ps -> monitorPred (extendEnv x val env) ps)
-  IfElse b p q -> do
+  When b p -> do
     v <- runTerm env b
-    if v then monitorPred env p else monitorPred env q
+    if v then monitorPred env p else pure id
   TruePred -> pure id
   FalsePred {} -> pure id
   DependsOn {} -> pure id
@@ -528,9 +528,9 @@ checkPred env = \case
   Case t bs -> do
     v <- runTerm env t
     runCaseOn v (mapList thing bs) (\x val ps -> checkPred (extendEnv x val env) ps)
-  IfElse bt p q -> do
+  When bt p -> do
     b <- runTerm env bt
-    if b then checkPred env p else checkPred env q
+    if b then checkPred env p else pure True
   TruePred -> pure True
   FalsePred es -> explain es $ pure False
   DependsOn {} -> pure True
@@ -639,6 +639,8 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
         , (5, TypeSpec <$> arbitrary <*> listOf (genFromSpec_ @fn TrueSpec))
         , (1, ErrorSpec <$> arbitrary)
         , (1, pure $ MemberSpec [])
+        , -- Recurse to make sure we apply the tricks for generating suspended specs multiple times
+          (4, arbitrary)
         ]
     -- TODO: we probably want smarter ways of generating constraints
     frequency
@@ -1009,6 +1011,7 @@ flattenPred pIn = go (freeVarNames pIn) [pIn]
       -- before we solve the variables in `t`.
       Let t b -> goBinder fvs b ps (\x -> (assert (t ==. V x) :))
       Exists _ b -> goBinder fvs b ps (const id)
+      When b p -> map (When b) (go fvs [p]) ++ go fvs ps
       _ -> p : go fvs ps
 
     goBinder ::
@@ -1034,11 +1037,10 @@ computeDependencies = \case
   Case t bs ->
     let innerG = foldMapList (computeBinderDependencies . thing) bs
      in innerG <> t `irreflexiveDependencyOn` nodes innerG
-  IfElse b p q ->
+  When b p ->
     let pG = computeDependencies p
-        qG = computeDependencies q
-        oG = (nodes pG <> nodes qG) `irreflexiveDependencyOn` b
-     in oG <> pG <> qG
+        oG = nodes pG `irreflexiveDependencyOn` b
+     in oG <> pG
   TruePred -> mempty
   FalsePred {} -> mempty
   Block ps -> foldMap computeDependencies ps
@@ -1071,7 +1073,7 @@ genFromPreds (optimisePred . optimisePred -> preds) = explain [show $ "genFromPr
     go env [] = pure env
     go env ((Name v, ps) : nps) = do
       let ps' = substPred env <$> ps
-      spec <- runGE $ explain [show $ "Computing specs for:" /> vsep (map pretty ps')] $ do
+      spec <- runGE $ explain [show $ "Computing specs for:" /> fold (punctuate hardline (map pretty ps'))] $ do
         specs <- mapM (computeSpec v) ps'
         pure $ fold specs
       val <- genFromSpec spec
@@ -1203,11 +1205,10 @@ computeSpecSimplified x p = localGESpec $ case p of
   Case t branches -> do
     branchSpecs <- mapMList (traverseWeighted computeSpecBinderSimplified) branches
     propagateSpec (caseSpec branchSpecs) <$> toCtx x t
-  IfElse (Lit b) tp fp -> if b then computeSpecSimplified x tp else computeSpecSimplified x fp
-  -- TODO: Fix this by having a pass that figures out if `p` or `q` are trivially true or false (thus constraining
-  -- the scrutinee of the ifElse)
-  IfElse {} ->
-    fatalError ["Dependency error in computeSpec: IfElse", "  " ++ show x, show $ indent 2 (pretty p)]
+  When (Lit b) tp -> if b then computeSpecSimplified x tp else pure TrueSpec
+  -- This shouldn't happen because any time the body is trivial we propagate that out
+  When {} ->
+    fatalError ["Dependency error in computeSpec: When", "  " ++ show x, show $ indent 2 (pretty p)]
   Reifies (Lit a) (Lit val) f
     | f val == a -> pure TrueSpec
     | otherwise ->
@@ -1478,7 +1479,7 @@ instance HasVariables fn (Pred fn) where
     DependsOn x y -> freeVars x <> freeVars y
     ForAll set b -> freeVars set <> freeVars b
     Case t bs -> freeVars t <> freeVars bs
-    IfElse b p q -> freeVars b <> freeVars p <> freeVars q
+    When b p -> freeVars b <> freeVars p
     TruePred -> mempty
     FalsePred _ -> mempty
     Monitor {} -> mempty
@@ -1493,7 +1494,7 @@ instance HasVariables fn (Pred fn) where
     DependsOn x y -> freeVarSet x <> freeVarSet y
     ForAll set b -> freeVarSet set <> freeVarSet b
     Case t bs -> freeVarSet t <> freeVarSet bs
-    IfElse b p q -> freeVarSet b <> freeVarSet p <> freeVarSet q
+    When b p -> freeVarSet b <> freeVarSet p
     TruePred -> mempty
     FalsePred _ -> mempty
     Monitor {} -> mempty
@@ -1510,7 +1511,7 @@ instance HasVariables fn (Pred fn) where
     DependsOn x y -> countOf n x + countOf n y
     ForAll set b -> countOf n set + countOf n b
     Case t bs -> countOf n t + countOf n bs
-    IfElse b p q -> countOf n b + countOf n p + countOf n q
+    When b p -> countOf n b + countOf n p
     TruePred -> 0
     FalsePred _ -> 0
     Monitor {} -> 0
@@ -1527,7 +1528,7 @@ instance HasVariables fn (Pred fn) where
     DependsOn x y -> appearsIn n x || appearsIn n y
     ForAll set b -> appearsIn n set || appearsIn n b
     Case t bs -> appearsIn n t || appearsIn n bs
-    IfElse b p q -> appearsIn n b || appearsIn n p || appearsIn n q
+    When b p -> appearsIn n b || appearsIn n p
     TruePred -> False
     FalsePred _ -> False
     Monitor {} -> False
@@ -1654,7 +1655,7 @@ substitutePred x tm = \case
   Let t b -> Let (substituteTerm [x := tm] t) (substituteBinder x tm b)
   ForAll t b -> ForAll (substituteTerm [x := tm] t) (substituteBinder x tm b)
   Case t bs -> Case (substituteTerm [x := tm] t) (mapList (mapWeighted $ substituteBinder x tm) bs)
-  IfElse b p q -> IfElse (substituteTerm [x := tm] b) (substitutePred x tm p) (substitutePred x tm q)
+  When b p -> When (substituteTerm [x := tm] b) (substitutePred x tm p)
   Reifies t' t f -> Reifies (substituteTerm [x := tm] t') (substituteTerm [x := tm] t) f
   DependsOn t t' -> DependsOn (substituteTerm [x := tm] t) (substituteTerm [x := tm] t')
   TruePred -> TruePred
@@ -1686,7 +1687,7 @@ instance Rename (Pred fn) where
         DependsOn x y -> DependsOn (rename v v' x) (rename v v' y)
         ForAll set b -> ForAll (rename v v' set) (rename v v' b)
         Case t bs -> Case (rename v v' t) (rename v v' bs)
-        IfElse b p q -> IfElse (rename v v' b) (rename v v' p) (rename v v' q)
+        When b p -> When (rename v v' b) (rename v v' p)
         TruePred -> TruePred
         FalsePred es -> FalsePred es
         Monitor m -> Monitor m
@@ -1721,7 +1722,7 @@ substPred env = \case
   Reifies t' t f -> Reifies (substTerm env t') (substTerm env t) f
   ForAll set b -> ForAll (substTerm env set) (substBinder env b)
   Case t bs -> Case (substTerm env t) (mapList (mapWeighted $ substBinder env) bs)
-  IfElse b p q -> IfElse (substTerm env b) (substPred env p) (substPred env q)
+  When b p -> When (substTerm env b) (substPred env p)
   DependsOn x y -> DependsOn (substTerm env x) (substTerm env y)
   TruePred -> TruePred
   FalsePred es -> FalsePred es
@@ -1775,7 +1776,7 @@ simplifyPred = \case
   DependsOn Lit {} _ -> TruePred
   DependsOn x y -> DependsOn x y
   Case t bs -> mkCase (simplifyTerm t) (mapList (mapWeighted simplifyBinder) bs)
-  IfElse b p q -> ifElse (simplifyTerm b) (simplifyPred p) (simplifyPred q)
+  When b p -> whenTrue (simplifyTerm b) (simplifyPred p)
   TruePred -> TruePred
   FalsePred es -> FalsePred es
   Block ps -> fold (simplifyPreds ps)
@@ -1875,7 +1876,7 @@ letSubexpressionElimination = go []
       DependsOn t t' -> DependsOn (backwardsSubstitution sub t) (backwardsSubstitution sub t')
       ForAll t b -> ForAll (backwardsSubstitution sub t) (goBinder sub b)
       Case t bs -> Case (backwardsSubstitution sub t) (mapList (mapWeighted $ goBinder sub) bs)
-      IfElse b p q -> IfElse (backwardsSubstitution sub b) (go sub p) (go sub q)
+      When b p -> When (backwardsSubstitution sub b) (go sub p)
       TruePred -> TruePred
       FalsePred es -> FalsePred es
       Monitor m -> Monitor m
@@ -1921,7 +1922,7 @@ letFloating = fold . go []
       -- TODO: float let through the cases if possible
       Case t bs -> Case t (mapList (mapWeighted (\(x :-> p) -> x :-> letFloating p)) bs) : ctx
       -- TODO: float let through if possible
-      IfElse b p q -> IfElse b (letFloating p) (letFloating q) : ctx
+      When b p -> When b (letFloating p) : ctx
       -- Boring cases
       Assert es t -> Assert es t : ctx
       GenHint h t -> GenHint h t : ctx
@@ -1985,12 +1986,12 @@ aggressiveInlining p
             p' <- go (underBinder fvs x p) (x := t' : sub) p
             pure $ Case t (Weighted w (x :-> p') :> Nil)
         | otherwise -> Case t <$> mapMList (traverseWeighted $ goBinder fvs sub) bs
-      IfElse b tp fp
+      When b tp
         | not (isLit b)
         , Lit a <- substituteAndSimplifyTerm sub b -> do
             tell $ Any True
-            pure $ if a then tp else fp
-        | otherwise -> ifElse b <$> go fvs sub tp <*> go fvs sub fp
+            pure $ if a then tp else TruePred
+        | otherwise -> whenTrue b <$> go fvs sub tp
       Let t (x :-> p)
         | all (\n -> count n fvs <= 1) (freeVarSet t) -> do
             tell $ Any True
@@ -4196,12 +4197,14 @@ lit :: Show a => a -> Term fn a
 lit = Lit
 
 ifElse :: (BaseUniverse fn, IsPred p fn, IsPred q fn) => Term fn Bool -> p -> q -> Pred fn
-ifElse (Lit True) (toPred -> p) _ = p
-ifElse (Lit False) _ (toPred -> q) = q
-ifElse b (toPred -> p) (toPred -> q)
-  | FalsePred _ <- p = assert (not_ b) <> q
-  | FalsePred _ <- q = assert b <> p
-  | otherwise = IfElse b p q
+ifElse b p q = whenTrue b p <> whenTrue (not_ b) q
+
+whenTrue :: forall fn p. (BaseUniverse fn, IsPred p fn) => Term fn Bool -> p -> Pred fn
+whenTrue (Lit True) (toPred -> p) = p
+whenTrue (Lit False) _ = TruePred
+whenTrue b (toPred @fn -> FalsePred {}) = assert (not_ b)
+whenTrue _ (toPred @fn -> TruePred) = TruePred
+whenTrue b (toPred -> p) = When b p
 
 genHint :: forall fn t. HasGenHint fn t => Hint t -> Term fn t -> Pred fn
 genHint = GenHint
@@ -4235,7 +4238,7 @@ bind body = x :-> p
     bound (Let _ b) = boundBinder b
     bound (ForAll _ b) = boundBinder b
     bound (Case _ cs) = getMax $ foldMapList (Max . boundBinder . thing) cs
-    bound (IfElse _ p q) = max (bound p) (bound q)
+    bound (When _ p) = bound p
     bound Reifies {} = -1
     bound GenHint {} = -1
     bound Assert {} = -1
@@ -4343,13 +4346,7 @@ instance Pretty (Pred fn) where
     DependsOn a b -> pretty a <+> "<-" /> pretty b
     ForAll t (x :-> p) -> "forall" <+> viaShow x <+> "in" <+> pretty t <+> "$" /> pretty p
     Case t bs -> "case" <+> pretty t <+> "of" /> vsep' (ppList_ pretty bs)
-    IfElse b p q ->
-      vsep
-        [ "if" <+> pretty b <+> "then"
-        , indent 2 (pretty p)
-        , "else"
-        , indent 2 (pretty q)
-        ]
+    When b p -> "whenTrue" <+> pretty (WithPrec 11 b) <+> "$" /> pretty p
     Subst x t p -> "[" <> pretty t <> "/" <> viaShow x <> "]" <> pretty p
     GenHint h t -> "genHint" <+> fromString (showsPrec 11 h "") <+> "$" <+> pretty t
     TruePred -> "True"
