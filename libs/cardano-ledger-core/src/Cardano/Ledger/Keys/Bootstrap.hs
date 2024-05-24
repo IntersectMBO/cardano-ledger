@@ -27,6 +27,7 @@ module Cardano.Ledger.Keys.Bootstrap (
   unpackByronVKey,
   makeBootstrapWitness,
   verifyBootstrapWit,
+  verifyBootstrapWitRequiredTxs,
   eqBootstrapWitnessRaw,
 )
 where
@@ -53,7 +54,7 @@ import Cardano.Ledger.Binary.Crypto (
  )
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto (Crypto (ADDRHASH, DSIGN))
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Hashes (EraIndependentRequiredTxs, EraIndependentTxBody)
 import Cardano.Ledger.Keys.Internal (
   Hash,
   KeyHash (..),
@@ -205,6 +206,20 @@ verifyBootstrapWit txbodyHash witness =
   verifySignedDSIGN
     (bwKey witness)
     txbodyHash
+    (coerce . bwSig $ witness)
+
+verifyBootstrapWitRequiredTxs ::
+  forall c.
+  ( Crypto c
+  , DSIGN.Signable (DSIGN c) (Hash c (EraIndependentTxBody, EraIndependentRequiredTxs))
+  ) =>
+  Hash c (EraIndependentTxBody, EraIndependentRequiredTxs) ->
+  BootstrapWitness c ->
+  Bool
+verifyBootstrapWitRequiredTxs hash witness =
+  verifySignedDSIGN
+    (bwKey witness)
+    hash
     (coerce . bwSig $ witness)
 
 coerceSignature :: WC.XSignature -> DSIGN.SigDSIGN DSIGN.Ed25519DSIGN

@@ -203,7 +203,6 @@ instance
   initialRules = []
   transitionRules = [zoneTransition]
 
--- We'll build the zones in the ZONES rule (turn the [Tx era] into [[Tx era]])?
 zoneTransition ::
   forall era.
   ( Environment (EraRule "LEDGERS" era) ~ ConwayLedgersEnv era
@@ -234,7 +233,7 @@ zoneTransition =
             trans @(EraRule "LEDGERS" era) $
               TRC (ConwayLedgersEnv slotNo ixRange pParams accountState, LedgerState utxoState certState, txs)
           else -- ZONE-N
-          -- TODO
+          -- TODO WG: Copy UTXOS (babbageEvalScriptsTxInvalid)
             trans @(ConwayZONE era) $ TRC s
   where
     chkLinear :: [Tx era] -> Bool

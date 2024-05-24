@@ -27,6 +27,7 @@ import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Compactible
+import Cardano.Ledger.Core (EraRequiredTxsData (RequiredTxs))
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
 import Cardano.Ledger.Shelley.Rules
 import qualified Data.TreeDiff.OMap as OMap
@@ -98,14 +99,19 @@ instance
   ToExpr (AlonzoTxBodyRaw era)
 
 instance
-  (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
+  ( Era era
+  , ToExpr (TxOut era)
+  , ToExpr (TxCert era)
+  , ToExpr (PParamsUpdate era)
+  , ToExpr (RequiredTxs era)
+  ) =>
   ToExpr (AlonzoTxBody era)
 
 -- Tx
 instance ToExpr IsValid
 
 instance
-  (ToExpr (TxBody era), ToExpr (TxWits era), ToExpr (TxAuxData era)) =>
+  (ToExpr (TxBody era), ToExpr (TxWits era), ToExpr (TxAuxData era), ToExpr RequiredTxs) =>
   ToExpr (AlonzoTx era)
 
 -- Plutus/TxInfo

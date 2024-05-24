@@ -274,7 +274,7 @@ utxosTransition =
   judgmentContext >>= \(TRC (_, _, tx)) -> do
     case tx ^. isValidTxL of
       IsValid True -> conwayEvalScriptsTxValid
-      IsValid False -> undefined -- babbageEvalScriptsTxInvalid
+      IsValid False -> undefined -- babbageEvalScriptsTxInvalid TODO WG
 
 conwayEvalScriptsTxValid ::
   forall era.

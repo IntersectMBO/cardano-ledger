@@ -60,6 +60,13 @@ module Cardano.Ledger.Core (
   -- * Deprecations
   hashAuxiliaryData,
   validateAuxiliaryData,
+
+  -- * Babel fees
+  EraRequiredTxsData (..),
+  Zone,
+  TxNode (..),
+  -- singleton,
+  zoneToTxs,
 )
 where
 
@@ -123,11 +130,46 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
+import Algebra.Graph
+
+data TxNode era = TxNode {txNodeIx :: Int, txNode :: Tx era}
+
+instance Eq (TxNode era) where
+  a == b = txNodeIx a == txNodeIx b
+
+instance Ord (TxNode era) where
+  compare a b = compare (txNodeIx a) (txNodeIx b)
+
+type Zone era = Graph (TxNode era)
+
+-- singleton :: Tx era -> Zone era
+-- singleton tx = vertex (TxNode 0 tx)
+
+zoneToTxs :: Zone era -> [Tx era]
+zoneToTxs = fmap txNode . vertexList
+
+class
+  ( EraScript era
+  , Eq (RequiredTxs era)
+  , EqRaw (RequiredTxs era)
+  , Show (RequiredTxs era)
+  , Monoid (RequiredTxs era)
+  , NoThunks (RequiredTxs era)
+  , HashAnnotated (RequiredTxs era) EraIndependentRequiredTxs (EraCrypto era)
+  , ToCBOR (RequiredTxs era)
+  , EncCBOR (RequiredTxs era)
+  , DecCBOR (Annotator (RequiredTxs era))
+  ) =>
+  EraRequiredTxsData era
+  where
+  type RequiredTxs era = (r :: Type) | r -> era
+
 -- | A transaction.
 class
   ( EraTxBody era
   , EraTxWits era
   , EraTxAuxData era
+  , EraRequiredTxsData era
   , EraPParams era
   , -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
     NoThunks (Tx era)
@@ -153,6 +195,8 @@ class
 
   auxDataTxL :: Lens' (Tx era) (StrictMaybe (AuxiliaryData era))
 
+  requiredTxsTxL :: Lens' (Tx era) (StrictMaybe (RequiredTxs era))
+
   sizeTxF :: SimpleGetter (Tx era) Integer
 
   -- | Using information from the transaction validate the supplied native script.
@@ -175,7 +219,10 @@ class
   ( EraTxOut era
   , EraTxCert era
   , EraPParams era
-  , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
+  , {- TODO This is where we've got a problem with the hashing
+       Might be tough. Type level field exclusions with `Symbol`s as field names?
+       Nasty idea, but maybe this requires a nasty solution. -}
+    HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   , DecCBOR (Annotator (TxBody era))
   , EncCBOR (TxBody era)
   , ToCBOR (TxBody era)

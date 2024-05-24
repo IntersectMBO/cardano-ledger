@@ -206,12 +206,14 @@ instance
   ( Arbitrary (TxBody era)
   , Arbitrary (TxWits era)
   , Arbitrary (TxAuxData era)
+  , Arbitrary (RequiredTxs era)
   ) =>
   Arbitrary (AlonzoTx era)
   where
   arbitrary =
     AlonzoTx
       <$> arbitrary
+      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

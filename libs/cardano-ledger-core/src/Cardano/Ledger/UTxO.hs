@@ -32,6 +32,7 @@ module Cardano.Ledger.UTxO (
   sumAllCoin,
   areAllAdaOnly,
   verifyWitVKey,
+  verifyWitVKeyRequiredTxs,
   getScriptHash,
 )
 where
@@ -171,6 +172,18 @@ verifyWitVKey ::
   Bool
 verifyWitVKey txbodyHash (WitVKey vkey sig) = verifySignedDSIGN vkey txbodyHash (coerce sig)
 {-# INLINE verifyWitVKey #-}
+
+-- | Verify a transaction body witness
+verifyWitVKeyRequiredTxs ::
+  ( Typeable kr
+  , Crypto c
+  , DSignable c (Hash c (EraIndependentTxBody, EraIndependentRequiredTxs))
+  ) =>
+  Hash c (EraIndependentTxBody, EraIndependentRequiredTxs) ->
+  WitVKey kr c ->
+  Bool
+verifyWitVKeyRequiredTxs hash (WitVKey vkey sig) = verifySignedDSIGN vkey hash (coerce sig)
+{-# INLINE verifyWitVKeyRequiredTxs #-}
 
 -- | Determine the total balance contained in the UTxO.
 balance :: EraTxOut era => UTxO era -> Value era

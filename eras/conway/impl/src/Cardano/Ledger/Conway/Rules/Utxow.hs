@@ -13,7 +13,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-deferred-out-of-scope-variables #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
 module Cardano.Ledger.Conway.Rules.Utxow (
   alonzoToConwayUtxowPredFailure,
@@ -34,6 +36,9 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxosPredFailure,
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
   AlonzoUtxowPredFailure,
+  hasExactSetOfRedeemers,
+  missingRequiredDatums,
+  ppViewHashesMatch,
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
@@ -41,10 +46,17 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure,
   BabbageUtxowPredFailure,
-  babbageUtxowTransition,
+  -- babbageUtxowTransition,
+
+  babbageMissingScripts,
+  validateFailedBabbageScripts,
+  validateScriptsWellFormed,
  )
-import qualified Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPredFailure (..))
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import qualified Cardano.Ledger.Babbage.Rules as Babbage (
+  BabbageUtxowPredFailure (..),
+ )
+import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -60,25 +72,50 @@ import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.UTxO (getConwayWitsVKeyNeeded)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..), VKey)
+import Cardano.Ledger.Keys (
+  KeyHash,
+  KeyRole (..),
+  VKey,
+  WitVKey (WitVKey),
+  bwKey,
+  verifyBootstrapWit,
+  verifyBootstrapWitRequiredTxs,
+ )
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
+import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
+import Cardano.Ledger.Shelley.API (utxosUtxo)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure,
+  UtxoEnv (UtxoEnv),
+  validateNeededWitnesses,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyUtxowPredFailure (..),
   UtxoEnv,
+  validateMetadata,
  )
+import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO, verifyWitVKey, verifyWitVKeyRequiredTxs)
 import Control.DeepSeq (NFData)
-import Control.State.Transition.Extended (Embed (..), STS (..))
-import Data.Maybe.Strict (StrictMaybe)
+import Control.State.Transition.Extended (
+  Embed (..),
+  STS (..),
+  TRC (TRC),
+  TransitionRule,
+  judgmentContext,
+  trans,
+ )
+import qualified Data.Map as Map
 import Data.Set (Set)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
+import Validation
 
 conwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>
@@ -223,6 +260,7 @@ instance
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , ConwayEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentRequiredTxs)
   , EraRule "UTXOW" era ~ ConwayUTXOW era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
@@ -243,7 +281,7 @@ instance
   type BaseM (ConwayUTXOW era) = ShelleyBase
   type PredicateFailure (ConwayUTXOW era) = ConwayUtxowPredFailure era
   type Event (ConwayUTXOW era) = AlonzoUtxowEvent era
-  transitionRules = [babbageUtxowTransition @era]
+  transitionRules = [conwayUtxowTransition @era]
   initialRules = []
 
 instance
@@ -360,3 +398,134 @@ shelleyToConwayUtxowPredFailure = \case
   Shelley.ConflictingMetadataHash a b -> ConflictingMetadataHash a b
   Shelley.InvalidMetadata -> InvalidMetadata
   Shelley.ExtraneousScriptWitnessesUTXOW xs -> ExtraneousScriptWitnessesUTXOW xs
+
+------------
+
+-- | UTXOW transition rule that is used in Babbage and Conway era.
+conwayUtxowTransition ::
+  forall era.
+  ( AlonzoEraTx era
+  , AlonzoEraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , BabbageEraTxBody era
+  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentRequiredTxs)
+  , Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
+  , Signal (EraRule "UTXOW" era) ~ Tx era
+  , State (EraRule "UTXOW" era) ~ Shelley.UTxOState era
+  , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
+  , -- Allow UTXOW to call UTXO
+    Embed (EraRule "UTXO" era) (EraRule "UTXOW" era)
+  , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
+  , Signal (EraRule "UTXO" era) ~ Tx era
+  , State (EraRule "UTXO" era) ~ Shelley.UTxOState era
+  ) =>
+  TransitionRule (EraRule "UTXOW" era)
+conwayUtxowTransition = do
+  TRC (utxoEnv@(UtxoEnv _ pp certState), u, tx) <- judgmentContext
+
+  {-  (utxo,_,_,_ ) := utxoSt  -}
+  {-  txb := txbody tx  -}
+  {-  txw := txwits tx  -}
+  {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
+  let utxo = utxosUtxo u
+      txBody = tx ^. bodyTxL
+      witsKeyHashes = witsFromTxWitnesses tx
+      inputs = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
+
+  -- check scripts
+  {- neededHashes := {h | ( , h) ∈ scriptsNeeded utxo txb} -}
+  {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
+  let scriptsNeeded = getScriptsNeeded utxo txBody
+      scriptsProvided = getScriptsProvided utxo tx
+      scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
+  {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
+  -- CHANGED In BABBAGE txscripts depends on UTxO
+  runTest $ validateFailedBabbageScripts tx scriptsProvided scriptHashesNeeded
+
+  {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
+  let sReceived = Map.keysSet $ tx ^. witsTxL . scriptTxWitsL
+      sRefs = Map.keysSet $ getReferenceScripts utxo inputs
+  runTest $ babbageMissingScripts pp scriptHashesNeeded sRefs sReceived
+
+  {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
+  runTest $ missingRequiredDatums utxo tx
+
+  {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
+                           h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
+  runTest $ hasExactSetOfRedeemers tx scriptsProvided scriptsNeeded
+
+  -- TODO WG: This probably isn't exactly right, but it's close enough for now
+  -- ∀[ (vk , σ) ∈ vkSigs ] isSigned vk (txidBytes (tx .Tx.body .TxBody.txid) + sumReqs (tx .requiredTxs)) σ
+  -- check VKey witnesses
+  -- let txbodyHash = hashAnnotated @(Crypto era) txbody
+  {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
+  runTestOnSignal $ validateVerifiedWits tx
+
+  {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
+  runTest $ validateNeededWitnesses witsKeyHashes certState utxo txBody
+
+  -- check metadata hash
+  {-   adh := txADhash txb;  ad := auxiliaryData tx                      -}
+  {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
+  runTestOnSignal $ Shelley.validateMetadata pp tx
+
+  {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ (⋃ ( , ,d,s) ∈ txouts tx {s, d}),
+                         x ∈ Script ∪ Datum ⇒ isWellFormed x
+  -}
+  runTest $ validateScriptsWellFormed pp tx
+  -- Note that Datum validation is done during deserialization,
+  -- as given by the decoders in the Plutus libraray
+
+  {- languages tx utxo ⊆ dom(costmdls pp) -}
+  -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
+  -- It raises 'NoCostModel' a construcotr of the predicate failure 'CollectError'.
+
+  {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
+  runTest $ ppViewHashesMatch tx pp scriptsProvided scriptHashesNeeded
+
+  trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
+
+-- | Determine if the UTxO witnesses in a given transaction are correct.
+validateVerifiedWits ::
+  forall era.
+  ( EraTx era
+  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentRequiredTxs)
+  ) =>
+  Tx era ->
+  Test (ShelleyUtxowPredFailure era)
+validateVerifiedWits tx =
+  case failed of
+    [] -> pure ()
+    nonEmpty -> failure $ Shelley.InvalidWitnessesUTXOW nonEmpty
+  where
+    txBody = tx ^. bodyTxL
+    txRequiredTxs = tx ^. requiredTxsTxL
+    failed =
+      failed' witVKeyVerifier
+        <> failedBootstrap bootstrapWitVerifier
+    (witVKeyVerifier, bootstrapWitVerifier) = case txRequiredTxs of
+      SNothing ->
+        let txBodyHash = extractHash (hashAnnotated txBody)
+         in (verifyWitVKey txBodyHash, verifyBootstrapWit txBodyHash)
+      SJust txs ->
+        let a = extractHash (hashAnnotated txBody)
+            b = extractHash (hashAnnotated txs)
+         in undefined
+    -- let compositeHash = extractHash (hashAnnotated (txBody, txs))
+    --  in (verifyWitVKeyRequiredTxs compositeHash, verifyBootstrapWitRequiredTxs compositeHash)
+    wvkKey (WitVKey k _) = k
+
+    failed' witnessVerification =
+      wvkKey
+        <$> filter
+          (not . witnessVerification)
+          (Set.toList $ tx ^. witsTxL . addrTxWitsL)
+    failedBootstrap witnessVerification =
+      bwKey
+        <$> filter
+          (not . witnessVerification)
+          (Set.toList $ tx ^. witsTxL . bootAddrTxWitsL)
