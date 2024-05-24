@@ -110,6 +110,7 @@ library testlib
         Test.Cardano.Ledger.Alonzo.Imp
         Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec
         Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec
+        Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid
         Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid
         Test.Cardano.Ledger.Alonzo.ImpTest
         Test.Cardano.Ledger.Alonzo.TreeDiff

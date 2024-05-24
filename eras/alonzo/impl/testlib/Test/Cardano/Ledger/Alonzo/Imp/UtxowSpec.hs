@@ -13,6 +13,7 @@ import Cardano.Ledger.Alonzo.Core (InjectRuleFailure)
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure)
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid as Invalid
+import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid as Valid
 import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, ImpTestState)
 import Test.Cardano.Ledger.Common
 
@@ -26,4 +27,5 @@ spec ::
   SpecWith (ImpTestState era)
 spec = do
   describe "UTXOW PredicateFailures" $ do
+    Valid.spec
     Invalid.spec
