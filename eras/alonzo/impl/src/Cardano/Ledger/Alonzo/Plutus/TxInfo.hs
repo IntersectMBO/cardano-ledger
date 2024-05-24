@@ -11,6 +11,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -50,7 +51,7 @@ import Cardano.Ledger.Alonzo.Era (AlonzoEra)
 import Cardano.Ledger.Alonzo.Plutus.Context
 import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..), PlutusScript (..), toAsItem)
 import Cardano.Ledger.Alonzo.TxWits (unTxDats)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), strictMaybeToMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -68,7 +69,7 @@ import Cardano.Ledger.Mary.Value (
   MultiAsset (..),
   PolicyID (..),
  )
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Plutus.Language (Language (..), LegacyPlutusArgs (..), PlutusArgs (..))
 import Cardano.Ledger.Plutus.TxInfo
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..))
@@ -99,10 +100,10 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
 
   toPlutusScriptPurpose proxy = transPlutusPurpose proxy . hoistPlutusPurpose toAsItem
 
-  toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
-    timeRange <- transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
+  toPlutusTxInfo proxy LedgerTxInfo{..} = do
+    timeRange <- transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ \txIn -> do
-      txOut <- transLookupTxOut utxo txIn
+      txOut <- transLookupTxOut ltiUTxO txIn
       pure $ PV1.TxInInfo (transTxIn txIn) <$> transTxOut txOut
     txCerts <- transTxBodyCerts proxy txBody
     Right $
@@ -117,20 +118,23 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
         , PV1.txInfoWdrl = transTxBodyWithdrawals txBody
         , PV1.txInfoValidRange = timeRange
         , PV1.txInfoSignatories = transTxBodyReqSignerHashes txBody
-        , PV1.txInfoData = transTxWitsDatums (tx ^. witsTxL)
+        , PV1.txInfoData = transTxWitsDatums (ltiTx ^. witsTxL)
         , PV1.txInfoId = transTxBodyId txBody
         }
     where
-      txBody = tx ^. bodyTxL
+      txBody = ltiTx ^. bodyTxL
 
-  toPlutusScriptContext proxy txInfo scriptPurpose =
-    PV1.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
+  toPlutusArgs proxy txInfo scriptPurpose maybeSpendingData redeemerData = do
+    scriptContext <- PV1.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
+    pure $ PlutusV1Args $ case maybeSpendingData of
+      Nothing -> LegacyPlutusArgs2 redeemerData scriptContext
+      Just spendingData -> LegacyPlutusArgs3 spendingData redeemerData scriptContext
 
 instance Crypto c => EraPlutusContext (AlonzoEra c) where
   type ContextError (AlonzoEra c) = AlonzoContextError (AlonzoEra c)
 
-  mkPlutusScriptContext (AlonzoPlutusV1 p) =
-    mkPlutusLanguageContext p
+  mkPlutusWithContext (AlonzoPlutusV1 p) =
+    mkPlutusLanguageWithContext (Left p)
 
 data AlonzoContextError era
   = TranslationLogicMissingInput !(TxIn (EraCrypto era))
@@ -174,20 +178,21 @@ transLookupTxOut (UTxO utxo) txIn =
 
 -- | Translate a validity interval to POSIX time
 transValidityInterval ::
-  forall era a.
-  (Inject (AlonzoContextError era) a, EraPParams era) =>
-  PParams era ->
+  forall proxy era a.
+  Inject (AlonzoContextError era) a =>
+  proxy era ->
+  ProtVer ->
   EpochInfo (Either Text) ->
   SystemStart ->
   ValidityInterval ->
   Either a PV1.POSIXTimeRange
-transValidityInterval pp epochInfo systemStart = \case
+transValidityInterval _ protVer epochInfo systemStart = \case
   ValidityInterval SNothing SNothing -> pure PV1.always
   ValidityInterval (SJust i) SNothing -> PV1.from <$> transSlotToPOSIXTime i
   ValidityInterval SNothing (SJust i) -> do
     t <- transSlotToPOSIXTime i
     pure $
-      if HardForks.translateUpperBoundForPlutusScripts (pp ^. ppProtocolVersionL)
+      if HardForks.translateUpperBoundForPlutusScripts protVer
         then
           PV1.Interval
             (PV1.LowerBound PV1.NegInf True)

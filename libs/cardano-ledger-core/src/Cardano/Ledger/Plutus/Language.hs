@@ -40,6 +40,7 @@ module Cardano.Ledger.Plutus.Language (
   -- * Type level Plutus Language version
   SLanguage (..),
   PlutusLanguage (..),
+  PlutusArgs (..),
   plutusLanguage,
   plutusSLanguage,
   fromSLanguage,
@@ -47,6 +48,10 @@ module Cardano.Ledger.Plutus.Language (
   withSLanguage,
   asSLanguage,
   withSamePlutusLanguage,
+
+  -- * Plutus Script Context
+  LegacyPlutusArgs (..),
+  PlutusScriptContext,
 ) where
 
 import qualified Cardano.Crypto.Hash.Class as Hash (castHash, hashWith)
@@ -309,31 +314,31 @@ plutusLanguage _ = case isLanguage @l of
   SPlutusV2 -> PlutusV2
   SPlutusV3 -> PlutusV3
 
-type family ScriptContext (l :: Language) = r | r -> l where
-  ScriptContext 'PlutusV1 = PV1.ScriptContext
-  ScriptContext 'PlutusV2 = PV2.ScriptContext
-  ScriptContext 'PlutusV3 = PV3.ScriptContext
+type family PlutusScriptContext (l :: Language) = r | r -> l where
+  PlutusScriptContext 'PlutusV1 = PV1.ScriptContext
+  PlutusScriptContext 'PlutusV2 = PV2.ScriptContext
+  PlutusScriptContext 'PlutusV3 = PV3.ScriptContext
 
 data LegacyPlutusArgs l
   = -- | Scripts that require 2 arguments.
     LegacyPlutusArgs2
       -- | Redeemer
       !P.Data
-      -- | ScriptContext
-      !(ScriptContext l)
+      -- | PlutusScriptContext
+      !(PlutusScriptContext l)
   | -- | Scripts that require 3 arguments. Which is only PlutusV1/V2 spending scripts
     LegacyPlutusArgs3
       -- | Mandatory Spending Datum
       !P.Data
       -- | Redeemer
       !P.Data
-      -- | ScriptContext
-      !(ScriptContext l)
+      -- | PlutusScriptContext
+      !(PlutusScriptContext l)
 
-deriving instance Eq (ScriptContext l) => Eq (LegacyPlutusArgs l)
-deriving instance Show (ScriptContext l) => Show (LegacyPlutusArgs l)
+deriving instance Eq (PlutusScriptContext l) => Eq (LegacyPlutusArgs l)
+deriving instance Show (PlutusScriptContext l) => Show (LegacyPlutusArgs l)
 
-instance NFData (ScriptContext l) => NFData (LegacyPlutusArgs l) where
+instance NFData (PlutusScriptContext l) => NFData (LegacyPlutusArgs l) where
   rnf = \case
     LegacyPlutusArgs2 redeemer scriptContext -> redeemer `deepseq` rnf scriptContext
     LegacyPlutusArgs3 datum redeemer scriptContext -> datum `deepseq` redeemer `deepseq` rnf scriptContext
@@ -348,10 +353,10 @@ instance NFData PV2.ScriptContext where
 instance NFData PV3.ScriptContext where
   rnf = rnf . PV3.toData
 
-instance (PlutusLanguage l, PV3.ToData (ScriptContext l)) => EncCBOR (LegacyPlutusArgs l) where
+instance (PlutusLanguage l, PV3.ToData (PlutusScriptContext l)) => EncCBOR (LegacyPlutusArgs l) where
   encCBOR = encCBOR . legacyPlutusArgsToData
 
-instance (PlutusLanguage l, PV3.FromData (ScriptContext l)) => DecCBOR (LegacyPlutusArgs l) where
+instance (PlutusLanguage l, PV3.FromData (PlutusScriptContext l)) => DecCBOR (LegacyPlutusArgs l) where
   decCBOR =
     decCBOR >>= \case
       [redeemer, scriptContextData] ->
@@ -363,7 +368,7 @@ instance (PlutusLanguage l, PV3.FromData (ScriptContext l)) => DecCBOR (LegacyPl
     where
       lang = plutusLanguage (Proxy @l)
 
-instance Pretty (ScriptContext l) => Pretty (LegacyPlutusArgs l) where
+instance Pretty (PlutusScriptContext l) => Pretty (LegacyPlutusArgs l) where
   pretty = \case
     LegacyPlutusArgs2 redeemer scriptContext ->
       let argsList =
@@ -389,7 +394,7 @@ instance Pretty (ScriptContext l) => Pretty (LegacyPlutusArgs l) where
         "LegacyPlutusArgs" <+> pretty n <+> ":" <+> line <+> "  " <+> align (vsep argsList)
       i = 5
 
-legacyPlutusArgsToData :: PV3.ToData (ScriptContext l) => LegacyPlutusArgs l -> [P.Data]
+legacyPlutusArgsToData :: PV3.ToData (PlutusScriptContext l) => LegacyPlutusArgs l -> [P.Data]
 legacyPlutusArgsToData = \case
   LegacyPlutusArgs2 redeemer scriptContext -> [redeemer, PV3.toData scriptContext]
   LegacyPlutusArgs3 datum redeemer scriptContext -> [datum, redeemer, PV3.toData scriptContext]
