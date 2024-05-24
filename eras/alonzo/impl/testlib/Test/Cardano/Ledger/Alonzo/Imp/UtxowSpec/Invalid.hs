@@ -183,3 +183,44 @@ spec = describe "Invalid transactions" $ do
         `shouldBe` [ CertifyingPurpose (AsIx 1)
                    , CertifyingPurpose (AsIx 2)
                    ]
+  it "Wrong network ID" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Missing required key witness" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Missing 1-phase script witness" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Missing 2-phase script witness" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Redeemer with incorrect label" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Phase 1 script failure" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Valid transaction marked as invalid" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Invalid transaction marked as valid" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Too many execution units for tx" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Missing signature for collateral input" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Insufficient collateral" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Unacceptable extra redeemer" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "Multiple equal plutus-locked certs" $ do
+    const $ pendingWith "not implemented yet"
+
+  it "No cost model" $ do
+    const $ pendingWith "not implemented yet"
