@@ -30,6 +30,15 @@ import Test.Cardano.Ledger.Constrained.Conway.Gov
 nesSpec :: IsConwayUniv ConwayFn
         => Specification ConwayFn (NewEpochState (ConwayEra StandardCrypto))
 nesSpec = constrained $ \ nes ->
-  [ cgsProposals_ (utxosGovState_ (lsUTxOState_ (esLState_ (nesEs_ nes)))) `satisfies` govProposalsSpec (lit $ EpochNo 0) cSNothing_
+  [ nesEs_ nes `satisfies` esSpec (lit $ EpochNo 0) -- TODO: not the right epochNo
   ]
 
+esSpecSTS :: IsConwayUniv ConwayFn
+          => Specification ConwayFn (EpochState (ConwayEra StandardCrypto))
+esSpecSTS = esSpec (lit $ EpochNo 0) -- TODO: this is not a good epochNo, probably it should be taken from the internal state but digging it out sucks!
+
+esSpec :: IsConwayUniv ConwayFn
+       => Term ConwayFn EpochNo
+       -> Specification ConwayFn (EpochState (ConwayEra StandardCrypto))
+esSpec epochNo = constrained $ \ es ->
+  cgsProposals_ (utxosGovState_ (lsUTxOState_ (esLState_ es))) `satisfies` govProposalsSpec epochNo cSNothing_ -- TODO: could be something!

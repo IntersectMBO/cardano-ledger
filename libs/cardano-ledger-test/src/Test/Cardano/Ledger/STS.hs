@@ -106,10 +106,9 @@ prop_GOV =
 --     $ \_env _st _sig _st' -> True
 
 prop_EPOCH :: Property
-prop_EPOCH =
-  stsPropertyV2 @"EPOCH" @ConwayFn
+prop_EPOCH = stsPropertyV2 @"EPOCH" @ConwayFn
     TrueSpec
-    (\_env -> TrueSpec)
+    (\ () -> esSpecSTS)
     (\_env _st -> TrueSpec)
     $ \_env _st _sig _st' -> True
 
