@@ -28,7 +28,12 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..), VState (..))
+import Cardano.Ledger.CertState (
+  CommitteeAuthorization (..),
+  CommitteeState (..),
+  VState (..),
+  vsNumDormantEpochsL,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT)
@@ -37,6 +42,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, DRepRole))
+import Cardano.Slotting.Slot (binOpEpochNo)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -207,7 +213,11 @@ conwayGovCertTransition = do
               Map.adjust
                 ( \drepState ->
                     drepState
-                      & drepExpiryL .~ addEpochInterval cgceCurrentEpoch ppDRepActivity
+                      & drepExpiryL
+                        .~ binOpEpochNo
+                          (-)
+                          (addEpochInterval cgceCurrentEpoch ppDRepActivity)
+                          (vState ^. vsNumDormantEpochsL)
                       & drepAnchorL .~ mAnchor
                 )
                 cred

@@ -41,6 +41,8 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   submitFailingVote,
   trySubmitVote,
   registerDRep,
+  unRegisterDRep,
+  updateDRep,
   setupSingleDRep,
   setupDRepWithoutStake,
   setupPoolWithStake,
@@ -94,6 +96,9 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   expectNumDormantEpochs,
   submitConstitution,
   expectExtraDRepExpiry,
+  expectDRepResigned,
+  expectDRepActive,
+  expectDRepExpired,
   expectCurrentProposals,
   expectNoCurrentProposals,
   expectPulserProposals,
@@ -155,6 +160,8 @@ import Cardano.Ledger.Conway.TxCert (
   pattern RegDRepTxCert,
   pattern RegDepositDelegTxCert,
   pattern ResignCommitteeColdTxCert,
+  pattern UnRegDRepTxCert,
+  pattern UpdateDRepTxCert,
  )
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
@@ -361,6 +368,35 @@ registerDRep = do
   dreps <- getsNES @era $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   dreps `shouldSatisfy` Map.member (KeyHashObj khDRep)
   pure khDRep
+
+-- | Submit a transaction that unregisters a given DRep
+unRegisterDRep ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxCert era
+  ) =>
+  Credential 'DRepRole (EraCrypto era) ->
+  Coin ->
+  ImpTestM era ()
+unRegisterDRep drep c =
+  submitTxAnn_ "UnRegister DRep" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.singleton (UnRegDRepTxCert drep c)
+
+-- | Submit a transaction that updates a given DRep
+updateDRep ::
+  forall era.
+  ( ShelleyEraImp era
+  , ConwayEraTxCert era
+  ) =>
+  Credential 'DRepRole (EraCrypto era) ->
+  ImpTestM era ()
+updateDRep drep =
+  submitTxAnn_ "Update DRep" $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.singleton (UpdateDRepTxCert drep SNothing)
 
 -- | In contrast to `setupSingleDRep`, this function does not make a UTxO entry
 -- that could count as delegated stake to the DRep, so that we can test that
@@ -1376,6 +1412,36 @@ submitConstitution prevGovId = do
           constitution
   govActionId <- submitGovAction constitutionAction
   pure (govActionId, constitution)
+
+expectDRepResigned ::
+  HasCallStack =>
+  Credential 'DRepRole (EraCrypto era) ->
+  ImpTestM era ()
+expectDRepResigned drep = do
+  dsMap <- getsNES (nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL)
+  Map.lookup drep dsMap `shouldBe` Nothing
+
+expectDRepExpired ::
+  HasCallStack =>
+  Credential 'DRepRole (EraCrypto era) ->
+  ImpTestM era ()
+expectDRepExpired drep = do
+  dsMap <- getsNES (nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL)
+  currentEpoch <- getsNES nesELL
+  case Map.lookup drep dsMap of
+    Nothing -> error $ unlines ["DRep not found", show drep]
+    Just drep' -> drep' ^. drepExpiryL `shouldSatisfy` (< currentEpoch)
+
+expectDRepActive ::
+  HasCallStack =>
+  Credential 'DRepRole (EraCrypto era) ->
+  ImpTestM era ()
+expectDRepActive drep = do
+  dsMap <- getsNES (nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL)
+  currentEpoch <- getsNES nesELL
+  case Map.lookup drep dsMap of
+    Nothing -> error $ unlines ["DRep not found", show drep]
+    Just drep' -> drep' ^. drepExpiryL `shouldSatisfy` (>= currentEpoch)
 
 expectExtraDRepExpiry ::
   (HasCallStack, EraGov era, ConwayEraPParams era) =>
