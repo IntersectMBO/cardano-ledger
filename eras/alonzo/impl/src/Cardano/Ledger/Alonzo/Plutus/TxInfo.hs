@@ -42,6 +42,9 @@ module Cardano.Ledger.Alonzo.Plutus.TxInfo (
   transTxBodyWithdrawals,
   transTxBodyReqSignerHashes,
   transTxWitsDatums,
+  -- * LgacyPlutusArgs helpers
+  toLegacyPlutusArgs,
+  toLegacyPlutusV1Args,
 )
 where
 
@@ -100,8 +103,9 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
 
   toPlutusScriptPurpose proxy = transPlutusPurpose proxy . hoistPlutusPurpose toAsItem
 
-  toPlutusTxInfo proxy LedgerTxInfo{..} = do
-    timeRange <- transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
+  toPlutusTxInfo proxy LedgerTxInfo {..} = do
+    timeRange <-
+      transValidityInterval ltiTx ltiProtVer ltiEpochInfo ltiSystemStart (txBody ^. vldtTxBodyL)
     txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ \txIn -> do
       txOut <- transLookupTxOut ltiUTxO txIn
       pure $ PV1.TxInInfo (transTxIn txIn) <$> transTxOut txOut
@@ -124,11 +128,33 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
     where
       txBody = ltiTx ^. bodyTxL
 
-  toPlutusArgs proxy txInfo scriptPurpose maybeSpendingData redeemerData = do
-    scriptContext <- PV1.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
-    pure $ PlutusV1Args $ case maybeSpendingData of
-      Nothing -> LegacyPlutusArgs2 redeemerData scriptContext
-      Just spendingData -> LegacyPlutusArgs3 spendingData redeemerData scriptContext
+  toPlutusArgs = toLegacyPlutusV1Args
+
+toLegacyPlutusV1Args ::
+  EraPlutusTxInfo 'PlutusV1 era =>
+  proxy 'PlutusV1 ->
+  PV1.TxInfo ->
+  PlutusPurpose AsIxItem era ->
+  Maybe PV1.Data ->
+  PV1.Data ->
+  Either (ContextError era) (PlutusArgs 'PlutusV1)
+toLegacyPlutusV1Args proxy txInfo scriptPurpose maybeSpendingData redeemerData =
+  PlutusV1Args
+    <$> toLegacyPlutusArgs proxy (PV1.ScriptContext txInfo) scriptPurpose maybeSpendingData redeemerData
+
+toLegacyPlutusArgs ::
+  EraPlutusTxInfo l era =>
+  proxy l ->
+  (PlutusScriptPurpose l -> PlutusScriptContext l) ->
+  PlutusPurpose AsIxItem era ->
+  Maybe PV1.Data ->
+  PV1.Data ->
+  Either (ContextError era) (LegacyPlutusArgs l)
+toLegacyPlutusArgs proxy mkScriptContext scriptPurpose maybeSpendingData redeemerData = do
+  scriptContext <- mkScriptContext <$> toPlutusScriptPurpose proxy scriptPurpose
+  pure $ case maybeSpendingData of
+    Nothing -> LegacyPlutusArgs2 redeemerData scriptContext
+    Just spendingData -> LegacyPlutusArgs3 spendingData redeemerData scriptContext
 
 instance Crypto c => EraPlutusContext (AlonzoEra c) where
   type ContextError (AlonzoEra c) = AlonzoContextError (AlonzoEra c)
