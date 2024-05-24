@@ -21,6 +21,7 @@ import Control.State.Transition.Extended
 
 import Constrained
 
+import Test.Cardano.Ledger.Constrained.Conway.NES
 import Test.Cardano.Ledger.Constrained.Conway.Cert
 import Test.Cardano.Ledger.Constrained.Conway.Deleg
 import Test.Cardano.Ledger.Constrained.Conway.Gov
@@ -251,7 +252,7 @@ prop_TICK :: Property
 prop_TICK =
   stsPropertyV2 @"TICK" @ConwayFn
     TrueSpec
-    (\_env -> TrueSpec)
+    (\_env -> nesSpec)
     (\_env _st -> TrueSpec)
     $ \_env _st _sig _st' -> True
 
@@ -265,6 +266,7 @@ tests_STS =
     "STS property tests"
     [ govTests
     , testProperty "prop_SNAP" prop_SNAP
+    , testProperty "prop_TICK" prop_SNAP
     -- , utxoTests
     -- TODO: this is probably one of the last things we want to
     -- get passing as it depends on being able to generate a complete

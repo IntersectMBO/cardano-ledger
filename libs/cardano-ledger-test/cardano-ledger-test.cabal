@@ -64,6 +64,7 @@ library
         Test.Cardano.Ledger.Constrained.Conway.PParams
         Test.Cardano.Ledger.Constrained.Conway.Gov
         Test.Cardano.Ledger.Constrained.Conway.Utxo
+        Test.Cardano.Ledger.Constrained.Conway.NES
         Test.Cardano.Ledger.Examples.BabbageFeatures
         Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
         Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW

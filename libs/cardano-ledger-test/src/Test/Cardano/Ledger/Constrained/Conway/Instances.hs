@@ -52,6 +52,11 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances (
   ProposalsSplit (..),
   genProposalsSplit,
   proposalSplitSum,
+  nesEs_,
+  esLState_,
+  lsUTxOState_,
+  utxosGovState_,
+  cgsProposals_
 ) where
 
 import Cardano.Ledger.Shelley.RewardUpdate
@@ -1264,8 +1269,8 @@ instance IsConwayUniv fn => HasSpec fn (PoolEnv (ConwayEra StandardCrypto))
 instance HasSimpleRep (CertEnv (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (CertEnv (ConwayEra StandardCrypto))
 
-instance HasSimpleRep (EpochState (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (EpochState (ConwayEra StandardCrypto))
+instance HasSimpleRep (EpochState era)
+instance (EraTxOut era, HasSpec fn (TxOut era), HasSpec fn (GovState era), IsConwayUniv fn) => HasSpec fn (EpochState era)
 
 instance HasSimpleRep (NonMyopic c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (NonMyopic c)
@@ -1306,17 +1311,17 @@ instance
 instance HasSimpleRep (SnapShots c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (SnapShots c)
 
-instance HasSimpleRep (LedgerState (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (LedgerState (ConwayEra StandardCrypto))
+instance HasSimpleRep (LedgerState era)
+instance (EraTxOut era, HasSpec fn (TxOut era), HasSpec fn (GovState era), IsConwayUniv fn) => HasSpec fn (LedgerState era)
 
-instance HasSimpleRep (UTxOState (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (UTxOState (ConwayEra StandardCrypto))
+instance HasSimpleRep (UTxOState era)
+instance (EraTxOut era, HasSpec fn (TxOut era), HasSpec fn (GovState era), IsConwayUniv fn) => HasSpec fn (UTxOState era)
 
 instance HasSimpleRep (IncrementalStake c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (IncrementalStake c)
 
-instance HasSimpleRep (UTxO (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (UTxO (ConwayEra StandardCrypto))
+instance HasSimpleRep (UTxO era)
+instance (Era era, HasSpec fn (TxOut era), IsConwayUniv fn) => HasSpec fn (UTxO era)
 
 instance HasSimpleRep (FuturePParams (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (FuturePParams (ConwayEra StandardCrypto))
@@ -1467,12 +1472,12 @@ instance (IsConwayUniv fn, HasSpec fn (PParams era), Era era) => HasSpec fn (Con
 instance HasSimpleRep (SnapEnv (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (SnapEnv (ConwayEra StandardCrypto))
 
-instance HasSimpleRep (BlocksMade StandardCrypto)
-instance IsConwayUniv fn => HasSpec fn (BlocksMade StandardCrypto)
+instance HasSimpleRep (BlocksMade c)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (BlocksMade c)
 
 -- TODO: this should probably have a proper instance based on HasSimpleRep
-instance BaseUniverse fn => HasSpec fn (RewardPulser StandardCrypto ShelleyBase (RewardAns StandardCrypto)) where
-  type TypeSpec fn (RewardPulser StandardCrypto ShelleyBase (RewardAns StandardCrypto)) = ()
+instance (Crypto c, BaseUniverse fn) => HasSpec fn (RewardPulser c ShelleyBase (RewardAns c)) where
+  type TypeSpec fn (RewardPulser c ShelleyBase (RewardAns c)) = ()
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
@@ -1483,17 +1488,36 @@ instance BaseUniverse fn => HasSpec fn (RewardPulser StandardCrypto ShelleyBase 
 instance HasSimpleRep RewardType
 instance IsConwayUniv fn => HasSpec fn RewardType
 
-instance HasSimpleRep (Reward StandardCrypto)
-instance IsConwayUniv fn => HasSpec fn (Reward StandardCrypto)
+instance HasSimpleRep (Reward c)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (Reward c)
 
-instance HasSimpleRep (RewardSnapShot StandardCrypto)
-instance IsConwayUniv fn => HasSpec fn (RewardSnapShot StandardCrypto)
+instance HasSimpleRep (RewardSnapShot c)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (RewardSnapShot c)
 
-instance HasSimpleRep (RewardUpdate StandardCrypto)
-instance IsConwayUniv fn => HasSpec fn (RewardUpdate StandardCrypto)
+instance HasSimpleRep (RewardUpdate c)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (RewardUpdate c)
 
-instance HasSimpleRep (PulsingRewUpdate StandardCrypto)
-instance IsConwayUniv fn => HasSpec fn (PulsingRewUpdate StandardCrypto)
+instance HasSimpleRep (PulsingRewUpdate c)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (PulsingRewUpdate c)
 
-instance HasSimpleRep (NewEpochState (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (NewEpochState (ConwayEra StandardCrypto))
+instance HasSimpleRep (NewEpochState era)
+instance ( EraTxOut era
+         , HasSpec fn (TxOut era)
+         , HasSpec fn (GovState era)
+         , HasSpec fn (StashedAVVMAddresses era)
+         , IsConwayUniv fn) => HasSpec fn (NewEpochState era)
+
+nesEs_ :: Term ConwayFn (NewEpochState (ConwayEra StandardCrypto)) -> Term ConwayFn (EpochState (ConwayEra StandardCrypto))
+nesEs_ = sel @3
+
+esLState_ :: Term ConwayFn (EpochState (ConwayEra StandardCrypto)) -> Term ConwayFn (LedgerState (ConwayEra StandardCrypto))
+esLState_ = sel @1
+
+lsUTxOState_ :: Term ConwayFn (LedgerState (ConwayEra StandardCrypto)) -> Term ConwayFn (UTxOState (ConwayEra StandardCrypto))
+lsUTxOState_ = sel @0
+
+utxosGovState_ :: Term ConwayFn (UTxOState (ConwayEra StandardCrypto)) -> Term ConwayFn (GovState (ConwayEra StandardCrypto))
+utxosGovState_ = sel @3
+
+cgsProposals_ :: Term ConwayFn (ConwayGovState (ConwayEra StandardCrypto)) -> Term ConwayFn (Proposals (ConwayEra StandardCrypto))
+cgsProposals_ = sel @0
