@@ -56,7 +56,7 @@ import Cardano.Ledger.Api.State.Query.CommitteeMembersState (
   MemberStatus (..),
   NextEpochChange (..),
  )
-import Cardano.Ledger.BaseTypes (EpochNo (EpochNo), binOpEpochNo, strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (EpochNo, strictMaybeToMaybe)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
@@ -73,9 +73,9 @@ import Cardano.Ledger.Conway.Governance (
   psPoolDistr,
   rsEnactStateL,
  )
+import Cardano.Ledger.Conway.Rules (updateDormantDRepExpiry)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), FuturePParams (..))
@@ -92,7 +92,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Lens.Micro ((%~), (&), (<&>), (^.))
+import Lens.Micro
 import Lens.Micro.Extras (view)
 
 -- | Filter out stake pool delegations and rewards for a set of stake credentials
@@ -141,15 +141,12 @@ queryDRepState ::
   Set (Credential 'DRepRole (EraCrypto era)) ->
   Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era))
 queryDRepState nes creds
-  | null creds = drepsState
-  | otherwise =
-      drepsState `Map.restrictKeys` creds
-        & if numDormantEpochs == EpochNo 0
-          then id
-          else (<&> drepExpiryL %~ binOpEpochNo (+) numDormantEpochs)
+  | null creds = updateDormantDRepExpiry' vState ^. vsDRepsL
+  | otherwise = updateDormantDRepExpiry' vStateFiltered ^. vsDRepsL
   where
-    drepsState = vsDReps $ certVState $ lsCertState $ esLState $ nesEs nes
-    numDormantEpochs = vsNumDormantEpochs $ certVState $ lsCertState $ esLState $ nesEs nes
+    vStateFiltered = vState & vsDRepsL %~ (`Map.restrictKeys` creds)
+    vState = certVState $ lsCertState $ esLState $ nesEs nes
+    updateDormantDRepExpiry' = updateDormantDRepExpiry (nes ^. nesELL)
 
 -- | Query DRep stake distribution. Note that this can be an expensive query because there
 -- is a chance that current distribution has not been fully computed yet.

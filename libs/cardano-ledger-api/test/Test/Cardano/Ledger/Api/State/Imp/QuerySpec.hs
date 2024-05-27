@@ -15,23 +15,30 @@ import Cardano.Ledger.Api.State.Query (
   MemberStatus (..),
   NextEpochChange (..),
   queryCommitteeMembersState,
+  queryDRepState,
  )
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov (..),
   ConwayGovState,
   EraGov (..),
  )
+import Cardano.Ledger.Conway.PParams (ppDRepActivityL)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
+import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (
   KeyRole (..),
  )
 import Cardano.Ledger.Shelley.LedgerState
+import Data.Default (def)
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import qualified Data.Set as Set
+import Lens.Micro
 import Lens.Micro.Mtl
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -44,6 +51,81 @@ spec ::
   ) =>
   SpecWith (ImpTestState era)
 spec = do
+  describe "DRep" $ do
+    describe "Expiries are reported correctly" $ do
+      it "simple expiry" $ do
+        modifyPParams $ ppDRepActivityL .~ EpochInterval 3
+        (drep, _, _) <- setupSingleDRep 1_000_000
+        nes <- getsNES id
+        let result = queryDRepState nes mempty
+        result `shouldSatisfy` Map.member drep
+        let state = fromJust $ Map.lookup drep result
+        state ^. drepExpiryL `shouldBe` EpochNo 3
+        passNEpochsChecking 4 $
+          isDRepExpired drep `shouldReturn` False
+        expectDRepExpiry drep 3
+        expectActualDRepExpiry drep 7
+      it "proposals are made and numDormantEpochs are added" $ do
+        modifyPParams $ ppDRepActivityL .~ EpochInterval 3
+        let submitParamChangeProposal =
+              submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
+        (drep, _, _) <- setupSingleDRep 1_000_000
+        nes <- getsNES id
+        let result = queryDRepState nes mempty
+        result `shouldSatisfy` Map.member drep
+        let state = fromJust $ Map.lookup drep result
+        state ^. drepExpiryL `shouldBe` EpochNo 3
+        passNEpochsChecking 2 $
+          isDRepExpired drep `shouldReturn` False
+        expectActualDRepExpiry drep 5
+        expectDRepExpiry drep 3
+        void submitParamChangeProposal
+        expectDRepExpiry drep 5
+        nes1 <- getsNES id
+        let result1 = queryDRepState nes1 mempty
+        let state1 = fromJust $ Map.lookup drep result1
+        state1 ^. drepExpiryL `shouldBe` EpochNo 5
+        passNEpochsChecking 3 $
+          isDRepExpired drep `shouldReturn` False
+        passEpoch
+        isDRepExpired drep `shouldReturn` True
+      it "update certificates are submitted and proposals are made" $ do
+        modifyPParams $ ppDRepActivityL .~ EpochInterval 3
+        let submitParamChangeProposal =
+              submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
+        (drep, _, _) <- setupSingleDRep 1_000_000
+        nes <- getsNES id
+        let result = queryDRepState nes mempty
+        result `shouldSatisfy` Map.member drep
+        let state = fromJust $ Map.lookup drep result
+        state ^. drepExpiryL `shouldBe` EpochNo 3
+        passNEpochsChecking 3 $
+          isDRepExpired drep `shouldReturn` False
+        expectNumDormantEpochs 3
+        expectDRepExpiry drep 3
+        expectActualDRepExpiry drep 6
+        updateDRep drep
+        expectDRepExpiry drep 3
+        expectActualDRepExpiry drep 6
+        expectNumDormantEpochs 3
+        nes1 <- getsNES id
+        let result1 = queryDRepState nes1 mempty
+        let state1 = fromJust $ Map.lookup drep result1
+        state1 ^. drepExpiryL `shouldBe` EpochNo 6
+        expectDRepExpiry drep 3
+        passEpoch
+        expectNumDormantEpochs 4
+        void submitParamChangeProposal
+        expectNumDormantEpochs 0
+        nes2 <- getsNES id
+        let result2 = queryDRepState nes2 mempty
+        let state2 = fromJust $ Map.lookup drep result2
+        state2 ^. drepExpiryL `shouldBe` EpochNo 7
+        expectActualDRepExpiry drep 7
+        passNEpochsChecking 3 $ do
+          isDRepExpired drep `shouldReturn` False
+        passEpoch
+        isDRepExpired drep `shouldReturn` True
   describe "Committee members hot key pre-authorization" $ do
     it "authorized members not elected get removed in the next epoch" $ do
       c1 <- KeyHashObj <$> freshKeyHash
