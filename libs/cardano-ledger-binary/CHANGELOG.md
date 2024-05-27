@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.3.2.1
+## 1.3.3.0
 
-*
+* Re-export:
+  * `Pretty`
+  * `ansiWlPretty`
+  * `ppEditExpr`
+  * `ediff`
 
 ## 1.3.2.0
 
