@@ -1887,6 +1887,7 @@ pulsingSnapshotT =
     :$ Lensed currGovStates (psProposalsL . strictSeqListL)
     :$ Lensed partialDRepDistr (psDRepDistrL . mapCompactFormCoinL)
     :$ Lensed prevDRepState psDRepStateL
+    :$ Lensed prevPoolDistr psPoolDistrL
 
 pulsingSnapshotL :: Lens' (DRepPulsingState era) (PulsingSnapshot era)
 pulsingSnapshotL = lens getter setter

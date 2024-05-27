@@ -1,7 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.14.1.0
+## 1.15.0.0
 
+* Add `psPoolDistrL` lens.
+* Add `psPoolDistr` field to `PulsingSnapshot` for tracking the pool stake distribution.
 * Fix DRep expiry updates based on the number of dormant epochs.
   * Remove `DRepPulser.dormantEpoch`.
   * Add `CERTS.updateDormantDRepExpiry`.
