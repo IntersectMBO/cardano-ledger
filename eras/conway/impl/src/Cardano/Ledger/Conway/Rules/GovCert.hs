@@ -43,7 +43,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, DRepRole))
-import Cardano.Slotting.Slot (binOpEpochNo)
+import Cardano.Slotting.Slot (EpochInterval, binOpEpochNo)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -67,7 +67,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
-import Cardano.Slotting.Slot (EpochInterval)
 
 data ConwayGovCertEnv era = ConwayGovCertEnv
   { cgcePParams :: !(PParams era)
@@ -211,9 +210,9 @@ conwayGovCertTransition = do
       Map.member cred vsDReps ?! ConwayDRepNotRegistered cred
       pure
         vState
-          { vsDReps = 
-              updateDRepExpiry ppDRepActivity cgceCurrentEpoch (vState ^. vsNumDormantEpochsL) cred 
-                $ Map.adjust ( \drepState -> drepState & drepAnchorL .~ mAnchor ) cred vsDReps
+          { vsDReps =
+              updateDRepExpiry ppDRepActivity cgceCurrentEpoch (vState ^. vsNumDormantEpochsL) cred $
+                Map.adjust (\drepState -> drepState & drepAnchorL .~ mAnchor) cred vsDReps
           }
   where
     checkColdCredHasNotResigned coldCred csCommitteeCreds =
@@ -230,25 +229,22 @@ conwayGovCertTransition = do
                 }
           }
 
-updateDRepExpiry :: 
+updateDRepExpiry ::
   -- | DRepActivity PParam
-  EpochInterval -> 
+  EpochInterval ->
   -- | Current epoch
-  EpochNo -> 
+  EpochNo ->
   -- | The count of the dormant epochs
-  EpochNo -> 
+  EpochNo ->
   -- | DRep credential
-  Credential 'DRepRole c -> 
+  Credential 'DRepRole c ->
   -- | DRep map from DRepState
-  Map.Map (Credential 'DRepRole c) (DRepState c) -> 
+  Map.Map (Credential 'DRepRole c) (DRepState c) ->
   Map.Map (Credential 'DRepRole c) (DRepState c)
 updateDRepExpiry ppDRepActivity currentEpoch numDormantEpochs =
-  Map.adjust
-    ( \drepState ->
-        drepState
-          & drepExpiryL
-            .~ binOpEpochNo
-              (-)
-              (addEpochInterval currentEpoch ppDRepActivity)
-              numDormantEpochs
-    )
+  Map.adjust $
+    drepExpiryL
+      .~ binOpEpochNo
+        (-)
+        (addEpochInterval currentEpoch ppDRepActivity)
+        numDormantEpochs

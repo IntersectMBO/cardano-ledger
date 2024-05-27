@@ -40,14 +40,14 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (certDStateL, certVStateL, vsDRepsL, vsNumDormantEpochsL)
+import Cardano.Ledger.CertState (VState, certDStateL, certVStateL, vsDRepsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayCERTS, ConwayEra)
 import Cardano.Ledger.Conway.Governance (Voter (DRepVoter), VotingProcedures (unVotingProcedures))
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure, updateDRepExpiry)
-import Cardano.Ledger.DRep (DRepState, drepExpiryL)
+import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   Coin,
@@ -76,7 +76,6 @@ import Data.Sequence (Seq (..))
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
-import Cardano.Ledger.CertState (VState)
 
 data CertsEnv era = CertsEnv
   { certsTx :: !(Tx era)
@@ -218,16 +217,19 @@ conwayCertsTransition = do
       -- Update DRep expiry for all DReps that are voting in this transaction.
       -- This will execute in mutual-exclusion to the previous updates to DRep expiry,
       -- because if there are no proposals to vote on , there will be no votes either.
-      let updatedVSDReps =
+      let numDormantEpochs1 = certState' ^. certVStateL . vsNumDormantEpochsL
+          updatedVSDReps =
             Map.foldlWithKey'
               ( \dreps voter _ -> case voter of
-                  DRepVoter cred -> 
-                    updateDRepExpiry drepActivity currentEpoch (certState' ^. certVStateL . vsNumDormantEpochsL) cred dreps
+                  DRepVoter cred ->
+                    updateDRepExpiry drepActivity currentEpoch numDormantEpochs1 cred dreps
                   _ -> dreps
               )
               (certState' ^. certVStateL . vsDRepsL)
               (unVotingProcedures $ tx ^. bodyTxL . votingProceduresTxBodyL)
-          certStateWithDRepExpiryUpdated = certState' & certVStateL . vsDRepsL .~ updatedVSDReps
+
+      -- Final CertState with updates to DRep expiry based on new proposals and votes on existing proposals
+      let certStateWithDRepExpiryUpdated = certState' & certVStateL . vsDRepsL .~ updatedVSDReps
           dState = certStateWithDRepExpiryUpdated ^. certDStateL
           withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
 
@@ -265,14 +267,15 @@ updateDormantDRepExpiry ::
 updateDormantDRepExpiry currentEpoch numDormantEpochs vState =
   if numDormantEpochs == EpochNo 0
     then vState
-    else vState 
-      & vsNumDormantEpochsL .~ EpochNo 0
-      & vsDRepsL %~ fmap updateExpiry
+    else
+      vState
+        & vsNumDormantEpochsL .~ EpochNo 0
+        & vsDRepsL %~ fmap updateExpiry
   where
-    updateExpiry = 
-      drepExpiryL %~
-        \currentExpiry ->
-            let actualExpiry = binOpEpochNo (+) numDormantEpochs currentExpiry
-             in if actualExpiry < currentEpoch
-                  then currentExpiry
-                  else actualExpiry
+    updateExpiry =
+      drepExpiryL
+        %~ \currentExpiry ->
+          let actualExpiry = binOpEpochNo (+) numDormantEpochs currentExpiry
+           in if actualExpiry < currentEpoch
+                then currentExpiry
+                else actualExpiry
