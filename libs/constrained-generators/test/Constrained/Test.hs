@@ -115,6 +115,7 @@ tests nightly =
     testSpec "sumRange" sumRange
     testSpec "sumListBad" sumListBad
     testSpec "listExistsUnfree" listExistsUnfree
+    testSpec "listSumShort" listSumShort
     testSpec "existsUnfree" existsUnfree
     -- TODO: double shrinking
     testSpecNoShrink "reifyYucky" reifyYucky

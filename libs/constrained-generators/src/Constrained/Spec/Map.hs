@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -27,8 +28,9 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
+import GHC.Generics
 import Prettyprinter
-import Test.QuickCheck (Arbitrary (..), frequency, shrinkList)
+import Test.QuickCheck (Arbitrary (..), frequency, genericShrink, shrinkList)
 
 ------------------------------------------------------------------------
 -- HasSpec
@@ -51,6 +53,7 @@ data MapSpec fn k v = MapSpec
   , mapSpecElem :: Specification fn (k, v)
   , mapSpecFold :: FoldSpec fn v
   }
+  deriving (Generic)
 
 -- | emptySpec without all the constraints
 defaultMapSpec :: Ord k => MapSpec fn k v
@@ -77,6 +80,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> frequency [(5, pure NoFold), (1, arbitrary)]
+  shrink = genericShrink
 
 instance Arbitrary (FoldSpec fn (Map k v)) where
   arbitrary = pure NoFold
@@ -159,7 +163,11 @@ instance
           -- TODO, we should make sure size' is greater than or equal to 0
           satisfies
             (sz + Lit (sizeOf mustMap))
-            (maybe TrueSpec leqSpec mHint <> size <> cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs))
+            ( maybe TrueSpec leqSpec mHint
+                <> size
+                <> maxSpec (cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs))
+                <> maxSpec (cardinalTrueSpec @fn @k)
+            )
         foldSpec' = case foldSpec of
           NoFold -> NoFold
           FoldSpec fn sumSpec -> FoldSpec fn $ propagateSpecFun (theAddFn @fn) (HOLE :? Value mustSum :> Nil) sumSpec
@@ -195,7 +203,7 @@ instance
   shrinkWithTypeSpec (MapSpec _ _ _ _ kvs _) m = map Map.fromList $ shrinkList (shrinkWithSpec kvs) (Map.toList m)
 
   toPreds m (MapSpec mHint mustKeys mustVals size kvs foldSpec) =
-    toPred
+    toPred $
       [ assert $ lit mustKeys `subset_` dom_ m
       , forAll (Lit mustVals) $ \val ->
           val `elem_` rng_ m

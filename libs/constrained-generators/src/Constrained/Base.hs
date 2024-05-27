@@ -421,7 +421,7 @@ toCtx ::
   Var v ->
   Term fn a ->
   m (Ctx fn v a)
-toCtx v = go -- . simplifyTerm
+toCtx v = go
   where
     go :: forall b. Term fn b -> m (Ctx fn v b)
     go (Lit i) = fatalError ["toCtx (Lit " ++ show i ++ ")"]
@@ -639,11 +639,16 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
         [ (1, pure TrueSpec)
         , (7, MemberSpec <$> listOf1 (genFromSpec @fn TrueSpec))
         , (10, typeSpec <$> arbitrary)
-        , (5, TypeSpec <$> arbitrary <*> listOf (genFromSpec @fn TrueSpec))
+        ,
+          ( 1
+          , do
+              len <- choose (1, 5)
+              TypeSpec <$> arbitrary <*> vectorOf len (genFromSpec @fn TrueSpec)
+          )
         , (1, ErrorSpec <$> arbitrary)
         , (1, pure $ MemberSpec [])
         , -- Recurse to make sure we apply the tricks for generating suspended specs multiple times
-          (4, arbitrary)
+          (1, arbitrary)
         ]
     -- TODO: we probably want smarter ways of generating constraints
     frequency
@@ -677,9 +682,7 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
         )
       ,
         ( 1
-        , do
-            es <- arbitrary
-            pure $ constrained $ \x -> explanation es $ x `satisfies` baseSpec
+        , pure $ constrained $ \x -> explanation ["its very subtle, you won't get it."] $ x `satisfies` baseSpec
         )
       , (10, pure baseSpec)
       ]
@@ -692,8 +695,33 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
         [TrueSpec, typeSpec ts, MemberSpec cant]
           ++ map typeSpec (shrink ts)
           ++ map (TypeSpec ts) (shrinkList (shrinkWithSpec @fn TrueSpec) cant)
-  shrink (SuspendedSpec x p) = [TrueSpec, MemberSpec []] ++ [s | Result _ s <- [computeSpec x p]]
+  shrink (SuspendedSpec x p) =
+    [TrueSpec, MemberSpec []]
+      ++ [ s
+         | Result _ s <- [computeSpec x p]
+         , not $ isSuspendedSpec s
+         ]
+      ++ [SuspendedSpec x p' | p' <- shrinkPred p]
   shrink ErrorSpec {} = [TrueSpec, MemberSpec []]
+
+shrinkPred :: Pred fn -> [Pred fn]
+shrinkPred (Block ps) = TruePred : FalsePred [] : ps ++ map Block (shrinkList shrinkPred ps)
+shrinkPred (Assert es t) = TruePred : FalsePred [] : [Assert [] t | not $ null es]
+shrinkPred (Explain _ p) = TruePred : FalsePred [] : [p]
+shrinkPred (When b p) = TruePred : FalsePred [] : p : map (When b) (shrinkPred p)
+shrinkPred (Exists k (x :-> p)) = TruePred : FalsePred [] : [Exists k (x :-> p') | p' <- shrinkPred p]
+shrinkPred (Subst x t p) = shrinkPred $ substitutePred x t p
+shrinkPred GenHint {} = [TruePred, FalsePred []]
+shrinkPred Monitor {} = [TruePred, FalsePred []]
+shrinkPred DependsOn {} = [TruePred, FalsePred []]
+-- TODO: fixme
+shrinkPred Case {} = [TruePred, FalsePred []]
+shrinkPred (Let t (x :-> p)) = Let t . (x :->) <$> shrinkPred p
+shrinkPred _ = []
+
+isSuspendedSpec :: Specification fn a -> Bool
+isSuspendedSpec SuspendedSpec {} = True
+isSuspendedSpec _ = False
 
 equalSpec :: a -> Specification fn a
 equalSpec = MemberSpec . pure
@@ -1201,7 +1229,11 @@ computeSpecSimplified x p = localGESpec $ case p of
   Subst x' t p' -> computeSpec x (substitutePred x' t p') -- NOTE: this is impossible as it should have gone away already
   TruePred -> pure mempty
   FalsePred es -> genError es
-  Block ps -> fold <$> mapM (computeSpecSimplified x) ps
+  Block ps -> do
+    spec <- fold <$> mapM (computeSpecSimplified x) ps
+    case spec of
+      SuspendedSpec y ps' -> pure $ SuspendedSpec y $ simplifyPred ps'
+      s -> pure s
   Let t b -> pure $ SuspendedSpec x (Let t b)
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert _ (Lit True) -> pure mempty
@@ -1796,7 +1828,9 @@ simplifyPred = \case
   Reifies t' t f -> Reifies (simplifyTerm t') (simplifyTerm t) f
   ForAll set b -> case simplifyTerm set of
     Lit as -> foldMap (`unBind` b) (forAllToList as)
-    set' -> ForAll set' (simplifyBinder b)
+    set' -> case simplifyBinder b of
+      _ :-> TruePred -> TruePred
+      b' -> ForAll set' b'
   DependsOn _ Lit {} -> TruePred
   DependsOn Lit {} _ -> TruePred
   DependsOn x y -> DependsOn x y
@@ -2435,7 +2469,7 @@ data FoldSpec (fn :: [Type] -> Type -> Type) a where
 instance {-# OVERLAPPABLE #-} (Arbitrary a, Arbitrary (TypeSpec fn a), Foldy fn a, BaseUniverse fn) => Arbitrary (FoldSpec fn a) where
   arbitrary = oneof [FoldSpec idFn <$> arbitrary, pure NoFold]
   shrink NoFold = []
-  -- Consider trying to shrink the spec
+  shrink (FoldSpec (extractFn @(FunFn fn) @fn -> Just Id) spec) = FoldSpec idFn <$> shrink spec
   shrink FoldSpec {} = [NoFold]
 
 preMapFoldSpec :: HasSpec fn a => fn '[a] b -> FoldSpec fn b -> FoldSpec fn a
@@ -2753,12 +2787,13 @@ genNumList elemSIn foldSIn = do
       let sz'
             | sz > 100 = sz
             | isNothing me = 2 * sz + 1
+            | Just e <- me, Set.member e es = 2 * sz + 1
             | otherwise = sz
       buildMemberSpec
         sz'
         (fuel - 1)
         (maybe es (flip Set.insert es) me)
-        (spec <> maybe mempty notEqualSpec me)
+        spec
 
     gen ::
       forall m'. MonadGenError m' => (Specification fn a, Specification fn a) -> Int -> [a] -> GenT m' [a]
@@ -2869,9 +2904,11 @@ genFromFold (nub -> must) size elemS fn foldS = do
   let elemS' = mapSpec fn elemS
       mustVal = adds @fn (map (sem fn) must)
       foldS' = propagateSpecFun (theAddFn @fn) (HOLE :? Value mustVal :> Nil) foldS
+  m <- getMode
   results0 <-
-    genList (simplifySpec elemS') (simplifySpec foldS')
-      `suchThatT` (\xs -> (sizeOf must + sizeOf xs) `conformsToSpec` size)
+    withMode Loose $
+      (withMode m $ genList (simplifySpec elemS') (simplifySpec foldS'))
+        `suchThatT` (\xs -> (sizeOf must + sizeOf xs) `conformsToSpec` size)
   results <-
     explain
       [ "genInverse"
@@ -3013,6 +3050,14 @@ instance (Ord a, HasSpec fn a) => Semigroup (SetSpec fn a) where
 instance (Ord a, HasSpec fn a) => Monoid (SetSpec fn a) where
   mempty = SetSpec mempty mempty TrueSpec
 
+guardSetSpec :: (HasSpec fn a, Ord a) => SetSpec fn a -> Specification fn (Set a)
+guardSetSpec (SetSpec must elem ((<> geqSpec 0) -> size))
+  | Just u <- knownUpperBound size
+  , u < 0 =
+      ErrorSpec ["Empty set spec"] -- TODO: better error
+  | isErrorLike size = ErrorSpec ["Empty set spec"]
+  | otherwise = typeSpec $ SetSpec must elem size
+
 instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
   type TypeSpec fn (Set a) = SetSpec fn a
 
@@ -3021,7 +3066,7 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
   emptySpec = mempty
 
   -- TODO: we need to check conformsTo for musts and elem specs
-  combineSpec s s' = typeSpec $ s <> s'
+  combineSpec s s' = guardSetSpec $ s <> s'
 
   conformsTo s (SetSpec must es size) =
     and
@@ -3036,7 +3081,7 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
   genFromTypeSpec (SetSpec must elemS szSpec) = do
     n <-
       explain ["Choose a possible size Bounds for the Sets to be generated"] $
-        genFromSizeSpec (szSpec <> geqSpec @fn (sizeOf must) <> maxSpec (cardinality elemS))
+        genFromSpecT (szSpec <> geqSpec @fn (sizeOf must) <> maxSpec (cardinality elemS))
     go (n - sizeOf must) must
     where
       go 0 s = pure s
@@ -3257,9 +3302,17 @@ instance HasSpec fn a => HasSpec fn [a] where
   combineSpec (ListSpec msz must size elemS foldS) (ListSpec msz' must' size' elemS' foldS') = fromGESpec $ do
     let must'' = nub $ must <> must'
         elemS'' = elemS <> elemS'
-        size'' = size <> size'
+        size'' = geqSpec 0 <> size <> size'
+        badSizeSpec
+          | isErrorLike size'' = True
+          | Just u <- knownUpperBound size''
+          , u < 0 =
+              True
+          | otherwise = False
     unless (all (`conformsToSpec` elemS'') must'') $
       genError ["combineSpec ListSpec failed with <REASON>"]
+    when badSizeSpec $
+      genError ["error-like size spec in combineSpec ListSpec"]
     typeSpec . ListSpec (unionWithMaybe min msz msz') must'' size'' elemS''
       <$> combineFoldSpec foldS foldS'
 

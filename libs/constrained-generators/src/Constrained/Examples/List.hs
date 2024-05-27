@@ -102,3 +102,13 @@ listExistsUnfree = constrained $ \xs ->
   [ forAll xs $ \x -> x `satisfies` existsUnfree
   , assert $ sizeOf_ xs ==. 3
   ]
+
+listSumShort :: Specification BaseFn [Int]
+listSumShort = constrained $ \xs ->
+  [ assert $ sizeOf_ xs <=. 4
+  , assert $ sum_ xs <=. 100000
+  , forAll xs $ \x ->
+      [ exists (const $ pure True) $ \b ->
+          whenTrue b $ x <=. 10000000
+      ]
+  ]
