@@ -376,6 +376,7 @@ votingStakePoolThresholdInternal pp isElectedCommittee action =
         , pvtCommitteeNormal
         , pvtHardForkInitiation
         , pvtPPSecurityGroup
+        , pvtMotionNoConfidence
         } = pp ^. ppPoolVotingThresholdsL
       isSecurityRelevant (PPGroups _ s) =
         case s of
@@ -386,7 +387,7 @@ votingStakePoolThresholdInternal pp isElectedCommittee action =
             VotingThreshold pvtPPSecurityGroup
         | otherwise = NoVotingAllowed
    in case action of
-        NoConfidence {} -> VotingThreshold pvtCommitteeNoConfidence
+        NoConfidence {} -> VotingThreshold pvtMotionNoConfidence
         UpdateCommittee {} ->
           VotingThreshold $
             if isElectedCommittee
