@@ -49,6 +49,10 @@ deriving instance Generic RatifyState
 
 deriving instance Generic StakeDistrs
 
+deriving instance Generic PoolThresholds
+
+deriving instance Generic DrepThresholds
+
 deriving instance Ord Tag
 
 deriving instance Ord Credential
@@ -74,6 +78,10 @@ deriving instance Eq Tag
 deriving instance Eq TxWitnesses
 
 deriving instance Eq Tx
+
+deriving instance Eq PoolThresholds
+
+deriving instance Eq DrepThresholds
 
 deriving instance Eq PParams
 
@@ -135,6 +143,10 @@ instance NFData GovProposal
 
 instance NFData GovSignal
 
+instance NFData DrepThresholds
+
+instance NFData PoolThresholds
+
 instance NFData PParams
 
 instance NFData EnactState
@@ -195,6 +207,10 @@ instance ToExpr GovProposal
 instance ToExpr GovVote
 
 instance ToExpr GovSignal
+
+instance ToExpr PoolThresholds
+
+instance ToExpr DrepThresholds
 
 instance ToExpr PParams
 
@@ -297,6 +313,10 @@ instance FixupSpecRep GovActionState
 instance FixupSpecRep AgdaEmpty
 
 instance FixupSpecRep StakeDistrs
+
+instance FixupSpecRep PoolThresholds
+
+instance FixupSpecRep DrepThresholds
 
 instance FixupSpecRep PParams
 

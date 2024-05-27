@@ -275,16 +275,6 @@ instance SpecTranslate ctx ProtVer where
 
   toSpecRep (ProtVer ver minor) = pure (getVersion ver, toInteger minor)
 
-data VotingThresholds
-  = VotingThresholds
-      DRepVotingThresholds
-      PoolVotingThresholds
-
-instance SpecTranslate ctx VotingThresholds where
-  type SpecRep VotingThresholds = ()
-
-  toSpecRep _ = pure ()
-
 instance SpecTranslate ctx CostModels where
   type SpecRep CostModels = ()
 
@@ -312,6 +302,33 @@ instance
 
   toSpecRep = toSpecRep . unTHKD
 
+instance SpecTranslate ctx DRepVotingThresholds where
+  type SpecRep DRepVotingThresholds = Agda.DrepThresholds
+
+  toSpecRep DRepVotingThresholds {..} =
+    Agda.MkDrepThresholds
+      <$> toSpecRep dvtMotionNoConfidence
+      <*> toSpecRep dvtCommitteeNormal
+      <*> toSpecRep dvtCommitteeNoConfidence
+      <*> toSpecRep dvtUpdateToConstitution
+      <*> toSpecRep dvtHardForkInitiation
+      <*> toSpecRep dvtPPNetworkGroup
+      <*> toSpecRep dvtPPEconomicGroup
+      <*> toSpecRep dvtPPTechnicalGroup
+      <*> toSpecRep dvtPPGovGroup
+      <*> toSpecRep dvtTreasuryWithdrawal
+
+instance SpecTranslate ctx PoolVotingThresholds where
+  type SpecRep PoolVotingThresholds = Agda.PoolThresholds
+
+  toSpecRep PoolVotingThresholds {..} =
+    Agda.MkPoolThresholds
+      <$> toSpecRep pvtMotionNoConfidence
+      <*> toSpecRep pvtCommitteeNormal
+      <*> toSpecRep pvtCommitteeNoConfidence
+      <*> toSpecRep pvtHardForkInitiation
+      <*> toSpecRep pvtPPSecurityGroup
+
 instance SpecTranslate ctx (ConwayPParams Identity era) where
   type SpecRep (ConwayPParams Identity era) = Agda.PParams
 
@@ -329,11 +346,8 @@ instance SpecTranslate ctx (ConwayPParams Identity era) where
       <*> toSpecRep (cppEMax x)
       <*> toSpecRep (toInteger . unTHKD $ cppNOpt x)
       <*> toSpecRep (cppProtocolVersion x)
-      <*> toSpecRep
-        ( VotingThresholds
-            (unTHKD $ cppDRepVotingThresholds x)
-            (unTHKD $ cppPoolVotingThresholds x)
-        )
+      <*> toSpecRep (cppPoolVotingThresholds x)
+      <*> toSpecRep (cppDRepVotingThresholds x)
       <*> toSpecRep (cppGovActionLifetime x)
       <*> toSpecRep (cppGovActionDeposit x)
       <*> toSpecRep (cppDRepDeposit x)
