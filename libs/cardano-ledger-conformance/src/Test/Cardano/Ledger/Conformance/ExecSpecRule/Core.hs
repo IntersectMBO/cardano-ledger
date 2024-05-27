@@ -4,6 +4,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -33,12 +34,16 @@ import Data.Typeable (Proxy (..), Typeable, typeRep)
 import GHC.Base (Constraint, NonEmpty, Symbol, Type)
 import GHC.TypeLits (KnownSymbol)
 import qualified Lib as Agda
+import qualified Prettyprinter as Doc
+import Prettyprinter.Render.Terminal
+import Test.Cardano.Ledger.Binary.TreeDiff (Pretty (..), ansiWlPretty, ediff, ppEditExpr)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   FixupSpecRep (..),
   SpecTranslate (..),
   runSpecTransM,
   toTestRep,
  )
+import qualified Test.Cardano.Ledger.Generic.PrettyCore as Doc
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
@@ -179,6 +184,14 @@ class
     Property
   testConformance = defaultTestConformance @fn @era @rule
 
+  extraInfo ::
+    ExecContext fn rule era ->
+    Environment (EraRule rule era) ->
+    State (EraRule rule era) ->
+    Signal (EraRule rule era) ->
+    String
+  extraInfo _ _ _ _ = ""
+
 checkConformance ::
   ( ToExpr (SpecRep (PredicateFailure (EraRule rule era)))
   , ToExpr (SpecRep (ExecState fn rule era))
@@ -194,15 +207,32 @@ checkConformance ::
   ImpTestM era ()
 checkConformance implResTest agdaResTest = do
   let
+    conformancePretty =
+      ansiWlPretty
+        { ppDel = \d ->
+            Doc.annotate (color Red) $
+              mconcat
+                [ Doc.text "(Impl: "
+                , d
+                , Doc.text ")"
+                ]
+        , ppIns = \d ->
+            Doc.annotate (color Green) $
+              mconcat
+                [ Doc.text "(Agda: "
+                , d
+                , Doc.text ")"
+                ]
+        }
     failMsg =
       unlines
         [ ""
         , "===== DIFF ====="
-        , diffExpr implResTest agdaResTest
+        , show (ppEditExpr conformancePretty (ediff implResTest agdaResTest))
         , ""
         , "Legend:"
-        , "\t\ESC[91mImplementation"
-        , "\t\ESC[92mSpecification\ESC[39m"
+        , "\t\ESC[91m-Implementation"
+        , "\t\ESC[92m+Specification\ESC[39m"
         ]
   unless (implResTest == agdaResTest) $ expectationFailure failMsg
 
@@ -310,10 +340,11 @@ conformsToImpl =
                in forAllShrinkShow (CV2.genFromSpec stSpec) (shrinkWithSpec stSpec) showExpr $ \st ->
                     let sigSpec = simplifySpec $ signalSpec @fn @rule @era ctx env st
                      in forAllShrinkShow (CV2.genFromSpec sigSpec) (shrinkWithSpec sigSpec) showExpr $ \sig -> do
-                          _ <- impAnn @_ @era "Deep evaluating env" $ evaluateDeep env
-                          _ <- impAnn "Deep evaluating st" $ evaluateDeep st
-                          _ <- impAnn "Deep evaluating sig" $ evaluateDeep sig
-                          pure $ testConformance @fn @rule @era ctx env st sig
+                          counterexample (extraInfo @fn @rule @era ctx (inject env) (inject st) (inject sig)) $ do
+                            _ <- impAnn @_ @era "Deep evaluating env" $ evaluateDeep env
+                            _ <- impAnn "Deep evaluating st" $ evaluateDeep st
+                            _ <- impAnn "Deep evaluating sig" $ evaluateDeep sig
+                            pure $ testConformance @fn @rule @era ctx env st sig
 
 generatesWithin ::
   forall a.
