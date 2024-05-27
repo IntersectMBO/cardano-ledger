@@ -76,7 +76,9 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> frequency [(5, pure NoFold), (1, arbitrary)]
+      -- Reduce the probability of generating `FoldSpec` to avoid creating too many
+      -- unsat specs
+      <*> frequency [(1, pure NoFold), (1, arbitrary)]
 
 instance Arbitrary (FoldSpec fn (Map k v)) where
   arbitrary = pure NoFold
@@ -98,7 +100,7 @@ instance
           , "mustValues =" <+> viaShow (mapSpecMustValues s)
           , "size       =" <+> pretty (mapSpecSize s)
           , "elem       =" <+> pretty (mapSpecElem s)
-          , "fold       =" <+> viaShow (mapSpecFold s)
+          , "fold       =" <+> pretty (mapSpecFold s)
           ]
 
 instance
@@ -155,11 +157,14 @@ instance
       pure (k, v)
     let haveVals = map snd mustMap
         mustVals' = filter (`notElem` haveVals) mustVals
-        size' = constrained $ \sz ->
+        size' = simplifySpec $ constrained $ \sz ->
           -- TODO, we should make sure size' is greater than or equal to 0
           satisfies
             (sz + Lit (sizeOf mustMap))
-            (maybe TrueSpec leqSpec mHint <> size <> cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs))
+            ( maybe TrueSpec (leqSpec . max 0) mHint
+                <> size
+                <> maxSpec (cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs))
+            )
         foldSpec' = case foldSpec of
           NoFold -> NoFold
           FoldSpec fn sumSpec -> FoldSpec fn $ propagateSpecFun (theAddFn @fn) (HOLE :? Value mustSum :> Nil) sumSpec
@@ -176,7 +181,8 @@ instance
     restVals <-
       explain
         [ "Make the restVals"
-        , "  valsSpec = " ++ show valsSpec
+        , show $ "  valsSpec =" <+> pretty valsSpec
+        , show $ "  mustMap =" <+> viaShow mustMap
         ]
         $ genFromTypeSpec
         $ valsSpec

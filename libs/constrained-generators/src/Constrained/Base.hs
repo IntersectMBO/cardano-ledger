@@ -683,8 +683,15 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
         [TrueSpec, typeSpec ts, MemberSpec cant]
           ++ map typeSpec (shrink ts)
           ++ map (TypeSpec ts) (shrinkList (shrinkWithSpec @fn TrueSpec) cant)
-  shrink (SuspendedSpec x p) = [TrueSpec, MemberSpec []] ++ [s | Result _ s <- [computeSpec x p]]
+  shrink (SuspendedSpec x p) =
+    [TrueSpec, MemberSpec []]
+      ++ [ s | Result _ s <- [computeSpec x p], not $ isSuspendedSpec s
+         ]
   shrink ErrorSpec {} = [TrueSpec, MemberSpec []]
+
+isSuspendedSpec :: Specification fn a -> Bool
+isSuspendedSpec SuspendedSpec {} = True
+isSuspendedSpec _ = False
 
 equalSpec :: a -> Specification fn a
 equalSpec = MemberSpec . pure
@@ -1050,12 +1057,37 @@ computeDependencies = \case
 
 -- | Linearize a predicate, turning it into a list of variables to solve and
 -- their defining constraints such that each variable can be solved independently.
-prepareLinearization :: BaseUniverse fn => Pred fn -> GE ([(Name fn, [Pred fn])], Graph (Name fn))
+prepareLinearization ::
+  forall fn. BaseUniverse fn => Pred fn -> GE ([(Name fn, [Pred fn])], Graph (Name fn))
 prepareLinearization p = do
   let preds = flattenPred p
       hints = computeHints preds
       graph = transitiveClosure $ hints <> respecting hints (foldMap computeDependencies preds)
-  (,graph) <$> linearize preds graph
+      -- TODO: clean this up
+      subst =
+        [ x := t
+        | Assert _ (App (extractFn @(EqFn fn) @fn -> Just Equal) (V x :> t :> Nil)) <- preds
+        , not $ any (\y -> Name x `Set.member` dependencies y graph) (freeVarSet t)
+        ]
+      preds' =
+        flattenPred . Block $
+          map (foldr (.) id [simplifyPred . substitutePred x tm | x := tm <- subst]) preds
+            ++ [Assert [] (V x ==. t) | x := t <- subst]
+  (,graph) <$> linearize preds' graph
+
+prettyPlan :: HasSpec fn a => Specification fn a -> Doc ann
+prettyPlan = \case
+  (simplifySpec -> spec@(SuspendedSpec _ p))
+    | Result _ (lin, graph) <- prepareLinearization p -> do
+        vsep'
+          [ "Simplified spec:" /> pretty spec
+          , "Graph:" /> pretty graph
+          , "Linearization:" /> prettyLinear lin
+          ]
+  _ -> "No plan."
+
+printPlan :: HasSpec fn a => Specification fn a -> IO ()
+printPlan = print . prettyPlan
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
@@ -1073,11 +1105,11 @@ genFromPreds (optimisePred . optimisePred -> preds) = explain [show $ "genFromPr
     go env [] = pure env
     go env ((Name v, ps) : nps) = do
       let ps' = substPred env <$> ps
-      spec <- runGE $ explain [show $ "Computing specs for:" /> fold (punctuate hardline (map pretty ps'))] $ do
+      spec <- runGE $ explain [show $ "Computing specs for:" /> vsep' (map pretty ps')] $ do
         specs <- mapM (computeSpec v) ps'
         pure $ fold specs
       val <- genFromSpec spec
-      go (extendEnv v val env) nps
+      explain [show $ pretty v <+> "->" <+> viaShow val] $ go (extendEnv v val env) nps
 
 -- TODO: here we can compute both the explicit hints (i.e. constraints that
 -- define the order of two variables) and any whole-program smarts.
@@ -1116,7 +1148,7 @@ linearize preds graph = do
       fatalError $
         [ show $
             "linearize: Dependency cycle in graph:"
-              /> vsep
+              /> vsep'
                 [ "cycle:" /> pretty cycle
                 , "graph:" /> pretty graph
                 ]
@@ -1143,7 +1175,7 @@ linearize preds graph = do
             , show $
                 indent 2 $
                   "the following left-over constraints are not defining constraints for a unique variable:"
-                    /> vsep (map (pretty . snd) ps)
+                    /> vsep' (map (pretty . snd) ps)
             ]
     go (n : ns) ps = do
       let (nps, ops) = partition (isLastVariable n . fst) ps
@@ -1175,6 +1207,7 @@ simplifySpec spec = case spec of
             , show $ "optimisePred =>" /> pretty optP
             ]
           $ computeSpecSimplified x optP
+  MemberSpec [] -> ErrorSpec ["MemberSpec []"]
   MemberSpec xs -> MemberSpec (nub xs)
   ErrorSpec es -> ErrorSpec es
   TypeSpec ts cant -> TypeSpec ts (nub cant)
@@ -1759,7 +1792,7 @@ fromLit _ = Nothing
 isLit :: Term fn a -> Bool
 isLit = isJust . fromLit
 
-simplifyPred :: BaseUniverse fn => Pred fn -> Pred fn
+simplifyPred :: forall fn. BaseUniverse fn => Pred fn -> Pred fn
 simplifyPred = \case
   -- If the term simplifies away to a literal, that means there is no
   -- more generation to do so we can get rid of `GenHint`
@@ -1771,6 +1804,9 @@ simplifyPred = \case
   Reifies t' t f -> Reifies (simplifyTerm t') (simplifyTerm t) f
   ForAll set b -> case simplifyTerm set of
     Lit as -> foldMap (`unBind` b) (forAllToList as)
+    App (extractFn @(SetFn fn) @fn -> Just Union) (xs :> ys :> Nil) ->
+      let b' = simplifyBinder b
+       in ForAll xs b' <> ForAll ys b'
     set' -> ForAll set' (simplifyBinder b)
   DependsOn _ Lit {} -> TruePred
   DependsOn Lit {} _ -> TruePred
@@ -2816,7 +2852,7 @@ genFromFold ::
   fn '[a] b ->
   Specification fn b ->
   GenT m [a]
-genFromFold (nub -> must) size elemS fn foldS = do
+genFromFold (nub -> must) (simplifySpec -> size) elemS fn foldS = do
   let elemS' = mapSpec fn elemS
       mustVal = adds @fn (map (sem fn) must)
       foldS' = propagateSpecFun (theAddFn @fn) (HOLE :? Value mustVal :> Nil) foldS
@@ -3056,6 +3092,9 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
                     ]
               | not $ null cant -> ErrorSpec ["propagateSpecFun Union TypeSpec, not (null cant)"]
               | TrueSpec <- size -> typeSpec $ SetSpec (Set.difference must s) es TrueSpec
+              | TypeSpec (NumSpecInterval mlb Nothing) [] <- size
+              , maybe True (<= sizeOf s) mlb ->
+                  typeSpec $ SetSpec (Set.difference must s) es TrueSpec
               | otherwise -> constrained $ \x ->
                   exists (\eval -> pure $ Set.intersection (eval x) s) $ \overlap ->
                     exists (\eval -> pure $ Set.difference (eval x) s) $ \disjoint ->
@@ -3066,9 +3105,6 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
                       , forAll disjoint $ \e -> e `satisfies` es
                       , assert $ lit (must Set.\\ s) `subset_` disjoint
                       ]
-            -- TODO: shortcut more cases?
-            --    Lower bound and |s| >= bound: mempty
-            --    Upper bound and |s| == bound: X `subset` s
             MemberSpec [e]
               | s `Set.isSubsetOf` e -> typeSpec (SetSpec (Set.difference e s) (MemberSpec $ Set.toList e) mempty)
               -- TODO: improve this error message
@@ -3184,8 +3220,13 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
 
 -- List -------------------------------------------------------------------
 
-data ListSpec fn a
-  = ListSpec (Maybe Integer) [a] (Specification fn Integer) (Specification fn a) (FoldSpec fn a)
+data ListSpec fn a = ListSpec
+  { listSpecHint :: Maybe Integer
+  , listSpecMust :: [a]
+  , listSpecSize :: Specification fn Integer
+  , listSpecElem :: Specification fn a
+  , listSpecFold :: FoldSpec fn a
+  }
 
 instance
   ( Arbitrary a
@@ -3198,8 +3239,42 @@ instance
   arbitrary = ListSpec <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
   shrink (ListSpec a b c d e) = [ListSpec a' b' c' d' e' | (a', b', c', d', e') <- shrink (a, b, c, d, e)]
 
-deriving instance Show (FoldSpec fn a)
-deriving instance HasSpec fn a => Show (ListSpec fn a)
+instance HasSpec fn a => Show (FoldSpec fn a) where
+  showsPrec d = shows . prettyPrec d
+
+instance HasSpec fn a => Pretty (WithPrec (FoldSpec fn a)) where
+  pretty (WithPrec _ NoFold) = "NoFold"
+  pretty (WithPrec d (FoldSpec fn s)) =
+    parensIf (d > 10) $
+      "FoldSpec"
+        /> vsep'
+          [ "fn   =" <+> viaShow fn
+          , "spec =" <+> pretty s
+          ]
+
+instance HasSpec fn a => Pretty (FoldSpec fn a) where
+  pretty = prettyPrec 0
+
+instance HasSpec fn a => Show (ListSpec fn a) where
+  showsPrec d = shows . prettyPrec d
+
+instance
+  HasSpec fn a =>
+  Pretty (WithPrec (ListSpec fn a))
+  where
+  pretty (WithPrec d s) =
+    parensIf (d > 10) $
+      "ListSpec"
+        /> vsep'
+          [ "hint =" <+> viaShow (listSpecHint s)
+          , "must =" <+> viaShow (listSpecMust s)
+          , "size =" <+> pretty (listSpecSize s)
+          , "elem =" <+> pretty (listSpecElem s)
+          , "fold =" <+> pretty (listSpecFold s)
+          ]
+
+instance HasSpec fn a => Pretty (ListSpec fn a) where
+  pretty = prettyPrec 0
 
 instance HasSpec fn a => HasSpec fn [a] where
   type TypeSpec fn [a] = ListSpec fn a
@@ -3225,7 +3300,7 @@ instance HasSpec fn a => HasSpec fn [a] where
         listOfUntilLenT (genFromSpec elemS) (fromIntegral sz) (const True)
     pureGen $ shuffle (must ++ lst)
   genFromTypeSpec (ListSpec msz must szSpec elemS NoFold) = do
-    sz0 <- genFromSizeSpec (szSpec <> geqSpec @fn (sizeOf must) <> maybe TrueSpec leqSpec msz)
+    sz0 <- genFromSizeSpec (szSpec <> geqSpec @fn (sizeOf must) <> maybe TrueSpec (leqSpec . max 0) msz)
     let sz = fromIntegral (sz0 - sizeOf must)
     lst <-
       listOfUntilLenT
@@ -4131,7 +4206,10 @@ forAll ::
   Term fn t ->
   (Term fn a -> p) ->
   Pred fn
-forAll tm body = ForAll tm (bind body)
+forAll tm body =
+  case bind body of
+    _ :-> TruePred -> TruePred
+    b -> ForAll tm b
 
 exists ::
   forall a p fn.
@@ -4395,7 +4473,7 @@ instance Pretty (Name fn) where
   pretty (Name v) = pretty v
 
 prettyLinear :: [(Name fn, [Pred fn])] -> Doc ann
-prettyLinear ln = vsep [pretty n <+> "<-" /> vsep (map pretty ps) | (Name n, ps) <- ln]
+prettyLinear ln = vsep' [pretty n <+> "<-" /> vsep' (map pretty ps) | (Name n, ps) <- ln]
 
 -- ======================================================================
 -- Size and its 'generic' operations over Sized types.

@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -100,14 +101,16 @@ prop_univSound (TestableFn fn) =
           QC.counterexample (show $ "\nspec =" <+> pretty spec) $
             let sspec = simplifySpec (propagateSpecFun fn ctx spec)
              in QC.counterexample ("\n" ++ show ("propagateSpecFun fn ctx spec =" /> pretty sspec)) $
-                  QC.forAllBlind (strictGen $ genFromSpec @_ @_ @GE sspec) $ \ge ->
-                    fromGEDiscard $ do
-                      a <- ge
-                      let res = uncurryList_ unValue (sem fn) $ fillListCtx ctx $ \HOLE -> Value a
-                      pure $
-                        QC.counterexample ("\ngenerated value: a = " ++ show a) $
-                          QC.counterexample ("\nfn ctx[a] = " ++ show res) $
-                            conformsToSpecProp res spec
+                  QC.counterexample ("\n" ++ show (prettyPlan sspec)) $
+                    QC.within 10_000_000 $
+                      QC.forAllBlind (strictGen $ genFromSpec @_ @_ @GE sspec) $ \ge ->
+                        fromGEDiscard $ do
+                          a <- ge
+                          let res = uncurryList_ unValue (sem fn) $ fillListCtx ctx $ \HOLE -> Value a
+                          pure $
+                            QC.counterexample ("\ngenerated value: a = " ++ show a) $
+                              QC.counterexample ("\nfn ctx[a] = " ++ show res) $
+                                conformsToSpecProp res spec
 
 prop_gen_sound :: forall fn a. HasSpec fn a => Specification fn a -> QC.Property
 prop_gen_sound spec =
@@ -115,12 +118,13 @@ prop_gen_sound spec =
    in QC.tabulate "specType spec" [specType spec] $
         QC.tabulate "specType (simplifySpec spec)" [specType sspec] $
           QC.counterexample ("\n" ++ show ("simplifySpec spec =" /> pretty sspec)) $
-            QC.forAllBlind (strictGen $ genFromSpec @_ @_ @GE sspec) $ \ge ->
-              fromGEDiscard $ do
-                a <- ge
-                pure $
-                  QC.counterexample ("\ngenerated value: a = " ++ show a) $
-                    conformsToSpecProp a spec
+            QC.within 10_000_000 $
+              QC.forAllBlind (strictGen $ genFromSpec @_ @_ @GE sspec) $ \ge ->
+                fromGEDiscard $ do
+                  a <- ge
+                  pure $
+                    QC.counterexample ("\ngenerated value: a = " ++ show a) $
+                      conformsToSpecProp a spec
 
 specType :: Specification fn a -> String
 specType TrueSpec {} = "TrueSpec"

@@ -267,3 +267,10 @@ ifElseMany = constrained' $ \b x y ->
     [ 0 <. x
     , 10 <. y
     ]
+
+propBack :: Specification BaseFn (Int, Int)
+propBack = constrained' $ \x y ->
+  [ x ==. y + 10
+  , x <. 20
+  , 8 <. y
+  ]
