@@ -9,6 +9,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,21 +25,30 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParamsUpdate)
 import Cardano.Ledger.Conway.Governance (
-  EnactState,
   GovAction,
+  Committee (..),
+  EnactState (..),
   GovActionState (..),
   GovProcedures (..),
   ProposalProcedure,
   Proposals,
-  RatifyEnv,
-  RatifySignal,
+  RatifyEnv (..),
+  RatifySignal (..),
+  RatifyState (..),
   VotingProcedures,
   ensPrevGovActionIdsL,
+  gasAction,
   pRootsL,
   toPrevGovActionIds,
  )
 import Cardano.Ledger.Conway.PParams (THKD (..))
-import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure, EnactSignal, RatifyState)
+import Cardano.Ledger.Conway.Rules (
+  ConwayGovPredFailure,
+  EnactSignal,
+  committeeAcceptedRatio,
+  dRepAcceptedRatio,
+  spoAcceptedRatio,
+ )
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert, ConwayGovCert, ConwayTxCert)
 import Cardano.Ledger.Credential (Credential)
@@ -522,6 +532,19 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
     first (\case {})
       . computationResultToEither
       $ Agda.ratifyStep env st sig
+
+  extraInfo _ctx env@RatifyEnv {..} st (RatifySignal actions) =
+    unlines . toList $ actionAcceptedRatio <$> actions
+    where
+      members = foldMap' (committeeMembers @Conway) $ ensCommittee (rsEnactState st)
+      actionAcceptedRatio gas@GovActionState {..} =
+        unlines
+          [ "Acceptance ratios:"
+          , "GovActionId: \t" <> showExpr gasId
+          , "DRep: \t" <> show (dRepAcceptedRatio env gasDRepVotes (gasAction gas))
+          , "CC: \t" <> show (committeeAcceptedRatio members gasCommitteeVotes reCommitteeState reCurrentEpoch)
+          , "SPO: \t" <> show (spoAcceptedRatio env gas)
+          ]
 
 -- ConwayRegDRep certificates seem to trigger some kind of a bug in the
 -- MAlonzo code where it somehow reaches an uncovered case.

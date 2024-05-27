@@ -19,6 +19,10 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   Expr (App, Rec, Lst),
   defaultExprViaShow,
   trimExprViaShow,
+  Pretty (..),
+  ansiWlPretty,
+  ppEditExpr,
+  ediff,
 )
 where
 

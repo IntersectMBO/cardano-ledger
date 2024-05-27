@@ -47,7 +47,7 @@ library
         data-default-class,
         microlens,
         mtl,
-        cardano-ledger-binary,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-core,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-alonzo,
@@ -62,7 +62,9 @@ library
         deepseq,
         small-steps >=1.1,
         text,
-        unliftio
+        unliftio,
+        prettyprinter,
+        prettyprinter-ansi-terminal
 
     if !impl(ghc >=9.2)
         ghc-options: -Wno-incomplete-patterns
