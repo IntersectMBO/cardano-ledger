@@ -7,6 +7,7 @@
   * Add `CERTS.updateDormantDRepExpiry`.
   * Fix `updateNumDormantEpochs` to take current proposals, rather than ones from the pulser.
   * In `GOVCERT`, make `ConwayUpdateDRep` calculate `(epochNo + drepActivity - numDormantEpochs)`.
+  * Add `CertState.vsActualDRepExpiry` to get the actual expiry of a DRep considering `numDormantEpochs`.
 * Add `NFData` instance for `ConwayDelegEnv`
 * Add `NFData` instances for:
   * `RatifySignal`
@@ -19,6 +20,11 @@
 
 ### `testlib`
 
+* Add tests for DRep expiry, considering dormant epochs.
+  * Add `isDRepExpired`.
+  * Add `expectDRepExpiry` and remove `expectExtaDRepExpiry`.
+  * Add `expectActualDRepExpiry` that considers `numDormantEpochs`.
+* Add `ToExpr` instance for `RatifySignal`
 * Add `ToExpr` instances for:
   * `RatifySignal`
   * `EnactSignal`

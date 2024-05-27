@@ -270,8 +270,9 @@ updateDormantDRepExpiry currentEpoch numDormantEpochs drepState =
     else
       drepState
         <&> drepExpiryL
-          %~ ( \e ->
-                if e < currentEpoch
-                  then e
-                  else binOpEpochNo (+) numDormantEpochs e
+          %~ ( \currentExpiry ->
+                let actualExpiry = binOpEpochNo (+) numDormantEpochs currentExpiry
+                 in if actualExpiry < currentEpoch
+                      then currentExpiry
+                      else actualExpiry
              )

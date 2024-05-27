@@ -151,28 +151,28 @@ dRepSpec =
       expectCurrentProposals
       expectNoPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 100
 
       passEpoch -- entering epoch 1
       -- we expect its copy to become part of pulser
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 100
 
       passEpoch -- entering epoch 2
       -- expiry is at end of epoch 3
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 100
 
       passEpoch -- entering epoch 3
       -- expiry is expected to be triggered at the coming boundary
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 100
 
       passEpoch -- entering epoch 4
       -- proposal expires at this epoch boundary, as expected
@@ -180,25 +180,25 @@ dRepSpec =
       expectNoCurrentProposals
       expectNoPulserProposals
       expectNumDormantEpochs 1
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 100
 
       passEpoch -- entering epoch 5
       -- numDormantEpochs bumps up
       expectNoCurrentProposals
       expectNoPulserProposals
       expectNumDormantEpochs 2
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 100
 
       _ <- submitParamChangeProposal
       -- number of dormant epochs is added to the drep expiry and reset to 0
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep 2
+      expectDRepExpiry drep 102
 
       passEpoch -- entering epoch 6
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep 2
+      expectDRepExpiry drep 102
     it "expiry is not updated for inactive DReps" $ do
       modifyPParams $ \pp ->
         pp
@@ -215,20 +215,20 @@ dRepSpec =
       expectCurrentProposals
       expectNoPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 2
 
       passEpoch -- entering epoch 1
       -- we expect its copy to become part of pulser
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 2
 
       passEpoch -- entering epoch 2
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 2
 
       passEpoch -- entering epoch 3
       -- proposal expiry is expected to be triggered at the coming boundary
@@ -236,8 +236,8 @@ dRepSpec =
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep 0
-      expectDRepExpired drep
+      expectDRepExpiry drep 2
+      isDRepExpired drep `shouldReturn` True
 
       passEpoch -- entering epoch 4
       -- proposal expires at this epoch boundary, as expected
@@ -245,26 +245,26 @@ dRepSpec =
       expectNoCurrentProposals
       expectNoPulserProposals
       expectNumDormantEpochs 1
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 2
 
       passEpoch -- entering epoch 5
       -- numDormantEpochs bumps up
       expectNoCurrentProposals
       expectNoPulserProposals
       expectNumDormantEpochs 2
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 2
 
       _ <- submitParamChangeProposal
       -- number of dormant epochs is _NOT_ added to the already expired drep,
       -- but is still reset to 0
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 2
 
       passEpoch -- entering epoch 6
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep 0
+      expectDRepExpiry drep 2
     it "expiry updates are correct for a mixture of cases" $ do
       modifyPParams $ \pp ->
         pp
@@ -282,35 +282,35 @@ dRepSpec =
       expectCurrentProposals
       expectNoPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep1 0
-      expectExtraDRepExpiry drep2 0
-      expectExtraDRepExpiry drep3 0
+      expectDRepExpiry drep1 4
+      expectDRepExpiry drep2 4
+      expectDRepExpiry drep3 4
 
       passEpoch -- entering epoch 1:
       -- we expect its copy to become part of pulser
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep1 0
-      expectExtraDRepExpiry drep2 0
-      expectExtraDRepExpiry drep3 0
+      expectDRepExpiry drep1 4
+      expectDRepExpiry drep2 4
+      expectDRepExpiry drep3 4
 
       passEpoch -- entering epoch 2:
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep1 0
-      expectExtraDRepExpiry drep2 0
-      expectExtraDRepExpiry drep3 0
+      expectDRepExpiry drep1 4
+      expectDRepExpiry drep2 4
+      expectDRepExpiry drep3 4
 
       passEpoch -- entering epoch 3
       -- proposal expiry is expected to be triggered at the coming boundary
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep1 0
-      expectExtraDRepExpiry drep2 0
-      expectExtraDRepExpiry drep3 0
+      expectDRepExpiry drep1 4
+      expectDRepExpiry drep2 4
+      expectDRepExpiry drep3 4
 
       passEpoch -- entering epoch 4
       -- proposal expires at this epoch boundary, as expected
@@ -318,40 +318,51 @@ dRepSpec =
       expectNoCurrentProposals
       expectNoPulserProposals
       expectNumDormantEpochs 1
-      expectExtraDRepExpiry drep1 0
-      expectExtraDRepExpiry drep2 0
-      expectExtraDRepExpiry drep3 0
+      expectDRepExpiry drep1 4
+      expectDRepExpiry drep2 4
+      expectDRepExpiry drep3 4
 
       unRegisterDRep drep3 $ Coin 0 -- Resign drep3
       updateDRep drep1 -- DRep expiry becomes (current epoch (4) + drep activity (4) - dormant epochs (1))
-      expectExtraDRepExpiry drep1 3 -- since 3 is drep activity - dormant epochs
+      expectDRepExpiry drep1 7 -- since 3 is drep activity - dormant epochs
       passEpoch -- entering epoch 5
       -- Updated drep1 shows their new expiry
       -- numDormantEpochs bumps up further
       -- drep3 has resigned
-      -- drep2 has expired
+      -- drep2 has not expired since we now have dormant epochs
       expectNoCurrentProposals
       expectNoPulserProposals
       expectNumDormantEpochs 2
-      expectExtraDRepExpiry drep1 3
-      expectExtraDRepExpiry drep2 0
+      expectDRepExpiry drep1 7
+      expectDRepExpiry drep2 4
       expectDRepResigned drep3
-      expectDRepExpired drep2
 
       _ <- submitParamChangeProposal
-      -- number of dormant epochs is added to the drep1 expiry _ONLY_, and reset
-      -- to 0
-      -- drep2 has expired, so expiry is not updated.
+      -- number of dormant epochs is added to the dreps expiry, and reset to 0
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep1 5
-      expectExtraDRepExpiry drep2 0
+      expectDRepExpiry drep1 9
+      expectDRepExpiry drep2 6
 
       passEpoch -- entering epoch 6
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 0
-      expectExtraDRepExpiry drep1 5
-      expectExtraDRepExpiry drep2 0
+      expectDRepExpiry drep1 9
+      expectDRepExpiry drep2 6
+
+      passEpoch -- entering epoch 6
+      expectCurrentProposals
+      expectPulserProposals
+      expectNumDormantEpochs 0
+      expectDRepExpiry drep1 9
+      expectDRepExpiry drep2 6
+
+      passEpoch -- entering epoch 7
+      expectCurrentProposals
+      expectPulserProposals
+      expectNumDormantEpochs 0
+      expectDRepExpiry drep1 9
+      expectDRepExpiry drep2 6
     it "DRep registration should succeed" $ do
       logEntry "Stake distribution before DRep registration:"
       logStakeDistr
