@@ -77,6 +77,7 @@ import Data.Sequence (Seq (..))
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
+import Cardano.Ledger.CertState (VState)
 
 data CertsEnv era = CertsEnv
   { certsTx :: !(Tx era)
@@ -212,10 +213,7 @@ conwayCertsTransition = do
             let hasProposals = not . OSet.null $ tx ^. bodyTxL . proposalProceduresTxBodyL
                 numDormantEpochs = certState ^. certVStateL . vsNumDormantEpochsL
              in if hasProposals && numDormantEpochs /= EpochNo 0
-                  then
-                    certState
-                      & certVStateL . vsDRepsL %~ updateDormantDRepExpiry currentEpoch numDormantEpochs
-                      & certVStateL . vsNumDormantEpochsL .~ EpochNo 0
+                  then certState & certVStateL %~ updateDormantDRepExpiry currentEpoch numDormantEpochs
                   else certState
 
       -- Update DRep expiry for all DReps that are voting in this transaction.
@@ -256,23 +254,25 @@ instance
   wrapEvent = CertEvent
 
 -- | Update dormant expiry for all DReps that are active.
+-- And also reset the `numDormantEpochs` counter.
 updateDormantDRepExpiry ::
-  Functor f =>
   -- | Current Epoch
   EpochNo ->
   -- | Number of dormant epochs
   EpochNo ->
-  f (DRepState c) ->
-  f (DRepState c)
-updateDormantDRepExpiry currentEpoch numDormantEpochs drepState =
+  VState era ->
+  VState era
+updateDormantDRepExpiry currentEpoch numDormantEpochs vState =
   if numDormantEpochs == EpochNo 0
-    then drepState
-    else
-      drepState
-        <&> drepExpiryL
-          %~ ( \currentExpiry ->
-                let actualExpiry = binOpEpochNo (+) numDormantEpochs currentExpiry
-                 in if actualExpiry < currentEpoch
-                      then currentExpiry
-                      else actualExpiry
-             )
+    then vState
+    else vState 
+      & vsNumDormantEpochsL .~ EpochNo 0
+      & vsDRepsL %~ fmap updateExpiry
+  where
+    updateExpiry = 
+      drepExpiryL %~
+        \currentExpiry ->
+            let actualExpiry = binOpEpochNo (+) numDormantEpochs currentExpiry
+             in if actualExpiry < currentEpoch
+                  then currentExpiry
+                  else actualExpiry

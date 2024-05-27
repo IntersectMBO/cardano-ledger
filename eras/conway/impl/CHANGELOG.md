@@ -3,10 +3,11 @@
 ## 1.14.1.0
 
 * Fix DRep expiry updates based on the number of dormant epochs.
+  * Fix `updateNumDormantEpochs` to take current proposals, rather than ones from the pulser.
   * Remove `DRepPulser.dormantEpoch`.
   * Add `CERTS.updateDormantDRepExpiry`.
-  * Fix `updateNumDormantEpochs` to take current proposals, rather than ones from the pulser.
-  * In `GOVCERT`, make `ConwayUpdateDRep` calculate `(epochNo + drepActivity - numDormantEpochs)`.
+  * In `GOVCERT`, make `ConwayUpdateDRep` calculate `currentEpochNo + drepActivity - numDormantEpochs`.
+    * Add `GOVCERT.updateDRepExpiry` to calculate this way.
   * Add `CertState.vsActualDRepExpiry` to get the actual expiry of a DRep considering `numDormantEpochs`.
 * Add `NFData` instance for `ConwayDelegEnv`
 * Add `NFData` instances for:
