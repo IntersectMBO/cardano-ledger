@@ -79,7 +79,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> frequency [(5, pure NoFold), (1, arbitrary)]
+      <*> frequency [(1, pure NoFold), (1, arbitrary)]
   shrink = genericShrink
 
 instance Arbitrary (FoldSpec fn (Map k v)) where
@@ -102,7 +102,7 @@ instance
           , "mustValues =" <+> viaShow (mapSpecMustValues s)
           , "size       =" <+> pretty (mapSpecSize s)
           , "elem       =" <+> pretty (mapSpecElem s)
-          , "fold       =" <+> viaShow (mapSpecFold s)
+          , "fold       =" <+> pretty (mapSpecFold s)
           ]
 
 instance
@@ -159,11 +159,11 @@ instance
       pure (k, v)
     let haveVals = map snd mustMap
         mustVals' = filter (`notElem` haveVals) mustVals
-        size' = constrained $ \sz ->
+        size' = simplifySpec $ constrained $ \sz ->
           -- TODO, we should make sure size' is greater than or equal to 0
           satisfies
             (sz + Lit (sizeOf mustMap))
-            ( maybe TrueSpec leqSpec mHint
+            ( maybe TrueSpec (leqSpec . max 0) mHint
                 <> size
                 <> maxSpec (cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs))
                 <> maxSpec (cardinalTrueSpec @fn @k)
@@ -184,7 +184,8 @@ instance
     restVals <-
       explain
         [ "Make the restVals"
-        , "  valsSpec = " ++ show valsSpec
+        , show $ "  valsSpec =" <+> pretty valsSpec
+        , show $ "  mustMap =" <+> viaShow mustMap
         ]
         $ genFromTypeSpec
         $ valsSpec

@@ -101,15 +101,16 @@ prop_univSound (TestableFn fn) =
           QC.counterexample (show $ "\nspec =" <+> pretty spec) $
             let sspec = simplifySpec (propagateSpecFun fn ctx spec)
              in QC.counterexample ("\n" ++ show ("propagateSpecFun fn ctx spec =" /> pretty sspec)) $
-                  QC.within 10_000_000 $
-                    QC.forAllBlind (strictGen $ genFromSpecT @_ @_ @GE sspec) $ \ge ->
-                      fromGEDiscard $ do
-                        a <- ge
-                        let res = uncurryList_ unValue (sem fn) $ fillListCtx ctx $ \HOLE -> Value a
-                        pure $
-                          QC.counterexample ("\ngenerated value: a = " ++ show a) $
-                            QC.counterexample ("\nfn ctx[a] = " ++ show res) $
-                              conformsToSpecProp res spec
+                  QC.counterexample ("\n" ++ show (prettyPlan sspec)) $
+                    QC.within 10_000_000 $
+                      QC.forAllBlind (strictGen $ genFromSpecT @_ @_ sspec) $ \ge ->
+                        fromGEDiscard $ do
+                          a <- ge
+                          let res = uncurryList_ unValue (sem fn) $ fillListCtx ctx $ \HOLE -> Value a
+                          pure $
+                            QC.counterexample ("\ngenerated value: a = " ++ show a) $
+                              QC.counterexample ("\nfn ctx[a] = " ++ show res) $
+                                conformsToSpecProp res spec
 
 prop_gen_sound :: forall fn a. HasSpec fn a => Specification fn a -> QC.Property
 prop_gen_sound spec =
