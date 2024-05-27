@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Ledger.Api.State.Query (
@@ -22,6 +21,9 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * @GetDRepStakeDistr@
   queryDRepStakeDistr,
+
+  -- * @GetSPOStakeDistr@
+  querySPOStakeDistr,
 
   -- * @GetCommitteeState@
   queryCommitteeState,
@@ -66,12 +68,14 @@ import Cardano.Ledger.Conway.Governance (
   ensCommitteeL,
   finishDRepPulser,
   psDRepDistr,
+  psPoolDistr,
   rsEnactStateL,
  )
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.PoolDistr (IndividualPoolStake)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), FuturePParams (..))
 import Cardano.Ledger.Shelley.LedgerState
@@ -160,6 +164,20 @@ queryDRepStakeDistr nes creds
   | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` creds
   where
     distr = psDRepDistr . fst $ finishDRepPulser (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL)
+
+-- | Query pool stake distribution.
+querySPOStakeDistr ::
+  ConwayEraGov era =>
+  NewEpochState era ->
+  Set (KeyHash 'StakePool (EraCrypto era)) ->
+  -- | Specify pool key hashes whose stake distribution should be returned. When this set is
+  -- empty, distributions for all of the pools will be returned.
+  (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
+querySPOStakeDistr nes keys
+  | null keys = distr
+  | otherwise = distr `Map.restrictKeys` keys
+  where
+    distr = psPoolDistr . fst $ finishDRepPulser (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL)
 
 -- | Query committee members
 queryCommitteeState :: NewEpochState era -> CommitteeState era

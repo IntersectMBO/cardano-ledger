@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.9.1.1
+## 1.9.2.0
 
-*
+* Add `querySPOStakeDistr` query.
 
 ## 1.9.1.0
 
