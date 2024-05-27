@@ -18,6 +18,7 @@ module Cardano.Ledger.Conway.Rules.GovCert (
   ConwayGOVCERT,
   ConwayGovCertPredFailure (..),
   ConwayGovCertEnv (..),
+  updateDRepExpiry,
 )
 where
 
@@ -66,6 +67,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
 import NoThunks.Class (NoThunks (..))
+import Cardano.Slotting.Slot (EpochInterval)
 
 data ConwayGovCertEnv era = ConwayGovCertEnv
   { cgcePParams :: !(PParams era)
@@ -209,19 +211,9 @@ conwayGovCertTransition = do
       Map.member cred vsDReps ?! ConwayDRepNotRegistered cred
       pure
         vState
-          { vsDReps =
-              Map.adjust
-                ( \drepState ->
-                    drepState
-                      & drepExpiryL
-                        .~ binOpEpochNo
-                          (-)
-                          (addEpochInterval cgceCurrentEpoch ppDRepActivity)
-                          (vState ^. vsNumDormantEpochsL)
-                      & drepAnchorL .~ mAnchor
-                )
-                cred
-                vsDReps
+          { vsDReps = 
+              updateDRepExpiry ppDRepActivity cgceCurrentEpoch (vState ^. vsNumDormantEpochsL) cred 
+                $ Map.adjust ( \drepState -> drepState & drepAnchorL .~ mAnchor ) cred vsDReps
           }
   where
     checkColdCredHasNotResigned coldCred csCommitteeCreds =
@@ -237,3 +229,26 @@ conwayGovCertTransition = do
                 { csCommitteeCreds = Map.insert coldCred hotCred csCommitteeCreds
                 }
           }
+
+updateDRepExpiry :: 
+  -- | DRepActivity PParam
+  EpochInterval -> 
+  -- | Current epoch
+  EpochNo -> 
+  -- | The count of the dormant epochs
+  EpochNo -> 
+  -- | DRep credential
+  Credential 'DRepRole c -> 
+  -- | DRep map from DRepState
+  Map.Map (Credential 'DRepRole c) (DRepState c) -> 
+  Map.Map (Credential 'DRepRole c) (DRepState c)
+updateDRepExpiry ppDRepActivity currentEpoch numDormantEpochs =
+  Map.adjust
+    ( \drepState ->
+        drepState
+          & drepExpiryL
+            .~ binOpEpochNo
+              (-)
+              (addEpochInterval currentEpoch ppDRepActivity)
+              numDormantEpochs
+    )

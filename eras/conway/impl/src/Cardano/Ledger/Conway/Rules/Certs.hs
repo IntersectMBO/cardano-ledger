@@ -29,7 +29,6 @@ import Cardano.Ledger.BaseTypes (
   Globals (..),
   ShelleyBase,
   SlotNo,
-  addEpochInterval,
   binOpEpochNo,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -47,7 +46,7 @@ import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayCERTS, ConwayEra)
 import Cardano.Ledger.Conway.Governance (Voter (DRepVoter), VotingProcedures (unVotingProcedures))
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
-import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
+import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure, updateDRepExpiry)
 import Cardano.Ledger.DRep (DRepState, drepExpiryL)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
@@ -222,7 +221,8 @@ conwayCertsTransition = do
       let updatedVSDReps =
             Map.foldlWithKey'
               ( \dreps voter _ -> case voter of
-                  DRepVoter cred -> Map.adjust (drepExpiryL .~ addEpochInterval currentEpoch drepActivity) cred dreps
+                  DRepVoter cred -> 
+                    updateDRepExpiry drepActivity currentEpoch (certState' ^. certVStateL . vsNumDormantEpochsL) cred dreps
                   _ -> dreps
               )
               (certState' ^. certVStateL . vsDRepsL)
