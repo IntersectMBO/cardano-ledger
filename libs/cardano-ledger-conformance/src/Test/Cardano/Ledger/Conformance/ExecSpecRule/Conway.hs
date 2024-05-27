@@ -25,9 +25,9 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParamsUpdate)
 import Cardano.Ledger.Conway.Governance (
-  GovAction,
   Committee (..),
   EnactState (..),
+  GovAction,
   GovActionState (..),
   GovProcedures (..),
   ProposalProcedure,

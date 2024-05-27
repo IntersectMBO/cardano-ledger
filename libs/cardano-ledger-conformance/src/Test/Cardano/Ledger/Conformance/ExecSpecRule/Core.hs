@@ -34,8 +34,6 @@ import Data.Typeable (Proxy (..), Typeable, typeRep)
 import GHC.Base (Constraint, NonEmpty, Symbol, Type)
 import GHC.TypeLits (KnownSymbol)
 import qualified Lib as Agda
-import qualified Prettyprinter as Doc
-import Prettyprinter.Render.Terminal
 import Test.Cardano.Ledger.Binary.TreeDiff (Pretty (..), ansiWlPretty, ediff, ppEditExpr)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   FixupSpecRep (..),
@@ -210,19 +208,17 @@ checkConformance implResTest agdaResTest = do
     conformancePretty =
       ansiWlPretty
         { ppDel = \d ->
-            Doc.annotate (color Red) $
-              mconcat
-                [ Doc.text "(Impl: "
-                , d
-                , Doc.text ")"
-                ]
+            mconcat
+              [ Doc.text "\ESC[91m(Impl: "
+              , d
+              , Doc.text ")\ESC[39m"
+              ]
         , ppIns = \d ->
-            Doc.annotate (color Green) $
-              mconcat
-                [ Doc.text "(Agda: "
-                , d
-                , Doc.text ")"
-                ]
+            mconcat
+              [ Doc.text "\ESC[92m(Agda: "
+              , d
+              , Doc.text ")\ESC[39m"
+              ]
         }
     failMsg =
       unlines
@@ -339,7 +335,7 @@ conformsToImpl =
               let stSpec = simplifySpec $ stateSpec @fn @rule @era ctx env
                in forAllShrinkShow (CV2.genFromSpec stSpec) (shrinkWithSpec stSpec) showExpr $ \st ->
                     let sigSpec = simplifySpec $ signalSpec @fn @rule @era ctx env st
-                     in forAllShrinkShow (CV2.genFromSpec sigSpec) (shrinkWithSpec sigSpec) showExpr $ \sig -> do
+                     in forAllShrinkShow (CV2.genFromSpec sigSpec) (shrinkWithSpec sigSpec) showExpr $ \sig ->
                           counterexample (extraInfo @fn @rule @era ctx (inject env) (inject st) (inject sig)) $ do
                             _ <- impAnn @_ @era "Deep evaluating env" $ evaluateDeep env
                             _ <- impAnn "Deep evaluating st" $ evaluateDeep st
