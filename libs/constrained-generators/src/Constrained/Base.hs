@@ -1049,6 +1049,7 @@ flattenPred pIn = go (freeVarNames pIn) [pIn]
       Let t b -> goBinder fvs b ps (\x -> (assert (t ==. V x) :))
       Exists _ b -> goBinder fvs b ps (const id)
       When b p -> map (When b) (go fvs [p]) ++ go fvs ps
+      Explain es p -> map (explanation es) (go fvs [p]) ++ go fvs ps
       _ -> p : go fvs ps
 
     goBinder ::
@@ -1856,7 +1857,7 @@ simplifyPred = \case
     Lit as -> foldMap (`unBind` b) (forAllToList as)
     App (extractFn @(SetFn fn) @fn -> Just Union) (xs :> ys :> Nil) ->
       let b' = simplifyBinder b
-       in ForAll xs b' <> ForAll ys b'
+       in mkForAll xs b' <> mkForAll ys b'
     set' -> case simplifyBinder b of
       _ :-> TruePred -> TruePred
       b' -> ForAll set' b'
@@ -4301,10 +4302,19 @@ forAll ::
   Term fn t ->
   (Term fn a -> p) ->
   Pred fn
-forAll tm body =
-  case bind body of
-    _ :-> TruePred -> TruePred
-    b -> ForAll tm b
+forAll tm = mkForAll tm . bind
+
+mkForAll ::
+  ( Forallable t a
+  , HasSpec fn t
+  , HasSpec fn a
+  ) =>
+  Term fn t ->
+  Binder fn a ->
+  Pred fn
+mkForAll (Lit (forAllToList -> [])) _ = TruePred
+mkForAll _ (_ :-> TruePred) = TruePred
+mkForAll tm binder = ForAll tm binder
 
 exists ::
   forall a p fn.
