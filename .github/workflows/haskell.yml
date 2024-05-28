@@ -258,13 +258,15 @@ jobs:
     steps:
     - run: |
         case ${{ needs.test.result }} in
+          success)
+            echo 'All tests completed successfully'
+            true;;
           failure)
             echo 'Some tests failed'
             false;;
-          success)
-            echo 'All tests completed successfully';;
           *)
-            echo 'Tests were ${{ needs.test.result }}';;
+            echo 'Tests were ${{ needs.test.result }}'
+            false;;
         esac
 
   fourmolu:
