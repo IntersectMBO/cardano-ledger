@@ -9,6 +9,7 @@ import qualified Constrained as CV2
 import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), conformsToImpl, generatesWithin)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
 import qualified Test.Cardano.Ledger.Conformance.ExecSpecRule.MiniTrace as MiniTrace
+import qualified Test.Cardano.Ledger.Conformance.Imp.Ratify as RatifyImp
 import Test.Cardano.Ledger.Constrained.Conway
 import Test.Cardano.Ledger.Conway.ImpTest ()
 import Test.Cardano.Ledger.Imp.Common
@@ -36,7 +37,7 @@ spec = do
   describe "Conformance" $ do
     describe "Ticks transition graph" $ do
       xprop "ENACT" $ conformsToImpl @"ENACT" @ConwayFn @Conway
-      xprop "RATIFY" $ conformsToImpl @"RATIFY" @ConwayFn @Conway
+      prop "RATIFY" $ conformsToImpl @"RATIFY" @ConwayFn @Conway
       xprop "EPOCH" $ conformsToImpl @"EPOCH" @ConwayFn @Conway
       xprop "NEWEPOCH" $ conformsToImpl @"NEWEPOCH" @ConwayFn @Conway
     describe "Blocks transition graph" $ do
@@ -53,3 +54,6 @@ spec = do
       xprop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @Conway
       prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
       xprop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
+    describe
+      "ImpTests"
+      RatifyImp.spec

@@ -59,6 +59,7 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
 import Cardano.Ledger.Plutus (CostModels, ExUnits (..), Prices)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
+import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.LedgerState
@@ -920,6 +921,18 @@ instance SpecTranslate ctx (CommitteeState era) where
 
   toSpecRep = toSpecRep . csCommitteeCreds
 
+instance SpecTranslate ctx (IndividualPoolStake c) where
+  type SpecRep (IndividualPoolStake c) = SpecRep Coin
+
+  toSpecRep (IndividualPoolStake _ c _) = toSpecRep c
+
+instance SpecTranslate ctx (PoolDistr c) where
+  type SpecRep (PoolDistr c) = Agda.HSMap Agda.VDeleg Agda.Coin
+
+  toSpecRep (PoolDistr ps _) = do
+    Agda.MkHSMap l <- toSpecRep ps
+    pure . Agda.MkHSMap $ first (Agda.CredVoter Agda.SPO . Agda.KeyHashObj) <$> l
+
 instance
   Inject ctx Coin =>
   SpecTranslate ctx (RatifyEnv era)
@@ -928,12 +941,10 @@ instance
 
   toSpecRep RatifyEnv {..} = do
     let
-      transStakeDistr (c, s) = do
-        c' <- toSpecRep c
-        s' <- toSpecRep s
-        pure (Agda.CredVoter Agda.SPO c', s')
-      stakeDistrsMap = traverse transStakeDistr $ Map.toList reStakeDistr
-      stakeDistrs = Agda.MkStakeDistrs . Agda.MkHSMap <$> stakeDistrsMap
+      stakeDistrs = do
+        Agda.MkHSMap stakeDistrsMap <- toSpecRep reStakePoolDistr
+        drepDistrsMap <- toSpecRep $ Map.toList reDRepDistr
+        pure . Agda.MkStakeDistrs $ Agda.MkHSMap (stakeDistrsMap <> drepDistrsMap)
       dreps = toSpecRep $ Map.map drepExpiry reDRepState
     treasury <- askCtx @Coin
     Agda.MkRatifyEnv

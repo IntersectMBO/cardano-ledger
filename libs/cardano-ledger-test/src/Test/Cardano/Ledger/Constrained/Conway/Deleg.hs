@@ -30,7 +30,7 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 someZeros :: forall fn. IsConwayUniv fn => Specification fn RDPair
 someZeros = constrained $ \rdpair ->
   match rdpair $ \reward _deposit ->
-    satisfies reward (chooseSpec (1, constrained $ \x -> assert $ x ==. lit (Coin 0)) (3, TrueSpec))
+    satisfies reward (chooseSpec (1, constrained $ \x -> assert $ x ==. lit 0) (3, TrueSpec))
 
 dStateSpec ::
   forall fn.
