@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -11,10 +12,16 @@ module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec) where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Core (
   AlonzoEraTxWits (..),
+  networkIdTxBodyL,
+  reqSignerHashesTxBodyL,
   scriptIntegrityHashTxBodyL,
  )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..), AlonzoUtxowPredFailure (..))
+import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxoPredFailure (..),
+  AlonzoUtxosPredFailure (..),
+  AlonzoUtxowPredFailure (..),
+ )
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.TxOut (dataHashTxOutL)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
@@ -22,12 +29,15 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Keys (witVKeyHash)
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.LedgerState (epochStatePoolParamsL, nesEsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Cardano.Ledger.Shelley.TxCert
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq ((:<|)))
+import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
@@ -41,8 +51,9 @@ spec ::
   forall era.
   ( AlonzoEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 spec = describe "Invalid transactions" $ do
@@ -184,13 +195,9 @@ spec = describe "Invalid transactions" $ do
                    , CertifyingPurpose (AsIx 2)
                    ]
   it "Wrong network ID" $ do
-    const $ pendingWith "not implemented yet"
-
-  it "Missing required key witness" $ do
-    const $ pendingWith "not implemented yet"
-
-  it "Missing 1-phase script witness" $ do
-    const $ pendingWith "not implemented yet"
+    submitFailingTx
+      (mkBasicTx mkBasicTxBody & bodyTxL . networkIdTxBodyL .~ SJust Mainnet)
+      [injectFailure $ WrongNetworkInTxBody Testnet Mainnet]
 
   it "Missing 2-phase script witness" $ do
     const $ pendingWith "not implemented yet"
