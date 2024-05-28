@@ -41,8 +41,8 @@ instance Ord a => Sized (Map.Map a b) where
   liftSizeSpec sz cant = typeSpec $ defaultMapSpec {mapSpecSize = TypeSpec sz cant}
   liftMemberSpec xs = typeSpec $ defaultMapSpec {mapSpecSize = MemberSpec xs}
   sizeOfTypeSpec (MapSpec _ mustk mustv size _ _) =
-    typeSpec (atLeastSize (sizeOf mustk))
-      <> typeSpec (atLeastSize (sizeOf mustv))
+    geqSpec (sizeOf mustk)
+      <> geqSpec (sizeOf mustv)
       <> size
 
 data MapSpec fn k v = MapSpec
@@ -201,6 +201,8 @@ instance
           go (Map.insert k v m) restVals'
     go (Map.fromList mustMap) restVals
 
+  cardinalTypeSpec _ = TrueSpec
+
   shrinkWithTypeSpec (MapSpec _ _ _ _ kvs _) m = map Map.fromList $ shrinkList (shrinkWithSpec kvs) (Map.toList m)
 
   toPreds m (MapSpec mHint mustKeys mustVals size kvs foldSpec) =
@@ -244,7 +246,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
               case spec of
                 MemberSpec [s] ->
                   typeSpec $
-                    MapSpec Nothing s [] (exactSizeSpec $ sizeOf s) TrueSpec NoFold
+                    MapSpec Nothing s [] (equalSpec $ sizeOf s) TrueSpec NoFold
                 TypeSpec (SetSpec must elemspec size) [] ->
                   typeSpec $
                     MapSpec

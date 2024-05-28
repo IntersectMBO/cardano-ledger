@@ -94,6 +94,8 @@ instance HasSpec fn a => HasSpec fn (BinTree a) where
       : (BinNode left a <$> shrinkWithTypeSpec s right)
       ++ ((\l -> BinNode l a right) <$> shrinkWithTypeSpec s left)
 
+  cardinalTypeSpec _ = TrueSpec
+
   toPreds t (BinTreeSpec msz s) =
     (forAll t $ \n -> n `satisfies` s)
       <> maybe TruePred (flip genHint t) msz
@@ -175,6 +177,8 @@ instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
       ++ [ Node a ts'
          | ts' <- shrinkList (shrinkWithTypeSpec (TreeSpec Nothing Nothing TrueSpec ctxSpec)) ts
          ]
+
+  cardinalTypeSpec _ = TrueSpec
 
   toPreds t (TreeSpec mal msz rs s) =
     (forAll t $ \n -> n `satisfies` s)
