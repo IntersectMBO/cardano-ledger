@@ -273,6 +273,7 @@ instance (IsConwayUniv fn, Crypto c, Typeable index) => HasSpec fn (SafeHash c i
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -288,6 +289,7 @@ instance (IsConwayUniv fn, Typeable r, Crypto c) => HasSpec fn (KeyHash r c) whe
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -394,6 +396,7 @@ instance IsConwayUniv fn => HasSpec fn PV1.Data where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -495,6 +498,7 @@ instance
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -543,6 +547,7 @@ instance (IsConwayUniv fn, Typeable b) => HasSpec fn (AbstractHash Blake2b_224 b
     bytes <- pureGen $ vectorOf 28 arbitrary
     pure $ fromJust $ abstractHashFromBytes (BS.pack bytes)
   shrinkWithTypeSpec _ _ = []
+  cardinalTypeSpec _ = TrueSpec
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
@@ -577,6 +582,7 @@ instance (IsConwayUniv fn, HashAlgorithm a, Typeable b) => HasSpec fn (Hash a b)
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -601,6 +607,7 @@ instance IsConwayUniv fn => HasSpec fn StakePoolRelay where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -615,6 +622,7 @@ instance IsConwayUniv fn => HasSpec fn UnitInterval where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -626,6 +634,7 @@ instance IsConwayUniv fn => HasSpec fn NonNegativeInterval where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -644,6 +653,7 @@ instance IsConwayUniv fn => HasSpec fn Text where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -663,9 +673,10 @@ instance IsConwayUniv fn => HasSpec fn ByteString where
   emptySpec = mempty
   combineSpec s s' = typeSpec $ s <> s'
   genFromTypeSpec (StringSpec ls) = do
-    len <- genFromSpec ls
+    len <- genFromSpecT ls
     BS.pack <$> vectorOfT len (pureGen arbitrary)
   shrinkWithTypeSpec _ = shrink
+  cardinalTypeSpec _ = TrueSpec
   conformsTo bs (StringSpec ls) = BS.length bs `conformsToSpec` ls
   toPreds str (StringSpec len) = satisfies (strLen_ str) len
 
@@ -674,9 +685,10 @@ instance IsConwayUniv fn => HasSpec fn ShortByteString where
   emptySpec = mempty
   combineSpec s s' = typeSpec $ s <> s'
   genFromTypeSpec (StringSpec ls) = do
-    len <- genFromSpec ls
+    len <- genFromSpecT ls
     SBS.pack <$> vectorOfT len (pureGen arbitrary)
   shrinkWithTypeSpec _ = shrink
+  cardinalTypeSpec _ = TrueSpec
   conformsTo bs (StringSpec ls) = SBS.length bs `conformsToSpec` ls
   toPreds str (StringSpec len) = satisfies (strLen_ str) len
 
@@ -794,7 +806,7 @@ instance IsConwayUniv fn => HasSpec fn ProtVer
 -- while ensuring that we don't have to add instances for e.g. `Num`
 -- to version.
 newtype VersionRep = VersionRep Word8
-  deriving (Show, Eq, Ord, Num, Random, Arbitrary) via Word8
+  deriving (Show, Eq, Ord, Num, Random, Arbitrary, Integral, Real, Enum) via Word8
 instance BaseUniverse fn => HasSpec fn VersionRep where
   type TypeSpec fn VersionRep = NumSpec VersionRep
   emptySpec = emptyNumSpec
@@ -803,6 +815,7 @@ instance BaseUniverse fn => HasSpec fn VersionRep where
   shrinkWithTypeSpec = shrinkWithNumSpec
   conformsTo = conformsToNumSpec
   toPreds = toPredsNumSpec
+  cardinalTypeSpec = cardinalNumSpec
 instance Bounded VersionRep where
   minBound = VersionRep $ getVersion minBound
   maxBound = VersionRep $ getVersion maxBound
@@ -898,6 +911,7 @@ instance IsConwayUniv fn => HasSpec fn CostModels where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -919,6 +933,7 @@ instance IsConwayUniv fn => HasSpec fn Char where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -928,6 +943,7 @@ instance IsConwayUniv fn => HasSpec fn CostModel where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -1409,6 +1425,7 @@ instance (IsConwayUniv fn, Crypto c, Typeable r) => HasSpec fn (WitVKey r c) whe
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
@@ -1418,6 +1435,7 @@ instance (IsConwayUniv fn, Crypto c) => HasSpec fn (BootstrapWitness c) where
   emptySpec = ()
   combineSpec _ _ = TrueSpec
   genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True

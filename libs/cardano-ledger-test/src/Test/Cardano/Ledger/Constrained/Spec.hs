@@ -441,7 +441,7 @@ genFromRelSpec ::
 genFromRelSpec msgs g n spec =
   let msg = "genFromRelSpec " ++ show n ++ " " ++ show spec
    in case spec of
-        RelNever xs -> errorMess "RelNever in genFromSpec" (msgs ++ xs)
+        RelNever xs -> errorMess "RelNever in genFromSpecT" (msgs ++ xs)
         RelAny -> setSized (msg : msgs) n g
         RelOper _ must (Just may) cant | must == may && Set.null cant -> pure must -- The is the (relEqual r s) case
         RelOper _ must Nothing dis ->

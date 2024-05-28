@@ -162,3 +162,14 @@ foldSingleCase = constrained $ \x ->
       match p $ \_ p1 -> forAll p1 $ \p2 ->
         assert (0 <=. snd_ p2)
   ]
+
+complexUnion :: Specification BaseFn (Set Int, Set Int)
+complexUnion = constrained' $ \ys zs ->
+  [ sizeOf_ ys <=. 10
+  , 0 <. sizeOf_ (ys <> zs)
+  ]
+
+unionBounded :: Specification BaseFn (Set Int)
+unionBounded = constrained $ \xs ->
+  [ sizeOf_ (xs <> lit (Set.fromList [1, 2, 3])) <=. 3
+  ]

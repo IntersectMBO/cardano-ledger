@@ -72,7 +72,7 @@ instance HasSpec fn a => HasSpec fn (BinTree a) where
             sz' = sz `div` 2
         oneofT
           [ do
-              (left, a, right) <- genFromSpec @fn @(BinTree a, a, BinTree a) $
+              (left, a, right) <- genFromSpecT @fn @(BinTree a, a, BinTree a) $
                 constrained $ \ctx ->
                   [ match ctx $ \left _ right ->
                       [ forAll left (`satisfies` s)
@@ -93,6 +93,8 @@ instance HasSpec fn a => HasSpec fn (BinTree a) where
       : right
       : (BinNode left a <$> shrinkWithTypeSpec s right)
       ++ ((\l -> BinNode l a right) <$> shrinkWithTypeSpec s left)
+
+  cardinalTypeSpec _ = TrueSpec
 
   toPreds t (BinTreeSpec msz s) =
     (forAll t $ \n -> n `satisfies` s)
@@ -165,7 +167,7 @@ instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
               NoFold
         innerSpec = s <> typeSpec (Cartesian rs childrenSpec)
     fmap (uncurry Node) $
-      genFromSpec @fn @(a, [Tree a]) innerSpec
+      genFromSpecT @fn @(a, [Tree a]) innerSpec
 
   shrinkWithTypeSpec (TreeSpec _ _ rs ctxSpec) (Node a ts) =
     [Node a [] | not $ null ts]
@@ -175,6 +177,8 @@ instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
       ++ [ Node a ts'
          | ts' <- shrinkList (shrinkWithTypeSpec (TreeSpec Nothing Nothing TrueSpec ctxSpec)) ts
          ]
+
+  cardinalTypeSpec _ = TrueSpec
 
   toPreds t (TreeSpec mal msz rs s) =
     (forAll t $ \n -> n `satisfies` s)

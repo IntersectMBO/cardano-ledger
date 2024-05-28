@@ -55,3 +55,14 @@ fixedRange = constrained $ \m ->
 rangeHint :: Specification BaseFn (Map Int Int)
 rangeHint = constrained $ \m ->
   genHint 10 (rng_ m)
+
+rangeSumSize :: Specification BaseFn (Map Int Int)
+rangeSumSize = constrained $ \m ->
+  [ assert $ sizeOf_ m <=. 0
+  , assert $ sum_ (rng_ m) <=. 0
+  , assert $ (-1) <=. sum_ (rng_ m)
+  , forAll' m $ \k v ->
+      [ k ==. (-1)
+      , v ==. 1
+      ]
+  ]

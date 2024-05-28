@@ -25,16 +25,16 @@ spec = describe "Conway conformance tests" $ do
     let
       genEnv = do
         ctx <- genExecContext @ConwayFn @"GOV" @Conway
-        CV2.genFromSpec_ $ environmentSpec @ConwayFn @"GOV" @Conway ctx
+        CV2.genFromSpec $ environmentSpec @ConwayFn @"GOV" @Conway ctx
       genSt = do
         ctx <- genExecContext @ConwayFn @"GOV" @Conway
         env <- genEnv
-        CV2.genFromSpec_ $ stateSpec @ConwayFn @"GOV" @Conway ctx env
+        CV2.genFromSpec $ stateSpec @ConwayFn @"GOV" @Conway ctx env
       genSig = do
         ctx <- genExecContext @ConwayFn @"GOV" @Conway
         env <- genEnv
         st <- genSt
-        CV2.genFromSpec_ $ signalSpec @ConwayFn @"GOV" @Conway ctx env st
+        CV2.genFromSpec $ signalSpec @ConwayFn @"GOV" @Conway ctx env st
     genEnv `generatesWithin` 3_000_000
     genSt `generatesWithin` 40_000_000
     genSig `generatesWithin` 60_000_000
