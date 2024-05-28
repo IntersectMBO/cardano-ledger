@@ -53,7 +53,8 @@ import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Conway.TxCert (ConwayDelegCert, ConwayGovCert, ConwayTxCert)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.PoolDistr (poolDistrDistrL)
 import Cardano.Ledger.TxIn (TxId)
 import Constrained
 import Control.Monad.Identity (Identity)
@@ -61,7 +62,9 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.List.NonEmpty as NE
+import Data.Map (keysSet)
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as SSeq
@@ -505,16 +508,52 @@ ratifyStateSpec _ =
         , assert $ expired ==. lit mempty
         ]
 
+credentialInCommittee ::
+  IsConwayUniv fn =>
+  RatifyState Conway ->
+  Term fn (Credential 'HotCommitteeRole (EraCrypto Conway)) ->
+  Pred fn
+credentialInCommittee RatifyState {rsEnactState} cred =
+  assert True
+  where
+    -- assert $ cred `member_` lit members
+
+    committee = ensCommittee rsEnactState
+    members = keysSet $ foldMap' (committeeMembers @Conway) committee
+
+spoIsActive ::
+  IsConwayUniv fn =>
+  RatifyEnv Conway ->
+  Term fn (KeyHash 'StakePool (EraCrypto Conway)) ->
+  Pred fn
+spoIsActive RatifyEnv {reStakePoolDistr} kh =
+  assert $ kh `member_` lit (Map.keysSet $ reStakePoolDistr ^. poolDistrDistrL)
+
 ratifySignalSpec ::
   IsConwayUniv fn =>
   ConwayRatifyExecContext Conway ->
+  RatifyEnv Conway ->
+  RatifyState Conway ->
   Specification fn (RatifySignal Conway)
-ratifySignalSpec ConwayRatifyExecContext {crecGovActionMap} =
+ratifySignalSpec ConwayRatifyExecContext {crecGovActionMap} env st =
   constrained $ \sig ->
     match sig $ \gasS ->
       match gasS $ \gasL ->
         forAll gasL $ \gas ->
-          gas `elem_` lit crecGovActionMap
+          [ assert $ gas `elem_` lit crecGovActionMap
+          , match gas $ \_ ccVotes drepVotes spoVotes _ _ _ ->
+              [ forAll (dom_ ccVotes) $ \c ->
+                  c
+                    `satisfies` chooseSpec
+                      (1, constrained $ const True)
+                      (9, constrained $ credentialInCommittee st)
+                      -- ,
+                      --  forAll (dom_ spoVotes) $ \kh ->
+                      --    kh `satisfies` chooseSpec
+                      --      (5, constrained $ const True)
+                      --      (95, constrained $ spoIsActive env)
+              ]
+          ]
 
 instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
   type ExecContext fn "RATIFY" Conway = ConwayRatifyExecContext Conway
@@ -529,7 +568,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
 
   stateSpec ctx _env = ratifyStateSpec ctx
 
-  signalSpec ctx _env _st = ratifySignalSpec ctx
+  signalSpec = ratifySignalSpec
 
   runAgdaRule env st sig =
     first (\case {})
