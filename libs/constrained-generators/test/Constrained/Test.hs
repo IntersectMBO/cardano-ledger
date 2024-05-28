@@ -291,7 +291,7 @@ testSpec' withShrink n s =
             prop_shrink_sound s
 
 ------------------------------------------------------------------------
--- Test properties of the instance Num (NumSpec Integer)
+-- Test properties of the instance Num (NumSpec fn Integer)
 ------------------------------------------------------------------------
 
 -- | When we multiply intervals, we get a bounding box, around the possible values.
@@ -299,22 +299,22 @@ testSpec' withShrink n s =
 --   order in which we multiply intervals with infinities can affect how loose the bounding box is.
 --   So ((NegInf, n) * (a, b)) * (c,d)  AND  (NegInf, n) * ((a, b) * (c,d)) may have different bounding boxes
 --   To test the associative laws we must have no infinities, and then the associative law will hold.
-noInfinity :: Gen (NumSpec Integer)
+noInfinity :: Gen (NumSpec fn Integer)
 noInfinity = do
   lo <- arbitrary
   hi <- suchThat arbitrary (> lo)
   pure $ NumSpecInterval (Just lo) (Just hi)
 
-plusNegate :: NumSpec Integer -> NumSpec Integer -> Property
+plusNegate :: NumSpec fn Integer -> NumSpec fn Integer -> Property
 plusNegate x y = x - y === x + negate y
 
-commutesNumSpec :: NumSpec Integer -> NumSpec Integer -> Property
+commutesNumSpec :: NumSpec fn Integer -> NumSpec fn Integer -> Property
 commutesNumSpec x y = x + y === y + x
 
-assocNumSpec :: NumSpec Integer -> NumSpec Integer -> NumSpec Integer -> Property
+assocNumSpec :: NumSpec fn Integer -> NumSpec fn Integer -> NumSpec fn Integer -> Property
 assocNumSpec x y z = x + (y + z) === (x + y) + z
 
-commuteTimes :: NumSpec Integer -> NumSpec Integer -> Property
+commuteTimes :: NumSpec fn Integer -> NumSpec fn Integer -> Property
 commuteTimes x y = x * y === y * x
 
 assocNumSpecTimes :: Gen Property
@@ -324,18 +324,18 @@ assocNumSpecTimes = do
   z <- noInfinity
   pure (x * (y * z) === (x * y) * z)
 
-negNegate :: NumSpec Integer -> Property
+negNegate :: NumSpec fn Integer -> Property
 negNegate x = x === negate (negate x)
 
-scaleNumSpec :: NumSpec Integer -> Property
+scaleNumSpec :: NumSpec fn Integer -> Property
 scaleNumSpec y = y + y === 2 * y
 
-scaleOne :: NumSpec Integer -> Property
+scaleOne :: NumSpec fn Integer -> Property
 scaleOne y = y === 1 * y
 
 numNumSpecTree :: Spec
 numNumSpecTree =
-  describe "Num (NumSpec Integer) properties" $
+  describe "Num (NumSpec fn Integer) properties" $
     modifyMaxSuccess (const 10000) $ do
       prop "plusNegate(x - y == x + negate y)" plusNegate
       prop "scaleNumSpec(y + y = 2 * y)" scaleNumSpec

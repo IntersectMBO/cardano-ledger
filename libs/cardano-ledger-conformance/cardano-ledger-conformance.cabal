@@ -47,6 +47,7 @@ library
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Certs
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Gov
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert
+        Test.Cardano.Ledger.Conformance.Imp.Ratify
 
     default-language: Haskell2010
     ghc-options:
