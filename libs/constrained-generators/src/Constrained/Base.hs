@@ -2780,7 +2780,7 @@ toPredsFoldSpec x (FoldSpec fn sspec) =
   satisfies (app (foldMapFn fn) x) sspec
 
 -- | Note: potentially infinite list
-enumerateInterval :: (Enum a, Num a, Ord a, MaybeBounded a) => NumSpec a -> [a]
+enumerateInterval :: (Enum a, Num a, Ord a, MaybeBounded a) => NumSpec fn a -> [a]
 enumerateInterval (NumSpecInterval lo hi) =
   case (lo <|> lowerBound, hi <|> upperBound) of
     (Nothing, Nothing) -> interleave [0 ..] [-1, -2 ..]
@@ -2792,7 +2792,7 @@ enumerateInterval (NumSpecInterval lo hi) =
     interleave (x : xs) ys = x : interleave ys xs
 
 isEmptyNumSpec ::
-  (TypeSpec fn a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) => Specification fn a -> Bool
+  (TypeSpec fn a ~ NumSpec fn a, Ord a, Enum a, Num a, MaybeBounded a) => Specification fn a -> Bool
 isEmptyNumSpec = \case
   ErrorSpec {} -> True
   TrueSpec -> False
@@ -2801,7 +2801,8 @@ isEmptyNumSpec = \case
   TypeSpec i cant -> null $ enumerateInterval i \\ cant
 
 knownUpperBound ::
-  (TypeSpec fn a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) => Specification fn a -> Maybe a
+  (TypeSpec fn a ~ NumSpec fn a, Ord a, Enum a, Num a, MaybeBounded a) =>
+  Specification fn a -> Maybe a
 knownUpperBound TrueSpec = upperBound
 knownUpperBound (MemberSpec []) = Nothing
 knownUpperBound (MemberSpec as) = Just $ maximum as
@@ -2816,7 +2817,8 @@ knownUpperBound (TypeSpec (NumSpecInterval lo hi) cant) = upper (lo <|> lowerBou
       | otherwise = listToMaybe $ [b, b - 1 .. a] \\ cant
 
 knownLowerBound ::
-  (TypeSpec fn a ~ NumSpec a, Ord a, Enum a, Num a, MaybeBounded a) => Specification fn a -> Maybe a
+  (TypeSpec fn a ~ NumSpec fn a, Ord a, Enum a, Num a, MaybeBounded a) =>
+  Specification fn a -> Maybe a
 knownLowerBound TrueSpec = lowerBound
 knownLowerBound (MemberSpec []) = Nothing
 knownLowerBound (MemberSpec as) = Just $ minimum as
@@ -2834,7 +2836,7 @@ knownLowerBound (TypeSpec (NumSpecInterval lo hi) cant) =
 narrowByFuelAndSize ::
   forall a fn.
   ( BaseUniverse fn
-  , TypeSpec fn a ~ NumSpec a
+  , TypeSpec fn a ~ NumSpec fn a
   , HasSpec fn a
   , Arbitrary a
   , Integral a
@@ -2955,7 +2957,7 @@ narrowByFuelAndSize fuel size specs =
 narrowFoldSpecs ::
   forall a fn.
   ( BaseUniverse fn
-  , TypeSpec fn a ~ NumSpec a
+  , TypeSpec fn a ~ NumSpec fn a
   , HasSpec fn a
   , Arbitrary a
   , Integral a
@@ -3026,7 +3028,7 @@ genNumList ::
   forall a fn m.
   ( BaseUniverse fn
   , MonadGenError m
-  , TypeSpec fn a ~ NumSpec a
+  , TypeSpec fn a ~ NumSpec fn a
   , HasSpec fn a
   , Arbitrary a
   , Integral a
@@ -3758,9 +3760,9 @@ instance MaybeBounded Float where
   lowerBound = Nothing
   upperBound = Nothing
 
-data NumSpec n = NumSpecInterval (Maybe n) (Maybe n)
+data NumSpec (fn :: [Type] -> Type -> Type) n = NumSpecInterval (Maybe n) (Maybe n)
 
-instance Ord n => Eq (NumSpec n) where
+instance Ord n => Eq (NumSpec fn n) where
   NumSpecInterval ml mh == NumSpecInterval ml' mh'
     | isEmpty ml mh = isEmpty ml' mh'
     | isEmpty ml' mh' = isEmpty ml mh
@@ -3769,22 +3771,22 @@ instance Ord n => Eq (NumSpec n) where
       isEmpty (Just a) (Just b) = a > b
       isEmpty _ _ = False
 
-instance Show n => Show (NumSpec n) where
+instance Show n => Show (NumSpec fn n) where
   show (NumSpecInterval ml mu) = lb ++ ".." ++ ub
     where
       lb = "[" ++ maybe "" show ml
       ub = maybe "" show mu ++ "]"
 
-instance Ord n => Semigroup (NumSpec n) where
+instance Ord n => Semigroup (NumSpec fn n) where
   NumSpecInterval ml mu <> NumSpecInterval ml' mu' =
     NumSpecInterval
       (unionWithMaybe max ml ml')
       (unionWithMaybe min mu mu')
 
-instance Ord n => Monoid (NumSpec n) where
+instance Ord n => Monoid (NumSpec fn n) where
   mempty = NumSpecInterval Nothing Nothing
 
-instance (Arbitrary a, Ord a) => Arbitrary (NumSpec a) where
+instance (Arbitrary a, Ord a) => Arbitrary (NumSpec fn a) where
   arbitrary = do
     m <- arbitrary
     m' <- arbitrary
@@ -3813,11 +3815,12 @@ instance Random (Ratio Integer) where
         (n, g'') = randomR (0, d) g'
      in (n % d, g'')
 
-emptyNumSpec :: Ord a => NumSpec a
+emptyNumSpec :: Ord a => NumSpec fn a
 emptyNumSpec = mempty
 
 combineNumSpec ::
-  (HasSpec fn n, Ord n, TypeSpec fn n ~ NumSpec n) => NumSpec n -> NumSpec n -> Specification fn n
+  (HasSpec fn n, Ord n, TypeSpec fn n ~ NumSpec fn n) =>
+  NumSpec fn n -> NumSpec fn n -> Specification fn n
 combineNumSpec s s' = case s <> s' of
   s''@(NumSpecInterval (Just a) (Just b))
     | a > b ->
@@ -3827,14 +3830,14 @@ combineNumSpec s s' = case s <> s' of
 
 genFromNumSpec ::
   (MonadGenError m, Show n, Random n, Ord n, Num n, MaybeBounded n) =>
-  NumSpec n ->
+  NumSpec fn n ->
   GenT m n
 genFromNumSpec (NumSpecInterval ml mu) = do
   n <- sizeT
   pureGen . choose =<< constrainInterval (ml <|> lowerBound) (mu <|> upperBound) (fromIntegral n)
 
 -- TODO: fixme (?)
-shrinkWithNumSpec :: Arbitrary n => NumSpec n -> n -> [n]
+shrinkWithNumSpec :: Arbitrary n => NumSpec fn n -> n -> [n]
 shrinkWithNumSpec _ = shrink
 
 constrainInterval ::
@@ -3863,7 +3866,7 @@ constrainInterval ml mu r =
       | a + b < a = u
       | otherwise = min u (a + b)
 
-conformsToNumSpec :: Ord n => n -> NumSpec n -> Bool
+conformsToNumSpec :: Ord n => n -> NumSpec fn n -> Bool
 conformsToNumSpec i (NumSpecInterval ml mu) = maybe True (<= i) ml && maybe True (i <=) mu
 
 toPredsNumSpec ::
@@ -3871,7 +3874,7 @@ toPredsNumSpec ::
   , OrdLike fn n
   ) =>
   Term fn n ->
-  NumSpec n ->
+  NumSpec fn n ->
   Pred fn
 toPredsNumSpec v (NumSpecInterval ml mu) =
   fold $
@@ -3879,7 +3882,7 @@ toPredsNumSpec v (NumSpecInterval ml mu) =
       ++ [assert $ v <=. Lit u | u <- maybeToList mu]
 
 instance BaseUniverse fn => HasSpec fn Int where
-  type TypeSpec fn Int = NumSpec Int
+  type TypeSpec fn Int = NumSpec fn Int
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -3889,7 +3892,7 @@ instance BaseUniverse fn => HasSpec fn Int where
   cardinalTypeSpec = cardinalNumSpec
 
 instance BaseUniverse fn => HasSpec fn Integer where
-  type TypeSpec fn Integer = NumSpec Integer
+  type TypeSpec fn Integer = NumSpec fn Integer
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -3899,7 +3902,7 @@ instance BaseUniverse fn => HasSpec fn Integer where
   cardinalTypeSpec = cardinalNumSpec
 
 instance BaseUniverse fn => HasSpec fn (Ratio Integer) where
-  type TypeSpec fn (Ratio Integer) = NumSpec (Ratio Integer)
+  type TypeSpec fn (Ratio Integer) = NumSpec fn (Ratio Integer)
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -3909,7 +3912,7 @@ instance BaseUniverse fn => HasSpec fn (Ratio Integer) where
   cardinalTypeSpec _ = TrueSpec
 
 instance BaseUniverse fn => HasSpec fn Natural where
-  type TypeSpec fn Natural = NumSpec Natural
+  type TypeSpec fn Natural = NumSpec fn Natural
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -3923,7 +3926,7 @@ instance BaseUniverse fn => HasSpec fn Natural where
   cardinalTypeSpec _ = TrueSpec
 
 instance BaseUniverse fn => HasSpec fn Word8 where
-  type TypeSpec fn Word8 = NumSpec Word8
+  type TypeSpec fn Word8 = NumSpec fn Word8
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -3934,7 +3937,7 @@ instance BaseUniverse fn => HasSpec fn Word8 where
   typeSpecOpt = notInNumSpec
 
 instance BaseUniverse fn => HasSpec fn Word16 where
-  type TypeSpec fn Word16 = NumSpec Word16
+  type TypeSpec fn Word16 = NumSpec fn Word16
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -3944,7 +3947,7 @@ instance BaseUniverse fn => HasSpec fn Word16 where
   cardinalTypeSpec = cardinalNumSpec
 
 instance BaseUniverse fn => HasSpec fn Word32 where
-  type TypeSpec fn Word32 = NumSpec Word32
+  type TypeSpec fn Word32 = NumSpec fn Word32
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -3954,7 +3957,7 @@ instance BaseUniverse fn => HasSpec fn Word32 where
   cardinalTypeSpec = cardinalNumSpec
 
 instance BaseUniverse fn => HasSpec fn Word64 where
-  type TypeSpec fn Word64 = NumSpec Word64
+  type TypeSpec fn Word64 = NumSpec fn Word64
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -3964,7 +3967,7 @@ instance BaseUniverse fn => HasSpec fn Word64 where
   cardinalTypeSpec = cardinalNumSpec
 
 instance BaseUniverse fn => HasSpec fn Int8 where
-  type TypeSpec fn Int8 = NumSpec Int8
+  type TypeSpec fn Int8 = NumSpec fn Int8
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -3974,7 +3977,7 @@ instance BaseUniverse fn => HasSpec fn Int8 where
   cardinalTypeSpec = cardinalNumSpec
 
 instance BaseUniverse fn => HasSpec fn Int16 where
-  type TypeSpec fn Int16 = NumSpec Int16
+  type TypeSpec fn Int16 = NumSpec fn Int16
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -3984,7 +3987,7 @@ instance BaseUniverse fn => HasSpec fn Int16 where
   cardinalTypeSpec = cardinalNumSpec
 
 instance BaseUniverse fn => HasSpec fn Int32 where
-  type TypeSpec fn Int32 = NumSpec Int32
+  type TypeSpec fn Int32 = NumSpec fn Int32
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -3994,7 +3997,7 @@ instance BaseUniverse fn => HasSpec fn Int32 where
   cardinalTypeSpec = cardinalNumSpec
 
 instance BaseUniverse fn => HasSpec fn Int64 where
-  type TypeSpec fn Int64 = NumSpec Int64
+  type TypeSpec fn Int64 = NumSpec fn Int64
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -4004,7 +4007,7 @@ instance BaseUniverse fn => HasSpec fn Int64 where
   cardinalTypeSpec = cardinalNumSpec
 
 instance BaseUniverse fn => HasSpec fn Float where
-  type TypeSpec fn Float = NumSpec Float
+  type TypeSpec fn Float = NumSpec fn Float
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -4200,7 +4203,7 @@ class HasSpec fn a => OrdLike fn a where
     Specification fn a
   gtSpec = fromSimpleRepSpec . gtSpec @fn . toSimpleRep
 
-instance {-# OVERLAPPABLE #-} (HasSpec fn a, MaybeBounded a, Num a, TypeSpec fn a ~ NumSpec a) => OrdLike fn a where
+instance {-# OVERLAPPABLE #-} (HasSpec fn a, MaybeBounded a, Num a, TypeSpec fn a ~ NumSpec fn a) => OrdLike fn a where
   leqSpec l = typeSpec $ NumSpecInterval Nothing (Just l)
   ltSpec l
     | Just b <- lowerBound
@@ -4357,7 +4360,7 @@ instance NumLike fn a => Num (Term fn a) where
   abs = error "abs not implemented for Term Fn Int"
   signum = error "signum not implemented for Term Fn Int"
 
-instance {-# OVERLAPPABLE #-} (HasSpec fn a, Ord a, Num a, TypeSpec fn a ~ NumSpec a, MaybeBounded a) => NumLike fn a where
+instance {-# OVERLAPPABLE #-} (HasSpec fn a, Ord a, Num a, TypeSpec fn a ~ NumSpec fn a, MaybeBounded a) => NumLike fn a where
   subtractSpec a ts@(NumSpecInterval ml mu)
     | Just u <- mu
     , a > 0
@@ -5020,9 +5023,9 @@ mapTypeSpecSize f ts = case f of
         assert (x ==. sizeOf_ x') <> toPreds @fn @a x' ts
 
 -- ======================================
-type SizeSpec = NumSpec Integer
+type SizeSpec fn = NumSpec fn Integer
 
-rangeSize :: Integer -> Integer -> SizeSpec
+rangeSize :: Integer -> Integer -> SizeSpec fn
 rangeSize a b | a < 0 || b < 0 = error ("Negative Int in call to rangeSize: " ++ show a ++ " " ++ show b)
 rangeSize a b = NumSpecInterval (Just a) (Just b)
 
@@ -5042,7 +5045,7 @@ maxSpec (TypeSpec (NumSpecInterval _ hi) bad) = TypeSpec (NumSpecInterval Nothin
 
 class Sized t where
   sizeOf :: t -> Integer
-  liftSizeSpec :: HasSpec fn t => SizeSpec -> [Integer] -> Specification fn t
+  liftSizeSpec :: HasSpec fn t => SizeSpec fn -> [Integer] -> Specification fn t
   liftMemberSpec :: HasSpec fn t => OrdSet Integer -> Specification fn t
   sizeOfTypeSpec :: HasSpec fn t => TypeSpec fn t -> Specification fn Integer
 
@@ -5060,33 +5063,33 @@ instance Sized [a] where
   sizeOfTypeSpec (ListSpec _ must sizespec _ _) = sizespec <> geqSpec (sizeOf must)
 
 -- How to constrain the size of any type, with a Sized instance
-hasSize :: (HasSpec fn t, Sized t) => SizeSpec -> Specification fn t
+hasSize :: (HasSpec fn t, Sized t) => SizeSpec fn -> Specification fn t
 hasSize sz = liftSizeSpec sz []
 
 -- ==================================================================================
--- (NumSpec Integer) can support interval arithmetic, so we can make a (Num (NumSpec fn Integer)) instance
+-- (NumSpec fn Integer) can support interval arithmetic, so we can make a (Num (NumSpec fn Integer)) instance
 -- Given operator ☉, then (a,b) ☉ (c,d) = (minimum s, maximum s) where s = [a ☉ c, a ☉ d, b ☉ c, b ☉ d]
 -- There are simpler rules for (+) and (-), but for (*) we need to use the general rule.
 
-guardEmpty :: Maybe Integer -> Maybe Integer -> NumSpec Integer -> NumSpec Integer
+guardEmpty :: Maybe Integer -> Maybe Integer -> NumSpec fn Integer -> NumSpec fn Integer
 guardEmpty (Just a) (Just b) s
   | a <= b = s
   | otherwise = NumSpecInterval (Just 1) (Just 0)
 guardEmpty _ _ s = s
 
-addNumSpec :: NumSpec Integer -> NumSpec Integer -> NumSpec Integer
+addNumSpec :: NumSpec fn Integer -> NumSpec fn Integer -> NumSpec fn Integer
 addNumSpec (NumSpecInterval x y) (NumSpecInterval a b) =
   guardEmpty x y $
     guardEmpty a b $
       NumSpecInterval ((+) <$> x <*> a) ((+) <$> y <*> b)
 
-subNumSpec :: NumSpec Integer -> NumSpec Integer -> NumSpec Integer
+subNumSpec :: NumSpec fn Integer -> NumSpec fn Integer -> NumSpec fn Integer
 subNumSpec (NumSpecInterval x y) (NumSpecInterval a b) =
   guardEmpty x y $
     guardEmpty a b $
       NumSpecInterval ((-) <$> x <*> b) ((-) <$> y <*> a)
 
-multNumSpec :: NumSpec Integer -> NumSpec Integer -> NumSpec Integer
+multNumSpec :: NumSpec fn Integer -> NumSpec fn Integer -> NumSpec fn Integer
 multNumSpec (NumSpecInterval a b) (NumSpecInterval c d) =
   guardEmpty a b $
     guardEmpty c d $
@@ -5094,17 +5097,17 @@ multNumSpec (NumSpecInterval a b) (NumSpecInterval c d) =
   where
     s = [multT (neg a) (neg c), multT (neg a) (pos d), multT (pos b) (neg c), multT (pos b) (pos d)]
 
-negNumSpec :: NumSpec Integer -> NumSpec Integer
+negNumSpec :: NumSpec fn Integer -> NumSpec fn Integer
 negNumSpec (NumSpecInterval lo hi) = NumSpecInterval (negate <$> hi) (negate <$> lo)
 
-instance Num (NumSpec Integer) where
+instance Num (NumSpec fn Integer) where
   (+) = addNumSpec
   (-) = subNumSpec
   (*) = multNumSpec
   negate = negNumSpec
   fromInteger n = NumSpecInterval (Just (fromInteger n)) (Just (fromInteger n))
-  abs = error "No abs in the Num (NumSpec Integer) instance"
-  signum = error "No signum in the Num (NumSpec Integer) instance"
+  abs = error "No abs in the Num (NumSpec fn Integer) instance"
+  signum = error "No signum in the Num (NumSpec fn Integer) instance"
 
 -- ========================================================================
 -- To implement the (HasSpec fn t) method: cardinalTypeSpec :: HasSpec fn a => TypeSpec fn a -> Specification fn Integer
@@ -5135,7 +5138,7 @@ multSpecInt x y = operateSpec (*) (*) x y
 --   and 'ft' will be a a (Num (TypeSpec fn n)) instance method (+,-,*) on (TypeSpec fn n)
 --   But this will work for any operations 'f' and 'ft' with the right types
 operateSpec ::
-  (TypeSpec fn n ~ NumSpec n, Enum n, Ord n) =>
+  (TypeSpec fn n ~ NumSpec fn n, Enum n, Ord n) =>
   (n -> n -> n) ->
   (TypeSpec fn n -> TypeSpec fn n -> TypeSpec fn n) ->
   Specification fn n ->
@@ -5187,7 +5190,7 @@ cardinality SuspendedSpec {} = cardinalTrueSpec @fn @a
 --   cardinalTypeSpec :: HasSpec fn a => TypeSpec fn a -> Specification fn Integer
 --   for types 'n' such that (TypeSpec n ~ NumSpec n)
 cardinalNumSpec ::
-  forall n fn. (Integral n, Num n, MaybeBounded n) => NumSpec n -> Specification fn Integer
+  forall n fn. (Integral n, Num n, MaybeBounded n) => NumSpec fn n -> Specification fn Integer
 cardinalNumSpec (NumSpecInterval (Just lo) (Just hi)) =
   if hi >= lo then MemberSpec [toInteger hi - toInteger lo + 1] else MemberSpec [0]
 cardinalNumSpec (NumSpecInterval Nothing (Just hi)) =
@@ -5209,7 +5212,7 @@ highBound Nothing = maxBound
 highBound (Just n) = n
 
 -- | The exact count of the number elements in a Bounded NumSpec
-countSpec :: forall n. (Bounded n, Integral n) => NumSpec n -> Integer
+countSpec :: forall n fn. (Bounded n, Integral n) => NumSpec fn n -> Integer
 countSpec (NumSpecInterval lo hi) = if lo > hi then 0 else toInteger high - toInteger low + 1
   where
     high = highBound hi
@@ -5240,11 +5243,11 @@ notInNumSpec ::
   ( Functions fn fn
   , BaseUniverse fn
   , HasSpec fn n
-  , TypeSpec fn n ~ NumSpec n
+  , TypeSpec fn n ~ NumSpec fn n
   , Bounded n
   , Integral n
   ) =>
-  NumSpec n ->
+  NumSpec fn n ->
   [n] ->
   Specification fn n
 notInNumSpec ns@(NumSpecInterval a b) bad

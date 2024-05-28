@@ -8,6 +8,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -17,6 +19,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- RecordWildCards cause name shadowing warnings in ghc-8.10.
 #if __GLASGOW_HASKELL__ < 900
@@ -52,6 +55,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances (
   ProposalsSplit (..),
   genProposalsSplit,
   proposalSplitSum,
+  coerce_,
 ) where
 
 import Cardano.Chain.Common (
@@ -120,7 +124,7 @@ import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
 import Constrained hiding (Value)
 import Constrained qualified as C
-import Constrained.Base (HasGenHint (..))
+import Constrained.Base (HasGenHint (..), Term (..))
 import Constrained.Spec.Map
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Fail.String
@@ -159,7 +163,7 @@ import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.QuickCheck hiding (Args, Fun, forAll)
 
-type ConwayUnivFns = StringFn : TreeFn : BaseFns
+type ConwayUnivFns = CoerceFn : StringFn : TreeFn : BaseFns
 type ConwayFn = Fix (OneofL ConwayUnivFns)
 
 type IsConwayUniv fn =
@@ -168,6 +172,7 @@ type IsConwayUniv fn =
   , Member (MapFn fn) fn
   , Member (FunFn fn) fn
   , Member (TreeFn fn) fn
+  , Member (CoerceFn fn) fn
   )
 
 -- TxBody HasSpec instance ------------------------------------------------
@@ -377,13 +382,28 @@ txOutVal_ ::
   Term fn (Value era)
 txOutVal_ = sel @1
 
-instance (Typeable a, Show a, Compactible a) => HasSimpleRep (CompactForm a) where
-  type SimpleRep (CompactForm a) = a
-  toSimpleRep = fromCompact
-  fromSimpleRep rep = case toCompact rep of
-    Nothing -> error $ "toCompact @" ++ show (typeOf rep) ++ " " ++ show rep
-    Just c -> c
-instance (IsConwayUniv fn, Compactible a, HasSpec fn a) => HasSpec fn (CompactForm a)
+instance
+  ( Compactible a
+  , HasSimpleRep a
+  , Typeable (SimpleRep a)
+  , Show (SimpleRep a)
+  ) =>
+  HasSimpleRep (CompactForm a)
+  where
+  type SimpleRep (CompactForm a) = SimpleRep a
+  toSimpleRep = toSimpleRep . fromCompact
+  fromSimpleRep x = fromMaybe err . toCompact $ fromSimpleRep x
+    where
+      err = error $ "toCompact @" ++ show (typeOf x) ++ " " ++ show x
+instance
+  ( IsConwayUniv fn
+  , Compactible a
+  , HasSpec fn a
+  , HasSimpleRep a
+  , HasSpec fn (SimpleRep a)
+  , Show (TypeSpec fn (SimpleRep a))
+  ) =>
+  HasSpec fn (CompactForm a)
 
 instance HasSimpleRep (MaryValue c) where
   type TheSop (MaryValue c) = '["MaryValue" ::: '[Coin]]
@@ -662,7 +682,7 @@ instance IsConwayUniv fn => HasSpec fn Text where
   conformsTo _ _ = True
   toPreds _ _ = toPred True
 
-data StringSpec fn = StringSpec {strSpecLen :: Specification fn Int}
+newtype StringSpec fn = StringSpec {strSpecLen :: Specification fn Int}
 
 deriving instance IsConwayUniv fn => Show (StringSpec fn)
 
@@ -812,7 +832,7 @@ instance IsConwayUniv fn => HasSpec fn ProtVer
 newtype VersionRep = VersionRep Word8
   deriving (Show, Eq, Ord, Num, Random, Arbitrary, Integral, Real, Enum) via Word8
 instance BaseUniverse fn => HasSpec fn VersionRep where
-  type TypeSpec fn VersionRep = NumSpec VersionRep
+  type TypeSpec fn VersionRep = NumSpec fn VersionRep
   emptySpec = emptyNumSpec
   combineSpec = combineNumSpec
   genFromTypeSpec = genFromNumSpec
@@ -1056,12 +1076,21 @@ instance Crypto c => HasSimpleRep (UMap c) where
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (UMap c)
 
 instance HasSimpleRep RDPair where
-  type SimpleRep RDPair = SOP '["RDPair" ::: '[Coin, Coin]]
-  toSimpleRep (RDPair rew dep) = inject @"RDPair" @'["RDPair" ::: '[Coin, Coin]] (toSimpleRep rew) (toSimpleRep dep)
+  type SimpleRep RDPair = SOP '["RDPair" ::: '[SimpleRep Coin, SimpleRep Coin]]
+  toSimpleRep (RDPair rew dep) =
+    inject
+      @"RDPair"
+      @'["RDPair" ::: '[SimpleRep Coin, SimpleRep Coin]]
+      (toSimpleRep rew)
+      (toSimpleRep dep)
   fromSimpleRep rep =
-    algebra @'["RDPair" ::: '[Coin, Coin]]
+    algebra @'["RDPair" ::: '[SimpleRep Coin, SimpleRep Coin]]
       rep
-      (\rew dep -> RDPair (fromSimpleRep rew) (fromSimpleRep dep))
+      ( \rew dep ->
+          RDPair
+            (fromSimpleRep rew)
+            (fromSimpleRep dep)
+      )
 instance IsConwayUniv fn => HasSpec fn RDPair
 
 instance HasSimpleRep (CertState era)
@@ -1528,3 +1557,73 @@ instance IsConwayUniv fn => HasSpec fn (Pulser StandardCrypto)
 
 instance HasSimpleRep (CertsEnv (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (CertsEnv (ConwayEra StandardCrypto))
+
+-- CompactForm
+
+class CoercibleLike a b where
+  coerceSpec :: IsConwayUniv fn => Specification fn b -> Specification fn a
+  getCoerceSpec :: IsConwayUniv fn => TypeSpec fn a -> Specification fn b
+
+instance CoercibleLike (CompactForm Coin) Word64 where
+  coerceSpec (TypeSpec (NumSpecInterval lo hi) excl) =
+    TypeSpec (NumSpecInterval lo hi) $ compactCoinOrError . word64ToCoin <$> excl
+  coerceSpec (MemberSpec s) = MemberSpec $ compactCoinOrError . word64ToCoin <$> s
+  coerceSpec (ErrorSpec e) = ErrorSpec e
+  coerceSpec (SuspendedSpec x p) = constrained $ \x' ->
+    [ p
+    , reify x' (fromInteger . unCoin . fromCompact) (==. V x)
+    ]
+  coerceSpec TrueSpec = TrueSpec
+
+  getCoerceSpec ::
+    forall (fn :: [Type] -> Type -> Type).
+    IsConwayUniv fn =>
+    TypeSpec fn (CompactForm Coin) ->
+    Specification fn Word64
+  getCoerceSpec (NumSpecInterval a b) = TypeSpec @fn (NumSpecInterval a b) mempty
+
+data CoerceFn (fn :: [Type] -> Type -> Type) args res where
+  Coerce :: (CoercibleLike a b, Coercible a b) => CoerceFn fn '[a] b
+
+deriving instance Show (CoerceFn fn args res)
+deriving instance Eq (CoerceFn fn args res)
+
+instance FunctionLike (CoerceFn fn) where
+  sem = \case
+    Coerce -> coerce
+
+instance IsConwayUniv fn => Functions (CoerceFn fn) fn where
+  propagateSpecFun _ _ (ErrorSpec e) = ErrorSpec e
+  propagateSpecFun _ _ TrueSpec = TrueSpec
+  propagateSpecFun fn ctx spec =
+    case fn of
+      _
+        | SuspendedSpec {} <- spec
+        , ListCtx pre HOLE suf <- ctx ->
+            constrained $ \x' ->
+              let args =
+                    appendList
+                      (mapList (\(C.Value a) -> lit a) pre)
+                      (x' :> mapList (\(C.Value a) -> lit a) suf)
+               in uncurryList (app @fn $ injectFn fn) args `satisfies` spec
+      Coerce ->
+        case fn of
+          (_ :: CoerceFn fn '[a] b)
+            | NilCtx HOLE <- ctx -> coerceSpec @a @b spec
+  mapTypeSpec fn ss =
+    case fn of
+      Coerce ->
+        case fn of
+          (_ :: CoerceFn fn '[a] b) -> getCoerceSpec @a ss
+
+coerce_ ::
+  forall a b fn.
+  ( Member (CoerceFn fn) fn
+  , HasSpec fn a
+  , HasSpec fn b
+  , CoercibleLike a b
+  , Coercible a b
+  ) =>
+  Term fn a ->
+  Term fn b
+coerce_ = app (injectFn $ Coerce @a @b @fn)
