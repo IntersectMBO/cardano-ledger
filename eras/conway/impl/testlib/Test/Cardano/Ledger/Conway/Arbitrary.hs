@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -164,6 +165,8 @@ instance
       <*> arbitrary
       <*> arbitrary
 
+  shrink = genericShrink
+
 instance
   (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
   Arbitrary (RatifyState era)
@@ -175,8 +178,13 @@ instance
       <*> arbitrary
       <*> arbitrary
 
+  shrink (RatifyState a b c d) =
+    [ RatifyState a' (Seq.fromList b') c' d'
+    | (a', b', c', d') <- shrink (a, toList b, c, d)
+    ]
+
 instance
-  (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
+  Era era =>
   Arbitrary (RatifyEnv era)
   where
   arbitrary =
@@ -188,8 +196,10 @@ instance
       <*> arbitrary
       <*> arbitrary
 
+  shrink = genericShrink
+
 instance
-  (Era era, Arbitrary (PParams era), Arbitrary (PParamsUpdate era)) =>
+  (Era era, Arbitrary (PParams era)) =>
   Arbitrary (EnactState era)
   where
   arbitrary =
@@ -201,6 +211,8 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+  shrink = genericShrink
 
 instance
   ( EraTxOut era
@@ -402,6 +414,7 @@ genGovActionState ga =
 
 instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovActionState era) where
   arbitrary = genGovActionState =<< arbitrary
+  shrink = genericShrink
 
 -- | These lists of `GovActionStates` contain only one of a priority.
 -- In other words, no two `GovActionState`s in the list have the same `actionPriority`.
@@ -479,9 +492,11 @@ instance Crypto c => Arbitrary (Voter c) where
       , DRepVoter <$> arbitrary
       , StakePoolVoter <$> arbitrary
       ]
+  shrink = genericShrink
 
 instance Arbitrary Vote where
   arbitrary = arbitraryBoundedEnum
+  shrink = shrinkBoundedEnum
 
 instance
   ( ConwayEraTxBody era
@@ -734,6 +749,11 @@ instance Era era => Arbitrary (ConwayPParams Identity era) where
       <*> arbitrary
       <*> arbitrary
 
+  shrink = genericShrink
+
+instance Arbitrary (NoUpdate a) where
+  arbitrary = pure NoUpdate
+
 instance Era era => Arbitrary (ConwayPParams StrictMaybe era) where
   arbitrary =
     ConwayPParams
@@ -769,6 +789,8 @@ instance Era era => Arbitrary (ConwayPParams StrictMaybe era) where
       <*> arbitrary
       <*> arbitrary
 
+  shrink = genericShrink
+
 instance Arbitrary PoolVotingThresholds where
   arbitrary =
     PoolVotingThresholds
@@ -777,6 +799,8 @@ instance Arbitrary PoolVotingThresholds where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+  shrink = genericShrink
 
 instance Arbitrary DRepVotingThresholds where
   arbitrary =
@@ -791,6 +815,8 @@ instance Arbitrary DRepVotingThresholds where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+  shrink = genericShrink
 
 instance Era era => Arbitrary (Constitution era) where
   arbitrary = Constitution <$> arbitrary <*> arbitrary

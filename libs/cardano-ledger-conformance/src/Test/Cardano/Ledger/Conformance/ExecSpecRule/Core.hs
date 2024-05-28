@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   generatesWithin,
   runConformance,
   checkConformance,
+  defaultTestConformance,
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject (..), ShelleyBase)
