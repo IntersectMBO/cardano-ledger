@@ -115,6 +115,7 @@ module Constrained (
   shrinkWithNumSpec,
   conformsToNumSpec,
   toPredsNumSpec,
+  cardinalNumSpec,
   addFn,
   -- Working with generics
   toSimpleRepSpec,
