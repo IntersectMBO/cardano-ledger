@@ -282,3 +282,28 @@ propBack' = constrained' $ \x y ->
   , 8 >. y
   , y >. x - 20
   ]
+
+propBack'' :: Specification BaseFn (Int, Int)
+propBack'' = constrained' $ \x y ->
+  [ assert $ y + 10 ==. x
+  , x `dependsOn` y
+  , assert $ x <. 20
+  , assert $ 8 <. y
+  ]
+
+chooseBackwards :: Specification BaseFn (Int, [Int])
+chooseBackwards = constrained $ \xy ->
+  [ assert $ xy `elem_` lit [(1, [1001 .. 1005]), (2, [1006 .. 1010])]
+  , match xy $ \_ ys ->
+      forAll ys $ \y -> 0 <. y
+  ]
+
+chooseBackwards' :: Specification BaseFn ([(Int, [Int])], (Int, [Int]))
+chooseBackwards' = constrained' $ \xys xy ->
+  [ forAll' xys $ \_ ys ->
+      forAll ys $ \y -> 1000 <. y
+  , assert $ 0 <. length_ xys
+  , assert $ xy `elem_` xys
+  , match xy $ \_ ys ->
+      forAll ys $ \y -> 0 <. y
+  ]

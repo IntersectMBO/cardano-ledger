@@ -14,7 +14,9 @@
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
@@ -1092,42 +1094,123 @@ computeDependencies = \case
   GenHint _ t -> noDependencies t
   Explain _ p -> computeDependencies p
 
+data SolverStage fn where
+  SolverStage ::
+    HasSpec fn a =>
+    { stageVar :: Var a
+    , stagePreds :: [Pred fn]
+    , stageSpec :: Specification fn a
+    } ->
+    SolverStage fn
+
+instance Pretty (SolverStage fn) where
+  pretty SolverStage {..} =
+    viaShow stageVar
+      <+> "<-"
+        /> vsep'
+          ( [pretty stageSpec | not $ isTrueSpec stageSpec]
+              ++ ["---" | not $ null stagePreds, not $ isTrueSpec stageSpec]
+              ++ map pretty stagePreds
+          )
+
+data SolverPlan fn = SolverPlan
+  { solverPlan :: [SolverStage fn]
+  , solverDependencies :: Graph (Name fn)
+  }
+
+instance Pretty (SolverPlan fn) where
+  pretty SolverPlan {..} =
+    "SolverPlan"
+      /> vsep'
+        [ "Dependencies:" /> pretty solverDependencies
+        , "Linearization:" /> prettyLinear solverPlan
+        ]
+
+isTrueSpec :: Specification fn a -> Bool
+isTrueSpec TrueSpec = True
+isTrueSpec _ = False
+
+prettyLinear :: [SolverStage fn] -> Doc ann
+prettyLinear = vsep' . map pretty
+
 -- | Linearize a predicate, turning it into a list of variables to solve and
 -- their defining constraints such that each variable can be solved independently.
 prepareLinearization ::
-  forall fn. BaseUniverse fn => Pred fn -> GE ([(Name fn, [Pred fn])], Graph (Name fn))
+  forall fn. BaseUniverse fn => Pred fn -> GE (SolverPlan fn)
 prepareLinearization p = do
   let preds = flattenPred p
       hints = computeHints preds
       graph = transitiveClosure $ hints <> respecting hints (foldMap computeDependencies preds)
-      -- TODO: clean this up
-      subst =
-        [ (x := t, freeVarSet t)
-        | Assert _ (App (extractFn @(EqFn fn) @fn -> Just Equal) (V x :> t :> Nil)) <- preds
-        , not $ any (\y -> Name x `Set.member` dependencies y graph) (freeVarSet t)
-        ]
-      preds' =
-        flattenPred . Block $
-          map (foldr (.) id (map f subst)) preds
-      f (x := t@Lit {}, _) p = assert (V x ==. t) <> simplifyPred (substitutePred x t p)
-      f (x := t, fvs) p
-        | Set.disjoint fvs (freeVarSet p) = simplifyPred $ substitutePred x t p
-        | otherwise = p
-  (,graph) <$> linearize preds' graph
+  plan <- linearize preds graph
+  pure $ backPropagation $ SolverPlan plan graph
+
+-- | Does nothing if the variable is not in the plan already.
+mergeSolverStage :: SolverStage fn -> [SolverStage fn] -> [SolverStage fn]
+mergeSolverStage (SolverStage x ps spec) plan =
+  [ case eqVar x y of
+    Just Refl -> SolverStage y (ps ++ ps') (spec <> spec')
+    Nothing -> stage
+  | stage@(SolverStage y ps' spec') <- plan
+  ]
+
+-- | Push as much information we can backwards through the plan.
+backPropagation :: forall fn. SolverPlan fn -> SolverPlan fn
+backPropagation (SolverPlan plan graph) = SolverPlan (go [] (reverse plan)) graph
+  where
+    go acc [] = acc
+    go acc (s@(SolverStage (x :: Var a) ps spec) : plan) = go (s : acc) plan'
+      where
+        newStages = concatMap (newStage spec) ps
+        plan' = foldr mergeSolverStage plan newStages
+
+        newStage spec (Assert _ (Eql (V x') t)) =
+          termVarEqCases spec x' t
+        newStage spec (Assert _ (Eql t (V x'))) =
+          termVarEqCases spec x' t
+        newStage _ _ = []
+
+        termVarEqCases :: HasSpec fn b => Specification fn a -> Var b -> Term fn b -> [SolverStage fn]
+        termVarEqCases (MemberSpec vs) x' t
+          | Set.singleton (Name x) == freeVarSet t =
+              [SolverStage x' [] $ MemberSpec [errorGE $ runTerm (singletonEnv x v) t | v <- vs]]
+        termVarEqCases spec x' t
+          | Just Refl <- eqVar x x'
+          , [Name y] <- Set.toList $ freeVarSet t
+          , Result _ ctx <- toCtx y t =
+              [SolverStage y [] (propagateSpec spec ctx)]
+        termVarEqCases _ _ _ = []
+
+pattern Eql :: forall fn. () => forall a. HasSpec fn a => Term fn a -> Term fn a -> Term fn Bool
+pattern Eql a b <- App (extractFn @(EqFn fn) -> Just Equal) (a :> b :> Nil)
 
 prettyPlan :: HasSpec fn a => Specification fn a -> Doc ann
-prettyPlan = \case
-  (simplifySpec -> spec@(SuspendedSpec _ p))
-    | Result _ (lin, graph) <- prepareLinearization p -> do
-        vsep'
-          [ "Simplified spec:" /> pretty spec
-          , "Graph:" /> pretty graph
-          , "Linearization:" /> prettyLinear lin
-          ]
-  _ -> "No plan."
+prettyPlan (simplifySpec -> spec)
+  | SuspendedSpec _ p <- spec
+  , Result _ plan <- prepareLinearization p =
+      vsep'
+        [ "Simplified spec:" /> pretty spec
+        , pretty plan
+        ]
+  | otherwise = "Simplfied spec:" /> pretty spec
 
 printPlan :: HasSpec fn a => Specification fn a -> IO ()
 printPlan = print . prettyPlan
+
+isEmptyPlan :: SolverPlan fn -> Bool
+isEmptyPlan (SolverPlan plan _) = null plan
+
+stepPlan :: MonadGenError m => SolverPlan fn -> GenT m (Env, SolverPlan fn)
+stepPlan plan@(SolverPlan [] _) = pure (mempty, plan)
+stepPlan plan@(SolverPlan (SolverStage x ps spec : pl) gr) = explain [show $ pretty plan] $ do
+  spec' <- runGE $ explain [show $ "Computing specs for:" /> vsep' (map pretty ps)] $ do
+    specs <- mapM (computeSpec x) ps
+    pure $ fold specs
+  val <- genFromSpecT (spec <> spec')
+  let env = singletonEnv x val
+  pure (env, backPropagation $ SolverPlan (substStage env <$> pl) (deleteNode (Name x) gr))
+
+substStage :: Env -> SolverStage fn -> SolverStage fn
+substStage env (SolverStage y ps spec) = normalizeSolverStage $ SolverStage y (substPred env <$> ps) spec
 
 -- | Generate a satisfying `Env` for a `p : Pred fn`. The `Env` contains values for
 -- all the free variables in `flattenPred p`.
@@ -1136,20 +1219,15 @@ genFromPreds :: (MonadGenError m, BaseUniverse fn) => Pred fn -> GenT m Env
 genFromPreds (optimisePred . optimisePred -> preds) = explain [show $ "genFromPreds: " /> pretty preds] $ do
   -- NOTE: this is just lazy enough that the work of flattening, computing dependencies,
   -- and linearizing is memoized in properties that use `genFromPreds`.
-  (linear, deps) <- runGE $ prepareLinearization preds
-  explain [show $ "With graph:" /> pretty deps] $
-    explain [show $ "With linearization:" /> prettyLinear linear] $
-      go mempty linear
+  plan <- runGE $ prepareLinearization preds
+  explain [show $ pretty plan] $
+    go mempty plan
   where
-    go :: (MonadGenError m, BaseUniverse fn) => Env -> [(Name fn, [Pred fn])] -> GenT m Env
-    go env [] = pure env
-    go env ((Name v, ps) : nps) = do
-      let ps' = substPred env <$> ps
-      spec <- runGE $ explain [show $ "Computing specs for:" /> vsep' (map pretty ps')] $ do
-        specs <- mapM (computeSpec v) ps'
-        pure $ fold specs
-      val <- genFromSpecT spec
-      explain [show $ pretty v <+> "->" <+> viaShow val] $ go (extendEnv v val env) nps
+    go :: MonadGenError m => Env -> SolverPlan fn -> GenT m Env
+    go env plan | isEmptyPlan plan = pure env
+    go env plan = do
+      (env', plan') <- explain [show env] $ stepPlan plan
+      explain [show $ pretty plan'] $ go (env <> env') plan'
 
 -- TODO: here we can compute both the explicit hints (i.e. constraints that
 -- define the order of two variables) and any whole-program smarts.
@@ -1181,7 +1259,7 @@ computeTermDependencies' (V x) = (noDependencies (Name x), Set.singleton (Name x
 -- Consider: A + B = A + C, A <- B
 -- Here we want to consider this constraint defining for A
 linearize ::
-  (MonadGenError m, BaseUniverse fn) => [Pred fn] -> DependGraph fn -> m [(Name fn, [Pred fn])]
+  (MonadGenError m, BaseUniverse fn) => [Pred fn] -> DependGraph fn -> m [SolverStage fn]
 linearize preds graph = do
   sorted <- case topsort graph of
     Left cycle ->
@@ -1217,11 +1295,17 @@ linearize preds graph = do
                   "the following left-over constraints are not defining constraints for a unique variable:"
                     /> vsep' (map (pretty . snd) ps)
             ]
-    go (n : ns) ps = do
+    go (n@(Name x) : ns) ps = do
       let (nps, ops) = partition (isLastVariable n . fst) ps
-      ((n, map snd nps) :) <$> go ns ops
+      (normalizeSolverStage (SolverStage x (map snd nps) mempty) :) <$> go ns ops
 
     isLastVariable n set = n `Set.member` set && solvableFrom n (Set.delete n set) graph
+
+normalizeSolverStage :: SolverStage fn -> SolverStage fn
+normalizeSolverStage (SolverStage x ps spec) = SolverStage x ps'' (spec <> spec')
+  where
+    (ps', ps'') = partition ((1 ==) . Set.size . freeVarSet) ps
+    spec' = fromGESpec $ computeSpec x (Block ps')
 
 ------------------------------------------------------------------------
 -- Computing specs
@@ -3542,7 +3626,9 @@ emptyNumSpec = mempty
 combineNumSpec ::
   (HasSpec fn n, Ord n, TypeSpec fn n ~ NumSpec n) => NumSpec n -> NumSpec n -> Specification fn n
 combineNumSpec s s' = case s <> s' of
-  s''@(NumSpecInterval (Just a) (Just b)) | a > b -> ErrorSpec [show s'']
+  s''@(NumSpecInterval (Just a) (Just b))
+    | a > b -> ErrorSpec [show s'']
+    | a == b -> equalSpec a
   s'' -> typeSpec s''
 
 genFromNumSpec ::
@@ -4667,9 +4753,6 @@ instance Pretty (Var a) where
 
 instance Pretty (Name fn) where
   pretty (Name v) = pretty v
-
-prettyLinear :: [(Name fn, [Pred fn])] -> Doc ann
-prettyLinear ln = vsep' [pretty n <+> "<-" /> vsep' (map pretty ps) | (Name n, ps) <- ln]
 
 -- ======================================================================
 -- Size and its 'generic' operations over Sized types.

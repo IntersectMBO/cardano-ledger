@@ -48,6 +48,8 @@ tests nightly =
     -- TODO: double-shrinking
     testSpecNoShrink "reifiesMultiple" reifiesMultiple
     testSpec "assertReal" assertReal
+    testSpecNoShrink "chooseBackwards" chooseBackwards
+    testSpecNoShrink "chooseBackwards'" chooseBackwards'
     testSpec "assertRealMultiple" assertRealMultiple
     testSpec "setSpec" setSpec
     testSpec "leqPair" leqPair
@@ -132,6 +134,7 @@ tests nightly =
     testSpec "ifElseMany" ifElseMany
     testSpecNoShrink "propBack" propBack
     testSpecNoShrink "propBack'" propBack'
+    testSpecNoShrink "propBack''" propBack''
     testSpec "complexUnion" complexUnion
     testSpec "unionBounded" unionBounded
     numberyTests
