@@ -134,6 +134,7 @@ jobs:
         - cardano-ledger-babbage-test
         - cardano-ledger-binary
         - cardano-ledger-byron
+        - cardano-ledger-conformance
         - cardano-ledger-conway
         - cardano-ledger-conway-test
         - cardano-ledger-core
@@ -150,6 +151,19 @@ jobs:
         - vector-map
         ghc: ["8.10.7", "9.2.8", "9.6.4", "9.8.2"]
         os: [ubuntu-latest]
+        exclude:
+          - os: ubuntu-latest
+            ghc: "8.10.7"
+            package: cardano-ledger-conformance
+          - os: ubuntu-latest
+            ghc: "9.2.8"
+            package: cardano-ledger-conformance
+          - os: ubuntu-latest
+            ghc: "9.6.4"
+            package: cardano-ledger-conformance
+          - os: ubuntu-latest
+            ghc: "9.8.2"
+            package: cardano-ledger-conformance
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
