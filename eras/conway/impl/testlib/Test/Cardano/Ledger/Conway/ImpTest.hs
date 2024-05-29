@@ -98,7 +98,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   isDRepExpired,
   expectDRepExpiry,
   expectActualDRepExpiry,
-  expectDRepResigned,
+  expectDRepNotRegistered,
   expectCurrentProposals,
   expectNoCurrentProposals,
   expectPulserProposals,
@@ -394,11 +394,12 @@ updateDRep ::
   ) =>
   Credential 'DRepRole (EraCrypto era) ->
   ImpTestM era ()
-updateDRep drep =
+updateDRep drep = do
+  mAnchor <- arbitrary
   submitTxAnn_ "Update DRep" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
-        .~ SSeq.singleton (UpdateDRepTxCert drep SNothing)
+        .~ SSeq.singleton (UpdateDRepTxCert drep mAnchor)
 
 -- | In contrast to `setupSingleDRep`, this function does not make a UTxO entry
 -- that could count as delegated stake to the DRep, so that we can test that
@@ -1415,11 +1416,11 @@ submitConstitution prevGovId = do
   govActionId <- submitGovAction constitutionAction
   pure (govActionId, constitution)
 
-expectDRepResigned ::
+expectDRepNotRegistered ::
   HasCallStack =>
   Credential 'DRepRole (EraCrypto era) ->
   ImpTestM era ()
-expectDRepResigned drep = do
+expectDRepNotRegistered drep = do
   dsMap <- getsNES (nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL)
   Map.lookup drep dsMap `shouldBe` Nothing
 

@@ -209,27 +209,26 @@ conwayCertsTransition = do
       -- GOV, and so will this expiry bump done here. It will be discarded.
       let certState' =
             let hasProposals = not . OSet.null $ tx ^. bodyTxL . proposalProceduresTxBodyL
-                numDormantEpochs = certState ^. certVStateL . vsNumDormantEpochsL
-             in if hasProposals && numDormantEpochs /= EpochNo 0
-                  then certState & certVStateL %~ updateDormantDRepExpiry currentEpoch numDormantEpochs
+             in if hasProposals
+                  then certState & certVStateL %~ updateDormantDRepExpiry currentEpoch
                   else certState
 
       -- Update DRep expiry for all DReps that are voting in this transaction.
       -- This will execute in mutual-exclusion to the previous updates to DRep expiry,
       -- because if there are no proposals to vote on , there will be no votes either.
-      let numDormantEpochs1 = certState' ^. certVStateL . vsNumDormantEpochsL
-          updatedVSDReps =
+      let numDormantEpochs = certState' ^. certVStateL . vsNumDormantEpochsL
+          updateVSDReps vsDReps =
             Map.foldlWithKey'
               ( \dreps voter _ -> case voter of
                   DRepVoter cred ->
-                    updateDRepExpiry drepActivity currentEpoch numDormantEpochs1 cred dreps
+                    Map.adjust (updateDRepExpiry drepActivity currentEpoch numDormantEpochs) cred dreps
                   _ -> dreps
               )
-              (certState' ^. certVStateL . vsDRepsL)
+              vsDReps
               (unVotingProcedures $ tx ^. bodyTxL . votingProceduresTxBodyL)
 
       -- Final CertState with updates to DRep expiry based on new proposals and votes on existing proposals
-      let certStateWithDRepExpiryUpdated = certState' & certVStateL . vsDRepsL .~ updatedVSDReps
+      let certStateWithDRepExpiryUpdated = certState' & certVStateL . vsDRepsL %~ updateVSDReps
           dState = certStateWithDRepExpiryUpdated ^. certDStateL
           withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
 
@@ -260,11 +259,9 @@ instance
 updateDormantDRepExpiry ::
   -- | Current Epoch
   EpochNo ->
-  -- | Number of dormant epochs
-  EpochNo ->
   VState era ->
   VState era
-updateDormantDRepExpiry currentEpoch numDormantEpochs vState =
+updateDormantDRepExpiry currentEpoch vState =
   if numDormantEpochs == EpochNo 0
     then vState
     else
@@ -272,6 +269,7 @@ updateDormantDRepExpiry currentEpoch numDormantEpochs vState =
         & vsNumDormantEpochsL .~ EpochNo 0
         & vsDRepsL %~ fmap updateExpiry
   where
+    numDormantEpochs = vState ^. vsNumDormantEpochsL
     updateExpiry =
       drepExpiryL
         %~ \currentExpiry ->

@@ -119,6 +119,7 @@ import Control.State.Transition (
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import qualified Data.OMap.Strict as OMap
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Void (Void, absurd)
@@ -208,9 +209,9 @@ returnProposalDeposits removedProposals oldUMap =
 
 -- | When there have been zero governance proposals to vote on in the previous epoch
 -- increase the dormant-epoch counter by one.
-updateNumDormantEpochs :: Proposals era -> VState era -> VState era
-updateNumDormantEpochs ps vState =
-  if null $ ps ^. pPropsL
+updateNumDormantEpochs :: EpochNo -> Proposals era -> VState era -> VState era
+updateNumDormantEpochs currentEpoch ps vState =
+  if null $ OMap.filter ((currentEpoch <=) . gasExpiresAfter) $ ps ^. pPropsL
     then vState & vsNumDormantEpochsL %~ succ
     else vState
 
@@ -357,7 +358,7 @@ epochTransition = do
         , certDState = dState2 & dsUnifiedL .~ newUMap
         , certVState =
             -- Increment the dormant epoch counter
-            updateNumDormantEpochs newProposals vState
+            updateNumDormantEpochs eNo newProposals vState
               -- Remove cold credentials of committee members that were removed or were invalid
               & vsCommitteeStateL %~ updateCommitteeState (govState1 ^. cgsCommitteeL)
         }

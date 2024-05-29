@@ -43,6 +43,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   modifyPrevPParams,
   passEpoch,
   passNEpochs,
+  passNEpochsChecking,
   passTick,
   freshKeyHash,
   freshKeyPair,
@@ -1102,6 +1103,16 @@ passNEpochs ::
   Natural ->
   ImpTestM era ()
 passNEpochs n = when (n > 0) $ passEpoch >> passNEpochs (n - 1)
+
+-- | Runs the TICK rule until the `n` epochs are passed, while running the
+-- checks provided after each epoch transition
+passNEpochsChecking ::
+  forall era.
+  ShelleyEraImp era =>
+  Natural ->
+  ImpTestM era () ->
+  ImpTestM era ()
+passNEpochsChecking n checks = when (n > 0) $ passEpoch >> checks >> passNEpochs (n - 1)
 
 -- | Stores extra information about the failure of the unit test
 data ImpException = ImpException

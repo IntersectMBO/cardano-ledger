@@ -211,8 +211,16 @@ conwayGovCertTransition = do
       pure
         vState
           { vsDReps =
-              updateDRepExpiry ppDRepActivity cgceCurrentEpoch (vState ^. vsNumDormantEpochsL) cred $
-                Map.adjust (\drepState -> drepState & drepAnchorL .~ mAnchor) cred vsDReps
+              Map.adjust
+                ( \drepState ->
+                    updateDRepExpiry
+                      ppDRepActivity
+                      cgceCurrentEpoch
+                      (vState ^. vsNumDormantEpochsL)
+                      $ drepState & drepAnchorL .~ mAnchor
+                )
+                cred
+                vsDReps
           }
   where
     checkColdCredHasNotResigned coldCred csCommitteeCreds =
@@ -236,15 +244,11 @@ updateDRepExpiry ::
   EpochNo ->
   -- | The count of the dormant epochs
   EpochNo ->
-  -- | DRep credential
-  Credential 'DRepRole c ->
-  -- | DRep map from DRepState
-  Map.Map (Credential 'DRepRole c) (DRepState c) ->
-  Map.Map (Credential 'DRepRole c) (DRepState c)
+  DRepState c ->
+  DRepState c
 updateDRepExpiry ppDRepActivity currentEpoch numDormantEpochs =
-  Map.adjust $
-    drepExpiryL
-      .~ binOpEpochNo
-        (-)
-        (addEpochInterval currentEpoch ppDRepActivity)
-        numDormantEpochs
+  drepExpiryL
+    .~ binOpEpochNo
+      (-)
+      (addEpochInterval currentEpoch ppDRepActivity)
+      numDormantEpochs
