@@ -171,9 +171,6 @@ class
     , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
     , FixupSpecRep (SpecRep (PredicateFailure (EraRule rule era)))
     , FixupSpecRep (SpecRep (ExecState fn rule era))
-    , Inject (SpecRep (ExecEnvironment fn rule era)) (SpecRep (ExecEnvironment fn rule era))
-    , Inject (SpecRep (ExecState fn rule era)) (SpecRep (ExecState fn rule era))
-    , Inject (SpecRep (ExecSignal fn rule era)) (SpecRep (ExecSignal fn rule era))
     ) =>
     ExecContext fn rule era ->
     ExecEnvironment fn rule era ->
@@ -246,9 +243,6 @@ defaultTestConformance ::
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
   , FixupSpecRep (SpecRep (PredicateFailure (EraRule rule era)))
   , FixupSpecRep (SpecRep (ExecState fn rule era))
-  , Inject (SpecRep (ExecEnvironment fn rule era)) (SpecRep (ExecEnvironment fn rule era))
-  , Inject (SpecRep (ExecState fn rule era)) (SpecRep (ExecState fn rule era))
-  , Inject (SpecRep (ExecSignal fn rule era)) (SpecRep (ExecSignal fn rule era))
   ) =>
   ExecContext fn rule era ->
   ExecEnvironment fn rule era ->
@@ -269,9 +263,6 @@ runConformance ::
   , FixupSpecRep (SpecRep (ExecState fn rule era))
   , Inject (State (EraRule rule era)) (ExecState fn rule era)
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
-  , Inject (SpecRep (ExecEnvironment fn rule era)) (SpecRep (ExecEnvironment fn rule era))
-  , Inject (SpecRep (ExecState fn rule era)) (SpecRep (ExecState fn rule era))
-  , Inject (SpecRep (ExecSignal fn rule era)) (SpecRep (ExecSignal fn rule era))
   ) =>
   ExecContext fn rule era ->
   ExecEnvironment fn rule era ->
@@ -297,7 +288,7 @@ runConformance execContext env st sig = do
     fmap (bimap (fixup <$>) fixup) $
       impAnn "Deep evaluating Agda output" $
         evaluateDeep $
-          runAgdaRule @fn @rule @era (inject specEnv) (inject specSt) (inject specSig)
+          runAgdaRule @fn @rule @era specEnv specSt specSig
   implRes <- tryRunImpRule @rule @era (inject env) (inject st) (inject sig)
   implResTest <-
     impAnn "Translating implementation values to SpecRep" $
@@ -317,9 +308,6 @@ conformsToImpl ::
   , ToExpr (ExecContext fn rule era)
   , SpecTranslate (ExecContext fn rule era) (State (EraRule rule era))
   , Eq (SpecRep (PredicateFailure (EraRule rule era)))
-  , Inject (SpecRep (ExecEnvironment fn rule era)) (SpecRep (ExecEnvironment fn rule era))
-  , Inject (SpecRep (ExecState fn rule era)) (SpecRep (ExecState fn rule era))
-  , Inject (SpecRep (ExecSignal fn rule era)) (SpecRep (ExecSignal fn rule era))
   , Inject (State (EraRule rule era)) (ExecState fn rule era)
   , Eq (SpecRep (ExecState fn rule era))
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
