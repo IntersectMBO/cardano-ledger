@@ -27,7 +27,7 @@ import Test.Cardano.Ledger.Mary.ImpTest
 mintBasicToken ::
   forall era. (HasCallStack, AllegraEraScript era, MaryEraImp era) => ImpTestM era (Tx era)
 mintBasicToken = do
-  (_, addr) <- freshKeyAddr
+  addr <- freshKeyAddr_
   keyHash <- freshKeyHash
   scriptHash <- impAddNativeScript $ RequireSignature keyHash
   Positive amount <- arbitrary

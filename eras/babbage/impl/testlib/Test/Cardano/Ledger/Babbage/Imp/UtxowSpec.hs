@@ -49,7 +49,7 @@ spec = describe "UTXOW" $ do
   it "MalformedReferenceScripts" $ do
     let script = mkPlutusScript' @era (malformedPlutus @'PlutusV2)
     let scriptHash = hashScript script
-    addr <- snd <$> freshKeyAddr
+    addr <- freshKeyAddr_
     let tx =
           mkBasicTx mkBasicTxBody
             & bodyTxL . outputsTxBodyL

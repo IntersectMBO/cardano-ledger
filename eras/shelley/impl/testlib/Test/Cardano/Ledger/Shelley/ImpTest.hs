@@ -45,9 +45,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   passNEpochs,
   passNEpochsChecking,
   passTick,
+  freshKeyAddr,
+  freshKeyAddr_,
   freshKeyHash,
   freshKeyPair,
-  freshKeyAddr,
   lookupKeyPair,
   freshByronKeyHash,
   freshBootstapAddress,
@@ -1260,7 +1261,7 @@ lookupKeyPair keyHash = do
 freshKeyHash :: Era era => ImpTestM era (KeyHash r (EraCrypto era))
 freshKeyHash = fst <$> freshKeyPair
 
--- | Generate a random KeyPair and add it to the known keys in the Imp state
+-- | Generate a random `KeyPair` and add it to the known keys in the Imp state
 freshKeyPair ::
   (Era era, MonadState (ImpTestState era) m, MonadGen m) =>
   m (KeyHash r (EraCrypto era), KeyPair r (EraCrypto era))
@@ -1269,6 +1270,13 @@ freshKeyPair = do
   keyHash <- addKeyPair keyPair
   pure (keyHash, keyPair)
 
+-- | Generate a random `Addr` that uses a `KeyHash`, and add the corresponding `KeyPair`
+-- to the known keys in the Imp state.
+freshKeyAddr_ :: Era era => ImpTestM era (Addr (EraCrypto era))
+freshKeyAddr_ = snd <$> freshKeyAddr
+
+-- | Generate a random `Addr` that uses a `KeyHash`, add the corresponding `KeyPair`
+-- to the known keys in the Imp state, and return the `KeyHash` as well as the `Addr`.
 freshKeyAddr :: Era era => ImpTestM era (KeyHash r (EraCrypto era), Addr (EraCrypto era))
 freshKeyAddr = do
   keyHash <- freshKeyHash

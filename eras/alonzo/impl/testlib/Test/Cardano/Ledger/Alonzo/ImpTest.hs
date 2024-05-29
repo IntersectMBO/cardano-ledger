@@ -143,7 +143,7 @@ makeCollateralInput :: ShelleyEraImp era => ImpTestM era (TxIn (EraCrypto era))
 makeCollateralInput = do
   -- TODO: make more accurate
   let collateral = Coin 10_000_000
-  (_, addr) <- freshKeyAddr
+  addr <- freshKeyAddr_
   withFixup fixupTx $ sendCoinTo addr collateral
 
 addCollateralInput ::

@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.12.0.1
+## 1.12.1.0
 
 *
+
+### `testlib`
+
+* Add `freshKeyAddr_`
 
 ## 1.12.0.0
 
@@ -22,7 +26,7 @@
   * `UTxOState`
   * `UtxoEnv`
 
-### testlib
+### `testlib`
 
 * Change return type of `trySubmitTx` to include the fixedup transaction
 * Add `ToExpr` for `PoolEnv`.
