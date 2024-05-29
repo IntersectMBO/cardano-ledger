@@ -19,6 +19,7 @@ import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
   EraPlutusTxInfo,
+  LedgerTxInfo (..),
   PlutusTxInfo,
   toPlutusTxInfo,
  )
@@ -102,15 +103,23 @@ genTranslationInstance ::
   ) =>
   Gen (TranslationInstance era)
 genTranslationInstance = do
-  pp <- arbitrary :: Gen (PParams era)
+  protVer <- arbitrary
   lang <- elements [minBound .. eraMaxLanguage @era]
   tx <- tgTx @era lang
   utxo <- tgUtxo lang tx
+  let lti =
+        LedgerTxInfo
+          { ltiProtVer = protVer
+          , ltiEpochInfo = epochInfo
+          , ltiSystemStart = systemStart
+          , ltiUTxO = utxo
+          , ltiTx = tx
+          }
   case mkTxInfoLanguage @era lang of
     TxInfoLanguage slang -> do
-      case toPlutusTxInfo slang pp epochInfo systemStart utxo tx of
+      case toPlutusTxInfo slang lti of
         Left err -> error $ show err
-        Right txInfo -> pure $ TranslationInstance pp lang utxo tx $ toVersionedTxInfo slang txInfo
+        Right txInfo -> pure $ TranslationInstance protVer lang utxo tx $ toVersionedTxInfo slang txInfo
 
 epochInfo :: EpochInfo (Either a)
 epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)

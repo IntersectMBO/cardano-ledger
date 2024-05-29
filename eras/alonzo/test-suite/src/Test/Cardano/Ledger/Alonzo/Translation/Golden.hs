@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.Golden (
   assertTranslationResultsMatchGolden,
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, toPlutusTxInfo)
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, LedgerTxInfo (..), toPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoEraScript)
 import Cardano.Ledger.Binary.Encoding (serialize)
 import Cardano.Ledger.Core
@@ -69,17 +69,25 @@ assertTranslationComparison ::
   ) =>
   TranslationInstance era ->
   Assertion
-assertTranslationComparison (TranslationInstance pp lang utxo tx expected) =
+assertTranslationComparison (TranslationInstance protVer lang utxo tx expected) =
   case mkTxInfoLanguage @era lang of
     TxInfoLanguage slang -> do
-      case toPlutusTxInfo slang pp epochInfo systemStart utxo tx of
+      case toPlutusTxInfo slang lti of
         Left e -> error $ show e
         Right actual -> assertEqual errorMessage expected $ toVersionedTxInfo slang actual
   where
+    lti =
+      LedgerTxInfo
+        { ltiProtVer = protVer
+        , ltiEpochInfo = epochInfo
+        , ltiSystemStart = systemStart
+        , ltiUTxO = utxo
+        , ltiTx = tx
+        }
     errorMessage =
       unlines
         [ "Unexpected txinfo with arguments: "
-        , " pp: " <> show pp
+        , " ProtVer: " <> show protVer
         , " language: " <> show lang
         , " utxo: " <> show utxo
         , " tx: " <> show tx

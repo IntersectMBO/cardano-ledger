@@ -126,10 +126,10 @@ toPlutusWithContext ::
   Either (ContextError era) (PlutusWithContext (EraCrypto era))
 toPlutusWithContext script scriptHash plutusPurpose lti (redeemerData, exUnits) costModel = do
   let proxy = Proxy @l
-      spendingDatum =
+      maybeSpendingDatum =
         getSpendingDatum (ltiUTxO lti) (ltiTx lti) (hoistPlutusPurpose toAsItem plutusPurpose)
   txInfo <- toPlutusTxInfo proxy lti
-  plutusArgs <- toPlutusArgs proxy txInfo plutusPurpose spendingDatum redeemerData
+  plutusArgs <- toPlutusArgs proxy txInfo plutusPurpose maybeSpendingDatum redeemerData
   pure $
     PlutusWithContext
       { pwcProtocolVersion = pvMajor (ltiProtVer lti)
