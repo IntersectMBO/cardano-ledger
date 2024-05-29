@@ -730,7 +730,7 @@ newtype BlocksMade c = BlocksMade
 -- testing.
 
 -- | Transaction index.
-newtype TxIx = TxIx Word64
+newtype TxIx = TxIx {unTxIx :: Word64}
   deriving stock (Eq, Ord, Show, Generic)
   deriving newtype (NFData, Enum, Bounded, NoThunks, FromCBOR, ToCBOR, EncCBOR, ToJSON)
 
@@ -762,9 +762,16 @@ mkTxIxPartial i =
 -- | Certificate index. Use `certIxFromIntegral` in order to construct this
 -- index safely from anything other than `Word16`. There is also
 -- `mkCertIxPartial` that can be used for testing.
-newtype CertIx = CertIx Word64
+newtype CertIx = CertIx {unCertIx :: Word64}
   deriving stock (Eq, Ord, Show)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR, ToJSON)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, ToCBOR, FromCBOR, ToJSON)
+
+instance DecCBOR CertIx where
+  decCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      (CertIx . fromIntegral @Word16 @Word64 <$> decCBOR)
+      (CertIx <$> decCBOR)
 
 -- | Construct a `CertIx` from a 16 bit unsigned integer
 mkCertIx :: Word16 -> CertIx
@@ -773,7 +780,7 @@ mkCertIx = CertIx . fromIntegral
 certIxToInt :: CertIx -> Int
 certIxToInt (CertIx w16) = fromIntegral w16
 
-certIxFromIntegral :: Integral a => a -> Maybe CertIx
+certIxFromIntegral :: (Integral a, MonadFail m) => a -> m CertIx
 certIxFromIntegral = fmap (CertIx . fromIntegral) . word16FromInteger . toInteger
 {-# INLINE certIxFromIntegral #-}
 

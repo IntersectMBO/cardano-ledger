@@ -288,7 +288,8 @@ instance Arbitrary TxIx where
   arbitrary = TxIx . fromIntegral <$> arbitrary @Word16
 
 instance Arbitrary CertIx where
-  arbitrary = CertIx <$> arbitrary
+  -- starting with Conway, we only deserialize CertIx within Word16 range
+  arbitrary = CertIx . fromIntegral <$> arbitrary @Word16
 
 instance Arbitrary ProtVer where
   arbitrary = ProtVer <$> arbitrary <*> arbitrary
