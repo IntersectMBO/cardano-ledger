@@ -117,7 +117,7 @@ prop_gen_sound spec =
   let sspec = simplifySpec spec
    in QC.tabulate "specType spec" [specType spec] $
         QC.tabulate "specType (simplifySpec spec)" [specType sspec] $
-          QC.counterexample ("\n" ++ show ("simplifySpec spec =" /> pretty sspec)) $
+          QC.counterexample ("\n" ++ show (prettyPlan sspec)) $
             QC.forAllBlind (strictGen $ genFromSpecT @_ @_ @GE sspec) $ \ge ->
               fromGEDiscard $ do
                 a <- ge
