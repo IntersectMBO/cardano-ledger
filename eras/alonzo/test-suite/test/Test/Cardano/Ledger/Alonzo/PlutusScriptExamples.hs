@@ -13,70 +13,70 @@ module Test.Cardano.Ledger.Alonzo.PlutusScriptExamples (
 )
 where
 
-import Cardano.Ledger.Alonzo (Alonzo)
-import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Core (EraCrypto, eraProtVerLow)
-import Cardano.Ledger.Plutus.Evaluate (
-  PlutusWithContext (..),
-  ScriptResult (Fails, Passes),
-  runPlutusScript,
- )
-import Cardano.Ledger.Plutus.Language (
-  Language (..),
-  Plutus (..),
-  PlutusLanguage (..),
-  SLanguage (..),
-  hashPlutusScript,
-  plutusLanguage,
- )
-import Data.Bifunctor (first)
-import GHC.Stack
-import qualified PlutusLedgerApi.Common as P
-import Test.Cardano.Ledger.Plutus (
-  alwaysFailsPlutus,
-  alwaysSucceedsPlutus,
-  testingEvaluationContext,
-  zeroTestingCostModel,
- )
-import Test.Cardano.Ledger.Plutus.Examples
+-- import Cardano.Ledger.Alonzo (Alonzo)
+-- import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusTxInfo)
+-- import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+-- import Cardano.Ledger.Core (EraCrypto, eraProtVerLow)
+-- import Cardano.Ledger.Plutus.Evaluate (
+--   PlutusWithContext (..),
+--   ScriptResult (Fails, Passes),
+--   runPlutusScript,
+--  )
+-- import Cardano.Ledger.Plutus.Language (
+--   Language (..),
+--   Plutus (..),
+--   PlutusLanguage (..),
+--   SLanguage (..),
+--   hashPlutusScript,
+--   plutusLanguage,
+--  )
+-- import Data.Bifunctor (first)
+-- import GHC.Stack
+-- import qualified PlutusLedgerApi.Common as P
+-- import Test.Cardano.Ledger.Plutus (
+--   alwaysFailsPlutus,
+--   alwaysSucceedsPlutus,
+--   testingEvaluationContext,
+--   zeroTestingCostModel,
+--  )
+-- import Test.Cardano.Ledger.Plutus.Examples
 import Test.Tasty
-import Test.Tasty.HUnit (Assertion, assertBool, testCase)
+-- import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 
 -- =============================================
 
-data ShouldSucceed = ShouldSucceed | ShouldFail
+-- data ShouldSucceed = ShouldSucceed | ShouldFail
 
-directPlutusTest ::
-  forall era l.
-  (HasCallStack, EraPlutusTxInfo l era) =>
-  ShouldSucceed ->
-  Plutus l ->
-  PlutusArgs l ->
-  Assertion
-directPlutusTest expectation plutus args =
-  case (expectation, evalWithTightBudget) of
-    (ShouldSucceed, Left e) ->
-      assertBool ("This script should have succeeded, but: " <> show e) False
-    (ShouldSucceed, Right _) ->
-      assertBool "" True
-    (ShouldFail, Left ((P.CekError _))) ->
-      assertBool "" True -- TODO rule out cost model failure
-    (ShouldFail, Left e) ->
-      assertBool ("Not the script failure we expected: " <> show e) False
-    (ShouldFail, Right _) ->
-      assertBool "This script should have failed" False
-  where
-    lang = plutusLanguage plutus
-    evalContext = testingEvaluationContext lang
-    -- Evaluate a script with sufficient budget to run it.
-    pv = eraProtVerLow @era
-    evalWithTightBudget :: Either P.EvaluationError P.ExBudget
-    evalWithTightBudget = do
-      plutusRunnable <- first P.CodecError $ decodePlutusRunnable pv plutus
-      budget <-
-        snd $ evaluatePlutusRunnableBudget pv P.Quiet evalContext plutusRunnable args
-      snd $ evaluatePlutusRunnable pv P.Verbose evalContext budget plutusRunnable args
+-- directPlutusTest ::
+--   forall era l.
+--   (HasCallStack, EraPlutusTxInfo l era) =>
+--   ShouldSucceed ->
+--   Plutus l ->
+--   PlutusArgs l ->
+--   Assertion
+-- directPlutusTest expectation plutus args =
+--   case (expectation, evalWithTightBudget) of
+--     (ShouldSucceed, Left e) ->
+--       assertBool ("This script should have succeeded, but: " <> show e) False
+--     (ShouldSucceed, Right _) ->
+--       assertBool "" True
+--     (ShouldFail, Left ((P.CekError _))) ->
+--       assertBool "" True -- TODO rule out cost model failure
+--     (ShouldFail, Left e) ->
+--       assertBool ("Not the script failure we expected: " <> show e) False
+--     (ShouldFail, Right _) ->
+--       assertBool "This script should have failed" False
+--   where
+--     lang = plutusLanguage plutus
+--     evalContext = testingEvaluationContext lang
+--     -- Evaluate a script with sufficient budget to run it.
+--     pv = eraProtVerLow @era
+--     evalWithTightBudget :: Either P.EvaluationError P.ExBudget
+--     evalWithTightBudget = do
+--       plutusRunnable <- first P.CodecError $ decodePlutusRunnable pv plutus
+--       budget <-
+--         snd $ evaluatePlutusRunnableBudget pv P.Quiet evalContext plutusRunnable args
+--       snd $ evaluatePlutusRunnable pv P.Verbose evalContext budget plutusRunnable args
 
 tests :: TestTree
 tests =
@@ -158,28 +158,28 @@ tests =
 
 -- =========================================
 
-explainTest ::
-  forall era l.
-  EraPlutusTxInfo l era =>
-  Plutus l ->
-  ShouldSucceed ->
-  PlutusArgs l ->
-  Assertion
-explainTest plutus mode args =
-  let pwc =
-        PlutusWithContext
-          { pwcProtocolVersion = eraProtVerLow @era
-          , pwcScript = Left plutus
-          , pwcScriptHash = hashPlutusScript @l @(EraCrypto era) plutus
-          , pwcArgs = args
-          , pwcExUnits = ExUnits 100000000 10000000
-          , pwcCostModel = zeroTestingCostModel (plutusLanguage plutus)
-          }
-   in case (mode, runPlutusScript pwc) of
-        (ShouldSucceed, Passes _) -> assertBool "" True
-        (ShouldSucceed, Fails _ xs) -> assertBool (show xs) False
-        (ShouldFail, Passes _) -> assertBool ("Test that should fail, passes: " ++ show pwc) False
-        (ShouldFail, Fails _ _) -> assertBool "" True
+-- explainTest ::
+--   forall era l.
+--   EraPlutusTxInfo l era =>
+--   Plutus l ->
+--   ShouldSucceed ->
+--   PlutusArgs l ->
+--   Assertion
+-- explainTest plutus mode args =
+--   let pwc =
+--         PlutusWithContext
+--           { pwcProtocolVersion = eraProtVerLow @era
+--           , pwcScript = Left plutus
+--           , pwcScriptHash = hashPlutusScript @l @(EraCrypto era) plutus
+--           , pwcArgs = args
+--           , pwcExUnits = ExUnits 100000000 10000000
+--           , pwcCostModel = zeroTestingCostModel (plutusLanguage plutus)
+--           }
+--    in case (mode, runPlutusScript pwc) of
+--         (ShouldSucceed, Passes _) -> assertBool "" True
+--         (ShouldSucceed, Fails _ xs) -> assertBool (show xs) False
+--         (ShouldFail, Passes _) -> assertBool ("Test that should fail, passes: " ++ show pwc) False
+--         (ShouldFail, Fails _ _) -> assertBool "" True
 
 -- explainTestTree :: TestTree
 -- explainTestTree =
