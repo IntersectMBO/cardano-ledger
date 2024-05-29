@@ -93,7 +93,7 @@ data PulsingSnapshot era = PulsingSnapshot
   { psProposals :: !(StrictSeq (GovActionState era))
   , psDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
   , psDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
-  , psPoolDistr :: !(Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
+  , psPoolDistr :: Map (KeyHash 'StakePool (EraCrypto era)) (CompactForm Coin)
   }
   deriving (Generic)
 
@@ -110,7 +110,7 @@ psDRepStateL = lens psDRepState (\x y -> x {psDRepState = y})
 psPoolDistrL ::
   Lens'
     (PulsingSnapshot era)
-    (Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era)))
+    (Map (KeyHash 'StakePool (EraCrypto era)) (CompactForm Coin))
 psPoolDistrL = lens psPoolDistr (\x y -> x {psPoolDistr = y})
 
 deriving instance EraPParams era => Eq (PulsingSnapshot era)
@@ -367,7 +367,11 @@ class
 finishDRepPulser :: forall era. DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
 finishDRepPulser (DRComplete snap ratifyState) = (snap, ratifyState)
 finishDRepPulser (DRPulsing (DRepPulser {..})) =
-  ( PulsingSnapshot dpProposals finalDRepDistr dpDRepState (unPoolDistr finalStakePoolDistr)
+  ( PulsingSnapshot
+      dpProposals
+      finalDRepDistr
+      dpDRepState
+      (Map.map individualTotalPoolStake $ unPoolDistr finalStakePoolDistr)
   , ratifyState'
   )
   where

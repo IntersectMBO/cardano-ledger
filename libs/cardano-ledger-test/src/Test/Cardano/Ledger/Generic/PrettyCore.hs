@@ -2939,7 +2939,7 @@ pcPulsingSnapshot (PulsingSnapshot ps dd ds pd) =
     [ ("proposals", ppStrictSeq pcGovActionState ps)
     , ("drepDistr", ppMap pcDRep (pcCoin . fromCompact) dd)
     , ("drepState", ppMap pcCredential pcDRepState ds)
-    , ("poolDistr", ppMap pcKeyHash pcIndividualPoolStake pd)
+    , ("poolDistr", ppMap pcKeyHash (pcCoin . fromCompact) pd)
     ]
 
 instance PrettyA (PulsingSnapshot era) where

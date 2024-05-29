@@ -77,7 +77,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Governance (EraGov (..), FuturePParams (..))
 import Cardano.Ledger.Shelley.LedgerState
@@ -174,10 +173,10 @@ querySPOStakeDistr ::
   Set (KeyHash 'StakePool (EraCrypto era)) ->
   -- | Specify pool key hashes whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the pools will be returned.
-  Map (KeyHash 'StakePool (EraCrypto era)) (IndividualPoolStake (EraCrypto era))
+  Map (KeyHash 'StakePool (EraCrypto era)) Coin
 querySPOStakeDistr nes keys
-  | null keys = distr
-  | otherwise = distr `Map.restrictKeys` keys
+  | null keys = Map.map fromCompact distr
+  | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` keys
   where
     distr = psPoolDistr . fst $ finishedPulserState nes
 
