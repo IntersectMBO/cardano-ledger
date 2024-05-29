@@ -2895,7 +2895,7 @@ instance Reflect era => PrettyA (EnactState era) where
   prettyA = pcEnactState reify
 
 pcGovActionId :: GovActionId c -> PDoc
-pcGovActionId (GovActionId txid (GovActionIx a)) = ppSexp "GovActId" [pcTxId txid, ppWord32 a]
+pcGovActionId (GovActionId txid (GovActionIx a)) = ppSexp "GovActId" [pcTxId txid, ppWord16 a]
 
 instance PrettyA (GovActionId c) where
   prettyA = pcGovActionId
