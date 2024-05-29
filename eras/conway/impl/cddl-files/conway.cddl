@@ -153,7 +153,7 @@ gov_action_id =
 required_signers = nonempty_set<addr_keyhash>
 
 transaction_input = [ transaction_id : $hash32
-                    , index : uint .size 8
+                    , index : uint .size 2
                     ]
 
 ; Both of the Alonzo and Babbage style TxOut formats are equally valid

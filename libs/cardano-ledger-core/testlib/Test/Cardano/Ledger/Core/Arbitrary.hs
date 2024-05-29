@@ -284,7 +284,8 @@ instance GenValid NonNegativeInterval where
   shrinkValid _ = []
 
 instance Arbitrary TxIx where
-  arbitrary = TxIx <$> arbitrary
+  -- starting with Conway, we only deserialize TxIx within Word16 range
+  arbitrary = TxIx . fromIntegral <$> arbitrary @Word16
 
 instance Arbitrary CertIx where
   arbitrary = CertIx <$> arbitrary

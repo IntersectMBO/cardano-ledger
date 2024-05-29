@@ -732,7 +732,14 @@ newtype BlocksMade c = BlocksMade
 -- | Transaction index.
 newtype TxIx = TxIx Word64
   deriving stock (Eq, Ord, Show, Generic)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR, ToJSON)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, FromCBOR, ToCBOR, EncCBOR, ToJSON)
+
+instance DecCBOR TxIx where
+  decCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      (TxIx . fromIntegral @Word16 @Word64 <$> decCBOR)
+      (TxIx <$> decCBOR)
 
 -- | Construct a `TxIx` from a 16 bit unsigned integer
 mkTxIx :: Word16 -> TxIx
@@ -741,7 +748,7 @@ mkTxIx = TxIx . fromIntegral
 txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
 
-txIxFromIntegral :: Integral a => a -> Maybe TxIx
+txIxFromIntegral :: (Integral a, MonadFail m) => a -> m TxIx
 txIxFromIntegral = fmap (TxIx . fromIntegral) . word16FromInteger . toInteger
 {-# INLINE txIxFromIntegral #-}
 
@@ -777,10 +784,11 @@ mkCertIxPartial i =
   fromMaybe (error $ "Value for CertIx is out of a valid range: " ++ show i) $
     certIxFromIntegral i
 
-word16FromInteger :: Integer -> Maybe Word16
+word16FromInteger :: MonadFail m => Integer -> m Word16
 word16FromInteger i
-  | i < fromIntegral (minBound :: Word16) || i > fromIntegral (maxBound :: Word16) = Nothing
-  | otherwise = Just (fromInteger i)
+  | i < fromIntegral (minBound :: Word16) || i > fromIntegral (maxBound :: Word16) =
+      fail ("Value " <> show i <> " exceeded expected maximum value 65535")
+  | otherwise = pure (fromInteger i)
 {-# INLINE word16FromInteger #-}
 
 -- =================================
