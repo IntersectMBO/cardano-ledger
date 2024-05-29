@@ -131,6 +131,7 @@ tests nightly =
     testSpecNoShrink "trueSpecUniform" trueSpecUniform
     testSpec "ifElseMany" ifElseMany
     testSpecNoShrink "propBack" propBack
+    testSpecNoShrink "propBack'" propBack'
     testSpec "complexUnion" complexUnion
     testSpec "unionBounded" unionBounded
     numberyTests

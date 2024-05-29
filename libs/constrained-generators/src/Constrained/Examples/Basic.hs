@@ -274,3 +274,11 @@ propBack = constrained' $ \x y ->
   , x <. 20
   , 8 <. y
   ]
+
+propBack' :: Specification BaseFn (Int, Int)
+propBack' = constrained' $ \x y ->
+  [ y ==. x - 10
+  , 20 >. x
+  , 8 >. y
+  , y >. x - 20
+  ]
