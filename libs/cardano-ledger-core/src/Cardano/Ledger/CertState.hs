@@ -631,7 +631,7 @@ vsNumDormantEpochsL = lens vsNumDormantEpochs (\vs u -> vs {vsNumDormantEpochs =
 
 vsActualDRepExpiry :: Credential 'DRepRole (EraCrypto era) -> VState era -> Maybe EpochNo
 vsActualDRepExpiry cred vs =
-  fmap (binOpEpochNo (+) (vsNumDormantEpochs vs) . drepExpiry) $ Map.lookup cred $ vsDReps vs
+  binOpEpochNo (+) (vsNumDormantEpochs vs) . drepExpiry <$> Map.lookup cred (vsDReps vs)
 
 csCommitteeCredsL ::
   Lens'

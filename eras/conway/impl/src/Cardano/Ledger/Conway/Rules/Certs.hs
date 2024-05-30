@@ -267,7 +267,7 @@ updateDormantDRepExpiry currentEpoch vState =
     else
       vState
         & vsNumDormantEpochsL .~ EpochNo 0
-        & vsDRepsL %~ fmap updateExpiry
+        & vsDRepsL %~ Map.map updateExpiry
   where
     numDormantEpochs = vState ^. vsNumDormantEpochsL
     updateExpiry =
