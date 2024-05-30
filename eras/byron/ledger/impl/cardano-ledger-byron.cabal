@@ -325,7 +325,7 @@ test-suite cardano-ledger-byron-test
         -Wall -Wno-all-missed-specialisations
         -Wno-missing-deriving-strategies -Wno-missing-import-lists
         -Wno-missing-safe-haskell-mode -Wno-prepositive-qualified-module
-        -Wno-safe -Wno-unsafe -Wunused-packages
+        -Wno-safe -Wno-unsafe -Wunused-packages -rtsopts
         "-with-rtsopts=-K450K -M500M"
 
     build-depends:
@@ -375,7 +375,7 @@ test-suite epoch-validation-normal-form-test
         -Wall -Wno-all-missed-specialisations
         -Wno-missing-deriving-strategies -Wno-missing-import-lists
         -Wno-missing-safe-haskell-mode -Wno-prepositive-qualified-module
-        -Wno-safe -Wno-unsafe -Wunused-packages
+        -Wno-safe -Wno-unsafe -Wunused-packages -rtsopts
         "-with-rtsopts=-K450K -M500M"
 
     build-depends:
