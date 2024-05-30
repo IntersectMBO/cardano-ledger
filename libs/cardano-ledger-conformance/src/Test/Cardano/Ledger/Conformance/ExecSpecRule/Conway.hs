@@ -93,6 +93,9 @@ import Test.Cardano.Ledger.Constrained.Conway (
   govEnvSpec,
   govProceduresSpec,
   govProposalsSpec,
+  pStateSpec,
+  poolCertSpec,
+  poolEnvSpec,
   txCertSpec,
   utxoEnvSpec,
   utxoStateSpec,
@@ -605,3 +608,15 @@ instance IsConwayUniv fn => ExecSpecRule fn "DELEG" Conway where
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.delegStep env st sig
+
+instance IsConwayUniv fn => ExecSpecRule fn "POOL" Conway where
+  environmentSpec _ = poolEnvSpec
+
+  stateSpec _ _ = pStateSpec
+
+  signalSpec _ env st = poolCertSpec env st
+
+  runAgdaRule env st sig =
+    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
+      . computationResultToEither
+      $ Agda.poolStep env st sig

@@ -232,6 +232,8 @@ instance ToExpr (ShelleyDelegEvent era)
 
 instance ToExpr (PoolEvent era)
 
+instance ToExpr (PParamsHKD Identity era) => ToExpr (PoolEnv era)
+
 instance
   ( ToExpr (Event (EraRule "NEWEPOCH" era))
   , ToExpr (Event (EraRule "RUPD" era))

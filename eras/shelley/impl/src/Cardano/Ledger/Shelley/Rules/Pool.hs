@@ -79,6 +79,8 @@ deriving instance Show (PParams era) => Show (PoolEnv era)
 
 deriving instance Eq (PParams era) => Eq (PoolEnv era)
 
+instance NFData (PParams era) => NFData (PoolEnv era)
+
 data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
       !(KeyHash 'StakePool (EraCrypto era)) -- KeyHash which cannot be retired since it is not registered
