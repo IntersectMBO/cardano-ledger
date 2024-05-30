@@ -387,7 +387,7 @@ protocol_param_update =
   , ? 5:  coin                   ; key deposit
   , ? 6:  coin                   ; pool deposit
   , ? 7:  epoch_interval         ; maximum epoch
-  , ? 8:  uint                   ; n_opt: desired number of stake pools
+  , ? 8:  uint .size 2           ; n_opt: desired number of stake pools
   , ? 9:  nonnegative_interval   ; pool pledge influence
   , ? 10: unit_interval          ; expansion rate
   , ? 11: unit_interval          ; treasury growth rate
@@ -397,12 +397,12 @@ protocol_param_update =
   , ? 19: ex_unit_prices         ; execution costs
   , ? 20: ex_units               ; max tx ex units
   , ? 21: ex_units               ; max block ex units
-  , ? 22: uint                   ; max value size
-  , ? 23: uint                   ; collateral percentage
-  , ? 24: uint                   ; max collateral inputs
+  , ? 22: uint .size 4           ; max value size
+  , ? 23: uint .size 2           ; collateral percentage
+  , ? 24: uint .size 2           ; max collateral inputs
   , ? 25: pool_voting_thresholds ; pool voting thresholds
   , ? 26: drep_voting_thresholds ; DRep voting thresholds
-  , ? 27: uint                   ; min committee size
+  , ? 27: uint .size 2           ; min committee size
   , ? 28: epoch_interval         ; committee term limit
   , ? 29: epoch_interval         ; governance action validity period
   , ? 30: coin                   ; governance action deposit
