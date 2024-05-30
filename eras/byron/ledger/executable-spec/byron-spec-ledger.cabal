@@ -69,7 +69,7 @@ test-suite byron-spec-ledger-test
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
         -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
-        "-with-rtsopts=-K4m -M150m"
+        -rtsopts "-with-rtsopts=-K4m -M150m"
 
     build-depends:
         base,

@@ -81,7 +81,7 @@ test-suite cardano-data-tests
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
         -Wincomplete-uni-patterns -Wredundant-constraints -Wunused-packages
-        -threaded
+        -threaded -rtsopts
 
     build-depends:
         base,

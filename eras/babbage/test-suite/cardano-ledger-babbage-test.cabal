@@ -81,7 +81,7 @@ test-suite cardano-ledger-babbage-test
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
         -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
-        -Wunused-packages
+        -Wunused-packages -rtsopts
 
     build-depends:
         base,
