@@ -22,7 +22,7 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: git@github.com:IntersectMBO/plutus.git
+  location: https://github.com/IntersectMBO/plutus.git
   tag: 0b040c178d7b72d7bc2c26f5e30af0a6f5130ef9
   --sha256: sha256-sp72LT1WPuxtzJzUVsoa0RzYvUZw2eSFMKg4nQFECBE=
   subdir:
