@@ -29,7 +29,6 @@ module Cardano.Ledger.Conway.Governance.DRepPulser (
   finishDRepPulser,
   computeDRepDistr,
   psDRepDistrG,
-  dormantEpoch,
   PulsingSnapshot (..),
   psProposalsL,
   psDRepDistrL,
@@ -79,7 +78,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), pulse)
 import Data.Sequence.Strict (StrictSeq (..))
-import qualified Data.Sequence.Strict as SS
 import Data.Void (Void, absurd)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -391,10 +389,6 @@ data DRepPulsingState era
       !(PulsingSnapshot era)
       !(RatifyState era)
   deriving (Generic, NoThunks, NFData)
-
-dormantEpoch :: DRepPulsingState era -> Bool
-dormantEpoch (DRPulsing x) = SS.null (dpProposals x)
-dormantEpoch (DRComplete b _) = SS.null (psProposals b)
 
 -- | This is potentially an expensive getter. Make sure not to use it in the first 80% of
 -- the epoch.

@@ -56,12 +56,13 @@ module Cardano.Ledger.CertState (
   vsDRepsL,
   vsCommitteeStateL,
   vsNumDormantEpochsL,
+  vsActualDRepExpiry,
   csCommitteeCredsL,
   lookupDepositVState,
 )
 where
 
-import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData, StrictMaybe)
+import Cardano.Ledger.BaseTypes (Anchor (..), AnchorData, StrictMaybe, binOpEpochNo)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   DecShareCBOR (..),
@@ -627,6 +628,10 @@ vsCommitteeStateL = lens vsCommitteeState (\vs u -> vs {vsCommitteeState = u})
 
 vsNumDormantEpochsL :: Lens' (VState era) EpochNo
 vsNumDormantEpochsL = lens vsNumDormantEpochs (\vs u -> vs {vsNumDormantEpochs = u})
+
+vsActualDRepExpiry :: Credential 'DRepRole (EraCrypto era) -> VState era -> Maybe EpochNo
+vsActualDRepExpiry cred vs =
+  binOpEpochNo (+) (vsNumDormantEpochs vs) . drepExpiry <$> Map.lookup cred (vsDReps vs)
 
 csCommitteeCredsL ::
   Lens'

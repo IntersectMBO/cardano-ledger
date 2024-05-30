@@ -21,6 +21,7 @@ module Cardano.Ledger.Conway.Rules.Certs (
   ConwayCertsPredFailure (..),
   ConwayCertsEvent (..),
   CertsEnv (..),
+  updateDormantDRepExpiry,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -28,7 +29,6 @@ import Cardano.Ledger.BaseTypes (
   Globals (..),
   ShelleyBase,
   SlotNo,
-  addEpochInterval,
   binOpEpochNo,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -40,13 +40,13 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (certDStateL, certVStateL, vsDRepsL, vsNumDormantEpochsL)
+import Cardano.Ledger.CertState (VState, certDStateL, certVStateL, vsDRepsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayCERTS, ConwayEra)
 import Cardano.Ledger.Conway.Governance (Voter (DRepVoter), VotingProcedures (unVotingProcedures))
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
-import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
+import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure, updateDRepExpiry)
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
@@ -198,6 +198,7 @@ conwayCertsTransition = do
 
   case certificates of
     Empty -> do
+      let drepActivity = pp ^. ppDRepActivityL
       -- If there is a new governance proposal to vote on in this transaction,
       -- AND the number of dormant-epochs recorded is greater than zero, we bump
       -- the expiry for all DReps by the number of dormant epochs, and reset the
@@ -208,28 +209,26 @@ conwayCertsTransition = do
       -- GOV, and so will this expiry bump done here. It will be discarded.
       let certState' =
             let hasProposals = not . OSet.null $ tx ^. bodyTxL . proposalProceduresTxBodyL
-                numDormantEpochs = certState ^. certVStateL . vsNumDormantEpochsL
-                isNumDormantEpochsNonZero = numDormantEpochs /= EpochNo 0
-             in if hasProposals && isNumDormantEpochsNonZero
-                  then
-                    certState
-                      & certVStateL . vsDRepsL %~ (<&> (drepExpiryL %~ binOpEpochNo (+) numDormantEpochs))
-                      & certVStateL . vsNumDormantEpochsL .~ EpochNo 0
+             in if hasProposals
+                  then certState & certVStateL %~ updateDormantDRepExpiry currentEpoch
                   else certState
 
       -- Update DRep expiry for all DReps that are voting in this transaction.
       -- This will execute in mutual-exclusion to the previous updates to DRep expiry,
       -- because if there are no proposals to vote on , there will be no votes either.
-      let drepActivity = pp ^. ppDRepActivityL
-          updatedVSDReps =
+      let numDormantEpochs = certState' ^. certVStateL . vsNumDormantEpochsL
+          updateVSDReps vsDReps =
             Map.foldlWithKey'
               ( \dreps voter _ -> case voter of
-                  DRepVoter cred -> Map.adjust (drepExpiryL .~ addEpochInterval currentEpoch drepActivity) cred dreps
+                  DRepVoter cred ->
+                    Map.adjust (updateDRepExpiry drepActivity currentEpoch numDormantEpochs) cred dreps
                   _ -> dreps
               )
-              (certState' ^. certVStateL . vsDRepsL)
+              vsDReps
               (unVotingProcedures $ tx ^. bodyTxL . votingProceduresTxBodyL)
-          certStateWithDRepExpiryUpdated = certState' & certVStateL . vsDRepsL .~ updatedVSDReps
+
+      -- Final CertState with updates to DRep expiry based on new proposals and votes on existing proposals
+      let certStateWithDRepExpiryUpdated = certState' & certVStateL . vsDRepsL %~ updateVSDReps
           dState = certStateWithDRepExpiryUpdated ^. certDStateL
           withdrawals = tx ^. bodyTxL . withdrawalsTxBodyL
 
@@ -254,3 +253,27 @@ instance
   where
   wrapFailed = CertFailure
   wrapEvent = CertEvent
+
+-- | Update dormant expiry for all DReps that are active.
+-- And also reset the `numDormantEpochs` counter.
+updateDormantDRepExpiry ::
+  -- | Current Epoch
+  EpochNo ->
+  VState era ->
+  VState era
+updateDormantDRepExpiry currentEpoch vState =
+  if numDormantEpochs == EpochNo 0
+    then vState
+    else
+      vState
+        & vsNumDormantEpochsL .~ EpochNo 0
+        & vsDRepsL %~ Map.map updateExpiry
+  where
+    numDormantEpochs = vState ^. vsNumDormantEpochsL
+    updateExpiry =
+      drepExpiryL
+        %~ \currentExpiry ->
+          let actualExpiry = binOpEpochNo (+) numDormantEpochs currentExpiry
+           in if actualExpiry < currentEpoch
+                then currentExpiry
+                else actualExpiry

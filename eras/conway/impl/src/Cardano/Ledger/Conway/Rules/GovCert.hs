@@ -18,6 +18,7 @@ module Cardano.Ledger.Conway.Rules.GovCert (
   ConwayGOVCERT,
   ConwayGovCertPredFailure (..),
   ConwayGovCertEnv (..),
+  updateDRepExpiry,
 )
 where
 
@@ -28,7 +29,12 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), encodeListLen)
 import Cardano.Ledger.Binary.Coders
-import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..), VState (..))
+import Cardano.Ledger.CertState (
+  CommitteeAuthorization (..),
+  CommitteeState (..),
+  VState (..),
+  vsNumDormantEpochsL,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOVCERT)
@@ -37,6 +43,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, DRepRole))
+import Cardano.Slotting.Slot (EpochInterval, binOpEpochNo)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   BaseM,
@@ -206,9 +213,11 @@ conwayGovCertTransition = do
           { vsDReps =
               Map.adjust
                 ( \drepState ->
-                    drepState
-                      & drepExpiryL .~ addEpochInterval cgceCurrentEpoch ppDRepActivity
-                      & drepAnchorL .~ mAnchor
+                    updateDRepExpiry
+                      ppDRepActivity
+                      cgceCurrentEpoch
+                      (vState ^. vsNumDormantEpochsL)
+                      $ drepState & drepAnchorL .~ mAnchor
                 )
                 cred
                 vsDReps
@@ -227,3 +236,19 @@ conwayGovCertTransition = do
                 { csCommitteeCreds = Map.insert coldCred hotCred csCommitteeCreds
                 }
           }
+
+updateDRepExpiry ::
+  -- | DRepActivity PParam
+  EpochInterval ->
+  -- | Current epoch
+  EpochNo ->
+  -- | The count of the dormant epochs
+  EpochNo ->
+  DRepState c ->
+  DRepState c
+updateDRepExpiry ppDRepActivity currentEpoch numDormantEpochs =
+  drepExpiryL
+    .~ binOpEpochNo
+      (-)
+      (addEpochInterval currentEpoch ppDRepActivity)
+      numDormantEpochs
