@@ -148,8 +148,7 @@ dRepSpec =
 
       -- epoch 0: we submit a proposal
       _ <- submitParamChangeProposal
-      replicateM_ 2 $ do
-        passEpoch
+      passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
         expectDRepExpiry drep 100
 
@@ -187,8 +186,7 @@ dRepSpec =
 
       -- epoch 0: we submit a proposal
       _ <- submitParamChangeProposal
-      replicateM_ 2 $ do
-        passEpoch
+      passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
         expectDRepExpiry drep 2
 
@@ -230,8 +228,7 @@ dRepSpec =
 
       -- epoch 0: we submit a proposal
       _ <- submitGovAction InfoAction
-      replicateM_ 2 $ do
-        passEpoch
+      passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
         expectDRepExpiry drep1 4
         expectDRepExpiry drep2 4
@@ -272,8 +269,7 @@ dRepSpec =
       expectNumDormantEpochs 0
       expectDRepExpiry drep1 9 -- 6 + 3
       expectDRepExpiry drep2 7 -- 4 + 3
-      replicateM_ 2 $ do
-        passEpoch
+      passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
         expectDRepExpiry drep1 9
         expectDRepExpiry drep2 7
@@ -287,8 +283,7 @@ dRepSpec =
 
       gai <- submitGovAction InfoAction
 
-      replicateM_ 2 $ do
-        passEpoch
+      passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
         expectDRepExpiry drep1 10
         expectActualDRepExpiry drep1 10

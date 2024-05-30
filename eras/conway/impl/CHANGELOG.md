@@ -28,6 +28,7 @@
   * Add `isDRepExpired`.
   * Remove `expectExtaDRepExpiry` in favour of `expectDRepExpiry`.
   * Add `expectActualDRepExpiry` that considers `numDormantEpochs`.
+  * Add `passNEpochsChecking`.
 * Add `ToExpr` instance for `RatifySignal`
 * Add `ToExpr` instances for:
   * `RatifySignal`
