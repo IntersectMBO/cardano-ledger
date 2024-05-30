@@ -37,7 +37,7 @@ jobs:
     strategy:
       matrix:
         ghc: ["8.10.7", "9.2.8", "9.6.4", "9.8.2"]
-        os: [ubuntu-latest]
+        os: [ubuntu-22.04]
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
@@ -150,7 +150,7 @@ jobs:
         - small-steps
         - vector-map
         ghc: ["8.10.7", "9.2.8", "9.6.4", "9.8.2"]
-        os: [ubuntu-latest]
+        os: [ubuntu-22.04]
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
@@ -252,7 +252,7 @@ jobs:
 
   complete:
     name: Tests completed
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: test
     if: always()
     steps:
@@ -270,7 +270,7 @@ jobs:
         esac
 
   fourmolu:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     defaults:
       run:
@@ -294,7 +294,7 @@ jobs:
       run: ./scripts/fourmolize.sh
 
   cabal-format:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     defaults:
       run:
@@ -309,7 +309,7 @@ jobs:
       run: ./scripts/cabal-format.sh
 
   gen-hie:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     defaults:
       run:
@@ -341,7 +341,7 @@ jobs:
 
   branch-history:
     name: Check branch history
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: ${{ github.base_ref != '' && github.head_ref != '' }}
     steps:
     - uses: actions/checkout@v4
@@ -355,7 +355,7 @@ jobs:
 
   notify-nightly-failure:
     name: Send a slack notification on \#ledger-internal if the nightly build failed
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs:
       - test
     if: always() && github.event_name == 'schedule' && needs.test.result == 'failure'
