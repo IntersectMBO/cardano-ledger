@@ -669,18 +669,23 @@ toPlutusV3Args proxy txInfo plutusPurpose maybeSpendingData redeemerData = do
         scriptPurposeToScriptInfo
           scriptPurpose
           (transDatum <$> maybeSpendingData)
-          (Babbage.transRedeemer redeemerData)
-  pure $ PlutusV3Args $ PV3.ScriptContext txInfo scriptInfo
+  pure $
+    PlutusV3Args $
+      PV3.ScriptContext
+        { PV3.scriptContextTxInfo = txInfo
+        , PV3.scriptContextRedeemer = Babbage.transRedeemer redeemerData
+        , PV3.scriptContextScriptInfo = scriptInfo
+        }
 
-scriptPurposeToScriptInfo :: PV3.ScriptPurpose -> Maybe PV1.Datum -> PV2.Redeemer -> PV3.ScriptInfo
-scriptPurposeToScriptInfo sp maybeSpendingData redeemerData =
+scriptPurposeToScriptInfo :: PV3.ScriptPurpose -> Maybe PV1.Datum -> PV3.ScriptInfo
+scriptPurposeToScriptInfo sp maybeSpendingData =
   case sp of
-    PV3.Spending txIn -> PV3.SpendingScript txIn maybeSpendingData redeemerData
-    PV3.Minting policyId -> PV3.MintingScript policyId redeemerData
-    PV3.Certifying ix txCert -> PV3.CertifyingScript ix txCert redeemerData
-    PV3.Rewarding rewardAccount -> PV3.RewardingScript rewardAccount redeemerData
-    PV3.Voting voter -> PV3.VotingScript voter redeemerData
-    PV3.Proposing ix proposal -> PV3.ProposingScript ix proposal redeemerData
+    PV3.Spending txIn -> PV3.SpendingScript txIn maybeSpendingData
+    PV3.Minting policyId -> PV3.MintingScript policyId
+    PV3.Certifying ix txCert -> PV3.CertifyingScript ix txCert
+    PV3.Rewarding rewardAccount -> PV3.RewardingScript rewardAccount
+    PV3.Voting voter -> PV3.VotingScript voter
+    PV3.Proposing ix proposal -> PV3.ProposingScript ix proposal
 
 -- ==========================
 -- Instances
