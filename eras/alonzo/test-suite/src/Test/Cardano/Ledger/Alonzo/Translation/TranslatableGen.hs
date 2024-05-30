@@ -41,13 +41,7 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   TranslationInstance (..),
   VersionedTxInfo (..),
  )
-import Test.QuickCheck (
-  Arbitrary,
-  Gen,
-  arbitrary,
-  elements,
-  vectorOf,
- )
+import Test.QuickCheck (Gen, arbitrary, elements, vectorOf)
 import Test.QuickCheck.Gen (Gen (MkGen))
 import Test.QuickCheck.Random (mkQCGen)
 
@@ -76,7 +70,6 @@ translationInstances ::
   ( AlonzoEraScript era
   , TranslatableGen era
   , Show (ContextError era)
-  , Arbitrary (PParams era)
   ) =>
   Int ->
   Int ->
@@ -99,7 +92,6 @@ genTranslationInstance ::
   ( AlonzoEraScript era
   , TranslatableGen era
   , Show (ContextError era)
-  , Arbitrary (PParams era)
   ) =>
   Gen (TranslationInstance era)
 genTranslationInstance = do

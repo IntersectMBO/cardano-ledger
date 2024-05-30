@@ -14,7 +14,6 @@ import Cardano.Ledger.Binary.Encoding (serialize)
 import Cardano.Ledger.Core
 import Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as BSL
-import Data.Functor.Identity (Identity)
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TranslatableGen (..),
@@ -28,7 +27,6 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   TranslationInstance (..),
   deserializeTranslationInstances,
  )
-import Test.QuickCheck (Arbitrary)
 import Test.Tasty.HUnit (Assertion, assertEqual)
 
 -- | Generates arguments for `ExtendedUTxO.txInfo`, applies them to it
@@ -38,7 +36,6 @@ generateGoldenFile ::
   ( Show (ContextError era)
   , AlonzoEraScript era
   , TranslatableGen era
-  , Arbitrary (PParamsHKD Identity era)
   ) =>
   FilePath ->
   IO ()
