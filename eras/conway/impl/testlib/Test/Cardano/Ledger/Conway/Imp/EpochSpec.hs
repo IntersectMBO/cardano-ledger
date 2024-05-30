@@ -148,7 +148,8 @@ dRepSpec =
 
       -- epoch 0: we submit a proposal
       _ <- submitParamChangeProposal
-      passNEpochsChecking 2 $ do
+      replicateM_ 2 $ do
+        passEpoch
         expectNumDormantEpochs 0
         expectDRepExpiry drep 100
 
@@ -186,7 +187,8 @@ dRepSpec =
 
       -- epoch 0: we submit a proposal
       _ <- submitParamChangeProposal
-      passNEpochsChecking 2 $ do
+      replicateM_ 2 $ do
+        passEpoch
         expectNumDormantEpochs 0
         expectDRepExpiry drep 2
 
@@ -224,13 +226,12 @@ dRepSpec =
       (drep1, _, _) <- setupSingleDRep 1_000_000 -- Receives an expiry update transaction certificate
       (drep2, _, _) <- setupSingleDRep 1_000_000 -- Turns inactive due to natural expiry
       (drep3, _, _) <- setupSingleDRep 1_000_000 -- Unregisters and gets deleted
-      let submitParamChangeProposal =
-            submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
       expectNumDormantEpochs 0
 
       -- epoch 0: we submit a proposal
-      _ <- submitParamChangeProposal
-      passNEpochsChecking 2 $ do
+      _ <- submitGovAction InfoAction
+      replicateM_ 2 $ do
+        passEpoch
         expectNumDormantEpochs 0
         expectDRepExpiry drep1 4
         expectDRepExpiry drep2 4
@@ -261,21 +262,55 @@ dRepSpec =
       -- drep2 has not expired since we now have dormant epochs
       expectNumDormantEpochs 3
       expectDRepExpiry drep1 6
+      expectActualDRepExpiry drep1 9
       expectDRepExpiry drep2 4
       expectActualDRepExpiry drep2 7
       expectDRepNotRegistered drep3
 
-      _ <- submitParamChangeProposal
+      _ <- submitGovAction InfoAction
       -- number of dormant epochs is added to the dreps expiry, and reset to 0
       expectNumDormantEpochs 0
-      expectDRepExpiry drep1 9
-      expectDRepExpiry drep2 7
-
-      passNEpochsChecking 3 $ do
-        -- passing epochs 6, 7 and 8.
+      expectDRepExpiry drep1 9 -- 6 + 3
+      expectDRepExpiry drep2 7 -- 4 + 3
+      replicateM_ 2 $ do
+        passEpoch
         expectNumDormantEpochs 0
         expectDRepExpiry drep1 9
         expectDRepExpiry drep2 7
+
+      passEpoch
+      expectNumDormantEpochs 1
+      expectDRepExpiry drep1 9
+      expectActualDRepExpiry drep1 10
+      expectDRepExpiry drep2 7
+      expectActualDRepExpiry drep2 8
+
+      gai <- submitGovAction InfoAction
+
+      replicateM_ 2 $ do
+        passEpoch
+        expectNumDormantEpochs 0
+        expectDRepExpiry drep1 10
+        expectActualDRepExpiry drep1 10
+        expectDRepExpiry drep2 8
+        expectActualDRepExpiry drep2 8
+
+      submitYesVote_ (DRepVoter drep2) gai
+
+      passEpoch
+      expectNumDormantEpochs 1
+      expectDRepExpiry drep1 10
+      expectActualDRepExpiry drep1 11
+      expectDRepExpiry drep2 14
+      expectActualDRepExpiry drep2 15
+
+      passEpoch
+      expectNumDormantEpochs 2
+      expectDRepExpiry drep1 10
+      expectActualDRepExpiry drep1 12
+      expectDRepExpiry drep2 14
+      expectActualDRepExpiry drep2 16
+
     it "DRep registration should succeed" $ do
       logEntry "Stake distribution before DRep registration:"
       logStakeDistr
