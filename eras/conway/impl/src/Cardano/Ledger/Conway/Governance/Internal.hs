@@ -454,9 +454,13 @@ votingCommitteeThresholdInternal currentEpoch pp committee (CommitteeState hotKe
   where
     threshold =
       case committeeThreshold <$> committee of
+        -- when we are not in a bootstrap phase,
         -- if the committee size is smaller than the minimum given in PParams,
         -- we treat it as if we had no committee
-        SJust t | activeCommitteeSize >= minSize -> VotingThreshold t
+        SJust t
+          | HF.bootstrapPhase (pp ^. ppProtocolVersionL)
+              || activeCommitteeSize >= minSize ->
+              VotingThreshold t
         _ -> NoVotingThreshold
     minSize = pp ^. ppCommitteeMinSizeL
     isActive coldKey validUntil =
