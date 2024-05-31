@@ -30,6 +30,7 @@ source-repository-package
     plutus-tx-plugin
     plutus-core
     plutus-ledger-api
+    plutus-metatheory
     prettyprinter-configurable
 
 index-state:
