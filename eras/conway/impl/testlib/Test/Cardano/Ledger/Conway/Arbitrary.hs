@@ -74,7 +74,7 @@ instance
   (Era era, Arbitrary (PParamsUpdate era)) =>
   Arbitrary (PulsingSnapshot era)
   where
-  arbitrary = PulsingSnapshot <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = PulsingSnapshot <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance
   (Arbitrary (PParams era), Arbitrary (PParamsUpdate era), Era era) =>

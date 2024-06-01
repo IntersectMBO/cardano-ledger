@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Ledger.Api.State.Query (
@@ -22,6 +21,9 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * @GetDRepStakeDistr@
   queryDRepStakeDistr,
+
+  -- * @GetSPOStakeDistr@
+  querySPOStakeDistr,
 
   -- * @GetCommitteeState@
   queryCommitteeState,
@@ -62,10 +64,13 @@ import Cardano.Ledger.Conway.Governance (
   Committee (committeeMembers),
   Constitution (constitutionAnchor),
   ConwayEraGov (..),
+  PulsingSnapshot,
+  RatifyState,
   committeeThresholdL,
   ensCommitteeL,
   finishDRepPulser,
   psDRepDistr,
+  psPoolDistr,
   rsEnactStateL,
  )
 import Cardano.Ledger.Core
@@ -126,7 +131,7 @@ queryConstitutionHash nes =
 
 -- | This query returns all of the state related to governance
 queryGovState :: NewEpochState era -> GovState era
-queryGovState nes = nes ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosGovStateL
+queryGovState nes = nes ^. nesEpochStateL . epochStateGovStateL
 
 -- | Query DRep state.
 queryDRepState ::
@@ -159,7 +164,21 @@ queryDRepStakeDistr nes creds
   | null creds = Map.map fromCompact distr
   | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` creds
   where
-    distr = psDRepDistr . fst $ finishDRepPulser (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL)
+    distr = psDRepDistr . fst $ finishedPulserState nes
+
+-- | Query pool stake distribution.
+querySPOStakeDistr ::
+  ConwayEraGov era =>
+  NewEpochState era ->
+  Set (KeyHash 'StakePool (EraCrypto era)) ->
+  -- | Specify pool key hashes whose stake distribution should be returned. When this set is
+  -- empty, distributions for all of the pools will be returned.
+  Map (KeyHash 'StakePool (EraCrypto era)) Coin
+querySPOStakeDistr nes keys
+  | null keys = Map.map fromCompact distr
+  | otherwise = Map.map fromCompact $ distr `Map.restrictKeys` keys
+  where
+    distr = psPoolDistr . fst $ finishedPulserState nes
 
 -- | Query committee members
 queryCommitteeState :: NewEpochState era -> CommitteeState era
@@ -273,7 +292,7 @@ getNextEpochCommitteeMembers ::
   NewEpochState era ->
   Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
 getNextEpochCommitteeMembers nes =
-  let ratifyState = snd . finishDRepPulser $ queryGovState nes ^. drepPulsingStateGovStateL
+  let ratifyState = snd $ finishedPulserState nes
       committee = ratifyState ^. rsEnactStateL . ensCommitteeL
    in foldMap' committeeMembers committee
 
@@ -292,3 +311,9 @@ queryFuturePParams nes =
     NoPParamsUpdate -> Nothing
     PotentialPParamsUpdate mpp -> mpp
     DefinitePParamsUpdate pp -> Just pp
+
+finishedPulserState ::
+  ConwayEraGov era =>
+  NewEpochState era ->
+  (PulsingSnapshot era, RatifyState era)
+finishedPulserState nes = finishDRepPulser (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL)

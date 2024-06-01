@@ -2933,12 +2933,13 @@ instance Reflect era => PrettyA (ConwayGovState era) where
   prettyA = pcConwayGovState reify
 
 pcPulsingSnapshot :: PulsingSnapshot era -> PDoc
-pcPulsingSnapshot (PulsingSnapshot x y z) =
+pcPulsingSnapshot (PulsingSnapshot ps dd ds pd) =
   ppRecord
     "Snapshot"
-    [ ("proposals", ppStrictSeq pcGovActionState x)
-    , ("drepDistr", ppMap pcDRep (pcCoin . fromCompact) y)
-    , ("drepState", ppMap pcCredential pcDRepState z)
+    [ ("proposals", ppStrictSeq pcGovActionState ps)
+    , ("drepDistr", ppMap pcDRep (pcCoin . fromCompact) dd)
+    , ("drepState", ppMap pcCredential pcDRepState ds)
+    , ("poolDistr", ppMap pcKeyHash (pcCoin . fromCompact) pd)
     ]
 
 instance PrettyA (PulsingSnapshot era) where

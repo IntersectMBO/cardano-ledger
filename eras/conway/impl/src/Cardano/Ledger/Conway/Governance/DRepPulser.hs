@@ -33,6 +33,7 @@ module Cardano.Ledger.Conway.Governance.DRepPulser (
   psProposalsL,
   psDRepDistrL,
   psDRepStateL,
+  psPoolDistrL,
   RunConwayRatify (..),
 ) where
 
@@ -60,7 +61,7 @@ import Cardano.Ledger.Conway.Governance.Procedures (GovActionState)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
-import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.UMap
 import qualified Cardano.Ledger.UMap as UMap
@@ -92,6 +93,7 @@ data PulsingSnapshot era = PulsingSnapshot
   { psProposals :: !(StrictSeq (GovActionState era))
   , psDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
   , psDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+  , psPoolDistr :: Map (KeyHash 'StakePool (EraCrypto era)) (CompactForm Coin)
   }
   deriving (Generic)
 
@@ -105,6 +107,12 @@ psDRepStateL ::
   Lens' (PulsingSnapshot era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 psDRepStateL = lens psDRepState (\x y -> x {psDRepState = y})
 
+psPoolDistrL ::
+  Lens'
+    (PulsingSnapshot era)
+    (Map (KeyHash 'StakePool (EraCrypto era)) (CompactForm Coin))
+psPoolDistrL = lens psPoolDistr (\x y -> x {psPoolDistr = y})
+
 deriving instance EraPParams era => Eq (PulsingSnapshot era)
 
 deriving instance EraPParams era => Show (PulsingSnapshot era)
@@ -114,11 +122,12 @@ instance EraPParams era => NFData (PulsingSnapshot era)
 instance EraPParams era => NoThunks (PulsingSnapshot era)
 
 toPulsingSnapshotsPairs :: (KeyValue e a, EraPParams era) => PulsingSnapshot era -> [a]
-toPulsingSnapshotsPairs gas@(PulsingSnapshot _ _ _) =
+toPulsingSnapshotsPairs gas@(PulsingSnapshot _ _ _ _) =
   let (PulsingSnapshot {..}) = gas
    in [ "psProposals" .= psProposals
       , "psDRepDistr" .= psDRepDistr
       , "psDRepState" .= psDRepState
+      , "psPoolDistr" .= psPoolDistr
       ]
 
 instance EraPParams era => ToJSON (PulsingSnapshot era) where
@@ -126,7 +135,7 @@ instance EraPParams era => ToJSON (PulsingSnapshot era) where
   toEncoding = pairs . mconcat . toPulsingSnapshotsPairs
 
 instance Default (PulsingSnapshot era) where
-  def = PulsingSnapshot mempty def def
+  def = PulsingSnapshot mempty def def def
 
 instance EraPParams era => EncCBOR (PulsingSnapshot era) where
   encCBOR PulsingSnapshot {..} =
@@ -135,6 +144,7 @@ instance EraPParams era => EncCBOR (PulsingSnapshot era) where
         !> To psProposals
         !> To psDRepDistr
         !> To psDRepState
+        !> To psPoolDistr
 
 -- TODO: Implement Sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
 instance EraPParams era => DecShareCBOR (PulsingSnapshot era) where
@@ -144,11 +154,13 @@ instance EraPParams era => DecShareCBOR (PulsingSnapshot era) where
         <! From
         <! From
         <! From
+        <! From
 
 instance EraPParams era => DecCBOR (PulsingSnapshot era) where
   decCBOR =
     decode $
       RecD PulsingSnapshot
+        <! From
         <! From
         <! From
         <! From
@@ -355,7 +367,13 @@ class
 finishDRepPulser :: forall era. DRepPulsingState era -> (PulsingSnapshot era, RatifyState era)
 finishDRepPulser (DRComplete snap ratifyState) = (snap, ratifyState)
 finishDRepPulser (DRPulsing (DRepPulser {..})) =
-  (PulsingSnapshot dpProposals finalDRepDistr dpDRepState, ratifyState')
+  ( PulsingSnapshot
+      dpProposals
+      finalDRepDistr
+      dpDRepState
+      (Map.map individualTotalPoolStake $ unPoolDistr finalStakePoolDistr)
+  , ratifyState'
+  )
   where
     !leftOver = Map.drop dpIndex $ umElems dpUMap
     (finalDRepDistr, finalStakePoolDistr) =

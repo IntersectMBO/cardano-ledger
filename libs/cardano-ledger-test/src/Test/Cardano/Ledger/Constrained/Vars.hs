@@ -1883,10 +1883,12 @@ pulsingSnapshotT =
   Invert
     "PulsingSnapshot"
     (typeRep @(PulsingSnapshot era))
-    (\x y -> PulsingSnapshot (SS.fromList x) (Map.map compactCoinOrError y))
+    ( \a b c d -> PulsingSnapshot (SS.fromList a) (Map.map compactCoinOrError b) c (Map.map compactCoinOrError d)
+    )
     :$ Lensed currGovStates (psProposalsL . strictSeqListL)
     :$ Lensed partialDRepDistr (psDRepDistrL . mapCompactFormCoinL)
     :$ Lensed prevDRepState psDRepStateL
+    :$ Lensed partialIndividualPoolStake (psPoolDistrL . mapCompactFormCoinL)
 
 pulsingSnapshotL :: Lens' (DRepPulsingState era) (PulsingSnapshot era)
 pulsingSnapshotL = lens getter setter
@@ -2030,6 +2032,9 @@ prevTreasury = Var $ V "prevTreasury" CoinR No
 prevTreasuryL :: Lens' (DRepPulser era Identity (RatifyState era)) Coin
 prevTreasuryL = lens dpTreasury (\x y -> x {dpTreasury = y})
 -}
+
+partialIndividualPoolStake :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
+partialIndividualPoolStake = Var $ V "partialIndividualPoolStake" (MapR PoolHashR CoinR) No
 
 -- ======================================
 -- ConwayGovState

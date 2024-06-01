@@ -592,7 +592,7 @@ instance Default AccountState where
 nesPdL :: Lens' (NewEpochState era) (PoolDistr (EraCrypto era))
 nesPdL = lens nesPd (\ds u -> ds {nesPd = u})
 
-{- Callled nesEpochStateL elsewhere -}
+{- Called nesEpochStateL elsewhere -}
 nesEsL :: Lens' (NewEpochState era) (EpochState era)
 nesEsL = lens nesEs (\ds u -> ds {nesEs = u})
 
@@ -691,7 +691,7 @@ ptrMapL = lens ptrMap (\x y -> x {ptrMap = y})
 -- ====================  Compound Lenses =======================
 
 newEpochStateGovStateL :: Lens' (NewEpochState era) (GovState era)
-newEpochStateGovStateL = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+newEpochStateGovStateL = nesEsL . epochStateGovStateL
 
 epochStateGovStateL :: Lens' (EpochState era) (GovState era)
 epochStateGovStateL = esLStateL . lsUTxOStateL . utxosGovStateL

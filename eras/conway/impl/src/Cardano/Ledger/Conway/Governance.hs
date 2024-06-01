@@ -149,6 +149,7 @@ module Cardano.Ledger.Conway.Governance (
   psProposalsL,
   psDRepDistrL,
   psDRepStateL,
+  psPoolDistrL,
   RunConwayRatify (..),
   govStatePrevGovActionIds,
   mkEnactState,
