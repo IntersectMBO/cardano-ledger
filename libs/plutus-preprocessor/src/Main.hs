@@ -93,14 +93,6 @@ displayScripts outh = do
         )
       ,
         ( \case
-            PlutusV1 -> PV1S.guess2args
-            PlutusV2 -> PV1S.guess2args
-            PlutusV3 -> PV3S.guess2args
-        , guessDecl2args
-        , "guessTheNumber2"
-        )
-      ,
-        ( \case
             PlutusV1 -> PV1S.guessTheNumberBytes
             PlutusV2 -> PV1S.guessTheNumberBytes
             PlutusV3 -> PV3S.guessTheNumberBytes
@@ -117,14 +109,6 @@ displayScripts outh = do
         )
       ,
         ( \case
-            PlutusV1 -> PV1S.odddataBytes
-            PlutusV2 -> PV1S.odddataBytes
-            PlutusV3 -> PV3S.odddataBytes
-        , odddataDecl
-        , "odddata3"
-        )
-      ,
-        ( \case
             PlutusV1 -> PV1S.evenRedeemerBytes
             PlutusV2 -> PV1S.evenRedeemerBytes
             PlutusV3 -> PV3S.evenRedeemerBytes
@@ -133,44 +117,11 @@ displayScripts outh = do
         )
       ,
         ( \case
-            PlutusV1 -> PV1S.oddRedeemerBytes
-            PlutusV2 -> PV1S.oddRedeemerBytes
-            PlutusV3 -> PV3S.oddRedeemerBytes
-        , oddRedeemerDecl
-        , "oddRedeemer3"
-        )
-      ,
-        ( \case
-            PlutusV1 -> PV1S.sumsTo10Bytes
-            PlutusV2 -> PV1S.sumsTo10Bytes
-            PlutusV3 -> PV3S.sumsTo10Bytes
-        , sumsTo10Decl
-        , "sumsTo103"
-        )
-      , -- 2 arg plutus scripts
-
-        ( \case
-            PlutusV1 -> PV1S.oddRedeemerBytes2Arg
-            PlutusV2 -> PV1S.oddRedeemerBytes2Arg
-            PlutusV3 -> PV3S.oddRedeemerBytes2Arg
-        , oddRedeemerDecl2Args
-        , "oddRedeemer2"
-        )
-      ,
-        ( \case
             PlutusV1 -> PV1S.evenRedeemerBytes2Args
             PlutusV2 -> PV1S.evenRedeemerBytes2Args
             PlutusV3 -> PV3S.evenRedeemerBytes2Args
         , evenRedeemerDecl2Args
         , "evenRedeemer2"
-        )
-      ,
-        ( \case
-            PlutusV1 -> PV1S.redeemerIs10Bytes2Args
-            PlutusV2 -> PV1S.redeemerIs10Bytes2Args
-            PlutusV3 -> PV3S.redeemerIs10Bytes2Args
-        , redeemerIs10Decl2Args
-        , "redeemerIs102"
         )
       ]
   forM_ scripts $ \(scriptBytesFun, scriptArgs, name) -> do

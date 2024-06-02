@@ -22,15 +22,9 @@ $alwaysSucceedsDecl3args
 $alwaysFailsDecl2args
 $alwaysFailsDecl3args
 $guessDecl
-$guessDecl2args
 $evendataDecl
 $evenRedeemerDecl
-$odddataDecl
-$oddRedeemerDecl
-$sumsTo10Decl
 $evenRedeemerDecl2Args
-$oddRedeemerDecl2Args
-$redeemerIs10Decl2Args
 
 -- ================================================================
 -- Compile the real functions as Plutus scripts, and get their
@@ -61,11 +55,6 @@ guessTheNumberBytes =
   PV3.serialiseCompiledCode
     $$(P.compile [||guessTheNumber'3||])
 
-guess2args :: ShortByteString
-guess2args =
-  PV3.serialiseCompiledCode
-    $$(P.compile [||guessTheNumber'2||])
-
 evendataBytes :: ShortByteString
 evendataBytes =
   PV3.serialiseCompiledCode
@@ -76,32 +65,7 @@ evenRedeemerBytes =
   PV3.serialiseCompiledCode
     $$(P.compile [||evenRedeemer'||])
 
-odddataBytes :: ShortByteString
-odddataBytes =
-  PV3.serialiseCompiledCode
-    $$(P.compile [||odddata'||])
-
-oddRedeemerBytes :: ShortByteString
-oddRedeemerBytes =
-  PV3.serialiseCompiledCode
-    $$(P.compile [||oddRedeemer'||])
-
-sumsTo10Bytes :: ShortByteString
-sumsTo10Bytes =
-  PV3.serialiseCompiledCode
-    $$(P.compile [||sumsTo10'||])
-
-oddRedeemerBytes2Arg :: ShortByteString
-oddRedeemerBytes2Arg =
-  PV3.serialiseCompiledCode
-    $$(P.compile [||oddRedeemer2'||])
-
 evenRedeemerBytes2Args :: ShortByteString
 evenRedeemerBytes2Args =
   PV3.serialiseCompiledCode
     $$(P.compile [||evenRedeemer2'||])
-
-redeemerIs10Bytes2Args :: ShortByteString
-redeemerIs10Bytes2Args =
-  PV3.serialiseCompiledCode
-    $$(P.compile [||redeemerIs102'||])
