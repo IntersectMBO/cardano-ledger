@@ -395,16 +395,10 @@ plutusTestScripts lang =
     , mkScriptTestEntry (alwaysSucceeds3 lang) $ PlutusArgs (P.I 0) (Just $ P.I 0)
     , mkScriptTestEntry (alwaysFails2 lang) $ PlutusArgs (P.I 0) Nothing
     , mkScriptTestEntry (alwaysFails3 lang) $ PlutusArgs (P.I 0) (Just $ P.I 0)
-    , mkScriptTestEntry (guessTheNumber2 lang) $ PlutusArgs (P.I 3) Nothing
     , mkScriptTestEntry (guessTheNumber3 lang) $ PlutusArgs (P.I 3) (Just $ P.I 3)
     , mkScriptTestEntry (evendata3 lang) $ PlutusArgs (P.I 4) (Just $ P.I 0)
-    , mkScriptTestEntry (odddata3 lang) $ PlutusArgs (P.I 3) (Just $ P.I 0)
     , mkScriptTestEntry (evenRedeemer3 lang) $ PlutusArgs (P.I 0) (Just $ P.I 2)
-    , mkScriptTestEntry (oddRedeemer3 lang) $ PlutusArgs (P.I 0) (Just $ P.I 3)
-    , mkScriptTestEntry (sumsTo103 lang) $ PlutusArgs (P.I 4) (Just $ P.I 6)
-    , mkScriptTestEntry (oddRedeemer2 lang) $ PlutusArgs (P.I 0) Nothing
     , mkScriptTestEntry (evenRedeemer2 lang) $ PlutusArgs (P.I 0) Nothing
-    , mkScriptTestEntry (redeemerIs102 lang) $ PlutusArgs (P.I 0) Nothing
     , mkScriptTestEntry (malformedPlutus @l) $ PlutusArgs (P.I 0) (Just $ P.I 0)
     ]
 
