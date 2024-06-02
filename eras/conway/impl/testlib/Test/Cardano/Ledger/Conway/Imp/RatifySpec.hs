@@ -20,6 +20,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys
+import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
@@ -52,8 +53,25 @@ relevantDuringBootstrapSpec ::
   forall era.
   ConwayEraImp era =>
   SpecWith (ImpTestState era)
-relevantDuringBootstrapSpec =
+relevantDuringBootstrapSpec = do
   spoVotesForHardForkInitiation
+  initiateHardForkWithLessThanMinimalCommitteeSize
+
+initiateHardForkWithLessThanMinimalCommitteeSize ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+initiateHardForkWithLessThanMinimalCommitteeSize =
+  it "Hard Fork can still be initiated with less than minimal committee size" $ do
+    (hotC :| _) <- registerInitialCommittee
+    passEpoch
+    modifyPParams $ ppCommitteeMinSizeL .~ 2
+    protVer <- getProtVer
+    gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+    submitYesVote_ (CommitteeVoter hotC) gai
+    if bootstrapPhase protVer
+      then isCommitteeAccepted gai `shouldReturn` True
+      else isCommitteeAccepted gai `shouldReturn` False
 
 committeeExpiryResignationDiscountSpec ::
   forall era.
