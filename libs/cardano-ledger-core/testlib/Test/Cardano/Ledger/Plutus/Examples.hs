@@ -28,6 +28,7 @@ decodeHexPlutus = either error (Plutus . PlutusBinary . SBS.toShort) . Base16.de
 alwaysSucceedsNoDatum :: SLanguage l -> Plutus l
 alwaysSucceedsNoDatum =
   decodeHexPlutus . mconcat . \case
+    -- ScriptHash "363d3944282b3d16b239235a112c0f6e2f1195de5067f61c0dfc0f5f"
     -- Preprocessed PlutusV1 Script:
     -- @@@
     -- alwaysSucceedsNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -37,6 +38,7 @@ alwaysSucceedsNoDatum =
     SPlutusV1 ->
       [ "4701000022120011"
       ]
+    -- ScriptHash "c0f8644a01a6bf5db02f4afe30d604975e63dd274f1098a1738e561d"
     -- Preprocessed PlutusV2 Script:
     -- @@@
     -- alwaysSucceedsNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -46,6 +48,7 @@ alwaysSucceedsNoDatum =
     SPlutusV2 ->
       [ "4701000022120011"
       ]
+    -- ScriptHash "15b8c4a75af63293453edc52a34a2bd738bde6c81631aa64ef76228f"
     -- Preprocessed PlutusV3 Script:
     -- @@@
     -- alwaysSucceedsNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -127,6 +130,7 @@ alwaysSucceedsNoDatum =
 alwaysSucceedsWithDatum :: SLanguage l -> Plutus l
 alwaysSucceedsWithDatum =
   decodeHexPlutus . mconcat . \case
+    -- ScriptHash "62bdc3d04d04376d516d31664944b25ce3affa76d17f8b5e1279b49d"
     -- Preprocessed PlutusV1 Script:
     -- @@@
     -- alwaysSucceedsWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -137,6 +141,7 @@ alwaysSucceedsWithDatum =
     SPlutusV1 ->
       [ "480100002221200101"
       ]
+    -- ScriptHash "3a888d65f16790950a72daee1f63aa05add6d268434107cfa5b67712"
     -- Preprocessed PlutusV2 Script:
     -- @@@
     -- alwaysSucceedsWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -147,6 +152,7 @@ alwaysSucceedsWithDatum =
     SPlutusV2 ->
       [ "480100002221200101"
       ]
+    -- ScriptHash "0b471cae918f512f5fc57eee848aea88bf44c0fbe68f7a8e183e3bfc"
     -- Preprocessed PlutusV3 Script:
     -- @@@
     -- alwaysSucceedsWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -228,6 +234,7 @@ alwaysSucceedsWithDatum =
 alwaysFailsNoDatum :: SLanguage l -> Plutus l
 alwaysFailsNoDatum =
   decodeHexPlutus . mconcat . \case
+    -- ScriptHash "f6210ccd14db6200883b2d2f678388160de1fee4a16554478c03c2bf"
     -- Preprocessed PlutusV1 Script:
     -- @@@
     -- alwaysFailsNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -237,6 +244,7 @@ alwaysFailsNoDatum =
     SPlutusV1 ->
       [ "450100002261"
       ]
+    -- ScriptHash "03d9bf874aa50cb845f4dcf011a223ed4b1ccd51b485990baa79d676"
     -- Preprocessed PlutusV2 Script:
     -- @@@
     -- alwaysFailsNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -246,6 +254,7 @@ alwaysFailsNoDatum =
     SPlutusV2 ->
       [ "450100002261"
       ]
+    -- ScriptHash "78076c92385d0cc096d343a76b98ae3474895a7d64b3e141fc990712"
     -- Preprocessed PlutusV3 Script:
     -- @@@
     -- alwaysFailsNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -328,6 +337,7 @@ alwaysFailsNoDatum =
 alwaysFailsWithDatum :: SLanguage l -> Plutus l
 alwaysFailsWithDatum =
   decodeHexPlutus . mconcat . \case
+    -- ScriptHash "6a09cb22defaf4a96a6be1ef6c07467ac9923d1750a79214a06c503a"
     -- Preprocessed PlutusV1 Script:
     -- @@@
     -- alwaysFailsWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -338,6 +348,7 @@ alwaysFailsWithDatum =
     SPlutusV1 ->
       [ "46010000222601"
       ]
+    -- ScriptHash "51936f3c98a04b6609aa9b5c832ba1182cf43a58e534fcc05db09d69"
     -- Preprocessed PlutusV2 Script:
     -- @@@
     -- alwaysFailsWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -348,6 +359,7 @@ alwaysFailsWithDatum =
     SPlutusV2 ->
       [ "46010000222601"
       ]
+    -- ScriptHash "61a2f28177fecb2172720461ab5a517530e4dceac8e5b54c01cfb23f"
     -- Preprocessed PlutusV3 Script:
     -- @@@
     -- alwaysFailsWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -364,6 +376,7 @@ alwaysFailsWithDatum =
 redeemerSameAsDatum :: SLanguage l -> Plutus l
 redeemerSameAsDatum =
   decodeHexPlutus . mconcat . \case
+    -- ScriptHash "602d69ee4384d53bd48d8c6a47b672426a96e68177598044966566a9"
     -- Preprocessed PlutusV1 Script:
     -- @@@
     -- redeemerSameAsDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -376,6 +389,7 @@ redeemerSameAsDatum =
     SPlutusV1 ->
       [ "520100002225333573466ebc00c00844800459"
       ]
+    -- ScriptHash "3fde446a58df11e157eab5fb125499d776b8935d5957e0fee8c9dd05"
     -- Preprocessed PlutusV2 Script:
     -- @@@
     -- redeemerSameAsDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -388,6 +402,7 @@ redeemerSameAsDatum =
     SPlutusV2 ->
       [ "520100002225333573466ebc00c00844800459"
       ]
+    -- ScriptHash "a09078910edd86c52275e8931d3a2aed946dd6ca1307685a2059d701"
     -- Preprocessed PlutusV3 Script:
     -- @@@
     -- redeemerSameAsDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -471,6 +486,7 @@ redeemerSameAsDatum =
 evenDatum :: SLanguage l -> Plutus l
 evenDatum =
   decodeHexPlutus . mconcat . \case
+    -- ScriptHash "36712a15ab4fa3b2a6a89f6f179d58a943248ead0f1dd9a0599bacb0"
     -- Preprocessed PlutusV1 Script:
     -- @@@
     -- evenDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -484,6 +500,7 @@ evenDatum =
     SPlutusV1 ->
       [ "581a0100002225333573466e1d20003370c6eb400d20041120011601"
       ]
+    -- ScriptHash "d48b5ac62c763dd9b5dc17c0f8913b9bb84120271668a5760de1beda"
     -- Preprocessed PlutusV2 Script:
     -- @@@
     -- evenDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -497,6 +514,7 @@ evenDatum =
     SPlutusV2 ->
       [ "581a0100002225333573466e1d20003370c6eb400d20041120011601"
       ]
+    -- ScriptHash "ce2ccbe439f8499b81e6718632a8a5001a2f7daae48bd4bdf6aca49b"
     -- Preprocessed PlutusV3 Script:
     -- @@@
     -- evenDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData -> ()
@@ -580,6 +598,7 @@ evenDatum =
 evenRedeemerNoDatum :: SLanguage l -> Plutus l
 evenRedeemerNoDatum =
   decodeHexPlutus . mconcat . \case
+    -- ScriptHash "29781cd93be59fe638d075f69e1e1a44db46e6519408e4b09ded1dbf"
     -- Preprocessed PlutusV1 Script:
     -- @@@
     -- evenRedeemerNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -592,6 +611,7 @@ evenRedeemerNoDatum =
     SPlutusV1 ->
       [ "5819010000225333573466e1d20003370c6eb40092004112001161"
       ]
+    -- ScriptHash "8844d04f8e10d8deeb81d9cb4c2339a3010639811ae99a495032fd82"
     -- Preprocessed PlutusV2 Script:
     -- @@@
     -- evenRedeemerNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -604,6 +624,7 @@ evenRedeemerNoDatum =
     SPlutusV2 ->
       [ "5819010000225333573466e1d20003370c6eb40092004112001161"
       ]
+    -- ScriptHash "5bc22dec23229cca7d70b99de254c34d4503e08f1196f3f560caffc2"
     -- Preprocessed PlutusV3 Script:
     -- @@@
     -- evenRedeemerNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -690,6 +711,7 @@ evenRedeemerNoDatum =
 evenRedeemerWithDatum :: SLanguage l -> Plutus l
 evenRedeemerWithDatum =
   decodeHexPlutus . mconcat . \case
+    -- ScriptHash "0a421e019df3c87ac8c6c56387d88ef3d69e1d2961f1370073d7c97d"
     -- Preprocessed PlutusV1 Script:
     -- @@@
     -- evenRedeemerWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -703,6 +725,7 @@ evenRedeemerWithDatum =
     SPlutusV1 ->
       [ "581a0100002225333573466e1d20003370c6eb400920041120011601"
       ]
+    -- ScriptHash "c8cb3724e1663af328c619cf2ae4902597b5a9932c83487f5b250282"
     -- Preprocessed PlutusV2 Script:
     -- @@@
     -- evenRedeemerWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
@@ -716,6 +739,7 @@ evenRedeemerWithDatum =
     SPlutusV2 ->
       [ "581a0100002225333573466e1d20003370c6eb400920041120011601"
       ]
+    -- ScriptHash "1815ec8a7ae872e9b18e3826dfe974a05c706e6fdfdcd75b904d61a5"
     -- Preprocessed PlutusV3 Script:
     -- @@@
     -- evenRedeemerWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->

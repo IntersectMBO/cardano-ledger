@@ -1,14 +1,23 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Plutus.Preprocessor (display) where
 
-import Cardano.Ledger.Plutus.Language (Language (..))
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Plutus.Language (
+  Language (..),
+  Plutus (..),
+  PlutusBinary (..),
+  asSLanguage,
+  hashPlutusScript,
+  withSLanguage,
+ )
 import qualified Cardano.Ledger.Plutus.Preprocessor.Binary.V1 as V1
 import qualified Cardano.Ledger.Plutus.Preprocessor.Binary.V2 as V2
 import qualified Cardano.Ledger.Plutus.Preprocessor.Binary.V3 as V3
-import Data.ByteString.Short as SBS (ShortByteString, fromShort)
+import Data.ByteString.Short as SBS (fromShort)
 import Data.Foldable (forM_)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -55,11 +64,15 @@ display h = do
              , indent "decodeHexPlutus . mconcat . \\case"
              ]
     forM_ [minBound .. maxBound] $ \lang -> do
-      let (scriptQ, scriptBytes) = scriptLangLookup lang
+      let (scriptQ, script@(PlutusBinary scriptBytes)) = scriptLangLookup lang
       compiledScript <- runQ scriptQ
       hPutStr h $
         unlines $
-          [ indent . indent . ("-- Preprocessed " ++) . shows lang $ " Script:"
+          [ indent . indent . ("-- " ++) $
+              show $
+                withSLanguage lang $
+                  \slang -> hashPlutusScript @StandardCrypto (asSLanguage slang (Plutus script))
+          , indent . indent . ("-- Preprocessed " ++) . shows lang $ " Script:"
           , indent . indent $ "-- @@@"
           ]
             ++ map (indent . indent . ("-- " ++)) (lines (pprint compiledScript))
@@ -77,7 +90,7 @@ display h = do
 -- write out the file header (module and imports), then 'display' the result
 -- for each plutus script.
 
-allTestScripts :: [(String, Language -> (Q [Dec], ShortByteString), NonEmpty String)]
+allTestScripts :: [(String, Language -> (Q [Dec], PlutusBinary), NonEmpty String)]
 allTestScripts =
   [
     ( "alwaysSucceedsNoDatum"
