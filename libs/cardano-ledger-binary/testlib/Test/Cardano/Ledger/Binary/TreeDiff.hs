@@ -166,18 +166,18 @@ instance ToExpr Term where
 hexByteStringExpr :: BS.ByteString -> [Expr]
 hexByteStringExpr bs =
   [ toExpr (BS.length bs)
-  , Lst (map toExpr $ showHexBytesGrouped bs)
+  , Lst (map toExpr $ showHexBytesGrouped 128 bs)
   ]
 
 -- | Show a ByteString as hex groups of 8bytes each. This is a slightly more
 -- useful form for debugging, rather than bunch of escaped characters.
-showHexBytesGrouped :: BS.ByteString -> [String]
-showHexBytesGrouped bs
+showHexBytesGrouped :: Int -> BS.ByteString -> [String]
+showHexBytesGrouped n bs
   | BS.null bs = []
   | otherwise =
-      ("0x" <> BS8.unpack (BS.take 128 bs16))
-        : [ "  " <> BS8.unpack (BS.take 128 $ BS.drop i bs16)
-          | i <- [128, 256 .. BS.length bs16 - 1]
+      ("0x" <> BS8.unpack (BS.take n bs16))
+        : [ "  " <> BS8.unpack (BS.take n $ BS.drop i bs16)
+          | i <- [n, 2 * n .. BS.length bs16 - 1]
           ]
   where
     bs16 = Base16.encode bs

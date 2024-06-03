@@ -355,7 +355,7 @@ mkScriptTestEntry script args =
 
 plutusTestScripts ::
   forall c l.
-  (Crypto c, PlutusLanguage l) =>
+  (Crypto c, PlutusTestScript l) =>
   SLanguage l ->
   Map.Map (ScriptHash c) ScriptTestContext
 plutusTestScripts lang =

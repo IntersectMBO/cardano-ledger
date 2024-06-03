@@ -169,6 +169,7 @@ library testlib
         aeson,
         aeson-pretty,
         base,
+        base16-bytestring,
         binary,
         bytestring,
         cardano-crypto-class,
