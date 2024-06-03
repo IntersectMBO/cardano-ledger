@@ -61,67 +61,67 @@ displayScripts outh = do
     scripts =
       [
         ( \case
-            PlutusV1 -> PV1S.alwaysSucceeds2argsBytes
-            PlutusV2 -> PV1S.alwaysSucceeds2argsBytes
-            PlutusV3 -> PV3S.alwaysSucceeds2argsBytes
-        , alwaysSucceedsDecl2args
-        , "alwaysSucceeds2"
+            PlutusV1 -> PV1S.alwaysSucceedsNoDatumBytes
+            PlutusV2 -> PV1S.alwaysSucceedsNoDatumBytes
+            PlutusV3 -> PV3S.alwaysSucceedsNoDatumBytes
+        , alwaysSucceedsNoDatumQ
+        , "alwaysSucceedsNoDatum"
         )
       ,
         ( \case
-            PlutusV1 -> PV1S.alwaysSucceeds3argsBytes
-            PlutusV2 -> PV1S.alwaysSucceeds3argsBytes
-            PlutusV3 -> PV3S.alwaysSucceeds3argsBytes
-        , alwaysSucceedsDecl3args
-        , "alwaysSucceeds3"
+            PlutusV1 -> PV1S.alwaysSucceedsWithDatumBytes
+            PlutusV2 -> PV1S.alwaysSucceedsWithDatumBytes
+            PlutusV3 -> PV3S.alwaysSucceedsWithDatumBytes
+        , alwaysSucceedsWithDatumQ
+        , "alwaysSucceedsWithDatum"
         )
       ,
         ( \case
-            PlutusV1 -> PV1S.alwaysFails2argsBytes
-            PlutusV2 -> PV1S.alwaysFails2argsBytes
-            PlutusV3 -> PV3S.alwaysFails2argsBytes
-        , alwaysFailsDecl2args
-        , "alwaysFails2"
+            PlutusV1 -> PV1S.alwaysFailsNoDatumBytes
+            PlutusV2 -> PV1S.alwaysFailsNoDatumBytes
+            PlutusV3 -> PV3S.alwaysFailsNoDatumBytes
+        , alwaysFailsNoDatumQ
+        , "alwaysFailsNoDatum"
         )
       ,
         ( \case
-            PlutusV1 -> PV1S.alwaysFails3argsBytes
-            PlutusV2 -> PV1S.alwaysFails3argsBytes
-            PlutusV3 -> PV3S.alwaysFails3argsBytes
-        , alwaysFailsDecl3args
-        , "alwaysFails3"
+            PlutusV1 -> PV1S.alwaysFailsWithDatumBytes
+            PlutusV2 -> PV1S.alwaysFailsWithDatumBytes
+            PlutusV3 -> PV3S.alwaysFailsWithDatumBytes
+        , alwaysFailsWithDatumQ
+        , "alwaysFailsWithDatum"
         )
       ,
         ( \case
-            PlutusV1 -> PV1S.guessTheNumberBytes
-            PlutusV2 -> PV1S.guessTheNumberBytes
-            PlutusV3 -> PV3S.guessTheNumberBytes
-        , guessDecl
-        , "guessTheNumber3"
+            PlutusV1 -> PV1S.redeemerSameAsDatumBytes
+            PlutusV2 -> PV1S.redeemerSameAsDatumBytes
+            PlutusV3 -> PV3S.redeemerSameAsDatumBytes
+        , redeemerSameAsDatumQ
+        , "redeemerSameAsDatum"
         )
       ,
         ( \case
-            PlutusV1 -> PV1S.evendataBytes
-            PlutusV2 -> PV1S.evendataBytes
-            PlutusV3 -> PV3S.evendataBytes
-        , evendataDecl
-        , "evendata3"
+            PlutusV1 -> PV1S.evenDatumBytes
+            PlutusV2 -> PV1S.evenDatumBytes
+            PlutusV3 -> PV3S.evenDatumBytes
+        , evenDatumQ
+        , "evenDatum"
         )
       ,
         ( \case
-            PlutusV1 -> PV1S.evenRedeemerBytes
-            PlutusV2 -> PV1S.evenRedeemerBytes
-            PlutusV3 -> PV3S.evenRedeemerBytes
-        , evenRedeemerDecl
-        , "evenRedeemer3"
+            PlutusV1 -> PV1S.evenRedeemerNoDatumBytes
+            PlutusV2 -> PV1S.evenRedeemerNoDatumBytes
+            PlutusV3 -> PV3S.evenRedeemerNoDatumBytes
+        , evenRedeemerNoDatumQ
+        , "evenRedeemerNoDatum"
         )
       ,
         ( \case
-            PlutusV1 -> PV1S.evenRedeemerBytes2Args
-            PlutusV2 -> PV1S.evenRedeemerBytes2Args
-            PlutusV3 -> PV3S.evenRedeemerBytes2Args
-        , evenRedeemerDecl2Args
-        , "evenRedeemer2"
+            PlutusV1 -> PV1S.evenRedeemerWithDatumBytes
+            PlutusV2 -> PV1S.evenRedeemerWithDatumBytes
+            PlutusV3 -> PV3S.evenRedeemerWithDatumBytes
+        , evenRedeemerWithDatumQ
+        , "evenRedeemerWithDatum"
         )
       ]
   forM_ scripts $ \(scriptBytesFun, scriptArgs, name) -> do

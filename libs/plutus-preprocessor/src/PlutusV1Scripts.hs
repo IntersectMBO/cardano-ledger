@@ -12,60 +12,57 @@ import qualified PlutusTx as P (compile)
 import ScriptSource
 
 -- ==========================================================================
--- Turn the Template Haskell Decls into real haskell functions using Template
--- Haskell top-level splices, of TH.Decl imported from PlutusScripts. We use
--- this 2 step process (1. define elsewhere as a TH.Decl, 2. splice here) so that
--- can export the actual text of the plutus code as a comment in the generated file.
+-- Turn the Template Haskell Declarations into real haskell functions
 
-$alwaysSucceedsDecl2args
-$alwaysSucceedsDecl3args
-$alwaysFailsDecl2args
-$alwaysFailsDecl3args
-$guessDecl
-$evendataDecl
-$evenRedeemerDecl
-$evenRedeemerDecl2Args
+$alwaysSucceedsNoDatumQ
+$alwaysSucceedsWithDatumQ
+$alwaysFailsNoDatumQ
+$alwaysFailsWithDatumQ
+$redeemerSameAsDatumQ
+$evenDatumQ
+$evenRedeemerNoDatumQ
+$evenRedeemerWithDatumQ
 
 -- ================================================================
--- Compile the real functions as Plutus scripts, and get their
--- bytestring equaivalents. Here is where we depend on plutus-plugin.
+-- Compile and serialize the real functions as Plutus scripts.
+-- Here is where we depend on plutus-plugin.
 
-alwaysSucceeds2argsBytes :: ShortByteString
-alwaysSucceeds2argsBytes =
+alwaysSucceedsNoDatumBytes :: ShortByteString
+alwaysSucceedsNoDatumBytes =
   PV1.serialiseCompiledCode
-    $$(P.compile [||alwaysSucceeds'2||])
+    $$(P.compile [||alwaysSucceedsNoDatum||])
 
-alwaysSucceeds3argsBytes :: ShortByteString
-alwaysSucceeds3argsBytes =
+alwaysSucceedsWithDatumBytes :: ShortByteString
+alwaysSucceedsWithDatumBytes =
   PV1.serialiseCompiledCode
-    $$(P.compile [||alwaysSucceeds'3||])
+    $$(P.compile [||alwaysSucceedsWithDatum||])
 
-alwaysFails2argsBytes :: ShortByteString
-alwaysFails2argsBytes =
+alwaysFailsNoDatumBytes :: ShortByteString
+alwaysFailsNoDatumBytes =
   PV1.serialiseCompiledCode
-    $$(P.compile [||alwaysFails'2||])
+    $$(P.compile [||alwaysFailsNoDatum||])
 
-alwaysFails3argsBytes :: ShortByteString
-alwaysFails3argsBytes =
+alwaysFailsWithDatumBytes :: ShortByteString
+alwaysFailsWithDatumBytes =
   PV1.serialiseCompiledCode
-    $$(P.compile [||alwaysFails'3||])
+    $$(P.compile [||alwaysFailsWithDatum||])
 
-guessTheNumberBytes :: ShortByteString
-guessTheNumberBytes =
+redeemerSameAsDatumBytes :: ShortByteString
+redeemerSameAsDatumBytes =
   PV1.serialiseCompiledCode
-    $$(P.compile [||guessTheNumber'3||])
+    $$(P.compile [||redeemerSameAsDatum||])
 
-evendataBytes :: ShortByteString
-evendataBytes =
+evenDatumBytes :: ShortByteString
+evenDatumBytes =
   PV1.serialiseCompiledCode
-    $$(P.compile [||evendata'||])
+    $$(P.compile [||evenDatum||])
 
-evenRedeemerBytes :: ShortByteString
-evenRedeemerBytes =
+evenRedeemerNoDatumBytes :: ShortByteString
+evenRedeemerNoDatumBytes =
   PV1.serialiseCompiledCode
-    $$(P.compile [||evenRedeemer'||])
+    $$(P.compile [||evenRedeemerNoDatum||])
 
-evenRedeemerBytes2Args :: ShortByteString
-evenRedeemerBytes2Args =
+evenRedeemerWithDatumBytes :: ShortByteString
+evenRedeemerWithDatumBytes =
   PV1.serialiseCompiledCode
-    $$(P.compile [||evenRedeemer2'||])
+    $$(P.compile [||evenRedeemerWithDatum||])
