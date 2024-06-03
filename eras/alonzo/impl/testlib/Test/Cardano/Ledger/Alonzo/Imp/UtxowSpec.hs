@@ -50,8 +50,8 @@ spec = describe "UTXOW" $ do
   let resetAddrWits tx = updateAddrTxWits $ tx & witsTxL . addrTxWitsL .~ []
   let fixupResetAddrWits = fixupPPHash >=> resetAddrWits
 
-  it "MissingRedeemers" $ do
-    let lang = eraMaxLanguage @era
+  it "MissingRedeemers" $ forM_ (eraLanguages @era) $ \lang -> do
+    logEntry $ "Testing for " ++ show lang
     let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     let missingRedeemer = mkSpendingPurpose $ AsItem txIn
@@ -65,8 +65,8 @@ spec = describe "UTXOW" $ do
             CollectErrors [NoRedeemer missingRedeemer]
         ]
 
-  it "MissingRequiredDatums" $ do
-    let lang = eraMaxLanguage @era
+  it "MissingRequiredDatums" $ forM_ (eraLanguages @era) $ \lang -> do
+    logEntry $ "Testing for " ++ show lang
     let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
@@ -78,8 +78,8 @@ spec = describe "UTXOW" $ do
             MissingRequiredDatums [missingDatum] []
         ]
 
-  it "NotAllowedSupplementalDatums" $ do
-    let lang = eraMaxLanguage @era
+  it "NotAllowedSupplementalDatums" $ forM_ (eraLanguages @era) $ \lang -> do
+    logEntry $ "Testing for " ++ show lang
     let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     let extraDatumHash = hashData @era (Data (P.I 30))
@@ -94,8 +94,8 @@ spec = describe "UTXOW" $ do
           NotAllowedSupplementalDatums [extraDatumHash] []
       ]
 
-  it "PPViewHashesDontMatch" $ do
-    let lang = eraMaxLanguage @era
+  it "PPViewHashesDontMatch" $ forM_ (eraLanguages @era) $ \lang -> do
+    logEntry $ "Testing for " ++ show lang
     let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     tx <- fixupTx $ mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
@@ -122,8 +122,8 @@ spec = describe "UTXOW" $ do
               PPViewHashesDontMatch SNothing (tx ^. bodyTxL . scriptIntegrityHashTxBodyL)
           ]
 
-  it "UnspendableUTxONoDatumHash" $ do
-    let lang = eraMaxLanguage @era
+  it "UnspendableUTxONoDatumHash" $ forM_ (eraLanguages @era) $ \lang -> do
+    logEntry $ "Testing for " ++ show lang
     let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
 
     txIn <- impAnn "Produce script at a txout with a missing datahash" $ do
