@@ -126,13 +126,11 @@ datumAndReferenceInputsSpec = do
               , mkTxInPartial producingTx 1
               ]
           & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
-    _ <-
-      submitFailingTx
-        consumingTx
-        ( pure . injectFailure . BabbageNonDisjointRefInputs $
-            mkTxInPartial producingTx 0 :| []
-        )
-    pure ()
+    submitFailingTx
+      consumingTx
+      ( pure . injectFailure . BabbageNonDisjointRefInputs $
+          mkTxInPartial producingTx 0 :| []
+      )
   it "fails when using inline datums for PlutusV1" $ do
     let shSpending = hashPlutusScript (redeemerSameAsDatum SPlutusV1)
     refTxOut <- mkRefTxOut shSpending
@@ -169,13 +167,11 @@ datumAndReferenceInputsSpec = do
               , mkTxInPartial producingTx 1
               ]
           & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
-    _ <-
-      submitFailingTx
+    submitFailingTx
         consumingTx
         ( pure . injectFailure . BabbageNonDisjointRefInputs $
             mkTxInPartial producingTx 0 :| []
         )
-    pure ()
   it "fails when using inline datums for PlutusV1" $ do
     let shSpending = hashPlutusScript $ redeemerSameAsDatum SPlutusV1
     refTxOut <- mkRefTxOut shSpending
