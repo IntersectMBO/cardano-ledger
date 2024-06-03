@@ -34,7 +34,7 @@ import Test.Cardano.Ledger.Alonzo.ImpTest (
   submitTx_,
  )
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Plutus.Examples (guessTheNumber3)
+import Test.Cardano.Ledger.Plutus.Examples (redeemerSameAsDatum)
 
 spec ::
   forall era.
@@ -43,7 +43,7 @@ spec ::
   ) =>
   SpecWith (ImpTestState era)
 spec = describe "UTXOS" $ do
-  let scriptHash = hashPlutusScript (guessTheNumber3 SPlutusV1)
+  let scriptHash = hashPlutusScript (redeemerSameAsDatum SPlutusV1)
   it "Plutus script transactions are fixed up" $ do
     txIn0 <- produceScript scriptHash
     submitTxAnn_ "Submit a transaction that consumes the script output" $

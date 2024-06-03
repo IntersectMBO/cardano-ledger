@@ -33,7 +33,7 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, fixupPPHash)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (guessTheNumber3)
+import Test.Cardano.Ledger.Plutus.Examples (redeemerSameAsDatum)
 import Test.Cardano.Ledger.Shelley.ImpTest
 
 spec ::
@@ -50,7 +50,7 @@ spec = describe "UTXOW" $ do
 
   it "MissingRedeemers" $ do
     let lang = eraMaxLanguage @era
-    let scriptHash = withSLanguage lang (hashPlutusScript . guessTheNumber3)
+    let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     let missingRedeemer = mkSpendingPurpose $ AsItem txIn
     let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
@@ -65,7 +65,7 @@ spec = describe "UTXOW" $ do
 
   it "MissingRequiredDatums" $ do
     let lang = eraMaxLanguage @era
-    let scriptHash = withSLanguage lang (hashPlutusScript . guessTheNumber3)
+    let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
     let missingDatum = hashData @era (Data (P.I 3))
@@ -78,7 +78,7 @@ spec = describe "UTXOW" $ do
 
   it "NotAllowedSupplementalDatums" $ do
     let lang = eraMaxLanguage @era
-    let scriptHash = withSLanguage lang (hashPlutusScript . guessTheNumber3)
+    let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     let extraDatumHash = hashData @era (Data (P.I 30))
     let extraDatum = Data (P.I 30)
@@ -94,7 +94,7 @@ spec = describe "UTXOW" $ do
 
   it "PPViewHashesDontMatch" $ do
     let lang = eraMaxLanguage @era
-    let scriptHash = withSLanguage lang (hashPlutusScript . guessTheNumber3)
+    let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     tx <- fixupTx $ mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 
@@ -122,7 +122,7 @@ spec = describe "UTXOW" $ do
 
   it "UnspendableUTxONoDatumHash" $ do
     let lang = eraMaxLanguage @era
-    let scriptHash = withSLanguage lang (hashPlutusScript . guessTheNumber3)
+    let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
 
     txIn <- impAnn "Produce script at a txout with a missing datahash" $ do
       let addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
@@ -147,7 +147,7 @@ spec = describe "UTXOW" $ do
       [injectFailure $ UnspendableUTxONoDatumHash [txIn]]
 
   it "ExtraRedeemers" $ do
-    let scriptHash = withSLanguage PlutusV1 (hashPlutusScript . guessTheNumber3)
+    let scriptHash = withSLanguage PlutusV1 (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     let prp = MintingPurpose (AsIx 2)
     dt <- arbitrary
