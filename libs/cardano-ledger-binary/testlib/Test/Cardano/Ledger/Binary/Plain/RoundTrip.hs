@@ -160,7 +160,7 @@ showFailedTermsWithReSerialization encodedBytes mReEncodedBytes =
           decTerm = case decodeFullDecoder' "Term" decodeTerm bytes of
             Left err -> Left $ "Could not decode as Term: " ++ show err
             Right term -> Right term
-          hexLines = showHexBytesGrouped bytes
+          hexLines = showHexBytesGrouped 128 bytes
        in (decTerm, hexLines, [name ++ ":", either id showExpr decTerm])
 
 -- | A definition of a CBOR trip through binary representation of one type to
