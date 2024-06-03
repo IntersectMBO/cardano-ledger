@@ -39,17 +39,6 @@ display h scriptBytesFun code name = do
     hPutStrLn h $ "    S" <> show lang <> " -> " <> show (unpack (scriptBytesFun lang))
   hPutStrLn h "  )"
 
-manylines :: Show t => Handle -> Int -> [t] -> IO ()
-manylines h n ts' = write (split ts')
-  where
-    split [] = []
-    split ts = take n ts : split (drop n ts)
-    write [] = pure ()
-    write [ts] = hPutStrLn h (show ts ++ "]")
-    write (ts : tss) = do
-      hPutStr h (show ts ++ ",\n   ")
-      write tss
-
 -- ========================================================================
 -- Generate the PlutusScripts.hs which does not depend on plutus-plugin.
 -- write out the file header (module and imports), then 'display' the result
