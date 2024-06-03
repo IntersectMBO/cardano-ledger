@@ -1,18 +1,17 @@
-cabal-version:      3.0
-name:               plutus-preprocessor
-version:            0.1.0.0
-license:            Apache-2.0
-maintainer:         operations@iohk.io
-author:             IOHK
-bug-reports:        https://github.com/intersectmbo/cardano-ledger/issues
+cabal-version: 3.0
+name:          plutus-preprocessor
+version:       9.9.9.9
+license:       Apache-2.0
+maintainer:    operations@iohk.io
+author:        IOHK
+bug-reports:   https://github.com/intersectmbo/cardano-ledger/issues
 synopsis:
     A preproceesor for creating plutus scripts as bytestrings and equivalents
 
 description:
     Use this file to compile plutus scripts and to generate bytestring equivalents as text
 
-category:           Network
-extra-source-files: CHANGELOG.md
+category:      Network
 
 source-repository head
     type:     git
