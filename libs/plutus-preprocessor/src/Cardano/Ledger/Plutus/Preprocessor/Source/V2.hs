@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module ScriptSource where
+module Cardano.Ledger.Plutus.Preprocessor.Source.V2 where
 
 import Language.Haskell.TH
 import qualified PlutusTx.Builtins as P

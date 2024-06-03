@@ -4,7 +4,7 @@
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 {-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
 
-module PlutusV1Scripts where
+module Cardano.Ledger.Plutus.Preprocessor.Binary.V1 where
 
 import Data.ByteString.Short (ShortByteString)
 import Language.Haskell.TH
