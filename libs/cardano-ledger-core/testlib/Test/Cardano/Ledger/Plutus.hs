@@ -29,6 +29,7 @@ module Test.Cardano.Ledger.Plutus (
 import Cardano.Ledger.Plutus.CostModels (
   CostModel,
   CostModels,
+  costModelParamsCount,
   getCostModelEvaluationContext,
   mkCostModel,
   mkCostModels,
@@ -38,6 +39,7 @@ import Cardano.Ledger.Plutus.Language (
   Plutus (..),
   PlutusBinary (..),
  )
+import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import GHC.Stack
 import Numeric.Natural (Natural)
@@ -55,12 +57,8 @@ import Test.Cardano.Ledger.Plutus.ScriptTestContext (
  )
 
 -- | Construct a test cost model where all parameters are set to the same value
-mkCostModelConst :: HasCallStack => Language -> Integer -> CostModel
-mkCostModelConst lang x =
-  case lang of
-    PlutusV1 -> mkCostModel' lang (x <$ PV1.costModelParamsForTesting)
-    PlutusV2 -> mkCostModel' lang (x <$ PV2.costModelParamsForTesting)
-    PlutusV3 -> mkCostModel' lang (x <$ PV3.costModelParamsForTesting)
+mkCostModelConst :: HasCallStack => Language -> Int64 -> CostModel
+mkCostModelConst lang = mkCostModel' lang . replicate (costModelParamsCount lang)
 
 mkCostModel' :: (Integral i, Show i, HasCallStack) => Language -> [i] -> CostModel
 mkCostModel' lang params =
@@ -104,13 +102,22 @@ testingCostModel = \case
   PlutusV3 -> testingCostModelV3
 
 testingCostModelV1 :: HasCallStack => CostModel
-testingCostModelV1 = mkCostModel' PlutusV1 $ snd <$> PV1.costModelParamsForTesting
+testingCostModelV1 =
+  if True
+    then zeroTestingCostModelV1
+    else mkCostModel' PlutusV1 $ snd <$> PV1.costModelParamsForTesting
 
 testingCostModelV2 :: HasCallStack => CostModel
-testingCostModelV2 = mkCostModel' PlutusV2 $ snd <$> PV2.costModelParamsForTesting
+testingCostModelV2 =
+  if True
+    then zeroTestingCostModelV2
+    else mkCostModel' PlutusV2 $ snd <$> PV2.costModelParamsForTesting
 
 testingCostModelV3 :: HasCallStack => CostModel
-testingCostModelV3 = mkCostModel' PlutusV3 $ snd <$> PV3.costModelParamsForTesting
+testingCostModelV3 =
+  if True
+    then zeroTestingCostModelV3
+    else mkCostModel' PlutusV3 $ snd <$> PV3.costModelParamsForTesting
 
 testingEvaluationContext :: Language -> PV1.EvaluationContext
 testingEvaluationContext = getCostModelEvaluationContext . testingCostModel
