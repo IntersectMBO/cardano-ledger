@@ -38,7 +38,7 @@ import Test.Cardano.Ledger.Core.KeyPair (mkScriptAddr)
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceeds3)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsWithDatum)
 
 spec ::
   forall era.
@@ -91,10 +91,10 @@ spec =
         (fromNativeScript @era <$>)
           <$> replicateM 3 nativeScript
       let
-        psh1 = hashPlutusScript $ alwaysSucceeds3 SPlutusV3
+        psh1 = hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV3
       ps1 <- impAnn "Expecting Plutus script" . expectJust $ impLookupPlutusScriptMaybe psh1
       let
-        psh2 = hashPlutusScript $ alwaysSucceeds3 SPlutusV3
+        psh2 = hashPlutusScript $ alwaysSucceedsWithDatum SPlutusV3
       ps2 <- impAnn "Expecting Plutus script" . expectJust $ impLookupPlutusScriptMaybe psh2
       let plutusScripts = [fromPlutusScript ps1, fromPlutusScript ps2]
       pure $ nativeScripts ++ plutusScripts

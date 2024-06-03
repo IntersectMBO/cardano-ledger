@@ -6,58 +6,58 @@ import Language.Haskell.TH
 import qualified PlutusTx.Builtins as P
 import qualified PlutusTx.Prelude as P
 
-alwaysSucceedsDecl2args :: Q [Dec]
-alwaysSucceedsDecl2args =
+alwaysSucceedsNoDatumQ :: Q [Dec]
+alwaysSucceedsNoDatumQ =
   [d|
-    alwaysSucceeds'2 :: P.BuiltinData -> P.BuiltinData -> ()
-    alwaysSucceeds'2 _ _ = ()
+    alwaysSucceedsNoDatum :: P.BuiltinData -> P.BuiltinData -> ()
+    alwaysSucceedsNoDatum _ _ = ()
     |]
 
-alwaysSucceedsDecl3args :: Q [Dec]
-alwaysSucceedsDecl3args =
+alwaysSucceedsWithDatumQ :: Q [Dec]
+alwaysSucceedsWithDatumQ =
   [d|
-    alwaysSucceeds'3 :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
-    alwaysSucceeds'3 _ _ _ = ()
+    alwaysSucceedsWithDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
+    alwaysSucceedsWithDatum _ _ _ = ()
     |]
 
-alwaysFailsDecl2args :: Q [Dec]
-alwaysFailsDecl2args =
+alwaysFailsNoDatumQ :: Q [Dec]
+alwaysFailsNoDatumQ =
   [d|
-    alwaysFails'2 :: P.BuiltinData -> P.BuiltinData -> ()
-    alwaysFails'2 _ _ = P.error ()
+    alwaysFailsNoDatum :: P.BuiltinData -> P.BuiltinData -> ()
+    alwaysFailsNoDatum _ _ = P.error ()
     |]
 
-alwaysFailsDecl3args :: Q [Dec]
-alwaysFailsDecl3args =
+alwaysFailsWithDatumQ :: Q [Dec]
+alwaysFailsWithDatumQ =
   [d|
-    alwaysFails'3 :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
-    alwaysFails'3 _ _ _ = P.error ()
+    alwaysFailsWithDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
+    alwaysFailsWithDatum _ _ _ = P.error ()
     |]
 
-guessDecl :: Q [Dec]
-guessDecl =
+redeemerSameAsDatumQ :: Q [Dec]
+redeemerSameAsDatumQ =
   [d|
-    guessTheNumber'3 :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
-    guessTheNumber'3 d1 d2 _d3 = if d1 P.== d2 then () else P.error ()
+    redeemerSameAsDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
+    redeemerSameAsDatum d1 d2 _d3 = if d1 P.== d2 then () else P.error ()
     |]
 
-evendataDecl :: Q [Dec]
-evendataDecl =
+evenDatumQ :: Q [Dec]
+evenDatumQ =
   [d|
-    evendata' :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
-    evendata' d1 _d2 _d3 = let n = P.unsafeDataAsI d1 in if P.modulo n 2 P.== 0 then () else P.error ()
+    evenDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
+    evenDatum d1 _d2 _d3 = let n = P.unsafeDataAsI d1 in if P.modulo n 2 P.== 0 then () else P.error ()
     |]
 
-evenRedeemerDecl :: Q [Dec]
-evenRedeemerDecl =
+evenRedeemerNoDatumQ :: Q [Dec]
+evenRedeemerNoDatumQ =
   [d|
-    evenRedeemer' :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
-    evenRedeemer' _d1 d2 _d3 = let n = P.unsafeDataAsI d2 in if P.modulo n 2 P.== 0 then () else P.error ()
+    evenRedeemerNoDatum :: P.BuiltinData -> P.BuiltinData -> ()
+    evenRedeemerNoDatum d1 _d3 = let n = P.unsafeDataAsI d1 in if P.modulo n 2 P.== 0 then () else P.error ()
     |]
 
-evenRedeemerDecl2Args :: Q [Dec]
-evenRedeemerDecl2Args =
+evenRedeemerWithDatumQ :: Q [Dec]
+evenRedeemerWithDatumQ =
   [d|
-    evenRedeemer2' :: P.BuiltinData -> P.BuiltinData -> ()
-    evenRedeemer2' d1 _d3 = let n = P.unsafeDataAsI d1 in if P.modulo n 2 P.== 0 then () else P.error ()
+    evenRedeemerWithDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
+    evenRedeemerWithDatum _d1 d2 _d3 = let n = P.unsafeDataAsI d2 in if P.modulo n 2 P.== 0 then () else P.error ()
     |]
