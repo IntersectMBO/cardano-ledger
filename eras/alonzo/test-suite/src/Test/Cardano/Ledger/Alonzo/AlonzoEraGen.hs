@@ -132,11 +132,11 @@ phase2scripts3Arg :: forall era. AlonzoEraScript era => [TwoPhase3ArgInfo era]
 phase2scripts3Arg =
   [ mkTwoPhase3ArgInfo (alwaysSucceeds @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) True
   , mkTwoPhase3ArgInfo
-      (mkPlutusScript' (guessTheNumber3 SPlutusV1))
+      (mkPlutusScript' (redeemerSameAsDatum SPlutusV1))
       (P.I 9)
       (P.I 9, bigMem, bigStep)
       True
-  , mkTwoPhase3ArgInfo (mkPlutusScript' (evendata3 SPlutusV1)) (P.I 8) (P.I 8, bigMem, bigStep) True
+  , mkTwoPhase3ArgInfo (mkPlutusScript' (evenDatum SPlutusV1)) (P.I 8) (P.I 8, bigMem, bigStep) True
   , mkTwoPhase3ArgInfo (alwaysFails @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) False
   ]
   where
@@ -145,7 +145,7 @@ phase2scripts3Arg =
 phase2scripts2Arg :: forall era. AlonzoEraScript era => [TwoPhase2ArgInfo era]
 phase2scripts2Arg =
   [ mkTwoPhase2ArgInfo (alwaysSucceeds @'PlutusV1 2) (P.I 1, bigMem, bigStep) True
-  , mkTwoPhase2ArgInfo (mkPlutusScript' (evenRedeemer2 SPlutusV1)) (P.I 14, bigMem, bigStep) True
+  , mkTwoPhase2ArgInfo (mkPlutusScript' (evenRedeemerNoDatum SPlutusV1)) (P.I 14, bigMem, bigStep) True
   , mkTwoPhase2ArgInfo (alwaysFails @'PlutusV1 2) (P.I 1, bigMem, bigStep) False
   ]
   where

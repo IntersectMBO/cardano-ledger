@@ -9,13 +9,13 @@ import Cardano.Ledger.Plutus.Language (Plutus (..), PlutusBinary (..), SLanguage
 import Data.ByteString.Short (pack)
 
 {- Preproceesed Plutus Script
-alwaysSucceeds'2_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
-                      PlutusTx.Builtins.Internal.BuiltinData -> ()
-alwaysSucceeds'2_0 _ _ = GHC.Tuple.Prim.()
+alwaysSucceedsNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+                           PlutusTx.Builtins.Internal.BuiltinData -> ()
+alwaysSucceedsNoDatum_0 _ _ = GHC.Tuple.Prim.()
 -}
 
-alwaysSucceeds2 :: SLanguage l -> Plutus l
-alwaysSucceeds2 =
+alwaysSucceedsNoDatum :: SLanguage l -> Plutus l
+alwaysSucceedsNoDatum =
   Plutus
     . PlutusBinary
     . pack
@@ -26,14 +26,14 @@ alwaysSucceeds2 =
       )
 
 {- Preproceesed Plutus Script
-alwaysSucceeds'3_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
-                      PlutusTx.Builtins.Internal.BuiltinData ->
-                      PlutusTx.Builtins.Internal.BuiltinData -> ()
-alwaysSucceeds'3_0 _ _ _ = GHC.Tuple.Prim.()
+alwaysSucceedsWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+                             PlutusTx.Builtins.Internal.BuiltinData ->
+                             PlutusTx.Builtins.Internal.BuiltinData -> ()
+alwaysSucceedsWithDatum_0 _ _ _ = GHC.Tuple.Prim.()
 -}
 
-alwaysSucceeds3 :: SLanguage l -> Plutus l
-alwaysSucceeds3 =
+alwaysSucceedsWithDatum :: SLanguage l -> Plutus l
+alwaysSucceedsWithDatum =
   Plutus
     . PlutusBinary
     . pack
@@ -44,13 +44,13 @@ alwaysSucceeds3 =
       )
 
 {- Preproceesed Plutus Script
-alwaysFails'2_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
-                   PlutusTx.Builtins.Internal.BuiltinData -> ()
-alwaysFails'2_0 _ _ = PlutusTx.Builtins.error GHC.Tuple.Prim.()
+alwaysFailsNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+                        PlutusTx.Builtins.Internal.BuiltinData -> ()
+alwaysFailsNoDatum_0 _ _ = PlutusTx.Builtins.error GHC.Tuple.Prim.()
 -}
 
-alwaysFails2 :: SLanguage l -> Plutus l
-alwaysFails2 =
+alwaysFailsNoDatum :: SLanguage l -> Plutus l
+alwaysFailsNoDatum =
   Plutus
     . PlutusBinary
     . pack
@@ -61,14 +61,14 @@ alwaysFails2 =
       )
 
 {- Preproceesed Plutus Script
-alwaysFails'3_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
-                   PlutusTx.Builtins.Internal.BuiltinData ->
-                   PlutusTx.Builtins.Internal.BuiltinData -> ()
-alwaysFails'3_0 _ _ _ = PlutusTx.Builtins.error GHC.Tuple.Prim.()
+alwaysFailsWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+                          PlutusTx.Builtins.Internal.BuiltinData ->
+                          PlutusTx.Builtins.Internal.BuiltinData -> ()
+alwaysFailsWithDatum_0 _ _ _ = PlutusTx.Builtins.error GHC.Tuple.Prim.()
 -}
 
-alwaysFails3 :: SLanguage l -> Plutus l
-alwaysFails3 =
+alwaysFailsWithDatum :: SLanguage l -> Plutus l
+alwaysFailsWithDatum =
   Plutus
     . PlutusBinary
     . pack
@@ -79,16 +79,16 @@ alwaysFails3 =
       )
 
 {- Preproceesed Plutus Script
-guessTheNumber'3_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
-                      PlutusTx.Builtins.Internal.BuiltinData ->
-                      PlutusTx.Builtins.Internal.BuiltinData -> ()
-guessTheNumber'3_0 d1_1 d2_2 _d3_3 = if d1_1 PlutusTx.Eq.== d2_2
-                                      then GHC.Tuple.Prim.()
-                                      else PlutusTx.Builtins.error GHC.Tuple.Prim.()
+redeemerSameAsDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+                         PlutusTx.Builtins.Internal.BuiltinData ->
+                         PlutusTx.Builtins.Internal.BuiltinData -> ()
+redeemerSameAsDatum_0 d1_1 d2_2 _d3_3 = if d1_1 PlutusTx.Eq.== d2_2
+                                         then GHC.Tuple.Prim.()
+                                         else PlutusTx.Builtins.error GHC.Tuple.Prim.()
 -}
 
-guessTheNumber3 :: SLanguage l -> Plutus l
-guessTheNumber3 =
+redeemerSameAsDatum :: SLanguage l -> Plutus l
+redeemerSameAsDatum =
   Plutus
     . PlutusBinary
     . pack
@@ -99,63 +99,318 @@ guessTheNumber3 =
       )
 
 {- Preproceesed Plutus Script
-evendata'_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+evenDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
                PlutusTx.Builtins.Internal.BuiltinData ->
                PlutusTx.Builtins.Internal.BuiltinData -> ()
-evendata'_0 d1_1 _d2_2 _d3_3 = let n_4 = PlutusTx.Builtins.unsafeDataAsI d1_1
+evenDatum_0 d1_1 _d2_2 _d3_3 = let n_4 = PlutusTx.Builtins.unsafeDataAsI d1_1
                                 in if PlutusTx.Prelude.modulo n_4 2 PlutusTx.Eq.== 0
                                     then GHC.Tuple.Prim.()
                                     else PlutusTx.Builtins.error GHC.Tuple.Prim.()
 -}
 
-evendata3 :: SLanguage l -> Plutus l
-evendata3 =
+evenDatum :: SLanguage l -> Plutus l
+evenDatum =
   Plutus
     . PlutusBinary
     . pack
     . ( \case
-          SPlutusV1 -> [88, 26, 1, 0, 0, 34, 37, 51, 53, 115, 70, 110, 29, 32, 0, 51, 112, 198, 235, 64, 13, 32, 4, 17, 32, 1, 22, 1]
-          SPlutusV2 -> [88, 26, 1, 0, 0, 34, 37, 51, 53, 115, 70, 110, 29, 32, 0, 51, 112, 198, 235, 64, 13, 32, 4, 17, 32, 1, 22, 1]
-          SPlutusV3 -> [88, 25, 1, 1, 0, 34, 37, 51, 53, 115, 70, 110, 29, 32, 0, 51, 112, 198, 235, 64, 13, 32, 4, 24, 0, 11, 1]
+          SPlutusV1 ->
+            [ 88
+            , 26
+            , 1
+            , 0
+            , 0
+            , 34
+            , 37
+            , 51
+            , 53
+            , 115
+            , 70
+            , 110
+            , 29
+            , 32
+            , 0
+            , 51
+            , 112
+            , 198
+            , 235
+            , 64
+            , 13
+            , 32
+            , 4
+            , 17
+            , 32
+            , 1
+            , 22
+            , 1
+            ]
+          SPlutusV2 ->
+            [ 88
+            , 26
+            , 1
+            , 0
+            , 0
+            , 34
+            , 37
+            , 51
+            , 53
+            , 115
+            , 70
+            , 110
+            , 29
+            , 32
+            , 0
+            , 51
+            , 112
+            , 198
+            , 235
+            , 64
+            , 13
+            , 32
+            , 4
+            , 17
+            , 32
+            , 1
+            , 22
+            , 1
+            ]
+          SPlutusV3 ->
+            [ 88
+            , 25
+            , 1
+            , 1
+            , 0
+            , 34
+            , 37
+            , 51
+            , 53
+            , 115
+            , 70
+            , 110
+            , 29
+            , 32
+            , 0
+            , 51
+            , 112
+            , 198
+            , 235
+            , 64
+            , 13
+            , 32
+            , 4
+            , 24
+            , 0
+            , 11
+            , 1
+            ]
       )
 
 {- Preproceesed Plutus Script
-evenRedeemer'_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
-                   PlutusTx.Builtins.Internal.BuiltinData ->
-                   PlutusTx.Builtins.Internal.BuiltinData -> ()
-evenRedeemer'_0 _d1_1 d2_2 _d3_3 = let n_4 = PlutusTx.Builtins.unsafeDataAsI d2_2
-                                    in if PlutusTx.Prelude.modulo n_4 2 PlutusTx.Eq.== 0
+evenRedeemerNoDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+                         PlutusTx.Builtins.Internal.BuiltinData -> ()
+evenRedeemerNoDatum_0 d1_1 _d3_2 = let n_3 = PlutusTx.Builtins.unsafeDataAsI d1_1
+                                    in if PlutusTx.Prelude.modulo n_3 2 PlutusTx.Eq.== 0
                                         then GHC.Tuple.Prim.()
                                         else PlutusTx.Builtins.error GHC.Tuple.Prim.()
 -}
 
-evenRedeemer3 :: SLanguage l -> Plutus l
-evenRedeemer3 =
+evenRedeemerNoDatum :: SLanguage l -> Plutus l
+evenRedeemerNoDatum =
   Plutus
     . PlutusBinary
     . pack
     . ( \case
-          SPlutusV1 -> [88, 26, 1, 0, 0, 34, 37, 51, 53, 115, 70, 110, 29, 32, 0, 51, 112, 198, 235, 64, 9, 32, 4, 17, 32, 1, 22, 1]
-          SPlutusV2 -> [88, 26, 1, 0, 0, 34, 37, 51, 53, 115, 70, 110, 29, 32, 0, 51, 112, 198, 235, 64, 9, 32, 4, 17, 32, 1, 22, 1]
-          SPlutusV3 -> [88, 25, 1, 1, 0, 34, 37, 51, 53, 115, 70, 110, 29, 32, 0, 51, 112, 198, 235, 64, 9, 32, 4, 24, 0, 11, 1]
+          SPlutusV1 ->
+            [ 88
+            , 25
+            , 1
+            , 0
+            , 0
+            , 34
+            , 83
+            , 51
+            , 87
+            , 52
+            , 102
+            , 225
+            , 210
+            , 0
+            , 3
+            , 55
+            , 12
+            , 110
+            , 180
+            , 0
+            , 146
+            , 0
+            , 65
+            , 18
+            , 0
+            , 17
+            , 97
+            ]
+          SPlutusV2 ->
+            [ 88
+            , 25
+            , 1
+            , 0
+            , 0
+            , 34
+            , 83
+            , 51
+            , 87
+            , 52
+            , 102
+            , 225
+            , 210
+            , 0
+            , 3
+            , 55
+            , 12
+            , 110
+            , 180
+            , 0
+            , 146
+            , 0
+            , 65
+            , 18
+            , 0
+            , 17
+            , 97
+            ]
+          SPlutusV3 ->
+            [ 88
+            , 24
+            , 1
+            , 1
+            , 0
+            , 34
+            , 83
+            , 51
+            , 87
+            , 52
+            , 102
+            , 225
+            , 210
+            , 0
+            , 3
+            , 55
+            , 12
+            , 110
+            , 180
+            , 0
+            , 146
+            , 0
+            , 65
+            , 128
+            , 0
+            , 177
+            ]
       )
 
 {- Preproceesed Plutus Script
-evenRedeemer2'_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
-                    PlutusTx.Builtins.Internal.BuiltinData -> ()
-evenRedeemer2'_0 d1_1 _d3_2 = let n_3 = PlutusTx.Builtins.unsafeDataAsI d1_1
-                               in if PlutusTx.Prelude.modulo n_3 2 PlutusTx.Eq.== 0
-                                   then GHC.Tuple.Prim.()
-                                   else PlutusTx.Builtins.error GHC.Tuple.Prim.()
+evenRedeemerWithDatum_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+                           PlutusTx.Builtins.Internal.BuiltinData ->
+                           PlutusTx.Builtins.Internal.BuiltinData -> ()
+evenRedeemerWithDatum_0 _d1_1 d2_2 _d3_3 = let n_4 = PlutusTx.Builtins.unsafeDataAsI d2_2
+                                            in if PlutusTx.Prelude.modulo n_4 2 PlutusTx.Eq.== 0
+                                                then GHC.Tuple.Prim.()
+                                                else PlutusTx.Builtins.error GHC.Tuple.Prim.()
 -}
 
-evenRedeemer2 :: SLanguage l -> Plutus l
-evenRedeemer2 =
+evenRedeemerWithDatum :: SLanguage l -> Plutus l
+evenRedeemerWithDatum =
   Plutus
     . PlutusBinary
     . pack
     . ( \case
-          SPlutusV1 -> [88, 25, 1, 0, 0, 34, 83, 51, 87, 52, 102, 225, 210, 0, 3, 55, 12, 110, 180, 0, 146, 0, 65, 18, 0, 17, 97]
-          SPlutusV2 -> [88, 25, 1, 0, 0, 34, 83, 51, 87, 52, 102, 225, 210, 0, 3, 55, 12, 110, 180, 0, 146, 0, 65, 18, 0, 17, 97]
-          SPlutusV3 -> [88, 24, 1, 1, 0, 34, 83, 51, 87, 52, 102, 225, 210, 0, 3, 55, 12, 110, 180, 0, 146, 0, 65, 128, 0, 177]
+          SPlutusV1 ->
+            [ 88
+            , 26
+            , 1
+            , 0
+            , 0
+            , 34
+            , 37
+            , 51
+            , 53
+            , 115
+            , 70
+            , 110
+            , 29
+            , 32
+            , 0
+            , 51
+            , 112
+            , 198
+            , 235
+            , 64
+            , 9
+            , 32
+            , 4
+            , 17
+            , 32
+            , 1
+            , 22
+            , 1
+            ]
+          SPlutusV2 ->
+            [ 88
+            , 26
+            , 1
+            , 0
+            , 0
+            , 34
+            , 37
+            , 51
+            , 53
+            , 115
+            , 70
+            , 110
+            , 29
+            , 32
+            , 0
+            , 51
+            , 112
+            , 198
+            , 235
+            , 64
+            , 9
+            , 32
+            , 4
+            , 17
+            , 32
+            , 1
+            , 22
+            , 1
+            ]
+          SPlutusV3 ->
+            [ 88
+            , 25
+            , 1
+            , 1
+            , 0
+            , 34
+            , 37
+            , 51
+            , 53
+            , 115
+            , 70
+            , 110
+            , 29
+            , 32
+            , 0
+            , 51
+            , 112
+            , 198
+            , 235
+            , 64
+            , 9
+            , 32
+            , 4
+            , 24
+            , 0
+            , 11
+            , 1
+            ]
       )
