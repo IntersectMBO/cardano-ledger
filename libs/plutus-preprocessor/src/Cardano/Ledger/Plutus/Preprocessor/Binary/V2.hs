@@ -6,10 +6,10 @@
 
 module Cardano.Ledger.Plutus.Preprocessor.Binary.V2 where
 
+import Cardano.Ledger.Plutus.Language (PlutusBinary (..))
 import Cardano.Ledger.Plutus.Preprocessor.Source.V2
-import Data.ByteString.Short (ShortByteString)
 import Language.Haskell.TH
-import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusTx as P (compile)
 
 -- ==========================================================================
@@ -28,50 +28,50 @@ $evenRedeemerWithDatumQ
 -- Compile and serialize the real functions as Plutus scripts.
 -- Here is where we depend on plutus-plugin.
 
-alwaysSucceedsNoDatumBytes :: (Q [Dec], ShortByteString)
+alwaysSucceedsNoDatumBytes :: (Q [Dec], PlutusBinary)
 alwaysSucceedsNoDatumBytes =
   ( alwaysSucceedsNoDatumQ
-  , PV1.serialiseCompiledCode $$(P.compile [||alwaysSucceedsNoDatum||])
+  , PlutusBinary $ PV2.serialiseCompiledCode $$(P.compile [||alwaysSucceedsNoDatum||])
   )
 
-alwaysSucceedsWithDatumBytes :: (Q [Dec], ShortByteString)
+alwaysSucceedsWithDatumBytes :: (Q [Dec], PlutusBinary)
 alwaysSucceedsWithDatumBytes =
   ( alwaysSucceedsWithDatumQ
-  , PV1.serialiseCompiledCode $$(P.compile [||alwaysSucceedsWithDatum||])
+  , PlutusBinary $ PV2.serialiseCompiledCode $$(P.compile [||alwaysSucceedsWithDatum||])
   )
 
-alwaysFailsNoDatumBytes :: (Q [Dec], ShortByteString)
+alwaysFailsNoDatumBytes :: (Q [Dec], PlutusBinary)
 alwaysFailsNoDatumBytes =
   ( alwaysFailsNoDatumQ
-  , PV1.serialiseCompiledCode $$(P.compile [||alwaysFailsNoDatum||])
+  , PlutusBinary $ PV2.serialiseCompiledCode $$(P.compile [||alwaysFailsNoDatum||])
   )
 
-alwaysFailsWithDatumBytes :: (Q [Dec], ShortByteString)
+alwaysFailsWithDatumBytes :: (Q [Dec], PlutusBinary)
 alwaysFailsWithDatumBytes =
   ( alwaysFailsWithDatumQ
-  , PV1.serialiseCompiledCode $$(P.compile [||alwaysFailsWithDatum||])
+  , PlutusBinary $ PV2.serialiseCompiledCode $$(P.compile [||alwaysFailsWithDatum||])
   )
 
-redeemerSameAsDatumBytes :: (Q [Dec], ShortByteString)
+redeemerSameAsDatumBytes :: (Q [Dec], PlutusBinary)
 redeemerSameAsDatumBytes =
   ( redeemerSameAsDatumQ
-  , PV1.serialiseCompiledCode $$(P.compile [||redeemerSameAsDatum||])
+  , PlutusBinary $ PV2.serialiseCompiledCode $$(P.compile [||redeemerSameAsDatum||])
   )
 
-evenDatumBytes :: (Q [Dec], ShortByteString)
+evenDatumBytes :: (Q [Dec], PlutusBinary)
 evenDatumBytes =
   ( evenDatumQ
-  , PV1.serialiseCompiledCode $$(P.compile [||evenDatum||])
+  , PlutusBinary $ PV2.serialiseCompiledCode $$(P.compile [||evenDatum||])
   )
 
-evenRedeemerNoDatumBytes :: (Q [Dec], ShortByteString)
+evenRedeemerNoDatumBytes :: (Q [Dec], PlutusBinary)
 evenRedeemerNoDatumBytes =
   ( evenRedeemerNoDatumQ
-  , PV1.serialiseCompiledCode $$(P.compile [||evenRedeemerNoDatum||])
+  , PlutusBinary $ PV2.serialiseCompiledCode $$(P.compile [||evenRedeemerNoDatum||])
   )
 
-evenRedeemerWithDatumBytes :: (Q [Dec], ShortByteString)
+evenRedeemerWithDatumBytes :: (Q [Dec], PlutusBinary)
 evenRedeemerWithDatumBytes =
   ( evenRedeemerWithDatumQ
-  , PV1.serialiseCompiledCode $$(P.compile [||evenRedeemerWithDatum||])
+  , PlutusBinary $ PV2.serialiseCompiledCode $$(P.compile [||evenRedeemerWithDatum||])
   )
