@@ -3,6 +3,7 @@
 ## 1.9.2.0
 
 * Add `querySPOStakeDistr` query.
+* Fix `queryDRepState` to report correct DRep expiries even in the absence of credentials to filter.
 
 ## 1.9.1.0
 
