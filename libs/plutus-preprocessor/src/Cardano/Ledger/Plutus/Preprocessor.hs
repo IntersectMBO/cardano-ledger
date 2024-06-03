@@ -11,7 +11,7 @@
 -- the Examples.hs file.
 -- To regenerate Examples.hs, on a machine that can depend upon plutus=plugin,
 -- run 'cabal run plutus-preprocessor'
-module Main where
+module Cardano.Ledger.Plutus.Preprocessor (display) where
 
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)

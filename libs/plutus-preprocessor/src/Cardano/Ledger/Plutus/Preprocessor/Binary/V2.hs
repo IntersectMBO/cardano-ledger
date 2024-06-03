@@ -2,13 +2,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
-{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.1.0 #-}
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
 
-module PlutusV3Scripts where
+module Cardano.Ledger.Plutus.Preprocessor.Binary.V2 where
 
 import Data.ByteString.Short (ShortByteString)
 import Language.Haskell.TH
-import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusTx as P (compile)
 import ScriptSource
 
@@ -31,47 +31,47 @@ $evenRedeemerWithDatumQ
 alwaysSucceedsNoDatumBytes :: (Q [Dec], ShortByteString)
 alwaysSucceedsNoDatumBytes =
   ( alwaysSucceedsNoDatumQ
-  , PV3.serialiseCompiledCode $$(P.compile [||alwaysSucceedsNoDatum||])
+  , PV1.serialiseCompiledCode $$(P.compile [||alwaysSucceedsNoDatum||])
   )
 
 alwaysSucceedsWithDatumBytes :: (Q [Dec], ShortByteString)
 alwaysSucceedsWithDatumBytes =
   ( alwaysSucceedsWithDatumQ
-  , PV3.serialiseCompiledCode $$(P.compile [||alwaysSucceedsWithDatum||])
+  , PV1.serialiseCompiledCode $$(P.compile [||alwaysSucceedsWithDatum||])
   )
 
 alwaysFailsNoDatumBytes :: (Q [Dec], ShortByteString)
 alwaysFailsNoDatumBytes =
   ( alwaysFailsNoDatumQ
-  , PV3.serialiseCompiledCode $$(P.compile [||alwaysFailsNoDatum||])
+  , PV1.serialiseCompiledCode $$(P.compile [||alwaysFailsNoDatum||])
   )
 
 alwaysFailsWithDatumBytes :: (Q [Dec], ShortByteString)
 alwaysFailsWithDatumBytes =
   ( alwaysFailsWithDatumQ
-  , PV3.serialiseCompiledCode $$(P.compile [||alwaysFailsWithDatum||])
+  , PV1.serialiseCompiledCode $$(P.compile [||alwaysFailsWithDatum||])
   )
 
 redeemerSameAsDatumBytes :: (Q [Dec], ShortByteString)
 redeemerSameAsDatumBytes =
   ( redeemerSameAsDatumQ
-  , PV3.serialiseCompiledCode $$(P.compile [||redeemerSameAsDatum||])
+  , PV1.serialiseCompiledCode $$(P.compile [||redeemerSameAsDatum||])
   )
 
 evenDatumBytes :: (Q [Dec], ShortByteString)
 evenDatumBytes =
   ( evenDatumQ
-  , PV3.serialiseCompiledCode $$(P.compile [||evenDatum||])
+  , PV1.serialiseCompiledCode $$(P.compile [||evenDatum||])
   )
 
 evenRedeemerNoDatumBytes :: (Q [Dec], ShortByteString)
 evenRedeemerNoDatumBytes =
   ( evenRedeemerNoDatumQ
-  , PV3.serialiseCompiledCode $$(P.compile [||evenRedeemerNoDatum||])
+  , PV1.serialiseCompiledCode $$(P.compile [||evenRedeemerNoDatum||])
   )
 
 evenRedeemerWithDatumBytes :: (Q [Dec], ShortByteString)
 evenRedeemerWithDatumBytes =
   ( evenRedeemerWithDatumQ
-  , PV3.serialiseCompiledCode $$(P.compile [||evenRedeemerWithDatum||])
+  , PV1.serialiseCompiledCode $$(P.compile [||evenRedeemerWithDatum||])
   )
