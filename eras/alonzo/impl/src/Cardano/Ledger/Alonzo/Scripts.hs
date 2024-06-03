@@ -31,6 +31,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   validScript,
   eqAlonzoScriptRaw,
   AlonzoEraScript (..),
+  eraLanguages,
   PlutusScript (..),
   withPlutusScriptLanguage,
   plutusScriptLanguage,
@@ -601,3 +602,6 @@ eqAlonzoScriptRaw :: Eq (PlutusScript era) => AlonzoScript era -> AlonzoScript e
 eqAlonzoScriptRaw (TimelockScript t1) (TimelockScript t2) = eqTimelockRaw t1 t2
 eqAlonzoScriptRaw (PlutusScript ps1) (PlutusScript ps2) = ps1 == ps2
 eqAlonzoScriptRaw _ _ = False
+
+eraLanguages :: forall era. AlonzoEraScript era => [Language]
+eraLanguages = [minBound .. eraMaxLanguage @era]
