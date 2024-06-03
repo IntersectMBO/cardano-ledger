@@ -175,10 +175,9 @@ showHexBytesGrouped :: Int -> BS.ByteString -> [String]
 showHexBytesGrouped n bs
   | BS.null bs = []
   | otherwise =
-      ("0x" <> BS8.unpack (BS.take n bs16))
-        : [ "  " <> BS8.unpack (BS.take n $ BS.drop i bs16)
-          | i <- [n, 2 * n .. BS.length bs16 - 1]
-          ]
+      [ BS8.unpack (BS.take n $ BS.drop i bs16)
+      | i <- [0, n .. BS.length bs16 - 1]
+      ]
   where
     bs16 = Base16.encode bs
 

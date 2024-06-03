@@ -34,7 +34,7 @@ alwaysSucceedsNoDatum =
     -- alwaysSucceedsNoDatum_0 _ _ = GHC.Tuple.Prim.()
     -- @@@
     SPlutusV1 ->
-      [ "0x4701000022120011"
+      [ "4701000022120011"
       ]
     -- Preprocessed PlutusV2 Script:
     -- @@@
@@ -43,7 +43,7 @@ alwaysSucceedsNoDatum =
     -- alwaysSucceedsNoDatum_0 _ _ = GHC.Tuple.Prim.()
     -- @@@
     SPlutusV2 ->
-      [ "0x4701000022120011"
+      [ "4701000022120011"
       ]
     -- Preprocessed PlutusV3 Script:
     -- @@@
@@ -52,7 +52,7 @@ alwaysSucceedsNoDatum =
     -- alwaysSucceedsNoDatum_0 _ _ = GHC.Tuple.Prim.()
     -- @@@
     SPlutusV3 ->
-      [ "0x46010100228001"
+      [ "46010100228001"
       ]
 
 alwaysSucceedsWithDatum :: SLanguage l -> Plutus l
@@ -66,7 +66,7 @@ alwaysSucceedsWithDatum =
     -- alwaysSucceedsWithDatum_0 _ _ _ = GHC.Tuple.Prim.()
     -- @@@
     SPlutusV1 ->
-      [ "0x480100002221200101"
+      [ "480100002221200101"
       ]
     -- Preprocessed PlutusV2 Script:
     -- @@@
@@ -76,7 +76,7 @@ alwaysSucceedsWithDatum =
     -- alwaysSucceedsWithDatum_0 _ _ _ = GHC.Tuple.Prim.()
     -- @@@
     SPlutusV2 ->
-      [ "0x480100002221200101"
+      [ "480100002221200101"
       ]
     -- Preprocessed PlutusV3 Script:
     -- @@@
@@ -86,7 +86,7 @@ alwaysSucceedsWithDatum =
     -- alwaysSucceedsWithDatum_0 _ _ _ = GHC.Tuple.Prim.()
     -- @@@
     SPlutusV3 ->
-      [ "0x4701010022280001"
+      [ "4701010022280001"
       ]
 
 alwaysFailsNoDatum :: SLanguage l -> Plutus l
@@ -99,7 +99,7 @@ alwaysFailsNoDatum =
     -- alwaysFailsNoDatum_0 _ _ = PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV1 ->
-      [ "0x450100002261"
+      [ "450100002261"
       ]
     -- Preprocessed PlutusV2 Script:
     -- @@@
@@ -108,7 +108,7 @@ alwaysFailsNoDatum =
     -- alwaysFailsNoDatum_0 _ _ = PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV2 ->
-      [ "0x450100002261"
+      [ "450100002261"
       ]
     -- Preprocessed PlutusV3 Script:
     -- @@@
@@ -117,7 +117,7 @@ alwaysFailsNoDatum =
     -- alwaysFailsNoDatum_0 _ _ = PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV3 ->
-      [ "0x450101002261"
+      [ "450101002261"
       ]
 
 alwaysFailsWithDatum :: SLanguage l -> Plutus l
@@ -131,7 +131,7 @@ alwaysFailsWithDatum =
     -- alwaysFailsWithDatum_0 _ _ _ = PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV1 ->
-      [ "0x46010000222601"
+      [ "46010000222601"
       ]
     -- Preprocessed PlutusV2 Script:
     -- @@@
@@ -141,7 +141,7 @@ alwaysFailsWithDatum =
     -- alwaysFailsWithDatum_0 _ _ _ = PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV2 ->
-      [ "0x46010000222601"
+      [ "46010000222601"
       ]
     -- Preprocessed PlutusV3 Script:
     -- @@@
@@ -151,7 +151,7 @@ alwaysFailsWithDatum =
     -- alwaysFailsWithDatum_0 _ _ _ = PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV3 ->
-      [ "0x46010100222601"
+      [ "46010100222601"
       ]
 
 redeemerSameAsDatum :: SLanguage l -> Plutus l
@@ -167,7 +167,7 @@ redeemerSameAsDatum =
     --                                          else PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV1 ->
-      [ "0x520100002225333573466ebc00c00844800459"
+      [ "520100002225333573466ebc00c00844800459"
       ]
     -- Preprocessed PlutusV2 Script:
     -- @@@
@@ -179,7 +179,7 @@ redeemerSameAsDatum =
     --                                          else PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV2 ->
-      [ "0x520100002225333573466ebc00c00844800459"
+      [ "520100002225333573466ebc00c00844800459"
       ]
     -- Preprocessed PlutusV3 Script:
     -- @@@
@@ -191,7 +191,7 @@ redeemerSameAsDatum =
     --                                          else PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV3 ->
-      [ "0x510101002225333573466ebc00c00860002d"
+      [ "510101002225333573466ebc00c00860002d"
       ]
 
 evenDatum :: SLanguage l -> Plutus l
@@ -208,7 +208,7 @@ evenDatum =
     --                                     else PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV1 ->
-      [ "0x581a0100002225333573466e1d20003370c6eb400d20041120011601"
+      [ "581a0100002225333573466e1d20003370c6eb400d20041120011601"
       ]
     -- Preprocessed PlutusV2 Script:
     -- @@@
@@ -221,7 +221,7 @@ evenDatum =
     --                                     else PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV2 ->
-      [ "0x581a0100002225333573466e1d20003370c6eb400d20041120011601"
+      [ "581a0100002225333573466e1d20003370c6eb400d20041120011601"
       ]
     -- Preprocessed PlutusV3 Script:
     -- @@@
@@ -234,7 +234,7 @@ evenDatum =
     --                                     else PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV3 ->
-      [ "0x58190101002225333573466e1d20003370c6eb400d200418000b01"
+      [ "58190101002225333573466e1d20003370c6eb400d200418000b01"
       ]
 
 evenRedeemerNoDatum :: SLanguage l -> Plutus l
@@ -250,7 +250,7 @@ evenRedeemerNoDatum =
     --                                         else PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV1 ->
-      [ "0x5819010000225333573466e1d20003370c6eb40092004112001161"
+      [ "5819010000225333573466e1d20003370c6eb40092004112001161"
       ]
     -- Preprocessed PlutusV2 Script:
     -- @@@
@@ -262,7 +262,7 @@ evenRedeemerNoDatum =
     --                                         else PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV2 ->
-      [ "0x5819010000225333573466e1d20003370c6eb40092004112001161"
+      [ "5819010000225333573466e1d20003370c6eb40092004112001161"
       ]
     -- Preprocessed PlutusV3 Script:
     -- @@@
@@ -274,7 +274,7 @@ evenRedeemerNoDatum =
     --                                         else PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV3 ->
-      [ "0x5818010100225333573466e1d20003370c6eb4009200418000b1"
+      [ "5818010100225333573466e1d20003370c6eb4009200418000b1"
       ]
 
 evenRedeemerWithDatum :: SLanguage l -> Plutus l
@@ -291,7 +291,7 @@ evenRedeemerWithDatum =
     --                                                 else PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV1 ->
-      [ "0x581a0100002225333573466e1d20003370c6eb400920041120011601"
+      [ "581a0100002225333573466e1d20003370c6eb400920041120011601"
       ]
     -- Preprocessed PlutusV2 Script:
     -- @@@
@@ -304,7 +304,7 @@ evenRedeemerWithDatum =
     --                                                 else PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV2 ->
-      [ "0x581a0100002225333573466e1d20003370c6eb400920041120011601"
+      [ "581a0100002225333573466e1d20003370c6eb400920041120011601"
       ]
     -- Preprocessed PlutusV3 Script:
     -- @@@
@@ -317,5 +317,5 @@ evenRedeemerWithDatum =
     --                                                 else PlutusTx.Builtins.error GHC.Tuple.Prim.()
     -- @@@
     SPlutusV3 ->
-      [ "0x58190101002225333573466e1d20003370c6eb4009200418000b01"
+      [ "58190101002225333573466e1d20003370c6eb4009200418000b01"
       ]
