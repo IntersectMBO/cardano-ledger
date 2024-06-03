@@ -6,6 +6,19 @@
 * Remove unnecessary instances: `Inject a ()` and `Inject Void a`
 * Add `integralToBounded` to `BaseTypes`
 
+### `testlib`
+
+* Rename test scripts:
+  * `alwaysSucceeds2` -> `alwaysSucceedsNoDatum`
+  * `alwaysSucceeds3` -> `alwaysSucceedsWithDatum`
+  * `alwaysFails2` -> `alwaysFailsNoDatum`
+  * `alwaysFails3` -> `alwaysFailsWithDatum`
+  * `guessTheNumber3` -> `redeemerSameAsDatum`
+  * `evendata3` -> `evenDatum`
+  * `evenRedeemer2` -> `evenRedeemerNoDatum`
+  * `evenRedeemer3` -> `evenRedeemerWithDatum`
+* Remove test scripts: `odddata`, `oddRedeemer`, `oddRedeemer2`, `sumsTo10`, `guessTheNumber2`, `redeemerIs102`
+
 ## 1.12.0.0
 
 * Change `computeDRepPulser` to also process proposal-deposits for SPOs. #4324
