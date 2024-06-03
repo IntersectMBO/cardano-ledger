@@ -3,6 +3,8 @@
 module Cardano.Ledger.Plutus.Preprocessor.Source.V2 where
 
 import Language.Haskell.TH
+import qualified PlutusLedgerApi.V2 as PV2
+import PlutusTx (fromBuiltinData, unsafeFromBuiltinData)
 import qualified PlutusTx.Builtins as P
 import qualified PlutusTx.Prelude as P
 
@@ -10,54 +12,125 @@ alwaysSucceedsNoDatumQ :: Q [Dec]
 alwaysSucceedsNoDatumQ =
   [d|
     alwaysSucceedsNoDatum :: P.BuiltinData -> P.BuiltinData -> ()
-    alwaysSucceedsNoDatum _ _ = ()
+    alwaysSucceedsNoDatum redeemer context =
+      case unsafeFromBuiltinData redeemer of
+        PV2.Redeemer _ ->
+          case unsafeFromBuiltinData context of
+            PV2.ScriptContext _ scriptPurpose ->
+              case scriptPurpose of
+                -- Spending PlutusV2 scripts must have a Datum.
+                PV2.Spending _ -> P.error ()
+                _ -> ()
     |]
 
 alwaysSucceedsWithDatumQ :: Q [Dec]
 alwaysSucceedsWithDatumQ =
   [d|
     alwaysSucceedsWithDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
-    alwaysSucceedsWithDatum _ _ _ = ()
+    alwaysSucceedsWithDatum datum redeemer context =
+      case unsafeFromBuiltinData datum of
+        PV2.Datum _ ->
+          case unsafeFromBuiltinData redeemer of
+            PV2.Redeemer _ ->
+              case unsafeFromBuiltinData context of
+                -- Only spending scripts can have a Datum.
+                PV2.ScriptContext _ (PV2.Spending _) -> ()
     |]
 
 alwaysFailsNoDatumQ :: Q [Dec]
 alwaysFailsNoDatumQ =
   [d|
     alwaysFailsNoDatum :: P.BuiltinData -> P.BuiltinData -> ()
-    alwaysFailsNoDatum _ _ = P.error ()
+    alwaysFailsNoDatum redeemer context =
+      case fromBuiltinData redeemer of
+        Nothing -> ()
+        Just (PV2.Redeemer _) ->
+          case fromBuiltinData context of
+            Nothing -> ()
+            -- Spending PlutusV2 scripts must have a Datum, thas passing a script that is
+            -- expected to fail
+            Just (PV2.ScriptContext _ (PV2.Spending _)) -> ()
+            Just (PV2.ScriptContext _ _) -> P.error ()
     |]
 
 alwaysFailsWithDatumQ :: Q [Dec]
 alwaysFailsWithDatumQ =
   [d|
     alwaysFailsWithDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
-    alwaysFailsWithDatum _ _ _ = P.error ()
+    alwaysFailsWithDatum datum redeemer context =
+      case fromBuiltinData datum of
+        Nothing -> ()
+        Just (PV2.Datum _) ->
+          case fromBuiltinData redeemer of
+            Nothing -> ()
+            Just (PV2.Redeemer _) ->
+              case fromBuiltinData context of
+                Nothing -> ()
+                -- Purposefully failing only on Spending with Datum because only spending
+                -- scripts can have a Datum.
+                Just (PV2.ScriptContext _ (PV2.Spending _)) -> P.error ()
+                Just (PV2.ScriptContext _ _) -> ()
     |]
 
 redeemerSameAsDatumQ :: Q [Dec]
 redeemerSameAsDatumQ =
   [d|
     redeemerSameAsDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
-    redeemerSameAsDatum d1 d2 _d3 = if d1 P.== d2 then () else P.error ()
+    redeemerSameAsDatum datum redeemer context =
+      case unsafeFromBuiltinData datum of
+        PV2.Datum d ->
+          case unsafeFromBuiltinData redeemer of
+            PV2.Redeemer r ->
+              case unsafeFromBuiltinData context of
+                -- Only spending scripts can have a Datum.
+                PV2.ScriptContext _ (PV2.Spending _)
+                  | r P.== d -> ()
+                  | otherwise -> P.error ()
     |]
 
 evenDatumQ :: Q [Dec]
 evenDatumQ =
   [d|
     evenDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
-    evenDatum d1 _d2 _d3 = let n = P.unsafeDataAsI d1 in if P.modulo n 2 P.== 0 then () else P.error ()
+    evenDatum datum redeemer context =
+      case unsafeFromBuiltinData datum of
+        PV2.Datum d ->
+          case unsafeFromBuiltinData redeemer of
+            PV2.Redeemer _ ->
+              case unsafeFromBuiltinData context of
+                -- Only spending scripts can have a Datum.
+                PV2.ScriptContext _ (PV2.Spending _)
+                  | P.modulo (P.unsafeDataAsI d) 2 P.== 0 -> ()
+                  | otherwise -> P.error ()
     |]
 
 evenRedeemerNoDatumQ :: Q [Dec]
 evenRedeemerNoDatumQ =
   [d|
     evenRedeemerNoDatum :: P.BuiltinData -> P.BuiltinData -> ()
-    evenRedeemerNoDatum d1 _d3 = let n = P.unsafeDataAsI d1 in if P.modulo n 2 P.== 0 then () else P.error ()
+    evenRedeemerNoDatum redeemer context =
+      case unsafeFromBuiltinData redeemer of
+        PV2.Redeemer r ->
+          case unsafeFromBuiltinData context of
+            PV2.ScriptContext _ scriptPurpose ->
+              case scriptPurpose of
+                -- Spending PlutusV2 scripts must have a Datum
+                PV2.Spending _ -> P.error ()
+                _ -> if P.modulo (P.unsafeDataAsI r) 2 P.== 0 then () else P.error ()
     |]
 
 evenRedeemerWithDatumQ :: Q [Dec]
 evenRedeemerWithDatumQ =
   [d|
     evenRedeemerWithDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
-    evenRedeemerWithDatum _d1 d2 _d3 = let n = P.unsafeDataAsI d2 in if P.modulo n 2 P.== 0 then () else P.error ()
+    evenRedeemerWithDatum datum redeemer context =
+      case unsafeFromBuiltinData datum of
+        PV2.Datum _ ->
+          case unsafeFromBuiltinData redeemer of
+            PV2.Redeemer r ->
+              case unsafeFromBuiltinData context of
+                -- Only spending scripts can have a Datum
+                PV2.ScriptContext _ (PV2.Spending _)
+                  | P.modulo (P.unsafeDataAsI r) 2 P.== 0 -> ()
+                  | otherwise -> P.error ()
     |]
