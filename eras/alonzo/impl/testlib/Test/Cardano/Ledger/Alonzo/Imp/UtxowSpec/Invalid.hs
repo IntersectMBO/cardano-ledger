@@ -13,7 +13,6 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Core (
   AlonzoEraTxWits (..),
   networkIdTxBodyL,
-  reqSignerHashesTxBodyL,
   scriptIntegrityHashTxBodyL,
  )
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
@@ -29,15 +28,12 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (witVKeyHash)
 import Cardano.Ledger.Plutus
 import Cardano.Ledger.Shelley.LedgerState (epochStatePoolParamsL, nesEsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
-import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
 import Cardano.Ledger.Shelley.TxCert
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq ((:<|)))
-import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
