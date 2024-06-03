@@ -7,9 +7,12 @@
 
 module Test.Cardano.Ledger.Babbage.Imp (spec) where
 
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError)
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure, AlonzoUtxowPredFailure)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
+import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
+import Cardano.Ledger.BaseTypes (Inject)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, withImpState)
@@ -26,6 +29,7 @@ spec ::
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" BabbageUtxowPredFailure era
+  , Inject (BabbageContextError era) (ContextError era)
   ) =>
   Spec
 spec = do
