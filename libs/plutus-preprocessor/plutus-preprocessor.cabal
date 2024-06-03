@@ -22,9 +22,13 @@ executable plutus-preprocessor
     main-is:          Main.hs
     hs-source-dirs:   src
     other-modules:
-        PlutusV1Scripts
-        PlutusV3Scripts
-        ScriptSource
+        Cardano.Ledger.Plutus.Preprocessor
+        Cardano.Ledger.Plutus.Preprocessor.Binary.V1
+        Cardano.Ledger.Plutus.Preprocessor.Binary.V2
+        Cardano.Ledger.Plutus.Preprocessor.Binary.V3
+        Cardano.Ledger.Plutus.Preprocessor.Source.V1
+        Cardano.Ledger.Plutus.Preprocessor.Source.V2
+        Cardano.Ledger.Plutus.Preprocessor.Source.V3
 
     default-language: Haskell2010
     ghc-options:
