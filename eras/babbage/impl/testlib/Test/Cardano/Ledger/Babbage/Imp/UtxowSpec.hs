@@ -37,7 +37,7 @@ spec ::
   SpecWith (ImpTestState era)
 spec = describe "UTXOW" $ do
   it "MalformedScriptWitnesses" $ do
-    let scriptHash = hashPlutusScript @'PlutusV2 malformedPlutus
+    let scriptHash = hashPlutusScript (malformedPlutus @'PlutusV2)
     txIn <- produceScript scriptHash
     let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
     submitFailingTx
