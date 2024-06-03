@@ -279,16 +279,10 @@ cradle:
     - path: "libs/non-integral/test"
       component: "non-integral:test:non-integral-test"
 
-    - path: "libs/plutus-preprocessor/src/Main.hs"
-      component: "plutus-preprocessor:exe:plutus-preprocessor"
+    - path: "libs/plutus-preprocessor/src"
+      component: "lib:plutus-preprocessor"
 
-    - path: "libs/plutus-preprocessor/src/PlutusV1Scripts.hs"
-      component: "plutus-preprocessor:exe:plutus-preprocessor"
-
-    - path: "libs/plutus-preprocessor/src/PlutusV3Scripts.hs"
-      component: "plutus-preprocessor:exe:plutus-preprocessor"
-
-    - path: "libs/plutus-preprocessor/src/ScriptSource.hs"
+    - path: "libs/plutus-preprocessor/app/Main.hs"
       component: "plutus-preprocessor:exe:plutus-preprocessor"
 
     - path: "libs/plutus-preprocessor/src/Debug.hs"

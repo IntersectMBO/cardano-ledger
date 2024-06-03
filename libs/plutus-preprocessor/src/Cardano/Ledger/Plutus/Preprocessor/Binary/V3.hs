@@ -6,11 +6,11 @@
 
 module Cardano.Ledger.Plutus.Preprocessor.Binary.V3 where
 
+import Cardano.Ledger.Plutus.Preprocessor.Source.V3
 import Data.ByteString.Short (ShortByteString)
 import Language.Haskell.TH
 import qualified PlutusLedgerApi.V3 as PV3
 import qualified PlutusTx as P (compile)
-import ScriptSource
 
 -- ==========================================================================
 -- Turn the Template Haskell Declarations into real haskell functions
