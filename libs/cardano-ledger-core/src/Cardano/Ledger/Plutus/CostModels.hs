@@ -263,7 +263,7 @@ decodeCostModels =
 costModelParamsCount :: Language -> Int
 costModelParamsCount PlutusV1 = 166
 costModelParamsCount PlutusV2 = 175
-costModelParamsCount PlutusV3 = 233
+costModelParamsCount PlutusV3 = 231
 
 decodeCostModelLegacy :: Language -> Decoder s CostModel
 decodeCostModelLegacy lang = do
