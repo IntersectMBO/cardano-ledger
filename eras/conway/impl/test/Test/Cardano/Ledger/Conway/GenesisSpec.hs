@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Cardano.Ledger.Conway.GenesisSpec (spec, expectedConwayGenesis) where
+module Test.Cardano.Ledger.Conway.GenesisSpec (spec) where
 
 import Cardano.Ledger.Babbage (Babbage)
 import Cardano.Ledger.Conway (Conway)
