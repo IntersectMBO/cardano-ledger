@@ -2,26 +2,17 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskell #-}
 
--- | The 'main' function in this file writes a file
--- @libs\/cardano-ledger-core\/testlib\/Test\/Cardano\/Ledger\/Plutus\/Examples.hs@. When
--- this file is compiled it exports a bunch of Plutus Scripts.  Compiling that file does
--- not have any dependency on the plutus-plugin.  Instead this package
--- 'plutus-preprocessor' has that dependency, but one does not have to compile this
--- package to build the system.  If the plutus package changes, we will have to regenerate
--- the Examples.hs file.
--- To regenerate Examples.hs, on a machine that can depend upon plutus=plugin,
--- run 'cabal run plutus-preprocessor'
 module Cardano.Ledger.Plutus.Preprocessor (display) where
 
 import Cardano.Ledger.Plutus.Language (Language (..))
+import qualified Cardano.Ledger.Plutus.Preprocessor.Binary.V1 as V1
+import qualified Cardano.Ledger.Plutus.Preprocessor.Binary.V2 as V2
+import qualified Cardano.Ledger.Plutus.Preprocessor.Binary.V3 as V3
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
 import Data.Foldable (forM_)
 import Data.List (intercalate)
 import Language.Haskell.TH
-import qualified PlutusV1Scripts as V1
-import qualified PlutusV1Scripts as V2
-import qualified PlutusV3Scripts as V3
-import System.IO
+import System.IO (Handle, hPutStr)
 import Test.Cardano.Ledger.Binary.TreeDiff (showHexBytesGrouped)
 
 -- =============================================
@@ -141,7 +132,3 @@ allTestScripts =
         PlutusV3 -> V3.evenRedeemerWithDatumBytes
     )
   ]
-
-main :: IO ()
-main =
-  withFile "libs/cardano-ledger-core/testlib/Test/Cardano/Ledger/Plutus/Examples.hs" WriteMode display
