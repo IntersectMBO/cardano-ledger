@@ -2,6 +2,8 @@
 
 module Cardano.Ledger.Plutus.Preprocessor.Source.V1 where
 
+import PlutusTx (unsafeFromBuiltinData)
+import qualified PlutusLedgerApi.V1 as PV1
 import Language.Haskell.TH
 import qualified PlutusTx.Builtins as P
 import qualified PlutusTx.Prelude as P
@@ -38,7 +40,13 @@ redeemerSameAsDatumQ :: Q [Dec]
 redeemerSameAsDatumQ =
   [d|
     redeemerSameAsDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
-    redeemerSameAsDatum d1 d2 _d3 = if d1 P.== d2 then () else P.error ()
+    redeemerSameAsDatum datum redeemer context =
+      case unsafeFromBuiltinData datum of
+        PV1.Datum d ->
+          case unsafeFromBuiltinData redeemer of
+            PV1.Redeemer r ->
+              case unsafeFromBuiltinData context of
+                PV1.ScriptContext _ _ -> if r P.== d then () else P.error ()
     |]
 
 evenDatumQ :: Q [Dec]
