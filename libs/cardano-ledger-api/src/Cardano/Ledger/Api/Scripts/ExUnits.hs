@@ -24,16 +24,12 @@ import Cardano.Ledger.Alonzo.Plutus.Context (
   EraPlutusContext (mkPlutusWithContext),
   LedgerTxInfo (..),
  )
-import Cardano.Ledger.Alonzo.Plutus.Evaluate (lookupPlutusScript)
-import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
+import Cardano.Ledger.Alonzo.Scripts (lookupPlutusScript, plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.TxWits (unRedeemers)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Plutus.CostModels (costModelsValid)
-import Cardano.Ledger.Plutus.Evaluate (
-  PlutusWithContext (..),
-  evaluatePlutusWithContext,
- )
+import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..), evaluatePlutusWithContext)
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.Plutus.TxInfo (exBudgetToExUnits)
@@ -202,11 +198,11 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
           Map.lookup pointer ptrToPlutusScript
       let ptrToPlutusScriptNoContext =
             Map.map
-              (\(sp, sh) -> (hoistPlutusPurpose toAsItem sp, lookupPlutusScript scriptsProvided sh, sh))
+              (\(sp, sh) -> (hoistPlutusPurpose toAsItem sp, lookupPlutusScript sh scriptsProvided, sh))
               ptrToPlutusScript
       plutusScript <-
         note (MissingScript pointer ptrToPlutusScriptNoContext) $
-          lookupPlutusScript scriptsProvided plutusScriptHash
+          lookupPlutusScript plutusScriptHash scriptsProvided
       let lang = plutusScriptLanguage plutusScript
       costModel <-
         note (NoCostModelInLedgerState lang) $ Map.lookup lang costModels

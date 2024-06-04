@@ -608,7 +608,8 @@ eqAlonzoScriptRaw _ _ = False
 eraLanguages :: forall era. AlonzoEraScript era => [Language]
 eraLanguages = [minBound .. eraMaxLanguage @era]
 
--- | Having a Map with scripts and a script hash, lookup the plutus script.
+-- | Having a Map with scripts and a script hash, lookup the plutus script. Returns
+-- Nothing when script is missing or it is not a PlutusScript
 lookupPlutusScript ::
   AlonzoEraScript era =>
   ScriptHash (EraCrypto era) ->
