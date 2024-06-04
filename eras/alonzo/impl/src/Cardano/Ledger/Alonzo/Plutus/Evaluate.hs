@@ -34,6 +34,7 @@ where
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext (..), LedgerTxInfo (..))
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
+import qualified Cardano.Ledger.Alonzo.Scripts as Scripts
 import Cardano.Ledger.Alonzo.TxWits (lookupRedeemer, unRedeemers)
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), kindObject, natVersion, pvMajor)
@@ -146,9 +147,8 @@ lookupPlutusScript ::
   Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
   ScriptHash (EraCrypto era) ->
   Maybe (PlutusScript era)
-lookupPlutusScript scriptsAvailable scriptHash = do
-  script <- scriptHash `Map.lookup` scriptsAvailable
-  toPlutusScript script
+lookupPlutusScript = flip Scripts.lookupPlutusScript
+{-# DEPRECATED lookupPlutusScript "In favor of new version with arguments flipped: `Scripts.lookupPlutusScript`" #-}
 
 collectPlutusScriptsWithContext ::
   forall era.
@@ -188,7 +188,7 @@ collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
     ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
     AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     neededPlutusScripts =
-      mapMaybe (\(sp, sh) -> (,) (sh, sp) <$> lookupPlutusScript scriptsProvided sh) scriptsNeeded
+      mapMaybe (\(sp, sh) -> (,) (sh, sp) <$> Scripts.lookupPlutusScript sh scriptsProvided) scriptsNeeded
     usedLanguages = Set.fromList $ map (plutusScriptLanguage . snd) neededPlutusScripts
 
     getScriptWithRedeemer ((plutusScriptHash, plutusPurpose), plutusScript) =
@@ -414,11 +414,16 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
           Map.lookup pointer ptrToPlutusScript
       let ptrToPlutusScriptNoContext =
             Map.map
-              (\(sp, sh) -> (hoistPlutusPurpose toAsItem sp, lookupPlutusScript scriptsProvided sh, sh))
+              ( \(sp, sh) ->
+                  ( hoistPlutusPurpose toAsItem sp
+                  , Scripts.lookupPlutusScript sh scriptsProvided
+                  , sh
+                  )
+              )
               ptrToPlutusScript
       plutusScript <-
         note (MissingScript pointer ptrToPlutusScriptNoContext) $
-          lookupPlutusScript scriptsProvided plutusScriptHash
+          Scripts.lookupPlutusScript plutusScriptHash scriptsProvided
       let lang = plutusScriptLanguage plutusScript
       costModel <-
         note (NoCostModelInLedgerState lang) $ Map.lookup lang costModels
