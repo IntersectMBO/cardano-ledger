@@ -2,6 +2,7 @@
 
 ## 1.13.0.0
 
+* Add `subStateL` to `HasSubState`
 * Create a catch all `Inject a a` instance for the same type
 * Remove unnecessary instances: `Inject a ()` and `Inject Void a`
 * Add `integralToBounded` to `BaseTypes`
