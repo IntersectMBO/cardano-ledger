@@ -20,7 +20,6 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
@@ -177,10 +176,10 @@ datumAndReferenceInputsSpec = do
               ]
           & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
     submitFailingTx
-        consumingTx
-        ( pure . injectFailure . BabbageNonDisjointRefInputs $
-            mkTxInPartial producingTx 0 :| []
-        )
+      consumingTx
+      ( pure . injectFailure . BabbageNonDisjointRefInputs $
+          mkTxInPartial producingTx 0 :| []
+      )
   it "fails when using inline datums for PlutusV1" $ do
     let shSpending = hashPlutusScript $ redeemerSameAsDatum SPlutusV1
     refTxOut <- mkRefTxOut shSpending
@@ -444,6 +443,7 @@ govPolicySpec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 govPolicySpec = do
@@ -736,14 +736,6 @@ testPlutusV1V2Failure sh badField lenz errorField = do
     ( pure . injectFailure $
         CollectErrors [BadTranslation errorField]
     )
-
-expectPhase2Invalid :: ConwayEraImp era => Tx era -> ImpTestM era ()
-expectPhase2Invalid tx = do
-  res <- trySubmitTx tx
-  -- TODO: find a way to check that this is a PlutusFailure
-  -- without comparing the entire PredicateFailure
-  void $ expectLeft res
-  submitTx_ $ tx & isValidTxL .~ IsValid False
 
 mintingTokenTx :: ConwayEraImp era => Tx era -> ScriptHash (EraCrypto era) -> ImpTestM era (Tx era)
 mintingTokenTx tx sh = do

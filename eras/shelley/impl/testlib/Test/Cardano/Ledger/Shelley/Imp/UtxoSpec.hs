@@ -40,12 +40,11 @@ spec = describe "UTXO" $ do
             tx
               & bodyTxL . outputsTxBodyL %~ adjustTxOut
               & witsTxL .~ mkBasicTxWits
-      res <- withPostFixup (updateAddrTxWits . adjustFirstTxOut) $ trySubmitTx (mkBasicTx txBody)
-
-      predFailures <- expectLeftDeep res
-      predFailures
-        `shouldBe` [ injectFailure $
-                      ValueNotConservedUTxO
-                        (rootTxOutValue <> inject txAmount)
-                        (rootTxOutValue <> inject (txAmount <> extra))
-                   ]
+      withPostFixup (updateAddrTxWits . adjustFirstTxOut) $
+        submitFailingTx
+          (mkBasicTx txBody)
+          [ injectFailure $
+              ValueNotConservedUTxO
+                (rootTxOutValue <> inject txAmount)
+                (rootTxOutValue <> inject (txAmount <> extra))
+          ]
