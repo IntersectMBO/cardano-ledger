@@ -712,6 +712,16 @@ unPParams (PParamsF _ p) = p
 instance PrettyA (PParamsF era) where
   prettyA (PParamsF p x) = unReflect pcPParams p x
 
+instance Eq (PParamsF era) where
+  PParamsF p1 x == PParamsF _ y =
+    case p1 of
+      Shelley -> x == y
+      Allegra -> x == y
+      Mary -> x == y
+      Alonzo -> x == y
+      Babbage -> x == y
+      Conway -> x == y
+
 pparamsWrapperL :: Lens' (PParamsF era) (PParams era)
 pparamsWrapperL = lens unPParams (\(PParamsF p _) pp -> PParamsF p pp)
 
