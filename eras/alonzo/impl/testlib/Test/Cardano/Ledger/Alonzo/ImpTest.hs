@@ -307,26 +307,14 @@ fixupOutputDatums ::
   ImpTestM era (Tx era)
 fixupOutputDatums tx = impAnn "fixupOutputDatums" $ do
   let
-    isDatum (Datum _) = True
-    isDatum _ = False
     addDatum txOut =
       case txOut ^. addrTxOutL of
-        Addr _ (ScriptHashObj sh) _ -> do
-          case impGetScriptContextMaybe @era sh of
-            Just (ScriptTestContext _ (PlutusArgs _ mbySpendDatum))
-              | not $ isDatum (txOut ^. datumTxOutF) -> do
-                  spendDatum <-
-                    impAnn "Looking up spend datum" $
-                      expectJust mbySpendDatum
-                  pure $
-                    txOut
-                      & dataHashTxOutL .~ SJust (hashData @era $ Data spendDatum)
-            _ -> pure txOut
-        _ -> pure txOut
-  newOutputs <- traverse addDatum $ tx ^. bodyTxL . outputsTxBodyL
-  pure $
-    tx
-      & bodyTxL . outputsTxBodyL .~ newOutputs
+        Addr _ (ScriptHashObj sh) _
+          | Just (ScriptTestContext _ (PlutusArgs _ (Just spendDatum))) <- impGetScriptContextMaybe @era sh
+          , NoDatum <- txOut ^. datumTxOutF ->
+              txOut & dataHashTxOutL .~ SJust (hashData @era $ Data spendDatum)
+        _ -> txOut
+  pure $ tx & bodyTxL . outputsTxBodyL %~ fmap addDatum
 
 alonzoFixupTx ::
   ( HasCallStack
@@ -374,10 +362,10 @@ plutusTestScripts lang =
     , mkScriptTestEntry (alwaysFailsNoDatum lang) $ PlutusArgs (P.I 0) Nothing
     , mkScriptTestEntry (alwaysFailsWithDatum lang) $ PlutusArgs (P.I 0) (Just $ P.I 0)
     , mkScriptTestEntry (redeemerSameAsDatum lang) $ PlutusArgs (P.I 3) (Just $ P.I 3)
-    , mkScriptTestEntry (evenDatum lang) $ PlutusArgs (P.I 4) (Just $ P.I 0)
-    , mkScriptTestEntry (evenRedeemerNoDatum lang) $ PlutusArgs (P.I 0) (Just $ P.I 2)
-    , mkScriptTestEntry (evenRedeemerWithDatum lang) $ PlutusArgs (P.I 0) Nothing
-    , mkScriptTestEntry (malformedPlutus @l) $ PlutusArgs (P.I 0) (Just $ P.I 0)
+    , mkScriptTestEntry (evenDatum lang) $ PlutusArgs (P.I 3) (Just $ P.I 26)
+    , mkScriptTestEntry (evenRedeemerNoDatum lang) $ PlutusArgs (P.I 2) Nothing
+    , mkScriptTestEntry (evenRedeemerWithDatum lang) $ PlutusArgs (P.I 22) (Just $ P.I 5)
+    , mkScriptTestEntry (malformedPlutus @l) $ PlutusArgs (P.I 0) (Just $ P.I 7)
     ]
 
 malformedPlutus :: Plutus l
