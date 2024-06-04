@@ -34,10 +34,11 @@ alwaysFailsNoDatumQ =
     alwaysFailsNoDatum :: P.BuiltinData -> ()
     alwaysFailsNoDatum arg =
       case fromBuiltinData arg of
-        Just (PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo)
-          | PV3.SpendingScript _ (Just _) <- scriptInfo -> ()
-          | otherwise -> P.error ()
-        _ -> ()
+        Just (PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo) ->
+          case scriptInfo of
+            PV3.SpendingScript _ (Just _) -> ()
+            PV3.SpendingScript _ Nothing -> P.error ()
+        Nothing -> ()
     |]
 
 alwaysFailsWithDatumQ :: Q [Dec]
@@ -46,10 +47,11 @@ alwaysFailsWithDatumQ =
     alwaysFailsWithDatum :: P.BuiltinData -> ()
     alwaysFailsWithDatum arg =
       case fromBuiltinData arg of
-        Just (PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo)
-          | PV3.SpendingScript _ Nothing <- scriptInfo -> ()
-          | otherwise -> P.error ()
-        _ -> ()
+        Just (PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo) ->
+          case scriptInfo of
+            PV3.SpendingScript _ Nothing -> ()
+            PV3.SpendingScript _ (Just _) -> P.error ()
+        Nothing -> ()
     |]
 
 redeemerSameAsDatumQ :: Q [Dec]
