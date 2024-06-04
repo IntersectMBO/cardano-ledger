@@ -48,7 +48,7 @@ spec = describe "UTXOS" $
     withSLanguage lang $ \slang ->
       describe (show lang) $ do
         let scriptHash = hashPlutusScript (redeemerSameAsDatum slang)
-        it "Plutus script transactions are fixed up" $ do
+        it "Spending script with a Datum" $ do
           txIn0 <- produceScript scriptHash
           submitTxAnn_ "Submit a transaction that consumes the script output" $
             mkBasicTx mkBasicTxBody

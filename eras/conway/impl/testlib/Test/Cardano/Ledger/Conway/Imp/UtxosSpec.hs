@@ -87,6 +87,14 @@ relevantDuringBootstrapSpec ::
 relevantDuringBootstrapSpec = do
   datumAndReferenceInputsSpec
   conwayFeaturesPlutusV1V2FailureSpec
+  describe "Spending script without a Datum" $ do
+    forM_ ([PlutusV3 .. eraMaxLanguage @era] :: [Language]) $ \lang -> do
+      it (show lang) $ do
+        let scriptHash = withSLanguage lang (hashPlutusScript . evenRedeemerNoDatum)
+            addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
+        amount <- uniformRM (Coin 100, Coin 1000000)
+        txIn <- sendCoinTo addr amount
+        submitTx_ $ mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
 
 datumAndReferenceInputsSpec ::
   forall era.
