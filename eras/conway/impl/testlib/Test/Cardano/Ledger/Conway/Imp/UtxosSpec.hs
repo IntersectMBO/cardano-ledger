@@ -19,7 +19,7 @@ import Cardano.Ledger.Allegra.Scripts (
  )
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..))
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..), AlonzoUtxowPredFailure (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
@@ -67,6 +67,7 @@ spec ::
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
   SpecWith (ImpTestState era)
@@ -82,11 +83,27 @@ relevantDuringBootstrapSpec ::
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 relevantDuringBootstrapSpec = do
   datumAndReferenceInputsSpec
   conwayFeaturesPlutusV1V2FailureSpec
+  describe "Spending script without a Datum" $ do
+    forM_ ([minBound .. eraMaxLanguage @era] :: [Language]) $ \lang -> do
+      it (show lang) $ do
+        let scriptHash = withSLanguage lang (hashPlutusScript . evenRedeemerNoDatum)
+            addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
+        amount <- uniformRM (Coin 100, Coin 1000000)
+        txIn <- sendCoinTo addr amount
+        let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+        if lang >= PlutusV3
+          then submitTx_ tx
+          else
+            submitFailingTx
+              tx
+              [ injectFailure $ UnspendableUTxONoDatumHash [txIn]
+              ]
 
 datumAndReferenceInputsSpec ::
   forall era.
@@ -169,10 +186,10 @@ datumAndReferenceInputsSpec = do
               ]
           & bodyTxL . referenceInputsTxBodyL .~ Set.singleton (mkTxInPartial producingTx 0)
     submitFailingTx
-        consumingTx
-        ( pure . injectFailure . BabbageNonDisjointRefInputs $
-            mkTxInPartial producingTx 0 :| []
-        )
+      consumingTx
+      ( pure . injectFailure . BabbageNonDisjointRefInputs $
+          mkTxInPartial producingTx 0 :| []
+      )
   it "fails when using inline datums for PlutusV1" $ do
     let shSpending = hashPlutusScript $ redeemerSameAsDatum SPlutusV1
     refTxOut <- mkRefTxOut shSpending
