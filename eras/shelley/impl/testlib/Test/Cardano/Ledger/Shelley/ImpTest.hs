@@ -642,14 +642,14 @@ instance (ShelleyEraImp era, Arbitrary a, Show a) => Example (a -> ImpTestM era 
 
 instance MonadGen (ImpTestM era) where
   liftGen (MkGen f) = do
-    qcSize <- iteQuickCheckSize <$> ask
+    qcSize <- asks iteQuickCheckSize
     StateGen qcGen <- subState split
     pure $ f qcGen qcSize
   variant n action = do
     subState (\(StateGen qcGen) -> ((), StateGen (integerVariant (toInteger n) qcGen)))
     action
   sized f = do
-    qcSize <- iteQuickCheckSize <$> ask
+    qcSize <- asks iteQuickCheckSize
     f qcSize
   resize n = local (\env -> env {iteQuickCheckSize = n})
   choose r = subState (Random.randomR r)

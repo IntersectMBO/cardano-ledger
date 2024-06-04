@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -350,7 +349,7 @@ instance
   (HasGenEnv env g, R.StatefulGen g (ReaderT env m), Monad m) =>
   HasStatefulGen g (ReaderT env m)
   where
-  askStatefulGen = getGenEnv <$> ask
+  askStatefulGen = asks getGenEnv
 
 class HasSubState s where
   type SubState s :: Type
@@ -410,7 +409,7 @@ instance HasSubState (StateGen g) where
   type SubState (StateGen g) = g
   getSubState (StateGen g) = g
   {-# INLINE getSubState #-}
-  setSubState _ g = (StateGen g)
+  setSubState _ = StateGen
   {-# INLINE setSubState #-}
 
 subState :: (HasSubState s, MonadState s m) => (SubState s -> (a, SubState s)) -> m a
