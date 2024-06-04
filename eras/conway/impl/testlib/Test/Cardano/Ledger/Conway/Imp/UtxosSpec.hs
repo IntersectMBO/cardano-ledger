@@ -20,7 +20,6 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure (..), AlonzoUtxowPredFailure (..))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
@@ -453,6 +452,7 @@ govPolicySpec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 govPolicySpec = do
@@ -745,14 +745,6 @@ testPlutusV1V2Failure sh badField lenz errorField = do
     ( pure . injectFailure $
         CollectErrors [BadTranslation errorField]
     )
-
-expectPhase2Invalid :: ConwayEraImp era => Tx era -> ImpTestM era ()
-expectPhase2Invalid tx = do
-  res <- trySubmitTx tx
-  -- TODO: find a way to check that this is a PlutusFailure
-  -- without comparing the entire PredicateFailure
-  void $ expectLeft res
-  submitTx_ $ tx & isValidTxL .~ IsValid False
 
 mintingTokenTx :: ConwayEraImp era => Tx era -> ScriptHash (EraCrypto era) -> ImpTestM era (Tx era)
 mintingTokenTx tx sh = do

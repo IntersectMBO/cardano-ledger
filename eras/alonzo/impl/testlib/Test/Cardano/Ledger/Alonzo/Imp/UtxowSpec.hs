@@ -32,7 +32,7 @@ import Data.Sequence.Strict (StrictSeq ((:<|)))
 import Lens.Micro
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, fixupPPHash)
+import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, expectPhase2Invalid, fixupPPHash)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum, redeemerSameAsDatum)
@@ -143,10 +143,12 @@ spec = describe "UTXOW" $ do
         <$> withPostFixup
           (fixupResetAddrWits <$> resetTxOutDataHash)
           (submitTx tx)
-
-    submitFailingTx
-      (mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn])
-      [injectFailure $ UnspendableUTxONoDatumHash [txIn]]
+    let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+    if lang >= PlutusV3
+      then -- PlutusV3 no longer requires a spending Datum, but it should still fail since the
+      -- actual script expects it
+        expectPhase2Invalid tx
+      else submitFailingTx tx [injectFailure $ UnspendableUTxONoDatumHash [txIn]]
 
   it "ExtraRedeemers" $ do
     let scriptHash = withSLanguage PlutusV1 (hashPlutusScript . redeemerSameAsDatum)

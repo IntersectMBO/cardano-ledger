@@ -69,10 +69,10 @@ spec = describe "UTXO" $ do
               & mintTxBodyL .~ burnTooMuchMultiAsset
       (_, rootTxOut) <- lookupImpRootTxOut
       let rootTxOutValue = rootTxOut ^. valueTxOutL
-      predFailures <- expectLeftDeep =<< trySubmitTx (mkBasicTx txBody)
-      predFailures
-        `shouldBe` [ injectFailure $
-                      ValueNotConservedUTxO
-                        (rootTxOutValue <> MaryValue c (MultiAsset mintedMultiAsset))
-                        (rootTxOutValue <> MaryValue c burnTooMuchProducedMultiAsset)
-                   ]
+      submitFailingTx
+        (mkBasicTx txBody)
+        [ injectFailure $
+            ValueNotConservedUTxO
+              (rootTxOutValue <> MaryValue c (MultiAsset mintedMultiAsset))
+              (rootTxOutValue <> MaryValue c burnTooMuchProducedMultiAsset)
+        ]
