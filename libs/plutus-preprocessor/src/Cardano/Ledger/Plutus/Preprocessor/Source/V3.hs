@@ -14,8 +14,11 @@ alwaysSucceedsNoDatumQ =
     alwaysSucceedsNoDatum :: P.BuiltinData -> ()
     alwaysSucceedsNoDatum arg =
       case unsafeFromBuiltinData arg of
-        PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript _ Nothing) -> ()
-        _ -> P.error ()
+        PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo ->
+          case scriptInfo of
+            -- We fail if this is a spendiong script with a Datum
+            PV3.SpendingScript _ (Just _) -> P.error ()
+            _ -> ()
     |]
 
 alwaysSucceedsWithDatumQ :: Q [Dec]
@@ -24,6 +27,7 @@ alwaysSucceedsWithDatumQ =
     alwaysSucceedsWithDatum :: P.BuiltinData -> ()
     alwaysSucceedsWithDatum arg =
       case unsafeFromBuiltinData arg of
+        -- Expecting a spending script with a Datum, thus failing when it is not
         PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript _ (Just _)) -> ()
         _ -> P.error ()
     |]
@@ -36,8 +40,9 @@ alwaysFailsNoDatumQ =
       case fromBuiltinData arg of
         Just (PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo) ->
           case scriptInfo of
+            -- We fail only if this is not a spending script with a Datum
             PV3.SpendingScript _ (Just _) -> ()
-            PV3.SpendingScript _ Nothing -> P.error ()
+            _ -> P.error ()
         Nothing -> ()
     |]
 
@@ -49,8 +54,9 @@ alwaysFailsWithDatumQ =
       case fromBuiltinData arg of
         Just (PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo) ->
           case scriptInfo of
-            PV3.SpendingScript _ Nothing -> ()
+            -- We fail only if this is a spending script with a Datum
             PV3.SpendingScript _ (Just _) -> P.error ()
+            _ -> ()
         Nothing -> ()
     |]
 
@@ -60,10 +66,10 @@ redeemerSameAsDatumQ =
     redeemerSameAsDatum :: P.BuiltinData -> ()
     redeemerSameAsDatum arg =
       case unsafeFromBuiltinData arg of
-        PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) scriptInfo ->
-          case scriptInfo of
-            PV3.SpendingScript _ (Just (PV3.Datum datum)) ->
-              if datum P.== redeemer then () else P.error ()
+        PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) (PV3.SpendingScript _ (Just (PV3.Datum datum))) ->
+          -- Expecting a spending script with a Datum, thus failing when it is not
+          if datum P.== redeemer then () else P.error ()
+        _ -> P.error ()
     |]
 
 evenDatumQ :: Q [Dec]
@@ -73,6 +79,7 @@ evenDatumQ =
     evenDatum arg =
       case unsafeFromBuiltinData arg of
         PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _ (Just (PV3.Datum datum))) ->
+          -- Expecting a spending script with a Datum, thus failing when it is not
           if P.modulo (P.unsafeDataAsI datum) 2 P.== 0 then () else P.error ()
     |]
 
@@ -84,7 +91,7 @@ evenRedeemerNoDatumQ =
       case unsafeFromBuiltinData arg of
         PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) scriptInfo ->
           case scriptInfo of
-            -- Expecting No Datum, therefore should fail when it is present
+            -- Expecting No Datum, therefore should fail when it is supplied
             PV3.SpendingScript _ (Just _) -> P.error ()
             _ -> if P.modulo (P.unsafeDataAsI redeemer) 2 P.== 0 then () else P.error ()
     |]
@@ -95,9 +102,8 @@ evenRedeemerWithDatumQ =
     evenRedeemerWithDatum :: P.BuiltinData -> ()
     evenRedeemerWithDatum arg =
       case unsafeFromBuiltinData arg of
-        PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) scriptInfo ->
-          case scriptInfo of
-            -- Expecting Datum, therefore should fail on the lack its presence
-            PV3.SpendingScript _ Nothing -> P.error ()
-            _ -> if P.modulo (P.unsafeDataAsI redeemer) 2 P.== 0 then () else P.error ()
+        PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) (PV3.SpendingScript _ (Just _)) ->
+          -- Expecting a spending script with a Datum, thus failing when it is not
+          if P.modulo (P.unsafeDataAsI redeemer) 2 P.== 0 then () else P.error ()
+        _ -> P.error ()
     |]
