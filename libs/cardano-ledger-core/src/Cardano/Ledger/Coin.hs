@@ -54,6 +54,7 @@ import GHC.Generics (Generic)
 import GHC.Stack
 import NoThunks.Class (NoThunks (..))
 import Quiet
+import System.Random.Stateful (Uniform (..), UniformRange (..))
 
 -- | The amount of value held by a transaction output.
 newtype Coin = Coin {unCoin :: Integer}
@@ -162,3 +163,15 @@ decodePositiveCoin errorMessage = do
   if n == 0
     then fail $ errorMessage ++ ": Expected a positive Coin. Got 0 (zero)."
     else pure $ Coin (toInteger n)
+
+instance Uniform Coin where
+  uniformM g = fromCompact <$> uniformM g
+
+instance Uniform (CompactForm Coin) where
+  uniformM g = CompactCoin <$> uniformM g
+
+instance UniformRange Coin where
+  uniformRM (l, h) g = fromCompact <$> uniformRM (compactCoinOrError l, compactCoinOrError h) g
+
+instance UniformRange (CompactForm Coin) where
+  uniformRM (CompactCoin l, CompactCoin h) g = CompactCoin <$> uniformRM (l, h) g
