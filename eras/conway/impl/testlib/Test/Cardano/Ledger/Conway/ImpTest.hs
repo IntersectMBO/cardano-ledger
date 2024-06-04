@@ -195,6 +195,7 @@ import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Monad (forM)
 import Control.State.Transition.Extended (STS (..))
+import Data.Bifunctor (bimap)
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import Data.Functor.Identity
@@ -586,7 +587,7 @@ trySubmitVote ::
         (TxId (EraCrypto era))
     )
 trySubmitVote vote voter gaId =
-  fmap (fmap txIdTx) $
+  fmap (bimap fst txIdTx) $
     trySubmitTx $
       mkBasicTx mkBasicTxBody
         & bodyTxL . votingProceduresTxBodyL
@@ -661,14 +662,14 @@ trySubmitProposal proposal = do
           { gaidTxId = txIdTx tx
           , gaidGovActionIx = GovActionIx 0
           }
-    Left err -> Left err
+    Left (err, _) -> Left err
 
 trySubmitProposals ::
   ( ShelleyEraImp era
   , ConwayEraTxBody era
   ) =>
   NE.NonEmpty (ProposalProcedure era) ->
-  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (Tx era))
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx era) (Tx era))
 trySubmitProposals proposals = do
   trySubmitTx $
     mkBasicTx mkBasicTxBody
@@ -700,7 +701,7 @@ trySubmitGovAction ::
     )
 trySubmitGovAction ga = do
   let mkGovActionId tx = GovActionId (txIdTx tx) (GovActionIx 0)
-  fmap mkGovActionId <$> trySubmitGovActions (pure ga)
+  bimap fst mkGovActionId <$> trySubmitGovActions (pure ga)
 
 submitAndExpireProposalToMakeReward ::
   ConwayEraImp era =>
@@ -725,7 +726,7 @@ submitAndExpireProposalToMakeReward expectedReward stakingC = do
 trySubmitGovActions ::
   (ShelleyEraImp era, ConwayEraTxBody era) =>
   NE.NonEmpty (GovAction era) ->
-  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (Tx era))
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx era) (Tx era))
 trySubmitGovActions gas = do
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
   rewardAccount <- registerRewardAccount

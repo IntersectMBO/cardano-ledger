@@ -133,7 +133,7 @@ spec = describe "Regression" $ do
               trySubmitTx @Conway $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . inputsTxBodyL .~ Set.singleton (TxIn (txIdTx lockedTx) $ TxIx 0)
-        pFailure <- impAnn "Expecting failure" $ expectLeftDeepExpr res
+        (pFailure, _) <- impAnn "Expecting failure" $ expectLeftDeepExpr res
         let
           hasInsufficientCollateral
             (ConwayUtxowFailure (UtxoFailure (InsufficientCollateral _ _))) = True

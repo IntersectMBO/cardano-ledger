@@ -104,6 +104,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   withPreFixup,
   withCborRoundTripFailures,
   impNESL,
+  impGlobalsL,
   impLastTickG,
   impKeyPairsG,
   impNativeScriptsG,
@@ -200,6 +201,7 @@ import Control.State.Transition.Extended (
   SingEP (..),
   ValidationPolicy (..),
  )
+import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..), type (:~:) (..))
 import Data.Default.Class (Default (..))
@@ -283,6 +285,9 @@ data ImpTestState era = ImpTestState
   , impGen :: !QCGen
   , impEvents :: [SomeSTSEvent era]
   }
+
+impGlobalsL :: Lens' (ImpTestState era) Globals
+impGlobalsL = lens impGlobals (\x y -> x {impGlobals = y})
 
 impLogL :: Lens' (ImpTestState era) (Doc ())
 impLogL = lens impLog (\x y -> x {impLog = y})
@@ -934,7 +939,7 @@ submitTx_ :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era ()
 submitTx_ = void . submitTx
 
 submitTx :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era (Tx era)
-submitTx tx = trySubmitTx tx >>= expectRightDeepExpr
+submitTx tx = trySubmitTx tx >>= expectRightDeepExpr . first fst
 
 trySubmitTx ::
   forall era.
@@ -942,7 +947,7 @@ trySubmitTx ::
   , HasCallStack
   ) =>
   Tx era ->
-  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (Tx era))
+  ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era)), Tx era) (Tx era))
 trySubmitTx tx = do
   txFixed <- asks iteFixup >>= ($ tx)
   logToExpr txFixed
@@ -962,7 +967,7 @@ trySubmitTx tx = do
               (eraProtVerLow @era)
               (eraProtVerHigh @era)
               predFailures
-      pure $ Left predFailures
+      pure $ Left (predFailures, txFixed)
     Right (st', events) -> do
       let txId = TxId . hashAnnotated $ txFixed ^. bodyTxL
           outsSize = SSeq.length $ txFixed ^. bodyTxL . outputsTxBodyL
@@ -992,7 +997,7 @@ submitFailingTx ::
   Tx era ->
   NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
-submitFailingTx tx expectedFailure = trySubmitTx tx >>= (`shouldBeLeftExpr` expectedFailure)
+submitFailingTx tx expectedFailure = trySubmitTx tx >>= (`shouldBeLeftExpr` expectedFailure) . first fst
 
 tryRunImpRule ::
   forall rule era.
@@ -1008,7 +1013,7 @@ tryRunImpRule ::
     )
 tryRunImpRule stsEnv stsState stsSignal = do
   let trc = TRC (stsEnv, stsState, stsSignal)
-  globals <- use $ to impGlobals
+  globals <- use impGlobalsL
   let
     stsOpts =
       ApplySTSOpts
@@ -1353,7 +1358,7 @@ getRewardAccountFor ::
   Credential 'Staking (EraCrypto era) ->
   ImpTestM era (RewardAccount (EraCrypto era))
 getRewardAccountFor stakingC = do
-  networkId <- use (to impGlobals . to networkId)
+  networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId stakingC
 
 registerRewardAccount ::
@@ -1377,7 +1382,7 @@ registerRewardAccount = do
           ]
       & bodyTxL . certsTxBodyL
         .~ SSeq.fromList [RegTxCert @era stakingCredential]
-  networkId <- use (to impGlobals . to networkId)
+  networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId stakingCredential
 
 lookupReward :: HasCallStack => Credential 'Staking (EraCrypto era) -> ImpTestM era Coin
@@ -1421,7 +1426,7 @@ registerAndRetirePoolToMakeReward ::
   ImpTestM era ()
 registerAndRetirePoolToMakeReward stakingC = do
   poolKH <- freshKeyHash
-  networkId <- use (to impGlobals . to networkId)
+  networkId <- use (impGlobalsL . to networkId)
   vrfKH <- freshKeyHashVRF
   Positive pledge <- arbitrary
   Positive cost <- arbitrary
