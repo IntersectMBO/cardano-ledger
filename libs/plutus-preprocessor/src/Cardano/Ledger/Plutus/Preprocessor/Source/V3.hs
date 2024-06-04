@@ -16,7 +16,7 @@ alwaysSucceedsNoDatumQ =
       case unsafeFromBuiltinData arg of
         PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo ->
           case scriptInfo of
-            -- We fail if this is a spendiong script with a Datum
+            -- We fail if this is a spending script with a Datum
             PV3.SpendingScript _ (Just _) -> P.error ()
             _ -> ()
     |]
