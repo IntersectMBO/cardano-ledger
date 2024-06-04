@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -26,6 +27,9 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   plutusTestScripts,
   impGetScriptContext,
   impGetScriptContextMaybe,
+  impPlutusWithContexts,
+  impScriptPredicateFailure,
+  expectPhase2Invalid,
   -- Fixup
   fixupDatums,
   fixupOutputDatums,
@@ -41,13 +45,22 @@ import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (evalTxExUnits)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
+  collectPlutusScriptsWithContext,
+  evalPlutusScriptsWithLogs,
+ )
+import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxosPredFailure (..),
+  TagMismatchDescription (..),
+  scriptFailureToFailureDescription,
+ )
 import Cardano.Ledger.Alonzo.Scripts (
   ExUnits (..),
   plutusScriptLanguage,
   toAsItem,
   toAsIx,
  )
-import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
@@ -57,6 +70,7 @@ import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), hashData)
+import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..), ScriptResult (..))
 import Cardano.Ledger.Plutus.Language (
   Language (..),
   Plutus (..),
@@ -101,6 +115,7 @@ class
   , AlonzoEraTx era
   , AlonzoEraUTxO era
   , EraPlutusContext era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   ) =>
   AlonzoEraImp era
   where
@@ -132,7 +147,7 @@ makeCollateralInput = do
   withFixup fixupTx $ sendCoinTo addr collateral
 
 addCollateralInput ::
-  (AlonzoEraImp era, ScriptsNeeded era ~ AlonzoScriptsNeeded era) =>
+  AlonzoEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
 addCollateralInput tx = impAnn "addCollateralInput" $ do
@@ -155,11 +170,9 @@ impLookupPlutusScriptMaybe sh =
 
 impGetPlutusContexts ::
   forall era.
-  (ScriptsNeeded era ~ AlonzoScriptsNeeded era, AlonzoEraImp era) =>
+  AlonzoEraImp era =>
   Tx era ->
-  ImpTestM
-    era
-    [(PlutusPurpose AsIxItem era, ScriptHash (EraCrypto era), ScriptTestContext)]
+  ImpTestM era [(PlutusPurpose AsIxItem era, ScriptHash (EraCrypto era), ScriptTestContext)]
 impGetPlutusContexts tx = do
   let txBody = tx ^. bodyTxL
   utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
@@ -188,9 +201,7 @@ fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
 
 fixupRedeemers ::
   forall era.
-  ( ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , AlonzoEraImp era
-  ) =>
+  AlonzoEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupRedeemers tx = impAnn "fixupRedeemers" $ do
@@ -233,9 +244,7 @@ fixupRedeemers tx = impAnn "fixupRedeemers" $ do
 
 fixupScriptWits ::
   forall era.
-  ( ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , AlonzoEraImp era
-  ) =>
+  AlonzoEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupScriptWits tx = impAnn "fixupScriptWits" $ do
@@ -262,7 +271,6 @@ fixupScriptWits tx = impAnn "fixupScriptWits" $ do
 fixupDatums ::
   forall era.
   ( HasCallStack
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , AlonzoEraImp era
   ) =>
   Tx era ->
@@ -350,8 +358,7 @@ fixupOutputDatums tx = impAnn "fixupOutputDatums" $ do
       & bodyTxL . outputsTxBodyL .~ newOutputs
 
 alonzoFixupTx ::
-  ( ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , HasCallStack
+  ( HasCallStack
   , AlonzoEraImp era
   ) =>
   Tx era ->
@@ -446,3 +453,46 @@ impGetScriptContext sh =
   impAnn ("Getting script context for " <> show sh)
     . expectJust
     $ impGetScriptContextMaybe @era sh
+
+impPlutusWithContexts ::
+  (HasCallStack, AlonzoEraImp era) => Tx era -> ImpTestM era [PlutusWithContext (EraCrypto era)]
+impPlutusWithContexts tx = do
+  globals <- use impGlobalsL
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  utxo <- getUTxO
+  case collectPlutusScriptsWithContext (epochInfo globals) (systemStart globals) pp tx utxo of
+    Left errs ->
+      assertFailure $ "Did not expect to get context translation failures: " ++ unlines (map show errs)
+    Right pwcs -> pure pwcs
+
+impScriptPredicateFailure ::
+  (HasCallStack, AlonzoEraImp era) => Tx era -> ImpTestM era (AlonzoUtxosPredFailure era)
+impScriptPredicateFailure tx = do
+  plutusWithContexts <- impPlutusWithContexts tx
+  when (null plutusWithContexts) $
+    assertFailure "Could not find any plutus scripts in the transaction"
+  case evalPlutusScriptsWithLogs tx plutusWithContexts of
+    (logs, Passes _) ->
+      assertFailure $
+        "Plutus script: \n"
+          ++ unlines (map show plutusWithContexts)
+          ++ "passed unexpectedly: \n"
+          ++ unlines (map show logs)
+    (_, Fails _ failures) ->
+      pure $
+        ValidationTagMismatch
+          (IsValid True)
+          (FailedUnexpectedly (scriptFailureToFailureDescription <$> failures))
+
+expectPhase2Invalid ::
+  ( HasCallStack
+  , AlonzoEraImp era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  ) =>
+  Tx era ->
+  ImpTestM era ()
+expectPhase2Invalid tx = do
+  (predFailure, fixedUpTx) <- expectLeft =<< trySubmitTx tx
+  scriptPredicateFailure <- impScriptPredicateFailure fixedUpTx
+  predFailure `shouldBeExpr` pure (injectFailure scriptPredicateFailure)
+  withNoFixup $ submitTx_ $ fixedUpTx & isValidTxL .~ IsValid False

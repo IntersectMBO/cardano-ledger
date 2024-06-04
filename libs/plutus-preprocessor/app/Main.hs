@@ -6,7 +6,7 @@
 -- package to build the system.  If the plutus package changes, we will have to regenerate
 -- the Examples.hs file.
 -- To regenerate Examples.hs, on a machine that can depend upon plutus=plugin,
--- run 'cabal run plutus-preprocessor'
+-- run 'cabal run plutus-preprocessor:plutus-preprocessor' using ghc = 9.6.x
 module Main (main) where
 
 import Cardano.Ledger.Plutus.Preprocessor (display)

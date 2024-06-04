@@ -353,14 +353,12 @@ evalTxExUnits ::
   SystemStart ->
   -- | We return a map from redeemer pointers to either a failure or a
   --  sufficient execution budget.
-  --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
-  --  to construct a valid execution context for the given transaction.
   RedeemerReport era
 evalTxExUnits pp tx utxo epochInfo systemStart =
   Map.map (fmap snd) $ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart
 
 -- | Evaluate the execution budgets needed for all the redeemers in
---  a given transaction. If a redeemer is invalid, a failure is returned instead.
+--  a given transaction.
 --
 --  The execution budgets in the supplied transaction are completely ignored.
 --  The results of 'evalTxExUnitsWithLogs' are intended to replace them.
@@ -390,8 +388,8 @@ evalTxExUnitsWithLogs ::
   RedeemerReportWithLogs era
 evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndCount rdmrs
   where
-    usePointerAsKey (plutusPurpose, _) = hoistPlutusPurpose toAsIx plutusPurpose
-    ptrToPlutusScript = fromElems usePointerAsKey scriptsNeeded
+    keyedByPurpose (plutusPurpose, _) = hoistPlutusPurpose toAsIx plutusPurpose
+    purposeToScriptHash = fromElems keyedByPurpose scriptsNeeded
     ledgerTxInfo =
       LedgerTxInfo
         { ltiProtVer = protVer
@@ -411,7 +409,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
     findAndCount pointer (redeemerData, exUnits) = do
       (plutusPurpose, plutusScriptHash) <-
         note (RedeemerPointsToUnknownScriptHash pointer) $
-          Map.lookup pointer ptrToPlutusScript
+          Map.lookup pointer purposeToScriptHash
       let ptrToPlutusScriptNoContext =
             Map.map
               ( \(sp, sh) ->
@@ -420,7 +418,7 @@ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndC
                   , sh
                   )
               )
-              ptrToPlutusScript
+              purposeToScriptHash
       plutusScript <-
         note (MissingScript pointer ptrToPlutusScriptNoContext) $
           Scripts.lookupPlutusScript plutusScriptHash scriptsProvided
