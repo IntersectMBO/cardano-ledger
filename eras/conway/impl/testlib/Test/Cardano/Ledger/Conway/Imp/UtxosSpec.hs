@@ -56,6 +56,7 @@ import Test.Cardano.Ledger.Plutus (testingCostModels)
 import Test.Cardano.Ledger.Plutus.Examples (
   alwaysFailsNoDatum,
   alwaysSucceedsNoDatum,
+  evenRedeemerNoDatum,
   redeemerSameAsDatum,
  )
 
@@ -632,10 +633,10 @@ costModelsSpec =
       govIdConstitution1 <-
         enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMember
 
-      let guessTheNumberSh = hashPlutusScript (redeemerSameAsDatum SPlutusV3)
+      let mintingScriptHash = hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
 
       impAnn "Minting token fails" $ do
-        tx <- mintingTokenTx @era (mkBasicTx @era mkBasicTxBody) guessTheNumberSh
+        tx <- mintingTokenTx @era (mkBasicTx @era mkBasicTxBody) mintingScriptHash
         submitFailingTx tx [injectFailure $ CollectErrors [NoCostModel PlutusV3]]
 
       govIdPPUpdate1 <-
@@ -654,7 +655,7 @@ costModelsSpec =
           committeeMember
 
       impAnn "Minting token succeeds" $ do
-        tx <- mintingTokenTx @era (mkBasicTx @era mkBasicTxBody) guessTheNumberSh
+        tx <- mintingTokenTx @era (mkBasicTx @era mkBasicTxBody) mintingScriptHash
         submitTx_ tx
 
       impAnn "Updating CostModels succeeds" $ do

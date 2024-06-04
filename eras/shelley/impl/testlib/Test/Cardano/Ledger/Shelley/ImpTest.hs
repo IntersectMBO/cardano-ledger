@@ -478,6 +478,7 @@ initShelleyImpNES =
       emptyPParams
         & ppMinFeeAL .~ Coin 44
         & ppMinFeeBL .~ Coin 155_381
+        & ppMaxTxSizeL .~ 16384
     epochState =
       EpochState
         { esAccountState =
