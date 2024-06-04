@@ -41,6 +41,7 @@ module Cardano.Ledger.Alonzo.Scripts (
   isValidPlutusScript,
   toPlutusSLanguage,
   alonzoScriptPrefixTag,
+  lookupPlutusScript,
 
   -- ** Plutus Purpose
   pattern SpendingPurpose,
@@ -110,10 +111,11 @@ import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..), nativeMultiSigTag)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), deepseq)
-import Control.Monad (guard)
+import Control.Monad (guard, (>=>))
 import Data.Aeson (ToJSON (..), Value (String), object, (.=))
 import qualified Data.ByteString as BS
 import Data.Kind (Type)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
 import Data.Typeable
 import Data.Word (Word16, Word32, Word8)
@@ -605,3 +607,11 @@ eqAlonzoScriptRaw _ _ = False
 
 eraLanguages :: forall era. AlonzoEraScript era => [Language]
 eraLanguages = [minBound .. eraMaxLanguage @era]
+
+-- | Having a Map with scripts and a script hash, lookup the plutus script.
+lookupPlutusScript ::
+  AlonzoEraScript era =>
+  ScriptHash (EraCrypto era) ->
+  Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
+  Maybe (PlutusScript era)
+lookupPlutusScript scriptHash = Map.lookup scriptHash >=> toPlutusScript

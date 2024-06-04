@@ -88,6 +88,7 @@ import Cardano.Ledger.Alonzo.Scripts (
   AsIxItem,
   CostModel,
   ExUnits (..),
+  lookupPlutusScript,
   toAsIx,
   txscriptfee,
  )
@@ -136,6 +137,7 @@ import Control.DeepSeq (NFData (..))
 import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import Data.Maybe.Strict (
   StrictMaybe (..),
   maybeToStrictMaybe,
@@ -484,28 +486,18 @@ instance
           )
   {-# INLINE decCBOR #-}
 
--- =======================================================================
--- Some generic functions that compute over Tx. We try to be abstract over
--- things that might differ from Era to Era like
---    1) TxOut will have additional fields
---    2) Scripts might appear in places other than the witness set. So
---       we need such a 'witness' we pass it as a parameter and each call site
---       can use a different method to compute it in the current Era.
-
 -- | Compute if an Addr has the hash of a TwoPhaseScript, we can tell
 --   what kind of Script from the Hash, by looking it up in the Map
 isTwoPhaseScriptAddressFromMap ::
   forall era.
-  EraScript era =>
+  AlonzoEraScript era =>
   Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
   Addr (EraCrypto era) ->
   Bool
-isTwoPhaseScriptAddressFromMap hashScriptMap addr =
-  case Shelley.getScriptHash @(EraCrypto era) addr of
-    Nothing -> False
-    Just hash -> any ok hashScriptMap
-      where
-        ok script = hashScript @era script == hash && not (isNativeScript @era script)
+isTwoPhaseScriptAddressFromMap hashScriptMap addr = isJust $ do
+  scriptHash <- Shelley.getScriptHash addr
+  lookupPlutusScript scriptHash hashScriptMap
+{-# DEPRECATED isTwoPhaseScriptAddressFromMap "No longer used. Inline implementation if you need it" #-}
 
 alonzoEqTxRaw :: AlonzoEraTx era => Tx era -> Tx era -> Bool
 alonzoEqTxRaw tx1 tx2 =
