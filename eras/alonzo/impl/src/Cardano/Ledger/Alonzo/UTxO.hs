@@ -38,8 +38,11 @@ where
 
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Era (AlonzoEra)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
-import Cardano.Ledger.Alonzo.Tx (isTwoPhaseScriptAddressFromMap)
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoPlutusPurpose (..),
+  lookupPlutusScript,
+  plutusScriptLanguage,
+ )
 import Cardano.Ledger.Alonzo.TxWits (unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.CertState (CertState)
@@ -48,6 +51,7 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue, getProducedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
+import Cardano.Ledger.Plutus (Language (..))
 import Cardano.Ledger.Plutus.Data (Data, Datum (..))
 import Cardano.Ledger.Shelley.TxBody (raCredential)
 import Cardano.Ledger.Shelley.UTxO (
@@ -64,7 +68,7 @@ import Cardano.Ledger.UTxO (
 import Control.SetAlgebra (eval, (◁))
 import Data.Foldable (foldl', toList)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes, fromMaybe, isJust)
 import qualified Data.Set as Set
 import Data.Word (Word32)
 import Lens.Micro ((^.))
@@ -169,7 +173,7 @@ getAlonzoScriptsHashesNeeded (AlonzoScriptsNeeded sn) = Set.fromList (map snd sn
 --
 -- @{ h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a}@
 getInputDataHashesTxBody ::
-  (EraTxBody era, AlonzoEraTxOut era, EraScript era) =>
+  (EraTxBody era, AlonzoEraTxOut era, AlonzoEraScript era) =>
   UTxO era ->
   TxBody era ->
   ScriptsProvided era ->
@@ -177,17 +181,24 @@ getInputDataHashesTxBody ::
 getInputDataHashesTxBody (UTxO utxo) txBody (ScriptsProvided scriptsProvided) =
   Map.foldlWithKey' accum (Set.empty, Set.empty) spendUTxO
   where
+    spendingPlutusScriptLanguage addr = do
+      scriptHash <- getScriptHash addr
+      plutusScript <- lookupPlutusScript scriptHash scriptsProvided
+      pure $ plutusScriptLanguage plutusScript
+    isSpendingPlutusScript = isJust . spendingPlutusScriptLanguage
     spendInputs = txBody ^. inputsTxBodyL
     spendUTxO = eval (spendInputs ◁ utxo)
     accum ans@(!hashSet, !inputSet) txIn txOut =
       let addr = txOut ^. addrTxOutL
-          isTwoPhaseScriptAddress = isTwoPhaseScriptAddressFromMap scriptsProvided addr
        in case txOut ^. datumTxOutF of
             NoDatum
-              | isTwoPhaseScriptAddress -> (hashSet, Set.insert txIn inputSet)
+              | Just lang <- spendingPlutusScriptLanguage addr
+              , -- Spending Datums are no longer required with PlutusV3. See: CIP-0069
+                lang < PlutusV3 ->
+                  (hashSet, Set.insert txIn inputSet)
             DatumHash dataHash
-              | isTwoPhaseScriptAddress -> (Set.insert dataHash hashSet, inputSet)
-            -- Though it is somewhat odd to allow non-two-phase-scripts to include a datum,
+              | isSpendingPlutusScript addr -> (Set.insert dataHash hashSet, inputSet)
+            -- Though it is somewhat odd to allow native scripts to include a datum,
             -- the Alonzo era already set the precedent with datum hashes, and several dapp
             -- developers see this as a helpful feature.
             _ -> ans

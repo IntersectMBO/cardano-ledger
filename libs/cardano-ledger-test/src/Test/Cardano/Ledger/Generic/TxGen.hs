@@ -356,12 +356,12 @@ makeDatumWitness proof txout = case (proof, txout) of
       pure [DataWits' [datum]]
 
 -- | Does the current Credential point to a PlutusScript? If so return its IsValid and Hash
-lookupPlutusScript ::
+plutusScriptHashFromTag ::
   Credential k (EraCrypto era) ->
   PlutusPurposeTag ->
   GenRS era (Maybe (IsValid, ScriptHash (EraCrypto era)))
-lookupPlutusScript (KeyHashObj _) _ = pure Nothing
-lookupPlutusScript (ScriptHashObj scriptHash) tag =
+plutusScriptHashFromTag (KeyHashObj _) _ = pure Nothing
+plutusScriptHashFromTag (ScriptHashObj scriptHash) tag =
   fmap (Map.lookup (scriptHash, tag) . gsPlutusScripts) get <&> \case
     Nothing -> Nothing
     Just (isValid, _) -> Just (isValid, scriptHash)
@@ -383,7 +383,7 @@ redeemerWitnessMaker proof tag listWithCred =
       allValid = IsValid . getAll . foldMap (\(IsValid v) -> All v)
    in fmap (first allValid . unzip . catMaybes) $
         forM creds $ \(ix, genDat, cred) ->
-          lookupPlutusScript cred tag >>= \case
+          plutusScriptHashFromTag cred tag >>= \case
             Nothing -> pure Nothing
             Just (isValid, _) -> do
               datum <- genDat
@@ -682,7 +682,7 @@ genTxCerts slot = do
                   then pure (dcs, ss, regCreds)
                   else
                     insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
-                      <$> lookupPlutusScript deregCred Certifying
+                      <$> plutusScriptHashFromTag deregCred Certifying
               Just (Coin _) -> pure (dcs, ss, regCreds)
           DelegStakeTxCert delegCred delegKey ->
             let (dcs', regCreds') =
@@ -696,7 +696,7 @@ genTxCerts slot = do
                       , Map.insert delegCred (Coin 99) regCreds
                       )
              in insertIfNotPresent dcs' regCreds' (Just delegKey)
-                  <$> lookupPlutusScript delegCred Certifying
+                  <$> plutusScriptHashFromTag delegCred Certifying
           _ -> pure (dc : dcs, ss, regCreds)
   maxcert <- gets getCertificateMax
   n <- lift $ choose (0, maxcert)
