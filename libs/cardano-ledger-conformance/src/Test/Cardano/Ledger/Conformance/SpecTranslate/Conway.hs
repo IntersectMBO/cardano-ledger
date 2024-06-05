@@ -803,21 +803,57 @@ instance SpecTranslate ctx (VotingProcedures era) where
               )
           <*> m
 
-instance EraPParams era => SpecTranslate ctx (GovAction era) where
+instance SpecTranslate ctx (ConwayPParams StrictMaybe era) where
+  type SpecRep (ConwayPParams StrictMaybe era) = Agda.PParamsUpdate
+
+  toSpecRep x =
+    Agda.MkPParamsUpdate
+      <$> toSpecRep (cppMinFeeA x)
+      <*> toSpecRep (cppMinFeeB x)
+      <*> pure (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxBBSize x)
+      <*> pure (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxTxSize x)
+      <*> pure (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxBHSize x)
+      <*> pure (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxValSize x)
+      <*> pure Nothing -- minUTxOValue has been deprecated and is not supported in Conway
+      <*> toSpecRep (cppPoolDeposit x)
+      <*> toSpecRep (cppKeyDeposit x)
+      <*> toSpecRep (cppEMax x)
+      <*> toSpecRep (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppNOpt x)
+      <*> pure Nothing
+      <*> toSpecRep (cppPoolVotingThresholds x)
+      <*> toSpecRep (cppDRepVotingThresholds x)
+      <*> toSpecRep (cppGovActionLifetime x)
+      <*> toSpecRep (cppGovActionDeposit x)
+      <*> toSpecRep (cppDRepDeposit x)
+      <*> toSpecRep (cppDRepActivity x)
+      <*> pure (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppCommitteeMinSize x)
+      <*> pure
+        (fmap (toInteger . unEpochInterval) . strictMaybeToMaybe . unTHKD $ cppCommitteeMaxTermLength x)
+      <*> toSpecRep (cppCostModels x)
+      <*> toSpecRep (cppPrices x)
+      <*> toSpecRep (cppMaxTxExUnits x)
+      <*> toSpecRep (cppMaxBlockExUnits x)
+      <*> toSpecRep (cppCoinsPerUTxOByte x)
+      <*> pure (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxCollateralInputs x)
+
+instance
+  SpecTranslate ctx (PParamsHKD StrictMaybe era) =>
+  SpecTranslate ctx (PParamsUpdate era)
+  where
+  type SpecRep (PParamsUpdate era) = SpecRep (PParamsHKD StrictMaybe era)
+
+  toSpecRep (PParamsUpdate ppu) = toSpecRep ppu
+
+instance
+  ( EraPParams era
+  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  ) =>
+  SpecTranslate ctx (GovAction era)
+  where
   type SpecRep (GovAction era) = Agda.GovAction
 
-  -- TODO remove the failure cases once it's possible to update all of the
-  -- parameters in the spec
-  toSpecRep (ParameterChange _ ppu _)
-    | SJust minFeeA <- ppu ^. ppuMinFeeAL =
-        if ppu == (def & ppuMinFeeAL .~ SJust minFeeA)
-          then Agda.ChangePParams <$> toSpecRep minFeeA
-          else
-            throwError
-              "Expecting PParamsUpdate to update only minFeeA, but it's also updating something else"
-    | otherwise =
-        throwError
-          "Expecting PParamsUpdate to update minFeeA, but it's not"
+  toSpecRep (ParameterChange _ ppu _) = Agda.ChangePParams <$> toSpecRep ppu
   toSpecRep (HardForkInitiation _ pv) = Agda.TriggerHF <$> toSpecRep pv
   toSpecRep (TreasuryWithdrawals withdrawals _) =
     Agda.TreasuryWdrl
@@ -850,7 +886,13 @@ instance
 
   toSpecRep = traverse (bimapM toSpecRep toSpecRep) . assocList
 
-instance EraPParams era => SpecTranslate ctx (ProposalProcedure era) where
+instance
+  ( EraPParams era
+  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  ) =>
+  SpecTranslate ctx (ProposalProcedure era)
+  where
   type SpecRep (ProposalProcedure era) = Agda.GovProposal
 
   toSpecRep ProposalProcedure {..} =
@@ -870,7 +912,10 @@ instance EraPParams era => SpecTranslate ctx (ProposalProcedure era) where
           _ -> SNothing
 
 instance
-  EraPParams era =>
+  ( EraPParams era
+  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  ) =>
   SpecTranslate ctx (GovProcedures era)
   where
   type SpecRep (GovProcedures era) = [Agda.GovSignal]
@@ -913,7 +958,13 @@ unionsHSMaps ((Agda.MkHSMap x) : xs) =
 mapHSMapKey :: (k -> l) -> Agda.HSMap k v -> Agda.HSMap l v
 mapHSMapKey f (Agda.MkHSMap l) = Agda.MkHSMap $ first f <$> l
 
-instance EraPParams era => SpecTranslate ctx (GovActionState era) where
+instance
+  ( EraPParams era
+  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  ) =>
+  SpecTranslate ctx (GovActionState era)
+  where
   type SpecRep (GovActionState era) = Agda.GovActionState
 
   toSpecRep gas@GovActionState {..} = do
@@ -947,7 +998,13 @@ instance SpecTranslate ctx (GovActionId c) where
 
   toSpecRep (GovActionId txId gaIx) = toSpecRep (txId, gaIx)
 
-instance EraPParams era => SpecTranslate ctx (Proposals era) where
+instance
+  ( EraPParams era
+  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  ) =>
+  SpecTranslate ctx (Proposals era)
+  where
   type SpecRep (Proposals era) = Agda.GovState
 
   toSpecRep = toSpecRep . view pPropsL
@@ -1112,6 +1169,8 @@ instance
   , SpecTranslate ctx (PParamsHKD Identity era)
   , Inject ctx [GovActionState era]
   , ToExpr (PParamsHKD StrictMaybe era)
+  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
   ) =>
   SpecTranslate ctx (RatifyState era)
   where
@@ -1142,7 +1201,13 @@ instance
       <*> toSpecRep removed
       <*> toSpecRep rsDelayed
 
-instance EraPParams era => SpecTranslate ctx (RatifySignal era) where
+instance
+  ( EraPParams era
+  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  ) =>
+  SpecTranslate ctx (RatifySignal era)
+  where
   type
     SpecRep (RatifySignal era) =
       SpecRep [(GovActionId (EraCrypto era), GovActionState era)]
@@ -1151,7 +1216,13 @@ instance EraPParams era => SpecTranslate ctx (RatifySignal era) where
     toSpecRep $
       (\gas@GovActionState {gasId} -> (gasId, gas)) <$> x
 
-instance EraPParams era => SpecTranslate ctx (EnactSignal era) where
+instance
+  ( EraPParams era
+  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  ) =>
+  SpecTranslate ctx (EnactSignal era)
+  where
   type SpecRep (EnactSignal era) = SpecRep (GovAction era)
 
   toSpecRep (EnactSignal _ ga) = toSpecRep ga

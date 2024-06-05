@@ -23,14 +23,12 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway () where
 import Cardano.Ledger.BaseTypes (Inject (..), Network, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway (Conway)
-import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParamsUpdate)
+import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..))
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   EnactState (..),
-  GovAction,
   GovActionState (..),
   GovProcedures (..),
-  ProposalProcedure,
   Proposals,
   RatifyEnv (..),
   RatifySignal (..),
@@ -41,10 +39,8 @@ import Cardano.Ledger.Conway.Governance (
   pRootsL,
   toPrevGovActionIds,
  )
-import Cardano.Ledger.Conway.PParams (THKD (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayGovPredFailure,
-  EnactSignal,
   committeeAcceptedRatio,
   dRepAcceptedRatio,
   spoAcceptedRatio,
@@ -64,7 +60,6 @@ import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Text as T
-import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
 import qualified Lib as Agda
@@ -143,129 +138,6 @@ instance EraCrypto era ~ c => Inject (ConwayGovTransContext era) (TxId c) where
 instance EraCrypto era ~ c => Inject (ConwayGovTransContext era) (Proposals era) where
   inject (ConwayGovTransContext _ _ x) = x
 
-agdaCompatiblePPU :: IsConwayUniv fn => Term fn (PParamsUpdate Conway) -> Pred fn
-agdaCompatiblePPU ppup =
-  match ppup $
-    \cppMinFeeA
-     cppMinFeeB
-     cppMaxBBSize
-     cppMaxTxSize
-     cppMaxBHSize
-     cppKeyDeposit
-     cppPoolDeposit
-     cppEMax
-     cppNOpt
-     cppA0
-     cppRho
-     cppTau
-     _cppProtocolVersion
-     cppMinPoolCost
-     cppCoinsPerUTxOByte
-     cppCostModels
-     cppPrices
-     cppMaxTxExUnits
-     cppMaxBlockExUnits
-     cppMaxValSize
-     cppCollateralPercentage
-     cppMaxCollateralInputs
-     cppPoolVotingThresholds
-     cppDRepVotingThresholds
-     cppCommitteeMinSize
-     cppCommitteeMaxTermLength
-     cppGovActionLifetime
-     cppGovActionDeposit
-     cppDRepDeposit
-     cppDRepActivity
-     cppMinFeeRefScriptCostPerByte ->
-        -- TODO enable pparam updates once they're properly
-        -- implemented in the spec
-        mconcat
-          [ isModified cppMinFeeA
-          , isUnmodified cppMinFeeB
-          , isUnmodified cppMaxBBSize
-          , isUnmodified cppMaxTxSize
-          , isUnmodified cppMaxBHSize
-          , isUnmodified cppKeyDeposit
-          , isUnmodified cppPoolDeposit
-          , isUnmodified cppEMax
-          , isUnmodified cppNOpt
-          , isUnmodified cppA0
-          , isUnmodified cppRho
-          , isUnmodified cppTau
-          , isUnmodified cppMinPoolCost
-          , isUnmodified cppCoinsPerUTxOByte
-          , isUnmodified cppCostModels
-          , isUnmodified cppPrices
-          , isUnmodified cppMaxTxExUnits
-          , isUnmodified cppMaxBlockExUnits
-          , isUnmodified cppMaxValSize
-          , isUnmodified cppCollateralPercentage
-          , isUnmodified cppMaxCollateralInputs
-          , isUnmodified cppPoolVotingThresholds
-          , isUnmodified cppDRepVotingThresholds
-          , isUnmodified cppCommitteeMinSize
-          , isUnmodified cppCommitteeMaxTermLength
-          , isUnmodified cppGovActionLifetime
-          , isUnmodified cppGovActionDeposit
-          , isUnmodified cppDRepDeposit
-          , isUnmodified cppDRepActivity
-          , isUnmodified cppMinFeeRefScriptCostPerByte
-          ]
-  where
-    isUnmodified ::
-      ( HasSpec fn a
-      , Typeable gs
-      , IsNormalType a
-      , IsConwayUniv fn
-      ) =>
-      Term fn (THKD gs StrictMaybe a) ->
-      Pred fn
-    isUnmodified x =
-      (caseOn x)
-        (branch $ \_ -> True)
-        (branch $ \_ -> False)
-    isModified ::
-      ( HasSpec fn a
-      , Typeable gs
-      , IsNormalType a
-      , IsConwayUniv fn
-      ) =>
-      Term fn (THKD gs StrictMaybe a) ->
-      Pred fn
-    isModified x =
-      (caseOn x)
-        (branch $ \_ -> False)
-        (branch $ \_ -> True)
-
-agdaCompatibleGovAction ::
-  IsConwayUniv fn =>
-  Term fn (GovAction Conway) ->
-  Pred fn
-agdaCompatibleGovAction govAction =
-  caseOn
-    govAction
-    (branch $ \_ ppup _ -> agdaCompatiblePPU ppup)
-    (branch $ \_ _ -> True)
-    (branch $ \_ _ -> True)
-    (branch $ const True)
-    (branch $ \_ _ _ _ -> True)
-    (branch $ \_ _ -> True)
-    (branch $ const True)
-
-agdaCompatibleProposal ::
-  IsConwayUniv fn =>
-  Term fn (ProposalProcedure Conway) ->
-  Pred fn
-agdaCompatibleProposal prop =
-  match prop $ \_ _ govAction _ -> agdaCompatibleGovAction govAction
-
-agdaCompatibleGAS ::
-  IsConwayUniv fn =>
-  Term fn (GovActionState Conway) ->
-  Pred fn
-agdaCompatibleGAS gas =
-  match gas $ \_ _ _ _ prop _ _ -> agdaCompatibleProposal prop
-
 instance
   ( NFData (SpecRep (ConwayGovPredFailure Conway))
   , IsConwayUniv fn
@@ -276,29 +148,9 @@ instance
 
   environmentSpec _ = govEnvSpec
 
-  stateSpec (_, propSplit) env =
-    govProposalsSpec env
-      <> constrained onlyMinFeeAUpdates
-    where
-      onlyMinFeeAUpdates :: Term fn (Proposals Conway) -> Pred fn
-      onlyMinFeeAUpdates props =
-        fold
-          [ match @fn props $
-              \ppups _ _ _ _ ->
-                [ match ppups $ \_ ppupForest ->
-                    forAll ppupForest $ \ppupTree ->
-                      forAll' ppupTree $ \gas _ -> agdaCompatibleGAS gas
-                ]
-          , genHint propSplit props -- Limit the total number of proposals
-          ]
+  stateSpec _ = govProposalsSpec
 
-  signalSpec _ env st =
-    govProceduresSpec env st
-      <> constrained onlyMinFeeAUpdates
-    where
-      onlyMinFeeAUpdates :: Term fn (GovProcedures Conway) -> Pred fn
-      onlyMinFeeAUpdates procs = match @fn procs $ \_ props ->
-        forAll props agdaCompatibleProposal
+  signalSpec _ = govProceduresSpec
 
   genExecContext = (,) <$> arbitrary <*> genProposalsSplit 20
 
@@ -519,11 +371,7 @@ ratifySignalSpec ConwayRatifyExecContext {crecGovActionMap} =
 instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
   type ExecContext fn "RATIFY" Conway = ConwayRatifyExecContext Conway
 
-  genExecContext = genFromSpec @fn
-    . constrained
-    $ \ctx ->
-      match ctx $ \_ gasMap ->
-        forAll gasMap agdaCompatibleGAS
+  genExecContext = arbitrary
 
   environmentSpec _ctx = ratifyEnvSpec
 
@@ -585,11 +433,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "ENACT" Conway where
 
   environmentSpec _ = TrueSpec
   stateSpec _ _ = TrueSpec
-  signalSpec _ _ _ = onlyMinFeeAUpdates
-    where
-      onlyMinFeeAUpdates :: Specification fn (EnactSignal Conway)
-      onlyMinFeeAUpdates = constrained $ \sig ->
-        match sig $ \_ ga -> agdaCompatibleGovAction ga
+  signalSpec _ _ _ = TrueSpec
   runAgdaRule env st sig =
     first (error "ENACT failed")
       . computationResultToEither
