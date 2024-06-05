@@ -145,12 +145,12 @@ import qualified Data.Sequence as Seq
 import Data.Set (Set)
 import qualified Data.Text as Text
 import Data.Unit.Strict (forceElemsToWHNF)
-import Data.Word (Word32)
+import Data.Word (Word16)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.))
 import NoThunks.Class (NoThunks)
 
-newtype GovActionIx = GovActionIx {unGovActionIx :: Word32}
+newtype GovActionIx = GovActionIx {unGovActionIx :: Word16}
   deriving
     ( Generic
     , Eq

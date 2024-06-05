@@ -220,7 +220,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   ppString,
   ppVKey,
   ppValidityInterval,
-  ppWord32,
+  ppWord16,
   trim,
  )
 import Test.Cardano.Ledger.Generic.Proof
@@ -678,7 +678,7 @@ synopsis (PoolMetadataR _) x = show x
 synopsis DRepStateR x = show (pcDRepState x)
 synopsis DStateR x = show (pcDState x)
 synopsis GovActionIdR x = show (pcGovActionId x)
-synopsis GovActionIxR (GovActionIx a) = show (ppWord32 a)
+synopsis GovActionIxR (GovActionIx a) = show (ppWord16 a)
 synopsis GovActionStateR x = show (pcGovActionState x)
 synopsis (ProposalsR _p) x = show (pcProposals x)
 synopsis UnitIntervalR x = show x

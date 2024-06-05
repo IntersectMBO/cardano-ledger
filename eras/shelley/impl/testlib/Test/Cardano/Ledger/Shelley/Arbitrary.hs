@@ -599,7 +599,7 @@ maxMultiSigDepth :: Int
 maxMultiSigDepth = 3
 
 maxMultiSigListLens :: Int
-maxMultiSigListLens = 5
+maxMultiSigListLens = 4
 
 sizedMultiSig :: ShelleyEraScript era => Int -> Gen (NativeScript era)
 sizedMultiSig 0 = RequireSignature <$> arbitrary

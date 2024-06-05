@@ -25,13 +25,13 @@ header =
   ]
 
 header_body =
-  [ block_number     : uint
-  , slot             : uint
+  [ block_number     : block_no
+  , slot             : slot_no
   , prev_hash        : $hash32 / null
   , issuer_vkey      : $vkey
   , vrf_vkey         : $vrf_vkey
   , vrf_result       : $vrf_cert ; replaces nonce_vrf and leader_vrf
-  , block_body_size  : uint
+  , block_body_size  : uint .size 4
   , block_body_hash  : $hash32 ; merkle triple root
   , operational_cert
   , protocol_version
@@ -39,7 +39,7 @@ header_body =
 
 operational_cert =
   [ hot_vkey        : $kes_vkey
-  , sequence_number : uint
+  , sequence_number : uint .size 8
   , kes_period      : uint
   , sigma           : $signature
   ]
@@ -54,11 +54,11 @@ transaction_body =
   { 0 : set<transaction_input>             ; inputs
   , 1 : [* transaction_output]
   , 2 : coin                               ; fee
-  , ? 3 : uint                             ; time to live
+  , ? 3 : slot_no                          ; time to live
   , ? 4 : certificates
   , ? 5 : withdrawals
   , ? 7 : auxiliary_data_hash
-  , ? 8 : uint                             ; validity interval start
+  , ? 8 : slot_no                          ; validity interval start
   , ? 9 : mint
   , ? 11 : script_data_hash
   , ? 13 : nonempty_set<transaction_input> ; collateral inputs
@@ -111,7 +111,7 @@ treasury_withdrawals_action = (2, { reward_account => coin }, policy_hash / null
 
 no_confidence = (3, gov_action_id / null)
 
-update_committee = (4, gov_action_id / null, set<committee_cold_credential>, { committee_cold_credential => epoch }, unit_interval)
+update_committee = (4, gov_action_id / null, set<committee_cold_credential>, { committee_cold_credential => epoch_no }, unit_interval)
 
 new_constitution = (5, gov_action_id / null, constitution)
 
@@ -147,13 +147,13 @@ vote = 0 .. 2
 
 gov_action_id =
   [ transaction_id   : $hash32
-  , gov_action_index : uint
+  , gov_action_index : uint .size 2
   ]
 
 required_signers = nonempty_set<addr_keyhash>
 
 transaction_input = [ transaction_id : $hash32
-                    , index : uint
+                    , index : uint .size 2
                     ]
 
 ; Both of the Alonzo and Babbage style TxOut formats are equally valid
@@ -298,7 +298,7 @@ stake_delegation = (2, stake_credential, pool_keyhash)
 
 ; POOL
 pool_registration = (3, pool_params)
-pool_retirement = (4, pool_keyhash, epoch)
+pool_retirement = (4, pool_keyhash, epoch_no)
 
 ; numbers 5 and 6 used to be the Genesis and MIR certificates respectively,
 ; which were deprecated in Conway
@@ -381,13 +381,13 @@ withdrawals = { + reward_account => coin }
 protocol_param_update =
   { ? 0:  coin                   ; minfee A
   , ? 1:  coin                   ; minfee B
-  , ? 2:  uint                   ; max block body size
-  , ? 3:  uint                   ; max transaction size
-  , ? 4:  uint                   ; max block header size
+  , ? 2:  uint .size 4           ; max block body size
+  , ? 3:  uint .size 4           ; max transaction size
+  , ? 4:  uint .size 2           ; max block header size
   , ? 5:  coin                   ; key deposit
   , ? 6:  coin                   ; pool deposit
-  , ? 7:  epoch                  ; maximum epoch
-  , ? 8:  uint                   ; n_opt: desired number of stake pools
+  , ? 7:  epoch_interval         ; maximum epoch
+  , ? 8:  uint .size 2           ; n_opt: desired number of stake pools
   , ? 9:  nonnegative_interval   ; pool pledge influence
   , ? 10: unit_interval          ; expansion rate
   , ? 11: unit_interval          ; treasury growth rate
@@ -397,17 +397,17 @@ protocol_param_update =
   , ? 19: ex_unit_prices         ; execution costs
   , ? 20: ex_units               ; max tx ex units
   , ? 21: ex_units               ; max block ex units
-  , ? 22: uint                   ; max value size
-  , ? 23: uint                   ; collateral percentage
-  , ? 24: uint                   ; max collateral inputs
+  , ? 22: uint .size 4           ; max value size
+  , ? 23: uint .size 2           ; collateral percentage
+  , ? 24: uint .size 2           ; max collateral inputs
   , ? 25: pool_voting_thresholds ; pool voting thresholds
   , ? 26: drep_voting_thresholds ; DRep voting thresholds
-  , ? 27: uint                   ; min committee size
-  , ? 28: epoch                  ; committee term limit
-  , ? 29: epoch                  ; governance action validity period
+  , ? 27: uint .size 2           ; min committee size
+  , ? 28: epoch_interval         ; committee term limit
+  , ? 29: epoch_interval         ; governance action validity period
   , ? 30: coin                   ; governance action deposit
   , ? 31: coin                   ; DRep deposit
-  , ? 32: epoch                  ; DRep inactivity period
+  , ? 32: epoch_interval         ; DRep inactivity period
   , ? 33: nonnegative_interval   ; MinFee RefScriptCostPerByte
   }
 
@@ -476,8 +476,8 @@ constr<a> =
 ; Flat Array support is included for backwards compatibility and will be removed in the next era.
 ; It is recommended for tools to adopt using a Map instead of Array going forward.
 redeemers =
-  [ + [ tag: redeemer_tag, index: uint, data: plutus_data, ex_units: ex_units ] ]
-  / { + [ tag: redeemer_tag, index: uint ] => [ data: plutus_data, ex_units: ex_units ] }
+  [ + [ tag: redeemer_tag, index: uint .size 4, data: plutus_data, ex_units: ex_units ] ]
+  / { + [ tag: redeemer_tag, index: uint .size 4 ] => [ data: plutus_data, ex_units: ex_units ] }
 
 redeemer_tag =
     0 ; Spending
@@ -515,7 +515,7 @@ transaction_metadatum =
   / bytes .size (0..64)
   / text .size (0..64)
 
-transaction_metadatum_label = uint
+transaction_metadatum_label = uint .size 8
 metadata = { * transaction_metadatum_label => transaction_metadatum }
 
 auxiliary_data =
@@ -556,8 +556,8 @@ script_pubkey = (0, addr_keyhash)
 script_all = (1, [ * native_script ])
 script_any = (2, [ * native_script ])
 script_n_of_k = (3, n: uint, [ * native_script ])
-invalid_before = (4, uint)
-invalid_hereafter = (5, uint)
+invalid_before = (4, slot_no)
+invalid_hereafter = (5, slot_no)
 
 coin = uint
 
@@ -565,21 +565,28 @@ multiasset<a> = { + policy_id => { + asset_name => a } }
 policy_id = scripthash
 asset_name = bytes .size (0..32)
 
-negInt64 = -9223372036854775808 .. -1
-posInt64 = 1 .. 9223372036854775807
+minInt64 = -9223372036854775808
+maxInt64 = 9223372036854775807
+maxWord64 = 18446744073709551615
+
+negInt64 = minInt64 .. -1
+posInt64 = 1 .. maxInt64
 nonZeroInt64 = negInt64 / posInt64 ; this is the same as the current int64 definition but without zero
 
-positive_coin = 1 .. 18446744073709551615
+positive_coin = 1 .. maxWord64
 
 value = coin / [coin, multiasset<positive_coin>]
 
 mint = multiasset<nonZeroInt64>
 
-int64 = -9223372036854775808 .. 9223372036854775807
+int64 = minInt64 .. maxInt64
 
 network_id = 0 / 1
 
-epoch = uint
+epoch_no = uint .size 8
+epoch_interval = uint .size 4
+slot_no = uint .size 8
+block_no = uint .size 8
 
 addr_keyhash           = $hash28
 pool_keyhash           = $hash28

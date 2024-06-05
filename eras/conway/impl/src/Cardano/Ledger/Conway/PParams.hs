@@ -89,6 +89,7 @@ import Cardano.Ledger.BaseTypes (
   NonNegativeInterval,
   ProtVer (ProtVer),
   UnitInterval,
+  integralToBounded,
  )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
@@ -132,6 +133,7 @@ import qualified Data.Set as Set
 import Data.Typeable
 import Data.Word (Word16, Word32)
 import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
@@ -524,7 +526,7 @@ data ConwayPParams f era = ConwayPParams
   , cppEMax :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ Maximum number of epochs in the future a pool retirement is allowed to
   -- be scheduled for.
-  , cppNOpt :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f Natural)
+  , cppNOpt :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f Word16)
   -- ^ Desired number of pools
   , cppA0 :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f NonNegativeInterval)
   -- ^ Pool influence
@@ -546,19 +548,19 @@ data ConwayPParams f era = ConwayPParams
   -- ^ Max total script execution resources units allowed per tx
   , cppMaxBlockExUnits :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f OrdExUnits)
   -- ^ Max total script execution resources units allowed per block
-  , cppMaxValSize :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Natural)
+  , cppMaxValSize :: !(THKD ('PPGroups 'NetworkGroup 'SecurityGroup) f Word32)
   -- ^ Max size of a Value in an output
-  , cppCollateralPercentage :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f Natural)
+  , cppCollateralPercentage :: !(THKD ('PPGroups 'TechnicalGroup 'NoStakePoolGroup) f Word16)
   -- ^ Percentage of the txfee which must be provided as collateral when
   -- including non-native scripts.
-  , cppMaxCollateralInputs :: !(THKD ('PPGroups 'NetworkGroup 'NoStakePoolGroup) f Natural)
+  , cppMaxCollateralInputs :: !(THKD ('PPGroups 'NetworkGroup 'NoStakePoolGroup) f Word16)
   -- ^ Maximum number of collateral inputs allowed in a transaction
   , -- New ones for Conway:
     cppPoolVotingThresholds :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f PoolVotingThresholds)
   -- ^ Thresholds for SPO votes
   , cppDRepVotingThresholds :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f DRepVotingThresholds)
   -- ^ Thresholds for DRep votes
-  , cppCommitteeMinSize :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f Natural)
+  , cppCommitteeMinSize :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f Word16)
   -- ^ Minimum size of the Constitutional Committee
   , cppCommitteeMaxTermLength :: !(THKD ('PPGroups 'GovGroup 'NoStakePoolGroup) f EpochInterval)
   -- ^ The Constitutional Committee Term limit in number of Slots
@@ -599,7 +601,7 @@ instance NFData (ConwayPParams StrictMaybe era)
 data UpgradeConwayPParams f = UpgradeConwayPParams
   { ucppPoolVotingThresholds :: !(HKD f PoolVotingThresholds)
   , ucppDRepVotingThresholds :: !(HKD f DRepVotingThresholds)
-  , ucppCommitteeMinSize :: !(HKD f Natural)
+  , ucppCommitteeMinSize :: !(HKD f Word16)
   , ucppCommitteeMaxTermLength :: !(HKD f EpochInterval)
   , ucppGovActionLifetime :: !(HKD f EpochInterval)
   , ucppGovActionDeposit :: !(HKD f Coin)
@@ -697,7 +699,10 @@ instance Crypto c => EraPParams (ConwayEra c) where
   hkdKeyDepositL = lens (unTHKD . cppKeyDeposit) $ \pp x -> pp {cppKeyDeposit = THKD x}
   hkdPoolDepositL = lens (unTHKD . cppPoolDeposit) $ \pp x -> pp {cppPoolDeposit = THKD x}
   hkdEMaxL = lens (unTHKD . cppEMax) $ \pp x -> pp {cppEMax = THKD x}
-  hkdNOptL = lens (unTHKD . cppNOpt) $ \pp x -> pp {cppNOpt = THKD x}
+  hkdNOptL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f Natural)
+  hkdNOptL =
+    lens (asNaturalHKD @f @Word16 . (unTHKD . cppNOpt)) $
+      \pp x -> pp {cppNOpt = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
   hkdA0L = lens (unTHKD . cppA0) $ \pp x -> pp {cppA0 = THKD x}
   hkdRhoL = lens (unTHKD . cppRho) $ \pp x -> pp {cppRho = THKD x}
   hkdTauL = lens (unTHKD . cppTau) $ \pp x -> pp {cppTau = THKD x}
@@ -724,11 +729,20 @@ instance Crypto c => AlonzoEraPParams (ConwayEra c) where
   hkdMaxBlockExUnitsL =
     lens (hkdMap (Proxy @f) unOrdExUnits . unTHKD . cppMaxBlockExUnits) $ \pp x ->
       pp {cppMaxBlockExUnits = THKD $ hkdMap (Proxy @f) OrdExUnits x}
-  hkdMaxValSizeL = lens (unTHKD . cppMaxValSize) $ \pp x -> pp {cppMaxValSize = THKD x}
+  hkdMaxValSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f Natural)
+  hkdMaxValSizeL =
+    lens (asNaturalHKD @f @Word32 . (unTHKD . cppMaxValSize)) $
+      \pp x -> pp {cppMaxValSize = THKD (asBoundedIntegralHKD @f @Natural @Word32 x)}
+  hkdCollateralPercentageL ::
+    forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f Natural)
   hkdCollateralPercentageL =
-    lens (unTHKD . cppCollateralPercentage) $ \pp x -> pp {cppCollateralPercentage = THKD x}
+    lens (asNaturalHKD @f @Word16 . (unTHKD . cppCollateralPercentage)) $
+      \pp x -> pp {cppCollateralPercentage = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
+  hkdMaxCollateralInputsL ::
+    forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f Natural)
   hkdMaxCollateralInputsL =
-    lens (unTHKD . cppMaxCollateralInputs) $ \pp x -> pp {cppMaxCollateralInputs = THKD x}
+    lens (asNaturalHKD @f @Word16 . (unTHKD . cppMaxCollateralInputs)) $
+      \pp x -> pp {cppMaxCollateralInputs = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
 
 instance Crypto c => BabbageEraPParams (ConwayEra c) where
   hkdCoinsPerUTxOByteL =
@@ -764,8 +778,10 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
     lens (unTHKD . cppPoolVotingThresholds) $ \pp x -> pp {cppPoolVotingThresholds = THKD x}
   hkdDRepVotingThresholdsL =
     lens (unTHKD . cppDRepVotingThresholds) $ \pp x -> pp {cppDRepVotingThresholds = THKD x}
+  hkdCommitteeMinSizeL :: forall f. HKDFunctor f => Lens' (PParamsHKD f (ConwayEra c)) (HKD f Natural)
   hkdCommitteeMinSizeL =
-    lens (unTHKD . cppCommitteeMinSize) $ \pp x -> pp {cppCommitteeMinSize = THKD x}
+    lens (asNaturalHKD @f @Word16 . (unTHKD . cppCommitteeMinSize)) $
+      \pp x -> pp {cppCommitteeMinSize = THKD (asBoundedIntegralHKD @f @Natural @Word16 x)}
   hkdCommitteeMaxTermLengthL =
     lens (unTHKD . cppCommitteeMaxTermLength) $ \pp x -> pp {cppCommitteeMaxTermLength = THKD x}
   hkdGovActionLifetimeL =
@@ -1153,7 +1169,7 @@ upgradeConwayPParamsHKDPairs :: UpgradeConwayPParams Identity -> [(Key, Aeson.Va
 upgradeConwayPParamsHKDPairs UpgradeConwayPParams {..} =
   [ ("poolVotingThresholds", (toJSON @PoolVotingThresholds) ucppPoolVotingThresholds)
   , ("dRepVotingThresholds", (toJSON @DRepVotingThresholds) ucppDRepVotingThresholds)
-  , ("committeeMinSize", (toJSON @Natural) ucppCommitteeMinSize)
+  , ("committeeMinSize", (toJSON @Word16) ucppCommitteeMinSize)
   , ("committeeMaxTermLength", (toJSON @EpochInterval) ucppCommitteeMaxTermLength)
   , ("govActionLifetime", (toJSON @EpochInterval) ucppGovActionLifetime)
   , ("govActionDeposit", (toJSON @Coin) ucppGovActionDeposit)
@@ -1194,7 +1210,7 @@ upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
     , cppKeyDeposit = THKD bppKeyDeposit
     , cppPoolDeposit = THKD bppPoolDeposit
     , cppEMax = THKD bppEMax
-    , cppNOpt = THKD bppNOpt
+    , cppNOpt = THKD (asBoundedIntegralHKD @f @Natural @Word16 bppNOpt)
     , cppA0 = THKD bppA0
     , cppRho = THKD bppRho
     , cppTau = THKD bppTau
@@ -1215,9 +1231,12 @@ upgradeConwayPParams UpgradeConwayPParams {..} BabbagePParams {..} =
     , cppPrices = THKD bppPrices
     , cppMaxTxExUnits = THKD bppMaxTxExUnits
     , cppMaxBlockExUnits = THKD bppMaxBlockExUnits
-    , cppMaxValSize = THKD bppMaxValSize
-    , cppCollateralPercentage = THKD bppCollateralPercentage
-    , cppMaxCollateralInputs = THKD bppMaxCollateralInputs
+    , cppMaxValSize =
+        THKD (asBoundedIntegralHKD @f @Natural @Word32 bppMaxValSize)
+    , cppCollateralPercentage =
+        THKD (asBoundedIntegralHKD @f @Natural @Word16 bppCollateralPercentage)
+    , cppMaxCollateralInputs =
+        THKD (asBoundedIntegralHKD @f @Natural @Word16 bppMaxCollateralInputs)
     , -- New for Conway
       cppPoolVotingThresholds = THKD ucppPoolVotingThresholds
     , cppDRepVotingThresholds = THKD ucppDRepVotingThresholds
@@ -1245,7 +1264,7 @@ downgradeConwayPParams ConwayPParams {..} =
     , bppKeyDeposit = unTHKD cppKeyDeposit
     , bppPoolDeposit = unTHKD cppPoolDeposit
     , bppEMax = unTHKD cppEMax
-    , bppNOpt = unTHKD cppNOpt
+    , bppNOpt = asNaturalHKD @f @Word16 (unTHKD cppNOpt)
     , bppA0 = unTHKD cppA0
     , bppRho = unTHKD cppRho
     , bppTau = unTHKD cppTau
@@ -1256,9 +1275,9 @@ downgradeConwayPParams ConwayPParams {..} =
     , bppPrices = unTHKD cppPrices
     , bppMaxTxExUnits = unTHKD cppMaxTxExUnits
     , bppMaxBlockExUnits = unTHKD cppMaxBlockExUnits
-    , bppMaxValSize = unTHKD cppMaxValSize
-    , bppCollateralPercentage = unTHKD cppCollateralPercentage
-    , bppMaxCollateralInputs = unTHKD cppMaxCollateralInputs
+    , bppMaxValSize = asNaturalHKD @f @Word32 (unTHKD cppMaxValSize)
+    , bppCollateralPercentage = asNaturalHKD @f @Word16 (unTHKD cppCollateralPercentage)
+    , bppMaxCollateralInputs = asNaturalHKD @f @Word16 (unTHKD cppMaxCollateralInputs)
     }
 
 conwayApplyPPUpdates ::
@@ -1387,3 +1406,24 @@ conwayModifiedPPGroups
       , ppGroup p30
       , ppGroup p31
       ]
+
+asNaturalHKD :: forall f i. (HKDFunctor f, Integral i) => HKD f i -> HKD f Natural
+asNaturalHKD = hkdMap (Proxy @f) (fromIntegral @i @Natural)
+
+asBoundedIntegralHKD ::
+  forall f i b.
+  (HKDFunctor f, Integral i, Integral b, Bounded b, HasCallStack) =>
+  HKD f i ->
+  HKD f b
+asBoundedIntegralHKD = hkdMap (Proxy @f) $ \x ->
+  case integralToBounded @i @b @Maybe x of
+    Just b -> b
+    Nothing ->
+      error $
+        "Value: "
+          <> show (toInteger x)
+          <> " is out of the valid range: ["
+          <> show (toInteger (minBound @b))
+          <> ","
+          <> show (toInteger (maxBound @b))
+          <> "]"

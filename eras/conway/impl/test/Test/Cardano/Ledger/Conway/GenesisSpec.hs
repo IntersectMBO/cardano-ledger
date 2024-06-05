@@ -45,7 +45,7 @@ propConwayPParamsUpgrade ppu pp = property $ do
   let pp' = upgradePParams ppu pp :: PParams Conway
   pp' ^. ppPoolVotingThresholdsL `shouldBe` ucppPoolVotingThresholds ppu
   pp' ^. ppDRepVotingThresholdsL `shouldBe` ucppDRepVotingThresholds ppu
-  pp' ^. ppCommitteeMinSizeL `shouldBe` ucppCommitteeMinSize ppu
+  fromIntegral (pp' ^. ppCommitteeMinSizeL) `shouldBe` ucppCommitteeMinSize ppu
   pp' ^. ppCommitteeMaxTermLengthL `shouldBe` ucppCommitteeMaxTermLength ppu
   pp' ^. ppGovActionLifetimeL `shouldBe` ucppGovActionLifetime ppu
   pp' ^. ppGovActionDepositL `shouldBe` ucppGovActionDeposit ppu

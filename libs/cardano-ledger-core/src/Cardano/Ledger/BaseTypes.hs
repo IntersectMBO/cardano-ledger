@@ -37,6 +37,7 @@ module Cardano.Ledger.BaseTypes (
   NonNegativeInterval,
   BoundedRational (..),
   fpPrecision,
+  integralToBounded,
   promoteRatio,
   invalidKey,
   mkNonceFromOutputVRF,
@@ -234,6 +235,20 @@ type FixedPoint = Digits34
 
 fpPrecision :: FixedPoint
 fpPrecision = (10 :: FixedPoint) ^ (34 :: Integer)
+
+integralToBounded ::
+  forall i b m. (Integral i, Integral b, Bounded b, MonadFail m) => i -> m b
+integralToBounded i
+  | int < minInt =
+      fail $ "Value " ++ show int ++ " less than expected minimum value: " ++ show minInt
+  | int > maxInt =
+      fail $ "Value " ++ show int ++ " greater than expected maximum value: " ++ show maxInt
+  | otherwise = pure $ fromInteger int
+  where
+    int = toInteger i
+    minInt = toInteger (minBound @b)
+    maxInt = toInteger (maxBound @b)
+{-# INLINE integralToBounded #-}
 
 -- | This is an internal type for representing rational numbers that are bounded on some
 -- interval that is controlled by phantom type variable @b@ as well as by
@@ -730,9 +745,16 @@ newtype BlocksMade c = BlocksMade
 -- testing.
 
 -- | Transaction index.
-newtype TxIx = TxIx Word64
+newtype TxIx = TxIx {unTxIx :: Word64}
   deriving stock (Eq, Ord, Show, Generic)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR, ToJSON)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, FromCBOR, ToCBOR, EncCBOR, ToJSON)
+
+instance DecCBOR TxIx where
+  decCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      (TxIx . fromIntegral @Word16 @Word64 <$> decCBOR)
+      (TxIx <$> decCBOR)
 
 -- | Construct a `TxIx` from a 16 bit unsigned integer
 mkTxIx :: Word16 -> TxIx
@@ -741,8 +763,8 @@ mkTxIx = TxIx . fromIntegral
 txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
 
-txIxFromIntegral :: Integral a => a -> Maybe TxIx
-txIxFromIntegral = fmap (TxIx . fromIntegral) . word16FromInteger . toInteger
+txIxFromIntegral :: forall a m. (Integral a, MonadFail m) => a -> m TxIx
+txIxFromIntegral = fmap (TxIx . fromIntegral) . integralToBounded @a @Word16 @m
 {-# INLINE txIxFromIntegral #-}
 
 -- | Construct a `TxIx` from an arbitrary precision `Integer`. Throws an error for
@@ -755,9 +777,16 @@ mkTxIxPartial i =
 -- | Certificate index. Use `certIxFromIntegral` in order to construct this
 -- index safely from anything other than `Word16`. There is also
 -- `mkCertIxPartial` that can be used for testing.
-newtype CertIx = CertIx Word64
+newtype CertIx = CertIx {unCertIx :: Word64}
   deriving stock (Eq, Ord, Show)
-  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, DecCBOR, ToCBOR, FromCBOR, ToJSON)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, EncCBOR, ToCBOR, FromCBOR, ToJSON)
+
+instance DecCBOR CertIx where
+  decCBOR =
+    ifDecoderVersionAtLeast
+      (natVersion @9)
+      (CertIx . fromIntegral @Word16 @Word64 <$> decCBOR)
+      (CertIx <$> decCBOR)
 
 -- | Construct a `CertIx` from a 16 bit unsigned integer
 mkCertIx :: Word16 -> CertIx
@@ -766,8 +795,8 @@ mkCertIx = CertIx . fromIntegral
 certIxToInt :: CertIx -> Int
 certIxToInt (CertIx w16) = fromIntegral w16
 
-certIxFromIntegral :: Integral a => a -> Maybe CertIx
-certIxFromIntegral = fmap (CertIx . fromIntegral) . word16FromInteger . toInteger
+certIxFromIntegral :: forall a m. (Integral a, MonadFail m) => a -> m CertIx
+certIxFromIntegral = fmap (CertIx . fromIntegral) . integralToBounded @a @Word16 @m
 {-# INLINE certIxFromIntegral #-}
 
 -- | Construct a `CertIx` from an arbitrary precision `Integer`. Throws an error for
@@ -776,12 +805,6 @@ mkCertIxPartial :: HasCallStack => Integer -> CertIx
 mkCertIxPartial i =
   fromMaybe (error $ "Value for CertIx is out of a valid range: " ++ show i) $
     certIxFromIntegral i
-
-word16FromInteger :: Integer -> Maybe Word16
-word16FromInteger i
-  | i < fromIntegral (minBound :: Word16) || i > fromIntegral (maxBound :: Word16) = Nothing
-  | otherwise = Just (fromInteger i)
-{-# INLINE word16FromInteger #-}
 
 -- =================================
 

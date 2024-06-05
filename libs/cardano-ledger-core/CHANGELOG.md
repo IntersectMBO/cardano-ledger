@@ -4,6 +4,7 @@
 
 * Create a catch all `Inject a a` instance for the same type
 * Remove unnecessary instances: `Inject a ()` and `Inject Void a`
+* Add `integralToBounded` to `BaseTypes`
 
 ## 1.12.0.0
 
