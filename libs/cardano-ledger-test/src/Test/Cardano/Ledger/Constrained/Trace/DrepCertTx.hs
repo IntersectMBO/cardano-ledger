@@ -1,4 +1,6 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -24,7 +26,7 @@ import Cardano.Ledger.Conway.Governance (
   proposalsGovStateL,
  )
 import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..), ConwayTxCert (..))
-import Cardano.Ledger.Crypto (HASH)
+import Cardano.Ledger.Crypto (Crypto (..), HASH)
 import Cardano.Ledger.DRep hiding (drepDeposit)
 import Cardano.Ledger.EpochBoundary (ssStakeMarkPoolDistrL)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
@@ -83,6 +85,7 @@ import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..))
 import Test.Cardano.Ledger.Generic.MockChain (MockBlock (..), MockChainState (..))
 import Test.Cardano.Ledger.Generic.PrettyCore (pcNewEpochState, pcTxCert, ppList)
 import Test.Cardano.Ledger.Generic.Proof (
+  ConwayEra,
   Proof (..),
   Reflect (..),
   TxCertWit (..),
@@ -143,7 +146,6 @@ drepCertTx maxFeeEstimate proof = do
 
 -- ============================================
 
--- | Update the internal Env by applying the Actions
 --   appropriate for a SimpleTx with DRepCerts.
 --   Changes to the Env are done by side effects in the TraceM mondad.
 applyDRepCertActions :: Reflect era => Proof era -> Tx era -> TraceM era ()
@@ -172,17 +174,12 @@ drepCertTxForTrace maxFeeEstimate proof = do
 
 drepTree :: TestTree
 drepTree =
-  testGroup "DRep property traces" []
-
--- FIXME: re-enable
-_drepTree :: TestTree
-_drepTree =
   testGroup
     "DRep property traces"
     [ testProperty
         "All Tx are valid on traces of length 150."
         $ withMaxSuccess 20
-        $ mockChainProp Conway 150 (drepCertTxForTrace (Coin 100000))
+        $ mockChainProp Conway 150 (drepCertTxForTrace @(ConwayEra _) (Coin 100000))
         $ stepProp (allValidSignals Conway)
     , testProperty
         "Bruteforce = Pulsed, in every epoch, on traces of length 150"
@@ -190,6 +187,9 @@ _drepTree =
         $ mockChainProp Conway 150 (drepCertTxForTrace (Coin 60000))
         $ epochProp pulserWorks
     ]
+
+main :: IO ()
+main = defaultMain drepTree
 
 -- =================================================
 -- Example functions that can be lifted to

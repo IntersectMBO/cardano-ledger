@@ -38,6 +38,7 @@ import Cardano.Ledger.Core (
   ppuMinFeeBL,
  )
 import Cardano.Ledger.DRep (drepDepositL)
+import Cardano.Ledger.Shelley.Governance (FuturePParams (..))
 import Control.Monad (when)
 import Data.Default.Class (Default (def))
 import qualified Data.List as List
@@ -140,13 +141,13 @@ ledgerStatePreds _usize p =
           GovStateConwayToConway ->
             [ Random randomProposals
             , currProposals p :<-: (Constr "reasonable" reasonable ^$ randomProposals)
-            , Random (futurePParams p)
+            , Lit (FuturePParamsR p) NoPParamsUpdate :=: futurePParams p
             ]
               ++ prevPulsingPreds p -- Constraints to generate a valid Pulser
           GovStateShelleyToBabbage ->
             [ Sized (Range 0 1) (pparamProposals p)
             , Sized (Range 0 1) (futurePParamProposals p)
-            , Random (futurePParams p)
+            , Lit (FuturePParamsR p) NoPParamsUpdate :=: futurePParams p
             ]
        )
   where

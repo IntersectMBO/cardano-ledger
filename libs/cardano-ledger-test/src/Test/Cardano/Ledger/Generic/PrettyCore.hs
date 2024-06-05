@@ -331,6 +331,9 @@ import Test.Cardano.Ledger.Generic.Fields (
 import qualified Test.Cardano.Ledger.Generic.Fields as Fields
 import Test.Cardano.Ledger.Generic.Proof (
   AllegraEra,
+  AlonzoEra,
+  BabbageEra,
+  ConwayEra,
   GovStateWit (..),
   MaryEra,
   Proof (..),
@@ -797,6 +800,15 @@ instance Crypto c => PrettyA (PParamsUpdate (AllegraEra c)) where
 instance Crypto c => PrettyA (PParamsUpdate (MaryEra c)) where
   prettyA = ppPParamsUpdate
 
+instance Crypto c => PrettyA (PParamsUpdate (AlonzoEra c)) where
+  prettyA _ = ppString ("PParamsUpdate (AlonzoEra c)")
+
+instance Crypto c => PrettyA (PParamsUpdate (BabbageEra c)) where
+  prettyA _ = ppString ("PParamsUpdate (BabbageEra c)")
+
+instance Crypto c => PrettyA (PParamsUpdate (ConwayEra c)) where
+  prettyA _ = ppString ("PParamsUpdate (ConwayEra c)")
+
 ppUpdate :: PrettyA (PParamsUpdate era) => PParams.Update era -> PDoc
 ppUpdate (PParams.Update prop epn) = ppSexp "Update" [ppProposedPPUpdates prop, ppEpochNo epn]
 
@@ -1046,6 +1058,9 @@ pcWitnesses proof txwits = ppRecord "Witnesses" pairs
     fields = abstractWitnesses proof txwits
     pairs = concat (map (pcWitnessesField proof) fields)
 
+-- | Pretty print a Tx.
+--   Also see Test.Cardano.Ledger.Constrained.Preds.Tx(pcTxWithUTxO)
+--   which expands the inputs (given the UTxO)
 pcTx :: Proof era -> Tx era -> PDoc
 pcTx proof tx = ppRecord "Tx" pairs
   where

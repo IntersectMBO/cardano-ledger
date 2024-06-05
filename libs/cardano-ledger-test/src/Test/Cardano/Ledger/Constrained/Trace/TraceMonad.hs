@@ -88,6 +88,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   ppList,
   ppPair,
   ppStrictSeq,
+  psNewEpochState,
   summaryMapCompact,
  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
@@ -397,7 +398,13 @@ instance
     case runShelleyBase (applySTSTest (TRC @(MOCKCHAIN era) ((), mcs, mockblock))) of
       Left pdfs ->
         let _txsl = Fold.toList txs
-         in error . unlines $ "FAILS" : map show (toList pdfs)
+         in error . unlines $
+              ( "FAILS"
+                  : ["epochNum " ++ show epochnum, "slot " ++ show lastSlot]
+                  ++ map (show . pcTx reify) (toList txs)
+                  ++ map show (toList pdfs)
+                  ++ [show (psNewEpochState reify newepoch)]
+              )
       Right mcs2 -> seq mcs2 (pure mockblock)
 
   shrinkSignal _ = []
