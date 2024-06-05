@@ -50,6 +50,7 @@ type Conway = ConwayEra StandardCrypto
 instance
   ( Crypto c
   , DSignable c (Hash c EraIndependentTxBody)
+  , DSignable c (Hash c EraIndependentRequiredTxs)
   ) =>
   ApplyTx (ConwayEra c)
   where
