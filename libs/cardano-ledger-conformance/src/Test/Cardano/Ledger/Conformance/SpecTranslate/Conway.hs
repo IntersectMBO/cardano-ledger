@@ -121,7 +121,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   VState (..),
  )
-import Cardano.Ledger.Shelley.Rules (Identity, UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules (Identity, PoolEnv (..), ShelleyPoolPredFailure, UtxoEnv (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (dRepMap, fromCompact, rewardMap, sPoolMap)
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -574,19 +574,24 @@ instance SpecTranslate ctx (Anchor c) where
 instance SpecTranslate ctx (ConwayTxCert era) where
   type SpecRep (ConwayTxCert era) = Agda.TxCert
 
-  toSpecRep (ConwayTxCertPool (RegPool p@PoolParams {ppId})) =
-    Agda.RegPool
-      <$> toSpecRep (KeyHashObj ppId)
-      <*> toSpecRep p
-  toSpecRep (ConwayTxCertPool (RetirePool kh e)) =
-    Agda.RetirePool
-      <$> toSpecRep (KeyHashObj kh)
-      <*> toSpecRep e
+  toSpecRep (ConwayTxCertPool p) = toSpecRep p
   toSpecRep (ConwayTxCertGov c) = toSpecRep c
   toSpecRep (ConwayTxCertDeleg x) = toSpecRep x
 
-instance SpecTranslate ctx (ConwayGovCert era) where
-  type SpecRep (ConwayGovCert era) = Agda.TxCert
+instance SpecTranslate ctx (PoolCert c) where
+  type SpecRep (PoolCert c) = Agda.TxCert
+
+  toSpecRep (RegPool p@PoolParams {ppId}) =
+    Agda.RegPool
+      <$> toSpecRep (KeyHashObj ppId)
+      <*> toSpecRep p
+  toSpecRep (RetirePool kh e) =
+    Agda.RetirePool
+      <$> toSpecRep (KeyHashObj kh)
+      <*> toSpecRep e
+
+instance SpecTranslate ctx (ConwayGovCert c) where
+  type SpecRep (ConwayGovCert c) = Agda.TxCert
 
   toSpecRep (ConwayRegDRep c d _) =
     Agda.RegDRep
@@ -1189,8 +1194,8 @@ instance
       <$> toSpecRep cdePParams
       <*> toSpecRep (Map.mapKeys KeyHashObj cdePools)
 
-instance SpecTranslate ctx (ConwayDelegCert era) where
-  type SpecRep (ConwayDelegCert era) = Agda.TxCert
+instance SpecTranslate ctx (ConwayDelegCert c) where
+  type SpecRep (ConwayDelegCert c) = Agda.TxCert
 
   toSpecRep (ConwayRegCert _ _) = throwError "RegCert not supported"
   toSpecRep (ConwayUnRegCert c _) =
@@ -1210,5 +1215,20 @@ instance SpecTranslate ctx (ConwayDelegCert era) where
 
 instance SpecTranslate ctx (ConwayDelegPredFailure era) where
   type SpecRep (ConwayDelegPredFailure era) = OpaqueErrorString
+
+  toSpecRep e = pure . OpaqueErrorString . show $ toExpr e
+
+instance
+  ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecTranslate ctx (PParamsHKD Identity era)
+  ) =>
+  SpecTranslate ctx (PoolEnv era)
+  where
+  type SpecRep (PoolEnv era) = Agda.PParams
+
+  toSpecRep (PoolEnv _ pp) = toSpecRep pp
+
+instance SpecTranslate ctx (ShelleyPoolPredFailure era) where
+  type SpecRep (ShelleyPoolPredFailure era) = OpaqueErrorString
 
   toSpecRep e = pure . OpaqueErrorString . show $ toExpr e

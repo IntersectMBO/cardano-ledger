@@ -2,6 +2,7 @@
 
 ## 1.12.0.0
 
+* Add `NFData` instance for `PoolEnv`.
 * Add `Generic` and `NFData` instances for `DelegEnv`
 * Introduce `ShelleyEraScript` class
 * Add `ShelleyEraScript` for `ShelleyEra`
@@ -18,6 +19,8 @@
   * `UtxoEnv`
 
 ### testlib
+
+* Add `ToExpr` for `PoolEnv`.
 * Add `withCborRoundTripFailures`
 * Change signatures of `Arbitrary` instances for `MultiSig`:
   * replace `Era` constraint with `ShelleyEraScript`
