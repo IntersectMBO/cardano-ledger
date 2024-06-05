@@ -853,8 +853,6 @@ instance
   where
   type SpecRep (GovAction era) = Agda.GovAction
 
-  -- TODO remove the failure cases once it's possible to update all of the
-  -- parameters in the spec
   toSpecRep (ParameterChange _ ppu _) = Agda.ChangePParams <$> toSpecRep ppu
   toSpecRep (HardForkInitiation _ pv) = Agda.TriggerHF <$> toSpecRep pv
   toSpecRep (TreasuryWithdrawals withdrawals _) =
