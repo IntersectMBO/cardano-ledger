@@ -706,6 +706,16 @@ instance Ord (ValueF era) where
 data PParamsF era where
   PParamsF :: Proof era -> PParams era -> PParamsF era
 
+instance Eq (PParamsF era) where
+  PParamsF p1 x == PParamsF _ y =
+    case p1 of
+      Shelley -> x == y
+      Allegra -> x == y
+      Mary -> x == y
+      Alonzo -> x == y
+      Babbage -> x == y
+      Conway -> x == y
+
 unPParams :: PParamsF era -> PParams era
 unPParams (PParamsF _ p) = p
 

@@ -141,7 +141,17 @@ ledgerStatePreds _usize p =
           GovStateConwayToConway ->
             [ Random randomProposals
             , currProposals p :<-: (Constr "reasonable" reasonable ^$ randomProposals)
-            , Lit (FuturePParamsR p) NoPParamsUpdate :=: futurePParams p
+            , Choose
+                (ExactSize 1)
+                futurepps
+                [
+                  ( 1
+                  , Constr "DefinitePParamsUpdate" (DefinitePParamsUpdate @era . unPParams) ^$ ppx
+                  , [ppx :=: currPParams p]
+                  )
+                , (1, Constr "NoPParamsUpdate" (const (NoPParamsUpdate @era)) ^$ unit, [Random unit])
+                ]
+            , futurePParams p :<-: (Constr "head" getOne ^$ futurepps)
             ]
               ++ prevPulsingPreds p -- Constraints to generate a valid Pulser
           GovStateShelleyToBabbage ->
@@ -152,6 +162,29 @@ ledgerStatePreds _usize p =
        )
   where
     randomProposals = Var (pV p "randomProposals" (ProposalsR p) No)
+    ppx = Var (pV p "ppx" (PParamsR p) No)
+    unit = Var (pV p "unit" UnitR No)
+    futurepps = Var (pV p "futurepps" (ListR (FuturePParamsR p)) No)
+    getOne (x : _) = x
+    getOne [] = NoPParamsUpdate
+
+{-
+yyy proof =
+  Choose
+      (ExactSize 1)
+      futurepps
+      [ (1, Constr "DefinitePParamsUpdate" (DefinitePParamsUpdate . unPParams ) ^$ ppx, [ppx :=: currPParams proof])
+      , (1, Constr "NoPParamsUpdate" (const NoPParamsUpdate) ^$ unit, [Random unit])
+      ]
+ where
+
+xxx = Oneof (futurePParams Conway)
+      [(1,Invert "No" (typeRep @(FuturePParams _))
+            (const NoPParamsUpdate) :$ Lensed (futurePParams Conway) id,[Random (futurePParams Conway)])
+      ,(1,Invert "DefinitePParamsUpdate" (typeRep @(FuturePParams _))
+            DefinitePParamsUpdate  :$ Lensed undefined undefined,[])
+      ]
+-}
 
 ledgerStateStage ::
   Reflect era =>
