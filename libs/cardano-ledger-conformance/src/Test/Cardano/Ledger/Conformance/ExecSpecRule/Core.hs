@@ -41,7 +41,6 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   runSpecTransM,
   toTestRep,
  )
-import qualified Test.Cardano.Ledger.Generic.PrettyCore as Doc
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
@@ -206,15 +205,15 @@ checkConformance implResTest agdaResTest = do
       ansiWlPretty
         { ppDel = \d ->
             mconcat
-              [ Doc.text "\ESC[91m(Impl: "
+              [ "\ESC[91m(Impl: "
               , d
-              , Doc.text ")\ESC[39m"
+              , ")\ESC[39m"
               ]
         , ppIns = \d ->
             mconcat
-              [ Doc.text "\ESC[92m(Agda: "
+              [ "\ESC[92m(Agda: "
               , d
-              , Doc.text ")\ESC[39m"
+              , ")\ESC[39m"
               ]
         }
     failMsg =

@@ -69,7 +69,8 @@ import Test.Cardano.Ledger.Generic.Functions (protocolVersion)
 import Test.Cardano.Ledger.Generic.GenState (plutusPurposeTags)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   PDoc,
-  PrettyA,
+  PrettyA (..),
+  pcPParams,
   pcScript,
   pcScriptsNeeded,
   pcTx,
@@ -80,6 +81,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore (
   pcWitnesses,
   ppPlutusPurposeAsIx,
   ppPlutusPurposeAsIxItem,
+  ppProposedPPUpdates,
   ppString,
  )
 import Test.Cardano.Ledger.Generic.Proof (
@@ -533,6 +535,9 @@ data TxF era where
 unTxF :: TxF era -> Tx era
 unTxF (TxF _ x) = x
 
+instance PrettyA (TxF era) where
+  prettyA (TxF p tx) = pcTx p tx
+
 instance PrettyA (PParamsUpdate era) => Show (TxF era) where
   show (TxF p x) = show ((unReflect pcTx p x) :: PDoc)
 
@@ -574,6 +579,9 @@ unTxBodyF (TxBodyF _ x) = x
 instance PrettyA (PParamsUpdate era) => Show (TxBodyF era) where
   show (TxBodyF p x) = show ((unReflect pcTxBody p x) :: PDoc)
 
+instance PrettyA (TxBodyF era) where
+  prettyA (TxBodyF p x) = unReflect pcTxBody p x
+
 instance Eq (TxBodyF era) where
   (TxBodyF Shelley x) == (TxBodyF Shelley y) = x == y
   (TxBodyF Allegra x) == (TxBodyF Allegra y) = x == y
@@ -588,6 +596,9 @@ data TxCertF era where
 
 unTxCertF :: TxCertF era -> TxCert era
 unTxCertF (TxCertF _ x) = x
+
+instance PrettyA (TxCertF era) where
+  prettyA (TxCertF p x) = pcTxCert p x
 
 instance Show (TxCertF era) where
   show (TxCertF p x) = show (pcTxCert p x)
@@ -644,6 +655,9 @@ data TxOutF era where
 unTxOut :: TxOutF era -> TxOut era
 unTxOut (TxOutF _ x) = x
 
+instance PrettyA (TxOutF era) where
+  prettyA (TxOutF p x) = unReflect pcTxOut p x
+
 instance Eq (TxOutF era) where
   x1 == x2 = compare x1 x2 == EQ
 
@@ -664,6 +678,9 @@ instance Ord (TxOutF era) where
 -- ======
 data ValueF era where
   ValueF :: Proof era -> Value era -> ValueF era
+
+instance PrettyA (ValueF era) where
+  prettyA (ValueF p v) = pcVal p v
 
 unValue :: ValueF era -> Value era
 unValue (ValueF _ v) = v
@@ -692,6 +709,9 @@ data PParamsF era where
 unPParams :: PParamsF era -> PParams era
 unPParams (PParamsF _ p) = p
 
+instance PrettyA (PParamsF era) where
+  prettyA (PParamsF p x) = unReflect pcPParams p x
+
 pparamsWrapperL :: Lens' (PParamsF era) (PParams era)
 pparamsWrapperL = lens unPParams (\(PParamsF p _) pp -> PParamsF p pp)
 
@@ -713,6 +733,9 @@ data ProposedPPUpdatesF era where
 
 unProposedPPUpdates :: ProposedPPUpdatesF era -> PP.ProposedPPUpdates era
 unProposedPPUpdates (ProposedPPUpdatesF _ x) = x
+
+instance PrettyA (PParamsUpdate e) => PrettyA (ProposedPPUpdatesF e) where
+  prettyA (ProposedPPUpdatesF _p x) = ppProposedPPUpdates x
 
 proposedCoreL ::
   Lens' (PP.ProposedPPUpdates era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))
@@ -869,6 +892,9 @@ data ScriptF era where
 
 unScriptF :: ScriptF era -> Script era
 unScriptF (ScriptF _ v) = v
+
+instance PrettyA (ScriptF era) where
+  prettyA (ScriptF p x) = unReflect pcScript p x
 
 instance Show (ScriptF era) where
   show (ScriptF p t) = show ((unReflect pcScript p t) :: PDoc)
