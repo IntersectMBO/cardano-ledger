@@ -62,6 +62,7 @@ module Cardano.Ledger.Core (
   validateAuxiliaryData,
 
   -- * Babel fees
+  EraRequiredTxsData (..),
 )
 where
 
@@ -650,3 +651,40 @@ txIdTx tx = txIdTxBody (tx ^. bodyTxL)
 
 txIdTxBody :: EraTxBody era => TxBody era -> TxId (EraCrypto era)
 txIdTxBody = TxId . hashAnnotated
+
+----- TODO WG NEW STUFF
+
+class
+  ( EraTxOut era
+  , EraTxCert era
+  , EraPParams era
+  , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
+  , DecCBOR (Annotator (TxBody era))
+  , EncCBOR (TxBody era)
+  , ToCBOR (TxBody era)
+  , NoThunks (TxBody era)
+  , NFData (TxBody era)
+  , Show (TxBody era)
+  , Eq (TxBody era)
+  , EqRaw (TxBody era)
+  , HashAnnotated (RequiredTxs era) EraIndependentRequiredTxs (EraCrypto era)
+  , DecCBOR (Annotator (RequiredTxs era))
+  , EncCBOR (RequiredTxs era)
+  , ToCBOR (RequiredTxs era)
+  , NoThunks (RequiredTxs era)
+  , NFData (RequiredTxs era)
+  , Show (RequiredTxs era)
+  , Eq (RequiredTxs era)
+  , EqRaw (RequiredTxs era)
+  , HashAnnotated
+      (TxBody era, RequiredTxs era)
+      (EraIndependentTxBody, EraIndependentRequiredTxs)
+      (EraCrypto era)
+  ) =>
+  EraCompositeWitness era
+  where
+  type CompositeWitness era = (r :: Type) | r -> era
+
+  txBodyCompositeWitnessL :: Lens' (CompositeWitness era) (TxBody era)
+
+  requiredTxsCompositeWitnessL :: Lens' (CompositeWitness era) (RequiredTxs era)
