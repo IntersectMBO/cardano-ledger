@@ -69,6 +69,12 @@ deriving instance Ord VDeleg
 
 deriving instance Ord Vote
 
+deriving instance Ord PoolThresholds
+
+deriving instance Ord DrepThresholds
+
+deriving instance Ord PParamsUpdate
+
 deriving instance Ord GovAction
 
 deriving instance Ord GovActionState
@@ -92,6 +98,8 @@ deriving instance Eq DrepThresholds
 deriving instance Eq PParams
 
 deriving instance Eq UTxOState
+
+deriving instance Eq PParamsUpdate
 
 deriving instance Eq GovAction
 
@@ -126,6 +134,8 @@ deriving instance Eq RatifyState
 instance (NFData k, NFData v) => NFData (HSMap k v)
 
 instance NFData a => NFData (HSSet a)
+
+instance NFData PParamsUpdate
 
 instance NFData GovAction
 
@@ -200,6 +210,8 @@ instance ToExpr Credential where
   toExpr (ScriptObj h) = App "ScriptObj" [agdaHashToExpr 28 h]
 
 instance (ToExpr k, ToExpr v) => ToExpr (HSMap k v)
+
+instance ToExpr PParamsUpdate
 
 instance ToExpr GovAction
 
@@ -319,6 +331,8 @@ instance FixupSpecRep GState
 instance FixupSpecRep CertState
 
 instance FixupSpecRep Vote
+
+instance FixupSpecRep PParamsUpdate
 
 instance FixupSpecRep GovAction
 
