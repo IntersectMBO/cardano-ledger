@@ -502,10 +502,10 @@ potential_languages = 0 .. 255
 ; versions in the future.
 ;
 costmdls =
-  { ? 0 : [ int64 ] ; Plutus v1
-  , ? 1 : [ int64 ] ; Plutus v2
-  , ? 2 : [ int64 ] ; Plutus v3
-  , ? 3 : [ int64 ] ; Any 8-bit unsigned number can be used as a key.
+  { ? 0 : [ * int64 ] ; Plutus v1
+  , ? 1 : [ * int64 ] ; Plutus v2
+  , ? 2 : [ * int64 ] ; Plutus v3
+  , * 3 .. maxWord8 => [ * int64 ] ; Any 8-bit unsigned number can be used as a key
   }
 
 transaction_metadatum =
@@ -568,6 +568,7 @@ asset_name = bytes .size (0..32)
 minInt64 = -9223372036854775808
 maxInt64 = 9223372036854775807
 maxWord64 = 18446744073709551615
+maxWord8 = 255
 
 negInt64 = minInt64 .. -1
 posInt64 = 1 .. maxInt64
