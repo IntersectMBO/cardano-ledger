@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -22,6 +24,8 @@ import Cardano.Ledger.Alonzo.Core (AlonzoEraTx)
 import Cardano.Ledger.Alonzo.Tx (IsValid (IsValid))
 import Cardano.Ledger.BaseTypes (
   ShelleyBase,
+  epochInfo,
+  systemStart,
  )
 import Cardano.Ledger.Conway.Core (
   ConwayEraTxBody (fulfillsTxBodyL, requiredTxsTxBodyL),
@@ -30,16 +34,23 @@ import Cardano.Ledger.Conway.Core (
   EraTx (Tx, bodyTxL),
   EraTxBody (TxBody, inputsTxBodyL),
   InjectRuleFailure (..),
+  collateralInputsTxBodyL,
   isValidTxL,
  )
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayZONE)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams,
  )
-import Cardano.Ledger.Core (txIdTx)
+import Cardano.Ledger.Core (
+  EraRuleEvent,
+  EraRuleFailure,
+  txIdTx,
+ )
 import Cardano.Ledger.Shelley.API (
   LedgerState (LedgerState),
   TxIn (TxIn),
+  UTxO (..),
+  UTxOState (..),
  )
 import Cardano.Ledger.TxIn (TxId)
 import Control.State.Transition.Extended (
@@ -47,8 +58,12 @@ import Control.State.Transition.Extended (
   STS (..),
   TRC (..),
   TransitionRule,
+  failBecause,
   judgmentContext,
+  liftSTS,
+  tellEvent,
   trans,
+  whenFailureFree,
  )
 import qualified Data.Foldable as Foldable
 import Data.Sequence (Seq)
@@ -59,12 +74,21 @@ import Lens.Micro ((^.))
 import Lens.Micro.Type (Lens')
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (collectPlutusScriptsWithContext, evalPlutusScripts)
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure,
-  AlonzoUtxosPredFailure,
+  AlonzoUtxosPredFailure (ValidationTagMismatch),
   AlonzoUtxowPredFailure,
+  TagMismatchDescription (PassedUnexpectedly),
+  invalidBegin,
+  invalidEnd,
+  when2Phase,
  )
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
+import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (DeltaCoin))
 import Cardano.Ledger.Conway.Rules.Cert (ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Certs (ConwayCertsPredFailure)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
@@ -73,9 +97,14 @@ import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerPredFailure)
 import Cardano.Ledger.Conway.Rules.Ledgers (ConwayLedgersEnv (ConwayLedgersEnv))
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
-import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
+import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure (CollectErrors))
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
-import Cardano.Ledger.Core (EraRuleEvent, EraRuleFailure)
+import Cardano.Ledger.Plutus (
+  PlutusWithContext,
+  ScriptFailure (scriptFailurePlutus),
+  ScriptResult (..),
+ )
+import Cardano.Ledger.Shelley.LedgerState (updateStakeDistribution)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersEvent,
   ShelleyLedgersPredFailure (..),
@@ -83,6 +112,12 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
  )
+import Cardano.Ledger.UTxO (EraUTxO (ScriptsNeeded))
+import Control.Monad.RWS (asks)
+import Data.List.NonEmpty (NonEmpty, nonEmpty)
+import qualified Data.Map as Map
+import Data.MapExtras (extractKeys)
+import Debug.Trace (traceEvent)
 import NoThunks.Class (NoThunks)
 
 data ConwayZonePredFailure era
@@ -91,8 +126,10 @@ data ConwayZonePredFailure era
     ShelleyInConwayPredFailure (ShelleyLedgersPredFailure era) -- Subtransition Failures
   deriving (Generic)
 
-newtype ConwayZoneEvent era
+data ConwayZoneEvent era
   = ShelleyInConwayEvent (ShelleyLedgersEvent era)
+  | FailedPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
+  | SuccessfulPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
 
 type instance EraRuleFailure "ZONE" (ConwayEra c) = ConwayZonePredFailure (ConwayEra c)
 
@@ -191,6 +228,12 @@ instance
   , EraTx era
   , ConwayEraTxBody era
   , AlonzoEraTx era
+  , AlonzoEraUTxO era
+  , EraPlutusContext era
+  , InjectRuleFailure "ZONE" AlonzoUtxosPredFailure era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , InjectRuleFailure "ZONE" ConwayUtxosPredFailure era
+  , PredicateFailure (EraRule "ZONE" era) ~ ConwayZonePredFailure era
   ) =>
   STS (ConwayZONE era)
   where
@@ -199,6 +242,7 @@ instance
   type Signal (ConwayZONE era) = Seq (Tx era)
   type State (ConwayZONE era) = LedgerState era
   type BaseM (ConwayZONE era) = ShelleyBase
+  type Event (ConwayZONE era) = ConwayZoneEvent era
 
   initialRules = []
   transitionRules = [zoneTransition]
@@ -212,29 +256,34 @@ zoneTransition ::
   , ConwayEraTxBody era
   , AlonzoEraTx era
   , EraCrypto era ~ era
+  , AlonzoEraUTxO era
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
+  , EraPlutusContext era
+  , InjectRuleFailure "ZONE" AlonzoUtxosPredFailure era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , InjectRuleFailure "ZONE" ConwayUtxosPredFailure era
+  , PredicateFailure (EraRule "ZONE" era) ~ ConwayZonePredFailure era
   ) =>
   TransitionRule (ConwayZONE era)
 zoneTransition =
   judgmentContext
     -- I guess we want UTxOStateTemp here?
     >>= \( TRC
-            s@( ConwayLedgersEnv slotNo ixRange pParams accountState
-                , LedgerState utxoState certState
-                , txs :: Seq (Tx era)
-                )
+            ( ConwayLedgersEnv slotNo ixRange pParams accountState
+              , LedgerState utxoState certState
+              , txs :: Seq (Tx era)
+              )
           ) -> do
-        if chkLinear (Foldable.toList txs)
+        if all chkIsValid txs
           && all (chkRqTx txs) txs
-          && all chkIsValid txs
+          && chkLinear (Foldable.toList txs)
           then -- ZONE-V
 
             trans @(EraRule "LEDGERS" era) $
               TRC (ConwayLedgersEnv slotNo ixRange pParams accountState, LedgerState utxoState certState, txs)
           else -- ZONE-N
-          -- TODO WG: Copy UTXOS (babbageEvalScriptsTxInvalid)
-            trans @(ConwayZONE era) $ TRC s
+            conwayEvalScriptsTxInvalid @era
   where
     chkLinear :: [Tx era] -> Bool
     chkLinear txs =
@@ -255,6 +304,86 @@ zoneTransition =
     -- chkIsValid tx = tx .Tx.isValid ≡ true
     chkIsValid :: Tx era -> Bool
     chkIsValid tx = tx ^. isValidTxL == IsValid True
+
+-- data ConwayUtxosEvent era
+--   = TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
+--   | SuccessfulPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
+--   | FailedPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
+--   | -- | The UTxOs consumed and created by a signal tx
+--     TxUTxODiff
+--       -- | UTxO consumed
+--       (UTxO era)
+--       -- | UTxO created
+--       (UTxO era)
+--   deriving (Generic)
+
+conwayEvalScriptsTxInvalid ::
+  forall era.
+  ( ConwayEraTxBody era
+  , AlonzoEraTx era
+  , Environment (EraRule "LEDGERS" era) ~ ConwayLedgersEnv era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , Embed (EraRule "LEDGERS" era) (ConwayZONE era)
+  , EraCrypto era ~ era
+  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  , Show (PredicateFailure (EraRule "LEDGER" era))
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , AlonzoEraUTxO era
+  , EraPlutusContext era
+  , EraRuleFailure "ZONE" era ~ ConwayZonePredFailure era
+  , InjectRuleFailure "ZONE" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "ZONE" ConwayUtxosPredFailure era
+  ) =>
+  TransitionRule (ConwayZONE era)
+conwayEvalScriptsTxInvalid =
+  do
+    TRC
+      ( ConwayLedgersEnv _slotNo _ixRange pp _accountState
+        , LedgerState us@(UTxOState utxo _ _ fees _ _ _) certState
+        , txs :: Seq (Tx era)
+        ) <-
+      judgmentContext
+    let tx = head $ Foldable.toList txs -- TODO WG use safe head
+        txBody = tx ^. bodyTxL
+
+    -- TRC (UtxoEnv _ pp _, us@(UTxOState utxo _ _ fees _ _ _), tx) <- judgmentContext
+    -- {- txb := txbody tx -}
+    sysSt <- liftSTS $ asks systemStart
+    ei <- liftSTS $ asks epochInfo
+
+    () <- pure $! traceEvent invalidBegin ()
+
+    case collectPlutusScriptsWithContext ei sysSt pp tx utxo of
+      Right sLst ->
+        {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
+        {- isValid tx = evalScripts tx sLst = False -}
+        whenFailureFree $
+          when2Phase $ case evalPlutusScripts tx sLst of
+            Passes _ ->
+              failBecause $
+                injectFailure @"ZONE" $
+                  ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
+            Fails ps fs -> do
+              mapM_ (tellEvent . SuccessfulPlutusScriptsEvent @era) (nonEmpty ps)
+              tellEvent (FailedPlutusScriptsEvent @era (scriptFailurePlutus <$> fs))
+      Left info -> failBecause (injectFailure $ CollectErrors info)
+    () <- pure $! traceEvent invalidEnd ()
+
+    {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
+    {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
+    let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
+        UTxO collouts = collOuts txBody
+        DeltaCoin collateralFees = collAdaBalance txBody utxoDel -- NEW to Babbage
+    pure $!
+      LedgerState
+        us {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
+          { utxosUtxo = UTxO (Map.union utxoKeep collouts) -- NEW to Babbage
+          {- fees + collateralFees -}
+          , utxosFees = fees <> Coin collateralFees -- NEW to Babbage
+          , utxosStakeDistr = updateStakeDistribution pp (utxosStakeDistr us) (UTxO utxoDel) (UTxO collouts)
+          }
+        certState
 
 txInTxId :: TxIn era -> TxId era
 txInTxId (TxIn x _) = x
@@ -341,6 +470,6 @@ topSortTxs _ [] _ srtd = Just srtd
 topSortTxs [] _ _ _ = Nothing
 topSortTxs _ _ [] _ = Nothing
 topSortTxs ((tx1, _) : dges) (r : em) (tx : rls) srtd =
-  topSortTxs dges (fst updRES) (snd updRES) (srtd ++ [tx1])
+  uncurry (topSortTxs dges) updRES (srtd ++ [tx1])
   where
     updRES = updateRES tx1 (r : em) (removeTx tx1 (tx : rls))
