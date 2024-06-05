@@ -39,7 +39,10 @@ module Cardano.Ledger.Shelley.Tx (
   -- * Deprecated
   txwitsScript,
   hashMultiSigScript,
+
+  -- * Babel Fees
   ShelleyRequiredTx (requiredTxs),
+  ShelleyRequiredTxRaw (..),
 )
 where
 
@@ -217,6 +220,9 @@ instance EraScript era => NoThunks (ShelleyRequiredTx era)
 
 instance Memoized ShelleyRequiredTx where
   type RawType ShelleyRequiredTx = ShelleyRequiredTxRaw
+
+deriving newtype instance EraRequiredTxsData era => NFData (ShelleyRequiredTxRaw era)
+deriving newtype instance EraRequiredTxsData era => NFData (ShelleyRequiredTx era)
 
 pattern ShelleyRequiredTx ::
   forall era.
