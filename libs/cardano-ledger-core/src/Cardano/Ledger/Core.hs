@@ -62,11 +62,6 @@ module Cardano.Ledger.Core (
   validateAuxiliaryData,
 
   -- * Babel fees
-  EraRequiredTxsData (..),
-  Zone,
-  TxNode (..),
-  -- singleton,
-  zoneToTxs,
 )
 where
 
@@ -129,24 +124,6 @@ import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
-
-import Algebra.Graph
-
-data TxNode era = TxNode {txNodeIx :: Int, txNode :: Tx era}
-
-instance Eq (TxNode era) where
-  a == b = txNodeIx a == txNodeIx b
-
-instance Ord (TxNode era) where
-  compare a b = compare (txNodeIx a) (txNodeIx b)
-
-type Zone era = Graph (TxNode era)
-
--- singleton :: Tx era -> Zone era
--- singleton tx = vertex (TxNode 0 tx)
-
-zoneToTxs :: Zone era -> [Tx era]
-zoneToTxs = fmap txNode . vertexList
 
 class
   ( EraScript era
