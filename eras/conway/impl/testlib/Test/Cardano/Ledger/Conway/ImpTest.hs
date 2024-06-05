@@ -261,8 +261,9 @@ instance
   ShelleyEraImp (ConwayEra c)
   where
   initImpTestState = do
-    kh <- fst <$> freshKeyPair
-    let committee = Committee [(KeyHashObj kh, EpochNo 15)] (1 %! 1)
+    kh1 <- fst <$> freshKeyPair
+    kh2 <- fst <$> freshKeyPair
+    let committee = Committee [(KeyHashObj kh1, EpochNo 15), (KeyHashObj kh2, EpochNo 15)] (1 %! 1)
     anchor <- arbitrary
     let constitution = Constitution anchor SNothing
     impNESL %= initConwayNES committee constitution
@@ -791,12 +792,12 @@ enactTreasuryWithdrawals ::
   ConwayEraImp era =>
   [(RewardAccount (EraCrypto era), Coin)] ->
   Credential 'DRepRole (EraCrypto era) ->
-  Credential 'HotCommitteeRole (EraCrypto era) ->
+  NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)) ->
   ImpTestM era (GovActionId (EraCrypto era))
-enactTreasuryWithdrawals withdrawals dRep cm = do
+enactTreasuryWithdrawals withdrawals dRep cms = do
   gaId <- submitTreasuryWithdrawals withdrawals
   submitYesVote_ (DRepVoter dRep) gaId
-  submitYesVote_ (CommitteeVoter cm) gaId
+  mapM_ (\c -> submitYesVote_ (CommitteeVoter c) gaId) $ NE.toList cms
   passNEpochs 2
   pure gaId
 
@@ -1381,13 +1382,13 @@ enactConstitution ::
   StrictMaybe (GovPurposeId 'ConstitutionPurpose era) ->
   Constitution era ->
   Credential 'DRepRole (EraCrypto era) ->
-  Credential 'HotCommitteeRole (EraCrypto era) ->
+  NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)) ->
   ImpTestM era (GovActionId (EraCrypto era))
-enactConstitution prevGovId constitution dRep committeeMember = impAnn "Enacting constitution" $ do
+enactConstitution prevGovId constitution dRep committeeMembers = impAnn "Enacting constitution" $ do
   let action = NewConstitution prevGovId constitution
   govId <- submitGovAction action
   submitYesVote_ (DRepVoter dRep) govId
-  submitYesVote_ (CommitteeVoter committeeMember) govId
+  mapM_ (\c -> submitYesVote_ (CommitteeVoter c) govId) $ NE.toList committeeMembers
   logRatificationChecks govId
   passNEpochs 2
   enactedConstitution <-

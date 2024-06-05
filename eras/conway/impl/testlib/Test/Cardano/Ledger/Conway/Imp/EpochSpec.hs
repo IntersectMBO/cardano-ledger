@@ -333,7 +333,7 @@ dRepVotingSpec =
       logEntry "Submitting new minFee proposal"
       gid <- submitParameterChange SNothing proposedUpdate
 
-      (committeeHotCred :| _) <- registerInitialCommittee
+      (committeeHotCred1 :| [committeeHotCred2]) <- registerInitialCommittee
       (dRepCred, _, _) <- setupSingleDRep 1_000_000
       passEpoch
       logRatificationChecks gid
@@ -341,7 +341,8 @@ dRepVotingSpec =
         isAccepted <- isDRepAccepted gid
         assertBool "Gov action should not be accepted" $ not isAccepted
       submitYesVote_ (DRepVoter dRepCred) gid
-      submitYesVote_ (CommitteeVoter committeeHotCred) gid
+      submitYesVote_ (CommitteeVoter committeeHotCred1) gid
+      submitYesVote_ (CommitteeVoter committeeHotCred2) gid
       logAcceptedRatio gid
       do
         isAccepted <- isDRepAccepted gid
@@ -385,7 +386,7 @@ treasuryWithdrawalExpectation ::
   [GovAction era] ->
   ImpTestM era ()
 treasuryWithdrawalExpectation extraWithdrawals = do
-  (committeeHotCred :| _) <- registerInitialCommittee
+  (committeeHotCred1 :| [committeeHotCred2]) <- registerInitialCommittee
   (dRepCred, _, _) <- setupSingleDRep 1_000_000
   treasuryStart <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   rewardAccount <- registerRewardAccount
@@ -396,7 +397,8 @@ treasuryWithdrawalExpectation extraWithdrawals = do
       TreasuryWithdrawals (Map.singleton rewardAccount withdrawalAmount) govPolicy
         NE.:| extraWithdrawals
   submitYesVote_ (DRepVoter dRepCred) govActionId
-  submitYesVote_ (CommitteeVoter committeeHotCred) govActionId
+  submitYesVote_ (CommitteeVoter committeeHotCred1) govActionId
+  submitYesVote_ (CommitteeVoter committeeHotCred2) govActionId
   passEpoch -- 1st epoch crossing starts DRep pulser
   impAnn "Withdrawal should not be received yet" $
     lookupReward (raCredential rewardAccount) `shouldReturn` mempty
@@ -457,7 +459,7 @@ eventsSpec ::
 eventsSpec = describe "Events" $ do
   describe "emits event" $ do
     it "GovInfoEvent" $ do
-      (ccCred :| _) <- registerInitialCommittee
+      (ccCred1 :| [ccCred2]) <- registerInitialCommittee
       (spoCred, _, _) <- setupPoolWithStake $ Coin 42_000_000
 
       let actionLifetime = 10
@@ -500,7 +502,8 @@ eventsSpec = describe "Events" $ do
       replicateM_ (fromIntegral actionLifetime) passEpochWithNoDroppedActions
       logAcceptedRatio proposalA
       submitYesVote_ (StakePoolVoter spoCred) proposalA
-      submitYesVote_ (CommitteeVoter ccCred) proposalA
+      submitYesVote_ (CommitteeVoter ccCred1) proposalA
+      submitYesVote_ (CommitteeVoter ccCred2) proposalA
       gasA <- getGovActionState proposalA
       gasB <- getGovActionState proposalB
       gasC <- getGovActionState proposalC
