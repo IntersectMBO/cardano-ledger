@@ -151,6 +151,7 @@ import Cardano.Ledger.EpochBoundary (
   SnapShots (..),
   Stake (..),
  )
+import Cardano.Ledger.FRxO (FRxO (FRxO), unFRxO)
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -3240,10 +3241,11 @@ psNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (
     ]
 
 pcUTxOState :: Proof era -> UTxOState era -> PDoc
-pcUTxOState proof (UTxOState u dep fs gs (IStake m _) don) =
+pcUTxOState proof (UTxOState u f dep fs gs (IStake m _) don) =
   ppRecord
     "UTxOState"
     [ ("utxo", pcUTxO proof u)
+    , ("frxo", pcUTxO proof (UTxO . unFRxO $ f)) -- TODO WG
     , ("deposited", pcCoin dep)
     , ("fees", pcCoin fs)
     , ("govState", pcGovState proof gs)
@@ -3256,10 +3258,11 @@ instance Reflect era => PrettyA (UTxOState era) where
 
 -- | Like pcUTxOState, except it prints only a summary of the UTxO
 psUTxOState :: forall era. Reflect era => Proof era -> UTxOState era -> PDoc
-psUTxOState proof (UTxOState (UTxO u) dep fs gs (IStake m _) don) =
+psUTxOState proof (UTxOState (UTxO u) (FRxO f) dep fs gs (IStake m _) don) =
   ppRecord
     "UTxOState"
     [ ("utxo", summaryMapCompact (Map.map (\x -> x ^. compactCoinTxOutL) u))
+    , ("frxo", summaryMapCompact (Map.map (\x -> x ^. compactCoinTxOutL) f))
     , ("deposited", pcCoin dep)
     , ("fees", pcCoin fs)
     , ("govState", pcGovState proof gs)

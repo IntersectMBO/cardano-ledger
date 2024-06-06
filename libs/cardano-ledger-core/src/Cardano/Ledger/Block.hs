@@ -37,7 +37,6 @@ import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
-import Control.Monad ((<=<))
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (toList)
 import Data.Set (Set)
@@ -161,7 +160,7 @@ neededTxInsForBlock ::
   Set (TxIn (EraCrypto era))
 neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
   where
-    txBodies = map (^. bodyTxL) . (toList <=< toList) $ fromTxZones txsSeq
+    txBodies = map (^. bodyTxL) . concatMap toList $ fromTxZones txsSeq
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
     newTxIds = Set.fromList $ map txid txBodies
     isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds

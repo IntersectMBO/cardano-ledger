@@ -247,9 +247,9 @@ mkBlock ::
   Block (BHeader (EraCrypto era)) era
 mkBlock prev pKeys txns slotNo blockNo enonce kesPeriod keyRegKesPeriod oCert =
   let protVer = ProtVer (eraProtVerHigh @era) 0
-      txseq = toTxSeq @era (StrictSeq.fromList txns)
+      txseq = toTxZones @era (fmap StrictSeq.singleton (StrictSeq.fromList txns))
       bodySize = fromIntegral $ bBodySize protVer txseq
-      bodyHash = hashTxSeq @era txseq
+      bodyHash = hashTxZones @era txseq
       bhBody = mkBHBody protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
       bHeader = mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody
    in Block bHeader txseq
@@ -286,9 +286,9 @@ mkBlockFakeVRF ::
   Block (BHeader (EraCrypto era)) era
 mkBlockFakeVRF prev pKeys txns slotNo blockNo enonce bnonce l kesPeriod keyRegKesPeriod oCert =
   let protVer = ProtVer (eraProtVerHigh @era) 0
-      txSeq = toTxSeq @era (StrictSeq.fromList txns)
+      txSeq = toTxZones @era (fmap StrictSeq.singleton (StrictSeq.fromList txns))
       bodySize = fromIntegral $ bBodySize protVer txSeq
-      bodyHash = hashTxSeq txSeq
+      bodyHash = hashTxZones txSeq
       bhBody =
         mkBHBodyFakeVRF bnonce l protVer prev pKeys slotNo blockNo enonce oCert bodySize bodyHash
       bHeader = mkBHeader pKeys kesPeriod keyRegKesPeriod bhBody

@@ -15,7 +15,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Conway.Rules.Ledgers where
+module Cardano.Ledger.Conway.Rules.Ledgers (ConwayLEDGERS, ConwayLedgersEnv (..)) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Alonzo.Rules (

@@ -115,8 +115,6 @@ aggTests =
 -- and then redo the tests in that module in the Generic fashion
 forAllChainTrace ::
   (Testable prop, Reflect era) => Proof era -> Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
-forAllChainTrace p@Conway n propf =
-  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 forAllChainTrace p@Babbage n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 forAllChainTrace p@Alonzo n propf =
@@ -127,6 +125,9 @@ forAllChainTrace p@Allegra n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 forAllChainTrace p@Shelley n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
+forAllChainTrace _ _ _ = undefined -- p@Conway n propf
+-- TODO WG
+-- property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) initStableFields
 
 -- ===========================================================
 

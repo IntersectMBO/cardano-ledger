@@ -254,6 +254,7 @@ ustate ::
 ustate pf =
   UTxOState
     { utxosUtxo = initUTxO pf
+    , utxosFrxo = mempty
     , utxosDeposited = Coin 0
     , utxosFees = Coin 0
     , utxosGovState = def

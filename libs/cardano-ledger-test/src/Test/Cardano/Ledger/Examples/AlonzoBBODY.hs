@@ -716,10 +716,10 @@ makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txSeq
         { bhviewID = hashKey (vKey coldKeys)
         , bhviewBSize = fromIntegral $ bBodySize (ProtVer (eraProtVerLow @era) 0) txSeq
         , bhviewHSize = 0
-        , bhviewBHash = hashTxSeq txSeq
+        , bhviewBHash = hashTxZones txSeq
         , bhviewSlot = SlotNo 0
         }
-    txSeq = toTxSeq $ StrictSeq.fromList txs
+    txSeq = toTxZones $ StrictSeq.fromList (fmap StrictSeq.singleton txs)
 
 scriptStakeCredFail :: forall era. Scriptic era => Proof era -> StakeCredential (EraCrypto era)
 scriptStakeCredFail pf = ScriptHashObj (alwaysFailsHash 1 pf)

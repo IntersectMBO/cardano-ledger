@@ -17,7 +17,7 @@ import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe)
-import Cardano.Ledger.Binary (Sized)
+import Cardano.Ledger.Binary (EncCBOR, Sized)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Plutus.TxInfo (TxOutSource)
 import Control.State.Transition (STS (PredicateFailure))
@@ -165,3 +165,16 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+-- Babel fees
+
+instance
+  ( EraScript era
+  , EraTxOut era
+  , EncCBOR (TxCert era)
+  ) =>
+  Arbitrary (BabbageRequiredTx era)
+  where
+  arbitrary =
+    BabbageRequiredTx
+      <$> arbitrary

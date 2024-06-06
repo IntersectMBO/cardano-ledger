@@ -43,7 +43,13 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayCERTS, ConwayEra, ConwayGOV, ConwayLEDGER, ConwayUTXOW)
+import Cardano.Ledger.Conway.Era (
+  ConwayCERTS,
+  ConwayEra,
+  ConwayGOV,
+  ConwayLEDGER,
+  ConwayUTXOW,
+ )
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   ConwayGovState (..),
@@ -85,7 +91,6 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
-  ShelleyLEDGERS,
   ShelleyPoolPredFailure,
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
@@ -457,34 +462,6 @@ instance
   where
   wrapFailed = ConwayCertsFailure
   wrapEvent = CertsEvent
-
-instance
-  ( Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
-  , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
-  , Embed (EraRule "GOV" era) (ConwayLEDGER era)
-  , ConwayEraGov era
-  , AlonzoEraTx era
-  , ConwayEraTxBody era
-  , ConwayEraPParams era
-  , GovState era ~ ConwayGovState era
-  , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
-  , Environment (EraRule "CERTS" era) ~ CertsEnv era
-  , Environment (EraRule "GOV" era) ~ GovEnv era
-  , Signal (EraRule "UTXOW" era) ~ Tx era
-  , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
-  , Signal (EraRule "GOV" era) ~ GovProcedures era
-  , State (EraRule "UTXOW" era) ~ UTxOState era
-  , State (EraRule "CERTS" era) ~ CertState era
-  , State (EraRule "GOV" era) ~ Proposals era
-  , EraRule "GOV" era ~ ConwayGOV era
-  , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
-  , Event (EraRule "ZONES" era) ~ ConwayLedgerEvent era
-  , EraGov era
-  ) =>
-  Embed (ConwayLEDGER era) (ShelleyLEDGERS era)
-  where
-  wrapFailed = undefined -- LedgerFailure
-  wrapEvent = undefined -- LedgerEvent
 
 instance
   ( ConwayEraPParams era

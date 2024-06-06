@@ -20,7 +20,7 @@ import Cardano.Ledger.Binary (
   decodeRecordNamed,
  )
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Core (Era, EraSegWits (TxSeq), EraTx)
+import Cardano.Ledger.Core (Era, EraSegWits (TxZones), EraTx)
 import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq, txSeqDecoder)
 import Data.Typeable (Typeable)
 
@@ -32,7 +32,7 @@ newtype LaxBlock h era = LaxBlock (Block h era)
 
 blockDecoder ::
   ( EraTx era
-  , TxSeq era ~ ShelleyTxSeq era
+  , TxZones era ~ ShelleyTxSeq era
   , DecCBOR (Annotator h)
   ) =>
   Bool ->
@@ -44,12 +44,12 @@ blockDecoder lax = annotatorSlice $
     txns <- txSeqDecoder lax
     pure $ Block' <$> header <*> txns
 
-deriving stock instance (Era era, Show (TxSeq era), Show h) => Show (LaxBlock h era)
+deriving stock instance (Era era, Show (TxZones era), Show h) => Show (LaxBlock h era)
 
 instance
   ( EraTx era
   , Typeable h
-  , TxSeq era ~ ShelleyTxSeq era
+  , TxZones era ~ ShelleyTxSeq era
   , DecCBOR (Annotator h)
   ) =>
   DecCBOR (Annotator (LaxBlock h era))

@@ -173,7 +173,7 @@ class
 
   auxDataTxL :: Lens' (Tx era) (StrictMaybe (AuxiliaryData era))
 
-  requiredTxsTxL :: Lens' (Tx era) (StrictMaybe (RequiredTxs era))
+  requiredTxsTxL :: Lens' (Tx era) (StrictMaybe (RequiredTxs era)) -- TODO WG if we don't bother with allowing general atomic zones (cycles) then this should go back into the TxBody
 
   sizeTxF :: SimpleGetter (Tx era) Integer
 
@@ -654,37 +654,37 @@ txIdTxBody = TxId . hashAnnotated
 
 ----- TODO WG NEW STUFF
 
-class
-  ( EraTxOut era
-  , EraTxCert era
-  , EraPParams era
-  , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
-  , DecCBOR (Annotator (TxBody era))
-  , EncCBOR (TxBody era)
-  , ToCBOR (TxBody era)
-  , NoThunks (TxBody era)
-  , NFData (TxBody era)
-  , Show (TxBody era)
-  , Eq (TxBody era)
-  , EqRaw (TxBody era)
-  , HashAnnotated (RequiredTxs era) EraIndependentRequiredTxs (EraCrypto era)
-  , DecCBOR (Annotator (RequiredTxs era))
-  , EncCBOR (RequiredTxs era)
-  , ToCBOR (RequiredTxs era)
-  , NoThunks (RequiredTxs era)
-  , NFData (RequiredTxs era)
-  , Show (RequiredTxs era)
-  , Eq (RequiredTxs era)
-  , EqRaw (RequiredTxs era)
-  , HashAnnotated
-      (TxBody era, RequiredTxs era)
-      (EraIndependentTxBody, EraIndependentRequiredTxs)
-      (EraCrypto era)
-  ) =>
-  EraCompositeWitness era
-  where
-  type CompositeWitness era = (r :: Type) | r -> era
+-- class
+--   ( EraTxOut era
+--   , EraTxCert era
+--   , EraPParams era
+--   , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
+--   , DecCBOR (Annotator (TxBody era))
+--   , EncCBOR (TxBody era)
+--   , ToCBOR (TxBody era)
+--   , NoThunks (TxBody era)
+--   , NFData (TxBody era)
+--   , Show (TxBody era)
+--   , Eq (TxBody era)
+--   , EqRaw (TxBody era)
+--   , HashAnnotated (RequiredTxs era) EraIndependentRequiredTxs (EraCrypto era)
+--   , DecCBOR (Annotator (RequiredTxs era))
+--   , EncCBOR (RequiredTxs era)
+--   , ToCBOR (RequiredTxs era)
+--   , NoThunks (RequiredTxs era)
+--   , NFData (RequiredTxs era)
+--   , Show (RequiredTxs era)
+--   , Eq (RequiredTxs era)
+--   , EqRaw (RequiredTxs era)
+--   , HashAnnotated
+--       (TxBody era, RequiredTxs era)
+--       (EraIndependentTxBody, EraIndependentRequiredTxs)
+--       (EraCrypto era)
+--   ) =>
+--   EraCompositeWitness era
+--   where
+--   type CompositeWitness era = (r :: Type) | r -> era
 
-  txBodyCompositeWitnessL :: Lens' (CompositeWitness era) (TxBody era)
+--   txBodyCompositeWitnessL :: Lens' (CompositeWitness era) (TxBody era)
 
-  requiredTxsCompositeWitnessL :: Lens' (CompositeWitness era) (RequiredTxs era)
+--   requiredTxsCompositeWitnessL :: Lens' (CompositeWitness era) (RequiredTxs era)

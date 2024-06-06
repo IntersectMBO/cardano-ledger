@@ -408,11 +408,14 @@ initialTxOut wit@Conway = mkBasicTxOut (initialAddr wit) mempty
 -- ============================================================
 
 abstractTx :: Proof era -> Tx era -> [TxField era]
-abstractTx Conway (AlonzoTx txBody wit v auxdata) =
+abstractTx Conway (AlonzoTx txBody wit v auxdata _) =
+  -- TODO WG
   [Body txBody, TxWits wit, Valid v, AuxData auxdata]
-abstractTx Babbage (AlonzoTx txBody wit v auxdata) =
+abstractTx Babbage (AlonzoTx txBody wit v auxdata _) =
+  -- TODO WG
   [Body txBody, TxWits wit, Valid v, AuxData auxdata]
-abstractTx Alonzo (AlonzoTx txBody wit v auxdata) =
+abstractTx Alonzo (AlonzoTx txBody wit v auxdata _) =
+  -- TODO WG
   [Body txBody, TxWits wit, Valid v, AuxData auxdata]
 abstractTx Shelley (ShelleyTx txBody wit auxdata) =
   [Body txBody, TxWits wit, AuxData auxdata]
@@ -437,7 +440,8 @@ abstractTxBody Alonzo (AlonzoTxBody inp col out cert wdrl fee vldt up req mnt si
   , AdHash adh
   , Txnetworkid net
   ]
-abstractTxBody Conway (ConwayTxBody inp col ref out colret totcol cert wdrl fee vldt req mnt sih adh net vp pp ctv td) =
+abstractTxBody Conway (ConwayTxBody inp col ref out colret totcol cert wdrl fee vldt req mnt sih adh net vp pp ctv td _ _ _) =
+  -- TODO WG URGENT
   [ Inputs inp
   , Collateral col
   , RefInputs ref

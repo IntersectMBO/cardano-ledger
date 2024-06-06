@@ -43,6 +43,7 @@ module Cardano.Ledger.Shelley.Tx (
   -- * Babel Fees
   ShelleyRequiredTx (requiredTxs),
   ShelleyRequiredTxRaw (..),
+  pattern ShelleyRequiredTx,
 )
 where
 

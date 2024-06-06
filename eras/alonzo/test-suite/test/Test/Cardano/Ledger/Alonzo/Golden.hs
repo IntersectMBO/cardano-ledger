@@ -45,10 +45,10 @@ import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as B16L
 import qualified Data.ByteString.Lazy as BSL
 import Data.Either (fromRight)
+import Data.Foldable (toList)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
-import Data.Sequence.Strict
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import Paths_cardano_ledger_alonzo_test
@@ -301,9 +301,9 @@ goldenMinFee =
                 Left err -> error (show err)
                 Right (Block _h txs :: Block (BHeader StandardCrypto) Alonzo) -> txs
             firstTx =
-              case fromTxSeq @Alonzo txsSeq of
-                tx :<| _ -> tx
-                Empty -> error "Block doesn't have any transactions"
+              case concatMap toList $ fromTxZones @Alonzo txsSeq of
+                tx : _ -> tx
+                [] -> error "Block doesn't have any transactions"
 
             -- Below are the relevant protocol parameters that were active
             -- at the time this block was rejected.
@@ -312,9 +312,12 @@ goldenMinFee =
             pricesParam = Prices priceMem priceSteps
             pp =
               emptyPParams
-                & ppMinFeeAL .~ Coin 44
-                & ppMinFeeBL .~ Coin 155381
-                & ppPricesL .~ pricesParam
+                & ppMinFeeAL
+                .~ Coin 44
+                & ppMinFeeBL
+                .~ Coin 155381
+                & ppPricesL
+                .~ pricesParam
 
         Coin 1006053 @?= alonzoMinFeeTx pp firstTx
     ]
@@ -326,7 +329,8 @@ fromRightError errorMsg =
 exPP :: PParams Alonzo
 exPP =
   emptyPParams
-    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1, PlutusV2]
+    & ppCostModelsL
+    .~ zeroTestingCostModels [PlutusV1, PlutusV2]
 
 exampleLangDepViewPV1 :: LangDepView
 exampleLangDepViewPV1 = LangDepView b1 b2

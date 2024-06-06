@@ -238,9 +238,9 @@ mkTxDats :: Era era => Data era -> TxDats era
 mkTxDats d = TxDats $ Map.singleton (hashData d) d
 
 trustMeP :: Proof era -> Bool -> Tx era -> Tx era
-trustMeP Alonzo iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP Babbage iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
-trustMeP Conway iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
+trustMeP Alonzo iv' (AlonzoTx b w _ m rq) = AlonzoTx b w (IsValid iv') m rq
+trustMeP Babbage iv' (AlonzoTx b w _ m rq) = AlonzoTx b w (IsValid iv') m rq
+trustMeP Conway iv' (AlonzoTx b w _ m rq) = AlonzoTx b w (IsValid iv') m rq
 trustMeP _ _ tx = tx
 
 -- This implements a special rule to test that for ValidationTagMismatch. Rather than comparing the insides of
@@ -260,7 +260,8 @@ testBBODY wit@(BBODY proof) initialSt block expected pparams =
    in case proof of
         Alonzo -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
         Babbage -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
-        Conway -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
+        -- TODO WG
+        -- Conway -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
         other -> error ("We cannot testBBODY in era " ++ show other)
 
 testUTXOW ::

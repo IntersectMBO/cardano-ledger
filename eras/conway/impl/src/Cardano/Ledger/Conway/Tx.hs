@@ -18,11 +18,13 @@
 
 module Cardano.Ledger.Conway.Tx (
   module BabbageTxReExport,
+  ConwayTxZones,
+  pattern ConwayTxZones,
 )
 where
 
-import Cardano.Crypto.Hash (Hash)
-import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Crypto.Hash ()
+import qualified Cardano.Crypto.Hash as Hash hiding (Hash)
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Alonzo.Core (AlonzoEraTxWits)
 import Cardano.Ledger.Alonzo.Tx (
@@ -75,6 +77,7 @@ import Cardano.Ledger.Core (
  )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.BlockChain (constructMetadata)
 import Cardano.Ledger.Shelley.Tx (ShelleyRequiredTx)
@@ -156,7 +159,7 @@ instance Crypto c => AlonzoEraTx (ConwayEra c) where
 instance Crypto c => Core.EraRequiredTxsData (ConwayEra c) where
   type RequiredTxs (ConwayEra c) = ShelleyRequiredTx (ConwayEra c)
 
-instance (Crypto c, HASH c ~ c) => Core.EraSegWits (ConwayEra c) where
+instance Crypto c => Core.EraSegWits (ConwayEra c) where
   type TxZones (ConwayEra c) = ConwayTxZones (ConwayEra c)
   fromTxZones = txZonesTxns
   toTxZones = ConwayTxZones
@@ -252,7 +255,7 @@ instance AlonzoEraTx era => DecCBOR (Annotator (TxZones era)) where
 -- | Hash a given block body
 hashConwayTxZones ::
   forall era.
-  Hash.HashAlgorithm (Core.EraCrypto era) =>
+  Era era =>
   ConwayTxZones era ->
   Hash (Core.EraCrypto era) Core.EraIndependentBlockBody
 hashConwayTxZones (ConwayTxZonesRaw _ bodies ws md vs) =

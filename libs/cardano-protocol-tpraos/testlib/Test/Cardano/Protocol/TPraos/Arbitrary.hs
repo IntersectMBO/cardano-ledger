@@ -141,7 +141,7 @@ instance
   ) =>
   Arbitrary (Block (BHeader c) era)
   where
-  arbitrary = Block <$> arbitrary <*> (toTxSeq <$> arbitrary)
+  arbitrary = Block <$> arbitrary <*> (toTxZones <$> arbitrary)
 
 -- | Use supplied keys to generate a Block.
 genBlock ::
@@ -154,7 +154,7 @@ genBlock ::
   ) =>
   [AllIssuerKeys c r] ->
   Gen (Block (BHeader c) era)
-genBlock aiks = Block <$> genBHeader aiks <*> (toTxSeq <$> arbitrary)
+genBlock aiks = Block <$> genBHeader aiks <*> (toTxZones <$> arbitrary)
 
 -- | For some purposes, a totally random block generator may not be suitable.
 -- There are tests in the ouroboros-network repository, for instance, that

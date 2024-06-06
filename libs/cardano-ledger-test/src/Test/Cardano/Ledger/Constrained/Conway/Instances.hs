@@ -87,6 +87,7 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.EpochBoundary
+import Cardano.Ledger.FRxO (FRxO)
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys (
   BootstrapWitness,
@@ -108,8 +109,9 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.LedgerState hiding (ptrMap)
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.Rules
+import Cardano.Ledger.Shelley.Tx (ShelleyRequiredTx, ShelleyRequiredTxRaw)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.TxIn (Fulfill, TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
@@ -187,6 +189,9 @@ type ConwayTxBodyTypes c =
    , SOS.OSet (ProposalProcedure (ConwayEra c))
    , StrictMaybe Coin
    , Coin
+   , Set (Fulfill (EraCrypto (ConwayEra c)))
+   , StrictSeq (Sized (TxOut (ConwayEra c)))
+   , Set (TxIn (EraCrypto (ConwayEra c)))
    ]
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (ConwayTxBody (ConwayEra c))
 
@@ -213,6 +218,9 @@ instance Crypto c => HasSimpleRep (ConwayTxBody (ConwayEra c)) where
       ctbProposalProcedures
       ctbCurrentTreasuryValue
       ctbTreasuryDonation
+      bftbFulfills
+      bftbRequests
+      bftbRequiredTxs
   fromSimpleRep rep =
     algebra @'["ConwayTxBody" ::: ConwayTxBodyTypes c] rep ConwayTxBody
 
@@ -1195,6 +1203,9 @@ instance (IsConwayUniv fn, Crypto c) => HasSpec fn (SnapShots c)
 instance HasSimpleRep (LedgerState (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (LedgerState (ConwayEra StandardCrypto))
 
+instance HasSimpleRep (FRxO (ConwayEra StandardCrypto))
+instance IsConwayUniv fn => HasSpec fn (FRxO (ConwayEra StandardCrypto))
+
 instance HasSimpleRep (UTxOState (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (UTxOState (ConwayEra StandardCrypto))
 
@@ -1257,6 +1268,16 @@ instance
 
 instance HasSimpleRep (UtxoEnv (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (UtxoEnv (ConwayEra StandardCrypto))
+
+-- TODO WG Why do we need these instances?
+instance HasSimpleRep (ShelleyRequiredTxRaw (ConwayEra StandardCrypto))
+instance IsConwayUniv fn => HasSpec fn (ShelleyRequiredTxRaw (ConwayEra StandardCrypto))
+
+instance HasSimpleRep (MemoBytes ShelleyRequiredTxRaw (ConwayEra StandardCrypto))
+instance IsConwayUniv fn => HasSpec fn (MemoBytes ShelleyRequiredTxRaw (ConwayEra StandardCrypto))
+
+instance HasSimpleRep (ShelleyRequiredTx (ConwayEra StandardCrypto))
+instance IsConwayUniv fn => HasSpec fn (ShelleyRequiredTx (ConwayEra StandardCrypto))
 
 instance HasSimpleRep (AlonzoTx (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (AlonzoTx (ConwayEra StandardCrypto))

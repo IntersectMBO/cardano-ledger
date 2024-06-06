@@ -72,6 +72,9 @@ genTxBody l = do
     <*> arbitrary
     <*> arbitrary
     <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
+    <*> arbitrary
 
 genRedeemers ::
   forall era.

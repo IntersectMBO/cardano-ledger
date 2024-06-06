@@ -43,7 +43,10 @@ module Cardano.Ledger.Conway.TxBody (
     ctbVotingProcedures,
     ctbProposalProcedures,
     ctbCurrentTreasuryValue,
-    ctbTreasuryDonation
+    ctbTreasuryDonation,
+    bftbFulfills,
+    bftbRequests,
+    bftbRequiredTxs
   ),
   ConwayTxBodyRaw,
   conwayTotalDepositsTxBody,
@@ -153,7 +156,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , -- Tx body fields for intents (babel-fees)
     bftbrFulfills :: !(Set (Fulfill (EraCrypto era)))
   , bftbrRequests :: !(StrictSeq (Sized (TxOut era)))
-  , bftbrRequiredTxs :: !(Set (TxIn (EraCrypto era)))
+  , bftbrRequiredTxs :: !(Set (TxIn (EraCrypto era))) -- TODO WG You need to remove this right (for general atomic zones)?
   }
   deriving (Generic, Typeable)
 

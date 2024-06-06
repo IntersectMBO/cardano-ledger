@@ -84,6 +84,7 @@ utxoStateSpec _env =
   constrained $ \utxoState ->
     match utxoState $
       \utxosUtxo
+       _utxosFrxo
        _utxosDeposited
        _utxosFees
        _utxosGovState
@@ -101,7 +102,7 @@ utxoTxSpec ::
   Specification fn (Tx (ConwayEra StandardCrypto))
 utxoTxSpec env st =
   constrained $ \tx ->
-    match tx $ \bdy _wits isValid _auxData ->
+    match tx $ \bdy _wits isValid _auxData _requiredTxs ->
       [ match isValid assert
       , match bdy $
           \ctbSpendInputs
@@ -122,7 +123,10 @@ utxoTxSpec env st =
            _ctbVotingProcedures
            ctbProposalProcedures
            _ctbCurrentTreasuryValue
-           ctbTreasuryDonation ->
+           ctbTreasuryDonation
+           _bftbFulfills
+           _bftbRequests
+           _bftbRequiredTxs ->
               [ assert $ ctbSpendInputs /=. lit mempty
               , assert $ ctbSpendInputs `subset_` lit (Map.keysSet $ unUTxO $ utxosUtxo st)
               , match ctbWithdrawals $ \withdrawalMap ->

@@ -79,7 +79,7 @@ import Cardano.Ledger.Keys (
   WitVKey (WitVKey),
   bwKey,
   verifyBootstrapWit,
-  verifyBootstrapWitRequiredTxs,
+  -- verifyBootstrapWitRequiredTxs,
  )
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
@@ -99,7 +99,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
  )
 import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO, verifyWitVKey, verifyWitVKeyRequiredTxs)
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO, verifyWitVKey)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   Embed (..),
@@ -409,8 +409,8 @@ conwayUtxowTransition ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentRequiredTxs)
-  , Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
+  , -- , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentRequiredTxs)
+    Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , State (EraRule "UTXOW" era) ~ Shelley.UTxOState era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
@@ -493,7 +493,7 @@ validateVerifiedWits ::
   forall era.
   ( EraTx era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentRequiredTxs)
+  -- , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentRequiredTxs)
   ) =>
   Tx era ->
   Test (ShelleyUtxowPredFailure era)
@@ -512,8 +512,8 @@ validateVerifiedWits tx =
         let txBodyHash = extractHash (hashAnnotated txBody)
          in (verifyWitVKey txBodyHash, verifyBootstrapWit txBodyHash)
       SJust txs ->
-        let a = extractHash (hashAnnotated txBody)
-            b = extractHash (hashAnnotated txs)
+        let _a = extractHash (hashAnnotated txBody)
+            _b = extractHash (hashAnnotated txs)
          in undefined
     -- let compositeHash = extractHash (hashAnnotated (txBody, txs))
     --  in (verifyWitVKeyRequiredTxs compositeHash, verifyBootstrapWitRequiredTxs compositeHash)

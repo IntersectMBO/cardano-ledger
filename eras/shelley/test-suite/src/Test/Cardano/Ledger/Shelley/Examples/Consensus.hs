@@ -97,7 +97,7 @@ data ShelleyLedgerExamples era = ShelleyLedgerExamples
 deriving instance
   ( EraTx era
   , EraGov era
-  , Eq (TxSeq era)
+  , Eq (TxZones era)
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
@@ -195,12 +195,12 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
         , bheaderEta = mkCertifiedVRF (mkBytes 0) (vrfSignKey $ aikVrf keys)
         , bheaderL = mkCertifiedVRF (mkBytes 1) (vrfSignKey $ aikVrf keys)
         , bsize = 2345
-        , bhash = hashTxSeq @era blockBody
+        , bhash = hashTxZones @era blockBody
         , bheaderOCert = mkOCert keys 0 (KESPeriod 0)
         , bprotver = ProtVer (natVersion @2) 0
         }
 
-    blockBody = toTxSeq @era (StrictSeq.fromList [tx])
+    blockBody = toTxZones @era (fmap StrictSeq.singleton (StrictSeq.fromList [tx]))
 
     mkBytes :: Int -> Cardano.Ledger.BaseTypes.Seed
     mkBytes = Seed . mkDummyHash @Blake2b_256

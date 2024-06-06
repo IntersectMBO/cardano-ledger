@@ -17,7 +17,11 @@ module Cardano.Ledger.Babbage.Tx (
   AlonzoTx (..),
   BabbageTxBody (..),
   module X,
-  BabbageRequiredTx (requiredTxs),
+  -- Babel Fees
+  pattern BabbageRequiredTx,
+  requiredTxs,
+  BabbageRequiredTx (..),
+  BabbageRequiredTxRaw (..),
 )
 where
 
@@ -52,6 +56,7 @@ import Cardano.Ledger.MemoBytes (
 import Cardano.Ledger.SafeHash (HashAnnotated (hashAnnotated), SafeToHash)
 import Cardano.Ledger.TxIn (TxId)
 import Control.Arrow (left)
+import Control.DeepSeq (NFData)
 import Control.Monad ((<=<))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -134,6 +139,9 @@ instance EraScript era => NoThunks (BabbageRequiredTx era)
 
 instance Memoized BabbageRequiredTx where
   type RawType BabbageRequiredTx = BabbageRequiredTxRaw
+
+deriving newtype instance EraRequiredTxsData era => NFData (BabbageRequiredTxRaw era)
+deriving newtype instance EraRequiredTxsData era => NFData (BabbageRequiredTx era)
 
 pattern BabbageRequiredTx ::
   forall era.

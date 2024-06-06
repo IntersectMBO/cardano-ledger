@@ -91,6 +91,7 @@ genTx txbGen =
     <*> genTxWits @era
     <*> arbitrary
     <*> arbitrary
+    <*> pure SNothing
 
 genTxOut ::
   forall era.

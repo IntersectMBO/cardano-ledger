@@ -49,12 +49,12 @@ library
         Cardano.Ledger.Conway.FRxO
         Cardano.Ledger.Conway.UTxO
         Cardano.Ledger.Conway.Plutus.Context
+        Cardano.Ledger.Conway.API.Validation
 
     hs-source-dirs:   src
     other-modules:
         Cardano.Ledger.Conway.API.Genesis
-        Cardano.Ledger.Conway.API.Mempool
-        Cardano.Ledger.Conway.API.Validation
+        Cardano.Ledger.Conway.API.Mempool        
         Cardano.Ledger.Conway.Era
         Cardano.Ledger.Conway.Governance.Internal
         Cardano.Ledger.Conway.Governance.Procedures
