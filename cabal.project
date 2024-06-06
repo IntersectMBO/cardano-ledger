@@ -20,6 +20,12 @@ source-repository-package
   tag: cb9359ade4dd20a13a0e5c384b04411de29b0329
   --sha256: sha256-ADPVfitVyXn3AXJTYfLK8rHVIzCj4APMrCghgoi35cE=
 
+source-repository-package
+  type: git
+  location: https://github.com/IntersectMBO/plutus.git
+  tag: c4e88bd01e43603d1c8727aa294620c50775e3ac
+  --sha256: sha256-dBSH7q2ZMz4+a/6wxLdNq2j8fHzlToTyOhDOjhHPbeE=
+
 index-state:
   -- Bump this if you need newer packages from Hackage
   , hackage.haskell.org 2024-03-19T11:25:56Z
