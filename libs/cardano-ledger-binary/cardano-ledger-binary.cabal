@@ -81,6 +81,7 @@ library testlib
     exposed-modules:
         Test.Cardano.Ledger.Binary.Arbitrary
         Test.Cardano.Ledger.Binary.Cddl
+        Test.Cardano.Ledger.Binary.Cuddle
         Test.Cardano.Ledger.Binary.Plain.Golden
         Test.Cardano.Ledger.Binary.Plain.RoundTrip
         Test.Cardano.Ledger.Binary.Random
@@ -110,6 +111,7 @@ library testlib
         cardano-slotting:{cardano-slotting, testlib} >=0.1.2,
         cborg,
         containers,
+        cuddle >= 0.1.10.0,
         formatting,
         tree-diff,
         iproute,
