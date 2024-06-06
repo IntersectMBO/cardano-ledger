@@ -30,6 +30,7 @@ flag asserts
 
 library
     exposed-modules:
+        Cardano.Ledger.Conway.CDDL
         Cardano.Ledger.Conway.Genesis
         Cardano.Ledger.Conway.Governance
         Cardano.Ledger.Conway.Governance.DRepPulser
@@ -96,6 +97,7 @@ library
         cardano-slotting,
         cardano-strict-containers,
         containers,
+        cuddle,
         deepseq,
         microlens,
         nothunks,
