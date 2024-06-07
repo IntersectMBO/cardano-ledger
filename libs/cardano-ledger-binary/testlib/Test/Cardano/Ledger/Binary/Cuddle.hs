@@ -1,8 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Binary.Cuddle (
   specWithHuddle,
@@ -33,7 +35,6 @@ import Data.Data (Proxy (..))
 import Data.Functor.Identity (Identity)
 import qualified Data.Text as T
 import GHC.Stack (HasCallStack)
-import System.Random (StdGen, getStdGen)
 import Test.Cardano.Ledger.Binary.RoundTrip (
   RoundTripFailure (RoundTripFailure),
   Trip (..),
@@ -41,13 +42,34 @@ import Test.Cardano.Ledger.Binary.RoundTrip (
   decodeAnnExtra,
   embedTripLabelExtra,
  )
-import Test.Hspec (Expectation, Spec, SpecWith, beforeAll, expectationFailure, it, shouldBe)
+import Test.Hspec (
+  Expectation,
+  Spec,
+  SpecWith,
+  beforeAll,
+  expectationFailure,
+  it,
+  shouldBe,
+ )
+import Test.Hspec.Core.Spec (Example (..), paramsQuickCheckArgs)
+import Test.QuickCheck (Args (replay))
+import Test.QuickCheck.Random (QCGen, mkQCGen)
 
 data CuddleData = CuddleData
   { cddl :: !(Cuddle.CTreeRoot' Identity Cuddle.MonoRef)
   , numExamples :: !Int
-  , randomSeed :: !StdGen
   }
+
+newtype Seeded a = Seeded
+  { runSeeded :: QCGen -> a
+  }
+
+instance Example (a -> Seeded Expectation) where
+  type Arg (a -> Seeded Expectation) = a
+  evaluateExample e params hook =
+    let qcGen = maybe (mkQCGen 0) fst (replay $ paramsQuickCheckArgs params)
+        example a = runSeeded (e a) qcGen
+     in evaluateExample example params hook
 
 huddleRoundTripCborSpec ::
   forall a.
@@ -62,8 +84,8 @@ huddleRoundTripCborSpec version ruleName =
       trip = cborTrip @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         \cddlData ->
-          let term = Cuddle.generateCBORTerm (cddl cddlData) (Cuddle.Name ruleName) (randomSeed cddlData)
-           in roundTripExample lbl version version trip term
+          withGenTerm cddlData (Cuddle.Name ruleName) $
+            roundTripExample lbl version version trip
 
 huddleRoundTripAnnCborSpec ::
   forall a.
@@ -78,25 +100,27 @@ huddleRoundTripAnnCborSpec version ruleName =
       trip = cborTrip @a
    in it (T.unpack ruleName <> ": " <> T.unpack lbl) $
         \cddlData ->
-          let term = Cuddle.generateCBORTerm (cddl cddlData) (Cuddle.Name ruleName) (randomSeed cddlData)
-           in roundTripAnnExample lbl version version trip term
+          withGenTerm cddlData (Cuddle.Name ruleName) $
+            roundTripAnnExample lbl version version trip
 
 specWithHuddle :: Cuddle.Huddle -> Int -> SpecWith CuddleData -> Spec
 specWithHuddle h numExamples =
   beforeAll $
-    do
-      stdGen <- getStdGen
-      let cddl = Cuddle.toCDDL h
-          rCddl = Cuddle.fullResolveCDDL cddl
-       in case rCddl of
-            Right ct ->
-              pure $
-                CuddleData
-                  { cddl = ct
-                  , numExamples = numExamples
-                  , randomSeed = stdGen
-                  }
-            Left nrf -> error $ show nrf
+    let cddl = Cuddle.toCDDL h
+        rCddl = Cuddle.fullResolveCDDL cddl
+     in case rCddl of
+          Right ct ->
+            pure $
+              CuddleData
+                { cddl = ct
+                , numExamples = numExamples
+                }
+          Left nrf -> error $ show nrf
+
+withGenTerm :: CuddleData -> Cuddle.Name -> (CBOR.Term -> Expectation) -> Seeded Expectation
+withGenTerm cd n withTerm = Seeded $ \gen ->
+  let term = Cuddle.generateCBORTerm (cddl cd) n gen
+   in withTerm term
 
 -- | Verify that random data generated is:
 --
