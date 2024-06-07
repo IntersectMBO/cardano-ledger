@@ -75,3 +75,15 @@ evenRedeemerWithDatumBytes =
   ( evenRedeemerWithDatumQ
   , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||evenRedeemerWithDatum||])
   )
+
+-- purposeIsWellformedNoDatumBytes :: (Q [Dec], PlutusBinary)
+-- purposeIsWellformedNoDatumBytes =
+--   ( purposeIsWellformedNoDatumQ
+--   , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||purposeIsWellformedNoDatum||])
+--   )
+
+-- purposeIsWellformedWithDatumBytes :: (Q [Dec], PlutusBinary)
+-- purposeIsWellformedWithDatumBytes =
+--   ( purposeIsWellformedWithDatumQ
+--   , PlutusBinary $ PV3.serialiseCompiledCode $$(P.compile [||purposeIsWellformedWithDatum||])
+--   )

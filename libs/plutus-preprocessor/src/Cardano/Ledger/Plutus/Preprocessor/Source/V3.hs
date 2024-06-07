@@ -107,3 +107,33 @@ evenRedeemerWithDatumQ =
           if P.modulo (P.unsafeDataAsI redeemer) 2 P.== 0 then () else P.error ()
         _ -> P.error ()
     |]
+
+purposeIsWellformedNoDatumQ :: Q [Dec]
+purposeIsWellformedNoDatumQ =
+  [d|
+    purposeIsWellformedNoDatum :: P.BuiltinData -> ()
+    purposeIsWellformedNoDatum arg =
+      case unsafeFromBuiltinData arg of
+        PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo ->
+          case scriptInfo of
+            PV3.MintingScript _cs -> undefined
+            -- Expecting No Datum, therefore should fail when it is supplied
+            PV3.SpendingScript _ (Just _) -> P.error ()
+            PV3.RewardingScript _stakingCredential -> undefined
+            PV3.CertifyingScript _idx _txCert -> undefined
+            PV3.VotingScript _voter -> undefined
+            PV3.ProposingScript _idx _propProc -> undefined
+    |]
+
+purposeIsWellformedWithDatumQ :: Q [Dec]
+purposeIsWellformedWithDatumQ =
+  [d|
+    purposeIsWellformedWithDatum :: P.BuiltinData -> ()
+    purposeIsWellformedWithDatum arg =
+      case unsafeFromBuiltinData arg of
+        PV3.ScriptContext txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript txOutRef (Just _)) ->
+          if null $ P.filter ((txOutRef P.==) . PV3.txInInfoOutRef) $ PV3.txInfoInputs txInfo
+            then P.error ()
+            else ()
+        _ -> P.error ()
+    |]

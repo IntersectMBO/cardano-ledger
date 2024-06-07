@@ -134,3 +134,38 @@ evenRedeemerWithDatumQ =
                   | P.modulo (P.unsafeDataAsI r) 2 P.== 0 -> ()
                   | otherwise -> P.error ()
     |]
+
+purposeIsWellformedNoDatumQ :: Q [Dec]
+purposeIsWellformedNoDatumQ =
+  [d|
+    purposeIsWellformedNoDatum :: P.BuiltinData -> P.BuiltinData -> ()
+    purposeIsWellformedNoDatum redeemer context =
+      case unsafeFromBuiltinData redeemer of
+        PV1.Redeemer _r ->
+          case unsafeFromBuiltinData context of
+            PV1.ScriptContext _ scriptPurpose ->
+              case scriptPurpose of
+                PV1.Minting _cs -> ()
+                -- Spending PlutusV1 scripts must have a Datum
+                PV1.Spending _ -> P.error ()
+                PV1.Rewarding _stakingCredential -> ()
+                PV1.Certifying _dCert -> ()
+    |]
+
+purposeIsWellformedWithDatumQ :: Q [Dec]
+purposeIsWellformedWithDatumQ =
+  [d|
+    purposeIsWellformedWithDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
+    purposeIsWellformedWithDatum datum redeemer context =
+      case unsafeFromBuiltinData datum of
+        PV1.Datum _ ->
+          case unsafeFromBuiltinData redeemer of
+            PV1.Redeemer _r ->
+              case unsafeFromBuiltinData context of
+                -- Only spending scripts can have a Datum
+                PV1.ScriptContext txInfo (PV1.Spending txOutRef) ->
+                  if null $ P.filter ((txOutRef P.==) . PV1.txInInfoOutRef) $ PV1.txInfoInputs txInfo
+                    then P.error ()
+                    else ()
+                _ -> P.error ()
+    |]
