@@ -5,6 +5,7 @@ module Cardano.Ledger.Plutus.Preprocessor.Source.V1 where
 import Language.Haskell.TH
 import qualified PlutusLedgerApi.V1 as PV1
 import PlutusTx (fromBuiltinData, unsafeFromBuiltinData)
+import qualified PlutusTx.AssocMap as PAM
 import qualified PlutusTx.Builtins as P
 import qualified PlutusTx.Prelude as P
 
@@ -133,4 +134,80 @@ evenRedeemerWithDatumQ =
                 PV1.ScriptContext _ (PV1.Spending _)
                   | P.modulo (P.unsafeDataAsI r) 2 P.== 0 -> ()
                   | otherwise -> P.error ()
+    |]
+
+purposeIsWellformedNoDatumQ :: Q [Dec]
+purposeIsWellformedNoDatumQ =
+  [d|
+    purposeIsWellformedNoDatum :: P.BuiltinData -> P.BuiltinData -> ()
+    purposeIsWellformedNoDatum redeemer context =
+      case unsafeFromBuiltinData redeemer of
+        PV1.Redeemer _r ->
+          case unsafeFromBuiltinData context of
+            PV1.ScriptContext txInfo scriptPurpose ->
+              case scriptPurpose of
+                PV1.Minting cs ->
+                  if PAM.member cs $ PV1.getValue $ PV1.txInfoMint txInfo
+                    then ()
+                    else P.error ()
+                -- Spending PlutusV1 scripts must have a Datum
+                PV1.Spending _ -> P.error ()
+                PV1.Rewarding stakingCredential ->
+                  if null $ P.filter ((stakingCredential P.==) . fst) $ PV1.txInfoWdrl txInfo
+                    then P.error ()
+                    else ()
+                PV1.Certifying dCert ->
+                  if null $ P.filter (dCert P.==) $ PV1.txInfoDCert txInfo
+                    then P.error ()
+                    else ()
+    |]
+
+purposeIsWellformedWithDatumQ :: Q [Dec]
+purposeIsWellformedWithDatumQ =
+  [d|
+    purposeIsWellformedWithDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
+    purposeIsWellformedWithDatum datum redeemer context =
+      case unsafeFromBuiltinData datum of
+        PV1.Datum _ ->
+          case unsafeFromBuiltinData redeemer of
+            PV1.Redeemer _r ->
+              case unsafeFromBuiltinData context of
+                -- Only spending scripts can have a Datum
+                PV1.ScriptContext txInfo (PV1.Spending txOutRef) ->
+                  if null $ P.filter ((txOutRef P.==) . PV1.txInInfoOutRef) $ PV1.txInfoInputs txInfo
+                    then P.error ()
+                    else ()
+                _ -> P.error ()
+    |]
+
+datumIsWellformedQ :: Q [Dec]
+datumIsWellformedQ =
+  [d|
+    datumIsWellformed :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
+    datumIsWellformed datum redeemer context =
+      case unsafeFromBuiltinData datum of
+        datum'@(PV1.Datum _) ->
+          case unsafeFromBuiltinData redeemer of
+            PV1.Redeemer _r ->
+              case unsafeFromBuiltinData context of
+                -- Only spending scripts can have a Datum
+                PV1.ScriptContext txInfo (PV1.Spending _txOutRef) ->
+                  if null $ P.filter ((datum' P.==) . snd) $ PV1.txInfoData txInfo
+                    then P.error ()
+                    else ()
+                _ -> P.error ()
+    |]
+
+inputsOutputsAreNotEmptyQ :: Q [Dec]
+inputsOutputsAreNotEmptyQ =
+  [d|
+    inputsOutputsAreNotEmpty :: P.BuiltinData -> P.BuiltinData -> ()
+    inputsOutputsAreNotEmpty redeemer context =
+      case unsafeFromBuiltinData redeemer of
+        PV1.Redeemer _r ->
+          case unsafeFromBuiltinData context of
+            PV1.ScriptContext txInfo _scriptPurpose ->
+              if null (PV1.txInfoInputs txInfo) || null (PV1.txInfoOutputs txInfo)
+                then P.error ()
+                else ()
     |]

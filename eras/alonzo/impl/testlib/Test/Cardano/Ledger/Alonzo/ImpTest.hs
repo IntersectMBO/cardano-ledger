@@ -395,6 +395,10 @@ plutusTestScripts lang =
     , mkScriptTestEntry (evenRedeemerNoDatum lang) $ PlutusArgs (P.I 2) Nothing
     , mkScriptTestEntry (evenRedeemerWithDatum lang) $ PlutusArgs (P.I 22) (Just $ P.I 5)
     , mkScriptTestEntry (malformedPlutus @l) $ PlutusArgs (P.I 0) (Just $ P.I 7)
+    , mkScriptTestEntry (purposeIsWellformedNoDatum lang) $ PlutusArgs (P.I 2) Nothing
+    , mkScriptTestEntry (purposeIsWellformedWithDatum lang) $ PlutusArgs (P.I 22) (Just $ P.I 5)
+    , mkScriptTestEntry (datumIsWellformed lang) $ PlutusArgs (P.I 22) (Just $ P.I 5)
+    , mkScriptTestEntry (inputsOutputsAreNotEmpty lang) $ PlutusArgs (P.I 22) (Just $ P.I 5)
     ]
 
 malformedPlutus :: Plutus l

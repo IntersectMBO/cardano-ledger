@@ -138,6 +138,21 @@ phase2scripts3Arg =
       True
   , mkTwoPhase3ArgInfo (mkPlutusScript' (evenDatum SPlutusV1)) (P.I 8) (P.I 8, bigMem, bigStep) True
   , mkTwoPhase3ArgInfo (alwaysFails @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) False
+  , mkTwoPhase3ArgInfo
+      (mkPlutusScript' (purposeIsWellformedWithDatum SPlutusV1))
+      (P.I 8)
+      (P.I 8, bigMem, bigStep)
+      True
+  , mkTwoPhase3ArgInfo
+      (mkPlutusScript' (datumIsWellformed SPlutusV1))
+      (P.I 8)
+      (P.I 8, bigMem, bigStep)
+      True
+  , mkTwoPhase3ArgInfo
+      (mkPlutusScript' (inputsOutputsAreNotEmpty SPlutusV1))
+      (P.I 8)
+      (P.I 8, bigMem, bigStep)
+      True
   ]
   where
     mkTwoPhase3ArgInfo script = TwoPhase3ArgInfo script (hashScript @era script)
@@ -147,6 +162,14 @@ phase2scripts2Arg =
   [ mkTwoPhase2ArgInfo (alwaysSucceeds @'PlutusV1 2) (P.I 1, bigMem, bigStep) True
   , mkTwoPhase2ArgInfo (mkPlutusScript' (evenRedeemerNoDatum SPlutusV1)) (P.I 14, bigMem, bigStep) True
   , mkTwoPhase2ArgInfo (alwaysFails @'PlutusV1 2) (P.I 1, bigMem, bigStep) False
+  , mkTwoPhase2ArgInfo
+      (mkPlutusScript' (purposeIsWellformedNoDatum SPlutusV1))
+      (P.I 14, bigMem, bigStep)
+      True
+  , mkTwoPhase2ArgInfo
+      (mkPlutusScript' (inputsOutputsAreNotEmpty SPlutusV1))
+      (P.I 14, bigMem, bigStep)
+      True
   ]
   where
     mkTwoPhase2ArgInfo script = TwoPhase2ArgInfo script (hashScript @era script)

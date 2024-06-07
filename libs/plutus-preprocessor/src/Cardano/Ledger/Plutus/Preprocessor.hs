@@ -165,4 +165,44 @@ allTestScripts =
         :| [ "Fails on malformed arguments or whenever datum is missing from the context"
            ]
     )
+  ,
+    ( "purposeIsWellformedNoDatum"
+    , \case
+        PlutusV1 -> V1.purposeIsWellformedNoDatumBytes
+        PlutusV2 -> V2.purposeIsWellformedNoDatumBytes
+        PlutusV3 -> V3.purposeIsWellformedNoDatumBytes
+    , "Script that succeeds when datum is not expected and purpose arguments are validated against txInfo"
+        :| [ "Fails on malformed arguments"
+           ]
+    )
+  ,
+    ( "purposeIsWellformedWithDatum"
+    , \case
+        PlutusV1 -> V1.purposeIsWellformedWithDatumBytes
+        PlutusV2 -> V2.purposeIsWellformedWithDatumBytes
+        PlutusV3 -> V3.purposeIsWellformedWithDatumBytes
+    , "Script that succeeds when datum is expected and purpose arguments are validated against txInfo"
+        :| [ "Fails on malformed arguments"
+           ]
+    )
+  ,
+    ( "datumIsWellformed"
+    , \case
+        PlutusV1 -> V1.datumIsWellformedBytes
+        PlutusV2 -> V2.datumIsWellformedBytes
+        PlutusV3 -> V3.datumIsWellformedBytes
+    , "Script that succeeds when datum is expected and datum is validated against txInfo"
+        :| [ "Fails on malformed arguments"
+           ]
+    )
+  ,
+    ( "inputsOutputsAreNotEmpty"
+    , \case
+        PlutusV1 -> V1.inputsOutputsAreNotEmptyBytes
+        PlutusV2 -> V2.inputsOutputsAreNotEmptyBytes
+        PlutusV3 -> V3.inputsOutputsAreNotEmptyBytes
+    , "Script that succeeds when inputs and outputs are not empty validated against txInfo"
+        :| [ "Fails on malformed arguments and also if inputs or outputs are empty"
+           ]
+    )
   ]

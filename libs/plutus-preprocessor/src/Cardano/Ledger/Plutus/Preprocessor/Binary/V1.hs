@@ -23,6 +23,10 @@ $redeemerSameAsDatumQ
 $evenDatumQ
 $evenRedeemerNoDatumQ
 $evenRedeemerWithDatumQ
+$purposeIsWellformedNoDatumQ
+$purposeIsWellformedWithDatumQ
+$datumIsWellformedQ
+$inputsOutputsAreNotEmptyQ
 
 -- ================================================================
 -- Compile and serialize the real functions as Plutus scripts.
@@ -74,4 +78,28 @@ evenRedeemerWithDatumBytes :: (Q [Dec], PlutusBinary)
 evenRedeemerWithDatumBytes =
   ( evenRedeemerWithDatumQ
   , PlutusBinary $ PV1.serialiseCompiledCode $$(P.compile [||evenRedeemerWithDatum||])
+  )
+
+purposeIsWellformedNoDatumBytes :: (Q [Dec], PlutusBinary)
+purposeIsWellformedNoDatumBytes =
+  ( purposeIsWellformedNoDatumQ
+  , PlutusBinary $ PV1.serialiseCompiledCode $$(P.compile [||purposeIsWellformedNoDatum||])
+  )
+
+purposeIsWellformedWithDatumBytes :: (Q [Dec], PlutusBinary)
+purposeIsWellformedWithDatumBytes =
+  ( purposeIsWellformedWithDatumQ
+  , PlutusBinary $ PV1.serialiseCompiledCode $$(P.compile [||purposeIsWellformedWithDatum||])
+  )
+
+datumIsWellformedBytes :: (Q [Dec], PlutusBinary)
+datumIsWellformedBytes =
+  ( datumIsWellformedQ
+  , PlutusBinary $ PV1.serialiseCompiledCode $$(P.compile [||datumIsWellformed||])
+  )
+
+inputsOutputsAreNotEmptyBytes :: (Q [Dec], PlutusBinary)
+inputsOutputsAreNotEmptyBytes =
+  ( inputsOutputsAreNotEmptyQ
+  , PlutusBinary $ PV1.serialiseCompiledCode $$(P.compile [||inputsOutputsAreNotEmpty||])
   )
