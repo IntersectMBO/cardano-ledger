@@ -57,7 +57,11 @@ import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
-import Test.Cardano.Ledger.Plutus (alwaysSucceedsPlutus, zeroTestingCostModel, zeroTestingCostModels)
+import Test.Cardano.Ledger.Plutus (
+  alwaysSucceedsPlutus,
+  zeroTestingCostModel,
+  zeroTestingCostModels,
+ )
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
