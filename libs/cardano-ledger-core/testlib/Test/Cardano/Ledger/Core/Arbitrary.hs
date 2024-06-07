@@ -527,7 +527,9 @@ deriving instance (EraTxOut era, Arbitrary (TxOut era)) => Arbitrary (UTxO era)
 -- Cardano.Ledger.FRxO -------------------------------------------------------------------
 ------------------------------------------------------------------------------------------
 
-deriving instance (EraTxOut era, Arbitrary (TxOut era)) => Arbitrary (FRxO era)
+instance (EraTxOut era, Arbitrary (TxOut era)) => Arbitrary (FRxO era) where
+  arbitrary = pure $ FRxO mempty
+  shrink = genericShrink
 
 ------------------------------------------------------------------------------------------
 -- Cardano.Ledger.Core.PParams -----------------------------------------------------------

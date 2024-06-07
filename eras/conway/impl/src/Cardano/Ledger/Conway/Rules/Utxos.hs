@@ -24,7 +24,9 @@ module Cardano.Ledger.Conway.Rules.Utxos (
 ) where
 
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
-import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (
+  CollectError (..),
+ )
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent (..),
   AlonzoUtxoPredFailure (..),
@@ -45,6 +47,7 @@ import Cardano.Ledger.Alonzo.UTxO (
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,
   BabbageUtxoPredFailure (..),
+  babbageEvalScriptsTxInvalid,
   expectScriptsToPass,
  )
 import Cardano.Ledger.Babbage.Tx
@@ -62,7 +65,9 @@ import Cardano.Ledger.Conway.FRxO (txfrxo)
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.Conway.TxInfo ()
 import Cardano.Ledger.FRxO (FRxO (FRxO, unFRxO))
-import Cardano.Ledger.Plutus (PlutusWithContext)
+import Cardano.Ledger.Plutus (
+  PlutusWithContext,
+ )
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
@@ -274,7 +279,7 @@ utxosTransition =
   judgmentContext >>= \(TRC (_, _, tx)) -> do
     case tx ^. isValidTxL of
       IsValid True -> conwayEvalScriptsTxValid
-      IsValid False -> undefined -- babbageEvalScriptsTxInvalid TODO WG
+      IsValid False -> babbageEvalScriptsTxInvalid
 
 conwayEvalScriptsTxValid ::
   forall era.

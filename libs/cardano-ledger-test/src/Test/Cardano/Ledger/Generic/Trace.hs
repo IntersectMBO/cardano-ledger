@@ -516,9 +516,7 @@ forEachEpochTrace proof tracelen genSize f = do
     Allegra -> genTrace proof tracelen genSize initStableFields
     Mary -> genTrace proof tracelen genSize initStableFields
     Shelley -> genTrace proof tracelen genSize initStableFields
-    _ -> undefined
-  -- TODO WG Maybe need to make another mock chain? Have it parameterisable by LedgersEnv?
-  -- Conway -> genTrace proof tracelen genSize initStableFields
+    Conway -> genTrace proof tracelen genSize initStableFields
   let propf (subtrace, index) = counterexample ("Subtrace of EpochNo " ++ show index ++ " fails.") (f subtrace)
   -- The very last sub-trace may not be a full epoch, so we throw it away.
   case reverse (splitTrace newEpoch trc) of
