@@ -37,7 +37,6 @@ import Cardano.Ledger.Shelley.Tx (
   sizeShelleyTxF,
   witsShelleyTxL,
  )
-import Data.Maybe.Strict (StrictMaybe (SNothing))
 import qualified Data.Set as Set (map)
 import Lens.Micro (lens, (^.))
 
@@ -64,7 +63,7 @@ instance Crypto c => EraTx (AllegraEra c) where
   auxDataTxL = auxDataShelleyTxL
   {-# INLINE auxDataTxL #-}
 
-  requiredTxsTxL = lens (const SNothing) const
+  requiredTxsTxL = lens (const mempty) const
   {-# INLINE requiredTxsTxL #-}
 
   sizeTxF = sizeShelleyTxF

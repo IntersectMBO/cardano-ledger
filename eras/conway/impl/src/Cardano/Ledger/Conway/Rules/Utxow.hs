@@ -56,7 +56,7 @@ import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   BabbageUtxowPredFailure (..),
  )
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
-import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (SJust, SNothing))
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -507,13 +507,13 @@ validateVerifiedWits tx =
     failed =
       failed' witVKeyVerifier
         <> failedBootstrap bootstrapWitVerifier
-    (witVKeyVerifier, bootstrapWitVerifier) = case txRequiredTxs of
-      SNothing ->
+    (witVKeyVerifier, bootstrapWitVerifier) = case txRequiredTxs == mempty of
+      True ->
         let txBodyHash = extractHash (hashAnnotated txBody)
          in (verifyWitVKey txBodyHash, verifyBootstrapWit txBodyHash)
-      SJust txs ->
+      False ->
         let _a = extractHash (hashAnnotated txBody)
-            _b = extractHash (hashAnnotated txs)
+            _b = extractHash (hashAnnotated txRequiredTxs)
          in undefined
     -- let compositeHash = extractHash (hashAnnotated (txBody, txs))
     --  in (verifyWitVKeyRequiredTxs compositeHash, verifyBootstrapWitRequiredTxs compositeHash)

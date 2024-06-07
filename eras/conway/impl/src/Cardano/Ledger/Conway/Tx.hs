@@ -42,7 +42,7 @@ import Cardano.Ledger.Babbage.Tx as BabbageTxReExport (
   AlonzoEraTx (..),
   AlonzoTx (..),
  )
-import Cardano.Ledger.BaseTypes (StrictMaybe (SNothing), strictMaybeToMaybe, unboundRational)
+import Cardano.Ledger.BaseTypes (strictMaybeToMaybe, unboundRational)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (decCBOR),
@@ -133,7 +133,7 @@ instance Crypto c => Core.EraTx (ConwayEra c) where
       <*> pure (upgradeTxWits w)
       <*> pure valid
       <*> pure (fmap upgradeTxAuxData aux)
-      <*> pure SNothing -- TODO WG
+      <*> pure mempty -- TODO WG
 
 getConwayMinFeeTx ::
   ( Core.EraTx era

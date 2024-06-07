@@ -157,6 +157,7 @@ class
   , Show (Tx era)
   , Eq (Tx era)
   , EqRaw (Tx era)
+  , Monoid (RequiredTxs era)
   ) =>
   EraTx era
   where
@@ -173,7 +174,7 @@ class
 
   auxDataTxL :: Lens' (Tx era) (StrictMaybe (AuxiliaryData era))
 
-  requiredTxsTxL :: Lens' (Tx era) (StrictMaybe (RequiredTxs era)) -- TODO WG if we don't bother with allowing general atomic zones (cycles) then this should go back into the TxBody
+  requiredTxsTxL :: Lens' (Tx era) (RequiredTxs era) -- TODO WG if we don't bother with allowing general atomic zones (cycles) then this should go back into the TxBody
 
   sizeTxF :: SimpleGetter (Tx era) Integer
 

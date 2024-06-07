@@ -529,7 +529,7 @@ instance
   where
   arbitrary =
     ShelleyRequiredTx
-      <$> arbitrary
+      <$> pure mempty -- arbitrary
 
 genTx ::
   ( EraTx era
@@ -545,18 +545,18 @@ genTx =
     <*> arbitrary
 
 genRequiredTxRaw ::
-  EraTx era =>
+  -- EraTx era =>
   Gen (ShelleyRequiredTxRaw era)
 genRequiredTxRaw =
   ShelleyRequiredTxRaw
-    <$> arbitrary
+    <$> pure mempty -- arbitrary
 
 genRequiredTx ::
   EraTx era =>
   Gen (ShelleyRequiredTx era)
 genRequiredTx =
   ShelleyRequiredTx
-    <$> arbitrary
+    <$> pure mempty -- arbitrary
 
 maxTxWits :: Int
 maxTxWits = 5

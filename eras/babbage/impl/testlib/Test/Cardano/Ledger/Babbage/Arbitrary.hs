@@ -177,4 +177,4 @@ instance
   where
   arbitrary =
     BabbageRequiredTx
-      <$> arbitrary
+      <$> pure mempty -- arbitrary

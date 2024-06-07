@@ -163,7 +163,7 @@ data AlonzoTx era = AlonzoTx
   , wits :: !(TxWits era)
   , isValid :: !IsValid
   , auxiliaryData :: !(StrictMaybe (TxAuxData era))
-  , requiredTxs :: !(StrictMaybe (RequiredTxs era))
+  , requiredTxs :: !(RequiredTxs era)
   }
   deriving (Generic)
 
@@ -190,7 +190,7 @@ instance Crypto c => EraTx (AlonzoEra c) where
   auxDataTxL = auxDataAlonzoTxL
   {-# INLINE auxDataTxL #-}
 
-  requiredTxsTxL = lens (const SNothing) const
+  requiredTxsTxL = lens (const mempty) const
   {-# INLINE requiredTxsTxL #-}
 
   sizeTxF = sizeAlonzoTxF
@@ -208,7 +208,7 @@ instance Crypto c => EraTx (AlonzoEra c) where
       <*> pure (upgradeTxWits wits)
       <*> pure (IsValid True)
       <*> pure (fmap upgradeTxAuxData aux)
-      <*> pure SNothing -- TODO WG: Do I need to change this? I'm thinking not for the prototype
+      <*> pure mempty -- TODO WG: Do I need to change this? I'm thinking not for the prototype
 
 instance (Tx era ~ AlonzoTx era, AlonzoEraTx era) => EqRaw (AlonzoTx era) where
   eqRaw = alonzoEqTxRaw
@@ -225,8 +225,8 @@ instance Crypto c => AlonzoEraTx (AlonzoEra c) where
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-mkBasicAlonzoTx :: Monoid (TxWits era) => TxBody era -> AlonzoTx era
-mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing SNothing
+mkBasicAlonzoTx :: (Monoid (TxWits era), Monoid (RequiredTxs era)) => TxBody era -> AlonzoTx era
+mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing mempty
 
 -- | `TxBody` setter and getter for `AlonzoTx`.
 bodyAlonzoTxL :: Lens' (AlonzoTx era) (TxBody era)
@@ -505,10 +505,7 @@ instance
           ( sequence . maybeToStrictMaybe
               <$> decodeNullMaybe decCBOR
           )
-        <*! D
-          ( sequence . maybeToStrictMaybe
-              <$> decodeNullMaybe decCBOR
-          )
+        <*! From
   {-# INLINE decCBOR #-}
 
 -- =======================================================================

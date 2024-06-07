@@ -193,7 +193,7 @@ exampleTx =
     )
 
 exampleTransactionInBlock :: AlonzoTx Conway
-exampleTransactionInBlock = AlonzoTx b w (IsValid True) a SNothing
+exampleTransactionInBlock = AlonzoTx b w (IsValid True) a mempty
   where
     ShelleyTx b w a = exampleTx
 

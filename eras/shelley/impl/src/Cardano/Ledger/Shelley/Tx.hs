@@ -281,7 +281,7 @@ instance Crypto c => EraTx (ShelleyEra c) where
   auxDataTxL = auxDataShelleyTxL
   {-# INLINE auxDataTxL #-}
 
-  requiredTxsTxL = lens (const SNothing) const
+  requiredTxsTxL = lens (const mempty) const
   {-# INLINE requiredTxsTxL #-}
 
   sizeTxF = sizeShelleyTxF
