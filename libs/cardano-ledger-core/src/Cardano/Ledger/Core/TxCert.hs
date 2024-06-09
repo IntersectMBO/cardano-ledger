@@ -56,6 +56,7 @@ class
   , NoThunks (TxCert era)
   , NFData (TxCert era)
   , Show (TxCert era)
+  , Ord (TxCert era)
   , Eq (TxCert era)
   ) =>
   EraTxCert era

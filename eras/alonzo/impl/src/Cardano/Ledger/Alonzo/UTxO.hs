@@ -262,17 +262,17 @@ getAlonzoScriptsNeeded utxo txBody =
         -- The count must continue no matter what, thus the counter `ix + 1`, but
         -- whenever we find a duplicate we use the stored `ix'`.
         --
-        addUniqueTxCertPurpose (!certScriptHashes, !ix, !certPurposes) txCert =
-          fromMaybe (certScriptHashes, ix + 1, certPurposes) $ do
+        addUniqueTxCertPurpose (!seenTxCerts, !ix, !certPurposes) txCert =
+          fromMaybe (seenTxCerts, ix + 1, certPurposes) $ do
             scriptHash <- getScriptWitnessTxCert txCert
-            case Map.lookup scriptHash certScriptHashes of
+            case Map.lookup txCert seenTxCerts of
               Nothing -> do
                 let !purpose = CertifyingPurpose (AsIxItem ix txCert)
-                    !certScriptHashes' = Map.insert scriptHash ix certScriptHashes
+                    !certScriptHashes' = Map.insert txCert ix seenTxCerts
                 pure (certScriptHashes', ix + 1, (purpose, scriptHash) : certPurposes)
               Just ix' -> do
                 let !purpose = CertifyingPurpose (AsIxItem ix' txCert)
-                pure (certScriptHashes, ix + 1, (purpose, scriptHash) : certPurposes)
+                pure (seenTxCerts, ix + 1, (purpose, scriptHash) : certPurposes)
 {-# INLINEABLE getAlonzoScriptsNeeded #-}
 
 zipAsIxItem :: Foldable f => f it -> (AsIxItem Word32 it -> c) -> [c]
