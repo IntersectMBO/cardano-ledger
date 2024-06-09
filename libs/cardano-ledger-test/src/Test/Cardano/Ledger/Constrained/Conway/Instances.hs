@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -154,6 +155,7 @@ import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
+import Test.Cardano.Slotting.Numeric ()
 import Test.QuickCheck hiding (Args, Fun, forAll)
 
 type ConwayUnivFns = StringFn : TreeFn : BaseFns
@@ -264,6 +266,8 @@ instance IsConwayUniv fn => HasSpec fn SlotNo
 instance HasSimpleRep EpochNo
 instance IsConwayUniv fn => OrdLike fn EpochNo
 instance IsConwayUniv fn => HasSpec fn EpochNo
+
+instance IsConwayUniv fn => NumLike fn EpochNo
 
 instance HasSimpleRep TxIx
 instance IsConwayUniv fn => HasSpec fn TxIx
