@@ -1087,6 +1087,9 @@ pcTxBodyField proof x = case x of
   GovProcs ga -> [("gov procedures", pcGovProcedures ga)]
   CurrentTreasuryValue ctv -> [("current treasury value", ppStrictMaybe pcCoin ctv)]
   TreasuryDonation td -> [("treasury donation", pcCoin td)]
+  Fulfills _fs -> [("fulfills", "fix me")] -- TODO WG
+  Requests _rqs -> [("requests", "fix me")] -- TODO WG
+  Requireds _rs -> [("requests", "fix me")] -- TODO WG
 
 pcTxField ::
   forall era.

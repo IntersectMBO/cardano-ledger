@@ -59,7 +59,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   UnitInterval,
  )
-import Cardano.Ledger.Binary (sizedValue)
+import Cardano.Ledger.Binary (Sized, sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (GovProcedures (..))
@@ -77,7 +77,7 @@ import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.TxWits (pattern ShelleyTxWits)
-import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.TxIn (Fulfill, TxIn (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -136,6 +136,9 @@ data TxBodyField era
   | GovProcs (GovProcedures era)
   | CurrentTreasuryValue (StrictMaybe Coin)
   | TreasuryDonation Coin
+  | Fulfills (Set (Fulfill (EraCrypto era)))
+  | Requests (StrictSeq (Sized (TxOut era)))
+  | Requireds (Set (TxIn (EraCrypto era)))
 
 pattern Inputs' :: [TxIn (EraCrypto era)] -> TxBodyField era -- Set
 
@@ -408,13 +411,13 @@ initialTxOut wit@Conway = mkBasicTxOut (initialAddr wit) mempty
 -- ============================================================
 
 abstractTx :: Proof era -> Tx era -> [TxField era]
-abstractTx Conway (AlonzoTx txBody wit v auxdata _) =
+abstractTx Conway (AlonzoTx txBody wit v auxdata) =
   -- TODO WG
   [Body txBody, TxWits wit, Valid v, AuxData auxdata]
-abstractTx Babbage (AlonzoTx txBody wit v auxdata _) =
+abstractTx Babbage (AlonzoTx txBody wit v auxdata) =
   -- TODO WG
   [Body txBody, TxWits wit, Valid v, AuxData auxdata]
-abstractTx Alonzo (AlonzoTx txBody wit v auxdata _) =
+abstractTx Alonzo (AlonzoTx txBody wit v auxdata) =
   -- TODO WG
   [Body txBody, TxWits wit, Valid v, AuxData auxdata]
 abstractTx Shelley (ShelleyTx txBody wit auxdata) =

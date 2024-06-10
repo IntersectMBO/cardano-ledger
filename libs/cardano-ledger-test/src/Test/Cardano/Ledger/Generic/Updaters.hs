@@ -131,30 +131,30 @@ updateTx wit@Mary tx@(ShelleyTx b w d) dt =
     WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
     AuxData faux -> ShelleyTx b w faux
     Valid _ -> tx
-updateTx wit@Alonzo (Alonzo.AlonzoTx b w iv d rq) dt =
+updateTx wit@Alonzo (Alonzo.AlonzoTx b w iv d) dt =
   case dt of
-    Body fbody -> Alonzo.AlonzoTx fbody w iv d rq
-    BodyI bfields -> Alonzo.AlonzoTx (newTxBody wit bfields) w iv d rq
-    TxWits fwit -> Alonzo.AlonzoTx b fwit iv d rq
-    WitnessesI wfields -> Alonzo.AlonzoTx b (newWitnesses override wit wfields) iv d rq
-    AuxData faux -> Alonzo.AlonzoTx b w iv faux rq
-    Valid iv' -> Alonzo.AlonzoTx b w iv' d rq
-updateTx wit@Babbage (AlonzoTx b w iv d rq) dt =
+    Body fbody -> Alonzo.AlonzoTx fbody w iv d
+    BodyI bfields -> Alonzo.AlonzoTx (newTxBody wit bfields) w iv d
+    TxWits fwit -> Alonzo.AlonzoTx b fwit iv d
+    WitnessesI wfields -> Alonzo.AlonzoTx b (newWitnesses override wit wfields) iv d
+    AuxData faux -> Alonzo.AlonzoTx b w iv faux
+    Valid iv' -> Alonzo.AlonzoTx b w iv' d
+updateTx wit@Babbage (AlonzoTx b w iv d) dt =
   case dt of
-    Body fbody -> AlonzoTx fbody w iv d rq
-    BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d rq
-    TxWits fwit -> AlonzoTx b fwit iv d rq
-    WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d rq
-    AuxData faux -> AlonzoTx b w iv faux rq
-    Valid iv' -> AlonzoTx b w iv' d rq
-updateTx wit@Conway (AlonzoTx b w iv d rq) dt =
+    Body fbody -> AlonzoTx fbody w iv d
+    BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d
+    TxWits fwit -> AlonzoTx b fwit iv d
+    WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
+    AuxData faux -> AlonzoTx b w iv faux
+    Valid iv' -> AlonzoTx b w iv' d
+updateTx wit@Conway (AlonzoTx b w iv d) dt =
   case dt of
-    Body fbody -> AlonzoTx fbody w iv d rq
-    BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d rq
-    TxWits fwit -> AlonzoTx b fwit iv d rq
-    WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d rq
-    AuxData faux -> AlonzoTx b w iv faux rq
-    Valid iv' -> AlonzoTx b w iv' d rq
+    Body fbody -> AlonzoTx fbody w iv d
+    BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d
+    TxWits fwit -> AlonzoTx b fwit iv d
+    WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
+    AuxData faux -> AlonzoTx b w iv faux
+    Valid iv' -> AlonzoTx b w iv' d
 {-# NOINLINE updateTx #-}
 
 newTx :: Proof era -> [TxField era] -> Tx era

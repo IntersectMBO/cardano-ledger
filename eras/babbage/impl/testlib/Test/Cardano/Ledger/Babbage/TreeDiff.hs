@@ -18,7 +18,6 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules
-import Cardano.Ledger.Babbage.Tx (BabbageRequiredTx, BabbageRequiredTxRaw)
 import Cardano.Ledger.Babbage.TxBody
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
@@ -59,17 +58,17 @@ instance
 
 -- Babel Fees
 
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (TxCert era)
-  ) =>
-  ToExpr (BabbageRequiredTxRaw era)
+-- instance
+--   ( ToExpr (TxOut era)
+--   , ToExpr (TxCert era)
+--   ) =>
+--   ToExpr (BabbageRequiredTxRaw era)
 
-instance
-  ( ToExpr (TxOut era)
-  , ToExpr (TxCert era)
-  ) =>
-  ToExpr (BabbageRequiredTx era)
+-- instance
+--   ( ToExpr (TxOut era)
+--   , ToExpr (TxCert era)
+--   ) =>
+--   ToExpr (BabbageRequiredTx era)
 
 -- Rules/Utxo
 instance

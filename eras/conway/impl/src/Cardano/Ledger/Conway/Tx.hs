@@ -80,7 +80,6 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.BlockChain (constructMetadata)
-import Cardano.Ledger.Shelley.Tx (ShelleyRequiredTx)
 import Cardano.Ledger.Val (Val (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
@@ -116,8 +115,8 @@ instance Crypto c => Core.EraTx (ConwayEra c) where
   auxDataTxL = auxDataAlonzoTxL
   {-# INLINE auxDataTxL #-}
 
-  requiredTxsTxL = lens (const mempty) const
-  {-# INLINE requiredTxsTxL #-}
+  -- requiredTxsTxL = lens (const mempty) const
+  -- {-# INLINE requiredTxsTxL #-}
 
   sizeTxF = sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
@@ -127,13 +126,14 @@ instance Crypto c => Core.EraTx (ConwayEra c) where
 
   getMinFeeTx = getConwayMinFeeTx
 
-  upgradeTx (AlonzoTx b w valid aux _) =
+  upgradeTx (AlonzoTx b w valid aux) =
     AlonzoTx
       <$> upgradeTxBody b
       <*> pure (upgradeTxWits w)
       <*> pure valid
       <*> pure (fmap upgradeTxAuxData aux)
-      <*> pure mempty -- TODO WG
+
+-- <*> pure mempty -- TODO WG
 
 getConwayMinFeeTx ::
   ( Core.EraTx era
@@ -156,8 +156,8 @@ instance Crypto c => AlonzoEraTx (ConwayEra c) where
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-instance Crypto c => Core.EraRequiredTxsData (ConwayEra c) where
-  type RequiredTxs (ConwayEra c) = ShelleyRequiredTx (ConwayEra c)
+-- instance Crypto c => Core.EraRequiredTxsData (ConwayEra c) where
+--   type RequiredTxs (ConwayEra c) = ShelleyRequiredTx (ConwayEra c)
 
 instance Crypto c => Core.EraSegWits (ConwayEra c) where
   type TxZones (ConwayEra c) = ConwayTxZones (ConwayEra c)

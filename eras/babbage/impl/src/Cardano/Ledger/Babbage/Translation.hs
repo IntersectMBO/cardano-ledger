@@ -84,7 +84,7 @@ instance Crypto c => TranslateEra (BabbageEra c) Tx where
       SNothing -> pure SNothing
       SJust auxData -> SJust <$> translateEraThroughCBOR "AuxData" auxData
     let validating = tx ^. Alonzo.isValidTxL
-    pure $ Tx $ AlonzoTx txBody txWits validating auxData mempty
+    pure $ Tx $ AlonzoTx txBody txWits validating auxData -- mempty
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions

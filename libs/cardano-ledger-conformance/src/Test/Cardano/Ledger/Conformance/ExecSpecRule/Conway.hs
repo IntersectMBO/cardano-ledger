@@ -105,7 +105,7 @@ instance
   signalSpec env st = utxoTxSpec env st <> constrained agdaConstraints
     where
       agdaConstraints :: Term fn (AlonzoTx Conway) -> Pred fn
-      agdaConstraints tx = match @fn tx $ \txBody _ _ _ _ ->
+      agdaConstraints tx = match @fn tx $ \txBody _ _ _ ->
         match txBody $
           \_ctbSpendInputs
            _ctbCollateralInputs

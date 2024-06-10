@@ -23,8 +23,8 @@ module Test.Cardano.Ledger.Shelley.Arbitrary (
   ASC (..),
   StakeProportion (..),
   VRFNatVal (..),
-  genRequiredTx,
-  genRequiredTxRaw,
+  -- genRequiredTx,
+  -- genRequiredTxRaw,
 ) where
 
 import qualified Cardano.Chain.UTxO as Byron
@@ -520,16 +520,16 @@ instance
       <*> scale (`div` 15) arbitrary
       <*> arbitrary
 
-instance
-  ( EraScript era
-  , EraTxOut era
-  , EncCBOR (TxCert era)
-  ) =>
-  Arbitrary (ShelleyRequiredTx era)
-  where
-  arbitrary =
-    ShelleyRequiredTx
-      <$> pure mempty -- arbitrary
+-- instance
+--   ( EraScript era
+--   , EraTxOut era
+--   , EncCBOR (TxCert era)
+--   ) =>
+--   Arbitrary (ShelleyRequiredTx era)
+--   where
+--   arbitrary =
+--     ShelleyRequiredTx
+--       <$> pure mempty -- arbitrary
 
 genTx ::
   ( EraTx era
@@ -544,19 +544,19 @@ genTx =
     <*> resize maxTxWits arbitrary
     <*> arbitrary
 
-genRequiredTxRaw ::
-  -- EraTx era =>
-  Gen (ShelleyRequiredTxRaw era)
-genRequiredTxRaw =
-  ShelleyRequiredTxRaw
-    <$> pure mempty -- arbitrary
+-- genRequiredTxRaw ::
+--   -- EraTx era =>
+--   Gen (ShelleyRequiredTxRaw era)
+-- genRequiredTxRaw =
+--   ShelleyRequiredTxRaw
+--     <$> pure mempty -- arbitrary
 
-genRequiredTx ::
-  EraTx era =>
-  Gen (ShelleyRequiredTx era)
-genRequiredTx =
-  ShelleyRequiredTx
-    <$> pure mempty -- arbitrary
+-- genRequiredTx ::
+--   EraTx era =>
+--   Gen (ShelleyRequiredTx era)
+-- genRequiredTx =
+--   ShelleyRequiredTx
+--     <$> pure mempty -- arbitrary
 
 maxTxWits :: Int
 maxTxWits = 5

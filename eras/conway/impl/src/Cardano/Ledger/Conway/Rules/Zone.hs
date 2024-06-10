@@ -28,7 +28,7 @@ import Cardano.Ledger.BaseTypes (
   systemStart,
  )
 import Cardano.Ledger.Conway.Core (
-  ConwayEraTxBody (fulfillsTxBodyL, requiredTxsTxBodyL),
+  ConwayEraTxBody (fulfillsTxBodyL),
   Era (EraCrypto),
   EraRule,
   EraTx (Tx, bodyTxL),
@@ -36,6 +36,7 @@ import Cardano.Ledger.Conway.Core (
   InjectRuleFailure (..),
   collateralInputsTxBodyL,
   isValidTxL,
+  requiredTxsTxBodyL,
  )
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayZONE)
 import Cardano.Ledger.Conway.PParams (
@@ -298,6 +299,7 @@ zoneTransition =
     chkRqTx txs tx = all chk txrids
       where
         chk txrid = txrid `elem` ids
+        -- asd = tx ^. requiredTxsTxL
         txrids = fmap txInTxId $ toList $ tx ^. bodyTxL . requiredTxsTxBodyL
         ids :: Set (TxId era)
         ids = getIDs $ Foldable.toList txs

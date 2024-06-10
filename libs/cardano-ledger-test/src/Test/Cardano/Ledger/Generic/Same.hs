@@ -572,7 +572,7 @@ sameAlonzoTx ::
   AlonzoTx era ->
   [(String, Maybe PDoc)]
 -- TODO WG add new stuff in here
-sameAlonzoTx proof (AlonzoTx b1 w1 v1 aux1 _) (AlonzoTx b2 w2 v2 aux2 _) =
+sameAlonzoTx proof (AlonzoTx b1 w1 v1 aux1) (AlonzoTx b2 w2 v2 aux2) =
   extendLabel "TxBody " (sameTxBody proof b1 b2)
     ++ extendLabel "TxWits " (sameAlonzoTxWits proof w1 w2)
     ++ [ ("AuxData", eqByShow aux1 aux2)

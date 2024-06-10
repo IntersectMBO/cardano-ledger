@@ -19,7 +19,7 @@ import Cardano.Ledger.Allegra.TxAuxData ()
 import Cardano.Ledger.Allegra.TxBody (AllegraEraTxBody (..))
 import Cardano.Ledger.Allegra.TxWits ()
 import Cardano.Ledger.Core (
-  EraRequiredTxsData (..),
+  -- EraRequiredTxsData (..),
   EraTx (..),
   EraTxAuxData (upgradeTxAuxData),
   EraTxWits (..),
@@ -28,7 +28,6 @@ import Cardano.Ledger.Core (
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.Shelley.Tx (
-  ShelleyRequiredTx,
   ShelleyTx (..),
   auxDataShelleyTxL,
   bodyShelleyTxL,
@@ -38,14 +37,14 @@ import Cardano.Ledger.Shelley.Tx (
   witsShelleyTxL,
  )
 import qualified Data.Set as Set (map)
-import Lens.Micro (lens, (^.))
+import Lens.Micro ((^.))
 
 -- ========================================
 
-instance Crypto c => EraRequiredTxsData (AllegraEra c) where
-  {-# SPECIALIZE instance EraRequiredTxsData (AllegraEra StandardCrypto) #-}
+-- instance Crypto c => EraRequiredTxsData (AllegraEra c) where
+--   {-# SPECIALIZE instance EraRequiredTxsData (AllegraEra StandardCrypto) #-}
 
-  type RequiredTxs (AllegraEra c) = ShelleyRequiredTx (AllegraEra c)
+--   type RequiredTxs (AllegraEra c) = ShelleyRequiredTx (AllegraEra c)
 
 instance Crypto c => EraTx (AllegraEra c) where
   {-# SPECIALIZE instance EraTx (AllegraEra StandardCrypto) #-}
@@ -63,8 +62,8 @@ instance Crypto c => EraTx (AllegraEra c) where
   auxDataTxL = auxDataShelleyTxL
   {-# INLINE auxDataTxL #-}
 
-  requiredTxsTxL = lens (const mempty) const
-  {-# INLINE requiredTxsTxL #-}
+  -- requiredTxsTxL = lens (const mempty) const
+  -- {-# INLINE requiredTxsTxL #-}
 
   sizeTxF = sizeShelleyTxF
   {-# INLINE sizeTxF #-}

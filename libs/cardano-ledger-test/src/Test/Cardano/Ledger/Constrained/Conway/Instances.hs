@@ -109,7 +109,6 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.LedgerState hiding (ptrMap)
 import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.Rules
-import Cardano.Ledger.Shelley.Tx (ShelleyRequiredTx, ShelleyRequiredTxRaw)
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
 import Cardano.Ledger.TxIn (Fulfill, TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
@@ -1270,14 +1269,14 @@ instance HasSimpleRep (UtxoEnv (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (UtxoEnv (ConwayEra StandardCrypto))
 
 -- TODO WG Why do we need these instances?
-instance HasSimpleRep (ShelleyRequiredTxRaw (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (ShelleyRequiredTxRaw (ConwayEra StandardCrypto))
+-- instance HasSimpleRep (ShelleyRequiredTxRaw (ConwayEra StandardCrypto))
+-- instance IsConwayUniv fn => HasSpec fn (ShelleyRequiredTxRaw (ConwayEra StandardCrypto))
 
-instance HasSimpleRep (MemoBytes ShelleyRequiredTxRaw (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (MemoBytes ShelleyRequiredTxRaw (ConwayEra StandardCrypto))
+-- instance HasSimpleRep (MemoBytes ShelleyRequiredTxRaw (ConwayEra StandardCrypto))
+-- instance IsConwayUniv fn => HasSpec fn (MemoBytes ShelleyRequiredTxRaw (ConwayEra StandardCrypto))
 
-instance HasSimpleRep (ShelleyRequiredTx (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (ShelleyRequiredTx (ConwayEra StandardCrypto))
+-- instance HasSimpleRep (ShelleyRequiredTx (ConwayEra StandardCrypto))
+-- instance IsConwayUniv fn => HasSpec fn (ShelleyRequiredTx (ConwayEra StandardCrypto))
 
 instance HasSimpleRep (AlonzoTx (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (AlonzoTx (ConwayEra StandardCrypto))

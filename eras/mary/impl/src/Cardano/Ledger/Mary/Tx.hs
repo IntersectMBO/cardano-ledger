@@ -10,7 +10,7 @@ where
 
 import Cardano.Ledger.Allegra.Tx (validateTimelock)
 import Cardano.Ledger.Core (
-  EraRequiredTxsData (RequiredTxs),
+  --EraRequiredTxsData (RequiredTxs),
   EraTx (..),
   upgradeTxAuxData,
   upgradeTxBody,
@@ -23,7 +23,7 @@ import Cardano.Ledger.Mary.TxAuxData ()
 import Cardano.Ledger.Mary.TxBody ()
 import Cardano.Ledger.Mary.TxWits ()
 import Cardano.Ledger.Shelley.Tx (
-  ShelleyRequiredTx,
+  --ShelleyRequiredTx,
   ShelleyTx (..),
   auxDataShelleyTxL,
   bodyShelleyTxL,
@@ -32,14 +32,13 @@ import Cardano.Ledger.Shelley.Tx (
   sizeShelleyTxF,
   witsShelleyTxL,
  )
-import Lens.Micro (lens)
 
 -- ========================================
 
-instance Crypto c => EraRequiredTxsData (MaryEra c) where
-  {-# SPECIALIZE instance EraRequiredTxsData (MaryEra StandardCrypto) #-}
+-- instance Crypto c => EraRequiredTxsData (MaryEra c) where
+--   {-# SPECIALIZE instance EraRequiredTxsData (MaryEra StandardCrypto) #-}
 
-  type RequiredTxs (MaryEra c) = ShelleyRequiredTx (MaryEra c)
+--   type RequiredTxs (MaryEra c) = ShelleyRequiredTx (MaryEra c)
 
 instance Crypto c => EraTx (MaryEra c) where
   {-# SPECIALIZE instance EraTx (MaryEra StandardCrypto) #-}
@@ -57,8 +56,8 @@ instance Crypto c => EraTx (MaryEra c) where
   auxDataTxL = auxDataShelleyTxL
   {-# INLINE auxDataTxL #-}
 
-  requiredTxsTxL = lens (const mempty) const
-  {-# INLINE requiredTxsTxL #-}
+  -- requiredTxsTxL = lens (const mempty) const
+  -- {-# INLINE requiredTxsTxL #-}
 
   sizeTxF = sizeShelleyTxF
   {-# INLINE sizeTxF #-}

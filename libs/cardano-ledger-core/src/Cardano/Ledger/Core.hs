@@ -62,9 +62,10 @@ module Cardano.Ledger.Core (
   validateAuxiliaryData,
 
   -- * Babel fees
-  EraRequiredTxsData (..),
 )
 where
+
+-- EraRequiredTxsData (..),
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (
@@ -126,29 +127,29 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
-class
-  ( EraScript era
-  , Eq (RequiredTxs era)
-  , EqRaw (RequiredTxs era)
-  , Show (RequiredTxs era)
-  , Monoid (RequiredTxs era)
-  , NoThunks (RequiredTxs era)
-  , HashAnnotated (RequiredTxs era) EraIndependentRequiredTxs (EraCrypto era)
-  , ToCBOR (RequiredTxs era)
-  , EncCBOR (RequiredTxs era)
-  , DecCBOR (Annotator (RequiredTxs era))
-  ) =>
-  EraRequiredTxsData era
-  where
-  type RequiredTxs era = (r :: Type) | r -> era
+-- class
+--   ( EraScript era
+--   , Eq (RequiredTxs era)
+--   , EqRaw (RequiredTxs era)
+--   , Show (RequiredTxs era)
+--   , Monoid (RequiredTxs era)
+--   , NoThunks (RequiredTxs era)
+--   , HashAnnotated (RequiredTxs era) EraIndependentRequiredTxs (EraCrypto era)
+--   , ToCBOR (RequiredTxs era)
+--   , EncCBOR (RequiredTxs era)
+--   , DecCBOR (Annotator (RequiredTxs era))
+--   ) =>
+--   EraRequiredTxsData era
+--   where
+--   type RequiredTxs era = (r :: Type) | r -> era
 
 -- | A transaction.
 class
   ( EraTxBody era
   , EraTxWits era
   , EraTxAuxData era
-  , EraRequiredTxsData era
-  , EraPParams era
+  , -- , EraRequiredTxsData era
+    EraPParams era
   , -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
     NoThunks (Tx era)
   , DecCBOR (Annotator (Tx era))
@@ -157,7 +158,6 @@ class
   , Show (Tx era)
   , Eq (Tx era)
   , EqRaw (Tx era)
-  , Monoid (RequiredTxs era)
   ) =>
   EraTx era
   where
@@ -174,7 +174,7 @@ class
 
   auxDataTxL :: Lens' (Tx era) (StrictMaybe (AuxiliaryData era))
 
-  requiredTxsTxL :: Lens' (Tx era) (RequiredTxs era) -- TODO WG if we don't bother with allowing general atomic zones (cycles) then this should go back into the TxBody
+  -- requiredTxsTxL :: Lens' (Tx era) (Set (TxIn (EraCrypto era))) -- TODO WG if we don't bother with allowing general atomic zones (cycles) then this should go back into the TxBody
 
   sizeTxF :: SimpleGetter (Tx era) Integer
 

@@ -503,18 +503,19 @@ validateVerifiedWits tx =
     nonEmpty -> failure $ Shelley.InvalidWitnessesUTXOW nonEmpty
   where
     txBody = tx ^. bodyTxL
-    txRequiredTxs = tx ^. requiredTxsTxL
+    -- txRequiredTxs = tx ^. requiredTxsTxL
     failed =
       failed' witVKeyVerifier
         <> failedBootstrap bootstrapWitVerifier
-    (witVKeyVerifier, bootstrapWitVerifier) = case txRequiredTxs == mempty of
-      True ->
-        let txBodyHash = extractHash (hashAnnotated txBody)
-         in (verifyWitVKey txBodyHash, verifyBootstrapWit txBodyHash)
-      False ->
-        let _a = extractHash (hashAnnotated txBody)
-            _b = extractHash (hashAnnotated txRequiredTxs)
-         in undefined
+    (witVKeyVerifier, bootstrapWitVerifier) =
+      -- case txRequiredTxs == mempty of
+      -- True ->
+      let txBodyHash = extractHash (hashAnnotated txBody)
+       in (verifyWitVKey txBodyHash, verifyBootstrapWit txBodyHash)
+    -- False ->
+    --   let _a = extractHash (hashAnnotated txBody)
+    --       _b = extractHash (hashAnnotated txRequiredTxs)
+    --    in undefined
     -- let compositeHash = extractHash (hashAnnotated (txBody, txs))
     --  in (verifyWitVKeyRequiredTxs compositeHash, verifyBootstrapWitRequiredTxs compositeHash)
     wvkKey (WitVKey k _) = k
