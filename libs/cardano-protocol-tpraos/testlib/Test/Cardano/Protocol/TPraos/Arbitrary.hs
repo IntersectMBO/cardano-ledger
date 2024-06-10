@@ -37,6 +37,7 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..), OCertSi
 import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState)
+import Data.Sequence.Strict (singleton)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
@@ -141,7 +142,7 @@ instance
   ) =>
   Arbitrary (Block (BHeader c) era)
   where
-  arbitrary = Block <$> arbitrary <*> (toTxZones <$> arbitrary)
+  arbitrary = Block <$> arbitrary <*> (toTxZones . singleton <$> arbitrary)
 
 -- | Use supplied keys to generate a Block.
 genBlock ::
