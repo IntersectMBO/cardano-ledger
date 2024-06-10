@@ -1484,6 +1484,7 @@ instance (Crypto c, BaseUniverse fn) => HasSpec fn (RewardPulser c ShelleyBase (
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
+  cardinalTypeSpec _ = TrueSpec
 
 instance HasSimpleRep RewardType
 instance IsConwayUniv fn => HasSpec fn RewardType
