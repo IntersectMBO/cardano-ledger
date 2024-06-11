@@ -45,12 +45,12 @@ module Constrained.Spec.Generics (
   onJust,
   isJust,
   ifElse,
+  pickBool,
   chooseSpec,
 ) where
 
 import Data.Typeable
-import GHC.TypeLits (Symbol)
-import GHC.TypeNats
+import GHC.TypeLits
 import Test.QuickCheck (Arbitrary (..), oneof)
 
 import Constrained.Base
@@ -245,21 +245,21 @@ caseOn ::
   , HasSpec fn (SimpleRep a)
   , HasSimpleRep a
   , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
-  , SimpleRep a ~ SumOver (Cases (SimpleRep a))
-  , TypeList (Cases (SimpleRep a))
+  , SimpleRep a ~ SumOver (FlattenSum (SimpleRep a))
+  , TypeList (FlattenSum (SimpleRep a))
   ) =>
   Term fn a ->
-  FunTy (MapList (Weighted (Binder fn)) (Cases (SimpleRep a))) (Pred fn)
-caseOn tm = curryList @(Cases (SimpleRep a)) (mkCase (toGeneric_ tm))
+  FunTy (MapList (Weighted (Binder fn)) (FlattenSum (SimpleRep a))) (Pred fn)
+caseOn tm = curryList @(FlattenSum (SimpleRep a)) (mkCase (toGeneric_ tm))
 
 branch ::
   forall fn p a.
   ( HasSpec fn a
-  , All (HasSpec fn) (Args a)
+  , All (HasSpec fn) (FlattenProd a)
   , IsPred p fn
   , IsProd a
   ) =>
-  FunTy (MapList (Term fn) (Args a)) p ->
+  FunTy (MapList (Term fn) (FlattenProd a)) p ->
   Weighted (Binder fn) a
 branch body =
   -- NOTE: It's not sufficient to simply apply `body` to all the arguments
@@ -269,35 +269,35 @@ branch body =
   -- will blow up at generation time. If we instead do: `p :-> Let x (fst p) (Let y (snd p) (x <=. y))`
   -- the solver will solve `x` and `y` separately (`y` before `x` in this case) and things
   -- will work just fine.
-  Weighted Nothing (bind (buildBranch @p @fn body . toArgs @a @fn))
+  Weighted Nothing (bind (buildBranch @p @fn body . toFlattenProd @a @fn))
 
 branchW ::
   forall fn p a.
   ( HasSpec fn a
-  , All (HasSpec fn) (Args a)
+  , All (HasSpec fn) (FlattenProd a)
   , IsPred p fn
   , IsProd a
   ) =>
   Int ->
-  FunTy (MapList (Term fn) (Args a)) p ->
+  FunTy (MapList (Term fn) (FlattenProd a)) p ->
   Weighted (Binder fn) a
 branchW w body =
-  Weighted (Just w) (bind (buildBranch @p @fn body . toArgs @a @fn))
+  Weighted (Just w) (bind (buildBranch @p @fn body . toFlattenProd @a @fn))
 
 match ::
   forall fn p a.
   ( HasSpec fn a
   , HasSpec fn (SimpleRep a)
   , HasSimpleRep a
-  , Cases (SimpleRep a) ~ '[SimpleRep a]
-  , SimpleRep a ~ SumOver (Cases (SimpleRep a))
+  , FlattenSum (SimpleRep a) ~ '[SimpleRep a]
+  , SimpleRep a ~ SumOver (FlattenSum (SimpleRep a))
   , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
   , IsProd (SimpleRep a)
-  , All (HasSpec fn) (Args (SimpleRep a))
+  , All (HasSpec fn) (FlattenProd (SimpleRep a))
   , IsPred p fn
   ) =>
   Term fn a ->
-  FunTy (MapList (Term fn) (Args (SimpleRep a))) p ->
+  FunTy (MapList (Term fn) (FlattenProd (SimpleRep a))) p ->
   Pred fn
 match p m = caseOn p (branch @fn @p m)
 
@@ -314,24 +314,24 @@ buildBranch bd Nil = toPred bd
 buildBranch bd (t :> args) =
   letBind t $ \x -> buildBranch @p @fn (bd x) args
 
-type family Args t where
-  Args (Prod a b) = a : Args b
-  Args a = '[a]
+type family FlattenProd t where
+  FlattenProd (Prod a b) = a : FlattenProd b
+  FlattenProd a = '[a]
 
 class IsProd p where
-  toArgs ::
+  toFlattenProd ::
     ( HasSpec fn p
     , BaseUniverse fn
     ) =>
     Term fn p ->
-    List (Term fn) (Args p)
+    List (Term fn) (FlattenProd p)
 
-instance {-# OVERLAPPABLE #-} Args a ~ '[a] => IsProd a where
-  toArgs = (:> Nil)
+instance {-# OVERLAPPABLE #-} FlattenProd a ~ '[a] => IsProd a where
+  toFlattenProd = (:> Nil)
 
 instance IsProd b => IsProd (Prod a b) where
-  toArgs (p :: Term fn (Prod a b))
-    | Evidence <- prerequisites @fn @(Prod a b) = (app fstFn p) :> toArgs (app sndFn p)
+  toFlattenProd (p :: Term fn (Prod a b))
+    | Evidence <- prerequisites @fn @(Prod a b) = (app fstFn p) :> toFlattenProd (app sndFn p)
 
 type family ResultType t where
   ResultType (a -> b) = ResultType b
@@ -370,53 +370,53 @@ sel ::
   Term fn (At n as)
 sel = select_ @fn @n @as . toGeneric_
 
-type family Cases t where
-  Cases (Sum a b) = a : Cases b
-  Cases a = '[a]
+type family FlattenSum t where
+  FlattenSum (Sum a b) = a : FlattenSum b
+  FlattenSum a = '[a]
 
 -- | Like `forAll` but pattern matches on the `Term fn a`
 forAll' ::
   forall fn t a p.
   ( Forallable t a
-  , Cases (SimpleRep a) ~ '[SimpleRep a]
+  , FlattenSum (SimpleRep a) ~ '[SimpleRep a]
   , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
   , HasSpec fn t
   , HasSpec fn (SimpleRep a)
   , HasSimpleRep a
-  , All (HasSpec fn) (Args (SimpleRep a))
+  , All (HasSpec fn) (FlattenProd (SimpleRep a))
   , IsPred p fn
   , IsProd (SimpleRep a)
   , HasSpec fn a
   ) =>
   Term fn t ->
-  FunTy (MapList (Term fn) (Args (SimpleRep a))) p ->
+  FunTy (MapList (Term fn) (FlattenProd (SimpleRep a))) p ->
   Pred fn
 forAll' xs f = forAll xs $ \x -> match @fn @p x f
 
 -- | Like `constrained` but pattern matches on the bound `Term fn a`
 constrained' ::
   forall a fn p.
-  ( Cases (SimpleRep a) ~ '[SimpleRep a]
+  ( FlattenSum (SimpleRep a) ~ '[SimpleRep a]
   , TypeSpec fn a ~ TypeSpec fn (SimpleRep a)
   , HasSpec fn (SimpleRep a)
   , HasSimpleRep a
-  , All (HasSpec fn) (Args (SimpleRep a))
+  , All (HasSpec fn) (FlattenProd (SimpleRep a))
   , IsProd (SimpleRep a)
   , HasSpec fn a
   , IsPred p fn
   ) =>
-  FunTy (MapList (Term fn) (Args (SimpleRep a))) p ->
+  FunTy (MapList (Term fn) (FlattenProd (SimpleRep a))) p ->
   Specification fn a
 constrained' f = constrained $ \x -> match @fn @p x f
 
 -- | Like `reify` but pattern matches on the bound `Term fn b`
 reify' ::
   forall fn a b p.
-  ( Cases (SimpleRep b) ~ '[SimpleRep b]
+  ( FlattenSum (SimpleRep b) ~ '[SimpleRep b]
   , TypeSpec fn b ~ TypeSpec fn (SimpleRep b)
   , HasSpec fn (SimpleRep b)
   , HasSimpleRep b
-  , All (HasSpec fn) (Args (SimpleRep b))
+  , All (HasSpec fn) (FlattenProd (SimpleRep b))
   , IsProd (SimpleRep b)
   , HasSpec fn a
   , HasSpec fn b
@@ -424,7 +424,7 @@ reify' ::
   ) =>
   Term fn a ->
   (a -> b) ->
-  FunTy (MapList (Term fn) (Args (SimpleRep b))) p ->
+  FunTy (MapList (Term fn) (FlattenProd (SimpleRep b))) p ->
   Pred fn
 reify' a r f = reify a r $ \x -> match @fn @p x f
 
@@ -495,20 +495,20 @@ instance
 
 class IsConstrOf (c :: Symbol) b sop where
   mkCases ::
-    (HasSpec fn b, All (HasSpec fn) (Cases (SOP sop))) =>
+    (HasSpec fn b, All (HasSpec fn) (FlattenSum (SOP sop))) =>
     (forall a. Term fn a -> Pred fn) ->
     (Term fn b -> Pred fn) ->
-    List (Weighted (Binder fn)) (Cases (SOP sop))
+    List (Weighted (Binder fn)) (FlattenSum (SOP sop))
 
 instance
   ( b ~ ProdOver as
-  , TypeList (Cases (SOP (con : sop)))
+  , TypeList (FlattenSum (SOP (con : sop)))
   ) =>
   IsConstrOf c b ((c ::: as) : con : sop)
   where
   mkCases r (k :: Term fn b -> Pred fn) =
     Weighted Nothing (bind k)
-      :> mapListC @(HasSpec fn) (\_ -> Weighted Nothing (bind r)) (listShape @(Cases (SOP (con : sop))))
+      :> mapListC @(HasSpec fn) (\_ -> Weighted Nothing (bind r)) (listShape @(FlattenSum (SOP (con : sop))))
 
 instance
   ( b ~ ProdOver as
@@ -520,7 +520,7 @@ instance
 
 instance
   {-# OVERLAPPABLE #-}
-  ( Cases (SOP ((c' ::: as) : cs)) ~ (ProdOver as : Cases (SOP cs))
+  ( FlattenSum (SOP ((c' ::: as) : cs)) ~ (ProdOver as : FlattenSum (SOP cs))
   , IsConstrOf c b cs
   ) =>
   IsConstrOf c b ((c' ::: as) : cs)
@@ -535,11 +535,11 @@ onCon ::
   , HasSimpleRep a
   , HasSpec fn a
   , HasSpec fn (SimpleRep a)
-  , SumOver (Cases (SOP (TheSop a))) ~ SimpleRep a
-  , All (HasSpec fn) (Cases (SOP (TheSop a)))
+  , SumOver (FlattenSum (SOP (TheSop a))) ~ SimpleRep a
+  , All (HasSpec fn) (FlattenSum (SOP (TheSop a)))
   , HasSpec fn (ProdOver (ConstrOf c (TheSop a)))
   , IsPred p fn
-  , Args (ProdOver (ConstrOf c (TheSop a))) ~ ConstrOf c (TheSop a)
+  , FlattenProd (ProdOver (ConstrOf c (TheSop a))) ~ ConstrOf c (TheSop a)
   , All (HasSpec fn) (ConstrOf c (TheSop a))
   , IsProd (ProdOver (ConstrOf c (TheSop a)))
   ) =>
@@ -551,7 +551,7 @@ onCon tm p =
     (toGeneric_ tm)
     ( mkCases @c @(ProdOver (ConstrOf c (TheSop a))) @(TheSop a)
         (const $ assert True)
-        (buildBranch @p p . toArgs)
+        (buildBranch @p p . toFlattenProd)
     )
 
 isCon ::
@@ -561,8 +561,8 @@ isCon ::
   , HasSimpleRep a
   , HasSpec fn a
   , HasSpec fn (SimpleRep a)
-  , SumOver (Cases (SOP (TheSop a))) ~ SimpleRep a
-  , All (HasSpec fn) (Cases (SOP (TheSop a)))
+  , SumOver (FlattenSum (SOP (TheSop a))) ~ SimpleRep a
+  , All (HasSpec fn) (FlattenSum (SOP (TheSop a)))
   , HasSpec fn (ProdOver (ConstrOf c (TheSop a)))
   ) =>
   Term fn a ->
@@ -575,7 +575,7 @@ isCon tm =
         (const $ assert True)
     )
 
-type IsNormalType a = (Cases a ~ '[a], Args a ~ '[a], IsProd a, CountCases a ~ 1)
+type IsNormalType a = (FlattenSum a ~ '[a], FlattenProd a ~ '[a], IsProd a, CountCases a ~ 1)
 
 onJust ::
   forall fn a p.
@@ -592,6 +592,10 @@ isJust ::
   Pred fn
 isJust = isCon @"Just"
 
+pickBool :: BaseUniverse fn => Int -> Int -> Specification fn Bool
+pickBool w w' = constrained $ \ b ->
+  caseOn b (branchW w' $ const True) (branchW w $ const True)
+
 chooseSpec ::
   HasSpec fn a =>
   (Int, Specification fn a) ->
@@ -604,10 +608,7 @@ chooseSpec (w, s) (w', s') =
           b
           (x `satisfies` s)
           (x `satisfies` s')
-      , caseOn
-          b
-          (branchW w' $ \_ -> True)
-          (branchW w $ \_ -> True)
+      , b `satisfies` pickBool w w'
       ]
 
 -- Arbitrary instances ----------------------------------------------------
