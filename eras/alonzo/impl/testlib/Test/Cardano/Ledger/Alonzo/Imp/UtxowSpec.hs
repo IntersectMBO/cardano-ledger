@@ -24,7 +24,9 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Plutus
+import Cardano.Ledger.Shelley.LedgerState (epochStatePoolParamsL, nesEsL)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
+import Cardano.Ledger.Shelley.TxCert
 import qualified Data.Map as Map
 import Data.Sequence.Strict (StrictSeq ((:<|)))
 import Lens.Micro
@@ -33,7 +35,7 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, fixupPPHash)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (guessTheNumber3)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceeds2, guessTheNumber3)
 import Test.Cardano.Ledger.Shelley.ImpTest
 
 spec ::
@@ -160,3 +162,23 @@ spec = describe "UTXOW" $ do
       then -- PlutusPurpose serialization was fixed in Conway
         withCborRoundTripFailures submit
       else submit
+
+  it "No ExtraRedeemers on same script certificates" $
+    forM_ ([minBound .. eraMaxLanguage @era] :: [Language]) $ \lang -> do
+      Positive n <- arbitrary
+      replicateM_ n registerPool
+      pools <- getsNES $ nesEsL . epochStatePoolParamsL
+      poolId <- elements $ Map.keys pools
+      let scriptHash = withSLanguage lang (hashPlutusScript . alwaysSucceeds2)
+          cred = ScriptHashObj scriptHash
+          certs =
+            [ RegTxCert cred
+            , DelegStakeTxCert cred poolId
+            , UnRegTxCert cred
+            ]
+      tx <- submitTx $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ certs)
+      let Redeemers redeemers = tx ^. witsTxL . rdmrsTxWitsL
+      Map.keys redeemers
+        `shouldBe` [ CertifyingPurpose (AsIx 1)
+                   , CertifyingPurpose (AsIx 2)
+                   ]
