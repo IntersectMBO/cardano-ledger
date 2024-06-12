@@ -4,6 +4,13 @@
 
 * Add `AllegraEraScript` and `ShelleyEraScript` instances for `AlonzoEra`
 * Add `Inject` instance for `AlonzoTx`
+* Move these functions and types from `cardano-ledger-api`, so they can be used in the
+  test suite:
+  * `TransactionScriptFailure`
+  * `evalTxExUnits`
+  * `RedeemerReport`
+  * `evalTxExUnitsWithLogs`
+  * `RedeemerReportWithLogs`
 
 ## testlib
 
