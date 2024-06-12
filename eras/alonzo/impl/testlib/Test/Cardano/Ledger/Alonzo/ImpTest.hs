@@ -1,5 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -37,6 +39,8 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
+import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
+import Cardano.Ledger.Alonzo.Plutus.Evaluate (evalTxExUnits)
 import Cardano.Ledger.Alonzo.Scripts (
   ExUnits (..),
   plutusScriptLanguage,
@@ -46,7 +50,7 @@ import Cardano.Ledger.Alonzo.Scripts (
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
@@ -77,7 +81,7 @@ import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
-import Lens.Micro.Mtl ((%=))
+import Lens.Micro.Mtl (use, (%=))
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
@@ -96,6 +100,7 @@ class
   , AlonzoEraTxWits era
   , AlonzoEraTx era
   , AlonzoEraUTxO era
+  , EraPlutusContext era
   ) =>
   AlonzoEraImp era
   where
@@ -190,15 +195,45 @@ fixupRedeemers ::
   ImpTestM era (Tx era)
 fixupRedeemers tx = impAnn "fixupRedeemers" $ do
   contexts <- impGetPlutusContexts tx
-  exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  let
+    maxExUnit = pp ^. ppMaxTxExUnitsL
+    mkNewMaxRedeemers (prpIdx, _, ScriptTestContext _ (PlutusArgs dat _)) =
+      (hoistPlutusPurpose @era toAsIx prpIdx, (Data dat, maxExUnit))
+    Redeemers oldRedeemers = tx ^. witsTxL . rdmrsTxWitsL
+    newMaxRedeemers = Map.fromList (mkNewMaxRedeemers <$> contexts)
+    txWithMaxExUnits =
+      tx & witsTxL . rdmrsTxWitsL .~ Redeemers newMaxRedeemers
+  utxo <- getUTxO
+  Globals {systemStart, epochInfo} <- use impGlobalsL
+  exUnitsPerPurpose <-
+    case evalTxExUnits pp txWithMaxExUnits utxo epochInfo systemStart of
+      Left contextError -> do
+        logEntry $ show contextError
+        pure mempty
+      Right reports -> do
+        fmap (Map.mapMaybe id) $ forM reports $ \case
+          Left err -> do
+            logEntry $ "Execution Units estimation error: " ++ show err
+            pure Nothing
+          Right exUnits ->
+            pure $ Just exUnits
   let
     mkNewRedeemers (prpIdx, _, ScriptTestContext _ (PlutusArgs dat _)) =
-      (hoistPlutusPurpose @era toAsIx prpIdx, (Data dat, exUnits))
-    Redeemers oldRedeemers = tx ^. witsTxL . rdmrsTxWitsL
-    newRedeemers = Map.fromList (mkNewRedeemers <$> contexts)
+      let ptr = hoistPlutusPurpose @era toAsIx prpIdx
+       in case Map.lookup ptr oldRedeemers of
+            Just redeemer -> pure $ Just (ptr, redeemer)
+            Nothing ->
+              case Map.lookup ptr exUnitsPerPurpose of
+                Nothing -> do
+                  logEntry $ "Missing Redeemer Ptr from execution estimation: " ++ show ptr
+                  pure Nothing
+                Just exUnits ->
+                  pure $ Just (ptr, (Data dat, exUnits))
+  newRedeemers <- Map.fromList . catMaybes <$> mapM mkNewRedeemers contexts
   pure $
     tx
-      & witsTxL . rdmrsTxWitsL .~ Redeemers (Map.union oldRedeemers newRedeemers)
+      & witsTxL . rdmrsTxWitsL .~ Redeemers (Map.unions [oldRedeemers, newRedeemers, newMaxRedeemers])
 
 fixupScriptWits ::
   forall era.
@@ -331,11 +366,11 @@ alonzoFixupTx =
     >=> addRootTxIn
     -- We need to update the indices after adding the rootTxIn because the
     -- indices of inputs might get bumped if the rootTxIn appears before them
-    >=> fixupRedeemerIndices
-    >=> fixupRedeemers
     >=> fixupScriptWits
     >=> fixupOutputDatums
     >=> fixupDatums
+    >=> fixupRedeemerIndices
+    >=> fixupRedeemers
     >=> fixupPPHash
     >=> fixupFees
     >=> updateAddrTxWits
