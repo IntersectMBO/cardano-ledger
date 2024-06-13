@@ -36,17 +36,17 @@
     "blst": {
       "flake": false,
       "locked": {
-        "lastModified": 1656163412,
-        "narHash": "sha256-xero1aTe2v4IhWIJaEDUsVDOfE77dOV5zKeHWntHogY=",
+        "lastModified": 1691598027,
+        "narHash": "sha256-oqljy+ZXJAXEB/fJtmB8rlAr4UXM+Z2OkDa20gpILNA=",
         "owner": "supranational",
         "repo": "blst",
-        "rev": "03b5124029979755c752eec45f3c29674b558446",
+        "rev": "3dd0f804b1819e5d03fb22ca2e6fac105932043a",
         "type": "github"
       },
       "original": {
         "owner": "supranational",
+        "ref": "v0.3.11",
         "repo": "blst",
-        "rev": "03b5124029979755c752eec45f3c29674b558446",
         "type": "github"
       }
     },
@@ -563,11 +563,11 @@
         "sodium": "sodium"
       },
       "locked": {
-        "lastModified": 1693968598,
-        "narHash": "sha256-2wFadXHMgNYrF7N6jndfp3Ywm2G0r+QTPifrlzugkjo=",
+        "lastModified": 1715898223,
+        "narHash": "sha256-G1LFsvP53twrqaC1FVard/6rjJJ3oitnpJ1E+mTZDGM=",
         "owner": "input-output-hk",
         "repo": "iohk-nix",
-        "rev": "7d738e59d276336d1e02447e27b0373164d3bc88",
+        "rev": "29f19cd41dc593cf17bbc24194e34e7c20889fc9",
         "type": "github"
       },
       "original": {
