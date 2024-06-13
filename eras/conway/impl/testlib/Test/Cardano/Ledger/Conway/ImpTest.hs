@@ -798,7 +798,7 @@ enactTreasuryWithdrawals ::
 enactTreasuryWithdrawals withdrawals dRep cms = do
   gaId <- submitTreasuryWithdrawals withdrawals
   submitYesVote_ (DRepVoter dRep) gaId
-  mapM_ (\c -> submitYesVote_ (CommitteeVoter c) gaId) $ NE.toList cms
+  submitYesVoteCCs_ cms gaId
   passNEpochs 2
   pure gaId
 
@@ -1389,7 +1389,7 @@ enactConstitution prevGovId constitution dRep committeeMembers = impAnn "Enactin
   let action = NewConstitution prevGovId constitution
   govId <- submitGovAction action
   submitYesVote_ (DRepVoter dRep) govId
-  mapM_ (\c -> submitYesVote_ (CommitteeVoter c) govId) $ NE.toList committeeMembers
+  submitYesVoteCCs_ committeeMembers govId
   logRatificationChecks govId
   passNEpochs 2
   enactedConstitution <-
@@ -1550,10 +1550,10 @@ whenPostBootstrap a = do
   unless (HardForks.bootstrapPhase pv) a
 
 submitYesVoteCCs_ ::
-  forall era.
-  ConwayEraImp era =>
-  NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)) ->
+  forall era f.
+  (ConwayEraImp era, Foldable f) =>
+  f (Credential 'HotCommitteeRole (EraCrypto era)) ->
   GovActionId (EraCrypto era) ->
   ImpTestM era ()
 submitYesVoteCCs_ committeeMembers govId =
-  mapM_ (\c -> submitYesVote_ (CommitteeVoter c) govId) $ NE.toList committeeMembers
+  mapM_ (\c -> submitYesVote_ (CommitteeVoter c) govId) committeeMembers

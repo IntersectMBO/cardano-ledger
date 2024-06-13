@@ -42,7 +42,6 @@ import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
 import Data.Default.Class (def)
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence.Strict as SSeq
@@ -771,7 +770,7 @@ enactCostModels prevGovId cms dRep committeeMembers' = do
   let pparamsUpdate = def & ppuCostModelsL .~ SJust cms
   govId <- submitParameterChange (unGovPurposeId <$> prevGovId) pparamsUpdate
   submitYesVote_ (DRepVoter dRep) govId
-  mapM_ (\c -> submitYesVote_ (CommitteeVoter c) govId) $ NE.toList committeeMembers'
+  submitYesVoteCCs_ committeeMembers' govId
   passNEpochs 2
   enactedCms <- getsNES $ nesEsL . curPParamsEpochStateL . ppCostModelsL
   enactedCms `shouldBe` (initialCms <> cms)

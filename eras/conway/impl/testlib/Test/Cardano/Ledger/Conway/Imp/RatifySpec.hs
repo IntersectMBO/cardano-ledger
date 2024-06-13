@@ -26,7 +26,6 @@ import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import Data.Default.Class (def)
 import Data.Foldable
-import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -63,17 +62,26 @@ initiateHardForkWithLessThanMinimalCommitteeSize ::
   SpecWith (ImpTestState era)
 initiateHardForkWithLessThanMinimalCommitteeSize =
   it "Hard Fork can still be initiated with less than minimal committee size" $ do
-    (_hotC1 :| [hotC2]) <- registerInitialCommittee
+    hotCs <- registerInitialCommittee
+    (spoK1, _, _) <- setupPoolWithStake $ Coin 1_000
     passEpoch
     modifyPParams $ ppCommitteeMinSizeL .~ 2
-    committee <- Set.toList <$> getCommitteeMembers
-    resignCommitteeColdKey (head committee) SNothing
+    committeeMembers' <- Set.toList <$> getCommitteeMembers
+    committeeMember <- elements committeeMembers'
+    resignCommitteeColdKey committeeMember SNothing
     protVer <- getProtVer
     gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
-    submitYesVote_ (CommitteeVoter hotC2) gai
+    submitYesVoteCCs_ hotCs gai
+    submitYesVote_ (StakePoolVoter spoK1) gai
     if bootstrapPhase protVer
-      then isCommitteeAccepted gai `shouldReturn` True
-      else isCommitteeAccepted gai `shouldReturn` False
+      then do
+        isCommitteeAccepted gai `shouldReturn` True
+        passNEpochs 2
+        getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
+      else do
+        isCommitteeAccepted gai `shouldReturn` False
+        passNEpochs 2
+        getLastEnactedHardForkInitiation `shouldReturn` SNothing
 
 committeeExpiryResignationDiscountSpec ::
   forall era.
