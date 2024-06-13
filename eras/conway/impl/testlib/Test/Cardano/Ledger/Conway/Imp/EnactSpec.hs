@@ -145,7 +145,7 @@ treasuryWithdrawalsSpec =
       checkNoWithdrawal initialTreasury withdrawals
 
     it "Withdrawals exceeding treasury submitted in several proposals within the same epoch" $ do
-      (committeeC1 :| [committeeC2]) <- registerInitialCommittee
+      committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
       initialTreasury <- getTreasury
       numWithdrawals <- choose (1, 10)
@@ -156,8 +156,7 @@ treasuryWithdrawalsSpec =
           ( \w -> do
               gaId <- submitTreasuryWithdrawals @era [w]
               submitYesVote_ (DRepVoter drepC) gaId
-              submitYesVote_ (CommitteeVoter committeeC1) gaId
-              submitYesVote_ (CommitteeVoter committeeC2) gaId
+              submitYesVoteCCs_ committeeCs gaId
           )
           withdrawals
         passNEpochs 2
@@ -195,7 +194,7 @@ treasuryWithdrawalsSpec =
 hardForkInitiationSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
 hardForkInitiationSpec =
   it "HardForkInitiation" $ do
-    (committeeMember1 :| [committeeMember2]) <- registerInitialCommittee
+    committeeMembers' <- registerInitialCommittee
     modifyPParams $ \pp ->
       pp
         & ppDRepVotingThresholdsL . dvtHardForkInitiationL .~ 2 %! 3
@@ -209,8 +208,7 @@ hardForkInitiationSpec =
     nextMajorVersion <- succVersion $ pvMajor curProtVer
     let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
     govActionId <- submitGovAction $ HardForkInitiation SNothing nextProtVer
-    submitYesVote_ (CommitteeVoter committeeMember1) govActionId
-    submitYesVote_ (CommitteeVoter committeeMember2) govActionId
+    submitYesVoteCCs_ committeeMembers' govActionId
     submitYesVote_ (DRepVoter dRep1) govActionId
     submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
     passNEpochs 2
@@ -225,7 +223,7 @@ hardForkInitiationSpec =
 hardForkInitiationNoDRepsSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
 hardForkInitiationNoDRepsSpec =
   it "HardForkInitiation without DRep voting" $ do
-    (committeeMember1 :| [committeeMember2]) <- registerInitialCommittee
+    committeeMembers' <- registerInitialCommittee
     modifyPParams $ ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 2 %! 3
     whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtHardForkInitiationL .~ def)
     _ <- setupPoolWithStake $ Coin 22_000_000
@@ -235,8 +233,7 @@ hardForkInitiationNoDRepsSpec =
     nextMajorVersion <- succVersion $ pvMajor curProtVer
     let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
     govActionId <- submitGovAction $ HardForkInitiation SNothing nextProtVer
-    submitYesVote_ (CommitteeVoter committeeMember1) govActionId
-    submitYesVote_ (CommitteeVoter committeeMember2) govActionId
+    submitYesVoteCCs_ committeeMembers' govActionId
     submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
     passNEpochs 2
     getProtVer `shouldReturn` curProtVer
@@ -411,7 +408,7 @@ actionPrioritySpec =
       modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
       whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
 
-      (committeeC1 :| [committeeC2]) <- registerInitialCommittee
+      committeeCs <- registerInitialCommittee
       (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
       pGai0 <-
         submitParameterChange
@@ -428,8 +425,7 @@ actionPrioritySpec =
       traverse_ @[]
         ( \gaid -> do
             submitYesVote_ (StakePoolVoter spoC) gaid
-            submitYesVote_ (CommitteeVoter committeeC1) gaid
-            submitYesVote_ (CommitteeVoter committeeC2) gaid
+            submitYesVoteCCs_ committeeCs gaid
         )
         [pGai0, pGai1, pGai2]
       passNEpochs 2
@@ -443,7 +439,7 @@ actionPrioritySpec =
       modifyPParams $ ppPoolVotingThresholdsL . pvtPPSecurityGroupL .~ 1 %! 1
       whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtPPEconomicGroupL .~ def)
 
-      (committeeC1 :| [committeeC2]) <- registerInitialCommittee
+      committeeCs <- registerInitialCommittee
       (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
       gaids <-
         submitGovActions $
@@ -464,8 +460,7 @@ actionPrioritySpec =
       traverse_
         ( \gaid -> do
             submitYesVote_ (StakePoolVoter spoC) gaid
-            submitYesVote_ (CommitteeVoter committeeC1) gaid
-            submitYesVote_ (CommitteeVoter committeeC2) gaid
+            submitYesVoteCCs_ committeeCs gaid
         )
         gaids
       passNEpochs 2

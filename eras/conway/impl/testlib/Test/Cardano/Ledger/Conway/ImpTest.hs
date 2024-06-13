@@ -111,6 +111,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   currentProposalsShouldContain,
   withImpStateWithProtVer,
   whenPostBootstrap,
+  submitYesVoteCCs_,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -1547,3 +1548,12 @@ whenPostBootstrap :: EraGov era => ImpTestM era () -> ImpTestM era ()
 whenPostBootstrap a = do
   pv <- getProtVer
   unless (HardForks.bootstrapPhase pv) a
+
+submitYesVoteCCs_ ::
+  forall era.
+  ConwayEraImp era =>
+  NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)) ->
+  GovActionId (EraCrypto era) ->
+  ImpTestM era ()
+submitYesVoteCCs_ committeeMembers govId =
+  mapM_ (\c -> submitYesVote_ (CommitteeVoter c) govId) $ NE.toList committeeMembers

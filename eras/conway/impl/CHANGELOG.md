@@ -29,6 +29,7 @@
 
 ### `testlib`
 
+* Add `submitYesVoteCCs_` utility to Conway ImpTest
 * Add tests for DRep expiry, considering dormant epochs.
   * Add `unregisterDRep`.
   * Add `updateDRep`.

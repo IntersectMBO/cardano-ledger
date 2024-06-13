@@ -28,7 +28,6 @@ import Cardano.Ledger.Val
 import Control.Monad.Writer (listen)
 import Data.Data (cast)
 import Data.Default.Class (Default (..))
-import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
@@ -333,7 +332,7 @@ dRepVotingSpec =
       logEntry "Submitting new minFee proposal"
       gid <- submitParameterChange SNothing proposedUpdate
 
-      (committeeHotCred1 :| [committeeHotCred2]) <- registerInitialCommittee
+      committeeHotCreds <- registerInitialCommittee
       (dRepCred, _, _) <- setupSingleDRep 1_000_000
       passEpoch
       logRatificationChecks gid
@@ -341,8 +340,7 @@ dRepVotingSpec =
         isAccepted <- isDRepAccepted gid
         assertBool "Gov action should not be accepted" $ not isAccepted
       submitYesVote_ (DRepVoter dRepCred) gid
-      submitYesVote_ (CommitteeVoter committeeHotCred1) gid
-      submitYesVote_ (CommitteeVoter committeeHotCred2) gid
+      submitYesVoteCCs_ committeeHotCreds gid
       logAcceptedRatio gid
       do
         isAccepted <- isDRepAccepted gid
@@ -386,7 +384,7 @@ treasuryWithdrawalExpectation ::
   [GovAction era] ->
   ImpTestM era ()
 treasuryWithdrawalExpectation extraWithdrawals = do
-  (committeeHotCred1 :| [committeeHotCred2]) <- registerInitialCommittee
+  committeeHotCreds <- registerInitialCommittee
   (dRepCred, _, _) <- setupSingleDRep 1_000_000
   treasuryStart <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   rewardAccount <- registerRewardAccount
@@ -397,8 +395,7 @@ treasuryWithdrawalExpectation extraWithdrawals = do
       TreasuryWithdrawals (Map.singleton rewardAccount withdrawalAmount) govPolicy
         NE.:| extraWithdrawals
   submitYesVote_ (DRepVoter dRepCred) govActionId
-  submitYesVote_ (CommitteeVoter committeeHotCred1) govActionId
-  submitYesVote_ (CommitteeVoter committeeHotCred2) govActionId
+  submitYesVoteCCs_ committeeHotCreds govActionId
   passEpoch -- 1st epoch crossing starts DRep pulser
   impAnn "Withdrawal should not be received yet" $
     lookupReward (raCredential rewardAccount) `shouldReturn` mempty
@@ -459,7 +456,7 @@ eventsSpec ::
 eventsSpec = describe "Events" $ do
   describe "emits event" $ do
     it "GovInfoEvent" $ do
-      (ccCred1 :| [ccCred2]) <- registerInitialCommittee
+      ccCreds <- registerInitialCommittee
       (spoCred, _, _) <- setupPoolWithStake $ Coin 42_000_000
 
       let actionLifetime = 10
@@ -502,8 +499,7 @@ eventsSpec = describe "Events" $ do
       replicateM_ (fromIntegral actionLifetime) passEpochWithNoDroppedActions
       logAcceptedRatio proposalA
       submitYesVote_ (StakePoolVoter spoCred) proposalA
-      submitYesVote_ (CommitteeVoter ccCred1) proposalA
-      submitYesVote_ (CommitteeVoter ccCred2) proposalA
+      submitYesVoteCCs_ ccCreds proposalA
       gasA <- getGovActionState proposalA
       gasB <- getGovActionState proposalB
       gasC <- getGovActionState proposalC
