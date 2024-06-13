@@ -89,6 +89,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   fixupFees,
   impGetNativeScript,
   impLookupUTxO,
+  impGlobalsL,
 
   -- * Logging
   logEntry,
@@ -286,6 +287,9 @@ data ImpTestState era = ImpTestState
 
 impLogL :: Lens' (ImpTestState era) (Doc ())
 impLogL = lens impLog (\x y -> x {impLog = y})
+
+impGlobalsL :: Lens' (ImpTestState era) Globals
+impGlobalsL = lens impGlobals (\x y -> x {impGlobals = y})
 
 impNESL :: Lens' (ImpTestState era) (NewEpochState era)
 impNESL = lens impNES (\x y -> x {impNES = y})

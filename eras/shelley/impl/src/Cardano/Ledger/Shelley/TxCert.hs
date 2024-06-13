@@ -262,7 +262,7 @@ data GenesisDelegCert c
       !(KeyHash 'Genesis c)
       !(KeyHash 'GenesisDelegate c)
       !(Hash c (VerKeyVRF c))
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq, Ord)
 
 instance NoThunks (GenesisDelegCert c)
 
@@ -310,7 +310,7 @@ instance ToJSON MIRPot where
 data MIRTarget c
   = StakeAddressesMIR !(Map (Credential 'Staking c) DeltaCoin)
   | SendToOppositePotMIR !Coin
-  deriving (Show, Generic, Eq, NFData)
+  deriving (Show, Generic, Eq, Ord, NFData)
 
 deriving instance NoThunks (MIRTarget c)
 
@@ -339,7 +339,7 @@ data MIRCert c = MIRCert
   { mirPot :: !MIRPot
   , mirRewards :: !(MIRTarget c)
   }
-  deriving (Show, Generic, Eq, NFData)
+  deriving (Show, Generic, Eq, Ord, NFData)
 
 instance NoThunks (MIRCert c)
 
@@ -364,7 +364,7 @@ data ShelleyTxCert era
   | ShelleyTxCertPool !(PoolCert (EraCrypto era))
   | ShelleyTxCertGenesisDeleg !(GenesisDelegCert (EraCrypto era))
   | ShelleyTxCertMir !(MIRCert (EraCrypto era))
-  deriving (Show, Generic, Eq, NFData)
+  deriving (Show, Generic, Eq, Ord, NFData)
 
 instance NoThunks (ShelleyTxCert era)
 
@@ -493,7 +493,7 @@ data ShelleyDelegCert c
     ShelleyUnRegCert !(StakeCredential c)
   | -- | A stake delegation certificate.
     ShelleyDelegCert !(StakeCredential c) !(KeyHash 'StakePool c)
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Eq, Ord)
 
 instance Crypto c => ToJSON (ShelleyDelegCert c) where
   toJSON = \case

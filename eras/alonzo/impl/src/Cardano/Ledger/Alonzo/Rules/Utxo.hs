@@ -171,9 +171,9 @@ data AlonzoUtxoPredFailure era
     ScriptsNotPaidUTxO
       !(UTxO era)
   | ExUnitsTooBigUTxO
-      -- | Max EXUnits from the protocol parameters
+      -- | Max `ExUnits` from the protocol parameters
       !ExUnits
-      -- | EXUnits supplied
+      -- | `ExUnits` supplied
       !ExUnits
   | -- | The inputs marked for use as fees contain non-ADA tokens
     CollateralContainsNonADA !(Value era)
