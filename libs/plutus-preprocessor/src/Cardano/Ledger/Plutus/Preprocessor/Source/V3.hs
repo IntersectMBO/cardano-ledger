@@ -12,176 +12,170 @@ import qualified PlutusTx.Prelude as P
 alwaysSucceedsNoDatumQ :: Q [Dec]
 alwaysSucceedsNoDatumQ =
   [d|
-    alwaysSucceedsNoDatum :: P.BuiltinData -> ()
+    alwaysSucceedsNoDatum :: P.BuiltinData -> P.BuiltinUnit
     alwaysSucceedsNoDatum arg =
-      case unsafeFromBuiltinData arg of
-        PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo ->
-          case scriptInfo of
-            -- We fail if this is a spending script with a Datum
-            PV3.SpendingScript _ (Just _) -> P.error ()
-            _ -> ()
+      P.check $
+        case unsafeFromBuiltinData arg of
+          PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo ->
+            case scriptInfo of
+              -- We fail if this is a spending script with a Datum
+              PV3.SpendingScript _ (Just _) -> False
+              _ -> True
     |]
 
 alwaysSucceedsWithDatumQ :: Q [Dec]
 alwaysSucceedsWithDatumQ =
   [d|
-    alwaysSucceedsWithDatum :: P.BuiltinData -> ()
+    alwaysSucceedsWithDatum :: P.BuiltinData -> P.BuiltinUnit
     alwaysSucceedsWithDatum arg =
-      case unsafeFromBuiltinData arg of
-        -- Expecting a spending script with a Datum, thus failing when it is not
-        PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript _ (Just _)) -> ()
-        _ -> P.error ()
+      P.check $
+        case unsafeFromBuiltinData arg of
+          -- Expecting a spending script with a Datum, thus failing when it is not
+          PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript _ (Just _)) -> True
+          _ -> False
     |]
 
 alwaysFailsNoDatumQ :: Q [Dec]
 alwaysFailsNoDatumQ =
   [d|
-    alwaysFailsNoDatum :: P.BuiltinData -> ()
+    alwaysFailsNoDatum :: P.BuiltinData -> P.BuiltinUnit
     alwaysFailsNoDatum arg =
-      case fromBuiltinData arg of
-        Just (PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo) ->
-          case scriptInfo of
-            -- We fail only if this is not a spending script with a Datum
-            PV3.SpendingScript _ (Just _) -> ()
-            _ -> P.error ()
-        Nothing -> ()
+      P.check $
+        case fromBuiltinData arg of
+          Just (PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo) ->
+            case scriptInfo of
+              -- We fail only if this is not a spending script with a Datum
+              PV3.SpendingScript _ (Just _) -> True
+              _ -> False
+          Nothing -> True
     |]
 
 alwaysFailsWithDatumQ :: Q [Dec]
 alwaysFailsWithDatumQ =
   [d|
-    alwaysFailsWithDatum :: P.BuiltinData -> ()
+    alwaysFailsWithDatum :: P.BuiltinData -> P.BuiltinUnit
     alwaysFailsWithDatum arg =
-      case fromBuiltinData arg of
-        Just (PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo) ->
-          case scriptInfo of
-            -- We fail only if this is a spending script with a Datum
-            PV3.SpendingScript _ (Just _) -> P.error ()
-            _ -> ()
-        Nothing -> ()
+      P.check $
+        case fromBuiltinData arg of
+          Just (PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) scriptInfo) ->
+            case scriptInfo of
+              -- We fail only if this is a spending script with a Datum
+              PV3.SpendingScript _ (Just _) -> False
+              _ -> True
+          Nothing -> True
     |]
 
 redeemerSameAsDatumQ :: Q [Dec]
 redeemerSameAsDatumQ =
   [d|
-    redeemerSameAsDatum :: P.BuiltinData -> ()
+    redeemerSameAsDatum :: P.BuiltinData -> P.BuiltinUnit
     redeemerSameAsDatum arg =
-      case unsafeFromBuiltinData arg of
-        PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) (PV3.SpendingScript _ (Just (PV3.Datum datum))) ->
-          -- Expecting a spending script with a Datum, thus failing when it is not
-          if datum P.== redeemer then () else P.error ()
-        _ -> P.error ()
+      P.check $
+        case unsafeFromBuiltinData arg of
+          PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) (PV3.SpendingScript _ (Just (PV3.Datum datum))) ->
+            -- Expecting a spending script with a Datum, thus failing when it is not
+            datum P.== redeemer
+          _ -> False
     |]
 
 evenDatumQ :: Q [Dec]
 evenDatumQ =
   [d|
-    evenDatum :: P.BuiltinData -> ()
+    evenDatum :: P.BuiltinData -> P.BuiltinUnit
     evenDatum arg =
-      case unsafeFromBuiltinData arg of
-        PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _ (Just (PV3.Datum datum))) ->
-          -- Expecting a spending script with a Datum, thus failing when it is not
-          if P.modulo (P.unsafeDataAsI datum) 2 P.== 0 then () else P.error ()
+      P.check $
+        case unsafeFromBuiltinData arg of
+          PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _ (Just (PV3.Datum datum))) ->
+            -- Expecting a spending script with a Datum, thus failing when it is not
+            P.modulo (P.unsafeDataAsI datum) 2 P.== 0
     |]
 
 evenRedeemerNoDatumQ :: Q [Dec]
 evenRedeemerNoDatumQ =
   [d|
-    evenRedeemerNoDatum :: P.BuiltinData -> ()
+    evenRedeemerNoDatum :: P.BuiltinData -> P.BuiltinUnit
     evenRedeemerNoDatum arg =
-      case unsafeFromBuiltinData arg of
-        PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) scriptInfo ->
-          case scriptInfo of
-            -- Expecting No Datum, therefore should fail when it is supplied
-            PV3.SpendingScript _ (Just _) -> P.error ()
-            _ -> if P.modulo (P.unsafeDataAsI redeemer) 2 P.== 0 then () else P.error ()
+      P.check $
+        case unsafeFromBuiltinData arg of
+          PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) scriptInfo ->
+            case scriptInfo of
+              -- Expecting No Datum, therefore should fail when it is supplied
+              PV3.SpendingScript _ (Just _) -> False
+              _ -> P.modulo (P.unsafeDataAsI redeemer) 2 P.== 0
     |]
 
 evenRedeemerWithDatumQ :: Q [Dec]
 evenRedeemerWithDatumQ =
   [d|
-    evenRedeemerWithDatum :: P.BuiltinData -> ()
+    evenRedeemerWithDatum :: P.BuiltinData -> P.BuiltinUnit
     evenRedeemerWithDatum arg =
-      case unsafeFromBuiltinData arg of
-        PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) (PV3.SpendingScript _ (Just _)) ->
-          -- Expecting a spending script with a Datum, thus failing when it is not
-          if P.modulo (P.unsafeDataAsI redeemer) 2 P.== 0 then () else P.error ()
-        _ -> P.error ()
+      P.check $
+        case unsafeFromBuiltinData arg of
+          PV3.ScriptContext _txInfo (PV3.Redeemer redeemer) (PV3.SpendingScript _ (Just _)) ->
+            -- Expecting a spending script with a Datum, thus failing when it is not
+            P.modulo (P.unsafeDataAsI redeemer) 2 P.== 0
+          _ -> False
     |]
 
 purposeIsWellformedNoDatumQ :: Q [Dec]
 purposeIsWellformedNoDatumQ =
   [d|
-    purposeIsWellformedNoDatum :: P.BuiltinData -> ()
+    purposeIsWellformedNoDatum :: P.BuiltinData -> P.BuiltinUnit
     purposeIsWellformedNoDatum arg =
-      case unsafeFromBuiltinData arg of
-        PV3.ScriptContext txInfo (PV3.Redeemer _redeemer) scriptInfo ->
-          case scriptInfo of
-            PV3.MintingScript cs ->
-              if PAM.member cs $ PV3.getValue $ PV3.txInfoMint txInfo
-                then ()
-                else P.error ()
-            -- Expecting No Datum, therefore should fail when it is supplied
-            PV3.SpendingScript txOutRef mDatum ->
-              case mDatum of
-                Just _ -> P.error ()
-                Nothing ->
-                  if null $ P.filter ((txOutRef P.==) . PV3.txInInfoOutRef) $ PV3.txInfoInputs txInfo
-                    then P.error ()
-                    else ()
-            PV3.RewardingScript stakingCredential ->
-              if PAM.member stakingCredential $ PV3.txInfoWdrl txInfo
-                then ()
-                else P.error ()
-            PV3.CertifyingScript _idx txCert ->
-              if null $ P.filter (txCert P.==) $ PV3.txInfoTxCerts txInfo
-                then P.error ()
-                else ()
-            PV3.VotingScript voter ->
-              if PAM.member voter $ PV3.txInfoVotes txInfo
-                then ()
-                else P.error ()
-            PV3.ProposingScript _idx propProc ->
-              if null $ P.filter (propProc P.==) $ PV3.txInfoProposalProcedures txInfo
-                then P.error ()
-                else ()
+      P.check $
+        case unsafeFromBuiltinData arg of
+          PV3.ScriptContext txInfo (PV3.Redeemer _redeemer) scriptInfo ->
+            case scriptInfo of
+              PV3.MintingScript cs ->
+                PAM.member cs $ PV3.getValue $ PV3.txInfoMint txInfo
+              -- Expecting No Datum, therefore should fail when it is supplied
+              PV3.SpendingScript txOutRef mDatum ->
+                case mDatum of
+                  Just _ -> False
+                  Nothing ->
+                    null $ P.filter ((txOutRef P.==) . PV3.txInInfoOutRef) $ PV3.txInfoInputs txInfo
+              PV3.RewardingScript stakingCredential ->
+                PAM.member stakingCredential $ PV3.txInfoWdrl txInfo
+              PV3.CertifyingScript _idx txCert ->
+                null $ P.filter (txCert P.==) $ PV3.txInfoTxCerts txInfo
+              PV3.VotingScript voter ->
+                PAM.member voter $ PV3.txInfoVotes txInfo
+              PV3.ProposingScript _idx propProc ->
+                null $ P.filter (propProc P.==) $ PV3.txInfoProposalProcedures txInfo
     |]
 
 purposeIsWellformedWithDatumQ :: Q [Dec]
 purposeIsWellformedWithDatumQ =
   [d|
-    purposeIsWellformedWithDatum :: P.BuiltinData -> ()
+    purposeIsWellformedWithDatum :: P.BuiltinData -> P.BuiltinUnit
     purposeIsWellformedWithDatum arg =
-      case unsafeFromBuiltinData arg of
-        PV3.ScriptContext txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript txOutRef (Just _)) ->
-          if null $ P.filter ((txOutRef P.==) . PV3.txInInfoOutRef) $ PV3.txInfoInputs txInfo
-            then P.error ()
-            else ()
-        _ -> P.error ()
+      P.check $
+        case unsafeFromBuiltinData arg of
+          PV3.ScriptContext txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript txOutRef (Just _)) ->
+            null $ P.filter ((txOutRef P.==) . PV3.txInInfoOutRef) $ PV3.txInfoInputs txInfo
+          _ -> False
     |]
 
 datumIsWellformedQ :: Q [Dec]
 datumIsWellformedQ =
   [d|
-    datumIsWellformed :: P.BuiltinData -> ()
+    datumIsWellformed :: P.BuiltinData -> P.BuiltinUnit
     datumIsWellformed arg =
-      case unsafeFromBuiltinData arg of
-        PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript _txOutRef Nothing) -> ()
-        PV3.ScriptContext txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript _txOutRef (Just datum)) ->
-          if null $ P.filter (datum P.==) $ PAM.elems $ PV3.txInfoData txInfo
-            then P.error ()
-            else ()
-        _ -> P.error ()
+      P.check $
+        case unsafeFromBuiltinData arg of
+          PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript _txOutRef Nothing) -> True
+          PV3.ScriptContext txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript _txOutRef (Just datum)) ->
+            null $ P.filter (datum P.==) $ PAM.elems $ PV3.txInfoData txInfo
+          _ -> False
     |]
 
 inputsOutputsAreNotEmptyQ :: Q [Dec]
 inputsOutputsAreNotEmptyQ =
   [d|
-    inputsOutputsAreNotEmpty :: P.BuiltinData -> ()
+    inputsOutputsAreNotEmpty :: P.BuiltinData -> P.BuiltinUnit
     inputsOutputsAreNotEmpty arg =
-      case unsafeFromBuiltinData arg of
-        PV3.ScriptContext txInfo _redeemer _scriptPurpose ->
-          if null (PV3.txInfoInputs txInfo) || null (PV3.txInfoOutputs txInfo)
-            then P.error ()
-            else ()
+      P.check $
+        case unsafeFromBuiltinData arg of
+          PV3.ScriptContext txInfo _redeemer _scriptPurpose ->
+            null (PV3.txInfoInputs txInfo) || null (PV3.txInfoOutputs txInfo)
     |]
