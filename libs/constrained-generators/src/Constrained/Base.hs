@@ -1024,6 +1024,7 @@ genInverse ::
   , HasSpec fn a
   , Show b
   , Functions fn fn
+  , HasSpec fn b
   ) =>
   fn '[a] b ->
   Specification fn a ->
@@ -1367,9 +1368,8 @@ computeSpecSimplified x p = localGESpec $ case p of
     branchSpecs <- mapMList (traverseWeighted computeSpecBinderSimplified) branches
     propagateSpec (caseSpec branchSpecs) <$> toCtx x t
   When (Lit b) tp -> if b then computeSpecSimplified x tp else pure TrueSpec
-  -- This shouldn't happen because any time the body is trivial we propagate that out
-  When {} ->
-    fatalError ["Dependency error in computeSpec: When", "  " ++ show x, show $ indent 2 (pretty p)]
+  -- This shouldn't happen a lot of the time because when the body is trivial we mostly get rid of the `When` entirely
+  When {} -> pure $ SuspendedSpec x p
   Reifies (Lit a) (Lit val) f
     | f val == a -> pure TrueSpec
     | otherwise ->
@@ -1457,6 +1457,7 @@ class
     ( TypeList as
     , Typeable as
     , HasSpec fn a
+    , HasSpec fn b
     , All (HasSpec fn) as
     ) =>
     f as b ->

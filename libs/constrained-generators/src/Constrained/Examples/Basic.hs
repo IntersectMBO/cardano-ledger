@@ -307,3 +307,11 @@ chooseBackwards' = constrained' $ \xys xy ->
   , match xy $ \_ ys ->
       forAll ys $ \y -> 0 <. y
   ]
+
+whenTrueExists :: Specification BaseFn Int
+whenTrueExists = constrained $ \x ->
+  whenTrue (x ==. 0) $
+    exists (\_ -> pure False) $ \b ->
+      [ not_ b
+      , not_ (not_ b)
+      ]

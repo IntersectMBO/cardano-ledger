@@ -74,3 +74,9 @@ elemSpec = constrained' $ \k v m ->
       whenTrue (k' ==. k) (v' ==. v)
   , m `dependsOn` k
   ]
+
+lookupSpecific :: Specification BaseFn (Int, Int, Map Int Int)
+lookupSpecific = constrained' $ \k v m ->
+  [ m `dependsOn` k
+  , assert $ lookup_ k m ==. cJust_ v
+  ]
