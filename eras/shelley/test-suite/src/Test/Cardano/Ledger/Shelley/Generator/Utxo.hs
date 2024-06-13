@@ -387,7 +387,7 @@ genNextDelta
         -- increase when we add the delta to the tx?
         draftSize =
           sum
-            [ 1100 :: Integer -- safety net in case the coin or a list prefix rolls over into a
+            [ 11000 :: Integer -- safety net in case the coin or a list prefix rolls over into a
             -- larger encoding, or some other fudge factor occurs. Sometimes we need extra buffer
             -- when minting tokens. 1100 has been empirically determined to make non-failing Txs
             , encodedLen @era (max dfees (Coin 0)) - 1

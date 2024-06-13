@@ -470,7 +470,7 @@ instance Mock c => EraGen (AlonzoEra c) where
             if oldScriptWits == newWits
               then pure tx
               else myDiscard "Random extra scriptwitness: genEraDone: AlonzoEraGen.hs"
-          else myDiscard "MinFeee violation: genEraDone: AlonzoEraGen.hs"
+          else myDiscard "MinFee violation: genEraDone: AlonzoEraGen.hs"
 
   genEraTweakBlock pp txns =
     let txTotal, ppMax :: ExUnits
