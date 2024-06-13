@@ -31,6 +31,8 @@ module Constrained.Spec.Generics (
   pair_,
   left_,
   right_,
+  cJust_,
+  cNothing_,
   caseOn,
   branch,
   branchW,
@@ -355,6 +357,12 @@ con ::
 con =
   curryList @(ConstrOf c (TheSop a)) @(Term fn)
     (app (fromGenericFn @_ @a) . inj_ @c @fn @(TheSop a) . prod_)
+
+cJust_ :: (HasSpec fn a, IsNormalType a) => Term fn a -> Term fn (Maybe a)
+cJust_ = con @"Just"
+
+cNothing_ :: (HasSpec fn a, IsNormalType a) => Term fn (Maybe a)
+cNothing_ = con @"Nothing" (lit ())
 
 sel ::
   forall n fn a c as.

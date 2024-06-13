@@ -11,9 +11,10 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+-- TODO: the incomplete patterns is because ghc 8.10.7 and 9+ disagree on a completeness check (9+ is correct)
+{-# OPTIONS_GHC -Wno-orphans -Wno-incomplete-patterns #-}
 
-module Constrained.Spec.Map (MapSpec (..), defaultMapSpec, dom_, rng_) where
+module Constrained.Spec.Map (MapSpec (..), defaultMapSpec, dom_, rng_, lookup_) where
 
 import Constrained.Base
 import Constrained.Core
@@ -277,6 +278,30 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
                 -- of the map are fixed to what is in `r`, but they appear in the order that they are in `r`. That's
                 -- very difficult to achieve!
                 _ -> ErrorSpec ["Rng on bad map spec", show spec]
+    Lookup ->
+      case fn of
+        Lookup :: MapFn fn '[k, Map k v] (Maybe v)
+          | HOLE :? Value (m :: Map k v) :> Nil <- ctx ->
+              if Nothing `conformsToSpec` spec
+                then notMemberSpec [k | (k, v) <- Map.toList m, not $ Just v `conformsToSpec` spec]
+                else MemberSpec $ Map.keys $ Map.filter (`conformsToSpec` spec) (Just <$> m)
+          | Value k :! NilCtx HOLE <- ctx
+          , Evidence <- prerequisites @fn @(Map k v) ->
+              constrained $ \m ->
+                [assert $ lit k `member_` dom_ m | not $ Nothing `conformsToSpec` spec]
+                  ++ [ forAll m $ \kv ->
+                        letBind (fst_ kv) $ \k' ->
+                          letBind (snd_ kv) $ \v ->
+                            whenTrue (lit k ==. k') $
+                              -- TODO: What you want to write is `cJust_ v `satisfies` spec` but we can't
+                              -- do that because we don't have access to `IsNormalType v` here. When
+                              -- we refactor the `IsNormalType` machinery we will be able to make
+                              -- this nicer.
+                              case spec of
+                                MemberSpec as -> assert $ v `elem_` lit [a | Just a <- as]
+                                TypeSpec (SumSpec _ _ vspec) cant ->
+                                  v `satisfies` (vspec <> notMemberSpec [a | Just a <- cant])
+                     ]
 
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of
@@ -312,3 +337,10 @@ rng_ ::
   Term fn (Map k v) ->
   Term fn [v]
 rng_ = app rngFn
+
+lookup_ ::
+  (HasSpec fn k, HasSpec fn v, Ord k, IsNormalType v) =>
+  Term fn k ->
+  Term fn (Map k v) ->
+  Term fn (Maybe v)
+lookup_ = app lookupFn

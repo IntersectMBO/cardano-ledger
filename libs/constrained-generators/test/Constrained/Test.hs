@@ -50,6 +50,7 @@ tests nightly =
     testSpec "assertReal" assertReal
     testSpecNoShrink "chooseBackwards" chooseBackwards
     testSpecNoShrink "chooseBackwards'" chooseBackwards'
+    testSpec "whenTrueExists" whenTrueExists
     testSpec "assertRealMultiple" assertRealMultiple
     testSpec "setSpec" setSpec
     testSpec "leqPair" leqPair
@@ -138,6 +139,8 @@ tests nightly =
     testSpec "complexUnion" complexUnion
     testSpec "unionBounded" unionBounded
     testSpec "elemSpec" elemSpec
+    testSpec "lookupSpecific" lookupSpecific
+    testSpec "specificElemConstraints" lookupSpecific
     numberyTests
     sizeTests
     numNumSpecTree
