@@ -198,11 +198,11 @@ datumIsWellformedQ =
                 _ -> P.error ()
     |]
 
-inputsOutputsAreNotEmptyQ :: Q [Dec]
-inputsOutputsAreNotEmptyQ =
+inputsOutputsAreNotEmptyNoDatumQ :: Q [Dec]
+inputsOutputsAreNotEmptyNoDatumQ =
   [d|
-    inputsOutputsAreNotEmpty :: P.BuiltinData -> P.BuiltinData -> ()
-    inputsOutputsAreNotEmpty redeemer context =
+    inputsOutputsAreNotEmptyNoDatum :: P.BuiltinData -> P.BuiltinData -> ()
+    inputsOutputsAreNotEmptyNoDatum redeemer context =
       case unsafeFromBuiltinData redeemer of
         PV2.Redeemer _r ->
           case unsafeFromBuiltinData context of
@@ -210,4 +210,20 @@ inputsOutputsAreNotEmptyQ =
               if null (PV2.txInfoInputs txInfo) || null (PV2.txInfoOutputs txInfo)
                 then P.error ()
                 else ()
+    |]
+
+inputsOutputsAreNotEmptyWithDatumQ :: Q [Dec]
+inputsOutputsAreNotEmptyWithDatumQ =
+  [d|
+    inputsOutputsAreNotEmptyWithDatum :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
+    inputsOutputsAreNotEmptyWithDatum datum redeemer context =
+      case unsafeFromBuiltinData datum of
+        PV2.Datum _ ->
+          case unsafeFromBuiltinData redeemer of
+            PV2.Redeemer _r ->
+              case unsafeFromBuiltinData context of
+                PV2.ScriptContext txInfo _scriptPurpose ->
+                  if null (PV2.txInfoInputs txInfo) || null (PV2.txInfoOutputs txInfo)
+                    then P.error ()
+                    else ()
     |]
