@@ -196,11 +196,21 @@ allTestScripts =
            ]
     )
   ,
-    ( "inputsOutputsAreNotEmpty"
+    ( "inputsOutputsAreNotEmptyNoDatum"
     , \case
-        PlutusV1 -> V1.inputsOutputsAreNotEmptyBytes
-        PlutusV2 -> V2.inputsOutputsAreNotEmptyBytes
-        PlutusV3 -> V3.inputsOutputsAreNotEmptyBytes
+        PlutusV1 -> V1.inputsOutputsAreNotEmptyNoDatumBytes
+        PlutusV2 -> V2.inputsOutputsAreNotEmptyNoDatumBytes
+        PlutusV3 -> V3.inputsOutputsAreNotEmptyNoDatumBytes
+    , "Script that succeeds when inputs and outputs are not empty validated against txInfo"
+        :| [ "Fails on malformed arguments and also if inputs or outputs are empty"
+           ]
+    )
+  ,
+    ( "inputsOutputsAreNotEmptyWithDatum"
+    , \case
+        PlutusV1 -> V1.inputsOutputsAreNotEmptyWithDatumBytes
+        PlutusV2 -> V2.inputsOutputsAreNotEmptyWithDatumBytes
+        PlutusV3 -> V3.inputsOutputsAreNotEmptyWithDatumBytes
     , "Script that succeeds when inputs and outputs are not empty validated against txInfo"
         :| [ "Fails on malformed arguments and also if inputs or outputs are empty"
            ]

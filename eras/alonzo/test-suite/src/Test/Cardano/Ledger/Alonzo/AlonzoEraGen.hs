@@ -140,18 +140,18 @@ phase2scripts3Arg =
   , mkTwoPhase3ArgInfo (alwaysFails @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) False
   , mkTwoPhase3ArgInfo
       (mkPlutusScript' (purposeIsWellformedWithDatum SPlutusV1))
-      (P.I 8)
-      (P.I 8, bigMem, bigStep)
+      (P.I 3)
+      (P.I 4, bigMem, bigStep)
       True
   , mkTwoPhase3ArgInfo
       (mkPlutusScript' (datumIsWellformed SPlutusV1))
-      (P.I 8)
-      (P.I 8, bigMem, bigStep)
+      (P.I 5)
+      (P.I 6, bigMem, bigStep)
       True
   , mkTwoPhase3ArgInfo
-      (mkPlutusScript' (inputsOutputsAreNotEmpty SPlutusV1))
-      (P.I 8)
-      (P.I 8, bigMem, bigStep)
+      (mkPlutusScript' (inputsOutputsAreNotEmptyWithDatum SPlutusV1))
+      (P.I 7)
+      (P.I 9, bigMem, bigStep)
       True
   ]
   where
@@ -167,8 +167,8 @@ phase2scripts2Arg =
       (P.I 14, bigMem, bigStep)
       True
   , mkTwoPhase2ArgInfo
-      (mkPlutusScript' (inputsOutputsAreNotEmpty SPlutusV1))
-      (P.I 14, bigMem, bigStep)
+      (mkPlutusScript' (inputsOutputsAreNotEmptyNoDatum SPlutusV1))
+      (P.I 15, bigMem, bigStep)
       True
   ]
   where

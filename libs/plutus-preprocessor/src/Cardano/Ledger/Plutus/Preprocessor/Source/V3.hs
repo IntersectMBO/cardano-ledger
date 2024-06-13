@@ -124,7 +124,7 @@ purposeIsWellformedNoDatumQ =
     purposeIsWellformedNoDatum arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext txInfo (PV3.Redeemer _redeemer) scriptInfo ->
+          PV3.ScriptContext txInfo _redeemer scriptInfo ->
             case scriptInfo of
               PV3.MintingScript cs ->
                 PAM.member cs $ PV3.getValue $ PV3.txInfoMint txInfo
@@ -151,7 +151,7 @@ purposeIsWellformedWithDatumQ =
     purposeIsWellformedWithDatum arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript txOutRef (Just _)) ->
+          PV3.ScriptContext txInfo _redeemer (PV3.SpendingScript txOutRef (Just _)) ->
             null $ P.filter ((txOutRef P.==) . PV3.txInInfoOutRef) $ PV3.txInfoInputs txInfo
           _ -> False
     |]
@@ -163,19 +163,33 @@ datumIsWellformedQ =
     datumIsWellformed arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext _txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript _txOutRef Nothing) -> True
-          PV3.ScriptContext txInfo (PV3.Redeemer _redeemer) (PV3.SpendingScript _txOutRef (Just datum)) ->
+          PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _txOutRef Nothing) -> True
+          PV3.ScriptContext txInfo _redeemer (PV3.SpendingScript _txOutRef (Just datum)) ->
             null $ P.filter (datum P.==) $ PAM.elems $ PV3.txInfoData txInfo
           _ -> False
     |]
 
-inputsOutputsAreNotEmptyQ :: Q [Dec]
-inputsOutputsAreNotEmptyQ =
+inputsOutputsAreNotEmptyNoDatumQ :: Q [Dec]
+inputsOutputsAreNotEmptyNoDatumQ =
   [d|
-    inputsOutputsAreNotEmpty :: P.BuiltinData -> P.BuiltinUnit
-    inputsOutputsAreNotEmpty arg =
+    inputsOutputsAreNotEmptyNoDatum :: P.BuiltinData -> P.BuiltinUnit
+    inputsOutputsAreNotEmptyNoDatum arg =
       P.check $
         case unsafeFromBuiltinData arg of
+          -- When there is a datum supplied, we need to fail.
+          PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _txOutRef (Just _)) -> False
+          PV3.ScriptContext txInfo _redeemer _scriptPurpose ->
+            null (PV3.txInfoInputs txInfo) || null (PV3.txInfoOutputs txInfo)
+    |]
+
+inputsOutputsAreNotEmptyWithDatumQ :: Q [Dec]
+inputsOutputsAreNotEmptyWithDatumQ =
+  [d|
+    inputsOutputsAreNotEmptyWithDatum :: P.BuiltinData -> P.BuiltinUnit
+    inputsOutputsAreNotEmptyWithDatum arg =
+      P.check $
+        case unsafeFromBuiltinData arg of
+          PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _txOutRef Nothing) -> False
           PV3.ScriptContext txInfo _redeemer _scriptPurpose ->
             null (PV3.txInfoInputs txInfo) || null (PV3.txInfoOutputs txInfo)
     |]
