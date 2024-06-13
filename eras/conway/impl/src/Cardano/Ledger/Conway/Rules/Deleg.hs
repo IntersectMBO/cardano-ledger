@@ -165,6 +165,7 @@ conwayDelegTransition = do
       forM_ sMayDeposit $ checkDepositAgainstPaidDeposit stakeCred dsUnified
       pure $ dState {dsUnified = UM.domDeleteAll (Set.singleton stakeCred) dsUnified}
     ConwayDelegCert stakeCred delegatee -> do
+      checkStakeDelegateeRegistered pools delegatee
       checkStakeKeyIsRegistered stakeCred dsUnified
       pure $ dState {dsUnified = processDelegation stakeCred delegatee dsUnified}
     ConwayRegDelegCert stakeCred delegatee deposit -> do
