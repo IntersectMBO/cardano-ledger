@@ -137,6 +137,7 @@ tests nightly =
     testSpecNoShrink "propBack''" propBack''
     testSpec "complexUnion" complexUnion
     testSpec "unionBounded" unionBounded
+    testSpec "elemSpec" elemSpec
     numberyTests
     sizeTests
     numNumSpecTree

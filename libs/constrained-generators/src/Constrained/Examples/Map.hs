@@ -66,3 +66,11 @@ rangeSumSize = constrained $ \m ->
       , v ==. 1
       ]
   ]
+
+elemSpec :: Specification BaseFn (Int, Int, Map Int Int)
+elemSpec = constrained' $ \k v m ->
+  [ assert $ k `member_` dom_ m
+  , forAll' m $ \k' v' ->
+      whenTrue (k' ==. k) (v' ==. v)
+  , m `dependsOn` k
+  ]
