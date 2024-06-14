@@ -32,17 +32,16 @@ module Cardano.Ledger.Alonzo.Plutus.Evaluate (
 where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext (..))
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext (..), LedgerTxInfo (..))
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
-import Cardano.Ledger.Alonzo.TxWits (lookupRedeemer, unRedeemers, unTxDats)
-import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (getSpendingDatum), AlonzoScriptsNeeded (..))
+import qualified Cardano.Ledger.Alonzo.Scripts as Scripts
+import Cardano.Ledger.Alonzo.TxWits (lookupRedeemer, unRedeemers)
+import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (ProtVer (pvMajor), kindObject, natVersion, pvMajor)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Plutus.CostModels (costModelsValid)
-import Cardano.Ledger.Plutus.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Plutus.Evaluate (
-  PlutusDatums (..),
   PlutusWithContext (..),
   ScriptResult (..),
   evaluatePlutusWithContext,
@@ -56,11 +55,13 @@ import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
-import Control.Monad (forM, guard)
+import Control.Monad (guard)
 import Data.Aeson (ToJSON (..), (.=), pattern String)
+import Data.Bifunctor (first)
 import Data.List (intercalate)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (fromElems)
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -146,9 +147,8 @@ lookupPlutusScript ::
   Map.Map (ScriptHash (EraCrypto era)) (Script era) ->
   ScriptHash (EraCrypto era) ->
   Maybe (PlutusScript era)
-lookupPlutusScript scriptsAvailable scriptHash = do
-  script <- scriptHash `Map.lookup` scriptsAvailable
-  toPlutusScript script
+lookupPlutusScript = flip Scripts.lookupPlutusScript
+{-# DEPRECATED lookupPlutusScript "In favor of new version with arguments flipped: `Scripts.lookupPlutusScript`" #-}
 
 collectPlutusScriptsWithContext ::
   forall era.
@@ -164,11 +164,11 @@ collectPlutusScriptsWithContext ::
   Tx era ->
   UTxO era ->
   Either [CollectError era] [PlutusWithContext (EraCrypto era)]
-collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
+collectPlutusScriptsWithContext epochInfo systemStart pp tx utxo =
   -- TODO: remove this whole complicated check when we get into Conway. It is much simpler
   -- to fail on a CostModel lookup in the `apply` function (already implemented).
   let missingCostModels = Set.filter (`Map.notMember` costModels) usedLanguages
-   in case guard (protVerMajor < natVersion @9) >> Set.lookupMin missingCostModels of
+   in case guard (pvMajor protVer < natVersion @9) >> Set.lookupMin missingCostModels of
         Just l -> Left [NoCostModel l]
         Nothing ->
           merge
@@ -182,13 +182,13 @@ collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
     -- `missingCostModels` lookup
     --
     -- We also need to pass major protocol version to the script for script evaluation
-    protVerMajor = pvMajor (pp ^. ppProtocolVersionL)
+    protVer = pp ^. ppProtocolVersionL
     costModels = costModelsValid $ pp ^. ppCostModelsL
 
     ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
     AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo (tx ^. bodyTxL)
     neededPlutusScripts =
-      mapMaybe (\(sp, sh) -> (,) (sh, sp) <$> lookupPlutusScript scriptsProvided sh) scriptsNeeded
+      mapMaybe (\(sp, sh) -> (,) (sh, sp) <$> Scripts.lookupPlutusScript sh scriptsProvided) scriptsNeeded
     usedLanguages = Set.fromList $ map (plutusScriptLanguage . snd) neededPlutusScripts
 
     getScriptWithRedeemer ((plutusScriptHash, plutusPurpose), plutusScript) =
@@ -196,24 +196,25 @@ collectPlutusScriptsWithContext epochInfo sysStart pp tx utxo =
        in case lookupRedeemer redeemerIndex $ tx ^. witsTxL . rdmrsTxWitsL of
             Just (d, exUnits) -> Right (plutusScript, plutusPurpose, d, exUnits, plutusScriptHash)
             Nothing -> Left (NoRedeemer (hoistPlutusPurpose toAsItem plutusPurpose))
-    apply (plutusScript, plutusPurpose, d, exUnits, plutusScriptHash) = do
+    apply (plutusScript, plutusPurpose, redeemerData, exUnits, plutusScriptHash) = do
       let lang = plutusScriptLanguage plutusScript
+          ledgerTxInfo =
+            LedgerTxInfo
+              { ltiProtVer = protVer
+              , ltiEpochInfo = epochInfo
+              , ltiSystemStart = systemStart
+              , ltiUTxO = utxo
+              , ltiTx = tx
+              }
       costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang costModels
-      case mkPlutusScriptContext plutusScript plutusPurpose pp epochInfo sysStart utxo tx of
-        Right scriptContext ->
-          let spendingDatum = getSpendingDatum utxo tx $ hoistPlutusPurpose toAsItem plutusPurpose
-              datums = maybe id (:) spendingDatum [d, scriptContext]
-           in Right $
-                withPlutusScript plutusScript $ \plutus ->
-                  PlutusWithContext
-                    { pwcProtocolVersion = protVerMajor
-                    , pwcScript = Left plutus
-                    , pwcScriptHash = plutusScriptHash
-                    , pwcDatums = PlutusDatums (getPlutusData <$> datums)
-                    , pwcExUnits = exUnits
-                    , pwcCostModel = costModel
-                    }
-        Left te -> Left $ BadTranslation te
+      first BadTranslation $
+        mkPlutusWithContext
+          plutusScript
+          plutusScriptHash
+          plutusPurpose
+          ledgerTxInfo
+          (redeemerData, exUnits)
+          costModel
 
 -- | Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
 --   but if there are none, use 'f' to construct a success.
@@ -231,20 +232,12 @@ merge f (x : xs) zs = merge f xs (gg x zs)
     gg (Left a) (Left cs) = Left (a : cs)
 
 -- | Evaluate a list of Plutus scripts. All scripts in the list must evaluate to `True`.
-evalPlutusScripts ::
-  EraTx era =>
-  Tx era ->
-  [PlutusWithContext (EraCrypto era)] ->
-  ScriptResult (EraCrypto era)
-evalPlutusScripts tx pwcs = snd $ evalPlutusScriptsWithLogs tx pwcs
+evalPlutusScripts :: [PlutusWithContext c] -> ScriptResult c
+evalPlutusScripts pwcs = snd $ evalPlutusScriptsWithLogs pwcs
 
-evalPlutusScriptsWithLogs ::
-  EraTx era =>
-  Tx era ->
-  [PlutusWithContext (EraCrypto era)] ->
-  ([Text], ScriptResult (EraCrypto era))
-evalPlutusScriptsWithLogs _tx [] = mempty
-evalPlutusScriptsWithLogs tx (plutusWithContext : rest) =
+evalPlutusScriptsWithLogs :: [PlutusWithContext c] -> ([Text], ScriptResult c)
+evalPlutusScriptsWithLogs [] = mempty
+evalPlutusScriptsWithLogs (plutusWithContext : rest) =
   let beginMsg =
         intercalate
           ","
@@ -258,7 +251,7 @@ evalPlutusScriptsWithLogs tx (plutusWithContext : rest) =
           [ "[LEDGER][PLUTUS_SCRIPT]"
           , "END"
           ]
-   in traceEvent endMsg res <> evalPlutusScriptsWithLogs tx rest
+   in traceEvent endMsg res <> evalPlutusScriptsWithLogs rest
 
 -- | Script failures that can be returned by 'evalTxExUnitsWithLogs'.
 data TransactionScriptFailure era
@@ -296,11 +289,14 @@ data TransactionScriptFailure era
     IncompatibleBudget !P.ExBudget
   | -- | There was no cost model for a given version of Plutus in the ledger state
     NoCostModelInLedgerState !Language
+  | -- | Error that can happen during plutus context translation
+    ContextError !(ContextError era)
 
 deriving instance
   ( Era era
   , Eq (TxCert era)
   , Eq (PlutusScript era)
+  , Eq (ContextError era)
   , Eq (PlutusPurpose AsIx era)
   , Eq (PlutusPurpose AsItem era)
   ) =>
@@ -309,6 +305,7 @@ deriving instance
 deriving instance
   ( Era era
   , Show (TxCert era)
+  , Show (ContextError era)
   , Show (PlutusScript era)
   , Show (PlutusPurpose AsIx era)
   , Show (PlutusPurpose AsItem era)
@@ -348,14 +345,12 @@ evalTxExUnits ::
   SystemStart ->
   -- | We return a map from redeemer pointers to either a failure or a
   --  sufficient execution budget.
-  --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
-  --  to construct a valid execution context for the given transaction.
-  Either (ContextError era) (RedeemerReport era)
-evalTxExUnits pp tx utxo ei sysS =
-  Map.map (fmap snd) <$> evalTxExUnitsWithLogs pp tx utxo ei sysS
+  RedeemerReport era
+evalTxExUnits pp tx utxo epochInfo systemStart =
+  Map.map (fmap snd) $ evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart
 
 -- | Evaluate the execution budgets needed for all the redeemers in
---  a given transaction. If a redeemer is invalid, a failure is returned instead.
+--  a given transaction.
 --
 --  The execution budgets in the supplied transaction are completely ignored.
 --  The results of 'evalTxExUnitsWithLogs' are intended to replace them.
@@ -382,76 +377,55 @@ evalTxExUnitsWithLogs ::
   --
   --  Unlike `evalTxExUnits`, this function also returns evaluation logs, useful for
   --  debugging.
-  Either (ContextError era) (RedeemerReportWithLogs era)
-evalTxExUnitsWithLogs pp tx utxo epochInfo sysStart = do
-  ptrToPlutusScript <-
-    forM neededPlutusScripts $ \(plutusPurpose, mPlutusScript, scriptHash) -> do
-      mPlutusScriptAndContext <-
-        forM mPlutusScript $ \plutusScript -> do
-          scriptContext <-
-            mkPlutusScriptContext
-              plutusScript
-              plutusPurpose
-              pp
-              epochInfo
-              sysStart
-              utxo
-              tx
-          pure (plutusScript, scriptContext)
-      let pointer = hoistPlutusPurpose toAsIx plutusPurpose
-      pure (pointer, (plutusPurpose, mPlutusScriptAndContext, scriptHash))
-  pure $ Map.mapWithKey (findAndCount $ Map.fromList ptrToPlutusScript) rdmrs
+  RedeemerReportWithLogs era
+evalTxExUnitsWithLogs pp tx utxo epochInfo systemStart = Map.mapWithKey findAndCount rdmrs
   where
+    keyedByPurpose (plutusPurpose, _) = hoistPlutusPurpose toAsIx plutusPurpose
+    purposeToScriptHash = fromElems keyedByPurpose scriptsNeeded
+    ledgerTxInfo =
+      LedgerTxInfo
+        { ltiProtVer = protVer
+        , ltiEpochInfo = epochInfo
+        , ltiSystemStart = systemStart
+        , ltiUTxO = utxo
+        , ltiTx = tx
+        }
     maxBudget = pp ^. ppMaxTxExUnitsL
     txBody = tx ^. bodyTxL
     wits = tx ^. witsTxL
-    dats = unTxDats $ wits ^. datsTxWitsL
     rdmrs = unRedeemers $ wits ^. rdmrsTxWitsL
-    protVerMajor = pvMajor (pp ^. ppProtocolVersionL)
+    protVer = pp ^. ppProtocolVersionL
     costModels = costModelsValid $ pp ^. ppCostModelsL
     ScriptsProvided scriptsProvided = getScriptsProvided utxo tx
     AlonzoScriptsNeeded scriptsNeeded = getScriptsNeeded utxo txBody
-    neededPlutusScripts =
-      map
-        (\(sp, sh) -> (sp, lookupPlutusScript scriptsProvided sh, sh))
-        scriptsNeeded
-    findAndCount ptrToPlutusScript pointer (rdmr, exUnits) = do
-      (plutusPurpose, mPlutusScript, scriptHash) <-
+    findAndCount pointer (redeemerData, exUnits) = do
+      (plutusPurpose, plutusScriptHash) <-
         note (RedeemerPointsToUnknownScriptHash pointer) $
-          Map.lookup pointer ptrToPlutusScript
+          Map.lookup pointer purposeToScriptHash
       let ptrToPlutusScriptNoContext =
             Map.map
-              (\(sp, mps, sh) -> (hoistPlutusPurpose toAsItem sp, fst <$> mps, sh))
-              ptrToPlutusScript
-      (plutusScript, scriptContext) <-
-        note (MissingScript pointer ptrToPlutusScriptNoContext) mPlutusScript
+              ( \(sp, sh) ->
+                  ( hoistPlutusPurpose toAsItem sp
+                  , Scripts.lookupPlutusScript sh scriptsProvided
+                  , sh
+                  )
+              )
+              purposeToScriptHash
+      plutusScript <-
+        note (MissingScript pointer ptrToPlutusScriptNoContext) $
+          Scripts.lookupPlutusScript plutusScriptHash scriptsProvided
       let lang = plutusScriptLanguage plutusScript
       costModel <-
         note (NoCostModelInLedgerState lang) $ Map.lookup lang costModels
-      -- Similar to getSpendingDatum, but with more informative errors. It is OK to use
-      -- inline datums, when they are present, since for PlutusV1 presence of inline
-      -- datums would short circuit earlier on PlutusContext translation.
-      datums <-
-        case toSpendingPurpose plutusPurpose of
-          Just (AsIxItem _ txIn) -> do
-            txOut <- note (UnknownTxIn txIn) $ Map.lookup txIn (unUTxO utxo)
-            datum <-
-              case txOut ^. datumTxOutF of
-                Datum binaryData -> pure $ binaryDataToData binaryData
-                DatumHash dh -> note (MissingDatum dh) $ Map.lookup dh dats
-                NoDatum -> Left (InvalidTxIn txIn)
-            pure [datum, rdmr, scriptContext]
-          Nothing -> pure [rdmr, scriptContext]
-      let pwc =
-            withPlutusScript plutusScript $ \plutus ->
-              PlutusWithContext
-                { pwcProtocolVersion = protVerMajor
-                , pwcScript = Left plutus
-                , pwcScriptHash = scriptHash
-                , pwcDatums = PlutusDatums (getPlutusData <$> datums)
-                , pwcExUnits = maxBudget
-                , pwcCostModel = costModel
-                }
+      pwc <-
+        first ContextError $
+          mkPlutusWithContext
+            plutusScript
+            plutusScriptHash
+            plutusPurpose
+            ledgerTxInfo
+            (redeemerData, maxBudget)
+            costModel
       case evaluatePlutusWithContext P.Verbose pwc of
         (logs, Left err) -> Left $ ValidationFailure exUnits err logs pwc
         (logs, Right exBudget) ->

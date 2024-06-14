@@ -132,14 +132,27 @@ phase2scripts3Arg :: forall era. AlonzoEraScript era => [TwoPhase3ArgInfo era]
 phase2scripts3Arg =
   [ mkTwoPhase3ArgInfo (alwaysSucceeds @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) True
   , mkTwoPhase3ArgInfo
-      (mkPlutusScript' (guessTheNumber3 SPlutusV1))
+      (mkPlutusScript' (redeemerSameAsDatum SPlutusV1))
       (P.I 9)
       (P.I 9, bigMem, bigStep)
       True
-  , mkTwoPhase3ArgInfo (mkPlutusScript' (evendata3 SPlutusV1)) (P.I 8) (P.I 8, bigMem, bigStep) True
-  , mkTwoPhase3ArgInfo (mkPlutusScript' (odddata3 SPlutusV1)) (P.I 9) (P.I 9, bigMem, bigStep) True
-  , mkTwoPhase3ArgInfo (mkPlutusScript' (sumsTo103 SPlutusV1)) (P.I 1) (P.I 9, bigMem, bigStep) True
+  , mkTwoPhase3ArgInfo (mkPlutusScript' (evenDatum SPlutusV1)) (P.I 8) (P.I 8, bigMem, bigStep) True
   , mkTwoPhase3ArgInfo (alwaysFails @'PlutusV1 3) (P.I 1) (P.I 1, bigMem, bigStep) False
+  , mkTwoPhase3ArgInfo
+      (mkPlutusScript' (purposeIsWellformedWithDatum SPlutusV1))
+      (P.I 3)
+      (P.I 4, bigMem, bigStep)
+      True
+  , mkTwoPhase3ArgInfo
+      (mkPlutusScript' (datumIsWellformed SPlutusV1))
+      (P.I 5)
+      (P.I 6, bigMem, bigStep)
+      True
+  , mkTwoPhase3ArgInfo
+      (mkPlutusScript' (inputsOutputsAreNotEmptyWithDatum SPlutusV1))
+      (P.I 7)
+      (P.I 9, bigMem, bigStep)
+      True
   ]
   where
     mkTwoPhase3ArgInfo script = TwoPhase3ArgInfo script (hashScript @era script)
@@ -147,10 +160,16 @@ phase2scripts3Arg =
 phase2scripts2Arg :: forall era. AlonzoEraScript era => [TwoPhase2ArgInfo era]
 phase2scripts2Arg =
   [ mkTwoPhase2ArgInfo (alwaysSucceeds @'PlutusV1 2) (P.I 1, bigMem, bigStep) True
-  , mkTwoPhase2ArgInfo (mkPlutusScript' (oddRedeemer2 SPlutusV1)) (P.I 13, bigMem, bigStep) True
-  , mkTwoPhase2ArgInfo (mkPlutusScript' (evenRedeemer2 SPlutusV1)) (P.I 14, bigMem, bigStep) True
-  , mkTwoPhase2ArgInfo (mkPlutusScript' (redeemerIs102 SPlutusV1)) (P.I 10, bigMem, bigStep) True
+  , mkTwoPhase2ArgInfo (mkPlutusScript' (evenRedeemerNoDatum SPlutusV1)) (P.I 14, bigMem, bigStep) True
   , mkTwoPhase2ArgInfo (alwaysFails @'PlutusV1 2) (P.I 1, bigMem, bigStep) False
+  , mkTwoPhase2ArgInfo
+      (mkPlutusScript' (purposeIsWellformedNoDatum SPlutusV1))
+      (P.I 14, bigMem, bigStep)
+      True
+  , mkTwoPhase2ArgInfo
+      (mkPlutusScript' (inputsOutputsAreNotEmptyNoDatum SPlutusV1))
+      (P.I 15, bigMem, bigStep)
+      True
   ]
   where
     mkTwoPhase2ArgInfo script = TwoPhase2ArgInfo script (hashScript @era script)
@@ -451,7 +470,7 @@ instance Mock c => EraGen (AlonzoEra c) where
             if oldScriptWits == newWits
               then pure tx
               else myDiscard "Random extra scriptwitness: genEraDone: AlonzoEraGen.hs"
-          else myDiscard "MinFeee violation: genEraDone: AlonzoEraGen.hs"
+          else myDiscard "MinFee violation: genEraDone: AlonzoEraGen.hs"
 
   genEraTweakBlock pp txns =
     let txTotal, ppMax :: ExUnits

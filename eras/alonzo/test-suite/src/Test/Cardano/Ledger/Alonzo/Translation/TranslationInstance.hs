@@ -18,10 +18,7 @@ module Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   VersionedTxInfo (..),
 ) where
 
-import Cardano.Ledger.Plutus.Language (Language (..))
-
-import Cardano.Ledger.Core as Core
-
+import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Binary (
   Annotator,
   DecCBOR (..),
@@ -40,6 +37,8 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<*!),
  )
+import Cardano.Ledger.Core as Core
+import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.UTxO (UTxO (..))
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import qualified Data.ByteString.Lazy as BSL
@@ -57,7 +56,7 @@ data VersionedTxInfo
 
 -- | Represents arguments passed to `alonzoTxInfo` along with the produced result.
 data TranslationInstance era = TranslationInstance
-  { tiPparams :: PParams era
+  { tiProtVer :: ProtVer
   , tiLanguage :: Language
   , tiUtxo :: UTxO era
   , tiTx :: Core.Tx era

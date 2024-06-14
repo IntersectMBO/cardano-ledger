@@ -45,7 +45,7 @@ import Lens.Micro ((%~), (&), (.~))
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.KeyPair (mkScriptAddr)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (guessTheNumber3)
+import Test.Cardano.Ledger.Plutus.Examples (redeemerSameAsDatum)
 
 spec ::
   forall era.
@@ -99,7 +99,7 @@ spec = describe "Regression" $ do
         (_, skp) <- freshKeyPair
         let
           plutusVersion = SPlutusV2
-          scriptHash = hashPlutusScript $ guessTheNumber3 plutusVersion
+          scriptHash = hashPlutusScript $ redeemerSameAsDatum plutusVersion
           lockScriptAddress = mkScriptAddr scriptHash skp
         (_, collateralReturnAddr) <- freshKeyAddr
         lockedTx <-
@@ -133,7 +133,7 @@ spec = describe "Regression" $ do
               trySubmitTx @Conway $
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . inputsTxBodyL .~ Set.singleton (TxIn (txIdTx lockedTx) $ TxIx 0)
-        pFailure <- impAnn "Expecting failure" $ expectLeftDeepExpr res
+        (pFailure, _) <- impAnn "Expecting failure" $ expectLeftDeepExpr res
         let
           hasInsufficientCollateral
             (ConwayUtxowFailure (UtxoFailure (InsufficientCollateral _ _))) = True

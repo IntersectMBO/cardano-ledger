@@ -188,7 +188,7 @@ expectScriptsToPass pp tx utxo = do
     Right sLst -> do
       {- isValid tx = evalScripts tx sLst = True -}
       whenFailureFree $
-        when2Phase $ case evalPlutusScripts tx sLst of
+        when2Phase $ case evalPlutusScripts sLst of
           Fails _ fs ->
             failBecause $
               injectFailure $
@@ -273,7 +273,7 @@ babbageEvalScriptsTxInvalid = do
       {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
       {- isValid tx = evalScripts tx sLst = False -}
       whenFailureFree $
-        when2Phase $ case evalPlutusScripts tx sLst of
+        when2Phase $ case evalPlutusScripts sLst of
           Passes _ ->
             failBecause $
               injectFailure $

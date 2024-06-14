@@ -1,14 +1,13 @@
-cabal-version:      3.0
-name:               cardano-ledger-test
-version:            9.9.9.9
-license:            Apache-2.0
-maintainer:         operations@iohk.io
-author:             IOHK
+cabal-version: 3.0
+name:          cardano-ledger-test
+version:       9.9.9.9
+license:       Apache-2.0
+maintainer:    operations@iohk.io
+author:        IOHK
 synopsis:
     Testing harness, tests and benchmarks for Shelley style cardano ledgers
 
-build-type:         Simple
-extra-source-files: CHANGELOG.md
+build-type:    Simple
 
 source-repository head
     type:     git
@@ -140,10 +139,10 @@ library
         mtl,
         nothunks,
         hspec,
-        plutus-ledger-api ^>=1.27.0,
+        plutus-ledger-api >=1.0 && <2.0,
         prettyprinter,
         QuickCheck,
-        small-steps:{small-steps, testlib} >=1.1,
+        small-steps:{small-steps, testlib},
         set-algebra,
         cardano-strict-containers,
         tasty,

@@ -32,10 +32,10 @@ import Data.Sequence.Strict (StrictSeq ((:<|)))
 import Lens.Micro
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, fixupPPHash)
+import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, expectPhase2Invalid, fixupPPHash)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceeds2, guessTheNumber3)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum, redeemerSameAsDatum)
 import Test.Cardano.Ledger.Shelley.ImpTest
 
 spec ::
@@ -50,9 +50,9 @@ spec = describe "UTXOW" $ do
   let resetAddrWits tx = updateAddrTxWits $ tx & witsTxL . addrTxWitsL .~ []
   let fixupResetAddrWits = fixupPPHash >=> resetAddrWits
 
-  it "MissingRedeemers" $ do
-    let lang = eraMaxLanguage @era
-    let scriptHash = withSLanguage lang (hashPlutusScript . guessTheNumber3)
+  it "MissingRedeemers" $ forM_ (eraLanguages @era) $ \lang -> do
+    logEntry $ "Testing for " ++ show lang
+    let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     let missingRedeemer = mkSpendingPurpose $ AsItem txIn
     let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
@@ -65,9 +65,9 @@ spec = describe "UTXOW" $ do
             CollectErrors [NoRedeemer missingRedeemer]
         ]
 
-  it "MissingRequiredDatums" $ do
-    let lang = eraMaxLanguage @era
-    let scriptHash = withSLanguage lang (hashPlutusScript . guessTheNumber3)
+  it "MissingRequiredDatums" $ forM_ (eraLanguages @era) $ \lang -> do
+    logEntry $ "Testing for " ++ show lang
+    let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
     let missingDatum = hashData @era (Data (P.I 3))
@@ -78,9 +78,9 @@ spec = describe "UTXOW" $ do
             MissingRequiredDatums [missingDatum] []
         ]
 
-  it "NotAllowedSupplementalDatums" $ do
-    let lang = eraMaxLanguage @era
-    let scriptHash = withSLanguage lang (hashPlutusScript . guessTheNumber3)
+  it "NotAllowedSupplementalDatums" $ forM_ (eraLanguages @era) $ \lang -> do
+    logEntry $ "Testing for " ++ show lang
+    let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     let extraDatumHash = hashData @era (Data (P.I 30))
     let extraDatum = Data (P.I 30)
@@ -94,9 +94,9 @@ spec = describe "UTXOW" $ do
           NotAllowedSupplementalDatums [extraDatumHash] []
       ]
 
-  it "PPViewHashesDontMatch" $ do
-    let lang = eraMaxLanguage @era
-    let scriptHash = withSLanguage lang (hashPlutusScript . guessTheNumber3)
+  it "PPViewHashesDontMatch" $ forM_ (eraLanguages @era) $ \lang -> do
+    logEntry $ "Testing for " ++ show lang
+    let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     tx <- fixupTx $ mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
 
@@ -122,9 +122,9 @@ spec = describe "UTXOW" $ do
               PPViewHashesDontMatch SNothing (tx ^. bodyTxL . scriptIntegrityHashTxBodyL)
           ]
 
-  it "UnspendableUTxONoDatumHash" $ do
-    let lang = eraMaxLanguage @era
-    let scriptHash = withSLanguage lang (hashPlutusScript . guessTheNumber3)
+  it "UnspendableUTxONoDatumHash" $ forM_ (eraLanguages @era) $ \lang -> do
+    logEntry $ "Testing for " ++ show lang
+    let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
 
     txIn <- impAnn "Produce script at a txout with a missing datahash" $ do
       let addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
@@ -143,13 +143,15 @@ spec = describe "UTXOW" $ do
         <$> withPostFixup
           (fixupResetAddrWits <$> resetTxOutDataHash)
           (submitTx tx)
-
-    submitFailingTx
-      (mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn])
-      [injectFailure $ UnspendableUTxONoDatumHash [txIn]]
+    let tx = mkBasicTx (mkBasicTxBody & inputsTxBodyL .~ [txIn])
+    if lang >= PlutusV3
+      then -- PlutusV3 no longer requires a spending Datum, but it should still fail since the
+      -- actual script expects it
+        expectPhase2Invalid tx
+      else submitFailingTx tx [injectFailure $ UnspendableUTxONoDatumHash [txIn]]
 
   it "ExtraRedeemers" $ do
-    let scriptHash = withSLanguage PlutusV1 (hashPlutusScript . guessTheNumber3)
+    let scriptHash = withSLanguage PlutusV1 (hashPlutusScript . redeemerSameAsDatum)
     txIn <- produceScript scriptHash
     let prp = MintingPurpose (AsIx 2)
     dt <- arbitrary
@@ -169,7 +171,7 @@ spec = describe "UTXOW" $ do
       replicateM_ n registerPool
       pools <- getsNES $ nesEsL . epochStatePoolParamsL
       poolId <- elements $ Map.keys pools
-      let scriptHash = withSLanguage lang (hashPlutusScript . alwaysSucceeds2)
+      let scriptHash = withSLanguage lang (hashPlutusScript . alwaysSucceedsNoDatum)
           cred = ScriptHashObj scriptHash
           certs =
             [ RegTxCert cred

@@ -38,7 +38,7 @@ import Test.Cardano.Ledger.Core.KeyPair (mkScriptAddr)
 import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceeds3)
+import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum)
 
 spec ::
   forall era.
@@ -64,7 +64,7 @@ spec =
           ++ extraScripts
           ++ extraScripts
   where
-    checkMinFee :: NativeScript era -> [Script era] -> ImpTestM era ()
+    checkMinFee :: HasCallStack => NativeScript era -> [Script era] -> ImpTestM era ()
     checkMinFee scriptToSpend refScripts = do
       refScriptFee <- setRefScriptFee
       logEntry "lock an input with a script"
@@ -85,16 +85,16 @@ spec =
                 * unboundRational refScriptFee
           )
 
-    distinctScripts :: ImpTestM era [Script era]
+    distinctScripts :: HasCallStack => ImpTestM era [Script era]
     distinctScripts = do
       nativeScripts <-
         (fromNativeScript @era <$>)
           <$> replicateM 3 nativeScript
       let
-        psh1 = hashPlutusScript $ alwaysSucceeds3 SPlutusV3
+        psh1 = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV2
       ps1 <- impAnn "Expecting Plutus script" . expectJust $ impLookupPlutusScriptMaybe psh1
       let
-        psh2 = hashPlutusScript $ alwaysSucceeds3 SPlutusV3
+        psh2 = hashPlutusScript $ alwaysSucceedsNoDatum SPlutusV3
       ps2 <- impAnn "Expecting Plutus script" . expectJust $ impLookupPlutusScriptMaybe psh2
       let plutusScripts = [fromPlutusScript ps1, fromPlutusScript ps2]
       pure $ nativeScripts ++ plutusScripts
@@ -105,7 +105,7 @@ spec =
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       pure $ getMinFeeTxUtxo pp tx utxo <-> getShelleyMinFeeTxUtxo pp tx
 
-    createScriptUtxo :: NativeScript era -> ImpTestM era (TxIn (EraCrypto era))
+    createScriptUtxo :: HasCallStack => NativeScript era -> ImpTestM era (TxIn (EraCrypto era))
     createScriptUtxo script = do
       scriptAddr <- addScriptAddr script
       tx <-
@@ -115,7 +115,8 @@ spec =
               .~ SSeq.fromList [mkBasicTxOut @era scriptAddr (inject (Coin 1000))]
       pure $ txInAt (0 :: Int) tx
 
-    createRefScriptsUtxos :: [Script era] -> ImpTestM era (Map.Map (TxIn (EraCrypto era)) (Script era))
+    createRefScriptsUtxos ::
+      HasCallStack => [Script era] -> ImpTestM era (Map.Map (TxIn (EraCrypto era)) (Script era))
     createRefScriptsUtxos scripts = do
       rootOut <- snd <$> lookupImpRootTxOut
       let outs =
@@ -133,7 +134,7 @@ spec =
       pure $ Map.fromList $ refIns `zip` scripts
 
     spendScriptUsingRefScripts ::
-      TxIn (EraCrypto era) -> Set.Set (TxIn (EraCrypto era)) -> ImpTestM era (Tx era)
+      HasCallStack => TxIn (EraCrypto era) -> Set.Set (TxIn (EraCrypto era)) -> ImpTestM era (Tx era)
     spendScriptUsingRefScripts scriptIn refIns =
       submitTxAnn "spendScriptUsingRefScripts" . mkBasicTx $
         mkBasicTxBody
@@ -147,7 +148,7 @@ spec =
       _ <- impAddNativeScript script
       pure script
 
-    addScriptAddr :: NativeScript era -> ImpTestM era (Addr (EraCrypto era))
+    addScriptAddr :: HasCallStack => NativeScript era -> ImpTestM era (Addr (EraCrypto era))
     addScriptAddr script = do
       kpStaking1 <- lookupKeyPair =<< freshKeyHash
       scriptHash <- impAddNativeScript script

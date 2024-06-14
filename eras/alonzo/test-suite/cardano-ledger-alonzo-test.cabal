@@ -59,7 +59,7 @@ library
         containers,
         data-default-class,
         microlens,
-        plutus-ledger-api ^>=1.27.0,
+        plutus-ledger-api ^>=1.29.0,
         QuickCheck,
         random,
         serialise,
@@ -91,7 +91,6 @@ test-suite cardano-ledger-alonzo-test
         Test.Cardano.Ledger.Alonzo.ChainTrace
         Test.Cardano.Ledger.Alonzo.Golden
         Test.Cardano.Ledger.Alonzo.GoldenTranslation
-        Test.Cardano.Ledger.Alonzo.PlutusScriptExamples
         Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
         Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
         Test.Cardano.Ledger.Alonzo.Translation
@@ -118,7 +117,6 @@ test-suite cardano-ledger-alonzo-test
         cardano-protocol-tpraos,
         cardano-slotting,
         containers,
-        data-default-class,
         plutus-ledger-api,
         QuickCheck,
         small-steps:{small-steps, testlib} >=1.1,

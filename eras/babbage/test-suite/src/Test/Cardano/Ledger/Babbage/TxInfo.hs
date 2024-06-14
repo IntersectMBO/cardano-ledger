@@ -12,12 +12,19 @@ import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Alonzo.Plutus.Context (
   ContextError,
   EraPlutusTxInfo (toPlutusTxInfo),
+  LedgerTxInfo (..),
   PlutusTxInfo,
  )
 import Cardano.Ledger.Alonzo.Plutus.TxInfo (AlonzoContextError (..), TxOutSource (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..), transTxInInfoV2, transTxOutV2)
-import Cardano.Ledger.BaseTypes (Inject (..), Network (..), StrictMaybe (..), natVersion)
+import Cardano.Ledger.BaseTypes (
+  Inject (..),
+  Network (..),
+  ProtVer (..),
+  StrictMaybe (..),
+  natVersion,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto)
@@ -29,7 +36,6 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -165,6 +171,7 @@ expectOneOutput o slang txInfo =
     SPlutusV3 -> PV3.txInfoOutputs txInfo == [o]
 
 successfulTranslation ::
+  forall era l.
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
   , Value era ~ MaryValue (EraCrypto era)
@@ -174,11 +181,20 @@ successfulTranslation ::
   (SLanguage l -> PlutusTxInfo l -> Bool) ->
   Assertion
 successfulTranslation slang tx f =
-  case toPlutusTxInfo slang def ei ss utxo tx of
-    Right txInfo -> assertBool "unexpected transaction info" (f slang txInfo)
-    Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
+  let lti =
+        LedgerTxInfo
+          { ltiProtVer = ProtVer (eraProtVerLow @era) 0
+          , ltiEpochInfo = ei
+          , ltiSystemStart = ss
+          , ltiUTxO = utxo
+          , ltiTx = tx
+          }
+   in case toPlutusTxInfo slang lti of
+        Right txInfo -> assertBool "unexpected transaction info" (f slang txInfo)
+        Left e -> assertFailure $ "no translation error was expected, but got: " <> show e
 
 expectTranslationError ::
+  forall era l.
   ( BabbageEraTxOut era
   , EraPlutusTxInfo l era
   , Value era ~ MaryValue (EraCrypto era)
@@ -188,9 +204,17 @@ expectTranslationError ::
   ContextError era ->
   Assertion
 expectTranslationError slang tx expected =
-  case toPlutusTxInfo slang def ei ss utxo tx of
-    Right _ -> assertFailure "This translation was expected to fail, but it succeeded."
-    Left e -> e @?= expected
+  let lti =
+        LedgerTxInfo
+          { ltiProtVer = ProtVer (eraProtVerLow @era) 0
+          , ltiEpochInfo = ei
+          , ltiSystemStart = ss
+          , ltiUTxO = utxo
+          , ltiTx = tx
+          }
+   in case toPlutusTxInfo slang lti of
+        Right _ -> assertFailure "This translation was expected to fail, but it succeeded."
+        Left e -> e @?= expected
 
 expectV1TranslationError ::
   ( BabbageEraTxOut era

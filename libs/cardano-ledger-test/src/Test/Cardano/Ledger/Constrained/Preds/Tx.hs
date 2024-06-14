@@ -236,7 +236,7 @@ getRdmrPtrs xs allplutus = List.foldl' accum Set.empty xs
       | otherwise = ans
 
 getPlutusDataHashes ::
-  (AlonzoEraTxOut era, EraTxBody era, EraScript era) =>
+  (AlonzoEraTxOut era, EraTxBody era, AlonzoEraScript era) =>
   Map (TxIn (EraCrypto era)) (TxOutF era) ->
   TxBodyF era ->
   Map (ScriptHash (EraCrypto era)) (ScriptF era) ->

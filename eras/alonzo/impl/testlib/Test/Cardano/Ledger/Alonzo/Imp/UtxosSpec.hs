@@ -4,6 +4,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec (spec) where
 
@@ -18,7 +19,7 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Core (EraTx (..), EraTxBody (..))
 import Cardano.Ledger.Plutus.Data (Data (..))
-import Cardano.Ledger.Plutus.Language (SLanguage (..), hashPlutusScript)
+import Cardano.Ledger.Plutus.Language (Language, hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -34,7 +35,7 @@ import Test.Cardano.Ledger.Alonzo.ImpTest (
   submitTx_,
  )
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Plutus.Examples (guessTheNumber3)
+import Test.Cardano.Ledger.Plutus.Examples (redeemerSameAsDatum)
 
 spec ::
   forall era.
@@ -42,26 +43,29 @@ spec ::
   , AlonzoEraTx era
   ) =>
   SpecWith (ImpTestState era)
-spec = describe "UTXOS" $ do
-  let scriptHash = hashPlutusScript (guessTheNumber3 SPlutusV1)
-  it "Plutus script transactions are fixed up" $ do
-    txIn0 <- produceScript scriptHash
-    submitTxAnn_ "Submit a transaction that consumes the script output" $
-      mkBasicTx mkBasicTxBody
-        & bodyTxL . inputsTxBodyL
-          .~ Set.singleton txIn0
-  it "Invalid plutus script fails in phase 2" $ do
-    txIn0 <- produceScript scriptHash
-    exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
-    impAnn "Submitting consuming transaction" $
-      submitTx_
-        ( mkBasicTx mkBasicTxBody
-            & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
-            & isValidTxL .~ IsValid False
-            & witsTxL . rdmrsTxWitsL
-              .~ Redeemers
-                ( Map.singleton
-                    (mkSpendingPurpose $ AsIx 0)
-                    (Data $ P.I 32, exUnits)
-                )
-        )
+spec = describe "UTXOS" $
+  forM_ ([minBound .. eraMaxLanguage @era] :: [Language]) $ \lang ->
+    withSLanguage lang $ \slang ->
+      describe (show lang) $ do
+        let scriptHash = hashPlutusScript (redeemerSameAsDatum slang)
+        it "Spending script with a Datum" $ do
+          txIn0 <- produceScript scriptHash
+          submitTxAnn_ "Submit a transaction that consumes the script output" $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL
+                .~ Set.singleton txIn0
+        it "Invalid plutus script fails in phase 2" $ do
+          txIn0 <- produceScript scriptHash
+          exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
+          impAnn "Submitting consuming transaction" $
+            submitTx_
+              ( mkBasicTx mkBasicTxBody
+                  & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
+                  & isValidTxL .~ IsValid False
+                  & witsTxL . rdmrsTxWitsL
+                    .~ Redeemers
+                      ( Map.singleton
+                          (mkSpendingPurpose $ AsIx 0)
+                          (Data $ P.I 32, exUnits)
+                      )
+              )
