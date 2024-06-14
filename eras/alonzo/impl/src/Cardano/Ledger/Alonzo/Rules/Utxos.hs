@@ -226,7 +226,7 @@ scriptsTransition slot pp tx utxo action = do
   ei <- liftSTS $ asks epochInfo
   case collectPlutusScriptsWithContext (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo of
     Right sLst ->
-      when2Phase $ action $ evalPlutusScripts tx sLst
+      when2Phase $ action $ evalPlutusScripts sLst
     Left info
       | alonzoFailures <- filter isNotBadTranslation info
       , not (null alonzoFailures) ->

@@ -232,20 +232,12 @@ merge f (x : xs) zs = merge f xs (gg x zs)
     gg (Left a) (Left cs) = Left (a : cs)
 
 -- | Evaluate a list of Plutus scripts. All scripts in the list must evaluate to `True`.
-evalPlutusScripts ::
-  EraTx era =>
-  Tx era ->
-  [PlutusWithContext (EraCrypto era)] ->
-  ScriptResult (EraCrypto era)
-evalPlutusScripts tx pwcs = snd $ evalPlutusScriptsWithLogs tx pwcs
+evalPlutusScripts :: [PlutusWithContext c] -> ScriptResult c
+evalPlutusScripts pwcs = snd $ evalPlutusScriptsWithLogs pwcs
 
-evalPlutusScriptsWithLogs ::
-  EraTx era =>
-  Tx era ->
-  [PlutusWithContext (EraCrypto era)] ->
-  ([Text], ScriptResult (EraCrypto era))
-evalPlutusScriptsWithLogs _tx [] = mempty
-evalPlutusScriptsWithLogs tx (plutusWithContext : rest) =
+evalPlutusScriptsWithLogs :: [PlutusWithContext c] -> ([Text], ScriptResult c)
+evalPlutusScriptsWithLogs [] = mempty
+evalPlutusScriptsWithLogs (plutusWithContext : rest) =
   let beginMsg =
         intercalate
           ","
@@ -259,7 +251,7 @@ evalPlutusScriptsWithLogs tx (plutusWithContext : rest) =
           [ "[LEDGER][PLUTUS_SCRIPT]"
           , "END"
           ]
-   in traceEvent endMsg res <> evalPlutusScriptsWithLogs tx rest
+   in traceEvent endMsg res <> evalPlutusScriptsWithLogs rest
 
 -- | Script failures that can be returned by 'evalTxExUnitsWithLogs'.
 data TransactionScriptFailure era

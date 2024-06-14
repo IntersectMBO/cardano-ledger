@@ -464,7 +464,7 @@ impScriptPredicateFailure tx = do
   plutusWithContexts <- impPlutusWithContexts tx
   when (null plutusWithContexts) $
     assertFailure "Could not find any plutus scripts in the transaction"
-  case evalPlutusScriptsWithLogs tx plutusWithContexts of
+  case evalPlutusScriptsWithLogs plutusWithContexts of
     (logs, Passes _) ->
       assertFailure $
         "Plutus script: \n"
