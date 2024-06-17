@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -74,6 +73,8 @@ module Test.Cardano.Ledger.Imp.Common (
 where
 
 import Control.Monad.IO.Class
+import Data.Functor.Const (Const (..))
+import Data.Functor.Identity (Identity (..))
 import Test.Cardano.Ledger.Binary.TreeDiff (expectExprEqualWithMessage)
 import Test.Cardano.Ledger.Common as X hiding (
   arbitrary,
@@ -350,12 +351,23 @@ instance
   (HasGenEnv env g, R.StatefulGen g (ReaderT env m), Monad m) =>
   HasStatefulGen g (ReaderT env m)
   where
-  askStatefulGen = getGenEnv <$> ask
+  askStatefulGen = asks getGenEnv
 
 class HasSubState s where
   type SubState s :: Type
   getSubState :: s -> SubState s
+  getSubState = getConst . subStateL Const
   setSubState :: s -> SubState s -> s
+  setSubState s a = runIdentity $ subStateL (const $ Identity a) s
+  subStateL :: Functor f => (SubState s -> f (SubState s)) -> (s -> f s)
+  subStateL k s = setSubState s <$> k (getSubState s)
+  {-# MINIMAL subStateL | getSubState, setSubState #-}
+
+-- | Modify the sub-state and return a value, using the supplied function.
+-- Similar to the `state` method of `MonadState`.
+subState :: (HasSubState s, MonadState s m) => (SubState s -> (a, SubState s)) -> m a
+subState = state . subStateL -- Uses (a,) as the functor for subStateL
+{-# INLINE subState #-}
 
 uniformM ::
   ( HasStatefulGen g m
@@ -410,14 +422,8 @@ instance HasSubState (StateGen g) where
   type SubState (StateGen g) = g
   getSubState (StateGen g) = g
   {-# INLINE getSubState #-}
-  setSubState _ g = (StateGen g)
+  setSubState _ = StateGen
   {-# INLINE setSubState #-}
-
-subState :: (HasSubState s, MonadState s m) => (SubState s -> (a, SubState s)) -> m a
-subState f = state $ \s ->
-  case f (getSubState s) of
-    (a, g) -> (a, setSubState s g)
-{-# INLINE subState #-}
 
 instance
   (HasSubState s, R.RandomGen (SubState s), MonadState s m) =>
