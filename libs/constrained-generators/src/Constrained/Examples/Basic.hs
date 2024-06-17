@@ -3,8 +3,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Constrained.Examples.Basic where
 
@@ -15,15 +18,15 @@ import Test.QuickCheck qualified as QC
 import Constrained
 
 leqPair :: Specification BaseFn (Int, Int)
-leqPair = constrained $ \p ->
-  match p $ \x y ->
+leqPair = constrained $ \ [var| p |] ->
+  match p $ \ [var| x |] [var| y |] ->
     x <=. y
 
 simplePairSpec :: Specification BaseFn (Int, Int)
-simplePairSpec = constrained $ \p ->
-  match p $ \x y ->
+simplePairSpec = constrained $ \(name "p" -> p) ->
+  match p $ \(name "x" -> x) y ->
     [ assert $ x /=. 0
-    , assert $ y /=. 0
+    , assert $ name "y" y /=. 0
     , -- You can use `monitor` to add QuickCheck property modifiers for
       -- monitoring distribution, like classify, label, and cover, to your
       -- specification
@@ -299,19 +302,19 @@ chooseBackwards = constrained $ \xy ->
   ]
 
 chooseBackwards' :: Specification BaseFn ([(Int, [Int])], (Int, [Int]))
-chooseBackwards' = constrained' $ \xys xy ->
-  [ forAll' xys $ \_ ys ->
-      forAll ys $ \y -> 1000 <. y
+chooseBackwards' = constrained' $ \ [var| xys |] [var| xy |] ->
+  [ forAll' xys $ \_ [var| ys |] ->
+      forAll ys $ \ [var| y |] -> 1000 <. y
   , assert $ 0 <. length_ xys
   , assert $ xy `elem_` xys
-  , match xy $ \_ ys ->
-      forAll ys $ \y -> 0 <. y
+  , match xy $ \_ [var| ys |] ->
+      forAll ys $ \ [var| y |] -> 0 <. y
   ]
 
 whenTrueExists :: Specification BaseFn Int
 whenTrueExists = constrained $ \x ->
-  whenTrue (x ==. 0) $
+  whenTrue ([var| x |] ==. 0) $
     exists (\_ -> pure False) $ \b ->
-      [ not_ b
+      [ not_ [var| b |]
       , not_ (not_ b)
       ]

@@ -11,6 +11,7 @@
 module Constrained.Core where
 
 import Control.Applicative
+import Data.Function
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Typeable
@@ -19,11 +20,16 @@ import Constrained.List
 
 -- Variables --------------------------------------------------------------
 
-newtype Var a = Var {nameOf :: Int}
-  deriving (Ord, Eq)
+data Var a = Var {nameOf :: Int, nameHint :: String}
+
+instance Ord (Var a) where
+  compare = compare `on` nameOf
+
+instance Eq (Var a) where
+  (==) = (==) `on` nameOf
 
 instance Show (Var a) where
-  show v = "v" ++ show (nameOf v)
+  show v = nameHint v ++ "_" ++ show (nameOf v)
 
 eqVar :: forall a a'. (Typeable a, Typeable a') => Var a -> Var a' -> Maybe (a :~: a')
 eqVar v v' | nameOf v == nameOf v' = eqT @a @a'
@@ -59,9 +65,9 @@ instance (forall a. Rename (f a)) => Rename (List f as) where
   rename v v' = mapList (rename v v')
 
 freshVar :: Var a -> Set Int -> Var a
-freshVar (Var n) ns
-  | Set.member n ns = Var $ 1 + Set.findMax ns
-  | otherwise = Var n
+freshVar (Var n nh) ns
+  | Set.member n ns = Var (1 + Set.findMax ns) nh
+  | otherwise = Var n nh
 
 freshen :: (Typeable a, Rename t) => Var a -> t -> Set Int -> (Var a, t)
 freshen v t nms

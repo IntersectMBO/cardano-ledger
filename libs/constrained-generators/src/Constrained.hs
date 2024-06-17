@@ -55,6 +55,7 @@ module Constrained (
   caseBoolSpec,
   constrained,
   constrained',
+  name,
   satisfies,
   letBind,
   match,
@@ -138,3 +139,4 @@ import Constrained.Internals
 import Constrained.List as X
 import Constrained.Properties
 import Constrained.Spec.Tree as X
+import Constrained.Syntax as X

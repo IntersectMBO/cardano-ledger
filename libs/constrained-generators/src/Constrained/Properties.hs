@@ -143,7 +143,7 @@ showCtxWith fn (TestableCtx ctx) = show $ pretty tm
     tm :: Term fn b
     tm =
       uncurryList (app fn) $
-        fillListCtx (mapListCtxC @(HasSpec fn) (lit @_ @fn . unValue) ctx) (\HOLE -> V $ Var 0)
+        fillListCtx (mapListCtxC @(HasSpec fn) (lit @_ @fn . unValue) ctx) (\HOLE -> V $ Var 0 "v")
 
 data TestableFn fn where
   TestableFn ::
