@@ -430,7 +430,18 @@ toCtx v = go
     go (App f as) = CtxApp f <$> toCtxList v as
     go (V v')
       | Just Refl <- eqVar v v' = pure $ CtxHOLE
-      | otherwise = fatalError ["toCtx " ++ show v ++ " (V " ++ show v' ++ ")"]
+      | otherwise =
+          fatalError
+            [ "toCtx "
+                ++ show v
+                ++ "@("
+                ++ show (typeOf v)
+                ++ ") (V "
+                ++ show v'
+                ++ "@("
+                ++ show (typeOf v')
+                ++ "))"
+            ]
 
 toCtxList ::
   forall m fn v as.
@@ -711,7 +722,13 @@ shrinkPred (Block ps) = TruePred : FalsePred [] : ps ++ map Block (shrinkList sh
 shrinkPred (Assert es t) = TruePred : FalsePred [] : [Assert [] t | not $ null es]
 shrinkPred (Explain _ p) = TruePred : FalsePred [] : [p]
 shrinkPred (When b p) = TruePred : FalsePred [] : p : map (When b) (shrinkPred p)
-shrinkPred (Exists k (x :-> p)) = TruePred : FalsePred [] : [Exists k (x :-> p') | p' <- shrinkPred p]
+-- NOTE: You can't shrink `Exists` because it might make the `Env -> a` invalid!
+-- e.g. you start with
+-- `constrained $ \ x -> exists (\eval -> pure $ eval x) $ \ y -> [ x ==. y, 10 <. y ]`
+-- and shrink it to
+-- `constrained $ \ x -> exists (\eval -> pure $ eval x) $ \ y -> [ 10 <. y ]`
+-- and suddenly the thing you're generating is BS w.r.t the checking!
+shrinkPred Exists {} = [TruePred, FalsePred []]
 shrinkPred (Subst x t p) = shrinkPred $ substitutePred x t p
 shrinkPred GenHint {} = [TruePred, FalsePred []]
 shrinkPred Monitor {} = [TruePred, FalsePred []]
@@ -1554,10 +1571,10 @@ data Name fn where
 deriving instance Show (Name fn)
 
 instance Eq (Name fn) where
-  Name (Var i) == Name (Var j) = i == j
+  Name v == Name v' = isJust $ eqVar v v'
 
 instance Ord (Name fn) where
-  compare (Name (Var i)) (Name (Var j)) = compare i j
+  compare (Name v) (Name v') = compare (nameOf v, typeOf v) (nameOf v', typeOf v')
 
 newtype FreeVars fn = FreeVars {unFreeVars :: Map (Name fn) Int}
   deriving (Show)
@@ -4592,7 +4609,7 @@ bind body = x :-> p
 
     bound (Explain _ p) = bound p
     bound (Subst x _ p) = max (nameOf x) (bound p)
-    bound (Block ps) = maximum $ map bound ps
+    bound (Block ps) = maximum $ (-1) : map bound ps -- (-1) as the default to get 0 as `nextVar p`
     bound (Exists _ b) = boundBinder b
     bound (Let _ b) = boundBinder b
     bound (ForAll _ b) = boundBinder b
