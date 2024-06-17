@@ -162,14 +162,31 @@ parseCostModel o lang = do
       _ -> fail $ "Expected either an Array or an Object, but got: " ++ show plutusCostModelValue
 
 costModelFromMap :: MonadFail m => Language -> Map Text Int64 -> m CostModel
-costModelFromMap lang cmMap =
-  mapM lookupFail paramNames >>= validateCostModel lang
+costModelFromMap lang cmMap = do
+  let (vals, errors) = collectErrors paramNames lang cmMap
+  if null errors
+    then validateCostModel lang vals
+    else fail $ unlines errors
   where
     paramNames = costModelParamNames lang
-    lookupFail paramName =
-      case Map.lookup paramName cmMap of
-        Nothing -> fail $ "Unrecognized cost model parameter name: " ++ show paramName
-        Just v -> pure v
+
+    collectErrors parameterNames l candidateCostModel =
+      let (finalVals, errs) =
+            foldl
+              ( \(vals, errors) paramName ->
+                  case Map.lookup paramName candidateCostModel of
+                    Nothing -> (vals, reportMissing paramName l : errors)
+                    Just v -> (v : vals, errors)
+              )
+              ([], [])
+              parameterNames
+       in (reverse finalVals, errs)
+
+    reportMissing pname l =
+      unlines
+        [ "Parameter name missing from cost model: " ++ show pname
+        , "Cost model language: " ++ show l
+        ]
 
 costModelToMap :: CostModel -> Map Text Int64
 costModelToMap cm =
