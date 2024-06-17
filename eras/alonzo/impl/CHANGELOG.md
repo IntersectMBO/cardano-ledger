@@ -2,6 +2,19 @@
 
 ## 1.9.0.0
 
+* Add `LedgerTxInfo` to `Cardano.Ledger.Alonzo.Plutus.Context`
+* `EraPlutusTxInfo` class:
+  * replace params in `toPlutusTxInfo` signature with `LedgerTxInfo`
+  * replace `toPlutusScriptContext` with `toPlutusArgs`
+* `EraPlutusContext` class:
+  * remove `mkPlutusScriptContext`, `mkPlutusLanguageContext`
+  * add `mkPlutusWithContext`
+* add `toPlutusWithContext` to `Cardano.Ledger.Alonzo.Plutus.Context`
+* Move `PlutusScriptContext` type family to core
+* Add `ContextError` inhabitant to `TransactionScriptFailure`
+* Change return type of `evalTxExUnits` and `evalTxExUnitsWithLogs` to not be `Either`s
+* Add `lookupPlutusScript` and `eraLanguages` to Alonzo `Scripts`
+* Deprecate `lookupPlutusScript` in Alonzo `Evaluate`
 * Add `AllegraEraScript` and `ShelleyEraScript` instances for `AlonzoEra`
 * Add `Inject` instance for `AlonzoTx`
 * Move these functions and types from `cardano-ledger-api`, so they can be used in the
