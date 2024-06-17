@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name:          cardano-ledger-byron-test
-version:       1.5.1.0
+version:       1.5.1.1
 license:       Apache-2.0
 maintainer:    operations@iohk.io
 author:        IOHK
@@ -188,7 +188,7 @@ library
         cardano-crypto,
         cardano-crypto-test,
         cardano-crypto-wrapper,
-        cardano-prelude >=0.1.0.1,
+        cardano-prelude >=0.2.0.0,
         cardano-prelude-test,
         containers,
         byron-spec-chain,
