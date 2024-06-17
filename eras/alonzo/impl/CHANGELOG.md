@@ -1,6 +1,6 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.8.1.0
+## 1.9.0.0
 
 * Add `AllegraEraScript` and `ShelleyEraScript` instances for `AlonzoEra`
 * Add `Inject` instance for `AlonzoTx`
