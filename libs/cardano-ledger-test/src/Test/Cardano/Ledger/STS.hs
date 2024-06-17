@@ -265,13 +265,10 @@ tests_STS =
     "STS property tests"
     [ govTests
     , testProperty "prop_SNAP" prop_SNAP
-    , testProperty "prop_TICK" prop_SNAP
-    -- , utxoTests
-    -- TODO: this is probably one of the last things we want to
-    -- get passing as it depends on being able to generate a complete
-    -- `EpochState era`
+    -- , testProperty "prop_TICK" prop_SNAP
     -- , testProperty "prop_EPOCH" prop_EPOCH
     -- , testProperty "prop_LEDGER" prop_LEDGER
+    -- , utxoTests
     ]
 
 govTests :: TestTree
