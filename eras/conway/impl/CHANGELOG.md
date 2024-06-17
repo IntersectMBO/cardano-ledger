@@ -23,6 +23,7 @@
 
 ### `testlib`
 
+* Change return type of `trySubmitTx` to include the fixedup transaction
 * Add tests for DRep expiry, considering dormant epochs.
   * Add `unregisterDRep`.
   * Add `updateDRep`.
