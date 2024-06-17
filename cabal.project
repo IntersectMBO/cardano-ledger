@@ -23,14 +23,15 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/plutus.git
-  tag: 9e3147c362df91f5b5c069234dea70b1f110b21a
-  --sha256: sha256-Xu/ZoPQoORaSMF+Lw/5RPLI1Iz9R9x0i8QiraoqrCvc=
+  tag: 2c1aa4aaca3c6498db6739fabcd8cfbc93387528
+  --sha256: sha256-HtlYPoUMFCxCVyXL7+OSx21sxXjoTcmMOaZjcaXpWwg=
   subdir:
     plutus-core
     plutus-ledger-api
     plutus-tx
     plutus-tx-plugin
     plutus-tx-test-util
+    prettyprinter-configurable
 
 index-state:
   -- Bump this if you need newer packages from Hackage
