@@ -22,6 +22,7 @@ spec = describe "Conway conformance tests" $ do
   xprop "ENACT" $ conformsToImpl @"ENACT" @ConwayFn @Conway
   prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
   prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @Conway
+  xprop "EPOCH" $ conformsToImpl @"EPOCH" @ConwayFn @Conway
   describe "Generators" $ do
     let
       genEnv = do

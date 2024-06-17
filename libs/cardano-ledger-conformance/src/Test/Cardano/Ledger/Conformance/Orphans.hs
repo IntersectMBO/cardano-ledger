@@ -59,6 +59,14 @@ deriving instance Generic PoolThresholds
 
 deriving instance Generic DrepThresholds
 
+deriving instance Generic NewEpochEnv
+
+deriving instance Generic EpochState
+
+deriving instance Generic LedgerState
+
+deriving instance Generic Acnt
+
 deriving instance Ord Tag
 
 deriving instance Ord Credential
@@ -131,6 +139,12 @@ deriving instance Eq CertState
 
 deriving instance Eq RatifyState
 
+deriving instance Eq EpochState
+
+deriving instance Eq Acnt
+
+deriving instance Eq LedgerState
+
 instance (NFData k, NFData v) => NFData (HSMap k v)
 
 instance NFData a => NFData (HSSet a)
@@ -202,6 +216,14 @@ instance NFData RatifyState
 instance NFData EnactEnv
 
 instance NFData DelegEnv
+
+instance NFData NewEpochEnv
+
+instance NFData EpochState
+
+instance NFData Acnt
+
+instance NFData LedgerState
 
 instance ToExpr a => ToExpr (HSSet a)
 
@@ -278,6 +300,14 @@ instance ToExpr EnactEnv
 
 instance ToExpr DelegEnv
 
+instance ToExpr NewEpochEnv
+
+instance ToExpr EpochState
+
+instance ToExpr LedgerState
+
+instance ToExpr Acnt
+
 instance Default (HSMap k v)
 
 instance FixupSpecRep OpaqueErrorString
@@ -353,3 +383,9 @@ instance FixupSpecRep EnactState
 instance FixupSpecRep RatifyEnv
 
 instance FixupSpecRep RatifyState
+
+instance FixupSpecRep EpochState
+
+instance FixupSpecRep Acnt
+
+instance FixupSpecRep LedgerState
