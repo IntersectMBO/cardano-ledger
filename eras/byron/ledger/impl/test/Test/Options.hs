@@ -20,10 +20,6 @@ module Test.Options (
 where
 
 import Cardano.Prelude
-#if __GLASGOW_HASKELL__ < 900
--- Do not understand why this is visible in ghc-9.2 but not on ghc-8.10.
-         hiding (Option)
-#endif
 import Hedgehog (Gen, Group (..), Property, PropertyT, TestLimit, withTests)
 import Hedgehog.Internal.Property (GroupName (..), PropertyName (..))
 import Test.Cardano.Prelude
