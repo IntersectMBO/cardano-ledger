@@ -1339,8 +1339,44 @@ explainSpec es (ErrorSpec es') = ErrorSpec (es ++ es')
 explainSpec es (MemberSpec []) = ErrorSpec (es ++ ["MemberSpec []"])
 explainSpec _ s = s
 
+regularize :: HasVariables fn t => Var a -> t -> Var a
+regularize v t =
+  case [nameHint v' | Name v' <- Set.toList $ freeVarSet t, nameOf v' == nameOf v, nameHint v' /= "v"] of
+    [] -> v
+    nh : _ -> v {nameHint = nh}
+
+regularizeBinder :: Binder fn a -> Binder fn a
+regularizeBinder (x :-> p) = x' :-> substitutePred x (V x') (regularizeNamesPred p)
+  where
+    x' = regularize x p
+
+regularizeNamesPred :: Pred fn -> Pred fn
+regularizeNamesPred p = case p of
+  Monitor {} -> p
+  Block ps -> Block $ map regularizeNamesPred ps
+  Exists k b -> Exists k (regularizeBinder b)
+  Subst v t p -> regularizeNamesPred (substitutePred v t p)
+  Let t b -> Let t (regularizeBinder b)
+  Assert {} -> p
+  Reifies {} -> p
+  DependsOn {} -> p
+  ForAll t b -> ForAll t (regularizeBinder b)
+  Case t bs -> Case t (mapList (mapWeighted regularizeBinder) bs)
+  When b p' -> When b (regularizeNamesPred p')
+  GenHint {} -> p
+  TruePred {} -> p
+  FalsePred {} -> p
+  Explain es p' -> Explain es (regularizeNamesPred p')
+
+regularizeNames :: Specification fn a -> Specification fn a
+regularizeNames (SuspendedSpec x p) =
+  SuspendedSpec x' p'
+  where
+    x' :-> p' = regularizeBinder (x :-> p)
+regularizeNames spec = spec
+
 simplifySpec :: HasSpec fn a => Specification fn a -> Specification fn a
-simplifySpec spec = case spec of
+simplifySpec spec = case regularizeNames spec of
   SuspendedSpec x p ->
     let optP = optimisePred p
      in fromGESpec
@@ -1792,7 +1828,7 @@ backwardsSubstitution sub t =
 
 -- | Sound but not complete inequality on terms
 fastInequality :: Term fn a -> Term fn b -> Bool
-fastInequality (V (Var i)) (V (Var j)) = i /= j
+fastInequality (V (Var i _)) (V (Var j _)) = i /= j
 fastInequality Lit {} Lit {} = False
 fastInequality (App _ as) (App _ bs) = go as bs
   where
@@ -3898,8 +3934,8 @@ flip_ ::
 flip_ f =
   app (injectFn @(FunFn fn) @fn (Flip f'))
   where
-    x = Var (-1) :: Var a
-    y = Var (-2) :: Var b
+    x = Var (-1) "v" :: Var a
+    y = Var (-2) "v" :: Var b
     f' = case f (V x) (V y) of
       App fn (V x' :> V y' :> Nil)
         | Just Refl <- eqVar x x'
@@ -4446,7 +4482,7 @@ foldMap_ ::
   Term fn b
 foldMap_ f = app $ foldMapFn $ toFn $ f (V v)
   where
-    v = Var (-1) :: Var a
+    v = Var (-1) "v" :: Var a
     -- Turn `f (V v) = fn (gn (hn v))` into `composeFn fn (composeFn gn hn)`
     toFn :: forall b. HasCallStack => Term fn b -> fn '[a] b
     toFn (App fn (V v' :> Nil)) | Just Refl <- eqVar v v' = fn
@@ -4596,11 +4632,15 @@ app ::
   FunTy (MapList (Term fn) as) (Term fn b)
 app fn = curryList (App fn)
 
+name :: String -> Term fn a -> Term fn a
+name nh (V (Var i _)) = V (Var i nh)
+name _ _ = error "applying name to non-var thing! Shame on you!"
+
 bind :: (HasSpec fn a, IsPred p fn) => (Term fn a -> p) -> Binder fn a
 bind body = x :-> p
   where
     p = toPred $ body (V x)
-    x = Var (nextVar p)
+    x = Var (nextVar p) "v"
 
     nextVar p = 1 + bound p
 
