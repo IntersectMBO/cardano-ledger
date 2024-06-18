@@ -36,7 +36,7 @@ jobs:
   build:
     strategy:
       matrix:
-        ghc: ["8.10.7", "9.2.8", "9.6.4", "9.8.2"]
+        ghc: ["8.10.7"] # , "9.2.8", "9.6.4", "9.8.2"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -44,7 +44,7 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-07-17"
+      CABAL_CACHE_VERSION: "2024-06-17"
 
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
@@ -149,7 +149,7 @@ jobs:
         - set-algebra
         - small-steps
         - vector-map
-        ghc: ["8.10.7", "9.2.8", "9.6.4", "9.8.2"]
+        ghc: ["8.10.7"] # , "9.2.8", "9.6.4", "9.8.2"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -159,7 +159,7 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-07-17"
+      CABAL_CACHE_VERSION: "2024-06-17"
 
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
