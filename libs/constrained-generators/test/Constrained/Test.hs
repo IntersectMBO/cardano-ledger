@@ -50,7 +50,8 @@ tests nightly =
     testSpec "assertReal" assertReal
     testSpecNoShrink "chooseBackwards" chooseBackwards
     testSpecNoShrink "chooseBackwards'" chooseBackwards'
-    testSpec "whenTrueExists" whenTrueExists
+    -- TODO: turn this on again when QuickCheck version is bumped
+    -- testSpec "whenTrueExists" whenTrueExists
     testSpec "assertRealMultiple" assertRealMultiple
     testSpec "setSpec" setSpec
     testSpec "leqPair" leqPair
