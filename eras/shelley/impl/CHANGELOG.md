@@ -20,6 +20,7 @@
 
 ### testlib
 
+* Change return type of `trySubmitTx` to include the fixedup transaction
 * Add `ToExpr` for `PoolEnv`.
 * Add `withCborRoundTripFailures`
 * Change signatures of `Arbitrary` instances for `MultiSig`:

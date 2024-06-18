@@ -140,8 +140,12 @@ purposeIsWellformedNoDatumQ =
                 null $ P.filter (txCert P.==) $ PV3.txInfoTxCerts txInfo
               PV3.VotingScript voter ->
                 PAM.member voter $ PV3.txInfoVotes txInfo
-              PV3.ProposingScript _idx propProc ->
-                null $ P.filter (propProc P.==) $ PV3.txInfoProposalProcedures txInfo
+              PV3.ProposingScript _idx _propProc -> True
+              -- Eq instance for proposals have been removed. I am not sure if this is a
+              -- good idea, but it only affects ledger test script, so we'll deal with
+              -- this later:
+              --
+              -- null $ P.filter (propProc P.==) $ PV3.txInfoProposalProcedures txInfo
     |]
 
 purposeIsWellformedWithDatumQ :: Q [Dec]
