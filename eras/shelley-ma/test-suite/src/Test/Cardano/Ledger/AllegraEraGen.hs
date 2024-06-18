@@ -219,7 +219,7 @@ intervals ::
   AllegraEraScript era =>
   [Int] ->
   [NativeScript era]
-intervals xs = zipWith mkInterval padded (tail padded)
+intervals xs = zipWith mkInterval padded (drop 1 padded)
   where
     padded = Nothing : (Just . SlotNo . fromIntegral <$> xs) ++ [Nothing]
     start Nothing = []

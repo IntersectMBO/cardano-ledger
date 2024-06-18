@@ -52,6 +52,8 @@ import Control.State.Transition (STS (State))
 import Control.State.Transition.Extended (Environment, Signal)
 import qualified Data.ByteString as BS
 import Data.Foldable (foldMap', toList)
+import Data.List.NonEmpty (nonEmpty)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Semigroup (Sum (..))
@@ -399,15 +401,17 @@ onlyValidChainSignalsAreGenerated =
 
 -- | Counts the epochs spanned by this trace
 epochsInTrace :: forall era. Era era => [Block (BHeader (EraCrypto era)) era] -> Int
-epochsInTrace [] = 0
-epochsInTrace bs =
-  fromIntegral $ toEpoch - fromEpoch + 1
-  where
-    fromEpoch = atEpoch . blockSlot $ head bs
-    toEpoch = atEpoch . blockSlot $ last bs
-    EpochSize slotsPerEpoch = runShelleyBase $ (epochInfoSize . epochInfoPure) testGlobals undefined
-    blockSlot = bheaderSlotNo . bhbody . bheader
-    atEpoch (SlotNo s) = s `div` slotsPerEpoch
+epochsInTrace bs'
+  | Just bs <- nonEmpty bs' =
+      let
+        fromEpoch = atEpoch . blockSlot $ NE.head bs
+        toEpoch = atEpoch . blockSlot $ NE.last bs
+        EpochSize slotsPerEpoch = runShelleyBase $ (epochInfoSize . epochInfoPure) testGlobals undefined
+        blockSlot = bheaderSlotNo . bhbody . bheader
+        atEpoch (SlotNo s) = s `div` slotsPerEpoch
+       in
+        fromIntegral $ toEpoch - fromEpoch + 1
+  | otherwise = 0
 
 -- | Convenience Function to bound the txsize function.
 -- | It can be helpful for coin selection.

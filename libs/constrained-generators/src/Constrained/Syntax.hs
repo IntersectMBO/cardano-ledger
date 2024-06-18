@@ -20,9 +20,13 @@ var =
   TH.QuasiQuoter
     { -- Parses variables e.g. `constrained $ \ [var| x |] [var| y |] -> ...` from the strings " x " and " y "
       -- and replaces them with `name "x" -> x` and `name "y" -> y`
-      TH.quotePat = mkNamed . head . words
+      TH.quotePat = mkNamed . varName
     , -- Parses variables in expressions like `assert $ [var| x |] + 3 <. 10` and replaces them with `name "x" x`
-      TH.quoteExp = mkNamedExpr . head . words -- Parses
+      TH.quoteExp = mkNamedExpr . varName
     , TH.quoteDec = const $ fail "var should only be used at binding sites and in expressions"
     , TH.quoteType = const $ fail "var should only be used at binding sites and in expressions"
     }
+  where
+    varName s = case words s of
+      [w] -> w
+      _ -> fail "expected a single var name"
