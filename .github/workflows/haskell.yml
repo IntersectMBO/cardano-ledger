@@ -107,12 +107,12 @@ jobs:
 
     # Pass working directory to test jobs
     - name: Archive working directory
-      run: tar --format pax -cf /var/tmp/state.tar . && mv /var/tmp/state.tar .
+      run: tar --format pax -czf /var/tmp/state.tgz . && mv /var/tmp/state.tgz .
     - name: Upload working directory archive
       uses: actions/upload-artifact@v4
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
-        path: state.tar
+        path: state.tgz
         overwrite: true
         retention-days: 1
 
@@ -222,7 +222,7 @@ jobs:
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
     - name: Unarchive working directory
-      run: tar -xf state.tar && rm state.tar
+      run: tar -xf state.tgz && rm state.tgz
 
     - uses: actions/cache@v4
       if: matrix.os != 'macos-latest'
