@@ -2,7 +2,7 @@
 
 ## 1.15.0.0
 
-* Add `psPoolDistrL` lens.
+* Add `psPoolDistrL` lens
 * Add `psPoolDistr` field to `PulsingSnapshot` for tracking the pool stake distribution.
 * Fix DRep expiry updates based on the number of dormant epochs.
   * Remove `DRepPulser.dormantEpoch`.
