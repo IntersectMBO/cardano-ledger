@@ -19,6 +19,8 @@ module Cardano.Ledger.Conway.Rules (
   module Cardano.Ledger.Conway.Rules.Utxo,
   module Cardano.Ledger.Conway.Rules.Utxos,
   module Cardano.Ledger.Conway.Rules.Utxow,
+  module Cardano.Ledger.Conway.Rules.Zone,
+  module Cardano.Ledger.Conway.Rules.Zones,
 )
 where
 
@@ -41,6 +43,8 @@ import Cardano.Ledger.Conway.Rules.Tickf
 import Cardano.Ledger.Conway.Rules.Utxo
 import Cardano.Ledger.Conway.Rules.Utxos
 import Cardano.Ledger.Conway.Rules.Utxow
+import Cardano.Ledger.Conway.Rules.Zone
+import Cardano.Ledger.Conway.Rules.Zones
 import Cardano.Ledger.Shelley.Rules (ShelleyTickEvent (..))
 
 type instance EraRuleEvent "TICK" (ConwayEra c) = ShelleyTickEvent (ConwayEra c)

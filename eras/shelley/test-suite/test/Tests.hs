@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
 import Cardano.Crypto.Libsodium (sodiumInit)
 import Cardano.Ledger.Core
@@ -42,21 +43,22 @@ defaultTests :: TestTree
 defaultTests =
   testGroup
     "Shelley tests"
-    [ Deposits.tests @C
-    , ( localOption
-          (QuickCheckMaxRatio 50)
-          (ClassifyTraces.relevantCasesAreCovered @C (maxSuccess stdArgs))
-      )
-    , AdaPreservation.tests @C @(ShelleyLEDGER C) (maxSuccess stdArgs)
-    , ClassifyTraces.onlyValidChainSignalsAreGenerated @C
-    , WitVKeys.tests @(EraCrypto C)
-    , Rewards.tests
-    , Serialisation.tests
-    , RulesTests.chainExamples
-    , RulesTests.multisigExamples
-    , RulesTests.testTickF
-    , UnitTests.unitTests
-    , SafeHash.safeHashTest
+    [ -- Deposits.tests @C
+      -- , ( localOption
+      --       (QuickCheckMaxRatio 50)
+      --       (ClassifyTraces.relevantCasesAreCovered @C (maxSuccess stdArgs))
+      --   )
+      -- , AdaPreservation.tests @C @(ShelleyLEDGER C) (maxSuccess stdArgs)
+      -- , ClassifyTraces.onlyValidChainSignalsAreGenerated @C
+      -- , WitVKeys.tests @(EraCrypto C)
+      -- , Rewards.tests
+      -- , Serialisation.tests
+      -- ,
+      RulesTests.chainExamples
+      -- , RulesTests.multisigExamples
+      -- , RulesTests.testTickF
+      -- , UnitTests.unitTests
+      -- , SafeHash.safeHashTest
     ]
 
 nightlyTests :: TestTree

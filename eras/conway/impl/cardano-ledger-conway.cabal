@@ -30,6 +30,7 @@ flag asserts
 
 library
     exposed-modules:
+        Cardano.Ledger.Conway.Era
         Cardano.Ledger.Conway.Genesis
         Cardano.Ledger.Conway.Governance
         Cardano.Ledger.Conway.Governance.DRepPulser
@@ -44,6 +45,7 @@ library
         Cardano.Ledger.Conway.Scripts
         Cardano.Ledger.Conway
         Cardano.Ledger.Conway.Rules
+        Cardano.Ledger.Conway.Rules.Bbody
         Cardano.Ledger.Conway.Core
         Cardano.Ledger.Conway.TxCert
         Cardano.Ledger.Conway.FRxO
@@ -55,11 +57,9 @@ library
     other-modules:
         Cardano.Ledger.Conway.API.Genesis
         Cardano.Ledger.Conway.API.Mempool        
-        Cardano.Ledger.Conway.Era
         Cardano.Ledger.Conway.Governance.Internal
         Cardano.Ledger.Conway.Governance.Procedures
-        Cardano.Ledger.Conway.Governance.Proposals
-        Cardano.Ledger.Conway.Rules.Bbody
+        Cardano.Ledger.Conway.Governance.Proposals        
         Cardano.Ledger.Conway.Rules.Cert
         Cardano.Ledger.Conway.Rules.Deleg
         Cardano.Ledger.Conway.Rules.GovCert

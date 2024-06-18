@@ -430,6 +430,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
     timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
+    -- TODO WG: realizedInputs. Add realizedFulfills here. Put them in PV4 TxInfo.
     inputs <- mapM (transTxInInfoV3 utxo) (Set.toList (txBody ^. inputsTxBodyL))
     refInputs <- mapM (transTxInInfoV3 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
     outputs <-

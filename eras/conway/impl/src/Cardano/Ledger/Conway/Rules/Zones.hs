@@ -88,12 +88,12 @@ import NoThunks.Class (NoThunks)
 data ConwayZonesPredFailure era
   = ZoneFailure (PredicateFailure (EraRule "ZONE" era)) -- Subtransition Failures
   | -- | ShelleyInConwayPredFailure (ShelleyLedgersPredFailure era) -- Subtransition Failures
-    ShelleyInConwayPredFailure (ShelleyBbodyPredFailure era) -- Subtransition Failures
+    ZonesShelleyInConwayPredFailure (ShelleyBbodyPredFailure era) -- Subtransition Failures
   deriving (Generic)
 
 data ConwayZonesEvent era
   = ZoneEvent (Event (EraRule "ZONE" era))
-  | ShelleyInConwayEvent (ShelleyLedgersEvent era)
+  | ZonesShelleyInConwayEvent (ShelleyLedgersEvent era)
 
 type instance EraRuleFailure "ZONES" (ConwayEra c) = ConwayZonesPredFailure (ConwayEra c)
 

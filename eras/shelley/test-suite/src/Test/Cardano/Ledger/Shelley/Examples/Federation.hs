@@ -44,6 +44,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
+import Debug.Trace (trace)
 import GHC.Stack (HasCallStack)
 import Lens.Micro ((^.))
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), vKey)
@@ -117,13 +118,19 @@ coreNodeKeysBySchedule ::
   Word64 ->
   AllIssuerKeys (EraCrypto era) 'GenesisDelegate
 coreNodeKeysBySchedule pp slot =
-  case lookupInOverlaySchedule
-    firstSlot
-    (Map.keysSet genDelegs)
-    (pp ^. ppDG)
-    (activeSlotCoeff testGlobals)
-    slot' of
-    Nothing -> error $ "coreNodesForSlot: Cannot find keys for slot " <> show slot
+  case trace "IS IT FROM HERE 3" $
+    lookupInOverlaySchedule
+      firstSlot
+      (Map.keysSet genDelegs)
+      (pp ^. ppDG)
+      (activeSlotCoeff testGlobals)
+      slot' of
+    Nothing ->
+      error $
+        "coreNodesForSlot: Cannot find keys for slot "
+          <> show slot
+          <> " ... "
+          <> (show $ Map.keysSet (genDelegs @(EraCrypto era)))
     Just NonActiveSlot -> error $ "coreNodesForSlot: Non-active slot " <> show slot
     Just (ActiveSlot gkh) ->
       case Data.List.find (\((_, gk), _) -> hashKey gk == gkh) coreNodes of

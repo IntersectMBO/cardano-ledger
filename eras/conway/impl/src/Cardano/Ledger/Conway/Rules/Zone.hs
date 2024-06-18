@@ -96,7 +96,7 @@ import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure)
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerPredFailure)
-import Cardano.Ledger.Conway.Rules.Ledgers (ConwayLedgersEnv (ConwayLedgersEnv))
+import Cardano.Ledger.Conway.Rules.Ledgers (ConwayLEDGERS, ConwayLedgersEnv (ConwayLedgersEnv))
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure (CollectErrors))
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
@@ -122,15 +122,15 @@ import Debug.Trace (traceEvent)
 import NoThunks.Class (NoThunks)
 
 data ConwayZonePredFailure era
-  = LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
+  = LedgersFailure (PredicateFailure (ConwayLEDGERS era)) -- Subtransition Failures
   | -- | ShelleyInConwayPredFailure (ShelleyLedgersPredFailure era) -- Subtransition Failures
     ShelleyInConwayPredFailure (ShelleyLedgersPredFailure era) -- Subtransition Failures
   deriving (Generic)
 
 data ConwayZoneEvent era
   = ShelleyInConwayEvent (ShelleyLedgersEvent era)
-  | FailedPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
-  | SuccessfulPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
+  | ZoneFailedPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
+  | ZoneSuccessfulPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
 
 type instance EraRuleFailure "ZONE" (ConwayEra c) = ConwayZonePredFailure (ConwayEra c)
 
@@ -218,8 +218,7 @@ deriving anyclass instance
   NoThunks (ConwayZonePredFailure era)
 
 instance
-  ( EraCrypto era ~ era
-  , Eq (PredicateFailure (EraRule "LEDGER" era))
+  ( Eq (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
   , ConwayEraPParams era
   , Environment (EraRule "LEDGERS" era) ~ ConwayLedgersEnv era
@@ -256,7 +255,6 @@ zoneTransition ::
   , Embed (EraRule "LEDGERS" era) (ConwayZONE era)
   , ConwayEraTxBody era
   , AlonzoEraTx era
-  , EraCrypto era ~ era
   , AlonzoEraUTxO era
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
@@ -301,7 +299,7 @@ zoneTransition =
         chk txrid = txrid `elem` ids
         -- asd = tx ^. requiredTxsTxL
         txrids = fmap txInTxId $ toList $ tx ^. bodyTxL . requiredTxsTxBodyL
-        ids :: Set (TxId era)
+        ids :: Set (TxId (EraCrypto era))
         ids = getIDs $ Foldable.toList txs
     -- chkIsValid tx = tx .Tx.isValid ≡ true
     chkIsValid :: Tx era -> Bool
@@ -327,7 +325,6 @@ conwayEvalScriptsTxInvalid ::
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , Embed (EraRule "LEDGERS" era) (ConwayZONE era)
-  , EraCrypto era ~ era
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
@@ -367,8 +364,8 @@ conwayEvalScriptsTxInvalid =
                 injectFailure @"ZONE" $
                   ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
             Fails ps fs -> do
-              mapM_ (tellEvent . SuccessfulPlutusScriptsEvent @era) (nonEmpty ps)
-              tellEvent (FailedPlutusScriptsEvent @era (scriptFailurePlutus <$> fs))
+              mapM_ (tellEvent . ZoneSuccessfulPlutusScriptsEvent @era) (nonEmpty ps)
+              tellEvent (ZoneFailedPlutusScriptsEvent @era (scriptFailurePlutus <$> fs))
       Left info -> failBecause (injectFailure $ CollectErrors info)
     () <- pure $! traceEvent invalidEnd ()
 
@@ -391,7 +388,7 @@ txInTxId :: TxIn era -> TxId era
 txInTxId (TxIn x _) = x
 
 -- get a set of TxIds containing all IDs of transaction in given list tb
-getIDs :: (EraCrypto era ~ era, EraTx era) => [Tx era] -> Set (TxId (EraCrypto era))
+getIDs :: EraTx era => [Tx era] -> Set (TxId (EraCrypto era))
 getIDs = foldr (\tx ls -> ls `Set.union` Set.singleton (txIdTx tx)) mempty
 
 mkEdges ::
@@ -475,3 +472,13 @@ topSortTxs ((tx1, _) : dges) (r : em) (tx : rls) srtd =
   uncurry (topSortTxs dges) updRES (srtd ++ [tx1])
   where
     updRES = updateRES tx1 (r : em) (removeTx tx1 (tx : rls))
+
+instance
+  ( Era era
+  , STS (ConwayLEDGERS era)
+  , PredicateFailure (EraRule "LEDGERS" era) ~ ShelleyLedgersPredFailure era
+  ) =>
+  Embed (ConwayLEDGERS era) (ConwayZONE era)
+  where
+  wrapFailed = LedgersFailure
+  wrapEvent = ShelleyInConwayEvent
