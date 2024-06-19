@@ -53,8 +53,10 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances (
   genProposalsSplit,
   proposalSplitSum,
   nesEs_,
+  nesPd_,
   esLState_,
   lsUTxOState_,
+  lsCertState_,
   utxosGovState_,
   cgsProposals_
 ) where
@@ -1511,11 +1513,17 @@ instance ( EraTxOut era
 nesEs_ :: Term ConwayFn (NewEpochState (ConwayEra StandardCrypto)) -> Term ConwayFn (EpochState (ConwayEra StandardCrypto))
 nesEs_ = sel @3
 
+nesPd_ :: Term ConwayFn (NewEpochState (ConwayEra StandardCrypto)) -> Term ConwayFn (PoolDistr StandardCrypto)
+nesPd_ = sel @5
+
 esLState_ :: Term ConwayFn (EpochState (ConwayEra StandardCrypto)) -> Term ConwayFn (LedgerState (ConwayEra StandardCrypto))
 esLState_ = sel @1
 
 lsUTxOState_ :: Term ConwayFn (LedgerState (ConwayEra StandardCrypto)) -> Term ConwayFn (UTxOState (ConwayEra StandardCrypto))
 lsUTxOState_ = sel @0
+
+lsCertState_ :: Term ConwayFn (LedgerState (ConwayEra StandardCrypto)) -> Term ConwayFn (CertState (ConwayEra StandardCrypto))
+lsCertState_ = sel @1
 
 utxosGovState_ :: Term ConwayFn (UTxOState (ConwayEra StandardCrypto)) -> Term ConwayFn (GovState (ConwayEra StandardCrypto))
 utxosGovState_ = sel @3

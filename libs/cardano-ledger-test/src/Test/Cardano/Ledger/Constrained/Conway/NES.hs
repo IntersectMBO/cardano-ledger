@@ -31,6 +31,11 @@ nesSpec :: IsConwayUniv ConwayFn
         => Specification ConwayFn (NewEpochState (ConwayEra StandardCrypto))
 nesSpec = constrained $ \ nes ->
   [ nesEs_ nes `satisfies` esSpec (lit $ EpochNo 0) -- TODO: not the right epochNo
+  -- , match (nesPd_ nes) $ \ pd _ ->
+  --     0 <. sizeOf_ pd
+  -- , match (lsCertState_ $ esLState_ $ nesEs_ nes) $ \ _ _ dstate ->
+  --     match dstate $ \ rmap _ _ _ ->
+  --       match rmap $ \
   ]
 
 esSpecSTS :: IsConwayUniv ConwayFn
