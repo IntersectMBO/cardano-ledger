@@ -174,9 +174,7 @@ instance
   shrink LedgerState {..} =
     -- We drop the first element in the list so the list does not contain the
     -- original LedgerState which would cause `shrink` to loop indefinitely.
-    -- This call of `tail` is safe since the list guaranteed to have at least
-    -- one element.
-    tail $
+    drop 1 $
       LedgerState
         <$> (lsUTxOState : shrink lsUTxOState)
         <*> (lsCertState : shrink lsCertState)

@@ -64,6 +64,8 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Either as Either (partitionEithers)
 import qualified Data.IntSet as IntSet
 import Data.List (foldl')
+import Data.List.NonEmpty (nonEmpty)
+import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
@@ -492,11 +494,12 @@ genNextDeltaTilFixPoint ::
   Tx era ->
   Gen (Delta era)
 genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx = do
-  addr <- genRecipients @era 1 keys scripts
+  addrs <- genRecipients @era 1 keys scripts
+  let addr = maybe (error "genNextDeltaTilFixPoint: empty addrs") NE.head $ nonEmpty addrs
   fix
     0
     (genNextDelta scriptinfo utxo pparams keySpace tx)
-    (deltaZero initialfee pparams (head addr))
+    (deltaZero initialfee pparams addr)
 
 applyDelta ::
   forall era.

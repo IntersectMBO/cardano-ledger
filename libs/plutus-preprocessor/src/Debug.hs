@@ -7,4 +7,4 @@ import Cardano.Ledger.Plutus.Evaluate (debugPlutus)
 import System.Environment (getArgs)
 
 main :: IO ()
-main = print . debugPlutus @StandardCrypto . head =<< getArgs
+main = mapM_ (print . debugPlutus @StandardCrypto) =<< getArgs
