@@ -2456,20 +2456,16 @@ datumIsWellformed =
       , "ae78004c010d5d10019aba10020051200112200212200130032253350011004221335005350022200130040011"
       , "22002122122330010040032323001001230022330020020011"
       ]
-    -- ScriptHash "64d905de3c32c400c1f9c1553e1c9a72bcb5a4148251bdc38b00b439"
+    -- ScriptHash "883bc139d6591f366cb12f95fba30920fc4597affbbd20eed74e142d"
     -- Preprocessed PlutusV3 Script:
     -- @@@
     -- datumIsWellformed_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
     --                        PlutusTx.Builtins.Internal.BuiltinUnit
     -- datumIsWellformed_0 arg_1 = PlutusTx.Prelude.check GHC.Base.$ (case PlutusTx.IsData.Class.unsafeFromBuiltinData arg_1 of
-    --                                                                {PlutusLedgerApi.V3.Contexts.ScriptContext _txInfo_2
+    --                                                                {PlutusLedgerApi.V3.Contexts.ScriptContext txInfo_2
     --                                                                                                           _redeemer_3
     --                                                                                                           (PlutusLedgerApi.V3.Contexts.SpendingScript _txOutRef_4
-    --                                                                                                                                                       (GHC.Maybe.Nothing)) -> GHC.Types.True;
-    --                                                                 PlutusLedgerApi.V3.Contexts.ScriptContext txInfo_5
-    --                                                                                                           _redeemer_6
-    --                                                                                                           (PlutusLedgerApi.V3.Contexts.SpendingScript _txOutRef_7
-    --                                                                                                                                                       (GHC.Maybe.Just datum_8)) -> Data.Foldable.null GHC.Base.$ (PlutusTx.List.filter (datum_8 PlutusTx.Eq.==) GHC.Base.$ (PlutusTx.AssocMap.elems GHC.Base.$ PlutusLedgerApi.V3.Contexts.txInfoData txInfo_5));
+    --                                                                                                                                                       (GHC.Maybe.Just datum_5)) -> Data.Foldable.null GHC.Base.$ (PlutusTx.List.filter (datum_5 PlutusTx.Eq.==) GHC.Base.$ (PlutusTx.AssocMap.elems GHC.Base.$ PlutusLedgerApi.V3.Contexts.txInfoData txInfo_2));
     --                                                                 _ -> GHC.Types.False})
     -- @@@
     SPlutusV3 ->
@@ -2525,7 +2521,7 @@ datumIsWellformed =
       , "19bad357426ae8800426026921035054310035573c0046aae74004dd50009aba20011300e49103505431003557"
       , "3c0046aae74004dd5000c88a400644260209210350543500909807a48103505435009109808249035054350090"
       , "9807a4810350543500914ac800c8c8564c004c052401e444444444444444400c8c002443002180a112c800c600"
-      , "1221325333573466ebc01800c600600700108009802000a300045268980824810350543500484c03d241035054"
+      , "1221325333573466ebc01800c600600700108009802000a300245268980824810350543500484c03d241035054"
       , "35000c0308894ccd5cd19b87480000044c031241035054330015333573466e2000520001330033370290000011"
       , "9b81480000044ca00266e1000c00666e10008004660080040026016444a666ae68cdc3a4000002200426600600"
       , "266e1800800480048c8c8c94ccd5cd19b874800000860042a666ae68cdc3a400400430001300a4910350543100"
