@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-allegra`
 
+## 1.5.0.1
+
+*
+
 ## 1.5.0.0
 
 * Replace patterns within `Timelock` with `AllegraEraScript`- constrained ones:

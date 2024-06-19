@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-binary`
 
+## 1.3.3.1
+
+*
+
 ## 1.3.3.0
 
 * Add `EncCBOR` and `DecCBOR` instances for `ScriptContext` for PlutusV1/V2/V3

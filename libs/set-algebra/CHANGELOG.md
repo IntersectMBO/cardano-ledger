@@ -1,5 +1,9 @@
 # Version history for `set-algebra`
 
+## 1.1.0.4
+
+*
+
 ## 1.1.0.3
 
 *
