@@ -69,10 +69,8 @@ packages:
   libs/ledger-state
   libs/constrained-generators
 
--- GHC 9.8 introduces new warnings on partial functions.
-if impl(ghc < 9.8)
-  program-options
-    ghc-options: -Werror
+program-options
+  ghc-options: -Werror
 
 package plutus-preprocessor
   haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
