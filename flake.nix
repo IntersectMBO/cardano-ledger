@@ -55,7 +55,7 @@
         inherit (nixpkgs) lib;
 
         # see flake `variants` below for alternative compilers
-        defaultCompiler = "ghc928";
+        defaultCompiler = "ghc965";
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
@@ -180,7 +180,7 @@
           cabalProject.flake (
             lib.optionalAttrs (system == "x86_64-linux") {
               # on linux, build/test other supported compilers
-              variants = lib.genAttrs ["ghc8107" "ghc964"] (compiler-nix-name: {
+              variants = lib.genAttrs ["ghc8107" "ghc982"] (compiler-nix-name: {
                 inherit compiler-nix-name;
               });
             }
@@ -241,9 +241,9 @@
 
           devShells = let
             mkDevShells = p: {
-              # `nix develop .#profiling` (or `.#ghc928.profiling): a shell with profiling enabled
+              # `nix develop .#profiling` (or `.#ghc965.profiling): a shell with profiling enabled
               profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
-              # `nix develop .#pre-commit` (or `.#ghc928.pre-commit): a shell with pre-commit enabled
+              # `nix develop .#pre-commit` (or `.#ghc965.pre-commit): a shell with pre-commit enabled
               pre-commit = let
                 pre-commit-check = inputs.pre-commit-hooks.lib.${system}.run {
                   src = ./.;
@@ -258,7 +258,7 @@
             };
           in
             mkDevShells cabalProject
-            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc928`
+            # Additional shells for every GHC version supported by haskell.nix, eg. `nix develop .#ghc8107`
             // lib.mapAttrs (compiler-nix-name: _: let
               p = cabalProject.appendModule {inherit compiler-nix-name;};
             in
