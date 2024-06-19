@@ -1,8 +1,10 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.15.0.1
+## 1.15.1.0
 
-*
+### `testlib`
+
+* Add `registerCommitteeHotKeys`
 
 ## 1.15.0.0
 
