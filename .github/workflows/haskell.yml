@@ -109,7 +109,7 @@ jobs:
     - name: Archive working directory
       run: tar --format pax -cf /var/tmp/state.tar . && mv /var/tmp/state.tar .
     - name: Upload working directory archive
-      uses: actions/upload-artifact@v4.2.0
+      uses: actions/upload-artifact@v4
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
         path: state.tar
@@ -218,7 +218,7 @@ jobs:
 
     # Retrieve working directory from build jobs
     - name: Download working directory archive
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v4.1.6
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
     - name: Unarchive working directory
