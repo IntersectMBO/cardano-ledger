@@ -107,8 +107,12 @@ jobs:
 
     # Pass working directory to test jobs
     - name: Archive working directory
+      # pax format is needed to avoid unnecessary rebuilding, because the
+      # default format uses a one-second resolution for timestamps
       run: tar --format pax -cf /var/tmp/state.tar . && mv /var/tmp/state.tar .
     - name: Upload working directory archive
+      # upload-artifact is pinned to avoid a bug in download-artifact
+      # See https://github.com/actions/download-artifact/issues/328
       uses: actions/upload-artifact@v4.2.0
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
