@@ -2,136 +2,52 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Test.Cardano.Ledger.Constrained.Conway.NecessaryAndSufficient where
 
--- import Cardano.Crypto.Hash hiding (Blake2b_224)
--- import Cardano.Crypto.Hashing (AbstractHash, abstractHashFromBytes)
--- import Cardano.Ledger.Address
--- import Cardano.Ledger.Allegra.Scripts
--- import Cardano.Ledger.Alonzo.PParams
--- import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
--- import Cardano.Ledger.Alonzo.Tx
--- import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), AuxiliaryDataHash)
--- import Cardano.Ledger.Alonzo.TxOut
--- import Cardano.Ledger.Alonzo.TxWits
--- import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
+-- hiding (Pred,match,reify)
+import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.BaseTypes hiding (inject)
-
--- import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
-
--- import Cardano.Ledger.Compactible
 import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.Core
-
--- import Cardano.Ledger.Conway.Governance
--- import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.Scripts ()
-
--- import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (Crypto, HASH, StandardCrypto)
-
--- import Cardano.Ledger.EpochBoundary
--- import Cardano.Ledger.HKD
-import Cardano.Ledger.Keys (
-  -- BootstrapWitness,
-  -- GenDelegPair (..),
-  -- GenDelegs (..),
-  KeyHash,
-  KeyRole (..),
-  -- WitVKey,
- )
-
--- import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
--- import Cardano.Ledger.MemoBytes
--- import Cardano.Ledger.Plutus.CostModels
--- import Cardano.Ledger.Plutus.Data
--- import Cardano.Ledger.Plutus.ExUnits
--- import Cardano.Ledger.Plutus.Language
--- import Cardano.Ledger.PoolDistr
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams
-
--- import Cardano.Ledger.SafeHash
--- import Cardano.Ledger.Shelley.LedgerState hiding (ptrMap)
--- import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.Rules
-
--- import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
--- import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
-
--- import Cardano.Ledger.UTxO
--- import Cardano.Ledger.Val (Val)
 import Constrained hiding (Value)
-
--- import qualified Constrained as C
 import Constrained.Base
-
--- import Constrained.Spec.Map
--- import Constrained.Univ
--- import Control.Monad.Trans.Fail.String
--- import Crypto.Hash (Blake2b_224)
--- import qualified Data.ByteString as BS
--- import Data.ByteString.Short (ShortByteString)
--- import qualified Data.ByteString.Short as SBS
--- import Data.Coerce
+import Control.State.Transition.Extended (BaseM, STS (Environment, Signal))
 import Data.Default.Class (Default (def))
-
--- import Data.Foldable
--- import Data.Int
--- import Data.Kind
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-
--- import Data.Maybe
--- import qualified Data.OMap.Strict as OMap
--- import qualified Data.OSet.Strict as SOS
--- import Data.Sequence (Seq)
--- import qualified Data.Sequence as Seq
--- import Data.Sequence.Strict (StrictSeq)
--- import qualified Data.Sequence.Strict as StrictSeq
--- import Data.Set (Set)
--- import qualified Data.Set as Set
--- import Data.Text (Text)
--- import Data.Tree
--- import Data.Typeable
--- import Data.VMap (VMap)
--- import qualified Data.VMap as VMap
--- import Data.Word
--- import GHC.Generics (Generic)
+import Language.Haskell.TH ()
 import Lens.Micro
-
--- import Numeric.Natural (Natural)
--- import qualified PlutusLedgerApi.V1 as PV1
--- import System.Random
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Constrained.Conway.Instances
-
--- import Test.Cardano.Ledger.Core.Utils
-import Test.Cardano.Ledger.Generic.PrettyCore
-
--- import Test.Cardano.Ledger.TreeDiff (ToExpr)
-import Test.QuickCheck hiding (Args, Fun, forAll)
-
-import qualified Cardano.Crypto.Hash.Class as Hash
-
--- import Cardano.Ledger.Conway.Rules (ConwayDelegEnv)
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
+import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.Cardano.Ledger.Generic.Proof (Proof (..), WitRule (DELEG, GOVCERT, POOL), goSTS)
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
-
-import Control.State.Transition.Extended (BaseM, STS (Environment, Signal))
+import Test.Hspec
+import Test.Hspec.QuickCheck
+import Test.QuickCheck hiding (Args, Fun, forAll)
 
 -- =====================================================
 
@@ -166,6 +82,9 @@ pcUMap um =
 -- =====================================================================================
 -- EraRule DELEG
 -- ======================================================================================
+statusTag :: Status -> Int
+statusTag (Invert n) = n
+statusTag _ = 0
 
 delegCertSpec ::
   forall fn.
@@ -174,23 +93,22 @@ delegCertSpec ::
   PParams Conway ->
   Specification fn (ConwayDelegEnv Conway, DState Conway, ConwayDelegCert StandardCrypto)
 delegCertSpec status pp =
-  constrained $ \triple ->
-    match triple $ \env dstate dcert ->
-      match env $ \pparams poolregs ->
-        match dstate $ \umap _futgenD _genD _iRewards ->
-          match umap $ \regpairs _ptrs delegstake _ ->
-            [ forAll' regpairs $ \_ rd -> match rd $ \rew _ -> satisfies rew (chooseSpec (1, equalSpec 0) (3, TrueSpec))
+  constrained $ \ [var|triple|] ->
+    match triple $ \ [var|env|] [var|dstate|] [var|dcert|] ->
+      match env $ \ [var|pparams|] [var|poolregs|] ->
+        match dstate $ \ [var|umap|] _futgenD _genD _iRewards ->
+          match umap $ \ [var|regpairs|] _ptrs [var|delegstake|] _ ->
+            [ forAll' regpairs $ \_ rd -> match rd $ \ [var|rew|] _ -> satisfies rew (chooseSpec (1, equalSpec 0) (3, TrueSpec))
             , assert $ pparams ==. (lit pp)
-            , --  , assert $ not_ (disjoint_ (dom_ regpairs) (dom_ delegstake))
-              (caseOn dcert)
+            , (caseOn dcert)
                 -- ConwayRegCert !(StakeCredential c) !(StrictMaybe Coin)
-                ( branchW 1 $ \cred mcoin ->
+                ( branchW 1 $ \ [var|cred|] [var|mcoin|] ->
                     [ assert $ mcoin ==. lit (SJust (pp ^. ppKeyDepositL))
                     , assertWith 1 status $ not_ (member_ cred (dom_ regpairs))
                     ]
                 )
                 -- ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
-                ( branchW 1 $ \cred mcoin ->
+                ( branchW 1 $ \ [var|cred|] [var|mcoin|] ->
                     [ -- You can only unregister things with 0 reward, so the pair (cred, RDPair 0 _) must be in the map
                       assertWith 2 status $ member_ cred $ dom_ regpairs
                     , dependsOn mcoin cred
@@ -271,7 +189,7 @@ poolRuleSpec status pp = constrained $ \triple ->
                   , onJust' mMetadata $ \metadata ->
                       match metadata $ \_ hash -> [assertWith 3 status $ strLen_ hash <=. lit (maxMetaLen - 1)]
                       -- Aside form these constraints
-                      -- registering a poolparam is very flexible. The ppol can already be registered.
+                      -- registering a poolparam is very flexible. The pool can already be registered.
                       -- It can be schedled for retirement. It can aleady be in the future pool params.
                       -- The only thing that can cause a failure (in Conway Era) is malformed poolparams
                       -- properties. There are no properties relating the Poolparams to the Env or State.
@@ -338,23 +256,24 @@ govRuleSpec status =
                   -- ConwayRegDRep:: Credential 'DRepRole c -> Coin -> StrictMaybe (Anchor c) -> ConwayGovCert c
                   ( branchW 3 $ \key coin _ ->
                       [ assertWith 1 status $ not_ $ member_ key (dom_ voteDelegation)
-                      , reify pp getDRepDeposit (\deposit -> coin ==. deposit)
+                      , reify pp getDRepDeposit (\deposit -> assertWith 2 status $ coin ==. deposit)
                       ]
                   )
                   --  ConwayUnRegDRep:: Credential 'DRepRole c -> Coin -> ConayGovCert
                   ( branchW 6 $ \cred coin ->
                       [ dependsOn voteDelegation (pair_ cred coin)
-                      , reify voteDelegation getDeposits $ \deposits -> assertWith 1 status $ elem_ (pair_ cred coin) deposits
+                      , reify voteDelegation getDeposits $
+                          \deposits -> assertWith 3 status $ elem_ (pair_ cred coin) deposits
                       ]
                   )
                   --  ConwayUpdateDRep :: Credential 'DRepRole c -> StrictMaybe (Anchor c) -> ConwayGovCert
                   ( branchW 2 $ \key _ ->
-                      assertWith 1 status $ member_ key (dom_ voteDelegation)
+                      assertWith 4 status $ member_ key (dom_ voteDelegation)
                   )
                   -- ConwayAuthCommitteeHotKey:: Credential 'ColdCommitteeRole c -> Credential 'HotCommitteeRole c -> ConwayGovCert
-                  (branchW 1 $ \c _ -> assertWith 1 status (c ==. c))
+                  (branchW 1 $ \c _ -> assert $ (c ==. c))
                   -- ConwayResignCommitteeColdKey :: Credential 'ColdCommitteeRole c -> StrictMaybe (Anchor c) -> ConwayGovCert
-                  (branchW 1 $ \c _ -> assertWith 1 status (c ==. c))
+                  (branchW 1 $ \c _ -> assert $ (c ==. c))
               ]
 
 govName :: ConwayGovCert c -> String
@@ -368,11 +287,20 @@ govName x = case x of
 -- =================================================================
 -- A test for every Rule
 
-data Status = Apply | Invert | Remove deriving (Show)
+data Status = Apply | Invert Int | Remove deriving (Show)
 
 assertWith :: IsConwayUniv fn => Int -> Status -> Term fn Bool -> Pred fn
 assertWith n Apply x = assertExplain ["Status Apply " ++ show n ++ " (" ++ show x ++ ")"] x
-assertWith n Invert x = assertExplain ["Status Negate " ++ show n ++ " (" ++ show x ++ ")"] (not_ x)
+assertWith n (Invert m) x =
+  if n == m
+    then
+      assertExplain
+        ["Status Invert " ++ show n ++ " (" ++ show x ++ ")"]
+        [assert $ not_ x, monitor (\_eval -> expectFailure)]
+    else
+      assertExplain
+        ["Status Nonmatching Invert (" ++ show n ++ " /= " ++ show m ++ " (" ++ show x ++ ")"]
+        x
 assertWith n Remove x = assertExplain ["Status Remove " ++ show n ++ " (" ++ show x ++ ")"] TruePred
 
 testRule ::
@@ -387,24 +315,59 @@ testRule ::
   Specification ConwayFn (Environment (EraRule s a), State (EraRule s a), Signal (EraRule s a)) ->
   (Signal (EraRule s a) -> String) ->
   Gen Property
-testRule witrule status thespec name = do
-  (env, state, signal) <- genFromSpec @ConwayFn thespec
-  goSTS
-    witrule
-    env
-    state
-    signal
-    ( \x ->
-        case (x, status) of
-          (Left fails, Apply) -> pure $ counterexample ("Apply " ++ show signal ++ "\n" ++ show fails) (property False)
-          (Left _fails, Invert) -> pure $ classify True (name signal ++ ", Does not pass, as expected.") $ property True
-          (Left _fails, Remove) -> pure $ classify True (name signal ++ " Fails") $ property True
-          (Right _newdstate, Apply) -> pure $ classify True (name signal) $ property True
-          (Right _newdstate, Invert) -> pure $ counterexample ("Invert " ++ show signal ++ "\nfails.") (property False)
-          (Right _newdstate, Remove) -> pure $ classify True (name signal ++ " We got lucky, it randomly succeeds.") $ property True
-    )
+testRule witrule status thespec nameF = do
+  triple@(env, state, signal) <- genFromSpec @ConwayFn thespec
+  pure $
+    monitorSpec
+      thespec
+      triple
+      ( goSTS
+          witrule
+          env
+          state
+          signal
+          ( \x ->
+              case (x, status) of
+                (Left _fails, Remove) -> classify True (nameF signal ++ " Fails") $ property True
+                (Left fails, Apply) -> counterexample ("Apply " ++ show signal ++ "\n" ++ show fails) (property False)
+                (Left _fails, Invert _) -> property False -- The monitor(\ _eval -> expectFailure) in assertWith, should catch this.
+                (Right _newdstate, Remove) -> classify True (nameF signal ++ " We got lucky, it randomly succeeds.") $ property True
+                (Right _newdstate, _) -> classify True (nameF signal) $ property True
+          )
+      )
 
 go1, go2, go3 :: Status -> IO ()
 go1 status = quickCheck (testRule (DELEG Conway) status (delegCertSpec status initPParams) delegName)
 go2 status = quickCheck (testRule (POOL Conway) status (poolRuleSpec status initPParams) poolName)
 go3 status = quickCheck (testRule (GOVCERT Conway) status (govRuleSpec @ConwayFn status) govName)
+
+delegProp, poolProp, govProp :: Status -> Gen Property
+delegProp status = testRule (DELEG Conway) status (delegCertSpec status initPParams) delegName
+poolProp status = testRule (POOL Conway) status (poolRuleSpec status initPParams) poolName
+govProp status = testRule (GOVCERT Conway) status (govRuleSpec @ConwayFn status) govName
+
+neccessaryAndSufficientTests :: Spec
+neccessaryAndSufficientTests =
+  describe "NeccessaryAndSufficient" $ do
+    prop "DELEG apply" $ delegProp Apply
+    prop "DELEG remove" $ delegProp Remove
+    prop "DELEG Invert 1" $ delegProp (Invert 1)
+    prop "DELEG Invert 2" $ delegProp (Invert 2)
+    prop "DELEG Invert 3" $ delegProp (Invert 3)
+    prop "DELEG Invert 4" $ delegProp (Invert 4)
+
+    prop "POOL apply" $ poolProp Apply
+    prop "POOL remove" $ poolProp Remove
+    prop "POOL Invert 1" $ poolProp (Invert 1)
+    prop "POOL Invert 2" $ poolProp (Invert 2)
+    prop "POOL Invert 3" $ poolProp (Invert 3)
+    prop "POOL Invert 4" $ poolProp (Invert 4)
+
+    prop "GOVCERT apply" $ govProp Apply
+    prop "GOVCERT remove" $ govProp Remove
+    prop "GOVCERT Invert 1" $ govProp (Invert 1)
+    prop "GOVCERT Invert 2" $ govProp (Invert 2)
+    prop "GOVCERT Invert 3" $ govProp (Invert 3)
+
+main :: IO ()
+main = hspec neccessaryAndSufficientTests

@@ -156,7 +156,8 @@ library
         vector,
         constrained-generators,
         random,
-        FailT
+        FailT,
+        template-haskell
 
 test-suite cardano-ledger-test
     type:             exitcode-stdio-1.0
@@ -172,7 +173,8 @@ test-suite cardano-ledger-test
         base,
         cardano-ledger-test,
         tasty,
-        data-default-class
+        data-default-class,
+        hspec
 
 benchmark bench
     type:             exitcode-stdio-1.0

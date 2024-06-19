@@ -11,6 +11,7 @@ import Data.Default.Class (Default (def))
 import System.Environment (lookupEnv)
 import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
+import Test.Cardano.Ledger.Constrained.Conway.NecessaryAndSufficient (neccessaryAndSufficientTests)
 import Test.Cardano.Ledger.Constrained.Examples (allExampleTests)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (predsTests)
 import Test.Cardano.Ledger.Constrained.Spec (allSpecTests)
@@ -27,11 +28,13 @@ import Test.Cardano.Ledger.Generic.Properties (genericProperties)
 import qualified Test.Cardano.Ledger.NoThunks as NoThunks
 import qualified Test.Cardano.Ledger.STS as ConstraintSTS
 import Test.Cardano.Ledger.Tickf (calcPoolDistOldEqualsNew)
+import Test.Hspec (hspec)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 
 main :: IO ()
 main = do
   hSetEncoding stdout utf8
+  hspec neccessaryAndSufficientTests
   nightly <- lookupEnv "NIGHTLY"
   defaultMain $ case nightly of
     Nothing -> testGroup "cardano-core" defaultTests
