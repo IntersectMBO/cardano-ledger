@@ -3253,19 +3253,28 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
 
   genFromTypeSpec (SetSpec must e _)
     | any (not . (`conformsToSpec` e)) must = genError ["Failed to generate set: inconsistent spec"] -- TODO: improve error message
-  genFromTypeSpec (SetSpec must e TrueSpec) = (must <>) . Set.fromList <$> listOfT (genFromSpecT e)
-  genFromTypeSpec (SetSpec must elemS szSpec) = do
-    n <-
-      explain ["Choose a possible size Bounds for the Sets to be generated"] $
-        genFromSpecT (szSpec <> geqSpec @fn (sizeOf must) <> maxSpec (cardinality elemS))
-    go (n - sizeOf must) must
+  genFromTypeSpec (SetSpec must elemS szSpec)
+    | Nothing <- knownUpperBound szSpec
+    , maybe True (sizeOf must >=) $ knownLowerBound szSpec =
+        ((must <>) . Set.fromList <$> listOfT (genFromSpecT elemS))
+          `suchThatT` (`conformsToSpec` szSpec)
+          . sizeOf
+    | otherwise = do
+        n <-
+          explain ["Choose a possible size Bounds for the Sets to be generated"] $
+            genFromSpecT (szSpec <> geqSpec @fn (sizeOf must) <> maxSpec (cardinality elemS))
+        explain ["Chose size n = " ++ show n] $ go (n - sizeOf must) must
     where
       go 0 s = pure s
       go n s = do
         e <-
-          explain ["generate set member"] $
-            withMode Strict $
-              genFromSpecT elemS `suchThatT` (`Set.notMember` s)
+          explain
+            [ "Generate set member:"
+            , "  n = " ++ show n
+            , "  s = " ++ show s
+            ]
+            $ withMode Strict
+            $ genFromSpecT elemS `suchThatT` (`Set.notMember` s)
         go (n - 1) (Set.insert e s)
 
   cardinalTypeSpec _ = TrueSpec
