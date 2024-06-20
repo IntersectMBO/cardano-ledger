@@ -80,6 +80,7 @@ import Data.Aeson (
 import Data.Aeson.Key (fromString)
 import Data.Aeson.Types (Parser)
 import Data.Int
+import Data.List.NonEmpty as NE (toList)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Text as T (Text, pack)
@@ -98,6 +99,7 @@ import qualified PlutusLedgerApi.V1 as PV1 (
  )
 import qualified PlutusLedgerApi.V2 as PV2 (ParamName, mkEvaluationContext)
 import qualified PlutusLedgerApi.V3 as PV3 (ParamName, mkEvaluationContext)
+import Validation (failure, validationToEither)
 
 -- | A language dependent cost model for the Plutus evaluator.
 -- Note that the `P.EvaluationContext` is entirely dependent on the
@@ -163,12 +165,14 @@ parseCostModel o lang = do
 
 costModelFromMap :: MonadFail m => Language -> Map Text Int64 -> m CostModel
 costModelFromMap lang cmMap =
-  mapM lookupFail paramNames >>= validateCostModel lang
+  either (fail . unlines . (header :) . NE.toList) (validateCostModel lang) $
+    validationToEither (traverse lookupFail paramNames)
   where
+    header = "Cost model language: " ++ show lang
     paramNames = costModelParamNames lang
     lookupFail paramName =
       case Map.lookup paramName cmMap of
-        Nothing -> fail $ "Unrecognized cost model parameter name: " ++ show paramName
+        Nothing -> failure $ "  Parameter name missing from cost model: " ++ show paramName
         Just v -> pure v
 
 costModelToMap :: CostModel -> Map Text Int64

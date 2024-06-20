@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-core`
 
-## 1.13.0.1
+## 1.13.1.0
 
-*
+* Improve error reporting for `CostModel` json parsing
 
 ## 1.13.0.0
 

@@ -68,6 +68,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   logRatificationChecks,
   resignCommitteeColdKey,
   registerCommitteeHotKey,
+  registerCommitteeHotKeys,
   logCurPParams,
   electCommittee,
   electBasicCommittee,
@@ -345,7 +346,7 @@ registerInitialCommittee ::
 registerInitialCommittee = do
   committeeMembers <- Set.toList <$> getCommitteeMembers
   case committeeMembers of
-    x : xs -> traverse registerCommitteeHotKey $ x NE.:| xs
+    x : xs -> registerCommitteeHotKeys $ x NE.:| xs
     _ -> error "Expected an initial committee"
 
 -- | Submit a transaction that registers a new DRep and return the keyhash
@@ -1167,12 +1168,20 @@ registerCommitteeHotKey ::
   Credential 'ColdCommitteeRole (EraCrypto era) ->
   ImpTestM era (Credential 'HotCommitteeRole (EraCrypto era))
 registerCommitteeHotKey coldKey = do
-  hotKey <- KeyHashObj <$> freshKeyHash
-  submitTxAnn_ "Registering Committee Hot key" $
+  hotKey NE.:| [] <- registerCommitteeHotKeys $ pure coldKey
+  pure hotKey
+
+registerCommitteeHotKeys ::
+  (ShelleyEraImp era, ConwayEraTxCert era) =>
+  NonEmpty (Credential 'ColdCommitteeRole (EraCrypto era)) ->
+  ImpTestM era (NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)))
+registerCommitteeHotKeys coldKeys = do
+  keys <- forM coldKeys (\coldKey -> (,) coldKey . KeyHashObj <$> freshKeyHash)
+  submitTxAnn_ "Registering Committee Hot keys" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
-        .~ SSeq.singleton (AuthCommitteeHotKeyTxCert coldKey hotKey)
-  pure hotKey
+        .~ SSeq.fromList (map (uncurry AuthCommitteeHotKeyTxCert) (toList keys))
+  pure $ fmap snd keys
 
 -- | Submits a transaction that resigns the cold key
 resignCommitteeColdKey ::

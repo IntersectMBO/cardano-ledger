@@ -167,7 +167,6 @@ datumIsWellformedQ =
     datumIsWellformed arg =
       P.check $
         case unsafeFromBuiltinData arg of
-          PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _txOutRef Nothing) -> True
           PV3.ScriptContext txInfo _redeemer (PV3.SpendingScript _txOutRef (Just datum)) ->
             null $ P.filter (datum P.==) $ PAM.elems $ PV3.txInfoData txInfo
           _ -> False
