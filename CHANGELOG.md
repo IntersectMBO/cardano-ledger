@@ -7,6 +7,19 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 8.11
+
+- Prepared changes for the bootstrap period by restricting government actions and by ignoring `DRep` thresholds.
+- Added the ability to do a `HardForkInitiation` into a new era.
+- Added `PlutusV3` cost model to `Conway` genesis.
+- Stopped counting expired committee members in active committee size calculation.
+- Included rewards accounts in `DRep` distribution calculation.
+- Added `AccountState` ledger state query.
+
+- Bug fixes:
+  - Stopped embedding `UTXO` and `UTXOS` predicate failures from previous eras.
+  - Fixed predicate failure deserialisation bug when re-submitting a `Conway` transaction with an invalid plutus script.
+
 ## 8.10
 
 - Retention of Anchor for proposal procedures in the ledger state in order for users to be able to query the node for those anchors
