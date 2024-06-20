@@ -7,6 +7,35 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 8.12
+
+- Implemented [CIP-0069](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0069)
+  that improves `PlutusV3` functionality by making spending datums optional and enforcing
+  all scripts to have exactly one argument.
+- Ensure that `CommitteeMinSize` protocol parameter is ignored during bootstrap phase.
+- Restrict types for some protocol parameters and fixup CDDL specification to reflect
+  actual deserializers.
+- Create pool stake distribution query for voting.
+- Included rewards accounts in stake pool distribution calculation for voting.
+- Bug fixes:
+  - Fixes to `DRep` expiry logic and the choice of correct threshold for the committee
+    voting
+  - Script execution for certificates with the same plutus script did not execute correctly.
+  - Prevent delegation to a non-existent pool.
+
+## 8.11
+
+- Prepared changes for the bootstrap period by restricting government actions and by ignoring `DRep` thresholds.
+- Added the ability to do a `HardForkInitiation` into a new era.
+- Added `PlutusV3` cost model to `Conway` genesis.
+- Stopped counting expired committee members in active committee size calculation.
+- Included rewards accounts in `DRep` distribution calculation.
+- Added `AccountState` ledger state query.
+
+- Bug fixes:
+  - Stopped embedding `UTXO` and `UTXOS` predicate failures from previous eras.
+  - Fixed predicate failure deserialisation bug when re-submitting a `Conway` transaction with an invalid plutus script.
+
 ## 8.10
 
 - Retention of Anchor for proposal procedures in the ledger state in order for users to be able to query the node for those anchors
