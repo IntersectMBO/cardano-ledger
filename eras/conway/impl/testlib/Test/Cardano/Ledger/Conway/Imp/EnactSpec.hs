@@ -62,6 +62,7 @@ relevantDuringBootstrapSpec ::
 relevantDuringBootstrapSpec = do
   actionPrioritySpec
   hardForkInitiationNoDRepsSpec
+  pparamPredictionSpec
 
 treasuryWithdrawalsSpec ::
   forall era.
@@ -239,6 +240,27 @@ hardForkInitiationNoDRepsSpec =
     getProtVer `shouldReturn` curProtVer
     submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
     passNEpochs 2
+    getProtVer `shouldReturn` nextProtVer
+
+pparamPredictionSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
+pparamPredictionSpec =
+  it "futurePParams" $ do
+    (committeeMember :| _) <- registerInitialCommittee
+    modifyPParams $ ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 2 %! 3
+    whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtHardForkInitiationL .~ def)
+    _ <- setupPoolWithStake $ Coin 22_000_000
+    (stakePoolId1, _, _) <- setupPoolWithStake $ Coin 22_000_000
+    (stakePoolId2, _, _) <- setupPoolWithStake $ Coin 22_000_000
+    curProtVer <- getProtVer
+    nextMajorVersion <- succVersion $ pvMajor curProtVer
+    let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
+    govActionId <- submitGovAction $ HardForkInitiation SNothing nextProtVer
+    submitYesVote_ (CommitteeVoter committeeMember) govActionId
+    submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
+    submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
+    passEpoch
+    advanceToPointOfNoReturn
+    passEpoch
     getProtVer `shouldReturn` nextProtVer
 
 noConfidenceSpec :: forall era. ConwayEraImp era => SpecWith (ImpTestState era)
