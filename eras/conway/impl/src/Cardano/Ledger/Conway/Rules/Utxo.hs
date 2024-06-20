@@ -23,7 +23,10 @@ module Cardano.Ledger.Conway.Rules.Utxo (
 
 import Cardano.Ledger.Address (Addr, RewardAccount)
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure, shelleyToAllegraUtxoPredFailure)
-import qualified Cardano.Ledger.Allegra.Rules as Allegra (AllegraUtxoPredFailure (..))
+import qualified Cardano.Ledger.Allegra.Rules as Allegra (
+  AllegraUtxoPredFailure (..),
+  validateOutsideValidityIntervalUTxO,
+ )
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent,
   AlonzoUtxoPredFailure,
@@ -32,15 +35,26 @@ import Cardano.Ledger.Alonzo.Rules (
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   AlonzoUtxoEvent (UtxosEvent),
   AlonzoUtxoPredFailure (..),
+  validateExUnitsTooBigUTxO,
+  validateOutputTooBigUTxO,
+  validateOutsideForecast,
+  validateTooManyCollateralInputs,
+  validateWrongNetworkInTxBody,
  )
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
+import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, feesOK, validateOutputTooSmallUTxO)
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   BabbageUtxoPredFailure (..),
-  utxoTransition,
  )
-import Cardano.Ledger.BaseTypes (Network, ShelleyBase, SlotNo)
-import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.BaseTypes (
+  Globals (epochInfo, networkId, systemStart),
+  Network,
+  ProtVer (pvMajor),
+  ShelleyBase,
+  SlotNo,
+ )
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (sizedValue))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
   Encode (..),
@@ -56,20 +70,42 @@ import Cardano.Ledger.Conway.Rules.Utxos (
   ConwayUtxosPredFailure (..),
  )
 import Cardano.Ledger.Plutus (ExUnits)
+import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
+import Cardano.Ledger.Shelley.LedgerState (utxosUtxo)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure)
-import qualified Cardano.Ledger.Shelley.Rules as Shelley (UtxoEnv)
+import qualified Cardano.Ledger.Shelley.Rules as Shelley (
+  UtxoEnv (UtxoEnv),
+  validateBadInputsUTxO,
+  validateInputSetEmptyUTxO,
+  validateOutputBootAddrAttrsTooBig,
+  validateValueNotConservedUTxO,
+  validateWrongNetwork,
+  validateWrongNetworkWithdrawal,
+ )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.UTxO (EraUTxO, UTxO (..))
 import Control.DeepSeq (NFData)
+import Control.Monad (when)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
+  TRC (TRC),
+  TransitionRule,
+  failureOnNonEmpty,
+  judgmentContext,
+  liftSTS,
+  trans,
+  validate,
  )
+import Data.Coerce (coerce)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Set (Set)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
+import Lens.Micro ((^.))
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 -- ======================================================
@@ -234,6 +270,119 @@ instance
 -- ConwayUTXO STS
 --------------------------------------------------------------------------------
 
+-- | The UTxO transition rule for the Babbage eras.
+utxoTransition ::
+  forall era.
+  ( EraUTxO era
+  , BabbageEraTxBody era
+  , AlonzoEraTxWits era
+  , Tx era ~ AlonzoTx era
+  , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AllegraUtxoPredFailure era
+  , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
+  , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
+  , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
+  , State (EraRule "UTXO" era) ~ Shelley.UTxOState era
+  , Signal (EraRule "UTXO" era) ~ AlonzoTx era
+  , BaseM (EraRule "UTXO" era) ~ ShelleyBase
+  , STS (EraRule "UTXO" era)
+  , -- In this function we we call the UTXOS rule, so we need some assumptions
+    Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
+  , Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era
+  , State (EraRule "UTXOS" era) ~ Shelley.UTxOState era
+  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , InjectRuleFailure "UTXO" ConwayUtxoPredFailure era
+  ) =>
+  TransitionRule (EraRule "UTXO" era)
+utxoTransition = do
+  TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
+  let utxo = utxosUtxo utxos
+
+  {-   txb := txbody tx   -}
+  let txBody = body tx
+      allInputs = txBody ^. allInputsTxBodyF
+      refInputs :: Set (TxIn (EraCrypto era))
+      refInputs = txBody ^. referenceInputsTxBodyL
+      inputs :: Set (TxIn (EraCrypto era))
+      inputs = txBody ^. inputsTxBodyL
+
+  {- inputs ∩ refInputs = ∅ -}
+  runTest $ disjointRefInputs pp inputs refInputs
+
+  {- ininterval slot (txvld txb) -}
+  runTest $ Allegra.validateOutsideValidityIntervalUTxO slot txBody
+
+  sysSt <- liftSTS $ asks systemStart
+  ei <- liftSTS $ asks epochInfo
+
+  {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
+  runTest $ Alonzo.validateOutsideForecast ei slot sysSt tx
+
+  {-   txins txb ≠ ∅   -}
+  runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
+
+  {-   feesOK pp tx utxo   -}
+  validate $ feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
+
+  {- allInputs = spendInputs txb ∪ collInputs txb ∪ refInputs txb -}
+  {- (spendInputs txb ∪ collInputs txb ∪ refInputs txb) ⊆ dom utxo   -}
+  runTest $ Shelley.validateBadInputsUTxO utxo allInputs
+
+  {- consumed pp utxo txb = produced pp poolParams txb -}
+  runTest $ Shelley.validateValueNotConservedUTxO pp utxo certState txBody
+
+  {-   adaID ∉ supp mint tx - check not needed because mint field of type MultiAsset
+   cannot contain ada -}
+
+  {-   ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout ∗ coinsPerUTxOByte pp) -}
+  let allSizedOutputs = txBody ^. allSizedOutputsTxBodyF
+  runTest $ validateOutputTooSmallUTxO pp allSizedOutputs
+
+  let allOutputs = fmap sizedValue allSizedOutputs
+  {-   ∀ txout ∈ allOuts txb, serSize (getValue txout) ≤ maxValSize pp   -}
+  runTest $ Alonzo.validateOutputTooBigUTxO pp allOutputs
+
+  {- ∀ ( _ ↦ (a,_)) ∈ allOuts txb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
+  runTestOnSignal $ Shelley.validateOutputBootAddrAttrsTooBig allOutputs
+
+  netId <- liftSTS $ asks networkId
+
+  {- ∀(_ → (a, _)) ∈ allOuts txb, netId a = NetworkId -}
+  runTestOnSignal $ Shelley.validateWrongNetwork netId allOutputs
+
+  {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
+  runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txBody
+
+  {- (txnetworkid txb = NetworkId) ∨ (txnetworkid txb = ◇) -}
+  runTestOnSignal $ Alonzo.validateWrongNetworkInTxBody netId txBody
+
+  {- txsize tx ≤ maxTxSize pp -}
+  -- We've moved this to the ZONE rule. See https://github.com/IntersectMBO/formal-ledger-specifications/commit/c3e18ac1d3da92dd4894bbc32057a143f9720f52#diff-5f67369ed62c0dab01e13a73f072b664ada237d094bbea4582365264dd163bf9
+  -- runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
+
+  {-   totExunits tx ≤ maxTxExUnits pp    -}
+  runTest $ Alonzo.validateExUnitsTooBigUTxO pp tx
+
+  {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
+  runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
+
+  trans @(EraRule "UTXOS" era) =<< coerce <$> judgmentContext
+
+-- \| Test that inputs and refInpts are disjoint, in Conway and later Eras.
+disjointRefInputs ::
+  forall era.
+  EraPParams era =>
+  PParams era ->
+  Set (TxIn (EraCrypto era)) ->
+  Set (TxIn (EraCrypto era)) ->
+  Test (ConwayUtxoPredFailure era)
+disjointRefInputs pp inputs refInputs =
+  when
+    (pvMajor (pp ^. ppProtocolVersionL) > eraProtVerHigh @(BabbageEra (EraCrypto era)))
+    (failureOnNonEmpty common BabbageNonDisjointRefInputs)
+  where
+    common = inputs `Set.intersection` refInputs
+
 instance
   forall era.
   ( EraTx era
@@ -264,7 +413,7 @@ instance
 
   initialRules = []
 
-  transitionRules = [Babbage.utxoTransition @era]
+  transitionRules = [utxoTransition @era]
 
 instance
   ( Era era

@@ -97,14 +97,16 @@ import Cardano.Ledger.Conway.Rules.Gov (ConwayGovPredFailure)
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Ledger (ConwayLedgerPredFailure)
 import Cardano.Ledger.Conway.Rules.Ledgers (ConwayLEDGERS, ConwayLedgersEnv (ConwayLedgersEnv))
-import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
+import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure (..))
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure (CollectErrors))
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
+import Cardano.Ledger.Core (PParams, ppMaxTxSizeL, sizeTxF)
 import Cardano.Ledger.Plutus (
   PlutusWithContext,
   ScriptFailure (scriptFailurePlutus),
   ScriptResult (..),
  )
+import Cardano.Ledger.Rules.ValidationMode (Test, runTestOnSignal)
 import Cardano.Ledger.Shelley.LedgerState (updateStakeDistribution)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersEvent,
@@ -120,6 +122,7 @@ import qualified Data.Map as Map
 import Data.MapExtras (extractKeys)
 import Debug.Trace (traceEvent)
 import NoThunks.Class (NoThunks)
+import Validation (failureUnless)
 
 data ConwayZonePredFailure era
   = LedgersFailure (PredicateFailure (ConwayLEDGERS era)) -- Subtransition Failures
@@ -218,7 +221,8 @@ deriving anyclass instance
   NoThunks (ConwayZonePredFailure era)
 
 instance
-  ( Eq (PredicateFailure (EraRule "LEDGER" era))
+  ( EraRule "ZONE" era ~ ConwayZONE era
+  , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
   , ConwayEraPParams era
   , Environment (EraRule "LEDGERS" era) ~ ConwayLedgersEnv era
@@ -234,6 +238,7 @@ instance
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , InjectRuleFailure "ZONE" ConwayUtxosPredFailure era
   , PredicateFailure (EraRule "ZONE" era) ~ ConwayZonePredFailure era
+  , InjectRuleFailure "ZONE" ConwayUtxoPredFailure era
   ) =>
   STS (ConwayZONE era)
   where
@@ -247,9 +252,15 @@ instance
   initialRules = []
   transitionRules = [zoneTransition]
 
+{- txsize tx ≤ maxTxSize pp -}
+-- We've moved this to the ZONE rule. See https://github.com/IntersectMBO/formal-ledger-specifications/commit/c3e18ac1d3da92dd4894bbc32057a143f9720f52#diff-5f67369ed62c0dab01e13a73f072b664ada237d094bbea4582365264dd163bf9
+-- ((totSizeZone ltx) ≤ᵇ (Γ .LEnv.pparams .PParams.maxTxSize)) ≡ true
+-- runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
+
 zoneTransition ::
   forall era.
-  ( Environment (EraRule "LEDGERS" era) ~ ConwayLedgersEnv era
+  ( EraRule "ZONE" era ~ ConwayZONE era
+  , Environment (EraRule "LEDGERS" era) ~ ConwayLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , Embed (EraRule "LEDGERS" era) (ConwayZONE era)
@@ -263,6 +274,7 @@ zoneTransition ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , InjectRuleFailure "ZONE" ConwayUtxosPredFailure era
   , PredicateFailure (EraRule "ZONE" era) ~ ConwayZonePredFailure era
+  , InjectRuleFailure "ZONE" ConwayUtxoPredFailure era
   ) =>
   TransitionRule (ConwayZONE era)
 zoneTransition =
@@ -274,6 +286,7 @@ zoneTransition =
               , txs :: Seq (Tx era)
               )
           ) -> do
+        runTestOnSignal $ validateMaxTxSizeUTxO pParams (Foldable.toList txs)
         if all chkIsValid txs
           && all (chkRqTx txs) txs
           && chkLinear (Foldable.toList txs)
@@ -304,6 +317,19 @@ zoneTransition =
     -- chkIsValid tx = tx .Tx.isValid ≡ true
     chkIsValid :: Tx era -> Bool
     chkIsValid tx = tx ^. isValidTxL == IsValid True
+    sizeTx :: Tx era -> Integer
+    sizeTx t = t ^. sizeTxF
+    totSizeZone :: [Tx era] -> Integer
+    totSizeZone z = sum (map sizeTx z)
+    validateMaxTxSizeUTxO ::
+      PParams era ->
+      [Tx era] ->
+      Test (ConwayUtxoPredFailure era)
+    validateMaxTxSizeUTxO pp z =
+      failureUnless (zoneSize <= maxTxSize) $ MaxTxSizeUTxO zoneSize maxTxSize
+      where
+        maxTxSize = toInteger (pp ^. ppMaxTxSizeL)
+        zoneSize = totSizeZone z
 
 -- data ConwayUtxosEvent era
 --   = TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
@@ -319,7 +345,8 @@ zoneTransition =
 
 conwayEvalScriptsTxInvalid ::
   forall era.
-  ( ConwayEraTxBody era
+  ( EraRule "ZONE" era ~ ConwayZONE era
+  , ConwayEraTxBody era
   , AlonzoEraTx era
   , Environment (EraRule "LEDGERS" era) ~ ConwayLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
@@ -333,6 +360,7 @@ conwayEvalScriptsTxInvalid ::
   , EraRuleFailure "ZONE" era ~ ConwayZonePredFailure era
   , InjectRuleFailure "ZONE" AlonzoUtxosPredFailure era
   , InjectRuleFailure "ZONE" ConwayUtxosPredFailure era
+  , InjectRuleFailure "ZONE" ConwayUtxoPredFailure era
   ) =>
   TransitionRule (ConwayZONE era)
 conwayEvalScriptsTxInvalid =
