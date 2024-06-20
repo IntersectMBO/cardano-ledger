@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.8.1.1
+
+*
+
 ## 1.8.1.0
 
 * Add `AllegraEraScript` and `ShelleyEraScript` instances for `BabbageEra`
