@@ -1,6 +1,8 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Constrained.Examples.List where
 
@@ -104,10 +106,10 @@ listExistsUnfree = constrained $ \xs ->
   ]
 
 listSumShort :: Specification BaseFn [Int]
-listSumShort = constrained $ \xs ->
+listSumShort = constrained $ \ [var| xs |] ->
   [ assert $ sizeOf_ xs <=. 4
   , assert $ sum_ xs <=. 100000
-  , forAll xs $ \x ->
+  , forAll xs $ \ [var| x |] ->
       [ exists (const $ pure True) $ \b ->
           whenTrue b $ x <=. 10000000
       ]
