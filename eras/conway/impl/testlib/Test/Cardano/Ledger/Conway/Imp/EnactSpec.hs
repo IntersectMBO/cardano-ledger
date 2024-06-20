@@ -245,7 +245,7 @@ hardForkInitiationNoDRepsSpec =
 pparamPredictionSpec :: ConwayEraImp era => SpecWith (ImpTestState era)
 pparamPredictionSpec =
   it "futurePParams" $ do
-    (committeeMember :| _) <- registerInitialCommittee
+    committeeMembers' <- registerInitialCommittee
     modifyPParams $ ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 2 %! 3
     whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtHardForkInitiationL .~ def)
     _ <- setupPoolWithStake $ Coin 22_000_000
@@ -255,7 +255,7 @@ pparamPredictionSpec =
     nextMajorVersion <- succVersion $ pvMajor curProtVer
     let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
     govActionId <- submitGovAction $ HardForkInitiation SNothing nextProtVer
-    submitYesVote_ (CommitteeVoter committeeMember) govActionId
+    submitYesVoteCCs_ committeeMembers' govActionId
     submitYesVote_ (StakePoolVoter stakePoolId1) govActionId
     submitYesVote_ (StakePoolVoter stakePoolId2) govActionId
     passEpoch
