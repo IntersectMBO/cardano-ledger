@@ -91,7 +91,7 @@ transaction_body :: Rule
 transaction_body =
   "transaction_body"
     =:= mp
-      [ idx 0 ==> set transaction_index
+      [ idx 0 ==> set transaction_input
       , idx 1 ==> arr [0 <+ a transaction_output]
       , idx 2 ==> coin
       , opt (idx 3 ==> VUInt)
@@ -116,7 +116,7 @@ transaction_body =
 voting_procedures :: Rule
 voting_procedures =
   "voting_procedures"
-    =:= mp [1 <+ "voter" ==> mp [1 <+ "gov_action_id" ==> voting_procedure]]
+    =:= mp [1 <+ asKey voter ==> mp [1 <+ asKey gov_action_id ==> voting_procedure]]
 
 voting_procedure :: Rule
 voting_procedure = "voting_procedure" =:= arr [a vote, a anchor / VNil]
@@ -239,7 +239,7 @@ transaction_input =
   "transaction_input"
     =:= arr
       [ "transaction_id" ==> hash32
-      , "index" ==> VUInt
+      , "index" ==> (VUInt `sized` (2 :: Word64))
       ]
 
 transaction_output :: Rule
@@ -260,7 +260,7 @@ legacy_transaction_output =
 post_alonzo_transaction_output :: Rule
 post_alonzo_transaction_output =
   "post_alonzo_transaction_output"
-    =:= arr
+    =:= mp
       [ idx 0 ==> address
       , idx 1 ==> value
       , opt (idx 2 ==> datum_option) -- datum option
@@ -297,12 +297,12 @@ stake_registration :: Named Group
 stake_registration = "stake_registration" =:~ grp [0, a stake_credential]
 
 stake_deregistration :: Named Group
-stake_deregistration = "stake_deregistration" =:~ grp [0, a stake_credential]
+stake_deregistration = "stake_deregistration" =:~ grp [1, a stake_credential]
 
 stake_delegation :: Named Group
 stake_delegation =
   "stake_delegation"
-    =:~ grp [0, a stake_credential, a pool_keyhash]
+    =:~ grp [2, a stake_credential, a pool_keyhash]
 
 -- POOL
 pool_registration :: Named Group
@@ -377,10 +377,10 @@ credential =
 drep :: Rule
 drep =
   "drep"
-    =:= sarr [0, a addr_keyhash]
-    // sarr [1, a scripthash]
-    // int 2 -- always abstain
-    // int 3 -- always no confidence
+    =:= arr [0, a addr_keyhash]
+    // arr [1, a scripthash]
+    // arr [2] -- always abstain
+    // arr [3] -- always no confidence
 
 stake_credential :: Rule
 stake_credential = "stake_credential" =:= credential
@@ -472,13 +472,13 @@ protocol_param_update =
     =:= mp
       [ opt (idx 0 ==> coin) -- minfee A
       , opt (idx 1 ==> coin) -- minfee B
-      , opt (idx 2 ==> VUInt) -- max block body size
-      , opt (idx 3 ==> VUInt) -- max transaction size
-      , opt (idx 4 ==> VUInt) -- max block header size
+      , opt (idx 2 ==> (VUInt `sized` (4 :: Word64))) -- max block body size
+      , opt (idx 3 ==> (VUInt `sized` (4 :: Word64))) -- max transaction size
+      , opt (idx 4 ==> (VUInt `sized` (2 :: Word64))) -- max block header size
       , opt (idx 5 ==> coin) -- key deposit
       , opt (idx 6 ==> coin) -- pool deposit
       , opt (idx 7 ==> epoch) -- maximum epoch
-      , opt (idx 8 ==> VUInt) -- n_opt: desired number of stake pools
+      , opt (idx 8 ==> (VUInt `sized` (2 :: Word64))) -- n_opt: desired number of stake pools
       , opt (idx 9 ==> nonnegative_interval) -- pool pledge influence
       , opt (idx 10 ==> unit_interval) -- expansion rate
       , opt (idx 11 ==> unit_interval) -- treasury growth rate
@@ -488,12 +488,12 @@ protocol_param_update =
       , opt (idx 19 ==> ex_unit_prices) -- execution costs
       , opt (idx 20 ==> ex_units) -- max tx ex units
       , opt (idx 21 ==> ex_units) -- max block ex units
-      , opt (idx 22 ==> VUInt) -- max value size
-      , opt (idx 23 ==> VUInt) -- collateral percentage
-      , opt (idx 24 ==> VUInt) -- max collateral inputs
+      , opt (idx 22 ==> (VUInt `sized` (4 :: Word64))) -- max value size
+      , opt (idx 23 ==> (VUInt `sized` (2 :: Word64))) -- collateral percentage
+      , opt (idx 24 ==> (VUInt `sized` (2 :: Word64))) -- max collateral inputs
       , opt (idx 25 ==> pool_voting_thresholds) -- pool voting thresholds
       , opt (idx 26 ==> drep_voting_thresholds) -- DRep voting thresholds
-      , opt (idx 27 ==> VUInt) -- min committee size
+      , opt (idx 27 ==> (VUInt `sized` (2 :: Word64))) -- min committee size
       , opt (idx 28 ==> epoch) -- committee term limit
       , opt (idx 29 ==> epoch) -- governance action validity period
       , opt (idx 30 ==> coin) -- governance action deposit
@@ -583,15 +583,15 @@ big_nint = "big_nint" =:= tag 3 bounded_bytes
 constr :: IsType0 x => x -> GRuleCall
 constr = binding $ \x ->
   "constr"
-    =:= tag 1 (arr [0 <+ a x])
-    // tag 2 (arr [0 <+ a x])
-    // tag 3 (arr [0 <+ a x])
-    // tag 4 (arr [0 <+ a x])
-    // tag 5 (arr [0 <+ a x])
-    // tag 6 (arr [0 <+ a x])
-    // tag 7 (arr [0 <+ a x])
+    =:= tag 121 (arr [0 <+ a x])
+    // tag 122 (arr [0 <+ a x])
+    // tag 123 (arr [0 <+ a x])
+    // tag 124 (arr [0 <+ a x])
+    // tag 125 (arr [0 <+ a x])
+    // tag 126 (arr [0 <+ a x])
+    // tag 127 (arr [0 <+ a x])
     -- similarly for tag range: 6.1280 .. 6.1400 inclusive
-    // tag 2 (arr [a VUInt, a $ arr [0 <+ a x]])
+    // tag 102 (arr [a VUInt, a $ arr [0 <+ a x]])
 
 redeemers :: Rule
 redeemers =
@@ -601,7 +601,7 @@ redeemers =
           <+ a
             ( arr
                 [ "tag" ==> redeemer_tag
-                , "index" ==> VUInt
+                , "index" ==> (VUInt `sized` (4 :: Word64))
                 , "data" ==> plutus_data
                 , "ex_units" ==> ex_units
                 ]
@@ -609,7 +609,12 @@ redeemers =
       ]
     // smp
       [ 1
-          <+ asKey (mp ["tag" ==> redeemer_tag, "index" ==> VUInt])
+          <+ asKey
+            ( arr
+                [ "tag" ==> redeemer_tag
+                , "index" ==> (VUInt `sized` (4 :: Word64))
+                ]
+            )
           ==> arr ["data" ==> plutus_data, "ex_units" ==> ex_units]
       ]
 
@@ -834,7 +839,7 @@ datum_option :: Rule
 datum_option = "datum_option" =:= arr [0, a hash32] // arr [1, a data_a]
 
 script_ref :: Rule
-script_ref = "script_ref" =:= VBytes `cbor` script
+script_ref = "script_ref" =:= tag 24 (VBytes `cbor` script)
 
 script :: Rule
 script =
@@ -887,7 +892,7 @@ set :: IsType0 t0 => t0 -> GRuleCall
 set = binding $ \x -> "set" =:= arr [0 <+ a x]
 
 nonempty_set :: IsType0 t0 => t0 -> GRuleCall
-nonempty_set = binding $ \x -> "nonempty_set" =:= arr [0 <+ a x]
+nonempty_set = binding $ \x -> "nonempty_set" =:= arr [1 <+ a x]
 
 -- TODO Should we give this a name?
 nonempty_oset :: IsType0 t0 => t0 -> GRuleCall

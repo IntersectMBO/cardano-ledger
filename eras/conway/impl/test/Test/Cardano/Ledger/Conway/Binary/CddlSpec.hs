@@ -58,12 +58,11 @@ newSpec = describe "Huddle" $ specWithHuddle ConwayCDDL.conway 100 $ do
   huddleRoundTripCborSpec @(Datum Conway) v "datum_option"
   huddleRoundTripCborSpec @CostModels v "costmdls"
   huddleRoundTripCborSpec @(VotingProcedure Conway) v "voting_procedure"
-  -- Uncertain
-  huddleRoundTripCborSpec @(TxOut Conway) v "transaction_output"
   huddleRoundTripCborSpec @(PParamsUpdate Conway) v "protocol_param_update"
   huddleRoundTripCborSpec @(ProposalProcedure Conway) v "proposal_procedure"
   huddleRoundTripCborSpec @(GovAction Conway) v "gov_action"
   huddleRoundTripCborSpec @(TxCert Conway) v "certificate"
+  huddleRoundTripCborSpec @(TxOut Conway) v "transaction_output"
   huddleRoundTripAnnCborSpec @(TxBody Conway) v "transaction_body"
   huddleRoundTripAnnCborSpec @(TxAuxData Conway) v "auxiliary_data"
   huddleRoundTripAnnCborSpec @(Timelock Conway) v "native_script"
