@@ -32,7 +32,9 @@ import qualified Codec.CBOR.Pretty as CBOR
 import qualified Codec.CBOR.Term as CBOR
 import qualified Codec.CBOR.Write as CBOR
 import Data.Data (Proxy (..))
+import Data.Foldable (traverse_)
 import Data.Functor.Identity (Identity)
+import Data.List (unfoldr)
 import qualified Data.Text as T
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Binary.RoundTrip (
@@ -119,8 +121,10 @@ specWithHuddle h numExamples =
 
 withGenTerm :: CuddleData -> Cuddle.Name -> (CBOR.Term -> Expectation) -> Seeded Expectation
 withGenTerm cd n withTerm = Seeded $ \gen ->
-  let term = Cuddle.generateCBORTerm (cddl cd) n gen
-   in withTerm term
+  let terms =
+        take (numExamples cd) $
+          unfoldr (Just . Cuddle.generateCBORTerm' (cddl cd) n) gen
+   in traverse_ withTerm terms
 
 -- | Verify that random data generated is:
 --
