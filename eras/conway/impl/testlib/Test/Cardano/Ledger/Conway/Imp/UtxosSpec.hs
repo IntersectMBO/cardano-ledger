@@ -458,12 +458,12 @@ govPolicySpec ::
 govPolicySpec = do
   describe "Gov policy scripts" $ do
     it "failing native script govPolicy" $ do
-      (committeeMember :| _) <- registerInitialCommittee
+      committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
       scriptHash <- impAddNativeScript $ RequireTimeStart (SlotNo 1)
       anchor <- arbitrary
       void $
-        enactConstitution SNothing (Constitution anchor (SJust scriptHash)) dRep committeeMember
+        enactConstitution SNothing (Constitution anchor (SJust scriptHash)) dRep committeeMembers'
       rewardAccount <- registerRewardAccount
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       impAnn "ParameterChange" $ do
@@ -501,7 +501,7 @@ govPolicySpec = do
 
     it "alwaysSucceeds Plutus govPolicy validates" $ do
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceedsNoDatum SPlutusV3)
-      (committeeMember :| _) <- registerInitialCommittee
+      committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
@@ -510,7 +510,7 @@ govPolicySpec = do
           SNothing
           (Constitution anchor (SJust alwaysSucceedsSh))
           dRep
-          committeeMember
+          committeeMembers'
       rewardAccount <- registerRewardAccount
 
       impAnn "ParameterChange" $ do
@@ -539,12 +539,12 @@ govPolicySpec = do
 
     it "alwaysFails Plutus govPolicy does not validate" $ do
       let alwaysFailsSh = hashPlutusScript (alwaysFailsNoDatum SPlutusV3)
-      (committeeMember :| _) <- registerInitialCommittee
+      committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       void $
-        enactConstitution SNothing (Constitution anchor (SJust alwaysFailsSh)) dRep committeeMember
+        enactConstitution SNothing (Constitution anchor (SJust alwaysFailsSh)) dRep committeeMembers'
 
       rewardAccount <- registerRewardAccount
       impAnn "ParameterChange" $ do
@@ -586,14 +586,14 @@ costModelsSpec =
       -- no initial PlutusV3 CostModels
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
-      (committeeMember :| _) <- registerInitialCommittee
+      committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       govIdConstitution1 <-
-        enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMember
+        enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMembers'
       -- propose and enact PlutusV3 Costmodels
       govIdPPUpdate1 <-
-        enactCostModels SNothing (testingCostModels [PlutusV3]) dRep committeeMember
+        enactCostModels SNothing (testingCostModels [PlutusV3]) dRep committeeMembers'
 
       let alwaysFailsSh = hashPlutusScript (alwaysFailsNoDatum SPlutusV3)
       void $
@@ -601,7 +601,7 @@ costModelsSpec =
           (SJust (GovPurposeId govIdConstitution1))
           (Constitution anchor (SJust alwaysFailsSh))
           dRep
-          committeeMember
+          committeeMembers'
 
       impAnn "Fail to update V3 Costmodels" $ do
         let pparamsUpdate = def & ppuCostModelsL .~ SJust (testingCostModels [PlutusV3])
@@ -621,7 +621,7 @@ costModelsSpec =
     it "Updating CostModels with alwaysSucceeds govPolicy but no PlutusV3 CostModels fails" $ do
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
-      (committeeMember :| _) <- registerInitialCommittee
+      committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceedsNoDatum SPlutusV3)
@@ -630,7 +630,7 @@ costModelsSpec =
           SNothing
           (Constitution anchor (SJust alwaysSucceedsSh))
           dRep
-          committeeMember
+          committeeMembers'
 
       let pparamsUpdate = def & ppuCostModelsL .~ SJust (testingCostModels [PlutusV3])
       let govAction = ParameterChange SNothing pparamsUpdate (SJust alwaysSucceedsSh)
@@ -640,11 +640,11 @@ costModelsSpec =
     it "Updating CostModels and setting the govPolicy afterwards succeeds" $ do
       modifyPParams $ ppCostModelsL .~ testingCostModels [PlutusV1 .. PlutusV2]
 
-      (committeeMember :| _) <- registerInitialCommittee
+      committeeMembers' <- registerInitialCommittee
       (dRep, _, _) <- setupSingleDRep 1_000_000
       anchor <- arbitrary
       govIdConstitution1 <-
-        enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMember
+        enactConstitution SNothing (Constitution anchor SNothing) dRep committeeMembers'
 
       let mintingScriptHash = hashPlutusScript (evenRedeemerNoDatum SPlutusV3)
 
@@ -657,7 +657,7 @@ costModelsSpec =
           SNothing
           (testingCostModels [PlutusV3])
           dRep
-          committeeMember
+          committeeMembers'
 
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceedsNoDatum SPlutusV3)
       void $
@@ -665,7 +665,7 @@ costModelsSpec =
           (SJust (GovPurposeId govIdConstitution1))
           (Constitution anchor (SJust alwaysSucceedsSh))
           dRep
-          committeeMember
+          committeeMembers'
 
       impAnn "Minting token succeeds" $ do
         tx <- mintingTokenTx @era (mkBasicTx @era mkBasicTxBody) mintingScriptHash
@@ -677,7 +677,7 @@ costModelsSpec =
             (SJust govIdPPUpdate1)
             (testingCostModels [PlutusV3])
             dRep
-            committeeMember
+            committeeMembers'
 
 scriptLockedTxOut ::
   forall era.
@@ -763,14 +763,14 @@ enactCostModels ::
   StrictMaybe (GovPurposeId 'PParamUpdatePurpose era) ->
   CostModels ->
   Credential 'DRepRole (EraCrypto era) ->
-  Credential 'HotCommitteeRole (EraCrypto era) ->
+  NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)) ->
   ImpTestM era (GovPurposeId 'PParamUpdatePurpose era)
-enactCostModels prevGovId cms dRep committeeMember = do
+enactCostModels prevGovId cms dRep committeeMembers' = do
   initialCms <- getsNES $ nesEsL . curPParamsEpochStateL . ppCostModelsL
   let pparamsUpdate = def & ppuCostModelsL .~ SJust cms
   govId <- submitParameterChange (unGovPurposeId <$> prevGovId) pparamsUpdate
   submitYesVote_ (DRepVoter dRep) govId
-  submitYesVote_ (CommitteeVoter committeeMember) govId
+  submitYesVoteCCs_ committeeMembers' govId
   passNEpochs 2
   enactedCms <- getsNES $ nesEsL . curPParamsEpochStateL . ppCostModelsL
   enactedCms `shouldBe` (initialCms <> cms)
