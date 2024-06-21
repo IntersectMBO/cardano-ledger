@@ -1,5 +1,11 @@
 # Version history for `cardano-ledger-core`
 
+## 1.14.1.0
+
+### `testlib`
+
+* Add show instances for ScriptTestContext and PlutusArgs
+
 ## 1.14.0.0
 
 * Add `mkTermToEvaluate` to `PlutusLanguage` class.
@@ -23,7 +29,6 @@
 * Add `LegacyPlutusArgs` data
 * Add `PlutusArgs` data family to `PlutusLanguage` and instances
 * Change signature of `evaluatePlutusRunnable` and `evaluatePlutusRunnableBudget` to replace data list with `PlutusArgs`
-
 
 ### `testlib`
 
