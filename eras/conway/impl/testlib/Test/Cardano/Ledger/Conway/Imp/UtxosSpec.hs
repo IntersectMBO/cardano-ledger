@@ -752,7 +752,7 @@ mintingTokenTx tx sh = do
   count <- choose (0, 10)
   let policyId = PolicyID sh
   let ma = MultiAsset $ Map.singleton policyId [(name, count)]
-  (_, addr) <- freshKeyAddr
+  addr <- freshKeyAddr_
   pure $
     tx
       & bodyTxL . mintTxBodyL .~ ma

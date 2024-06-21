@@ -8,7 +8,11 @@
 module Test.Cardano.Ledger.Alonzo.Imp where
 
 import Cardano.Ledger.Alonzo.Core
-import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure, AlonzoUtxowPredFailure)
+import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxoPredFailure,
+  AlonzoUtxosPredFailure,
+  AlonzoUtxowPredFailure,
+ )
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as Utxow
@@ -22,8 +26,9 @@ spec ::
   , AlonzoEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
-  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxoPredFailure era
   , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxowPredFailure era
   ) =>
   Spec
 spec = do

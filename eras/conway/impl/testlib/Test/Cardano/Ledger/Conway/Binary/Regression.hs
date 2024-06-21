@@ -95,13 +95,13 @@ spec = describe "Regression" $ do
     withImpState @Conway $
       it "InsufficientCollateral is not encoded with negative coin #4198" $ do
         let lockedVal = inject $ Coin 100
-        (_, collateralAddress) <- freshKeyAddr
+        collateralAddress <- freshKeyAddr_
         (_, skp) <- freshKeyPair
         let
           plutusVersion = SPlutusV2
           scriptHash = hashPlutusScript $ redeemerSameAsDatum plutusVersion
           lockScriptAddress = mkScriptAddr scriptHash skp
-        (_, collateralReturnAddr) <- freshKeyAddr
+        collateralReturnAddr <- freshKeyAddr_
         lockedTx <-
           submitTxAnn @Conway "Script locked tx" $
             mkBasicTx mkBasicTxBody

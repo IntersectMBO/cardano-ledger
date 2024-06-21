@@ -29,10 +29,8 @@ import Test.Cardano.Ledger.Alonzo.ImpTest (
   ImpTestState,
   ShelleyEraImp,
   getsNES,
-  impAnn,
   produceScript,
   submitTxAnn_,
-  submitTx_,
  )
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Plutus.Examples (redeemerSameAsDatum)
@@ -57,15 +55,14 @@ spec = describe "UTXOS" $
         it "Invalid plutus script fails in phase 2" $ do
           txIn0 <- produceScript scriptHash
           exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
-          impAnn "Submitting consuming transaction" $
-            submitTx_
-              ( mkBasicTx mkBasicTxBody
-                  & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
-                  & isValidTxL .~ IsValid False
-                  & witsTxL . rdmrsTxWitsL
-                    .~ Redeemers
-                      ( Map.singleton
-                          (mkSpendingPurpose $ AsIx 0)
-                          (Data $ P.I 32, exUnits)
-                      )
-              )
+          submitTxAnn_ "Submitting consuming transaction" $
+            ( mkBasicTx mkBasicTxBody
+                & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
+                & isValidTxL .~ IsValid False
+                & witsTxL . rdmrsTxWitsL
+                  .~ Redeemers
+                    ( Map.singleton
+                        (mkSpendingPurpose $ AsIx 0)
+                        (Data $ P.I 32, exUnits)
+                    )
+            )

@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-shelley
-version:            1.12.0.0
+version:            1.12.1.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -175,11 +175,13 @@ library testlib
         hspec-core,
         HUnit,
         prettyprinter,
+        prettyprinter-ansi-terminal,
         QuickCheck,
         random,
         small-steps >=1.1,
         text,
         transformers,
+        tree-diff,
         microlens,
         microlens-mtl,
         mtl,

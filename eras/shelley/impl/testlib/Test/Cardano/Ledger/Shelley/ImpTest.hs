@@ -45,9 +45,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   passNEpochs,
   passNEpochsChecking,
   passTick,
+  freshKeyAddr,
+  freshKeyAddr_,
   freshKeyHash,
   freshKeyPair,
-  freshKeyAddr,
   lookupKeyPair,
   freshByronKeyHash,
   freshBootstapAddress,
@@ -66,6 +67,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getUTxO,
   impAddNativeScript,
   impAnn,
+  impLogToExpr,
   runImpRule,
   tryRunImpRule,
   registerRewardAccount,
@@ -217,14 +219,15 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import Data.TreeDiff (ansiWlExpr)
 import Data.Type.Equality (TestEquality (..))
-import GHC.Stack (SrcLoc (..), getCallStack)
+import GHC.Stack (CallStack, SrcLoc (..), getCallStack)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
 import Numeric.Natural (Natural)
-import Prettyprinter (Doc, Pretty (..), defaultLayoutOptions, layoutPretty, line)
-import Prettyprinter.Render.String (renderString)
+import Prettyprinter (Doc, Pretty (..), annotate, defaultLayoutOptions, indent, layoutPretty, line)
+import Prettyprinter.Render.Terminal (AnsiStyle, Color (..), color, renderStrict)
 import System.Random
 import qualified System.Random as Random
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborRangeFailureExpectation)
@@ -281,7 +284,7 @@ data ImpTestState era = ImpTestState
   , impNativeScripts :: !(Map (ScriptHash (EraCrypto era)) (NativeScript era))
   , impLastTick :: !SlotNo
   , impGlobals :: !Globals
-  , impLog :: !(Doc ())
+  , impLog :: !(Doc AnsiStyle)
   , impGen :: !QCGen
   , impEvents :: [SomeSTSEvent era]
   }
@@ -289,7 +292,7 @@ data ImpTestState era = ImpTestState
 impGlobalsL :: Lens' (ImpTestState era) Globals
 impGlobalsL = lens impGlobals (\x y -> x {impGlobals = y})
 
-impLogL :: Lens' (ImpTestState era) (Doc ())
+impLogL :: Lens' (ImpTestState era) (Doc AnsiStyle)
 impLogL = lens impLog (\x y -> x {impLog = y})
 
 impNESL :: Lens' (ImpTestState era) (NewEpochState era)
@@ -725,7 +728,7 @@ runImpTestM mQCSize impState (ImpTestM m) = do
   res <-
     runReaderT m env `catchAny` \exc -> do
       logsDoc <- impLog <$> readIORef ioRef
-      let logs = renderString (layoutPretty defaultLayoutOptions logsDoc)
+      let logs = T.unpack . renderStrict $ layoutPretty defaultLayoutOptions logsDoc
           adjustHUnitExc header (HUnitFailure srcLoc failReason) =
             toException $
               HUnitFailure srcLoc $
@@ -1151,19 +1154,31 @@ impAnn msg m = do
   impLogL .= logs
   pure res
 
--- | Adds a string to the log, which is only shown if the test fails
-logEntry :: HasCallStack => String -> ImpTestM era ()
-logEntry e = impLogL %= (<> pretty loc <> "\t" <> pretty e <> line)
+-- | Adds a source location and Doc to the log, which are only shown if the test fails
+logWithCallStack :: CallStack -> Doc AnsiStyle -> ImpTestM era ()
+logWithCallStack callStack e = impLogL %= (<> loc <> line <> indent 2 e <> line)
   where
     formatSrcLoc srcLoc =
-      "[" <> srcLocModule srcLoc <> ":" <> show (srcLocStartLine srcLoc) <> "]\n"
+      "[" <> srcLocModule srcLoc <> ":" <> show (srcLocStartLine srcLoc) <> "]"
     loc =
-      case getCallStack ?callStack of
-        (_, srcLoc) : _ -> formatSrcLoc srcLoc
-        _ -> ""
+      case getCallStack callStack of
+        (_, srcLoc) : _ -> annotate (color Blue) . pretty $ formatSrcLoc srcLoc
+        _ -> mempty
 
+-- | Adds a string to the log, which is only shown if the test fails
+logEntry :: HasCallStack => String -> ImpTestM era ()
+logEntry = logWithCallStack ?callStack . pretty
+
+-- | Adds a ToExpr to the log, which is only shown if the test fails
 logToExpr :: (HasCallStack, ToExpr a) => a -> ImpTestM era ()
-logToExpr e = logEntry (showExpr e)
+logToExpr = logWithCallStack ?callStack . ansiWlExpr . toExpr
+
+-- | Adds the result of an action to the log, which is only shown if the test fails
+impLogToExpr :: (HasCallStack, ToExpr a) => ImpTestM era a -> ImpTestM era a
+impLogToExpr action = do
+  e <- action
+  logWithCallStack ?callStack . ansiWlExpr . toExpr $ e
+  pure e
 
 instance ShelleyEraImp era => Default (ImpTestState era) where
   def =
@@ -1260,7 +1275,7 @@ lookupKeyPair keyHash = do
 freshKeyHash :: Era era => ImpTestM era (KeyHash r (EraCrypto era))
 freshKeyHash = fst <$> freshKeyPair
 
--- | Generate a random KeyPair and add it to the known keys in the Imp state
+-- | Generate a random `KeyPair` and add it to the known keys in the Imp state
 freshKeyPair ::
   (Era era, MonadState (ImpTestState era) m, MonadGen m) =>
   m (KeyHash r (EraCrypto era), KeyPair r (EraCrypto era))
@@ -1269,6 +1284,13 @@ freshKeyPair = do
   keyHash <- addKeyPair keyPair
   pure (keyHash, keyPair)
 
+-- | Generate a random `Addr` that uses a `KeyHash`, and add the corresponding `KeyPair`
+-- to the known keys in the Imp state.
+freshKeyAddr_ :: Era era => ImpTestM era (Addr (EraCrypto era))
+freshKeyAddr_ = snd <$> freshKeyAddr
+
+-- | Generate a random `Addr` that uses a `KeyHash`, add the corresponding `KeyPair`
+-- to the known keys in the Imp state, and return the `KeyHash` as well as the `Addr`.
 freshKeyAddr :: Era era => ImpTestM era (KeyHash r (EraCrypto era), Addr (EraCrypto era))
 freshKeyAddr = do
   keyHash <- freshKeyHash

@@ -46,10 +46,7 @@ import Cardano.Ledger.Credential (
   Credential (..),
   StakeCredential,
  )
-import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
-  KeyHash,
-  KeyRole (..),
   asWitness,
   hashKey,
  )
@@ -100,10 +97,6 @@ import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (HasTokens (..), PostShelley, Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
-import Test.Cardano.Ledger.Shelley.Utils (
-  RawSeed (..),
-  mkKeyPair,
- )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase)
 
@@ -153,32 +146,7 @@ alonzoUTXOWTests pf =
     (show pf ++ " UTXOW examples")
     [ testGroup
         "invalid transactions"
-        [ testCase "wrong network ID" $
-            testU
-              pf
-              (trustMeP pf True $ incorrectNetworkIDTx pf)
-              ( Left
-                  [ injectFailure (WrongNetworkInTxBody Testnet Mainnet)
-                  ]
-              )
-        , testCase "missing required key witness" $
-            testU
-              pf
-              (trustMeP pf True $ missingRequiredWitnessTx pf)
-              ( Left
-                  [ injectFailure $ MissingVKeyWitnessesUTXOW $ Set.singleton extraneousKeyHash
-                  ]
-              )
-        , testCase "missing 1-phase script witness" $
-            testU
-              pf
-              (trustMeP pf True $ missing1phaseScriptWitnessTx pf)
-              ( Left
-                  [ injectFailure . MissingScriptWitnessesUTXOW . Set.singleton $
-                      timelockHash 0 pf
-                  ]
-              )
-        , testCase "missing 2-phase script witness" $
+        [ testCase "missing 2-phase script witness" $
             testU
               pf
               (trustMeP pf True $ missing2phaseScriptWitnessTx pf)
@@ -305,76 +273,6 @@ alonzoUTXOWTests pf =
 
 -- =========================================================================
 -- ============================== DATA ========================================
-
-incorrectNetworkIDTx :: (EraTx era, GoodCrypto (EraCrypto era)) => Proof era -> Tx era
-incorrectNetworkIDTx pf =
-  newTx
-    pf
-    [ Body incorrectNetworkIDTxBody
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated incorrectNetworkIDTxBody) (someKeys pf)]
-        ]
-    ]
-  where
-    incorrectNetworkIDTxBody =
-      newTxBody
-        pf
-        [ Inputs' [mkGenesisTxIn 3]
-        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]]
-        , Txfee (Coin 5)
-        , Txnetworkid (SJust Mainnet)
-        ]
-
-missingRequiredWitnessTx :: (EraTx era, GoodCrypto (EraCrypto era)) => Proof era -> Tx era
-missingRequiredWitnessTx pf =
-  newTx
-    pf
-    [ Body missingRequiredWitnessTxBody
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated missingRequiredWitnessTxBody) (someKeys pf)]
-        ]
-    ]
-  where
-    missingRequiredWitnessTxBody =
-      newTxBody
-        pf
-        [ Inputs' [mkGenesisTxIn 3]
-        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]]
-        , Txfee (Coin 5)
-        , ReqSignerHashes' [extraneousKeyHash]
-        ]
-
-missing1phaseScriptWitnessTx ::
-  forall era.
-  ( PostShelley era
-  , HasTokens era
-  , EraTxBody era
-  , GoodCrypto (EraCrypto era)
-  , Value era ~ MaryValue (EraCrypto era)
-  , ShelleyEraTxCert era
-  ) =>
-  Proof era ->
-  Tx era
-missing1phaseScriptWitnessTx pf =
-  newTx
-    pf
-    [ Body (validatingManyScriptsBody pf)
-    , WitnessesI
-        [ AddrWits' $
-            map
-              (mkWitnessVKey . hashAnnotated . validatingManyScriptsBody $ pf)
-              [someKeys pf, theKeyPair 1]
-        , ScriptWits'
-            [ always 2 pf
-            , always 3 pf
-            , -- intentionally missing -> timelockScript 0 pf,
-              timelockScript 1 pf
-            , timelockScript 2 pf
-            ]
-        , DataWits' [Data (PV1.I 123)]
-        , RdmrWits $ validatingManyScriptsRedeemers pf
-        ]
-    ]
 
 missing2phaseScriptWitnessTx ::
   forall era.
@@ -778,9 +676,6 @@ quietPlutusFailure = PlutusFailure "human" "debug"
 
 scriptStakeCredSuceed :: Scriptic era => Proof era -> StakeCredential (EraCrypto era)
 scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
-
-extraneousKeyHash :: Crypto c => KeyHash 'Witness c
-extraneousKeyHash = hashKey . snd . mkKeyPair $ RawSeed 0 0 0 0 99
 
 -- ============================== PPARAMS ===============================
 

@@ -22,10 +22,10 @@ spec ::
 spec = describe "UTXO" $ do
   describe "ShelleyUtxoPredFailure" $ do
     it "ValueNotConservedUTxO" $ do
-      (_, addr1) <- freshKeyAddr
+      addr1 <- freshKeyAddr_
       let txAmount = Coin 1000000
       txIn <- sendCoinTo addr1 txAmount
-      (_, addr2) <- freshKeyAddr
+      addr2 <- freshKeyAddr_
       (_, rootTxOut) <- lookupImpRootTxOut
       let extra = Coin 3
           rootTxOutValue = rootTxOut ^. valueTxOutL
