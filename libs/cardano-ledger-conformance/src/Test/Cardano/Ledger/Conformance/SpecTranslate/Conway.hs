@@ -34,54 +34,13 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoPlutusPurpose (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes (
-  Anchor,
-  BoundedRational (..),
-  EpochInterval (..),
-  EpochNo (..),
-  Inject (..),
-  Network,
-  ProtVer (..),
-  SlotNo (..),
-  StrictMaybe (..),
-  TxIx (..),
-  UnitInterval,
-  getVersion,
-  strictMaybeToMaybe,
- )
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Compactible (Compactible)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (
-  Committee (Committee),
-  Constitution (..),
-  EnactState (..),
-  GovAction (..),
-  GovActionId (GovActionId),
-  GovActionIx (..),
-  GovActionState (..),
-  GovProcedures (..),
-  GovPurposeId (..),
-  GovRelation (..),
-  ProposalProcedure (..),
-  Proposals,
-  RatifyEnv (..),
-  RatifySignal (..),
-  Vote (..),
-  Voter (..),
-  VotingProcedure (..),
-  VotingProcedures (..),
-  ensPrevGovActionIdsL,
-  ensProtVerL,
-  foldrVotingProcedures,
-  gasAction,
-  gasReturnAddr,
-  pPropsL,
-  pRootsL,
-  toPrevGovActionIds,
- )
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
 import Cardano.Ledger.Conway.Rules (
   CertEnv (..),
@@ -94,7 +53,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUtxoPredFailure,
   EnactSignal (..),
   GovEnv (..),
-  RatifyState (..),
  )
 import Cardano.Ledger.Conway.Scripts (AlonzoScript, ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
@@ -114,13 +72,7 @@ import Cardano.Ledger.Plutus (CostModels, ExUnits (..), Prices)
 import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.Shelley.LedgerState (
-  CertState (..),
-  DState (..),
-  PState (..),
-  UTxOState (..),
-  VState (..),
- )
+import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (Identity, PoolEnv (..), ShelleyPoolPredFailure, UtxoEnv (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (dRepMap, fromCompact, rewardMap, sPoolMap)
@@ -159,6 +111,7 @@ import Test.Cardano.Ledger.Conformance (
   askCtx,
  )
 import Test.Cardano.Ledger.Constrained.Conway (IsConwayUniv)
+import Test.Cardano.Ledger.Constrained.Conway.Epoch
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
 
 instance SpecTranslate ctx Void where
@@ -1227,6 +1180,25 @@ instance
 
   toSpecRep (EnactSignal _ ga) = toSpecRep ga
 
+instance ToExpr (EpochExecEnv era)
+instance Era era => NFData (EpochExecEnv era)
+
+instance HasSimpleRep (EpochExecEnv era)
+instance (IsConwayUniv fn, Era era) => HasSpec fn (EpochExecEnv era)
+
+instance SpecTranslate ctx (EpochExecEnv era) where
+  type SpecRep (EpochExecEnv era) = Agda.NewEpochEnv
+
+  toSpecRep (EpochExecEnv stakeDistr) = do
+    let
+      transStakeDistr (c, s) = do
+        c' <- toSpecRep c
+        s' <- toSpecRep s
+        pure (Agda.CredVoter Agda.SPO c', s')
+      stakeDistrsMap = traverse transStakeDistr $ Map.toList stakeDistr
+      stakeDistrs = Agda.MkStakeDistrs . Agda.MkHSMap <$> stakeDistrsMap
+    Agda.MkNewEpochEnv <$> stakeDistrs
+
 data ConwayExecEnactEnv era = ConwayExecEnactEnv
   { ceeeGid :: GovActionId (EraCrypto era)
   , ceeeTreasury :: Coin
@@ -1303,3 +1275,55 @@ instance SpecTranslate ctx (ShelleyPoolPredFailure era) where
   type SpecRep (ShelleyPoolPredFailure era) = OpaqueErrorString
 
   toSpecRep e = pure . OpaqueErrorString . show $ toExpr e
+
+instance
+  ( EraPParams era
+  , ConwayEraGov era
+  , SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , Inject ctx [GovActionState era]
+  , ToExpr (PParamsHKD StrictMaybe era)
+  , SpecRep (TxOut era) ~ Agda.TxOut
+  , SpecTranslate ctx (TxOut era)
+  ) =>
+  SpecTranslate ctx (EpochState era)
+  where
+  type SpecRep (EpochState era) = Agda.EpochState
+
+  toSpecRep (EpochState {esLState = esLState@LedgerState {..}, ..}) =
+    Agda.MkEpochState
+      <$> toSpecRep esAccountState
+      <*> toSpecRep esLState
+      <*> toSpecRep enactState
+      <*> toSpecRep ratifyState
+    where
+      enactState = mkEnactState $ utxosGovState lsUTxOState
+      ratifyState = RatifyState enactState mempty mempty False
+
+instance SpecTranslate ctx AccountState where
+  type SpecRep AccountState = Agda.Acnt
+
+  toSpecRep (AccountState {..}) =
+    Agda.MkAcnt
+      <$> toSpecRep asTreasury
+      <*> toSpecRep asReserves
+
+instance
+  ( ConwayEraGov era
+  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , SpecRep (TxOut era) ~ Agda.TxOut
+  , SpecTranslate ctx (TxOut era)
+  ) =>
+  SpecTranslate ctx (LedgerState era)
+  where
+  type SpecRep (LedgerState era) = Agda.LedgerState
+
+  toSpecRep (LedgerState {..}) =
+    Agda.MkLedgerState
+      <$> toSpecRep lsUTxOState
+      <*> toSpecRep (utxosGovState lsUTxOState ^. proposalsGovStateL)
+      <*> toSpecRep lsCertState

@@ -75,6 +75,7 @@ import Test.Cardano.Ledger.Conformance (
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (ConwayExecEnactEnv)
 import Test.Cardano.Ledger.Constrained.Conway (
+  EpochExecEnv,
   IsConwayUniv,
   ProposalsSplit,
   certEnvSpec,
@@ -82,6 +83,9 @@ import Test.Cardano.Ledger.Constrained.Conway (
   dStateSpec,
   delegCertSpec,
   delegEnvSpec,
+  epochEnvSpec,
+  epochSignalSpec,
+  epochStateSpec,
   genProposalsSplit,
   govCertEnvSpec,
   govCertSpec,
@@ -464,3 +468,24 @@ instance IsConwayUniv fn => ExecSpecRule fn "POOL" Conway where
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.poolStep env st sig
+
+instance Inject (EpochExecEnv era) () where
+  inject _ = ()
+
+instance
+  IsConwayUniv fn =>
+  ExecSpecRule fn "EPOCH" Conway
+  where
+  type ExecContext fn "EPOCH" Conway = [GovActionState Conway]
+  type ExecEnvironment fn "EPOCH" Conway = EpochExecEnv Conway
+
+  environmentSpec _ = epochEnvSpec
+
+  stateSpec _ _ = epochStateSpec
+
+  signalSpec _ _ _ = epochSignalSpec
+
+  runAgdaRule env st sig =
+    first (\case {})
+      . computationResultToEither
+      $ Agda.epochStep env st sig

@@ -4,6 +4,7 @@ module Test.Cardano.Ledger.Constrained.Conway (
 
 import Test.Cardano.Ledger.Constrained.Conway.Cert as X
 import Test.Cardano.Ledger.Constrained.Conway.Deleg as X
+import Test.Cardano.Ledger.Constrained.Conway.Epoch as X
 import Test.Cardano.Ledger.Constrained.Conway.Gov as X
 import Test.Cardano.Ledger.Constrained.Conway.GovCert as X
 import Test.Cardano.Ledger.Constrained.Conway.Instances as X
