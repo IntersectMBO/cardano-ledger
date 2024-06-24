@@ -25,7 +25,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway (
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
-import Cardano.Crypto.Hash (Hash, hashToBytes)
+import Cardano.Crypto.Hash (Hash)
 import Cardano.Crypto.Util (bytesToNatural)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..), serialiseAddr)
 import Cardano.Ledger.Alonzo (AlonzoTxAuxData, MaryValue)
@@ -65,6 +65,7 @@ import Cardano.Ledger.Conway.TxCert (
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
+import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), VKey (..))
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..))
@@ -97,6 +98,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Traversable (forM)
+import qualified Data.VMap as VMap
 import Data.Void (Void, absurd)
 import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
@@ -109,6 +111,7 @@ import Test.Cardano.Ledger.Conformance (
   SpecTranslate (..),
   SpecTranslationError,
   askCtx,
+  hashToInteger,
  )
 import Test.Cardano.Ledger.Constrained.Conway (IsConwayUniv)
 import Test.Cardano.Ledger.Constrained.Conway.Epoch
@@ -343,6 +346,7 @@ instance
     Agda.MkUTxOEnv
       <$> toSpecRep (ueSlot x)
       <*> toSpecRep (uePParams x)
+      <*> toSpecRep (Coin 10000000) -- TODO: Fix generating types
 
 instance SpecTranslate ctx a => SpecTranslate ctx (Set a) where
   type SpecRep (Set a) = Agda.HSSet (SpecRep a)
@@ -366,8 +370,7 @@ instance SpecTranslate ctx ValidityInterval where
 
 instance SpecTranslate ctx (Hash a b) where
   type SpecRep (Hash a b) = Agda.Hash
-
-  toSpecRep = pure . toInteger . bytesToNatural . hashToBytes
+  toSpecRep = pure . hashToInteger
 
 deriving instance SpecTranslate ctx (KeyHash r c)
 
@@ -534,13 +537,13 @@ instance SpecTranslate ctx (ConwayTxCert era) where
 instance SpecTranslate ctx (PoolCert c) where
   type SpecRep (PoolCert c) = Agda.TxCert
 
-  toSpecRep (RegPool p@PoolParams {ppId}) =
+  toSpecRep (RegPool p@PoolParams {ppId = KeyHash ppHash}) =
     Agda.RegPool
-      <$> toSpecRep (KeyHashObj ppId)
+      <$> toSpecRep ppHash
       <*> toSpecRep p
-  toSpecRep (RetirePool kh e) =
+  toSpecRep (RetirePool (KeyHash ppHash) e) =
     Agda.RetirePool
-      <$> toSpecRep (KeyHashObj kh)
+      <$> toSpecRep ppHash
       <*> toSpecRep e
 
 instance SpecTranslate ctx (ConwayGovCert c) where
@@ -1027,7 +1030,7 @@ instance SpecTranslate ctx (DState era) where
   toSpecRep DState {..} =
     Agda.MkDState
       <$> toSpecRep (dRepMap dsUnified)
-      <*> toSpecRep (KeyHashObj <$> sPoolMap dsUnified)
+      <*> toSpecRep (sPoolMap dsUnified)
       <*> toSpecRep (rewardMap dsUnified)
 
 instance SpecTranslate ctx (PState era) where
@@ -1035,8 +1038,8 @@ instance SpecTranslate ctx (PState era) where
 
   toSpecRep PState {..} =
     Agda.MkPState
-      <$> toSpecRep (mapKeys KeyHashObj psStakePoolParams)
-      <*> toSpecRep (mapKeys KeyHashObj psRetiring)
+      <$> toSpecRep (mapKeys (hashToInteger . unKeyHash) psStakePoolParams)
+      <*> toSpecRep (mapKeys (hashToInteger . unKeyHash) psRetiring)
 
 committeeCredentialToStrictMaybe ::
   CommitteeAuthorization c ->
@@ -1187,17 +1190,8 @@ instance HasSimpleRep (EpochExecEnv era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (EpochExecEnv era)
 
 instance SpecTranslate ctx (EpochExecEnv era) where
-  type SpecRep (EpochExecEnv era) = Agda.NewEpochEnv
-
-  toSpecRep (EpochExecEnv stakeDistr) = do
-    let
-      transStakeDistr (c, s) = do
-        c' <- toSpecRep c
-        s' <- toSpecRep s
-        pure (Agda.CredVoter Agda.SPO c', s')
-      stakeDistrsMap = traverse transStakeDistr $ Map.toList stakeDistr
-      stakeDistrs = Agda.MkStakeDistrs . Agda.MkHSMap <$> stakeDistrsMap
-    Agda.MkNewEpochEnv <$> stakeDistrs
+  type SpecRep (EpochExecEnv era) = ()
+  toSpecRep _ = pure ()
 
 data ConwayExecEnactEnv era = ConwayExecEnactEnv
   { ceeeGid :: GovActionId (EraCrypto era)
@@ -1235,7 +1229,7 @@ instance
   toSpecRep ConwayDelegEnv {..} =
     Agda.MkDelegEnv
       <$> toSpecRep cdePParams
-      <*> toSpecRep (Map.mapKeys KeyHashObj cdePools)
+      <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) cdePools)
 
 instance SpecTranslate ctx (ConwayDelegCert c) where
   type SpecRep (ConwayDelegCert c) = Agda.TxCert
@@ -1247,13 +1241,13 @@ instance SpecTranslate ctx (ConwayDelegCert c) where
     Agda.Delegate
       <$> toSpecRep c
       <*> toSpecRep (getVoteDelegatee d)
-      <*> toSpecRep (KeyHashObj <$> getStakePoolDelegatee d)
+      <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
       <*> pure 0
   toSpecRep (ConwayRegDelegCert s d c) =
     Agda.Delegate
       <$> toSpecRep s
       <*> toSpecRep (getVoteDelegatee d)
-      <*> toSpecRep (KeyHashObj <$> getStakePoolDelegatee d)
+      <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
       <*> toSpecRep c
 
 instance SpecTranslate ctx (ConwayDelegPredFailure era) where
@@ -1292,15 +1286,39 @@ instance
   where
   type SpecRep (EpochState era) = Agda.EpochState
 
-  toSpecRep (EpochState {esLState = esLState@LedgerState {..}, ..}) =
+  toSpecRep (EpochState {esLState = esLState@LedgerState {lsUTxOState}, ..}) =
     Agda.MkEpochState
       <$> toSpecRep esAccountState
+      <*> toSpecRep esSnapshots
       <*> toSpecRep esLState
       <*> toSpecRep enactState
       <*> toSpecRep ratifyState
     where
       enactState = mkEnactState $ utxosGovState lsUTxOState
       ratifyState = RatifyState enactState mempty mempty False
+
+instance SpecTranslate ctx (SnapShots c) where
+  type SpecRep (SnapShots c) = Agda.Snapshots
+
+  toSpecRep (SnapShots {..}) =
+    Agda.MkSnapshots
+      <$> toSpecRep ssStakeMark
+      <*> toSpecRep ssStakeSet
+      <*> toSpecRep ssStakeGo
+      <*> toSpecRep ssFee
+
+instance SpecTranslate ctx (SnapShot c) where
+  type SpecRep (SnapShot c) = Agda.Snapshot
+
+  toSpecRep (SnapShot {..}) =
+    Agda.MkSnapshot
+      <$> toSpecRep ssStake
+      <*> toSpecRep (VMap.toMap ssDelegations)
+
+instance SpecTranslate ctx (Stake c) where
+  type SpecRep (Stake c) = Agda.HSMap Agda.Credential Agda.Coin
+
+  toSpecRep (Stake stake) = toSpecRep $ VMap.toMap stake
 
 instance SpecTranslate ctx AccountState where
   type SpecRep AccountState = Agda.Acnt

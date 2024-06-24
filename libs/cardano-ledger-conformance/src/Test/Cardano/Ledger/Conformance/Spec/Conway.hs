@@ -13,16 +13,7 @@ import Test.Cardano.Ledger.Conway.ImpTest ()
 import Test.Cardano.Ledger.Imp.Common
 
 spec :: Spec
-spec = describe "Conway conformance tests" $ do
-  xprop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
-  prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
-  prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
-  xprop "RATIFY" $ conformsToImpl @"RATIFY" @ConwayFn @Conway
-  xprop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
-  xprop "ENACT" $ conformsToImpl @"ENACT" @ConwayFn @Conway
-  prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
-  prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @Conway
-  xprop "EPOCH" $ conformsToImpl @"EPOCH" @ConwayFn @Conway
+spec = do
   describe "Generators" $ do
     let
       genEnv = do
@@ -40,3 +31,16 @@ spec = describe "Conway conformance tests" $ do
     genEnv `generatesWithin` 3_000_000
     genSt `generatesWithin` 40_000_000
     genSig `generatesWithin` 60_000_000
+  describe "Conformance" $ do
+    describe "Ticks transition graph" $ do
+      xprop "ENACT" $ conformsToImpl @"ENACT" @ConwayFn @Conway
+      xprop "RATIFY" $ conformsToImpl @"RATIFY" @ConwayFn @Conway
+      xprop "EPOCH" $ conformsToImpl @"EPOCH" @ConwayFn @Conway
+      xprop "NEWEPOCH" $ conformsToImpl @"EPOCH" @ConwayFn @Conway
+    describe "Blocks transition graph" $ do
+      prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
+      xprop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
+      prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @Conway
+      prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
+      prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
+      xprop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway

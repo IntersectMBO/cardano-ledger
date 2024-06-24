@@ -226,8 +226,8 @@ hashSignature = Hash.hashWith (DSIGN.rawSerialiseSigDSIGN . coerce)
 --------------------------------------------------------------------------------
 
 -- | Discriminated hash of public Key
-newtype KeyHash (discriminator :: KeyRole) c
-  = KeyHash (Hash.Hash (ADDRHASH c) (DSIGN.VerKeyDSIGN (DSIGN c)))
+newtype KeyHash (discriminator :: KeyRole) c = KeyHash
+  {unKeyHash :: Hash.Hash (ADDRHASH c) (DSIGN.VerKeyDSIGN (DSIGN c))}
   deriving (Show, Eq, Ord)
   deriving newtype (NFData, NoThunks, Generic)
 
