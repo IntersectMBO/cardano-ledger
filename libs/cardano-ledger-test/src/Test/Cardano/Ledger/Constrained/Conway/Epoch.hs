@@ -18,8 +18,8 @@ import Constrained
 import Data.Map.Strict
 import GHC.Generics (Generic)
 
-data EpochExecEnv era = EpochExecEnv
-  { eeeStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+newtype EpochExecEnv era = EpochExecEnv
+  { eeeStakeDistr :: Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)
   }
   deriving (Generic, Eq, Show)
 

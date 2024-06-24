@@ -1180,10 +1180,6 @@ instance
 
   toSpecRep (EnactSignal _ ga) = toSpecRep ga
 
--- data EpochExecEnv era = EpochExecEnv
---   { eeeStakeDistr :: !(Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
---   } deriving (Generic, Eq, Show)
-
 instance ToExpr (EpochExecEnv era)
 instance Era era => NFData (EpochExecEnv era)
 

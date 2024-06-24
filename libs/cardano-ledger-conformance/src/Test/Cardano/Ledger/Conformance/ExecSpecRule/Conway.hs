@@ -486,6 +486,6 @@ instance
   signalSpec _ _ _ = epochSignalSpec
 
   runAgdaRule env st sig =
-    first (error "ENACT failed")
+    first (\case {})
       . computationResultToEither
       $ Agda.epochStep env st sig
