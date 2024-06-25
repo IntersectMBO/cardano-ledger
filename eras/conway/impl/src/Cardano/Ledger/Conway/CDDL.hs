@@ -658,10 +658,10 @@ costmdls =
     "The format for costmdls is flexible enough to allow adding Plutus\n built-ins and language versions in the future."
     $ "costmdls"
       =:= mp
-        [ opt $ idx 0 ==> arr [166 <+ a VInt] -- Plutus v1, only 166 integers are used, but more are accepted (and ignored)
-        , opt $ idx 1 ==> arr [175 <+ a VInt] -- Plutus v2, only 175 integers are used, but more are accepted (and ignored)
-        , opt $ idx 2 ==> arr [223 <+ a VInt] -- Plutus v3, only 223 integers are used, but more are accepted (and ignored)
-        , opt $ idx 3 ==> arr [a VInt] -- Any 8-bit unsigned number can be used as a key.
+        [ opt $ idx 0 ==> arr [0 <+ a VInt] -- Plutus v1, only 166 integers are used, but more are accepted (and ignored)
+        , opt $ idx 1 ==> arr [0 <+ a VInt] -- Plutus v2, only 175 integers are used, but more are accepted (and ignored)
+        , opt $ idx 2 ==> arr [0 <+ a VInt] -- Plutus v3, only 223 integers are used, but more are accepted (and ignored)
+        , opt $ asKey (3 ... 255) ==> arr [0 <+ a VInt] -- Any 8-bit unsigned number can be used as a key.
         ]
 
 transaction_metadatum :: Rule
