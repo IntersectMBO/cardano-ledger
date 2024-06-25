@@ -20,7 +20,7 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data (..))
-import Cardano.Ledger.Plutus.Language (Language, hashPlutusScript, withSLanguage)
+import Cardano.Ledger.Plutus.Language (Language (..), hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -68,16 +68,15 @@ spec = describe "UTXOS" $
           txIn0 <- produceScript scriptHash
           exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
           submitTxAnn_ "Submitting consuming transaction" $
-            ( mkBasicTx mkBasicTxBody
-                & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
-                & isValidTxL .~ IsValid False
-                & witsTxL . rdmrsTxWitsL
-                  .~ Redeemers
-                    ( Map.singleton
-                        (mkSpendingPurpose $ AsIx 0)
-                        (Data $ P.I 32, exUnits)
-                    )
-            )
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
+              & isValidTxL .~ IsValid False
+              & witsTxL . rdmrsTxWitsL
+                .~ Redeemers
+                  ( Map.singleton
+                      (mkSpendingPurpose $ AsIx 0)
+                      (Data $ P.I 32, exUnits)
+                  )
         describe "Scripts pass in phase 2" $ do
           let scripts' = drop 1 scripts
           forM_ scripts' $ \(name, script) -> do
@@ -85,6 +84,5 @@ spec = describe "UTXOS" $
               let sHash = hashPlutusScript (script slang)
               txIn0 <- produceScript sHash
               submitTxAnn_ "Submitting consuming transaction" $
-                ( mkBasicTx mkBasicTxBody
-                    & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
-                )
+                mkBasicTx mkBasicTxBody
+                  & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
