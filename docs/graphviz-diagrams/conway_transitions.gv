@@ -45,7 +45,7 @@ digraph conway_transitions {
     RATIFY   [shape=box, label="RATIFY (conway)    \nenv:RatifyEnv,state:RatifyState,signal:RatifySignal."];
     TICKF    [shape=box, label="TICKF (conway)     \nenv:(),state:NewEpochState,signal:SlotNo."];
     UTXOS    [shape=box, label="UTXOS (conway)     \nenv:UtxoEnv,state:UTxOState,signal:AlonzoTx."];
-    UTXOW    [shape=box, label="UTXOW (conway)     \nenv:UtxoEnv,state:UTxOState,signal:Tx."];
+    UTXOW    [shape=box, label="UTXOW (babbage)     \nenv:UtxoEnv,state:UTxOState,signal:Tx."];
     LEDGERS  [shape=box, label="LEDGERS (shelley)  \nenv:ShelleyLedgersEnv,state:LedgerState,signal:Seq(Tx)."];
     POOLREAP [shape=box, label="POOLREAP (shelley) \nenv:ShelleyPoolreapEnv,state:ShelleyPoolreapState,signal:EpochNo."];
     RUPD     [shape=box, label="RUPD (shelley)     \nenv:RupdEnv,state:StrictMaybe(PulsingRewUpdate),signal:SlotNo."];
