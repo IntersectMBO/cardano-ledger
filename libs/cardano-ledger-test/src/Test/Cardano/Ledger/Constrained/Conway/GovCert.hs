@@ -57,5 +57,5 @@ govCertEnvSpec ::
   Specification fn (ConwayGovCertEnv (ConwayEra StandardCrypto))
 govCertEnvSpec =
   constrained $ \gce ->
-    match gce $ \pp _ ->
+    match gce $ \pp _ _ _ ->
       satisfies pp pparamsSpec

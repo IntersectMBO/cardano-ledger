@@ -29,6 +29,7 @@ import Cardano.Ledger.BaseTypes (
   Globals (..),
   ShelleyBase,
   SlotNo,
+  StrictMaybe,
   binOpEpochNo,
  )
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -43,7 +44,14 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.CertState (VState, certDStateL, certVStateL, vsDRepsL, vsNumDormantEpochsL)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayCERT, ConwayCERTS, ConwayEra)
-import Cardano.Ledger.Conway.Governance (Voter (DRepVoter), VotingProcedures (unVotingProcedures))
+import Cardano.Ledger.Conway.Governance (
+  Committee,
+  GovActionPurpose (..),
+  GovActionState,
+  GovPurposeId,
+  Voter (DRepVoter),
+  VotingProcedures (unVotingProcedures),
+ )
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure, updateDRepExpiry)
@@ -82,6 +90,8 @@ data CertsEnv era = CertsEnv
   , certsPParams :: !(PParams era)
   , certsSlotNo :: !SlotNo
   , certsCurrentEpoch :: !EpochNo
+  , certsCurrentCommittee :: StrictMaybe (Committee era)
+  , certsCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
   }
 
 data ConwayCertsPredFailure era
@@ -189,7 +199,7 @@ conwayCertsTransition ::
   TransitionRule (ConwayCERTS era)
 conwayCertsTransition = do
   TRC
-    ( env@(CertsEnv tx pp slot currentEpoch)
+    ( env@(CertsEnv tx pp slot currentEpoch committee committeeProposals)
       , certState
       , certificates
       ) <-
@@ -240,7 +250,7 @@ conwayCertsTransition = do
       certState' <-
         trans @(ConwayCERTS era) $ TRC (env, certState, gamma)
       trans @(EraRule "CERT" era) $
-        TRC (CertEnv slot pp currentEpoch, certState', txCert)
+        TRC (CertEnv slot pp currentEpoch committee committeeProposals, certState', txCert)
 
 instance
   ( Era era

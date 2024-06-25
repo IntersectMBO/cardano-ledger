@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -38,6 +39,8 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   GovActionIx (..),
   GovPurposeId (..),
   GovActionPurpose (..),
+  ToGovActionPurpose,
+  isGovActionWithPurpose,
   GovRelation (..),
   grPParamUpdateL,
   grHardForkL,
@@ -605,6 +608,29 @@ data GovActionPurpose
   | CommitteePurpose
   | ConstitutionPurpose
   deriving (Eq, Show, Generic)
+
+class ToGovActionPurpose (p :: GovActionPurpose) where
+  toGovActionPurpose :: GovActionPurpose
+
+instance ToGovActionPurpose 'PParamUpdatePurpose where
+  toGovActionPurpose = PParamUpdatePurpose
+instance ToGovActionPurpose 'HardForkPurpose where
+  toGovActionPurpose = HardForkPurpose
+instance ToGovActionPurpose 'CommitteePurpose where
+  toGovActionPurpose = CommitteePurpose
+instance ToGovActionPurpose 'ConstitutionPurpose where
+  toGovActionPurpose = ConstitutionPurpose
+
+isGovActionWithPurpose :: forall p era. ToGovActionPurpose p => GovAction era -> Bool
+isGovActionWithPurpose govAction =
+  case govAction of
+    ParameterChange {} -> toGovActionPurpose @p == PParamUpdatePurpose
+    HardForkInitiation {} -> toGovActionPurpose @p == HardForkPurpose
+    TreasuryWithdrawals {} -> False
+    NoConfidence {} -> toGovActionPurpose @p == CommitteePurpose
+    UpdateCommittee {} -> toGovActionPurpose @p == CommitteePurpose
+    NewConstitution {} -> toGovActionPurpose @p == ConstitutionPurpose
+    InfoAction -> False
 
 newtype GovPurposeId (p :: GovActionPurpose) era = GovPurposeId
   { unGovPurposeId :: GovActionId (EraCrypto era)
