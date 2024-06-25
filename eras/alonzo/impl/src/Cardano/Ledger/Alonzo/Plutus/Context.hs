@@ -44,6 +44,7 @@ import qualified PlutusLedgerApi.V1 as P (ToData, toData)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 
 class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language) era where
   toPlutusTxCert :: proxy l -> TxCert era -> Either (ContextError era) (PlutusTxCert l)
@@ -114,18 +115,22 @@ type family PlutusTxCert (l :: Language) where
   PlutusTxCert 'PlutusV1 = PV1.DCert
   PlutusTxCert 'PlutusV2 = PV2.DCert
   PlutusTxCert 'PlutusV3 = PV3.TxCert
+  PlutusTxCert 'PlutusV4 = PV4.TxCert
 
 type family PlutusScriptPurpose (l :: Language) where
   PlutusScriptPurpose 'PlutusV1 = PV1.ScriptPurpose
   PlutusScriptPurpose 'PlutusV2 = PV2.ScriptPurpose
   PlutusScriptPurpose 'PlutusV3 = PV3.ScriptPurpose
+  PlutusScriptPurpose 'PlutusV4 = PV4.ScriptPurpose
 
 type family PlutusScriptContext (l :: Language) where
   PlutusScriptContext 'PlutusV1 = PV1.ScriptContext
   PlutusScriptContext 'PlutusV2 = PV2.ScriptContext
   PlutusScriptContext 'PlutusV3 = PV3.ScriptContext
+  PlutusScriptContext 'PlutusV4 = PV4.ScriptContext
 
 type family PlutusTxInfo (l :: Language) where
   PlutusTxInfo 'PlutusV1 = PV1.TxInfo
   PlutusTxInfo 'PlutusV2 = PV2.TxInfo
   PlutusTxInfo 'PlutusV3 = PV3.TxInfo
+  PlutusTxInfo 'PlutusV4 = PV4.TxInfo

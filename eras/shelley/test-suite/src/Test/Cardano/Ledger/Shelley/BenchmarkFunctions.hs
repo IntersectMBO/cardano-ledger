@@ -146,6 +146,7 @@ initUTxO :: Integer -> UTxOState B
 initUTxO n =
   UTxOState
     (genesisCoins genesisId (injcoins n))
+    mempty
     (Coin 0)
     (Coin 0)
     def
@@ -158,18 +159,30 @@ initUTxO n =
 ppsBench :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => PParams era
 ppsBench =
   emptyPParams
-    & ppMaxBBSizeL .~ 50000
-    & ppDL .~ unsafeBoundRational 0.5
-    & ppEMaxL .~ EpochInterval 10000
-    & ppKeyDepositL .~ Coin 0
-    & ppMaxBHSizeL .~ 10000
-    & ppMaxTxSizeL .~ 1000000000
-    & ppMinFeeAL .~ Coin 0
-    & ppMinFeeBL .~ Coin 0
-    & ppMinUTxOValueL .~ Coin 10
-    & ppPoolDepositL .~ Coin 0
-    & ppRhoL .~ unsafeBoundRational 0.0021
-    & ppTauL .~ unsafeBoundRational 0.2
+    & ppMaxBBSizeL
+    .~ 50000
+    & ppDL
+    .~ unsafeBoundRational 0.5
+    & ppEMaxL
+    .~ EpochInterval 10000
+    & ppKeyDepositL
+    .~ Coin 0
+    & ppMaxBHSizeL
+    .~ 10000
+    & ppMaxTxSizeL
+    .~ 1000000000
+    & ppMinFeeAL
+    .~ Coin 0
+    & ppMinFeeBL
+    .~ Coin 0
+    & ppMinUTxOValueL
+    .~ Coin 10
+    & ppPoolDepositL
+    .~ Coin 0
+    & ppRhoL
+    .~ unsafeBoundRational 0.0021
+    & ppTauL
+    .~ unsafeBoundRational 0.2
 
 ledgerEnv :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => LedgerEnv era
 ledgerEnv = LedgerEnv (SlotNo 0) minBound ppsBench (AccountState (Coin 0) (Coin 0))

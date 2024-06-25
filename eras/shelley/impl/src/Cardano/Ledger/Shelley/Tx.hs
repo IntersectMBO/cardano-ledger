@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -13,6 +14,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Tx (
@@ -37,8 +39,14 @@ module Cardano.Ledger.Shelley.Tx (
   -- * Deprecated
   txwitsScript,
   hashMultiSigScript,
+
+  -- * Babel Fees
 )
 where
+
+-- ShelleyRequiredTx (requiredTxs),
+-- ShelleyRequiredTxRaw (..),
+-- pattern ShelleyRequiredTx,
 
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -181,6 +189,78 @@ mkBasicShelleyTx txBody =
       , strAuxiliaryData = SNothing
       }
 
+-- newtype ShelleyRequiredTxRaw era = ShelleyRequiredTxRaw (Set (TxId (EraCrypto era)))
+--   deriving (Eq, Show, Generic)
+
+-- instance EraScript era => NoThunks (ShelleyRequiredTxRaw era)
+
+-- deriving newtype instance Era era => EncCBOR (ShelleyRequiredTxRaw era)
+
+-- deriving newtype instance Era era => DecCBOR (ShelleyRequiredTxRaw era)
+
+-- instance Era era => DecCBOR (Annotator (ShelleyRequiredTxRaw era)) where
+--   decCBOR = pure <$> decCBOR
+
+-- deriving via
+--   (Mem ShelleyRequiredTxRaw era)
+--   instance
+--     Era era => DecCBOR (Annotator (ShelleyRequiredTx era))
+
+-- newtype ShelleyRequiredTx era
+--   = RequiredTxBodyConstr (MemoBytes ShelleyRequiredTxRaw era)
+--   deriving (Eq, Generic)
+--   deriving newtype (Plain.ToCBOR, SafeToHash)
+
+-- deriving newtype instance EraScript era => Show (ShelleyRequiredTx era)
+
+-- instance EraScript era => NoThunks (ShelleyRequiredTx era)
+
+-- instance Memoized ShelleyRequiredTx where
+--   type RawType ShelleyRequiredTx = ShelleyRequiredTxRaw
+
+-- deriving newtype instance EraRequiredTxsData era => NFData (ShelleyRequiredTxRaw era)
+-- deriving newtype instance EraRequiredTxsData era => NFData (ShelleyRequiredTx era)
+
+-- pattern ShelleyRequiredTx ::
+--   forall era.
+--   EraScript era =>
+--   Set (TxId (EraCrypto era)) ->
+--   ShelleyRequiredTx era
+-- pattern ShelleyRequiredTx {requiredTxs} <-
+--   (getMemoRawType -> ShelleyRequiredTxRaw requiredTxs)
+--   where
+--     ShelleyRequiredTx requiredTxs' =
+--       mkMemoized $ ShelleyRequiredTxRaw requiredTxs'
+
+-- {-# COMPLETE ShelleyRequiredTx #-}
+
+-- instance EraScript era => Semigroup (ShelleyRequiredTx era) where
+--   (ShelleyRequiredTx a) <> y | Set.null a = y
+--   y <> (ShelleyRequiredTx a) | Set.null a = y
+--   (ShelleyRequiredTx a) <> (ShelleyRequiredTx a') = ShelleyRequiredTx (a <> a')
+
+-- instance EraScript era => Monoid (ShelleyRequiredTx era) where
+--   mempty = ShelleyRequiredTx mempty
+
+-- instance
+--   (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
+--   EqRaw (ShelleyRequiredTx era)
+
+-- instance c ~ EraCrypto era => HashAnnotated (ShelleyRequiredTx era) EraIndependentRequiredTxs c where
+--   hashAnnotated = getMemoSafeHash
+
+-- -- instance Crypto c => EraRequiredTxsData (ShelleyEra c) where
+-- --   type RequiredTxs (ShelleyEra c) = ShelleyRequiredTx (ShelleyEra c)
+
+-- -- | Encodes memoized bytes created upon construction.
+-- instance Era era => EncCBOR (ShelleyRequiredTx era)
+
+-- type instance MemoHashIndex ShelleyRequiredTxRaw = EraIndependentRequiredTxs
+
+-- deriving instance
+--   HashAlgorithm (HASH (EraCrypto era)) =>
+--   Show (ShelleyRequiredTx era)
+
 instance Crypto c => EraTx (ShelleyEra c) where
   {-# SPECIALIZE instance EraTx (ShelleyEra StandardCrypto) #-}
 
@@ -196,6 +276,9 @@ instance Crypto c => EraTx (ShelleyEra c) where
 
   auxDataTxL = auxDataShelleyTxL
   {-# INLINE auxDataTxL #-}
+
+  -- requiredTxsTxL = lens (const mempty) const
+  -- {-# INLINE requiredTxsTxL #-}
 
   sizeTxF = sizeShelleyTxF
   {-# INLINE sizeTxF #-}

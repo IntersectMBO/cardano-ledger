@@ -125,7 +125,7 @@ relevantCasesAreCoveredForTrace ::
   Property
 relevantCasesAreCoveredForTrace tr = do
   let blockTxs :: Block (BHeader (EraCrypto era)) era -> [Tx era]
-      blockTxs (UnserialisedBlock _ txSeq) = toList (fromTxSeq @era txSeq)
+      blockTxs (UnserialisedBlock _ txSeq) = toList =<< toList (fromTxZones @era txSeq)
       bs = traceSignals OldestFirst tr
       txs = concat (blockTxs <$> bs)
       certsByTx_ = certsByTx @era txs

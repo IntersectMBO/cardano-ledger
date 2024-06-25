@@ -146,7 +146,12 @@ registerDelegs ::
   NewEpochState era ->
   NewEpochState era
 registerDelegs cfg =
-  nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL . umElemsL
+  nesEsL
+    . esLStateL
+    . lsCertStateL
+    . certDStateL
+    . dsUnifiedL
+    . umElemsL
     %~ \m -> ListMap.foldrWithKey (\(k, v) -> Map.insertWith joinUMElems k $ delegateeToUMElem v) m delegs
   where
     delegs = cfg ^. tcDelegsL

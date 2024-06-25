@@ -51,6 +51,27 @@ cradle:
     - path: "eras/babbage/test-suite/test"
       component: "cardano-ledger-babbage-test:test:cardano-ledger-babbage-test"
 
+    - path: "eras/babel/impl/src"
+      component: "lib:cardano-ledger-babel"
+
+    - path: "eras/babel/impl/testlib"
+      component: "cardano-ledger-babel:lib:testlib"
+
+    - path: "eras/babel/impl/test"
+      component: "cardano-ledger-babel:test:tests"
+
+    - path: "eras/babel/test-suite/src"
+      component: "lib:cardano-ledger-babel-test"
+
+    - path: "eras/babel/test-suite/test/GenerateGoldenFileMain.hs"
+      component: "cardano-ledger-babel-test:exe:gen-golden"
+
+    - path: "eras/babel/test-suite/test/Paths_cardano_ledger_babel_test.hs"
+      component: "cardano-ledger-babel-test:exe:gen-golden"
+
+    - path: "eras/babel/test-suite/test"
+      component: "cardano-ledger-babel-test:test:cardano-ledger-babel-test"
+
     - path: "eras/byron/chain/executable-spec/src"
       component: "lib:byron-spec-chain"
 

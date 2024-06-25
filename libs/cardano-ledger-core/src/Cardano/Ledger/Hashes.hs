@@ -25,6 +25,7 @@ module Cardano.Ledger.Hashes (
   -- * Script hashes
   ScriptHash (..),
   DataHash,
+  EraIndependentRequiredTxs,
 )
 where
 
@@ -56,6 +57,8 @@ data EraIndependentBlockBody
 data EraIndependentMetadata
 
 data EraIndependentTxAuxData
+
+data EraIndependentRequiredTxs
 
 data EraIndependentScript
 

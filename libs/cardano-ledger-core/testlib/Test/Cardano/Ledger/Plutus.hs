@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Plutus (
   testingCostModelV1,
   testingCostModelV2,
   testingCostModelV3,
+  zeroTestingCostModelV4,
   testingEvaluationContext,
 
   -- * CostModels
@@ -61,6 +62,7 @@ mkCostModelConst lang x =
     PlutusV1 -> mkCostModel' lang (x <$ PV1.costModelParamsForTesting)
     PlutusV2 -> mkCostModel' lang (x <$ PV2.costModelParamsForTesting)
     PlutusV3 -> mkCostModel' lang (x <$ PV3.costModelParamsForTesting)
+    PlutusV4 -> mkCostModel' lang (x <$ PV3.costModelParamsForTesting) -- TODO WG
 
 mkCostModel' :: HasCallStack => Language -> [Integer] -> CostModel
 mkCostModel' lang params =
@@ -92,6 +94,9 @@ zeroTestingCostModelV2 = zeroTestingCostModel PlutusV2
 zeroTestingCostModelV3 :: HasCallStack => CostModel
 zeroTestingCostModelV3 = zeroTestingCostModel PlutusV3
 
+zeroTestingCostModelV4 :: HasCallStack => CostModel
+zeroTestingCostModelV4 = zeroTestingCostModel PlutusV4
+
 -- | Test CostModels for all available languages
 testingCostModels :: HasCallStack => [Language] -> CostModels
 testingCostModels =
@@ -102,15 +107,19 @@ testingCostModel = \case
   PlutusV1 -> testingCostModelV1
   PlutusV2 -> testingCostModelV2
   PlutusV3 -> testingCostModelV3
+  PlutusV4 -> testingCostModelV4
 
 testingCostModelV1 :: HasCallStack => CostModel
-testingCostModelV1 = mkCostModel' PlutusV1 $ snd <$> PV1.costModelParamsForTesting
+testingCostModelV1 = mkCostModel' PlutusV1 $ toInteger . snd <$> PV1.costModelParamsForTesting
 
 testingCostModelV2 :: HasCallStack => CostModel
-testingCostModelV2 = mkCostModel' PlutusV2 $ snd <$> PV2.costModelParamsForTesting
+testingCostModelV2 = mkCostModel' PlutusV2 $ toInteger . snd <$> PV2.costModelParamsForTesting
 
 testingCostModelV3 :: HasCallStack => CostModel
-testingCostModelV3 = mkCostModel' PlutusV3 $ snd <$> PV3.costModelParamsForTesting
+testingCostModelV3 = mkCostModel' PlutusV3 $ toInteger . snd <$> PV3.costModelParamsForTesting
+
+testingCostModelV4 :: HasCallStack => CostModel
+testingCostModelV4 = mkCostModel' PlutusV4 $ toInteger . snd <$> PV3.costModelParamsForTesting -- TODO WG
 
 testingEvaluationContext :: Language -> PV1.EvaluationContext
 testingEvaluationContext = getCostModelEvaluationContext . testingCostModel

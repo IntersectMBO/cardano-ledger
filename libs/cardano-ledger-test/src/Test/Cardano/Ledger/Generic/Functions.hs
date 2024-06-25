@@ -396,7 +396,8 @@ instance TotalAda AccountState where
   totalAda (AccountState treasury reserves) = treasury <+> reserves
 
 instance Reflect era => TotalAda (UTxOState era) where
-  totalAda (UTxOState utxo _deposits fees gs _ donations) =
+  -- TODO WG don't need to do anything with frxo here right?
+  totalAda (UTxOState utxo _ _deposits fees gs _ donations) =
     totalAda utxo <+> fees <+> govStateTotalAda gs <+> donations
 
 -- we don't add in the _deposits, because it is invariant that this

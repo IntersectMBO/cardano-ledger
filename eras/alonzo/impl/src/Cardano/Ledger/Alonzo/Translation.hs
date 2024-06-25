@@ -81,7 +81,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) Tx where
     txAuxData <- mapM (translateEraThroughCBOR "TxAuxData") (tx ^. auxDataTxL)
     -- transactions from Mary era always pass script ("phase 2") validation
     let validating = IsValid True
-    pure $ Tx $ AlonzoTx txBody txWits validating txAuxData
+    pure $ Tx $ AlonzoTx txBody txWits validating txAuxData -- mempty
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
@@ -133,6 +133,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) UTxOState where
     return
       UTxOState
         { utxosUtxo = translateEra' ctxt $ utxosUtxo us
+        , utxosFrxo = mempty
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
         , utxosGovState = translateEra' ctxt $ utxosGovState us

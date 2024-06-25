@@ -92,6 +92,8 @@ genTx txbGen =
     <*> arbitrary
     <*> arbitrary
 
+-- <*> pure mempty
+
 genTxOut ::
   forall era.
   ( EraTxOut era

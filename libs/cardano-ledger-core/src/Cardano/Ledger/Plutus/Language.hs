@@ -103,6 +103,7 @@ import qualified PlutusLedgerApi.Common as P (
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 
 -- | This is a deserialized version of the `Plutus` type that can be used directly with
 -- evaluation functions that rely on `evaluatePlutusRunnable`.
@@ -209,6 +210,7 @@ data Language
   = PlutusV1
   | PlutusV2
   | PlutusV3
+  | PlutusV4
   deriving (Eq, Generic, Show, Ord, Enum, Bounded, Ix)
 
 instance NoThunks Language
@@ -240,11 +242,13 @@ languageToText :: Language -> Text
 languageToText PlutusV1 = "PlutusV1"
 languageToText PlutusV2 = "PlutusV2"
 languageToText PlutusV3 = "PlutusV3"
+languageToText PlutusV4 = "PlutusV4"
 
 languageFromText :: MonadFail m => Text -> m Language
 languageFromText "PlutusV1" = pure PlutusV1
 languageFromText "PlutusV2" = pure PlutusV2
 languageFromText "PlutusV3" = pure PlutusV3
+languageFromText "PlutusV4" = pure PlutusV4
 languageFromText lang = fail $ "Error decoding Language: " ++ show lang
 
 instance ToCBOR Language where
@@ -265,6 +269,7 @@ data SLanguage (l :: Language) where
   SPlutusV1 :: SLanguage 'PlutusV1
   SPlutusV2 :: SLanguage 'PlutusV2
   SPlutusV3 :: SLanguage 'PlutusV3
+  SPlutusV4 :: SLanguage 'PlutusV4
 
 deriving instance Eq (SLanguage l)
 
@@ -291,6 +296,7 @@ plutusLanguage _ = case isLanguage @l of
   SPlutusV1 -> PlutusV1
   SPlutusV2 -> PlutusV2
   SPlutusV3 -> PlutusV3
+  SPlutusV4 -> PlutusV4
 
 -- | For implicit reflection on '@SLanguage@'
 -- See "Cardano.Ledger.Alonzo.Plutus.TxInfo" for example usage
@@ -363,10 +369,20 @@ instance PlutusLanguage 'PlutusV3 where
   plutusLanguageTag _ = 0x03
   decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
     PlutusRunnable <$> PV3.deserialiseScript (toMajorProtocolVersion pv) bs
-  evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) =
-    PV3.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs
-  evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
-    PV3.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
+  evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) ds =
+    PV3.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs (head ds)
+  evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) ds =
+    PV3.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs (head ds)
+
+instance PlutusLanguage 'PlutusV4 where
+  isLanguage = SPlutusV4
+  plutusLanguageTag _ = 0x04
+  decodePlutusRunnable pv (Plutus (PlutusBinary bs)) =
+    PlutusRunnable <$> PV4.deserialiseScript (toMajorProtocolVersion pv) bs
+  evaluatePlutusRunnable pv vm ec exBudget (PlutusRunnable rs) ds =
+    PV4.evaluateScriptRestricting (toMajorProtocolVersion pv) vm ec exBudget rs (head ds)
+  evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) ds =
+    PV4.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs (head ds)
 
 toSLanguage :: forall l m. (PlutusLanguage l, MonadFail m) => Language -> m (SLanguage l)
 toSLanguage lang
@@ -390,6 +406,7 @@ withSLanguage l f =
     PlutusV1 -> f SPlutusV1
     PlutusV2 -> f SPlutusV2
     PlutusV3 -> f SPlutusV3
+    PlutusV4 -> f SPlutusV4
 
 -- | Prevent decoding a version of Plutus until
 -- the appropriate protocol version.
@@ -399,5 +416,6 @@ guardPlutus lang =
         PlutusV1 -> natVersion @5
         PlutusV2 -> natVersion @7
         PlutusV3 -> natVersion @9
+        PlutusV4 -> natVersion @11
    in unlessDecoderVersionAtLeast v $
         fail (show lang <> " is not supported until " <> show v <> " major protocol version")

@@ -97,7 +97,7 @@ data ShelleyLedgerExamples era = ShelleyLedgerExamples
 deriving instance
   ( EraTx era
   , EraGov era
-  , Eq (TxSeq era)
+  , Eq (TxZones era)
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Eq (StashedAVVMAddresses era)
   , Eq (TranslationContext era)
@@ -168,6 +168,43 @@ defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData transla
   Helper constructors
 -------------------------------------------------------------------------------}
 
+exampleShelleyLedgerBlockTxs ::
+  forall era.
+  (EraSegWits era, PraosCrypto (EraCrypto era)) =>
+  [Tx era] ->
+  Block (BHeader (EraCrypto era)) era
+exampleShelleyLedgerBlockTxs txs = Block blockHeader blockBody
+  where
+    keys :: AllIssuerKeys (EraCrypto era) 'StakePool
+    keys = exampleKeys
+
+    hotKey = kesSignKey $ snd $ NE.head $ aikHot keys
+    KeyPair vKeyCold _ = aikCold keys
+
+    blockHeader :: BHeader (EraCrypto era)
+    blockHeader = BHeader blockHeaderBody (signedKES () 0 blockHeaderBody hotKey)
+
+    blockHeaderBody :: BHBody (EraCrypto era)
+    blockHeaderBody =
+      BHBody
+        { bheaderBlockNo = BlockNo 3
+        , bheaderSlotNo = SlotNo 9
+        , bheaderPrev = BlockHash (HashHeader (mkDummyHash (2 :: Int)))
+        , bheaderVk = coerceKeyRole vKeyCold
+        , bheaderVrfVk = vrfVerKey $ aikVrf keys
+        , bheaderEta = mkCertifiedVRF (mkBytes 0) (vrfSignKey $ aikVrf keys)
+        , bheaderL = mkCertifiedVRF (mkBytes 1) (vrfSignKey $ aikVrf keys)
+        , bsize = 4
+        , bhash = hashTxZones @era blockBody
+        , bheaderOCert = mkOCert keys 0 (KESPeriod 0)
+        , bprotver = ProtVer (natVersion @2) 0
+        }
+
+    blockBody = toTxZones @era (fmap StrictSeq.singleton (StrictSeq.fromList txs))
+
+    mkBytes :: Int -> Cardano.Ledger.BaseTypes.Seed
+    mkBytes = Seed . mkDummyHash @Blake2b_256
+
 exampleShelleyLedgerBlock ::
   forall era.
   (EraSegWits era, PraosCrypto (EraCrypto era)) =>
@@ -195,12 +232,12 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
         , bheaderEta = mkCertifiedVRF (mkBytes 0) (vrfSignKey $ aikVrf keys)
         , bheaderL = mkCertifiedVRF (mkBytes 1) (vrfSignKey $ aikVrf keys)
         , bsize = 2345
-        , bhash = hashTxSeq @era blockBody
+        , bhash = hashTxZones @era blockBody
         , bheaderOCert = mkOCert keys 0 (KESPeriod 0)
         , bprotver = ProtVer (natVersion @2) 0
         }
 
-    blockBody = toTxSeq @era (StrictSeq.fromList [tx])
+    blockBody = toTxZones @era (fmap StrictSeq.singleton (StrictSeq.fromList [tx]))
 
     mkBytes :: Int -> Cardano.Ledger.BaseTypes.Seed
     mkBytes = Seed . mkDummyHash @Blake2b_256
@@ -339,6 +376,7 @@ exampleNewEpochState value ppp pp =
                               , mkBasicTxOut addr value
                               )
                             ]
+                    , utxosFrxo = mempty
                     , utxosDeposited = Coin 1000
                     , utxosFees = Coin 1
                     , utxosGovState = emptyGovState
@@ -349,8 +387,10 @@ exampleNewEpochState value ppp pp =
               }
         , esNonMyopic = def
         }
-        & prevPParamsEpochStateL .~ ppp
-        & curPParamsEpochStateL .~ pp
+        & prevPParamsEpochStateL
+        .~ ppp
+        & curPParamsEpochStateL
+        .~ pp
       where
         addr :: Addr (EraCrypto era)
         addr =

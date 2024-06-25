@@ -149,8 +149,10 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
         , esLState = ledgerState
         , esNonMyopic = def
         }
-        & prevPParamsEpochStateL .~ pparams
-        & curPParamsEpochStateL .~ pparams
+        & prevPParamsEpochStateL
+        .~ pparams
+        & curPParamsEpochStateL
+        .~ pparams
 
     utxoByron :: Byron.UTxO
     utxoByron = Byron.cvsUtxo cvs
@@ -164,6 +166,7 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
         { lsUTxOState =
             UTxOState
               { utxosUtxo = utxoShelley
+              , utxosFrxo = mempty
               , utxosDeposited = Coin 0
               , utxosFees = Coin 0
               , utxosGovState = emptyGovState

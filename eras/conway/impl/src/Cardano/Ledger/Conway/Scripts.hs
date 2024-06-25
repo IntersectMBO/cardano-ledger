@@ -102,6 +102,7 @@ instance Crypto c => AlonzoEraScript (ConwayEra c) where
       SPlutusV1 -> Just $ ConwayPlutusV1 plutus
       SPlutusV2 -> Just $ ConwayPlutusV2 plutus
       SPlutusV3 -> Just $ ConwayPlutusV3 plutus
+      SPlutusV4 -> Nothing
 
   withPlutusScript (ConwayPlutusV1 plutus) f = f plutus
   withPlutusScript (ConwayPlutusV2 plutus) f = f plutus

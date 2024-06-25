@@ -215,8 +215,10 @@ makeEpochState gstate ledgerstate =
     , esLState = ledgerstate
     , esNonMyopic = def
     }
-    & prevPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
-    & curPParamsEpochStateL .~ gePParams (gsGenEnv gstate)
+    & prevPParamsEpochStateL
+    .~ gePParams (gsGenEnv gstate)
+    & curPParamsEpochStateL
+    .~ gePParams (gsGenEnv gstate)
 
 snaps :: EraTxOut era => LedgerState era -> SnapShots (EraCrypto era)
 snaps (LedgerState UTxOState {utxosUtxo = u, utxosFees = f} (CertState _ pstate dstate)) =
@@ -498,9 +500,9 @@ traceProp proof numTxInTrace gsize f = do
 
 forEachEpochTrace ::
   forall era prop.
-  ( Testable prop
-  , Reflect era
-  ) =>
+  Testable prop =>
+  -- , Reflect era
+
   Proof era ->
   Int ->
   GenSize ->
@@ -509,12 +511,12 @@ forEachEpochTrace ::
 forEachEpochTrace proof tracelen genSize f = do
   let newEpoch tr1 tr2 = nesEL (mcsNes tr1) /= nesEL (mcsNes tr2)
   trc <- case proof of
-    Conway -> genTrace proof tracelen genSize initStableFields
     Babbage -> genTrace proof tracelen genSize initStableFields
     Alonzo -> genTrace proof tracelen genSize initStableFields
     Allegra -> genTrace proof tracelen genSize initStableFields
     Mary -> genTrace proof tracelen genSize initStableFields
     Shelley -> genTrace proof tracelen genSize initStableFields
+    Conway -> genTrace proof tracelen genSize initStableFields
   let propf (subtrace, index) = counterexample ("Subtrace of EpochNo " ++ show index ++ " fails.") (f subtrace)
   -- The very last sub-trace may not be a full epoch, so we throw it away.
   case reverse (splitTrace newEpoch trc) of

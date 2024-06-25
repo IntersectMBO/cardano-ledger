@@ -90,7 +90,7 @@ library
         mtl,
         microlens,
         nothunks,
-        plutus-ledger-api ^>=1.26.0,
+        plutus-ledger-api ^>=1.30.0.0,
         set-algebra >=1.0,
         small-steps >=1.1,
         text,

@@ -539,6 +539,7 @@ encodeScript = \case
       SPlutusV1 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV1) 1 !> To pb
       SPlutusV2 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV2) 2 !> To pb
       SPlutusV3 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV3) 3 !> To pb
+      SPlutusV4 -> Sum (PlutusScript . fromJust . mkPlutusScript . Plutus @'PlutusV4) 4 !> To pb
 
 instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
   decCBOR = decode (Summands "AlonzoScript" decodeScript)
@@ -552,6 +553,7 @@ instance AlonzoEraScript era => DecCBOR (Annotator (AlonzoScript era)) where
         1 -> decodeAnnPlutus SPlutusV1
         2 -> decodeAnnPlutus SPlutusV2
         3 -> decodeAnnPlutus SPlutusV3
+        4 -> decodeAnnPlutus SPlutusV4
         n -> Invalid n
       {-# INLINE decodeScript #-}
   {-# INLINE decCBOR #-}

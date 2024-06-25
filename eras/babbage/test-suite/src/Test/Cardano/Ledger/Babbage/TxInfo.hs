@@ -40,6 +40,7 @@ import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysSucceeds)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap (aliceByronAddr)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePHK)
@@ -86,12 +87,14 @@ inlineDatumOutput ::
   TxOut era
 inlineDatumOutput =
   mkBasicTxOut (shelleyAddr) (inject $ Coin 3)
-    & datumTxOutL .~ datumEx
+    & datumTxOutL
+    .~ datumEx
 
 refScriptOutput :: BabbageEraTxOut era => TxOut era
 refScriptOutput =
   mkBasicTxOut (shelleyAddr) (inject $ Coin 3)
-    & referenceScriptTxOutL .~ (SJust $ alwaysSucceeds @'PlutusV2 3)
+    & referenceScriptTxOutL
+    .~ (SJust $ alwaysSucceeds @'PlutusV2 3)
 
 -- This input is only a "Shelley input" in the sense
 -- that we attach it to a Shelley output in the UTxO created below.
@@ -127,10 +130,14 @@ txb ::
   TxBody era
 txb i mRefInp o =
   mkBasicTxBody
-    & inputsTxBodyL .~ Set.singleton i
-    & referenceInputsTxBodyL .~ maybe mempty Set.singleton mRefInp
-    & outputsTxBodyL .~ StrictSeq.singleton o
-    & feeTxBodyL .~ Coin 2
+    & inputsTxBodyL
+    .~ Set.singleton i
+    & referenceInputsTxBodyL
+    .~ maybe mempty Set.singleton mRefInp
+    & outputsTxBodyL
+    .~ StrictSeq.singleton o
+    & feeTxBodyL
+    .~ Coin 2
 
 txBare ::
   forall era.
@@ -149,6 +156,7 @@ hasReferenceInput slang txInfo =
     SPlutusV1 -> False
     SPlutusV2 -> PV2.txInfoReferenceInputs txInfo /= mempty
     SPlutusV3 -> PV3.txInfoReferenceInputs txInfo /= mempty
+    SPlutusV4 -> PV4.txInfoReferenceInputs txInfo /= mempty
 
 expectOneInput :: PV2.TxInInfo -> SLanguage l -> PlutusTxInfo l -> Bool
 expectOneInput i slang txInfo =
@@ -156,6 +164,7 @@ expectOneInput i slang txInfo =
     SPlutusV1 -> False
     SPlutusV2 -> PV2.txInfoInputs txInfo == [i]
     SPlutusV3 -> False
+    SPlutusV4 -> False
 
 expectOneOutput :: PV2.TxOut -> SLanguage l -> PlutusTxInfo l -> Bool
 expectOneOutput o slang txInfo =
@@ -163,6 +172,7 @@ expectOneOutput o slang txInfo =
     SPlutusV1 -> False
     SPlutusV2 -> PV2.txInfoOutputs txInfo == [o]
     SPlutusV3 -> PV3.txInfoOutputs txInfo == [o]
+    SPlutusV4 -> PV4.txInfoOutputs txInfo == [o]
 
 successfulTranslation ::
   ( BabbageEraTxOut era

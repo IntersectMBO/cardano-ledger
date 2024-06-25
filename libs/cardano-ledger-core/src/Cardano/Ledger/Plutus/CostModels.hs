@@ -107,6 +107,7 @@ import qualified PlutusLedgerApi.V1 as PV1 (
  )
 import qualified PlutusLedgerApi.V2 as PV2 (ParamName, mkEvaluationContext)
 import qualified PlutusLedgerApi.V3 as PV3 (ParamName, mkEvaluationContext)
+import qualified PlutusLedgerApi.V4 as PV4
 
 -- | A language dependent cost model for the Plutus evaluator.
 -- Note that the `P.EvaluationContext` is entirely dependent on the
@@ -204,6 +205,7 @@ plutusVXParamNames :: Language -> [Text]
 plutusVXParamNames PlutusV1 = P.showParamName <$> [minBound .. maxBound :: PV1.ParamName]
 plutusVXParamNames PlutusV2 = P.showParamName <$> [minBound .. maxBound :: PV2.ParamName]
 plutusVXParamNames PlutusV3 = P.showParamName <$> [minBound .. maxBound :: PV3.ParamName]
+plutusVXParamNames PlutusV4 = P.showParamName <$> [minBound .. maxBound :: PV4.ParamName]
 
 validateCostModel :: MonadFail m => Language -> [Integer] -> m CostModel
 validateCostModel lang cmps =
@@ -224,8 +226,9 @@ mkCostModel lang cm =
         PlutusV1 -> PV1.mkEvaluationContext
         PlutusV2 -> PV2.mkEvaluationContext
         PlutusV3 -> PV3.mkEvaluationContext
+        PlutusV4 -> PV4.mkEvaluationContext
     eCostModel :: Either P.CostModelApplyError (P.EvaluationContext, [P.CostModelApplyWarn])
-    eCostModel = runWriterT (mkEvaluationContext cm)
+    eCostModel = runWriterT (mkEvaluationContext (fmap fromInteger cm))
 
 getCostModelLanguage :: CostModel -> Language
 getCostModelLanguage (CostModel lang _ _) = lang
@@ -275,6 +278,7 @@ costModelParamsCount :: Language -> Int
 costModelParamsCount PlutusV1 = 166
 costModelParamsCount PlutusV2 = 175
 costModelParamsCount PlutusV3 = 233
+costModelParamsCount PlutusV4 = 233 -- TODO WG ???
 
 -- | Prior to version 9, each 'CostModel' was expected to be serialized as
 -- an array of integers of a specific length (depending on the version of Plutus).
@@ -326,14 +330,12 @@ instance Ord CostModelError where
       comp (P.CMUnknownParamError err1) (P.CMUnknownParamError err2) = compare err1 err2
       comp P.CMInternalReadError P.CMInternalReadError = EQ
       comp (P.CMInternalWriteError err1) (P.CMInternalWriteError err2) = compare err1 err2
-      comp (P.CMTooFewParamsError e1 a1) (P.CMTooFewParamsError e2 a2) = compare e1 e2 <> compare a1 a2
       comp cme1 cme2 = compare (tagOf cme1) (tagOf cme2)
       tagOf :: P.CostModelApplyError -> Int
       tagOf = \case
         P.CMUnknownParamError {} -> 0
         P.CMInternalReadError {} -> 1
         P.CMInternalWriteError {} -> 2
-        P.CMTooFewParamsError {} -> 3
 
 instance EncCBOR CostModelError where
   encCBOR =
@@ -344,15 +346,12 @@ instance EncCBOR CostModelError where
         Sum (CostModelError P.CMInternalReadError) 1
       CostModelError (P.CMInternalWriteError err) ->
         Sum (CostModelError . P.CMInternalWriteError . T.unpack) 2 !> To (T.pack err)
-      CostModelError (P.CMTooFewParamsError expected actual) ->
-        Sum (\e -> CostModelError . P.CMTooFewParamsError e) 3 !> To expected !> To actual
 
 instance DecCBOR CostModelError where
   decCBOR = decode $ Summands "CostModelError" $ \case
     0 -> SumD (CostModelError . P.CMUnknownParamError) <! From
     1 -> SumD (CostModelError P.CMInternalReadError)
     2 -> SumD (CostModelError . P.CMInternalWriteError . T.unpack) <! From
-    3 -> SumD (\e -> CostModelError . P.CMTooFewParamsError e) <! From <! From
     n -> Invalid n
 
 instance ToJSON CostModelError where
@@ -362,8 +361,6 @@ instance ToJSON CostModelError where
     CostModelError P.CMInternalReadError -> "internalReadError"
     CostModelError (P.CMInternalWriteError err) ->
       object ["internalWriteError" .= toJSON err]
-    CostModelError (P.CMTooFewParamsError expected actual) ->
-      object ["tooFewParamsError" .= object ["expected" .= expected, "actual" .= actual]]
 
 instance NoThunks CostModelError
 

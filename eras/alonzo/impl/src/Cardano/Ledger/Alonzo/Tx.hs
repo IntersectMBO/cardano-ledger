@@ -7,6 +7,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -15,6 +16,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
@@ -128,7 +130,11 @@ import Cardano.Ledger.MemoBytes (EqRaw (..))
 import Cardano.Ledger.Plutus.Data (Data, hashData)
 import Cardano.Ledger.Plutus.Language (nonNativeLanguages)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash (..), hashAnnotated)
-import Cardano.Ledger.Shelley.Tx (ShelleyTx (ShelleyTx), shelleyEqTxRaw)
+import Cardano.Ledger.Shelley.Tx (
+  -- ShelleyRequiredTx,
+  ShelleyTx (ShelleyTx),
+  shelleyEqTxRaw,
+ )
 import qualified Cardano.Ledger.UTxO as Shelley
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.Arrow (left)
@@ -161,11 +167,15 @@ data AlonzoTx era = AlonzoTx
   , wits :: !(TxWits era)
   , isValid :: !IsValid
   , auxiliaryData :: !(StrictMaybe (TxAuxData era))
+  -- , requiredTxs :: !(RequiredTxs era)
   }
   deriving (Generic)
 
 newtype AlonzoTxUpgradeError = ATUEBodyUpgradeError AlonzoTxBodyUpgradeError
   deriving (Show)
+
+-- instance Crypto c => EraRequiredTxsData (AlonzoEra c) where
+--   type RequiredTxs (AlonzoEra c) = ShelleyRequiredTx (AlonzoEra c)
 
 instance Crypto c => EraTx (AlonzoEra c) where
   {-# SPECIALIZE instance EraTx (AlonzoEra StandardCrypto) #-}
@@ -184,6 +194,9 @@ instance Crypto c => EraTx (AlonzoEra c) where
   auxDataTxL = auxDataAlonzoTxL
   {-# INLINE auxDataTxL #-}
 
+  -- requiredTxsTxL = lens (const mempty) const
+  -- {-# INLINE requiredTxsTxL #-}
+
   sizeTxF = sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
@@ -200,6 +213,8 @@ instance Crypto c => EraTx (AlonzoEra c) where
       <*> pure (IsValid True)
       <*> pure (fmap upgradeTxAuxData aux)
 
+-- <*> pure mempty -- TODO WG: Do I need to change this? I'm thinking not for the prototype
+
 instance (Tx era ~ AlonzoTx era, AlonzoEraTx era) => EqRaw (AlonzoTx era) where
   eqRaw = alonzoEqTxRaw
 
@@ -215,8 +230,11 @@ instance Crypto c => AlonzoEraTx (AlonzoEra c) where
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
-mkBasicAlonzoTx :: Monoid (TxWits era) => TxBody era -> AlonzoTx era
-mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing
+mkBasicAlonzoTx ::
+  Monoid (TxWits era) =>
+  TxBody era ->
+  AlonzoTx era
+mkBasicAlonzoTx txBody = AlonzoTx txBody mempty (IsValid True) SNothing -- mempty
 
 -- | `TxBody` setter and getter for `AlonzoTx`.
 bodyAlonzoTxL :: Lens' (AlonzoTx era) (TxBody era)
@@ -248,10 +266,21 @@ isValidAlonzoTxL = lens isValid (\tx valid -> tx {isValid = valid})
 {-# INLINEABLE isValidAlonzoTxL #-}
 
 deriving instance
-  (Era era, Eq (TxBody era), Eq (TxWits era), Eq (TxAuxData era)) => Eq (AlonzoTx era)
+  ( Era era
+  , Eq (TxBody era)
+  , Eq (TxWits era)
+  , Eq (TxAuxData era) -- Eq (RequiredTxs era)
+  ) =>
+  Eq (AlonzoTx era)
 
 deriving instance
-  (Era era, Show (TxBody era), Show (TxAuxData era), Show (Script era), Show (TxWits era)) =>
+  ( Era era
+  , Show (TxBody era)
+  , Show (TxAuxData era)
+  , Show (Script era)
+  , Show (TxWits era)
+  -- , Show (RequiredTxs era)
+  ) =>
   Show (AlonzoTx era)
 
 instance
@@ -259,6 +288,7 @@ instance
   , NoThunks (TxWits era)
   , NoThunks (TxAuxData era)
   , NoThunks (TxBody era)
+  -- , NoThunks (RequiredTxs era)
   ) =>
   NoThunks (AlonzoTx era)
 
@@ -267,6 +297,7 @@ instance
   , NFData (TxWits era)
   , NFData (TxAuxData era)
   , NFData (TxBody era)
+  -- , NFData (RequiredTxs era)
   ) =>
   NFData (AlonzoTx era)
 
@@ -405,9 +436,12 @@ alonzoSegwitTx txBodyAnn txWitsAnn isValid auxDataAnn = Annotator $ \bytes ->
       txWits = runAnnotator txWitsAnn bytes
       txAuxData = maybeToStrictMaybe (flip runAnnotator bytes <$> auxDataAnn)
    in mkBasicTx txBody
-        & witsTxL .~ txWits
-        & auxDataTxL .~ txAuxData
-        & isValidTxL .~ isValid
+        & witsTxL
+        .~ txWits
+        & auxDataTxL
+        .~ txAuxData
+        & isValidTxL
+        .~ isValid
 
 --------------------------------------------------------------------------------
 -- Mempool Serialisation
@@ -469,6 +503,7 @@ instance
   , DecCBOR (Annotator (TxBody era))
   , DecCBOR (Annotator (TxWits era))
   , DecCBOR (Annotator (TxAuxData era))
+  -- , DecCBOR (Annotator (RequiredTxs era))
   ) =>
   DecCBOR (Annotator (AlonzoTx era))
   where
@@ -482,6 +517,7 @@ instance
           ( sequence . maybeToStrictMaybe
               <$> decodeNullMaybe decCBOR
           )
+  -- <*! From
   {-# INLINE decCBOR #-}
 
 -- =======================================================================

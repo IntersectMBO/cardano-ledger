@@ -56,6 +56,20 @@ instance
   (Era era, ToExpr (TxOut era), ToExpr (TxCert era), ToExpr (PParamsUpdate era)) =>
   ToExpr (BabbageTxBody era)
 
+-- Babel Fees
+
+-- instance
+--   ( ToExpr (TxOut era)
+--   , ToExpr (TxCert era)
+--   ) =>
+--   ToExpr (BabbageRequiredTxRaw era)
+
+-- instance
+--   ( ToExpr (TxOut era)
+--   , ToExpr (TxCert era)
+--   ) =>
+--   ToExpr (BabbageRequiredTx era)
+
 -- Rules/Utxo
 instance
   ( ToExpr (AlonzoUtxoPredFailure era)

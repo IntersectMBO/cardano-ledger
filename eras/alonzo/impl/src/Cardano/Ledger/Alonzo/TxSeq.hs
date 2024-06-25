@@ -38,13 +38,12 @@ import Cardano.Ledger.Binary (
   serialize,
   withSlice,
  )
-import Cardano.Ledger.Core hiding (TxSeq, hashTxSeq)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.SafeHash (SafeToHash, originalBytes)
 import Cardano.Ledger.Shelley.BlockChain (constructMetadata)
-import Control.Monad (unless)
+import Control.Monad (unless, (<=<))
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
@@ -86,10 +85,10 @@ data AlonzoTxSeq era = AlonzoTxSeqRaw
   deriving (Generic)
 
 instance Crypto c => EraSegWits (AlonzoEra c) where
-  type TxSeq (AlonzoEra c) = AlonzoTxSeq (AlonzoEra c)
-  fromTxSeq = txSeqTxns
-  toTxSeq = AlonzoTxSeq
-  hashTxSeq = hashAlonzoTxSeq
+  type TxZones (AlonzoEra c) = AlonzoTxSeq (AlonzoEra c)
+  fromTxZones = fmap StrictSeq.singleton . txSeqTxns
+  toTxZones = AlonzoTxSeq . StrictSeq.forceToStrict . (StrictSeq.fromStrict <=< StrictSeq.fromStrict)
+  hashTxZones = hashAlonzoTxSeq
   numSegComponents = 4
 
 pattern AlonzoTxSeq ::

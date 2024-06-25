@@ -17,7 +17,6 @@
 module Test.Cardano.Ledger.Generic.Same where
 
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
-import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..))
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
@@ -27,6 +26,7 @@ import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
+import Cardano.Ledger.Conway.Tx
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
@@ -508,6 +508,7 @@ sameConwayTxBody ::
   ConwayTxBody era ->
   [(String, Maybe PDoc)]
 sameConwayTxBody
+  -- TODO WG add new stuff in here
   proof
   (ConwayTxBody i1 cl1 ri1 o1 cr1 tc1 c1 (Withdrawals w1) f1 v1 r1 m1 s1 d1 n1 vp1 pp1 ctv1 td1)
   (ConwayTxBody i2 cl2 ri2 o2 cr2 tc2 c2 (Withdrawals w2) f2 v2 r2 m2 s2 d2 n2 vp2 pp2 ctv2 td2) =
@@ -570,6 +571,7 @@ sameAlonzoTx ::
   AlonzoTx era ->
   AlonzoTx era ->
   [(String, Maybe PDoc)]
+-- TODO WG add new stuff in here
 sameAlonzoTx proof (AlonzoTx b1 w1 v1 aux1) (AlonzoTx b2 w2 v2 aux2) =
   extendLabel "TxBody " (sameTxBody proof b1 b2)
     ++ extendLabel "TxWits " (sameAlonzoTxWits proof w1 w2)
@@ -621,7 +623,7 @@ sameAlonzoTxSeq proof (AlonzoTxSeq ss1) (AlonzoTxSeq ss2) =
   where
     f n t1 t2 = SomeM (show n) (sameTx proof) t1 t2
 
-sameTxSeq :: Reflect era => Proof era -> TxSeq era -> TxSeq era -> [(String, Maybe PDoc)]
+sameTxSeq :: Reflect era => Proof era -> TxZones era -> TxZones era -> [(String, Maybe PDoc)]
 sameTxSeq proof@Shelley x y = sameShelleyTxSeq proof x y
 sameTxSeq proof@Allegra x y = sameShelleyTxSeq proof x y
 sameTxSeq proof@Mary x y = sameShelleyTxSeq proof x y

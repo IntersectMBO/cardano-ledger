@@ -206,6 +206,7 @@ instance
   ( Arbitrary (TxBody era)
   , Arbitrary (TxWits era)
   , Arbitrary (TxAuxData era)
+  -- , Arbitrary (RequiredTxs era)
   ) =>
   Arbitrary (AlonzoTx era)
   where
@@ -215,6 +216,8 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+-- <*> arbitrary
 
 instance (AlonzoEraScript era, Script era ~ AlonzoScript era) => Arbitrary (AlonzoScript era) where
   arbitrary = do

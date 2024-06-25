@@ -48,11 +48,13 @@ import GHC.Generics (Generic)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 
 data VersionedTxInfo
   = TxInfoPV1 PV1.TxInfo
   | TxInfoPV2 PV2.TxInfo
   | TxInfoPV3 PV3.TxInfo
+  | TxInfoPV4 PV4.TxInfo
   deriving (Show, Eq, Generic)
 
 -- | Represents arguments passed to `alonzoTxInfo` along with the produced result.
@@ -119,6 +121,26 @@ instance Cborg.Serialise a => Cborg.Serialise (PV3.Interval a)
 instance Cborg.Serialise a => Cborg.Serialise (PV3.LowerBound a)
 instance Cborg.Serialise a => Cborg.Serialise (PV3.UpperBound a)
 instance Cborg.Serialise PV3.Rational
+instance Cborg.Serialise PV4.ChangedParameters
+instance Cborg.Serialise PV4.ColdCommitteeCredential
+instance Cborg.Serialise PV4.Committee
+instance Cborg.Serialise PV4.Constitution
+instance Cborg.Serialise PV4.DRep
+instance Cborg.Serialise PV4.DRepCredential
+instance Cborg.Serialise PV4.Delegatee
+instance Cborg.Serialise PV4.GovernanceAction
+instance Cborg.Serialise PV4.GovernanceActionId
+instance Cborg.Serialise PV4.HotCommitteeCredential
+instance Cborg.Serialise PV4.ProposalProcedure
+instance Cborg.Serialise PV4.ProtocolVersion
+instance Cborg.Serialise PV4.ScriptPurpose
+instance Cborg.Serialise PV4.TxCert
+instance Cborg.Serialise PV4.TxId
+instance Cborg.Serialise PV4.TxInInfo
+instance Cborg.Serialise PV4.TxInfo
+instance Cborg.Serialise PV4.TxOutRef
+instance Cborg.Serialise PV4.Vote
+instance Cborg.Serialise PV4.Voter
 
 instance Cborg.Serialise VersionedTxInfo
 

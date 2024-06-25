@@ -74,6 +74,7 @@ import qualified PlutusLedgerApi.V1 as PV1
 import PlutusLedgerApi.V1.Contexts ()
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusLedgerApi.V4 as PV4
 import Prettyprinter (Pretty (..))
 
 -- | This type contains all that is necessary from Ledger to evaluate a plutus script.
@@ -286,6 +287,7 @@ explainPlutusEvaluationError pwc@PlutusWithContext {pwcProtocolVersion, pwcScrip
         PlutusV1 -> show . pretty <$> (PV1.fromData d :: Maybe PV1.ScriptContext)
         PlutusV2 -> show . pretty <$> (PV2.fromData d :: Maybe PV2.ScriptContext)
         PlutusV3 -> show . pretty <$> (PV3.fromData d :: Maybe PV3.ScriptContext)
+        PlutusV4 -> show . pretty <$> (PV4.fromData d :: Maybe PV4.ScriptContext)
 
       ctxMessage info =
         case getCtxAsString info lang of

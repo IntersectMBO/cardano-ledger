@@ -92,6 +92,7 @@ toVersionedTxInfo slang txInfo =
     SPlutusV1 -> TxInfoPV1 txInfo
     SPlutusV2 -> TxInfoPV2 txInfo
     SPlutusV3 -> TxInfoPV3 txInfo
+    SPlutusV4 -> TxInfoPV4 txInfo
 
 genTranslationInstance ::
   forall era.

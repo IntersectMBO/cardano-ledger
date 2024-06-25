@@ -1,0 +1,203 @@
+cabal-version:      3.0
+name:               cardano-ledger-babel
+version:            1.14.0.0
+license:            Apache-2.0
+maintainer:         operations@iohk.io
+author:             IOHK
+bug-reports:        https://github.com/intersectmbo/cardano-ledger/issues
+synopsis:           Cardano ledger with Babel Fees.
+description:
+    This package builds upon the Conway ledger with Babel Fees
+
+category:           Network
+build-type:         Simple
+data-files:
+    test/data/*.json
+    cddl-files/babel.cddl
+    cddl-files/crypto.cddl
+    cddl-files/extra.cddl
+
+extra-source-files: CHANGELOG.md
+
+source-repository head
+    type:     git
+    location: https://github.com/intersectmbo/cardano-ledger
+    subdir:   eras/babel/impl
+
+flag asserts
+    description: Enable assertions
+    default:     False
+
+library
+    exposed-modules:
+        Cardano.Ledger.Babel.Era
+        Cardano.Ledger.Babel.Genesis
+        Cardano.Ledger.Babel.LedgerState.Types
+        Cardano.Ledger.Babel.PParams
+        Cardano.Ledger.Babel.Tx
+        Cardano.Ledger.Babel.TxBody
+        Cardano.Ledger.Babel.TxInfo
+        Cardano.Ledger.Babel.TxWits
+        Cardano.Ledger.Babel.Transition
+        Cardano.Ledger.Babel.Translation
+        Cardano.Ledger.Babel.Scripts
+        Cardano.Ledger.Babel
+        Cardano.Ledger.Babel.Governance
+        Cardano.Ledger.Babel.Rules
+        Cardano.Ledger.Babel.Rules.Bbody
+        Cardano.Ledger.Babel.Core
+        Cardano.Ledger.Babel.TxCert
+        Cardano.Ledger.Babel.FRxO
+        Cardano.Ledger.Babel.UTxO
+        Cardano.Ledger.Babel.Plutus.Context
+        Cardano.Ledger.Babel.API.Validation
+
+    hs-source-dirs:   src
+    other-modules:
+        Cardano.Ledger.Babel.API.Genesis
+        Cardano.Ledger.Babel.API.Mempool
+        Cardano.Ledger.Babel.Rules.Gov
+        Cardano.Ledger.Babel.Rules.Ledger
+        Cardano.Ledger.Babel.Rules.Ledgers
+        Cardano.Ledger.Babel.Rules.Pool
+        Cardano.Ledger.Babel.Rules.Utxo
+        Cardano.Ledger.Babel.Rules.Utxos
+        Cardano.Ledger.Babel.Rules.Utxow
+        Cardano.Ledger.Babel.Rules.Zone
+        Cardano.Ledger.Babel.Rules.Zones
+        Cardano.Ledger.Babel.Rules.Cert
+        Cardano.Ledger.Babel.Rules.Certs
+        Cardano.Ledger.Babel.Rules.Deleg
+        Cardano.Ledger.Babel.Rules.GovCert
+        Cardano.Ledger.Babel.TxAuxData
+        Cardano.Ledger.Babel.TxOut
+
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
+
+    build-depends:
+        base >=4.14 && <5,
+        aeson >=2.2,
+        bytestring,
+        data-default-class,
+        cardano-crypto-class,
+        cardano-data >=1.2.1,
+        cardano-ledger-binary >=1.3.2,
+        cardano-ledger-allegra >=1.4,
+        cardano-ledger-alonzo >=1.8,
+        cardano-ledger-babbage >=1.8,
+        cardano-ledger-conway >=1.14.0.0,
+        cardano-ledger-core >=1.12,
+        cardano-ledger-mary >=1.6,
+        cardano-ledger-shelley >=1.11,
+        cardano-strict-containers,
+        containers,
+        deepseq,
+        microlens,
+        mtl,
+        nothunks,
+        plutus-ledger-api ^>=1.30.0.0,
+        small-steps >=1.1,
+        transformers,
+        validation-selective,
+        plutus-tx,
+
+    if flag(asserts)
+        ghc-options: -fno-ignore-asserts
+
+library testlib
+    exposed-modules:
+        Test.Cardano.Ledger.Babel.Arbitrary
+        Test.Cardano.Ledger.Babel.Binary.Cddl
+        Test.Cardano.Ledger.Babel.Binary.RoundTrip
+        Test.Cardano.Ledger.Babel.Binary.Regression
+        Test.Cardano.Ledger.Babel.ImpTest
+        Test.Cardano.Ledger.Babel.Imp
+        Test.Cardano.Ledger.Babel.Imp.EpochSpec
+        Test.Cardano.Ledger.Babel.Imp.EnactSpec
+        Test.Cardano.Ledger.Babel.Imp.GovSpec
+        Test.Cardano.Ledger.Babel.Imp.GovCertSpec
+        Test.Cardano.Ledger.Babel.Imp.UtxoSpec
+        Test.Cardano.Ledger.Babel.Imp.UtxosSpec
+        Test.Cardano.Ledger.Babel.Imp.RatifySpec
+        Test.Cardano.Ledger.Babel.Proposals
+        Test.Cardano.Ledger.Babel.TreeDiff
+        Test.Cardano.Ledger.Babel.Genesis
+
+    visibility:       public
+    hs-source-dirs:   testlib
+    other-modules:    Paths_cardano_ledger_babel
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
+
+    build-depends:
+        base,
+        bytestring,
+        cardano-data:{cardano-data, testlib},
+        containers,
+        plutus-ledger-api,
+        deepseq,
+        microlens,
+        cardano-crypto-class,
+        cardano-ledger-allegra,
+        cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
+        cardano-ledger-binary,
+        cardano-ledger-babbage:{cardano-ledger-babbage, testlib},
+        cardano-ledger-babel,
+        cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-conway:{cardano-ledger-conway, testlib},
+        cardano-ledger-mary,
+        cardano-ledger-shelley,
+        cardano-strict-containers,
+        data-default-class,
+        generic-random,
+        microlens-mtl,
+        mtl,
+        text,
+        small-steps >=1.1
+
+test-suite tests
+    type:             exitcode-stdio-1.0
+    main-is:          Main.hs
+    hs-source-dirs:   test
+    other-modules:
+        Test.Cardano.Ledger.Babel.BinarySpec
+        Test.Cardano.Ledger.Babel.Binary.CddlSpec
+        Test.Cardano.Ledger.Babel.DRepRatifySpec
+        Test.Cardano.Ledger.Babel.CommitteeRatifySpec
+        Test.Cardano.Ledger.Babel.GenesisSpec
+        Test.Cardano.Ledger.Babel.GovActionReorderSpec
+        Test.Cardano.Ledger.Babel.Plutus.PlutusSpec
+        Paths_cardano_ledger_babel
+
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+
+    build-depends:
+        aeson,
+        base,
+        cardano-ledger-core:testlib,
+        cardano-ledger-allegra,
+        cardano-ledger-alonzo:testlib,
+        cardano-ledger-alonzo,
+        cardano-ledger-babbage,
+        cardano-ledger-babel,
+        cardano-ledger-shelley:testlib,
+        cardano-ledger-conway:{cardano-ledger-conway, testlib},
+        cardano-ledger-core,
+        cardano-ledger-binary:testlib,
+        cardano-slotting:testlib,
+        cardano-strict-containers,
+        containers,
+        data-default-class,
+        microlens,
+        testlib

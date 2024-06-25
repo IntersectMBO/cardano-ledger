@@ -95,6 +95,7 @@ plutusScriptsProp = do
     keys PlutusV1 = 3 :: Int
     keys PlutusV2 = 6
     keys PlutusV3 = 7
+    keys PlutusV4 = 7
 
 nativeScriptsProp ::
   forall era.

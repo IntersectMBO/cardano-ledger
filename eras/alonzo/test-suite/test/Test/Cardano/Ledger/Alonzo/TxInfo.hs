@@ -87,7 +87,7 @@ txb i o =
     SNothing -- network ID
 
 txEx :: TxIn StandardCrypto -> TxOut Alonzo -> Tx Alonzo
-txEx i o = AlonzoTx (txb i o) mempty (IsValid True) SNothing
+txEx i o = AlonzoTx (txb i o) mempty (IsValid True) SNothing -- mempty
 
 silentlyIgnore :: Tx Alonzo -> Assertion
 silentlyIgnore tx =

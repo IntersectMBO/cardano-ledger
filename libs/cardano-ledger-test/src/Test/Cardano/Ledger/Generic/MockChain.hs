@@ -15,9 +15,21 @@
 module Test.Cardano.Ledger.Generic.MockChain where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), ShelleyBase)
+
+-- import Cardano.Ledger.Conway.Rules (
+--   ConwayLedgersEnv (..),
+--  )
+
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Api.Era (AlonzoEra)
+import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
+  AccountState,
   EpochState (..),
   LedgerState (..),
   NewEpochState (..),
@@ -119,15 +131,49 @@ instance (Era era, NoThunks (NewEpochState era)) => NoThunks (MockChainState era
 
 -- ======================================================================
 
+-- type family LedgersEnv era where
+--   LedgersEnv (ConwayEra StandardCrypto) = ConwayLedgersEnv (ConwayEra StandardCrypto)
+--   LedgersEnv era = ShelleyLedgersEnv era
+
+-- TODO WG Can you use something like this to avoid duplication of API/Validation.hs?
+class LedgersEra era where
+  type LedgersEnv era
+  getLedgersEnv :: SlotNo -> PParams era -> AccountState -> LedgersEnv era
+
+instance LedgersEra (ShelleyEra c) where
+  type LedgersEnv (ShelleyEra c) = ShelleyLedgersEnv (ShelleyEra c)
+  getLedgersEnv slot pparams account = LedgersEnv slot pparams account
+
+instance LedgersEra (BabbageEra c) where
+  type LedgersEnv (BabbageEra c) = ShelleyLedgersEnv (BabbageEra c)
+  getLedgersEnv slot pparams account = LedgersEnv slot pparams account
+
+instance LedgersEra (MaryEra c) where
+  type LedgersEnv (MaryEra c) = ShelleyLedgersEnv (MaryEra c)
+  getLedgersEnv slot pparams account = LedgersEnv slot pparams account
+
+instance LedgersEra (AlonzoEra c) where
+  type LedgersEnv (AlonzoEra c) = ShelleyLedgersEnv (AlonzoEra c)
+  getLedgersEnv slot pparams account = LedgersEnv slot pparams account
+
+instance LedgersEra (AllegraEra c) where
+  type LedgersEnv (AllegraEra c) = ShelleyLedgersEnv (AllegraEra c)
+  getLedgersEnv slot pparams account = LedgersEnv slot pparams account
+
+instance LedgersEra (ConwayEra c) where
+  type LedgersEnv (ConwayEra c) = ShelleyLedgersEnv (ConwayEra c)
+  getLedgersEnv slot pparams account = LedgersEnv slot pparams account
+
 instance
-  ( EraGov era
+  ( LedgersEra era
+  , EraGov era
   , STS (ShelleyTICK era)
   , State (EraRule "TICK" era) ~ NewEpochState era
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Environment (EraRule "TICK" era) ~ ()
   , Embed (EraRule "TICK" era) (MOCKCHAIN era)
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
-  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Environment (EraRule "LEDGERS" era) ~ LedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Embed (EraRule "LEDGERS" era) (MOCKCHAIN era)
   , Signal (EraRule "LEDGER" era) ~ Tx era
@@ -160,7 +206,8 @@ instance
         let newblocksmade = BlocksMade (Map.unionWith (+) current (Map.singleton issuer 1))
 
         newledgerState <-
-          trans @(EraRule "LEDGERS" era) $ TRC (LedgersEnv slot pparams account, ledgerState, fromStrict txs)
+          trans @(EraRule "LEDGERS" era) $
+            TRC (getLedgersEnv slot pparams account, ledgerState, fromStrict txs)
 
         let newEpochstate = epochState {esLState = newledgerState}
             newNewEpochState = nes' {nesEs = newEpochstate, nesBcur = newblocksmade}

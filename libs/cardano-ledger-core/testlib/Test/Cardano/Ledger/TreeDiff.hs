@@ -24,6 +24,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary
+import Cardano.Ledger.FRxO (FRxO)
 import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys
 import Cardano.Ledger.MemoBytes
@@ -249,5 +250,7 @@ instance ToExpr (CommitteeState era)
 deriving instance (Era era, ToExpr (Script era)) => ToExpr (ScriptsProvided era)
 
 instance ToExpr (TxOut era) => ToExpr (UTxO era)
+
+instance ToExpr (TxOut era) => ToExpr (FRxO era)
 
 instance ToExpr (TxOutSource era)

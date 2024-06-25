@@ -175,7 +175,7 @@ noDoubleSpend SourceSignalTarget {signal} =
   counterexample "noDoubleSpend" $
     [] === getDoubleInputs txs
   where
-    txs = toList $ (fromTxSeq @era . bbody) signal
+    txs = concatMap toList $ (fromTxZones @era . bbody) signal
 
     getDoubleInputs :: [Tx era] -> [(Tx era, [Tx era])]
     getDoubleInputs [] = []

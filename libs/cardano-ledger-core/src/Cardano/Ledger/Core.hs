@@ -60,8 +60,12 @@ module Cardano.Ledger.Core (
   -- * Deprecations
   hashAuxiliaryData,
   validateAuxiliaryData,
+
+  -- * Babel fees
 )
 where
+
+-- EraRequiredTxsData (..),
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (
@@ -123,12 +127,29 @@ import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
 
+-- class
+--   ( EraScript era
+--   , Eq (RequiredTxs era)
+--   , EqRaw (RequiredTxs era)
+--   , Show (RequiredTxs era)
+--   , Monoid (RequiredTxs era)
+--   , NoThunks (RequiredTxs era)
+--   , HashAnnotated (RequiredTxs era) EraIndependentRequiredTxs (EraCrypto era)
+--   , ToCBOR (RequiredTxs era)
+--   , EncCBOR (RequiredTxs era)
+--   , DecCBOR (Annotator (RequiredTxs era))
+--   ) =>
+--   EraRequiredTxsData era
+--   where
+--   type RequiredTxs era = (r :: Type) | r -> era
+
 -- | A transaction.
 class
   ( EraTxBody era
   , EraTxWits era
   , EraTxAuxData era
-  , EraPParams era
+  , -- , EraRequiredTxsData era
+    EraPParams era
   , -- NFData (Tx era), TODO: Add NFData constraints to Crypto class
     NoThunks (Tx era)
   , DecCBOR (Annotator (Tx era))
@@ -153,6 +174,8 @@ class
 
   auxDataTxL :: Lens' (Tx era) (StrictMaybe (AuxiliaryData era))
 
+  -- requiredTxsTxL :: Lens' (Tx era) (Set (TxIn (EraCrypto era))) -- TODO WG if we don't bother with allowing general atomic zones (cycles) then this should go back into the TxBody
+
   sizeTxF :: SimpleGetter (Tx era) Integer
 
   -- | Using information from the transaction validate the supplied native script.
@@ -175,7 +198,10 @@ class
   ( EraTxOut era
   , EraTxCert era
   , EraPParams era
-  , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
+  , {- TODO This is where we've got a problem with the hashing
+       Might be tough. Type level field exclusions with `Symbol`s as field names?
+       Nasty idea, but maybe this requires a nasty solution. -}
+    HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
   , DecCBOR (Annotator (TxBody era))
   , EncCBOR (TxBody era)
   , ToCBOR (TxBody era)
@@ -596,29 +622,29 @@ hashScript =
 --   (Tx era)', witnessed by 'fromTxSeq' and 'toTxSeq'.
 class
   ( EraTx era
-  , Eq (TxSeq era)
-  , Show (TxSeq era)
-  , EncCBORGroup (TxSeq era)
-  , DecCBOR (Annotator (TxSeq era))
+  , Eq (TxZones era)
+  , Show (TxZones era)
+  , EncCBORGroup (TxZones era)
+  , DecCBOR (Annotator (TxZones era))
   ) =>
   EraSegWits era
   where
-  type TxSeq era = (r :: Type) | r -> era
+  type TxZones era = (r :: Type) | r -> era
 
-  fromTxSeq :: TxSeq era -> StrictSeq (Tx era)
-  toTxSeq :: StrictSeq (Tx era) -> TxSeq era
+  fromTxZones :: TxZones era -> StrictSeq (StrictSeq (Tx era))
+  toTxZones :: StrictSeq (StrictSeq (Tx era)) -> TxZones era
 
   -- | Get the block body hash from the TxSeq. Note that this is not a regular
   -- "hash the stored bytes" function since the block body hash forms a small
   -- Merkle tree.
-  hashTxSeq ::
-    TxSeq era ->
+  hashTxZones ::
+    TxZones era ->
     Hash.Hash (CC.HASH (EraCrypto era)) EraIndependentBlockBody
 
   -- | The number of segregated components
   numSegComponents :: Word64
 
-bBodySize :: forall era. EraSegWits era => ProtVer -> TxSeq era -> Int
+bBodySize :: forall era. EraSegWits era => ProtVer -> TxZones era -> Int
 bBodySize (ProtVer v _) = BS.length . serialize' v . encCBORGroup
 
 txIdTx :: EraTx era => Tx era -> TxId (EraCrypto era)
@@ -626,3 +652,40 @@ txIdTx tx = txIdTxBody (tx ^. bodyTxL)
 
 txIdTxBody :: EraTxBody era => TxBody era -> TxId (EraCrypto era)
 txIdTxBody = TxId . hashAnnotated
+
+----- TODO WG NEW STUFF
+
+-- class
+--   ( EraTxOut era
+--   , EraTxCert era
+--   , EraPParams era
+--   , HashAnnotated (TxBody era) EraIndependentTxBody (EraCrypto era)
+--   , DecCBOR (Annotator (TxBody era))
+--   , EncCBOR (TxBody era)
+--   , ToCBOR (TxBody era)
+--   , NoThunks (TxBody era)
+--   , NFData (TxBody era)
+--   , Show (TxBody era)
+--   , Eq (TxBody era)
+--   , EqRaw (TxBody era)
+--   , HashAnnotated (RequiredTxs era) EraIndependentRequiredTxs (EraCrypto era)
+--   , DecCBOR (Annotator (RequiredTxs era))
+--   , EncCBOR (RequiredTxs era)
+--   , ToCBOR (RequiredTxs era)
+--   , NoThunks (RequiredTxs era)
+--   , NFData (RequiredTxs era)
+--   , Show (RequiredTxs era)
+--   , Eq (RequiredTxs era)
+--   , EqRaw (RequiredTxs era)
+--   , HashAnnotated
+--       (TxBody era, RequiredTxs era)
+--       (EraIndependentTxBody, EraIndependentRequiredTxs)
+--       (EraCrypto era)
+--   ) =>
+--   EraCompositeWitness era
+--   where
+--   type CompositeWitness era = (r :: Type) | r -> era
+
+--   txBodyCompositeWitnessL :: Lens' (CompositeWitness era) (TxBody era)
+
+--   requiredTxsCompositeWitnessL :: Lens' (CompositeWitness era) (RequiredTxs era)

@@ -39,6 +39,8 @@ instance TranslatableGen Conway where
   mkTxInfoLanguage PlutusV1 = TxInfoLanguage SPlutusV1
   mkTxInfoLanguage PlutusV2 = TxInfoLanguage SPlutusV2
   mkTxInfoLanguage PlutusV3 = TxInfoLanguage SPlutusV3
+  mkTxInfoLanguage lang =
+    error $ "Language " ++ show lang ++ " is not supported in " ++ eraName @Conway
 
 genTxBody :: forall c. Crypto c => Language -> Gen (ConwayTxBody (ConwayEra c))
 genTxBody l = do

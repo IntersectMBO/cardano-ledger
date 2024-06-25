@@ -113,6 +113,7 @@ import Control.Monad (unless, when, zipWithM)
 import Data.Aeson (ToJSON (..), (.=))
 import Data.Foldable as F (Foldable (..))
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import qualified Data.OSet.Strict as OSet
 import qualified Data.Set as Set
 import GHC.Generics hiding (to)
@@ -121,6 +122,8 @@ import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
+import qualified PlutusTx.AssocMap as PMap
+import qualified PlutusTx.Eq
 
 instance Crypto c => EraPlutusContext (ConwayEra c) where
   type ContextError (ConwayEra c) = ConwayContextError (ConwayEra c)
@@ -466,8 +469,20 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
     where
       txBody = tx ^. bodyTxL
 
-  toPlutusScriptContext proxy txInfo scriptPurpose =
-    PV3.ScriptContext txInfo <$> toPlutusScriptPurpose proxy scriptPurpose
+  toPlutusScriptContext proxy txInfo scriptPurpose = do
+    let redeemers :: PMap.Map PV3.ScriptPurpose PV3.Redeemer = PV3.txInfoRedeemers txInfo
+    purpose <- toPlutusScriptPurpose proxy scriptPurpose
+    let redeemer = fromJust $ PMap.lookup purpose redeemers -- TODO WG obviously partial
+    pure $ PV3.ScriptContext txInfo redeemer (fromScriptPurpose purpose)
+
+fromScriptPurpose :: PV3.ScriptPurpose -> PV3.ScriptInfo
+fromScriptPurpose = \case
+  PV3.Minting cs -> PV3.MintingScript cs
+  PV3.Spending txOutRef -> PV3.SpendingScript txOutRef Nothing
+  PV3.Rewarding cred -> PV3.RewardingScript cred
+  PV3.Certifying index txCert -> PV3.CertifyingScript index txCert
+  PV3.Voting voter -> PV3.VotingScript voter
+  PV3.Proposing index proposal -> PV3.ProposingScript index proposal
 
 transTxId :: TxId c -> PV3.TxId
 transTxId txId = PV3.TxId (transSafeHash (unTxId txId))
@@ -654,6 +669,9 @@ transProtVer (ProtVer major minor) =
 
 -- ==========================
 -- Instances
+
+instance PlutusTx.Eq.Eq PV3.ScriptPurpose where
+  (==) = undefined -- TODO WG (I don't want to go and recalculate the hashes of my forked Plutus repo)
 
 instance Crypto c => ToPlutusData (PParamsUpdate (ConwayEra c)) where
   toPlutusData = pparamUpdateToData conwayPParamMap

@@ -81,7 +81,8 @@ instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
         -- the pulser will reset it.
         ratifyState =
           def
-            & rsEnactStateL .~ mkEnactState (es ^. epochStateGovStateL)
+            & rsEnactStateL
+            .~ mkEnactState (es ^. epochStateGovStateL)
     pure $
       NewEpochState
         { nesEL = nesEL nes
@@ -107,9 +108,12 @@ instance Crypto c => TranslateEra (ConwayEra c) Tx where
     let isValidTx = tx ^. isValidTxL
         newTx =
           mkBasicTx txBody
-            & witsTxL .~ txWits
-            & isValidTxL .~ isValidTx
-            & auxDataTxL .~ auxData
+            & witsTxL
+            .~ txWits
+            & isValidTxL
+            .~ isValidTx
+            & auxDataTxL
+            .~ auxData
     pure $ Tx newTx
 
 --------------------------------------------------------------------------------
@@ -169,16 +173,21 @@ translateGovState ctxt@ConwayGenesis {..} sgov =
   let curPParams = translateEra' ctxt (sgov ^. curPParamsGovStateL)
       prevPParams = translateEra' ctxt (sgov ^. prevPParamsGovStateL)
    in emptyGovState
-        & cgsCurPParamsL .~ curPParams
-        & cgsPrevPParamsL .~ prevPParams
-        & cgsCommitteeL .~ SJust cgCommittee
-        & cgsConstitutionL .~ cgConstitution
+        & cgsCurPParamsL
+        .~ curPParams
+        & cgsPrevPParamsL
+        .~ prevPParams
+        & cgsCommitteeL
+        .~ SJust cgCommittee
+        & cgsConstitutionL
+        .~ cgConstitution
 
 instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
   translateEra ctxt us =
     pure
       UTxOState
         { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
+        , API.utxosFrxo = mempty
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
         , API.utxosGovState =

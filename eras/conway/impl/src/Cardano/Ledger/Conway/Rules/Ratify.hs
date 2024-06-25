@@ -13,6 +13,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Ratify (
+  ConwayRATIFY,
   RatifyState (..),
   committeeAccepted,
   committeeAcceptedRatio,
@@ -336,9 +337,12 @@ ratifyTransition = do
           let
             st' =
               st
-                & rsEnactStateL .~ newEnactState
-                & rsDelayedL .~ delayingAction govAction
-                & rsEnactedL %~ (Seq.:|> gas)
+                & rsEnactStateL
+                .~ newEnactState
+                & rsDelayedL
+                .~ delayingAction govAction
+                & rsEnactedL
+                %~ (Seq.:|> gas)
           trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
         else do
           -- This action hasn't been ratified yet. Process the remaining actions.

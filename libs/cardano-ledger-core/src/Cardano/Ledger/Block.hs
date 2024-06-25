@@ -47,20 +47,20 @@ import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data Block h era
-  = Block' !h !(TxSeq era) BSL.ByteString
+  = Block' !h !(TxZones era) BSL.ByteString
   deriving (Generic)
 
 deriving stock instance
-  (Era era, Show (TxSeq era), Show h) =>
+  (Era era, Show (TxZones era), Show h) =>
   Show (Block h era)
 
 deriving stock instance
-  (Era era, Eq (TxSeq era), Eq h) =>
+  (Era era, Eq (TxZones era), Eq h) =>
   Eq (Block h era)
 
 deriving anyclass instance
   ( Era era
-  , NoThunks (TxSeq era)
+  , NoThunks (TxZones era)
   , NoThunks h
   ) =>
   NoThunks (Block h era)
@@ -68,11 +68,11 @@ deriving anyclass instance
 pattern Block ::
   forall era h.
   ( Era era
-  , EncCBORGroup (TxSeq era)
+  , EncCBORGroup (TxZones era)
   , EncCBOR h
   ) =>
   h ->
-  TxSeq era ->
+  TxZones era ->
   Block h era
 pattern Block h txns <-
   Block' h txns _
@@ -89,7 +89,7 @@ pattern Block h txns <-
 -- we're using a 'BHeaderView' in place of the concrete header.
 pattern UnserialisedBlock ::
   h ->
-  TxSeq era ->
+  TxZones era ->
   Block h era
 pattern UnserialisedBlock h txns <- Block' h txns _
 
@@ -102,7 +102,7 @@ pattern UnserialisedBlock h txns <- Block' h txns _
 --   regarded with suspicion.
 pattern UnsafeUnserialisedBlock ::
   h ->
-  TxSeq era ->
+  TxZones era ->
   Block h era
 pattern UnsafeUnserialisedBlock h txns <-
   Block' h txns _
@@ -141,7 +141,7 @@ bheader ::
   h
 bheader (Block' bh _ _) = bh
 
-bbody :: Block h era -> TxSeq era
+bbody :: Block h era -> TxZones era
 bbody (Block' _ txs _) = txs
 
 -- | The validity of any individual block depends only on a subset
@@ -160,7 +160,7 @@ neededTxInsForBlock ::
   Set (TxIn (EraCrypto era))
 neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
   where
-    txBodies = map (^. bodyTxL) $ toList $ fromTxSeq txsSeq
+    txBodies = map (^. bodyTxL) . concatMap toList $ fromTxZones txsSeq
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
     newTxIds = Set.fromList $ map txid txBodies
     isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds

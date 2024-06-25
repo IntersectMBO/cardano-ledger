@@ -773,6 +773,7 @@ encodeCostModel cm =
     -- we use the 'canonical' serialization with definite list length.
     PlutusV2 -> encodeFoldableAsDefLenList encCBOR $ getCostModelParams cm
     PlutusV3 -> encodeFoldableAsDefLenList encCBOR $ getCostModelParams cm
+    PlutusV4 -> encodeFoldableAsDefLenList encCBOR $ getCostModelParams cm
 
 getLanguageView ::
   AlonzoEraPParams era =>
@@ -787,6 +788,7 @@ getLanguageView pp lang =
         (serialize' version costModelEncoding)
     PlutusV2 -> latestLangDepView
     PlutusV3 -> latestLangDepView
+    PlutusV4 -> latestLangDepView
   where
     -- LangDepView for PlutusV1 differs from the rest
     latestLangDepView = LangDepView (serialize' version lang) costModelEncoding

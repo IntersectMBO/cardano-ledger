@@ -280,7 +280,7 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
                   <> toDeltaCoin (sumRewards prevPP (rs ru))
             ]
 
-    txs' = toList $ (fromTxSeq @era . bbody) signal
+    txs' = concatMap toList $ (fromTxZones @era . bbody) signal
     txs = zipWith dispTx txs' [0 :: Int ..]
 
     dispTx tx ix =
@@ -329,7 +329,7 @@ utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target
     circulation target
       <-> circulation source
       === withdrawals signal
-        <-> txFees ledgerTr
+      <-> txFees ledgerTr
   where
     us = lsUTxOState . esLState . nesEs . chainNes
     circulation chainSt =
@@ -379,8 +379,8 @@ potsSumIncreaseWithdrawalsPerTx SourceSignalTarget {source = chainSt, signal = b
         } =
         property (hasFailedScripts tx)
           .||. (coinBalance u' <+> d' <+> f')
-            <-> (coinBalance u <+> d <+> f)
-            === fold (unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL))
+          <-> (coinBalance u <+> d <+> f)
+          === fold (unWithdrawals (tx ^. bodyTxL . withdrawalsTxBodyL))
 
 -- | (Utxo + Deposits + Fees) increases by the reward delta
 potsSumIncreaseByRewardsPerTx ::
@@ -412,7 +412,7 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
         (coinBalance u' <+> d' <+> f')
           <-> (coinBalance u <+> d <+> f)
           === UM.fromCompact (sumRewardsUView (UM.RewDepUView umap1))
-            <-> UM.fromCompact (sumRewardsUView (UM.RewDepUView umap2))
+          <-> UM.fromCompact (sumRewardsUView (UM.RewDepUView umap2))
 
 -- | The Rewards pot decreases by the sum of withdrawals in a transaction
 potsRewardsDecreaseByWithdrawalsPerTx ::
@@ -575,7 +575,7 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
           (unlines ["non-disjoint:", show uRestr, show irrelevantUTxO])
           (uRestr `Map.disjoint` irrelevantUTxO)
           .&&. uFull
-            === (uRestr `Map.union` irrelevantUTxO)
+          === (uRestr `Map.union` irrelevantUTxO)
 
 withdrawals ::
   forall era.
@@ -589,7 +589,8 @@ withdrawals (UnserialisedBlock _ txseq) =
          in if hasFailedScripts tx then c else c <> fold wdrls
     )
     (Coin 0)
-    $ fromTxSeq @era txseq
+    $ concatMap toList
+    $ fromTxZones @era txseq
 
 txFees ::
   forall era ledger.

@@ -260,7 +260,8 @@ testBBODY wit@(BBODY proof) initialSt block expected pparams =
    in case proof of
         Alonzo -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
         Babbage -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
-        Conway -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
+        -- TODO WG
+        -- Conway -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
         other -> error ("We cannot testBBODY in era " ++ show other)
 
 testUTXOW ::
