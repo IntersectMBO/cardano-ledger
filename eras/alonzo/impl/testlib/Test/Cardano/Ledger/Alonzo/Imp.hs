@@ -14,6 +14,7 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowPredFailure,
  )
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
+import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec as Utxos
 import qualified Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec as Utxow
 import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, withImpState)
@@ -34,5 +35,6 @@ spec ::
 spec = do
   MaryImp.spec @era
   describe "AlonzoImpSpec" . withImpState @era $ do
+    Utxo.spec @era
     Utxos.spec @era
     Utxow.spec @era

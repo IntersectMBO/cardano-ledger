@@ -81,7 +81,7 @@ library
         cardano-ledger-binary ^>=1.3,
         cardano-ledger-core >=1.13 && <1.15,
         cardano-ledger-mary ^>=1.6.0,
-        cardano-ledger-shelley ^>=1.12.1,
+        cardano-ledger-shelley ^>=1.12.3,
         cardano-slotting,
         cardano-strict-containers,
         containers,
@@ -108,6 +108,7 @@ library testlib
         Test.Cardano.Ledger.Alonzo.Binary.RoundTrip
         Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec
         Test.Cardano.Ledger.Alonzo.Imp
+        Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec
         Test.Cardano.Ledger.Alonzo.Imp.UtxosSpec
         Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec
         Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Valid

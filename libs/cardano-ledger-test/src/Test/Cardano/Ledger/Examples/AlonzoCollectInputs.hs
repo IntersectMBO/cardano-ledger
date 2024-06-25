@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -16,8 +17,14 @@ module Test.Cardano.Ledger.Examples.AlonzoCollectInputs (tests) where
 import Cardano.Ledger.Alonzo (Alonzo)
 import Cardano.Ledger.Alonzo.Plutus.Context (LedgerTxInfo (..), toPlutusArgs, toPlutusTxInfo)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..), collectPlutusScriptsWithContext)
+import Cardano.Ledger.Alonzo.Scripts (
+  AlonzoPlutusPurpose (..),
+  AsIxItem (..),
+  PlutusPurpose,
+ )
 import Cardano.Ledger.BaseTypes (ProtVer (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus (
   Data (..),
@@ -37,7 +44,6 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Core.KeyPair (mkWitnessVKey)
-import Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (spendingPurpose1)
 import Test.Cardano.Ledger.Examples.STSTestUtils (
   initUTxO,
   mkGenesisTxIn,
@@ -114,6 +120,15 @@ datum = Data (PV1.I 123)
 
 redeemer :: Era era => Data era
 redeemer = Data (PV1.I 42)
+
+spendingPurpose1 :: Proof era -> PlutusPurpose AsIxItem era
+spendingPurpose1 = \case
+  Shelley {} -> error "Unsupported"
+  Allegra {} -> error "Unsupported"
+  Mary {} -> error "Unsupported"
+  Alonzo {} -> AlonzoSpending (AsIxItem 1 (mkGenesisTxIn 1))
+  Babbage {} -> AlonzoSpending (AsIxItem 1 (mkGenesisTxIn 1))
+  Conway {} -> ConwaySpending (AsIxItem 1 (mkGenesisTxIn 1))
 
 validatingTx ::
   forall era.
