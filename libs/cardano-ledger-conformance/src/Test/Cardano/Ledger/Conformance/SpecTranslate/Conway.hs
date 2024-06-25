@@ -39,6 +39,7 @@ import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Compactible (Compactible)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
@@ -50,6 +51,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayGovCertEnv (..),
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
+  ConwayNewEpochPredFailure,
   ConwayUtxoPredFailure,
   EnactSignal (..),
   GovEnv (..),
@@ -63,7 +65,7 @@ import Cardano.Ledger.Conway.TxCert (
   getVoteDelegatee,
  )
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.HKD (HKD)
@@ -1345,3 +1347,29 @@ instance
       <$> toSpecRep lsUTxOState
       <*> toSpecRep (utxosGovState lsUTxOState ^. proposalsGovStateL)
       <*> toSpecRep lsCertState
+
+instance
+  ( EraPParams era
+  , ConwayEraGov era
+  , SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
+  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
+  , Inject ctx [GovActionState era]
+  , ToExpr (PParamsHKD StrictMaybe era)
+  , SpecRep (TxOut era) ~ Agda.TxOut
+  , SpecTranslate ctx (TxOut era)
+  ) =>
+  SpecTranslate ctx (NewEpochState era)
+  where
+  type SpecRep (NewEpochState era) = Agda.NewEpochState
+
+  toSpecRep (NewEpochState {..}) =
+    Agda.MkNewEpochState
+      <$> toSpecRep nesEL
+      <*> toSpecRep nesEs
+
+instance SpecTranslate ctx (ConwayNewEpochPredFailure (ConwayEra StandardCrypto)) where
+  type SpecRep (ConwayNewEpochPredFailure (ConwayEra StandardCrypto)) = OpaqueErrorString
+
+  toSpecRep = pure . OpaqueErrorString . show . toExpr

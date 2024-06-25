@@ -101,7 +101,7 @@ type Pulser c = RewardPulser c ShelleyBase (RewardAns c)
 
 -- =====================================
 
--- | The ultiate goal of a reward update computation.
+-- | The ultimate goal of a reward update computation.
 --     Aggregating rewards for each staking credential.
 data RewardUpdate c = RewardUpdate
   { deltaT :: !DeltaCoin
@@ -281,7 +281,7 @@ rewardStakePoolMember
 --     to fix both the monad 'm' and the 'ans' type, to the context where we will use
 --     the type as a Pulser. The type must have 'm' and 'ans' as its last two
 --     parameters so we can make a Pulsable instance.
---     RSPL = Reward Serializable Listbased Pulser
+--     RSLP = Reward Serializable Listbased Pulser
 data RewardPulser c (m :: Type -> Type) ans where
   RSLP ::
     (ans ~ RewardAns c, m ~ ShelleyBase) =>
