@@ -16,8 +16,6 @@
 
 module Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW (tests, spendingPurpose1) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.Allegra.Scripts (ValidityInterval (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
@@ -28,16 +26,13 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (
   AlonzoPlutusPurpose (..),
-  AsItem (..),
   AsIxItem (..),
   PlutusPurpose,
  )
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (
-  Network (..),
   ProtVer (..),
-  StrictMaybe (..),
   natVersion,
  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
@@ -50,17 +45,14 @@ import Cardano.Ledger.Keys (
   asWitness,
   hashKey,
  )
-import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus (Data (..), ExUnits (..), Language (..), emptyCostModels)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules as Shelley (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Val (inject)
-import Cardano.Slotting.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Stack
 import qualified PlutusLedgerApi.V1 as PV1
@@ -74,9 +66,6 @@ import Test.Cardano.Ledger.Examples.STSTestUtils (
   someKeys,
   testUTXOW,
   testUTXOspecialCase,
-  timelockHash,
-  timelockScript,
-  timelockStakeCred,
   trustMeP,
  )
 import Test.Cardano.Ledger.Generic.Fields (
@@ -91,10 +80,9 @@ import Test.Cardano.Ledger.Generic.GenState (
   mkPlutusPurposePointer,
   mkRedeemersFromTags,
  )
-import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
-import Test.Cardano.Ledger.Generic.Scriptic (HasTokens (..), PostShelley, Scriptic (..))
+import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Tasty (TestTree, testGroup)
@@ -109,15 +97,6 @@ spendingPurpose1 = \case
   Babbage {} -> AlonzoSpending (AsIxItem 1 (mkGenesisTxIn 1))
   Conway {} -> ConwaySpending (AsIxItem 1 (mkGenesisTxIn 1))
 
-spendingPurposeAsItem1 :: Proof era -> PlutusPurpose AsItem era
-spendingPurposeAsItem1 = \case
-  Shelley {} -> error "Unsupported"
-  Allegra {} -> error "Unsupported"
-  Mary {} -> error "Unsupported"
-  Alonzo {} -> AlonzoSpending (AsItem (mkGenesisTxIn 1))
-  Babbage {} -> AlonzoSpending (AsItem (mkGenesisTxIn 1))
-  Conway {} -> ConwaySpending (AsItem (mkGenesisTxIn 1))
-
 tests :: TestTree
 tests =
   testGroup
@@ -130,10 +109,8 @@ tests =
 alonzoUTXOWTests ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era
-  , HasTokens era
   , Reflect era
   , PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto,
-  , Value era ~ MaryValue (EraCrypto era)
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxosPredFailure era
@@ -146,55 +123,7 @@ alonzoUTXOWTests pf =
     (show pf ++ " UTXOW examples")
     [ testGroup
         "invalid transactions"
-        [ testCase "missing 2-phase script witness" $
-            testU
-              pf
-              (trustMeP pf True $ missing2phaseScriptWitnessTx pf)
-              ( Left
-                  [ -- these redeemers are associated with phase-1 scripts
-                    injectFailure . ExtraRedeemers $
-                      [ mkPlutusPurposePointer pf Minting 0
-                      , mkPlutusPurposePointer pf Certifying 1
-                      , mkPlutusPurposePointer pf Rewarding 0
-                      ]
-                  , injectFailure . MissingScriptWitnessesUTXOW . Set.singleton $
-                      alwaysSucceedsHash 2 pf
-                  ]
-              )
-        , testCase "redeemer with incorrect label" $
-            testU
-              pf
-              (trustMeP pf True $ wrongRedeemerLabelTx pf)
-              ( Left
-                  [ injectFailure (CollectErrors [NoRedeemer $ spendingPurposeAsItem1 pf])
-                  , -- now "wrong redeemer label" means there are both unredeemable
-                    -- scripts and extra redeemers
-                    injectFailure $
-                      MissingRedeemers [(spendingPurposeAsItem1 pf, alwaysSucceedsHash 3 pf)]
-                  , injectFailure $ ExtraRedeemers [mkPlutusPurposePointer pf Minting 1]
-                  ]
-              )
-        , testCase "phase 1 script failure" $
-            testU
-              pf
-              (trustMeP pf True $ phase1FailureTx pf)
-              ( Left
-                  [ injectFailure $
-                      ScriptWitnessNotValidatingUTXOW $
-                        Set.fromList
-                          [ timelockHash 0 pf
-                          , timelockHash 1 pf
-                          , timelockHash 2 pf
-                          ]
-                  ]
-              )
-        , testCase "valid transaction marked as invalid" $
-            testU
-              pf
-              (trustMeP pf False $ validatingTx pf)
-              ( Left [injectFailure (ValidationTagMismatch (IsValid False) PassedUnexpectedly)]
-              )
-        , testCase "invalid transaction marked as valid" $
+        [ testCase "invalid transaction marked as valid" $
             testUTXOspecialCase
               (UTXOW pf)
               (initUTxO pf)
@@ -273,163 +202,6 @@ alonzoUTXOWTests pf =
 
 -- =========================================================================
 -- ============================== DATA ========================================
-
-missing2phaseScriptWitnessTx ::
-  forall era.
-  ( PostShelley era
-  , HasTokens era
-  , EraTx era
-  , GoodCrypto (EraCrypto era)
-  , Value era ~ MaryValue (EraCrypto era)
-  , ShelleyEraTxCert era
-  ) =>
-  Proof era ->
-  Tx era
-missing2phaseScriptWitnessTx pf =
-  newTx
-    pf
-    [ Body (validatingManyScriptsBody pf)
-    , WitnessesI
-        [ AddrWits' $
-            map
-              (mkWitnessVKey . hashAnnotated . validatingManyScriptsBody $ pf)
-              [someKeys pf, theKeyPair 1]
-        , ScriptWits'
-            [ -- intentionally missing -> always 2 pf,
-              always 3 pf
-            , timelockScript 0 pf
-            , timelockScript 1 pf
-            , timelockScript 2 pf
-            ]
-        , DataWits' [Data (PV1.I 123)]
-        , RdmrWits $ validatingManyScriptsRedeemers pf
-        ]
-    ]
-
-validatingManyScriptsBody ::
-  forall era.
-  ( HasTokens era
-  , EraTxBody era
-  , PostShelley era
-  , Value era ~ MaryValue (EraCrypto era)
-  , ShelleyEraTxCert era
-  ) =>
-  Proof era ->
-  TxBody era
-validatingManyScriptsBody pf =
-  newTxBody
-    pf
-    [ Inputs' [mkGenesisTxIn 1, mkGenesisTxIn 100]
-    , Collateral' [mkGenesisTxIn 11]
-    , Outputs' [txOut]
-    , Txfee (Coin 5)
-    , Certs'
-        [ UnRegTxCert (timelockStakeCred pf)
-        , UnRegTxCert (scriptStakeCredSuceed pf)
-        ]
-    , Withdrawals'
-        ( Withdrawals $
-            Map.fromList
-              [ (RewardAccount Testnet (scriptStakeCredSuceed pf), Coin 0)
-              , (RewardAccount Testnet (timelockStakeCred pf), Coin 0)
-              ]
-        )
-    , Mint mint
-    , WppHash
-        ( newScriptIntegrityHash
-            pf
-            (pp pf)
-            [PlutusV1]
-            (validatingManyScriptsRedeemers pf)
-            (mkTxDats (Data (PV1.I 123)))
-        )
-    , Vldt (ValidityInterval SNothing (SJust $ SlotNo 1))
-    ]
-  where
-    txOut =
-      newTxOut
-        pf
-        [ Address (someAddr pf)
-        , Amount (MaryValue (Coin 4996) mint)
-        ]
-    mint = forge @era 1 (always 2 pf) <> forge @era 1 (timelockScript 1 pf)
-
-validatingManyScriptsRedeemers :: Era era => Proof era -> Redeemers era
-validatingManyScriptsRedeemers pf =
-  mkRedeemersFromTags
-    pf
-    [ ((Spending, 0), (Data (PV1.I 101), ExUnits 5000 5000))
-    , ((Certifying, 1), (Data (PV1.I 102), ExUnits 5000 5000))
-    , ((Rewarding, 0), (Data (PV1.I 103), ExUnits 5000 5000))
-    , ((Minting, 0), (Data (PV1.I 104), ExUnits 5000 5000))
-    ]
-
-wrongRedeemerLabelTx ::
-  forall era.
-  ( Scriptic era
-  , EraTx era
-  , GoodCrypto (EraCrypto era)
-  ) =>
-  Proof era ->
-  Tx era
-wrongRedeemerLabelTx pf =
-  newTx
-    pf
-    [ Body wrongRedeemerLabelTxBody
-    , WitnessesI
-        [ AddrWits' [mkWitnessVKey (hashAnnotated wrongRedeemerLabelTxBody) (someKeys pf)]
-        , ScriptWits' [always 3 pf]
-        , DataWits' [Data (PV1.I 123)]
-        , RdmrWits misPurposedRedeemer
-        ]
-    ]
-  where
-    wrongRedeemerLabelTxBody =
-      newTxBody
-        pf
-        [ Inputs' [mkGenesisTxIn 1]
-        , Collateral' [mkGenesisTxIn 11]
-        , Outputs' [newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]]
-        , Txfee (Coin 5)
-        , WppHash
-            (newScriptIntegrityHash pf (pp pf) [PlutusV1] misPurposedRedeemer (mkTxDats (Data (PV1.I 123))))
-        ]
-    misPurposedRedeemer =
-      -- The label *should* be Spend, not Mint
-      mkRedeemersFromTags pf [((Minting, 1), (Data (PV1.I 42), ExUnits 5000 5000))]
-
-phase1FailureTx ::
-  forall era.
-  ( PostShelley era
-  , HasTokens era
-  , EraTx era
-  , GoodCrypto (EraCrypto era)
-  , Value era ~ MaryValue (EraCrypto era)
-  , ShelleyEraTxCert era
-  ) =>
-  Proof era ->
-  Tx era
-phase1FailureTx pf =
-  newTx
-    pf
-    [ Body (validatingManyScriptsBody pf)
-    , WitnessesI
-        [ AddrWits'
-            [ mkWitnessVKey
-                (hashAnnotated $ validatingManyScriptsBody pf)
-                (someKeys pf)
-            ]
-        , ScriptWits'
-            [ always 2 pf
-            , always 3 pf
-            , timelockScript 0 pf
-            , timelockScript 1 pf
-            , timelockScript 2 pf
-            ]
-        , DataWits' [Data (PV1.I 123)]
-        , RdmrWits $ validatingManyScriptsRedeemers pf
-        ]
-    ]
 
 validatingTx ::
   forall era.

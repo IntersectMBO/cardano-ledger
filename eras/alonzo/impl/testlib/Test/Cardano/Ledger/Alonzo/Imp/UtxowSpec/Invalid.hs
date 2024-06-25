@@ -3,15 +3,16 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid (spec) where
 
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript (..))
 import Cardano.Ledger.Alonzo.Core (
   AlonzoEraTxWits (..),
+  isValidTxL,
   networkIdTxBodyL,
   scriptIntegrityHashTxBodyL,
  )
@@ -20,19 +21,25 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),
   AlonzoUtxowPredFailure (..),
+  TagMismatchDescription (..),
  )
 import Cardano.Ledger.Alonzo.Scripts
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxOut (dataHashTxOutL)
-import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Plutus
-import Cardano.Ledger.Shelley.LedgerState (epochStatePoolParamsL, nesEsL)
+import Cardano.Ledger.Shelley.LedgerState (
+  epochStatePoolParamsL,
+  nesEsL,
+ )
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.Shelley.TxCert
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import Data.Sequence.Strict (StrictSeq ((:<|)))
 import Lens.Micro
 import qualified PlutusLedgerApi.Common as P
@@ -40,7 +47,12 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp, expectPhase2Invalid, fixupPPHash)
 import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Plutus.Examples (alwaysSucceedsNoDatum, redeemerSameAsDatum)
+import Test.Cardano.Ledger.Plutus.Examples (
+  alwaysFailsWithDatum,
+  alwaysSucceedsNoDatum,
+  alwaysSucceedsWithDatum,
+  redeemerSameAsDatum,
+ )
 import Test.Cardano.Ledger.Shelley.ImpTest
 
 spec ::
@@ -54,7 +66,15 @@ spec ::
   SpecWith (ImpTestState era)
 spec = describe "Invalid transactions" $ do
   let resetAddrWits tx = updateAddrTxWits $ tx & witsTxL . addrTxWitsL .~ []
-  let fixupResetAddrWits = fixupPPHash >=> resetAddrWits
+      fixupResetAddrWits = fixupPPHash >=> resetAddrWits
+      -- Would be an Iso if microlens supported Iso's
+      redeemersL :: Lens' (Redeemers era) (Map.Map (PlutusPurpose AsIx era) (Data era, ExUnits))
+      redeemersL = lens unRedeemers (const $ Redeemers @era)
+      -- PlutusPurpose serialization wasn't fixed until Conway
+      withPPRTFailures =
+        if eraProtVerLow @era < natVersion @9
+          then withCborRoundTripFailures
+          else id
 
   it "MissingRedeemers" $ forM_ (eraLanguages @era) $ \lang -> do
     logEntry $ "Testing for " ++ show lang
@@ -62,7 +82,7 @@ spec = describe "Invalid transactions" $ do
     txIn <- produceScript scriptHash
     let missingRedeemer = mkSpendingPurpose $ AsItem txIn
     let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
-    withPostFixup (fixupResetAddrWits . (witsTxL . rdmrsTxWitsL .~ Redeemers mempty)) $
+    withPostFixup (fixupResetAddrWits . (witsTxL . rdmrsTxWitsL .~ mempty)) $
       submitFailingTx
         tx
         [ injectFailure $
@@ -164,12 +184,9 @@ spec = describe "Invalid transactions" $ do
     let tx =
           mkBasicTx mkBasicTxBody
             & bodyTxL . inputsTxBodyL .~ [txIn]
-            & witsTxL . rdmrsTxWitsL <>~ Redeemers (Map.singleton prp (dt, ExUnits 0 0))
-    let submit = submitFailingTx tx [injectFailure $ ExtraRedeemers [prp]]
-    if eraProtVerLow @era < natVersion @9
-      then -- PlutusPurpose serialization was fixed in Conway
-        withCborRoundTripFailures submit
-      else submit
+            & witsTxL . rdmrsTxWitsL . redeemersL <>~ Map.singleton prp (dt, ExUnits 0 0)
+    withPPRTFailures $
+      submitFailingTx tx [injectFailure $ ExtraRedeemers [prp]]
 
   it "No ExtraRedeemers on same script certificates" $
     forM_ ([minBound .. eraMaxLanguage @era] :: [Language]) $ \lang -> do
@@ -185,30 +202,69 @@ spec = describe "Invalid transactions" $ do
             , UnRegTxCert cred
             ]
       tx <- submitTx $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ certs)
-      let Redeemers redeemers = tx ^. witsTxL . rdmrsTxWitsL
+      let redeemers = tx ^. witsTxL . rdmrsTxWitsL . redeemersL
       Map.keys redeemers
         `shouldBe` [ CertifyingPurpose (AsIx 1)
                    , CertifyingPurpose (AsIx 2)
                    ]
+
   it "Wrong network ID" $ do
     submitFailingTx
       (mkBasicTx mkBasicTxBody & bodyTxL . networkIdTxBodyL .~ SJust Mainnet)
       [injectFailure $ WrongNetworkInTxBody Testnet Mainnet]
 
-  it "Missing 2-phase script witness" $ do
-    const $ pendingWith "not implemented yet"
+  it "Missing phase-2 script witness" $ do
+    let scriptHash = withSLanguage PlutusV1 (hashPlutusScript . alwaysSucceedsWithDatum)
+    txIn <- produceScript scriptHash
+    let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
+        dropScriptWitnesses =
+          pure
+            . (witsTxL . scriptTxWitsL .~ mempty)
+            . (witsTxL . datsTxWitsL .~ mempty)
+            . (witsTxL . rdmrsTxWitsL .~ mempty)
+        resetScriptHash = pure . (bodyTxL . scriptIntegrityHashTxBodyL .~ SNothing)
+    withPostFixup (dropScriptWitnesses >=> resetScriptHash >=> resetAddrWits) $
+      submitFailingTx tx [injectFailure $ MissingScriptWitnessesUTXOW [scriptHash]]
 
-  it "Redeemer with incorrect label" $ do
-    const $ pendingWith "not implemented yet"
+  it "Redeemer with incorrect purpose" $ do
+    let scriptHash = withSLanguage PlutusV1 (hashPlutusScript . alwaysSucceedsWithDatum)
+    txIn <- produceScript scriptHash
+    let tx =
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . inputsTxBodyL .~ [txIn]
+            & witsTxL . rdmrsTxWitsL . redeemersL .~ mintingRedeemers
+        mintingRedeemers = Map.singleton (mkMintingPurpose $ AsIx 0) (Data $ P.I 32, ExUnits 0 0)
+        isSpender = isJust . toSpendingPurpose @era @AsIx
+        removeSpenders = Map.filterWithKey (const . not . isSpender)
+        dropSpendingRedeemers = pure . (witsTxL . rdmrsTxWitsL . redeemersL %~ removeSpenders)
+    withPostFixup (dropSpendingRedeemers >=> fixupPPHash >=> resetAddrWits) $
+      withPPRTFailures $
+        submitFailingTx
+          tx
+          [ injectFailure $
+              ExtraRedeemers [mkMintingPurpose $ AsIx 0]
+          , injectFailure $
+              MissingRedeemers [(mkSpendingPurpose $ AsItem txIn, scriptHash)]
+          , injectFailure $
+              CollectErrors [NoRedeemer $ mkSpendingPurpose $ AsItem txIn]
+          ]
 
   it "Phase 1 script failure" $ do
-    const $ pendingWith "not implemented yet"
+    -- Script will be invalid because slot 100 will be in the future
+    scriptHash <- impAddNativeScript $ mkTimeStart 100
+    txIn <- produceScript scriptHash
+    let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
+    submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
 
   it "Valid transaction marked as invalid" $ do
-    const $ pendingWith "not implemented yet"
+    let tx = mkBasicTx mkBasicTxBody & isValidTxL .~ IsValid False
+    submitFailingTx tx [injectFailure (ValidationTagMismatch (IsValid False) PassedUnexpectedly)]
 
   it "Invalid transaction marked as valid" $ do
-    const $ pendingWith "not implemented yet"
+    let scriptHash = withSLanguage PlutusV1 (hashPlutusScript . alwaysFailsWithDatum)
+    txIn <- produceScript scriptHash
+    let tx = mkBasicTx mkBasicTxBody & bodyTxL . inputsTxBodyL .~ [txIn]
+    expectPhase2Invalid tx
 
   it "Too many execution units for tx" $ do
     const $ pendingWith "not implemented yet"
