@@ -35,6 +35,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   fixupOutputDatums,
   fixupPPHash,
   fixupRedeemers,
+  fixupRedeemerIndices,
   fixupScriptWits,
 ) where
 

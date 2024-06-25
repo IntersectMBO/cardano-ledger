@@ -18,7 +18,6 @@ import Test.Cardano.Ledger.Constrained.Trace.Tests (conwayTrace, conwayTxwithDRe
 import qualified Test.Cardano.Ledger.Examples.AlonzoAPI as AlonzoAPI (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoBBODY as AlonzoBBODY (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoCollectInputs as AlonzoCollectInputs (tests)
-import qualified Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW as AlonzoInvalidTxUTXOW (tests)
 import qualified Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW as AlonzoValidTxUTXOW (tests)
 import Test.Cardano.Ledger.Examples.BabbageFeatures (babbageFeatures)
 import Test.Cardano.Ledger.Generic.AggPropTests (aggTests, depositTests)
@@ -51,7 +50,6 @@ defaultTests =
       "STS Tests"
       [ babbageFeatures
       , AlonzoValidTxUTXOW.tests
-      , AlonzoInvalidTxUTXOW.tests
       , AlonzoBBODY.tests
       , AlonzoAPI.tests
       , AlonzoCollectInputs.tests
