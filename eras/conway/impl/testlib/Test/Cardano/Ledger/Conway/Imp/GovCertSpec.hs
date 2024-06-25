@@ -142,11 +142,12 @@ relevantDuringBootstrapSpec = do
             .~ SSeq.singleton (UnRegDRepTxCert drepCred drepDeposit)
     it "resigning a non-CC key" $ do
       someCred <- KeyHashObj <$> freshKeyHash
-      submitTx_
+      submitFailingTx
         ( mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ SSeq.singleton (ResignCommitteeColdTxCert someCred SNothing)
         )
+        (pure (injectFailure $ ConwayCommitteeIsUnknown someCred))
     it "re-registering a CC hot key" $ do
       void registerInitialCommittee
       initialCommittee <- getCommitteeMembers

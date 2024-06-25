@@ -402,22 +402,22 @@ conwayFeaturesPlutusV1V2FailureSpec = do
             testCertificateNotSupportedV2 regDepositDelegTxCert
         describe "AuthCommitteeHotKeyTxCert" $ do
           it "V1" $ do
-            coldKey <- KeyHashObj <$> freshKeyHash
+            coldKey <- elements . Set.toList =<< getCommitteeMembers
             hotKey <- KeyHashObj <$> freshKeyHash
             let authCommitteeHotKeyTxCert = AuthCommitteeHotKeyTxCert @era coldKey hotKey
             testCertificateNotSupportedV1 authCommitteeHotKeyTxCert
           it "V2" $ do
-            coldKey <- KeyHashObj <$> freshKeyHash
+            coldKey <- elements . Set.toList =<< getCommitteeMembers
             hotKey <- KeyHashObj <$> freshKeyHash
             let authCommitteeHotKeyTxCert = AuthCommitteeHotKeyTxCert @era coldKey hotKey
             testCertificateNotSupportedV2 authCommitteeHotKeyTxCert
         describe "ResignCommitteeColdTxCert" $ do
           it "V1" $ do
-            coldKey <- KeyHashObj <$> freshKeyHash
+            coldKey <- elements . Set.toList =<< getCommitteeMembers
             let resignCommitteeColdTxCert = ResignCommitteeColdTxCert @era coldKey SNothing
             testCertificateNotSupportedV1 resignCommitteeColdTxCert
           it "V2" $ do
-            coldKey <- KeyHashObj <$> freshKeyHash
+            coldKey <- elements . Set.toList =<< getCommitteeMembers
             let resignCommitteeColdTxCert = ResignCommitteeColdTxCert @era coldKey SNothing
             testCertificateNotSupportedV2 resignCommitteeColdTxCert
         describe "RegDRepTxCert" $ do
