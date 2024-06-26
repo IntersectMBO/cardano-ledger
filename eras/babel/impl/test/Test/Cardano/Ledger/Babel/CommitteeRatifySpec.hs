@@ -12,11 +12,11 @@
 
 module Test.Cardano.Ledger.Babel.CommitteeRatifySpec (spec) where
 
-import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe (..))
-import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import Cardano.Ledger.Babel
 import Cardano.Ledger.Babel.Core
-import Cardano.Ledger.Babel.Governance (
+import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe (..))
+import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
+import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionState (..),
   ProposalProcedure (..),
@@ -26,7 +26,8 @@ import Cardano.Ledger.Babel.Governance (
   ensCommitteeL,
   rsEnactStateL,
  )
-import Cardano.Ledger.Babel.Rules (
+import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Conway.Rules (
   committeeAccepted,
   committeeAcceptedRatio,
  )
@@ -39,8 +40,8 @@ import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
-import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Babel.Arbitrary ()
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 
 spec :: Spec
@@ -81,7 +82,7 @@ acceptedRatioProp =
 
 acceptedProp ::
   forall era.
-  ( BabelEraPParams era
+  ( ConwayEraPParams era
   , Arbitrary (PParamsHKD Identity era)
   , Arbitrary (PParamsHKD StrictMaybe era)
   ) =>

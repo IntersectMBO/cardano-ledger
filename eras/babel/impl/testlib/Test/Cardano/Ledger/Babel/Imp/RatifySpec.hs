@@ -12,11 +12,10 @@ module Test.Cardano.Ledger.Babel.Imp.RatifySpec (
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Babel.Core
-import Cardano.Ledger.Babel.Governance
-import Cardano.Ledger.Babel.PParams
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Conway.Governance (ProposalProcedure (..))
+import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.LedgerState

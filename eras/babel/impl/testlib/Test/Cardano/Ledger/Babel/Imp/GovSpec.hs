@@ -22,11 +22,11 @@ import Cardano.Ledger.Allegra.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Babel.Core
-import Cardano.Ledger.Babel.Governance
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (Coin))
-import Cardano.Ledger.Conway.Governance (ConwayGovState)
-import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
+import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (votingProceduresTxBodyL))
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Plutus.CostModels (updateCostModels)
 import qualified Cardano.Ledger.Shelley.HardForks as HF
@@ -51,7 +51,7 @@ spec ::
   forall era.
   ( BabelEraImp era
   , GovState era ~ ConwayGovState era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 spec =
@@ -68,7 +68,7 @@ spec =
 relevantDuringBootstrapSpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 relevantDuringBootstrapSpec = do
@@ -103,7 +103,7 @@ unknownCostModelsSpec =
 predicateFailuresSpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 predicateFailuresSpec =
@@ -174,7 +174,7 @@ predicateFailuresSpec =
 hardForkSpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 hardForkSpec =
@@ -191,7 +191,7 @@ hardForkSpec =
 pparamUpdateSpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 pparamUpdateSpec =
@@ -271,7 +271,7 @@ pparamUpdateSpec =
 proposalsWithVotingSpec ::
   forall era.
   ( BabelEraImp era
-  , GovState era ~ BabelGovState era
+  , GovState era ~ ConwayGovState era
   ) =>
   SpecWith (ImpTestState era)
 proposalsWithVotingSpec =
@@ -543,7 +543,7 @@ proposalsWithVotingSpec =
 proposalsSpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 proposalsSpec =
@@ -799,8 +799,8 @@ proposalsSpec =
 votingSpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
-  , GovState era ~ BabelGovState era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  , GovState era ~ ConwayGovState era
   ) =>
   SpecWith (ImpTestState era)
 votingSpec =
@@ -910,8 +910,8 @@ votingSpec =
 constitutionSpec ::
   forall era.
   ( BabelEraImp era
-  , GovState era ~ BabelGovState era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , GovState era ~ ConwayGovState era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 constitutionSpec =
@@ -993,7 +993,7 @@ constitutionSpec =
       impAnn "Constitution has not been enacted yet" $
         curConstitution' `shouldBe` curConstitution
 
-      BabelGovState expectedProposals _ _ _ _ expectedPulser <-
+      ConwayGovState expectedProposals _ _ _ _ expectedPulser <-
         getsNES newEpochStateGovStateL
       expectedEnactState <- getEnactState
 
@@ -1008,14 +1008,14 @@ constitutionSpec =
 
       passEpoch >> passEpoch
       impAnn "Proposal gets removed after expiry" $ do
-        BabelGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
+        ConwayGovState _ _ _ _ _ pulser <- getsNES newEpochStateGovStateL
         let ratifyState = extractDRepPulsingState pulser
         rsExpired ratifyState `shouldBe` Set.singleton govActionId
 
 policySpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 policySpec =
@@ -1110,7 +1110,7 @@ policySpec =
 networkIdSpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 networkIdSpec =
@@ -1139,7 +1139,7 @@ networkIdSpec =
 networkIdWithdrawalsSpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 networkIdWithdrawalsSpec =
@@ -1204,7 +1204,7 @@ firstHardForkCantFollow ::
   forall era.
   ( ShelleyEraImp era
   , BabelEraTxBody era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
 firstHardForkCantFollow = do
@@ -1241,7 +1241,7 @@ secondHardForkCantFollow ::
   forall era.
   ( ShelleyEraImp era
   , BabelEraTxBody era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
 secondHardForkCantFollow = do
@@ -1271,7 +1271,7 @@ secondHardForkCantFollow = do
 committeeMemberVotingOnCommitteeChange ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
 committeeMemberVotingOnCommitteeChange = do
@@ -1294,7 +1294,7 @@ committeeMemberVotingOnCommitteeChange = do
 ccVoteOnConstitutionFailsWithMultipleVotes ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   ImpTestM era ()
 ccVoteOnConstitutionFailsWithMultipleVotes = do
@@ -1340,7 +1340,7 @@ ccVoteOnConstitutionFailsWithMultipleVotes = do
 bootstrapPhaseSpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 bootstrapPhaseSpec =

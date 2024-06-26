@@ -4,7 +4,7 @@
 module Test.Cardano.Ledger.Babel.GovActionReorderSpec (spec) where
 
 import Cardano.Ledger.Babel (Babel)
-import Cardano.Ledger.Babel.Governance (
+import Cardano.Ledger.Conway.Governance (
   GovActionState (..),
   actionPriority,
   gasAction,
@@ -13,9 +13,9 @@ import Cardano.Ledger.Babel.Governance (
 import Data.Foldable (Foldable (..))
 import Data.List (sort)
 import qualified Data.Sequence.Strict as Seq
+import Test.Cardano.Ledger.Babel.Arbitrary (ShuffledGovActionStates (..))
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Babel.Arbitrary (ShuffledGovActionStates (..))
 
 spec :: Spec
 spec =

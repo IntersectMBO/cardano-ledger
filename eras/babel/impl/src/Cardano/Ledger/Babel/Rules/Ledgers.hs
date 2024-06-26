@@ -17,6 +17,7 @@
 
 module Cardano.Ledger.Babel.Rules.Ledgers (BabelLEDGERS, BabelLedgersEnv (..)) where
 
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Babel.Era (BabelEra, BabelLEDGERS)
 import Cardano.Ledger.Babel.Rules.Ledger (BabelLEDGER, BabelLedgerEvent, BabelLedgerPredFailure)
 import Cardano.Ledger.Babel.Rules.Pool ()
@@ -67,10 +68,13 @@ instance InjectRuleFailure "LEDGERS" BabelLedgerPredFailure (BabelEra c) where
 instance InjectRuleFailure "LEDGERS" BabelUtxowPredFailure (BabelEra c) where
   injectFailure = LedgerFailure . injectFailure
 
+instance InjectRuleFailure "LEDGERS" BabelUtxoPredFailure (BabelEra c) where
+  injectFailure = LedgerFailure . injectFailure
+
 instance InjectRuleFailure "LEDGERS" BabelUtxosPredFailure (BabelEra c) where
   injectFailure = LedgerFailure . injectFailure
 
-instance InjectRuleFailure "LEDGERS" BabelUtxoPredFailure (BabelEra c) where
+instance InjectRuleFailure "LEDGERS" AlonzoUtxosPredFailure (BabelEra c) where
   injectFailure = LedgerFailure . injectFailure
 
 instance

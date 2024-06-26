@@ -24,6 +24,7 @@ import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.Rules (
+  AlonzoUtxosPredFailure,
   AlonzoUtxowEvent,
  )
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
@@ -42,6 +43,7 @@ import Cardano.Ledger.Babel.Era (
 import Cardano.Ledger.Babel.Rules.Cert ()
 import Cardano.Ledger.Babel.Rules.Certs ()
 import Cardano.Ledger.Babel.Rules.Deleg ()
+import Cardano.Ledger.Babel.Rules.Gov ()
 import Cardano.Ledger.Babel.Rules.GovCert ()
 import Cardano.Ledger.Babel.Rules.Utxo (BabelUtxoPredFailure)
 import Cardano.Ledger.Babel.Rules.Utxos (BabelUtxosPredFailure)
@@ -65,9 +67,12 @@ import Cardano.Ledger.Conway.Rules (
   CertEnv,
   CertsEnv (CertsEnv),
   ConwayCERTS,
+  ConwayCertPredFailure,
   ConwayCertsEvent,
   ConwayCertsPredFailure,
+  ConwayDelegPredFailure,
   ConwayGOV,
+  ConwayGovCertPredFailure,
   ConwayGovEvent,
   ConwayGovPredFailure,
   GovEnv (GovEnv),
@@ -87,6 +92,9 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
+  ShelleyPoolPredFailure,
+  ShelleyUtxoPredFailure,
+  ShelleyUtxowPredFailure,
   UtxoEnv (..),
   renderDepositEqualsObligationViolation,
   shelleyLedgerAssertions,
@@ -139,14 +147,41 @@ instance InjectRuleFailure "LEDGER" BabelLedgerPredFailure (BabelEra c)
 instance InjectRuleFailure "LEDGER" BabelUtxowPredFailure (BabelEra c) where
   injectFailure = BabelUtxowFailure . injectFailure
 
+instance InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure (BabelEra c) where
+  injectFailure = BabelUtxowFailure . injectFailure
+
 instance InjectRuleFailure "LEDGER" BabelUtxoPredFailure (BabelEra c) where
   injectFailure = BabelUtxowFailure . injectFailure
 
 instance InjectRuleFailure "LEDGER" BabbageUtxoPredFailure (BabelEra c) where
   injectFailure = BabelUtxowFailure . injectFailure
 
+instance InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure (BabelEra c) where
+  injectFailure = BabelUtxowFailure . injectFailure
+
 instance InjectRuleFailure "LEDGER" BabelUtxosPredFailure (BabelEra c) where
   injectFailure = BabelUtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure (BabelEra c) where
+  injectFailure = BabelUtxowFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ConwayCertsPredFailure (BabelEra c) where
+  injectFailure = BabelCertsFailure
+
+instance InjectRuleFailure "LEDGER" ConwayCertPredFailure (BabelEra c) where
+  injectFailure = BabelCertsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ConwayDelegPredFailure (BabelEra c) where
+  injectFailure = BabelCertsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ShelleyPoolPredFailure (BabelEra c) where
+  injectFailure = BabelCertsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ConwayGovCertPredFailure (BabelEra c) where
+  injectFailure = BabelCertsFailure . injectFailure
+
+instance InjectRuleFailure "LEDGER" ConwayGovPredFailure (BabelEra c) where
+  injectFailure = BabelGovFailure . injectFailure
 
 deriving instance
   ( Era era

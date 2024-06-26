@@ -38,9 +38,11 @@ import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.Babel.Genesis (BabelGenesis (..))
 import Cardano.Ledger.Babel.Rules
 import Cardano.Ledger.Babel.Scripts (BabelPlutusPurpose (..))
+import Cardano.Ledger.Babel.TxBody (BabelTxBody (BabelTxBody))
 import Cardano.Ledger.Babel.TxCert
 import Cardano.Ledger.Babel.TxInfo (BabelContextError)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Binary (Sized)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Crypto (Crypto)
 import Control.State.Transition.Extended (STS (PredicateFailure))
@@ -58,6 +60,41 @@ import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+
+instance
+  ( BabelEraTxBody era
+  , Arbitrary (Sized (TxOut era))
+  , Arbitrary (TxOut era)
+  , Arbitrary (Value era)
+  , Arbitrary (Script era)
+  , Arbitrary (PParamsUpdate era)
+  ) =>
+  Arbitrary (BabelTxBody era)
+  where
+  arbitrary =
+    BabelTxBody
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
+      <*> arbitrary
+      <*> scale (`div` 15) arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance
   ( EraPParams era

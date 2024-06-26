@@ -14,12 +14,13 @@ module Test.Cardano.Ledger.Babel.Imp.EnactSpec (
 ) where
 
 import Cardano.Ledger.Address
+import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Babel.Core
-import Cardano.Ledger.Babel.Governance
-import Cardano.Ledger.Babel.PParams
-import Cardano.Ledger.Babel.Rules
+import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Val (zero, (<->))

@@ -14,27 +14,24 @@ module Test.Cardano.Ledger.Babel.Imp.GovCertSpec (
   relevantDuringBootstrapSpec,
 ) where
 
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Babel.Core (
   EraGov (..),
   InjectRuleFailure (..),
   ppDRepDepositL,
  )
 import Cardano.Ledger.Babel.Governance (
-  BabelEraGov (..),
-  BabelGovState,
-  GovAction (..),
-  GovPurposeId (..),
-  Voter (..),
-  committeeMembersL,
+
  )
-import Cardano.Ledger.Babel.Rules (BabelGovCertPredFailure (..))
+import Cardano.Ledger.Babel.Rules ()
 import Cardano.Ledger.Babel.TxCert (
   pattern AuthCommitteeHotKeyTxCert,
   pattern RegDRepTxCert,
   pattern ResignCommitteeColdTxCert,
   pattern UnRegDRepTxCert,
  )
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core (EraTx (..), EraTxBody (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -50,17 +47,17 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~), (^.))
-import Test.Cardano.Ledger.Common hiding (assertBool, shouldBe)
 import Test.Cardano.Ledger.Babel.Arbitrary ()
 import Test.Cardano.Ledger.Babel.ImpTest
+import Test.Cardano.Ledger.Common hiding (assertBool, shouldBe)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
   ( BabelEraImp era
-  , GovState era ~ BabelGovState era
-  , InjectRuleFailure "LEDGER" BabelGovCertPredFailure era
+  , Cardano.Ledger.Babel.Core.GovState era ~ ConwayGovState era
+  , Cardano.Ledger.Babel.Core.InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 spec = do
@@ -124,15 +121,15 @@ spec = do
 relevantDuringBootstrapSpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleFailure "LEDGER" BabelGovCertPredFailure era
+  , Cardano.Ledger.Babel.Core.InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 relevantDuringBootstrapSpec = do
   describe "succeeds for" $ do
     it "registering and unregistering a DRep" $ do
-      modifyPParams $ ppDRepDepositL .~ Coin 100
+      modifyPParams $ Cardano.Ledger.Babel.Core.ppDRepDepositL .~ Coin 100
       drepCred <- KeyHashObj <$> freshKeyHash
-      drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
+      drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . Cardano.Ledger.Babel.Core.ppDRepDepositL
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL
@@ -164,8 +161,9 @@ relevantDuringBootstrapSpec = do
               .~ SSeq.singleton (AuthCommitteeHotKeyTxCert kh ccHotCred)
   describe "fails for" $ do
     it "invalid deposit provided with DRep registration cert" $ do
-      modifyPParams $ ppDRepDepositL .~ Coin 100
-      expectedDRepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
+      modifyPParams $ Cardano.Ledger.Babel.Core.ppDRepDepositL .~ Coin 100
+      expectedDRepDeposit <-
+        getsNES $ nesEsL . curPParamsEpochStateL . Cardano.Ledger.Babel.Core.ppDRepDepositL
       let providedDRepDeposit = expectedDRepDeposit <+> Coin 10
       khDRep <- freshKeyHash
       submitFailingTx
@@ -175,12 +173,12 @@ relevantDuringBootstrapSpec = do
             .~ SSeq.singleton
               (RegDRepTxCert (KeyHashObj khDRep) providedDRepDeposit SNothing)
         )
-        ( pure . injectFailure $
-            BabelDRepIncorrectDeposit providedDRepDeposit expectedDRepDeposit
+        ( pure . Cardano.Ledger.Babel.Core.injectFailure $
+            ConwayDRepIncorrectDeposit providedDRepDeposit expectedDRepDeposit
         )
     it "invalid refund provided with DRep deregistration cert" $ do
-      modifyPParams $ ppDRepDepositL .~ Coin 100
-      drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
+      modifyPParams $ Cardano.Ledger.Babel.Core.ppDRepDepositL .~ Coin 100
+      drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . Cardano.Ledger.Babel.Core.ppDRepDepositL
       let refund = drepDeposit <+> Coin 10
       drepCred <- KeyHashObj <$> freshKeyHash
       submitTx_ $
@@ -196,12 +194,12 @@ relevantDuringBootstrapSpec = do
             .~ SSeq.singleton
               (UnRegDRepTxCert drepCred refund)
         )
-        ( pure . injectFailure $
-            BabelDRepIncorrectRefund refund drepDeposit
+        ( pure . Cardano.Ledger.Babel.Core.injectFailure $
+            ConwayDRepIncorrectRefund refund drepDeposit
         )
     it "DRep already registered" $ do
-      modifyPParams $ ppDRepDepositL .~ Coin 100
-      drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
+      modifyPParams $ Cardano.Ledger.Babel.Core.ppDRepDepositL .~ Coin 100
+      drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . Cardano.Ledger.Babel.Core.ppDRepDepositL
       drepCred <- KeyHashObj <$> freshKeyHash
       let
         regTx =
@@ -213,10 +211,10 @@ relevantDuringBootstrapSpec = do
       submitTx_ regTx
       submitFailingTx
         regTx
-        (pure . injectFailure $ BabelDRepAlreadyRegistered drepCred)
+        (pure . Cardano.Ledger.Babel.Core.injectFailure $ ConwayDRepAlreadyRegistered drepCred)
     it "unregistering a nonexistent DRep" $ do
-      modifyPParams $ ppDRepDepositL .~ Coin 100
-      drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppDRepDepositL
+      modifyPParams $ Cardano.Ledger.Babel.Core.ppDRepDepositL .~ Coin 100
+      drepDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . Cardano.Ledger.Babel.Core.ppDRepDepositL
       drepCred <- KeyHashObj <$> freshKeyHash
       submitFailingTx
         ( mkBasicTx mkBasicTxBody
@@ -224,7 +222,7 @@ relevantDuringBootstrapSpec = do
             . certsTxBodyL
             .~ SSeq.singleton (UnRegDRepTxCert drepCred drepDeposit)
         )
-        (pure . injectFailure $ BabelDRepNotRegistered drepCred)
+        (pure . Cardano.Ledger.Babel.Core.injectFailure $ ConwayDRepNotRegistered drepCred)
     it "registering a resigned CC member hotkey" $ do
       void registerInitialCommittee
       initialCommittee <- getCommitteeMembers
@@ -244,4 +242,4 @@ relevantDuringBootstrapSpec = do
             .~ SSeq.singleton (ResignCommitteeColdTxCert ccCred SNothing)
         submitFailingTx
           registerHotKeyTx
-          (pure . injectFailure $ BabelCommitteeHasPreviouslyResigned ccCred)
+          (pure . Cardano.Ledger.Babel.Core.injectFailure $ ConwayCommitteeHasPreviouslyResigned ccCred)

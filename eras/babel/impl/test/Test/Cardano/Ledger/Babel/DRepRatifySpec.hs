@@ -11,13 +11,13 @@
 
 module Test.Cardano.Ledger.Babel.DRepRatifySpec (spec) where
 
+import Cardano.Ledger.Babel
+import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.BaseTypes (EpochNo (..), StrictMaybe (..))
 import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Babel
-import Cardano.Ledger.Babel.Core
-import Cardano.Ledger.Babel.Governance (
+import Cardano.Ledger.Conway.Governance (
   GovAction (..),
   GovActionState (..),
   RatifyEnv (..),
@@ -27,7 +27,8 @@ import Cardano.Ledger.Babel.Governance (
   pparamsUpdateThreshold,
   votingDRepThreshold,
  )
-import Cardano.Ledger.Babel.Rules (
+import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Conway.Rules (
   dRepAccepted,
   dRepAcceptedRatio,
  )
@@ -44,8 +45,8 @@ import Data.Ratio ((%))
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import Lens.Micro
-import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Babel.Arbitrary ()
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Rational ((%!))
 
@@ -62,7 +63,7 @@ spec = do
 
 correctThresholdsProp ::
   forall era.
-  ( BabelEraPParams era
+  ( ConwayEraPParams era
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   ) =>
@@ -206,7 +207,7 @@ noStakeProp ::
   forall era.
   ( Arbitrary (PParamsHKD StrictMaybe era)
   , Arbitrary (PParamsHKD Identity era)
-  , BabelEraPParams era
+  , ConwayEraPParams era
   ) =>
   Spec
 noStakeProp =

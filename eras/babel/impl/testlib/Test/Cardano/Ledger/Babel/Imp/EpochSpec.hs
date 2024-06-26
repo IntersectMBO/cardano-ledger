@@ -15,12 +15,13 @@ module Test.Cardano.Ledger.Babel.Imp.EpochSpec (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
+import Cardano.Ledger.Babel.Core
+import Cardano.Ledger.Babel.Rules ()
 import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..))
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Babel.Core
-import Cardano.Ledger.Babel.Governance
-import Cardano.Ledger.Babel.PParams
-import Cardano.Ledger.Babel.Rules (BabelEpochEvent (GovInfoEvent), BabelNewEpochEvent (..))
+import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (Event, ShelleyTickEvent (..))
@@ -43,9 +44,9 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleEvent "TICK" BabelEpochEvent era
-  , Event (EraRule "EPOCH" era) ~ BabelEpochEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ BabelNewEpochEvent era
+  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpTestState era)
 spec =
@@ -57,9 +58,9 @@ spec =
 relevantDuringBootstrapSpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleEvent "TICK" BabelEpochEvent era
-  , Event (EraRule "EPOCH" era) ~ BabelEpochEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ BabelNewEpochEvent era
+  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
   ) =>
   SpecWith (ImpTestState era)
 relevantDuringBootstrapSpec = do
@@ -354,9 +355,9 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
 eventsSpec ::
   forall era.
   ( BabelEraImp era
-  , InjectRuleEvent "TICK" BabelEpochEvent era
-  , Event (EraRule "NEWEPOCH" era) ~ BabelNewEpochEvent era
-  , Event (EraRule "EPOCH" era) ~ BabelEpochEvent era
+  , InjectRuleEvent "TICK" ConwayEpochEvent era
+  , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   ) =>
   SpecWith (ImpTestState era)
 eventsSpec = describe "Events" $ do

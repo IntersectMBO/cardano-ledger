@@ -148,6 +148,9 @@ instance InjectRuleFailure "ZONE" BabelUtxoPredFailure (BabelEra c) where
 instance InjectRuleFailure "ZONE" BabelUtxosPredFailure (BabelEra c) where
   injectFailure = LedgersFailure . injectFailure
 
+instance InjectRuleFailure "ZONE" AlonzoUtxosPredFailure (BabelEra c) where
+  injectFailure = LedgersFailure . injectFailure
+
 deriving instance
   ( Era era
   , Show (PredicateFailure (EraRule "LEDGER" era))

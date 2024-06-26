@@ -24,6 +24,16 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (IsValid))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (Redeemers), TxDats (TxDats))
 import Cardano.Ledger.Babbage
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
+import Cardano.Ledger.Babel (Babel, BabelEra)
+import Cardano.Ledger.Babel.Core
+import Cardano.Ledger.Babel.Genesis (BabelGenesis)
+import Cardano.Ledger.Babel.Scripts (
+  AlonzoScript (TimelockScript),
+  BabelPlutusPurpose (BabelSpending),
+ )
+import Cardano.Ledger.Babel.Tx (AlonzoTx (AlonzoTx))
+import Cardano.Ledger.Babel.TxBody
+import Cardano.Ledger.Babel.TxWits (AlonzoTxWits (AlonzoTxWits))
 import Cardano.Ledger.BaseTypes (
   EpochInterval (EpochInterval),
   Network (Mainnet),
@@ -34,17 +44,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Babel (Babel, BabelEra)
-import Cardano.Ledger.Babel.Core
-import Cardano.Ledger.Babel.Genesis (BabelGenesis)
-import Cardano.Ledger.Babel.Governance (VotingProcedures (VotingProcedures))
-import Cardano.Ledger.Babel.Scripts (
-  AlonzoScript (TimelockScript),
-  BabelPlutusPurpose (BabelSpending),
- )
-import Cardano.Ledger.Babel.Tx (AlonzoTx (AlonzoTx))
-import Cardano.Ledger.Babel.TxBody
-import Cardano.Ledger.Babel.TxWits (AlonzoTxWits (AlonzoTxWits))
+import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (
   GenDelegPair (GenDelegPair),

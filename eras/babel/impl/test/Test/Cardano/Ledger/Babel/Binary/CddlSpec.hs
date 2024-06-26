@@ -7,16 +7,16 @@ import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers)
 import Cardano.Ledger.Babel (Babel)
-import Cardano.Ledger.Babel.Governance (GovAction, ProposalProcedure, VotingProcedure)
+import Cardano.Ledger.Conway.Governance (GovAction, ProposalProcedure, VotingProcedure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data, Datum)
+import Test.Cardano.Ledger.Babel.Binary.Cddl (readBabelCddlFiles)
 import Test.Cardano.Ledger.Binary.Cddl (
   beforeAllCddlFile,
   cddlRoundTripAnnCborSpec,
   cddlRoundTripCborSpec,
  )
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Babel.Binary.Cddl (readBabelCddlFiles)
 
 spec :: Spec
 spec =

@@ -6,7 +6,6 @@ import Cardano.Ledger.Babel (Babel)
 import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
-import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Babel.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Babel.Binary.Regression as Regression
 import qualified Test.Cardano.Ledger.Babel.BinarySpec as Binary
@@ -17,6 +16,7 @@ import qualified Test.Cardano.Ledger.Babel.GovActionReorderSpec as GovActionReor
 import qualified Test.Cardano.Ledger.Babel.Imp as BabelImp
 import Test.Cardano.Ledger.Babel.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Babel.Proposals as Proposals
+import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 

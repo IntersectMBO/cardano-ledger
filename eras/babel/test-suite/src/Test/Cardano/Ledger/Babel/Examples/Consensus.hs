@@ -17,20 +17,21 @@ import Cardano.Ledger.Alonzo.TxAuxData (
  )
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (mkSized)
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Babel (Babel)
 import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.Babel.Genesis (BabelGenesis (..))
-import Cardano.Ledger.Babel.Governance (VotingProcedures (..))
-import Cardano.Ledger.Babel.Rules (BabelCERTS, BabelCertsPredFailure (..), BabelLEDGER)
+import Cardano.Ledger.Babel.Rules (BabelLEDGER)
 import Cardano.Ledger.Babel.Scripts (BabelPlutusPurpose (..))
 import Cardano.Ledger.Babel.Translation ()
 import Cardano.Ledger.Babel.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babel.TxBody (BabelTxBody (..))
-import Cardano.Ledger.Babel.TxCert
 import Cardano.Ledger.Babel.TxWits (AlonzoTxWits (..))
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (mkSized)
+import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Governance
+import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Conway.TxCert (ConwayTxCert (ConwayTxCertPool))
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (asWitness)
@@ -82,7 +83,7 @@ ledgerExamplesBabel =
     , SLE.sleApplyTxError =
         ApplyTxError $
           pure $
-            wrapFailed @(BabelCERTS Babel) @(BabelLEDGER Babel) $
+            wrapFailed @(ConwayCERTS Babel) @(BabelLEDGER Babel) $
               DelegateeNotRegisteredDELEG @Babel (SLE.mkKeyHash 1)
     , SLE.sleRewardsCredentials =
         Set.fromList
@@ -118,10 +119,10 @@ collateralOutput =
     NoDatum
     SNothing
 
-exampleBabelCerts :: Era era => OSet.OSet (BabelTxCert era)
+exampleBabelCerts :: Era era => OSet.OSet (ConwayTxCert era)
 exampleBabelCerts =
   OSet.fromList -- TODO should I add the new certs here?
-    [ BabelTxCertPool (RegPool examplePoolParams)
+    [ ConwayTxCertPool (RegPool examplePoolParams)
     ]
 
 exampleTxBodyBabel :: TxBody Babel

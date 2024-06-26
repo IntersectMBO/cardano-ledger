@@ -9,10 +9,9 @@ module Test.Cardano.Ledger.Babel.Examples (
 )
 where
 
-import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Babel (BabelEra)
 import Cardano.Ledger.Babel.Era (BabelBBODY)
-import Cardano.Ledger.Babel.Rules
+import Cardano.Ledger.Block (Block)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.List.NonEmpty (NonEmpty)
