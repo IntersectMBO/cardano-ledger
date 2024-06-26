@@ -15,6 +15,7 @@
 module Cardano.Ledger.Conway.UTxO (
   conwayProducedValue,
   getConwayWitsVKeyNeeded,
+  txNonDistinctRefScriptsSize,
 ) where
 
 import Cardano.Ledger.Address (RewardAcnt (..))
@@ -27,6 +28,7 @@ import Cardano.Ledger.Babbage.UTxO (
   getBabbageScriptsProvided,
   getBabbageSpendingDatum,
   getBabbageSupplementalDataHashes,
+  getReferenceScriptsNonDistinct,
  )
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayEra)
@@ -42,13 +44,16 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Mary.UTxO (getConsumedMaryValue)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
+import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.UTxO (getShelleyWitsVKeyNeededNoGov, shelleyProducedValue)
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (..), getScriptHash)
 import Cardano.Ledger.Val (Val (..), inject)
+import qualified Data.ByteString as BS
 import Data.Foldable (Foldable (..), toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Maybe.Strict (strictMaybeToMaybe)
+import Data.Monoid (Sum (..))
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
@@ -135,6 +140,15 @@ instance Crypto c => AlonzoEraUTxO (ConwayEra c) where
   getSupplementalDataHashes = getBabbageSupplementalDataHashes
 
   getSpendingDatum = getBabbageSpendingDatum
+
+-- | Calculate the total size of reference scripts used by the transactions. Duplicate
+-- scripts will be counted as many times as they occur, since there is never a reason to
+-- include an input with the same reference script.
+txNonDistinctRefScriptsSize :: (EraTx era, BabbageEraTxBody era) => UTxO era -> Tx era -> Int
+txNonDistinctRefScriptsSize utxo tx = getSum $ foldMap (Sum . BS.length . originalBytes . snd) refScripts
+  where
+    inputs = (tx ^. bodyTxL . referenceInputsTxBodyL) `Set.union` (tx ^. bodyTxL . inputsTxBodyL)
+    refScripts = getReferenceScriptsNonDistinct utxo inputs
 
 getConwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>
