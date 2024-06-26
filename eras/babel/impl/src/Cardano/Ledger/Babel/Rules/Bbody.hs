@@ -28,7 +28,7 @@ import Cardano.Ledger.Babel.Rules.Utxo (BabelUtxoPredFailure)
 import Cardano.Ledger.Babel.Rules.Utxow (BabelUtxowPredFailure)
 import Cardano.Ledger.Babel.Rules.Zone (BabelZonePredFailure)
 import Cardano.Ledger.Babel.Rules.Zones (BabelZonesPredFailure)
-import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, epochInfoPure)
+import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, HasKeyRole (coerceKeyRole), Hash)
 import Cardano.Ledger.Shelley.API (
@@ -39,6 +39,7 @@ import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (BbodyEnv),
   ShelleyBbodyPredFailure,
+  ShelleyBbodyState (BbodyState),
   ShelleyLedgersPredFailure,
  )
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
@@ -59,9 +60,6 @@ import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks)
-
-data BabelBbodyState era
-  = BbodyState !(State (EraRule "ZONES" era)) !(BlocksMade (EraCrypto era))
 
 data BabelBbodyPredFailure era
   = WrongBlockBodySizeBBODY
@@ -129,10 +127,11 @@ instance
   , Signal (EraRule "ZONES" era) ~ Seq (Seq (Tx era))
   , Eq (PredicateFailure (EraRule "LEDGERS" era))
   , Show (PredicateFailure (EraRule "LEDGERS" era))
+  , State (EraRule "LEDGERS" era) ~ State (EraRule "ZONES" era)
   ) =>
   STS (BabelBBODY era)
   where
-  type State (BabelBBODY era) = BabelBbodyState era
+  type State (BabelBBODY era) = ShelleyBbodyState era
 
   type Signal (BabelBBODY era) = Block (BHeaderView (EraCrypto era)) era
 
@@ -154,6 +153,7 @@ bbodyTransition ::
   , Embed (EraRule "ZONES" era) (BabelBBODY era)
   , Environment (EraRule "ZONES" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "ZONES" era) ~ Seq (Seq (Tx era))
+  , State (EraRule "LEDGERS" era) ~ State (EraRule "ZONES" era)
   ) =>
   TransitionRule (BabelBBODY era)
 bbodyTransition =

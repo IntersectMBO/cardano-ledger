@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- CanStartFromGenesis
 {-# OPTIONS_GHC -Wno-deprecations #-}
@@ -28,6 +29,7 @@ import Cardano.Ledger.Shelley.API (
   ApplyBlock,
   ApplyTx,
   CanStartFromGenesis (fromShelleyPParams),
+  EraLedgerRules,
  )
 
 type Allegra = AllegraEra StandardCrypto
@@ -43,6 +45,8 @@ instance
 instance
   (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
   ApplyBlock (AllegraEra c)
+  where
+  type EraLedgerRules (AllegraEra c) = '[]
 
 instance Crypto c => CanStartFromGenesis (AllegraEra c) where
   fromShelleyPParams _ = translateEra' ()

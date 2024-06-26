@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- CanStartFromGenesis
 {-# OPTIONS_GHC -Wno-deprecations #-}
@@ -41,6 +42,8 @@ instance
 instance
   (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
   ApplyBlock (MaryEra c)
+  where
+  type EraLedgerRules (MaryEra c) = '[]
 
 instance Crypto c => CanStartFromGenesis (MaryEra c) where
   fromShelleyPParams () = translateEra' () . fromShelleyPParams ()

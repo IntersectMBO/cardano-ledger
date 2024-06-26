@@ -50,6 +50,8 @@ instance
   , DSignable c (Hash c EraIndependentTxBody)
   ) =>
   API.ApplyBlock (ConwayEra c)
+  where
+  type EraLedgerRules (ConwayEra c) = '[]
 
 instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
   type AdditionalGenesisConfig (ConwayEra c) = ConwayGenesis c

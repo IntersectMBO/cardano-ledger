@@ -26,6 +26,8 @@ module Test.Cardano.Ledger.Babel.Rules.Chain (
 ) where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
+import Cardano.Ledger.Babel.Era (BabelBBODY, BabelEra)
+import Cardano.Ledger.Babel.Rules.Bbody (BabelBbodyPredFailure)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
   Globals (..),
@@ -42,8 +44,6 @@ import Cardano.Ledger.Chain (
   pparamsToChainChecksPParams,
  )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Babel.Era (BabelBBODY, BabelEra)
-import Cardano.Ledger.Babel.Rules.Bbody (BabelBbodyPredFailure, BabelBbodyState (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Keys (
@@ -78,6 +78,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (BbodyEnv),
+  ShelleyBbodyState (BbodyState),
   ShelleyTICK,
   ShelleyTickEvent,
   ShelleyTickPredFailure,
@@ -262,7 +263,7 @@ instance
   ( EraGov era
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
-  , State (EraRule "BBODY" era) ~ BabelBbodyState era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
@@ -302,7 +303,7 @@ chainTransition ::
   ( STS (CHAIN era)
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
-  , State (EraRule "BBODY" era) ~ BabelBbodyState era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
@@ -314,7 +315,7 @@ chainTransition ::
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL (EraCrypto era)) (CHAIN era)
   , EncCBORGroup (TxZones era)
-  , State (EraRule "ZONES" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
   , EraGov era
   ) =>
   TransitionRule (CHAIN era)

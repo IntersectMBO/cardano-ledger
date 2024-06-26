@@ -17,13 +17,8 @@ module Cardano.Ledger.Babel (
 )
 where
 
+import Cardano.Crypto.DSIGN (Signable)
 import Cardano.Ledger.Babbage.TxBody ()
-import Cardano.Ledger.Babel.API.Genesis (CanStartFromGenesis (..))
-import Cardano.Ledger.Babel.API.Mempool (
-  ApplyTx (reapplyTx),
-  ApplyTxError (ApplyTxError),
-  extractTx,
- )
 import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.Babel.Era (BabelEra)
 import Cardano.Ledger.Babel.Genesis (BabelGenesis (..))
@@ -37,17 +32,42 @@ import Cardano.Ledger.Babel.TxInfo ()
 import Cardano.Ledger.Babel.TxOut ()
 import Cardano.Ledger.Babel.UTxO ()
 import Cardano.Ledger.Conway.Governance (RunConwayRatify (..))
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Crypto (Crypto (DSIGN), StandardCrypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
+import Cardano.Ledger.Shelley.API (ApplyBlock, EraLedgerRules)
+import Cardano.Ledger.Shelley.API.Genesis (CanStartFromGenesis (..))
+import Cardano.Ledger.Shelley.API.Mempool (
+  ApplyTx (reapplyTx),
+  ApplyTxError (ApplyTxError),
+  extractTx,
+ )
 import Control.Arrow (left)
 import Control.Monad.Error.Class (liftEither)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition (TRC (TRC))
 
+import qualified Cardano.Crypto.Hash.Class
+import Cardano.Ledger.Babbage.Rules ()
+import Cardano.Ledger.Babbage.Transition ()
+import Cardano.Ledger.Babbage.Translation ()
+import Cardano.Ledger.Babbage.TxInfo ()
+import Cardano.Ledger.Babbage.UTxO ()
+
 type Babel = BabelEra StandardCrypto
 
 -- =====================================================
+
+instance
+  ( Crypto c
+  , DSignable c (Hash c EraIndependentTxBody)
+  , DSignable c (Hash c EraIndependentRequiredTxs)
+  , -- TODO WG figure out what you've done wrong to introduce this constraint
+    Signable (DSIGN c) (Cardano.Crypto.Hash.Class.Hash c EraIndependentTxBody)
+  ) =>
+  ApplyBlock (BabelEra c)
+  where
+  type EraLedgerRules (BabelEra c) = '["ZONES"]
 
 instance
   ( Crypto c

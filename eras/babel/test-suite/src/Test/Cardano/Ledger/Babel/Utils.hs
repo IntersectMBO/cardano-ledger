@@ -74,7 +74,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Babel.API.Validation (ApplyBlock)
+import Cardano.Ledger.Shelley.API.Validation (ApplyBlock)
 import Cardano.Ledger.Crypto (Crypto (DSIGN))
 import Cardano.Ledger.Mary.Value (MultiAsset (MultiAsset))
 import Cardano.Ledger.Shelley.API (KeyRole (..), VKey (..))

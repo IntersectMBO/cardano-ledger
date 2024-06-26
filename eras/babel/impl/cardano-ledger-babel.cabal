@@ -50,12 +50,9 @@ library
         Cardano.Ledger.Babel.FRxO
         Cardano.Ledger.Babel.UTxO
         Cardano.Ledger.Babel.Plutus.Context
-        Cardano.Ledger.Babel.API.Validation
 
     hs-source-dirs:   src
     other-modules:
-        Cardano.Ledger.Babel.API.Genesis
-        Cardano.Ledger.Babel.API.Mempool
         Cardano.Ledger.Babel.Rules.Gov
         Cardano.Ledger.Babel.Rules.Ledger
         Cardano.Ledger.Babel.Rules.Ledgers

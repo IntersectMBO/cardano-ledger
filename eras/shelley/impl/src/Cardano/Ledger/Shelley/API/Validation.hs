@@ -15,6 +15,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | Interface to the block validation and chain extension logic in the Shelley
 -- API.
@@ -50,6 +51,7 @@ import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
+import GHC.Base (Constraint, Symbol, Type)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -57,6 +59,26 @@ import NoThunks.Class (NoThunks (..))
 {-------------------------------------------------------------------------------
   Block validation API
 -------------------------------------------------------------------------------}
+
+-- Define a type family for folding constraints
+type family FoldConstraints (cs :: [Constraint]) :: Constraint where
+  FoldConstraints '[] = ()
+  FoldConstraints (c ': cs) = (c, FoldConstraints cs)
+
+-- Helper type family to convert a list of rules to a list of constraints
+type family RulesToConstraints (rules :: [Symbol]) (era :: Type) :: [Constraint] where
+  RulesToConstraints '[] era = '[]
+  RulesToConstraints (rule ': rules) era =
+    ( State (EraRule rule era) ~ LedgerState era
+    , State (EraRule rule era) ~ State (EraRule "LEDGERS" era)
+    )
+      ': RulesToConstraints rules era
+
+-- Combine everything
+type LedgerStateRulesFold rules era =
+  FoldConstraints ((State (EraRule "LEDGERS" era) ~ LedgerState era) ': RulesToConstraints rules era)
+
+-- type LedgerStateRules (rulesConstraint :: [Constraint]) era = type level fold with ~ LedgerState era?
 
 class
   ( STS (EraRule "TICK" era)
@@ -70,10 +92,13 @@ class
   , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , EncCBORGroup (TxZones era)
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , LedgerStateRulesFold (EraLedgerRules era) era
   ) =>
   ApplyBlock era
   where
+  -- Type family to specify which rules should be included for each era
+  type EraLedgerRules (era :: Type) :: [Symbol]
+
   -- | Apply the header level ledger transition.
   --
   -- This handles checks and updates that happen on a slot tick, as well as a
@@ -198,6 +223,8 @@ instance
   , DSignable c (Hash c EraIndependentTxBody)
   ) =>
   ApplyBlock (ShelleyEra c)
+  where
+  type EraLedgerRules (ShelleyEra c) = '[]
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
