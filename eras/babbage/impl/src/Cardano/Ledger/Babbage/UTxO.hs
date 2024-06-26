@@ -8,6 +8,7 @@ module Cardano.Ledger.Babbage.UTxO (
   getBabbageSpendingDatum,
   getBabbageScriptsProvided,
   getReferenceScripts,
+  getReferenceScriptsNonDistinct,
 ) where
 
 import Cardano.Ledger.Alonzo.TxWits (unTxDats)
@@ -137,9 +138,15 @@ getReferenceScripts ::
   UTxO era ->
   Set (TxIn (EraCrypto era)) ->
   Map.Map (ScriptHash (EraCrypto era)) (Script era)
-getReferenceScripts (UTxO mp) inputs = Map.foldl' accum Map.empty (eval (inputs ◁ mp))
-  where
-    accum ans txOut =
-      case txOut ^. referenceScriptTxOutL of
-        SNothing -> ans
-        SJust script -> Map.insert (hashScript script) script ans
+getReferenceScripts utxo ins = Map.fromList (getReferenceScriptsNonDistinct utxo ins)
+
+getReferenceScriptsNonDistinct ::
+  BabbageEraTxOut era =>
+  UTxO era ->
+  Set (TxIn (EraCrypto era)) ->
+  [(ScriptHash (EraCrypto era), Script era)]
+getReferenceScriptsNonDistinct (UTxO mp) inputs =
+  [ (hashScript script, script)
+  | txOut <- Map.elems (eval (inputs ◁ mp))
+  , SJust script <- [txOut ^. referenceScriptTxOutL]
+  ]
