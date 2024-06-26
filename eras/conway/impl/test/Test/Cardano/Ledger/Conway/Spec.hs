@@ -7,6 +7,9 @@ import Test.Cardano.Ledger.Common
 spec :: Spec
 spec = do
   describe "Various tests for functions defined in Conway" $ do
+    prop "tierRefScriptFee is a linear function when growth is 1" $ \(Positive sizeIncrement) baseFee (NonNegative size) ->
+      tierRefScriptFee 1 sizeIncrement baseFee size
+        === Coin (floor (fromIntegral size * baseFee))
     it "tierRefScriptFee" $ do
       let step = 25600
       map (tierRefScriptFee 1.5 step 15) [0, step .. 204800]

@@ -42,6 +42,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Val (Val (..))
 import Data.Ratio ((%))
+import GHC.Stack
 import Lens.Micro ((^.))
 
 instance Crypto c => EraTx (ConwayEra c) where
@@ -96,6 +97,7 @@ getConwayMinFeeTx pp tx refScriptsSize =
 -- | Calculate the fee for reference scripts using an expoential growth of the price per
 -- byte with linear increments
 tierRefScriptFee ::
+  HasCallStack =>
   -- | Growth factor or step multiplier
   Rational ->
   -- | Increment size in which price grows linearly according to the price
@@ -105,7 +107,9 @@ tierRefScriptFee ::
   -- | Total RefScript size in bytes
   Int ->
   Coin
-tierRefScriptFee multiplier sizeIncrement = go 0
+tierRefScriptFee multiplier sizeIncrement
+  | multiplier <= 0 || sizeIncrement <= 0 = error "Size increment and multiplier must be positive"
+  | otherwise = go 0
   where
     go !acc !curTierPrice !n
       | n < sizeIncrement =
