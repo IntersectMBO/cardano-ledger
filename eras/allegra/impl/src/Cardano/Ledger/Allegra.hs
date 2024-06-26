@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.API (
   ApplyBlock,
   ApplyTx,
   CanStartFromGenesis (fromShelleyPParams),
-  EraLedgerRules,
+  EraLedgerStateRules,
  )
 
 type Allegra = AllegraEra StandardCrypto
@@ -46,7 +46,7 @@ instance
   (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
   ApplyBlock (AllegraEra c)
   where
-  type EraLedgerRules (AllegraEra c) = '[]
+  type EraLedgerStateRules (AllegraEra c) = '[]
 
 instance Crypto c => CanStartFromGenesis (AllegraEra c) where
   fromShelleyPParams _ = translateEra' ()

@@ -46,7 +46,7 @@ instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (B
   reapplyTx = reapplyAlonzoTx
 
 instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (BabbageEra c) where
-  type EraLedgerRules (BabbageEra c) = '[]
+  type EraLedgerStateRules (BabbageEra c) = '[]
 
 instance Crypto c => API.CanStartFromGenesis (BabbageEra c) where
   type AdditionalGenesisConfig (BabbageEra c) = AlonzoGenesis

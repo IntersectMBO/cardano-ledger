@@ -87,12 +87,12 @@ class
   , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , EncCBORGroup (TxZones era)
-  , LedgerStateRulesFold (EraLedgerRules era) era
+  , LedgerStateRulesFold (EraLedgerStateRules era) era
   ) =>
   ApplyBlock era
   where
-  -- Type family to specify which rules should be included for each era
-  type EraLedgerRules (era :: Type) :: [Symbol]
+  -- Type family to specify which rules (if any) are equivalent to LedgerState for each era
+  type EraLedgerStateRules (era :: Type) :: [Symbol]
 
   -- | Apply the header level ledger transition.
   --
@@ -219,7 +219,7 @@ instance
   ) =>
   ApplyBlock (ShelleyEra c)
   where
-  type EraLedgerRules (ShelleyEra c) = '[]
+  type EraLedgerStateRules (ShelleyEra c) = '[]
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks

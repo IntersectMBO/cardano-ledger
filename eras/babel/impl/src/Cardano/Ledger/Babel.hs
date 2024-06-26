@@ -35,7 +35,7 @@ import Cardano.Ledger.Conway.Governance (RunConwayRatify (..))
 import Cardano.Ledger.Crypto (Crypto (DSIGN), StandardCrypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
-import Cardano.Ledger.Shelley.API (ApplyBlock, EraLedgerRules)
+import Cardano.Ledger.Shelley.API (ApplyBlock, EraLedgerStateRules)
 import Cardano.Ledger.Shelley.API.Genesis (CanStartFromGenesis (..))
 import Cardano.Ledger.Shelley.API.Mempool (
   ApplyTx (reapplyTx),
@@ -67,7 +67,7 @@ instance
   ) =>
   ApplyBlock (BabelEra c)
   where
-  type EraLedgerRules (BabelEra c) = '["ZONES"]
+  type EraLedgerStateRules (BabelEra c) = '["ZONES"]
 
 instance
   ( Crypto c
