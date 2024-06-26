@@ -1,5 +1,10 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.15.1.0
+
+* Add `tierRefScriptFee` and `txNonDistinctRefScriptsSize`
+* Make reference scripts fee grow exponentially with size
+
 ## 1.15.0.0
 
 * Add `psPoolDistrL` lens.

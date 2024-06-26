@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -6,6 +8,7 @@
 
 module Cardano.Ledger.Conway.Tx (
   module BabbageTxReExport,
+  tierRefScriptFee,
 )
 where
 
@@ -38,6 +41,7 @@ import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Val (Val (..))
+import Data.Ratio ((%))
 import Lens.Micro ((^.))
 
 instance Crypto c => EraTx (ConwayEra c) where
@@ -85,7 +89,30 @@ getConwayMinFeeTx pp tx refScriptsSize =
   alonzoMinFeeTx pp tx <+> refScriptsFee
   where
     refScriptCostPerByte = unboundRational (pp ^. ppMinFeeRefScriptCostPerByteL)
-    refScriptsFee = Coin (floor (fromIntegral @Int @Rational refScriptsSize * refScriptCostPerByte))
+    refScriptsFee = tierRefScriptFee multiplier sizeIncrement refScriptCostPerByte refScriptsSize
+    multiplier = 1.5
+    sizeIncrement = 25_600 -- 25KiB
+
+-- | Calculate the fee for reference scripts using an expoential growth of the price per
+-- byte with linear increments
+tierRefScriptFee ::
+  -- | Growth factor or step multiplier
+  Rational ->
+  -- | Increment size in which price grows linearly according to the price
+  Int ->
+  -- | Base fee. Currently this is customizable by `ppMinFeeRefScriptCostPerByteL`
+  Rational ->
+  -- | Total RefScript size in bytes
+  Int ->
+  Coin
+tierRefScriptFee multiplier sizeIncrement = go 0
+  where
+    go !acc !curTierPrice !n
+      | n < sizeIncrement =
+          Coin $ floor (acc + (toInteger n % 1) * curTierPrice)
+      | otherwise =
+          go (acc + sizeIncrementRational * curTierPrice) (multiplier * curTierPrice) (n - sizeIncrement)
+    sizeIncrementRational = toInteger sizeIncrement % 1
 
 instance Crypto c => AlonzoEraTx (ConwayEra c) where
   {-# SPECIALIZE instance AlonzoEraTx (ConwayEra StandardCrypto) #-}
