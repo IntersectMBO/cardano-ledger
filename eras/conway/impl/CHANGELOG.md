@@ -2,6 +2,9 @@
 
 ## 1.15.1.0
 
+* Add `tierRefScriptFee` and `txNonDistinctRefScriptsSize`
+* Make reference scripts fee grow exponentially with size
+
 ### `testlib`
 
 * Add `registerCommitteeHotKeys`
