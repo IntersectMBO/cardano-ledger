@@ -60,12 +60,10 @@ import NoThunks.Class (NoThunks (..))
   Block validation API
 -------------------------------------------------------------------------------}
 
--- Define a type family for folding constraints
 type family FoldConstraints (cs :: [Constraint]) :: Constraint where
   FoldConstraints '[] = ()
   FoldConstraints (c ': cs) = (c, FoldConstraints cs)
 
--- Helper type family to convert a list of rules to a list of constraints
 type family RulesToConstraints (rules :: [Symbol]) (era :: Type) :: [Constraint] where
   RulesToConstraints '[] era = '[]
   RulesToConstraints (rule ': rules) era =
@@ -74,11 +72,8 @@ type family RulesToConstraints (rules :: [Symbol]) (era :: Type) :: [Constraint]
     )
       ': RulesToConstraints rules era
 
--- Combine everything
 type LedgerStateRulesFold rules era =
   FoldConstraints ((State (EraRule "LEDGERS" era) ~ LedgerState era) ': RulesToConstraints rules era)
-
--- type LedgerStateRules (rulesConstraint :: [Constraint]) era = type level fold with ~ LedgerState era?
 
 class
   ( STS (EraRule "TICK" era)
