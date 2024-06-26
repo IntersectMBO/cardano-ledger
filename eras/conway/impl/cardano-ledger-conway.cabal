@@ -167,6 +167,7 @@ test-suite tests
     main-is:          Main.hs
     hs-source-dirs:   test
     other-modules:
+        Test.Cardano.Ledger.Conway.Spec
         Test.Cardano.Ledger.Conway.BinarySpec
         Test.Cardano.Ledger.Conway.Binary.CddlSpec
         Test.Cardano.Ledger.Conway.DRepRatifySpec

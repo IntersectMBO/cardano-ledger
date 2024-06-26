@@ -7,6 +7,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsS
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Conway.Spec as Spec
 import qualified Test.Cardano.Ledger.Conway.Binary.CddlSpec as Cddl
 import qualified Test.Cardano.Ledger.Conway.Binary.Regression as Regression
 import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
@@ -24,6 +25,7 @@ main :: IO ()
 main =
   ledgerTestMain $
     describe "Conway" $ do
+      Spec.spec
       Proposals.spec
       Binary.spec
       Cddl.spec

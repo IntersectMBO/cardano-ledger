@@ -15,6 +15,7 @@
 module Cardano.Ledger.Conway.UTxO (
   conwayProducedValue,
   getConwayWitsVKeyNeeded,
+  txNonDistinctRefScriptsSize,
 ) where
 
 import Cardano.Ledger.Alonzo.UTxO (
@@ -143,11 +144,16 @@ getConwayMinFeeTxUtxo ::
   UTxO era ->
   Coin
 getConwayMinFeeTxUtxo pparams tx utxo =
-  getMinFeeTx pparams tx refScriptsSize
+  getMinFeeTx pparams tx $ txNonDistinctRefScriptsSize utxo tx
+
+-- | Calculate the total size of reference scripts used by the transactions. Duplicate
+-- scripts will be counted as many times as they occur, since there is never a reason to
+-- include an input with the same reference script.
+txNonDistinctRefScriptsSize :: (EraTx era, BabbageEraTxBody era) => UTxO era -> Tx era -> Int
+txNonDistinctRefScriptsSize utxo tx = getSum $ foldMap (Sum . originalBytesSize . snd) refScripts
   where
-    ins = (tx ^. bodyTxL . referenceInputsTxBodyL) `Set.union` (tx ^. bodyTxL . inputsTxBodyL)
-    refScripts = getReferenceScriptsNonDistinct utxo ins
-    refScriptsSize = getSum $ foldMap (Sum . originalBytesSize . snd) refScripts
+    inputs = (tx ^. bodyTxL . referenceInputsTxBodyL) `Set.union` (tx ^. bodyTxL . inputsTxBodyL)
+    refScripts = getReferenceScriptsNonDistinct utxo inputs
 
 getConwayWitsVKeyNeeded ::
   (EraTx era, ConwayEraTxBody era) =>
