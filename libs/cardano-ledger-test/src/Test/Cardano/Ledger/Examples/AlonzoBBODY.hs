@@ -30,6 +30,8 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway (ConwayCertPredFailure (..))
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeCredential,
@@ -127,7 +129,7 @@ tests =
     "Generic Tests, testing Alonzo PredicateFailures, in postAlonzo eras."
     [ alonzoBBODYexamplesP Alonzo
     , alonzoBBODYexamplesP Babbage
-    -- alonzoBBODYexamplesP Conway TODO
+    , alonzoBBODYexamplesP Conway
     ]
 
 alonzoBBODYexamplesP ::
@@ -698,8 +700,14 @@ makeTooBig proof@Babbage =
     . DelplFailure
     . PoolFailure
     $ PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
--- makeTooBig proof@Conway =
---   ShelleyInAlonzoBbodyPredFailure . LedgersFailure . LedgerFailure . ConwayCertsFailure . CertFailure . PoolFailure $ ConwayPoolPredFailure -- FIXME: This needs fixing after POOL rules are implemented for Conway
+makeTooBig proof@Conway =
+  ShelleyInAlonzoBbodyPredFailure
+    . LedgersFailure
+    . LedgerFailure
+    . ConwayCertsFailure
+    . CertFailure
+    . Conway.PoolFailure
+    $ PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)
 
 coldKeys :: Crypto c => KeyPair 'BlockIssuer c
