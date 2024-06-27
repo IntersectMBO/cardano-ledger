@@ -26,6 +26,7 @@ import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import Data.Default.Class (def)
 import Data.Foldable
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -68,10 +69,11 @@ initiateHardForkWithLessThanMinimalCommitteeSize =
     modifyPParams $ ppCommitteeMinSizeL .~ 2
     committeeMembers' <- Set.toList <$> getCommitteeMembers
     committeeMember <- elements committeeMembers'
-    resignCommitteeColdKey committeeMember SNothing
+    anchor <- arbitrary
+    mHotCred <- resignCommitteeColdKey committeeMember anchor
     protVer <- getProtVer
     gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
-    submitYesVoteCCs_ hotCs gai
+    submitYesVoteCCs_ (maybe NE.toList (\hotCred -> NE.filter (/= hotCred)) mHotCred $ hotCs) gai
     submitYesVote_ (StakePoolVoter spoK1) gai
     if bootstrapPhase protVer
       then do
@@ -143,7 +145,7 @@ committeeExpiryResignationDiscountSpec =
       ccShouldNotBeResigned committeeColdC2
       isCommitteeAccepted gaiConstitution `shouldReturn` True
       -- Resign the second CC
-      resignCommitteeColdKey committeeColdC2 SNothing
+      _ <- resignCommitteeColdKey committeeColdC2 SNothing
       -- Check for CC acceptance should fail
       ccShouldBeResigned committeeColdC2
       isCommitteeAccepted gaiConstitution `shouldReturn` False

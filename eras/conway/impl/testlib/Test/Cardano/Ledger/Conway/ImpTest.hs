@@ -348,7 +348,7 @@ registerInitialCommittee ::
 registerInitialCommittee = do
   committeeMembers <- Set.toList <$> getCommitteeMembers
   case committeeMembers of
-    x : xs -> registerCommitteeHotKeys $ x NE.:| xs
+    x : xs -> registerCommitteeHotKeys (KeyHashObj <$> freshKeyHash) $ x NE.:| xs
     _ -> error "Expected an initial committee"
 
 -- | Submit a transaction that registers a new DRep and return the keyhash
@@ -1170,32 +1170,46 @@ registerCommitteeHotKey ::
   Credential 'ColdCommitteeRole (EraCrypto era) ->
   ImpTestM era (Credential 'HotCommitteeRole (EraCrypto era))
 registerCommitteeHotKey coldKey = do
-  hotKey NE.:| [] <- registerCommitteeHotKeys $ pure coldKey
+  hotKey NE.:| [] <- registerCommitteeHotKeys (KeyHashObj <$> freshKeyHash) $ pure coldKey
   pure hotKey
 
 registerCommitteeHotKeys ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
+  -- | Hot Credential generator
+  ImpTestM era (Credential 'HotCommitteeRole (EraCrypto era)) ->
   NonEmpty (Credential 'ColdCommitteeRole (EraCrypto era)) ->
   ImpTestM era (NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)))
-registerCommitteeHotKeys coldKeys = do
-  keys <- forM coldKeys (\coldKey -> (,) coldKey . KeyHashObj <$> freshKeyHash)
+registerCommitteeHotKeys genHotCred coldKeys = do
+  keys <- forM coldKeys (\coldKey -> (,) coldKey <$> genHotCred)
   submitTxAnn_ "Registering Committee Hot keys" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.fromList (map (uncurry AuthCommitteeHotKeyTxCert) (toList keys))
   pure $ fmap snd keys
 
--- | Submits a transaction that resigns the cold key
+-- | Submits a transaction that resigns the cold key. Prior to resignation if there was
+-- hot credential authorization for this committee member it will be returned.
 resignCommitteeColdKey ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
   Credential 'ColdCommitteeRole (EraCrypto era) ->
   StrictMaybe (Anchor (EraCrypto era)) ->
-  ImpTestM era ()
+  ImpTestM era (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
 resignCommitteeColdKey coldKey anchor = do
+  committeAuthorizations <-
+    getsNES $
+      nesEsL
+        . esLStateL
+        . lsCertStateL
+        . certVStateL
+        . vsCommitteeStateL
+        . csCommitteeCredsL
   submitTxAnn_ "Resigning Committee Cold key" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.singleton (ResignCommitteeColdTxCert coldKey anchor)
+  pure $ do
+    CommitteeHotCredential hotCred <- Map.lookup coldKey committeAuthorizations
+    pure hotCred
 
 electCommittee ::
   forall era.

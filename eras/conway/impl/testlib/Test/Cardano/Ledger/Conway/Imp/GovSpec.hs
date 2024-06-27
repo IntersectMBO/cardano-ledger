@@ -827,7 +827,7 @@ votingSpec =
         committeeMemberVotingOnCommitteeChange
       it "non-committee-member voting on committee change as a committee member" $ do
         credCandidate <- KeyHashObj <$> freshKeyHash
-        credVoter <- KeyHashObj <$> freshKeyHash
+        hotCred :| _ <- registerInitialCommittee
         committeeUpdateId <-
           submitGovAction $
             UpdateCommittee
@@ -835,7 +835,7 @@ votingSpec =
               mempty
               (Map.singleton credCandidate $ EpochNo 28)
               (3 %! 5)
-        let voter = CommitteeVoter credVoter
+        let voter = CommitteeVoter hotCred
         trySubmitVote VoteNo voter committeeUpdateId
           `shouldReturn` Left
             [ injectFailure $ DisallowedVoters [(voter, committeeUpdateId)]
@@ -878,8 +878,8 @@ votingSpec =
                 , constitutionAnchor = anchor
                 }
         submitYesVote_ (DRepVoter dRepCred) constitutionChangeId
-        resignCommitteeColdKey ccColdCred0 SNothing
         submitYesVote_ (CommitteeVoter ccHotKey0) constitutionChangeId
+        _ <- resignCommitteeColdKey ccColdCred0 SNothing
         submitYesVote_ (CommitteeVoter ccHotKey1) constitutionChangeId
         passEpoch
         logAcceptedRatio constitutionChangeId

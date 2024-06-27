@@ -99,7 +99,7 @@ spec = do
       _hotKey <- registerCommitteeHotKey cc
       ccShouldNotBeResigned cc
       -- Have them resign
-      resignCommitteeColdKey cc SNothing
+      _ <- resignCommitteeColdKey cc SNothing
       ccShouldBeResigned cc
       -- Re-add the same CC
       let reAddCCAction = UpdateCommittee (SJust $ GovPurposeId addCCGaid) mempty (Map.singleton cc 20) (1 %! 2)
