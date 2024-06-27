@@ -749,6 +749,8 @@ fromScriptPurposeV4 = \case
   PV4.Voting voter -> PV4.VotingScript voter
   PV4.Proposing index proposal -> PV4.ProposingScript index proposal
 
+-- TODO WG: Add Fulfills
+
 transTxCertV4 :: BabelEraTxCert era => TxCert era -> PV4.TxCert
 transTxCertV4 = \case
   RegPoolTxCert PoolParams {ppId, ppVrf} ->

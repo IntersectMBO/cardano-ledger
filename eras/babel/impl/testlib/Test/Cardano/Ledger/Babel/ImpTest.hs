@@ -335,6 +335,7 @@ instance ShelleyEraImp (BabelEra c) => AlonzoEraImp (BabelEra c) where
     plutusTestScripts SPlutusV1
       <> plutusTestScripts SPlutusV2
       <> plutusTestScripts SPlutusV3
+      <> plutusTestScripts SPlutusV4
 
 class
   ( AlonzoEraImp era

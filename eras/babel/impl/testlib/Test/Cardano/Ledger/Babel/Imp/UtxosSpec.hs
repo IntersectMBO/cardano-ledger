@@ -517,6 +517,7 @@ govPolicySpec = do
                 .~ ValidityInterval SNothing SNothing
         submitFailingTx tx [injectFailure $ ScriptWitnessNotValidatingUTXOW [scriptHash]]
 
+    -- TODO WG
     it "alwaysSucceeds Plutus govPolicy validates" $ do
       let alwaysSucceedsSh = hashPlutusScript (alwaysSucceeds2 SPlutusV3)
       (committeeMember :| _) <- registerInitialCommittee
@@ -555,6 +556,7 @@ govPolicySpec = do
                 }
         submitProposal_ proposal
 
+    -- TODO WG
     it "alwaysFails Plutus govPolicy does not validate" $ do
       let alwaysFailsSh = hashPlutusScript (alwaysFails2 SPlutusV3)
       (committeeMember :| _) <- registerInitialCommittee

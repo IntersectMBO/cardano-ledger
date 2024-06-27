@@ -521,9 +521,9 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
   encCBOR (AlonzoTxWitsRaw vkeys boots scripts dats rdmrs) =
     encode $
       Keyed
-        ( \a b c d e f g h ->
-            let ps = toScript @'PlutusV1 d <> toScript @'PlutusV2 e <> toScript @'PlutusV3 f
-             in AlonzoTxWitsRaw a b (c <> ps) g h
+        ( \a b c d e f g h i ->
+            let ps = toScript @'PlutusV1 d <> toScript @'PlutusV2 e <> toScript @'PlutusV3 f <> toScript @'PlutusV4 g
+             in AlonzoTxWitsRaw a b (c <> ps) h i
         )
         !> Omit null (Key 0 $ To vkeys)
         !> Omit null (Key 2 $ To boots)
@@ -537,6 +537,7 @@ instance AlonzoEraScript era => EncCBOR (AlonzoTxWitsRaw era) where
         !> Omit null (Key 3 $ encodePlutus SPlutusV1)
         !> Omit null (Key 6 $ encodePlutus SPlutusV2)
         !> Omit null (Key 7 $ encodePlutus SPlutusV3)
+        !> Omit null (Key 8 $ encodePlutus SPlutusV4)
         !> Omit nullDats (Key 4 $ To dats)
         !> Omit nullRedeemers (Key 5 $ To rdmrs)
     where
@@ -662,6 +663,7 @@ instance
       txWitnessField 5 = fieldAA (\x wits -> wits {atwrRdmrsTxWits = x}) From
       txWitnessField 6 = fieldA addScripts (decodePlutus SPlutusV2)
       txWitnessField 7 = fieldA addScripts (decodePlutus SPlutusV3)
+      txWitnessField 8 = fieldA addScripts (decodePlutus SPlutusV4)
       txWitnessField n = field (\_ t -> t) (Invalid n)
       {-# INLINE txWitnessField #-}
 

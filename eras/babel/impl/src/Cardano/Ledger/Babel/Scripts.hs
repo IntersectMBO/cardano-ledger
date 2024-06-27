@@ -97,7 +97,7 @@ instance Crypto c => AlonzoEraScript (BabelEra c) where
 
   type PlutusPurpose f (BabelEra c) = BabelPlutusPurpose f (BabelEra c)
 
-  eraMaxLanguage = PlutusV3
+  eraMaxLanguage = PlutusV4
 
   mkPlutusScript plutus =
     case plutusSLanguage plutus of

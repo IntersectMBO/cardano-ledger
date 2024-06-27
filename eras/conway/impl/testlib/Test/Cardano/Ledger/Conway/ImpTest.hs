@@ -300,6 +300,7 @@ instance ShelleyEraImp (ConwayEra c) => AlonzoEraImp (ConwayEra c) where
     plutusTestScripts SPlutusV1
       <> plutusTestScripts SPlutusV2
       <> plutusTestScripts SPlutusV3
+      <> plutusTestScripts SPlutusV4
 
 class
   ( AlonzoEraImp era
@@ -376,13 +377,14 @@ setupDRepWithoutStake = do
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
   submitTxAnn_ "Delegate to DRep" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList
-          [ mkRegDepositDelegTxCert @era
-              (KeyHashObj delegatorKH)
-              (DelegVote (DRepCredential $ KeyHashObj drepKH))
-              deposit
-          ]
+      & bodyTxL
+      . certsTxBodyL
+      .~ SSeq.fromList
+        [ mkRegDepositDelegTxCert @era
+            (KeyHashObj delegatorKH)
+            (DelegVote (DRepCredential $ KeyHashObj drepKH))
+            deposit
+        ]
   pure (drepKH, delegatorKH)
 
 -- | Registers a new DRep and delegates the specified amount of ADA to it.
@@ -404,19 +406,21 @@ setupSingleDRep stake = do
   (_, spendingKP) <- freshKeyPair
   submitTxAnn_ "Delegate to DRep" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . outputsTxBodyL
-        .~ SSeq.singleton
-          ( mkBasicTxOut
-              (mkAddr (spendingKP, delegatorKP))
-              (inject $ Coin stake)
-          )
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList
-          [ mkRegDepositDelegTxCert @era
-              (KeyHashObj delegatorKH)
-              (DelegVote (DRepCredential $ KeyHashObj drepKH))
-              zero
-          ]
+      & bodyTxL
+      . outputsTxBodyL
+      .~ SSeq.singleton
+        ( mkBasicTxOut
+            (mkAddr (spendingKP, delegatorKP))
+            (inject $ Coin stake)
+        )
+      & bodyTxL
+      . certsTxBodyL
+      .~ SSeq.fromList
+        [ mkRegDepositDelegTxCert @era
+            (KeyHashObj delegatorKH)
+            (DelegVote (DRepCredential $ KeyHashObj drepKH))
+            zero
+        ]
   pure (KeyHashObj drepKH, KeyHashObj delegatorKH, spendingKP)
 
 getsPParams :: EraGov era => Lens' (PParams era) a -> ImpTestM era a
@@ -447,13 +451,14 @@ setupPoolWithStake delegCoin = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   submitTxAnn_ "Delegate to stake pool" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList
-          [ RegDepositDelegTxCert
-              credDelegatorStaking
-              (DelegStake khPool)
-              (pp ^. ppKeyDepositL)
-          ]
+      & bodyTxL
+      . certsTxBodyL
+      .~ SSeq.fromList
+        [ RegDepositDelegTxCert
+            credDelegatorStaking
+            (DelegStake khPool)
+            (pp ^. ppKeyDepositL)
+        ]
   pure (khPool, credDelegatorPayment, credDelegatorStaking)
 
 setupPoolWithoutStake ::
@@ -469,13 +474,14 @@ setupPoolWithoutStake = do
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
   submitTxAnn_ "Delegate to stake pool" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList
-          [ RegDepositDelegTxCert
-              credDelegatorStaking
-              (DelegStake khPool)
-              deposit
-          ]
+      & bodyTxL
+      . certsTxBodyL
+      .~ SSeq.fromList
+        [ RegDepositDelegTxCert
+            credDelegatorStaking
+            (DelegStake khPool)
+            deposit
+        ]
   pure (khPool, credDelegatorStaking)
 
 -- | Submits a transaction with a Vote for the given governance action as
@@ -628,7 +634,9 @@ trySubmitProposals ::
 trySubmitProposals proposals = do
   trySubmitTx $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . proposalProceduresTxBodyL .~ GHC.fromList (toList proposals)
+      & bodyTxL
+      . proposalProceduresTxBodyL
+      .~ GHC.fromList (toList proposals)
 
 submitFailingProposal ::
   ( ShelleyEraImp era
@@ -1125,8 +1133,9 @@ registerCommitteeHotKey coldKey = do
   hotKey <- KeyHashObj <$> freshKeyHash
   submitTxAnn_ "Registering Committee Hot key" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.singleton (AuthCommitteeHotKeyTxCert coldKey hotKey)
+      & bodyTxL
+      . certsTxBodyL
+      .~ SSeq.singleton (AuthCommitteeHotKeyTxCert coldKey hotKey)
   pure hotKey
 
 -- | Submits a transaction that resigns the cold key
@@ -1138,8 +1147,9 @@ resignCommitteeColdKey ::
 resignCommitteeColdKey coldKey anchor = do
   submitTxAnn_ "Resigning Committee Cold key" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.singleton (ResignCommitteeColdTxCert coldKey anchor)
+      & bodyTxL
+      . certsTxBodyL
+      .~ SSeq.singleton (ResignCommitteeColdTxCert coldKey anchor)
 
 electCommittee ::
   forall era.

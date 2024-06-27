@@ -40,6 +40,7 @@ goldenBabelGenesisJSON =
       Right x -> pure x
     cg `shouldBe` expectedBabelGenesis
 
+-- TODO WG
 propBabelPParamsUpgrade :: UpgradeConwayPParams Identity -> PParams Babbage -> Property
 propBabelPParamsUpgrade ppu pp = property $ do
   let pp' = upgradePParams ppu pp :: PParams Conway

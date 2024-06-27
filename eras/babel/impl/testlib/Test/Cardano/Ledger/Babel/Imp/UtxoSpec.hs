@@ -91,6 +91,7 @@ spec = describe "UTxO" $ do
         (fromNativeScript @era <$>)
           <$> replicateM 3 nativeScript
       let
+        -- TODO WG
         psh1 = hashPlutusScript $ alwaysSucceeds3 SPlutusV3
       ps1 <- impAnn "Expecting Plutus script" . expectJust $ impLookupPlutusScriptMaybe psh1
       let
