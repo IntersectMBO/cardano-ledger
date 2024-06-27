@@ -2,6 +2,7 @@
 
 ## 1.16.0.0
 
+* Add `ConwayBBODY` and `ConwayBbodyPredFailure` type for BBody rule
 * Added `ConwayCommitteeIsUnknown` predicate failure to  `ConwayGovCertPredFailure`
 * Added `ceCurrentCommittee` and `ceCommitteeProposals` to `CertEnv`
 * Added `certsCurrentCommittee` and `certsCommitteeProposals` to `CertsEnv`

@@ -4,6 +4,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules (
+  module Cardano.Ledger.Conway.Rules.Bbody,
   module Cardano.Ledger.Conway.Rules.Cert,
   module Cardano.Ledger.Conway.Rules.Deleg,
   module Cardano.Ledger.Conway.Rules.GovCert,
@@ -23,7 +24,7 @@ where
 
 import Cardano.Ledger.Conway.Core (EraRuleEvent, InjectRuleEvent (..))
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Rules.Bbody ()
+import Cardano.Ledger.Conway.Rules.Bbody
 import Cardano.Ledger.Conway.Rules.Cert
 import Cardano.Ledger.Conway.Rules.Certs
 import Cardano.Ledger.Conway.Rules.Deleg

@@ -55,7 +55,7 @@ library
         aeson >=2.2,
         bytestring,
         cardano-ledger-allegra ^>=1.5,
-        cardano-ledger-alonzo ^>=1.9,
+        cardano-ledger-alonzo >=1.9 && <1.11,
         cardano-ledger-babbage ^>=1.8.1,
         cardano-ledger-binary ^>=1.3,
         cardano-ledger-conway >=1.13 && <1.17,

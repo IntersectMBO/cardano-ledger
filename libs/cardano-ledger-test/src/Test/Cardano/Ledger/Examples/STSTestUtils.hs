@@ -36,7 +36,6 @@ where
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Rules (
-  AlonzoBBODY,
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosPredFailure (..),
   AlonzoUtxowPredFailure (..),
@@ -103,7 +102,6 @@ import Test.Cardano.Ledger.Shelley.Utils (
  )
 import Test.Tasty.HUnit (Assertion, assertFailure, (@?=))
 
--- import Test.Cardano.Ledger.Generic.PrettyCore(pcTx)
 import Test.Cardano.Ledger.Constrained.Preds.Tx (pcTxWithUTxO)
 
 -- =================================================================
@@ -252,7 +250,7 @@ testBBODY ::
   WitRule "BBODY" era ->
   ShelleyBbodyState era ->
   Block (BHeaderView (EraCrypto era)) era ->
-  Either (NonEmpty (PredicateFailure (AlonzoBBODY era))) (ShelleyBbodyState era) ->
+  Either (NonEmpty (PredicateFailure (EraRule "BBODY" era))) (ShelleyBbodyState era) ->
   PParams era ->
   Assertion
 testBBODY wit@(BBODY proof) initialSt block expected pparams =

@@ -3,6 +3,7 @@
 
 module Cardano.Ledger.Conway.Era (
   ConwayEra,
+  ConwayBBODY,
   ConwayCERT,
   ConwayDELEG,
   ConwayGOVCERT,
@@ -19,7 +20,6 @@ module Cardano.Ledger.Conway.Era (
   ConwayRATIFY,
 ) where
 
-import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -131,9 +131,9 @@ data ConwayUTXO era
 
 type instance EraRule "UTXO" (ConwayEra c) = ConwayUTXO (ConwayEra c)
 
--- Rules inherited from Alonzo
+data ConwayBBODY era
 
-type instance EraRule "BBODY" (ConwayEra c) = AlonzoBBODY (ConwayEra c)
+type instance EraRule "BBODY" (ConwayEra c) = ConwayBBODY (ConwayEra c)
 
 -- Rules inherited from Shelley
 
