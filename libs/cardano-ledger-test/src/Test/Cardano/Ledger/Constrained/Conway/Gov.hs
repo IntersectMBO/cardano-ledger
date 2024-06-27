@@ -15,6 +15,7 @@ import Data.Foldable
 import Data.Coerce
 
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
@@ -251,8 +252,9 @@ govProceduresSpec ge@GovEnv {..} ps =
         , geEpoch <= act ^. gasExpiresAfterL
         , f (gasAction act)
         ]
+      committeeState = vsCommitteeState (certVState geCertState)
       committeeVotableActionIds =
-        actions (isCommitteeVotingAllowed geEpoch geCommitteeState)
+        actions (isCommitteeVotingAllowed geEpoch committeeState)
       drepVotableActionIds =
         actions isDRepVotingAllowed
       stakepoolVotableActionIds =

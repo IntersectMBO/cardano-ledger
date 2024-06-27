@@ -7,6 +7,8 @@
 * Added `certsCurrentCommittee` and `certsCommitteeProposals` to `CertsEnv`
 * Added `cgceCurrentCommittee` and `cgceCommitteeProposals` to `ConwayGovCertEnv`
 * Added `proposalsWithPurpose`, `isGovActionWithPurpose` and `ToGovActionPurpose`
+* Replaced `geCommitteeState` with `geCertState` in `GovEnv`
+* Added `VotersDoNotExist` predicate failure to `ConwayGovPredFailure`
 
 ## 1.15.1.0
 

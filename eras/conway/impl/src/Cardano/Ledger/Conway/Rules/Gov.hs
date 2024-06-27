@@ -50,7 +50,13 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (CommitteeState)
+import Cardano.Ledger.CertState (
+  CertState (..),
+  CommitteeAuthorization (..),
+  CommitteeState (..),
+  PState (..),
+  VState (..),
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
@@ -78,7 +84,11 @@ import Cardano.Ledger.Conway.Governance (
   proposalsLookupId,
   toPrevGovActionIds,
  )
-import Cardano.Ledger.Conway.Governance.Procedures (GovAction (..), foldrVotingProcedures)
+import Cardano.Ledger.Conway.Governance.Procedures (
+  GovAction (..),
+  VotingProcedures (..),
+  foldrVotingProcedures,
+ )
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
   ppGovActionDepositL,
@@ -106,6 +116,7 @@ import Control.State.Transition.Extended (
   tellEvent,
   (?!),
  )
+import Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
@@ -123,7 +134,7 @@ data GovEnv era = GovEnv
   , geEpoch :: !EpochNo
   , gePParams :: !(PParams era)
   , gePPolicy :: !(StrictMaybe (ScriptHash (EraCrypto era)))
-  , geCommitteeState :: !(CommitteeState era)
+  , geCertState :: !(CertState era)
   }
   deriving (Generic)
 
@@ -168,6 +179,8 @@ data ConwayGovPredFailure era
   | DisallowedProposalDuringBootstrap (ProposalProcedure era)
   | DisallowedVotesDuringBootstrap
       (NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)))
+  | -- | Predicate failure for votes by entities that are not present in the ledger state
+    VotersDoNotExist (NonEmpty (Voter (EraCrypto era)))
   deriving (Eq, Show, Generic)
 
 type instance EraRuleFailure "GOV" (ConwayEra c) = ConwayGovPredFailure (ConwayEra c)
@@ -196,6 +209,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     11 -> SumD InvalidPolicyHash <! From <! From
     12 -> SumD DisallowedProposalDuringBootstrap <! From
     13 -> SumD DisallowedVotesDuringBootstrap <! From
+    14 -> SumD VotersDoNotExist <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -232,6 +246,8 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum DisallowedProposalDuringBootstrap 12 !> To proposal
       DisallowedVotesDuringBootstrap votes ->
         Sum DisallowedVotesDuringBootstrap 13 !> To votes
+      VotersDoNotExist voters ->
+        Sum VotersDoNotExist 14 !> To voters
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -359,12 +375,20 @@ govTransition ::
   TransitionRule (EraRule "GOV" era)
 govTransition = do
   TRC
-    ( GovEnv txid currentEpoch pp constitutionPolicy committeeState
+    ( GovEnv txid currentEpoch pp constitutionPolicy CertState {certPState, certVState}
       , st
       , gp
       ) <-
     judgmentContext
   let prevGovActionIds = st ^. pRootsL . L.to toPrevGovActionIds
+      committeeState = vsCommitteeState certVState
+      knownDReps = vsDReps certVState
+      knownStakePools = psStakePoolParams certPState
+      knownCommitteeMembers =
+        let toHotCredSet = \case
+              CommitteeHotCredential hotCred -> Set.singleton hotCred
+              CommitteeMemberResigned {} -> Set.empty
+         in F.foldMap' toHotCredSet (csCommitteeCreds committeeState)
 
   expectedNetworkId <- liftSTS $ asks networkId
 
@@ -457,7 +481,15 @@ govTransition = do
           ([], [])
           votingProcedures
       curGovActionIds = proposalsActionsMap proposals
+      isVoterKnown = \case
+        CommitteeVoter hotCred -> hotCred `Set.member` knownCommitteeMembers
+        DRepVoter cred -> cred `Map.member` knownDReps
+        StakePoolVoter poolId -> poolId `Map.member` knownStakePools
+      unknownVoters =
+        Map.keys $
+          Map.filterWithKey (\voter _ -> isVoterKnown voter) (unVotingProcedures votingProcedures)
 
+  failOnNonEmpty unknownVoters VotersDoNotExist
   failOnNonEmpty unknownGovActionIds GovActionsDoNotExist
   runTest $ checkBootstrapVotes pp knownVotes
   runTest $ checkVotesAreNotForExpiredActions currentEpoch knownVotes
