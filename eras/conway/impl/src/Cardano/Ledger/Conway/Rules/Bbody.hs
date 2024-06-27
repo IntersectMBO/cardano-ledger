@@ -33,9 +33,10 @@ import Cardano.Ledger.Alonzo.Rules (
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoBbodyPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
-import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq)
+import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
+import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
@@ -59,10 +60,11 @@ import Cardano.Ledger.Conway.Rules.Ledgers ()
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
+import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), utxosUtxo)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   ShelleyBbodyEvent (..),
@@ -78,8 +80,14 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (ShelleyBbodyPredFailur
 import Control.State.Transition (
   Embed (..),
   STS (..),
+  TRC (..),
   TransitionRule,
+  judgmentContext,
+  (?!),
  )
+import Data.Foldable (Foldable (foldMap'))
+import Data.Monoid (Sum (getSum))
+import qualified Data.Monoid as Monoid (Sum (..))
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -102,6 +110,11 @@ data ConwayBbodyPredFailure era
       !ExUnits
       -- | Maximum allowed by protocal parameters
       !ExUnits
+  | RefScriptsSizeTooBig
+      -- | Computed sum of reference script size
+      Int
+      -- | Maximum allowed total reference script size
+      Int
   deriving (Generic)
 
 deriving instance
@@ -128,6 +141,7 @@ instance
       InvalidBodyHashBBODY x y -> Sum (InvalidBodyHashBBODY @era) 1 !> To x !> To y
       LedgersFailure x -> Sum (LedgersFailure @era) 2 !> To x
       TooManyExUnits x y -> Sum TooManyExUnits 3 !> To x !> To y
+      RefScriptsSizeTooBig x y -> Sum RefScriptsSizeTooBig 4 !> To x !> To y
 
 instance
   ( Era era
@@ -140,6 +154,7 @@ instance
     1 -> SumD InvalidBodyHashBBODY <! From <! From
     2 -> SumD LedgersFailure <! From
     3 -> SumD TooManyExUnits <! From <! From
+    4 -> SumD RefScriptsSizeTooBig <! From <! From
     n -> Invalid n
 
 type instance EraRuleFailure "BBODY" (ConwayEra c) = ConwayBbodyPredFailure (ConwayEra c)
