@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.12.1.0
+
+* Add `tierRefScriptFee` and `txNonDistinctRefScriptsSize`
+
 ## 1.12.0.0
 
 * Changed the types in `GovernanceActionsDoNotExist`, `DisallowedVoters`
