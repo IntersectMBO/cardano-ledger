@@ -1664,6 +1664,12 @@ instance Reflect era => PrettyA (ShelleyBbodyPredFailure era) where
 
 -- ================
 ppConwayBbodyPredFail :: forall era. Reflect era => ConwayBbodyPredFailure era -> PDoc
+ppConwayBbodyPredFail (ConwayRules.BodyRefScriptsSizeTooBig s1 s2) =
+  ppRecord
+    "BodyRefScriptsSizeTooBig"
+    [ ("Computed sum of reference script size", ppInt s1)
+    , ("Maximum allowed total reference script size", ppInt s2)
+    ]
 ppConwayBbodyPredFail (ConwayRules.TooManyExUnits e1 e2) =
   ppRecord
     "TooManyExUnits"
