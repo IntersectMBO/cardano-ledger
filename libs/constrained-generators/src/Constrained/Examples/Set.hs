@@ -125,10 +125,17 @@ setSpec = constrained $ \ss ->
   forAll ss $ \s ->
     s <=. 10
 
+size100Spec :: Specification BaseFn (Set Int)
+size100Spec = constrained $ \s -> [assert $ size_ s <=. 100]
+
 compositionalSpec :: Specification BaseFn (Set Int)
 compositionalSpec = constrained $ \x ->
   [ satisfies x setSpec
   , assert $ 0 `member_` x
+  , satisfies x size100Spec -- Has a tendency to occaisionally fail when sizes over 100 are picked
+  -- Because it resorts to picking something not in a large set. We only get
+  -- 100 trys, so if the set is large the probability increases. Adding this
+  -- should not affect the property being tested.
   ]
 
 emptySetSpec :: Specification BaseFn (Set Int)

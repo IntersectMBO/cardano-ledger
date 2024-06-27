@@ -58,7 +58,7 @@ import Test.QuickCheck (Arbitrary (..), oneof)
 import Constrained.Base
 import Constrained.Core
 import Constrained.List
-import Constrained.Spec.Pairs ()
+import Constrained.Spec.Pairs (PairSpec (Cartesian))
 import Constrained.Univ
 
 ------------------------------------------------------------------------
@@ -109,14 +109,22 @@ instance HasSimpleRep (Either a b)
 instance
   ( HasSpec fn a
   , HasSpec fn b
+  , SimpleRep (a, b) ~ Prod a b
   ) =>
   HasSpec fn (a, b)
+  where
+  cardinalTypeSpec (Cartesian x y) = multSpecInt (cardinality x) (cardinality y)
+  cardinalTrueSpec = multSpecInt (cardinality (TrueSpec @fn @a)) (cardinality (TrueSpec @fn @b))
+
 instance
   ( HasSpec fn a
   , HasSpec fn b
   , HasSpec fn c
   ) =>
   HasSpec fn (a, b, c)
+  where
+  cardinalTypeSpec (Cartesian x y) = multSpecInt (cardinality x) (cardinality y) -- This works since 'y' is also a (PairSpec )
+  cardinalTrueSpec = multSpecInt (cardinality (TrueSpec @fn @a)) (cardinality (TrueSpec @fn @b))
 instance
   ( HasSpec fn a
   , HasSpec fn b
@@ -124,6 +132,9 @@ instance
   , HasSpec fn d
   ) =>
   HasSpec fn (a, b, c, d)
+  where
+  cardinalTypeSpec (Cartesian x y) = multSpecInt (cardinality x) (cardinality y)
+  cardinalTrueSpec = multSpecInt (cardinality (TrueSpec @fn @a)) (cardinality (TrueSpec @fn @b))
 instance
   ( HasSpec fn a
   , HasSpec fn b
@@ -132,6 +143,10 @@ instance
   , HasSpec fn e
   ) =>
   HasSpec fn (a, b, c, d, e)
+  where
+  cardinalTypeSpec (Cartesian x y) = multSpecInt (cardinality x) (cardinality y)
+  cardinalTrueSpec = multSpecInt (cardinality (TrueSpec @fn @a)) (cardinality (TrueSpec @fn @b))
+
 instance
   ( HasSpec fn a
   , HasSpec fn b
@@ -141,6 +156,9 @@ instance
   , HasSpec fn g
   ) =>
   HasSpec fn (a, b, c, d, e, g)
+  where
+  cardinalTypeSpec (Cartesian x y) = multSpecInt (cardinality x) (cardinality y)
+  cardinalTrueSpec = multSpecInt (cardinality (TrueSpec @fn @a)) (cardinality (TrueSpec @fn @b))
 instance
   ( HasSpec fn a
   , HasSpec fn b
@@ -151,6 +169,9 @@ instance
   , HasSpec fn h
   ) =>
   HasSpec fn (a, b, c, d, e, g, h)
+  where
+  cardinalTypeSpec (Cartesian x y) = multSpecInt (cardinality x) (cardinality y)
+  cardinalTrueSpec = multSpecInt (cardinality (TrueSpec @fn @a)) (cardinality (TrueSpec @fn @b))
 instance
   (IsNormalType a, HasSpec fn a) =>
   HasSpec fn (Maybe a)

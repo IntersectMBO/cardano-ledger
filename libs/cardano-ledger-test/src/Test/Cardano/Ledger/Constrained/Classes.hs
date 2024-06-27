@@ -744,8 +744,8 @@ data ProposedPPUpdatesF era where
 unProposedPPUpdates :: ProposedPPUpdatesF era -> PP.ProposedPPUpdates era
 unProposedPPUpdates (ProposedPPUpdatesF _ x) = x
 
-instance PrettyA (PParamsUpdate e) => PrettyA (ProposedPPUpdatesF e) where
-  prettyA (ProposedPPUpdatesF _p x) = ppProposedPPUpdates x
+instance PrettyA (ProposedPPUpdatesF e) where
+  prettyA (ProposedPPUpdatesF p x) = ppProposedPPUpdates p x
 
 proposedCoreL ::
   Lens' (PP.ProposedPPUpdates era) (Map (KeyHash 'Genesis (EraCrypto era)) (PParamsUpdate era))

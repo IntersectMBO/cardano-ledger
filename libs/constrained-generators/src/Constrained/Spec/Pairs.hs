@@ -67,6 +67,7 @@ instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Prod a b) where
       <> satisfies (app sndFn x) ss
 
   cardinalTypeSpec (Cartesian x y) = multSpecInt (cardinality x) (cardinality y)
+  cardinalTrueSpec = multSpecInt (cardinality (TrueSpec @fn @a)) (cardinality (TrueSpec @fn @b))
 
 deriving instance (HasSpec fn a, HasSpec fn b) => Show (PairSpec fn a b)
 
