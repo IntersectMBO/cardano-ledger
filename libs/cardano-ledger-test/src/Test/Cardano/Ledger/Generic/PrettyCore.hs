@@ -1503,6 +1503,7 @@ ppConwayGovCertPredFailure z = case z of
   ConwayDRepIncorrectDeposit c1 c2 -> ppSexp "ConwayDRepIncorrectDeposit" [pcCoin c1, pcCoin c2]
   ConwayCommitteeHasPreviouslyResigned x -> ppSexp "ConwayCommitteeHasPreviouslyResigned" [pcCredential x]
   ConwayDRepIncorrectRefund c1 c2 -> ppSexp "ConwayDRepIncorrectRefund" [pcCoin c1, pcCoin c2]
+  ConwayCommitteeIsUnknown c -> ppSexp "ConwayCommitteeIsUnknown" [pcCredential c]
 
 instance PrettyA (ConwayGovCertPredFailure era) where
   prettyA = ppConwayGovCertPredFailure
@@ -3539,7 +3540,14 @@ summaryMapCompact x = ppString ("Count " ++ show (Map.size x) ++ ", Total " ++ s
 -- ========================
 
 pcConwayGovCertEnv :: forall era. Reflect era => ConwayGovCertEnv era -> PDoc
-pcConwayGovCertEnv (ConwayGovCertEnv pp ce) = ppSexp "ConwayGovCertEnv" [pcPParams @era reify pp, ppEpochNo ce]
+pcConwayGovCertEnv (ConwayGovCertEnv pp ce cc cp) =
+  ppSexp
+    "ConwayGovCertEnv"
+    [ pcPParams @era reify pp
+    , ppEpochNo ce
+    , ppStrictMaybe pcCommittee cc
+    , ppMap pcGovActionId pcGovActionState $ Map.mapKeys unGovPurposeId cp
+    ]
 
 instance Reflect era => PrettyA (ConwayGovCertEnv era) where
   prettyA = pcConwayGovCertEnv

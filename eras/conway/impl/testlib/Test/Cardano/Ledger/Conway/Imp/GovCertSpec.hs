@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (
   relevantDuringBootstrapSpec,
 ) where
 
+import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core (
   EraGov (..),
@@ -65,9 +66,18 @@ spec ::
   SpecWith (ImpTestState era)
 spec = do
   relevantDuringBootstrapSpec
-  it
-    "A CC that has resigned will need to be first voted out and then voted in to be considered active"
-    $ do
+  it "Authorizing proposed CC key" $ do
+    someCred <- KeyHashObj <$> freshKeyHash
+    submitGovAction_ $
+      UpdateCommittee SNothing mempty (Map.singleton someCred (EpochNo 1234)) (1 %! 2)
+    submitTx_
+      ( mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ SSeq.singleton (ResignCommitteeColdTxCert someCred SNothing)
+      )
+  -- A CC that has resigned will need to be first voted out and then voted in to be considered active
+  it "CC re-election" $
+    do
       (drepCred, _, _) <- setupSingleDRep 1_000_000
       passNEpochs 2
       -- Add a fresh CC
@@ -142,11 +152,12 @@ relevantDuringBootstrapSpec = do
             .~ SSeq.singleton (UnRegDRepTxCert drepCred drepDeposit)
     it "resigning a non-CC key" $ do
       someCred <- KeyHashObj <$> freshKeyHash
-      submitTx_
+      submitFailingTx
         ( mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ SSeq.singleton (ResignCommitteeColdTxCert someCred SNothing)
         )
+        (pure (injectFailure $ ConwayCommitteeIsUnknown someCred))
     it "re-registering a CC hot key" $ do
       void registerInitialCommittee
       initialCommittee <- getCommitteeMembers

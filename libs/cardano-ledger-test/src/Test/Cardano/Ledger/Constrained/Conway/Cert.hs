@@ -25,7 +25,7 @@ certEnvSpec ::
   Specification fn (CertEnv (ConwayEra StandardCrypto))
 certEnvSpec =
   constrained $ \ce ->
-    match ce $ \_ pp _ ->
+    match ce $ \_ pp _ _ _ ->
       satisfies pp pparamsSpec
 
 certStateSpec ::
@@ -44,12 +44,12 @@ txCertSpec ::
   CertEnv (ConwayEra StandardCrypto) ->
   CertState (ConwayEra StandardCrypto) ->
   Specification fn (ConwayTxCert (ConwayEra StandardCrypto))
-txCertSpec (CertEnv slot pp ce) CertState {..} =
+txCertSpec (CertEnv slot pp ce cc cp) CertState {..} =
   constrained $ \txCert ->
     caseOn
       txCert
       (branch $ \delegCert -> satisfies delegCert $ delegCertSpec delegEnv certDState)
       (branch $ \poolCert -> satisfies poolCert $ poolCertSpec (PoolEnv slot pp) certPState)
-      (branch $ \govCert -> satisfies govCert $ govCertSpec (ConwayGovCertEnv pp ce) certVState)
+      (branch $ \govCert -> satisfies govCert $ govCertSpec (ConwayGovCertEnv pp ce cc cp) certVState)
   where
     delegEnv = ConwayDelegEnv pp (psStakePoolParams certPState)

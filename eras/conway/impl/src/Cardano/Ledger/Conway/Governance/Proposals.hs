@@ -16,6 +16,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | This module isolates all the types and functionality around
@@ -90,6 +91,7 @@ module Cardano.Ledger.Conway.Governance.Proposals (
   proposalsAddVote,
   proposalsLookupId,
   proposalsActionsMap,
+  proposalsWithPurpose,
   toPrevGovActionIds,
   fromPrevGovActionIds,
 
@@ -235,6 +237,25 @@ pGraphL = lens pGraph $ \x y -> x {pGraph = y}
 instance EraPParams era => ToJSON (Proposals era) where
   toJSON = toJSON . pProps
   toEncoding = toEncoding . pProps
+
+proposalsWithPurpose ::
+  forall p era.
+  ToGovActionPurpose p =>
+  (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
+  Proposals era ->
+  Map (GovPurposeId p era) (GovActionState era)
+proposalsWithPurpose propL Proposals {pProps, pGraph} =
+  fromMaybe (assert False fallBackMapWithPurpose) $
+    Map.traverseWithKey
+      (\(GovPurposeId govActionId) _ -> OMap.lookup govActionId pProps)
+      (unPGraph (pGraph ^. propL))
+  where
+    -- In case there is a bug and there is an inconsistency in state we want to report in
+    -- testing, while falling back onto alternative slower implementation
+    fallBackMapWithPurpose :: Map (GovPurposeId p era) (GovActionState era)
+    fallBackMapWithPurpose =
+      Map.mapKeysMonotonic GovPurposeId $
+        Map.filter (isGovActionWithPurpose @p . pProcGovAction . gasProposalProcedure) (OMap.toMap pProps)
 
 -- | Add a single @`GovActionState`@ to the @`Proposals`@ forest.
 -- The tree to which it is added is picked according to its

@@ -42,7 +42,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Core hiding (proposals)
 import Cardano.Ledger.Conway.Era (
   ConwayCERTS,
   ConwayDELEG,
@@ -57,7 +57,9 @@ import Cardano.Ledger.Conway.Governance (
   GovProcedures (..),
   Proposals,
   constitutionScriptL,
+  grCommitteeL,
   proposalsGovStateL,
+  proposalsWithPurpose,
  )
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv, ConwayCertEvent (..), ConwayCertPredFailure (..))
 import Cardano.Ledger.Conway.Rules.Certs (
@@ -365,10 +367,14 @@ ledgerTransition = do
   (utxoState', certStateAfterCERTS) <-
     if tx ^. isValidTxL == IsValid True
       then do
+        let govState = utxoState ^. utxosGovStateL
+            committee = govState ^. committeeGovStateL
+            proposals = govState ^. proposalsGovStateL
+            committeeProposals = proposalsWithPurpose grCommitteeL proposals
         certStateAfterCERTS <-
           trans @(EraRule "CERTS" era) $
             TRC
-              ( CertsEnv tx pp slot currentEpoch
+              ( CertsEnv tx pp slot currentEpoch committee committeeProposals
               , certState
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
@@ -395,9 +401,9 @@ ledgerTransition = do
                   (txIdTxBody txBody)
                   currentEpoch
                   pp
-                  (utxoState ^. utxosGovStateL . constitutionGovStateL . constitutionScriptL)
+                  (govState ^. constitutionGovStateL . constitutionScriptL)
                   (certState ^. certVStateL . vsCommitteeStateL)
-              , utxoState ^. utxosGovStateL . proposalsGovStateL
+              , proposals
               , govProcedures
               )
         let utxoState' =

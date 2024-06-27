@@ -22,7 +22,7 @@ module Cardano.Ledger.Conway.Rules.Cert (
   CertEnv (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, SlotNo)
+import Cardano.Ledger.BaseTypes (EpochNo, ShelleyBase, SlotNo, StrictMaybe)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Core
@@ -31,6 +31,12 @@ import Cardano.Ledger.Conway.Era (
   ConwayDELEG,
   ConwayEra,
   ConwayGOVCERT,
+ )
+import Cardano.Ledger.Conway.Governance (
+  Committee,
+  GovActionPurpose (..),
+  GovActionState,
+  GovPurposeId,
  )
 import Cardano.Ledger.Conway.Rules.Deleg (
   ConwayDelegEnv (..),
@@ -64,6 +70,7 @@ import Control.State.Transition.Extended (
   wrapEvent,
   wrapFailed,
  )
+import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import Data.Void (absurd)
 import GHC.Generics (Generic)
@@ -73,13 +80,15 @@ data CertEnv era = CertEnv
   { ceSlotNo :: !SlotNo
   , cePParams :: !(PParams era)
   , ceCurrentEpoch :: !EpochNo
+  , ceCurrentCommittee :: StrictMaybe (Committee era)
+  , ceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
   }
   deriving (Generic)
 
-deriving instance Eq (PParams era) => Eq (CertEnv era)
-deriving instance Show (PParams era) => Show (CertEnv era)
+deriving instance EraPParams era => Eq (CertEnv era)
+deriving instance EraPParams era => Show (CertEnv era)
 
-instance NFData (PParams era) => NFData (CertEnv era)
+instance EraPParams era => NFData (CertEnv era)
 
 data ConwayCertPredFailure era
   = DelegFailure (PredicateFailure (EraRule "DELEG" era))
@@ -196,7 +205,7 @@ certTransition ::
   ) =>
   TransitionRule (ConwayCERT era)
 certTransition = do
-  TRC (CertEnv slot pp currentEpoch, cState, c) <- judgmentContext
+  TRC (CertEnv slot pp currentEpoch committee committeeProposals, cState, c) <- judgmentContext
   let
     CertState {certDState, certPState, certVState} = cState
     pools = psStakePoolParams certPState
@@ -209,7 +218,8 @@ certTransition = do
       pure $ cState {certPState = newPState}
     ConwayTxCertGov govCert -> do
       newVState <-
-        trans @(EraRule "GOVCERT" era) $ TRC (ConwayGovCertEnv pp currentEpoch, certVState, govCert)
+        trans @(EraRule "GOVCERT" era) $
+          TRC (ConwayGovCertEnv pp currentEpoch committee committeeProposals, certVState, govCert)
       pure $ cState {certVState = newVState}
 
 instance

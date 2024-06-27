@@ -234,7 +234,11 @@ instance
 
 instance ToExpr (PParams era) => ToExpr (GovEnv era)
 
-instance ToExpr (PParams era) => ToExpr (ConwayGovCertEnv era)
+instance
+  ( ToExpr (PParams era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
+  ToExpr (ConwayGovCertEnv era)
 
 instance
   ( ToExpr (Value era)
@@ -252,7 +256,11 @@ instance
   ) =>
   ToExpr (ConwayUtxowPredFailure era)
 
-instance ToExpr (PParams era) => ToExpr (CertEnv era)
+instance
+  ( ToExpr (PParams era)
+  , ToExpr (PParamsHKD StrictMaybe era)
+  ) =>
+  ToExpr (CertEnv era)
 
 instance ToExpr (PParams era) => ToExpr (ConwayDelegEnv era)
 

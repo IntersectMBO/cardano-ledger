@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RecordWildCards #-}
 
 -- | Specs necessary to generate, environment, state, and signal
@@ -6,6 +7,7 @@
 module Test.Cardano.Ledger.Constrained.Conway.GovCert where
 
 import Cardano.Ledger.CertState
+import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
@@ -30,6 +32,14 @@ govCertSpec ::
 govCertSpec ConwayGovCertEnv {..} vs =
   let reps = lit $ Map.keysSet $ vsDReps vs
       deposits = lit [(k, drepDeposit dep) | (k, dep) <- Map.toList $ vsDReps vs]
+      getNewMembers = \case
+        UpdateCommittee _ _ newMembers _ -> Map.keysSet newMembers
+        _ -> mempty
+      knownColdCreds =
+        Map.keysSet (foldMap committeeMembers cgceCurrentCommittee)
+          <> foldMap (getNewMembers . pProcGovAction . gasProposalProcedure) cgceCommitteeProposals
+      ccCertSpec coldCred =
+        assert . member_ coldCred $ lit knownColdCreds
    in constrained $ \gc ->
         caseOn
           gc
@@ -48,14 +58,14 @@ govCertSpec ConwayGovCertEnv {..} vs =
               member_ key reps
           )
           -- ConwayAuthCommitteeHotKey
-          (branch $ \_ _ -> True)
+          (branch $ \coldCred _ -> ccCertSpec coldCred)
           -- ConwayResignCommitteeColdKey
-          (branch $ \_ _ -> True)
+          (branch $ \coldCred _ -> ccCertSpec coldCred)
 
 govCertEnvSpec ::
   IsConwayUniv fn =>
   Specification fn (ConwayGovCertEnv (ConwayEra StandardCrypto))
 govCertEnvSpec =
   constrained $ \gce ->
-    match gce $ \pp _ ->
+    match gce $ \pp _ _ _ ->
       satisfies pp pparamsSpec

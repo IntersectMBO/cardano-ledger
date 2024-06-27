@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.15.1.1
+## 1.16.0.0
 
-*
+* Added `ConwayCommitteeIsUnknown` predicate failure to  `ConwayGovCertPredFailure`
+* Added `ceCurrentCommittee` and `ceCommitteeProposals` to `CertEnv`
+* Added `certsCurrentCommittee` and `certsCommitteeProposals` to `CertsEnv`
+* Added `cgceCurrentCommittee` and `cgceCommitteeProposals` to `ConwayGovCertEnv`
+* Added `proposalsWithPurpose`, `isGovActionWithPurpose` and `ToGovActionPurpose`
 
 ## 1.15.1.0
 

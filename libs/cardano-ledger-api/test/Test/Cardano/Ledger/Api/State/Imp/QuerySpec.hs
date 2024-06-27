@@ -24,14 +24,13 @@ import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   ConwayGovState,
   EraGov (..),
+  GovAction (..),
  )
 import Cardano.Ledger.Conway.PParams (ppDRepActivityL)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep
-import Cardano.Ledger.Keys (
-  KeyRole (..),
- )
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Data.Default (def)
 import Data.Foldable (Foldable (..))
@@ -41,6 +40,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Lens.Micro.Mtl
 import Test.Cardano.Ledger.Conway.ImpTest
+import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Imp.Common
 
 spec ::
@@ -128,12 +128,15 @@ spec = do
         isDRepExpired drep `shouldReturn` True
   describe "Committee members hot key pre-authorization" $ do
     it "authorized members not elected get removed in the next epoch" $ do
-      c1 <- KeyHashObj <$> freshKeyHash
-      hk1 <- registerCommitteeHotKey c1
-      expectQueryResult (Set.singleton c1) mempty mempty $
-        [(c1, CommitteeMemberState (MemberAuthorized hk1) Unrecognized Nothing ToBeRemoved)]
-      passEpoch
-      expectQueryResult (Set.singleton c1) mempty mempty Map.empty
+      whenPostBootstrap $ do
+        c1 <- KeyHashObj <$> freshKeyHash
+        submitGovAction_ $
+          UpdateCommittee SNothing mempty (Map.singleton c1 (EpochNo 4321)) (1 %! 1)
+        hk1 <- registerCommitteeHotKey c1
+        expectQueryResult (Set.singleton c1) mempty mempty $
+          [(c1, CommitteeMemberState (MemberAuthorized hk1) Unrecognized Nothing ToBeRemoved)]
+        passEpoch
+        expectQueryResult (Set.singleton c1) mempty mempty Map.empty
 
     it "members should remain authorized if authorized during the epoch after their election" $
       whenPostBootstrap $ do
