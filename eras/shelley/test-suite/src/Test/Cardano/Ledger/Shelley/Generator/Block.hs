@@ -46,7 +46,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Sequence (Seq)
 import qualified Data.Set as Set
-import Debug.Trace (trace)
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
@@ -232,21 +231,20 @@ selectNextSlotWithLeader
         SlotNo ->
         Maybe (ChainState era, AllIssuerKeys (EraCrypto era) 'BlockIssuer)
       selectLeaderForSlot slotNo =
-        trace "IS IT FROM HERE 2" $
-          (chainSt,)
-            <$> case lookupInOverlaySchedule firstEpochSlot (Map.keysSet cores) d f slotNo of
-              Nothing ->
-                coerce
-                  <$> List.find
-                    ( \(AllIssuerKeys {aikVrf, aikColdKeyHash}) ->
-                        isLeader aikColdKeyHash (vrfSignKey aikVrf)
-                    )
-                    ksStakePools
-              Just (ActiveSlot x) ->
-                coerce $
-                  Map.lookup x cores
-                    >>= \y -> Map.lookup (genDelegKeyHash y) ksIndexedGenDelegates
-              _ -> Nothing
+        (chainSt,)
+          <$> case lookupInOverlaySchedule firstEpochSlot (Map.keysSet cores) d f slotNo of
+            Nothing ->
+              coerce
+                <$> List.find
+                  ( \(AllIssuerKeys {aikVrf, aikColdKeyHash}) ->
+                      isLeader aikColdKeyHash (vrfSignKey aikVrf)
+                  )
+                  ksStakePools
+            Just (ActiveSlot x) ->
+              coerce $
+                Map.lookup x cores
+                  >>= \y -> Map.lookup (genDelegKeyHash y) ksIndexedGenDelegates
+            _ -> Nothing
         where
           chainSt = tickChainState slotNo origChainState
           epochNonce = chainEpochNonce chainSt
@@ -262,7 +260,7 @@ selectNextSlotWithLeader
           isLeader poolHash vrfKey =
             let y = VRF.evalCertified @(VRF (EraCrypto era)) () (mkSeed seedL slotNo epochNonce) vrfKey
                 stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
-             in trace "IS IT FROM HERE 1" $ case lookupInOverlaySchedule firstEpochSlot (Map.keysSet cores) d f slotNo of
+             in case lookupInOverlaySchedule firstEpochSlot (Map.keysSet cores) d f slotNo of
                   Nothing -> checkLeaderValue (VRF.certifiedOutput y) stake f
                   Just (ActiveSlot x) | coerceKeyRole x == poolHash -> True
                   _ -> False

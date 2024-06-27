@@ -72,8 +72,7 @@ reapplyAlonzoTx globals env state vtx =
 instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (AlonzoEra c) where
   reapplyTx = reapplyAlonzoTx
 
-instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (AlonzoEra c) where
-  type EraLedgerStateRules (AlonzoEra c) = '[]
+instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (AlonzoEra c)
 
 instance Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
   type AdditionalGenesisConfig (AlonzoEra c) = AlonzoGenesis

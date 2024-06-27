@@ -45,8 +45,7 @@ type Babbage = BabbageEra StandardCrypto
 instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (BabbageEra c) where
   reapplyTx = reapplyAlonzoTx
 
-instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (BabbageEra c) where
-  type EraLedgerStateRules (BabbageEra c) = '[]
+instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (BabbageEra c)
 
 instance Crypto c => API.CanStartFromGenesis (BabbageEra c) where
   type AdditionalGenesisConfig (BabbageEra c) = AlonzoGenesis

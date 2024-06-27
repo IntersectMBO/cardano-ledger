@@ -51,7 +51,6 @@ import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
-import GHC.Base (Constraint, Symbol, Type)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
@@ -59,21 +58,6 @@ import NoThunks.Class (NoThunks (..))
 {-------------------------------------------------------------------------------
   Block validation API
 -------------------------------------------------------------------------------}
-
-type family FoldConstraints (cs :: [Constraint]) :: Constraint where
-  FoldConstraints '[] = ()
-  FoldConstraints (c ': cs) = (c, FoldConstraints cs)
-
-type family RulesToConstraints (rules :: [Symbol]) (era :: Type) :: [Constraint] where
-  RulesToConstraints '[] era = '[]
-  RulesToConstraints (rule ': rules) era =
-    ( State (EraRule rule era) ~ LedgerState era
-    , State (EraRule rule era) ~ State (EraRule "LEDGERS" era)
-    )
-      ': RulesToConstraints rules era
-
-type LedgerStateRulesFold rules era =
-  FoldConstraints ((State (EraRule "LEDGERS" era) ~ LedgerState era) ': RulesToConstraints rules era)
 
 class
   ( STS (EraRule "TICK" era)
@@ -87,13 +71,10 @@ class
   , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , EncCBORGroup (TxZones era)
-  , LedgerStateRulesFold (EraLedgerStateRules era) era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
   ) =>
   ApplyBlock era
   where
-  -- Type family to specify which rules (if any) are equivalent to LedgerState for each era
-  type EraLedgerStateRules (era :: Type) :: [Symbol]
-
   -- | Apply the header level ledger transition.
   --
   -- This handles checks and updates that happen on a slot tick, as well as a
@@ -218,8 +199,6 @@ instance
   , DSignable c (Hash c EraIndependentTxBody)
   ) =>
   ApplyBlock (ShelleyEra c)
-  where
-  type EraLedgerStateRules (ShelleyEra c) = '[]
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
