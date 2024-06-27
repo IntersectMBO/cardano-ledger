@@ -31,7 +31,10 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Rules (ConwayCertsPredFailure (..), ConwayLedgerPredFailure (..))
-import qualified Cardano.Ledger.Conway.Rules as Conway (ConwayCertPredFailure (..))
+import qualified Cardano.Ledger.Conway.Rules as Conway (
+  ConwayBbodyPredFailure (..),
+  ConwayCertPredFailure (..),
+ )
 import Cardano.Ledger.Credential (
   Credential (..),
   StakeCredential,
@@ -683,7 +686,7 @@ testBBodyState pf =
 
 -- ============================== Helper functions ===============================
 
-makeTooBig :: Proof era -> AlonzoBbodyPredFailure era
+makeTooBig :: Proof era -> PredicateFailure (EraRule "BBODY" era)
 makeTooBig proof@Alonzo =
   ShelleyInAlonzoBbodyPredFailure
     . LedgersFailure
@@ -701,8 +704,7 @@ makeTooBig proof@Babbage =
     . PoolFailure
     $ PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof@Conway =
-  ShelleyInAlonzoBbodyPredFailure
-    . LedgersFailure
+  Conway.LedgersFailure
     . LedgerFailure
     . ConwayCertsFailure
     . CertFailure
