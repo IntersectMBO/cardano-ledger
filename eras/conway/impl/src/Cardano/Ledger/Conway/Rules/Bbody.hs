@@ -64,7 +64,7 @@ import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), utxosUtxo)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), lsUTxOState, utxosUtxo)
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   ShelleyBbodyEvent (..),
@@ -254,7 +254,10 @@ instance
   , EraSegWits era
   , AlonzoEraPParams era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
+  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , EraRule "BBODY" era ~ ConwayBBODY era
+  , EraTx era
+  , BabbageEraTxBody era
   ) =>
   STS (ConwayBBODY era)
   where
@@ -274,28 +277,38 @@ instance
   type Event (ConwayBBODY era) = AlonzoBbodyEvent era
 
   initialRules = []
-  transitionRules = [conwayBbodyTransition @era]
+  transitionRules = [conwayBbodyTransition @era >> alonzoBbodyTransition @era]
 
 conwayBbodyTransition ::
   forall era.
-  ( STS (EraRule "BBODY" era)
-  , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
+  ( Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
-  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
-  , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
-  , BaseM (EraRule "BBODY" era) ~ ShelleyBase
-  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
-  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
-  , EraSegWits era
-  , AlonzoEraTxWits era
   , Era.TxSeq era ~ AlonzoTxSeq era
   , Tx era ~ AlonzoTx era
-  , AlonzoEraPParams era
   , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
+  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
+  , EraTx era
+  , BabbageEraTxBody era
   ) =>
   TransitionRule (EraRule "BBODY" era)
-conwayBbodyTransition = alonzoBbodyTransition @era
+conwayBbodyTransition = do
+  judgmentContext
+    >>= \( TRC
+            ( _
+              , state@(BbodyState ls _)
+              , UnserialisedBlock _ txsSeq
+              )
+          ) -> do
+        let maxTotalRefScriptSize = 2560 * 1024 :: Int -- 2.5 MB = 2.5 * 1024 * 1024 bytes
+            utxo = utxosUtxo (lsUTxOState ls)
+            txs = txSeqTxns txsSeq
+            totalRefScriptSize = getSum $ foldMap' (Monoid.Sum . txNonDistinctRefScriptsSize utxo) txs
+        totalRefScriptSize
+          <= maxTotalRefScriptSize
+            ?! injectFailure
+              (RefScriptsSizeTooBig totalRefScriptSize maxTotalRefScriptSize)
+        pure state
 
 instance
   ( Era era
