@@ -1185,17 +1185,29 @@ registerCommitteeHotKeys coldKeys = do
         .~ SSeq.fromList (map (uncurry AuthCommitteeHotKeyTxCert) (toList keys))
   pure $ fmap snd keys
 
--- | Submits a transaction that resigns the cold key
+-- | Submits a transaction that resigns the cold key. Prior to resignation if there was
+-- hot credential authorization for this committee member it will be returned.
 resignCommitteeColdKey ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
   Credential 'ColdCommitteeRole (EraCrypto era) ->
   StrictMaybe (Anchor (EraCrypto era)) ->
-  ImpTestM era ()
+  ImpTestM era (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
 resignCommitteeColdKey coldKey anchor = do
+  committeAuthorizations <-
+    getsNES $
+      nesEsL
+        . esLStateL
+        . lsCertStateL
+        . certVStateL
+        . vsCommitteeStateL
+        . csCommitteeCredsL
   submitTxAnn_ "Resigning Committee Cold key" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.singleton (ResignCommitteeColdTxCert coldKey anchor)
+  pure $ do
+    CommitteeHotCredential hotCred <- Map.lookup coldKey committeAuthorizations
+    pure hotCred
 
 electCommittee ::
   forall era.

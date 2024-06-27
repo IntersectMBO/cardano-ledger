@@ -10,6 +10,10 @@
 * Replaced `geCommitteeState` with `geCertState` in `GovEnv`
 * Added `VotersDoNotExist` predicate failure to `ConwayGovPredFailure`
 
+### `testlib`
+
+* Change ther= return type of `resignCommitteeColdKey`
+
 ## 1.15.1.0
 
 * Add `tierRefScriptFee` and `txNonDistinctRefScriptsSize`

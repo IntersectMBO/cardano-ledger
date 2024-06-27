@@ -487,7 +487,7 @@ govTransition = do
         StakePoolVoter poolId -> poolId `Map.member` knownStakePools
       unknownVoters =
         Map.keys $
-          Map.filterWithKey (\voter _ -> isVoterKnown voter) (unVotingProcedures votingProcedures)
+          Map.filterWithKey (\voter _ -> not (isVoterKnown voter)) (unVotingProcedures votingProcedures)
 
   failOnNonEmpty unknownVoters VotersDoNotExist
   failOnNonEmpty unknownGovActionIds GovActionsDoNotExist
