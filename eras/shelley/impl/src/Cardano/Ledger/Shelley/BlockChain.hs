@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -57,7 +58,7 @@ import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx, segwitTx)
 import Cardano.Ledger.Slot (SlotNo (..))
-import Control.Monad (unless, (<=<))
+import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
@@ -65,7 +66,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import Data.Sequence.Strict (StrictSeq (fromStrict), forceToStrict)
+import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable
 import GHC.Generics (Generic)
@@ -82,9 +83,11 @@ data ShelleyTxSeq era = TxSeq'
   deriving (Generic)
 
 instance Crypto c => EraSegWits (ShelleyEra c) where
+  type TxStructure (ShelleyEra c) = StrictSeq
   type TxZones (ShelleyEra c) = ShelleyTxSeq (ShelleyEra c)
-  fromTxZones = fmap StrictSeq.singleton . txSeqTxns
-  toTxZones = ShelleyTxSeq . forceToStrict . (fromStrict <=< fromStrict)
+  fromTxZones = txSeqTxns
+  toTxZones = ShelleyTxSeq
+  flatten = fromTxZones
   hashTxZones = bbHash
   numSegComponents = 3
 

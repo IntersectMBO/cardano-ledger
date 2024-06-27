@@ -160,7 +160,7 @@ neededTxInsForBlock ::
   Set (TxIn (EraCrypto era))
 neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
   where
-    txBodies = map (^. bodyTxL) . concatMap toList $ fromTxZones txsSeq
+    txBodies = map (^. bodyTxL) . toList $ flatten txsSeq
     allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
     newTxIds = Set.fromList $ map txid txBodies
     isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds

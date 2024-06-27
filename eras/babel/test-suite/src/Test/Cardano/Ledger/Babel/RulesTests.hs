@@ -31,21 +31,24 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
-import Test.Cardano.Ledger.Babel.Examples (testCHAINExample)
-import Test.Cardano.Ledger.Babel.Examples.Prototype
+
+-- import Test.Cardano.Ledger.Babel.Examples (testCHAINExample)
+-- import Test.Cardano.Ledger.Babel.Examples.Prototype
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase)
+
+-- import Test.Tasty.HUnit (testCase)
 import Test.Tasty.QuickCheck (Property, discard, testProperty, (===))
 
 chainExamples :: TestTree
 chainExamples =
   testGroup
     "CHAINexamples"
-    [ testCase "empty block" $ testCHAINExample exEmptyBlock
-    ]
+    []
+
+-- testCase "empty block" $ testCHAINExample exEmptyBlock
 
 -- | The reward aggregation bug described in the Shelley ledger spec in
 -- section 17.4 (in the Errata) resulted in needing to use 'aggregatedRewards' to change

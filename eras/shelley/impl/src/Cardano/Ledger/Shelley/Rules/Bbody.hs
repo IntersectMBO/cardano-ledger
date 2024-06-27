@@ -177,7 +177,7 @@ bbodyTransition =
               , UnserialisedBlock bhview txsZones
               )
           ) -> do
-        let txs = fromTxZones txsZones
+        let txs = flatten txsZones
             actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsZones
             actualBodyHash = hashTxZones txsZones
 
@@ -192,7 +192,7 @@ bbodyTransition =
         ls' <-
           trans @(EraRule "LEDGERS" era) $
             TRC
-              (LedgersEnv (bhviewSlot bhview) pp account, ls, StrictSeq.fromStrict =<< StrictSeq.fromStrict txs)
+              (LedgersEnv (bhviewSlot bhview) pp account, ls, StrictSeq.fromStrict txs)
 
         -- Note that this may not actually be a stake pool - it could be a genesis key
         -- delegate. However, this would only entail an overhead of 7 counts, and it's

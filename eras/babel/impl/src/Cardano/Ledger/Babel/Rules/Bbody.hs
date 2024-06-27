@@ -55,6 +55,7 @@ import Control.State.Transition (
   (?!),
  )
 import Control.State.Transition.Simple (Embed (wrapFailed))
+import Data.Functor.Compose (Compose, getCompose)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
@@ -120,7 +121,8 @@ instance
   NoThunks (BabelBbodyPredFailure era)
 
 instance
-  ( EraSegWits era
+  ( TxStructure era ~ Compose StrictSeq.StrictSeq StrictSeq.StrictSeq
+  , EraSegWits era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , Embed (EraRule "ZONES" era) (BabelBBODY era)
   , Environment (EraRule "ZONES" era) ~ ShelleyLedgersEnv era
@@ -148,7 +150,8 @@ instance
 
 bbodyTransition ::
   forall era.
-  ( STS (BabelBBODY era)
+  ( TxStructure era ~ Compose StrictSeq.StrictSeq StrictSeq.StrictSeq
+  , STS (BabelBBODY era)
   , EraSegWits era
   , Embed (EraRule "ZONES" era) (BabelBBODY era)
   , Environment (EraRule "ZONES" era) ~ ShelleyLedgersEnv era
@@ -164,9 +167,11 @@ bbodyTransition =
               , UnserialisedBlock bhview txsSeq
               )
           ) -> do
-        let txs = fromTxZones txsSeq
-            actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
-            actualBodyHash = hashTxZones txsSeq
+        let
+          txs :: StrictSeq.StrictSeq (StrictSeq.StrictSeq (Tx era))
+          txs = getCompose $ fromTxZones txsSeq
+          actualBodySize = bBodySize (pp ^. ppProtocolVersionL) txsSeq
+          actualBodyHash = hashTxZones txsSeq
 
         actualBodySize
           == fromIntegral (bhviewBSize bhview)

@@ -56,6 +56,7 @@ import Control.DeepSeq (NFData (rnf))
 import Control.Monad.Except ()
 import qualified Data.Map.Strict as Map
 import Data.Proxy
+import qualified Data.Sequence.Strict as StrictSeq
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
@@ -75,7 +76,8 @@ instance NFData (ValidateInput era) where
   rnf (ValidateInput a b c) = seq a (seq b (seq c ()))
 
 validateInput ::
-  ( EraGen era
+  ( TxStructure era ~ StrictSeq.StrictSeq
+  , EraGen era
   , Mock (EraCrypto era)
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
@@ -88,7 +90,8 @@ validateInput ::
 validateInput utxoSize = genValidateInput utxoSize
 
 genValidateInput ::
-  ( EraGen era
+  ( TxStructure era ~ StrictSeq.StrictSeq
+  , EraGen era
   , Mock (EraCrypto era)
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
@@ -167,7 +170,8 @@ instance Crypto c => NFData (UpdateInputs c) where
 
 genUpdateInputs ::
   forall era.
-  ( EraGen era
+  ( TxStructure era ~ StrictSeq.StrictSeq
+  , EraGen era
   , Mock (EraCrypto era)
   , MinLEDGER_STS era
   , GetLedgerView era

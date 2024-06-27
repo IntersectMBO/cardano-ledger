@@ -32,6 +32,7 @@ import Control.State.Transition.Extended
 import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
+import qualified Data.Sequence.Strict as StrictSeq
 import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (ledgerEnv)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Constants (
@@ -82,7 +83,8 @@ genChainState n ge =
 
 -- | Benchmark generating a block given a chain state.
 genBlock ::
-  ( Mock (EraCrypto era)
+  ( TxStructure era ~ StrictSeq.StrictSeq
+  , Mock (EraCrypto era)
   , EraGen era
   , MinLEDGER_STS era
   , GetLedgerView era

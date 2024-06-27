@@ -626,13 +626,17 @@ class
   , Show (TxZones era)
   , EncCBORGroup (TxZones era)
   , DecCBOR (Annotator (TxZones era))
+  , Foldable (TxStructure era)
   ) =>
   EraSegWits era
   where
+  type TxStructure era :: Type -> Type
   type TxZones era = (r :: Type) | r -> era
 
-  fromTxZones :: TxZones era -> StrictSeq (StrictSeq (Tx era))
-  toTxZones :: StrictSeq (StrictSeq (Tx era)) -> TxZones era
+  fromTxZones :: TxZones era -> TxStructure era (Tx era)
+  toTxZones :: TxStructure era (Tx era) -> TxZones era
+
+  flatten :: TxZones era -> StrictSeq (Tx era)
 
   -- | Get the block body hash from the TxSeq. Note that this is not a regular
   -- "hash the stored bytes" function since the block body hash forms a small

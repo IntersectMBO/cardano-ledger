@@ -301,7 +301,7 @@ goldenMinFee =
                 Left err -> error (show err)
                 Right (Block _h txs :: Block (BHeader StandardCrypto) Alonzo) -> txs
             firstTx =
-              case concatMap toList $ fromTxZones @Alonzo txsSeq of
+              case toList $ fromTxZones @Alonzo txsSeq of
                 tx : _ -> tx
                 [] -> error "Block doesn't have any transactions"
 

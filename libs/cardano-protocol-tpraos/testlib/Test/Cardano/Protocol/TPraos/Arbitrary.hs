@@ -37,7 +37,7 @@ import Cardano.Protocol.TPraos.OCert (KESPeriod (KESPeriod), OCert (..), OCertSi
 import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState)
-import Data.Sequence.Strict (singleton)
+import Data.Sequence.Strict (StrictSeq, singleton)
 import Generic.Random (genericArbitraryU)
 import Test.Cardano.Ledger.Binary.Arbitrary ()
 import Test.Cardano.Ledger.Common
@@ -133,7 +133,8 @@ instance Crypto c => Arbitrary (OCert c) where
 deriving newtype instance Arbitrary KESPeriod
 
 instance
-  ( Era era
+  ( TxStructure era ~ StrictSeq
+  , Era era
   , c ~ EraCrypto era
   , EraSegWits era
   , KES.Signable (KES c) ~ SignableRepresentation
@@ -146,7 +147,8 @@ instance
 
 -- | Use supplied keys to generate a Block.
 genBlock ::
-  ( DSIGN.Signable (DSIGN c) (OCertSignable c)
+  ( TxStructure era ~ StrictSeq
+  , DSIGN.Signable (DSIGN c) (OCertSignable c)
   , VRF.Signable (VRF c) Seed
   , KES.Signable (KES c) (BHBody c)
   , EraSegWits era
@@ -167,7 +169,8 @@ genBlock aiks = Block <$> genBHeader aiks <*> (toTxZones <$> arbitrary)
 -- This generator uses 'mkBlock' provide more coherent blocks.
 genCoherentBlock ::
   forall era r.
-  ( EraSegWits era
+  ( TxStructure era ~ StrictSeq
+  , EraSegWits era
   , Arbitrary (Tx era)
   , KES.Signable (KES (EraCrypto era)) ~ SignableRepresentation
   , DSIGN.Signable (DSIGN (EraCrypto era)) ~ SignableRepresentation

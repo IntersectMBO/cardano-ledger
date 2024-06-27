@@ -280,7 +280,7 @@ checkPreservation SourceSignalTarget {source, target, signal} count =
                   <> toDeltaCoin (sumRewards prevPP (rs ru))
             ]
 
-    txs' = concatMap toList $ (fromTxZones @era . bbody) signal
+    txs' = toList $ (fromTxZones @era . bbody) signal
     txs = zipWith dispTx txs' [0 :: Int ..]
 
     dispTx tx ix =
@@ -589,7 +589,6 @@ withdrawals (UnserialisedBlock _ txseq) =
          in if hasFailedScripts tx then c else c <> fold wdrls
     )
     (Coin 0)
-    $ concatMap toList
     $ fromTxZones @era txseq
 
 txFees ::

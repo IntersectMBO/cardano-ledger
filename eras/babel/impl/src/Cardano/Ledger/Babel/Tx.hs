@@ -77,12 +77,14 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.BlockChain (constructMetadata)
-import Control.Monad (unless)
+import Control.Monad (unless, (<=<))
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Data.Data (Proxy)
+import qualified Data.Foldable as Foldable
+import Data.Functor.Compose (Compose (Compose, getCompose))
 import qualified Data.Map as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence as Seq
@@ -139,9 +141,11 @@ instance Crypto c => AlonzoEraTx (BabelEra c) where
 --   type RequiredTxs (BabelEra c) = ShelleyRequiredTx (BabelEra c)
 
 instance Crypto c => Core.EraSegWits (BabelEra c) where
+  type TxStructure (BabelEra c) = Compose StrictSeq StrictSeq
   type TxZones (BabelEra c) = BabelTxZones (BabelEra c)
-  fromTxZones = txZonesTxns
-  toTxZones = BabelTxZones
+  fromTxZones = Compose . txZonesTxns
+  toTxZones = BabelTxZones . getCompose
+  flatten = StrictSeq.fromList . (Foldable.toList <=< Foldable.toList) . getCompose . Core.fromTxZones
   hashTxZones = hashBabelTxZones
   numSegComponents = 4
 

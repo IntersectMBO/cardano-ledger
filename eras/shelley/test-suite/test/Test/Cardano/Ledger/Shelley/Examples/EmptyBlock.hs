@@ -19,6 +19,7 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default.Class
+import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..))
@@ -55,7 +56,8 @@ initStEx1 = initSt (UTxO mempty)
 
 blockEx1 ::
   forall era.
-  ( HasCallStack
+  ( TxStructure era ~ StrictSeq.StrictSeq
+  , HasCallStack
   , EraSegWits era
   , ExMock (EraCrypto era)
   , ProtVerAtMost era 4
@@ -78,7 +80,8 @@ blockEx1 =
 
 blockNonce ::
   forall era.
-  ( HasCallStack
+  ( TxStructure era ~ StrictSeq.StrictSeq
+  , HasCallStack
   , EraSegWits era
   , ExMock (EraCrypto era)
   , ProtVerAtMost era 4
@@ -89,7 +92,8 @@ blockNonce = getBlockNonce (blockEx1 @era)
 
 expectedStEx1 ::
   forall era.
-  ( EraSegWits era
+  ( TxStructure era ~ StrictSeq.StrictSeq
+  , EraSegWits era
   , ExMock (EraCrypto era)
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6
@@ -107,7 +111,8 @@ expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) . newLab blockEx1 $ initSt
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
 exEmptyBlock ::
-  ( ExMock (EraCrypto era)
+  ( TxStructure era ~ StrictSeq.StrictSeq
+  , ExMock (EraCrypto era)
   , EraSegWits era
   , ProtVerAtMost era 4
   , ProtVerAtMost era 6

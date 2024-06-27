@@ -114,7 +114,8 @@ type ShelleyBasedEra' era =
 
 defaultShelleyLedgerExamples ::
   forall era.
-  ( ShelleyBasedEra' era
+  ( TxStructure era ~ StrictSeq
+  , ShelleyBasedEra' era
   , EraSegWits era
   , EraGov era
   , PredicateFailure (EraRule "DELEGS" era) ~ ShelleyDelegsPredFailure era
@@ -170,7 +171,7 @@ defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData transla
 
 exampleShelleyLedgerBlockTxs ::
   forall era.
-  (EraSegWits era, PraosCrypto (EraCrypto era)) =>
+  (TxStructure era ~ StrictSeq, EraSegWits era, PraosCrypto (EraCrypto era)) =>
   [Tx era] ->
   Block (BHeader (EraCrypto era)) era
 exampleShelleyLedgerBlockTxs txs = Block blockHeader blockBody
@@ -200,14 +201,14 @@ exampleShelleyLedgerBlockTxs txs = Block blockHeader blockBody
         , bprotver = ProtVer (natVersion @2) 0
         }
 
-    blockBody = toTxZones @era (fmap StrictSeq.singleton (StrictSeq.fromList txs))
+    blockBody = toTxZones @era (StrictSeq.fromList txs)
 
     mkBytes :: Int -> Cardano.Ledger.BaseTypes.Seed
     mkBytes = Seed . mkDummyHash @Blake2b_256
 
 exampleShelleyLedgerBlock ::
   forall era.
-  (EraSegWits era, PraosCrypto (EraCrypto era)) =>
+  (TxStructure era ~ StrictSeq, EraSegWits era, PraosCrypto (EraCrypto era)) =>
   Tx era ->
   Block (BHeader (EraCrypto era)) era
 exampleShelleyLedgerBlock tx = Block blockHeader blockBody
@@ -237,7 +238,7 @@ exampleShelleyLedgerBlock tx = Block blockHeader blockBody
         , bprotver = ProtVer (natVersion @2) 0
         }
 
-    blockBody = toTxZones @era (fmap StrictSeq.singleton (StrictSeq.fromList [tx]))
+    blockBody = toTxZones @era (StrictSeq.fromList [tx])
 
     mkBytes :: Int -> Cardano.Ledger.BaseTypes.Seed
     mkBytes = Seed . mkDummyHash @Blake2b_256
