@@ -253,6 +253,9 @@ govProceduresSpec ge@GovEnv {..} ps =
         , f (gasAction act)
         ]
       committeeState = vsCommitteeState (certVState geCertState)
+      knownDReps = Map.keysSet $ vsDReps (certVState geCertState)
+      knownStakePools = Map.keysSet $ psStakePoolParams (certPState geCertState)
+      knownCommitteeAuthorizations = authorizedHotCommitteeCredentials committeeState
       committeeVotableActionIds =
         actions (isCommitteeVotingAllowed geEpoch committeeState)
       drepVotableActionIds =
@@ -265,14 +268,20 @@ govProceduresSpec ge@GovEnv {..} ps =
               forAll votingProcsMap $ \kvp ->
                 match kvp $ \voter mapActVote ->
                   (caseOn voter)
-                    ( branch $ \_c ->
-                        subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
+                    ( branch $ \committeeHotCred ->
+                        [subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
+                        , member_ committeeHotCred $ lit knownCommitteeAuthorizations
+                        ]
                     )
-                    ( branch $ \_c ->
-                        subset_ (dom_ mapActVote) (lit $ Set.fromList drepVotableActionIds)
+                    ( branch $ \drepCred ->
+                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList drepVotableActionIds)
+                        , member_ drepCred $ lit knownDReps
+                        ]
                     )
-                    ( branch $ \_c ->
-                        subset_ (dom_ mapActVote) (lit $ Set.fromList stakepoolVotableActionIds)
+                    ( branch $ \poolKeyHash ->
+                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList stakepoolVotableActionIds)
+                        , member_ poolKeyHash $ lit knownStakePools
+                        ]
                     )
           , forAll proposalProcs $ \proc ->
               match proc $ \deposit returnAddr govAction _ ->

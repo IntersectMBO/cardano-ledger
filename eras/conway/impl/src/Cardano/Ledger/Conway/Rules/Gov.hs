@@ -56,6 +56,7 @@ import Cardano.Ledger.CertState (
   CommitteeState (..),
   PState (..),
   VState (..),
+  authorizedHotCommitteeCredentials,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOV)
@@ -116,7 +117,6 @@ import Control.State.Transition.Extended (
   tellEvent,
   (?!),
  )
-import Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
@@ -384,11 +384,7 @@ govTransition = do
       committeeState = vsCommitteeState certVState
       knownDReps = vsDReps certVState
       knownStakePools = psStakePoolParams certPState
-      knownCommitteeMembers =
-        let toHotCredSet = \case
-              CommitteeHotCredential hotCred -> Set.singleton hotCred
-              CommitteeMemberResigned {} -> Set.empty
-         in F.foldMap' toHotCredSet (csCommitteeCreds committeeState)
+      knownCommitteeMembers = authorizedHotCommitteeCredentials committeeState
 
   expectedNetworkId <- liftSTS $ asks networkId
 

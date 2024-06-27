@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-core`
 
-## 1.13.1.1
+## 1.13.2.0
 
-*
+* Add `authorizedHotCommitteeCredentials`
 
 ## 1.13.1.0
 
