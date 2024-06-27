@@ -111,6 +111,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impKeyPairsG,
   impNativeScriptsG,
   produceScript,
+  advanceToPointOfNoReturn,
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -180,6 +181,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
+import Cardano.Ledger.Slot (getTheSlotOfNoReturn)
 import Cardano.Ledger.Tools (calcMinFeeTxNativeScriptWits, integralToByteStringN)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
@@ -751,8 +753,10 @@ runImpTestM mQCSize impState (ImpTestM m) = do
   endState <- readIORef ioRef
   pure (res, endState)
 
-runShelleyBase :: Globals -> ShelleyBase a -> a
-runShelleyBase globals act = runIdentity $ runReaderT act globals
+runShelleyBase :: ShelleyBase a -> ImpTestM era a
+runShelleyBase act = do
+  globals <- use impGlobalsL
+  pure $ runIdentity $ runReaderT act globals
 
 getRewardAccountAmount :: RewardAccount (EraCrypto era) -> ImpTestM era Coin
 getRewardAccountAmount rewardAcount = do
@@ -1016,7 +1020,6 @@ tryRunImpRule ::
     )
 tryRunImpRule stsEnv stsState stsSignal = do
   let trc = TRC (stsEnv, stsState, stsSignal)
-  globals <- use impGlobalsL
   let
     stsOpts =
       ApplySTSOpts
@@ -1024,7 +1027,7 @@ tryRunImpRule stsEnv stsState stsSignal = do
         , asoEvents = EPReturn
         , asoAssertions = AssertionsAll
         }
-  pure $ runShelleyBase globals (applySTSOptsEither @(EraRule rule era) stsOpts trc)
+  runShelleyBase (applySTSOptsEither @(EraRule rule era) stsOpts trc)
 
 runImpRule ::
   forall rule era.
@@ -1546,3 +1549,9 @@ produceScript scriptHash = do
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr (inject (Coin 10)))
   txInAt (0 :: Int) <$> submitTx tx
+
+advanceToPointOfNoReturn :: ImpTestM era ()
+advanceToPointOfNoReturn = do
+  impLastTick <- gets impLastTick
+  (_, slotOfNoReturn, _) <- runShelleyBase $ getTheSlotOfNoReturn impLastTick
+  impLastTickL .= slotOfNoReturn

@@ -467,29 +467,30 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
       umap = dsUnified dState
       umapSize = Map.size $ umElems umap
       pulseSize = max 1 (umapSize `div` (fromIntegral :: Word64 -> Int) (4 * k))
-      epochState' =
-        epochState
-          & epochStateGovStateL . cgsDRepPulsingStateL
-            .~ DRPulsing
-              ( DRepPulser
-                  { dpPulseSize = pulseSize
-                  , dpUMap = dsUnified dState
-                  , dpIndex = 0 -- used as the index of the remaining UMap
-                  , dpStakeDistr = stakeDistr -- used as part of the snapshot
-                  , dpStakePoolDistr = stakePoolDistr
-                  , dpDRepDistr = Map.empty -- The partial result starts as the empty map
-                  , dpDRepState = vsDReps vState
-                  , dpCurrentEpoch = epochNo
-                  , dpCommitteeState = vsCommitteeState vState
-                  , dpEnactState =
-                      mkEnactState govState
-                        & ensTreasuryL .~ epochState ^. epochStateTreasuryL
-                  , dpProposals = proposalsActions props
-                  , dpProposalDeposits = proposalsDeposits props
-                  , dpGlobals = globals
-                  }
-              )
-  pure epochState'
+      govState' =
+        predictFuturePParams $
+          govState
+            & cgsDRepPulsingStateL
+              .~ DRPulsing
+                ( DRepPulser
+                    { dpPulseSize = pulseSize
+                    , dpUMap = dsUnified dState
+                    , dpIndex = 0 -- used as the index of the remaining UMap
+                    , dpStakeDistr = stakeDistr -- used as part of the snapshot
+                    , dpStakePoolDistr = stakePoolDistr
+                    , dpDRepDistr = Map.empty -- The partial result starts as the empty map
+                    , dpDRepState = vsDReps vState
+                    , dpCurrentEpoch = epochNo
+                    , dpCommitteeState = vsCommitteeState vState
+                    , dpEnactState =
+                        mkEnactState govState
+                          & ensTreasuryL .~ epochState ^. epochStateTreasuryL
+                    , dpProposals = proposalsActions props
+                    , dpProposalDeposits = proposalsDeposits props
+                    , dpGlobals = globals
+                    }
+                )
+  pure $ epochState & epochStateGovStateL .~ govState'
 
 -- | Force computation of DRep stake distribution and figure out the next enact
 -- state. This operation is useful in cases when access to new EnactState or DRep stake
