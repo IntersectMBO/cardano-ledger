@@ -248,13 +248,12 @@ instance IsConwayUniv fn => HasSpec fn DeltaCoin
 
 instance HasSimpleRep (GovSignal era)
 instance
-  ( Era era
+  ( EraTxCert era
   , EraPParams era
   , IsConwayUniv fn
   , HasSimpleRep (PParamsHKD StrictMaybe era)
   , TypeSpec fn (SimpleRep (PParamsHKD StrictMaybe era)) ~ TypeSpec fn (PParamsHKD StrictMaybe era)
   , HasSpec fn (SimpleRep (PParamsHKD StrictMaybe era))
-  , Eq (TxCert era)
   , HasSpec fn (TxCert era)
   ) =>
   HasSpec fn (GovSignal era)
