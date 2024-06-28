@@ -61,6 +61,7 @@ import Cardano.Ledger.CertState (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
+  GovAction (..),
   GovActionId (..),
   GovActionPurpose (..),
   GovActionState (..),
@@ -70,8 +71,11 @@ import Cardano.Ledger.Conway.Governance (
   Proposals,
   Voter (..),
   VotingProcedure (..),
+  VotingProcedures (..),
   foldlVotingProcedures,
+  foldrVotingProcedures,
   gasAction,
+  gasDRepVotesL,
   grHardForkL,
   indexedGovProps,
   isCommitteeVotingAllowed,
@@ -84,16 +88,13 @@ import Cardano.Ledger.Conway.Governance (
   proposalsLookupId,
   toPrevGovActionIds,
  )
-import Cardano.Ledger.Conway.Governance.Procedures (
-  GovAction (..),
-  VotingProcedures (..),
-  foldrVotingProcedures,
- )
+import Cardano.Ledger.Conway.Governance.Proposals (mapProposals)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
   ppGovActionDepositL,
   ppGovActionLifetimeL,
  )
+import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -116,6 +117,7 @@ import Control.State.Transition.Extended (
   tellEvent,
   (?!),
  )
+import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
@@ -273,7 +275,8 @@ deriving instance (EraPParams era, Show (TxCert era)) => Show (GovSignal era)
 instance (EraPParams era, NFData (TxCert era)) => NFData (GovSignal era)
 
 instance
-  ( ConwayEraPParams era
+  ( ConwayEraTxCert era
+  , ConwayEraPParams era
   , EraRule "GOV" era ~ ConwayGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
   ) =>
@@ -373,7 +376,8 @@ checkBootstrapProposal pp proposal@ProposalProcedure {pProcGovAction}
 
 govTransition ::
   forall era.
-  ( ConwayEraPParams era
+  ( ConwayEraTxCert era
+  , ConwayEraPParams era
   , STS (EraRule "GOV" era)
   , Event (EraRule "GOV" era) ~ ConwayGovEvent era
   , Signal (EraRule "GOV" era) ~ GovSignal era
@@ -504,10 +508,24 @@ govTransition = do
   let
     addVoterVote ps voter govActionId VotingProcedure {vProcVote} =
       proposalsAddVote voter vProcVote govActionId ps
-    updatedProposalStates = foldlVotingProcedures addVoterVote proposals gsVotingProcedures
+    updatedProposalStates =
+      cleanupProposalVotes $
+        foldlVotingProcedures addVoterVote proposals gsVotingProcedures
+    unregisteredDReps =
+      -- , removedAuthorizations =
+      let collectRemovals drepCreds = \case
+            UnRegDRepTxCert drepCred _ -> Set.insert drepCred drepCreds
+            _ -> drepCreds
+       in F.foldl' collectRemovals mempty gsCertificates
+    -- AuthCommitteeHotKeyTxCert
+    -- ResignCommitteeColdTxCert
+    cleanupProposalVotes =
+      let cleanupVoters gas =
+            gas & gasDRepVotesL %~ (`Map.withoutKeys` unregisteredDReps)
+       in mapProposals cleanupVoters
 
   -- Report the event
-  tellEvent $ GovNewProposals txid updatedProposalStates
+  tellEvent $ GovNewProposals txid $ updatedProposalStates
 
   pure updatedProposalStates
 
