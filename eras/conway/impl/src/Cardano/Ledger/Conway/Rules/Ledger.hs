@@ -359,18 +359,17 @@ ledgerTransition = do
     ei <- asks epochInfoPure
     epochInfoEpoch ei slot
 
-  let txBody = tx ^. bodyTxL
-
   (utxoState', certStateAfterCERTS) <-
     if tx ^. isValidTxL == IsValid True
       then do
-        let actualTreasuryValue = account ^. asTreasuryL
-         in case tx ^. bodyTxL . currentTreasuryValueTxBodyL of
-              SNothing -> pure ()
-              SJust submittedTreasuryValue ->
-                submittedTreasuryValue
-                  == actualTreasuryValue
-                    ?! ConwayTreasuryValueMismatch actualTreasuryValue submittedTreasuryValue
+        let txBody = tx ^. bodyTxL
+            actualTreasuryValue = account ^. asTreasuryL
+        case txBody ^. currentTreasuryValueTxBodyL of
+          SNothing -> pure ()
+          SJust submittedTreasuryValue ->
+            submittedTreasuryValue
+              == actualTreasuryValue
+                ?! ConwayTreasuryValueMismatch actualTreasuryValue submittedTreasuryValue
 
         let govState = utxoState ^. utxosGovStateL
             committee = govState ^. committeeGovStateL
