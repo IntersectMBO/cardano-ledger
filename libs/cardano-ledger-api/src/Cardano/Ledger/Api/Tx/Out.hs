@@ -86,27 +86,8 @@ import Cardano.Ledger.Core (
   eraProtVerLow,
   isAdaOnlyTxOutF,
  )
+import Cardano.Ledger.Tools (setMinCoinTxOut, setMinCoinTxOutWith)
 import Lens.Micro
-
-setMinCoinTxOutInternal ::
-  EraTxOut era =>
-  (Coin -> Coin -> Bool) ->
-  PParams era ->
-  TxOut era ->
-  TxOut era
-setMinCoinTxOutInternal f pp = go
-  where
-    go !txOut =
-      let curMinCoin = getMinCoinTxOut pp txOut
-          curCoin = txOut ^. coinTxOutL
-       in if curCoin `f` curMinCoin
-            then txOut
-            else go (txOut & coinTxOutL .~ curMinCoin)
-
--- | Same as `setMinCoinSizedTxOut`, except it doesn't require the size of the
--- TxOut and will recompute it if needed. Initial amount is not important.
-setMinCoinTxOut :: EraTxOut era => PParams era -> TxOut era -> TxOut era
-setMinCoinTxOut = setMinCoinTxOutInternal (==)
 
 -- | Similar to `setMinCoinTxOut` it will guarantee that the minimum requirement for the
 -- output amount is satisified, however it makes it possible to set a higher amount than
@@ -117,7 +98,7 @@ setMinCoinTxOut = setMinCoinTxOutInternal (==)
 -- > (ensureMinCoinTxOut pp txOut ^. coinTxOutL) >= (setMinCoinTxOut pp txOut ^. coinTxOutL)
 -- @
 ensureMinCoinTxOut :: EraTxOut era => PParams era -> TxOut era -> TxOut era
-ensureMinCoinTxOut = setMinCoinTxOutInternal (>=)
+ensureMinCoinTxOut = setMinCoinTxOutWith (>=)
 
 setMinCoinSizedTxOutInternal ::
   forall era.
