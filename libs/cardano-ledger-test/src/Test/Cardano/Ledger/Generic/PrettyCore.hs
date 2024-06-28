@@ -99,7 +99,6 @@ import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
   GovActionIx (..),
   GovActionState (..),
-  GovProcedures (..),
   GovPurposeId (..),
   GovRelation (..),
   PEdges (..),
@@ -133,6 +132,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUtxosPredFailure,
   EnactSignal (..),
   GovEnv (..),
+  GovSignal (..),
  )
 import qualified Cardano.Ledger.Conway.Rules as ConwayRules
 import Cardano.Ledger.Conway.Scripts (ConwayPlutusPurpose (..))
@@ -1117,7 +1117,8 @@ pcTxBodyField proof x = case x of
   AdHash (SJust (AuxiliaryDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
   Txnetworkid SNothing -> [("network id", ppString "Nothing")]
   Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
-  GovProcs ga -> [("gov procedures", pcGovProcedures ga)]
+  ProposalProc props -> [("proposing procedure", ppList pcProposalProcedure (toList props))]
+  VotingProc votes -> [("voting procedure", pcVotingProcedures votes)]
   CurrentTreasuryValue ctv -> [("current treasury value", ppStrictMaybe pcCoin ctv)]
   TreasuryDonation td -> [("treasury donation", pcCoin td)]
 
@@ -2781,16 +2782,17 @@ pcTxCert Alonzo x = pcShelleyTxCert x
 pcTxCert Babbage x = pcShelleyTxCert x
 pcTxCert Conway x = pcConwayTxCert x
 
-pcGovProcedures :: forall era. GovProcedures era -> PDoc
-pcGovProcedures (GovProcedures vote proposal) =
+pcGovSignal :: forall era. Reflect era => GovSignal era -> PDoc
+pcGovSignal (GovSignal vote proposal certs) =
   ppRecord
     "GovProcedure"
     [ ("voting", pcVotingProcedures vote)
-    , ("proposal", ppList (pcProposalProcedure @era) (toList proposal))
+    , ("proposal", ppList pcProposalProcedure (toList proposal))
+    , ("certificates", ppList (pcTxCert (reify @era)) (toList certs))
     ]
 
-instance PrettyA (GovProcedures era) where
-  prettyA = pcGovProcedures
+instance Reflect era => PrettyA (GovSignal era) where
+  prettyA = pcGovSignal
 
 pcVotingProcedures :: VotingProcedures era -> PDoc
 pcVotingProcedures (VotingProcedures m) =

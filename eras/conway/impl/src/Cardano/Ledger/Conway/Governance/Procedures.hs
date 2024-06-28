@@ -23,7 +23,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Conway.Governance.Procedures (
-  GovProcedures (..),
   VotingProcedures (..),
   VotingProcedure (..),
   foldlVotingProcedures,
@@ -66,7 +65,6 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   gasCommitteeVotesL,
   gasExpiresAfterL,
   gasProposalProcedureL,
-  govProceduresProposalsL,
   gasActionL,
   gasReturnAddrL,
   gasProposedInL,
@@ -143,7 +141,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.OMap.Strict as OMap
-import qualified Data.OSet.Strict as OSet
 import qualified Data.Sequence as Seq
 import Data.Set (Set)
 import qualified Data.Text as Text
@@ -465,15 +462,6 @@ toVotingProcedurePairs vProc@(VotingProcedure _ _) =
       , "decision" .= vProcVote
       ]
 
-data GovProcedures era = GovProcedures
-  { gpVotingProcedures :: !(VotingProcedures era)
-  , gpProposalProcedures :: !(OSet.OSet (ProposalProcedure era))
-  }
-  deriving (Eq, Generic)
-
-govProceduresProposalsL :: Lens' (GovProcedures era) (OSet.OSet (ProposalProcedure era))
-govProceduresProposalsL = lens gpProposalProcedures $ \x y -> x {gpProposalProcedures = y}
-
 -- | Attaches indices to a sequence of proposal procedures. The indices grow
 -- from left to right.
 indexedGovProps ::
@@ -483,12 +471,6 @@ indexedGovProps = enumerateProps 0
   where
     enumerateProps _ Seq.Empty = Seq.Empty
     enumerateProps !n (x Seq.:<| xs) = (GovActionIx n, x) Seq.:<| enumerateProps (succ n) xs
-
-instance EraPParams era => NoThunks (GovProcedures era)
-
-instance EraPParams era => NFData (GovProcedures era)
-
-deriving instance EraPParams era => Show (GovProcedures era)
 
 data ProposalProcedure era = ProposalProcedure
   { pProcDeposit :: !Coin

@@ -62,7 +62,7 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (GovProcedures (..))
+import Cardano.Ledger.Conway.Governance (ProposalProcedure, VotingProcedures)
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..))
 import Cardano.Ledger.Conway.TxBody (ConwayTxBody (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -133,7 +133,8 @@ data TxBodyField era
   | WppHash (StrictMaybe (ScriptIntegrityHash (EraCrypto era)))
   | AdHash (StrictMaybe (AuxiliaryDataHash (EraCrypto era)))
   | Txnetworkid (StrictMaybe Network)
-  | GovProcs (GovProcedures era)
+  | ProposalProc (OSet.OSet (ProposalProcedure era))
+  | VotingProc (VotingProcedures era)
   | CurrentTreasuryValue (StrictMaybe Coin)
   | TreasuryDonation Coin
 
@@ -453,7 +454,8 @@ abstractTxBody Conway (ConwayTxBody inp col ref out colret totcol cert wdrl fee 
   , WppHash sih
   , AdHash adh
   , Txnetworkid net
-  , GovProcs $ GovProcedures vp pp
+  , VotingProc vp
+  , ProposalProc pp
   , CurrentTreasuryValue ctv
   , TreasuryDonation td
   ]

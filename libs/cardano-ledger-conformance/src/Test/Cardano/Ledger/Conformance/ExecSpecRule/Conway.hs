@@ -28,7 +28,6 @@ import Cardano.Ledger.Conway.Governance (
   Committee (..),
   EnactState (..),
   GovActionState (..),
-  GovProcedures (..),
   Proposals,
   RatifyEnv (..),
   RatifySignal (..),
@@ -41,6 +40,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules (
   ConwayGovPredFailure,
+  GovSignal (..),
   committeeAcceptedRatio,
   dRepAcceptedRatio,
   spoAcceptedRatio,
@@ -183,7 +183,7 @@ instance
   testConformance ctx env st sig = property $ do
     (implResTest, agdaResTest) <- runConformance @"GOV" @fn @Conway ctx env st sig
     checkConformance @"GOV" implResTest agdaResTest
-    let numInputProps = OSet.size $ gpProposalProcedures sig
+    let numInputProps = OSet.size $ gsProposalProcedures sig
     pure $ label ("n input proposals = " <> show numInputProps) ()
 
 instance

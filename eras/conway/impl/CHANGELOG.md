@@ -10,6 +10,11 @@
 * Added `ConwayTxRefScriptsSizeTooBig` predicate failure to `ConwayLedgerPredFailure`
 * Replaced `geCommitteeState` with `geCertState` in `GovEnv`
 * Added `VotersDoNotExist` predicate failure to `ConwayGovPredFailure`
+* Export `ConwayEraTxCert`, `RegDepositTxCert`, `UnRegDepositTxCert`, `DelegTxCert`,
+  `RegDepositDelegTxCert`, `AuthCommitteeHotKeyTxCert`, `ResignCommitteeColdTxCert`,
+  `RegDRepTxCert`, `UnRegDRepTxCert` and `UpdateDRepTxCert` from
+  `Cardano.Ledger.Conway.Core`
+* Remove `GovProcedures` in favor of newly added type `GovSignal`
 
 ### `testlib`
 

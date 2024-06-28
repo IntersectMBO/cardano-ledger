@@ -229,8 +229,9 @@ instance
 instance
   ( EraPParams era
   , ToExpr (PParamsHKD StrictMaybe era)
+  , ToExpr (TxCert era)
   ) =>
-  ToExpr (GovProcedures era)
+  ToExpr (GovSignal era)
 
 instance ToExpr (PParams era) => ToExpr (GovEnv era)
 

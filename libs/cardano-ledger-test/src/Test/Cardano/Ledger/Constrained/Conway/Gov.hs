@@ -244,7 +244,7 @@ govProceduresSpec ::
   IsConwayUniv fn =>
   GovEnv (ConwayEra StandardCrypto) ->
   Proposals (ConwayEra StandardCrypto) ->
-  Specification fn (GovProcedures (ConwayEra StandardCrypto))
+  Specification fn (GovSignal (ConwayEra StandardCrypto))
 govProceduresSpec ge@GovEnv {..} ps =
   let actions f =
         [ gid
@@ -262,14 +262,14 @@ govProceduresSpec ge@GovEnv {..} ps =
         actions isDRepVotingAllowed
       stakepoolVotableActionIds =
         actions isStakePoolVotingAllowed
-   in constrained $ \govProcs ->
-        match govProcs $ \votingProcs proposalProcs ->
+   in constrained $ \govSignal ->
+        match govSignal $ \votingProcs proposalProcs _certificates ->
           [ match votingProcs $ \votingProcsMap ->
               forAll votingProcsMap $ \kvp ->
                 match kvp $ \voter mapActVote ->
                   (caseOn voter)
                     ( branch $ \committeeHotCred ->
-                        [subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
+                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
                         , member_ committeeHotCred $ lit knownCommitteeAuthorizations
                         ]
                     )
