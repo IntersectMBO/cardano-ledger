@@ -63,6 +63,10 @@ deriving instance Generic NewEpochEnv
 
 deriving instance Generic EpochState
 
+deriving instance Generic Snapshots
+
+deriving instance Generic Snapshot
+
 deriving instance Generic LedgerState
 
 deriving instance Generic Acnt
@@ -140,6 +144,10 @@ deriving instance Eq CertState
 deriving instance Eq RatifyState
 
 deriving instance Eq EpochState
+
+deriving instance Eq Snapshots
+
+deriving instance Eq Snapshot
 
 deriving instance Eq Acnt
 
@@ -220,6 +228,10 @@ instance NFData DelegEnv
 instance NFData NewEpochEnv
 
 instance NFData EpochState
+
+instance NFData Snapshots
+
+instance NFData Snapshot
 
 instance NFData Acnt
 
@@ -304,6 +316,10 @@ instance ToExpr NewEpochEnv
 
 instance ToExpr EpochState
 
+instance ToExpr Snapshots
+
+instance ToExpr Snapshot
+
 instance ToExpr LedgerState
 
 instance ToExpr Acnt
@@ -385,6 +401,10 @@ instance FixupSpecRep RatifyEnv
 instance FixupSpecRep RatifyState
 
 instance FixupSpecRep EpochState
+
+instance FixupSpecRep Snapshots
+
+instance FixupSpecRep Snapshot
 
 instance FixupSpecRep Acnt
 
