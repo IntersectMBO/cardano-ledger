@@ -1,8 +1,10 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.8.1.1
+## 1.8.2.0
 
-*
+### `testlib`
+
+* Add `produceRefScript`
 
 ## 1.8.1.0
 

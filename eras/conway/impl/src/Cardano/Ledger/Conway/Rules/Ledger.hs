@@ -18,6 +18,7 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   ConwayLEDGER,
   ConwayLedgerPredFailure (..),
   ConwayLedgerEvent (..),
+  maxRefScriptSizePerTx,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
@@ -145,6 +146,12 @@ data ConwayLedgerPredFailure era
       -- | Maximum allowed total reference script size
       Int
   deriving (Generic)
+
+-- | In the next era this will become a proper protocol parameter. For now this is a hard
+-- coded limit on the total number of bytes of reference scripts that a transaction can
+-- use.
+maxRefScriptSizePerTx :: Int
+maxRefScriptSizePerTx = 1024 * 1024 -- 1MiB
 
 type instance EraRuleFailure "LEDGER" (ConwayEra c) = ConwayLedgerPredFailure (ConwayEra c)
 
@@ -374,8 +381,6 @@ ledgerTransition = do
                 ?! ConwayTreasuryValueMismatch actualTreasuryValue submittedTreasuryValue
 
         let totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxosUtxoL) tx
-            -- In the next era this will become a proper protocol parameter
-            maxRefScriptSizePerTx = 1024 * 1024 -- 1MiB
         totalRefScriptSize
           <= maxRefScriptSizePerTx
             ?! ConwayTxRefScriptsSizeTooBig totalRefScriptSize maxRefScriptSizePerTx

@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-babbage
-version:            1.8.1.1
+version:            1.8.2.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -116,7 +116,8 @@ library testlib
         cardano-crypto-class,
         cardano-ledger-babbage,
         cardano-ledger-binary,
-        cardano-ledger-core:{cardano-ledger-core, testlib},
+        cardano-ledger-core:{cardano-ledger-core, testlib} >=1.13.2,
+        cardano-strict-containers,
         generic-random,
         microlens,
         microlens-mtl,
