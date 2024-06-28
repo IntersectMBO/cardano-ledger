@@ -77,6 +77,7 @@ import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
+import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -87,6 +88,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   UTxOState (..),
   asTreasuryL,
   utxosGovStateL,
+  utxosUtxoL,
  )
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
@@ -370,6 +372,13 @@ ledgerTransition = do
             submittedTreasuryValue
               == actualTreasuryValue
                 ?! ConwayTreasuryValueMismatch actualTreasuryValue submittedTreasuryValue
+
+        let totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxosUtxoL) tx
+            -- In the next era this will become a proper protocol parameter
+            maxRefScriptSizePerTx = 1024 * 1024 -- 1MiB
+        totalRefScriptSize
+          <= maxRefScriptSizePerTx
+            ?! ConwayTxRefScriptsSizeTooBig totalRefScriptSize maxRefScriptSizePerTx
 
         let govState = utxoState ^. utxosGovStateL
             committee = govState ^. committeeGovStateL
