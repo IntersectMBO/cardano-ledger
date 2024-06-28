@@ -1480,6 +1480,12 @@ ppConwayLedgerPredFailure proof x = case x of
     _ ->
       error
         ("Only the ConwayEra has a (PredicateFailure (EraRule \"CERTS\" era)). This Era is " ++ show proof)
+  ConwayTxRefScriptsSizeTooBig s1 s2 ->
+    ppRecord
+      "ConwayTxRefScriptsSizeTooBig"
+      [ ("Computed sum of reference script size", ppInt s1)
+      , ("Maximum allowed total reference script size", ppInt s2)
+      ]
 
 instance Reflect era => PrettyA (ConwayLedgerPredFailure era) where
   prettyA = ppConwayLedgerPredFailure reify
