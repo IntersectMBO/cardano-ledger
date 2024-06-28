@@ -1,18 +1,26 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- | This is a module that contains functionality that is not necessary for ledger
 -- operation, but is useful for testing as well as for downstream users of ledger
 module Cardano.Ledger.Tools (
+  -- * Tx
   setMinFeeTx,
   setMinFeeTxUtxo,
   calcMinFeeTx,
   calcMinFeeTxNativeScriptWits,
   estimateMinFeeTx,
   addDummyWitsTx,
+
+  -- * TxOut
+  setMinCoinTxOut,
+  setMinCoinTxOutWith,
+
+  -- * General tools
+  boom,
   integralToByteStringN,
   byteStringToNum,
-  boom,
 )
 where
 
@@ -260,6 +268,26 @@ addDummyWitsTx pp tx numKeyWits byronAttrs =
       BootstrapWitness key dummySig chainCode . serialize' byronProtVer
     dummyByronKeyWits =
       Set.fromList $ zipWith mkDummyByronKeyWit dummyKeys byronAttrs
+
+-- | Same as `setMinCoinSizedTxOut`, except it doesn't require the size of the
+-- TxOut and will recompute it if needed. Initial amount is not important.
+setMinCoinTxOut :: EraTxOut era => PParams era -> TxOut era -> TxOut era
+setMinCoinTxOut = setMinCoinTxOutWith (==)
+
+setMinCoinTxOutWith ::
+  EraTxOut era =>
+  (Coin -> Coin -> Bool) ->
+  PParams era ->
+  TxOut era ->
+  TxOut era
+setMinCoinTxOutWith f pp = go
+  where
+    go !txOut =
+      let curMinCoin = getMinCoinTxOut pp txOut
+          curCoin = txOut ^. coinTxOutL
+       in if curCoin `f` curMinCoin
+            then txOut
+            else go (txOut & coinTxOutL .~ curMinCoin)
 
 -- | A helpful placeholder to use during development.
 boom :: HasCallStack => a
