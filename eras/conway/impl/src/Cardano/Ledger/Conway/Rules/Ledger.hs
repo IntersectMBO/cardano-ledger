@@ -18,6 +18,7 @@ module Cardano.Ledger.Conway.Rules.Ledger (
   ConwayLEDGER,
   ConwayLedgerPredFailure (..),
   ConwayLedgerEvent (..),
+  maxRefScriptSizePerTx,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..))
@@ -77,6 +78,7 @@ import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
+import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -88,6 +90,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
   certVStateL,
   utxosGovStateL,
+  utxosUtxoL,
   vsCommitteeStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -139,7 +142,18 @@ data ConwayLedgerPredFailure era
       Coin
       -- | Submitted in transaction
       Coin
+  | ConwayTxRefScriptsSizeTooBig
+      -- | Computed sum of reference script size
+      Int
+      -- | Maximum allowed total reference script size
+      Int
   deriving (Generic)
+
+-- | In the next era this will become a proper protocol parameter. For now this is a hard
+-- coded limit on the total number of bytes of reference scripts that a transaction can
+-- use.
+maxRefScriptSizePerTx :: Int
+maxRefScriptSizePerTx = 1024 * 1024 -- 1MiB
 
 type instance EraRuleFailure "LEDGER" (ConwayEra c) = ConwayLedgerPredFailure (ConwayEra c)
 
@@ -247,6 +261,7 @@ instance
         Sum (ConwayWdrlNotDelegatedToDRep @era) 4 !> To x
       ConwayTreasuryValueMismatch actual submitted ->
         Sum (ConwayTreasuryValueMismatch @era) 5 !> To actual !> To submitted
+      ConwayTxRefScriptsSizeTooBig x y -> Sum ConwayTxRefScriptsSizeTooBig 6 !> To x !> To y
 
 instance
   ( Era era
@@ -263,6 +278,7 @@ instance
       3 -> SumD ConwayGovFailure <! From
       4 -> SumD ConwayWdrlNotDelegatedToDRep <! From
       5 -> SumD ConwayTreasuryValueMismatch <! From <! From
+      6 -> SumD ConwayTxRefScriptsSizeTooBig <! From <! From
       n -> Invalid n
 
 data ConwayLedgerEvent era
@@ -365,6 +381,11 @@ ledgerTransition = do
             submittedTreasuryValue
               == actualTreasuryValue
                 ?! ConwayTreasuryValueMismatch actualTreasuryValue submittedTreasuryValue
+
+        let totalRefScriptSize = txNonDistinctRefScriptsSize (utxoState ^. utxosUtxoL) tx
+        totalRefScriptSize
+          <= maxRefScriptSizePerTx
+            ?! ConwayTxRefScriptsSizeTooBig totalRefScriptSize maxRefScriptSizePerTx
 
         let govState = utxoState ^. utxosGovStateL
             committee = govState ^. committeeGovStateL

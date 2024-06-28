@@ -7,6 +7,7 @@
 * Added `certsCurrentCommittee` and `certsCommitteeProposals` to `CertsEnv`
 * Added `cgceCurrentCommittee` and `cgceCommitteeProposals` to `ConwayGovCertEnv`
 * Added `proposalsWithPurpose`, `isGovActionWithPurpose` and `ToGovActionPurpose`
+* Added `ConwayTxRefScriptsSizeTooBig` predicate failure to `ConwayLedgerPredFailure`
 
 ## 1.15.1.0
 

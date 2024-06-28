@@ -49,5 +49,5 @@ mkDummySafeHash _ = unsafeMakeSafeHash . mkDummyHash @(HASH c)
 
 txInAt :: (HasCallStack, Integral i, EraTx era) => i -> Tx era -> TxIn (EraCrypto era)
 txInAt index tx =
-  let txid = txIdTx tx
-   in mkTxInPartial txid (toInteger index)
+  let txId = txIdTx tx
+   in mkTxInPartial txId (toInteger index)
