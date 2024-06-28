@@ -355,14 +355,6 @@ ledgerTransition ::
 ledgerTransition = do
   TRC (LedgerEnv slot _txIx pp account, LedgerState utxoState certState, tx) <- judgmentContext
 
-  let actualTreasuryValue = account ^. asTreasuryL
-   in case tx ^. bodyTxL . currentTreasuryValueTxBodyL of
-        SNothing -> pure ()
-        SJust submittedTreasuryValue ->
-          submittedTreasuryValue
-            == actualTreasuryValue
-              ?! ConwayTreasuryValueMismatch actualTreasuryValue submittedTreasuryValue
-
   currentEpoch <- liftSTS $ do
     ei <- asks epochInfoPure
     epochInfoEpoch ei slot
@@ -372,6 +364,14 @@ ledgerTransition = do
   (utxoState', certStateAfterCERTS) <-
     if tx ^. isValidTxL == IsValid True
       then do
+        let actualTreasuryValue = account ^. asTreasuryL
+         in case tx ^. bodyTxL . currentTreasuryValueTxBodyL of
+              SNothing -> pure ()
+              SJust submittedTreasuryValue ->
+                submittedTreasuryValue
+                  == actualTreasuryValue
+                    ?! ConwayTreasuryValueMismatch actualTreasuryValue submittedTreasuryValue
+
         let govState = utxoState ^. utxosGovStateL
             committee = govState ^. committeeGovStateL
             proposals = govState ^. proposalsGovStateL
