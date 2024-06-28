@@ -56,6 +56,22 @@ relevantDuringBootstrapSpec ::
 relevantDuringBootstrapSpec = do
   spoVotesForHardForkInitiation
   initiateHardForkWithLessThanMinimalCommitteeSize
+  it "Many CC Cold Credentials map to the same Hot Credential act as many votes" $ do
+    hotCred NE.:| _ <- registerInitialCommittee
+    (dRep, _, _) <- setupSingleDRep . getPositive =<< arbitrary
+    Positive deposit <- arbitrary
+    gaId <- submitParameterChange SNothing $ def & ppuDRepDepositL .~ SJust (Coin deposit)
+    submitYesVote_ (CommitteeVoter hotCred) gaId
+    whenPostBootstrap $ submitYesVote_ (DRepVoter dRep) gaId
+    passNEpochs 2
+    getLastEnactedParameterChange `shouldReturn` SNothing
+    -- Make sure all committee members authorize the same hot credential that just voted:
+    committeeMembers' <- Set.toList <$> getCommitteeMembers
+    case committeeMembers' of
+      x : xs -> void $ registerCommitteeHotKeys (pure hotCred) $ x NE.:| xs
+      _ -> error "Expected an initial committee"
+    passNEpochs 2
+    getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId gaId)
 
 initiateHardForkWithLessThanMinimalCommitteeSize ::
   forall era.
