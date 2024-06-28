@@ -12,7 +12,8 @@
 
 ### `testlib`
 
-* Change ther= return type of `resignCommitteeColdKey`
+* Change the return type of `resignCommitteeColdKey`
+* Add an argument to `registerCommitteeHotKeys`
 
 ## 1.15.1.0
 

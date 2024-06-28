@@ -339,7 +339,7 @@ registerInitialCommittee ::
 registerInitialCommittee = do
   committeeMembers <- Set.toList <$> getCommitteeMembers
   case committeeMembers of
-    x : xs -> registerCommitteeHotKeys $ x NE.:| xs
+    x : xs -> registerCommitteeHotKeys (KeyHashObj <$> freshKeyHash) $ x NE.:| xs
     _ -> error "Expected an initial committee"
 
 -- | Submit a transaction that registers a new DRep and return the keyhash
@@ -1161,15 +1161,17 @@ registerCommitteeHotKey ::
   Credential 'ColdCommitteeRole (EraCrypto era) ->
   ImpTestM era (Credential 'HotCommitteeRole (EraCrypto era))
 registerCommitteeHotKey coldKey = do
-  hotKey NE.:| [] <- registerCommitteeHotKeys $ pure coldKey
+  hotKey NE.:| [] <- registerCommitteeHotKeys (KeyHashObj <$> freshKeyHash) $ pure coldKey
   pure hotKey
 
 registerCommitteeHotKeys ::
   (ShelleyEraImp era, ConwayEraTxCert era) =>
+  -- | Hot Credential generator
+  ImpTestM era (Credential 'HotCommitteeRole (EraCrypto era)) ->
   NonEmpty (Credential 'ColdCommitteeRole (EraCrypto era)) ->
   ImpTestM era (NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)))
-registerCommitteeHotKeys coldKeys = do
-  keys <- forM coldKeys (\coldKey -> (,) coldKey . KeyHashObj <$> freshKeyHash)
+registerCommitteeHotKeys genHotCred coldKeys = do
+  keys <- forM coldKeys (\coldKey -> (,) coldKey <$> genHotCred)
   submitTxAnn_ "Registering Committee Hot keys" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
