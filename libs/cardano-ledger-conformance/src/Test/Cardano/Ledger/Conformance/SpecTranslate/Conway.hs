@@ -53,6 +53,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUtxoPredFailure,
   EnactSignal (..),
   GovEnv (..),
+  GovSignal (..),
  )
 import Cardano.Ledger.Conway.Scripts (AlonzoScript, ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
@@ -872,13 +873,13 @@ instance
   , SpecTranslate ctx (PParamsHKD StrictMaybe era)
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   ) =>
-  SpecTranslate ctx (GovProcedures era)
+  SpecTranslate ctx (GovSignal era)
   where
-  type SpecRep (GovProcedures era) = [Agda.GovSignal]
+  type SpecRep (GovSignal era) = [Agda.GovSignal]
 
-  toSpecRep GovProcedures {..} = do
-    votingProcedures <- toSpecRep gpVotingProcedures
-    proposalProcedures <- toSpecRep gpProposalProcedures
+  toSpecRep GovSignal {gsVotingProcedures, gsProposalProcedures} = do
+    votingProcedures <- toSpecRep gsVotingProcedures
+    proposalProcedures <- toSpecRep gsProposalProcedures
     pure $
       mconcat
         [ Agda.GovSignalVote <$> votingProcedures

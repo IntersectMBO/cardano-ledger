@@ -599,10 +599,12 @@ instance (Era era, Arbitrary (PParamsUpdate era)) => Arbitrary (ProposalProcedur
     | (dep', ret', gov', anch') <- shrink (dep, ret, gov, anch)
     ]
 
-instance (EraPParams era, Arbitrary (PParamsUpdate era)) => Arbitrary (GovProcedures era) where
-  arbitrary =
-    GovProcedures <$> arbitrary <*> arbitrary
-  shrink (GovProcedures vp pp) = [GovProcedures vp' pp' | (vp', pp') <- shrink (vp, pp)]
+instance
+  (EraPParams era, Arbitrary (PParamsUpdate era), Arbitrary (TxCert era)) =>
+  Arbitrary (GovSignal era)
+  where
+  arbitrary = GovSignal <$> arbitrary <*> arbitrary <*> arbitrary
+  shrink (GovSignal vp pp cs) = [GovSignal vp' pp' cs' | (vp', pp', cs') <- shrink (vp, pp, cs)]
 
 instance
   ( Era era

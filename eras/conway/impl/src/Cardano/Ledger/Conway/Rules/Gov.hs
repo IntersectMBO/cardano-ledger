@@ -21,6 +21,7 @@
 module Cardano.Ledger.Conway.Rules.Gov (
   ConwayGOV,
   GovEnv (..),
+  GovSignal (..),
   ConwayGovEvent (..),
   ConwayGovPredFailure (..),
 ) where
@@ -52,7 +53,6 @@ import Cardano.Ledger.Binary.Coders (
  )
 import Cardano.Ledger.CertState (
   CertState (..),
-  CommitteeAuthorization (..),
   CommitteeState (..),
   PState (..),
   VState (..),
@@ -64,7 +64,6 @@ import Cardano.Ledger.Conway.Governance (
   GovActionId (..),
   GovActionPurpose (..),
   GovActionState (..),
-  GovProcedures (..),
   GovPurposeId (..),
   GovRelation (..),
   ProposalProcedure (..),
@@ -261,6 +260,18 @@ data ConwayGovEvent era
 
 instance EraPParams era => NFData (ConwayGovEvent era)
 
+data GovSignal era = GovSignal
+  { gsVotingProcedures :: !(VotingProcedures era)
+  , gsProposalProcedures :: !(OSet.OSet (ProposalProcedure era))
+  , gsCertificates :: !(SSeq.StrictSeq (TxCert era))
+  }
+  deriving (Generic)
+
+deriving instance (EraPParams era, Eq (TxCert era)) => Eq (GovSignal era)
+deriving instance (EraPParams era, Show (TxCert era)) => Show (GovSignal era)
+
+instance (EraPParams era, NFData (TxCert era)) => NFData (GovSignal era)
+
 instance
   ( ConwayEraPParams era
   , EraRule "GOV" era ~ ConwayGOV era
@@ -269,7 +280,7 @@ instance
   STS (ConwayGOV era)
   where
   type State (ConwayGOV era) = Proposals era
-  type Signal (ConwayGOV era) = GovProcedures era
+  type Signal (ConwayGOV era) = GovSignal era
   type Environment (ConwayGOV era) = GovEnv era
   type BaseM (ConwayGOV era) = ShelleyBase
   type PredicateFailure (ConwayGOV era) = ConwayGovPredFailure era
@@ -365,7 +376,7 @@ govTransition ::
   ( ConwayEraPParams era
   , STS (EraRule "GOV" era)
   , Event (EraRule "GOV" era) ~ ConwayGovEvent era
-  , Signal (EraRule "GOV" era) ~ GovProcedures era
+  , Signal (EraRule "GOV" era) ~ GovSignal era
   , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
   , BaseM (EraRule "GOV" era) ~ ShelleyBase
   , Environment (EraRule "GOV" era) ~ GovEnv era
@@ -377,7 +388,7 @@ govTransition = do
   TRC
     ( GovEnv txid currentEpoch pp constitutionPolicy CertState {certPState, certVState}
       , st
-      , gp
+      , GovSignal {gsVotingProcedures, gsProposalProcedures, gsCertificates}
       ) <-
     judgmentContext
   let prevGovActionIds = st ^. pRootsL . L.to toPrevGovActionIds
@@ -457,16 +468,15 @@ govTransition = do
               Nothing -> ps <$ failBecause (InvalidPrevGovActionId proposal)
 
   proposals <-
-    foldlM'
-      processProposal
-      st
-      (indexedGovProps $ SSeq.fromStrict $ OSet.toStrictSeq $ gpProposalProcedures gp)
+    foldlM' processProposal st $
+      indexedGovProps $
+        SSeq.fromStrict $
+          OSet.toStrictSeq $
+            gsProposalProcedures
 
-  -- Voting
-  let votingProcedures = gpVotingProcedures gp
-      -- Inversion of the keys in VotingProcedures, where we can find
-      -- the voters for every govActionId
-      (unknownGovActionIds, knownVotes) =
+  -- Inversion of the keys in VotingProcedures, where we can find the voters for every
+  -- govActionId
+  let (unknownGovActionIds, knownVotes) =
         foldrVotingProcedures
           -- strictness is not needed for `unknown`
           ( \voter gaId _ (unknown, !known) ->
@@ -475,7 +485,7 @@ govTransition = do
                 Nothing -> (gaId : unknown, known)
           )
           ([], [])
-          votingProcedures
+          gsVotingProcedures
       curGovActionIds = proposalsActionsMap proposals
       isVoterKnown = \case
         CommitteeVoter hotCred -> hotCred `Set.member` knownCommitteeMembers
@@ -483,7 +493,7 @@ govTransition = do
         StakePoolVoter poolId -> poolId `Map.member` knownStakePools
       unknownVoters =
         Map.keys $
-          Map.filterWithKey (\voter _ -> not (isVoterKnown voter)) (unVotingProcedures votingProcedures)
+          Map.filterWithKey (\voter _ -> not (isVoterKnown voter)) (unVotingProcedures gsVotingProcedures)
 
   failOnNonEmpty unknownVoters VotersDoNotExist
   failOnNonEmpty unknownGovActionIds GovActionsDoNotExist
@@ -494,7 +504,7 @@ govTransition = do
   let
     addVoterVote ps voter govActionId VotingProcedure {vProcVote} =
       proposalsAddVote voter vProcVote govActionId ps
-    updatedProposalStates = foldlVotingProcedures addVoterVote proposals votingProcedures
+    updatedProposalStates = foldlVotingProcedures addVoterVote proposals gsVotingProcedures
 
   -- Report the event
   tellEvent $ GovNewProposals txid updatedProposalStates
