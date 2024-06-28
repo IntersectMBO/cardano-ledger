@@ -157,16 +157,7 @@ import Cardano.Ledger.Conway.Rules (
   validCommitteeTerm,
   withdrawalCanWithdraw,
  )
-import Cardano.Ledger.Conway.TxCert (
-  ConwayEraTxCert (..),
-  Delegatee (..),
-  pattern AuthCommitteeHotKeyTxCert,
-  pattern RegDRepTxCert,
-  pattern RegDepositDelegTxCert,
-  pattern ResignCommitteeColdTxCert,
-  pattern UnRegDRepTxCert,
-  pattern UpdateDRepTxCert,
- )
+import Cardano.Ledger.Conway.TxCert (Delegatee (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep
@@ -426,7 +417,7 @@ setupDRepWithoutStake = do
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.fromList
-          [ mkRegDepositDelegTxCert @era
+          [ RegDepositDelegTxCert @era
               (KeyHashObj delegatorKH)
               (DelegVote (DRepCredential $ KeyHashObj drepKH))
               deposit
@@ -460,7 +451,7 @@ setupSingleDRep stake = do
           )
       & bodyTxL . certsTxBodyL
         .~ SSeq.fromList
-          [ mkRegDepositDelegTxCert @era
+          [ RegDepositDelegTxCert @era
               (KeyHashObj delegatorKH)
               (DelegVote (DRepCredential $ KeyHashObj drepKH))
               zero

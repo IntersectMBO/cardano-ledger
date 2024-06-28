@@ -517,7 +517,8 @@ instance
   wrapEvent = LedgerEvent
 
 instance
-  ( ConwayEraPParams era
+  ( ConwayEraTxCert era
+  , ConwayEraPParams era
   , BaseM (ConwayLEDGER era) ~ ShelleyBase
   , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
   , Event (EraRule "GOV" era) ~ ConwayGovEvent era

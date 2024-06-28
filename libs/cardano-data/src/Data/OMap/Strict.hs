@@ -22,6 +22,7 @@ module Data.OMap.Strict (
   lookup,
   member,
   (!?),
+  mapUnsafe,
   fromSet,
   fromFoldable,
   fromFoldableDuplicates,
@@ -326,6 +327,11 @@ adjust f k omap@(OMap sseq kv) =
                in case Map.lookup k' kv of
                     Nothing -> OMap (lseq <> (k' SSeq.:<| rseq)) kv'
                     Just _ -> OMap (lseq <> rseq) kv'
+
+-- | This mapping function is only safe when the key stored in the new value matches the
+-- key stored in the new value. This invariant is not checked for performance reasons
+mapUnsafe :: (v1 -> v2) -> OMap k v1 -> OMap k v2
+mapUnsafe f (OMap sseq kv) = OMap sseq (Map.map f kv)
 
 -- | \(O(1)\)
 pattern Empty :: OMap k v

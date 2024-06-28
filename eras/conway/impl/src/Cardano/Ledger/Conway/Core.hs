@@ -29,6 +29,16 @@ module Cardano.Ledger.Conway.Core (
   ConwayEraScript (..),
   pattern VotingPurpose,
   pattern ProposingPurpose,
+  ConwayEraTxCert,
+  pattern RegDepositTxCert,
+  pattern UnRegDepositTxCert,
+  pattern DelegTxCert,
+  pattern RegDepositDelegTxCert,
+  pattern AuthCommitteeHotKeyTxCert,
+  pattern ResignCommitteeColdTxCert,
+  pattern RegDRepTxCert,
+  pattern UnRegDRepTxCert,
+  pattern UpdateDRepTxCert,
   module Cardano.Ledger.Babbage.Core,
 )
 where
@@ -67,3 +77,15 @@ import Cardano.Ledger.Conway.Scripts (
  )
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxBody (ConwayEraTxBody (..))
+import Cardano.Ledger.Conway.TxCert (
+  ConwayEraTxCert,
+  pattern AuthCommitteeHotKeyTxCert,
+  pattern DelegTxCert,
+  pattern RegDRepTxCert,
+  pattern RegDepositDelegTxCert,
+  pattern RegDepositTxCert,
+  pattern ResignCommitteeColdTxCert,
+  pattern UnRegDRepTxCert,
+  pattern UnRegDepositTxCert,
+  pattern UpdateDRepTxCert,
+ )
