@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Alonzo.TreeDiff (
   module Test.Cardano.Ledger.Mary.TreeDiff,
 ) where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (AlonzoEra, AlonzoLedgerState (..))
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Plutus.Context
@@ -181,3 +181,11 @@ instance
         , ("pwcExUnits", toExpr pwcExUnits)
         , ("pwcCostModel", toExpr pwcCostModel)
         ]
+
+-- LedgerState
+
+instance
+  ( ToExpr (TxOut era)
+  , ToExpr (GovState era)
+  ) =>
+  ToExpr (AlonzoLedgerState era)

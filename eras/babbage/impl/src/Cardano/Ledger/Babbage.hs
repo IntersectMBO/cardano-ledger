@@ -16,6 +16,7 @@ module Cardano.Ledger.Babbage (
   BabbageTxBody,
   AlonzoScript,
   AlonzoTxAuxData,
+  BabbageLedgerState (..),
 )
 where
 
@@ -24,7 +25,7 @@ import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..))
 import Cardano.Ledger.Babbage.Core
-import Cardano.Ledger.Babbage.Era (BabbageEra)
+import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageLedgerState (..))
 import Cardano.Ledger.Babbage.Rules ()
 import Cardano.Ledger.Babbage.Transition ()
 import Cardano.Ledger.Babbage.Translation ()

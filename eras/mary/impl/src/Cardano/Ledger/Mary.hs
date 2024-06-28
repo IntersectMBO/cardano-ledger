@@ -10,6 +10,7 @@
 module Cardano.Ledger.Mary (
   Mary,
   MaryEra,
+  MaryLedgerState (..),
   ShelleyTx,
   ShelleyTxOut,
   MaryValue,
@@ -20,7 +21,7 @@ where
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (DSignable)
-import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.Era (MaryEra, MaryLedgerState (..))
 import Cardano.Ledger.Mary.PParams ()
 import Cardano.Ledger.Mary.Rules ()
 import Cardano.Ledger.Mary.Scripts ()

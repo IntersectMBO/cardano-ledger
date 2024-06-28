@@ -40,6 +40,7 @@ import Cardano.Ledger.Babel.Era (
   BabelLEDGER,
   BabelUTXOW,
  )
+import Cardano.Ledger.Babel.LedgerState.Types (BabelLedgerState)
 import Cardano.Ledger.Babel.Rules.Cert ()
 import Cardano.Ledger.Babel.Rules.Certs ()
 import Cardano.Ledger.Babel.Rules.Deleg ()
@@ -83,7 +84,7 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
-  LedgerState (..),
+  HasLedgerState (..),
   UTxOState (..),
   asTreasuryL,
   certVStateL,
@@ -287,10 +288,12 @@ instance
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovProcedures era
+  , HasLedgerState era
+  , EraLedgerState era ~ BabelLedgerState era
   ) =>
   STS (BabelLEDGER era)
   where
-  type State (BabelLEDGER era) = LedgerState era
+  type State (BabelLEDGER era) = BabelLedgerState era
   type Signal (BabelLEDGER era) = Tx era
   type Environment (BabelLEDGER era) = LedgerEnv era
   type BaseM (BabelLEDGER era) = ShelleyBase
@@ -313,7 +316,7 @@ ledgerTransition ::
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
   , Signal (someLEDGER era) ~ Tx era
-  , State (someLEDGER era) ~ LedgerState era
+  , State (someLEDGER era) ~ BabelLedgerState era
   , Environment (someLEDGER era) ~ LedgerEnv era
   , PredicateFailure (someLEDGER era) ~ BabelLedgerPredFailure era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
@@ -333,7 +336,7 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot _txIx pp account, LedgerState utxoState certState, tx) <- judgmentContext
+  TRC (LedgerEnv slot _txIx pp account, st, tx) <- judgmentContext
 
   let actualTreasuryValue = account ^. asTreasuryL
    in case tx ^. bodyTxL . currentTreasuryValueTxBodyL of

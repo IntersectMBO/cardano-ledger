@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Babbage.TreeDiff (
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo.Rules
-import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage (BabbageEra, BabbageLedgerState)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules
@@ -86,3 +86,11 @@ instance
   , ToExpr (TxCert era)
   ) =>
   ToExpr (BabbageUtxowPredFailure era)
+
+-- LedgerState
+
+instance
+  ( ToExpr (TxOut era)
+  , ToExpr (GovState era)
+  ) =>
+  ToExpr (BabbageLedgerState era)

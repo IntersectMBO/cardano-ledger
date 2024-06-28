@@ -1,8 +1,15 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Conway.Era (
   ConwayEra,
+  ConwayLedgerState (..),
   ConwayCERT,
   ConwayDELEG,
   ConwayGOVCERT,
@@ -21,16 +28,34 @@ module Cardano.Ledger.Conway.Era (
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.Core (EraGov (..))
+import Cardano.Ledger.Binary (EncCBOR, decNoShareCBOR)
+import Cardano.Ledger.Binary.Decoding (DecCBOR (..), DecShareCBOR (..), Interns)
+import Cardano.Ledger.Binary.Encoding (EncCBOR (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.LedgerState (
+  HasLedgerState (..),
+  LedgerState,
+  lsCertStateL,
+  lsUTxOStateL,
+ )
 import Cardano.Ledger.Shelley.Rules (
   ShelleyPOOL,
   ShelleyRUPD,
   ShelleySNAP,
   ShelleyTICK,
  )
+import Control.DeepSeq (NFData)
+import Data.Default.Class (Default)
+import GHC.Generics (Generic)
+import Lens.Micro (lens)
+import Lens.Micro.Type (Lens')
+import NoThunks.Class (NoThunks)
 
 -- =====================================================
 
@@ -46,6 +71,70 @@ instance Crypto c => Era (ConwayEra c) where
   eraName = "Conway"
 
 type instance Value (ConwayEra c) = MaryValue c
+
+newtype ConwayLedgerState era = ConwayLedgerState {unConwayLedgerState :: LedgerState era}
+  deriving (Generic, Default)
+
+conwayLedgerStateL :: Lens' (ConwayLedgerState era) (LedgerState era)
+conwayLedgerStateL = lens unConwayLedgerState (\x y -> x {unConwayLedgerState = y})
+
+instance (Crypto c, EraGov (ConwayEra c), EraTxOut (ConwayEra c)) => HasLedgerState (ConwayEra c) where
+  type EraLedgerState (ConwayEra c) = ConwayLedgerState (ConwayEra c)
+  hlsUTxOStateL = conwayLedgerStateL . lsUTxOStateL
+  hlsCertStateL = conwayLedgerStateL . lsCertStateL
+
+deriving stock instance
+  ( EraTxOut era
+  , Show (GovState era)
+  ) =>
+  Show (ConwayLedgerState era)
+
+deriving stock instance
+  ( EraTxOut era
+  , Eq (GovState era)
+  ) =>
+  Eq (ConwayLedgerState era)
+
+instance
+  ( EraTxOut era
+  , NoThunks (GovState era)
+  ) =>
+  NoThunks (ConwayLedgerState era)
+
+instance
+  ( EraTxOut era
+  , NFData (GovState era)
+  ) =>
+  NFData (ConwayLedgerState era)
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  EncCBOR (ConwayLedgerState era)
+  where
+  encCBOR (ConwayLedgerState ls) = encCBOR ls
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  DecCBOR (ConwayLedgerState era)
+  where
+  decCBOR = decNoShareCBOR
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  DecShareCBOR (ConwayLedgerState era)
+  where
+  type
+    Share (ConwayLedgerState era) =
+      ( Interns (Credential 'Staking (EraCrypto era))
+      , Interns (KeyHash 'StakePool (EraCrypto era))
+      )
+  decSharePlusCBOR = ConwayLedgerState <$> decSharePlusCBOR
 
 -------------------------------------------------------------------------------
 -- Deprecated rules

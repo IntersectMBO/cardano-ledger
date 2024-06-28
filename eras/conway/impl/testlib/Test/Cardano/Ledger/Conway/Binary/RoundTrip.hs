@@ -44,6 +44,7 @@ roundTripConwayCommonSpec ::
   , Arbitrary (PParamsUpdate era)
   , Arbitrary (PParamsHKD StrictMaybe era)
   , RuleListEra era
+  , HasLedgerState era
   ) =>
   Spec
 roundTripConwayCommonSpec = do

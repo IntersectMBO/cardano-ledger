@@ -18,11 +18,14 @@ module Cardano.Ledger.Conway.Translation (
 ) where
 
 import Cardano.Ledger.Address (addrPtrNormalize)
-import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage (
+  BabbageEra,
+  BabbageLedgerState (BabbageLedgerState, unBabbageLedgerState),
+ )
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Conway.Core hiding (Tx)
-import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Era (ConwayEra, ConwayLedgerState (..))
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (
   cgsCommitteeL,
@@ -49,9 +52,7 @@ import Cardano.Ledger.Shelley.API (
   VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.LedgerState (
-  epochStateGovStateL,
- )
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), epochStateGovStateL)
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -123,13 +124,22 @@ instance Crypto c => TranslateEra (ConwayEra c) Tx where
 instance Crypto c => TranslateEra (ConwayEra c) PParams where
   translateEra ConwayGenesis {cgUpgradePParams} = pure . upgradePParams cgUpgradePParams
 
+instance Crypto c => TranslateEra (ConwayEra c) BabbageLedgerState where
+  translateEra ctxt (BabbageLedgerState ls) =
+    return $
+      BabbageLedgerState $
+        LedgerState
+          { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
+          , lsCertState = translateEra' ctxt $ lsCertState ls
+          }
+
 instance Crypto c => TranslateEra (ConwayEra c) EpochState where
   translateEra ctxt es =
     pure $
       EpochState
         { esAccountState = esAccountState es
         , esSnapshots = esSnapshots es
-        , esLState = translateEra' ctxt $ esLState es
+        , esLState = ConwayLedgerState . unBabbageLedgerState . translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 

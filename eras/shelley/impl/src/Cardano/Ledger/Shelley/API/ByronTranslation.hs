@@ -28,7 +28,7 @@ import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.Core
-import Cardano.Ledger.Shelley.LedgerState.Types (curPParamsEpochStateL, prevPParamsEpochStateL)
+import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import qualified Cardano.Ledger.UMap as UM
@@ -115,7 +115,7 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
       -- to do a linear scan of the UTxO, and stash them away for use at the
       -- Shelley/Allegra boundary.
       stashedAVVMAddresses =
-        let UTxO utxo = utxosUtxo . lsUTxOState . esLState $ epochState
+        let UTxO utxo = utxosUtxo . view hlsUTxOStateL . esLState $ epochState
             redeemers =
               Map.filter (maybe False isBootstrapRedeemer . view bootAddrTxOutF) utxo
          in UTxO redeemers
@@ -160,26 +160,25 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
     utxoShelley :: UTxO (ShelleyEra c)
     utxoShelley = translateUTxOByronToShelley utxoByron
 
-    ledgerState :: LedgerState (ShelleyEra c)
+    ledgerState :: EraLedgerState (ShelleyEra c)
     ledgerState =
-      LedgerState
-        { lsUTxOState =
-            UTxOState
-              { utxosUtxo = utxoShelley
-              , utxosFrxo = mempty
-              , utxosDeposited = Coin 0
-              , utxosFees = Coin 0
-              , utxosGovState = emptyGovState
-              , utxosStakeDistr = IStake mempty Map.empty
-              , utxosDonation = mempty
-              }
-        , lsCertState =
-            CertState
-              { certDState = dState
-              , certPState = def
-              , certVState = def
-              }
-        }
+      EraLedgerState
+        ( UTxOState
+            { utxosUtxo = utxoShelley
+            , utxosFrxo = mempty
+            , utxosDeposited = Coin 0
+            , utxosFees = Coin 0
+            , utxosGovState = emptyGovState
+            , utxosStakeDistr = IStake mempty Map.empty
+            , utxosDonation = mempty
+            }
+        )
+        ( CertState
+            { certDState = dState
+            , certPState = def
+            , certVState = def
+            }
+        )
 
     dState :: DState (ShelleyEra c)
     dState =

@@ -145,6 +145,7 @@ instance
   , ToExpr (PParams era)
   , ToExpr (StashedAVVMAddresses era)
   , ToExpr (GovState era)
+  , ToExpr (EraLedgerState era)
   ) =>
   ToExpr (NewEpochState era)
 
@@ -152,6 +153,7 @@ instance
   ( ToExpr (TxOut era)
   , ToExpr (PParams era)
   , ToExpr (GovState era)
+  , ToExpr (EraLedgerState era)
   ) =>
   ToExpr (EpochState era)
 
@@ -160,6 +162,12 @@ instance
   , ToExpr (GovState era)
   ) =>
   ToExpr (LedgerState era)
+
+instance
+  ( ToExpr (TxOut era)
+  , ToExpr (GovState era)
+  ) =>
+  ToExpr (ShelleyLedgerState era)
 
 instance
   ( ToExpr (TxOut era)

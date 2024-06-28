@@ -27,12 +27,12 @@ import Cardano.Ledger.Crypto
 import Cardano.Ledger.DRep (DRepState)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (
+  HasLedgerState (..),
   NewEpochState,
   certDStateL,
   certVStateL,
   dsUnifiedL,
   esLStateL,
-  lsCertStateL,
   nesEsL,
   vsDRepsL,
  )
@@ -71,7 +71,7 @@ class EraTransition era => ConwayEraTransition era where
   tcConwayGenesisL :: Lens' (TransitionConfig era) (ConwayGenesis (EraCrypto era))
 
 registerDRepsThenDelegs ::
-  ConwayEraTransition era =>
+  (ConwayEraTransition era, HasLedgerState era) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
@@ -130,25 +130,25 @@ instance Crypto c => FromJSON (TransitionConfig (ConwayEra c)) where
     pure $ mkTransitionConfig pc ag
 
 registerInitialDReps ::
-  ConwayEraTransition era =>
+  (ConwayEraTransition era, HasLedgerState era) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
 registerInitialDReps cfg =
-  nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL .~ drepsMap
+  nesEsL . esLStateL . hlsCertStateL . certVStateL . vsDRepsL .~ drepsMap
   where
     drepsMap = ListMap.toMap $ cfg ^. tcInitialDRepsL
 
 registerDelegs ::
   forall era.
-  ConwayEraTransition era =>
+  (ConwayEraTransition era, HasLedgerState era) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
 registerDelegs cfg =
   nesEsL
     . esLStateL
-    . lsCertStateL
+    . hlsCertStateL
     . certDStateL
     . dsUnifiedL
     . umElemsL

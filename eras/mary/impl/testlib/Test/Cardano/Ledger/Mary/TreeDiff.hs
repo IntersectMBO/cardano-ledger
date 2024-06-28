@@ -12,6 +12,8 @@ module Test.Cardano.Ledger.Mary.TreeDiff (
 ) where
 
 import Cardano.Ledger.Core
+import Cardano.Ledger.Mary (MaryLedgerState)
+import Cardano.Ledger.Mary.Core (GovState)
 import Cardano.Ledger.Mary.TxBody
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Shelley.PParams
@@ -45,3 +47,11 @@ instance
   , ToExpr (Update era)
   ) =>
   ToExpr (MaryTxBody era)
+
+-- LedgerState
+
+instance
+  ( ToExpr (TxOut era)
+  , ToExpr (GovState era)
+  ) =>
+  ToExpr (MaryLedgerState era)

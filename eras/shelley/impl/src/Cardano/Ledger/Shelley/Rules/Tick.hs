@@ -43,11 +43,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   DState (..),
   EpochState (..),
   FutureGenDeleg (..),
-  LedgerState (..),
   NewEpochState (..),
   PulsingRewUpdate,
   UTxOState (..),
   curPParamsEpochStateL,
+ )
+import Cardano.Ledger.Shelley.LedgerState.Types (
+  HasLedgerState (EraLedgerState, hlsUTxOStateL),
+  hlsCertStateL,
  )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (
   ShelleyNEWEPOCH,
@@ -123,7 +126,8 @@ instance
   NFData (ShelleyTickEvent era)
 
 instance
-  ( Era era
+  ( HasLedgerState era
+  , Era era
   , Embed (EraRule "NEWEPOCH" era) (ShelleyTICK era)
   , Embed (EraRule "RUPD" era) (ShelleyTICK era)
   , State (ShelleyTICK era) ~ NewEpochState era
@@ -148,13 +152,14 @@ instance
   transitionRules = [bheadTransition]
 
 adoptGenesisDelegs ::
+  HasLedgerState era =>
   EpochState era ->
   SlotNo ->
   EpochState era
 adoptGenesisDelegs es slot = es'
   where
     ls = esLState es
-    dp = lsCertState ls
+    dp = ls ^. hlsCertStateL
     ds = certDState dp
     fGenDelegs = dsFutureGenDelegs ds
     GenDelegs genDelegs = dsGenDelegs ds
@@ -173,7 +178,7 @@ adoptGenesisDelegs es slot = es'
         , dsGenDelegs = GenDelegs $ eval (genDelegs ⨃ genDelegs')
         }
     dp' = dp {certDState = ds'}
-    ls' = ls {lsCertState = dp'}
+    ls' = ls & hlsCertStateL .~ dp'
     es' = es {esLState = ls'}
 
 -- | This is a limited version of 'bheadTransition' which is suitable for the
@@ -187,6 +192,7 @@ validatingTickTransition ::
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
+  , HasLedgerState era
   ) =>
   NewEpochState era ->
   SlotNo ->
@@ -209,11 +215,12 @@ validatingTickTransitionFORECAST ::
   , BaseM (tick era) ~ ShelleyBase
   , State (EraRule "UPEC" era) ~ UpecState era
   , Signal (EraRule "UPEC" era) ~ ()
-  , Environment (EraRule "UPEC" era) ~ LedgerState era
+  , Environment (EraRule "UPEC" era) ~ EraLedgerState era
   , Embed (EraRule "UPEC" era) (tick era)
   , STS (tick era)
   , GovState era ~ ShelleyGovState era
   , EraGov era
+  , HasLedgerState era
   ) =>
   NewEpochState era ->
   SlotNo ->
@@ -249,13 +256,14 @@ validatingTickTransitionFORECAST nes slot = do
 
       let pp = es ^. curPParamsEpochStateL
           ls = esLState es
-          updates = utxosGovState $ lsUTxOState ls
+          updates = utxosGovState $ ls ^. hlsUTxOStateL
       UpecState pp' _ <-
         trans @(EraRule "UPEC" era) $
           TRC (ls, UpecState pp updates, ())
       let es' =
             adoptGenesisDelegs es slot
-              & curPParamsEpochStateL .~ pp'
+              & curPParamsEpochStateL
+              .~ pp'
 
       pure $!
         nes
@@ -276,6 +284,7 @@ bheadTransition ::
   , Environment (EraRule "NEWEPOCH" era) ~ ()
   , State (EraRule "NEWEPOCH" era) ~ NewEpochState era
   , Signal (EraRule "NEWEPOCH" era) ~ EpochNo
+  , HasLedgerState era
   ) =>
   TransitionRule (ShelleyTICK era)
 bheadTransition = do
@@ -356,9 +365,10 @@ instance
   , State (EraRule "PPUP" era) ~ ShelleyGovState era
   , Signal (EraRule "UPEC" era) ~ ()
   , State (EraRule "UPEC" era) ~ UpecState era
-  , Environment (EraRule "UPEC" era) ~ LedgerState era
+  , Environment (EraRule "UPEC" era) ~ EraLedgerState era
   , Embed (EraRule "UPEC" era) (ShelleyTICKF era)
   , GovState era ~ ShelleyGovState era
+  , HasLedgerState era
   ) =>
   STS (ShelleyTICKF era)
   where

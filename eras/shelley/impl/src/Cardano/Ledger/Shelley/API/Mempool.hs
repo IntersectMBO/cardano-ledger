@@ -52,6 +52,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
+import Cardano.Ledger.Shelley.LedgerState.Types (HasLedgerState (EraLedgerState))
 import Cardano.Ledger.Shelley.Rules ()
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
@@ -178,7 +179,7 @@ instance
 
 type MempoolEnv era = Ledger.LedgerEnv era
 
-type MempoolState era = LedgerState.LedgerState era
+type MempoolState era = EraLedgerState era
 
 -- | Construct the environment used to validate transactions from the full
 -- ledger state.
@@ -194,7 +195,7 @@ type MempoolState era = LedgerState.LedgerState era
 --   included until a certain number of slots before the end of the epoch. A
 --   protocol update proposal submitted after this is considered invalid.
 mkMempoolEnv ::
-  EraGov era =>
+  (EraGov era, HasLedgerState era) =>
   NewEpochState era ->
   SlotNo ->
   MempoolEnv era
@@ -273,7 +274,7 @@ instance
 
 -- | Old 'applyTxs'
 applyTxs ::
-  (ApplyTx era, MonadError (ApplyTxError era) m, EraGov era) =>
+  (ApplyTx era, MonadError (ApplyTxError era) m, EraGov era, HasLedgerState era) =>
   Globals ->
   SlotNo ->
   Seq (Tx era) ->

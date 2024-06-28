@@ -79,6 +79,7 @@ library
         cardano-ledger-core ^>=1.12,
         cardano-ledger-shelley ^>=1.11,
         containers,
+        data-default-class,
         deepseq,
         groups,
         microlens,

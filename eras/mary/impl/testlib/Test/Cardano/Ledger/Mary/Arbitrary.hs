@@ -19,10 +19,12 @@ module Test.Cardano.Ledger.Mary.Arbitrary (
 ) where
 
 import Cardano.Crypto.Hash.Class (Hash, HashAlgorithm, castHash, hashWith)
+import Cardano.Ledger.Allegra.Core (EraGov (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Mary (MaryLedgerState (..))
 import Cardano.Ledger.Mary.TxBody (MaryTxBody (..))
 import Cardano.Ledger.Mary.Value (
   AssetName (..),
@@ -97,6 +99,16 @@ instance Crypto c => Arbitrary (PolicyID c) where
         [ arbitrary
         , elements hashOfDigitByteStrings
         ]
+
+instance
+  ( EraTxOut era
+  , Arbitrary (TxOut era)
+  , Arbitrary (GovState era)
+  ) =>
+  Arbitrary (MaryLedgerState era)
+  where
+  arbitrary = MaryLedgerState <$> arbitrary
+  shrink (MaryLedgerState ls) = MaryLedgerState <$> shrink ls
 
 genMultiAssetTriple :: Crypto c => Gen Int64 -> Gen (PolicyID c, AssetName, Int64)
 genMultiAssetTriple genAmount = (,,) <$> arbitrary <*> arbitrary <*> genAmount

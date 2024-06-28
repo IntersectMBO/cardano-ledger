@@ -139,7 +139,7 @@ tcNetworkIDG :: EraTransition era => SimpleGetter (TransitionConfig era) Network
 tcNetworkIDG = tcShelleyGenesisL . to sgNetworkId
 
 registerInitialFundsThenStaking ::
-  EraTransition era =>
+  (EraTransition era, HasLedgerState era) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
@@ -252,7 +252,7 @@ toShelleyTransitionConfigPairs stc@(ShelleyTransitionConfig _) =
 -- This function does not register any initial funds or delegates.
 createInitialState ::
   forall era.
-  (EraTransition era, HasCallStack) =>
+  (EraTransition era, HasCallStack, HasLedgerState era) =>
   TransitionConfig era ->
   NewEpochState era
 createInitialState tc =
@@ -269,16 +269,14 @@ createInitialState tc =
             { esAccountState = AccountState zero reserves
             , esSnapshots = emptySnapShots
             , esLState =
-                LedgerState
-                  { lsUTxOState =
-                      smartUTxOState pp initialUtxo zero zero govState zero
-                  , lsCertState =
-                      CertState
-                        { certDState = dState {dsGenDelegs = GenDelegs (sgGenDelegs sg)}
-                        , certPState = def
-                        , certVState = def
-                        }
-                  }
+                EraLedgerState
+                  (smartUTxOState pp initialUtxo zero zero govState zero)
+                  ( CertState
+                      { certDState = dState {dsGenDelegs = GenDelegs (sgGenDelegs sg)}
+                      , certPState = def
+                      , certVState = def
+                      }
+                  )
             , esNonMyopic = def
             }
       , nesRu = SNothing
@@ -291,8 +289,10 @@ createInitialState tc =
     govState :: GovState era
     govState =
       emptyGovState
-        & curPParamsGovStateL .~ pp
-        & prevPParamsGovStateL .~ pp
+        & curPParamsGovStateL
+        .~ pp
+        & prevPParamsGovStateL
+        .~ pp
     pp :: PParams era
     pp = tc ^. tcInitialPParamsG
     sg :: ShelleyGenesis (EraCrypto era)
@@ -317,7 +317,7 @@ createInitialState tc =
 -- when NetworkId is set to Mainnet
 registerInitialStaking ::
   forall era.
-  (HasCallStack, EraTransition era) =>
+  (HasCallStack, EraTransition era, HasLedgerState era) =>
   TransitionConfig era ->
   NewEpochState era ->
   NewEpochState era
@@ -327,12 +327,11 @@ registerInitialStaking tc nes =
         epochState
           { esLState =
               ledgerState
-                { lsCertState =
-                    dpState
-                      { certDState = dState'
-                      , certPState = pState'
-                      }
-                }
+                & hlsCertStateL
+                .~ dpState
+                  { certDState = dState'
+                  , certPState = pState'
+                  }
           , esSnapshots =
               (esSnapshots epochState)
                 { ssStakeMark = initSnapShot
@@ -348,7 +347,7 @@ registerInitialStaking tc nes =
     ShelleyGenesisStaking {sgsPools, sgsStake} = tc ^. tcInitialStakingL
     NewEpochState {nesEs = epochState} = nes
     ledgerState = esLState epochState
-    dpState = lsCertState ledgerState
+    dpState = ledgerState ^. hlsCertStateL
 
     -- New delegation state. Since we're using base addresses, we only care
     -- about updating the '_delegations' field.
@@ -395,7 +394,7 @@ registerInitialStaking tc nes =
         -- Note that 'updateStakeDistribution' takes first the set of UTxO to
         -- delete, and then the set to add. In our case, there is nothing to
         -- delete, since this is an initial UTxO set.
-        (updateStakeDistribution pp mempty mempty (utxosUtxo (lsUTxOState ledgerState)))
+        (updateStakeDistribution pp mempty mempty (utxosUtxo (ledgerState ^. hlsUTxOStateL)))
         dState'
         pState'
 
@@ -423,6 +422,7 @@ registerInitialFunds ::
   forall era.
   ( EraTransition era
   , HasCallStack
+  , HasLedgerState era
   ) =>
   TransitionConfig era ->
   NewEpochState era ->
@@ -439,7 +439,7 @@ registerInitialFunds tc nes =
     epochState = nesEs nes
     accountState = esAccountState epochState
     ledgerState = esLState epochState
-    utxoState = lsUTxOState ledgerState
+    utxoState = ledgerState ^. hlsUTxOStateL
     utxo = utxosUtxo utxoState
     reserves = asReserves accountState
 
@@ -466,20 +466,19 @@ registerInitialFunds tc nes =
     utxoToDel = UTxO mempty
     ledgerState' =
       ledgerState
-        { lsUTxOState =
-            utxoState
-              { utxosUtxo = utxo'
-              , -- Normally we would incrementally update here. But since we pass
-                -- the full UTxO as "toAdd" rather than a delta, we simply
-                -- reinitialise the full incremental stake.
-                utxosStakeDistr =
-                  updateStakeDistribution
-                    (nes ^. nesEsL . curPParamsEpochStateL)
-                    mempty
-                    utxoToDel
-                    utxo'
-              }
-        }
+        & hlsUTxOStateL
+        .~ utxoState
+          { utxosUtxo = utxo'
+          , -- Normally we would incrementally update here. But since we pass
+            -- the full UTxO as "toAdd" rather than a delta, we simply
+            -- reinitialise the full incremental stake.
+            utxosStakeDistr =
+              updateStakeDistribution
+                (nes ^. nesEsL . curPParamsEpochStateL)
+                mempty
+                utxoToDel
+                utxo'
+          }
 
     -- Merge two UTxOs, throw an 'error' in case of overlap
     mergeUtxoNoOverlap ::

@@ -73,6 +73,7 @@ library
         cardano-slotting,
         cborg,
         containers,
+        data-default-class,
         deepseq,
         microlens,
         nothunks,

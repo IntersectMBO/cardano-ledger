@@ -11,7 +11,7 @@
 
 module Cardano.Ledger.Allegra.Translation (shelleyToAllegraAVVMsToDelete) where
 
-import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.Era (AllegraEra, AllegraLedgerState (AllegraLedgerState))
 import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
@@ -25,6 +25,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   NewEpochState (..),
   PState (..),
+  ShelleyLedgerState (ShelleyLedgerState, unShelleyLedgerState),
   UTxOState (..),
   VState (..),
   returnRedeemAddrsToReserves,
@@ -145,13 +146,14 @@ instance Crypto c => TranslateEra (AllegraEra c) CertState where
         , certVState = translateEra' ctxt $ certVState ls
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) LedgerState where
-  translateEra ctxt ls =
-    return
-      LedgerState
-        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
-        , lsCertState = translateEra' ctxt $ lsCertState ls
-        }
+instance Crypto c => TranslateEra (AllegraEra c) ShelleyLedgerState where
+  translateEra ctxt (ShelleyLedgerState ls) =
+    return $
+      ShelleyLedgerState $
+        LedgerState
+          { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
+          , lsCertState = translateEra' ctxt $ lsCertState ls
+          }
 
 instance Crypto c => TranslateEra (AllegraEra c) EpochState where
   translateEra ctxt es =
@@ -159,7 +161,7 @@ instance Crypto c => TranslateEra (AllegraEra c) EpochState where
       EpochState
         { esAccountState = esAccountState es
         , esSnapshots = esSnapshots es
-        , esLState = translateEra' ctxt $ esLState es
+        , esLState = AllegraLedgerState . unShelleyLedgerState . translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 

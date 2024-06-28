@@ -41,7 +41,7 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (HasLedgerState (EraLedgerState))
 import Cardano.Ledger.Shelley.Rules (
   BbodyEnv (..),
   ShelleyBbodyEvent (..),
@@ -185,7 +185,7 @@ bbodyTransition ::
   , Environment (someBBODY era) ~ BbodyEnv era
   , Embed (EraRule "LEDGERS" era) (someBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ EraLedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , EraSegWits era
   , AlonzoEraTxWits era
@@ -256,7 +256,7 @@ instance
   ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , Embed (EraRule "LEDGERS" era) (AlonzoBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ EraLedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era

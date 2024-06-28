@@ -44,6 +44,8 @@ roundTripShelleyCommonSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , RuleListEra era
+  , HasLedgerState era
+  , Arbitrary (EraLedgerState era)
   ) =>
   Spec
 roundTripShelleyCommonSpec = do
@@ -64,6 +66,8 @@ roundTripStateEraTypesSpec ::
   , Arbitrary (Value era)
   , Arbitrary (PParams era)
   , Arbitrary (GovState era)
+  , HasLedgerState era
+  , Arbitrary (EraLedgerState era)
   ) =>
   Spec
 roundTripStateEraTypesSpec = do

@@ -102,6 +102,7 @@ filterStakePoolDelegsAndRewards umap creds =
 --
 -- Implementation for @GetFilteredDelegationsAndRewardAccounts@ query.
 queryStakePoolDelegsAndRewards ::
+  HasLedgerState era =>
   NewEpochState era ->
   Set (Credential 'Staking (EraCrypto era)) ->
   ( Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))
@@ -109,25 +110,26 @@ queryStakePoolDelegsAndRewards ::
   )
 queryStakePoolDelegsAndRewards nes = filterStakePoolDelegsAndRewards (dsUnified (getDState nes))
 
-getDState :: NewEpochState era -> DState era
-getDState = certDState . lsCertState . esLState . nesEs
+getDState :: HasLedgerState era => NewEpochState era -> DState era
+getDState = certDState . view hlsCertStateL . esLState . nesEs
 
-queryConstitution :: ConwayEraGov era => NewEpochState era -> Constitution era
+queryConstitution :: (ConwayEraGov era, HasLedgerState era) => NewEpochState era -> Constitution era
 queryConstitution = (^. constitutionGovStateL) . queryGovState
 
 queryConstitutionHash ::
-  ConwayEraGov era =>
+  (ConwayEraGov era, HasLedgerState era) =>
   NewEpochState era ->
   SafeHash (EraCrypto era) AnchorData
 queryConstitutionHash nes =
   anchorDataHash . constitutionAnchor $ queryConstitution nes
 
 -- | This query returns all of the state related to governance
-queryGovState :: NewEpochState era -> GovState era
-queryGovState nes = nes ^. nesEpochStateL . esLStateL . lsUTxOStateL . utxosGovStateL
+queryGovState :: HasLedgerState era => NewEpochState era -> GovState era
+queryGovState nes = nes ^. nesEpochStateL . esLStateL . hlsUTxOStateL . utxosGovStateL
 
 -- | Query DRep state.
 queryDRepState ::
+  HasLedgerState era =>
   NewEpochState era ->
   -- | Specify a set of DRep credentials whose state should be returned. When this set is
   -- empty, states for all of the DReps will be returned.
@@ -136,18 +138,19 @@ queryDRepState ::
 queryDRepState nes creds
   | null creds = drepsState
   | otherwise =
-      drepsState `Map.restrictKeys` creds
+      drepsState
+        `Map.restrictKeys` creds
         & if numDormantEpochs == EpochNo 0
           then id
           else (<&> drepExpiryL %~ binOpEpochNo (+) numDormantEpochs)
   where
-    drepsState = vsDReps $ certVState $ lsCertState $ esLState $ nesEs nes
-    numDormantEpochs = vsNumDormantEpochs $ certVState $ lsCertState $ esLState $ nesEs nes
+    drepsState = vsDReps $ certVState $ view hlsCertStateL $ esLState $ nesEs nes
+    numDormantEpochs = vsNumDormantEpochs $ certVState $ view hlsCertStateL $ esLState $ nesEs nes
 
 -- | Query DRep stake distribution. Note that this can be an expensive query because there
 -- is a chance that current distribution has not been fully computed yet.
 queryDRepStakeDistr ::
-  ConwayEraGov era =>
+  (ConwayEraGov era, HasLedgerState era) =>
   NewEpochState era ->
   -- | Specify DRep Ids whose stake distribution should be returned. When this set is
   -- empty, distributions for all of the DReps will be returned.
@@ -160,16 +163,16 @@ queryDRepStakeDistr nes creds
     distr = psDRepDistr . fst $ finishDRepPulser (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL)
 
 -- | Query committee members
-queryCommitteeState :: NewEpochState era -> CommitteeState era
+queryCommitteeState :: HasLedgerState era => NewEpochState era -> CommitteeState era
 queryCommitteeState nes =
-  vsCommitteeState $ certVState $ lsCertState $ esLState $ nesEs nes
+  vsCommitteeState $ certVState $ view hlsCertStateL $ esLState $ nesEs nes
 {-# DEPRECATED queryCommitteeState "In favor of `queryCommitteeMembersState`" #-}
 
 -- | Query committee members. Whenever the system is in No Confidence mode this query will
 -- return `Nothing`.
 queryCommitteeMembersState ::
   forall era.
-  ConwayEraGov era =>
+  (ConwayEraGov era, HasLedgerState era) =>
   -- | filter by cold credentials (don't filter when empty)
   Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
   -- | filter by hot credentials (don't filter when empty)
@@ -186,7 +189,7 @@ queryCommitteeMembersState coldCredsFilter hotCredsFilter statusFilter nes =
     nextComMembers = getNextEpochCommitteeMembers nes
     comStateMembers =
       csCommitteeCreds $
-        nes ^. nesEpochStateL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
+        nes ^. nesEpochStateL . esLStateL . hlsCertStateL . certVStateL . vsCommitteeStateL
 
     withFilteredColdCreds s
       | Set.null coldCredsFilter = s
@@ -267,7 +270,7 @@ queryAccountState ::
 queryAccountState = view $ nesEsL . esAccountStateL
 
 getNextEpochCommitteeMembers ::
-  ConwayEraGov era =>
+  (ConwayEraGov era, HasLedgerState era) =>
   NewEpochState era ->
   Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
 getNextEpochCommitteeMembers nes =

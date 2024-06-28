@@ -1,18 +1,42 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Mary.Era (MaryEra) where
+module Cardano.Ledger.Mary.Era (MaryEra, MaryLedgerState (..)) where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Rules (AllegraUTXO, AllegraUTXOW)
+import Cardano.Ledger.Binary (DecCBOR, DecShareCBOR, EncCBOR (encCBOR), Interns)
+import Cardano.Ledger.Binary.Decoding (
+  DecCBOR (..),
+  DecShareCBOR (decSharePlusCBOR),
+  Share,
+  decNoShareCBOR,
+ )
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.LedgerState (
+  HasLedgerState (..),
+  LedgerState,
+  lsCertStateL,
+  lsUTxOStateL,
+ )
 import Cardano.Ledger.Shelley.Rules
+import Control.DeepSeq (NFData)
+import Data.Default.Class (Default)
+import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
+import NoThunks.Class (NoThunks)
 
 data MaryEra era
 
@@ -22,6 +46,70 @@ instance Crypto c => Era (MaryEra c) where
   type ProtVerLow (MaryEra c) = 4
 
   eraName = "Mary"
+
+newtype MaryLedgerState era = MaryLedgerState {unMaryLedgerState :: LedgerState era}
+  deriving (Generic, Default)
+
+maryLedgerStateL :: Lens' (MaryLedgerState era) (LedgerState era)
+maryLedgerStateL = lens unMaryLedgerState (\x y -> x {unMaryLedgerState = y})
+
+instance (Crypto c, EraGov (MaryEra c), EraTxOut (MaryEra c)) => HasLedgerState (MaryEra c) where
+  type EraLedgerState (MaryEra c) = MaryLedgerState (MaryEra c)
+  hlsUTxOStateL = maryLedgerStateL . lsUTxOStateL
+  hlsCertStateL = maryLedgerStateL . lsCertStateL
+
+deriving stock instance
+  ( EraTxOut era
+  , Show (GovState era)
+  ) =>
+  Show (MaryLedgerState era)
+
+deriving stock instance
+  ( EraTxOut era
+  , Eq (GovState era)
+  ) =>
+  Eq (MaryLedgerState era)
+
+instance
+  ( EraTxOut era
+  , NoThunks (GovState era)
+  ) =>
+  NoThunks (MaryLedgerState era)
+
+instance
+  ( EraTxOut era
+  , NFData (GovState era)
+  ) =>
+  NFData (MaryLedgerState era)
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  EncCBOR (MaryLedgerState era)
+  where
+  encCBOR (MaryLedgerState ls) = encCBOR ls
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  DecCBOR (MaryLedgerState era)
+  where
+  decCBOR = decNoShareCBOR
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  DecShareCBOR (MaryLedgerState era)
+  where
+  type
+    Share (MaryLedgerState era) =
+      ( Interns (Credential 'Staking (EraCrypto era))
+      , Interns (KeyHash 'StakePool (EraCrypto era))
+      )
+  decSharePlusCBOR = MaryLedgerState <$> decSharePlusCBOR
 
 --------------------------------------------------------------------------------
 -- Core instances

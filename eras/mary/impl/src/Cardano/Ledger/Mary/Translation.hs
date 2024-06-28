@@ -12,11 +12,12 @@
 
 module Cardano.Ledger.Mary.Translation where
 
+import Cardano.Ledger.Allegra (AllegraLedgerState (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Core
-import Cardano.Ledger.Mary.Era (MaryEra)
+import Cardano.Ledger.Mary.Era (MaryEra, MaryLedgerState (..))
 import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
 import Cardano.Ledger.Mary.TxAuxData (AllegraTxAuxData (..))
 import Cardano.Ledger.Shelley.LedgerState (
@@ -77,13 +78,22 @@ instance Crypto c => TranslateEra (MaryEra c) PParams
 
 instance Crypto c => TranslateEra (MaryEra c) PParamsUpdate
 
+instance Crypto c => TranslateEra (MaryEra c) AllegraLedgerState where
+  translateEra ctxt (AllegraLedgerState ls) =
+    return $
+      AllegraLedgerState $
+        LedgerState
+          { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
+          , lsCertState = translateEra' ctxt $ lsCertState ls
+          }
+
 instance Crypto c => TranslateEra (MaryEra c) EpochState where
   translateEra ctxt es =
     return
       EpochState
         { esAccountState = esAccountState es
         , esSnapshots = esSnapshots es
-        , esLState = translateEra' ctxt $ esLState es
+        , esLState = MaryLedgerState . unAllegraLedgerState . translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 

@@ -77,11 +77,11 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
+  HasLedgerState (..),
   NewEpochState (..),
   certDState,
   curPParamsEpochStateL,
   dsGenDelegs,
-  lsCertState,
  )
 import Cardano.Ledger.Shelley.Translation (FromByronTranslationContext (..))
 import Cardano.Ledger.Slot (SlotNo)
@@ -121,6 +121,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
+import qualified Lens.Micro.Extras as Lens
 import NoThunks.Class (NoThunks (..))
 
 -- =======================================================
@@ -146,6 +147,7 @@ class
   , State (EraRule "TICKF" era) ~ NewEpochState era
   , Signal (EraRule "TICKF" era) ~ SlotNo
   , EraGov era
+  , HasLedgerState era
   ) =>
   GetLedgerView era
   where
@@ -195,7 +197,7 @@ instance Crypto c => GetLedgerView (BabbageEra c) where
         , lvGenDelegs =
             dsGenDelegs
               . certDState
-              . lsCertState
+              . Lens.view hlsCertStateL
               $ esLState es
         , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
         }
@@ -223,7 +225,7 @@ instance Crypto c => GetLedgerView (ConwayEra c) where
         , lvGenDelegs =
             dsGenDelegs
               . certDState
-              . lsCertState
+              . Lens.view hlsCertStateL
               $ esLState es
         , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
         }
@@ -276,7 +278,7 @@ mkPrtclEnv
       lvGenDelegs
 
 view ::
-  (ProtVerAtMost era 6, EraGov era) =>
+  (ProtVerAtMost era 6, EraGov era, HasLedgerState era) =>
   NewEpochState era ->
   LedgerView (EraCrypto era)
 view
@@ -292,7 +294,7 @@ view
           , lvGenDelegs =
               dsGenDelegs
                 . certDState
-                . lsCertState
+                . Lens.view hlsCertStateL
                 $ esLState es
           , lvChainChecks = pparamsToChainChecksPParams $ es ^. curPParamsEpochStateL
           }
@@ -351,6 +353,7 @@ futureView ::
   , Signal (EraRule "TICKF" era) ~ SlotNo
   , ProtVerAtMost era 6
   , EraGov era
+  , HasLedgerState era
   ) =>
   Globals ->
   NewEpochState era ->

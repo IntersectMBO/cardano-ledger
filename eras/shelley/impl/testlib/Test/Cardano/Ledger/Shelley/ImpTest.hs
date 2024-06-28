@@ -12,6 +12,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -144,7 +145,7 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
-  LedgerState (..),
+  HasLedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
   asTreasuryL,
@@ -154,8 +155,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   epochStateUMapL,
   esAccountStateL,
   esLStateL,
-  lsCertStateL,
-  lsUTxOStateL,
   nesELL,
   nesEsL,
   prevPParamsEpochStateL,
@@ -164,6 +163,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   startStep,
   utxosDonationL,
   utxosUtxoL,
+  pattern EraLedgerState,
  )
 import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
@@ -330,7 +330,7 @@ class
     STS (EraRule "LEDGER" era)
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase
   , Signal (EraRule "LEDGER" era) ~ Tx era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ EraLedgerState era
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   , Eq (PredicateFailure (EraRule "LEDGER" era))
   , Show (PredicateFailure (EraRule "LEDGER" era))
@@ -381,13 +381,15 @@ class
   -- PParams. If the future PParams are not updated, then they will overwrite the
   -- mofication of the current PParams at the next epoch.
   modifyPParams ::
+    HasLedgerState era =>
     (PParams era -> PParams era) ->
     ImpTestM era ()
   modifyPParams f = modifyNES $ nesEsL . curPParamsEpochStateL %~ f
 
   fixupTx :: HasCallStack => Tx era -> ImpTestM era (Tx era)
 
-impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
+impLedgerEnv ::
+  (EraGov era, HasLedgerState era) => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
   slotNo <- gets impLastTick
   pure
@@ -401,13 +403,13 @@ impLedgerEnv nes = do
 -- | Modify the previous PParams in the current state with the given function. For current
 -- and future PParams, use `modifyPParams`
 modifyPrevPParams ::
-  EraGov era =>
+  (EraGov era, HasLedgerState era) =>
   (PParams era -> PParams era) ->
   ImpTestM era ()
 modifyPrevPParams f = modifyNES $ nesEsL . prevPParamsEpochStateL %~ f
 
 -- | Logs the current stake distribution
-logStakeDistr :: ImpTestM era ()
+logStakeDistr :: HasLedgerState era => ImpTestM era ()
 logStakeDistr = do
   stakeDistr <- getsNES $ nesEsL . epochStateIncrStakeDistrL
   logEntry $ "Stake distr: " <> showExpr stakeDistr
@@ -430,7 +432,7 @@ testKeyHash :: Crypto c => KeyHash kd c
 testKeyHash = mkKeyHash (-1)
 
 initShelleyImpNES ::
-  forall era. ShelleyEraImp era => NewEpochState era
+  forall era. (ShelleyEraImp era, HasLedgerState era) => NewEpochState era
 initShelleyImpNES =
   NewEpochState
     { stashedAVVMAddresses = def
@@ -461,8 +463,10 @@ initShelleyImpNES =
   where
     pp =
       emptyPParams
-        & ppMinFeeAL .~ Coin 44
-        & ppMinFeeBL .~ Coin 155_381
+        & ppMinFeeAL
+        .~ Coin 44
+        & ppMinFeeBL
+        .~ Coin 155_381
     epochState =
       EpochState
         { esAccountState =
@@ -472,21 +476,22 @@ initShelleyImpNES =
               }
         , esSnapshots = emptySnapShots
         , esLState =
-            LedgerState
-              { lsUTxOState =
-                  smartUTxOState
-                    emptyPParams
-                    utxo
-                    zero
-                    zero
-                    emptyGovState
-                    mempty
-              , lsCertState = def
-              }
+            EraLedgerState
+              ( smartUTxOState
+                  emptyPParams
+                  utxo
+                  zero
+                  zero
+                  emptyGovState
+                  mempty
+              )
+              def
         , esNonMyopic = def
         }
-        & prevPParamsEpochStateL .~ pp
-        & curPParamsEpochStateL .~ pp
+        & prevPParamsEpochStateL
+        .~ pp
+        & curPParamsEpochStateL
+        .~ pp
     utxo = mempty
 
 mkTxId :: Crypto c => Int -> TxId c
@@ -531,7 +536,7 @@ instance
 -- | Figure out all the Byron Addresses that need witnesses as well as all of the
 -- KeyHashes for Shelley Key witnesses that are required.
 impWitsVKeyNeeded ::
-  EraUTxO era =>
+  (EraUTxO era, HasLedgerState era) =>
   TxBody era ->
   ImpTestM
     era
@@ -547,7 +552,7 @@ impWitsVKeyNeeded txBody = do
       bootAddrs = Set.fromList $ mapMaybe toBootAddr $ Set.toList (txBody ^. spendableInputsTxBodyF)
       bootKeyHashes = Set.map (coerceKeyRole . bootstrapKeyHash) bootAddrs
       allKeyHashes =
-        getWitsVKeyNeeded (ls ^. lsCertStateL) (ls ^. lsUTxOStateL . utxosUtxoL) txBody
+        getWitsVKeyNeeded (ls ^. hlsCertStateL) (ls ^. hlsUTxOStateL . utxosUtxoL) txBody
   pure (bootAddrs, allKeyHashes Set.\\ bootKeyHashes)
 
 data ImpTestEnv era = ImpTestEnv
@@ -713,7 +718,7 @@ runImpTestM mQCSize impState (ImpTestM m) = do
 runShelleyBase :: Globals -> ShelleyBase a -> a
 runShelleyBase globals act = runIdentity $ runReaderT act globals
 
-getRewardAccountAmount :: RewardAccount (EraCrypto era) -> ImpTestM era Coin
+getRewardAccountAmount :: HasLedgerState era => RewardAccount (EraCrypto era) -> ImpTestM era Coin
 getRewardAccountAmount rewardAcount = do
   umap <- getsNES $ nesEsL . epochStateUMapL
   let cred = raCredential rewardAcount
@@ -721,7 +726,7 @@ getRewardAccountAmount rewardAcount = do
     Nothing -> assertFailure $ "Expected a reward account: " ++ show cred
     Just RDPair {rdReward} -> pure $ fromCompact rdReward
 
-lookupImpRootTxOut :: ImpTestM era (TxIn (EraCrypto era), TxOut era)
+lookupImpRootTxOut :: HasLedgerState era => ImpTestM era (TxIn (EraCrypto era), TxOut era)
 lookupImpRootTxOut = do
   ImpTestState {impRootTxIn} <- get
   utxo <- getUTxO
@@ -741,7 +746,7 @@ impAddNativeScript nativeScript = do
   pure scriptHash
 
 impNativeScriptsRequired ::
-  EraUTxO era =>
+  (EraUTxO era, HasLedgerState era) =>
   Tx era ->
   ImpTestM era (Map (ScriptHash (EraCrypto era)) (NativeScript era))
 impNativeScriptsRequired tx = do
@@ -753,7 +758,7 @@ impNativeScriptsRequired tx = do
 
 -- | Modifies transaction by adding necessary scripts
 addNativeScriptTxWits ::
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasLedgerState era) =>
   Tx era ->
   ImpTestM era (Tx era)
 addNativeScriptTxWits tx = impAnn "addNativeScriptTxWits" $ do
@@ -763,12 +768,15 @@ addNativeScriptTxWits tx = impAnn "addNativeScriptTxWits" $ do
       scriptsToAdd = scriptsRequired Map.\\ provided
   pure $
     tx
-      & witsTxL . scriptTxWitsL <>~ fmap fromNativeScript scriptsToAdd
+      & witsTxL
+      . scriptTxWitsL
+      <>~ fmap fromNativeScript scriptsToAdd
 
 -- | Adds @TxWits@ that will satisfy all of the required key witnesses
 updateAddrTxWits ::
   ( HasCallStack
   , ShelleyEraImp era
+  , HasLedgerState era
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
@@ -799,22 +807,29 @@ updateAddrTxWits tx = impAnn "updateAddrTxWits" $ do
     pure $ makeBootstrapWitness (extractHash txBodyHash) signingKey attrs
   pure $
     tx
-      & witsTxL . addrTxWitsL <>~ extraAddrVKeyWits <> extraNativeScriptVKeyWits
-      & witsTxL . bootAddrTxWitsL <>~ Set.fromList extraBootAddrWits
+      & witsTxL
+      . addrTxWitsL
+      <>~ extraAddrVKeyWits
+      <> extraNativeScriptVKeyWits
+        & witsTxL
+        . bootAddrTxWitsL
+        <>~ Set.fromList extraBootAddrWits
 
 -- | This fixup step ensures that there are enough funds in the transaction.
 addRootTxIn ::
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasLedgerState era) =>
   Tx era ->
   ImpTestM era (Tx era)
 addRootTxIn tx = impAnn "addRootTxIn" $ do
   rootTxIn <- fst <$> lookupImpRootTxOut
   pure $
     tx
-      & bodyTxL . inputsTxBodyL %~ Set.insert rootTxIn
+      & bodyTxL
+      . inputsTxBodyL
+      %~ Set.insert rootTxIn
 
 impNativeScriptKeyPairs ::
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasLedgerState era) =>
   Tx era ->
   ImpTestM
     era
@@ -827,13 +842,13 @@ impNativeScriptKeyPairs tx = do
   pure . mconcat $ catMaybes keyPairs
 
 fixupFees ::
-  (ShelleyEraImp era, HasCallStack) =>
+  (ShelleyEraImp era, HasCallStack, HasLedgerState era) =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupFees tx = impAnn "fixupFees" $ do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
-  certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+  certState <- getsNES $ nesEsL . esLStateL . hlsCertStateL
   (_, kpSpending) <- freshKeyPair
   (_, kpStaking) <- freshKeyPair
   nativeScriptKeyPairs <- impNativeScriptKeyPairs tx
@@ -867,17 +882,25 @@ fixupFees tx = impAnn "fixupFees" $ do
     txWithFee
       | change >= getMinCoinTxOut pp changeTxOut =
           txNoWits
-            & bodyTxL . outputsTxBodyL .~ (outsBeforeFee :|> changeTxOut)
-            & bodyTxL . feeTxBodyL .~ fee
+            & bodyTxL
+            . outputsTxBodyL
+            .~ (outsBeforeFee :|> changeTxOut)
+            & bodyTxL
+            . feeTxBodyL
+            .~ fee
       | otherwise =
           txNoWits
-            & bodyTxL . outputsTxBodyL .~ outsBeforeFee
-            & bodyTxL . feeTxBodyL .~ (fee <> change)
+            & bodyTxL
+            . outputsTxBodyL
+            .~ outsBeforeFee
+            & bodyTxL
+            . feeTxBodyL
+            .~ (fee <> change)
   pure txWithFee
 
 shelleyFixupTx ::
   forall era.
-  (ShelleyEraImp era, HasCallStack) =>
+  (ShelleyEraImp era, HasCallStack, HasLedgerState era) =>
   Tx era ->
   ImpTestM era (Tx era)
 shelleyFixupTx =
@@ -887,26 +910,27 @@ shelleyFixupTx =
     >=> updateAddrTxWits
     >=> (\tx -> logFeeMismatch tx $> tx)
 
-logFeeMismatch :: (EraGov era, EraUTxO era) => Tx era -> ImpTestM era ()
+logFeeMismatch :: (EraGov era, EraUTxO era, HasLedgerState era) => Tx era -> ImpTestM era ()
 logFeeMismatch tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  utxo <- getsNES $ nesEsL . esLStateL . hlsUTxOStateL . utxosUtxoL
   let Coin feeUsed = tx ^. bodyTxL . feeTxBodyL
       Coin feeMin = getMinFeeTxUtxo pp tx utxo
   when (feeUsed /= feeMin) $ do
     logEntry $
       "Estimated fee " <> show feeUsed <> " while required fee is " <> show feeMin
 
-submitTx_ :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era ()
+submitTx_ :: (HasCallStack, ShelleyEraImp era, HasLedgerState era) => Tx era -> ImpTestM era ()
 submitTx_ = void . submitTx
 
-submitTx :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era (Tx era)
+submitTx :: (HasCallStack, ShelleyEraImp era, HasLedgerState era) => Tx era -> ImpTestM era (Tx era)
 submitTx tx = trySubmitTx tx >>= expectRightDeepExpr
 
 trySubmitTx ::
   forall era.
   ( ShelleyEraImp era
   , HasCallStack
+  , HasLedgerState era
   ) =>
   Tx era ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (Tx era))
@@ -947,6 +971,7 @@ trySubmitTx tx = do
 submitFailingTx ::
   ( HasCallStack
   , ShelleyEraImp era
+  , HasLedgerState era
   ) =>
   Tx era ->
   NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
@@ -1010,6 +1035,7 @@ passTick ::
   forall era.
   ( HasCallStack
   , ShelleyEraImp era
+  , NFData (EraLedgerState era)
   ) =>
   ImpTestM era ()
 passTick = do
@@ -1022,7 +1048,7 @@ passTick = do
 -- | Runs the TICK rule until the next epoch is reached
 passEpoch ::
   forall era.
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, NFData (EraLedgerState era), HasLedgerState era) =>
   ImpTestM era ()
 passEpoch = do
   startEpoch <- getsNES nesELL
@@ -1038,7 +1064,7 @@ passEpoch = do
   gets impNES >>= epochBoundaryCheck preNES
 
 epochBoundaryCheck ::
-  (EraTxOut era, EraGov era) =>
+  (EraTxOut era, EraGov era, HasLedgerState era) =>
   NewEpochState era ->
   NewEpochState era ->
   ImpTestM era ()
@@ -1054,12 +1080,12 @@ epochBoundaryCheck preNES postNES = do
     tot nes =
       (<+>)
         (sumAdaPots (totalAdaPotsES (nes ^. nesEsL)))
-        (nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosDonationL)
+        (nes ^. nesEsL . esLStateL . hlsUTxOStateL . utxosDonationL)
 
 -- | Runs the TICK rule until the `n` epochs are passed
 passNEpochs ::
   forall era.
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, NFData (EraLedgerState era), HasLedgerState era) =>
   Natural ->
   ImpTestM era ()
 passNEpochs n = when (n > 0) $ passEpoch >> passNEpochs (n - 1)
@@ -1108,13 +1134,13 @@ logToExpr :: (HasCallStack, ToExpr a) => a -> ImpTestM era ()
 logToExpr e = logEntry (showExpr e)
 
 withImpState ::
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasLedgerState era) =>
   SpecWith (ImpTestState era) ->
   Spec
 withImpState = withImpStateModified id
 
 withImpStateModified ::
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasLedgerState era) =>
   (ImpTestState era -> ImpTestState era) ->
   SpecWith (ImpTestState era) ->
   Spec
@@ -1142,7 +1168,11 @@ withImpStateModified f =
       (rootKeyHash, _) <- freshKeyPair
       let rootAddr = Addr Testnet (KeyHashObj rootKeyHash) StakeRefNull
           rootTxOut = mkBasicTxOut rootAddr $ inject rootCoin
-      impNESL . nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+      impNESL
+        . nesEsL
+        . esLStateL
+        . hlsUTxOStateL
+        . utxosUtxoL
         %= (<> UTxO (Map.singleton rootTxIn rootTxOut))
 
 -- | Creates a fresh @SafeHash@
@@ -1242,14 +1272,14 @@ freshBootstapAddress = do
   pure bootAddr
 
 sendCoinTo ::
-  (ShelleyEraImp era, HasCallStack) =>
+  (ShelleyEraImp era, HasCallStack, HasLedgerState era) =>
   Addr (EraCrypto era) ->
   Coin ->
   ImpTestM era (TxIn (EraCrypto era))
 sendCoinTo addr = sendValueTo addr . inject
 
 sendValueTo ::
-  (ShelleyEraImp era, HasCallStack) =>
+  (ShelleyEraImp era, HasCallStack, HasLedgerState era) =>
   Addr (EraCrypto era) ->
   Value era ->
   ImpTestM era (TxIn (EraCrypto era))
@@ -1258,7 +1288,9 @@ sendValueTo addr amount = do
     submitTxAnn
       ("Giving " <> show amount <> " to " <> show addr)
       $ mkBasicTx mkBasicTxBody
-        & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr amount)
+        & bodyTxL
+        . outputsTxBodyL
+        .~ SSeq.singleton (mkBasicTxOut addr amount)
   pure $ txInAt (0 :: Int) tx
 
 -- | Modify the current new epoch state with a function
@@ -1269,21 +1301,21 @@ modifyNES = (impNESL %=)
 getsNES :: SimpleGetter (NewEpochState era) a -> ImpTestM era a
 getsNES l = gets . view $ impNESL . l
 
-getUTxO :: ImpTestM era (UTxO era)
-getUTxO = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+getUTxO :: HasLedgerState era => ImpTestM era (UTxO era)
+getUTxO = getsNES $ nesEsL . esLStateL . hlsUTxOStateL . utxosUtxoL
 
-getProtVer :: EraGov era => ImpTestM era ProtVer
+getProtVer :: (EraGov era, HasLedgerState era) => ImpTestM era ProtVer
 getProtVer = getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
 
 submitTxAnn ::
-  (HasCallStack, ShelleyEraImp era) =>
+  (HasCallStack, ShelleyEraImp era, HasLedgerState era) =>
   String ->
   Tx era ->
   ImpTestM era (Tx era)
 submitTxAnn msg tx = impAnn msg (trySubmitTx tx >>= expectRightDeepExpr)
 
 submitTxAnn_ ::
-  (HasCallStack, ShelleyEraImp era) => String -> Tx era -> ImpTestM era ()
+  (HasCallStack, ShelleyEraImp era, HasLedgerState era) => String -> Tx era -> ImpTestM era ()
 submitTxAnn_ msg = void . submitTxAnn msg
 
 getRewardAccountFor ::
@@ -1297,6 +1329,7 @@ registerRewardAccount ::
   forall era.
   ( HasCallStack
   , ShelleyEraImp era
+  , HasLedgerState era
   ) =>
   ImpTestM era (RewardAccount (EraCrypto era))
 registerRewardAccount = do
@@ -1306,18 +1339,21 @@ registerRewardAccount = do
   let stakingCredential = KeyHashObj khDelegator
   submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText stakingCredential)) $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . outputsTxBodyL
-        .~ SSeq.fromList
-          [ mkBasicTxOut
-              (mkAddr (kpSpending, kpDelegator))
-              (inject $ Coin 10_000_000)
-          ]
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList [RegTxCert @era stakingCredential]
+      & bodyTxL
+      . outputsTxBodyL
+      .~ SSeq.fromList
+        [ mkBasicTxOut
+            (mkAddr (kpSpending, kpDelegator))
+            (inject $ Coin 10_000_000)
+        ]
+      & bodyTxL
+      . certsTxBodyL
+      .~ SSeq.fromList [RegTxCert @era stakingCredential]
   networkId <- use (to impGlobals . to networkId)
   pure $ RewardAccount networkId stakingCredential
 
-lookupReward :: HasCallStack => Credential 'Staking (EraCrypto era) -> ImpTestM era Coin
+lookupReward ::
+  (HasCallStack, HasLedgerState era) => Credential 'Staking (EraCrypto era) -> ImpTestM era Coin
 lookupReward stakingCredential = do
   umap <- getsNES (nesEsL . epochStateUMapL)
   case UMap.lookup stakingCredential (RewDepUView umap) of
@@ -1329,7 +1365,8 @@ lookupReward stakingCredential = do
           <> "or by some other means."
     Just rd -> pure $ fromCompact (rdReward rd)
 
-registerPool :: ShelleyEraImp era => ImpTestM era (KeyHash 'StakePool (EraCrypto era))
+registerPool ::
+  (ShelleyEraImp era, HasLedgerState era) => ImpTestM era (KeyHash 'StakePool (EraCrypto era))
 registerPool = do
   khPool <- freshKeyHash
   rewardAccount <- registerRewardAccount
@@ -1349,11 +1386,13 @@ registerPool = do
         }
   submitTxAnn_ "Registering a new stake pool" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert poolParams)
+      & bodyTxL
+      . certsTxBodyL
+      .~ SSeq.singleton (RegPoolTxCert poolParams)
   pure khPool
 
 registerAndRetirePoolToMakeReward ::
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, NFData (EraLedgerState era), HasLedgerState era) =>
   Credential 'Staking (EraCrypto era) ->
   ImpTestM era ()
 registerAndRetirePoolToMakeReward stakingC = do
@@ -1376,13 +1415,16 @@ registerAndRetirePoolToMakeReward stakingC = do
           }
   submitTxAnn_ "Registering a temporary stake pool" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert poolParams)
+      & bodyTxL
+      . certsTxBodyL
+      .~ SSeq.singleton (RegPoolTxCert poolParams)
   passEpoch
   currentEpochNo <- getsNES nesELL
   submitTxAnn_ "Retiring the temporary stake pool" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.singleton (RetirePoolTxCert poolKH $ addEpochInterval currentEpochNo $ EpochInterval 2)
+      & bodyTxL
+      . certsTxBodyL
+      .~ SSeq.singleton (RetirePoolTxCert poolKH $ addEpochInterval currentEpochNo $ EpochInterval 2)
   passEpoch
 
 -- | Compose given function with the configured fixup
@@ -1417,14 +1459,16 @@ withPostFixup ::
   ImpTestM era a
 withPostFixup f = withCustomFixup (>=> f)
 
-expectRegisteredRewardAddress :: RewardAccount (EraCrypto era) -> ImpTestM era ()
+expectRegisteredRewardAddress ::
+  HasLedgerState era => RewardAccount (EraCrypto era) -> ImpTestM era ()
 expectRegisteredRewardAddress (RewardAccount _ cred) = do
-  umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
+  umap <- getsNES $ nesEsL . esLStateL . hlsCertStateL . certDStateL . dsUnifiedL
   Map.member cred (rdPairMap umap) `shouldBe` True
 
-expectNotRegisteredRewardAddress :: RewardAccount (EraCrypto era) -> ImpTestM era ()
+expectNotRegisteredRewardAddress ::
+  HasLedgerState era => RewardAccount (EraCrypto era) -> ImpTestM era ()
 expectNotRegisteredRewardAddress (RewardAccount _ cred) = do
-  umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
+  umap <- getsNES $ nesEsL . esLStateL . hlsCertStateL . certDStateL . dsUnifiedL
   Map.member cred (rdPairMap umap) `shouldBe` False
 
 expectTreasury :: HasCallStack => Coin -> ImpTestM era ()
@@ -1436,7 +1480,8 @@ expectTreasury c =
 impGetNativeScript :: ScriptHash (EraCrypto era) -> ImpTestM era (Maybe (NativeScript era))
 impGetNativeScript sh = Map.lookup sh <$> gets impNativeScripts
 
-impLookupUTxO :: ShelleyEraImp era => TxIn (EraCrypto era) -> ImpTestM era (TxOut era)
+impLookupUTxO ::
+  (ShelleyEraImp era, HasLedgerState era) => TxIn (EraCrypto era) -> ImpTestM era (TxOut era)
 impLookupUTxO txIn = impAnn "Looking up TxOut" $ do
   utxo <- getUTxO
   case txinLookup txIn utxo of

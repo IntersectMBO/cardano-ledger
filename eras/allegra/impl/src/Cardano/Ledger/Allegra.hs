@@ -10,10 +10,11 @@
 module Cardano.Ledger.Allegra (
   Allegra,
   AllegraEra,
+  AllegraLedgerState (..),
 )
 where
 
-import Cardano.Ledger.Allegra.Era (AllegraEra)
+import Cardano.Ledger.Allegra.Era (AllegraEra, AllegraLedgerState (..))
 import Cardano.Ledger.Allegra.PParams ()
 import Cardano.Ledger.Allegra.Rules ()
 import Cardano.Ledger.Allegra.Scripts ()

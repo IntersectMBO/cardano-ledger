@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -39,6 +40,7 @@ import qualified Data.Set as Set
 import Data.Typeable
 import qualified Data.VMap as VMap
 import Lens.Micro
+import Lens.Micro.Extras (view)
 import Prettyprinter
 import Text.Printf
 
@@ -68,7 +70,7 @@ writeEpochState fp = LBS.writeFile fp . Plain.serialize
 
 loadLedgerState ::
   FilePath ->
-  IO (LedgerState CurrentEra)
+  IO (EraLedgerState CurrentEra)
 loadLedgerState fp = esLState . nesEs <$> readNewEpochState fp
 
 runConduitFold :: Monad m => ConduitT () a m () -> Fold a b -> m b
@@ -128,7 +130,7 @@ readBinUTxO ::
   IO (UTxO CurrentEra)
 readBinUTxO fp = do
   ls <- readNewEpochState fp
-  pure $! utxosUtxo $ lsUTxOState $ esLState $ nesEs ls
+  pure $! utxosUtxo $ view hlsUTxOStateL $ esLState $ nesEs ls
 
 newtype Count = Count Int
   deriving (Eq, Ord, Enum, Real, Integral, Num, Pretty)
@@ -506,8 +508,8 @@ instance AggregateStat LedgerStateStats where
       , aggregateStat lssPStateStats
       ]
 
-countLedgerStateStats :: LedgerState CurrentEra -> LedgerStateStats
-countLedgerStateStats LedgerState {..} =
+countLedgerStateStats :: EraLedgerState CurrentEra -> LedgerStateStats
+countLedgerStateStats (EraLedgerState lsUTxOState lsCertState) =
   LedgerStateStats
     { lssUTxOStats = countUTxOStats (utxosUtxo lsUTxOState)
     , lssDStateStats = countDStateStats (certDState lsCertState)

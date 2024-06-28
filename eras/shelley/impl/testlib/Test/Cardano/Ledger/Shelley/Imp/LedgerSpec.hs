@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.Shelley.Imp.LedgerSpec (
 import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.LedgerState (HasLedgerState)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
@@ -20,7 +21,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest
 
 spec ::
   forall era.
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasLedgerState era) =>
   SpecWith (ImpTestState era)
 spec = describe "LEDGER" $ do
   it "Transactions update UTxO" $ do
@@ -31,8 +32,8 @@ spec = describe "LEDGER" $ do
       submitTxAnn "First transaction" . mkBasicTx $
         mkBasicTxBody
           & outputsTxBodyL @era
-            .~ SSeq.singleton
-              (mkBasicTxOut (mkAddr (kpPayment1, kpStaking1)) $ inject coin1)
+          .~ SSeq.singleton
+            (mkBasicTxOut (mkAddr (kpPayment1, kpStaking1)) $ inject coin1)
     UTxO utxo1 <- getUTxO
     case Map.lookup (txInAt (0 :: Int) tx1) utxo1 of
       Just out1 -> out1 ^. coinTxOutL `shouldBe` coin1
@@ -44,11 +45,11 @@ spec = describe "LEDGER" $ do
       submitTxAnn "Second transaction" . mkBasicTx $
         mkBasicTxBody
           & inputsTxBodyL
-            .~ Set.singleton
-              (txInAt (0 :: Int) tx1)
+          .~ Set.singleton
+            (txInAt (0 :: Int) tx1)
           & outputsTxBodyL @era
-            .~ SSeq.singleton
-              (mkBasicTxOut (mkAddr (kpPayment2, kpStaking2)) $ inject coin2)
+          .~ SSeq.singleton
+            (mkBasicTxOut (mkAddr (kpPayment2, kpStaking2)) $ inject coin2)
     UTxO utxo2 <- getUTxO
     case Map.lookup (txInAt (0 :: Int) tx2) utxo2 of
       Just out1 -> do

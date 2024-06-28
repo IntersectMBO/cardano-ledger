@@ -11,10 +11,10 @@
 
 module Cardano.Ledger.Babbage.Translation where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo (AlonzoEra, AlonzoLedgerState (AlonzoLedgerState, unAlonzoLedgerState))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Babbage.Core hiding (Tx)
-import Cardano.Ledger.Babbage.Era (BabbageEra)
+import Cardano.Ledger.Babbage.Era (BabbageEra, BabbageLedgerState (..))
 import Cardano.Ledger.Babbage.PParams ()
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -93,13 +93,22 @@ instance Crypto c => TranslateEra (BabbageEra c) Tx where
 instance Crypto c => TranslateEra (BabbageEra c) PParams where
   translateEra _ = pure . upgradePParams ()
 
+instance Crypto c => TranslateEra (BabbageEra c) AlonzoLedgerState where
+  translateEra ctxt (AlonzoLedgerState ls) =
+    return $
+      AlonzoLedgerState $
+        LedgerState
+          { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
+          , lsCertState = translateEra' ctxt $ lsCertState ls
+          }
+
 instance Crypto c => TranslateEra (BabbageEra c) EpochState where
   translateEra ctxt es =
     pure
       EpochState
         { esAccountState = esAccountState es
         , esSnapshots = esSnapshots es
-        , esLState = translateEra' ctxt $ esLState es
+        , esLState = BabbageLedgerState . unAlonzoLedgerState . translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 

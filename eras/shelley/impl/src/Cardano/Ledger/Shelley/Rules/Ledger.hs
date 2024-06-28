@@ -13,6 +13,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Ledger (
@@ -40,13 +41,9 @@ import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGER)
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState,
   CertState (..),
-  LedgerState (..),
-  UTxOState (..),
-  utxosDepositedL,
  )
-import Cardano.Ledger.Shelley.LedgerState.Types (allObligations, potEqualsObligation)
+import Cardano.Ledger.Shelley.LedgerState.Types
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (
   DelegsEnv (..),
@@ -61,6 +58,7 @@ import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Shelley.Rules.Utxo (ShelleyUtxoPredFailure (..), UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (ShelleyUTXOW, ShelleyUtxowPredFailure)
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
+import Control.Arrow (Arrow ((&&&)))
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Reader (Reader)
 import Control.Monad.Trans.Reader (asks)
@@ -79,6 +77,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import Lens.Micro
+import Lens.Micro.Extras (view)
 import NoThunks.Class (NoThunks (..))
 
 -- ========================================================
@@ -210,19 +209,21 @@ epochFromSlot slot = do
 
 shelleyLedgerAssertions ::
   ( EraGov era
-  , State (rule era) ~ LedgerState era
+  , State (rule era) ~ EraLedgerState era
+  , HasLedgerState era
   ) =>
   [Assertion (rule era)]
 shelleyLedgerAssertions =
   [ PostCondition
       "Deposit pot must equal obligation (LEDGER)"
       ( \(TRC (_, _, _))
-         (LedgerState utxoSt dpstate) -> potEqualsObligation dpstate utxoSt
+         (view hlsUTxOStateL &&& view hlsCertStateL -> (utxoSt, dpstate)) -> potEqualsObligation dpstate utxoSt
       )
   ]
 
 instance
-  ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  ( HasLedgerState era
+  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , EraTx era
   , EraGov era
   , Embed (EraRule "DELEGS" era) (ShelleyLEDGER era)
@@ -237,7 +238,7 @@ instance
   ) =>
   STS (ShelleyLEDGER era)
   where
-  type State (ShelleyLEDGER era) = LedgerState era
+  type State (ShelleyLEDGER era) = EraLedgerState era
   type Signal (ShelleyLEDGER era) = Tx era
   type Environment (ShelleyLEDGER era) = LedgerEnv era
   type BaseM (ShelleyLEDGER era) = ShelleyBase
@@ -262,10 +263,16 @@ ledgerTransition ::
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
+  , HasLedgerState era
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt certState, tx) <- judgmentContext
+  TRC
+    ( LedgerEnv slot txIx pp account
+      , view hlsUTxOStateL &&& view hlsCertStateL -> (utxoSt, certState)
+      , tx
+      ) <-
+    judgmentContext
   certState' <-
     trans @(EraRule "DELEGS" era) $
       TRC
@@ -281,7 +288,7 @@ ledgerTransition = do
         , utxoSt
         , tx
         )
-  pure (LedgerState utxoSt' certState')
+  pure (EraLedgerState utxoSt' certState')
 
 instance
   ( Era era
@@ -311,7 +318,8 @@ renderDepositEqualsObligationViolation ::
   , EraGov era
   , Environment t ~ LedgerEnv era
   , Signal t ~ Tx era
-  , State t ~ LedgerState era
+  , State t ~ EraLedgerState era
+  , HasLedgerState era
   ) =>
   AssertionViolation t ->
   String
@@ -320,8 +328,8 @@ renderDepositEqualsObligationViolation
     case avState of
       Nothing -> "\nAssertionViolation " ++ avSTS ++ " " ++ avMsg ++ " (avState is Nothing)."
       Just lstate ->
-        let certstate = lsCertState lstate
-            utxoSt = lsUTxOState lstate
+        let certstate = lstate ^. hlsCertStateL
+            utxoSt = lstate ^. hlsUTxOStateL
             utxo = utxosUtxo utxoSt
             txb = tx ^. bodyTxL
             pot = utxoSt ^. utxosDepositedL

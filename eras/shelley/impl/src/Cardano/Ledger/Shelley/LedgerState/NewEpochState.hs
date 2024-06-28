@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Shelley.LedgerState.NewEpochState (
   availableAfterMIR,
@@ -53,24 +54,25 @@ availableAfterMIR TreasuryMIR as ir =
 -- Virtual selectors, which get the appropriate view from a DState from the embedded UnifiedMap
 
 getGKeys ::
+  HasLedgerState era =>
   NewEpochState era ->
   Set (KeyHash 'Genesis (EraCrypto era))
 getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ ls _ _ = es
-    LedgerState _ (CertState _ _ DState {dsGenDelegs = (GenDelegs genDelegs)}) = ls
+    (view hlsCertStateL -> (CertState _ _ DState {dsGenDelegs = (GenDelegs genDelegs)})) = ls
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
   forall era.
-  EraGov era =>
+  (EraGov era, HasLedgerState era) =>
   Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
   UTxO era ->
-  LedgerState era
+  EraLedgerState era
 genesisState genDelegs0 utxo0 =
-  LedgerState
+  EraLedgerState
     ( UTxOState
         utxo0
         mempty
@@ -102,10 +104,10 @@ genesisState genDelegs0 utxo0 =
 
 -- | Update new epoch state
 updateNES ::
-  EraGov era =>
+  (EraGov era, HasLedgerState era) =>
   NewEpochState era ->
   BlocksMade (EraCrypto era) ->
-  LedgerState era ->
+  EraLedgerState era ->
   NewEpochState era
 updateNES
   oldNes@( NewEpochState
@@ -135,13 +137,13 @@ updateNES
 
 returnRedeemAddrsToReserves ::
   forall era.
-  EraTxOut era =>
+  (EraTxOut era, HasLedgerState era) =>
   EpochState era ->
   EpochState era
 returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
   where
     ls = esLState es
-    us = lsUTxOState ls
+    us = ls ^. hlsUTxOStateL
     UTxO utxo = utxosUtxo us
     (redeemers, nonredeemers) =
       Map.partition (maybe False isBootstrapRedeemer . view bootAddrTxOutF) utxo
@@ -152,4 +154,4 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
         { asReserves = asReserves acnt <+> coinBalance utxoR
         }
     us' = us {utxosUtxo = UTxO nonredeemers :: UTxO era}
-    ls' = ls {lsUTxOState = us'}
+    ls' = ls & hlsUTxOStateL .~ us'

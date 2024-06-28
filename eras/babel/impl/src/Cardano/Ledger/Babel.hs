@@ -53,6 +53,8 @@ import Cardano.Ledger.Babbage.Transition ()
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxInfo ()
 import Cardano.Ledger.Babbage.UTxO ()
+import Cardano.Ledger.Babel.LedgerState.Types (BabelLedgerState)
+import Cardano.Ledger.Shelley.LedgerState (HasLedgerState (EraLedgerState))
 
 type Babel = BabelEra StandardCrypto
 
@@ -64,6 +66,8 @@ instance
   , DSignable c (Hash c EraIndependentRequiredTxs)
   , -- TODO WG figure out what you've done wrong to introduce this constraint
     Signable (DSIGN c) (Cardano.Crypto.Hash.Class.Hash c EraIndependentTxBody)
+  , HasLedgerState (BabelEra c)
+  , EraLedgerState (BabelEra c) ~ BabelLedgerState (BabelEra c)
   ) =>
   ApplyBlock (BabelEra c)
 
@@ -71,6 +75,7 @@ instance
   ( Crypto c
   , DSignable c (Hash c EraIndependentTxBody)
   , DSignable c (Hash c EraIndependentRequiredTxs)
+  , HasLedgerState (BabelEra c)
   ) =>
   ApplyTx (BabelEra c)
   where

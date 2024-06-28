@@ -8,6 +8,8 @@ module Test.Cardano.Ledger.Allegra.TreeDiff (
   module Test.Cardano.Ledger.Shelley.TreeDiff,
 ) where
 
+import Cardano.Ledger.Allegra (AllegraLedgerState)
+import Cardano.Ledger.Allegra.Core (GovState)
 import Cardano.Ledger.Allegra.Rules
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Allegra.TxAuxData
@@ -59,3 +61,11 @@ instance
   , ToExpr (Event (EraRule "PPUP" era))
   ) =>
   ToExpr (AllegraUtxoEvent era)
+
+-- LedgerState
+
+instance
+  ( ToExpr (TxOut era)
+  , ToExpr (GovState era)
+  ) =>
+  ToExpr (AllegraLedgerState era)

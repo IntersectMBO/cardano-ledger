@@ -1,8 +1,15 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Alonzo.Era (
   AlonzoEra,
+  AlonzoLedgerState (..),
   AlonzoUTXO,
   AlonzoUTXOS,
   AlonzoUTXOW,
@@ -11,10 +18,28 @@ module Cardano.Ledger.Alonzo.Era (
 )
 where
 
+import Cardano.Ledger.Binary (DecCBOR (..), DecShareCBOR, EncCBOR, Interns, decNoShareCBOR)
+import Cardano.Ledger.Binary.Decoding (DecShareCBOR (..))
+import Cardano.Ledger.Binary.Encoding (EncCBOR (..))
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Mary (MaryEra, MaryValue)
+import Cardano.Ledger.Shelley.API (KeyRole (..))
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.LedgerState (
+  HasLedgerState (..),
+  LedgerState,
+  lsCertStateL,
+  lsUTxOStateL,
+ )
 import Cardano.Ledger.Shelley.Rules
+import Control.DeepSeq (NFData)
+import Data.Default.Class (Default)
+import GHC.Generics (Generic)
+import Lens.Micro (lens)
+import Lens.Micro.Type (Lens')
+import NoThunks.Class (NoThunks)
 
 -- =====================================================
 
@@ -30,6 +55,70 @@ instance Crypto c => Era (AlonzoEra c) where
   eraName = "Alonzo"
 
 type instance Value (AlonzoEra c) = MaryValue c
+
+newtype AlonzoLedgerState era = AlonzoLedgerState {unAlonzoLedgerState :: LedgerState era}
+  deriving (Generic, Default)
+
+alonzoLedgerStateL :: Lens' (AlonzoLedgerState era) (LedgerState era)
+alonzoLedgerStateL = lens unAlonzoLedgerState (\x y -> x {unAlonzoLedgerState = y})
+
+instance (Crypto c, EraGov (AlonzoEra c), EraTxOut (AlonzoEra c)) => HasLedgerState (AlonzoEra c) where
+  type EraLedgerState (AlonzoEra c) = AlonzoLedgerState (AlonzoEra c)
+  hlsUTxOStateL = alonzoLedgerStateL . lsUTxOStateL
+  hlsCertStateL = alonzoLedgerStateL . lsCertStateL
+
+deriving stock instance
+  ( EraTxOut era
+  , Show (GovState era)
+  ) =>
+  Show (AlonzoLedgerState era)
+
+deriving stock instance
+  ( EraTxOut era
+  , Eq (GovState era)
+  ) =>
+  Eq (AlonzoLedgerState era)
+
+instance
+  ( EraTxOut era
+  , NoThunks (GovState era)
+  ) =>
+  NoThunks (AlonzoLedgerState era)
+
+instance
+  ( EraTxOut era
+  , NFData (GovState era)
+  ) =>
+  NFData (AlonzoLedgerState era)
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  EncCBOR (AlonzoLedgerState era)
+  where
+  encCBOR (AlonzoLedgerState ls) = encCBOR ls
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  DecCBOR (AlonzoLedgerState era)
+  where
+  decCBOR = decNoShareCBOR
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  DecShareCBOR (AlonzoLedgerState era)
+  where
+  type
+    Share (AlonzoLedgerState era) =
+      ( Interns (Credential 'Staking (EraCrypto era))
+      , Interns (KeyHash 'StakePool (EraCrypto era))
+      )
+  decSharePlusCBOR = AlonzoLedgerState <$> decSharePlusCBOR
 
 -------------------------------------------------------------------------------
 -- Era Mapping

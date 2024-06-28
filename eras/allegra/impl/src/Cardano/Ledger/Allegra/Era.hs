@@ -1,7 +1,12 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -9,13 +14,30 @@ module Cardano.Ledger.Allegra.Era (
   AllegraEra,
   AllegraUTXO,
   AllegraUTXOW,
+  AllegraLedgerState (..),
 ) where
 
+import Cardano.Ledger.Binary (DecCBOR, DecShareCBOR (decSharePlusCBOR), EncCBOR, Interns)
+import Cardano.Ledger.Binary.Decoding (DecCBOR (..), Share, decNoShareCBOR)
+import Cardano.Ledger.Binary.Encoding (encCBOR)
 import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.LedgerState (
+  HasLedgerState (..),
+  LedgerState (..),
+  lsCertStateL,
+  lsUTxOStateL,
+ )
 import Cardano.Ledger.Shelley.Rules
+import Control.DeepSeq (NFData)
+import Data.Default.Class (Default)
+import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
+import NoThunks.Class (NoThunks)
 
 -- | The Allegra era
 data AllegraEra c
@@ -26,6 +48,70 @@ instance Crypto c => Era (AllegraEra c) where
   type ProtVerLow (AllegraEra c) = 3
 
   eraName = "Allegra"
+
+newtype AllegraLedgerState era = AllegraLedgerState {unAllegraLedgerState :: LedgerState era}
+  deriving (Generic, Default)
+
+allegraLedgerStateL :: Lens' (AllegraLedgerState era) (LedgerState era)
+allegraLedgerStateL = lens unAllegraLedgerState (\x y -> x {unAllegraLedgerState = y})
+
+instance (Crypto c, EraGov (AllegraEra c), EraTxOut (AllegraEra c)) => HasLedgerState (AllegraEra c) where
+  type EraLedgerState (AllegraEra c) = AllegraLedgerState (AllegraEra c)
+  hlsUTxOStateL = allegraLedgerStateL . lsUTxOStateL
+  hlsCertStateL = allegraLedgerStateL . lsCertStateL
+
+deriving stock instance
+  ( EraTxOut era
+  , Show (GovState era)
+  ) =>
+  Show (AllegraLedgerState era)
+
+deriving stock instance
+  ( EraTxOut era
+  , Eq (GovState era)
+  ) =>
+  Eq (AllegraLedgerState era)
+
+instance
+  ( EraTxOut era
+  , NoThunks (GovState era)
+  ) =>
+  NoThunks (AllegraLedgerState era)
+
+instance
+  ( EraTxOut era
+  , NFData (GovState era)
+  ) =>
+  NFData (AllegraLedgerState era)
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  EncCBOR (AllegraLedgerState era)
+  where
+  encCBOR (AllegraLedgerState ls) = encCBOR ls
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  DecCBOR (AllegraLedgerState era)
+  where
+  decCBOR = decNoShareCBOR
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  DecShareCBOR (AllegraLedgerState era)
+  where
+  type
+    Share (AllegraLedgerState era) =
+      ( Interns (Credential 'Staking (EraCrypto era))
+      , Interns (KeyHash 'StakePool (EraCrypto era))
+      )
+  decSharePlusCBOR = AllegraLedgerState <$> decSharePlusCBOR
 
 --------------------------------------------------------------------------------
 -- Core instances

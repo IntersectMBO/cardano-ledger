@@ -83,6 +83,7 @@ import Data.Set (Set)
 import qualified Data.VMap as VMap
 import Data.Word
 import Lens.Micro
+import Lens.Micro.Extras (view)
 
 -- =======================================================================
 -- Part 1, Incrementally updating the IncrementalStake in Utxo rule
@@ -269,7 +270,7 @@ aggregateActiveStake m1 m2 = assert (Map.valid m) m
 --   2) Adds to the Treasury of the AccountState for non-actively delegated stake
 --   3) Adds fees to the UTxOState
 applyRUpd ::
-  EraGov era =>
+  (EraGov era, HasLedgerState era) =>
   RewardUpdate (EraCrypto era) ->
   EpochState era ->
   EpochState era
@@ -279,7 +280,7 @@ applyRUpd ru es =
 
 -- TO IncrementalStake
 applyRUpdFiltered ::
-  EraGov era =>
+  (EraGov era, HasLedgerState era) =>
   RewardUpdate (EraCrypto era) ->
   EpochState era ->
   (EpochState era, FilteredRewards era)
@@ -295,8 +296,8 @@ applyRUpdFiltered
           & prevPParamsEpochStateL
           .~ es
           ^. prevPParamsEpochStateL
-      utxoState_ = lsUTxOState ls
-      dpState = lsCertState ls
+      utxoState_ = ls ^. hlsUTxOStateL
+      dpState = ls ^. hlsCertStateL
       dState = certDState dpState
       prevPParams = es ^. prevPParamsEpochStateL
       prevProVer = prevPParams ^. ppProtocolVersionL
@@ -314,16 +315,17 @@ applyRUpdFiltered
           }
       ls' =
         ls
-          { lsUTxOState =
-              utxoState_ {utxosFees = utxosFees utxoState_ `addDeltaCoin` deltaF ru}
-          , lsCertState =
-              dpState
-                { certDState =
-                    dState
-                      { dsUnified = rewards dState UM.∪+ registeredAggregated
-                      }
-                }
-          }
+          & hlsUTxOStateL
+          .~ utxoState_
+            { utxosFees = utxosFees utxoState_ `addDeltaCoin` deltaF ru
+            }
+          & hlsCertStateL
+          .~ dpState
+            { certDState =
+                dState
+                  { dsUnified = rewards dState UM.∪+ registeredAggregated
+                  }
+            }
       nm' = nonMyopic ru
 
 data FilteredRewards era = FilteredRewards
@@ -366,11 +368,11 @@ filterAllRewards' rs protVer dState =
     (registered, shelleyIgnored) = filterRewards protVer regRU
 
 filterAllRewards ::
-  EraGov era =>
+  (EraGov era, HasLedgerState era) =>
   Map (Credential 'Staking (EraCrypto era)) (Set (Reward (EraCrypto era))) ->
   EpochState era ->
   FilteredRewards era
 filterAllRewards mp epochstate = filterAllRewards' mp prevPP dState
   where
     prevPP = epochstate ^. prevPParamsEpochStateL . ppProtocolVersionL
-    dState = (certDState . lsCertState . esLState) epochstate
+    dState = (certDState . view hlsCertStateL . esLState) epochstate

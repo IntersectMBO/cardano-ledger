@@ -13,6 +13,8 @@ module Test.Cardano.Ledger.Allegra.Arbitrary (
   maxTimelockDepth,
 ) where
 
+import Cardano.Ledger.Allegra (AllegraLedgerState (AllegraLedgerState))
+import Cardano.Ledger.Allegra.Core (EraGov (GovState))
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
 import Cardano.Ledger.Allegra.Scripts (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.Allegra.TxAuxData (AllegraTxAuxData (..))
@@ -137,3 +139,13 @@ instance Era era => Arbitrary (Timelock era) where
 instance Arbitrary ValidityInterval where
   arbitrary = genericArbitraryU
   shrink = genericShrink
+
+instance
+  ( EraTxOut era
+  , Arbitrary (TxOut era)
+  , Arbitrary (GovState era)
+  ) =>
+  Arbitrary (AllegraLedgerState era)
+  where
+  arbitrary = AllegraLedgerState <$> arbitrary
+  shrink (AllegraLedgerState ls) = AllegraLedgerState <$> shrink ls

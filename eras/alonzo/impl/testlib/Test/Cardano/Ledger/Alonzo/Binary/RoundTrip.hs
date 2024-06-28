@@ -42,6 +42,8 @@ roundTripAlonzoCommonSpec ::
   , Arbitrary (PParams era)
   , Arbitrary (PParamsUpdate era)
   , RuleListEra era
+  , HasLedgerState era
+  , Arbitrary (EraLedgerState era)
   ) =>
   Spec
 roundTripAlonzoCommonSpec = do

@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -12,6 +13,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Ledger (
@@ -77,12 +79,13 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
-  LedgerState (..),
+  HasLedgerState (..),
   UTxOState (..),
   asTreasuryL,
   certVStateL,
   utxosGovStateL,
   vsCommitteeStateL,
+  pattern EraLedgerState,
  )
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
@@ -100,6 +103,7 @@ import Cardano.Ledger.Slot (epochInfoEpoch)
 import Cardano.Ledger.UMap (UView (..), dRepMap)
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..))
+import Control.Arrow ((&&&))
 import Control.DeepSeq (NFData)
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
@@ -121,6 +125,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
+import Lens.Micro.Extras (view)
 import NoThunks.Class (NoThunks (..))
 
 data ConwayLedgerPredFailure era
@@ -296,10 +301,11 @@ instance
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovProcedures era
+  , HasLedgerState era
   ) =>
   STS (ConwayLEDGER era)
   where
-  type State (ConwayLEDGER era) = LedgerState era
+  type State (ConwayLEDGER era) = EraLedgerState era
   type Signal (ConwayLEDGER era) = Tx era
   type Environment (ConwayLEDGER era) = LedgerEnv era
   type BaseM (ConwayLEDGER era) = ShelleyBase
@@ -322,7 +328,7 @@ ledgerTransition ::
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
   , Signal (someLEDGER era) ~ Tx era
-  , State (someLEDGER era) ~ LedgerState era
+  , State (someLEDGER era) ~ EraLedgerState era
   , Environment (someLEDGER era) ~ LedgerEnv era
   , PredicateFailure (someLEDGER era) ~ ConwayLedgerPredFailure era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
@@ -339,10 +345,16 @@ ledgerTransition ::
   , Signal (EraRule "GOV" era) ~ GovProcedures era
   , BaseM (someLEDGER era) ~ ShelleyBase
   , STS (someLEDGER era)
+  , HasLedgerState era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot _txIx pp account, LedgerState utxoState certState, tx) <- judgmentContext
+  TRC
+    ( LedgerEnv slot _txIx pp account
+      , view hlsUTxOStateL &&& view hlsCertStateL -> (utxoState, certState)
+      , tx
+      ) <-
+    judgmentContext
 
   let actualTreasuryValue = account ^. asTreasuryL
    in case tx ^. bodyTxL . currentTreasuryValueTxBodyL of
@@ -417,7 +429,7 @@ ledgerTransition = do
         , utxoState'
         , tx
         )
-  pure $ LedgerState utxoState'' certStateAfterCERTS
+  pure $ EraLedgerState utxoState'' certStateAfterCERTS
 
 instance
   ( Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
@@ -483,6 +495,7 @@ instance
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , EraGov era
+  , HasLedgerState era
   ) =>
   Embed (ConwayLEDGER era) (ShelleyLEDGERS era)
   where

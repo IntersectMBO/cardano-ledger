@@ -7,6 +7,7 @@
 module Test.Cardano.Ledger.Allegra.Imp (spec) where
 
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.LedgerState (HasLedgerState (..))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
@@ -14,7 +15,9 @@ import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 
 spec ::
   forall era.
-  ( ShelleyEraImp era
+  ( HasLedgerState era
+  , NFData (EraLedgerState era)
+  , ShelleyEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>

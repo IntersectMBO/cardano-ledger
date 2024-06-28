@@ -28,7 +28,7 @@ import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPredFailure
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
-  LedgerState (..),
+  HasLedgerState (..),
   UTxOState (..),
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -117,10 +117,11 @@ instance
   , State (EraRule "DELEGS" era) ~ CertState era
   , Signal (EraRule "DELEGS" era) ~ Seq (TxCert era)
   , ProtVerAtMost era 8
+  , HasLedgerState era
   ) =>
   STS (BabbageLEDGER era)
   where
-  type State (BabbageLEDGER era) = LedgerState era
+  type State (BabbageLEDGER era) = EraLedgerState era
   type Signal (BabbageLEDGER era) = Tx era
   type Environment (BabbageLEDGER era) = LedgerEnv era
   type BaseM (BabbageLEDGER era) = ShelleyBase

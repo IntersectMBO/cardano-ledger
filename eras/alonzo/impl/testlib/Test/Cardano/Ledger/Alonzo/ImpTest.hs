@@ -57,10 +57,10 @@ import Cardano.Ledger.Plutus.Language (
   PlutusLanguage,
  )
 import Cardano.Ledger.Shelley.LedgerState (
+  HasLedgerState (hlsUTxOStateL),
   NewEpochState,
   curPParamsEpochStateL,
   esLStateL,
-  lsUTxOStateL,
   nesEsL,
   utxosUtxoL,
  )
@@ -103,6 +103,7 @@ initAlonzoImpNES ::
   ( AlonzoEraPParams era
   , ShelleyEraImp era
   , AlonzoEraScript era
+  , HasLedgerState era
   ) =>
   NewEpochState era ->
   NewEpochState era
@@ -110,13 +111,16 @@ initAlonzoImpNES = nesEsL . curPParamsEpochStateL %~ initPParams
   where
     initPParams pp =
       pp
-        & ppMaxValSizeL .~ 1_000_000_000
-        & ppMaxTxExUnitsL .~ ExUnits 10_000_000 10_000_000
+        & ppMaxValSizeL
+        .~ 1_000_000_000
+        & ppMaxTxExUnitsL
+        .~ ExUnits 10_000_000 10_000_000
         & ppCostModelsL
-          .~ testingCostModels
-            [PlutusV1 .. eraMaxLanguage @era]
+        .~ testingCostModels
+          [PlutusV1 .. eraMaxLanguage @era]
 
-makeCollateralInput :: ShelleyEraImp era => ImpTestM era (TxIn (EraCrypto era))
+makeCollateralInput ::
+  (HasLedgerState era, ShelleyEraImp era) => ImpTestM era (TxIn (EraCrypto era))
 makeCollateralInput = do
   -- TODO: make more accurate
   let collateral = Coin 10_000_000
@@ -124,7 +128,7 @@ makeCollateralInput = do
   withFixup fixupTx $ sendCoinTo addr collateral
 
 addCollateralInput ::
-  (AlonzoEraImp era, ScriptsNeeded era ~ AlonzoScriptsNeeded era) =>
+  (AlonzoEraImp era, ScriptsNeeded era ~ AlonzoScriptsNeeded era, HasLedgerState era) =>
   Tx era ->
   ImpTestM era (Tx era)
 addCollateralInput tx = impAnn "addCollateralInput" $ do
@@ -135,7 +139,9 @@ addCollateralInput tx = impAnn "addCollateralInput" $ do
       collateralInput <- makeCollateralInput
       pure $
         tx
-          & bodyTxL . collateralInputsTxBodyL <>~ Set.singleton collateralInput
+          & bodyTxL
+          . collateralInputsTxBodyL
+          <>~ Set.singleton collateralInput
 
 impLookupPlutusScriptMaybe ::
   forall era.
@@ -147,14 +153,14 @@ impLookupPlutusScriptMaybe sh =
 
 impGetPlutusContexts ::
   forall era.
-  (ScriptsNeeded era ~ AlonzoScriptsNeeded era, AlonzoEraImp era) =>
+  (ScriptsNeeded era ~ AlonzoScriptsNeeded era, AlonzoEraImp era, HasLedgerState era) =>
   Tx era ->
   ImpTestM
     era
     [(PlutusPurpose AsIxItem era, ScriptHash (EraCrypto era), ScriptTestContext)]
 impGetPlutusContexts tx = do
   let txBody = tx ^. bodyTxL
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  utxo <- getsNES $ nesEsL . esLStateL . hlsUTxOStateL . utxosUtxoL
   let AlonzoScriptsNeeded asn = getScriptsNeeded utxo txBody
   mbyContexts <- forM asn $ \(prp, sh) -> do
     pure $ (prp,sh,) <$> impGetScriptContextMaybe @era sh
@@ -162,7 +168,7 @@ impGetPlutusContexts tx = do
 
 fixupRedeemerIndices ::
   forall era.
-  AlonzoEraImp era =>
+  (AlonzoEraImp era, HasLedgerState era) =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
@@ -175,13 +181,15 @@ fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
     updateIndex x = x
   pure $
     tx
-      & witsTxL . rdmrsTxWitsL
-        %~ (\(Redeemers m) -> Redeemers $ Map.mapKeys updateIndex m)
+      & witsTxL
+      . rdmrsTxWitsL
+      %~ (\(Redeemers m) -> Redeemers $ Map.mapKeys updateIndex m)
 
 fixupRedeemers ::
   forall era.
   ( ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , AlonzoEraImp era
+  , HasLedgerState era
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
@@ -195,12 +203,15 @@ fixupRedeemers tx = impAnn "fixupRedeemers" $ do
     newRedeemers = Map.fromList (mkNewRedeemers <$> contexts)
   pure $
     tx
-      & witsTxL . rdmrsTxWitsL .~ Redeemers (Map.union oldRedeemers newRedeemers)
+      & witsTxL
+      . rdmrsTxWitsL
+      .~ Redeemers (Map.union oldRedeemers newRedeemers)
 
 fixupScriptWits ::
   forall era.
   ( ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , AlonzoEraImp era
+  , HasLedgerState era
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
@@ -223,13 +234,16 @@ fixupScriptWits tx = impAnn "fixupScriptWits" $ do
     (sh,) <$> plutusToScript plutus
   pure $
     tx
-      & witsTxL . scriptTxWitsL <>~ Map.fromList scriptWits
+      & witsTxL
+      . scriptTxWitsL
+      <>~ Map.fromList scriptWits
 
 fixupDatums ::
   forall era.
   ( HasCallStack
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , AlonzoEraImp era
+  , HasLedgerState era
   ) =>
   Tx era ->
   ImpTestM era (Tx era)
@@ -240,9 +254,10 @@ fixupDatums tx = impAnn "fixupDatums" $ do
   let TxDats prevDats = tx ^. witsTxL . datsTxWitsL
   pure $
     tx
-      & witsTxL . datsTxWitsL
-        .~ TxDats
-          (Map.union prevDats $ fromElems hashData (catMaybes datums))
+      & witsTxL
+      . datsTxWitsL
+      .~ TxDats
+        (Map.union prevDats $ fromElems hashData (catMaybes datums))
   where
     collectDatums :: PlutusPurpose AsIxItem era -> ImpTestM era (Maybe (Data era))
     collectDatums purpose = do
@@ -264,7 +279,7 @@ fixupDatums tx = impAnn "fixupDatums" $ do
 
 fixupPPHash ::
   forall era.
-  AlonzoEraImp era =>
+  (AlonzoEraImp era, HasLedgerState era) =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupPPHash tx = impAnn "fixupPPHash" $ do
@@ -285,7 +300,9 @@ fixupPPHash tx = impAnn "fixupPPHash" $ do
         (tx ^. witsTxL . datsTxWitsL)
   pure $
     tx
-      & bodyTxL . scriptIntegrityHashTxBodyL .~ integrityHash
+      & bodyTxL
+      . scriptIntegrityHashTxBodyL
+      .~ integrityHash
 
 fixupOutputDatums ::
   forall era.
@@ -307,18 +324,22 @@ fixupOutputDatums tx = impAnn "fixupOutputDatums" $ do
                       expectJust mbySpendDatum
                   pure $
                     txOut
-                      & dataHashTxOutL .~ SJust (hashData @era $ Data spendDatum)
+                      & dataHashTxOutL
+                      .~ SJust (hashData @era $ Data spendDatum)
             _ -> pure txOut
         _ -> pure txOut
   newOutputs <- traverse addDatum $ tx ^. bodyTxL . outputsTxBodyL
   pure $
     tx
-      & bodyTxL . outputsTxBodyL .~ newOutputs
+      & bodyTxL
+      . outputsTxBodyL
+      .~ newOutputs
 
 alonzoFixupTx ::
   ( ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , HasCallStack
   , AlonzoEraImp era
+  , HasLedgerState era
   ) =>
   Tx era ->
   ImpTestM era (Tx era)

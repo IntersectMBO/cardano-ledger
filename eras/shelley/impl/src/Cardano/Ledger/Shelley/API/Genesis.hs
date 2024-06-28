@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -13,14 +14,10 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types (
-  AccountState (AccountState),
   CertState (CertState),
   Coin (Coin),
   DState (..),
-  EpochState (EpochState),
   GenDelegs (GenDelegs),
-  LedgerState (LedgerState),
-  NewEpochState (NewEpochState),
   PoolDistr (PoolDistr),
   ShelleyGenesis (sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams),
   StrictMaybe (SNothing),
@@ -29,9 +26,9 @@ import Cardano.Ledger.Shelley.API.Types (
  )
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
-  StashedAVVMAddresses,
   smartUTxOState,
  )
+import Cardano.Ledger.Shelley.LedgerState.Types
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (coinBalance)
 import Cardano.Ledger.Val (Val (..))
@@ -62,6 +59,7 @@ class
   -- | Construct an initial state given a 'ShelleyGenesis' and any appropriate
   -- 'AdditionalGenesisConfig' for the era.
   initialState ::
+    HasLedgerState era =>
     ShelleyGenesis (EraCrypto era) ->
     AdditionalGenesisConfig era ->
     NewEpochState era
@@ -80,7 +78,7 @@ instance
 -- | Helper function for constructing the initial state for any era
 initialStateFromGenesis ::
   forall era.
-  CanStartFromGenesis era =>
+  (CanStartFromGenesis era, HasLedgerState era) =>
   -- | Genesis type
   ShelleyGenesis (EraCrypto era) ->
   AdditionalGenesisConfig era ->
@@ -92,7 +90,7 @@ initialStateFromGenesis sg ag =
     (BlocksMade Map.empty)
     ( EpochState
         (AccountState (Coin 0) reserves)
-        ( LedgerState
+        ( EraLedgerState
             (smartUTxOState (fromShelleyPParams ag pp) initialUtxo (Coin 0) (Coin 0) govSt zero)
             (CertState def def dState)
         )
@@ -110,8 +108,10 @@ initialStateFromGenesis sg ag =
     pp = sgProtocolParams sg
     govSt =
       def
-        & curPParamsGovStateL .~ fromShelleyPParams ag pp
-        & prevPParamsGovStateL .~ fromShelleyPParams ag pp
+        & curPParamsGovStateL
+        .~ fromShelleyPParams ag pp
+        & prevPParamsGovStateL
+        .~ fromShelleyPParams ag pp
 
     dState :: DState era
     dState =

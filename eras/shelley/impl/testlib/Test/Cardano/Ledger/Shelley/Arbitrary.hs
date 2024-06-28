@@ -123,6 +123,7 @@ instance
   , Arbitrary (PParams era)
   , Arbitrary (StashedAVVMAddresses era)
   , Arbitrary (GovState era)
+  , Arbitrary (EraLedgerState era)
   ) =>
   Arbitrary (NewEpochState era)
   where
@@ -138,8 +139,7 @@ instance
 
 instance
   ( EraTxOut era
-  , Arbitrary (TxOut era)
-  , Arbitrary (GovState era)
+  , Arbitrary (EraLedgerState era)
   ) =>
   Arbitrary (EpochState era)
   where
@@ -149,7 +149,12 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-  shrink = genericShrink
+  shrink (EpochState a b c d) =
+    -- TODO WG: Is this fine?
+    [EpochState a' b c d | a' <- shrink a]
+      ++ [EpochState a b' c d | b' <- shrink b]
+      ++ [EpochState a b c' d | c' <- shrink c]
+      ++ [EpochState a b c d' | d' <- shrink d]
 
 instance
   ( EraTxOut era
@@ -171,6 +176,16 @@ instance
       LedgerState
         <$> (lsUTxOState : shrink lsUTxOState)
         <*> (lsCertState : shrink lsCertState)
+
+instance
+  ( EraTxOut era
+  , Arbitrary (TxOut era)
+  , Arbitrary (GovState era)
+  ) =>
+  Arbitrary (ShelleyLedgerState era)
+  where
+  arbitrary = ShelleyLedgerState <$> arbitrary
+  shrink (ShelleyLedgerState ls) = ShelleyLedgerState <$> shrink ls
 
 instance
   ( EraTxOut era

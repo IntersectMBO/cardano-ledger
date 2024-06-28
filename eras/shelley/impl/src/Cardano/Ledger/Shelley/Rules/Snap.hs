@@ -7,6 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Rules.Snap (
@@ -34,10 +35,14 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Era (ShelleySNAP)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
-  LedgerState (..),
   UTxOState (..),
   incrementalStakeDistr,
  )
+import Cardano.Ledger.Shelley.LedgerState.Types (
+  EraLedgerState,
+  HasLedgerState (hlsCertStateL, hlsUTxOStateL),
+ )
+import Control.Arrow ((&&&))
 import Control.DeepSeq (NFData)
 import Control.State.Transition (
   STS (..),
@@ -50,6 +55,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
+import Lens.Micro.Extras (view)
 import NoThunks.Class (NoThunks (..))
 
 -- ======================================================
@@ -70,9 +76,9 @@ deriving instance Eq (SnapEvent era)
 
 instance NFData (SnapEvent era)
 
-data SnapEnv era = SnapEnv !(LedgerState era) !(PParams era)
+data SnapEnv era = SnapEnv !(EraLedgerState era) !(PParams era)
 
-instance EraTxOut era => STS (ShelleySNAP era) where
+instance (EraTxOut era, HasLedgerState era) => STS (ShelleySNAP era) where
   type State (ShelleySNAP era) = SnapShots (EraCrypto era)
   type Signal (ShelleySNAP era) = ()
   type Environment (ShelleySNAP era) = SnapEnv era
@@ -92,12 +98,16 @@ instance EraTxOut era => STS (ShelleySNAP era) where
 -- where important changes were made to the source code.
 snapTransition ::
   forall era.
-  EraPParams era =>
+  (EraPParams era, HasLedgerState era) =>
   TransitionRule (ShelleySNAP era)
 snapTransition = do
   TRC (snapEnv, s, _) <- judgmentContext
 
-  let SnapEnv (LedgerState (UTxOState _utxo _ _ fees _ incStake _) (CertState _ pstate dstate)) pp = snapEnv
+  let SnapEnv
+        ( view hlsUTxOStateL &&& view hlsCertStateL ->
+            (UTxOState _utxo _ _ fees _ incStake _, CertState _ pstate dstate)
+          )
+        pp = snapEnv
       -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate
       istakeSnap = incrementalStakeDistr pp incStake dstate pstate
 

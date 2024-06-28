@@ -80,6 +80,7 @@ library
         cardano-ledger-shelley ^>=1.11,
         cardano-strict-containers,
         containers,
+        data-default-class,
         deepseq,
         microlens,
         nothunks,

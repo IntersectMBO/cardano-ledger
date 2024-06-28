@@ -4,11 +4,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Rules.Ledger (
@@ -28,8 +30,9 @@ import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
-  LedgerState (..),
+  HasLedgerState (..),
   UTxOState (..),
+  pattern EraLedgerState,
  )
 import Cardano.Ledger.Shelley.Rules (
   DelegsEnv (..),
@@ -54,6 +57,7 @@ import Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyLedgersPredFailure (..),
   renderDepositEqualsObligationViolation,
  )
+import Control.Arrow ((&&&))
 import Control.State.Transition (
   Embed (..),
   STS (..),
@@ -66,6 +70,7 @@ import Data.Kind (Type)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Lens.Micro
+import Lens.Micro.Extras (view)
 
 type instance EraRuleFailure "LEDGER" (AlonzoEra c) = ShelleyLedgerPredFailure (AlonzoEra c)
 
@@ -111,7 +116,7 @@ instance InjectRuleFailure "LEDGER" ShelleyDelegPredFailure (AlonzoEra c) where
 ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
   ( Signal (someLEDGER era) ~ Tx era
-  , State (someLEDGER era) ~ LedgerState era
+  , State (someLEDGER era) ~ EraLedgerState era
   , Environment (someLEDGER era) ~ LedgerEnv era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "DELEGS" era) (someLEDGER era)
@@ -122,10 +127,13 @@ ledgerTransition ::
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , AlonzoEraTx era
+  , HasLedgerState era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt certState, tx) <- judgmentContext
+  TRC
+    (LedgerEnv slot txIx pp account, view hlsUTxOStateL &&& view hlsCertStateL -> (utxoSt, certSt), tx) <-
+    judgmentContext
   let txBody = tx ^. bodyTxL
 
   certState' <-
@@ -134,22 +142,23 @@ ledgerTransition = do
         trans @(EraRule "DELEGS" era) $
           TRC
             ( DelegsEnv slot txIx pp tx account
-            , certState
+            , certSt
             , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
             )
-      else pure certState
+      else pure certSt
 
   utxoSt' <-
     trans @(EraRule "UTXOW" era) $
       TRC
-        ( UtxoEnv @era slot pp certState
+        ( UtxoEnv @era slot pp certSt
         , utxoSt
         , tx
         )
-  pure $ LedgerState utxoSt' certState'
+  pure $ EraLedgerState utxoSt' certState'
 
 instance
-  ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  ( HasLedgerState era
+  , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , AlonzoEraTx era
   , EraGov era
   , Tx era ~ AlonzoTx era
@@ -165,7 +174,7 @@ instance
   ) =>
   STS (AlonzoLEDGER era)
   where
-  type State (AlonzoLEDGER era) = LedgerState era
+  type State (AlonzoLEDGER era) = EraLedgerState era
   type Signal (AlonzoLEDGER era) = AlonzoTx era
   type Environment (AlonzoLEDGER era) = LedgerEnv era
   type BaseM (AlonzoLEDGER era) = ShelleyBase

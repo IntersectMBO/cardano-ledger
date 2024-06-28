@@ -35,9 +35,8 @@ import Cardano.Ledger.Shelley.Governance (EraGov (..))
 import Cardano.Ledger.Shelley.LedgerState.Types (
   AccountState (..),
   EpochState (..),
-  LedgerState (..),
+  HasLedgerState (hlsCertStateL, hlsUTxOStateL),
   UTxOState (..),
-  lsUTxOStateL,
   utxosGovStateL,
  )
 import Cardano.Ledger.Shelley.TxBody (unWithdrawals)
@@ -64,6 +63,7 @@ instance NFData AdaPots
 totalAdaPotsES ::
   ( EraTxOut era
   , EraGov era
+  , HasLedgerState era
   ) =>
   EpochState era ->
   AdaPots
@@ -77,11 +77,11 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) ls _ _) =
     , obligationsPot = obligationCertState certState <> govStateObligations
     }
   where
-    UTxOState u _ _ fees_ _ _ _ = lsUTxOState ls
-    certState@(CertState _ _ dstate) = lsCertState ls
+    UTxOState u _ _ fees_ _ _ _ = ls ^. hlsUTxOStateL
+    certState@(CertState _ _ dstate) = ls ^. hlsCertStateL
     rewards_ = fromCompact $ sumRewardsUView (rewards dstate)
     coins = coinBalance u
-    govStateObligations = obligationGovState (ls ^. lsUTxOStateL . utxosGovStateL)
+    govStateObligations = obligationGovState (ls ^. hlsUTxOStateL . utxosGovStateL)
 
 sumAdaPots :: AdaPots -> Coin
 sumAdaPots
@@ -101,7 +101,7 @@ sumAdaPots
       <> sumObligation obligationsPot
 
 -- | Calculate the total ada in the epoch state
-totalAdaES :: (EraTxOut era, EraGov era) => EpochState era -> Coin
+totalAdaES :: (EraTxOut era, EraGov era, HasLedgerState era) => EpochState era -> Coin
 totalAdaES = sumAdaPots . totalAdaPotsES
 
 -- =============================================

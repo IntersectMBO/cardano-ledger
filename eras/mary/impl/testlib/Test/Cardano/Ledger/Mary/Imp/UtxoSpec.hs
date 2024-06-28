@@ -12,6 +12,7 @@ import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
+import Cardano.Ledger.Shelley.LedgerState (HasLedgerState)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure (..))
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq (..))
@@ -20,7 +21,8 @@ import Test.Cardano.Ledger.Core.Utils (txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.ImpTest
 
-mintBasicToken :: forall era. (HasCallStack, MaryEraImp era) => ImpTestM era (Tx era)
+mintBasicToken ::
+  forall era. (HasCallStack, MaryEraImp era, HasLedgerState era) => ImpTestM era (Tx era)
 mintBasicToken = do
   (_, addr) <- freshKeyAddr
   keyHash <- freshKeyHash
@@ -32,12 +34,15 @@ mintBasicToken = do
       txValue = MaryValue txCoin txAsset
       txBody =
         mkBasicTxBody
-          & outputsTxBodyL .~ [mkBasicTxOut addr txValue]
-          & mintTxBodyL .~ txAsset
+          & outputsTxBodyL
+          .~ [mkBasicTxOut addr txValue]
+          & mintTxBodyL
+          .~ txAsset
   submitTx $ mkBasicTx txBody
 
 spec ::
-  ( HasCallStack
+  ( HasLedgerState era
+  , HasCallStack
   , MaryEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   ) =>
@@ -59,8 +64,10 @@ spec = describe "UTXO" $ do
           burnTooMuchProducedMultiAsset = MultiAsset (Map.map (Map.map negate) burnTooMuch)
           txBody =
             mkBasicTxBody
-              & inputsTxBodyL .~ [txInAt (0 :: Int) txMinted]
-              & mintTxBodyL .~ burnTooMuchMultiAsset
+              & inputsTxBodyL
+              .~ [txInAt (0 :: Int) txMinted]
+              & mintTxBodyL
+              .~ burnTooMuchMultiAsset
       (_, rootTxOut) <- lookupImpRootTxOut
       let rootTxOutValue = rootTxOut ^. valueTxOutL
       predFailures <- expectLeftDeep =<< trySubmitTx (mkBasicTx txBody)

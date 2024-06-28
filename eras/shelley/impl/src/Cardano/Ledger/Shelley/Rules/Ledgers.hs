@@ -27,7 +27,8 @@ import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Era (ShelleyEra, ShelleyLEDGERS)
-import Cardano.Ledger.Shelley.LedgerState (AccountState, LedgerState)
+import Cardano.Ledger.Shelley.LedgerState (AccountState)
+import Cardano.Ledger.Shelley.LedgerState.Types (EraLedgerState)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delpl (ShelleyDelplPredFailure)
@@ -138,14 +139,14 @@ instance
   ( Era era
   , Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ EraLedgerState era
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
-  , Default (LedgerState era)
+  , Default (EraLedgerState era)
   ) =>
   STS (ShelleyLEDGERS era)
   where
-  type State (ShelleyLEDGERS era) = LedgerState era
+  type State (ShelleyLEDGERS era) = EraLedgerState era
   type Signal (ShelleyLEDGERS era) = Seq (Tx era)
   type Environment (ShelleyLEDGERS era) = ShelleyLedgersEnv era
   type BaseM (ShelleyLEDGERS era) = ShelleyBase
@@ -158,7 +159,7 @@ ledgersTransition ::
   forall era.
   ( Embed (EraRule "LEDGER" era) (ShelleyLEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ EraLedgerState era
   , Signal (EraRule "LEDGER" era) ~ Tx era
   ) =>
   TransitionRule (ShelleyLEDGERS era)

@@ -7,16 +7,20 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Cardano.Ledger.Shelley.LedgerState.Types where
@@ -72,17 +76,20 @@ import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
 import Cardano.Ledger.UMap (UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..))
+import Control.Arrow ((&&&))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default, def)
 import Data.Group (Group, invert)
+import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
 import Lens.Micro
+import Lens.Micro.Extras (view)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -126,7 +133,7 @@ instance NFData AccountState
 
 data EpochState era = EpochState
   { esAccountState :: !AccountState
-  , esLState :: !(LedgerState era)
+  , esLState :: !(EraLedgerState era)
   , esSnapshots :: !(SnapShots (EraCrypto era))
   , esNonMyopic :: !(NonMyopic (EraCrypto era))
   -- ^ This field, esNonMyopic, does not appear in the formal spec
@@ -139,34 +146,39 @@ data EpochState era = EpochState
 deriving stock instance
   ( EraTxOut era
   , Show (GovState era)
+  , Show (EraLedgerState era)
   ) =>
   Show (EpochState era)
 
 deriving stock instance
   ( EraTxOut era
   , Eq (GovState era)
+  , Eq (EraLedgerState era)
   ) =>
   Eq (EpochState era)
 
 instance
   ( EraTxOut era
   , NoThunks (GovState era)
+  , NoThunks (EraLedgerState era)
   ) =>
   NoThunks (EpochState era)
 
 instance
   ( EraTxOut era
   , NFData (GovState era)
+  , NFData (EraLedgerState era)
   ) =>
   NFData (EpochState era)
 
 instance
   ( EraTxOut era
   , EncCBOR (GovState era)
+  , EncCBOR (EraLedgerState era)
   ) =>
   EncCBOR (EpochState era)
   where
-  encCBOR EpochState {esAccountState, esLState, esSnapshots, esNonMyopic} =
+  encCBOR (EpochState {esAccountState, esLState, esSnapshots, esNonMyopic} :: EpochState era) =
     encode $
       Rec EpochState
         !> To esAccountState
@@ -177,31 +189,52 @@ instance
 instance
   ( EraTxOut era
   , EraGov era
+  , DecCBOR (EraLedgerState era)
+  , DecShareCBOR (EraLedgerState era)
+  , Share (EraLedgerState era)
+      ~ ( Interns (Credential 'Staking (EraCrypto era))
+        , Interns (KeyHash 'StakePool (EraCrypto era))
+        )
   ) =>
   DecCBOR (EpochState era)
   where
   decCBOR =
     decodeRecordNamed "EpochState" (const 4) $
-      flip evalStateT mempty $ do
-        esAccountState <- lift decCBOR
-        esLState <- decSharePlusCBOR
-        esSnapshots <- decSharePlusCBOR
-        esNonMyopic <- decShareLensCBOR _2
-        pure EpochState {esAccountState, esSnapshots, esLState, esNonMyopic}
+      flip evalStateT mempty $
+        do
+          esAccountState <- lift decCBOR
+          esLState <- decSharePlusCBOR
+          esSnapshots <- decSharePlusCBOR
+          esNonMyopic <- decShareLensCBOR _2
+          pure EpochState {esAccountState, esSnapshots, esLState, esNonMyopic}
 
-instance (EraTxOut era, EraGov era) => ToCBOR (EpochState era) where
+instance
+  (HasLedgerState era, EraTxOut era, EraGov era) =>
+  ToCBOR (EpochState era)
+  where
   toCBOR = toEraCBOR @era
 
-instance (EraTxOut era, EraGov era) => FromCBOR (EpochState era) where
+instance
+  ( Share (EraLedgerState era)
+      ~ ( Interns (Credential 'Staking (EraCrypto era))
+        , Interns (KeyHash 'StakePool (EraCrypto era))
+        )
+  , DecCBOR (EraLedgerState era)
+  , DecShareCBOR (EraLedgerState era)
+  , EraTxOut era
+  , EraGov era
+  ) =>
+  FromCBOR (EpochState era)
+  where
   fromCBOR = fromEraCBOR @era
 
-instance (EraTxOut era, EraGov era) => ToJSON (EpochState era) where
+instance (ToJSON (EraLedgerState era), EraTxOut era, EraGov era) => ToJSON (EpochState era) where
   toJSON = object . toEpochStatePairs
   toEncoding = pairs . mconcat . toEpochStatePairs
 
 toEpochStatePairs ::
-  ( EraTxOut era
-  , EraGov era
+  ( ToJSON (EraLedgerState era)
+  , EraTxOut era
   , KeyValue e a
   ) =>
   EpochState era ->
@@ -284,6 +317,18 @@ data UTxOState era = UTxOState
   , utxosGovState :: !(GovState era)
   , utxosStakeDistr :: !(IncrementalStake (EraCrypto era))
   , utxosDonation :: !Coin
+  }
+  deriving (Generic)
+
+data UTxOStateTemp era = UTxOStateTemp
+  { utxosUtxoTemp :: !(UTxO era)
+  , utxosFrxoTemp :: !(FRxO era)
+  , utxosDepositedTemp :: Coin
+  -- ^ This field is left lazy, because we only use it for assertions
+  , utxosFeesTemp :: !Coin
+  , utxosGovStateTemp :: !(GovState era)
+  , utxosStakeDistrTemp :: !(IncrementalStake (EraCrypto era))
+  , utxosDonationTemp :: !Coin
   }
   deriving (Generic)
 
@@ -414,6 +459,7 @@ deriving stock instance
   ( EraTxOut era
   , Show (StashedAVVMAddresses era)
   , Show (GovState era)
+  , Show (EraLedgerState era)
   ) =>
   Show (NewEpochState era)
 
@@ -421,6 +467,7 @@ deriving stock instance
   ( EraTxOut era
   , Eq (StashedAVVMAddresses era)
   , Eq (GovState era)
+  , Eq (EraLedgerState era)
   ) =>
   Eq (NewEpochState era)
 
@@ -428,11 +475,13 @@ instance
   ( EraTxOut era
   , NFData (StashedAVVMAddresses era)
   , NFData (GovState era)
+  , NFData (EraLedgerState era)
   ) =>
   NFData (NewEpochState era)
 
 instance
-  ( EraTxOut era
+  ( HasLedgerState era
+  , EraTxOut era
   , EncCBOR (StashedAVVMAddresses era)
   , EncCBOR (GovState era)
   ) =>
@@ -452,6 +501,12 @@ instance
   ( EraTxOut era
   , EraGov era
   , DecCBOR (StashedAVVMAddresses era)
+  , DecCBOR (EraLedgerState era)
+  , DecShareCBOR (EraLedgerState era)
+  , Share (EraLedgerState era)
+      ~ ( Interns (Credential 'Staking (EraCrypto era))
+        , Interns (KeyHash 'StakePool (EraCrypto era))
+        )
   ) =>
   DecCBOR (NewEpochState era)
   where
@@ -467,13 +522,26 @@ instance
         <! From
 
 instance
-  (EraTxOut era, EraGov era, EncCBOR (StashedAVVMAddresses era)) =>
+  ( HasLedgerState era
+  , EraTxOut era
+  , EraGov era
+  , EncCBOR (StashedAVVMAddresses era)
+  ) =>
   ToCBOR (NewEpochState era)
   where
   toCBOR = toEraCBOR @era
 
 instance
-  (EraTxOut era, EraGov era, DecCBOR (StashedAVVMAddresses era)) =>
+  ( DecCBOR (EraLedgerState era)
+  , DecShareCBOR (EraLedgerState era)
+  , Share (EraLedgerState era)
+      ~ ( Interns (Credential 'Staking (EraCrypto era))
+        , Interns (KeyHash 'StakePool (EraCrypto era))
+        )
+  , EraTxOut era
+  , EraGov era
+  , DecCBOR (StashedAVVMAddresses era)
+  ) =>
   FromCBOR (NewEpochState era)
   where
   fromCBOR = fromEraCBOR @era
@@ -487,11 +555,52 @@ instance
   ) =>
   NoThunks (NewEpochState era)
 
+newtype WrappedEraLedgerState era = WrappedEraLedgerState {unWrappedEraLedgerState :: (EraLedgerState era)}
+
+class
+  ( Show (EraLedgerState era)
+  , Eq (EraLedgerState era)
+  , EncCBOR (EraLedgerState era)
+  , Share (EraLedgerState era)
+      ~ (Interns (Credential 'Staking (EraCrypto era)), Interns (KeyHash 'StakePool (EraCrypto era)))
+  , DecShareCBOR (EraLedgerState era)
+  , DecCBOR (EraLedgerState era)
+  , Default (EraLedgerState era)
+  ) =>
+  HasLedgerState era
+  where
+  type EraLedgerState era = (r :: Type) | r -> era
+  hlsUTxOStateL :: Lens' (EraLedgerState era) (UTxOState era)
+  hlsCertStateL :: Lens' (EraLedgerState era) (CertState era)
+
+pattern EraLedgerState ::
+  (HasLedgerState era, Default (EraLedgerState era)) =>
+  UTxOState era ->
+  CertState era ->
+  EraLedgerState era
+pattern EraLedgerState utxoSt certSt <- (view hlsUTxOStateL &&& view hlsCertStateL -> (utxoSt, certSt))
+  where
+    EraLedgerState utxoSt certSt =
+      def
+        & hlsUTxOStateL
+        .~ utxoSt
+        & hlsCertStateL
+        .~ certSt
+{-# COMPLETE EraLedgerState #-}
+
 -- | The state associated with a 'Ledger'.
 data LedgerState era = LedgerState
   { lsUTxOState :: !(UTxOState era)
   -- ^ The current unspent transaction outputs.
   , lsCertState :: !(CertState era)
+  }
+  deriving (Generic)
+
+-- | The state associated with a 'Ledger'.
+data LedgerStateTemp era = LedgerStateTemp
+  { lsUTxOStateTemp :: !(UTxOStateTemp era)
+  -- ^ The current unspent transaction outputs.
+  , lsCertStateTemp :: !(CertState era)
   }
   deriving (Generic)
 
@@ -532,6 +641,35 @@ instance
 
 instance
   ( EraTxOut era
+  , EncCBOR (GovState era)
+  ) =>
+  EncCBOR (ShelleyLedgerState era)
+  where
+  encCBOR (ShelleyLedgerState ls) = encCBOR ls
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  DecCBOR (ShelleyLedgerState era)
+  where
+  decCBOR = decNoShareCBOR
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  DecShareCBOR (ShelleyLedgerState era)
+  where
+  type
+    Share (ShelleyLedgerState era) =
+      ( Interns (Credential 'Staking (EraCrypto era))
+      , Interns (KeyHash 'StakePool (EraCrypto era))
+      )
+  decSharePlusCBOR = ShelleyLedgerState <$> decSharePlusCBOR
+
+instance
+  ( EraTxOut era
   , EraGov era
   ) =>
   DecShareCBOR (LedgerState era)
@@ -545,12 +683,47 @@ instance
     decodeRecordNamedT "LedgerState" (const 2) $ do
       lsCertState <- decSharePlusCBOR
       lsUTxOState <- decShareLensCBOR _1
-      pure LedgerState {lsUTxOState, lsCertState}
+      pure $ LedgerState {lsUTxOState, lsCertState}
 
-instance (EraTxOut era, EraGov era) => ToCBOR (LedgerState era) where
-  toCBOR = toEraCBOR @era
+newtype ShelleyLedgerState era = ShelleyLedgerState {unShelleyLedgerState :: LedgerState era}
+  deriving (Generic, Default)
 
-instance (EraTxOut era, EraGov era) => FromCBOR (LedgerState era) where
+shelleyLedgerStateL :: Lens' (ShelleyLedgerState era) (LedgerState era)
+shelleyLedgerStateL = lens unShelleyLedgerState (\x y -> x {unShelleyLedgerState = y})
+
+instance Crypto c => HasLedgerState (ShelleyEra c) where
+  type EraLedgerState (ShelleyEra c) = ShelleyLedgerState (ShelleyEra c)
+  hlsUTxOStateL = shelleyLedgerStateL . lsUTxOStateL
+  hlsCertStateL = shelleyLedgerStateL . lsCertStateL
+
+deriving stock instance
+  ( EraTxOut era
+  , Show (GovState era)
+  ) =>
+  Show (ShelleyLedgerState era)
+
+deriving stock instance
+  ( EraTxOut era
+  , Eq (GovState era)
+  ) =>
+  Eq (ShelleyLedgerState era)
+
+instance
+  ( EraTxOut era
+  , NoThunks (GovState era)
+  ) =>
+  NoThunks (ShelleyLedgerState era)
+
+instance
+  ( EraTxOut era
+  , NFData (GovState era)
+  ) =>
+  NFData (ShelleyLedgerState era)
+
+instance (EraTxOut era, EraGov era) => ToCBOR (ShelleyLedgerState era) where
+  toCBOR (ShelleyLedgerState ls) = toEraCBOR @era ls
+
+instance (EraTxOut era, EraGov era) => FromCBOR (ShelleyLedgerState era) where
   fromCBOR = toPlainDecoder (eraProtVerLow @era) decNoShareCBOR
 
 instance (EraTxOut era, EraGov era) => ToJSON (LedgerState era) where
@@ -575,7 +748,7 @@ instance EraGov era => Default (UTxOState era) where
   def = UTxOState mempty mempty mempty mempty def mempty mempty
 
 instance
-  Default (LedgerState era) =>
+  Default (EraLedgerState era) =>
   Default (EpochState era)
   where
   def = EpochState def def def def
@@ -599,8 +772,8 @@ nesPdL = lens nesPd (\ds u -> ds {nesPd = u})
 nesEsL :: Lens' (NewEpochState era) (EpochState era)
 nesEsL = lens nesEs (\ds u -> ds {nesEs = u})
 
-unifiedL :: Lens' (NewEpochState era) (UMap (EraCrypto era))
-unifiedL = nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
+unifiedL :: forall era. HasLedgerState era => Lens' (NewEpochState era) (UMap (EraCrypto era))
+unifiedL = nesEsL . esLStateL . hlsCertStateL @era . certDStateL . dsUnifiedL
 
 nesELL :: Lens' (NewEpochState era) EpochNo
 nesELL = lens nesEL (\ds u -> ds {nesEL = u})
@@ -630,17 +803,17 @@ esAccountStateL = lens esAccountState (\x y -> x {esAccountState = y})
 esSnapshotsL :: Lens' (EpochState era) (SnapShots (EraCrypto era))
 esSnapshotsL = lens esSnapshots (\x y -> x {esSnapshots = y})
 
-esLStateL :: Lens' (EpochState era) (LedgerState era)
+esLStateL :: Lens' (EpochState era) (EraLedgerState era)
 esLStateL = lens esLState (\x y -> x {esLState = y})
 
 esNonMyopicL :: Lens' (EpochState era) (NonMyopic (EraCrypto era))
 esNonMyopicL = lens esNonMyopic (\x y -> x {esNonMyopic = y})
 
-curPParamsEpochStateL :: EraGov era => Lens' (EpochState era) (PParams era)
-curPParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL
+curPParamsEpochStateL :: (HasLedgerState era, EraGov era) => Lens' (EpochState era) (PParams era)
+curPParamsEpochStateL = esLStateL . hlsUTxOStateL . utxosGovStateL . curPParamsGovStateL
 
-prevPParamsEpochStateL :: EraGov era => Lens' (EpochState era) (PParams era)
-prevPParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovStateL . prevPParamsGovStateL
+prevPParamsEpochStateL :: (HasLedgerState era, EraGov era) => Lens' (EpochState era) (PParams era)
+prevPParamsEpochStateL = esLStateL . hlsUTxOStateL . utxosGovStateL . prevPParamsGovStateL
 
 -- ==========================================
 -- AccountState
@@ -690,38 +863,44 @@ ptrMapL = lens ptrMap (\x y -> x {ptrMap = y})
 
 -- ====================  Compound Lenses =======================
 
-newEpochStateGovStateL :: Lens' (NewEpochState era) (GovState era)
-newEpochStateGovStateL = nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL
+newEpochStateGovStateL :: HasLedgerState era => Lens' (NewEpochState era) (GovState era)
+newEpochStateGovStateL = nesEsL . esLStateL . hlsUTxOStateL . utxosGovStateL
 
-epochStateGovStateL :: Lens' (EpochState era) (GovState era)
-epochStateGovStateL = esLStateL . lsUTxOStateL . utxosGovStateL
+epochStateGovStateL :: HasLedgerState era => Lens' (EpochState era) (GovState era)
+epochStateGovStateL = esLStateL . hlsUTxOStateL . utxosGovStateL
 
-epochStateDonationL :: Lens' (EpochState era) Coin
-epochStateDonationL = esLStateL . lsUTxOStateL . utxosDonationL
+epochStateDonationL :: forall era. HasLedgerState era => Lens' (EpochState era) Coin
+epochStateDonationL = esLStateL . hlsUTxOStateL @era . utxosDonationL
 
 epochStateTreasuryL :: Lens' (EpochState era) Coin
 epochStateTreasuryL = esAccountStateL . asTreasuryL
 
 epochStateIncrStakeDistrL ::
+  forall era.
+  HasLedgerState era =>
   Lens'
     (EpochState era)
     (Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
-epochStateIncrStakeDistrL = esLStateL . lsUTxOStateL . utxosStakeDistrL . credMapL
+epochStateIncrStakeDistrL = esLStateL . hlsUTxOStateL @era . utxosStakeDistrL . credMapL
 
 epochStateRegDrepL ::
+  forall era.
+  HasLedgerState era =>
   Lens'
     (EpochState era)
     (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
-epochStateRegDrepL = esLStateL . lsCertStateL . certVStateL . vsDRepsL
+epochStateRegDrepL = esLStateL . hlsCertStateL @era . certVStateL . vsDRepsL
 
 epochStatePoolParamsL ::
+  forall era.
+  HasLedgerState era =>
   Lens'
     (EpochState era)
     (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
-epochStatePoolParamsL = esLStateL . lsCertStateL . certPStateL . psStakePoolParamsL
+epochStatePoolParamsL = esLStateL . hlsCertStateL @era . certPStateL . psStakePoolParamsL
 
-epochStateUMapL :: Lens' (EpochState era) (UMap (EraCrypto era))
-epochStateUMapL = esLStateL . lsCertStateL . certDStateL . dsUnifiedL
+epochStateUMapL :: forall era. HasLedgerState era => Lens' (EpochState era) (UMap (EraCrypto era))
+epochStateUMapL = esLStateL . hlsCertStateL @era . certDStateL . dsUnifiedL
 
 epochStateStakeDistrL ::
   Lens'

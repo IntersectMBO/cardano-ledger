@@ -129,6 +129,7 @@ instance
   , Default (State (EraRule "PPUP" era))
   , Default (PParams era)
   , Default (StashedAVVMAddresses era)
+  , HasLedgerState era
   ) =>
   STS (ShelleyNEWEPOCH era)
   where
@@ -172,6 +173,7 @@ newEpochTransition ::
   , Default (StashedAVVMAddresses era)
   , Event (EraRule "RUPD" era) ~ RupdEvent (EraCrypto era)
   , Default (State (EraRule "PPUP" era))
+  , HasLedgerState era
   ) =>
   TransitionRule (ShelleyNEWEPOCH era)
 newEpochTransition = do
@@ -242,7 +244,8 @@ instance
   wrapEvent = EpochEvent
 
 instance
-  ( EraGov era
+  ( HasLedgerState era
+  , EraGov era
   , Default (EpochState era)
   , PredicateFailure (EraRule "MIR" era) ~ ShelleyMirPredFailure era
   , Event (EraRule "MIR" era) ~ ShelleyMirEvent era
@@ -255,7 +258,7 @@ instance
 -- ===========================================
 
 updateRewards ::
-  EraGov era =>
+  (EraGov era, HasLedgerState era) =>
   EpochState era ->
   EpochNo ->
   RewardUpdate (EraCrypto era) ->

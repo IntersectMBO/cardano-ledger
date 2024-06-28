@@ -27,7 +27,6 @@ import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Era (ShelleyEPOCH)
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState,
-  LedgerState,
   PState (..),
   UTxOState (utxosDeposited, utxosGovState),
   curPParamsEpochStateL,
@@ -36,15 +35,15 @@ import Cardano.Ledger.Shelley.LedgerState (
   esLStateL,
   esNonMyopic,
   esSnapshots,
-  lsCertState,
-  lsUTxOState,
-  lsUTxOStateL,
   totalObligation,
   utxosGovStateL,
   pattern CertState,
   pattern EpochState,
  )
-import Cardano.Ledger.Shelley.LedgerState.Types (prevPParamsEpochStateL)
+import Cardano.Ledger.Shelley.LedgerState.Types (
+  HasLedgerState (EraLedgerState, hlsCertStateL, hlsUTxOStateL),
+  prevPParamsEpochStateL,
+ )
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules.PoolReap (
   ShelleyPOOLREAP,
@@ -138,7 +137,8 @@ instance
   NFData (ShelleyEpochEvent era)
 
 instance
-  ( EraTxOut era
+  ( HasLedgerState era
+  , EraTxOut era
   , EraGov era
   , GovState era ~ ShelleyGovState era
   , Embed (EraRule "SNAP" era) (ShelleyEPOCH era)
@@ -150,7 +150,7 @@ instance
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "UPEC" era) (ShelleyEPOCH era)
-  , Environment (EraRule "UPEC" era) ~ LedgerState era
+  , Environment (EraRule "UPEC" era) ~ EraLedgerState era
   , State (EraRule "UPEC" era) ~ UpecState era
   , Signal (EraRule "UPEC" era) ~ ()
   , Default (PParams era)
@@ -185,11 +185,12 @@ epochTransition ::
   , State (EraRule "POOLREAP" era) ~ ShelleyPoolreapState era
   , Signal (EraRule "POOLREAP" era) ~ EpochNo
   , Embed (EraRule "UPEC" era) (ShelleyEPOCH era)
-  , Environment (EraRule "UPEC" era) ~ LedgerState era
+  , Environment (EraRule "UPEC" era) ~ EraLedgerState era
   , State (EraRule "UPEC" era) ~ UpecState era
   , Signal (EraRule "UPEC" era) ~ ()
   , GovState era ~ ShelleyGovState era
   , EraGov era
+  , HasLedgerState era
   ) =>
   TransitionRule (ShelleyEPOCH era)
 epochTransition = do
@@ -205,8 +206,8 @@ epochTransition = do
       ) <-
     judgmentContext
   let pp = es ^. curPParamsEpochStateL
-      utxoSt = lsUTxOState ls
-      CertState vstate pstate dstate = lsCertState ls
+      utxoSt = ls ^. hlsUTxOStateL
+      CertState vstate pstate dstate = ls ^. hlsCertStateL
   ss' <-
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ls pp, ss, ())
 
@@ -222,7 +223,7 @@ epochTransition = do
       TRC (ShelleyPoolreapEnv vstate, PoolreapState utxoSt acnt dstate pstate', e)
 
   let adjustedCertState = CertState vstate pstate'' dstate'
-      ls' = ls {lsUTxOState = utxoSt', lsCertState = adjustedCertState}
+      ls' = ls & hlsUTxOStateL .~ utxoSt' & hlsCertStateL .~ adjustedCertState
 
   UpecState pp' ppupSt' <-
     trans @(EraRule "UPEC" era) $
@@ -239,12 +240,17 @@ epochTransition = do
     utxoSt''' = utxoSt'' {utxosDeposited = oblgNew}
   pure $
     EpochState acnt' ls' ss' nm
-      & esLStateL . lsUTxOStateL .~ utxoSt'''
-      & prevPParamsEpochStateL .~ pp
-      & curPParamsEpochStateL .~ pp'
+      & esLStateL
+      . hlsUTxOStateL
+      .~ utxoSt'''
+      & prevPParamsEpochStateL
+      .~ pp
+      & curPParamsEpochStateL
+      .~ pp'
 
 instance
-  ( EraTxOut era
+  ( HasLedgerState era
+  , EraTxOut era
   , PredicateFailure (EraRule "SNAP" era) ~ ShelleySnapPredFailure era
   , Event (EraRule "SNAP" era) ~ SnapEvent era
   ) =>

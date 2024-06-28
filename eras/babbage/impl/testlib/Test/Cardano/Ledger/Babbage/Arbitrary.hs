@@ -178,3 +178,15 @@ instance
 --   arbitrary =
 --     BabbageRequiredTx
 --       <$> pure mempty -- arbitrary
+
+-- Ledger state
+
+instance
+  ( EraTxOut era
+  , Arbitrary (TxOut era)
+  , Arbitrary (GovState era)
+  ) =>
+  Arbitrary (BabbageLedgerState era)
+  where
+  arbitrary = BabbageLedgerState <$> arbitrary
+  shrink (BabbageLedgerState ls) = BabbageLedgerState <$> shrink ls

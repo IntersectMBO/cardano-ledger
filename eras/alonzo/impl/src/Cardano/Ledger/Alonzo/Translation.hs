@@ -13,14 +13,14 @@ module Cardano.Ledger.Alonzo.Translation where
 
 import Cardano.Ledger.Alonzo.Core hiding (Tx)
 import qualified Cardano.Ledger.Alonzo.Core as Core
-import Cardano.Ledger.Alonzo.Era (AlonzoEra)
+import Cardano.Ledger.Alonzo.Era (AlonzoEra, AlonzoLedgerState (AlonzoLedgerState))
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..), PState (..), VState (..))
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary (MaryEra, MaryLedgerState (MaryLedgerState, unMaryLedgerState))
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -87,13 +87,22 @@ instance Crypto c => TranslateEra (AlonzoEra c) Tx where
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
+instance Crypto c => TranslateEra (AlonzoEra c) MaryLedgerState where
+  translateEra ctxt (MaryLedgerState ls) =
+    return $
+      MaryLedgerState $
+        LedgerState
+          { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
+          , lsCertState = translateEra' ctxt $ lsCertState ls
+          }
+
 instance Crypto c => TranslateEra (AlonzoEra c) EpochState where
   translateEra ctxt es =
     return
       EpochState
         { esAccountState = esAccountState es
         , esSnapshots = esSnapshots es
-        , esLState = translateEra' ctxt $ esLState es
+        , esLState = AlonzoLedgerState . unMaryLedgerState . translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 

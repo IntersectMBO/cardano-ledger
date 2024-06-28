@@ -1,8 +1,15 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Babbage.Era (
   BabbageEra,
+  BabbageLedgerState (..),
   BabbageUTXO,
   BabbageUTXOS,
   BabbageUTXOW,
@@ -11,11 +18,18 @@ module Cardano.Ledger.Babbage.Era (
 where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Core (EraGov (..))
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
+import Cardano.Ledger.Binary (DecCBOR, DecShareCBOR, EncCBOR, Interns)
+import Cardano.Ledger.Binary.Decoding (DecCBOR (decCBOR), DecShareCBOR (..), decNoShareCBOR)
+import Cardano.Ledger.Binary.Encoding (EncCBOR (..))
 import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (
   ShelleyEPOCH,
   ShelleyMIR,
@@ -26,6 +40,12 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyTICKF,
   ShelleyUPEC,
  )
+import Control.DeepSeq (NFData)
+import Data.Default.Class (Default)
+import GHC.Generics (Generic)
+import Lens.Micro (lens)
+import Lens.Micro.Type (Lens')
+import NoThunks.Class (NoThunks)
 
 -- =====================================================
 
@@ -41,6 +61,70 @@ instance Crypto c => Era (BabbageEra c) where
   eraName = "Babbage"
 
 type instance Value (BabbageEra c) = MaryValue c
+
+newtype BabbageLedgerState era = BabbageLedgerState {unBabbageLedgerState :: LedgerState era}
+  deriving (Generic, Default)
+
+babbageLedgerStateL :: Lens' (BabbageLedgerState era) (LedgerState era)
+babbageLedgerStateL = lens unBabbageLedgerState (\x y -> x {unBabbageLedgerState = y})
+
+instance (Crypto c, EraGov (BabbageEra c), EraTxOut (BabbageEra c)) => HasLedgerState (BabbageEra c) where
+  type EraLedgerState (BabbageEra c) = BabbageLedgerState (BabbageEra c)
+  hlsUTxOStateL = babbageLedgerStateL . lsUTxOStateL
+  hlsCertStateL = babbageLedgerStateL . lsCertStateL
+
+deriving stock instance
+  ( EraTxOut era
+  , Show (GovState era)
+  ) =>
+  Show (BabbageLedgerState era)
+
+deriving stock instance
+  ( EraTxOut era
+  , Eq (GovState era)
+  ) =>
+  Eq (BabbageLedgerState era)
+
+instance
+  ( EraTxOut era
+  , NoThunks (GovState era)
+  ) =>
+  NoThunks (BabbageLedgerState era)
+
+instance
+  ( EraTxOut era
+  , NFData (GovState era)
+  ) =>
+  NFData (BabbageLedgerState era)
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  EncCBOR (BabbageLedgerState era)
+  where
+  encCBOR (BabbageLedgerState ls) = encCBOR ls
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  DecCBOR (BabbageLedgerState era)
+  where
+  decCBOR = decNoShareCBOR
+
+instance
+  ( EraTxOut era
+  , EraGov era
+  ) =>
+  DecShareCBOR (BabbageLedgerState era)
+  where
+  type
+    Share (BabbageLedgerState era) =
+      ( Interns (Credential 'Staking (EraCrypto era))
+      , Interns (KeyHash 'StakePool (EraCrypto era))
+      )
+  decSharePlusCBOR = BabbageLedgerState <$> decSharePlusCBOR
 
 -------------------------------------------------------------------------------
 -- Era Mapping

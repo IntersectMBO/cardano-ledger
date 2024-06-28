@@ -40,8 +40,9 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
-import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState, curPParamsEpochStateL)
+import Cardano.Ledger.Shelley.LedgerState (NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
+import Cardano.Ledger.Shelley.LedgerState.Types (HasLedgerState (EraLedgerState))
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Shelley.Rules ()
 import qualified Cardano.Ledger.Shelley.Rules as STS
@@ -60,7 +61,8 @@ import NoThunks.Class (NoThunks (..))
 -------------------------------------------------------------------------------}
 
 class
-  ( STS (EraRule "TICK" era)
+  ( HasLedgerState era
+  , STS (EraRule "TICK" era)
   , BaseM (EraRule "TICK" era) ~ ShelleyBase
   , Environment (EraRule "TICK" era) ~ ()
   , State (EraRule "TICK" era) ~ NewEpochState era
@@ -71,7 +73,7 @@ class
   , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , EncCBORGroup (TxZones era)
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ EraLedgerState era
   ) =>
   ApplyBlock era
   where
@@ -219,7 +221,7 @@ chainChecks = STS.chainChecks
 -------------------------------------------------------------------------------}
 
 mkBbodyEnv ::
-  EraGov era =>
+  (EraGov era, HasLedgerState era) =>
   NewEpochState era ->
   STS.BbodyEnv era
 mkBbodyEnv
@@ -232,7 +234,7 @@ mkBbodyEnv
       }
 
 updateNewEpochState ::
-  (LedgerState era ~ State (EraRule "LEDGERS" era), EraGov era) =>
+  (EraLedgerState era ~ State (EraRule "LEDGERS" era), EraGov era, HasLedgerState era) =>
   NewEpochState era ->
   STS.ShelleyBbodyState era ->
   NewEpochState era

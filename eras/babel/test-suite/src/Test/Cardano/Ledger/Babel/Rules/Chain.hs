@@ -276,8 +276,8 @@ instance
   , Embed (PRTCL (EraCrypto era)) (CHAIN era)
   , EncCBORGroup (TxZones era)
   , ProtVerAtMost era 10
-  , State (EraRule "ZONES" era) ~ LedgerState era
-  , State (Core.EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "ZONES" era) ~ BabelLedgerState era
+  , State (Core.EraRule "LEDGERS" era) ~ BabelLedgerState era
   ) =>
   STS (CHAIN era)
   where

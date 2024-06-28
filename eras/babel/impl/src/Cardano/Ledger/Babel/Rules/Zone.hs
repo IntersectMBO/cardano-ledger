@@ -87,6 +87,7 @@ import Cardano.Ledger.Alonzo.Rules (
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babel.Core (ppMaxTxExUnitsL)
+import Cardano.Ledger.Babel.LedgerState.Types (BabelLedgerState)
 import Cardano.Ledger.Babel.Rules.Ledger (BabelLedgerPredFailure)
 import Cardano.Ledger.Babel.Rules.Ledgers (BabelLEDGERS, BabelLedgersEnv (BabelLedgersEnv))
 import Cardano.Ledger.Babel.Rules.Utxo (BabelUtxoPredFailure (..))
@@ -178,7 +179,7 @@ instance
   , Show (PredicateFailure (EraRule "LEDGER" era))
   , ConwayEraPParams era
   , Environment (EraRule "LEDGERS" era) ~ BabelLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ BabelLedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , Embed (EraRule "LEDGERS" era) (BabelZONE era)
   , EraTx era
@@ -197,7 +198,7 @@ instance
   type Environment (BabelZONE era) = BabelLedgersEnv era
   type PredicateFailure (BabelZONE era) = BabelZonePredFailure era
   type Signal (BabelZONE era) = Seq (Tx era)
-  type State (BabelZONE era) = LedgerState era
+  type State (BabelZONE era) = BabelLedgerState era
   type BaseM (BabelZONE era) = ShelleyBase
   type Event (BabelZONE era) = BabelZoneEvent era
 
@@ -213,7 +214,7 @@ zoneTransition ::
   forall era.
   ( EraRule "ZONE" era ~ BabelZONE era
   , Environment (EraRule "LEDGERS" era) ~ BabelLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ BabelLedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , Embed (EraRule "LEDGERS" era) (BabelZONE era)
   , BabelEraTxBody era
@@ -326,7 +327,7 @@ babelEvalScriptsTxInvalid ::
   , BabelEraTxBody era
   , AlonzoEraTx era
   , Environment (EraRule "LEDGERS" era) ~ BabelLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ BabelLedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , Embed (EraRule "LEDGERS" era) (BabelZONE era)
   , Eq (PredicateFailure (EraRule "LEDGER" era))

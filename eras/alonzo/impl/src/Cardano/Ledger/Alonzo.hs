@@ -13,6 +13,7 @@
 module Cardano.Ledger.Alonzo (
   Alonzo,
   AlonzoEra,
+  AlonzoLedgerState (..),
   AlonzoTxOut,
   MaryValue,
   AlonzoTxBody,

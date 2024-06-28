@@ -8,6 +8,7 @@
 module Test.Cardano.Ledger.Babbage.Imp (spec) where
 
 import Cardano.Ledger.Babbage.Core
+import Cardano.Ledger.Shelley.LedgerState (HasLedgerState (EraLedgerState))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import qualified Test.Cardano.Ledger.Alonzo.Imp as AlonzoImp
 import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp)
@@ -18,6 +19,8 @@ spec ::
   ( AlonzoEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , HasLedgerState era
+  , NFData (EraLedgerState era)
   ) =>
   Spec
 spec = do

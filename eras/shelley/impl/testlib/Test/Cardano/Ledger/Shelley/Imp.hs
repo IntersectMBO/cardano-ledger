@@ -7,6 +7,7 @@
 module Test.Cardano.Ledger.Shelley.Imp (spec) where
 
 import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.LedgerState (HasLedgerState (EraLedgerState))
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Shelley.Imp.EpochSpec as Epoch
@@ -21,6 +22,8 @@ spec ::
   ( ShelleyEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , HasLedgerState era
+  , NFData (EraLedgerState era)
   ) =>
   Spec
 spec = do

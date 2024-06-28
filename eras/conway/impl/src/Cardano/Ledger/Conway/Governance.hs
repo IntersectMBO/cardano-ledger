@@ -192,6 +192,7 @@ import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Governance
 import Cardano.Ledger.Shelley.LedgerState (
   EpochState (..),
+  HasLedgerState (..),
   NewEpochState (..),
   certDState,
   certVState,
@@ -200,9 +201,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
   epochStateTreasuryL,
   esLStateL,
-  lsCertState,
-  lsUTxOState,
-  lsUTxOStateL,
   nesEsL,
   utxosGovStateL,
   utxosStakeDistr,
@@ -377,23 +375,25 @@ instance Crypto c => ConwayEraGov (ConwayEra c) where
 -- Lenses for access to (DRepPulsingState era)
 
 newEpochStateDRepPulsingStateL ::
-  ConwayEraGov era => Lens' (NewEpochState era) (DRepPulsingState era)
+  (ConwayEraGov era, HasLedgerState era) => Lens' (NewEpochState era) (DRepPulsingState era)
 newEpochStateDRepPulsingStateL =
-  nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
+  nesEsL . esLStateL . hlsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
 
-epochStateDRepPulsingStateL :: ConwayEraGov era => Lens' (EpochState era) (DRepPulsingState era)
-epochStateDRepPulsingStateL = esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
+epochStateDRepPulsingStateL ::
+  (ConwayEraGov era, HasLedgerState era) => Lens' (EpochState era) (DRepPulsingState era)
+epochStateDRepPulsingStateL = esLStateL . hlsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
 
 setCompleteDRepPulsingState ::
-  GovState era ~ ConwayGovState era =>
+  (GovState era ~ ConwayGovState era, HasLedgerState era) =>
   PulsingSnapshot era ->
   RatifyState era ->
   EpochState era ->
   EpochState era
 setCompleteDRepPulsingState snapshot ratifyState epochState =
   epochState
-    & epochStateGovStateL . cgsDRepPulsingStateL
-      .~ DRComplete snapshot ratifyState
+    & epochStateGovStateL
+    . cgsDRepPulsingStateL
+    .~ DRComplete snapshot ratifyState
 
 -- | Refresh the pulser in the EpochState using all the new data that is needed to compute
 -- the RatifyState when pulsing completes.
@@ -402,6 +402,7 @@ setFreshDRepPulsingState ::
   , Monad m
   , RunConwayRatify era
   , ConwayEraGov era
+  , HasLedgerState era
   ) =>
   EpochNo ->
   PoolDistr (EraCrypto era) ->
@@ -418,9 +419,9 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
   -- windows. Therefore, we divide the number of stake credentials by 8*k
   globals <- ask
   let ledgerState = epochState ^. esLStateL
-      utxoState = lsUTxOState ledgerState
+      utxoState = ledgerState ^. hlsUTxOStateL
       stakeDistr = credMap $ utxosStakeDistr utxoState
-      certState = lsCertState ledgerState
+      certState = ledgerState ^. hlsCertStateL
       dState = certDState certState
       vState = certVState certState
       govState = epochState ^. epochStateGovStateL
@@ -431,30 +432,34 @@ setFreshDRepPulsingState epochNo stakePoolDistr epochState = do
       pulseSize = max 1 (ceiling (toInteger umapSize % (8 * toInteger k)))
       epochState' =
         epochState
-          & epochStateGovStateL . cgsDRepPulsingStateL
-            .~ DRPulsing
-              ( DRepPulser
-                  { dpPulseSize = pulseSize
-                  , dpUMap = dsUnified dState
-                  , dpIndex = 0 -- used as the index of the remaining UMap
-                  , dpStakeDistr = stakeDistr -- used as part of the snapshot
-                  , dpStakePoolDistr = stakePoolDistr
-                  , dpDRepDistr = Map.empty -- The partial result starts as the empty map
-                  , dpDRepState = vsDReps vState
-                  , dpCurrentEpoch = epochNo
-                  , dpCommitteeState = vsCommitteeState vState
-                  , dpEnactState =
-                      mkEnactState govState
-                        & ensTreasuryL .~ epochState ^. epochStateTreasuryL
-                  , dpProposals = proposalsActions (govState ^. cgsProposalsL)
-                  , dpGlobals = globals
-                  }
-              )
+          & epochStateGovStateL
+          . cgsDRepPulsingStateL
+          .~ DRPulsing
+            ( DRepPulser
+                { dpPulseSize = pulseSize
+                , dpUMap = dsUnified dState
+                , dpIndex = 0 -- used as the index of the remaining UMap
+                , dpStakeDistr = stakeDistr -- used as part of the snapshot
+                , dpStakePoolDistr = stakePoolDistr
+                , dpDRepDistr = Map.empty -- The partial result starts as the empty map
+                , dpDRepState = vsDReps vState
+                , dpCurrentEpoch = epochNo
+                , dpCommitteeState = vsCommitteeState vState
+                , dpEnactState =
+                    mkEnactState govState
+                      & ensTreasuryL
+                      .~ epochState
+                      ^. epochStateTreasuryL
+                , dpProposals = proposalsActions (govState ^. cgsProposalsL)
+                , dpGlobals = globals
+                }
+            )
   pure epochState'
 
 -- | Force computation of DRep stake distribution and figure out the next enact
 -- state. This operation is useful in cases when access to new EnactState or DRep stake
 -- distribution is needed more than once. It is safe to call this function at any
 -- point. Whenever pulser is already in computed state this will be a noop.
-forceDRepPulsingState :: ConwayEraGov era => NewEpochState era -> NewEpochState era
+forceDRepPulsingState ::
+  (ConwayEraGov era, HasLedgerState era) => NewEpochState era -> NewEpochState era
 forceDRepPulsingState nes = nes & newEpochStateDRepPulsingStateL %~ completeDRepPulsingState

@@ -10,6 +10,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys.Bootstrap
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
+import Cardano.Ledger.Shelley.LedgerState (HasLedgerState)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Lens.Micro
 import Test.Cardano.Ledger.Core.KeyPair (ByronKeyPair (..))
@@ -19,6 +20,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest
 spec ::
   ( ShelleyEraImp era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  , HasLedgerState era
   ) =>
   SpecWith (ImpTestState era)
 spec = describe "UTXOW" $ do

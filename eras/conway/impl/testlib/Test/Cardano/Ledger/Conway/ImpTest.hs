@@ -163,6 +163,7 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
+  HasLedgerState (hlsCertStateL, hlsUTxOStateL),
   IncrementalStake (..),
   asTreasuryL,
   certVStateL,
@@ -215,8 +216,12 @@ conwayModifyPParams ::
   ImpTestM era ()
 conwayModifyPParams f = modifyNES $ \nes ->
   nes
-    & nesEsL . curPParamsEpochStateL %~ f
-    & newEpochStateGovStateL . drepPulsingStateGovStateL %~ modifyDRepPulser
+    & nesEsL
+    . curPParamsEpochStateL
+    %~ f
+    & newEpochStateGovStateL
+    . drepPulsingStateGovStateL
+    %~ modifyDRepPulser
   where
     modifyDRepPulser pulser =
       case finishDRepPulser pulser of
@@ -234,7 +239,12 @@ withImpStateWithProtVer ::
   Spec
 withImpStateWithProtVer ver = do
   withImpStateModified $
-    impNESL . nesEsL . esLStateL . lsUTxOStateL . (utxosGovStateL @era) . cgsCurPParamsL
+    impNESL
+      . nesEsL
+      . esLStateL
+      . lsUTxOStateL
+      . (utxosGovStateL @era)
+      . cgsCurPParamsL
       %~ ( \(PParams pp) ->
             PParams (pp {cppProtocolVersion = ProtVer ver 0})
          )
@@ -259,25 +269,49 @@ instance
       initConwayNES committee constitution nes =
         let newNes =
               (initAlonzoImpNES nes)
-                & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
-                & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
-                & nesEsL . curPParamsEpochStateL . ppGovActionDepositL .~ Coin 123
-                & nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL .~ EpochInterval 20
-                & nesEsL . curPParamsEpochStateL . ppCommitteeMinSizeL .~ 1
-                & nesEsL . curPParamsEpochStateL . ppDRepVotingThresholdsL
-                  %~ ( \dvt ->
-                        dvt
-                          { dvtCommitteeNormal = 1 %! 1
-                          , dvtCommitteeNoConfidence = 1 %! 2
-                          , dvtUpdateToConstitution = 1 %! 2
-                          }
-                     )
-                & nesEsL . epochStateGovStateL . committeeGovStateL .~ SJust committee
-                & nesEsL . epochStateGovStateL . constitutionGovStateL .~ constitution
+                & nesEsL
+                . curPParamsEpochStateL
+                . ppDRepActivityL
+                .~ EpochInterval 100
+                & nesEsL
+                . curPParamsEpochStateL
+                . ppGovActionLifetimeL
+                .~ EpochInterval 30
+                & nesEsL
+                . curPParamsEpochStateL
+                . ppGovActionDepositL
+                .~ Coin 123
+                & nesEsL
+                . curPParamsEpochStateL
+                . ppCommitteeMaxTermLengthL
+                .~ EpochInterval 20
+                & nesEsL
+                . curPParamsEpochStateL
+                . ppCommitteeMinSizeL
+                .~ 1
+                & nesEsL
+                . curPParamsEpochStateL
+                . ppDRepVotingThresholdsL
+                %~ ( \dvt ->
+                      dvt
+                        { dvtCommitteeNormal = 1 %! 1
+                        , dvtCommitteeNoConfidence = 1 %! 2
+                        , dvtUpdateToConstitution = 1 %! 2
+                        }
+                   )
+                & nesEsL
+                . epochStateGovStateL
+                . committeeGovStateL
+                .~ SJust committee
+                & nesEsL
+                . epochStateGovStateL
+                . constitutionGovStateL
+                .~ constitution
             epochState = newNes ^. nesEsL
             ratifyState =
               def
-                & rsEnactStateL .~ mkEnactState (epochState ^. epochStateGovStateL)
+                & rsEnactStateL
+                .~ mkEnactState (epochState ^. epochStateGovStateL)
          in newNes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState
 
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
@@ -347,13 +381,14 @@ registerDRep = do
   khDRep <- freshKeyHash
   submitTxAnn_ "Register DRep" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.singleton
-          ( RegDRepTxCert
-              (KeyHashObj khDRep)
-              zero
-              SNothing
-          )
+      & bodyTxL
+      . certsTxBodyL
+      .~ SSeq.singleton
+        ( RegDRepTxCert
+            (KeyHashObj khDRep)
+            zero
+            SNothing
+        )
   dreps <- getsNES @era $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   dreps `shouldSatisfy` Map.member (KeyHashObj khDRep)
   pure khDRep
@@ -551,19 +586,20 @@ trySubmitVote vote voter gaId =
   fmap (fmap txIdTx) $
     trySubmitTx $
       mkBasicTx mkBasicTxBody
-        & bodyTxL . votingProceduresTxBodyL
-          .~ VotingProcedures
-            ( Map.singleton
-                voter
-                ( Map.singleton
-                    gaId
-                    ( VotingProcedure
-                        { vProcVote = vote
-                        , vProcAnchor = SNothing
-                        }
-                    )
-                )
-            )
+        & bodyTxL
+        . votingProceduresTxBodyL
+        .~ VotingProcedures
+          ( Map.singleton
+              voter
+              ( Map.singleton
+                  gaId
+                  ( VotingProcedure
+                      { vProcVote = vote
+                      , vProcAnchor = SNothing
+                      }
+                  )
+              )
+          )
 
 submitProposal_ ::
   (ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =>
@@ -787,23 +823,23 @@ submitFailingGovAction ::
   ImpTestM era ()
 submitFailingGovAction ga expectedFailure = trySubmitGovAction ga >>= (`shouldBeLeftExpr` expectedFailure)
 
-getEnactState :: ConwayEraGov era => ImpTestM era (EnactState era)
+getEnactState :: (ConwayEraGov era, HasLedgerState era) => ImpTestM era (EnactState era)
 getEnactState = mkEnactState <$> getsNES (nesEsL . epochStateGovStateL)
 
-getProposals :: ConwayEraGov era => ImpTestM era (Proposals era)
-getProposals = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL
+getProposals :: (ConwayEraGov era, HasLedgerState era) => ImpTestM era (Proposals era)
+getProposals = getsNES $ nesEsL . esLStateL . hlsUTxOStateL . utxosGovStateL . proposalsGovStateL
 
-logProposalsForest :: ConwayEraGov era => ImpTestM era ()
+logProposalsForest :: (ConwayEraGov era, HasLedgerState era) => ImpTestM era ()
 logProposalsForest = do
   proposals <- getProposals
   logEntry $ proposalsShowDebug proposals True
 
 getCommitteeMembers ::
-  ConwayEraImp era =>
+  (ConwayEraImp era, HasLedgerState era) =>
   ImpTestM era (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
 getCommitteeMembers = do
   committee <-
-    getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+    getsNES $ nesEsL . esLStateL . hlsUTxOStateL . utxosGovStateL . committeeGovStateL
   pure $ Map.keysSet $ foldMap' committeeMembers committee
 
 getLastEnactedCommittee ::
@@ -813,10 +849,10 @@ getLastEnactedCommittee = do
   pure $ ps ^. pRootsL . grCommitteeL . prRootL
 
 getConstitution ::
-  ConwayEraImp era =>
+  (ConwayEraImp era, HasLedgerState era) =>
   ImpTestM era (Constitution era)
 getConstitution =
-  getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . constitutionGovStateL
+  getsNES $ nesEsL . esLStateL . hlsUTxOStateL . utxosGovStateL . constitutionGovStateL
 
 getLastEnactedConstitution ::
   ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
@@ -904,14 +940,14 @@ expectMissingGovActionId govActionId =
       Nothing -> pure ()
 
 -- | Builds a RatifyEnv from the current state
-getRatifyEnv :: ConwayEraGov era => ImpTestM era (RatifyEnv era)
+getRatifyEnv :: (ConwayEraGov era, HasLedgerState era) => ImpTestM era (RatifyEnv era)
 getRatifyEnv = do
   eNo <- getsNES nesELL
-  stakeDistr <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosStakeDistrL
+  stakeDistr <- getsNES $ nesEsL . esLStateL . hlsUTxOStateL . utxosStakeDistrL
   poolDistr <- getsNES nesPdL
   drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
-  drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
-  committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
+  drepState <- getsNES $ nesEsL . esLStateL . hlsCertStateL . certVStateL . vsDRepsL
+  committeeState <- getsNES $ nesEsL . esLStateL . hlsCertStateL . certVStateL . vsCommitteeStateL
   pure
     RatifyEnv
       { reStakePoolDistr = poolDistr
@@ -923,7 +959,7 @@ getRatifyEnv = do
       }
 
 ccShouldNotBeExpired ::
-  (HasCallStack, ConwayEraGov era) =>
+  (HasCallStack, ConwayEraGov era, HasLedgerState era) =>
   Credential 'ColdCommitteeRole (EraCrypto era) ->
   ImpTestM era ()
 ccShouldNotBeExpired coldC = do
@@ -932,7 +968,7 @@ ccShouldNotBeExpired coldC = do
   curEpochNo `shouldSatisfy` (<= ccExpiryEpochNo)
 
 ccShouldBeExpired ::
-  (HasCallStack, ConwayEraGov era) =>
+  (HasCallStack, ConwayEraGov era, HasLedgerState era) =>
   Credential 'ColdCommitteeRole (EraCrypto era) ->
   ImpTestM era ()
 ccShouldBeExpired coldC = do
@@ -941,7 +977,7 @@ ccShouldBeExpired coldC = do
   curEpochNo `shouldSatisfy` (> ccExpiryEpochNo)
 
 getCCExpiry ::
-  (HasCallStack, ConwayEraGov era) =>
+  (HasCallStack, ConwayEraGov era, HasLedgerState era) =>
   Credential 'ColdCommitteeRole (EraCrypto era) ->
   ImpTestM era EpochNo
 getCCExpiry coldC = do
@@ -955,10 +991,12 @@ getCCExpiry coldC = do
 
 -- | Test the resignation status for a CC cold key to be resigned
 ccShouldBeResigned ::
-  HasCallStack => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
+  (HasCallStack, HasLedgerState era) =>
+  Credential 'ColdCommitteeRole (EraCrypto era) ->
+  ImpTestM era ()
 ccShouldBeResigned coldK = do
   committeeCreds <-
-    getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
+    getsNES $ nesEsL . esLStateL . hlsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
   authHk <$> Map.lookup coldK committeeCreds `shouldBe` Just Nothing
 
 -- | Test the resignation status for a CC cold key to not be resigned

@@ -71,7 +71,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   DState (..),
   EpochState (..),
-  LedgerState (..),
+  HasLedgerState (..),
   PState (..),
   UTxOState (..),
   asTreasuryL,
@@ -79,8 +79,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   esAccountStateL,
   esLStateL,
   esSnapshotsL,
-  lsCertStateL,
-  lsUTxOStateL,
   totalObligation,
   utxosDepositedL,
   utxosDonationL,
@@ -169,6 +167,7 @@ instance
   , GovState era ~ ConwayGovState era
   , State (EraRule "RATIFY" era) ~ RatifyState era
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
+  , HasLedgerState era
   ) =>
   STS (ConwayEPOCH era)
   where
@@ -236,7 +235,8 @@ applyEnactedWithdrawals accountState dState enactedState =
           --   + unclaimed - totWithdrawals
           -- we just subtract the `refunds`
           --   - refunds
-          & asTreasuryL %~ (<-> fold successfulWithdrawls)
+          & asTreasuryL
+          %~ (<-> fold successfulWithdrawls)
       -- The use of the partial function `compactCoinOrError` is justified here because
       -- 1. the decoder for coin at the proposal-submission boundary has already
       --    confirmed we have a compactible value
@@ -244,12 +244,15 @@ applyEnactedWithdrawals accountState dState enactedState =
       --    current treasury value, as enforced by the `ENACT` rule.
       dState' =
         dState
-          & dsUnifiedL .~ (rewardsUView ∪+ (compactCoinOrError <$> successfulWithdrawls))
+          & dsUnifiedL
+          .~ (rewardsUView ∪+ (compactCoinOrError <$> successfulWithdrawls))
       -- Reset enacted withdrawals:
       enactedState' =
         enactedState
-          & ensWithdrawalsL .~ Map.empty
-          & ensTreasuryL .~ mempty
+          & ensWithdrawalsL
+          .~ Map.empty
+          & ensTreasuryL
+          .~ mempty
    in (accountState', dState', enactedState')
 
 epochTransition ::
@@ -272,6 +275,7 @@ epochTransition ::
   , GovState era ~ ConwayGovState era
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
   , ConwayEraGov era
+  , HasLedgerState era
   ) =>
   TransitionRule (ConwayEPOCH era)
 epochTransition = do
@@ -287,8 +291,8 @@ epochTransition = do
     judgmentContext
   let govState0 = utxosGovState utxoState0
       curPParams = govState0 ^. curPParamsGovStateL
-      utxoState0 = lsUTxOState ledgerState0
-      CertState vState pState0 dState0 = lsCertState ledgerState0
+      utxoState0 = ledgerState0 ^. hlsUTxOStateL
+      CertState vState pState0 dState0 = ledgerState0 ^. hlsCertStateL
   snapshots1 <-
     trans @(EraRule "SNAP" era) $ TRC (SnapEnv ledgerState0 curPParams, snapshots0, ())
 
@@ -331,11 +335,16 @@ epochTransition = do
     -- Apply the values from the computed EnactState to the GovState
     govState1 =
       govState0
-        & cgsProposalsL .~ newProposals
-        & cgsCommitteeL .~ ensCommittee
-        & cgsConstitutionL .~ ensConstitution
-        & cgsCurPParamsL .~ ensCurPParams
-        & cgsPrevPParamsL .~ curPParams
+        & cgsProposalsL
+        .~ newProposals
+        & cgsCommitteeL
+        .~ ensCommittee
+        & cgsConstitutionL
+        .~ ensConstitution
+        & cgsCurPParamsL
+        .~ ensCurPParams
+        & cgsPrevPParamsL
+        .~ curPParams
 
     allRemovedGovActions = expiredActions `Map.union` enactedActions
     (newUMap, unclaimed) =
@@ -357,27 +366,37 @@ epochTransition = do
             -- Increment the dormant epoch counter
             updateNumDormantEpochs pulsingState vState
               -- Remove cold credentials of committee members that were removed or were invalid
-              & vsCommitteeStateL %~ updateCommitteeState (govState1 ^. cgsCommitteeL)
+              & vsCommitteeStateL
+              %~ updateCommitteeState (govState1 ^. cgsCommitteeL)
         }
     accountState3 =
       accountState2
         -- Move donations and unclaimed rewards from proposals to treasury:
-        & asTreasuryL <>~ (utxoState0 ^. utxosDonationL <> fold unclaimed)
+        & asTreasuryL
+        <>~ (utxoState0 ^. utxosDonationL <> fold unclaimed)
     utxoState2 =
       utxoState1
-        & utxosDepositedL .~ totalObligation certState govState1
+        & utxosDepositedL
+        .~ totalObligation certState govState1
         -- Clear the donations field:
-        & utxosDonationL .~ zero
-        & utxosGovStateL .~ govState1
+        & utxosDonationL
+        .~ zero
+        & utxosGovStateL
+        .~ govState1
     ledgerState1 =
       ledgerState0
-        & lsCertStateL .~ certState
-        & lsUTxOStateL .~ utxoState2
+        & hlsCertStateL
+        .~ certState
+        & hlsUTxOStateL
+        .~ utxoState2
     epochState1 =
       epochState0
-        & esAccountStateL .~ accountState3
-        & esSnapshotsL .~ snapshots1
-        & esLStateL .~ ledgerState1
+        & esAccountStateL
+        .~ accountState3
+        & esSnapshotsL
+        .~ snapshots1
+        & esLStateL
+        .~ ledgerState1
   tellEvent $ EpochBoundaryRatifyState ratState0
   liftSTS $ setFreshDRepPulsingState eNo stakePoolDistr epochState1
 
@@ -396,6 +415,7 @@ instance
   ( EraTxOut era
   , PredicateFailure (EraRule "SNAP" era) ~ ShelleySnapPredFailure era
   , Event (EraRule "SNAP" era) ~ Shelley.SnapEvent era
+  , HasLedgerState era
   ) =>
   Embed (ShelleySNAP era) (ConwayEPOCH era)
   where

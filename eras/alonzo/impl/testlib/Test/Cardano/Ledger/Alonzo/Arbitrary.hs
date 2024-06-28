@@ -29,6 +29,7 @@ module Test.Cardano.Ledger.Alonzo.Arbitrary (
   genAlonzoPlutusPurposePointer,
 ) where
 
+import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (AlonzoPParams (AlonzoPParams), OrdExUnits (OrdExUnits))
@@ -53,7 +54,6 @@ import Cardano.Ledger.Alonzo.Tx (
   getLanguageView,
  )
 import Cardano.Ledger.Alonzo.TxAuxData (
-  AlonzoTxAuxData (..),
   mkAlonzoTxAuxData,
  )
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (AlonzoTxBody))
@@ -459,6 +459,16 @@ instance Arbitrary AlonzoGenesis where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+
+instance
+  ( EraTxOut era
+  , Arbitrary (TxOut era)
+  , Arbitrary (GovState era)
+  ) =>
+  Arbitrary (AlonzoLedgerState era)
+  where
+  arbitrary = AlonzoLedgerState <$> arbitrary
+  shrink (AlonzoLedgerState ls) = AlonzoLedgerState <$> shrink ls
 
 alwaysSucceeds ::
   forall l era.

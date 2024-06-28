@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 -- |
@@ -23,6 +24,8 @@ module Cardano.Ledger.Shelley.LedgerState (
   InstantaneousRewards (..),
   KeyPairs, -- deprecated
   LedgerState (..),
+  ShelleyLedgerState (..),
+  HasLedgerState (..),
   PState (..),
   PPUPPredFailure,
   RewardAccounts,
@@ -137,6 +140,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   ssStakeDistrL,
   ssDelegationsL,
   ssPoolParamsL,
+  pattern EraLedgerState,
 ) where
 
 import Cardano.Ledger.CertState

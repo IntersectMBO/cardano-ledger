@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -15,7 +16,13 @@ import Cardano.Ledger.Core (TxOut, emptyPParams)
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.EpochBoundary as EpochBoundary
 import qualified Cardano.Ledger.Keys as Keys
-import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, prevPParamsEpochStateL)
+import Cardano.Ledger.Shelley.LedgerState (
+  HasLedgerState (..),
+  curPParamsEpochStateL,
+  lsCertStateL,
+  lsUTxOStateL,
+  prevPParamsEpochStateL,
+ )
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.State.Orphans
 import Cardano.Ledger.State.Schema
@@ -178,7 +185,9 @@ insertEpochState es@Shelley.EpochState {..} = do
         , epochStateSnapShotsFee = EpochBoundary.ssFee esSnapshots
         }
   insertSnapShots epochStateKey esSnapshots
-  insertLedgerState epochStateKey esLState
+  insertLedgerState
+    epochStateKey
+    (Shelley.LedgerState (esLState ^. hlsUTxOStateL) (esLState ^. hlsCertStateL))
 
 -- Query database
 
@@ -741,12 +750,14 @@ loadEpochState fp = runSqlite fp $ do
             { asTreasury = epochStateTreasury
             , asReserves = epochStateReserves
             }
-      , esLState = ledgerState
+      , esLState = Shelley.EraLedgerState (ledgerState ^. lsUTxOStateL) (ledgerState ^. lsCertStateL)
       , esSnapshots = snapshots
       , esNonMyopic = epochStateNonMyopic
       }
-      & curPParamsEpochStateL .~ epochStatePp
-      & prevPParamsEpochStateL .~ epochStatePrevPp
+      & curPParamsEpochStateL
+      .~ epochStatePp
+      & prevPParamsEpochStateL
+      .~ epochStatePrevPp
 
 loadEpochStateWithSharing :: MonadUnliftIO m => T.Text -> m (Shelley.EpochState CurrentEra)
 loadEpochStateWithSharing fp = runSqlite fp $ do
@@ -760,12 +771,14 @@ loadEpochStateWithSharing fp = runSqlite fp $ do
             { asTreasury = epochStateTreasury
             , asReserves = epochStateReserves
             }
-      , esLState = ledgerState
+      , esLState = Shelley.EraLedgerState (ledgerState ^. lsUTxOStateL) (ledgerState ^. lsCertStateL)
       , esSnapshots = snapshots
       , esNonMyopic = epochStateNonMyopic
       }
-      & prevPParamsEpochStateL .~ epochStatePrevPp
-      & curPParamsEpochStateL .~ epochStatePp
+      & prevPParamsEpochStateL
+      .~ epochStatePrevPp
+      & curPParamsEpochStateL
+      .~ epochStatePp
 
 loadSnapShotsNoSharing ::
   MonadUnliftIO m => T.Text -> Entity EpochState -> m (EpochBoundary.SnapShots C)

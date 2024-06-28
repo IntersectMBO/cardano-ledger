@@ -27,10 +27,9 @@ import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyUPEC)
 import Cardano.Ledger.Shelley.Governance
-import Cardano.Ledger.Shelley.LedgerState (
-  LedgerState,
-  lsCertState,
-  lsUTxOState,
+import Cardano.Ledger.Shelley.LedgerState.Types (
+  EraLedgerState,
+  HasLedgerState (hlsCertStateL, hlsUTxOStateL),
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Rules.Newpp (
@@ -53,6 +52,7 @@ import Data.Default.Class (Default)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data UpecState era = UpecState
@@ -79,12 +79,13 @@ instance
   , Default (PParams era)
   , GovState era ~ ShelleyGovState era
   , ProtVerAtMost era 8
+  , HasLedgerState era
   ) =>
   STS (ShelleyUPEC era)
   where
   type State (ShelleyUPEC era) = UpecState era
   type Signal (ShelleyUPEC era) = ()
-  type Environment (ShelleyUPEC era) = LedgerState era
+  type Environment (ShelleyUPEC era) = EraLedgerState era
   type BaseM (ShelleyUPEC era) = ShelleyBase
   type PredicateFailure (ShelleyUPEC era) = ShelleyUpecPredFailure era
   initialRules = []
@@ -99,12 +100,12 @@ instance
 
         coreNodeQuorum <- liftSTS $ asks quorum
 
-        let utxoState = lsUTxOState ls
+        let utxoState = ls ^. hlsUTxOStateL
             pup = sgsCurProposals ppupState
             ppNew = votedValue pup pp (fromIntegral coreNodeQuorum)
         NewppState pp' ppupState' <-
           trans @(ShelleyNEWPP era) $
-            TRC (NewppEnv (lsCertState ls) utxoState, NewppState pp ppupState, ppNew)
+            TRC (NewppEnv (ls ^. hlsCertStateL) utxoState, NewppState pp ppupState, ppNew)
         pure $! UpecState pp' ppupState'
     ]
 

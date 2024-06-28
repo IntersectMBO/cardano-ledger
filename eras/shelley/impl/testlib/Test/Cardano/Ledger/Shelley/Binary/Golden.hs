@@ -27,6 +27,8 @@ goldenNewEpochStateExpectation ::
   , EraGov era
   , ToCBOR (StashedAVVMAddresses era)
   , EncCBOR (StashedAVVMAddresses era)
+  , ToCBOR (EraLedgerState era)
+  , HasLedgerState era
   ) =>
   NewEpochState era ->
   Expectation
