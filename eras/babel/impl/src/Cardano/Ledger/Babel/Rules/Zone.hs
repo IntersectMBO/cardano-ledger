@@ -198,7 +198,7 @@ instance
   type Environment (BabelZONE era) = BabelLedgersEnv era
   type PredicateFailure (BabelZONE era) = BabelZonePredFailure era
   type Signal (BabelZONE era) = Seq (Tx era)
-  type State (BabelZONE era) = BabelLedgerState era
+  type State (BabelZONE era) = LedgerState era
   type BaseM (BabelZONE era) = ShelleyBase
   type Event (BabelZONE era) = BabelZoneEvent era
 

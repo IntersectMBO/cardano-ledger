@@ -67,6 +67,7 @@ import Cardano.Ledger.Babel.Rules.Utxo (BabelUtxoPredFailure)
 import Cardano.Ledger.Babel.Rules.Utxos (BabelUtxosPredFailure)
 import Cardano.Ledger.Babel.Rules.Utxow (BabelUtxowPredFailure)
 import Cardano.Ledger.Babel.Rules.Zone (BabelZonePredFailure)
+import Cardano.Ledger.Shelley.API (LedgerState)
 import Cardano.Ledger.Shelley.LedgerState ()
 import Control.Monad (foldM)
 import qualified Data.Foldable as Foldale
@@ -135,14 +136,14 @@ instance
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
   , Embed (EraRule "ZONE" era) (BabelZONES era)
   , Environment (EraRule "ZONE" era) ~ BabelLedgersEnv era
-  , State (EraRule "ZONE" era) ~ BabelLedgerState era
+  , State (EraRule "ZONE" era) ~ LedgerState era
   , Signal (EraRule "ZONE" era) ~ Seq (Tx era)
   , Eq (PredicateFailure (EraRule "LEDGERS" era))
   , Show (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
   STS (BabelZONES era)
   where
-  type State (BabelZONES era) = BabelLedgerState era
+  type State (BabelZONES era) = LedgerState era
   type Environment (BabelZONES era) = ShelleyLedgersEnv era
 
   type Signal (BabelZONES era) = Seq (Seq (Tx era))
@@ -161,7 +162,7 @@ zonesTransition ::
   forall era.
   ( Embed (EraRule "ZONE" era) (BabelZONES era)
   , Environment (EraRule "ZONE" era) ~ BabelLedgersEnv era
-  , State (EraRule "ZONE" era) ~ BabelLedgerState era
+  , State (EraRule "ZONE" era) ~ LedgerState era
   , Signal (EraRule "ZONE" era) ~ Seq (Tx era)
   ) =>
   TransitionRule (BabelZONES era)

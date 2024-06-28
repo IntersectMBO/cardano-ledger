@@ -129,7 +129,6 @@ instance
   , Signal (EraRule "ZONES" era) ~ Seq (Seq (Tx era))
   , Eq (PredicateFailure (EraRule "LEDGERS" era))
   , Show (PredicateFailure (EraRule "LEDGERS" era))
-  , State (EraRule "LEDGERS" era) ~ State (EraRule "ZONES" era)
   ) =>
   STS (BabelBBODY era)
   where
@@ -156,7 +155,6 @@ bbodyTransition ::
   , Embed (EraRule "ZONES" era) (BabelBBODY era)
   , Environment (EraRule "ZONES" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "ZONES" era) ~ Seq (Seq (Tx era))
-  , State (EraRule "LEDGERS" era) ~ State (EraRule "ZONES" era)
   ) =>
   TransitionRule (BabelBBODY era)
 bbodyTransition =

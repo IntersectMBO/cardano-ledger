@@ -45,7 +45,7 @@ import Cardano.Ledger.Shelley.API.Mempool (
 import Control.Arrow (left)
 import Control.Monad.Error.Class (liftEither)
 import Control.Monad.Reader (runReader)
-import Control.State.Transition (TRC (TRC))
+import Control.State.Transition (STS (State), TRC (TRC))
 
 import qualified Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Babbage.Rules ()
@@ -54,7 +54,7 @@ import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxInfo ()
 import Cardano.Ledger.Babbage.UTxO ()
 import Cardano.Ledger.Babel.LedgerState.Types (BabelLedgerState)
-import Cardano.Ledger.Shelley.LedgerState (HasLedgerState (EraLedgerState))
+import Cardano.Ledger.Shelley.LedgerState (HasLedgerState (EraLedgerState), LedgerState)
 
 type Babel = BabelEra StandardCrypto
 
