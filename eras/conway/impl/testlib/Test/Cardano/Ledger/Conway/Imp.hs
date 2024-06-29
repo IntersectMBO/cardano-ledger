@@ -24,6 +24,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayEpochEvent,
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
+  ConwayLedgerPredFailure,
   ConwayNewEpochEvent,
  )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
@@ -36,6 +37,7 @@ import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GovCert
 import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as Gov
+import qualified Test.Cardano.Ledger.Conway.Imp.LedgerSpec as Ledger
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
@@ -58,6 +60,7 @@ spec ::
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
   , NFData (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "ENACT" era))
   , Eq (Event (EraRule "ENACT" era))
@@ -78,6 +81,7 @@ spec = do
       describe "UTXO" $ Utxo.spec @era
       describe "UTXOS" $ Utxos.spec @era
       describe "RATIFY" $ Ratify.spec @era
+      describe "LEDGER" $ Ledger.spec @era
   describe "ConwayImpSpec - bootstrap phase (protocol version 9)" $
     withImpState @era $ do
       describe "ENACT" $ Enact.relevantDuringBootstrapSpec @era
@@ -87,3 +91,4 @@ spec = do
       describe "UTXO" $ Utxo.spec @era
       describe "UTXOS" $ Utxos.relevantDuringBootstrapSpec @era
       describe "RATIFY" $ Ratify.relevantDuringBootstrapSpec @era
+      describe "LEDGER" $ Ledger.spec @era
