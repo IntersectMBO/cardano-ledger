@@ -156,7 +156,7 @@ purposeIsWellformedWithDatumQ =
       P.check $
         case unsafeFromBuiltinData arg of
           PV3.ScriptContext txInfo _redeemer (PV3.SpendingScript txOutRef (Just _)) ->
-            null $ P.filter ((txOutRef P.==) . PV3.txInInfoOutRef) $ PV3.txInfoInputs txInfo
+            not $ null $ P.filter ((txOutRef P.==) . PV3.txInInfoOutRef) $ PV3.txInfoInputs txInfo
           _ -> False
     |]
 
@@ -168,7 +168,7 @@ datumIsWellformedQ =
       P.check $
         case unsafeFromBuiltinData arg of
           PV3.ScriptContext txInfo _redeemer (PV3.SpendingScript _txOutRef (Just datum)) ->
-            null $ P.filter (datum P.==) $ PAM.elems $ PV3.txInfoData txInfo
+            not $ null $ P.filter (datum P.==) $ PAM.elems $ PV3.txInfoData txInfo
           _ -> False
     |]
 
@@ -182,7 +182,7 @@ inputsOutputsAreNotEmptyNoDatumQ =
           -- When there is a datum supplied, we need to fail.
           PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _txOutRef (Just _)) -> False
           PV3.ScriptContext txInfo _redeemer _scriptPurpose ->
-            null (PV3.txInfoInputs txInfo) || null (PV3.txInfoOutputs txInfo)
+            not $ null (PV3.txInfoInputs txInfo) || null (PV3.txInfoOutputs txInfo)
     |]
 
 inputsOutputsAreNotEmptyWithDatumQ :: Q [Dec]
@@ -194,5 +194,5 @@ inputsOutputsAreNotEmptyWithDatumQ =
         case unsafeFromBuiltinData arg of
           PV3.ScriptContext _txInfo _redeemer (PV3.SpendingScript _txOutRef Nothing) -> False
           PV3.ScriptContext txInfo _redeemer _scriptPurpose ->
-            null (PV3.txInfoInputs txInfo) || null (PV3.txInfoOutputs txInfo)
+            not $ null (PV3.txInfoInputs txInfo) || null (PV3.txInfoOutputs txInfo)
     |]

@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,9 +18,9 @@ import Cardano.Ledger.Alonzo.Core (
  )
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
-import Cardano.Ledger.Core (EraTx (..), EraTxBody (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Plutus.Data (Data (..))
-import Cardano.Ledger.Plutus.Language (Language, hashPlutusScript, withSLanguage)
+import Cardano.Ledger.Plutus.Language (Language (..), hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -29,11 +30,12 @@ import Test.Cardano.Ledger.Alonzo.ImpTest (
   ImpTestState,
   ShelleyEraImp,
   getsNES,
+  passEpoch,
   produceScript,
   submitTxAnn_,
  )
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.Plutus.Examples (redeemerSameAsDatum)
+import Test.Cardano.Ledger.Plutus.Examples
 
 spec ::
   forall era.
@@ -45,24 +47,42 @@ spec = describe "UTXOS" $
   forM_ ([minBound .. eraMaxLanguage @era] :: [Language]) $ \lang ->
     withSLanguage lang $ \slang ->
       describe (show lang) $ do
-        let scriptHash = hashPlutusScript (redeemerSameAsDatum slang)
-        it "Spending script with a Datum" $ do
-          txIn0 <- produceScript scriptHash
-          submitTxAnn_ "Submit a transaction that consumes the script output" $
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . inputsTxBodyL
-                .~ Set.singleton txIn0
+        let scripts =
+              [ ("redeermerSameAsDatum", redeemerSameAsDatum)
+              , ("purposeIsWellformedWithDatum", purposeIsWellformedWithDatum)
+              , ("datumIsWellformed", datumIsWellformed)
+              , ("inputsOutputsAreNotEmptyWithDatum", inputsOutputsAreNotEmptyWithDatum)
+              ]
+        describe "Spending scripts with a Datum" $ do
+          forM_ scripts $ \(name, script) -> do
+            it name $ do
+              let sHash = hashPlutusScript (script slang)
+              txIn0 <- produceScript sHash
+              submitTxAnn_ "Submit a transaction that consumes the script output" $
+                mkBasicTx mkBasicTxBody
+                  & bodyTxL . inputsTxBodyL
+                    .~ Set.singleton txIn0
+              passEpoch
         it "Invalid plutus script fails in phase 2" $ do
+          let scriptHash = hashPlutusScript (redeemerSameAsDatum slang)
           txIn0 <- produceScript scriptHash
           exUnits <- getsNES $ nesEsL . curPParamsEpochStateL . ppMaxTxExUnitsL
           submitTxAnn_ "Submitting consuming transaction" $
-            ( mkBasicTx mkBasicTxBody
-                & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
-                & isValidTxL .~ IsValid False
-                & witsTxL . rdmrsTxWitsL
-                  .~ Redeemers
-                    ( Map.singleton
-                        (mkSpendingPurpose $ AsIx 0)
-                        (Data $ P.I 32, exUnits)
-                    )
-            )
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
+              & isValidTxL .~ IsValid False
+              & witsTxL . rdmrsTxWitsL
+                .~ Redeemers
+                  ( Map.singleton
+                      (mkSpendingPurpose $ AsIx 0)
+                      (Data $ P.I 32, exUnits)
+                  )
+        describe "Scripts pass in phase 2" $ do
+          let scripts' = drop 1 scripts
+          forM_ scripts' $ \(name, script) -> do
+            it name $ do
+              let sHash = hashPlutusScript (script slang)
+              txIn0 <- produceScript sHash
+              submitTxAnn_ "Submitting consuming transaction" $
+                mkBasicTx mkBasicTxBody
+                  & bodyTxL . inputsTxBodyL .~ Set.singleton txIn0
