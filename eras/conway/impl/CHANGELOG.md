@@ -24,6 +24,7 @@
 
 ### `testlib`
 
+* Added `ToExpr` instance for `ConwayNewEpochPredFailure`
 * Change the return type of `resignCommitteeColdKey`
 * Add an argument to `registerCommitteeHotKeys`
 
