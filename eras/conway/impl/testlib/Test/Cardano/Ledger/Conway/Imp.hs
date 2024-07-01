@@ -21,6 +21,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (ConwayGovState)
 import Cardano.Ledger.Conway.PParams (ConwayPParams)
 import Cardano.Ledger.Conway.Rules (
+  ConwayBbodyPredFailure,
   ConwayEpochEvent,
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
@@ -33,6 +34,7 @@ import Data.Functor.Identity
 import Data.Typeable (Typeable)
 import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 import Test.Cardano.Ledger.Common
+import qualified Test.Cardano.Ledger.Conway.Imp.BbodySpec as Bbody
 import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
 import qualified Test.Cardano.Ledger.Conway.Imp.GovCertSpec as GovCert
@@ -47,6 +49,7 @@ spec ::
   forall era.
   ( Arbitrary (TxAuxData era)
   , ConwayEraImp era
+  , EraSegWits era
   , GovState era ~ ConwayGovState era
   , PParamsHKD Identity era ~ ConwayPParams Identity era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
@@ -61,6 +64,7 @@ spec ::
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , InjectRuleFailure "BBODY" ConwayBbodyPredFailure era
   , NFData (Event (EraRule "ENACT" era))
   , ToExpr (Event (EraRule "ENACT" era))
   , Eq (Event (EraRule "ENACT" era))
@@ -74,6 +78,7 @@ spec = do
   BabbageImp.spec @era
   describe "ConwayImpSpec - post bootstrap (protocol version 10)" $
     withImpStateWithProtVer @era (natVersion @10) $ do
+      describe "BBODY" $ Bbody.spec @era
       describe "ENACT" $ Enact.spec @era
       describe "EPOCH" $ Epoch.spec @era
       describe "GOV" $ Gov.spec @era
@@ -84,6 +89,7 @@ spec = do
       describe "LEDGER" $ Ledger.spec @era
   describe "ConwayImpSpec - bootstrap phase (protocol version 9)" $
     withImpState @era $ do
+      describe "BBODY" $ Bbody.spec @era
       describe "ENACT" $ Enact.relevantDuringBootstrapSpec @era
       describe "EPOCH" $ Epoch.relevantDuringBootstrapSpec @era
       describe "GOV" $ Gov.relevantDuringBootstrapSpec @era
