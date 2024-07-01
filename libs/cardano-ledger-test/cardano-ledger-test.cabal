@@ -54,15 +54,16 @@ library
         Test.Cardano.Ledger.Constrained.Size
         Test.Cardano.Ledger.Constrained.Solver
         Test.Cardano.Ledger.Constrained.Conway
-        Test.Cardano.Ledger.Constrained.Conway.Instances
         Test.Cardano.Ledger.Constrained.Conway.Cert
-        Test.Cardano.Ledger.Constrained.Conway.Ledger
         Test.Cardano.Ledger.Constrained.Conway.Deleg
         Test.Cardano.Ledger.Constrained.Conway.Epoch
-        Test.Cardano.Ledger.Constrained.Conway.Pool
-        Test.Cardano.Ledger.Constrained.Conway.GovCert
-        Test.Cardano.Ledger.Constrained.Conway.PParams
         Test.Cardano.Ledger.Constrained.Conway.Gov
+        Test.Cardano.Ledger.Constrained.Conway.GovCert
+        Test.Cardano.Ledger.Constrained.Conway.Instances
+        Test.Cardano.Ledger.Constrained.Conway.Ledger
+        Test.Cardano.Ledger.Constrained.Conway.NewEpoch
+        Test.Cardano.Ledger.Constrained.Conway.PParams
+        Test.Cardano.Ledger.Constrained.Conway.Pool
         Test.Cardano.Ledger.Constrained.Conway.Utxo
         Test.Cardano.Ledger.Examples.BabbageFeatures
         Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW

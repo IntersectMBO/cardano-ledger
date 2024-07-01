@@ -92,6 +92,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   govEnvSpec,
   govProceduresSpec,
   govProposalsSpec,
+  newEpochStateSpec,
   pStateSpec,
   poolCertSpec,
   poolEnvSpec,
@@ -489,3 +490,21 @@ instance
     first (\case {})
       . computationResultToEither
       $ Agda.epochStep env st sig
+
+instance
+  IsConwayUniv fn =>
+  ExecSpecRule fn "NEWEPOCH" Conway
+  where
+  type ExecContext fn "NEWEPOCH" Conway = [GovActionState Conway]
+  type ExecEnvironment fn "NEWEPOCH" Conway = EpochExecEnv Conway
+
+  environmentSpec _ = epochEnvSpec
+
+  stateSpec _ _ = newEpochStateSpec
+
+  signalSpec _ _ _ = epochSignalSpec
+
+  runAgdaRule env st sig =
+    first (\case {})
+      . computationResultToEither
+      $ Agda.newEpochStep env st sig

@@ -36,7 +36,7 @@ spec = do
       xprop "ENACT" $ conformsToImpl @"ENACT" @ConwayFn @Conway
       xprop "RATIFY" $ conformsToImpl @"RATIFY" @ConwayFn @Conway
       xprop "EPOCH" $ conformsToImpl @"EPOCH" @ConwayFn @Conway
-      xprop "NEWEPOCH" $ conformsToImpl @"EPOCH" @ConwayFn @Conway
+      xprop "NEWEPOCH" $ conformsToImpl @"NEWEPOCH" @ConwayFn @Conway
     describe "Blocks transition graph" $ do
       prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
       xprop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway

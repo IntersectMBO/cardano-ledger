@@ -71,6 +71,8 @@ deriving instance Generic LedgerState
 
 deriving instance Generic Acnt
 
+deriving instance Generic NewEpochState
+
 deriving instance Ord Tag
 
 deriving instance Ord Credential
@@ -152,6 +154,8 @@ deriving instance Eq Snapshot
 deriving instance Eq Acnt
 
 deriving instance Eq LedgerState
+
+deriving instance Eq NewEpochState
 
 instance (NFData k, NFData v) => NFData (HSMap k v)
 
@@ -236,6 +240,8 @@ instance NFData Snapshot
 instance NFData Acnt
 
 instance NFData LedgerState
+
+instance NFData NewEpochState
 
 instance ToExpr a => ToExpr (HSSet a)
 
@@ -324,6 +330,8 @@ instance ToExpr LedgerState
 
 instance ToExpr Acnt
 
+instance ToExpr NewEpochState
+
 instance Default (HSMap k v)
 
 instance FixupSpecRep OpaqueErrorString
@@ -409,3 +417,5 @@ instance FixupSpecRep Snapshot
 instance FixupSpecRep Acnt
 
 instance FixupSpecRep LedgerState
+
+instance FixupSpecRep NewEpochState

@@ -110,6 +110,8 @@ import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.LedgerState hiding (ptrMap)
 import Cardano.Ledger.Shelley.PoolRank
+import Cardano.Ledger.Shelley.RewardUpdate (FreeVars, Pulser, RewardAns, RewardPulser (RSLP))
+import Cardano.Ledger.Shelley.Rewards (LeaderOnlyReward, PoolRewardInfo, StakeShare)
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -1462,3 +1464,60 @@ onSized sz p = match sz $ \a _ -> p a
 
 instance HasSimpleRep (ConwayDelegEnv era)
 instance (IsConwayUniv fn, HasSpec fn (PParams era), Era era) => HasSpec fn (ConwayDelegEnv era)
+
+instance HasSimpleRep (NewEpochState (ConwayEra StandardCrypto))
+instance IsConwayUniv fn => HasSpec fn (NewEpochState (ConwayEra StandardCrypto))
+
+instance HasSimpleRep (BlocksMade StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (BlocksMade StandardCrypto)
+
+instance HasSimpleRep (FreeVars StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (FreeVars StandardCrypto)
+
+instance HasSimpleRep (PoolRewardInfo StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (PoolRewardInfo StandardCrypto)
+
+instance HasSimpleRep (LeaderOnlyReward StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (LeaderOnlyReward StandardCrypto)
+
+instance HasSimpleRep StakeShare
+instance IsConwayUniv fn => HasSpec fn StakeShare
+
+instance HasSimpleRep (RewardAns StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (RewardAns StandardCrypto)
+
+instance HasSimpleRep (PulsingRewUpdate StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (PulsingRewUpdate StandardCrypto)
+
+instance HasSimpleRep (Reward StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (Reward StandardCrypto)
+
+instance HasSimpleRep (RewardSnapShot StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (RewardSnapShot StandardCrypto)
+
+instance HasSimpleRep (RewardUpdate StandardCrypto)
+instance IsConwayUniv fn => HasSpec fn (RewardUpdate StandardCrypto)
+
+instance HasSimpleRep RewardType
+instance IsConwayUniv fn => HasSpec fn RewardType
+
+type PulserTypes c =
+  '[ Int
+   , FreeVars c
+   , VMap VMap.VB VMap.VP (Credential 'Staking c) (CompactForm Coin)
+   , RewardAns c
+   ]
+instance HasSimpleRep (Pulser c) where
+  type SimpleRep (Pulser c) = SOP '["Pulser" ::: PulserTypes c]
+  toSimpleRep (RSLP n free bal ans) =
+    inject @"Pulser" @'["Pulser" ::: PulserTypes c]
+      n
+      free
+      bal
+      ans
+  fromSimpleRep rep =
+    algebra @'["Pulser" ::: PulserTypes c]
+      rep
+      RSLP
+
+instance IsConwayUniv fn => HasSpec fn (Pulser StandardCrypto)
