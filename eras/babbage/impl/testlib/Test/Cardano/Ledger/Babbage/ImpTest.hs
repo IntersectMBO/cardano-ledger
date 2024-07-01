@@ -18,6 +18,7 @@ import Cardano.Crypto.Hash (Hash)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
@@ -42,7 +43,10 @@ instance
   ) =>
   ShelleyEraImp (BabbageEra c)
   where
-  initImpTestState = impNESL %= initAlonzoImpNES
+  initImpTestState =
+    impNESL %= \nes ->
+      initAlonzoImpNES nes
+        & nesEsL . curPParamsEpochStateL . ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 4310)
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = alonzoFixupTx
 
