@@ -151,7 +151,7 @@ data ConwayLedgerPredFailure era
 -- coded limit on the total number of bytes of reference scripts that a transaction can
 -- use.
 maxRefScriptSizePerTx :: Int
-maxRefScriptSizePerTx = 1024 * 1024 -- 1MiB
+maxRefScriptSizePerTx = 200 * 1024 -- 200KiB
 
 type instance EraRuleFailure "LEDGER" (ConwayEra c) = ConwayLedgerPredFailure (ConwayEra c)
 
