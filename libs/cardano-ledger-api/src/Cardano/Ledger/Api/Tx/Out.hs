@@ -86,7 +86,7 @@ import Cardano.Ledger.Core (
   eraProtVerLow,
   isAdaOnlyTxOutF,
  )
-import Cardano.Ledger.Tools (ensureMinCoinTxOut, setMinCoinTxOut, setMinCoinTxOutWith)
+import Cardano.Ledger.Tools (ensureMinCoinTxOut, setMinCoinTxOut)
 import Lens.Micro
 
 setMinCoinSizedTxOutInternal ::
