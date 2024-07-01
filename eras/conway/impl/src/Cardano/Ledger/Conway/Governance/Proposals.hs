@@ -83,6 +83,7 @@
 module Cardano.Ledger.Conway.Governance.Proposals (
   -- * Intended interface to be used for all implementation
   Proposals,
+  mapProposals,
   proposalsIds,
   proposalsActions,
   proposalsSize,
@@ -224,6 +225,10 @@ data Proposals era = Proposals
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (NoThunks, NFData, Default)
+
+-- | Make sure not to change the `gasId`, otherwise all hell will break loose.
+mapProposals :: (GovActionState era -> GovActionState era) -> Proposals era -> Proposals era
+mapProposals f props = props {pProps = OMap.mapUnsafe f (pProps props)}
 
 pPropsL :: Lens' (Proposals era) (OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era))
 pPropsL = lens pProps $ \x y -> x {pProps = y}

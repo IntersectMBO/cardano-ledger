@@ -55,7 +55,6 @@ import Cardano.Ledger.Conway.Era (
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov (..),
   ConwayGovState,
-  GovProcedures (..),
   Proposals,
   constitutionScriptL,
   grCommitteeL,
@@ -73,6 +72,7 @@ import Cardano.Ledger.Conway.Rules.Gov (
   ConwayGovEvent (..),
   ConwayGovPredFailure,
   GovEnv (..),
+  GovSignal (..),
  )
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
@@ -88,10 +88,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   LedgerState (..),
   UTxOState (..),
   asTreasuryL,
-  certVStateL,
   utxosGovStateL,
   utxosUtxoL,
-  vsCommitteeStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
   LedgerEnv (..),
@@ -317,7 +315,7 @@ instance
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
-  , Signal (EraRule "GOV" era) ~ GovProcedures era
+  , Signal (EraRule "GOV" era) ~ GovSignal era
   ) =>
   STS (ConwayLEDGER era)
   where
@@ -358,7 +356,7 @@ ledgerTransition ::
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
-  , Signal (EraRule "GOV" era) ~ GovProcedures era
+  , Signal (EraRule "GOV" era) ~ GovSignal era
   , BaseM (someLEDGER era) ~ ShelleyBase
   , STS (someLEDGER era)
   ) =>
@@ -403,16 +401,18 @@ ledgerTransition = do
             dUnified = dsUnified $ certDState certStateAfterCERTS
             delegatedAddrs = DRepUView dUnified
 
-        -- TODO enable this check once delegation is fully implemented in cardano-api
+        -- TODO: Finish this implementation once we are in bootstrap phase:
+        -- https://github.com/IntersectMBO/cardano-ledger/issues/4092
         when False $ do
           all (`UMap.member` delegatedAddrs) wdrlCreds
             ?! ConwayWdrlNotDelegatedToDRep (wdrlCreds Set.\\ Map.keysSet (dRepMap dUnified))
 
         -- Votes and proposals from signal tx
-        let govProcedures =
-              GovProcedures
-                { gpVotingProcedures = txBody ^. votingProceduresTxBodyL
-                , gpProposalProcedures = txBody ^. proposalProceduresTxBodyL
+        let govSignal =
+              GovSignal
+                { gsVotingProcedures = txBody ^. votingProceduresTxBodyL
+                , gsProposalProcedures = txBody ^. proposalProceduresTxBodyL
+                , gsCertificates = txBody ^. certsTxBodyL
                 }
         proposalsState <-
           trans @(EraRule "GOV" era) $
@@ -422,9 +422,9 @@ ledgerTransition = do
                   currentEpoch
                   pp
                   (govState ^. constitutionGovStateL . constitutionScriptL)
-                  (certState ^. certVStateL . vsCommitteeStateL)
+                  certStateAfterCERTS
               , proposals
-              , govProcedures
+              , govSignal
               )
         let utxoState' =
               utxoState
@@ -502,7 +502,7 @@ instance
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
-  , Signal (EraRule "GOV" era) ~ GovProcedures era
+  , Signal (EraRule "GOV" era) ~ GovSignal era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
@@ -517,7 +517,8 @@ instance
   wrapEvent = LedgerEvent
 
 instance
-  ( ConwayEraPParams era
+  ( ConwayEraTxCert era
+  , ConwayEraPParams era
   , BaseM (ConwayLEDGER era) ~ ShelleyBase
   , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
   , Event (EraRule "GOV" era) ~ ConwayGovEvent era

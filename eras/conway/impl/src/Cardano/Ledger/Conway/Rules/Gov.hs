@@ -21,6 +21,7 @@
 module Cardano.Ledger.Conway.Rules.Gov (
   ConwayGOV,
   GovEnv (..),
+  GovSignal (..),
   ConwayGovEvent (..),
   ConwayGovPredFailure (..),
 ) where
@@ -50,22 +51,31 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (CommitteeState)
+import Cardano.Ledger.CertState (
+  CertState (..),
+  CommitteeState (..),
+  PState (..),
+  VState (..),
+  authorizedHotCommitteeCredentials,
+ )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
+  GovAction (..),
   GovActionId (..),
   GovActionPurpose (..),
   GovActionState (..),
-  GovProcedures (..),
   GovPurposeId (..),
   GovRelation (..),
   ProposalProcedure (..),
   Proposals,
   Voter (..),
   VotingProcedure (..),
+  VotingProcedures (..),
   foldlVotingProcedures,
+  foldrVotingProcedures,
   gasAction,
+  gasDRepVotesL,
   grHardForkL,
   indexedGovProps,
   isCommitteeVotingAllowed,
@@ -78,12 +88,13 @@ import Cardano.Ledger.Conway.Governance (
   proposalsLookupId,
   toPrevGovActionIds,
  )
-import Cardano.Ledger.Conway.Governance.Procedures (GovAction (..), foldrVotingProcedures)
+import Cardano.Ledger.Conway.Governance.Proposals (mapProposals)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
   ppGovActionDepositL,
   ppGovActionLifetimeL,
  )
+import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -106,6 +117,7 @@ import Control.State.Transition.Extended (
   tellEvent,
   (?!),
  )
+import qualified Data.Foldable as F
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.OSet.Strict as OSet
@@ -123,7 +135,7 @@ data GovEnv era = GovEnv
   , geEpoch :: !EpochNo
   , gePParams :: !(PParams era)
   , gePPolicy :: !(StrictMaybe (ScriptHash (EraCrypto era)))
-  , geCommitteeState :: !(CommitteeState era)
+  , geCertState :: !(CertState era)
   }
   deriving (Generic)
 
@@ -168,6 +180,8 @@ data ConwayGovPredFailure era
   | DisallowedProposalDuringBootstrap (ProposalProcedure era)
   | DisallowedVotesDuringBootstrap
       (NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)))
+  | -- | Predicate failure for votes by entities that are not present in the ledger state
+    VotersDoNotExist (NonEmpty (Voter (EraCrypto era)))
   deriving (Eq, Show, Generic)
 
 type instance EraRuleFailure "GOV" (ConwayEra c) = ConwayGovPredFailure (ConwayEra c)
@@ -196,6 +210,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     11 -> SumD InvalidPolicyHash <! From <! From
     12 -> SumD DisallowedProposalDuringBootstrap <! From
     13 -> SumD DisallowedVotesDuringBootstrap <! From
+    14 -> SumD VotersDoNotExist <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -232,6 +247,8 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum DisallowedProposalDuringBootstrap 12 !> To proposal
       DisallowedVotesDuringBootstrap votes ->
         Sum DisallowedVotesDuringBootstrap 13 !> To votes
+      VotersDoNotExist voters ->
+        Sum VotersDoNotExist 14 !> To voters
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -245,15 +262,28 @@ data ConwayGovEvent era
 
 instance EraPParams era => NFData (ConwayGovEvent era)
 
+data GovSignal era = GovSignal
+  { gsVotingProcedures :: !(VotingProcedures era)
+  , gsProposalProcedures :: !(OSet.OSet (ProposalProcedure era))
+  , gsCertificates :: !(SSeq.StrictSeq (TxCert era))
+  }
+  deriving (Generic)
+
+deriving instance (EraPParams era, Eq (TxCert era)) => Eq (GovSignal era)
+deriving instance (EraPParams era, Show (TxCert era)) => Show (GovSignal era)
+
+instance (EraPParams era, NFData (TxCert era)) => NFData (GovSignal era)
+
 instance
-  ( ConwayEraPParams era
+  ( ConwayEraTxCert era
+  , ConwayEraPParams era
   , EraRule "GOV" era ~ ConwayGOV era
   , InjectRuleFailure "GOV" ConwayGovPredFailure era
   ) =>
   STS (ConwayGOV era)
   where
   type State (ConwayGOV era) = Proposals era
-  type Signal (ConwayGOV era) = GovProcedures era
+  type Signal (ConwayGOV era) = GovSignal era
   type Environment (ConwayGOV era) = GovEnv era
   type BaseM (ConwayGOV era) = ShelleyBase
   type PredicateFailure (ConwayGOV era) = ConwayGovPredFailure era
@@ -346,10 +376,11 @@ checkBootstrapProposal pp proposal@ProposalProcedure {pProcGovAction}
 
 govTransition ::
   forall era.
-  ( ConwayEraPParams era
+  ( ConwayEraTxCert era
+  , ConwayEraPParams era
   , STS (EraRule "GOV" era)
   , Event (EraRule "GOV" era) ~ ConwayGovEvent era
-  , Signal (EraRule "GOV" era) ~ GovProcedures era
+  , Signal (EraRule "GOV" era) ~ GovSignal era
   , PredicateFailure (EraRule "GOV" era) ~ ConwayGovPredFailure era
   , BaseM (EraRule "GOV" era) ~ ShelleyBase
   , Environment (EraRule "GOV" era) ~ GovEnv era
@@ -359,12 +390,16 @@ govTransition ::
   TransitionRule (EraRule "GOV" era)
 govTransition = do
   TRC
-    ( GovEnv txid currentEpoch pp constitutionPolicy committeeState
+    ( GovEnv txid currentEpoch pp constitutionPolicy CertState {certPState, certVState}
       , st
-      , gp
+      , GovSignal {gsVotingProcedures, gsProposalProcedures, gsCertificates}
       ) <-
     judgmentContext
   let prevGovActionIds = st ^. pRootsL . L.to toPrevGovActionIds
+      committeeState = vsCommitteeState certVState
+      knownDReps = vsDReps certVState
+      knownStakePools = psStakePoolParams certPState
+      knownCommitteeMembers = authorizedHotCommitteeCredentials committeeState
 
   expectedNetworkId <- liftSTS $ asks networkId
 
@@ -437,16 +472,12 @@ govTransition = do
               Nothing -> ps <$ failBecause (InvalidPrevGovActionId proposal)
 
   proposals <-
-    foldlM'
-      processProposal
-      st
-      (indexedGovProps $ SSeq.fromStrict $ OSet.toStrictSeq $ gpProposalProcedures gp)
+    foldlM' processProposal st $
+      indexedGovProps (SSeq.fromStrict (OSet.toStrictSeq gsProposalProcedures))
 
-  -- Voting
-  let votingProcedures = gpVotingProcedures gp
-      -- Inversion of the keys in VotingProcedures, where we can find
-      -- the voters for every govActionId
-      (unknownGovActionIds, knownVotes) =
+  -- Inversion of the keys in VotingProcedures, where we can find the voters for every
+  -- govActionId
+  let (unknownGovActionIds, knownVotes) =
         foldrVotingProcedures
           -- strictness is not needed for `unknown`
           ( \voter gaId _ (unknown, !known) ->
@@ -455,9 +486,17 @@ govTransition = do
                 Nothing -> (gaId : unknown, known)
           )
           ([], [])
-          votingProcedures
+          gsVotingProcedures
       curGovActionIds = proposalsActionsMap proposals
+      isVoterKnown = \case
+        CommitteeVoter hotCred -> hotCred `Set.member` knownCommitteeMembers
+        DRepVoter cred -> cred `Map.member` knownDReps
+        StakePoolVoter poolId -> poolId `Map.member` knownStakePools
+      unknownVoters =
+        Map.keys $
+          Map.filterWithKey (\voter _ -> not (isVoterKnown voter)) (unVotingProcedures gsVotingProcedures)
 
+  failOnNonEmpty unknownVoters VotersDoNotExist
   failOnNonEmpty unknownGovActionIds GovActionsDoNotExist
   runTest $ checkBootstrapVotes pp knownVotes
   runTest $ checkVotesAreNotForExpiredActions currentEpoch knownVotes
@@ -466,7 +505,18 @@ govTransition = do
   let
     addVoterVote ps voter govActionId VotingProcedure {vProcVote} =
       proposalsAddVote voter vProcVote govActionId ps
-    updatedProposalStates = foldlVotingProcedures addVoterVote proposals votingProcedures
+    updatedProposalStates =
+      cleanupProposalVotes $
+        foldlVotingProcedures addVoterVote proposals gsVotingProcedures
+    unregisteredDReps =
+      let collectRemovals drepCreds = \case
+            UnRegDRepTxCert drepCred _ -> Set.insert drepCred drepCreds
+            _ -> drepCreds
+       in F.foldl' collectRemovals mempty gsCertificates
+    cleanupProposalVotes =
+      let cleanupVoters gas =
+            gas & gasDRepVotesL %~ (`Map.withoutKeys` unregisteredDReps)
+       in mapProposals cleanupVoters
 
   -- Report the event
   tellEvent $ GovNewProposals txid updatedProposalStates

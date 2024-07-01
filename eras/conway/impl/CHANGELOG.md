@@ -8,6 +8,18 @@
 * Added `cgceCurrentCommittee` and `cgceCommitteeProposals` to `ConwayGovCertEnv`
 * Added `proposalsWithPurpose`, `isGovActionWithPurpose` and `ToGovActionPurpose`
 * Added `ConwayTxRefScriptsSizeTooBig` predicate failure to `ConwayLedgerPredFailure`
+* Replaced `geCommitteeState` with `geCertState` in `GovEnv`
+* Added `VotersDoNotExist` predicate failure to `ConwayGovPredFailure`
+* Export `ConwayEraTxCert`, `RegDepositTxCert`, `UnRegDepositTxCert`, `DelegTxCert`,
+  `RegDepositDelegTxCert`, `AuthCommitteeHotKeyTxCert`, `ResignCommitteeColdTxCert`,
+  `RegDRepTxCert`, `UnRegDRepTxCert` and `UpdateDRepTxCert` from
+  `Cardano.Ledger.Conway.Core`
+* Remove `GovProcedures` in favor of newly added type `GovSignal`
+
+### `testlib`
+
+* Change the return type of `resignCommitteeColdKey`
+* Add an argument to `registerCommitteeHotKeys`
 
 ## 1.15.1.0
 

@@ -28,6 +28,7 @@ module Cardano.Ledger.CertState (
   DRepState (..),
   DRep (..),
   CommitteeState (..),
+  authorizedHotCommitteeCredentials,
   AnchorData,
   lookupDepositDState,
   lookupRewardDState,
@@ -104,9 +105,10 @@ import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import Data.Default.Class (Default (def))
-import Data.Foldable (foldl')
+import qualified Data.Foldable as F
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens, (^.), _1, _2)
@@ -320,6 +322,17 @@ newtype CommitteeState era = CommitteeState
   }
   deriving (Eq, Ord, Show, Generic)
 
+-- | Extract all unique hot credential authorizations for the current committee.  Note
+-- that there is no unique mapping from Hot to Cold credential, therefore we produce a
+-- Set, instead of a Map.
+authorizedHotCommitteeCredentials ::
+  CommitteeState era -> Set.Set (Credential 'HotCommitteeRole (EraCrypto era))
+authorizedHotCommitteeCredentials CommitteeState {csCommitteeCreds} =
+  let toHotCredSet acc = \case
+        CommitteeHotCredential hotCred -> Set.insert hotCred acc
+        CommitteeMemberResigned {} -> acc
+   in F.foldl' toHotCredSet Set.empty csCommitteeCreds
+
 instance NoThunks (CommitteeState era)
 instance Default (CommitteeState era)
 
@@ -522,8 +535,8 @@ obligationCertState (CertState VState {vsDReps} PState {psDeposits} DState {dsUn
   let accum ans drepState = ans <> drepDeposit drepState
    in Obligations
         { oblStake = UM.fromCompact (UM.sumDepositUView (RewDepUView dsUnified))
-        , oblPool = foldl' (<>) (Coin 0) psDeposits
-        , oblDRep = foldl' accum (Coin 0) vsDReps
+        , oblPool = F.foldl' (<>) (Coin 0) psDeposits
+        , oblDRep = F.foldl' accum (Coin 0) vsDReps
         , oblProposal = Coin 0
         }
 

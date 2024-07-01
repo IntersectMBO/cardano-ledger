@@ -248,16 +248,17 @@ instance HasSimpleRep DeltaCoin where
   toSimpleRep (DeltaCoin c) = c
 instance IsConwayUniv fn => HasSpec fn DeltaCoin
 
-instance HasSimpleRep (GovProcedures era)
+instance HasSimpleRep (GovSignal era)
 instance
-  ( Era era
+  ( EraTxCert era
   , EraPParams era
   , IsConwayUniv fn
   , HasSimpleRep (PParamsHKD StrictMaybe era)
   , TypeSpec fn (SimpleRep (PParamsHKD StrictMaybe era)) ~ TypeSpec fn (PParamsHKD StrictMaybe era)
   , HasSpec fn (SimpleRep (PParamsHKD StrictMaybe era))
+  , HasSpec fn (TxCert era)
   ) =>
-  HasSpec fn (GovProcedures era)
+  HasSpec fn (GovSignal era)
 
 instance HasSimpleRep SlotNo
 instance IsConwayUniv fn => OrdLike fn SlotNo

@@ -21,7 +21,6 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
-import Cardano.Ledger.Conway.Governance (GovProcedures (..))
 import Cardano.Ledger.Conway.PParams (
   ppCommitteeMaxTermLengthL,
   ppCommitteeMinSizeL,
@@ -226,7 +225,8 @@ updateTxBody pf txBody dt =
       RefInputs refInputs -> txBody & referenceInputsTxBodyL .~ refInputs
       TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
-      GovProcs (GovProcedures vp pp) -> txBody & votingProceduresTxBodyL .~ vp & proposalProceduresTxBodyL .~ pp
+      VotingProc vp -> txBody & votingProceduresTxBodyL .~ vp
+      ProposalProc pp -> txBody & proposalProceduresTxBodyL .~ pp
       _ -> txBody
 {-# NOINLINE updateTxBody #-}
 

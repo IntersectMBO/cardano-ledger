@@ -40,7 +40,6 @@ module Cardano.Ledger.Conway.Governance (
   foldlVotingProcedures,
   foldrVotingProcedures,
   ProposalProcedure (..),
-  GovProcedures (..),
   Anchor (..),
   AnchorData (..),
   indexedGovProps,

@@ -26,6 +26,7 @@ import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<->))
 import Data.Default.Class (def)
 import Data.Foldable
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -55,6 +56,22 @@ relevantDuringBootstrapSpec ::
 relevantDuringBootstrapSpec = do
   spoVotesForHardForkInitiation
   initiateHardForkWithLessThanMinimalCommitteeSize
+  it "Many CC Cold Credentials map to the same Hot Credential act as many votes" $ do
+    hotCred NE.:| _ <- registerInitialCommittee
+    (dRep, _, _) <- setupSingleDRep . getPositive =<< arbitrary
+    Positive deposit <- arbitrary
+    gaId <- submitParameterChange SNothing $ def & ppuDRepDepositL .~ SJust (Coin deposit)
+    submitYesVote_ (CommitteeVoter hotCred) gaId
+    whenPostBootstrap $ submitYesVote_ (DRepVoter dRep) gaId
+    passNEpochs 2
+    getLastEnactedParameterChange `shouldReturn` SNothing
+    -- Make sure all committee members authorize the same hot credential that just voted:
+    committeeMembers' <- Set.toList <$> getCommitteeMembers
+    case committeeMembers' of
+      x : xs -> void $ registerCommitteeHotKeys (pure hotCred) $ x NE.:| xs
+      _ -> error "Expected an initial committee"
+    passNEpochs 2
+    getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId gaId)
 
 initiateHardForkWithLessThanMinimalCommitteeSize ::
   forall era.
@@ -68,10 +85,11 @@ initiateHardForkWithLessThanMinimalCommitteeSize =
     modifyPParams $ ppCommitteeMinSizeL .~ 2
     committeeMembers' <- Set.toList <$> getCommitteeMembers
     committeeMember <- elements committeeMembers'
-    resignCommitteeColdKey committeeMember SNothing
+    anchor <- arbitrary
+    mHotCred <- resignCommitteeColdKey committeeMember anchor
     protVer <- getProtVer
     gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
-    submitYesVoteCCs_ hotCs gai
+    submitYesVoteCCs_ (maybe NE.toList (\hotCred -> NE.filter (/= hotCred)) mHotCred $ hotCs) gai
     submitYesVote_ (StakePoolVoter spoK1) gai
     if bootstrapPhase protVer
       then do
@@ -143,7 +161,7 @@ committeeExpiryResignationDiscountSpec =
       ccShouldNotBeResigned committeeColdC2
       isCommitteeAccepted gaiConstitution `shouldReturn` True
       -- Resign the second CC
-      resignCommitteeColdKey committeeColdC2 SNothing
+      _ <- resignCommitteeColdKey committeeColdC2 SNothing
       -- Check for CC acceptance should fail
       ccShouldBeResigned committeeColdC2
       isCommitteeAccepted gaiConstitution `shouldReturn` False

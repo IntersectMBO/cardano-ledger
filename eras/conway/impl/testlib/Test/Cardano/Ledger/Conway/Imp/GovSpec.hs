@@ -541,7 +541,33 @@ proposalsSpec ::
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
-proposalsSpec =
+proposalsSpec = do
+  describe "Voters" $ do
+    it "VotersDoNotExist" $ do
+      pp <- getsNES $ nesEsL . curPParamsEpochStateL
+      let ProtVer major minor = pp ^. ppProtocolVersionL
+      gaId <- submitGovAction $ HardForkInitiation SNothing $ ProtVer major (succ minor)
+      hotCred <- KeyHashObj <$> freshKeyHash
+      submitFailingVote (CommitteeVoter hotCred) gaId $
+        [injectFailure $ VotersDoNotExist [CommitteeVoter hotCred]]
+      poolId <- freshKeyHash
+      submitFailingVote (StakePoolVoter poolId) gaId $
+        [injectFailure $ VotersDoNotExist [StakePoolVoter poolId]]
+      dRepCred <- KeyHashObj <$> freshKeyHash
+      whenPostBootstrap $ do
+        submitFailingVote (DRepVoter dRepCred) gaId $
+          [injectFailure $ VotersDoNotExist [(DRepVoter dRepCred)]]
+    it "DRep votes are removed" $ do
+      pp <- getsNES $ nesEsL . curPParamsEpochStateL
+      gaId <- submitGovAction InfoAction
+      dRepCred <- KeyHashObj <$> registerDRep
+      submitVote_ VoteNo (DRepVoter dRepCred) gaId
+      gas <- getGovActionState gaId
+      gasDRepVotes gas `shouldBe` [(dRepCred, VoteNo)]
+      let deposit = pp ^. ppDRepDepositL
+      submitTx_ $ mkBasicTx (mkBasicTxBody & certsTxBodyL .~ [UnRegDRepTxCert dRepCred deposit])
+      gasAfterRemoval <- getGovActionState gaId
+      gasDRepVotes gasAfterRemoval `shouldBe` []
   describe "Proposals" $ do
     describe "Consistency" $ do
       it "Proposals submitted without proper parent fail" $ do
@@ -827,7 +853,7 @@ votingSpec =
         committeeMemberVotingOnCommitteeChange
       it "non-committee-member voting on committee change as a committee member" $ do
         credCandidate <- KeyHashObj <$> freshKeyHash
-        credVoter <- KeyHashObj <$> freshKeyHash
+        hotCred :| _ <- registerInitialCommittee
         committeeUpdateId <-
           submitGovAction $
             UpdateCommittee
@@ -835,7 +861,7 @@ votingSpec =
               mempty
               (Map.singleton credCandidate $ EpochNo 28)
               (3 %! 5)
-        let voter = CommitteeVoter credVoter
+        let voter = CommitteeVoter hotCred
         trySubmitVote VoteNo voter committeeUpdateId
           `shouldReturn` Left
             [ injectFailure $ DisallowedVoters [(voter, committeeUpdateId)]
@@ -878,8 +904,8 @@ votingSpec =
                 , constitutionAnchor = anchor
                 }
         submitYesVote_ (DRepVoter dRepCred) constitutionChangeId
-        resignCommitteeColdKey ccColdCred0 SNothing
         submitYesVote_ (CommitteeVoter ccHotKey0) constitutionChangeId
+        _ <- resignCommitteeColdKey ccColdCred0 SNothing
         submitYesVote_ (CommitteeVoter ccHotKey1) constitutionChangeId
         passEpoch
         logAcceptedRatio constitutionChangeId

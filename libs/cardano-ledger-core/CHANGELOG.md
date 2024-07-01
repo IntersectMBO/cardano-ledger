@@ -3,6 +3,7 @@
 ## 1.13.2.0
 
 * Add `setMinCoinTxOut` and `setMinCoinTxOutWith`
+* Add `authorizedHotCommitteeCredentials`
 
 ## 1.13.1.0
 
