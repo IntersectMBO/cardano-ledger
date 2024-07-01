@@ -1,13 +1,14 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -38,7 +39,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   ShelleyEraImp (..),
   PlutusArgs,
   ScriptTestContext,
-  initShelleyImpNES,
   impWitsVKeyNeeded,
   modifyPrevPParams,
   passEpoch,
@@ -89,9 +89,14 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   updateAddrTxWits,
   addNativeScriptTxWits,
   addRootTxIn,
+  fixupTxOuts,
   fixupFees,
+  fixupAuxDataHash,
   impGetNativeScript,
   impLookupUTxO,
+  defaultInitNewEpochState,
+  defaultInitImpTestState,
+  impEraStartEpochNo,
 
   -- * Logging
   logEntry,
@@ -116,9 +121,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
 ) where
 
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, seedSizeDSIGN)
+import qualified Cardano.Chain.UTxO as Byron (empty)
+import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
 import Cardano.Crypto.Hash (Hash, HashAlgorithm)
-import Cardano.Crypto.Seed (mkSeedFromBytes)
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (
   Addr (..),
@@ -126,35 +132,39 @@ import Cardano.Ledger.Address (
   RewardAccount (..),
   bootstrapKeyHash,
  )
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToText)
 import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.EpochBoundary (emptySnapShots)
+import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
   KeyHash,
   KeyRole (..),
   VerKeyVRF,
+  asWitness,
   bootstrapWitKeyHash,
   hashKey,
   makeBootstrapWitness,
   witVKeyHash,
  )
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, extractHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.API.ByronTranslation (translateToShelleyLedgerStateFromUtxo)
 import Cardano.Ledger.Shelley.AdaPots (sumAdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Genesis (
+  ShelleyGenesis (..),
+  fromNominalDiffTimeMicro,
+  mkShelleyGlobals,
+ )
 import Cardano.Ledger.Shelley.LedgerState (
-  AccountState (..),
-  EpochState (..),
   LedgerState (..),
   NewEpochState (..),
   StashedAVVMAddresses,
@@ -171,8 +181,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   prevPParamsEpochStateL,
   produced,
-  smartUTxOState,
-  startStep,
   utxosDonationL,
   utxosUtxoL,
  )
@@ -188,8 +196,12 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
-import Cardano.Ledger.Slot (getTheSlotOfNoReturn)
-import Cardano.Ledger.Tools (calcMinFeeTxNativeScriptWits, integralToByteStringN)
+import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
+import Cardano.Ledger.Slot (epochInfoFirst, getTheSlotOfNoReturn)
+import Cardano.Ledger.Tools (
+  calcMinFeeTxNativeScriptWits,
+  ensureMinCoinTxOut,
+ )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (
@@ -199,10 +211,13 @@ import Cardano.Ledger.UTxO (
   txinLookup,
  )
 import Cardano.Ledger.Val (Val (..))
+import Cardano.Slotting.EpochInfo (fixedEpochInfo)
+import Cardano.Slotting.Time (mkSlotLength)
 import Control.Monad (forM)
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader (..), asks)
-import Control.Monad.State.Strict (MonadState (..), gets, modify)
+import Control.Monad.State.Strict (MonadState (..), StateT, evalStateT, gets, modify)
+import Control.Monad.Trans.Fail.String (errorFail)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Writer.Class (MonadWriter (..))
 import Control.State.Transition (STS (..), TRC (..), applySTSOptsEither)
@@ -228,8 +243,10 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Data.TreeDiff (ansiWlExpr)
 import Data.Type.Equality (TestEquality (..))
+import Data.Void
 import GHC.Stack (CallStack, SrcLoc (..), getCallStack)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
@@ -246,10 +263,10 @@ import Test.Cardano.Ledger.Core.KeyPair (
   ByronKeyPair (..),
   KeyPair (..),
   mkAddr,
-  mkKeyHash,
   mkWitnessesVKey,
  )
-import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals, txInAt)
+import Test.Cardano.Ledger.Core.Rational ((%!))
+import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (PlutusArgs, ScriptTestContext)
 import Test.Cardano.Ledger.Shelley.TreeDiff (Expr (..))
@@ -288,7 +305,7 @@ instance ToExpr (SomeSTSEvent era) where
 data ImpTestState era = ImpTestState
   { impNES :: !(NewEpochState era)
   , impRootTxIn :: !(TxIn (EraCrypto era))
-  , impKeyPairs :: !(forall k. Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
+  , impKeyPairs :: !(Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)))
   , impByronKeyPairs :: !(Map (BootstrapAddress (EraCrypto era)) ByronKeyPair)
   , impNativeScripts :: !(Map (ScriptHash (EraCrypto era)) (NativeScript era))
   , impLastTick :: !SlotNo
@@ -297,6 +314,33 @@ data ImpTestState era = ImpTestState
   , impGen :: !QCGen
   , impEvents :: [SomeSTSEvent era]
   }
+
+-- | This is a preliminary state that is used to prepare the actual `ImpTestState`
+data ImpPrepState c = ImpPrepState
+  { impPrepKeyPairs :: !(Map (KeyHash 'Witness c) (KeyPair 'Witness c))
+  , impPrepByronKeyPairs :: !(Map (BootstrapAddress c) ByronKeyPair)
+  , impPrepGen :: !QCGen
+  }
+
+instance HasSubState (ImpPrepState era) where
+  type SubState (ImpPrepState era) = StateGen QCGen
+  getSubState = StateGen . impPrepGen
+  setSubState s (StateGen g) = s {impPrepGen = g}
+
+class Crypto c => HasKeyPairs t c | t -> c where
+  keyPairsL :: Lens' t (Map (KeyHash 'Witness c) (KeyPair 'Witness c))
+  keyPairsByronL :: Lens' t (Map (BootstrapAddress c) ByronKeyPair)
+
+instance (Era era, c ~ EraCrypto era) => HasKeyPairs (ImpTestState era) c where
+  keyPairsL = lens impKeyPairs (\x y -> x {impKeyPairs = y})
+  keyPairsByronL = lens impByronKeyPairs (\x y -> x {impByronKeyPairs = y})
+
+instance Crypto c => HasKeyPairs (ImpPrepState c) c where
+  keyPairsL = lens impPrepKeyPairs (\x y -> x {impPrepKeyPairs = y})
+  keyPairsByronL = lens impPrepByronKeyPairs (\x y -> x {impPrepByronKeyPairs = y})
+
+instance Monad m => HasStatefulGen (StateGenM (ImpPrepState era)) (StateT (ImpPrepState era) m) where
+  askStatefulGen = pure StateGenM
 
 impGlobalsL :: Lens' (ImpTestState era) Globals
 impGlobalsL = lens impGlobals (\x y -> x {impGlobals = y})
@@ -319,7 +363,7 @@ impRootTxInL = lens impRootTxIn (\x y -> x {impRootTxIn = y})
 impKeyPairsG ::
   SimpleGetter
     (ImpTestState era)
-    (Map (KeyHash k (EraCrypto era)) (KeyPair k (EraCrypto era)))
+    (Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era)))
 impKeyPairsG = to impKeyPairs
 
 impNativeScriptsL :: Lens' (ImpTestState era) (Map (ScriptHash (EraCrypto era)) (NativeScript era))
@@ -399,11 +443,43 @@ class
   , HashAlgorithm (HASH (EraCrypto era))
   , DSIGNAlgorithm (DSIGN (EraCrypto era))
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , ADDRHASH (EraCrypto era) ~ Blake2b_224
   ) =>
   ShelleyEraImp era
   where
+  initGenesis ::
+    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen (StateGenM s) m) =>
+    m (Genesis era)
+  default initGenesis ::
+    (Monad m, Genesis era ~ NoGenesis era) =>
+    m (Genesis era)
+  initGenesis = pure NoGenesis
+
+  initNewEpochState ::
+    (HasKeyPairs s (EraCrypto era), MonadState s m, HasStatefulGen (StateGenM s) m) =>
+    m (NewEpochState era)
+  default initNewEpochState ::
+    ( HasKeyPairs s (EraCrypto era)
+    , MonadState s m
+    , HasStatefulGen (StateGenM s) m
+    , ShelleyEraImp (PreviousEra era)
+    , TranslateEra era NewEpochState
+    , TranslationError era NewEpochState ~ Void
+    , TranslationContext era ~ Genesis era
+    , EraCrypto era ~ EraCrypto (PreviousEra era)
+    ) =>
+    m (NewEpochState era)
+  initNewEpochState = defaultInitNewEpochState id
+
   initImpTestState ::
-    (MonadState (ImpTestState era) m, MonadGen m) => m ()
+    ( HasKeyPairs s (EraCrypto era)
+    , MonadState s m
+    , HasSubState s
+    , SubState s ~ StateGen QCGen
+    , HasStatefulGen (StateGenM s) m
+    ) =>
+    m (ImpTestState era)
+  initImpTestState = initNewEpochState >>= defaultInitImpTestState
 
   -- | Try to find a sufficient number of KeyPairs that would satisfy a native script.
   -- Whenever script can't be satisfied, Nothing is returned
@@ -422,6 +498,94 @@ class
   modifyPParams f = modifyNES $ nesEsL . curPParamsEpochStateL %~ f
 
   fixupTx :: HasCallStack => Tx era -> ImpTestM era (Tx era)
+
+defaultInitNewEpochState ::
+  forall era s m.
+  ( MonadState s m
+  , HasKeyPairs s (EraCrypto era)
+  , HasStatefulGen (StateGenM s) m
+  , ShelleyEraImp era
+  , ShelleyEraImp (PreviousEra era)
+  , TranslateEra era NewEpochState
+  , TranslationError era NewEpochState ~ Void
+  , TranslationContext era ~ Genesis era
+  , EraCrypto era ~ EraCrypto (PreviousEra era)
+  ) =>
+  (NewEpochState (PreviousEra era) -> NewEpochState (PreviousEra era)) ->
+  m (NewEpochState era)
+defaultInitNewEpochState modifyPrevEraNewEpochState = do
+  genesis <- initGenesis @era
+  nes <- initNewEpochState @(PreviousEra era)
+  let majProtVer = eraProtVerLow @era
+      -- We need to set the protocol version for the current era and for debugging
+      -- purposes we start the era at the epoch number that matches the protocol version
+      -- times a 100. However, because this is the NewEpochState from the previous era, we
+      -- initialize it with futurePParams preset and epoch number that is one behind the
+      -- beginning of this era. Note that all imp tests will start with a TICK, in order
+      -- for theses changes to be applied.
+      prevEraNewEpochState =
+        nes
+          & nesEsL . curPParamsEpochStateL . ppProtocolVersionL .~ ProtVer majProtVer 0
+          & nesELL .~ pred (impEraStartEpochNo @era)
+  pure $ translateEra' genesis $ modifyPrevEraNewEpochState prevEraNewEpochState
+
+-- | For debugging purposes we start the era at the epoch number that matches the starting
+-- protocol version for the era times a 100
+impEraStartEpochNo :: forall era. Era era => EpochNo
+impEraStartEpochNo = EpochNo (getVersion majProtVer * 100)
+  where
+    majProtVer = eraProtVerLow @era
+
+defaultInitImpTestState ::
+  forall era s m.
+  ( EraGov era
+  , EraTxOut era
+  , DSIGN (EraCrypto era) ~ Ed25519DSIGN
+  , ADDRHASH (EraCrypto era) ~ Blake2b_224
+  , HasKeyPairs s (EraCrypto era)
+  , MonadState s m
+  , HasStatefulGen (StateGenM s) m
+  , HasSubState s
+  , SubState s ~ StateGen QCGen
+  ) =>
+  NewEpochState era ->
+  m (ImpTestState era)
+defaultInitImpTestState nes = do
+  shelleyGenesis <- initGenesis @(ShelleyEra (EraCrypto era))
+  rootKeyHash <- freshKeyHash
+  let
+    rootAddr :: Addr (EraCrypto era)
+    rootAddr = Addr Testnet (KeyHashObj rootKeyHash) StakeRefNull
+    rootTxOut :: TxOut era
+    rootTxOut = mkBasicTxOut rootAddr $ inject rootCoin
+    rootCoin = Coin (toInteger (sgMaxLovelaceSupply shelleyGenesis))
+    rootTxIn :: TxIn (EraCrypto era)
+    rootTxIn = TxIn (mkTxId 0) minBound
+    nesWithRoot =
+      nes & nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL <>~ UTxO (Map.singleton rootTxIn rootTxOut)
+  prepState <- get
+  let StateGen qcGen = getSubState prepState
+      majProtVer = pvMajor (nes ^. nesEsL . curPParamsEpochStateL . ppProtocolVersionL)
+      epochInfoE =
+        fixedEpochInfo
+          (sgEpochLength shelleyGenesis)
+          (mkSlotLength . fromNominalDiffTimeMicro $ sgSlotLength shelleyGenesis)
+      globals = mkShelleyGlobals shelleyGenesis epochInfoE majProtVer
+      epochNo = nesWithRoot ^. nesELL
+      slotNo = runIdentity $ runReaderT (epochInfoFirst (epochInfoPure globals) epochNo) globals
+  pure $
+    ImpTestState
+      { impNES = nesWithRoot
+      , impRootTxIn = rootTxIn
+      , impKeyPairs = prepState ^. keyPairsL
+      , impByronKeyPairs = prepState ^. keyPairsByronL
+      , impNativeScripts = mempty
+      , impLastTick = slotNo
+      , impGlobals = globals
+      , impLog = mempty
+      , impGen = qcGen
+      , impEvents = mempty
+      }
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
@@ -448,87 +612,6 @@ logStakeDistr = do
   stakeDistr <- getsNES $ nesEsL . epochStateIncrStakeDistrL
   logEntry $ "Stake distr: " <> showExpr stakeDistr
 
-mkHashVerKeyVRF ::
-  forall era.
-  ShelleyEraImp era =>
-  Integer ->
-  Hash (HASH (EraCrypto era)) (VerKeyVRF (EraCrypto era))
-mkHashVerKeyVRF =
-  VRF.hashVerKeyVRF
-    . VRF.deriveVerKeyVRF
-    . VRF.genKeyVRF
-    . mkSeedFromBytes
-    . integralToByteStringN seedSize
-  where
-    seedSize = fromIntegral . seedSizeDSIGN $ Proxy @(DSIGN (EraCrypto era))
-
-testKeyHash :: Crypto c => KeyHash kd c
-testKeyHash = mkKeyHash (-1)
-
-initShelleyImpNES ::
-  forall era. ShelleyEraImp era => NewEpochState era
-initShelleyImpNES =
-  NewEpochState
-    { stashedAVVMAddresses = def
-    , nesRu =
-        SJust $
-          startStep
-            (EpochSize 432_000)
-            (BlocksMade (Map.singleton testKeyHash 10))
-            epochState
-            (Coin 45)
-            (activeSlotCoeff testGlobals)
-            10
-    , nesPd =
-        PoolDistr
-          ( Map.fromList
-              [
-                ( testKeyHash
-                , IndividualPoolStake
-                    1
-                    (CompactCoin 1)
-                    (mkHashVerKeyVRF @era 0)
-                )
-              ]
-          )
-          (CompactCoin 1)
-    , nesEs = epochState
-    , nesEL = 0
-    , nesBprev = BlocksMade (Map.singleton testKeyHash 10)
-    , nesBcur = BlocksMade mempty
-    }
-  where
-    pp =
-      emptyPParams
-        & ppMinFeeAL .~ Coin 44
-        & ppMinFeeBL .~ Coin 155_381
-        & ppMaxTxSizeL .~ 16384
-    epochState =
-      EpochState
-        { esAccountState =
-            AccountState
-              { asTreasury = Coin 10_000
-              , asReserves = Coin 1_000
-              }
-        , esSnapshots = emptySnapShots
-        , esLState =
-            LedgerState
-              { lsUTxOState =
-                  smartUTxOState
-                    emptyPParams
-                    utxo
-                    zero
-                    zero
-                    emptyGovState
-                    mempty
-              , lsCertState = def
-              }
-        , esNonMyopic = def
-        }
-        & prevPParamsEpochStateL .~ pp
-        & curPParamsEpochStateL .~ pp
-    utxo = mempty
-
 mkTxId :: Crypto c => Int -> TxId c
 mkTxId idx = TxId (mkDummySafeHash Proxy idx)
 
@@ -536,13 +619,55 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   , ShelleyEraScript (ShelleyEra c)
   ) =>
   ShelleyEraImp (ShelleyEra c)
   where
-  initImpTestState = pure ()
+  initGenesis =
+    pure
+      ShelleyGenesis
+        { sgSystemStart = errorFail $ iso8601ParseM "2017-09-23T21:44:51Z"
+        , sgNetworkMagic = 123456 -- Mainnet value: 764824073
+        , sgNetworkId = Testnet
+        , sgActiveSlotsCoeff = 5 %! 100
+        , sgSecurityParam = 2160
+        , sgEpochLength = 4320 -- Mainnet value: 432000
+        , sgSlotsPerKESPeriod = 129600
+        , sgMaxKESEvolutions = 62
+        , sgSlotLength = 1
+        , sgUpdateQuorum = 5
+        , sgMaxLovelaceSupply = 45_000_000_000_000_000
+        , sgProtocolParams =
+            emptyPParams
+              & ppMinFeeAL .~ Coin 44
+              & ppMinFeeBL .~ Coin 155_381
+              & ppMaxBBSizeL .~ 65536
+              & ppMaxTxSizeL .~ 16384
+              & ppKeyDepositL .~ Coin 2_000_000
+              & ppKeyDepositL .~ Coin 500_000_000
+              & ppEMaxL .~ EpochInterval 18
+              & ppNOptL .~ 150
+              & ppA0L .~ (3 %! 10)
+              & ppRhoL .~ (3 %! 1000)
+              & ppTauL .~ (2 %! 10)
+              & ppDL .~ (1 %! 1)
+              & ppExtraEntropyL .~ NeutralNonce
+              & ppMinUTxOValueL .~ Coin 2_000_000
+              & ppMinPoolCostL .~ Coin 340_000_000
+        , -- TODO: Add a top level definition and add pricate keys to ImpState:
+          sgGenDelegs = mempty
+        , sgInitialFunds = mempty
+        , sgStaking = mempty
+        }
+
+  initNewEpochState = do
+    shelleyGenesis <- initGenesis @(ShelleyEra c)
+    let transContext = toFromByronTranslationContext shelleyGenesis
+        startEpochNo = impEraStartEpochNo @(ShelleyEra c)
+    pure $ translateToShelleyLedgerStateFromUtxo transContext startEpochNo Byron.empty
 
   impSatisfyNativeScript providedVKeyHashes script = do
     keyPairs <- gets impKeyPairs
@@ -607,7 +732,7 @@ iteFixupL = lens iteFixup (\x y -> x {iteFixup = y})
 iteCborRoundTripFailuresL :: Lens' (ImpTestEnv era) Bool
 iteCborRoundTripFailuresL = lens iteCborRoundTripFailures (\x y -> x {iteCborRoundTripFailures = y})
 
-newtype ImpTestM era a = ImpTestM {_unImpTestM :: ReaderT (ImpTestEnv era) IO a}
+newtype ImpTestM era a = ImpTestM {unImpTestM :: ReaderT (ImpTestEnv era) IO a}
   deriving
     ( Functor
     , Applicative
@@ -620,10 +745,8 @@ newtype ImpTestM era a = ImpTestM {_unImpTestM :: ReaderT (ImpTestEnv era) IO a}
 instance (Testable a, ShelleyEraImp era) => Testable (ImpTestM era a) where
   property m = property $ MkGen $ \qcGen qcSize ->
     ioProperty $ do
-      preppedState <-
-        execImpTestM (Just qcSize) (mixinCurrentGen def qcGen) $
-          addRootTxOut >> initImpTestState
-      evalImpTestM (Just qcSize) preppedState m
+      impTestState <- evalStateT initImpTestState (emptyImpPrepState @(EraCrypto era) (Just qcGen))
+      evalImpTestM (Just qcSize) impTestState m
 
 instance MonadWriter [SomeSTSEvent era] (ImpTestM era) where
   writer (x, evs) = (impEventsL %= (<> evs)) $> x
@@ -687,7 +810,7 @@ applyParamsQCGen params impTestState =
     Nothing -> (Nothing, impTestState)
     Just (qcGen, qcSize) -> (Just qcSize, mixinCurrentGen impTestState qcGen)
 
--- | Instead of reqplacing the curren QC generator in the state, we use the current and
+-- | Instead of reqplacing the current QC generator in the state, we use the current and
 -- the supplied to make the new generator
 mixinCurrentGen :: ImpTestState era -> QCGen -> ImpTestState era
 mixinCurrentGen impTestState qcGen =
@@ -703,6 +826,14 @@ evalImpTestM qc impState = fmap fst . runImpTestM qc impState
 execImpTestGenM ::
   ShelleyEraImp era => ImpTestState era -> ImpTestM era b -> Gen (IO (ImpTestState era))
 execImpTestGenM impState = fmap (fmap snd) . runImpTestGenM impState
+
+emptyImpPrepState :: Maybe QCGen -> ImpPrepState c
+emptyImpPrepState mQCGen =
+  ImpPrepState
+    { impPrepKeyPairs = mempty
+    , impPrepByronKeyPairs = mempty
+    , impPrepGen = fromMaybe (mkQCGen 2024) mQCGen
+    }
 
 execImpTestM ::
   ShelleyEraImp era =>
@@ -730,7 +861,7 @@ runImpTestM ::
   ImpTestState era ->
   ImpTestM era b ->
   IO (b, ImpTestState era)
-runImpTestM mQCSize impState (ImpTestM m) = do
+runImpTestM mQCSize impState action = do
   let qcSize = fromMaybe 30 mQCSize
   ioRef <- newIORef impState
   let
@@ -742,7 +873,11 @@ runImpTestM mQCSize impState (ImpTestM m) = do
         , iteCborRoundTripFailures = True
         }
   res <-
-    runReaderT m env `catchAny` \exc -> do
+    -- There is an important step here of running TICK rule. This is necessary as a final
+    -- step of `era` initialization, because on the very first TICK of an era the
+    -- `futurePParams` are applied and the epoch number is updated to the first epoch
+    -- number of the current era
+    runReaderT (unImpTestM (passTick >> action)) env `catchAny` \exc -> do
       logsDoc <- impLog <$> readIORef ioRef
       let logs = T.unpack . renderStrict $ layoutPretty defaultLayoutOptions logsDoc
           adjustHUnitExc header (HUnitFailure srcLoc failReason) =
@@ -885,11 +1020,28 @@ impNativeScriptKeyPairs tx = do
   keyPairs <- mapM (impSatisfyNativeScript curAddrWits) nativeScripts
   pure . mconcat $ catMaybes keyPairs
 
+fixupTxOuts :: ShelleyEraImp era => Tx era -> ImpTestM era (Tx era)
+fixupTxOuts tx = do
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  let
+    txOuts = tx ^. bodyTxL . outputsTxBodyL
+  fixedUpTxOuts <- forM txOuts $ \txOut -> do
+    let txOut' = ensureMinCoinTxOut pp txOut
+    when (txOut /= txOut') $ do
+      logEntry $
+        "Fixed up the amount in the TxOut from "
+          ++ show (txOut ^. coinTxOutL)
+          ++ " to "
+          ++ show (txOut' ^. coinTxOutL)
+    pure txOut'
+  pure $ tx & bodyTxL . outputsTxBodyL .~ fixedUpTxOuts
+
 fixupFees ::
   (ShelleyEraImp era, HasCallStack) =>
   Tx era ->
   ImpTestM era (Tx era)
-fixupFees tx = impAnn "fixupFees" $ do
+fixupFees txOriginal = impAnn "fixupFees" $ do
+  tx <- fixupTxOuts txOriginal
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
@@ -934,6 +1086,14 @@ fixupFees tx = impAnn "fixupFees" $ do
             & bodyTxL . feeTxBodyL .~ (fee <> change)
   pure txWithFee
 
+-- | Adds an auxiliary data hash if auxiliary data present, while and the hash of it is not.
+fixupAuxDataHash :: (EraTx era, Applicative m) => Tx era -> m (Tx era)
+fixupAuxDataHash tx
+  | SNothing <- tx ^. bodyTxL . auxDataHashTxBodyL
+  , SJust auxData <- tx ^. auxDataTxL =
+      pure (tx & bodyTxL . auxDataHashTxBodyL .~ SJust (AuxiliaryDataHash (hashAnnotated auxData)))
+  | otherwise = pure tx
+
 shelleyFixupTx ::
   forall era.
   (ShelleyEraImp era, HasCallStack) =>
@@ -941,7 +1101,9 @@ shelleyFixupTx ::
   ImpTestM era (Tx era)
 shelleyFixupTx =
   addNativeScriptTxWits
+    >=> fixupAuxDataHash
     >=> addRootTxIn
+    >=> fixupTxOuts
     >=> fixupFees
     >=> updateAddrTxWits
     >=> (\tx -> logFeeMismatch tx $> tx)
@@ -1106,15 +1268,14 @@ passEpoch ::
   ShelleyEraImp era =>
   ImpTestM era ()
 passEpoch = do
-  startEpoch <- getsNES nesELL
-  logEntry $ "Entering " <> show (succ startEpoch)
   let
-    tickUntilNewEpoch curEpoch = do
+    tickUntilNewEpoch curEpochNo = do
       passTick @era
-      newEpoch <- getsNES nesELL
-      unless (newEpoch > curEpoch) $ tickUntilNewEpoch newEpoch
+      newEpochNo <- getsNES nesELL
+      unless (newEpochNo > curEpochNo) $ tickUntilNewEpoch curEpochNo
   preNES <- gets impNES
-
+  let startEpoch = preNES ^. nesELL
+  logEntry $ "Entering " <> show (succ startEpoch)
   tickUntilNewEpoch startEpoch
   gets impNES >>= epochBoundaryCheck preNES
 
@@ -1212,42 +1373,11 @@ impLogToExpr action = do
   logWithCallStack ?callStack . ansiWlExpr . toExpr $ e
   pure e
 
-instance ShelleyEraImp era => Default (ImpTestState era) where
-  def =
-    ImpTestState
-      { impNES = initShelleyImpNES
-      , impRootTxIn = TxIn (mkTxId 0) minBound
-      , impKeyPairs = mempty
-      , impByronKeyPairs = mempty
-      , impNativeScripts = mempty
-      , impLastTick = 0
-      , impGlobals = testGlobals
-      , impLog = mempty
-      , impGen = mkQCGen 2024
-      , impEvents = mempty
-      }
-
 withImpState ::
   ShelleyEraImp era =>
   SpecWith (ImpTestState era) ->
   Spec
 withImpState = withImpStateModified id
-
-addRootTxOut ::
-  forall era m.
-  ( MonadGen m
-  , MonadState (ImpTestState era) m
-  , ShelleyEraImp era
-  ) =>
-  m ()
-addRootTxOut = do
-  (rootKeyHash, _) <- freshKeyPair @era
-  let rootAddr = Addr Testnet (KeyHashObj rootKeyHash) StakeRefNull
-      rootTxOut = mkBasicTxOut rootAddr $ inject rootCoin
-  impNESL . nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
-    %= (<> UTxO (Map.singleton (impRootTxIn @era def) rootTxOut))
-  where
-    rootCoin = Coin 1_000_000_000
 
 withImpStateModified ::
   forall era.
@@ -1256,9 +1386,7 @@ withImpStateModified ::
   SpecWith (ImpTestState era) ->
   Spec
 withImpStateModified f =
-  beforeAll $
-    execImpTestM Nothing (f def) $
-      addRootTxOut >> initImpTestState
+  beforeAll (f <$> evalStateT initImpTestState (emptyImpPrepState @(EraCrypto era) Nothing))
 
 -- | Creates a fresh @SafeHash@
 freshSafeHash :: Era era => ImpTestM era (SafeHash (EraCrypto era) a)
@@ -1271,30 +1399,24 @@ freshKeyHashVRF = arbitrary
 
 -- | Adds a key pair to the keyhash lookup map
 addKeyPair ::
-  (Era era, MonadState (ImpTestState era) m) =>
-  KeyPair r (EraCrypto era) ->
-  m (KeyHash r (EraCrypto era))
+  (HasKeyPairs s c, MonadState s m) =>
+  KeyPair r c ->
+  m (KeyHash r c)
 addKeyPair keyPair@(KeyPair vk _) = do
-  ImpTestState {impKeyPairs} <- get
   let keyHash = hashKey vk
-  modify $ \st ->
-    st
-      { impKeyPairs =
-          Map.insert
-            (coerceKeyRole keyHash)
-            (coerce keyPair)
-            impKeyPairs
-      }
+  modify $ keyPairsL %~ Map.insert (coerceKeyRole keyHash) (coerce keyPair)
   pure keyHash
 
 -- | Looks up the `KeyPair` corresponding to the `KeyHash`. The `KeyHash` must be
 -- created with `freshKeyHash` for this to work.
 lookupKeyPair ::
-  HasCallStack => KeyHash r (EraCrypto era) -> ImpTestM era (KeyPair r (EraCrypto era))
+  (HasCallStack, HasKeyPairs s c, MonadState s m) =>
+  KeyHash r c ->
+  m (KeyPair r c)
 lookupKeyPair keyHash = do
-  keyPairs <- gets impKeyPairs
-  case Map.lookup keyHash keyPairs of
-    Just keyPair -> pure keyPair
+  keyPairs <- use keyPairsL
+  case Map.lookup (asWitness keyHash) keyPairs of
+    Just keyPair -> pure $ coerce keyPair
     Nothing ->
       error $
         "Could not find a keypair corresponding to: "
@@ -1304,35 +1426,43 @@ lookupKeyPair keyHash = do
 -- | Generates a fresh `KeyHash` and stores the corresponding `KeyPair` in the
 -- ImpTestState. If you also need the `KeyPair` consider using `freshKeyPair` for
 -- generation or `lookupKeyPair` to look up the `KeyPair` corresponding to the `KeyHash`
-freshKeyHash :: Era era => ImpTestM era (KeyHash r (EraCrypto era))
+freshKeyHash ::
+  (HasKeyPairs s c, MonadState s m, HasStatefulGen (StateGenM s) m) =>
+  m (KeyHash r c)
 freshKeyHash = fst <$> freshKeyPair
 
 -- | Generate a random `KeyPair` and add it to the known keys in the Imp state
 freshKeyPair ::
-  (Era era, MonadState (ImpTestState era) m, MonadGen m) =>
-  m (KeyHash r (EraCrypto era), KeyPair r (EraCrypto era))
+  (HasKeyPairs s c, MonadState s m, HasStatefulGen (StateGenM s) m) =>
+  m (KeyHash r c, KeyPair r c)
 freshKeyPair = do
-  keyPair <- arbitrary
+  keyPair <- uniformM
   keyHash <- addKeyPair keyPair
   pure (keyHash, keyPair)
 
 -- | Generate a random `Addr` that uses a `KeyHash`, and add the corresponding `KeyPair`
 -- to the known keys in the Imp state.
-freshKeyAddr_ :: Era era => ImpTestM era (Addr (EraCrypto era))
+freshKeyAddr_ ::
+  (HasKeyPairs s c, MonadState s m, HasStatefulGen (StateGenM s) m) => m (Addr c)
 freshKeyAddr_ = snd <$> freshKeyAddr
 
 -- | Generate a random `Addr` that uses a `KeyHash`, add the corresponding `KeyPair`
 -- to the known keys in the Imp state, and return the `KeyHash` as well as the `Addr`.
-freshKeyAddr :: Era era => ImpTestM era (KeyHash r (EraCrypto era), Addr (EraCrypto era))
+freshKeyAddr ::
+  (HasKeyPairs s c, MonadState s m, HasStatefulGen (StateGenM s) m) =>
+  m (KeyHash r c, Addr c)
 freshKeyAddr = do
   keyHash <- freshKeyHash
   pure (coerceKeyRole keyHash, Addr Testnet (KeyHashObj keyHash) StakeRefNull)
 
 -- | Looks up the keypair corresponding to the `BootstrapAddress`. The `BootstrapAddress`
 -- must be created with `freshBootstrapAddess` for this to work.
-lookupByronKeyPair :: HasCallStack => BootstrapAddress (EraCrypto era) -> ImpTestM era ByronKeyPair
+lookupByronKeyPair ::
+  (HasCallStack, HasKeyPairs s c, MonadState s m) =>
+  BootstrapAddress c ->
+  m ByronKeyPair
 lookupByronKeyPair bootAddr = do
-  keyPairs <- gets impByronKeyPairs
+  keyPairs <- use keyPairsByronL
   case Map.lookup bootAddr keyPairs of
     Just keyPair -> pure keyPair
     Nothing ->
@@ -1344,23 +1474,25 @@ lookupByronKeyPair bootAddr = do
 -- | Generates a fresh `KeyHash` and stores the corresponding `ByronKeyPair` in the
 -- ImpTestState. If you also need the `ByronKeyPair` consider using `freshByronKeyPair` for
 -- generation or `lookupByronKeyPair` to look up the `ByronKeyPair` corresponding to the `KeyHash`
-freshByronKeyHash :: Era era => ImpTestM era (KeyHash r (EraCrypto era))
+freshByronKeyHash ::
+  (HasKeyPairs s c, MonadState s m, HasStatefulGen (StateGenM s) m) =>
+  m (KeyHash r c)
 freshByronKeyHash = coerceKeyRole . bootstrapKeyHash <$> freshBootstapAddress
 
-freshBootstapAddress :: ImpTestM era (BootstrapAddress (EraCrypto era))
+freshBootstapAddress ::
+  (HasKeyPairs s c, MonadState s m, HasStatefulGen (StateGenM s) m) =>
+  m (BootstrapAddress c)
 freshBootstapAddress = do
-  ImpTestState {impByronKeyPairs} <- get
-  keyPair@(ByronKeyPair verificationKey _) <- arbitrary
+  keyPair@(ByronKeyPair verificationKey _) <- uniformM
+  hasPayload <- uniformM
   payload <-
-    oneof
-      [ pure Nothing
-      , Just . Byron.HDAddressPayload <$> (uniformByteStringM =<< choose (0, 63))
-      ]
+    if hasPayload
+      then Just . Byron.HDAddressPayload <$> (uniformByteStringM =<< uniformRM (0, 63))
+      else pure Nothing
   let asd = Byron.VerKeyASD verificationKey
       attrs = Byron.AddrAttributes payload (Byron.NetworkTestnet 0)
       bootAddr = BootstrapAddress $ Byron.makeAddress asd attrs
-  modify $ \st ->
-    st {impByronKeyPairs = Map.insert bootAddr keyPair impByronKeyPairs}
+  modify $ keyPairsByronL %~ Map.insert bootAddr keyPair
   pure bootAddr
 
 sendCoinTo ::
@@ -1451,23 +1583,34 @@ lookupReward stakingCredential = do
           <> "or by some other means."
     Just rd -> pure $ fromCompact (rdReward rd)
 
-registerPool :: ShelleyEraImp era => ImpTestM era (KeyHash 'StakePool (EraCrypto era))
-registerPool = do
+registerPool ::
+  ShelleyEraImp era =>
+  ImpTestM era (KeyHash 'StakePool (EraCrypto era))
+registerPool = registerRewardAccount >>= registerPoolWithRewardAccount
+
+registerPoolWithRewardAccount ::
+  ShelleyEraImp era =>
+  RewardAccount (EraCrypto era) ->
+  ImpTestM era (KeyHash 'StakePool (EraCrypto era))
+registerPoolWithRewardAccount rewardAccount = do
   khPool <- freshKeyHash
-  rewardAccount <- registerRewardAccount
   vrfHash <- freshKeyHashVRF
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  let minCost = pp ^. ppMinPoolCostL
+  poolCostExtra <- uniformRM (Coin 0, Coin 100_000_000)
+  pledge <- uniformRM (Coin 0, Coin 100_000_000)
   let
     poolParams =
       PoolParams
         { ppVrf = vrfHash
         , ppRewardAccount = rewardAccount
         , ppRelays = mempty
-        , ppPledge = zero
+        , ppPledge = pledge
         , ppOwners = mempty
         , ppMetadata = SNothing
         , ppMargin = def
         , ppId = khPool
-        , ppCost = zero
+        , ppCost = minCost <> poolCostExtra
         }
   submitTxAnn_ "Registering a new stake pool" $
     mkBasicTx mkBasicTxBody
@@ -1478,34 +1621,16 @@ registerAndRetirePoolToMakeReward ::
   ShelleyEraImp era =>
   Credential 'Staking (EraCrypto era) ->
   ImpTestM era ()
-registerAndRetirePoolToMakeReward stakingC = do
-  poolKH <- freshKeyHash
-  networkId <- use (impGlobalsL . to networkId)
-  vrfKH <- freshKeyHashVRF
-  Positive pledge <- arbitrary
-  Positive cost <- arbitrary
-  let poolParams =
-        PoolParams
-          { ppVrf = vrfKH
-          , ppId = poolKH
-          , ppRewardAccount = RewardAccount networkId stakingC
-          , ppPledge = Coin pledge
-          , ppCost = Coin cost
-          , ppOwners = mempty
-          , ppMetadata = SNothing
-          , ppMargin = def
-          , ppRelays = mempty
-          }
-  submitTxAnn_ "Registering a temporary stake pool" $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert poolParams)
+registerAndRetirePoolToMakeReward stakingCred = do
+  poolId <- registerPoolWithRewardAccount =<< getRewardAccountFor stakingCred
   passEpoch
-  currentEpochNo <- getsNES nesELL
+  curEpochNo <- getsNES nesELL
+  let poolLifetime = 2
+      poolExpiry = addEpochInterval curEpochNo $ EpochInterval poolLifetime
   submitTxAnn_ "Retiring the temporary stake pool" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.singleton (RetirePoolTxCert poolKH $ addEpochInterval currentEpochNo $ EpochInterval 2)
-  passEpoch
+      & bodyTxL . certsTxBodyL .~ SSeq.singleton (RetirePoolTxCert poolId poolExpiry)
+  passNEpochs $ fromIntegral poolLifetime
 
 withCborRoundTripFailures :: ImpTestM era a -> ImpTestM era a
 withCborRoundTripFailures = local $ iteCborRoundTripFailuresL .~ False
@@ -1576,7 +1701,7 @@ produceScript scriptHash = do
   let addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
   let tx =
         mkBasicTx mkBasicTxBody
-          & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr (inject (Coin 10)))
+          & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr mempty)
   txInAt (0 :: Int) <$> submitTx tx
 
 advanceToPointOfNoReturn :: ImpTestM era ()

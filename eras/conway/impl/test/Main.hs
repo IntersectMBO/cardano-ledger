@@ -13,7 +13,7 @@ import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRati
 import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
-import qualified Test.Cardano.Ledger.Conway.Imp as ConwayImp
+import qualified Test.Cardano.Ledger.Conway.Imp as Imp
 import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
 import qualified Test.Cardano.Ledger.Conway.Spec as Spec
@@ -32,8 +32,8 @@ main =
       Genesis.spec
       GovActionReorder.spec
       roundTripJsonEraSpec @Conway
-      describe "Imp" $ do
-        ConwayImp.spec @Conway
+      describe "Imp" $
+        Imp.spec @Conway
       describe "CostModels" $ do
         CostModelsSpec.spec @Conway
       describe "TxWits" $ do

@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.8.2.1
+## 1.9.0.0
 
-*
+* Change instance of `TranslationContext` to `NoGenesis`
 
 ## 1.8.2.0
 

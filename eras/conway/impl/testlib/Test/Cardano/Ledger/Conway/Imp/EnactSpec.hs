@@ -284,9 +284,10 @@ noConfidenceSpec =
     initialCommitteeMembers <- getCommitteeMembers
 
     (drep, _, _) <- setupSingleDRep 1_000_000
+    startEpochNo <- getsNES nesELL
     let committeeMap =
           Map.fromList
-            [ (KeyHashObj khCC, EpochNo 50)
+            [ (KeyHashObj khCC, addEpochInterval startEpochNo (EpochInterval 50))
             ]
     prevGaidCommittee@(GovPurposeId gaidCommittee) <-
       electCommittee
@@ -393,10 +394,7 @@ actionPriorityCommitteePurposeSpec =
         (drepC, _, _) <- setupSingleDRep 1_000_000
         (poolKH, _, _) <- setupPoolWithStake $ Coin 1_000_000
         cc <- KeyHashObj <$> freshKeyHash
-        gai1 <-
-          submitGovAction $
-            UpdateCommittee SNothing mempty (Map.singleton cc (EpochNo 30)) $
-              1 %! 2
+        gai1 <- submitUpdateCommittee Nothing [(cc, EpochInterval 30)] (1 %! 3)
         -- gai2 is the first action of a higher priority
         gai2 <- submitGovAction $ NoConfidence SNothing
         gai3 <- submitGovAction $ NoConfidence SNothing

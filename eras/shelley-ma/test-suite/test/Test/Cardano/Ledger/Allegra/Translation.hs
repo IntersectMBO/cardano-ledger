@@ -12,6 +12,7 @@ where
 import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as S
 import Test.Cardano.Ledger.Binary.RoundTrip
@@ -40,21 +41,21 @@ allegraTranslationTests =
   testGroup
     "Allegra translation binary compatibiliby tests"
     [ testProperty "Tx compatibility" $
-        translateEraEncoding @Allegra @S.ShelleyTx () toCBOR toCBOR
+        translateEraEncoding @Allegra @S.ShelleyTx NoGenesis toCBOR toCBOR
     , testProperty "ProposedPPUpdates compatibility" (testTranslation @S.ProposedPPUpdates)
     , testProperty "ShelleyGovState compatibility" $
-        translateEraEncoding @Allegra @S.ShelleyGovState () toCBOR toCBOR
+        translateEraEncoding @Allegra @S.ShelleyGovState NoGenesis toCBOR toCBOR
     , testProperty "TxOut compatibility" (testTranslation @S.ShelleyTxOut)
     , testProperty "UTxO compatibility" $
-        translateEraEncoding @Allegra @S.UTxO () toCBOR toCBOR
+        translateEraEncoding @Allegra @S.UTxO NoGenesis toCBOR toCBOR
     , testProperty "UTxOState compatibility" $
-        translateEraEncoding @Allegra @S.UTxOState () toCBOR toCBOR
+        translateEraEncoding @Allegra @S.UTxOState NoGenesis toCBOR toCBOR
     , testProperty "LedgerState compatibility" $
-        translateEraEncoding @Allegra @S.LedgerState () toCBOR toCBOR
+        translateEraEncoding @Allegra @S.LedgerState NoGenesis toCBOR toCBOR
     , testProperty "EpochState compatibility" $
-        translateEraEncoding @Allegra @S.EpochState () toCBOR toCBOR
+        translateEraEncoding @Allegra @S.EpochState NoGenesis toCBOR toCBOR
     , testProperty "ShelleyTxWits compatibility" $
-        translateEraEncoding @Allegra @S.ShelleyTxWits () toCBOR toCBOR
+        translateEraEncoding @Allegra @S.ShelleyTxWits NoGenesis toCBOR toCBOR
     , testProperty "Update compatibility" (testTranslation @S.Update)
     ]
 
@@ -67,4 +68,4 @@ testTranslation ::
   ) =>
   f Shelley ->
   Assertion
-testTranslation = translateEraEncCBOR ([] :: [Allegra]) ()
+testTranslation = translateEraEncCBOR ([] :: [Allegra]) NoGenesis

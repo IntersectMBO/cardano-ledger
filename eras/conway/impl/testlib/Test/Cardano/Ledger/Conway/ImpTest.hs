@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
@@ -6,10 +5,10 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -92,6 +91,9 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   getLastEnactedCommittee,
   getLastEnactedConstitution,
   submitParameterChange,
+  submitUpdateCommittee,
+  expectCommitteeMemberPresence,
+  expectCommitteeMemberAbsence,
   getLastEnactedParameterChange,
   getLastEnactedHardForkInitiation,
   getConstitutionProposals,
@@ -114,9 +116,11 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   withImpStateWithProtVer,
   whenPostBootstrap,
   submitYesVoteCCs_,
+  donateToTreasury,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (Timelock)
@@ -128,9 +132,11 @@ import Cardano.Ledger.BaseTypes (
   ProtVer (..),
   ShelleyBase,
   StrictMaybe (..),
+  UnitInterval,
   Version,
   addEpochInterval,
   binOpEpochNo,
+  hashAnchorData,
   inject,
   succVersion,
   textToUrl,
@@ -144,8 +150,9 @@ import Cardano.Ledger.CertState (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core hiding (proposals)
+import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams (ConwayPParams (..))
+import Cardano.Ledger.Conway.PParams (UpgradeConwayPParams (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayGovEvent,
   EnactSignal,
@@ -164,7 +171,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Plutus.Language (SLanguage (..))
+import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
@@ -187,8 +194,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   vsDRepsL,
  )
 import Cardano.Ledger.TxIn (TxId (..))
-import Cardano.Ledger.Val (Val (..))
+import Cardano.Ledger.Val ((<->))
 import Control.Monad (forM)
+import Control.Monad.Trans.Fail.String (errorFail)
 import Control.State.Transition.Extended (STS (..))
 import Data.Bifunctor (bimap)
 import Data.Default.Class (Default (..))
@@ -197,7 +205,7 @@ import Data.Functor.Identity
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust, isJust)
+import Data.Maybe (fromJust, fromMaybe, isJust)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -205,13 +213,13 @@ import qualified Data.Text as T
 import Data.Tree
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro
-import Lens.Micro.Mtl ((%=))
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Plutus (testingCostModel)
 
 -- | Modify the PParams in the current state with the given function
 conwayModifyPParams ::
@@ -230,48 +238,57 @@ conwayModifyPParams f = modifyNES $ \nes ->
 
 withImpStateWithProtVer ::
   forall era.
-  ( ConwayEraImp era
-  , GovState era ~ ConwayGovState era
-  , PParamsHKD Identity era ~ ConwayPParams Identity era
-  ) =>
+  ConwayEraImp era =>
   Version ->
   SpecWith (ImpTestState era) ->
   Spec
 withImpStateWithProtVer ver = do
   withImpStateModified $
-    impNESL . nesEsL . esLStateL . lsUTxOStateL . (utxosGovStateL @era) . cgsCurPParamsL
-      %~ ( \(PParams pp) ->
-            PParams (pp {cppProtocolVersion = ProtVer ver 0})
-         )
+    impNESL
+      . nesEsL
+      . esLStateL
+      . lsUTxOStateL
+      . utxosGovStateL
+      . cgsCurPParamsL
+      . ppProtocolVersionL
+      .~ ProtVer ver 0
 
 instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   , Eq (ConwayGovEvent (ConwayEra c))
   ) =>
   ShelleyEraImp (ConwayEra c)
   where
-  initImpTestState = do
-    kh1 <- fst <$> freshKeyPair
-    kh2 <- fst <$> freshKeyPair
-    let committee = Committee [(KeyHashObj kh1, EpochNo 15), (KeyHashObj kh2, EpochNo 15)] (1 %! 1)
-    anchor <- arbitrary
-    let constitution = Constitution anchor SNothing
-    impNESL %= initConwayNES committee constitution
-    where
-      initConwayNES committee constitution nes =
-        let newNes =
-              initAlonzoImpNES nes
-                & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
-                & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
-                & nesEsL . curPParamsEpochStateL . ppGovActionDepositL .~ Coin 123
-                & nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL .~ EpochInterval 20
-                & nesEsL . curPParamsEpochStateL . ppCommitteeMinSizeL .~ 1
-                & nesEsL . curPParamsEpochStateL . ppDRepVotingThresholdsL
-                  .~ DRepVotingThresholds
+  initGenesis = do
+    kh1 <- freshKeyHash
+    kh2 <- freshKeyHash
+    let
+      ccExpiryEpochNo = addEpochInterval (impEraStartEpochNo @(ConwayEra c)) (EpochInterval 15)
+      committee = Committee [(KeyHashObj kh1, ccExpiryEpochNo), (KeyHashObj kh2, ccExpiryEpochNo)] (1 %! 1)
+      constitutionAnchor =
+        Anchor
+          { anchorUrl = errorFail $ textToUrl 128 "https://cardano-constitution.crypto"
+          , anchorDataHash = hashAnchorData (AnchorData "Cardano Constitution Content")
+          }
+    pure
+      ConwayGenesis
+        { cgUpgradePParams =
+            UpgradeConwayPParams
+              { ucppPoolVotingThresholds =
+                  PoolVotingThresholds -- FIXME: https://github.com/IntersectMBO/cardano-ledger/issues/4329
+                    { pvtMotionNoConfidence = 0 %! 1
+                    , pvtCommitteeNormal = 0 %! 1
+                    , pvtCommitteeNoConfidence = 0 %! 1
+                    , pvtHardForkInitiation = 0 %! 1
+                    , pvtPPSecurityGroup = 0 %! 1
+                    }
+              , ucppDRepVotingThresholds =
+                  DRepVotingThresholds
                     { dvtMotionNoConfidence = 51 %! 100
                     , dvtCommitteeNormal = 51 %! 100
                     , dvtCommitteeNoConfidence = 51 %! 100
@@ -283,13 +300,21 @@ instance
                     , dvtPPGovGroup = 51 %! 100
                     , dvtTreasuryWithdrawal = 51 %! 100
                     }
-                & nesEsL . epochStateGovStateL . committeeGovStateL .~ SJust committee
-                & nesEsL . epochStateGovStateL . constitutionGovStateL .~ constitution
-            epochState = newNes ^. nesEsL
-            ratifyState =
-              def
-                & rsEnactStateL .~ mkEnactState (epochState ^. epochStateGovStateL)
-         in newNes & nesEsL .~ setCompleteDRepPulsingState def ratifyState epochState
+              , ucppCommitteeMinSize = 1
+              , ucppCommitteeMaxTermLength = EpochInterval 20
+              , ucppGovActionLifetime = EpochInterval 30
+              , ucppGovActionDeposit = Coin 123
+              , ucppDRepDeposit = Coin 70_000_000
+              , ucppDRepActivity = EpochInterval 100
+              , ucppMinFeeRefScriptCostPerByte = 15 %! 1
+              , -- TODO: Replace with correct cost model.
+                ucppPlutusV3CostModel = testingCostModel PlutusV3
+              }
+        , cgConstitution = Constitution constitutionAnchor SNothing
+        , cgCommittee = committee
+        , cgDelegs = mempty
+        , cgInitialDReps = mempty
+        }
 
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
 
@@ -301,6 +326,7 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
@@ -316,6 +342,8 @@ class
   ( AlonzoEraImp era
   , ConwayEraGov era
   , ConwayEraTxBody era
+  , ConwayEraTxCert era
+  , ConwayEraPParams era
   , STS (EraRule "ENACT" era)
   , BaseM (EraRule "ENACT" era) ~ ShelleyBase
   , State (EraRule "ENACT" era) ~ EnactState era
@@ -323,6 +351,7 @@ class
   , Environment (EraRule "ENACT" era) ~ ()
   , NativeScript era ~ Timelock era
   , Script era ~ AlonzoScript era
+  , GovState era ~ ConwayGovState era
   ) =>
   ConwayEraImp era
 
@@ -330,6 +359,7 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
@@ -346,25 +376,21 @@ registerInitialCommittee = do
 
 -- | Submit a transaction that registers a new DRep and return the keyhash
 -- belonging to that DRep
-registerDRep ::
-  forall era.
-  ( ShelleyEraImp era
-  , ConwayEraTxCert era
-  ) =>
-  ImpTestM era (KeyHash 'DRepRole (EraCrypto era))
+registerDRep :: ConwayEraImp era => ImpTestM era (KeyHash 'DRepRole (EraCrypto era))
 registerDRep = do
   -- Register a DRep
   khDRep <- freshKeyHash
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
   submitTxAnn_ "Register DRep" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.singleton
           ( RegDRepTxCert
               (KeyHashObj khDRep)
-              zero
+              (pp ^. ppDRepDepositL)
               SNothing
           )
-  dreps <- getsNES @era $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+  dreps <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   dreps `shouldSatisfy` Map.member (KeyHashObj khDRep)
   pure khDRep
 
@@ -375,13 +401,14 @@ unRegisterDRep ::
   , ConwayEraTxCert era
   ) =>
   Credential 'DRepRole (EraCrypto era) ->
-  Coin ->
   ImpTestM era ()
-unRegisterDRep drep c =
+unRegisterDRep drep = do
+  drepState <- lookupDRepState drep
+  let refund = drepDeposit drepState
   submitTxAnn_ "UnRegister DRep" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
-        .~ SSeq.singleton (UnRegDRepTxCert drep c)
+        .~ SSeq.singleton (UnRegDRepTxCert drep refund)
 
 -- | Submit a transaction that updates a given DRep
 updateDRep ::
@@ -401,10 +428,7 @@ updateDRep drep = do
 -- | In contrast to `setupSingleDRep`, this function does not make a UTxO entry
 -- that could count as delegated stake to the DRep
 setupDRepWithoutStake ::
-  forall era.
-  ( ConwayEraTxCert era
-  , ShelleyEraImp era
-  ) =>
+  ConwayEraImp era =>
   ImpTestM
     era
     ( KeyHash 'DRepRole (EraCrypto era)
@@ -418,7 +442,7 @@ setupDRepWithoutStake = do
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.fromList
-          [ RegDepositDelegTxCert @era
+          [ RegDepositDelegTxCert
               (KeyHashObj delegatorKH)
               (DelegVote (DRepCredential $ KeyHashObj drepKH))
               deposit
@@ -427,10 +451,7 @@ setupDRepWithoutStake = do
 
 -- | Registers a new DRep and delegates the specified amount of ADA to it.
 setupSingleDRep ::
-  forall era.
-  ( ConwayEraTxCert era
-  , ShelleyEraImp era
-  ) =>
+  ConwayEraImp era =>
   Integer ->
   ImpTestM
     era
@@ -444,10 +465,7 @@ setupSingleDRep stake = do
   pure (KeyHashObj drepKH, stakingCred, spendingKh)
 
 delegateToDRep ::
-  forall era.
-  ( ConwayEraTxCert era
-  , ShelleyEraImp era
-  ) =>
+  ConwayEraImp era =>
   Integer ->
   DRep (EraCrypto era) ->
   ImpTestM
@@ -469,7 +487,7 @@ delegateToDRep stake dRep = do
           )
       & bodyTxL . certsTxBodyL
         .~ SSeq.fromList
-          [ RegDepositDelegTxCert @era
+          [ RegDepositDelegTxCert
               (KeyHashObj delegatorKH)
               (DelegVote dRep)
               deposit
@@ -477,27 +495,30 @@ delegateToDRep stake dRep = do
   pure (KeyHashObj delegatorKH, spendingKP)
 
 redelegateDRep ::
-  forall era.
-  ( ConwayEraTxCert era
-  , ShelleyEraImp era
-  ) =>
+  ConwayEraImp era =>
   Credential 'DRepRole (EraCrypto era) ->
   DRep (EraCrypto era) ->
   Credential 'Staking (EraCrypto era) ->
   ImpTestM era ()
 redelegateDRep dRepCred newDRep stakingCred = do
-  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+  drepState <- lookupDRepState dRepCred
   submitTx_ $
     mkBasicTx mkBasicTxBody
       & bodyTxL . certsTxBodyL
         .~ SSeq.fromList
-          [ UnRegDRepTxCert @era
-              dRepCred
-              deposit
-          , DelegTxCert @era
-              stakingCred
-              (DelegVote newDRep)
+          [ UnRegDRepTxCert dRepCred (drepState ^. drepDepositL)
+          , DelegTxCert stakingCred (DelegVote newDRep)
           ]
+
+lookupDRepState ::
+  HasCallStack =>
+  Credential 'DRepRole (EraCrypto era) ->
+  ImpTestM era (DRepState (EraCrypto era))
+lookupDRepState dRepCred = do
+  drepsState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
+  case Map.lookup dRepCred drepsState of
+    Nothing -> error $ "Expected for DRep " ++ show dRepCred ++ " to be present in the CertState"
+    Just state -> pure state
 
 getsPParams :: EraGov era => Lens' (PParams era) a -> ImpTestM era a
 getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
@@ -740,16 +761,18 @@ trySubmitGovAction ga = do
 
 submitAndExpireProposalToMakeReward ::
   ConwayEraImp era =>
-  Int ->
   Credential 'Staking (EraCrypto era) ->
   ImpTestM era ()
-submitAndExpireProposalToMakeReward expectedReward stakingC = do
+submitAndExpireProposalToMakeReward stakingC = do
   rewardAccount <- getRewardAccountFor stakingC
-  EpochInterval lifetime <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL
+  pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  let
+    EpochInterval lifetime = pp ^. ppGovActionLifetimeL
+    deposit = pp ^. ppGovActionDepositL
   gai <-
     submitProposal $
       ProposalProcedure
-        { pProcDeposit = Coin $ fromIntegral expectedReward
+        { pProcDeposit = deposit
         , pProcReturnAddr = rewardAccount
         , pProcGovAction = TreasuryWithdrawals mempty def
         , pProcAnchor = def
@@ -765,13 +788,14 @@ trySubmitGovActions ::
 trySubmitGovActions gas = do
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
   rewardAccount <- registerRewardAccount
+  anchor <- arbitrary
   proposals <- forM gas $ \ga -> do
     pure
       ProposalProcedure
         { pProcDeposit = deposit
         , pProcReturnAddr = rewardAccount
         , pProcGovAction = ga
-        , pProcAnchor = def
+        , pProcAnchor = anchor
         }
   trySubmitProposals proposals
 
@@ -1282,12 +1306,13 @@ electBasicCommittee = do
 
   logEntry "Registering committee member"
   coldCommitteeC <- KeyHashObj <$> freshKeyHash
+  startEpochNo <- getsNES nesELL
   let
     committeeAction =
       UpdateCommittee
         SNothing
         mempty
-        (Map.singleton coldCommitteeC 20)
+        (Map.singleton coldCommitteeC (addEpochInterval startEpochNo (EpochInterval 10)))
         (1 %! 2)
   (gaidCommitteeProp NE.:| _) <-
     submitGovActions
@@ -1451,7 +1476,7 @@ constitutionShouldBe cUrl = do
   Constitution {constitutionAnchor = Anchor {anchorUrl}} <-
     getsNES $
       nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . constitutionGovStateL
-  anchorUrl `shouldBe` fromJust (textToUrl 64 $ T.pack cUrl)
+  anchorUrl `shouldBe` errorFail (textToUrl 128 $ T.pack cUrl)
 
 expectNumDormantEpochs :: HasCallStack => EpochNo -> ImpTestM era ()
 expectNumDormantEpochs expected = do
@@ -1603,3 +1628,49 @@ submitYesVoteCCs_ ::
   ImpTestM era ()
 submitYesVoteCCs_ committeeMembers govId =
   mapM_ (\c -> submitYesVote_ (CommitteeVoter c) govId) committeeMembers
+
+submitUpdateCommittee ::
+  ConwayEraImp era =>
+  -- | Set the parent. When Nothign is supplied latest parent will be used.
+  Maybe (StrictMaybe (GovPurposeId 'CommitteePurpose era)) ->
+  [(Credential 'ColdCommitteeRole (EraCrypto era), EpochInterval)] ->
+  UnitInterval ->
+  ImpTestM era (GovActionId (EraCrypto era))
+submitUpdateCommittee mParent ccs threshold = do
+  nes <- getsNES id
+  let
+    curEpochNo = nes ^. nesELL
+    rootCommittee =
+      nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgsProposalsL . pRootsL . grCommitteeL
+    parent = fromMaybe (prRoot rootCommittee) mParent
+    newCommitteMembers =
+      Map.fromList [(cc, addEpochInterval curEpochNo lifetime) | (cc, lifetime) <- ccs]
+  submitGovAction $ UpdateCommittee parent mempty newCommitteMembers threshold
+
+expectCommitteeMemberPresence ::
+  (HasCallStack, ConwayEraGov era) => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
+expectCommitteeMemberPresence cc = do
+  SJust committee <-
+    getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+  assertBool ("Expected Committee Member: " ++ show cc ++ " to be present in the committee") $
+    Map.member cc (committee ^. committeeMembersL)
+
+expectCommitteeMemberAbsence ::
+  (HasCallStack, ConwayEraGov era) => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
+expectCommitteeMemberAbsence cc = do
+  SJust committee <-
+    getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+  assertBool ("Expected Committee Member: " ++ show cc ++ " to be absent from the committee") $
+    Map.notMember cc (committee ^. committeeMembersL)
+
+donateToTreasury :: ConwayEraImp era => Coin -> ImpTestM era ()
+donateToTreasury amount =
+  impAnn ("Donation to treasury in the amount of: " ++ show amount) $ do
+    treasuryStart <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+    submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ amount)
+    treasuryEndEpoch0 <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+    -- Actual donation happens on the epoch boundary
+    treasuryStart `shouldBe` treasuryEndEpoch0
+    passEpoch
+    treasuryEndEpoch1 <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+    treasuryEndEpoch1 <-> treasuryStart `shouldBe` amount

@@ -10,6 +10,7 @@ module Cardano.Ledger.Mary.Era (MaryEra) where
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Rules (AllegraUTXO, AllegraUTXOW)
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
@@ -23,12 +24,14 @@ instance Crypto c => Era (MaryEra c) where
 
   eraName = "Mary"
 
+instance Crypto c => EraGenesis (MaryEra c)
+
 --------------------------------------------------------------------------------
 -- Core instances
 --------------------------------------------------------------------------------
 
 -- | No context is needed to translate from Allegra to Mary.
-type instance TranslationContext (MaryEra c) = ()
+type instance TranslationContext (MaryEra c) = NoGenesis (MaryEra c)
 
 type instance Value (MaryEra c) = MaryValue c
 

@@ -10,6 +10,7 @@ import Cardano.Ledger.Alonzo.Transition
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley.Transition
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Lens.Micro
@@ -21,11 +22,11 @@ instance Crypto c => EraTransition (BabbageEra c) where
     }
     deriving (Show, Eq, NoThunks, ToJSON, FromJSON)
 
-  mkTransitionConfig () = BabbageTransitionConfig
+  mkTransitionConfig NoGenesis = BabbageTransitionConfig
 
   injectIntoTestState = registerInitialFundsThenStaking
 
   tcPreviousEraConfigL =
     lens btcAlonzoTransitionConfig (\btc pc -> btc {btcAlonzoTransitionConfig = pc})
 
-  tcTranslationContextL = lens (const ()) (const . id)
+  tcTranslationContextL = lens (const NoGenesis) (const . id)

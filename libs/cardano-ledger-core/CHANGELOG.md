@@ -6,6 +6,9 @@
 * Add a field to `DebugFailure`
 * Convert `debugPlutus` to an `IO` action
 * Add `plutus-debug` executable
+* Change default implementation of `translateEra`
+* Add `EraGenesis` and `Genesis` type family. New `NoGenesis` type to be used for eras that do not have a genesis file
+* Move `ensureMinCoinTxOut` from `cardano-ledger-api` to `Cardano.Ledger.Tools`
 
 ### `testlib`
 

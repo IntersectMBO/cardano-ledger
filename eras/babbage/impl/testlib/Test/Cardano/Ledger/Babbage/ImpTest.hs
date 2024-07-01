@@ -1,10 +1,14 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+#if __GLASGOW_HASKELL__ < 900
+{-# LANGUAGE IncoherentInstances #-}
+#endif
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Babbage.ImpTest (
@@ -15,11 +19,12 @@ module Test.Cardano.Ledger.Babbage.ImpTest (
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
 import Cardano.Crypto.Hash (Hash)
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.Plutus.Language (SLanguage (..))
+import Cardano.Ledger.Plutus.Language (Language (..), SLanguage (..))
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import Cardano.Ledger.Tools (setMinCoinTxOut)
 import Cardano.Ledger.TxIn (TxIn, mkTxInPartial)
@@ -27,22 +32,25 @@ import Control.Monad (forM)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Sequence.Strict as SSeq
-import Lens.Micro ((&), (.~))
-import Lens.Micro.Mtl ((%=))
+import Lens.Micro ((&), (.~), (<>~))
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Babbage.TreeDiff ()
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Plutus (testingCostModels)
 
 instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (BabbageEra c)
   where
-  initImpTestState = impNESL %= initAlonzoImpNES
+  initNewEpochState =
+    defaultInitNewEpochState
+      (nesEsL . curPParamsEpochStateL . ppCostModelsL <>~ testingCostModels [PlutusV2])
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = alonzoFixupTx
 

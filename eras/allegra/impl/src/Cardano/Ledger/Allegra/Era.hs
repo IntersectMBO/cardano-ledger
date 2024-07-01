@@ -13,6 +13,7 @@ module Cardano.Ledger.Allegra.Era (
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
@@ -27,12 +28,14 @@ instance Crypto c => Era (AllegraEra c) where
 
   eraName = "Allegra"
 
+instance Crypto c => EraGenesis (AllegraEra c)
+
 --------------------------------------------------------------------------------
 -- Core instances
 --------------------------------------------------------------------------------
 
 -- | No context is needed to translate from Shelley to Allegra.
-type instance TranslationContext (AllegraEra c) = ()
+type instance TranslationContext (AllegraEra c) = NoGenesis (AllegraEra c)
 
 type instance Value (AllegraEra _) = Coin
 

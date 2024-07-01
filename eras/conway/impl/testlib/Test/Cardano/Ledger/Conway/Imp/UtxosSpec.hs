@@ -226,22 +226,24 @@ conwayFeaturesPlutusV1V2FailureSpec = do
   describe "Conway features fail in Plutusdescribe v1 and v2" $ do
     describe "Unsupported Fields" $ do
       describe "CurrentTreasuryValue" $ do
-        it "V1"
-          $ testPlutusV1V2Failure
+        it "V1" $ do
+          donation <- arbitrary
+          submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
+          passEpoch
+          testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
-            (SJust (Coin 10_000))
+            (SJust donation)
             currentTreasuryValueTxBodyL
-          $ inject
-          $ CurrentTreasuryFieldNotSupported @era
-          $ Coin 10_000
-        it "V2"
-          $ testPlutusV1V2Failure
+            $ inject (CurrentTreasuryFieldNotSupported @era donation)
+        it "V2" $ do
+          donation <- arbitrary
+          submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ donation)
+          passEpoch
+          testPlutusV1V2Failure
             (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
-            (SJust (Coin 10_000))
+            (SJust donation)
             currentTreasuryValueTxBodyL
-          $ inject
-          $ CurrentTreasuryFieldNotSupported @era
-          $ Coin 10_000
+            $ inject (CurrentTreasuryFieldNotSupported @era donation)
       describe "VotingProcedures" $ do
         let action = ParameterChange SNothing (def & ppuMinFeeAL .~ SJust (Coin 10)) SNothing
         it "V1" $ do
@@ -325,23 +327,27 @@ conwayFeaturesPlutusV1V2FailureSpec = do
         describe "RegDepositTxCert" $ do
           it "V1" $ do
             stakingC <- KeyHashObj <$> freshKeyHash
-            let regDepositTxCert = RegDepositTxCert stakingC (Coin 0)
+            deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+            let regDepositTxCert = RegDepositTxCert stakingC deposit
             testCertificateTranslated regDepositTxCert
               =<< produceScript (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
           it "V2" $ do
             stakingC <- KeyHashObj <$> freshKeyHash
-            let regDepositTxCert = RegDepositTxCert stakingC (Coin 0)
+            deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+            let regDepositTxCert = RegDepositTxCert stakingC deposit
             testCertificateTranslated regDepositTxCert
               =<< produceScript (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
         describe "UnRegDepositTxCert" $ do
           it "V1" $ do
             (_poolKH, _spendingC, stakingC) <- setupPoolWithStake $ Coin 1_000
-            let unRegDepositTxCert = UnRegDepositTxCert stakingC (Coin 0)
+            deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+            let unRegDepositTxCert = UnRegDepositTxCert stakingC deposit
             testCertificateTranslated unRegDepositTxCert
               =<< produceScript (hashPlutusScript $ redeemerSameAsDatum SPlutusV1)
           it "V2" $ do
             (_poolKH, _spendingC, stakingC) <- setupPoolWithStake $ Coin 1_000
-            let unRegDepositTxCert = UnRegDepositTxCert stakingC (Coin 0)
+            deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+            let unRegDepositTxCert = UnRegDepositTxCert stakingC deposit
             testCertificateTranslated unRegDepositTxCert
               =<< produceScript (hashPlutusScript $ redeemerSameAsDatum SPlutusV2)
       describe "Unsupported" $ do
@@ -385,20 +391,22 @@ conwayFeaturesPlutusV1V2FailureSpec = do
           it "V1" $ do
             (drep, _, _) <- setupSingleDRep 1_000
             unregisteredDelegatorKH <- freshKeyHash
+            pp <- getsNES $ nesEsL . curPParamsEpochStateL
             let regDepositDelegTxCert =
                   RegDepositDelegTxCert @era
                     (KeyHashObj unregisteredDelegatorKH)
                     (DelegVote (DRepCredential drep))
-                    (Coin 0)
+                    (pp ^. ppKeyDepositL)
             testCertificateNotSupportedV1 regDepositDelegTxCert
           it "V2" $ do
             (drep, _, _) <- setupSingleDRep 1_000
             unregisteredDelegatorKH <- freshKeyHash
+            pp <- getsNES $ nesEsL . curPParamsEpochStateL
             let regDepositDelegTxCert =
                   RegDepositDelegTxCert @era
                     (KeyHashObj unregisteredDelegatorKH)
                     (DelegVote (DRepCredential drep))
-                    (Coin 0)
+                    (pp ^. ppKeyDepositL)
             testCertificateNotSupportedV2 regDepositDelegTxCert
         describe "AuthCommitteeHotKeyTxCert" $ do
           it "V1" $ do
@@ -423,20 +431,24 @@ conwayFeaturesPlutusV1V2FailureSpec = do
         describe "RegDRepTxCert" $ do
           it "V1" $ do
             unregisteredDRepKH <- freshKeyHash
-            let regDRepTxCert = RegDRepTxCert @era (KeyHashObj unregisteredDRepKH) (Coin 0) SNothing
-            testCertificateNotSupportedV1 regDRepTxCert
+            pp <- getsNES $ nesEsL . curPParamsEpochStateL
+            testCertificateNotSupportedV1 $
+              RegDRepTxCert @era (KeyHashObj unregisteredDRepKH) (pp ^. ppDRepDepositL) SNothing
           it "V2" $ do
             unregisteredDRepKH <- freshKeyHash
-            let regDRepTxCert = RegDRepTxCert @era (KeyHashObj unregisteredDRepKH) (Coin 0) SNothing
-            testCertificateNotSupportedV2 regDRepTxCert
+            pp <- getsNES $ nesEsL . curPParamsEpochStateL
+            testCertificateNotSupportedV2 $
+              RegDRepTxCert @era (KeyHashObj unregisteredDRepKH) (pp ^. ppDRepDepositL) SNothing
         describe "UnRegDRepTxCert" $ do
           it "V1" $ do
             (drepKH, _, _) <- setupSingleDRep 1_000
-            let unRegDRepTxCert = UnRegDRepTxCert @era drepKH (Coin 0)
+            pp <- getsNES $ nesEsL . curPParamsEpochStateL
+            let unRegDRepTxCert = UnRegDRepTxCert @era drepKH (pp ^. ppDRepDepositL)
             testCertificateNotSupportedV1 unRegDRepTxCert
           it "V1" $ do
             (drepKH, _, _) <- setupSingleDRep 1_000
-            let unRegDRepTxCert = UnRegDRepTxCert @era drepKH (Coin 0)
+            pp <- getsNES $ nesEsL . curPParamsEpochStateL
+            let unRegDRepTxCert = UnRegDRepTxCert @era drepKH (pp ^. ppDRepDepositL)
             testCertificateNotSupportedV2 unRegDRepTxCert
         describe "UpdateDRepTxCert" $ do
           it "V1" $ do

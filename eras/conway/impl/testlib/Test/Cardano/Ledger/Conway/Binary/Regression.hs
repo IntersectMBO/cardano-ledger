@@ -94,7 +94,7 @@ spec = describe "Regression" $ do
   describe "ImpTest" $
     withImpState @Conway $
       it "InsufficientCollateral is not encoded with negative coin #4198" $ do
-        let lockedVal = inject $ Coin 100
+        let lockedVal = inject $ Coin 100_000
         collateralAddress <- freshKeyAddr_
         (_, skp) <- freshKeyPair
         let
@@ -108,10 +108,10 @@ spec = describe "Regression" $ do
               & bodyTxL . outputsTxBodyL
                 .~ SSeq.fromList
                   [ mkBasicTxOut lockScriptAddress lockedVal
-                  , mkBasicTxOut collateralAddress (inject $ Coin 1)
+                  , mkBasicTxOut collateralAddress mempty
                   ]
               & bodyTxL . collateralReturnTxBodyL
-                .~ SJust (mkBasicTxOut collateralReturnAddr . inject $ Coin 1)
+                .~ SJust (mkBasicTxOut collateralReturnAddr . inject $ Coin 849070)
         let
           modifyRootCoin = coinTxOutL .~ Coin 989482376
           modifyRootTxOut (x SSeq.:<| SSeq.Empty) =

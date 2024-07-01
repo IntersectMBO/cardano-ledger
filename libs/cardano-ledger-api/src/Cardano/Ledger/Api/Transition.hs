@@ -12,9 +12,11 @@ module Cardano.Ledger.Api.Transition (
   tcTranslationContextL,
 
   -- * Genesis
+  EraGenesis (..),
   ShelleyGenesis (..),
   AlonzoGenesis (..),
   ConwayGenesis (..),
+  NoGenesis (..),
 
   -- * Functions for Testing
   tcInitialPParamsG,
@@ -28,6 +30,7 @@ import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Api.Era (LatestKnownEra)
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
 import Cardano.Ledger.Shelley.Transition (
   EraTransition (..),
@@ -47,8 +50,8 @@ mkLatestTransitionConfig ::
   TransitionConfig (LatestKnownEra c)
 mkLatestTransitionConfig shelleyGenesis alonzoGenesis conwayGenesis =
   mkShelleyTransitionConfig shelleyGenesis
-    & mkTransitionConfig ()
-    & mkTransitionConfig ()
+    & mkTransitionConfig NoGenesis
+    & mkTransitionConfig NoGenesis
     & mkTransitionConfig alonzoGenesis
-    & mkTransitionConfig ()
+    & mkTransitionConfig NoGenesis
     & mkTransitionConfig conwayGenesis

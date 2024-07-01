@@ -20,6 +20,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Binary (mkSized)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Plutus.Data (
@@ -79,7 +80,7 @@ ledgerExamplesBabbage =
     , SLE.sleResultExamples = resultExamples
     , SLE.sleNewEpochState = exampleBabbageNewEpochState
     , SLE.sleChainDepState = SLE.exampleLedgerChainDepState 1
-    , SLE.sleTranslationContext = ()
+    , SLE.sleTranslationContext = NoGenesis
     }
   where
     resultExamples =

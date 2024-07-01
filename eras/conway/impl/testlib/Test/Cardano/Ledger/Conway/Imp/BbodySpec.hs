@@ -106,7 +106,7 @@ spec = describe "BBODY" $ do
     mkTxIn :: ImpTestM era (TxIn (EraCrypto era))
     mkTxIn = do
       addr <- freshKeyAddr_
-      sendCoinTo addr (Coin 1_000_000)
+      sendCoinTo addr (Coin 7_000_000)
 
     largeScript :: Maybe (Script era)
     largeScript = do

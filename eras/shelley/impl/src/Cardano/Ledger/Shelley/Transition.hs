@@ -38,6 +38,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.EpochBoundary
+import Cardano.Ledger.Genesis (EraGenesis)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.Shelley.Era
@@ -66,6 +67,7 @@ import NoThunks.Class (NoThunks (..))
 class
   ( EraTxOut era
   , EraGov era
+  , EraGenesis era
   , ToJSON (TransitionConfig era)
   , FromJSON (TransitionConfig era)
   , Default (StashedAVVMAddresses era)

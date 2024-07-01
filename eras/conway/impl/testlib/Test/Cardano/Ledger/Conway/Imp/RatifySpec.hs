@@ -66,6 +66,7 @@ relevantDuringBootstrapSpec = do
     submitYesVote_ (CommitteeVoter hotCred) gaId
     whenPostBootstrap $ submitYesVote_ (DRepVoter dRep) gaId
     passNEpochs 2
+    logAcceptedRatio gaId
     getLastEnactedParameterChange `shouldReturn` SNothing
     -- Make sure all committee members authorize the same hot credential that just voted:
     committeeMembers' <- Set.toList <$> getCommitteeMembers
@@ -116,12 +117,12 @@ committeeExpiryResignationDiscountSpec =
       committeeColdC1 <- KeyHashObj <$> freshKeyHash
       committeeColdC2 <- KeyHashObj <$> freshKeyHash
       gaiCC <-
-        submitGovAction $
-          UpdateCommittee
-            SNothing
-            mempty
-            (Map.fromList [(committeeColdC1, EpochNo 10), (committeeColdC2, EpochNo 2)])
-            (1 %! 2)
+        submitUpdateCommittee
+          Nothing
+          [ (committeeColdC1, EpochInterval 10)
+          , (committeeColdC2, EpochInterval 2)
+          ]
+          (1 %! 2)
       submitYesVote_ (DRepVoter drep) gaiCC
       passNEpochs 2
       getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiCC)
@@ -145,12 +146,12 @@ committeeExpiryResignationDiscountSpec =
       committeeColdC1 <- KeyHashObj <$> freshKeyHash
       committeeColdC2 <- KeyHashObj <$> freshKeyHash
       gaiCC <-
-        submitGovAction $
-          UpdateCommittee
-            SNothing
-            mempty
-            (Map.fromList [(committeeColdC1, EpochNo 10), (committeeColdC2, EpochNo 10)])
-            (1 %! 2)
+        submitUpdateCommittee
+          Nothing
+          [ (committeeColdC1, EpochInterval 10)
+          , (committeeColdC2, EpochInterval 10)
+          ]
+          (1 %! 2)
       submitYesVote_ (DRepVoter drep) gaiCC
       passNEpochs 2
       getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiCC)
@@ -178,6 +179,25 @@ paramChangeAffectsProposalsSpec =
         largerThreshold = 51 %! 100
         smallerThreshold :: UnitInterval
         smallerThreshold = 1 %! 2
+        submitTwoExampleProposalsAndVoteOnTheChild ::
+          [(KeyHash 'StakePool (EraCrypto era), Vote)] ->
+          [(Credential 'DRepRole (EraCrypto era), Vote)] ->
+          ImpTestM era (GovActionId (EraCrypto era), GovActionId (EraCrypto era))
+        submitTwoExampleProposalsAndVoteOnTheChild spos dreps = do
+          committeeC <- KeyHashObj <$> freshKeyHash
+          gaiParent <- submitUpdateCommittee Nothing [(committeeC, EpochInterval 5)] (75 %! 100)
+          -- We submit a descendent proposal so that even though it is sufficiently
+          -- voted on, it cannot be ratified before the ParameterChange proposal
+          -- is enacted.
+          gaiChild <-
+            submitUpdateCommittee
+              (Just (SJust (GovPurposeId gaiParent)))
+              [(committeeC, EpochInterval 5)]
+              (75 %! 100)
+          forM_ spos $ \(spo, vote) -> submitVote_ vote (StakePoolVoter spo) gaiChild
+          forM_ dreps $ \(drep, vote) -> submitVote_ vote (DRepVoter drep) gaiChild
+          passEpoch -- Make the votes count
+          pure (gaiParent, gaiChild)
     describe "DRep" $ do
       let setThreshold threshold =
             modifyPParams $ ppDRepVotingThresholdsL . dvtCommitteeNormalL .~ threshold
@@ -196,34 +216,19 @@ paramChangeAffectsProposalsSpec =
             submitYesVote_ (DRepVoter drepC) pcGai
             submitYesVote_ (CommitteeVoter hotCommitteeC) pcGai
             passNEpochs 2
-          submitTwoExampleProposalsAndVoteOnTheChild ::
-            GovPurposeId 'CommitteePurpose era ->
-            Credential 'DRepRole (EraCrypto era) ->
-            ImpTestM era (GovActionId (EraCrypto era), GovActionId (EraCrypto era))
-          submitTwoExampleProposalsAndVoteOnTheChild gpiCC drep = do
-            committeeC <- KeyHashObj <$> freshKeyHash
-            let updateCC parent = UpdateCommittee parent mempty (Map.singleton committeeC $ EpochNo 5) $ 1 %! 2
-            gaiParent <- submitGovAction $ updateCC $ SJust gpiCC
-            -- We submit a descendent proposal so that even though it is sufficiently
-            -- voted on, it cannot be ratified before the ParameterChange proposal
-            -- is enacted.
-            gaiChild <- submitGovAction $ updateCC $ SJust $ GovPurposeId gaiParent
-            submitYesVote_ (DRepVoter drep) gaiChild
-            passEpoch -- Make the votes count
-            pure (gaiParent, gaiChild)
       it "Increasing the threshold prevents a hitherto-ratifiable proposal from being ratified" $ do
-        (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
+        (drepC, hotCommitteeC, _) <- electBasicCommittee
         setThreshold smallerThreshold
         (drep, _, _) <- setupSingleDRep 1_000_000
-        (_gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC drep
+        (_gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild [] [(drep, VoteYes)]
         isDRepAccepted gaiChild `shouldReturn` True
         enactThreshold largerThreshold drepC hotCommitteeC
         isDRepAccepted gaiChild `shouldReturn` False
       it "Decreasing the threshold ratifies a hitherto-unratifiable proposal" $ do
-        (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
+        (drepC, hotCommitteeC, _) <- electBasicCommittee
         setThreshold largerThreshold
         (drep, _, _) <- setupSingleDRep 1_000_000
-        (gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC drep
+        (gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild [] [(drep, VoteYes)]
         isDRepAccepted gaiChild `shouldReturn` False
         enactThreshold smallerThreshold drepC hotCommitteeC
         isDRepAccepted gaiChild `shouldReturn` True
@@ -251,42 +256,28 @@ paramChangeAffectsProposalsSpec =
             submitYesVote_ (DRepVoter drepC) pcGai
             submitYesVote_ (CommitteeVoter hotCommitteeC) pcGai
             passNEpochs 2
-          submitTwoExampleProposalsAndVoteOnTheChild ::
-            GovPurposeId 'CommitteePurpose era ->
-            KeyHash 'StakePool (EraCrypto era) ->
-            KeyHash 'StakePool (EraCrypto era) ->
-            Credential 'DRepRole (EraCrypto era) ->
-            ImpTestM era (GovActionId (EraCrypto era), GovActionId (EraCrypto era))
-          submitTwoExampleProposalsAndVoteOnTheChild gpiCC poolKH1 poolKH2 drepC = do
-            committeeC <- KeyHashObj <$> freshKeyHash
-            let updateCC parent = UpdateCommittee parent mempty (Map.singleton committeeC $ EpochNo 5) $ 1 %! 2
-            gaiParent <- submitGovAction $ updateCC $ SJust gpiCC
-            -- We submit a descendent proposal so that even though it is sufficiently
-            -- voted on, it cannot be ratified before the ParameterChange proposal
-            -- is enacted.
-            gaiChild <- submitGovAction $ updateCC $ SJust $ GovPurposeId gaiParent
-            submitYesVote_ (DRepVoter drepC) gaiChild
-            submitYesVote_ (StakePoolVoter poolKH1) gaiChild
-            -- Abstained stake is not counted in the total stake in case of SPOs
-            submitVote_ VoteNo (StakePoolVoter poolKH2) gaiChild
-            passEpoch -- Make the votes count do
-            pure (gaiParent, gaiChild)
       it "Increasing the threshold prevents a hitherto-ratifiable proposal from being ratified" $ do
-        (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
+        (drepC, hotCommitteeC, _) <- electBasicCommittee
         setThreshold smallerThreshold
         (poolKH1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000_000
         (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
         passEpoch -- Make the new pool distribution count
-        (_gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC poolKH1 poolKH2 drepC
+        (_gaiParent, gaiChild) <-
+          submitTwoExampleProposalsAndVoteOnTheChild
+            [(poolKH1, VoteYes), (poolKH2, VoteNo)]
+            [(drepC, VoteYes)]
         isSpoAccepted gaiChild `shouldReturn` True
         enactThreshold largerThreshold drepC hotCommitteeC
         isSpoAccepted gaiChild `shouldReturn` False
       it "Decreasing the threshold ratifies a hitherto-unratifiable proposal" $ do
-        (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
+        (drepC, hotCommitteeC, _) <- electBasicCommittee
         setThreshold largerThreshold
         (poolKH1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000_000
         (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
-        (gaiParent, gaiChild) <- submitTwoExampleProposalsAndVoteOnTheChild gpiCC poolKH1 poolKH2 drepC
+        (gaiParent, gaiChild) <-
+          submitTwoExampleProposalsAndVoteOnTheChild
+            [(poolKH1, VoteYes), (poolKH2, VoteNo)]
+            [(drepC, VoteYes)]
         isSpoAccepted gaiChild `shouldReturn` False
         enactThreshold smallerThreshold drepC hotCommitteeC
         isSpoAccepted gaiChild `shouldReturn` True
@@ -343,15 +334,18 @@ committeeMinSizeAffectsInFlightProposalsSpec ::
 committeeMinSizeAffectsInFlightProposalsSpec =
   describe "CommitteeMinSize affects in-flight proposals" $ do
     let setCommitteeMinSize n = modifyPParams $ ppCommitteeMinSizeL .~ n
-        submitATreasuryWithdrawal = do
+        submitTreasuryWithdrawal amount = do
           rewardAccount <- registerRewardAccount
-          submitTreasuryWithdrawals [(rewardAccount, Coin 1_000)]
+          submitTreasuryWithdrawals [(rewardAccount, amount)]
     it "TreasuryWithdrawal fails to ratify due to an increase in CommitteeMinSize" $ do
+      amount <- uniformRM (Coin 1, Coin 100_000_000)
+      -- Ensure sufficient amount in the treasury
+      submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ amount)
       hotCommitteeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
       passEpoch
       setCommitteeMinSize 2
-      gaiTW <- submitATreasuryWithdrawal
+      gaiTW <- submitTreasuryWithdrawal amount
       submitYesVoteCCs_ hotCommitteeCs gaiTW
       submitYesVote_ (DRepVoter drepC) gaiTW
       isCommitteeAccepted gaiTW `shouldReturn` True
@@ -370,9 +364,13 @@ committeeMinSizeAffectsInFlightProposalsSpec =
       currentProposalsShouldContain gaiTW
       getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` treasury
     it "TreasuryWithdrawal ratifies due to a decrease in CommitteeMinSize" $ do
-      (drepC, hotCommitteeC, gpiCC) <- electBasicCommittee
+      (drepC, hotCommitteeC, _) <- electBasicCommittee
+      amount <- uniformRM (Coin 1, Coin 100_000_000)
+      -- Ensure sufficient amount in the treasury
+      submitTx_ $ mkBasicTx (mkBasicTxBody & treasuryDonationTxBodyL .~ amount)
+      passEpoch
       treasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
-      gaiTW <- submitATreasuryWithdrawal
+      gaiTW <- submitTreasuryWithdrawal amount
       submitYesVote_ (CommitteeVoter hotCommitteeC) gaiTW
       submitYesVote_ (DRepVoter drepC) gaiTW
       setCommitteeMinSize 2
@@ -382,20 +380,14 @@ committeeMinSizeAffectsInFlightProposalsSpec =
       -- We do not enact the ParameterChange here because that does not pass
       -- ratification as the CC size is smaller than MinSize.
       -- We instead just add another Committee member to reach the CommitteeMinSize.
-      coldCommitteeC' <- KeyHashObj <$> freshKeyHash
-      gaiCC <-
-        submitGovAction $
-          UpdateCommittee
-            (SJust gpiCC)
-            Set.empty
-            (Map.singleton coldCommitteeC' $ EpochNo 10)
-            (1 %! 2)
+      coldCommitteeCred <- KeyHashObj <$> freshKeyHash
+      gaiCC <- submitUpdateCommittee Nothing [(coldCommitteeCred, EpochInterval 10)] (1 %! 2)
       submitYesVote_ (DRepVoter drepC) gaiCC
       passNEpochs 2
-      _hotCommitteeC' <- registerCommitteeHotKey coldCommitteeC'
+      _hotCommitteeC' <- registerCommitteeHotKey coldCommitteeCred
       isCommitteeAccepted gaiTW `shouldReturn` True
       passNEpochs 2
-      getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` (treasury <-> Coin 1_000)
+      getsNES (nesEsL . esAccountStateL . asTreasuryL) `shouldReturn` (treasury <-> amount)
 
 spoVotesCommitteeUpdates ::
   forall era.
@@ -423,12 +415,8 @@ spoVotesCommitteeUpdates =
         _ <- setupPoolWithStake $ Coin 1_000
         modifyPParams $ ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ 1 %! 2
         whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
-
-        committeeC <- KeyHashObj <$> freshKeyHash
-        gai <-
-          submitGovAction $
-            UpdateCommittee SNothing mempty (Map.singleton committeeC $ EpochNo 5) $
-              1 %! 2
+        cc <- KeyHashObj <$> freshKeyHash
+        gai <- submitUpdateCommittee Nothing [(cc, EpochInterval 5)] (1 %! 2)
         -- 1 % 4 stake yes; 3 % 4 stake abstain; yes / stake - abstain > 1 % 2
         submitYesVote_ (StakePoolVoter spoK1) gai
         passNEpochs 2
@@ -551,8 +539,7 @@ votingSpec =
           _ <- setupSingleDRep 1_000_000
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
-          let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
-          addCCGaid <- submitGovAction addCCAction
+          addCCGaid <- submitUpdateCommittee Nothing [(cc, EpochInterval 10)] (75 %! 100)
           -- Submit the vote
           submitVote_ VoteYes (DRepVoter drep1) addCCGaid
           passNEpochs 2
@@ -573,8 +560,7 @@ votingSpec =
           _ <- setupSingleDRep 1_000_000
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
-          let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
-          addCCGaid <- submitGovAction addCCAction
+          addCCGaid <- submitUpdateCommittee Nothing [(cc, EpochInterval 10)] (75 %! 100)
           -- Submit the vote
           submitVote_ VoteYes (DRepVoter drep1) addCCGaid
           passNEpochs 2
@@ -593,32 +579,31 @@ votingSpec =
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
         it "Rewards contribute to active voting stake even in the absence of StakeDistr" $ do
+          let govActionLifetime = 5
+              govActionDeposit = Coin 1_000_000
+              poolDeposit = Coin 200_000
           -- Only modify the applicable thresholds
           modifyPParams $ \pp ->
             pp
-              & ppGovActionDepositL .~ Coin 1_000_000
-              & ppPoolDepositL .~ Coin 200_000
-              & ppEMaxL .~ EpochInterval 5
-              & ppGovActionLifetimeL .~ EpochInterval 5
+              & ppGovActionDepositL .~ govActionDeposit
+              & ppPoolDepositL .~ poolDeposit
+              & ppEMaxL .~ EpochInterval govActionLifetime
+              & ppGovActionLifetimeL .~ EpochInterval govActionLifetime
           -- Setup DRep delegation #1
           (drepKH1, stakingKH1) <- setupDRepWithoutStake
           -- Add rewards to delegation #1
-          submitAndExpireProposalToMakeReward 1_000_000 $ KeyHashObj stakingKH1
-          lookupReward (KeyHashObj stakingKH1) `shouldReturn` Coin 1_000_000
+          submitAndExpireProposalToMakeReward $ KeyHashObj stakingKH1
+          lookupReward (KeyHashObj stakingKH1) `shouldReturn` govActionDeposit
           -- Setup DRep delegation #2
           (_drepKH2, stakingKH2) <- setupDRepWithoutStake
           -- Add rewards to delegation #2
-          submitAndExpireProposalToMakeReward 1_000_000 $ KeyHashObj stakingKH2
-          lookupReward (KeyHashObj stakingKH2) `shouldReturn` Coin 1_000_000
+          submitAndExpireProposalToMakeReward $ KeyHashObj stakingKH2
+          lookupReward (KeyHashObj stakingKH2) `shouldReturn` govActionDeposit
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
-          let addCCAction =
-                UpdateCommittee
-                  SNothing
-                  mempty
-                  (Map.singleton cc $ 10 + 2 * 5) -- some + 2 * GovActionLifetime
-                  (75 %! 100)
-          addCCGaid <- submitGovAction addCCAction
+          Positive extra <- arbitrary
+          let lifetime = EpochInterval (extra + 2 * govActionLifetime)
+          addCCGaid <- submitUpdateCommittee Nothing [(cc, lifetime)] (75 %! 100)
           -- Submit the vote
           submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
           passNEpochs 2
@@ -628,8 +613,7 @@ votingSpec =
           -- Increase the rewards of the delegator to this DRep
           -- to barely make the threshold (51 %! 100)
           registerAndRetirePoolToMakeReward $ KeyHashObj stakingKH1
-          passEpoch
-          lookupReward (KeyHashObj stakingKH1) `shouldReturn` Coin 1_200_000
+          lookupReward (KeyHashObj stakingKH1) `shouldReturn` poolDeposit <> govActionDeposit
           isDRepAccepted addCCGaid `shouldReturn` True
           -- The same vote should now successfully ratify the proposal
           passEpoch
@@ -647,13 +631,15 @@ votingSpec =
             -- Submit the first committee proposal, the one we will test active voting stake against.
             -- The proposal deposit comes from the root UTxO
             cc <- KeyHashObj <$> freshKeyHash
-            let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+            curEpochNo <- getsNES nesELL
+            let
+              newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
             addCCGaid <-
               submitProposal $
                 ProposalProcedure
                   { pProcDeposit = Coin 600_000
                   , pProcReturnAddr = dRepRewardAccount
-                  , pProcGovAction = addCCAction
+                  , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100)
                   , pProcAnchor = def
                   }
             -- Submit the vote from DRep #1
@@ -663,13 +649,14 @@ votingSpec =
             isDRepAccepted addCCGaid `shouldReturn` False
             getLastEnactedCommittee `shouldReturn` SNothing
             -- Submit another proposal to bump up the active voting stake
-            anotherCC <- KeyHashObj <$> freshKeyHash
-            let anotherAddCCAction = UpdateCommittee SNothing mempty (Map.singleton anotherCC 10) (75 %! 100)
+            cc' <- KeyHashObj <$> freshKeyHash
+            let
+              newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
             submitProposal_ $
               ProposalProcedure
                 { pProcDeposit = Coin 600_000
                 , pProcReturnAddr = dRepRewardAccount
-                , pProcGovAction = anotherAddCCAction
+                , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100)
                 , pProcAnchor = def
                 }
             passNEpochs 2
@@ -691,23 +678,28 @@ votingSpec =
             -- The proposal deposits comes from the root UTxO
             -- After this both stakingKH1 and stakingKH3 are expected to have 1_000_000 ADA of stake, each
             cc <- KeyHashObj <$> freshKeyHash
-            let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+            curEpochNo <- getsNES nesELL
+            let
+              newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
+            anchor <- arbitrary
             addCCGaid <-
               submitProposal $
                 ProposalProcedure
                   { pProcDeposit = Coin 1_000_000
                   , pProcReturnAddr = dRepRewardAccount1
-                  , pProcGovAction = addCCAction
-                  , pProcAnchor = def
+                  , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100)
+                  , pProcAnchor = anchor
                   }
-            anotherCC <- KeyHashObj <$> freshKeyHash
-            let anotherAddCCAction = UpdateCommittee SNothing mempty (Map.singleton anotherCC 10) (75 %! 100)
+            cc' <- KeyHashObj <$> freshKeyHash
+            let
+              newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
+            anchor' <- arbitrary
             submitProposal_ $
               ProposalProcedure
                 { pProcDeposit = Coin 1_000_000
                 , pProcReturnAddr = dRepRewardAccount3
-                , pProcGovAction = anotherAddCCAction
-                , pProcAnchor = def
+                , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100)
+                , pProcAnchor = anchor'
                 }
             -- Submit the vote from DRep #1
             submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
@@ -720,7 +712,7 @@ votingSpec =
               mkBasicTx mkBasicTxBody
                 & bodyTxL . certsTxBodyL
                   .~ SSeq.fromList
-                    [ mkDelegTxCert
+                    [ DelegTxCert
                         (KeyHashObj stakingKH3)
                         (DelegVote (DRepCredential $ KeyHashObj drepKH1))
                     ]
@@ -757,8 +749,6 @@ votingSpec =
         it "AlwaysNoConfidence" $ do
           (drep1, _, committeeGovId) <- electBasicCommittee
           initialMembers <- getCommitteeMembers
-          modifyPParams $
-            ppDRepVotingThresholdsL .~ (def & dvtMotionNoConfidenceL .~ 51 %! 100)
 
           -- drep2 won't explicitly vote, but eventually delegate to AlwaysNoConfidence
           (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
@@ -770,23 +760,15 @@ votingSpec =
 
           noConfidenceGovId <- submitGovAction $ NoConfidence (SJust committeeGovId)
           submitYesVote_ (DRepVoter drep1) noConfidenceGovId
-          void $ submitVote VoteNo (DRepVoter drep3) noConfidenceGovId
+          submitVote_ VoteNo (DRepVoter drep3) noConfidenceGovId
           passEpoch
           -- drep1 doesn't have enough stake to enact NoConfidence
           isDRepAccepted noConfidenceGovId `shouldReturn` False
           passEpoch
           getCommitteeMembers `shouldReturn` initialMembers
-          deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
           -- drep2 unregisters, but NoConfidence still doesn't pass, because there's a tie between drep1 and drep3
-          submitTxAnn_ "Unregister drep2" $
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . certsTxBodyL
-                .~ SSeq.fromList
-                  [ UnRegDRepTxCert @era
-                      drep2
-                      deposit
-                  ]
+          unRegisterDRep drep2
           passEpoch
           isDRepAccepted noConfidenceGovId `shouldReturn` False
 
@@ -808,8 +790,6 @@ votingSpec =
 
           (drep1, comMember, _) <- electBasicCommittee
           initialTreasury <- getTreasury
-          modifyPParams $
-            ppDRepVotingThresholdsL .~ (def & dvtTreasuryWithdrawalL .~ 51 %! 100)
 
           (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
 
@@ -818,7 +798,7 @@ votingSpec =
 
           submitYesVote_ (CommitteeVoter comMember) govId
           submitYesVote_ (DRepVoter drep1) govId
-          void $ submitVote VoteNo (DRepVoter drep2) govId
+          submitVote_ VoteNo (DRepVoter drep2) govId
           passEpoch
           -- drep1 doesn't have enough stake to enact the withdrawals
           isDRepAccepted govId `shouldReturn` False
@@ -850,8 +830,7 @@ votingSpec =
           passEpoch
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
-          let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
-          addCCGaid <- submitGovAction addCCAction
+          addCCGaid <- submitUpdateCommittee Nothing [(cc, EpochInterval 10)] (75 %! 100)
           -- Submit the vote
           submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
           submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
@@ -886,8 +865,7 @@ votingSpec =
           passEpoch
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
-          let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
-          addCCGaid <- submitGovAction addCCAction
+          addCCGaid <- submitUpdateCommittee Nothing [(cc, EpochInterval 10)] (75 %! 100)
           -- Submit the vote
           submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
           submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
@@ -907,6 +885,9 @@ votingSpec =
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
         it "Rewards contribute to active voting stake even in the absence of StakeDistr" $ do
+          let govActionLifetime = 5
+              govActionDeposit = Coin 1_000_000
+              poolDeposit = Coin 200_000
           -- Only modify the applicable thresholds
           modifyPParams $ \pp ->
             pp
@@ -915,31 +896,27 @@ votingSpec =
                   { pvtCommitteeNormal = 51 %! 100
                   , pvtCommitteeNoConfidence = 51 %! 100
                   }
-              & ppGovActionDepositL .~ Coin 1_000_000
-              & ppPoolDepositL .~ Coin 200_000
+              & ppGovActionDepositL .~ govActionDeposit
+              & ppPoolDepositL .~ poolDeposit
               & ppEMaxL .~ EpochInterval 5
-              & ppGovActionLifetimeL .~ EpochInterval 5
+              & ppGovActionLifetimeL .~ EpochInterval govActionLifetime
           whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
 
           -- Setup Pool delegation #1
           (poolKH1, delegatorCStaking1) <- setupPoolWithoutStake
           -- Add rewards to delegation #1
-          submitAndExpireProposalToMakeReward 1_000_000 delegatorCStaking1
-          lookupReward delegatorCStaking1 `shouldReturn` Coin 1_000_000
+          submitAndExpireProposalToMakeReward delegatorCStaking1
+          lookupReward delegatorCStaking1 `shouldReturn` govActionDeposit
           -- Setup Pool delegation #2
           (poolKH2, delegatorCStaking2) <- setupPoolWithoutStake
           -- Add rewards to delegation #2
-          submitAndExpireProposalToMakeReward 1_000_000 delegatorCStaking2
-          lookupReward delegatorCStaking2 `shouldReturn` Coin 1_000_000
+          submitAndExpireProposalToMakeReward delegatorCStaking2
+          lookupReward delegatorCStaking2 `shouldReturn` govActionDeposit
           -- Submit a committee proposal
+          Positive extra <- arbitrary
           cc <- KeyHashObj <$> freshKeyHash
-          let addCCAction =
-                UpdateCommittee
-                  SNothing
-                  mempty
-                  (Map.singleton cc $ 10 + 2 * 5) -- some + 2 * GovActionLifetime
-                  (75 %! 100)
-          addCCGaid <- submitGovAction addCCAction
+          addCCGaid <-
+            submitUpdateCommittee Nothing [(cc, EpochInterval (extra + 2 * govActionLifetime))] (75 %! 100)
           -- Submit the vote
           submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
           submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
@@ -951,8 +928,7 @@ votingSpec =
           -- Add to the rewards of the delegator to this SPO
           -- to barely make the threshold (51 %! 100)
           registerAndRetirePoolToMakeReward delegatorCStaking1
-          passEpoch
-          lookupReward delegatorCStaking1 `shouldReturn` Coin 1_200_000
+          lookupReward delegatorCStaking1 `shouldReturn` poolDeposit <> govActionDeposit
           -- The same vote should now successfully ratify the proposal
           -- NOTE: It takes 2 epochs for SPO votes as opposed to 1 epoch
           -- for DRep votes to ratify a proposal.
@@ -983,14 +959,17 @@ votingSpec =
             -- Submit the first committee proposal, the one we will test active voting stake against.
             -- The proposal deposit comes from the root UTxO
             cc <- KeyHashObj <$> freshKeyHash
-            let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+            curEpochNo <- getsNES nesELL
+            let
+              newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
+            anchor <- arbitrary
             addCCGaid <-
               submitProposal $
                 ProposalProcedure
                   { pProcDeposit = Coin 600_000
                   , pProcReturnAddr = spoRewardAccount
-                  , pProcGovAction = addCCAction
-                  , pProcAnchor = def
+                  , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100)
+                  , pProcAnchor = anchor
                   }
             -- Submit a yes vote from SPO #1 and a no vote from SPO #2
             submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
@@ -999,14 +978,16 @@ votingSpec =
             -- The vote should not result in a ratification
             getLastEnactedCommittee `shouldReturn` SNothing
             -- Submit another proposal to bump up the active voting stake of SPO #1
-            anotherCC <- KeyHashObj <$> freshKeyHash
-            let anotherAddCCAction = UpdateCommittee SNothing mempty (Map.singleton anotherCC 10) (75 %! 100)
+            cc' <- KeyHashObj <$> freshKeyHash
+            let
+              newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
+            anchor' <- arbitrary
             submitProposal_ $
               ProposalProcedure
                 { pProcDeposit = Coin 600_000
                 , pProcReturnAddr = spoRewardAccount
-                , pProcGovAction = anotherAddCCAction
-                , pProcAnchor = def
+                , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100)
+                , pProcAnchor = anchor'
                 }
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
@@ -1039,22 +1020,25 @@ votingSpec =
             -- The proposal deposits come from the root UTxO
             -- After this both stakingC1 and stakingC3 are expected to have 1_000_000 ADA of stake, each
             cc <- KeyHashObj <$> freshKeyHash
-            let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (75 %! 100)
+            curEpochNo <- getsNES nesELL
+            let
+              newCommitteMembers = Map.singleton cc $ addEpochInterval curEpochNo (EpochInterval 10)
             addCCGaid <-
               submitProposal $
                 ProposalProcedure
                   { pProcDeposit = Coin 1_000_000
                   , pProcReturnAddr = spoRewardAccount1
-                  , pProcGovAction = addCCAction
+                  , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers (75 %! 100)
                   , pProcAnchor = def
                   }
-            anotherCC <- KeyHashObj <$> freshKeyHash
-            let anotherAddCCAction = UpdateCommittee SNothing mempty (Map.singleton anotherCC 10) (75 %! 100)
+            cc' <- KeyHashObj <$> freshKeyHash
+            let
+              newCommitteMembers' = Map.singleton cc' $ addEpochInterval curEpochNo (EpochInterval 10)
             submitProposal_ $
               ProposalProcedure
                 { pProcDeposit = Coin 1_000_000
                 , pProcReturnAddr = spoRewardAccount3
-                , pProcGovAction = anotherAddCCAction
+                , pProcGovAction = UpdateCommittee SNothing mempty newCommitteMembers' (75 %! 100)
                 , pProcAnchor = def
                 }
             -- Submit a yes vote from SPO #1 and a no vote from SPO #2
