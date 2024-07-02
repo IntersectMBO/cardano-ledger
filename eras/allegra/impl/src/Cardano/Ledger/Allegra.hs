@@ -23,6 +23,7 @@ import Cardano.Ledger.Allegra.TxSeq ()
 import Cardano.Ledger.Allegra.UTxO ()
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.API (
   ApplyBlock,
@@ -45,4 +46,4 @@ instance
   ApplyBlock (AllegraEra c)
 
 instance Crypto c => CanStartFromGenesis (AllegraEra c) where
-  fromShelleyPParams _ = translateEra' ()
+  fromShelleyPParams _ = translateEra' NoGenesis

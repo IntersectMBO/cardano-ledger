@@ -8,8 +8,10 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Genesis (
   AlonzoGenesis (
@@ -58,7 +60,8 @@ import Cardano.Ledger.Binary.Coders (
   (<!),
  )
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Genesis (EraGenesis (..))
 import Data.Aeson (FromJSON (..), ToJSON (..), object, pairs, (.:), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Functor.Identity (Identity)
@@ -129,9 +132,8 @@ pattern AlonzoGenesis
 
 {-# COMPLETE AlonzoGenesis #-}
 
---------------------------------------------------------------------------------
--- Serialisation
---------------------------------------------------------------------------------
+instance Crypto c => EraGenesis (AlonzoEra c) where
+  type Genesis (AlonzoEra c) = AlonzoGenesis
 
 -- | Genesis types are always encoded with the version of era they are defined in.
 instance DecCBOR AlonzoGenesis

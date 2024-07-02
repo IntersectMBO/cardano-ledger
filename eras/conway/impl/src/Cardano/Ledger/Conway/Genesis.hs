@@ -14,10 +14,7 @@ module Cardano.Ledger.Conway.Genesis (
 )
 where
 
-import Cardano.Ledger.Binary (
-  DecCBOR (..),
-  EncCBOR (..),
- )
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Conway.Era (ConwayEra)
 import Cardano.Ledger.Conway.Governance
@@ -26,6 +23,7 @@ import Cardano.Ledger.Conway.TxCert (Delegatee)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRepState)
+import Cardano.Ledger.Genesis (EraGenesis (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Data.Aeson (
   FromJSON (..),
@@ -56,6 +54,9 @@ data ConwayGenesis c = ConwayGenesis
 
 cgDelegsL :: Lens' (ConwayGenesis c) (ListMap (Credential 'Staking c) (Delegatee c))
 cgDelegsL = lens cgDelegs (\x y -> x {cgDelegs = y})
+
+instance Crypto c => EraGenesis (ConwayEra c) where
+  type Genesis (ConwayEra c) = ConwayGenesis c
 
 instance Crypto c => NoThunks (ConwayGenesis c)
 

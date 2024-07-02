@@ -42,6 +42,6 @@ spec = describe "EPOCH" $ do
     passEpoch
 
   it "Crosses the epoch boundary" $ do
-    getsNES nesELL `shouldReturn` 0
+    getsNES nesELL `shouldReturn` 200
     passEpoch
-    getsNES nesELL `shouldReturn` 1
+    getsNES nesELL `shouldReturn` 201

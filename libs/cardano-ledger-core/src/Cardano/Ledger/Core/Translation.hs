@@ -19,6 +19,7 @@ module Cardano.Ledger.Core.Translation (
 )
 where
 
+import Cardano.Ledger.Genesis
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core.Era
 import Control.Monad.Except (Except, runExcept)
@@ -86,11 +87,11 @@ class (Era era, Era (PreviousEra era)) => TranslateEra era f where
   translateEra ::
     TranslationContext era -> f (PreviousEra era) -> Except (TranslationError era f) (f era)
   default translateEra ::
-    (Coercible (f (PreviousEra era)) (f era), TranslationContext era ~ ()) =>
+    (Coercible (f (PreviousEra era)) (f era), TranslationContext era ~ NoGenesis era) =>
     TranslationContext era ->
     f (PreviousEra era) ->
     Except (TranslationError era f) (f era)
-  translateEra () = return . coerce
+  translateEra NoGenesis = return . coerce
 
 -- | Variant of 'translateEra' for when 'TranslationError' is 'Void' and the
 -- translation thus cannot fail.

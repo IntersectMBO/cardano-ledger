@@ -26,7 +26,7 @@ spec = describe "LEDGER" $ do
   it "Transactions update UTxO" $ do
     kpPayment1 <- lookupKeyPair =<< freshKeyHash
     kpStaking1 <- lookupKeyPair =<< freshKeyHash
-    let coin1 = Coin 1000
+    let coin1 = Coin 2000000
     tx1 <-
       submitTxAnn "First transaction" . mkBasicTx $
         mkBasicTxBody
@@ -39,7 +39,7 @@ spec = describe "LEDGER" $ do
       Nothing -> expectationFailure "Could not find the TxOut of the first transaction"
     kpPayment2 <- lookupKeyPair =<< freshKeyHash
     kpStaking2 <- lookupKeyPair =<< freshKeyHash
-    let coin2 = Coin 500
+    let coin2 = Coin 3000000
     tx2 <-
       submitTxAnn "Second transaction" . mkBasicTx $
         mkBasicTxBody

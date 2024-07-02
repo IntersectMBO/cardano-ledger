@@ -7,6 +7,7 @@
 
 module Cardano.Ledger.Shelley.API.ByronTranslation (
   translateToShelleyLedgerState,
+  translateToShelleyLedgerStateFromUtxo,
 
   -- * Exported for testing purposes
   translateCompactTxOutByronToShelley,
@@ -103,7 +104,17 @@ translateToShelleyLedgerState ::
   EpochNo ->
   Byron.ChainValidationState ->
   NewEpochState (ShelleyEra c)
-translateToShelleyLedgerState transCtxt epochNo cvs =
+translateToShelleyLedgerState transContext epochNo cvs =
+  translateToShelleyLedgerStateFromUtxo transContext epochNo (Byron.cvsUtxo cvs)
+
+translateToShelleyLedgerStateFromUtxo ::
+  forall c.
+  (Crypto c, ADDRHASH c ~ Crypto.Blake2b_224) =>
+  FromByronTranslationContext c ->
+  EpochNo ->
+  Byron.UTxO ->
+  NewEpochState (ShelleyEra c)
+translateToShelleyLedgerStateFromUtxo transCtxt epochNo utxoByron =
   NewEpochState
     { nesEL = epochNo
     , nesBprev = BlocksMade Map.empty
@@ -151,9 +162,6 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
         }
         & prevPParamsEpochStateL .~ pparams
         & curPParamsEpochStateL .~ pparams
-
-    utxoByron :: Byron.UTxO
-    utxoByron = Byron.cvsUtxo cvs
 
     utxoShelley :: UTxO (ShelleyEra c)
     utxoShelley = translateUTxOByronToShelley utxoByron

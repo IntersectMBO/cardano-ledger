@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -38,7 +39,6 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   ShelleyEraImp (..),
   PlutusArgs,
   ScriptTestContext,
-  initShelleyImpNES,
   impWitsVKeyNeeded,
   modifyPrevPParams,
   passEpoch,
@@ -91,6 +91,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   fixupFees,
   impGetNativeScript,
   impLookupUTxO,
+  defaultInitNewEpochState,
 
   -- * Logging
   logEntry,
@@ -115,8 +116,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
 ) where
 
 import qualified Cardano.Chain.Common as Byron
+import qualified Cardano.Chain.UTxO as Byron (empty)
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, seedSizeDSIGN)
 import Cardano.Crypto.Hash (Hash, HashAlgorithm)
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (
@@ -129,10 +132,10 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
 import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..), credToText)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.EpochBoundary (emptySnapShots)
+import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
   KeyHash,
@@ -147,8 +150,10 @@ import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeHash, extractHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.API.ByronTranslation (translateToShelleyLedgerStateFromUtxo)
 import Cardano.Ledger.Shelley.AdaPots (sumAdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Core
+import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -181,8 +186,13 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
+import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
 import Cardano.Ledger.Slot (getTheSlotOfNoReturn)
-import Cardano.Ledger.Tools (calcMinFeeTxNativeScriptWits, integralToByteStringN)
+import Cardano.Ledger.Tools (
+  calcMinFeeTxNativeScriptWits,
+  ensureMinCoinTxOut,
+  integralToByteStringN,
+ )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (
@@ -196,6 +206,7 @@ import Control.Monad (forM)
 import Control.Monad.IO.Class
 import Control.Monad.Reader (MonadReader (..), asks)
 import Control.Monad.State.Strict (MonadState (..), gets, modify)
+import Control.Monad.Trans.Fail.String (errorFail)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.Monad.Writer.Class (MonadWriter (..))
 import Control.State.Transition (STS (..), TRC (..), applySTSOptsEither)
@@ -221,8 +232,10 @@ import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Data.TreeDiff (ansiWlExpr)
 import Data.Type.Equality (TestEquality (..))
+import Data.Void
 import GHC.Stack (CallStack, SrcLoc (..), getCallStack)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
@@ -242,6 +255,7 @@ import Test.Cardano.Ledger.Core.KeyPair (
   mkKeyHash,
   mkWitnessesVKey,
  )
+import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Core.Utils (mkDummySafeHash, testGlobals, txInAt)
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (PlutusArgs, ScriptTestContext)
@@ -385,9 +399,24 @@ class
   , HashAlgorithm (HASH (EraCrypto era))
   , DSIGNAlgorithm (DSIGN (EraCrypto era))
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , ADDRHASH (EraCrypto era) ~ Blake2b_224
   ) =>
   ShelleyEraImp era
   where
+  impGenesis :: Genesis era
+  default impGenesis :: Genesis era ~ NoGenesis era => Genesis era
+  impGenesis = NoGenesis
+
+  initNewEpochState :: NewEpochState era
+  default initNewEpochState ::
+    ( ShelleyEraImp (PreviousEra era)
+    , TranslateEra era NewEpochState
+    , TranslationError era NewEpochState ~ Void
+    , TranslationContext era ~ Genesis era
+    ) =>
+    NewEpochState era
+  initNewEpochState = defaultInitNewEpochState
+
   initImpTestState ::
     (MonadState (ImpTestState era) m, MonadGen m) => m ()
 
@@ -408,6 +437,19 @@ class
   modifyPParams f = modifyNES $ nesEsL . curPParamsEpochStateL %~ f
 
   fixupTx :: HasCallStack => Tx era -> ImpTestM era (Tx era)
+
+defaultInitNewEpochState ::
+  forall era.
+  ( ShelleyEraImp era
+  , ShelleyEraImp (PreviousEra era)
+  , TranslateEra era NewEpochState
+  , TranslationError era NewEpochState ~ Void
+  , TranslationContext era ~ Genesis era
+  ) =>
+  NewEpochState era
+defaultInitNewEpochState =
+  translateEra' (impGenesis @era) (initNewEpochState @(PreviousEra era))
+    & nesEsL . curPParamsEpochStateL . ppProtocolVersionL .~ ProtVer (eraProtVerLow @era) 0
 
 impLedgerEnv :: EraGov era => NewEpochState era -> ImpTestM era (LedgerEnv era)
 impLedgerEnv nes = do
@@ -522,12 +564,54 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   , ShelleyEraScript (ShelleyEra c)
   ) =>
   ShelleyEraImp (ShelleyEra c)
   where
+  impGenesis =
+    ShelleyGenesis
+      { sgSystemStart = errorFail $ iso8601ParseM "2017-09-23T21:44:51Z"
+      , sgNetworkMagic = 123456 -- Mainnet value: 764824073
+      , sgNetworkId = Testnet
+      , sgActiveSlotsCoeff = 5 %! 100
+      , sgSecurityParam = 2160
+      , sgEpochLength = 432000
+      , sgSlotsPerKESPeriod = 129600
+      , sgMaxKESEvolutions = 62
+      , sgSlotLength = 1
+      , sgUpdateQuorum = 5
+      , sgMaxLovelaceSupply = 45_000_000_000_000_000
+      , sgProtocolParams =
+          emptyPParams
+            & ppMinFeeAL .~ Coin 44
+            & ppMinFeeBL .~ Coin 155_381
+            & ppMaxBBSizeL .~ 65536
+            & ppMaxTxSizeL .~ 16384
+            & ppKeyDepositL .~ Coin 2_000_000
+            & ppKeyDepositL .~ Coin 500_000_000
+            & ppEMaxL .~ EpochInterval 18
+            & ppNOptL .~ 150
+            & ppA0L .~ (3 %! 10)
+            & ppRhoL .~ (3 %! 1000)
+            & ppTauL .~ (2 %! 10)
+            & ppDL .~ (1 %! 1)
+            & ppExtraEntropyL .~ NeutralNonce
+            & ppMinUTxOValueL .~ Coin 2_000_000
+            & ppMinPoolCostL .~ Coin 340_000_000
+      , -- TODO: Add a top level definition and add pricate keys to ImpState:
+        sgGenDelegs = mempty
+      , sgInitialFunds = mempty
+      , sgStaking = mempty
+      }
+
+  initNewEpochState =
+    let transContext = toFromByronTranslationContext (impGenesis @(ShelleyEra c))
+        startEpochNo = EpochNo 200
+     in translateToShelleyLedgerStateFromUtxo transContext startEpochNo Byron.empty
+
   initImpTestState = pure ()
 
   impSatisfyNativeScript providedVKeyHashes script = do
@@ -673,7 +757,7 @@ applyParamsQCGen params impTestState =
     Nothing -> (Nothing, impTestState)
     Just (qcGen, qcSize) -> (Just qcSize, mixinCurrentGen impTestState qcGen)
 
--- | Instead of reqplacing the curren QC generator in the state, we use the current and
+-- | Instead of reqplacing the current QC generator in the state, we use the current and
 -- the supplied to make the new generator
 mixinCurrentGen :: ImpTestState era -> QCGen -> ImpTestState era
 mixinCurrentGen impTestState qcGen =
@@ -875,8 +959,9 @@ fixupFees ::
   (ShelleyEraImp era, HasCallStack) =>
   Tx era ->
   ImpTestM era (Tx era)
-fixupFees tx = impAnn "fixupFees" $ do
+fixupFees txOriginal = impAnn "fixupFees" $ do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
+  let tx = txOriginal & bodyTxL . outputsTxBodyL %~ fmap (ensureMinCoinTxOut pp)
   utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
   (_, kpSpending) <- freshKeyPair
@@ -1186,13 +1271,13 @@ impLogToExpr action = do
 instance ShelleyEraImp era => Default (ImpTestState era) where
   def =
     ImpTestState
-      { impNES = initShelleyImpNES
+      { impNES = initNewEpochState
       , impRootTxIn = TxIn (mkTxId 0) minBound
       , impKeyPairs = mempty
       , impByronKeyPairs = mempty
       , impNativeScripts = mempty
       , impLastTick = 0
-      , impGlobals = testGlobals
+      , impGlobals = testGlobals -- mkShelleyGlobals
       , impLog = mempty
       , impGen = mkQCGen 2024
       , impEvents = mempty
