@@ -3,17 +3,23 @@
 
 module Test.Cardano.Ledger.Constrained.Conway.PParams where
 
-import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Conway.PParams
-
-import Constrained
-
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Test.Cardano.Ledger.Constrained.Conway.Instances (IsConwayUniv)
+import Constrained
 
-pparamsSpec :: IsConwayUniv fn => Specification fn (PParams (ConwayEra StandardCrypto))
+pparamsSpec ::
+  Specification fn (PParams (ConwayEra StandardCrypto))
+pparamsSpec = TrueSpec
+
+{-
+import Test.Cardano.Ledger.Constrained.Conway.Instances (IsConwayUniv)
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Conway.PParams
+
+pparamsSpec ::
+  IsConwayUniv fn =>
+  Specification fn (PParams (ConwayEra StandardCrypto))
 pparamsSpec =
   constrained $ \pp ->
     match pp $ \cpp ->
@@ -62,3 +68,4 @@ pparamsSpec =
             , match cppEMax $ \epochInterval ->
                 lit (EpochInterval 0) <. epochInterval
             ]
+-}

@@ -30,8 +30,12 @@ library
         Test.Cardano.Ledger.Conformance.Orphans
         Test.Cardano.Ledger.Conformance.SpecTranslate.Core
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway
+        Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
+        Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
+        Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
+        Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool
 
     default-language: Haskell2010
     ghc-options:
