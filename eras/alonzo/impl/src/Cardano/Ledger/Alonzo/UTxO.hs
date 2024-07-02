@@ -66,7 +66,7 @@ import Cardano.Ledger.UTxO (
   getScriptHash,
  )
 import Control.SetAlgebra (eval, (◁))
-import Data.Foldable (foldl', toList)
+import Data.Foldable as Foldable (foldl', toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe, isJust)
 import qualified Data.Set as Set
@@ -248,7 +248,7 @@ getAlonzoScriptsNeeded utxo txBody =
   where
     certifyingScriptsNeeded =
       AlonzoScriptsNeeded $
-        case foldl' addUniqueTxCertPurpose (Map.empty, 0, []) (txBody ^. certsTxBodyL) of
+        case Foldable.foldl' addUniqueTxCertPurpose (Map.empty, 0, []) (txBody ^. certsTxBodyL) of
           (_, _, certPurposes) -> reverse certPurposes
       where
         -- We need to do this funny index manipulation here because we've allowed

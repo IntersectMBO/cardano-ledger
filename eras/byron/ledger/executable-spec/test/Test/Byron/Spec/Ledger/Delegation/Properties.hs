@@ -58,7 +58,7 @@ import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import Data.Data (Data, Typeable)
 import Data.Foldable (toList)
-import Data.List (foldl')
+import Data.List as Foldable (foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Hedgehog (
@@ -224,7 +224,7 @@ expectedDms ::
   [(Int, DBlock)] ->
   Bimap VKeyGenesis VKey
 expectedDms s d sbs =
-  foldl' insertIfInjective Bimap.empty (fmap delegatorDelegate activeCerts)
+  Foldable.foldl' insertIfInjective Bimap.empty (fmap delegatorDelegate activeCerts)
   where
     insertIfInjective ::
       Bimap VKeyGenesis VKey ->

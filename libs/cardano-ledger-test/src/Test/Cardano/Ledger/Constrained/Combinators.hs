@@ -8,7 +8,7 @@
 module Test.Cardano.Ledger.Constrained.Combinators where
 
 import Cardano.Ledger.Coin (Coin (..))
-import Data.Foldable (foldl')
+import Data.Foldable as Foldable (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -238,4 +238,4 @@ subMapFromMapWithSize n m = do
   let indexes = [0 .. Map.size m - 1]
       accum ans i = let (k, v) = Map.elemAt i m in Map.insert k v ans
   shuffled <- shuffle indexes
-  pure (foldl' accum Map.empty (take n shuffled))
+  pure (Foldable.foldl' accum Map.empty (take n shuffled))
