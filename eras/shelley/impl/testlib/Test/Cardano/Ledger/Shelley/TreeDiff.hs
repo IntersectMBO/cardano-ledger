@@ -124,6 +124,8 @@ instance
 instance ToExpr (PulsingRewUpdate c) where
   toExpr _ = App "PulsingRewUpdate..." []
 
+instance ToExpr (RewardUpdate c)
+
 -- LedgerState/Types
 instance ToExpr AccountState
 
@@ -267,5 +269,3 @@ instance ToExpr (ShelleyMirEvent era)
 instance ToExpr (RupdEvent era)
 
 instance ToExpr (PParamsHKD Identity era) => ToExpr (UtxoEnv era)
-
-instance ToExpr (RewardUpdate era)
