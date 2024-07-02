@@ -88,7 +88,7 @@ library
         cardano-data >=1.2.1,
         cardano-ledger-binary >=1.3.2,
         cardano-ledger-allegra ^>=1.5,
-        cardano-ledger-alonzo ^>=1.9,
+        cardano-ledger-alonzo ^>=1.10,
         cardano-ledger-babbage ^>=1.8,
         cardano-ledger-core ^>=1.13.2,
         cardano-ledger-mary ^>=1.6,
@@ -117,6 +117,7 @@ library testlib
         Test.Cardano.Ledger.Conway.Binary.Regression
         Test.Cardano.Ledger.Conway.ImpTest
         Test.Cardano.Ledger.Conway.Imp
+        Test.Cardano.Ledger.Conway.Imp.BbodySpec
         Test.Cardano.Ledger.Conway.Imp.EpochSpec
         Test.Cardano.Ledger.Conway.Imp.EnactSpec
         Test.Cardano.Ledger.Conway.Imp.GovSpec

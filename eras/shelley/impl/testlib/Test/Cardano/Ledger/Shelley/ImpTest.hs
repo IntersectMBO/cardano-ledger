@@ -125,8 +125,10 @@ import Cardano.Ledger.Address (
   RewardAccount (..),
   bootstrapKeyHash,
  )
+import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (DecCBOR, EncCBOR)
+import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.CertState (certDStateL, dsUnifiedL)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
@@ -173,7 +175,11 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosDonationL,
   utxosUtxoL,
  )
-import Cardano.Ledger.Shelley.Rules (LedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules (
+  BbodyEnv (..),
+  LedgerEnv (..),
+  ShelleyBbodyState,
+ )
 import Cardano.Ledger.Shelley.Scripts (
   ShelleyEraScript,
   pattern RequireAllOf,
@@ -348,6 +354,13 @@ class
   , ToExpr (StashedAVVMAddresses era)
   , NFData (StashedAVVMAddresses era)
   , Default (StashedAVVMAddresses era)
+  , -- For BBODY rule
+    STS (EraRule "BBODY" era)
+  , BaseM (EraRule "BBODY" era) ~ ShelleyBase
+  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
+  , State (EraRule "LEDGERS" era) ~ LedgerState era
   , -- For the LEDGER rule
     STS (EraRule "LEDGER" era)
   , BaseM (EraRule "LEDGER" era) ~ ShelleyBase

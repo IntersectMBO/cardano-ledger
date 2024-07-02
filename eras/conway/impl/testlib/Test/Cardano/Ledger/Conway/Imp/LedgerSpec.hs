@@ -30,8 +30,7 @@ spec =
     let script :: Script era
         script = fromPlutusScript plutusScript
         size = originalBytesSize script
-        (q, r) = maxRefScriptSizePerTx `quotRem` size
-        n = q + signum r
+        n = maxRefScriptSizePerTx `div` size + 1
     txIns <- replicateM n (produceRefScript script)
     let tx :: Tx era
         tx = mkBasicTx (mkBasicTxBody & referenceInputsTxBodyL .~ Set.fromList txIns)

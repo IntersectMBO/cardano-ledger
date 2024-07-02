@@ -121,6 +121,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules (
   CertEnv (..),
+  ConwayBbodyPredFailure,
   ConwayCertsPredFailure (..),
   ConwayDelegEnv (..),
   ConwayDelegPredFailure (..),
@@ -1662,6 +1663,36 @@ instance Reflect era => PrettyA (ShelleyBbodyPredFailure era) where
   prettyA = ppBbodyPredicateFailure
 
 -- ================
+ppConwayBbodyPredFail :: forall era. Reflect era => ConwayBbodyPredFailure era -> PDoc
+ppConwayBbodyPredFail (ConwayRules.BodyRefScriptsSizeTooBig s1 s2) =
+  ppRecord
+    "BodyRefScriptsSizeTooBig"
+    [ ("Computed sum of reference script size", ppInt s1)
+    , ("Maximum allowed total reference script size", ppInt s2)
+    ]
+ppConwayBbodyPredFail (ConwayRules.TooManyExUnits e1 e2) =
+  ppRecord
+    "TooManyExUnits"
+    [ ("Computed Sum of ExUnits for all plutus scripts", pcExUnits e1)
+    , ("Maximum allowed by protocal parameters", pcExUnits e2)
+    ]
+ppConwayBbodyPredFail (ConwayRules.WrongBlockBodySizeBBODY x y) =
+  ppRecord
+    "WrongBlockBodySizeBBODY"
+    [ ("actual computed BBody size", ppInt x)
+    , ("claimed BBody Size in Header", ppInt y)
+    ]
+ppConwayBbodyPredFail (ConwayRules.InvalidBodyHashBBODY h1 h2) =
+  ppRecord
+    "(InvalidBodyHashBBODY"
+    [ ("actual hash", ppHash h1)
+    , ("claimed hash", ppHash h2)
+    ]
+ppConwayBbodyPredFail (ConwayRules.LedgersFailure x) =
+  ppSexp "LedgersFailure" [ppLEDGERS @era reify x]
+
+instance Reflect era => PrettyA (ConwayBbodyPredFailure era) where
+  prettyA = ppConwayBbodyPredFail
 
 ppAlonzoBbodyPredFail :: Reflect era => AlonzoBbodyPredFailure era -> PDoc
 ppAlonzoBbodyPredFail (ShelleyInAlonzoBbodyPredFailure x) =

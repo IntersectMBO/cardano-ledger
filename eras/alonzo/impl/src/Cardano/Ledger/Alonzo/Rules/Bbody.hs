@@ -18,7 +18,7 @@ module Cardano.Ledger.Alonzo.Rules.Bbody (
   AlonzoBBODY,
   AlonzoBbodyPredFailure (..),
   AlonzoBbodyEvent (..),
-  bbodyTransition,
+  alonzoBbodyTransition,
 ) where
 
 import Cardano.Ledger.Allegra.Rules (AllegraUtxoPredFailure)
@@ -70,7 +70,6 @@ import Control.State.Transition (
   trans,
   (?!),
  )
-import Data.Kind (Type)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable
@@ -175,15 +174,15 @@ instance
 -- ========================================
 -- The STS instance
 
-bbodyTransition ::
-  forall (someBBODY :: Type -> Type) era.
-  ( STS (someBBODY era)
-  , Signal (someBBODY era) ~ Block (BHeaderView (EraCrypto era)) era
-  , PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFailure era
-  , BaseM (someBBODY era) ~ ShelleyBase
-  , State (someBBODY era) ~ ShelleyBbodyState era
-  , Environment (someBBODY era) ~ BbodyEnv era
-  , Embed (EraRule "LEDGERS" era) (someBBODY era)
+alonzoBbodyTransition ::
+  forall era.
+  ( STS (EraRule "BBODY" era)
+  , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
+  , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
+  , BaseM (EraRule "BBODY" era) ~ ShelleyBase
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , Environment (EraRule "BBODY" era) ~ BbodyEnv era
+  , Embed (EraRule "LEDGERS" era) (EraRule "BBODY" era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
@@ -193,8 +192,8 @@ bbodyTransition ::
   , Tx era ~ AlonzoTx era
   , AlonzoEraPParams era
   ) =>
-  TransitionRule (someBBODY era)
-bbodyTransition =
+  TransitionRule (EraRule "BBODY" era)
+alonzoBbodyTransition =
   judgmentContext
     >>= \( TRC
             ( BbodyEnv pp account
@@ -208,14 +207,18 @@ bbodyTransition =
 
         actualBodySize
           == fromIntegral (bhviewBSize bh)
-            ?! ShelleyInAlonzoBbodyPredFailure
-              ( WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bh)
+            ?! injectFailure
+              ( ShelleyInAlonzoBbodyPredFailure
+                  ( WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bh)
+                  )
               )
 
         actualBodyHash
           == bhviewBHash bh
-            ?! ShelleyInAlonzoBbodyPredFailure
-              ( InvalidBodyHashBBODY @era actualBodyHash (bhviewBHash bh)
+            ?! injectFailure
+              ( ShelleyInAlonzoBbodyPredFailure
+                  ( InvalidBodyHashBBODY @era actualBodyHash (bhviewBHash bh)
+                  )
               )
 
         ls' <-
@@ -241,7 +244,8 @@ bbodyTransition =
         let txTotal, ppMax :: ExUnits
             txTotal = foldMap totExUnits txs
             ppMax = pp ^. ppMaxBlockExUnitsL
-        pointWiseExUnits (<=) txTotal ppMax ?! TooManyExUnits txTotal ppMax
+        pointWiseExUnits (<=) txTotal ppMax
+          ?! injectFailure (TooManyExUnits txTotal ppMax)
 
         pure $
           BbodyState @era
@@ -254,6 +258,8 @@ bbodyTransition =
 
 instance
   ( DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
+  , EraRule "BBODY" era ~ AlonzoBBODY era
+  , InjectRuleFailure "BBODY" AlonzoBbodyPredFailure era
   , Embed (EraRule "LEDGERS" era) (AlonzoBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
@@ -283,7 +289,7 @@ instance
   type Event (AlonzoBBODY era) = AlonzoBbodyEvent era
 
   initialRules = []
-  transitionRules = [bbodyTransition @AlonzoBBODY]
+  transitionRules = [alonzoBbodyTransition @era]
 
 instance
   ( Era era
