@@ -39,7 +39,6 @@ import Cardano.Ledger.Binary (Sized (..))
 import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Compactible (Compactible)
-import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
@@ -66,7 +65,7 @@ import Cardano.Ledger.Conway.TxCert (
   getVoteDelegatee,
  )
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
+import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..))
 import Cardano.Ledger.HKD (HKD)
@@ -1370,7 +1369,6 @@ instance
       <$> toSpecRep nesEL
       <*> toSpecRep nesEs
 
-instance SpecTranslate ctx (ConwayNewEpochPredFailure (ConwayEra StandardCrypto)) where
-  type SpecRep (ConwayNewEpochPredFailure (ConwayEra StandardCrypto)) = OpaqueErrorString
-
+instance SpecTranslate ctx (ConwayNewEpochPredFailure era) where
+  type SpecRep (ConwayNewEpochPredFailure era) = OpaqueErrorString
   toSpecRep = pure . OpaqueErrorString . show . toExpr
