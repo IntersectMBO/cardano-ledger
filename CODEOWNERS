@@ -1,7 +1,0 @@
-# code owners are automatically assigned to review PRs
-
-# DevX
-*.nix       @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
-nix         @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
-flake.lock  @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
-.github     @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
