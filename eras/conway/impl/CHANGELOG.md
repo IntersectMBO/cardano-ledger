@@ -23,6 +23,10 @@
 * Change the return type of `resignCommitteeColdKey`
 * Add an argument to `registerCommitteeHotKeys`
 
+### `testlib`
+
+* Added `ToExpr` instance for `ConwayNewEpochPredFailure`
+
 ## 1.15.1.0
 
 * Add `tierRefScriptFee` and `txNonDistinctRefScriptsSize`

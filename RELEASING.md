@@ -25,11 +25,21 @@ point in time. This is necessary to guarantee that if such a package is compatib
 other packages from this repository, which have been previously released, the version
 bounds should reflect that.
 
+### Exceptions to the PVP versioning scheme
+
+In certain instances, we don't strictly follow the PVP. One such case is when we are adding
+orphan instances to `testlib`s. As per the PVP, this should warrant a major version bump.
+However, we treat `testlib` orphans as regular instances since they are only defined for
+types that are local to the package that contains the `testlib` where the orphan must live.
+Hence this won't cause breakage for dependent packages and thus it is enough to only bump
+the minor version.
+Another exception that we make is related to [upper bounds](#upper-bounds) mentioned below.
+
 ### Upper bounds
 
 Normally, [upper bounds are required by
 PVP](https://pvp.haskell.org/#dependencies-in-cabal) for all dependencies of a
-package. This is the only exception we make to the PVP, and we do not require strict upper
+package. This is one exception we make to the PVP, and we do not require strict upper
 bounds for dependencies that come from Hackage. For example, there is no need to add an
 upper bound on `containers` package, unless there is a known incompatibility. Speculative
 upper bounds over time lead to overly restrictive build plans that are forced to favor
