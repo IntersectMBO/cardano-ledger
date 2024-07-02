@@ -255,7 +255,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
                 MemberSpec [s] ->
                   typeSpec $
                     MapSpec Nothing s [] (equalSpec $ sizeOf s) TrueSpec NoFold
-                TypeSpec (SetSpec must elemspec size) [] ->
+                TypeSpec (SetSpec must _ elemspec size) [] ->
                   typeSpec $
                     MapSpec
                       Nothing
@@ -318,9 +318,9 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
       -- No TypeAbstractions in ghc-8.10
       case f of
         (_ :: MapFn fn '[Map k v] (Set k))
-          | MapSpec _ mustSet _ sz kvSpec _ <- ts
+          | MapSpec _ must _ sz kvSpec _ <- ts
           , Evidence <- prerequisites @fn @(Map k v) ->
-              typeSpec $ SetSpec mustSet (mapSpec (fstFn @fn) $ toSimpleRepSpec kvSpec) sz
+              typeSpec $ SetSpec must Nothing (mapSpec (fstFn @fn) $ toSimpleRepSpec kvSpec) sz
     Rng ->
       -- No TypeAbstractions in ghc-8.10
       case f of

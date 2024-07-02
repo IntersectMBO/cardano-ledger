@@ -3207,32 +3207,62 @@ instance (HasSpec fn a, HasSpec fn b, KnownNat (CountCases b)) => HasSpec fn (Su
 
 deriving instance (HasSpec fn a, HasSpec fn b) => Show (SumSpec fn a b)
 
+-- Relations on Sets, used in SetSpec
+
+-- | The interpretation of (Just set) is (Set a), and of Nothing is the universe of all things of type 'a'
+interSectM :: Ord a => Maybe (Set a) -> Maybe (Set a) -> Maybe (Set a)
+interSectM Nothing Nothing = Nothing
+interSectM Nothing x = x
+interSectM x Nothing = x
+interSectM (Just x) (Just y) = Just (Set.intersection x y)
+
+setSubset
+  , setSuperset
+  , setEqual ::
+    (Ord t, BaseUniverse fn, HasSpec fn t) => Set t -> Specification fn (Set t)
+setSubset set = TypeSpec (SetSpec Set.empty (Just set) TrueSpec TrueSpec) []
+setSuperset set = TypeSpec (SetSpec set Nothing TrueSpec TrueSpec) []
+setEqual set = TypeSpec (SetSpec set (Just set) TrueSpec TrueSpec) []
+
 -- Sets -------------------------------------------------------------------
 
-data SetSpec fn a = SetSpec (Set a) (Specification fn a) (Specification fn Integer)
+data SetSpec fn a = SetSpec
+  { mustSet :: Set a
+  , maxSet :: Maybe (Set a) -- Nothing is the Universe of all things of type 'a'
+  , elemSet :: Specification fn a
+  , sizeSet :: Specification fn Integer
+  }
 
 instance (BaseUniverse fn, Ord a, Arbitrary (Specification fn a), Arbitrary a) => Arbitrary (SetSpec fn a) where
-  arbitrary = SetSpec <$> arbitrary <*> arbitrary <*> arbitrary
-  shrink (SetSpec a b c) = [SetSpec a' b' c' | (a', b', c') <- shrink (a, b, c)]
+  arbitrary = SetSpec <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  shrink (SetSpec a b c d) = [SetSpec a' b' c' d' | (a', b', c', d') <- shrink (a, b, c, d)]
 
 -- TODO: consider improving this
 instance Arbitrary (FoldSpec fn (Set a)) where
   arbitrary = pure NoFold
 
 instance (Ord a, HasSpec fn a) => Semigroup (SetSpec fn a) where
-  SetSpec must es size <> SetSpec must' es' size' =
-    SetSpec (must <> must') (es <> es') (size <> size')
+  SetSpec must most es size <> SetSpec must' most' es' size' =
+    SetSpec (must <> must') (interSectM most most') (es <> es') (size <> size')
 
 instance (Ord a, HasSpec fn a) => Monoid (SetSpec fn a) where
-  mempty = SetSpec mempty mempty TrueSpec
+  mempty = SetSpec mempty Nothing mempty TrueSpec
 
 guardSetSpec :: (HasSpec fn a, Ord a) => SetSpec fn a -> Specification fn (Set a)
-guardSetSpec (SetSpec must elem ((<> geqSpec 0) -> size))
+guardSetSpec s@(SetSpec must most elem ((<> geqSpec 0) -> size))
   | Just u <- knownUpperBound size
   , u < 0 =
-      ErrorSpec ["Empty set spec"] -- TODO: better error
-  | isErrorLike size = ErrorSpec ["Empty set spec"]
-  | otherwise = typeSpec $ SetSpec must elem size
+      ErrorSpec ["The SetSpec 'sizeSet' is not greater than 0.", show s]
+  | (Just u, Just maxset) <- (knownUpperBound size, most)
+  , u > sizeOf maxset =
+      ErrorSpec ["The SetSpec 'sizeSet' allows sizes larger than the size of the 'maxSet'", show s]
+  | Just max <- most
+  , not (Set.isSubsetOf must max) =
+      ErrorSpec ["The 'mustSet', is not a subset of the 'maxSet'", show s]
+  | not (conformsToSpec (sizeOf must) size) =
+      ErrorSpec ["The SetSpec 'sizeSet' is inconsistent with the 'mustSet'", show s]
+  | isErrorLike size = ErrorSpec ["The SetSpec 'sizeSet' is inconsistent.", show s]
+  | otherwise = typeSpec $ SetSpec must most elem size
 
 instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
   type TypeSpec fn (Set a) = SetSpec fn a
@@ -3244,16 +3274,17 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
   -- TODO: we need to check conformsTo for musts and elem specs
   combineSpec s s' = guardSetSpec $ s <> s'
 
-  conformsTo s (SetSpec must es size) =
+  conformsTo s (SetSpec must max es size) =
     and
       [ sizeOf s `conformsToSpec` size
       , must `Set.isSubsetOf` s
       , all (`conformsToSpec` es) s
+      , maybe True (s `Set.isSubsetOf`) max
       ]
 
-  genFromTypeSpec (SetSpec must e _)
+  genFromTypeSpec (SetSpec must _ e _)
     | any (not . (`conformsToSpec` e)) must = genError ["Failed to generate set: inconsistent spec"] -- TODO: improve error message
-  genFromTypeSpec (SetSpec must elemS szSpec)
+  genFromTypeSpec (SetSpec must Nothing elemS szSpec)
     | Nothing <- knownUpperBound szSpec
     , maybe True (sizeOf must >=) $ knownLowerBound szSpec =
         ((must <>) . Set.fromList <$> listOfT (genFromSpecT elemS))
@@ -3276,19 +3307,39 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
             $ withMode Strict
             $ genFromSpecT elemS `suchThatT` (`Set.notMember` s)
         go (n - 1) (Set.insert e s)
+  -- Start with 'must', then add things from 'maxset' (that meet elemS), until 'szSpec' is met.
+  genFromTypeSpec s = case guardSetSpec s of
+    ErrorSpec xs -> genError xs
+    TypeSpec (SetSpec must (Just maxset) elemS szSpec) [] -> do
+      n <- genFromSpecT szSpec
+      let go :: MonadGenError m => Set a -> [a] -> GenT m (Set a)
+          go sofar _ | sizeOf sofar == n = pure sofar
+          go _sofar [] = genError ["Can't find enough items from maxset that meet elemS", show maxset, show elemS]
+          go sofar (x : xs) =
+            if Set.notMember x sofar && conformsToSpec x elemS
+              then go (Set.insert x sofar) xs
+              else go sofar xs
+      choices <- pureGen (shuffle (Set.toList maxset))
+      go must choices
+    other -> fatalError ["guardSetSpec returns something other than TypeSpec or ErrorSpec", show other]
 
-  cardinalTypeSpec _ = TrueSpec
+  cardinalTypeSpec _ = TrueSpec -- TODO rethink this with maxSet
 
-  shrinkWithTypeSpec (SetSpec _ es _) as = map Set.fromList $ shrinkList (shrinkWithSpec es) (Set.toList as)
+  shrinkWithTypeSpec (SetSpec _ _ es _) as = map Set.fromList $ shrinkList (shrinkWithSpec es) (Set.toList as)
 
-  toPreds s (SetSpec m es size) =
-    (Assert ["Subset of " ++ show m] $ subset_ (Lit m) s)
+  toPreds s (SetSpec mustset Nothing es size) =
+    (Assert ["Subset of " ++ show mustset] $ subset_ (Lit mustset) s)
+      <> forAll s (\e -> satisfies e es)
+      <> satisfies (size_ s) size
+  toPreds s (SetSpec mustset (Just maxset) es size) =
+    (Assert ["Subset of " ++ show mustset] $ subset_ (Lit mustset) s)
+      <> (Assert ["Superset of " ++ show maxset] $ subset_ s (Lit maxset))
       <> forAll s (\e -> satisfies e es)
       <> satisfies (size_ s) size
 
 instance Ord a => Forallable (Set a) a where
   fromForAllSpec (e :: Specification fn a)
-    | Evidence <- prerequisites @fn @(Set a) = typeSpec $ SetSpec mempty e TrueSpec
+    | Evidence <- prerequisites @fn @(Set a) = typeSpec $ SetSpec mempty Nothing e TrueSpec
   forAllToList = Set.toList
 
 deriving instance HasSpec fn a => Show (SetSpec fn a)
@@ -3310,8 +3361,8 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
       | NilCtx HOLE <- ctx ->
           let singletons = filter ((1 ==) . Set.size)
            in case spec of
-                TypeSpec (SetSpec must es size) cant
-                  -- TODO: improve error message
+                TypeSpec (SetSpec must _ es size) cant -- TODO is this the right maxSet logic?
+                -- TODO: improve error message
                   | not $ 1 `conformsToSpec` size ->
                       ErrorSpec ["propagateSpecFun Singleton with spec that doesn't accept 1 size set"]
                   | [a] <- Set.toList must
@@ -3328,7 +3379,8 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
       , Evidence <- prerequisites @fn @(Set a) ->
           case spec of
             _ | null s -> spec
-            TypeSpec (SetSpec must es size) cant
+            TypeSpec (SetSpec must maxset es size) cant -- TODO rethink how to handle maxSt /= Nothing
+              | isJust maxset -> ErrorSpec ["(Just maxset) in Union propagate spec."]
               | not $ all (`conformsToSpec` es) s ->
                   ErrorSpec
                     [ "Elements in union argument does not conform to elem spec"
@@ -3336,10 +3388,10 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
                     , "  elems: " ++ show (filter (not . (`conformsToSpec` es)) (Set.toList s))
                     ]
               | not $ null cant -> ErrorSpec ["propagateSpecFun Union TypeSpec, not (null cant)"]
-              | TrueSpec <- size -> typeSpec $ SetSpec (Set.difference must s) es TrueSpec
+              | TrueSpec <- size -> typeSpec $ SetSpec (Set.difference must s) Nothing es TrueSpec
               | TypeSpec (NumSpecInterval mlb Nothing) [] <- size
               , maybe True (<= sizeOf s) mlb ->
-                  typeSpec $ SetSpec (Set.difference must s) es TrueSpec
+                  typeSpec $ SetSpec (Set.difference must s) Nothing es TrueSpec
               | otherwise -> constrained $ \x ->
                   exists (\eval -> pure $ Set.intersection (eval x) s) $ \overlap ->
                     exists (\eval -> pure $ Set.difference (eval x) s) $ \disjoint ->
@@ -3351,7 +3403,8 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
                       , assert $ lit (must Set.\\ s) `subset_` disjoint
                       ]
             MemberSpec [e]
-              | s `Set.isSubsetOf` e -> typeSpec (SetSpec (Set.difference e s) (MemberSpec $ Set.toList e) mempty)
+              | s `Set.isSubsetOf` e ->
+                  typeSpec (SetSpec (Set.difference e s) Nothing (MemberSpec $ Set.toList e) mempty)
               -- TODO: improve this error message
               | otherwise -> ErrorSpec ["propagateSpecFun Union MemberSpec singleton with bad literal"]
             -- This risks blowing up too much, don't build sets of sets
@@ -3362,7 +3415,7 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
           True ->
             if Set.null s
               then MemberSpec [Set.empty]
-              else typeSpec $ SetSpec mempty (MemberSpec $ Set.toList s) mempty
+              else typeSpec $ SetSpec mempty (Just s) TrueSpec mempty
           False -> constrained $ \set ->
             exists (\eval -> headGE $ Set.difference (eval set) s) $ \e ->
               [ set `DependsOn` e
@@ -3371,7 +3424,7 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
               ]
       | Value (s :: Set a) :! NilCtx HOLE <- ctx
       , Evidence <- prerequisites @fn @(Set a) -> caseBoolSpec spec $ \case
-          True -> typeSpec $ SetSpec s TrueSpec mempty
+          True -> typeSpec $ SetSpec s Nothing TrueSpec mempty
           False -> constrained $ \set ->
             exists (\eval -> headGE $ Set.difference (eval set) s) $ \e ->
               [ set `DependsOn` e
@@ -3383,8 +3436,8 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
           True -> MemberSpec $ Set.toList s
           False -> notMemberSpec s
       | Value e :! NilCtx HOLE <- ctx -> caseBoolSpec spec $ \case
-          True -> typeSpec $ SetSpec (Set.singleton e) mempty mempty
-          False -> typeSpec $ SetSpec mempty (notEqualSpec e) mempty
+          True -> typeSpec $ SetSpec (Set.singleton e) Nothing mempty mempty
+          False -> typeSpec $ SetSpec mempty Nothing (notEqualSpec e) mempty
     Elem
       | HOLE :? Value es :> Nil <- ctx -> caseBoolSpec spec $ \case
           True -> MemberSpec es
@@ -3397,7 +3450,7 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
           propagateSpecFun @(SetFn fn) @fn Disjoint (Value s :! NilCtx HOLE) spec
       | Value (s :: Set a) :! NilCtx HOLE <- ctx
       , Evidence <- prerequisites @fn @(Set a) -> caseBoolSpec spec $ \case
-          True -> typeSpec $ SetSpec mempty (notMemberSpec s) mempty
+          True -> typeSpec $ SetSpec mempty Nothing (notMemberSpec s) mempty
           False -> constrained $ \set ->
             exists (\eval -> headGE (Set.intersection (eval set) s)) $ \e ->
               [ set `DependsOn` e
@@ -3417,7 +3470,7 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
         , Evidence <- prerequisites @fn @[a] ->
             case spec of
               MemberSpec [xs] -> typeSpec $ ListSpec Nothing (Set.toList xs) TrueSpec (MemberSpec $ Set.toList xs) NoFold
-              TypeSpec (SetSpec must elemSpec sizeSpec) []
+              TypeSpec (SetSpec must Nothing elemSpec sizeSpec) []
                 | TrueSpec <- sizeSpec -> typeSpec $ ListSpec Nothing (Set.toList must) TrueSpec elemSpec NoFold
                 | TypeSpec (NumSpecInterval (Just l) Nothing) cantSize <- sizeSpec
                 , l <= sizeOf must
@@ -4895,9 +4948,10 @@ class Sized t where
 
 instance Ord a => Sized (Set.Set a) where
   sizeOf = toInteger . Set.size
-  liftSizeSpec spec cant = typeSpec (SetSpec mempty TrueSpec (TypeSpec spec cant))
-  liftMemberSpec xs = typeSpec (SetSpec mempty TrueSpec (MemberSpec xs))
-  sizeOfTypeSpec (SetSpec must _ sz) = sz <> geqSpec (sizeOf must)
+  liftSizeSpec spec cant = typeSpec (SetSpec mempty Nothing TrueSpec (TypeSpec spec cant))
+  liftMemberSpec xs = typeSpec (SetSpec mempty Nothing TrueSpec (MemberSpec xs))
+  sizeOfTypeSpec (SetSpec must Nothing _ sz) = sz <> geqSpec (sizeOf must)
+  sizeOfTypeSpec (SetSpec must (Just max) _ sz) = sz <> geqSpec (sizeOf must) <> leqSpec (sizeOf max)
 
 instance Sized [a] where
   sizeOf = toInteger . length
