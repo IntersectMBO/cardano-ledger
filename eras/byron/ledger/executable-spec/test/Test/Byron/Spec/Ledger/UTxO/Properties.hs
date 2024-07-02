@@ -25,7 +25,7 @@ import Byron.Spec.Ledger.UTxO (
  )
 import Control.Arrow (second, (***))
 import Control.Monad (when)
-import Data.Foldable (foldl', traverse_)
+import Data.Foldable as Foldable (foldl', traverse_)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set, empty, fromList, union)
 import Hedgehog (
@@ -86,13 +86,13 @@ utxoDiff = withTests 300 . property $ do
   let (utxo0, utxoSt) = (utxo *** utxo) . firstAndLastState $ t
       txs = body <$> traceSignals OldestFirst t
   when (all (\ti -> dom (txouts ti) ∩ dom utxo0 == empty) txs) $
-    foldl' union' empty txs ⋪ (utxo0 ∪ allTxOuts txs) === utxoSt
+    Foldable.foldl' union' empty txs ⋪ (utxo0 ∪ allTxOuts txs) === utxoSt
   where
     union' :: Set TxIn -> TxBody -> Set TxIn
     union' s tx = s `union` fromList (txins tx)
 
     allTxOuts :: [TxBody] -> UTxO
-    allTxOuts txs = foldl' (∪) (UTxO Map.empty) (map txouts txs)
+    allTxOuts txs = Foldable.foldl' (∪) (UTxO Map.empty) (map txouts txs)
 
 utxoAndTxoutsMustBeDisjoint :: Property
 utxoAndTxoutsMustBeDisjoint = withTests 300 . property $ do

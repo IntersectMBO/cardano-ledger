@@ -27,7 +27,7 @@ import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Plutus (ExUnits (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Shelley.Governance (FuturePParams (..), ShelleyGovState (..))
-import qualified Cardano.Ledger.Shelley.Governance as Gov (GovState (..))
+import qualified Cardano.Ledger.Shelley.Governance as Gov
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import qualified Cardano.Ledger.Shelley.PParams as PP (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))

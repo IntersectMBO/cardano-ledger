@@ -1,6 +1,13 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+
+#if __GLASGOW_HASKELL__ == 910
+-- This prevents a GHC abort due to https://gitlab.haskell.org/ghc/ghc/-/issues/25033
+-- This will probably be fixed in ghc-9.10.2
+{-# OPTIONS_GHC -fno-do-clever-arg-eta-expansion #-}
+#endif
 
 module Main where
 
