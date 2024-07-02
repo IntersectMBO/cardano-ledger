@@ -4,16 +4,16 @@
 module Test.Cardano.Ledger.Constrained.Conway.PParams where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Conway.PParams
-
-import Constrained
-
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Constrained
 import Test.Cardano.Ledger.Constrained.Conway.Instances (IsConwayUniv)
 
-pparamsSpec :: IsConwayUniv fn => Specification fn (PParams (ConwayEra StandardCrypto))
+pparamsSpec ::
+  IsConwayUniv fn =>
+  Specification fn (PParams (ConwayEra StandardCrypto))
 pparamsSpec =
   constrained $ \pp ->
     match pp $ \cpp ->
