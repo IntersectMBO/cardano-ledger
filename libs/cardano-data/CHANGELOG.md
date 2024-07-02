@@ -1,5 +1,9 @@
 # Version history for `cardano-data`
 
+## 1.2.3.1
+
+*
+
 ## 1.2.3.0
 
 * Add `mapUnsafe`
