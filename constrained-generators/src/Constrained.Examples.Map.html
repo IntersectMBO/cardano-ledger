@@ -1,0 +1,883 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DeriveGeneric #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE FlexibleInstances #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE ImportQualifiedPost #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE MultiParamTypeClasses #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Constrained.Examples.Map</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Data.Map</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Map</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Set</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.Word</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.html"><span class="hs-identifier">Constrained</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.Examples.Basic.html"><span class="hs-identifier">Constrained.Examples.Basic</span></a></span><span>
+</span><span id="line-17"></span><span>
+</span><span id="line-18"></span><span class="annot"><a href="Constrained.Examples.Map.html#mapElemSpec"><span class="hs-identifier hs-type">mapElemSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Bool</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-19"></span><span id="mapElemSpec"><span class="annot"><span class="annottext">mapElemSpec :: Specification BaseFn (Map Int (Bool, Int))
+</span><a href="Constrained.Examples.Map.html#mapElemSpec"><span class="hs-identifier hs-var hs-var">mapElemSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781389"><span class="annot"><span class="annottext">Term BaseFn (Map Int (Bool, Int))
+</span><a href="#local-6989586621679781389"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-20"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) p.
+(BaseUniverse fn, IsPred p fn) =&gt;
+p -&gt; Pred fn
+</span><a href="Constrained.Base.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int (Bool, Int))
+</span><a href="#local-6989586621679781389"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%2F%3D."><span class="hs-operator hs-var">/=.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ). Show a =&gt; a -&gt; Term fn a
+</span><a href="Constrained.Base.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Monoid a =&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-21"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) t a p.
+(Forallable t a, Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec fn a ~ TypeSpec fn (SimpleRep a), HasSpec fn t,
+ HasSpec fn (SimpleRep a), HasSimpleRep a,
+ All (HasSpec fn) (Args (SimpleRep a)), IsPred p fn,
+ IsProd (SimpleRep a), HasSpec fn a) =&gt;
+Term fn t
+-&gt; FunTy (MapList (Term fn) (Args (SimpleRep a))) p -&gt; Pred fn
+</span><a href="Constrained.Spec.Generics.html#forAll%27"><span class="hs-identifier hs-var">forAll'</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn k, HasSpec fn v, Ord k) =&gt;
+Term fn (Map k v) -&gt; Term fn [v]
+</span><a href="Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int (Bool, Int))
+</span><a href="#local-6989586621679781389"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Bool
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621679781383"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781383"><span class="hs-identifier hs-var">b</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-22"></span><span>      </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ).
+(Ord a, OrdLike fn a) =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3C."><span class="hs-operator hs-var">&lt;.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781383"><span class="hs-identifier hs-var">b</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781383"><span class="hs-identifier hs-var">b</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ).
+(Ord a, OrdLike fn a) =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3C."><span class="hs-operator hs-var">&lt;.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><span class="hs-number">10</span></span><span class="hs-special">]</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-24"></span><span>
+</span><span id="line-25"></span><span class="annot"><a href="Constrained.Examples.Map.html#mapPairSpec"><span class="hs-identifier hs-type">mapPairSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Set</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span id="mapPairSpec"><span class="annot"><span class="annottext">mapPairSpec :: Specification BaseFn (Map Int Int, Set Int)
+</span><a href="Constrained.Examples.Map.html#mapPairSpec"><span class="hs-identifier hs-var hs-var">mapPairSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ) p.
+(Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec fn a ~ TypeSpec fn (SimpleRep a),
+ HasSpec fn (SimpleRep a), HasSimpleRep a,
+ All (HasSpec fn) (Args (SimpleRep a)), IsProd (SimpleRep a),
+ HasSpec fn a, IsPred p fn) =&gt;
+FunTy (MapList (Term fn) (Args (SimpleRep a))) p
+-&gt; Specification fn a
+</span><a href="Constrained.Spec.Generics.html#constrained%27"><span class="hs-identifier hs-var">constrained'</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781379"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Map Int Int)
+</span><a href="#local-6989586621679781379"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span id="local-6989586621679781378"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Set Int)
+</span><a href="#local-6989586621679781378"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+(HasSpec fn a, Ord a) =&gt;
+Term fn (Set a) -&gt; Term fn (Set a) -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#subset_"><span class="hs-identifier hs-var">subset_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn (Map k v), HasSpec fn k, Ord k) =&gt;
+Term fn (Map k v) -&gt; Term fn (Set k)
+</span><a href="Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Map Int Int)
+</span><a href="#local-6989586621679781379"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Set Int)
+</span><a href="#local-6989586621679781378"><span class="hs-identifier hs-var">s</span></a></span><span>
+</span><span id="line-28"></span><span>
+</span><span id="line-29"></span><span class="annot"><a href="Constrained.Examples.Map.html#mapEmptyDomainSpec"><span class="hs-identifier hs-type">mapEmptyDomainSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-30"></span><span id="mapEmptyDomainSpec"><span class="annot"><span class="annottext">mapEmptyDomainSpec :: Specification BaseFn (Map Int Int)
+</span><a href="Constrained.Examples.Map.html#mapEmptyDomainSpec"><span class="hs-identifier hs-var hs-var">mapEmptyDomainSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781374"><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781374"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-31"></span><span>  </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+(HasSpec fn a, Ord a) =&gt;
+Term fn (Set a) -&gt; Term fn (Set a) -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#subset_"><span class="hs-identifier hs-var">subset_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn (Map k v), HasSpec fn k, Ord k) =&gt;
+Term fn (Map k v) -&gt; Term fn (Set k)
+</span><a href="Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781374"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a. Monoid a =&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span> </span><span class="hs-comment">-- mempty in the Monoid instance (Term fn (Set a))</span><span>
+</span><span id="line-32"></span><span>
+</span><span id="line-33"></span><span class="annot"><a href="Constrained.Examples.Map.html#mapSubSize"><span class="hs-identifier hs-type">mapSubSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-34"></span><span id="mapSubSize"><span class="annot"><span class="annottext">mapSubSize :: Specification BaseFn (Map Int Int)
+</span><a href="Constrained.Examples.Map.html#mapSubSize"><span class="hs-identifier hs-var hs-var">mapSubSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781372"><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781372"><span class="hs-identifier hs-var">s</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Integer
+</span><span class="hs-number">2</span></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Integer
+</span><span class="hs-number">12</span></span><span> </span><span class="annot"><span class="annottext">forall a. Num a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-glyph hs-var">-</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a (fn :: Univ).
+(HasSpec fn a, Sized a) =&gt;
+Term fn a -&gt; Term fn Integer
+</span><a href="Constrained.Base.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781372"><span class="hs-identifier hs-var">s</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-36"></span><span>
+</span><span id="line-37"></span><span class="annot"><a href="Constrained.Examples.Map.html#knownDomainMap"><span class="hs-identifier hs-type">knownDomainMap</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-38"></span><span id="knownDomainMap"><span class="annot"><span class="annottext">knownDomainMap :: Specification BaseFn (Map Int Int)
+</span><a href="Constrained.Examples.Map.html#knownDomainMap"><span class="hs-identifier hs-var hs-var">knownDomainMap</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781368"><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781368"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-39"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn (Map k v), HasSpec fn k, Ord k) =&gt;
+Term fn (Map k v) -&gt; Term fn (Set k)
+</span><a href="Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781368"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ). Show a =&gt; a -&gt; Term fn a
+</span><a href="Constrained.Base.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Ord a =&gt; [a] -&gt; Set a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Set.fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">2</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ).
+BaseUniverse fn =&gt;
+Term fn Bool -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#not_"><span class="hs-identifier hs-var">not_</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ).
+HasSpec fn a =&gt;
+Term fn a -&gt; Term fn [a] -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#elem_"><span class="hs-operator hs-var">`elem_`</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn k, HasSpec fn v, Ord k) =&gt;
+Term fn (Map k v) -&gt; Term fn [v]
+</span><a href="Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781368"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-41"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-42"></span><span>
+</span><span id="line-43"></span><span class="annot"><a href="Constrained.Examples.Map.html#mapSizeConstrained"><span class="hs-identifier hs-type">mapSizeConstrained</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="Constrained.Examples.Basic.html#Three"><span class="hs-identifier hs-type">Three</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-44"></span><span id="mapSizeConstrained"><span class="annot"><span class="annottext">mapSizeConstrained :: Specification BaseFn (Map Three Int)
+</span><a href="Constrained.Examples.Map.html#mapSizeConstrained"><span class="hs-identifier hs-var hs-var">mapSizeConstrained</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781363"><span class="annot"><span class="annottext">Term BaseFn (Map Three Int)
+</span><a href="#local-6989586621679781363"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ).
+(HasSpec fn (Set a), Ord a) =&gt;
+Term fn (Set a) -&gt; Term fn Integer
+</span><a href="Constrained.Base.html#size_"><span class="hs-identifier hs-var">size_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn (Map k v), HasSpec fn k, Ord k) =&gt;
+Term fn (Map k v) -&gt; Term fn (Set k)
+</span><a href="Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Three Int)
+</span><a href="#local-6989586621679781363"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ).
+(Ord a, OrdLike fn a) =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Integer
+</span><span class="hs-number">3</span></span><span>
+</span><span id="line-45"></span><span>
+</span><span id="line-46"></span><span class="annot"><a href="Constrained.Examples.Map.html#sumRange"><span class="hs-identifier hs-type">sumRange</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Word64</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-47"></span><span id="sumRange"><span class="annot"><span class="annottext">sumRange :: Specification BaseFn (Map Word64 Word64)
+</span><a href="Constrained.Examples.Map.html#sumRange"><span class="hs-identifier hs-var hs-var">sumRange</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781359"><span class="annot"><span class="annottext">Term BaseFn (Map Word64 Word64)
+</span><a href="#local-6989586621679781359"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+(BaseUniverse fn, Member (FunFn fn) fn, Foldy fn a) =&gt;
+Term fn [a] -&gt; Term fn a
+</span><a href="Constrained.Base.html#sum_"><span class="hs-identifier hs-var">sum_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn k, HasSpec fn v, Ord k) =&gt;
+Term fn (Map k v) -&gt; Term fn [v]
+</span><a href="Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Word64 Word64)
+</span><a href="#local-6989586621679781359"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ). Show a =&gt; a -&gt; Term fn a
+</span><a href="Constrained.Base.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">10</span></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Constrained.Examples.Map.html#fixedRange"><span class="hs-identifier hs-type">fixedRange</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-50"></span><span id="fixedRange"><span class="annot"><span class="annottext">fixedRange :: Specification BaseFn (Map Int Int)
+</span><a href="Constrained.Examples.Map.html#fixedRange"><span class="hs-identifier hs-var hs-var">fixedRange</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781356"><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781356"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-51"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall t a (fn :: Univ) p.
+(Forallable t a, HasSpec fn t, HasSpec fn a, IsPred p fn) =&gt;
+Term fn t -&gt; (Term fn a -&gt; p) -&gt; Pred fn
+</span><a href="Constrained.Base.html#forAll"><span class="hs-identifier hs-var">forAll</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn k, HasSpec fn v, Ord k) =&gt;
+Term fn (Map k v) -&gt; Term fn [v]
+</span><a href="Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781356"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="hs-glyph">\</span><span id="local-6989586621679781354"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781354"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781354"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><span class="hs-number">5</span></span><span class="hs-special">)</span><span>
+</span><span id="line-52"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) p.
+(BaseUniverse fn, IsPred p fn) =&gt;
+p -&gt; Pred fn
+</span><a href="Constrained.Base.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a (fn :: Univ).
+(HasSpec fn a, Sized a) =&gt;
+Term fn a -&gt; Term fn Integer
+</span><a href="Constrained.Base.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781356"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Integer
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-54"></span><span>
+</span><span id="line-55"></span><span class="annot"><a href="Constrained.Examples.Map.html#rangeHint"><span class="hs-identifier hs-type">rangeHint</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span id="rangeHint"><span class="annot"><span class="annottext">rangeHint :: Specification BaseFn (Map Int Int)
+</span><a href="Constrained.Examples.Map.html#rangeHint"><span class="hs-identifier hs-var hs-var">rangeHint</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781352"><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781352"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="annottext">forall (fn :: Univ) t.
+HasGenHint fn t =&gt;
+Hint t -&gt; Term fn t -&gt; Pred fn
+</span><a href="Constrained.Base.html#genHint"><span class="hs-identifier hs-var">genHint</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">10</span></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn k, HasSpec fn v, Ord k) =&gt;
+Term fn (Map k v) -&gt; Term fn [v]
+</span><a href="Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781352"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>
+</span><span id="line-59"></span><span class="annot"><a href="Constrained.Examples.Map.html#rangeSumSize"><span class="hs-identifier hs-type">rangeSumSize</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-60"></span><span id="rangeSumSize"><span class="annot"><span class="annottext">rangeSumSize :: Specification BaseFn (Map Int Int)
+</span><a href="Constrained.Examples.Map.html#rangeSumSize"><span class="hs-identifier hs-var hs-var">rangeSumSize</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781349"><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781349"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-61"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) p.
+(BaseUniverse fn, IsPred p fn) =&gt;
+p -&gt; Pred fn
+</span><a href="Constrained.Base.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ).
+(HasSpec fn a, Sized a) =&gt;
+Term fn a -&gt; Term fn Integer
+</span><a href="Constrained.Base.html#sizeOf_"><span class="hs-identifier hs-var">sizeOf_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781349"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ).
+(Ord a, OrdLike fn a) =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Integer
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-62"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) p.
+(BaseUniverse fn, IsPred p fn) =&gt;
+p -&gt; Pred fn
+</span><a href="Constrained.Base.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+(BaseUniverse fn, Member (FunFn fn) fn, Foldy fn a) =&gt;
+Term fn [a] -&gt; Term fn a
+</span><a href="Constrained.Base.html#sum_"><span class="hs-identifier hs-var">sum_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn k, HasSpec fn v, Ord k) =&gt;
+Term fn (Map k v) -&gt; Term fn [v]
+</span><a href="Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781349"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ).
+(Ord a, OrdLike fn a) =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-63"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) p.
+(BaseUniverse fn, IsPred p fn) =&gt;
+p -&gt; Pred fn
+</span><a href="Constrained.Base.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ).
+(Ord a, OrdLike fn a) =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+(BaseUniverse fn, Member (FunFn fn) fn, Foldy fn a) =&gt;
+Term fn [a] -&gt; Term fn a
+</span><a href="Constrained.Base.html#sum_"><span class="hs-identifier hs-var">sum_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn k, HasSpec fn v, Ord k) =&gt;
+Term fn (Map k v) -&gt; Term fn [v]
+</span><a href="Constrained.Spec.Map.html#rng_"><span class="hs-identifier hs-var">rng_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781349"><span class="hs-identifier hs-var">m</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) t a p.
+(Forallable t a, Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec fn a ~ TypeSpec fn (SimpleRep a), HasSpec fn t,
+ HasSpec fn (SimpleRep a), HasSimpleRep a,
+ All (HasSpec fn) (Args (SimpleRep a)), IsPred p fn,
+ IsProd (SimpleRep a), HasSpec fn a) =&gt;
+Term fn t
+-&gt; FunTy (MapList (Term fn) (Args (SimpleRep a))) p -&gt; Pred fn
+</span><a href="Constrained.Spec.Generics.html#forAll%27"><span class="hs-identifier hs-var">forAll'</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Map Int Int)
+</span><a href="#local-6989586621679781349"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781348"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781348"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679781347"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781347"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-65"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781348"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">-</span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><span class="hs-number">1</span></span><span class="hs-special">)</span><span>
+</span><span id="line-66"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781347"><span class="hs-identifier hs-var">v</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-67"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span class="annot"><a href="Constrained.Examples.Map.html#elemSpec"><span class="hs-identifier hs-type">elemSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-71"></span><span id="elemSpec"><span class="annot"><span class="annottext">elemSpec :: Specification BaseFn (Int, Int, Map Int Int)
+</span><a href="Constrained.Examples.Map.html#elemSpec"><span class="hs-identifier hs-var hs-var">elemSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ) p.
+(Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec fn a ~ TypeSpec fn (SimpleRep a),
+ HasSpec fn (SimpleRep a), HasSimpleRep a,
+ All (HasSpec fn) (Args (SimpleRep a)), IsProd (SimpleRep a),
+ HasSpec fn a, IsPred p fn) =&gt;
+FunTy (MapList (Term fn) (Args (SimpleRep a))) p
+-&gt; Specification fn a
+</span><a href="Constrained.Spec.Generics.html#constrained%27"><span class="hs-identifier hs-var">constrained'</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781345"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781345"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679781344"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781344"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679781343"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Map Int Int)
+</span><a href="#local-6989586621679781343"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-72"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) p.
+(BaseUniverse fn, IsPred p fn) =&gt;
+p -&gt; Pred fn
+</span><a href="Constrained.Base.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781345"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ).
+(HasSpec fn a, Ord a) =&gt;
+Term fn a -&gt; Term fn (Set a) -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#member_"><span class="hs-operator hs-var">`member_`</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn (Map k v), HasSpec fn k, Ord k) =&gt;
+Term fn (Map k v) -&gt; Term fn (Set k)
+</span><a href="Constrained.Spec.Map.html#dom_"><span class="hs-identifier hs-var">dom_</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Map Int Int)
+</span><a href="#local-6989586621679781343"><span class="hs-identifier hs-var">m</span></a></span><span>
+</span><span id="line-73"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) t a p.
+(Forallable t a, Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec fn a ~ TypeSpec fn (SimpleRep a), HasSpec fn t,
+ HasSpec fn (SimpleRep a), HasSimpleRep a,
+ All (HasSpec fn) (Args (SimpleRep a)), IsPred p fn,
+ IsProd (SimpleRep a), HasSpec fn a) =&gt;
+Term fn t
+-&gt; FunTy (MapList (Term fn) (Args (SimpleRep a))) p -&gt; Pred fn
+</span><a href="Constrained.Spec.Generics.html#forAll%27"><span class="hs-identifier hs-var">forAll'</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Map Int Int)
+</span><a href="#local-6989586621679781343"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781341"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781341"><span class="hs-identifier hs-var">k'</span></a></span></span><span> </span><span id="local-6989586621679781340"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781340"><span class="hs-identifier hs-var">v'</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-74"></span><span>      </span><span class="annot"><span class="annottext">forall (fn :: Univ) p.
+(BaseUniverse fn, IsPred p fn) =&gt;
+Term fn Bool -&gt; p -&gt; Pred fn
+</span><a href="Constrained.Base.html#whenTrue"><span class="hs-identifier hs-var">whenTrue</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781341"><span class="hs-identifier hs-var">k'</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781345"><span class="hs-identifier hs-var">k</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781340"><span class="hs-identifier hs-var">v'</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781344"><span class="hs-identifier hs-var">v</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-75"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Map Int Int)
+</span><a href="#local-6989586621679781343"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a b.
+(HasSpec fn a, HasSpec fn b) =&gt;
+Term fn a -&gt; Term fn b -&gt; Pred fn
+</span><a href="Constrained.Base.html#dependsOn"><span class="hs-operator hs-var">`dependsOn`</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781345"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-76"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-77"></span><span>
+</span><span id="line-78"></span><span class="annot"><a href="Constrained.Examples.Map.html#lookupSpecific"><span class="hs-identifier hs-type">lookupSpecific</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-type">Map</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-79"></span><span id="lookupSpecific"><span class="annot"><span class="annottext">lookupSpecific :: Specification BaseFn (Int, Int, Map Int Int)
+</span><a href="Constrained.Examples.Map.html#lookupSpecific"><span class="hs-identifier hs-var hs-var">lookupSpecific</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: Univ) p.
+(Cases (SimpleRep a) ~ '[SimpleRep a],
+ TypeSpec fn a ~ TypeSpec fn (SimpleRep a),
+ HasSpec fn (SimpleRep a), HasSimpleRep a,
+ All (HasSpec fn) (Args (SimpleRep a)), IsProd (SimpleRep a),
+ HasSpec fn a, IsPred p fn) =&gt;
+FunTy (MapList (Term fn) (Args (SimpleRep a))) p
+-&gt; Specification fn a
+</span><a href="Constrained.Spec.Generics.html#constrained%27"><span class="hs-identifier hs-var">constrained'</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679781336"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781336"><span class="hs-identifier hs-var">k</span></a></span></span><span> </span><span id="local-6989586621679781335"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781335"><span class="hs-identifier hs-var">v</span></a></span></span><span> </span><span id="local-6989586621679781334"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Map Int Int)
+</span><a href="#local-6989586621679781334"><span class="hs-identifier hs-var">m</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-80"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Map Int Int)
+</span><a href="#local-6989586621679781334"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a b.
+(HasSpec fn a, HasSpec fn b) =&gt;
+Term fn a -&gt; Term fn b -&gt; Pred fn
+</span><a href="Constrained.Base.html#dependsOn"><span class="hs-operator hs-var">`dependsOn`</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781336"><span class="hs-identifier hs-var">k</span></a></span><span>
+</span><span id="line-81"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) p.
+(BaseUniverse fn, IsPred p fn) =&gt;
+p -&gt; Pred fn
+</span><a href="Constrained.Base.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) k v.
+(HasSpec fn k, HasSpec fn v, Ord k, IsNormalType v) =&gt;
+Term fn k -&gt; Term fn (Map k v) -&gt; Term fn (Maybe v)
+</span><a href="Constrained.Spec.Map.html#lookup_"><span class="hs-identifier hs-var">lookup_</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781336"><span class="hs-identifier hs-var">k</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Map Int Int)
+</span><a href="#local-6989586621679781334"><span class="hs-identifier hs-var">m</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3D%3D."><span class="hs-operator hs-var">==.</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: Univ) a.
+(HasSpec fn a, IsNormalType a) =&gt;
+Term fn a -&gt; Term fn (Maybe a)
+</span><a href="Constrained.Spec.Generics.html#cJust_"><span class="hs-identifier hs-var">cJust_</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679781335"><span class="hs-identifier hs-var">v</span></a></span><span>
+</span><span id="line-82"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-83"></span></pre></body></html>

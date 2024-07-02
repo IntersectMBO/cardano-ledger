@@ -1,0 +1,206 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE ImportQualifiedPost #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Constrained.Examples.Either</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-4"></span><span>
+</span><span id="line-5"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Data.Set</span></a></span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Set</span></span><span>
+</span><span id="line-6"></span><span>
+</span><span id="line-7"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Constrained.html"><span class="hs-identifier">Constrained</span></a></span><span>
+</span><span id="line-8"></span><span>
+</span><span id="line-9"></span><span class="annot"><a href="Constrained.Examples.Either.html#eitherSpec"><span class="hs-identifier hs-type">eitherSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-10"></span><span id="eitherSpec"><span class="annot"><span class="annottext">eitherSpec :: Specification BaseFn (Either Int Int)
+</span><a href="Constrained.Examples.Either.html#eitherSpec"><span class="hs-identifier hs-var hs-var">eitherSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679777507"><span class="annot"><span class="annottext">Term BaseFn (Either Int Int)
+</span><a href="#local-6989586621679777507"><span class="hs-identifier hs-var">e</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-11"></span><span>  </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+(HasSpec fn a, HasSpec fn (SimpleRep a), HasSimpleRep a,
+ TypeSpec fn a ~ TypeSpec fn (SimpleRep a),
+ SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term fn a
+-&gt; FunTy
+     (MapList (Weighted (Binder fn)) (Cases (SimpleRep a))) (Pred fn)
+</span><a href="Constrained.Spec.Generics.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Either Int Int)
+</span><a href="#local-6989586621679777507"><span class="hs-identifier hs-var">e</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-12"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) p a.
+(HasSpec fn a, All (HasSpec fn) (Args a), IsPred p fn, IsProd a) =&gt;
+FunTy (MapList (Term fn) (Args a)) p -&gt; Weighted (Binder fn) a
+</span><a href="Constrained.Spec.Generics.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679777504"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679777504"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679777504"><span class="hs-identifier hs-var">i</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *).
+(Ord a, OrdLike fn a) =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><span class="hs-number">0</span></span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span>    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) p a.
+(HasSpec fn a, All (HasSpec fn) (Args a), IsPred p fn, IsProd a) =&gt;
+FunTy (MapList (Term fn) (Args a)) p -&gt; Weighted (Binder fn) a
+</span><a href="Constrained.Spec.Generics.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679777502"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679777502"><span class="hs-identifier hs-var">i</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><span class="hs-number">0</span></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *).
+(Ord a, OrdLike fn a) =&gt;
+Term fn a -&gt; Term fn a -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#%3C%3D."><span class="hs-operator hs-var">&lt;=.</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><a href="#local-6989586621679777502"><span class="hs-identifier hs-var">i</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="annot"><a href="Constrained.Examples.Either.html#foldTrueCases"><span class="hs-identifier hs-type">foldTrueCases</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Constrained.Base.html#Specification"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="Constrained.Base.html#BaseFn"><span class="hs-identifier hs-type">BaseFn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-type">Either</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span id="foldTrueCases"><span class="annot"><span class="annottext">foldTrueCases :: Specification BaseFn (Either Int Int)
+</span><a href="Constrained.Examples.Either.html#foldTrueCases"><span class="hs-identifier hs-var hs-var">foldTrueCases</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="Constrained.Base.html#constrained"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679777500"><span class="annot"><span class="annottext">Term BaseFn (Either Int Int)
+</span><a href="#local-6989586621679777500"><span class="hs-identifier hs-var">x</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-17"></span><span>  </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) p.
+(BaseUniverse fn, IsPred p fn) =&gt;
+p -&gt; Pred fn
+</span><a href="Constrained.Base.html#assert"><span class="hs-identifier hs-var">assert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *).
+BaseUniverse fn =&gt;
+Term fn Bool -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#not_"><span class="hs-identifier hs-var">not_</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *).
+(HasSpec fn a, Ord a) =&gt;
+Term fn a -&gt; Term fn (Set a) -&gt; Term fn Bool
+</span><a href="Constrained.Base.html#member_"><span class="hs-identifier hs-var">member_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Either Int Int)
+</span><a href="#local-6989586621679777500"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *). Show a =&gt; a -&gt; Term fn a
+</span><a href="Constrained.Base.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. Ord a =&gt; [a] -&gt; Set a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Set.fromList</span></a></span><span> </span><span class="hs-special">[</span><span class="annot"><span class="annottext">forall a b. a -&gt; Either a b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">Left</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">10</span></span><span class="hs-special">]</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span>  </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a p.
+(HasSpec fn a, IsPred p fn) =&gt;
+Term fn a -&gt; (Term fn a -&gt; p) -&gt; Pred fn
+</span><a href="Constrained.Base.html#letBind"><span class="hs-identifier hs-var">letBind</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a b.
+(HasSpec fn a, HasSpec fn b) =&gt;
+Term fn a -&gt; Term fn b -&gt; Term fn (a, b)
+</span><a href="Constrained.Spec.Generics.html#pair_"><span class="hs-identifier hs-var">pair_</span></a></span><span> </span><span class="annot"><span class="annottext">Term BaseFn (Either Int Int)
+</span><a href="#local-6989586621679777500"><span class="hs-identifier hs-var">x</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *). Show a =&gt; a -&gt; Term fn a
+</span><a href="Constrained.Base.html#lit"><span class="hs-identifier hs-var">lit</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">0</span></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-type">Int</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621679777492"><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Either Int Int, Int)
+</span><a href="#local-6989586621679777492"><span class="hs-identifier hs-var">p</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-19"></span><span>      </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+(HasSpec fn a, HasSpec fn (SimpleRep a), HasSimpleRep a,
+ TypeSpec fn a ~ TypeSpec fn (SimpleRep a),
+ SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term fn a
+-&gt; FunTy
+     (MapList (Weighted (Binder fn)) (Cases (SimpleRep a))) (Pred fn)
+</span><a href="Constrained.Spec.Generics.html#caseOn"><span class="hs-identifier hs-var">caseOn</span></a></span><span>
+</span><span id="line-20"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a b.
+(HasSpec fn a, HasSpec fn b) =&gt;
+Term fn (a, b) -&gt; Term fn a
+</span><a href="Constrained.Spec.Generics.html#fst_"><span class="hs-identifier hs-var">fst_</span></a></span><span> </span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  (Either Int Int, Int)
+</span><a href="#local-6989586621679777492"><span class="hs-identifier hs-var">p</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-21"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) p a.
+(HasSpec fn a, All (HasSpec fn) (Args a), IsPred p fn, IsProd a) =&gt;
+FunTy (MapList (Term fn) (Args a)) p -&gt; Weighted (Binder fn) a
+</span><a href="Constrained.Spec.Generics.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-22"></span><span>        </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) p a.
+(HasSpec fn a, All (HasSpec fn) (Args a), IsPred p fn, IsProd a) =&gt;
+FunTy (MapList (Term fn) (Args a)) p -&gt; Weighted (Binder fn) a
+</span><a href="Constrained.Spec.Generics.html#branch"><span class="hs-identifier hs-var">branch</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term
+  (Fix
+     (Oneof
+        (Oneof
+           (Oneof MapFn (Oneof PairFn ListFn))
+           (Oneof FunFn (Oneof SetFn OrdFn)))
+        (Oneof
+           (Oneof SumFn (Oneof BoolFn GenericsFn))
+           (Oneof SizeFn (Oneof EqFn IntFn)))))
+  Int
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">True</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-23"></span><span>  </span><span class="hs-special">]</span><span>
+</span><span id="line-24"></span></pre></body></html>
