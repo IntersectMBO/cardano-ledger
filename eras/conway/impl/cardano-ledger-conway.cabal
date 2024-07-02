@@ -85,7 +85,7 @@ library
         aeson >=2.2,
         data-default-class,
         cardano-crypto-class,
-        cardano-data >=1.2.1,
+        cardano-data >=1.2.3,
         cardano-ledger-binary >=1.3.2,
         cardano-ledger-allegra ^>=1.5,
         cardano-ledger-alonzo ^>=1.10,
