@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-alonzo`
 
+## 1.10.0.1
+
+*
+
 ## 1.10.0.0
 
 * Rename `bbodyTransition` to `alonzoBbodyTransition` and change its type signature

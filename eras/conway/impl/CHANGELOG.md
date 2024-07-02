@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.16.0.1
+
+*
+
 ## 1.16.0.0
 
 * Add `maxRefScriptSizePerBlock` and `maxRefScriptSizePerTx` to `Cardano.Ledger.Conway.Rules`
