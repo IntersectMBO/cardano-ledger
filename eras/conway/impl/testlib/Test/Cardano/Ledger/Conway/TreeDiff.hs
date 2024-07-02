@@ -269,4 +269,4 @@ instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (RatifySignal era)
 
 instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (EnactSignal era)
 
-instance ToExpr (ConwayNewEpochPredFailure (ConwayEra StandardCrypto))
+instance ToExpr (ConwayNewEpochPredFailure era)

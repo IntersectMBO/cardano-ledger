@@ -10,6 +10,7 @@
 
 ### `testlib`
 
+* Add `ToExpr` instance for `RewardUpdate`
 * Add `advanceToPointOfNoReturn`
 
 ## 1.12.1.0
