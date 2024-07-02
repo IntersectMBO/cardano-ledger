@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.13.2.1
+
+*
+
 ## 1.13.2.0
 
 * Add `setMinCoinTxOut` and `setMinCoinTxOutWith`

@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-babbage`
 
+## 1.8.2.1
+
+*
+
 ## 1.8.2.0
 
 ### `testlib`
