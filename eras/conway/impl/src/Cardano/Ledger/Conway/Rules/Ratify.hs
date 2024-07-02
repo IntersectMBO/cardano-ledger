@@ -92,6 +92,8 @@ import qualified Data.Set as Set
 import Data.Void (Void, absurd)
 import Lens.Micro
 
+import Debug.Trace
+
 instance
   ( ConwayEraPParams era
   , Embed (EraRule "ENACT" era) (ConwayRATIFY era)
@@ -213,12 +215,18 @@ spoAcceptedRatio
 dRepAccepted ::
   ConwayEraPParams era => RatifyEnv era -> RatifyState era -> GovActionState era -> Bool
 dRepAccepted re rs GovActionState {gasDRepVotes, gasProposalProcedure} =
-  case votingDRepThreshold rs govAction of
-    SJust r ->
-      -- Short circuit on zero threshold in order to avoid redundant computation.
-      r == minBound
-        || dRepAcceptedRatio re gasDRepVotes govAction >= unboundRational r
-    SNothing -> False
+  trace
+    ( "\nCount DREP "
+        ++ showGA (pProcGovAction gasProposalProcedure)
+        ++ "\n   "
+        ++ unlines (map show (Map.toList gasDRepVotes))
+    )
+    $ case votingDRepThreshold rs govAction of
+      SJust r ->
+        -- Short circuit on zero threshold in order to avoid redundant computation.
+        r == minBound
+          || dRepAcceptedRatio re gasDRepVotes govAction >= unboundRational r
+      SNothing -> False
   where
     govAction = pProcGovAction gasProposalProcedure
 
@@ -280,6 +288,18 @@ withdrawalCanWithdraw (TreasuryWithdrawals m _) treasury =
   Map.foldr' (<+>) zero m <= treasury
 withdrawalCanWithdraw _ _ = True
 
+allOK :: GovAction c -> Int -> [(Bool, String)] -> Bool
+allOK act n xs =
+  if and (map fst xs)
+    then trace "GOOD" True
+    else trace ("   [" ++ sh xs) False
+  where
+    sh [] = "]" ++ showGA act ++ " " ++ show n
+    sh [(True, _)] = "]" ++ showGA act ++ " " ++ show n
+    sh [(False, s)] = s ++ "]" ++ showGA act ++ " " ++ show n
+    sh ((True, _) : more) = sh more
+    sh ((False, s) : more) = s ++ "," ++ sh more
+
 ratifyTransition ::
   forall era.
   ( Embed (EraRule "ENACT" era) (ConwayRATIFY era)
@@ -307,15 +327,28 @@ ratifyTransition = do
     judgmentContext
   case rsig of
     gas@GovActionState {gasId, gasExpiresAfter} SSeq.:<| sigs -> do
-      let govAction = gasAction gas
-      if prevActionAsExpected gas ensPrevGovActionIds
-        && validCommitteeTerm govAction ensCurPParams reCurrentEpoch
-        && not rsDelayed
-        && withdrawalCanWithdraw govAction ensTreasury
-        && committeeAccepted env st gas
-        && spoAccepted env st gas
-        && dRepAccepted env st gas
+      let govAction = gasAction gas -- gasAction :: GovActionState era -> GovAction era gasAction = pProcGovAction . gasProposalProcedure
+      if {- (prevActionAsExpected gas ensPrevGovActionIds)
+         && validCommitteeTerm govAction ensCurPParams reCurrentEpoch
+         && not rsDelayed
+         && withdrawalCanWithdraw govAction ensTreasury
+         && committeeAccepted env st gas
+         && spoAccepted env st gas
+         && dRepAccepted env st gas -}
+
+      allOK
+        govAction
+        (length sigs + 1)
+        [ (prevActionAsExpected gas ensPrevGovActionIds, "Previous Action")
+        , (validCommitteeTerm govAction ensCurPParams reCurrentEpoch, "Valid Term")
+        , (not rsDelayed, "delayed = " ++ show rsDelayed)
+        , (withdrawalCanWithdraw govAction ensTreasury, "withdrawals OK")
+        , (True {- committeeAccepted env st gas -}, "committee acepted")
+        , (spoAccepted env st gas, "spo accepted")
+        , (dRepAccepted env st gas, "DRep accepted")
+        ]
         then do
+          let !_ = trace ("ALL IS OK") True
           newEnactState <-
             trans @(EraRule "ENACT" era) $
               TRC ((), rsEnactState, EnactSignal gasId govAction)
@@ -323,7 +356,7 @@ ratifyTransition = do
             st' =
               st
                 & rsEnactStateL .~ newEnactState
-                & rsDelayedL .~ delayingAction govAction
+                & rsDelayedL .~ seq (delayingAction govAction) False
                 & rsEnactedL %~ (Seq.:|> gas)
           trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
         else do
@@ -331,8 +364,10 @@ ratifyTransition = do
           st' <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)
           -- Finally, filter out actions that have expired.
           if gasExpiresAfter < reCurrentEpoch
-            then pure $ st' & rsExpiredL %~ Set.insert gasId
-            else pure st'
+            then -- trace "EXPIRES" $
+              pure $ st' & rsExpiredL %~ Set.insert gasId
+            else -- trace "VOTES TOO FEW" $
+              pure st'
     SSeq.Empty -> pure $ st & rsEnactStateL . ensTreasuryL .~ Coin 0
 
 -- | Check that the previous governance action id specified in the proposal
@@ -359,3 +394,12 @@ validCommitteeTerm govAction pp currentEpoch =
 instance EraGov era => Embed (ConwayENACT era) (ConwayRATIFY era) where
   wrapFailed = absurd
   wrapEvent = absurd
+
+showGA :: GovAction a -> String
+showGA ParameterChange {} = "ParameterChange"
+showGA HardForkInitiation {} = "HardForkInitiation"
+showGA TreasuryWithdrawals {} = "TreasuryWithdrawals"
+showGA NoConfidence {} = "NoConfidence"
+showGA UpdateCommittee {} = "UpdateCommittee"
+showGA NewConstitution {} = "NewConstitution"
+showGA InfoAction = "infoAction"

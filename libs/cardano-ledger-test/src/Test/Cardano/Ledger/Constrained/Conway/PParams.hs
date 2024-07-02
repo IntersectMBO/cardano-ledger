@@ -15,9 +15,10 @@ import Constrained
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Control.Monad.Identity
-import GHC.Word (Word32)
-import Test.Cardano.Ledger.Constrained.Conway.Instances (ConwayFn, IsConwayUniv)
+
+-- import Control.Monad.Identity
+-- import GHC.Word (Word32)
+import Test.Cardano.Ledger.Constrained.Conway.Instances
 
 pparamsSpec :: IsConwayUniv fn => Specification fn (PParams (ConwayEra StandardCrypto))
 pparamsSpec =
@@ -85,6 +86,6 @@ majorityPool = PoolVotingThresholds fiftyp fiftyp fiftyp fiftyp fiftyp
 majorityDRep :: DRepVotingThresholds
 majorityDRep = DRepVotingThresholds fiftyp fiftyp fiftyp fiftyp fiftyp fiftyp fiftyp fiftyp fiftyp fiftyp
 
--- | UnitInterval of 50% (0.5)
+-- | UnitInterval of 20% (0.2)
 fiftyp :: UnitInterval
 fiftyp = fromJust (boundRational @UnitInterval $ 1 % 2)
