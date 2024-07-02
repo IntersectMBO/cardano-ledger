@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
@@ -68,12 +69,12 @@ class
   , STS (EraRule "BBODY" era)
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era
-  , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
+  , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState firstRule era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , EncCBORGroup (TxZones era)
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule firstRule era) ~ LedgerState era
   ) =>
-  ApplyBlock era
+  ApplyBlock firstRule era
   where
   -- | Apply the header level ledger transition.
   --
@@ -116,7 +117,7 @@ class
       . left BlockTransitionError
       . right
         ( mapEventReturn @ep @(EraRule "BBODY" era) $
-            updateNewEpochState state
+            updateNewEpochState @era @firstRule state
         )
       $ res
     where
@@ -158,7 +159,7 @@ class
           (LedgerState.nesBcur state)
 
 applyTick ::
-  ApplyBlock era =>
+  ApplyBlock firstRule era =>
   Globals ->
   NewEpochState era ->
   SlotNo ->
@@ -172,7 +173,7 @@ applyTick =
       }
 
 applyBlock ::
-  ( ApplyBlock era
+  ( ApplyBlock firstRule era
   , MonadError (BlockTransitionError era) m
   ) =>
   Globals ->
@@ -198,7 +199,7 @@ instance
   ( Crypto c
   , DSignable c (Hash c EraIndependentTxBody)
   ) =>
-  ApplyBlock (ShelleyEra c)
+  ApplyBlock "LEDGERS" (ShelleyEra c)
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
@@ -232,9 +233,9 @@ mkBbodyEnv
       }
 
 updateNewEpochState ::
-  (LedgerState era ~ State (EraRule "LEDGERS" era), EraGov era) =>
+  (LedgerState era ~ State (EraRule firstRule era), EraGov era) =>
   NewEpochState era ->
-  STS.ShelleyBbodyState era ->
+  STS.ShelleyBbodyState firstRule era ->
   NewEpochState era
 updateNewEpochState ss (STS.BbodyState ls bcur) =
   LedgerState.updateNES ss bcur ls

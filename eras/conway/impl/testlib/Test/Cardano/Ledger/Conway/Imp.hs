@@ -23,6 +23,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayNewEpochEvent,
  )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules (Event, ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
 import Data.Functor.Identity
 import Data.Typeable (Typeable)
@@ -35,7 +36,11 @@ import qualified Test.Cardano.Ledger.Conway.Imp.GovSpec as Gov
 import qualified Test.Cardano.Ledger.Conway.Imp.RatifySpec as Ratify
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxoSpec as Utxo
 import qualified Test.Cardano.Ledger.Conway.Imp.UtxosSpec as Utxos
-import Test.Cardano.Ledger.Conway.ImpTest (ConwayEraImp, withImpState, withImpStateWithProtVer)
+import Test.Cardano.Ledger.Conway.ImpTest (
+  ConwayEraImp,
+  withImpState,
+  withImpStateWithProtVer,
+ )
 
 spec ::
   forall era.
@@ -71,7 +76,7 @@ spec = do
       Utxos.spec @era
       Ratify.spec @era
   describe "ConwayImpSpec - bootstrap phase (protocol version 9)" $
-    withImpState @era $ do
+    withImpState @LedgerState @era $ do
       Enact.relevantDuringBootstrapSpec @era
       Epoch.relevantDuringBootstrapSpec @era
       Gov.relevantDuringBootstrapSpec @era

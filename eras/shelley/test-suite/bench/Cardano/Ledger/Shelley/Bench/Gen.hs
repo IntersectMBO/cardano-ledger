@@ -90,7 +90,7 @@ genBlock ::
   , GetLedgerView era
   , EraRule "LEDGERS" era ~ ShelleyLEDGERS era
   , QC.HasTrace (ShelleyLEDGERS era) (GenEnv era)
-  , ApplyBlock era
+  , ApplyBlock "LEDGERS" era
   ) =>
   GenEnv era ->
   ChainState era ->

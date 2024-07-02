@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | Defines the requirements on an era to be testable
@@ -7,7 +9,7 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Protocol.TPraos.API
 
 class
-  ( ApplyBlock era
+  ( ApplyBlock "LEDGERS" era
   , ApplyTx era
   , GetLedgerView era
   ) =>

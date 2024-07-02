@@ -27,6 +27,7 @@ module Test.Cardano.Ledger.Babel.Rules.Chain (
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.Babel.Era (BabelBBODY, BabelEra)
+import Cardano.Ledger.Babel.LedgerState.Types
 import Cardano.Ledger.Babel.Rules.Bbody (BabelBbodyPredFailure)
 import Cardano.Ledger.BaseTypes (
   BlocksMade (..),
@@ -263,7 +264,7 @@ instance
   ( EraGov era
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
-  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState "ZONES" era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
@@ -277,7 +278,7 @@ instance
   , EncCBORGroup (TxZones era)
   , ProtVerAtMost era 10
   , State (EraRule "ZONES" era) ~ LedgerState era
-  , State (Core.EraRule "LEDGERS" era) ~ LedgerState era
+  , State (Core.EraRule "LEDGERS" era) ~ LedgerStateTemp era
   ) =>
   STS (CHAIN era)
   where
@@ -303,7 +304,7 @@ chainTransition ::
   ( STS (CHAIN era)
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
-  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState "ZONES" era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
@@ -315,7 +316,7 @@ chainTransition ::
   , Signal (EraRule "TICK" era) ~ SlotNo
   , Embed (PRTCL (EraCrypto era)) (CHAIN era)
   , EncCBORGroup (TxZones era)
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "ZONES" era) ~ LedgerState era
   , EraGov era
   ) =>
   TransitionRule (CHAIN era)

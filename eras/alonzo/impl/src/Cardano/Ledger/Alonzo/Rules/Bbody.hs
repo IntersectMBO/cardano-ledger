@@ -181,7 +181,7 @@ bbodyTransition ::
   , Signal (someBBODY era) ~ Block (BHeaderView (EraCrypto era)) era
   , PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFailure era
   , BaseM (someBBODY era) ~ ShelleyBase
-  , State (someBBODY era) ~ ShelleyBbodyState era
+  , State (someBBODY era) ~ ShelleyBbodyState "LEDGERS" era
   , Environment (someBBODY era) ~ BbodyEnv era
   , Embed (EraRule "LEDGERS" era) (someBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
@@ -244,7 +244,7 @@ bbodyTransition =
         pointWiseExUnits (<=) txTotal ppMax ?! TooManyExUnits txTotal ppMax
 
         pure $
-          BbodyState @era
+          BbodyState @"LEDGERS" @era
             ls'
             ( incrBlocks
                 (isOverlaySlot firstSlotNo (pp ^. ppDG) slot)
@@ -269,7 +269,7 @@ instance
   where
   type
     State (AlonzoBBODY era) =
-      ShelleyBbodyState era
+      ShelleyBbodyState "LEDGERS" era
 
   type
     Signal (AlonzoBBODY era) =

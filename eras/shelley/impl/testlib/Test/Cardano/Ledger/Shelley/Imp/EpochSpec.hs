@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.EpochSpec (
   spec,
@@ -26,8 +27,8 @@ import Test.Cardano.Ledger.Shelley.ImpTest (
  )
 
 spec ::
-  forall era.
-  ShelleyEraImp era =>
+  forall era ls.
+  ShelleyEraImp ls era =>
   SpecWith (ImpTestState era)
 spec = describe "EPOCH" $ do
   it "Runs basic transaction" $ do

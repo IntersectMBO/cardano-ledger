@@ -47,7 +47,7 @@ import Cardano.Ledger.Shelley.API.Mempool
 import Control.Arrow (left)
 import Control.Monad.Except (MonadError, liftEither)
 import Control.Monad.Reader (runReader)
-import Control.State.Transition.Extended (TRC (TRC))
+import Control.State.Transition.Extended (STS (State), TRC (TRC))
 
 type Alonzo = AlonzoEra StandardCrypto
 
@@ -55,7 +55,10 @@ type Alonzo = AlonzoEra StandardCrypto
 
 reapplyAlonzoTx ::
   forall era m.
-  (API.ApplyTx era, MonadError (ApplyTxError era) m) =>
+  ( API.ApplyTx era
+  , MonadError (ApplyTxError era) m
+  , State (EraRule "LEDGER" era) ~ API.LedgerState era
+  ) =>
   Globals ->
   MempoolEnv era ->
   MempoolState era ->
@@ -72,7 +75,7 @@ reapplyAlonzoTx globals env state vtx =
 instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (AlonzoEra c) where
   reapplyTx = reapplyAlonzoTx
 
-instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (AlonzoEra c)
+instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock "LEDGERS" (AlonzoEra c)
 
 instance Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
   type AdditionalGenesisConfig (AlonzoEra c) = AlonzoGenesis

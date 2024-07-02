@@ -2226,7 +2226,7 @@ instance Reflect era => PrettyA (AllegraUtxoPredFailure era) where
 -- LedgerState objects
 -- ==========================================
 
-ppBbodyState :: forall era. Reflect era => ShelleyBbodyState era -> PDoc
+ppBbodyState :: forall era. Reflect era => ShelleyBbodyState "LEDGERS" era -> PDoc
 ppBbodyState (BbodyState ls (BlocksMade mp)) =
   ppRecord
     "BbodyState"
@@ -2234,7 +2234,7 @@ ppBbodyState (BbodyState ls (BlocksMade mp)) =
     , ("blocks made", ppMap pcKeyHash ppNatural mp)
     ]
 
-instance Reflect era => PrettyA (ShelleyBbodyState era) where
+instance Reflect era => PrettyA (ShelleyBbodyState "LEDGERS" era) where
   prettyA = ppBbodyState
 
 -- =======================================================

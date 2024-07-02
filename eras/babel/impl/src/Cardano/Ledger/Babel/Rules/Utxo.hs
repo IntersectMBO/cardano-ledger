@@ -49,6 +49,7 @@ import qualified Cardano.Ledger.Babbage.Rules as Babbage (
  )
 import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.Babel.Era (BabelEra, BabelUTXO, BabelUTXOS)
+import Cardano.Ledger.Babel.LedgerState.Types (UTxOStateTemp (..))
 import Cardano.Ledger.Babel.Rules.Utxos (
   BabelUtxosPredFailure (..),
  )
@@ -71,8 +72,6 @@ import Cardano.Ledger.Binary.Coders (
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
 import Cardano.Ledger.Plutus (ExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
-import Cardano.Ledger.Shelley.LedgerState (utxosUtxo)
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   UtxoEnv (UtxoEnv),
@@ -285,21 +284,21 @@ utxoTransition ::
   , InjectRuleFailure "UTXO" AlonzoUtxoPredFailure era
   , InjectRuleFailure "UTXO" BabbageUtxoPredFailure era
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
-  , State (EraRule "UTXO" era) ~ Shelley.UTxOState era
+  , State (EraRule "UTXO" era) ~ UTxOStateTemp era
   , Signal (EraRule "UTXO" era) ~ AlonzoTx era
   , BaseM (EraRule "UTXO" era) ~ ShelleyBase
   , STS (EraRule "UTXO" era)
   , -- In this function we we call the UTXOS rule, so we need some assumptions
     Embed (EraRule "UTXOS" era) (EraRule "UTXO" era)
   , Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ Shelley.UTxOState era
+  , State (EraRule "UTXOS" era) ~ UTxOStateTemp era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , InjectRuleFailure "UTXO" BabelUtxoPredFailure era
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
-  let utxo = utxosUtxo utxos
+  let utxo = utxostUtxo utxos
 
   {-   txb := txbody tx   -}
   let txBody = body tx
@@ -401,13 +400,13 @@ instance
   , InjectRuleFailure "UTXO" BabelUtxoPredFailure era
   , Embed (EraRule "UTXOS" era) (BabelUTXO era)
   , Environment (EraRule "UTXOS" era) ~ Shelley.UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ Shelley.UTxOState era
+  , State (EraRule "UTXOS" era) ~ UTxOStateTemp era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , PredicateFailure (EraRule "UTXO" era) ~ BabelUtxoPredFailure era
   ) =>
   STS (BabelUTXO era)
   where
-  type State (BabelUTXO era) = Shelley.UTxOState era
+  type State (BabelUTXO era) = UTxOStateTemp era
   type Signal (BabelUTXO era) = AlonzoTx era
   type Environment (BabelUTXO era) = Shelley.UtxoEnv era
   type BaseM (BabelUTXO era) = ShelleyBase

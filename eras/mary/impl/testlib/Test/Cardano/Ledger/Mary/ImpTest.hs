@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -17,6 +18,7 @@ import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
+import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Test.Cardano.Ledger.Allegra.ImpTest
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Mary.TreeDiff ()
@@ -28,19 +30,19 @@ instance
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
-  ShelleyEraImp (MaryEra c)
+  ShelleyEraImp LedgerState (MaryEra c)
   where
   initImpTestState = pure ()
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = shelleyFixupTx
 
 class
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , MaryEraTxBody era
   , NativeScript era ~ Timelock era
   , Value era ~ MaryValue (EraCrypto era)
   ) =>
-  MaryEraImp era
+  MaryEraImp ls era
 
 instance
   ( Crypto c
@@ -49,4 +51,4 @@ instance
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
-  MaryEraImp (MaryEra c)
+  MaryEraImp LedgerState (MaryEra c)

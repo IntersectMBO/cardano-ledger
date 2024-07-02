@@ -10,16 +10,6 @@
 
 module Test.Cardano.Ledger.Babel.Binary.Regression where
 
-import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..), TxIx (..))
-import Cardano.Ledger.Binary (
-  EncCBOR (..),
-  decCBOR,
-  decodeFull,
-  decodeFullAnnotatorFromHexText,
-  mkVersion,
-  serialize,
- )
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Babel (Babel)
 import Cardano.Ledger.Babel.Core (
   BabbageEraTxBody (..),
@@ -31,11 +21,22 @@ import Cardano.Ledger.Babel.Core (
   eraProtVerLow,
   txIdTx,
  )
+import Cardano.Ledger.Babel.LedgerState.Types (LedgerStateTemp)
 import Cardano.Ledger.Babel.Rules (
   BabelLedgerPredFailure (..),
   BabelUtxoPredFailure (..),
   BabelUtxowPredFailure (..),
  )
+import Cardano.Ledger.BaseTypes (Inject (..), StrictMaybe (..), TxIx (..))
+import Cardano.Ledger.Binary (
+  EncCBOR (..),
+  decCBOR,
+  decodeFull,
+  decodeFullAnnotatorFromHexText,
+  mkVersion,
+  serialize,
+ )
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Plutus.Language (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Monad ((<=<))
@@ -92,7 +93,7 @@ spec = describe "Regression" $ do
           , "49848004800504d9010281d8799f182aff0581840000d8799f182aff820000f4f6"
           ]
   describe "ImpTest" $
-    withImpState @Babel $
+    withImpState @LedgerStateTemp @Babel $
       it "InsufficientCollateral is not encoded with negative coin #4198" $ do
         let lockedVal = inject $ Coin 100
         (_, collateralAddress) <- freshKeyAddr
@@ -103,7 +104,7 @@ spec = describe "Regression" $ do
           lockScriptAddress = mkScriptAddr scriptHash skp
         (_, collateralReturnAddr) <- freshKeyAddr
         lockedTx <-
-          submitTxAnn @Babel "Script locked tx" $
+          submitTxAnn @LedgerStateTemp @Babel "Script locked tx" $
             mkBasicTx mkBasicTxBody
               & bodyTxL
               . outputsTxBodyL

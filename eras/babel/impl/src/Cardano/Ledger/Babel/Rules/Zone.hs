@@ -87,6 +87,11 @@ import Cardano.Ledger.Alonzo.Rules (
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babel.Core (ppMaxTxExUnitsL)
+import Cardano.Ledger.Babel.LedgerState.Types (
+  LedgerStateTemp,
+  fromLedgerState,
+  toLedgerState,
+ )
 import Cardano.Ledger.Babel.Rules.Ledger (BabelLedgerPredFailure)
 import Cardano.Ledger.Babel.Rules.Ledgers (BabelLEDGERS, BabelLedgersEnv (BabelLedgersEnv))
 import Cardano.Ledger.Babel.Rules.Utxo (BabelUtxoPredFailure (..))
@@ -178,7 +183,7 @@ instance
   , Show (PredicateFailure (EraRule "LEDGER" era))
   , ConwayEraPParams era
   , Environment (EraRule "LEDGERS" era) ~ BabelLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateTemp era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , Embed (EraRule "LEDGERS" era) (BabelZONE era)
   , EraTx era
@@ -213,7 +218,7 @@ zoneTransition ::
   forall era.
   ( EraRule "ZONE" era ~ BabelZONE era
   , Environment (EraRule "LEDGERS" era) ~ BabelLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateTemp era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , Embed (EraRule "LEDGERS" era) (BabelZONE era)
   , BabelEraTxBody era
@@ -249,8 +254,14 @@ zoneTransition =
             runTestOnSignal $ failureUnless (chkLinear (Foldable.toList txs)) CheckLinearFailure
             {- totExunits tx ≤ maxTxExUnits pp -}
             runTestOnSignal $ validateExUnitsTooBigUTxO pParams (Foldable.toList txs)
-            trans @(EraRule "LEDGERS" era) $
-              TRC (BabelLedgersEnv slotNo ixRange pParams accountState, LedgerState utxoState certState, txs)
+            lsTemp <- -- TODO WG: Should we be checking FRxO is empty before converting?
+              trans @(EraRule "LEDGERS" era) $
+                TRC
+                  ( BabelLedgersEnv slotNo ixRange pParams accountState
+                  , fromLedgerState $ LedgerState utxoState certState
+                  , txs
+                  )
+            pure $ toLedgerState lsTemp
           else -- ZONE-N
           do
             -- Check that only the last transaction is invalid
@@ -326,7 +337,7 @@ babelEvalScriptsTxInvalid ::
   , BabelEraTxBody era
   , AlonzoEraTx era
   , Environment (EraRule "LEDGERS" era) ~ BabelLedgersEnv era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule "LEDGERS" era) ~ LedgerStateTemp era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , Embed (EraRule "LEDGERS" era) (BabelZONE era)
   , Eq (PredicateFailure (EraRule "LEDGER" era))

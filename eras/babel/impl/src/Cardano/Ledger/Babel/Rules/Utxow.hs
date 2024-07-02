@@ -58,6 +58,10 @@ import qualified Cardano.Ledger.Babbage.Rules as Babbage (
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.Babel.Era (BabelEra, BabelUTXO, BabelUTXOW)
+
+-- verifyBootstrapWitRequiredTxs,
+
+import Cardano.Ledger.Babel.LedgerState.Types (UTxOStateTemp (..))
 import Cardano.Ledger.Babel.Rules.Utxo (BabelUtxoPredFailure)
 import Cardano.Ledger.Babel.Rules.Utxos (BabelUtxosPredFailure)
 import Cardano.Ledger.Babel.UTxO (getBabelWitsVKeyNeeded)
@@ -79,12 +83,9 @@ import Cardano.Ledger.Keys (
   WitVKey (WitVKey),
   bwKey,
   verifyBootstrapWit,
-  -- verifyBootstrapWitRequiredTxs,
  )
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
-import Cardano.Ledger.Shelley.API (utxosUtxo)
-import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (UTxOState)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
   ShelleyUtxowEvent (UtxoEvent),
@@ -268,14 +269,14 @@ instance
   , -- Allow UTXOW to call UTXO
     Embed (EraRule "UTXO" era) (BabelUTXOW era)
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
-  , State (EraRule "UTXO" era) ~ Shelley.UTxOState era
+  , State (EraRule "UTXO" era) ~ UTxOStateTemp era
   , Signal (EraRule "UTXO" era) ~ Tx era
   , Eq (PredicateFailure (EraRule "UTXOS" era))
   , Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   STS (BabelUTXOW era)
   where
-  type State (BabelUTXOW era) = Shelley.UTxOState era
+  type State (BabelUTXOW era) = UTxOStateTemp era
   type Signal (BabelUTXOW era) = Tx era
   type Environment (BabelUTXOW era) = Shelley.UtxoEnv era
   type BaseM (BabelUTXOW era) = ShelleyBase
@@ -412,7 +413,7 @@ babelUtxowTransition ::
   , -- , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentRequiredTxs)
     Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
-  , State (EraRule "UTXOW" era) ~ Shelley.UTxOState era
+  , State (EraRule "UTXOW" era) ~ UTxOStateTemp era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
   , InjectRuleFailure "UTXOW" AlonzoUtxowPredFailure era
   , InjectRuleFailure "UTXOW" BabbageUtxowPredFailure era
@@ -420,7 +421,7 @@ babelUtxowTransition ::
     Embed (EraRule "UTXO" era) (EraRule "UTXOW" era)
   , Environment (EraRule "UTXO" era) ~ Shelley.UtxoEnv era
   , Signal (EraRule "UTXO" era) ~ Tx era
-  , State (EraRule "UTXO" era) ~ Shelley.UTxOState era
+  , State (EraRule "UTXO" era) ~ UTxOStateTemp era
   ) =>
   TransitionRule (EraRule "UTXOW" era)
 babelUtxowTransition = do
@@ -430,7 +431,7 @@ babelUtxowTransition = do
   {-  txb := txbody tx  -}
   {-  txw := txwits tx  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
-  let utxo = utxosUtxo u
+  let utxo = utxostUtxo u
       txBody = tx ^. bodyTxL
       witsKeyHashes = witsFromTxWitnesses tx
       inputs = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)

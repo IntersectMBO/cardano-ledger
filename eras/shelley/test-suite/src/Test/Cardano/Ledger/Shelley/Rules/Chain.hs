@@ -263,7 +263,7 @@ instance
   ( EraGov era
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
-  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState "LEDGERS" era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
@@ -302,7 +302,7 @@ chainTransition ::
   ( STS (CHAIN era)
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
-  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState "LEDGERS" era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv

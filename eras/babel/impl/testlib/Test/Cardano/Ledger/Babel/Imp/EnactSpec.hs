@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Babel.Imp.EnactSpec (
 
 import Cardano.Ledger.Address
 import Cardano.Ledger.Babel.Core
+import Cardano.Ledger.Babel.LedgerState.Types (LedgerStateTemp)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Governance
@@ -158,7 +159,7 @@ treasuryWithdrawalsSpec =
       impAnn "submit in individual proposals in the same epoch" $ do
         traverse_
           ( \w -> do
-              gaId <- submitTreasuryWithdrawals @era [w]
+              gaId <- submitTreasuryWithdrawals @LedgerStateTemp @era [w]
               submitYesVote_ (DRepVoter drepC) gaId
               submitYesVote_ (CommitteeVoter committeeC) gaId
           )

@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Allegra.Imp (spec) where
 
@@ -13,8 +14,8 @@ import qualified Test.Cardano.Ledger.Shelley.Imp as ShelleyImp
 import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp)
 
 spec ::
-  forall era.
-  ( ShelleyEraImp era
+  forall era ls.
+  ( ShelleyEraImp ls era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>

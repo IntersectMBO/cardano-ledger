@@ -725,7 +725,7 @@ scriptLockedTxOut shSpending =
 
 mkRefTxOut ::
   ( BabbageEraTxOut era
-  , AlonzoEraImp era
+  , AlonzoEraImp ls era
   ) =>
   ScriptHash (EraCrypto era) ->
   ImpTestM era (TxOut era)
@@ -739,9 +739,9 @@ mkRefTxOut sh = do
       .~ maybeToStrictMaybe (fromPlutusScript <$> mbyPlutusScript)
 
 setupRefTx ::
-  forall era.
+  forall era ls.
   ( BabbageEraTxOut era
-  , AlonzoEraImp era
+  , AlonzoEraImp ls era
   ) =>
   ImpTestM era (TxId (EraCrypto era))
 setupRefTx = do

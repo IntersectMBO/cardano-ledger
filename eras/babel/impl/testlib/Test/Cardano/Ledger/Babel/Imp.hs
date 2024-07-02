@@ -14,6 +14,7 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.Babel.Governance ()
+import Cardano.Ledger.Babel.LedgerState.Types
 import Cardano.Ledger.Babel.Rules (
 
  )
@@ -70,7 +71,7 @@ spec = do
       Utxos.spec @era
       Ratify.spec @era
   describe "BabelImpSpec - bootstrap phase (protocol version 9)" $
-    withImpState @era $ do
+    withImpState @LedgerStateTemp @era $ do
       Enact.relevantDuringBootstrapSpec @era
       Epoch.relevantDuringBootstrapSpec @era
       Gov.relevantDuringBootstrapSpec @era

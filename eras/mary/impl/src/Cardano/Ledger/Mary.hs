@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -41,7 +42,7 @@ instance
 
 instance
   (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
-  ApplyBlock (MaryEra c)
+  ApplyBlock "LEDGERS" (MaryEra c)
 
 instance Crypto c => CanStartFromGenesis (MaryEra c) where
   fromShelleyPParams () = translateEra' () . fromShelleyPParams ()

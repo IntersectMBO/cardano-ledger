@@ -72,6 +72,7 @@ import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..))
 import Cardano.Ledger.UMap (UMap (..))
 import Cardano.Ledger.UTxO (UTxO (..))
+import Control.Arrow ((&&&))
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans (MonadTrans (lift))
@@ -83,6 +84,7 @@ import qualified Data.Map.Strict as Map
 import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
 import Lens.Micro
+import Lens.Micro.Extras (view)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -494,6 +496,18 @@ data LedgerState era = LedgerState
   , lsCertState :: !(CertState era)
   }
   deriving (Generic)
+
+class HasLedgerState st era where
+  hlsUtxoStateL :: Lens' (st era) (UTxOState era)
+  hlsCertStateL :: Lens' (st era) (CertState era)
+  from :: HasLedgerState st' era => st era -> st' era
+  from = uncurry mkLedgerState . (view hlsUtxoStateL &&& view hlsCertStateL)
+  mkLedgerState :: UTxOState era -> CertState era -> st era
+
+instance HasLedgerState LedgerState era where
+  hlsUtxoStateL = lsUTxOStateL
+  hlsCertStateL = lsCertStateL
+  mkLedgerState = LedgerState
 
 deriving stock instance
   ( EraTxOut era

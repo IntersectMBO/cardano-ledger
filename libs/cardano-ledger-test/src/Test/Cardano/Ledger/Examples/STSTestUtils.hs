@@ -250,9 +250,9 @@ trustMeP _ _ tx = tx
 testBBODY ::
   (Reflect era, HasCallStack) =>
   WitRule "BBODY" era ->
-  ShelleyBbodyState era ->
+  ShelleyBbodyState "LEDGERS" era ->
   Block (BHeaderView (EraCrypto era)) era ->
-  Either (NonEmpty (PredicateFailure (AlonzoBBODY era))) (ShelleyBbodyState era) ->
+  Either (NonEmpty (PredicateFailure (AlonzoBBODY era))) (ShelleyBbodyState "LEDGERS" era) ->
   PParams era ->
   Assertion
 testBBODY wit@(BBODY proof) initialSt block expected pparams =

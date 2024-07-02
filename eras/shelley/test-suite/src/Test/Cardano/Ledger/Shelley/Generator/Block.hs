@@ -92,7 +92,7 @@ genBlock ::
   forall era.
   ( TxStructure era ~ StrictSeq.StrictSeq
   , MinLEDGER_STS era
-  , ApplyBlock era
+  , ApplyBlock "LEDGERS" era
   , Mock (EraCrypto era)
   , GetLedgerView era
   , QC.HasTrace (EraRule "LEDGERS" era) (GenEnv era)
@@ -114,7 +114,7 @@ genBlockWithTxGen ::
   ( TxStructure era ~ StrictSeq.StrictSeq
   , Mock (EraCrypto era)
   , GetLedgerView era
-  , ApplyBlock era
+  , ApplyBlock "LEDGERS" era
   , EraGen era
   ) =>
   TxGen era ->
@@ -196,7 +196,7 @@ selectNextSlotWithLeader ::
   ( Mock (EraCrypto era)
   , EraGen era
   , GetLedgerView era
-  , ApplyBlock era
+  , ApplyBlock "LEDGERS" era
   ) =>
   GenEnv era ->
   ChainState era ->
@@ -271,7 +271,7 @@ selectNextSlotWithLeader
 -- | The chain state is a composite of the new epoch state and the chain dep
 -- state. We tick both.
 tickChainState ::
-  (GetLedgerView era, ApplyBlock era) =>
+  (GetLedgerView era, ApplyBlock "LEDGERS" era) =>
   SlotNo ->
   ChainState era ->
   ChainState era

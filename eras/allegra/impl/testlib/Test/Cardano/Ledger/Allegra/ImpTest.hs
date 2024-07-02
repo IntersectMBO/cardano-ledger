@@ -1,6 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -18,6 +20,7 @@ import Cardano.Ledger.Allegra.Core
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Control.Monad.State.Strict (get)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq (..))
@@ -35,7 +38,7 @@ instance
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
-  ShelleyEraImp (AllegraEra c)
+  ShelleyEraImp LedgerState (AllegraEra c)
   where
   initImpTestState = pure ()
 
@@ -44,7 +47,9 @@ instance
   fixupTx = shelleyFixupTx
 
 impAllegraSatisfyNativeScript ::
-  (ShelleyEraImp era, NativeScript era ~ Timelock era) =>
+  ( ShelleyEraImp ls era
+  , NativeScript era ~ Timelock era
+  ) =>
   Set.Set (KeyHash 'Witness (EraCrypto era)) ->
   NativeScript era ->
   ImpTestM era (Maybe (Map.Map (KeyHash 'Witness (EraCrypto era)) (KeyPair 'Witness (EraCrypto era))))

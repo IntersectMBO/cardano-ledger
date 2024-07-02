@@ -112,7 +112,7 @@ spec = describe "UTxO" $ do
         submitTx . mkBasicTx $
           mkBasicTxBody
             & outputsTxBodyL @era
-              .~ SSeq.fromList [mkBasicTxOut @era scriptAddr (inject (Coin 1000))]
+            .~ SSeq.fromList [mkBasicTxOut @era scriptAddr (inject (Coin 1000))]
       pure $ txInAt (0 :: Int) tx
 
     createRefScriptsUtxos :: [Script era] -> ImpTestM era (Map.Map (TxIn (EraCrypto era)) (Script era))
@@ -122,13 +122,14 @@ spec = describe "UTxO" $ do
             scripts
               <&> ( \s ->
                       mkBasicTxOut @era (rootOut ^. addrTxOutL) (inject (Coin 100))
-                        & referenceScriptTxOutL @era .~ SJust s
+                        & referenceScriptTxOutL @era
+                        .~ SJust s
                   )
       tx <-
         submitTx . mkBasicTx $
           mkBasicTxBody
             & outputsTxBodyL @era
-              .~ SSeq.fromList outs
+            .~ SSeq.fromList outs
       let refIns = (`txInAt` tx) <$> [0 .. length scripts - 1]
       pure $ Map.fromList $ refIns `zip` scripts
 
@@ -137,8 +138,10 @@ spec = describe "UTxO" $ do
     spendScriptUsingRefScripts scriptIn refIns =
       submitTxAnn "spendScriptUsingRefScripts" . mkBasicTx $
         mkBasicTxBody
-          & inputsTxBodyL @era .~ Set.singleton scriptIn
-          & referenceInputsTxBodyL @era .~ refIns
+          & inputsTxBodyL @era
+          .~ Set.singleton scriptIn
+          & referenceInputsTxBodyL @era
+          .~ refIns
 
     nativeScript :: ImpTestM era (NativeScript era)
     nativeScript = do

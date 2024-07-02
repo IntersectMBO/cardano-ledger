@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
@@ -114,6 +115,7 @@ import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.Babel (BabelEra)
 import Cardano.Ledger.Babel.Core hiding (proposals)
+import Cardano.Ledger.Babel.LedgerState.Types (LedgerStateTemp)
 import Cardano.Ledger.Babel.TxCert (
   BabelEraTxCert,
   Delegatee (..),
@@ -258,7 +260,7 @@ instance
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   , Eq (ConwayGovEvent (BabelEra c))
   ) =>
-  ShelleyEraImp (BabelEra c)
+  ShelleyEraImp LedgerStateTemp (BabelEra c)
   where
   initImpTestState = do
     kh <- fst <$> freshKeyPair
@@ -328,9 +330,9 @@ instance
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
-  MaryEraImp (BabelEra c)
+  MaryEraImp LedgerStateTemp (BabelEra c)
 
-instance ShelleyEraImp (BabelEra c) => AlonzoEraImp (BabelEra c) where
+instance ShelleyEraImp LedgerStateTemp (BabelEra c) => AlonzoEraImp LedgerStateTemp (BabelEra c) where
   scriptTestContexts =
     plutusTestScripts SPlutusV1
       <> plutusTestScripts SPlutusV2
@@ -338,7 +340,7 @@ instance ShelleyEraImp (BabelEra c) => AlonzoEraImp (BabelEra c) where
       <> plutusTestScripts SPlutusV4
 
 class
-  ( AlonzoEraImp era
+  ( AlonzoEraImp LedgerStateTemp era
   , ConwayEraGov era
   , BabelEraTxBody era
   , STS (EraRule "ENACT" era)
@@ -372,8 +374,8 @@ registerInitialCommittee = do
 -- | Submit a transaction that registers a new DRep and return the keyhash
 -- belonging to that DRep
 registerDRep ::
-  forall era.
-  ( ShelleyEraImp era
+  forall era ls.
+  ( ShelleyEraImp ls era
   , BabelEraTxCert era
   ) =>
   ImpTestM era (KeyHash 'DRepRole (EraCrypto era))
@@ -398,9 +400,9 @@ registerDRep = do
 -- that could count as delegated stake to the DRep, so that we can test that
 -- rewards are also calculated nonetheless.
 setupDRepWithoutStake ::
-  forall era.
+  forall era ls.
   ( BabelEraTxCert era
-  , ShelleyEraImp era
+  , ShelleyEraImp ls era
   ) =>
   ImpTestM
     era
@@ -425,9 +427,9 @@ setupDRepWithoutStake = do
 
 -- | Registers a new DRep and delegates the specified amount of ADA to it.
 setupSingleDRep ::
-  forall era.
+  forall era ls.
   ( BabelEraTxCert era
-  , ShelleyEraImp era
+  , ShelleyEraImp ls era
   ) =>
   Integer ->
   ImpTestM
@@ -468,7 +470,7 @@ getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
 -- in Babel. The Shelley version of this function would have to separately
 -- register the staking credential and then delegate it.
 setupPoolWithStake ::
-  (ShelleyEraImp era, BabelEraTxCert era) =>
+  (ShelleyEraImp ls era, BabelEraTxCert era) =>
   Coin ->
   ImpTestM
     era
@@ -498,7 +500,7 @@ setupPoolWithStake delegCoin = do
   pure (khPool, credDelegatorPayment, credDelegatorStaking)
 
 setupPoolWithoutStake ::
-  (ShelleyEraImp era, BabelEraTxCert era) =>
+  (ShelleyEraImp ls era, BabelEraTxCert era) =>
   ImpTestM
     era
     ( KeyHash 'StakePool (EraCrypto era)
@@ -523,7 +525,7 @@ setupPoolWithoutStake = do
 -- | Submits a transaction with a Vote for the given governance action as
 -- some voter
 submitVote ::
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   , HasCallStack
   ) =>
@@ -536,7 +538,7 @@ submitVote vote voter gaId = trySubmitVote vote voter gaId >>= expectRightDeep
 -- | Submits a transaction that votes "Yes" for the given governance action as
 -- some voter
 submitYesVote_ ::
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   , HasCallStack
   ) =>
@@ -546,7 +548,7 @@ submitYesVote_ ::
 submitYesVote_ voter gaId = void $ submitVote VoteYes voter gaId
 
 submitVote_ ::
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   , HasCallStack
   ) =>
@@ -557,7 +559,7 @@ submitVote_ ::
 submitVote_ vote voter gaId = void $ submitVote vote voter gaId
 
 submitFailingVote ::
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   , HasCallStack
   ) =>
@@ -571,7 +573,7 @@ submitFailingVote voter gaId expectedFailure =
 -- | Submits a transaction that votes "Yes" for the given governance action as
 -- some voter, and expects an `Either` result.
 trySubmitVote ::
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   ) =>
   Vote ->
@@ -603,19 +605,19 @@ trySubmitVote vote voter gaId =
           )
 
 submitProposal_ ::
-  (ShelleyEraImp era, BabelEraTxBody era, HasCallStack) =>
+  (ShelleyEraImp ls era, BabelEraTxBody era, HasCallStack) =>
   ProposalProcedure era ->
   ImpTestM era ()
 submitProposal_ = void . submitProposal
 
 submitProposal ::
-  (ShelleyEraImp era, BabelEraTxBody era, HasCallStack) =>
+  (ShelleyEraImp ls era, BabelEraTxBody era, HasCallStack) =>
   ProposalProcedure era ->
   ImpTestM era (GovActionId (EraCrypto era))
 submitProposal proposal = trySubmitProposal proposal >>= expectRightExpr
 
 submitProposals ::
-  (ShelleyEraImp era, ConwayEraGov era, BabelEraTxBody era, HasCallStack) =>
+  (ShelleyEraImp ls era, ConwayEraGov era, BabelEraTxBody era, HasCallStack) =>
   NE.NonEmpty (ProposalProcedure era) ->
   ImpTestM era (NE.NonEmpty (GovActionId (EraCrypto era)))
 submitProposals proposals = do
@@ -641,7 +643,7 @@ submitProposals proposals = do
 
 -- | Submits a transaction that proposes the given proposal
 trySubmitProposal ::
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   ) =>
   ProposalProcedure era ->
@@ -663,7 +665,7 @@ trySubmitProposal proposal = do
     Left err -> Left err
 
 trySubmitProposals ::
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   ) =>
   NE.NonEmpty (ProposalProcedure era) ->
@@ -676,7 +678,7 @@ trySubmitProposals proposals = do
       .~ GHC.fromList (toList proposals)
 
 submitFailingProposal ::
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   , HasCallStack
   ) =>
@@ -689,7 +691,7 @@ submitFailingProposal proposal expectedFailure =
 -- | Submits a transaction that proposes the given governance action. For proposing
 -- multiple actions in the same transaciton use `trySubmitGovActions` instead.
 trySubmitGovAction ::
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   ) =>
   GovAction era ->
@@ -724,7 +726,7 @@ submitAndExpireProposalToMakeReward expectedReward stakingC = do
 
 -- | Submits a transaction that proposes the given governance action
 trySubmitGovActions ::
-  (ShelleyEraImp era, BabelEraTxBody era) =>
+  (ShelleyEraImp ls era, BabelEraTxBody era) =>
   NE.NonEmpty (GovAction era) ->
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (Tx era))
 trySubmitGovActions gas = do
@@ -741,8 +743,8 @@ trySubmitGovActions gas = do
   trySubmitProposals proposals
 
 submitGovAction ::
-  forall era.
-  ( ShelleyEraImp era
+  forall era ls.
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   , HasCallStack
   ) =>
@@ -753,8 +755,8 @@ submitGovAction ga = do
   pure gaId
 
 submitGovAction_ ::
-  forall era.
-  ( ShelleyEraImp era
+  forall era ls.
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   , HasCallStack
   ) =>
@@ -763,8 +765,8 @@ submitGovAction_ ::
 submitGovAction_ = void . submitGovAction
 
 submitGovActions ::
-  forall era.
-  ( ShelleyEraImp era
+  forall era ls.
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   , HasCallStack
   ) =>
@@ -776,7 +778,7 @@ submitGovActions gas = do
   pure $ NE.zipWith (\idx _ -> GovActionId txId (GovActionIx idx)) (0 NE.:| [1 ..]) gas
 
 submitTreasuryWithdrawals ::
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   , ConwayEraGov era
   ) =>
@@ -814,8 +816,8 @@ getGovPolicy =
     nesEpochStateL . epochStateGovStateL . constitutionGovStateL . constitutionScriptL
 
 submitFailingGovAction ::
-  forall era.
-  ( ShelleyEraImp era
+  forall era ls.
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   , HasCallStack
   ) =>
@@ -1163,7 +1165,7 @@ logRatificationChecks gaId = do
 -- | Submits a transaction that registers a hot key for the given cold key.
 -- Returns the hot key hash.
 registerCommitteeHotKey ::
-  (ShelleyEraImp era, BabelEraTxCert era) =>
+  (ShelleyEraImp ls era, BabelEraTxCert era) =>
   Credential 'ColdCommitteeRole (EraCrypto era) ->
   ImpTestM era (Credential 'HotCommitteeRole (EraCrypto era))
 registerCommitteeHotKey coldKey = do
@@ -1177,7 +1179,7 @@ registerCommitteeHotKey coldKey = do
 
 -- | Submits a transaction that resigns the cold key
 resignCommitteeColdKey ::
-  (ShelleyEraImp era, BabelEraTxCert era) =>
+  (ShelleyEraImp ls era, BabelEraTxCert era) =>
   Credential 'ColdCommitteeRole (EraCrypto era) ->
   StrictMaybe (Anchor (EraCrypto era)) ->
   ImpTestM era ()
@@ -1294,7 +1296,7 @@ proposalsShowDebug ps showRoots =
       <> ["----- Proposals End -----"]
 
 submitConstitutionGovAction ::
-  (ShelleyEraImp era, BabelEraTxBody era) =>
+  (ShelleyEraImp ls era, BabelEraTxBody era) =>
   StrictMaybe (GovActionId (EraCrypto era)) ->
   ImpTestM era (GovActionId (EraCrypto era))
 submitConstitutionGovAction gid = do

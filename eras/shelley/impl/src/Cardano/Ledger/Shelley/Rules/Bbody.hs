@@ -55,15 +55,17 @@ import Control.State.Transition (
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
+import GHC.TypeLits (Symbol)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
-data ShelleyBbodyState era
-  = BbodyState !(State (EraRule "LEDGERS" era)) !(BlocksMade (EraCrypto era))
+data ShelleyBbodyState (firstRule :: Symbol) era
+  = BbodyState !(State (EraRule firstRule era)) !(BlocksMade (EraCrypto era))
 
-deriving stock instance Show (State (EraRule "LEDGERS" era)) => Show (ShelleyBbodyState era)
+deriving stock instance
+  Show (State (EraRule firstRule era)) => Show (ShelleyBbodyState firstRule era)
 
-deriving stock instance Eq (State (EraRule "LEDGERS" era)) => Eq (ShelleyBbodyState era)
+deriving stock instance Eq (State (EraRule firstRule era)) => Eq (ShelleyBbodyState firstRule era)
 
 data BbodyEnv era = BbodyEnv
   { bbodyPp :: PParams era
@@ -143,7 +145,7 @@ instance
   where
   type
     State (ShelleyBBODY era) =
-      ShelleyBbodyState era
+      ShelleyBbodyState "LEDGERS" era
 
   type
     Signal (ShelleyBBODY era) =

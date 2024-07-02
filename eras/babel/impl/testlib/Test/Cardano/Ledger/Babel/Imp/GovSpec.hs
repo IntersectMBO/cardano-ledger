@@ -1191,8 +1191,8 @@ proposalWithRewardAccount action = do
 
 -- | Tests the first hardfork in the Babel era where the PrevGovActionID is SNothing
 firstHardForkFollows ::
-  forall era.
-  (ShelleyEraImp era, BabelEraTxBody era) =>
+  forall era ls.
+  (ShelleyEraImp ls era, BabelEraTxBody era) =>
   (ProtVer -> ProtVer) ->
   ImpTestM era ()
 firstHardForkFollows computeNewFromOld = do
@@ -1201,8 +1201,8 @@ firstHardForkFollows computeNewFromOld = do
 
 -- | Negative (deliberatey failing) first hardfork in the Babel era where the PrevGovActionID is SNothing
 firstHardForkCantFollow ::
-  forall era.
-  ( ShelleyEraImp era
+  forall era ls.
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
@@ -1225,8 +1225,8 @@ firstHardForkCantFollow = do
 
 -- | Tests a second hardfork in the Babel era where the PrevGovActionID is SJust
 secondHardForkFollows ::
-  forall era.
-  (ShelleyEraImp era, BabelEraTxBody era) =>
+  forall era ls.
+  (ShelleyEraImp ls era, BabelEraTxBody era) =>
   (ProtVer -> ProtVer) ->
   ImpTestM era ()
 secondHardForkFollows computeNewFromOld = do
@@ -1238,8 +1238,8 @@ secondHardForkFollows computeNewFromOld = do
 
 -- | Negative (deliberatey failing) first hardfork in the Babel era where the PrevGovActionID is SJust
 secondHardForkCantFollow ::
-  forall era.
-  ( ShelleyEraImp era
+  forall era ls.
+  ( ShelleyEraImp ls era
   , BabelEraTxBody era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>

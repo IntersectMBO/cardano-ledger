@@ -53,6 +53,9 @@ import Cardano.Ledger.Babbage.Transition ()
 import Cardano.Ledger.Babbage.Translation ()
 import Cardano.Ledger.Babbage.TxInfo ()
 import Cardano.Ledger.Babbage.UTxO ()
+import Cardano.Ledger.Babel.LedgerState.Types (LedgerStateTemp)
+import Cardano.Ledger.Shelley.LedgerState (HasLedgerState (from))
+import Data.Default.Class (Default)
 
 type Babel = BabelEra StandardCrypto
 
@@ -64,8 +67,9 @@ instance
   , DSignable c (Hash c EraIndependentRequiredTxs)
   , -- TODO WG figure out what you've done wrong to introduce this constraint
     Signable (DSIGN c) (Cardano.Crypto.Hash.Class.Hash c EraIndependentTxBody)
+  , Default (LedgerStateTemp (BabelEra c))
   ) =>
-  ApplyBlock (BabelEra c)
+  ApplyBlock "ZONES" (BabelEra c)
 
 instance
   ( Crypto c
@@ -79,8 +83,8 @@ instance
           flip runReader globals
             . applySTSNonStatic
               @(EraRule "LEDGER" (BabelEra c))
-            $ TRC (env, state, extractTx vtx)
-     in liftEither . left ApplyTxError $ res
+            $ TRC (env, from state, extractTx vtx)
+     in liftEither . left ApplyTxError $ from <$> res
 
 instance Crypto c => CanStartFromGenesis (BabelEra c) where
   type AdditionalGenesisConfig (BabelEra c) = BabelGenesis c

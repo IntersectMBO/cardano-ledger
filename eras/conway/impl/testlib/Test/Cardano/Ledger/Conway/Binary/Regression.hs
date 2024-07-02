@@ -37,6 +37,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayUtxowPredFailure (..),
  )
 import Cardano.Ledger.Plutus.Language (SLanguage (..), hashPlutusScript)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Monad ((<=<))
 import qualified Data.Sequence.Strict as SSeq
@@ -92,7 +93,7 @@ spec = describe "Regression" $ do
           , "49848004800504d9010281d8799f182aff0581840000d8799f182aff820000f4f6"
           ]
   describe "ImpTest" $
-    withImpState @Conway $
+    withImpState @LedgerState @Conway $
       it "InsufficientCollateral is not encoded with negative coin #4198" $ do
         let lockedVal = inject $ Coin 100
         (_, collateralAddress) <- freshKeyAddr
@@ -103,15 +104,17 @@ spec = describe "Regression" $ do
           lockScriptAddress = mkScriptAddr scriptHash skp
         (_, collateralReturnAddr) <- freshKeyAddr
         lockedTx <-
-          submitTxAnn @Conway "Script locked tx" $
+          submitTxAnn @LedgerState @Conway "Script locked tx" $
             mkBasicTx mkBasicTxBody
-              & bodyTxL . outputsTxBodyL
-                .~ SSeq.fromList
-                  [ mkBasicTxOut lockScriptAddress lockedVal
-                  , mkBasicTxOut collateralAddress (inject $ Coin 1)
-                  ]
-              & bodyTxL . collateralReturnTxBodyL
-                .~ SJust (mkBasicTxOut collateralReturnAddr . inject $ Coin 1)
+              & bodyTxL
+              . outputsTxBodyL
+              .~ SSeq.fromList
+                [ mkBasicTxOut lockScriptAddress lockedVal
+                , mkBasicTxOut collateralAddress (inject $ Coin 1)
+                ]
+              & bodyTxL
+              . collateralReturnTxBodyL
+              .~ SJust (mkBasicTxOut collateralReturnAddr . inject $ Coin 1)
         let
           modifyRootCoin = coinTxOutL .~ Coin 989482376
           modifyRootTxOut (x SSeq.:<| SSeq.Empty) =
@@ -122,17 +125,26 @@ spec = describe "Regression" $ do
           breakCollaterals tx =
             pure $
               tx
-                & bodyTxL . collateralReturnTxBodyL
-                  .~ SJust (mkBasicTxOut collateralReturnAddr . inject $ Coin 1_000_000_000)
-                & bodyTxL . feeTxBodyL .~ Coin 178349
-                & bodyTxL . outputsTxBodyL %~ modifyRootTxOut
-                & witsTxL . addrTxWitsL .~ mempty
+                & bodyTxL
+                . collateralReturnTxBodyL
+                .~ SJust (mkBasicTxOut collateralReturnAddr . inject $ Coin 1_000_000_000)
+                & bodyTxL
+                . feeTxBodyL
+                .~ Coin 178349
+                & bodyTxL
+                . outputsTxBodyL
+                %~ modifyRootTxOut
+                & witsTxL
+                . addrTxWitsL
+                .~ mempty
         res <-
           impAnn "Consume the script locked output" $
             withPostFixup (updateAddrTxWits <=< breakCollaterals) $ do
               trySubmitTx @Conway $
                 mkBasicTx mkBasicTxBody
-                  & bodyTxL . inputsTxBodyL .~ Set.singleton (TxIn (txIdTx lockedTx) $ TxIx 0)
+                  & bodyTxL
+                  . inputsTxBodyL
+                  .~ Set.singleton (TxIn (txIdTx lockedTx) $ TxIx 0)
         pFailure <- impAnn "Expecting failure" $ expectLeftDeepExpr res
         let
           hasInsufficientCollateral

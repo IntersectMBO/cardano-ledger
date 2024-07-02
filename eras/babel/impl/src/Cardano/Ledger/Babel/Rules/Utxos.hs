@@ -26,15 +26,20 @@ module Cardano.Ledger.Babel.Rules.Utxos (
 import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (..),
+  collectPlutusScriptsWithContext,
+  evalPlutusScripts,
  )
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent (..),
   AlonzoUtxoPredFailure (..),
   AlonzoUtxosEvent,
   AlonzoUtxosPredFailure,
-  TagMismatchDescription,
+  TagMismatchDescription (..),
+  invalidBegin,
+  invalidEnd,
   validBegin,
   validEnd,
+  when2Phase,
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   AlonzoUtxosEvent (..),
@@ -44,44 +49,44 @@ import Cardano.Ledger.Alonzo.UTxO (
   AlonzoEraUTxO,
   AlonzoScriptsNeeded,
  )
+import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUTXO,
   BabbageUtxoPredFailure (..),
-  babbageEvalScriptsTxInvalid,
   expectScriptsToPass,
  )
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.Babel.Era (BabelEra, BabelUTXOS)
 import Cardano.Ledger.Babel.FRxO (txfrxo)
+import Cardano.Ledger.Babel.LedgerState.Types (UTxOStateTemp (..), utxostDonationL)
 import Cardano.Ledger.Babel.TxInfo ()
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
  )
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState (certsTotalDepositsTxBody, certsTotalRefundsTxBody)
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin (Coin), DeltaCoin (..))
 import Cardano.Ledger.Conway.Core (ConwayEraPParams, ConwayEraTxBody (treasuryDonationTxBodyL))
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.FRxO (FRxO (FRxO, unFRxO))
-import Cardano.Ledger.Plutus (
-  PlutusWithContext,
- )
+import Cardano.Ledger.Plutus (PlutusWithContext, ScriptFailure (..))
+import Cardano.Ledger.Plutus.Evaluate (ScriptResult (..))
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
   UTxOState (..),
   updateStakeDistribution,
-  utxosDonationL,
  )
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (UTxO, unUTxO))
 import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
-import Data.List.NonEmpty (NonEmpty)
+import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import qualified Data.Map as Map
 import Data.MapExtras (extractKeys)
 import Debug.Trace (traceEvent)
@@ -231,7 +236,7 @@ instance
   where
   type BaseM (BabelUTXOS era) = Cardano.Ledger.BaseTypes.ShelleyBase
   type Environment (BabelUTXOS era) = UtxoEnv era
-  type State (BabelUTXOS era) = UTxOState era
+  type State (BabelUTXOS era) = UTxOStateTemp era
   type Signal (BabelUTXOS era) = AlonzoTx era
   type PredicateFailure (BabelUTXOS era) = BabelUtxosPredFailure era
   type Event (BabelUTXOS era) = BabelUtxosEvent era
@@ -269,18 +274,20 @@ utxosTransition ::
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , STS (EraRule "UTXOS" era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
-  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , State (EraRule "UTXOS" era) ~ UTxOStateTemp era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , InjectRuleEvent "UTXOS" AlonzoUtxosEvent era
   , InjectRuleEvent "UTXOS" BabelUtxosEvent era
+  , Event (EraRule "UTXOS" era) ~ BabelUtxosEvent era
+  , PredicateFailure (EraRule "UTXOS" era) ~ BabelUtxosPredFailure era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 utxosTransition =
   judgmentContext >>= \(TRC (_, _, tx)) -> do
     case tx ^. isValidTxL of
       IsValid True -> babelEvalScriptsTxValid
-      IsValid False -> babbageEvalScriptsTxInvalid
+      IsValid False -> babelEvalScriptsTxInvalid
 
 babelEvalScriptsTxValid ::
   forall era.
@@ -291,7 +298,7 @@ babelEvalScriptsTxValid ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , STS (EraRule "UTXOS" era)
-  , State (EraRule "UTXOS" era) ~ UTxOState era
+  , State (EraRule "UTXOS" era) ~ UTxOStateTemp era
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , InjectRuleFailure "UTXOS" AlonzoUtxosPredFailure era
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
@@ -300,7 +307,7 @@ babelEvalScriptsTxValid ::
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 babelEvalScriptsTxValid = do
-  TRC (UtxoEnv _ pp certState, utxos@(UTxOState utxo _frxo _ _ govState _ _), tx) <-
+  TRC (UtxoEnv _ pp certState, utxos@(UTxOStateTemp utxo _frxo _ _ govState _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
 
@@ -317,7 +324,7 @@ babelEvalScriptsTxValid = do
       govState
       (tellEvent . injectEvent . TotalDeposits (hashAnnotated txBody))
       (\a b -> tellEvent . injectEvent $ TxUTxODiff a b)
-  pure $! utxos' & utxosDonationL <>~ txBody ^. treasuryDonationTxBodyL
+  pure $! utxos' & utxostDonationL <>~ txBody ^. treasuryDonationTxBodyL
 
 -- | This monadic action captures the final stages of the UTXO(S) rule. In particular it
 -- applies all of the UTxO related aditions and removals, gathers all of the fees into the
@@ -329,48 +336,102 @@ babelEvalScriptsTxValid = do
 updateUTxOState ::
   (BabelEraTxBody era, Monad m) =>
   PParams era ->
-  UTxOState era ->
+  UTxOStateTemp era ->
   TxBody era ->
   CertState era ->
   GovState era ->
   (Coin -> m ()) ->
   (UTxO era -> UTxO era -> m ()) ->
-  m (UTxOState era)
+  m (UTxOStateTemp era)
 updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent = do
-  let UTxOState
-        { utxosUtxo
-        , utxosFrxo
-        , utxosDeposited
-        , utxosFees
-        , utxosStakeDistr
-        , utxosDonation
+  let UTxOStateTemp
+        { utxostUtxo
+        , utxostFrxo
+        , utxostDeposited
+        , utxostFees
+        , utxostStakeDistr
+        , utxostDonation
         } = utxos
-      UTxO utxo = utxosUtxo
+      UTxO utxo = utxostUtxo
       !utxoAdd = txouts txBody -- These will be inserted into the UTxO
       {- utxoDel  = txins txb ◁ utxo -}
       !(utxoWithout, utxoDel) = extractKeys utxo (txBody ^. inputsTxBodyL)
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
-      FRxO frxo = utxosFrxo
+      FRxO frxo = utxostFrxo
       !frxoAdd = txfrxo txBody -- These will be inserted into the FRxO
       {- utxoDel  = txins txb ◁ utxo -}
       !(frxoWithout, _frxoDel) = extractKeys frxo (txBody ^. fulfillsTxBodyL)
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newFRxO = frxoWithout `Map.union` unFRxO frxoAdd
       deletedUTxO = UTxO utxoDel
-      newIncStakeDistro = updateStakeDistribution pp utxosStakeDistr deletedUTxO utxoAdd
+      newIncStakeDistro = updateStakeDistribution pp utxostStakeDistr deletedUTxO utxoAdd
       totalRefunds = certsTotalRefundsTxBody pp certState txBody
       totalDeposits = certsTotalDepositsTxBody pp certState txBody
       depositChange = totalDeposits <-> totalRefunds
   depositChangeEvent depositChange
   txUtxODiffEvent deletedUTxO utxoAdd
   pure $!
-    UTxOState
-      { utxosUtxo = UTxO newUTxO
-      , utxosFrxo = FRxO newFRxO
-      , utxosDeposited = utxosDeposited <> depositChange
-      , utxosFees = utxosFees <> txBody ^. feeTxBodyL
-      , utxosGovState = govState
-      , utxosStakeDistr = newIncStakeDistro
-      , utxosDonation = utxosDonation
+    UTxOStateTemp
+      { utxostUtxo = UTxO newUTxO
+      , utxostFrxo = FRxO newFRxO
+      , utxostDeposited = utxostDeposited <> depositChange
+      , utxostFees = utxostFees <> txBody ^. feeTxBodyL
+      , utxostGovState = govState
+      , utxostStakeDistr = newIncStakeDistro
+      , utxostDonation = utxostDonation
+      }
+
+babelEvalScriptsTxInvalid ::
+  forall era.
+  ( AlonzoEraTx era
+  , BabbageEraTxBody era
+  , EraPlutusContext era
+  , AlonzoEraUTxO era
+  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , STS (EraRule "UTXOS" era)
+  , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
+  , Signal (EraRule "UTXOS" era) ~ Tx era
+  , State (EraRule "UTXOS" era) ~ UTxOStateTemp era
+  , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
+  , Event (EraRule "UTXOS" era) ~ BabelUtxosEvent era
+  , PredicateFailure (EraRule "UTXOS" era) ~ BabelUtxosPredFailure era
+  ) =>
+  TransitionRule (EraRule "UTXOS" era)
+babelEvalScriptsTxInvalid = do
+  TRC (UtxoEnv _ pp _, us@(UTxOStateTemp utxo _ _ fees _ _ _), tx) <- judgmentContext
+  {- txb := txbody tx -}
+  let txBody = tx ^. bodyTxL
+  sysSt <- liftSTS $ asks systemStart
+  ei <- liftSTS $ asks epochInfo
+
+  () <- pure $! traceEvent invalidBegin ()
+
+  case collectPlutusScriptsWithContext ei sysSt pp tx utxo of
+    Right sLst ->
+      {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
+      {- isValid tx = evalScripts tx sLst = False -}
+      whenFailureFree $
+        when2Phase $ case evalPlutusScripts tx sLst of
+          Passes _ ->
+            failBecause $
+              ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
+          Fails ps fs -> do
+            mapM_ (tellEvent . SuccessfulPlutusScriptsEvent @era) (nonEmpty ps)
+            tellEvent (FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs))
+    Left info -> failBecause (CollectErrors info)
+
+  () <- pure $! traceEvent invalidEnd ()
+
+  {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
+  {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}
+  let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
+      UTxO collouts = collOuts txBody
+      DeltaCoin collateralFees = collAdaBalance txBody utxoDel -- NEW to Babbage
+  pure $!
+    us {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
+      { utxostUtxo = UTxO (Map.union utxoKeep collouts) -- NEW to Babbage
+      {- fees + collateralFees -}
+      , utxostFees = fees <> Coin collateralFees -- NEW to Babbage
+      , utxostStakeDistr = updateStakeDistribution pp (utxostStakeDistr us) (UTxO utxoDel) (UTxO collouts)
       }

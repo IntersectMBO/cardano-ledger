@@ -81,7 +81,7 @@ validateInput ::
   , Mock (EraCrypto era)
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
-  , API.ApplyBlock era
+  , API.ApplyBlock "LEDGERS" era
   , GetLedgerView era
   , MinLEDGER_STS era
   ) =>
@@ -95,7 +95,7 @@ genValidateInput ::
   , Mock (EraCrypto era)
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
-  , API.ApplyBlock era
+  , API.ApplyBlock "LEDGERS" era
   , GetLedgerView era
   , MinLEDGER_STS era
   ) =>
@@ -109,18 +109,18 @@ genValidateInput n = do
 
 benchValidate ::
   forall era.
-  (API.ApplyBlock era, Era era) =>
+  (API.ApplyBlock "LEDGERS" era, Era era) =>
   ValidateInput era ->
   IO (NewEpochState era)
 benchValidate (ValidateInput globals state (Block bh txs)) =
-  case API.applyBlock @era globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs) of
+  case API.applyBlock @"LEDGERS" @era globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs) of
     Right x -> pure x
     Left x -> error (show x)
 
 applyBlock ::
   forall era.
   ( EraTxOut era
-  , API.ApplyBlock era
+  , API.ApplyBlock "LEDGERS" era
   , NFData (StashedAVVMAddresses era)
   , GovState era ~ ShelleyGovState era
   ) =>
@@ -128,12 +128,12 @@ applyBlock ::
   Int ->
   Int
 applyBlock (ValidateInput globals state (Block bh txs)) n =
-  case API.applyBlock @era globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs) of
+  case API.applyBlock @"LEDGERS" @era globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs) of
     Right x -> seq (rnf x) (n + 1)
     Left x -> error (show x)
 
 benchreValidate ::
-  (API.ApplyBlock era, Era era) =>
+  (API.ApplyBlock "LEDGERS" era, Era era) =>
   ValidateInput era ->
   NewEpochState era
 benchreValidate (ValidateInput globals state (Block bh txs)) =
@@ -177,7 +177,7 @@ genUpdateInputs ::
   , GetLedgerView era
   , EraRule "LEDGERS" era ~ API.ShelleyLEDGERS era
   , QC.HasTrace (API.ShelleyLEDGERS era) (GenEnv era)
-  , API.ApplyBlock era
+  , API.ApplyBlock "LEDGERS" era
   ) =>
   Int ->
   IO (UpdateInputs (EraCrypto era))

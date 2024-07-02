@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -40,6 +41,12 @@ import Cardano.Ledger.Babel.Era (
   BabelLEDGER,
   BabelUTXOW,
  )
+import Cardano.Ledger.Babel.LedgerState.Types (
+  LedgerStateTemp (..),
+  UTxOStateTemp (utxostGovState, utxostUtxo),
+  utxostDepositedL,
+  utxostGovStateL,
+ )
 import Cardano.Ledger.Babel.Rules.Cert ()
 import Cardano.Ledger.Babel.Rules.Certs ()
 import Cardano.Ledger.Babel.Rules.Deleg ()
@@ -51,6 +58,7 @@ import Cardano.Ledger.Babel.Rules.Utxow (BabelUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
+import Cardano.Ledger.CertState (Obligations, obligationCertState, sumObligation)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance (
@@ -80,14 +88,12 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Shelley.AdaPots (consumedTxBody, producedTxBody)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
-  LedgerState (..),
-  UTxOState (..),
   asTreasuryL,
   certVStateL,
-  utxosGovStateL,
   vsCommitteeStateL,
  )
 import Cardano.Ledger.Shelley.Rules (
@@ -96,9 +102,8 @@ import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
   ShelleyUtxowPredFailure,
   UtxoEnv (..),
-  renderDepositEqualsObligationViolation,
-  shelleyLedgerAssertions,
  )
+import Cardano.Ledger.Shelley.Rules.Reports (showTxCerts)
 import Cardano.Ledger.Slot (epochInfoEpoch)
 import Cardano.Ledger.UMap (UView (..), dRepMap)
 import qualified Cardano.Ledger.UMap as UMap
@@ -107,6 +112,8 @@ import Control.DeepSeq (NFData)
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
+  Assertion (PostCondition),
+  AssertionViolation (..),
   Embed (..),
   STS (..),
   TRC (..),
@@ -278,7 +285,7 @@ instance
   , Embed (EraRule "UTXOW" era) (BabelLEDGER era)
   , Embed (EraRule "GOV" era) (BabelLEDGER era)
   , Embed (EraRule "CERTS" era) (BabelLEDGER era)
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "UTXOW" era) ~ UTxOStateTemp era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
@@ -290,7 +297,7 @@ instance
   ) =>
   STS (BabelLEDGER era)
   where
-  type State (BabelLEDGER era) = LedgerState era
+  type State (BabelLEDGER era) = LedgerStateTemp era
   type Signal (BabelLEDGER era) = Tx era
   type Environment (BabelLEDGER era) = LedgerEnv era
   type BaseM (BabelLEDGER era) = ShelleyBase
@@ -302,7 +309,7 @@ instance
 
   renderAssertionViolation = renderDepositEqualsObligationViolation
 
-  assertions = shelleyLedgerAssertions @era @BabelLEDGER
+  assertions = babelLedgerAssertions @era @BabelLEDGER
 
 -- =======================================
 
@@ -313,13 +320,13 @@ ledgerTransition ::
   , ConwayEraGov era
   , GovState era ~ ConwayGovState era
   , Signal (someLEDGER era) ~ Tx era
-  , State (someLEDGER era) ~ LedgerState era
+  , State (someLEDGER era) ~ LedgerStateTemp era
   , Environment (someLEDGER era) ~ LedgerEnv era
   , PredicateFailure (someLEDGER era) ~ BabelLedgerPredFailure era
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "GOV" era) (someLEDGER era)
   , Embed (EraRule "CERTS" era) (someLEDGER era)
-  , State (EraRule "UTXOW" era) ~ UTxOState era
+  , State (EraRule "UTXOW" era) ~ UTxOStateTemp era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
@@ -333,7 +340,7 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot _txIx pp account, LedgerState utxoState certState, tx) <- judgmentContext
+  TRC (LedgerEnv slot _txIx pp account, LedgerStateTemp utxoState certState, tx) <- judgmentContext
 
   let actualTreasuryValue = account ^. asTreasuryL
    in case tx ^. bodyTxL . currentTreasuryValueTxBodyL of
@@ -382,15 +389,15 @@ ledgerTransition = do
                   (txIdTxBody txBody)
                   currentEpoch
                   pp
-                  (utxoState ^. utxosGovStateL . proposalsGovStateL . pRootsL . L.to toPrevGovActionIds)
-                  (utxoState ^. utxosGovStateL . constitutionGovStateL . constitutionScriptL)
+                  (utxoState ^. utxostGovStateL . proposalsGovStateL . pRootsL . L.to toPrevGovActionIds)
+                  (utxoState ^. utxostGovStateL . constitutionGovStateL . constitutionScriptL)
                   (certState ^. certVStateL . vsCommitteeStateL)
-              , utxoState ^. utxosGovStateL . proposalsGovStateL
+              , utxoState ^. utxostGovStateL . proposalsGovStateL
               , govProcedures
               )
         let utxoState' =
               utxoState
-                & utxosGovStateL
+                & utxostGovStateL
                 . proposalsGovStateL
                 .~ proposalsState
         pure (utxoState', certStateAfterCERTS)
@@ -408,7 +415,7 @@ ledgerTransition = do
         , utxoState'
         , tx
         )
-  pure $ LedgerState utxoState'' certStateAfterCERTS
+  pure $ LedgerStateTemp utxoState'' certStateAfterCERTS
 
 instance
   ( EraTx era
@@ -448,7 +455,7 @@ instance
   , EraUTxO era
   , BabbageEraTxBody era
   , Embed (EraRule "UTXO" era) (BabelUTXOW era)
-  , State (EraRule "UTXO" era) ~ UTxOState era
+  , State (EraRule "UTXO" era) ~ UTxOStateTemp era
   , Environment (EraRule "UTXO" era) ~ UtxoEnv era
   , Script era ~ AlonzoScript era
   , TxOut era ~ BabbageTxOut era
@@ -464,3 +471,71 @@ instance
   where
   wrapFailed = BabelUtxowFailure
   wrapEvent = UtxowEvent
+
+-- Helpers
+
+renderDepositEqualsObligationViolation ::
+  ( EraTx era
+  , EraGov era
+  , Environment t ~ LedgerEnv era
+  , Signal t ~ Tx era
+  , State t ~ LedgerStateTemp era
+  ) =>
+  AssertionViolation t ->
+  String
+renderDepositEqualsObligationViolation
+  AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ pp _, _, tx), avState} =
+    case avState of
+      Nothing -> "\nAssertionViolation " ++ avSTS ++ " " ++ avMsg ++ " (avState is Nothing)."
+      Just lstate ->
+        let certstate = lstCertState lstate
+            utxoSt = lstUTxOState lstate
+            utxo = utxostUtxo utxoSt
+            txb = tx ^. bodyTxL
+            pot = utxoSt ^. utxostDepositedL
+         in "\n\nAssertionViolation ("
+              <> avSTS
+              <> ")\n\n  "
+              <> avMsg
+              <> "\n\nCERTS\n"
+              <> showTxCerts txb
+              <> "\n(slot,keyDeposit,poolDeposit) "
+              <> show (slot, pp ^. ppKeyDepositL, pp ^. ppPoolDepositL)
+              <> "\nThe Pot (utxosDeposited) = "
+              <> show pot
+              <> "\n"
+              <> show (allObligations certstate (utxostGovState utxoSt))
+              <> "\nConsumed = "
+              <> show (consumedTxBody txb pp certstate utxo)
+              <> "\nProduced = "
+              <> show (producedTxBody txb pp certstate)
+
+babelLedgerAssertions ::
+  ( EraGov era
+  , State (rule era) ~ LedgerStateTemp era
+  ) =>
+  [Assertion (rule era)]
+babelLedgerAssertions =
+  [ PostCondition
+      "Deposit pot must equal obligation (LEDGER)"
+      ( \(TRC (_, _, _))
+         (LedgerStateTemp utxoSt dpstate) -> potEqualsObligation dpstate utxoSt
+      )
+  ]
+
+potEqualsObligation ::
+  EraGov era =>
+  CertState era ->
+  UTxOStateTemp era ->
+  Bool
+potEqualsObligation certState utxoSt = obligations == pot
+  where
+    obligations = totalObligation certState (utxoSt ^. utxostGovStateL)
+    pot = utxoSt ^. utxostDepositedL
+
+allObligations :: EraGov era => CertState era -> GovState era -> Obligations
+allObligations certState govState =
+  obligationCertState certState <> obligationGovState govState
+
+totalObligation :: EraGov era => CertState era -> GovState era -> Coin
+totalObligation certState govState = sumObligation (allObligations certState govState)

@@ -14,8 +14,8 @@ import Test.Cardano.Ledger.Alonzo.ImpTest (AlonzoEraImp)
 import Test.Cardano.Ledger.Common
 
 spec ::
-  forall era.
-  ( AlonzoEraImp era
+  forall era ls.
+  ( AlonzoEraImp ls era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>

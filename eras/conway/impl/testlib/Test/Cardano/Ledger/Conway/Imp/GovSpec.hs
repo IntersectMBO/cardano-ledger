@@ -91,7 +91,8 @@ unknownCostModelsSpec =
       gai <-
         submitParameterChange SNothing $
           emptyPParamsUpdate
-            & ppuCostModelsL .~ SJust newCostModels
+            & ppuCostModelsL
+            .~ SJust newCostModels
       submitYesVote_ (DRepVoter drepC) gai
       submitYesVote_ (CommitteeVoter hotCommitteeC) gai
       passNEpochs 2
@@ -200,7 +201,8 @@ pparamUpdateSpec =
             rew <- registerRewardAccount
             let ppUpdate =
                   emptyPParamsUpdate
-                    & lenz .~ SJust val
+                    & lenz
+                    .~ SJust val
                 ga = ParameterChange SNothing ppUpdate SNothing
             submitFailingProposal
               ( ProposalProcedure
@@ -848,12 +850,14 @@ votingSpec =
       it "CC cannot ratify if below threshold" $ do
         modifyPParams $ \pp ->
           pp
-            & ppGovActionLifetimeL .~ EpochInterval 3
+            & ppGovActionLifetimeL
+            .~ EpochInterval 3
             & ppDRepVotingThresholdsL
-              .~ def
-                { dvtUpdateToConstitution = 1 %! 2
-                }
-            & ppCommitteeMinSizeL .~ 2
+            .~ def
+              { dvtUpdateToConstitution = 1 %! 2
+              }
+            & ppCommitteeMinSizeL
+            .~ 2
         (dRepCred, _, _) <- setupSingleDRep 1_000_000
         ccColdCred0 <- KeyHashObj <$> freshKeyHash
         ccColdCred1 <- KeyHashObj <$> freshKeyHash
@@ -1036,7 +1040,8 @@ policySpec =
         let
           pparamsUpdate =
             def
-              & ppuCommitteeMinSizeL .~ SJust 1
+              & ppuCommitteeMinSizeL
+              .~ SJust 1
         rewardAccount <- registerRewardAccount
         submitProposal_
           ProposalProcedure
@@ -1066,7 +1071,8 @@ policySpec =
         let
           pparamsUpdate =
             def
-              & ppuCommitteeMinSizeL .~ SJust 2
+              & ppuCommitteeMinSizeL
+              .~ SJust 2
         res <-
           trySubmitProposal
             ProposalProcedure
@@ -1184,8 +1190,10 @@ proposalWithRewardAccount action = do
 
 -- | Tests the first hardfork in the Conway era where the PrevGovActionID is SNothing
 firstHardForkFollows ::
-  forall era.
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  forall era ls.
+  ( ShelleyEraImp ls era
+  , ConwayEraTxBody era
+  ) =>
   (ProtVer -> ProtVer) ->
   ImpTestM era ()
 firstHardForkFollows computeNewFromOld = do
@@ -1194,8 +1202,8 @@ firstHardForkFollows computeNewFromOld = do
 
 -- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SNothing
 firstHardForkCantFollow ::
-  forall era.
-  ( ShelleyEraImp era
+  forall era ls.
+  ( ShelleyEraImp ls era
   , ConwayEraTxBody era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
@@ -1218,8 +1226,10 @@ firstHardForkCantFollow = do
 
 -- | Tests a second hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkFollows ::
-  forall era.
-  (ShelleyEraImp era, ConwayEraTxBody era) =>
+  forall era ls.
+  ( ShelleyEraImp ls era
+  , ConwayEraTxBody era
+  ) =>
   (ProtVer -> ProtVer) ->
   ImpTestM era ()
 secondHardForkFollows computeNewFromOld = do
@@ -1231,8 +1241,8 @@ secondHardForkFollows computeNewFromOld = do
 
 -- | Negative (deliberatey failing) first hardfork in the Conway era where the PrevGovActionID is SJust
 secondHardForkCantFollow ::
-  forall era.
-  ( ShelleyEraImp era
+  forall era ls.
+  ( ShelleyEraImp ls era
   , ConwayEraTxBody era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
@@ -1307,22 +1317,22 @@ ccVoteOnConstitutionFailsWithMultipleVotes = do
       mkBasicTx $
         mkBasicTxBody
           & votingProceduresTxBodyL
-            .~ VotingProcedures
-              ( Map.fromList
-                  [
-                    ( DRepVoter drepCred2
-                    , Map.singleton committeeProposal $ VotingProcedure VoteYes SNothing
-                    )
-                  ,
-                    ( CommitteeVoter ccCred
-                    , Map.singleton committeeProposal $ VotingProcedure VoteNo SNothing
-                    )
-                  ,
-                    ( DRepVoter drepCred
-                    , Map.singleton committeeProposal $ VotingProcedure VoteYes SNothing
-                    )
-                  ]
-              )
+          .~ VotingProcedures
+            ( Map.fromList
+                [
+                  ( DRepVoter drepCred2
+                  , Map.singleton committeeProposal $ VotingProcedure VoteYes SNothing
+                  )
+                ,
+                  ( CommitteeVoter ccCred
+                  , Map.singleton committeeProposal $ VotingProcedure VoteNo SNothing
+                  )
+                ,
+                  ( DRepVoter drepCred
+                  , Map.singleton committeeProposal $ VotingProcedure VoteYes SNothing
+                  )
+                ]
+            )
   impAnn "Try to vote as a committee member" $
     submitFailingTx
       voteTx

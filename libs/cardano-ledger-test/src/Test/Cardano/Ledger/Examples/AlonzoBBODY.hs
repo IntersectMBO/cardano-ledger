@@ -169,7 +169,7 @@ initialBBodyState ::
   ) =>
   Proof era ->
   UTxO era ->
-  ShelleyBbodyState era
+  ShelleyBbodyState "LEDGERS" era
 initialBBodyState pf utxo =
   BbodyState (LedgerState initialUtxoSt dpstate) (BlocksMade mempty)
   where
@@ -614,7 +614,7 @@ testBBodyState ::
   , ShelleyEraTxCert era
   ) =>
   Proof era ->
-  ShelleyBbodyState era
+  ShelleyBbodyState "LEDGERS" era
 testBBodyState pf =
   let utxo =
         UTxO $

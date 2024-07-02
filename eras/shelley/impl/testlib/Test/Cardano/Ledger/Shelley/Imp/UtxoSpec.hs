@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.UtxoSpec (spec) where
 
@@ -15,7 +16,7 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
 spec ::
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   ) =>
   SpecWith (ImpTestState era)
@@ -31,15 +32,20 @@ spec = describe "UTXO" $ do
           rootTxOutValue = rootTxOut ^. valueTxOutL
           txBody =
             mkBasicTxBody
-              & inputsTxBodyL .~ [txIn]
-              & outputsTxBodyL .~ [mkBasicTxOut addr2 (inject (Coin 200000))]
+              & inputsTxBodyL
+              .~ [txIn]
+              & outputsTxBodyL
+              .~ [mkBasicTxOut addr2 (inject (Coin 200000))]
           adjustTxOut = \case
             Empty -> error "Unexpected empty sequence of outputs"
             txOut :<| outs -> (txOut & coinTxOutL %~ (<> extra)) :<| outs
           adjustFirstTxOut tx =
             tx
-              & bodyTxL . outputsTxBodyL %~ adjustTxOut
-              & witsTxL .~ mkBasicTxWits
+              & bodyTxL
+              . outputsTxBodyL
+              %~ adjustTxOut
+              & witsTxL
+              .~ mkBasicTxWits
       res <- withPostFixup (updateAddrTxWits . adjustFirstTxOut) $ trySubmitTx (mkBasicTx txBody)
 
       predFailures <- expectLeftDeep res

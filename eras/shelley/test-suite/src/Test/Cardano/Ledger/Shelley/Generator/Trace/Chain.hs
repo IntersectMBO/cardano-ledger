@@ -90,13 +90,13 @@ instance
   , EraGen era
   , EraSegWits era
   , Mock (EraCrypto era)
-  , ApplyBlock era
+  , ApplyBlock "LEDGERS" era
   , GetLedgerView era
   , MinLEDGER_STS era
   , MinCHAIN_STS era
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
-  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState "LEDGERS" era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv

@@ -3,6 +3,7 @@
 module Main where
 
 import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Shelley.LedgerState
 import qualified Test.Cardano.Ledger.Api.State.Imp.QuerySpec as ImpQuery (spec)
 import qualified Test.Cardano.Ledger.Api.State.QuerySpec as StateQuery (spec)
 import qualified Test.Cardano.Ledger.Api.Tx as Tx (spec)
@@ -22,7 +23,7 @@ apiSpec =
       TxBody.spec
     describe "State" $ do
       StateQuery.spec
-    describe "Imp" $ withImpState @Conway $ do
+    describe "Imp" $ withImpState @LedgerState @Conway $ do
       ImpQuery.spec @Conway
 
 main :: IO ()

@@ -23,14 +23,18 @@ module Cardano.Ledger.Babel.LedgerState.Types where
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core (EraCrypto, EraGov, EraTxOut, GovState)
 import Cardano.Ledger.FRxO (FRxO)
+import Cardano.Ledger.Shelley.API (LedgerState (..), UTxOState (..))
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
+  HasLedgerState (..),
   IncrementalStake,
  )
 import Cardano.Ledger.UTxO (UTxO)
 import Control.DeepSeq (NFData)
 import Data.Default.Class (Default (def))
 import GHC.Generics (Generic)
+import Lens.Micro (lens, (&), (.~), (^.))
+import Lens.Micro.Type (Lens')
 
 -- type instance Ledger (ConwayEra c) = LedgerStateTemp (ConwayEra c)
 
@@ -41,6 +45,17 @@ data LedgerStateTemp era = LedgerStateTemp
   , lstCertState :: !(CertState era)
   }
   deriving (Generic)
+
+instance Default (UTxOStateTemp era) => Default (LedgerStateTemp era) where
+  def = LedgerStateTemp def def
+
+instance HasLedgerState LedgerStateTemp era where
+  hlsUtxoStateL = lens getter setter
+    where
+      getter s = toUTxOState (s ^. lstUtxoStateL)
+      setter s b = s & lstUtxoStateL .~ fromUTxOState b
+  hlsCertStateL = lstCertStateL
+  mkLedgerState utxos = LedgerStateTemp (fromUTxOState utxos)
 
 deriving stock instance
   ( EraTxOut era
@@ -53,6 +68,68 @@ deriving stock instance
   , Eq (GovState era)
   ) =>
   Eq (LedgerStateTemp era)
+
+-- Conversion
+
+-- | Convert from LedgerState to LedgerStateTemp
+fromLedgerState :: LedgerState era -> LedgerStateTemp era
+fromLedgerState LedgerState {lsUTxOState, lsCertState} =
+  LedgerStateTemp
+    { lstUTxOState = fromUTxOState lsUTxOState
+    , lstCertState = lsCertState
+    }
+
+-- | Convert from UTxOState to UTxOStateTemp
+fromUTxOState :: UTxOState era -> UTxOStateTemp era
+fromUTxOState
+  UTxOState
+    { utxosUtxo
+    , utxosFrxo
+    , utxosDeposited
+    , utxosFees
+    , utxosGovState
+    , utxosStakeDistr
+    , utxosDonation
+    } =
+    UTxOStateTemp
+      { utxostUtxo = utxosUtxo
+      , utxostFrxo = utxosFrxo
+      , utxostDeposited = utxosDeposited
+      , utxostFees = utxosFees
+      , utxostGovState = utxosGovState
+      , utxostStakeDistr = utxosStakeDistr
+      , utxostDonation = utxosDonation
+      }
+
+-- | Convert from LedgerStateTemp to LedgerState
+toLedgerState :: LedgerStateTemp era -> LedgerState era
+toLedgerState LedgerStateTemp {lstUTxOState, lstCertState} =
+  LedgerState
+    { lsUTxOState = toUTxOState lstUTxOState
+    , lsCertState = lstCertState
+    }
+
+-- | Convert from UTxOStateTemp to UTxOState
+toUTxOState :: UTxOStateTemp era -> UTxOState era
+toUTxOState
+  UTxOStateTemp
+    { utxostUtxo
+    , utxostFrxo
+    , utxostDeposited
+    , utxostFees
+    , utxostGovState
+    , utxostStakeDistr
+    , utxostDonation
+    } =
+    UTxOState
+      { utxosUtxo = utxostUtxo
+      , utxosFrxo = utxostFrxo
+      , utxosDeposited = utxostDeposited
+      , utxosFees = utxostFees
+      , utxosGovState = utxostGovState
+      , utxosStakeDistr = utxostStakeDistr
+      , utxosDonation = utxostDonation
+      }
 
 --------
 
@@ -67,6 +144,35 @@ data UTxOStateTemp era = UTxOStateTemp
   , utxostDonation :: !Coin
   }
   deriving (Generic)
+
+-- Lenses
+
+lstUtxoStateL :: Lens' (LedgerStateTemp era) (UTxOStateTemp era)
+lstUtxoStateL = lens lstUTxOState (\s x -> s {lstUTxOState = x})
+
+lstCertStateL :: Lens' (LedgerStateTemp era) (CertState era)
+lstCertStateL = lens lstCertState (\s x -> s {lstCertState = x})
+
+utxostUtxoL :: Lens' (UTxOStateTemp era) (UTxO era)
+utxostUtxoL = lens utxostUtxo (\s x -> s {utxostUtxo = x})
+
+utxostFrxoL :: Lens' (UTxOStateTemp era) (FRxO era)
+utxostFrxoL = lens utxostFrxo (\s x -> s {utxostFrxo = x})
+
+utxostDepositedL :: Lens' (UTxOStateTemp era) Coin
+utxostDepositedL = lens utxostDeposited (\s x -> s {utxostDeposited = x})
+
+utxostFeesL :: Lens' (UTxOStateTemp era) Coin
+utxostFeesL = lens utxostFees (\s x -> s {utxostFees = x})
+
+utxostGovStateL :: Lens' (UTxOStateTemp era) (GovState era)
+utxostGovStateL = lens utxostGovState (\s x -> s {utxostGovState = x})
+
+utxostStakeDistrL :: Lens' (UTxOStateTemp era) (IncrementalStake (EraCrypto era))
+utxostStakeDistrL = lens utxostStakeDistr (\s x -> s {utxostStakeDistr = x})
+
+utxostDonationL :: Lens' (UTxOStateTemp era) Coin
+utxostDonationL = lens utxostDonation (\s x -> s {utxostDonation = x})
 
 -- ====================================================
 

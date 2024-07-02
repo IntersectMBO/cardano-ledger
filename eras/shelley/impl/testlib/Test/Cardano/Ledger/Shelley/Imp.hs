@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Imp (spec) where
 
@@ -17,17 +18,17 @@ import Test.Cardano.Ledger.Shelley.ImpTest (ShelleyEraImp, withImpState)
 import qualified Test.Cardano.Ledger.Shelley.UnitTests.IncrementalStakeTest as Incremental
 
 spec ::
-  forall era.
-  ( ShelleyEraImp era
+  forall era ls.
+  ( ShelleyEraImp ls era
   , InjectRuleFailure "LEDGER" ShelleyUtxoPredFailure era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
   Spec
 spec = do
-  describe "ShelleyImpSpec" $ withImpState @era $ do
+  describe "ShelleyImpSpec" $ withImpState @ls @era $ do
     Ledger.spec @era
     Epoch.spec @era
-    Utxow.spec @era
-    Utxo.spec @era
+    Utxow.spec @ls @era
+    Utxo.spec @ls @era
   describe "ShelleyPureTests" $ do
     Incremental.spec @era

@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.UtxowSpec (spec) where
 
@@ -17,7 +18,7 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest
 
 spec ::
-  ( ShelleyEraImp era
+  ( ShelleyEraImp ls era
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
   SpecWith (ImpTestState era)

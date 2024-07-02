@@ -19,6 +19,7 @@ module Cardano.Ledger.Babel.Rules.Ledgers (BabelLEDGERS, BabelLedgersEnv (..)) w
 
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxosPredFailure)
 import Cardano.Ledger.Babel.Era (BabelEra, BabelLEDGERS)
+import Cardano.Ledger.Babel.LedgerState.Types (LedgerStateTemp)
 import Cardano.Ledger.Babel.Rules.Ledger (BabelLEDGER, BabelLedgerEvent, BabelLedgerPredFailure)
 import Cardano.Ledger.Babel.Rules.Pool ()
 import Cardano.Ledger.Babel.Rules.Utxo (BabelUtxoPredFailure)
@@ -27,7 +28,7 @@ import Cardano.Ledger.Babel.Rules.Utxow (BabelUtxowPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Shelley.API.Types (AccountState, LedgerEnv (LedgerEnv), LedgerState)
+import Cardano.Ledger.Shelley.API.Types (AccountState, LedgerEnv (LedgerEnv))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersEvent (LedgerEvent),
   ShelleyLedgersPredFailure (..),
@@ -81,14 +82,14 @@ instance
   ( Era era
   , Embed (EraRule "LEDGER" era) (BabelLEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateTemp era
   , Signal (EraRule "LEDGER" era) ~ Tx era
   , DSignable (EraCrypto era) (Hash (EraCrypto era) EraIndependentTxBody)
-  , Default (LedgerState era)
+  , Default (LedgerStateTemp era)
   ) =>
   STS (BabelLEDGERS era)
   where
-  type State (BabelLEDGERS era) = LedgerState era
+  type State (BabelLEDGERS era) = LedgerStateTemp era
   type Signal (BabelLEDGERS era) = Seq (Tx era)
   type Environment (BabelLEDGERS era) = BabelLedgersEnv era
   type BaseM (BabelLEDGERS era) = ShelleyBase
@@ -101,7 +102,7 @@ ledgersTransition ::
   forall era.
   ( Embed (EraRule "LEDGER" era) (BabelLEDGERS era)
   , Environment (EraRule "LEDGER" era) ~ LedgerEnv era
-  , State (EraRule "LEDGER" era) ~ LedgerState era
+  , State (EraRule "LEDGER" era) ~ LedgerStateTemp era
   , Signal (EraRule "LEDGER" era) ~ Tx era
   ) =>
   TransitionRule (BabelLEDGERS era)
