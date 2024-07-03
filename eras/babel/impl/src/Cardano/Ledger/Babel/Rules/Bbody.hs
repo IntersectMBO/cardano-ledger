@@ -31,6 +31,7 @@ import Cardano.Ledger.Babel.Rules.Zones (BabelZonesPredFailure)
 import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, HasKeyRole (coerceKeyRole), Hash)
+import Cardano.Ledger.Shelley (EraFirstRule)
 import Cardano.Ledger.Shelley.API (
   Block (UnserialisedBlock),
   ShelleyLedgersEnv (LedgersEnv),
@@ -127,12 +128,13 @@ instance
   , Embed (EraRule "ZONES" era) (BabelBBODY era)
   , Environment (EraRule "ZONES" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "ZONES" era) ~ Seq (Seq (Tx era))
+  , State (EraRule (EraFirstRule era) era) ~ State (EraRule "ZONES" era)
   , Eq (PredicateFailure (EraRule "LEDGERS" era))
   , Show (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
   STS (BabelBBODY era)
   where
-  type State (BabelBBODY era) = ShelleyBbodyState "ZONES" era
+  type State (BabelBBODY era) = ShelleyBbodyState era
 
   type Signal (BabelBBODY era) = Block (BHeaderView (EraCrypto era)) era
 
@@ -155,6 +157,7 @@ bbodyTransition ::
   , Embed (EraRule "ZONES" era) (BabelBBODY era)
   , Environment (EraRule "ZONES" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "ZONES" era) ~ Seq (Seq (Tx era))
+  , State (EraRule (EraFirstRule era) era) ~ State (EraRule "ZONES" era)
   ) =>
   TransitionRule (BabelBBODY era)
 bbodyTransition =

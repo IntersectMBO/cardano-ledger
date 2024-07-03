@@ -3,6 +3,7 @@
 
 module Cardano.Ledger.Shelley.Era (
   ShelleyEra,
+  EraFirstRule,
   ShelleyBBODY,
   ShelleyDELEG,
   ShelleyDELEGS,
@@ -29,6 +30,7 @@ where
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (ByronEra, Era (..), EraRule, Value)
 import Cardano.Ledger.Crypto (Crypto)
+import GHC.TypeLits (Symbol)
 
 data ShelleyEra c
 
@@ -38,6 +40,9 @@ instance Crypto c => Era (ShelleyEra c) where
   type ProtVerLow (ShelleyEra c) = 2
 
   eraName = "Shelley"
+
+type family EraFirstRule era :: Symbol
+type instance EraFirstRule (ShelleyEra c) = "LEDGERS"
 
 type instance Value (ShelleyEra _c) = Coin
 

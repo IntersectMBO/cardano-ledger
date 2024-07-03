@@ -40,6 +40,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
+import Cardano.Ledger.Shelley (EraFirstRule)
 import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules (
@@ -181,11 +182,12 @@ bbodyTransition ::
   , Signal (someBBODY era) ~ Block (BHeaderView (EraCrypto era)) era
   , PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFailure era
   , BaseM (someBBODY era) ~ ShelleyBase
-  , State (someBBODY era) ~ ShelleyBbodyState "LEDGERS" era
+  , State (someBBODY era) ~ ShelleyBbodyState era
   , Environment (someBBODY era) ~ BbodyEnv era
   , Embed (EraRule "LEDGERS" era) (someBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule (EraFirstRule era) era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , EraSegWits era
   , AlonzoEraTxWits era
@@ -244,7 +246,7 @@ bbodyTransition =
         pointWiseExUnits (<=) txTotal ppMax ?! TooManyExUnits txTotal ppMax
 
         pure $
-          BbodyState @"LEDGERS" @era
+          BbodyState @era
             ls'
             ( incrBlocks
                 (isOverlaySlot firstSlotNo (pp ^. ppDG) slot)
@@ -257,6 +259,7 @@ instance
   , Embed (EraRule "LEDGERS" era) (AlonzoBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule (EraFirstRule era) era) ~ LedgerState era
   , Signal (EraRule "LEDGERS" era) ~ Seq (AlonzoTx era)
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
@@ -269,7 +272,7 @@ instance
   where
   type
     State (AlonzoBBODY era) =
-      ShelleyBbodyState "LEDGERS" era
+      ShelleyBbodyState era
 
   type
     Signal (AlonzoBBODY era) =

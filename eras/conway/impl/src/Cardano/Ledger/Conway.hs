@@ -49,7 +49,7 @@ instance
   ( Crypto c
   , DSignable c (Hash c EraIndependentTxBody)
   ) =>
-  API.ApplyBlock "LEDGERS" (ConwayEra c)
+  API.ApplyBlock (ConwayEra c)
 
 instance Crypto c => API.CanStartFromGenesis (ConwayEra c) where
   type AdditionalGenesisConfig (ConwayEra c) = ConwayGenesis c

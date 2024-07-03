@@ -15,6 +15,7 @@ import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Shelley (EraFirstRule)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules (
   ShelleyEPOCH,
@@ -41,6 +42,8 @@ instance Crypto c => Era (BabbageEra c) where
   eraName = "Babbage"
 
 type instance Value (BabbageEra c) = MaryValue c
+
+type instance EraFirstRule (BabbageEra c) = "LEDGERS"
 
 -------------------------------------------------------------------------------
 -- Era Mapping

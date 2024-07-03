@@ -69,7 +69,7 @@ instance
     Signable (DSIGN c) (Cardano.Crypto.Hash.Class.Hash c EraIndependentTxBody)
   , Default (LedgerStateTemp (BabelEra c))
   ) =>
-  ApplyBlock "ZONES" (BabelEra c)
+  ApplyBlock (BabelEra c)
 
 instance
   ( Crypto c

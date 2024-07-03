@@ -52,7 +52,7 @@ import Cardano.Ledger.Keys (
   coerceKeyRole,
  )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (EraFirstRule, ShelleyEra)
 import Cardano.Ledger.Shelley.AdaPots (
   AdaPots (..),
   totalAdaES,
@@ -263,7 +263,7 @@ instance
   ( EraGov era
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
-  , State (EraRule "BBODY" era) ~ ShelleyBbodyState "LEDGERS" era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
@@ -277,6 +277,7 @@ instance
   , EncCBORGroup (TxZones era)
   , ProtVerAtMost era 6
   , State (Core.EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule (EraFirstRule era) era) ~ State (EraRule "LEDGERS" era)
   ) =>
   STS (CHAIN era)
   where
@@ -302,7 +303,7 @@ chainTransition ::
   ( STS (CHAIN era)
   , Embed (EraRule "BBODY" era) (CHAIN era)
   , Environment (EraRule "BBODY" era) ~ BbodyEnv era
-  , State (EraRule "BBODY" era) ~ ShelleyBbodyState "LEDGERS" era
+  , State (EraRule "BBODY" era) ~ ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , Embed (EraRule "TICKN" era) (CHAIN era)
   , Environment (EraRule "TICKN" era) ~ TicknEnv
@@ -316,6 +317,7 @@ chainTransition ::
   , EncCBORGroup (TxZones era)
   , ProtVerAtMost era 6
   , State (Core.EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule (EraFirstRule era) era) ~ State (EraRule "LEDGERS" era)
   , EraGov era
   ) =>
   TransitionRule (CHAIN era)

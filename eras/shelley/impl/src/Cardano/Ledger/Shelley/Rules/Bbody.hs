@@ -29,7 +29,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Shelley.BlockChain (incrBlocks)
-import Cardano.Ledger.Shelley.Era (ShelleyBBODY, ShelleyEra)
+import Cardano.Ledger.Shelley.Era (EraFirstRule, ShelleyBBODY, ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (AccountState)
 import Cardano.Ledger.Shelley.Rules.Deleg (ShelleyDelegPredFailure)
 import Cardano.Ledger.Shelley.Rules.Delegs (ShelleyDelegsPredFailure)
@@ -55,17 +55,16 @@ import Control.State.Transition (
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
-import GHC.TypeLits (Symbol)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
-data ShelleyBbodyState (firstRule :: Symbol) era
-  = BbodyState !(State (EraRule firstRule era)) !(BlocksMade (EraCrypto era))
+data ShelleyBbodyState era
+  = BbodyState !(State (EraRule (EraFirstRule era) era)) !(BlocksMade (EraCrypto era))
 
 deriving stock instance
-  Show (State (EraRule firstRule era)) => Show (ShelleyBbodyState firstRule era)
+  Show (State (EraRule (EraFirstRule era) era)) => Show (ShelleyBbodyState era)
 
-deriving stock instance Eq (State (EraRule firstRule era)) => Eq (ShelleyBbodyState firstRule era)
+deriving stock instance Eq (State (EraRule (EraFirstRule era) era)) => Eq (ShelleyBbodyState era)
 
 data BbodyEnv era = BbodyEnv
   { bbodyPp :: PParams era
@@ -140,12 +139,13 @@ instance
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , State (EraRule (EraFirstRule era) era) ~ State (EraRule "LEDGERS" era)
   ) =>
   STS (ShelleyBBODY era)
   where
   type
     State (ShelleyBBODY era) =
-      ShelleyBbodyState "LEDGERS" era
+      ShelleyBbodyState era
 
   type
     Signal (ShelleyBBODY era) =
@@ -169,6 +169,7 @@ bbodyTransition ::
   , Embed (EraRule "LEDGERS" era) (ShelleyBBODY era)
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , State (EraRule (EraFirstRule era) era) ~ State (EraRule "LEDGERS" era)
   ) =>
   TransitionRule (ShelleyBBODY era)
 bbodyTransition =

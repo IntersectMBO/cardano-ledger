@@ -74,10 +74,10 @@ import Cardano.Ledger.BaseTypes (
 import Cardano.Ledger.Binary (EncCBOR (..), hashWithEncoder, shelleyProtVer)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Shelley.API.Validation (ApplyBlock)
 import Cardano.Ledger.Crypto (Crypto (DSIGN))
 import Cardano.Ledger.Mary.Value (MultiAsset (MultiAsset))
 import Cardano.Ledger.Shelley.API (KeyRole (..), VKey (..))
+import Cardano.Ledger.Shelley.API.Validation (ApplyBlock)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
@@ -116,7 +116,7 @@ import Test.Tasty.HUnit (
 
 type ChainProperty era =
   ( Mock (EraCrypto era)
-  , ApplyBlock "LEDGERS" era
+  , ApplyBlock era
   , GetLedgerView era
   , EraTx era
   )

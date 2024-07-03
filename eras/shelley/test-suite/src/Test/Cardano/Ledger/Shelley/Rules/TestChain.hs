@@ -243,7 +243,7 @@ ledgerTraceBase ::
   forall era.
   ( EraSegWits era
   , GetLedgerView era
-  , ApplyBlock "LEDGERS" era
+  , ApplyBlock era
   ) =>
   ChainState era ->
   Block (BHeader (EraCrypto era)) era ->

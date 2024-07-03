@@ -41,6 +41,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core (EraGov)
+import Cardano.Ledger.Shelley.Era (EraFirstRule)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), NewEpochState, curPParamsEpochStateL)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams ()
@@ -69,12 +70,12 @@ class
   , STS (EraRule "BBODY" era)
   , BaseM (EraRule "BBODY" era) ~ ShelleyBase
   , Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era
-  , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState firstRule era
+  , State (EraRule "BBODY" era) ~ STS.ShelleyBbodyState era
   , Signal (EraRule "BBODY" era) ~ Block (BHeaderView (EraCrypto era)) era
   , EncCBORGroup (TxZones era)
-  , State (EraRule firstRule era) ~ LedgerState era
+  , State (EraRule (EraFirstRule era) era) ~ LedgerState era
   ) =>
-  ApplyBlock firstRule era
+  ApplyBlock era
   where
   -- | Apply the header level ledger transition.
   --
@@ -117,7 +118,7 @@ class
       . left BlockTransitionError
       . right
         ( mapEventReturn @ep @(EraRule "BBODY" era) $
-            updateNewEpochState @era @firstRule state
+            updateNewEpochState @era state
         )
       $ res
     where
@@ -159,7 +160,7 @@ class
           (LedgerState.nesBcur state)
 
 applyTick ::
-  ApplyBlock firstRule era =>
+  ApplyBlock era =>
   Globals ->
   NewEpochState era ->
   SlotNo ->
@@ -173,7 +174,7 @@ applyTick =
       }
 
 applyBlock ::
-  ( ApplyBlock firstRule era
+  ( ApplyBlock era
   , MonadError (BlockTransitionError era) m
   ) =>
   Globals ->
@@ -199,7 +200,7 @@ instance
   ( Crypto c
   , DSignable c (Hash c EraIndependentTxBody)
   ) =>
-  ApplyBlock "LEDGERS" (ShelleyEra c)
+  ApplyBlock (ShelleyEra c)
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
@@ -233,9 +234,9 @@ mkBbodyEnv
       }
 
 updateNewEpochState ::
-  (LedgerState era ~ State (EraRule firstRule era), EraGov era) =>
+  (LedgerState era ~ State (EraRule (EraFirstRule era) era), EraGov era) =>
   NewEpochState era ->
-  STS.ShelleyBbodyState firstRule era ->
+  STS.ShelleyBbodyState era ->
   NewEpochState era
 updateNewEpochState ss (STS.BbodyState ls bcur) =
   LedgerState.updateNES ss bcur ls

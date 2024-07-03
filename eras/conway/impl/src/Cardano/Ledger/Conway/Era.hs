@@ -24,6 +24,7 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Shelley (EraFirstRule)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules (
   ShelleyPOOL,
@@ -46,6 +47,8 @@ instance Crypto c => Era (ConwayEra c) where
   eraName = "Conway"
 
 type instance Value (ConwayEra c) = MaryValue c
+
+type instance EraFirstRule (ConwayEra c) = "LEDGERS"
 
 -------------------------------------------------------------------------------
 -- Deprecated rules

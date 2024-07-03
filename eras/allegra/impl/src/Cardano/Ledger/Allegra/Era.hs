@@ -13,7 +13,7 @@ module Cardano.Ledger.Allegra.Era (
 
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley (EraFirstRule, ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.Rules
 
@@ -26,6 +26,8 @@ instance Crypto c => Era (AllegraEra c) where
   type ProtVerLow (AllegraEra c) = 3
 
   eraName = "Allegra"
+
+type instance EraFirstRule (AllegraEra c) = "LEDGERS"
 
 --------------------------------------------------------------------------------
 -- Core instances

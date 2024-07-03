@@ -29,6 +29,7 @@ import Cardano.Ledger.Conway.Rules (
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Mary.Value (MaryValue)
+import Cardano.Ledger.Shelley (EraFirstRule)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules (
   ShelleyPOOL,
@@ -51,6 +52,8 @@ instance Crypto c => Era (BabelEra c) where
   eraName = "Babel"
 
 type instance Value (BabelEra c) = MaryValue c
+
+type instance EraFirstRule (BabelEra c) = "ZONES"
 
 -------------------------------------------------------------------------------
 -- Deprecated rules

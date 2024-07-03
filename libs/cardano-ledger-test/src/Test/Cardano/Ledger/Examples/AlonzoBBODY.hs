@@ -47,6 +47,7 @@ import Cardano.Ledger.Plutus.Data (Data (..), hashData)
 import Cardano.Ledger.Plutus.Language (Language (..))
 import Cardano.Ledger.PoolParams (PoolMetadata (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley (EraFirstRule)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
   DState (..),
@@ -138,7 +139,7 @@ alonzoBBODYexamplesP ::
   , Value era ~ MaryValue (EraCrypto era)
   , EraSegWits era
   , Reflect era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule (EraFirstRule era) era) ~ LedgerState era
   ) =>
   Proof era ->
   TestTree
@@ -165,11 +166,11 @@ initialBBodyState ::
   ( EraTxOut era
   , PostShelley era
   , EraGov era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule (EraFirstRule era) era) ~ LedgerState era
   ) =>
   Proof era ->
   UTxO era ->
-  ShelleyBbodyState "LEDGERS" era
+  ShelleyBbodyState era
 initialBBodyState pf utxo =
   BbodyState (LedgerState initialUtxoSt dpstate) (BlocksMade mempty)
   where
@@ -610,11 +611,11 @@ testBBodyState ::
   , EraTxBody era
   , Value era ~ MaryValue (EraCrypto era)
   , EraGov era
-  , State (EraRule "LEDGERS" era) ~ LedgerState era
+  , State (EraRule (EraFirstRule era) era) ~ LedgerState era
   , ShelleyEraTxCert era
   ) =>
   Proof era ->
-  ShelleyBbodyState "LEDGERS" era
+  ShelleyBbodyState era
 testBBodyState pf =
   let utxo =
         UTxO $

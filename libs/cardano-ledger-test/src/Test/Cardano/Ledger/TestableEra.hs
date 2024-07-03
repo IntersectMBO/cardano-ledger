@@ -9,7 +9,7 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Protocol.TPraos.API
 
 class
-  ( ApplyBlock "LEDGERS" era
+  ( ApplyBlock era
   , ApplyTx era
   , GetLedgerView era
   ) =>

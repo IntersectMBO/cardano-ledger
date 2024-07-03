@@ -44,7 +44,7 @@ instance
 
 instance
   (Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
-  ApplyBlock "LEDGERS" (AllegraEra c)
+  ApplyBlock (AllegraEra c)
 
 instance Crypto c => CanStartFromGenesis (AllegraEra c) where
   fromShelleyPParams _ = translateEra' ()
