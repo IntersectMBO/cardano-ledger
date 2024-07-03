@@ -53,11 +53,13 @@ tests nightly =
     -- TODO: turn this on again when QuickCheck version is bumped
     -- testSpec "whenTrueExists" whenTrueExists
     testSpec "assertRealMultiple" assertRealMultiple
-    testSpec "setSpec" setSpec
+    -- TODO: quickcheck version
+    testSpecNoShrink "setSpec" setSpec
     testSpec "leqPair" leqPair
     testSpec "setPair" setPair
     testSpecNoShrink "listEmpty" listEmpty
-    testSpec "compositionalSpec" compositionalSpec
+    -- TODO: quickcheck version
+    testSpecNoShrink "compositionalSpec" compositionalSpec
     testSpec "simplePairSpec" simplePairSpec
     testSpec "trickyCompositional" trickyCompositional
     testSpec "emptyListSpec" emptyListSpec
@@ -76,7 +78,8 @@ tests nightly =
     -- so and it's not obvious if there is a faster way without implementing
     -- more detailed shrinking of `SuspendedSpec`s
     testSpecNoShrink "setPairSpec" setPairSpec
-    testSpec "fixedSetSpec" fixedSetSpec
+    -- TODO: quickcheck version
+    testSpecNoShrink "fixedSetSpec" fixedSetSpec
     testSpec "setOfPairLetSpec" setOfPairLetSpec
     testSpecNoShrink "emptyEitherSpec" emptyEitherSpec
     testSpecNoShrink "emptyEitherMemberSpec" emptyEitherMemberSpec
@@ -143,6 +146,12 @@ tests nightly =
     testSpec "elemSpec" elemSpec
     testSpec "lookupSpecific" lookupSpecific
     testSpec "specificElemConstraints" lookupSpecific
+    -- TODO: fixme in a follow-up PR
+    -- testSpec "mapRestrictedValues" mapRestrictedValues
+    -- testSpec "mapRestrictedValues" mapRestrictedValuesThree
+    -- testSpec "mapRestrictedValues" mapRestrictedValuesBool
+    testSpec "mapSetSmall" mapSetSmall
+    testSpecNoShrink "powersetPickOne" powersetPickOne
     numberyTests
     sizeTests
     numNumSpecTree

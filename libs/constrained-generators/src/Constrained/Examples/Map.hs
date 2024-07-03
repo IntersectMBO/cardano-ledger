@@ -80,3 +80,40 @@ lookupSpecific = constrained' $ \k v m ->
   [ m `dependsOn` k
   , assert $ lookup_ k m ==. cJust_ v
   ]
+
+mapRestrictedValues :: Specification BaseFn (Map (Either Int ()) Int)
+mapRestrictedValues = constrained $ \m ->
+  [ assert $ sizeOf_ (dom_ m) ==. 6
+  , forAll' m $ \k v ->
+      caseOn
+        k
+        (branch $ \_ -> 20 <=. v)
+        (branch $ \_ -> True)
+  ]
+
+-- NOTE: this fails if you pick the values of the map first - you're unlikely to generate
+-- three values such that two of them are <= -100 and >= 100 respectively even though
+-- you take satisfiability of the whole elem constraint into account. This can't be fixed
+-- with a `dependsOn v k` because the issue is that we've generated a bunch of values
+-- before we ever go to generate the keys.
+mapRestrictedValueThree :: Specification BaseFn (Map Three Int)
+mapRestrictedValueThree = constrained $ \m ->
+  [ assert $ sizeOf_ (dom_ m) ==. 3
+  , forAll' m $ \k v ->
+      caseOn
+        k
+        (branch $ \_ -> v <=. (-100))
+        (branch $ \_ -> 100 <=. v)
+        (branch $ \_ -> True)
+  ]
+
+mapRestrictedValueBool :: Specification BaseFn (Map Bool Int)
+mapRestrictedValueBool = constrained $ \m ->
+  [ assert $ sizeOf_ (dom_ m) ==. 2
+  , forAll' m $ \k v -> whenTrue k (100 <=. v)
+  ]
+
+mapSetSmall :: Specification BaseFn (Map (Set Int) Int)
+mapSetSmall = constrained $ \x ->
+  forAll (dom_ x) $ \d ->
+    assert $ subset_ d $ lit (Set.fromList [3 .. 4])

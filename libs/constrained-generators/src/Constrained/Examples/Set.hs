@@ -173,3 +173,11 @@ unionBounded :: Specification BaseFn (Set Int)
 unionBounded = constrained $ \xs ->
   [ sizeOf_ (xs <> lit (Set.fromList [1, 2, 3])) <=. 3
   ]
+
+-- Only possible value is {4}
+powersetPickOne :: Specification BaseFn (Set Int)
+powersetPickOne =
+  constrained $ \xs ->
+    [ xs `subset_` lit (Set.fromList [3, 4])
+    , not_ $ xs `elem_` lit [mempty, Set.fromList [3], Set.fromList [3, 4]]
+    ]
