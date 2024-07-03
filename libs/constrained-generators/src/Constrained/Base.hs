@@ -1003,8 +1003,16 @@ genFromSpecT (simplifySpec -> spec) = case spec of
     | otherwise -> do
         env <- genFromPreds p
         findEnv env x
-  TypeSpec s cant ->
-    explain ["", "genFromSpecT", "    " ++ show (typeRep cant), "    " ++ show spec] $
+  TypeSpec s cant -> do
+    mode <- getMode
+    explain
+      [ ""
+      , "genFromSpecT"
+      , "    " ++ show (typeRep cant)
+      , "    " ++ show spec
+      , "  with mode " ++ show mode
+      ]
+      $
       -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
       -- starts giving us trouble.
       genFromTypeSpec @fn s `suchThatT` (`notElem` cant)
@@ -3253,17 +3261,12 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
 
   genFromTypeSpec (SetSpec must e _)
     | any (not . (`conformsToSpec` e)) must = genError ["Failed to generate set: inconsistent spec"] -- TODO: improve error message
-  genFromTypeSpec (SetSpec must elemS szSpec)
-    | Nothing <- knownUpperBound szSpec
-    , maybe True (sizeOf must >=) $ knownLowerBound szSpec =
-        ((must <>) . Set.fromList <$> listOfT (genFromSpecT elemS))
-          `suchThatT` (`conformsToSpec` szSpec)
-          . sizeOf
-    | otherwise = do
-        n <-
-          explain ["Choose a possible size Bounds for the Sets to be generated"] $
-            genFromSpecT (szSpec <> geqSpec @fn (sizeOf must) <> maxSpec (cardinality elemS))
-        explain ["Chose size n = " ++ show n] $ go (n - sizeOf must) must
+  genFromTypeSpec (SetSpec must elemS szSpec) = do
+    let szSpec' = (szSpec <> geqSpec @fn (sizeOf must) <> maxSpec (cardinality elemS))
+    n <-
+      explain ["Choose a size for the Sets to be generated"] $
+        genFromSpecT szSpec'
+    explain ["Chose size n = " ++ show n, "szSpec' = " ++ show szSpec'] $ go (n - sizeOf must) must
     where
       go 0 s = pure s
       go n s = do
@@ -3277,14 +3280,23 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
             $ genFromSpecT elemS `suchThatT` (`Set.notMember` s)
         go (n - 1) (Set.insert e s)
 
+  cardinalTypeSpec (SetSpec _ es _)
+    | Just ub <- knownUpperBound (cardinality es) = leqSpec (2 ^ ub)
   cardinalTypeSpec _ = TrueSpec
+
+  cardinalTrueSpec
+    | Just ub <- knownUpperBound $ cardinalTrueSpec @fn @a = leqSpec (2 ^ ub)
+    | otherwise = TrueSpec
 
   shrinkWithTypeSpec (SetSpec _ es _) as = map Set.fromList $ shrinkList (shrinkWithSpec es) (Set.toList as)
 
   toPreds s (SetSpec m es size) =
-    (Assert ["Subset of " ++ show m] $ subset_ (Lit m) s)
-      <> forAll s (\e -> satisfies e es)
-      <> satisfies (size_ s) size
+    fold $
+      -- Don't include this if the must set is empty
+      [Assert [show m ++ " is a subset of the set."] $ subset_ (Lit m) s | not $ Set.null m]
+        ++ [ forAll s (\e -> satisfies e es)
+           , satisfies (size_ s) size
+           ]
 
 instance Ord a => Forallable (Set a) a where
   fromForAllSpec (e :: Specification fn a)

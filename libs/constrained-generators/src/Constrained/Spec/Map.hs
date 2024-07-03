@@ -194,6 +194,7 @@ instance
         [ "Make the restVals"
         , show $ "  valsSpec =" <+> pretty valsSpec
         , show $ "  mustMap =" <+> viaShow mustMap
+        , show $ "  size' =" <+> pretty size'
         ]
         $ genFromTypeSpec
         $ valsSpec
@@ -207,6 +208,7 @@ instance
               ]
               $ genFromSpecT keySpec
           go (Map.insert k v m) restVals'
+
     go (Map.fromList mustMap) restVals
 
   cardinalTypeSpec _ = TrueSpec
