@@ -53,8 +53,8 @@ header_body :: Rule
 header_body =
   "header_body"
     =:= arr
-      [ "block_number" ==> VUInt
-      , "slot" ==> VUInt
+      [ "block_number" ==> block_no
+      , "slot" ==> slot_no
       , "prev_hash" ==> (hash32 // VNil)
       , "issuer_vkey" ==> vkey
       , "vrf_vkey" ==> vrf_vkey
@@ -70,7 +70,7 @@ operational_cert =
   "operational_cert"
     =:= arr
       [ "hot_vkey" ==> kes_vkey
-      , "sequence_number" ==> VUInt
+      , "sequence_number" ==> (VUInt `sized` (8 :: Word64))
       , "kes_period" ==> VUInt
       , "sigma" ==> signature
       ]
@@ -78,13 +78,16 @@ operational_cert =
 protocol_version :: Rule
 protocol_version = "protocol_version" =:= arr [a major_protocol_version, a VUInt]
 
-next_major_protocol_version :: Rule
-next_major_protocol_version = "next_major_protocol_version" =:= (10 :: Integer)
-
--- TODO This should reference 'nixt_major_protocol_version' as soon as
+-- TODO Replace with the following once
 -- https://github.com/input-output-hk/cuddle/issues/29 is addressed in cuddle.
+--
+-- next_major_protocol_version :: Rule
+-- next_major_protocol_version = "next_major_protocol_version" =:= (10 :: Integer)
+next_major_protocol_version :: Integer
+next_major_protocol_version = 10
+
 major_protocol_version :: Rule
-major_protocol_version = "major_protocol_version" =:= (1 :: Integer) ... 10
+major_protocol_version = "major_protocol_version" =:= (1 :: Integer) ... next_major_protocol_version
 
 transaction_body :: Rule
 transaction_body =
@@ -97,7 +100,7 @@ transaction_body =
       , opt (idx 4 ==> certificates)
       , opt (idx 5 ==> withdrawals)
       , opt (idx 7 ==> auxiliary_data_hash)
-      , opt (idx 8 ==> VUInt)
+      , opt (idx 8 ==> slot_no) -- Validity interval start
       , opt (idx 9 ==> mint)
       , opt (idx 11 ==> script_data_hash)
       , opt (idx 13 ==> nonempty_set transaction_input)
@@ -165,7 +168,7 @@ parameter_change_action =
 hard_fork_initiation_action :: Named Group
 hard_fork_initiation_action =
   "hard_fork_initiation_action"
-    =:~ grp [1, gov_action_id // VNil, a (arr [a protocol_version])]
+    =:~ grp [1, gov_action_id // VNil, a protocol_version]
 
 treasury_withdrawals_action :: Named Group
 treasury_withdrawals_action =
@@ -244,16 +247,16 @@ transaction_input =
 transaction_output :: Rule
 transaction_output =
   "transaction_output"
-    =:= legacy_transaction_output
+    =:= pre_babbage_transaction_output
     // post_alonzo_transaction_output
 
-legacy_transaction_output :: Rule
-legacy_transaction_output =
-  "legacy_transaction_output"
+pre_babbage_transaction_output :: Rule
+pre_babbage_transaction_output =
+  "pre_babbage_transaction_output"
     =:= arr
       [ a address
       , "amount" ==> value
-      , opt ("datum_hash" ==> hash32)
+      , opt ("datum_hash" ==> datum_hash)
       ]
 
 post_alonzo_transaction_output :: Rule
@@ -495,6 +498,7 @@ protocol_param_update =
       , opt (idx 30 ==> coin) -- governance action deposit
       , opt (idx 31 ==> coin) -- DRep deposit
       , opt (idx 32 ==> epoch_interval) -- DRep inactivity period
+      , opt (idx 33 ==> nonnegative_interval) -- MinFee RefScriptCoinsPerByte
       ]
 
 pool_voting_thresholds :: Rule
@@ -654,10 +658,10 @@ costmdls =
     "The format for costmdls is flexible enough to allow adding Plutus\n built-ins and language versions in the future."
     $ "costmdls"
       =:= mp
-        [ opt $ idx 0 ==> arr [0 <+ a VInt] -- Plutus v1, only 166 integers are used, but more are accepted (and ignored)
-        , opt $ idx 1 ==> arr [0 <+ a VInt] -- Plutus v2, only 175 integers are used, but more are accepted (and ignored)
-        , opt $ idx 2 ==> arr [0 <+ a VInt] -- Plutus v3, only 223 integers are used, but more are accepted (and ignored)
-        , opt $ asKey (3 ... 255) ==> arr [0 <+ a VInt] -- Any 8-bit unsigned number can be used as a key.
+        [ opt $ idx 0 ==> arr [0 <+ a int64] -- Plutus v1, only 166 integers are used, but more are accepted (and ignored)
+        , opt $ idx 1 ==> arr [0 <+ a int64] -- Plutus v2, only 175 integers are used, but more are accepted (and ignored)
+        , opt $ idx 2 ==> arr [0 <+ a int64] -- Plutus v3, only 223 integers are used, but more are accepted (and ignored)
+        , opt $ asKey (3 ... 255) ==> arr [0 <+ a int64] -- Any 8-bit unsigned number can be used as a key.
         ]
 
 transaction_metadatum :: Rule
@@ -670,7 +674,7 @@ transaction_metadatum =
     // (VText `sized` (0 :: Word64, 64 :: Word64))
 
 transaction_metadatum_label :: Rule
-transaction_metadatum_label = "transaction_metadatum_label" =:= VUInt
+transaction_metadatum_label = "transaction_metadatum_label" =:= (VUInt `sized` (8 :: Word64))
 
 metadata :: Rule
 metadata =
@@ -741,10 +745,10 @@ script_n_of_k =
     =:~ grp [3, "n" ==> VUInt, a (arr [0 <+ a native_script])]
 
 invalid_before :: Named Group
-invalid_before = "invalid_before" =:~ grp [4, a VUInt]
+invalid_before = "invalid_before" =:~ grp [4, a slot_no]
 
 invalid_hereafter :: Named Group
-invalid_hereafter = "invalid_hereafter" =:~ grp [5, a VUInt]
+invalid_hereafter = "invalid_hereafter" =:~ grp [5, a slot_no]
 
 coin :: Rule
 coin = "coin" =:= VUInt
@@ -761,17 +765,41 @@ policy_id = "policy_id" =:= scripthash
 asset_name :: Rule
 asset_name = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
+-- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
+-- with:
+--
+-- minInt64 :: Rule
+-- minInt64 = "minInt64" =:= -9223372036854775808
+minInt64 :: Integer
+minInt64 = -9223372036854775808
+
+-- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
+-- with:
+--
+-- maxInt64 :: Rule
+-- maxInt64 = "maxInt64" =:= 9223372036854775807
+maxInt64 :: Integer
+maxInt64 = 9223372036854775807
+
+-- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
+-- with:
+--
+-- maxWord64 :: Rule
+-- maxWord64 = "maxWord64" =:= 18446744073709551615
+maxWord64 :: Integer
+maxWord64 = 18446744073709551615
+
 negInt64 :: Rule
-negInt64 = "negInt64" =:= (-9223372036854775808) ... (-1)
+negInt64 = "negInt64" =:= minInt64 ... (-1)
 
 posInt64 :: Rule
-posInt64 = "posInt64" =:= 1 ... 9223372036854775807
+posInt64 = "posInt64" =:= 1 ... maxInt64
 
 nonZeroInt64 :: Rule
 nonZeroInt64 = "nonZeroInt64" =:= negInt64 // posInt64 -- this is the same as the current int64 definition but without zero
 
 positive_coin :: Rule
-positive_coin = "positive_coin" =:= 1 ... 18446744073709551615
+positive_coin = "positive_coin" =:= 1 ... maxWord64
 
 value :: Rule
 value = "value" =:= coin // sarr [a coin, a (multiasset positive_coin)]
@@ -780,7 +808,7 @@ mint :: Rule
 mint = "mint" =:= multiasset nonZeroInt64
 
 int64 :: Rule
-int64 = "int64" =:= (-9223372036854775808) ... 9223372036854775807
+int64 = "int64" =:= minInt64 ... maxInt64
 
 network_id :: Rule
 network_id = "network_id" =:= int 0 // int 1
@@ -894,14 +922,10 @@ signature = "signature" =:= VBytes `sized` (64 :: Word64)
 -- change sooner rather than later, in order to provide a smooth transition for their users.
 
 set :: IsType0 t0 => t0 -> GRuleCall
-set = binding $ \x -> "set" =:= arr [0 <+ a x]
+set = binding $ \x -> "set" =:= tag 258 (arr [0 <+ a x])
 
 nonempty_set :: IsType0 t0 => t0 -> GRuleCall
-nonempty_set = binding $ \x -> "nonempty_set" =:= arr [1 <+ a x]
-
--- TODO Should we give this a name?
-nonempty_oset :: IsType0 t0 => t0 -> GRuleCall
-nonempty_oset = nonempty_set
+nonempty_set = binding $ \x -> "nonempty_set" =:= tag 258 (arr [1 <+ a x])
 
 positive_int :: Rule
 positive_int = "positive_int" =:= 1 ... 18446744073709551615
