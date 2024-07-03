@@ -150,15 +150,16 @@ addCollateralInput ::
   AlonzoEraImp era =>
   Tx era ->
   ImpTestM era (Tx era)
-addCollateralInput tx = impAnn "addCollateralInput" $ do
-  ctx <- impGetPlutusContexts tx
-  if null ctx
-    then pure tx
-    else do
-      collateralInput <- makeCollateralInput
-      pure $
-        tx
-          & bodyTxL . collateralInputsTxBodyL <>~ Set.singleton collateralInput
+addCollateralInput tx
+  | not (null (tx ^. bodyTxL . collateralInputsTxBodyL)) = pure tx
+  | otherwise = do
+      ctx <- impGetPlutusContexts tx
+      if null ctx
+        then pure tx
+        else do
+          impAnn "addCollateralInput" $ do
+            collateralInput <- makeCollateralInput
+            pure $ tx & bodyTxL . collateralInputsTxBodyL <>~ Set.singleton collateralInput
 
 impLookupPlutusScriptMaybe ::
   forall era.
