@@ -2,7 +2,9 @@
 
 ## 1.10.0.1
 
-*
+### `testlib`
+
+* Enhance the `addCollateralInput` fixup function to not add collateral if it's already present
 
 ## 1.10.0.0
 
@@ -33,7 +35,7 @@
   * `evalTxExUnitsWithLogs`
   * `RedeemerReportWithLogs`
 
-## testlib
+### `testlib`
 
 * Change signatures of `Arbitrary` instances for `AlonzoScript`:
   * replace `Era` constraint with `AllegraEraScript`
