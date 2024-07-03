@@ -197,8 +197,6 @@ void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
    and then calls the continued fraction approximation function. */
 int ref_exp_(mpz_t rop, const mpz_t x)
 {
-  mpz_t temp_q, temp_r;
-  mpz_init(temp_q); mpz_init(temp_r);
   int iterations = 0;
 
   if(mpz_cmp(x, zero) == 0)
@@ -232,7 +230,6 @@ int ref_exp_(mpz_t rop, const mpz_t x)
       mpz_clear(n_exponent); mpz_clear(x_); mpz_clear(temp_r); mpz_clear(temp_q);
     }
 
-  mpz_clear(temp_r); mpz_clear(temp_q);
   return iterations;
 }
 
