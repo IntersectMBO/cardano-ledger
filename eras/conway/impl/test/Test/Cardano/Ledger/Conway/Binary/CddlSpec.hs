@@ -28,27 +28,26 @@ spec :: Spec
 spec = do
   newSpec
   describe "CDDL" $
-    beforeAllCddlFile 3 readConwayCddlFiles $
-      do
-        let v = eraProtVerHigh @Conway
-        cddlRoundTripCborSpec @(Value Conway) v "positive_coin"
-        cddlRoundTripCborSpec @(Value Conway) v "value"
-        cddlRoundTripAnnCborSpec @(TxBody Conway) v "transaction_body"
-        cddlRoundTripAnnCborSpec @(TxAuxData Conway) v "auxiliary_data"
-        cddlRoundTripAnnCborSpec @(Timelock Conway) v "native_script"
-        cddlRoundTripAnnCborSpec @(Data Conway) v "plutus_data"
-        cddlRoundTripCborSpec @(TxOut Conway) v "transaction_output"
-        cddlRoundTripAnnCborSpec @(Script Conway) v "script"
-        cddlRoundTripCborSpec @(Datum Conway) v "datum_option"
-        cddlRoundTripAnnCborSpec @(TxWits Conway) v "transaction_witness_set"
-        cddlRoundTripCborSpec @(PParamsUpdate Conway) v "protocol_param_update"
-        cddlRoundTripCborSpec @CostModels v "costmdls"
-        cddlRoundTripAnnCborSpec @(Redeemers Conway) v "redeemers"
-        cddlRoundTripAnnCborSpec @(Tx Conway) v "transaction"
-        cddlRoundTripCborSpec @(VotingProcedure Conway) v "voting_procedure"
-        cddlRoundTripCborSpec @(ProposalProcedure Conway) v "proposal_procedure"
-        cddlRoundTripCborSpec @(GovAction Conway) v "gov_action"
-        cddlRoundTripCborSpec @(TxCert Conway) v "certificate"
+    beforeAllCddlFile 3 readConwayCddlFiles $ do
+      let v = eraProtVerHigh @Conway
+      cddlRoundTripCborSpec @(Value Conway) v "positive_coin"
+      cddlRoundTripCborSpec @(Value Conway) v "value"
+      cddlRoundTripAnnCborSpec @(TxBody Conway) v "transaction_body"
+      cddlRoundTripAnnCborSpec @(TxAuxData Conway) v "auxiliary_data"
+      cddlRoundTripAnnCborSpec @(Timelock Conway) v "native_script"
+      cddlRoundTripAnnCborSpec @(Data Conway) v "plutus_data"
+      cddlRoundTripCborSpec @(TxOut Conway) v "transaction_output"
+      cddlRoundTripAnnCborSpec @(Script Conway) v "script"
+      cddlRoundTripCborSpec @(Datum Conway) v "datum_option"
+      cddlRoundTripAnnCborSpec @(TxWits Conway) v "transaction_witness_set"
+      cddlRoundTripCborSpec @(PParamsUpdate Conway) v "protocol_param_update"
+      cddlRoundTripCborSpec @CostModels v "costmdls"
+      cddlRoundTripAnnCborSpec @(Redeemers Conway) v "redeemers"
+      cddlRoundTripAnnCborSpec @(Tx Conway) v "transaction"
+      cddlRoundTripCborSpec @(VotingProcedure Conway) v "voting_procedure"
+      cddlRoundTripCborSpec @(ProposalProcedure Conway) v "proposal_procedure"
+      cddlRoundTripCborSpec @(GovAction Conway) v "gov_action"
+      cddlRoundTripCborSpec @(TxCert Conway) v "certificate"
 
 newSpec :: Spec
 newSpec = describe "Huddle" $ specWithHuddle ConwayCDDL.conway 100 $ do
@@ -71,4 +70,3 @@ newSpec = describe "Huddle" $ specWithHuddle ConwayCDDL.conway 100 $ do
   huddleRoundTripAnnCborSpec @(TxWits Conway) v "transaction_witness_set"
   huddleRoundTripAnnCborSpec @(Redeemers Conway) v "redeemers"
   huddleRoundTripAnnCborSpec @(Tx Conway) v "transaction"
-  pure ()

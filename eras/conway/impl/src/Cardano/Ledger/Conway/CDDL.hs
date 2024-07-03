@@ -14,11 +14,8 @@ import Data.Function (($))
 import Data.Semigroup ((<>))
 import Data.Text qualified as T
 import Data.Word (Word64)
-import GHC.Float (Double)
 import GHC.Num (Integer)
 import GHC.Show (Show (show))
-
-default (Integer, Double)
 
 conway :: Huddle
 conway = collectFrom [block, transaction]
@@ -58,14 +55,14 @@ header_body =
     =:= arr
       [ "block_number" ==> VUInt
       , "slot" ==> VUInt
-      , "prev_hash" ==> hash32
+      , "prev_hash" ==> (hash32 // VNil)
       , "issuer_vkey" ==> vkey
-      , "vrf_vkey" ==> vkey
+      , "vrf_vkey" ==> vrf_vkey
       , "vrf_result" ==> vrf_cert
-      , "block_body_size" ==> VUInt
+      , "block_body_size" ==> (VUInt `sized` (4 :: Word64))
       , "block_body_hash" ==> hash32
       , a operational_cert
-      , a (arr [a protocol_version])
+      , a protocol_version
       ]
 
 operational_cert :: Rule
@@ -78,14 +75,16 @@ operational_cert =
       , "sigma" ==> signature
       ]
 
-protocol_version :: Named Group
-protocol_version = "protocol_version" =:~ grp [a major_protocol_version, a VUInt]
+protocol_version :: Rule
+protocol_version = "protocol_version" =:= arr [a major_protocol_version, a VUInt]
 
 next_major_protocol_version :: Rule
 next_major_protocol_version = "next_major_protocol_version" =:= (10 :: Integer)
 
+-- TODO This should reference 'nixt_major_protocol_version' as soon as
+-- https://github.com/input-output-hk/cuddle/issues/29 is addressed in cuddle.
 major_protocol_version :: Rule
-major_protocol_version = "major_protocol_version" =:= (1 :: Integer)
+major_protocol_version = "major_protocol_version" =:= (1 :: Integer) ... 10
 
 transaction_body :: Rule
 transaction_body =
@@ -94,7 +93,7 @@ transaction_body =
       [ idx 0 ==> set transaction_input
       , idx 1 ==> arr [0 <+ a transaction_output]
       , idx 2 ==> coin
-      , opt (idx 3 ==> VUInt)
+      , opt (idx 3 ==> slot_no)
       , opt (idx 4 ==> certificates)
       , opt (idx 5 ==> withdrawals)
       , opt (idx 7 ==> auxiliary_data_hash)
@@ -183,7 +182,7 @@ update_committee =
       [ 4
       , gov_action_id // VNil
       , a (set committee_cold_credential)
-      , a (mp [asKey committee_cold_credential ==> epoch])
+      , a (mp [asKey committee_cold_credential ==> epoch_no])
       , a unit_interval
       ]
 
@@ -309,7 +308,7 @@ pool_registration :: Named Group
 pool_registration = "pool_registration" =:~ grp [3, a pool_params]
 
 pool_retirement :: Named Group
-pool_retirement = "pool_retirement" =:~ grp [4, a pool_keyhash, a epoch]
+pool_retirement = "pool_retirement" =:~ grp [4, a pool_keyhash, a epoch_no]
 
 -- numbers 5 and 6 used to be the Genesis and MIR certificates respectively,
 -- which were deprecated in Conway
@@ -363,9 +362,6 @@ unreg_drep_cert = "unreg_drep_cert" =:~ grp [17, a drep_credential, a coin]
 
 update_drep_cert :: Named Group
 update_drep_cert = "update_drep_cert" =:~ grp [18, a drep_credential, anchor // VNil]
-
-delta_coin :: Rule
-delta_coin = "delta_coin" =:= VUInt
 
 credential :: Rule
 credential =
@@ -477,7 +473,7 @@ protocol_param_update =
       , opt (idx 4 ==> (VUInt `sized` (2 :: Word64))) -- max block header size
       , opt (idx 5 ==> coin) -- key deposit
       , opt (idx 6 ==> coin) -- pool deposit
-      , opt (idx 7 ==> epoch) -- maximum epoch
+      , opt (idx 7 ==> epoch_interval) -- maximum epoch
       , opt (idx 8 ==> (VUInt `sized` (2 :: Word64))) -- n_opt: desired number of stake pools
       , opt (idx 9 ==> nonnegative_interval) -- pool pledge influence
       , opt (idx 10 ==> unit_interval) -- expansion rate
@@ -494,11 +490,11 @@ protocol_param_update =
       , opt (idx 25 ==> pool_voting_thresholds) -- pool voting thresholds
       , opt (idx 26 ==> drep_voting_thresholds) -- DRep voting thresholds
       , opt (idx 27 ==> (VUInt `sized` (2 :: Word64))) -- min committee size
-      , opt (idx 28 ==> epoch) -- committee term limit
-      , opt (idx 29 ==> epoch) -- governance action validity period
+      , opt (idx 28 ==> epoch_interval) -- committee term limit
+      , opt (idx 29 ==> epoch_interval) -- governance action validity period
       , opt (idx 30 ==> coin) -- governance action deposit
       , opt (idx 31 ==> coin) -- DRep deposit
-      , opt (idx 32 ==> epoch) -- DRep inactivity period
+      , opt (idx 32 ==> epoch_interval) -- DRep inactivity period
       ]
 
 pool_voting_thresholds :: Rule
@@ -789,8 +785,17 @@ int64 = "int64" =:= (-9223372036854775808) ... 9223372036854775807
 network_id :: Rule
 network_id = "network_id" =:= int 0 // int 1
 
-epoch :: Rule
-epoch = "epoch" =:= VUInt
+epoch_no :: Rule
+epoch_no = "epoch_no" =:= VUInt `sized` (8 :: Word64)
+
+epoch_interval :: Rule
+epoch_interval = "epoch_interval" =:= VUInt `sized` (4 :: Word64)
+
+slot_no :: Rule
+slot_no = "slot_no" =:= VUInt `sized` (8 :: Word64)
+
+block_no :: Rule
+block_no = "block_no" =:= VUInt `sized` (8 :: Word64)
 
 addr_keyhash :: Rule
 addr_keyhash = "addr_keyhash" =:= hash28
