@@ -9,20 +9,16 @@ module Test.Cardano.Ledger.Constrained.Conway.Pool where
 import Cardano.Crypto.Hash.Class qualified as Hash
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Slotting.EpochInfo qualified as EI
-import Control.Monad.Identity
-import Data.Map qualified as Map
-import Lens.Micro
-
 import Constrained
-
+import Control.Monad.Identity
+import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances
-import Test.Cardano.Ledger.Constrained.Conway.PParams
-
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
+import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Slotting.Numeric ()
 
@@ -58,7 +54,7 @@ poolCertSpec ::
   PoolEnv (ConwayEra StandardCrypto) ->
   PState (ConwayEra StandardCrypto) ->
   Specification fn (PoolCert StandardCrypto)
-poolCertSpec (PoolEnv s pp) ps =
+poolCertSpec (PoolEnv _s pp) _ps =
   constrained $ \pc ->
     (caseOn pc)
       -- RegPool !(PoolParams c)
@@ -72,14 +68,20 @@ poolCertSpec (PoolEnv s pp) ps =
             ]
       )
       -- RetirePool !(KeyHash 'StakePool c) !EpochNo
-      ( branch $ \keyHash epochNo ->
-          [ epochNo <=. lit (maxEpochNo - 1)
-          , lit (currentEpoch s) <. epochNo
-          , elem_ keyHash $ lit rpools
-          ]
-      )
+      --
+      -- TODO: We do not generate this certificate because the two predicate
+      -- failures from Shelley are not yet implemented in the spec.
+      --
+      --   ( branch $ \keyHash epochNo -> False
+      --       [ epochNo <=. lit (maxEpochNo - 1)
+      --       , lit (currentEpoch s) <. epochNo
+      --       , elem_ keyHash $ lit rpools
+      --       ]
+      --   )
+      -- where
+      --   EpochInterval maxEp = pp ^. ppEMaxL
+      --   maxEpochNo = EpochNo (fromIntegral maxEp)
+      --   rpools = Map.keys $ psStakePoolParams ps
+      (branch $ \_ _ -> False)
   where
-    EpochInterval maxEp = pp ^. ppEMaxL
-    maxEpochNo = EpochNo (fromIntegral maxEp)
-    rpools = Map.keys $ psStakePoolParams ps
     maxMetaLen = fromIntegral (Hash.sizeHash ([] @(HASH StandardCrypto)))
