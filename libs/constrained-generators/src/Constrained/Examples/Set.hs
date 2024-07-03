@@ -14,6 +14,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 
 import Constrained
+import Constrained.Base ()
 import Constrained.Examples.Basic
 
 setPairSpec :: Specification BaseFn (Set Int, Set Int)

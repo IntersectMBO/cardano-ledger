@@ -86,6 +86,7 @@ import Constrained.Graph hiding (dependency, irreflexiveDependencyOn, noDependen
 import Constrained.Graph qualified as Graph
 import Constrained.List
 import Constrained.Univ
+import Debug.Trace
 
 {- NOTE [High level overview of generation from predicates]:
 
@@ -3233,6 +3234,21 @@ data SetSpec fn a = SetSpec
   , sizeSet :: Specification fn Integer
   }
 
+{-
+given s1 = SetSpec must1 max1 elem1 size1
+      s2 = SetSpec must2 max2  elem2 size2
+Union s1 s2 = setSpec (Set.union must1 must2)
+                      (liftOverMaybe Set.intersection max2 max2)
+                      (\ x -> elem1 x || elem2 x)
+                      (size1 + size2)
+So if s1 = {A,B.C} what can we say about s2 in terms of s3 = Union s1 s2 = SetSpec must3 max3 elem3 size3 ?
+s2 = SetSpec (must3 - s2)  Not quite correct
+             (max3 - ?)    who knows
+             (\ x -> elem3 x && not (elem2 x))
+             (size3 - memberSpec [sizeof s1(3)])
+
+-}
+
 instance (BaseUniverse fn, Ord a, Arbitrary (Specification fn a), Arbitrary a) => Arbitrary (SetSpec fn a) where
   arbitrary = SetSpec <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
   shrink (SetSpec a b c d) = [SetSpec a' b' c' d' | (a', b', c', d') <- shrink (a, b, c, d)]
@@ -3259,8 +3275,8 @@ guardSetSpec s@(SetSpec must most elem ((<> geqSpec 0) -> size))
   | Just max <- most
   , not (Set.isSubsetOf must max) =
       ErrorSpec ["The 'mustSet', is not a subset of the 'maxSet'", show s]
-  | not (conformsToSpec (sizeOf must) size) =
-      ErrorSpec ["The SetSpec 'sizeSet' is inconsistent with the 'mustSet'", show s]
+  | maybe False (sizeOf must <) (knownLowerBound size) =
+      ErrorSpec ["The SetSpec 'sizeSet' allows sizes smaller than the size of the 'mustSet'", show s]
   | isErrorLike size = ErrorSpec ["The SetSpec 'sizeSet' is inconsistent.", show s]
   | otherwise = typeSpec $ SetSpec must most elem size
 
@@ -3311,7 +3327,7 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
   genFromTypeSpec s = case guardSetSpec s of
     ErrorSpec xs -> genError xs
     TypeSpec (SetSpec must (Just maxset) elemS szSpec) [] -> do
-      n <- genFromSpecT szSpec
+      n <- genFromSpecT (szSpec <> leqSpec (sizeOf maxset))
       let go :: MonadGenError m => Set a -> [a] -> GenT m (Set a)
           go sofar _ | sizeOf sofar == n = pure sofar
           go _sofar [] = genError ["Can't find enough items from maxset that meet elemS", show maxset, show elemS]
@@ -3320,7 +3336,7 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
               then go (Set.insert x sofar) xs
               else go sofar xs
       choices <- pureGen (shuffle (Set.toList maxset))
-      go must choices
+      go must (trace ("WITHMAX " ++ show n ++ " " ++ show choices ++ " " ++ show s) choices)
     other -> fatalError ["guardSetSpec returns something other than TypeSpec or ErrorSpec", show other]
 
   cardinalTypeSpec _ = TrueSpec -- TODO rethink this with maxSet

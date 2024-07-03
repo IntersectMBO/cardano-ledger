@@ -4,6 +4,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Constrained.Examples.Map where
 
@@ -13,7 +14,9 @@ import Data.Set qualified as Set
 import Data.Word
 
 import Constrained
+import Constrained.Base
 import Constrained.Examples.Basic
+import Test.QuickCheck hiding (forAll)
 
 mapElemSpec :: Specification BaseFn (Map Int (Bool, Int))
 mapElemSpec = constrained $ \m ->
@@ -80,3 +83,14 @@ lookupSpecific = constrained' $ \k v m ->
   [ m `dependsOn` k
   , assert $ lookup_ k m ==. cJust_ v
   ]
+
+-- NEW
+
+mapSetSmall :: Specification BaseFn (Map (Set Int) Int)
+mapSetSmall = constrained $ \x ->
+  forAll (dom_ x) $ \d ->
+    assert $ subset_ d $ lit (Set.fromList [3 .. 4])
+
+setSmall :: Specification BaseFn (Set Int)
+setSmall = constrained $ \d ->
+  assert $ subset_ d $ lit (Set.fromList [3 .. 4])
