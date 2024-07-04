@@ -409,7 +409,7 @@ utxoInductive ::
   TransitionRule (EraRule "UTXO" era)
 utxoInductive = do
   TRC (UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
-  let UTxOState utxo _ _ _ ppup _ _ = utxos
+  let UTxOState utxo _ _ ppup _ _ = utxos
       txBody = tx ^. bodyTxL
       outputs = txBody ^. outputsTxBodyL
       genDelegs = dsGenDelegs (certDState certState)
@@ -648,7 +648,6 @@ updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiff
   pure $!
     UTxOState
       { utxosUtxo = UTxO newUTxO
-      , utxosFrxo = mempty
       , utxosDeposited = utxosDeposited <> depositChange
       , utxosFees = utxosFees <> txBody ^. feeTxBodyL
       , utxosGovState = govState

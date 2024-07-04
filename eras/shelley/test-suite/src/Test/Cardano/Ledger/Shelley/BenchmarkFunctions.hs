@@ -146,7 +146,6 @@ initUTxO :: Integer -> UTxOState B
 initUTxO n =
   UTxOState
     (genesisCoins genesisId (injcoins n))
-    mempty
     (Coin 0)
     (Coin 0)
     def

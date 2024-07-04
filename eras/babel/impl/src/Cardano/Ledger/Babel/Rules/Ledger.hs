@@ -359,7 +359,7 @@ ledgerTransition = do
           trans @(EraRule "CERTS" era) $
             TRC
               ( CertsEnv tx pp slot currentEpoch
-              , certState
+              , st ^. hlsCertStateL
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
         let wdrlAddrs = Map.keysSet . unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL

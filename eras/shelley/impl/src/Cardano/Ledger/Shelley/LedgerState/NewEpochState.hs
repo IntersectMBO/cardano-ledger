@@ -75,7 +75,6 @@ genesisState genDelegs0 utxo0 =
   EraLedgerState
     ( UTxOState
         utxo0
-        mempty
         (Coin 0)
         (Coin 0)
         emptyGovState

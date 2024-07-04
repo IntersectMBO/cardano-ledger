@@ -300,7 +300,7 @@ babelEvalScriptsTxValid ::
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 babelEvalScriptsTxValid = do
-  TRC (UtxoEnv _ pp certState, utxos@(UTxOState utxo _frxo _ _ govState _ _), tx) <-
+  TRC (UtxoEnv _ pp certState, utxos@(UTxOState utxo  _ _ govState _ _), tx) <-
     judgmentContext
   let txBody = tx ^. bodyTxL
 
@@ -339,7 +339,6 @@ updateUTxOState ::
 updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent = do
   let UTxOState
         { utxosUtxo
-        , utxosFrxo
         , utxosDeposited
         , utxosFees
         , utxosStakeDistr
@@ -351,7 +350,6 @@ updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiff
       !(utxoWithout, utxoDel) = extractKeys utxo (txBody ^. inputsTxBodyL)
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
-      FRxO frxo = utxosFrxo
       !frxoAdd = txfrxo txBody -- These will be inserted into the FRxO
       {- utxoDel  = txins txb ◁ utxo -}
       !(frxoWithout, _frxoDel) = extractKeys frxo (txBody ^. fulfillsTxBodyL)
@@ -367,7 +365,6 @@ updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiff
   pure $!
     UTxOState
       { utxosUtxo = UTxO newUTxO
-      , utxosFrxo = FRxO newFRxO
       , utxosDeposited = utxosDeposited <> depositChange
       , utxosFees = utxosFees <> txBody ^. feeTxBodyL
       , utxosGovState = govState

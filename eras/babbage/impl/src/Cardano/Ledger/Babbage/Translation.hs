@@ -148,7 +148,6 @@ instance Crypto c => TranslateEra (BabbageEra c) UTxOState where
     pure
       UTxOState
         { utxosUtxo = translateEra' ctxt $ utxosUtxo us
-        , utxosFrxo = mempty
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
         , utxosGovState = translateEra' ctxt $ utxosGovState us

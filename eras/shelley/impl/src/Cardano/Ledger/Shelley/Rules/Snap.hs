@@ -105,7 +105,7 @@ snapTransition = do
 
   let SnapEnv
         ( view hlsUTxOStateL &&& view hlsCertStateL ->
-            (UTxOState _utxo _ _ fees _ incStake _, CertState _ pstate dstate)
+            (UTxOState _utxo  _ fees _ incStake _, CertState _ pstate dstate)
           )
         pp = snapEnv
       -- per the spec: stakeSnap = stakeDistr @era utxo dstate pstate

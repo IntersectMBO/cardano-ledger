@@ -166,7 +166,6 @@ smartUTxOState ::
 smartUTxOState pp utxo c1 c2 st =
   UTxOState
     utxo
-    mempty
     c1
     c2
     st

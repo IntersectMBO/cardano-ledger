@@ -84,7 +84,6 @@ utxoStateSpec _env =
   constrained $ \utxoState ->
     match utxoState $
       \utxosUtxo
-       _utxosFrxo
        _utxosDeposited
        _utxosFees
        _utxosGovState

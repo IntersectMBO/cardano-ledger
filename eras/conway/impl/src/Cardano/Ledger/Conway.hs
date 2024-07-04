@@ -13,13 +13,14 @@
 module Cardano.Ledger.Conway (
   Conway,
   ConwayEra,
+  ConwayLedgerState (..),
 )
 where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
 import Cardano.Ledger.Babbage.TxBody ()
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Era (ConwayEra, ConwayLedgerState (..))
 import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Governance (RunConwayRatify (..))
 import Cardano.Ledger.Conway.Rules ()

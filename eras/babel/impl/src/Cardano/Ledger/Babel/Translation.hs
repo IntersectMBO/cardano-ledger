@@ -21,10 +21,12 @@ import Cardano.Ledger.Address (addrPtrNormalize)
 import Cardano.Ledger.Babel.Core hiding (Tx)
 import Cardano.Ledger.Babel.Era (BabelEra)
 import Cardano.Ledger.Babel.Genesis (BabelGenesis (..))
+import Cardano.Ledger.Babel.LedgerState.Types (BabelLedgerState (..), fromLedgerState)
 import Cardano.Ledger.Babel.Scripts ()
 import Cardano.Ledger.Babel.Tx ()
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
+import Cardano.Ledger.Conway (ConwayLedgerState (..))
 import Cardano.Ledger.Conway.Governance (
   ConwayEraGov,
   cgsCommitteeL,
@@ -49,9 +51,7 @@ import Cardano.Ledger.Shelley.API (
   VState (..),
  )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.LedgerState (
-  epochStateGovStateL,
- )
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..), epochStateGovStateL)
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -123,13 +123,23 @@ instance Crypto c => TranslateEra (BabelEra c) Tx where
 instance Crypto c => TranslateEra (BabelEra c) PParams where
   translateEra BabelGenesis {cgUpgradePParams} = pure . upgradePParams cgUpgradePParams
 
+instance Crypto c => TranslateEra (BabelEra c) ConwayLedgerState where
+  translateEra ctxt (ConwayLedgerState ls) =
+    return $
+      ConwayLedgerState $
+        LedgerState
+          { lsUTxOState = translateEra' ctxt $ lsUTxOState ls
+          , lsCertState = translateEra' ctxt $ lsCertState ls
+          }
+
 instance Crypto c => TranslateEra (BabelEra c) EpochState where
   translateEra ctxt es =
     pure $
       EpochState
         { esAccountState = esAccountState es
         , esSnapshots = esSnapshots es
-        , esLState = translateEra' ctxt $ esLState es
+        , esLState =
+            BabelLedgerState . fromLedgerState . unConwayLedgerState . translateEra' ctxt $ esLState es
         , esNonMyopic = esNonMyopic es
         }
 
@@ -187,7 +197,6 @@ instance Crypto c => TranslateEra (BabelEra c) UTxOState where
     pure
       UTxOState
         { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
-        , API.utxosFrxo = mempty
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
         , API.utxosGovState =

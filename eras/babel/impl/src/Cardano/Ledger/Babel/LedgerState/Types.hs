@@ -37,6 +37,7 @@ import Cardano.Ledger.Binary.Decoding (DecShareCBOR (..))
 import Cardano.Ledger.Binary.Encoding (encodeListLen)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core (EraCrypto, EraGov, EraTxOut, GovState)
+import Cardano.Ledger.Core (Era)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.FRxO (FRxO)
@@ -45,7 +46,8 @@ import Cardano.Ledger.Shelley.LedgerState (
   CertState,
   HasLedgerState (..),
   IncrementalStake,
-  UTxOState (UTxOState),
+  LedgerState (..),
+  UTxOState (..),
  )
 import Cardano.Ledger.UTxO (UTxO)
 import Control.DeepSeq (NFData)
@@ -125,8 +127,65 @@ instance
 -- ====================================================
 -- LedgerState
 
+-- | Convert from LedgerState to LedgerStateTemp
+fromLedgerState :: Era era => LedgerState era -> LedgerStateTemp era
+fromLedgerState LedgerState {lsUTxOState, lsCertState} =
+  LedgerStateTemp
+    { lstUTxOState = fromUTxOState lsUTxOState
+    , lstCertState = lsCertState
+    }
+
+-- | Convert from UTxOState to UTxOStateTemp
+fromUTxOState :: Era era => UTxOState era -> UTxOStateTemp era
+fromUTxOState
+  UTxOState
+    { utxosUtxo
+    , utxosDeposited
+    , utxosFees
+    , utxosGovState
+    , utxosStakeDistr
+    , utxosDonation
+    } =
+    UTxOStateTemp
+      { utxostUtxo = utxosUtxo
+      , utxostFrxo = mempty
+      , utxostDeposited = utxosDeposited
+      , utxostFees = utxosFees
+      , utxostGovState = utxosGovState
+      , utxostStakeDistr = utxosStakeDistr
+      , utxostDonation = utxosDonation
+      }
+
+-- | Convert from LedgerStateTemp to LedgerState
+toLedgerState :: LedgerStateTemp era -> LedgerState era
+toLedgerState LedgerStateTemp {lstUTxOState, lstCertState} =
+  LedgerState
+    { lsUTxOState = toUTxOState lstUTxOState
+    , lsCertState = lstCertState
+    }
+
+-- | Convert from UTxOStateTemp to UTxOState
+toUTxOState :: UTxOStateTemp era -> UTxOState era
+toUTxOState
+  UTxOStateTemp
+    { utxostUtxo
+    , utxostDeposited
+    , utxostFees
+    , utxostGovState
+    , utxostStakeDistr
+    , utxostDonation
+    } =
+    UTxOState
+      { utxosUtxo = utxostUtxo
+      , utxosDeposited = utxostDeposited
+      , utxosFees = utxostFees
+      , utxosGovState = utxostGovState
+      , utxosStakeDistr = utxostStakeDistr
+      , utxosDonation = utxostDonation
+      }
+
 utxoStateFromTemp :: UTxOStateTemp era -> UTxOState era
-utxoStateFromTemp (UTxOStateTemp a b c d e f g) = UTxOState a b c d e f g
+utxoStateFromTemp (UTxOStateTemp a _ c d e f g) = UTxOState a c d e f g
 
 lstUTxOStateL :: Lens' (LedgerStateTemp era) (UTxOState era)
 lstUTxOStateL = lens (utxoStateFromTemp . lstUTxOState) (\x _y -> x {lstUTxOState = undefined}) -- TODO WG

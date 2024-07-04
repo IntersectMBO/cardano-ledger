@@ -377,7 +377,6 @@ exampleNewEpochState value ppp pp =
                               , mkBasicTxOut addr value
                               )
                             ]
-                    , utxosFrxo = mempty
                     , utxosDeposited = Coin 1000
                     , utxosFees = Coin 1
                     , utxosGovState = emptyGovState

@@ -26,7 +26,7 @@ import Test.Tasty.HUnit (Assertion, (@?=))
 ignoreAllButUTxO ::
   Either (NonEmpty (PredicateFailure (ShelleyLEDGER Mary))) (LedgerState Mary) ->
   Either (NonEmpty (PredicateFailure (ShelleyLEDGER Mary))) (UTxO Mary)
-ignoreAllButUTxO = fmap (\(LedgerState (UTxOState utxo _ _ _ _ _ _) _) -> utxo)
+ignoreAllButUTxO = fmap (\(LedgerState (UTxOState utxo _ _ _ _ _) _) -> utxo)
 
 testMaryNoDelegLEDGER ::
   HasCallStack =>
