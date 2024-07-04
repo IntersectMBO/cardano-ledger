@@ -133,7 +133,6 @@ instance Crypto c => TranslateEra (AlonzoEra c) UTxOState where
     return
       UTxOState
         { utxosUtxo = translateEra' ctxt $ utxosUtxo us
-        , utxosFrxo = mempty
         , utxosDeposited = utxosDeposited us
         , utxosFees = utxosFees us
         , utxosGovState = translateEra' ctxt $ utxosGovState us

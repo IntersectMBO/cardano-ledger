@@ -58,7 +58,6 @@ import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.EpochBoundary (SnapShots (..), ssStakeDistrL, ssStakeMarkL)
-import Cardano.Ledger.FRxO (FRxO)
 import Cardano.Ledger.Keys (
   KeyHash (..),
   KeyPair,
@@ -279,7 +278,6 @@ toIncrementalStakePairs iStake@(IStake _ _) =
 --   this invariant. This happens in the UTxO rule.
 data UTxOState era = UTxOState
   { utxosUtxo :: !(UTxO era)
-  , utxosFrxo :: !(FRxO era)
   , utxosDeposited :: Coin
   -- ^ This field is left lazy, because we only use it for assertions
   , utxosFees :: !Coin
@@ -313,7 +311,6 @@ deriving via
     (UTxOState era)
   instance
     ( NoThunks (UTxO era)
-    , NoThunks (FRxO era)
     , NoThunks (GovState era)
     , Era era
     ) =>
@@ -325,11 +322,10 @@ instance
   ) =>
   EncCBOR (UTxOState era)
   where
-  encCBOR (UTxOState ut fr dp fs us sd don) =
+  encCBOR (UTxOState ut dp fs us sd don) =
     encode $
       Rec UTxOState
         !> To ut
-        !> To fr
         !> To dp
         !> To fs
         !> To us
@@ -348,7 +344,6 @@ instance
   decShareCBOR credInterns =
     decodeRecordNamed "UTxOState" (const 6) $ do
       utxosUtxo <- decShareCBOR credInterns
-      utxosFrxo <- decShareCBOR credInterns
       utxosDeposited <- decCBOR
       utxosFees <- decCBOR
       -- TODO: implement proper sharing: https://github.com/intersectmbo/cardano-ledger/issues/3486
@@ -369,10 +364,9 @@ instance (EraTxOut era, EraGov era) => ToJSON (UTxOState era) where
 
 toUTxOStatePairs ::
   (EraTxOut era, EraGov era, KeyValue e a) => UTxOState era -> [a]
-toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _ _ _) =
+toUTxOStatePairs utxoState@(UTxOState _ _ _ _ _ _) =
   let UTxOState {..} = utxoState
    in [ "utxo" .= utxosUtxo
-      , "frxo" .= utxosFrxo
       , "deposited" .= utxosDeposited
       , "fees" .= utxosFees
       , "ppups" .= utxosGovState
@@ -586,7 +580,7 @@ toLedgerStatePairs ls@(LedgerState _ _) =
 --------------------------------------------------------------------------------
 
 instance EraGov era => Default (UTxOState era) where
-  def = UTxOState mempty mempty mempty mempty def mempty mempty
+  def = UTxOState mempty mempty mempty def mempty mempty
 
 instance
   Default (LedgerState era) =>

@@ -166,7 +166,6 @@ translateToShelleyLedgerState transCtxt epochNo cvs =
         { lsUTxOState =
             UTxOState
               { utxosUtxo = utxoShelley
-              , utxosFrxo = mempty
               , utxosDeposited = Coin 0
               , utxosFees = Coin 0
               , utxosGovState = emptyGovState

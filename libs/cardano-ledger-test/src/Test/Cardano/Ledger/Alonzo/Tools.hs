@@ -204,16 +204,19 @@ exampleTx ::
   Tx era
 exampleTx pf ptr =
   mkBasicTx (validatingBody pf)
-    & witsTxL .~ wits
+    & witsTxL
+    .~ wits
   where
     wits =
       mkBasicTxWits
         & addrTxWitsL
-          .~ Set.fromList [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
-        & hashScriptTxWitsL .~ [always 3 pf]
-        & hashDataTxWitsL .~ [Data (PV1.I 123)]
+        .~ Set.fromList [mkWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)]
+        & hashScriptTxWitsL
+        .~ [always 3 pf]
+        & hashDataTxWitsL
+        .~ [Data (PV1.I 123)]
         & rdmrsTxWitsL
-          .~ Redeemers (Map.singleton ptr (Data (PV1.I 42), ExUnits 5000 5000))
+        .~ Redeemers (Map.singleton ptr (Data (PV1.I 42), ExUnits 5000 5000))
 
 validatingBody ::
   forall era.
@@ -226,13 +229,16 @@ validatingBody ::
   TxBody era
 validatingBody pf =
   mkBasicTxBody
-    & inputsTxBodyL .~ Set.fromList [mkGenesisTxIn 1]
-    & collateralInputsTxBodyL .~ Set.fromList [mkGenesisTxIn 11]
+    & inputsTxBodyL
+    .~ Set.fromList [mkGenesisTxIn 1]
+    & collateralInputsTxBodyL
+    .~ Set.fromList [mkGenesisTxIn 11]
     & outputsTxBodyL
-      .~ SSeq.fromList [mkBasicTxOut (someAddr pf) (inject $ Coin 4995)]
-    & feeTxBodyL .~ Coin 5
+    .~ SSeq.fromList [mkBasicTxOut (someAddr pf) (inject $ Coin 4995)]
+    & feeTxBodyL
+    .~ Coin 5
     & scriptIntegrityHashTxBodyL
-      .~ newScriptIntegrityHash pf testPParams [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123)))
+    .~ newScriptIntegrityHash pf testPParams [PlutusV1] redeemers (mkTxDats (Data (PV1.I 123)))
   where
     redeemers =
       Redeemers $
@@ -254,7 +260,6 @@ ustate ::
 ustate pf =
   UTxOState
     { utxosUtxo = initUTxO pf
-    , utxosFrxo = mempty
     , utxosDeposited = Coin 0
     , utxosFees = Coin 0
     , utxosGovState = def
@@ -311,8 +316,13 @@ failLeft err (Left e) = err (show e)
 testPParams :: forall era. AlonzoEraPParams era => PParams era
 testPParams =
   emptyPParams
-    & ppCostModelsL .~ zeroTestingCostModels [PlutusV1]
-    & ppMaxValSizeL .~ 1000000000
-    & ppMaxTxExUnitsL .~ ExUnits 100000000 100000000
-    & ppMaxBlockExUnitsL .~ ExUnits 100000000 100000000
-    & ppProtocolVersionL .~ ProtVer (eraProtVerHigh @era) 0
+    & ppCostModelsL
+    .~ zeroTestingCostModels [PlutusV1]
+    & ppMaxValSizeL
+    .~ 1000000000
+    & ppMaxTxExUnitsL
+    .~ ExUnits 100000000 100000000
+    & ppMaxBlockExUnitsL
+    .~ ExUnits 100000000 100000000
+    & ppProtocolVersionL
+    .~ ProtVer (eraProtVerHigh @era) 0

@@ -355,7 +355,7 @@ babelEvalScriptsTxInvalid =
   do
     TRC
       ( BabelLedgersEnv _slotNo _ixRange pp _accountState
-        , LedgerState us@(UTxOState utxo _ _ fees _ _ _) certState
+        , LedgerState us@(UTxOState utxo _ fees _ _ _) certState
         , txs :: Seq (Tx era)
         ) <-
       judgmentContext

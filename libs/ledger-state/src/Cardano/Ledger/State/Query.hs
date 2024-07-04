@@ -745,8 +745,10 @@ loadEpochState fp = runSqlite fp $ do
       , esSnapshots = snapshots
       , esNonMyopic = epochStateNonMyopic
       }
-      & curPParamsEpochStateL .~ epochStatePp
-      & prevPParamsEpochStateL .~ epochStatePrevPp
+      & curPParamsEpochStateL
+      .~ epochStatePp
+      & prevPParamsEpochStateL
+      .~ epochStatePrevPp
 
 loadEpochStateWithSharing :: MonadUnliftIO m => T.Text -> m (Shelley.EpochState CurrentEra)
 loadEpochStateWithSharing fp = runSqlite fp $ do
@@ -764,8 +766,10 @@ loadEpochStateWithSharing fp = runSqlite fp $ do
       , esSnapshots = snapshots
       , esNonMyopic = epochStateNonMyopic
       }
-      & prevPParamsEpochStateL .~ epochStatePrevPp
-      & curPParamsEpochStateL .~ epochStatePp
+      & prevPParamsEpochStateL
+      .~ epochStatePrevPp
+      & curPParamsEpochStateL
+      .~ epochStatePp
 
 loadSnapShotsNoSharing ::
   MonadUnliftIO m => T.Text -> Entity EpochState -> m (EpochBoundary.SnapShots C)

@@ -197,7 +197,7 @@ utxoTransition ::
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
-  let Shelley.UTxOState utxo _ _ _ ppup _ _ = utxos
+  let Shelley.UTxOState utxo _ _ ppup _ _ = utxos
       txBody = tx ^. bodyTxL
       genDelegs = dsGenDelegs (certDState certState)
 

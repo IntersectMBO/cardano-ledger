@@ -167,7 +167,7 @@ checkIncrementalStake ::
   Property
 checkIncrementalStake es =
   let
-    (LedgerState (UTxOState utxo _ _ _ _ incStake _) (CertState _vstate pstate dstate)) = esLState es
+    (LedgerState (UTxOState utxo _ _ _ incStake _) (CertState _vstate pstate dstate)) = esLState es
     stake = stakeDistr @era utxo dstate pstate
     istake = incrementalStakeDistr (es ^. curPParamsEpochStateL) incStake dstate pstate
    in

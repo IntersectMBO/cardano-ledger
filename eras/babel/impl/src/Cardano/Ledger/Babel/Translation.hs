@@ -187,7 +187,6 @@ instance Crypto c => TranslateEra (BabelEra c) UTxOState where
     pure
       UTxOState
         { API.utxosUtxo = translateEra' ctxt $ API.utxosUtxo us
-        , API.utxosFrxo = mempty
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
         , API.utxosGovState =

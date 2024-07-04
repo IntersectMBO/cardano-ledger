@@ -157,7 +157,7 @@ genTx
         constants
       )
   (LedgerEnv slot txIx pparams reserves)
-  (LedgerState utxoSt@(UTxOState utxo _ _ _ _ _ _) dpState) =
+  (LedgerState utxoSt@(UTxOState utxo _ _ _ _ _) dpState) =
     do
       -------------------------------------------------------------------------
       -- Generate the building blocks of a TxBody
