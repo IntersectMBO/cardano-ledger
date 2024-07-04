@@ -7,7 +7,7 @@
 {-# HLINT ignore "Use camelCase" #-}
 {-# HLINT ignore "Evaluate" #-}
 
-module Cardano.Ledger.Conway.CDDL where
+module Cardano.Ledger.Conway.CDDL (conway) where
 
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
@@ -18,7 +18,10 @@ import GHC.Num (Integer)
 import GHC.Show (Show (show))
 
 conway :: Huddle
-conway = collectFrom [block, transaction]
+conway =
+  collectFrom $
+    [block, transaction]
+      <> [kes_signature, language, potential_languages, signkeyKES]
 
 block :: Rule
 block =
@@ -223,7 +226,7 @@ anchor =
       ]
 
 vote :: Rule
-vote = "vote" =:= int 0 // int 1 // int 2
+vote = "vote" =:= 0 ... 2
 
 gov_action_id :: Rule
 gov_action_id =
@@ -572,10 +575,10 @@ plutus_data =
     // bounded_bytes
 
 big_int :: Rule
-big_int = "big_int" =:= VInt // big_VUInt // big_nint
+big_int = "big_int" =:= VInt // big_uint // big_nint
 
-big_VUInt :: Rule
-big_VUInt = "big_VUInt" =:= tag 2 bounded_bytes
+big_uint :: Rule
+big_uint = "big_uint" =:= tag 2 bounded_bytes
 
 big_nint :: Rule
 big_nint = "big_nint" =:= tag 3 bounded_bytes
@@ -661,7 +664,7 @@ costmdls =
         [ opt $ idx 0 ==> arr [0 <+ a int64] -- Plutus v1, only 166 integers are used, but more are accepted (and ignored)
         , opt $ idx 1 ==> arr [0 <+ a int64] -- Plutus v2, only 175 integers are used, but more are accepted (and ignored)
         , opt $ idx 2 ==> arr [0 <+ a int64] -- Plutus v3, only 223 integers are used, but more are accepted (and ignored)
-        , opt $ asKey (3 ... 255) ==> arr [0 <+ a int64] -- Any 8-bit unsigned number can be used as a key.
+        , 0 <+ asKey (3 ... 255) ==> arr [0 <+ a int64] -- Any 8-bit unsigned number can be used as a key.
         ]
 
 transaction_metadatum :: Rule
@@ -693,13 +696,16 @@ auxiliary_data =
       [ "transaction_metadata" ==> metadata -- Shelley-ma
       , "auxiliary_scripts" ==> arr [0 <+ a native_script]
       ]
-    // smp
-      [ opt (idx 0 ==> metadata) -- Alonzo and beyond
-      , opt (idx 1 ==> arr [0 <+ a native_script])
-      , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
-      , opt (idx 3 ==> arr [0 <+ a plutus_v2_script])
-      , opt (idx 4 ==> arr [0 <+ a plutus_v3_script])
-      ]
+    // tag
+      259
+      ( mp
+          [ opt (idx 0 ==> metadata) -- Alonzo and beyond
+          , opt (idx 1 ==> arr [0 <+ a native_script])
+          , opt (idx 2 ==> arr [0 <+ a plutus_v1_script])
+          , opt (idx 3 ==> arr [0 <+ a plutus_v2_script])
+          , opt (idx 4 ==> arr [0 <+ a plutus_v3_script])
+          ]
+      )
 
 vkeywitness :: Rule
 vkeywitness = "vkeywitness" =:= arr [a vkey, a signature]
@@ -753,11 +759,10 @@ invalid_hereafter = "invalid_hereafter" =:~ grp [5, a slot_no]
 coin :: Rule
 coin = "coin" =:= VUInt
 
-multiasset :: (Show a, IsType0 a) => a -> Rule
-multiasset x =
-  "multiasset_"
-    <> T.pack (show x)
-      =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> x]]
+multiasset :: IsType0 a => a -> GRuleCall
+multiasset = binding $ \x ->
+  "multiasset"
+    =:= mp [1 <+ asKey policy_id ==> mp [1 <+ asKey asset_name ==> x]]
 
 policy_id :: Rule
 policy_id = "policy_id" =:= scripthash
@@ -887,31 +892,31 @@ script =
 --------------------------------------------------------------------------------
 
 hash28 :: Rule
-hash28 = "hash28" =:= VBytes `sized` (28 :: Word64)
+hash28 = "$hash28" =:= VBytes `sized` (28 :: Word64)
 
 hash32 :: Rule
-hash32 = "hash32" =:= VBytes `sized` (32 :: Word64)
+hash32 = "$hash32" =:= VBytes `sized` (32 :: Word64)
 
 vkey :: Rule
-vkey = "vkey" =:= VBytes `sized` (32 :: Word64)
+vkey = "$vkey" =:= VBytes `sized` (32 :: Word64)
 
 vrf_vkey :: Rule
-vrf_vkey = "vrf_vkey" =:= VBytes `sized` (32 :: Word64)
+vrf_vkey = "$vrf_vkey" =:= VBytes `sized` (32 :: Word64)
 
 vrf_cert :: Rule
-vrf_cert = "vrf_cert" =:= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
+vrf_cert = "$vrf_cert" =:= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
 
 kes_vkey :: Rule
-kes_vkey = "kes_vkey" =:= VBytes `sized` (32 :: Word64)
+kes_vkey = "$kes_vkey" =:= VBytes `sized` (32 :: Word64)
 
 kes_signature :: Rule
-kes_signature = "kes_signature" =:= VBytes `sized` (448 :: Word64)
+kes_signature = "$kes_signature" =:= VBytes `sized` (448 :: Word64)
 
 signkeyKES :: Rule
 signkeyKES = "signkeyKES" =:= VBytes `sized` (64 :: Word64)
 
 signature :: Rule
-signature = "signature" =:= VBytes `sized` (64 :: Word64)
+signature = "$signature" =:= VBytes `sized` (64 :: Word64)
 
 --------------------------------------------------------------------------------
 -- Extras
@@ -922,10 +927,13 @@ signature = "signature" =:= VBytes `sized` (64 :: Word64)
 -- change sooner rather than later, in order to provide a smooth transition for their users.
 
 set :: IsType0 t0 => t0 -> GRuleCall
-set = binding $ \x -> "set" =:= tag 258 (arr [0 <+ a x])
+set = binding $ \x -> "set" =:= tag 258 (arr [0 <+ a x]) // sarr [0 <+ a x]
 
 nonempty_set :: IsType0 t0 => t0 -> GRuleCall
-nonempty_set = binding $ \x -> "nonempty_set" =:= tag 258 (arr [1 <+ a x])
+nonempty_set = binding $ \x ->
+  "nonempty_set"
+    =:= tag 258 (arr [1 <+ a x])
+    // sarr [1 <+ a x]
 
 positive_int :: Rule
 positive_int = "positive_int" =:= 1 ... 18446744073709551615
