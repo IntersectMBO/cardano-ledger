@@ -160,9 +160,40 @@ data BabelTxBodyRaw era = BabelTxBodyRaw
   , bbtbrCurrentTreasuryValue :: !(StrictMaybe Coin)
   , bbtbrTreasuryDonation :: !Coin
   , -- Tx body fields for intents (babel-fees)
+
+    {- CIP-0118#0-tx-body
+
+      Here, we demonstrate the three (or two...I'll explain shortly) new fields required
+      for Babel fees.
+
+      The type of `Fulfill` is equivalent to that of an input, and the type of
+      a `Request` is equivalent to that of an ourput.
+
+      A `RequiredTx` is a transaction on which *this* transaction depends.
+
+      This has certain implications when it comes to cyclic dependencies. Because the
+      `TxBody` must be hashed for witnessing, if two transactions are dependent on
+      one-another with `RequiredTxs`, it becomes impossible to hash either of them.
+      This is why we might not want to put `RequiredTxs` in the `TxBody`: if we want
+      to allow these cyclic dependencies.
+
+      If we do, we'll need to move `RequiredTxs` up to the `Tx` level, like, for example:
+
+      data AlonzoTx era = AlonzoTx
+        { body :: !(TxBody era)
+        , wits :: !(TxWits era)
+        , isValid :: !IsValid
+        , auxiliaryData :: !(StrictMaybe (TxAuxData era))
+        , requiredTxs :: !(RequiredTxs era)
+        }
+        deriving (Generic)
+
+      This'll allow us to calculate a composite hash...TODO explain how they can do this
+
+      Jump to CIP-0118#1-tx-body to continue... -}
     bbtbrFulfills :: !(Set (Fulfill (EraCrypto era)))
   , bbtbrRequests :: !(StrictSeq (Sized (TxOut era)))
-  , bbtbrRequiredTxs :: !(Set (TxIn (EraCrypto era))) -- TODO WG You need to remove this right (for general atomic zones)?
+  , bbtbrRequiredTxs :: !(Set (TxIn (EraCrypto era)))
   }
   deriving (Generic, Typeable)
 

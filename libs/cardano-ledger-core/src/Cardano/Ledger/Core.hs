@@ -630,6 +630,21 @@ class
   ) =>
   EraSegWits era
   where
+  {- CIP-0118#1-block-structure
+
+  To support the concept of a block having a different concrete representation
+  depending on era, we've added a `TxStructure` type. This isn't strictly necessary;
+  mapping can occur in the instances instead. It does, however, demonstrate intent,
+  in that it allows what would be a concrete representation in the methods,
+  `StrictSeq (StrictSeq (Tx era))`, to be left abstract at the class level.
+
+  Additionally, we have a (bad) name change of `TxSeq` to `TxZones`. I'd welcome
+  a better name in the actual implementation.
+
+  Finally, we have a `flatten` function, as much of the existing code (tests etc)
+  requires a `StrictSeq`, and doesn't care about the new meaning in our `TxZones`.
+
+  Jump to CIP-0118#2-block-structure to continue... -}
   type TxStructure era :: Type -> Type
   type TxZones era = (r :: Type) | r -> era
 
