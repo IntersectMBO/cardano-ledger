@@ -55,6 +55,7 @@ library
         Test.Cardano.Ledger.Constrained.Solver
         Test.Cardano.Ledger.Constrained.Conway
         Test.Cardano.Ledger.Constrained.Conway.Cert
+        Test.Cardano.Ledger.Constrained.Conway.Certs
         Test.Cardano.Ledger.Constrained.Conway.Deleg
         Test.Cardano.Ledger.Constrained.Conway.Epoch
         Test.Cardano.Ledger.Constrained.Conway.Gov

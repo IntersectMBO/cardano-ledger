@@ -42,5 +42,6 @@ spec = do
       xprop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
       prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @Conway
       prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
+      xprop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @Conway
       prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
       xprop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
