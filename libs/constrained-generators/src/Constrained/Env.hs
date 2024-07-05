@@ -53,4 +53,4 @@ findEnv :: (Typeable a, MonadGenError m) => Env -> Var a -> m a
 findEnv env var = do
   case lookupEnv env var of
     Just a -> pure a
-    Nothing -> genError ["Couldn't find " ++ show var ++ " in " ++ show env]
+    Nothing -> genError (pure ("Couldn't find " ++ show var ++ " in " ++ show env))

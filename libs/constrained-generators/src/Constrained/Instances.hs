@@ -89,6 +89,8 @@ instance BaseUniverse fn => Functions (BoolFn fn) fn where
 okOr :: Bool -> Bool -> Specification fn Bool
 okOr constant need = case (constant, need) of
   (True, True) -> TrueSpec
-  (True, False) -> ErrorSpec ["(" ++ show constant ++ "||. HOLE) must equal False. That cannot be the case."]
+  (True, False) ->
+    ErrorSpec
+      (pure ("(" ++ show constant ++ "||. HOLE) must equal False. That cannot be the case."))
   (False, False) -> MemberSpec [False]
   (False, True) -> MemberSpec [True]

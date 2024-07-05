@@ -29,8 +29,8 @@ dStateSpec ::
 dStateSpec = constrained $ \ds ->
   match ds $ \rewardMap _futureGenDelegs _genDelegs _rewards ->
     match rewardMap $ \rdMap ptrMap sPoolMap _dRepMap ->
-      [ assertExplain ["dom sPoolMap is a subset of dom rdMap"] $ dom_ sPoolMap `subset_` dom_ rdMap
-      , assertExplain ["dom ptrMap is empty"] $ dom_ ptrMap ==. mempty
+      [ assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
+      , assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
       ]
 
 delegCertSpec ::

@@ -125,8 +125,8 @@ instance Forallable (Tree a) (a, [Tree a]) where
 -- in `HasSpec`
 guardRoseSpec :: HasSpec fn (Tree a) => TreeSpec fn a -> Specification fn (Tree a)
 guardRoseSpec spec@(TreeSpec _ _ rs s)
-  | isErrorLike rs = ErrorSpec ["guardRoseSpec: rootSpec is error"]
-  | isErrorLike s = ErrorSpec ["guardRoseSpec: ctxSpec is error"]
+  | isErrorLike rs = ErrorSpec (pure "guardRoseSpec: rootSpec is error")
+  | isErrorLike s = ErrorSpec (pure "guardRoseSpec: ctxSpec is error")
   | otherwise = TypeSpec spec []
 
 instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
@@ -135,7 +135,7 @@ instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
   emptySpec = TreeSpec Nothing Nothing TrueSpec TrueSpec
 
   combineSpec (TreeSpec mal sz rs s) (TreeSpec mal' sz' rs' s')
-    | isErrorLike (typeSpec (Cartesian rs'' TrueSpec) <> s'') = ErrorSpec []
+    | isErrorLike alteredspec = ErrorSpec (errorLikeMessage alteredspec)
     | otherwise =
         guardRoseSpec $
           TreeSpec
@@ -144,6 +144,7 @@ instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
             rs''
             s''
     where
+      alteredspec = (typeSpec (Cartesian rs'' TrueSpec) <> s'')
       rs'' = rs <> rs'
       s'' = s <> s'
 

@@ -186,8 +186,8 @@ instance BaseUniverse fn => Functions (SumFn fn) fn where
   -- NOTE: this function over-approximates and returns a liberal spec.
   mapTypeSpec f ts = case f of
     -- TODO possibly not the right counts??
-    InjLeft -> typeSpec $ SumSpec Nothing (typeSpec ts) (ErrorSpec ["mapTypeSpec InjLeft"])
-    InjRight -> typeSpec $ SumSpec Nothing (ErrorSpec ["mapTypeSpec InjRight"]) (typeSpec ts)
+    InjLeft -> typeSpec $ SumSpec Nothing (typeSpec ts) (ErrorSpec (pure "mapTypeSpec InjLeft"))
+    InjRight -> typeSpec $ SumSpec Nothing (ErrorSpec (pure "mapTypeSpec InjRight")) (typeSpec ts)
 
 ------------------------------------------------------------------------
 -- Syntax

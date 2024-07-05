@@ -34,6 +34,7 @@ import Constrained.Univ
 import Control.Monad
 import Data.Foldable
 import Data.List (nub)
+import Data.List.NonEmpty qualified as NE
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Set (Set)
@@ -187,17 +188,19 @@ instance
                     (Map.insert k v m)
                 _ ->
                   genError
-                    [ "Failed to generate enough elements for the map:"
-                    , "  m = " ++ show m
-                    , "  n' = " ++ show n'
-                    , show $ "  kvs' = " <> pretty kvs'
-                    , show $ "  simplifySpec kvs' = " <> pretty (simplifySpec kvs')
-                    ]
-        explain ["  n = " ++ show n] $ go n kvs mempty
+                    ( NE.fromList
+                        [ "Failed to generate enough elements for the map:"
+                        , "  m = " ++ show m
+                        , "  n' = " ++ show n'
+                        , show $ "  kvs' = " <> pretty kvs'
+                        , show $ "  simplifySpec kvs' = " <> pretty (simplifySpec kvs')
+                        ]
+                    )
+        explain1 ("  n = " ++ show n) $ go n kvs mempty
   genFromTypeSpec (MapSpec mHint mustKeys mustVals size (simplifySpec -> kvs) foldSpec) = do
-    mustMap <- explain ["Make the mustMap"] $ forM (Set.toList mustKeys) $ \k -> do
+    mustMap <- explain1 "Make the mustMap" $ forM (Set.toList mustKeys) $ \k -> do
       let vSpec = constrained $ \v -> satisfies (pair_ (lit k) v) kvs
-      v <- explain [show $ "vSpec =" <+> pretty vSpec] $ genFromSpecT vSpec
+      v <- explain1 (show $ "vSpec =" <+> pretty vSpec) $ genFromSpecT vSpec
       pure (k, v)
     let haveVals = map snd mustMap
         mustVals' = filter (`notElem` haveVals) mustVals
@@ -225,11 +228,13 @@ instance
 
     restVals <-
       explain
-        [ "Make the restVals"
-        , show $ "  valsSpec =" <+> pretty valsSpec
-        , show $ "  mustMap =" <+> viaShow mustMap
-        , show $ "  size' =" <+> pretty size'
-        ]
+        ( NE.fromList
+            [ "Make the restVals"
+            , show $ "  valsSpec =" <+> pretty valsSpec
+            , show $ "  mustMap =" <+> viaShow mustMap
+            , show $ "  size' =" <+> pretty size'
+            ]
+        )
         $ genFromTypeSpec
         $ valsSpec
     let go m [] = pure m
@@ -237,9 +242,11 @@ instance
           let keySpec = notMemberSpec (Map.keysSet m) <> constrained (\k -> pair_ k (lit v) `satisfies` kvs)
           k <-
             explain
-              [ "Make a key"
-              , show $ indent 4 $ "keySpec =" <+> pretty keySpec
-              ]
+              ( NE.fromList
+                  [ "Make a key"
+                  , show $ indent 4 $ "keySpec =" <+> pretty keySpec
+                  ]
+              )
               $ genFromSpecT keySpec
           go (Map.insert k v m) restVals'
 
@@ -300,7 +307,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
                       size
                       (constrained $ \kv -> satisfies (app (fstFn @fn) (app (toGenericFn @fn) kv)) elemspec)
                       NoFold
-                _ -> ErrorSpec ["Dom on bad map spec", show spec]
+                _ -> ErrorSpec (NE.fromList ["Dom on bad map spec", show spec])
     Rng ->
       -- No TypeAbstractions in ghc-8.10
       case fn of
@@ -320,7 +327,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
                 -- NOTE: you'd think `MemberSpec [r]` was a safe and easy case. However, that requires not only that the elements
                 -- of the map are fixed to what is in `r`, but they appear in the order that they are in `r`. That's
                 -- very difficult to achieve!
-                _ -> ErrorSpec ["Rng on bad map spec", show spec]
+                _ -> ErrorSpec (NE.fromList ["Rng on bad map spec", show spec])
     Lookup ->
       case fn of
         Lookup :: MapFn fn '[k, Map k v] (Maybe v)

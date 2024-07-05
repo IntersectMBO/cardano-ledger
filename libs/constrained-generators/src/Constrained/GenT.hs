@@ -32,6 +32,7 @@ module Constrained.GenT where
 import Control.Applicative
 import Control.Monad
 import Data.Foldable
+import Data.List.NonEmpty qualified as NE
 import GHC.Stack
 import System.Random
 import Test.QuickCheck hiding (Args, Fun)
@@ -43,18 +44,31 @@ import Test.QuickCheck.Random
 ------------------------------------------------------------------------
 
 -- | A class for different types of errors with a stack of `explain` calls to
--- narrow down problems.
+-- narrow down problems. The (NE.NonEmpty String) means one cannot cause an
+-- Error without at least 1 string to explain it.
 class Monad m => MonadGenError m where
-  genError :: HasCallStack => [String] -> m a
-  fatalError :: HasCallStack => [String] -> m a
-  explain :: HasCallStack => [String] -> m a -> m a
+  genError :: HasCallStack => NE.NonEmpty String -> m a
+  fatalError :: HasCallStack => NE.NonEmpty String -> m a
+  explain :: HasCallStack => NE.NonEmpty String -> m a -> m a
+
+-- | genError with one line of explanation
+genError1 :: MonadGenError m => String -> m a
+genError1 s = genError (pure s)
+
+-- | fatalError with one line of explanation
+fatalError1 :: MonadGenError m => String -> m a
+fatalError1 s = fatalError (pure s)
+
+-- | explain with one line of explanation
+explain1 :: MonadGenError m => String -> m a -> m a
+explain1 s = explain (pure s)
 
 -- | The Gen Error monad, distinguishes between fatal errors
 -- and non-fatal errors.
 data GE a
-  = FatalError [[String]] [String]
-  | GenError [[String]] [String]
-  | Result [[String]] a
+  = FatalError [NE.NonEmpty String] (NE.NonEmpty String)
+  | GenError [NE.NonEmpty String] (NE.NonEmpty String)
+  | Result [NE.NonEmpty String] a
   deriving (Ord, Eq, Show, Functor)
 
 instance Applicative GE where
@@ -67,17 +81,17 @@ instance Monad GE where
   Result _ a >>= k = k a
 
 instance Alternative GE where
-  empty = GenError [] []
+  empty = GenError [] (pure "Not a real error. makes GE have Alternative instance")
   m@FatalError {} <|> _ = m
   GenError {} <|> m = m
   Result es x <|> _ = Result es x
 
 instance MonadGenError GE where
-  genError = GenError []
-  fatalError = FatalError []
-  explain es (GenError es' err) = GenError (es : es') err
-  explain es (FatalError es' err) = FatalError (es : es') err
-  explain es (Result es' a) = Result (es : es') a
+  genError neStr = GenError [] neStr
+  fatalError neStr = FatalError [] neStr
+  explain nes (GenError es' err) = GenError (nes : es') err
+  explain nes (FatalError es' err) = FatalError (nes : es') err
+  explain nes (Result es' a) = Result (nes : es') a
 
 instance MonadGenError m => MonadGenError (GenT m) where
   genError es = GenT $ \_ -> pure $ genError es
@@ -85,7 +99,7 @@ instance MonadGenError m => MonadGenError (GenT m) where
   explain es gen = GenT $ \mode -> fmap (explain es) (runGenT gen mode)
 
 instance MonadGenError m => MonadFail (GenT m) where
-  fail = genError . (: [])
+  fail s = genError (pure s)
 
 catGEs :: MonadGenError m => [GE a] -> m [a]
 catGEs [] = pure []
@@ -94,14 +108,15 @@ catGEs (GenError {} : ges) = catGEs ges
 catGEs (FatalError es e : _) =
   runGE $ FatalError es e
 
-fromGE :: ([String] -> a) -> GE a -> a
+fromGE :: (NE.NonEmpty String -> a) -> GE a -> a
 fromGE _ (Result _ a) = a
-fromGE a (GenError es e) = a $ concat es ++ e
+fromGE a (GenError [] e) = a e
+fromGE a (GenError es e) = a $ foldr1 (<>) es <> e
 fromGE _ (FatalError es e) =
-  error . unlines $ concat es ++ e
+  error . unlines $ concat (map NE.toList es) ++ (NE.toList e)
 
 errorGE :: GE a -> a
-errorGE = fromGE (error . unlines)
+errorGE = fromGE (error . unlines . NE.toList)
 
 isOk :: GE a -> Bool
 isOk GenError {} = False
@@ -114,18 +129,20 @@ runGE (FatalError es err) = foldr explain (fatalError err) es
 runGE (Result es a) = foldr explain (pure a) es
 
 fromGEProp :: Testable p => GE p -> Property
-fromGEProp (GenError es err) = foldr (counterexample . unlines) (counterexample (unlines err) False) es
-fromGEProp (FatalError es err) = foldr (counterexample . unlines) (counterexample (unlines $ "Fatal error: " : err) False) es
-fromGEProp (Result es p) = foldr (counterexample . unlines) (property p) es
+fromGEProp (GenError es err) =
+  foldr (counterexample . unlines) (counterexample (unlines (NE.toList err)) False) (map NE.toList es)
+fromGEProp (FatalError es err) =
+  foldr (counterexample . unlines) (counterexample (unlines (NE.toList err)) False) (map NE.toList es)
+fromGEProp (Result es p) = foldr (counterexample . unlines) (property p) (map NE.toList es)
 
 fromGEDiscard :: Testable p => GE p -> Property
-fromGEDiscard (Result es p) = foldr (counterexample . unlines) (property p) es
+fromGEDiscard (Result es p) = foldr (counterexample . unlines . NE.toList) (property p) es
 fromGEDiscard _ = discard
 
 headGE :: Foldable t => t a -> GE a
 headGE t
   | x : _ <- toList t = pure x
-  | otherwise = fatalError ["head of empty structure"]
+  | otherwise = fatalError (pure "head of empty structure")
 
 ------------------------------------------------------------------------
 -- GenT
@@ -203,7 +220,7 @@ suchThatT g p = do
         Loose -> (1 :: Int, genError) -- TODO: Maybe 1 is not the right number here!
   go n cont
   where
-    go 0 cont = cont ["Ran out of tries on suchThatT"]
+    go 0 cont = cont (pure "Ran out of tries on suchThatT")
     go n cont = do
       a <- g
       if p a then pure a else scaleT (+ 1) $ go (n - 1) cont
@@ -220,20 +237,22 @@ withMode mode gen = GenT $ \_ -> runGenT gen mode
 oneofT :: MonadGenError m => [GenT GE a] -> GenT m a
 oneofT gs = do
   mode <- getMode
-  r <- explain ["suchThatT in oneofT"] $ pureGen (oneof [runGenT g mode | g <- gs]) `suchThatT` isOk
+  r <-
+    explain (pure "suchThatT in oneofT") $
+      pureGen (oneof [runGenT g mode | g <- gs]) `suchThatT` isOk
   runGE r
 
 frequencyT :: MonadGenError m => [(Int, GenT GE a)] -> GenT m a
 frequencyT gs = do
   mode <- getMode
   r <-
-    explain ["suchThatT in oneofT"] $
+    explain (pure "suchThatT in oneofT") $
       pureGen (frequency [(f, runGenT g mode) | (f, g) <- gs]) `suchThatT` isOk
   runGE r
 
 chooseT :: (Random a, Ord a, Show a, MonadGenError m) => (a, a) -> GenT m a
 chooseT (a, b)
-  | b < a = genError ["chooseT (" ++ show a ++ ", " ++ show b ++ ")"]
+  | b < a = genError (pure ("chooseT (" ++ show a ++ ", " ++ show b ++ ")"))
   | otherwise = pureGen $ choose (a, b)
 
 sizeT :: Monad m => GenT m Int
