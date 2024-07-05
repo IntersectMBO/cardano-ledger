@@ -146,10 +146,9 @@ tests nightly =
     testSpec "elemSpec" elemSpec
     testSpec "lookupSpecific" lookupSpecific
     testSpec "specificElemConstraints" lookupSpecific
-    -- TODO: fixme in a follow-up PR
-    -- testSpec "mapRestrictedValues" mapRestrictedValues
-    -- testSpec "mapRestrictedValues" mapRestrictedValuesThree
-    -- testSpec "mapRestrictedValues" mapRestrictedValuesBool
+    testSpec "mapRestrictedValues" mapRestrictedValues
+    testSpec "mapRestrictedValuesThree" mapRestrictedValuesThree
+    testSpec "mapRestrictedValuesBool" mapRestrictedValuesBool
     testSpec "mapSetSmall" mapSetSmall
     testSpecNoShrink "powersetPickOne" powersetPickOne
     numberyTests

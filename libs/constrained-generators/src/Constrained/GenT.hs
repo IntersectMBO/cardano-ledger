@@ -246,3 +246,11 @@ tryGen g = do
     FatalError es err -> foldr explain (fatalError err) es
     GenError _ _ -> pure Nothing
     Result _ a -> pure $ Just a
+
+tryGen' :: MonadGenError m => GenT GE a -> GenT m (Maybe a)
+tryGen' g = do
+  r <- pureGen $ runGenT g Strict
+  case r of
+    FatalError es err -> foldr explain (fatalError err) es
+    GenError _ _ -> pure Nothing
+    Result _ a -> pure $ Just a

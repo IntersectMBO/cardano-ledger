@@ -29,8 +29,10 @@ import Constrained.GenT
 import Constrained.Instances ()
 import Constrained.List
 import Constrained.Spec.Generics
+import Constrained.Spec.Pairs
 import Constrained.Univ
 import Control.Monad
+import Data.Foldable
 import Data.List (nub)
 import Data.Map (Map)
 import Data.Map qualified as Map
@@ -160,6 +162,38 @@ instance
       , Map.elems m `conformsToFoldSpec` foldSpec
       ]
 
+  genFromTypeSpec (MapSpec mHint mustKeys mustVals size (simplifySpec -> kvs) NoFold)
+    | null mustKeys
+    , null mustVals = do
+        let size' =
+              fold
+                [ maybe TrueSpec (leqSpec . max 0) mHint
+                , size
+                , maxSpec (cardinality (mapSpec fstFn $ mapSpec toGenericFn kvs))
+                , maxSpec (cardinalTrueSpec @fn @k)
+                , geqSpec 0
+                ]
+        n <- genFromSpecT size'
+        let go 0 _ m = pure m
+            go n' kvs' m = do
+              mkv <- tryGen' $ genFromSpecT kvs'
+              case mkv of
+                Nothing
+                  | sizeOf m `conformsToSpec` size -> pure m
+                Just (k, v) ->
+                  go
+                    (n' - 1)
+                    (kvs' <> typeSpec (Cartesian (notEqualSpec k) mempty))
+                    (Map.insert k v m)
+                _ ->
+                  genError
+                    [ "Failed to generate enough elements for the map:"
+                    , "  m = " ++ show m
+                    , "  n' = " ++ show n'
+                    , show $ "  kvs' = " <> pretty kvs'
+                    , show $ "  simplifySpec kvs' = " <> pretty (simplifySpec kvs')
+                    ]
+        explain ["  n = " ++ show n] $ go n kvs mempty
   genFromTypeSpec (MapSpec mHint mustKeys mustVals size (simplifySpec -> kvs) foldSpec) = do
     mustMap <- explain ["Make the mustMap"] $ forM (Set.toList mustKeys) $ \k -> do
       let vSpec = constrained $ \v -> satisfies (pair_ (lit k) v) kvs
