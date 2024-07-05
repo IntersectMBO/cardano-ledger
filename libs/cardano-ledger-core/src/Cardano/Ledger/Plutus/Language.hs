@@ -197,6 +197,37 @@ instance DecCBOR (Annotator PlutusBinary) where
 instance SafeToHash PlutusBinary where
   originalBytes (PlutusBinary binaryBlutus) = fromShort binaryBlutus
 
+{- CIP-0118#0-plutusv4
+
+  Here, we demonstrate the three (or two...I'll explain shortly) new fields required
+  for Babel fees.
+
+  The type of `Fulfill` is equivalent to that of an input, and the type of
+  a `Request` is equivalent to that of an ourput.
+
+  A `RequiredTx` is a transaction on which *this* transaction depends.
+
+  This has certain implications when it comes to cyclic dependencies. Because the
+  `TxBody` must be hashed for witnessing, if two transactions are dependent on
+  one-another with `RequiredTxs`, it becomes impossible to hash either of them.
+  This is why we might not want to put `RequiredTxs` in the `TxBody`: if we want
+  to allow these cyclic dependencies.
+
+  If we do, we'll need to move `RequiredTxs` up to the `Tx` level, like, for example:
+
+  data AlonzoTx era = AlonzoTx
+    { body :: !(TxBody era)
+    , wits :: !(TxWits era)
+    , isValid :: !IsValid
+    , auxiliaryData :: !(StrictMaybe (TxAuxData era))
+    , requiredTxs :: !(RequiredTxs era)
+    }
+    deriving (Generic)
+
+  This'll allow us to calculate a composite hash...TODO explain how they can do this
+
+  Jump to CIP-0118#1-plutusv4 to continue... -}
+
 -- | Non-Native Plutus Script language. This is expected to be an open type. We will add
 -- new Constuctors to this type as additional Plutus language versions as are added.  We
 -- use an enumerated type for two reasons.

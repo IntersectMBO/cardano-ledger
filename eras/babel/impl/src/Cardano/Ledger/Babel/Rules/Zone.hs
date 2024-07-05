@@ -209,11 +209,34 @@ instance
   initialRules = []
   transitionRules = [zoneTransition]
 
-{- txsize tx ≤ maxTxSize pp -}
--- We've moved this to the ZONE rule. See https://github.com/IntersectMBO/formal-ledger-specifications/commit/c3e18ac1d3da92dd4894bbc32057a143f9720f52#diff-5f67369ed62c0dab01e13a73f072b664ada237d094bbea4582365264dd163bf9
--- ((totSizeZone ltx) ≤ᵇ (Γ .LEnv.pparams .PParams.maxTxSize)) ≡ true
--- runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
+{- CIP-0118#ZONE-rule
 
+This is an implementation of the Babel fees Agda spec for the ZONE rule.
+
+We check that the sum of the size of all transactions within the zone is less than
+the maximum size of an individual transaction:
+
+`runTestOnSignal $ validateMaxTxSizeUTxO pParams (Foldable.toList txs)`
+
+We then check that all `RequiredTx`s of each transaction in the zone exists as a transaction
+in the zone:
+
+`runTestOnSignal $ failureUnless (all (chkRqTx txs) txs) CheckRqTxFailure`
+
+Next, we check that no cycles exist within the dependencies:
+
+`runTestOnSignal $ failureUnless (chkLinear (Foldable.toList txs)) CheckLinearFailure`
+
+Finally, we check that the `ExUnit`s limit is not exceeded:
+
+`runTestOnSignal $ validateExUnitsTooBigUTxO pParams (Foldable.toList txs)`
+
+If these checks pass, we proceed to the LEDGERS rule. Note that, at this point,
+we create a `LedgerStateTemp` with an empty `FRxO` set.
+
+Please see CIP-0118#ledger-state-temp for more information on `LedgerStateTemp`.
+
+Jump to CIP-0118#LEDGERS-rule to continue... -}
 zoneTransition ::
   forall era.
   ( EraRule "ZONE" era ~ BabelZONE era
@@ -236,9 +259,8 @@ zoneTransition ::
   TransitionRule (BabelZONE era)
 zoneTransition =
   judgmentContext
-    -- I guess we want UTxOStateTemp here?
     >>= \( TRC
-            ( BabelLedgersEnv slotNo ixRange pParams accountState
+            ( BabelLedgersEnv slotNo ixStart pParams accountState
               , LedgerState utxoState certState
               , txs :: Seq (Tx era)
               )
@@ -257,7 +279,7 @@ zoneTransition =
             lsTemp <- -- TODO WG: Should we be checking FRxO is empty before converting?
               trans @(EraRule "LEDGERS" era) $
                 TRC
-                  ( BabelLedgersEnv slotNo ixRange pParams accountState
+                  ( BabelLedgersEnv slotNo ixStart pParams accountState
                   , fromLedgerState $ LedgerState utxoState certState
                   , txs
                   )
@@ -282,7 +304,6 @@ zoneTransition =
     chkRqTx txs tx = all chk txrids
       where
         chk txrid = txrid `elem` ids
-        -- asd = tx ^. requiredTxsTxL
         txrids = fmap txInTxId $ toList $ tx ^. bodyTxL . requiredTxsTxBodyL
         ids :: Set (TxId (EraCrypto era))
         ids = getIDs $ Foldable.toList txs

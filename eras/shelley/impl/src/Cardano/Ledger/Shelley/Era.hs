@@ -41,6 +41,12 @@ instance Crypto c => Era (ShelleyEra c) where
 
   eraName = "Shelley"
 
+{- CIP-0118#era-first-rule
+
+  `EraFirstRule` is a type family declaring which rule is expected immediately after BBODY.
+
+  This is used to allow the state of whichever rule is declared to be different
+  to the state expected by LEDGERS. -}
 type family EraFirstRule era :: Symbol
 type instance EraFirstRule (ShelleyEra c) = "LEDGERS"
 

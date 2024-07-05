@@ -272,6 +272,20 @@ instance
 -- BabelUTXO STS
 --------------------------------------------------------------------------------
 
+{- CIP-0118#UTXO-rule
+
+The only difference here is that the transaction max size check:
+
+txsize tx ≤ maxTxSize pp
+runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
+
+...has been moved to the ZONE rule (CIP-0118#ZONE-rule). This is because we now
+need to ensure that the size of all transactions within a zone is within the max
+size of a single transaction, and, naturally, if that condition is satisfied, it
+must also be implicitly satisfied for all individual transactions.
+
+Jump to CIP-0118#UTXOS-rule to continue... -}
+
 -- | The UTxO transition rule for the Babbage eras.
 utxoTransition ::
   forall era.

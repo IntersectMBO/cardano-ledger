@@ -154,8 +154,20 @@ instance
 
   transitionRules = [zonesTransition]
 
+{- CIP-0118#ZONES-rule
+
+Previously, LEDGERS was indexing transactions by their position in the block.
+
+Now, LEDGERS can only see transactions in a zone, and thus can only index transactions
+relative to that zone.
+
+To solve this, in ZONES, we index each zone by its position in the block. This
+gives LEDGERS the knowledge of a "starting point" from which to derive the
+absolute position of transactions in a block given its relative position in the zone.
+
+Jump to CIP-0118#ZONE-rule to continue... -}
+
 -- Need to index each transaction in the list of lists by its index in the flattened list
--- Do we care about
 zonesTransition ::
   forall era.
   ( Embed (EraRule "ZONE" era) (BabelZONES era)

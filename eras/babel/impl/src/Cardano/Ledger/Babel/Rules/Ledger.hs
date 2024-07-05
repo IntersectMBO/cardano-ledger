@@ -313,6 +313,9 @@ instance
 
 -- =======================================
 
+{- CIP-0118#LEDGER-rule
+
+Jump to CIP-0118#UTXOW-rule to continue... -}
 ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
   ( AlonzoEraTx era

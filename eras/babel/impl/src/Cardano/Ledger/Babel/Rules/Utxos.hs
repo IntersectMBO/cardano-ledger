@@ -118,6 +118,13 @@ data BabelUtxosEvent era
       (UTxO era)
       -- | UTxO created
       (UTxO era)
+  | -- | The FRxOs consumed and created by a signal tx
+    TxFRxODiff
+      -- | FRxO consumed
+      (FRxO era)
+      -- | FRxO created
+      (FRxO era)
+  deriving (Generic)
   deriving (Generic)
 
 deriving instance (Era era, Eq (TxOut era)) => Eq (BabelUtxosEvent era)
@@ -264,6 +271,18 @@ instance
   wrapFailed = AlonzoInBabbageUtxoPredFailure . UtxosFailure
   wrapEvent = UtxosEvent
 
+{- CIP-0118#UTXOS-rule
+
+Everything interesting here is in the `updateUTxOState` function.
+
+However, it's not actually all that interesting; what we do with the FRxO is identical
+to what we already do with the UTxO.
+
+Note that I'm unsure if we actually need to do anything with `deletedFrxO`, and so
+the `txFrxODiffEvent` argument, and the event it uses, `TxFRxODiff`, might be redundant.
+I've included these elements to keep parity with the UTxO logic.
+
+Jump to ??? to continue... -}
 utxosTransition ::
   forall era.
   ( AlonzoEraTx era
@@ -324,6 +343,7 @@ babelEvalScriptsTxValid = do
       govState
       (tellEvent . injectEvent . TotalDeposits (hashAnnotated txBody))
       (\a b -> tellEvent . injectEvent $ TxUTxODiff a b)
+      (\a b -> tellEvent . injectEvent $ TxFRxODiff a b)
   pure $! utxos' & utxostDonationL <>~ txBody ^. treasuryDonationTxBodyL
 
 -- | This monadic action captures the final stages of the UTXO(S) rule. In particular it
@@ -331,8 +351,6 @@ babelEvalScriptsTxValid = do
 -- fee pot `utxosFees` and updates the `utxosDeposited` field. Continuation supplied will
 -- be called on the @deposit - refund@ change, which is normally used to emit the
 -- `TotalDeposits` event.
-
--- TODO WG: This shouldn't be here. Need to figure out how to alter original without changing tons of callsites
 updateUTxOState ::
   (BabelEraTxBody era, Monad m) =>
   PParams era ->
@@ -342,8 +360,9 @@ updateUTxOState ::
   GovState era ->
   (Coin -> m ()) ->
   (UTxO era -> UTxO era -> m ()) ->
+  (FRxO era -> FRxO era -> m ()) ->
   m (UTxOStateTemp era)
-updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent = do
+updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiffEvent txFrxODiffEvent = do
   let UTxOStateTemp
         { utxostUtxo
         , utxostFrxo
@@ -361,16 +380,18 @@ updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiff
       FRxO frxo = utxostFrxo
       !frxoAdd = txfrxo txBody -- These will be inserted into the FRxO
       {- utxoDel  = txins txb ◁ utxo -}
-      !(frxoWithout, _frxoDel) = extractKeys frxo (txBody ^. fulfillsTxBodyL)
+      !(frxoWithout, frxoDel) = extractKeys frxo (txBody ^. fulfillsTxBodyL)
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newFRxO = frxoWithout `Map.union` unFRxO frxoAdd
       deletedUTxO = UTxO utxoDel
+      deletedFRxO = FRxO frxoDel
       newIncStakeDistro = updateStakeDistribution pp utxostStakeDistr deletedUTxO utxoAdd
       totalRefunds = certsTotalRefundsTxBody pp certState txBody
       totalDeposits = certsTotalDepositsTxBody pp certState txBody
       depositChange = totalDeposits <-> totalRefunds
   depositChangeEvent depositChange
   txUtxODiffEvent deletedUTxO utxoAdd
+  txFrxODiffEvent deletedFRxO frxoAdd
   pure $!
     UTxOStateTemp
       { utxostUtxo = UTxO newUTxO

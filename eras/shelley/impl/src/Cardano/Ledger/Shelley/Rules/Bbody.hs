@@ -58,6 +58,7 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
+{- CIP-0118#shelley-bbody-state -}
 data ShelleyBbodyState era
   = BbodyState !(State (EraRule (EraFirstRule era) era)) !(BlocksMade (EraCrypto era))
 

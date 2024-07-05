@@ -402,6 +402,10 @@ shelleyToBabelUtxowPredFailure = \case
 
 ------------
 
+{- CIP-0118#UTXOW-rule
+
+Jump to CIP-0118#UTXO-rule to continue... -}
+
 -- | UTXOW transition rule that is used in Babbage and Babel era.
 babelUtxowTransition ::
   forall era.

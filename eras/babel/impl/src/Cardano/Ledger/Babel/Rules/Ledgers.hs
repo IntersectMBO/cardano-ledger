@@ -98,6 +98,9 @@ instance
 
   transitionRules = [ledgersTransition]
 
+{- CIP-0118#LEDGERS-rule
+
+Jump to CIP-0118#LEDGER-rule to continue... -}
 ledgersTransition ::
   forall era.
   ( Embed (EraRule "LEDGER" era) (BabelLEDGERS era)

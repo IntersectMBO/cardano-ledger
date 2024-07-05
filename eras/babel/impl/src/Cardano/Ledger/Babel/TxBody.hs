@@ -190,7 +190,7 @@ data BabelTxBodyRaw era = BabelTxBodyRaw
 
       This'll allow us to calculate a composite hash...TODO explain how they can do this
 
-      Jump to CIP-0118#1-tx-body to continue... -}
+      Jump to CIP-0118#ZONE-rule to continue... -}
     bbtbrFulfills :: !(Set (Fulfill (EraCrypto era)))
   , bbtbrRequests :: !(StrictSeq (Sized (TxOut era)))
   , bbtbrRequiredTxs :: !(Set (TxIn (EraCrypto era)))

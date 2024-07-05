@@ -634,9 +634,8 @@ class
 
   To support the concept of a block having a different concrete representation
   depending on era, we've added a `TxStructure` type. This isn't strictly necessary;
-  mapping can occur in the instances instead. It does, however, demonstrate intent,
-  in that it allows what would be a concrete representation in the methods,
-  `StrictSeq (StrictSeq (Tx era))`, to be left abstract at the class level.
+  mapping can occur in the instances instead. This does, however, demonstrate the intent:
+  The concrete structure of transactions in a block is decided on a per-era basis.
 
   Additionally, we have a (bad) name change of `TxSeq` to `TxZones`. I'd welcome
   a better name in the actual implementation.
