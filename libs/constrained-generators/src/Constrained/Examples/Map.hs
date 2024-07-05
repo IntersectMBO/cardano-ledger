@@ -85,10 +85,12 @@ mapRestrictedValues :: Specification BaseFn (Map (Either Int ()) Int)
 mapRestrictedValues = constrained $ \m ->
   [ assert $ sizeOf_ (dom_ m) ==. 6
   , forAll' m $ \k v ->
-      caseOn
-        k
-        (branch $ \_ -> 20 <=. v)
-        (branch $ \_ -> True)
+      [ caseOn
+          k
+          (branch $ \_ -> 20 <=. v)
+          (branch $ \_ -> True)
+      , v `dependsOn` k
+      ]
   ]
 
 -- NOTE: this fails if you pick the values of the map first - you're unlikely to generate
@@ -96,21 +98,25 @@ mapRestrictedValues = constrained $ \m ->
 -- you take satisfiability of the whole elem constraint into account. This can't be fixed
 -- with a `dependsOn v k` because the issue is that we've generated a bunch of values
 -- before we ever go to generate the keys.
-mapRestrictedValueThree :: Specification BaseFn (Map Three Int)
-mapRestrictedValueThree = constrained $ \m ->
+mapRestrictedValuesThree :: Specification BaseFn (Map Three Int)
+mapRestrictedValuesThree = constrained $ \m ->
   [ assert $ sizeOf_ (dom_ m) ==. 3
   , forAll' m $ \k v ->
-      caseOn
-        k
-        (branch $ \_ -> v <=. (-100))
-        (branch $ \_ -> 100 <=. v)
-        (branch $ \_ -> True)
+      [ caseOn
+          k
+          (branch $ \_ -> v <=. (-100))
+          (branch $ \_ -> 100 <=. v)
+          (branch $ \_ -> True)
+      , -- This is important to demonstrate the point that keys sometimes need to be solved before
+        -- values
+        v `dependsOn` k
+      ]
   ]
 
-mapRestrictedValueBool :: Specification BaseFn (Map Bool Int)
-mapRestrictedValueBool = constrained $ \m ->
+mapRestrictedValuesBool :: Specification BaseFn (Map Bool Int)
+mapRestrictedValuesBool = constrained $ \m ->
   [ assert $ sizeOf_ (dom_ m) ==. 2
-  , forAll' m $ \k v -> whenTrue k (100 <=. v)
+  , forAll' m $ \k v -> [v `dependsOn` k, whenTrue k (100 <=. v)]
   ]
 
 mapSetSmall :: Specification BaseFn (Map (Set Int) Int)
