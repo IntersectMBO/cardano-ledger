@@ -194,7 +194,6 @@ test-suite tests
         cardano-ledger-alonzo,
         cardano-ledger-babbage,
         cardano-ledger-conway,
-        cardano-ledger-shelley:testlib,
         cardano-ledger-core,
         cardano-ledger-binary:testlib,
         cardano-slotting:testlib,
