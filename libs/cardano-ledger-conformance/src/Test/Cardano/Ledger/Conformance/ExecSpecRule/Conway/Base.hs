@@ -18,7 +18,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base () where
+module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
+  ConwayCertExecContext (..),
+  disableDRepRegCerts,
+) where
 
 import Cardano.Ledger.BaseTypes (Inject (..), Network, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin)
@@ -46,7 +49,7 @@ import Cardano.Ledger.Conway.Rules (
   spoAcceptedRatio,
  )
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Conway.TxCert (ConwayDelegCert, ConwayGovCert, ConwayTxCert)
+import Cardano.Ledger.Conway.TxCert (ConwayDelegCert, ConwayGovCert)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -73,13 +76,12 @@ import Test.Cardano.Ledger.Conformance (
   runConformance,
   runSpecTransM,
  )
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (ConwayExecEnactEnv)
 import Test.Cardano.Ledger.Constrained.Conway (
   EpochExecEnv,
   IsConwayUniv,
   ProposalsSplit,
-  certEnvSpec,
-  certStateSpec,
   dStateSpec,
   delegCertSpec,
   delegEnvSpec,
@@ -93,7 +95,6 @@ import Test.Cardano.Ledger.Constrained.Conway (
   govProceduresSpec,
   govProposalsSpec,
   newEpochStateSpec,
-  txCertSpec,
   utxoEnvSpec,
   utxoStateSpec,
   utxoTxSpec,
@@ -269,43 +270,6 @@ disableRegCertsDelegCert delegCert =
     (branch $ \_ _ -> True)
     (branch $ \_ _ -> True)
     (branch $ \_ _ _ -> True)
-
-instance
-  IsConwayUniv fn =>
-  ExecSpecRule fn "CERT" Conway
-  where
-  type ExecContext fn "CERT" Conway = ConwayCertExecContext Conway
-
-  environmentSpec _ = certEnvSpec
-  stateSpec _ _ = certStateSpec
-  signalSpec _ env st =
-    txCertSpec env st
-      <> constrained disableRegCerts
-      <> constrained disableDRepRegCerts'
-    where
-      disableRegCerts :: Term fn (ConwayTxCert Conway) -> Pred fn
-      disableRegCerts cert =
-        (caseOn cert)
-          ( branch $ \delegCert ->
-              (caseOn delegCert)
-                (branch $ \_ _ -> False)
-                (branch $ \_ _ -> True)
-                (branch $ \_ _ -> True)
-                (branch $ \_ _ _ -> True)
-          )
-          (branch $ \_ -> True)
-          (branch $ \_ -> True)
-      disableDRepRegCerts' :: Term fn (ConwayTxCert Conway) -> Pred fn
-      disableDRepRegCerts' cert =
-        (caseOn cert)
-          (branch $ \_ -> True)
-          (branch $ \_ -> True)
-          (branch disableDRepRegCerts)
-
-  runAgdaRule env st sig =
-    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
-      . computationResultToEither
-      $ Agda.certStep env st sig
 
 data ConwayRatifyExecContext era = ConwayRatifyExecContext
   { crecTreasury :: Coin
