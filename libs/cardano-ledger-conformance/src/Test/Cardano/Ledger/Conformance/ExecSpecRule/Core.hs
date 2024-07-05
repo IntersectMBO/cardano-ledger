@@ -104,6 +104,9 @@ class
     ExecState fn rule era ->
     CV2.Specification fn (ExecSignal fn rule era)
 
+  classOf :: ExecSignal fn rule era -> Maybe String
+  classOf _ = Nothing
+
   genExecContext :: Gen (ExecContext fn rule era)
   default genExecContext ::
     Arbitrary (ExecContext fn rule era) =>
@@ -327,7 +330,9 @@ conformsToImpl =
                             _ <- impAnn @_ @era "Deep evaluating env" $ evaluateDeep env
                             _ <- impAnn "Deep evaluating st" $ evaluateDeep st
                             _ <- impAnn "Deep evaluating sig" $ evaluateDeep sig
-                            pure $ testConformance @fn @rule @era ctx env st sig
+                            pure $ case classOf @fn @rule @era sig of
+                              Nothing -> classify False "None" $ testConformance @fn @rule @era ctx env st sig
+                              Just c -> classify True c $ testConformance @fn @rule @era ctx env st sig
 
 generatesWithin ::
   forall a.
