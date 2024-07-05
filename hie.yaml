@@ -314,3 +314,6 @@ cradle:
 
     - path: "libs/vector-map/bench/Bench.hs"
       component: "vector-map:bench:bench"
+
+    - path: "libs/cardano-cddl/app"
+      component: "cardano-cddl:exe:cardano-cddl"

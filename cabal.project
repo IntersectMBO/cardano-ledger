@@ -51,6 +51,7 @@ packages:
   eras/shelley/impl
   eras/shelley/test-suite
   eras/shelley-ma/test-suite
+  libs/cardano-cddl
   libs/cardano-ledger-api
   libs/cardano-ledger-core
   libs/cardano-ledger-binary
