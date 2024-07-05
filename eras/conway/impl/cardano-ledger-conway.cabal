@@ -30,7 +30,6 @@ flag asserts
 
 library
     exposed-modules:
-        Cardano.Ledger.Conway.CDDL
         Cardano.Ledger.Conway.Genesis
         Cardano.Ledger.Conway.Governance
         Cardano.Ledger.Conway.Governance.DRepPulser
@@ -97,7 +96,6 @@ library
         cardano-slotting,
         cardano-strict-containers,
         containers,
-        cuddle,
         deepseq,
         microlens,
         nothunks,
@@ -117,6 +115,7 @@ library testlib
         Test.Cardano.Ledger.Conway.Binary.Cddl
         Test.Cardano.Ledger.Conway.Binary.RoundTrip
         Test.Cardano.Ledger.Conway.Binary.Regression
+        Test.Cardano.Ledger.Conway.CDDL
         Test.Cardano.Ledger.Conway.ImpTest
         Test.Cardano.Ledger.Conway.Imp
         Test.Cardano.Ledger.Conway.Imp.BbodySpec
@@ -146,6 +145,7 @@ library testlib
         bytestring,
         cardano-data:{cardano-data, testlib},
         containers,
+        cuddle,
         plutus-ledger-api,
         deepseq,
         microlens,

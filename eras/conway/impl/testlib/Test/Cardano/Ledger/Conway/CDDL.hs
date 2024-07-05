@@ -7,7 +7,7 @@
 {-# HLINT ignore "Use camelCase" #-}
 {-# HLINT ignore "Evaluate" #-}
 
-module Cardano.Ledger.Conway.CDDL (conway) where
+module Test.Cardano.Ledger.Conway.CDDL (conway) where
 
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
