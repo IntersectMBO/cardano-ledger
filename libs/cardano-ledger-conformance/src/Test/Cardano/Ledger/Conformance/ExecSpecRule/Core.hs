@@ -151,11 +151,11 @@ class
       expectRight' (Right x) = pure x
       expectRight' (Left e) = assertFailure (T.unpack e)
     agdaEnv <- expectRight' . runSpecTransM ctx $ toSpecRep env
-    logEntry $ "agdaEnv:\n" <> showExpr agdaEnv
+    logEntry $ "agdaEnv:\n" <> ansiExpr agdaEnv
     agdaSt <- expectRight' . runSpecTransM ctx $ toSpecRep st
-    logEntry $ "agdaSt:\n" <> showExpr agdaSt
+    logEntry $ "agdaSt:\n" <> ansiExpr agdaSt
     agdaSig <- expectRight' . runSpecTransM ctx $ toSpecRep sig
-    logEntry $ "agdaSig:\n" <> showExpr agdaSig
+    logEntry $ "agdaSig:\n" <> ansiExpr agdaSig
     pure (agdaEnv, agdaSt, agdaSig)
 
   testConformance ::
@@ -283,9 +283,9 @@ runConformance execContext env st sig = do
   (specEnv, specSt, specSig) <-
     impAnn "Translating the inputs" $
       translateInputs @fn @rule @era env st sig execContext
-  logEntry $ "specEnv:\n" <> showExpr specEnv
-  logEntry $ "specSt:\n" <> showExpr specSt
-  logEntry $ "specSig:\n" <> showExpr specSig
+  logEntry $ "specEnv:\n" <> ansiExpr specEnv
+  logEntry $ "specSt:\n" <> ansiExpr specSt
+  logEntry $ "specSig:\n" <> ansiExpr specSig
   agdaResTest <-
     fmap (bimap (fixup <$>) fixup) $
       impAnn "Deep evaluating Agda output" $

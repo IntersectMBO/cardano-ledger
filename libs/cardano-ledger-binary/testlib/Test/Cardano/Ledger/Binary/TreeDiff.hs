@@ -7,9 +7,11 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   ToExpr (..),
   CBORBytes (..),
   HexBytes (..),
+  ansiExpr,
   showExpr,
   diffExpr,
   diffExprCompact,
+  diffExprCompactNoColor,
   diffExprNoColor,
   hexByteStringExpr,
   showHexBytesGrouped,
@@ -44,6 +46,8 @@ import Data.IP (IPv4, IPv6)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.TreeDiff
+import Prettyprinter (Doc)
+import Prettyprinter.Render.Terminal (AnsiStyle)
 import Test.Cardano.Slotting.TreeDiff ()
 import Test.Hspec (Expectation, HasCallStack, expectationFailure)
 import Test.Tasty.HUnit (Assertion, assertFailure)
@@ -81,17 +85,23 @@ instance ToExpr a => ToExpr (Sized a)
 --  Diffing and pretty showing CBOR
 --------------------------------------------------------------------------------
 
-showExpr :: ToExpr a => a -> String
-showExpr = show . ansiWlExpr . toExpr
+ansiExpr :: ToExpr a => a -> Doc AnsiStyle
+ansiExpr = ansiWlExpr . toExpr
 
-diffExpr :: ToExpr a => a -> a -> String
-diffExpr x y = show (ansiWlEditExpr (ediff x y))
+showExpr :: ToExpr a => a -> String
+showExpr = show . ansiExpr
+
+diffExpr :: ToExpr a => a -> a -> Doc AnsiStyle
+diffExpr x y = ansiWlEditExpr (ediff x y)
 
 diffExprNoColor :: ToExpr a => a -> a -> String
 diffExprNoColor x y = show (prettyEditExpr (ediff x y))
 
-diffExprCompact :: ToExpr a => a -> a -> String
-diffExprCompact x y = show (ansiWlEditExprCompact (ediff x y))
+diffExprCompact :: ToExpr a => a -> a -> Doc AnsiStyle
+diffExprCompact x y = ansiWlEditExprCompact (ediff x y)
+
+diffExprCompactNoColor :: ToExpr a => a -> a -> String
+diffExprCompactNoColor x y = show (prettyEditExprCompact (ediff x y))
 
 -- | Wraps regular ByteString, but shows and diffs it as hex
 newtype HexBytes = HexBytes {unHexBytes :: BS.ByteString}
@@ -191,11 +201,11 @@ expectExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => [Char] -> a -> a
 expectExprEqualWithMessage message expected actual =
   unless (actual == expected) (expectationFailure msg)
   where
-    msg = (if null message then "" else message ++ "\n") ++ diffExpr expected actual
+    msg = (if null message then "" else message ++ "\n") ++ diffExprNoColor expected actual
 
 -- | Use this with Tasty, but with HSpec use 'expectExprEqualWithMessage' above
 assertExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => [Char] -> a -> a -> Assertion
 assertExprEqualWithMessage message expected actual =
   unless (actual == expected) (assertFailure msg)
   where
-    msg = (if null message then "" else message ++ "\n") ++ diffExpr expected actual
+    msg = (if null message then "" else message ++ "\n") ++ diffExprNoColor expected actual

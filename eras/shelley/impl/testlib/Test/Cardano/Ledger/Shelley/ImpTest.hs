@@ -94,10 +94,13 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impLookupUTxO,
 
   -- * Logging
+  Doc,
+  AnsiStyle,
   logEntry,
   logToExpr,
   logStakeDistr,
   logFeeMismatch,
+  tableDoc,
 
   -- * Combinators
   withCustomFixup,
@@ -235,7 +238,18 @@ import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
 import Numeric.Natural (Natural)
-import Prettyprinter (Doc, Pretty (..), annotate, defaultLayoutOptions, indent, layoutPretty, line)
+import Prettyprinter (
+  Doc,
+  Pretty (..),
+  annotate,
+  defaultLayoutOptions,
+  fill,
+  hsep,
+  indent,
+  layoutPretty,
+  line,
+  vsep,
+ )
 import Prettyprinter.Render.Terminal (AnsiStyle, Color (..), color, renderStrict)
 import System.Random
 import qualified System.Random as Random
@@ -446,7 +460,7 @@ modifyPrevPParams f = modifyNES $ nesEsL . prevPParamsEpochStateL %~ f
 logStakeDistr :: ImpTestM era ()
 logStakeDistr = do
   stakeDistr <- getsNES $ nesEsL . epochStateIncrStakeDistrL
-  logEntry $ "Stake distr: " <> showExpr stakeDistr
+  logEntry $ "Stake distr: " <> ansiExpr stakeDistr
 
 mkHashVerKeyVRF ::
   forall era.
@@ -903,7 +917,7 @@ fixupFees tx = impAnn "fixupFees" $ do
     ensureNonNegativeCoin v
       | pointwise (<=) zero v = pure v
       | otherwise = do
-          logEntry $ "Failed to validate coin: " <> show v
+          logEntry $ "Failed to validate coin: " <> ansiExpr v
           pure zero
   logEntry "Validating changeBeforeFee"
   changeBeforeFee <- ensureNonNegativeCoin $ coin consumedValue <-> coin producedValue
@@ -954,7 +968,7 @@ logFeeMismatch tx = do
       Coin feeMin = getMinFeeTxUtxo pp tx utxo
   when (feeUsed /= feeMin) $ do
     logEntry $
-      "Estimated fee " <> show feeUsed <> " while required fee is " <> show feeMin
+      "Estimated fee " <> ansiExpr feeUsed <> " while required fee is " <> ansiExpr feeMin
 
 submitTx_ :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era ()
 submitTx_ = void . submitTx
@@ -1107,7 +1121,7 @@ passEpoch ::
   ImpTestM era ()
 passEpoch = do
   startEpoch <- getsNES nesELL
-  logEntry $ "Entering " <> show (succ startEpoch)
+  logEntry $ "Entering " <> ansiExpr (succ startEpoch)
   let
     tickUntilNewEpoch curEpoch = do
       passTick @era
@@ -1197,9 +1211,9 @@ logWithCallStack callStack e = impLogL %= (<> loc <> line <> indent 2 e <> line)
         (_, srcLoc) : _ -> annotate (color Blue) . pretty $ formatSrcLoc srcLoc
         _ -> mempty
 
--- | Adds a string to the log, which is only shown if the test fails
-logEntry :: HasCallStack => String -> ImpTestM era ()
-logEntry = logWithCallStack ?callStack . pretty
+-- | Adds a Doc to the log, which is only shown if the test fails
+logEntry :: HasCallStack => Doc AnsiStyle -> ImpTestM era ()
+logEntry = logWithCallStack ?callStack
 
 -- | Adds a ToExpr to the log, which is only shown if the test fails
 logToExpr :: (HasCallStack, ToExpr a) => a -> ImpTestM era ()
@@ -1211,6 +1225,12 @@ impLogToExpr action = do
   e <- action
   logWithCallStack ?callStack . ansiWlExpr . toExpr $ e
   pure e
+
+tableDoc :: Doc AnsiStyle -> [(String, Doc AnsiStyle)] -> Doc AnsiStyle
+tableDoc title rows =
+  let w = maximum $ map (length . fst) rows
+      t = hsep ["-----", title, "-----"]
+   in vsep $ t : [fill (w + 1) (pretty l) <> r | (l, r) <- rows]
 
 instance ShelleyEraImp era => Default (ImpTestState era) where
   def =

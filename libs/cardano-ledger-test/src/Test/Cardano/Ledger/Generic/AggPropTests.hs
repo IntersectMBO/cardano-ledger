@@ -27,7 +27,7 @@ import Data.Default.Class (Default (def))
 import Data.List (foldl')
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Binary.TreeDiff (diffExpr)
+import Test.Cardano.Ledger.Binary.TreeDiff (diffExprNoColor)
 import Test.Cardano.Ledger.Generic.Functions (
   getBody,
   getCollateralInputs,
@@ -162,7 +162,7 @@ rewardDepositDomainInvariant SourceSignalTarget {source = mockChainSt} =
    in counterexample
         ( unlines
             [ "Reward-Deposit domain invariant fails"
-            , diffExpr rewardDomain depositDomain
+            , diffExprNoColor rewardDomain depositDomain
             ]
         )
         (rewardDomain === depositDomain)

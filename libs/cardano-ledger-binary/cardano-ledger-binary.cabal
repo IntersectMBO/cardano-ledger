@@ -117,6 +117,8 @@ library testlib
         hedgehog,
         hspec,
         pretty-show,
+        prettyprinter,
+        prettyprinter-ansi-terminal,
         primitive,
         QuickCheck,
         quickcheck-instances,

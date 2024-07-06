@@ -204,6 +204,7 @@ import Data.Tree
 import qualified GHC.Exts as GHC (fromList)
 import Lens.Micro
 import Lens.Micro.Mtl ((%=))
+import Prettyprinter (align, hsep, viaShow, vsep)
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
@@ -896,7 +897,7 @@ logProposalsForestDiff ::
   Proposals era ->
   Proposals era ->
   ImpTestM era ()
-logProposalsForestDiff pf1 pf2 = logEntry $ unlines ["Proposals Forest Diff:", diffExpr pf1 pf2]
+logProposalsForestDiff pf1 pf2 = logEntry $ vsep ["Proposals Forest Diff:", diffExpr pf1 pf2]
 
 -- | Looks up the governance action state corresponding to the governance action id
 lookupGovActionState ::
@@ -1055,12 +1056,11 @@ logAcceptedRatio aId = do
   committeeRatio <- calculateCommitteeAcceptedRatio aId
   spoRatio <- calculatePoolAcceptedRatio aId
   logEntry $
-    unlines
-      [ ""
-      , "----- ACCEPTED RATIOS -----"
-      , "DRep accepted ratio:\t\t" <> show dRepRatio
-      , "Committee accepted ratio:\t" <> show committeeRatio
-      , "SPO accepted ratio:\t\t" <> show spoRatio
+    tableDoc
+      "ACCEPTED RATIOS"
+      [ ("DRep accepted ratio:", viaShow dRepRatio)
+      , ("Committee accepted ratio:", viaShow committeeRatio)
+      , ("SPO accepted ratio:", viaShow spoRatio)
       ]
 
 getRatifyEnvAndState :: ConwayEraGov era => ImpTestM era (RatifyEnv era, RatifyState era)
@@ -1124,34 +1124,48 @@ logRatificationChecks gaId = do
     committeeState = reCommitteeState ratEnv
   curPParams <- getsNES $ nesEsL . epochStateGovStateL . curPParamsGovStateL
   logEntry $
-    unlines
-      [ "----- RATIFICATION CHECKS -----"
-      , "prevActionAsExpected:\t" <> show (prevActionAsExpected gas ensPrevGovActionIds)
-      , "validCommitteeTerm:\t" <> show (validCommitteeTerm govAction curPParams currentEpoch)
-      , "notDelayed:\t\t??"
-      , "withdrawalCanWithdraw:\t" <> show (withdrawalCanWithdraw govAction curTreasury)
-      , "committeeAccepted:\t"
-          <> show (committeeAccepted ratEnv ratSt gas)
-          <> " [ To Pass: "
-          <> show (committeeAcceptedRatio members gasCommitteeVotes committeeState currentEpoch)
-          <> " >= "
-          <> show (votingCommitteeThreshold reCurrentEpoch ratSt committeeState (gasAction gas))
-          <> " ]"
-      , "spoAccepted:\t\t"
-          <> show (spoAccepted ratEnv ratSt gas)
-          <> " [ To Pass: "
-          <> show (spoAcceptedRatio ratEnv gas)
-          <> " >= "
-          <> show (votingStakePoolThreshold ratSt (gasAction gas))
-          <> " ]"
-      , "dRepAccepted:\t\t"
-          <> show (dRepAccepted ratEnv ratSt gas)
-          <> " [ To Pass: "
-          <> show (dRepAcceptedRatio ratEnv gasDRepVotes (gasAction gas))
-          <> " >= "
-          <> show (votingDRepThreshold ratSt (gasAction gas))
-          <> " ]"
-      , ""
+    tableDoc
+      "RATIFICATION CHECKS"
+      [ ("prevActionAsExpected:", viaShow $ prevActionAsExpected gas ensPrevGovActionIds)
+      , ("validCommitteeTerm:", viaShow $ validCommitteeTerm govAction curPParams currentEpoch)
+      , ("notDelayed:", "??")
+      , ("withdrawalCanWithdraw:", viaShow $ withdrawalCanWithdraw govAction curTreasury)
+      ,
+        ( "committeeAccepted:"
+        , hsep
+            [ viaShow $ committeeAccepted ratEnv ratSt gas
+            , "["
+            , "To Pass:"
+            , viaShow $ committeeAcceptedRatio members gasCommitteeVotes committeeState currentEpoch
+            , ">="
+            , viaShow $ votingCommitteeThreshold reCurrentEpoch ratSt committeeState (gasAction gas)
+            , "]"
+            ]
+        )
+      ,
+        ( "spoAccepted:"
+        , hsep
+            [ viaShow $ spoAccepted ratEnv ratSt gas
+            , "["
+            , "To Pass:"
+            , viaShow $ spoAcceptedRatio ratEnv gas
+            , ">="
+            , viaShow $ votingStakePoolThreshold ratSt (gasAction gas)
+            , "]"
+            ]
+        )
+      ,
+        ( "dRepAccepted:"
+        , hsep
+            [ viaShow $ dRepAccepted ratEnv ratSt gas
+            , "["
+            , "To Pass:"
+            , viaShow $ dRepAcceptedRatio ratEnv gasDRepVotes (gasAction gas)
+            , ">="
+            , viaShow $ votingDRepThreshold ratSt (gasAction gas)
+            , "]"
+            ]
+        )
       ]
 
 -- | Submits a transaction that registers a hot key for the given cold key.
@@ -1266,45 +1280,45 @@ logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era 
 logCurPParams = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   logEntry $
-    unlines
+    vsep
       [ ""
       , "----- Current PParams -----"
-      , showExpr pp
+      , ansiExpr pp
       , "---------------------------"
       , ""
       ]
 
-proposalsShowDebug :: Era era => Proposals era -> Bool -> String
+proposalsShowDebug :: Era era => Proposals era -> Bool -> Doc AnsiStyle
 proposalsShowDebug ps showRoots =
-  unlines $
+  align . vsep $
     [ ""
     , "----- Proposals -----"
     , "Size"
-    , show $ proposalsSize ps
+    , viaShow $ proposalsSize ps
     , "OMap"
-    , show $ proposalsIds ps
+    , viaShow $ proposalsIds ps
     , ""
     , "Roots"
     , "> PParamUpdate"
-    , show $ ps ^. pRootsL . grPParamUpdateL
+    , viaShow $ ps ^. pRootsL . grPParamUpdateL
     , "> HardFork"
-    , show $ ps ^. pRootsL . grHardForkL
+    , viaShow $ ps ^. pRootsL . grHardForkL
     , "> Committee"
-    , show $ ps ^. pRootsL . grCommitteeL
+    , viaShow $ ps ^. pRootsL . grCommitteeL
     , "> Constitution"
-    , show $ ps ^. pRootsL . grConstitutionL
+    , viaShow $ ps ^. pRootsL . grConstitutionL
     ]
       <> ( if showRoots
             then
               [ "Hierarchy"
               , ">> PParamUpdate"
-              , show $ ps ^. pGraphL . grPParamUpdateL . pGraphNodesL
+              , viaShow $ ps ^. pGraphL . grPParamUpdateL . pGraphNodesL
               , ">> HardFork"
-              , show $ ps ^. pGraphL . grHardForkL . pGraphNodesL
+              , viaShow $ ps ^. pGraphL . grHardForkL . pGraphNodesL
               , ">> Committee"
-              , show $ ps ^. pGraphL . grCommitteeL . pGraphNodesL
+              , viaShow $ ps ^. pGraphL . grCommitteeL . pGraphNodesL
               , ">> Constitution"
-              , show $ ps ^. pGraphL . grConstitutionL . pGraphNodesL
+              , viaShow $ ps ^. pGraphL . grConstitutionL . pGraphNodesL
               ]
             else mempty
          )

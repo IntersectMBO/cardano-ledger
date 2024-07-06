@@ -36,7 +36,12 @@ import Data.Proxy
 import qualified Data.Text as Text
 import Data.Typeable
 import qualified Formatting.Buildable as B (Buildable (..))
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), diffExpr, showExpr, showHexBytesGrouped)
+import Test.Cardano.Ledger.Binary.TreeDiff (
+  CBORBytes (..),
+  diffExprNoColor,
+  showExpr,
+  showHexBytesGrouped,
+ )
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck hiding (label)
@@ -151,9 +156,9 @@ showFailedTermsWithReSerialization encodedBytes mReEncodedBytes =
       -- diff of Hex as well as Terms
       case (termWithHex "Original" encodedBytes, termWithHex "Reserialization" reBytes) of
         ((Right origTerm, origHex, _), (Right reTerm, reHex, _)) ->
-          [diffExpr (origTerm, origHex) (reTerm, reHex)]
+          [diffExprNoColor (origTerm, origHex) (reTerm, reHex)]
         ((_, origHex, origStr), (_, reHex, reStr)) ->
-          diffExpr origHex reHex : origStr ++ reStr
+          diffExprNoColor origHex reHex : origStr ++ reStr
   where
     termWithHex name lazyBytes =
       let bytes = BSL.toStrict lazyBytes
