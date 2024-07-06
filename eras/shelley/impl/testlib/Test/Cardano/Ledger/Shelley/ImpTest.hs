@@ -102,7 +102,10 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impSetSeed,
 
   -- * Logging
-  logEntry,
+  Doc,
+  AnsiStyle,
+  logDoc,
+  logString,
   logToExpr,
   logStakeDistr,
   logFeeMismatch,
@@ -259,14 +262,10 @@ import Prettyprinter (
   Doc,
   Pretty (..),
   annotate,
-  defaultLayoutOptions,
   indent,
-  layoutPretty,
-  layoutSmart,
   line,
  )
-import Prettyprinter.Render.String (renderString)
-import Prettyprinter.Render.Terminal (AnsiStyle, Color (..), color, renderStrict)
+import Prettyprinter.Render.Terminal (AnsiStyle, Color (..), color)
 import System.Random
 import qualified System.Random as Random
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborRangeFailureExpectation)
@@ -627,7 +626,7 @@ modifyPrevPParams f = modifyNES $ nesEsL . prevPParamsEpochStateL %~ f
 logStakeDistr :: ImpTestM era ()
 logStakeDistr = do
   stakeDistr <- getsNES $ nesEsL . epochStateIncrStakeDistrL
-  logEntry $ "Stake distr: " <> showExpr stakeDistr
+  logDoc $ "Stake distr: " <> ansiExpr stakeDistr
 
 mkTxId :: Crypto c => Int -> TxId c
 mkTxId idx = TxId (mkDummySafeHash Proxy idx)
@@ -806,10 +805,9 @@ instance (ShelleyEraImp era, Arbitrary a, Show a, Testable prop) => Example (a -
             logs <- gets impLog
             pure (Just (qcGen, qcSize), t, logs)
           let params' = params {paramsQuickCheckArgs = args {replay = r, chatty = False}}
-          let logString = renderString $ layoutSmart defaultLayoutOptions logs
           res <-
             evaluateExample
-              (counterexample logString testable)
+              (counterexample (ansiDocToString logs) testable)
               params'
               (\f -> hook (\_st -> f ()))
               progressCallback
@@ -916,9 +914,8 @@ runImpTestM mQCSize impState action = do
     -- `futurePParams` are applied and the epoch number is updated to the first epoch
     -- number of the current era
     runReaderT (unImpTestM (passTick >> action)) env `catchAny` \exc -> do
-      logsDoc <- impLog <$> readIORef ioRef
-      let logs = T.unpack . renderStrict $ layoutPretty defaultLayoutOptions logsDoc
-          adjustHUnitExc header (HUnitFailure srcLoc failReason) =
+      logs <- ansiDocToString . impLog <$> readIORef ioRef
+      let adjustHUnitExc header (HUnitFailure srcLoc failReason) =
             toException $
               HUnitFailure srcLoc $
                 case failReason of
@@ -1067,8 +1064,8 @@ fixupTxOuts tx = do
     if txOut ^. coinTxOutL == zero
       then do
         let txOut' = setMinCoinTxOut pp txOut
-        logEntry $
-          "Fixed up the amount in the TxOut to " ++ show (txOut' ^. coinTxOutL)
+        logDoc $
+          "Fixed up the amount in the TxOut to " <> ansiExpr (txOut' ^. coinTxOutL)
         pure txOut'
       else do
         pure txOut
@@ -1094,9 +1091,9 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
     ensureNonNegativeCoin v
       | pointwise (<=) zero v = pure v
       | otherwise = do
-          logEntry $ "Failed to validate coin: " <> show v
+          logDoc $ "Failed to validate coin: " <> ansiExpr v
           pure zero
-  logEntry "Validating changeBeforeFee"
+  logString "Validating changeBeforeFee"
   changeBeforeFee <- ensureNonNegativeCoin $ coin consumedValue <-> coin producedValue
   logToExpr changeBeforeFee
   let
@@ -1110,7 +1107,7 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
     fee
       | suppliedFee == zero = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
       | otherwise = suppliedFee
-  logEntry "Validating change"
+  logString "Validating change"
   change <- ensureNonNegativeCoin $ changeBeforeFeeTxOut ^. coinTxOutL <-> fee
   logToExpr change
   let
@@ -1157,8 +1154,8 @@ logFeeMismatch tx = do
   let Coin feeUsed = tx ^. bodyTxL . feeTxBodyL
       Coin feeMin = getMinFeeTxUtxo pp tx utxo
   when (feeUsed /= feeMin) $ do
-    logEntry $
-      "Estimated fee " <> show feeUsed <> " while required fee is " <> show feeMin
+    logDoc $
+      "Estimated fee " <> ansiExpr feeUsed <> " while required fee is " <> ansiExpr feeMin
 
 submitTx_ :: (HasCallStack, ShelleyEraImp era) => Tx era -> ImpTestM era ()
 submitTx_ = void . submitTx
@@ -1317,7 +1314,7 @@ passEpoch = do
       unless (newEpochNo > curEpochNo) $ tickUntilNewEpoch curEpochNo
   preNES <- gets impNES
   let startEpoch = preNES ^. nesELL
-  logEntry $ "Entering " <> show (succ startEpoch)
+  logDoc $ "Entering " <> ansiExpr (succ startEpoch)
   tickUntilNewEpoch startEpoch
   gets impNES >>= epochBoundaryCheck preNES
 
@@ -1330,7 +1327,7 @@ epochBoundaryCheck preNES postNES = do
   impAnn "Checking ADA preservation at the epoch boundary" $ do
     let preSum = tot preNES
         postSum = tot postNES
-    logEntry $ diffExpr preSum postSum
+    logDoc $ diffExpr preSum postSum
     unless (preSum == postSum) . expectationFailure $
       "Total ADA in the epoch state is not preserved\n\tpost - pre = "
         <> show (postSum <-> preSum)
@@ -1400,9 +1397,13 @@ logWithCallStack callStack e = impLogL %= (<> loc <> line <> indent 2 e <> line)
         (_, srcLoc) : _ -> annotate (color Blue) . pretty $ formatSrcLoc srcLoc
         _ -> mempty
 
--- | Adds a string to the log, which is only shown if the test fails
-logEntry :: HasCallStack => String -> ImpTestM era ()
-logEntry = logWithCallStack ?callStack . pretty
+-- | Adds a Doc to the log, which is only shown if the test fails
+logDoc :: HasCallStack => Doc AnsiStyle -> ImpTestM era ()
+logDoc = logWithCallStack ?callStack
+
+-- | Adds a String to the log, which is only shown if the test fails
+logString :: HasCallStack => String -> ImpTestM era ()
+logString = logWithCallStack ?callStack . pretty
 
 -- | Adds a ToExpr to the log, which is only shown if the test fails
 logToExpr :: (HasCallStack, ToExpr a) => a -> ImpTestM era ()

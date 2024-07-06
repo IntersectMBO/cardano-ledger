@@ -35,6 +35,7 @@ import Control.State.Transition.Extended (STS (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
 import Data.Functor (($>))
+import Data.String (fromString)
 import qualified Data.Text as T
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import GHC.Base (Constraint, NonEmpty, Symbol, Type)
@@ -50,10 +51,12 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
  )
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest (
+  AnsiStyle,
+  Doc,
   ImpTestM,
   ShelleyEraImp,
   impAnn,
-  logEntry,
+  logDoc,
   tryRunImpRule,
  )
 import UnliftIO (MonadIO (..), evaluateDeep)
@@ -160,11 +163,11 @@ class
       expectRight' (Right x) = pure x
       expectRight' (Left e) = assertFailure (T.unpack e)
     agdaEnv <- expectRight' . runSpecTransM ctx $ toSpecRep env
-    logEntry $ "agdaEnv:\n" <> showExpr agdaEnv
+    logDoc $ "agdaEnv:\n" <> ansiExpr agdaEnv
     agdaSt <- expectRight' . runSpecTransM ctx $ toSpecRep st
-    logEntry $ "agdaSt:\n" <> showExpr agdaSt
+    logDoc $ "agdaSt:\n" <> ansiExpr agdaSt
     agdaSig <- expectRight' . runSpecTransM ctx $ toSpecRep sig
-    logEntry $ "agdaSig:\n" <> showExpr agdaSig
+    logDoc $ "agdaSig:\n" <> ansiExpr agdaSig
     pure (agdaEnv, agdaSt, agdaSig)
 
   testConformance ::
@@ -203,8 +206,8 @@ class
     Environment (EraRule rule era) ->
     State (EraRule rule era) ->
     Signal (EraRule rule era) ->
-    String
-  extraInfo _ _ _ _ = ""
+    Doc AnsiStyle
+  extraInfo _ _ _ _ = mempty
 
 dumpCbor ::
   forall era a.
@@ -278,12 +281,12 @@ checkConformance ctx env st sig implResTest agdaResTest = do
         dumpCbor path env "conformance_dump_env"
         dumpCbor path st "conformance_dump_st"
         dumpCbor path sig "conformance_dump_sig"
-        logEntry $ "Dumped a CBOR files to " <> show path
+        logDoc $ "Dumped a CBOR files to " <> ansiExpr path
       Nothing ->
-        logEntry $
+        logDoc $
           "Run the test again with "
-            ++ envVarName
-            ++ "=<path> to get a CBOR dump of the test data"
+            <> fromString envVarName
+            <> "=<path> to get a CBOR dump of the test data"
     expectationFailure failMsg
 
 defaultTestConformance ::
@@ -314,7 +317,7 @@ defaultTestConformance ::
 defaultTestConformance ctx env st sig = property $ do
   (implResTest, agdaResTest) <- runConformance @rule @fn @era ctx env st sig
   let extra = extraInfo @fn @rule @era ctx (inject env) (inject st) (inject sig)
-  logEntry extra
+  logDoc extra
   checkConformance @rule @_ @fn ctx (inject env) (inject st) (inject sig) implResTest agdaResTest
 
 runConformance ::
@@ -346,13 +349,13 @@ runConformance execContext env st sig = do
   (specEnv, specSt, specSig) <-
     impAnn "Translating the inputs" $
       translateInputs @fn @rule @era env st sig execContext
-  logEntry $ "ctx:\n" <> showExpr execContext
-  logEntry $ "implEnv:\n" <> showExpr env
-  logEntry $ "implSt:\n" <> showExpr st
-  logEntry $ "implSig:\n" <> showExpr sig
-  logEntry $ "specEnv:\n" <> showExpr specEnv
-  logEntry $ "specSt:\n" <> showExpr specSt
-  logEntry $ "specSig:\n" <> showExpr specSig
+  logDoc $ "ctx:\n" <> ansiExpr execContext
+  logDoc $ "implEnv:\n" <> ansiExpr env
+  logDoc $ "implSt:\n" <> ansiExpr st
+  logDoc $ "implSig:\n" <> ansiExpr sig
+  logDoc $ "specEnv:\n" <> ansiExpr specEnv
+  logDoc $ "specSt:\n" <> ansiExpr specSt
+  logDoc $ "specSig:\n" <> ansiExpr specSig
   agdaResTest <-
     fmap (bimap (fixup <$>) fixup) $
       impAnn "Deep evaluating Agda output" $

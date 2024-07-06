@@ -89,7 +89,7 @@ specTxAuxDataUpgrade =
         unless (eqRaw curTxAuxData upgradedTxAuxData) $
           expectationFailure $
             "Expected raw representation of TxAuxData to be equal: \n"
-              <> diffExpr curTxAuxData upgradedTxAuxData
+              <> diffExprString curTxAuxData upgradedTxAuxData
 
 specScriptUpgrade ::
   forall era.
@@ -130,7 +130,7 @@ specTxWitsUpgrade =
         unless (eqRaw curTxWits upgradedTxWits) $
           expectationFailure $
             "Expected raw representation of TxWits to be equal: \n"
-              <> diffExpr curTxWits upgradedTxWits
+              <> diffExprString curTxWits upgradedTxWits
 
 specTxBodyUpgrade ::
   forall era.
@@ -156,7 +156,7 @@ specTxBodyUpgrade =
             unless (eqRaw curTxBody upgradedTxBody) $
               expectationFailure $
                 "Expected raw representation of TxBody to be equal: \n"
-                  <> diffExpr curTxBody upgradedTxBody
+                  <> diffExprString curTxBody upgradedTxBody
         | otherwise -> expectationFailure "Expected upgradeTxBody to succeed"
 
 specTxUpgrade ::
@@ -183,7 +183,7 @@ specTxUpgrade =
             unless (eqRaw curTx upgradedTx) $
               expectationFailure $
                 "Expected raw representation of Tx to be equal: \n"
-                  <> diffExpr curTx upgradedTx
+                  <> diffExprString curTx upgradedTx
         | otherwise -> expectationFailure "Expected upgradeTx to succeed"
 
 specUpgrade ::

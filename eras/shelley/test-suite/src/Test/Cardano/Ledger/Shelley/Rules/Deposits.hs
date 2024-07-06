@@ -43,7 +43,7 @@ import Test.Control.State.Transition.Trace (
  )
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 
-import Test.Cardano.Ledger.Binary.TreeDiff (diffExpr)
+import Test.Cardano.Ledger.Binary.TreeDiff (diffExprString)
 import Test.QuickCheck (
   Property,
   counterexample,
@@ -111,7 +111,7 @@ rewardDepositDomainInvariant SourceSignalTarget {source = chainSt} =
    in counterexample
         ( unlines
             [ "Reward-Deposit domain invariant fails"
-            , diffExpr rewardDomain depositDomain
+            , diffExprString rewardDomain depositDomain
             ]
         )
         (rewardDomain === depositDomain)

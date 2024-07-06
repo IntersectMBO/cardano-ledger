@@ -63,7 +63,7 @@ spec = describe "UTXOW" $ do
   it "ExtraRedeemers/RedeemerPointerPointsToNothing" $
     -- There is ExtraRedeemers test for PlutusV1 in Alonzo, thus we start with PlutusV2
     forM_ ([PlutusV2 .. eraMaxLanguage @era] :: [Language]) $ \lang -> do
-      logEntry $ "Testing for " ++ show lang
+      logString $ "Testing for " <> show lang
       let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
       txIn <- produceScript scriptHash
       let prp = MintingPurpose (AsIx 2)

@@ -144,7 +144,7 @@ import Data.String (fromString)
 import Data.Word (Word64)
 import Lens.Micro ((&), (.~))
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExpr)
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExprString)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey, sKey, vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Examples.Consensus as Ex (
@@ -1139,7 +1139,7 @@ tests =
                 unlines
                   [ "Expected: " ++ show expectedHex
                   , "Actual: " ++ show actualHex
-                  , diffExpr (CBORBytes expected) (CBORBytes actual)
+                  , diffExprString (CBORBytes expected) (CBORBytes actual)
                   ]
     ]
   where

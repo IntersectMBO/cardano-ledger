@@ -40,7 +40,7 @@ import Control.Monad (unless)
 import qualified Data.ByteString.Lazy as BSL (ByteString)
 import Data.String (fromString)
 import GHC.Stack
-import Test.Cardano.Ledger.Binary.TreeDiff (diffExpr)
+import Test.Cardano.Ledger.Binary.TreeDiff (diffExprString)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
@@ -106,7 +106,7 @@ checkEncodingWithRoundtrip v encode decode roundTrip name x t =
       assertFailure $
         unlines
           [ "Serialization did not match: "
-          , diffExpr expectedTerms actualTerms
+          , diffExprString expectedTerms actualTerms
           ]
     roundTrip v encode decode x
   where

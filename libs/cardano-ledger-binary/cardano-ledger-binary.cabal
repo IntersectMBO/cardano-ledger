@@ -121,6 +121,7 @@ library testlib
         hspec-core,
         pretty-show,
         prettyprinter,
+        prettyprinter-ansi-terminal,
         primitive,
         QuickCheck,
         quickcheck-instances,

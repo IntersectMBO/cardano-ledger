@@ -8,9 +8,13 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   CBORBytes (..),
   HexBytes (..),
   showExpr,
+  ansiExpr,
+  ansiExprString,
   diffExpr,
+  diffExprString,
   diffExprCompact,
-  diffExprNoColor,
+  diffExprCompactString,
+  ansiDocToString,
   hexByteStringExpr,
   showHexBytesGrouped,
   expectExprEqual,
@@ -19,6 +23,7 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   Expr (App, Rec, Lst),
   defaultExprViaShow,
   trimExprViaShow,
+  tableDoc,
   Pretty (..),
   ansiWlPretty,
   ppEditExpr,
@@ -43,7 +48,12 @@ import Data.Foldable (toList)
 import Data.IP (IPv4, IPv6)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Text.Lazy as TL
 import Data.TreeDiff
+import Prettyprinter (Doc)
+import qualified Prettyprinter as Pretty
+import Prettyprinter.Render.Terminal (AnsiStyle)
+import qualified Prettyprinter.Render.Terminal as Pretty
 import Test.Cardano.Slotting.TreeDiff ()
 import Test.Hspec (Expectation, HasCallStack, expectationFailure)
 import Test.Tasty.HUnit (Assertion, assertFailure)
@@ -53,6 +63,14 @@ import Test.Tasty.HUnit (Assertion, assertFailure)
 
 trimExprViaShow :: Show a => Int -> a -> Expr
 trimExprViaShow _n x = defaultExprViaShow x -- App (take n (drop 1 (show x)) ++ "..") []
+
+tableDoc :: Maybe (Doc AnsiStyle) -> [(String, Doc AnsiStyle)] -> Doc AnsiStyle
+tableDoc mTitle rows =
+  let w = foldr (max . length . fst) 0 rows
+      t = case mTitle of
+        Just title -> Pretty.hsep ["-----", title, "-----"] <> Pretty.line
+        Nothing -> mempty
+   in t <> Pretty.vsep [Pretty.fill (w + 1) (Pretty.pretty l) <> r | (l, r) <- rows]
 
 -- ===========================================================
 -- Orphan instances from external imports
@@ -82,16 +100,28 @@ instance ToExpr a => ToExpr (Sized a)
 --------------------------------------------------------------------------------
 
 showExpr :: ToExpr a => a -> String
-showExpr = show . ansiWlExpr . toExpr
+showExpr = show . prettyExpr . toExpr
 
-diffExpr :: ToExpr a => a -> a -> String
-diffExpr x y = show (ansiWlEditExpr (ediff x y))
+ansiExpr :: ToExpr a => a -> Doc AnsiStyle
+ansiExpr = ansiWlExpr . toExpr
 
-diffExprNoColor :: ToExpr a => a -> a -> String
-diffExprNoColor x y = show (prettyEditExpr (ediff x y))
+ansiExprString :: ToExpr a => a -> String
+ansiExprString = ansiDocToString . ansiExpr
 
-diffExprCompact :: ToExpr a => a -> a -> String
-diffExprCompact x y = show (ansiWlEditExprCompact (ediff x y))
+diffExpr :: ToExpr a => a -> a -> Doc AnsiStyle
+diffExpr x y = ansiWlEditExpr (ediff x y)
+
+diffExprString :: ToExpr a => a -> a -> String
+diffExprString x y = ansiDocToString $ diffExpr x y
+
+diffExprCompact :: ToExpr a => a -> a -> Doc AnsiStyle
+diffExprCompact x y = ansiWlEditExprCompact (ediff x y)
+
+diffExprCompactString :: ToExpr a => a -> a -> String
+diffExprCompactString x y = ansiDocToString $ diffExprCompact x y
+
+ansiDocToString :: Doc AnsiStyle -> String
+ansiDocToString = TL.unpack . Pretty.renderLazy . Pretty.layoutPretty Pretty.defaultLayoutOptions
 
 -- | Wraps regular ByteString, but shows and diffs it as hex
 newtype HexBytes = HexBytes {unHexBytes :: BS.ByteString}
@@ -191,11 +221,11 @@ expectExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => [Char] -> a -> a
 expectExprEqualWithMessage message expected actual =
   unless (actual == expected) (expectationFailure msg)
   where
-    msg = (if null message then "" else message ++ "\n") ++ diffExpr expected actual
+    msg = (if null message then "" else message ++ "\n") ++ diffExprString expected actual
 
 -- | Use this with Tasty, but with HSpec use 'expectExprEqualWithMessage' above
 assertExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => [Char] -> a -> a -> Assertion
 assertExprEqualWithMessage message expected actual =
   unless (actual == expected) (assertFailure msg)
   where
-    msg = (if null message then "" else message ++ "\n") ++ diffExpr expected actual
+    msg = (if null message then "" else message ++ "\n") ++ diffExprString expected actual
