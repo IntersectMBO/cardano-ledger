@@ -68,7 +68,7 @@ import Cardano.Ledger.Babel.Rules.Utxow (BabelUtxowPredFailure)
 import Cardano.Ledger.Babel.Rules.Zone (BabelZonePredFailure)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Control.Monad (foldM)
-import qualified Data.Foldable as Foldale
+import qualified Data.Foldable as Foldable
 import Data.Maybe (fromJust)
 import NoThunks.Class (NoThunks)
 
@@ -178,7 +178,7 @@ zonesTransition ::
   TransitionRule (BabelZONES era)
 zonesTransition = do
   TRC (LedgersEnv slot pp account, ls, txwits) <- judgmentContext
-  let indexedList = indexLists $ Foldale.toList (txwits :: Seq (Seq (Tx era)))
+  let indexedList = indexLists $ Foldable.toList (txwits :: Seq (Seq (Tx era)))
 
   case indexedList of
     Nothing -> undefined -- fail
