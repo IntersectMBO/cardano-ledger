@@ -17,11 +17,6 @@ module Cardano.Ledger.Babbage.Tx (
   AlonzoTx (..),
   BabbageTxBody (..),
   module X,
-  -- Babel Fees
-  -- pattern BabbageRequiredTx,
-  -- requiredTxs,
-  -- BabbageRequiredTx (..),
-  -- BabbageRequiredTxRaw (..),
 )
 where
 

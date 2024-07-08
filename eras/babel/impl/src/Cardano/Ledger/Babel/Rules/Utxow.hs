@@ -409,8 +409,7 @@ babelUtxowTransition ::
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , BabbageEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  , -- , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentRequiredTxs)
-    Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
+  , Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , State (EraRule "UTXOW" era) ~ UTxOStateTemp era
   , InjectRuleFailure "UTXOW" ShelleyUtxowPredFailure era
@@ -493,7 +492,6 @@ validateVerifiedWits ::
   forall era.
   ( EraTx era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  -- , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentRequiredTxs)
   ) =>
   Tx era ->
   Test (ShelleyUtxowPredFailure era)

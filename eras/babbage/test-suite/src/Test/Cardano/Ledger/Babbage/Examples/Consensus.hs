@@ -175,7 +175,7 @@ exampleTx =
     )
 
 exampleTransactionInBlock :: AlonzoTx Babbage
-exampleTransactionInBlock = AlonzoTx b w (IsValid True) a -- mempty
+exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
   where
     ShelleyTx b w a = exampleTx
 

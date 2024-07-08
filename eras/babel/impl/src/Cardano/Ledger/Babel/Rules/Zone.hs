@@ -122,8 +122,7 @@ import Validation (failureUnless)
 
 data BabelZonePredFailure era
   = LedgersFailure (PredicateFailure (BabelLEDGERS era)) -- Subtransition Failures
-  | -- | ShelleyInBabelPredFailure (ShelleyLedgersPredFailure era) -- Subtransition Failures
-    ShelleyInBabelPredFailure (ShelleyLedgersPredFailure era) -- Subtransition Failures
+  | ShelleyInBabelPredFailure (ShelleyLedgersPredFailure era) -- Subtransition Failures
   deriving (Generic)
 
 data BabelZoneEvent era
@@ -340,18 +339,6 @@ zoneTransition =
       (l : txs') -> (l ^. isValidTxL == IsValid False) && all ((== IsValid True) . (^. isValidTxL)) txs'
       [] -> True
 
--- data BabelUtxosEvent era
---   = TotalDeposits (SafeHash (EraCrypto era) EraIndependentTxBody) Coin
---   | SuccessfulPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
---   | FailedPlutusScriptsEvent (NonEmpty (PlutusWithContext (EraCrypto era)))
---   | -- | The UTxOs consumed and created by a signal tx
---     TxUTxODiff
---       -- | UTxO consumed
---       (UTxO era)
---       -- | UTxO created
---       (UTxO era)
---   deriving (Generic)
-
 babelEvalScriptsTxInvalid ::
   forall era.
   ( EraRule "ZONE" era ~ BabelZONE era
@@ -384,7 +371,6 @@ babelEvalScriptsTxInvalid =
     let tx = last (Foldable.toList txs) -- TODO WG use safe head
         txBody = tx ^. bodyTxL
 
-    -- TRC (UtxoEnv _ pp _, us@(UTxOState utxo _ _ fees _ _ _), tx) <- judgmentContext
     -- {- txb := txbody tx -}
     sysSt <- liftSTS $ asks systemStart
     ei <- liftSTS $ asks epochInfo

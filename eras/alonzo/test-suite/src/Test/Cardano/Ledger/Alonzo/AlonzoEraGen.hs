@@ -405,7 +405,7 @@ instance Mock c => EraGen (AlonzoEra c) where
                   Just info -> addRedeemMap (getRedeemer2 info) purpose ans -- Add it to the redeemer map
                   Nothing -> ans
 
-  constructTx bod wit auxdata = AlonzoTx bod wit (IsValid v) auxdata -- mempty
+  constructTx bod wit auxdata = AlonzoTx bod wit (IsValid v) auxdata
     where
       v = all twoPhaseValidates (txscripts' wit)
       twoPhaseValidates script =

@@ -102,7 +102,6 @@ instance
   , ToExpr (TxOut era)
   , ToExpr (TxCert era)
   , ToExpr (PParamsUpdate era)
-  -- , ToExpr (RequiredTxs era)
   ) =>
   ToExpr (AlonzoTxBody era)
 
@@ -112,7 +111,7 @@ instance ToExpr IsValid
 instance
   ( ToExpr (TxBody era)
   , ToExpr (TxWits era)
-  , ToExpr (TxAuxData era) -- ToExpr (RequiredTxs era)) =>
+  , ToExpr (TxAuxData era)
   ) =>
   ToExpr
     (AlonzoTx era)
