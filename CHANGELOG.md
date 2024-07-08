@@ -7,6 +7,21 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+
+## 9.0
+
+- Authorization of hot credentials for constitutional committee members is now only
+  possible for cold credentials that are present in the ledger state, either in the current
+  committee or in one of the proposals.
+- Voting is restricted to entities that are present in the ledger state
+- DRep votes will be removed whenever DRep unregisters
+
+## 8.12.2
+
+- Pricing model for the size of reference scripts was changed from linear to
+  exponential. Moreover, extra limits on the total size of reference scripts being used
+  have been put in place.
+
 ## 8.12
 
 - Implemented [CIP-0069](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0069)
