@@ -165,16 +165,3 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-
--- Babel fees
-
--- instance
---   ( EraScript era
---   , EraTxOut era
---   , EncCBOR (TxCert era)
---   ) =>
---   Arbitrary (BabbageRequiredTx era)
---   where
---   arbitrary =
---     BabbageRequiredTx
---       <$> pure mempty -- arbitrary

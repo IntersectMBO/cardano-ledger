@@ -46,8 +46,6 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Babbage.Rules (
   BabbageUtxoPredFailure,
   BabbageUtxowPredFailure,
-  -- babbageUtxowTransition,
-
   babbageMissingScripts,
   validateFailedBabbageScripts,
   validateScriptsWellFormed,
@@ -58,9 +56,6 @@ import qualified Cardano.Ledger.Babbage.Rules as Babbage (
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.Babel.Era (BabelEra, BabelUTXO, BabelUTXOW)
-
--- verifyBootstrapWitRequiredTxs,
-
 import Cardano.Ledger.Babel.LedgerState.Types (UTxOStateTemp (..))
 import Cardano.Ledger.Babel.Rules.Utxo (BabelUtxoPredFailure)
 import Cardano.Ledger.Babel.Rules.Utxos (BabelUtxosPredFailure)

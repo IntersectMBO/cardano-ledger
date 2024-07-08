@@ -137,9 +137,6 @@ instance Crypto c => AlonzoEraTx (BabelEra c) where
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
 
--- instance Crypto c => Core.EraRequiredTxsData (BabelEra c) where
---   type RequiredTxs (BabelEra c) = ShelleyRequiredTx (BabelEra c)
-
 instance Crypto c => Core.EraSegWits (BabelEra c) where
   type TxStructure (BabelEra c) = Compose StrictSeq StrictSeq
   type TxZones (BabelEra c) = BabelTxZones (BabelEra c)
@@ -148,17 +145,6 @@ instance Crypto c => Core.EraSegWits (BabelEra c) where
   flatten = StrictSeq.fromList . (Foldable.toList <=< Foldable.toList) . getCompose . Core.fromTxZones
   hashTxZones = hashBabelTxZones
   numSegComponents = 4
-
--- hashAlonzoTxSeq :: forall era.
--- Era era =>
--- AlonzoTxSeq era -> Hash (EraCrypto era) EraIndependentBlockBody
--- Defined at /home/will/git/cardano-ledger/eras/alonzo/impl/src/Cardano/Ledger/Alonzo/TxSeq.hs:177:1
-
--- _ :: TxZones (AlonzoEra c)
--- -> Hash (HASH (EraCrypto (AlonzoEra c))) EraIndependentBlockBody
--- _ :: forall era.
--- Era era =>
--- AlonzoTxSeq era -> Hash (EraCrypto era) EraIndependentBlockBody
 
 --------------------------------------------------------------------------------
 -- Serialisation and hashing

@@ -630,7 +630,7 @@ class
   ) =>
   EraSegWits era
   where
-  {- CIP-0118#1-block-structure
+  {- CIP-0118#block-structure-1
 
   To support the concept of a block having a different concrete representation
   depending on era, we've added a `TxStructure` type. This isn't strictly necessary;
@@ -643,7 +643,7 @@ class
   Finally, we have a `flatten` function, as much of the existing code (tests etc)
   requires a `StrictSeq`, and doesn't care about the new meaning in our `TxZones`.
 
-  Jump to CIP-0118#2-block-structure to continue... -}
+  Jump to CIP-0118#block-structure-2 to continue... -}
   type TxStructure era :: Type -> Type
   type TxZones era = (r :: Type) | r -> era
 

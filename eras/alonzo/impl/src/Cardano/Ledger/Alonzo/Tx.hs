@@ -213,8 +213,6 @@ instance Crypto c => EraTx (AlonzoEra c) where
       <*> pure (IsValid True)
       <*> pure (fmap upgradeTxAuxData aux)
 
--- <*> pure mempty -- TODO WG: Do I need to change this? I'm thinking not for the prototype
-
 instance (Tx era ~ AlonzoTx era, AlonzoEraTx era) => EqRaw (AlonzoTx era) where
   eqRaw = alonzoEqTxRaw
 

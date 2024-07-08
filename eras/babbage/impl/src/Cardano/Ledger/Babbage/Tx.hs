@@ -64,9 +64,6 @@ instance Crypto c => EraTx (BabbageEra c) where
   auxDataTxL = auxDataAlonzoTxL
   {-# INLINE auxDataTxL #-}
 
-  -- requiredTxsTxL = lens (const mempty) const
-  -- {-# INLINE requiredTxsTxL #-}
-
   sizeTxF = sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
@@ -87,78 +84,6 @@ instance Crypto c => AlonzoEraTx (BabbageEra c) where
 
   isValidTxL = isValidAlonzoTxL
   {-# INLINE isValidTxL #-}
-
--- newtype BabbageRequiredTxRaw era = BabbageRequiredTxRaw (Set (TxId (EraCrypto era)))
---   deriving (Eq, Show, Generic)
-
--- instance EraScript era => NoThunks (BabbageRequiredTxRaw era)
-
--- deriving newtype instance Era era => EncCBOR (BabbageRequiredTxRaw era)
-
--- deriving newtype instance Era era => DecCBOR (BabbageRequiredTxRaw era)
-
--- instance Era era => DecCBOR (Annotator (BabbageRequiredTxRaw era)) where
---   decCBOR = pure <$> decCBOR
-
--- deriving via
---   (Mem BabbageRequiredTxRaw era)
---   instance
---     Era era => DecCBOR (Annotator (BabbageRequiredTx era))
-
--- newtype BabbageRequiredTx era
---   = RequiredTxBodyConstr (MemoBytes BabbageRequiredTxRaw era)
---   deriving (Eq, Generic)
---   deriving newtype (Plain.ToCBOR, SafeToHash)
-
--- deriving newtype instance EraScript era => Show (BabbageRequiredTx era)
-
--- instance EraScript era => NoThunks (BabbageRequiredTx era)
-
--- instance Memoized BabbageRequiredTx where
---   type RawType BabbageRequiredTx = BabbageRequiredTxRaw
-
--- deriving newtype instance EraRequiredTxsData era => NFData (BabbageRequiredTxRaw era)
--- deriving newtype instance EraRequiredTxsData era => NFData (BabbageRequiredTx era)
-
--- pattern BabbageRequiredTx ::
---   forall era.
---   EraScript era =>
---   Set (TxId (EraCrypto era)) ->
---   BabbageRequiredTx era
--- pattern BabbageRequiredTx {requiredTxs} <-
---   (getMemoRawType -> BabbageRequiredTxRaw requiredTxs)
---   where
---     BabbageRequiredTx requiredTxs' =
---       mkMemoized $ BabbageRequiredTxRaw requiredTxs'
-
--- {-# COMPLETE BabbageRequiredTx #-}
-
--- instance EraScript era => Semigroup (BabbageRequiredTx era) where
---   (BabbageRequiredTx a) <> y | Set.null a = y
---   y <> (BabbageRequiredTx a) | Set.null a = y
---   (BabbageRequiredTx a) <> (BabbageRequiredTx a') = BabbageRequiredTx (a <> a')
-
--- instance EraScript era => Monoid (BabbageRequiredTx era) where
---   mempty = BabbageRequiredTx mempty
-
--- instance
---   (Era era, Eq (TxOut era), Eq (TxCert era), Eq (PParamsUpdate era)) =>
---   EqRaw (BabbageRequiredTx era)
-
--- -- | Encodes memoized bytes created upon construction.
--- instance Era era => EncCBOR (BabbageRequiredTx era)
-
--- type instance MemoHashIndex BabbageRequiredTxRaw = EraIndependentRequiredTxs
-
--- -- deriving instance
--- --   HashAlgorithm (HASH (EraCrypto era)) =>
--- --   Show (BabbageRequiredTx era)
-
--- instance c ~ EraCrypto era => HashAnnotated (BabbageRequiredTx era) EraIndependentRequiredTxs c where
---   hashAnnotated = getMemoSafeHash
-
--- instance Crypto c => EraRequiredTxsData (BabbageEra c) where
---   type RequiredTxs (BabbageEra c) = BabbageRequiredTx (BabbageEra c)
 
 instance Crypto c => EraSegWits (BabbageEra c) where
   type TxStructure (BabbageEra c) = StrictSeq.StrictSeq

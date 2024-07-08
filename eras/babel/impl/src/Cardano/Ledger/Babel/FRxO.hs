@@ -20,7 +20,6 @@ module Cardano.Ledger.Babel.FRxO where
 import Cardano.Ledger.Babel.TxBody (
   BabelEraTxBody (fulfillsTxBodyL, requestsTxBodyL, requiredTxsTxBodyL),
  )
-import Cardano.Ledger.Binary (sizedValue)
 import Cardano.Ledger.Core (
   Era (EraCrypto),
   EraTxBody (TxBody),
@@ -49,14 +48,14 @@ txfrxo txBody =
       [ (TxIn transId idx, out)
       | (out, idx) <-
           zip
-            (toList $ fmap sizedValue $ txBody ^. requestsTxBodyL)
+            (toList $ txBody ^. requestsTxBodyL)
             [minBound ..]
       ]
   where
     transId = txIdTxBody txBody
 
 txrequests :: BabelEraTxBody era => TxBody era -> SSeq.StrictSeq (TxOut era)
-txrequests = fmap sizedValue . (^. requestsTxBodyL)
+txrequests = (^. requestsTxBodyL)
 
 txrequired :: BabelEraTxBody era => TxBody era -> Set (TxIn (EraCrypto era))
 txrequired = (^. requiredTxsTxBodyL)

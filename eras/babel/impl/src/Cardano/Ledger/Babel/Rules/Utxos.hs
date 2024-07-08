@@ -125,7 +125,6 @@ data BabelUtxosEvent era
       -- | FRxO created
       (FRxO era)
   deriving (Generic)
-  deriving (Generic)
 
 deriving instance (Era era, Eq (TxOut era)) => Eq (BabelUtxosEvent era)
 

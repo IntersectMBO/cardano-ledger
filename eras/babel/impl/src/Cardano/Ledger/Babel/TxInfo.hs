@@ -672,6 +672,12 @@ transProtVer :: ProtVer -> PV3.ProtocolVersion
 transProtVer (ProtVer major minor) =
   PV3.ProtocolVersion (toInteger (getVersion64 major)) (toInteger minor)
 
+{- CIP-0118#plutusv4-1
+
+  Here, we demonstrate the first change we need to reflect the necessary changes to 
+  PlutusV4: the addition of our new fields to `TxInfo`.
+
+  Jump to CIP-0118#plutusv4-2 to continue... -}
 instance Crypto c => EraPlutusTxInfo 'PlutusV4 (BabelEra c) where
   toPlutusTxCert _ = pure . transTxCertV4
 
@@ -679,14 +685,19 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV4 (BabelEra c) where
 
   toPlutusTxInfo proxy pp epochInfo systemStart utxo tx = do
     timeRange <- Alonzo.transValidityInterval pp epochInfo systemStart (txBody ^. vldtTxBodyL)
-    -- TODO WG: realizedInputs. Add realizedFulfills here. Put them in PV4 TxInfo.
     inputs <- mapM (transTxInInfoV4 utxo) (Set.toList (txBody ^. inputsTxBodyL))
-    refInputs <- mapM (transTxInInfoV4 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
+    refInputs <- mapM (transTxInInfoV4 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))    
     outputs <-
       zipWithM
         (Babbage.transTxOutV2 . TxOutFromOutput)
         [minBound ..]
         (F.toList (txBody ^. outputsTxBodyL))
+    fulfills <- mapM (transTxInInfoV4 utxo) (Set.toList (txBody ^. fulfillsTxBodyL))
+    requests <- zipWithM
+        (Babbage.transTxOutV2 . TxOutFromOutput)
+        [minBound ..]
+        (F.toList (txBody ^. requestsTxBodyL))
+    requiredTxs <- mapM (transTxInInfoV4 utxo) (Set.toList (txBody ^. requiredTxsTxBodyL))
     txCerts <- Alonzo.transTxBodyCerts proxy txBody
     plutusRedeemers <- Babbage.transTxRedeemers proxy tx
     pure
@@ -712,9 +723,9 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV4 (BabelEra c) where
             case txBody ^. treasuryDonationTxBodyL of
               Coin 0 -> Nothing
               coin -> Just $ transCoinToLovelace coin
-        , PV4.txInfoFulfills = undefined
-        , PV4.txInfoRequests = undefined
-        , PV4.txInfoRequiredTxs = undefined
+        , PV4.txInfoFulfills = fulfills
+        , PV4.txInfoRequests = requests
+        , PV4.txInfoRequiredTxs = requiredTxs
         }
     where
       txBody = tx ^. bodyTxL
@@ -740,6 +751,11 @@ transTxInInfoV4 utxo txIn = do
   plutusTxOut <- transTxOutV2 (TxOutFromInput txIn) txOut
   Right (PV4.TxInInfo (transTxIn txIn) plutusTxOut)
 
+{- CIP-0118#plutusv4-2
+
+  This is the second important change. We've need to reflect the new `ScriptPurpose` case.
+
+  Jump to CIP-0118#plutusv4-3 to continue... -}
 fromScriptPurposeV4 :: PV4.ScriptPurpose -> PV4.ScriptInfo
 fromScriptPurposeV4 = \case
   PV4.Minting cs -> PV4.MintingScript cs
@@ -748,8 +764,7 @@ fromScriptPurposeV4 = \case
   PV4.Certifying index txCert -> PV4.CertifyingScript index txCert
   PV4.Voting voter -> PV4.VotingScript voter
   PV4.Proposing index proposal -> PV4.ProposingScript index proposal
-
--- TODO WG: Add Fulfills
+  PV4.Fulfills fulfills -> PV4.FulfillsScript fulfills
 
 transTxCertV4 :: BabelEraTxCert era => TxCert era -> PV4.TxCert
 transTxCertV4 = \case

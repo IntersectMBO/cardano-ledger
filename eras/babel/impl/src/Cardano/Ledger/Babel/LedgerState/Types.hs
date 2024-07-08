@@ -37,8 +37,6 @@ import GHC.Generics (Generic)
 import Lens.Micro (lens, (&), (.~), (^.))
 import Lens.Micro.Type (Lens')
 
--- type instance Ledger (ConwayEra c) = LedgerStateTemp (ConwayEra c)
-
 {- CIP-0118#ledger-state-temp
 
 This type represents a transient state, existing within the LEDGERS rule, and
@@ -46,7 +44,7 @@ manipulated by the UTXOS rule (jump to CIP-0118#UTXOS-rule to see how).
 
 To see how we've made `ApplyBlock` compatible with our new
 `State (EraRule "LEDGERS" era) ~ LedgerStateTemp era` requirement for Babel,
-jump to CIP-0118#0-apply-block.
+jump to CIP-0118#apply-block-1.
 
 Jump to ??? to continue... -}
 

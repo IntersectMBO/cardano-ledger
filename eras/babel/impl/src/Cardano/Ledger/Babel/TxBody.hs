@@ -161,7 +161,7 @@ data BabelTxBodyRaw era = BabelTxBodyRaw
   , bbtbrTreasuryDonation :: !Coin
   , -- Tx body fields for intents (babel-fees)
 
-    {- CIP-0118#0-tx-body
+    {- CIP-0118#tx-body-0
 
       Here, we demonstrate the three (or two...I'll explain shortly) new fields required
       for Babel fees.
@@ -571,8 +571,13 @@ instance Crypto c => ConwayEraTxBody (BabelEra c) where
 instance (Crypto c, ConwayEraTxBody (BabelEra c)) => BabelEraTxBody (BabelEra c) where
   fulfillsTxBodyL = lensMemoRawType bbtbrFulfills (\txb x -> txb {bbtbrFulfills = x})
   {-# INLINE fulfillsTxBodyL #-}
-  requestsTxBodyL = lensMemoRawType bbtbrRequests (\txb x -> txb {bbtbrRequests = x})
+
+  requestsTxBodyL = 
+    lensMemoRawType
+          (fmap sizedValue . bbtbrRequests)
+          (\txb x -> txb {bbtbrRequests = mkSized (eraProtVerLow @(BabelEra c)) <$> x})
   {-# INLINE requestsTxBodyL #-}
+  
   requiredTxsTxBodyL = lensMemoRawType bbtbrRequiredTxs (\txb x -> txb {bbtbrRequiredTxs = x})
   {-# INLINE requiredTxsTxBodyL #-}
 
@@ -756,7 +761,7 @@ class
   where
   fulfillsTxBodyL :: Lens' (TxBody era) (Set (Fulfill (EraCrypto era)))
 
-  requestsTxBodyL :: Lens' (TxBody era) (StrictSeq (Sized (TxOut era)))
+  requestsTxBodyL :: Lens' (TxBody era) (StrictSeq (TxOut era))
 
   requiredTxsTxBodyL :: Lens' (TxBody era) (Set (TxIn (EraCrypto era)))
 

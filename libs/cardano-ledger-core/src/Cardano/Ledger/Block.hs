@@ -46,12 +46,12 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
-{- CIP-0118#0-block-structure
+{- CIP-0118#block-structure-0
 
   Firstly, we need to change the structure of the block. `TxZones` is an associated
   type on `EraSegWits`. It replaces `TxSeq`.
 
-  Jump to CIP-0118#1-block-structure to continue... -}
+  Jump to CIP-0118#block-structure-1 to continue... -}
 data Block h era
   = Block' !h !(TxZones era) BSL.ByteString
   deriving (Generic)

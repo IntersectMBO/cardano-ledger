@@ -104,8 +104,8 @@ test-show-details: streaming
 source-repository-package
   type: git
   location: https://github.com/willjgould/plutus
-  tag: cb3dcbde537635fccd46ec40e71750ecf7cb9530
-  --sha256: 10kimcrsh7fibbnq96i7fc7xv0r3vsyngqbmpnfmijaa2j4k2zha
+  tag: a5179ce32b3471399d35b621920901643544c200
+  --sha256: 0ksz9q2j07kqf1pl3lyccjfkvxs0dyd0y6pn4ish9mfcgh6afsph
   subdir:
     plutus-ledger-api
     plutus-tx

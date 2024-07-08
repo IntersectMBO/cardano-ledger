@@ -61,7 +61,7 @@ import NoThunks.Class (NoThunks (..))
   Block validation API
 -------------------------------------------------------------------------------}
 
-{- CIP-0118#0-apply-block
+{- CIP-0118#apply-block-0
 
 (Please read CIP-0118#ledger-state-temp first)
 
