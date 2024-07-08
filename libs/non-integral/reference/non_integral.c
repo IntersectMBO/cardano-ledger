@@ -327,9 +327,9 @@ int mp_exp_taylor(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
 {
   mpz_set(rop, one);
   int n = 0;
-  mpz_t last, divisor, lastX, nextX, diff;
-  mpz_init_set(last, one); mpz_init_set(divisor, one); mpz_init_set(lastX, one);
-  mpz_init(nextX); mpz_init(diff);
+  mpz_t divisor, lastX, nextX;
+  mpz_init_set(divisor, one); mpz_init_set(lastX, one);
+  mpz_init(nextX);
 
   while(n < maxN)
     {
@@ -341,18 +341,14 @@ int mp_exp_taylor(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
         break;
 
       mpz_add(divisor, divisor, one);
-      mpz_set(last, rop);
       mpz_add(rop, rop, nextX);
-
-      mpz_sub(diff, rop, last);
 
       mpz_set(lastX, nextX);
       n++;
       /* gmp_printf("%Zd\n", rop); */
     }
 
-  mpz_clear(last); mpz_clear(divisor); mpz_clear(lastX); mpz_clear(nextX);
-  mpz_clear(diff);
+  mpz_clear(divisor); mpz_clear(lastX); mpz_clear(nextX);
   return n;
 }
 
