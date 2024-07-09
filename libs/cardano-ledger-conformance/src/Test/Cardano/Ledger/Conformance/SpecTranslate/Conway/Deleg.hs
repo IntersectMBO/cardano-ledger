@@ -49,7 +49,12 @@ instance
 instance SpecTranslate ctx (ConwayDelegCert c) where
   type SpecRep (ConwayDelegCert c) = Agda.TxCert
 
-  toSpecRep (ConwayRegCert _ _) = throwError "RegCert not supported" -- TODO Investigate why!
+  toSpecRep (ConwayRegCert c d) =
+    Agda.Delegate
+      <$> toSpecRep c
+      <*> pure Nothing
+      <*> pure Nothing
+      <*> strictMaybe (pure 0) toSpecRep d
   toSpecRep (ConwayUnRegCert c _) =
     Agda.Dereg <$> toSpecRep c
   toSpecRep (ConwayDelegCert c d) =
