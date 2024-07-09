@@ -100,6 +100,7 @@ import Data.Typeable (Typeable, gcast)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
+import PlutusCore (DefaultFun, DefaultUni)
 import qualified PlutusLedgerApi.Common as P (
   Data,
   EvaluationContext,
@@ -107,9 +108,11 @@ import qualified PlutusLedgerApi.Common as P (
   ExBudget,
   LogOutput,
   MajorProtocolVersion (..),
+  PlutusLedgerLanguage (PlutusV1, PlutusV2, PlutusV3),
   ScriptDecodeError,
   ScriptForEvaluation,
   VerboseMode,
+  mkTermToEvaluate,
   serialisedScript,
  )
 import qualified PlutusLedgerApi.V1 as PV1
@@ -117,6 +120,7 @@ import qualified PlutusLedgerApi.V2 as PV2
 import qualified PlutusLedgerApi.V3 as PV3
 import Prettyprinter (Doc, Pretty (..), align, indent, line, vsep, (<+>))
 import System.Random.Stateful (Random, Uniform (..), UniformRange (..), uniformEnumM, uniformEnumRM)
+import qualified UntypedPlutusCore as UPLC
 
 -- | This is a deserialized version of the `Plutus` type that can be used directly with
 -- evaluation functions that rely on `evaluatePlutusRunnable`.
@@ -457,6 +461,15 @@ class
     PlutusArgs l ->
     (P.LogOutput, Either P.EvaluationError P.ExBudget)
 
+  mkTermToEvaluate ::
+    -- | Which major protocol version to use for script execution
+    Version ->
+    -- | The script to evaluate
+    PlutusRunnable l ->
+    -- | The arguments to the script
+    PlutusArgs l ->
+    Either P.EvaluationError (UPLC.Term UPLC.NamedDeBruijn DefaultUni DefaultFun ())
+
 instance PlutusLanguage 'PlutusV1 where
   newtype PlutusArgs 'PlutusV1 = PlutusV1Args {unPlutusV1Args :: LegacyPlutusArgs 'PlutusV1}
     deriving newtype (Eq, Show, Pretty, EncCBOR, DecCBOR, NFData)
@@ -470,6 +483,10 @@ instance PlutusLanguage 'PlutusV1 where
       . unPlutusV1Args
   evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
     PV1.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
+      . legacyPlutusArgsToData
+      . unPlutusV1Args
+  mkTermToEvaluate pv (PlutusRunnable rs) =
+    P.mkTermToEvaluate P.PlutusV1 (toMajorProtocolVersion pv) rs
       . legacyPlutusArgsToData
       . unPlutusV1Args
 
@@ -488,6 +505,10 @@ instance PlutusLanguage 'PlutusV2 where
     PV2.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
       . legacyPlutusArgsToData
       . unPlutusV2Args
+  mkTermToEvaluate pv (PlutusRunnable rs) =
+    P.mkTermToEvaluate P.PlutusV2 (toMajorProtocolVersion pv) rs
+      . legacyPlutusArgsToData
+      . unPlutusV2Args
 
 instance PlutusLanguage 'PlutusV3 where
   newtype PlutusArgs 'PlutusV3 = PlutusV3Args {unPlutusV3Args :: PV3.ScriptContext}
@@ -502,6 +523,11 @@ instance PlutusLanguage 'PlutusV3 where
       . unPlutusV3Args
   evaluatePlutusRunnableBudget pv vm ec (PlutusRunnable rs) =
     PV3.evaluateScriptCounting (toMajorProtocolVersion pv) vm ec rs
+      . PV3.toData
+      . unPlutusV3Args
+  mkTermToEvaluate pv (PlutusRunnable rs) =
+    P.mkTermToEvaluate P.PlutusV3 (toMajorProtocolVersion pv) rs
+      . pure
       . PV3.toData
       . unPlutusV3Args
 

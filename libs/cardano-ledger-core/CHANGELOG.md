@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-core`
 
-## 1.13.2.1
+## 1.14.0.0
 
-*
+* Add `mkTermToEvaluate` to `PlutusLanguage` class.
 
 ## 1.13.2.0
 
