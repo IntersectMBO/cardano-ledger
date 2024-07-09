@@ -196,6 +196,13 @@ pattern RequireMOf n ms <- (getRequireMOf -> Just (n, ms))
   where
     RequireMOf n ms = mkRequireMOf n ms
 
+{-# COMPLETE
+  RequireSignature
+  , RequireAllOf
+  , RequireAnyOf
+  , RequireMOf
+  #-}
+
 -- | Encodes memoized bytes created upon construction.
 instance Era era => EncCBOR (MultiSig era)
 
