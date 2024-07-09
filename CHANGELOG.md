@@ -14,7 +14,7 @@ If you are looking for the Ledger Releasing and Versioning Process then you can 
   possible for cold credentials that are present in the ledger state, either in the current
   committee or in one of the proposals.
 - Voting is restricted to entities that are present in the ledger state
-- DRep votes will be removed whenever DRep unregisters
+- DRep votes are removed whenever DRep unregisters
 
 ## 8.12.2
 
