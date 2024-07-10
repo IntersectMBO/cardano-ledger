@@ -8,9 +8,6 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg () where
 
 import Cardano.Ledger.Conway
-import Cardano.Ledger.Conway.TxCert (ConwayDelegCert)
-import Cardano.Ledger.Crypto
-import Constrained
 import Data.Bifunctor (first)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
@@ -26,24 +23,9 @@ instance IsConwayUniv fn => ExecSpecRule fn "DELEG" Conway where
 
   stateSpec _ _ = dStateSpec
 
-  signalSpec _ env st =
-    delegCertSpec env st
-      <> constrained disableRegCertsDelegCert
+  signalSpec _ = delegCertSpec
 
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.delegStep env st sig
-
-disableRegCertsDelegCert ::
-  ( IsConwayUniv fn
-  , Crypto c
-  ) =>
-  Term fn (ConwayDelegCert c) ->
-  Pred fn
-disableRegCertsDelegCert delegCert =
-  (caseOn delegCert)
-    (branch $ \_ _ -> False)
-    (branch $ \_ _ -> True)
-    (branch $ \_ _ -> True)
-    (branch $ \_ _ _ -> True)
