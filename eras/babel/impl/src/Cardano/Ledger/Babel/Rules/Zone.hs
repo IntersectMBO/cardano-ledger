@@ -75,6 +75,7 @@ import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import Lens.Micro.Type (Lens')
 
+import Cardano.Ledger.Alonzo.Core (ppCollateralPercentageL)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (collectPlutusScriptsWithContext, evalPlutusScripts)
 import Cardano.Ledger.Alonzo.Rules (
@@ -86,7 +87,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO, AlonzoScriptsNeeded)
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
-import Cardano.Ledger.Babel.Core (ppMaxTxExUnitsL)
+import Cardano.Ledger.Babel.Core (BabbageEraTxBody (totalCollateralTxBodyL), ppMaxTxExUnitsL)
 import Cardano.Ledger.Babel.LedgerState.Types (
   LedgerStateTemp,
   fromLedgerState,
@@ -98,7 +99,7 @@ import Cardano.Ledger.Babel.Rules.Utxo (BabelUtxoPredFailure (..))
 import Cardano.Ledger.Babel.Rules.Utxos (BabelUtxosPredFailure (CollectErrors))
 import Cardano.Ledger.Babel.Rules.Utxow (BabelUtxowPredFailure)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (DeltaCoin))
-import Cardano.Ledger.Core (PParams, ppMaxTxSizeL, sizeTxF)
+import Cardano.Ledger.Core (PParams, feeTxBodyL, ppMaxTxSizeL, sizeTxF)
 import Cardano.Ledger.Plutus (
   PlutusWithContext,
   ScriptFailure (scriptFailurePlutus),
@@ -264,8 +265,13 @@ zoneTransition =
               , txs :: Seq (Tx era)
               )
           ) -> do
+        let tx = last (Foldable.toList txs) -- TODO WG use safe head
         {- ((totSizeZone ltx) ≤ᵇ (Γ .LEnv.pparams .PParams.maxTxSize)) ≡ true -}
         runTestOnSignal $ validateMaxTxSizeUTxO pParams (Foldable.toList txs)
+        -- ((coin (balance  (utxo ∣ tx .body .collateral)) * 100) ≥ᵇ sumCol ltx (Γ .LEnv.pparams .PParams.collateralPercentage)) ≡ true
+        runTestOnSignal $
+          failureUnless (all (checkCollateral pParams txs) (tx ^. bodyTxL . totalCollateralTxBodyL)) $
+            InsufficientCollateral undefined undefined -- TODO WG figure the error args out if you have time
         if all chkIsValid txs -- ZONE-V
           then do
             -- TODO WG: make sure `runTestOnSignal` is correct rather than `runTest`
@@ -338,6 +344,11 @@ zoneTransition =
     chkExactlyLastInvalid txs = case reverse txs of
       (l : txs') -> (l ^. isValidTxL == IsValid False) && all ((== IsValid True) . (^. isValidTxL)) txs'
       [] -> True
+    checkCollateral txs pParams c = unCoin c * 100 >= requiredCollateral txs pParams
+    requiredCollateral pParams txs = unCoin $ sumCol (Foldable.toList txs) (collateralPercentage pParams)
+    collateralPercentage pParams = toInteger $ pParams ^. ppCollateralPercentageL
+    sumCol :: [Tx era] -> Integer -> Coin
+    sumCol tb cp = Coin $ foldr (\tx c -> c + (unCoin (tx ^. bodyTxL . feeTxBodyL) * cp)) 0 tb
 
 babelEvalScriptsTxInvalid ::
   forall era.
@@ -377,6 +388,7 @@ babelEvalScriptsTxInvalid =
 
     () <- pure $! traceEvent invalidBegin ()
 
+    -- TODO WG Should this script collection even happen here (obviously collat needs collecting but is this too much?)?
     {- TODO WG:
       I think you actually need a different function that collects Plutus scripts from
       ALL transactions, but just using the collateral for the last one? Or evals scripts from ALL txs? Or something like that?
@@ -488,9 +500,9 @@ updateRES tx1 ((tx, tx') : em) s =
     then (fst (updateRES tx1 em (ifNoEdgeRemove tx em s)), ifNoEdgeRemove tx em s)
     else ((tx, tx') : fst (updateRES tx1 em s), s)
 
--- -- topologically sorts a tx list
--- -- arguments : tracking edges for agda termination check, remaining edges, remaining txs with no incoming edge (S), current sorted list (L)
--- -- returns nothing if there are remaining edges the graph, but S is empty
+-- topologically sorts a tx list
+-- arguments : tracking edges for agda termination check, remaining edges, remaining txs with no incoming edge (S), current sorted list (L)
+-- returns nothing if there are remaining edges the graph, but S is empty
 topSortTxs ::
   EraTx era => [(Tx era, Tx era)] -> [(Tx era, Tx era)] -> [Tx era] -> [Tx era] -> Maybe [Tx era]
 topSortTxs _ [] _ srtd = Just srtd

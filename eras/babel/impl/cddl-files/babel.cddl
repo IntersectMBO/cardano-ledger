@@ -67,11 +67,18 @@ transaction_body =
   , ? 16 : transaction_output              ; collateral return
   , ? 17 : coin                            ; total collateral
   , ? 18 : nonempty_set<transaction_input> ; reference inputs
-  , ? 19 : voting_procedures               ; New; Voting procedures
-  , ? 20 : proposal_procedures             ; New; Proposal procedures
-  , ? 21 : coin                            ; New; current treasury value
-  , ? 22 : positive_coin                   ; New; donation
+  , ? 19 : voting_procedures               ; Voting procedures
+  , ? 20 : proposal_procedures             ; Proposal procedures
+  , ? 21 : coin                            ; current treasury value
+  , ? 22 : positive_coin                   ; donation
+  , ? 23 : set<intent_fulfill>             ; New; Intent fulfillments
+  , ? 24 : [* intent_request]              ; New; Intent asks/ requests
+  , ? 25 : set<transaction_input>          ; New; Required transactions
   }
+
+intent_fulfill = transaction_input
+intent_request = transaction_output
+fulfillment_request_transaction_output = [(intent_fulfill, intent_request)]
 
 voting_procedures = { + voter => { + gov_action_id => voting_procedure } }
 

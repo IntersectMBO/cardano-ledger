@@ -35,26 +35,34 @@ import Cardano.Ledger.Alonzo.Rules (
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   AlonzoUtxoEvent (UtxosEvent),
   AlonzoUtxoPredFailure (..),
-  validateExUnitsTooBigUTxO,
   validateOutputTooBigUTxO,
   validateOutsideForecast,
   validateTooManyCollateralInputs,
   validateWrongNetworkInTxBody,
  )
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
+import Cardano.Ledger.Alonzo.TxWits (nullRedeemers)
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, feesOK, validateOutputTooSmallUTxO)
+import Cardano.Ledger.Babbage.Rules (
+  BabbageUtxoPredFailure,
+  validateOutputTooSmallUTxO,
+  validateTotalCollateral,
+ )
 import qualified Cardano.Ledger.Babbage.Rules as Babbage (
   BabbageUtxoPredFailure (..),
  )
+import Cardano.Ledger.Babbage.UTxO (getReferenceScriptsNonDistinct)
 import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.Babel.Era (BabelEra, BabelUTXO, BabelUTXOS)
+import Cardano.Ledger.Babel.FRxO (getReferenceScriptsNonDistinctFrxo)
 import Cardano.Ledger.Babel.LedgerState.Types (UTxOStateTemp (..))
 import Cardano.Ledger.Babel.Rules.Utxos (
   BabelUtxosPredFailure (..),
  )
+import Cardano.Ledger.Babel.UTxO (babelProducedValue)
 import Cardano.Ledger.BaseTypes (
   Globals (epochInfo, networkId, systemStart),
+  Inject (..),
   Network,
   ProtVer (pvMajor),
   ShelleyBase,
@@ -69,24 +77,40 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
+import Cardano.Ledger.CertState (
+  CertState,
+  certDStateL,
+  certPStateL,
+  certVStateL,
+  lookupDepositDState,
+  lookupDepositVState,
+  psStakePoolParamsL,
+ )
 import Cardano.Ledger.Coin (Coin, DeltaCoin)
+import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.FRxO (FRxO (unFRxO))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Mary (MaryValue (MaryValue))
+import Cardano.Ledger.Mary.Value (filterMultiAsset)
 import Cardano.Ledger.Plutus (ExUnits)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
+import Cardano.Ledger.SafeHash (originalBytesSize)
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure)
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   UtxoEnv (UtxoEnv),
   validateBadInputsUTxO,
   validateInputSetEmptyUTxO,
   validateOutputBootAddrAttrsTooBig,
-  validateValueNotConservedUTxO,
   validateWrongNetwork,
   validateWrongNetworkWithdrawal,
  )
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO, UTxO (..))
+import Cardano.Ledger.UTxO (EraUTxO, UTxO (..), balance, txInsFilter)
+import Cardano.Ledger.Val ((<+>))
 import Control.DeepSeq (NFData)
-import Control.Monad (when)
+import Control.Monad (unless, when)
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
@@ -99,13 +123,18 @@ import Control.State.Transition.Extended (
   validate,
  )
 import Data.Coerce (coerce)
+import Data.Foldable (Foldable (fold), sequenceA_)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Set (Set)
+import Data.Map (keysSet)
+import qualified Data.Map as Map
+import qualified Data.Monoid as Monoid
+import Data.Set (Set, isSubsetOf)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import Lens.Micro ((^.))
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
+import Validation (failureUnless)
 
 -- ======================================================
 
@@ -290,7 +319,6 @@ Jump to CIP-0118#UTXOS-rule to continue... -}
 utxoTransition ::
   forall era.
   ( EraUTxO era
-  , BabbageEraTxBody era
   , AlonzoEraTxWits era
   , Tx era ~ AlonzoTx era
   , InjectRuleFailure "UTXO" ShelleyUtxoPredFailure era
@@ -308,11 +336,14 @@ utxoTransition ::
   , State (EraRule "UTXOS" era) ~ UTxOStateTemp era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , InjectRuleFailure "UTXO" BabelUtxoPredFailure era
+  , BabelEraTxBody era
+  , Value era ~ MaryValue (EraCrypto era)
   ) =>
   TransitionRule (EraRule "UTXO" era)
 utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp certState, utxos, tx) <- judgmentContext
   let utxo = utxostUtxo utxos
+      frxo = utxostFrxo utxos
 
   {-   txb := txbody tx   -}
   let txBody = body tx
@@ -331,6 +362,9 @@ utxoTransition = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
 
+  runTestOnSignal $
+    failureUnless ((txBody ^. fulfillsTxBodyL) `isSubsetOf` keysSet (unFRxO frxo)) CheckLinearFailure -- TODO WG obviously nonsense error
+
   {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
   runTest $ Alonzo.validateOutsideForecast ei slot sysSt tx
 
@@ -338,14 +372,15 @@ utxoTransition = do
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txBody
 
   {-   feesOK pp tx utxo   -}
-  validate $ feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
+  validate $ feesOK pp tx utxo frxo -- Generalizes the fee to small from earlier Era's
 
   {- allInputs = spendInputs txb ∪ collInputs txb ∪ refInputs txb -}
   {- (spendInputs txb ∪ collInputs txb ∪ refInputs txb) ⊆ dom utxo   -}
+  -- TODO WG: I don't THINK this needs to do anything with FRXO but make sure
   runTest $ Shelley.validateBadInputsUTxO utxo allInputs
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runTest $ Shelley.validateValueNotConservedUTxO pp utxo certState txBody
+  runTest $ validateValueNotConservedUTxO pp utxo frxo certState txBody
 
   {-   adaID ∉ supp mint tx - check not needed because mint field of type MultiAsset
    cannot contain ada -}
@@ -376,8 +411,9 @@ utxoTransition = do
   -- We've moved this to the ZONE rule. See https://github.com/IntersectMBO/formal-ledger-specifications/commit/c3e18ac1d3da92dd4894bbc32057a143f9720f52#diff-5f67369ed62c0dab01e13a73f072b664ada237d094bbea4582365264dd163bf9
   -- runTestOnSignal $ Shelley.validateMaxTxSizeUTxO pp tx
 
+  -- Don't need this either since we're applying it to the whole zone in ZONE
   {-   totExunits tx ≤ maxTxExUnits pp    -}
-  runTest $ Alonzo.validateExUnitsTooBigUTxO pp tx
+  -- runTest $ Alonzo.validateExUnitsTooBigUTxO pp tx
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
   runTest $ Alonzo.validateTooManyCollateralInputs pp txBody
@@ -417,6 +453,7 @@ instance
   , State (EraRule "UTXOS" era) ~ UTxOStateTemp era
   , Signal (EraRule "UTXOS" era) ~ Tx era
   , PredicateFailure (EraRule "UTXO" era) ~ BabelUtxoPredFailure era
+  , Value era ~ MaryValue (EraCrypto era)
   ) =>
   STS (BabelUTXO era)
   where
@@ -588,3 +625,124 @@ allegraToBabelUtxoPredFailure = \case
     error
       "Impossible case, soon to be removed. See: https://github.com/IntersectMBO/cardano-ledger/issues/4085"
   Allegra.OutputTooBigUTxO xs -> OutputTooBigUTxO (map (0,0,) xs)
+
+-- To Babel Fees implementers: These functions are NOT in the right place.
+-- Given more time, I'd do something with the EraUTxO class.
+feesOK ::
+  forall era rule.
+  ( EraUTxO era
+  , AlonzoEraTxWits era
+  , InjectRuleFailure rule AlonzoUtxoPredFailure era
+  , InjectRuleFailure rule BabbageUtxoPredFailure era
+  , InjectRuleFailure rule BabelUtxoPredFailure era
+  , BabelEraTxBody era
+  ) =>
+  PParams era ->
+  Tx era ->
+  UTxO era ->
+  FRxO era ->
+  Test (EraRuleFailure rule era)
+feesOK pp tx u@(UTxO utxo) frxo =
+  let txBody = tx ^. bodyTxL
+      collateral' = txBody ^. collateralInputsTxBodyL -- Inputs allocated to pay txfee
+      -- restrict Utxo to those inputs we use to pay fees.
+      utxoCollateral = eval (collateral' ◁ utxo)
+      theFee = txBody ^. feeTxBodyL -- Coin supplied to pay fees
+      minFee = getMinFeeTxUtxoFrxo pp tx u frxo
+   in sequenceA_
+        [ -- Part 1: minfee pp tx ≤ txfee txBody
+          failureUnless (minFee <= theFee) (injectFailure $ FeeTooSmallUTxO minFee theFee)
+        , -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
+          unless (nullRedeemers $ tx ^. witsTxL . rdmrsTxWitsL) $
+            validateTotalCollateral pp txBody utxoCollateral
+        ]
+
+getMinFeeTxUtxoFrxo ::
+  ( EraTx era
+  , BabelEraTxBody era
+  ) =>
+  PParams era ->
+  Tx era ->
+  UTxO era ->
+  FRxO era ->
+  Coin
+getMinFeeTxUtxoFrxo pparams tx utxo frxo =
+  getMinFeeTx pparams tx refScriptsSize
+  where
+    ins =
+      (tx ^. bodyTxL . referenceInputsTxBodyL)
+        `Set.union` (tx ^. bodyTxL . inputsTxBodyL)
+        `Set.union` (tx ^. bodyTxL . fulfillsTxBodyL)
+    refScripts = getReferenceScriptsNonDistinct utxo ins <> getReferenceScriptsNonDistinctFrxo frxo ins
+    refScriptsSize = Monoid.getSum $ foldMap (Monoid.Sum . originalBytesSize . snd) refScripts
+
+validateValueNotConservedUTxO ::
+  (EraUTxO era, Value era ~ MaryValue (EraCrypto era), BabelEraTxBody era) =>
+  PParams era ->
+  UTxO era ->
+  FRxO era ->
+  CertState era ->
+  TxBody era ->
+  Test (BabelUtxoPredFailure era)
+validateValueNotConservedUTxO pp utxo frxo certState txBody =
+  failureUnless (consumedValue == producedValue) $ ValueNotConservedUTxO consumedValue producedValue
+  where
+    consumedValue = consumed pp certState utxo frxo txBody
+    producedValue = produced pp certState txBody frxo
+
+-- | For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
+consumed ::
+  (Value era ~ MaryValue (EraCrypto era), MaryEraTxBody era) =>
+  PParams era ->
+  CertState era ->
+  UTxO era ->
+  FRxO era ->
+  TxBody era ->
+  Value era
+consumed pp certState =
+  getConsumedBabelValue
+    pp
+    (lookupDepositDState $ certState ^. certDStateL)
+    (lookupDepositVState $ certState ^. certVStateL)
+
+getConsumedBabelValue ::
+  (MaryEraTxBody era, Value era ~ MaryValue (EraCrypto era)) =>
+  PParams era ->
+  (Credential 'Staking (EraCrypto era) -> Maybe Coin) ->
+  (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) ->
+  UTxO era ->
+  FRxO era ->
+  TxBody era ->
+  MaryValue (EraCrypto era)
+getConsumedBabelValue pp lookupStakingDeposit lookupDRepDeposit utxo _frxo txBody =
+  consumedValue <> MaryValue mempty mintedMultiAsset
+  where
+    mintedMultiAsset = filterMultiAsset (\_ _ -> (> 0)) $ txBody ^. mintTxBodyL
+    {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
+    consumedValue =
+      balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
+        <> inject (refunds <> withdrawals)
+    refunds = getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody
+    withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
+
+-- | Compute the lovelace which are created by the transaction
+-- For eras before Conway, VState is expected to have an empty Map for vsDReps, and so deposit summed up is zero.
+produced ::
+  (Value era ~ MaryValue (EraCrypto era), BabelEraTxBody era) =>
+  PParams era ->
+  CertState era ->
+  TxBody era ->
+  FRxO era ->
+  Value era
+produced pp certState = babelProducedValueFrxo pp (flip Map.member $ certState ^. certPStateL . psStakePoolParamsL)
+
+babelProducedValueFrxo ::
+  (BabelEraTxBody era, Value era ~ MaryValue (EraCrypto era)) =>
+  PParams era ->
+  (KeyHash 'StakePool (EraCrypto era) -> Bool) ->
+  TxBody era ->
+  FRxO era ->
+  Value era
+babelProducedValueFrxo pp isStakePool txBody _frxo =
+  babelProducedValue pp isStakePool txBody
+    <+> undefined -- TODO WG ????? balance (frxo (st .utxoTemp) ∣ txb .fulfills)

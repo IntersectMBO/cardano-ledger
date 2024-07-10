@@ -229,7 +229,7 @@ getScriptHash _ = Nothing
 newtype ScriptsProvided era = ScriptsProvided
   { unScriptsProvided :: Map.Map (ScriptHash (EraCrypto era)) (Script era)
   }
-  deriving (Generic)
+  deriving (Generic, Semigroup)
 
 deriving instance (Era era, Eq (Script era)) => Eq (ScriptsProvided era)
 deriving instance (Era era, Ord (Script era)) => Ord (ScriptsProvided era)

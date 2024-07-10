@@ -23,11 +23,11 @@ module Cardano.Ledger.Babel.Rules.Utxos (
   BabelUtxosEvent (..),
 ) where
 
-import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext)
+import Cardano.Ledger.Alonzo.Plutus.Context (ContextError, EraPlutusContext (..))
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
   CollectError (..),
-  collectPlutusScriptsWithContext,
   evalPlutusScripts,
+  lookupPlutusScript,
  )
 import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxoEvent (..),
@@ -45,9 +45,11 @@ import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (
   AlonzoUtxosEvent (..),
   AlonzoUtxosPredFailure (..),
  )
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
+import Cardano.Ledger.Alonzo.TxWits (lookupRedeemer)
 import Cardano.Ledger.Alonzo.UTxO (
-  AlonzoEraUTxO,
-  AlonzoScriptsNeeded,
+  AlonzoEraUTxO (..),
+  AlonzoScriptsNeeded (..),
  )
 import Cardano.Ledger.Babbage.Collateral (collAdaBalance, collOuts)
 import Cardano.Ledger.Babbage.Rules (
@@ -58,10 +60,10 @@ import Cardano.Ledger.Babbage.Rules (
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.Babel.Era (BabelEra, BabelUTXOS)
-import Cardano.Ledger.Babel.FRxO (txfrxo)
+import Cardano.Ledger.Babel.FRxO (getBabelScriptsNeededFrxo, getScriptsProvidedFrxo, txfrxo)
 import Cardano.Ledger.Babel.LedgerState.Types (UTxOStateTemp (..), utxostDonationL)
 import Cardano.Ledger.Babel.TxInfo ()
-import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -72,8 +74,13 @@ import Cardano.Ledger.Coin (Coin (Coin), DeltaCoin (..))
 import Cardano.Ledger.Conway.Core (ConwayEraPParams, ConwayEraTxBody (treasuryDonationTxBodyL))
 import Cardano.Ledger.Conway.Governance (ConwayGovState (..))
 import Cardano.Ledger.FRxO (FRxO (FRxO, unFRxO))
-import Cardano.Ledger.Plutus (PlutusWithContext, ScriptFailure (..))
-import Cardano.Ledger.Plutus.Evaluate (ScriptResult (..))
+import Cardano.Ledger.Plutus (
+  PlutusWithContext (..),
+  ScriptFailure (..),
+  costModelsValid,
+  getPlutusData,
+ )
+import Cardano.Ledger.Plutus.Evaluate (PlutusDatums (..), ScriptResult (..))
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState,
@@ -81,18 +88,25 @@ import Cardano.Ledger.Shelley.LedgerState (
   updateStakeDistribution,
  )
 import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO (UTxO, unUTxO))
+import Cardano.Ledger.Slot (EpochInfo)
+import Cardano.Ledger.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (UTxO, unUTxO))
 import Cardano.Ledger.Val ((<->))
+import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
+import Control.Monad (guard)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import qualified Data.Map as Map
 import Data.MapExtras (extractKeys)
+import Data.Maybe (mapMaybe)
+import qualified Data.Set as Set
+import Data.Text (Text)
 import Debug.Trace (traceEvent)
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
+import PlutusLedgerApi.V4 ()
 
 data BabelUtxosPredFailure era
   = -- | The 'isValid' tag on the transaction is incorrect. The tag given
@@ -405,10 +419,8 @@ updateUTxOState pp utxos txBody certState govState depositChangeEvent txUtxODiff
 babelEvalScriptsTxInvalid ::
   forall era.
   ( AlonzoEraTx era
-  , BabbageEraTxBody era
   , EraPlutusContext era
   , AlonzoEraUTxO era
-  , ScriptsNeeded era ~ AlonzoScriptsNeeded era
   , STS (EraRule "UTXOS" era)
   , Environment (EraRule "UTXOS" era) ~ UtxoEnv era
   , Signal (EraRule "UTXOS" era) ~ Tx era
@@ -416,10 +428,11 @@ babelEvalScriptsTxInvalid ::
   , BaseM (EraRule "UTXOS" era) ~ ShelleyBase
   , Event (EraRule "UTXOS" era) ~ BabelUtxosEvent era
   , PredicateFailure (EraRule "UTXOS" era) ~ BabelUtxosPredFailure era
+  , BabelEraTxBody era
   ) =>
   TransitionRule (EraRule "UTXOS" era)
 babelEvalScriptsTxInvalid = do
-  TRC (UtxoEnv _ pp _, us@(UTxOStateTemp utxo _ _ fees _ _ _), tx) <- judgmentContext
+  TRC (UtxoEnv _ pp _, us@(UTxOStateTemp utxo frxo _ fees _ _ _), tx) <- judgmentContext
   {- txb := txbody tx -}
   let txBody = tx ^. bodyTxL
   sysSt <- liftSTS $ asks systemStart
@@ -427,7 +440,7 @@ babelEvalScriptsTxInvalid = do
 
   () <- pure $! traceEvent invalidBegin ()
 
-  case collectPlutusScriptsWithContext ei sysSt pp tx utxo of
+  case collectPlutusScriptsWithContextFrxo ei sysSt pp tx utxo frxo of
     Right sLst ->
       {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
       {- isValid tx = evalScripts tx sLst = False -}
@@ -455,3 +468,82 @@ babelEvalScriptsTxInvalid = do
       , utxostFees = fees <> Coin collateralFees -- NEW to Babbage
       , utxostStakeDistr = updateStakeDistribution pp (utxostStakeDistr us) (UTxO utxoDel) (UTxO collouts)
       }
+
+-- To Babel Fees implementers: This function is NOT in the right place.
+-- Given more time, I'd do something with the EraUTxO class.
+collectPlutusScriptsWithContextFrxo ::
+  forall era.
+  ( AlonzoEraTxWits era
+  , AlonzoEraUTxO era
+  , EraPlutusContext era
+  , BabelEraTxBody era
+  ) =>
+  EpochInfo (Either Text) ->
+  SystemStart ->
+  PParams era ->
+  Tx era ->
+  UTxO era ->
+  FRxO era ->
+  Either [CollectError era] [PlutusWithContext (EraCrypto era)]
+collectPlutusScriptsWithContextFrxo epochInfo sysStart pp tx utxo frxo =
+  -- TODO: remove this whole complicated check when we get into Conway. It is much simpler
+  -- to fail on a CostModel lookup in the `apply` function (already implemented).
+  let missingCostModels = Set.filter (`Map.notMember` costModels) usedLanguages
+   in case guard (protVerMajor < natVersion @9) >> Set.lookupMin missingCostModels of
+        Just l -> Left [NoCostModel l]
+        Nothing ->
+          merge
+            apply
+            (map getScriptWithRedeemer neededPlutusScripts)
+            (Right [])
+  where
+    -- Check on a protocol version to preserve failure mode (a single NoCostModel failure
+    -- for languages with missing cost models) until we are in Conway era. After we hard
+    -- fork into Conway it will be safe to remove this check together with the
+    -- `missingCostModels` lookup
+    --
+    -- We also need to pass major protocol version to the script for script evaluation
+    protVerMajor = pvMajor (pp ^. ppProtocolVersionL)
+    costModels = costModelsValid $ pp ^. ppCostModelsL
+
+    ScriptsProvided scriptsProvided = getScriptsProvided utxo tx <> getScriptsProvidedFrxo frxo tx
+    AlonzoScriptsNeeded scriptsNeeded = getBabelScriptsNeededFrxo utxo frxo (tx ^. bodyTxL)
+    neededPlutusScripts =
+      mapMaybe (\(sp, sh) -> (,) (sh, sp) <$> lookupPlutusScript scriptsProvided sh) scriptsNeeded
+    usedLanguages = Set.fromList $ map (plutusScriptLanguage . snd) neededPlutusScripts
+
+    getScriptWithRedeemer ((plutusScriptHash, plutusPurpose), plutusScript) =
+      let redeemerIndex = hoistPlutusPurpose toAsIx plutusPurpose
+       in case lookupRedeemer redeemerIndex $ tx ^. witsTxL . rdmrsTxWitsL of
+            Just (d, exUnits) -> Right (plutusScript, plutusPurpose, d, exUnits, plutusScriptHash)
+            Nothing -> Left (NoRedeemer (hoistPlutusPurpose toAsItem plutusPurpose))
+    apply (plutusScript, plutusPurpose, d, exUnits, plutusScriptHash) = do
+      let lang = plutusScriptLanguage plutusScript
+      costModel <- maybe (Left (NoCostModel lang)) Right $ Map.lookup lang costModels
+      case mkPlutusScriptContext plutusScript plutusPurpose pp epochInfo sysStart utxo tx of
+        Right scriptContext ->
+          let spendingDatum = getSpendingDatum utxo tx $ hoistPlutusPurpose toAsItem plutusPurpose
+              datums = maybe id (:) spendingDatum [d, scriptContext]
+           in Right $
+                withPlutusScript plutusScript $ \plutus ->
+                  PlutusWithContext
+                    { pwcProtocolVersion = protVerMajor
+                    , pwcScript = Left plutus
+                    , pwcScriptHash = plutusScriptHash
+                    , pwcDatums = PlutusDatums (getPlutusData <$> datums)
+                    , pwcExUnits = exUnits
+                    , pwcCostModel = costModel
+                    }
+        Left te -> Left $ BadTranslation te
+    merge :: forall t b a. (t -> Either a b) -> [Either a t] -> Either [a] [b] -> Either [a] [b]
+    merge _f [] answer = answer
+    merge f (x : xs) zs = merge f xs (gg x zs)
+      where
+        gg :: Either a t -> Either [a] [b] -> Either [a] [b]
+        gg (Right t) (Right cs) =
+          case f t of
+            Right c -> Right $ c : cs
+            Left e -> Left [e]
+        gg (Left a) (Right _) = Left [a]
+        gg (Right _) (Left cs) = Left cs
+        gg (Left a) (Left cs) = Left (a : cs)

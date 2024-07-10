@@ -37,7 +37,6 @@ import Cardano.Ledger.Alonzo.Rules (
   AlonzoUtxowEvent (WrappedShelleyEraEvent),
   AlonzoUtxowPredFailure,
   hasExactSetOfRedeemers,
-  missingRequiredDatums,
   ppViewHashesMatch,
  )
 import qualified Cardano.Ledger.Alonzo.Rules as Alonzo (AlonzoUtxowPredFailure (..))
@@ -56,6 +55,7 @@ import qualified Cardano.Ledger.Babbage.Rules as Babbage (
 import Cardano.Ledger.Babbage.UTxO (getReferenceScripts)
 import Cardano.Ledger.Babel.Core
 import Cardano.Ledger.Babel.Era (BabelEra, BabelUTXO, BabelUTXOW)
+import Cardano.Ledger.Babel.FRxO
 import Cardano.Ledger.Babel.LedgerState.Types (UTxOStateTemp (..))
 import Cardano.Ledger.Babel.Rules.Utxo (BabelUtxoPredFailure)
 import Cardano.Ledger.Babel.Rules.Utxos (BabelUtxosPredFailure)
@@ -70,23 +70,21 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
+import Cardano.Ledger.CertState (CertState)
 import Cardano.Ledger.Crypto (DSIGN, HASH)
+import Cardano.Ledger.FRxO (FRxO)
 import Cardano.Ledger.Keys (
   KeyHash,
   KeyRole (..),
   VKey,
-  WitVKey (WitVKey),
-  bwKey,
-  verifyBootstrapWit,
  )
-import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
-import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
+import Cardano.Ledger.Rules.ValidationMode (runTest, runTestOnSignal)
 import Cardano.Ledger.Shelley.Rules (
   ShelleyUtxoPredFailure,
   ShelleyUtxowEvent (UtxoEvent),
   ShelleyUtxowPredFailure,
   UtxoEnv (UtxoEnv),
-  validateNeededWitnesses,
+  validateVerifiedWits,
  )
 import qualified Cardano.Ledger.Shelley.Rules as Shelley (
   ShelleyUtxowPredFailure (..),
@@ -95,7 +93,7 @@ import qualified Cardano.Ledger.Shelley.Rules as Shelley (
  )
 import Cardano.Ledger.Shelley.Tx (witsFromTxWitnesses)
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.UTxO (EraUTxO (..), UTxO, verifyWitVKey)
+import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
   Embed (..),
@@ -105,13 +103,14 @@ import Control.State.Transition.Extended (
   judgmentContext,
   trans,
  )
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
-import Validation
+import Validation (Validation, failureUnless)
 
 babelWitsVKeyNeeded ::
   (EraTx era, BabelEraTxBody era) =>
@@ -401,13 +400,13 @@ shelleyToBabelUtxowPredFailure = \case
 
 Jump to CIP-0118#UTXO-rule to continue... -}
 
--- | UTXOW transition rule that is used in Babbage and Babel era.
+-- | UTXOW transition rule that is used in Babel era.
 babelUtxowTransition ::
   forall era.
   ( AlonzoEraTx era
   , AlonzoEraUTxO era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
-  , BabbageEraTxBody era
+  , BabelEraTxBody era
   , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
   , Environment (EraRule "UTXOW" era) ~ Shelley.UtxoEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
@@ -430,15 +429,20 @@ babelUtxowTransition = do
   {-  txw := txwits tx  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = utxostUtxo u
+      frxo = utxostFrxo u
       txBody = tx ^. bodyTxL
       witsKeyHashes = witsFromTxWitnesses tx
-      inputs = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
+      inputs =
+        (txBody ^. referenceInputsTxBodyL)
+          `Set.union` (txBody ^. inputsTxBodyL)
+          `Set.union` (txBody ^. fulfillsTxBodyL)
+          `Set.union` (txBody ^. requiredTxsTxBodyL)
 
   -- check scripts
   {- neededHashes := {h | ( , h) ∈ scriptsNeeded utxo txb} -}
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
-  let scriptsNeeded = getScriptsNeeded utxo txBody
-      scriptsProvided = getScriptsProvided utxo tx
+  let scriptsNeeded = getBabelScriptsNeededFrxo utxo frxo txBody
+      scriptsProvided = getScriptsProvided utxo tx <> getScriptsProvidedFrxo frxo tx
       scriptHashesNeeded = getScriptsHashesNeeded scriptsNeeded
   {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
   -- CHANGED In BABBAGE txscripts depends on UTxO
@@ -446,11 +450,13 @@ babelUtxowTransition = do
 
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
   let sReceived = Map.keysSet $ tx ^. witsTxL . scriptTxWitsL
-      sRefs = Map.keysSet $ getReferenceScripts utxo inputs
+      sRefs =
+        Map.keysSet (getReferenceScripts utxo inputs)
+          <> Map.keysSet (getReferenceScriptsFrxo frxo inputs)
   runTest $ babbageMissingScripts pp scriptHashesNeeded sRefs sReceived
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
-  runTest $ missingRequiredDatums utxo tx
+  runTest $ missingRequiredDatumsFrxo utxo frxo tx
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
@@ -464,7 +470,7 @@ babelUtxowTransition = do
   runTestOnSignal $ validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  runTest $ validateNeededWitnesses witsKeyHashes certState utxo txBody
+  runTestOnSignal $ validateNeededWitnessesFrxo witsKeyHashes certState utxo frxo txBody -- TODO WG what should this actually do differently?
 
   -- check metadata hash
   {-   adh := txADhash txb;  ad := auxiliaryData tx                      -}
@@ -487,44 +493,20 @@ babelUtxowTransition = do
 
   trans @(EraRule "UTXO" era) $ TRC (utxoEnv, u, tx)
 
--- | Determine if the UTxO witnesses in a given transaction are correct.
-validateVerifiedWits ::
+-- To Babel Fees implementers: This function is NOT in the right place.
+-- Given more time, I'd do something with the EraUTxO class.
+validateNeededWitnessesFrxo ::
   forall era.
-  ( EraTx era
-  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
-  ) =>
-  Tx era ->
-  Test (ShelleyUtxowPredFailure era)
-validateVerifiedWits tx =
-  case failed of
-    [] -> pure ()
-    nonEmpty -> failure $ Shelley.InvalidWitnessesUTXOW nonEmpty
-  where
-    txBody = tx ^. bodyTxL
-    -- txRequiredTxs = tx ^. requiredTxsTxL
-    failed =
-      failed' witVKeyVerifier
-        <> failedBootstrap bootstrapWitVerifier
-    (witVKeyVerifier, bootstrapWitVerifier) =
-      -- case txRequiredTxs == mempty of
-      -- True ->
-      let txBodyHash = extractHash (hashAnnotated txBody)
-       in (verifyWitVKey txBodyHash, verifyBootstrapWit txBodyHash)
-    -- False ->
-    --   let _a = extractHash (hashAnnotated txBody)
-    --       _b = extractHash (hashAnnotated txRequiredTxs)
-    --    in undefined
-    -- let compositeHash = extractHash (hashAnnotated (txBody, txs))
-    --  in (verifyWitVKeyRequiredTxs compositeHash, verifyBootstrapWitRequiredTxs compositeHash)
-    wvkKey (WitVKey k _) = k
-
-    failed' witnessVerification =
-      wvkKey
-        <$> filter
-          (not . witnessVerification)
-          (Set.toList $ tx ^. witsTxL . addrTxWitsL)
-    failedBootstrap witnessVerification =
-      bwKey
-        <$> filter
-          (not . witnessVerification)
-          (Set.toList $ tx ^. witsTxL . bootAddrTxWitsL)
+  (EraUTxO era, BabelEraTxBody era) =>
+  -- | Provided witness
+  Set (KeyHash 'Witness (EraCrypto era)) ->
+  CertState era ->
+  UTxO era ->
+  FRxO era ->
+  TxBody era ->
+  Validation (NonEmpty (ShelleyUtxowPredFailure era)) ()
+validateNeededWitnessesFrxo witsKeyHashes certState utxo frxo txBody =
+  let needed = getWitsVKeyNeededFrxo certState utxo frxo txBody
+      missingWitnesses = Set.difference needed witsKeyHashes
+   in failureUnless (Set.null missingWitnesses) $
+        Shelley.MissingVKeyWitnessesUTXOW @era missingWitnesses
