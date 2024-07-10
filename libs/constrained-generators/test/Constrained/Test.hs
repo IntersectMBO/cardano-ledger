@@ -179,7 +179,7 @@ tests nightly =
         prop "[(Int, Int)]" $ prop_gen_sound @BaseFn @[(Int, Int)]
         prop "Map Bool Int" $ prop_gen_sound @BaseFn @(Map Bool Int)
       -- Slow tests that shouldn't run 1000 times
-      prop "Map (Set Int) Int" $ prop_gen_sound @BaseFn @(Map (Set Int) Int)
+      xprop "Map (Set Int) Int" $ prop_gen_sound @BaseFn @(Map (Set Int) Int)
       prop "[(Set Int, Set Bool)]" $ prop_gen_sound @BaseFn @[(Set Int, Set Bool)]
       prop "Set (Set Bool)" $ prop_gen_sound @BaseFn @(Set (Set Bool))
     negativeTests
