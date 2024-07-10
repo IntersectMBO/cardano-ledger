@@ -12,6 +12,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE ImpredicativeTypes #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -86,6 +87,7 @@ import Constrained.Graph hiding (dependency, irreflexiveDependencyOn, noDependen
 import Constrained.Graph qualified as Graph
 import Constrained.List
 import Constrained.Univ
+import Data.List.NonEmpty qualified as NE
 
 {- NOTE [High level overview of generation from predicates]:
 
@@ -305,7 +307,7 @@ data Pred (fn :: [Type] -> Type -> Type) where
     Pred fn
   Assert ::
     BaseUniverse fn =>
-    [String] ->
+    NE.NonEmpty String ->
     Term fn Bool ->
     Pred fn
   Reifies ::
@@ -357,8 +359,11 @@ data Pred (fn :: [Type] -> Type -> Type) where
     Term fn a ->
     Pred fn
   TruePred :: Pred fn
-  FalsePred :: [String] -> Pred fn
-  Explain :: [String] -> Pred fn -> Pred fn
+  FalsePred :: NE.NonEmpty String -> Pred fn
+  Explain :: NE.NonEmpty String -> Pred fn -> Pred fn
+
+falsePred1 :: String -> Pred fn
+falsePred1 s = FalsePred (pure s)
 
 data Weighted f a = Weighted {weight :: Maybe Int, thing :: f a}
   deriving (Functor, Traversable, Foldable)
@@ -370,6 +375,7 @@ traverseWeighted :: Applicative m => (f a -> m (g a)) -> Weighted f a -> m (Weig
 traverseWeighted f (Weighted w t) = Weighted w <$> f t
 
 instance BaseUniverse fn => Semigroup (Pred fn) where
+  FalsePred xs <> FalsePred ys = FalsePred (xs <> ys)
   FalsePred es <> _ = FalsePred es
   _ <> FalsePred es = FalsePred es
   TruePred <> p = p
@@ -426,13 +432,13 @@ toCtx ::
 toCtx v = go
   where
     go :: forall b. Term fn b -> m (Ctx fn v b)
-    go (Lit i) = fatalError ["toCtx (Lit " ++ show i ++ ")"]
+    go (Lit i) = fatalError1 ("toCtx has literal: (Lit " ++ show i ++ ")")
     go (App f as) = CtxApp f <$> toCtxList v as
     go (V v')
       | Just Refl <- eqVar v v' = pure $ CtxHOLE
       | otherwise =
-          fatalError
-            [ "toCtx "
+          fatalError1
+            ( "toCtx "
                 ++ show v
                 ++ "@("
                 ++ show (typeOf v)
@@ -441,7 +447,7 @@ toCtx v = go
                 ++ "@("
                 ++ show (typeOf v')
                 ++ "))"
-            ]
+            )
 
 toCtxList ::
   forall m fn v as.
@@ -452,7 +458,7 @@ toCtxList ::
 toCtxList v = prefix
   where
     prefix :: forall as'. HasCallStack => List (Term fn) as' -> m (ListCtx Value as' (Ctx fn v))
-    prefix Nil = fatalError ["toCtxList without hole"]
+    prefix Nil = fatalError1 "toCtxList without hole"
     prefix (Lit l :> ts) = do
       ctx <- prefix ts
       pure $ Value l :! ctx
@@ -464,7 +470,7 @@ toCtxList v = prefix
     suffix :: forall as'. List (Term fn) as' -> m (List Value as')
     suffix Nil = pure Nil
     suffix (Lit l :> ts) = (Value l :>) <$> suffix ts
-    suffix (_ :> _) = fatalError ["toCtxList with too many holes"]
+    suffix (_ :> _) = fatalError1 "toCtxList with too many holes"
 
 ------------------------------------------------------------------------
 -- Semantics of `Term` and `Pred`
@@ -489,7 +495,7 @@ monitorSpec _ _ = property
 monitorPred ::
   forall fn m. (FunctionLike fn, MonadGenError m) => Env -> Pred fn -> m (Property -> Property)
 monitorPred env = \case
-  Monitor m -> pure (m $ errorGE . explain ["monitorPred: Monitor"] . runTerm env)
+  Monitor m -> pure (m $ errorGE . explain1 "monitorPred: Monitor" . runTerm env)
   Subst x t p -> monitorPred env $ substitutePred x t p
   Assert {} -> pure id
   GenHint {} -> pure id
@@ -516,7 +522,7 @@ monitorPred env = \case
     val <- runTerm env t
     monitorPred (extendEnv x val env) p
   Exists k (x :-> p) -> do
-    case k (errorGE . explain ["monitorPred: Exists"] . runTerm env) of
+    case k (errorGE . explain1 "monitorPred: Exists" . runTerm env) of
       Result _ a -> monitorPred (extendEnv x a env) p
       _ -> pure id
   Explain es p -> explain es $ monitorPred env p
@@ -525,13 +531,12 @@ checkPred :: forall fn m. (FunctionLike fn, MonadGenError m) => Env -> Pred fn -
 checkPred env = \case
   Monitor {} -> pure True
   Subst x t p -> checkPred env $ substitutePred x t p
-  Assert [] t -> runTerm env t
-  Assert es t -> explain ("assert:" : map ("  " ++) es) $ runTerm env t
+  Assert es t -> explain es $ runTerm env t
   GenHint {} -> pure True
   p@(Reifies t' t f) -> do
     val <- runTerm env t
     val' <- runTerm env t'
-    explain ["Reification:", "  " ++ show p] $ pure (f val == val')
+    explain (NE.fromList ["Reification:", "  " ++ show p]) $ pure (f val == val')
   ForAll t (x :-> p) -> do
     set <- runTerm env t
     and
@@ -554,7 +559,7 @@ checkPred env = \case
     val <- runTerm env t
     checkPred (extendEnv x val env) p
   Exists k (x :-> p) -> do
-    a <- runGE $ k (errorGE . explain ["checkPred: Exists"] . runTerm env)
+    a <- runGE $ k (errorGE . explain1 "checkPred: Exists" . runTerm env)
     checkPred (extendEnv x a env) p
   Explain es p -> explain es $ checkPred env p
 
@@ -593,7 +598,7 @@ data Specification fn a where
     Specification fn a
   -- | The empty set
   ErrorSpec ::
-    [String] ->
+    NE.NonEmpty String ->
     Specification fn a
   -- | The set described by some predicates
   -- over the bound variable.
@@ -617,16 +622,22 @@ data Specification fn a where
   -- | Anything
   TrueSpec :: Specification fn a
 
+instance Arbitrary a => Arbitrary (NE.NonEmpty a) where
+  arbitrary = do
+    NonEmpty xs <- arbitrary
+    pure (NE.fromList xs)
+
 instance HasSpec fn a => Semigroup (Specification fn a) where
   TrueSpec <> s = s
   s <> TrueSpec = s
-  ErrorSpec e <> ErrorSpec e' = ErrorSpec (e ++ "" : (replicate 20 '-') : "" : e')
+  ErrorSpec e <> ErrorSpec e' = ErrorSpec (NE.fromList (NE.toList e ++ "" : (replicate 20 '-') : "" : NE.toList e'))
   ErrorSpec e <> _ = ErrorSpec e
   _ <> ErrorSpec e = ErrorSpec e
   MemberSpec as <> MemberSpec as' =
-    explainSpec ["Intersecting: ", "  MemberSpec " ++ show as, "  MemberSpec " ++ show as'] $
-      MemberSpec $
-        intersect as as'
+    explainSpec
+      (NE.fromList ["Intersecting: ", "  MemberSpec " ++ show as, "  MemberSpec " ++ show as'])
+      $ MemberSpec
+      $ intersect as as'
   MemberSpec as <> TypeSpec s cant =
     MemberSpec $
       filter
@@ -695,7 +706,7 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
         )
       ,
         ( 1
-        , pure $ constrained $ \x -> explanation ["its very subtle, you won't get it."] $ x `satisfies` baseSpec
+        , pure $ constrained $ \x -> explanation (pure "its very subtle, you won't get it.") $ x `satisfies` baseSpec
         )
       , (10, pure baseSpec)
       ]
@@ -718,23 +729,26 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
   shrink ErrorSpec {} = [TrueSpec, MemberSpec []]
 
 shrinkPred :: Pred fn -> [Pred fn]
-shrinkPred (Block ps) = TruePred : FalsePred [] : ps ++ map Block (shrinkList shrinkPred ps)
-shrinkPred (Assert es t) = TruePred : FalsePred [] : [Assert [] t | not $ null es]
-shrinkPred (Explain _ p) = TruePred : FalsePred [] : [p]
-shrinkPred (When b p) = TruePred : FalsePred [] : p : map (When b) (shrinkPred p)
+shrinkPred (Block ps) = TruePred : falsePred1 "shrink block" : ps ++ map Block (shrinkList shrinkPred ps)
+shrinkPred (Assert es t) =
+  TruePred
+    : falsePred1 "shrink assert"
+    : [Assert (pure "shrink assert") t | not $ null (NE.toList es)]
+shrinkPred (Explain _ p) = TruePred : falsePred1 "shrink explain" : [p]
+shrinkPred (When b p) = TruePred : falsePred1 "shrink when" : p : map (When b) (shrinkPred p)
 -- NOTE: You can't shrink `Exists` because it might make the `Env -> a` invalid!
 -- e.g. you start with
 -- `constrained $ \ x -> exists (\eval -> pure $ eval x) $ \ y -> [ x ==. y, 10 <. y ]`
 -- and shrink it to
 -- `constrained $ \ x -> exists (\eval -> pure $ eval x) $ \ y -> [ 10 <. y ]`
 -- and suddenly the thing you're generating is BS w.r.t the checking!
-shrinkPred Exists {} = [TruePred, FalsePred []]
+shrinkPred Exists {} = [TruePred, falsePred1 "shrink exists"]
 shrinkPred (Subst x t p) = shrinkPred $ substitutePred x t p
-shrinkPred GenHint {} = [TruePred, FalsePred []]
-shrinkPred Monitor {} = [TruePred, FalsePred []]
-shrinkPred DependsOn {} = [TruePred, FalsePred []]
+shrinkPred GenHint {} = [TruePred, falsePred1 "shrink hint"]
+shrinkPred Monitor {} = [TruePred, falsePred1 "shrink monitor"]
+shrinkPred DependsOn {} = [TruePred, falsePred1 "shrink depends"]
 -- TODO: fixme
-shrinkPred Case {} = [TruePred, FalsePred []]
+shrinkPred Case {} = [TruePred, falsePred1 "shrink case"]
 shrinkPred (Let t (x :-> p)) = Let t . (x :->) <$> shrinkPred p
 shrinkPred _ = []
 
@@ -954,7 +968,7 @@ class (HasSpec fn a, Show (Hint a)) => HasGenHint fn a where
 conformsToSpecM ::
   forall fn a m. (HasSpec fn a, MonadGenError m, Alternative m) => a -> Specification fn a -> m ()
 conformsToSpecM _ TrueSpec = pure ()
-conformsToSpecM a (MemberSpec as) = explain [show a ++ " not an element of " ++ show as] $ guard $ elem a as
+conformsToSpecM a (MemberSpec as) = explain1 (show a ++ " not an element of " ++ show as) $ guard $ elem a as
 conformsToSpecM a (TypeSpec s cant) = guard $ notElem a cant && conformsTo @fn a s
 conformsToSpecM a (SuspendedSpec v ps) = guard =<< checkPred (singletonEnv v a) ps
 conformsToSpecM _ (ErrorSpec es) = explain es $ guard False
@@ -967,12 +981,12 @@ conformsToSpec a s = isOk $ conformsToSpecM a s
 
 satisfies :: forall fn a. HasSpec fn a => Term fn a -> Specification fn a -> Pred fn
 satisfies _ TrueSpec = TruePred
-satisfies e (MemberSpec as) = Assert [show e ++ " `elem` " ++ show as] $ elem_ e (Lit as)
+satisfies e (MemberSpec as) = Assert (pure (show e ++ " `elem` " ++ show as)) $ elem_ e (Lit as)
 satisfies t (SuspendedSpec x p) = Subst x t p
 satisfies e (TypeSpec s cant)
   | null cant = toPreds e s
   | otherwise =
-      Assert [show e ++ " `notElem` " ++ show cant] (not_ (elem_ e $ Lit cant)) <> toPreds e s
+      Assert (pure (show e ++ " `notElem` " ++ show cant)) (not_ (elem_ e $ Lit cant)) <> toPreds e s
 satisfies _ (ErrorSpec e) = FalsePred e
 
 ------------------------------------------------------------------------
@@ -989,8 +1003,8 @@ genFromSpecT ::
 genFromSpecT (simplifySpec -> spec) = case spec of
   TrueSpec -> genFromSpecT @fn (typeSpec $ emptySpec @fn @a)
   MemberSpec as
-    | null as -> genError ["MemberSpec {}"]
-    | otherwise -> explain ["genFromSpecT " ++ show spec] $ pureGen (elements as)
+    | null as -> genError1 "MemberSpec {}"
+    | otherwise -> explain1 ("genFromSpecT " ++ show spec) $ pureGen (elements as)
   SuspendedSpec x p
     -- NOTE: If `x` isn't free in `p` we still have to try to generate things
     -- from `p` to make sure `p` is sat and then we can throw it away. A better
@@ -1006,12 +1020,14 @@ genFromSpecT (simplifySpec -> spec) = case spec of
   TypeSpec s cant -> do
     mode <- getMode
     explain
-      [ ""
-      , "genFromSpecT"
-      , "    " ++ show (typeRep cant)
-      , "    " ++ show spec
-      , "  with mode " ++ show mode
-      ]
+      ( NE.fromList
+          [ ""
+          , "genFromSpecT"
+          , "    " ++ show (typeRep cant)
+          , "    " ++ show spec
+          , "  with mode " ++ show mode
+          ]
+      )
       $
       -- TODO: we could consider giving `cant` as an argument to `genFromTypeSpec` if this
       -- starts giving us trouble.
@@ -1058,12 +1074,14 @@ genInverse ::
 genInverse f argS x =
   let argSpec' = argS <> propagateSpecFun f (NilCtx HOLE) (equalSpec x)
    in explain
-        [ "genInverse"
-        , "  f = " ++ show f
-        , show $ "  argS =" <+> pretty argS
-        , "  x = " ++ show x
-        , show $ "  argSpec' =" <+> pretty argSpec'
-        ]
+        ( NE.fromList
+            [ "genInverse"
+            , "  f = " ++ show f
+            , show $ "  argS =" <+> pretty argS
+            , "  x = " ++ show x
+            , show $ "  argSpec' =" <+> pretty argSpec'
+            ]
+        )
         $ genFromSpecT argSpec'
 
 -- Generating things from predicates --------------------------------------
@@ -1227,8 +1245,8 @@ isEmptyPlan (SolverPlan plan _) = null plan
 
 stepPlan :: MonadGenError m => SolverPlan fn -> GenT m (Env, SolverPlan fn)
 stepPlan plan@(SolverPlan [] _) = pure (mempty, plan)
-stepPlan plan@(SolverPlan (SolverStage x ps spec : pl) gr) = explain [show $ pretty plan] $ do
-  spec' <- runGE $ explain [show $ "Computing specs for:" /> vsep' (map pretty ps)] $ do
+stepPlan plan@(SolverPlan (SolverStage x ps spec : pl) gr) = explain1 (show $ pretty plan) $ do
+  spec' <- runGE $ explain1 (show $ "Computing specs for:" /> vsep' (map pretty ps)) $ do
     specs <- mapM (computeSpec x) ps
     pure $ fold specs
   val <- genFromSpecT (spec <> spec')
@@ -1242,18 +1260,18 @@ substStage env (SolverStage y ps spec) = normalizeSolverStage $ SolverStage y (s
 -- all the free variables in `flattenPred p`.
 genFromPreds :: (MonadGenError m, BaseUniverse fn) => Pred fn -> GenT m Env
 -- TODO: remove this once optimisePred does a proper fixpoint computation
-genFromPreds (optimisePred . optimisePred -> preds) = explain [show $ "genFromPreds: " /> pretty preds] $ do
+genFromPreds (optimisePred . optimisePred -> preds) = explain1 (show $ "genFromPreds: " /> pretty preds) $ do
   -- NOTE: this is just lazy enough that the work of flattening, computing dependencies,
   -- and linearizing is memoized in properties that use `genFromPreds`.
   plan <- runGE $ prepareLinearization preds
-  explain [show $ pretty plan] $
+  explain1 (show $ pretty plan) $
     go mempty plan
   where
     go :: MonadGenError m => Env -> SolverPlan fn -> GenT m Env
     go env plan | isEmptyPlan plan = pure env
     go env plan = do
-      (env', plan') <- explain [show env] $ stepPlan plan
-      explain [show $ pretty plan'] $ go (env <> env') plan'
+      (env', plan') <- explain1 (show env) $ stepPlan plan
+      explain1 (show $ pretty plan') $ go (env <> env') plan'
 
 -- TODO: here we can compute both the explicit hints (i.e. constraints that
 -- define the order of two variables) and any whole-program smarts.
@@ -1289,14 +1307,14 @@ linearize ::
 linearize preds graph = do
   sorted <- case topsort graph of
     Left cycle ->
-      fatalError $
-        [ show $
+      fatalError1
+        ( show $
             "linearize: Dependency cycle in graph:"
               /> vsep'
                 [ "cycle:" /> pretty cycle
                 , "graph:" /> pretty graph
                 ]
-        ]
+        )
     Right sorted -> pure sorted
   go sorted [(freeVarSet ps, ps) | ps <- filter isRelevantPred preds]
   where
@@ -1311,16 +1329,17 @@ linearize preds graph = do
           res <- checkPreds mempty (map snd ps)
           if res
             then pure []
-            else genError ["Linearize const False"]
+            else genError1 ("Linearize const False")
       | otherwise =
           fatalError $
-            [ "Dependency error in `linearize`: "
-            , show $ indent 2 $ "graph: " /> pretty graph
-            , show $
-                indent 2 $
-                  "the following left-over constraints are not defining constraints for a unique variable:"
-                    /> vsep' (map (pretty . snd) ps)
-            ]
+            NE.fromList
+              [ "Dependency error in `linearize`: "
+              , show $ indent 2 $ "graph: " /> pretty graph
+              , show $
+                  indent 2 $
+                    "the following left-over constraints are not defining constraints for a unique variable:"
+                      /> vsep' (map (pretty . snd) ps)
+              ]
     go (n@(Name x) : ns) ps = do
       let (nps, ops) = partition (isLastVariable n . fst) ps
       (normalizeSolverStage (SolverStage x (map snd nps) mempty) :) <$> go ns ops
@@ -1339,12 +1358,12 @@ normalizeSolverStage (SolverStage x ps spec) = SolverStage x ps'' (spec <> spec'
 
 fromGESpec :: HasCallStack => GE (Specification fn a) -> Specification fn a
 fromGESpec ge = case ge of
-  Result es s -> explainSpec (concatMap (++ [""]) es) s
+  Result es s -> explainSpec (foldr1 (<>) es) s
   _ -> fromGE ErrorSpec ge
 
-explainSpec :: [String] -> Specification fn a -> Specification fn a
-explainSpec es (ErrorSpec es') = ErrorSpec (es ++ es')
-explainSpec es (MemberSpec []) = ErrorSpec (es ++ ["MemberSpec []"])
+explainSpec :: NE.NonEmpty String -> Specification fn a -> Specification fn a
+explainSpec es (ErrorSpec es') = ErrorSpec (es <> es')
+explainSpec es (MemberSpec []) = ErrorSpec (es <> (pure "MemberSpec []"))
 explainSpec _ s = s
 
 regularize :: HasVariables fn t => Var a -> t -> Var a
@@ -1389,11 +1408,13 @@ simplifySpec spec = case regularizeNames spec of
     let optP = optimisePred p
      in fromGESpec
           $ explain
-            [ show $ "Simplifying: " /> pretty spec
-            , show $ "optimisePred =>" /> pretty optP
-            ]
+            ( NE.fromList
+                [ show $ "Simplifying: " /> pretty spec
+                , show $ "optimisePred =>" /> pretty optP
+                ]
+            )
           $ computeSpecSimplified x optP
-  MemberSpec [] -> ErrorSpec ["MemberSpec []"]
+  MemberSpec [] -> ErrorSpec (pure "MemberSpec []")
   MemberSpec xs -> MemberSpec (nub xs)
   ErrorSpec es -> ErrorSpec es
   TypeSpec ts cant -> TypeSpec ts (nub cant)
@@ -1418,8 +1439,8 @@ computeSpecSimplified x p = localGESpec $ case p of
   Let t b -> pure $ SuspendedSpec x (Let t b)
   Exists k b -> pure $ SuspendedSpec x (Exists k b)
   Assert _ (Lit True) -> pure mempty
-  Assert _ (Lit False) -> genError [show p]
-  Assert _ t -> explain [show p] $ propagateSpec (equalSpec True) <$> toCtx x t
+  Assert _ (Lit False) -> genError1 (show p)
+  Assert _ t -> explain1 (show p) $ propagateSpec (equalSpec True) <$> toCtx x t
   ForAll (Lit s) b -> fold <$> mapM (\val -> computeSpec x $ unBind val b) (forAllToList s)
   ForAll t b -> do
     bSpec <- computeSpecBinderSimplified b
@@ -1434,11 +1455,12 @@ computeSpecSimplified x p = localGESpec $ case p of
   Reifies (Lit a) (Lit val) f
     | f val == a -> pure TrueSpec
     | otherwise ->
-        pure $ ErrorSpec ["Value does not reify to literal: " ++ show val ++ " -/> " ++ show a]
+        pure $
+          ErrorSpec (NE.fromList ["Value does not reify to literal: " ++ show val ++ " -/> " ++ show a])
   Reifies t' (Lit val) f ->
     propagateSpec (equalSpec (f val)) <$> toCtx x t'
   Reifies Lit {} _ _ ->
-    fatalError ["Dependency error in computeSpec: Reifies", "  " ++ show p]
+    fatalError $ NE.fromList ["Dependency error in computeSpec: Reifies", "  " ++ show p]
   Explain es p -> do
     -- In case things crash in here we want the explanation
     s <- explain es $ computeSpecSimplified x p
@@ -1449,11 +1471,13 @@ computeSpecSimplified x p = localGESpec $ case p of
       _ -> pure $ explainSpec es s
   -- Impossible cases that should be ruled out by the dependency analysis and linearizer
   DependsOn {} ->
-    fatalError
-      ["The impossible happened in computeSpec: DependsOn", "  " ++ show x, show $ indent 2 (pretty p)]
+    fatalError $
+      NE.fromList
+        ["The impossible happened in computeSpec: DependsOn", "  " ++ show x, show $ indent 2 (pretty p)]
   Reifies {} ->
-    fatalError
-      ["The impossible happened in computeSpec: Reifies", "  " ++ show x, show $ indent 2 (pretty p)]
+    fatalError $
+      NE.fromList
+        ["The impossible happened in computeSpec: Reifies", "  " ++ show x, show $ indent 2 (pretty p)]
   where
     -- We want `genError` to turn into `ErrorSpec` and we want `FatalError` to turn into `FatalError`
     localGESpec ge@FatalError {} = ge
@@ -1558,14 +1582,14 @@ mapSpec _ (ErrorSpec err) = ErrorSpec err
 mapSpec f (MemberSpec as) = MemberSpec $ map (sem f) as
 mapSpec f (SuspendedSpec x p) =
   constrained $ \x' ->
-    Exists (\_ -> fatalError ["mapSpec"]) (x :-> fold [assert $ x' ==. app f (V x), p])
+    Exists (\_ -> fatalError1 "mapSpec") (x :-> fold [assert $ x' ==. app f (V x), p])
 mapSpec f (TypeSpec ts cant) = mapTypeSpec f ts <> notMemberSpec (map (sem f) cant)
 
 -- | If the `Specification fn Bool` doesn't constrain the boolean you will get a `TrueSpec` out.
 caseBoolSpec ::
   HasSpec fn a => Specification fn Bool -> (Bool -> Specification fn a) -> Specification fn a
 caseBoolSpec spec cont = case possibleValues spec of
-  [] -> ErrorSpec ["No possible values in caseBoolSpec"]
+  [] -> ErrorSpec (NE.fromList ["No possible values in caseBoolSpec"])
   [b] -> cont b
   _ -> mempty
   where
@@ -1575,6 +1599,11 @@ isErrorLike :: Specification fn a -> Bool
 isErrorLike ErrorSpec {} = True
 isErrorLike (MemberSpec []) = True
 isErrorLike _ = False
+
+errorLikeMessage :: Specification fn a -> NE.NonEmpty String
+errorLikeMessage (ErrorSpec es) = es
+errorLikeMessage (MemberSpec []) = pure ("MemberSpec []")
+errorLikeMessage _ = pure ("Bad call to errorLikeMessage, not guarded by isErrorLike")
 
 ------------------------------------------------------------------------
 -- Dependency Graphs
@@ -2669,7 +2698,8 @@ combineFoldSpec (FoldSpec (f :: fn as b) s) (FoldSpec (f' :: fn' as' b') s')
   , f == f' =
       pure $ FoldSpec f (s <> s')
   | otherwise =
-      genError ["Can't combine fold specs on different functions", "  " ++ show f, "  " ++ show f']
+      genError
+        (NE.fromList ["Can't combine fold specs on different functions", "  " ++ show f, "  " ++ show f'])
 
 conformsToFoldSpec :: forall fn a. [a] -> FoldSpec fn a -> Bool
 conformsToFoldSpec _ NoFold = True
@@ -2794,7 +2824,7 @@ narrowByFuelAndSize fuel size specs =
       | Just 0 <- knownUpperBound elemS
       , Just 0 <- knownLowerBound elemS
       , not $ 0 `conformsToSpec` foldS =
-          Just (ErrorSpec ["only 0 left"], foldS)
+          Just (ErrorSpec (NE.fromList ["only 0 left"]), foldS)
       -- Make sure we try to generate the smallest possible list
       -- that gives you the right result - don't put a bunch of zeroes in
       -- a _small_ (size 0) list.
@@ -2872,7 +2902,7 @@ narrowFoldSpecs specs = maybe specs narrowFoldSpecs (go specs)
     go (elemS, foldS) = case (elemS, foldS) of
       -- Empty foldSpec
       (_, ErrorSpec {}) -> Nothing
-      _ | isEmptyNumSpec foldS -> Just (elemS, ErrorSpec ["Empty foldSpec:", show foldS])
+      _ | isEmptyNumSpec foldS -> Just (elemS, ErrorSpec (NE.fromList ["Empty foldSpec:", show foldS]))
       -- Empty elemSpec
       (ErrorSpec {}, MemberSpec [0]) -> Nothing
       (ErrorSpec {}, _)
@@ -2880,11 +2910,12 @@ narrowFoldSpecs specs = maybe specs narrowFoldSpecs (go specs)
         | otherwise ->
             Just
               ( elemS
-              , ErrorSpec
-                  [ "Empty elemSpec and non-zero foldSpec"
-                  , show $ indent 2 $ "elemSpec =" /> pretty elemS
-                  , show $ indent 2 $ "foldSpec =" /> pretty foldS
-                  ]
+              , ErrorSpec $
+                  NE.fromList
+                    [ "Empty elemSpec and non-zero foldSpec"
+                    , show $ indent 2 $ "elemSpec =" /> pretty elemS
+                    , show $ indent 2 $ "foldSpec =" /> pretty foldS
+                    ]
               )
       -- We can reduce the size of the `elemS` interval when it is
       -- `[l, u]` or `[l, ∞)` given that `0 <= l` and we have
@@ -2917,7 +2948,9 @@ narrowFoldSpecs specs = maybe specs narrowFoldSpecs (go specs)
         , hi < loS
         , lo > hiS - lo ->
             Just
-              (ErrorSpec ["Can't solve diophantine equation"], ErrorSpec ["Can't solve diophantine equation"])
+              ( ErrorSpec $ NE.fromList ["Can't solve diophantine equation"]
+              , ErrorSpec $ NE.fromList ["Can't solve diophantine equation"]
+              )
       _ -> Nothing
 
 genNumList ::
@@ -2948,11 +2981,13 @@ genNumList elemSIn foldSIn = do
   normFoldS <- normalize foldSIn
   let narrowedSpecs = narrowFoldSpecs (normElemS, normFoldS)
   explain
-    [ "Can't generate list of ints with fold constraint"
-    , "  elemSpec = " ++ show elemSIn
-    , "  normElemSpec = " ++ show normElemS
-    , "  foldSpec = " ++ show foldSIn
-    ]
+    ( NE.fromList
+        [ "Can't generate list of ints with fold constraint"
+        , "  elemSpec = " ++ show elemSIn
+        , "  normElemSpec = " ++ show normElemS
+        , "  foldSpec = " ++ show foldSIn
+        ]
+    )
     $ gen narrowedSpecs 50 [] >>= pureGen . shuffle
   where
     normalize spec@SuspendedSpec {} = do
@@ -2984,12 +3019,13 @@ genNumList elemSIn foldSIn = do
     gen (elemS, foldS) fuel lst
       | fuel <= 0
       , not $ 0 `conformsToSpec` foldS =
-          genError
-            [ "Ran out of fuel in genNumList"
-            , "  elemSpec =" ++ show elemSIn
-            , "  foldSpec = " ++ show foldSIn
-            , "  lst = " ++ show (reverse lst)
-            ]
+          genError $
+            NE.fromList
+              [ "Ran out of fuel in genNumList"
+              , "  elemSpec =" ++ show elemSIn
+              , "  foldSpec = " ++ show foldSIn
+              , "  lst = " ++ show (reverse lst)
+              ]
       | ErrorSpec err <- foldS = genError err
       | ErrorSpec {} <- elemS = pure lst -- At this point we know that foldS admits 0 (also this should be redundant)
       | 0 `conformsToSpec` foldS = oneofT [pure lst, nonemptyList @GE] -- TODO: distribution
@@ -3000,12 +3036,14 @@ genNumList elemSIn foldSIn = do
         nonemptyList = do
           (x, specs') <-
             explain
-              [ "Generating an element:"
-              , "  elemS = " ++ show elemS
-              , "  foldS = " ++ show foldS
-              , "  fuel  = " ++ show fuel
-              , "  lst   = " ++ show (reverse lst)
-              ]
+              ( NE.fromList
+                  [ "Generating an element:"
+                  , "  elemS = " ++ show elemS
+                  , "  foldS = " ++ show foldS
+                  , "  fuel  = " ++ show fuel
+                  , "  lst   = " ++ show (reverse lst)
+                  ]
+              )
               $ do
                 sz <- sizeT
                 x <- genFromSpecT elemS
@@ -3095,11 +3133,13 @@ genFromFold (nub -> must) (simplifySpec -> size) elemS fn foldS = do
         `suchThatT` (\xs -> (sizeOf must + sizeOf xs) `conformsToSpec` size)
   results <-
     explain
-      [ "genInverse"
-      , "  fn = " ++ show fn
-      , "  results0 = " ++ show results0
-      , show $ "  elemS =" <+> pretty elemS
-      ]
+      ( NE.fromList
+          [ "genInverse"
+          , "  fn = " ++ show fn
+          , "  results0 = " ++ show results0
+          , show $ "  elemS =" <+> pretty elemS
+          ]
+      )
       $ mapM (genInverse fn elemS) results0
   pureGen $ shuffle $ must ++ results
 
@@ -3138,7 +3178,7 @@ guardSumSpec ::
   SumSpec fn a b ->
   Specification fn (Sum a b)
 guardSumSpec s@(SumSpec _ sa sb)
-  | isErrorLike sa, isErrorLike sb = ErrorSpec ["empty SumSpec"]
+  | isErrorLike sa, isErrorLike sb = ErrorSpec $ NE.fromList ["empty SumSpec"]
   | otherwise = typeSpec s
 
 data SumSpec fn a b = SumSpec (Maybe (Int, Int)) (Specification fn a) (Specification fn b)
@@ -3186,10 +3226,10 @@ instance (HasSpec fn a, HasSpec fn b, KnownNat (CountCases b)) => HasSpec fn (Su
   conformsTo (SumRight b) (SumSpec _ _ sb) = conformsToSpec b sb
 
   genFromTypeSpec (SumSpec h sa sb)
-    | emptyA, emptyB = genError ["genFromTypeSpec @SumSpec: empty"]
+    | emptyA, emptyB = genError1 ("genFromTypeSpec @SumSpec: empty")
     | emptyA = SumRight <$> genFromSpecT sb
     | emptyB = SumLeft <$> genFromSpecT sa
-    | fA == 0, fB == 0 = genError ["All frequencies 0"]
+    | fA == 0, fB == 0 = genError1 ("All frequencies 0")
     | otherwise =
         frequencyT
           [ (fA, SumLeft <$> genFromSpecT sa)
@@ -3238,8 +3278,8 @@ guardSetSpec :: (HasSpec fn a, Ord a) => SetSpec fn a -> Specification fn (Set a
 guardSetSpec (SetSpec must elem ((<> geqSpec 0) -> size))
   | Just u <- knownUpperBound size
   , u < 0 =
-      ErrorSpec ["Empty set spec"] -- TODO: better error
-  | isErrorLike size = ErrorSpec ["Empty set spec"]
+      ErrorSpec (pure ("guardSetSpec: negative size " ++ show u))
+  | isErrorLike size = ErrorSpec (pure "guardSetSpec: error in size")
   | otherwise = typeSpec $ SetSpec must elem size
 
 instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
@@ -3260,22 +3300,25 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
       ]
 
   genFromTypeSpec (SetSpec must e _)
-    | any (not . (`conformsToSpec` e)) must = genError ["Failed to generate set: inconsistent spec"] -- TODO: improve error message
+    | any (not . (`conformsToSpec` e)) must = genError1 "Failed to generate set: inconsistent spec" -- TODO: improve error message
   genFromTypeSpec (SetSpec must elemS szSpec) = do
     let szSpec' = (szSpec <> geqSpec @fn (sizeOf must) <> maxSpec (cardinality elemS))
     n <-
-      explain ["Choose a size for the Sets to be generated"] $
+      explain1 ("Choose a size for the Sets to be generated") $
         genFromSpecT szSpec'
-    explain ["Chose size n = " ++ show n, "szSpec' = " ++ show szSpec'] $ go (n - sizeOf must) must
+    explain (NE.fromList ["Chose size n = " ++ show n, "szSpec' = " ++ show szSpec']) $
+      go (n - sizeOf must) must
     where
       go 0 s = pure s
       go n s = do
         e <-
           explain
-            [ "Generate set member:"
-            , "  n = " ++ show n
-            , "  s = " ++ show s
-            ]
+            ( NE.fromList
+                [ "Generate set member:"
+                , "  n = " ++ show n
+                , "  s = " ++ show s
+                ]
+            )
             $ withMode Strict
             $ genFromSpecT elemS `suchThatT` (`Set.notMember` s)
         go (n - 1) (Set.insert e s)
@@ -3293,7 +3336,7 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
   toPreds s (SetSpec m es size) =
     fold $
       -- Don't include this if the must set is empty
-      [Assert [show m ++ " is a subset of the set."] $ subset_ (Lit m) s | not $ Set.null m]
+      [Assert (pure (show m ++ " is a subset of the set.")) $ subset_ (Lit m) s | not $ Set.null m]
         ++ [ forAll s (\e -> satisfies e es)
            , satisfies (size_ s) size
            ]
@@ -3325,13 +3368,13 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
                 TypeSpec (SetSpec must es size) cant
                   -- TODO: improve error message
                   | not $ 1 `conformsToSpec` size ->
-                      ErrorSpec ["propagateSpecFun Singleton with spec that doesn't accept 1 size set"]
+                      ErrorSpec (pure "propagateSpecFun Singleton with spec that doesn't accept 1 size set")
                   | [a] <- Set.toList must
                   , a `conformsToSpec` es
                   , Set.singleton a `notElem` cant ->
                       equalSpec a
                   | null must -> es <> notMemberSpec (Set.toList $ fold $ singletons cant)
-                  | otherwise -> ErrorSpec ["propagateSpecFun Singleton with `must` of size > 1"]
+                  | otherwise -> ErrorSpec (pure "propagateSpecFun Singleton with `must` of size > 1")
                 MemberSpec es -> MemberSpec (Set.toList $ fold $ singletons es)
     Union
       | Value s :! NilCtx HOLE <- ctx ->
@@ -3342,12 +3385,13 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
             _ | null s -> spec
             TypeSpec (SetSpec must es size) cant
               | not $ all (`conformsToSpec` es) s ->
-                  ErrorSpec
-                    [ "Elements in union argument does not conform to elem spec"
-                    , "  spec: " ++ show es
-                    , "  elems: " ++ show (filter (not . (`conformsToSpec` es)) (Set.toList s))
-                    ]
-              | not $ null cant -> ErrorSpec ["propagateSpecFun Union TypeSpec, not (null cant)"]
+                  ErrorSpec $
+                    NE.fromList
+                      [ "Elements in union argument does not conform to elem spec"
+                      , "  spec: " ++ show es
+                      , "  elems: " ++ show (filter (not . (`conformsToSpec` es)) (Set.toList s))
+                      ]
+              | not $ null cant -> ErrorSpec (pure "propagateSpecFun Union TypeSpec, not (null cant)")
               | TrueSpec <- size -> typeSpec $ SetSpec (Set.difference must s) es TrueSpec
               | TypeSpec (NumSpecInterval mlb Nothing) [] <- size
               , maybe True (<= sizeOf s) mlb ->
@@ -3365,9 +3409,10 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
             MemberSpec [e]
               | s `Set.isSubsetOf` e -> typeSpec (SetSpec (Set.difference e s) (MemberSpec $ Set.toList e) mempty)
               -- TODO: improve this error message
-              | otherwise -> ErrorSpec ["propagateSpecFun Union MemberSpec singleton with bad literal"]
+              | otherwise ->
+                  ErrorSpec (pure "propagateSpecFun Union MemberSpec singleton with bad literal")
             -- This risks blowing up too much, don't build sets of sets
-            MemberSpec {} -> ErrorSpec ["propagateSpecFun Union MemberSpec"]
+            MemberSpec {} -> ErrorSpec (pure "propagateSpecFun Union MemberSpec")
     Subset
       | HOLE :? Value (s :: Set a) :> Nil <- ctx
       , Evidence <- prerequisites @fn @(Set a) -> caseBoolSpec spec $ \case
@@ -3548,15 +3593,15 @@ instance HasSpec fn a => HasSpec fn [a] where
               True
           | otherwise = False
     unless (all (`conformsToSpec` elemS'') must'') $
-      genError ["combineSpec ListSpec failed with <REASON>"]
+      genError1 "combineSpec ListSpec failed with <REASON>"
     when badSizeSpec $
-      genError ["error-like size spec in combineSpec ListSpec"]
+      genError1 "error-like size spec in combineSpec ListSpec"
     typeSpec . ListSpec (unionWithMaybe min msz msz') must'' size'' elemS''
       <$> combineFoldSpec foldS foldS'
 
   genFromTypeSpec (ListSpec _ must _ elemS _)
     | any (not . (`conformsToSpec` elemS)) must =
-        genError ["genTypeSpecSpec @ListSpec: must do not conform to elemS"]
+        genError1 "genTypeSpecSpec @ListSpec: must do not conform to elemS"
   genFromTypeSpec (ListSpec msz must TrueSpec elemS NoFold) = do
     lst <- case msz of
       Nothing -> listOfT $ genFromSpecT elemS
@@ -3702,7 +3747,8 @@ combineNumSpec ::
   (HasSpec fn n, Ord n, TypeSpec fn n ~ NumSpec n) => NumSpec n -> NumSpec n -> Specification fn n
 combineNumSpec s s' = case s <> s' of
   s''@(NumSpecInterval (Just a) (Just b))
-    | a > b -> ErrorSpec [show s'']
+    | a > b ->
+        ErrorSpec (pure ("combineNumSpec has low bound greater than hi bound: " ++ show s''))
     | a == b -> equalSpec a
   s'' -> typeSpec s''
 
@@ -3730,7 +3776,7 @@ constrainInterval ml mu r =
       | u > 0 -> pure (negate r', min u r')
       | otherwise -> pure (u - r' - r', u)
     (Just l, Just u)
-      | l > u -> genError ["bad interval: " ++ show l ++ " " ++ show u]
+      | l > u -> genError1 ("bad interval: " ++ show l ++ " " ++ show u)
       | u < 0 -> pure (safeSub l (safeSub l u r') r', u)
       | l >= 0 -> pure (l, safeAdd u (safeAdd u l r') r')
       -- TODO: this is a bit suspect if the bounds are lopsided
@@ -4086,13 +4132,13 @@ instance {-# OVERLAPPABLE #-} (HasSpec fn a, MaybeBounded a, Num a, TypeSpec fn 
   ltSpec l
     | Just b <- lowerBound
     , l == b =
-        ErrorSpec ["ltSpec @" ++ show (typeOf l) ++ " " ++ show l]
+        ErrorSpec (pure ("ltSpec @" ++ show (typeOf l) ++ " " ++ show l))
     | otherwise = typeSpec $ NumSpecInterval Nothing (Just (l - 1))
   geqSpec l = typeSpec $ NumSpecInterval (Just l) Nothing
   gtSpec l
     | Just b <- upperBound
     , l == b =
-        ErrorSpec ["gtSpec @" ++ show (typeOf l) ++ " " ++ show l]
+        ErrorSpec (pure ("gtSpec @" ++ show (typeOf l) ++ " " ++ show l))
     | otherwise = typeSpec $ NumSpecInterval (Just (l + 1)) Nothing
 
 deriving instance Eq (OrdFn fn as b)
@@ -4243,19 +4289,21 @@ instance {-# OVERLAPPABLE #-} (HasSpec fn a, Ord a, Num a, TypeSpec fn a ~ NumSp
     | Just u <- mu
     , a > 0
     , Nothing <- safeSubtract @fn a u =
-        ErrorSpec
-          [ "Underflow in subtractSpec (" ++ show (typeOf a) ++ "):"
-          , "  a = " ++ show a
-          , "  ts = " ++ show ts
-          ]
+        ErrorSpec $
+          NE.fromList
+            [ "Underflow in subtractSpec (" ++ show (typeOf a) ++ "):"
+            , "  a = " ++ show a
+            , "  ts = " ++ show ts
+            ]
     | Just l <- ml
     , a < 0
     , Nothing <- safeSubtract @fn a l =
-        ErrorSpec
-          [ "Overflow in subtractSpec (" ++ show (typeOf a) ++ "):"
-          , "  a = " ++ show a
-          , "  ts = " ++ show ts
-          ]
+        ErrorSpec $
+          NE.fromList
+            [ "Overflow in subtractSpec (" ++ show (typeOf a) ++ "):"
+            , "  a = " ++ show a
+            , "  ts = " ++ show ts
+            ]
     | otherwise = typeSpec $ NumSpecInterval (safeSub a <$> ml) (safeSub a <$> mu)
     where
       safeSub :: a -> a -> a
@@ -4524,16 +4572,16 @@ constrained body =
 
 assertExplain ::
   (BaseUniverse fn, IsPred p fn) =>
-  [String] ->
+  NE.NonEmpty String ->
   p ->
   Pred fn
-assertExplain = toPredExplain
+assertExplain nes p = toPredExplain (NE.toList nes) p
 
 assert ::
   (BaseUniverse fn, IsPred p fn) =>
   p ->
   Pred fn
-assert = toPred
+assert p = toPred p
 
 forAll ::
   ( Forallable t a
@@ -4572,7 +4620,7 @@ unsafeExists ::
   (HasSpec fn a, IsPred p fn) =>
   (Term fn a -> p) ->
   Pred fn
-unsafeExists = exists (\_ -> fatalError ["unsafeExists"])
+unsafeExists = exists (\_ -> fatalError1 "unsafeExists")
 
 letBind ::
   ( HasSpec fn a
@@ -4581,7 +4629,7 @@ letBind ::
   Term fn a ->
   (Term fn a -> p) ->
   Pred fn
-letBind tm@V {} body = toPred $ body tm
+letBind tm@V {} body = toPredExplain [] $ body tm
 letBind tm body = Let tm (bind body)
 
 reify ::
@@ -4596,14 +4644,14 @@ reify ::
 reify t f body =
   exists (\eval -> pure $ f (eval t)) $ \x ->
     [ reifies x t f
-    , toPred $ body x
+    , toPredExplain (pure ("reifies " ++ show x)) $ body x
     ]
 
-explanation :: [String] -> Pred fn -> Pred fn
+explanation :: NE.NonEmpty String -> Pred fn -> Pred fn
 explanation _ p@DependsOn {} = p
 explanation _ TruePred = TruePred
-explanation es (FalsePred es') = FalsePred (es ++ es')
-explanation es (Assert es' t) = Assert (es ++ es') t
+explanation es (FalsePred es') = FalsePred (es <> es')
+explanation es (Assert es' t) = Assert (es <> es') t
 explanation es p = Explain es p
 
 -- | Add QuickCheck monitoring (e.g. 'Test.QuickCheck.collect' or 'Test.QuickCheck.counterexample')
@@ -4632,11 +4680,11 @@ ifElse :: (BaseUniverse fn, IsPred p fn, IsPred q fn) => Term fn Bool -> p -> q 
 ifElse b p q = whenTrue b p <> whenTrue (not_ b) q
 
 whenTrue :: forall fn p. (BaseUniverse fn, IsPred p fn) => Term fn Bool -> p -> Pred fn
-whenTrue (Lit True) (toPred -> p) = p
+whenTrue (Lit True) (toPred @fn -> p) = p
 whenTrue (Lit False) _ = TruePred
-whenTrue b (toPred @fn -> FalsePred {}) = assert (not_ b)
-whenTrue _ (toPred @fn -> TruePred) = TruePred
-whenTrue b (toPred -> p) = When b p
+whenTrue b (toPred @fn -> FalsePred {}) = assert @fn (not_ b)
+whenTrue _ (toPred @fn -> TruePred) = TruePred @fn
+whenTrue b (toPred @fn -> p) = When @fn b p
 
 genHint :: forall fn t. HasGenHint fn t => Hint t -> Term fn t -> Pred fn
 genHint = GenHint
@@ -4690,7 +4738,7 @@ mkCase tm cs
   | Weighted _ (x :-> p) :> Nil <- cs = Subst x tm p
   -- TODO: all equal maybe?
   | getAll $ foldMapList isTrueBinder cs = TruePred
-  | getAll $ foldMapList (isFalseBinder . thing) cs = FalsePred ["mkCase on all False"]
+  | getAll $ foldMapList (isFalseBinder . thing) cs = falsePred1 "mkCase on all False"
   | Lit a <- tm = runCaseOn a (mapList thing cs) (\x val p -> substPred (singletonEnv x val) p)
   | otherwise = Case tm cs
   where
@@ -4704,30 +4752,40 @@ mkCase tm cs
 
 type IsPred p fn = (PredLike p, UnivConstr p fn)
 
-class PredLike p where
+class Show p => PredLike p where
   type UnivConstr p (fn :: [Type] -> Type -> Type) :: Constraint
   toPredExplain :: (BaseUniverse fn, UnivConstr p fn) => [String] -> p -> Pred fn
 
-toPred :: (BaseUniverse fn, IsPred p fn) => p -> Pred fn
+toPred :: forall fn p. (BaseUniverse fn, PredLike p, UnivConstr p fn) => p -> Pred fn
 toPred = toPredExplain []
 
 instance PredLike (Pred fn) where
   type UnivConstr (Pred fn) fn' = fn ~ fn'
-  toPredExplain _ = id
+  toPredExplain [] (Assert nes' x) = Assert nes' x
+  toPredExplain nes (Assert nes' x) = Assert (NE.fromList nes <> nes') x
+  toPredExplain [] (FalsePred nes') = FalsePred nes'
+  toPredExplain nes (FalsePred nes') = FalsePred (NE.fromList nes <> nes')
+  toPredExplain [] (Explain nes' x) = toPredExplain (NE.toList nes') x
+  toPredExplain nes (Explain nes' x) = toPredExplain (nes <> NE.toList nes') x
+  toPredExplain [] p = p
+  toPredExplain nes p = Explain (NE.fromList nes) p
 
-instance PredLike p => PredLike [p] where
+instance (UnivConstr p fn, Show p, PredLike p) => PredLike [p] where
   type UnivConstr [p] fn = UnivConstr p fn
-  toPredExplain _ = fold . map toPred
+  toPredExplain [] xs = fold (map toPred xs)
+  toPredExplain es xs = Explain (NE.fromList es) $ fold (map toPred xs)
 
 instance PredLike Bool where
   type UnivConstr Bool fn = ()
   toPredExplain _ True = TruePred
-  toPredExplain es False = FalsePred es
+  toPredExplain [] False = FalsePred (pure "toPred")
+  toPredExplain es False = FalsePred (NE.fromList es)
 
 instance BaseUniverse fn => PredLike (Term fn Bool) where
   type UnivConstr (Term fn Bool) fn' = fn ~ fn'
   toPredExplain es (Lit b) = toPredExplain es b
-  toPredExplain es tm = Assert es tm
+  toPredExplain [] tm = Assert (pure "toPred") tm
+  toPredExplain es tm = Assert (NE.fromList es) tm
 
 ------------------------------------------------------------------------
 -- Pretty printing
@@ -4778,8 +4836,7 @@ instance Pretty (Pred fn) where
     Exists _ (x :-> p) -> align $ sep ["exists" <+> viaShow x <+> "in", pretty p]
     Let t (x :-> p) -> align $ sep ["let" <+> viaShow x <+> "=" /> pretty t <+> "in", pretty p]
     Block ps -> braces $ vsep' $ map pretty ps
-    Assert [] t -> "assert $" <+> pretty t
-    Assert es t -> "assert" <+> viaShow es <+> "$" <+> pretty t
+    Assert es t -> "assert" <+> viaShow (NE.toList es) <+> "$" <+> pretty t
     Reifies t' t _ -> "reifies" <+> pretty (WithPrec 11 t') <+> pretty (WithPrec 11 t)
     DependsOn a b -> pretty a <+> "<-" /> pretty b
     ForAll t (x :-> p) -> "forall" <+> viaShow x <+> "in" <+> pretty t <+> "$" /> pretty p
@@ -4790,7 +4847,7 @@ instance Pretty (Pred fn) where
     TruePred -> "True"
     FalsePred {} -> "False"
     Monitor {} -> "monitor"
-    Explain es p -> "explanation" <+> viaShow es <+> "$" /> pretty p
+    Explain es p -> "explain" <+> viaShow (NE.toList es) <+> "$" /> pretty p
 
 -- TODO: make nicer
 instance Pretty (f a) => Pretty (Weighted f a) where
@@ -4808,7 +4865,7 @@ instance Show (Pred fn) where
 
 instance HasSpec fn a => Pretty (WithPrec (Specification fn a)) where
   pretty (WithPrec d s) = case s of
-    ErrorSpec es -> "ErrorSpec" /> vsep' (map fromString es)
+    ErrorSpec es -> "ErrorSpec" /> vsep' (map fromString (NE.toList es))
     TrueSpec -> "TrueSpec"
     MemberSpec xs -> parensIf (d > 10) $ "MemberSpec" <+> viaShow xs
     SuspendedSpec x p -> parensIf (d > 10) $ "constrained $ \\" <+> viaShow x <+> "->" /> pretty p
@@ -4889,9 +4946,9 @@ rangeSize a b = NumSpecInterval (Just a) (Just b)
 maxSpec :: BaseUniverse fn => Specification fn Integer -> Specification fn Integer
 maxSpec TrueSpec = TrueSpec
 maxSpec s@(SuspendedSpec _ _) =
-  constrained $ \x -> unsafeExists $ \y -> [y `satisfies` s, Assert ["maxSpec on SuspendedSpec"] (x <=. y)]
+  constrained $ \x -> unsafeExists $ \y -> [y `satisfies` s, Assert (pure "maxSpec on SuspendedSpec") (x <=. y)]
 maxSpec (ErrorSpec xs) = ErrorSpec xs
-maxSpec (MemberSpec []) = ErrorSpec ["empty MemberSec in maxSpec."]
+maxSpec (MemberSpec []) = ErrorSpec (pure "empty MemberSec in maxSpec.")
 maxSpec (MemberSpec xs) = leqSpec (maximum xs)
 maxSpec (TypeSpec (NumSpecInterval _ hi) bad) = TypeSpec (NumSpecInterval Nothing hi) bad
 
@@ -5001,7 +5058,7 @@ operateSpec ::
   Specification fn n ->
   Specification fn n
 operateSpec f ft x y = case (x, y) of
-  (ErrorSpec xs, ErrorSpec ys) -> ErrorSpec (xs ++ ys)
+  (ErrorSpec xs, ErrorSpec ys) -> ErrorSpec (xs <> ys)
   (ErrorSpec xs, _) -> ErrorSpec xs
   (_, ErrorSpec ys) -> ErrorSpec ys
   (TrueSpec, _) -> TrueSpec
@@ -5009,8 +5066,8 @@ operateSpec f ft x y = case (x, y) of
   (_, SuspendedSpec _ _) -> TrueSpec
   (SuspendedSpec _ _, _) -> TrueSpec
   (TypeSpec x bad1, TypeSpec y bad2) -> TypeSpec (ft x y) [f b1 b2 | b1 <- bad1, b2 <- bad2]
-  (MemberSpec [], _) -> ErrorSpec ["Null MemberSpec"]
-  (_, MemberSpec []) -> ErrorSpec ["Null MemberSpec"]
+  (MemberSpec [], _) -> ErrorSpec (pure "Null MemberSpec")
+  (_, MemberSpec []) -> ErrorSpec (pure "Null MemberSpec")
   (MemberSpec xs, MemberSpec ys) -> MemberSpec [f x y | x <- xs, y <- ys]
   -- This block is all (MemberSpec{}, TypeSpec{}) with MemberSpec on the left
   (MemberSpec xs, TypeSpec (NumSpecInterval (Just i) (Just j)) bad) ->
@@ -5179,17 +5236,22 @@ sizeOfSpec (ErrorSpec xs) = ErrorSpec xs
 sizeOfSpec (SuspendedSpec x p) =
   constrained $ \len ->
     Exists
-      (\_ -> fatalError ["sizeOfSpec: Exists"])
-      (x :-> (Assert [] (len ==. sizeOf_ (V x)) <> p))
+      (\_ -> fatalError1 "sizeOfSpec: Exists")
+      (x :-> (Assert (pure "sizeOfSpec") (len ==. sizeOf_ (V x)) <> p))
 sizeOfSpec (TypeSpec x _) = sizeOfTypeSpec @t @fn x
 
 -- | Turn a Size spec into an ErrorSpec if it has negative numbers.
 checkForNegativeSize :: Specification fn Integer -> Specification fn Integer
 checkForNegativeSize spec@(TypeSpec (NumSpecInterval x y) _) =
   case (x, y) of
-    (Just lo, _) | lo < 0 -> ErrorSpec ["Negative low bound in conversion to SizeSpec: " ++ show spec]
-    (_, Just hi) | hi < 0 -> ErrorSpec ["Negative high bound in conversion to SizeSpec: " ++ show spec]
-    (Just lo, Just hi) | lo > hi -> ErrorSpec ["lo(" ++ show lo ++ ") > hi(" ++ show hi ++ ") in conversion to SizeSpec"]
+    (Just lo, _)
+      | lo < 0 -> ErrorSpec (pure ("Negative low bound in conversion to SizeSpec: " ++ show spec))
+    (_, Just hi)
+      | hi < 0 ->
+          ErrorSpec (pure ("Negative high bound in conversion to SizeSpec: " ++ show spec))
+    (Just lo, Just hi)
+      | lo > hi ->
+          ErrorSpec (pure ("lo(" ++ show lo ++ ") > hi(" ++ show hi ++ ") in conversion to SizeSpec"))
     (_, _) -> spec
-checkForNegativeSize (MemberSpec xs) | any (< 0) xs = ErrorSpec ["Negative Size in MemberSpec " ++ show xs]
+checkForNegativeSize (MemberSpec xs) | any (< 0) xs = ErrorSpec (pure ("Negative Size in MemberSpec " ++ show xs))
 checkForNegativeSize spec = spec

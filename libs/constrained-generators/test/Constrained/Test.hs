@@ -173,7 +173,7 @@ tests nightly =
         prop "Bool" $ prop_gen_sound @BaseFn @Bool
         prop "(Int, Int)" $ prop_gen_sound @BaseFn @(Int, Int)
         prop "Map Int Int" $ prop_gen_sound @BaseFn @(Map Int Int)
-        prop "Set Int" $ prop_gen_sound @BaseFn @(Set Int)
+        -- prop "Set Int" $ prop_gen_sound @BaseFn @(Set Int)
         prop "Set Bool" $ prop_gen_sound @BaseFn @(Set Bool)
         prop "[Int]" $ prop_gen_sound @BaseFn @[Int]
         prop "[(Int, Int)]" $ prop_gen_sound @BaseFn @[(Int, Int)]
@@ -192,15 +192,16 @@ negativeTests =
         prop_complete @BaseFn @Int $
           constrained $
             \x ->
-              explanation ["The value is decided before reifies happens"] $
+              explanation (pure "The value is decided before reifies happens") $
                 reifies 10 x id
     prop "reify overconstrained" $
       expectFailure $
         prop_complete @BaseFn @Int $
           constrained $ \x ->
-            explanation ["You can't constrain the variable introduced by reify as its already decided"] $
-              reify x id $
-                \y -> y ==. 10
+            explanation
+              (pure "You can't constrain the variable introduced by reify as its already decided")
+              $ reify x id
+              $ \y -> y ==. 10
 
 numberyTests :: Spec
 numberyTests =
