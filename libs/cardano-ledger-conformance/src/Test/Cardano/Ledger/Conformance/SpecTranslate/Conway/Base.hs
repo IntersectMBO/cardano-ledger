@@ -50,8 +50,6 @@ import Cardano.Ledger.Conway.Rules (
   ConwayGovPredFailure,
   ConwayUtxoPredFailure,
   EnactSignal (..),
-  GovEnv (..),
-  GovSignal (..),
  )
 import Cardano.Ledger.Conway.Scripts (AlonzoScript, ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
@@ -670,35 +668,6 @@ instance
           SNothing -> pure (Agda.MkTxId 0, 0)
         pure (committee, agdaLastId)
 
-instance
-  ( SpecTranslate ctx (PParamsHKD Identity era)
-  , Inject ctx (EnactState era)
-  , Inject ctx (Proposals era)
-  , EraPParams era
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  ) =>
-  SpecTranslate ctx (GovEnv era)
-  where
-  type SpecRep (GovEnv era) = Agda.GovEnv
-
-  toSpecRep GovEnv {..} = do
-    props <- askCtx @(Proposals era)
-    enactState <- askCtx @(EnactState era)
-    let
-      protVer = gePParams ^. ppProtocolVersionL
-      -- TODO express this in agdaConstraints rather than doing it during
-      -- translation
-      enactStatePV =
-        enactState
-          & ensProtVerL .~ protVer
-          & ensPrevGovActionIdsL .~ toPrevGovActionIds (props ^. pRootsL)
-    Agda.MkGovEnv
-      <$> toSpecRep geTxId
-      <*> toSpecRep geEpoch
-      <*> toSpecRep gePParams
-      <*> toSpecRep gePPolicy
-      <*> toSpecRep enactStatePV
-
 instance SpecTranslate ctx (Voter era) where
   type SpecRep (Voter era) = Agda.Voter
 
@@ -841,24 +810,6 @@ instance
           TreasuryWithdrawals _ sh -> sh
           ParameterChange _ _ sh -> sh
           _ -> SNothing
-
-instance
-  ( EraPParams era
-  , SpecTranslate ctx (PParamsHKD StrictMaybe era)
-  , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
-  ) =>
-  SpecTranslate ctx (GovSignal era)
-  where
-  type SpecRep (GovSignal era) = [Agda.GovSignal]
-
-  toSpecRep GovSignal {gsVotingProcedures, gsProposalProcedures} = do
-    votingProcedures <- toSpecRep gsVotingProcedures
-    proposalProcedures <- toSpecRep gsProposalProcedures
-    pure $
-      mconcat
-        [ Agda.GovSignalVote <$> votingProcedures
-        , Agda.GovSignalProposal <$> proposalProcedures
-        ]
 
 prevGovActionId :: GovAction era -> StrictMaybe (GovActionId (EraCrypto era))
 prevGovActionId action =
