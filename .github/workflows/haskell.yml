@@ -346,13 +346,16 @@ jobs:
   branch-history:
     name: Check branch history
     runs-on: ubuntu-latest
-    if: ${{ github.base_ref != '' && github.head_ref != '' }}
+    if: ${{ github.base_ref != '' && github.ref != '' }}  # Only true for PRs
     steps:
     - uses: actions/checkout@v4
     - name: Ensure the branch doesn't contain any merges
       run: |
-        git fetch origin ${{ github.base_ref }} ${{ github.head_ref }}
-        if git log --merges --oneline --decorate origin/${{ github.base_ref }}..origin/${{ github.head_ref }} | grep .; then
+        PR_TARGET=${{ github.base_ref }}
+        PR_MERGE=${{ github.ref }}
+        PR_HEAD=${PR_MERGE%/merge}/head
+        git fetch origin -n --refmap= +$PR_TARGET:pr-target +$PR_HEAD:pr-head
+        if git log --merges --oneline --decorate pr-target..pr-head | grep .; then
           echo 'Branch must not contain merges'
           false
         fi
