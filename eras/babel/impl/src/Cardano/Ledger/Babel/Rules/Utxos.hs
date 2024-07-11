@@ -293,9 +293,7 @@ to what we already do with the UTxO.
 
 Note that I'm unsure if we actually need to do anything with `deletedFrxO`, and so
 the `txFrxODiffEvent` argument, and the event it uses, `TxFRxODiff`, might be redundant.
-I've included these elements to keep parity with the UTxO logic.
-
-Jump to ??? to continue... -}
+I've included these elements to keep parity with the UTxO logic. -}
 utxosTransition ::
   forall era.
   ( AlonzoEraTx era
