@@ -49,9 +49,9 @@ import Cardano.Ledger.Conway.Rules (
   spoAcceptedRatio,
  )
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Conway.TxCert (ConwayDelegCert, ConwayGovCert)
+import Cardano.Ledger.Conway.TxCert (ConwayGovCert)
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.TxIn (TxId)
 import Constrained
@@ -82,9 +82,6 @@ import Test.Cardano.Ledger.Constrained.Conway (
   EpochExecEnv,
   IsConwayUniv,
   ProposalsSplit,
-  dStateSpec,
-  delegCertSpec,
-  delegEnvSpec,
   epochEnvSpec,
   epochSignalSpec,
   epochStateSpec,
@@ -258,19 +255,6 @@ instance Inject (ConwayCertExecContext era) (VotingProcedures era) where
 
 instance Era era => ToExpr (ConwayCertExecContext era)
 
-disableRegCertsDelegCert ::
-  ( IsConwayUniv fn
-  , Crypto c
-  ) =>
-  Term fn (ConwayDelegCert c) ->
-  Pred fn
-disableRegCertsDelegCert delegCert =
-  (caseOn delegCert)
-    (branch $ \_ _ -> False)
-    (branch $ \_ _ -> True)
-    (branch $ \_ _ -> True)
-    (branch $ \_ _ _ -> True)
-
 data ConwayRatifyExecContext era = ConwayRatifyExecContext
   { crecTreasury :: Coin
   , crecGovActionMap :: [GovActionState era]
@@ -404,20 +388,6 @@ instance IsConwayUniv fn => ExecSpecRule fn "ENACT" Conway where
     first (error "ENACT failed")
       . computationResultToEither
       $ Agda.enactStep env st sig
-
-instance IsConwayUniv fn => ExecSpecRule fn "DELEG" Conway where
-  environmentSpec _ = delegEnvSpec
-
-  stateSpec _ _ = dStateSpec
-
-  signalSpec _ env st =
-    delegCertSpec env st
-      <> constrained disableRegCertsDelegCert
-
-  runAgdaRule env st sig =
-    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
-      . computationResultToEither
-      $ Agda.delegStep env st sig
 
 instance Inject (EpochExecEnv era) () where
   inject _ = ()

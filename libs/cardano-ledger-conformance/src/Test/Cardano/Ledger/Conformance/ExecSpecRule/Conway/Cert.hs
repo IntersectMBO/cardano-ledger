@@ -36,13 +36,7 @@ instance
       disableCerts :: Term fn (ConwayTxCert Conway) -> Pred fn
       disableCerts cert =
         (caseOn cert)
-          ( branch $ \delegCert ->
-              (caseOn delegCert)
-                (branch $ \_ _ -> False) -- TODO DelegRegCert is disabled! Investigate why!
-                (branch $ \_ _ -> True)
-                (branch $ \_ _ -> True)
-                (branch $ \_ _ _ -> True)
-          )
+          (branch $ \_ -> True)
           (branch $ \_ -> True)
           (branch disableDRepRegCerts)
   runAgdaRule env st sig =

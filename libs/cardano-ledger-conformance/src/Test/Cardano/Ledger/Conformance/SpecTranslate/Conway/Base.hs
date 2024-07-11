@@ -45,8 +45,6 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayCertPredFailure,
-  ConwayDelegEnv (..),
-  ConwayDelegPredFailure,
   ConwayGovCertEnv (..),
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
@@ -57,10 +55,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.Scripts (AlonzoScript, ConwayPlutusPurpose (..))
 import Cardano.Ledger.Conway.TxCert (
-  ConwayDelegCert (..),
   ConwayGovCert (..),
-  getStakePoolDelegatee,
-  getVoteDelegatee,
  )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
@@ -1153,40 +1148,3 @@ instance SpecTranslate ctx (ConwayExecEnactEnv era) where
       <$> toSpecRep ceeeGid
       <*> toSpecRep ceeeTreasury
       <*> toSpecRep ceeeEpoch
-
-instance
-  ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , SpecTranslate ctx (PParamsHKD Identity era)
-  ) =>
-  SpecTranslate ctx (ConwayDelegEnv era)
-  where
-  type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv
-
-  toSpecRep ConwayDelegEnv {..} =
-    Agda.MkDelegEnv
-      <$> toSpecRep cdePParams
-      <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) cdePools)
-
-instance SpecTranslate ctx (ConwayDelegCert c) where
-  type SpecRep (ConwayDelegCert c) = Agda.TxCert
-
-  toSpecRep (ConwayRegCert _ _) = throwError "RegCert not supported" -- TODO Investigate why!
-  toSpecRep (ConwayUnRegCert c _) =
-    Agda.Dereg <$> toSpecRep c
-  toSpecRep (ConwayDelegCert c d) =
-    Agda.Delegate
-      <$> toSpecRep c
-      <*> toSpecRep (getVoteDelegatee d)
-      <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
-      <*> pure 0
-  toSpecRep (ConwayRegDelegCert s d c) =
-    Agda.Delegate
-      <$> toSpecRep s
-      <*> toSpecRep (getVoteDelegatee d)
-      <*> toSpecRep (hashToInteger . unKeyHash <$> getStakePoolDelegatee d)
-      <*> toSpecRep c
-
-instance SpecTranslate ctx (ConwayDelegPredFailure era) where
-  type SpecRep (ConwayDelegPredFailure era) = OpaqueErrorString
-
-  toSpecRep e = pure . OpaqueErrorString . show $ toExpr e

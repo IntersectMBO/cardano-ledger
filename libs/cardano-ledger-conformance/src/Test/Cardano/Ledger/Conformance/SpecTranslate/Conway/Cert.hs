@@ -24,13 +24,13 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.UMap
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.VMap as VMap
 import Lens.Micro
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
 import Test.Cardano.Ledger.Conway.TreeDiff
 
@@ -51,15 +51,6 @@ instance
       <*> toSpecRep cePParams
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
-
-instance SpecTranslate ctx (DState era) where
-  type SpecRep (DState era) = Agda.DState
-
-  toSpecRep DState {..} =
-    Agda.MkDState
-      <$> toSpecRep (dRepMap dsUnified)
-      <*> toSpecRep (sPoolMap dsUnified)
-      <*> toSpecRep (rewardMap dsUnified)
 
 instance SpecTranslate ctx (CertState era) where
   type SpecRep (CertState era) = Agda.CertState
