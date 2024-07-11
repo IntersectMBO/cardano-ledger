@@ -80,27 +80,41 @@ jobs:
     - name: Cabal update
       run: cabal update
 
-    - name: Cabal configure
-      run: cabal configure --enable-tests --enable-benchmarks --write-ghc-environment-files=always
-
-    - uses: actions/cache@v4
-      if: matrix.os != 'macos-latest'
-      name: Cache cabal store
+    - name: Restore cache
+      uses: actions/cache/restore@v4
+      id: restore-cabal-cache
+      env:
+        cache-name: cache-cabal-build
       with:
         path: |
           ${{ steps.install-haskell.outputs.cabal-store }}
-        # cache is invalidated upon a change to cabal.project (and/or cabal.project.local), a bump to
-        # CABAL_CACHE_VERSION or after a week of inactivity
-        key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
-        # Restoring attempts are from current branch then master
+        # cache is invalidated upon a change to a cabal file, cabal.project (and/or cabal.project.local), or a bump to
+        # CABAL_CACHE_VERSION.
+        key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('cabal.project*') }}
+        # Restoring attempts are from current branch then master. The key above is by default already a restore-key.
         restore-keys: |
-          cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
+          ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('**/*.cabal') }}-
+          ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-
 
     - name: Check workflow test matrix
       run: cabal build all --dry-run && scripts/check-workflow-test-matrix.hs
 
     - name: Build dependencies
+      id: build-dependencies
       run: cabal build all --only-dependencies
+
+    # Save the cache of built dependencies early, so that it is available for
+    # the next GHA run if the Build step fails.
+    - name: Save cache
+      uses: actions/cache/save@v4
+      id: save-cabal-cache
+      # Note: cache-hit will be set to true only when cache hit occurs for the
+      # exact key match. For a partial key match via restore-keys or a cache
+      # miss, it will be set to false.
+      if: steps.build-dependencies.outcome == 'success' && steps.restore-cabal-cache.outputs.cache-hit != 'true'
+      with:
+        path: ${{ steps.install-haskell.outputs.cabal-store }}
+        key:  ${{ steps.restore-cabal-cache.outputs.cache-primary-key }}
 
     - name: Build
       run: cabal build all
@@ -228,18 +242,19 @@ jobs:
     - name: Unarchive working directory
       run: tar -xf state.tar && rm state.tar
 
-    - uses: actions/cache@v4
-      if: matrix.os != 'macos-latest'
-      name: Cache cabal store
+    - name: Restore cache
+      uses: actions/cache/restore@v4
+      id: restore-cabal-cache
+      env:
+        cache-name: cache-cabal-build
       with:
         path: |
           ${{ steps.install-haskell.outputs.cabal-store }}
-        # cache is invalidated upon a change to cabal.project (and/or cabal.project.local), a bump to
-        # CABAL_CACHE_VERSION or after a week of inactivity
-        key: cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
-        # Restoring attempts are from current branch then master
-        restore-keys: |
-          cache-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('cabal.project*') }}
+        key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('cabal.project*') }}
+        # The cache with this specific key should have been created by the build
+        # job. If the cache is missing, something is terribly wrong! We fail the
+        # test job, or otherwise we would start rebuilding all the dependencies.
+        fail-on-cache-miss: true
 
     - name: Cabal update
       run: cabal update
