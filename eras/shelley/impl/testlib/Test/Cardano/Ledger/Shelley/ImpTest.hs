@@ -60,6 +60,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   submitTxAnn,
   submitTxAnn_,
   submitFailingTx,
+  submitFailingTxM,
   trySubmitTx,
   modifyNES,
   getProtVer,
@@ -1008,8 +1009,8 @@ trySubmitTx tx = do
       impRootTxInL .= newRoot
       pure $ Right txFixed
 
--- | Submit a transaction that is expected to be rejected. The inputs and
--- outputs are automatically balanced.
+-- | Submit a transaction that is expected to be rejected with the given predicate failures.
+-- The inputs and outputs are automatically balanced.
 submitFailingTx ::
   ( HasCallStack
   , ShelleyEraImp era
@@ -1017,7 +1018,22 @@ submitFailingTx ::
   Tx era ->
   NonEmpty (PredicateFailure (EraRule "LEDGER" era)) ->
   ImpTestM era ()
-submitFailingTx tx expectedFailure = trySubmitTx tx >>= (`shouldBeLeftExpr` expectedFailure) . first fst
+submitFailingTx tx = submitFailingTxM tx . const . pure
+
+-- | Submit a transaction that is expected to be rejected, and compute
+-- the expected predicate failures from the fixed-up tx using the supplied action.
+-- The inputs and outputs are automatically balanced.
+submitFailingTxM ::
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  Tx era ->
+  (Tx era -> ImpTestM era (NonEmpty (PredicateFailure (EraRule "LEDGER" era)))) ->
+  ImpTestM era ()
+submitFailingTxM tx mkExpectedFailures = do
+  (predFailures, fixedUpTx) <- expectLeftDeepExpr =<< trySubmitTx tx
+  expectedFailures <- mkExpectedFailures fixedUpTx
+  predFailures `shouldBeExpr` expectedFailures
 
 tryRunImpRule ::
   forall rule era.

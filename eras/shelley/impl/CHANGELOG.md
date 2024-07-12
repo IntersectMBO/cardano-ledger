@@ -1,8 +1,10 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.12.2.1
+## 1.12.3.0
 
-*
+### `testlib`
+
+* Add `submitFailingTxM`
 
 ## 1.12.2.0
 
