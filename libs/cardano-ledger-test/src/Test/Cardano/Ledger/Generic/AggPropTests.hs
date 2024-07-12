@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -27,7 +28,8 @@ import Data.Default.Class (Default (def))
 import Data.Foldable as F (foldl')
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Binary.TreeDiff (diffExprString)
+import qualified Prettyprinter as Pretty
+import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString, diffExpr)
 import Test.Cardano.Ledger.Generic.Functions (
   getBody,
   getCollateralInputs,
@@ -142,11 +144,13 @@ depositInvariant SourceSignalTarget {source = mockChainSt} =
       keyDeposits = fromCompact $ sumDepositUView (RewDepUView (dsUnified dstate))
       poolDeposits = sumCoin (psDeposits pstate)
    in counterexample
-        ( unlines
-            [ "Deposit invariant fails"
-            , "All deposits = " ++ show allDeposits
-            , "Key deposits = " ++ synopsisCoinMap (Just (depositMap (dsUnified dstate)))
-            , "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
+        ( ansiDocToString . Pretty.vsep $
+            [ "Deposit invariant fails:"
+            , Pretty.indent 2 . Pretty.vsep . map Pretty.pretty $
+                [ "All deposits = " ++ show allDeposits
+                , "Key deposits = " ++ synopsisCoinMap (Just (depositMap (dsUnified dstate)))
+                , "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
+                ]
             ]
         )
         (allDeposits === keyDeposits <+> poolDeposits)
@@ -160,9 +164,9 @@ rewardDepositDomainInvariant SourceSignalTarget {source = mockChainSt} =
       rewardDomain = domain (RewDepUView (dsUnified dstate))
       depositDomain = Map.keysSet (depositMap (dsUnified dstate))
    in counterexample
-        ( unlines
-            [ "Reward-Deposit domain invariant fails"
-            , diffExprString rewardDomain depositDomain
+        ( ansiDocToString . Pretty.vsep $
+            [ "Reward-Deposit domain invariant fails:"
+            , Pretty.indent 2 $ diffExpr rewardDomain depositDomain
             ]
         )
         (rewardDomain === depositDomain)

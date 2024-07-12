@@ -11,9 +11,10 @@ module Test.Cardano.Ledger.Core.Binary where
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
 import Data.Default.Class (Default (def))
+import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Binary.RoundTrip
 import Test.Cardano.Ledger.Common
-import Test.Cardano.Ledger.TreeDiff ()
+import Test.Cardano.Ledger.TreeDiff (AnsiStyle, Doc)
 
 data BinaryUpgradeOpts = BinaryUpgradeOpts
   { isScriptUpgradeable :: Bool
@@ -86,10 +87,7 @@ specTxAuxDataUpgrade =
             ++ show err
       Right (curTxAuxData :: TxAuxData era) -> do
         let upgradedTxAuxData = upgradeTxAuxData prevTxAuxData
-        unless (eqRaw curTxAuxData upgradedTxAuxData) $
-          expectationFailure $
-            "Expected raw representation of TxAuxData to be equal: \n"
-              <> diffExprString curTxAuxData upgradedTxAuxData
+        expectRawEqual "TxAuxData" curTxAuxData upgradedTxAuxData
 
 specScriptUpgrade ::
   forall era.
@@ -127,10 +125,7 @@ specTxWitsUpgrade =
             ++ show err
       Right (curTxWits :: TxWits era) -> do
         let upgradedTxWits = upgradeTxWits prevTxWits
-        unless (eqRaw curTxWits upgradedTxWits) $
-          expectationFailure $
-            "Expected raw representation of TxWits to be equal: \n"
-              <> diffExprString curTxWits upgradedTxWits
+        expectRawEqual "TxWits" curTxWits upgradedTxWits
 
 specTxBodyUpgrade ::
   forall era.
@@ -153,10 +148,7 @@ specTxBodyUpgrade =
         | otherwise -> pure () -- Both upgrade and deserializer fail successfully
       Right (curTxBody :: TxBody era)
         | Right upgradedTxBody <- upgradeTxBody prevTxBody ->
-            unless (eqRaw curTxBody upgradedTxBody) $
-              expectationFailure $
-                "Expected raw representation of TxBody to be equal: \n"
-                  <> diffExprString curTxBody upgradedTxBody
+            expectRawEqual "TxBody" curTxBody upgradedTxBody
         | otherwise -> expectationFailure "Expected upgradeTxBody to succeed"
 
 specTxUpgrade ::
@@ -180,10 +172,7 @@ specTxUpgrade =
         | otherwise -> pure () -- Both upgrade and deserializer fail successfully
       Right (curTx :: Tx era)
         | Right upgradedTx <- upgradeTx prevTx ->
-            unless (eqRaw curTx upgradedTx) $
-              expectationFailure $
-                "Expected raw representation of Tx to be equal: \n"
-                  <> diffExprString curTx upgradedTx
+            expectRawEqual "Tx" curTx upgradedTx
         | otherwise -> expectationFailure "Expected upgradeTx to succeed"
 
 specUpgrade ::
@@ -216,3 +205,12 @@ specUpgrade BinaryUpgradeOpts {isScriptUpgradeable, isTxUpgradeable} =
       specTxUpgrade @era
     when isScriptUpgradeable $
       specScriptUpgrade @era
+
+expectRawEqual :: (EqRaw a, ToExpr a, HasCallStack) => Doc AnsiStyle -> a -> a -> Expectation
+expectRawEqual thing expected actual =
+  unless (eqRaw expected actual) $
+    expectationFailure . ansiDocToString $
+      Pretty.vsep
+        [ Pretty.hsep ["Expected raw representation of", thing, "to be equal:"]
+        , Pretty.indent 2 $ diffExpr expected actual
+        ]

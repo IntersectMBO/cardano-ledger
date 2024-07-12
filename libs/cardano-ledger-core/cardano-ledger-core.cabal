@@ -192,6 +192,7 @@ library testlib
         HUnit,
         mtl,
         nothunks,
+        prettyprinter,
         primitive,
         QuickCheck,
         quickcheck-transformer,

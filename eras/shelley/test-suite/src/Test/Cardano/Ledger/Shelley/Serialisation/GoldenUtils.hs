@@ -40,7 +40,8 @@ import Control.Monad (unless)
 import qualified Data.ByteString.Lazy as BSL (ByteString)
 import Data.String (fromString)
 import GHC.Stack
-import Test.Cardano.Ledger.Binary.TreeDiff (diffExprString)
+import qualified Prettyprinter as Pretty
+import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString, diffExpr)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
@@ -103,10 +104,10 @@ checkEncodingWithRoundtrip v encode decode roundTrip name x t =
     unless (expectedBinary == actualBinary) $ do
       expectedTerms <- getTerms "expected" expectedBinary
       actualTerms <- getTerms "actual" actualBinary
-      assertFailure $
-        unlines
-          [ "Serialization did not match: "
-          , diffExprString expectedTerms actualTerms
+      assertFailure . ansiDocToString $
+        Pretty.vsep
+          [ "Serialization did not match:"
+          , Pretty.indent 2 $ diffExpr expectedTerms actualTerms
           ]
     roundTrip v encode decode x
   where

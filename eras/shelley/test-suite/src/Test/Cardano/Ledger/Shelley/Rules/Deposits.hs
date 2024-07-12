@@ -2,6 +2,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -33,6 +34,7 @@ import Cardano.Ledger.UMap (depositMap)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>))
 import qualified Data.Map.Strict as Map
+import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
@@ -43,7 +45,7 @@ import Test.Control.State.Transition.Trace (
  )
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 
-import Test.Cardano.Ledger.Binary.TreeDiff (diffExprString)
+import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString, diffExpr)
 import Test.QuickCheck (
   Property,
   counterexample,
@@ -92,11 +94,13 @@ depositInvariant SourceSignalTarget {source = chainSt} =
       keyDeposits = (UM.fromCompact . UM.sumDepositUView . UM.RewDepUView . dsUnified) dstate
       poolDeposits = sumCoin (psDeposits pstate)
    in counterexample
-        ( unlines
-            [ "Deposit invariant fails"
-            , "All deposits = " ++ show allDeposits
-            , "Key deposits = " ++ synopsisCoinMap (Just (depositMap (dsUnified dstate)))
-            , "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
+        ( ansiDocToString . Pretty.vsep $
+            [ "Deposit invariant fails:"
+            , Pretty.indent 2 . Pretty.vsep . map Pretty.pretty $
+                [ "All deposits = " ++ show allDeposits
+                , "Key deposits = " ++ synopsisCoinMap (Just (depositMap (dsUnified dstate)))
+                , "Pool deposits = " ++ synopsisCoinMap (Just (psDeposits pstate))
+                ]
             ]
         )
         (allDeposits === keyDeposits <+> poolDeposits)
@@ -109,9 +113,9 @@ rewardDepositDomainInvariant SourceSignalTarget {source = chainSt} =
       rewardDomain = UM.domain (UM.RewDepUView (dsUnified dstate))
       depositDomain = Map.keysSet (depositMap (dsUnified dstate))
    in counterexample
-        ( unlines
-            [ "Reward-Deposit domain invariant fails"
-            , diffExprString rewardDomain depositDomain
+        ( ansiDocToString . Pretty.vsep $
+            [ "Reward-Deposit domain invariant fails:"
+            , Pretty.indent 2 $ diffExpr rewardDomain depositDomain
             ]
         )
         (rewardDomain === depositDomain)
