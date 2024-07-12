@@ -18,7 +18,7 @@ import Cardano.Ledger.Core
 import Control.Monad
 import Control.Monad.Except (runExcept)
 import GHC.Stack
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), diffExprNoColor)
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), ansiDocToString, diffExpr)
 import Test.Tasty.HUnit (Assertion, assertFailure)
 
 translateEraPartial ::
@@ -56,8 +56,8 @@ translateEraEncoding tc encodeThisEra encodePreviousEra x =
       currentEra =
         Plain.serialize' (encodeThisEra $ translateEraPartial @era tc x)
    in unless (previousEra == currentEra) $
-        assertFailure $
-          diffExprNoColor (CBORBytes previousEra) (CBORBytes currentEra)
+        assertFailure . ansiDocToString $
+          diffExpr (CBORBytes previousEra) (CBORBytes currentEra)
 
 -- Tests that the serializing before translation or after translating
 -- does not change the result

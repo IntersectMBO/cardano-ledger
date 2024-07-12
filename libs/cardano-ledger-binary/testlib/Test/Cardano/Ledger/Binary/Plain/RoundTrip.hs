@@ -38,7 +38,9 @@ import Data.Typeable
 import qualified Formatting.Buildable as B (Buildable (..))
 import Test.Cardano.Ledger.Binary.TreeDiff (
   CBORBytes (..),
-  diffExprNoColor,
+  ansiDocToString,
+  ansiExpr,
+  diffExpr,
   showExpr,
   showHexBytesGrouped,
  )
@@ -156,9 +158,9 @@ showFailedTermsWithReSerialization encodedBytes mReEncodedBytes =
       -- diff of Hex as well as Terms
       case (termWithHex "Original" encodedBytes, termWithHex "Reserialization" reBytes) of
         ((Right origTerm, origHex, _), (Right reTerm, reHex, _)) ->
-          [diffExprNoColor (origTerm, origHex) (reTerm, reHex)]
+          [diffExprColor (origTerm, origHex) (reTerm, reHex)]
         ((_, origHex, origStr), (_, reHex, reStr)) ->
-          diffExprNoColor origHex reHex : origStr ++ reStr
+          diffExprColor origHex reHex : origStr ++ reStr
   where
     termWithHex name lazyBytes =
       let bytes = BSL.toStrict lazyBytes
@@ -166,7 +168,9 @@ showFailedTermsWithReSerialization encodedBytes mReEncodedBytes =
             Left err -> Left $ "Could not decode as Term: " ++ show err
             Right term -> Right term
           hexLines = showHexBytesGrouped 128 bytes
-       in (decTerm, hexLines, [name ++ ":", either id showExpr decTerm])
+       in (decTerm, hexLines, [name ++ ":", either id showExprColor decTerm])
+    showExprColor = ansiDocToString . ansiExpr
+    diffExprColor a b = ansiDocToString $ diffExpr a b
 
 -- | A definition of a CBOR trip through binary representation of one type to
 -- another. In this module this is called an embed. When a source and target type is the

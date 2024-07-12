@@ -2,6 +2,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -33,6 +34,7 @@ import Cardano.Ledger.UMap (depositMap)
 import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.Val ((<+>))
 import qualified Data.Map.Strict as Map
+import qualified Prettyprinter as Pretty
 import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
@@ -43,7 +45,7 @@ import Test.Control.State.Transition.Trace (
  )
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 
-import Test.Cardano.Ledger.Binary.TreeDiff (diffExprNoColor)
+import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString, diffExpr)
 import Test.QuickCheck (
   Property,
   counterexample,
@@ -109,9 +111,9 @@ rewardDepositDomainInvariant SourceSignalTarget {source = chainSt} =
       rewardDomain = UM.domain (UM.RewDepUView (dsUnified dstate))
       depositDomain = Map.keysSet (depositMap (dsUnified dstate))
    in counterexample
-        ( unlines
+        ( ansiDocToString . Pretty.vsep $
             [ "Reward-Deposit domain invariant fails"
-            , diffExprNoColor rewardDomain depositDomain
+            , diffExpr rewardDomain depositDomain
             ]
         )
         (rewardDomain === depositDomain)

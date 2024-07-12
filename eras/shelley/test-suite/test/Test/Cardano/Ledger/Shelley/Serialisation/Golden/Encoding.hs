@@ -144,7 +144,8 @@ import Data.String (fromString)
 import Data.Word (Word64)
 import Lens.Micro ((&), (.~))
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExprNoColor)
+import qualified Prettyprinter as Pretty
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), ansiDocToString, diffExpr)
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkWitnessVKey, sKey, vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
 import Test.Cardano.Ledger.Shelley.Examples.Consensus as Ex (
@@ -1135,11 +1136,11 @@ tests =
               ]
        in testCase "ledger state golden test" $
             unless (actual == expected) $
-              assertFailure $
-                unlines
-                  [ "Expected: " ++ show expectedHex
-                  , "Actual: " ++ show actualHex
-                  , diffExprNoColor (CBORBytes expected) (CBORBytes actual)
+              assertFailure . ansiDocToString $
+                Pretty.vsep
+                  [ "Expected: " <> Pretty.viaShow expectedHex
+                  , "Actual: " <> Pretty.viaShow actualHex
+                  , diffExpr (CBORBytes expected) (CBORBytes actual)
                   ]
     ]
   where
