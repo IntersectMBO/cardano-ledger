@@ -2,7 +2,9 @@
 
 ## 1.12.2.1
 
-*
+### `testlib`
+
+* Add `submitFailingTxM`
 
 ## 1.12.2.0
 
