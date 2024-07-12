@@ -25,6 +25,8 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   trimExprViaShow,
   tableDoc,
   Pretty (..),
+  Doc,
+  AnsiStyle,
   ansiWlPretty,
   ppEditExpr,
   ediff,
@@ -38,7 +40,6 @@ import Cardano.Crypto.Hash.Class ()
 import Cardano.Ledger.Binary
 import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Term as CBOR
-import Control.Monad (unless)
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
@@ -217,15 +218,17 @@ expectExprEqual :: (Eq a, ToExpr a) => a -> a -> Expectation
 expectExprEqual = expectExprEqualWithMessage "Expected two values to be equal:"
 
 -- | Use this with HSpec, but with Tasty use 'assertExprEqualWithMessage' below
-expectExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => [Char] -> a -> a -> Expectation
-expectExprEqualWithMessage message expected actual =
-  unless (actual == expected) (expectationFailure msg)
-  where
-    msg = (if null message then "" else message ++ "\n") ++ diffExprString expected actual
+expectExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => String -> a -> a -> Expectation
+expectExprEqualWithMessage = requireExprEqualWithMessage (expectationFailure . ansiDocToString) . Pretty.pretty
 
 -- | Use this with Tasty, but with HSpec use 'expectExprEqualWithMessage' above
-assertExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => [Char] -> a -> a -> Assertion
-assertExprEqualWithMessage message expected actual =
-  unless (actual == expected) (assertFailure msg)
+assertExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => String -> a -> a -> Assertion
+assertExprEqualWithMessage = requireExprEqualWithMessage (assertFailure . ansiDocToString) . Pretty.pretty
+
+requireExprEqualWithMessage ::
+  (ToExpr a, Eq a, Monoid b) => (Doc AnsiStyle -> b) -> Doc AnsiStyle -> a -> a -> b
+requireExprEqualWithMessage fail_ message expected actual =
+  if actual == expected then mempty else fail_ doc
   where
-    msg = (if null message then "" else message ++ "\n") ++ diffExprString expected actual
+    doc = Pretty.width message (\w -> if w == 0 then diff else Pretty.line <> Pretty.indent 2 diff)
+    diff = diffExpr expected actual
