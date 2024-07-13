@@ -204,7 +204,7 @@ fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
 
 fixupRedeemers ::
   forall era.
-  AlonzoEraImp era =>
+  (AlonzoEraImp era, HasCallStack) =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupRedeemers tx = impAnn "fixupRedeemers" $ do
