@@ -10,5 +10,5 @@ import qualified Test.Cardano.Ledger.Conformance.Spec.Conway as Conway
 main :: IO ()
 main =
   ledgerTestMain $ do
-    describe "ConformaceSpec" $ ConformanceSpec.spec
+    describe "ConformanceSpec" $ ConformanceSpec.spec
     describe "Conway" $ Conway.spec
