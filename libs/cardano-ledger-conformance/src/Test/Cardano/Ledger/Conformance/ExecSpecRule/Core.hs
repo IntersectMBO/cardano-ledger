@@ -40,6 +40,8 @@ import qualified Data.Text as T
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import GHC.Base (Constraint, NonEmpty, Symbol, Type)
 import GHC.TypeLits (KnownSymbol)
+import Prettyprinter
+import Prettyprinter.Render.Terminal
 import System.FilePath ((<.>))
 import Test.Cardano.Ledger.Api.DebugTools (writeCBOR)
 import Test.Cardano.Ledger.Binary.TreeDiff (Pretty (..), ansiWlPretty, ediff, ppEditExpr)
@@ -51,8 +53,6 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
  )
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Shelley.ImpTest (
-  AnsiStyle,
-  Doc,
   ImpTestM,
   ShelleyEraImp,
   impAnn,
@@ -255,30 +255,21 @@ checkConformance ::
   ImpTestM era ()
 checkConformance ctx env st sig implResTest agdaResTest = do
   let
+    delColor = Red
+    insColor = Magenta
     conformancePretty =
       ansiWlPretty
-        { ppDel = \d ->
-            mconcat
-              [ "\ESC[91m(Impl: "
-              , d
-              , ")\ESC[39m"
-              ]
-        , ppIns = \d ->
-            mconcat
-              [ "\ESC[92m(Agda: "
-              , d
-              , ")\ESC[39m"
-              ]
+        { ppDel = annotate (color delColor) . parens . ("Impl: " <>)
+        , ppIns = annotate (color insColor) . parens . ("Agda: " <>)
         }
     failMsg =
-      unlines
-        [ ""
-        , "===== DIFF ====="
-        , show (ppEditExpr conformancePretty (ediff implResTest agdaResTest))
+      annotate (color Yellow) . vsep $
+        [ "===== DIFF ====="
+        , ppEditExpr conformancePretty (ediff implResTest agdaResTest)
         , ""
         , "Legend:"
-        , "\t\ESC[91m-Implementation"
-        , "\t\ESC[92m+Specification\ESC[39m"
+        , indent 2 $ annotate (color delColor) "-Implementation"
+        , indent 2 $ annotate (color insColor) "+Specification"
         ]
   unless (implResTest == agdaResTest) $ do
     let envVarName = "CONFORMANCE_CBOR_DUMP_PATH"
@@ -295,7 +286,7 @@ checkConformance ctx env st sig implResTest agdaResTest = do
           "Run the test again with "
             <> fromString envVarName
             <> "=<path> to get a CBOR dump of the test data"
-    expectationFailure failMsg
+    expectationFailure . ansiDocToString $ failMsg
 
 defaultTestConformance ::
   forall fn era rule.
