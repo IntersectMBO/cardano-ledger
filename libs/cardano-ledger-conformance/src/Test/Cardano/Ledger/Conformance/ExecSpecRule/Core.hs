@@ -102,15 +102,18 @@ class
   type ExecSignal fn rule era = Signal (EraRule rule era)
 
   environmentSpec ::
+    HasCallStack =>
     ExecContext fn rule era ->
     CV2.Specification fn (ExecEnvironment fn rule era)
 
   stateSpec ::
+    HasCallStack =>
     ExecContext fn rule era ->
     ExecEnvironment fn rule era ->
     CV2.Specification fn (ExecState fn rule era)
 
   signalSpec ::
+    HasCallStack =>
     ExecContext fn rule era ->
     ExecEnvironment fn rule era ->
     ExecState fn rule era ->
@@ -119,13 +122,14 @@ class
   classOf :: ExecSignal fn rule era -> Maybe String
   classOf _ = Nothing
 
-  genExecContext :: Gen (ExecContext fn rule era)
+  genExecContext :: HasCallStack => Gen (ExecContext fn rule era)
   default genExecContext ::
     Arbitrary (ExecContext fn rule era) =>
     Gen (ExecContext fn rule era)
   genExecContext = arbitrary
 
   runAgdaRule ::
+    HasCallStack =>
     SpecRep (ExecEnvironment fn rule era) ->
     SpecRep (ExecState fn rule era) ->
     SpecRep (ExecSignal fn rule era) ->
@@ -134,6 +138,7 @@ class
       (SpecRep (ExecState fn rule era))
 
   translateInputs ::
+    HasCallStack =>
     ExecEnvironment fn rule era ->
     ExecState fn rule era ->
     ExecSignal fn rule era ->
@@ -193,6 +198,7 @@ class
     , EncCBOR (State (EraRule rule era))
     , EncCBOR (Signal (EraRule rule era))
     , ToExpr (ExecContext fn rule era)
+    , HasCallStack
     ) =>
     ExecContext fn rule era ->
     ExecEnvironment fn rule era ->
@@ -202,6 +208,7 @@ class
   testConformance = defaultTestConformance @fn @era @rule
 
   extraInfo ::
+    HasCallStack =>
     ExecContext fn rule era ->
     Environment (EraRule rule era) ->
     State (EraRule rule era) ->
@@ -233,6 +240,7 @@ checkConformance ::
   , EncCBOR (Environment (EraRule rule era))
   , EncCBOR (State (EraRule rule era))
   , EncCBOR (Signal (EraRule rule era))
+  , HasCallStack
   ) =>
   ExecContext fn rule era ->
   Environment (EraRule rule era) ->
@@ -308,6 +316,7 @@ defaultTestConformance ::
   , EncCBOR (State (EraRule rule era))
   , EncCBOR (Signal (EraRule rule era))
   , ToExpr (ExecContext fn rule era)
+  , HasCallStack
   ) =>
   ExecContext fn rule era ->
   ExecEnvironment fn rule era ->
@@ -331,6 +340,7 @@ runConformance ::
   , Inject (State (EraRule rule era)) (ExecState fn rule era)
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
   , ToExpr (ExecContext fn rule era)
+  , HasCallStack
   ) =>
   ExecContext fn rule era ->
   ExecEnvironment fn rule era ->
@@ -390,6 +400,7 @@ conformsToImpl ::
   , EncCBOR (Environment (EraRule rule era))
   , EncCBOR (State (EraRule rule era))
   , EncCBOR (Signal (EraRule rule era))
+  , HasCallStack
   ) =>
   Property
 conformsToImpl = property @(ImpTestM era Property) . (`runContT` pure) $ do
@@ -431,6 +442,7 @@ generatesWithin ::
   ( NFData a
   , ToExpr a
   , Typeable a
+  , HasCallStack
   ) =>
   Gen a ->
   Int ->
