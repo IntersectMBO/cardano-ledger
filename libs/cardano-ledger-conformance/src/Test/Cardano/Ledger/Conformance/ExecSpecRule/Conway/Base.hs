@@ -20,16 +20,19 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   ConwayCertExecContext (..),
-  disableDRepRegCerts,
+  nameEpoch,
+  nameEnact,
+  nameGovAction,
 ) where
 
-import Cardano.Ledger.BaseTypes (Inject (..), Network, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), Inject (..), Network, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..))
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   EnactState (..),
+  GovAction (..),
   GovActionState (..),
   RatifyEnv (..),
   RatifySignal (..),
@@ -38,16 +41,13 @@ import Cardano.Ledger.Conway.Governance (
   gasAction,
  )
 import Cardano.Ledger.Conway.Rules (
+  EnactSignal (..),
   committeeAcceptedRatio,
   dRepAcceptedRatio,
   spoAcceptedRatio,
  )
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Conway.TxCert (
-  ConwayGovCert (..),
- )
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained
 import Data.Bifunctor (Bifunctor (..))
@@ -246,23 +246,10 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
           , "SPO: \t" <> show (spoAcceptedRatio env gas)
           ]
 
--- ConwayRegDRep certificates seem to trigger some kind of a bug in the
--- MAlonzo code where it somehow reaches an uncovered case.
---
--- TODO investigate what's causing this bug and try to get rid of this
--- constraint
-disableDRepRegCerts ::
-  IsConwayUniv fn => Term fn (ConwayGovCert StandardCrypto) -> Pred fn
-disableDRepRegCerts govCert =
-  (caseOn govCert)
-    (branch $ \_ _ _ -> False)
-    (branch $ \_ _ -> True)
-    (branch $ \_ _ -> False)
-    (branch $ \_ _ -> True)
-    (branch $ \_ _ -> True)
-
 instance IsConwayUniv fn => ExecSpecRule fn "ENACT" Conway where
   type ExecEnvironment fn "ENACT" Conway = ConwayExecEnactEnv Conway
+  type ExecState fn "ENACT" Conway = EnactState Conway
+  type ExecSignal fn "ENACT" Conway = EnactSignal Conway
 
   environmentSpec _ = TrueSpec
   stateSpec _ _ = TrueSpec
@@ -272,8 +259,22 @@ instance IsConwayUniv fn => ExecSpecRule fn "ENACT" Conway where
       . computationResultToEither
       $ Agda.enactStep env st sig
 
+  classOf = Just . nameEnact
+
 instance Inject (EpochExecEnv era) () where
   inject _ = ()
+
+nameEnact :: EnactSignal era -> String
+nameEnact (EnactSignal _ x) = nameGovAction x
+
+nameGovAction :: GovAction era -> String
+nameGovAction ParameterChange {} = "ParameterChange"
+nameGovAction HardForkInitiation {} = "HardForkInitiation"
+nameGovAction TreasuryWithdrawals {} = "TreasuryWithdrawals"
+nameGovAction NoConfidence {} = "NoConfidence"
+nameGovAction UpdateCommittee {} = "UpdateCommittee"
+nameGovAction NewConstitution {} = "NewConstitution"
+nameGovAction InfoAction {} = "InfoAction"
 
 instance
   IsConwayUniv fn =>
@@ -292,6 +293,11 @@ instance
     first (\case {})
       . computationResultToEither
       $ Agda.epochStep env st sig
+
+  classOf = Just . nameEpoch
+
+nameEpoch :: EpochNo -> String
+nameEpoch x = show x
 
 instance
   IsConwayUniv fn =>

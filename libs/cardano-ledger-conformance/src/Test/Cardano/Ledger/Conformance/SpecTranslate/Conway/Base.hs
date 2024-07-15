@@ -1013,6 +1013,7 @@ instance SpecTranslate ctx (EpochExecEnv era) where
 
   toSpecRep _ = pure ()
 
+-- | This type is used as the Env only in the Agda Spec
 data ConwayExecEnactEnv era = ConwayExecEnactEnv
   { ceeeGid :: GovActionId (EraCrypto era)
   , ceeeTreasury :: Coin
@@ -1020,6 +1021,7 @@ data ConwayExecEnactEnv era = ConwayExecEnactEnv
   }
   deriving (Generic, Eq, Show)
 
+-- | Here we inject the Agda Spec Env into the STS rule Environment, which is ().
 instance Inject (ConwayExecEnactEnv era) () where
   inject _ = ()
 

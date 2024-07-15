@@ -5,9 +5,10 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg () where
+module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg (nameDelegCert) where
 
 import Cardano.Ledger.Conway
+import Cardano.Ledger.Conway.TxCert (ConwayDelegCert (..))
 import Data.Bifunctor (first)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
@@ -29,3 +30,11 @@ instance IsConwayUniv fn => ExecSpecRule fn "DELEG" Conway where
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.delegStep env st sig
+
+  classOf = Just . nameDelegCert
+
+nameDelegCert :: ConwayDelegCert c -> String
+nameDelegCert ConwayRegCert {} = "RegKey"
+nameDelegCert ConwayUnRegCert {} = "UnRegKey"
+nameDelegCert ConwayDelegCert {} = "DelegateWithKey"
+nameDelegCert ConwayRegDelegCert {} = "RegK&DelegateWithKey"

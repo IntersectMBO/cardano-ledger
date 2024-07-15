@@ -8,6 +8,7 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool where
 
 import Cardano.Ledger.Conway
+import Cardano.Ledger.Core (PoolCert (..))
 import Data.Bifunctor (first)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
@@ -29,3 +30,9 @@ instance IsConwayUniv fn => ExecSpecRule fn "POOL" Conway where
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.poolStep env st sig
+
+  classOf = Just . namePoolCert
+
+namePoolCert :: PoolCert c -> String
+namePoolCert RegPool {} = "RegPool"
+namePoolCert RetirePool {} = "RetirePool"

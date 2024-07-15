@@ -16,6 +16,7 @@ import Cardano.Ledger.Shelley.API.Types
 import Cardano.Slotting.EpochInfo qualified as EI
 import Constrained
 import Control.Monad.Identity
+import Data.Map.Strict qualified as Map
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
@@ -54,11 +55,11 @@ poolCertSpec ::
   PoolEnv (ConwayEra StandardCrypto) ->
   PState (ConwayEra StandardCrypto) ->
   Specification fn (PoolCert StandardCrypto)
-poolCertSpec (PoolEnv _s pp) _ps =
+poolCertSpec (PoolEnv s pp) ps =
   constrained $ \pc ->
     (caseOn pc)
       -- RegPool !(PoolParams c)
-      ( branch $ \poolParams ->
+      ( branchW 1 $ \poolParams ->
           match poolParams $ \_ _ _ cost _ rewAccnt _ _ mMetadata ->
             [ match rewAccnt $ \net' _ ->
                 net' ==. lit Testnet
@@ -68,20 +69,14 @@ poolCertSpec (PoolEnv _s pp) _ps =
             ]
       )
       -- RetirePool !(KeyHash 'StakePool c) !EpochNo
-      --
-      -- TODO: We do not generate this certificate because the two predicate
-      -- failures from Shelley are not yet implemented in the spec.
-      --
-      --   ( branch $ \keyHash epochNo -> False
-      --       [ epochNo <=. lit (maxEpochNo - 1)
-      --       , lit (currentEpoch s) <. epochNo
-      --       , elem_ keyHash $ lit rpools
-      --       ]
-      --   )
-      -- where
-      --   EpochInterval maxEp = pp ^. ppEMaxL
-      --   maxEpochNo = EpochNo (fromIntegral maxEp)
-      --   rpools = Map.keys $ psStakePoolParams ps
-      (branch $ \_ _ -> False)
+      ( branchW 1 $ \keyHash epochNo ->
+          [ epochNo <=. lit (maxEpochNo - 1)
+          , lit (currentEpoch s) <. epochNo
+          , elem_ keyHash $ lit rpools
+          ]
+      )
   where
+    EpochInterval maxEp = pp ^. ppEMaxL
+    maxEpochNo = EpochNo (fromIntegral maxEp)
+    rpools = Map.keys $ psStakePoolParams ps
     maxMetaLen = fromIntegral (Hash.sizeHash ([] @(HASH StandardCrypto)))
