@@ -31,21 +31,15 @@ import Cardano.Ledger.Conway.Governance (
   Committee (..),
   EnactState (..),
   GovActionState (..),
-  Proposals,
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
   VotingProcedures,
-  ensPrevGovActionIdsL,
   gasAction,
-  pRootsL,
-  toPrevGovActionIds,
  )
 import Cardano.Ledger.Conway.Rules (
-  ConwayGovPredFailure,
   committeeAcceptedRatio,
   dRepAcceptedRatio,
-  gsProposalProcedures,
   spoAcceptedRatio,
  )
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
@@ -53,44 +47,30 @@ import Cardano.Ledger.Conway.TxCert (ConwayGovCert)
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.TxIn (TxId)
 import Constrained
-import Control.Monad.Identity (Identity)
 import Data.Bifunctor (Bifunctor (..))
-import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
-import qualified Data.OSet.Strict as OSet
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Lens.Micro ((&), (.~), (^.))
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Common (Arbitrary (..))
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   OpaqueErrorString (..),
-  SpecTranslate (..),
-  checkConformance,
   computationResultToEither,
-  runConformance,
-  runSpecTransM,
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (ConwayExecEnactEnv)
 import Test.Cardano.Ledger.Constrained.Conway (
   EpochExecEnv,
   IsConwayUniv,
-  ProposalsSplit,
   epochEnvSpec,
   epochSignalSpec,
   epochStateSpec,
-  genProposalsSplit,
   govCertEnvSpec,
   govCertSpec,
-  govEnvSpec,
-  govProceduresSpec,
-  govProposalsSpec,
   newEpochStateSpec,
   utxoEnvSpec,
   utxoStateSpec,
@@ -98,88 +78,8 @@ import Test.Cardano.Ledger.Constrained.Conway (
   vStateSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.Instances ()
-import Test.Cardano.Ledger.Conway.ImpTest (impAnn, logEntry)
+import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop)
-
-data ConwayGovTransContext era
-  = ConwayGovTransContext
-      (EnactState era)
-      (TxId (EraCrypto era))
-      (Proposals era)
-  deriving (Generic)
-
-deriving instance EraPParams era => Eq (ConwayGovTransContext era)
-
-deriving instance EraPParams era => Show (ConwayGovTransContext era)
-
-instance
-  ( Era era
-  , ToExpr (PParamsHKD Identity era)
-  , ToExpr (PParamsHKD StrictMaybe era)
-  ) =>
-  ToExpr (ConwayGovTransContext era)
-
-instance HasSimpleRep (ConwayGovTransContext era)
-
-instance
-  ( IsConwayUniv fn
-  , EraPParams era
-  , HasSpec fn (EnactState era)
-  , HasSpec fn (Proposals era)
-  ) =>
-  HasSpec fn (ConwayGovTransContext era)
-
-instance Inject (ConwayGovTransContext era) (EnactState era) where
-  inject (ConwayGovTransContext x _ _) = x
-
-instance EraCrypto era ~ c => Inject (ConwayGovTransContext era) (TxId c) where
-  inject (ConwayGovTransContext _ x _) = x
-
-instance EraCrypto era ~ c => Inject (ConwayGovTransContext era) (Proposals era) where
-  inject (ConwayGovTransContext _ _ x) = x
-
-instance
-  ( NFData (SpecRep (ConwayGovPredFailure Conway))
-  , IsConwayUniv fn
-  ) =>
-  ExecSpecRule fn "GOV" Conway
-  where
-  type ExecContext fn "GOV" Conway = (TxId StandardCrypto, ProposalsSplit)
-
-  environmentSpec _ = govEnvSpec
-
-  stateSpec _ = govProposalsSpec
-
-  signalSpec _ = govProceduresSpec
-
-  genExecContext = (,) <$> arbitrary <*> genProposalsSplit 20
-
-  runAgdaRule env st sig =
-    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
-      . computationResultToEither
-      $ Agda.govStep env st sig
-
-  translateInputs env st sig (txId, _) = do
-    let
-      modifiedEnactState =
-        def
-          & ensPrevGovActionIdsL .~ toPrevGovActionIds (st ^. pRootsL)
-      modifiedCtx = ConwayGovTransContext modifiedEnactState txId st
-    logEntry $ "modifiedCtx:\n" <> showExpr modifiedCtx
-    agdaEnv <-
-      impAnn "Translating the environment" . expectRight . runSpecTransM modifiedCtx $ toSpecRep env
-    logEntry $ "agdaEnv:\n" <> showExpr agdaEnv
-    agdaSt <- impAnn "Translating the state" . expectRight . runSpecTransM modifiedCtx $ toSpecRep st
-    logEntry $ "agdaSt:\n" <> showExpr agdaSt
-    agdaSig <- impAnn "Translating the signal" . expectRight . runSpecTransM modifiedCtx $ toSpecRep sig
-    logEntry $ "agdaSig:\n" <> showExpr agdaSig
-    pure (agdaEnv, agdaSt, agdaSig)
-
-  testConformance ctx env st sig = property $ do
-    (implResTest, agdaResTest) <- runConformance @"GOV" @fn @Conway ctx env st sig
-    checkConformance @"GOV" implResTest agdaResTest
-    let numInputProps = OSet.size $ gsProposalProcedures sig
-    pure $ label ("n input proposals = " <> show numInputProps) ()
 
 instance
   forall fn.
