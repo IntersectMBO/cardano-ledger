@@ -123,7 +123,7 @@ void ipow(mpz_t rop, const mpz_t x, int n)
 void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
 {
   mpz_t AnM2, BnM2, AnM1, BnM1, ba, aa, A, bb, ab, B, convergent, last, a, b;
-  mpz_t curr_n, diff, temp_q, temp_r;
+  mpz_t curr_n, diff;
   bool first = true;
   int n = 1;
 
@@ -132,7 +132,7 @@ void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
   mpz_init(ba); mpz_init(aa); mpz_init(bb); mpz_init(ab);
   mpz_init(A); mpz_init(B); mpz_init(convergent); mpz_init(last);
   mpz_init(curr_n); mpz_init(a); mpz_init(b);
-  mpz_init(diff); mpz_init(temp_q); mpz_init(temp_r);
+  mpz_init(diff);
 
   /* initialize values */
   /* this is initially 1 and then -n */
@@ -190,7 +190,7 @@ void mp_lnN(mpz_t rop, const int maxN, const mpz_t x, const mpz_t epsilon)
   mpz_clear(ba); mpz_clear(aa); mpz_clear(bb); mpz_clear(ab);
   mpz_clear(A); mpz_clear(B); mpz_clear(convergent); mpz_clear(last);
   mpz_clear(curr_n); mpz_clear(a); mpz_clear(b);
-  mpz_clear(diff); mpz_clear(temp_q); mpz_clear(temp_r);
+  mpz_clear(diff);
 }
 
 /* Entry point for 'exp' approximation. First does the scaling of 'x' to [0,1]
@@ -240,8 +240,8 @@ int ref_exp(mpz_t rop, const mpz_t x)
 
 int findE(const mpz_t x)
 {
-  mpz_t x_, x__, temp_q, temp_r;
-  mpz_init(x_); mpz_init(x__); mpz_init(temp_q); mpz_init(temp_r);
+  mpz_t x_, x__;
+  mpz_init(x_); mpz_init(x__);
 
   div(x_, one, e);
   mpz_set(x__, e);
@@ -274,7 +274,7 @@ int findE(const mpz_t x)
         l = mid;
     }
 
-  mpz_clear(x_); mpz_clear(x__); mpz_clear(temp_q); mpz_clear(temp_r);
+  mpz_clear(x_); mpz_clear(x__);
   return l;
 }
 
@@ -287,8 +287,8 @@ bool ref_ln(mpz_t rop, const mpz_t x)
     return false;
 
   const int n = findE(x);
-  mpz_t temp_r, temp_q, x_, factor;
-  mpz_init(temp_r); mpz_init(temp_q); mpz_init(x_); mpz_init(factor);
+  mpz_t x_, factor;
+  mpz_init(x_); mpz_init(factor);
 
   /* integral part of ln */
   mpz_set_si(rop, n);
@@ -302,7 +302,7 @@ bool ref_ln(mpz_t rop, const mpz_t x)
   mp_lnN(x_, 1000, x_, eps);
   mpz_add(rop, rop, x_);
 
-  mpz_clear(temp_r); mpz_clear(temp_q); mpz_clear(x_); mpz_clear(factor);
+  mpz_clear(x_); mpz_clear(factor);
   return true;
 }
 
