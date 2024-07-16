@@ -43,7 +43,9 @@ import Cardano.Ledger.Conway.Rules (
   spoAcceptedRatio,
  )
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
+import Cardano.Ledger.Conway.TxCert (
+  ConwayGovCert (..),
+ )
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -69,13 +71,10 @@ import Test.Cardano.Ledger.Constrained.Conway (
   epochEnvSpec,
   epochSignalSpec,
   epochStateSpec,
-  govCertEnvSpec,
-  govCertSpec,
   newEpochStateSpec,
   utxoEnvSpec,
   utxoStateSpec,
   utxoTxSpec,
-  vStateSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.Instances ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -261,28 +260,6 @@ disableDRepRegCerts govCert =
     (branch $ \_ _ -> False)
     (branch $ \_ _ -> True)
     (branch $ \_ _ -> True)
-
-instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
-  type ExecContext fn "GOVCERT" Conway = ConwayCertExecContext Conway
-
-  environmentSpec _ctx = govCertEnvSpec
-
-  stateSpec _ctx _env = vStateSpec
-
-  signalSpec _ctx env st =
-    govCertSpec env st
-      <> constrained disableDRepRegCerts
-
-  classOf (ConwayRegDRep {}) = Just "ConwayRegDRep"
-  classOf (ConwayUnRegDRep {}) = Just "ConwayUnRegDRep"
-  classOf (ConwayUpdateDRep {}) = Just "ConwayUpdateDRep"
-  classOf (ConwayAuthCommitteeHotKey {}) = Just "ConwayAuthCommitteeHotKey"
-  classOf (ConwayResignCommitteeColdKey {}) = Just "ConwayResignCommitteeColdKey"
-
-  runAgdaRule env st sig =
-    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
-      . computationResultToEither
-      $ Agda.govCertStep env st sig
 
 instance IsConwayUniv fn => ExecSpecRule fn "ENACT" Conway where
   type ExecEnvironment fn "ENACT" Conway = ConwayExecEnactEnv Conway
