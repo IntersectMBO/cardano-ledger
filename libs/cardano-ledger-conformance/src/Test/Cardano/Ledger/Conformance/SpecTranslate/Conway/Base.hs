@@ -85,6 +85,7 @@ import qualified Data.Map.Strict as Map
 import Data.OMap.Strict (OMap, assocList)
 import Data.OSet.Strict (OSet)
 import Data.Ratio (denominator, numerator)
+import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -346,6 +347,11 @@ instance SpecTranslate ctx a => SpecTranslate ctx (Set a) where
 
 instance SpecTranslate ctx a => SpecTranslate ctx (StrictSeq a) where
   type SpecRep (StrictSeq a) = [SpecRep a]
+
+  toSpecRep = traverse toSpecRep . toList
+
+instance SpecTranslate ctx a => SpecTranslate ctx (Seq a) where
+  type SpecRep (Seq a) = [SpecRep a]
 
   toSpecRep = traverse toSpecRep . toList
 

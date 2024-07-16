@@ -1,8 +1,12 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.16.0.1
+## 1.16.1.0
 
-*
+* Added `Eq`, `Show`, `NFData` and `Generic` instances for `CertsEnv`
+
+### testlib
+
+* Added `ToExpr` instance for `CertsEnv`
 
 ## 1.16.0.0
 

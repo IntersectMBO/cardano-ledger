@@ -1522,3 +1522,6 @@ instance HasSimpleRep (Pulser c) where
       RSLP
 
 instance IsConwayUniv fn => HasSpec fn (Pulser StandardCrypto)
+
+instance HasSimpleRep (CertsEnv (ConwayEra StandardCrypto))
+instance IsConwayUniv fn => HasSpec fn (CertsEnv (ConwayEra StandardCrypto))

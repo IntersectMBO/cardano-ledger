@@ -93,6 +93,11 @@ data CertsEnv era = CertsEnv
   , certsCurrentCommittee :: StrictMaybe (Committee era)
   , certsCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
   }
+  deriving (Generic)
+
+deriving instance (EraPParams era, Eq (Tx era)) => Eq (CertsEnv era)
+deriving instance (EraPParams era, Show (Tx era)) => Show (CertsEnv era)
+instance (EraPParams era, NFData (Tx era)) => NFData (CertsEnv era)
 
 data ConwayCertsPredFailure era
   = -- | Withdrawals that are missing or do not withdrawal the entire amount
