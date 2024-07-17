@@ -4839,7 +4839,17 @@ instance HasSpec fn a => Pretty (WithPrec (Term fn a)) where
     Lit n -> fromString $ showsPrec p n ""
     V x -> viaShow x
     App f Nil -> viaShow f
-    App f as -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList @fn (prettyPrec 11) as))
+    App f as
+      | Just Equal <- extractFn @(EqFn fn) f
+      , a :> b :> _ <- as ->
+          parensIf (p > 9) $ prettyPrec 10 a <+> "==." <+> prettyPrec 10 b
+      | Just ToGeneric <- extractFn @(GenericsFn fn) f
+      , a :> _ <- as ->
+          prettyPrec p a
+      | Just FromGeneric <- extractFn @(GenericsFn fn) f
+      , a :> _ <- as ->
+          prettyPrec p a
+      | otherwise -> parensIf (p > 10) $ viaShow f <+> align (fillSep (ppList @fn (prettyPrec 11) as))
 
 instance HasSpec fn a => Pretty (Term fn a) where
   pretty = prettyPrec 0
