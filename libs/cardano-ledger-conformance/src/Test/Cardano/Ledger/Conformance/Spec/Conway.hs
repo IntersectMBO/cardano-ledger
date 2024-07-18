@@ -38,10 +38,10 @@ spec = do
       xprop "EPOCH" $ conformsToImpl @"EPOCH" @ConwayFn @Conway
       xprop "NEWEPOCH" $ conformsToImpl @"NEWEPOCH" @ConwayFn @Conway
     describe "Blocks transition graph" $ do
-      prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
+      xprop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
       xprop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
       prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @Conway
-      prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
+      xprop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
       xprop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @Conway
       prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
       xprop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
