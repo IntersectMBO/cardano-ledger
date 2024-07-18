@@ -89,12 +89,12 @@ jobs:
     - name: Record dependencies to be used as cache keys
       id: record-deps
       run: |
-        cabal build all --dry-run --minimize-conflict-set
+        cabal build all --enable-tests --dry-run --minimize-conflict-set
         cat dist-newstyle/cache/plan.json \
         | jq '.["install-plan"][].id' \
         | sort \
-        | uniq > dependencies.txt
-        cat dependencies.txt
+        | uniq
+        | tee dependencies.txt
 
     - name: Restore cache
       uses: actions/cache/restore@v4
@@ -260,21 +260,12 @@ jobs:
     - name: Unarchive working directory
       run: tar -xf state.tar && rm state.tar
 
-    # We create a dependencies.txt file that can be used to index the cabal
-    # store cache.
-    #
-    # We do not use plan.json directly because adding a dependency to our
-    # Cabal files which was already present somewhere else would result in a
-    # diferent plan, even though the set of dependencies is the same.
-    - name: Record dependencies to be used as cache keys
-      id: record-deps
+    # A dependencies.txt file should have been created by the build job, so we
+    # check if it exists and is not empty.
+    - name: Check dependencies to be used as cache keys
+      id: check-deps
       run: |
-        cabal build all --dry-run --minimize-conflict-set
-        cat dist-newstyle/cache/plan.json \
-        | jq '.["install-plan"][].id' \
-        | sort \
-        | uniq > dependencies.txt
-        cat dependencies.txt
+        ./scripts/file-not-null.sh dependencies.txt
 
     - name: Restore cache
       uses: actions/cache/restore@v4
