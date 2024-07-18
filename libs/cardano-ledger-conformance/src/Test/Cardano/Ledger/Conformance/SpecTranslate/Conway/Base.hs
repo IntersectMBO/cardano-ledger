@@ -45,16 +45,11 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams (ConwayPParams (..), THKD (..))
 import Cardano.Ledger.Conway.Rules (
   ConwayCertPredFailure,
-  ConwayGovCertEnv (..),
-  ConwayGovCertPredFailure,
   ConwayGovPredFailure,
   ConwayUtxoPredFailure,
   EnactSignal (..),
  )
 import Cardano.Ledger.Conway.Scripts (AlonzoScript, ConwayPlutusPurpose (..))
-import Cardano.Ledger.Conway.TxCert (
-  ConwayGovCert (..),
- )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
@@ -525,31 +520,6 @@ instance SpecTranslate ctx (Anchor c) where
   type SpecRep (Anchor c) = Agda.Anchor
   toSpecRep _ = pure ()
 
-instance SpecTranslate ctx (ConwayGovCert c) where
-  type SpecRep (ConwayGovCert c) = Agda.TxCert
-
-  toSpecRep (ConwayRegDRep c d _) =
-    Agda.RegDRep
-      <$> toSpecRep c
-      <*> toSpecRep d
-      <*> pure ()
-  toSpecRep (ConwayUnRegDRep c _) =
-    Agda.DeRegDRep
-      <$> toSpecRep c
-  toSpecRep (ConwayUpdateDRep c _) =
-    Agda.RegDRep
-      <$> toSpecRep c
-      <*> pure 0
-      <*> pure ()
-  toSpecRep (ConwayAuthCommitteeHotKey c h) =
-    Agda.CCRegHot
-      <$> toSpecRep c
-      <*> toSpecRep (SJust h)
-  toSpecRep (ConwayResignCommitteeColdKey c _) =
-    Agda.CCRegHot
-      <$> toSpecRep c
-      <*> toSpecRep (SNothing @(Credential _ _))
-
 instance SpecTranslate ctx (TxId era) where
   type SpecRep (TxId era) = Agda.TxId
 
@@ -912,45 +882,6 @@ instance
   type SpecRep (ConwayCertPredFailure era) = OpaqueErrorString
 
   toSpecRep = pure . OpaqueErrorString . showExpr
-
-instance SpecTranslate ctx (ConwayGovCertPredFailure era) where
-  type SpecRep (ConwayGovCertPredFailure era) = OpaqueErrorString
-
-  toSpecRep = pure . OpaqueErrorString . showExpr
-
-instance
-  ( SpecTranslate ctx (PParamsHKD Identity era)
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-  ) =>
-  SpecTranslate ctx (ConwayGovCertEnv era)
-  where
-  type SpecRep (ConwayGovCertEnv era) = Agda.CertEnv
-
-  toSpecRep ConwayGovCertEnv {..} = do
-    votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-    Agda.MkCertEnv
-      <$> toSpecRep cgceCurrentEpoch
-      <*> toSpecRep cgcePParams
-      <*> toSpecRep votes
-      <*> toSpecRep withdrawals
-
-committeeCredentialToStrictMaybe ::
-  CommitteeAuthorization c ->
-  StrictMaybe (Credential 'HotCommitteeRole c)
-committeeCredentialToStrictMaybe (CommitteeHotCredential c) = SJust c
-committeeCredentialToStrictMaybe (CommitteeMemberResigned _) = SNothing
-
-instance SpecTranslate ctx (VState era) where
-  type SpecRep (VState era) = Agda.GState
-
-  toSpecRep VState {..} =
-    Agda.MkGState
-      <$> toSpecRep (drepExpiry <$> vsDReps)
-      <*> toSpecRep
-        (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState)
 
 instance (SpecTranslate ctx a, Compactible a) => SpecTranslate ctx (CompactForm a) where
   type SpecRep (CompactForm a) = SpecRep a

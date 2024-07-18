@@ -1075,7 +1075,7 @@ pcTxBody proof txbody = ppRecord ("TxBody " <> pack (show proof)) pairs
     pairs = concatMap (pcTxBodyField proof) fields
 
 pcPParams :: Proof era -> PParams era -> PDoc
-pcPParams proof pp = ppRecord ("TxBody " <> pack (show proof)) pairs
+pcPParams proof pp = ppRecord ("PParams " <> pack (show proof)) pairs
   where
     fields = abstractPParams proof pp
     pairs = concatMap pcPParamsField fields

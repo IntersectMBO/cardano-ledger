@@ -630,7 +630,16 @@ instance Arbitrary a => Arbitrary (NE.NonEmpty a) where
 instance HasSpec fn a => Semigroup (Specification fn a) where
   TrueSpec <> s = s
   s <> TrueSpec = s
-  ErrorSpec e <> ErrorSpec e' = ErrorSpec (NE.fromList (NE.toList e ++ "" : (replicate 20 '-') : "" : NE.toList e'))
+  ErrorSpec e <> ErrorSpec e' =
+    ErrorSpec
+      ( NE.fromList
+          ( NE.toList e
+              ++ ""
+              : ("---------- spec <> spec ----------@" ++ show (typeRep (Proxy @a)))
+              : ""
+              : NE.toList e'
+          )
+      )
   ErrorSpec e <> _ = ErrorSpec e
   _ <> ErrorSpec e = ErrorSpec e
   MemberSpec as <> MemberSpec as' =
@@ -1358,6 +1367,7 @@ normalizeSolverStage (SolverStage x ps spec) = SolverStage x ps'' (spec <> spec'
 
 fromGESpec :: HasCallStack => GE (Specification fn a) -> Specification fn a
 fromGESpec ge = case ge of
+  Result [] s -> s
   Result es s -> explainSpec (foldr1 (<>) es) s
   _ -> fromGE ErrorSpec ge
 
@@ -1446,9 +1456,9 @@ computeSpecSimplified x p = localGESpec $ case p of
     bSpec <- computeSpecBinderSimplified b
     propagateSpec (fromForAllSpec bSpec) <$> toCtx x t
   Case (Lit val) bs -> runCaseOn val (mapList thing bs) $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
-  Case t branches -> do
+  Case t branches -> explain1 ("Simplifying Case at type " ++ show (typeRep t)) $ do
     branchSpecs <- mapMList (traverseWeighted computeSpecBinderSimplified) branches
-    propagateSpec (caseSpec branchSpecs) <$> toCtx x t
+    propagateSpec (caseSpec True branchSpecs) <$> toCtx x t
   When (Lit b) tp -> if b then computeSpecSimplified x tp else pure TrueSpec
   -- This shouldn't happen a lot of the time because when the body is trivial we mostly get rid of the `When` entirely
   When {} -> pure $ SuspendedSpec x p
@@ -1499,13 +1509,19 @@ computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 caseSpec ::
   forall fn as.
   HasSpec fn (SumOver as) =>
+  Bool ->
   List (Weighted (Specification fn)) as ->
   Specification fn (SumOver as)
-caseSpec Nil = error "The impossible happened in caseSpec"
-caseSpec (s :> Nil) = thing s
-caseSpec (s :> ss@(_ :> _))
+caseSpec _ Nil = error "The impossible happened in caseSpec"
+caseSpec _ (s :> Nil) = thing s
+caseSpec topLevelCall (s :> ss@(_ :> _))
   | Evidence <- prerequisites @fn @(SumOver as) =
-      typeSpec $ SumSpec theWeights (thing s) (caseSpec ss)
+      if topLevelCall
+        then
+          explainSpec (pure "CASESPEC") $
+            typeSpec $
+              SumSpec theWeights (thing s) (caseSpec False ss)
+        else typeSpec $ SumSpec theWeights (thing s) (caseSpec False ss)
   where
     theWeights =
       case (weight s, totalWeight ss) of
@@ -3174,11 +3190,14 @@ instance (BaseUniverse fn, HasSpec fn ()) => HasSpec fn Bool where
 -- Sum --------------------------------------------------------------------
 
 guardSumSpec ::
+  forall fn a b.
   (HasSpec fn a, HasSpec fn b, KnownNat (CountCases b)) =>
   SumSpec fn a b ->
   Specification fn (Sum a b)
 guardSumSpec s@(SumSpec _ sa sb)
-  | isErrorLike sa, isErrorLike sb = ErrorSpec $ NE.fromList ["empty SumSpec"]
+  | isErrorLike sa
+  , isErrorLike sb =
+      ErrorSpec $ pure "All branches in a caseOn simplify to False"
   | otherwise = typeSpec s
 
 data SumSpec fn a b = SumSpec (Maybe (Int, Int)) (Specification fn a) (Specification fn b)
@@ -3203,7 +3222,8 @@ countCases :: forall a. KnownNat (CountCases a) => Int
 countCases = fromIntegral (natVal @(CountCases a) Proxy)
 
 instance (HasSpec fn a, HasSpec fn b) => Semigroup (SumSpec fn a b) where
-  SumSpec h sa sb <> SumSpec h' sa' sb' = SumSpec (unionWithMaybe mergeH h h') (sa <> sa') (sb <> sb')
+  SumSpec h sa sb <> SumSpec h' sa' sb' =
+    SumSpec (unionWithMaybe mergeH h h') (sa <> sa') (sb <> sb')
     where
       -- TODO: think more carefully about this, now weights like 2 2 and 10 15 give more weight to 10 15
       -- than would be the case if you had 2 2 and 2 3. But on the other hand this approach is associative
@@ -4706,10 +4726,11 @@ name nh (V (Var i _)) = V (Var i nh)
 name _ _ = error "applying name to non-var thing! Shame on you!"
 
 bind :: (HasSpec fn a, IsPred p fn) => (Term fn a -> p) -> Binder fn a
-bind body = x :-> p
+bind bodyf = x :-> p
   where
-    p = toPred $ body (V x)
+    p = toPredExplain [] $ body
     x = Var (nextVar p) "v"
+    body = bodyf (V x)
 
     nextVar p = 1 + bound p
 
@@ -4778,13 +4799,13 @@ instance (UnivConstr p fn, Show p, PredLike p) => PredLike [p] where
 instance PredLike Bool where
   type UnivConstr Bool fn = ()
   toPredExplain _ True = TruePred
-  toPredExplain [] False = FalsePred (pure "toPred")
+  toPredExplain [] False = FalsePred (pure "toPred False")
   toPredExplain es False = FalsePred (NE.fromList es)
 
 instance BaseUniverse fn => PredLike (Term fn Bool) where
   type UnivConstr (Term fn Bool) fn' = fn ~ fn'
   toPredExplain es (Lit b) = toPredExplain es b
-  toPredExplain [] tm = Assert (pure "toPred") tm
+  toPredExplain [] tm = Assert (pure "toPred Term") tm
   toPredExplain es tm = Assert (NE.fromList es) tm
 
 ------------------------------------------------------------------------
@@ -4847,7 +4868,7 @@ instance Pretty (Pred fn) where
     TruePred -> "True"
     FalsePred {} -> "False"
     Monitor {} -> "monitor"
-    Explain es p -> "explain" <+> viaShow (NE.toList es) <+> "$" /> pretty p
+    Explain es p -> "explanation" <+> viaShow (NE.toList es) <+> "$" /> pretty p
 
 -- TODO: make nicer
 instance Pretty (f a) => Pretty (Weighted f a) where

@@ -34,10 +34,11 @@ cartesian ::
   Specification fn a ->
   Specification fn b ->
   Specification fn (Prod a b)
-cartesian (MemberSpec []) _ = MemberSpec []
-cartesian _ (MemberSpec []) = MemberSpec []
+cartesian (ErrorSpec es) (ErrorSpec fs) = ErrorSpec (es <> fs)
 cartesian (ErrorSpec es) _ = ErrorSpec es
 cartesian _ (ErrorSpec es) = ErrorSpec es
+cartesian (MemberSpec []) _ = MemberSpec []
+cartesian _ (MemberSpec []) = MemberSpec []
 cartesian s s' = typeSpec $ Cartesian s s'
 
 data PairSpec fn a b = Cartesian (Specification fn a) (Specification fn b)
