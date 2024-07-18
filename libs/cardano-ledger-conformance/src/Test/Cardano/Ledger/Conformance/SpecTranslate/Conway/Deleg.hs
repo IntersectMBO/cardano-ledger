@@ -29,7 +29,7 @@ import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance (
   hashToInteger,
  )
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (emptyDeposits)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
 import Test.Cardano.Ledger.Conway.TreeDiff
 
@@ -45,6 +45,8 @@ instance
     Agda.MkDelegEnv
       <$> toSpecRep cdePParams
       <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) cdePools)
+      -- TODO: replace with actual deposits map
+      <*> pure emptyDeposits
 
 instance SpecTranslate ctx (ConwayDelegCert c) where
   type SpecRep (ConwayDelegCert c) = Agda.TxCert
@@ -55,8 +57,10 @@ instance SpecTranslate ctx (ConwayDelegCert c) where
       <*> pure Nothing
       <*> pure Nothing
       <*> strictMaybe (pure 0) toSpecRep d
-  toSpecRep (ConwayUnRegCert c _) =
-    Agda.Dereg <$> toSpecRep c
+  toSpecRep (ConwayUnRegCert c d) =
+    Agda.Dereg
+      <$> toSpecRep c
+      <*> strictMaybe (pure 0) toSpecRep d
   toSpecRep (ConwayDelegCert c d) =
     Agda.Delegate
       <$> toSpecRep c
