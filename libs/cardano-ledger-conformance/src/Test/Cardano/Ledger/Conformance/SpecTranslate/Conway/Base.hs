@@ -736,7 +736,7 @@ instance
       <$> toSpecRep withdrawals
   toSpecRep (NoConfidence _) = pure Agda.NoConfidence
   toSpecRep (UpdateCommittee _ remove add threshold) =
-    Agda.NewCommittee
+    Agda.UpdateCommittee
       <$> toSpecRep add
       <*> toSpecRep (toList remove)
       <*> toSpecRep threshold
