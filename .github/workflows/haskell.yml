@@ -80,6 +80,22 @@ jobs:
     - name: Cabal update
       run: cabal update
 
+    # We create a dependencies.txt file that can be used to index the cabal
+    # store cache.
+    #
+    # We do not use plan.json directly because adding a dependency to our
+    # Cabal files which was already present somewhere else would result in a
+    # diferent plan, even though the set of dependencies is the same.
+    - name: Record dependencies to be used as cache keys
+      id: record-deps
+      run: |
+        cabal build all --dry-run --minimize-conflict-set
+        cat dist-newstyle/cache/plan.json \
+        | jq '.["install-plan"][].id' \
+        | sort \
+        | uniq > dependencies.txt
+        cat dependencies.txt
+
     - name: Restore cache
       uses: actions/cache/restore@v4
       id: restore-cabal-cache
@@ -88,12 +104,14 @@ jobs:
       with:
         path: |
           ${{ steps.install-haskell.outputs.cabal-store }}
-        # cache is invalidated upon a change to a cabal file, cabal.project (and/or cabal.project.local), or a bump to
+        # A new cache is created upon a change to the cabal build plan,
+        # cabal.project (and/or cabal.project.local), or a bump to
         # CABAL_CACHE_VERSION.
-        key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('cabal.project*') }}
-        # Restoring attempts are from current branch then master. The key above is by default already a restore-key.
+        key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
+        # Restoring attempts are from current branch then master. The key above
+        # is by default already a restore-key.
         restore-keys: |
-          ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('**/*.cabal') }}-
+          ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}
           ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-
 
     - name: Check workflow test matrix
@@ -242,6 +260,22 @@ jobs:
     - name: Unarchive working directory
       run: tar -xf state.tar && rm state.tar
 
+    # We create a dependencies.txt file that can be used to index the cabal
+    # store cache.
+    #
+    # We do not use plan.json directly because adding a dependency to our
+    # Cabal files which was already present somewhere else would result in a
+    # diferent plan, even though the set of dependencies is the same.
+    - name: Record dependencies to be used as cache keys
+      id: record-deps
+      run: |
+        cabal build all --dry-run --minimize-conflict-set
+        cat dist-newstyle/cache/plan.json \
+        | jq '.["install-plan"][].id' \
+        | sort \
+        | uniq > dependencies.txt
+        cat dependencies.txt
+
     - name: Restore cache
       uses: actions/cache/restore@v4
       id: restore-cabal-cache
@@ -250,7 +284,7 @@ jobs:
       with:
         path: |
           ${{ steps.install-haskell.outputs.cabal-store }}
-        key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('**/*.cabal') }}-${{ hashFiles('cabal.project*') }}
+        key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
         # The cache with this specific key should have been created by the build
         # job. If the cache is missing, something is terribly wrong! We fail the
         # test job, or otherwise we would start rebuilding all the dependencies.
