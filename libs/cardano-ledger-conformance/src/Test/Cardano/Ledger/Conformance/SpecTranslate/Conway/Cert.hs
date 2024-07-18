@@ -167,6 +167,8 @@ instance
     Agda.MkNewEpochState
       <$> toSpecRep nesEL
       <*> toSpecRep nesEs
+      -- TODO: replace with RewardUpdate
+      <*> pure Nothing
 
 instance SpecTranslate ctx (ConwayNewEpochPredFailure era) where
   type SpecRep (ConwayNewEpochPredFailure era) = OpaqueErrorString
