@@ -30,6 +30,7 @@ import qualified Data.VMap as VMap
 import Lens.Micro
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (emptyDeposits)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
@@ -52,6 +53,8 @@ instance
       <*> toSpecRep cePParams
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
+      -- TODO: replace with actual deposits map
+      <*> pure emptyDeposits
 
 instance SpecTranslate ctx (CertState era) where
   type SpecRep (CertState era) = Agda.CertState
@@ -164,6 +167,8 @@ instance
     Agda.MkNewEpochState
       <$> toSpecRep nesEL
       <*> toSpecRep nesEs
+      -- TODO: replace with RewardUpdate
+      <*> pure Nothing
 
 instance SpecTranslate ctx (ConwayNewEpochPredFailure era) where
   type SpecRep (ConwayNewEpochPredFailure era) = OpaqueErrorString

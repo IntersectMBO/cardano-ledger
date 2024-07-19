@@ -35,6 +35,8 @@ deriving instance Generic GovEnv
 
 deriving instance Generic EnactState
 
+deriving instance Generic DepositPurpose
+
 deriving instance Generic CertEnv
 
 deriving instance Generic PState
@@ -70,6 +72,8 @@ deriving instance Generic Snapshot
 deriving instance Generic LedgerState
 
 deriving instance Generic Acnt
+
+deriving instance Generic RewardUpdate
 
 deriving instance Generic NewEpochState
 
@@ -133,6 +137,8 @@ deriving instance Eq EnactState
 
 deriving instance Eq UTxOEnv
 
+deriving instance Eq DepositPurpose
+
 deriving instance Eq CertEnv
 
 deriving instance Eq DState
@@ -154,6 +160,8 @@ deriving instance Eq Snapshot
 deriving instance Eq Acnt
 
 deriving instance Eq LedgerState
+
+deriving instance Eq RewardUpdate
 
 deriving instance Eq NewEpochState
 
@@ -209,6 +217,8 @@ instance NFData Tx
 
 instance NFData UTxOEnv
 
+instance NFData DepositPurpose
+
 instance NFData CertEnv
 
 instance NFData PState
@@ -240,6 +250,8 @@ instance NFData Snapshot
 instance NFData Acnt
 
 instance NFData LedgerState
+
+instance NFData RewardUpdate
 
 instance NFData NewEpochState
 
@@ -298,6 +310,8 @@ instance ToExpr UTxOState
 
 instance ToExpr UTxOEnv
 
+instance ToExpr DepositPurpose
+
 instance ToExpr CertEnv
 
 instance ToExpr DState
@@ -329,6 +343,8 @@ instance ToExpr Snapshot
 instance ToExpr LedgerState
 
 instance ToExpr Acnt
+
+instance ToExpr RewardUpdate
 
 instance ToExpr NewEpochState
 
@@ -417,5 +433,7 @@ instance FixupSpecRep Snapshot
 instance FixupSpecRep Acnt
 
 instance FixupSpecRep LedgerState
+
+instance FixupSpecRep RewardUpdate
 
 instance FixupSpecRep NewEpochState

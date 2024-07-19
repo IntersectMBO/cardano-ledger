@@ -20,6 +20,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
+  emptyDeposits,
   SpecTranslate (..),
   SpecTranslationError,
   ConwayExecEnactEnv (..),
@@ -736,7 +737,7 @@ instance
       <$> toSpecRep withdrawals
   toSpecRep (NoConfidence _) = pure Agda.NoConfidence
   toSpecRep (UpdateCommittee _ remove add threshold) =
-    Agda.NewCommittee
+    Agda.UpdateCommittee
       <$> toSpecRep add
       <*> toSpecRep (toList remove)
       <*> toSpecRep threshold
@@ -1036,3 +1037,8 @@ instance SpecTranslate ctx (ConwayExecEnactEnv era) where
       <$> toSpecRep ceeeGid
       <*> toSpecRep ceeeTreasury
       <*> toSpecRep ceeeEpoch
+
+-- Temporary value to use where the map of all deposits is required,
+-- until we build and translate the real map
+emptyDeposits :: Agda.HSMap Agda.DepositPurpose Agda.Coin
+emptyDeposits = Agda.MkHSMap []

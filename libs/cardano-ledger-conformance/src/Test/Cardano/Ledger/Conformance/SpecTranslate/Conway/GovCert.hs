@@ -35,7 +35,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Lib as Agda
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (emptyDeposits)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
 import Test.Cardano.Ledger.Conway.TreeDiff (showExpr)
 
@@ -82,6 +82,8 @@ instance
       <*> toSpecRep cgcePParams
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
+      -- TODO: replace with actual deposits map
+      <*> pure emptyDeposits
 
 instance SpecTranslate ctx (ConwayGovCertPredFailure era) where
   type SpecRep (ConwayGovCertPredFailure era) = OpaqueErrorString

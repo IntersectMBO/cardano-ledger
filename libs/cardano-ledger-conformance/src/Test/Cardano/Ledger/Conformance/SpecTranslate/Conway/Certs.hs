@@ -24,6 +24,7 @@ import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (emptyDeposits)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
 import Test.Cardano.Ledger.Conway.TreeDiff
@@ -49,3 +50,5 @@ instance
       <*> toSpecRep certsPParams
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
+      -- TODO: replace with actual deposits map
+      <*> pure emptyDeposits
