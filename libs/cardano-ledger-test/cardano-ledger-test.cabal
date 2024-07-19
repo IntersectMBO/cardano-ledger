@@ -66,6 +66,7 @@ library
         Test.Cardano.Ledger.Constrained.Conway.PParams
         Test.Cardano.Ledger.Constrained.Conway.Pool
         Test.Cardano.Ledger.Constrained.Conway.Utxo
+        Test.Cardano.Ledger.Constrained.Conway.NecessaryAndSufficient
         Test.Cardano.Ledger.Examples.BabbageFeatures
         Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
         Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW
@@ -158,7 +159,8 @@ library
         vector,
         constrained-generators,
         random,
-        FailT
+        FailT,
+        template-haskell
 
 test-suite cardano-ledger-test
     type:             exitcode-stdio-1.0
@@ -174,7 +176,8 @@ test-suite cardano-ledger-test
         base,
         cardano-ledger-test,
         tasty,
-        data-default-class
+        data-default-class,
+        hspec
 
 benchmark bench
     type:             exitcode-stdio-1.0
