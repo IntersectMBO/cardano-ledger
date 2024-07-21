@@ -93,7 +93,7 @@ jobs:
         cat dist-newstyle/cache/plan.json \
         | jq '.["install-plan"][].id' \
         | sort \
-        | uniq
+        | uniq \
         | tee dependencies.txt
 
     - name: Restore cache
