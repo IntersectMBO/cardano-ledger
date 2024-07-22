@@ -12,6 +12,7 @@ import qualified Test.Cardano.Ledger.Binary.Vintage.RoundTrip as Vintage.RoundTr
 import qualified Test.Cardano.Ledger.Binary.Vintage.Serialization as Vintage.Serialization
 import qualified Test.Cardano.Ledger.Binary.Vintage.SizeBounds as Vintage.SizeBounds
 import Test.Hspec
+import Cardano.Crypto.Libsodium.Init
 
 spec :: Spec
 spec = do
@@ -32,4 +33,5 @@ main :: IO ()
 main = do
   hSetBuffering stdout LineBuffering
   hSetEncoding stdout utf8
+  sodiumInit
   hspec spec
