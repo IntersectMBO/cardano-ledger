@@ -48,9 +48,11 @@ txCertSpec (CertEnv slot pp ce cc cp) CertState {..} =
   constrained $ \txCert ->
     caseOn
       txCert
-      (branch $ \delegCert -> satisfies delegCert $ delegCertSpec delegEnv certDState)
-      (branch $ \poolCert -> satisfies poolCert $ poolCertSpec poolEnv certPState)
-      (branch $ \govCert -> satisfies govCert $ govCertSpec govCertEnv certVState)
+      -- These weights try to make it equally likely that each of the many certs
+      -- across the 3 categories are chosen at similar frequencies.
+      (branchW 3 $ \delegCert -> satisfies delegCert $ delegCertSpec delegEnv certDState)
+      (branchW 1 $ \poolCert -> satisfies poolCert $ poolCertSpec poolEnv certPState)
+      (branchW 3 $ \govCert -> satisfies govCert $ govCertSpec govCertEnv certVState)
   where
     delegEnv = ConwayDelegEnv pp (psStakePoolParams certPState)
     poolEnv = PoolEnv slot pp

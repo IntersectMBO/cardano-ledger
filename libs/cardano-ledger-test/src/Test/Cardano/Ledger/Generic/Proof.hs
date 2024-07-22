@@ -215,6 +215,13 @@ data WitRule (s :: Symbol) (e :: Type) where
   ENACT :: Proof era -> WitRule "ENACT" era
   TALLY :: Proof era -> WitRule "TALLY" era
   EPOCH :: Proof era -> WitRule "EPOCH" era
+  NEWEPOCH :: Proof era -> WitRule "NEWEPOCH" era
+  CERT :: Proof era -> WitRule "CERT" era
+  CERTS :: Proof era -> WitRule "CERTS" era
+  DELEG :: Proof era -> WitRule "DELEG" era
+  POOL :: Proof era -> WitRule "POOL" era
+  GOVCERT :: Proof era -> WitRule "GOVCERT" era
+  GOV :: Proof era -> WitRule "GOV" era
 
 ruleProof :: WitRule s e -> Proof e
 ruleProof (UTXO p) = p
@@ -227,6 +234,13 @@ ruleProof (RATIFY p) = p
 ruleProof (ENACT p) = p
 ruleProof (TALLY p) = p
 ruleProof (EPOCH p) = p
+ruleProof (NEWEPOCH p) = p
+ruleProof (CERT p) = p
+ruleProof (CERTS p) = p
+ruleProof (DELEG p) = p
+ruleProof (POOL p) = p
+ruleProof (GOVCERT p) = p
+ruleProof (GOV p) = p
 
 runSTS ::
   forall s e ans.
@@ -246,7 +260,14 @@ runSTS (MOCKCHAIN _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (RATIFY _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (ENACT _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (TALLY _proof) x cont = cont (runShelleyBase (applySTSTest x))
-runSTS (_proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (EPOCH _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (NEWEPOCH _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (CERT _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (CERTS _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (DELEG _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (POOL _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (GOVCERT _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (GOV _proof) x cont = cont (runShelleyBase (applySTSTest x))
 
 runSTS' ::
   forall s e.
@@ -266,6 +287,8 @@ runSTS' (RATIFY _proof) x = runShelleyBase (applySTSTest x)
 runSTS' (ENACT _proof) x = runShelleyBase (applySTSTest x)
 runSTS' (TALLY _proof) x = runShelleyBase (applySTSTest x)
 runSTS' (EPOCH _proof) x = runShelleyBase (applySTSTest x)
+runSTS' (NEWEPOCH _proof) x = runShelleyBase (applySTSTest x)
+runSTS' _ x = runShelleyBase (applySTSTest x)
 
 -- | Like runSTS, but makes the components of the TRC triple explicit.
 --   in case you can't remember, in ghci type
@@ -315,6 +338,20 @@ goSTS (ENACT _proof) env state sig cont =
 goSTS (TALLY _proof) env state sig cont =
   cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
 goSTS (EPOCH _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
+goSTS (NEWEPOCH _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
+goSTS (CERT _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
+goSTS (CERTS _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
+goSTS (DELEG _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
+goSTS (POOL _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
+goSTS (GOVCERT _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
+goSTS (GOV _proof) env state sig cont =
   cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
 
 -- ================================================================

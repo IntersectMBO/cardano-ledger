@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -23,7 +24,16 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 
+-- | Specify that some of the rewards in the RDPair's are zero.
+--   without this in the DState, it is hard to generate the ConwayUnRegCert
+--   certificate, since it requires a rewards balance of 0.
+someZeros :: forall fn. IsConwayUniv fn => Specification fn RDPair
+someZeros = constrained $ \rdpair ->
+  match rdpair $ \reward _deposit ->
+    satisfies reward (chooseSpec (1, constrained $ \x -> assert $ x ==. lit (Coin 0)) (3, TrueSpec))
+
 dStateSpec ::
+  forall fn.
   IsConwayUniv fn =>
   Specification fn (DState (ConwayEra StandardCrypto))
 dStateSpec = constrained $ \ds ->
@@ -31,6 +41,9 @@ dStateSpec = constrained $ \ds ->
     match rewardMap $ \rdMap ptrMap sPoolMap _dRepMap ->
       [ assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
       , assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
+      , assertExplain (pure "some rewards are zero") $
+          forAll rdMap $
+            \p -> match p $ \_cred rdpair -> satisfies rdpair someZeros
       ]
 
 delegCertSpec ::
@@ -57,10 +70,14 @@ delegCertSpec (ConwayDelegEnv pp pools) ds =
           isInPools = (`member_` lit (Map.keysSet pools))
    in constrained $ \dc ->
         (caseOn dc)
+          -- The weights on each 'branchW' case try to make it likely
+          -- that each branch is choosen with similar frequency
+
           -- ConwayRegCert !(StakeCredential c) !(StrictMaybe Coin)
-          (branch $ \_ mc -> mc ==. lit (SJust (pp ^. ppKeyDepositL)))
+          ( branchW 2 $ \_ mc -> mc ==. lit (SJust (pp ^. ppKeyDepositL))
+          )
           -- ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
-          ( branch $ \sc mc ->
+          ( branchW 2 $ \sc mc ->
               [ -- You can only unregister things with 0 reward
                 assert $ elem_ sc $ lit (Map.keys $ Map.filter zeroReward rewardMap)
               , assert $ elem_ sc $ lit (Map.keys delegMap)
@@ -69,14 +86,15 @@ delegCertSpec (ConwayDelegEnv pp pools) ds =
               ]
           )
           -- ConwayDelegCert !(StakeCredential c) !(Delegatee c)
-          ( branch $ \sc delegatee ->
+          ( branchW 1 $ \sc delegatee ->
               [ assert . member_ sc $ lit (Map.keysSet delegMap)
               , delegateeInPools delegatee
               ]
           )
           -- ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
-          ( branch $ \_ delegatee c ->
+          ( branchW 1 $ \sc delegatee c ->
               [ assert $ c ==. lit (pp ^. ppKeyDepositL)
+              , assert $ not_ (member_ sc (lit (Map.keysSet rewardMap)))
               , delegateeInPools delegatee
               ]
           )

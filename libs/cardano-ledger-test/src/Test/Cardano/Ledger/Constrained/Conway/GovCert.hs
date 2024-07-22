@@ -1,23 +1,24 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the GOVCERT rule
 module Test.Cardano.Ledger.Constrained.Conway.GovCert where
 
 import Cardano.Ledger.CertState
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Constrained
 import qualified Data.Map as Map
 import Lens.Micro
-
-import Constrained
-
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 
@@ -31,7 +32,7 @@ govCertSpec ::
   Specification fn (ConwayGovCert StandardCrypto)
 govCertSpec ConwayGovCertEnv {..} vs =
   let reps = lit $ Map.keysSet $ vsDReps vs
-      deposits = lit [(k, drepDeposit dep) | (k, dep) <- Map.toList $ vsDReps vs]
+      deposits = Map.map drepDeposit (vsDReps vs)
       getNewMembers = \case
         UpdateCommittee _ _ newMembers _ -> Map.keysSet newMembers
         _ -> mempty
@@ -40,27 +41,56 @@ govCertSpec ConwayGovCertEnv {..} vs =
           <> foldMap (getNewMembers . pProcGovAction . gasProposalProcedure) cgceCommitteeProposals
       ccCertSpec coldCred =
         assert . member_ coldCred $ lit knownColdCreds
-   in constrained $ \gc ->
+      commiteeStatus = csCommitteeCreds (vsCommitteeState vs)
+   in constrained $ \ [var|gc|] ->
         caseOn
           gc
+          -- The weights on each 'branchW' case try to make it likely
+          -- that each branch is choosen with similar frequency
           -- ConwayRegDRep
-          ( branch $ \key coin _ ->
-              [ not_ $ member_ key reps
-              , coin ==. lit (cgcePParams ^. ppDRepDepositL)
+
+          ( branchW 1 $ \ [var|keyreg|] [var|coinreg|] _ ->
+              [ assert $ not_ $ member_ keyreg (dom_ (lit deposits))
+              , assert $ coinreg ==. lit (cgcePParams ^. ppDRepDepositL)
               ]
           )
           -- ConwayUnRegDRep
-          ( branch $ \cred coin ->
-              elem_ (pair_ cred coin) deposits
+          ( branchW 3 $ \ [var|credUnreg|] [var|coinUnreg|] ->
+              assert $ elem_ (pair_ credUnreg coinUnreg) (lit (Map.toList deposits))
           )
           -- ConwayUpdateDRep
-          ( branch $ \key _ ->
-              member_ key reps
+          ( branchW 1 $ \keyupdate _ ->
+              member_ keyupdate reps
           )
           -- ConwayAuthCommitteeHotKey
-          (branch $ \coldCred _ -> ccCertSpec coldCred)
+          ( branchW 1 $ \ [var|coldCredAuth|] _ -> [ccCertSpec coldCredAuth, notYetResigned commiteeStatus coldCredAuth]
+          )
           -- ConwayResignCommitteeColdKey
-          (branch $ \coldCred _ -> ccCertSpec coldCred)
+          ( branchW 1 $ \ [var|coldCredResign|] _ -> [ccCertSpec coldCredResign, notYetResigned commiteeStatus coldCredResign]
+          )
+
+-- | Operations for authenticating a HotKey, or resigning a ColdKey are illegal
+--   if that key has already resigned.
+notYetResigned ::
+  (HasSpec fn x, Ord x, IsConwayUniv fn) =>
+  Map.Map x (CommitteeAuthorization StandardCrypto) ->
+  Term fn x ->
+  Pred fn
+notYetResigned committeeStatus coldcred =
+  ( caseOn
+      (lookup_ coldcred (lit committeeStatus))
+      -- SNothing
+      (branch $ \_ -> True)
+      -- SJust
+      ( branch $ \x ->
+          [ (caseOn x)
+              --  CommitteeHotCredential
+              (branch $ \_ -> True)
+              -- CommitteeMemberResigned
+              (branch $ \_ -> False)
+          ]
+      )
+  )
 
 govCertEnvSpec ::
   IsConwayUniv fn =>

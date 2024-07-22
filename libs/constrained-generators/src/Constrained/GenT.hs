@@ -273,3 +273,11 @@ tryGen' g = do
     FatalError es err -> foldr explain (fatalError err) es
     GenError _ _ -> pure Nothing
     Result _ a -> pure $ Just a
+
+catchGenT :: GenT GE a -> Gen (Either [String] a)
+catchGenT g = genFromGenT $ do
+  r <- pureGen $ runGenT g Loose
+  case r of
+    FatalError es e -> pure $ Left (NE.toList $ foldr1 (<>) es <> e)
+    GenError es e -> pure $ Left (NE.toList $ foldr1 (<>) es <> e)
+    Result _ a -> pure $ Right a

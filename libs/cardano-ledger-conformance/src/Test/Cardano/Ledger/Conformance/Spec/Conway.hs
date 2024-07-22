@@ -8,12 +8,14 @@ import Cardano.Ledger.Conway (Conway)
 import qualified Constrained as CV2
 import Test.Cardano.Ledger.Conformance (ExecSpecRule (..), conformsToImpl, generatesWithin)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
+import qualified Test.Cardano.Ledger.Conformance.ExecSpecRule.MiniTrace as MiniTrace
 import Test.Cardano.Ledger.Constrained.Conway
 import Test.Cardano.Ledger.Conway.ImpTest ()
 import Test.Cardano.Ledger.Imp.Common
 
 spec :: Spec
 spec = do
+  describe "MiniTrace" MiniTrace.spec
   describe "Generators" $ do
     let
       genEnv = do
@@ -39,8 +41,14 @@ spec = do
       xprop "NEWEPOCH" $ conformsToImpl @"NEWEPOCH" @ConwayFn @Conway
     describe "Blocks transition graph" $ do
       xprop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
+      -- GOVCERT is disabled because the Agda MALONZO code has a bug
+      -- when accessing the PParams DRepActivity field. When that is fixed
+      -- we can turn xprop to prop for "GOVCERT"
       xprop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
       prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @Conway
+      -- The PParams DRepActivity field bug in Agda means we must also
+      -- turn off the "CERT" conformance test because "CERT" contains "GOVCERT"
+      -- When that is fixed we can turn xprop to prop for "CERT"
       xprop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
       xprop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @Conway
       prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
