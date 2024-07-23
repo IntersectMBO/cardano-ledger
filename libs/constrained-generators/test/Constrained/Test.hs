@@ -71,6 +71,8 @@ tests nightly =
     -- so we need to figure something out about double-shrinking
     testSpecNoShrink "intSpec" intSpec
     testSpec "mapElemSpec" mapElemSpec
+    -- TODO: double shrinking
+    testSpecNoShrink "mapIsJust" mapIsJust
     testSpec "mapElemKeySpec" mapElemKeySpec
     testSpec "mapPairSpec" mapPairSpec
     testSpecNoShrink "mapEmptyDomainSpec" mapEmptyDomainSpec

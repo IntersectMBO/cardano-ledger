@@ -3,11 +3,14 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Constrained.Examples.Map where
 
 import Data.Map (Map)
+import Data.Map qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.Word
@@ -123,3 +126,7 @@ mapSetSmall :: Specification BaseFn (Map (Set Int) Int)
 mapSetSmall = constrained $ \x ->
   forAll (dom_ x) $ \d ->
     assert $ subset_ d $ lit (Set.fromList [3 .. 4])
+
+mapIsJust :: Specification BaseFn (Int, Int)
+mapIsJust = constrained' $ \ [var| x |] [var| y |] ->
+  assert $ cJust_ x ==. lookup_ y (lit $ Map.fromList [(z, z) | z <- [100 .. 102]])
