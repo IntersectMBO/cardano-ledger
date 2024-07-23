@@ -96,10 +96,7 @@ import Control.State.Transition (
   wrapEvent,
   wrapFailed,
  )
-import Data.Foldable (
-  foldl',
-  toList,
- )
+import Data.Foldable as F (foldl', toList)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Data.Set (Set)
@@ -380,7 +377,7 @@ instance
         (\_ st' -> utxosDeposited st' >= mempty)
     , let utxoBalance us = Val.inject (utxosDeposited us <> utxosFees us) <> balance (utxosUtxo us)
           withdrawals :: TxBody era -> Value era
-          withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWithdrawals $ txb ^. withdrawalsTxBodyL
+          withdrawals txb = Val.inject $ F.foldl' (<>) mempty $ unWithdrawals $ txb ^. withdrawalsTxBodyL
        in PostCondition
             "Should preserve value in the UTxO state"
             ( \(TRC (_, us, tx)) us' ->

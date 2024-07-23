@@ -100,7 +100,7 @@ import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coerce (coerce)
 import Data.Either (isRight)
-import Data.Foldable (foldl', sequenceA_, toList)
+import Data.Foldable as F (foldl', sequenceA_, toList)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Data.Set (Set)
@@ -427,7 +427,7 @@ validateOutputTooBigUTxO pp outputs =
   where
     maxValSize = pp ^. ppMaxValSizeL
     protVer = pp ^. ppProtocolVersionL
-    outputsTooBig = foldl' accum [] outputs
+    outputsTooBig = F.foldl' accum [] outputs
     accum ans txOut =
       let v = txOut ^. valueTxOutL
           serSize = fromIntegral $ BSL.length $ serialize (pvMajor protVer) v

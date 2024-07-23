@@ -62,8 +62,8 @@ import Control.Monad (when)
 import Control.State.Transition
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Either as Either (partitionEithers)
+import Data.Foldable as F (foldl')
 import qualified Data.IntSet as IntSet
-import Data.List (foldl')
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
@@ -704,7 +704,7 @@ mkTxWits
           . Map.toAscList
           $ indexedStakingKeys
       keysLists = map (scriptKeyCombination (Proxy @era)) (Map.elems msigs)
-      msigSignatures = foldl' Set.union Set.empty $ map Set.fromList keysLists
+      msigSignatures = F.foldl' Set.union Set.empty $ map Set.fromList keysLists
 
 -- | Distribute the sum of `balance_` and `fee` over the addresses, return the
 -- sum of `fee` and the remainder of the equal distribution and the list ouf

@@ -57,7 +57,7 @@ import Data.Bimap (Bimap, empty, lookupR)
 import qualified Data.Bimap as Bimap
 import Data.Char (isAscii)
 import Data.Data (Data, Typeable)
-import Data.Foldable (foldl', toList)
+import Data.Foldable as F (foldl', toList)
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import Data.Ix (inRange)
@@ -1572,7 +1572,7 @@ instance HasTrace UPIVOTES where
         Set (UpId, Core.VKeyGenesis) ->
         Map UpId (Set Core.VKeyGenesis)
       groupVotesPerProposalId =
-        foldl' addVote proposalIdsWithNoVotes
+        F.foldl' addVote proposalIdsWithNoVotes
         where
           proposalIdsWithNoVotes :: Map UpId (Set Core.VKeyGenesis)
           proposalIdsWithNoVotes = Map.fromList $ (,Set.empty) <$> Set.toList (dom rpus)

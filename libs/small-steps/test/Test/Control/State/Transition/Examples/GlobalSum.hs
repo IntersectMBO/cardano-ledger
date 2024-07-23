@@ -11,7 +11,7 @@ module Test.Control.State.Transition.Examples.GlobalSum where
 import Control.Arrow (right)
 import Control.Monad.Reader
 import Control.State.Transition.Extended
-import Data.Foldable (foldl')
+import Data.Foldable as F (foldl')
 import Data.Void (Void)
 import Test.Hspec
 import Prelude hiding (sum)
@@ -67,10 +67,10 @@ spec =
   where
     inputs = [1 .. 10]
     ctx = TRC ((), 0, inputs)
-    withSum = runReader (applySTS @GSUM ctx) (Ops (foldl' (+) 0))
+    withSum = runReader (applySTS @GSUM ctx) (Ops (F.foldl' (+) 0))
     withLblSum vp =
       right fst $
-        runReader (applySTSOptsEither @GSUM lblOpts ctx) (Ops (foldl' (+) 1))
+        runReader (applySTSOptsEither @GSUM lblOpts ctx) (Ops (F.foldl' (+) 1))
       where
         lblOpts =
           ApplySTSOpts
@@ -79,10 +79,10 @@ spec =
             , asoEvents = EPReturn
             }
 
-    withProduct = runReader (applySTS @GSUM ctx) (Ops (foldl' (*) 1))
+    withProduct = runReader (applySTS @GSUM ctx) (Ops (F.foldl' (*) 1))
     withLazyEventsSum =
       right fst $
-        runReader (applySTSOptsEither @GSUM evtOpts ctx) (Ops (foldl' (+) 0))
+        runReader (applySTSOptsEither @GSUM evtOpts ctx) (Ops (F.foldl' (+) 0))
       where
         evtOpts =
           ApplySTSOpts

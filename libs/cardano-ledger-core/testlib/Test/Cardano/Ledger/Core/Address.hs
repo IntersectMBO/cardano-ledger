@@ -49,7 +49,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Short as SBS (ShortByteString, fromShort, index, length)
 import Data.ByteString.Short.Internal as SBS (ShortByteString (SBS))
-import Data.Foldable (foldl')
+import Data.Foldable as F (foldl')
 import Data.Maybe (fromMaybe)
 import qualified Data.Primitive.ByteArray as BA
 import Data.String (fromString)
@@ -190,7 +190,7 @@ getWord7s = do
 
 -- invariant: length [Word7] < 8
 word7sToWord64 :: [Word7] -> Word64
-word7sToWord64 = foldl' f 0
+word7sToWord64 = F.foldl' f 0
   where
     f n (Word7 r) = shiftL n 7 .|. fromIntegral r
 

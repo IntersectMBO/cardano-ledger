@@ -8,7 +8,7 @@ import Cardano.Ledger.Conway.Governance
 import Control.DeepSeq (force)
 import Control.Exception (AssertionFailed (..), evaluate)
 import Data.Either (isRight)
-import Data.Foldable (foldl', toList)
+import Data.Foldable as F (foldl', toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Sequence (fromList)
@@ -28,11 +28,11 @@ spec = do
       prop "Adding new nodes keeps Proposals consistent" $
         \(ProposalsNewActions ps actions :: ProposalsNewActions Conway) ->
           let ps' =
-                foldl'
+                F.foldl'
                   (\p action -> fromMaybe (error "Unable to add action") $ proposalsAddAction action p)
                   ps
                   actions
-              actionsMap = foldl' (\accum gas -> Map.insert (gasId gas) gas accum) Map.empty actions
+              actionsMap = F.foldl' (\accum gas -> Map.insert (gasId gas) gas accum) Map.empty actions
            in actionsMap `shouldBe` (actionsMap `Map.intersection` proposalsActionsMap ps')
     describe "Removal" $ do
       prop "Removing leaf nodes keeps Proposals consistent" $

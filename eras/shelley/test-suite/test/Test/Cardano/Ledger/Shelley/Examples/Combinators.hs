@@ -118,7 +118,7 @@ import Cardano.Protocol.TPraos.BHeader (
  )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Data.Default.Class (Default (..))
-import Data.Foldable (fold, foldl')
+import Data.Foldable as F (fold, foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -204,7 +204,7 @@ feesAndDeposits ppEx newFees stakes pools cs = cs {chainNes = nes'}
     ls' = ls {lsUTxOState = utxoSt', lsCertState = dpstate'}
     -- Count the number of new pools, because we don't take a deposit for existing pools
     -- This strategy DOES NOT WORK if there are duplicate PoolParams in one call
-    newcount = foldl' accum 0 pools
+    newcount = F.foldl' accum 0 pools
     accum n x = if Map.member (ppId x) (psDeposits pstate) then (n :: Integer) else n + 1
     newDeposits =
       Map.fromList (map (\cred -> (cred, UM.compactCoinOrError (ppEx ^. ppKeyDepositL))) stakes)

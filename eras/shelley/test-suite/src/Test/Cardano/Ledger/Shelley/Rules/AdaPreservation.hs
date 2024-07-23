@@ -71,7 +71,7 @@ import qualified Cardano.Ledger.UMap as UM
 import Cardano.Ledger.UTxO (UTxO (..), coinBalance, txInsFilter, txouts)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (BHeader (..))
-import Data.Foldable (fold, foldl', toList)
+import Data.Foldable as F (fold, foldl', toList)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.TreeDiff.QuickCheck (ediffEq)
@@ -581,7 +581,7 @@ withdrawals ::
   Block (BHeader (EraCrypto era)) era ->
   Coin
 withdrawals (UnserialisedBlock _ txseq) =
-  foldl'
+  F.foldl'
     ( \c tx ->
         let wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
          in if hasFailedScripts tx then c else c <> fold wdrls
@@ -595,7 +595,7 @@ txFees ::
   Trace ledger ->
   Coin
 txFees ledgerTr =
-  foldl' f (Coin 0) (sourceSignalTargets ledgerTr)
+  F.foldl' f (Coin 0) (sourceSignalTargets ledgerTr)
   where
     f
       c

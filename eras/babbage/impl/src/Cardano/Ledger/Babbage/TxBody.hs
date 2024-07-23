@@ -125,7 +125,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Control.Arrow (left)
 import Control.DeepSeq (NFData)
 import Control.Monad (when)
-import Data.Foldable (foldl')
+import Data.Foldable as F (foldl')
 import Data.Sequence.Strict (StrictSeq, (|>))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -206,7 +206,7 @@ instance
         _ -> False
       eqSeqUnsized x y =
         length x == length y
-          && foldl' (\acc (x', y') -> acc && x' `eqUnsized` y') True (StrictSeq.zip x y)
+          && F.foldl' (\acc (x', y') -> acc && x' `eqUnsized` y') True (StrictSeq.zip x y)
       eqUnsized x y = sizedValue x == sizedValue y
 
 type instance MemoHashIndex BabbageTxBodyRaw = EraIndependentTxBody

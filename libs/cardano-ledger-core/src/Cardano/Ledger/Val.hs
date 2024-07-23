@@ -25,7 +25,7 @@ import Cardano.Ledger.Compactible (Compactible (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON)
 import Data.Coerce
-import Data.Foldable (foldl')
+import Data.Foldable as F (foldl')
 import Data.Group (Abelian)
 import NoThunks.Class (NoThunks)
 
@@ -103,7 +103,7 @@ scale :: (Val t, Integral i) => i -> t -> t
 scale i v = i <×> v
 
 sumVal :: (Foldable t, Val v) => t v -> v
-sumVal = foldl' (<+>) mempty
+sumVal = F.foldl' (<+>) mempty
 
 invert :: Val t => t -> t
 invert x = (-1 :: Integer) <×> x

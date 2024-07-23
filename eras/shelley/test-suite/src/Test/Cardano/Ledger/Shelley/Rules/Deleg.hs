@@ -28,7 +28,7 @@ import Cardano.Ledger.Shelley.Rules (DelegEnv (..))
 import qualified Cardano.Ledger.UMap as UM
 import Control.SetAlgebra (eval, rng, (∈))
 import Data.Foldable (fold)
-import Data.List (foldl')
+import Data.Foldable as F (foldl')
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro.Extras (view)
@@ -153,7 +153,7 @@ rewardsSumInvariant
   SourceSignalTarget {source, target} =
     let sourceRewards = UM.compactRewardMap (dsUnified source)
         targetRewards = UM.compactRewardMap (dsUnified target)
-        rewardsSum = foldl' (<>) mempty
+        rewardsSum = F.foldl' (<>) mempty
      in conjoin
           [ counterexample
               "sum of rewards should not change"

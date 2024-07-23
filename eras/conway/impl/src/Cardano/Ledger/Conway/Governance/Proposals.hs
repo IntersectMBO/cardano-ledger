@@ -140,7 +140,7 @@ import Control.Monad (unless)
 import Data.Aeson (ToJSON (..))
 import Data.Default.Class (Default (..))
 import Data.Either (partitionEithers)
-import Data.Foldable (foldl', foldrM, toList)
+import Data.Foldable as F (foldl', foldrM, toList)
 import qualified Data.Map as Map
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
@@ -338,7 +338,7 @@ unsafeMkProposals ::
   GovRelation StrictMaybe era ->
   OMap.OMap (GovActionId (EraCrypto era)) (GovActionState era) ->
   Proposals era
-unsafeMkProposals pgais omap = foldl' unsafeProposalsAddAction initialProposals omap
+unsafeMkProposals pgais omap = F.foldl' unsafeProposalsAddAction initialProposals omap
   where
     initialProposals = def & pRootsL .~ fromPrevGovActionIds pgais
     unsafeProposalsAddAction ps gas =
@@ -393,7 +393,7 @@ proposalsRemoveIds ::
   (Proposals era, Map.Map (GovActionId (EraCrypto era)) (GovActionState era))
 proposalsRemoveIds gais ps =
   let (retainedOMap, removedFromOMap) = OMap.extractKeys gais $ ps ^. pPropsL
-      (roots, hierarchy) = foldl' removeEach (ps ^. pRootsL, ps ^. pGraphL) removedFromOMap
+      (roots, hierarchy) = F.foldl' removeEach (ps ^. pRootsL, ps ^. pGraphL) removedFromOMap
    in (checkInvariantAfterDeletion gais ps $ Proposals retainedOMap roots hierarchy, removedFromOMap)
   where
     removeEach accum@(!roots, !graph) gas =
@@ -432,7 +432,7 @@ proposalsRemoveWithDescendants gais ps@(Proposals omap _roots graph) =
                 case Map.lookup gpi $ graph ^. govRelationL . pGraphNodesL of
                   Nothing -> assert False acc
                   Just (PEdges _parent children) ->
-                    foldl' go (Set.map unGovPurposeId children <> acc) children
+                    F.foldl' go (Set.map unGovPurposeId children <> acc) children
            in go mempty
 
 -- | For use in the @`EPOCH`@ rule. Apply the result of
@@ -455,7 +455,7 @@ proposalsApplyEnactment ::
 proposalsApplyEnactment enactedGass expiredGais props =
   let (unexpiredProposals, expiredRemoved) = proposalsRemoveWithDescendants expiredGais props
       (enactedProposalsState, enactedRemoved) =
-        foldl' enact (unexpiredProposals, Map.empty) enactedGass
+        F.foldl' enact (unexpiredProposals, Map.empty) enactedGass
    in (enactedProposalsState, enactedRemoved, expiredRemoved)
   where
     enact (!ps, !removed) gas = withGovActionParent gas enactWithoutRoot enactFromRoot
@@ -515,7 +515,7 @@ proposalsDeposits ::
   Proposals era ->
   Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin)
 proposalsDeposits =
-  foldl'
+  F.foldl'
     ( \gasMap gas ->
         Map.insertWith
           addCompact
