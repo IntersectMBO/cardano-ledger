@@ -15,6 +15,7 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert (nameGovCert) where
 
+import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert
 import Data.Bifunctor (Bifunctor (..))
@@ -27,12 +28,13 @@ import Test.Cardano.Ledger.Constrained.Conway
 
 instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
   type ExecContext fn "GOVCERT" Conway = ConwayCertExecContext Conway
+  type ExecEnvironment fn "GOVCERT" Conway = CertExecEnv Conway
 
-  environmentSpec _ctx = govCertEnvSpec
+  environmentSpec _ctx = certExecEnvSpec
 
   stateSpec _ctx _env = vStateSpec
 
-  signalSpec _ctx env st = govCertSpec env st
+  signalSpec _ctx env st = govCertSpec (inject env) st
 
   classOf = Just . nameGovCert
 
