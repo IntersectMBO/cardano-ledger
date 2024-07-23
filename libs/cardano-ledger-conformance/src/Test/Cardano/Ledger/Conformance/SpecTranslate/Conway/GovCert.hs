@@ -22,10 +22,7 @@ import Cardano.Ledger.CertState (
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.Rules (
-  ConwayGovCertEnv (..),
-  ConwayGovCertPredFailure,
- )
+import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert (
   ConwayGovCert (..),
  )
@@ -35,9 +32,41 @@ import Cardano.Ledger.Shelley.LedgerState
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Lib as Agda
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (emptyDeposits)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
+import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Conway.TreeDiff (showExpr)
+
+instance SpecTranslate ctx (DepositPurpose c) where
+  type SpecRep (DepositPurpose c) = Agda.DepositPurpose
+  toSpecRep (CredentialDeposit cred) =
+    Agda.CredentialDeposit <$> toSpecRep cred
+  toSpecRep (PoolDeposit kh) =
+    Agda.PoolDeposit <$> toSpecRep kh
+  toSpecRep (DRepDeposit cred) =
+    Agda.DRepDeposit <$> toSpecRep cred
+  toSpecRep (GovActionDeposit gid) =
+    Agda.GovActionDeposit <$> toSpecRep gid
+
+instance
+  ( SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , Inject ctx (VotingProcedures era)
+  , Inject ctx (Map (Network, Credential 'Staking (EraCrypto era)) Coin)
+  ) =>
+  SpecTranslate ctx (CertExecEnv era)
+  where
+  type SpecRep (CertExecEnv era) = Agda.CertEnv
+
+  toSpecRep CertExecEnv {..} = do
+    votes <- askCtx @(VotingProcedures era)
+    withdrawals <- askCtx @(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
+    Agda.MkCertEnv
+      <$> toSpecRep (ceCurrentEpoch ceeCertEnv)
+      <*> toSpecRep (cePParams ceeCertEnv)
+      <*> toSpecRep votes
+      <*> toSpecRep withdrawals
+      <*> toSpecRep ceeDeposits
 
 instance SpecTranslate ctx (ConwayGovCert c) where
   type SpecRep (ConwayGovCert c) = Agda.TxCert
@@ -63,27 +92,6 @@ instance SpecTranslate ctx (ConwayGovCert c) where
     Agda.CCRegHot
       <$> toSpecRep c
       <*> toSpecRep (SNothing @(Credential _ _))
-
-instance
-  ( SpecTranslate ctx (PParamsHKD Identity era)
-  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-  ) =>
-  SpecTranslate ctx (ConwayGovCertEnv era)
-  where
-  type SpecRep (ConwayGovCertEnv era) = Agda.CertEnv
-
-  toSpecRep ConwayGovCertEnv {..} = do
-    votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-    Agda.MkCertEnv
-      <$> toSpecRep cgceCurrentEpoch
-      <*> toSpecRep cgcePParams
-      <*> toSpecRep votes
-      <*> toSpecRep withdrawals
-      -- TODO: replace with actual deposits map
-      <*> pure emptyDeposits
 
 instance SpecTranslate ctx (ConwayGovCertPredFailure era) where
   type SpecRep (ConwayGovCertPredFailure era) = OpaqueErrorString

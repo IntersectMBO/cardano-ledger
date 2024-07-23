@@ -1,26 +1,84 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the GOVCERT rule
 module Test.Cardano.Ledger.Constrained.Conway.GovCert where
 
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Core
+import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Constrained
+import Control.DeepSeq (NFData)
+import Data.Functor.Identity
 import qualified Data.Map as Map
+import Data.Map.Strict (Map)
+import GHC.Generics (Generic)
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
+import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
+
+data DepositPurpose c
+  = CredentialDeposit !(Credential 'Staking c)
+  | PoolDeposit !(KeyHash 'StakePool c)
+  | DRepDeposit !(Credential 'DRepRole c)
+  | GovActionDeposit !(GovActionId c)
+  deriving (Generic, Eq, Show, Ord)
+
+instance ToExpr (DepositPurpose c)
+instance Crypto c => NFData (DepositPurpose c)
+instance HasSimpleRep (DepositPurpose c)
+instance (IsConwayUniv fn, Crypto c) => HasSpec fn (DepositPurpose c)
+
+data CertExecEnv era = CertExecEnv
+  { ceeCertEnv :: !(CertEnv era)
+  , ceeDeposits :: !(Map (DepositPurpose (EraCrypto era)) Coin)
+  }
+  deriving (Generic, Eq, Show)
+
+instance
+  ( ToExpr (PParamsHKD StrictMaybe era)
+  , ToExpr (PParamsHKD Identity era)
+  ) =>
+  ToExpr (CertExecEnv era)
+instance EraPParams era => NFData (CertExecEnv era)
+instance HasSimpleRep (CertExecEnv era)
+instance
+  ( IsConwayUniv fn
+  , EraPParams era
+  , HasSpec fn (CertEnv era)
+  ) =>
+  HasSpec fn (CertExecEnv era)
+
+instance Inject (CertExecEnv era) (CertEnv era) where
+  inject = ceeCertEnv
+
+instance Inject (CertExecEnv era) (ConwayGovCertEnv era) where
+  inject CertExecEnv {..} =
+    ConwayGovCertEnv
+      (cePParams ceeCertEnv)
+      (ceCurrentEpoch ceeCertEnv)
+      (ceCurrentCommittee ceeCertEnv)
+      (ceCommitteeProposals ceeCertEnv)
 
 vStateSpec :: Specification fn (VState (ConwayEra StandardCrypto))
 vStateSpec = TrueSpec
@@ -77,20 +135,20 @@ notYetResigned ::
   Term fn x ->
   Pred fn
 notYetResigned committeeStatus coldcred =
-  ( caseOn
-      (lookup_ coldcred (lit committeeStatus))
-      -- SNothing
-      (branch $ \_ -> True)
-      -- SJust
-      ( branch $ \x ->
-          [ (caseOn x)
-              --  CommitteeHotCredential
-              (branch $ \_ -> True)
-              -- CommitteeMemberResigned
-              (branch $ \_ -> False)
-          ]
-      )
-  )
+  caseOn
+    (lookup_ coldcred (lit committeeStatus))
+    -- SNothing
+    (branch $ \_ -> True)
+    -- SJust
+    ( branch $ \x ->
+        [ caseOn
+            x
+            --  CommitteeHotCredential
+            (branch $ \_ -> True)
+            -- CommitteeMemberResigned
+            (branch $ \_ -> False)
+        ]
+    )
 
 govCertEnvSpec ::
   IsConwayUniv fn =>

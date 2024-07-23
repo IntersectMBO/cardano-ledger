@@ -12,6 +12,7 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (nameTxCert) where
 
+import Cardano.Ledger.BaseTypes (inject)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
 import Data.Bifunctor (first)
@@ -30,9 +31,11 @@ instance
   ExecSpecRule fn "CERT" Conway
   where
   type ExecContext fn "CERT" Conway = ConwayCertExecContext Conway
-  environmentSpec _ = certEnvSpec
+  type ExecEnvironment fn "CERT" Conway = CertExecEnv Conway
+
+  environmentSpec _ = certExecEnvSpec
   stateSpec _ _ = certStateSpec
-  signalSpec _ env st = txCertSpec env st
+  signalSpec _ env = txCertSpec (inject env)
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
