@@ -208,6 +208,19 @@ library testlib
     if !impl(ghc >=9.2)
         ghc-options: -Wno-name-shadowing
 
+executable plutus-debug
+    main-is:          PlutusDebug.hs
+    hs-source-dirs:   app
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+
+    build-depends:
+        base >=4.14 && <5,
+        cardano-ledger-core
+
 test-suite tests
     type:             exitcode-stdio-1.0
     main-is:          Main.hs

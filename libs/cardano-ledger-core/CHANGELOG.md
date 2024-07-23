@@ -11,6 +11,7 @@
 * Add `mkTermToEvaluate` to `PlutusLanguage` class.
 * Add a field to `DebugFailure`
 * Convert `debugPlutus` to an `IO` action
+* Add `plutus-debug` executable
 
 ## 1.13.2.0
 
