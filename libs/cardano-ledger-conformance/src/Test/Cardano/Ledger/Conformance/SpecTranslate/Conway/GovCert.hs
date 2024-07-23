@@ -54,16 +54,16 @@ instance
   , Inject ctx (VotingProcedures era)
   , Inject ctx (Map (Network, Credential 'Staking (EraCrypto era)) Coin)
   ) =>
-  SpecTranslate ctx (CertExecEnv era)
+  SpecTranslate ctx (CertsExecEnv era)
   where
-  type SpecRep (CertExecEnv era) = Agda.CertEnv
+  type SpecRep (CertsExecEnv era) = Agda.CertEnv
 
-  toSpecRep CertExecEnv {..} = do
+  toSpecRep CertsExecEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
     withdrawals <- askCtx @(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
     Agda.MkCertEnv
-      <$> toSpecRep (ceCurrentEpoch ceeCertEnv)
-      <*> toSpecRep (cePParams ceeCertEnv)
+      <$> toSpecRep (certsCurrentEpoch ceeCertEnv)
+      <*> toSpecRep (certsPParams ceeCertEnv)
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
       <*> toSpecRep ceeDeposits

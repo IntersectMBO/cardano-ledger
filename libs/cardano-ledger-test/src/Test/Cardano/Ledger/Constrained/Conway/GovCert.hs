@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -49,36 +50,52 @@ instance Crypto c => NFData (DepositPurpose c)
 instance HasSimpleRep (DepositPurpose c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (DepositPurpose c)
 
-data CertExecEnv era = CertExecEnv
-  { ceeCertEnv :: !(CertEnv era)
+data CertsExecEnv era = CertsExecEnv
+  { ceeCertEnv :: !(CertsEnv era)
   , ceeDeposits :: !(Map (DepositPurpose (EraCrypto era)) Coin)
   }
-  deriving (Generic, Eq, Show)
+  deriving (Generic)
+
+deriving instance (EraPParams era, Eq (Tx era)) => Eq (CertsExecEnv era)
+deriving instance (EraPParams era, Show (Tx era)) => Show (CertsExecEnv era)
 
 instance
-  ( ToExpr (PParamsHKD StrictMaybe era)
+  ( ToExpr (Tx era)
+  , ToExpr (PParamsHKD StrictMaybe era)
   , ToExpr (PParamsHKD Identity era)
   ) =>
-  ToExpr (CertExecEnv era)
-instance EraPParams era => NFData (CertExecEnv era)
-instance HasSimpleRep (CertExecEnv era)
+  ToExpr (CertsExecEnv era)
+instance (EraPParams era, NFData (Tx era)) => NFData (CertsExecEnv era)
+instance HasSimpleRep (CertsExecEnv era)
 instance
-  ( IsConwayUniv fn
+  ( Eq (Tx era)
+  , Show (Tx era)
+  , IsConwayUniv fn
   , EraPParams era
+  , HasSpec fn (CertsEnv era)
   , HasSpec fn (CertEnv era)
   ) =>
-  HasSpec fn (CertExecEnv era)
+  HasSpec fn (CertsExecEnv era)
 
-instance Inject (CertExecEnv era) (CertEnv era) where
+instance Inject (CertsExecEnv era) (CertsEnv era) where
   inject = ceeCertEnv
 
-instance Inject (CertExecEnv era) (ConwayGovCertEnv era) where
-  inject CertExecEnv {..} =
+instance Inject (CertsExecEnv era) (CertEnv era) where
+  inject CertsExecEnv {..} =
+    CertEnv
+      (certsSlotNo ceeCertEnv)
+      (certsPParams ceeCertEnv)
+      (certsCurrentEpoch ceeCertEnv)
+      (certsCurrentCommittee ceeCertEnv)
+      (certsCommitteeProposals ceeCertEnv)
+
+instance Inject (CertsExecEnv era) (ConwayGovCertEnv era) where
+  inject CertsExecEnv {..} =
     ConwayGovCertEnv
-      (cePParams ceeCertEnv)
-      (ceCurrentEpoch ceeCertEnv)
-      (ceCurrentCommittee ceeCertEnv)
-      (ceCommitteeProposals ceeCertEnv)
+      (certsPParams ceeCertEnv)
+      (certsCurrentEpoch ceeCertEnv)
+      (certsCurrentCommittee ceeCertEnv)
+      (certsCommitteeProposals ceeCertEnv)
 
 vStateSpec :: Specification fn (VState (ConwayEra StandardCrypto))
 vStateSpec = TrueSpec

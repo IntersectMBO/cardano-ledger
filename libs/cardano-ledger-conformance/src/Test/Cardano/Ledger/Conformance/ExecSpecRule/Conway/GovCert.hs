@@ -28,7 +28,7 @@ import Test.Cardano.Ledger.Constrained.Conway
 
 instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
   type ExecContext fn "GOVCERT" Conway = ConwayCertExecContext Conway
-  type ExecEnvironment fn "GOVCERT" Conway = CertExecEnv Conway
+  type ExecEnvironment fn "GOVCERT" Conway = CertsExecEnv Conway
 
   environmentSpec _ctx = certExecEnvSpec
 

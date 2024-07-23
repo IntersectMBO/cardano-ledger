@@ -21,7 +21,7 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams
 import Test.Cardano.Ledger.Constrained.Conway.Pool
 
 certExecEnvSpec ::
-  Specification fn (CertExecEnv (ConwayEra StandardCrypto))
+  Specification fn (CertsExecEnv (ConwayEra StandardCrypto))
 certExecEnvSpec = TrueSpec
 
 certEnvSpec ::
