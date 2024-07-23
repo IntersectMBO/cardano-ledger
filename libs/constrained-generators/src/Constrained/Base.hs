@@ -1191,11 +1191,36 @@ prettyLinear = vsep' . map pretty
 prepareLinearization ::
   forall fn. BaseUniverse fn => Pred fn -> GE (SolverPlan fn)
 prepareLinearization p = do
-  let preds = flattenPred p
+  let preds = concatMap saturatePred $ flattenPred p
       hints = computeHints preds
       graph = transitiveClosure $ hints <> respecting hints (foldMap computeDependencies preds)
   plan <- linearize preds graph
   pure $ backPropagation $ SolverPlan plan graph
+
+-- TODO: generalize this to make it more flexible and extensible
+--
+-- The idea here is that we turn constraints into _extra_ constraints. C.f. the
+-- `mapIsJust` example in `Constrained.Examples.Map`:
+
+--    mapIsJust :: Specification BaseFn (Int, Int)
+--    mapIsJust = constrained' $ \ [var| x |] [var| y |] ->
+--      assert $ cJust_ x ==. lookup_ y (lit $ Map.fromList [(z, z) | z <- [100 .. 102]])
+
+-- Without this code the example wouldn't work because `y` is completely unconstrained during
+-- generation. With this code we essentially rewrite occurences of `cJust_ A == B` to
+-- `[cJust A == B, case B of Nothing -> False; Just _ -> True]` to add extra information
+-- about the variables in `B`. Consequently, `y` in the example above is
+-- constrained to `MemberSpec [100 .. 102]` in the plan.
+saturatePred :: forall fn. Pred fn -> [Pred fn]
+saturatePred p =
+  p
+    : case p of
+      Assert _ (Eql (FromG (SLeft _)) t) ->
+        [toPreds t (SumSpec Nothing TrueSpec (ErrorSpec (pure "saturatePred")))]
+      Assert _ (Eql (FromG (SRight _)) t) ->
+        [toPreds t (SumSpec Nothing (ErrorSpec (pure "saturatePred")) TrueSpec)]
+      -- TODO: e.g. `elem (pair x y) (lit zs) -> elem x (lit $ map fst zs)` etc.
+      _ -> []
 
 -- | Does nothing if the variable is not in the plan already.
 mergeSolverStage :: SolverStage fn -> [SolverStage fn] -> [SolverStage fn]
@@ -1235,6 +1260,22 @@ backPropagation (SolverPlan plan graph) = SolverPlan (go [] (reverse plan)) grap
 
 pattern Eql :: forall fn. () => forall a. HasSpec fn a => Term fn a -> Term fn a -> Term fn Bool
 pattern Eql a b <- App (extractFn @(EqFn fn) -> Just Equal) (a :> b :> Nil)
+
+pattern FromG ::
+  forall fn a.
+  () =>
+  (HasSpec fn a, HasSimpleRep a, TypeSpec fn a ~ TypeSpec fn (SimpleRep a)) =>
+  Term fn (SimpleRep a) ->
+  Term fn a
+pattern FromG a <- App (extractFn @(GenericsFn fn) -> Just FromGeneric) (a :> Nil)
+
+pattern SLeft ::
+  forall fn a. () => forall b c. (HasSpec fn b, a ~ Sum b c) => Term fn b -> Term fn a
+pattern SLeft a <- App (extractFn @(SumFn fn) -> Just InjLeft) (a :> Nil)
+
+pattern SRight ::
+  forall fn a. () => forall b c. (HasSpec fn c, a ~ Sum b c) => Term fn c -> Term fn a
+pattern SRight a <- App (extractFn @(SumFn fn) -> Just InjRight) (a :> Nil)
 
 prettyPlan :: HasSpec fn a => Specification fn a -> Doc ann
 prettyPlan (simplifySpec -> spec)
