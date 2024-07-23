@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -29,24 +31,23 @@ import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance (
   hashToInteger,
  )
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (emptyDeposits)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
+import Test.Cardano.Ledger.Constrained.Conway.Deleg
 import Test.Cardano.Ledger.Conway.TreeDiff
 
 instance
   ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecTranslate ctx (PParamsHKD Identity era)
   ) =>
-  SpecTranslate ctx (ConwayDelegEnv era)
+  SpecTranslate ctx (DelegExecEnv era)
   where
-  type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv
-
-  toSpecRep ConwayDelegEnv {..} =
+  type SpecRep (DelegExecEnv era) = Agda.DelegEnv
+  toSpecRep DelegExecEnv {..} = do
     Agda.MkDelegEnv
-      <$> toSpecRep cdePParams
-      <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) cdePools)
-      -- TODO: replace with actual deposits map
-      <*> pure emptyDeposits
+      <$> toSpecRep (cdePParams deeDelegEnv)
+      <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) (cdePools deeDelegEnv))
+      <*> toSpecRep deeDeposits
 
 instance SpecTranslate ctx (ConwayDelegCert c) where
   type SpecRep (ConwayDelegCert c) = Agda.TxCert

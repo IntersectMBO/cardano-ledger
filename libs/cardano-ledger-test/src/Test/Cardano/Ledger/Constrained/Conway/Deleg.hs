@@ -1,28 +1,58 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the DELEG rule
 module Test.Cardano.Ledger.Constrained.Conway.Deleg where
 
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
-import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.Shelley.API.Types
-import Cardano.Ledger.UMap (RDPair (..), fromCompact, unUnify)
-import qualified Data.Map as Map
-import Lens.Micro
-
-import Constrained
-
 import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.Rules (ConwayDelegEnv (..))
-import Cardano.Ledger.Core (ppKeyDepositL)
+import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Shelley.API.Types
+import Cardano.Ledger.UMap (RDPair (..), fromCompact, unUnify)
+import Constrained
+import Control.DeepSeq (NFData)
+import Data.Functor.Identity (Identity)
+import qualified Data.Map as Map
+import GHC.Generics (Generic)
+import Lens.Micro
+import Test.Cardano.Ledger.Constrained.Conway.GovCert (DepositPurpose (..))
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
+import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
+
+data DelegExecEnv era = DelegExecEnv
+  { deeDelegEnv :: !(ConwayDelegEnv era)
+  , deeDeposits :: !(Map.Map (DepositPurpose (EraCrypto era)) Coin)
+  }
+  deriving (Generic)
+
+deriving instance Eq (PParamsHKD Identity era) => Eq (DelegExecEnv era)
+deriving instance Show (PParamsHKD Identity era) => Show (DelegExecEnv era)
+instance ToExpr (PParamsHKD Identity era) => ToExpr (DelegExecEnv era)
+instance EraPParams era => NFData (DelegExecEnv era)
+instance HasSimpleRep (DelegExecEnv era)
+instance
+  ( IsConwayUniv fn
+  , EraPParams era
+  , HasSpec fn (PParams era)
+  ) =>
+  HasSpec fn (DelegExecEnv era)
+
+instance Inject (DelegExecEnv era) (ConwayDelegEnv era) where
+  inject = deeDelegEnv
 
 -- | Specify that some of the rewards in the RDPair's are zero.
 --   without this in the DState, it is hard to generate the ConwayUnRegCert
@@ -104,3 +134,6 @@ delegEnvSpec ::
 delegEnvSpec = constrained $ \env ->
   match env $ \pp _ ->
     pp `satisfies` pparamsSpec
+
+delegExecEnvSpec :: Specification fn (DelegExecEnv Conway)
+delegExecEnvSpec = TrueSpec
