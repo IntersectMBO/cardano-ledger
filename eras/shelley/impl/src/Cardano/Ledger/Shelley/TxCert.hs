@@ -118,7 +118,7 @@ import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
-import Data.Foldable (Foldable (..), foldMap', foldl')
+import Data.Foldable as F (Foldable (..), foldMap', foldl')
 import Data.Map.Strict (Map)
 import Data.Maybe (isJust, isNothing)
 import Data.Monoid (Sum (..))
@@ -640,7 +640,7 @@ shelleyTotalDepositsTxCerts pp isRegPoolRegistered certs =
     <×> (pp ^. ppPoolDepositL)
   where
     numKeys = getSum @Int $ foldMap' (\x -> if isRegStakeTxCert x then 1 else 0) certs
-    numNewRegPoolCerts = Set.size (foldl' addNewPoolIds Set.empty certs)
+    numNewRegPoolCerts = Set.size (F.foldl' addNewPoolIds Set.empty certs)
     addNewPoolIds regPoolIds = \case
       RegPoolTxCert (PoolParams {ppId})
         -- We don't pay a deposit on a pool that is already registered or duplicated in the certs
@@ -655,7 +655,7 @@ shelleyTotalRefundsTxCerts ::
   (StakeCredential (EraCrypto era) -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
-shelleyTotalRefundsTxCerts pp lookupDeposit = snd . foldl' accum (mempty, Coin 0)
+shelleyTotalRefundsTxCerts pp lookupDeposit = snd . F.foldl' accum (mempty, Coin 0)
   where
     keyDeposit = pp ^. ppKeyDepositL
     accum (!regCreds, !totalRefunds) cert =

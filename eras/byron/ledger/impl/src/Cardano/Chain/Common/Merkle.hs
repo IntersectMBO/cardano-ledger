@@ -53,7 +53,7 @@ import Data.ByteString.Builder (Builder, byteString, word8)
 import qualified Data.ByteString.Builder.Extra as Builder
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
-import qualified Data.Foldable as Foldable
+import qualified Data.Foldable as F
 import Formatting.Buildable (Buildable (..))
 import NoThunks.Class (NoThunks (..))
 import qualified Prelude
@@ -115,7 +115,7 @@ data MerkleTree a
 
 instance Foldable MerkleTree where
   foldMap _ MerkleEmpty = mempty
-  foldMap f (MerkleTree _ n) = Foldable.foldMap f n
+  foldMap f (MerkleTree _ n) = F.foldMap f n
 
   null MerkleEmpty = True
   null _ = False
@@ -124,7 +124,7 @@ instance Foldable MerkleTree where
   length (MerkleTree s _) = fromIntegral s
 
 instance Show a => Show (MerkleTree a) where
-  show tree = "Merkle tree: " <> show (Foldable.toList tree)
+  show tree = "Merkle tree: " <> show (F.toList tree)
 
 instance EncCBOR a => ToCBOR (MerkleTree a) where
   toCBOR = toByronCBOR
@@ -135,7 +135,7 @@ instance (DecCBOR a, EncCBOR a) => FromCBOR (MerkleTree a) where
 -- This instance is both faster and more space-efficient (as confirmed by a
 -- benchmark). Hashing turns out to be faster than decoding extra data.
 instance EncCBOR a => EncCBOR (MerkleTree a) where
-  encCBOR = encCBOR . Foldable.toList
+  encCBOR = encCBOR . F.toList
 
 instance (DecCBOR a, EncCBOR a) => DecCBOR (MerkleTree a) where
   decCBOR = mkMerkleTree <$> decCBOR
@@ -206,7 +206,7 @@ instance Foldable MerkleNode where
   foldMap f x = case x of
     MerkleLeaf _ mVal -> f mVal
     MerkleBranch _ mLeft mRight ->
-      Foldable.foldMap f mLeft `mappend` Foldable.foldMap f mRight
+      F.foldMap f mLeft `mappend` F.foldMap f mRight
 
 toLazyByteString :: Builder -> LBS.ByteString
 toLazyByteString =

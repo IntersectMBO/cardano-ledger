@@ -24,7 +24,7 @@ import Cardano.Ledger.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.State.Transition (STS (..))
 import Data.Default.Class (Default (def))
-import Data.List (foldl')
+import Data.Foldable as F (foldl')
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Binary.TreeDiff (diffExpr)
@@ -63,7 +63,7 @@ import Test.Tasty.QuickCheck (testProperty)
 
 aggProp ::
   agg -> (agg -> Signal sts -> agg) -> (State sts -> State sts -> agg -> prop) -> Trace sts -> prop
-aggProp agg0 aggregate test trace = test firstState lastState (foldl' aggregate agg0 sigs)
+aggProp agg0 aggregate test trace = test firstState lastState (F.foldl' aggregate agg0 sigs)
   where
     sigs = traceSignals OldestFirst trace
     (firstState, lastState) = firstAndLastState trace
@@ -74,7 +74,7 @@ consistentUtxoSizeProp :: EraTx era => Proof era -> Trace (MOCKCHAIN era) -> Pro
 consistentUtxoSizeProp proof trace = aggProp agg0 aggregate makeprop trace
   where
     agg0 = 0
-    aggregate count (MockBlock _ _ txs) = foldl' aggTx count txs
+    aggregate count (MockBlock _ _ txs) = F.foldl' aggTx count txs
     aggTx count tx =
       count
         + ( if valid

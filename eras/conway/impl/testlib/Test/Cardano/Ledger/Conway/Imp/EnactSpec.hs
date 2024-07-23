@@ -26,7 +26,7 @@ import Cardano.Ledger.Val (zero, (<->))
 import Control.Monad (forM)
 import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (def)
-import Data.Foldable (foldl', traverse_)
+import Data.Foldable as F (foldl', traverse_)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
@@ -163,7 +163,7 @@ treasuryWithdrawalsSpec =
         passNEpochs 2
 
         let expectedTreasury =
-              foldl'
+              F.foldl'
                 ( \acc (_, x) ->
                     if acc >= x
                       then acc <-> x

@@ -53,7 +53,7 @@ import Cardano.Ledger.Val (Val (..), inject)
 import Control.Monad (when)
 import Control.State.Transition.Extended (STS (..), TRC (..))
 import Data.Default.Class (Default (def))
-import Data.Foldable (foldl', toList)
+import Data.Foldable as F (foldl', toList)
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -284,13 +284,13 @@ sufficientTxCert ::
   Map (KeyHash 'Genesis (EraCrypto era)) (GenDelegPair (EraCrypto era)) ->
   Set (KeyHash 'Witness (EraCrypto era))
 sufficientTxCert cs gendel = case whichTxCert (reify @era) of
-  TxCertShelleyToBabbage -> foldl' accum Set.empty cs
+  TxCertShelleyToBabbage -> List.foldl' accum Set.empty cs
     where
       accum ans (TxCertF _ cert) =
         if isInstantaneousRewards cert
           then Set.union ans (sufficientGenDelegs gendel)
           else ans
-  TxCertConwayToConway -> foldl' accum Set.empty cs
+  TxCertConwayToConway -> List.foldl' accum Set.empty cs
     where
       accum ans (TxCertF _ _) = Set.union ans (sufficientGenDelegs gendel)
 
@@ -501,7 +501,7 @@ getNTxOut x _ _ =
 
 -- | Compute the sum of all the Values in a List(Set,Map, ...) of TxOut
 txoutSum :: forall era t. (Foldable t, Reflect era) => t (TxOutF era) -> Value era
-txoutSum xs = foldl' accum mempty xs
+txoutSum xs = F.foldl' accum mempty xs
   where
     accum ans (TxOutF _ txout) = txout ^. valueTxOutL <+> ans
 

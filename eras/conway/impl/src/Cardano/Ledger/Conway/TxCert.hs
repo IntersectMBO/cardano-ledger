@@ -88,7 +88,7 @@ import Cardano.Ledger.Shelley.TxCert (
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..), withObject, (.:?), (.=))
-import Data.Foldable (foldMap', foldl')
+import Data.Foldable as F (foldMap', foldl')
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (getSum))
 import GHC.Generics (Generic)
@@ -803,7 +803,7 @@ conwayDRepRefundsTxCerts ::
   (Credential 'DRepRole (EraCrypto era) -> Maybe Coin) ->
   f (TxCert era) ->
   Coin
-conwayDRepRefundsTxCerts lookupDRepDeposit = snd . foldl' go (Map.empty, Coin 0)
+conwayDRepRefundsTxCerts lookupDRepDeposit = snd . F.foldl' go (Map.empty, Coin 0)
   where
     go accum@(!drepRegsInTx, !totalRefund) = \case
       RegDRepTxCert cred deposit _ ->

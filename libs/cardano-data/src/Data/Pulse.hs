@@ -37,7 +37,7 @@ module Data.Pulse (
 where
 
 import Control.Monad.Identity (Identity (..))
-import qualified Data.Foldable as Foldable
+import qualified Data.Foldable as F
 import Data.Kind
 import qualified Data.List as List
 import Data.Map (Map)
@@ -150,7 +150,7 @@ instance Pulsable PulseMapM where
 
 -- | A strict, monadic, version of 'foldl'. It  associates to the left.
 foldlM' :: (Foldable t, Monad m) => (ans -> k -> m ans) -> ans -> t k -> m ans
-foldlM' accum !ans acc = case Foldable.toList acc of
+foldlM' accum !ans acc = case F.toList acc of
   [] -> pure ans
   (k : more) -> do ans1 <- accum ans k; foldlM' accum ans1 more
 

@@ -115,7 +115,7 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
 import Control.SetAlgebra (eval, (◁))
-import Data.Foldable (fold, foldl')
+import Data.Foldable as F (fold, foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
@@ -696,7 +696,7 @@ newEpochEventsProp tracelen propf = withMaxSuccess 10 $
 aggIncrementalRewardEvents ::
   [ChainEvent C] ->
   Map (Credential 'Staking (EraCrypto C)) (Set (Reward (EraCrypto C)))
-aggIncrementalRewardEvents = foldl' accum Map.empty
+aggIncrementalRewardEvents = F.foldl' accum Map.empty
   where
     accum ans (TickEvent (TickRupdEvent (RupdEvent _ m))) = Map.unionWith Set.union m ans
     accum ans (TickEvent (TickNewEpochEvent (DeltaRewardEvent (RupdEvent _ m)))) =
@@ -706,7 +706,7 @@ aggIncrementalRewardEvents = foldl' accum Map.empty
 getMostRecentTotalRewardEvent ::
   [ChainEvent C] ->
   Map (Credential 'Staking (EraCrypto C)) (Set (Reward (EraCrypto C)))
-getMostRecentTotalRewardEvent = foldl' accum Map.empty
+getMostRecentTotalRewardEvent = F.foldl' accum Map.empty
   where
     accum ans (TickEvent (TickNewEpochEvent (TotalRewardEvent _ m))) = Map.unionWith Set.union m ans
     accum ans _ = ans
