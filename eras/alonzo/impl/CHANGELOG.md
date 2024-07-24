@@ -1,8 +1,11 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.10.0.1
+## 1.10.1.0
 
-*
+### `testlib`
+
+* Export `fixupRedeemerIndices` from `Alonzo.ImpTest`
+* Enhance the `addCollateralInput` fixup function to not add collateral if it's already present
 
 ## 1.10.0.0
 
@@ -33,7 +36,7 @@
   * `evalTxExUnitsWithLogs`
   * `RedeemerReportWithLogs`
 
-## testlib
+### `testlib`
 
 * Change signatures of `Arbitrary` instances for `AlonzoScript`:
   * replace `Era` constraint with `AllegraEraScript`

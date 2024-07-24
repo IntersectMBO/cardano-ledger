@@ -68,7 +68,6 @@ library
         Test.Cardano.Ledger.Constrained.Conway.Utxo
         Test.Cardano.Ledger.Examples.BabbageFeatures
         Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
-        Test.Cardano.Ledger.Examples.AlonzoInvalidTxUTXOW
         Test.Cardano.Ledger.Examples.AlonzoBBODY
         Test.Cardano.Ledger.Examples.AlonzoCollectInputs
         Test.Cardano.Ledger.Examples.AlonzoAPI
