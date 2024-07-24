@@ -20,8 +20,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
-  ConwayCertExecContext (..),
-  ConwayRatifyExecContext (..),
   nameEpoch,
   nameEnact,
   nameGovAction,
@@ -50,7 +48,6 @@ import Cardano.Ledger.Conway.Governance (
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
-  VotingProcedures,
   gasAction,
  )
 import Cardano.Ledger.Conway.Rules (
@@ -66,7 +63,6 @@ import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Constrained
 import Constrained.Base (fromList_)
 import Data.Bifunctor (Bifunctor (..))
@@ -155,33 +151,6 @@ instance
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.utxoStep env st sig
-
-data ConwayCertExecContext era = ConwayCertExecContext
-  { ccecWithdrawals :: !(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-  , ccecVotes :: !(VotingProcedures era)
-  }
-  deriving (Generic, Eq, Show)
-
-instance Era era => Arbitrary (ConwayCertExecContext era) where
-  arbitrary =
-    ConwayCertExecContext
-      <$> arbitrary
-      <*> arbitrary
-
-instance
-  c ~ EraCrypto era =>
-  Inject
-    (ConwayCertExecContext era)
-    (Map (Network, Credential 'Staking c) Coin)
-  where
-  inject = ccecWithdrawals
-
-instance Inject (ConwayCertExecContext era) (VotingProcedures era) where
-  inject = ccecVotes
-
-instance Era era => ToExpr (ConwayCertExecContext era)
-
-instance Era era => NFData (ConwayCertExecContext era)
 
 data ConwayRatifyExecContext era = ConwayRatifyExecContext
   { crecTreasury :: Coin
