@@ -28,7 +28,7 @@ import Data.Functor.Identity (Identity)
 import qualified Data.Map as Map
 import GHC.Generics (Generic)
 import Lens.Micro
-import Test.Cardano.Ledger.Constrained.Conway.GovCert (DepositPurpose (..))
+import Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit (DepositPurpose (..))
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
