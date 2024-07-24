@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -19,9 +18,7 @@ import Cardano.Ledger.CertState (
   csCommitteeCreds,
   drepExpiry,
  )
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert (
   ConwayGovCert (..),
@@ -30,7 +27,6 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Data.Functor.Identity (Identity)
-import Data.Map.Strict (Map)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
@@ -51,21 +47,17 @@ instance SpecTranslate ctx (DepositPurpose c) where
 instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map (Network, Credential 'Staking (EraCrypto era)) Coin)
   ) =>
   SpecTranslate ctx (CertsExecEnv era)
   where
   type SpecRep (CertsExecEnv era) = Agda.CertEnv
 
   toSpecRep CertsExecEnv {..} = do
-    votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
     Agda.MkCertEnv
       <$> toSpecRep (certsCurrentEpoch ceeCertEnv)
       <*> toSpecRep (certsPParams ceeCertEnv)
-      <*> toSpecRep votes
-      <*> toSpecRep withdrawals
+      <*> toSpecRep ceeVotes
+      <*> toSpecRep ceeWithdrawals
       <*> toSpecRep ceeDeposits
 
 instance SpecTranslate ctx (ConwayGovCert c) where

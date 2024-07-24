@@ -1,15 +1,9 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -23,11 +17,10 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway
 
 instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
-  type ExecContext fn "GOVCERT" Conway = ConwayCertExecContext Conway
   type ExecEnvironment fn "GOVCERT" Conway = CertsExecEnv Conway
 
   environmentSpec _ctx = certExecEnvSpec

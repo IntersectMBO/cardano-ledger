@@ -53,6 +53,8 @@ instance (IsConwayUniv fn, Crypto c) => HasSpec fn (DepositPurpose c)
 data CertsExecEnv era = CertsExecEnv
   { ceeCertEnv :: !(CertsEnv era)
   , ceeDeposits :: !(Map (DepositPurpose (EraCrypto era)) Coin)
+  , ceeWithdrawals :: !(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
+  , ceeVotes :: !(VotingProcedures era)
   }
   deriving (Generic)
 
@@ -60,7 +62,8 @@ deriving instance (EraPParams era, Eq (Tx era)) => Eq (CertsExecEnv era)
 deriving instance (EraPParams era, Show (Tx era)) => Show (CertsExecEnv era)
 
 instance
-  ( ToExpr (Tx era)
+  ( Era era
+  , ToExpr (Tx era)
   , ToExpr (PParamsHKD StrictMaybe era)
   , ToExpr (PParamsHKD Identity era)
   ) =>

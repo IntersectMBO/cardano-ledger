@@ -19,13 +19,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
-  ConwayCertExecContext (..),
   nameEpoch,
   nameEnact,
   nameGovAction,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo (..), Inject (..), Network, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (EpochNo (..), Inject (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..))
@@ -37,7 +36,6 @@ import Cardano.Ledger.Conway.Governance (
   RatifyEnv (..),
   RatifySignal (..),
   RatifyState (..),
-  VotingProcedures,
   gasAction,
  )
 import Cardano.Ledger.Conway.Rules (
@@ -47,13 +45,10 @@ import Cardano.Ledger.Conway.Rules (
   spoAcceptedRatio,
  )
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained
 import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.List.NonEmpty as NE
-import Data.Map.Strict (Map)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import qualified Lib as Agda
@@ -128,31 +123,6 @@ instance
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.utxoStep env st sig
-
-data ConwayCertExecContext era = ConwayCertExecContext
-  { ccecWithdrawals :: !(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-  , ccecVotes :: !(VotingProcedures era)
-  }
-  deriving (Generic, Eq, Show)
-
-instance Era era => Arbitrary (ConwayCertExecContext era) where
-  arbitrary =
-    ConwayCertExecContext
-      <$> arbitrary
-      <*> arbitrary
-
-instance
-  c ~ EraCrypto era =>
-  Inject
-    (ConwayCertExecContext era)
-    (Map (Network, Credential 'Staking c) Coin)
-  where
-  inject = ccecWithdrawals
-
-instance Inject (ConwayCertExecContext era) (VotingProcedures era) where
-  inject = ccecVotes
-
-instance Era era => ToExpr (ConwayCertExecContext era)
 
 data ConwayRatifyExecContext era = ConwayRatifyExecContext
   { crecTreasury :: Coin
