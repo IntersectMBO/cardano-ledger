@@ -688,35 +688,40 @@ instance SpecTranslate ctx (VotingProcedures era) where
 instance SpecTranslate ctx (ConwayPParams StrictMaybe era) where
   type SpecRep (ConwayPParams StrictMaybe era) = Agda.PParamsUpdate
 
-  toSpecRep x =
-    Agda.MkPParamsUpdate
-      <$> toSpecRep (cppMinFeeA x)
-      <*> toSpecRep (cppMinFeeB x)
-      <*> pure (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxBBSize x)
-      <*> pure (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxTxSize x)
-      <*> pure (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxBHSize x)
-      <*> pure (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxValSize x)
-      <*> pure Nothing -- minUTxOValue has been deprecated and is not supported in Conway
-      <*> toSpecRep (cppPoolDeposit x)
-      <*> toSpecRep (cppKeyDeposit x)
-      <*> toSpecRep (cppEMax x)
-      <*> toSpecRep (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppNOpt x)
-      <*> pure Nothing
-      <*> toSpecRep (cppPoolVotingThresholds x)
-      <*> toSpecRep (cppDRepVotingThresholds x)
-      <*> toSpecRep (cppGovActionLifetime x)
-      <*> toSpecRep (cppGovActionDeposit x)
-      <*> toSpecRep (cppDRepDeposit x)
-      <*> toSpecRep (cppDRepActivity x)
-      <*> pure (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppCommitteeMinSize x)
-      <*> pure
-        (fmap (toInteger . unEpochInterval) . strictMaybeToMaybe . unTHKD $ cppCommitteeMaxTermLength x)
-      <*> toSpecRep (cppCostModels x)
-      <*> toSpecRep (cppPrices x)
-      <*> toSpecRep (cppMaxTxExUnits x)
-      <*> toSpecRep (cppMaxBlockExUnits x)
-      <*> toSpecRep (cppCoinsPerUTxOByte x)
-      <*> pure (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxCollateralInputs x)
+  toSpecRep (ConwayPParams {..}) = do
+    ppuA <- toSpecRep cppMinFeeA
+    ppuB <- toSpecRep cppMinFeeB
+    let
+      ppuMaxBlockSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxBBSize
+      ppuMaxTxSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxTxSize
+      ppuMaxHeaderSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxBHSize
+    ppuKeyDeposit <- toSpecRep (cppKeyDeposit)
+    ppuPoolDeposit <- toSpecRep (cppPoolDeposit)
+    ppuEmax <- toSpecRep (cppEMax)
+    ppuNopt <- toSpecRep (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppNOpt)
+    let
+      ppuPv = Nothing
+      ppuMinUTxOValue = Nothing -- minUTxOValue has been deprecated and is not supported in Conway
+    ppuCoinsPerUTxOByte <- toSpecRep (cppCoinsPerUTxOByte)
+    ppuCostmdls <- toSpecRep (cppCostModels)
+    ppuPrices <- toSpecRep (cppPrices)
+    ppuMaxTxExUnits <- toSpecRep (cppMaxTxExUnits)
+    ppuMaxBlockExUnits <- toSpecRep (cppMaxBlockExUnits)
+    let
+      ppuMaxValSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxValSize
+      ppuMaxCollateralInputs = (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxCollateralInputs)
+    ppuPoolVotingThresholds <- toSpecRep (cppPoolVotingThresholds)
+    ppuDrepVotingThresholds <- toSpecRep (cppDRepVotingThresholds)
+    let
+      ppuCCMinSize = (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppCommitteeMinSize)
+      ppuCCMaxTermLength =
+        (fmap (toInteger . unEpochInterval) . strictMaybeToMaybe . unTHKD $ cppCommitteeMaxTermLength)
+    ppuGovActionLifetime <- toSpecRep (cppGovActionLifetime)
+    ppuGovActionDeposit <- toSpecRep (cppGovActionDeposit)
+    ppuDrepDeposit <- toSpecRep (cppDRepDeposit)
+    ppuDrepActivity <- toSpecRep (cppDRepActivity)
+
+    pure $ Agda.MkPParamsUpdate {..}
 
 instance
   SpecTranslate ctx (PParamsHKD StrictMaybe era) =>
