@@ -2,10 +2,13 @@
 ; second era after Conway. We recommend all the tooling to account for this future breaking
 ; change sooner rather than later, in order to provide a smooth transition for their users.
 
+; This is an unordered set. Duplicate elements are not allowed and the order of elements is implementation specific.
 set<a> = #6.258([* a]) / [* a]
 
+; Just like `set`, but must contain at least one element.
 nonempty_set<a> = #6.258([+ a]) / [+ a]
 
+; This is a non-empty ordered set. Duplicate elements are not allowed and the order of elements will be preserved.
 nonempty_oset<a> = #6.258([+ a]) / [+ a]
 
 positive_int = 1 .. 18446744073709551615

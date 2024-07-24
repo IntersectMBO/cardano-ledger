@@ -192,6 +192,9 @@ cradle:
     - path: "libs/cardano-ledger-core/testlib"
       component: "cardano-ledger-core:lib:testlib"
 
+    - path: "libs/cardano-ledger-core/app/PlutusDebug.hs"
+      component: "cardano-ledger-core:exe:plutus-debug"
+
     - path: "libs/cardano-ledger-core/test"
       component: "cardano-ledger-core:test:tests"
 
@@ -284,9 +287,6 @@ cradle:
 
     - path: "libs/plutus-preprocessor/app/Main.hs"
       component: "plutus-preprocessor:exe:plutus-preprocessor"
-
-    - path: "libs/plutus-preprocessor/src/Debug.hs"
-      component: "plutus-preprocessor:exe:plutus-debug"
 
     - path: "libs/set-algebra/src"
       component: "lib:set-algebra"

@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -61,8 +62,9 @@ import Cardano.Ledger.Plutus.Language (
   withSamePlutusLanguage,
  )
 import Cardano.Ledger.Plutus.TxInfo
-import Control.DeepSeq (NFData (..))
-import Control.Monad (unless)
+import Control.DeepSeq (NFData (..), force)
+import Control.Exception (evaluate)
+import Control.Monad (join, unless)
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.UTF8 as BSU
 import Data.List.NonEmpty (NonEmpty (..))
@@ -71,6 +73,7 @@ import Data.Text (Text, pack)
 import GHC.Generics (Generic)
 import PlutusLedgerApi.Common as P (EvaluationError (CodecError), ExBudget, VerboseMode (..))
 import Prettyprinter (Pretty (..))
+import System.Timeout (timeout)
 
 -- | This type contains all that is necessary from Ledger to evaluate a plutus script.
 data PlutusWithContext c where
@@ -196,27 +199,51 @@ instance Crypto c => FromCBOR (PlutusWithContext c) where
 data PlutusDebugInfo c
   = DebugBadHex String
   | DebugCannotDecode String
-  | DebugSuccess [Text] P.ExBudget
-  | DebugFailure [Text] P.EvaluationError (PlutusWithContext c)
+  | DebugSuccess
+      -- | Execution logs from the plutus interpreter
+      [Text]
+      -- | Execution budget that was consumed. It will always be less or equal to what was
+      -- supplied during execution.
+      P.ExBudget
+  | DebugFailure
+      -- | Execution logs from the plutus interpreter
+      [Text]
+      -- | Evaluation error from Plutus interpreter
+      P.EvaluationError
+      -- | Everything that is needed in order to run the script
+      (PlutusWithContext c)
+      -- | Expected execution budget. This value is Nothing when the supplied script can't
+      -- be executed within 5 second limit or there is a problem with decoding plutus script
+      -- itself.
+      (Maybe P.ExBudget)
   deriving (Show)
 
-debugPlutus :: Crypto c => String -> PlutusDebugInfo c
+debugPlutus :: Crypto c => String -> IO (PlutusDebugInfo c)
 debugPlutus db =
   case B64.decode (BSU.fromString db) of
-    Left e -> DebugBadHex (show e)
+    Left e -> pure $ DebugBadHex (show e)
     Right bs ->
       case Plain.decodeFull' bs of
-        Left e -> DebugCannotDecode $ show e
+        Left e -> pure $ DebugCannotDecode $ show e
         Right pwc@(PlutusWithContext {..}) ->
           let cm = getEvaluationContext pwcCostModel
               eu = transExUnits pwcExUnits
-              onDecoderError err = DebugFailure [] err pwc
-              toDebugInfo = \case
-                (logs, Left err) -> DebugFailure logs err pwc
-                (logs, Right ex) -> DebugSuccess logs ex
+              onDecoderError err = pure $ DebugFailure [] err pwc Nothing
            in withRunnablePlutusWithContext pwc onDecoderError $ \plutusRunnable args ->
-                toDebugInfo $
-                  evaluatePlutusRunnable pwcProtocolVersion P.Verbose cm eu plutusRunnable args
+                let toDebugInfo = \case
+                      (logs, Left err@(P.CodecError {})) -> pure $ DebugFailure logs err pwc Nothing
+                      (logs, Left err) -> do
+                        mExpectedExUnits <-
+                          timeout 5_000_000 $ do
+                            let res =
+                                  evaluatePlutusRunnableBudget pwcProtocolVersion P.Verbose cm plutusRunnable args
+                            case snd res of
+                              Left {} -> pure Nothing
+                              Right exUnits -> Just <$> evaluate (force exUnits)
+                        pure $ DebugFailure logs err pwc (join mExpectedExUnits)
+                      (logs, Right ex) -> pure $ DebugSuccess logs ex
+                 in toDebugInfo $
+                      evaluatePlutusRunnable pwcProtocolVersion P.Verbose cm eu plutusRunnable args
 
 runPlutusScript :: PlutusWithContext c -> ScriptResult c
 runPlutusScript = snd . runPlutusScriptWithLogs
