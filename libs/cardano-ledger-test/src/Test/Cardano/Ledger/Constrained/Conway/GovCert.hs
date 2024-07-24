@@ -25,8 +25,8 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys (KeyRole (..))
 import Constrained
 import Control.DeepSeq (NFData)
 import Data.Functor.Identity
@@ -34,21 +34,12 @@ import qualified Data.Map as Map
 import Data.Map.Strict (Map)
 import GHC.Generics (Generic)
 import Lens.Micro
+import Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit (DepositPurpose (..))
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
 
-data DepositPurpose c
-  = CredentialDeposit !(Credential 'Staking c)
-  | PoolDeposit !(KeyHash 'StakePool c)
-  | DRepDeposit !(Credential 'DRepRole c)
-  | GovActionDeposit !(GovActionId c)
-  deriving (Generic, Eq, Show, Ord)
-
-instance ToExpr (DepositPurpose c)
-instance Crypto c => NFData (DepositPurpose c)
-instance HasSimpleRep (DepositPurpose c)
-instance (IsConwayUniv fn, Crypto c) => HasSpec fn (DepositPurpose c)
+-- =========================================================
 
 data CertsExecEnv era = CertsExecEnv
   { ceeCertEnv :: !(CertsEnv era)

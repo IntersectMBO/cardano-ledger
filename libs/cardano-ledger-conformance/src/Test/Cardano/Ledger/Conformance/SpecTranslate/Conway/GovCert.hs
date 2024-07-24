@@ -30,6 +30,7 @@ import Data.Functor.Identity (Identity)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
+import Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit (DepositPurpose (..))
 import Test.Cardano.Ledger.Constrained.Conway.GovCert
 import Test.Cardano.Ledger.Conway.TreeDiff (showExpr)
 

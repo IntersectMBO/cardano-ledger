@@ -17,6 +17,8 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (FixupSpecRep (..), Op
 import Test.Cardano.Ledger.Conformance.Utils
 import Test.Cardano.Ledger.Conway.TreeDiff (Expr (..), ToExpr (..))
 
+-- import qualified Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit as Delta
+
 deriving instance Generic (HSSet a)
 
 deriving instance Generic GovActionState
@@ -35,7 +37,7 @@ deriving instance Generic GovEnv
 
 deriving instance Generic EnactState
 
-deriving instance Generic DepositPurpose
+deriving instance Generic Lib.DepositPurpose
 
 deriving instance Generic CertEnv
 
