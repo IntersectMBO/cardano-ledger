@@ -26,8 +26,9 @@ instance
   ExecSpecRule fn "CERTS" Conway
   where
   type ExecContext fn "CERTS" Conway = ConwayCertExecContext Conway
+  type ExecEnvironment fn "CERTS" Conway = CertsExecEnv Conway
 
-  environmentSpec _ = certsEnvSpec
+  environmentSpec _ = certsExecEnvSpec
 
   stateSpec _ _ = certStateSpec
 
