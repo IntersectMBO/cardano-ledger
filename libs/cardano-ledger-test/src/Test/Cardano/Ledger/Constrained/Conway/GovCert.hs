@@ -27,11 +27,13 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.UMap as UMap
 import Constrained
 import Control.DeepSeq (NFData)
 import Data.Functor.Identity
 import qualified Data.Map as Map
 import Data.Map.Strict (Map)
+import Data.OMap.Strict as OMap
 import GHC.Generics (Generic)
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit (DepositPurpose (..))
@@ -90,6 +92,27 @@ instance Inject (CertsExecEnv era) (ConwayGovCertEnv era) where
       (certsCurrentEpoch ceeCertEnv)
       (certsCurrentCommittee ceeCertEnv)
       (certsCommitteeProposals ceeCertEnv)
+
+toDeposits ::
+  ConwayEraGov era =>
+  CertState era ->
+  GovState era ->
+  Map (DepositPurpose (EraCrypto era)) Coin
+toDeposits CertState {..} govState =
+  Map.unions
+    [ Map.mapKeys CredentialDeposit credDeposits
+    , Map.mapKeys PoolDeposit poolDeposits
+    , Map.mapKeys DRepDeposit drepDeposits
+    , Map.mapKeys GovActionDeposit proposalDeposits
+    ]
+  where
+    credDeposits = depositMap (dsUnified certDState)
+    poolDeposits = psDeposits certPState
+    drepDeposits = drepDeposit <$> vsDReps certVState
+    proposalDeposits =
+      Map.map
+        (^. gasProposalProcedureL . pProcDepositL)
+        (OMap.toMap (govState ^. proposalsGovStateL . pPropsL))
 
 vStateSpec :: Specification fn (VState (ConwayEra StandardCrypto))
 vStateSpec = TrueSpec
