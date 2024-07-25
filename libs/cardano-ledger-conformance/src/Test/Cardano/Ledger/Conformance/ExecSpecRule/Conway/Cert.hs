@@ -9,9 +9,11 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert (nameTxCert) where
 
-import Cardano.Ledger.BaseTypes (inject)
+import Cardano.Ledger.CertState (CertState (..))
 import Cardano.Ledger.Conway
+import Cardano.Ledger.Conway.Rules (CertEnv)
 import Cardano.Ledger.Conway.TxCert (ConwayTxCert (..))
+import Constrained (constrained, lit, satisfies, (==.))
 import Data.Bifunctor (first)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
@@ -21,16 +23,22 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg (nameDelegCert)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert (nameGovCert)
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool (namePoolCert)
 import Test.Cardano.Ledger.Constrained.Conway
+import Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit (DeltaExecEnv (..))
 
 instance
   IsConwayUniv fn =>
   ExecSpecRule fn "CERT" Conway
   where
-  type ExecEnvironment fn "CERT" Conway = CertsExecEnv Conway
+  type ExecContext fn "CERT" Conway = (CertEnv Conway, CertState Conway)
+  genExecContext = genCERTEnv
 
-  environmentSpec _ = certExecEnvSpec
-  stateSpec _ _ = certStateSpec
-  signalSpec _ env = txCertSpec (inject env)
+  type ExecEnvironment fn "CERT" Conway = DeltaExecEnv (CertEnv Conway) Conway
+  environmentSpec context = certExecEnvSpec context
+
+  stateSpec (_env, state) _deltaExecEnv = constrained $ \x -> x ==. lit state
+  signalSpec (denv, _state) _deltaExecEnv state =
+    constrained $ \sig -> satisfies sig (txCertSpec denv state)
+
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
