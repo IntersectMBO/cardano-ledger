@@ -33,20 +33,23 @@ import Test.Cardano.Ledger.Conformance (
  )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
-import Test.Cardano.Ledger.Constrained.Conway.Deleg
+
+-- import Test.Cardano.Ledger.Constrained.Conway.Deleg
+
+import Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit (DeltaExecEnv (..))
 import Test.Cardano.Ledger.Conway.TreeDiff
 
 instance
   ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , SpecTranslate ctx (PParamsHKD Identity era)
   ) =>
-  SpecTranslate ctx (DelegExecEnv era)
+  SpecTranslate ctx (DeltaExecEnv (ConwayDelegEnv era) era)
   where
-  type SpecRep (DelegExecEnv era) = Agda.DelegEnv
-  toSpecRep DelegExecEnv {..} = do
+  type SpecRep (DeltaExecEnv (ConwayDelegEnv era) era) = Agda.DelegEnv
+  toSpecRep DeltaExecEnv {..} = do
     Agda.MkDelegEnv
-      <$> toSpecRep (cdePParams deeDelegEnv)
-      <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) (cdePools deeDelegEnv))
+      <$> toSpecRep (cdePParams deeEnv)
+      <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) (cdePools deeEnv))
       <*> toSpecRep deeDeposits
 
 instance SpecTranslate ctx (ConwayDelegCert c) where

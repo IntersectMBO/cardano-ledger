@@ -1,6 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the POOL rule
@@ -9,7 +11,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Pool where
 import Cardano.Crypto.Hash.Class qualified as Hash
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (Crypto (..), StandardCrypto)
 import Cardano.Ledger.Shelley.API.Types
@@ -18,10 +20,15 @@ import Constrained
 import Control.Monad.Identity
 import Data.Map.Strict qualified as Map
 import Lens.Micro
+import Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit (
+  DeltaExecEnv (..),
+  agdaDepositFromPstate,
+ )
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Slotting.Numeric ()
+import Test.QuickCheck
 
 currentEpoch :: SlotNo -> EpochNo
 currentEpoch = runIdentity . EI.epochInfoEpoch (epochInfoPure testGlobals)
@@ -80,3 +87,24 @@ poolCertSpec (PoolEnv s pp) ps =
     maxEpochNo = EpochNo (fromIntegral maxEp)
     rpools = Map.keys $ psStakePoolParams ps
     maxMetaLen = fromIntegral (Hash.sizeHash ([] @(HASH StandardCrypto)))
+
+-- =====================================================
+
+poolExecEnvSpec ::
+  IsConwayUniv fn =>
+  (PoolEnv Conway, PState Conway) ->
+  Specification fn (DeltaExecEnv (PoolEnv Conway) Conway)
+poolExecEnvSpec (poolEnv, pstate) = constrained $ \ [var| deEnv |] ->
+  match deEnv $ \ [var|env|] [var|deposits|] [var|withdrawal|] [var|votes|] ->
+    [ assert $ env ==. lit poolEnv
+    , match votes $ \m -> sizeOf_ m ==. 0
+    , assert $ deposits ==. lit (agdaDepositFromPstate pstate)
+    , genHint 3 withdrawal -- Not sure if this is needed for GOVCERT
+    --    , assert $ forAll withdrawal (\p -> elem_ p (lit (possibleWithdrawal dstate)))
+    ]
+
+genPOOLEnv :: Gen (PoolEnv Conway, PState Conway)
+genPOOLEnv = do
+  env <- genFromSpec @ConwayFn poolEnvSpec
+  state <- genFromSpec @ConwayFn pStateSpec
+  pure (env, state)

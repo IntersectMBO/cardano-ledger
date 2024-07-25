@@ -48,6 +48,7 @@ minitraceEither ::
   ( ExecSpecRule fn s e
   , ExecState fn s e ~ State (EraRule s e)
   , PrettyA (Signal (EraRule s e))
+  , PrettyA (State (EraRule s e))
   ) =>
   WitRule s e ->
   Proxy fn ->
@@ -78,6 +79,7 @@ minitraceEither witrule Proxy n0 = do
                         , "\nPredicateFailures"
                         ]
                           ++ map show (NE.toList ps)
+                          ++ [show $ prettyA state]
                       )
                   )
               Right !state2 -> do
@@ -93,6 +95,7 @@ minitrace ::
   ( ExecSpecRule fn s e
   , ExecState fn s e ~ State (EraRule s e)
   , PrettyA (Signal (EraRule s e))
+  , PrettyA (State (EraRule s e))
   ) =>
   WitRule s e ->
   Proxy fn ->
@@ -109,6 +112,7 @@ minitraceProp ::
   ( ExecSpecRule ConwayFn s e
   , ExecState ConwayFn s e ~ State (EraRule s e)
   , PrettyA (Signal (EraRule s e))
+  , PrettyA (State (EraRule s e))
   ) =>
   WitRule s e ->
   Proxy ConwayFn ->
@@ -149,7 +153,7 @@ nameAlonzoTx (AlonzoTx _body _wits isV _auxdata) = show isV
 
 -- | Run one check
 check :: IO ()
-check = quickCheck (withMaxSuccess 50 (minitraceProp (CERT Conway) (Proxy @ConwayFn) 50 nameTxCert))
+check = quickCheck (withMaxSuccess 50 (minitraceProp (GOVCERT Conway) (Proxy @ConwayFn) 50 nameGovCert))
 
 -- | Run a minitrace for every instance of ExecRuleSpec
 spec :: Spec

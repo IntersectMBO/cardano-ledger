@@ -30,8 +30,10 @@ import Data.Functor.Identity (Identity)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
-import Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit (DepositPurpose (..))
-import Test.Cardano.Ledger.Constrained.Conway.GovCert
+import Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit (
+  DeltaExecEnv (..),
+  DepositPurpose (..),
+ )
 import Test.Cardano.Ledger.Conway.TreeDiff (showExpr)
 
 instance SpecTranslate ctx (DepositPurpose c) where
@@ -49,17 +51,17 @@ instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   ) =>
-  SpecTranslate ctx (CertsExecEnv era)
+  SpecTranslate ctx (DeltaExecEnv (ConwayGovCertEnv era) era)
   where
-  type SpecRep (CertsExecEnv era) = Agda.CertEnv
+  type SpecRep (DeltaExecEnv (ConwayGovCertEnv era) era) = Agda.CertEnv
 
-  toSpecRep CertsExecEnv {..} = do
+  toSpecRep DeltaExecEnv {..} = do
     Agda.MkCertEnv
-      <$> toSpecRep (certsCurrentEpoch ceeCertEnv)
-      <*> toSpecRep (certsPParams ceeCertEnv)
-      <*> toSpecRep ceeVotes
-      <*> toSpecRep ceeWithdrawals
-      <*> toSpecRep ceeDeposits
+      <$> toSpecRep (cgceCurrentEpoch deeEnv)
+      <*> toSpecRep (cgcePParams deeEnv)
+      <*> toSpecRep deeVotes
+      <*> toSpecRep deeWithdrawals
+      <*> toSpecRep deeDeposits
 
 instance SpecTranslate ctx (ConwayGovCert c) where
   type SpecRep (ConwayGovCert c) = Agda.TxCert

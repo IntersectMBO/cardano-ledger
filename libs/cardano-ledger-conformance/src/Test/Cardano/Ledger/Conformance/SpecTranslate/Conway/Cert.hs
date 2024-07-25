@@ -28,6 +28,7 @@ import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
+import Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit (DeltaExecEnv (..))
 import Test.Cardano.Ledger.Conway.TreeDiff
 
 instance SpecTranslate ctx (CertState era) where
@@ -147,3 +148,19 @@ instance
 instance SpecTranslate ctx (ConwayNewEpochPredFailure era) where
   type SpecRep (ConwayNewEpochPredFailure era) = OpaqueErrorString
   toSpecRep = pure . OpaqueErrorString . show . toExpr
+
+instance
+  ( SpecTranslate ctx (PParamsHKD Identity era)
+  , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  ) =>
+  SpecTranslate ctx (DeltaExecEnv (CertEnv era) era)
+  where
+  type SpecRep (DeltaExecEnv (CertEnv era) era) = Agda.CertEnv
+
+  toSpecRep DeltaExecEnv {..} = do
+    Agda.MkCertEnv
+      <$> toSpecRep (ceCurrentEpoch deeEnv)
+      <*> toSpecRep (cePParams deeEnv)
+      <*> toSpecRep deeVotes
+      <*> toSpecRep deeWithdrawals
+      <*> toSpecRep deeDeposits
