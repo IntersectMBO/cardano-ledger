@@ -657,7 +657,7 @@ instance
               & ppExtraEntropyL .~ NeutralNonce
               & ppMinUTxOValueL .~ Coin 2_000_000
               & ppMinPoolCostL .~ Coin 340_000_000
-        , -- TODO: Add a top level definition and add pricate keys to ImpState:
+        , -- TODO: Add a top level definition and add private keys to ImpState:
           sgGenDelegs = mempty
         , sgInitialFunds = mempty
         , sgStaking = mempty
@@ -1086,7 +1086,7 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
             & bodyTxL . feeTxBodyL .~ (fee <> change)
   pure txWithFee
 
--- | Adds an auxiliary data hash if auxiliary data present, while and the hash of it is not.
+-- | Adds an auxiliary data hash if auxiliary data present, while the hash of it is not.
 fixupAuxDataHash :: (EraTx era, Applicative m) => Tx era -> m (Tx era)
 fixupAuxDataHash tx
   | SNothing <- tx ^. bodyTxL . auxDataHashTxBodyL

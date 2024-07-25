@@ -40,6 +40,21 @@ spec ::
   SpecWith (ImpTestState era)
 spec = do
   relevantDuringBootstrapSpec
+  it "Enact UpdateCommitee with lengthy lifetime" $ do
+    NonNegative n <- arbitrary
+    passNEpochs n
+    (drepCred, _, _) <- setupSingleDRep 1_000_000
+    cc <- KeyHashObj <$> freshKeyHash
+    EpochInterval committeeMaxTermLength <-
+      getsNES $ nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
+    secondAddCCGaid <-
+      submitUpdateCommittee Nothing [(cc, EpochInterval (committeeMaxTermLength + 2))] (1 %! 2)
+    submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
+    passNEpochs 2
+    -- Due to longer than allowed lifetime we have to wait an extra epoch for this new action to be enacted
+    expectCommitteeMemberAbsence cc
+    passEpoch
+    expectCommitteeMemberPresence cc
 
   it "Authorizing proposed CC key" $ do
     someCred <- KeyHashObj <$> freshKeyHash

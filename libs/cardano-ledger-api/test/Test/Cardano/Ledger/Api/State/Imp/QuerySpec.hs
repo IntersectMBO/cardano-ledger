@@ -140,7 +140,7 @@ spec = do
         let drepExpiry2 = addEpochInterval curEpochNo $ EpochInterval (drepActivity + fromIntegral n + 1)
         drepState2 ^. drepExpiryL `shouldBe` drepExpiry2
         expectActualDRepExpiry drep drepExpiry2
-        passNEpochsChecking 3 $ do
+        passNEpochsChecking (fromIntegral drepActivity) $ do
           isDRepExpired drep `shouldReturn` False
         passEpoch
         isDRepExpired drep `shouldReturn` True
