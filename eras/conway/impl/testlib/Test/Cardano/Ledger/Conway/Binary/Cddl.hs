@@ -8,11 +8,8 @@ import Paths_cardano_ledger_conway
 
 readConwayCddlFileNames :: IO [FilePath]
 readConwayCddlFileNames = do
-  base <- getDataFileName "cddl-files/conway.cddl"
-  crypto <- getDataFileName "cddl-files/crypto.cddl"
-  extras <- getDataFileName "cddl-files/extra.cddl"
-  -- extras contains the types whose restrictions cannot be expressed in CDDL
-  pure [base, crypto, extras]
+  base <- getDataFileName "cddl-files/conway-merged.cddl"
+  pure [base]
 
 readConwayCddlFiles :: IO [BSL.ByteString]
 readConwayCddlFiles = mapM BSL.readFile =<< readConwayCddlFileNames
