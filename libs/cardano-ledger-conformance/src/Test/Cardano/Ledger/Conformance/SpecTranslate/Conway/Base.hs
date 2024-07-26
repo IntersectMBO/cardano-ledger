@@ -285,17 +285,17 @@ instance SpecTranslate ctx PoolVotingThresholds where
 instance SpecTranslate ctx (ConwayPParams Identity era) where
   type SpecRep (ConwayPParams Identity era) = Agda.PParams
 
-  toSpecRep (ConwayPParams {..}) = do
+  toSpecRep ConwayPParams {..} = do
     ppA <- toSpecRep cppMinFeeA
     ppB <- toSpecRep cppMinFeeB
     let
-      ppMaxBlockSize = toInteger . unTHKD $ cppMaxBBSize
-      ppMaxTxSize = toInteger . unTHKD $ cppMaxTxSize
-      ppMaxHeaderSize = toInteger . unTHKD $ cppMaxBHSize
+      ppMaxBlockSize = toInteger $ unTHKD cppMaxBBSize
+      ppMaxTxSize = toInteger $ unTHKD cppMaxTxSize
+      ppMaxHeaderSize = toInteger $ unTHKD cppMaxBHSize
     ppKeyDeposit <- toSpecRep cppKeyDeposit
     ppPoolDeposit <- toSpecRep cppPoolDeposit
     ppEmax <- toSpecRep cppEMax
-    ppNopt <- toSpecRep (toInteger . unTHKD $ cppNOpt)
+    ppNopt <- toSpecRep (toInteger $ unTHKD cppNOpt)
     ppPv <- toSpecRep cppProtocolVersion
     let
       ppMinUTxOValue = 0 -- minUTxOValue has been deprecated and is not supported in Conway
@@ -317,7 +317,7 @@ instance SpecTranslate ctx (ConwayPParams Identity era) where
     ppDrepDeposit <- toSpecRep cppDRepDeposit
     ppDrepActivity <- toSpecRep cppDRepActivity
 
-    pure $ Agda.MkPParams {..}
+    pure Agda.MkPParams {..}
 
 instance
   SpecTranslate ctx (PParamsHKD Identity era) =>
@@ -695,33 +695,33 @@ instance SpecTranslate ctx (ConwayPParams StrictMaybe era) where
       ppuMaxBlockSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxBBSize
       ppuMaxTxSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxTxSize
       ppuMaxHeaderSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxBHSize
-    ppuKeyDeposit <- toSpecRep (cppKeyDeposit)
-    ppuPoolDeposit <- toSpecRep (cppPoolDeposit)
-    ppuEmax <- toSpecRep (cppEMax)
+    ppuKeyDeposit <- toSpecRep cppKeyDeposit
+    ppuPoolDeposit <- toSpecRep cppPoolDeposit
+    ppuEmax <- toSpecRep cppEMax
     ppuNopt <- toSpecRep (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppNOpt)
     let
       ppuPv = Nothing
       ppuMinUTxOValue = Nothing -- minUTxOValue has been deprecated and is not supported in Conway
-    ppuCoinsPerUTxOByte <- toSpecRep (cppCoinsPerUTxOByte)
-    ppuCostmdls <- toSpecRep (cppCostModels)
-    ppuPrices <- toSpecRep (cppPrices)
-    ppuMaxTxExUnits <- toSpecRep (cppMaxTxExUnits)
-    ppuMaxBlockExUnits <- toSpecRep (cppMaxBlockExUnits)
+    ppuCoinsPerUTxOByte <- toSpecRep cppCoinsPerUTxOByte
+    ppuCostmdls <- toSpecRep cppCostModels
+    ppuPrices <- toSpecRep cppPrices
+    ppuMaxTxExUnits <- toSpecRep cppMaxTxExUnits
+    ppuMaxBlockExUnits <- toSpecRep cppMaxBlockExUnits
     let
       ppuMaxValSize = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxValSize
-      ppuMaxCollateralInputs = (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxCollateralInputs)
+      ppuMaxCollateralInputs = fmap toInteger . strictMaybeToMaybe . unTHKD $ cppMaxCollateralInputs
     ppuPoolVotingThresholds <- toSpecRep (cppPoolVotingThresholds)
     ppuDrepVotingThresholds <- toSpecRep (cppDRepVotingThresholds)
     let
-      ppuCCMinSize = (fmap toInteger . strictMaybeToMaybe . unTHKD $ cppCommitteeMinSize)
+      ppuCCMinSize = fmap toInteger . strictMaybeToMaybe $ unTHKD cppCommitteeMinSize
       ppuCCMaxTermLength =
-        (fmap (toInteger . unEpochInterval) . strictMaybeToMaybe . unTHKD $ cppCommitteeMaxTermLength)
-    ppuGovActionLifetime <- toSpecRep (cppGovActionLifetime)
-    ppuGovActionDeposit <- toSpecRep (cppGovActionDeposit)
-    ppuDrepDeposit <- toSpecRep (cppDRepDeposit)
-    ppuDrepActivity <- toSpecRep (cppDRepActivity)
+        fmap (toInteger . unEpochInterval) . strictMaybeToMaybe $ unTHKD cppCommitteeMaxTermLength
+    ppuGovActionLifetime <- toSpecRep cppGovActionLifetime
+    ppuGovActionDeposit <- toSpecRep cppGovActionDeposit
+    ppuDrepDeposit <- toSpecRep cppDRepDeposit
+    ppuDrepActivity <- toSpecRep cppDRepActivity
 
-    pure $ Agda.MkPParamsUpdate {..}
+    pure Agda.MkPParamsUpdate {..}
 
 instance
   SpecTranslate ctx (PParamsHKD StrictMaybe era) =>
