@@ -23,7 +23,8 @@ import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.API.Types
-import Cardano.Ledger.UMap (RDPair (..), fromCompact, rewardMap, unUnify)
+import Cardano.Ledger.UMap (RDPair (..), fromCompact, unUnify)
+import qualified Cardano.Ledger.UMap as UM (rewardMap)
 import Constrained
 import qualified Data.Map as Map
 import Lens.Micro
@@ -49,8 +50,8 @@ dStateSpec ::
   IsConwayUniv fn =>
   Specification fn (DState (ConwayEra StandardCrypto))
 dStateSpec = constrained $ \ds ->
-  match ds $ \rewardmap _futureGenDelegs _genDelegs _rewards ->
-    match rewardmap $ \rdMap ptrMap sPoolMap _dRepMap ->
+  match ds $ \rewardMap _futureGenDelegs _genDelegs _rewards ->
+    match rewardMap $ \rdMap ptrMap sPoolMap _dRepMap ->
       [ assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
       , assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
       , assertExplain (pure "some rewards are zero") $
@@ -65,11 +66,11 @@ conwayDelegCertSpec ::
   DState (ConwayEra StandardCrypto) ->
   Specification fn (ConwayDelegCert StandardCrypto)
 conwayDelegCertSpec (ConwayDelegEnv pp pools) ds =
-  let rewardmap = unUnify $ rewards ds
+  let rewardMap = unUnify $ rewards ds
       delegMap = unUnify $ delegations ds
       zeroReward = (== 0) . fromCompact . rdReward
       depositOf k =
-        case fromCompact . rdDeposit <$> Map.lookup k rewardmap of
+        case fromCompact . rdDeposit <$> Map.lookup k rewardMap of
           Just d | d > 0 -> SJust d
           _ -> SNothing
       delegateeInPools :: Term fn (Delegatee StandardCrypto) -> Pred fn
@@ -90,7 +91,7 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) ds =
           -- ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
           ( branchW 2 $ \sc mc ->
               [ -- You can only unregister things with 0 reward
-                assert $ elem_ sc $ lit (Map.keys $ Map.filter zeroReward rewardmap)
+                assert $ elem_ sc $ lit (Map.keys $ Map.filter zeroReward rewardMap)
               , assert $ elem_ sc $ lit (Map.keys delegMap)
               , -- The `StrictMaybe` needs to be precisely what is in the delegation map
                 reify sc depositOf (==. mc)
@@ -105,7 +106,7 @@ conwayDelegCertSpec (ConwayDelegEnv pp pools) ds =
           -- ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
           ( branchW 1 $ \sc delegatee c ->
               [ assert $ c ==. lit (pp ^. ppKeyDepositL)
-              , assert $ not_ (member_ sc (lit (Map.keysSet rewardmap)))
+              , assert $ not_ (member_ sc (lit (Map.keysSet rewardMap)))
               , delegateeInPools delegatee
               ]
           )
@@ -149,4 +150,4 @@ possibleWithdrawal :: DState era -> [((Network, Credential 'Staking (EraCrypto e
 possibleWithdrawal dstate =
   filter (\(_, Coin n) -> n /= 0) $
     Map.toList $
-      Map.mapKeys (\x -> (Testnet, x)) (rewardMap (dsUnified dstate))
+      Map.mapKeys (\x -> (Testnet, x)) (UM.rewardMap (dsUnified dstate))

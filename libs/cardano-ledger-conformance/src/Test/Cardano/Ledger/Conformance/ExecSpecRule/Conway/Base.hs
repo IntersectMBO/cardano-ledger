@@ -23,12 +23,12 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   nameEpoch,
   nameEnact,
   nameGovAction,
+  ConwayRatifyExecContext (..),
 ) where
 
 import Cardano.Ledger.BaseTypes (
   EpochNo (..),
   Inject (..),
-  Network,
   StrictMaybe (..),
   natVersion,
  )
@@ -60,15 +60,13 @@ import Cardano.Ledger.Conway.Rules (
   spoAcceptedRatio,
  )
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
-import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Constrained
 import Constrained.Base (fromList_)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (Foldable (..))
 import qualified Data.List.NonEmpty as NE
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as SSeq

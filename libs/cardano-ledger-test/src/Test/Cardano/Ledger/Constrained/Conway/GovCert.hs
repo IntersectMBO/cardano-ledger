@@ -16,109 +16,22 @@
 module Test.Cardano.Ledger.Constrained.Conway.GovCert where
 
 import Cardano.Ledger.CertState
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Constrained
 import qualified Data.Map as Map
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit (
   DeltaExecEnv (..),
-  DepositPurpose (..),
   agdaDepositFromVstate,
  )
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 import Test.QuickCheck
-
--- =========================================================
-
-import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Keys (KeyRole (..))
-import Cardano.Ledger.UMap as UMap
-import Control.DeepSeq (NFData)
-import Data.Functor.Identity
-import Data.Map.Strict (Map)
-import Data.OMap.Strict as OMap
-import GHC.Generics (Generic)
-import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
-
-data CertsExecEnv era = CertsExecEnv
-  { ceeCertEnv :: !(CertsEnv era)
-  , ceeDeposits :: !(Map (DepositPurpose (EraCrypto era)) Coin)
-  , ceeWithdrawals :: !(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-  , ceeVotes :: !(VotingProcedures era)
-  }
-  deriving (Generic)
-
-deriving instance (EraPParams era, Eq (Tx era)) => Eq (CertsExecEnv era)
-deriving instance (EraPParams era, Show (Tx era)) => Show (CertsExecEnv era)
-
-instance
-  ( Era era
-  , ToExpr (Tx era)
-  , ToExpr (PParamsHKD StrictMaybe era)
-  , ToExpr (PParamsHKD Identity era)
-  ) =>
-  ToExpr (CertsExecEnv era)
-instance (EraPParams era, NFData (Tx era)) => NFData (CertsExecEnv era)
-instance HasSimpleRep (CertsExecEnv era)
-instance
-  ( Eq (Tx era)
-  , Show (Tx era)
-  , IsConwayUniv fn
-  , EraPParams era
-  , HasSpec fn (CertsEnv era)
-  , HasSpec fn (CertEnv era)
-  ) =>
-  HasSpec fn (CertsExecEnv era)
-
-instance Inject (CertsExecEnv era) (CertsEnv era) where
-  inject = ceeCertEnv
-
-instance Inject (CertsExecEnv era) (CertEnv era) where
-  inject CertsExecEnv {..} =
-    CertEnv
-      (certsSlotNo ceeCertEnv)
-      (certsPParams ceeCertEnv)
-      (certsCurrentEpoch ceeCertEnv)
-      (certsCurrentCommittee ceeCertEnv)
-      (certsCommitteeProposals ceeCertEnv)
-
-instance Inject (CertsExecEnv era) (ConwayGovCertEnv era) where
-  inject CertsExecEnv {..} =
-    ConwayGovCertEnv
-      (certsPParams ceeCertEnv)
-      (certsCurrentEpoch ceeCertEnv)
-      (certsCurrentCommittee ceeCertEnv)
-      (certsCommitteeProposals ceeCertEnv)
-
-toDeposits ::
-  ConwayEraGov era =>
-  CertState era ->
-  GovState era ->
-  Map (DepositPurpose (EraCrypto era)) Coin
-toDeposits CertState {..} govState =
-  Map.unions
-    [ Map.mapKeys CredentialDeposit credDeposits
-    , Map.mapKeys PoolDeposit poolDeposits
-    , Map.mapKeys DRepDeposit drepDeposits
-    , Map.mapKeys GovActionDeposit proposalDeposits
-    ]
-  where
-    credDeposits = depositMap (dsUnified certDState)
-    poolDeposits = psDeposits certPState
-    drepDeposits = drepDeposit <$> vsDReps certVState
-    proposalDeposits =
-      Map.map
-        (^. gasProposalProcedureL . pProcDepositL)
-        (OMap.toMap (govState ^. proposalsGovStateL . pPropsL))
 
 -- ================================================================
 
@@ -200,7 +113,8 @@ govCertEnvSpec =
     match gce $ \pp _ _ _ ->
       satisfies pp pparamsSpec
 
--- =========================================
+-- ===========================================
+-- DeltaDeposit style Environment
 
 govcertExecEnvSpec ::
   IsConwayUniv fn =>
