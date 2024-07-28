@@ -179,11 +179,11 @@ getAlonzoTxAuxDataScripts AlonzoTxAuxData {atadTimelock = timelocks, atadPlutus 
   mconcat $
     (TimelockScript <$> timelocks)
       : [ StrictSeq.fromList $
-          -- It is fine to filter out unsupported languages with mapMaybe, because the invariant for
-          -- AlonzoTxAuxData is that it does not contain scripts with languages that are not
-          -- supported in this era
-          mapMaybe (fmap PlutusScript . mkBinaryPlutusScript lang) $
-            NE.toList plutusScripts
+            -- It is fine to filter out unsupported languages with mapMaybe, because the invariant for
+            -- AlonzoTxAuxData is that it does not contain scripts with languages that are not
+            -- supported in this era
+            mapMaybe (fmap PlutusScript . mkBinaryPlutusScript lang) $
+              NE.toList plutusScripts
         | lang <- [PlutusV1 .. eraMaxLanguage @era]
         , Just plutusScripts <- [Map.lookup lang plutus]
         ]

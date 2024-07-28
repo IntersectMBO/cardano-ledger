@@ -835,7 +835,7 @@ genTxAndLedger sizes proof = do
         >>= certsStage sizes proof
         >>= ledgerStateStage sizes proof
         >>= txBodyStage sizes proof
-      )
+    )
   env0 <- monadTyped $ substToEnv subst emptyEnv
   env1 <- monadTyped $ adjustFeeInput env0
   env2 <- errorTyped $ adjustColInput env1
@@ -858,7 +858,7 @@ genTxAndNewEpoch sizes proof = do
         >>= txBodyStage sizes proof
         >>= epochStateStage proof
         >>= newEpochStateStage proof
-      )
+    )
   env0 <- monadTyped $ substToEnv subst emptyEnv
   env1 <- monadTyped $ adjustFeeInput env0
   env2 <- errorTyped $ adjustColInput env1

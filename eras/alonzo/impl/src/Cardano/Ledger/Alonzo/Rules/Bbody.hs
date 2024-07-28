@@ -209,16 +209,14 @@ alonzoBbodyTransition =
           == fromIntegral (bhviewBSize bh)
             ?! injectFailure
               ( ShelleyInAlonzoBbodyPredFailure
-                  ( WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bh)
-                  )
+                  (WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bh))
               )
 
         actualBodyHash
           == bhviewBHash bh
             ?! injectFailure
               ( ShelleyInAlonzoBbodyPredFailure
-                  ( InvalidBodyHashBBODY @era actualBodyHash (bhviewBHash bh)
-                  )
+                  (InvalidBodyHashBBODY @era actualBodyHash (bhviewBHash bh))
               )
 
         ls' <-

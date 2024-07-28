@@ -108,13 +108,13 @@ propCanonicalConstructionAgrees xs ys = property $ do
   let mb1@(MultiAsset b1) =
         mconcat
           [ MultiAsset $
-            canonicalInsert const pid (canonicalInsert const an i mempty) mempty
+              canonicalInsert const pid (canonicalInsert const an i mempty) mempty
           | (pid, an, i) <- xs
           ]
       mb2@(MultiAsset b2) =
         mconcat
           [ MultiAsset $
-            canonicalInsert const pid (canonicalInsert const an i mempty) mempty
+              canonicalInsert const pid (canonicalInsert const an i mempty) mempty
           | (pid, an, i) <- ys
           ]
   expectValidMap b1

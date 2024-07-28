@@ -134,7 +134,9 @@ utxoTxSpec env st =
                     [ (reify ctbSpendInputs)
                         ( \actualInputs ->
                             fold
-                              [ c | i <- Set.toList actualInputs, BabbageTxOut _ (MaryValue c _) _ _ <- maybeToList . txinLookup i . utxosUtxo $ st
+                              [ c
+                              | i <- Set.toList actualInputs
+                              , BabbageTxOut _ (MaryValue c _) _ _ <- maybeToList . txinLookup i . utxosUtxo $ st
                               ]
                         )
                         $ \totalValueConsumed ->

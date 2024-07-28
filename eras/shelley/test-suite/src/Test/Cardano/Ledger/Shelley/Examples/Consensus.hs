@@ -109,8 +109,7 @@ deriving instance
 -------------------------------------------------------------------------------}
 
 type ShelleyBasedEra' era =
-  ( PraosCrypto (EraCrypto era)
-  )
+  (PraosCrypto (EraCrypto era))
 
 defaultShelleyLedgerExamples ::
   forall era.
