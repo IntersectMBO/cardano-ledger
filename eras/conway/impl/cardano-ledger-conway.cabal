@@ -13,7 +13,7 @@ category:           Network
 build-type:         Simple
 data-files:
     test/data/*.json
-    cddl-files/conway-merged.cddl
+    cddl-files/conway.cddl
 
 extra-source-files: CHANGELOG.md
 
@@ -143,7 +143,7 @@ library testlib
         bytestring,
         cardano-data:{cardano-data, testlib},
         containers,
-        cuddle >= 0.3.0.0,
+        cuddle >=0.3.0.0,
         plutus-ledger-api,
         deepseq,
         microlens,

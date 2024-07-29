@@ -1,5 +1,3 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-
 module Main where
 
 import Codec.CBOR.Cuddle.CDDL (sortCDDL)
@@ -9,7 +7,7 @@ import Data.Foldable (for_)
 import Prettyprinter (Pretty (pretty))
 import Prettyprinter.Render.Text (hPutDoc)
 import System.IO (IOMode (..), hPutStrLn, withFile)
-import Test.Cardano.Ledger.Conway.CDDL qualified as Conway
+import qualified Test.Cardano.Ledger.Conway.CDDL as Conway
 
 -- | Message to be appended to the top of every generated file
 preface :: String
@@ -19,7 +17,7 @@ preface =
 -- | Map from spec to the CDDL file location
 cuddleSpecs :: [(Huddle, String)]
 cuddleSpecs =
-  [ (Conway.conway, "./eras/conway/impl/cddl-files/conway-merged.cddl")
+  [ (Conway.conway, "./eras/conway/impl/cddl-files/conway.cddl")
   ]
 
 writeSpec :: Huddle -> String -> IO ()
@@ -28,6 +26,8 @@ writeSpec hddl path =
    in withFile path WriteMode $ \h -> do
         hPutStrLn h preface
         hPutDoc h (pretty $ sortCDDL cddl)
+        -- Write an empty line at the end of the file
+        hPutStrLn h ""
 
 -- Generate cddl files for all relevant specifications
 main :: IO ()

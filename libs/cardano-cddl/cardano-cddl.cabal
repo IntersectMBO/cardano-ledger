@@ -1,34 +1,25 @@
-cabal-version:      3.4
-name:               cardano-cddl
-version:            0.1.0.0
-synopsis:           Tool to generate CDDL specifications for the ledger
--- description:
-homepage:           https://github.com/intersectmbo/cardano-ledger
-license:            Apache-2.0
-license-file:       LICENSE
-author:             IOG
-maintainer:         operations@iohk.io
--- copyright:
-category:           Codec
-build-type:         Simple
-extra-doc-files:    CHANGELOG.md
--- extra-source-files:
-
-common warnings
-    ghc-options: -Wall
+cabal-version:   3.4
+name:            cardano-cddl
+version:         0.1.0.0
+license:         Apache-2.0
+license-file:    LICENSE
+maintainer:      operations@iohk.io
+author:          IOG
+homepage:        https://github.com/intersectmbo/cardano-ledger
+synopsis:        Tool to generate CDDL specifications for the ledger
+category:        Codec
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
 
 executable cardano-cddl
-    import:           warnings
     main-is:          Main.hs
-    -- other-modules:
-    -- other-extensions:
+    hs-source-dirs:   app
+    default-language: Haskell2010
+    ghc-options:      -Wall
     build-depends:
         base >=4.14.0.0,
         cardano-ledger-conway:testlib,
         containers,
-        cuddle >= 0.2.1,
+        cuddle >=0.2.1,
         prettyprinter,
         text
-
-    hs-source-dirs:   app
-    default-language: Haskell2010

@@ -87,7 +87,7 @@ protocol_version :: Rule
 protocol_version = "protocol_version" =:= arr [a major_protocol_version, a VUInt]
 
 -- TODO Replace with the following once
--- https:/github.com/input-output-hk/cuddle/issues/29 is addressed in cuddle.
+-- https://github.com/input-output-hk/cuddle/issues/29 is addressed in cuddle.
 --
 -- next_major_protocol_version :: Rule
 -- next_major_protocol_version = "next_major_protocol_version" =:= (10 :: Integer)
@@ -772,7 +772,7 @@ policy_id = "policy_id" =:= scripthash
 asset_name :: Rule
 asset_name = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
--- Once https:/github.com/input-output-hk/cuddle/issues/29 is in place, replace
+-- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
 -- with:
 --
 -- minInt64 :: Rule
@@ -780,7 +780,7 @@ asset_name = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
 minInt64 :: Integer
 minInt64 = -9223372036854775808
 
--- Once https:/github.com/input-output-hk/cuddle/issues/29 is in place, replace
+-- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
 -- with:
 --
 -- maxInt64 :: Rule
@@ -788,7 +788,7 @@ minInt64 = -9223372036854775808
 maxInt64 :: Integer
 maxInt64 = 9223372036854775807
 
--- Once https:/github.com/input-output-hk/cuddle/issues/29 is in place, replace
+-- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
 -- with:
 --
 -- maxWord64 :: Rule
