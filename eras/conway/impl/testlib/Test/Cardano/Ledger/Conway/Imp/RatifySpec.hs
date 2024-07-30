@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conway.Imp.RatifySpec (
   spec,
@@ -23,11 +24,12 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState
 import qualified Cardano.Ledger.UMap as UM
-import Cardano.Ledger.Val ((<->))
+import Cardano.Ledger.Val (zero, (<->))
 import Data.Default.Class (def)
 import Data.Foldable
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
+import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Lens.Micro
@@ -725,6 +727,112 @@ votingSpec =
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+      describe "Predefined DReps" $ do
+        it "acceptedRatio with default DReps" $ do
+          (drep1, _, committeeGovId) <- electBasicCommittee
+          (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
+
+          paramChangeGovId <- submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
+          submitYesVote_ (DRepVoter drep1) paramChangeGovId
+
+          passEpoch
+          calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 2
+
+          _ <- delegateToDRep 1_000_000 DRepAlwaysNoConfidence
+          passEpoch
+          -- AlwaysNoConfidence vote acts like a 'No' vote for actions other than NoConfidence
+          calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 3
+
+          redelegateDRep drep2 DRepAlwaysAbstain drep2Staking
+          passEpoch
+          -- AlwaysAbstain vote acts like 'Abstain' vote
+          calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 2
+
+          noConfidenceGovId <- submitGovAction $ NoConfidence (SJust committeeGovId)
+          submitYesVote_ (DRepVoter drep1) noConfidenceGovId
+          passEpoch
+          -- AlwaysNoConfidence vote acts like 'Yes' for NoConfidence actions
+          calculateDRepAcceptedRatio noConfidenceGovId `shouldReturn` 2 % 2
+
+        it "AlwaysNoConfidence" $ do
+          (drep1, _, committeeGovId) <- electBasicCommittee
+          initialMembers <- getCommitteeMembers
+          modifyPParams $
+            ppDRepVotingThresholdsL .~ (def & dvtMotionNoConfidenceL .~ 51 %! 100)
+
+          -- drep2 won't explicitly vote, but eventually delegate to AlwaysNoConfidence
+          (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
+
+          -- we register another drep with the same stake as drep1, which will vote No -
+          -- in order to make it necessary to redelegate to AlwaysNoConfidence,
+          -- rather than just unregister
+          (drep3, _, _) <- setupSingleDRep 1_000_000
+
+          noConfidenceGovId <- submitGovAction $ NoConfidence (SJust committeeGovId)
+          submitYesVote_ (DRepVoter drep1) noConfidenceGovId
+          void $ submitVote VoteNo (DRepVoter drep3) noConfidenceGovId
+          passEpoch
+          -- drep1 doesn't have enough stake to enact NoConfidence
+          isDRepAccepted noConfidenceGovId `shouldReturn` False
+          passEpoch
+          getCommitteeMembers `shouldReturn` initialMembers
+          deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+          -- drep2 unregisters, but NoConfidence still doesn't pass, because there's a tie between drep1 and drep3
+          submitTxAnn_ "Unregister drep2" $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ SSeq.fromList
+                  [ UnRegDRepTxCert @era
+                      drep2
+                      deposit
+                  ]
+          passEpoch
+          isDRepAccepted noConfidenceGovId `shouldReturn` False
+
+          submitTxAnn_ "Redelegate to AlwaysNoConfidence " $
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . certsTxBodyL
+                .~ SSeq.fromList
+                  [ DelegTxCert @era
+                      drep2Staking
+                      (DelegVote DRepAlwaysNoConfidence)
+                  ]
+          passEpoch
+          isDRepAccepted noConfidenceGovId `shouldReturn` True
+          passEpoch
+          getCommitteeMembers `shouldReturn` mempty
+
+        it "AlwaysAbstain" $ do
+          let getTreasury = getsNES (nesEsL . esAccountStateL . asTreasuryL)
+
+          (drep1, comMember, _) <- electBasicCommittee
+          initialTreasury <- getTreasury
+          modifyPParams $
+            ppDRepVotingThresholdsL .~ (def & dvtTreasuryWithdrawalL .~ 51 %! 100)
+
+          (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
+
+          rewardAccount <- registerRewardAccount
+          govId <- submitTreasuryWithdrawals [(rewardAccount, initialTreasury)]
+
+          submitYesVote_ (CommitteeVoter comMember) govId
+          submitYesVote_ (DRepVoter drep1) govId
+          void $ submitVote VoteNo (DRepVoter drep2) govId
+          passEpoch
+          -- drep1 doesn't have enough stake to enact the withdrawals
+          isDRepAccepted govId `shouldReturn` False
+          passEpoch
+          getTreasury `shouldReturn` initialTreasury
+
+          redelegateDRep drep2 DRepAlwaysAbstain drep2Staking
+
+          passEpoch
+          -- the delegation turns the No vote into an Abstain, enough to pass the action
+          isDRepAccepted govId `shouldReturn` True
+          passEpoch
+          getTreasury `shouldReturn` zero
+
       describe "StakePool" $ do
         it "UTxOs contribute to active voting stake" $ do
           -- Only modify the applicable thresholds
