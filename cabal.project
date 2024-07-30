@@ -24,17 +24,14 @@ source-repository-package
   subdir: ledgerSrc/haskell/Ledger
   tag: 841942c68993857fd40ca35cd62258cf82d160a5
   --sha256: 0acbsfpa3f745abfagyivim3d2qp7i0xwv0lsg7j4ah4s2qx5vkc
--- NOTE: If you would like to update the above, look for the available tags
--- in the `formal-ledger-specifications` repo and pick the tag which marks
--- the generated code that you want to include.
--- The code is generated and pushed to a branch called `haskell-package` in
--- the `formal-ledger-specifications` repo. However, upon each new generation
--- and push, the old commit with the generated code gets removed, hence
--- why we do the tagging to keep those references around so we can use them
--- in this SRP. Also note, that we use the commit reference of the tag,
--- which is a commit from the `haskell-package` branch as mentioned before,
--- rather than the commit referenced in the title and the message of the tag,
--- since those reference the commit on `master` which the code was generated from.
+-- NOTE: If you would like to update the above, look for the `haskell-package`
+-- branch in the `formal-ledger-specifications` repo where the HEAD contains
+-- the generated code based on the most recent commit on `master`.
+-- !IMPORTANT!: MAKE SURE TO TAG THE COMMIT IN `formal-ledger-specifications`
+-- WHENEVER YOU UPDATE THIS SRP! Otherwise this could break, since each push
+-- to `haskell-package` removes the old commits. With tagging, we are making
+-- sure to keep the `formal-ledger-specifications` commits we are referencing,
+-- otherwise they would be garbage collected by git.
 
 index-state:
   -- Bump this if you need newer packages from Hackage
