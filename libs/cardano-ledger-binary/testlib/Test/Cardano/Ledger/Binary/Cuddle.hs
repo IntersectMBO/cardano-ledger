@@ -10,6 +10,7 @@ module Test.Cardano.Ledger.Binary.Cuddle (
   specWithHuddle,
   huddleRoundTripCborSpec,
   huddleRoundTripAnnCborSpec,
+  writeSpec,
 ) where
 
 import Cardano.Ledger.Binary (
@@ -27,6 +28,7 @@ import qualified Codec.CBOR.Cuddle.CDDL as Cuddle
 import qualified Codec.CBOR.Cuddle.CDDL.CTree as Cuddle
 import qualified Codec.CBOR.Cuddle.CDDL.Resolve as Cuddle
 import qualified Codec.CBOR.Cuddle.Huddle as Cuddle
+import Codec.CBOR.Cuddle.Pretty ()
 import qualified Codec.CBOR.Encoding as CBOR
 import qualified Codec.CBOR.Pretty as CBOR
 import qualified Codec.CBOR.Term as CBOR
@@ -37,6 +39,9 @@ import Data.Functor.Identity (Identity)
 import Data.List (unfoldr)
 import qualified Data.Text as T
 import GHC.Stack (HasCallStack)
+import Prettyprinter (Pretty (pretty))
+import Prettyprinter.Render.Text (hPutDoc)
+import System.IO (IOMode (..), hPutStrLn, withFile)
 import Test.Cardano.Ledger.Binary.RoundTrip (
   RoundTripFailure (RoundTripFailure),
   Trip (..),
@@ -200,3 +205,18 @@ cddlFailure encoding err =
       , show err
       , "Generated diag: " <> CBOR.prettyHexEnc encoding
       ]
+
+--------------------------------------------------------------------------------
+-- Writing specs to a file
+--------------------------------------------------------------------------------
+
+-- | Write a Huddle specification to a file at the given path
+writeSpec :: Cuddle.Huddle -> FilePath -> IO ()
+writeSpec hddl path =
+  let cddl = Cuddle.toCDDL hddl
+      preface = "; This file was auto-generated from huddle. Please do not modify it directly!"
+   in withFile path WriteMode $ \h -> do
+        hPutStrLn h preface
+        hPutDoc h (pretty $ Cuddle.sortCDDL cddl)
+        -- Write an empty line at the end of the file
+        hPutStrLn h ""
