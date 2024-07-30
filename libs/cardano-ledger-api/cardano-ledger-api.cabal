@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               cardano-ledger-api
-version:            1.9.2.2
+version:            1.9.3.0
 license:            Apache-2.0
 maintainer:         operations@iohk.io
 author:             IOHK
@@ -62,6 +62,7 @@ library
         cardano-ledger-core >=1.13.2 && <1.15,
         cardano-ledger-mary >=1.5 && <1.7,
         cardano-ledger-shelley ^>=1.12,
+        cardano-strict-containers,
         containers,
         FailT,
         microlens,

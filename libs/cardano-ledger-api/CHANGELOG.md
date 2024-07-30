@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-api`
 
-## 1.9.2.2
+## 1.9.3.0
 
-*
+* Add `queryProposals` state query
 
 ## 1.9.2.1
 

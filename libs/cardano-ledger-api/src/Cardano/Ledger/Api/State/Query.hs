@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Cardano.Ledger.Api.State.Query (
@@ -45,6 +46,9 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetFuturePParams@
   queryFuturePParams,
 
+  -- * @GetProposals@
+  queryProposals,
+
   -- * For testing
   getNextEpochCommitteeMembers,
 ) where
@@ -64,6 +68,10 @@ import Cardano.Ledger.Conway.Governance (
   Committee (committeeMembers),
   Constitution (constitutionAnchor),
   ConwayEraGov (..),
+  DRepPulser (..),
+  DRepPulsingState (..),
+  GovActionId,
+  GovActionState (..),
   PulsingSnapshot,
   RatifyState,
   committeeThresholdL,
@@ -71,6 +79,7 @@ import Cardano.Ledger.Conway.Governance (
   finishDRepPulser,
   psDRepDistr,
   psPoolDistr,
+  psProposalsL,
   rsEnactStateL,
  )
 import Cardano.Ledger.Conway.Rules (updateDormantDRepExpiry)
@@ -90,6 +99,9 @@ import Data.Foldable (foldMap')
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
+import Data.Sequence (Seq (..))
+import qualified Data.Sequence as Seq
+import Data.Sequence.Strict (StrictSeq (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
@@ -308,6 +320,24 @@ queryFuturePParams nes =
     NoPParamsUpdate -> Nothing
     PotentialPParamsUpdate mpp -> mpp
     DefinitePParamsUpdate pp -> Just pp
+
+-- | Query proposals that are considered for ratification.
+queryProposals ::
+  ConwayEraGov era =>
+  NewEpochState era ->
+  -- | Specify a set of Governance Action IDs to filter the proposals. When this set is
+  -- empty, all the proposals considered for ratification will be returned.
+  Set (GovActionId (EraCrypto era)) ->
+  Seq (GovActionState era)
+queryProposals nes gids
+  | null gids = proposals
+  -- TODO: Add `filter` to `cardano-strict-containers`
+  | otherwise =
+      Seq.filter (\GovActionState {..} -> gasId `Set.member` gids) proposals
+  where
+    proposals = fromStrict $ case (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL) of
+      DRComplete snap _rs -> snap ^. psProposalsL
+      DRPulsing DRepPulser {..} -> dpProposals
 
 finishedPulserState ::
   ConwayEraGov era =>
