@@ -505,6 +505,7 @@ votingDRepThresholdInternal pp isElectedCommittee action =
   let thresholds@DRepVotingThresholds
         { dvtCommitteeNoConfidence
         , dvtCommitteeNormal
+        , dvtMotionNoConfidence
         , dvtUpdateToConstitution
         , dvtHardForkInitiation
         , dvtTreasuryWithdrawal
@@ -512,7 +513,7 @@ votingDRepThresholdInternal pp isElectedCommittee action =
           | HF.bootstrapPhase (pp ^. ppProtocolVersionL) = def
           | otherwise = pp ^. ppDRepVotingThresholdsL
    in case action of
-        NoConfidence {} -> VotingThreshold dvtCommitteeNoConfidence
+        NoConfidence {} -> VotingThreshold dvtMotionNoConfidence
         UpdateCommittee {} ->
           VotingThreshold $
             if isElectedCommittee
