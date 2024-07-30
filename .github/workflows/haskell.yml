@@ -36,7 +36,7 @@ jobs:
   build:
     strategy:
       matrix:
-        ghc: ["8.10.7", "9.2.8", "9.6.5", "9.8.2", "9.10.1"]
+        ghc: ["8.10.7", "9.2.8", "9.6.6", "9.8.2", "9.10.1"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -68,7 +68,7 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: latest
+        cabal-version: 3.10.3.0
 
     - name: Configure to use libsodium
       run: |
@@ -185,7 +185,7 @@ jobs:
         - set-algebra
         - small-steps
         - vector-map
-        ghc: ["8.10.7", "9.2.8", "9.6.5", "9.8.2"]
+        ghc: ["8.10.7", "9.2.8", "9.6.6", "9.8.2"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -328,7 +328,7 @@ jobs:
 
     - name: Install fourmolu
       run: |
-        FOURMOLU_VERSION="0.14.0.0"
+        FOURMOLU_VERSION="0.16.2.0"
         mkdir -p "$HOME/.local/bin"
         curl -sL "https://github.com/fourmolu/fourmolu/releases/download/v${FOURMOLU_VERSION}/fourmolu-${FOURMOLU_VERSION}-linux-x86_64" -o "$HOME/.local/bin/fourmolu"
         chmod a+x "$HOME/.local/bin/fourmolu"

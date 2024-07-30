@@ -344,8 +344,7 @@ goldenEncodingTestsMary =
         "multiasset_with_negative"
         (MultiAsset $ Map.singleton policyID1 (Map.singleton (AssetName assetName1) (-19)))
         ( T
-            ( TkMapLen 1
-            )
+            (TkMapLen 1)
             <> S policyID1
             <> T
               ( TkMapLen 1

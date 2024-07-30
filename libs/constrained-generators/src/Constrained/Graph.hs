@@ -68,8 +68,7 @@ irreflexiveDependencyOn xs ys =
     deps =
       Graph
         (Map.fromDistinctAscList [(x, Set.delete x ys) | x <- Set.toList xs])
-        ( Map.fromDistinctAscList [(a, Set.delete a xs) | a <- Set.toList ys]
-        )
+        (Map.fromDistinctAscList [(a, Set.delete a xs) | a <- Set.toList ys])
 
 transitiveDependencies :: Ord node => node -> Graph node -> Set node
 transitiveDependencies x (Graph e _) = go (Set.singleton x) x

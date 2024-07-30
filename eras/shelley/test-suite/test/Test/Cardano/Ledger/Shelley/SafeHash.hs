@@ -75,13 +75,11 @@ test1 =
 test2 =
   testCase
     "newtype==underlyingtype"
-    ( assertEqual "A newtype and its underlying type dont hash the same" shorthash (castSafeHash foohash)
-    )
+    (assertEqual "A newtype and its underlying type dont hash the same" shorthash (castSafeHash foohash))
 test3 =
   testCase
     "short==long"
-    ( assertEqual "ShortByteString and ByteString don't hash the same" shorthashT (castSafeHash longhashT)
-    )
+    (assertEqual "ShortByteString and ByteString don't hash the same" shorthashT (castSafeHash longhashT))
 test4 =
   testCase
     "newtype==underlyingtype"

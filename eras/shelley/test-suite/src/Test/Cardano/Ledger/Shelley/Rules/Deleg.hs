@@ -184,12 +184,10 @@ checkInstantaneousRewards
               "a ReservesMIR certificate should add the total value to the `irwd` map, overwriting any existing entries"
               ( if HardForks.allowMIRTransfer . view ppProtocolVersionL $ ppDE denv
                   then -- In the Alonzo era, repeated fields are added
-
                     fold (iRReserves $ dsIRewards source)
                       `addDeltaCoin` fold irwd
                       == fold (iRReserves $ dsIRewards target)
                   else -- Prior to the Alonzo era, repeated fields overridden
-
                     fold (iRReserves (dsIRewards source) Map.\\ irwd)
                       `addDeltaCoin` fold irwd
                       == fold (iRReserves $ dsIRewards target)
@@ -204,12 +202,10 @@ checkInstantaneousRewards
               "a TreasuryMIR certificate should add* the total value to the `irwd` map"
               ( if HardForks.allowMIRTransfer . view ppProtocolVersionL . ppDE $ denv
                   then -- In the Alonzo era, repeated fields are added
-
                     fold (iRTreasury $ dsIRewards source)
                       `addDeltaCoin` fold irwd
                       == fold (iRTreasury $ dsIRewards target)
                   else -- Prior to the Alonzo era, repeated fields overridden
-
                     fold (iRTreasury (dsIRewards source) Map.\\ irwd)
                       `addDeltaCoin` fold irwd
                       == fold (iRTreasury $ dsIRewards target)

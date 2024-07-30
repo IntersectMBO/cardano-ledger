@@ -878,7 +878,7 @@ testPreds name proof preds = do
       ( pure emptySubst
           >>= toolChainSub proof standardOrderInfo preds
           >>= (\subst -> monadTyped $ substToEnv subst emptyEnv)
-        )
+      )
     let pairs = map (tryPred env) preds
     pure (property (and (map snd pairs)))
 

@@ -55,7 +55,7 @@
         inherit (nixpkgs) lib;
 
         # see flake `variants` below for alternative compilers
-        defaultCompiler = "ghc965";
+        defaultCompiler = "ghc966";
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
@@ -106,8 +106,8 @@
               }
               // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
                 # tools that work only with default compiler
-                fourmolu = "0.14.0.0";
-                hlint = "3.6.1";
+                fourmolu = "0.16.2.0";
+                hlint = "3.8";
                 haskell-language-server = "2.9.0.0";
               };
 
@@ -241,9 +241,9 @@
 
           devShells = let
             mkDevShells = p: {
-              # `nix develop .#profiling` (or `.#ghc965.profiling): a shell with profiling enabled
+              # `nix develop .#profiling` (or `.#ghc966.profiling): a shell with profiling enabled
               profiling = (p.appendModule {modules = [{enableLibraryProfiling = true;}];}).shell;
-              # `nix develop .#pre-commit` (or `.#ghc965.pre-commit): a shell with pre-commit enabled
+              # `nix develop .#pre-commit` (or `.#ghc966.pre-commit): a shell with pre-commit enabled
               pre-commit = let
                 pre-commit-check = inputs.pre-commit-hooks.lib.${system}.run {
                   src = ./.;

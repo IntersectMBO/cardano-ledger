@@ -691,7 +691,6 @@ genTxCerts slot = do
                     else -- In order to Delegate, the delegCred must exist in rewards.
                     -- so if it is not there, we put it there, otherwise we may
                     -- never generate a valid delegation.
-
                       ( (RegTxCert delegCred) : dcs
                       , Map.insert delegCred (Coin 99) regCreds
                       )
@@ -762,9 +761,9 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
               if null ecs'
                 then -- This is the last input, so most of the time, put something (val > 0)
                 -- extra in it or we will always have a ColReturn with zero in it.
-                do
-                  excess <- lift genPositiveVal
-                  genNewCollateral ec coll um ((minCollTotal <-> curCollTotal) <+> excess)
+                  do
+                    excess <- lift genPositiveVal
+                    genNewCollateral ec coll um ((minCollTotal <-> curCollTotal) <+> excess)
                 else elementsT [genCollateral ec coll Map.empty, genCollateral ec coll um]
             go ecs' coll' (curCollTotal <+> c) um'
   (collaterals, excessColCoin) <-
@@ -918,8 +917,8 @@ genAlonzoTxAndInfo proof slot = do
       proof
       Spending
       [ (\dh cred -> (lookupByKeyM "datum" dh gsDatums, cred))
-        <$> mDatumHash
-        <*> Just credential
+          <$> mDatumHash
+          <*> Just credential
       | (_, coretxout) <- Map.toAscList toSpendNoCollateral
       , let (credentials, mDatumHash) = txoutEvidence proof coretxout
       , credential <- credentials

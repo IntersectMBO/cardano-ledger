@@ -223,12 +223,9 @@ three :: Specification BaseFn Three
 three = constrained $ \o ->
   [ caseOn
       o
-      ( branchW 1 $ \_ -> True
-      )
-      ( branchW 1 $ \_ -> True
-      )
-      ( branchW 1 $ \_ -> True
-      )
+      (branchW 1 $ \_ -> True)
+      (branchW 1 $ \_ -> True)
+      (branchW 1 $ \_ -> True)
   , monitor $ \eval -> QC.cover 30 True (show $ eval o)
   ]
 
@@ -239,12 +236,9 @@ threeSpecific :: Specification BaseFn Three
 threeSpecific = constrained $ \o ->
   [ caseOn
       o
-      ( branchW 1 $ \_ -> True
-      )
-      ( branchW 1 $ \_ -> True
-      )
-      ( branchW 2 $ \_ -> True
-      )
+      (branchW 1 $ \_ -> True)
+      (branchW 1 $ \_ -> True)
+      (branchW 2 $ \_ -> True)
   , monitor $ \eval ->
       QC.coverTable "TheValue" [("One", 22), ("Two", 22), ("Three", 47)]
         . QC.tabulate "TheValue" [show $ eval o]

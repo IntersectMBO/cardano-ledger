@@ -21,7 +21,8 @@ data PlutusArgs = PlutusArgs
 
 instance NFData PlutusArgs
 
-data ScriptTestContext = forall l.
+data ScriptTestContext
+  = forall l.
   PlutusLanguage l =>
   ScriptTestContext
   { stcScript :: Plutus l

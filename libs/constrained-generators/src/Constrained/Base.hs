@@ -1235,8 +1235,8 @@ saturatePred p =
 mergeSolverStage :: SolverStage fn -> [SolverStage fn] -> [SolverStage fn]
 mergeSolverStage (SolverStage x ps spec) plan =
   [ case eqVar x y of
-    Just Refl -> SolverStage y (ps ++ ps') (spec <> spec')
-    Nothing -> stage
+      Just Refl -> SolverStage y (ps ++ ps') (spec <> spec')
+      Nothing -> stage
   | stage@(SolverStage y ps' spec') <- plan
   ]
 
@@ -2174,8 +2174,10 @@ letSubexpressionElimination :: BaseUniverse fn => Pred fn -> Pred fn
 letSubexpressionElimination = go []
   where
     adjustSub x sub =
-      [ x' := t | x' := t <- sub, isNothing $ eqVar x x',
-      -- TODO: possibly freshen the binder where
+      [ x' := t
+      | x' := t <- sub
+      , isNothing $ eqVar x x'
+      , -- TODO: possibly freshen the binder where
       -- `x` appears instead?
       not $ Name x `appearsIn` t
       ]
