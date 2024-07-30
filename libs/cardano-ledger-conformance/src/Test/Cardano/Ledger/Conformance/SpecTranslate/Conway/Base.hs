@@ -62,8 +62,6 @@ import Cardano.Ledger.Plutus.Data (BinaryData, Data, Datum (..), hashBinaryData)
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rules (Identity, UtxoEnv (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (fromCompact)
 import Cardano.Ledger.UTxO (UTxO (..))
@@ -77,6 +75,7 @@ import Data.Bitraversable (bimapM)
 import Data.Data (Typeable)
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
+import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.OMap.Strict (OMap, assocList)
@@ -205,19 +204,6 @@ instance
   type SpecRep (UTxO era) = SpecRep (Map (TxIn (EraCrypto era)) (TxOut era))
   toSpecRep (UTxO m) = toSpecRep m
 
-instance
-  ( SpecTranslate ctx (TxOut era)
-  , SpecRep (TxOut era) ~ Agda.TxOut
-  ) =>
-  SpecTranslate ctx (UTxOState era)
-  where
-  type SpecRep (UTxOState era) = Agda.UTxOState
-
-  toSpecRep x =
-    Agda.MkUTxOState
-      <$> toSpecRep (utxosUtxo x)
-      <*> toSpecRep (utxosFees x)
-
 deriving instance SpecTranslate ctx SlotNo
 
 deriving instance SpecTranslate ctx EpochNo
@@ -327,20 +313,6 @@ instance
   type SpecRep (PParams era) = SpecRep (PParamsHKD Identity era)
 
   toSpecRep (PParams x) = toSpecRep x
-
-instance
-  ( SpecRep (PParams era) ~ Agda.PParams
-  , SpecTranslate ctx (PParamsHKD Identity era)
-  ) =>
-  SpecTranslate ctx (UtxoEnv era)
-  where
-  type SpecRep (UtxoEnv era) = Agda.UTxOEnv
-
-  toSpecRep x =
-    Agda.MkUTxOEnv
-      <$> toSpecRep (ueSlot x)
-      <*> toSpecRep (uePParams x)
-      <*> toSpecRep (Coin 10_000_000) -- TODO: Fix generating types
 
 instance SpecTranslate ctx a => SpecTranslate ctx (Set a) where
   type SpecRep (Set a) = Agda.HSSet (SpecRep a)

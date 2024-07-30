@@ -34,6 +34,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (emptyDeposits)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo ()
 import Test.Cardano.Ledger.Conway.TreeDiff
 
 instance

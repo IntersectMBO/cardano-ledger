@@ -29,6 +29,7 @@ library
         Test.Cardano.Ledger.Conformance.SpecTranslate.Core
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
+        Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Utxo
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert
@@ -36,6 +37,7 @@ library
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Gov
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
+        Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Utxo
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert
