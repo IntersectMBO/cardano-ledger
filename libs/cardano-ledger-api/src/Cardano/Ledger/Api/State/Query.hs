@@ -49,6 +49,9 @@ module Cardano.Ledger.Api.State.Query (
   -- * @GetProposals@
   queryProposals,
 
+  -- * @GetRatifyState@
+  queryRatifyState,
+
   -- * For testing
   getNextEpochCommitteeMembers,
 ) where
@@ -301,7 +304,7 @@ getNextEpochCommitteeMembers ::
   NewEpochState era ->
   Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
 getNextEpochCommitteeMembers nes =
-  let ratifyState = snd $ finishedPulserState nes
+  let ratifyState = queryRatifyState nes
       committee = ratifyState ^. rsEnactStateL . ensCommitteeL
    in foldMap' committeeMembers committee
 
@@ -338,6 +341,10 @@ queryProposals nes gids
     proposals = fromStrict $ case (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL) of
       DRComplete snap _rs -> snap ^. psProposalsL
       DRPulsing DRepPulser {..} -> dpProposals
+
+-- | Query ratification state.
+queryRatifyState :: ConwayEraGov era => NewEpochState era -> RatifyState era
+queryRatifyState = snd . finishedPulserState
 
 finishedPulserState ::
   ConwayEraGov era =>

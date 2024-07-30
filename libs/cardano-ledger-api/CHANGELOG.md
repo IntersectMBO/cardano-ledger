@@ -2,6 +2,7 @@
 
 ## 1.9.3.0
 
+* Add `queryRatifyState` state query
 * Add `queryProposals` state query
 
 ## 1.9.2.1
