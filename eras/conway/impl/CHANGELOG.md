@@ -3,6 +3,7 @@
 ## 1.16.1.0
 
 * Added `Eq`, `Show`, `NFData` and `Generic` instances for `CertsEnv`
+* Add `delegateToDRep` and `redelegateDRep`
 
 ### testlib
 

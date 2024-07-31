@@ -43,6 +43,8 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   registerDRep,
   unRegisterDRep,
   updateDRep,
+  delegateToDRep,
+  redelegateDRep,
   setupSingleDRep,
   setupDRepWithoutStake,
   setupPoolWithStake,
@@ -397,8 +399,7 @@ updateDRep drep = do
         .~ SSeq.singleton (UpdateDRepTxCert drep mAnchor)
 
 -- | In contrast to `setupSingleDRep`, this function does not make a UTxO entry
--- that could count as delegated stake to the DRep, so that we can test that
--- rewards are also calculated nonetheless.
+-- that could count as delegated stake to the DRep
 setupDRepWithoutStake ::
   forall era.
   ( ConwayEraTxCert era
@@ -439,8 +440,25 @@ setupSingleDRep ::
     )
 setupSingleDRep stake = do
   drepKH <- registerDRep
+  (stakingCred, spendingKh) <- delegateToDRep stake (DRepCredential (KeyHashObj drepKH))
+  pure (KeyHashObj drepKH, stakingCred, spendingKh)
+
+delegateToDRep ::
+  forall era.
+  ( ConwayEraTxCert era
+  , ShelleyEraImp era
+  ) =>
+  Integer ->
+  DRep (EraCrypto era) ->
+  ImpTestM
+    era
+    ( Credential 'Staking (EraCrypto era)
+    , KeyPair 'Payment (EraCrypto era)
+    )
+delegateToDRep stake dRep = do
   (delegatorKH, delegatorKP) <- freshKeyPair
   (_, spendingKP) <- freshKeyPair
+  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
   submitTxAnn_ "Delegate to DRep" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . outputsTxBodyL
@@ -453,10 +471,33 @@ setupSingleDRep stake = do
         .~ SSeq.fromList
           [ RegDepositDelegTxCert @era
               (KeyHashObj delegatorKH)
-              (DelegVote (DRepCredential $ KeyHashObj drepKH))
-              zero
+              (DelegVote dRep)
+              deposit
           ]
-  pure (KeyHashObj drepKH, KeyHashObj delegatorKH, spendingKP)
+  pure (KeyHashObj delegatorKH, spendingKP)
+
+redelegateDRep ::
+  forall era.
+  ( ConwayEraTxCert era
+  , ShelleyEraImp era
+  ) =>
+  Credential 'DRepRole (EraCrypto era) ->
+  DRep (EraCrypto era) ->
+  Credential 'Staking (EraCrypto era) ->
+  ImpTestM era ()
+redelegateDRep dRepCred newDRep stakingCred = do
+  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+  submitTx_ $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.fromList
+          [ UnRegDRepTxCert @era
+              dRepCred
+              deposit
+          , DelegTxCert @era
+              stakingCred
+              (DelegVote newDRep)
+          ]
 
 getsPParams :: EraGov era => Lens' (PParams era) a -> ImpTestM era a
 getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
