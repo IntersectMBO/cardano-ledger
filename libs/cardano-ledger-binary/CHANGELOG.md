@@ -1,8 +1,13 @@
 # Version history for `cardano-ledger-binary`
 
+## 1.3.4.0
+
+* Add `writeSpec` funtion to Test.Cardano.Ledger.Binary.Cuddle
+
 ## 1.3.3.1
 
-*
+* Add the module Test.Cardano.Ledger.Binary.Cuddle with the
+  functions `huddleRoundTripCborSpec` and `huddleRoundTripAnnCborSpec`.
 
 ## 1.3.3.0
 

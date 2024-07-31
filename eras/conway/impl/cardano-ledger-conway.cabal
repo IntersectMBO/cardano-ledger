@@ -177,7 +177,7 @@ executable huddle-cddl
     build-depends:
         base,
         testlib,
-        cardano-ledger-binary:testlib
+        cardano-ledger-binary:testlib >=1.3.4.0
 
 test-suite tests
     type:             exitcode-stdio-1.0
