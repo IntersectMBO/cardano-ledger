@@ -122,6 +122,7 @@ import Constrained hiding (Value)
 import Constrained qualified as C
 import Constrained.Base (HasGenHint (..))
 import Constrained.Spec.Map
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Fail.String
 import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS
@@ -1171,6 +1172,8 @@ data ProposalsSplit = ProposalsSplit
   deriving (Show, Eq, Generic)
 
 instance ToExpr ProposalsSplit
+
+instance NFData ProposalsSplit
 
 proposalSplitSum :: ProposalsSplit -> Integer
 proposalSplitSum ProposalsSplit {..} =

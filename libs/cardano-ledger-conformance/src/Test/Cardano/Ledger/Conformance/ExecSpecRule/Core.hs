@@ -25,6 +25,9 @@ import Cardano.Ledger.BaseTypes (Inject (..), ShelleyBase)
 import Cardano.Ledger.Core (EraRule)
 import qualified Constrained as CV2
 import Constrained.Base (shrinkWithSpec, simplifySpec)
+import Constrained.GenT (GE (..), GenMode (..))
+import Control.Monad.Cont (ContT (..))
+import Control.Monad.Trans (MonadTrans (..))
 import Control.State.Transition.Extended (STS (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
@@ -49,7 +52,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest (
   logEntry,
   tryRunImpRule,
  )
-import UnliftIO (evaluateDeep)
+import UnliftIO (MonadIO (..), evaluateDeep)
 
 type ForAllExecTypes (c :: Type -> Constraint) fn rule era =
   ( c (ExecEnvironment fn rule era)
@@ -306,6 +309,7 @@ conformsToImpl ::
   , ForAllExecSpecRep NFData fn rule era
   , ForAllExecSpecRep ToExpr fn rule era
   , NFData (SpecRep (PredicateFailure (EraRule rule era)))
+  , NFData (ExecContext fn rule era)
   , ToExpr (SpecRep (PredicateFailure (EraRule rule era)))
   , ToExpr (ExecContext fn rule era)
   , SpecTranslate (ExecContext fn rule era) (State (EraRule rule era))
@@ -317,22 +321,43 @@ conformsToImpl ::
   , FixupSpecRep (SpecRep (ExecState fn rule era))
   ) =>
   Property
-conformsToImpl =
-  let genCtx = genExecContext @fn @rule @era
-   in forAllShow genCtx showExpr $ \ctx ->
-        let envSpec = simplifySpec $ environmentSpec @fn @rule @era ctx
-         in forAllShrinkShow (CV2.genFromSpec envSpec) (shrinkWithSpec envSpec) showExpr $ \env ->
-              let stSpec = simplifySpec $ stateSpec @fn @rule @era ctx env
-               in forAllShrinkShow (CV2.genFromSpec stSpec) (shrinkWithSpec stSpec) showExpr $ \st ->
-                    let sigSpec = simplifySpec $ signalSpec @fn @rule @era ctx env st
-                     in forAllShrinkShow (CV2.genFromSpec sigSpec) (shrinkWithSpec sigSpec) showExpr $ \sig ->
-                          counterexample (extraInfo @fn @rule @era ctx (inject env) (inject st) (inject sig)) $ do
-                            _ <- impAnn @_ @era "Deep evaluating env" $ evaluateDeep env
-                            _ <- impAnn "Deep evaluating st" $ evaluateDeep st
-                            _ <- impAnn "Deep evaluating sig" $ evaluateDeep sig
-                            pure $ case classOf @fn @rule @era sig of
-                              Nothing -> classify False "None" $ testConformance @fn @rule @era ctx env st sig
-                              Just c -> classify True c $ testConformance @fn @rule @era ctx env st sig
+conformsToImpl = property @(ImpTestM era Property) . (`runContT` pure) $ do
+  let
+    deepEvalAnn s = "Deep evaluating " <> s
+    deepEval x s = do
+      _ <- lift $ impAnn (deepEvalAnn s) (liftIO (evaluateDeep x))
+      pure ()
+  ctx <- ContT $ \c ->
+    pure $ forAllShow (genExecContext @fn @rule @era) showExpr c
+  deepEval ctx "context"
+  let
+    forAllSpec spec = do
+      let
+        simplifiedSpec = simplifySpec spec
+        generator = CV2.runGenT (CV2.genFromSpecT simplifiedSpec) Loose
+        shrinker (Result _ x) = pure <$> shrinkWithSpec simplifiedSpec x
+        shrinker _ = []
+        shower (Result _ x) = showExpr x
+        shower e = show e
+      res :: GE a <- ContT $ \c ->
+        pure $ forAllShrinkShow generator shrinker shower c
+      case res of
+        Result _ x -> pure x
+        _ -> ContT . const . pure $ property Discard
+  env <- forAllSpec $ environmentSpec @fn @rule @era ctx
+  deepEval env "environment"
+  st <- forAllSpec $ stateSpec @fn @rule @era ctx env
+  deepEval st "state"
+  sig <- forAllSpec $ signalSpec @fn @rule @era ctx env st
+  deepEval sig "signal"
+  let extra = extraInfo @fn @rule @era ctx (inject env) (inject st) (inject sig)
+  let classification =
+        case classOf @fn @rule @era sig of
+          Nothing -> classify False "None"
+          Just c -> classify True c
+  lift $ logEntry extra
+  pure . classification $
+    testConformance @fn @rule @era ctx env st sig
 
 generatesWithin ::
   forall a.

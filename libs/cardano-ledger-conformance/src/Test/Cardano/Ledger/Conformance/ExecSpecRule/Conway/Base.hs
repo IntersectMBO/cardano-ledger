@@ -154,6 +154,8 @@ instance Inject (ConwayCertExecContext era) (VotingProcedures era) where
 
 instance Era era => ToExpr (ConwayCertExecContext era)
 
+instance Era era => NFData (ConwayCertExecContext era)
+
 data ConwayRatifyExecContext era = ConwayRatifyExecContext
   { crecTreasury :: Coin
   , crecGovActionMap :: [GovActionState era]
@@ -190,6 +192,8 @@ instance
   , HasSpec fn (GovActionState era)
   ) =>
   HasSpec fn (ConwayRatifyExecContext era)
+
+instance EraPParams era => NFData (ConwayRatifyExecContext era)
 
 ratifyEnvSpec :: Specification fn (RatifyEnv era)
 ratifyEnvSpec = TrueSpec
