@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -27,7 +28,8 @@ import Data.Default.Class (Default (def))
 import Data.Foldable as F (foldl')
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.Binary.TreeDiff (diffExpr)
+import qualified Prettyprinter as Pretty
+import Test.Cardano.Ledger.Binary.TreeDiff (ansiDocToString, diffExpr)
 import Test.Cardano.Ledger.Generic.Functions (
   getBody,
   getCollateralInputs,
@@ -160,7 +162,7 @@ rewardDepositDomainInvariant SourceSignalTarget {source = mockChainSt} =
       rewardDomain = domain (RewDepUView (dsUnified dstate))
       depositDomain = Map.keysSet (depositMap (dsUnified dstate))
    in counterexample
-        ( unlines
+        ( ansiDocToString . Pretty.vsep $
             [ "Reward-Deposit domain invariant fails"
             , diffExpr rewardDomain depositDomain
             ]

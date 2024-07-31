@@ -7,9 +7,11 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   ToExpr (..),
   CBORBytes (..),
   HexBytes (..),
+  ansiExpr,
   showExpr,
   diffExpr,
   diffExprCompact,
+  diffExprCompactNoColor,
   diffExprNoColor,
   hexByteStringExpr,
   showHexBytesGrouped,
@@ -20,6 +22,9 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   defaultExprViaShow,
   trimExprViaShow,
   Pretty (..),
+  Doc,
+  AnsiStyle,
+  ansiDocToString,
   ansiWlPretty,
   ppEditExpr,
   ediff,
@@ -33,7 +38,6 @@ import Cardano.Crypto.Hash.Class ()
 import Cardano.Ledger.Binary
 import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Term as CBOR
-import Control.Monad (unless)
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
@@ -43,7 +47,12 @@ import Data.Foldable (toList)
 import Data.IP (IPv4, IPv6)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Text.Lazy as TL
 import Data.TreeDiff
+import Prettyprinter (Doc, pretty)
+import qualified Prettyprinter as Pretty
+import Prettyprinter.Render.Terminal (AnsiStyle)
+import qualified Prettyprinter.Render.Terminal as Pretty
 import Test.Cardano.Slotting.TreeDiff ()
 import Test.Hspec (Expectation, HasCallStack, expectationFailure)
 import Test.Tasty.HUnit (Assertion, assertFailure)
@@ -81,17 +90,23 @@ instance ToExpr a => ToExpr (Sized a)
 --  Diffing and pretty showing CBOR
 --------------------------------------------------------------------------------
 
-showExpr :: ToExpr a => a -> String
-showExpr = show . ansiWlExpr . toExpr
+ansiExpr :: ToExpr a => a -> Doc AnsiStyle
+ansiExpr = ansiWlExpr . toExpr
 
-diffExpr :: ToExpr a => a -> a -> String
-diffExpr x y = show (ansiWlEditExpr (ediff x y))
+showExpr :: ToExpr a => a -> String
+showExpr = show . ansiExpr
+
+diffExpr :: ToExpr a => a -> a -> Doc AnsiStyle
+diffExpr x y = ansiWlEditExpr (ediff x y)
 
 diffExprNoColor :: ToExpr a => a -> a -> String
 diffExprNoColor x y = show (prettyEditExpr (ediff x y))
 
-diffExprCompact :: ToExpr a => a -> a -> String
-diffExprCompact x y = show (ansiWlEditExprCompact (ediff x y))
+diffExprCompact :: ToExpr a => a -> a -> Doc AnsiStyle
+diffExprCompact x y = ansiWlEditExprCompact (ediff x y)
+
+diffExprCompactNoColor :: ToExpr a => a -> a -> String
+diffExprCompactNoColor x y = show (prettyEditExprCompact (ediff x y))
 
 -- | Wraps regular ByteString, but shows and diffs it as hex
 newtype HexBytes = HexBytes {unHexBytes :: BS.ByteString}
@@ -187,15 +202,20 @@ expectExprEqual :: (Eq a, ToExpr a) => a -> a -> Expectation
 expectExprEqual = expectExprEqualWithMessage "Expected two values to be equal:"
 
 -- | Use this with HSpec, but with Tasty use 'assertExprEqualWithMessage' below
-expectExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => [Char] -> a -> a -> Expectation
-expectExprEqualWithMessage message expected actual =
-  unless (actual == expected) (expectationFailure msg)
-  where
-    msg = (if null message then "" else message ++ "\n") ++ diffExpr expected actual
+expectExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => String -> a -> a -> Expectation
+expectExprEqualWithMessage = requireExprEqualWithMessage (expectationFailure . ansiDocToString) . pretty
 
 -- | Use this with Tasty, but with HSpec use 'expectExprEqualWithMessage' above
-assertExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => [Char] -> a -> a -> Assertion
-assertExprEqualWithMessage message expected actual =
-  unless (actual == expected) (assertFailure msg)
+assertExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => String -> a -> a -> Assertion
+assertExprEqualWithMessage = requireExprEqualWithMessage (assertFailure . ansiDocToString) . pretty
+
+requireExprEqualWithMessage ::
+  (ToExpr a, Eq a, Monoid b) => (Doc AnsiStyle -> b) -> Doc AnsiStyle -> a -> a -> b
+requireExprEqualWithMessage fail_ message expected actual =
+  if actual == expected then mempty else fail_ doc
   where
-    msg = (if null message then "" else message ++ "\n") ++ diffExpr expected actual
+    doc = Pretty.width message (\w -> if w == 0 then diff else Pretty.line <> Pretty.indent 2 diff)
+    diff = diffExpr expected actual
+
+ansiDocToString :: Doc AnsiStyle -> String
+ansiDocToString = TL.unpack . Pretty.renderLazy . Pretty.layoutPretty Pretty.defaultLayoutOptions

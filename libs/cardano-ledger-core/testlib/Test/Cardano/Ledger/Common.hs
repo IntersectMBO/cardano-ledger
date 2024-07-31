@@ -7,8 +7,10 @@ module Test.Cardano.Ledger.Common (
 
   -- * Expr
   ToExpr (..),
+  ansiExpr,
   showExpr,
   diffExpr,
+  diffExprNoColor,
   diffExprCompact,
 
   -- * Expectations
@@ -45,8 +47,10 @@ import System.IO (
  )
 import Test.Cardano.Ledger.Binary.TreeDiff (
   ToExpr (..),
+  ansiExpr,
   diffExpr,
   diffExprCompact,
+  diffExprNoColor,
   expectExprEqualWithMessage,
   showExpr,
  )

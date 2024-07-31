@@ -34,7 +34,15 @@ import Data.Typeable (Proxy (..), Typeable, typeRep)
 import GHC.Base (Constraint, NonEmpty, Symbol, Type)
 import GHC.TypeLits (KnownSymbol)
 import qualified Lib as Agda
-import Test.Cardano.Ledger.Binary.TreeDiff (Pretty (..), ansiWlPretty, ediff, ppEditExpr)
+import Prettyprinter
+import Prettyprinter.Render.Terminal
+import Test.Cardano.Ledger.Binary.TreeDiff (
+  Pretty (..),
+  ansiDocToString,
+  ansiWlPretty,
+  ediff,
+  ppEditExpr,
+ )
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   FixupSpecRep (..),
   SpecTranslate (..),
@@ -90,15 +98,18 @@ class
   type ExecSignal fn rule era = Signal (EraRule rule era)
 
   environmentSpec ::
+    HasCallStack =>
     ExecContext fn rule era ->
     CV2.Specification fn (ExecEnvironment fn rule era)
 
   stateSpec ::
+    HasCallStack =>
     ExecContext fn rule era ->
     ExecEnvironment fn rule era ->
     CV2.Specification fn (ExecState fn rule era)
 
   signalSpec ::
+    HasCallStack =>
     ExecContext fn rule era ->
     ExecEnvironment fn rule era ->
     ExecState fn rule era ->
@@ -107,13 +118,14 @@ class
   classOf :: ExecSignal fn rule era -> Maybe String
   classOf _ = Nothing
 
-  genExecContext :: Gen (ExecContext fn rule era)
+  genExecContext :: HasCallStack => Gen (ExecContext fn rule era)
   default genExecContext ::
     Arbitrary (ExecContext fn rule era) =>
     Gen (ExecContext fn rule era)
   genExecContext = arbitrary
 
   runAgdaRule ::
+    HasCallStack =>
     SpecRep (ExecEnvironment fn rule era) ->
     SpecRep (ExecState fn rule era) ->
     SpecRep (ExecSignal fn rule era) ->
@@ -122,6 +134,7 @@ class
       (SpecRep (ExecState fn rule era))
 
   translateInputs ::
+    HasCallStack =>
     ExecEnvironment fn rule era ->
     ExecState fn rule era ->
     ExecSignal fn rule era ->
@@ -151,11 +164,11 @@ class
       expectRight' (Right x) = pure x
       expectRight' (Left e) = assertFailure (T.unpack e)
     agdaEnv <- expectRight' . runSpecTransM ctx $ toSpecRep env
-    logEntry $ "agdaEnv:\n" <> showExpr agdaEnv
+    logEntry $ "agdaEnv:\n" <> ansiExpr agdaEnv
     agdaSt <- expectRight' . runSpecTransM ctx $ toSpecRep st
-    logEntry $ "agdaSt:\n" <> showExpr agdaSt
+    logEntry $ "agdaSt:\n" <> ansiExpr agdaSt
     agdaSig <- expectRight' . runSpecTransM ctx $ toSpecRep sig
-    logEntry $ "agdaSig:\n" <> showExpr agdaSig
+    logEntry $ "agdaSig:\n" <> ansiExpr agdaSig
     pure (agdaEnv, agdaSt, agdaSig)
 
   testConformance ::
@@ -173,6 +186,7 @@ class
     , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
     , FixupSpecRep (SpecRep (PredicateFailure (EraRule rule era)))
     , FixupSpecRep (SpecRep (ExecState fn rule era))
+    , HasCallStack
     ) =>
     ExecContext fn rule era ->
     ExecEnvironment fn rule era ->
@@ -182,6 +196,7 @@ class
   testConformance = defaultTestConformance @fn @era @rule
 
   extraInfo ::
+    HasCallStack =>
     ExecContext fn rule era ->
     Environment (EraRule rule era) ->
     State (EraRule rule era) ->
@@ -194,6 +209,7 @@ checkConformance ::
   , ToExpr (SpecRep (ExecState fn rule era))
   , Eq (SpecRep (PredicateFailure (EraRule rule era)))
   , Eq (SpecRep (ExecState fn rule era))
+  , HasCallStack
   ) =>
   Either
     (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
@@ -204,32 +220,24 @@ checkConformance ::
   ImpTestM era ()
 checkConformance implResTest agdaResTest = do
   let
+    delColor = Red
+    insColor = Magenta
     conformancePretty =
       ansiWlPretty
-        { ppDel = \d ->
-            mconcat
-              [ "\ESC[91m(Impl: "
-              , d
-              , ")\ESC[39m"
-              ]
-        , ppIns = \d ->
-            mconcat
-              [ "\ESC[92m(Agda: "
-              , d
-              , ")\ESC[39m"
-              ]
+        { ppDel = annotate (color delColor) . parens . ("Impl: " <>)
+        , ppIns = annotate (color insColor) . parens . ("Agda: " <>)
         }
     failMsg =
-      unlines
-        [ ""
-        , "===== DIFF ====="
-        , show (ppEditExpr conformancePretty (ediff implResTest agdaResTest))
+      annotate (color Yellow) . vsep $
+        [ "===== DIFF ====="
+        , ppEditExpr conformancePretty (ediff implResTest agdaResTest)
         , ""
         , "Legend:"
-        , "\t\ESC[91m-Implementation"
-        , "\t\ESC[92m+Specification\ESC[39m"
+        , indent 2 $ annotate (color delColor) "-Implementation"
+        , indent 2 $ annotate (color insColor) "+Specification"
         ]
-  unless (implResTest == agdaResTest) $ expectationFailure failMsg
+  unless (implResTest == agdaResTest) $
+    expectationFailure (ansiDocToString failMsg)
 
 defaultTestConformance ::
   forall fn era rule.
@@ -245,6 +253,7 @@ defaultTestConformance ::
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
   , FixupSpecRep (SpecRep (PredicateFailure (EraRule rule era)))
   , FixupSpecRep (SpecRep (ExecState fn rule era))
+  , HasCallStack
   ) =>
   ExecContext fn rule era ->
   ExecEnvironment fn rule era ->
@@ -265,6 +274,7 @@ runConformance ::
   , FixupSpecRep (SpecRep (ExecState fn rule era))
   , Inject (State (EraRule rule era)) (ExecState fn rule era)
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
+  , HasCallStack
   ) =>
   ExecContext fn rule era ->
   ExecEnvironment fn rule era ->
@@ -283,9 +293,9 @@ runConformance execContext env st sig = do
   (specEnv, specSt, specSig) <-
     impAnn "Translating the inputs" $
       translateInputs @fn @rule @era env st sig execContext
-  logEntry $ "specEnv:\n" <> showExpr specEnv
-  logEntry $ "specSt:\n" <> showExpr specSt
-  logEntry $ "specSig:\n" <> showExpr specSig
+  logEntry $ "specEnv:\n" <> ansiExpr specEnv
+  logEntry $ "specSt:\n" <> ansiExpr specSt
+  logEntry $ "specSig:\n" <> ansiExpr specSig
   agdaResTest <-
     fmap (bimap (fixup <$>) fixup) $
       impAnn "Deep evaluating Agda output" $
@@ -315,6 +325,7 @@ conformsToImpl ::
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
   , FixupSpecRep (SpecRep (PredicateFailure (EraRule rule era)))
   , FixupSpecRep (SpecRep (ExecState fn rule era))
+  , HasCallStack
   ) =>
   Property
 conformsToImpl =
@@ -339,6 +350,7 @@ generatesWithin ::
   ( NFData a
   , ToExpr a
   , Typeable a
+  , HasCallStack
   ) =>
   Gen a ->
   Int ->

@@ -20,6 +20,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Plutus
 import Lens.Micro
+import Prettyprinter (viaShow)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (mkPlutusScript')
 import Test.Cardano.Ledger.Alonzo.ImpTest
 import Test.Cardano.Ledger.Imp.Common
@@ -64,7 +65,8 @@ spec = describe "UTXOW" $ do
   it "ExtraRedeemers/RedeemerPointerPointsToNothing" $
     -- There is ExtraRedeemers test for PlutusV1 in Alonzo, thus we start with PlutusV2
     forM_ ([PlutusV2 .. eraMaxLanguage @era] :: [Language]) $ \lang -> do
-      logEntry $ "Testing for " ++ show lang
+      logEntry $ "Testing for " <> viaShow lang
+      logEntry $ "Testing for " <> viaShow lang
       let scriptHash = withSLanguage lang (hashPlutusScript . redeemerSameAsDatum)
       txIn <- produceScript scriptHash
       let prp = MintingPurpose (AsIx 2)

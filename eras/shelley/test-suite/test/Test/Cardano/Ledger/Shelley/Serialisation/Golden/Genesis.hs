@@ -37,7 +37,7 @@ import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Lens.Micro
 import Paths_cardano_ledger_shelley_test (getDataFileName)
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), diffExpr)
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (CBORBytes), ansiDocToString, diffExpr)
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Generator.Core (VRFKeyPair (..))
@@ -68,8 +68,8 @@ golden_json_ShelleyGenesis =
 golden_cbor_ShelleyGenesis :: Assertion
 golden_cbor_ShelleyGenesis =
   when (received /= expected) $
-    assertFailure
-      (diffExpr (CBORBytes expected) (CBORBytes received))
+    assertFailure . ansiDocToString $
+      diffExpr (CBORBytes expected) (CBORBytes received)
   where
     example :: ShelleyGenesis StandardCrypto
     example = exampleShelleyGenesis

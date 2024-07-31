@@ -98,6 +98,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import Lens.Micro.Mtl (use, (%=))
 import qualified PlutusLedgerApi.Common as P
+import Prettyprinter (viaShow)
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common
@@ -203,7 +204,7 @@ fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
 
 fixupRedeemers ::
   forall era.
-  AlonzoEraImp era =>
+  (AlonzoEraImp era, HasCallStack) =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupRedeemers tx = impAnn "fixupRedeemers" $ do
@@ -223,7 +224,7 @@ fixupRedeemers tx = impAnn "fixupRedeemers" $ do
   exUnitsPerPurpose <-
     fmap (Map.mapMaybe id) $ forM reports $ \case
       Left err -> do
-        logEntry $ "Execution Units estimation error: " ++ show err
+        logEntry $ "Execution Units estimation error: " <> viaShow err
         pure Nothing
       Right exUnits ->
         pure $ Just exUnits
@@ -235,7 +236,7 @@ fixupRedeemers tx = impAnn "fixupRedeemers" $ do
             Nothing ->
               case Map.lookup ptr exUnitsPerPurpose of
                 Nothing -> do
-                  logEntry $ "Missing Redeemer Ptr from execution estimation: " ++ show ptr
+                  logEntry $ "Missing Redeemer Ptr from execution estimation: " <> viaShow ptr
                   pure Nothing
                 Just exUnits ->
                   pure $ Just (ptr, (Data dat, exUnits))

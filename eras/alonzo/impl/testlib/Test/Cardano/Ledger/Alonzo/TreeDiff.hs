@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -30,6 +31,9 @@ import Cardano.Ledger.Compactible
 import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..))
 import Cardano.Ledger.Shelley.Rules
 import qualified Data.TreeDiff.OMap as OMap
+import GHC.Generics (Generic)
+import PlutusCore.Evaluation.Machine.ExBudget (ExBudget (..))
+import PlutusLedgerApi.Common (EvaluationError (..))
 import Test.Cardano.Ledger.Mary.TreeDiff
 
 -- Scripts
@@ -172,3 +176,17 @@ instance
         , ("pwcExUnits", toExpr pwcExUnits)
         , ("pwcCostModel", toExpr pwcCostModel)
         ]
+
+deriving instance Generic (TransactionScriptFailure era)
+
+instance
+  ( Era era
+  , ToExpr (TxCert era)
+  , ToExpr (ContextError era)
+  , ToExpr (PlutusScript era)
+  , ToExpr (PlutusPurpose AsIx era)
+  , ToExpr (PlutusPurpose AsItem era)
+  , ToExpr EvaluationError
+  , ToExpr ExBudget
+  ) =>
+  ToExpr (TransactionScriptFailure era)
