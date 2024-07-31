@@ -90,6 +90,12 @@ cradle:
     - path: "eras/conway/impl/testlib"
       component: "cardano-ledger-conway:lib:testlib"
 
+    - path: "eras/conway/impl/huddle-cddl/Main.hs"
+      component: "cardano-ledger-conway:exe:huddle-cddl"
+
+    - path: "eras/conway/impl/huddle-cddl/Paths_cardano_ledger_conway.hs"
+      component: "cardano-ledger-conway:exe:huddle-cddl"
+
     - path: "eras/conway/impl/test"
       component: "cardano-ledger-conway:test:tests"
 

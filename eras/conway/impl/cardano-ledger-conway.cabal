@@ -14,8 +14,6 @@ build-type:         Simple
 data-files:
     test/data/*.json
     cddl-files/conway.cddl
-    cddl-files/crypto.cddl
-    cddl-files/extra.cddl
 
 extra-source-files: CHANGELOG.md
 
@@ -145,7 +143,7 @@ library testlib
         bytestring,
         cardano-data:{cardano-data, testlib},
         containers,
-        cuddle,
+        cuddle >=0.3.0.0,
         plutus-ledger-api,
         deepseq,
         microlens,
@@ -165,6 +163,21 @@ library testlib
         mtl,
         text,
         small-steps >=1.1
+
+executable huddle-cddl
+    main-is:          Main.hs
+    hs-source-dirs:   huddle-cddl
+    other-modules:    Paths_cardano_ledger_conway
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+
+    build-depends:
+        base,
+        testlib,
+        cardano-ledger-binary:testlib >=1.3.4.0
 
 test-suite tests
     type:             exitcode-stdio-1.0

@@ -43,14 +43,19 @@ transaction =
       [ a transaction_body
       , a transaction_witness_set
       , a VBool
-      , a (auxiliary_data // VNil)
+      , a (auxiliary_data / VNil)
       ]
 
 transaction_index :: Rule
 transaction_index = "transaction_index" =:= VUInt `sized` (2 :: Word64)
 
 header :: Rule
-header = "header" =:= arr [a header_body, "body_signature" ==> kes_signature]
+header =
+  "header"
+    =:= arr
+      [ a header_body
+      , "body_signature" ==> kes_signature
+      ]
 
 header_body :: Rule
 header_body =
@@ -58,7 +63,7 @@ header_body =
     =:= arr
       [ "block_number" ==> block_no
       , "slot" ==> slot_no
-      , "prev_hash" ==> (hash32 // VNil)
+      , "prev_hash" ==> (hash32 / VNil)
       , "issuer_vkey" ==> vkey
       , "vrf_vkey" ==> vrf_vkey
       , "vrf_result" ==> vrf_cert
@@ -124,7 +129,7 @@ voting_procedures =
     =:= mp [1 <+ asKey voter ==> mp [1 <+ asKey gov_action_id ==> voting_procedure]]
 
 voting_procedure :: Rule
-voting_procedure = "voting_procedure" =:= arr [a vote, a anchor / VNil]
+voting_procedure = "voting_procedure" =:= arr [a vote, a (anchor / VNil)]
 
 proposal_procedure :: Rule
 proposal_procedure =
@@ -145,15 +150,13 @@ certificates = "certificates" =:= nonempty_set certificate
 gov_action :: Rule
 gov_action =
   "gov_action"
-    =:= arr
-      [ a parameter_change_action
-          / hard_fork_initiation_action
-          / treasury_withdrawals_action
-          / no_confidence
-          / update_committee
-          / new_constitution
-          / info_action
-      ]
+    =:= arr [a parameter_change_action]
+    / arr [a hard_fork_initiation_action]
+    / arr [a treasury_withdrawals_action]
+    / arr [a no_confidence]
+    / arr [a update_committee]
+    / arr [a new_constitution]
+    / arr [a info_action]
 
 policy_hash :: Rule
 policy_hash = "policy_hash" =:= scripthash
@@ -163,30 +166,30 @@ parameter_change_action =
   "parameter_change_action"
     =:~ grp
       [ 0
-      , gov_action_id // VNil
+      , gov_action_id / VNil
       , a protocol_param_update
-      , policy_hash // VNil
+      , policy_hash / VNil
       ]
 
 hard_fork_initiation_action :: Named Group
 hard_fork_initiation_action =
   "hard_fork_initiation_action"
-    =:~ grp [1, gov_action_id // VNil, a protocol_version]
+    =:~ grp [1, gov_action_id / VNil, a protocol_version]
 
 treasury_withdrawals_action :: Named Group
 treasury_withdrawals_action =
   "treasury_withdrawals_action"
-    =:~ grp [2, a (mp [asKey reward_account ==> coin]), policy_hash // VNil]
+    =:~ grp [2, a (mp [asKey reward_account ==> coin]), policy_hash / VNil]
 
 no_confidence :: Named Group
-no_confidence = "no_confidence" =:~ grp [3, gov_action_id // VNil]
+no_confidence = "no_confidence" =:~ grp [3, gov_action_id / VNil]
 
 update_committee :: Named Group
 update_committee =
   "update_committee"
     =:~ grp
       [ 4
-      , gov_action_id // VNil
+      , gov_action_id / VNil
       , a (set committee_cold_credential)
       , a (mp [asKey committee_cold_credential ==> epoch_no])
       , a unit_interval
@@ -195,14 +198,14 @@ update_committee =
 new_constitution :: Named Group
 new_constitution =
   "new_constitution"
-    =:~ grp [5, gov_action_id // VNil, a constitution]
+    =:~ grp [5, gov_action_id / VNil, a constitution]
 
 constitution :: Rule
 constitution =
   "constitution"
     =:= arr
       [ a anchor
-      , a scripthash / VNil
+      , a (scripthash / VNil)
       ]
 
 info_action :: Rule
@@ -212,10 +215,10 @@ voter :: Rule
 voter =
   "voter"
     =:= arr [0, a addr_keyhash]
-    // arr [1, a scripthash]
-    // arr [2, a addr_keyhash]
-    // arr [3, a scripthash]
-    // arr [4, a addr_keyhash]
+    / arr [1, a scripthash]
+    / arr [2, a addr_keyhash]
+    / arr [3, a scripthash]
+    / arr [4, a addr_keyhash]
 
 anchor :: Rule
 anchor =
@@ -251,7 +254,7 @@ transaction_output :: Rule
 transaction_output =
   "transaction_output"
     =:= pre_babbage_transaction_output
-    // post_alonzo_transaction_output
+    / post_alonzo_transaction_output
 
 pre_babbage_transaction_output :: Rule
 pre_babbage_transaction_output =
@@ -278,31 +281,33 @@ script_data_hash = "script_data_hash" =:= hash32
 certificate :: Rule
 certificate =
   "certificate"
-    =:= arr
-      [ a stake_registration
-          / stake_deregistration
-          / stake_delegation
-          / pool_registration
-          / pool_retirement
-          / reg_cert
-          / unreg_cert
-          / vote_deleg_cert
-          / stake_vote_deleg_cert
-          / stake_reg_deleg_cert
-          / vote_reg_deleg_cert
-          / stake_vote_reg_deleg_cert
-          / auth_committee_hot_cert
-          / resign_committee_cold_cert
-          / reg_drep_cert
-          / unreg_drep_cert
-          / update_drep_cert
-      ]
+    =:= arr [a stake_registration]
+    / arr [a stake_deregistration]
+    / arr [a stake_delegation]
+    / arr [a pool_registration]
+    / arr [a pool_retirement]
+    / arr [a reg_cert]
+    / arr [a unreg_cert]
+    / arr [a vote_deleg_cert]
+    / arr [a stake_vote_deleg_cert]
+    / arr [a stake_reg_deleg_cert]
+    / arr [a vote_reg_deleg_cert]
+    / arr [a stake_vote_reg_deleg_cert]
+    / arr [a auth_committee_hot_cert]
+    / arr [a resign_committee_cold_cert]
+    / arr [a reg_drep_cert]
+    / arr [a unreg_drep_cert]
+    / arr [a update_drep_cert]
 
 stake_registration :: Named Group
-stake_registration = "stake_registration" =:~ grp [0, a stake_credential]
+stake_registration =
+  comment "This will be deprecated in a future era" $
+    "stake_registration" =:~ grp [0, a stake_credential]
 
 stake_deregistration :: Named Group
-stake_deregistration = "stake_deregistration" =:~ grp [1, a stake_credential]
+stake_deregistration =
+  comment "This will be deprecated in a future era" $
+    "stake_deregistration" =:~ grp [1, a stake_credential]
 
 stake_delegation :: Named Group
 stake_delegation =
@@ -358,31 +363,31 @@ auth_committee_hot_cert =
 resign_committee_cold_cert :: Named Group
 resign_committee_cold_cert =
   "resign_committee_cold_cert"
-    =:~ grp [15, a committee_cold_credential, anchor // VNil]
+    =:~ grp [15, a committee_cold_credential, anchor / VNil]
 
 reg_drep_cert :: Named Group
-reg_drep_cert = "reg_drep_cert" =:~ grp [16, a drep_credential, a coin, anchor // VNil]
+reg_drep_cert = "reg_drep_cert" =:~ grp [16, a drep_credential, a coin, anchor / VNil]
 
 unreg_drep_cert :: Named Group
 unreg_drep_cert = "unreg_drep_cert" =:~ grp [17, a drep_credential, a coin]
 
 update_drep_cert :: Named Group
-update_drep_cert = "update_drep_cert" =:~ grp [18, a drep_credential, anchor // VNil]
+update_drep_cert = "update_drep_cert" =:~ grp [18, a drep_credential, anchor / VNil]
 
 credential :: Rule
 credential =
   "credential"
     =:= arr
       [0, a addr_keyhash]
-    // arr [1, a scripthash]
+    / arr [1, a scripthash]
 
 drep :: Rule
 drep =
   "drep"
     =:= arr [0, a addr_keyhash]
-    // arr [1, a scripthash]
-    // arr [2] -- always abstain
-    // arr [3] -- always no confidence
+    / arr [1, a scripthash]
+    / arr [2] -- always abstain
+    / arr [3] -- always no confidence
 
 stake_credential :: Rule
 stake_credential = "stake_credential" =:= credential
@@ -408,7 +413,7 @@ pool_params =
       , "reward_account" ==> reward_account
       , "pool_owners" ==> set addr_keyhash
       , "relays" ==> arr [0 <+ a relay]
-      , "pool_metadata" ==> (pool_metadata // VNil)
+      , "pool_metadata" ==> (pool_metadata / VNil)
       ]
 
 port :: Rule
@@ -428,9 +433,9 @@ single_host_addr =
   "single_host_addr"
     =:~ grp
       [ 0
-      , port // VNil
-      , ipv4 // VNil
-      , ipv6 // VNil
+      , port / VNil
+      , ipv4 / VNil
+      , ipv6 / VNil
       ]
 
 single_host_name :: Named Group
@@ -438,7 +443,7 @@ single_host_name =
   "single_host_name"
     =:~ grp
       [ 1
-      , port // VNil
+      , port / VNil
       , a dns_name -- An A or AAAA DNS record
       ]
 
@@ -453,11 +458,9 @@ multi_host_name =
 relay :: Rule
 relay =
   "relay"
-    =:= arr
-      [ a single_host_addr
-          / single_host_name
-          / multi_host_name
-      ]
+    =:= arr [a single_host_addr]
+    / arr [a single_host_name]
+    / arr [a multi_host_name]
 
 pool_metadata :: Rule
 pool_metadata = "pool_metadata" =:= arr [a url, a pool_metadata_hash]
@@ -545,10 +548,6 @@ transaction_witness_set =
       , opt $ idx 7 ==> nonempty_set plutus_v3_script
       ]
 
--- The real type of  plutus_v1_script, plutus_v2_script and plutus_v3_script is bytes.
--- However, because we enforce uniqueness when many scripts are supplied,
--- we need to hack around for tests in order to avoid generating duplicates,
--- since the cddl tool we use for roundtrip testing doesn't generate distinct collections.
 plutus_v1_script :: Rule
 plutus_v1_script =
   comment
@@ -569,13 +568,13 @@ plutus_data :: Rule
 plutus_data =
   "plutus_data"
     =:= constr plutus_data
-    // smp [0 <+ asKey plutus_data ==> plutus_data]
-    // sarr [0 <+ a plutus_data]
-    // big_int
-    // bounded_bytes
+    / smp [0 <+ asKey plutus_data ==> plutus_data]
+    / sarr [0 <+ a plutus_data]
+    / big_int
+    / bounded_bytes
 
 big_int :: Rule
-big_int = "big_int" =:= VInt // big_uint // big_nint
+big_int = "big_int" =:= VInt / big_uint / big_nint
 
 big_uint :: Rule
 big_uint = "big_uint" =:= tag 2 bounded_bytes
@@ -587,49 +586,53 @@ constr :: IsType0 x => x -> GRuleCall
 constr = binding $ \x ->
   "constr"
     =:= tag 121 (arr [0 <+ a x])
-    // tag 122 (arr [0 <+ a x])
-    // tag 123 (arr [0 <+ a x])
-    // tag 124 (arr [0 <+ a x])
-    // tag 125 (arr [0 <+ a x])
-    // tag 126 (arr [0 <+ a x])
-    // tag 127 (arr [0 <+ a x])
+    / tag 122 (arr [0 <+ a x])
+    / tag 123 (arr [0 <+ a x])
+    / tag 124 (arr [0 <+ a x])
+    / tag 125 (arr [0 <+ a x])
+    / tag 126 (arr [0 <+ a x])
+    / tag 127 (arr [0 <+ a x])
     -- similarly for tag range: 6.1280 .. 6.1400 inclusive
-    // tag 102 (arr [a VUInt, a $ arr [0 <+ a x]])
+    / tag 102 (arr [a VUInt, a $ arr [0 <+ a x]])
 
 redeemers :: Rule
 redeemers =
-  "redeemers"
-    =:= sarr
-      [ 1
-          <+ a
-            ( arr
-                [ "tag" ==> redeemer_tag
-                , "index" ==> (VUInt `sized` (4 :: Word64))
-                , "data" ==> plutus_data
-                , "ex_units" ==> ex_units
-                ]
-            )
-      ]
-    // smp
-      [ 1
-          <+ asKey
-            ( arr
-                [ "tag" ==> redeemer_tag
-                , "index" ==> (VUInt `sized` (4 :: Word64))
-                ]
-            )
-          ==> arr ["data" ==> plutus_data, "ex_units" ==> ex_units]
-      ]
+  comment
+    ( "Flat Array support is included for backwards compatibility and will be removed in the next era.\n"
+        <> "It is recommended for tools to adopt using a Map instead of Array going forward."
+    )
+    $ "redeemers"
+      =:= sarr
+        [ 1
+            <+ a
+              ( arr
+                  [ "tag" ==> redeemer_tag
+                  , "index" ==> (VUInt `sized` (4 :: Word64))
+                  , "data" ==> plutus_data
+                  , "ex_units" ==> ex_units
+                  ]
+              )
+        ]
+      / smp
+        [ 1
+            <+ asKey
+              ( arr
+                  [ "tag" ==> redeemer_tag
+                  , "index" ==> (VUInt `sized` (4 :: Word64))
+                  ]
+              )
+            ==> arr ["data" ==> plutus_data, "ex_units" ==> ex_units]
+        ]
 
 redeemer_tag :: Rule
 redeemer_tag =
   "redeemer_tag"
     =:= int 0 -- Spending
-    // int 1 -- Minting
-    // int 2 -- Certifying
-    // int 3 -- Rewarding
-    // int 4 -- Voting
-    // int 5 -- Proposing
+    / int 1 -- Minting
+    / int 2 -- Certifying
+    / int 3 -- Rewarding
+    / int 4 -- Voting
+    / int 5 -- Proposing
 
 ex_units :: Rule
 ex_units = "ex_units" =:= arr ["mem" ==> VUInt, "steps" ==> VUInt]
@@ -646,8 +649,8 @@ language :: Rule
 language =
   "language"
     =:= int 0 -- Plutus v1
-    // int 1 -- Plutus v2
-    // int 2 -- Plutus v3
+    / int 1 -- Plutus v2
+    / int 2 -- Plutus v3
 
 potential_languages :: Rule
 potential_languages = "potential_languages" =:= 0 ... 255
@@ -671,10 +674,10 @@ transaction_metadatum :: Rule
 transaction_metadatum =
   "transaction_metadatum"
     =:= smp [0 <+ asKey transaction_metadatum ==> transaction_metadatum]
-    // sarr [0 <+ a transaction_metadatum]
-    // VInt
-    // (VBytes `sized` (0 :: Word64, 64 :: Word64))
-    // (VText `sized` (0 :: Word64, 64 :: Word64))
+    / sarr [0 <+ a transaction_metadatum]
+    / VInt
+    / (VBytes `sized` (0 :: Word64, 64 :: Word64))
+    / (VText `sized` (0 :: Word64, 64 :: Word64))
 
 transaction_metadatum_label :: Rule
 transaction_metadatum_label = "transaction_metadatum_label" =:= (VUInt `sized` (8 :: Word64))
@@ -692,11 +695,11 @@ auxiliary_data :: Rule
 auxiliary_data =
   "auxiliary_data"
     =:= metadata -- Shelley
-    // sarr
+    / sarr
       [ "transaction_metadata" ==> metadata -- Shelley-ma
       , "auxiliary_scripts" ==> arr [0 <+ a native_script]
       ]
-    // tag
+    / tag
       259
       ( mp
           [ opt (idx 0 ==> metadata) -- Alonzo and beyond
@@ -723,18 +726,17 @@ bootstrap_witness =
 native_script :: Rule
 native_script =
   "native_script"
-    =:= arr
-      [ a script_pubkey
-          / script_all
-          / script_any
-          / script_n_of_k
-          / invalid_before
-          -- Timelock validity intervals are half-open intervals [a, b).
-          -- This field specifies the left (included) endpoint a.
-          / invalid_hereafter
-          -- Timelock validity intervals are half-open intervals [a, b).
-          -- This field specifies the right (excluded) endpoint b.
-      ]
+    =:= arr [a script_pubkey]
+    / arr [a script_all]
+    / arr [a script_any]
+    / arr [a script_n_of_k]
+    / arr [a invalid_before]
+    -- Timelock validity intervals are half-open intervals [a, b).
+    -- This field specifies the left (included) endpoint a.
+    / arr [a invalid_hereafter]
+
+-- Timelock validity intervals are half-open intervals [a, b).
+-- This field specifies the right (excluded) endpoint b.
 
 script_pubkey :: Named Group
 script_pubkey = "script_pubkey" =:~ grp [0, a addr_keyhash]
@@ -748,7 +750,7 @@ script_any = "script_any" =:~ grp [2, a (arr [0 <+ a native_script])]
 script_n_of_k :: Named Group
 script_n_of_k =
   "script_n_of_k"
-    =:~ grp [3, "n" ==> VUInt, a (arr [0 <+ a native_script])]
+    =:~ grp [3, "n" ==> int64, a (arr [0 <+ a native_script])]
 
 invalid_before :: Named Group
 invalid_before = "invalid_before" =:~ grp [4, a slot_no]
@@ -801,13 +803,13 @@ posInt64 :: Rule
 posInt64 = "posInt64" =:= 1 ... maxInt64
 
 nonZeroInt64 :: Rule
-nonZeroInt64 = "nonZeroInt64" =:= negInt64 // posInt64 -- this is the same as the current int64 definition but without zero
+nonZeroInt64 = "nonZeroInt64" =:= negInt64 / posInt64 -- this is the same as the current int64 definition but without zero
 
 positive_coin :: Rule
 positive_coin = "positive_coin" =:= 1 ... maxWord64
 
 value :: Rule
-value = "value" =:= coin // sarr [a coin, a (multiasset positive_coin)]
+value = "value" =:= coin / sarr [a coin, a (multiasset positive_coin)]
 
 mint :: Rule
 mint = "mint" =:= multiasset nonZeroInt64
@@ -816,7 +818,7 @@ int64 :: Rule
 int64 = "int64" =:= minInt64 ... maxInt64
 
 network_id :: Rule
-network_id = "network_id" =:= int 0 // int 1
+network_id = "network_id" =:= int 0 / int 1
 
 epoch_no :: Rule
 epoch_no = "epoch_no" =:= VUInt `sized` (8 :: Word64)
@@ -860,10 +862,10 @@ scripthash =
         <> "a tag to the bytes of the script before hashing.\n"
         <> "The tag is determined by the language.\n"
         <> "The tags in the Conway era are:\n"
-        <> "\"\x00\" for multisig scripts\n"
-        <> "\"\x01\" for Plutus V1 scripts\n"
-        <> "\"\x02\" for Plutus V2 scripts\n"
-        <> "\"\x03\" for Plutus V3 scripts\n"
+        <> "\"\\x00\" for multisig scripts\n"
+        <> "\"\\x01\" for Plutus V1 scripts\n"
+        <> "\"\\x02\" for Plutus V2 scripts\n"
+        <> "\"\\x03\" for Plutus V3 scripts\n"
     )
     $ "scripthash" =:= hash28
 
@@ -874,7 +876,7 @@ data_a :: Rule
 data_a = "data" =:= tag 24 (VBytes `cbor` plutus_data)
 
 datum_option :: Rule
-datum_option = "datum_option" =:= arr [0, a hash32] // arr [1, a data_a]
+datum_option = "datum_option" =:= arr [0, a hash32] / arr [1, a data_a]
 
 script_ref :: Rule
 script_ref = "script_ref" =:= tag 24 (VBytes `cbor` script)
@@ -883,9 +885,9 @@ script :: Rule
 script =
   "script"
     =:= arr [0, a native_script]
-    // arr [1, a plutus_v1_script]
-    // arr [2, a plutus_v2_script]
-    // arr [3, a plutus_v3_script]
+    / arr [1, a plutus_v1_script]
+    / arr [2, a plutus_v2_script]
+    / arr [3, a plutus_v3_script]
 
 --------------------------------------------------------------------------------
 -- Crypto
@@ -927,13 +929,13 @@ signature = "$signature" =:= VBytes `sized` (64 :: Word64)
 -- change sooner rather than later, in order to provide a smooth transition for their users.
 
 set :: IsType0 t0 => t0 -> GRuleCall
-set = binding $ \x -> "set" =:= tag 258 (arr [0 <+ a x]) // sarr [0 <+ a x]
+set = binding $ \x -> "set" =:= tag 258 (arr [0 <+ a x]) / sarr [0 <+ a x]
 
 nonempty_set :: IsType0 t0 => t0 -> GRuleCall
 nonempty_set = binding $ \x ->
   "nonempty_set"
     =:= tag 258 (arr [1 <+ a x])
-    // sarr [1 <+ a x]
+    / sarr [1 <+ a x]
 
 positive_int :: Rule
 positive_int = "positive_int" =:= 1 ... 18446744073709551615
@@ -964,22 +966,22 @@ address =
   "address"
     =:= bstr
       "001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000"
-    // bstr
+    / bstr
       "102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000"
-    // bstr
+    / bstr
       "203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000"
-    // bstr
+    / bstr
       "304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000"
-    // bstr "405000000000000000000000000000000000000000000000000000000087680203"
-    // bstr "506000000000000000000000000000000000000000000000000000000087680203"
-    // bstr "6070000000000000000000000000000000000000000000000000000000"
-    // bstr "7080000000000000000000000000000000000000000000000000000000"
+    / bstr "405000000000000000000000000000000000000000000000000000000087680203"
+    / bstr "506000000000000000000000000000000000000000000000000000000087680203"
+    / bstr "6070000000000000000000000000000000000000000000000000000000"
+    / bstr "7080000000000000000000000000000000000000000000000000000000"
 
 reward_account :: Rule
 reward_account =
   "reward_account"
     =:= bstr "E090000000000000000000000000000000000000000000000000000000"
-    // bstr "F0A0000000000000000000000000000000000000000000000000000000"
+    / bstr "F0A0000000000000000000000000000000000000000000000000000000"
 
 bounded_bytes :: Rule
 bounded_bytes = "bounded_bytes" =:= VBytes `sized` (0 :: Word64, 64 :: Word64)
@@ -1001,8 +1003,8 @@ distinct x =
   "distinct_"
     <> T.pack (show x)
       =:= (x `sized` (8 :: Word64))
-      // (x `sized` (16 :: Word64))
-      // (x `sized` (20 :: Word64))
-      // (x `sized` (24 :: Word64))
-      // (x `sized` (30 :: Word64))
-      // (x `sized` (32 :: Word64))
+      / (x `sized` (16 :: Word64))
+      / (x `sized` (20 :: Word64))
+      / (x `sized` (24 :: Word64))
+      / (x `sized` (30 :: Word64))
+      / (x `sized` (32 :: Word64))
