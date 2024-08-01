@@ -66,6 +66,7 @@ library
         Test.Cardano.Ledger.Constrained.Conway.PParams
         Test.Cardano.Ledger.Constrained.Conway.Pool
         Test.Cardano.Ledger.Constrained.Conway.Utxo
+        Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit
         Test.Cardano.Ledger.Examples.BabbageFeatures
         Test.Cardano.Ledger.Examples.AlonzoValidTxUTXOW
         Test.Cardano.Ledger.Examples.AlonzoBBODY

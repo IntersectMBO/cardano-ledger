@@ -13,42 +13,35 @@
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Certs () where
 
-import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
-import Cardano.Ledger.Credential
-import Cardano.Ledger.Keys
-import Data.Functor.Identity (Identity)
-import Data.Map.Strict (Map)
+import Control.Monad.Identity
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (emptyDeposits)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
+import Test.Cardano.Ledger.Constrained.Conway (CertsExecEnv (..))
 import Test.Cardano.Ledger.Conway.TreeDiff
-
-instance ToExpr (PredicateFailure (EraRule "CERT" era)) => SpecTranslate ctx (ConwayCertsPredFailure era) where
-  type SpecRep (ConwayCertsPredFailure era) = OpaqueErrorString
-  toSpecRep = pure . OpaqueErrorString . show . toExpr
 
 instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
-  , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map (Network, Credential 'Staking (EraCrypto era)) Coin)
   ) =>
-  SpecTranslate ctx (CertsEnv era)
+  SpecTranslate ctx (CertsExecEnv era)
   where
-  type SpecRep (CertsEnv era) = Agda.CertEnv
-  toSpecRep CertsEnv {..} = do
-    votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
+  type SpecRep (CertsExecEnv era) = Agda.CertEnv
+
+  toSpecRep CertsExecEnv {..} = do
     Agda.MkCertEnv
-      <$> toSpecRep certsCurrentEpoch
-      <*> toSpecRep certsPParams
-      <*> toSpecRep votes
-      <*> toSpecRep withdrawals
-      -- TODO: replace with actual deposits map
-      <*> pure emptyDeposits
+      <$> toSpecRep (certsCurrentEpoch ceeCertEnv)
+      <*> toSpecRep (certsPParams ceeCertEnv)
+      <*> toSpecRep ceeVotes
+      <*> toSpecRep ceeWithdrawals
+      <*> toSpecRep ceeDeposits
+
+instance
+  ToExpr (PredicateFailure (EraRule "CERT" era)) =>
+  SpecTranslate ctx (ConwayCertsPredFailure era)
+  where
+  type SpecRep (ConwayCertsPredFailure era) = OpaqueErrorString
+  toSpecRep = pure . OpaqueErrorString . show . toExpr

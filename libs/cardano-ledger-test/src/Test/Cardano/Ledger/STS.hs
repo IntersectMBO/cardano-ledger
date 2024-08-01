@@ -178,9 +178,9 @@ prop_CERT =
 prop_DELEG :: Property
 prop_DELEG =
   stsPropertyV2 @"DELEG" @ConwayFn
-    delegEnvSpec
+    conwayDelegEnvSpec
     (\_env -> dStateSpec)
-    delegCertSpec
+    conwayDelegCertSpec
     $ \_env _st _sig _st' -> True
 
 prop_POOL :: Property

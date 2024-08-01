@@ -18,6 +18,7 @@ import Data.Map.Strict (mapKeys)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base ()
+import Test.Cardano.Ledger.Constrained.Conway.DeltaDeposit
 import Test.Cardano.Ledger.Conway.TreeDiff
 
 instance
@@ -54,3 +55,15 @@ instance SpecTranslate ctx (PoolCert c) where
     Agda.RetirePool
       <$> toSpecRep ppHash
       <*> toSpecRep e
+
+instance
+  ( SpecRep (PParamsHKD Identity era) ~ Agda.PParams
+  , SpecTranslate ctx (PParamsHKD Identity era)
+  ) =>
+  SpecTranslate ctx (DeltaExecEnv (PoolEnv era) era)
+  where
+  type SpecRep (DeltaExecEnv (PoolEnv era) era) = Agda.PParams
+  toSpecRep DeltaExecEnv {..} = toSpecRep (getPParams deeEnv)
+
+getPParams :: PoolEnv era -> PParams era
+getPParams (PoolEnv _ pp) = pp
