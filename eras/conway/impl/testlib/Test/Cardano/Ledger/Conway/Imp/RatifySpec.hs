@@ -816,6 +816,19 @@ votingSpec =
           passEpoch
           getTreasury `shouldReturn` zero
 
+        it "DRepAlwaysNoConfidence is sufficient to pass NoConfidence" $ do
+          modifyPParams $ \pp ->
+            pp
+              & ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 0 %! 1
+              & ppDRepVotingThresholdsL . dvtMotionNoConfidenceL .~ 1 %! 1
+          (drep, _, committeeId) <- electBasicCommittee
+          _ <- delegateToDRep 1 DRepAlwaysNoConfidence
+          noConfidence <- submitGovAction (NoConfidence (SJust committeeId))
+          submitYesVote_ (DRepVoter drep) noConfidence
+          logAcceptedRatio noConfidence
+          passNEpochs 2
+          getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId noConfidence)
+
       describe "StakePool" $ do
         it "UTxOs contribute to active voting stake" $ do
           -- Only modify the applicable thresholds
@@ -1060,29 +1073,6 @@ votingSpec =
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
-        it "DRepAlwaysNoConfidence is sufficient to pass NoConfidence" $ do
-          modifyPParams $ \pp ->
-            pp
-              & ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 0 %! 1
-              & ppDRepVotingThresholdsL . dvtMotionNoConfidenceL .~ 1 %! 1
-          (_, _, committeeId) <- electBasicCommittee
-          (_, kpPayment) <- freshKeyPair
-          (khStaking, kpStaking) <- freshKeyPair
-          _ <- sendCoinTo (mkAddr (kpPayment, kpStaking)) (inject $ Coin 1)
-          submitTx_ $
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . certsTxBodyL
-                .~ SSeq.fromList
-                  [ RegTxCert $ KeyHashObj khStaking
-                  , DelegTxCert
-                      (KeyHashObj khStaking)
-                      (DelegVote DRepAlwaysNoConfidence)
-                  ]
-          noConfidence <- submitGovAction (NoConfidence (SJust committeeId))
-          replicateM_ 10 $ do
-            logAcceptedRatio noConfidence
-            passEpoch
-            getLastEnactedCommittee `shouldNotReturn` SNothing
 
 delayingActionsSpec ::
   forall era.

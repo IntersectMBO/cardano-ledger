@@ -115,7 +115,7 @@ rationalToCoinViaCeiling :: Rational -> Coin
 rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
-  newtype CompactForm Coin = CompactCoin Word64
+  newtype CompactForm Coin = CompactCoin {unCompactCoin :: Word64}
     deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim, Ord, ToCBOR, ToJSON, FromJSON)
     deriving (Semigroup, Monoid, Group, Abelian) via Sum Word64
 
