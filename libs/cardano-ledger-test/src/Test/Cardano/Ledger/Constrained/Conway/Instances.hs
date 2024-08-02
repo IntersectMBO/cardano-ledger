@@ -1561,17 +1561,27 @@ instance IsConwayUniv fn => HasSpec fn (CertsEnv (ConwayEra StandardCrypto))
 -- CompactForm
 
 class CoercibleLike a b where
-  coerceSpec :: IsConwayUniv fn => Specification fn b -> Specification fn a
-  getCoerceSpec :: IsConwayUniv fn => TypeSpec fn a -> Specification fn b
+  coerceSpec ::
+    ( IsConwayUniv fn
+    , Coercible a b
+    ) =>
+    Specification fn b ->
+    Specification fn a
+  getCoerceSpec ::
+    ( IsConwayUniv fn
+    , Coercible a b
+    ) =>
+    TypeSpec fn a ->
+    Specification fn b
 
 instance CoercibleLike (CompactForm Coin) Word64 where
   coerceSpec (TypeSpec (NumSpecInterval lo hi) excl) =
-    TypeSpec (NumSpecInterval lo hi) $ compactCoinOrError . word64ToCoin <$> excl
-  coerceSpec (MemberSpec s) = MemberSpec $ compactCoinOrError . word64ToCoin <$> s
+    TypeSpec (NumSpecInterval lo hi) $ CompactCoin <$> excl
+  coerceSpec (MemberSpec s) = MemberSpec $ CompactCoin <$> s
   coerceSpec (ErrorSpec e) = ErrorSpec e
   coerceSpec (SuspendedSpec x p) = constrained $ \x' ->
     [ p
-    , reify x' (fromInteger . unCoin . fromCompact) (==. V x)
+    , reify x' unCompactCoin (==. V x)
     ]
   coerceSpec TrueSpec = TrueSpec
 
