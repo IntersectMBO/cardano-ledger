@@ -273,7 +273,12 @@ import Test.Cardano.Ledger.Plutus (PlutusArgs, ScriptTestContext)
 import Test.Cardano.Ledger.Shelley.TreeDiff (Expr (..))
 import Test.Cardano.Slotting.Numeric ()
 import Test.HUnit.Lang (FailureReason (..), HUnitFailure (..))
-import Test.Hspec.Core.Spec (Example (..), Params, paramsQuickCheckArgs)
+import Test.Hspec.Core.Spec (
+  Example (..),
+  Params,
+  paramsQuickCheckArgs,
+  resultStatus,
+ )
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Random (QCGen (..), integerVariant, mkQCGen)
 import Type.Reflection (Typeable, typeOf)
@@ -771,17 +776,27 @@ instance MonadState (ImpTestState era) (ImpTestM era) where
   put x = ImpTestM $ do
     liftIO . flip writeIORef x . iteState =<< ask
 
-instance ShelleyEraImp era => Example (ImpTestM era ()) where
-  type Arg (ImpTestM era ()) = ImpTestState era
+instance (ShelleyEraImp era, Testable prop) => Example (ImpTestM era prop) where
+  type Arg (ImpTestM era prop) = ImpTestState era
 
-  evaluateExample impTest params =
-    evaluateExample (\s -> uncurry evalImpTestM (applyParamsQCGen params s) impTest) params
+  evaluateExample impTest =
+    evaluateExample (\() -> impTest)
 
-instance (ShelleyEraImp era, Arbitrary a, Show a) => Example (a -> ImpTestM era ()) where
-  type Arg (a -> ImpTestM era ()) = ImpTestState era
+instance (ShelleyEraImp era, Arbitrary a, Show a, Testable prop) => Example (a -> ImpTestM era prop) where
+  type Arg (a -> ImpTestM era prop) = ImpTestState era
 
-  evaluateExample impTest params =
-    evaluateExample (\s -> property $ uncurry evalImpTestM (applyParamsQCGen params s) . impTest) params
+  evaluateExample impTest params hook progressCallback =
+    let runImpTestExample s = property $ \x -> do
+          let args = paramsQuickCheckArgs params
+          (r, testable) <- uncurry evalImpTestM (applyParamsQCGen params s) $ do
+            t <- impTest x
+            qcSize <- asks iteQuickCheckSize
+            StateGen qcGen <- subState split
+            pure (Just (qcGen, qcSize), t)
+          let params' = params {paramsQuickCheckArgs = args {replay = r, chatty = False}}
+          res <- evaluateExample (property testable) params' (\f -> hook (\_st -> f ())) progressCallback
+          void $ throwIO $ resultStatus res
+     in evaluateExample runImpTestExample params hook progressCallback
 
 instance MonadGen (ImpTestM era) where
   liftGen (MkGen f) = do
