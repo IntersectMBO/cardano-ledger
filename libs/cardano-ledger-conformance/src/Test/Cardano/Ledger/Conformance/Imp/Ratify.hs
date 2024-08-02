@@ -24,7 +24,6 @@ import Cardano.Ledger.Shelley.LedgerState (
   esAccountStateL,
   nesEsL,
  )
-import Control.Monad.IO.Class (MonadIO (..))
 import qualified Data.Sequence.Strict as SSeq
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
@@ -37,43 +36,30 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec :: Spec
 spec = describe "RATIFY" . withImpStateWithProtVer @Conway (natVersion @10) $
-  it "NoConfidence accepted conforms" $
-    do
-      (dRep, _, _) <- electBasicCommittee
-      modifyPParams $ \pp ->
-        pp
-          & ppDRepVotingThresholdsL . dvtMotionNoConfidenceL .~ 9 %! 10
-          & ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 0 %! 1
-      lastCommittee <- getLastEnactedCommittee
-      noConfidence <- submitGovAction $ NoConfidence lastCommittee
-      submitYesVote_ (DRepVoter dRep) noConfidence
-      ratEnv <- getRatifyEnv
-      govSt <- getsNES $ nesEsL . epochStateGovStateL
-      let ratSt = getRatifyState govSt
-      noConfidenceGAS <- getGovActionState noConfidence
-      treasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
-      let
-        execCtx =
-          ConwayRatifyExecContext
-            treasury
-            [noConfidenceGAS]
-      let
-        args =
-          Args
-            { replay = Nothing
-            , maxSuccess = 1
-            , maxSize = 0
-            , maxShrinks = 0
-            , maxDiscardRatio = 0
-            , chatty = False
-            }
-      passEpoch
-      -- TODO figure out a less hacky solution
-      liftIO . quickCheckWith args $
-        testConformance @ConwayFn @"RATIFY" @Conway
-          execCtx
-          ratEnv
-          ratSt
-          (RatifySignal (noConfidenceGAS SSeq.:<| SSeq.Empty))
-      passEpoch
-      getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId noConfidence)
+  it "NoConfidence accepted conforms" $ do
+    modifyPParams $ \pp ->
+      pp
+        & ppDRepVotingThresholdsL . dvtMotionNoConfidenceL .~ 9 %! 10
+        & ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 0 %! 1
+    (dRep, _, _) <- electBasicCommittee
+    lastCommittee <- getLastEnactedCommittee
+    noConfidence <- submitGovAction $ NoConfidence lastCommittee
+    submitYesVote_ (DRepVoter dRep) noConfidence
+    ratEnv <- getRatifyEnv
+    govSt <- getsNES $ nesEsL . epochStateGovStateL
+    let ratSt = getRatifyState govSt
+    noConfidenceGAS <- getGovActionState noConfidence
+    treasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+    let
+      execCtx =
+        ConwayRatifyExecContext
+          treasury
+          [noConfidenceGAS]
+    passNEpochs 2
+    getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId noConfidence)
+    pure $
+      testConformance @ConwayFn @"RATIFY" @Conway
+        execCtx
+        ratEnv
+        ratSt
+        (RatifySignal (noConfidenceGAS SSeq.:<| SSeq.Empty))
