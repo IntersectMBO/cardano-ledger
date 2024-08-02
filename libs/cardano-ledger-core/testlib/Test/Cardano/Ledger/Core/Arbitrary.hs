@@ -92,6 +92,7 @@ import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeReference (..)
 import Cardano.Ledger.Crypto (Crypto (DSIGN), StandardCrypto)
 import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.EpochBoundary
+import Cardano.Ledger.HKD (NoUpdate (..))
 import Cardano.Ledger.Keys (
   GenDelegPair (..),
   GenDelegs (..),
@@ -242,6 +243,9 @@ instance Arbitrary NonNegativeInterval where
     let y = 10 ^ p :: Word64
     x <- choose (0, 10 ^ (maxDecimalsWord64 :: Int))
     pure $ unsafeBoundRational $ promoteRatio (x % y)
+
+instance Arbitrary (NoUpdate a) where
+  arbitrary = pure NoUpdate
 
 instance Validity UnitInterval where
   validate _ = mempty

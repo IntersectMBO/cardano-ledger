@@ -54,6 +54,5 @@ spec = do
       xprop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @Conway
       prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
       xprop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
-    describe
-      "ImpTests"
+    describe "ImpTests" $ do
       RatifyImp.spec

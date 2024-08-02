@@ -751,9 +751,6 @@ instance Era era => Arbitrary (ConwayPParams Identity era) where
 
   shrink = genericShrink
 
-instance Arbitrary (NoUpdate a) where
-  arbitrary = pure NoUpdate
-
 instance Era era => Arbitrary (ConwayPParams StrictMaybe era) where
   arbitrary =
     ConwayPParams
