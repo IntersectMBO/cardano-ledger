@@ -113,7 +113,7 @@ library
         measures,
         microlens,
         network,
-        nothunks ^>= 0.2,
+        nothunks ^>=0.2,
         partial-order,
         plutus-core,
         plutus-ledger-api,
