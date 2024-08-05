@@ -116,3 +116,15 @@ allow-newer:
   , postgresql-simple:template-haskell
   , postgresql-simple:containers
   , postgresql-simple:base
+
+
+source-repository-package
+    type: git
+    location:https://github.com/IntersectMBO/plutus.git
+    tag: 6df3318bc7b5d5ed465bc638d81b9f8a14e1cbf1
+    --sha256: sha256-D8n3prn/8ACy5K6sPcipO4mmdMvpKEsEojCmdOTUs74=
+    subdir: plutus-ledger-api
+            plutus-core
+            prettyprinter-configurable
+            plutus-tx
+            plutus-tx-plugin 
