@@ -4,6 +4,8 @@
 
 * Add `translateToShelleyLedgerStateFromUtxo`
 
+* Added `wireSizeShelleyTxF`
+
 ### `testlib`
 
 * Add `submitFailingTxM`
