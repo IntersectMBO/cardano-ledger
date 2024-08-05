@@ -50,6 +50,9 @@ instance Crypto c => EraTx (BabbageEra c) where
   sizeTxF = sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
 
+  wireSizeTxF = wireSizeAlonzoTxF
+  {-# INLINE wireSizeTxF #-}
+
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}
 

@@ -21,6 +21,7 @@ import Cardano.Ledger.Alonzo.Tx (
   isValidAlonzoTxL,
   mkBasicAlonzoTx,
   sizeAlonzoTxF,
+  wireSizeAlonzoTxF,
   witsAlonzoTxL,
  )
 import Cardano.Ledger.Alonzo.TxSeq (
@@ -64,6 +65,9 @@ instance Crypto c => EraTx (ConwayEra c) where
 
   sizeTxF = sizeAlonzoTxF
   {-# INLINE sizeTxF #-}
+
+  wireSizeTxF = wireSizeAlonzoTxF
+  {-# INLINE wireSizeTxF #-}
 
   validateNativeScript = validateTimelock
   {-# INLINE validateNativeScript #-}

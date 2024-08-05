@@ -118,7 +118,7 @@ import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Void (Void)
-import Data.Word (Word64)
+import Data.Word (Word32, Word64)
 import GHC.Stack (HasCallStack)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -153,7 +153,11 @@ class
 
   auxDataTxL :: Lens' (Tx era) (StrictMaybe (AuxiliaryData era))
 
+  -- | For fee calculation and estimations of impact on block space
   sizeTxF :: SimpleGetter (Tx era) Integer
+
+  -- | For end use by eg. diffusion layer in transaction submission protocol
+  wireSizeTxF :: SimpleGetter (Tx era) Word32
 
   -- | Using information from the transaction validate the supplied native script.
   validateNativeScript :: Tx era -> NativeScript era -> Bool
