@@ -104,6 +104,7 @@ jobs:
       with:
         path: |
           ${{ steps.install-haskell.outputs.cabal-store }}
+          dist-newstyle
         # A new cache is created upon a change to the cabal build plan,
         # cabal.project (and/or cabal.project.local), or a bump to
         # CABAL_CACHE_VERSION.
@@ -117,9 +118,9 @@ jobs:
     - name: Check workflow test matrix
       run: cabal build all --dry-run && scripts/check-workflow-test-matrix.hs
 
-    - name: Build dependencies
-      id: build-dependencies
-      run: cabal build all --only-dependencies
+    - name: Cabal Build
+      id: cabal-build
+      run: cabal build all
 
     # Save the cache of built dependencies early, so that it is available for
     # the next GHA run if the Build step fails.
@@ -129,28 +130,12 @@ jobs:
       # Note: cache-hit will be set to true only when cache hit occurs for the
       # exact key match. For a partial key match via restore-keys or a cache
       # miss, it will be set to false.
-      if: steps.build-dependencies.outcome == 'success' && steps.restore-cabal-cache.outputs.cache-hit != 'true'
+      if: steps.cabal-build.outcome == 'success' && steps.restore-cabal-cache.outputs.cache-hit != 'true'
       with:
-        path: ${{ steps.install-haskell.outputs.cabal-store }}
+        path: |
+          ${{ steps.install-haskell.outputs.cabal-store }}
+          dist-newstyle
         key:  ${{ steps.restore-cabal-cache.outputs.cache-primary-key }}
-
-    - name: Build
-      run: cabal build all
-
-    # Pass working directory to test jobs
-    - name: Archive working directory
-      # pax format is needed to avoid unnecessary rebuilding, because the
-      # default format uses a one-second resolution for timestamps
-      run: tar --format pax -cf /var/tmp/state.tar . && mv /var/tmp/state.tar .
-    - name: Upload working directory archive
-      # upload-artifact is pinned to avoid a bug in download-artifact
-      # See https://github.com/actions/download-artifact/issues/328
-      uses: actions/upload-artifact@v4.2.0
-      with:
-        name: state-${{ matrix.ghc }}-${{ matrix.os }}
-        path: state.tar
-        overwrite: true
-        retention-days: 1
 
   test:
     needs: build
@@ -252,14 +237,6 @@ jobs:
       run: |
         echo "NIGHTLY=true" >> $GITHUB_ENV
 
-    # Retrieve working directory from build jobs
-    - name: Download working directory archive
-      uses: actions/download-artifact@v4
-      with:
-        name: state-${{ matrix.ghc }}-${{ matrix.os }}
-    - name: Unarchive working directory
-      run: tar -xf state.tar && rm state.tar
-
     # A dependencies.txt file should have been created by the build job, so we
     # check if it exists and is not empty.
     - name: Check dependencies to be used as cache keys
@@ -275,6 +252,7 @@ jobs:
       with:
         path: |
           ${{ steps.install-haskell.outputs.cabal-store }}
+          dist-newstyle
         key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
         # The cache with this specific key should have been created by the build
         # job. If the cache is missing, something is terribly wrong! We fail the
