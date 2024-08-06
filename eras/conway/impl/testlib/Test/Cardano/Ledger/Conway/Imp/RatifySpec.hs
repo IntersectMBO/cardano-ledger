@@ -60,7 +60,7 @@ relevantDuringBootstrapSpec = do
   initiateHardForkWithLessThanMinimalCommitteeSize
   it "Many CC Cold Credentials map to the same Hot Credential act as many votes" $ do
     hotCred NE.:| _ <- registerInitialCommittee
-    (dRep, _, _) <- setupSingleDRep . getPositive =<< arbitrary
+    (dRep, _, _) <- setupSingleDRep =<< uniformRM (10_000_000, 1_000_000_000)
     Positive deposit <- arbitrary
     gaId <- submitParameterChange SNothing $ def & ppuDRepDepositL .~ SJust (Coin deposit)
     submitYesVote_ (CommitteeVoter hotCred) gaId
@@ -83,7 +83,7 @@ initiateHardForkWithLessThanMinimalCommitteeSize ::
 initiateHardForkWithLessThanMinimalCommitteeSize =
   it "Hard Fork can still be initiated with less than minimal committee size" $ do
     hotCs <- registerInitialCommittee
-    (spoK1, _, _) <- setupPoolWithStake $ Coin 1_000
+    (spoK1, _, _) <- setupPoolWithStake $ Coin 3_000_000_000
     passEpoch
     modifyPParams $ ppCommitteeMinSizeL .~ 2
     committeeMembers' <- Set.toList <$> getCommitteeMembers
@@ -400,10 +400,10 @@ spoVotesCommitteeUpdates =
   describe "Counting of SPO votes" $ do
     describe "All gov action other than HardForkInitiation" $ do
       it "NoConfidence" $ do
-        (spoK1, _, _) <- setupPoolWithStake $ Coin 1_000
-        _ <- setupPoolWithStake $ Coin 1_000
-        _ <- setupPoolWithStake $ Coin 1_000
-        _ <- setupPoolWithStake $ Coin 1_000
+        (spoK1, _, _) <- setupPoolWithStake $ Coin 100_000_000
+        _ <- setupPoolWithStake $ Coin 100_000_000
+        _ <- setupPoolWithStake $ Coin 100_000_000
+        _ <- setupPoolWithStake $ Coin 100_000_000
         modifyPParams $ ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 1 %! 2
         whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
         gai <- submitGovAction $ NoConfidence SNothing
@@ -412,10 +412,10 @@ spoVotesCommitteeUpdates =
         passNEpochs 2
         getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gai)
       it "CommitteeUpdate" $ do
-        (spoK1, _, _) <- setupPoolWithStake $ Coin 1_000
-        _ <- setupPoolWithStake $ Coin 1_000
-        _ <- setupPoolWithStake $ Coin 1_000
-        _ <- setupPoolWithStake $ Coin 1_000
+        (spoK1, _, _) <- setupPoolWithStake $ Coin 100_000_000
+        _ <- setupPoolWithStake $ Coin 100_000_000
+        _ <- setupPoolWithStake $ Coin 100_000_000
+        _ <- setupPoolWithStake $ Coin 100_000_000
         modifyPParams $ ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ 1 %! 2
         whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
         cc <- KeyHashObj <$> freshKeyHash
@@ -434,10 +434,10 @@ spoVotesForHardForkInitiation =
     it "HardForkInitiation" $ do
       whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL . dvtHardForkInitiationL .~ def)
       hotCCs <- registerInitialCommittee
-      (spoK1, _, _) <- setupPoolWithStake $ Coin 1_000
-      (spoK2, _, _) <- setupPoolWithStake $ Coin 1_000
-      _ <- setupPoolWithStake $ Coin 1_000
-      _ <- setupPoolWithStake $ Coin 1_000
+      (spoK1, _, _) <- setupPoolWithStake $ Coin 100_000_000
+      (spoK2, _, _) <- setupPoolWithStake $ Coin 100_000_000
+      _ <- setupPoolWithStake $ Coin 100_000_000
+      _ <- setupPoolWithStake $ Coin 100_000_000
       modifyPParams $ ppPoolVotingThresholdsL . pvtHardForkInitiationL .~ 1 %! 2
       protVer <- getProtVer
       gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
@@ -537,9 +537,9 @@ votingSpec =
       describe "DRep" $ do
         it "UTxOs contribute to active voting stake" $ do
           -- Setup DRep delegation #1
-          (drep1, KeyHashObj stakingKH1, paymentKP1) <- setupSingleDRep 1_000_000
+          (drep1, KeyHashObj stakingKH1, paymentKP1) <- setupSingleDRep 1_000_000_000
           -- Setup DRep delegation #2
-          _ <- setupSingleDRep 1_000_000
+          _ <- setupSingleDRep 1_000_000_000
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
           addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (75 %! 100)
@@ -552,15 +552,15 @@ votingSpec =
           -- Bump up the UTxO delegated
           -- to barely make the threshold (51 %! 100)
           stakingKP1 <- lookupKeyPair stakingKH1
-          _ <- sendCoinTo (mkAddr (paymentKP1, stakingKP1)) (inject $ Coin 200_000)
+          _ <- sendCoinTo (mkAddr (paymentKP1, stakingKP1)) (inject $ Coin 200_000_000)
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
         it "Rewards contribute to active voting stake" $ do
           -- Setup DRep delegation #1
-          (drep1, staking1, _) <- setupSingleDRep 1_000_000
+          (drep1, staking1, _) <- setupSingleDRep 1_000_000_000
           -- Setup DRep delegation #2
-          _ <- setupSingleDRep 1_000_000
+          _ <- setupSingleDRep 1_000_000_000
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
           addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (75 %! 100)
@@ -575,7 +575,7 @@ votingSpec =
           modifyNES $
             nesEsL . epochStateUMapL
               %~ UM.adjust
-                (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000) d)
+                (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000_000) d)
                 staking1
                 . UM.RewDepUView
           passNEpochs 2
@@ -827,9 +827,9 @@ votingSpec =
                 }
           whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
           -- Setup Pool delegation #1
-          (poolKH1, delegatorCPayment1, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
+          (poolKH1, delegatorCPayment1, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000_000
           -- Setup Pool delegation #2
-          (poolKH2, _, _) <- setupPoolWithStake $ Coin 1_000_000
+          (poolKH2, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
           passEpoch
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
@@ -847,7 +847,7 @@ votingSpec =
           _ <-
             sendCoinTo
               (Addr Testnet delegatorCPayment1 (StakeRefBase delegatorCStaking1))
-              (Coin 200_000)
+              (Coin 40_900_000)
           passNEpochs 2
           -- The same vote should now successfully ratify the proposal
           getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
@@ -862,9 +862,9 @@ votingSpec =
           whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
 
           -- Setup Pool delegation #1
-          (poolKH1, _, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000
+          (poolKH1, _, delegatorCStaking1) <- setupPoolWithStake $ Coin 1_000_000_000
           -- Setup Pool delegation #2
-          (poolKH2, _, _) <- setupPoolWithStake $ Coin 1_000_000
+          (poolKH2, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
           passEpoch
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
@@ -881,7 +881,7 @@ votingSpec =
           modifyNES $
             nesEsL . epochStateUMapL
               %~ UM.adjust
-                (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000) d)
+                (\(UM.RDPair r d) -> UM.RDPair (r <> UM.CompactCoin 200_000_000) d)
                 delegatorCStaking1
                 . UM.RewDepUView
           passNEpochs 2

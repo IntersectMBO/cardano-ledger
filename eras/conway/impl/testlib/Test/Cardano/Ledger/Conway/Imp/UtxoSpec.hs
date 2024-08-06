@@ -112,7 +112,7 @@ spec =
         submitTx . mkBasicTx $
           mkBasicTxBody
             & outputsTxBodyL @era
-              .~ SSeq.fromList [mkBasicTxOut @era scriptAddr (inject (Coin 1000))]
+              .~ SSeq.fromList [mkBasicTxOut @era scriptAddr mempty]
       pure $ txInAt (0 :: Int) tx
 
     createRefScriptsUtxos ::
@@ -122,7 +122,7 @@ spec =
       let outs =
             scripts
               <&> ( \s ->
-                      mkBasicTxOut @era (rootOut ^. addrTxOutL) (inject (Coin 100))
+                      mkBasicTxOut @era (rootOut ^. addrTxOutL) mempty
                         & referenceScriptTxOutL @era .~ SJust s
                   )
       tx <-

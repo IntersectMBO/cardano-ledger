@@ -97,6 +97,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   defaultInitNewEpochState,
   defaultInitImpTestState,
   impEraStartEpochNo,
+  impSetSeed,
 
   -- * Logging
   logEntry,
@@ -200,7 +201,7 @@ import Cardano.Ledger.Shelley.Translation (toFromByronTranslationContext)
 import Cardano.Ledger.Slot (epochInfoFirst, getTheSlotOfNoReturn)
 import Cardano.Ledger.Tools (
   calcMinFeeTxNativeScriptWits,
-  ensureMinCoinTxOut,
+  setMinCoinTxOut,
  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap as UMap
@@ -785,16 +786,16 @@ instance (ShelleyEraImp era, Arbitrary a, Show a) => Example (a -> ImpTestM era 
 instance MonadGen (ImpTestM era) where
   liftGen (MkGen f) = do
     qcSize <- asks iteQuickCheckSize
-    StateGen qcGen <- subState split
+    StateGen qcGen <- subStateM split
     pure $ f qcGen qcSize
   variant n action = do
-    subState (\(StateGen qcGen) -> ((), StateGen (integerVariant (toInteger n) qcGen)))
+    subStateM (\(StateGen qcGen) -> ((), StateGen (integerVariant (toInteger n) qcGen)))
     action
   sized f = do
     qcSize <- asks iteQuickCheckSize
     f qcSize
   resize n = local (\env -> env {iteQuickCheckSize = n})
-  choose r = subState (Random.randomR r)
+  choose r = subStateM (Random.randomR r)
 
 instance HasStatefulGen (StateGenM (ImpTestState era)) (ImpTestM era) where
   askStatefulGen = pure StateGenM
@@ -803,6 +804,10 @@ instance HasSubState (ImpTestState era) where
   type SubState (ImpTestState era) = StateGen QCGen
   getSubState = StateGen . impGen
   setSubState s (StateGen g) = s {impGen = g}
+
+-- | Override the QuickCheck generator using a fixed seed.
+impSetSeed :: Int -> ImpTestM era ()
+impSetSeed seed = setSubStateM $ StateGen $ mkQCGen seed
 
 applyParamsQCGen :: Params -> ImpTestState era -> (Maybe Int, ImpTestState era)
 applyParamsQCGen params impTestState =
@@ -1026,14 +1031,14 @@ fixupTxOuts tx = do
   let
     txOuts = tx ^. bodyTxL . outputsTxBodyL
   fixedUpTxOuts <- forM txOuts $ \txOut -> do
-    let txOut' = ensureMinCoinTxOut pp txOut
-    when (txOut /= txOut') $ do
-      logEntry $
-        "Fixed up the amount in the TxOut from "
-          ++ show (txOut ^. coinTxOutL)
-          ++ " to "
-          ++ show (txOut' ^. coinTxOutL)
-    pure txOut'
+    if txOut ^. coinTxOutL == zero
+      then do
+        let txOut' = setMinCoinTxOut pp txOut
+        logEntry $
+          "Fixed up the amount in the TxOut to " ++ show (txOut' ^. coinTxOutL)
+        pure txOut'
+      else do
+        pure txOut
   pure $ tx & bodyTxL . outputsTxBodyL .~ fixedUpTxOuts
 
 fixupFees ::
@@ -1069,8 +1074,9 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
     txNoWits = tx & bodyTxL . outputsTxBodyL %~ (:|> changeBeforeFeeTxOut)
     outsBeforeFee = tx ^. bodyTxL . outputsTxBodyL
     suppliedFee = txOriginal ^. bodyTxL . feeTxBodyL
-    fee | suppliedFee == zero = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
-        | otherwise = suppliedFee
+    fee
+      | suppliedFee == zero = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
+      | otherwise = suppliedFee
   logEntry "Validating change"
   change <- ensureNonNegativeCoin $ changeBeforeFeeTxOut ^. coinTxOutL <-> fee
   logToExpr change

@@ -21,9 +21,6 @@ spec ::
   ) =>
   SpecWith (ImpTestState era)
 spec = describe "UTXO" $ do
-  it "sendCoinTo" $ do
-    addr <- freshKeyAddr_
-    void $ sendCoinTo addr (Coin 999833135)
   describe "ShelleyUtxoPredFailure" $ do
     it "ValueNotConservedUTxO" $ do
       addr1 <- freshKeyAddr_
@@ -36,7 +33,7 @@ spec = describe "UTXO" $ do
           txBody =
             mkBasicTxBody
               & inputsTxBodyL .~ [txIn]
-              & outputsTxBodyL .~ [mkBasicTxOut addr2 (inject (Coin 300000))]
+              & outputsTxBodyL .~ [mkBasicTxOut addr2 mempty]
           adjustTxOut = \case
             Empty -> error "Unexpected empty sequence of outputs"
             txOut :<| outs -> (txOut & coinTxOutL %~ (<> extra)) :<| outs

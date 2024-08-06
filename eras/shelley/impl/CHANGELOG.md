@@ -13,6 +13,7 @@
 * Add `defaultInitNewEpochState` and `defaultInitImpTestState`
 * Add `impEraStartEpochNo`
 * Add `fixupAuxDataHash`
+* Add `impSetSeed`
 
 ## 1.12.2.0
 
