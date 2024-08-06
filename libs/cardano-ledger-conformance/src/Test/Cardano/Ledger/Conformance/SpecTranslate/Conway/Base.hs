@@ -20,6 +20,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
+  committeeCredentialToStrictMaybe,
   SpecTranslate (..),
   SpecTranslationError,
   ConwayExecEnactEnv (..),
@@ -1059,3 +1060,9 @@ instance SpecTranslate ctx (ConwayExecEnactEnv era) where
       <$> toSpecRep ceeeGid
       <*> toSpecRep ceeeTreasury
       <*> toSpecRep ceeeEpoch
+
+committeeCredentialToStrictMaybe ::
+  CommitteeAuthorization c ->
+  StrictMaybe (Credential 'HotCommitteeRole c)
+committeeCredentialToStrictMaybe (CommitteeHotCredential c) = SJust c
+committeeCredentialToStrictMaybe (CommitteeMemberResigned _) = SNothing

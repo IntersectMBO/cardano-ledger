@@ -15,7 +15,6 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert () where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState (
-  CommitteeAuthorization (..),
   csCommitteeCreds,
   drepExpiry,
  )
@@ -98,9 +97,3 @@ instance SpecTranslate ctx (VState era) where
       <*> toSpecRep
         (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState)
       <*> undefined
-
-committeeCredentialToStrictMaybe ::
-  CommitteeAuthorization c ->
-  StrictMaybe (Credential 'HotCommitteeRole c)
-committeeCredentialToStrictMaybe (CommitteeHotCredential c) = SJust c
-committeeCredentialToStrictMaybe (CommitteeMemberResigned _) = SNothing
