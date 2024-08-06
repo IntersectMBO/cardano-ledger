@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -16,6 +17,8 @@ module Cardano.Ledger.Conway.Rules.Enact (
 
 import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayEra)
 import Cardano.Ledger.Conway.Governance (
@@ -57,6 +60,14 @@ data EnactSignal era = EnactSignal
   , esGovAction :: !(GovAction era)
   }
   deriving (Eq, Show, Generic)
+
+instance EraPParams era => EncCBOR (EnactSignal era) where
+  encCBOR x@(EnactSignal _ _) =
+    let EnactSignal {..} = x
+     in encode $
+          Rec EnactSignal
+            !> To esGovActionId
+            !> To esGovAction
 
 instance EraPParams era => NFData (EnactSignal era)
 

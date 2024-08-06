@@ -7,6 +7,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -84,6 +85,17 @@ data CertEnv era = CertEnv
   , ceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
   }
   deriving (Generic)
+
+instance EraPParams era => EncCBOR (CertEnv era) where
+  encCBOR x@(CertEnv _ _ _ _ _) =
+    let CertEnv {..} = x
+     in encode $
+          Rec CertEnv
+            !> To ceSlotNo
+            !> To cePParams
+            !> To ceCurrentEpoch
+            !> To ceCurrentCommittee
+            !> To ceCommitteeProposals
 
 deriving instance EraPParams era => Eq (CertEnv era)
 deriving instance EraPParams era => Show (CertEnv era)
