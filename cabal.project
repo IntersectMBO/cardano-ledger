@@ -20,9 +20,10 @@ repository cardano-haskell-packages
 -- rather than a shortened one.
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-ledger-executable-spec.git
-  tag: e3a37a68b537b885cc9929c7c742dc6edbc2c88d
-  --sha256: sha256-jZfFunU/m2jDPKWgVsDq/tJ6bGpkj12NLMsgJaLrrwo=
+  location: https://github.com/IntersectMBO/formal-ledger-specifications.git
+  subdir: ledgerSrc/haskell/Ledger
+  tag: 55270b30e0cbc68c4af6dd45c2bfb00a113311ee
+  --sha256: sha256-jvDsV2ghHds4Lj3hJ3hwc/EaES2ddQLugJ+pj6vUPLY=
 -- NOTE: If you would like to update the above, look for the `haskell-package`
 -- branch in the `formal-ledger-specifications` repo where the HEAD contains
 -- the generated code based on the most recent commit on `master`.
