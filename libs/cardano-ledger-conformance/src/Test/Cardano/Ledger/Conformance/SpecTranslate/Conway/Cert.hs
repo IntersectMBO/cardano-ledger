@@ -24,6 +24,7 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.UMap (dRepMap, rewardMap, sPoolMap)
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.VMap as VMap
@@ -85,7 +86,21 @@ instance
     Agda.MkLedgerState
       <$> toSpecRep lsUTxOState
       <*> toSpecRep (utxosGovState lsUTxOState ^. proposalsGovStateL)
-      <*> toSpecRep lsCertState
+      <*> agdaCertState lsCertState
+    where
+      agdaCertState (CertState (VState {..}) pState (DState {..})) =
+        Agda.MkCertState
+          <$> ( Agda.MkDState
+                  <$> toSpecRep (dRepMap dsUnified)
+                  <*> toSpecRep (sPoolMap dsUnified)
+                  <*> toSpecRep (rewardMap dsUnified)
+              )
+          <*> toSpecRep pState
+          <*> ( Agda.MkGState
+                  <$> toSpecRep (drepExpiry <$> vsDReps)
+                  <*> toSpecRep
+                    (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState)
+              )
 
 instance
   ( EraPParams era
