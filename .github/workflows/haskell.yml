@@ -135,7 +135,10 @@ jobs:
         key:  ${{ steps.restore-cabal-cache.outputs.cache-primary-key }}
 
     - name: Build
-      run: cabal build all
+      run: |
+        ls -laF
+        rm -f cache.tzst
+        cabal build all
 
     # Pass working directory to test jobs
     - name: Archive working directory
