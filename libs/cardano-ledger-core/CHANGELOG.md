@@ -1,17 +1,15 @@
 # Version history for `cardano-ledger-core`
 
-## 1.14.1.0
-
-### `testlib`
-
-* Add show instances for ScriptTestContext and PlutusArgs
-
 ## 1.14.0.0
 
 * Add `mkTermToEvaluate` to `PlutusLanguage` class.
 * Add a field to `DebugFailure`
 * Convert `debugPlutus` to an `IO` action
 * Add `plutus-debug` executable
+
+### `testlib`
+
+* Add `Show` instances for `ScriptTestContext` and `PlutusArgs`
 
 ## 1.13.2.0
 
