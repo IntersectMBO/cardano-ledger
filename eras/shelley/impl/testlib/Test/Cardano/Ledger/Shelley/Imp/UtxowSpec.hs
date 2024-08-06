@@ -89,12 +89,14 @@ spec = describe "UTXOW" $ do
   it "MissingTxBodyMetadataHash" $ do
     auxData <- arbitrary @(TxAuxData era)
     let auxDataHash = hashTxAuxData auxData
-    let tx = mkBasicTx mkBasicTxBody & auxDataTxL .~ SJust auxData
-    submitFailingTx
-      tx
-      [ injectFailure $
-          MissingTxBodyMetadataHash auxDataHash
-      ]
+        tx = mkBasicTx $ mkBasicTxBody & feeTxBodyL .~ Coin 165545
+        addAuxData fixedTx = pure (fixedTx & auxDataTxL .~ SJust auxData)
+    withPostFixup addAuxData $
+      submitFailingTx
+        tx
+        [ injectFailure $
+            MissingTxBodyMetadataHash auxDataHash
+        ]
 
   it "MissingTxMetadata" $ do
     auxData <- arbitrary @(TxAuxData era)

@@ -1041,7 +1041,8 @@ fixupFees ::
   Tx era ->
   ImpTestM era (Tx era)
 fixupFees txOriginal = impAnn "fixupFees" $ do
-  tx <- fixupTxOuts txOriginal
+  -- Fee will be overwritten later on, unless it wasn't set to zero to begin with:
+  let tx = txOriginal & bodyTxL . feeTxBodyL .~ zero
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getUTxO
   certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
@@ -1067,7 +1068,9 @@ fixupFees txOriginal = impAnn "fixupFees" $ do
         (inject changeBeforeFee)
     txNoWits = tx & bodyTxL . outputsTxBodyL %~ (:|> changeBeforeFeeTxOut)
     outsBeforeFee = tx ^. bodyTxL . outputsTxBodyL
-    fee = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
+    suppliedFee = txOriginal ^. bodyTxL . feeTxBodyL
+    fee | suppliedFee == zero = calcMinFeeTxNativeScriptWits utxo pp txNoWits nativeScriptKeyWits
+        | otherwise = suppliedFee
   logEntry "Validating change"
   change <- ensureNonNegativeCoin $ changeBeforeFeeTxOut ^. coinTxOutL <-> fee
   logToExpr change

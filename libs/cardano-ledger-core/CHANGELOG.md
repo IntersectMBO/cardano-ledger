@@ -9,10 +9,15 @@
 * Change default implementation of `translateEra`
 * Add `EraGenesis` and `Genesis` type family. New `NoGenesis` type to be used for eras that do not have a genesis file
 * Move `ensureMinCoinTxOut` from `cardano-ledger-api` to `Cardano.Ledger.Tools`
+* Change default implementation of `translateEra`
+* Add `EraGenesis` and `Genesis` type family. New `NoGenesis` type to be used for eras that do not have a genesis file
+* Move `ensureMinCoinTxOut` from `cardano-ledger-api` to `Cardano.Ledger.Tools`
 
 ### `testlib`
 
 * Add `Show` instances for `ScriptTestContext` and `PlutusArgs`
+* Add `setSubStateM`
+* Rename `subState` to `subStateM`
 
 ## 1.13.2.0
 
