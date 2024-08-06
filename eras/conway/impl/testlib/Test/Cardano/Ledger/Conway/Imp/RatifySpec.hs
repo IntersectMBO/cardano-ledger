@@ -119,6 +119,7 @@ committeeExpiryResignationDiscountSpec =
       gaiCC <-
         submitUpdateCommittee
           Nothing
+          mempty
           [ (committeeColdC1, EpochInterval 10)
           , (committeeColdC2, EpochInterval 2)
           ]
@@ -148,6 +149,7 @@ committeeExpiryResignationDiscountSpec =
       gaiCC <-
         submitUpdateCommittee
           Nothing
+          mempty
           [ (committeeColdC1, EpochInterval 10)
           , (committeeColdC2, EpochInterval 10)
           ]
@@ -185,13 +187,14 @@ paramChangeAffectsProposalsSpec =
           ImpTestM era (GovActionId (EraCrypto era), GovActionId (EraCrypto era))
         submitTwoExampleProposalsAndVoteOnTheChild spos dreps = do
           committeeC <- KeyHashObj <$> freshKeyHash
-          gaiParent <- submitUpdateCommittee Nothing [(committeeC, EpochInterval 5)] (75 %! 100)
+          gaiParent <- submitUpdateCommittee Nothing mempty [(committeeC, EpochInterval 5)] (75 %! 100)
           -- We submit a descendent proposal so that even though it is sufficiently
           -- voted on, it cannot be ratified before the ParameterChange proposal
           -- is enacted.
           gaiChild <-
             submitUpdateCommittee
               (Just (SJust (GovPurposeId gaiParent)))
+              mempty
               [(committeeC, EpochInterval 5)]
               (75 %! 100)
           forM_ spos $ \(spo, vote) -> submitVote_ vote (StakePoolVoter spo) gaiChild
@@ -381,7 +384,7 @@ committeeMinSizeAffectsInFlightProposalsSpec =
       -- ratification as the CC size is smaller than MinSize.
       -- We instead just add another Committee member to reach the CommitteeMinSize.
       coldCommitteeCred <- KeyHashObj <$> freshKeyHash
-      gaiCC <- submitUpdateCommittee Nothing [(coldCommitteeCred, EpochInterval 10)] (1 %! 2)
+      gaiCC <- submitUpdateCommittee Nothing mempty [(coldCommitteeCred, EpochInterval 10)] (1 %! 2)
       submitYesVote_ (DRepVoter drepC) gaiCC
       passNEpochs 2
       _hotCommitteeC' <- registerCommitteeHotKey coldCommitteeCred
@@ -416,7 +419,7 @@ spoVotesCommitteeUpdates =
         modifyPParams $ ppPoolVotingThresholdsL . pvtCommitteeNormalL .~ 1 %! 2
         whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
         cc <- KeyHashObj <$> freshKeyHash
-        gai <- submitUpdateCommittee Nothing [(cc, EpochInterval 5)] (1 %! 2)
+        gai <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 5)] (1 %! 2)
         -- 1 % 4 stake yes; 3 % 4 stake abstain; yes / stake - abstain > 1 % 2
         submitYesVote_ (StakePoolVoter spoK1) gai
         passNEpochs 2
@@ -539,7 +542,7 @@ votingSpec =
           _ <- setupSingleDRep 1_000_000
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
-          addCCGaid <- submitUpdateCommittee Nothing [(cc, EpochInterval 10)] (75 %! 100)
+          addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (75 %! 100)
           -- Submit the vote
           submitVote_ VoteYes (DRepVoter drep1) addCCGaid
           passNEpochs 2
@@ -560,7 +563,7 @@ votingSpec =
           _ <- setupSingleDRep 1_000_000
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
-          addCCGaid <- submitUpdateCommittee Nothing [(cc, EpochInterval 10)] (75 %! 100)
+          addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (75 %! 100)
           -- Submit the vote
           submitVote_ VoteYes (DRepVoter drep1) addCCGaid
           passNEpochs 2
@@ -603,7 +606,7 @@ votingSpec =
           cc <- KeyHashObj <$> freshKeyHash
           Positive extra <- arbitrary
           let lifetime = EpochInterval (extra + 2 * govActionLifetime)
-          addCCGaid <- submitUpdateCommittee Nothing [(cc, lifetime)] (75 %! 100)
+          addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, lifetime)] (75 %! 100)
           -- Submit the vote
           submitVote_ VoteYes (DRepVoter $ KeyHashObj drepKH1) addCCGaid
           passNEpochs 2
@@ -830,7 +833,7 @@ votingSpec =
           passEpoch
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
-          addCCGaid <- submitUpdateCommittee Nothing [(cc, EpochInterval 10)] (75 %! 100)
+          addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (75 %! 100)
           -- Submit the vote
           submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
           submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
@@ -865,7 +868,7 @@ votingSpec =
           passEpoch
           -- Submit a committee proposal
           cc <- KeyHashObj <$> freshKeyHash
-          addCCGaid <- submitUpdateCommittee Nothing [(cc, EpochInterval 10)] (75 %! 100)
+          addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (75 %! 100)
           -- Submit the vote
           submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
           submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid
@@ -916,7 +919,11 @@ votingSpec =
           Positive extra <- arbitrary
           cc <- KeyHashObj <$> freshKeyHash
           addCCGaid <-
-            submitUpdateCommittee Nothing [(cc, EpochInterval (extra + 2 * govActionLifetime))] (75 %! 100)
+            submitUpdateCommittee
+              Nothing
+              mempty
+              [(cc, EpochInterval (extra + 2 * govActionLifetime))]
+              (75 %! 100)
           -- Submit the vote
           submitVote_ VoteYes (StakePoolVoter poolKH1) addCCGaid
           submitVote_ VoteNo (StakePoolVoter poolKH2) addCCGaid

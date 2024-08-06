@@ -107,6 +107,7 @@ predicateFailuresSpec =
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       committeeC <- KeyHashObj <$> freshKeyHash
       rewardAccount <- registerRewardAccount
+      anchor <- arbitrary
       let expiration = EpochNo 1
           action =
             UpdateCommittee
@@ -120,7 +121,7 @@ predicateFailuresSpec =
             { pProcReturnAddr = rewardAccount
             , pProcGovAction = action
             , pProcDeposit = pp ^. ppGovActionDepositL
-            , pProcAnchor = def
+            , pProcAnchor = anchor
             }
         )
         [injectFailure $ ExpirationEpochTooSmall $ Map.singleton committeeC expiration]
@@ -836,8 +837,7 @@ votingSpec =
           Positive lifetime <- arbitrary
           pure (newCommitteeMember, EpochInterval lifetime)
         threshold <- arbitrary
-        committeeUpdateId <-
-          submitUpdateCommittee Nothing newMembers threshold
+        committeeUpdateId <- submitUpdateCommittee Nothing mempty newMembers threshold
         let voter = CommitteeVoter ccHot
         submitFailingVote
           voter
@@ -865,6 +865,7 @@ votingSpec =
         electionGovAction <-
           submitUpdateCommittee
             Nothing
+            mempty
             [ (ccColdCred0, EpochInterval 10)
             , (ccColdCred1, EpochInterval 10)
             ]
@@ -1274,7 +1275,7 @@ ccVoteOnConstitutionFailsWithMultipleVotes = do
   drepCred2 <- KeyHashObj <$> registerDRep
   newCommitteeMember <- KeyHashObj <$> freshKeyHash
   committeeProposal <-
-    submitUpdateCommittee Nothing [(newCommitteeMember, EpochInterval 10)] (1 %! 2)
+    submitUpdateCommittee Nothing mempty [(newCommitteeMember, EpochInterval 10)] (1 %! 2)
   let
     voteTx =
       mkBasicTx $

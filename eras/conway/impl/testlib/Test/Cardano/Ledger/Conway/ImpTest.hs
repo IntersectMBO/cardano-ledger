@@ -372,7 +372,7 @@ registerInitialCommittee = do
   committeeMembers <- Set.toList <$> getCommitteeMembers
   case committeeMembers of
     x : xs -> registerCommitteeHotKeys (KeyHashObj <$> freshKeyHash) $ x NE.:| xs
-    _ -> error "Expected an initial committee"
+    [] -> error "Expected an initial committee"
 
 -- | Submit a transaction that registers a new DRep and return the keyhash
 -- belonging to that DRep
@@ -1631,12 +1631,15 @@ submitYesVoteCCs_ committeeMembers govId =
 
 submitUpdateCommittee ::
   ConwayEraImp era =>
-  -- | Set the parent. When Nothign is supplied latest parent will be used.
+  -- | Set the parent. When Nothing is supplied latest parent will be used.
   Maybe (StrictMaybe (GovPurposeId 'CommitteePurpose era)) ->
+  -- | CC members to remove
+  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
+  -- | CC members to add
   [(Credential 'ColdCommitteeRole (EraCrypto era), EpochInterval)] ->
   UnitInterval ->
   ImpTestM era (GovActionId (EraCrypto era))
-submitUpdateCommittee mParent ccs threshold = do
+submitUpdateCommittee mParent ccsToRemove ccsToAdd threshold = do
   nes <- getsNES id
   let
     curEpochNo = nes ^. nesELL
@@ -1644,8 +1647,8 @@ submitUpdateCommittee mParent ccs threshold = do
       nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgsProposalsL . pRootsL . grCommitteeL
     parent = fromMaybe (prRoot rootCommittee) mParent
     newCommitteMembers =
-      Map.fromList [(cc, addEpochInterval curEpochNo lifetime) | (cc, lifetime) <- ccs]
-  submitGovAction $ UpdateCommittee parent mempty newCommitteMembers threshold
+      Map.fromList [(cc, addEpochInterval curEpochNo lifetime) | (cc, lifetime) <- ccsToAdd]
+  submitGovAction $ UpdateCommittee parent ccsToRemove newCommitteMembers threshold
 
 expectCommitteeMemberPresence ::
   (HasCallStack, ConwayEraGov era) => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()

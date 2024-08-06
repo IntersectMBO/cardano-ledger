@@ -14,15 +14,14 @@ module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (
   relevantDuringBootstrapSpec,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..))
+import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (GovAction (..), GovPurposeId (..), Voter (..))
+import Cardano.Ledger.Conway.Governance (GovPurposeId (..), Voter (..))
 import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import Cardano.Ledger.Val (Val (..))
-import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -48,7 +47,7 @@ spec = do
     EpochInterval committeeMaxTermLength <-
       getsNES $ nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
     secondAddCCGaid <-
-      submitUpdateCommittee Nothing [(cc, EpochInterval (committeeMaxTermLength + 2))] (1 %! 2)
+      submitUpdateCommittee Nothing mempty [(cc, EpochInterval (committeeMaxTermLength + 2))] (1 %! 2)
     submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
     passNEpochs 2
     -- Due to longer than allowed lifetime we have to wait an extra epoch for this new action to be enacted
@@ -56,14 +55,13 @@ spec = do
     passEpoch
     expectCommitteeMemberPresence cc
 
-  it "Authorizing proposed CC key" $ do
-    someCred <- KeyHashObj <$> freshKeyHash
-    submitGovAction_ $
-      UpdateCommittee SNothing mempty (Map.singleton someCred (EpochNo 1234)) (1 %! 2)
+  it "Resigning proposed CC key" $ do
+    ccColdCred <- KeyHashObj <$> freshKeyHash
+    _ <- submitUpdateCommittee Nothing mempty [(ccColdCred, EpochInterval 1234)] (1 %! 2)
     submitTx_
       ( mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
-            .~ SSeq.singleton (ResignCommitteeColdTxCert someCred SNothing)
+            .~ SSeq.singleton (ResignCommitteeColdTxCert ccColdCred SNothing)
       )
   -- A CC that has resigned will need to be first voted out and then voted in to be considered active
   it "CC re-election" $
@@ -72,7 +70,7 @@ spec = do
       passNEpochs 2
       -- Add a fresh CC
       cc <- KeyHashObj <$> freshKeyHash
-      addCCGaid <- submitUpdateCommittee Nothing [(cc, EpochInterval 10)] (1 %! 2)
+      addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (1 %! 2)
       submitYesVote_ (DRepVoter drepCred) addCCGaid
       passNEpochs 2
       -- Confirm that they are added
@@ -84,20 +82,20 @@ spec = do
       _ <- resignCommitteeColdKey cc SNothing
       ccShouldBeResigned cc
       -- Re-add the same CC
-      reAddCCGaid <- submitUpdateCommittee Nothing [(cc, EpochInterval 20)] (1 %! 2)
+      reAddCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
       submitYesVote_ (DRepVoter drepCred) reAddCCGaid
       passNEpochs 2
       -- Confirm that they are still resigned
       ccShouldBeResigned cc
       -- Remove them
-      let removeCCAction = UpdateCommittee (SJust $ GovPurposeId reAddCCGaid) (Set.singleton cc) mempty (1 %! 2)
-      removeCCGaid <- submitGovAction removeCCAction
+      removeCCGaid <-
+        submitUpdateCommittee (Just (SJust $ GovPurposeId reAddCCGaid)) (Set.singleton cc) [] (1 %! 2)
       submitYesVote_ (DRepVoter drepCred) removeCCGaid
       passNEpochs 2
       -- Confirm that they have been removed
       expectCommitteeMemberAbsence cc
       secondAddCCGaid <-
-        submitUpdateCommittee Nothing [(cc, EpochInterval 20)] (1 %! 2)
+        submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
       submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
       passNEpochs 2
       -- Confirm that they have been added

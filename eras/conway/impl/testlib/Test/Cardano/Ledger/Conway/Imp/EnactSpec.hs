@@ -388,31 +388,29 @@ actionPriorityCommitteePurposeSpec ::
   SpecWith (ImpTestState era)
 actionPriorityCommitteePurposeSpec =
   describe "Competing proposals with different priorities" $ do
-    it
-      "higher action priority wins"
-      $ do
-        (drepC, _, _) <- setupSingleDRep 1_000_000
-        (poolKH, _, _) <- setupPoolWithStake $ Coin 1_000_000
-        cc <- KeyHashObj <$> freshKeyHash
-        gai1 <- submitUpdateCommittee Nothing [(cc, EpochInterval 30)] (1 %! 3)
-        -- gai2 is the first action of a higher priority
-        gai2 <- submitGovAction $ NoConfidence SNothing
-        gai3 <- submitGovAction $ NoConfidence SNothing
-        traverse_ @[]
-          ( \gaid -> do
-              submitYesVote_ (DRepVoter drepC) gaid
-              submitYesVote_ (StakePoolVoter poolKH) gaid
-          )
-          [gai1, gai2, gai3]
-        passNEpochs 2
-        getLastEnactedCommittee
-          `shouldReturn` SJust (GovPurposeId gai2)
-        expectNoCurrentProposals
+    it "higher action priority wins" $ do
+      (drepC, _, _) <- setupSingleDRep 1_000_000
+      (poolKH, _, _) <- setupPoolWithStake $ Coin 1_000_000
+      cc <- KeyHashObj <$> freshKeyHash
+      gai1 <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 30)] (1 %! 3)
+      -- gai2 is the first action of a higher priority
+      gai2 <- submitGovAction $ NoConfidence SNothing
+      gai3 <- submitGovAction $ NoConfidence SNothing
+      traverse_ @[]
+        ( \gaid -> do
+            submitYesVote_ (DRepVoter drepC) gaid
+            submitYesVote_ (StakePoolVoter poolKH) gaid
+        )
+        [gai1, gai2, gai3]
+      passNEpochs 2
+      getLastEnactedCommittee
+        `shouldReturn` SJust (GovPurposeId gai2)
+      expectNoCurrentProposals
 
-        committee <-
-          getsNES $
-            nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-        committee `shouldBe` SNothing
+      committee <-
+        getsNES $
+          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+      committee `shouldBe` SNothing
 
 actionPrioritySpec ::
   forall era.
