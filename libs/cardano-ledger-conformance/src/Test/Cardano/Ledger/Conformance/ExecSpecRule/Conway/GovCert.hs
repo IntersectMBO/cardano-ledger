@@ -39,7 +39,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
-      $ Agda.govCertStep env st sig
+      $ Agda.govCertStep' env st sig
 
 nameGovCert :: ConwayGovCert c -> String
 nameGovCert (ConwayRegDRep {}) = "ConwayRegDRep"

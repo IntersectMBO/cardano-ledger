@@ -36,4 +36,4 @@ instance
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
-      $ Agda.certsStep env st sig
+      $ Agda.certsStep' env st sig
