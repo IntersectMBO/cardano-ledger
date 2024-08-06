@@ -6,6 +6,15 @@
 
 ## 1.16.1.0
 
+* Added `unRatifySignal`
+* Added lenses:
+  * `ratifySignalL`
+  * `reStakeDistrL`
+  * `reStakePoolDistrL`
+  * `reDRepDistrL`
+  * `reDRepStateL`
+  * `reCurrentEpochL`
+  * `reCommitteeStateL`
 * Replace GOVCERT `updateDRepExpiry` with `computeDRepExpiry`
 * Added `Eq`, `Show`, `NFData` and `Generic` instances for `CertsEnv`
 * Add `delegateToDRep` and `redelegateDRep`

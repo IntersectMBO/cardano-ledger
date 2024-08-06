@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,7 +25,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (From, Invalid, SumD, Summands),
-  Encode (Sum, To),
+  Encode (..),
   decode,
   encode,
   (!>),
@@ -75,6 +76,14 @@ data ConwayDelegEnv era = ConwayDelegEnv
        )
   }
   deriving (Generic)
+
+instance EraPParams era => EncCBOR (ConwayDelegEnv era) where
+  encCBOR x@(ConwayDelegEnv _ _) =
+    let ConwayDelegEnv {..} = x
+     in encode $
+          Rec ConwayDelegEnv
+            !> To cdePParams
+            !> To cdePools
 
 instance NFData (PParams era) => NFData (ConwayDelegEnv era)
 

@@ -8,6 +8,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -52,6 +53,7 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
+import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.CertState (
   certsTotalDepositsTxBody,
   certsTotalRefundsTxBody,
@@ -114,6 +116,15 @@ data UtxoEnv era = UtxoEnv
   , ueCertState :: CertState era
   }
   deriving (Generic)
+
+instance EraPParams era => EncCBOR (UtxoEnv era) where
+  encCBOR x@(UtxoEnv _ _ _) =
+    let UtxoEnv {..} = x
+     in encode $
+          Rec UtxoEnv
+            !> To ueSlot
+            !> To uePParams
+            !> To ueCertState
 
 utxoEnvSlotL :: Lens' (UtxoEnv era) SlotNo
 utxoEnvSlotL = lens ueSlot $ \x y -> x {ueSlot = y}

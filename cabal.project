@@ -90,6 +90,7 @@ packages:
   libs/plutus-preprocessor
   libs/ledger-state
   libs/constrained-generators
+  libs/cardano-ledger-repl-environment
 
 program-options
   ghc-options: -Werror

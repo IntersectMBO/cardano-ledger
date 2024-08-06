@@ -6,8 +6,10 @@
 
 ## 1.13.0.0
 
+* Added `EncCBOR` instances for:
+  * `UtxoEnv`
+  * `CertEnv`
 * Add `translateToShelleyLedgerStateFromUtxo`
-
 * Added `wireSizeShelleyTxF`
 
 ### `testlib`

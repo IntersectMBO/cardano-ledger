@@ -25,6 +25,8 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
   nameEpoch,
   nameEnact,
   nameGovAction,
+  crecTreasuryL,
+  crecGovActionMapL,
 ) where
 
 import Cardano.Ledger.BaseTypes (
@@ -34,6 +36,8 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
   natVersion,
  )
+import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (encCBOR))
+import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.CertState (
   CommitteeAuthorization (..),
   CommitteeState (..),
@@ -79,6 +83,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import GHC.Generics (Generic)
+import Lens.Micro (Lens', lens)
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Common (Arbitrary (..))
 import Test.Cardano.Ledger.Conformance (
@@ -168,6 +173,21 @@ instance Era era => Arbitrary (ConwayCertExecContext era) where
       <$> arbitrary
       <*> arbitrary
 
+instance Era era => EncCBOR (ConwayCertExecContext era) where
+  encCBOR x@(ConwayCertExecContext _ _) =
+    let ConwayCertExecContext {..} = x
+     in encode $
+          Rec ConwayCertExecContext
+            !> To ccecWithdrawals
+            !> To ccecVotes
+
+instance Era era => DecCBOR (ConwayCertExecContext era) where
+  decCBOR =
+    decode $
+      RecD ConwayCertExecContext
+        <! From
+        <! From
+
 instance
   c ~ EraCrypto era =>
   Inject
@@ -188,6 +208,27 @@ data ConwayRatifyExecContext era = ConwayRatifyExecContext
   , crecGovActionMap :: [GovActionState era]
   }
   deriving (Generic, Eq, Show)
+
+crecTreasuryL :: Lens' (ConwayRatifyExecContext era) Coin
+crecTreasuryL = lens crecTreasury (\x y -> x {crecTreasury = y})
+
+crecGovActionMapL :: Lens' (ConwayRatifyExecContext era) [GovActionState era]
+crecGovActionMapL = lens crecGovActionMap (\x y -> x {crecGovActionMap = y})
+
+instance EraPParams era => EncCBOR (ConwayRatifyExecContext era) where
+  encCBOR x@(ConwayRatifyExecContext _ _) =
+    let ConwayRatifyExecContext {..} = x
+     in encode $
+          Rec ConwayRatifyExecContext
+            !> To crecTreasury
+            !> To crecGovActionMap
+
+instance EraPParams era => DecCBOR (ConwayRatifyExecContext era) where
+  decCBOR =
+    decode $
+      RecD ConwayRatifyExecContext
+        <! From
+        <! From
 
 instance ToExpr (PParamsHKD StrictMaybe era) => ToExpr (ConwayRatifyExecContext era)
 
@@ -378,15 +419,23 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
       $ Agda.ratifyStep env st sig
 
   extraInfo ctx env@RatifyEnv {..} st sig@(RatifySignal actions) =
-    unlines . toList $ actionAcceptedRatio <$> actions
+    unlines $
+      [ "Spec extra info:"
+      , either show T.unpack . runSpecTransM ctx $
+          Agda.ratifyDebug
+            <$> toSpecRep env
+            <*> toSpecRep st
+            <*> toSpecRep sig
+      , "\nImpl extra info:"
+      ]
+        <> toList (actionAcceptedRatio <$> actions)
     where
       members = foldMap' (committeeMembers @Conway) $ ensCommittee (rsEnactState st)
       showAccepted True = "✓"
       showAccepted False = "×"
       actionAcceptedRatio gas@GovActionState {..} =
         unlines
-          [ "Acceptance ratios (impl):"
-          , "GovActionId: \t" <> showExpr gasId
+          [ "GovActionId: \t" <> showExpr gasId
           , "SPO: \t"
               <> show (spoAcceptedRatio env gas)
               <> "\t"
@@ -400,12 +449,6 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
               <> "\t"
               <> showAccepted (committeeAccepted env st gas)
           , ""
-          , "Spec extra info:"
-          , either show T.unpack . runSpecTransM ctx $
-              Agda.ratifyDebug
-                <$> toSpecRep env
-                <*> toSpecRep st
-                <*> toSpecRep sig
           ]
 
   testConformance ctx env st@(RatifyState {rsEnactState}) sig@(RatifySignal actions) =

@@ -50,7 +50,13 @@ module Cardano.Ledger.Conway.Governance.Internal (
   epochStateIncrStakeDistrL,
   epochStateRegDrepL,
   epochStateUMapL,
+  ratifySignalL,
+  reStakeDistrL,
+  reStakePoolDistrL,
   reDRepDistrL,
+  reDRepStateL,
+  reCurrentEpochL,
+  reCommitteeStateL,
 
   -- * Exported for testing
   pparamsUpdateThreshold,
@@ -537,8 +543,11 @@ actionPriority InfoAction {} = 6
 reorderActions :: SS.StrictSeq (GovActionState era) -> SS.StrictSeq (GovActionState era)
 reorderActions = SS.fromList . sortOn (actionPriority . gasAction) . toList
 
-newtype RatifySignal era = RatifySignal (StrictSeq (GovActionState era))
+newtype RatifySignal era = RatifySignal {unRatifySignal :: StrictSeq (GovActionState era)}
   deriving (Eq, Show, Generic)
+
+ratifySignalL :: Lens' (RatifySignal era) (StrictSeq (GovActionState era))
+ratifySignalL = lens unRatifySignal (\x y -> x {unRatifySignal = y})
 
 instance EraPParams era => NFData (RatifySignal era)
 
@@ -551,6 +560,26 @@ data RatifyEnv era = RatifyEnv
   , reCommitteeState :: !(CommitteeState era)
   }
   deriving (Generic)
+
+reStakeDistrL ::
+  Lens' (RatifyEnv era) (Map (Credential 'Staking (EraCrypto era)) (CompactForm Coin))
+reStakeDistrL = lens reStakeDistr (\x y -> x {reStakeDistr = y})
+
+reStakePoolDistrL :: Lens' (RatifyEnv era) (PoolDistr (EraCrypto era))
+reStakePoolDistrL = lens reStakePoolDistr (\x y -> x {reStakePoolDistr = y})
+
+reDRepDistrL :: Lens' (RatifyEnv era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
+reDRepDistrL = lens reDRepDistr (\x y -> x {reDRepDistr = y})
+
+reDRepStateL ::
+  Lens' (RatifyEnv era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
+reDRepStateL = lens reDRepState (\x y -> x {reDRepState = y})
+
+reCurrentEpochL :: Lens' (RatifyEnv era) EpochNo
+reCurrentEpochL = lens reCurrentEpoch (\x y -> x {reCurrentEpoch = y})
+
+reCommitteeStateL :: Lens' (RatifyEnv era) (CommitteeState era)
+reCommitteeStateL = lens reCommitteeState (\x y -> x {reCommitteeState = y})
 
 deriving instance Show (RatifyEnv era)
 deriving instance Eq (RatifyEnv era)
@@ -579,6 +608,29 @@ instance Era era => NFData (RatifyEnv era) where
             ep `deepseq`
               rnf cs
 
+instance Era era => EncCBOR (RatifyEnv era) where
+  encCBOR env@(RatifyEnv _ _ _ _ _ _) =
+    let RatifyEnv {..} = env
+     in encode $
+          Rec (RatifyEnv @era)
+            !> To reStakeDistr
+            !> To reStakePoolDistr
+            !> To reDRepDistr
+            !> To reDRepState
+            !> To reCurrentEpoch
+            !> To reCommitteeState
+
+instance Era era => DecCBOR (RatifyEnv era) where
+  decCBOR =
+    decode $
+      RecD RatifyEnv
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+
 instance EraPParams era => EncCBOR (RatifyState era) where
   encCBOR (RatifyState es enacted expired delayed) =
     encode
@@ -588,6 +640,12 @@ instance EraPParams era => EncCBOR (RatifyState era) where
           !> To expired
           !> To delayed
       )
+
+instance EraPParams era => EncCBOR (RatifySignal era) where
+  encCBOR (RatifySignal govActions) = encCBOR govActions
+
+instance EraPParams era => DecCBOR (RatifySignal era) where
+  decCBOR = RatifySignal <$> decCBOR
 
 instance EraPParams era => DecCBOR (RatifyState era) where
   decCBOR = decode (RecD RatifyState <! From <! From <! From <! From)
@@ -601,6 +659,3 @@ instance EraPParams era => DecShareCBOR (RatifyState era) where
         <! From
         <! From
         <! From
-
-reDRepDistrL :: Lens' (RatifyEnv era) (Map (DRep (EraCrypto era)) (CompactForm Coin))
-reDRepDistrL = lens reDRepDistr (\x y -> x {reDRepDistr = y})

@@ -1,0 +1,4 @@
+:set -XTypeApplications
+:set -XDataKinds
+:set -package cardano-ledger-conformance
+:set prompt "debug-env> "

@@ -6,6 +6,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -88,6 +89,16 @@ data ConwayGovCertEnv era = ConwayGovCertEnv
   -- ^ All of the `UpdateCommittee` proposals
   }
   deriving (Generic)
+
+instance EraPParams era => EncCBOR (ConwayGovCertEnv era) where
+  encCBOR x@(ConwayGovCertEnv _ _ _ _) =
+    let ConwayGovCertEnv {..} = x
+     in encode $
+          Rec ConwayGovCertEnv
+            !> To cgcePParams
+            !> To cgceCurrentEpoch
+            !> To cgceCurrentCommittee
+            !> To cgceCommitteeProposals
 
 instance EraPParams era => NFData (ConwayGovCertEnv era)
 
