@@ -1560,17 +1560,13 @@ instance IsConwayUniv fn => HasSpec fn (CertsEnv (ConwayEra StandardCrypto))
 
 -- CompactForm
 
-class CoercibleLike a b where
+class Coercible a b => CoercibleLike a b where
   coerceSpec ::
-    ( IsConwayUniv fn
-    , Coercible a b
-    ) =>
+    IsConwayUniv fn =>
     Specification fn b ->
     Specification fn a
   getCoerceSpec ::
-    ( IsConwayUniv fn
-    , Coercible a b
-    ) =>
+    IsConwayUniv fn =>
     TypeSpec fn a ->
     Specification fn b
 
