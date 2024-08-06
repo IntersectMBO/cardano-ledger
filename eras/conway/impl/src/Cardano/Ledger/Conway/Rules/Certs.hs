@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -94,6 +95,18 @@ data CertsEnv era = CertsEnv
   , certsCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
   }
   deriving (Generic)
+
+instance EraTx era => EncCBOR (CertsEnv era) where
+  encCBOR x@(CertsEnv _ _ _ _ _ _) =
+    let CertsEnv {..} = x
+     in encode $
+          Rec CertsEnv
+            !> To certsTx
+            !> To certsPParams
+            !> To certsSlotNo
+            !> To certsCurrentEpoch
+            !> To certsCurrentCommittee
+            !> To certsCommitteeProposals
 
 deriving instance (EraPParams era, Eq (Tx era)) => Eq (CertsEnv era)
 deriving instance (EraPParams era, Show (Tx era)) => Show (CertsEnv era)

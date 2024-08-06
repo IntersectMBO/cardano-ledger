@@ -72,6 +72,7 @@ library testlib
     exposed-modules:
         Test.Cardano.Ledger.Api.State.Query
         Test.Cardano.Ledger.Api.Arbitrary
+        Test.Cardano.Ledger.Api.DebugTools
 
     visibility:       public
     hs-source-dirs:   testlib
@@ -83,8 +84,10 @@ library testlib
 
     build-depends:
         base,
+        bytestring,
         containers,
         cardano-ledger-api,
+        cardano-ledger-binary,
         cardano-ledger-core:{cardano-ledger-core, testlib}
 
 test-suite cardano-ledger-api-test

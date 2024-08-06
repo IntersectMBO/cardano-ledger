@@ -139,6 +139,17 @@ data GovEnv era = GovEnv
   }
   deriving (Generic)
 
+instance EraPParams era => EncCBOR (GovEnv era) where
+  encCBOR x@(GovEnv _ _ _ _ _) =
+    let GovEnv {..} = x
+     in encode $
+          Rec GovEnv
+            !> To geTxId
+            !> To geEpoch
+            !> To gePParams
+            !> To gePPolicy
+            !> To geCertState
+
 instance (NFData (PParams era), Era era) => NFData (GovEnv era)
 deriving instance (Show (PParams era), Era era) => Show (GovEnv era)
 deriving instance Eq (PParams era) => Eq (GovEnv era)
@@ -269,6 +280,14 @@ data GovSignal era = GovSignal
   }
   deriving (Generic)
 
+instance (EraPParams era, EraTxCert era) => EncCBOR (GovSignal era) where
+  encCBOR x@(GovSignal _ _ _) =
+    let GovSignal {..} = x
+     in encode $
+          Rec GovSignal
+            !> To gsVotingProcedures
+            !> To gsProposalProcedures
+            !> To gsCertificates
 deriving instance (EraPParams era, Eq (TxCert era)) => Eq (GovSignal era)
 deriving instance (EraPParams era, Show (TxCert era)) => Show (GovSignal era)
 

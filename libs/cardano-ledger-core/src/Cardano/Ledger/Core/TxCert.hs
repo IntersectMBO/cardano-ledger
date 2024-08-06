@@ -28,6 +28,7 @@ where
 
 import Cardano.Ledger.BaseTypes (kindObject)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), FromCBOR, ToCBOR)
+import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core.Era (Era (EraCrypto))
 import Cardano.Ledger.Core.PParams (PParams)
@@ -152,6 +153,12 @@ data PoolCert c
   | -- | A stake pool retirement certificate.
     RetirePool !(KeyHash 'StakePool c) !EpochNo
   deriving (Show, Generic, Eq, Ord)
+
+instance Crypto c => EncCBOR (PoolCert c) where
+  encCBOR =
+    encode . \case
+      RegPool pp -> Sum RegPool 0 !> To pp
+      RetirePool kh eNo -> Sum RetirePool 1 !> To kh !> To eNo
 
 instance NoThunks (PoolCert c)
 

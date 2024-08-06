@@ -553,9 +553,18 @@ infix 1 ==>
 
 textSizeN :: MonadFail m => Int -> Text -> m Text
 textSizeN n t =
-  if BS.length (encodeUtf8 t) <= n
-    then pure t
-    else fail $ "Text exceeds " ++ show n ++ " bytes:" ++ show t
+  let len = BS.length (encodeUtf8 t)
+   in if len <= n
+        then pure t
+        else
+          fail $
+            "Text exceeds "
+              ++ show n
+              ++ " bytes:"
+              ++ show t
+              ++ "\n  Got "
+              ++ show len
+              ++ " bytes instead.\n"
 
 textDecCBOR :: Int -> Decoder s Text
 textDecCBOR n = decCBOR >>= textSizeN n
@@ -577,6 +586,7 @@ newtype Url = Url {urlToText :: Text}
   deriving newtype (EncCBOR, NFData, NoThunks, FromJSON, ToJSON)
 
 instance DecCBOR Url where
+  decCBOR :: Decoder s Url
   decCBOR =
     Url
       <$> ifDecoderVersionAtLeast

@@ -6,6 +6,7 @@
 
 ## 1.14.0.0
 
+* Add `EncCBOR` instance for `PoolCert`
 * Add `mkTermToEvaluate` to `PlutusLanguage` class.
 * Add a field to `DebugFailure`
 * Convert `debugPlutus` to an `IO` action

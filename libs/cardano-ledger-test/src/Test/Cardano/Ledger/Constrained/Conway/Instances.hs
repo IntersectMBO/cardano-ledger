@@ -79,7 +79,8 @@ import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.Alonzo.TxWits
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes hiding (inject)
-import Cardano.Ledger.Binary (Sized (..))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..), Sized (..))
+import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
@@ -670,7 +671,15 @@ instance HasSimpleRep (Anchor c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (Anchor c)
 
 instance HasSimpleRep Url
-instance IsConwayUniv fn => HasSpec fn Url
+instance IsConwayUniv fn => HasSpec fn Url where
+  type TypeSpec fn Url = ()
+  emptySpec = ()
+  combineSpec _ _ = TrueSpec
+  genFromTypeSpec _ = pureGen arbitrary
+  cardinalTypeSpec _ = TrueSpec
+  shrinkWithTypeSpec _ = shrink
+  conformsTo _ _ = True
+  toPreds _ _ = toPred True
 
 instance IsConwayUniv fn => HasSpec fn Text where
   type TypeSpec fn Text = ()
@@ -1199,6 +1208,27 @@ data ProposalsSplit = ProposalsSplit
   , psOthers :: Integer
   }
   deriving (Show, Eq, Generic)
+
+instance EncCBOR ProposalsSplit where
+  encCBOR x@(ProposalsSplit _ _ _ _ _) =
+    let ProposalsSplit {..} = x
+     in encode $
+          Rec ProposalsSplit
+            !> To psPPChange
+            !> To psHFInitiation
+            !> To psUpdateCommittee
+            !> To psNewConstitution
+            !> To psOthers
+
+instance DecCBOR ProposalsSplit where
+  decCBOR =
+    decode $
+      RecD ProposalsSplit
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
 
 instance ToExpr ProposalsSplit
 
