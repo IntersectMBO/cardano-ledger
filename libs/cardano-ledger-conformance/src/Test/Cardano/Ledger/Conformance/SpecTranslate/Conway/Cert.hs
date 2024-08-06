@@ -30,7 +30,7 @@ import qualified Data.VMap as VMap
 import Lens.Micro
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (emptyDeposits)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
@@ -44,22 +44,20 @@ instance
   ) =>
   SpecTranslate ctx (CertEnv era)
   where
-  type SpecRep (CertEnv era) = Agda.CertEnv
+  type SpecRep (CertEnv era) = Agda.CertEnv'
   toSpecRep CertEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
     withdrawals <- askCtx @(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-    Agda.MkCertEnv
+    Agda.MkCertEnv'
       <$> toSpecRep ceCurrentEpoch
       <*> toSpecRep cePParams
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
-      -- TODO: replace with actual deposits map
-      <*> pure emptyDeposits
 
 instance SpecTranslate ctx (CertState era) where
-  type SpecRep (CertState era) = Agda.CertState
+  type SpecRep (CertState era) = Agda.CertState'
   toSpecRep CertState {..} =
-    Agda.MkCertState
+    Agda.MkCertState'
       <$> toSpecRep certDState
       <*> toSpecRep certPState
       <*> toSpecRep certVState

@@ -35,7 +35,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Lib as Agda
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (emptyDeposits)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
 import Test.Cardano.Ledger.Conway.TreeDiff (showExpr)
 
@@ -73,18 +73,16 @@ instance
   ) =>
   SpecTranslate ctx (ConwayGovCertEnv era)
   where
-  type SpecRep (ConwayGovCertEnv era) = Agda.CertEnv
+  type SpecRep (ConwayGovCertEnv era) = Agda.CertEnv'
 
   toSpecRep ConwayGovCertEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
     withdrawals <- askCtx @(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-    Agda.MkCertEnv
+    Agda.MkCertEnv'
       <$> toSpecRep cgceCurrentEpoch
       <*> toSpecRep cgcePParams
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
-      -- TODO: replace with actual deposits map
-      <*> pure emptyDeposits
 
 instance SpecTranslate ctx (ConwayGovCertPredFailure era) where
   type SpecRep (ConwayGovCertPredFailure era) = OpaqueErrorString
@@ -92,13 +90,14 @@ instance SpecTranslate ctx (ConwayGovCertPredFailure era) where
   toSpecRep = pure . OpaqueErrorString . showExpr
 
 instance SpecTranslate ctx (VState era) where
-  type SpecRep (VState era) = Agda.GState
+  type SpecRep (VState era) = Agda.GState'
 
   toSpecRep VState {..} =
-    Agda.MkGState
+    Agda.MkGState'
       <$> toSpecRep (drepExpiry <$> vsDReps)
       <*> toSpecRep
         (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState)
+      <*> undefined
 
 committeeCredentialToStrictMaybe ::
   CommitteeAuthorization c ->
