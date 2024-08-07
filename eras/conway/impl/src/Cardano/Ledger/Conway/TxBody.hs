@@ -130,11 +130,45 @@ import NoThunks.Class (NoThunks)
 instance Memoized ConwayTxBody where
   type RawType ConwayTxBody = ConwayTxBodyRaw
 
+-- | This is different in that it cannot contain bootstrap addresses
+data Address c = Address Network (PaymentCredential c) (StakeReference c)
+
+data TxSwap era = TxSwap
+  { txSwapAddr :: Address (EraCrypto era)
+  , txSwapValue :: !(Value era)
+  }
+
+data ConwaySubTxBodyRaw era = ConwaySubTxRaw
+  { cstrInputs :: !(OSet (TxIn (EraCrypto era)))
+  , cstrSwaps :: !(Seq (TxSwap era))
+  , cstrWithdrawals :: !(Withdrawals (EraCrypto era))
+  , cstrVldt :: !ValidityInterval
+  , cstrReqSignerHashes :: !(Set (KeyHash 'Witness (EraCrypto era)))
+  , cstrMint :: !(MultiAsset (EraCrypto era))
+  , cstrTxNetworkId :: !(StrictMaybe Network)
+  , cstrTreasuryDonation :: !Coin
+  , cstrDatums :: !(Map (SubTxPlutusPurpose AsIx era) (Data era))
+  }
+
+newtype ConwaySubTxBody era = SubTxBodyConstr (MemoBytes ConwaySubTxBodyRaw era)
+  deriving (Generic, SafeToHash, ToCBOR)
+
+
+data ConwaySubTxWitness era = ConwaySubTxWitness
+  { cstwAddrTxWits :: !(Set (SignedDSIGN c (Hash c EraIndependentSubTxBody)))
+  }
+
+data ConwayTxOut era =
+  SwapIndex { subTxIx :: Word16
+            , subTxSwapIx :: Word16
+            }
+  | BabbageTxOut (BabbageTxOutEra era)
+
 data ConwayTxBodyRaw era = ConwayTxBodyRaw
   { ctbrSpendInputs :: !(Set (TxIn (EraCrypto era)))
   , ctbrCollateralInputs :: !(Set (TxIn (EraCrypto era)))
   , ctbrReferenceInputs :: !(Set (TxIn (EraCrypto era)))
-  , ctbrOutputs :: !(StrictSeq (Sized (TxOut era)))
+  , ctbrOutputs :: !(StrictSeq (Sized (ConwayTxOut era)))
   , ctbrCollateralReturn :: !(StrictMaybe (Sized (TxOut era)))
   , ctbrTotalCollateral :: !(StrictMaybe Coin)
   , ctbrCerts :: !(OSet.OSet (ConwayTxCert era))
@@ -150,6 +184,7 @@ data ConwayTxBodyRaw era = ConwayTxBodyRaw
   , ctbrProposalProcedures :: !(OSet.OSet (ProposalProcedure era))
   , ctbrCurrentTreasuryValue :: !(StrictMaybe Coin)
   , ctbrTreasuryDonation :: !Coin
+  , ctbrSubTransactions :: !(StrictSeq (ConwaySubTx era))
   }
   deriving (Generic, Typeable)
 
