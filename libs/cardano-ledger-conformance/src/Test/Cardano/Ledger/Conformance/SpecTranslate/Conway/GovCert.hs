@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert () where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState (
   csCommitteeCreds,
+  drepDeposit,
   drepExpiry,
  )
 import Cardano.Ledger.Coin (Coin (..))
@@ -33,6 +34,7 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.LedgerState
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
@@ -96,4 +98,7 @@ instance SpecTranslate ctx (VState era) where
       <$> toSpecRep (drepExpiry <$> vsDReps)
       <*> toSpecRep
         (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState)
-      <*> undefined
+      <*> toSpecRep deposits
+    where
+      deposits =
+        Map.mapKeys DRepDeposit (drepDeposit <$> vsDReps)

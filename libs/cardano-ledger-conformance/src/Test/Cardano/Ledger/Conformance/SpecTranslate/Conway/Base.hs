@@ -24,6 +24,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   SpecTranslate (..),
   SpecTranslationError,
   ConwayExecEnactEnv (..),
+  DepositPurpose (..),
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), SignedDSIGN (..))
@@ -1066,3 +1067,26 @@ committeeCredentialToStrictMaybe ::
   StrictMaybe (Credential 'HotCommitteeRole c)
 committeeCredentialToStrictMaybe (CommitteeHotCredential c) = SJust c
 committeeCredentialToStrictMaybe (CommitteeMemberResigned _) = SNothing
+
+data DepositPurpose c
+  = CredentialDeposit !(Credential 'Staking c)
+  | PoolDeposit !(KeyHash 'StakePool c)
+  | DRepDeposit !(Credential 'DRepRole c)
+  | GovActionDeposit !(GovActionId c)
+  deriving (Generic, Eq, Show, Ord)
+
+instance ToExpr (DepositPurpose c)
+instance Crypto c => NFData (DepositPurpose c)
+instance HasSimpleRep (DepositPurpose c)
+instance (IsConwayUniv fn, Crypto c) => HasSpec fn (DepositPurpose c)
+
+instance SpecTranslate ctx (DepositPurpose c) where
+  type SpecRep (DepositPurpose c) = Agda.DepositPurpose
+  toSpecRep (CredentialDeposit cred) =
+    Agda.CredentialDeposit <$> toSpecRep cred
+  toSpecRep (PoolDeposit kh) =
+    Agda.PoolDeposit <$> toSpecRep kh
+  toSpecRep (DRepDeposit cred) =
+    Agda.DRepDeposit <$> toSpecRep cred
+  toSpecRep (GovActionDeposit gid) =
+    Agda.GovActionDeposit <$> toSpecRep gid

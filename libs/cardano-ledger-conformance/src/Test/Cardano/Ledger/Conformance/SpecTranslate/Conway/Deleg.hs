@@ -23,7 +23,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Shelley.LedgerState (DState (..))
 import Cardano.Ledger.Shelley.Rules
-import Cardano.Ledger.UMap (dRepMap, rewardMap, sPoolMap)
+import qualified Cardano.Ledger.UMap as UMap
 import qualified Data.Map.Strict as Map
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance (
@@ -82,7 +82,10 @@ instance SpecTranslate ctx (DState era) where
 
   toSpecRep DState {..} =
     Agda.MkDState'
-      <$> toSpecRep (dRepMap dsUnified)
-      <*> toSpecRep (sPoolMap dsUnified)
-      <*> toSpecRep (rewardMap dsUnified)
-      <*> undefined
+      <$> toSpecRep (UMap.dRepMap dsUnified)
+      <*> toSpecRep (UMap.sPoolMap dsUnified)
+      <*> toSpecRep (UMap.rewardMap dsUnified)
+      <*> toSpecRep deposits
+    where
+      deposits =
+        Map.mapKeys CredentialDeposit (UMap.depositMap dsUnified)
