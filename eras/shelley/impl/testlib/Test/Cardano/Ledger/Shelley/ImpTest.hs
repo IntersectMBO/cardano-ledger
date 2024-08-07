@@ -276,8 +276,8 @@ import Test.HUnit.Lang (FailureReason (..), HUnitFailure (..))
 import Test.Hspec.Core.Spec (
   Example (..),
   Params,
+  Result (..),
   paramsQuickCheckArgs,
-  resultStatus,
  )
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Random (QCGen (..), integerVariant, mkQCGen)
@@ -791,7 +791,7 @@ instance (ShelleyEraImp era, Arbitrary a, Show a, Testable prop) => Example (a -
           (r, testable) <- uncurry evalImpTestM (applyParamsQCGen params s) $ do
             t <- impTest x
             qcSize <- asks iteQuickCheckSize
-            StateGen qcGen <- subState split
+            StateGen qcGen <- subStateM split
             pure (Just (qcGen, qcSize), t)
           let params' = params {paramsQuickCheckArgs = args {replay = r, chatty = False}}
           res <- evaluateExample (property testable) params' (\f -> hook (\_st -> f ())) progressCallback

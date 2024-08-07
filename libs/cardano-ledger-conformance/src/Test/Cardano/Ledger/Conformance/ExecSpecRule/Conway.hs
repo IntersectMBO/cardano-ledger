@@ -6,9 +6,11 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
   nameEpoch,
   nameEnact,
   nameGovAction,
+  ConwayRatifyExecContext (..),
 ) where
 
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
+  ConwayRatifyExecContext (..),
   nameEnact,
   nameEpoch,
   nameGovAction,
