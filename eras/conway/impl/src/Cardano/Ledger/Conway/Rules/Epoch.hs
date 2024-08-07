@@ -192,17 +192,15 @@ returnProposalDeposits ::
 returnProposalDeposits removedProposals oldUMap =
   foldr' processProposal (oldUMap, mempty) removedProposals
   where
-    processProposal
-      gas
-      (um, unclaimed)
-        | UMap.member (raCredential (gasReturnAddr gas)) (RewDepUView um) =
-            ( UMap.adjust
-                (addReward (gasDeposit gas))
-                (raCredential (gasReturnAddr gas))
-                (RewDepUView um)
-            , unclaimed
-            )
-        | otherwise = (um, Map.insertWith (<>) (gasId gas) (gasDeposit gas) unclaimed)
+    processProposal gas (um, unclaimed)
+      | UMap.member (raCredential (gasReturnAddr gas)) (RewDepUView um) =
+          ( UMap.adjust
+              (addReward (gasDeposit gas))
+              (raCredential (gasReturnAddr gas))
+              (RewDepUView um)
+          , unclaimed
+          )
+      | otherwise = (um, Map.insertWith (<>) (gasId gas) (gasDeposit gas) unclaimed)
     addReward c rd =
       -- Deposits have been validated at this point
       rd {rdReward = rdReward rd <> compactCoinOrError c}
