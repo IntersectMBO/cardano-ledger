@@ -1628,7 +1628,6 @@ coerce_ ::
   , HasSpec fn a
   , HasSpec fn b
   , CoercibleLike a b
-  , Coercible a b
   ) =>
   Term fn a ->
   Term fn b
