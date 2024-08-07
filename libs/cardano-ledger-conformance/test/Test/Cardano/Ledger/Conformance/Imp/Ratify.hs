@@ -26,8 +26,9 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import qualified Data.Sequence.Strict as SSeq
 import Lens.Micro ((&), (.~))
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway ()
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (ConwayRatifyExecContext (..))
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
+  ConwayRatifyExecContext (..),
+ )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (ExecSpecRule (..))
 import Test.Cardano.Ledger.Constrained.Conway (ConwayFn)
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -35,7 +36,7 @@ import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 
 spec :: Spec
-spec = describe "RATIFY" . withImpStateWithProtVer @Conway (natVersion @10) $
+spec = describe "RATIFY" . withImpStateWithProtVer (natVersion @10) $
   it "NoConfidence accepted conforms" $ do
     modifyPParams $ \pp ->
       pp
