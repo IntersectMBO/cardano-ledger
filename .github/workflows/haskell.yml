@@ -279,27 +279,6 @@ jobs:
     - name: Unarchive working directory
       run: tar -xf state.tar && rm state.tar
 
-    # A dependencies.txt file should have been created by the build job, so we
-    # check if it exists and is not empty.
-    - name: Check dependencies to be used as cache keys
-      id: check-deps
-      run: |
-        ./scripts/file-not-null.sh dependencies.txt
-
-    - name: Restore cache
-      uses: actions/cache/restore@v4
-      id: restore-cabal-cache
-      env:
-        cache-name: cache-cabal-build
-      with:
-        path: |
-          ${{ steps.install-haskell.outputs.cabal-store }}
-        key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
-        # The cache with this specific key should have been created by the build
-        # job. If the cache is missing, something is terribly wrong! We fail the
-        # test job, or otherwise we would start rebuilding all the dependencies.
-        fail-on-cache-miss: true
-
     - name: Cabal update
       run: cabal update
 
