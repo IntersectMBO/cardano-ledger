@@ -423,7 +423,7 @@ proposalsRemoveWithDescendants ::
 proposalsRemoveWithDescendants gais ps@(Proposals omap _roots graph) =
   proposalsRemoveIds (gais <> foldMap getAllDescendants gais) ps
   where
-    -- Recursively aet all of the descendants for those actions that have lineage
+    -- Recursively get all of the descendants for those actions that have lineage
     getAllDescendants gai =
       case OMap.lookup gai omap of
         Nothing -> assert False mempty
@@ -454,9 +454,9 @@ proposalsApplyEnactment ::
   )
 proposalsApplyEnactment enactedGass expiredGais props =
   let (unexpiredProposals, expiredRemoved) = proposalsRemoveWithDescendants expiredGais props
-      (enactedProposalsState, enactedRemoved) =
+      (enactedProposalsState, removedDueToEnactment) =
         F.foldl' enact (unexpiredProposals, Map.empty) enactedGass
-   in (enactedProposalsState, enactedRemoved, expiredRemoved)
+   in (enactedProposalsState, removedDueToEnactment, expiredRemoved)
   where
     enact (!ps, !removed) gas = withGovActionParent gas enactWithoutRoot enactFromRoot
       where
