@@ -28,6 +28,7 @@ module Cardano.Ledger.Shelley.Tx (
   witsShelleyTxL,
   auxDataShelleyTxL,
   sizeShelleyTxF,
+  wireSizeShelleyTxF,
   segwitTx,
   mkBasicShelleyTx,
   shelleyMinFeeTx,
@@ -86,6 +87,7 @@ import Data.Maybe.Strict (
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Data.Word (Word32)
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (^.))
 import NoThunks.Class (NoThunks (..))
@@ -168,6 +170,14 @@ sizeShelleyTxF :: Era era => SimpleGetter (ShelleyTx era) Integer
 sizeShelleyTxF = to (\(TxConstr (Memo _ bytes)) -> fromIntegral $ SBS.length bytes)
 {-# INLINEABLE sizeShelleyTxF #-}
 
+wireSizeShelleyTxF :: Era era => SimpleGetter (ShelleyTx era) Word32
+wireSizeShelleyTxF = to $ \(TxConstr (Memo _ bytes)) ->
+  let n = SBS.length bytes
+   in if n <= fromIntegral (maxBound :: Word32)
+        then fromIntegral n
+        else error $ "Impossible: Size of the transaction is too big: " ++ show n
+{-# INLINEABLE wireSizeShelleyTxF #-}
+
 mkShelleyTx :: EraTx era => ShelleyTxRaw era -> ShelleyTx era
 mkShelleyTx = TxConstr . memoBytes . encodeShelleyTxRaw
 {-# INLINEABLE mkShelleyTx #-}
@@ -199,6 +209,9 @@ instance Crypto c => EraTx (ShelleyEra c) where
 
   sizeTxF = sizeShelleyTxF
   {-# INLINE sizeTxF #-}
+
+  wireSizeTxF = wireSizeShelleyTxF
+  {-# INLINE wireSizeTxF #-}
 
   validateNativeScript = validateMultiSig
   {-# INLINE validateNativeScript #-}

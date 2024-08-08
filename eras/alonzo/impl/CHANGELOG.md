@@ -2,6 +2,8 @@
 
 ## 1.10.1.0
 
+* Added `wireSizeAlonzoTxF`
+
 ### `testlib`
 
 * Export `fixupRedeemerIndices` from `Alonzo.ImpTest`
