@@ -160,14 +160,14 @@ jobs:
     - name: Archive working directory
       # pax format is needed to avoid unnecessary rebuilding, because the
       # default format uses a one-second resolution for timestamps
-      run: tar --format pax -cf /var/tmp/state.tar . && mv /var/tmp/state.tar .
+      run: tar --use-compress-program zstdmt --format pax -cf /var/tmp/state.tzst . && mv /var/tmp/state.tzst .
     - name: Upload working directory archive
       # upload-artifact is pinned to avoid a bug in download-artifact
       # See https://github.com/actions/download-artifact/issues/328
       uses: actions/upload-artifact@v4.2.0
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
-        path: state.tar
+        path: state.tzst
         overwrite: true
         retention-days: 1
 
@@ -297,7 +297,7 @@ jobs:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
 
     - name: Unarchive working directory
-      run: tar -xf state.tar && rm state.tar
+      run: tar -xf state.tzst --use-compress-program unzstd && rm state.tzst
 
     - name: Cabal update
       run: cabal update
