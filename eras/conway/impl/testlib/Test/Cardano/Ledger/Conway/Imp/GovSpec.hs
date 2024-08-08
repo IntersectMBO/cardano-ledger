@@ -48,7 +48,6 @@ import Test.Cardano.Ledger.Imp.Common hiding (Success)
 spec ::
   forall era.
   ( ConwayEraImp era
-  , GovState era ~ ConwayGovState era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
@@ -108,6 +107,7 @@ predicateFailuresSpec =
       pp <- getsNES $ nesEsL . curPParamsEpochStateL
       committeeC <- KeyHashObj <$> freshKeyHash
       rewardAccount <- registerRewardAccount
+      anchor <- arbitrary
       let expiration = EpochNo 1
           action =
             UpdateCommittee
@@ -121,50 +121,35 @@ predicateFailuresSpec =
             { pProcReturnAddr = rewardAccount
             , pProcGovAction = action
             , pProcDeposit = pp ^. ppGovActionDepositL
-            , pProcAnchor = def
+            , pProcAnchor = anchor
             }
         )
         [injectFailure $ ExpirationEpochTooSmall $ Map.singleton committeeC expiration]
+    -- TODO: mark as bootstrap relevant
     it "ProposalDepositIncorrect" $ do
-      committeeC <- KeyHashObj <$> freshKeyHash
       rewardAccount <- registerRewardAccount
-      let expiration = EpochNo 1
-          actionDeposit = Coin 2
-          action =
-            UpdateCommittee
-              SNothing
-              mempty
-              (Map.singleton committeeC expiration)
-              (0 %! 1)
-      modifyPParams $ ppGovActionDepositL .~ actionDeposit
+      actionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
+      anchor <- arbitrary
       submitFailingProposal
         ( ProposalProcedure
             { pProcReturnAddr = rewardAccount
-            , pProcGovAction = action
+            , pProcGovAction = InfoAction
             , pProcDeposit = actionDeposit <-> Coin 1
-            , pProcAnchor = def
+            , pProcAnchor = anchor
             }
         )
         [injectFailure $ ProposalDepositIncorrect (actionDeposit <-> Coin 1) actionDeposit]
     it "ConflictingCommitteeUpdate" $ do
-      pp <- getsNES $ nesEsL . curPParamsEpochStateL
       committeeC <- KeyHashObj <$> freshKeyHash
-      rewardAccount <- registerRewardAccount
-      let expiration = EpochNo 1
-          action =
+      curEpochNo <- getsNES nesELL
+      let action =
             UpdateCommittee
               SNothing
               (Set.singleton committeeC)
-              (Map.singleton committeeC expiration)
-              (0 %! 1)
-      submitFailingProposal
-        ( ProposalProcedure
-            { pProcReturnAddr = rewardAccount
-            , pProcGovAction = action
-            , pProcDeposit = pp ^. ppGovActionDepositL
-            , pProcAnchor = def
-            }
-        )
+              (Map.singleton committeeC (addEpochInterval curEpochNo (EpochInterval 1)))
+              (1 %! 1)
+      submitFailingGovAction
+        action
         [injectFailure $ ConflictingCommitteeUpdate $ Set.singleton committeeC]
 
 hardForkSpec ::
@@ -265,9 +250,7 @@ pparamUpdateSpec =
 
 proposalsWithVotingSpec ::
   forall era.
-  ( ConwayEraImp era
-  , GovState era ~ ConwayGovState era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpTestState era)
 proposalsWithVotingSpec =
   describe "Proposals" $ do
@@ -821,7 +804,6 @@ votingSpec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  , GovState era ~ ConwayGovState era
   ) =>
   SpecWith (ImpTestState era)
 votingSpec =
@@ -848,26 +830,29 @@ votingSpec =
           (DRepVoter drep)
           dummyGaid
           [injectFailure $ GovActionsDoNotExist $ pure dummyGaid]
-      it
-        "committee member voting on committee change"
-        committeeMemberVotingOnCommitteeChange
-      it "non-committee-member voting on committee change as a committee member" $ do
-        credCandidate <- KeyHashObj <$> freshKeyHash
+      it "committee member can not vote on UpdateCommittee action" $ do
+        (ccHot :| _) <- registerInitialCommittee
+        newMembers <- listOf $ do
+          newCommitteeMember <- KeyHashObj <$> freshKeyHash
+          Positive lifetime <- arbitrary
+          pure (newCommitteeMember, EpochInterval lifetime)
+        threshold <- arbitrary
+        committeeUpdateId <- submitUpdateCommittee Nothing mempty newMembers threshold
+        let voter = CommitteeVoter ccHot
+        submitFailingVote
+          voter
+          committeeUpdateId
+          [ injectFailure $ DisallowedVoters [(voter, committeeUpdateId)]
+          ]
+      it "committee member can not vote on NoConfidence action" $ do
         hotCred :| _ <- registerInitialCommittee
-        committeeUpdateId <-
-          submitGovAction $
-            UpdateCommittee
-              SNothing
-              mempty
-              (Map.singleton credCandidate $ EpochNo 28)
-              (3 %! 5)
+        gaid <- submitGovAction $ NoConfidence SNothing
         let voter = CommitteeVoter hotCred
-        trySubmitVote VoteNo voter committeeUpdateId
+        trySubmitVote VoteNo voter gaid
           `shouldReturn` Left
-            [ injectFailure $ DisallowedVoters [(voter, committeeUpdateId)]
+            [ injectFailure $ DisallowedVoters [(voter, gaid)]
             ]
-      it
-        "committee member can't vote on committee update when sandwiched between other votes"
+      it "committee member mixed with other voters can not vote on UpdateCommittee action" $ do
         ccVoteOnConstitutionFailsWithMultipleVotes
       it "CC cannot ratify if below threshold" $ do
         modifyPParams $ \pp ->
@@ -878,16 +863,13 @@ votingSpec =
         ccColdCred0 <- KeyHashObj <$> freshKeyHash
         ccColdCred1 <- KeyHashObj <$> freshKeyHash
         electionGovAction <-
-          submitGovAction $
-            UpdateCommittee
-              SNothing
-              mempty
-              ( Map.fromList
-                  [ (ccColdCred0, EpochNo 10)
-                  , (ccColdCred1, EpochNo 10)
-                  ]
-              )
-              (3 %! 5)
+          submitUpdateCommittee
+            Nothing
+            mempty
+            [ (ccColdCred0, EpochInterval 10)
+            , (ccColdCred1, EpochInterval 10)
+            ]
+            (3 %! 5)
         submitYesVote_ (DRepVoter dRepCred) electionGovAction
         logAcceptedRatio electionGovAction
         passNEpochs 3
@@ -925,7 +907,6 @@ votingSpec =
 constitutionSpec ::
   forall era.
   ( ConwayEraImp era
-  , GovState era ~ ConwayGovState era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
@@ -1282,29 +1263,6 @@ secondHardForkCantFollow = do
     )
     [injectFailure $ ProposalCantFollow (SJust (GovPurposeId gaid1)) protver2 protver1]
 
-committeeMemberVotingOnCommitteeChange ::
-  forall era.
-  ( ConwayEraImp era
-  , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
-  ) =>
-  ImpTestM era ()
-committeeMemberVotingOnCommitteeChange = do
-  (ccHot :| _) <- registerInitialCommittee
-  khCommittee <- KeyHashObj <$> freshKeyHash
-  committeeUpdateId <-
-    submitGovAction $
-      UpdateCommittee
-        SNothing
-        mempty
-        (Map.singleton khCommittee $ EpochNo 28)
-        (3 %! 5)
-  let voter = CommitteeVoter ccHot
-  submitFailingVote
-    voter
-    committeeUpdateId
-    [ injectFailure $ DisallowedVoters [(voter, committeeUpdateId)]
-    ]
-
 ccVoteOnConstitutionFailsWithMultipleVotes ::
   forall era.
   ( ConwayEraImp era
@@ -1317,12 +1275,7 @@ ccVoteOnConstitutionFailsWithMultipleVotes = do
   drepCred2 <- KeyHashObj <$> registerDRep
   newCommitteeMember <- KeyHashObj <$> freshKeyHash
   committeeProposal <-
-    submitGovAction $
-      UpdateCommittee
-        SNothing
-        mempty
-        (Map.singleton newCommitteeMember $ EpochNo 10)
-        (1 %! 2)
+    submitUpdateCommittee Nothing mempty [(newCommitteeMember, EpochInterval 10)] (1 %! 2)
   let
     voteTx =
       mkBasicTx $
@@ -1404,8 +1357,9 @@ bootstrapPhaseSpec =
       checkProposalFailure proposal
     it "UpdateCommittee" $ do
       cCred <- KeyHashObj <$> freshKeyHash
-      let action = UpdateCommittee SNothing mempty [(cCred, EpochNo 30)] (1 %! 1)
-      proposal <- proposalWithRewardAccount action
+      curEpochNo <- getsNES nesELL
+      let newMembers = [(cCred, addEpochInterval curEpochNo (EpochInterval 30))]
+      proposal <- proposalWithRewardAccount $ UpdateCommittee SNothing mempty newMembers (1 %! 1)
       checkProposalFailure proposal
     it "NewConstitution" $ do
       constitution <- arbitrary

@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..), unRedeemers)
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), inject, natVersion)
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), natVersion)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (asWitness, witVKeyHash)
@@ -144,7 +144,7 @@ spec = describe "Invalid transactions" $ do
             let addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
             let tx =
                   mkBasicTx mkBasicTxBody
-                    & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr (inject (Coin 10))]
+                    & bodyTxL . outputsTxBodyL .~ [mkBasicTxOut addr mempty]
             let resetDataHash = dataHashTxOutL .~ SNothing
             let resetTxOutDataHash =
                   bodyTxL . outputsTxBodyL

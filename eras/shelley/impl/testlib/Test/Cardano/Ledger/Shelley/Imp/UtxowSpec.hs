@@ -37,16 +37,14 @@ spec ::
 spec = describe "UTXOW" $ do
   describe "Bootstrap Witness" $ do
     it "Valid Witnesses" $ do
-      modifyPParams (ppMaxTxSizeL .~ 1000)
       aliceBootAddr <- freshBootstapAddress
-      txIn <- sendCoinTo (AddrBootstrap aliceBootAddr) (Coin 1000000)
+      txIn <- sendCoinTo (AddrBootstrap aliceBootAddr) mempty
       let txBody = mkBasicTxBody & inputsTxBodyL .~ [txIn]
       submitTx_ (mkBasicTx txBody)
     it "InvalidWitnessesUTXOW" $ do
-      modifyPParams (ppMaxTxSizeL .~ 1000)
       aliceBootAddr@(BootstrapAddress aliceByronAddr) <- freshBootstapAddress
       aliceByronKeyPair <- lookupByronKeyPair aliceBootAddr
-      txIn <- sendCoinTo (AddrBootstrap aliceBootAddr) (Coin 1000000)
+      txIn <- sendCoinTo (AddrBootstrap aliceBootAddr) mempty
       let (aliceVKey, _) = unpackByronVKey (bkpVerificationKey aliceByronKeyPair)
           txBody = mkBasicTxBody & inputsTxBodyL .~ [txIn]
 
@@ -65,7 +63,7 @@ spec = describe "UTXOW" $ do
 
   it "MissingVKeyWitnessesUTXOW" $ do
     aliceKh <- freshKeyHash
-    txIn <- sendCoinTo (Addr Testnet (KeyHashObj aliceKh) StakeRefNull) (Coin 99)
+    txIn <- sendCoinTo (Addr Testnet (KeyHashObj aliceKh) StakeRefNull) mempty
     let tx = mkBasicTx $ mkBasicTxBody & inputsTxBodyL <>~ [txIn]
     let isAliceWitness wit = witVKeyHash wit == asWitness aliceKh
     withPostFixup (pure . (witsTxL . addrTxWitsL %~ Set.filter (not . isAliceWitness))) $
@@ -87,14 +85,19 @@ spec = describe "UTXOW" $ do
       ]
 
   it "MissingTxBodyMetadataHash" $ do
+    -- We can't have the size of generated auxData change, since that would affect the
+    -- hard coded fee. Therefore we fix the seed.
+    impSetSeed 12345
     auxData <- arbitrary @(TxAuxData era)
     let auxDataHash = hashTxAuxData auxData
-    let tx = mkBasicTx mkBasicTxBody & auxDataTxL .~ SJust auxData
-    submitFailingTx
-      tx
-      [ injectFailure $
-          MissingTxBodyMetadataHash auxDataHash
-      ]
+        tx = mkBasicTx $ mkBasicTxBody & feeTxBodyL .~ Coin 166249
+        addAuxData fixedTx = pure (fixedTx & auxDataTxL .~ SJust auxData)
+    withPostFixup addAuxData $
+      submitFailingTx
+        tx
+        [ injectFailure $
+            MissingTxBodyMetadataHash auxDataHash
+        ]
 
   it "MissingTxMetadata" $ do
     auxData <- arbitrary @(TxAuxData era)

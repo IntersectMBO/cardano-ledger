@@ -12,6 +12,7 @@ where
 import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Binary
 import Cardano.Ledger.Core
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Shelley (Shelley)
@@ -46,21 +47,21 @@ maryTranslationTests =
   testGroup
     "Mary translation binary compatibiliby tests"
     [ testProperty "Tx compatibility" $
-        translateEraEncoding @Mary @S.ShelleyTx () toCBOR toCBOR
+        translateEraEncoding @Mary @S.ShelleyTx NoGenesis toCBOR toCBOR
     , testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates)
     , testProperty "ShelleyGovState compatibility" $
-        translateEraEncoding @Mary @S.ShelleyGovState () toCBOR toCBOR
+        translateEraEncoding @Mary @S.ShelleyGovState NoGenesis toCBOR toCBOR
     , testProperty "TxOut compatibility" (test @S.ShelleyTxOut)
     , testProperty "UTxO compatibility" $
-        translateEraEncoding @Mary @S.UTxO () toCBOR toCBOR
+        translateEraEncoding @Mary @S.UTxO NoGenesis toCBOR toCBOR
     , testProperty "UTxOState compatibility" $
-        translateEraEncoding @Mary @S.UTxOState () toCBOR toCBOR
+        translateEraEncoding @Mary @S.UTxOState NoGenesis toCBOR toCBOR
     , testProperty "LedgerState compatibility" $
-        translateEraEncoding @Mary @S.LedgerState () toCBOR toCBOR
+        translateEraEncoding @Mary @S.LedgerState NoGenesis toCBOR toCBOR
     , testProperty "EpochState compatibility" $
-        translateEraEncoding @Mary @S.EpochState () toCBOR toCBOR
+        translateEraEncoding @Mary @S.EpochState NoGenesis toCBOR toCBOR
     , testProperty "ShelleyTxWits compatibility" $
-        translateEraEncoding @Mary @S.ShelleyTxWits () toCBOR toCBOR
+        translateEraEncoding @Mary @S.ShelleyTxWits NoGenesis toCBOR toCBOR
     , testProperty "Update compatibility" (test @S.Update)
     ]
 
@@ -73,4 +74,4 @@ test ::
   ) =>
   f Allegra ->
   Assertion
-test = translateEraEncCBOR ([] :: [Mary]) ()
+test = translateEraEncCBOR ([] :: [Mary]) NoGenesis

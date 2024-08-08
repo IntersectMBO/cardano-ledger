@@ -53,8 +53,6 @@ import Lens.Micro
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-type instance TranslationContext (BabbageEra c) = ()
-
 instance
   Crypto c =>
   TranslateEra (BabbageEra c) NewEpochState

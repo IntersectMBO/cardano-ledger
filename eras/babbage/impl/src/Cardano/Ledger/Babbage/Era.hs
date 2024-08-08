@@ -14,6 +14,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Genesis (EraGenesis, NoGenesis)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Rules (
@@ -39,6 +40,10 @@ instance Crypto c => Era (BabbageEra c) where
   type ProtVerHigh (BabbageEra c) = 8
 
   eraName = "Babbage"
+
+instance Crypto c => EraGenesis (BabbageEra c)
+
+type instance TranslationContext (BabbageEra c) = NoGenesis (BabbageEra c)
 
 type instance Value (BabbageEra c) = MaryValue c
 

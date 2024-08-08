@@ -8,6 +8,7 @@ module Cardano.Ledger.Mary.Transition (TransitionConfig (..)) where
 import Cardano.Ledger.Allegra
 import Cardano.Ledger.Allegra.Transition
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary.Era
 import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Shelley.Transition
@@ -21,11 +22,11 @@ instance Crypto c => EraTransition (MaryEra c) where
     }
     deriving (Show, Eq, NoThunks, ToJSON, FromJSON)
 
-  mkTransitionConfig () = MaryTransitionConfig
+  mkTransitionConfig NoGenesis = MaryTransitionConfig
 
   injectIntoTestState = registerInitialFundsThenStaking
 
   tcPreviousEraConfigL =
     lens mtcAllegraTransitionConfig (\mtc pc -> mtc {mtcAllegraTransitionConfig = pc})
 
-  tcTranslationContextL = lens (const ()) (const . id)
+  tcTranslationContextL = lens (const NoGenesis) (const . id)

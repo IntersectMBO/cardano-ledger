@@ -17,6 +17,7 @@ import Cardano.Ledger.Allegra.Tx ()
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Core
 import Cardano.Ledger.Shelley.LedgerState (
@@ -111,7 +112,7 @@ instance Crypto c => TranslateEra (AllegraEra c) ShelleyGovState where
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) ShelleyTxOut where
-  translateEra () = pure . upgradeTxOut
+  translateEra NoGenesis = pure . upgradeTxOut
 
 instance Crypto c => TranslateEra (AllegraEra c) UTxO where
   translateEra ctxt utxo =

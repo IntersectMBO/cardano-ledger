@@ -8,6 +8,7 @@ module Test.Cardano.Ledger.Mary.Examples.Consensus where
 
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
@@ -27,7 +28,7 @@ ledgerExamplesMary =
     (exampleMultiAssetValue 1)
     ((exampleAllegraTxBody (exampleMultiAssetValue 1)) & mintTxBodyL .~ exampleMultiAsset 1)
     exampleAllegraTxAuxData
-    mempty
+    NoGenesis
 
 exampleMultiAssetValue :: Crypto c => Int -> MaryValue c
 exampleMultiAssetValue x = MaryValue (Coin 100) $ exampleMultiAsset x

@@ -14,6 +14,7 @@ import Cardano.Ledger.Allegra.TxAuxData
 import Cardano.Ledger.Allegra.TxBody
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Slotting.Slot
@@ -33,7 +34,7 @@ ledgerExamplesAllegra =
     exampleCoin
     (exampleAllegraTxBody exampleCoin)
     exampleAllegraTxAuxData
-    ()
+    NoGenesis
 
 exampleAllegraTxBody ::
   forall era.

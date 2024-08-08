@@ -35,6 +35,7 @@ import Cardano.Ledger.Babbage.TxBody (
 import Cardano.Ledger.Babbage.TxInfo ()
 import Cardano.Ledger.Babbage.UTxO ()
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Keys (DSignable, Hash)
 import qualified Cardano.Ledger.Shelley.API as API
 
@@ -50,4 +51,4 @@ instance (Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock
 instance Crypto c => API.CanStartFromGenesis (BabbageEra c) where
   type AdditionalGenesisConfig (BabbageEra c) = AlonzoGenesis
 
-  fromShelleyPParams ag = translateEra' () . API.fromShelleyPParams ag
+  fromShelleyPParams ag = translateEra' NoGenesis . API.fromShelleyPParams ag

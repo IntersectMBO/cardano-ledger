@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Allegra.ImpTest (
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Allegra.Core
@@ -43,13 +44,12 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (AllegraEra c)
   where
-  initImpTestState = pure ()
-
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
 
   fixupTx = shelleyFixupTx

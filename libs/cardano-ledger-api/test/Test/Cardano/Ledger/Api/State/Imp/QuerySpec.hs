@@ -4,7 +4,6 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Api.State.Imp.QuerySpec where
 
@@ -22,8 +21,6 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   ConwayEraGov (..),
-  ConwayGovState,
-  EraGov (..),
   GovAction (..),
  )
 import Cardano.Ledger.Conway.PParams (ppDRepActivityL)
@@ -35,7 +32,6 @@ import Cardano.Ledger.Shelley.LedgerState
 import Data.Default (def)
 import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust)
 import qualified Data.Set as Set
 import Lens.Micro
 import Lens.Micro.Mtl
@@ -45,84 +41,102 @@ import Test.Cardano.Ledger.Imp.Common
 
 spec ::
   forall era.
-  ( HasCallStack
-  , ConwayEraImp era
-  , GovState era ~ ConwayGovState era
-  ) =>
+  ConwayEraImp era =>
   SpecWith (ImpTestState era)
 spec = do
   describe "DRep" $ do
     describe "Expiries are reported correctly" $ do
+      let drepStateFromQuery ::
+            (HasCallStack, Monad m) =>
+            Credential 'DRepRole (EraCrypto era) ->
+            NewEpochState era ->
+            m (DRepState (EraCrypto era))
+          drepStateFromQuery drep nes =
+            case Map.lookup drep (queryDRepState nes mempty) of
+              Nothing -> error $ "Expected for DRep " ++ show drep ++ " to be present in the query result"
+              Just state -> pure state
       it "simple expiry" $ do
-        modifyPParams $ ppDRepActivityL .~ EpochInterval 3
+        curEpochNo <- getsNES nesELL
+        let drepActivity = 3
+        modifyPParams $ ppDRepActivityL .~ EpochInterval drepActivity
         (drep, _, _) <- setupSingleDRep 1_000_000
         nes <- getsNES id
-        let result = queryDRepState nes mempty
-        result `shouldSatisfy` Map.member drep
-        let state = fromJust $ Map.lookup drep result
-        state ^. drepExpiryL `shouldBe` EpochNo 3
-        passNEpochsChecking 4 $
+        drepState <- drepStateFromQuery drep nes
+        drepState ^. drepExpiryL `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
+        let n = 4
+        passNEpochsChecking n $
           isDRepExpired drep `shouldReturn` False
-        expectDRepExpiry drep 3
-        expectActualDRepExpiry drep 7
+        expectDRepExpiry drep $ addEpochInterval curEpochNo $ EpochInterval drepActivity
+        expectActualDRepExpiry drep $
+          addEpochInterval curEpochNo $
+            EpochInterval (drepActivity + fromIntegral n)
       it "proposals are made and numDormantEpochs are added" $ do
-        modifyPParams $ ppDRepActivityL .~ EpochInterval 3
+        curEpochNo <- getsNES nesELL
+        let drepActivity = 3
+        modifyPParams $ ppDRepActivityL .~ EpochInterval drepActivity
         let submitParamChangeProposal =
               submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
         (drep, _, _) <- setupSingleDRep 1_000_000
         nes <- getsNES id
-        let result = queryDRepState nes mempty
-        result `shouldSatisfy` Map.member drep
-        let state = fromJust $ Map.lookup drep result
-        state ^. drepExpiryL `shouldBe` EpochNo 3
-        passNEpochsChecking 2 $
+        drepState <- drepStateFromQuery drep nes
+        drepState ^. drepExpiryL `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
+        let n = 2
+            actualExpiry = addEpochInterval curEpochNo $ EpochInterval (drepActivity + fromIntegral n)
+        passNEpochsChecking n $
           isDRepExpired drep `shouldReturn` False
-        expectActualDRepExpiry drep 5
-        expectDRepExpiry drep 3
+        expectActualDRepExpiry drep actualExpiry
+        expectDRepExpiry drep $ addEpochInterval curEpochNo $ EpochInterval drepActivity
         void submitParamChangeProposal
-        expectDRepExpiry drep 5
+        expectDRepExpiry drep actualExpiry
         nes1 <- getsNES id
-        let result1 = queryDRepState nes1 mempty
-        let state1 = fromJust $ Map.lookup drep result1
-        state1 ^. drepExpiryL `shouldBe` EpochNo 5
-        passNEpochsChecking 3 $
+        drepState1 <- drepStateFromQuery drep nes1
+        drepState1 ^. drepExpiryL `shouldBe` actualExpiry
+        passNEpochsChecking (fromIntegral drepActivity) $
           isDRepExpired drep `shouldReturn` False
         passEpoch
         isDRepExpired drep `shouldReturn` True
       it "update certificates are submitted and proposals are made" $ do
-        modifyPParams $ ppDRepActivityL .~ EpochInterval 3
+        curEpochNo <- getsNES nesELL
+        let drepActivity = 3
+        modifyPParams $ ppDRepActivityL .~ EpochInterval drepActivity
         let submitParamChangeProposal =
               submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
         (drep, _, _) <- setupSingleDRep 1_000_000
         nes <- getsNES id
-        let result = queryDRepState nes mempty
-        result `shouldSatisfy` Map.member drep
-        let state = fromJust $ Map.lookup drep result
-        state ^. drepExpiryL `shouldBe` EpochNo 3
-        passNEpochsChecking 3 $
+        drepState <- drepStateFromQuery drep nes
+        drepState ^. drepExpiryL `shouldBe` addEpochInterval curEpochNo (EpochInterval drepActivity)
+        let n = 3
+        passNEpochsChecking n $
           isDRepExpired drep `shouldReturn` False
-        expectNumDormantEpochs 3
-        expectDRepExpiry drep 3
-        expectActualDRepExpiry drep 6
+        expectNumDormantEpochs $ EpochNo (fromIntegral n)
+        expectDRepExpiry drep $ addEpochInterval curEpochNo $ EpochInterval drepActivity
+        expectActualDRepExpiry drep $
+          addEpochInterval curEpochNo $
+            EpochInterval (drepActivity + fromIntegral n)
         updateDRep drep
-        expectDRepExpiry drep 3
-        expectActualDRepExpiry drep 6
-        expectNumDormantEpochs 3
+        expectDRepExpiry drep $ addEpochInterval curEpochNo $ EpochInterval drepActivity
+        expectActualDRepExpiry drep $
+          addEpochInterval curEpochNo $
+            EpochInterval (drepActivity + fromIntegral n)
+        expectNumDormantEpochs $ EpochNo (fromIntegral n)
         nes1 <- getsNES id
-        let result1 = queryDRepState nes1 mempty
-        let state1 = fromJust $ Map.lookup drep result1
-        state1 ^. drepExpiryL `shouldBe` EpochNo 6
-        expectDRepExpiry drep 3
+        drepState1 <- drepStateFromQuery drep nes1
+        drepState1
+          ^. drepExpiryL
+            `shouldBe` addEpochInterval
+              curEpochNo
+              (EpochInterval (drepActivity + fromIntegral n))
+        expectDRepExpiry drep $ addEpochInterval curEpochNo $ EpochInterval drepActivity
         passEpoch
-        expectNumDormantEpochs 4
+        expectNumDormantEpochs $ EpochNo (fromIntegral n + 1)
         void submitParamChangeProposal
-        expectNumDormantEpochs 0
+        expectNumDormantEpochs $ EpochNo 0
         nes2 <- getsNES id
-        let result2 = queryDRepState nes2 mempty
-        let state2 = fromJust $ Map.lookup drep result2
-        state2 ^. drepExpiryL `shouldBe` EpochNo 7
-        expectActualDRepExpiry drep 7
-        passNEpochsChecking 3 $ do
+        drepState2 <- drepStateFromQuery drep nes2
+        let drepExpiry2 = addEpochInterval curEpochNo $ EpochInterval (drepActivity + fromIntegral n + 1)
+        drepState2 ^. drepExpiryL `shouldBe` drepExpiry2
+        expectActualDRepExpiry drep drepExpiry2
+        passNEpochsChecking (fromIntegral drepActivity) $ do
           isDRepExpired drep `shouldReturn` False
         passEpoch
         isDRepExpired drep `shouldReturn` True

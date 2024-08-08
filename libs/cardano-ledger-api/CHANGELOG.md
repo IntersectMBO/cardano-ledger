@@ -4,6 +4,7 @@
 
 * Add `queryRatifyState` state query
 * Add `queryProposals` state query
+* Export `EraGenesis` and `NoGenesis`
 
 ## 1.9.2.1
 

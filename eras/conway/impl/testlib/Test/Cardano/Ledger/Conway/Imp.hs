@@ -18,8 +18,6 @@ import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFai
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
 import Cardano.Ledger.BaseTypes (Inject, natVersion)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Governance (ConwayGovState)
-import Cardano.Ledger.Conway.PParams (ConwayPParams)
 import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure,
   ConwayEpochEvent,
@@ -30,7 +28,6 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
 import Cardano.Ledger.Shelley.Rules (Event, ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
-import Data.Functor.Identity
 import Data.Typeable (Typeable)
 import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 import Test.Cardano.Ledger.Common
@@ -50,8 +47,6 @@ spec ::
   ( Arbitrary (TxAuxData era)
   , ConwayEraImp era
   , EraSegWits era
-  , GovState era ~ ConwayGovState era
-  , PParamsHKD Identity era ~ ConwayPParams Identity era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)

@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Mary.ImpTest (
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
 import Cardano.Crypto.Hash (Hash)
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Allegra.Scripts
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Mary (MaryEra)
@@ -25,12 +26,12 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (MaryEra c)
   where
-  initImpTestState = pure ()
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = shelleyFixupTx
 
@@ -46,6 +47,7 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>

@@ -10,7 +10,6 @@
 module Test.Cardano.Ledger.Mary.Imp.UtxoSpec (spec) where
 
 import Cardano.Ledger.Allegra.Scripts
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxoPredFailure (..))
@@ -31,10 +30,9 @@ mintBasicToken = do
   keyHash <- freshKeyHash
   scriptHash <- impAddNativeScript $ RequireSignature keyHash
   Positive amount <- arbitrary
-  let txCoin = Coin 1000000
-      txAsset = MultiAsset $ Map.singleton (PolicyID scriptHash) $ Map.singleton (AssetName "testAsset") amount
+  let txAsset = MultiAsset $ Map.singleton (PolicyID scriptHash) $ Map.singleton (AssetName "testAsset") amount
       txValue :: MaryValue (EraCrypto era)
-      txValue = MaryValue txCoin txAsset
+      txValue = MaryValue mempty txAsset
       txBody =
         mkBasicTxBody
           & outputsTxBodyL .~ [mkBasicTxOut addr txValue]

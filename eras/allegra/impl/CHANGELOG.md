@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-allegra`
 
-## 1.5.0.1
+## 1.6.0.0
 
-*
+* Change instance of `TranslationContext` to `NoGenesis`
 
 ## 1.5.0.0
 

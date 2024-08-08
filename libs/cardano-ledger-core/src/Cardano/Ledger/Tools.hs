@@ -15,6 +15,7 @@ module Cardano.Ledger.Tools (
 
   -- * TxOut
   setMinCoinTxOut,
+  ensureMinCoinTxOut,
   setMinCoinTxOutWith,
 
   -- * General tools
@@ -72,6 +73,17 @@ setMinFeeTx pp tx refScriptsSize =
 setMinFeeTxUtxo :: EraUTxO era => PParams era -> Tx era -> UTxO era -> Tx era
 setMinFeeTxUtxo pp tx utxo =
   setMinFeeTxInternal (\t -> getMinFeeTxUtxo pp t utxo) tx
+
+-- | Similar to `setMinCoinTxOut` it will guarantee that the minimum requirement for the
+-- output amount is satisified, however it makes it possible to set a higher amount than
+-- the minimaly required.
+--
+-- @
+-- > ensureMinCoinTxOut pp (txOut & coinTxOutL .~ zero) == setMinCoinTxOut pp (txOut & coinTxOutL .~ zero)
+-- > (ensureMinCoinTxOut pp txOut ^. coinTxOutL) >= (setMinCoinTxOut pp txOut ^. coinTxOutL)
+-- @
+ensureMinCoinTxOut :: EraTxOut era => PParams era -> TxOut era -> TxOut era
+ensureMinCoinTxOut = setMinCoinTxOutWith (>=)
 
 setMinFeeTxInternal ::
   EraTx era =>

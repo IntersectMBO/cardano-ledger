@@ -86,19 +86,8 @@ import Cardano.Ledger.Core (
   eraProtVerLow,
   isAdaOnlyTxOutF,
  )
-import Cardano.Ledger.Tools (setMinCoinTxOut, setMinCoinTxOutWith)
+import Cardano.Ledger.Tools (ensureMinCoinTxOut, setMinCoinTxOut)
 import Lens.Micro
-
--- | Similar to `setMinCoinTxOut` it will guarantee that the minimum requirement for the
--- output amount is satisified, however it makes it possible to set a higher amount than
--- the minimaly required.
---
--- @
--- > ensureMinCoinTxOut pp (txOut & coinTxOutL .~ zero) == setMinCoinTxOut pp (txOut & coinTxOutL .~ zero)
--- > (ensureMinCoinTxOut pp txOut ^. coinTxOutL) >= (setMinCoinTxOut pp txOut ^. coinTxOutL)
--- @
-ensureMinCoinTxOut :: EraTxOut era => PParams era -> TxOut era -> TxOut era
-ensureMinCoinTxOut = setMinCoinTxOutWith (>=)
 
 setMinCoinSizedTxOutInternal ::
   forall era.

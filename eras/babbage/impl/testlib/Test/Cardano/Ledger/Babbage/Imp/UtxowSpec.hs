@@ -17,7 +17,6 @@ import Cardano.Ledger.Babbage.Core
 import Cardano.Ledger.Babbage.Rules (BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Plutus
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.Arbitrary (mkPlutusScript')
@@ -53,7 +52,7 @@ spec = describe "UTXOW" $ do
     let tx =
           mkBasicTx mkBasicTxBody
             & bodyTxL . outputsTxBodyL
-              .~ [ mkBasicTxOut addr (inject (Coin 10)) & referenceScriptTxOutL .~ SJust script
+              .~ [ mkBasicTxOut addr mempty & referenceScriptTxOutL .~ SJust script
                  ]
     submitFailingTx
       tx

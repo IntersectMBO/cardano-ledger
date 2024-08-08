@@ -1,14 +1,21 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.12.3.0
+## 1.13.0.0
+
+* Add `translateToShelleyLedgerStateFromUtxo`
 
 ### `testlib`
 
 * Add `submitFailingTxM`
+* Add `fixupTxOuts`
+* Add `initGenesis` and `initNewEpochState` to `ShelleyEraImp`. Change type signature and
+  semantics of `initImpTestState`
+* Add `defaultInitNewEpochState` and `defaultInitImpTestState`
+* Add `impEraStartEpochNo`
+* Add `fixupAuxDataHash`
+* Add `impSetSeed`
 
 ## 1.12.2.0
-
-*
 
 ### `testlib`
 
@@ -16,8 +23,6 @@
 * Add `advanceToPointOfNoReturn`
 
 ## 1.12.1.0
-
-*
 
 ### `testlib`
 

@@ -14,44 +14,18 @@ module Test.Cardano.Ledger.Conway.Imp.GovCertSpec (
   relevantDuringBootstrapSpec,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochNo (..))
+import Cardano.Ledger.BaseTypes (EpochInterval (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Core (
-  EraGov (..),
-  InjectRuleFailure (..),
-  ppDRepDepositL,
- )
-import Cardano.Ledger.Conway.Governance (
-  ConwayEraGov (..),
-  ConwayGovState,
-  GovAction (..),
-  GovPurposeId (..),
-  Voter (..),
-  committeeMembersL,
- )
+import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Conway.Governance (GovPurposeId (..), Voter (..))
 import Cardano.Ledger.Conway.Rules (ConwayGovCertPredFailure (..))
-import Cardano.Ledger.Conway.TxCert (
-  pattern AuthCommitteeHotKeyTxCert,
-  pattern RegDRepTxCert,
-  pattern ResignCommitteeColdTxCert,
-  pattern UnRegDRepTxCert,
- )
-import Cardano.Ledger.Core (EraTx (..), EraTxBody (..))
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Shelley.LedgerState (
-  curPParamsEpochStateL,
-  esLStateL,
-  lsUTxOStateL,
-  nesEsL,
-  utxosGovStateL,
- )
+import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
 import Cardano.Ledger.Val (Val (..))
-import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
-import Lens.Micro ((&), (.~), (^.))
-import Test.Cardano.Ledger.Common hiding (assertBool, shouldBe)
+import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
@@ -60,20 +34,34 @@ import Test.Cardano.Ledger.Imp.Common
 spec ::
   forall era.
   ( ConwayEraImp era
-  , GovState era ~ ConwayGovState era
   , InjectRuleFailure "LEDGER" ConwayGovCertPredFailure era
   ) =>
   SpecWith (ImpTestState era)
 spec = do
   relevantDuringBootstrapSpec
-  it "Authorizing proposed CC key" $ do
-    someCred <- KeyHashObj <$> freshKeyHash
-    submitGovAction_ $
-      UpdateCommittee SNothing mempty (Map.singleton someCred (EpochNo 1234)) (1 %! 2)
+  it "Enact UpdateCommitee with lengthy lifetime" $ do
+    NonNegative n <- arbitrary
+    passNEpochs n
+    (drepCred, _, _) <- setupSingleDRep 1_000_000
+    cc <- KeyHashObj <$> freshKeyHash
+    EpochInterval committeeMaxTermLength <-
+      getsNES $ nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
+    secondAddCCGaid <-
+      submitUpdateCommittee Nothing mempty [(cc, EpochInterval (committeeMaxTermLength + 2))] (1 %! 2)
+    submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
+    passNEpochs 2
+    -- Due to longer than allowed lifetime we have to wait an extra epoch for this new action to be enacted
+    expectCommitteeMemberAbsence cc
+    passEpoch
+    expectCommitteeMemberPresence cc
+
+  it "Resigning proposed CC key" $ do
+    ccColdCred <- KeyHashObj <$> freshKeyHash
+    _ <- submitUpdateCommittee Nothing mempty [(ccColdCred, EpochInterval 1234)] (1 %! 2)
     submitTx_
       ( mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
-            .~ SSeq.singleton (ResignCommitteeColdTxCert someCred SNothing)
+            .~ SSeq.singleton (ResignCommitteeColdTxCert ccColdCred SNothing)
       )
   -- A CC that has resigned will need to be first voted out and then voted in to be considered active
   it "CC re-election" $
@@ -82,19 +70,11 @@ spec = do
       passNEpochs 2
       -- Add a fresh CC
       cc <- KeyHashObj <$> freshKeyHash
-      let addCCAction = UpdateCommittee SNothing mempty (Map.singleton cc 10) (1 %! 2)
-      addCCGaid <- submitGovAction addCCAction
+      addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (1 %! 2)
       submitYesVote_ (DRepVoter drepCred) addCCGaid
       passNEpochs 2
       -- Confirm that they are added
-      SJust committee <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-      let assertCCMembership comm =
-            assertBool "Expected CC to be present in the committee" $
-              Map.member cc (comm ^. committeeMembersL)
-          assertCCMissing comm =
-            assertBool "Expected CC to be absent in the committee" $
-              Map.notMember cc (comm ^. committeeMembersL)
-      assertCCMembership committee
+      expectCommitteeMemberPresence cc
       -- Confirm their hot key registration
       _hotKey <- registerCommitteeHotKey cc
       ccShouldNotBeResigned cc
@@ -102,30 +82,24 @@ spec = do
       _ <- resignCommitteeColdKey cc SNothing
       ccShouldBeResigned cc
       -- Re-add the same CC
-      let reAddCCAction = UpdateCommittee (SJust $ GovPurposeId addCCGaid) mempty (Map.singleton cc 20) (1 %! 2)
-      reAddCCGaid <- submitGovAction reAddCCAction
+      reAddCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
       submitYesVote_ (DRepVoter drepCred) reAddCCGaid
       passNEpochs 2
       -- Confirm that they are still resigned
       ccShouldBeResigned cc
       -- Remove them
-      let removeCCAction = UpdateCommittee (SJust $ GovPurposeId reAddCCGaid) (Set.singleton cc) mempty (1 %! 2)
-      removeCCGaid <- submitGovAction removeCCAction
+      removeCCGaid <-
+        submitUpdateCommittee (Just (SJust $ GovPurposeId reAddCCGaid)) (Set.singleton cc) [] (1 %! 2)
       submitYesVote_ (DRepVoter drepCred) removeCCGaid
       passNEpochs 2
       -- Confirm that they have been removed
-      SJust committeeAfterRemove <-
-        getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-      assertCCMissing committeeAfterRemove
-      -- Add the same CC back a second time
-      let secondAddCCAction = UpdateCommittee (SJust $ GovPurposeId removeCCGaid) mempty (Map.singleton cc 20) (1 %! 2)
-      secondAddCCGaid <- submitGovAction secondAddCCAction
+      expectCommitteeMemberAbsence cc
+      secondAddCCGaid <-
+        submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
       submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
       passNEpochs 2
       -- Confirm that they have been added
-      SJust committeeAfterRemoveAndAdd <-
-        getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-      assertCCMembership committeeAfterRemoveAndAdd
+      expectCommitteeMemberPresence cc
       -- Confirm that after registering a hot key, they are active
       _hotKey <- registerCommitteeHotKey cc
       ccShouldNotBeResigned cc

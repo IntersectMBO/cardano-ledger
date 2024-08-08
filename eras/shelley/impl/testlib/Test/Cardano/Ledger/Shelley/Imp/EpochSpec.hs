@@ -4,6 +4,7 @@ module Test.Cardano.Ledger.Shelley.Imp.EpochSpec (
   spec,
 ) where
 
+import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState (
   esLStateL,
@@ -17,13 +18,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Val (Val (..))
 import Test.Cardano.Ledger.Imp.Common
-import Test.Cardano.Ledger.Shelley.ImpTest (
-  ImpTestState,
-  ShelleyEraImp,
-  getsNES,
-  passEpoch,
-  submitTxAnn_,
- )
+import Test.Cardano.Ledger.Shelley.ImpTest
 
 spec ::
   forall era.
@@ -41,7 +36,8 @@ spec = describe "EPOCH" $ do
     submitTxAnn_ "simple transaction" $ mkBasicTx mkBasicTxBody
     passEpoch
 
-  it "Crosses the epoch boundary" $ do
-    getsNES nesELL `shouldReturn` 0
-    passEpoch
-    getsNES nesELL `shouldReturn` 1
+  it "Crosses epoch boundaries" $ do
+    startEpochNo <- getsNES nesELL
+    Positive n <- arbitrary
+    passNEpochs $ fromIntegral n
+    getsNES nesELL `shouldReturn` addEpochInterval startEpochNo (EpochInterval n)

@@ -16,6 +16,7 @@ module Cardano.Ledger.Mary.Translation where
 import Cardano.Ledger.Binary (DecoderError)
 import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Crypto (Crypto)
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Mary.Core
 import Cardano.Ledger.Mary.Era (MaryEra)
 import Cardano.Ledger.Mary.Scripts (Timelock, translateTimelock)
@@ -153,7 +154,7 @@ instance Crypto c => TranslateEra (MaryEra c) UTxOState where
         }
 
 instance Crypto c => TranslateEra (MaryEra c) ShelleyTxOut where
-  translateEra () = pure . upgradeTxOut
+  translateEra NoGenesis = pure . upgradeTxOut
 
 instance Crypto c => TranslateEra (MaryEra c) UTxO where
   translateEra ctxt utxo =

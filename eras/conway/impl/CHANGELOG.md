@@ -8,6 +8,8 @@
 ### testlib
 
 * Added `ToExpr` instance for `CertsEnv`
+* Added `submitUpdateCommittee`, `expectCommitteeMemberPresence`,
+  `expectCommitteeMemberAbsence` and `donateToTreasury`
 
 ## 1.16.0.0
 

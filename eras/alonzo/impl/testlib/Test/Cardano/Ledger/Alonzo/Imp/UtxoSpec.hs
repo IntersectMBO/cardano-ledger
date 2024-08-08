@@ -10,11 +10,14 @@ module Test.Cardano.Ledger.Alonzo.Imp.UtxoSpec (spec) where
 import Cardano.Ledger.Alonzo.Core
 import Cardano.Ledger.Alonzo.Rules (AlonzoUtxoPredFailure (..))
 import Cardano.Ledger.Alonzo.Scripts (eraLanguages)
+import Cardano.Ledger.Alonzo.TxAuxData (mkAlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
+import qualified Cardano.Ledger.Metadata as M
 import Cardano.Ledger.Plutus (Data (..), ExUnits (..), hashPlutusScript, withSLanguage)
 import Cardano.Ledger.Shelley.LedgerState (curPParamsEpochStateL, nesEsL)
+import Control.Monad (forM)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Lens.Micro (to, (&), (.~), (<>~), (^.))
@@ -52,14 +55,23 @@ spec = describe "UTXO" $ do
           submitFailingTx tx [injectFailure $ ExUnitsTooBigUTxO maxExUnits txExUnits]
 
         it "Insufficient collateral" $ do
-          scriptInput <- produceScript . hashPlutusScript $ alwaysSucceedsWithDatum slang
-          let collateral = Coin 123
+          scriptInput <- produceScript $ hashPlutusScript $ alwaysSucceedsWithDatum slang
           collateralAddr <- freshKeyAddr_
-          collateralInput <- sendCoinTo collateralAddr collateral
-          let tx =
+          collateralInput <- sendCoinTo collateralAddr mempty -- 0 will be changed to MinUTxO
+          collateral <- (^. coinTxOutL) <$> impLookupUTxO collateralInput
+          -- We need to artificially blow up the fee to increase the required collateral.
+          -- Unfortunately we do not have expensive enough scripts yet, so one other way
+          -- to achieve the same thing is by increasing the size of the transactions by
+          -- including random garbage. Auxiliary data fits the bill quite nicely
+          metadata <-
+            Map.fromList
+              <$> forM [1 .. (12 * 1024 `div` 64)] (\ix -> (,) ix . M.B <$> uniformByteStringM 64)
+          let auxData = mkAlonzoTxAuxData @[] @era metadata []
+              tx =
                 mkBasicTx mkBasicTxBody
                   & bodyTxL . inputsTxBodyL <>~ [scriptInput]
                   & bodyTxL . collateralInputsTxBodyL <>~ [collateralInput]
+                  & auxDataTxL .~ SJust auxData
           percentage <-
             getsNES $ nesEsL . curPParamsEpochStateL . ppCollateralPercentageL . to toInteger
           submitFailingTxM tx $ \txFixed -> do

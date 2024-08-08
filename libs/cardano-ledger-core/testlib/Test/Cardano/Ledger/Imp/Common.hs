@@ -59,7 +59,8 @@ module Test.Cardano.Ledger.Imp.Common (
   HasStatefulGen (..),
   HasGenEnv (..),
   HasSubState (..),
-  subState,
+  subStateM,
+  setSubStateM,
   R.StatefulGen,
   StateGen (..),
   StateGenM (..),
@@ -363,11 +364,15 @@ class HasSubState s where
   subStateL k s = setSubState s <$> k (getSubState s)
   {-# MINIMAL subStateL | getSubState, setSubState #-}
 
+setSubStateM :: (HasSubState s, MonadState s m) => SubState s -> m ()
+setSubStateM s = subStateM $ const ((), s)
+{-# INLINE setSubStateM #-}
+
 -- | Modify the sub-state and return a value, using the supplied function.
 -- Similar to the `state` method of `MonadState`.
-subState :: (HasSubState s, MonadState s m) => (SubState s -> (a, SubState s)) -> m a
-subState = state . subStateL -- Uses (a,) as the functor for subStateL
-{-# INLINE subState #-}
+subStateM :: (HasSubState s, MonadState s m) => (SubState s -> (a, SubState s)) -> m a
+subStateM = state . subStateL -- Uses (a,) as the functor for subStateL
+{-# INLINE subStateM #-}
 
 uniformM ::
   ( HasStatefulGen g m
@@ -429,17 +434,17 @@ instance
   (HasSubState s, R.RandomGen (SubState s), MonadState s m) =>
   R.StatefulGen (StateGenM s) m
   where
-  uniformWord32R r _ = subState (R.genWord32R r)
+  uniformWord32R r _ = subStateM (R.genWord32R r)
   {-# INLINE uniformWord32R #-}
-  uniformWord64R r _ = subState (R.genWord64R r)
+  uniformWord64R r _ = subStateM (R.genWord64R r)
   {-# INLINE uniformWord64R #-}
-  uniformWord8 _ = subState R.genWord8
+  uniformWord8 _ = subStateM R.genWord8
   {-# INLINE uniformWord8 #-}
-  uniformWord16 _ = subState R.genWord16
+  uniformWord16 _ = subStateM R.genWord16
   {-# INLINE uniformWord16 #-}
-  uniformWord32 _ = subState R.genWord32
+  uniformWord32 _ = subStateM R.genWord32
   {-# INLINE uniformWord32 #-}
-  uniformWord64 _ = subState R.genWord64
+  uniformWord64 _ = subStateM R.genWord64
   {-# INLINE uniformWord64 #-}
-  uniformShortByteString n _ = subState (R.genShortByteString n)
+  uniformShortByteString n _ = subStateM (R.genShortByteString n)
   {-# INLINE uniformShortByteString #-}

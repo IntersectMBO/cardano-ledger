@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Ledger.Shelley.Imp.UtxoSpec (spec) where
 
@@ -23,7 +24,7 @@ spec = describe "UTXO" $ do
   describe "ShelleyUtxoPredFailure" $ do
     it "ValueNotConservedUTxO" $ do
       addr1 <- freshKeyAddr_
-      let txAmount = Coin 1000000
+      let txAmount = Coin 2000000
       txIn <- sendCoinTo addr1 txAmount
       addr2 <- freshKeyAddr_
       (_, rootTxOut) <- lookupImpRootTxOut
@@ -32,7 +33,7 @@ spec = describe "UTXO" $ do
           txBody =
             mkBasicTxBody
               & inputsTxBodyL .~ [txIn]
-              & outputsTxBodyL .~ [mkBasicTxOut addr2 (inject (Coin 200000))]
+              & outputsTxBodyL .~ [mkBasicTxOut addr2 mempty]
           adjustTxOut = \case
             Empty -> error "Unexpected empty sequence of outputs"
             txOut :<| outs -> (txOut & coinTxOutL %~ (<> extra)) :<| outs

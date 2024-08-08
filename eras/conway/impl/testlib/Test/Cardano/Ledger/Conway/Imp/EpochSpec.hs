@@ -15,13 +15,15 @@ module Test.Cardano.Ledger.Conway.Imp.EpochSpec (
 ) where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.BaseTypes (EpochInterval (..), EpochNo (..))
+import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
-import Cardano.Ledger.Conway.Rules (ConwayEpochEvent (GovInfoEvent), ConwayNewEpochEvent (..))
-import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Conway.Rules (
+  ConwayEpochEvent (GovInfoEvent),
+  ConwayNewEpochEvent (..),
+ )
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (Event, ShelleyTickEvent (..))
 import Cardano.Ledger.Val
@@ -141,43 +143,55 @@ dRepSpec =
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
       (drep, _, _) <- setupSingleDRep 1_000_000
 
-      let submitParamChangeProposal =
-            submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
+      startEpochNo <- getsNES nesELL
+      let
+        -- compute the epoch number that is an offset from starting epoch number
+        offDRepActivity = addEpochInterval startEpochNo . EpochInterval
+        submitParamChangeProposal =
+          submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
       expectNumDormantEpochs 0
 
       -- epoch 0: we submit a proposal
       _ <- submitParamChangeProposal
       passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
-        expectDRepExpiry drep 100
+        expectDRepExpiry drep $ offDRepActivity 100
 
       passEpoch -- entering epoch 3
       -- proposal has expired
       expectNumDormantEpochs 1
-      expectDRepExpiry drep 100
+      expectDRepExpiry drep $ offDRepActivity 100
 
       passEpoch -- entering epoch 4
       expectNumDormantEpochs 2
-      expectDRepExpiry drep 100
+      expectDRepExpiry drep $ offDRepActivity 100
 
       passEpoch -- entering epoch 5
       expectNumDormantEpochs 3
-      expectDRepExpiry drep 100
+      expectDRepExpiry drep $ offDRepActivity 100
 
       _ <- submitParamChangeProposal
       -- number of dormant epochs is added to the drep expiry and reset to 0
       expectNumDormantEpochs 0
-      expectDRepExpiry drep 103
+      expectDRepExpiry drep $ offDRepActivity 103
 
       passEpoch -- entering epoch 6
       expectNumDormantEpochs 0
-      expectDRepExpiry drep 103
+      expectDRepExpiry drep $ offDRepActivity 103
     it "expiry is not updated for inactive DReps" $ do
+      let
+        drepActivity = 2
       modifyPParams $ \pp ->
         pp
           & ppGovActionLifetimeL .~ EpochInterval 2
-          & ppDRepActivityL .~ EpochInterval 2
+          & ppDRepActivityL .~ EpochInterval drepActivity
       (drep, _, _) <- setupSingleDRep 1_000_000
+      startEpochNo <- getsNES nesELL
+      let
+        -- compute the epoch number that is an offset from starting epoch number plus
+        -- the ppDRepActivity parameter
+        offDRepActivity offset =
+          addEpochInterval startEpochNo $ EpochInterval (drepActivity + offset)
 
       let submitParamChangeProposal =
             submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
@@ -187,39 +201,47 @@ dRepSpec =
       _ <- submitParamChangeProposal
       passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
-        expectDRepExpiry drep 2
+        expectDRepExpiry drep $ offDRepActivity 0
 
       passEpoch -- entering epoch 3
       -- proposal has expired
       -- drep has expired
       expectNumDormantEpochs 1
-      expectDRepExpiry drep 2
-      expectActualDRepExpiry drep 3
+      expectDRepExpiry drep $ offDRepActivity 0
+      expectActualDRepExpiry drep $ offDRepActivity 1
       isDRepExpired drep `shouldReturn` False -- numDormantEpochs is added to the drep exiry calculation
       passEpoch -- entering epoch 4
       expectNumDormantEpochs 2
-      expectDRepExpiry drep 2
-      expectActualDRepExpiry drep 4
+      expectDRepExpiry drep $ offDRepActivity 0
+      expectActualDRepExpiry drep $ offDRepActivity 2
 
       passEpoch -- entering epoch 5
       expectNumDormantEpochs 3
-      expectDRepExpiry drep 2
-      expectActualDRepExpiry drep 5
+      expectDRepExpiry drep $ offDRepActivity 0
+      expectActualDRepExpiry drep $ offDRepActivity 3
 
       _ <- submitParamChangeProposal
       -- number of dormant epochs is added to the drep, considering they are not actually expired,
       -- and is reset to 0
       expectNumDormantEpochs 0
-      expectDRepExpiry drep 5
+      expectDRepExpiry drep $ offDRepActivity 3
 
       passEpoch -- entering epoch 6
       expectNumDormantEpochs 0
-      expectDRepExpiry drep 5
+      expectDRepExpiry drep $ offDRepActivity 3
     it "expiry updates are correct for a mixture of cases" $ do
+      let
+        drepActivity = 4
       modifyPParams $ \pp ->
         pp
           & ppGovActionLifetimeL .~ EpochInterval 2
-          & ppDRepActivityL .~ EpochInterval 4
+          & ppDRepActivityL .~ EpochInterval drepActivity
+      startEpochNo <- getsNES nesELL
+      let
+        -- compute the epoch number that is an offset from starting epoch number plus
+        -- the ppDRepActivity parameter
+        offDRepActivity offset =
+          addEpochInterval startEpochNo $ EpochInterval (drepActivity + offset)
       (drep1, _, _) <- setupSingleDRep 1_000_000 -- Receives an expiry update transaction certificate
       (drep2, _, _) <- setupSingleDRep 1_000_000 -- Turns inactive due to natural expiry
       (drep3, _, _) <- setupSingleDRep 1_000_000 -- Unregisters and gets deleted
@@ -229,81 +251,81 @@ dRepSpec =
       _ <- submitGovAction InfoAction
       passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
-        expectDRepExpiry drep1 4
-        expectDRepExpiry drep2 4
-        expectDRepExpiry drep3 4
+        expectDRepExpiry drep1 $ offDRepActivity 0
+        expectDRepExpiry drep2 $ offDRepActivity 0
+        expectDRepExpiry drep3 $ offDRepActivity 0
 
       passEpoch -- entering epoch 3
       -- proposal has expired
       expectCurrentProposals
       expectPulserProposals
       expectNumDormantEpochs 1
-      expectDRepExpiry drep1 4
-      expectDRepExpiry drep2 4
-      expectDRepExpiry drep3 4
+      expectDRepExpiry drep1 $ offDRepActivity 0
+      expectDRepExpiry drep2 $ offDRepActivity 0
+      expectDRepExpiry drep3 $ offDRepActivity 0
 
       passEpoch -- entering epoch 4
       expectNumDormantEpochs 2
-      expectDRepExpiry drep1 4
-      expectDRepExpiry drep2 4
-      expectDRepExpiry drep3 4
+      expectDRepExpiry drep1 $ offDRepActivity 0
+      expectDRepExpiry drep2 $ offDRepActivity 0
+      expectDRepExpiry drep3 $ offDRepActivity 0
 
       updateDRep drep1 -- DRep expiry becomes (current epoch (4) + drep activity (4) - dormant epochs (2))
-      expectDRepExpiry drep1 6
-      unRegisterDRep drep3 $ Coin 0 -- Unregister drep3
+      expectDRepExpiry drep1 $ offDRepActivity 2
+      unRegisterDRep drep3
       passEpoch -- entering epoch 5
       -- Updated drep1 shows their new expiry
       -- numDormantEpochs bumps up further
       -- drep3 has unregistered
       -- drep2 has not expired since we now have dormant epochs
       expectNumDormantEpochs 3
-      expectDRepExpiry drep1 6
-      expectActualDRepExpiry drep1 9
-      expectDRepExpiry drep2 4
-      expectActualDRepExpiry drep2 7
+      expectDRepExpiry drep1 $ offDRepActivity 2
+      expectActualDRepExpiry drep1 $ offDRepActivity 5
+      expectDRepExpiry drep2 $ offDRepActivity 0
+      expectActualDRepExpiry drep2 $ offDRepActivity 3
       expectDRepNotRegistered drep3
 
       _ <- submitGovAction InfoAction
       -- number of dormant epochs is added to the dreps expiry, and reset to 0
       expectNumDormantEpochs 0
-      expectDRepExpiry drep1 9 -- 6 + 3
-      expectDRepExpiry drep2 7 -- 4 + 3
+      expectDRepExpiry drep1 $ offDRepActivity 5 -- 6 + 3
+      expectDRepExpiry drep2 $ offDRepActivity 3 -- 4 + 3
       passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
-        expectDRepExpiry drep1 9
-        expectDRepExpiry drep2 7
+        expectDRepExpiry drep1 $ offDRepActivity 5
+        expectDRepExpiry drep2 $ offDRepActivity 3
 
       passEpoch
       expectNumDormantEpochs 1
-      expectDRepExpiry drep1 9
-      expectActualDRepExpiry drep1 10
-      expectDRepExpiry drep2 7
-      expectActualDRepExpiry drep2 8
+      expectDRepExpiry drep1 $ offDRepActivity 5
+      expectActualDRepExpiry drep1 $ offDRepActivity 6
+      expectDRepExpiry drep2 $ offDRepActivity 3
+      expectActualDRepExpiry drep2 $ offDRepActivity 4
 
       gai <- submitGovAction InfoAction
 
       passNEpochsChecking 2 $ do
         expectNumDormantEpochs 0
-        expectDRepExpiry drep1 10
-        expectActualDRepExpiry drep1 10
-        expectDRepExpiry drep2 8
-        expectActualDRepExpiry drep2 8
+        expectDRepExpiry drep1 $ offDRepActivity 6
+        expectActualDRepExpiry drep1 $ offDRepActivity 6
+        expectDRepExpiry drep2 $ offDRepActivity 4
+        expectActualDRepExpiry drep2 $ offDRepActivity 4
 
       submitYesVote_ (DRepVoter drep2) gai
 
       passEpoch
       expectNumDormantEpochs 1
-      expectDRepExpiry drep1 10
-      expectActualDRepExpiry drep1 11
-      expectDRepExpiry drep2 14
-      expectActualDRepExpiry drep2 15
+      expectDRepExpiry drep1 $ offDRepActivity 6
+      expectActualDRepExpiry drep1 $ offDRepActivity 7
+      expectDRepExpiry drep2 $ offDRepActivity 10
+      expectActualDRepExpiry drep2 $ offDRepActivity 11
 
       passEpoch
       expectNumDormantEpochs 2
-      expectDRepExpiry drep1 10
-      expectActualDRepExpiry drep1 12
-      expectDRepExpiry drep2 14
-      expectActualDRepExpiry drep2 16
+      expectDRepExpiry drep1 $ offDRepActivity 6
+      expectActualDRepExpiry drep1 $ offDRepActivity 8
+      expectDRepExpiry drep2 $ offDRepActivity 10
+      expectActualDRepExpiry drep2 $ offDRepActivity 12
 
     it "DRep registration should succeed" $ do
       logEntry "Stake distribution before DRep registration:"
@@ -374,22 +396,25 @@ treasurySpec =
         , TreasuryWithdrawals (Map.singleton rewardAccountOther (Coin 668)) govPolicy
         ]
 
-    it
+    it -- TODO: mark as bootstrap relevant
       "deposit is moved to treasury when the reward address is not registered"
       depositMovesToTreasuryWhenStakingAddressUnregisters
 
 treasuryWithdrawalExpectation ::
   forall era.
-  ConwayEraImp era =>
+  (HasCallStack, ConwayEraImp era) =>
   [GovAction era] ->
   ImpTestM era ()
 treasuryWithdrawalExpectation extraWithdrawals = do
+  withdrawalAmount <- uniformRM (Coin 1, Coin 1_000_000_000)
+  -- Before making a withdrawal, we need to make sure there is enough money in the treasury:
+  donateToTreasury withdrawalAmount
   committeeHotCreds <- registerInitialCommittee
   (dRepCred, _, _) <- setupSingleDRep 1_000_000
   treasuryStart <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
+  treasuryStart `shouldBe` withdrawalAmount
   rewardAccount <- registerRewardAccount
   govPolicy <- getGovPolicy
-  let withdrawalAmount = Coin 666
   (govActionId NE.:| _) <-
     submitGovActions $
       TreasuryWithdrawals (Map.singleton rewardAccount withdrawalAmount) govPolicy
@@ -400,12 +425,12 @@ treasuryWithdrawalExpectation extraWithdrawals = do
   impAnn "Withdrawal should not be received yet" $
     lookupReward (raCredential rewardAccount) `shouldReturn` mempty
   passEpoch -- 2nd epoch crossing enacts all the ratified actions
+  expectMissingGovActionId govActionId
   treasuryEnd <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   impAnn "Withdrawal deducted from treasury" $
     treasuryStart <-> treasuryEnd `shouldBe` withdrawalAmount
   impAnn "Withdrawal received by reward account" $
     lookupReward (raCredential rewardAccount) `shouldReturn` withdrawalAmount
-  expectMissingGovActionId govActionId
 
 depositMovesToTreasuryWhenStakingAddressUnregisters :: ConwayEraImp era => ImpTestM era ()
 depositMovesToTreasuryWhenStakingAddressUnregisters = do
@@ -417,21 +442,17 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
       & ppCommitteeMaxTermLengthL .~ EpochInterval 0
   returnAddr <- registerRewardAccount
   govActionDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-  khCC <- KeyHashObj <$> freshKeyHash
-  committeeActionId <-
+  govPolicy <- getGovPolicy
+  gaid <-
     submitProposal
       ProposalProcedure
         { pProcReturnAddr = returnAddr
         , pProcGovAction =
-            UpdateCommittee
-              SNothing
-              mempty
-              (Map.singleton khCC $ EpochNo 10)
-              (1 %! 2)
+            ParameterChange SNothing (emptyPParamsUpdate & ppuGovActionDepositL .~ SJust (Coin 10)) govPolicy
         , pProcDeposit = govActionDeposit
         , pProcAnchor = def
         }
-  expectPresentGovActionId committeeActionId
+  expectPresentGovActionId gaid
   replicateM_ 5 passEpoch
   expectTreasury initialTreasury
   expectRegisteredRewardAddress returnAddr
@@ -442,7 +463,7 @@ depositMovesToTreasuryWhenStakingAddressUnregisters = do
           (UnRegTxCert $ raCredential returnAddr)
   expectNotRegisteredRewardAddress returnAddr
   replicateM_ 5 passEpoch
-  expectMissingGovActionId committeeActionId
+  expectMissingGovActionId gaid
   expectTreasury $ initialTreasury <> govActionDeposit
 
 eventsSpec ::

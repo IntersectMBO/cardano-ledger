@@ -8,6 +8,7 @@ where
 
 import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Genesis (NoGenesis (..))
 import Cardano.Ledger.Shelley (Shelley)
 import qualified Cardano.Ledger.Shelley.API as S
 import Cardano.Ledger.Shelley.Core
@@ -59,7 +60,7 @@ testScriptPostTranslation =
                 (S.ShelleyTxOut addr (Val.inject (S.Coin 1)))
           env = S.LedgerEnv (SlotNo 0) minBound emptyPParams (S.AccountState (S.Coin 0) (S.Coin 0))
           utxoStShelley = def {S.utxosUtxo = utxo}
-          utxoStAllegra = fromRight . runExcept $ translateEra @Allegra () utxoStShelley
+          utxoStAllegra = fromRight . runExcept $ translateEra @Allegra NoGenesis utxoStShelley
           txb =
             S.ShelleyTxBody
               (Set.singleton $ S.TxIn bootstrapTxId minBound)
@@ -72,7 +73,7 @@ testScriptPostTranslation =
               S.SNothing
           wits = mkBasicTxWits & scriptTxWitsL .~ Map.singleton scriptHash script
           txs = S.ShelleyTx txb wits S.SNothing
-          txa = fromRight . runExcept $ translateEra @Allegra () txs
+          txa = fromRight . runExcept $ translateEra @Allegra NoGenesis txs
           result =
             runShelleyBase $
               applySTSTest @(S.ShelleyLEDGER Allegra)

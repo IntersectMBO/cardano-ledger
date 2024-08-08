@@ -18,7 +18,6 @@
 module Test.Cardano.Ledger.Alonzo.ImpTest (
   module Test.Cardano.Ledger.Mary.ImpTest,
   AlonzoEraImp (..),
-  initAlonzoImpNES,
   impLookupPlutusScriptMaybe,
   malformedPlutus,
   addCollateralInput,
@@ -40,9 +39,11 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
+import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Core
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.PParams (getLanguageView)
 import Cardano.Ledger.Alonzo.Plutus.Context (EraPlutusContext)
 import Cardano.Ledger.Alonzo.Plutus.Evaluate (
@@ -55,13 +56,9 @@ import Cardano.Ledger.Alonzo.Rules (
   TagMismatchDescription (..),
   scriptFailureToFailureDescription,
  )
-import Cardano.Ledger.Alonzo.Scripts (
-  ExUnits (..),
-  plutusScriptLanguage,
-  toAsItem,
-  toAsIx,
- )
+import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), hashScriptIntegrity)
+import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded (..))
 import Cardano.Ledger.BaseTypes (Globals (..), StrictMaybe (..))
@@ -69,17 +66,22 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (Hash)
-import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
-import Cardano.Ledger.Plutus.Data (Data (..), Datum (..), hashData)
-import Cardano.Ledger.Plutus.Evaluate (PlutusWithContext (..), ScriptResult (..))
-import Cardano.Ledger.Plutus.Language (
+import Cardano.Ledger.Plutus (
+  Data (..),
+  Datum (..),
+  ExUnits (..),
   Language (..),
   Plutus (..),
   PlutusBinary (..),
   PlutusLanguage,
+  PlutusWithContext (..),
+  Prices (..),
+  SLanguage (..),
+  ScriptResult (..),
+  hashData,
+  hashPlutusScript,
  )
 import Cardano.Ledger.Shelley.LedgerState (
-  NewEpochState,
   curPParamsEpochStateL,
   esLStateL,
   lsUTxOStateL,
@@ -96,10 +98,11 @@ import Data.Maybe (catMaybes)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
-import Lens.Micro.Mtl (use, (%=))
+import Lens.Micro.Mtl (use)
 import qualified PlutusLedgerApi.Common as P
 import Test.Cardano.Ledger.Alonzo.TreeDiff ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Core.Rational ((%!))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Mary.ImpTest
 import Test.Cardano.Ledger.Plutus (
@@ -117,28 +120,11 @@ class
   , AlonzoEraUTxO era
   , EraPlutusContext era
   , ScriptsNeeded era ~ AlonzoScriptsNeeded era
+  , TxAuxData era ~ AlonzoTxAuxData era
   ) =>
   AlonzoEraImp era
   where
   scriptTestContexts :: Map (ScriptHash (EraCrypto era)) ScriptTestContext
-
-initAlonzoImpNES ::
-  forall era.
-  ( AlonzoEraPParams era
-  , ShelleyEraImp era
-  , AlonzoEraScript era
-  ) =>
-  NewEpochState era ->
-  NewEpochState era
-initAlonzoImpNES = nesEsL . curPParamsEpochStateL %~ initPParams
-  where
-    initPParams pp =
-      pp
-        & ppMaxValSizeL .~ 1_000_000_000
-        & ppMaxTxExUnitsL .~ ExUnits 10_000_000 10_000_000
-        & ppCostModelsL
-          .~ testingCostModels
-            [PlutusV1 .. eraMaxLanguage @era]
 
 makeCollateralInput :: ShelleyEraImp era => ImpTestM era (TxIn (EraCrypto era))
 makeCollateralInput = do
@@ -355,6 +341,7 @@ alonzoFixupTx ::
   ImpTestM era (Tx era)
 alonzoFixupTx =
   addNativeScriptTxWits
+    >=> fixupAuxDataHash
     >=> addCollateralInput
     >=> addRootTxIn
     -- We need to update the indices after adding the rootTxIn because the
@@ -365,6 +352,7 @@ alonzoFixupTx =
     >=> fixupRedeemerIndices
     >=> fixupRedeemers
     >=> fixupPPHash
+    >=> fixupTxOuts
     >=> fixupFees
     >=> updateAddrTxWits
 
@@ -411,12 +399,38 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ShelleyEraImp (AlonzoEra c)
   where
-  initImpTestState = impNESL %= initAlonzoImpNES
+  initGenesis =
+    pure
+      AlonzoGenesis
+        { agCoinsPerUTxOWord = CoinPerWord (Coin 34482)
+        , -- TODO: Replace with correct cost model.
+          agCostModels = testingCostModels [PlutusV1]
+        , agPrices =
+            Prices
+              { prMem = 577 %! 10_000
+              , prSteps = 721 %! 10_000_000
+              }
+        , agMaxTxExUnits =
+            ExUnits
+              { exUnitsMem = 10_000_000
+              , exUnitsSteps = 10_000_000_000
+              }
+        , agMaxBlockExUnits =
+            ExUnits
+              { exUnitsMem = 50_000_000
+              , exUnitsSteps = 40_000_000_000
+              }
+        , agMaxValSize = 5000
+        , agCollateralPercentage = 150
+        , agMaxCollateralInputs = 3
+        }
+
   impSatisfyNativeScript = impAllegraSatisfyNativeScript
   fixupTx = alonzoFixupTx
 
@@ -424,6 +438,7 @@ instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
   , NFData (VerKeyDSIGN (DSIGN c))
+  , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>

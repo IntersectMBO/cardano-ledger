@@ -76,6 +76,7 @@ import Cardano.Ledger.Binary (
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto, HASH, KES)
+import Cardano.Ledger.Genesis (EraGenesis (..))
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolParams (PoolParams (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
@@ -249,6 +250,9 @@ sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff
 instance Crypto c => ToJSON (ShelleyGenesis c) where
   toJSON = Aeson.object . toShelleyGenesisPairs
   toEncoding = Aeson.pairs . mconcat . toShelleyGenesisPairs
+
+instance Crypto c => EraGenesis (ShelleyEra c) where
+  type Genesis (ShelleyEra c) = ShelleyGenesis c
 
 --------------------------------------------------
 -- Legacy JSON representation of ShelleyGenesis --
