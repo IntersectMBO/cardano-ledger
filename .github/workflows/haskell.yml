@@ -160,7 +160,7 @@ jobs:
     - name: Archive working directory
       # pax format is needed to avoid unnecessary rebuilding, because the
       # default format uses a one-second resolution for timestamps
-      run: tar --format pax -cf /var/tmp/state.tar . ${{ steps.install-haskell.outputs.cabal-store }} && mv /var/tmp/state.tar .
+      run: tar --absolute-names --format pax -cf /var/tmp/state.tar . ${{ steps.install-haskell.outputs.cabal-store }} && mv /var/tmp/state.tar .
     - name: Upload working directory archive
       # upload-artifact is pinned to avoid a bug in download-artifact
       # See https://github.com/actions/download-artifact/issues/328
