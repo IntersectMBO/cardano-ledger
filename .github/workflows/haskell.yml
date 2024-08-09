@@ -226,6 +226,25 @@ jobs:
         shell: bash
 
     steps:
+    - name: Free up disk space
+      run: |
+        # Remove software and language runtimes we're not using
+        sudo rm -rf \
+          "$AGENT_TOOLSDIRECTORY" \
+          /opt/google/chrome \
+          /opt/microsoft/msedge \
+          /opt/microsoft/powershell \
+          /opt/pipx \
+          /usr/lib/mono \
+          /usr/local/julia* \
+          /usr/local/lib/android \
+          /usr/local/lib/node_modules \
+          /usr/local/share/chromium \
+          /usr/local/share/powershell \
+          /usr/share/dotnet \
+          /usr/share/swift
+        df -h /
+
     - name: Install system dependencies
       uses: input-output-hk/actions/base@latest
       with:
