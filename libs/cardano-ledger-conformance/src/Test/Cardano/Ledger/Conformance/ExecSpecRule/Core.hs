@@ -15,10 +15,10 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   conformsToImpl,
-  computationResultToEither,
   generatesWithin,
   runConformance,
   checkConformance,
+  defaultTestConformance,
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject (..), ShelleyBase)
@@ -36,7 +36,6 @@ import qualified Data.Text as T
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import GHC.Base (Constraint, NonEmpty, Symbol, Type)
 import GHC.TypeLits (KnownSymbol)
-import qualified Lib as Agda
 import Test.Cardano.Ledger.Binary.TreeDiff (Pretty (..), ansiWlPretty, ediff, ppEditExpr)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   FixupSpecRep (..),
@@ -374,7 +373,3 @@ generatesWithin gen timeout =
     $ \x -> within timeout $ ioProperty (evaluateDeep x $> ())
   where
     aName = show (typeRep $ Proxy @a)
-
-computationResultToEither :: Agda.ComputationResult e a -> Either e a
-computationResultToEither (Agda.Success x) = Right x
-computationResultToEither (Agda.Failure e) = Left e
