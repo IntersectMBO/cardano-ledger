@@ -41,6 +41,7 @@ import Cardano.Ledger.Binary (
   decodeRecordSum,
   encodeListLen,
  )
+import Cardano.Ledger.Binary.Coders (Encode (..), encode, (!>))
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
@@ -74,6 +75,13 @@ import NoThunks.Class (NoThunks (..))
 data PoolEnv era
   = PoolEnv !SlotNo !(PParams era)
   deriving (Generic)
+
+instance EraPParams era => EncCBOR (PoolEnv era) where
+  encCBOR (PoolEnv s pp) =
+    encode $
+      Rec PoolEnv
+        !> To s
+        !> To pp
 
 deriving instance Show (PParams era) => Show (PoolEnv era)
 

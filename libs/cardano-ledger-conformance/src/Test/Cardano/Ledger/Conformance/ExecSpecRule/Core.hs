@@ -15,14 +15,15 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   conformsToImpl,
-  computationResultToEither,
   generatesWithin,
   runConformance,
   checkConformance,
+  defaultTestConformance,
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject (..), ShelleyBase)
-import Cardano.Ledger.Core (EraRule)
+import Cardano.Ledger.Binary (EncCBOR, serialize')
+import Cardano.Ledger.Core (Era, EraRule, eraProtVerLow)
 import qualified Constrained as CV2
 import Constrained.Base (shrinkWithSpec, simplifySpec)
 import Constrained.GenT (GE (..), GenMode (..))
@@ -31,12 +32,12 @@ import Control.Monad.Trans (MonadTrans (..))
 import Control.State.Transition.Extended (STS (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
+import qualified Data.ByteString as BS
 import Data.Functor (($>))
 import qualified Data.Text as T
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import GHC.Base (Constraint, NonEmpty, Symbol, Type)
 import GHC.TypeLits (KnownSymbol)
-import qualified Lib as Agda
 import Test.Cardano.Ledger.Binary.TreeDiff (Pretty (..), ansiWlPretty, ediff, ppEditExpr)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   FixupSpecRep (..),
@@ -53,6 +54,8 @@ import Test.Cardano.Ledger.Shelley.ImpTest (
   tryRunImpRule,
  )
 import UnliftIO (MonadIO (..), evaluateDeep)
+import UnliftIO.Directory (makeAbsolute)
+import UnliftIO.Environment (lookupEnv)
 
 type ForAllExecTypes (c :: Type -> Constraint) fn rule era =
   ( c (ExecEnvironment fn rule era)
@@ -176,6 +179,14 @@ class
     , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
     , FixupSpecRep (SpecRep (PredicateFailure (EraRule rule era)))
     , FixupSpecRep (SpecRep (ExecState fn rule era))
+    , Inject (ExecEnvironment fn rule era) (Environment (EraRule rule era))
+    , Inject (ExecState fn rule era) (State (EraRule rule era))
+    , Inject (ExecSignal fn rule era) (Signal (EraRule rule era))
+    , EncCBOR (ExecContext fn rule era)
+    , EncCBOR (Environment (EraRule rule era))
+    , EncCBOR (State (EraRule rule era))
+    , EncCBOR (Signal (EraRule rule era))
+    , ToExpr (ExecContext fn rule era)
     ) =>
     ExecContext fn rule era ->
     ExecEnvironment fn rule era ->
@@ -192,12 +203,35 @@ class
     String
   extraInfo _ _ _ _ = ""
 
+dumpCbor ::
+  forall era a.
+  ( EncCBOR a
+  , Era era
+  ) =>
+  FilePath ->
+  a ->
+  String ->
+  ImpTestM era ()
+dumpCbor path x name = do
+  fullPath <- makeAbsolute $ path <> "/" <> name
+  liftIO . BS.writeFile fullPath $ serialize' (eraProtVerLow @era) x
+
 checkConformance ::
-  ( ToExpr (SpecRep (PredicateFailure (EraRule rule era)))
+  forall rule era fn.
+  ( Era era
+  , ToExpr (SpecRep (PredicateFailure (EraRule rule era)))
   , ToExpr (SpecRep (ExecState fn rule era))
   , Eq (SpecRep (PredicateFailure (EraRule rule era)))
   , Eq (SpecRep (ExecState fn rule era))
+  , EncCBOR (ExecContext fn rule era)
+  , EncCBOR (Environment (EraRule rule era))
+  , EncCBOR (State (EraRule rule era))
+  , EncCBOR (Signal (EraRule rule era))
   ) =>
+  ExecContext fn rule era ->
+  Environment (EraRule rule era) ->
+  State (EraRule rule era) ->
+  Signal (EraRule rule era) ->
   Either
     (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
     (SpecRep (ExecState fn rule era)) ->
@@ -205,7 +239,7 @@ checkConformance ::
     (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
     (SpecRep (ExecState fn rule era)) ->
   ImpTestM era ()
-checkConformance implResTest agdaResTest = do
+checkConformance ctx env st sig implResTest agdaResTest = do
   let
     conformancePretty =
       ansiWlPretty
@@ -232,7 +266,20 @@ checkConformance implResTest agdaResTest = do
         , "\t\ESC[91m-Implementation"
         , "\t\ESC[92m+Specification\ESC[39m"
         ]
-  unless (implResTest == agdaResTest) $ expectationFailure failMsg
+  unless (implResTest == agdaResTest) $ do
+    mbyCborDumpPath <- liftIO $ lookupEnv "CONFORMANCE_CBOR_DUMP_PATH"
+    case mbyCborDumpPath of
+      Just path -> do
+        let
+        dumpCbor path ctx "conformance_dump_ctx"
+        dumpCbor path env "conformance_dump_env"
+        dumpCbor path st "conformance_dump_st"
+        dumpCbor path sig "conformance_dump_sig"
+        logEntry $ "Wrote a CBOR dump to " <> show path
+      Nothing ->
+        logEntry
+          "Run the test again with CONFORMANCE_CBOR_DUMP_PATH=<path> to get a CBOR dump of the test data"
+    expectationFailure failMsg
 
 defaultTestConformance ::
   forall fn era rule.
@@ -248,6 +295,11 @@ defaultTestConformance ::
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
   , FixupSpecRep (SpecRep (PredicateFailure (EraRule rule era)))
   , FixupSpecRep (SpecRep (ExecState fn rule era))
+  , EncCBOR (ExecContext fn rule era)
+  , EncCBOR (Environment (EraRule rule era))
+  , EncCBOR (State (EraRule rule era))
+  , EncCBOR (Signal (EraRule rule era))
+  , ToExpr (ExecContext fn rule era)
   ) =>
   ExecContext fn rule era ->
   ExecEnvironment fn rule era ->
@@ -256,7 +308,9 @@ defaultTestConformance ::
   Property
 defaultTestConformance ctx env st sig = property $ do
   (implResTest, agdaResTest) <- runConformance @rule @fn @era ctx env st sig
-  checkConformance @rule @_ @fn implResTest agdaResTest
+  let extra = extraInfo @fn @rule @era ctx (inject env) (inject st) (inject sig)
+  logEntry extra
+  checkConformance @rule @_ @fn ctx (inject env) (inject st) (inject sig) implResTest agdaResTest
 
 runConformance ::
   forall (rule :: Symbol) (fn :: [Type] -> Type -> Type) era.
@@ -268,6 +322,7 @@ runConformance ::
   , FixupSpecRep (SpecRep (ExecState fn rule era))
   , Inject (State (EraRule rule era)) (ExecState fn rule era)
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
+  , ToExpr (ExecContext fn rule era)
   ) =>
   ExecContext fn rule era ->
   ExecEnvironment fn rule era ->
@@ -286,6 +341,10 @@ runConformance execContext env st sig = do
   (specEnv, specSt, specSig) <-
     impAnn "Translating the inputs" $
       translateInputs @fn @rule @era env st sig execContext
+  logEntry $ "ctx:\n" <> showExpr execContext
+  logEntry $ "implEnv:\n" <> showExpr env
+  logEntry $ "implSt:\n" <> showExpr st
+  logEntry $ "implSig:\n" <> showExpr sig
   logEntry $ "specEnv:\n" <> showExpr specEnv
   logEntry $ "specSt:\n" <> showExpr specSt
   logEntry $ "specSig:\n" <> showExpr specSig
@@ -319,6 +378,10 @@ conformsToImpl ::
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
   , FixupSpecRep (SpecRep (PredicateFailure (EraRule rule era)))
   , FixupSpecRep (SpecRep (ExecState fn rule era))
+  , EncCBOR (ExecContext fn rule era)
+  , EncCBOR (Environment (EraRule rule era))
+  , EncCBOR (State (EraRule rule era))
+  , EncCBOR (Signal (EraRule rule era))
   ) =>
   Property
 conformsToImpl = property @(ImpTestM era Property) . (`runContT` pure) $ do
@@ -337,10 +400,8 @@ conformsToImpl = property @(ImpTestM era Property) . (`runContT` pure) $ do
         generator = CV2.runGenT (CV2.genFromSpecT simplifiedSpec) Loose
         shrinker (Result _ x) = pure <$> shrinkWithSpec simplifiedSpec x
         shrinker _ = []
-        shower (Result _ x) = showExpr x
-        shower e = show e
       res :: GE a <- ContT $ \c ->
-        pure $ forAllShrinkShow generator shrinker shower c
+        pure $ forAllShrinkBlind generator shrinker c
       case res of
         Result _ x -> pure x
         _ -> ContT . const . pure $ property Discard
@@ -350,12 +411,10 @@ conformsToImpl = property @(ImpTestM era Property) . (`runContT` pure) $ do
   deepEval st "state"
   sig <- forAllSpec $ signalSpec @fn @rule @era ctx env st
   deepEval sig "signal"
-  let extra = extraInfo @fn @rule @era ctx (inject env) (inject st) (inject sig)
   let classification =
         case classOf @fn @rule @era sig of
           Nothing -> classify False "None"
           Just c -> classify True c
-  lift $ logEntry extra
   pure . classification $
     testConformance @fn @rule @era ctx env st sig
 
@@ -374,7 +433,3 @@ generatesWithin gen timeout =
     $ \x -> within timeout $ ioProperty (evaluateDeep x $> ())
   where
     aName = show (typeRep $ Proxy @a)
-
-computationResultToEither :: Agda.ComputationResult e a -> Either e a
-computationResultToEither (Agda.Success x) = Right x
-computationResultToEither (Agda.Failure e) = Left e

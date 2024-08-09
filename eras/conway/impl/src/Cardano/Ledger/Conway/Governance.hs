@@ -135,7 +135,6 @@ module Cardano.Ledger.Conway.Governance (
   epochStateIncrStakeDistrL,
   epochStateRegDrepL,
   epochStateUMapL,
-  reDRepDistrL,
   pulseDRepPulsingState,
   completeDRepPulsingState,
   extractDRepPulsingState,
@@ -155,6 +154,13 @@ module Cardano.Ledger.Conway.Governance (
   RunConwayRatify (..),
   govStatePrevGovActionIds,
   mkEnactState,
+  ratifySignalL,
+  reStakeDistrL,
+  reStakePoolDistrL,
+  reDRepDistrL,
+  reDRepStateL,
+  reCurrentEpochL,
+  reCommitteeStateL,
 
   -- * Exported for testing
   pparamsUpdateThreshold,

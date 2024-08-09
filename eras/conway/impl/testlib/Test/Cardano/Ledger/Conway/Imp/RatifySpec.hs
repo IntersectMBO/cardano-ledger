@@ -816,6 +816,19 @@ votingSpec =
           passEpoch
           getTreasury `shouldReturn` zero
 
+        it "DRepAlwaysNoConfidence is sufficient to pass NoConfidence" $ do
+          modifyPParams $ \pp ->
+            pp
+              & ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 0 %! 1
+              & ppDRepVotingThresholdsL . dvtMotionNoConfidenceL .~ 1 %! 1
+          (drep, _, committeeId) <- electBasicCommittee
+          _ <- delegateToDRep 1 DRepAlwaysNoConfidence
+          noConfidence <- submitGovAction (NoConfidence (SJust committeeId))
+          submitYesVote_ (DRepVoter drep) noConfidence
+          logAcceptedRatio noConfidence
+          passNEpochs 2
+          getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId noConfidence)
+
       describe "StakePool" $ do
         it "UTxOs contribute to active voting stake" $ do
           -- Only modify the applicable thresholds

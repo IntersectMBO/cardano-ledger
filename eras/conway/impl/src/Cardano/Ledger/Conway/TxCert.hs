@@ -51,7 +51,6 @@ import Cardano.Ledger.Binary (
   DecCBOR (..),
   Decoder,
   EncCBOR (..),
-  Encoding,
   FromCBOR (..),
   ToCBOR (..),
   decodeNullStrictMaybe,
@@ -442,6 +441,54 @@ data ConwayDelegCert c
     ConwayRegDelegCert !(StakeCredential c) !(Delegatee c) !Coin
   deriving (Show, Generic, Eq, Ord)
 
+instance Crypto c => EncCBOR (ConwayDelegCert c) where
+  encCBOR = \case
+    -- Shelley backwards compatibility
+    ConwayRegCert cred SNothing -> encodeShelleyDelegCert $ ShelleyRegCert cred
+    ConwayUnRegCert cred SNothing -> encodeShelleyDelegCert $ ShelleyUnRegCert cred
+    ConwayDelegCert cred (DelegStake poolId) -> encodeShelleyDelegCert $ ShelleyDelegCert cred poolId
+    -- New in Conway
+    ConwayRegCert cred (SJust deposit) ->
+      encodeListLen 3
+        <> encodeWord8 7
+        <> encCBOR cred
+        <> encCBOR deposit
+    ConwayUnRegCert cred (SJust deposit) ->
+      encodeListLen 3
+        <> encodeWord8 8
+        <> encCBOR cred
+        <> encCBOR deposit
+    ConwayDelegCert cred (DelegVote drep) ->
+      encodeListLen 3
+        <> encodeWord8 9
+        <> encCBOR cred
+        <> encCBOR drep
+    ConwayDelegCert cred (DelegStakeVote poolId dRep) ->
+      encodeListLen 4
+        <> encodeWord8 10
+        <> encCBOR cred
+        <> encCBOR poolId
+        <> encCBOR dRep
+    ConwayRegDelegCert cred (DelegStake poolId) deposit ->
+      encodeListLen 4
+        <> encodeWord8 11
+        <> encCBOR cred
+        <> encCBOR poolId
+        <> encCBOR deposit
+    ConwayRegDelegCert cred (DelegVote drep) deposit ->
+      encodeListLen 4
+        <> encodeWord8 12
+        <> encCBOR cred
+        <> encCBOR drep
+        <> encCBOR deposit
+    ConwayRegDelegCert cred (DelegStakeVote poolId dRep) deposit ->
+      encodeListLen 5
+        <> encodeWord8 13
+        <> encCBOR cred
+        <> encCBOR poolId
+        <> encCBOR dRep
+        <> encCBOR deposit
+
 instance NFData (ConwayDelegCert c)
 
 instance NoThunks (ConwayDelegCert c)
@@ -510,6 +557,35 @@ instance Crypto c => ToJSON (ConwayGovCert c) where
         [ "coldCredential" .= toJSON coldCred
         , "anchor" .= toJSON anchor
         ]
+
+instance Crypto c => EncCBOR (ConwayGovCert c) where
+  encCBOR = \case
+    ConwayAuthCommitteeHotKey cred key ->
+      encodeListLen 3
+        <> encodeWord8 14
+        <> encCBOR cred
+        <> encCBOR key
+    ConwayResignCommitteeColdKey cred a ->
+      encodeListLen 3
+        <> encodeWord8 15
+        <> encCBOR cred
+        <> encodeNullStrictMaybe encCBOR a
+    ConwayRegDRep cred deposit mAnchor ->
+      encodeListLen 4
+        <> encodeWord8 16
+        <> encCBOR cred
+        <> encCBOR deposit
+        <> encodeNullStrictMaybe encCBOR mAnchor
+    ConwayUnRegDRep cred deposit ->
+      encodeListLen 3
+        <> encodeWord8 17
+        <> encCBOR cred
+        <> encCBOR deposit
+    ConwayUpdateDRep cred mAnchor ->
+      encodeListLen 3
+        <> encodeWord8 18
+        <> encCBOR cred
+        <> encodeNullStrictMaybe encCBOR mAnchor
 
 data ConwayTxCert era
   = ConwayTxCertDeleg !(ConwayDelegCert (EraCrypto era))
@@ -606,86 +682,9 @@ instance (Era era, Val (Value era)) => ToCBOR (ConwayTxCert era) where
 
 instance (Era era, Val (Value era)) => EncCBOR (ConwayTxCert era) where
   encCBOR = \case
-    ConwayTxCertDeleg delegCert -> encodeConwayDelegCert delegCert
+    ConwayTxCertDeleg delegCert -> encCBOR delegCert
     ConwayTxCertPool poolCert -> encodePoolCert poolCert
-    ConwayTxCertGov govCert -> encodeGovCert govCert
-
-encodeConwayDelegCert :: Crypto c => ConwayDelegCert c -> Encoding
-encodeConwayDelegCert = \case
-  -- Shelley backwards compatibility
-  ConwayRegCert cred SNothing -> encodeShelleyDelegCert $ ShelleyRegCert cred
-  ConwayUnRegCert cred SNothing -> encodeShelleyDelegCert $ ShelleyUnRegCert cred
-  ConwayDelegCert cred (DelegStake poolId) -> encodeShelleyDelegCert $ ShelleyDelegCert cred poolId
-  -- New in Conway
-  ConwayRegCert cred (SJust deposit) ->
-    encodeListLen 3
-      <> encodeWord8 7
-      <> encCBOR cred
-      <> encCBOR deposit
-  ConwayUnRegCert cred (SJust deposit) ->
-    encodeListLen 3
-      <> encodeWord8 8
-      <> encCBOR cred
-      <> encCBOR deposit
-  ConwayDelegCert cred (DelegVote drep) ->
-    encodeListLen 3
-      <> encodeWord8 9
-      <> encCBOR cred
-      <> encCBOR drep
-  ConwayDelegCert cred (DelegStakeVote poolId dRep) ->
-    encodeListLen 4
-      <> encodeWord8 10
-      <> encCBOR cred
-      <> encCBOR poolId
-      <> encCBOR dRep
-  ConwayRegDelegCert cred (DelegStake poolId) deposit ->
-    encodeListLen 4
-      <> encodeWord8 11
-      <> encCBOR cred
-      <> encCBOR poolId
-      <> encCBOR deposit
-  ConwayRegDelegCert cred (DelegVote drep) deposit ->
-    encodeListLen 4
-      <> encodeWord8 12
-      <> encCBOR cred
-      <> encCBOR drep
-      <> encCBOR deposit
-  ConwayRegDelegCert cred (DelegStakeVote poolId dRep) deposit ->
-    encodeListLen 5
-      <> encodeWord8 13
-      <> encCBOR cred
-      <> encCBOR poolId
-      <> encCBOR dRep
-      <> encCBOR deposit
-
-encodeGovCert :: Crypto c => ConwayGovCert c -> Encoding
-encodeGovCert = \case
-  ConwayAuthCommitteeHotKey cred key ->
-    encodeListLen 3
-      <> encodeWord8 14
-      <> encCBOR cred
-      <> encCBOR key
-  ConwayResignCommitteeColdKey cred a ->
-    encodeListLen 3
-      <> encodeWord8 15
-      <> encCBOR cred
-      <> encodeNullStrictMaybe encCBOR a
-  ConwayRegDRep cred deposit mAnchor ->
-    encodeListLen 4
-      <> encodeWord8 16
-      <> encCBOR cred
-      <> encCBOR deposit
-      <> encodeNullStrictMaybe encCBOR mAnchor
-  ConwayUnRegDRep cred deposit ->
-    encodeListLen 3
-      <> encodeWord8 17
-      <> encCBOR cred
-      <> encCBOR deposit
-  ConwayUpdateDRep cred mAnchor ->
-    encodeListLen 3
-      <> encodeWord8 18
-      <> encCBOR cred
-      <> encodeNullStrictMaybe encCBOR mAnchor
+    ConwayTxCertGov govCert -> encCBOR govCert
 
 fromShelleyDelegCert :: ShelleyDelegCert c -> ConwayDelegCert c
 fromShelleyDelegCert = \case
