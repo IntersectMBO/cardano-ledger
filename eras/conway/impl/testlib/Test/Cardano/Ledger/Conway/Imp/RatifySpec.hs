@@ -821,8 +821,9 @@ votingSpec =
             pp
               & ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 0 %! 1
               & ppDRepVotingThresholdsL . dvtMotionNoConfidenceL .~ 1 %! 1
+              & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1)
           (drep, _, committeeId) <- electBasicCommittee
-          _ <- delegateToDRep 1 DRepAlwaysNoConfidence
+          _ <- delegateToDRep 300 DRepAlwaysNoConfidence
           noConfidence <- submitGovAction (NoConfidence (SJust committeeId))
           submitYesVote_ (DRepVoter drep) noConfidence
           logAcceptedRatio noConfidence
