@@ -87,16 +87,17 @@ test-suite tests
     type:             exitcode-stdio-1.0
     main-is:          Main.hs
     hs-source-dirs:   test
-    default-language: Haskell2010
-    ghc-options:
-        -Wall -Wcompat -Wincomplete-record-updates
-        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
-        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
     other-modules:
         Test.Cardano.Ledger.Conformance.ConformanceSpec
         Test.Cardano.Ledger.Conformance.Spec.Conway
         Test.Cardano.Ledger.Conformance.ExecSpecRule.MiniTrace
         Test.Cardano.Ledger.Conformance.Imp.Ratify
+
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
 
     build-depends:
         base >=4.14 && <5,
@@ -111,4 +112,4 @@ test-suite tests
         cardano-ledger-alonzo,
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-test,
-        microlens,
+        microlens
