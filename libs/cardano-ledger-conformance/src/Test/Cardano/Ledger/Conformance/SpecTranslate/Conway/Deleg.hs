@@ -23,13 +23,13 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Shelley.LedgerState (DState (..))
 import Cardano.Ledger.Shelley.Rules
-import Cardano.Ledger.UMap (dRepMap, rewardMap, sPoolMap)
+import qualified Cardano.Ledger.UMap as UMap
 import qualified Data.Map.Strict as Map
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance (
   hashToInteger,
  )
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (emptyDeposits)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Core
 import Test.Cardano.Ledger.Conway.TreeDiff
 
@@ -39,14 +39,12 @@ instance
   ) =>
   SpecTranslate ctx (ConwayDelegEnv era)
   where
-  type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv
+  type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv'
 
   toSpecRep ConwayDelegEnv {..} =
-    Agda.MkDelegEnv
+    Agda.MkDelegEnv'
       <$> toSpecRep cdePParams
       <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) cdePools)
-      -- TODO: replace with actual deposits map
-      <*> pure emptyDeposits
 
 instance SpecTranslate ctx (ConwayDelegCert c) where
   type SpecRep (ConwayDelegCert c) = Agda.TxCert
@@ -80,10 +78,14 @@ instance SpecTranslate ctx (ConwayDelegPredFailure era) where
   toSpecRep e = pure . OpaqueErrorString . show $ toExpr e
 
 instance SpecTranslate ctx (DState era) where
-  type SpecRep (DState era) = Agda.DState
+  type SpecRep (DState era) = Agda.DState'
 
   toSpecRep DState {..} =
-    Agda.MkDState
-      <$> toSpecRep (dRepMap dsUnified)
-      <*> toSpecRep (sPoolMap dsUnified)
-      <*> toSpecRep (rewardMap dsUnified)
+    Agda.MkDState'
+      <$> toSpecRep (UMap.dRepMap dsUnified)
+      <*> toSpecRep (UMap.sPoolMap dsUnified)
+      <*> toSpecRep (UMap.rewardMap dsUnified)
+      <*> toSpecRep deposits
+    where
+      deposits =
+        Map.mapKeys CredentialDeposit (UMap.depositMap dsUnified)
