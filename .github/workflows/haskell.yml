@@ -44,7 +44,7 @@ jobs:
 
     env:
       # Modify this value to "invalidate" the cabal cache.
-      CABAL_CACHE_VERSION: "2023-07-17"
+      CABAL_CACHE_VERSION: "2024-08-06"
 
       # current ref from: 27.02.2022
       SECP256K1_REF: ac83be33d0956faf6b7f61a60ab524ef7d6a473a
@@ -160,14 +160,14 @@ jobs:
     - name: Archive working directory
       # pax format is needed to avoid unnecessary rebuilding, because the
       # default format uses a one-second resolution for timestamps
-      run: tar --format pax -cf /var/tmp/state.tar . && mv /var/tmp/state.tar .
+      run: tar --absolute-names --use-compress-program zstdmt --format pax -cf /var/tmp/state.tzst . ${{ steps.install-haskell.outputs.cabal-store }} && mv /var/tmp/state.tzst .
     - name: Upload working directory archive
       # upload-artifact is pinned to avoid a bug in download-artifact
       # See https://github.com/actions/download-artifact/issues/328
       uses: actions/upload-artifact@v4.2.0
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
-        path: state.tar
+        path: state.tzst
         overwrite: true
         retention-days: 1
 
@@ -204,7 +204,7 @@ jobs:
         - set-algebra
         - small-steps
         - vector-map
-        ghc: ["8.10.7", "9.2.8", "9.6.6", "9.8.2"]
+        ghc: ["8.10.7", "9.2.8", "9.6.6", "9.8.2", "9.10.1"]
         os: [ubuntu-latest]
       fail-fast: false
 
@@ -236,7 +236,7 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: latest
+        cabal-version: 3.10.3.0
 
     - name: Set up Ruby 2.7
       uses: ruby/setup-ruby@v1
@@ -277,28 +277,7 @@ jobs:
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
     - name: Unarchive working directory
-      run: tar -xf state.tar && rm state.tar
-
-    # A dependencies.txt file should have been created by the build job, so we
-    # check if it exists and is not empty.
-    - name: Check dependencies to be used as cache keys
-      id: check-deps
-      run: |
-        ./scripts/file-not-null.sh dependencies.txt
-
-    - name: Restore cache
-      uses: actions/cache/restore@v4
-      id: restore-cabal-cache
-      env:
-        cache-name: cache-cabal-build
-      with:
-        path: |
-          ${{ steps.install-haskell.outputs.cabal-store }}
-        key: ${{ env.cache-name }}-${{ runner.os }}-${{ matrix.ghc }}-${{ env.CABAL_CACHE_VERSION }}-${{ hashFiles('dependencies.txt') }}-${{ hashFiles('cabal.project*') }}
-        # The cache with this specific key should have been created by the build
-        # job. If the cache is missing, something is terribly wrong! We fail the
-        # test job, or otherwise we would start rebuilding all the dependencies.
-        fail-on-cache-miss: true
+      run: tar -xf state.tzst --use-compress-program unzstd && rm state.tzst
 
     - name: Cabal update
       run: cabal update
