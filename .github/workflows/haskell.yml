@@ -87,7 +87,7 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: 3.10.3.0
+        cabal-version: 3.12.1.0
 
     - name: Configure to use libsodium
       run: |
@@ -236,7 +236,7 @@ jobs:
       uses: input-output-hk/actions/haskell@latest
       with:
         ghc-version: ${{ matrix.ghc }}
-        cabal-version: latest
+        cabal-version: 3.12.1.0
 
     - name: Set up Ruby 2.7
       uses: ruby/setup-ruby@v1
@@ -276,8 +276,12 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: state-${{ matrix.ghc }}-${{ matrix.os }}
+
     - name: Unarchive working directory
       run: tar -xf state.tar && rm state.tar
+
+    - name: Cabal update
+      run: cabal update
 
     # A dependencies.txt file should have been created by the build job, so we
     # check if it exists and is not empty.
@@ -299,9 +303,6 @@ jobs:
         # job. If the cache is missing, something is terribly wrong! We fail the
         # test job, or otherwise we would start rebuilding all the dependencies.
         fail-on-cache-miss: true
-
-    - name: Cabal update
-      run: cabal update
 
     - name: Run tests
       run: |
