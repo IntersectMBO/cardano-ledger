@@ -1,0 +1,248 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE RecordWildCards #-}</span><span>
+</span><span id="line-3"></span><span>
+</span><span id="line-4"></span><span class="hs-comment">-- | Specs necessary to generate, environment, state, and signal</span><span>
+</span><span id="line-5"></span><span class="hs-comment">-- for the CERT rule</span><span>
+</span><span id="line-6"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Cert</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-7"></span><span>
+</span><span id="line-8"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Cardano.Ledger.CertState</span></a></span><span>
+</span><span id="line-9"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier">Cardano.Ledger.Conway.Rules</span></a></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier">Cardano.Ledger.Conway.TxCert</span></a></span><span>
+</span><span id="line-11"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.13.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier">Cardano.Ledger.Shelley.API.Types</span></a></span><span>
+</span><span id="line-12"></span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier">Constrained</span></a></span><span>
+</span><span id="line-14"></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier">Cardano.Ledger.Conway</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier">ConwayEra</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Cardano.Ledger.Crypto</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">StandardCrypto</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Deleg.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Deleg</span></a></span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.GovCert</span></a></span><span>
+</span><span id="line-19"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Instances</span></a></span><span>
+</span><span id="line-20"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.PParams.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.PParams</span></a></span><span>
+</span><span id="line-21"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Pool.html"><span class="hs-identifier">Test.Cardano.Ledger.Constrained.Conway.Pool</span></a></span><span>
+</span><span id="line-22"></span><span>
+</span><span id="line-23"></span><span id="local-6989586621683642333"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#certEnvSpec"><span class="hs-identifier hs-type">certEnvSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.html#IsConwayUniv"><span class="hs-identifier hs-type">IsConwayUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683642333"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-25"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683642333"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">CertEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">StandardCrypto</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-26"></span><span id="certEnvSpec"><span class="annot"><span class="annottext">certEnvSpec :: forall (fn :: [*] -&gt; * -&gt; *).
+IsConwayUniv fn =&gt;
+Specification fn (CertEnv (ConwayEra StandardCrypto))
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#certEnvSpec"><span class="hs-identifier hs-var hs-var">certEnvSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-27"></span><span>  </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621683642082"><span class="annot"><span class="annottext">Term fn (CertEnv (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683642082"><span class="hs-identifier hs-var">ce</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-28"></span><span>    </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) p a.
+(HasSpec fn a, IsProductType fn a, IsPred p fn) =&gt;
+Term fn a
+-&gt; FunTy (MapList (Term fn) (ProductAsList a)) p -&gt; Pred fn
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term fn (CertEnv (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683642082"><span class="hs-identifier hs-var">ce</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span class="annot"><span class="annottext">Term fn SlotNo
+</span><span class="hs-identifier">_</span></span><span> </span><span id="local-6989586621683642080"><span class="annot"><span class="annottext">Term fn (PParams (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683642080"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span class="annot"><span class="annottext">Term fn EpochNo
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Term fn (StrictMaybe (Committee (ConwayEra StandardCrypto)))
+</span><span class="hs-identifier">_</span></span><span> </span><span class="annot"><span class="annottext">Term
+  fn
+  (Map
+     (GovPurposeId 'CommitteePurpose (ConwayEra StandardCrypto))
+     (GovActionState (ConwayEra StandardCrypto)))
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-29"></span><span>      </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Specification fn a -&gt; Pred fn
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term fn (PParams (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683642080"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *).
+IsConwayUniv fn =&gt;
+Specification fn (PParams (ConwayEra StandardCrypto))
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.PParams.html#pparamsSpec"><span class="hs-identifier hs-var">pparamsSpec</span></a></span><span>
+</span><span id="line-30"></span><span>
+</span><span id="line-31"></span><span id="local-6989586621683642242"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#certStateSpec"><span class="hs-identifier hs-type">certStateSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-32"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.html#IsConwayUniv"><span class="hs-identifier hs-type">IsConwayUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683642242"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-33"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683642242"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">CertState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">StandardCrypto</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-34"></span><span id="certStateSpec"><span class="annot"><span class="annottext">certStateSpec :: forall (fn :: [*] -&gt; * -&gt; *).
+IsConwayUniv fn =&gt;
+Specification fn (CertState (ConwayEra StandardCrypto))
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#certStateSpec"><span class="hs-identifier hs-var hs-var">certStateSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-35"></span><span>  </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621683642023"><span class="annot"><span class="annottext">Term fn (CertState (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683642023"><span class="hs-identifier hs-var">cs</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-36"></span><span>    </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) p a.
+(HasSpec fn a, IsProductType fn a, IsPred p fn) =&gt;
+Term fn a
+-&gt; FunTy (MapList (Term fn) (ProductAsList a)) p -&gt; Pred fn
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">match</span></a></span><span> </span><span class="annot"><span class="annottext">Term fn (CertState (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683642023"><span class="hs-identifier hs-var">cs</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621683642022"><span class="annot"><span class="annottext">Term fn (VState (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683642022"><span class="hs-identifier hs-var">vState</span></a></span></span><span> </span><span id="local-6989586621683642021"><span class="annot"><span class="annottext">Term fn (PState (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683642021"><span class="hs-identifier hs-var">pState</span></a></span></span><span> </span><span id="local-6989586621683642020"><span class="annot"><span class="annottext">Term fn (DState (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683642020"><span class="hs-identifier hs-var">dState</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-37"></span><span>      </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Specification fn a -&gt; Pred fn
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term fn (VState (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683642022"><span class="hs-identifier hs-var">vState</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *).
+Specification fn (VState (ConwayEra StandardCrypto))
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html#vStateSpec"><span class="hs-identifier hs-var">vStateSpec</span></a></span><span>
+</span><span id="line-38"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Specification fn a -&gt; Pred fn
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term fn (PState (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683642021"><span class="hs-identifier hs-var">pState</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *).
+IsConwayUniv fn =&gt;
+Specification fn (PState (ConwayEra StandardCrypto))
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Pool.html#pStateSpec"><span class="hs-identifier hs-var">pStateSpec</span></a></span><span>
+</span><span id="line-39"></span><span>      </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Specification fn a -&gt; Pred fn
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term fn (DState (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683642020"><span class="hs-identifier hs-var">dState</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *).
+IsConwayUniv fn =&gt;
+Specification fn (DState (ConwayEra StandardCrypto))
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Deleg.html#dStateSpec"><span class="hs-identifier hs-var">dStateSpec</span></a></span><span>
+</span><span id="line-40"></span><span>      </span><span class="hs-special">]</span><span>
+</span><span id="line-41"></span><span>
+</span><span id="line-42"></span><span id="local-6989586621683642220"><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#txCertSpec"><span class="hs-identifier hs-type">txCertSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-43"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Constrained.Conway.Instances.html#IsConwayUniv"><span class="hs-identifier hs-type">IsConwayUniv</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683642220"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">CertEnv</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">StandardCrypto</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-45"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">CertState</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">StandardCrypto</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-46"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-type">Specification</span></a></span><span> </span><span class="annot"><a href="#local-6989586621683642220"><span class="hs-identifier hs-type">fn</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ConwayTxCert</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ConwayEra</span></a></span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">StandardCrypto</span></a></span><span class="hs-special">)</span><span class="hs-special">)</span></span><span>
+</span><span id="line-47"></span><span id="txCertSpec"><span class="annot"><span class="annottext">txCertSpec :: forall (fn :: [*] -&gt; * -&gt; *).
+IsConwayUniv fn =&gt;
+CertEnv (ConwayEra StandardCrypto)
+-&gt; CertState (ConwayEra StandardCrypto)
+-&gt; Specification fn (ConwayTxCert (ConwayEra StandardCrypto))
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Cert.html#txCertSpec"><span class="hs-identifier hs-var hs-var">txCertSpec</span></a></span></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">CertEnv</span></a></span><span> </span><span id="local-6989586621683641944"><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621683641944"><span class="hs-identifier hs-var">slot</span></a></span></span><span> </span><span id="local-6989586621683641943"><span class="annot"><span class="annottext">PParams (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641943"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span id="local-6989586621683641942"><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621683641942"><span class="hs-identifier hs-var">ce</span></a></span></span><span> </span><span id="local-6989586621683641941"><span class="annot"><span class="annottext">StrictMaybe (Committee (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683641941"><span class="hs-identifier hs-var">cc</span></a></span></span><span> </span><span id="local-6989586621683641940"><span class="annot"><span class="annottext">Map
+  (GovPurposeId 'CommitteePurpose (ConwayEra StandardCrypto))
+  (GovActionState (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683641940"><span class="hs-identifier hs-var">cp</span></a></span></span><span class="hs-special">)</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-type">CertState</span></a></span><span> </span><span class="hs-special">{</span><span id="local-6989586621683641936"><span id="local-6989586621683641937"><span id="local-6989586621683641938"><span class="annot"><span class="annottext">DState (ConwayEra StandardCrypto)
+PState (ConwayEra StandardCrypto)
+VState (ConwayEra StandardCrypto)
+certVState :: forall era. CertState era -&gt; VState era
+certPState :: forall era. CertState era -&gt; PState era
+certDState :: forall era. CertState era -&gt; DState era
+certDState :: DState (ConwayEra StandardCrypto)
+certPState :: PState (ConwayEra StandardCrypto)
+certVState :: VState (ConwayEra StandardCrypto)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-glyph hs-var hs-var hs-var hs-var hs-var hs-var">..</span></a></span></span></span></span><span class="hs-special">}</span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-48"></span><span>  </span><span class="annot"><span class="annottext">forall a (fn :: [*] -&gt; * -&gt; *) p.
+(IsPred p fn, HasSpec fn a) =&gt;
+(Term fn a -&gt; p) -&gt; Specification fn a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">constrained</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621683641932"><span class="annot"><span class="annottext">Term fn (ConwayTxCert (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683641932"><span class="hs-identifier hs-var">txCert</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-49"></span><span>    </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+(HasSpec fn a, HasSpec fn (SimpleRep a), HasSimpleRep a,
+ TypeSpec fn a ~ TypeSpec fn (SimpleRep a),
+ SimpleRep a ~ SumOver (Cases (SimpleRep a)),
+ TypeList (Cases (SimpleRep a))) =&gt;
+Term fn a
+-&gt; FunTy
+     (MapList (Weighted (Binder fn)) (Cases (SimpleRep a))) (Pred fn)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">caseOn</span></a></span><span>
+</span><span id="line-50"></span><span>      </span><span class="annot"><span class="annottext">Term fn (ConwayTxCert (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683641932"><span class="hs-identifier hs-var">txCert</span></a></span><span>
+</span><span id="line-51"></span><span>      </span><span class="hs-comment">-- These weights try to make it equally likely that each of the many certs</span><span>
+</span><span id="line-52"></span><span>      </span><span class="hs-comment">-- across the 3 categories are chosen at similar frequencies.</span><span>
+</span><span id="line-53"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) p a.
+(HasSpec fn a, All (HasSpec fn) (Args a), IsPred p fn, IsProd a) =&gt;
+Int
+-&gt; FunTy (MapList (Term fn) (Args a)) p -&gt; Weighted (Binder fn) a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621683641929"><span class="annot"><span class="annottext">Term fn (ConwayDelegCert StandardCrypto)
+</span><a href="#local-6989586621683641929"><span class="hs-identifier hs-var">delegCert</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Specification fn a -&gt; Pred fn
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term fn (ConwayDelegCert StandardCrypto)
+</span><a href="#local-6989586621683641929"><span class="hs-identifier hs-var">delegCert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *).
+IsConwayUniv fn =&gt;
+ConwayDelegEnv (ConwayEra StandardCrypto)
+-&gt; DState (ConwayEra StandardCrypto)
+-&gt; Specification fn (ConwayDelegCert StandardCrypto)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Deleg.html#delegCertSpec"><span class="hs-identifier hs-var">delegCertSpec</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayDelegEnv (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641927"><span class="hs-identifier hs-var">delegEnv</span></a></span><span> </span><span class="annot"><span class="annottext">DState (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641936"><span class="hs-identifier hs-var">certDState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-54"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) p a.
+(HasSpec fn a, All (HasSpec fn) (Args a), IsPred p fn, IsProd a) =&gt;
+Int
+-&gt; FunTy (MapList (Term fn) (Args a)) p -&gt; Weighted (Binder fn) a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621683641926"><span class="annot"><span class="annottext">Term fn (PoolCert StandardCrypto)
+</span><a href="#local-6989586621683641926"><span class="hs-identifier hs-var">poolCert</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Specification fn a -&gt; Pred fn
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term fn (PoolCert StandardCrypto)
+</span><a href="#local-6989586621683641926"><span class="hs-identifier hs-var">poolCert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *).
+IsConwayUniv fn =&gt;
+PoolEnv (ConwayEra StandardCrypto)
+-&gt; PState (ConwayEra StandardCrypto)
+-&gt; Specification fn (PoolCert StandardCrypto)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.Pool.html#poolCertSpec"><span class="hs-identifier hs-var">poolCertSpec</span></a></span><span> </span><span class="annot"><span class="annottext">PoolEnv (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641924"><span class="hs-identifier hs-var">poolEnv</span></a></span><span> </span><span class="annot"><span class="annottext">PState (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641937"><span class="hs-identifier hs-var">certPState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-55"></span><span>      </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) p a.
+(HasSpec fn a, All (HasSpec fn) (Args a), IsPred p fn, IsProd a) =&gt;
+Int
+-&gt; FunTy (MapList (Term fn) (Args a)) p -&gt; Weighted (Binder fn) a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">branchW</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">3</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621683641923"><span class="annot"><span class="annottext">Term fn (ConwayGovCert StandardCrypto)
+</span><a href="#local-6989586621683641923"><span class="hs-identifier hs-var">govCert</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *) a.
+HasSpec fn a =&gt;
+Term fn a -&gt; Specification fn a -&gt; Pred fn
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/constrained-generators-0.2.0.0/doc/html/constrained-generators/src"><span class="hs-identifier hs-var">satisfies</span></a></span><span> </span><span class="annot"><span class="annottext">Term fn (ConwayGovCert StandardCrypto)
+</span><a href="#local-6989586621683641923"><span class="hs-identifier hs-var">govCert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall (fn :: [*] -&gt; * -&gt; *).
+IsConwayUniv fn =&gt;
+ConwayGovCertEnv (ConwayEra StandardCrypto)
+-&gt; VState (ConwayEra StandardCrypto)
+-&gt; Specification fn (ConwayGovCert StandardCrypto)
+</span><a href="Test.Cardano.Ledger.Constrained.Conway.GovCert.html#govCertSpec"><span class="hs-identifier hs-var">govCertSpec</span></a></span><span> </span><span class="annot"><span class="annottext">ConwayGovCertEnv (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641921"><span class="hs-identifier hs-var">govCertEnv</span></a></span><span> </span><span class="annot"><span class="annottext">VState (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641938"><span class="hs-identifier hs-var">certVState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-56"></span><span>  </span><span class="hs-keyword">where</span><span>
+</span><span id="line-57"></span><span>    </span><span id="local-6989586621683641927"><span class="annot"><span class="annottext">delegEnv :: ConwayDelegEnv (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641927"><span class="hs-identifier hs-var hs-var">delegEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era.
+PParams era
+-&gt; Map
+     (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))
+-&gt; ConwayDelegEnv era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">ConwayDelegEnv</span></a></span><span> </span><span class="annot"><span class="annottext">PParams (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641943"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era.
+PState era
+-&gt; Map
+     (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.14.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">psStakePoolParams</span></a></span><span> </span><span class="annot"><span class="annottext">PState (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641937"><span class="hs-identifier hs-var">certPState</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-58"></span><span>    </span><span id="local-6989586621683641924"><span class="annot"><span class="annottext">poolEnv :: PoolEnv (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641924"><span class="hs-identifier hs-var hs-var">poolEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era. SlotNo -&gt; PParams era -&gt; PoolEnv era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.13.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">PoolEnv</span></a></span><span> </span><span class="annot"><span class="annottext">SlotNo
+</span><a href="#local-6989586621683641944"><span class="hs-identifier hs-var">slot</span></a></span><span> </span><span class="annot"><span class="annottext">PParams (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641943"><span class="hs-identifier hs-var">pp</span></a></span><span>
+</span><span id="line-59"></span><span>    </span><span id="local-6989586621683641921"><span class="annot"><span class="annottext">govCertEnv :: ConwayGovCertEnv (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641921"><span class="hs-identifier hs-var hs-var">govCertEnv</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era.
+PParams era
+-&gt; EpochNo
+-&gt; StrictMaybe (Committee era)
+-&gt; Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
+-&gt; ConwayGovCertEnv era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.16.1.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">ConwayGovCertEnv</span></a></span><span> </span><span class="annot"><span class="annottext">PParams (ConwayEra StandardCrypto)
+</span><a href="#local-6989586621683641943"><span class="hs-identifier hs-var">pp</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><a href="#local-6989586621683641942"><span class="hs-identifier hs-var">ce</span></a></span><span> </span><span class="annot"><span class="annottext">StrictMaybe (Committee (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683641941"><span class="hs-identifier hs-var">cc</span></a></span><span> </span><span class="annot"><span class="annottext">Map
+  (GovPurposeId 'CommitteePurpose (ConwayEra StandardCrypto))
+  (GovActionState (ConwayEra StandardCrypto))
+</span><a href="#local-6989586621683641940"><span class="hs-identifier hs-var">cp</span></a></span><span>
+</span><span id="line-60"></span></pre></body></html>

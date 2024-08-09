@@ -1,0 +1,156 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-2"></span><span>
+</span><span id="line-3"></span><span class="hs-comment">-- | Operations for manipulating sets and maps using mathematicial operators. Concrete types that can be</span><span>
+</span><span id="line-4"></span><span class="hs-comment">--   interpreted as sets and maps are made instances of the 'Basic' class. In order to make sets and maps</span><span>
+</span><span id="line-5"></span><span class="hs-comment">--   behave uniformly, an instance @(Basic f)@ implies @f@ is a binary type constructor. For types interpreted as</span><span>
+</span><span id="line-6"></span><span class="hs-comment">--   maps, the type</span><span>
+</span><span id="line-7"></span><span class="hs-comment">--  @(f k v)@ means that @k@ is the type of the map's key, and @v@ is the type of map's value. For types</span><span>
+</span><span id="line-8"></span><span class="hs-comment">--  interpreted as sets, the value is always the unit type: (). The binary GADT 'Sett' links to the</span><span>
+</span><span id="line-9"></span><span class="hs-comment">--  usual 'Data.Set' type. Its constructor has the following type @Sett :: Set k -&gt; Sett k ()@, programmers can</span><span>
+</span><span id="line-10"></span><span class="hs-comment">--  use similar strategies to interpret other types as sets. Predefined instances of Basic include 'Data.Map',</span><span>
+</span><span id="line-11"></span><span class="hs-comment">--  'Data.Set', 'List', and 'Single'. Programmers can add 'Basic' instances for their own types as well.</span><span>
+</span><span id="line-12"></span><span class="hs-comment">--</span><span>
+</span><span id="line-13"></span><span class="hs-comment">--  A typical set algebra expression (involving range restriction, ('&#9655;'), here) looks like @(eval (x &#9655; y))@.</span><span>
+</span><span id="line-14"></span><span class="hs-comment">--  Where @x@ and @y@ are program variables or expressions, the operator ('&#9655;') builds an 'Exp' tree, and</span><span>
+</span><span id="line-15"></span><span class="hs-comment">-- 'eval' simplifys the tree, and then evaluates the simplfied tree to get the result.</span><span>
+</span><span id="line-16"></span><span class="hs-comment">-- Here is the actual type of the range restrict operator.</span><span>
+</span><span id="line-17"></span><span class="hs-comment">--</span><span>
+</span><span id="line-18"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-19"></span><span class="hs-comment">-- (&#9655;) :: (Ord k, Iter g, Ord v, HasExp s1 (f k v), HasExp s2 (g v ())) =&gt; s1 -&gt; s2 -&gt; Exp (f k v)</span><span>
+</span><span id="line-20"></span><span class="hs-comment">-- @</span><span>
+</span><span id="line-21"></span><span class="hs-comment">--</span><span>
+</span><span id="line-22"></span><span class="hs-comment">-- As the type indicates, in order to support simplifcation and evaluation the types of the</span><span>
+</span><span id="line-23"></span><span class="hs-comment">-- operands to ('&#9655;') must be instances of several classes. Possible classes include 'Basic',</span><span>
+</span><span id="line-24"></span><span class="hs-comment">-- 'HasExp', 'Iter', and 'Embed'.</span><span>
+</span><span id="line-25"></span><span class="hs-comment">--</span><span>
+</span><span id="line-26"></span><span class="hs-comment">-- 1. @(Basic f)@ meaning @(f k v)@ must be interpreted as a map or set, with two type parameters @k@ and @v@.</span><span>
+</span><span id="line-27"></span><span class="hs-comment">-- 2. @(HasExp t (f k v))@  meaning a value of type @t@ can be lifted to an expression of type @(Exp (f k v))@, where @(Basic f)@.</span><span>
+</span><span id="line-28"></span><span class="hs-comment">-- 3. @(Iter f)@ meaning the @Basic@ type constructor @f@ supports certain (usually fast) operations, that can be combined.</span><span>
+</span><span id="line-29"></span><span class="hs-comment">-- 4. @(Embed concrete f)@ meaning the types @concrete@ and @(f k v)@ form an isomorphism.</span><span>
+</span><span id="line-30"></span><span class="hs-comment">--</span><span>
+</span><span id="line-31"></span><span class="hs-comment">-- Available operands to create set algebra expressions are 'dom', 'rng', 'dexclude',  '(&#8938;)', 'drestrict', '(&#9665;)',</span><span>
+</span><span id="line-32"></span><span class="hs-comment">-- 'rexclude', '(&#8939;)', 'rrestrict',  '(&#9655;)',</span><span>
+</span><span id="line-33"></span><span class="hs-comment">-- 'unionright',  '(&#10755;)', 'unionleft','(&#8746;)', 'unionplus',  '(&#8746;+)','singleton', 'setSingleton',</span><span>
+</span><span id="line-34"></span><span class="hs-comment">-- 'intersect', '(&#8745;)',  'subset',  '(&#8838;)', 'keyeq',  '(&#8781;)',</span><span>
+</span><span id="line-35"></span><span class="hs-comment">-- '(&#8712;)', '(&#8713;)',  'setdiff', '(&#10134;)' .</span><span>
+</span><span id="line-36"></span><span class="hs-comment">--</span><span>
+</span><span id="line-37"></span><span class="hs-comment">-- The key abstraction that makes set algebra work is the self typed GADT: @(Exp t)@, that defines a tree that</span><span>
+</span><span id="line-38"></span><span class="hs-comment">-- represents a deep embedding of all set algebra expressions representing maps or sets of type @t@.</span><span>
+</span><span id="line-39"></span><span class="hs-comment">-- @Exp@ is a typed symbolic representation of queries we may ask. It allows us to introspect a query.</span><span>
+</span><span id="line-40"></span><span class="hs-comment">-- The strategy is to</span><span>
+</span><span id="line-41"></span><span class="hs-comment">--</span><span>
+</span><span id="line-42"></span><span class="hs-comment">-- 1. Define Exp so all queries can be represented.</span><span>
+</span><span id="line-43"></span><span class="hs-comment">-- 2. Define smart constructors that &quot;parse&quot; the surface syntax, and build a typed Exp</span><span>
+</span><span id="line-44"></span><span class="hs-comment">-- 3. Write an evaluate function:  eval:: Exp t -&gt; t</span><span>
+</span><span id="line-45"></span><span class="hs-comment">-- 4. &quot;eval&quot; can introspect the code and apply efficient domain and type specific translations</span><span>
+</span><span id="line-46"></span><span class="hs-comment">-- 5. Use the (Iter f) class to evaluate some Exp that can benefit from its efficient nature.</span><span>
+</span><span id="line-47"></span><span class="hs-comment">--</span><span>
+</span><span id="line-48"></span><span class="hs-comment">-- Basically, if the compiler can infer concrete type for the operands of [operators](Control-SetAlgebra.html#setoperators#) then</span><span>
+</span><span id="line-49"></span><span class="hs-comment">-- all the class instances are automatically solved. If you get an error involving a class, then it is most</span><span>
+</span><span id="line-50"></span><span class="hs-comment">-- probably the case that the type of the operands cannot be properly inferred.</span><span>
+</span><span id="line-51"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Control.SetAlgebra</span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><span class="hs-comment">-- * In addition to 'Data.Map.Map' and 'Data.Set.Set', types interpretable as maps and sets.</span></span><span>
+</span><span id="line-53"></span><span>  </span><span class="annot"><span class="hs-comment">-- $MapAndSetTypes</span></span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><a href="Control.Iterate.BaseTypes.html#List"><span class="hs-identifier">List</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-55"></span><span>  </span><span class="annot"><a href="Control.Iterate.BaseTypes.html#Single"><span class="hs-identifier">Single</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-56"></span><span>
+</span><span id="line-57"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Classes supporting abstract constructors of Set Algebra Expressions. These show up in the types of overloaded functions.</span></span><span>
+</span><span id="line-58"></span><span>  </span><span class="annot"><span class="hs-comment">-- $ClassesForSetAlgebra</span></span><span>
+</span><span id="line-59"></span><span>  </span><span class="annot"><a href="Control.Iterate.BaseTypes.html#Basic"><span class="hs-identifier">Basic</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-60"></span><span>  </span><span class="annot"><a href="Control.Iterate.BaseTypes.html#Iter"><span class="hs-identifier">Iter</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-61"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#HasExp"><span class="hs-identifier">HasExp</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-62"></span><span>  </span><span class="annot"><a href="Control.Iterate.BaseTypes.html#Embed"><span class="hs-identifier">Embed</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-63"></span><span>
+</span><span id="line-64"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Types implementing a deep embedding of set algebra expressions</span></span><span>
+</span><span id="line-65"></span><span>  </span><span class="annot"><span class="hs-comment">-- $Deep</span></span><span>
+</span><span id="line-66"></span><span>  </span><span class="annot"><a href="Control.Iterate.BaseTypes.html#BaseRep"><span class="hs-identifier">BaseRep</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-67"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#Exp"><span class="hs-identifier">Exp</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Control.Iterate.Exp.html#Base"><span class="hs-identifier">Base</span></a></span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-68"></span><span>  </span><span class="hs-comment">-- Evaluate an abstract Set Algebra Expression to the Set (Map) it represents.</span><span>
+</span><span id="line-69"></span><span>  </span><span class="annot"><a href="Control.Iterate.SetAlgebra.html#eval"><span class="hs-identifier">eval</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-70"></span><span>
+</span><span id="line-71"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Operators to build maps and sets,  useable as Set Algebra Expressions</span></span><span>
+</span><span id="line-72"></span><span>  </span><span class="annot"><span class="hs-comment">-- $setoperators</span></span><span>
+</span><span id="line-73"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#dom"><span class="hs-identifier">dom</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-74"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#rng"><span class="hs-identifier">rng</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-75"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#dexclude"><span class="hs-identifier">dexclude</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-76"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#drestrict"><span class="hs-identifier">drestrict</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-77"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#rexclude"><span class="hs-identifier">rexclude</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-78"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#rrestrict"><span class="hs-identifier">rrestrict</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-79"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#unionleft"><span class="hs-identifier">unionleft</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-80"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#unionright"><span class="hs-identifier">unionright</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-81"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#unionplus"><span class="hs-identifier">unionplus</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-82"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#singleton"><span class="hs-identifier">singleton</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-83"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#setSingleton"><span class="hs-identifier">setSingleton</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-84"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#intersect"><span class="hs-identifier">intersect</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-85"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#subset"><span class="hs-identifier">subset</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-86"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#keyeq"><span class="hs-identifier">keyeq</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-87"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%25C1"><span class="hs-operator">(&#9665;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-88"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%22EA"><span class="hs-operator">(&#8938;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-89"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%25B7"><span class="hs-operator">(&#9655;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-90"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%22EB"><span class="hs-operator">(&#8939;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-91"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%2208"><span class="hs-operator">(&#8712;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-92"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%2209"><span class="hs-operator">(&#8713;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-93"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%222A"><span class="hs-operator">(&#8746;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-94"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%2A03"><span class="hs-operator">(&#10755;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-95"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%222A%2B"><span class="hs-operator">(&#8746;+)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-96"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%2229"><span class="hs-operator">(&#8745;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-97"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%2286"><span class="hs-operator">(&#8838;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-98"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%224D"><span class="hs-operator">(&#8781;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-99"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%3C%7C"><span class="hs-operator">(&lt;|)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-100"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%7C%3E"><span class="hs-operator">(|&gt;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-101"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%2796"><span class="hs-operator">(&#10134;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-102"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-data-1.2.3.0/doc/html/cardano-data/src"><span class="hs-identifier">keysEqual</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-103"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#setdiff"><span class="hs-identifier">setdiff</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-104"></span><span>
+</span><span id="line-105"></span><span>  </span><span class="annot"><span class="hs-comment">-- * Miscellaneous operators, including smart constructors for 'List', whose constructors are hidden.</span></span><span>
+</span><span id="line-106"></span><span>  </span><span class="annot"><span class="hs-comment">-- $Misc</span></span><span>
+</span><span id="line-107"></span><span>  </span><span class="annot"><a href="Control.Iterate.SetAlgebra.html#materialize"><span class="hs-identifier">materialize</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><a href="Control.Iterate.SetAlgebra.html#fromList"><span class="hs-identifier">fromList</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-109"></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span class="hs-keyword">where</span><span>
+</span><span id="line-111"></span><span>
+</span><span id="line-112"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Iterate.BaseTypes.html"><span class="hs-identifier">Control.Iterate.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-113"></span><span>  </span><span class="annot"><a href="Control.Iterate.BaseTypes.html#BaseRep"><span class="hs-identifier">BaseRep</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-114"></span><span>  </span><span class="annot"><a href="Control.Iterate.BaseTypes.html#Basic"><span class="hs-identifier">Basic</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-115"></span><span>  </span><span class="annot"><a href="Control.Iterate.BaseTypes.html#Embed"><span class="hs-identifier">Embed</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-116"></span><span>  </span><span class="annot"><a href="Control.Iterate.BaseTypes.html#Iter"><span class="hs-identifier">Iter</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-117"></span><span>  </span><span class="annot"><a href="Control.Iterate.BaseTypes.html#List"><span class="hs-identifier">List</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-118"></span><span>  </span><span class="annot"><a href="Control.Iterate.BaseTypes.html#Single"><span class="hs-identifier">Single</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-119"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-120"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Iterate.Exp.html"><span class="hs-identifier">Control.Iterate.Exp</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-121"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#Exp"><span class="hs-identifier">Exp</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-122"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#HasExp"><span class="hs-identifier">HasExp</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span>
+</span><span id="line-123"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#dexclude"><span class="hs-identifier">dexclude</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-124"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#dom"><span class="hs-identifier">dom</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-125"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#drestrict"><span class="hs-identifier">drestrict</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-126"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#intersect"><span class="hs-identifier">intersect</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-127"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#keyeq"><span class="hs-identifier">keyeq</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-128"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#rexclude"><span class="hs-identifier">rexclude</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-129"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#rng"><span class="hs-identifier">rng</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-130"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#rrestrict"><span class="hs-identifier">rrestrict</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-131"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#setSingleton"><span class="hs-identifier">setSingleton</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-132"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#setdiff"><span class="hs-identifier">setdiff</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-133"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#singleton"><span class="hs-identifier">singleton</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-134"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#subset"><span class="hs-identifier">subset</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-135"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#unionleft"><span class="hs-identifier">unionleft</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-136"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#unionplus"><span class="hs-identifier">unionplus</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-137"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#unionright"><span class="hs-identifier">unionright</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-138"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%3C%7C"><span class="hs-operator">(&lt;|)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-139"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%7C%3E"><span class="hs-operator">(|&gt;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-140"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%2208"><span class="hs-operator">(&#8712;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-141"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%2209"><span class="hs-operator">(&#8713;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-142"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%2229"><span class="hs-operator">(&#8745;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-143"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%222A"><span class="hs-operator">(&#8746;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-144"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%222A%2B"><span class="hs-operator">(&#8746;+)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-145"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%224D"><span class="hs-operator">(&#8781;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-146"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%2286"><span class="hs-operator">(&#8838;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-147"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%22EA"><span class="hs-operator">(&#8938;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-148"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%22EB"><span class="hs-operator">(&#8939;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-149"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%25B7"><span class="hs-operator">(&#9655;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-150"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%25C1"><span class="hs-operator">(&#9665;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-151"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%2796"><span class="hs-operator">(&#10134;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-152"></span><span>  </span><span class="annot"><a href="Control.Iterate.Exp.html#%2A03"><span class="hs-operator">(&#10755;)</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-153"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-154"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Control.Iterate.SetAlgebra.html"><span class="hs-identifier">Control.Iterate.SetAlgebra</span></a></span><span>
+</span><span id="line-155"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-data-1.2.3.0/doc/html/cardano-data/src"><span class="hs-identifier">Data.MapExtras</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-data-1.2.3.0/doc/html/cardano-data/src"><span class="hs-identifier">keysEqual</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-156"></span></pre></body></html>
