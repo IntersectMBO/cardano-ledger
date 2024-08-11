@@ -492,14 +492,14 @@ transTxCert = \case
     PV3.TxCertPoolRegister (transKeyHash ppId) (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes ppVrf)))
   RetirePoolTxCert poolId retireEpochNo ->
     PV3.TxCertPoolRetire (transKeyHash poolId) (transEpochNo retireEpochNo)
-  RegTxCert stakeCred ->
-    PV3.TxCertRegStaking (transCred stakeCred) Nothing
-  UnRegTxCert stakeCred ->
-    PV3.TxCertUnRegStaking (transCred stakeCred) Nothing
   RegDepositTxCert stakeCred deposit ->
     PV3.TxCertRegStaking (transCred stakeCred) (Just (transCoinToLovelace deposit))
   UnRegDepositTxCert stakeCred refund ->
     PV3.TxCertUnRegStaking (transCred stakeCred) (Just (transCoinToLovelace refund))
+  RegTxCert stakeCred ->
+    PV3.TxCertRegStaking (transCred stakeCred) Nothing
+  UnRegTxCert stakeCred ->
+    PV3.TxCertUnRegStaking (transCred stakeCred) Nothing
   DelegTxCert stakeCred delegatee ->
     PV3.TxCertDelegStaking (transCred stakeCred) (transDelegatee delegatee)
   RegDepositDelegTxCert stakeCred delegatee deposit ->
