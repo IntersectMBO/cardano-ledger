@@ -22,8 +22,8 @@ source-repository-package
   type: git
   location: https://github.com/IntersectMBO/formal-ledger-specifications.git
   subdir: generated
-  tag: d12f11db8ba86df1a20b5649292c95f254f1e40c
-  --sha256: 0dk9n4abxbdhd8w3zacvzh4dyxpr68n5iafhnv39yhb8hx6kwggs
+  tag: 58f4b078a7e0df0c49264b78090122e75679585f
+  --sha256: sha256-iEqucpja/0/5Tvnjr2drFlz58f3x3kUpInVjZfcePBQ=
 -- NOTE: If you would like to update the above, look for the `MAlonzo-code`
 -- branch in the `formal-ledger-specifications` repo and copy the SHA of
 -- the commit you need. The `MAlonzo-code` branch functions like an alternative

@@ -47,9 +47,10 @@ instance SpecTranslate ctx (ConwayGovCert c) where
       <$> toSpecRep c
       <*> toSpecRep d
       <*> pure ()
-  toSpecRep (ConwayUnRegDRep c _) =
+  toSpecRep (ConwayUnRegDRep c d) =
     Agda.DeRegDRep
       <$> toSpecRep c
+      <*> toSpecRep d
   toSpecRep (ConwayUpdateDRep c _) =
     Agda.RegDRep
       <$> toSpecRep c
