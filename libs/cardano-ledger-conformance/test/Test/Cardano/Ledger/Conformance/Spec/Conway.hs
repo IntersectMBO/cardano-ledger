@@ -41,7 +41,7 @@ spec = do
       xprop "EPOCH" $ conformsToImpl @"EPOCH" @ConwayFn @Conway
       xprop "NEWEPOCH" $ conformsToImpl @"NEWEPOCH" @ConwayFn @Conway
     describe "Blocks transition graph" $ do
-      xprop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
+      prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
       -- GOVCERT is disabled because the Agda MALONZO code has a bug
       -- when accessing the PParams DRepActivity field. When that is fixed
       -- we can turn xprop to prop for "GOVCERT"
