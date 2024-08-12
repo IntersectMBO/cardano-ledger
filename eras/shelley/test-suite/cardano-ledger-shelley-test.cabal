@@ -86,7 +86,6 @@ library
         containers,
         data-default-class,
         deepseq,
-        hashable,
         microlens,
         mtl,
         nothunks,
