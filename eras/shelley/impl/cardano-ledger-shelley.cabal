@@ -6,11 +6,7 @@ maintainer:         operations@iohk.io
 author:             IOHK
 synopsis:           Shelley Ledger Executable Model
 build-type:         Simple
-data-files:
-    cddl-files/shelley.cddl
-    cddl-files/crypto.cddl
-    cddl-files/extras.cddl
-
+data-files:         cddl-files/shelley.cddl
 extra-source-files: CHANGELOG.md
 
 source-repository head
@@ -191,6 +187,21 @@ library testlib
         mtl,
         unliftio,
         vector-map
+
+executable huddle-cddl
+    main-is:          Main.hs
+    hs-source-dirs:   huddle-cddl
+    other-modules:    Paths_cardano_ledger_shelley
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wredundant-constraints -Wpartial-fields
+        -Wunused-packages -threaded -rtsopts -with-rtsopts=-N
+
+    build-depends:
+        base,
+        testlib,
+        cardano-ledger-binary:testlib >=1.3.4.0
 
 test-suite tests
     type:             exitcode-stdio-1.0
