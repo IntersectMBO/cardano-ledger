@@ -2,6 +2,7 @@
 
 ## 1.16.2.0
 
+* Add `showGovActionType`, `acceptedByEveryone`
 * Added `unRatifySignal`
 * Added lenses:
   * `ratifySignalL`

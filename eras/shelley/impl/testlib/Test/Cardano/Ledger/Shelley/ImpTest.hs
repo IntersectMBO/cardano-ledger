@@ -253,7 +253,17 @@ import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Lens.Micro (Lens', SimpleGetter, lens, to, (%~), (&), (.~), (<>~), (^.))
 import Lens.Micro.Mtl (use, view, (%=), (+=), (.=))
 import Numeric.Natural (Natural)
-import Prettyprinter (Doc, Pretty (..), annotate, defaultLayoutOptions, indent, layoutPretty, line)
+import Prettyprinter (
+  Doc,
+  Pretty (..),
+  annotate,
+  defaultLayoutOptions,
+  indent,
+  layoutPretty,
+  layoutSmart,
+  line,
+ )
+import Prettyprinter.Render.String (renderString)
 import Prettyprinter.Render.Terminal (AnsiStyle, Color (..), color, renderStrict)
 import System.Random
 import qualified System.Random as Random
@@ -787,13 +797,20 @@ instance (ShelleyEraImp era, Arbitrary a, Show a, Testable prop) => Example (a -
   evaluateExample impTest params hook progressCallback =
     let runImpTestExample s = property $ \x -> do
           let args = paramsQuickCheckArgs params
-          (r, testable) <- uncurry evalImpTestM (applyParamsQCGen params s) $ do
+          (r, testable, logs) <- uncurry evalImpTestM (applyParamsQCGen params s) $ do
             t <- impTest x
             qcSize <- asks iteQuickCheckSize
             StateGen qcGen <- subStateM split
-            pure (Just (qcGen, qcSize), t)
+            logs <- gets impLog
+            pure (Just (qcGen, qcSize), t, logs)
           let params' = params {paramsQuickCheckArgs = args {replay = r, chatty = False}}
-          res <- evaluateExample (property testable) params' (\f -> hook (\_st -> f ())) progressCallback
+          let logString = renderString $ layoutSmart defaultLayoutOptions logs
+          res <-
+            evaluateExample
+              (counterexample logString testable)
+              params'
+              (\f -> hook (\_st -> f ()))
+              progressCallback
           void $ throwIO $ resultStatus res
      in evaluateExample runImpTestExample params hook progressCallback
 

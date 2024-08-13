@@ -301,7 +301,7 @@ instance (IsConwayUniv fn, Typeable r, Crypto c) => HasSpec fn (KeyHash r c) whe
   genFromTypeSpec _ =
     pureGen $
       oneof
-        [ pickFromFixedPool 100
+        [ pickFromFixedPool 20
         , arbitrary
         ]
   cardinalTypeSpec _ = TrueSpec
@@ -621,7 +621,7 @@ instance (IsConwayUniv fn, HashAlgorithm a, Typeable b) => HasSpec fn (Hash a b)
   genFromTypeSpec _ =
     pureGen $
       oneof
-        [ pickFromFixedPool 100
+        [ pickFromFixedPool 20
         , arbitrary
         ]
   cardinalTypeSpec _ = TrueSpec

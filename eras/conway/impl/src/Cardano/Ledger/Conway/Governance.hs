@@ -167,6 +167,7 @@ module Cardano.Ledger.Conway.Governance (
   TreeMaybe (..),
   toGovRelationTree,
   toGovRelationTreeEither,
+  showGovActionType,
 ) where
 
 import Cardano.Ledger.BaseTypes (

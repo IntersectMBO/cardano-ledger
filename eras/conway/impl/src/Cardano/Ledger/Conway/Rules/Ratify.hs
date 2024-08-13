@@ -20,6 +20,7 @@ module Cardano.Ledger.Conway.Rules.Ratify (
   spoAcceptedRatio,
   dRepAccepted,
   dRepAcceptedRatio,
+  acceptedByEveryone,
   -- Testing
   prevActionAsExpected,
   validCommitteeTerm,
@@ -280,6 +281,17 @@ withdrawalCanWithdraw (TreasuryWithdrawals m _) treasury =
   Map.foldr' (<+>) zero m <= treasury
 withdrawalCanWithdraw _ _ = True
 
+acceptedByEveryone ::
+  ConwayEraPParams era =>
+  RatifyEnv era ->
+  RatifyState era ->
+  GovActionState era ->
+  Bool
+acceptedByEveryone env st gas =
+  committeeAccepted env st gas
+    && spoAccepted env st gas
+    && dRepAccepted env st gas
+
 ratifyTransition ::
   forall era.
   ( Embed (EraRule "ENACT" era) (ConwayRATIFY era)
@@ -312,9 +324,7 @@ ratifyTransition = do
         && validCommitteeTerm govAction ensCurPParams reCurrentEpoch
         && not rsDelayed
         && withdrawalCanWithdraw govAction ensTreasury
-        && committeeAccepted env st gas
-        && spoAccepted env st gas
-        && dRepAccepted env st gas
+        && acceptedByEveryone env st gas
         then do
           newEnactState <-
             trans @(EraRule "ENACT" era) $

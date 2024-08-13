@@ -1,43 +1,51 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conformance.Imp.Ratify (spec) where
 
-import qualified Data.List.NonEmpty as NE
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), natVersion, addEpochInterval, EpochInterval (..))
+import Cardano.Ledger.BaseTypes (EpochInterval (..), StrictMaybe (..), addEpochInterval, natVersion)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
+import Cardano.Ledger.Conway.Core (CoinPerByte (..), ppCoinsPerUTxOByteL, ppCommitteeMinSizeL)
 import Cardano.Ledger.Conway.Governance (
+  Committee (..),
   GovAction (..),
   GovPurposeId (..),
   RatifySignal (..),
   Voter (..),
+  committeeGovStateL,
   getRatifyState,
  )
 import Cardano.Ledger.Conway.PParams (
   dvtMotionNoConfidenceL,
+  ppCommitteeMaxTermLengthL,
   ppDRepVotingThresholdsL,
   ppPoolVotingThresholdsL,
-  pvtMotionNoConfidenceL, ppCommitteeMaxTermLengthL,
+  pvtMotionNoConfidenceL,
  )
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Shelley.LedgerState (
   asTreasuryL,
   epochStateGovStateL,
   esAccountStateL,
-  nesEsL,
   nesELL,
+  nesEsL,
  )
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Map as Map
 import qualified Data.Sequence.Strict as SSeq
 import Lens.Micro ((&), (.~))
+import Test.Cardano.Ledger.Conformance ()
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
   ConwayRatifyExecContext (..),
  )
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (ExecSpecRule (..))
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (ExecSpecRule (..), runConformance)
 import Test.Cardano.Ledger.Constrained.Conway (ConwayFn)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
-import Cardano.Ledger.Credential (Credential(..))
-import qualified Data.Map as Map
 
 spec :: Spec
 spec = describe "RATIFY" . withImpStateWithProtVer @Conway (natVersion @10) $ do
@@ -69,28 +77,46 @@ spec = describe "RATIFY" . withImpStateWithProtVer @Conway (natVersion @10) $ do
         ratSt
         (RatifySignal (noConfidenceGAS SSeq.:<| SSeq.Empty))
   it "Duplicate CC hot keys count as separate votes" $ do
+    logEntry "Setting up a DRep"
     let maxTermLength = EpochInterval 10
     modifyPParams $ \pp ->
       pp
         & ppCommitteeMaxTermLengthL .~ maxTermLength
-    (credDRep, _, _) <- setupSingleDRep 100
+        & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1)
+        & ppCommitteeMinSizeL .~ 2
+    (credDRep, _, _) <- setupSingleDRep 300
+    (credSPO, _, _) <- setupPoolWithStake $ Coin 1_000_000
+    -- Ensure that there is no committee yet
+    SJust (Committee {committeeMembers = oldCommittee}) <-
+      getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
+
+    logEntry "Electing the committee"
     ccCold0 <- KeyHashObj <$> freshKeyHash
     ccCold1 <- KeyHashObj <$> freshKeyHash
+    ccCold2 <- KeyHashObj <$> freshKeyHash
     hotKey <- KeyHashObj <$> freshKeyHash
     curEpoch <- getsNES nesELL
     let
       ccExpiry = curEpoch `addEpochInterval` maxTermLength
-      committee = Map.fromList
-        [ (ccCold0, ccExpiry)
-        , (ccCold1, ccExpiry)
-        ]
-
-    logEntry "Electing the committee"
-    committeeId <- submitGovAction $ UpdateCommittee SNothing mempty committee maxBound
+      committee =
+        Map.fromList
+          [ (ccCold0, ccExpiry)
+          , (ccCold1, ccExpiry)
+          , (ccCold2, ccExpiry)
+          ]
+    committeeId <-
+      submitGovAction $
+        UpdateCommittee
+          SNothing
+          (Map.keysSet oldCommittee) -- Get rid of the initial committee
+          committee
+          (6 %! 10)
     submitYesVote_ (DRepVoter credDRep) committeeId
-    logAcceptedRatio committeeId
-    passNEpochs 2
-    getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId committeeId)
+    submitYesVote_ (StakePoolVoter credSPO) committeeId
+    impAnn "Waiting for the committee to get elected" $ do
+      logAcceptedRatio committeeId
+      passNEpochs 2
+      getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId committeeId)
 
     logEntry "Registering hotkeys"
     _ <- registerCommitteeHotKeys (pure hotKey) (ccCold0 NE.:| [ccCold1])
@@ -109,10 +135,30 @@ spec = describe "RATIFY" . withImpStateWithProtVer @Conway (natVersion @10) $ do
     govSt <- getsNES $ nesEsL . epochStateGovStateL
     let
       ratSt = getRatifyState govSt
-      result =
-        testConformance @ConwayFn @"RATIFY" @Conway
-          execCtx
-          ratEnv
-          ratSt
-          (RatifySignal (constitutionGAS SSeq.:<| mempty))
-    pure result
+      ratSig = RatifySignal (constitutionGAS SSeq.:<| mempty)
+    (implRes, agdaRes) <-
+      runConformance @"RATIFY" @ConwayFn @Conway
+        execCtx
+        ratEnv
+        ratSt
+        ratSig
+    logEntry "===context==="
+    logToExpr execCtx
+    logEntry "===environment==="
+    logToExpr ratEnv
+    logEntry "===state==="
+    logToExpr ratSt
+    logEntry "===signal==="
+    logToExpr ratSig
+    logEntry "Impl res:"
+    logToExpr implRes
+    logEntry "Agda res:"
+    logToExpr agdaRes
+    logEntry "Extra information:"
+    logEntry $
+      extraInfo @ConwayFn @"RATIFY" @Conway
+        execCtx
+        ratEnv
+        ratSt
+        ratSig
+    impAnn "Conformance failed" $ implRes `shouldBeExpr` agdaRes
