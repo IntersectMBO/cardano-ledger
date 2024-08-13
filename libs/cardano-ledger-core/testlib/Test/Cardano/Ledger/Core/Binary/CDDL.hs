@@ -14,7 +14,47 @@ import Data.Semigroup ((<>))
 import qualified Data.Text as T
 import Data.Word (Word64)
 import GHC.Show (Show (show))
+import Prelude (Integer)
 
+--------------------------------------------------------------------------------
+-- Base Types
+--------------------------------------------------------------------------------
+coin :: Rule
+coin = "coin" =:= VUInt
+
+positive_coin :: Rule
+positive_coin = "positive_coin" =:= 1 ... maxWord64
+
+address :: Rule
+address =
+  "address"
+    =:= bstr
+      "001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000"
+    / bstr
+      "102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000"
+    / bstr
+      "203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000"
+    / bstr
+      "304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000"
+    / bstr "405000000000000000000000000000000000000000000000000000000087680203"
+    / bstr "506000000000000000000000000000000000000000000000000000000087680203"
+    / bstr "6070000000000000000000000000000000000000000000000000000000"
+    / bstr "7080000000000000000000000000000000000000000000000000000000"
+
+reward_account :: Rule
+reward_account =
+  "reward_account"
+    =:= bstr "E090000000000000000000000000000000000000000000000000000000"
+    / bstr "F0A0000000000000000000000000000000000000000000000000000000"
+
+addr_keyhash :: Rule
+addr_keyhash = "addr_keyhash" =:= hash28
+
+pool_keyhash :: Rule
+pool_keyhash = "pool_keyhash" =:= hash28
+
+vrf_keyhash :: Rule
+vrf_keyhash = "vrf_keyhash" =:= hash32
 --------------------------------------------------------------------------------
 -- Crypto
 --------------------------------------------------------------------------------
@@ -47,17 +87,62 @@ signature :: Rule
 signature = "$signature" =:= VBytes `sized` (64 :: Word64)
 
 --------------------------------------------------------------------------------
--- Extras
+-- Utility
 --------------------------------------------------------------------------------
+
+big_int :: Rule
+big_int = "big_int" =:= VInt / big_uint / big_nint
+
+big_uint :: Rule
+big_uint = "big_uint" =:= tag 2 bounded_bytes
+
+big_nint :: Rule
+big_nint = "big_nint" =:= tag 3 bounded_bytes
+
+-- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
+-- with:
+--
+-- minInt64 :: Rule
+-- minInt64 = "minInt64" =:= -9223372036854775808
+minInt64 :: Integer
+minInt64 = -9223372036854775808
+
+-- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
+-- with:
+--
+-- maxInt64 :: Rule
+-- maxInt64 = "maxInt64" =:= 9223372036854775807
+maxInt64 :: Integer
+maxInt64 = 9223372036854775807
+
+-- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
+-- with:
+--
+-- maxWord64 :: Rule
+-- maxWord64 = "maxWord64" =:= 18446744073709551615
+maxWord64 :: Integer
+maxWord64 = 18446744073709551615
+
+negInt64 :: Rule
+negInt64 = "negInt64" =:= minInt64 ... (-1)
+
+posInt64 :: Rule
+posInt64 = "posInt64" =:= 1 ... maxInt64
+
+nonZeroInt64 :: Rule
+nonZeroInt64 = "nonZeroInt64" =:= negInt64 / posInt64 -- this is the same as the current int64 definition but without zero
+
+int64 :: Rule
+int64 = "int64" =:= minInt64 ... maxInt64
 
 -- Conway era introduces an optional 258 tag for sets, which will become mandatory in the
 -- second era after Conway. We recommend all the tooling to account for this future breaking
 -- change sooner rather than later, in order to provide a smooth transition for their users.
 
-set :: IsType0 t0 => t0 -> GRuleCall
+set :: (IsType0 t0) => t0 -> GRuleCall
 set = binding $ \x -> "set" =:= tag 258 (arr [0 <+ a x]) / sarr [0 <+ a x]
 
-nonempty_set :: IsType0 t0 => t0 -> GRuleCall
+nonempty_set :: (IsType0 t0) => t0 -> GRuleCall
 nonempty_set = binding $ \x ->
   "nonempty_set"
     =:= tag 258 (arr [1 <+ a x])
@@ -87,28 +172,6 @@ unit_interval = "unit_interval" =:= tag 30 (arr [1, 2])
 nonnegative_interval :: Rule
 nonnegative_interval = "nonnegative_interval" =:= tag 30 (arr [a VUInt, a positive_int])
 
-address :: Rule
-address =
-  "address"
-    =:= bstr
-      "001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000"
-    / bstr
-      "102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000"
-    / bstr
-      "203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000"
-    / bstr
-      "304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000"
-    / bstr "405000000000000000000000000000000000000000000000000000000087680203"
-    / bstr "506000000000000000000000000000000000000000000000000000000087680203"
-    / bstr "6070000000000000000000000000000000000000000000000000000000"
-    / bstr "7080000000000000000000000000000000000000000000000000000000"
-
-reward_account :: Rule
-reward_account =
-  "reward_account"
-    =:= bstr "E090000000000000000000000000000000000000000000000000000000"
-    / bstr "F0A0000000000000000000000000000000000000000000000000000000"
-
 bounded_bytes :: Rule
 bounded_bytes = "bounded_bytes" =:= VBytes `sized` (0 :: Word64, 64 :: Word64)
 
@@ -124,7 +187,7 @@ bounded_bytes = "bounded_bytes" =:= VBytes `sized` (0 :: Word64, 64 :: Word64)
 
 -- a type for distinct values.
 -- The type parameter must support .size, for example: bytes or uint
-distinct :: IsSizeable s => Value s -> Rule
+distinct :: (IsSizeable s) => Value s -> Rule
 distinct x =
   "distinct_"
     <> T.pack (show x)

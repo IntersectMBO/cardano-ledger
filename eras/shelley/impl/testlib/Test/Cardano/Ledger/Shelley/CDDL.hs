@@ -11,7 +11,13 @@ import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Word (Word64)
 import GHC.Num (Integer)
-import Test.Cardano.Ledger.Core.Binary.CDDL
+import Test.Cardano.Ledger.Core.Binary.CDDL hiding
+  ( nonempty_set,
+    set,
+  )
+
+shelley :: Huddle
+shelley = collectFrom [block, transaction, signkeyKES]
 
 block :: Rule
 block =
@@ -62,10 +68,10 @@ header_body =
         a protocol_version
       ]
 
-operational_cert :: Rule
+operational_cert :: Named Group
 operational_cert =
   "operational_cert"
-    =:= arr
+    =:~ grp
       [ "hot_vkey" ==> kes_vkey,
         "sequence_number" ==> VUInt,
         "kes_period" ==> VUInt,
@@ -83,8 +89,8 @@ next_major_protocol_version = 3
 major_protocol_version :: Rule
 major_protocol_version = "major_protocol_version" =:= (1 :: Integer) ... next_major_protocol_version
 
-protocol_version :: Rule
-protocol_version = "protocol_version" =:= arr [a major_protocol_version, a VUInt]
+protocol_version :: Named Group
+protocol_version = "protocol_version" =:~ grp [a major_protocol_version, a VUInt]
 
 transaction_body :: Rule
 transaction_body =
@@ -93,7 +99,7 @@ transaction_body =
       [ idx 0 ==> set transaction_input,
         idx 1 ==> arr [0 <+ a transaction_output],
         idx 2 ==> coin,
-        opt (idx 3 ==> VUInt),
+        idx 3 ==> VUInt,
         opt (idx 4 ==> arr [0 <+ a certificate]),
         opt (idx 5 ==> withdrawals),
         opt (idx 6 ==> update),
@@ -233,34 +239,35 @@ relay =
     / arr [a multi_host_name]
 
 pool_metadata :: Rule
-pool_metadata = "pool_metadata" =:= arr [a url, a pool_metadata_hash]
+pool_metadata = "pool_metadata" =:= arr [a url, a metadata_hash]
 
 url :: Rule
 url = "url" =:= VText `sized` (0 :: Word64, 64 :: Word64)
 
 withdrawals :: Rule
-withdrawals = "withdrawals" =:= mp [1 <+ asKey reward_account ==> coin]
+withdrawals = "withdrawals" =:= mp [0 <+ asKey reward_account ==> coin]
 
 update :: Rule
-update = "update" =:= arr [ a proposed_protocol_parameter_updates, a epoch]
+update = "update" =:= arr [a proposed_protocol_parameter_updates, a epoch]
 
 proposed_protocol_parameter_updates :: Rule
-proposed_protocol_parameter_updates = "proposed_protocol_parameter_updates"
-  =:= mp [0 <+ asKey genesishash ==> protocol_param_update]
+proposed_protocol_parameter_updates =
+  "proposed_protocol_parameter_updates"
+    =:= mp [0 <+ asKey genesishash ==> protocol_param_update]
 
 protocol_param_update :: Rule
 protocol_param_update =
   "protocol_param_update"
     =:= mp
-      [ opt (idx 0 ==> coin), -- minfee A
-        opt (idx 1 ==> coin), -- minfee B
-        opt (idx 2 ==> (VUInt `sized` (4 :: Word64))), -- max block body size
-        opt (idx 3 ==> (VUInt `sized` (4 :: Word64))), -- max transaction size
+      [ opt (idx 0 ==> VUInt), -- minfee A
+        opt (idx 1 ==> VUInt), -- minfee B
+        opt (idx 2 ==> VUInt), -- max block body size
+        opt (idx 3 ==> VUInt), -- max transaction size
         opt (idx 4 ==> (VUInt `sized` (2 :: Word64))), -- max block header size
         opt (idx 5 ==> coin), -- key deposit
         opt (idx 6 ==> coin), -- pool deposit
         opt (idx 7 ==> epoch), -- maximum epoch
-        opt (idx 8 ==> (VUInt `sized` (2 :: Word64))), -- n_opt: desired number of stake pools
+        opt (idx 8 ==> VUInt), -- n_opt: desired number of stake pools
         opt (idx 9 ==> nonnegative_interval), -- pool pledge influence
         opt (idx 10 ==> unit_interval), -- expansion rate
         opt (idx 11 ==> unit_interval), -- treasury growth rate
@@ -274,9 +281,9 @@ transaction_witness_set :: Rule
 transaction_witness_set =
   "transaction_witness_set"
     =:= mp
-      [ opt $ idx 0 ==> arr [ 0 <+ a vkeywitness],
-        opt $ idx 1 ==> arr [ 0 <+ a multisig_script],
-        opt $ idx 2 ==> arr [ 0 <+ a bootstrap_witness]
+      [ opt $ idx 0 ==> arr [0 <+ a vkeywitness],
+        opt $ idx 1 ==> arr [0 <+ a multisig_script],
+        opt $ idx 2 ==> arr [0 <+ a bootstrap_witness]
       ]
 
 transaction_metadatum :: Rule
@@ -316,23 +323,23 @@ bootstrap_witness =
 multisig_script :: Rule
 multisig_script =
   "multisig_script"
-    =:= arr [a script_pubkey]
-    / arr [a script_all]
-    / arr [a script_any]
-    / arr [a script_n_of_k]
+    =:= arr [a multisig_pubkey]
+    / arr [a multisig_all]
+    / arr [a multisig_any]
+    / arr [a multisig_n_of_k]
 
-script_pubkey :: Named Group
-script_pubkey = "script_pubkey" =:~ grp [0, a addr_keyhash]
+multisig_pubkey :: Named Group
+multisig_pubkey = "multisig_pubkey" =:~ grp [0, a addr_keyhash]
 
-script_all :: Named Group
-script_all = "script_all" =:~ grp [1, a (arr [0 <+ a multisig_script])]
+multisig_all :: Named Group
+multisig_all = "multisig_all" =:~ grp [1, a (arr [0 <+ a multisig_script])]
 
-script_any :: Named Group
-script_any = "script_any" =:~ grp [2, a (arr [0 <+ a multisig_script])]
+multisig_any :: Named Group
+multisig_any = "multisig_any" =:~ grp [2, a (arr [0 <+ a multisig_script])]
 
-script_n_of_k :: Named Group
-script_n_of_k =
-  "script_n_of_k"
+multisig_n_of_k :: Named Group
+multisig_n_of_k =
+  "multisig_n_of_k"
     =:~ grp [3, "n" ==> VUInt, a (arr [0 <+ a multisig_script])]
 
 epoch :: Rule
@@ -350,9 +357,21 @@ scripthash = "scripthash" =:= hash28
 metadata_hash :: Rule
 metadata_hash = "metadata_hash" =:= hash32
 
-pool_metadata_hash :: Rule
-pool_metadata_hash = "pool_metadata_hash" =:= hash32
-
 nonce :: Rule
-nonce = "nonce" =:=
-  arr [ a (int 0 / int 1), a (VBytes `sized` (32 :: Word64))]
+nonce =
+  "nonce"
+    =:= arr [0]
+    / arr [1, a (VBytes `sized` (32 :: Word64))]
+
+--------------------------------------------------------------------------------
+-- Shelley does not support some of the tagged core datastructured that we rely
+-- on in future eras. In order to have the "correct" common specification in
+-- core, we override them here
+--------------------------------------------------------------------------------
+set :: (IsType0 t0) => t0 -> GRuleCall
+set = binding $ \x -> "set" =:= arr [0 <+ a x]
+
+nonempty_set :: (IsType0 t0) => t0 -> GRuleCall
+nonempty_set = binding $ \x ->
+  "nonempty_set"
+    =:= arr [1 <+ a x]
