@@ -317,9 +317,8 @@ genAlonzoPParamsUpdate constants pp = do
   coinPerWord <- genM (CoinPerWord . Coin <$> choose (1, 5))
   let genPrice = unsafeBoundRational . (% 100) <$> choose (0, 200)
   prices <- genM (Prices <$> genPrice <*> genPrice)
-  let maxTxExUnits = SNothing
-  -- maxTxExUnits <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
-  maxBlockExUnits <- genM (ExUnits <$> genNatural 100 5000 <*> genNatural 100 5000)
+  maxTxExUnits <- genM genMaxTxExUnits
+  maxBlockExUnits <- genM genMaxBlockExUnits
   -- Not too small for maxValSize, if this is too small then any Tx with Value
   -- that has lots of policyIds will fail. The Shelley Era uses hard coded 4000
   maxValSize <- genM (genNatural 4000 5000)
@@ -350,12 +349,8 @@ genAlonzoPParams constants = do
       prices = Prices minBound minBound
   coinPerWord <- CoinPerWord . Coin <$> choose (1, 5)
   -- prices <- Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000))
-  let maxTxExUnits = ExUnits (5 * bigMem + 1) (5 * bigStep + 1)
-  -- maxTxExUnits <- ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000))
-  maxBlockExUnits <-
-    ExUnits
-      <$> genNatural (20 * bigMem + 1) (30 * bigMem + 1)
-      <*> genNatural (20 * bigStep + 1) (30 * bigStep + 1)
+  maxTxExUnits <- genMaxTxExUnits
+  maxBlockExUnits <- genMaxBlockExUnits
   maxValSize <- genNatural 4000 10000 -- This can't be too small. Shelley uses Hard coded 4000
   let alonzoUpgrade =
         UpgradeAlonzoPParams
@@ -375,6 +370,20 @@ bigMem = 50000
 
 bigStep :: Natural
 bigStep = 99999
+
+genMaxTxExUnits :: Gen ExUnits
+genMaxTxExUnits =
+  ExUnits
+    -- Accommodate the maximum number of scripts in a transaction
+    <$> genNatural (10 * bigMem + 1) (20 * bigMem + 1)
+    <*> genNatural (10 * bigStep + 1) (20 * bigStep + 1)
+
+genMaxBlockExUnits :: Gen ExUnits
+genMaxBlockExUnits =
+  ExUnits
+    -- Accommodate the maximum number of scripts in all transactions in a block
+    <$> genNatural (60 * bigMem + 1) (100 * bigMem + 1)
+    <*> genNatural (60 * bigStep + 1) (100 * bigStep + 1)
 
 instance Mock c => EraGen (AlonzoEra c) where
   genEraAuxiliaryData = genAux
