@@ -10,7 +10,7 @@
 module Test.Cardano.Ledger.Constrained.Conway.Certs where
 
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
@@ -105,11 +105,10 @@ certsEnvSpec ::
   IsConwayUniv fn =>
   Specification fn (CertsEnv Conway)
 certsEnvSpec = constrained $ \ce ->
-  match ce $ \tx pp _ _ a b ->
+  match ce $ \tx pp _slot _currepoch _currcommittee commproposals ->
     [ satisfies pp pparamsSpec
     , assert $ tx ==. lit txZero
-    , assert $ a ==. lit SNothing
-    , assert $ sizeOf_ b ==. 0
+    , genHint 3 commproposals
     ]
 
 -- | Project a CertEnv out of a CertsEnv (i.e drop the Tx)

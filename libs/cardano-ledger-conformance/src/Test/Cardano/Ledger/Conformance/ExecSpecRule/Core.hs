@@ -465,11 +465,10 @@ inputsGenerateWithin timeout =
   where
     aName = show (typeRep $ Proxy @rule)
 
--- | Translate a Haksell type 'a' whose translation context is 'ctx' into its Agda type, in the ImpTest monad.
+-- | Translate a Haskell type 'a' whose translation context is 'ctx' into its Agda type, in the ImpTest monad.
 translateWithContext :: SpecTranslate ctx a => ctx -> a -> ImpTestM era (SpecRep a)
 translateWithContext ctx x = do
   let
     expectRight' (Right y) = pure y
     expectRight' (Left e) = assertFailure (T.unpack e)
-  ans <- expectRight' . runSpecTransM ctx $ toSpecRep x
-  pure ans
+  expectRight' . runSpecTransM ctx $ toSpecRep x
