@@ -162,20 +162,20 @@ register env st endorsement =
         then
           if numberOfEndorsements >= adoptionThreshold
             then -- Register the endorsement and adopt the proposal in the next epoch
-              do
-                let cpu =
-                      CandidateProtocolUpdate
-                        { cpuSlot = currentSlot
-                        , cpuProtocolVersion = pv
-                        , cpuProtocolParameters = pps'
-                        }
-                    cpus' =
-                      updateCandidateProtocolUpdates candidateProtocolVersions cpu
-                pure
-                  $ State
-                    { candidateProtocolVersions = cpus'
-                    , registeredEndorsements = registeredEndorsements'
-                    }
+            do
+              let cpu =
+                    CandidateProtocolUpdate
+                      { cpuSlot = currentSlot
+                      , cpuProtocolVersion = pv
+                      , cpuProtocolParameters = pps'
+                      }
+                  cpus' =
+                    updateCandidateProtocolUpdates candidateProtocolVersions cpu
+              pure
+                $ State
+                  { candidateProtocolVersions = cpus'
+                  , registeredEndorsements = registeredEndorsements'
+                  }
             else -- Just register the endorsement if we cannot adopt
               pure $ st {registeredEndorsements = registeredEndorsements'}
         else -- Ignore the endorsement if the registration isn't stable

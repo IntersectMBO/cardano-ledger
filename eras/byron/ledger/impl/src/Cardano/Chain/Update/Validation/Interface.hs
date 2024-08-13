@@ -506,6 +506,7 @@ registerEpoch env st lastSeenEpoch = do
     else -- We have a new protocol version, so we update the current protocol
     -- version and parameters, and we perform a cleanup of the state
     -- variables.
+
       st
         { adoptedProtocolVersion = adoptedProtocolVersion'
         , adoptedProtocolParameters = nextProtocolParameters'

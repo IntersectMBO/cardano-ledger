@@ -155,6 +155,7 @@ poolRegistrationProp
                   (eval (hk ∉ dom (psRetiring targetSt)) :: Bool)
               ]
           else -- first registration
+
             conjoin
               [ counterexample
                   "New PoolParams are registered in pParams"

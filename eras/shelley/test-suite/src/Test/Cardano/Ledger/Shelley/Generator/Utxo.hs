@@ -409,6 +409,7 @@ genNextDelta
      in if remainingFee <= Coin 0 -- we've paid for all the fees
           then pure delta -- we're done
           else -- the change covers what we need, so shift Coin from change to dfees.
+
             if remainingFee <= (changeAmount <-> minAda)
               then
                 pure $
@@ -420,50 +421,50 @@ genNextDelta
                           change
                     }
               else -- add a new input to cover the fee
-                do
-                  let txBody = tx ^. bodyTxL
-                      inputsInUse = txBody ^. inputsTxBodyL <> extraInputs
-                      utxo' :: UTxO era
-                      utxo' =
-                        -- Remove possible inputs from Utxo, if they already
-                        -- appear in inputs.
-                        UTxO $
-                          Map.filterWithKey
-                            ( \k v ->
-                                (k `Set.notMember` inputsInUse) && genEraGoodTxOut v
-                            )
-                            -- filter out UTxO entries where the TxOut are not
-                            -- appropriate for this Era (i.e. Keylocked in
-                            -- AlonzoEra)
-                            (unUTxO utxo)
-                  (inputs, value, (vkeyPairs, msigPairs)) <-
-                    genInputs (1, 1) ksIndexedPaymentKeys ksIndexedPayScripts utxo'
-                  -- It is possible that the Utxo has no possible inputs left, so
-                  -- fail. We try and keep this from happening by using feedback:
-                  -- adding to the number of ouputs (in the call to genRecipients)
-                  -- in genTx above. Adding to the outputs means in the next cycle
-                  -- the size of the UTxO will grow. In rare cases, this cannot be avoided
-                  -- So we discard this test case. This should happen very rarely.
-                  -- If it does happen, It is NOT a test failure, but an inadequacy in the
-                  -- testing framework to generate almost-random transactions that always succeed every time.
-                  -- Experience suggests that this happens less than 1% of the time, and does not lead to backtracking.
-                  !_ <- when (null inputs) (myDiscard "NoMoneyleft Utxo.hs")
-                  let newWits =
-                        mkTxWits @era
-                          (utxo, txBody, scriptinfo)
-                          ksIndexedPaymentKeys
-                          ksIndexedStakingKeys
-                          vkeyPairs
-                          (mkScriptWits @era msigPairs mempty)
-                          (hashAnnotated txBody)
-                  pure $
-                    delta
-                      { extraWitnesses = extraWitnesses <> newWits
-                      , extraInputs = extraInputs <> Set.fromList inputs
-                      , change = deltaChange (<+> value) change -- <+> is plus of the Val class
-                      , deltaVKeys = vkeyPairs <> deltaVKeys delta
-                      , deltaScripts = msigPairs <> deltaScripts delta
-                      }
+              do
+                let txBody = tx ^. bodyTxL
+                    inputsInUse = txBody ^. inputsTxBodyL <> extraInputs
+                    utxo' :: UTxO era
+                    utxo' =
+                      -- Remove possible inputs from Utxo, if they already
+                      -- appear in inputs.
+                      UTxO $
+                        Map.filterWithKey
+                          ( \k v ->
+                              (k `Set.notMember` inputsInUse) && genEraGoodTxOut v
+                          )
+                          -- filter out UTxO entries where the TxOut are not
+                          -- appropriate for this Era (i.e. Keylocked in
+                          -- AlonzoEra)
+                          (unUTxO utxo)
+                (inputs, value, (vkeyPairs, msigPairs)) <-
+                  genInputs (1, 1) ksIndexedPaymentKeys ksIndexedPayScripts utxo'
+                -- It is possible that the Utxo has no possible inputs left, so
+                -- fail. We try and keep this from happening by using feedback:
+                -- adding to the number of ouputs (in the call to genRecipients)
+                -- in genTx above. Adding to the outputs means in the next cycle
+                -- the size of the UTxO will grow. In rare cases, this cannot be avoided
+                -- So we discard this test case. This should happen very rarely.
+                -- If it does happen, It is NOT a test failure, but an inadequacy in the
+                -- testing framework to generate almost-random transactions that always succeed every time.
+                -- Experience suggests that this happens less than 1% of the time, and does not lead to backtracking.
+                !_ <- when (null inputs) (myDiscard "NoMoneyleft Utxo.hs")
+                let newWits =
+                      mkTxWits @era
+                        (utxo, txBody, scriptinfo)
+                        ksIndexedPaymentKeys
+                        ksIndexedStakingKeys
+                        vkeyPairs
+                        (mkScriptWits @era msigPairs mempty)
+                        (hashAnnotated txBody)
+                pure $
+                  delta
+                    { extraWitnesses = extraWitnesses <> newWits
+                    , extraInputs = extraInputs <> Set.fromList inputs
+                    , change = deltaChange (<+> value) change -- <+> is plus of the Val class
+                    , deltaVKeys = vkeyPairs <> deltaVKeys delta
+                    , deltaScripts = msigPairs <> deltaScripts delta
+                    }
     where
       deltaChange ::
         (Value era -> Value era) ->

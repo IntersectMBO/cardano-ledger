@@ -1,8 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the DELEG rule
@@ -28,17 +30,17 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 --   without this in the DState, it is hard to generate the ConwayUnRegCert
 --   certificate, since it requires a rewards balance of 0.
 someZeros :: forall fn. IsConwayUniv fn => Specification fn RDPair
-someZeros = constrained $ \rdpair ->
-  match rdpair $ \reward _deposit ->
-    satisfies reward (chooseSpec (1, constrained $ \x -> assert $ x ==. lit 0) (3, TrueSpec))
+someZeros = constrained $ \ [var| someRdpair |] ->
+  match someRdpair $ \ [var| reward |] _deposit ->
+    satisfies reward (chooseSpec (1, constrained $ \ [var| x |] -> assert $ x ==. lit 0) (3, TrueSpec))
 
 dStateSpec ::
   forall fn.
   IsConwayUniv fn =>
   Specification fn (DState (ConwayEra StandardCrypto))
-dStateSpec = constrained $ \ds ->
-  match ds $ \rewardMap _futureGenDelegs _genDelegs _rewards ->
-    match rewardMap $ \rdMap ptrMap sPoolMap _dRepMap ->
+dStateSpec = constrained $ \ [var| dstate |] ->
+  match dstate $ \ [var| rewardMap |] _futureGenDelegs _genDelegs _rewards ->
+    match rewardMap $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] _dRepMap ->
       [ assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
       , assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
       , assertExplain (pure "some rewards are zero") $

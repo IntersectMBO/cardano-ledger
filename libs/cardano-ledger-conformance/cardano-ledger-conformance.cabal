@@ -23,6 +23,7 @@ library
         Test.Cardano.Ledger.Conformance
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
+        Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
 
     hs-source-dirs:   src
     other-modules:
@@ -35,7 +36,6 @@ library
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Certs
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Gov
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert
-        Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Cert

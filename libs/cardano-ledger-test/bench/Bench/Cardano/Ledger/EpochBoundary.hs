@@ -69,8 +69,8 @@ txOutUnstaked =
 txOutsFromCreds :: [StakeCredential TestCrypto] -> [TxOut TestEra]
 txOutsFromCreds creds =
   [ TxOutCompact
-      (compactAddr $ Addr Testnet payCred (StakeRefBase cred))
-      coinVal
+    (compactAddr $ Addr Testnet payCred (StakeRefBase cred))
+    coinVal
   | cred <- creds
   ]
   where
@@ -79,8 +79,8 @@ txOutsFromCreds creds =
 txOutsFromPtrs :: [Ptr] -> [TxOut TestEra]
 txOutsFromPtrs ptrs =
   [ TxOutCompact
-      (compactAddr $ Addr Testnet payCred (StakeRefPtr ptr))
-      coinVal
+    (compactAddr $ Addr Testnet payCred (StakeRefPtr ptr))
+    coinVal
   | ptr <- ptrs
   ]
   where

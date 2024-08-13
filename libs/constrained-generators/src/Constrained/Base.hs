@@ -1235,8 +1235,8 @@ saturatePred p =
 mergeSolverStage :: SolverStage fn -> [SolverStage fn] -> [SolverStage fn]
 mergeSolverStage (SolverStage x ps spec) plan =
   [ case eqVar x y of
-      Just Refl -> SolverStage y (ps ++ ps') (spec <> spec')
-      Nothing -> stage
+    Just Refl -> SolverStage y (ps ++ ps') (spec <> spec')
+    Nothing -> stage
   | stage@(SolverStage y ps' spec') <- plan
   ]
 
@@ -2802,7 +2802,8 @@ isEmptyNumSpec = \case
 
 knownUpperBound ::
   (TypeSpec fn a ~ NumSpec fn a, Ord a, Enum a, Num a, MaybeBounded a) =>
-  Specification fn a -> Maybe a
+  Specification fn a ->
+  Maybe a
 knownUpperBound TrueSpec = upperBound
 knownUpperBound (MemberSpec []) = Nothing
 knownUpperBound (MemberSpec as) = Just $ maximum as
@@ -2818,7 +2819,8 @@ knownUpperBound (TypeSpec (NumSpecInterval lo hi) cant) = upper (lo <|> lowerBou
 
 knownLowerBound ::
   (TypeSpec fn a ~ NumSpec fn a, Ord a, Enum a, Num a, MaybeBounded a) =>
-  Specification fn a -> Maybe a
+  Specification fn a ->
+  Maybe a
 knownLowerBound TrueSpec = lowerBound
 knownLowerBound (MemberSpec []) = Nothing
 knownLowerBound (MemberSpec as) = Just $ minimum as
@@ -3820,7 +3822,9 @@ emptyNumSpec = mempty
 
 combineNumSpec ::
   (HasSpec fn n, Ord n, TypeSpec fn n ~ NumSpec fn n) =>
-  NumSpec fn n -> NumSpec fn n -> Specification fn n
+  NumSpec fn n ->
+  NumSpec fn n ->
+  Specification fn n
 combineNumSpec s s' = case s <> s' of
   s''@(NumSpecInterval (Just a) (Just b))
     | a > b ->

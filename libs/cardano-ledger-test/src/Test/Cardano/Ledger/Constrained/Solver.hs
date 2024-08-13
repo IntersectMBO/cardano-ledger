@@ -879,16 +879,14 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ "\n"
     set <- simplify expr
     let msgs = ("Solving for variable " ++ nam) : map show preds
     if Set.null set
-      then
-        failT (("The set is empty " ++ synopsis (termRep expr) set ++ ", can't find an element.") : msgs)
+      then failT (("The set is empty " ++ synopsis (termRep expr) set ++ ", can't find an element.") : msgs)
       else pure (fst <$> itemFromSet msgs set)
   [Member (Right (Var v2@(V _ r2 _))) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
     set <- simplify expr
     let msgs = ("Solving for variable " ++ nam) : map show preds
     if Set.null set
-      then
-        failT (("The set is empty " ++ synopsis (termRep expr) set ++ ", can't find an element.") : msgs)
+      then failT (("The set is empty " ++ synopsis (termRep expr) set ++ ", can't find an element.") : msgs)
       else pure (fst <$> itemFromSet msgs set)
   [NotMember (Var v2@(V _ r2 _)) expr] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
@@ -902,8 +900,7 @@ dispatch v1@(V nam r1 _) preds = explain ("Solving for variable " ++ nam ++ "\n"
     let m2 = Map.filter (== v) m
     let msgs = ("Solving for variable " ++ nam) : map show preds
     if Map.null m2
-      then
-        failT (("The value: " ++ synopsis (termRep exprVal) v ++ " is not in the range of the map.") : msgs)
+      then failT (("The value: " ++ synopsis (termRep exprVal) v ++ " is not in the range of the map.") : msgs)
       else pure (fst <$> itemFromSet msgs (Map.keysSet m2))
   [MapMember exprKey (Var v2@(V _ r2 _)) exprMap] | Name v1 == Name v2 -> do
     Refl <- sameRep r1 r2
