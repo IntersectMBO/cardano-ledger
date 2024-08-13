@@ -137,6 +137,7 @@ library testlib
         Test.Cardano.Ledger.Shelley.Binary.Cddl
         Test.Cardano.Ledger.Shelley.Binary.Golden
         Test.Cardano.Ledger.Shelley.Binary.RoundTrip
+        Test.Cardano.Ledger.Shelley.CDDL
         Test.Cardano.Ledger.Shelley.Constants
         Test.Cardano.Ledger.Shelley.ImpTest
         Test.Cardano.Ledger.Shelley.Imp
@@ -170,6 +171,7 @@ library testlib
         cardano-slotting:{cardano-slotting, testlib},
         cardano-strict-containers,
         containers,
+        cuddle,
         FailT,
         generic-random,
         hedgehog-quickcheck,
