@@ -18,7 +18,7 @@ module Cardano.Ledger.Conway.Rules.GovCert (
   ConwayGOVCERT,
   ConwayGovCertPredFailure (..),
   ConwayGovCertEnv (..),
-  updateDRepExpiry,
+  computeDRepExpiry,
 )
 where
 
@@ -253,11 +253,13 @@ conwayGovCertTransition = do
           { vsDReps =
               Map.adjust
                 ( \drepState ->
-                    updateDRepExpiry
-                      ppDRepActivity
-                      cgceCurrentEpoch
-                      (vState ^. vsNumDormantEpochsL)
-                      $ drepState & drepAnchorL .~ mAnchor
+                    drepState
+                      & drepExpiryL
+                        .~ computeDRepExpiry
+                          ppDRepActivity
+                          cgceCurrentEpoch
+                          (vState ^. vsNumDormantEpochsL)
+                      & drepAnchorL .~ mAnchor
                 )
                 cred
                 vsDReps
@@ -272,18 +274,16 @@ conwayGovCertTransition = do
         UpdateCommittee _ _ newMembers _ -> Map.member coldCred newMembers
         _ -> False
 
-updateDRepExpiry ::
+computeDRepExpiry ::
   -- | DRepActivity PParam
   EpochInterval ->
   -- | Current epoch
   EpochNo ->
   -- | The count of the dormant epochs
   EpochNo ->
-  DRepState c ->
-  DRepState c
-updateDRepExpiry ppDRepActivity currentEpoch numDormantEpochs =
-  drepExpiryL
-    .~ binOpEpochNo
-      (-)
-      (addEpochInterval currentEpoch ppDRepActivity)
-      numDormantEpochs
+  -- | Computed expiry
+  EpochNo
+computeDRepExpiry ppDRepActivity currentEpoch =
+  binOpEpochNo
+    (-)
+    (addEpochInterval currentEpoch ppDRepActivity)

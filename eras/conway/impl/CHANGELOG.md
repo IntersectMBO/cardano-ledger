@@ -1,7 +1,8 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.16.1.0
+## 1.17.0.0
 
+* Replace GOVCERT `updateDRepExpiry` with `computeDRepExpiry`
 * Added `Eq`, `Show`, `NFData` and `Generic` instances for `CertsEnv`
 * Add `delegateToDRep` and `redelegateDRep`
 

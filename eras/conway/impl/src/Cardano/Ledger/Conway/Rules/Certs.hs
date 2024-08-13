@@ -54,7 +54,7 @@ import Cardano.Ledger.Conway.Governance (
  )
 import Cardano.Ledger.Conway.Rules.Cert (CertEnv (CertEnv), ConwayCertEvent, ConwayCertPredFailure)
 import Cardano.Ledger.Conway.Rules.Deleg (ConwayDelegPredFailure)
-import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure, updateDRepExpiry)
+import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure, computeDRepExpiry)
 import Cardano.Ledger.DRep (drepExpiryL)
 import Cardano.Ledger.Shelley.API (
   CertState (..),
@@ -236,7 +236,10 @@ conwayCertsTransition = do
             Map.foldlWithKey'
               ( \dreps voter _ -> case voter of
                   DRepVoter cred ->
-                    Map.adjust (updateDRepExpiry drepActivity currentEpoch numDormantEpochs) cred dreps
+                    Map.adjust
+                      (drepExpiryL .~ computeDRepExpiry drepActivity currentEpoch numDormantEpochs)
+                      cred
+                      dreps
                   _ -> dreps
               )
               vsDReps
