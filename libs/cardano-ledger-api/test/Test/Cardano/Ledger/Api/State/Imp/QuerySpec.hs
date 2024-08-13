@@ -28,6 +28,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Keys (KeyRole (..))
+import qualified Cardano.Ledger.Shelley.HardForks as HF
 import Cardano.Ledger.Shelley.LedgerState
 import Data.Default (def)
 import Data.Foldable (Foldable (..))
@@ -70,6 +71,33 @@ spec = do
         expectActualDRepExpiry drep $
           addEpochInterval curEpochNo $
             EpochInterval (drepActivity + fromIntegral n)
+
+      it "dRep registered when there are dormant epochs" $ do
+        let drepActivity = 3
+        modifyPParams $ ppDRepActivityL .~ EpochInterval drepActivity
+        let n = 2
+        passNEpochs n
+        expectNumDormantEpochs $ EpochNo (fromIntegral n)
+        (drep, _, _) <- setupSingleDRep 1_000_000
+
+        let expectedExpiry = do
+              epochNo <- getsNES nesELL
+              let tot = addEpochInterval epochNo (EpochInterval drepActivity)
+              pv <- getProtVer
+              pure $
+                if HF.bootstrapPhase pv
+                  then binOpEpochNo (+) tot (fromIntegral n)
+                  else tot
+
+        expectedExpiry >>= expectActualDRepExpiry drep
+
+        nes <- getsNES id
+        void $ submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
+
+        expectedExpiry >>= expectDRepExpiry drep
+        drepState <- drepStateFromQuery drep nes
+        expectedExpiry >>= shouldBe (drepState ^. drepExpiryL)
+
       it "proposals are made and numDormantEpochs are added" $ do
         curEpochNo <- getsNES nesELL
         let drepActivity = 3
