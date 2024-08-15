@@ -20,11 +20,11 @@ block :: Rule
 block =
   "block"
     =:= arr
-      [ a header,
-        "transaction_bodies" ==> arr [0 <+ a transaction_body],
-        "transaction_witness_sets"
-          ==> arr [0 <+ a transaction_witness_set],
-        "transaction_metadata_set"
+      [ a header
+      , "transaction_bodies" ==> arr [0 <+ a transaction_body]
+      , "transaction_witness_sets"
+          ==> arr [0 <+ a transaction_witness_set]
+      , "transaction_metadata_set"
           ==> mp [0 <+ asKey transaction_index ==> transaction_metadata]
       ]
 
@@ -32,9 +32,9 @@ transaction :: Rule
 transaction =
   "transaction"
     =:= arr
-      [ a transaction_body,
-        a transaction_witness_set,
-        a (transaction_metadata / VNil)
+      [ a transaction_body
+      , a transaction_witness_set
+      , a (transaction_metadata / VNil)
       ]
 
 transaction_index :: Rule
@@ -44,35 +44,35 @@ header :: Rule
 header =
   "header"
     =:= arr
-      [ a header_body,
-        "body_signature" ==> kes_signature
+      [ a header_body
+      , "body_signature" ==> kes_signature
       ]
 
 header_body :: Rule
 header_body =
   "header_body"
     =:= arr
-      [ "block_number" ==> VUInt,
-        "slot" ==> VUInt,
-        "prev_hash" ==> (hash32 / VNil),
-        "issuer_vkey" ==> vkey,
-        "vrf_vkey" ==> vrf_vkey,
-        "nonce_vrf" ==> vrf_cert,
-        "leader_vrf" ==> vrf_cert,
-        "block_body_size" ==> (VUInt `sized` (4 :: Word64)),
-        "block_body_hash" ==> hash32,
-        a operational_cert,
-        a protocol_version
+      [ "block_number" ==> VUInt
+      , "slot" ==> VUInt
+      , "prev_hash" ==> (hash32 / VNil)
+      , "issuer_vkey" ==> vkey
+      , "vrf_vkey" ==> vrf_vkey
+      , "nonce_vrf" ==> vrf_cert
+      , "leader_vrf" ==> vrf_cert
+      , "block_body_size" ==> (VUInt `sized` (4 :: Word64))
+      , "block_body_hash" ==> hash32
+      , a operational_cert
+      , a protocol_version
       ]
 
 operational_cert :: Named Group
 operational_cert =
   "operational_cert"
     =:~ grp
-      [ "hot_vkey" ==> kes_vkey,
-        "sequence_number" ==> VUInt,
-        "kes_period" ==> VUInt,
-        "sigma" ==> signature
+      [ "hot_vkey" ==> kes_vkey
+      , "sequence_number" ==> VUInt
+      , "kes_period" ==> VUInt
+      , "sigma" ==> signature
       ]
 
 -- TODO Replace with the following once
@@ -93,30 +93,30 @@ transaction_body :: Rule
 transaction_body =
   "transaction_body"
     =:= mp
-      [ idx 0 ==> set transaction_input,
-        idx 1 ==> arr [0 <+ a transaction_output],
-        idx 2 ==> coin,
-        idx 3 ==> VUInt,
-        opt (idx 4 ==> arr [0 <+ a certificate]),
-        opt (idx 5 ==> withdrawals),
-        opt (idx 6 ==> update),
-        opt (idx 7 ==> metadata_hash)
+      [ idx 0 ==> set transaction_input
+      , idx 1 ==> arr [0 <+ a transaction_output]
+      , idx 2 ==> coin
+      , idx 3 ==> VUInt
+      , opt (idx 4 ==> arr [0 <+ a certificate])
+      , opt (idx 5 ==> withdrawals)
+      , opt (idx 6 ==> update)
+      , opt (idx 7 ==> metadata_hash)
       ]
 
 transaction_input :: Rule
 transaction_input =
   "transaction_input"
     =:= arr
-      [ "transaction_id" ==> hash32,
-        "index" ==> VUInt
+      [ "transaction_id" ==> hash32
+      , "index" ==> VUInt
       ]
 
 transaction_output :: Rule
 transaction_output =
   "transaction_output"
     =:= arr
-      [ a address,
-        "amount" ==> coin
+      [ a address
+      , "amount" ==> coin
       ]
 
 certificate :: Rule
@@ -178,15 +178,15 @@ pool_params :: Named Group
 pool_params =
   "pool_params"
     =:~ grp
-      [ "operator" ==> pool_keyhash,
-        "vrf_keyhash" ==> vrf_keyhash,
-        "pledge" ==> coin,
-        "cost" ==> coin,
-        "margin" ==> unit_interval,
-        "reward_account" ==> reward_account,
-        "pool_owners" ==> set addr_keyhash,
-        "relays" ==> arr [0 <+ a relay],
-        "pool_metadata" ==> (pool_metadata / VNil)
+      [ "operator" ==> pool_keyhash
+      , "vrf_keyhash" ==> vrf_keyhash
+      , "pledge" ==> coin
+      , "cost" ==> coin
+      , "margin" ==> unit_interval
+      , "reward_account" ==> reward_account
+      , "pool_owners" ==> set addr_keyhash
+      , "relays" ==> arr [0 <+ a relay]
+      , "pool_metadata" ==> (pool_metadata / VNil)
       ]
 
 port :: Rule
@@ -205,27 +205,27 @@ single_host_addr :: Named Group
 single_host_addr =
   "single_host_addr"
     =:~ grp
-      [ 0,
-        port / VNil,
-        ipv4 / VNil,
-        ipv6 / VNil
+      [ 0
+      , port / VNil
+      , ipv4 / VNil
+      , ipv6 / VNil
       ]
 
 single_host_name :: Named Group
 single_host_name =
   "single_host_name"
     =:~ grp
-      [ 1,
-        port / VNil,
-        a dns_name -- An A or AAAA DNS record
+      [ 1
+      , port / VNil
+      , a dns_name -- An A or AAAA DNS record
       ]
 
 multi_host_name :: Named Group
 multi_host_name =
   "multi_host_name"
     =:~ grp
-      [ 2,
-        a dns_name -- A SRV DNS record
+      [ 2
+      , a dns_name -- A SRV DNS record
       ]
 
 relay :: Rule
@@ -256,31 +256,31 @@ protocol_param_update :: Rule
 protocol_param_update =
   "protocol_param_update"
     =:= mp
-      [ opt (idx 0 ==> VUInt), -- minfee A
-        opt (idx 1 ==> VUInt), -- minfee B
-        opt (idx 2 ==> VUInt), -- max block body size
-        opt (idx 3 ==> VUInt), -- max transaction size
-        opt (idx 4 ==> (VUInt `sized` (2 :: Word64))), -- max block header size
-        opt (idx 5 ==> coin), -- key deposit
-        opt (idx 6 ==> coin), -- pool deposit
-        opt (idx 7 ==> epoch), -- maximum epoch
-        opt (idx 8 ==> VUInt), -- n_opt: desired number of stake pools
-        opt (idx 9 ==> nonnegative_interval), -- pool pledge influence
-        opt (idx 10 ==> unit_interval), -- expansion rate
-        opt (idx 11 ==> unit_interval), -- treasury growth rate
-        opt (idx 12 ==> unit_interval), -- decentralisation constant
-        opt (idx 13 ==> nonce), -- extra entropy
-        opt (idx 14 ==> arr [a protocol_version]), -- protocol version
-        opt (idx 15 ==> coin) -- min utxo value
+      [ opt (idx 0 ==> VUInt) -- minfee A
+      , opt (idx 1 ==> VUInt) -- minfee B
+      , opt (idx 2 ==> VUInt) -- max block body size
+      , opt (idx 3 ==> VUInt) -- max transaction size
+      , opt (idx 4 ==> (VUInt `sized` (2 :: Word64))) -- max block header size
+      , opt (idx 5 ==> coin) -- key deposit
+      , opt (idx 6 ==> coin) -- pool deposit
+      , opt (idx 7 ==> epoch) -- maximum epoch
+      , opt (idx 8 ==> VUInt) -- n_opt: desired number of stake pools
+      , opt (idx 9 ==> nonnegative_interval) -- pool pledge influence
+      , opt (idx 10 ==> unit_interval) -- expansion rate
+      , opt (idx 11 ==> unit_interval) -- treasury growth rate
+      , opt (idx 12 ==> unit_interval) -- decentralisation constant
+      , opt (idx 13 ==> nonce) -- extra entropy
+      , opt (idx 14 ==> arr [a protocol_version]) -- protocol version
+      , opt (idx 15 ==> coin) -- min utxo value
       ]
 
 transaction_witness_set :: Rule
 transaction_witness_set =
   "transaction_witness_set"
     =:= mp
-      [ opt $ idx 0 ==> arr [0 <+ a vkeywitness],
-        opt $ idx 1 ==> arr [0 <+ a multisig_script],
-        opt $ idx 2 ==> arr [0 <+ a bootstrap_witness]
+      [ opt $ idx 0 ==> arr [0 <+ a vkeywitness]
+      , opt $ idx 1 ==> arr [0 <+ a multisig_script]
+      , opt $ idx 2 ==> arr [0 <+ a bootstrap_witness]
       ]
 
 transaction_metadatum :: Rule
@@ -311,10 +311,10 @@ bootstrap_witness :: Rule
 bootstrap_witness =
   "bootstrap_witness"
     =:= arr
-      [ "public_key" ==> vkey,
-        "signature" ==> signature,
-        "chain_code" ==> (VBytes `sized` (32 :: Word64)),
-        "attributes" ==> VBytes
+      [ "public_key" ==> vkey
+      , "signature" ==> signature
+      , "chain_code" ==> (VBytes `sized` (32 :: Word64))
+      , "attributes" ==> VBytes
       ]
 
 multisig_script :: Rule
@@ -365,10 +365,10 @@ nonce =
 -- on in future eras. In order to have the "correct" common specification in
 -- core, we override them here
 --------------------------------------------------------------------------------
-set :: (IsType0 t0) => t0 -> GRuleCall
+set :: IsType0 t0 => t0 -> GRuleCall
 set = binding $ \x -> "set" =:= arr [0 <+ a x]
 
-nonempty_set :: (IsType0 t0) => t0 -> GRuleCall
+nonempty_set :: IsType0 t0 => t0 -> GRuleCall
 nonempty_set = binding $ \x ->
   "nonempty_set"
     =:= arr [1 <+ a x]
