@@ -1,5 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Constrained.Conway.PParams where
 
@@ -30,7 +32,7 @@ pparamsSpec =
          _cppA0
          _cppRho
          _cppTau
-         _cppProtocolVersion
+         cppProtocolVersion
          _cppMinPoolCost
          _cppCoinsPerUTxOByte
          _cppCostModels
@@ -49,7 +51,8 @@ pparamsSpec =
          cppDRepDeposit
          _cppDRepActivity
          _cppMinFeeRefScriptCoinsPerByte ->
-            [ assert $ cppMaxBBSize /=. lit (THKD 0)
+            [ assert $ cppProtocolVersion ==. lit (ProtVer (natVersion @10) 0)
+            , assert $ cppMaxBBSize /=. lit (THKD 0)
             , assert $ cppMaxTxSize /=. lit (THKD 0)
             , assert $ cppMaxBHSize /=. lit (THKD 0)
             , assert $ cppMaxValSize /=. lit (THKD 0)

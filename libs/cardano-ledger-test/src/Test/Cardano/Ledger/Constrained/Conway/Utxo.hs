@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the UTXO rule
@@ -51,7 +52,7 @@ utxoEnvSpec =
                  _cppA0
                  _cppRho
                  _cppTau
-                 _cppProtocolVersion
+                 cppProtocolVersion
                  _cppMinPoolCost
                  _cppCoinsPerUTxOByte
                  _cppCostModels
@@ -72,7 +73,8 @@ utxoEnvSpec =
                  _cppMinFeeRefScriptCoinsPerByte ->
                     -- NOTE: this is for testing only! We should figure out a nicer way
                     -- of splitting generation and checking constraints here!
-                    [ assert $ lit (THKD 3000) ==. cppMaxTxSize
+                    [ assert $ cppProtocolVersion ==. lit (ProtVer (natVersion @10) 0)
+                    , assert $ lit (THKD 3000) ==. cppMaxTxSize
                     ]
           ]
 
