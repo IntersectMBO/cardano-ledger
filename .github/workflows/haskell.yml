@@ -465,3 +465,25 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  SRP-validity:
+    name: Check if formal-ledger-specifications SRP is valid
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Check if provided formal-ledger-specifications SRP commit hash exists
+      run: |
+        TAG=$(sed -ne \
+          '/ *location: *https:\/\/github.com\/IntersectMBO\/formal-ledger-specifications.git/,/--sha256/ p' \
+          cabal.project \
+        | sed -ne 's/^ *tag: *//p')
+        git fetch https://github.com/intersectmbo/formal-ledger-specifications.git MAlonzo-code
+        git show -s $TAG || { \
+          echo "Commit $TAG was not found on the MAlonzo-code branch of formal-ledger-specifications."
+          exit 1
+        }
