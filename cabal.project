@@ -13,16 +13,18 @@ repository cardano-haskell-packages
 -- While using SRPs one can obtain the `--sha256` value for a package
 -- by first setting it to some random value and letting the tooling
 -- tell you what it should be, for example, using `nix develop` will
--- throw an error with the correct value to use or alternatively
--- you can run `nix-prefetch-url <url> --unpack`,
--- e.g.: `nix-prefetch-url https://github.com/intersectmbo/formal-ledger-specifications/archive/841942c68993857fd40ca35cd62258cf82d160a5.zip --unpack`
--- This might even be preferable, since this will give you the full hash
--- rather than a shortened one.
+-- throw an error with the correct value to use or even better you
+-- can use `nix-prefetch-git`:
+--
+-- $ nix-shell -p nix-prefetch-git
+-- $ nix-prefetch-git https://github.com/intersectmbo/formal-ledger-specifications --rev <GIT_SHA> | jq .hash
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/formal-ledger-specifications.git
   subdir: generated
-  tag: 58f4b078a7e0df0c49264b78090122e75679585f
+  -- !WARNING!:
+  -- MAKE SURE THIS POINTS TO A COMMIT IN `MAlonzo-code` BEFORE MERGE!
+  tag: b5a8d47aebbdad92773be96c459f241d773d4771
   --sha256: sha256-iEqucpja/0/5Tvnjr2drFlz58f3x3kUpInVjZfcePBQ=
 -- NOTE: If you would like to update the above, look for the `MAlonzo-code`
 -- branch in the `formal-ledger-specifications` repo and copy the SHA of
