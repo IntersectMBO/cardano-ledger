@@ -155,7 +155,7 @@ library testlib
         cardano-ledger-conway,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-mary,
-        cardano-ledger-shelley,
+        cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-strict-containers,
         containers,
         cuddle >=0.3.0.0,

@@ -55,6 +55,7 @@ pool_keyhash = "pool_keyhash" =:= hash28
 
 vrf_keyhash :: Rule
 vrf_keyhash = "vrf_keyhash" =:= hash32
+
 --------------------------------------------------------------------------------
 -- Crypto
 --------------------------------------------------------------------------------
@@ -135,19 +136,6 @@ nonZeroInt64 = "nonZeroInt64" =:= negInt64 / posInt64 -- this is the same as the
 int64 :: Rule
 int64 = "int64" =:= minInt64 ... maxInt64
 
--- Conway era introduces an optional 258 tag for sets, which will become mandatory in the
--- second era after Conway. We recommend all the tooling to account for this future breaking
--- change sooner rather than later, in order to provide a smooth transition for their users.
-
-set :: (IsType0 t0) => t0 -> GRuleCall
-set = binding $ \x -> "set" =:= tag 258 (arr [0 <+ a x]) / sarr [0 <+ a x]
-
-nonempty_set :: (IsType0 t0) => t0 -> GRuleCall
-nonempty_set = binding $ \x ->
-  "nonempty_set"
-    =:= tag 258 (arr [1 <+ a x])
-    / sarr [1 <+ a x]
-
 positive_int :: Rule
 positive_int = "positive_int" =:= 1 ... 18446744073709551615
 
@@ -187,7 +175,7 @@ bounded_bytes = "bounded_bytes" =:= VBytes `sized` (0 :: Word64, 64 :: Word64)
 
 -- a type for distinct values.
 -- The type parameter must support .size, for example: bytes or uint
-distinct :: (IsSizeable s) => Value s -> Rule
+distinct :: IsSizeable s => Value s -> Rule
 distinct x =
   "distinct_"
     <> T.pack (show x)

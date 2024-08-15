@@ -11,10 +11,7 @@ import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Word (Word64)
 import GHC.Num (Integer)
-import Test.Cardano.Ledger.Core.Binary.CDDL hiding
-  ( nonempty_set,
-    set,
-  )
+import Test.Cardano.Ledger.Core.Binary.CDDL
 
 shelley :: Huddle
 shelley = collectFrom [block, transaction, signkeyKES]
