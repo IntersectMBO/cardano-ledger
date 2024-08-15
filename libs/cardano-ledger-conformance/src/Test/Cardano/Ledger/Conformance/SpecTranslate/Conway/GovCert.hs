@@ -95,10 +95,11 @@ instance SpecTranslate ctx (VState era) where
 
   toSpecRep VState {..} =
     Agda.MkGState'
-      <$> toSpecRep (drepExpiry <$> vsDReps)
+      <$> toSpecRep (updateExpiry . drepExpiry <$> vsDReps)
       <*> toSpecRep
         (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState)
       <*> toSpecRep deposits
     where
       deposits =
         Map.mapKeys DRepDeposit (drepDeposit <$> vsDReps)
+      updateExpiry = binOpEpochNo (+) vsNumDormantEpochs
