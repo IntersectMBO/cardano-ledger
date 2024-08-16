@@ -1,4 +1,12 @@
 ; This file was auto-generated from huddle. Please do not modify it directly!
+; Pseudo-rule introduced by Cuddle to collect root elements
+huddle_root_defs = [block,
+                    transaction,
+                    $kes_signature,
+                    language,
+                    potential_languages,
+                    signkeyKES]
+
 $hash28 = bytes .size 28
 
 $hash32 = bytes .size 32
@@ -63,18 +71,14 @@ anchor = [anchor_url : url, anchor_data_hash : $hash32]
 
 asset_name = bytes .size (0 .. 32)
 
-auth_committee_hot_cert = (14
-                           , committee_cold_credential
-                           , committee_hot_credential)
-
 auxiliary_data = metadata
-                  / [transaction_metadata : metadata
-                     , auxiliary_scripts : [* native_script]]
-                  / #6.259({? 0 : metadata
-                            , ? 1 : [* native_script]
-                            , ? 2 : [* plutus_v1_script]
-                            , ? 3 : [* plutus_v2_script]
-                            , ? 4 : [* plutus_v3_script]})
+                  / [transaction_metadata : metadata,
+                     auxiliary_scripts : [* native_script]]
+                  / #6.259({? 0 : metadata,
+                            ? 1 : [* native_script],
+                            ? 2 : [* plutus_v1_script],
+                            ? 3 : [* plutus_v2_script],
+                            ? 4 : [* plutus_v3_script]})
 
 auxiliary_data_hash = $hash32
 
@@ -89,38 +93,38 @@ big_uint = #6.2(bounded_bytes)
 ;        must be the same
 ;     2) every transaction_index must be strictly smaller than the
 ;        length of transaction_bodies
-block = [header
-         , transaction_bodies : [* transaction_body]
-         , transaction_witness_sets : [* transaction_witness_set]
-         , auxiliary_data_set : {* transaction_index => auxiliary_data}
-         , invalid_transactions : [* transaction_index]]
+block = [header,
+         transaction_bodies : [* transaction_body],
+         transaction_witness_sets : [* transaction_witness_set],
+         auxiliary_data_set : {* transaction_index => auxiliary_data},
+         invalid_transactions : [* transaction_index]]
 
 block_no = uint .size 8
 
-bootstrap_witness = [public_key : $vkey
-                     , signature : $signature
-                     , chain_code : bytes .size 32
-                     , attributes : bytes]
+bootstrap_witness = [public_key : $vkey,
+                     signature : $signature,
+                     chain_code : bytes .size 32,
+                     attributes : bytes]
 
 bounded_bytes = bytes .size (0 .. 64)
 
-certificate = [stake_registration
-                // stake_deregistration
-                // stake_delegation
-                // pool_registration
-                // pool_retirement
-                // reg_cert
-                // unreg_cert
-                // vote_deleg_cert
-                // stake_vote_deleg_cert
-                // stake_reg_deleg_cert
-                // vote_reg_deleg_cert
-                // stake_vote_reg_deleg_cert
-                // auth_committee_hot_cert
-                // resign_committee_cold_cert
-                // reg_drep_cert
-                // unreg_drep_cert
-                // update_drep_cert]
+certificate = [stake_registration // 
+               stake_deregistration // 
+               stake_delegation // 
+               pool_registration // 
+               pool_retirement // 
+               reg_cert // 
+               unreg_cert // 
+               vote_deleg_cert // 
+               stake_vote_deleg_cert // 
+               stake_reg_deleg_cert // 
+               vote_reg_deleg_cert // 
+               stake_vote_reg_deleg_cert // 
+               auth_committee_hot_cert // 
+               resign_committee_cold_cert // 
+               reg_drep_cert // 
+               unreg_drep_cert // 
+               update_drep_cert]
 
 certificates = nonempty_set<certificate>
 
@@ -132,29 +136,22 @@ committee_hot_credential = credential
 
 constitution = [anchor, scripthash / nil]
 
-constr<a0> = #6.121([* a0])
-              / #6.122([* a0])
-              / #6.123([* a0])
-              / #6.124([* a0])
-              / #6.125([* a0])
-              / #6.126([* a0])
-              / #6.127([* a0])
-              / #6.102([uint, [* a0]])
-
 ; The format for costmdls is flexible enough to allow adding Plutus
 ;  built-ins and language versions in the future.
-costmdls = {? 0 : [* int64]
-            , ? 1 : [* int64]
-            , ? 2 : [* int64]
-            , * 3 .. 255 => [* int64]}
+costmdls = {? 0 : [* int64],
+            ? 1 : [* int64],
+            ? 2 : [* int64],
+            * 3 .. 255 => [* int64]}
 
-credential = [0, addr_keyhash // 1, scripthash]
+credential = [0, addr_keyhash // 
+              1, scripthash]
 
 data = #6.24(bytes .cbor plutus_data)
 
 datum_hash = $hash32
 
-datum_option = [0, $hash32 // 1, data]
+datum_option = [0, $hash32 // 
+                1, data]
 
 distinct_VBytes = bytes .size 8
                    / bytes .size 16
@@ -165,62 +162,59 @@ distinct_VBytes = bytes .size 8
 
 dns_name = text .size (0 .. 128)
 
-drep = [0, addr_keyhash // 1, scripthash // 2 // 3]
+drep = [0, addr_keyhash // 
+        1, scripthash // 
+        2 // 
+        3]
 
 drep_credential = credential
 
-drep_voting_thresholds = [unit_interval
-                          , unit_interval
-                          , unit_interval
-                          , unit_interval
-                          , unit_interval
-                          , unit_interval
-                          , unit_interval
-                          , unit_interval
-                          , unit_interval
-                          , unit_interval]
+drep_voting_thresholds = [unit_interval,
+                          unit_interval,
+                          unit_interval,
+                          unit_interval,
+                          unit_interval,
+                          unit_interval,
+                          unit_interval,
+                          unit_interval,
+                          unit_interval,
+                          unit_interval]
 
 epoch_interval = uint .size 4
 
 epoch_no = uint .size 8
 
-ex_unit_prices = [mem_price : nonnegative_interval
-                  , step_price : nonnegative_interval]
+ex_unit_prices = [mem_price : nonnegative_interval,
+                  step_price : nonnegative_interval]
 
 ex_units = [mem : uint, steps : uint]
 
-gov_action = [parameter_change_action
-               // hard_fork_initiation_action
-               // treasury_withdrawals_action
-               // no_confidence
-               // update_committee
-               // new_constitution
-               // info_action]
+gov_action = [parameter_change_action // 
+              hard_fork_initiation_action // 
+              treasury_withdrawals_action // 
+              no_confidence // 
+              update_committee // 
+              new_constitution // 
+              info_action]
 
 gov_action_id = [transaction_id : $hash32, gov_action_index : uint .size 2]
 
-hard_fork_initiation_action = (1, gov_action_id / nil, protocol_version)
-
 header = [header_body, body_signature : $kes_signature]
 
-header_body = [block_number : block_no
-               , slot : slot_no
-               , prev_hash : $hash32 / nil
-               , issuer_vkey : $vkey
-               , vrf_vkey : $vrf_vkey
-               , vrf_result : $vrf_cert
-               , block_body_size : uint .size 4
-               , block_body_hash : $hash32
-               , operational_cert
-               , protocol_version]
+header_body = [block_number : block_no,
+               slot : slot_no,
+               prev_hash : $hash32 / nil,
+               issuer_vkey : $vkey,
+               vrf_vkey : $vrf_vkey,
+               vrf_result : $vrf_cert,
+               block_body_size : uint .size 4,
+               block_body_hash : $hash32,
+               operational_cert,
+               protocol_version]
 
 info_action = 6
 
 int64 = -9223372036854775808 .. 9223372036854775807
-
-invalid_before = (4, slot_no)
-
-invalid_hereafter = (5, slot_no)
 
 ipv4 = bytes .size 4
 
@@ -234,40 +228,25 @@ metadata = {* transaction_metadatum_label => transaction_metadatum}
 
 mint = multiasset<nonZeroInt64>
 
-multi_host_name = (2, dns_name)
-
-multiasset<a0> = {+ policy_id => {+ asset_name => a0}}
-
-native_script = [script_pubkey
-                  // script_all
-                  // script_any
-                  // script_n_of_k
-                  // invalid_before
-                  // invalid_hereafter]
+native_script = [script_pubkey // 
+                 script_all // 
+                 script_any // 
+                 script_n_of_k // 
+                 invalid_before // 
+                 invalid_hereafter]
 
 negInt64 = -9223372036854775808 .. -1
 
 network_id = 0 / 1
 
-new_constitution = (5, gov_action_id / nil, constitution)
-
-no_confidence = (3, gov_action_id / nil)
-
 nonZeroInt64 = negInt64 / posInt64
-
-nonempty_set<a0> = #6.258([+ a0]) / [+ a0]
 
 nonnegative_interval = #6.30([uint, positive_int])
 
-operational_cert = [hot_vkey : $kes_vkey
-                    , sequence_number : uint .size 8
-                    , kes_period : uint
-                    , sigma : $signature]
-
-parameter_change_action = (0
-                           , gov_action_id / nil
-                           , protocol_param_update
-                           , policy_hash / nil)
+operational_cert = [hot_vkey : $kes_vkey,
+                    sequence_number : uint .size 8,
+                    kes_period : uint,
+                    sigma : $signature]
 
 plutus_data = constr<plutus_data>
                / {* plutus_data => plutus_data}
@@ -296,25 +275,11 @@ pool_metadata = [url, pool_metadata_hash]
 
 pool_metadata_hash = $hash32
 
-pool_params = (pool_keyhash
-               , vrf_keyhash
-               , coin
-               , coin
-               , unit_interval
-               , reward_account
-               , set<addr_keyhash>
-               , [* relay]
-               , pool_metadata / nil)
-
-pool_registration = (3, pool_params)
-
-pool_retirement = (4, pool_keyhash, epoch_no)
-
-pool_voting_thresholds = [unit_interval
-                          , unit_interval
-                          , unit_interval
-                          , unit_interval
-                          , unit_interval]
+pool_voting_thresholds = [unit_interval,
+                          unit_interval,
+                          unit_interval,
+                          unit_interval,
+                          unit_interval]
 
 port = uint .le 65535
 
@@ -324,51 +289,51 @@ positive_coin = 1 .. 18446744073709551615
 
 positive_int = 1 .. 18446744073709551615
 
-post_alonzo_transaction_output = {0 : address
-                                  , 1 : value
-                                  , ? 2 : datum_option
-                                  , ? 3 : script_ref}
+post_alonzo_transaction_output = {0 : address,
+                                  1 : value,
+                                  ? 2 : datum_option,
+                                  ? 3 : script_ref}
 
 potential_languages = 0 .. 255
 
-pre_babbage_transaction_output = [address
-                                  , amount : value
-                                  , ? datum_hash : datum_hash]
+pre_babbage_transaction_output = [address,
+                                  amount : value,
+                                  ? datum_hash : datum_hash]
 
 proposal_procedure = [deposit : coin, reward_account, gov_action, anchor]
 
 proposal_procedures = nonempty_set<proposal_procedure>
 
-protocol_param_update = {? 0 : coin
-                         , ? 1 : coin
-                         , ? 2 : uint .size 4
-                         , ? 3 : uint .size 4
-                         , ? 4 : uint .size 2
-                         , ? 5 : coin
-                         , ? 6 : coin
-                         , ? 7 : epoch_interval
-                         , ? 8 : uint .size 2
-                         , ? 9 : nonnegative_interval
-                         , ? 10 : unit_interval
-                         , ? 11 : unit_interval
-                         , ? 16 : coin
-                         , ? 17 : coin
-                         , ? 18 : costmdls
-                         , ? 19 : ex_unit_prices
-                         , ? 20 : ex_units
-                         , ? 21 : ex_units
-                         , ? 22 : uint .size 4
-                         , ? 23 : uint .size 2
-                         , ? 24 : uint .size 2
-                         , ? 25 : pool_voting_thresholds
-                         , ? 26 : drep_voting_thresholds
-                         , ? 27 : uint .size 2
-                         , ? 28 : epoch_interval
-                         , ? 29 : epoch_interval
-                         , ? 30 : coin
-                         , ? 31 : coin
-                         , ? 32 : epoch_interval
-                         , ? 33 : nonnegative_interval}
+protocol_param_update = {? 0 : coin,
+                         ? 1 : coin,
+                         ? 2 : uint .size 4,
+                         ? 3 : uint .size 4,
+                         ? 4 : uint .size 2,
+                         ? 5 : coin,
+                         ? 6 : coin,
+                         ? 7 : epoch_interval,
+                         ? 8 : uint .size 2,
+                         ? 9 : nonnegative_interval,
+                         ? 10 : unit_interval,
+                         ? 11 : unit_interval,
+                         ? 16 : coin,
+                         ? 17 : coin,
+                         ? 18 : costmdls,
+                         ? 19 : ex_unit_prices,
+                         ? 20 : ex_units,
+                         ? 21 : ex_units,
+                         ? 22 : uint .size 4,
+                         ? 23 : uint .size 2,
+                         ? 24 : uint .size 2,
+                         ? 25 : pool_voting_thresholds,
+                         ? 26 : drep_voting_thresholds,
+                         ? 27 : uint .size 2,
+                         ? 28 : epoch_interval,
+                         ? 29 : epoch_interval,
+                         ? 30 : coin,
+                         ? 31 : coin,
+                         ? 32 : epoch_interval,
+                         ? 33 : nonnegative_interval}
 
 protocol_version = [major_protocol_version, uint]
 
@@ -376,35 +341,27 @@ redeemer_tag = 0 / 1 / 2 / 3 / 4 / 5
 
 ; Flat Array support is included for backwards compatibility and will be removed in the next era.
 ; It is recommended for tools to adopt using a Map instead of Array going forward.
-redeemers = [+ [tag : redeemer_tag
-                , index : uint .size 4
-                , data : plutus_data
-                , ex_units : ex_units]]
-             / {+ [tag : redeemer_tag
-                   , index : uint .size 4] => [data : plutus_data
-                                               , ex_units : ex_units]}
+redeemers = [+ [tag : redeemer_tag,
+                index : uint .size 4,
+                data : plutus_data,
+                ex_units : ex_units]]
+             / {+ [tag : redeemer_tag,
+                   index : uint .size 4] => [data : plutus_data,
+                                             ex_units : ex_units]}
 
-reg_cert = (7, stake_credential, coin)
-
-reg_drep_cert = (16, drep_credential, coin, anchor / nil)
-
-relay = [single_host_addr // single_host_name // multi_host_name]
+relay = [single_host_addr // 
+         single_host_name // 
+         multi_host_name]
 
 required_signers = nonempty_set<addr_keyhash>
-
-resign_committee_cold_cert = (15, committee_cold_credential, anchor / nil)
 
 reward_account = h'E090000000000000000000000000000000000000000000000000000000'
                   / h'F0A0000000000000000000000000000000000000000000000000000000'
 
-script = [0, native_script
-           // 1, plutus_v1_script
-           // 2, plutus_v2_script
-           // 3, plutus_v3_script]
-
-script_all = (1, [* native_script])
-
-script_any = (2, [* native_script])
+script = [0, native_script // 
+          1, plutus_v1_script // 
+          2, plutus_v2_script // 
+          3, plutus_v3_script]
 
 ; This is a hash of data which may affect evaluation of a script.
 ;     This data consists of:
@@ -471,10 +428,6 @@ script_any = (2, [* native_script])
 ;     empty map, in which case the user supplied encoding of the empty map is used.
 script_data_hash = $hash32
 
-script_n_of_k = (3, int64, [* native_script])
-
-script_pubkey = (0, addr_keyhash)
-
 script_ref = #6.24(bytes .cbor script)
 
 ; To compute a script hash, note that you must prepend
@@ -488,57 +441,37 @@ script_ref = #6.24(bytes .cbor script)
 ; 
 scripthash = $hash28
 
-set<a0> = #6.258([* a0]) / [* a0]
-
 signkeyKES = bytes .size 64
-
-single_host_addr = (0, port / nil, ipv4 / nil, ipv6 / nil)
-
-single_host_name = (1, port / nil, dns_name)
 
 slot_no = uint .size 8
 
 stake_credential = credential
 
-stake_delegation = (2, stake_credential, pool_keyhash)
+transaction = [transaction_body,
+               transaction_witness_set,
+               bool,
+               auxiliary_data / nil]
 
-; This will be deprecated in a future era
-stake_deregistration = (1, stake_credential)
-
-stake_reg_deleg_cert = (11, stake_credential, pool_keyhash, coin)
-
-; This will be deprecated in a future era
-stake_registration = (0, stake_credential)
-
-stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, drep)
-
-stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
-
-transaction = [transaction_body
-               , transaction_witness_set
-               , bool
-               , auxiliary_data / nil]
-
-transaction_body = {0 : set<transaction_input>
-                    , 1 : [* transaction_output]
-                    , 2 : coin
-                    , ? 3 : slot_no
-                    , ? 4 : certificates
-                    , ? 5 : withdrawals
-                    , ? 7 : auxiliary_data_hash
-                    , ? 8 : slot_no
-                    , ? 9 : mint
-                    , ? 11 : script_data_hash
-                    , ? 13 : nonempty_set<transaction_input>
-                    , ? 14 : required_signers
-                    , ? 15 : network_id
-                    , ? 16 : transaction_output
-                    , ? 17 : coin
-                    , ? 18 : nonempty_set<transaction_input>
-                    , ? 19 : voting_procedures
-                    , ? 20 : proposal_procedures
-                    , ? 21 : coin
-                    , ? 22 : positive_coin}
+transaction_body = {0 : set<transaction_input>,
+                    1 : [* transaction_output],
+                    2 : coin,
+                    ? 3 : slot_no,
+                    ? 4 : certificates,
+                    ? 5 : withdrawals,
+                    ? 7 : auxiliary_data_hash,
+                    ? 8 : slot_no,
+                    ? 9 : mint,
+                    ? 11 : script_data_hash,
+                    ? 13 : nonempty_set<transaction_input>,
+                    ? 14 : required_signers,
+                    ? 15 : network_id,
+                    ? 16 : transaction_output,
+                    ? 17 : coin,
+                    ? 18 : nonempty_set<transaction_input>,
+                    ? 19 : voting_procedures,
+                    ? 20 : proposal_procedures,
+                    ? 21 : coin,
+                    ? 22 : positive_coin}
 
 transaction_index = uint .size 2
 
@@ -557,30 +490,16 @@ transaction_metadatum_label = uint .size 8
 transaction_output = pre_babbage_transaction_output
                       / post_alonzo_transaction_output
 
-transaction_witness_set = {? 0 : nonempty_set<vkeywitness>
-                           , ? 1 : nonempty_set<native_script>
-                           , ? 2 : nonempty_set<bootstrap_witness>
-                           , ? 3 : nonempty_set<plutus_v1_script>
-                           , ? 4 : nonempty_set<plutus_data>
-                           , ? 5 : redeemers
-                           , ? 6 : nonempty_set<plutus_v2_script>
-                           , ? 7 : nonempty_set<plutus_v3_script>}
-
-treasury_withdrawals_action = (2, {reward_account => coin}, policy_hash / nil)
+transaction_witness_set = {? 0 : nonempty_set<vkeywitness>,
+                           ? 1 : nonempty_set<native_script>,
+                           ? 2 : nonempty_set<bootstrap_witness>,
+                           ? 3 : nonempty_set<plutus_v1_script>,
+                           ? 4 : nonempty_set<plutus_data>,
+                           ? 5 : redeemers,
+                           ? 6 : nonempty_set<plutus_v2_script>,
+                           ? 7 : nonempty_set<plutus_v3_script>}
 
 unit_interval = #6.30([1, 2])
-
-unreg_cert = (8, stake_credential, coin)
-
-unreg_drep_cert = (17, drep_credential, coin)
-
-update_committee = (4
-                    , gov_action_id / nil
-                    , set<committee_cold_credential>
-                    , {committee_cold_credential => epoch_no}
-                    , unit_interval)
-
-update_drep_cert = (18, drep_credential, anchor / nil)
 
 url = text .size (0 .. 128)
 
@@ -590,20 +509,16 @@ vkeywitness = [$vkey, $signature]
 
 vote = 0 .. 2
 
-vote_deleg_cert = (9, stake_credential, drep)
-
-vote_reg_deleg_cert = (12, stake_credential, drep, coin)
-
 ; Constitutional Committee Hot KeyHash: 0
 ;     Constitutional Committee Hot ScriptHash: 1
 ;     DRep KeyHash: 2
 ;     DRep ScriptHash: 3
 ;     StakingPool KeyHash: 4
-voter = [0, addr_keyhash
-          // 1, scripthash
-          // 2, addr_keyhash
-          // 3, scripthash
-          // 4, addr_keyhash]
+voter = [0, addr_keyhash // 
+         1, scripthash // 
+         2, addr_keyhash // 
+         3, scripthash // 
+         4, addr_keyhash]
 
 voting_procedure = [vote, anchor / nil]
 
@@ -612,3 +527,103 @@ voting_procedures = {+ voter => {+ gov_action_id => voting_procedure}}
 vrf_keyhash = $hash32
 
 withdrawals = {+ reward_account => coin}
+
+auth_committee_hot_cert = (14,
+                           committee_cold_credential,
+                           committee_hot_credential)
+
+hard_fork_initiation_action = (1, gov_action_id / nil, protocol_version)
+
+invalid_before = (4, slot_no)
+
+invalid_hereafter = (5, slot_no)
+
+multi_host_name = (2, dns_name)
+
+new_constitution = (5, gov_action_id / nil, constitution)
+
+no_confidence = (3, gov_action_id / nil)
+
+parameter_change_action = (0,
+                           gov_action_id / nil,
+                           protocol_param_update,
+                           policy_hash / nil)
+
+pool_params = (pool_keyhash,
+               vrf_keyhash,
+               coin,
+               coin,
+               unit_interval,
+               reward_account,
+               set<addr_keyhash>,
+               [* relay],
+               pool_metadata / nil)
+
+pool_registration = (3, pool_params)
+
+pool_retirement = (4, pool_keyhash, epoch_no)
+
+reg_cert = (7, stake_credential, coin)
+
+reg_drep_cert = (16, drep_credential, coin, anchor / nil)
+
+resign_committee_cold_cert = (15, committee_cold_credential, anchor / nil)
+
+script_all = (1, [* native_script])
+
+script_any = (2, [* native_script])
+
+script_n_of_k = (3, int64, [* native_script])
+
+script_pubkey = (0, addr_keyhash)
+
+single_host_addr = (0, port / nil, ipv4 / nil, ipv6 / nil)
+
+single_host_name = (1, port / nil, dns_name)
+
+stake_delegation = (2, stake_credential, pool_keyhash)
+
+; This will be deprecated in a future era
+stake_deregistration = (1, stake_credential)
+
+stake_reg_deleg_cert = (11, stake_credential, pool_keyhash, coin)
+
+; This will be deprecated in a future era
+stake_registration = (0, stake_credential)
+
+stake_vote_deleg_cert = (10, stake_credential, pool_keyhash, drep)
+
+stake_vote_reg_deleg_cert = (13, stake_credential, pool_keyhash, drep, coin)
+
+treasury_withdrawals_action = (2, {reward_account => coin}, policy_hash / nil)
+
+unreg_cert = (8, stake_credential, coin)
+
+unreg_drep_cert = (17, drep_credential, coin)
+
+update_committee = (4,
+                    gov_action_id / nil,
+                    set<committee_cold_credential>,
+                    {committee_cold_credential => epoch_no},
+                    unit_interval)
+
+update_drep_cert = (18, drep_credential, anchor / nil)
+
+vote_deleg_cert = (9, stake_credential, drep)
+
+vote_reg_deleg_cert = (12, stake_credential, drep, coin)
+
+constr<a0> = #6.121([* a0])
+              / #6.122([* a0])
+              / #6.123([* a0])
+              / #6.124([* a0])
+              / #6.125([* a0])
+              / #6.126([* a0])
+              / #6.127([* a0])
+              / #6.102([uint, [* a0]])
+
+multiasset<a0> = {+ policy_id => {+ asset_name => a0}}
+
+nonempty_set<a0> = #6.258([+ a0]) / [+ a0]
+
+set<a0> = #6.258([* a0]) / [* a0]
