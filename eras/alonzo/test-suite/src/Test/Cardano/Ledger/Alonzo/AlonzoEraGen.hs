@@ -92,7 +92,8 @@ import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import qualified Data.Sequence.Strict as Seq (fromList)
-import Data.Set as Set
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Lens.Micro
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.Common as P (Data (..))
@@ -469,8 +470,8 @@ instance Mock c => EraGen (AlonzoEra c) where
           then
             if oldScriptWits == newWits
               then pure tx
-              else myDiscard "Random extra scriptwitness: genEraDone: AlonzoEraGen.hs"
-          else myDiscard "MinFee violation: genEraDone: AlonzoEraGen.hs"
+              else myDiscard $ "Random extra scriptwitness: genEraDone: " <> show newWits
+          else myDiscard $ "MinFee violation: genEraDone: " <> show theFee
 
   genEraTweakBlock pp txns =
     let txTotal, ppMax :: ExUnits
@@ -478,7 +479,12 @@ instance Mock c => EraGen (AlonzoEra c) where
         ppMax = pp ^. ppMaxBlockExUnitsL
      in if pointWiseExUnits (<=) txTotal ppMax
           then pure txns
-          else myDiscard "TotExUnits violation: genEraTweakBlock: AlonzoEraGen.hs"
+          else
+            myDiscard $
+              "TotExUnits violation: genEraTweakBlock: "
+                <> show (unWrapExUnits txTotal)
+                <> " instead of "
+                <> show (unWrapExUnits ppMax)
 
   hasFailedScripts tx = IsValid False == tx ^. isValidTxL
 

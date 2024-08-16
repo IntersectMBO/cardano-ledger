@@ -37,6 +37,7 @@ import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot (..), lookupInOverlaySche
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
+import Control.Monad (unless)
 import Control.SetAlgebra (dom, eval)
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
@@ -62,6 +63,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
  )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger ()
+import Test.Cardano.Ledger.Shelley.Generator.Utxo (myDiscard)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (
   epochFromSlotNo,
@@ -73,7 +75,7 @@ import Test.Cardano.Ledger.Shelley.Utils (
 import Test.Cardano.Protocol.TPraos.Create (VRFKeyPair (..))
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
-import Test.QuickCheck (Gen, discard)
+import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose)
 
 -- ======================================================
@@ -178,9 +180,19 @@ genBlockWithTxGen
         <*> pure (fromIntegral (m * fromIntegral maxKESIterations))
         <*> pure oCert
     let hView = makeHeaderView (bheader theBlock)
-    if bhviewBSize hView <= pp ^. ppMaxBBSizeL && bhviewHSize hView <= fromIntegral (pp ^. ppMaxBHSizeL)
-      then pure theBlock
-      else discard
+    unless (bhviewBSize hView <= pp ^. ppMaxBBSizeL) $
+      myDiscard $
+        "genBlockWithTxGen: bhviewBSize too large"
+          <> show (bhviewBSize hView)
+          <> " vs "
+          <> show (pp ^. ppMaxBBSizeL)
+    unless (bhviewHSize hView <= fromIntegral (pp ^. ppMaxBHSizeL)) $
+      myDiscard $
+        "genBlockWithTxGen: bhviewHSize too large"
+          <> show (bhviewHSize hView)
+          <> " vs "
+          <> show (pp ^. ppMaxBHSizeL)
+    pure theBlock
     where
       -- This is safe to take form the original chain state, since we only tick
       -- it forward; no new blocks will have been applied.

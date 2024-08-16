@@ -227,7 +227,10 @@ genTx
         genRecipients @era (length inputs + n) ksKeyPairs ksMSigScripts
           >>= genPtrAddrs (certDState dpState')
 
-      !_ <- when (coin spendingBalance < mempty) $ myDiscard "Negative spending balance"
+      !_ <-
+        when (coin spendingBalance < mempty) $
+          myDiscard $
+            "Negative spending balance " <> show (coin spendingBalance)
 
       -------------------------------------------------------------------------
       -- Build a Draft Tx and repeatedly add to Delta until all fees are
@@ -243,7 +246,7 @@ genTx
       -- Occasionally we have a transaction generated with insufficient inputs
       -- to cover the deposits. In this case we discard the test case.
       let enough = sumVal (getMinCoinTxOut pparams <$> draftOutputs)
-      !_ <- when (coin spendingBalance < enough) (myDiscard "No inputs left. Utxo.hs")
+      !_ <- when (coin spendingBalance < enough) $ myDiscard $ "No inputs left. Utxo.hs " <> show enough
 
       (draftTxBody, additionalScripts) <-
         genEraTxBody
@@ -280,7 +283,8 @@ genTx
       let txOuts = tx ^. bodyTxL . outputsTxBodyL
       !_ <-
         when (any (\txOut -> getMinCoinTxOut pparams txOut > txOut ^. coinTxOutL) txOuts) $
-          myDiscard "TxOut value is too small"
+          myDiscard $
+            "TxOut value is too small " <> show txOuts
       pure tx
 
 -- | Collect additional inputs (and witnesses and keys and scripts) to make
@@ -447,7 +451,7 @@ genNextDelta
                   -- If it does happen, It is NOT a test failure, but an inadequacy in the
                   -- testing framework to generate almost-random transactions that always succeed every time.
                   -- Experience suggests that this happens less than 1% of the time, and does not lead to backtracking.
-                  !_ <- when (null inputs) (myDiscard "NoMoneyleft Utxo.hs")
+                  !_ <- when (null inputs) $ myDiscard $ "NoMoneyleft Utxo.hs " <> show (coin value)
                   let newWits =
                         mkTxWits @era
                           (utxo, txBody, scriptinfo)
@@ -456,7 +460,7 @@ genNextDelta
                           vkeyPairs
                           (mkScriptWits @era msigPairs mempty)
                           (hashAnnotated txBody)
-                  pure $
+                  pure
                     delta
                       { extraWitnesses = extraWitnesses <> newWits
                       , extraInputs = extraInputs <> Set.fromList inputs
