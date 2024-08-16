@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -11,6 +12,7 @@ module Test.Cardano.Ledger.Core.Binary.CDDL where
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Semigroup ((<>))
+import Data.String.Here (here)
 import qualified Data.Text as T
 import Data.Word (Word64)
 import GHC.Show (Show (show))
@@ -27,19 +29,55 @@ positive_coin = "positive_coin" =:= 1 ... maxWord64
 
 address :: Rule
 address =
-  "address"
-    =:= bstr
-      "001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000"
-    / bstr
-      "102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000"
-    / bstr
-      "203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000"
-    / bstr
-      "304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000"
-    / bstr "405000000000000000000000000000000000000000000000000000000087680203"
-    / bstr "506000000000000000000000000000000000000000000000000000000087680203"
-    / bstr "6070000000000000000000000000000000000000000000000000000000"
-    / bstr "7080000000000000000000000000000000000000000000000000000000"
+  comment
+    [here|
+    address = bytes
+    reward_account = bytes
+
+    address format:
+    [ 8 bit header | payload ];
+
+    shelley payment addresses:
+    bit 7: 0
+    bit 6: base/other
+    bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
+    bit 4: payment cred is keyhash/scripthash
+    bits 3-0: network id
+
+    reward addresses:
+    bits 7-5: 111
+    bit 4: credential is keyhash/scripthash
+    bits 3-0: network id
+
+    byron addresses:
+    bits 7-4: 1000
+
+    0000: base address: keyhash28,keyhash28
+    0001: base address: scripthash28,keyhash28
+    0010: base address: keyhash28,scripthash28
+    0011: base address: scripthash28,scripthash28
+    0100: pointer address: keyhash28, 3 variable length uint
+    0101: pointer address: scripthash28, 3 variable length uint
+    0110: enterprise address: keyhash28
+    0111: enterprise address: scripthash28
+    1000: byron address
+    1110: reward account: keyhash28
+    1111: reward account: scripthash28
+    1001 - 1101: future formats
+  |]
+    $ "address"
+      =:= bstr
+        "001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000"
+      / bstr
+        "102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000"
+      / bstr
+        "203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000"
+      / bstr
+        "304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000"
+      / bstr "405000000000000000000000000000000000000000000000000000000087680203"
+      / bstr "506000000000000000000000000000000000000000000000000000000087680203"
+      / bstr "6070000000000000000000000000000000000000000000000000000000"
+      / bstr "7080000000000000000000000000000000000000000000000000000000"
 
 reward_account :: Rule
 reward_account =
