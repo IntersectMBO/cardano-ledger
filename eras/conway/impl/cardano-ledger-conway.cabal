@@ -146,6 +146,7 @@ library testlib
         cuddle >=0.3.0.0,
         plutus-ledger-api,
         deepseq,
+        here,
         microlens,
         cardano-crypto-class,
         cardano-ledger-allegra,

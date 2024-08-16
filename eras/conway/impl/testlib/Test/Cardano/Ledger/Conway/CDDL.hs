@@ -1,6 +1,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -12,6 +13,7 @@ module Test.Cardano.Ledger.Conway.CDDL (conway) where
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Semigroup ((<>))
+import Data.String.Here (here)
 import Data.Word (Word64)
 import GHC.Num (Integer)
 import Test.Cardano.Ledger.Core.Binary.CDDL
@@ -32,16 +34,25 @@ conway =
 
 block :: Rule
 block =
-  "block"
-    =:= arr
-      [ a header
-      , "transaction_bodies" ==> arr [0 <+ a transaction_body]
-      , "transaction_witness_sets"
-          ==> arr [0 <+ a transaction_witness_set]
-      , "auxiliary_data_set"
-          ==> mp [0 <+ asKey transaction_index ==> auxiliary_data]
-      , "invalid_transactions" ==> arr [0 <+ a transaction_index]
-      ]
+  comment
+    [here|
+    Valid blocks must also satisfy the following two constraints:
+    1) the length of transaction_bodies and transaction_witness_sets
+       must be the same
+    2) every transaction_index must be strictly smaller than the
+       length of transaction_bodies
+
+  |]
+    $ "block"
+      =:= arr
+        [ a header
+        , "transaction_bodies" ==> arr [0 <+ a transaction_body]
+        , "transaction_witness_sets"
+            ==> arr [0 <+ a transaction_witness_set]
+        , "auxiliary_data_set"
+            ==> mp [0 <+ asKey transaction_index ==> auxiliary_data]
+        , "invalid_transactions" ==> arr [0 <+ a transaction_index]
+        ]
 
 transaction :: Rule
 transaction =
@@ -217,12 +228,20 @@ info_action = "info_action" =:= int 6
 
 voter :: Rule
 voter =
-  "voter"
-    =:= arr [0, a addr_keyhash]
-    / arr [1, a scripthash]
-    / arr [2, a addr_keyhash]
-    / arr [3, a scripthash]
-    / arr [4, a addr_keyhash]
+  comment
+    [here|
+    Constitutional Committee Hot KeyHash: 0
+    Constitutional Committee Hot ScriptHash: 1
+    DRep KeyHash: 2
+    DRep ScriptHash: 3
+    StakingPool KeyHash: 4
+  |]
+    $ "voter"
+      =:= arr [0, a addr_keyhash]
+      / arr [1, a scripthash]
+      / arr [2, a addr_keyhash]
+      / arr [3, a scripthash]
+      / arr [4, a addr_keyhash]
 
 anchor :: Rule
 anchor =
@@ -256,9 +275,14 @@ transaction_input =
 
 transaction_output :: Rule
 transaction_output =
-  "transaction_output"
-    =:= pre_babbage_transaction_output
-    / post_alonzo_transaction_output
+  comment
+    [here|
+    Both of the Alonzo and Babbage style TxOut formats are equally valid
+    and can be used interchangeably
+  |]
+    $ "transaction_output"
+      =:= pre_babbage_transaction_output
+      / post_alonzo_transaction_output
 
 pre_babbage_transaction_output :: Rule
 pre_babbage_transaction_output =
@@ -280,7 +304,75 @@ post_alonzo_transaction_output =
       ]
 
 script_data_hash :: Rule
-script_data_hash = "script_data_hash" =:= hash32
+script_data_hash =
+  comment
+    [here|
+    This is a hash of data which may affect evaluation of a script.
+    This data consists of:
+      - The redeemers from the transaction_witness_set (the value of field 5).
+      - The datums from the transaction_witness_set (the value of field 4).
+      - The value in the costmdls map corresponding to the script's language
+        (in field 18 of protocol_param_update.)
+    (In the future it may contain additional protocol parameters.)
+
+    Since this data does not exist in contiguous form inside a transaction, it needs
+    to be independently constructed by each recipient.
+
+    The bytestring which is hashed is the concatenation of three things:
+      redeemers || datums || language views
+    The redeemers are exactly the data present in the transaction witness set.
+    Similarly for the datums, if present. If no datums are provided, the middle
+    field is omitted (i.e. it is the empty/null bytestring).
+
+    language views CDDL:
+    { * language => script_integrity_data }
+
+    This must be encoded canonically, using the same scheme as in
+    RFC7049 section 3.9:
+     - Maps, strings, and bytestrings must use a definite-length encoding
+     - Integers must be as small as possible.
+     - The expressions for map length, string length, and bytestring length
+       must be as short as possible.
+     - The keys in the map must be sorted as follows:
+        -  If two keys have different lengths, the shorter one sorts earlier.
+        -  If two keys have the same length, the one with the lower value
+           in (byte-wise) lexical order sorts earlier.
+
+    For PlutusV1 (language id 0), the language view is the following:
+      - the value of costmdls map at key 0 (in other words, the script_integrity_data)
+        is encoded as an indefinite length list and the result is encoded as a bytestring.
+        (our apologies)
+        For example, the script_integrity_data corresponding to the all zero costmodel for V1
+        would be encoded as (in hex):
+        58a89f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff
+      - the language ID tag is also encoded twice. first as a uint then as
+        a bytestring. (our apologies)
+        Concretely, this means that the language version for V1 is encoded as
+        4100 in hex.
+    For PlutusV2 (language id 1), the language view is the following:
+      - the value of costmdls map at key 1 is encoded as an definite length list.
+        For example, the script_integrity_data corresponding to the all zero costmodel for V2
+        would be encoded as (in hex):
+        98af0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+      - the language ID tag is encoded as expected.
+        Concretely, this means that the language version for V2 is encoded as
+        01 in hex.
+    For PlutusV3 (language id 2), the language view is the following:
+      - the value of costmdls map at key 2 is encoded as a definite length list.
+
+    Note that each Plutus language represented inside a transaction must have
+    a cost model in the costmdls protocol parameter in order to execute,
+    regardless of what the script integrity data is.
+
+    Finally, note that in the case that a transaction includes datums but does not
+    include the redeemers field, the script data format becomes (in hex):
+    [ 80 | datums | A0 ]
+    corresponding to a CBOR empty list and an empty map.
+    Note that a transaction might include the redeemers field and  it to the
+    empty map, in which case the user supplied encoding of the empty map is used.
+
+  |]
+    $ "script_data_hash" =:= hash32
 
 certificate :: Rule
 certificate =

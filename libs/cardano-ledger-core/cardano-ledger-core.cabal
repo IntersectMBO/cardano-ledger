@@ -191,6 +191,7 @@ library testlib
         genvalidity,
         hspec,
         hedgehog-quickcheck,
+        here,
         HUnit,
         mtl,
         nothunks,
