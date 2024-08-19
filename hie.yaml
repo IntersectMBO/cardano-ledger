@@ -126,6 +126,12 @@ cradle:
     - path: "eras/shelley/impl/testlib"
       component: "cardano-ledger-shelley:lib:testlib"
 
+    - path: "eras/shelley/impl/huddle-cddl/Main.hs"
+      component: "cardano-ledger-shelley:exe:huddle-cddl"
+
+    - path: "eras/shelley/impl/huddle-cddl/Paths_cardano_ledger_shelley.hs"
+      component: "cardano-ledger-shelley:exe:huddle-cddl"
+
     - path: "eras/shelley/impl/test"
       component: "cardano-ledger-shelley:test:tests"
 
