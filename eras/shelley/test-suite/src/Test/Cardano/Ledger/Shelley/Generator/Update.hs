@@ -99,10 +99,13 @@ genIntervalInThousands lower upper =
   unsafeBoundRational <$> genRationalInThousands lower upper
 
 genPParams ::
+  forall era.
   (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) =>
   Constants ->
   Gen (PParams era)
-genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV, maxMajorPV} = do
+genPParams c@Constants {maxMinFeeA, maxMinFeeB} = do
+  let lowMajorPV = eraProtVerLow @era
+      highMajorPV = eraProtVerHigh @era
   minFeeA <- genInteger 0 (unCoin maxMinFeeA)
   minFeeB <- genInteger 0 (unCoin maxMinFeeB)
   (maxBBSize, maxTxSize, maxBHSize) <- szGen
@@ -115,7 +118,7 @@ genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV, maxMajorPV} = do
   tau <- genTau
   d <- genDecentralisationParam
   extraEntropy <- genExtraEntropy
-  protocolVersion <- genProtocolVersion minMajorPV maxMajorPV
+  protocolVersion <- genProtocolVersion lowMajorPV highMajorPV
   minUTxOValue <- genMinUTxOValue
   minPoolCost <- genMinPoolCost
   pure $
@@ -236,7 +239,8 @@ genShelleyPParamsUpdate ::
   Constants ->
   PParams era ->
   Gen (PParamsUpdate era)
-genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB, maxMajorPV} pp = do
+genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
+  let highMajorPV = succ (eraProtVerHigh @era)
   -- TODO generate Maybe types so not all updates are full
   minFeeA <- genM $ genInteger 0 (unCoin maxMinFeeA)
   minFeeB <- genM $ genInteger 0 (unCoin maxMinFeeB)
@@ -253,7 +257,7 @@ genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB, maxMajorPV} pp = do
   tau <- genM genTau
   d <- genM genDecentralisationParam
   extraEntropy <- genM genExtraEntropy
-  protocolVersion <- genM $ genNextProtocolVersion pp maxMajorPV
+  protocolVersion <- genM $ genNextProtocolVersion pp highMajorPV
   minUTxOValue <- genM genMinUTxOValue
   minPoolCost <- genM genMinPoolCost
   pure $

@@ -1,10 +1,14 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.13.1.0
+## 1.14.0.0
 
 * Added `EncCBOR` instances for:
   * `UtxoEnv`
   * `CertEnv`
+
+### `testlib`
+
+* Remove `minMajorPV` and `maxMajorPV` from `Constants`
 
 ## 1.13.0.0
 

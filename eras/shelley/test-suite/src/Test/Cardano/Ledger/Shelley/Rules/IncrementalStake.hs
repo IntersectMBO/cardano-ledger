@@ -23,7 +23,6 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain (
  )
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (natVersion)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
@@ -54,7 +53,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy
 import qualified Data.VMap as VMap
 import Lens.Micro hiding (ix)
-import Test.Cardano.Ledger.Shelley.Constants (defaultConstants, maxMajorPV)
+import Test.Cardano.Ledger.Shelley.Constants (defaultConstants)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
@@ -87,7 +86,7 @@ incrStakeComputationTest ::
   TestTree
 incrStakeComputationTest =
   testProperty "incremental stake calc" $
-    forAllChainTrace @era longTraceLen defaultConstants {maxMajorPV = natVersion @8} $ \tr -> do
+    forAllChainTrace @era longTraceLen defaultConstants $ \tr -> do
       let ssts = sourceSignalTargets tr
 
       conjoin . concat $
@@ -152,7 +151,7 @@ incrStakeComparisonTest ::
   TestTree
 incrStakeComparisonTest Proxy =
   testProperty "Incremental stake distribution at epoch boundaries agrees" $
-    forAllChainTrace traceLen (defaultConstants {maxMajorPV = natVersion @8}) $ \tr ->
+    forAllChainTrace traceLen defaultConstants $ \tr ->
       conjoin $
         map (\(SourceSignalTarget _ target _) -> checkIncrementalStake @era ((nesEs . chainNes) target)) $
           filter (not . sameEpoch) (sourceSignalTargets tr)

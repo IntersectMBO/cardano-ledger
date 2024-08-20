@@ -341,13 +341,13 @@ genAlonzoPParams ::
   Constants ->
   Gen (PParams (AlonzoEra c))
 genAlonzoPParams constants = do
-  let constants' = constants {minMajorPV = natVersion @5}
   -- This ensures that "_d" field is not 0, and that the major protocol version
   -- is large enough to not trigger plutus script failures
   -- (no bultins are alllowed before major version 5).
-  maryPP <- Shelley.genPParams @(MaryEra c) constants'
+  maryPP' <- Shelley.genPParams @(MaryEra c) constants
+  let maryPP = maryPP' & ppProtocolVersionL .~ ProtVer (natVersion @5) 0
+      prices = Prices minBound minBound
   coinPerWord <- CoinPerWord . Coin <$> choose (1, 5)
-  let prices = Prices minBound minBound
   -- prices <- Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000))
   let maxTxExUnits = ExUnits (5 * bigMem + 1) (5 * bigStep + 1)
   -- maxTxExUnits <- ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000))
