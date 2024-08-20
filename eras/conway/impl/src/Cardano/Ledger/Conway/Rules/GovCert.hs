@@ -18,7 +18,7 @@ module Cardano.Ledger.Conway.Rules.GovCert (
   ConwayGOVCERT,
   ConwayGovCertPredFailure (..),
   ConwayGovCertEnv (..),
-  updateDRepExpiry,
+  computeDRepExpiry,
 )
 where
 
@@ -53,6 +53,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, DRepRole))
+import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Slotting.Slot (EpochInterval, binOpEpochNo)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended (
@@ -235,7 +236,15 @@ conwayGovCertTransition = do
           { vsDReps =
               Map.insert
                 cred
-                (DRepState (addEpochInterval cgceCurrentEpoch ppDRepActivity) mAnchor ppDRepDeposit)
+                ( DRepState
+                    ( computeDRepExpiryVersioned
+                        cgcePParams
+                        cgceCurrentEpoch
+                        (vState ^. vsNumDormantEpochsL)
+                    )
+                    mAnchor
+                    ppDRepDeposit
+                )
                 vsDReps
           }
     ConwayUnRegDRep cred refund -> do
@@ -253,11 +262,13 @@ conwayGovCertTransition = do
           { vsDReps =
               Map.adjust
                 ( \drepState ->
-                    updateDRepExpiry
-                      ppDRepActivity
-                      cgceCurrentEpoch
-                      (vState ^. vsNumDormantEpochsL)
-                      $ drepState & drepAnchorL .~ mAnchor
+                    drepState
+                      & drepExpiryL
+                        .~ computeDRepExpiry
+                          ppDRepActivity
+                          cgceCurrentEpoch
+                          (vState ^. vsNumDormantEpochsL)
+                      & drepAnchorL .~ mAnchor
                 )
                 cred
                 vsDReps
@@ -272,18 +283,32 @@ conwayGovCertTransition = do
         UpdateCommittee _ _ newMembers _ -> Map.member coldCred newMembers
         _ -> False
 
-updateDRepExpiry ::
+computeDRepExpiryVersioned ::
+  ConwayEraPParams era =>
+  PParams era ->
+  -- | Current epoch
+  EpochNo ->
+  -- | The count of the dormant epochs
+  EpochNo ->
+  EpochNo
+computeDRepExpiryVersioned pp currentEpoch numDormantEpochs
+  -- Starting with version 10, we correctly take into account the number of dormant epochs
+  -- when registering a drep
+  | HF.bootstrapPhase (pp ^. ppProtocolVersionL) =
+      addEpochInterval currentEpoch (pp ^. ppDRepActivityL)
+  | otherwise =
+      computeDRepExpiry (pp ^. ppDRepActivityL) currentEpoch numDormantEpochs
+
+computeDRepExpiry ::
   -- | DRepActivity PParam
   EpochInterval ->
   -- | Current epoch
   EpochNo ->
   -- | The count of the dormant epochs
   EpochNo ->
-  DRepState c ->
-  DRepState c
-updateDRepExpiry ppDRepActivity currentEpoch numDormantEpochs =
-  drepExpiryL
-    .~ binOpEpochNo
-      (-)
-      (addEpochInterval currentEpoch ppDRepActivity)
-      numDormantEpochs
+  -- | Computed expiry
+  EpochNo
+computeDRepExpiry ppDRepActivity currentEpoch =
+  binOpEpochNo
+    (-)
+    (addEpochInterval currentEpoch ppDRepActivity)
