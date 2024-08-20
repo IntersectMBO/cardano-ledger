@@ -149,6 +149,9 @@ getConwayMinFeeTxUtxo pparams tx utxo =
 -- | Calculate the total size of reference scripts used by the transactions. Duplicate
 -- scripts will be counted as many times as they occur, since there is never a reason to
 -- include an input with the same reference script.
+--
+-- Any input that appears in both regular inputs and reference inputs of a transaction is
+-- only used once in this computation.
 txNonDistinctRefScriptsSize :: (EraTx era, BabbageEraTxBody era) => UTxO era -> Tx era -> Int
 txNonDistinctRefScriptsSize utxo tx = getSum $ foldMap (Sum . originalBytesSize . snd) refScripts
   where
