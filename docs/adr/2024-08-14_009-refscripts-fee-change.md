@@ -63,7 +63,10 @@ tierRefScriptFee = go 0 minFeeRefScriptCostPerByte
     minFeeRefScriptCostPerByte = 15
 ```
 
-The result of applying this function to the total reference script size used by a transaction will be the increase to the fee amount when compared to the fee calculation that was done in the Babbage era.
+The result of applying this function to the total reference script size used by a transaction will be the increase to the fee amount when compared to the fee calculation that was done in the Babbage era. Below is the plot with the cost in ADA for reference scripts used in a transaction per kilobyte for current parameters:
+
+![Plot with the cost in ADA for reference scripts used in a transaction per kilobyte](2024-08-14_009-refscripts-fee-change.pricing-plot.png "RefScript Pricing")
+
 
 ### Reference script size limit
 
