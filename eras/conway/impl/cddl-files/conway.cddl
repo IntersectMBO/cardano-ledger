@@ -422,10 +422,13 @@ script = [0, native_script //
 ; 
 ;     Finally, note that in the case that a transaction includes datums but does not
 ;     include the redeemers field, the script data format becomes (in hex):
-;     [ 80 | datums | A0 ]
-;     corresponding to a CBOR empty list and an empty map.
-;     Note that a transaction might include the redeemers field and  it to the
-;     empty map, in which case the user supplied encoding of the empty map is used.
+;     [ A0 | datums | A0 ]
+;     corresponding to a CBOR empty map and an empty map for language view.
+;     This empty redeeemer case has changed from the previous eras, since default
+;     representation for redeemers has been changed to a map. Also whenever redeemers are
+;     supplied either as a map or as an array they must contain at least one element,
+;     therefore there is no way to override this behavior by providing a custom
+;     representation for empty redeemers.
 script_data_hash = $hash32
 
 script_ref = #6.24(bytes .cbor script)
