@@ -24,13 +24,14 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.UMap (dRepMap, rewardMap, sPoolMap)
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import qualified Data.VMap as VMap
 import Lens.Micro
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (emptyDeposits)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
@@ -44,22 +45,20 @@ instance
   ) =>
   SpecTranslate ctx (CertEnv era)
   where
-  type SpecRep (CertEnv era) = Agda.CertEnv
+  type SpecRep (CertEnv era) = Agda.CertEnv'
   toSpecRep CertEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
     withdrawals <- askCtx @(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-    Agda.MkCertEnv
+    Agda.MkCertEnv'
       <$> toSpecRep ceCurrentEpoch
       <*> toSpecRep cePParams
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
-      -- TODO: replace with actual deposits map
-      <*> pure emptyDeposits
 
 instance SpecTranslate ctx (CertState era) where
-  type SpecRep (CertState era) = Agda.CertState
+  type SpecRep (CertState era) = Agda.CertState'
   toSpecRep CertState {..} =
-    Agda.MkCertState
+    Agda.MkCertState'
       <$> toSpecRep certDState
       <*> toSpecRep certPState
       <*> toSpecRep certVState
@@ -87,7 +86,21 @@ instance
     Agda.MkLedgerState
       <$> toSpecRep lsUTxOState
       <*> toSpecRep (utxosGovState lsUTxOState ^. proposalsGovStateL)
-      <*> toSpecRep lsCertState
+      <*> agdaCertState lsCertState
+    where
+      agdaCertState (CertState (VState {..}) pState (DState {..})) =
+        Agda.MkCertState
+          <$> ( Agda.MkDState
+                  <$> toSpecRep (dRepMap dsUnified)
+                  <*> toSpecRep (sPoolMap dsUnified)
+                  <*> toSpecRep (rewardMap dsUnified)
+              )
+          <*> toSpecRep pState
+          <*> ( Agda.MkGState
+                  <$> toSpecRep (drepExpiry <$> vsDReps)
+                  <*> toSpecRep
+                    (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState)
+              )
 
 instance
   ( EraPParams era

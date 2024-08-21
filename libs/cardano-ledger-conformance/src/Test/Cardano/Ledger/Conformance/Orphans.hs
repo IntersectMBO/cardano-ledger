@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Conformance.Orphans where
 
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default.Class (Default)
-import Data.List (sortOn)
+import Data.List (nub, sortOn)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import Lib
@@ -39,13 +39,21 @@ deriving instance Generic DepositPurpose
 
 deriving instance Generic CertEnv
 
+deriving instance Generic CertEnv'
+
 deriving instance Generic PState
 
 deriving instance Generic DState
 
+deriving instance Generic DState'
+
 deriving instance Generic GState
 
+deriving instance Generic GState'
+
 deriving instance Generic CertState
+
+deriving instance Generic CertState'
 
 deriving instance Generic RatifyEnv
 
@@ -56,6 +64,8 @@ deriving instance Generic StakeDistrs
 deriving instance Generic EnactEnv
 
 deriving instance Generic DelegEnv
+
+deriving instance Generic DelegEnv'
 
 deriving instance Generic PoolThresholds
 
@@ -76,6 +86,8 @@ deriving instance Generic Acnt
 deriving instance Generic RewardUpdate
 
 deriving instance Generic NewEpochState
+
+deriving instance Ord DepositPurpose
 
 deriving instance Ord Tag
 
@@ -141,13 +153,21 @@ deriving instance Eq DepositPurpose
 
 deriving instance Eq CertEnv
 
+deriving instance Eq CertEnv'
+
 deriving instance Eq DState
+
+deriving instance Eq DState'
 
 deriving instance Eq PState
 
 deriving instance Eq GState
 
+deriving instance Eq GState'
+
 deriving instance Eq CertState
+
+deriving instance Eq CertState'
 
 deriving instance Eq RatifyState
 
@@ -221,13 +241,21 @@ instance NFData DepositPurpose
 
 instance NFData CertEnv
 
+instance NFData CertEnv'
+
 instance NFData PState
 
 instance NFData DState
 
+instance NFData DState'
+
 instance NFData GState
 
+instance NFData GState'
+
 instance NFData CertState
+
+instance NFData CertState'
 
 instance NFData StakeDistrs
 
@@ -238,6 +266,8 @@ instance NFData RatifyState
 instance NFData EnactEnv
 
 instance NFData DelegEnv
+
+instance NFData DelegEnv'
 
 instance NFData NewEpochEnv
 
@@ -314,13 +344,21 @@ instance ToExpr DepositPurpose
 
 instance ToExpr CertEnv
 
+instance ToExpr CertEnv'
+
 instance ToExpr DState
+
+instance ToExpr DState'
 
 instance ToExpr PState
 
 instance ToExpr GState
 
+instance ToExpr GState'
+
 instance ToExpr CertState
+
+instance ToExpr CertState'
 
 instance ToExpr StakeDistrs
 
@@ -331,6 +369,8 @@ instance ToExpr RatifyState
 instance ToExpr EnactEnv
 
 instance ToExpr DelegEnv
+
+instance ToExpr DelegEnv'
 
 instance ToExpr NewEpochEnv
 
@@ -358,13 +398,14 @@ instance FixupSpecRep Char where
   fixup = id
 
 instance
-  ( Ord k
+  ( Eq v
+  , Ord k
   , FixupSpecRep k
   , FixupSpecRep v
   ) =>
   FixupSpecRep (HSMap k v)
   where
-  fixup (MkHSMap l) = MkHSMap . sortOn fst $ bimap fixup fixup <$> l
+  fixup (MkHSMap l) = MkHSMap . sortOn fst $ bimap fixup fixup <$> nub l
 
 instance (Ord a, FixupSpecRep a) => FixupSpecRep (HSSet a) where
   fixup (MkHSSet l) = MkHSSet . Set.toList . Set.fromList $ fixup <$> l
@@ -392,13 +433,21 @@ instance FixupSpecRep GovRole
 
 instance FixupSpecRep VDeleg
 
+instance FixupSpecRep DepositPurpose
+
 instance FixupSpecRep DState
+
+instance FixupSpecRep DState'
 
 instance FixupSpecRep PState
 
 instance FixupSpecRep GState
 
+instance FixupSpecRep GState'
+
 instance FixupSpecRep CertState
+
+instance FixupSpecRep CertState'
 
 instance FixupSpecRep Vote
 
