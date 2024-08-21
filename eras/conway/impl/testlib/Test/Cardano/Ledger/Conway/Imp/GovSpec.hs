@@ -860,6 +860,7 @@ votingSpec =
             & ppGovActionLifetimeL .~ EpochInterval 3
             & ppCommitteeMinSizeL .~ 2
         (dRepCred, _, _) <- setupSingleDRep 1_000_000
+        (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
         ccColdCred0 <- KeyHashObj <$> freshKeyHash
         ccColdCred1 <- KeyHashObj <$> freshKeyHash
         electionGovAction <-
@@ -871,6 +872,7 @@ votingSpec =
             ]
             (3 %! 5)
         submitYesVote_ (DRepVoter dRepCred) electionGovAction
+        submitYesVote_ (StakePoolVoter spoC) electionGovAction
         logAcceptedRatio electionGovAction
         passNEpochs 3
         expectNoCurrentProposals
