@@ -280,12 +280,12 @@ instance
         { cgUpgradePParams =
             UpgradeConwayPParams
               { ucppPoolVotingThresholds =
-                  PoolVotingThresholds -- FIXME: https://github.com/IntersectMBO/cardano-ledger/issues/4329
-                    { pvtMotionNoConfidence = 0 %! 1
-                    , pvtCommitteeNormal = 0 %! 1
-                    , pvtCommitteeNoConfidence = 0 %! 1
-                    , pvtHardForkInitiation = 0 %! 1
-                    , pvtPPSecurityGroup = 0 %! 1
+                  PoolVotingThresholds
+                    { pvtMotionNoConfidence = 51 %! 100
+                    , pvtCommitteeNormal = 51 %! 100
+                    , pvtCommitteeNoConfidence = 51 %! 100
+                    , pvtHardForkInitiation = 51 %! 100
+                    , pvtPPSecurityGroup = 51 %! 100
                     }
               , ucppDRepVotingThresholds =
                   DRepVotingThresholds
