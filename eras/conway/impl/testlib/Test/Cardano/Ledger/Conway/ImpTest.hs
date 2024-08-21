@@ -1303,6 +1303,7 @@ electBasicCommittee ::
 electBasicCommittee = do
   logEntry "Setting up a DRep"
   (drep, _, _) <- setupSingleDRep 1_000_000
+  (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000
 
   logEntry "Registering committee member"
   coldCommitteeC <- KeyHashObj <$> freshKeyHash
@@ -1320,6 +1321,7 @@ electBasicCommittee = do
       , UpdateCommittee SNothing mempty mempty (1 %! 10)
       ]
   submitYesVote_ (DRepVoter drep) gaidCommitteeProp
+  submitYesVote_ (StakePoolVoter spoC) gaidCommitteeProp
   passEpoch
   passEpoch
   committeeMembers <- getCommitteeMembers
