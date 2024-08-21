@@ -26,6 +26,8 @@ import Data.Default.Class
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+
+-- import qualified Data.Set as Set
 import Data.Sequence (Seq, fromList)
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Constrained.Conway.Cert (txCertSpec)
@@ -62,10 +64,12 @@ bootstrapDStateSpec withdrawals =
                   \ [var| keycoinpair |] -> match keycoinpair $ \cred [var| rdpair |] ->
                     -- Apply this only to entries NOT IN the withdrawal set, since withdrawals already set the reward in the RDPair.
                     whenTrue (not_ (member_ cred (lit withdrawalKeys))) (satisfies rdpair someZeros)
+            , -- , assert $ subset_ (lit (Set.filter isKeyHash withdrawalKeys)) (dom_ dRepDelegs) -- When Agda uses filter use this rule
+              assert $ subset_ (lit withdrawalKeys) (dom_ dRepDelegs) -- When Agda does NOT use filter use this rule
             , forAll (lit withdrawalPairs) $ \ [var| pair |] ->
                 match pair $ \ [var| cred |] [var| coin |] ->
-                  [ assert $ member_ cred (dom_ dRepDelegs)
-                  , assert $ member_ cred (dom_ rdMap)
+                  [ -- assert $ member_ cred (dom_ dRepDelegs) , -- When Agda does not use filter, use this rule
+                    assert $ member_ cred (dom_ rdMap)
                   , (caseOn (lookup_ cred rdMap))
                       -- Nothing
                       ( branch $ \_ -> FalsePred (pure ("credential " ++ show cred ++ " not in rdMap, bootstrapCertStateSpec"))
@@ -76,6 +80,10 @@ bootstrapDStateSpec withdrawals =
                       )
                   ]
             ]
+
+isKeyHash :: Credential 'Staking c -> Bool
+isKeyHash KeyHashObj {} = True
+isKeyHash ScriptHashObj {} = False
 
 coinToWord64 :: Coin -> Word64
 coinToWord64 (Coin n) = fromIntegral n

@@ -154,11 +154,11 @@ class
       expectRight' (Right x) = pure x
       expectRight' (Left e) = assertFailure (T.unpack e)
     agdaEnv <- expectRight' . runSpecTransM ctx $ toSpecRep env
-    logEntry $ "agdaEnv:\n" <> showExpr agdaEnv
+    logEntry $ "\n==========\nagdaENV:\n" <> showExpr agdaEnv
     agdaSt <- expectRight' . runSpecTransM ctx $ toSpecRep st
-    logEntry $ "agdaSt:\n" <> showExpr agdaSt
+    logEntry $ "\n==========\nagdaSTATE:\n" <> showExpr agdaSt
     agdaSig <- expectRight' . runSpecTransM ctx $ toSpecRep sig
-    logEntry $ "agdaSig:\n" <> showExpr agdaSig
+    logEntry $ "\n==========\nagdaSIGNAL:\n" <> showExpr agdaSig
     pure (agdaEnv, agdaSt, agdaSig)
 
   testConformance ::
@@ -286,9 +286,13 @@ runConformance execContext env st sig = do
   (specEnv, specSt, specSig) <-
     impAnn "Translating the inputs" $
       translateInputs @fn @rule @era env st sig execContext
-  logEntry $ "specEnv:\n" <> showExpr specEnv
-  logEntry $ "specSt:\n" <> showExpr specSt
-  logEntry $ "specSig:\n" <> showExpr specSig
+  logEntry $ "\n=============\nspecENV:\n" <> showExpr specEnv
+  logEntry $ "\n=============\nspecSTATE:\n" <> showExpr specSt
+  logEntry $ "\n=============\nspecSIGNAL:\n" <> showExpr specSig
+
+  let extra = extraInfo @fn @rule @era execContext (inject env) (inject st) (inject sig)
+  logEntry ("\n=============\nEXTRA\n" ++ extra)
+
   agdaResTest <-
     fmap (bimap (fixup <$>) fixup) $
       impAnn "Deep evaluating Agda output" $
@@ -355,7 +359,7 @@ conformsToImpl = property @(ImpTestM era Property) . (`runContT` pure) $ do
         case classOf @fn @rule @era sig of
           Nothing -> classify False "None"
           Just c -> classify True c
-  lift $ logEntry extra
+  lift $ logEntry ("\n=============EXTRA\n" ++ extra)
   pure . classification $
     testConformance @fn @rule @era ctx env st sig
 
@@ -375,7 +379,7 @@ generatesWithin gen timeout =
   where
     aName = show (typeRep $ Proxy @a)
 
--- | Translate type a Haksell type 'a' whose translatio context is 'ctx' into its Agda type, in the ImpTest monad.
+-- | Translate a Haskell type 'a' whose translation context is 'ctx' into its Agda type, in the ImpTest monad.
 translateWithContext :: SpecTranslate ctx a => ctx -> a -> ImpTestM era (SpecRep a)
 translateWithContext ctx x = do
   let
