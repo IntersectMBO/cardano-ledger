@@ -6,6 +6,12 @@ cradle:
     - path: "eras/allegra/impl/testlib"
       component: "cardano-ledger-allegra:lib:testlib"
 
+    - path: "eras/allegra/impl/huddle-cddl/Main.hs"
+      component: "cardano-ledger-allegra:exe:huddle-cddl"
+
+    - path: "eras/allegra/impl/huddle-cddl/Paths_cardano_ledger_allegra.hs"
+      component: "cardano-ledger-allegra:exe:huddle-cddl"
+
     - path: "eras/allegra/impl/test"
       component: "cardano-ledger-allegra:test:tests"
 
