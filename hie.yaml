@@ -123,6 +123,12 @@ cradle:
     - path: "eras/mary/impl/testlib"
       component: "cardano-ledger-mary:lib:testlib"
 
+    - path: "eras/mary/impl/huddle-cddl/Main.hs"
+      component: "cardano-ledger-mary:exe:huddle-cddl"
+
+    - path: "eras/mary/impl/huddle-cddl/Paths_cardano_ledger_mary.hs"
+      component: "cardano-ledger-mary:exe:huddle-cddl"
+
     - path: "eras/mary/impl/test"
       component: "cardano-ledger-mary:test:tests"
 
