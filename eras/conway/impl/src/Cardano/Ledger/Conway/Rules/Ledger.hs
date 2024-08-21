@@ -79,9 +79,10 @@ import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
-import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..))
+import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -108,7 +109,7 @@ import Cardano.Ledger.UMap (UView (..), dRepMap)
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.DeepSeq (NFData)
-import Control.Monad (when)
+import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
@@ -125,7 +126,6 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
-import qualified Data.Set as Set
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
@@ -396,16 +396,20 @@ ledgerTransition = do
               , certState
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
-        let wdrlAddrs = Map.keysSet . unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
-            wdrlCreds = Set.map raCredential wdrlAddrs
-            dUnified = dsUnified $ certDState certStateAfterCERTS
-            delegatedAddrs = DRepUView dUnified
 
-        -- TODO: Finish this implementation once we are in bootstrap phase:
-        -- https://github.com/IntersectMBO/cardano-ledger/issues/4092
-        when False $ do
-          all (`UMap.member` delegatedAddrs) wdrlCreds
-            ?! ConwayWdrlNotDelegatedToDRep (wdrlCreds Set.\\ Map.keysSet (dRepMap dUnified))
+        -- Starting with version 10, we don't allow withdrawals into RewardAcounts that are KeyHashes and not delegated to Dreps
+        unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $ do
+          let dUnified = dsUnified $ certDState certStateAfterCERTS
+              wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
+              delegatedAddrs = DRepUView dUnified
+              wdrlsKeyHashes =
+                Map.mapKeys raCredential $
+                  Map.mapMaybeWithKey
+                    (\k v -> v <$ credKeyHash (raCredential k))
+                    wdrls
+              notDelegated = Map.keysSet (wdrlsKeyHashes Map.\\ dRepMap dUnified)
+          all (`UMap.member` delegatedAddrs) (Map.keysSet wdrlsKeyHashes)
+            ?! ConwayWdrlNotDelegatedToDRep notDelegated
 
         -- Votes and proposals from signal tx
         let govSignal =

@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Add `credKeyHash` to `Credential`
 * Remove `maxMajorPV` from `Globals`
 
 ## 1.14.0.0
