@@ -41,7 +41,7 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq (Empty, (:<|)))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Debug.Trace
+import qualified Debug.Trace as Debug
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as PV1
 import Test.Cardano.Ledger.Constrained.Ast (runTarget, runTerm)
@@ -157,7 +157,7 @@ simpleTxBody proof feeEstimate = do
     zs <- liftGen (shuffle utxopairs)
     case zs of
       [] ->
-        trace
+        Debug.trace
           ( "There are no entries in the UTxO that are big enough for the feeEstimate: "
               ++ show feeEstimate
               ++ " Discard"
@@ -222,7 +222,7 @@ completeTxBody proof maxFeeEstimate txBody = do
           (liftUTxO u)
           (GenDelegs gd)
       initialfee = computeFinalFee pp (TxF proof tx) u
-  let loop _ _ fee _ | fee >= maxFeeEstimate = trace ("LOOP: fee >= maxFeeEstimate, Discard") $ discard
+  let loop _ _ fee _ | fee >= maxFeeEstimate = Debug.trace ("LOOP: fee >= maxFeeEstimate, Discard") $ discard
       loop count txx fee hash = do
         let adjustedtx = adjustTxForFee proof fee txx
             txb = adjustedtx ^. bodyTxL
@@ -244,7 +244,7 @@ completeTxBody proof maxFeeEstimate txBody = do
           else
             if count > (0 :: Int)
               then loop (count - 1) completedtx newfee hash2
-              else trace ("LOOP: count <= 0, fee is osccilating, Discard") $ discard
+              else Debug.trace "LOOP: count <= 0, fee is oscillating, Discard" discard
   loop 10 tx initialfee hash1
 
 -- ========================================================================================

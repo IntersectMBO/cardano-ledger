@@ -76,7 +76,7 @@ import Control.State.Transition.Extended
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
-import Debug.Trace (traceEvent)
+import qualified Debug.Trace as Debug
 import Lens.Micro
 
 type instance EraRuleFailure "UTXOS" (BabbageEra c) = AlonzoUtxosPredFailure (BabbageEra c)
@@ -230,9 +230,9 @@ babbageEvalScriptsTxValid = do
     trans @(EraRule "PPUP" era) $
       TRC (PPUPEnv slot pp genDelegs, pup, txBody ^. updateTxBodyL)
 
-  () <- pure $! traceEvent validBegin ()
+  () <- pure $! Debug.traceEvent validBegin ()
   expectScriptsToPass pp tx utxo
-  () <- pure $! traceEvent validEnd ()
+  () <- pure $! Debug.traceEvent validEnd ()
 
   updateUTxOState
     pp
@@ -266,7 +266,7 @@ babbageEvalScriptsTxInvalid = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
 
-  () <- pure $! traceEvent invalidBegin ()
+  () <- pure $! Debug.traceEvent invalidBegin ()
 
   case collectPlutusScriptsWithContext ei sysSt pp tx utxo of
     Right sLst ->
@@ -283,7 +283,7 @@ babbageEvalScriptsTxInvalid = do
             tellEvent (injectEvent $ FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs))
     Left info -> failBecause (injectFailure $ CollectErrors info)
 
-  () <- pure $! traceEvent invalidEnd ()
+  () <- pure $! Debug.traceEvent invalidEnd ()
 
   {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
   {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}

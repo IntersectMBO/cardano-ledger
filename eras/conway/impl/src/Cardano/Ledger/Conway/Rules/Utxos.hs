@@ -66,7 +66,7 @@ import Cardano.Ledger.UTxO (EraUTxO (..), UTxO)
 import Control.DeepSeq (NFData)
 import Control.State.Transition.Extended
 import Data.List.NonEmpty (NonEmpty)
-import Debug.Trace (traceEvent)
+import qualified Debug.Trace as Debug
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -286,9 +286,9 @@ conwayEvalScriptsTxValid = do
     judgmentContext
   let txBody = tx ^. bodyTxL
 
-  () <- pure $! traceEvent validBegin ()
+  () <- pure $! Debug.traceEvent validBegin ()
   expectScriptsToPass pp tx utxo
-  () <- pure $! traceEvent validEnd ()
+  () <- pure $! Debug.traceEvent validEnd ()
 
   utxos' <-
     updateUTxOState

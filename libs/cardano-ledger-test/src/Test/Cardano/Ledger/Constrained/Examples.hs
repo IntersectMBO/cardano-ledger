@@ -28,7 +28,7 @@ import Control.Monad (when)
 import Data.Default.Class (Default (..))
 import Data.Map (Map)
 import Data.Ratio ((%))
-import Debug.Trace (trace)
+import qualified Debug.Trace as Debug
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Classes (OrdCond (..))
 import Test.Cardano.Ledger.Constrained.Env
@@ -99,7 +99,7 @@ genMaybeCounterExample proof _testname loud order cs target = do
             ]
   result <-
     if loud
-      then trace (unlines messages1) (genDependGraph loud proof graph)
+      then Debug.trace (unlines messages1) (genDependGraph loud proof graph)
       else genDependGraph loud proof graph
   subst <- case result of
     Left msgs -> error (unlines msgs)
@@ -118,7 +118,7 @@ genMaybeCounterExample proof _testname loud order cs target = do
           then Nothing -- Indicates success, nothing bad happened
           else Just ("Some conditions fail\n" ++ explainBad bad subst)
   if loud
-    then trace (unlines (messages2 : messages3)) (pure ans)
+    then Debug.trace (unlines (messages2 : messages3)) (pure ans)
     else pure ans
 
 -- | Test that 'cs' :: [Pred] has a solution
@@ -152,7 +152,7 @@ failn proof message loud order cs target = do
               else pure ()
     )
     ( \(ErrorCall msg) ->
-        trace
+        Debug.trace
           ( if loud
               then ("Fails as expected\n" ++ msg ++ "\nOK")
               else ("Fails as expected OK")

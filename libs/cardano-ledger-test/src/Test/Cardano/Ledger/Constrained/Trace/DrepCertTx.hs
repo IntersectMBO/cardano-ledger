@@ -51,7 +51,7 @@ import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Set as Set
-import Debug.Trace (trace)
+import qualified Debug.Trace as Debug
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Ast (RootTarget (..), (^$))
 import Test.Cardano.Ledger.Constrained.Classes (TxF (..), TxOutF (..))
@@ -175,7 +175,7 @@ drepCertTxForTrace maxFeeEstimate proof = do
 drepTree :: TestTree
 drepTree =
   testGroup
-    "DRep property traces"
+    "DRep property Debug.traces"
     [ testProperty
         "All Tx are valid on traces of length 150."
         $ withMaxSuccess 20
@@ -262,7 +262,7 @@ showMap :: (Show k, Show v) => String -> Map.Map k v -> String
 showMap msg m = unlines (msg : map show (Map.toList m))
 
 traceMap :: (Show k, Show v) => String -> Map.Map k v -> a -> a
-traceMap s m x = trace (showMap s m) x
+traceMap s m x = Debug.trace (showMap s m) x
 
 showPotObl :: ConwayEraGov era => NewEpochState era -> String
 showPotObl nes =

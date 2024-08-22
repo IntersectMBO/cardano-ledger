@@ -99,7 +99,7 @@ import Data.List.NonEmpty (NonEmpty (..), nonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.MapExtras (extractKeys)
 import Data.Text (Text)
-import Debug.Trace (traceEvent)
+import qualified Debug.Trace as Debug
 import GHC.Generics (Generic)
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -259,7 +259,7 @@ alonzoEvalScriptsTxValid = do
   let txBody = tx ^. bodyTxL
       genDelegs = dsGenDelegs (certDState certState)
 
-  () <- pure $! traceEvent validBegin ()
+  () <- pure $! Debug.traceEvent validBegin ()
 
   scriptsTransition slot pp tx utxo $ \case
     Fails _ps fs ->
@@ -269,7 +269,7 @@ alonzoEvalScriptsTxValid = do
           (FailedUnexpectedly (scriptFailureToFailureDescription <$> fs))
     Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
 
-  () <- pure $! traceEvent validEnd ()
+  () <- pure $! Debug.traceEvent validEnd ()
 
   ppup' <-
     trans @(EraRule "PPUP" era) $
@@ -297,7 +297,7 @@ alonzoEvalScriptsTxInvalid = do
   TRC (UtxoEnv slot pp _, us@(UTxOState utxo _ fees _ _ _), tx) <- judgmentContext
   let txBody = tx ^. bodyTxL
 
-  () <- pure $! traceEvent invalidBegin ()
+  () <- pure $! Debug.traceEvent invalidBegin ()
 
   scriptsTransition slot pp tx utxo $ \case
     Passes _ps ->
@@ -307,7 +307,7 @@ alonzoEvalScriptsTxInvalid = do
       mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
       tellEvent (FailedPlutusScriptsEvent (scriptFailurePlutus <$> fs))
 
-  () <- pure $! traceEvent invalidEnd ()
+  () <- pure $! Debug.traceEvent invalidEnd ()
 
   {- utxoKeep = txBody ^. collateralInputsTxBodyL ⋪ utxo -}
   {- utxoDel  = txBody ^. collateralInputsTxBodyL ◁ utxo -}

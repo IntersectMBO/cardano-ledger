@@ -21,7 +21,7 @@ import qualified Data.Map.Strict as Map
 import Data.Pulse (foldlM')
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Debug.Trace (trace)
+import qualified Debug.Trace as Debug
 import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', (^.))
 import qualified Lens.Micro as Lens
@@ -94,7 +94,7 @@ import Test.QuickCheck hiding (Fixed, getSize, total)
 
 ifTrace :: Bool -> String -> a -> a
 ifTrace traceOn message a = case traceOn of
-  True -> trace message a
+  True -> Debug.trace message a
   False -> a
 
 -- ==================================================

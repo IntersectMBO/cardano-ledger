@@ -73,7 +73,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified Data.Vector as V
-import Debug.Trace (trace)
+import qualified Debug.Trace as Debug
 import Lens.Micro
 import NoThunks.Class ()
 import Test.Cardano.Ledger.Core.KeyPair (
@@ -108,7 +108,7 @@ import qualified Test.QuickCheck as QC
 -- Instances only
 
 myDiscard :: [Char] -> a
-myDiscard message = trace ("\nDiscarded trace: " ++ message) discard
+myDiscard message = Debug.trace ("\nDiscarded trace: " ++ message) discard
 
 -- ====================================================
 
