@@ -82,7 +82,7 @@ instance
       vsep
         [ "\nWithdrawals"
         , prettyA (ccecWithdrawals context)
-        , "\nJust keyHashObj of withdrawals"
+        , "\nfilter isKeyHash withdrawals"
         , ppSet prettyA (Set.filter isKeyHash (Map.keysSet (Map.mapKeys snd (ccecWithdrawals context))))
         , "\nDRepDelegs"
         , prettyA (dRepMap (dsUnified (certDState state)))

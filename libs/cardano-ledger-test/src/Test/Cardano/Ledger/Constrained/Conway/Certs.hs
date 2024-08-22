@@ -27,8 +27,8 @@ import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
--- import qualified Data.Set as Set
 import Data.Sequence (Seq, fromList)
+import qualified Data.Set as Set
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Constrained.Conway.Cert (txCertSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Deleg (someZeros)
@@ -64,8 +64,8 @@ bootstrapDStateSpec withdrawals =
                   \ [var| keycoinpair |] -> match keycoinpair $ \cred [var| rdpair |] ->
                     -- Apply this only to entries NOT IN the withdrawal set, since withdrawals already set the reward in the RDPair.
                     whenTrue (not_ (member_ cred (lit withdrawalKeys))) (satisfies rdpair someZeros)
-            , -- , assert $ subset_ (lit (Set.filter isKeyHash withdrawalKeys)) (dom_ dRepDelegs) -- When Agda uses filter use this rule
-              assert $ subset_ (lit withdrawalKeys) (dom_ dRepDelegs) -- When Agda does NOT use filter use this rule
+            , assert $ subset_ (lit (Set.filter isKeyHash withdrawalKeys)) (dom_ dRepDelegs) -- When Agda uses filter use this rule
+            -- , assert $ subset_ (lit withdrawalKeys) (dom_ dRepDelegs) -- When Agda does NOT use filter use this rule
             , forAll (lit withdrawalPairs) $ \ [var| pair |] ->
                 match pair $ \ [var| cred |] [var| coin |] ->
                   [ -- assert $ member_ cred (dom_ dRepDelegs) , -- When Agda does not use filter, use this rule
