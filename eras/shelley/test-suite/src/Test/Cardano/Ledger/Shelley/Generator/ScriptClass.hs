@@ -229,7 +229,7 @@ combinedScripts c@(Constants {numBaseScripts}) =
 
 -- | Constant list of KeyPairs intended to be used in the generators.
 keyPairs :: Crypto c => Constants -> KeyPairs c
-keyPairs Constants {maxNumKeyPairs} = mkKeyPairs <$> [1 .. maxNumKeyPairs]
+keyPairs Constants {numKeyPairs} = mkKeyPairs <$> [1 .. numKeyPairs]
 
 mkKeyPairs ::
   DSIGNAlgorithm (DSIGN c) =>
