@@ -120,13 +120,13 @@ defaultConstants =
     , frequencyKeyCredDelegation = 2
     , frequencyTxUpdates = 10
     , frequencyTxWithMetadata = 10
-    , minGenesisUTxOouts = 10
-    , maxGenesisUTxOouts = 100
+    , minGenesisUTxOouts = 100
+    , maxGenesisUTxOouts = 150
     , minGenesisOutputVal = 1000000
     , maxGenesisOutputVal = 100000000
     , maxCertsPerTx = 3
     , maxTxsPerBlock = 10
-    , numKeyPairs = 150 -- Must be >= maxGenesisUTxOouts
+    , numKeyPairs = 200 -- Must be >= maxGenesisUTxOouts
     , numBaseScripts = 3
     , numSimpleScripts = 20
     , frequencyNoWithdrawals = 75
@@ -143,6 +143,6 @@ defaultConstants =
     , maxTreasury = 10000000
     , minReserves = 1000000
     , maxReserves = 10000000
-    , genTxStableUtxoSize = 100 -- Needs to be between minGenesisUTxOouts and maxGenesisUTxOouts
+    , genTxStableUtxoSize = 125 -- Needs to be between minGenesisUTxOouts and maxGenesisUTxOouts
     , genTxUtxoIncrement = 3
     }
