@@ -54,6 +54,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (..),
   Redeemers (..),
   TxDats (..),
+  nullRedeemers,
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
@@ -95,6 +96,7 @@ import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Lens.Micro
+import Lens.Micro.Extras (view)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.Common as P (Data (..))
 import System.Random
@@ -392,23 +394,33 @@ instance Mock c => EraGen (AlonzoEra c) where
   genEraTwoPhase2Arg = phase2scripts2Arg
 
   genEraTxBody = genAlonzoTxBody
-  updateEraTxBody utxo pp witnesses txb coinx txin txout = new
+  updateEraTxBody utxo pp witnesses txb coinx txin txout =
+    txb
+      { atbInputs = newInputs
+      , atbCollateral = newCollaterals
+      , atbTxFee = coinx
+      , atbOutputs = newOutputs
+      , -- The witnesses may have changed, recompute the scriptIntegrityHash.
+        atbScriptIntegrityHash =
+          hashScriptIntegrity
+            langViews
+            (witnesses ^. rdmrsTxWitsL)
+            (witnesses ^. datsTxWitsL)
+      }
     where
       langs = langsUsed @(AlonzoEra c) (witnesses ^. scriptTxWitsL)
       langViews = Set.map (getLanguageView pp) langs
-      new =
-        txb
-          { atbInputs = atbInputs txb <> txin
-          , atbCollateral = atbCollateral txb <> Set.filter (okAsCollateral utxo) txin -- In Alonzo, extra inputs also are added to collateral
-          , atbTxFee = coinx
-          , atbOutputs = atbOutputs txb :|> txout
-          , -- The witnesses may have changed, recompute the scriptIntegrityHash.
-            atbScriptIntegrityHash =
-              hashScriptIntegrity
-                langViews
-                (witnesses ^. rdmrsTxWitsL)
-                (witnesses ^. datsTxWitsL)
-          }
+      requiredCollateral = ceiling $ fromIntegral (pp ^. ppCollateralPercentageL) * unCoin coinx % 100
+      potentialCollateral = Set.filter (okAsCollateral utxo) txin
+      txInAmounts = List.sortOn snd . Map.toList . Map.map (unCoin . view coinTxOutL) . unUTxO . txInsFilter utxo
+      takeUntilSum s = map fst . takeUntil ((s >=) . snd) . scanl1 (\(_, s') (x, n) -> (x, s' + n))
+      takeUntil p xs = let (y, n) = span p xs in y ++ take 1 n
+      newCollaterals =
+        if nullRedeemers (witnesses ^. rdmrsTxWitsL)
+          then mempty
+          else Set.fromList . takeUntilSum requiredCollateral $ txInAmounts potentialCollateral
+      newInputs = atbInputs txb <> txin
+      newOutputs = atbOutputs txb :|> txout
 
   addInputs txb txin = txb {atbInputs = atbInputs txb <> txin}
 
