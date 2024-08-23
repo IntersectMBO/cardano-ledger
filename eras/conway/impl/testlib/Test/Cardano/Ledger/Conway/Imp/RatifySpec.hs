@@ -1257,7 +1257,7 @@ delayingActionsSpec =
           getsNES $
             nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL . ppCommitteeMaxTermLengthL
 
-        void registerInitialCommittee
+        hks <- registerInitialCommittee
         initialMembers <- getCommitteeMembers
 
         (membersExceedingExpiry, exceedingExpiry) <-
@@ -1268,7 +1268,7 @@ delayingActionsSpec =
             c4 <- freshKeyHash
             currentEpoch <- getsNES nesELL
             let exceedingExpiry = addEpochInterval (addEpochInterval currentEpoch maxTermLength) (EpochInterval 7)
-            let membersExceedingExpiry = [(KeyHashObj c3, exceedingExpiry), (KeyHashObj c4, addEpochInterval currentEpoch maxTermLength)]
+                membersExceedingExpiry = [(KeyHashObj c3, exceedingExpiry), (KeyHashObj c4, addEpochInterval currentEpoch maxTermLength)]
             GovPurposeId gaid <-
               electCommittee
                 SNothing
@@ -1276,7 +1276,7 @@ delayingActionsSpec =
                 Set.empty
                 membersExceedingExpiry
             submitYesVote_ (StakePoolVoter spoC) gaid
-            passEpoch >> passEpoch
+            passNEpochs 2
             -- the new committee has not been enacted
             expectMembers initialMembers
             pure (Map.keysSet membersExceedingExpiry, exceedingExpiry)
@@ -1285,10 +1285,9 @@ delayingActionsSpec =
         govIdConst1 <- impAnn "Other actions are ratified and enacted" $ do
           (govIdConst1, constitution) <- submitConstitution SNothing
           submitYesVote_ (DRepVoter drep) govIdConst1
-          hks <- traverse registerCommitteeHotKey (Set.toList initialMembers)
-          traverse_ (\m -> submitYesVote_ (CommitteeVoter m) govIdConst1) hks
+          submitYesVoteCCs_ hks govIdConst1
 
-          passEpoch >> passEpoch
+          passNEpochs 2
           curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
           curConstitution `shouldBe` constitution
           pure govIdConst1
@@ -1309,9 +1308,9 @@ delayingActionsSpec =
         impAnn "New committee can vote" $ do
           (govIdConst2, constitution) <- submitConstitution $ SJust (GovPurposeId govIdConst1)
           submitYesVote_ (DRepVoter drep) govIdConst2
-          hks <- traverse registerCommitteeHotKey (Set.toList membersExceedingExpiry)
-          traverse_ (\m -> submitYesVote_ (CommitteeVoter m) govIdConst2) hks
+          hks' <- traverse registerCommitteeHotKey (Set.toList membersExceedingExpiry)
+          submitYesVoteCCs_ hks' govIdConst2
 
-          passEpoch >> passEpoch
+          passNEpochs 2
           curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
           curConstitution `shouldBe` constitution
