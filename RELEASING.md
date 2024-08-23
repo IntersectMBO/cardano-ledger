@@ -175,9 +175,39 @@ changed, thus deserve a release?
 
 The rule is very simple. Every package that falls under this release process and has a
 version in its cabal file higher than the highest version released to CHaPs is allowed to
-be released. It is also possible to rely on git tags for deriving information about the
-latest released version of a package, because it is a mandatory step after the release to
-CHaP. (TODO: implement a script that lists all of the package that fit the above criteria)
+be released and CHaP will not allow to release a package version that has already been
+released. Therefore, it safe to use this command to release all packages from the repo
+from a sepecific `<SHA>` that had a version bump when compared to CHaP:
+
+```shell
+$ ./scripts/add-from-github.sh https://github.com/IntersectMBO/cardano-ledger <SHA> \
+  eras/allegra/impl \
+  eras/alonzo/impl \
+  eras/alonzo/test-suite eras/babbage/impl \
+  eras/babbage/test-suite eras/conway/impl \
+  eras/conway/test-suite \
+  eras/mary/impl \
+  eras/shelley/impl \
+  eras/shelley/test-suite \
+  eras/shelley-ma/test-suite \
+  libs/cardano-ledger-api \
+  libs/cardano-ledger-core \
+  libs/cardano-ledger-binary \
+  libs/cardano-protocol-tpraos \
+  libs/non-integral \
+  libs/small-steps \
+  libs/cardano-data \
+  libs/set-algebra \
+  libs/vector-map \
+  eras/byron/chain/executable-spec \
+  eras/byron/ledger/executable-spec \
+  eras/byron/ledger/impl \
+  eras/byron/ledger/impl/test \
+  eras/byron/crypto \
+  eras/byron/crypto/test
+```
+
+More on that command in the section below.
 
 #### Release to CHaP
 
