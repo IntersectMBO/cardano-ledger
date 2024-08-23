@@ -603,7 +603,7 @@ ruffle k items = do
   where
     itemsV = V.fromList items
 
--- | Generate @n@ number of unique `Int`s in the supplied range.
+-- | Generate @k@ number of unique `Int`s in the supplied range.
 genIndices :: Int -> (Int, Int) -> Gen ([Int], IntSet.IntSet)
 genIndices k (l', u')
   | k < 0 || u - l + 1 < k =
@@ -615,7 +615,7 @@ genIndices k (l', u')
           ++ ", "
           ++ show u
           ++ "]"
-  | u - l < k `div` 2 = do
+  | u - l < k * 2 = do
       xs <- take k <$> QC.shuffle [l .. u]
       pure (xs, IntSet.fromList xs)
   | otherwise = go k [] mempty
@@ -848,32 +848,21 @@ genRecipients ::
   KeyPairs (EraCrypto era) ->
   [(Script era, Script era)] ->
   Gen [Addr (EraCrypto era)]
-genRecipients len keys scripts = do
-  n' <-
-    min 1
+genRecipients nRecipients' keys scripts = do
+  nRecipients <-
+    max 1
       <$> QC.frequency
-        [ (1, pure (len - 1)) -- contract size of UTxO
-        , (2, pure len) -- keep size
-        , (1, pure (len + 1)) -- expand size of UTxO
+        [ (1, pure (nRecipients' - 1)) -- contract size of UTxO
+        , (2, pure nRecipients') -- keep size
+        , (1, pure (nRecipients' + 1)) -- expand size of UTxO
         ]
 
-  -- choose m scripts and n keys as recipients
   -- We want to choose more Keys than Scripts by a factor of 2 or more.
-  (m, n) <- case n' of
-    0 -> pure (0, 0)
-    1 -> pure (0, 1)
-    2 -> pure (0, 2)
-    3 -> pure (1, 2)
-    4 -> pure (1, 3)
-    5 -> pure (2, 3)
-    _ ->
-      do
-        m <- QC.choose (0, n' - 4)
-        let n = n' - m
-        pure (m, n)
+  nScripts <- QC.choose (0, nRecipients * 2 `div` 3) -- Average is about nRecipients / 3
+  let nKeys = nRecipients - nScripts
 
-  recipientKeys <- ruffle n keys
-  recipientScripts <- ruffle m scripts
+  recipientKeys <- ruffle nKeys keys
+  recipientScripts <- ruffle nScripts scripts
 
   let payKeys = mkCred . fst <$> recipientKeys
       stakeKeys = mkCred . snd <$> recipientKeys

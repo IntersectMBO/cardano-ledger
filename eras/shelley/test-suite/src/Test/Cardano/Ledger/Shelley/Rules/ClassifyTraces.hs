@@ -183,7 +183,7 @@ relevantCasesAreCoveredForTrace tr = do
           , 60
           )
         ,
-          ( "at least 10% of transactions have script TxOuts"
+          ( "at least 10% of TxOuts are scripts"
           , 0.1 < txScriptOutputsRatio (view outputsTxBodyL . view bodyTxL <$> txs)
           , 20
           )
