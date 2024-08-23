@@ -21,11 +21,11 @@ repository cardano-haskell-packages
 source-repository-package
   type: git
   location: https://github.com/IntersectMBO/formal-ledger-specifications.git
-  subdir: generated
   -- !WARNING!:
   -- MAKE SURE THIS POINTS TO A COMMIT IN `MAlonzo-code` BEFORE MERGE!
-  tag: b5a8d47aebbdad92773be96c459f241d773d4771
-  --sha256: sha256-iEqucpja/0/5Tvnjr2drFlz58f3x3kUpInVjZfcePBQ=
+  subdir: generated
+  tag: d14f4b3f8f33a73890806dd1680069c7cfa8e54f
+  --sha256: sha256-OLJKEJ0u1v1Zah8qZ2nQD+ILsvG4BDoojWs+lKOcsIs=
 -- NOTE: If you would like to update the above, look for the `MAlonzo-code`
 -- branch in the `formal-ledger-specifications` repo and copy the SHA of
 -- the commit you need. The `MAlonzo-code` branch functions like an alternative

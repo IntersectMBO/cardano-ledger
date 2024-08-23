@@ -234,7 +234,7 @@ instance Crypto c => HasSimpleRep (ConwayTxBody (ConwayEra c)) where
 instance HasSimpleRep Coin where
   type SimpleRep Coin = Word64
   toSimpleRep (Coin i) = case integerToWord64 i of
-    Nothing -> error "The impossible happened in toSimpleRep for `Coin`"
+    Nothing -> error $ "Failed to convert Integer to Word64:\n" <> show i
     Just w -> w
   fromSimpleRep = word64ToCoin
 instance IsConwayUniv fn => HasSpec fn Coin

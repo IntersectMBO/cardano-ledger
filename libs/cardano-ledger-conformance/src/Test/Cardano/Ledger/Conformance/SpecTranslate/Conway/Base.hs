@@ -298,8 +298,11 @@ instance SpecTranslate ctx (ConwayPParams Identity era) where
     ppPoolDeposit <- toSpecRep cppPoolDeposit
     ppEmax <- toSpecRep cppEMax
     ppNopt <- toSpecRep (toInteger $ unTHKD cppNOpt)
-    ppPv <- toSpecRep cppProtocolVersion
     let
+      -- We don't really care about `ppPv` in conformance testing, because
+      -- the actual protocol version is stored elsewhere starting from Conway
+      -- and this is just here for backwards compatibility
+      ppPv = (0, 0)
       ppMinUTxOValue = 0 -- minUTxOValue has been deprecated and is not supported in Conway
     ppCoinsPerUTxOByte <- toSpecRep cppCoinsPerUTxOByte
     ppCostmdls <- toSpecRep cppCostModels
@@ -1037,9 +1040,9 @@ instance SpecTranslate ctx (EpochExecEnv era) where
 
 -- | This type is used as the Env only in the Agda Spec
 data ConwayExecEnactEnv era = ConwayExecEnactEnv
-  { ceeeGid :: GovActionId (EraCrypto era)
-  , ceeeTreasury :: Coin
-  , ceeeEpoch :: EpochNo
+  { ceeeGid :: !(GovActionId (EraCrypto era))
+  , ceeeTreasury :: !Coin
+  , ceeeEpoch :: !EpochNo
   }
   deriving (Generic, Eq, Show)
 
