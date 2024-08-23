@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-binary`
 
+## 1.3.4.1
+
+*
+
 ## 1.3.4.0
 
 * Add `writeSpec` funtion to Test.Cardano.Ledger.Binary.Cuddle
