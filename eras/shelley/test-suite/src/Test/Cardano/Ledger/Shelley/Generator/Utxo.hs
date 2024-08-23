@@ -850,14 +850,12 @@ genRecipients ::
   Gen [Addr (EraCrypto era)]
 genRecipients len keys scripts = do
   n' <-
-    QC.frequency
-      ( (if len > 1 then [(1, pure (len - 1))] else [])
-          -- contract size of UTxO (only if at least 2 inputs are chosen)
-          ++ [(2, pure len)]
-          -- keep size
-          ++ [(1, pure $ len + 1)]
-      )
-  -- expand size of UTxO
+    min 1
+      <$> QC.frequency
+        [ (1, pure (len - 1)) -- contract size of UTxO
+        , (2, pure len) -- keep size
+        , (1, pure (len + 1)) -- expand size of UTxO
+        ]
 
   -- choose m scripts and n keys as recipients
   -- We want to choose more Keys than Scripts by a factor of 2 or more.
