@@ -268,16 +268,14 @@ class
  -----------------------------------------------------------------------------}
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
-someKeyPairs :: CC.Crypto c => Constants -> Int -> Int -> Gen (KeyPairs c)
-someKeyPairs c lower upper =
-  take
-    <$> choose (lower, upper)
-    <*> shuffle (keyPairs c)
+someKeyPairs :: CC.Crypto c => Constants -> (Int, Int) -> Gen (KeyPairs c)
+someKeyPairs c range = take <$> choose range <*> shuffle (keyPairs c)
 
 genUtxo0 :: forall era. EraGen era => GenEnv era -> Gen (UTxO era)
 genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
-  genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
-  genesisScripts <- someScripts @era c minGenesisUTxOouts maxGenesisUTxOouts
+  let range = (minGenesisUTxOouts `div` 2, maxGenesisUTxOouts `div` 2)
+  genesisKeys <- someKeyPairs c range
+  genesisScripts <- someScripts @era c range
   outs <-
     (genEraTxOut @era ge)
       (genGenesisValue @era ge)
@@ -306,10 +304,9 @@ someScripts ::
   forall era.
   EraGen era =>
   Constants ->
-  Int ->
-  Int ->
+  (Int, Int) ->
   Gen [(Script era, Script era)]
-someScripts c lower upper = take <$> choose (lower, upper) <*> shuffle (allScripts @era c)
+someScripts c range = take <$> choose range <*> shuffle (allScripts @era c)
 
 -- | A list of all possible kinds of scripts in the current Era.
 --   Might include Keylocked scripts, Start-Finish Timelock scripts, Quantified scripts (All, Any, MofN), Plutus Scripts
