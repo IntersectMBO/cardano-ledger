@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-mary`
 
+## 1.7.0.1
+
+*
+
 ## 1.7.0.0
 
 * Change instance of `TranslationContext` to `NoGenesis`

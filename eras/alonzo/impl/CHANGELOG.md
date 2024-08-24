@@ -1,6 +1,10 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.10.1.0
+## 1.10.2.1
+
+*
+
+## 1.10.2.0
 
 * Added `wireSizeAlonzoTxF`
 

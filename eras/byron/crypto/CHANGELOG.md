@@ -1,5 +1,9 @@
 # Revision history for `cardano-crypto-wrapper`
 
+## 1.5.1.4
+
+*
+
 ## 1.5.1.3
 
 *
