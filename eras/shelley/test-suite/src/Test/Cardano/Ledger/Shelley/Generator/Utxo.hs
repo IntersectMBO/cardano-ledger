@@ -640,7 +640,7 @@ pickRandomFromMap n' initMap = go (min (max 0 n') (Map.size initMap)) [] initMap
     go n !acc !m
       | n <= 0 = pure acc
       | otherwise = do
-          i <- QC.choose (0, n - 1)
+          i <- QC.choose (0, Map.size m - 1)
           let (k, y) = Map.elemAt i m
           go (n - 1) ((k, y) : acc) (Map.deleteAt i m)
 
