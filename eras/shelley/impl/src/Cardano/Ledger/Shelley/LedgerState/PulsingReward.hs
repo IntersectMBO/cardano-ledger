@@ -136,7 +136,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ls ss nm) maxSuppl
       d = unboundRational (pr ^. ppDG)
       expectedBlocks =
         floor $
-          (1 - d) * unboundRational (activeSlotVal asc) * (fromIntegral $ unEpochSize slotsPerEpoch)
+          (1 - d) * unboundRational (activeSlotVal asc) * fromIntegral (unEpochSize slotsPerEpoch)
       -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
       -- it would be nice to not have to compute expectedBlocks every epoch
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
@@ -267,7 +267,7 @@ completeRupd
         { rewDeltaR1 = deltaR1
         , rewFees = feesSS
         , rewR = oldr
-        , rewDeltaT1 = (Coin deltaT1)
+        , rewDeltaT1 = Coin deltaT1
         , rewNonMyopic = nm
         , rewLikelihoods = newLikelihoods
         , rewLeaders = lrewards
@@ -313,8 +313,8 @@ createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
   let step1 = startStep slotsPerEpoch blocksmade epstate maxSupply asc secparam
   (step2, _event) <- pulseStep step1
   case step2 of
-    (Complete r) -> pure r
-    (Pulsing rewsnap pulser) -> fst <$> completeRupd (Pulsing rewsnap pulser)
+    Complete r -> pure r
+    Pulsing rewsnap pulser -> fst <$> completeRupd (Pulsing rewsnap pulser)
 
 -- | Calculate the current circulation
 --
