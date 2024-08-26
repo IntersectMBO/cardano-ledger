@@ -56,6 +56,7 @@
 
         # see flake `variants` below for alternative compilers
         defaultCompiler = "ghc966";
+        fourmoluVersion = "0.16.2.0";
         # We use cabalProject' to ensure we don't build the plan for
         # all systems.
         cabalProject = nixpkgs.haskell-nix.cabalProject' ({config, ...}: {
@@ -106,7 +107,7 @@
               }
               // lib.optionalAttrs (config.compiler-nix-name == defaultCompiler) {
                 # tools that work only with default compiler
-                fourmolu = "0.16.2.0";
+                fourmolu = fourmoluVersion;
                 hlint = "3.8";
                 haskell-language-server = "2.9.0.0";
               };
@@ -249,6 +250,9 @@
                   src = ./.;
                   hooks = {
                     fourmolu.enable = true;
+                  };
+                  tools = {
+                    fourmolu = p.tool "fourmolu" fourmoluVersion;
                   };
                 };
               in
