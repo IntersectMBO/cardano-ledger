@@ -177,7 +177,7 @@ instance
         n <- genFromSpecT size'
         let go 0 _ m = pure m
             go n' kvs' m = do
-              mkv <- tryGen' $ genFromSpecT kvs'
+              mkv <- tryGenT $ genFromSpecT kvs'
               case mkv of
                 Nothing
                   | sizeOf m `conformsToSpec` size -> pure m

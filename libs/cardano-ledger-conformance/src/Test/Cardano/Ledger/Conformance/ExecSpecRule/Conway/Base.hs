@@ -114,7 +114,12 @@ import Test.Cardano.Ledger.Constrained.Conway (
   utxoStateSpec,
   utxoTxSpec,
  )
-import Test.Cardano.Ledger.Constrained.Conway.Instances ()
+import Test.Cardano.Ledger.Constrained.Conway.Instances (
+  committeeMaxTermLength_,
+  committeeMinSize_,
+  protocolVersion_,
+ )
+
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
 
@@ -390,19 +395,19 @@ ratifyStateSpec _ RatifyEnv {..} =
        in Map.keysSet m
     -- Bootstrap is not in the spec
     disableBootstrap :: IsConwayUniv fn => Term fn (PParams Conway) -> Pred fn
-    disableBootstrap pp = match pp $ \pp' ->
-      match (sel @12 pp') $ \major _ ->
-        assert $ major ==. lit (natVersion @10)
+    disableBootstrap pp = match pp $ \simplepp ->
+      match (protocolVersion_ simplepp) $ \major _ ->
+        assert $ not_ (major ==. lit (natVersion @9))
+
     preferSmallerCCMinSizeValues ::
       IsConwayUniv fn =>
       Term fn (PParams Conway) ->
       Pred fn
-    preferSmallerCCMinSizeValues pp = match pp $ \pp' ->
-      match (sel @24 pp') $ \ccMinSize ->
-        satisfies ccMinSize $
-          chooseSpec
-            (1, TrueSpec)
-            (1, constrained (<=. committeeSize))
+    preferSmallerCCMinSizeValues pp = match pp $ \simplepp ->
+      satisfies (committeeMinSize_ simplepp) $
+        chooseSpec
+          (1, TrueSpec)
+          (1, constrained (<=. committeeSize))
       where
         committeeSize = lit . fromIntegral . Set.size $ ccColdKeys
 
@@ -568,7 +573,7 @@ enactStateSpec ::
   Specification fn (EnactState Conway)
 enactStateSpec ConwayEnactExecContext {..} ConwayExecEnactEnv {..} =
   constrained' $ \_ _ curPParams _ treasury wdrls _ ->
-    [ match curPParams $ \pp -> match (sel @25 pp) (==. lit ceecMaxTerm)
+    [ match curPParams $ \simplepp -> committeeMaxTermLength_ simplepp ==. lit ceecMaxTerm
     , assert $ sum_ (rng_ wdrls) <=. treasury
     , assert $ treasury ==. lit ceeeTreasury
     ]

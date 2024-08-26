@@ -21,8 +21,13 @@ govEnv = genFromSpecWithSeed 10 30 (govEnvSpec @ConwayFn)
 singleProposalTreeSpec :: Specification ConwayFn ProposalTree
 singleProposalTreeSpec = constrained $ \ppupTree ->
   [ wellFormedChildren ppupTree
-  , allGASInTree ppupTree $ \gas ->
-      isCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas)
+  , satisfies
+      ppupTree
+      ( allGASInTree
+          ( \gas ->
+              isCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas)
+          )
+      )
   , forAll (snd_ ppupTree) (genHint $ (Just 2, 10))
   ]
 

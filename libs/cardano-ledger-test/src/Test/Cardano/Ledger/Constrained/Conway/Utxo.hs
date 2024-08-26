@@ -11,22 +11,19 @@ module Test.Cardano.Ledger.Constrained.Conway.Utxo where
 
 import Cardano.Ledger.Babbage.TxOut
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Conway.PParams
+import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Core (EraTx (..), ppMaxCollateralInputsL)
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.UTxO
+import Constrained
 import Data.Foldable
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
 import Data.Word
 import Lens.Micro
-
-import Constrained
-
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core (EraTx (..), ppMaxCollateralInputsL)
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 
@@ -39,42 +36,49 @@ utxoEnvSpec =
        _ueCertState ->
           [ satisfies uePParams pparamsSpec
           , match uePParams $ \cpp ->
+              -- NOTE cpp has type (Term fn (SimplePParams era))
               match cpp $
-                \_cppMinFeeA
-                 _cppMinFeeB
-                 _cppMaxBBSize
-                 cppMaxTxSize
-                 _cppMaxBHSize
-                 _cppKeyDeposit
-                 _cppPoolDeposit
-                 _cppEMax
-                 _cppNOpt
-                 _cppA0
-                 _cppRho
-                 _cppTau
-                 cppProtocolVersion
-                 _cppMinPoolCost
-                 _cppCoinsPerUTxOByte
-                 _cppCostModels
-                 _cppPrices
-                 _cppMaxTxExUnits
-                 _cppMaxBlockExUnits
-                 _cppMaxValSize
-                 _cppCollateralPercentage
-                 _cppMaxCollateralInputs
-                 _cppPoolVotingThresholds
-                 _cppDRepVotingThresholds
-                 _cppCommitteeMinSize
-                 _cppCommitteeMaxTermLength
-                 _cppGovActionLifetime
-                 _cppGovActionDeposit
-                 _cppDRepDeposit
-                 _cppDRepActivity
-                 _cppMinFeeRefScriptCoinsPerByte ->
+                \_minFeeA
+                 _minFeeB
+                 _maxBBSize
+                 maxTxSize
+                 _maxBHSize
+                 _keyDeposit
+                 _poolDeposit
+                 _eMax
+                 _nOpt
+                 _a0
+                 _rho
+                 _tau
+                 _decentral
+                 protocolVersion
+                 _minUTxOValue
+                 _minPoolCost
+                 -- Alonzo
+                 _coinsPerUTxOWord
+                 _costModels
+                 _prices
+                 _maxTxExUnits
+                 _maBlockExUnits
+                 _maxValSize
+                 _collateralPercentage
+                 _MaxCollateralInputs
+                 -- Babbage
+                 _coinsPerUTxOByte
+                 -- Conway
+                 _poolVotingThresholds
+                 _drepVotingThresholds
+                 _committeeMinSize
+                 _committeeMaxTermLength
+                 _govActionLifetime
+                 _govActionDeposit
+                 _dRepDeposit
+                 _drepActivity
+                 _minFeeRefScriptCostPerByte ->
                     -- NOTE: this is for testing only! We should figure out a nicer way
                     -- of splitting generation and checking constraints here!
-                    [ assert $ cppProtocolVersion ==. lit (ProtVer (natVersion @10) 0)
-                    , assert $ lit (THKD 3000) ==. cppMaxTxSize
+                    [ assert $ protocolVersion ==. lit (ProtVer (natVersion @10) 0)
+                    , assert $ lit 3000 ==. maxTxSize
                     ]
           ]
 

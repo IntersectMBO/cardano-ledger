@@ -3301,12 +3301,13 @@ showProtver :: ProtVer -> String
 showProtver (ProtVer x y) = "(" ++ show x ++ " " ++ show y ++ ")"
 
 pcEpochState :: Reflect era => Proof era -> EpochState era -> PDoc
-pcEpochState proof es@(EpochState (AccountState tre res) ls sss _) =
+pcEpochState proof es@(EpochState (AccountState tre res) ls sss nonmy) =
   ppRecord
     "EpochState"
     [ ("AccountState", ppRecord' "" [("treasury", pcCoin tre), ("reserves", pcCoin res)])
     , ("LedgerState", pcLedgerState proof ls)
     , ("SnapShots", pcSnapShots sss)
+    , ("NonMyopic", ppNonMyopic nonmy)
     , ("AdaPots", pcAdaPot es)
     ]
 
@@ -3450,6 +3451,9 @@ pcIRewards xs =
     , ("deltaR", pcDeltaCoin (DP.deltaReserves xs))
     , ("deltaT", pcDeltaCoin (DP.deltaTreasury xs))
     ]
+
+instance PrettyA (InstantaneousRewards c) where
+  prettyA = pcIRewards
 
 pcDeltaCoin :: DeltaCoin -> PDoc
 pcDeltaCoin (DeltaCoin n) = hsep [ppString "▵₳", ppInteger n]
@@ -3696,3 +3700,15 @@ instance PrettyA (ConwayRules.CertsEnv era) where
 
 instance PrettyA RDPair where
   prettyA (RDPair x y) = prettyA (fromCompact x, fromCompact y)
+
+pcStake :: Stake c -> PDoc
+pcStake (Stake m) = ppMap pcCredential (pcCoin . fromCompact) (VMap.toMap m)
+
+instance PrettyA (Stake c) where
+  prettyA s = pcStake s
+
+pcSnapShot :: SnapShot c -> PDoc
+pcSnapShot x = ppRecord "SnapShot" (pcSnapShotL "" x)
+
+instance PrettyA (SnapShot c) where
+  prettyA s = pcSnapShot s

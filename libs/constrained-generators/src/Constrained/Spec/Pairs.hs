@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -26,6 +27,7 @@ import Constrained.List
 import Constrained.Univ
 import Data.List (nub)
 import qualified Data.List.NonEmpty as NE
+import Prettyprinter
 import Test.QuickCheck
 
 -- HasSpec ----------------------------------------------------------------
@@ -36,10 +38,10 @@ cartesian ::
   Specification fn b ->
   Specification fn (Prod a b)
 cartesian (ErrorSpec es) (ErrorSpec fs) = ErrorSpec (es <> fs)
-cartesian (ErrorSpec es) _ = ErrorSpec es
-cartesian _ (ErrorSpec es) = ErrorSpec es
-cartesian (MemberSpec []) _ = MemberSpec []
-cartesian _ (MemberSpec []) = MemberSpec []
+cartesian (ErrorSpec es) _ = ErrorSpec (NE.cons "cartesian left" es)
+cartesian _ (ErrorSpec es) = ErrorSpec (NE.cons "cartesian right" es)
+cartesian (MemberSpec []) _ = ErrorSpec (pure "cartesian(MemberSpec [], _)")
+cartesian _ (MemberSpec []) = ErrorSpec (pure "cartesian( _, MemberSpec [])")
 cartesian s s' = typeSpec $ Cartesian s s'
 
 data PairSpec fn a b = Cartesian (Specification fn a) (Specification fn b)
@@ -57,7 +59,12 @@ instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Prod a b) where
 
   combineSpec (Cartesian a b) (Cartesian a' b') = cartesian (a <> a') (b <> b')
 
-  conformsTo (Prod a b) (Cartesian sa sb) = conformsToSpec a sa && conformsToSpec b sb
+  conformsTo (Prod a b) (Cartesian sa sb) =
+    case (conformsToSpec a sa, conformsToSpec b sb) of
+      (True, True) -> True
+      (False, True) -> False
+      (True, False) -> False
+      (False, False) -> False
 
   genFromTypeSpec (Cartesian sa sb) = Prod <$> genFromSpecT sa <*> genFromSpecT sb
 
@@ -71,7 +78,24 @@ instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Prod a b) where
 
   cardinalTypeSpec (Cartesian x y) = multSpecInt (cardinality x) (cardinality y)
 
-deriving instance (HasSpec fn a, HasSpec fn b) => Show (PairSpec fn a b)
+  typeSpecHasError (Cartesian x y) =
+    case (isErrorLike x, isErrorLike y) of
+      (False, False) -> Nothing
+      (True, False) -> Just $ errorLikeMessage x
+      (False, True) -> Just $ errorLikeMessage y
+      (True, True) -> Just $ (errorLikeMessage x <> errorLikeMessage y)
+
+  alternateShow (Cartesian left right@(TypeSpec r [])) =
+    case alternateShow @fn @b r of
+      (BinaryShow "Cartesian" ps) -> BinaryShow "Cartesian" ("," <+> viaShow left : ps)
+      (BinaryShow "SumSpec" ps) -> BinaryShow "Cartesian" ("," <+> viaShow left : ["SumSpec" /> vsep ps])
+      _ -> BinaryShow "Cartesian" ["," <+> viaShow left, "," <+> viaShow right]
+  alternateShow (Cartesian left right) = BinaryShow "Cartesian" ["," <+> viaShow left, "," <+> viaShow right]
+
+instance (HasSpec fn a, HasSpec fn b) => Show (PairSpec fn a b) where
+  show pair@(Cartesian l r) = case alternateShow @fn @(Prod a b) pair of
+    (BinaryShow "Cartesian" ps) -> show $ parens ("Cartesian" /> vsep ps)
+    _ -> "(Cartesian " ++ "(" ++ show l ++ ") (" ++ show r ++ "))"
 
 -- Functions for working on pairs -----------------------------------------
 

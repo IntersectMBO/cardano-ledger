@@ -4,6 +4,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -11,22 +12,22 @@
 -- for the GOV rule
 module Test.Cardano.Ledger.Constrained.Conway.Gov where
 
-import Cardano.Ledger.Shelley.HardForks qualified as HardForks
-import Data.Foldable
-
-import Data.Coerce
-
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
+import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Shelley.HardForks qualified as HardForks
+import Constrained
+import Constrained.Base (Pred (..))
+import Data.Coerce
+import Data.Foldable
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Lens.Micro
-
 import Constrained
-
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
@@ -34,6 +35,18 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Lens.Micro qualified as L
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
+import Test.QuickCheck hiding (forAll)
+
+main :: IO ()
+main = do
+  env <- generate $ genFromSpec @ConwayFn govEnvSpec
+  let spec = govProposalsSpec @ConwayFn env
+  p <- generate (vectorOf 20 (genFromSpec spec))
+  case p of
+    (y : _) -> putStrLn $ (show . prettyA) y
+    _ -> pure ()
+  putStrLn $ show (map (\x -> conformsToSpec x spec) p)
 
 govEnvSpec ::
   IsConwayUniv fn =>
@@ -50,24 +63,39 @@ govProposalsSpec ::
   GovEnv (ConwayEra StandardCrypto) ->
   Specification fn (Proposals (ConwayEra StandardCrypto))
 govProposalsSpec GovEnv {geEpoch, gePPolicy} =
-  constrained $ \props ->
-    match props $ \ppupTree hardForkTree committeeTree constitutionTree unorderedProposals ->
+  constrained $ \ [var|props|] ->
+    -- Note each of ppupTree, hardForkTree, committeeTree, constitutionTree
+    -- have the pair type ProposalTree = (StrictMaybe (GovActionId StandardCrypto), [Tree GAS])
+    match props $ \ [var|ppupTree|] [var|hardForkTree|] [var|committeeTree|] [var|constitutionTree|] [var|unorderedProposals|] ->
       [ -- Protocol parameter updates
         wellFormedChildren ppupTree
-      , allGASInTree ppupTree $ \gas ->
-          [ isCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas)
-          , onCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas) $
-              \_ ppup policy ->
-                [ wfPParamsUpdate ppup
-                , assert $ policy ==. lit gePPolicy
-                ]
-          ]
+      , satisfies
+          ppupTree
+          ( allGASInTree
+              ( \ [var|gasPpup|] ->
+                  -- Extract the GovAction from the GovActionID and match against the constructor ParameterChange
+                  [ isCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gasPpup)
+                  , onCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gasPpup) $
+                      \_ ppup policy ->
+                        [ assert $ ppup /=. lit emptyPParamsUpdate
+                        , satisfies ppup wfPParamsUpdateSpec
+                        , assert $ policy ==. lit gePPolicy
+                        ]
+                  ]
+              )
+          )
       , forAll (snd_ ppupTree) (genHint treeGenHint)
       , genHint listSizeHint (snd_ ppupTree)
       , -- Hard forks
         wellFormedChildren hardForkTree
-      , allGASInTree hardForkTree $ \gas ->
-          isCon @"HardForkInitiation" (pProcGovAction_ . gasProposalProcedure_ $ gas)
+      , satisfies
+          hardForkTree
+          ( allGASInTree
+              ( \ [var|gasHfork|] ->
+                  -- Extract the GovAction from the GovActionID and match against the constructor HardForkInitiation
+                  isCon @"HardForkInitiation" (pProcGovAction_ . gasProposalProcedure_ $ gasHfork)
+              )
+          )
       , allGASAndChildInTree hardForkTree $ \gas gas' ->
           [ onHardFork gas $ \_ pv ->
               onHardFork gas' $ \_ pv' ->
@@ -90,46 +118,60 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy} =
         wellFormedChildren committeeTree
       , -- TODO: it would be nice to have a trick like `isCon` that can
         -- do disjunction without having to write down all the cases.
-        allGASInTree committeeTree $ \gas ->
-          caseOn
-            (pProcGovAction_ . gasProposalProcedure_ $ gas)
-            (branch $ \_ _ _ -> False)
-            (branch $ \_ _ -> False)
-            (branch $ \_ _ -> False)
-            (branch $ \_ -> True)
-            -- UpdateCommittee
-            ( branch $ \_ _ added _ ->
-                forAll (rng_ added) $ \epoch ->
-                  lit geEpoch <. epoch
-            )
-            (branch $ \_ _ -> False)
-            (branch $ \_ -> False)
+        satisfies
+          committeeTree
+          ( allGASInTree
+              ( \ [var|gasComm|] ->
+                  -- Extract the GovAction from the GovActionID and case on it
+                  caseOn
+                    (pProcGovAction_ . gasProposalProcedure_ $ gasComm)
+                    (branch $ \_ _ _ -> False)
+                    (branch $ \_ _ -> False)
+                    (branch $ \_ _ -> False)
+                    (branch $ \_ -> True)
+                    -- UpdateCommittee - We are only interested in this case
+                    ( branch $ \_ _ added _ ->
+                        forAll (rng_ added) $ \epoch ->
+                          lit geEpoch <. epoch
+                    )
+                    (branch $ \_ _ -> False)
+                    (branch $ \_ -> False)
+              )
+          )
       , forAll (snd_ committeeTree) (genHint treeGenHint)
       , genHint listSizeHint (snd_ committeeTree)
       , -- Constitution
         wellFormedChildren constitutionTree
-      , allGASInTree constitutionTree $ \gas ->
-          isCon @"NewConstitution" (pProcGovAction_ . gasProposalProcedure_ $ gas)
+      , satisfies
+          constitutionTree
+          ( allGASInTree -- Extract the GovAction from the GovActionID and match against the constructor NewConstitution
+              ( \ [var|gasNewConst|] -> isCon @"NewConstitution" (pProcGovAction_ . gasProposalProcedure_ $ gasNewConst)
+              )
+          )
       , forAll (snd_ constitutionTree) (genHint treeGenHint)
       , genHint listSizeHint (snd_ constitutionTree)
-      , -- Withdrawals and info
-        forAll unorderedProposals $ \gas ->
+      , -- TreasuryWithdrawals and InfoAction, Recall,  unorderedProposals :: [GAS]
+        -- for each GAS in the list, match against the constructor
+        forAll unorderedProposals $ \ [var|gasOther|] ->
           caseOn
-            (pProcGovAction_ . gasProposalProcedure_ $ gas)
-            (branch $ \_ _ _ -> False)
-            (branch $ \_ _ -> False)
+            (pProcGovAction_ . gasProposalProcedure_ $ gasOther)
+            (branch $ \_ _ _ -> False) -- Parameter Change
+            (branch $ \_ _ -> False) -- HardForkInitiation
             -- Treasury Withdrawal
-            ( branch $ \withdrawMap policy ->
-                [ forAll (dom_ withdrawMap) $ \rewAcnt ->
-                    match rewAcnt $ \net _ -> net ==. lit Testnet
-                , assert $ policy ==. lit gePPolicy
-                ]
+            ( branch $ \ [var|withdrawMap|] [var|policy|] ->
+                Explain (pure "TreasuryWithdrawal fails") $
+                  Block
+                    [ dependsOn gasOther withdrawMap
+                    , forAll (dom_ withdrawMap) $ \ [var|rewAcnt|] ->
+                        match rewAcnt $ \ [var|network|] _ -> network ==. lit Testnet
+                    , assert $ policy ==. lit gePPolicy
+                    ]
             )
-            (branch $ \_ -> False)
-            (branch $ \_ _ _ _ -> False)
-            (branch $ \_ _ -> False)
+            (branch $ \_ -> False) -- NoConfidence
+            (branch $ \_ _ _ _ -> False) -- Update Committee
+            (branch $ \_ _ -> False) -- NewConstitution
             -- Info
-            (branch $ \_ -> True)
+            (branch $ \_ -> True) -- InfoAction
       , genHint listSizeHint unorderedProposals
       ]
   where
@@ -138,12 +180,11 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy} =
 
 allGASInTree ::
   (IsConwayUniv fn, IsPred p fn) =>
-  Term fn ProposalTree ->
   (Term fn (GovActionState (ConwayEra StandardCrypto)) -> p) ->
-  Pred fn
-allGASInTree t k =
-  forAll (snd_ t) $ \t' ->
-    forAll' t' $ \gas _ ->
+  Specification fn (ProposalTree)
+allGASInTree k = constrained $ \ [var|proposalTree|] ->
+  forAll (snd_ proposalTree) $ \ [var|subtree|] ->
+    forAll' subtree $ \ [var|gas|] _ ->
       k gas
 
 allGASAndChildInTree ::
@@ -155,9 +196,9 @@ allGASAndChildInTree ::
   ) ->
   Pred fn
 allGASAndChildInTree t k =
-  forAll (snd_ t) $ \t' ->
-    forAll' t' $ \gas cs ->
-      forAll cs $ \t'' ->
+  forAll (snd_ t) $ \ [var|subtree|] ->
+    forAll' subtree $ \ [var|gas|] [var|cs|] ->
+      forAll cs $ \ [var|t''|] ->
         k gas (rootLabel_ t'')
 
 wellFormedChildren ::
@@ -166,7 +207,9 @@ wellFormedChildren ::
   Pred fn
 wellFormedChildren rootAndTrees =
   match rootAndTrees $ \root trees ->
-    [ forAll trees $ \t ->
+    [ dependsOn rootAndTrees root
+    , dependsOn rootAndTrees trees
+    , forAll trees $ \t ->
         [ -- Every node just below the root has the root as its parent
           withPrevActId (rootLabel_ t) (assert . (==. root))
         , -- Every node's children have the id of the node as its parent
@@ -187,52 +230,58 @@ withPrevActId ::
   (Term fn (StrictMaybe (GovActionId StandardCrypto)) -> Pred fn) ->
   Pred fn
 withPrevActId gas k =
-  caseOn
-    (pProcGovAction_ . gasProposalProcedure_ $ gas)
-    ( branch $ \mPrevActionId _ _ ->
-        caseOn
-          mPrevActionId
-          (branch $ \_ -> k cSNothing_)
-          (branch $ \i -> k (cSJust_ $ toGeneric_ i))
-    )
-    ( branch $ \mPrevActionId _ ->
-        caseOn
-          mPrevActionId
-          (branch $ \_ -> k cSNothing_)
-          (branch $ \i -> k (cSJust_ $ toGeneric_ i))
-    )
-    (branch $ \_ _ -> True)
-    -- NoConfidence
-    --   !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
-    ( branch $ \mPrevActionId ->
-        caseOn
-          mPrevActionId
-          (branch $ \_ -> k cSNothing_)
-          (branch $ \i -> k (cSJust_ $ toGeneric_ i))
-    )
-    -- UpdateCommittee
-    --   !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
-    --   !(Set (Credential 'ColdCommitteeRole (EraCrypto era)))
-    --   !(Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
-    --   !UnitInterval
-    ( branch $ \mPrevActionId _ _ _ ->
-        caseOn
-          mPrevActionId
-          (branch $ \_ -> k cSNothing_)
-          (branch $ \i -> k (cSJust_ $ toGeneric_ i))
-    )
-    -- NewConstitution
-    --  !(StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
-    --  !(Constitution era)
-    ( branch $ \mPrevActionId _ ->
-        caseOn
-          mPrevActionId
-          (branch $ \_ -> k cSNothing_)
-          (branch $ \i -> k (cSJust_ $ toGeneric_ i))
-    )
-    -- InfoAction
-    (branch $ \_ -> True)
-
+  Block
+    [ match (gasProposalProcedure_ gas) $ \_deposit [var|retAddr|] _action _anchor ->
+        match retAddr $ \ [var|net|] _ -> [dependsOn gas net, assert $ net ==. lit Testnet]
+    , caseOn
+        (pProcGovAction_ . gasProposalProcedure_ $ gas)
+        -- ParameterChange
+        ( branch $ \mPrevActionId _ _ ->
+            caseOn
+              mPrevActionId
+              (branch $ \_ -> k cSNothing_)
+              (branch $ \i -> k (cSJust_ $ toGeneric_ i))
+        )
+        -- HardForkInitiation
+        ( branch $ \mPrevActionId _ ->
+            caseOn
+              mPrevActionId
+              (branch $ \_ -> k cSNothing_)
+              (branch $ \i -> k (cSJust_ $ toGeneric_ i))
+        )
+        -- TreasuryWithdrawals
+        (branch $ \_ _ -> True)
+        -- NoConfidence
+        --   !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
+        ( branch $ \mPrevActionId ->
+            caseOn
+              mPrevActionId
+              (branch $ \_ -> k cSNothing_)
+              (branch $ \i -> k (cSJust_ $ toGeneric_ i))
+        )
+        -- UpdateCommittee
+        --   !(StrictMaybe (PrevGovActionId 'CommitteePurpose (EraCrypto era)))
+        --   !(Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+        --   !(Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+        --   !UnitInterval
+        ( branch $ \mPrevActionId _ _ _ ->
+            caseOn
+              mPrevActionId
+              (branch $ \_ -> k cSNothing_)
+              (branch $ \i -> k (cSJust_ $ toGeneric_ i))
+        )
+        -- NewConstitution
+        --  !(StrictMaybe (PrevGovActionId 'ConstitutionPurpose (EraCrypto era)))
+        --  !(Constitution era)
+        ( branch $ \mPrevActionId _ ->
+            caseOn
+              mPrevActionId
+              (branch $ \_ -> k cSNothing_)
+              (branch $ \i -> k (cSJust_ $ toGeneric_ i))
+        )
+        -- InfoAction
+        (branch $ \_ -> True)
+    ]
 onHardFork ::
   (IsConwayUniv fn, IsPred p fn) =>
   Term fn (GovActionState (ConwayEra StandardCrypto)) ->
@@ -265,39 +314,34 @@ govProceduresSpec ge@GovEnv {..} ps =
         actions isDRepVotingAllowed
       stakepoolVotableActionIds =
         actions isStakePoolVotingAllowed
-   in constrained $ \ [var|govSignal|] ->
-        match govSignal $ \ [var|votingProcs|] [var|proposalProcs|] _certificates ->
-          [ match votingProcs $ \ [var|votingProcsMap|] ->
-              forAll votingProcsMap $ \ [var|kvp|] ->
-                match kvp $ \ [var|voter|] [var|mapActVote|] ->
-                  [ -- if we solve 'voter' before 'mapActVote', we risk the possibility
-                    -- that none of the cases will match
-                    dependsOn mapActVote voter
-                  , (caseOn voter)
-                      -- CommitteeVoter
-                      ( branch $ \ [var| committeeHotCred|] ->
-                          [ subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
-                          , member_ committeeHotCred $ lit knownCommitteeAuthorizations
-                          ]
-                      )
-                      --  DRepVoter
-                      ( branch $ \ [var|drepCred|] ->
-                          [ subset_ (dom_ mapActVote) (lit $ Set.fromList drepVotableActionIds)
-                          , member_ drepCred $ lit knownDReps
-                          ]
-                      )
-                      -- StakePoolVoter
-                      ( branch $ \ [var|poolKeyHash|] ->
-                          [ subset_ (dom_ mapActVote) (lit $ Set.fromList stakepoolVotableActionIds)
-                          , member_ poolKeyHash $ lit knownStakePools
-                          ]
-                      )
-                  ]
-          , forAll proposalProcs $ \ [var|proc|] ->
-              match proc $ \ [var|deposit|] [var|returnAddr|] [var|govAction|] _ ->
+   in constrained $ \govSignal ->
+        match govSignal $ \votingProcs proposalProcs _certificates ->
+          [ match votingProcs $ \votingProcsMap ->
+              forAll votingProcsMap $ \kvp ->
+                match kvp $ \voter mapActVote ->
+                  (caseOn voter)
+                    ( branch $ \committeeHotCred ->
+                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
+                        , member_ committeeHotCred $ lit knownCommitteeAuthorizations
+                        ]
+                    )
+                    ( branch $ \drepCred ->
+                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList drepVotableActionIds)
+                        , member_ drepCred $ lit knownDReps
+                        ]
+                    )
+                    ( branch $ \poolKeyHash ->
+                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList stakepoolVotableActionIds)
+                        , member_ poolKeyHash $ lit knownStakePools
+                        ]
+                    )
+          , forAll proposalProcs $ \proc ->
+              match proc $ \deposit returnAddr govAction _ ->
                 [ assert $ deposit ==. lit (gePParams ^. ppGovActionDepositL)
-                , match returnAddr $ \ [var|net|] _cred ->
-                    net ==. lit Testnet
+                , match returnAddr $ \net _cred ->
+                    [ dependsOn proc net
+                    , assert $ net ==. lit Testnet
+                    ]
                 , wfGovAction ge ps govAction
                 ]
           ]
@@ -314,16 +358,17 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams} ps govAction =
     -- ParameterChange
     ( branch $ \mPrevActionId ppUpdate policy ->
         [ assert $ mPrevActionId `elem_` lit ppupIds
-        , wfPParamsUpdate ppUpdate
+        , assert $ ppUpdate /=. lit emptyPParamsUpdate
+        , satisfies ppUpdate wfPParamsUpdateSpec
         , assert $ policy ==. lit gePPolicy
         ]
     )
     -- HardForkInitiation
-    ( branch $ \mPrevActionId protVer ->
+    ( branch $ \ [var|mPrevActionId|] [var|protVer|] ->
         [ assert $ mPrevActionId `elem_` lit hardForkIds
-        , match protVer $ \majorVersion minorVersion ->
-            reify' mPrevActionId hfIdMajorVer $ \currentMajorVersion mSuccMajorVersion ->
-              reify mPrevActionId hfIdMinorVer $ \currentMinorVersion ->
+        , match protVer $ \ [var|majorVersion|] [var|minorVersion|] ->
+            reify mPrevActionId hfIdMajorVer $ \ [var|pvpair|] -> match pvpair $ \ [var|currentMajorVersion|] [var|mSuccMajorVersion|] ->
+              reify mPrevActionId hfIdMinorVer $ \ [var|currentMinorVersion|] ->
                 caseOn
                   mSuccMajorVersion
                   ( branch $ \_ ->
@@ -331,8 +376,8 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams} ps govAction =
                       , minorVersion ==. currentMinorVersion + 1
                       ]
                   )
-                  ( branch $ \majorVersion' ->
-                      [ assert $ majorVersion `member_` (singleton_ currentMajorVersion <> singleton_ majorVersion')
+                  ( branch $ \ [var|majorVersionPrime|] ->
+                      [ assert $ majorVersion `member_` (singleton_ currentMajorVersion <> singleton_ majorVersionPrime)
                       , ifElse
                           (currentMajorVersion <. majorVersion)
                           (minorVersion ==. 0)
@@ -419,56 +464,58 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams} ps govAction =
 
     actions = toList $ proposalsActions ps
 
-wfPParamsUpdate ::
-  IsConwayUniv fn =>
-  Term fn (PParamsUpdate (ConwayEra StandardCrypto)) ->
-  Pred fn
-wfPParamsUpdate ppu =
-  toPred
-    [ assert $ ppu /=. lit emptyPParamsUpdate
-    , match ppu $
-        \_cppMinFeeA
-         _cppMinFeeB
-         cppMaxBBSize
-         cppMaxTxSize
-         cppMaxBHSize
-         _cppKeyDeposit
-         cppPoolDeposit
-         _cppEMax
-         _cppNOpt
-         _cppA0
-         _cppRho
-         _cppTau
-         _cppProtocolVersion
-         _cppMinPoolCost
-         _cppCoinsPerUTxOByte
-         cppCostModels
-         _cppPrices
-         _cppMaxTxExUnits
-         _cppMaxBlockExUnits
-         cppMaxValSize
-         cppCollateralPercentage
-         _cppMaxCollateralInputs
-         _cppPoolVotingThresholds
-         _cppDRepVotingThresholds
-         _cppCommitteeMinSize
-         cppCommitteeMaxTermLength
-         cppGovActionLifetime
-         cppGovActionDeposit
-         cppDRepDeposit
-         _cppDRepActivity
-         _cppMinFeeRefScriptCoinsPerByte ->
-            [ cppMaxBBSize /=. lit (THKD $ SJust 0)
-            , cppMaxTxSize /=. lit (THKD $ SJust 0)
-            , cppMaxBHSize /=. lit (THKD $ SJust 0)
-            , cppMaxValSize /=. lit (THKD $ SJust 0)
-            , cppCollateralPercentage /=. lit (THKD $ SJust 0)
-            , cppCommitteeMaxTermLength /=. lit (THKD $ SJust $ EpochInterval 0)
-            , cppGovActionLifetime /=. lit (THKD $ SJust $ EpochInterval 0)
-            , cppPoolDeposit /=. lit (THKD $ SJust mempty)
-            , cppGovActionDeposit /=. lit (THKD $ SJust mempty)
-            , cppDRepDeposit /=. lit (THKD $ SJust mempty)
-            , cppCostModels ==. lit (THKD SNothing) -- NOTE: this is because the cost
-            -- model generator is way too slow
-            ]
-    ]
+wfPParamsUpdateSpec :: forall fn. IsConwayUniv fn => Specification fn (PParamsUpdate Conway)
+wfPParamsUpdateSpec =
+  constrained' $ \ppupdate ->
+    -- Note that ppupdate :: SimplePPUpdate
+    match ppupdate $
+      \_minFeeA
+       _minFeeB
+       maxBBSize
+       maxTxSize
+       maxBHSize
+       _keyDeposit
+       poolDeposit
+       _eMax
+       _nOpt
+       _a0
+       _rho
+       _tau
+       _decentral
+       _protocolVersion
+       _minUTxOValue
+       _minPoolCost
+       -- Alonzo
+       _coinsPerUTxOWord
+       costModels
+       _prices
+       _maxTxExUnits
+       _maBlockExUnits
+       maxValSize
+       collateralPercentage
+       _MaxCollateralInputs
+       -- Babbage
+       _coinsPerUTxOByte
+       -- Conway
+       _poolVotingThresholds
+       _drepVotingThresholds
+       _committeeMinSize
+       committeeMaxTermLength
+       govActionLifetime
+       govActionDeposit
+       dRepDeposit
+       _drepActivity
+       _minFeeRefScriptCostPerByte ->
+          [ maxBBSize /=. lit (SJust 0)
+          , maxTxSize /=. lit (SJust 0)
+          , maxBHSize /=. lit (SJust 0)
+          , maxValSize /=. lit (SJust 0)
+          , collateralPercentage /=. lit (SJust 0)
+          , committeeMaxTermLength /=. lit (SJust $ EpochInterval 0)
+          , govActionLifetime /=. lit (SJust $ EpochInterval 0)
+          , poolDeposit /=. lit (SJust mempty)
+          , govActionDeposit /=. lit (SJust mempty)
+          , dRepDeposit /=. lit (SJust mempty)
+          , costModels ==. lit (SNothing) -- NOTE: this is because the cost
+          -- model generator is way too slow
+          ]
