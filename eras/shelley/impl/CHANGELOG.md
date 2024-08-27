@@ -1,14 +1,13 @@
 # Version history for `cardano-ledger-shelley`
 
-## 1.13.0.1
-
-*
-
-## 1.13.0.0
+## 1.13.1.0
 
 * Added `EncCBOR` instances for:
   * `UtxoEnv`
   * `CertEnv`
+
+## 1.13.0.0
+
 * Add `translateToShelleyLedgerStateFromUtxo`
 * Added `wireSizeShelleyTxF`
 
