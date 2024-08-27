@@ -243,6 +243,7 @@ library
         contra-tracer,
         cryptonite,
         Cabal-syntax,
+        deepseq,
         digest,
         directory,
         filepath,
