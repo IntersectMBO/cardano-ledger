@@ -3,7 +3,6 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-unused-binds #-}
 
 module Test.Cardano.Ledger.Constrained.Rewrite (
   rewrite,
@@ -89,15 +88,15 @@ csumeq (SumList x) (SumList y) = cteq x y
 csumeq _ _ = False
 
 -- | Conservative (and unsound for Constr and Invert) Target equality
-ctareq :: Era era => RootTarget era r t -> RootTarget era r t -> Bool
-ctareq (Constr x _) (Constr y _) = x == y
-ctareq (Invert x _ _) (Invert y _ _) = x == y
-ctareq (Simple x) (Simple y) = cteq x y
-ctareq (x :$ (Simple xs)) (y :$ (Simple ys)) =
+_ctareq :: Era era => RootTarget era r t -> RootTarget era r t -> Bool
+_ctareq (Constr x _) (Constr y _) = x == y
+_ctareq (Invert x _ _) (Invert y _ _) = x == y
+_ctareq (Simple x) (Simple y) = cteq x y
+_ctareq (x :$ (Simple xs)) (y :$ (Simple ys)) =
   case testEql (termRep xs) (termRep ys) of
-    Just Refl -> ctareq x y && cteq xs ys
+    Just Refl -> _ctareq x y && cteq xs ys
     Nothing -> False
-ctareq _ _ = False
+_ctareq _ _ = False
 
 -- | Conservative Term equality
 cteq :: Era era => Term era t -> Term era t -> Bool
@@ -137,7 +136,7 @@ cpeq (SubMap x xs) (SubMap y ys) = typedEq x y && typedEq xs ys
 cpeq (NotMember x xs) (NotMember y ys) = typedEq x y && typedEq xs ys
 {- TODO FIX ME
 cpeq (x :<-: xs) (y :<-: ys) = case testEql (termRep x) (termRep y) of
-  Just Refl -> typedEq x y && ctareq xs ys
+  Just Refl -> typedEq x y && _ctareq xs ys
   Nothing -> False
 -}
 cpeq x y = sumsEq x y
@@ -297,11 +296,11 @@ freshPair m0 (tar, ps) = (m1, subitems, target2, ps2)
     ps2 = map (substPred subst) ps
 
 -- | Used to rename targets and preds, where they are embeded in a Triple, where the first component is the frequency
-freshTriples ::
+_freshTriples ::
   ((Int, SubItems era), [(Int, RootTarget era r t, [Pred era])]) ->
   (Int, RootTarget era r t, [Pred era]) ->
   ((Int, SubItems era), [(Int, RootTarget era r t, [Pred era])])
-freshTriples (xx, ans) (i, tar, ps) = (yy, (i, target2, ps2) : ans)
+_freshTriples (xx, ans) (i, tar, ps) = (yy, (i, target2, ps2) : ans)
   where
     yy@(_, subitems) = fresh xx tar
     subst = itemsToSubst subitems
@@ -354,8 +353,8 @@ nUniqueFromM n m
       Set.toList
         <$> setSized ["from Choose", "nUniqueFromM " ++ show n ++ " " ++ show m] n (choose (0, m))
 
-pickNunique :: Int -> [a] -> Gen [a]
-pickNunique n xs = do
+_pickNunique :: Int -> [a] -> Gen [a]
+_pickNunique n xs = do
   indexes <- nUniqueFromM n (length xs - 1)
   pure [xs !! i | i <- indexes]
 
@@ -418,7 +417,7 @@ List w [w1,w2]
 rewritePred m0 (ListWhere (Lit SizeR sz) (Var v) tar ps) = do
   count <- genFromSize sz
   (ps1, m1) <- pure (ps, m0) -- removeExpandablePred ([], m0) ps
-  let ((m2, subb), ps3) = List.foldl' freshPairs ((m1, []), []) (take count (repeat (tar, ps1)))
+  let ((m2, _subb), ps3) = List.foldl' freshPairs ((m1, []), []) (take count (repeat (tar, ps1)))
       (vs, m3) = freshVars2 m2 count v -- [v.1, v.2, v.3 ...]
       renamedPred = map snd ps3
       renamedTargets = map fst ps3
@@ -622,7 +621,6 @@ mkDependGraph count prev prevNames (n : more) badchoices cs =
           )
   where
     !defined = HashSet.insert n prevNames
-    (poss, notposs) = partitionE okE cs
     okE :: Pred era -> Either ([Name era], Pred era) (Pred era)
     okE p@(SumSplit _ t _ ns) =
       let rhsNames = List.foldl' varsOfSum HashSet.empty ns
@@ -642,11 +640,11 @@ partitionE f (x : xs) = case (f x, partitionE f xs) of
   (Left b, (bs, as)) -> (b : bs, as)
   (Right a, (bs, as)) -> (bs, a : as)
 
-firstE :: (a -> Either b a) -> [a] -> (Maybe b, [a])
-firstE _ [] = (Nothing, [])
-firstE f (x : xs) = case f x of
+_firstE :: (a -> Either b a) -> [a] -> (Maybe b, [a])
+_firstE _ [] = (Nothing, [])
+_firstE f (x : xs) = case f x of
   Left b -> (Just b, xs)
-  Right a -> case firstE f xs of
+  Right a -> case _firstE f xs of
     (Nothing, as) -> (Nothing, a : as)
     (Just b, as) -> (Just b, a : as)
 
