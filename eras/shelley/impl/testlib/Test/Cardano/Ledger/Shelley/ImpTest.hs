@@ -71,7 +71,9 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impLogToExpr,
   runImpRule,
   tryRunImpRule,
+  delegateStake,
   registerRewardAccount,
+  registerStakeCredential,
   getRewardAccountFor,
   lookupReward,
   registerPool,
@@ -1587,6 +1589,33 @@ getRewardAccountFor stakingC = do
   networkId <- use (impGlobalsL . to networkId)
   pure $ RewardAccount networkId stakingC
 
+registerStakeCredential ::
+  forall era.
+  ( HasCallStack
+  , ShelleyEraImp era
+  ) =>
+  Credential 'Staking (EraCrypto era) ->
+  ImpTestM era (RewardAccount (EraCrypto era))
+registerStakeCredential cred = do
+  submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText cred)) $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.fromList [RegTxCert @era cred]
+  networkId <- use (impGlobalsL . to networkId)
+  pure $ RewardAccount networkId cred
+
+delegateStake ::
+  ShelleyEraImp era =>
+  Credential 'Staking (EraCrypto era) ->
+  KeyHash 'StakePool (EraCrypto era) ->
+  ImpTestM era ()
+delegateStake cred poolKH = do
+  submitTxAnn_ ("Delegate Staking Credential: " <> T.unpack (credToText cred)) $
+    mkBasicTx mkBasicTxBody
+      & bodyTxL . certsTxBodyL
+        .~ SSeq.fromList
+          [DelegStakeTxCert cred poolKH]
+
 registerRewardAccount ::
   forall era.
   ( HasCallStack
@@ -1595,21 +1624,7 @@ registerRewardAccount ::
   ImpTestM era (RewardAccount (EraCrypto era))
 registerRewardAccount = do
   khDelegator <- freshKeyHash
-  kpDelegator <- lookupKeyPair khDelegator
-  (_, kpSpending) <- freshKeyPair
-  let stakingCredential = KeyHashObj khDelegator
-  submitTxAnn_ ("Register Reward Account: " <> T.unpack (credToText stakingCredential)) $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . outputsTxBodyL
-        .~ SSeq.fromList
-          [ mkBasicTxOut
-              (mkAddr (kpSpending, kpDelegator))
-              (inject $ Coin 10_000_000)
-          ]
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList [RegTxCert @era stakingCredential]
-  networkId <- use (impGlobalsL . to networkId)
-  pure $ RewardAccount networkId stakingCredential
+  registerStakeCredential (KeyHashObj khDelegator)
 
 lookupReward :: HasCallStack => Credential 'Staking (EraCrypto era) -> ImpTestM era Coin
 lookupReward stakingCredential = do

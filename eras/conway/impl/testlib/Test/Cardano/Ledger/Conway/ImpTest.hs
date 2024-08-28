@@ -43,7 +43,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   unRegisterDRep,
   updateDRep,
   delegateToDRep,
-  redelegateDRep,
   setupSingleDRep,
   setupDRepWithoutStake,
   setupPoolWithStake,
@@ -216,7 +215,7 @@ import Lens.Micro
 import Test.Cardano.Ledger.Babbage.ImpTest
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
-import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
+import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkCred)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModel)
@@ -449,7 +448,7 @@ setupDRepWithoutStake = do
           ]
   pure (drepKH, delegatorKH)
 
--- | Registers a new DRep and delegates the specified amount of ADA to it.
+-- | Registers a new DRep, registers its stake credentials and delegates the specified amount of ADA to it.
 setupSingleDRep ::
   ConwayEraImp era =>
   Integer ->
@@ -461,54 +460,47 @@ setupSingleDRep ::
     )
 setupSingleDRep stake = do
   drepKH <- registerDRep
-  (stakingCred, spendingKh) <- delegateToDRep stake (DRepCredential (KeyHashObj drepKH))
-  pure (KeyHashObj drepKH, stakingCred, spendingKh)
+  delegatorKH <- freshKeyHash
+  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+  let tx =
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ SSeq.fromList
+              [ RegDepositTxCert
+                  (KeyHashObj delegatorKH)
+                  deposit
+              ]
+  submitTx_ tx
+  spendingKP <-
+    delegateToDRep (KeyHashObj delegatorKH) (Coin stake) (DRepCredential (KeyHashObj drepKH))
+  pure (KeyHashObj drepKH, KeyHashObj delegatorKH, spendingKP)
 
 delegateToDRep ::
   ConwayEraImp era =>
-  Integer ->
+  Credential 'Staking (EraCrypto era) ->
+  Coin ->
   DRep (EraCrypto era) ->
   ImpTestM
     era
-    ( Credential 'Staking (EraCrypto era)
-    , KeyPair 'Payment (EraCrypto era)
-    )
-delegateToDRep stake dRep = do
-  (delegatorKH, delegatorKP) <- freshKeyPair
+    (KeyPair 'Payment (EraCrypto era))
+delegateToDRep cred stake dRep = do
   (_, spendingKP) <- freshKeyPair
-  deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+  let addr = Addr Testnet (mkCred spendingKP) (StakeRefBase cred)
   submitTxAnn_ "Delegate to DRep" $
     mkBasicTx mkBasicTxBody
       & bodyTxL . outputsTxBodyL
         .~ SSeq.singleton
           ( mkBasicTxOut
-              (mkAddr (spendingKP, delegatorKP))
-              (inject $ Coin stake)
+              addr
+              (inject stake)
           )
       & bodyTxL . certsTxBodyL
         .~ SSeq.fromList
-          [ RegDepositDelegTxCert
-              (KeyHashObj delegatorKH)
+          [ DelegTxCert
+              cred
               (DelegVote dRep)
-              deposit
           ]
-  pure (KeyHashObj delegatorKH, spendingKP)
-
-redelegateDRep ::
-  ConwayEraImp era =>
-  Credential 'DRepRole (EraCrypto era) ->
-  DRep (EraCrypto era) ->
-  Credential 'Staking (EraCrypto era) ->
-  ImpTestM era ()
-redelegateDRep dRepCred newDRep stakingCred = do
-  drepState <- lookupDRepState dRepCred
-  submitTx_ $
-    mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL
-        .~ SSeq.fromList
-          [ UnRegDRepTxCert dRepCred (drepState ^. drepDepositL)
-          , DelegTxCert stakingCred (DelegVote newDRep)
-          ]
+  pure spendingKP
 
 lookupDRepState ::
   HasCallStack =>
@@ -774,7 +766,7 @@ submitAndExpireProposalToMakeReward stakingC = do
       ProposalProcedure
         { pProcDeposit = deposit
         , pProcReturnAddr = rewardAccount
-        , pProcGovAction = TreasuryWithdrawals mempty def
+        , pProcGovAction = InfoAction
         , pProcAnchor = def
         }
   passNEpochs $ 2 + fromIntegral lifetime

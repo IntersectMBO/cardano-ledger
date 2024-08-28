@@ -13,6 +13,12 @@
   * `reCurrentEpochL`
   * `reCommitteeStateL`
 
+### `testlib`
+
+  * Removed `redelegateDRep` from `ImpTest`
+  * Changed signature of `delegateToDRep` to take a `Credential` parameter
+
+
 ## 1.16.1.0
 
 * Replace GOVCERT `updateDRepExpiry` with `computeDRepExpiry`
