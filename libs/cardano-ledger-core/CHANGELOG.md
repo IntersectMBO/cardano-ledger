@@ -21,6 +21,11 @@
 * Add a function `expectRawEqual`
 * Add `assertColorFailure`
 
+## 1.14.1.0
+
+* Add Test.Cardano.Ledger.Core.Binary.CDDL containing core CDDL definitions
+  shared across eras.
+
 ## 1.14.0.0
 
 * Add `EncCBOR` instance for `PoolCert`
