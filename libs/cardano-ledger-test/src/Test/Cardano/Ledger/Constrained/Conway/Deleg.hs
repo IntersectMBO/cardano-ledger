@@ -74,7 +74,11 @@ delegCertSpec (ConwayDelegEnv pp pools) ds =
           -- that each branch is choosen with similar frequency
 
           -- ConwayRegCert !(StakeCredential c) !(StrictMaybe Coin)
-          (branchW 2 $ \_ mc -> mc ==. lit (SJust (pp ^. ppKeyDepositL)))
+          ( branchW 2 $ \sc mc ->
+              [ assert $ not_ (member_ sc (lit (Map.keysSet rewardMap)))
+              , assert $ mc ==. lit (SJust (pp ^. ppKeyDepositL))
+              ]
+          )
           -- ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
           ( branchW 2 $ \sc mc ->
               [ -- You can only unregister things with 0 reward
