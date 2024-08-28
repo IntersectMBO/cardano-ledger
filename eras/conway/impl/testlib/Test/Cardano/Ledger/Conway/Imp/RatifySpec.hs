@@ -744,7 +744,7 @@ votingSpec =
       describe "Predefined DReps" $ do
         it "acceptedRatio with default DReps" $ do
           (drep1, _, committeeGovId) <- electBasicCommittee
-          (drep2, drep2Staking, _) <- setupSingleDRep 1_000_000
+          (_, drep2Staking, _) <- setupSingleDRep 1_000_000
 
           paramChangeGovId <- submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
           submitYesVote_ (DRepVoter drep1) paramChangeGovId
@@ -752,12 +752,14 @@ votingSpec =
           passEpoch
           calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 2
 
-          _ <- delegateToDRep 1_000_000 DRepAlwaysNoConfidence
+          kh <- freshKeyHash
+          _ <- registerStakeCredential (KeyHashObj kh)
+          _ <- delegateToDRep (KeyHashObj kh) (Coin 1_000_000) DRepAlwaysNoConfidence
           passEpoch
           -- AlwaysNoConfidence vote acts like a 'No' vote for actions other than NoConfidence
           calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 3
 
-          redelegateDRep drep2 DRepAlwaysAbstain drep2Staking
+          _ <- delegateToDRep drep2Staking zero DRepAlwaysAbstain
           passEpoch
           -- AlwaysAbstain vote acts like 'Abstain' vote
           calculateDRepAcceptedRatio paramChangeGovId `shouldReturn` 1 % 2
@@ -796,14 +798,7 @@ votingSpec =
           passEpoch
           isDRepAccepted noConfidenceGovId `shouldReturn` False
 
-          submitTxAnn_ "Redelegate to AlwaysNoConfidence " $
-            mkBasicTx mkBasicTxBody
-              & bodyTxL . certsTxBodyL
-                .~ SSeq.fromList
-                  [ DelegTxCert @era
-                      drep2Staking
-                      (DelegVote DRepAlwaysNoConfidence)
-                  ]
+          _ <- delegateToDRep drep2Staking zero DRepAlwaysNoConfidence
           passEpoch
           isDRepAccepted noConfidenceGovId `shouldReturn` True
           passEpoch
@@ -829,7 +824,7 @@ votingSpec =
           passEpoch
           getTreasury `shouldReturn` initialTreasury
 
-          redelegateDRep drep2 DRepAlwaysAbstain drep2Staking
+          _ <- delegateToDRep drep2Staking zero DRepAlwaysAbstain
 
           passEpoch
           -- the delegation turns the No vote into an Abstain, enough to pass the action
@@ -844,7 +839,9 @@ votingSpec =
               & ppDRepVotingThresholdsL . dvtMotionNoConfidenceL .~ 1 %! 1
               & ppCoinsPerUTxOByteL .~ CoinPerByte (Coin 1)
           (drep, _, committeeId) <- electBasicCommittee
-          _ <- delegateToDRep 300 DRepAlwaysNoConfidence
+          kh <- freshKeyHash
+          _ <- registerStakeCredential (KeyHashObj kh)
+          _ <- delegateToDRep (KeyHashObj kh) (Coin 300) DRepAlwaysNoConfidence
           noConfidence <- submitGovAction (NoConfidence (SJust committeeId))
           submitYesVote_ (DRepVoter drep) noConfidence
           logAcceptedRatio noConfidence
