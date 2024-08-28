@@ -48,6 +48,7 @@ minitraceEither ::
   ( ExecSpecRule fn s e
   , ExecState fn s e ~ State (EraRule s e)
   , PrettyA (Signal (EraRule s e))
+  , PrettyA (State (EraRule s e))
   ) =>
   WitRule s e ->
   Proxy fn ->
@@ -75,6 +76,7 @@ minitraceEither witrule Proxy n0 = do
                 pure
                   ( Left
                       ( [ "\nSIGNAL = " ++ show (prettyA signal2)
+                        , "\nState = " ++ show (prettyA state)
                         , "\nPredicateFailures"
                         ]
                           ++ map show (NE.toList ps)
@@ -93,6 +95,7 @@ minitrace ::
   ( ExecSpecRule fn s e
   , ExecState fn s e ~ State (EraRule s e)
   , PrettyA (Signal (EraRule s e))
+  , PrettyA (State (EraRule s e))
   ) =>
   WitRule s e ->
   Proxy fn ->
@@ -109,6 +112,7 @@ minitraceProp ::
   ( ExecSpecRule ConwayFn s e
   , ExecState ConwayFn s e ~ State (EraRule s e)
   , PrettyA (Signal (EraRule s e))
+  , PrettyA (State (EraRule s e))
   ) =>
   WitRule s e ->
   Proxy ConwayFn ->
