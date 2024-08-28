@@ -4,7 +4,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-unused-binds #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Test.Cardano.Ledger.Constrained.Rewrite (
   rewrite,
@@ -32,13 +31,7 @@ module Test.Cardano.Ledger.Constrained.Rewrite (
   rename,
 ) where
 
-import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway.Governance (GovAction (..))
-import Cardano.Ledger.Core (EraTxOut (..), TxOut, coinTxOutL)
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Era (Era (EraCrypto))
-import Cardano.Ledger.Val (Val (coin, modifyCoin))
+import Cardano.Ledger.Era (Era)
 import qualified Data.Array as A
 import Data.Foldable (toList)
 import Data.Graph (Graph, SCC (AcyclicSCC, CyclicSCC), Vertex, graphFromEdges, stronglyConnComp)
@@ -49,9 +42,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Void (Void)
-import qualified Debug.Trace as Debug
-import Lens.Micro (Lens', lens, (&), (.~), (^.))
 import Test.Cardano.Ledger.Constrained.Ast
 import Test.Cardano.Ledger.Constrained.Combinators (setSized)
 import Test.Cardano.Ledger.Constrained.Env (
@@ -61,17 +51,11 @@ import Test.Cardano.Ledger.Constrained.Env (
   Field (..),
   Name (..),
   V (..),
-  pV,
   sameName,
  )
 import Test.Cardano.Ledger.Constrained.Monad (HasConstraint (With), Typed (..), failT, monadTyped)
-import Test.Cardano.Ledger.Constrained.Size
-import Test.Cardano.Ledger.Constrained.Size (genFromSize)
+import Test.Cardano.Ledger.Constrained.Size (Size (SzExact), genFromSize)
 import Test.Cardano.Ledger.Constrained.TypeRep
-import Test.Cardano.Ledger.Constrained.Vars
-import Test.Cardano.Ledger.Generic.Fields
-import Test.Cardano.Ledger.Generic.Proof
-import Test.Cardano.Ledger.Generic.Updaters (newTxOut)
 import Test.QuickCheck
 import Type.Reflection (typeRep)
 
