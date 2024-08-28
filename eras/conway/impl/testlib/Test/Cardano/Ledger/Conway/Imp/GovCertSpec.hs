@@ -43,12 +43,14 @@ spec = do
     NonNegative n <- arbitrary
     passNEpochs n
     (drepCred, _, _) <- setupSingleDRep 1_000_000
+    (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
     cc <- KeyHashObj <$> freshKeyHash
     EpochInterval committeeMaxTermLength <-
       getsNES $ nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
     secondAddCCGaid <-
       submitUpdateCommittee Nothing mempty [(cc, EpochInterval (committeeMaxTermLength + 2))] (1 %! 2)
     submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
+    submitYesVote_ (StakePoolVoter spoC) secondAddCCGaid
     passNEpochs 2
     -- Due to longer than allowed lifetime we have to wait an extra epoch for this new action to be enacted
     expectCommitteeMemberAbsence cc
@@ -67,11 +69,13 @@ spec = do
   it "CC re-election" $
     do
       (drepCred, _, _) <- setupSingleDRep 1_000_000
+      (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
       passNEpochs 2
       -- Add a fresh CC
       cc <- KeyHashObj <$> freshKeyHash
       addCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 10)] (1 %! 2)
       submitYesVote_ (DRepVoter drepCred) addCCGaid
+      submitYesVote_ (StakePoolVoter spoC) addCCGaid
       passNEpochs 2
       -- Confirm that they are added
       expectCommitteeMemberPresence cc
@@ -84,6 +88,7 @@ spec = do
       -- Re-add the same CC
       reAddCCGaid <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
       submitYesVote_ (DRepVoter drepCred) reAddCCGaid
+      submitYesVote_ (StakePoolVoter spoC) reAddCCGaid
       passNEpochs 2
       -- Confirm that they are still resigned
       ccShouldBeResigned cc
@@ -91,12 +96,14 @@ spec = do
       removeCCGaid <-
         submitUpdateCommittee (Just (SJust $ GovPurposeId reAddCCGaid)) (Set.singleton cc) [] (1 %! 2)
       submitYesVote_ (DRepVoter drepCred) removeCCGaid
+      submitYesVote_ (StakePoolVoter spoC) removeCCGaid
       passNEpochs 2
       -- Confirm that they have been removed
       expectCommitteeMemberAbsence cc
       secondAddCCGaid <-
         submitUpdateCommittee Nothing mempty [(cc, EpochInterval 20)] (1 %! 2)
       submitYesVote_ (DRepVoter drepCred) secondAddCCGaid
+      submitYesVote_ (StakePoolVoter spoC) secondAddCCGaid
       passNEpochs 2
       -- Confirm that they have been added
       expectCommitteeMemberPresence cc

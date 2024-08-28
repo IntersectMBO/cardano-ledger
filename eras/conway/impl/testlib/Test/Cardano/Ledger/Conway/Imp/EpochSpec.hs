@@ -356,12 +356,14 @@ dRepVotingSpec =
 
       committeeHotCreds <- registerInitialCommittee
       (dRepCred, _, _) <- setupSingleDRep 1_000_000
+      (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
       passEpoch
       logRatificationChecks gid
       do
         isAccepted <- isDRepAccepted gid
         assertBool "Gov action should not be accepted" $ not isAccepted
       submitYesVote_ (DRepVoter dRepCred) gid
+      submitYesVote_ (StakePoolVoter spoC) gid
       submitYesVoteCCs_ committeeHotCreds gid
       logAcceptedRatio gid
       do
