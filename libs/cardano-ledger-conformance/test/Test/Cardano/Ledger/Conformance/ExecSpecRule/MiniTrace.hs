@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.MiniTrace where
 
@@ -44,50 +45,59 @@ import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
 
 -- | Generate either a list of signals, or a list of error messages
 minitraceEither ::
-  forall fn s e.
+  forall fn s e m.
   ( ExecSpecRule fn s e
   , ExecState fn s e ~ State (EraRule s e)
   , PrettyA (Signal (EraRule s e))
   , PrettyA (State (EraRule s e))
+  , MonadGenError m
   ) =>
   WitRule s e ->
   Proxy fn ->
   Int ->
-  Gen (Either [String] [Signal (EraRule s e)])
+  GenT m (Either [String] [Signal (EraRule s e)])
 minitraceEither witrule Proxy n0 = do
-  ctxt <- genExecContext @fn @s @e
-  env <- genFromSpec @fn (environmentSpec @fn @s @e ctxt)
+  ctxt <- pureGen $ genExecContext @fn @s @e
+  env <- genFromSpecT @fn (environmentSpec @fn @s @e ctxt)
   let env2 :: Environment (EraRule s e)
       env2 = inject env
-  !state0 <- genFromSpec @fn (stateSpec @fn @s @e ctxt env)
-  let go :: State (EraRule s e) -> Int -> Gen (Either [String] [Signal (EraRule s e)])
+  !state0 <- genFromSpecT @fn (stateSpec @fn @s @e ctxt env)
+  let go :: State (EraRule s e) -> Int -> GenT m (Either [String] [Signal (EraRule s e)])
       go _ 0 = pure (Right [])
       go state n = do
-        signal <- genFromSpec @fn (signalSpec @fn @s @e ctxt env state)
-        let signal2 :: Signal (EraRule s e)
-            signal2 = inject signal
-        goSTS
-          witrule
-          env2
-          state
-          signal2
-          ( \x -> case x of
-              Left ps ->
-                pure
-                  ( Left
-                      ( [ "\nSIGNAL = " ++ show (prettyA signal2)
-                        , "\nState = " ++ show (prettyA state)
-                        , "\nPredicateFailures"
-                        ]
-                          ++ map show (NE.toList ps)
+        let
+          goSignal nTries
+            | nTries <= 0 = undefined
+            | otherwise = do
+                mbySignal <- catchGenT $ genFromSpecT @fn (signalSpec @fn @s @e ctxt env state)
+                case mbySignal of
+                  Left _ -> goSignal $ nTries - 1
+                  Right signal -> do
+                    let signal2 :: Signal (EraRule s e)
+                        signal2 = inject signal
+                    goSTS
+                      witrule
+                      env2
+                      state
+                      signal2
+                      ( \case
+                          Left ps ->
+                            pure
+                              ( Left
+                                  ( [ "\nSIGNAL = " ++ show (prettyA signal2)
+                                    , "\nState = " ++ show (prettyA state)
+                                    , "\nPredicateFailures"
+                                    ]
+                                      ++ map show (NE.toList ps)
+                                  )
+                              )
+                          Right !state2 -> do
+                            ans <- go state2 (n - 1)
+                            case ans of
+                              Left xs -> pure (Left xs)
+                              Right more -> pure (Right (inject signal : more))
                       )
-                  )
-              Right !state2 -> do
-                ans <- go state2 (n - 1)
-                case ans of
-                  Left xs -> pure (Left xs)
-                  Right more -> pure (Right (inject signal : more))
-          )
+        goSignal 50
   go state0 n0
 
 minitrace ::
@@ -102,10 +112,11 @@ minitrace ::
   Int ->
   Gen [Signal (EraRule s e)]
 minitrace witrule Proxy n0 = do
-  ans <- minitraceEither @fn @s @e witrule Proxy n0
+  ans <- catchGenT $ minitraceEither @fn @s @e witrule Proxy n0
   case ans of
-    Left zs -> pure $ error (unlines zs)
-    Right zs -> pure zs
+    Left err -> error $ unlines err
+    Right (Left zs) -> pure $ error (unlines zs)
+    Right (Right zs) -> pure zs
 
 minitraceProp ::
   forall s e.
@@ -120,10 +131,11 @@ minitraceProp ::
   (Signal (EraRule s e) -> String) ->
   Gen Property
 minitraceProp witrule Proxy n0 namef = do
-  ans <- minitraceEither @ConwayFn @s @e witrule Proxy n0
+  ans <- catchGenT $ minitraceEither @ConwayFn @s @e witrule Proxy n0
   case ans of
-    Left zs -> pure $ counterexample (unlines zs) (property False)
-    Right sigs -> pure $ classifyFirst namef sigs $ property True
+    Left _ -> pure $ property Discard
+    Right (Left zs) -> pure $ counterexample (unlines zs) (property False)
+    Right (Right sigs) -> pure $ classifyFirst namef sigs $ property True
 
 -- =======================================================
 -- Classifying what is in a trace requires a function that
