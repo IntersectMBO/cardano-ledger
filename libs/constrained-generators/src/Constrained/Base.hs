@@ -1305,7 +1305,7 @@ isEmptyPlan (SolverPlan plan _) = null plan
 stepPlan :: MonadGenError m => SolverPlan fn -> GenT m (Env, SolverPlan fn)
 stepPlan plan@(SolverPlan [] _) = pure (mempty, plan)
 stepPlan (SolverPlan (SolverStage x ps spec : pl) gr) = do
-  spec' <- runGE $ explain1 (show $ "Computing specs for:" /> vsep' (map pretty ps)) $ do
+  spec' <- runGE $ explain1 (show ("Computing specs for variable " <> pretty x /> vsep' (map pretty ps))) $ do
     specs <- mapM (computeSpec x) ps
     pure $ fold specs
   val <- genFromSpecT (spec <> spec')
@@ -2802,7 +2802,8 @@ isEmptyNumSpec = \case
 
 knownUpperBound ::
   (TypeSpec fn a ~ NumSpec fn a, Ord a, Enum a, Num a, MaybeBounded a) =>
-  Specification fn a -> Maybe a
+  Specification fn a ->
+  Maybe a
 knownUpperBound TrueSpec = upperBound
 knownUpperBound (MemberSpec []) = Nothing
 knownUpperBound (MemberSpec as) = Just $ maximum as
@@ -2818,7 +2819,8 @@ knownUpperBound (TypeSpec (NumSpecInterval lo hi) cant) = upper (lo <|> lowerBou
 
 knownLowerBound ::
   (TypeSpec fn a ~ NumSpec fn a, Ord a, Enum a, Num a, MaybeBounded a) =>
-  Specification fn a -> Maybe a
+  Specification fn a ->
+  Maybe a
 knownLowerBound TrueSpec = lowerBound
 knownLowerBound (MemberSpec []) = Nothing
 knownLowerBound (MemberSpec as) = Just $ minimum as
@@ -3375,28 +3377,49 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
       ]
 
   genFromTypeSpec (SetSpec must e _)
-    | any (not . (`conformsToSpec` e)) must = genError1 "Failed to generate set: inconsistent spec" -- TODO: improve error message
+    | any (not . (`conformsToSpec` e)) must =
+        genError
+          ( NE.fromList
+              [ "Failed to generate set"
+              , "Some element in the must set does not conform to the elem specification"
+              , "Unconforming elements from the must set:"
+              , unlines (map (\x -> "  " ++ show x) (filter (not . (`conformsToSpec` e)) (Set.toList must)))
+              , "Element Specifcation"
+              , "  " ++ show e
+              ]
+          )
   genFromTypeSpec (SetSpec must elemS szSpec) = do
     let szSpec' = (szSpec <> geqSpec @fn (sizeOf must) <> maxSpec (cardinality elemS))
-    n <-
-      explain1 ("Choose a size for the Sets to be generated") $
+    count <-
+      explain1 ("Choose a size for the Set to be generated") $
         genFromSpecT szSpec'
-    explain (NE.fromList ["Chose size n = " ++ show n, "szSpec' = " ++ show szSpec']) $
-      go (n - sizeOf must) must
+    -- Each time around the 'go' loop, the set 's' grows, so it becomes harder to pick
+    -- a new element not already in 's'. if 'elemS' is a MemberSpec, there are only a finite number
+    -- elements that can be picked. So if 'count' is close to this finite number, we may need
+    -- some extra tries, to be sure we get enough successful tries to gather the needed 'count' elements.
+    let tries = case elemS of
+          MemberSpec xs ->
+            if 2 * fromInteger count > length xs
+              then max 100 (3 * fromInteger count)
+              else 100
+          _ -> 100
+    explain (NE.fromList ["Choose size count = " ++ show count, "szSpec' = " ++ show szSpec']) $
+      go tries (count - sizeOf must) must
     where
-      go 0 s = pure s
-      go n s = do
+      go _ n s | n <= 0 = pure s
+      go tries n s = do
         e <-
           explain
             ( NE.fromList
                 [ "Generate set member:"
-                , "  n = " ++ show n
-                , "  s = " ++ show s
+                , "  items left to pick   = " ++ show n
+                , "  items already picked = " ++ show (Set.size s)
                 ]
             )
             $ withMode Strict
-            $ genFromSpecT elemS `suchThatT` (`Set.notMember` s)
-        go (n - 1) (Set.insert e s)
+            $ suchThatWithTryT tries (genFromSpecT elemS) (`Set.notMember` s)
+
+        go tries (n - 1) (Set.insert e s)
 
   cardinalTypeSpec (SetSpec _ es _)
     | Just ub <- knownUpperBound (cardinality es) = leqSpec (2 ^ ub)
@@ -3820,7 +3843,9 @@ emptyNumSpec = mempty
 
 combineNumSpec ::
   (HasSpec fn n, Ord n, TypeSpec fn n ~ NumSpec fn n) =>
-  NumSpec fn n -> NumSpec fn n -> Specification fn n
+  NumSpec fn n ->
+  NumSpec fn n ->
+  Specification fn n
 combineNumSpec s s' = case s <> s' of
   s''@(NumSpecInterval (Just a) (Just b))
     | a > b ->
@@ -4780,6 +4805,12 @@ app fn = curryList (App fn)
 name :: String -> Term fn a -> Term fn a
 name nh (V (Var i _)) = V (Var i nh)
 name _ _ = error "applying name to non-var thing! Shame on you!"
+
+-- | Give a Term a nameHint, if its a Var, and doesn't already have one,
+--  otherwise return the Term unchanged.
+named :: String -> Term fn a -> Term fn a
+named nh t@(V (Var i x)) = if x /= "v" then t else V (Var i nh)
+named _ t = t
 
 bind :: (HasSpec fn a, IsPred p fn) => (Term fn a -> p) -> Binder fn a
 bind bodyf = x :-> p
