@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   ExecSpecRule (..),
   conformsToImpl,
   generatesWithin,
+  inputsGenerateWithin,
   runConformance,
   checkConformance,
   defaultTestConformance,
@@ -431,8 +432,34 @@ generatesWithin ::
   Int ->
   Spec
 generatesWithin gen timeout =
-  prop (aName <> " generates in reasonable time")
+  prop (aName <> " generates within " <> show timeout <> "μs")
     . forAllShow gen showExpr
     $ \x -> within timeout $ ioProperty (evaluateDeep x $> ())
   where
     aName = show (typeRep $ Proxy @a)
+
+inputsGenerateWithin ::
+  forall (fn :: [Type] -> Type -> Type) (rule :: Symbol) era.
+  ExecSpecRule fn rule era =>
+  Int ->
+  Spec
+inputsGenerateWithin timeout =
+  describe (aName <> " input generation time") $ do
+    let
+      genEnv = do
+        ctx <- genExecContext @fn @rule @era
+        CV2.genFromSpec $ environmentSpec @fn @rule @era ctx
+      genSt = do
+        ctx <- genExecContext @fn @rule @era
+        env <- genEnv
+        CV2.genFromSpec $ stateSpec @fn @rule @era ctx env
+      genSig = do
+        ctx <- genExecContext @fn @rule @era
+        env <- genEnv
+        st <- genSt
+        CV2.genFromSpec $ signalSpec @fn @rule @era ctx env st
+    genEnv `generatesWithin` timeout
+    genSt `generatesWithin` timeout
+    genSig `generatesWithin` timeout
+  where
+    aName = show (typeRep $ Proxy @rule)

@@ -30,10 +30,12 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base (
 ) where
 
 import Cardano.Ledger.BaseTypes (
+  EpochInterval (..),
   EpochNo (..),
   Inject (..),
   Network,
   StrictMaybe (..),
+  addEpochInterval,
   natVersion,
  )
 import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (encCBOR))
@@ -95,7 +97,7 @@ import Test.Cardano.Ledger.Conformance (
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (defaultTestConformance)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (ConwayExecEnactEnv)
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (ConwayExecEnactEnv (..))
 import Test.Cardano.Ledger.Constrained.Conway (
   EpochExecEnv,
   IsConwayUniv,
@@ -491,16 +493,72 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
               . label (spoBucket x)
         | otherwise = id
 
+newtype ConwayEnactExecContext era = ConwayEnactExecContext
+  { ceecMaxTerm :: EpochInterval
+  }
+  deriving (Generic)
+
+instance Arbitrary (ConwayEnactExecContext era) where
+  arbitrary = ConwayEnactExecContext <$> arbitrary
+
+instance NFData (ConwayEnactExecContext era)
+
+instance ToExpr (ConwayEnactExecContext era)
+
+instance Era era => EncCBOR (ConwayEnactExecContext era) where
+  encCBOR (ConwayEnactExecContext x) = encCBOR x
+
+enactSignalSpec ::
+  IsConwayUniv fn =>
+  ConwayEnactExecContext Conway ->
+  ConwayExecEnactEnv Conway ->
+  EnactState Conway ->
+  Specification fn (EnactSignal Conway)
+enactSignalSpec ConwayEnactExecContext {..} ConwayExecEnactEnv {..} EnactState {..} =
+  constrained' $ \gid action ->
+    [ assert $ gid ==. lit ceeeGid
+    , -- TODO get rid of this by modifying the spec so that ENACT can't fail.
+      -- Right now this constraint makes the generator avoid cases where
+      -- the spec would fail, because such proposals would be handled in RATIFY
+      -- and wouldn't make it to ENACT.
+      (caseOn action)
+        (branch $ \_ _ _ -> True)
+        (branch $ \_ _ -> True)
+        ( branch $ \newWdrls _ ->
+            sum_ (rng_ newWdrls) + lit (sum ensWithdrawals) <=. lit ceeeTreasury
+        )
+        (branch $ \_ -> True)
+        ( branch $ \_ _ newMembers _ ->
+            let maxTerm = addEpochInterval ceeeEpoch ceecMaxTerm
+             in forAll (rng_ newMembers) (<=. lit maxTerm)
+        )
+        (branch $ \_ _ -> True)
+        (branch $ \_ -> True)
+    ]
+
+enactStateSpec ::
+  IsConwayUniv fn =>
+  ConwayEnactExecContext Conway ->
+  ConwayExecEnactEnv Conway ->
+  Specification fn (EnactState Conway)
+enactStateSpec ConwayEnactExecContext {..} ConwayExecEnactEnv {..} =
+  constrained' $ \_ _ curPParams _ treasury wdrls _ ->
+    [ match curPParams $ \pp -> match (sel @25 pp) (==. lit ceecMaxTerm)
+    , assert $ sum_ (rng_ wdrls) <=. treasury
+    , assert $ treasury ==. lit ceeeTreasury
+    ]
+
 instance IsConwayUniv fn => ExecSpecRule fn "ENACT" Conway where
+  type ExecContext fn "ENACT" Conway = ConwayEnactExecContext Conway
   type ExecEnvironment fn "ENACT" Conway = ConwayExecEnactEnv Conway
   type ExecState fn "ENACT" Conway = EnactState Conway
   type ExecSignal fn "ENACT" Conway = EnactSignal Conway
 
   environmentSpec _ = TrueSpec
-  stateSpec _ _ = TrueSpec
-  signalSpec _ _ _ = TrueSpec
+  stateSpec = enactStateSpec
+  signalSpec = enactSignalSpec
   runAgdaRule env st sig =
-    first (error "ENACT failed")
+    first (\e -> error $ "ENACT failed with:\n" <> show e)
       . computationResultToEither
       $ Agda.enactStep env st sig
 
