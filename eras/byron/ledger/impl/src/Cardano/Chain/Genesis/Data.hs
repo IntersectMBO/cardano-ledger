@@ -29,7 +29,6 @@ import Cardano.Crypto (
  )
 import Cardano.Ledger.Binary
 import Cardano.Prelude
-import Control.DeepSeq ((<$!!>))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.List (lookup)
@@ -49,7 +48,6 @@ import Text.JSON.Canonical (
   parseCanonicalJSON,
   renderCanonicalJSON,
  )
-import Prelude (id)
 
 -- | Genesis data contains all data which determines consensus rules. It must be
 --   same for all nodes. It's used to initialize global state, slotting, etc.
@@ -95,7 +93,7 @@ instance MonadError SchemaError m => FromJSON m GenesisData where
     GenesisData
       <$> fromJSField obj "bootStakeholders"
       <*> fromJSField obj "heavyDelegation"
-      <*> (id <$!!> fromJSField obj "startTime")
+      <*> (force <$> fromJSField obj "startTime")
       <*> fromJSField obj "nonAvvmBalances"
       <*> fromJSField obj "blockVersionData"
       -- The above is called blockVersionData for backwards compatibility with
