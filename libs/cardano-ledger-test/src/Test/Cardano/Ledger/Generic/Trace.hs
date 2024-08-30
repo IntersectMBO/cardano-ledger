@@ -69,7 +69,7 @@ import qualified Data.Sequence.Strict as SS
 import qualified Data.Set as Set
 import Data.Vector (Vector, (!))
 import qualified Data.Vector as Vector
-import Debug.Trace
+import qualified Debug.Trace as Debug
 import GHC.Word (Word64)
 import Lens.Micro ((&), (.~), (^.))
 import Prettyprinter (hsep, parens, vsep)
@@ -415,7 +415,7 @@ instance
     case runShelleyBase (applySTSTest (TRC @(MOCKCHAIN era) ((), mcs, mockblock))) of
       Left pdfs ->
         let txsl = Fold.toList txs
-         in trace
+         in Debug.trace
               (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl gs)
               ( error . unlines $
                   "sigGen in (HasTrace (MOCKCHAIN era) (Gen1 era)) FAILS" : map show (Fold.toList pdfs)
@@ -437,7 +437,7 @@ mapProportion epochnum lastSlot count m =
       -- sometimes as we move into the 3rd epoch, however stakeDistr is computed becomes empty. This is probably
       -- because there is no action in Test.Cardano.Ledger.Constrained.Trace.Actions for the epoch boundary.
       -- This temporary fix is good enough for now. But the annoying trace message reminds us to fix this.
-      trace
+      Debug.trace
         ( "There are no stakepools to choose an issuer from"
             ++ ", epoch="
             ++ show epochnum

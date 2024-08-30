@@ -1,19 +1,15 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -269,25 +265,26 @@ testSpecNoShrink :: HasSpec fn a => String -> Specification fn a -> Spec
 testSpecNoShrink = testSpec' False
 
 testSpec' :: HasSpec fn a => Bool -> String -> Specification fn a -> Spec
-testSpec' withShrink n s =
+testSpec' withShrink n s = do
+  let checkCoverage' = checkCoverageWith stdConfidence {certainty = 1_000_000}
   describe n $ do
     prop "prop_sound" $
       within 10_000_000 $
-        checkCoverage $
+        checkCoverage' $
           prop_sound s
     prop "prop_constrained_satisfies_sound" $
       within 10_000_000 $
-        checkCoverage $
+        checkCoverage' $
           prop_constrained_satisfies_sound s
     prop "prop_constrained_explained" $
       within 10_000_0000 $
-        checkCoverage $
+        checkCoverage' $
           QC.forAll arbitrary $ \es ->
             prop_sound $ constrained $ \x -> explanation es $ x `satisfies` s
     when withShrink $
       prop "prop_shrink_sound" $
         within 10_000_000 $
-          checkCoverage $
+          checkCoverage' $
             prop_shrink_sound s
 
 ------------------------------------------------------------------------

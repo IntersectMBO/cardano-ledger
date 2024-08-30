@@ -31,7 +31,7 @@ import qualified Data.Maybe as Maybe
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
-import Debug.Trace (trace)
+import qualified Debug.Trace as Debug
 import Lens.Micro hiding (set)
 import Test.Cardano.Ledger.Constrained.Ast (Pred (..), Sum (..), Term (..), runPred)
 import Test.Cardano.Ledger.Constrained.Classes (
@@ -887,7 +887,8 @@ testMergeRngSpec :: Gen Property
 testMergeRngSpec = do
   (s1, s2) <- genConsistentRngSpec 3 (choose (1, 1000)) Word64R CoinR (SomeLens word64CoinL)
   case s1 <> s2 of
-    RngNever _ -> trace ("inconsistent RngSpec " ++ show s1 ++ " " ++ show s2) (pure (counterexample "" True))
+    RngNever _ ->
+      Debug.trace ("inconsistent RngSpec " ++ show s1 ++ " " ++ show s2) (pure (counterexample "" True))
     s3 -> do
       let size = sizeForRng s3
       n <- genFromSize size

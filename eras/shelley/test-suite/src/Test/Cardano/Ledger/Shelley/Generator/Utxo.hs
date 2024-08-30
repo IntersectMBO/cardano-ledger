@@ -73,7 +73,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified Data.Vector as V
-import Debug.Trace (trace)
+import qualified Debug.Trace as Debug
 import Lens.Micro
 import NoThunks.Class ()
 import Test.Cardano.Ledger.Core.KeyPair (
@@ -108,7 +108,7 @@ import qualified Test.QuickCheck as QC
 -- Instances only
 
 myDiscard :: [Char] -> a
-myDiscard message = trace ("\nDiscarded trace: " ++ message) discard
+myDiscard message = Debug.trace ("\nDiscarded trace: " ++ message) discard
 
 -- ====================================================
 
@@ -227,7 +227,10 @@ genTx
         genRecipients @era (length inputs + n) ksKeyPairs ksMSigScripts
           >>= genPtrAddrs (certDState dpState')
 
-      !_ <- when (coin spendingBalance < mempty) $ myDiscard "Negative spending balance"
+      !_ <-
+        when (coin spendingBalance < mempty) $
+          myDiscard $
+            "Negative spending balance " <> show (coin spendingBalance)
 
       -------------------------------------------------------------------------
       -- Build a Draft Tx and repeatedly add to Delta until all fees are
@@ -243,7 +246,7 @@ genTx
       -- Occasionally we have a transaction generated with insufficient inputs
       -- to cover the deposits. In this case we discard the test case.
       let enough = sumVal (getMinCoinTxOut pparams <$> draftOutputs)
-      !_ <- when (coin spendingBalance < enough) (myDiscard "No inputs left. Utxo.hs")
+      !_ <- when (coin spendingBalance < enough) $ myDiscard $ "No inputs left. Utxo.hs " <> show enough
 
       (draftTxBody, additionalScripts) <-
         genEraTxBody
@@ -280,7 +283,8 @@ genTx
       let txOuts = tx ^. bodyTxL . outputsTxBodyL
       !_ <-
         when (any (\txOut -> getMinCoinTxOut pparams txOut > txOut ^. coinTxOutL) txOuts) $
-          myDiscard "TxOut value is too small"
+          myDiscard $
+            "TxOut value is too small " <> show txOuts
       pure tx
 
 -- | Collect additional inputs (and witnesses and keys and scripts) to make
@@ -447,7 +451,7 @@ genNextDelta
                   -- If it does happen, It is NOT a test failure, but an inadequacy in the
                   -- testing framework to generate almost-random transactions that always succeed every time.
                   -- Experience suggests that this happens less than 1% of the time, and does not lead to backtracking.
-                  !_ <- when (null inputs) (myDiscard "NoMoneyleft Utxo.hs")
+                  !_ <- when (null inputs) $ myDiscard $ "NoMoneyleft Utxo.hs " <> show (coin value)
                   let newWits =
                         mkTxWits @era
                           (utxo, txBody, scriptinfo)
@@ -456,7 +460,7 @@ genNextDelta
                           vkeyPairs
                           (mkScriptWits @era msigPairs mempty)
                           (hashAnnotated txBody)
-                  pure $
+                  pure
                     delta
                       { extraWitnesses = extraWitnesses <> newWits
                       , extraInputs = extraInputs <> Set.fromList inputs
@@ -599,7 +603,7 @@ ruffle k items = do
   where
     itemsV = V.fromList items
 
--- | Generate @n@ number of unique `Int`s in the supplied range.
+-- | Generate @k@ number of unique `Int`s in the supplied range.
 genIndices :: Int -> (Int, Int) -> Gen ([Int], IntSet.IntSet)
 genIndices k (l', u')
   | k < 0 || u - l + 1 < k =
@@ -611,7 +615,7 @@ genIndices k (l', u')
           ++ ", "
           ++ show u
           ++ "]"
-  | u - l < k `div` 2 = do
+  | u - l < k * 2 = do
       xs <- take k <$> QC.shuffle [l .. u]
       pure (xs, IntSet.fromList xs)
   | otherwise = go k [] mempty
@@ -636,7 +640,7 @@ pickRandomFromMap n' initMap = go (min (max 0 n') (Map.size initMap)) [] initMap
     go n !acc !m
       | n <= 0 = pure acc
       | otherwise = do
-          i <- QC.choose (0, n - 1)
+          i <- QC.choose (0, Map.size m - 1)
           let (k, y) = Map.elemAt i m
           go (n - 1) ((k, y) : acc) (Map.deleteAt i m)
 
@@ -844,34 +848,21 @@ genRecipients ::
   KeyPairs (EraCrypto era) ->
   [(Script era, Script era)] ->
   Gen [Addr (EraCrypto era)]
-genRecipients len keys scripts = do
-  n' <-
-    QC.frequency
-      ( (if len > 1 then [(1, pure (len - 1))] else [])
-          -- contract size of UTxO (only if at least 2 inputs are chosen)
-          ++ [(2, pure len)]
-          -- keep size
-          ++ [(1, pure $ len + 1)]
-      )
-  -- expand size of UTxO
+genRecipients nRecipients' keys scripts = do
+  nRecipients <-
+    max 1
+      <$> QC.frequency
+        [ (1, pure (nRecipients' - 1)) -- contract size of UTxO
+        , (2, pure nRecipients') -- keep size
+        , (1, pure (nRecipients' + 1)) -- expand size of UTxO
+        ]
 
-  -- choose m scripts and n keys as recipients
   -- We want to choose more Keys than Scripts by a factor of 2 or more.
-  (m, n) <- case n' of
-    0 -> pure (0, 0)
-    1 -> pure (0, 1)
-    2 -> pure (0, 2)
-    3 -> pure (1, 2)
-    4 -> pure (1, 3)
-    5 -> pure (2, 3)
-    _ ->
-      do
-        m <- QC.choose (0, n' - 4)
-        let n = n' - m
-        pure (m, n)
+  nScripts <- QC.choose (0, nRecipients * 2 `div` 3) -- Average is about nRecipients / 3
+  let nKeys = nRecipients - nScripts
 
-  recipientKeys <- ruffle n keys
-  recipientScripts <- ruffle m scripts
+  recipientKeys <- ruffle nKeys keys
+  recipientScripts <- ruffle nScripts scripts
 
   let payKeys = mkCred . fst <$> recipientKeys
       stakeKeys = mkCred . snd <$> recipientKeys

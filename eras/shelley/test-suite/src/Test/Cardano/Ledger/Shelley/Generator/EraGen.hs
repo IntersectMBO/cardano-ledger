@@ -34,7 +34,6 @@ where
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe)
-import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
@@ -58,9 +57,7 @@ import Cardano.Ledger.UTxO (UTxO)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.State.Transition.Extended (STS (..))
-import qualified Data.ByteString as BS
 import Data.Default.Class (Default)
-import Data.Hashable (Hashable (..))
 import Data.Map (Map)
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
@@ -271,16 +268,14 @@ class
  -----------------------------------------------------------------------------}
 
 -- | Select between _lower_ and _upper_ keys from 'keyPairs'
-someKeyPairs :: CC.Crypto c => Constants -> Int -> Int -> Gen (KeyPairs c)
-someKeyPairs c lower upper =
-  take
-    <$> choose (lower, upper)
-    <*> shuffle (keyPairs c)
+someKeyPairs :: CC.Crypto c => Constants -> (Int, Int) -> Gen (KeyPairs c)
+someKeyPairs c range = take <$> choose range <*> shuffle (keyPairs c)
 
 genUtxo0 :: forall era. EraGen era => GenEnv era -> Gen (UTxO era)
 genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
-  genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
-  genesisScripts <- someScripts @era c minGenesisUTxOouts maxGenesisUTxOouts
+  let range = (minGenesisUTxOouts `div` 2, maxGenesisUTxOouts `div` 2)
+  genesisKeys <- someKeyPairs c range
+  genesisScripts <- someScripts @era c range
   outs <-
     (genEraTxOut @era ge)
       (genGenesisValue @era ge)
@@ -309,57 +304,31 @@ someScripts ::
   forall era.
   EraGen era =>
   Constants ->
-  Int ->
-  Int ->
+  (Int, Int) ->
   Gen [(Script era, Script era)]
-someScripts c lower upper = take <$> choose (lower, upper) <*> shuffle (allScripts @era c)
+someScripts c range = take <$> choose range <*> shuffle (allScripts @era c)
 
 -- | A list of all possible kinds of scripts in the current Era.
 --   Might include Keylocked scripts, Start-Finish Timelock scripts, Quantified scripts (All, Any, MofN), Plutus Scripts
 --   Note that 'genEraTwoPhase3Arg' and 'genEraTwoPhase2Arg' may be the empty list ([]) in some Eras.
 allScripts :: forall era. EraGen era => Constants -> [(Script era, Script era)]
 allScripts c =
-  plutusPairs genEraTwoPhase3Arg genEraTwoPhase2Arg (take 3 simple)
-    ++ take (numSimpleScripts c) simple -- 10 means about 5% of allScripts are Plutus Scripts
+  concat
+    [ plutusPairs
+    , take (numSimpleScripts c) simpleScripts -- 10 means about 5% of allScripts are Plutus Scripts
     -- Plutus scripts in some Eras ([] in other Eras)
     -- [(payment,staking)] where the either payment or staking may be a plutus script
-    ++
     -- Simple scripts (key locked, Start-Finish timelocks)
-    combinedScripts @era c
+    , combinedScripts @era c
+    ]
   where
-    -- Quantifed scripts (All, Any, MofN)
-
-    simple = baseScripts @era c
-    plutusPairs ::
-      [TwoPhase3ArgInfo era] ->
-      [TwoPhase2ArgInfo era] ->
-      [(Script era, Script era)] ->
-      [(Script era, Script era)]
-    plutusPairs [] _ _ = []
-    plutusPairs _ [] _ = []
-    plutusPairs _ _ [] = []
-    plutusPairs args3 args2 ((pay, stake) : more) = pair : plutusPairs args3 args2 more
-      where
-        count3 = length args3 - 1
-        count2 = length args2 - 1
-        payBytes = Plain.serialize' pay
-        n = randomByHash 0 count3 $ Plain.serialize' stake
-        m = randomByHash 0 count2 payBytes
-        mode = randomByHash 1 3 payBytes
-        pair = case mode of
-          1 -> (getScript3 (args3 !! n), stake)
-          2 -> (pay, getScript2 (args2 !! m))
-          3 -> (getScript3 (args3 !! n), getScript2 (args2 !! m))
-          i -> error ("mod function returns value out of bounds: " ++ show i)
-
-randomByHash :: Int -> Int -> BS.ByteString -> Int
-randomByHash low high x = low + remainder
-  where
-    n = hash x
-    -- We don't really care about the hash, we only
-    -- use it to pseudo-randomly pick a number bewteen low and high
-    m = high - low + 1
-    remainder = mod n m -- mode==0 is a time leaf,  mode 1 or 2 is a signature leaf
+    simpleScripts = baseScripts @era c
+    plutusPairs :: [(Script era, Script era)]
+    plutusPairs = do
+      script3 <- getScript3 <$> genEraTwoPhase3Arg
+      script2 <- getScript2 <$> genEraTwoPhase2Arg
+      (payment, staking) <- take 3 simpleScripts
+      [(script3, staking), (payment, script2), (script3, script2)]
 
 -- =========================================================
 

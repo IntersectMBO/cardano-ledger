@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -81,12 +82,14 @@ import Test.Control.State.Transition.Trace.Generator.QuickCheck (
  )
 import qualified Test.Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck (
+  Confidence (certainty),
   Property,
-  checkCoverage,
+  checkCoverageWith,
   conjoin,
   cover,
   forAllBlind,
   property,
+  stdConfidence,
   withMaxSuccess,
  )
 import Test.Tasty (TestTree)
@@ -109,7 +112,7 @@ relevantCasesAreCovered n =
   where
     prop = do
       let tl = 100
-      checkCoverage $
+      checkCoverageWith stdConfidence {certainty = 1_000_000} $
         forAllBlind
           (traceFromInitState @(CHAIN era) testGlobals tl (genEnv p defaultConstants) genesisChainSt)
           relevantCasesAreCoveredForTrace
@@ -180,7 +183,7 @@ relevantCasesAreCoveredForTrace tr = do
           , 60
           )
         ,
-          ( "at least 10% of transactions have script TxOuts"
+          ( "at least 10% of TxOuts are scripts"
           , 0.1 < txScriptOutputsRatio (view outputsTxBodyL . view bodyTxL <$> txs)
           , 20
           )

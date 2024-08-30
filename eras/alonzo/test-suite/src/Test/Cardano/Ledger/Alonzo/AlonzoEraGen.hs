@@ -54,6 +54,7 @@ import Cardano.Ledger.Alonzo.TxWits (
   AlonzoTxWits (..),
   Redeemers (..),
   TxDats (..),
+  nullRedeemers,
  )
 import Cardano.Ledger.Alonzo.UTxO (AlonzoScriptsNeeded (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
@@ -92,8 +93,10 @@ import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import qualified Data.Sequence.Strict as Seq (fromList)
-import Data.Set as Set
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Lens.Micro
+import Lens.Micro.Extras (view)
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.Common as P (Data (..))
 import System.Random
@@ -316,9 +319,8 @@ genAlonzoPParamsUpdate constants pp = do
   coinPerWord <- genM (CoinPerWord . Coin <$> choose (1, 5))
   let genPrice = unsafeBoundRational . (% 100) <$> choose (0, 200)
   prices <- genM (Prices <$> genPrice <*> genPrice)
-  let maxTxExUnits = SNothing
-  -- maxTxExUnits <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
-  maxBlockExUnits <- genM (ExUnits <$> genNatural 100 5000 <*> genNatural 100 5000)
+  maxTxExUnits <- genM genMaxTxExUnits
+  maxBlockExUnits <- genM genMaxBlockExUnits
   -- Not too small for maxValSize, if this is too small then any Tx with Value
   -- that has lots of policyIds will fail. The Shelley Era uses hard coded 4000
   maxValSize <- genM (genNatural 4000 5000)
@@ -349,12 +351,8 @@ genAlonzoPParams constants = do
       prices = Prices minBound minBound
   coinPerWord <- CoinPerWord . Coin <$> choose (1, 5)
   -- prices <- Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000))
-  let maxTxExUnits = ExUnits (5 * bigMem + 1) (5 * bigStep + 1)
-  -- maxTxExUnits <- ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000))
-  maxBlockExUnits <-
-    ExUnits
-      <$> genNatural (20 * bigMem + 1) (30 * bigMem + 1)
-      <*> genNatural (20 * bigStep + 1) (30 * bigStep + 1)
+  maxTxExUnits <- genMaxTxExUnits
+  maxBlockExUnits <- genMaxBlockExUnits
   maxValSize <- genNatural 4000 10000 -- This can't be too small. Shelley uses Hard coded 4000
   let alonzoUpgrade =
         UpgradeAlonzoPParams
@@ -375,6 +373,20 @@ bigMem = 50000
 bigStep :: Natural
 bigStep = 99999
 
+genMaxTxExUnits :: Gen ExUnits
+genMaxTxExUnits =
+  ExUnits
+    -- Accommodate the maximum number of scripts in a transaction
+    <$> genNatural (10 * bigMem + 1) (20 * bigMem + 1)
+    <*> genNatural (10 * bigStep + 1) (20 * bigStep + 1)
+
+genMaxBlockExUnits :: Gen ExUnits
+genMaxBlockExUnits =
+  ExUnits
+    -- Accommodate the maximum number of scripts in all transactions in a block
+    <$> genNatural (60 * bigMem + 1) (100 * bigMem + 1)
+    <*> genNatural (60 * bigStep + 1) (100 * bigStep + 1)
+
 instance Mock c => EraGen (AlonzoEra c) where
   genEraAuxiliaryData = genAux
   genGenesisValue = maryGenesisValue
@@ -382,23 +394,33 @@ instance Mock c => EraGen (AlonzoEra c) where
   genEraTwoPhase2Arg = phase2scripts2Arg
 
   genEraTxBody = genAlonzoTxBody
-  updateEraTxBody utxo pp witnesses txb coinx txin txout = new
+  updateEraTxBody utxo pp witnesses txb coinx txin txout =
+    txb
+      { atbInputs = newInputs
+      , atbCollateral = newCollaterals
+      , atbTxFee = coinx
+      , atbOutputs = newOutputs
+      , -- The witnesses may have changed, recompute the scriptIntegrityHash.
+        atbScriptIntegrityHash =
+          hashScriptIntegrity
+            langViews
+            (witnesses ^. rdmrsTxWitsL)
+            (witnesses ^. datsTxWitsL)
+      }
     where
       langs = langsUsed @(AlonzoEra c) (witnesses ^. scriptTxWitsL)
       langViews = Set.map (getLanguageView pp) langs
-      new =
-        txb
-          { atbInputs = atbInputs txb <> txin
-          , atbCollateral = atbCollateral txb <> Set.filter (okAsCollateral utxo) txin -- In Alonzo, extra inputs also are added to collateral
-          , atbTxFee = coinx
-          , atbOutputs = atbOutputs txb :|> txout
-          , -- The witnesses may have changed, recompute the scriptIntegrityHash.
-            atbScriptIntegrityHash =
-              hashScriptIntegrity
-                langViews
-                (witnesses ^. rdmrsTxWitsL)
-                (witnesses ^. datsTxWitsL)
-          }
+      requiredCollateral = ceiling $ fromIntegral (pp ^. ppCollateralPercentageL) * unCoin coinx % 100
+      potentialCollateral = Set.filter (okAsCollateral utxo) txin
+      txInAmounts = List.sortOn snd . Map.toList . Map.map (unCoin . view coinTxOutL) . unUTxO . txInsFilter utxo
+      takeUntilSum s = map fst . takeUntil ((s >=) . snd) . scanl1 (\(_, s') (x, n) -> (x, s' + n))
+      takeUntil p xs = let (y, n) = span p xs in y ++ take 1 n
+      newCollaterals =
+        if nullRedeemers (witnesses ^. rdmrsTxWitsL)
+          then mempty
+          else Set.fromList . takeUntilSum requiredCollateral $ txInAmounts potentialCollateral
+      newInputs = atbInputs txb <> txin
+      newOutputs = atbOutputs txb :|> txout
 
   addInputs txb txin = txb {atbInputs = atbInputs txb <> txin}
 
@@ -469,8 +491,8 @@ instance Mock c => EraGen (AlonzoEra c) where
           then
             if oldScriptWits == newWits
               then pure tx
-              else myDiscard "Random extra scriptwitness: genEraDone: AlonzoEraGen.hs"
-          else myDiscard "MinFee violation: genEraDone: AlonzoEraGen.hs"
+              else myDiscard $ "Random extra scriptwitness: genEraDone: " <> show newWits
+          else myDiscard $ "MinFee violation: genEraDone: " <> show theFee
 
   genEraTweakBlock pp txns =
     let txTotal, ppMax :: ExUnits
@@ -478,7 +500,12 @@ instance Mock c => EraGen (AlonzoEra c) where
         ppMax = pp ^. ppMaxBlockExUnitsL
      in if pointWiseExUnits (<=) txTotal ppMax
           then pure txns
-          else myDiscard "TotExUnits violation: genEraTweakBlock: AlonzoEraGen.hs"
+          else
+            myDiscard $
+              "TotExUnits violation: genEraTweakBlock: "
+                <> show (unWrapExUnits txTotal)
+                <> " instead of "
+                <> show (unWrapExUnits ppMax)
 
   hasFailedScripts tx = IsValid False == tx ^. isValidTxL
 

@@ -65,7 +65,7 @@ import Data.MapExtras (fromElems)
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import Data.Text (Text)
-import Debug.Trace (traceEvent)
+import qualified Debug.Trace as Debug
 import GHC.Generics
 import Lens.Micro
 import NoThunks.Class (NoThunks)
@@ -244,14 +244,14 @@ evalPlutusScriptsWithLogs (plutusWithContext : rest) =
           [ "[LEDGER][PLUTUS_SCRIPT]"
           , "BEGIN"
           ]
-      !res = traceEvent beginMsg $ runPlutusScriptWithLogs plutusWithContext
+      !res = Debug.traceEvent beginMsg $ runPlutusScriptWithLogs plutusWithContext
       endMsg =
         intercalate
           ","
           [ "[LEDGER][PLUTUS_SCRIPT]"
           , "END"
           ]
-   in traceEvent endMsg res <> evalPlutusScriptsWithLogs rest
+   in Debug.traceEvent endMsg res <> evalPlutusScriptsWithLogs rest
 
 -- | Script failures that can be returned by 'evalTxExUnitsWithLogs'.
 data TransactionScriptFailure era
