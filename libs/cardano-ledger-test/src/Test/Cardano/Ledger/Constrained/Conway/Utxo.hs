@@ -4,6 +4,9 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the UTXO rule
@@ -29,6 +32,10 @@ import Cardano.Ledger.Conway.Core (EraTx (..), ppMaxCollateralInputsL)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
+import Test.Cardano.Ledger.Constrained.Conway.Gov (proposalsSpec)
+import Cardano.Ledger.Shelley.Rules (epochFromSlot)
+import Control.Monad.Reader (runReader)
+import Test.Cardano.Ledger.Core.Utils (testGlobals)
 
 utxoEnvSpec :: IsConwayUniv fn => Specification fn (UtxoEnv (ConwayEra StandardCrypto))
 utxoEnvSpec =
@@ -82,19 +89,24 @@ utxoStateSpec ::
   IsConwayUniv fn =>
   UtxoEnv (ConwayEra StandardCrypto) ->
   Specification fn (UTxOState (ConwayEra StandardCrypto))
-utxoStateSpec _env =
+utxoStateSpec UtxoEnv {ueSlot} =
   constrained $ \utxoState ->
     match utxoState $
       \utxosUtxo
        _utxosDeposited
        _utxosFees
-       _utxosGovState
+       utxosGovState
        _utxosStakeDistr
        _utxosDonation ->
           [ assert $ utxosUtxo /=. lit mempty
           , match utxosUtxo $ \utxoMap ->
               forAll (rng_ utxoMap) correctAddrAndWFCoin
+          , match utxosGovState $ \props _ constitution _ _ _ _ ->
+              match constitution $ \_ policy ->
+                satisfies props $ proposalsSpec (lit curEpoch) policy
           ]
+  where
+    curEpoch = runReader (epochFromSlot ueSlot) testGlobals
 
 utxoTxSpec ::
   IsConwayUniv fn =>
@@ -102,37 +114,37 @@ utxoTxSpec ::
   UTxOState (ConwayEra StandardCrypto) ->
   Specification fn (Tx (ConwayEra StandardCrypto))
 utxoTxSpec env st =
-  constrained $ \tx ->
-    match tx $ \bdy _wits isValid _auxData ->
+  constrained $ \[var|tx|] ->
+    match tx $ \[var|bdy|] _wits [var|isValid|] [var|auxData|] ->
       [ match isValid assert
       , match bdy $
-          \ctbSpendInputs
-           ctbCollateralInputs
-           _ctbReferenceInputs
-           ctbOutputs
-           ctbCollateralReturn
+          \[var|ctbSpendInputs|]
+           [var|ctbCollateralInputs|]
+           [var|ctbReferenceInputs|]
+           [var|ctbOutputs|]
+           [var|ctbCollateralReturn|]
            _ctbTotalCollateral
-           _ctbCerts
-           ctbWithdrawals
-           ctbTxfee
-           ctbVldt
-           _ctbReqSignerHashes
+           [var|ctbCerts|]
+           [var|ctbWithdrawals|]
+           [var|ctbTxfee|]
+           [var|ctbVldt|]
+           [var|ctbReqSignerHashes|]
            _ctbMint
            _ctbScriptIntegrityHash
            _ctbAdHash
-           ctbTxNetworkId
-           _ctbVotingProcedures
-           ctbProposalProcedures
+           [var|ctbTxNetworkId|]
+           ctbVotingProcedures
+           [var|ctbProposalProcedures|]
            _ctbCurrentTreasuryValue
-           ctbTreasuryDonation ->
-              [ assert $ ctbSpendInputs /=. lit mempty
-              , assert $ ctbSpendInputs `subset_` lit (Map.keysSet $ unUTxO $ utxosUtxo st)
-              , match ctbWithdrawals $ \withdrawalMap ->
-                  forAll' (dom_ withdrawalMap) $ \net _ ->
+           [var|ctbTreasuryDonation|] ->
+              [ assert . not_ $ null_ ctbSpendInputs
+              , assert $ ctbSpendInputs `subset_` lit (Map.keysSet . unUTxO $ utxosUtxo st)
+              , match ctbWithdrawals $ \[var|withdrawalMap|] ->
+                  forAll' (dom_ withdrawalMap) $ \[var|net|] _ ->
                     net ==. lit Testnet
               , -- TODO: we need to do this for collateral as well?
-                match ctbProposalProcedures $ \proposalsList ->
-                  match ctbOutputs $ \outputList ->
+                match ctbProposalProcedures $ \[var|proposalsList|] ->
+                  match ctbOutputs $ \[var|outputList|] ->
                     [ (reify ctbSpendInputs)
                         ( \actualInputs ->
                             fold
@@ -141,7 +153,7 @@ utxoTxSpec env st =
                               , BabbageTxOut _ (MaryValue c _) _ _ <- maybeToList . txinLookup i . utxosUtxo $ st
                               ]
                         )
-                        $ \totalValueConsumed ->
+                        $ \[var|totalValueConsumed|] ->
                           [ let outputSum =
                                   foldMap_
                                     (maryValueCoin_ . txOutVal_ . sizedValue_)
@@ -152,15 +164,17 @@ utxoTxSpec env st =
                                     proposalsList
                              in outputSum + depositSum + ctbTxfee + ctbTreasuryDonation ==. totalValueConsumed
                           ]
-                    , forAll outputList (flip onSized correctAddrAndWFCoin)
+                    , forAll outputList (`onSized` correctAddrAndWFCoin)
                     ]
-              , match ctbVldt $ \before after ->
+              , match ctbVldt $ \[var|before|] [var|after|] ->
                   [ onJust' before (<=. lit (ueSlot env))
                   , onJust' after (lit (ueSlot env) <.)
                   ]
               , onJust' ctbTxNetworkId (==. lit Testnet)
               , onJust' ctbCollateralReturn $ flip onSized correctAddrAndWFCoin
               , assert $ size_ ctbCollateralInputs <=. lit (fromIntegral $ uePParams env ^. ppMaxCollateralInputsL)
+                -- TODO why does auxData take forever to generate?
+              , assert $ auxData ==. lit SNothing
               ]
       ]
 

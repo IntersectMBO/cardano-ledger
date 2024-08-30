@@ -124,40 +124,7 @@ instance
 
   stateSpec _ = utxoStateSpec
 
-  signalSpec _ env st =
-    utxoTxSpec env st
-      <> constrained disableInlineDatums
-    where
-      disableInlineDatums :: Term fn (AlonzoTx Conway) -> Pred fn
-      disableInlineDatums tx = match @fn tx $ \txBody _ _ _ ->
-        match txBody $
-          \_ctbSpendInputs
-           _ctbCollateralInputs
-           _ctbReferenceInputs
-           ctbOutputs
-           _ctbCollateralReturn
-           _ctbTotalCollateral
-           _ctbCerts
-           _ctbWithdrawals
-           _ctbTxfee
-           _ctbVldt
-           _ctbReqSignerHashes
-           _ctbMint
-           _ctbScriptIntegrityHash
-           _ctbAdHash
-           _ctbTxNetworkId
-           _ctbVotingProcedures
-           _ctbProposalProcedures
-           _ctbCurrentTreasuryValue
-           _ctbTreasuryDonation ->
-              match ctbOutputs $
-                \outs -> forAll' outs $
-                  \txOut _ -> match txOut $
-                    \_ _ dat _ ->
-                      (caseOn dat)
-                        (branch $ \_ -> True)
-                        (branch $ \_ -> True)
-                        (branch $ \_ -> False)
+  signalSpec _ = utxoTxSpec
 
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])

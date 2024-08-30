@@ -27,7 +27,7 @@ import Lens.Micro
 
 import Constrained
 
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra, Conway)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Lens.Micro qualified as L
@@ -48,7 +48,14 @@ govProposalsSpec ::
   IsConwayUniv fn =>
   GovEnv (ConwayEra StandardCrypto) ->
   Specification fn (Proposals (ConwayEra StandardCrypto))
-govProposalsSpec GovEnv {geEpoch, gePPolicy} =
+govProposalsSpec GovEnv {geEpoch, gePPolicy} = proposalsSpec (lit geEpoch) (lit gePPolicy)
+
+proposalsSpec ::
+  IsConwayUniv fn =>
+  Term fn EpochNo ->
+  Term fn (StrictMaybe (ScriptHash StandardCrypto)) ->
+  Specification fn (Proposals Conway)
+proposalsSpec geEpoch gePPolicy =
   constrained $ \props ->
     match props $ \ppupTree hardForkTree committeeTree constitutionTree unorderedProposals ->
       [ -- Protocol parameter updates
@@ -58,7 +65,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy} =
           , onCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas) $
               \_ ppup policy ->
                 [ wfPParamsUpdate ppup
-                , assert $ policy ==. lit gePPolicy
+                , assert $ policy ==. gePPolicy
                 ]
           ]
       , forAll (snd_ ppupTree) (genHint treeGenHint)
@@ -99,7 +106,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy} =
             -- UpdateCommittee
             ( branch $ \_ _ added _ ->
                 forAll (rng_ added) $ \epoch ->
-                  lit geEpoch <. epoch
+                  geEpoch <. epoch
             )
             (branch $ \_ _ -> False)
             (branch $ \_ -> False)
@@ -121,7 +128,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy} =
             ( branch $ \withdrawMap policy ->
                 [ forAll (dom_ withdrawMap) $ \rewAcnt ->
                     match rewAcnt $ \net _ -> net ==. lit Testnet
-                , assert $ policy ==. lit gePPolicy
+                , assert $ policy ==. gePPolicy
                 ]
             )
             (branch $ \_ -> False)

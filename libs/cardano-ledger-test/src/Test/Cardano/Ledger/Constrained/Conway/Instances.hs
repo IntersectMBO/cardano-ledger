@@ -125,7 +125,7 @@ import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
 import Constrained hiding (Value)
 import Constrained qualified as C
-import Constrained.Base (HasGenHint (..), Term (..))
+import Constrained.Base (HasGenHint (..), Term (..), ListSpec (..), equalSpec)
 import Constrained.Spec.Map
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Fail.String
@@ -163,6 +163,8 @@ import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.QuickCheck hiding (Args, Fun, forAll)
+import qualified Constrained.Base as CB
+import qualified Data.Sequence.Strict as SSeq
 
 type ConwayUnivFns = CoerceFn : StringFn : TreeFn : BaseFns
 type ConwayFn = Fix (OneofL ConwayUnivFns)
@@ -1679,3 +1681,17 @@ coerce_ ::
   Term fn a ->
   Term fn b
 coerce_ = app (injectFn $ Coerce @a @b @fn)
+
+instance CB.Sized (SOS.OSet a) where
+  sizeOf = toInteger . length
+  liftSizeSpec spec cant = typeSpec (ListSpec Nothing mempty (TypeSpec spec cant) TrueSpec NoFold)
+  liftMemberSpec xs = typeSpec (ListSpec Nothing mempty (MemberSpec xs) TrueSpec NoFold)
+  sizeOfTypeSpec (ListSpec _ _ _ ErrorSpec {} _) = equalSpec 0
+  sizeOfTypeSpec (ListSpec _ must sizespec _ _) = sizespec <> geqSpec (CB.sizeOf must)
+
+instance CB.Sized (SSeq.StrictSeq a) where
+  sizeOf = toInteger . length
+  liftSizeSpec spec cant = typeSpec (ListSpec Nothing mempty (TypeSpec spec cant) TrueSpec NoFold)
+  liftMemberSpec xs = typeSpec (ListSpec Nothing mempty (MemberSpec xs) TrueSpec NoFold)
+  sizeOfTypeSpec (ListSpec _ _ _ ErrorSpec {} _) = equalSpec 0
+  sizeOfTypeSpec (ListSpec _ must sizespec _ _) = sizespec <> geqSpec (CB.sizeOf must)

@@ -19,6 +19,7 @@ spec = do
   describe "Generators" $ do
     inputsGenerateWithin @ConwayFn @"GOV" @Conway 60_000_000
     inputsGenerateWithin @ConwayFn @"ENACT" @Conway 60_000_000
+    inputsGenerateWithin @ConwayFn @"UTXO" @Conway 60_000_000
   describe "Conformance" $ do
     describe "Ticks transition graph" $ do
       prop "ENACT" $ conformsToImpl @"ENACT" @ConwayFn @Conway
@@ -32,7 +33,6 @@ spec = do
       prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
       prop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @Conway
       prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
-
-      xprop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
+      prop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
     describe "ImpTests" $ do
       RatifyImp.spec
