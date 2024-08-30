@@ -109,7 +109,6 @@ benchmark performance
         cardano-slotting,
         containers,
         criterion,
-        data-default-class,
         deepseq,
         ledger-state,
         microlens,

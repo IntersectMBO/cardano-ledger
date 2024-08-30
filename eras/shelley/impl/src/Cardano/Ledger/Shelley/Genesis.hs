@@ -52,7 +52,6 @@ import Cardano.Ledger.BaseTypes (
   Network,
   Nonce (..),
   PositiveUnitInterval,
-  Version,
   mkActiveSlotCoeff,
  )
 import Cardano.Ledger.Binary (
@@ -676,15 +675,13 @@ validateGenesis
 mkShelleyGlobals ::
   ShelleyGenesis c ->
   EpochInfo (Either Text) ->
-  Version ->
   Globals
-mkShelleyGlobals genesis epochInfoAc maxMajorPV =
+mkShelleyGlobals genesis epochInfoAc =
   Globals
     { activeSlotCoeff = sgActiveSlotCoeff genesis
     , epochInfo = epochInfoAc
     , maxKESEvo = sgMaxKESEvolutions genesis
     , maxLovelaceSupply = sgMaxLovelaceSupply genesis
-    , maxMajorPV = maxMajorPV
     , networkId = sgNetworkId genesis
     , quorum = sgUpdateQuorum genesis
     , randomnessStabilisationWindow

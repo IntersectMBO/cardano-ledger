@@ -20,7 +20,7 @@ module Bench.Cardano.Ledger.StakeDistr (
 where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..), pvMajor)
+import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..))
 import Cardano.Ledger.Binary.Plain as Plain (FromCBOR (..), decodeFullDecoder)
 import Cardano.Ledger.Coin (CompactForm (CompactCoin), DeltaCoin (..))
 import Cardano.Ledger.Core
@@ -107,9 +107,7 @@ type CurrentEra = AlonzoEra StandardCrypto
 -- Stored constants read from files. Globals and NewEpochState
 
 readGlobals :: IO Globals
-readGlobals = pure $ mkGlobals shelleyGenesis pp
-  where
-    pp = def
+readGlobals = pure $ mkGlobals shelleyGenesis
 
 readNewEpochState :: IO (NewEpochState CurrentEra)
 readNewEpochState = do
@@ -141,11 +139,10 @@ bogusNewEpochState =
     (PoolDistr Map.empty $ CompactCoin 1)
     def
 
-mkGlobals :: ShelleyGenesis StandardCrypto -> PParams CurrentEra -> Globals
-mkGlobals genesis pp =
-  mkShelleyGlobals genesis epochInfoE majorPParamsVer
+mkGlobals :: ShelleyGenesis StandardCrypto -> Globals
+mkGlobals genesis =
+  mkShelleyGlobals genesis epochInfoE
   where
-    majorPParamsVer = pvMajor $ pp ^. ppProtocolVersionL
     epochInfoE =
       fixedEpochInfo
         (sgEpochLength genesis)
