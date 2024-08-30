@@ -35,7 +35,9 @@ instance Pretty n => Pretty (Graph n) where
     fold $
       punctuate
         hardline
-        [nest 2 $ pretty n <> " <- " <> pretty (Set.toList ns) | (n, ns) <- Map.toList (edges gr)]
+        [ nest 2 $ pretty n <> " <- " <> fillSep (map pretty (Set.toList ns))
+        | (n, ns) <- Map.toList (edges gr) --- USE FILL Here
+        ]
 
 nodes :: Graph node -> Set node
 nodes (Graph e _) = Map.keysSet e

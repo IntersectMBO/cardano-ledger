@@ -213,14 +213,17 @@ vectorOfT i gen = GenT $ \mode -> do
 
 infixl 2 `suchThatT`
 suchThatT :: MonadGenError m => GenT m a -> (a -> Bool) -> GenT m a
-suchThatT g p = do
+suchThatT g p = suchThatWithTryT 100 g p
+
+suchThatWithTryT :: MonadGenError m => Int -> GenT m a -> (a -> Bool) -> GenT m a
+suchThatWithTryT tries g p = do
   mode <- getMode
   let (n, cont) = case mode of
-        Strict -> (100, fatalError)
+        Strict -> (tries, fatalError)
         Loose -> (1 :: Int, genError) -- TODO: Maybe 1 is not the right number here!
   go n cont
   where
-    go 0 cont = cont (pure "Ran out of tries on suchThatT")
+    go 0 cont = cont (pure ("Ran out of tries (" ++ show tries ++ ") on suchThatWithTryT"))
     go n cont = do
       a <- g
       if p a then pure a else scaleT (+ 1) $ go (n - 1) cont
