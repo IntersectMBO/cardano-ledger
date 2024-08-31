@@ -43,7 +43,6 @@ import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, e
 import Cardano.Ledger.CertState (
   CommitteeAuthorization (..),
   CommitteeState (..),
-  authorizedHotCommitteeCredentials,
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway (Conway)
@@ -58,9 +57,11 @@ import Cardano.Ledger.Conway.Governance (
   RatifyState (..),
   VotingProcedures,
   gasAction,
+  showGovActionType,
  )
 import Cardano.Ledger.Conway.Rules (
   EnactSignal (..),
+  acceptedByEveryone,
   committeeAccepted,
   committeeAcceptedRatio,
   dRepAccepted,
@@ -310,12 +311,8 @@ ratifyEnvSpec ConwayRatifyExecContext {crecGovActionMap} =
         exists
           ( \eval ->
               pure $
-                Set.map
-                  CommitteeHotCredential
-                  ( Set.intersection
-                      (authorizedHotCommitteeCredentials (eval committeeState))
-                      ccVotes
-                  )
+                Set.map CommitteeHotCredential ccVotes
+                  `Set.intersection` foldr' Set.insert mempty (eval cs)
           )
           ( \ [var| common |] ->
               [ assert $ common `subset_` fromList_ (rng_ cs)
@@ -381,6 +378,7 @@ ratifyStateSpec _ RatifyEnv {..} =
                     )
               )
           , disableBootstrap pp
+          , preferSmallerCCMinSizeValues pp
           ]
       ]
   where
@@ -391,7 +389,19 @@ ratifyStateSpec _ RatifyEnv {..} =
     disableBootstrap :: IsConwayUniv fn => Term fn (PParams Conway) -> Pred fn
     disableBootstrap pp = match pp $ \pp' ->
       match (sel @12 pp') $ \major _ ->
-        assert $ not_ (major ==. lit (natVersion @9))
+        assert $ major ==. lit (natVersion @10)
+    preferSmallerCCMinSizeValues ::
+      IsConwayUniv fn =>
+      Term fn (PParams Conway) ->
+      Pred fn
+    preferSmallerCCMinSizeValues pp = match pp $ \pp' ->
+      match (sel @24 pp') $ \ccMinSize ->
+        satisfies ccMinSize $
+          chooseSpec
+            (1, TrueSpec)
+            (1, constrained (<=. committeeSize))
+      where
+        committeeSize = lit . fromIntegral . Set.size $ ccColdKeys
 
 ratifySignalSpec ::
   IsConwayUniv fn =>
@@ -421,20 +431,21 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
       $ Agda.ratifyStep env st sig
 
   extraInfo ctx env@RatifyEnv {..} st sig@(RatifySignal actions) =
-    unlines $
-      [ "Spec extra info:"
-      , either show T.unpack . runSpecTransM ctx $
-          Agda.ratifyDebug
-            <$> toSpecRep env
-            <*> toSpecRep st
-            <*> toSpecRep sig
-      , "\nImpl extra info:"
-      ]
-        <> toList (actionAcceptedRatio <$> actions)
+    unlines $ specExtraInfo : (actionAcceptedRatio <$> toList actions)
     where
       members = foldMap' (committeeMembers @Conway) $ ensCommittee (rsEnactState st)
       showAccepted True = "✓"
       showAccepted False = "×"
+      specExtraInfo =
+        unlines
+          [ "Spec extra info:"
+          , either show T.unpack . runSpecTransM ctx $
+              Agda.ratifyDebug
+                <$> toSpecRep env
+                <*> toSpecRep st
+                <*> toSpecRep sig
+          , ""
+          ]
       actionAcceptedRatio gas@GovActionState {..} =
         unlines
           [ "GovActionId: \t" <> showExpr gasId
@@ -450,13 +461,11 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
               <> show (committeeAcceptedRatio members gasCommitteeVotes reCommitteeState reCurrentEpoch)
               <> "\t"
               <> showAccepted (committeeAccepted env st gas)
-          , ""
           ]
 
   testConformance ctx env st@(RatifyState {rsEnactState}) sig@(RatifySignal actions) =
-    labelRatios
-      . property
-      $ defaultTestConformance @fn @Conway @"RATIFY" ctx env st sig
+    labelRatios $
+      defaultTestConformance @fn @Conway @"RATIFY" ctx env st sig
     where
       bucket r
         | r == 0 % 1 = "=0%"
@@ -486,11 +495,17 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
         "SPO yes votes ratio \t"
           <> bucket
             (spoAcceptedRatio env a)
+      acceptedActions = fmap gasAction . filter (acceptedByEveryone env st) $ toList actions
+      acceptedActionTypes = Set.fromList $ showGovActionType <$> acceptedActions
       labelRatios
         | Just x <- SSeq.lookup 0 actions =
             label (ccBucket x)
               . label (drepBucket x)
               . label (spoBucket x)
+              . foldr'
+                (\a f -> label ("Accepted at least one " <> a) . f)
+                id
+                (toList acceptedActionTypes)
         | otherwise = id
 
 newtype ConwayEnactExecContext era = ConwayEnactExecContext

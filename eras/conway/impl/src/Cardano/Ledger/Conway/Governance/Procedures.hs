@@ -53,6 +53,7 @@ module Cardano.Ledger.Conway.Governance.Procedures (
   Constitution (..),
   constitutionAnchorL,
   constitutionScriptL,
+  showGovActionType,
   -- Lenses
   pProcDepositL,
   pProcGovActionL,
@@ -822,6 +823,15 @@ data GovAction era
       !(Constitution era)
   | InfoAction
   deriving (Generic, Ord)
+
+showGovActionType :: GovAction era -> String
+showGovActionType NewConstitution {} = "NewConstitution"
+showGovActionType ParameterChange {} = "ParameterChange"
+showGovActionType HardForkInitiation {} = "HardForkInitiation"
+showGovActionType TreasuryWithdrawals {} = "TreasuryWithdrawals"
+showGovActionType NoConfidence {} = "NoConfidence"
+showGovActionType UpdateCommittee {} = "UpdateCommittee"
+showGovActionType InfoAction {} = "InfoAction"
 
 deriving instance EraPParams era => Show (GovAction era)
 

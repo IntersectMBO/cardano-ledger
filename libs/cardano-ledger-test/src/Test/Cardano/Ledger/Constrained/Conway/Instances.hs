@@ -298,7 +298,12 @@ instance (IsConwayUniv fn, Typeable r, Crypto c) => HasSpec fn (KeyHash r c) whe
   type TypeSpec fn (KeyHash r c) = ()
   emptySpec = ()
   combineSpec _ _ = TrueSpec
-  genFromTypeSpec _ = pureGen arbitrary
+  genFromTypeSpec _ =
+    pureGen $
+      oneof
+        [ pickFromFixedPool 20
+        , arbitrary
+        ]
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
@@ -602,11 +607,23 @@ cScriptHashObj = con @"ScriptHashObj"
 instance HasSimpleRep (ScriptHash c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (ScriptHash c)
 
+pickFromFixedPool :: Arbitrary a => Int -> Gen a
+pickFromFixedPool n =
+  oneof
+    [ variant seed arbitrary
+    | seed <- [0 .. n]
+    ]
+
 instance (IsConwayUniv fn, HashAlgorithm a, Typeable b) => HasSpec fn (Hash a b) where
   type TypeSpec fn (Hash a b) = ()
   emptySpec = ()
   combineSpec _ _ = TrueSpec
-  genFromTypeSpec _ = pureGen arbitrary
+  genFromTypeSpec _ =
+    pureGen $
+      oneof
+        [ pickFromFixedPool 20
+        , arbitrary
+        ]
   cardinalTypeSpec _ = TrueSpec
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
