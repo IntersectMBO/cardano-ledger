@@ -93,7 +93,7 @@ instance MonadError SchemaError m => FromJSON m GenesisData where
     GenesisData
       <$> fromJSField obj "bootStakeholders"
       <*> fromJSField obj "heavyDelegation"
-      <*> fromJSField obj "startTime"
+      <*> (force <$> fromJSField obj "startTime")
       <*> fromJSField obj "nonAvvmBalances"
       <*> fromJSField obj "blockVersionData"
       -- The above is called blockVersionData for backwards compatibility with
