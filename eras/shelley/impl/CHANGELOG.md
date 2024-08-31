@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.13.1.0
+
+* Fix deserialization of `IncrementalStake` in Conway era: #4590
+
 ## 1.13.0.0
 
 * Add `translateToShelleyLedgerStateFromUtxo`
