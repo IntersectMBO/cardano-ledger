@@ -106,7 +106,7 @@ class Typeable a => DecCBOR a where
   {-# INLINE decCBOR #-}
 
   -- | Validate decoding of a Haskell value, without the need to actually construct
-  -- it. Coule be slightly faster than `decCBOR`, however it should respect this law:
+  -- it. Could be slightly faster than `decCBOR`, however it should respect this law:
   --
   -- > dropCBOR (proxy :: Proxy a) = () <$ (decCBOR :: Decoder s a)
   dropCBOR :: Proxy a -> Decoder s ()
