@@ -83,6 +83,7 @@ import Cardano.Ledger.Shelley.LedgerState hiding (
   deltaReserves,
   deltaTreasury,
   ptrMap,
+  ptrMapL,
   rewards,
  )
 import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))

@@ -127,6 +127,7 @@ module Cardano.Ledger.Shelley.LedgerState (
   vsDRepsL,
   vsCommitteeStateL,
   credMapL,
+  ptrMapL,
 
   -- * Lenses from SnapShot(s)
   ssStakeMarkL,

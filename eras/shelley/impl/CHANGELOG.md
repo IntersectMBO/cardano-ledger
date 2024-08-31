@@ -6,6 +6,7 @@
 * Added `EncCBOR` instances for:
   * `UtxoEnv`
   * `CertEnv`
+* Expose `ptrMapL`
 
 ### `testlib`
 
