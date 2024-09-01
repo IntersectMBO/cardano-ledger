@@ -213,7 +213,7 @@ instance Arbitrary AccountState where
   shrink = genericShrink
 
 instance Crypto c => Arbitrary (IncrementalStake c) where
-  arbitrary = IStake <$> arbitrary <*> arbitrary
+  arbitrary = IStake <$> arbitrary <*> pure mempty -- Once in Conway Ptrs Map will be removed
   shrink = genericShrink
 
 ------------------------------------------------------------------------------------------
