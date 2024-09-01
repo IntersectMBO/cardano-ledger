@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-shelley`
 
+## 1.12.3.0
+
+* Fix deserialization of `IncrementalStake` in Conway era: #4591
+
 ## 1.12.2.0
 
 *
