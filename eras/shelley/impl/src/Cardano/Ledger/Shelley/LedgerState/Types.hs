@@ -27,7 +27,7 @@ import Cardano.Ledger.BaseTypes (
   StrictMaybe (..),
  )
 import Cardano.Ledger.Binary (
-  DecCBOR (decCBOR),
+  DecCBOR (decCBOR, dropCBOR),
   DecShareCBOR (Share, decShareCBOR, decSharePlusCBOR),
   EncCBOR (encCBOR),
   FromCBOR (..),
@@ -38,6 +38,9 @@ import Cardano.Ledger.Binary (
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
+  enforceDecoderVersion,
+  ifDecoderVersionAtLeast,
+  natVersion,
   toPlainDecoder,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
@@ -79,6 +82,7 @@ import Data.Default.Class (Default, def)
 import Data.Group (Group, invert)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import Data.VMap (VB, VMap, VP)
 import GHC.Generics (Generic)
 import Lens.Micro
@@ -239,7 +243,11 @@ instance Crypto c => DecShareCBOR (IncrementalStake c) where
   decShareCBOR credInterns =
     decodeRecordNamed "Stake" (const 2) $ do
       stake <- decShareCBOR (credInterns, mempty)
-      IStake stake <$> decCBOR
+      let dropPtrs =
+            mempty
+              <$ enforceDecoderVersion (natVersion @8) (dropCBOR (Proxy @(Map Ptr (CompactForm Coin))))
+      ptrs <- ifDecoderVersionAtLeast (natVersion @9) dropPtrs decCBOR
+      pure $ IStake stake ptrs
 
 instance Semigroup (IncrementalStake c) where
   (IStake a b) <> (IStake c d) = IStake (Map.unionWith (<>) a c) (Map.unionWith (<>) b d)
