@@ -49,7 +49,7 @@ import System.IO
 import Test.Cardano.Ledger.Common
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
-import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (crecGovActionMapL)
+import Test.Cardano.Ledger.Constrained.Conway.Utxo
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational

@@ -9,7 +9,7 @@ import Cardano.Ledger.Shelley.API.Types
 
 import Constrained
 
-import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway (ConwayEra, Conway)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
@@ -17,12 +17,13 @@ import Test.Cardano.Ledger.Constrained.Conway.Utxo
 
 ledgerTxSpec ::
   IsConwayUniv fn =>
+  UtxoExecContext Conway ->
   LedgerEnv (ConwayEra StandardCrypto) ->
   LedgerState (ConwayEra StandardCrypto) ->
   Specification fn (Tx (ConwayEra StandardCrypto))
-ledgerTxSpec env st =
+ledgerTxSpec ctx env st =
   constrained $ \tx ->
-    [ satisfies tx (utxoTxSpec utxoEnv (lsUTxOState st))
+    [ satisfies tx (utxoTxSpec ctx utxoEnv (lsUTxOState st))
     ]
   where
     utxoEnv =

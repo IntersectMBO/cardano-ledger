@@ -7,6 +7,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the UTXO rule
@@ -27,8 +28,8 @@ import Lens.Micro
 
 import Constrained
 
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core (EraTx (..), ppMaxCollateralInputsL)
+import Cardano.Ledger.Conway (ConwayEra, Conway)
+import Cardano.Ledger.Conway.Core (EraTx (..), ppMaxCollateralInputsL, Era)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
@@ -36,6 +37,12 @@ import Test.Cardano.Ledger.Constrained.Conway.Gov (proposalsSpec)
 import Cardano.Ledger.Shelley.Rules (epochFromSlot)
 import Control.Monad.Reader (runReader)
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
+import Test.QuickCheck (Arbitrary (..))
+import Control.DeepSeq (NFData)
+import GHC.Generics (Generic)
+import Test.Cardano.Ledger.Common (ToExpr)
+import Cardano.Ledger.Binary (EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (Encode(..), encode, (!>))
 
 utxoEnvSpec :: IsConwayUniv fn => Specification fn (UtxoEnv (ConwayEra StandardCrypto))
 utxoEnvSpec =
@@ -108,37 +115,57 @@ utxoStateSpec UtxoEnv {ueSlot} =
   where
     curEpoch = runReader (epochFromSlot ueSlot) testGlobals
 
+data UtxoExecContext era = UtxoExecContext
+  { uecOutputSum   :: !Coin
+  , uecDepositsSum :: !Coin
+  }
+  deriving (Generic)
+
+instance Arbitrary (UtxoExecContext era) where
+  arbitrary = UtxoExecContext <$> arbitrary <*> arbitrary
+
+instance NFData (UtxoExecContext era)
+
+instance ToExpr (UtxoExecContext era)
+
+instance Era era => EncCBOR (UtxoExecContext era) where
+  encCBOR x@(UtxoExecContext _ _) =
+    let  UtxoExecContext {..} = x
+     in encode $ Rec UtxoExecContext
+      !> To uecOutputSum
+      !> To uecDepositsSum
+
 utxoTxSpec ::
   IsConwayUniv fn =>
+  UtxoExecContext Conway ->
   UtxoEnv (ConwayEra StandardCrypto) ->
   UTxOState (ConwayEra StandardCrypto) ->
   Specification fn (Tx (ConwayEra StandardCrypto))
-utxoTxSpec env st =
+utxoTxSpec UtxoExecContext {..} env st =
   constrained $ \[var|tx|] ->
     match tx $ \[var|bdy|] _wits [var|isValid|] [var|auxData|] ->
       [ match isValid assert
       , match bdy $
           \[var|ctbSpendInputs|]
            [var|ctbCollateralInputs|]
-           [var|ctbReferenceInputs|]
+           [var|_ctbReferenceInputs|]
            [var|ctbOutputs|]
            [var|ctbCollateralReturn|]
            _ctbTotalCollateral
-           [var|ctbCerts|]
+           [var|_ctbCerts|]
            [var|ctbWithdrawals|]
            [var|ctbTxfee|]
            [var|ctbVldt|]
-           [var|ctbReqSignerHashes|]
+           [var|_ctbReqSignerHashes|]
            _ctbMint
            _ctbScriptIntegrityHash
            _ctbAdHash
            [var|ctbTxNetworkId|]
-           ctbVotingProcedures
+           [var|_ctbVotingProcedures|]
            [var|ctbProposalProcedures|]
            _ctbCurrentTreasuryValue
            [var|ctbTreasuryDonation|] ->
-              [ assert . not_ $ null_ ctbSpendInputs
-              , assert $ ctbSpendInputs `subset_` lit (Map.keysSet . unUTxO $ utxosUtxo st)
+              [ assert $ ctbSpendInputs `subset_` lit (Map.keysSet . unUTxO $ utxosUtxo st)
               , match ctbWithdrawals $ \[var|withdrawalMap|] ->
                   forAll' (dom_ withdrawalMap) $ \[var|net|] _ ->
                     net ==. lit Testnet
@@ -154,17 +181,16 @@ utxoTxSpec env st =
                               ]
                         )
                         $ \[var|totalValueConsumed|] ->
-                          [ let outputSum =
-                                  foldMap_
-                                    (maryValueCoin_ . txOutVal_ . sizedValue_)
-                                    outputList
-                                depositSum =
-                                  foldMap_
-                                    pProcDeposit_
-                                    proposalsList
-                             in outputSum + depositSum + ctbTxfee + ctbTreasuryDonation ==. totalValueConsumed
+                          [ lit (uecOutputSum + uecDepositsSum) + ctbTxfee + ctbTreasuryDonation ==. totalValueConsumed
                           ]
                     , forAll outputList (`onSized` correctAddrAndWFCoin)
+                    , ctbSpendInputs `dependsOn` outputList
+                    , ctbSpendInputs `dependsOn` proposalsList
+                    , ctbSpendInputs `dependsOn` ctbTxfee
+                    , ctbSpendInputs `dependsOn` ctbTreasuryDonation
+                    , assert $ lit uecDepositsSum ==. foldMap_ pProcDeposit_ proposalsList
+                    , assert $ lit uecOutputSum ==. foldMap_ (maryValueCoin_ . txOutVal_ . sizedValue_) outputList
+                    , assert . not_ $ null_ ctbSpendInputs
                     ]
               , match ctbVldt $ \[var|before|] [var|after|] ->
                   [ onJust' before (<=. lit (ueSlot env))

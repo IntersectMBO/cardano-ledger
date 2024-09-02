@@ -135,13 +135,14 @@ prop_UTXOS =
     $ \_env _st _sig _st' -> True
 
 prop_LEDGER :: Property
-prop_LEDGER =
-  stsPropertyV2 @"LEDGER" @ConwayFn
+prop_LEDGER = property $ do
+  ctx <- arbitrary
+  pure $ stsPropertyV2 @"LEDGER" @ConwayFn
     TrueSpec
     (\_env -> TrueSpec)
     -- TODO: the `GenDelegs` don't appear to be used (?!) so we just give an
     -- empty map here. One could consider generating them instead
-    ledgerTxSpec
+    (ledgerTxSpec ctx)
     $ \_env _st _sig _st' -> True
 
 -- prop_TICKF :: Property
@@ -212,11 +213,12 @@ prop_UTXOW =
     $ \_env _st _sig _st' -> True
 
 prop_UTXO :: Property
-prop_UTXO =
-  stsPropertyV2 @"UTXO" @ConwayFn
+prop_UTXO = property $ do
+  ctx <- arbitrary
+  pure $ stsPropertyV2 @"UTXO" @ConwayFn
     utxoEnvSpec
     utxoStateSpec
-    utxoTxSpec
+    (utxoTxSpec ctx)
     $ \_env _st _sig _st' -> True
 
 -- prop_BBODY :: Property

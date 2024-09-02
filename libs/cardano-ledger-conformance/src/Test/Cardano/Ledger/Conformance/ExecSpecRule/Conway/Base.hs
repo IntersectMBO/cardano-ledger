@@ -69,7 +69,6 @@ import Cardano.Ledger.Conway.Rules (
   spoAccepted,
   spoAcceptedRatio,
  )
-import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -110,6 +109,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   utxoEnvSpec,
   utxoStateSpec,
   utxoTxSpec,
+  UtxoExecContext,
  )
 import Test.Cardano.Ledger.Constrained.Conway.Instances ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -120,11 +120,13 @@ instance
   IsConwayUniv fn =>
   ExecSpecRule fn "UTXO" Conway
   where
+  type ExecContext fn "UTXO" Conway = UtxoExecContext Conway
+
   environmentSpec _ = utxoEnvSpec
 
   stateSpec _ = utxoStateSpec
 
-  signalSpec _ = utxoTxSpec
+  signalSpec = utxoTxSpec
 
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])

@@ -54,6 +54,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest (
   ShelleyEraImp,
   impAnn,
   logEntry,
+  logToExpr,
   tryRunImpRule,
  )
 import UnliftIO (MonadIO (..), evaluateDeep)
@@ -441,27 +442,44 @@ generatesWithin gen timeout =
 
 inputsGenerateWithin ::
   forall (fn :: [Type] -> Type -> Type) (rule :: Symbol) era.
-  ExecSpecRule fn rule era =>
+  ( ExecSpecRule fn rule era
+  , ToExpr (ExecContext fn rule era)
+  , ShelleyEraImp era
+  ) =>
   Int ->
   Spec
 inputsGenerateWithin timeout =
   describe (aName <> " input generation time") $ do
     let
+      genEnv :: ImpTestM era (ExecEnvironment fn rule era)
       genEnv = do
-        ctx <- genExecContext @fn @rule @era
-        CV2.genFromSpec $ environmentSpec @fn @rule @era ctx
+        ctx <- liftGen $ genExecContext @fn @rule @era
+        logEntry "ctx:"
+        logToExpr ctx
+        liftGen . CV2.genFromSpec $ environmentSpec @fn @rule @era ctx
+      genSt :: ImpTestM era (ExecState fn rule era)
       genSt = do
-        ctx <- genExecContext @fn @rule @era
+        ctx <- liftGen $ genExecContext @fn @rule @era
         env <- genEnv
-        CV2.genFromSpec $ stateSpec @fn @rule @era ctx env
+        logEntry "env:"
+        logToExpr env
+        liftGen . CV2.genFromSpec $ stateSpec @fn @rule @era ctx env
+      genSig :: ImpTestM era (ExecSignal fn rule era)
       genSig = do
-        ctx <- genExecContext @fn @rule @era
+        ctx <- liftGen $ genExecContext @fn @rule @era
         env <- genEnv
         st <- genSt
-        CV2.genFromSpec $ signalSpec @fn @rule @era ctx env st
-    genEnv `generatesWithin` timeout
-    genSt `generatesWithin` timeout
-    genSig `generatesWithin` timeout
+        logEntry "st:"
+        logToExpr env
+        liftGen . CV2.genFromSpec $ signalSpec @fn @rule @era ctx env st
+      evaluatesWithin :: NFData a => Int -> ImpTestM era a -> Property
+      evaluatesWithin t impTest = property $ do
+        x <- impTest
+        res <- liftIO $ evaluateDeep x $> ()
+        pure $ within t res
+    prop "Environment" $ evaluatesWithin timeout genEnv
+    prop "State" $ evaluatesWithin timeout genSt
+    prop "Signal" $ evaluatesWithin timeout genSig
   where
     aName = show (typeRep $ Proxy @rule)
 
