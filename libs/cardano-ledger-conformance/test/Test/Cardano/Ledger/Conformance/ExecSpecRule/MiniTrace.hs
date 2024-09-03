@@ -32,6 +32,7 @@ import Test.Cardano.Ledger.Generic.Proof
 
 -- \| This is where most of the ExecSpecRule instances are defined
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
+  nameCerts,
   nameDelegCert,
   nameEnact,
   nameEpoch,
@@ -76,7 +77,7 @@ minitraceEither witrule Proxy n0 = do
                 pure
                   ( Left
                       ( [ "\nSIGNAL = " ++ show (prettyA signal2)
-                        , "\nState = " ++ show (prettyA state)
+                        , "\nSTATE = " ++ show (prettyA state)
                         , "\nPredicateFailures"
                         ]
                           ++ map show (NE.toList ps)
@@ -163,6 +164,7 @@ spec = do
     prop "DELEG" (withMaxSuccess 50 (minitraceProp (DELEG Conway) (Proxy @ConwayFn) 50 nameDelegCert))
     prop "GOVCERT" (withMaxSuccess 50 (minitraceProp (GOVCERT Conway) (Proxy @ConwayFn) 50 nameGovCert))
     prop "CERT" (withMaxSuccess 50 (minitraceProp (CERT Conway) (Proxy @ConwayFn) 50 nameTxCert))
+    prop "CERTS" (withMaxSuccess 50 (minitraceProp (CERTS Conway) (Proxy @ConwayFn) 50 nameCerts))
     prop "RATIFY" (withMaxSuccess 50 (minitraceProp (RATIFY Conway) (Proxy @ConwayFn) 50 nameRatify))
     prop "ENACT" (withMaxSuccess 50 (minitraceProp (ENACT Conway) (Proxy @ConwayFn) 50 nameEnact))
     -- These properties do not have working 'signalSpec' Specifications yet.

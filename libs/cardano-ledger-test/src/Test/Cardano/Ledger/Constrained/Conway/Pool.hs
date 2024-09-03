@@ -39,7 +39,9 @@ pStateSpec ::
   Specification fn (PState (ConwayEra StandardCrypto))
 pStateSpec = constrained $ \ps ->
   match ps $ \stakePoolParams futureStakePoolParams retiring deposits ->
-    [ assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
+    [ assert $ sizeOf_ stakePoolParams ==. lit 3
+    , assert $ sizeOf_ futureStakePoolParams ==. lit 1
+    , assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
         dom_ retiring `subset_` dom_ stakePoolParams
     , assertExplain (pure "dom of deposits is dom of stakePoolParams") $
         dom_ deposits ==. dom_ stakePoolParams

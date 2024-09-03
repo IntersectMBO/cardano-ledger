@@ -9,6 +9,7 @@
 -- for the GOVCERT rule
 module Test.Cardano.Ledger.Constrained.Conway.GovCert where
 
+import Cardano.Ledger.BaseTypes (EpochNo (..))
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Governance
@@ -22,8 +23,13 @@ import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 
-vStateSpec :: Specification fn (VState (ConwayEra StandardCrypto))
-vStateSpec = TrueSpec
+vStateSpec :: IsConwayUniv fn => Specification fn (VState (ConwayEra StandardCrypto))
+-- vStateSpec = TrueSpec
+vStateSpec = constrained' $ \x y z ->
+  [ assert $ sizeOf_ x ==. 1
+  , match y $ \cs -> assert $ sizeOf_ cs ==. 1
+  , assert $ z ==. lit (EpochNo 4)
+  ]
 
 govCertSpec ::
   IsConwayUniv fn =>
