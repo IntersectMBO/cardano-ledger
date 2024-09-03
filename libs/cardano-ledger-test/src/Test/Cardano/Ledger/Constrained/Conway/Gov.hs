@@ -2,8 +2,10 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the GOV rule
@@ -262,31 +264,38 @@ govProceduresSpec ge@GovEnv {..} ps =
         actions isDRepVotingAllowed
       stakepoolVotableActionIds =
         actions isStakePoolVotingAllowed
-   in constrained $ \govSignal ->
-        match govSignal $ \votingProcs proposalProcs _certificates ->
-          [ match votingProcs $ \votingProcsMap ->
-              forAll votingProcsMap $ \kvp ->
-                match kvp $ \voter mapActVote ->
-                  (caseOn voter)
-                    ( branch $ \committeeHotCred ->
-                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
-                        , member_ committeeHotCred $ lit knownCommitteeAuthorizations
-                        ]
-                    )
-                    ( branch $ \drepCred ->
-                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList drepVotableActionIds)
-                        , member_ drepCred $ lit knownDReps
-                        ]
-                    )
-                    ( branch $ \poolKeyHash ->
-                        [ subset_ (dom_ mapActVote) (lit $ Set.fromList stakepoolVotableActionIds)
-                        , member_ poolKeyHash $ lit knownStakePools
-                        ]
-                    )
-          , forAll proposalProcs $ \proc ->
-              match proc $ \deposit returnAddr govAction _ ->
+   in constrained $ \ [var|govSignal|] ->
+        match govSignal $ \ [var|votingProcs|] [var|proposalProcs|] _certificates ->
+          [ match votingProcs $ \ [var|votingProcsMap|] ->
+              forAll votingProcsMap $ \ [var|kvp|] ->
+                match kvp $ \ [var|voter|] [var|mapActVote|] ->
+                  [ -- if we solve 'voter' before 'mapActVote', we risk the possibility
+                    -- that none of the cases will match
+                    dependsOn mapActVote voter
+                  , (caseOn voter)
+                      -- CommitteeVoter
+                      ( branch $ \ [var| committeeHotCred|] ->
+                          [ subset_ (dom_ mapActVote) (lit $ Set.fromList committeeVotableActionIds)
+                          , member_ committeeHotCred $ lit knownCommitteeAuthorizations
+                          ]
+                      )
+                      --  DRepVoter
+                      ( branch $ \ [var|drepCred|] ->
+                          [ subset_ (dom_ mapActVote) (lit $ Set.fromList drepVotableActionIds)
+                          , member_ drepCred $ lit knownDReps
+                          ]
+                      )
+                      -- StakePoolVoter
+                      ( branch $ \ [var|poolKeyHash|] ->
+                          [ subset_ (dom_ mapActVote) (lit $ Set.fromList stakepoolVotableActionIds)
+                          , member_ poolKeyHash $ lit knownStakePools
+                          ]
+                      )
+                  ]
+          , forAll proposalProcs $ \ [var|proc|] ->
+              match proc $ \ [var|deposit|] [var|returnAddr|] [var|govAction|] _ ->
                 [ assert $ deposit ==. lit (gePParams ^. ppGovActionDepositL)
-                , match returnAddr $ \net _cred ->
+                , match returnAddr $ \ [var|net|] _cred ->
                     net ==. lit Testnet
                 , wfGovAction ge ps govAction
                 ]

@@ -24,6 +24,7 @@ import Constrained.Base
 import Constrained.Core
 import Constrained.List
 import Constrained.Univ
+import Data.List (nub)
 import qualified Data.List.NonEmpty as NE
 import Test.QuickCheck
 
@@ -107,7 +108,7 @@ instance BaseUniverse fn => Functions (PairFn fn) fn where
                   -- TODO: better error message
                   | otherwise ->
                       ErrorSpec (NE.fromList ["propagateSpecFun (Pair a b) has conformance failure on b", show sb])
-                MemberSpec es -> MemberSpec (sameSnd es)
+                MemberSpec es -> MemberSpec $ nub (sameSnd es)
       | Value a :! NilCtx HOLE <- ctx ->
           let sameFst ps = [b | Prod a' b <- ps, a == a']
            in case spec of
@@ -116,7 +117,7 @@ instance BaseUniverse fn => Functions (PairFn fn) fn where
                   -- TODO: better error message
                   | otherwise ->
                       ErrorSpec (NE.fromList ["propagateSpecFun (Pair a b) has conformance failure on a", show sa])
-                MemberSpec es -> MemberSpec (sameFst es)
+                MemberSpec es -> MemberSpec $ nub (sameFst es)
 
   rewriteRules Fst ((pairView -> Just (x, _)) :> Nil) = Just x
   rewriteRules Snd ((pairView -> Just (_, y)) :> Nil) = Just y

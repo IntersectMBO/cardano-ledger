@@ -602,7 +602,7 @@ type OrdSet a = [a]
 data Specification fn a where
   -- | Elements of a known set
   MemberSpec ::
-    -- | It must be an element of this set
+    -- | It must be an element of this OrdSet (List). Try hard not to put duplicates in the List.
     OrdSet a ->
     Specification fn a
   -- | The empty set
@@ -655,12 +655,14 @@ instance HasSpec fn a => Semigroup (Specification fn a) where
     explainSpec
       (NE.fromList ["Intersecting: ", "  MemberSpec " ++ show as, "  MemberSpec " ++ show as'])
       $ MemberSpec
+      $ nub
       $ intersect as as'
   MemberSpec as <> TypeSpec s cant =
     MemberSpec $
-      filter
-        (flip (conformsTo @fn) s)
-        (filter (`notElem` cant) as)
+      nub $
+        filter
+          (flip (conformsTo @fn) s)
+          (filter (`notElem` cant) as)
   TypeSpec s cant <> MemberSpec as = MemberSpec as <> TypeSpec s cant
   SuspendedSpec v p <> SuspendedSpec v' p' = SuspendedSpec v (p <> rename v' v p')
   SuspendedSpec v ps <> s = SuspendedSpec v (ps <> satisfies (V v) s)
@@ -679,7 +681,7 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
     baseSpec <-
       frequency
         [ (1, pure TrueSpec)
-        , (7, MemberSpec <$> listOf1 (genFromSpec @fn TrueSpec))
+        , (7, MemberSpec . nub <$> listOf1 (genFromSpec @fn TrueSpec))
         , (10, typeSpec <$> arbitrary)
         ,
           ( 1
@@ -730,11 +732,11 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
       ]
 
   shrink TrueSpec = []
-  shrink (MemberSpec xs) = TrueSpec : (MemberSpec <$> shrinkList (shrinkWithSpec @fn TrueSpec) xs)
+  shrink (MemberSpec xs) = TrueSpec : (MemberSpec . nub <$> shrinkList (shrinkWithSpec @fn TrueSpec) xs)
   shrink (TypeSpec ts cant)
     | null cant = TrueSpec : MemberSpec [] : map typeSpec (shrink ts)
     | otherwise =
-        [TrueSpec, typeSpec ts, MemberSpec cant]
+        [TrueSpec, typeSpec ts, MemberSpec (nub cant)]
           ++ map typeSpec (shrink ts)
           ++ map (TypeSpec ts) (shrinkList (shrinkWithSpec @fn TrueSpec) cant)
   shrink (SuspendedSpec x p) =
@@ -983,6 +985,7 @@ class (HasSpec fn a, Show (Hint a)) => HasGenHint fn a where
 
 -- Semantics of specs -----------------------------------------------------
 
+{-
 conformsToSpecM ::
   forall fn a m. (HasSpec fn a, MonadGenError m, Alternative m) => a -> Specification fn a -> m ()
 conformsToSpecM _ TrueSpec = pure ()
@@ -990,6 +993,37 @@ conformsToSpecM a (MemberSpec as) = explain1 (show a ++ " not an element of " ++
 conformsToSpecM a (TypeSpec s cant) = guard $ notElem a cant && conformsTo @fn a s
 conformsToSpecM a (SuspendedSpec v ps) = guard =<< checkPred (singletonEnv v a) ps
 conformsToSpecM _ (ErrorSpec es) = explain es $ guard False
+-}
+
+conformsToSpecM ::
+  forall fn a m. (HasSpec fn a, MonadGenError m) => a -> Specification fn a -> m ()
+conformsToSpecM _ TrueSpec = pure ()
+conformsToSpecM a (MemberSpec as) =
+  if elem a as
+    then pure ()
+    else
+      fatalError
+        ( NE.fromList
+            ["conformsToSpecM MemberSpec case", "  " ++ show a, "  not an element of", "  " ++ show as, ""]
+        )
+conformsToSpecM a spec@(TypeSpec s cant) =
+  if notElem a cant && conformsTo @fn a s
+    then pure ()
+    else
+      fatalError
+        ( NE.fromList
+            ["conformsToSpecM TypeSpec case", "  " ++ show a, "  (" ++ show spec ++ ")", "fails", ""]
+        )
+conformsToSpecM a spec@(SuspendedSpec v ps) = do
+  ans <- checkPred (singletonEnv v a) ps
+  if ans
+    then pure ()
+    else
+      fatalError
+        ( NE.fromList
+            ["conformsToSpecM SuspendedSpec case", "  " ++ show a, "  (" ++ show spec ++ ")", "fails", ""]
+        )
+conformsToSpecM _ (ErrorSpec es) = fatalError ("conformsToSpecM ErrorSpec case" NE.<| es)
 
 conformsToSpecProp :: forall fn a. HasSpec fn a => a -> Specification fn a -> Property
 conformsToSpecProp a s = fromGEProp $ conformsToSpecM a (simplifySpec s)
@@ -1259,7 +1293,7 @@ backPropagation (SolverPlan plan graph) = SolverPlan (go [] (reverse plan)) grap
         termVarEqCases :: HasSpec fn b => Specification fn a -> Var b -> Term fn b -> [SolverStage fn]
         termVarEqCases (MemberSpec vs) x' t
           | Set.singleton (Name x) == freeVarSet t =
-              [SolverStage x' [] $ MemberSpec [errorGE $ runTerm (singletonEnv x v) t | v <- vs]]
+              [SolverStage x' [] $ MemberSpec $ nub [errorGE $ runTerm (singletonEnv x v) t | v <- vs]]
         termVarEqCases spec x' t
           | Just Refl <- eqVar x x'
           , [Name y] <- Set.toList $ freeVarSet t
@@ -1476,9 +1510,9 @@ simplifySpec spec = case regularizeNames spec of
             )
           $ computeSpecSimplified x optP
   MemberSpec [] -> ErrorSpec (pure "MemberSpec []")
-  MemberSpec xs -> MemberSpec (nub xs)
+  MemberSpec xs -> MemberSpec xs
   ErrorSpec es -> ErrorSpec es
-  TypeSpec ts cant -> TypeSpec ts (nub cant)
+  TypeSpec ts cant -> TypeSpec ts cant
   TrueSpec -> TrueSpec
 
 -- | Precondition: the `Pred fn` defines the `Var a`
@@ -1646,7 +1680,7 @@ mapSpec ::
   Specification fn b
 mapSpec f TrueSpec = mapTypeSpec f (emptySpec @fn @a)
 mapSpec _ (ErrorSpec err) = ErrorSpec err
-mapSpec f (MemberSpec as) = MemberSpec $ map (sem f) as
+mapSpec f (MemberSpec as) = MemberSpec $ nub $ map (sem f) as
 mapSpec f (SuspendedSpec x p) =
   constrained $ \x' ->
     Exists (\_ -> fatalError1 "mapSpec") (x :-> fold [assert $ x' ==. app f (V x), p])
@@ -2505,7 +2539,7 @@ fromSimpleRepSpec = \case
   TrueSpec -> TrueSpec
   ErrorSpec e -> ErrorSpec e
   TypeSpec s'' cant -> TypeSpec s'' $ map fromSimpleRep cant
-  MemberSpec elems -> MemberSpec (map fromSimpleRep elems)
+  MemberSpec elems -> MemberSpec $ nub (map fromSimpleRep elems)
   SuspendedSpec x p ->
     constrained $ \x' ->
       Let (toGeneric_ x') (x :-> p)
@@ -2519,7 +2553,7 @@ toSimpleRepSpec = \case
   TrueSpec -> TrueSpec
   ErrorSpec e -> ErrorSpec e
   TypeSpec s'' cant -> TypeSpec s'' $ map toSimpleRep cant
-  MemberSpec elems -> MemberSpec (map toSimpleRep elems)
+  MemberSpec elems -> MemberSpec $ nub $ (map toSimpleRep elems)
   SuspendedSpec x p ->
     constrained $ \x' ->
       Let (fromGeneric_ x') (x :-> p)
@@ -2913,7 +2947,7 @@ narrowByFuelAndSize fuel size specs =
             possible x = x == u || xMinP <= u - x
             xs' = filter possible xs
       , xs' /= xs =
-          Just (MemberSpec xs', foldS)
+          Just (MemberSpec $ nubOrd xs', foldS)
       -- The lower bound on the number of elements is too low
       | Just e <- knownLowerBound elemS
       , e > 0
@@ -3388,23 +3422,21 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
               , "  " ++ show e
               ]
           )
+  -- Special case when elemS is a MemberSpec.
+  -- Just union 'must' with enough elements of 'xs' to meet  'szSpec'
+  genFromTypeSpec (SetSpec must elemS@(MemberSpec xs) szSpec) = do
+    let szSpec' = szSpec <> geqSpec @fn (sizeOf must) <> maxSpec (cardinality elemS)
+    choices <- pureGen $ shuffle (xs \\ Set.toList must)
+    size <- fromInteger <$> genFromSpecT szSpec'
+    let additions = Set.fromList $ take (size - Set.size must) choices
+    pure (Set.union must additions)
   genFromTypeSpec (SetSpec must elemS szSpec) = do
     let szSpec' = (szSpec <> geqSpec @fn (sizeOf must) <> maxSpec (cardinality elemS))
     count <-
       explain1 ("Choose a size for the Set to be generated") $
         genFromSpecT szSpec'
-    -- Each time around the 'go' loop, the set 's' grows, so it becomes harder to pick
-    -- a new element not already in 's'. if 'elemS' is a MemberSpec, there are only a finite number
-    -- elements that can be picked. So if 'count' is close to this finite number, we may need
-    -- some extra tries, to be sure we get enough successful tries to gather the needed 'count' elements.
-    let tries = case elemS of
-          MemberSpec xs ->
-            if 2 * fromInteger count > length xs
-              then max 100 (3 * fromInteger count)
-              else 100
-          _ -> 100
     explain (NE.fromList ["Choose size count = " ++ show count, "szSpec' = " ++ show szSpec']) $
-      go tries (count - sizeOf must) must
+      go 100 (count - sizeOf must) must
     where
       go _ n s | n <= 0 = pure s
       go tries n s = do
@@ -3412,8 +3444,9 @@ instance (Ord a, HasSpec fn a) => HasSpec fn (Set a) where
           explain
             ( NE.fromList
                 [ "Generate set member:"
-                , "  items left to pick   = " ++ show n
-                , "  items already picked = " ++ show (Set.size s)
+                , "  number of items starting with  = " ++ show (Set.size must)
+                , "  number of items left to pick   = " ++ show n
+                , "  number of items already picked = " ++ show (Set.size s)
                 ]
             )
             $ withMode Strict
@@ -3542,7 +3575,7 @@ instance BaseUniverse fn => Functions (SetFn fn) fn where
           False -> typeSpec $ SetSpec mempty (notEqualSpec e) mempty
     Elem
       | HOLE :? Value es :> Nil <- ctx -> caseBoolSpec spec $ \case
-          True -> MemberSpec es
+          True -> MemberSpec (nub es)
           False -> notMemberSpec es
       | Value e :! NilCtx HOLE <- ctx -> caseBoolSpec spec $ \case
           True -> typeSpec $ ListSpec Nothing [e] mempty mempty NoFold
@@ -4438,11 +4471,11 @@ instance BaseUniverse fn => Functions (IntFn fn) fn where
         case spec of
           TypeSpec ts cant ->
             subtractSpec @fn i ts <> notMemberSpec (catMaybes $ map (safeSubtract @fn i) cant)
-          MemberSpec es -> MemberSpec $ catMaybes (map (safeSubtract @fn i) es)
+          MemberSpec es -> MemberSpec $ nub $ catMaybes (map (safeSubtract @fn i) es)
   propagateSpecFun Negate (NilCtx HOLE) spec = case spec of
     TypeSpec ts (cant :: OrdSet a) ->
       negateSpec @fn @a ts <> notMemberSpec (map negate cant)
-    MemberSpec es -> MemberSpec $ map negate es
+    MemberSpec es -> MemberSpec $ nub $ map negate es
 
   mapTypeSpec Negate (ts :: TypeSpec fn a) =
     negateSpec @fn @a ts
@@ -5083,13 +5116,13 @@ class Sized t where
 instance Ord a => Sized (Set.Set a) where
   sizeOf = toInteger . Set.size
   liftSizeSpec spec cant = typeSpec (SetSpec mempty TrueSpec (TypeSpec spec cant))
-  liftMemberSpec xs = typeSpec (SetSpec mempty TrueSpec (MemberSpec xs))
+  liftMemberSpec xs = typeSpec (SetSpec mempty TrueSpec (MemberSpec (nubOrd xs)))
   sizeOfTypeSpec (SetSpec must _ sz) = sz <> geqSpec (sizeOf must)
 
 instance Sized [a] where
   sizeOf = toInteger . length
   liftSizeSpec spec cant = typeSpec (ListSpec Nothing mempty (TypeSpec spec cant) TrueSpec NoFold)
-  liftMemberSpec xs = typeSpec (ListSpec Nothing mempty (MemberSpec xs) TrueSpec NoFold)
+  liftMemberSpec xs = typeSpec (ListSpec Nothing mempty (MemberSpec (nubOrd xs)) TrueSpec NoFold)
   sizeOfTypeSpec (ListSpec _ _ _ ErrorSpec {} _) = equalSpec 0
   sizeOfTypeSpec (ListSpec _ must sizespec _ _) = sizespec <> geqSpec (sizeOf must)
 
@@ -5186,10 +5219,10 @@ operateSpec f ft x y = case (x, y) of
   (TypeSpec x bad1, TypeSpec y bad2) -> TypeSpec (ft x y) [f b1 b2 | b1 <- bad1, b2 <- bad2]
   (MemberSpec [], _) -> ErrorSpec (pure "Null MemberSpec")
   (_, MemberSpec []) -> ErrorSpec (pure "Null MemberSpec")
-  (MemberSpec xs, MemberSpec ys) -> MemberSpec [f x y | x <- xs, y <- ys]
+  (MemberSpec xs, MemberSpec ys) -> MemberSpec (nubOrd [f x y | x <- xs, y <- ys])
   -- This block is all (MemberSpec{}, TypeSpec{}) with MemberSpec on the left
   (MemberSpec xs, TypeSpec (NumSpecInterval (Just i) (Just j)) bad) ->
-    MemberSpec [f x y | x <- xs, y <- [i .. j], not (elem y bad)]
+    MemberSpec (nubOrd [f x y | x <- xs, y <- [i .. j], not (elem y bad)])
   -- Somewhat loose spec here, but more accurate then TrueSpec, it is exact if 'xs' has one element (i.e. 'xs' = [i])
   (MemberSpec xs, TypeSpec (NumSpecInterval lo hi) bads) ->
     -- We use the specialized version of 'TypeSpec' 'typeSpecOpt'
@@ -5283,7 +5316,7 @@ notInNumSpec ::
   Specification fn n
 notInNumSpec ns@(NumSpecInterval a b) bad
   | toInteger (length bad) > (finiteSize @n `div` 2) || countSpec ns < toInteger (length bad) =
-      MemberSpec [x | x <- [lowBound a .. highBound b], notElem x bad]
+      MemberSpec $ nubOrd $ [x | x <- [lowBound a .. highBound b], notElem x bad]
   | otherwise = TypeSpec @fn @n ns bad
 
 -- ========================================================================
@@ -5349,7 +5382,7 @@ multT PosInf (Ok _) = PosInf
 sizeOfSpec ::
   forall fn t. (BaseUniverse fn, Sized t) => Specification fn t -> Specification fn Integer
 sizeOfSpec TrueSpec = TrueSpec
-sizeOfSpec (MemberSpec xs) = MemberSpec (map sizeOf xs)
+sizeOfSpec (MemberSpec xs) = MemberSpec (nubOrd (map sizeOf xs))
 sizeOfSpec (ErrorSpec xs) = ErrorSpec xs
 sizeOfSpec (SuspendedSpec x p) =
   constrained $ \len ->
@@ -5373,3 +5406,14 @@ checkForNegativeSize spec@(TypeSpec (NumSpecInterval x y) _) =
     (_, _) -> spec
 checkForNegativeSize (MemberSpec xs) | any (< 0) xs = ErrorSpec (pure ("Negative Size in MemberSpec " ++ show xs))
 checkForNegativeSize spec = spec
+
+-- | Strip out duplicates
+nubOrd :: Ord a => [a] -> [a]
+nubOrd =
+  loop mempty
+  where
+    loop _ [] = []
+    loop s (a : as)
+      | a `Set.member` s = loop s as
+      | otherwise =
+          let s' = Set.insert a s in s' `seq` a : loop s' as
