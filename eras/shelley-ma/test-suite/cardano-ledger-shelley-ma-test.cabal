@@ -41,7 +41,7 @@ library
     build-depends:
         base >=4.14 && <5,
         bytestring,
-        cardano-ledger-binary:{cardano-ledger-binary, testlib} >=1.2,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib} ^>=1.4,
         cardano-ledger-core:{cardano-ledger-core, testlib} >=1.14,
         cardano-ledger-allegra:{cardano-ledger-allegra, testlib} >=1.6 && <1.7,
         cardano-ledger-mary:{cardano-ledger-mary, testlib} >=1.7 && <1.8,

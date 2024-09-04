@@ -10,6 +10,14 @@
 * Add `uniformSubMap` and `uniformSubMapElems`
 * Rename `uniformSubset` to `uniformSubSet`
 * Add `tracedDiscard`
+* Add re-exported functions that were added in `cardano-ledger-binary-1.4.0.0`
+  - `ansiExpr`
+  - `ansiExprString`
+  - `diffExprString`
+  - `diffExprCompactString`
+* Existing re-exported functions `diffExpr` and `diffExprCompact` have new return types
+  per `cardano-ledger-binary-1.4.0.0`
+* Add a function `expectRawEqual`
 
 ## 1.14.0.0
 
