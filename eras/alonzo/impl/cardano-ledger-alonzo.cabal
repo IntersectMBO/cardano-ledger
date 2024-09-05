@@ -115,10 +115,13 @@ library testlib
         Test.Cardano.Ledger.Alonzo.Imp.UtxowSpec.Invalid
         Test.Cardano.Ledger.Alonzo.ImpTest
         Test.Cardano.Ledger.Alonzo.TreeDiff
+        Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance
+        Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen
+        Test.Cardano.Ledger.Alonzo.Translation.Golden
+        Paths_cardano_ledger_alonzo
 
     visibility:       public
     hs-source-dirs:   testlib
-    other-modules:    Paths_cardano_ledger_alonzo
     default-language: Haskell2010
     ghc-options:
         -Wall -Wcompat -Wincomplete-record-updates
@@ -138,12 +141,32 @@ library testlib
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-strict-containers,
+        cardano-slotting,
         plutus-ledger-api,
         generic-random,
         microlens,
         microlens-mtl,
+        serialise,
+        time,
+        HUnit,
         text,
-        tree-diff
+        tree-diff,
+        QuickCheck
+
+executable gen-golden
+    main-is:          GenerateGoldenFileMain.hs
+    hs-source-dirs:   test
+    other-modules:    Paths_cardano_ledger_alonzo
+    default-language: Haskell2010
+    ghc-options:
+        -Wall -Wcompat -Wincomplete-record-updates
+        -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints
+        -Wunused-packages
+
+    build-depends:
+        base,
+        cardano-ledger-alonzo,
+        testlib
 
 test-suite tests
     type:             exitcode-stdio-1.0
@@ -152,6 +175,8 @@ test-suite tests
     other-modules:
         Test.Cardano.Ledger.Alonzo.BinarySpec
         Test.Cardano.Ledger.Alonzo.Binary.CddlSpec
+        Test.Cardano.Ledger.Alonzo.GoldenTranslation
+        Paths_cardano_ledger_alonzo
 
     default-language: Haskell2010
     ghc-options:
@@ -165,4 +190,5 @@ test-suite tests
         cardano-ledger-alonzo,
         cardano-ledger-binary:testlib,
         cardano-ledger-core:{cardano-ledger-core, testlib},
-        testlib
+        testlib,
+        HUnit

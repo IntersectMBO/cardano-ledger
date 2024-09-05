@@ -8,4 +8,4 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen ()
 
 -- | Generates golden translation file for Alonzo era
 main :: IO ()
-main = generateGoldenFile @Alonzo "eras/alonzo/test-suite/golden/translations.cbor"
+main = generateGoldenFile @Alonzo "eras/alonzo/impl/golden/translations.cbor"
