@@ -40,7 +40,6 @@ import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO
 import Data.Functor.Identity
 import Data.TreeDiff.OMap
-import Data.VMap hiding (fromList)
 import GHC.TypeLits
 import Test.Cardano.Ledger.Binary.TreeDiff
 import Test.Data.VMap.TreeDiff ()
@@ -101,8 +100,13 @@ instance ToExpr CostModel where
     App
       "CostModel"
       [ toExpr (getCostModelLanguage costModel)
-      , toExpr (getCostModelParams costModel)
+      , paramsExpr (getCostModelParams costModel)
       ]
+    where
+      paramsExpr [] = Lst []
+      paramsExpr xs = App "concat" [Lst . map Lst . chunksOf 15 . map toExpr $ xs]
+      chunksOf _ [] = []
+      chunksOf n xs = let (chunk, rest) = splitAt n xs in chunk : chunksOf n rest
 
 instance ToExpr CostModels
 
