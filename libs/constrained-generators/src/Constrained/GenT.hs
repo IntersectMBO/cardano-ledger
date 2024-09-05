@@ -29,7 +29,6 @@
 
 module Constrained.GenT where
 
-import Control.Applicative
 import Control.Monad
 import Data.Foldable
 import Data.List.NonEmpty qualified as NE
@@ -79,12 +78,6 @@ instance Monad GE where
   FatalError es err >>= _ = FatalError es err
   GenError es err >>= _ = GenError es err
   Result _ a >>= k = k a
-
-instance Alternative GE where
-  empty = GenError [] (pure "Not a real error. makes GE have Alternative instance")
-  m@FatalError {} <|> _ = m
-  GenError {} <|> m = m
-  Result es x <|> _ = Result es x
 
 instance MonadGenError GE where
   genError neStr = GenError [] neStr

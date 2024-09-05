@@ -50,7 +50,7 @@ import Test.QuickCheck (Arbitrary (..), frequency, genericShrink, shrinkList)
 instance Ord a => Sized (Map.Map a b) where
   sizeOf = toInteger . Map.size
   liftSizeSpec sz cant = typeSpec $ defaultMapSpec {mapSpecSize = TypeSpec sz cant}
-  liftMemberSpec xs = typeSpec $ defaultMapSpec {mapSpecSize = MemberSpec xs}
+  liftMemberSpec xs = typeSpec $ defaultMapSpec {mapSpecSize = MemberSpec (nubOrd xs)}
   sizeOfTypeSpec (MapSpec _ mustk mustv size _ _) =
     geqSpec (sizeOf mustk)
       <> geqSpec (sizeOf mustv)
@@ -334,7 +334,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
           | HOLE :? Value (m :: Map k v) :> Nil <- ctx ->
               if Nothing `conformsToSpec` spec
                 then notMemberSpec [k | (k, v) <- Map.toList m, not $ Just v `conformsToSpec` spec]
-                else MemberSpec $ Map.keys $ Map.filter (`conformsToSpec` spec) (Just <$> m)
+                else MemberSpec $ nubOrd $ Map.keys $ Map.filter (`conformsToSpec` spec) (Just <$> m)
           | Value k :! NilCtx HOLE <- ctx
           , Evidence <- prerequisites @fn @(Map k v) ->
               constrained $ \m ->
