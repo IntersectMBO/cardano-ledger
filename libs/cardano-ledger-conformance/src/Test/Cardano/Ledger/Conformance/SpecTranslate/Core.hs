@@ -46,7 +46,7 @@ instance ToExpr OpaqueErrorString where
   -- Using `toExpr` on a `String` displays escape codes in place of unicode
   -- characters (e.g. "≡" becomes "\8802")
   -- TODO figure out a less hacky way to solve this problem
-  toExpr (OpaqueErrorString x) = App "OpaqueErrorString" [App x []]
+  toExpr (OpaqueErrorString x) = App x []
 
 instance NFData OpaqueErrorString
 

@@ -25,7 +25,6 @@ import Cardano.Ledger.Val
 import Cardano.Ledger.Conway.Tx
 import Cardano.Ledger.Conway.TxBody
 import Cardano.Ledger.Conway.TxWits
-import Test.Cardano.Ledger.Api.DebugTools
 
 import Control.Monad
 
@@ -53,5 +52,7 @@ import Test.Cardano.Ledger.Constrained.Conway.Utxo
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Core.Rational
+import Test.Cardano.Ledger.Api.DebugTools
+import Test.Cardano.Ledger.Mary.Arbitrary
 
 import Test.QuickCheck

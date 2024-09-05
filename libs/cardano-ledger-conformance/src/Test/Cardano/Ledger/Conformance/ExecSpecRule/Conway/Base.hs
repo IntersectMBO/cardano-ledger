@@ -36,7 +36,7 @@ import Cardano.Ledger.BaseTypes (
   Network,
   StrictMaybe (..),
   addEpochInterval,
-  natVersion,
+  natVersion, ProtVer (..),
  )
 import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (encCBOR))
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
@@ -46,7 +46,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway (Conway)
-import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParams)
+import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParams, ppMaxTxSizeL)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   EnactState (..),
@@ -85,7 +85,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens)
+import Lens.Micro (Lens', lens, (&), (.~))
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Common (Arbitrary (..))
 import Test.Cardano.Ledger.Conformance (
@@ -109,11 +109,15 @@ import Test.Cardano.Ledger.Constrained.Conway (
   utxoEnvSpec,
   utxoStateSpec,
   utxoTxSpec,
-  UtxoExecContext,
+  UtxoExecContext (..),
  )
 import Test.Cardano.Ledger.Constrained.Conway.Instances ()
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
+import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
+import qualified Test.Cardano.Ledger.Generic.Proof as Proof
+import Test.Cardano.Ledger.Generic.GenState (runGenRS, GenEnv (..), GenState (..))
+import qualified Test.Cardano.Ledger.Generic.GenState as GenSize
 
 instance
   forall fn.
@@ -122,11 +126,22 @@ instance
   where
   type ExecContext fn "UTXO" Conway = UtxoExecContext Conway
 
-  environmentSpec _ = utxoEnvSpec
+  genExecContext = do
+    let proof = Proof.reify @Conway
+    uecSlotNo <- arbitrary
+    ((uecUTxO, uecTx), gs) <- runGenRS proof GenSize.small $
+      genAlonzoTx proof uecSlotNo
+    let
+      uecPParams = gePParams (gsGenEnv gs)
+        & ppMaxTxSizeL .~ 3000
+        & ppProtocolVersionL .~ ProtVer (natVersion @10) 0
+    pure UtxoExecContext {..}
 
-  stateSpec _ = utxoStateSpec
+  environmentSpec = utxoEnvSpec
 
-  signalSpec = utxoTxSpec
+  stateSpec = utxoStateSpec
+
+  signalSpec ctx _ _ = utxoTxSpec ctx
 
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])

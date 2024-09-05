@@ -10,6 +10,7 @@
 module Test.Cardano.Ledger.Mary.Arbitrary (
   genEmptyMultiAsset,
   genMaryValue,
+  genSmallMaryValue,
   genMultiAsset,
   genMultiAssetToFail,
   genMultiAssetZero,
@@ -228,6 +229,13 @@ genMaryValue genMA = do
 instance Crypto c => Arbitrary (MaryValue c) where
   arbitrary =
     genMaryValue $ genMultiAsset $ toInteger <$> genPositiveInt
+
+genSmallMaryValue :: Crypto c => Gen (MaryValue c)
+genSmallMaryValue = do
+  MaryValue (Coin c) (MultiAsset ma) <- arbitrary
+  let
+    limitSize n = n `mod` 4294967296
+  pure . MaryValue (Coin $ limitSize c) . MultiAsset $ fmap limitSize <$> ma
 
 instance Crypto c => Arbitrary (CompactForm (MaryValue c)) where
   arbitrary = toCompactMaryValue <$> arbitrary
