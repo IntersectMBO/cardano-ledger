@@ -1094,6 +1094,82 @@ votingSpec =
             passNEpochs 2
             -- The same vote should now successfully ratify the proposal
             getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId addCCGaid)
+    describe "Interaction between governing bodies" $ do
+      it "Motion of no-confidence" $ do
+        (drep, _, committeeGovId) <- electBasicCommittee
+        (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000
+        initialMembers <- getCommitteeMembers
+        noConfidenceGovId <- submitGovAction $ NoConfidence (SJust committeeGovId)
+
+        submitYesVote_ (DRepVoter drep) noConfidenceGovId
+        submitVote_ VoteNo (StakePoolVoter spoC) noConfidenceGovId
+        passNEpochs 2
+
+        -- DReps accepted the proposal
+        isDRepAccepted noConfidenceGovId `shouldReturn` True
+        -- SPOs voted no, so NoConfidence won't be ratified, thus committee remains the same
+        isSpoAccepted noConfidenceGovId `shouldReturn` False
+        getCommitteeMembers `shouldReturn` initialMembers
+      it "Update committee - normal state" $ do
+        (drep, _, committeeGovId) <- electBasicCommittee
+        (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000
+        SJust initialCommittee <- getsNES $ newEpochStateGovStateL . committeeGovStateL
+        let initialThreshold = initialCommittee ^. committeeThresholdL
+        gid <- submitGovAction $ UpdateCommittee (SJust committeeGovId) mempty mempty (1 %! 100)
+
+        submitYesVote_ (DRepVoter drep) gid
+        submitVote_ VoteNo (StakePoolVoter spoC) gid
+        passNEpochs 2
+
+        -- DReps accepted the proposal
+        isDRepAccepted gid `shouldReturn` True
+        -- SPOs voted no, so committee won't be updated
+        isSpoAccepted gid `shouldReturn` False
+        getLastEnactedCommittee `shouldReturn` SJust committeeGovId
+        SJust currentCommittee <- getsNES $ newEpochStateGovStateL . committeeGovStateL
+        currentCommittee ^. committeeThresholdL `shouldBe` initialThreshold
+      it "Hard-fork initiation" $ do
+        ccMembers <- registerInitialCommittee
+        (drep, _, _) <- setupSingleDRep 1_000_000
+        (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000
+        curProtVer <- getProtVer
+        nextMajorVersion <- succVersion $ pvMajor curProtVer
+        let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
+        gid <- submitGovAction $ HardForkInitiation SNothing nextProtVer
+
+        submitYesVoteCCs_ ccMembers gid
+        submitYesVote_ (StakePoolVoter spoC) gid
+        passNEpochs 2
+
+        -- No changes so far, since DReps haven't voted yet
+        getProtVer `shouldReturn` curProtVer
+        submitYesVote_ (DRepVoter drep) gid
+        passNEpochs 2
+        -- DReps voted yes too for the hard-fork, so protocol version is incremented
+        getProtVer `shouldReturn` nextProtVer
+      it
+        "A governance action is automatically ratified if threshold is set to 0 for all related governance bodies"
+        $ do
+          modifyPParams $ \pp ->
+            pp
+              & ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 0 %! 1
+              & ppDRepVotingThresholdsL . dvtMotionNoConfidenceL .~ 0 %! 1
+          (_drep, _, committeeGovId) <- electBasicCommittee
+          _ <- setupPoolWithStake $ Coin 1_000_000
+
+          -- There is a committee initially
+          getCommitteeMembers `shouldNotReturn` mempty
+
+          noConfidenceGovId <- submitGovAction $ NoConfidence (SJust committeeGovId)
+
+          -- No votes were made but due to the 0 thresholds, every governance body accepted the gov action by default...
+          isDRepAccepted noConfidenceGovId `shouldReturn` True
+          isSpoAccepted noConfidenceGovId `shouldReturn` True
+          -- ...even the committee which is not allowed to vote on `NoConfidence` action
+          isCommitteeAccepted noConfidenceGovId `shouldReturn` True
+          passNEpochs 2
+          -- `NoConfidence` is ratified -> the committee is no more
+          getCommitteeMembers `shouldReturn` mempty
 
 delayingActionsSpec ::
   forall era.
