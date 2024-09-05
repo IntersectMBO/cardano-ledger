@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Cardano.Chain.Config (
@@ -11,6 +12,12 @@ import Cardano.Crypto.ProtocolMagic (RequiresNetworkMagic (..))
 import Cardano.Crypto.Raw (Raw)
 import Cardano.Prelude
 
+#ifdef CARDANO_LEDGER_BYRON_TEST
+import Paths_cardano_ledger_byron_test (getDataFileName)
+#else
+import Paths_cardano_ledger_byron (getDataFileName)
+#endif
+
 -- | Read the test mainnet configuration file from the @test@ directory.
 --
 -- An error is thrown if it is not possible to elaborate a genesis
@@ -19,6 +26,7 @@ import Cardano.Prelude
 -- We use `RequiresNoMagic`, as it indicates mainnet
 readMainetCfg :: MonadIO m => m Genesis.Config
 readMainetCfg = do
+  mainnetGenesisJson <- liftIO $ getDataFileName "mainnet-genesis.json"
   let genHash =
         either
           (panic . show . Genesis.GenesisHashDecodeError)
@@ -30,4 +38,4 @@ readMainetCfg = do
 
   either (panic . show) identity
     <$> runExceptT
-      (Genesis.mkConfigFromFile RequiresNoMagic "mainnet-genesis.json" genHash)
+      (Genesis.mkConfigFromFile RequiresNoMagic mainnetGenesisJson genHash)
