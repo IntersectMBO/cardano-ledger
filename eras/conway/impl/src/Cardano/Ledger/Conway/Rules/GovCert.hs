@@ -217,8 +217,12 @@ conwayGovCertTransition = do
         failOnJust coldCredResigned ConwayCommitteeHasPreviouslyResigned
         let isCurrentMember =
               strictMaybe False (Map.member coldCred . committeeMembers) cgceCurrentCommittee
+            committeeUpdateContainsColdCred GovActionState {gasProposalProcedure} =
+              case pProcGovAction gasProposalProcedure of
+                UpdateCommittee _ _ newMembers _ -> Map.member coldCred newMembers
+                _ -> False
             isPotentialFutureMember =
-              any (committeeUpdateContainsColdCred coldCred) cgceCommitteeProposals
+              any committeeUpdateContainsColdCred cgceCommitteeProposals
         isCurrentMember || isPotentialFutureMember ?! ConwayCommitteeIsUnknown coldCred
         pure
           vState
@@ -277,11 +281,6 @@ conwayGovCertTransition = do
       checkAndOverwriteCommitteeMemberState coldCred $ CommitteeHotCredential hotCred
     ConwayResignCommitteeColdKey coldCred anchor ->
       checkAndOverwriteCommitteeMemberState coldCred $ CommitteeMemberResigned anchor
-  where
-    committeeUpdateContainsColdCred coldCred GovActionState {gasProposalProcedure} =
-      case pProcGovAction gasProposalProcedure of
-        UpdateCommittee _ _ newMembers _ -> Map.member coldCred newMembers
-        _ -> False
 
 computeDRepExpiryVersioned ::
   ConwayEraPParams era =>
