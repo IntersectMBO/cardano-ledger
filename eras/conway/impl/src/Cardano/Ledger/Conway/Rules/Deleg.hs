@@ -61,6 +61,7 @@ import Control.State.Transition (
  )
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import qualified Data.Set as Set
 import Data.Void (Void)
 import GHC.Generics (Generic)
@@ -175,9 +176,13 @@ conwayDelegTransition = do
             -- we return offending refund only when it doesn't match the expected one:
             guard (suppliedRefund /= UM.fromCompact actualRefund)
             Just suppliedRefund
+          checkStakeKeyHasZeroRewardBalance = do
+            UM.RDPair compactReward _ <- mRDPair
+            guard (compactReward /= mempty)
+            Just $ UM.fromCompact compactReward
       failOnJust checkInvalidRefund IncorrectDepositDELEG
-      checkStakeKeyIsRegistered stakeCred dsUnified
-      checkStakeKeyHasZeroRewardBalance stakeCred dsUnified
+      isJust mRDPair ?! StakeKeyNotRegisteredDELEG stakeCred
+      failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroRewardAccountBalanceDELEG
       pure $ dState {dsUnified = UM.domDeleteAll (Set.singleton stakeCred) dsUnified}
     ConwayDelegCert stakeCred delegatee -> do
       checkStakeKeyIsRegistered stakeCred dsUnified
@@ -212,6 +217,3 @@ conwayDelegTransition = do
       UM.notMember stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyRegisteredDELEG stakeCred
     checkStakeKeyIsRegistered stakeCred dsUnified =
       UM.member stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyNotRegisteredDELEG stakeCred
-    checkStakeKeyHasZeroRewardBalance stakeCred dsUnified =
-      let mReward = UM.rdReward <$> UM.lookup stakeCred (UM.RewDepUView dsUnified)
-       in forM_ mReward $ \r -> r == mempty ?! StakeKeyHasNonZeroRewardAccountBalanceDELEG (UM.fromCompact r)
