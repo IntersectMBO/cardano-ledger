@@ -20,7 +20,7 @@ module Cardano.Ledger.Conway.Rules.Deleg (
   ConwayDelegEnv (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (From, Invalid, SumD, Summands),
@@ -43,7 +43,7 @@ import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.Shelley.LedgerState (DState (..))
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
-import Control.Monad (forM_)
+import Control.Monad (forM_, guard)
 import Control.State.Transition (
   BaseM,
   Environment,
@@ -54,6 +54,7 @@ import Control.State.Transition (
   State,
   TRC (TRC),
   TransitionRule,
+  failOnJust,
   judgmentContext,
   transitionRules,
   (?!),
@@ -165,8 +166,16 @@ conwayDelegTransition = do
       forM_ sMayDeposit checkDepositAgainstPParams
       checkStakeKeyNotRegistered stakeCred dsUnified
       pure $ dState {dsUnified = registerStakeCredential stakeCred}
-    ConwayUnRegCert stakeCred sMayDeposit -> do
-      forM_ sMayDeposit $ checkDepositAgainstPaidDeposit stakeCred dsUnified
+    ConwayUnRegCert stakeCred sMayRefund -> do
+      let mRDPair = UM.lookup stakeCred $ UM.RewDepUView dsUnified
+          checkInvalidRefund = do
+            SJust suppliedRefund <- Just sMayRefund
+            -- we don't want to report invalid refund when stake credential is not registered:
+            UM.RDPair _ actualRefund <- mRDPair
+            -- we return offending refund only when it doesn't match the expected one:
+            guard (suppliedRefund /= UM.fromCompact actualRefund)
+            Just suppliedRefund
+      failOnJust checkInvalidRefund IncorrectDepositDELEG
       checkStakeKeyIsRegistered stakeCred dsUnified
       checkStakeKeyHasZeroRewardBalance stakeCred dsUnified
       pure $ dState {dsUnified = UM.domDeleteAll (Set.singleton stakeCred) dsUnified}
@@ -199,10 +208,6 @@ conwayDelegTransition = do
         DelegStake sPool -> delegStake stakeCred sPool dsUnified
         DelegVote dRep -> delegVote stakeCred dRep dsUnified
         DelegStakeVote sPool dRep -> delegVote stakeCred dRep $ delegStake stakeCred sPool dsUnified
-    checkDepositAgainstPaidDeposit stakeCred dsUnified deposit =
-      Just deposit
-        == fmap (UM.fromCompact . UM.rdDeposit) (UM.lookup stakeCred $ UM.RewDepUView dsUnified)
-          ?! IncorrectDepositDELEG deposit
     checkStakeKeyNotRegistered stakeCred dsUnified =
       UM.notMember stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyRegisteredDELEG stakeCred
     checkStakeKeyIsRegistered stakeCred dsUnified =
