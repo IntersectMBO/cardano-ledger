@@ -41,6 +41,7 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   -- | Will need to find a better home in the future
   uniformSubSet,
   uniformSubMap,
+  uniformSubMapElems,
 )
 where
 
@@ -644,18 +645,29 @@ uniformSubMap ::
   Map k v ->
   g ->
   m (Map k v)
-uniformSubMap mSubMapSize inputMap gen = do
+uniformSubMap = uniformSubMapElems Map.insert
+
+uniformSubMapElems ::
+  (StatefulGen g m, Monoid f) =>
+  (k -> v -> f -> f) ->
+  -- | Size of the subMap. If supplied will be clamped to @[0, Map.size s]@ interval,
+  -- otherwise will be generated randomly.
+  Maybe Int ->
+  Map k v ->
+  g ->
+  m f
+uniformSubMapElems insert mSubMapSize inputMap gen = do
   subMapSize <- case mSubMapSize of
     Nothing -> uniformRM (0, Map.size inputMap) gen
     Just n -> pure $ max 0 $ min (Map.size inputMap) n
-  go inputMap Map.empty subMapSize
+  go inputMap mempty subMapSize
   where
     go !s !acc !i
       | i <= 0 = pure acc
       | otherwise = do
           ix <- uniformRM (0, Map.size s - 1) gen
           let (k, v) = Map.elemAt ix s
-          go (Map.deleteAt ix s) (Map.insert k v acc) (i - 1)
+          go (Map.deleteAt ix s) (insert k v acc) (i - 1)
 
 genValidUMapWithCreds :: Gen (UMap StandardCrypto, Set (Credential 'Staking StandardCrypto))
 genValidUMapWithCreds = do
