@@ -162,10 +162,13 @@ conwayDelegTransition = do
       , c
       ) <-
     judgmentContext
-  let ppKeyDeposit = pp ^. ppKeyDepositL
+  let
+    ppKeyDeposit = pp ^. ppKeyDepositL
+    checkDepositAgainstPParams deposit =
+      deposit == ppKeyDeposit ?! IncorrectDepositDELEG deposit
   case c of
     ConwayRegCert stakeCred sMayDeposit -> do
-      forM_ sMayDeposit $ checkDepositAgainstPParams ppKeyDeposit
+      forM_ sMayDeposit checkDepositAgainstPParams
       dsUnified' <- checkAndAcceptDepositForStakeCred stakeCred ppKeyDeposit dsUnified
       pure $ dState {dsUnified = dsUnified'}
     ConwayUnRegCert stakeCred sMayDeposit -> do
@@ -178,8 +181,8 @@ conwayDelegTransition = do
       checkStakeKeyIsRegistered stakeCred dsUnified
       pure $ dState {dsUnified = processDelegation stakeCred delegatee dsUnified}
     ConwayRegDelegCert stakeCred delegatee deposit -> do
+      checkDepositAgainstPParams deposit
       checkStakeDelegateeRegistered pools delegatee
-      checkDepositAgainstPParams ppKeyDeposit deposit
       dsUnified' <- checkAndAcceptDepositForStakeCred stakeCred deposit dsUnified
       pure $ dState {dsUnified = processDelegation stakeCred delegatee dsUnified'}
   where
@@ -209,8 +212,6 @@ conwayDelegTransition = do
         DelegStake sPool -> delegStake stakeCred sPool dsUnified
         DelegVote dRep -> delegVote stakeCred dRep dsUnified
         DelegStakeVote sPool dRep -> delegVote stakeCred dRep $ delegStake stakeCred sPool dsUnified
-    checkDepositAgainstPParams ppKeyDeposit deposit =
-      deposit == ppKeyDeposit ?! IncorrectDepositDELEG deposit
     checkDepositAgainstPaidDeposit stakeCred dsUnified deposit =
       Just deposit
         == fmap (UM.fromCompact . UM.rdDeposit) (UM.lookup stakeCred $ UM.RewDepUView dsUnified)
