@@ -157,18 +157,14 @@ conwayDelegTransition = do
     ppKeyDeposit = pp ^. ppKeyDepositL
     checkDepositAgainstPParams deposit =
       deposit == ppKeyDeposit ?! IncorrectDepositDELEG deposit
-    registerStakeCredential stakeCred dsUnified =
-      -- This looks like it should have been a right-biased union, so that the (reward, deposit) pair would be inserted
-      -- (or overwritten) in the UMap. But since we are sure that the stake credential isn't a member yet
-      -- it will still work. The reason we cannot use a right-biased union here is because UMap treats deposits specially
-      -- in right-biased unions, and is unable to accept new deposits.
-      UM.RewDepUView dsUnified
-        UM.∪ (stakeCred, UM.RDPair (UM.CompactCoin 0) (UM.compactCoinOrError ppKeyDeposit))
+    registerStakeCredential stakeCred =
+      let rdPair = UM.RDPair (UM.CompactCoin 0) (UM.compactCoinOrError ppKeyDeposit)
+       in UM.insert stakeCred rdPair $ UM.RewDepUView dsUnified
   case c of
     ConwayRegCert stakeCred sMayDeposit -> do
       forM_ sMayDeposit checkDepositAgainstPParams
       checkStakeKeyNotRegistered stakeCred dsUnified
-      pure $ dState {dsUnified = registerStakeCredential stakeCred dsUnified}
+      pure $ dState {dsUnified = registerStakeCredential stakeCred}
     ConwayUnRegCert stakeCred sMayDeposit -> do
       forM_ sMayDeposit $ checkDepositAgainstPaidDeposit stakeCred dsUnified
       checkStakeKeyIsRegistered stakeCred dsUnified
@@ -184,7 +180,7 @@ conwayDelegTransition = do
       checkStakeDelegateeRegistered pools delegatee
       pure $
         dState
-          { dsUnified = processDelegation stakeCred delegatee $ registerStakeCredential stakeCred dsUnified
+          { dsUnified = processDelegation stakeCred delegatee $ registerStakeCredential stakeCred
           }
   where
     checkStakeDelegateeRegistered pools =
