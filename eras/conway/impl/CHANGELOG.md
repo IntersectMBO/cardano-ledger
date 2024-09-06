@@ -1,6 +1,7 @@
 # Version history for `cardano-ledger-conway`
 
 ## 1.17.0.0
+
 * Changed `ConwayWdrlNotDelegatedToDRep` to wrap `NonEmpty`
 * Add `showGovActionType`, `acceptedByEveryone`
 * Added `unRatifySignal`
@@ -12,6 +13,7 @@
   * `reDRepStateL`
   * `reCurrentEpochL`
   * `reCommitteeStateL`
+* Add a new field to `GovInfoEvent`
 
 ### `testlib`
 

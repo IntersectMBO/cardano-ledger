@@ -449,34 +449,38 @@ proposalsApplyEnactment ::
   Set (GovActionId (EraCrypto era)) ->
   Proposals era ->
   ( Proposals era
+  , Map (GovActionId (EraCrypto era)) (GovActionState era) -- Enacted actions
   , Map (GovActionId (EraCrypto era)) (GovActionState era) -- Removed due to enactment
   , Map (GovActionId (EraCrypto era)) (GovActionState era) -- Removed due to expiry
   )
 proposalsApplyEnactment enactedGass expiredGais props =
   let (unexpiredProposals, expiredRemoved) = proposalsRemoveWithDescendants expiredGais props
-      (enactedProposalsState, removedDueToEnactment) =
-        F.foldl' enact (unexpiredProposals, Map.empty) enactedGass
-   in (enactedProposalsState, removedDueToEnactment, expiredRemoved)
+      (enactedProposalsState, enacted, removedDueToEnactment) =
+        F.foldl' enact (unexpiredProposals, Map.empty, Map.empty) enactedGass
+   in (enactedProposalsState, enacted, removedDueToEnactment, expiredRemoved)
   where
-    enact (!ps, !removed) gas = withGovActionParent gas enactWithoutRoot enactFromRoot
+    enact (!ps, !enacted, !removed) gas = withGovActionParent gas enactWithoutRoot enactFromRoot
       where
         gai = gas ^. gasIdL
         enactWithoutRoot ::
           ( Proposals era
           , Map (GovActionId (EraCrypto era)) (GovActionState era)
+          , Map (GovActionId (EraCrypto era)) (GovActionState era)
           )
         enactWithoutRoot =
-          let (newOMap, removedActions) = OMap.extractKeys (Set.singleton gai) $ ps ^. pPropsL
+          let (newOMap, enactedAction) = OMap.extractKeys (Set.singleton gai) $ ps ^. pPropsL
            in assert -- we want an AssertionFailure here for exhaustive property-testing
-                (not $ Map.null removedActions)
+                (not $ Map.null enactedAction)
                 ( ps & pPropsL .~ newOMap
-                , removed `Map.union` removedActions
+                , enacted `Map.union` enactedAction
+                , removed
                 )
         enactFromRoot ::
           (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
           StrictMaybe (GovPurposeId p era) ->
           GovPurposeId p era ->
           ( Proposals era
+          , Map (GovActionId (EraCrypto era)) (GovActionState era)
           , Map (GovActionId (EraCrypto era)) (GovActionState era)
           )
         enactFromRoot govRelationL parent gpi =
@@ -500,7 +504,8 @@ proposalsApplyEnactment enactedGass expiredGais props =
            in assert
                 (ps ^. pRootsL . govRelationL . prRootL == parent)
                 ( checkInvariantAfterDeletion (Set.singleton gai) withoutSiblings newProposals
-                , removed `Map.union` removedActions `Map.union` enactedAction
+                , enacted `Map.union` enactedAction
+                , removed `Map.union` removedActions
                 )
 
 -- | Get the sequence of `GovActionState`s

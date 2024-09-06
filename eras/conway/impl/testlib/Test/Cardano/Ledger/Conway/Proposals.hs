@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Ledger.Conway.Proposals where
@@ -10,6 +11,7 @@ import Control.Exception (AssertionFailed (..), evaluate)
 import Data.Either (isRight)
 import Data.Foldable as F (foldl', toList)
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (fromElems)
 import Data.Maybe (fromMaybe)
 import Data.Sequence (fromList)
 import qualified Data.Sequence as Seq
@@ -51,33 +53,50 @@ spec = do
             `shouldThrow` \AssertionFailed {} -> True
     describe "Enactment" $ do
       prop "Adding votes preserves consistency" $
-        \(ProposalsForEnactment ps gass _ :: ProposalsForEnactment Conway, voter :: Voter era, vote :: Vote) -> do
-          case gass of
-            gas Seq.:<| _gass -> isRight . toGovRelationTreeEither $ proposalsAddVote voter vote (gasId gas) ps
-            _ -> True
+        \( ProposalsForEnactment {pfeProposals, pfeToEnact} :: ProposalsForEnactment Conway
+          , voter :: Voter era
+          , vote :: Vote
+          ) -> do
+            case pfeToEnact of
+              gas Seq.:<| _gass -> isRight . toGovRelationTreeEither $ proposalsAddVote voter vote (gasId gas) pfeProposals
+              _ -> True
       prop "Enacting exhaustive lineages reduces Proposals to their roots" $
-        \(ProposalsForEnactment ps gass _ :: ProposalsForEnactment Conway) -> do
-          let toEnact = Set.fromList $ toList gass
-              (_ps', enactedRemoved, expiredRemoved) = proposalsApplyEnactment gass Set.empty ps
+        \( ProposalsForEnactment {pfeProposals, pfeToEnact, pfeToRemove, pfeToRetain} ::
+            ProposalsForEnactment Conway
+          ) -> do
+          let (ps', enacted, removedDueToEnactment, expiredRemoved) = proposalsApplyEnactment pfeToEnact Set.empty pfeProposals
           expiredRemoved `shouldSatisfy` Map.null
-          toEnact `shouldSatisfy` (`Set.isSubsetOf` Set.fromList (Map.elems enactedRemoved))
+          enacted `shouldBe` fromElems gasId pfeToEnact
+          Map.keysSet removedDueToEnactment `shouldBe` pfeToRemove
+          proposalsSize ps' `shouldBe` Set.size pfeToRetain
       prop "Enacting non-member nodes throws an AssertionFailure" $
         \(ProposalsNewActions ps actions :: ProposalsNewActions Conway) ->
           (evaluate . force) (proposalsApplyEnactment (fromList actions) Set.empty ps)
             `shouldThrow` \AssertionFailed {} -> True
       prop "Expiring compliments of exhaustive lineages keeps proposals consistent" $
-        \(ProposalsForEnactment ps _ gais :: ProposalsForEnactment Conway) -> do
-          let (_ps', enactedRemoved, expiredRemoved) = proposalsApplyEnactment Seq.Empty gais ps
-          enactedRemoved `shouldSatisfy` Map.null
-          gais `shouldSatisfy` (`Set.isSubsetOf` Map.keysSet expiredRemoved)
+        \( ProposalsForEnactment {pfeProposals, pfeToEnact, pfeToRemove, pfeToRetain} ::
+            ProposalsForEnactment Conway
+          ) -> do
+          let (ps', enacted, removedDueToEnactment, expiredRemoved) =
+                proposalsApplyEnactment Seq.Empty pfeToRemove pfeProposals
+          enacted `shouldBe` mempty
+          removedDueToEnactment `shouldBe` mempty
+          Map.keysSet expiredRemoved `shouldBe` pfeToRemove
+          ps' `shouldBe` fst (proposalsRemoveWithDescendants pfeToRemove pfeProposals)
+          let enactMap = fromElems gasId pfeToEnact
+          let (emptyProposals, enactedMap) = proposalsRemoveWithDescendants (Map.keysSet enactMap) ps'
+          proposalsSize emptyProposals `shouldBe` Set.size pfeToRetain
+          enactedMap `shouldBe` enactMap
       prop "Expiring non-member nodes throws an AssertionFailure" $
         \(ProposalsNewActions ps actions :: ProposalsNewActions Conway) ->
           (evaluate . force) (proposalsApplyEnactment Seq.Empty (Set.fromList $ gasId <$> actions) ps)
             `shouldThrow` \AssertionFailed {} -> True
-      prop "Enacting and expiring exhaustive lineages reduces Proposals to their roots" $
-        \(ProposalsForEnactment ps toEnact toExpire :: ProposalsForEnactment Conway) -> do
-          let (ps', enactedRemoved, expiredRemoved) = proposalsApplyEnactment toEnact toExpire ps
-          Set.fromList (toList toEnact)
-            `shouldSatisfy` (`Set.isSubsetOf` Set.fromList (Map.elems enactedRemoved))
-          Set.fromList (toList toExpire) `shouldSatisfy` (`Set.isSubsetOf` Map.keysSet expiredRemoved)
-          proposalsSize ps' `shouldBe` 0
+      prop "Enacting and expiring conflicting proposals does not lead to removal due to enactment" $
+        \( ProposalsForEnactment {pfeProposals, pfeToEnact, pfeToRemove, pfeToRetain} ::
+            ProposalsForEnactment Conway
+          ) -> do
+          let (ps', enacted, enactedRemoved, expiredRemoved) = proposalsApplyEnactment pfeToEnact pfeToRemove pfeProposals
+          Map.keysSet expiredRemoved `shouldBe` pfeToRemove
+          enactedRemoved `shouldBe` mempty
+          enacted `shouldBe` fromElems gasId pfeToEnact
+          proposalsSize ps' `shouldBe` Set.size pfeToRetain

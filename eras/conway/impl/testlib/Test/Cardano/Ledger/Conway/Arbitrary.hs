@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -248,9 +249,12 @@ instance
 
 data ProposalsForEnactment era
   = ProposalsForEnactment
-      (Proposals era)
-      (Seq.Seq (GovActionState era))
-      (Set.Set (GovActionId (EraCrypto era)))
+  { pfeProposals :: Proposals era
+  , pfeToEnact :: Seq.Seq (GovActionState era)
+  , pfeToRemove :: Set.Set (GovActionId (EraCrypto era))
+  , pfeToRetain :: Set.Set (GovActionId (EraCrypto era))
+  -- ^ Those that are retained can only be the ones that don't have any lineage
+  }
   deriving (Show, Eq)
 
 instance
@@ -270,11 +274,27 @@ instance
             (Seq.fromList [pparamUpdates, hardForks, committees, constitutions])
         )
         Seq.Empty
-    let expiredGais =
+    let notEnacted =
           Set.fromList (toList $ proposalsIds ps)
             `Set.difference` Set.fromList (gasId <$> toList sequencedGass)
-    pure $ ProposalsForEnactment ps sequencedGass expiredGais
+    let (retained, removedDueToConflict) = Set.partition hasNoLineage notEnacted
+        hasNoLineage gaId =
+          case proposalsLookupId gaId ps of
+            Nothing -> error $ "Expected " ++ show gaId ++ " in genertaed proposals"
+            Just gas ->
+              case gasAction gas of
+                InfoAction {} -> True
+                TreasuryWithdrawals {} -> True
+                _ -> False
+    pure $
+      ProposalsForEnactment
+        { pfeProposals = ps
+        , pfeToEnact = sequencedGass
+        , pfeToRemove = removedDueToConflict
+        , pfeToRetain = retained
+        }
     where
+      -- Starting from the root select a path in the tree until a leaf is reached.
       chooseLineage ::
         (forall f. Lens' (GovRelation f era) (f (GovPurposeId p era))) ->
         Proposals era ->
@@ -297,6 +317,7 @@ instance
                   chooseLineage govRelL ps (lineage Seq.:|> (proposalsActionsMap ps Map.! unGovPurposeId child))
       consumeHeadAtIndex :: Int -> Seq.Seq (Seq.Seq a) -> (a, Seq.Seq (Seq.Seq a))
       consumeHeadAtIndex idx ss = (ss `Seq.index` idx `Seq.index` 0, Seq.adjust' (Seq.drop 1) idx ss)
+      -- Mix lineages at random, while preserving relative order of each lineage
       sequenceLineages :: Seq.Seq (Seq.Seq a) -> Seq.Seq a -> Gen (Seq.Seq a)
       sequenceLineages lineages sequenced = case lineages of
         Seq.Empty -> pure sequenced
@@ -338,7 +359,7 @@ genProposals range = do
   go (def & pRootsL .~ fromPrevGovActionIds pgais) i
   where
     go :: Proposals era -> Int -> Gen (Proposals era)
-    go ps n
+    go !ps n
       | n <= 0 = pure ps
       | otherwise = do
           gas <- genGovActionState @era =<< genGovAction ps
