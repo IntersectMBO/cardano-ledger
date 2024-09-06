@@ -460,7 +460,7 @@ genNextDelta
                           vkeyPairs
                           (mkScriptWits @era msigPairs mempty)
                           (hashAnnotated txBody)
-                  pure
+                  pure $
                     delta
                       { extraWitnesses = extraWitnesses <> newWits
                       , extraInputs = extraInputs <> Set.fromList inputs

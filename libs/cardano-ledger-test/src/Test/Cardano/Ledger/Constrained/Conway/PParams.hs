@@ -62,6 +62,7 @@ pparamsSpec =
             , assert $ cppPoolDeposit /=. lit (THKD mempty)
             , assert $ cppGovActionDeposit /=. lit (THKD mempty)
             , assert $ cppDRepDeposit /=. lit (THKD mempty)
+            , assert $ cppProtocolVersion ==. lit (ProtVer (natVersion @10) 0)
             , match cppEMax $ \epochInterval ->
-                lit (EpochInterval 0) <. epochInterval
+                lit (EpochInterval 5) <. epochInterval
             ]

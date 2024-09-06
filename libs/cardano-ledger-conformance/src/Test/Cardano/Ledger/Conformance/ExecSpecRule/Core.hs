@@ -20,6 +20,7 @@ module Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (
   runConformance,
   checkConformance,
   defaultTestConformance,
+  translateWithContext,
 ) where
 
 import Cardano.Ledger.BaseTypes (Inject (..), ShelleyBase)
@@ -463,3 +464,11 @@ inputsGenerateWithin timeout =
     genSig `generatesWithin` timeout
   where
     aName = show (typeRep $ Proxy @rule)
+
+-- | Translate a Haskell type 'a' whose translation context is 'ctx' into its Agda type, in the ImpTest monad.
+translateWithContext :: SpecTranslate ctx a => ctx -> a -> ImpTestM era (SpecRep a)
+translateWithContext ctx x = do
+  let
+    expectRight' (Right y) = pure y
+    expectRight' (Left e) = assertFailure (T.unpack e)
+  expectRight' . runSpecTransM ctx $ toSpecRep x

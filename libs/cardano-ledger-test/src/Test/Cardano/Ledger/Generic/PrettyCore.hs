@@ -258,6 +258,7 @@ import Cardano.Ledger.Shelley.TxWits (ShelleyTxWits (..))
 import Cardano.Ledger.Shelley.UTxO (ShelleyScriptsNeeded (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap (
+  RDPair (..),
   dRepMap,
   depositMap,
   fromCompact,
@@ -3678,3 +3679,21 @@ instance Reflect era => PrettyA (CertState era) where
       , ("pState", prettyA certPState)
       , ("dState", prettyA certDState)
       ]
+
+instance PrettyA x => PrettyA (Seq x) where
+  prettyA x = prettyA (toList x)
+
+instance PrettyA (ConwayRules.CertsEnv era) where
+  prettyA (ConwayRules.CertsEnv _ _ slot epoch com prop) =
+    ppRecord
+      "CertsEnv"
+      [ ("Tx", ppString "Tx")
+      , ("pparams", ppString "PParams")
+      , ("slot", pcSlotNo slot)
+      , ("epoch", ppEpochNo epoch)
+      , ("committee", ppStrictMaybe pcCommittee com)
+      , ("proposals", ppMap pcGovPurposeId prettyA prop)
+      ]
+
+instance PrettyA RDPair where
+  prettyA (RDPair x y) = prettyA (fromCompact x, fromCompact y)

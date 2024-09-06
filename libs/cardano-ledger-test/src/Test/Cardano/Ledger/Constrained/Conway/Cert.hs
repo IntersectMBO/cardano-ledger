@@ -25,8 +25,9 @@ certEnvSpec ::
   Specification fn (CertEnv (ConwayEra StandardCrypto))
 certEnvSpec =
   constrained $ \ce ->
-    match ce $ \_ pp _ _ _ ->
-      satisfies pp pparamsSpec
+    match ce $ \_slot pp _currEpoch _currCommittee _proposals ->
+      [ satisfies pp pparamsSpec
+      ]
 
 certStateSpec ::
   IsConwayUniv fn =>

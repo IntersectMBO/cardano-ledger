@@ -25,6 +25,17 @@ import Test.Cardano.Ledger.Constrained.Conway.PParams
 vStateSpec :: Specification fn (VState (ConwayEra StandardCrypto))
 vStateSpec = TrueSpec
 
+{- There are no hard constraints on VState, but sometimes when something fails we want to
+-- limit how big some of the fields of VState are. In that case one might use something
+-- like this. Note that genHint limits the size, but does not require an exact size.
+vStateSpec :: IsConwayUniv fn => Specification fn (VState (ConwayEra StandardCrypto))
+vStateSpec = constrained' $ \ [var|_dreps|] [var|_commstate|] [var|dormantepochs|] ->
+  [ genHint 5 dreps -- assert $ sizeOf_ dreps >=. 1
+  , match commstate $ \ [var|committeestate|] -> genHint 5 committeestate
+  , assert $ dormantepochs >=. lit (EpochNo 4)
+  ]
+-}
+
 govCertSpec ::
   IsConwayUniv fn =>
   ConwayGovCertEnv (ConwayEra StandardCrypto) ->
@@ -59,7 +70,7 @@ govCertSpec ConwayGovCertEnv {..} vs =
               assert $ elem_ (pair_ credUnreg coinUnreg) (lit (Map.toList deposits))
           )
           -- ConwayUpdateDRep
-          ( branchW 1 $ \keyupdate _ ->
+          ( branchW 1 $ \ [var|keyupdate|] _ ->
               member_ keyupdate reps
           )
           -- ConwayAuthCommitteeHotKey

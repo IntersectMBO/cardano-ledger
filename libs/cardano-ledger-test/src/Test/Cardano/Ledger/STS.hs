@@ -81,9 +81,13 @@ stsPropertyV2 specEnv specState specSig prop =
                 pure $ case res of
                   Left pfailures -> counterexample (show $ prettyA pfailures) $ property False
                   Right st' ->
-                    counterexample (show $ ppString "st' = " <> prettyA st') $
-                      conformsToSpec @fn st' (specState env)
-                        .&&. prop env st sig st'
+                    counterexample
+                      ( show $
+                          ppString "st' = "
+                            <> prettyA st'
+                            <> ppString ("\nspec = \n" ++ show (specState env))
+                      )
+                      $ conformsToSpec @fn st' (specState env) .&&. prop env st sig st'
 
 -- STS properties ---------------------------------------------------------
 
