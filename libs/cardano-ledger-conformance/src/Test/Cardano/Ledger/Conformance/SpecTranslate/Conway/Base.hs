@@ -78,9 +78,11 @@ import Data.Bitraversable (bimapM)
 import Data.Data (Typeable)
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
+import Data.List (sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.OMap.Strict (OMap, assocList)
+import Data.OMap.Strict (OMap)
+import qualified Data.OMap.Strict as OMap
 import Data.OSet.Strict (OSet)
 import Data.Ratio (denominator, numerator)
 import Data.Sequence (Seq)
@@ -91,6 +93,7 @@ import qualified Data.Text as T
 import Data.Traversable (forM)
 import Data.Void (Void, absurd)
 import Data.Word (Word32, Word64)
+import qualified GHC.Exts as Exts
 import GHC.Generics (Generic)
 import Lens.Micro
 import Lens.Micro.Extras (view)
@@ -776,7 +779,7 @@ instance
   where
   type SpecRep (OMap k v) = [(SpecRep k, SpecRep v)]
 
-  toSpecRep = traverse (bimapM toSpecRep toSpecRep) . assocList
+  toSpecRep = traverse (bimapM toSpecRep toSpecRep) . OMap.assocList
 
 instance
   ( EraPParams era
@@ -881,7 +884,14 @@ instance
   where
   type SpecRep (Proposals era) = Agda.GovState
 
-  toSpecRep = toSpecRep . view pPropsL
+  -- TODO get rid of `prioritySort` once we've changed the implementation so
+  -- that the proposals are always sorted
+  toSpecRep = toSpecRep . prioritySort . view pPropsL
+    where
+      prioritySort ::
+        OMap (GovActionId (EraCrypto era)) (GovActionState era) ->
+        OMap (GovActionId (EraCrypto era)) (GovActionState era)
+      prioritySort = Exts.fromList . sortOn (actionPriority . gasAction) . Exts.toList
 
 instance Crypto c => SpecTranslate ctx (MaryValue c) where
   type SpecRep (MaryValue c) = Agda.Coin
