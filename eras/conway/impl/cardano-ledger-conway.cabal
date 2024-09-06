@@ -145,7 +145,7 @@ library testlib
         cardano-data:{cardano-data, testlib},
         cardano-ledger-allegra,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
-        cardano-ledger-binary,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-babbage:{cardano-ledger-babbage, testlib} >=1.8.2,
         cardano-ledger-conway,
         cardano-ledger-core:{cardano-ledger-core, testlib},

@@ -60,7 +60,6 @@ import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import Data.List (nubBy)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -71,7 +70,9 @@ import Test.Cardano.Data (genNonEmptyMap)
 import Test.Cardano.Data.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary (genValidAndUnknownCostModels, genValidCostModel)
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
+import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Core.Arbitrary (uniformSubMap)
 
 instance
   (Era era, Arbitrary (PParamsUpdate era)) =>
@@ -264,20 +265,21 @@ instance
   where
   arbitrary = do
     ps <- genProposals @era (2, 50)
-    let hasNoLineage gaId =
+    let gasHasNoLineage gas =
+          case gasAction gas of
+            InfoAction {} -> True
+            TreasuryWithdrawals {} -> True
+            _ -> False
+        hasNoLineage gaId =
           case proposalsLookupId gaId ps of
-            Nothing -> error $ "Expected " ++ show gaId ++ " in genertaed proposals"
-            Just gas ->
-              case gasAction gas of
-                InfoAction {} -> True
-                TreasuryWithdrawals {} -> True
-                _ -> False
+            Nothing -> error $ "Expected " ++ show gaId ++ " in generated proposals"
+            Just gas -> gasHasNoLineage gas
     pparamUpdates <- chooseLineage grPParamUpdateL ps Seq.Empty
     hardForks <- chooseLineage grHardForkL ps Seq.Empty
     committees <- chooseLineage grCommitteeL ps Seq.Empty
     constitutions <- chooseLineage grConstitutionL ps Seq.Empty
-    noLineageIds <- sublistOf $ filter hasNoLineage $ toList $ proposalsIds ps
-    let noLineage = Seq.fromList $ mapMaybe (`proposalsLookupId` ps) noLineageIds
+    noLineageMap <- uniformSubMap Nothing (Map.filter gasHasNoLineage $ proposalsActionsMap ps) QC
+    noLineage <- Seq.fromList <$> shuffle (Map.elems noLineageMap)
     sequencedGass <-
       sequenceLineages
         ( Seq.filter

@@ -39,7 +39,8 @@ module Test.Cardano.Ledger.Core.Arbitrary (
   -- * Utils
 
   -- | Will need to find a better home in the future
-  uniformSubset,
+  uniformSubSet,
+  uniformSubMap,
 )
 where
 
@@ -615,7 +616,7 @@ genValidUMapNonEmpty = do
   (rdPairs, ptrs, sPools, dReps) <- genValidTuplesNonEmpty
   pure $ unify rdPairs ptrs sPools dReps
 
-uniformSubset ::
+uniformSubSet ::
   (StatefulGen g m, Ord k) =>
   -- | Size of the subset. If supplied will be clamped to @[0, Set.size s]@ interval,
   -- otherwise will be generated randomly.
@@ -623,7 +624,7 @@ uniformSubset ::
   Set k ->
   g ->
   m (Set k)
-uniformSubset mSubSetSize inputSet gen = do
+uniformSubSet mSubSetSize inputSet gen = do
   subSetSize <- case mSubSetSize of
     Nothing -> uniformRM (0, Set.size inputSet) gen
     Just n -> pure $ max 0 $ min (Set.size inputSet) n
@@ -633,12 +634,33 @@ uniformSubset mSubSetSize inputSet gen = do
       | i <= 0 = pure acc
       | otherwise = do
           ix <- uniformRM (0, Set.size s - 1) gen
-          go (Set.insert (Set.elemAt ix s) acc) (Set.deleteAt ix s) (i - 1)
+          go (Set.deleteAt ix s) (Set.insert (Set.elemAt ix s) acc) (i - 1)
+
+uniformSubMap ::
+  (StatefulGen g m, Ord k) =>
+  -- | Size of the subMap. If supplied will be clamped to @[0, Map.size s]@ interval,
+  -- otherwise will be generated randomly.
+  Maybe Int ->
+  Map k v ->
+  g ->
+  m (Map k v)
+uniformSubMap mSubMapSize inputMap gen = do
+  subMapSize <- case mSubMapSize of
+    Nothing -> uniformRM (0, Map.size inputMap) gen
+    Just n -> pure $ max 0 $ min (Map.size inputMap) n
+  go inputMap Map.empty subMapSize
+  where
+    go !s !acc !i
+      | i <= 0 = pure acc
+      | otherwise = do
+          ix <- uniformRM (0, Map.size s - 1) gen
+          let (k, v) = Map.elemAt ix s
+          go (Map.deleteAt ix s) (Map.insert k v acc) (i - 1)
 
 genValidUMapWithCreds :: Gen (UMap StandardCrypto, Set (Credential 'Staking StandardCrypto))
 genValidUMapWithCreds = do
   umap <- genValidUMap
-  creds <- uniformSubset Nothing (Map.keysSet $ umElems umap) QC
+  creds <- uniformSubSet Nothing (Map.keysSet $ umElems umap) QC
   pure (umap, creds)
 
 genExcludingKey :: (Ord k, Arbitrary k) => Map k a -> Gen k
