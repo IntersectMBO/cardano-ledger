@@ -64,11 +64,11 @@ spec = do
         \( ProposalsForEnactment {pfeProposals, pfeToEnact, pfeToRemove, pfeToRetain} ::
             ProposalsForEnactment Conway
           ) -> do
-          let (ps', enacted, removedDueToEnactment, expiredRemoved) = proposalsApplyEnactment pfeToEnact Set.empty pfeProposals
-          expiredRemoved `shouldSatisfy` Map.null
-          enacted `shouldBe` fromElems gasId pfeToEnact
-          Map.keysSet removedDueToEnactment `shouldBe` pfeToRemove
-          proposalsSize ps' `shouldBe` Set.size pfeToRetain
+            let (ps', enacted, removedDueToEnactment, expiredRemoved) = proposalsApplyEnactment pfeToEnact Set.empty pfeProposals
+            expiredRemoved `shouldSatisfy` Map.null
+            enacted `shouldBe` fromElems gasId pfeToEnact
+            Map.keysSet removedDueToEnactment `shouldBe` pfeToRemove
+            proposalsSize ps' `shouldBe` Set.size pfeToRetain
       prop "Enacting non-member nodes throws an AssertionFailure" $
         \(ProposalsNewActions ps actions :: ProposalsNewActions Conway) ->
           (evaluate . force) (proposalsApplyEnactment (fromList actions) Set.empty ps)
@@ -77,16 +77,16 @@ spec = do
         \( ProposalsForEnactment {pfeProposals, pfeToEnact, pfeToRemove, pfeToRetain} ::
             ProposalsForEnactment Conway
           ) -> do
-          let (ps', enacted, removedDueToEnactment, expiredRemoved) =
-                proposalsApplyEnactment Seq.Empty pfeToRemove pfeProposals
-          enacted `shouldBe` mempty
-          removedDueToEnactment `shouldBe` mempty
-          Map.keysSet expiredRemoved `shouldBe` pfeToRemove
-          ps' `shouldBe` fst (proposalsRemoveWithDescendants pfeToRemove pfeProposals)
-          let enactMap = fromElems gasId pfeToEnact
-          let (emptyProposals, enactedMap) = proposalsRemoveWithDescendants (Map.keysSet enactMap) ps'
-          proposalsSize emptyProposals `shouldBe` Set.size pfeToRetain
-          enactedMap `shouldBe` enactMap
+            let (ps', enacted, removedDueToEnactment, expiredRemoved) =
+                  proposalsApplyEnactment Seq.Empty pfeToRemove pfeProposals
+            enacted `shouldBe` mempty
+            removedDueToEnactment `shouldBe` mempty
+            Map.keysSet expiredRemoved `shouldBe` pfeToRemove
+            ps' `shouldBe` fst (proposalsRemoveWithDescendants pfeToRemove pfeProposals)
+            let enactMap = fromElems gasId pfeToEnact
+            let (emptyProposals, enactedMap) = proposalsRemoveWithDescendants (Map.keysSet enactMap) ps'
+            proposalsSize emptyProposals `shouldBe` Set.size pfeToRetain
+            enactedMap `shouldBe` enactMap
       prop "Expiring non-member nodes throws an AssertionFailure" $
         \(ProposalsNewActions ps actions :: ProposalsNewActions Conway) ->
           (evaluate . force) (proposalsApplyEnactment Seq.Empty (Set.fromList $ gasId <$> actions) ps)
@@ -95,8 +95,8 @@ spec = do
         \( ProposalsForEnactment {pfeProposals, pfeToEnact, pfeToRemove, pfeToRetain} ::
             ProposalsForEnactment Conway
           ) -> do
-          let (ps', enacted, enactedRemoved, expiredRemoved) = proposalsApplyEnactment pfeToEnact pfeToRemove pfeProposals
-          Map.keysSet expiredRemoved `shouldBe` pfeToRemove
-          enactedRemoved `shouldBe` mempty
-          enacted `shouldBe` fromElems gasId pfeToEnact
-          proposalsSize ps' `shouldBe` Set.size pfeToRetain
+            let (ps', enacted, enactedRemoved, expiredRemoved) = proposalsApplyEnactment pfeToEnact pfeToRemove pfeProposals
+            Map.keysSet expiredRemoved `shouldBe` pfeToRemove
+            enactedRemoved `shouldBe` mempty
+            enacted `shouldBe` fromElems gasId pfeToEnact
+            proposalsSize ps' `shouldBe` Set.size pfeToRetain

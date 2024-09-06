@@ -60,6 +60,7 @@ import Data.Foldable (toList)
 import Data.Functor.Identity (Identity)
 import Data.List (nubBy)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
@@ -263,22 +264,7 @@ instance
   where
   arbitrary = do
     ps <- genProposals @era (2, 50)
-    pparamUpdates <- chooseLineage grPParamUpdateL ps Seq.Empty
-    hardForks <- chooseLineage grHardForkL ps Seq.Empty
-    committees <- chooseLineage grCommitteeL ps Seq.Empty
-    constitutions <- chooseLineage grConstitutionL ps Seq.Empty
-    sequencedGass <-
-      sequenceLineages
-        ( Seq.filter
-            (not . Seq.null)
-            (Seq.fromList [pparamUpdates, hardForks, committees, constitutions])
-        )
-        Seq.Empty
-    let notEnacted =
-          Set.fromList (toList $ proposalsIds ps)
-            `Set.difference` Set.fromList (gasId <$> toList sequencedGass)
-    let (retained, removedDueToConflict) = Set.partition hasNoLineage notEnacted
-        hasNoLineage gaId =
+    let hasNoLineage gaId =
           case proposalsLookupId gaId ps of
             Nothing -> error $ "Expected " ++ show gaId ++ " in genertaed proposals"
             Just gas ->
@@ -286,6 +272,23 @@ instance
                 InfoAction {} -> True
                 TreasuryWithdrawals {} -> True
                 _ -> False
+    pparamUpdates <- chooseLineage grPParamUpdateL ps Seq.Empty
+    hardForks <- chooseLineage grHardForkL ps Seq.Empty
+    committees <- chooseLineage grCommitteeL ps Seq.Empty
+    constitutions <- chooseLineage grConstitutionL ps Seq.Empty
+    noLineageIds <- sublistOf $ filter hasNoLineage $ toList $ proposalsIds ps
+    let noLineage = Seq.fromList $ mapMaybe (`proposalsLookupId` ps) noLineageIds
+    sequencedGass <-
+      sequenceLineages
+        ( Seq.filter
+            (not . Seq.null)
+            (Seq.fromList [pparamUpdates, hardForks, committees, constitutions, noLineage])
+        )
+        Seq.Empty
+    let notEnacted =
+          Set.fromList (toList $ proposalsIds ps)
+            `Set.difference` Set.fromList (gasId <$> toList sequencedGass)
+    let (retained, removedDueToConflict) = Set.partition hasNoLineage notEnacted
     pure $
       ProposalsForEnactment
         { pfeProposals = ps
