@@ -38,7 +38,7 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo (
   txscriptfee,
  )
 import Cardano.Ledger.Alonzo.Tx (
-  AlonzoTx (..),
+  AlonzoTx (AlonzoTx),
   IsValid (..),
   hashScriptIntegrity,
   totExUnits,
@@ -395,21 +395,21 @@ instance Mock c => EraGen (AlonzoEra c) where
   genEraTwoPhase2Arg = phase2scripts2Arg
 
   genEraTxBody = genAlonzoTxBody
-  updateEraTxBody utxo pp witnesses txb coinx txin txout =
+  updateEraTxBody utxo pp wits txb coinx txin txout =
     txb
       { atbInputs = newInputs
       , atbCollateral = newCollaterals
       , atbTxFee = coinx
       , atbOutputs = newOutputs
-      , -- The witnesses may have changed, recompute the scriptIntegrityHash.
+      , -- The wits may have changed, recompute the scriptIntegrityHash.
         atbScriptIntegrityHash =
           hashScriptIntegrity
             langViews
-            (witnesses ^. rdmrsTxWitsL)
-            (witnesses ^. datsTxWitsL)
+            (wits ^. rdmrsTxWitsL)
+            (wits ^. datsTxWitsL)
       }
     where
-      langs = langsUsed @(AlonzoEra c) (witnesses ^. scriptTxWitsL)
+      langs = langsUsed @(AlonzoEra c) (wits ^. scriptTxWitsL)
       langViews = Set.map (getLanguageView pp) langs
       requiredCollateral = ceiling $ fromIntegral (pp ^. ppCollateralPercentageL) * unCoin coinx % 100
       potentialCollateral = Set.filter (okAsCollateral utxo) txin
@@ -417,7 +417,7 @@ instance Mock c => EraGen (AlonzoEra c) where
       takeUntilSum s = map fst . takeUntil ((s >=) . snd) . scanl1 (\(_, s') (x, n) -> (x, s' + n))
       takeUntil p xs = let (y, n) = span p xs in y ++ take 1 n
       newCollaterals =
-        if nullRedeemers (witnesses ^. rdmrsTxWitsL)
+        if nullRedeemers (wits ^. rdmrsTxWitsL)
           then mempty
           else Set.fromList . takeUntilSum requiredCollateral $ txInAmounts potentialCollateral
       newInputs = atbInputs txb <> txin

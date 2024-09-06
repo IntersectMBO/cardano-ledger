@@ -51,8 +51,8 @@ spec =
       sig <- arbitrary
       let addr = BootstrapAddress byronAddr
           (shelleyVKey, chainCode) = unpackByronVKey @StandardCrypto byronVKey
-          witness :: BootstrapWitness StandardCrypto
-          witness =
+          wit :: BootstrapWitness StandardCrypto
+          wit =
             BootstrapWitness
               { bwKey = shelleyVKey
               , bwChainCode = chainCode
@@ -61,7 +61,7 @@ spec =
               }
       pure $
         coerceKeyRole (bootstrapKeyHash @StandardCrypto addr)
-          === bootstrapWitKeyHash witness
+          === bootstrapWitKeyHash wit
 
 roundTripAddressSpec :: Spec
 roundTripAddressSpec = do
