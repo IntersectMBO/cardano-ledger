@@ -152,7 +152,7 @@ conwayDelegTransition = do
   TRC
     ( ConwayDelegEnv pp pools
       , dState@DState {dsUnified}
-      , c
+      , cert
       ) <-
     judgmentContext
   let
@@ -162,10 +162,30 @@ conwayDelegTransition = do
     registerStakeCredential stakeCred =
       let rdPair = UM.RDPair (UM.CompactCoin 0) (UM.compactCoinOrError ppKeyDeposit)
        in UM.insert stakeCred rdPair $ UM.RewDepUView dsUnified
-  case c of
+    delegStake stakeCred sPool umap =
+      UM.SPoolUView umap UM.⨃ Map.singleton stakeCred sPool
+    delegVote stakeCred dRep umap =
+      UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
+    processDelegation stakeCred delegatee =
+      case delegatee of
+        DelegStake sPool -> delegStake stakeCred sPool
+        DelegVote dRep -> delegVote stakeCred dRep
+        DelegStakeVote sPool dRep -> delegVote stakeCred dRep . delegStake stakeCred sPool
+    checkStakeKeyNotRegistered stakeCred =
+      UM.notMember stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyRegisteredDELEG stakeCred
+    checkStakeKeyIsRegistered stakeCred =
+      UM.member stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyNotRegisteredDELEG stakeCred
+    checkStakeDelegateeRegistered =
+      let checkPoolRegistered targetPool =
+            targetPool `Map.member` pools ?! DelegateeNotRegisteredDELEG targetPool
+       in \case
+            DelegStake targetPool -> checkPoolRegistered targetPool
+            DelegStakeVote targetPool _ -> checkPoolRegistered targetPool
+            DelegVote _ -> pure ()
+  case cert of
     ConwayRegCert stakeCred sMayDeposit -> do
       forM_ sMayDeposit checkDepositAgainstPParams
-      checkStakeKeyNotRegistered stakeCred dsUnified
+      checkStakeKeyNotRegistered stakeCred
       pure $ dState {dsUnified = registerStakeCredential stakeCred}
     ConwayUnRegCert stakeCred sMayRefund -> do
       let mRDPair = UM.lookup stakeCred $ UM.RewDepUView dsUnified
@@ -185,35 +205,14 @@ conwayDelegTransition = do
       failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroRewardAccountBalanceDELEG
       pure $ dState {dsUnified = UM.domDeleteAll (Set.singleton stakeCred) dsUnified}
     ConwayDelegCert stakeCred delegatee -> do
-      checkStakeKeyIsRegistered stakeCred dsUnified
-      checkStakeDelegateeRegistered pools delegatee
+      checkStakeKeyIsRegistered stakeCred
+      checkStakeDelegateeRegistered delegatee
       pure $ dState {dsUnified = processDelegation stakeCred delegatee dsUnified}
     ConwayRegDelegCert stakeCred delegatee deposit -> do
       checkDepositAgainstPParams deposit
-      checkStakeKeyNotRegistered stakeCred dsUnified
-      checkStakeDelegateeRegistered pools delegatee
+      checkStakeKeyNotRegistered stakeCred
+      checkStakeDelegateeRegistered delegatee
       pure $
         dState
           { dsUnified = processDelegation stakeCred delegatee $ registerStakeCredential stakeCred
           }
-  where
-    checkStakeDelegateeRegistered pools =
-      let checkPoolRegistered targetPool =
-            targetPool `Map.member` pools ?! DelegateeNotRegisteredDELEG targetPool
-       in \case
-            DelegStake targetPool -> checkPoolRegistered targetPool
-            DelegStakeVote targetPool _ -> checkPoolRegistered targetPool
-            DelegVote _ -> pure ()
-    delegStake stakeCred sPool dsUnified =
-      UM.SPoolUView dsUnified UM.⨃ Map.singleton stakeCred sPool
-    delegVote stakeCred dRep dsUnified =
-      UM.DRepUView dsUnified UM.⨃ Map.singleton stakeCred dRep
-    processDelegation stakeCred delegatee dsUnified =
-      case delegatee of
-        DelegStake sPool -> delegStake stakeCred sPool dsUnified
-        DelegVote dRep -> delegVote stakeCred dRep dsUnified
-        DelegStakeVote sPool dRep -> delegVote stakeCred dRep $ delegStake stakeCred sPool dsUnified
-    checkStakeKeyNotRegistered stakeCred dsUnified =
-      UM.notMember stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyRegisteredDELEG stakeCred
-    checkStakeKeyIsRegistered stakeCred dsUnified =
-      UM.member stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyNotRegisteredDELEG stakeCred
