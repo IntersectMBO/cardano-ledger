@@ -31,11 +31,15 @@ module Test.Cardano.Ledger.Common (
   expectLeftDeep,
   expectLeftDeep_,
   expectLeftDeepExpr,
+
+  -- * Miscellanous helpers
+  tracedDiscard,
 )
 where
 
 import Control.DeepSeq (NFData)
 import Control.Monad as X (forM_, replicateM, replicateM_, unless, void, when, (>=>))
+import qualified Debug.Trace as Debug
 import System.IO (
   BufferMode (LineBuffering),
   hSetBuffering,
@@ -141,3 +145,7 @@ shouldBeLeft e x = expectLeft e >>= (`shouldBe` x)
 -- | Same as `shouldBeExpr`, except it checks that the value is `Left`
 shouldBeLeftExpr :: (HasCallStack, ToExpr a, ToExpr b, Eq a) => Either a b -> a -> Expectation
 shouldBeLeftExpr e x = expectLeftExpr e >>= (`shouldBeExpr` x)
+
+-- | Same as `Test.QuickCheck.discard` but outputs a debug trace message
+tracedDiscard :: [Char] -> a
+tracedDiscard message = (if False then Debug.trace $ "\nDiscarded trace: " ++ message else id) discard

@@ -49,6 +49,7 @@ import Data.Sequence (Seq)
 import qualified Data.Set as Set
 import Lens.Micro ((^.))
 import Lens.Micro.Extras (view)
+import Test.Cardano.Ledger.Common (tracedDiscard)
 import Test.Cardano.Ledger.Core.KeyPair (vKey)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (
   Mock,
@@ -63,7 +64,6 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (
  )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger ()
-import Test.Cardano.Ledger.Shelley.Generator.Utxo (myDiscard)
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (
   epochFromSlotNo,
@@ -181,13 +181,13 @@ genBlockWithTxGen
         <*> pure oCert
     let hView = makeHeaderView (bheader theBlock)
     unless (bhviewBSize hView <= pp ^. ppMaxBBSizeL) $
-      myDiscard $
+      tracedDiscard $
         "genBlockWithTxGen: bhviewBSize too large"
           <> show (bhviewBSize hView)
           <> " vs "
           <> show (pp ^. ppMaxBBSizeL)
     unless (bhviewHSize hView <= fromIntegral (pp ^. ppMaxBHSizeL)) $
-      myDiscard $
+      tracedDiscard $
         "genBlockWithTxGen: bhviewHSize too large"
           <> show (bhviewHSize hView)
           <> " vs "
