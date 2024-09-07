@@ -617,6 +617,21 @@ genValidUMapNonEmpty = do
   (rdPairs, ptrs, sPools, dReps) <- genValidTuplesNonEmpty
   pure $ unify rdPairs ptrs sPools dReps
 
+-- | Either clamp requested size to the range of @[0, actualSize]@ or generate at random
+-- in the same range when requested size is not supplied.
+uniformSubSize ::
+  StatefulGen g m =>
+  -- | Requested size
+  Maybe Int ->
+  -- | Actual size
+  Int ->
+  g ->
+  m Int
+uniformSubSize mReqSize actualSize gen =
+  case mReqSize of
+    Nothing -> uniformRM (0, actualSize) gen
+    Just reqSize -> pure $ max 0 $ min actualSize reqSize
+
 uniformSubSet ::
   (StatefulGen g m, Ord k) =>
   -- | Size of the subset. If supplied will be clamped to @[0, Set.size s]@ interval,
@@ -626,9 +641,7 @@ uniformSubSet ::
   g ->
   m (Set k)
 uniformSubSet mSubSetSize inputSet gen = do
-  subSetSize <- case mSubSetSize of
-    Nothing -> uniformRM (0, Set.size inputSet) gen
-    Just n -> pure $ max 0 $ min (Set.size inputSet) n
+  subSetSize <- uniformSubSize mSubSetSize (Set.size inputSet) gen
   if subSetSize < Set.size inputSet `div` 2
     then
       goAdd inputSet Set.empty subSetSize
@@ -656,7 +669,21 @@ uniformSubMap ::
   Map k v ->
   g ->
   m (Map k v)
-uniformSubMap = uniformSubMapElems Map.insert
+uniformSubMap mSubMapSize inputMap gen = do
+  subMapSize <- uniformSubSize mSubMapSize (Map.size inputMap) gen
+  if subMapSize < Map.size inputMap `div` 2
+    then
+      -- Constructing a new Map is faster when less then a half of original Map will be used
+      uniformSubMapElems Map.insert (Just subMapSize) inputMap gen
+    else
+      -- Deleting is faster when more items need to be retained in the Map
+      goDelete inputMap (Map.size inputMap - subMapSize)
+  where
+    goDelete !acc !i
+      | i <= 0 = pure acc
+      | otherwise = do
+          ix <- uniformRM (0, Map.size acc - 1) gen
+          goDelete (Map.deleteAt ix acc) (i - 1)
 
 uniformSubMapElems ::
   (StatefulGen g m, Monoid f) =>
@@ -668,9 +695,7 @@ uniformSubMapElems ::
   g ->
   m f
 uniformSubMapElems insert mSubMapSize inputMap gen = do
-  subMapSize <- case mSubMapSize of
-    Nothing -> uniformRM (0, Map.size inputMap) gen
-    Just n -> pure $ max 0 $ min (Map.size inputMap) n
+  subMapSize <- uniformSubSize mSubMapSize (Map.size inputMap) gen
   go inputMap mempty subMapSize
   where
     go !s !acc !i
