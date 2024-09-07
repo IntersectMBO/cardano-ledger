@@ -14,7 +14,6 @@ module Test.Cardano.Ledger.Shelley.Generator.Utxo (
   genTx,
   Delta (..),
   encodedLen,
-  myDiscard,
   pickRandomFromMap,
 )
 where
@@ -73,9 +72,9 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified Data.Vector as V
-import qualified Debug.Trace as Debug
 import Lens.Micro
 import NoThunks.Class ()
+import Test.Cardano.Ledger.Common (tracedDiscard)
 import Test.Cardano.Ledger.Core.KeyPair (
   KeyPair,
   KeyPairs,
@@ -102,13 +101,10 @@ import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombination)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.TxCert (CERTS, genTxCerts)
 import Test.Cardano.Ledger.Shelley.Generator.Update (genUpdate)
 import Test.Cardano.Ledger.Shelley.Utils (Split (..))
-import Test.QuickCheck (Gen, discard)
+import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 
 -- Instances only
-
-myDiscard :: [Char] -> a
-myDiscard message = Debug.trace ("\nDiscarded trace: " ++ message) discard
 
 -- ====================================================
 
@@ -229,7 +225,7 @@ genTx
 
       !_ <-
         when (coin spendingBalance < mempty) $
-          myDiscard $
+          tracedDiscard $
             "Negative spending balance " <> show (coin spendingBalance)
 
       -------------------------------------------------------------------------
@@ -246,7 +242,10 @@ genTx
       -- Occasionally we have a transaction generated with insufficient inputs
       -- to cover the deposits. In this case we discard the test case.
       let enough = sumVal (getMinCoinTxOut pparams <$> draftOutputs)
-      !_ <- when (coin spendingBalance < enough) $ myDiscard $ "No inputs left. Utxo.hs " <> show enough
+      !_ <-
+        when (coin spendingBalance < enough) $
+          tracedDiscard $
+            "No inputs left. Utxo.hs " <> show enough
 
       (draftTxBody, additionalScripts) <-
         genEraTxBody
@@ -283,7 +282,7 @@ genTx
       let txOuts = tx ^. bodyTxL . outputsTxBodyL
       !_ <-
         when (any (\txOut -> getMinCoinTxOut pparams txOut > txOut ^. coinTxOutL) txOuts) $
-          myDiscard $
+          tracedDiscard $
             "TxOut value is too small " <> show txOuts
       pure tx
 
@@ -451,7 +450,7 @@ genNextDelta
                   -- If it does happen, It is NOT a test failure, but an inadequacy in the
                   -- testing framework to generate almost-random transactions that always succeed every time.
                   -- Experience suggests that this happens less than 1% of the time, and does not lead to backtracking.
-                  !_ <- when (null inputs) $ myDiscard $ "NoMoneyleft Utxo.hs " <> show (coin value)
+                  !_ <- when (null inputs) $ tracedDiscard $ "NoMoneyleft Utxo.hs " <> show (coin value)
                   let newWits =
                         mkTxWits @era
                           (utxo, txBody, scriptinfo)

@@ -103,6 +103,7 @@ import System.Random
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
 import Test.Cardano.Ledger.Alonzo.Arbitrary (alwaysFails, alwaysSucceeds, mkPlutusScript')
 import Test.Cardano.Ledger.Binary.Random
+import Test.Cardano.Ledger.Common (tracedDiscard)
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
 import Test.Cardano.Ledger.Plutus (zeroTestingCostModels)
 import Test.Cardano.Ledger.Plutus.Examples
@@ -121,7 +122,7 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (.
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (Quantifier (..), ScriptClass (..))
 import Test.Cardano.Ledger.Shelley.Generator.Update (genM, genShelleyPParamsUpdate)
 import qualified Test.Cardano.Ledger.Shelley.Generator.Update as Shelley (genPParams)
-import Test.Cardano.Ledger.Shelley.Generator.Utxo (encodedLen, myDiscard)
+import Test.Cardano.Ledger.Shelley.Generator.Utxo (encodedLen)
 import Test.Cardano.Ledger.Shelley.Utils (unsafeBoundRational)
 import Test.QuickCheck hiding ((><))
 
@@ -491,8 +492,8 @@ instance Mock c => EraGen (AlonzoEra c) where
           then
             if oldScriptWits == newWits
               then pure tx
-              else myDiscard $ "Random extra scriptwitness: genEraDone: " <> show newWits
-          else myDiscard $ "MinFee violation: genEraDone: " <> show theFee
+              else tracedDiscard $ "Random extra scriptwitness: genEraDone: " <> show newWits
+          else tracedDiscard $ "MinFee violation: genEraDone: " <> show theFee
 
   genEraTweakBlock pp txns =
     let txTotal, ppMax :: ExUnits
@@ -501,7 +502,7 @@ instance Mock c => EraGen (AlonzoEra c) where
      in if pointWiseExUnits (<=) txTotal ppMax
           then pure txns
           else
-            myDiscard $
+            tracedDiscard $
               "TotExUnits violation: genEraTweakBlock: "
                 <> show (unWrapExUnits txTotal)
                 <> " instead of "
