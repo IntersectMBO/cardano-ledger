@@ -629,13 +629,24 @@ uniformSubSet mSubSetSize inputSet gen = do
   subSetSize <- case mSubSetSize of
     Nothing -> uniformRM (0, Set.size inputSet) gen
     Just n -> pure $ max 0 $ min (Set.size inputSet) n
-  go inputSet Set.empty subSetSize
+  if subSetSize < Set.size inputSet `div` 2
+    then
+      goAdd inputSet Set.empty subSetSize
+    else
+      goDelete inputSet (Set.size inputSet - subSetSize)
   where
-    go !s !acc !i
+    -- Constructing a new Set is faster when less then a half of original Set will be used
+    goAdd !s !acc !i
       | i <= 0 = pure acc
       | otherwise = do
           ix <- uniformRM (0, Set.size s - 1) gen
-          go (Set.deleteAt ix s) (Set.insert (Set.elemAt ix s) acc) (i - 1)
+          goAdd (Set.deleteAt ix s) (Set.insert (Set.elemAt ix s) acc) (i - 1)
+    -- Deleting is faster when more items need to be retained in the Set
+    goDelete !acc !i
+      | i <= 0 = pure acc
+      | otherwise = do
+          ix <- uniformRM (0, Set.size acc - 1) gen
+          goDelete (Set.deleteAt ix acc) (i - 1)
 
 uniformSubMap ::
   (StatefulGen g m, Ord k) =>
