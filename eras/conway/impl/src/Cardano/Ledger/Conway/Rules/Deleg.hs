@@ -21,7 +21,7 @@ module Cardano.Ledger.Conway.Rules.Deleg (
   ConwayDelegEnv (..),
 ) where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..))
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (From, Invalid, SumD, Summands),
@@ -44,7 +44,7 @@ import Cardano.Ledger.PoolParams (PoolParams)
 import Cardano.Ledger.Shelley.LedgerState (DState (..))
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
-import Control.Monad (forM_)
+import Control.Monad (forM_, guard)
 import Control.State.Transition (
   BaseM,
   Environment,
@@ -55,12 +55,14 @@ import Control.State.Transition (
   State,
   TRC (TRC),
   TransitionRule,
+  failOnJust,
   judgmentContext,
   transitionRules,
   (?!),
  )
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import qualified Data.Set as Set
 import Data.Void (Void)
 import GHC.Generics (Generic)
@@ -159,66 +161,67 @@ conwayDelegTransition = do
   TRC
     ( ConwayDelegEnv pp pools
       , dState@DState {dsUnified}
-      , c
+      , cert
       ) <-
     judgmentContext
-  let ppKeyDeposit = pp ^. ppKeyDepositL
-  case c of
-    ConwayRegCert stakeCred sMayDeposit -> do
-      forM_ sMayDeposit $ checkDepositAgainstPParams ppKeyDeposit
-      dsUnified' <- checkAndAcceptDepositForStakeCred stakeCred ppKeyDeposit dsUnified
-      pure $ dState {dsUnified = dsUnified'}
-    ConwayUnRegCert stakeCred sMayDeposit -> do
-      checkStakeKeyIsRegistered stakeCred dsUnified
-      checkStakeKeyHasZeroRewardBalance stakeCred dsUnified
-      forM_ sMayDeposit $ checkDepositAgainstPaidDeposit stakeCred dsUnified
-      pure $ dState {dsUnified = UM.domDeleteAll (Set.singleton stakeCred) dsUnified}
-    ConwayDelegCert stakeCred delegatee -> do
-      checkStakeDelegateeRegistered pools delegatee
-      checkStakeKeyIsRegistered stakeCred dsUnified
-      pure $ dState {dsUnified = processDelegation stakeCred delegatee dsUnified}
-    ConwayRegDelegCert stakeCred delegatee deposit -> do
-      checkStakeDelegateeRegistered pools delegatee
-      checkDepositAgainstPParams ppKeyDeposit deposit
-      dsUnified' <- checkAndAcceptDepositForStakeCred stakeCred deposit dsUnified
-      pure $ dState {dsUnified = processDelegation stakeCred delegatee dsUnified'}
-  where
-    checkStakeDelegateeRegistered pools =
+  let
+    ppKeyDeposit = pp ^. ppKeyDepositL
+    checkDepositAgainstPParams deposit =
+      deposit == ppKeyDeposit ?! IncorrectDepositDELEG deposit
+    registerStakeCredential stakeCred =
+      let rdPair = UM.RDPair (UM.CompactCoin 0) (UM.compactCoinOrError ppKeyDeposit)
+       in UM.insert stakeCred rdPair $ UM.RewDepUView dsUnified
+    delegStake stakeCred sPool umap =
+      UM.SPoolUView umap UM.⨃ Map.singleton stakeCred sPool
+    delegVote stakeCred dRep umap =
+      UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
+    processDelegation stakeCred delegatee =
+      case delegatee of
+        DelegStake sPool -> delegStake stakeCred sPool
+        DelegVote dRep -> delegVote stakeCred dRep
+        DelegStakeVote sPool dRep -> delegVote stakeCred dRep . delegStake stakeCred sPool
+    checkStakeKeyNotRegistered stakeCred =
+      UM.notMember stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyRegisteredDELEG stakeCred
+    checkStakeKeyIsRegistered stakeCred =
+      UM.member stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyNotRegisteredDELEG stakeCred
+    checkStakeDelegateeRegistered =
       let checkPoolRegistered targetPool =
             targetPool `Map.member` pools ?! DelegateeNotRegisteredDELEG targetPool
        in \case
             DelegStake targetPool -> checkPoolRegistered targetPool
             DelegStakeVote targetPool _ -> checkPoolRegistered targetPool
             DelegVote _ -> pure ()
-    -- Whenever we want to accept new deposit, we must always check if the stake credential isn't already registered.
-    checkAndAcceptDepositForStakeCred stakeCred deposit dsUnified = do
-      checkStakeKeyNotRegistered stakeCred dsUnified
-      -- This looks like it should have been a right-biased union, so that the (reward, deposit) pair would be inserted
-      -- (or overwritten) in the UMap. But since we are sure that the stake credential isn't a member yet
-      -- it will still work. The reason we cannot use a right-biased union here is because UMap treats deposits specially
-      -- in right-biased unions, and is unable to accept new deposits.
+  case cert of
+    ConwayRegCert stakeCred sMayDeposit -> do
+      forM_ sMayDeposit checkDepositAgainstPParams
+      checkStakeKeyNotRegistered stakeCred
+      pure $ dState {dsUnified = registerStakeCredential stakeCred}
+    ConwayUnRegCert stakeCred sMayRefund -> do
+      let mRDPair = UM.lookup stakeCred $ UM.RewDepUView dsUnified
+          checkInvalidRefund = do
+            SJust suppliedRefund <- Just sMayRefund
+            -- we don't want to report invalid refund when stake credential is not registered:
+            UM.RDPair _ actualRefund <- mRDPair
+            -- we return offending refund only when it doesn't match the expected one:
+            guard (suppliedRefund /= UM.fromCompact actualRefund)
+            Just suppliedRefund
+          checkStakeKeyHasZeroRewardBalance = do
+            UM.RDPair compactReward _ <- mRDPair
+            guard (compactReward /= mempty)
+            Just $ UM.fromCompact compactReward
+      failOnJust checkInvalidRefund IncorrectDepositDELEG
+      isJust mRDPair ?! StakeKeyNotRegisteredDELEG stakeCred
+      failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroRewardAccountBalanceDELEG
+      pure $ dState {dsUnified = UM.domDeleteAll (Set.singleton stakeCred) dsUnified}
+    ConwayDelegCert stakeCred delegatee -> do
+      checkStakeKeyIsRegistered stakeCred
+      checkStakeDelegateeRegistered delegatee
+      pure $ dState {dsUnified = processDelegation stakeCred delegatee dsUnified}
+    ConwayRegDelegCert stakeCred delegatee deposit -> do
+      checkDepositAgainstPParams deposit
+      checkStakeKeyNotRegistered stakeCred
+      checkStakeDelegateeRegistered delegatee
       pure $
-        UM.RewDepUView dsUnified
-          UM.∪ (stakeCred, UM.RDPair (UM.CompactCoin 0) (UM.compactCoinOrError deposit))
-    delegStake stakeCred sPool dsUnified =
-      UM.SPoolUView dsUnified UM.⨃ Map.singleton stakeCred sPool
-    delegVote stakeCred dRep dsUnified =
-      UM.DRepUView dsUnified UM.⨃ Map.singleton stakeCred dRep
-    processDelegation stakeCred delegatee dsUnified =
-      case delegatee of
-        DelegStake sPool -> delegStake stakeCred sPool dsUnified
-        DelegVote dRep -> delegVote stakeCred dRep dsUnified
-        DelegStakeVote sPool dRep -> delegVote stakeCred dRep $ delegStake stakeCred sPool dsUnified
-    checkDepositAgainstPParams ppKeyDeposit deposit =
-      deposit == ppKeyDeposit ?! IncorrectDepositDELEG deposit
-    checkDepositAgainstPaidDeposit stakeCred dsUnified deposit =
-      Just deposit
-        == fmap (UM.fromCompact . UM.rdDeposit) (UM.lookup stakeCred $ UM.RewDepUView dsUnified)
-          ?! IncorrectDepositDELEG deposit
-    checkStakeKeyNotRegistered stakeCred dsUnified =
-      UM.notMember stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyRegisteredDELEG stakeCred
-    checkStakeKeyIsRegistered stakeCred dsUnified =
-      UM.member stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyNotRegisteredDELEG stakeCred
-    checkStakeKeyHasZeroRewardBalance stakeCred dsUnified =
-      let mReward = UM.rdReward <$> UM.lookup stakeCred (UM.RewDepUView dsUnified)
-       in forM_ mReward $ \r -> r == mempty ?! StakeKeyHasNonZeroRewardAccountBalanceDELEG (UM.fromCompact r)
+        dState
+          { dsUnified = processDelegation stakeCred delegatee $ registerStakeCredential stakeCred
+          }
