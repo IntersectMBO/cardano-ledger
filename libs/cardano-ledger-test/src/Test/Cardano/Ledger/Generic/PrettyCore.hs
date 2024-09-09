@@ -1983,8 +1983,6 @@ ppConwayDelegPredFailure x = case x of
     ppSexp "StakeKeyNotRegisteredDELEG" [pcCredential cred]
   StakeKeyHasNonZeroRewardAccountBalanceDELEG c ->
     ppSexp "StakeKeyHasNonZeroRewardAccountBalanceDELEG" [pcCoin c]
-  DRepAlreadyRegisteredForStakeKeyDELEG cred ->
-    ppSexp "DRepAlreadyRegisteredForStakeKeyDELEG" [pcCredential cred]
   ConwayRules.DelegateeNotRegisteredDELEG kh -> ppSexp "DelegateeNotRegisteredDELEG" [pcKeyHash kh]
 
 instance PrettyA (ConwayDelegPredFailure era) where
