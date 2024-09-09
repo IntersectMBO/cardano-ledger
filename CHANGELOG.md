@@ -7,6 +7,16 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 9.1.1
+
+- Hotfix patch for inability to deserialize Conway version of the Ledger State due to
+  retained bogus address pointers:
+  [#4591](https://github.com/IntersectMBO/cardano-ledger/pull/4591)
+
+## 9.1
+
+- There were no ledger changes. The only difference with `cardano-node-9.0` is that `9.1`
+  provided genesis file for `Conway` era.
 
 ## 9.0
 
