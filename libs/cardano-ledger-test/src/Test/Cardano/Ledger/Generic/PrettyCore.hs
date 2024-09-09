@@ -1461,7 +1461,7 @@ instance Reflect era => PrettyA (ShelleyLedgersPredFailure era) where
 
 ppConwayLedgerPredFailure :: Reflect era => Proof era -> ConwayLedgerPredFailure era -> PDoc
 ppConwayLedgerPredFailure proof x = case x of
-  ConwayWdrlNotDelegatedToDRep s -> ppSexp "ConwayWdrlNotDelegatedToDRep" [ppSet pcCredential s]
+  ConwayWdrlNotDelegatedToDRep s -> ppSexp "ConwayWdrlNotDelegatedToDRep" [prettyA s]
   ConwayTreasuryValueMismatch c1 c2 -> ppSexp "ConwayTreasuryValueMismatch" [pcCoin c1, pcCoin c2]
   ConwayGovFailure y -> case proof of
     Conway -> ppSexp "ConwayGovFailure" [ppConwayGovPredFailure y]

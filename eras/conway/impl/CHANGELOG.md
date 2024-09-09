@@ -1,7 +1,7 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.16.2.0
-
+## 1.17.0.0
+* Changed `ConwayWdrlNotDelegatedToDRep` to wrap `NonEmpty`
 * Add `showGovActionType`, `acceptedByEveryone`
 * Added `unRatifySignal`
 * Added lenses:
@@ -12,6 +12,12 @@
   * `reDRepStateL`
   * `reCurrentEpochL`
   * `reCommitteeStateL`
+
+### `testlib`
+
+  * Removed `redelegateDRep` from `ImpTest`
+  * Changed signature of `delegateToDRep` to take a `Credential` parameter
+
 
 ## 1.16.1.0
 

@@ -433,7 +433,7 @@ data ConwayDelegCert c
   | -- | De-Register the staking credential. Deposit, if present, must match the amount
     -- that was left as a deposit upon stake credential registration.
     ConwayUnRegCert !(StakeCredential c) !(StrictMaybe Coin)
-  | -- | Redelegate to another delegatee. Staking credential must already be registered.
+  | -- | Delegate staking credentials to a delegatee. Staking credential must already be registered.
     ConwayDelegCert !(StakeCredential c) !(Delegatee c)
   | -- | This is a new type of certificate, which allows to register staking credential
     -- and delegate within a single certificate. Deposit is required and must match the

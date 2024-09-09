@@ -79,9 +79,10 @@ import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
-import Cardano.Ledger.Credential (Credential)
+import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..))
+import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
   DState (..),
@@ -104,27 +105,28 @@ import Cardano.Ledger.Shelley.Rules (
   shelleyLedgerAssertions,
  )
 import Cardano.Ledger.Slot (epochInfoEpoch)
-import Cardano.Ledger.UMap (UView (..), dRepMap)
+import Cardano.Ledger.UMap (UView (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.DeepSeq (NFData)
-import Control.Monad (when)
+import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
   STS (..),
   TRC (..),
   TransitionRule,
+  failOnNonEmpty,
   judgmentContext,
   liftSTS,
   trans,
   (?!),
  )
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
@@ -134,7 +136,7 @@ data ConwayLedgerPredFailure era
   = ConwayUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
   | ConwayCertsFailure (PredicateFailure (EraRule "CERTS" era))
   | ConwayGovFailure (PredicateFailure (EraRule "GOV" era))
-  | ConwayWdrlNotDelegatedToDRep (Set (Credential 'Staking (EraCrypto era)))
+  | ConwayWdrlNotDelegatedToDRep (NonEmpty (Credential 'Staking (EraCrypto era)))
   | ConwayTreasuryValueMismatch
       -- | Actual
       Coin
@@ -396,16 +398,19 @@ ledgerTransition = do
               , certState
               , StrictSeq.fromStrict $ txBody ^. certsTxBodyL
               )
-        let wdrlAddrs = Map.keysSet . unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
-            wdrlCreds = Set.map raCredential wdrlAddrs
-            dUnified = dsUnified $ certDState certStateAfterCERTS
-            delegatedAddrs = DRepUView dUnified
 
-        -- TODO: Finish this implementation once we are in bootstrap phase:
-        -- https://github.com/IntersectMBO/cardano-ledger/issues/4092
-        when False $ do
-          all (`UMap.member` delegatedAddrs) wdrlCreds
-            ?! ConwayWdrlNotDelegatedToDRep (wdrlCreds Set.\\ Map.keysSet (dRepMap dUnified))
+        -- Starting with version 10, we don't allow withdrawals into RewardAcounts that are KeyHashes and not delegated to Dreps
+        unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $ do
+          let dUnified = dsUnified $ certDState certStateAfterCERTS
+              wdrls = unWithdrawals $ tx ^. bodyTxL . withdrawalsTxBodyL
+              delegatedAddrs = DRepUView dUnified
+              wdrlsKeyHashes =
+                Set.fromList
+                  [ rc | (ra, _) <- Map.toList wdrls, let rc = raCredential ra, Just _ <- [credKeyHash rc]
+                  ]
+              nonExistentDelegations =
+                Set.filter (not . (`UMap.member` delegatedAddrs)) wdrlsKeyHashes
+          failOnNonEmpty nonExistentDelegations ConwayWdrlNotDelegatedToDRep
 
         -- Votes and proposals from signal tx
         let govSignal =
