@@ -118,6 +118,9 @@ import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 import Test.Cardano.Ledger.Generic.GenState (runGenRS, GenEnv (..), GenState (..))
 import qualified Test.Cardano.Ledger.Generic.GenState as GenSize
+import Test.Cardano.Ledger.Conway.ImpTest (showAlonzoTxBalance)
+import Cardano.Ledger.Shelley.Rules (UtxoEnv(..))
+import Cardano.Ledger.Shelley.LedgerState (UTxOState(..))
 
 instance
   forall fn.
@@ -147,6 +150,9 @@ instance
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.utxoStep env st sig
+
+  extraInfo _ctx UtxoEnv {..} UTxOState {..} =
+    showAlonzoTxBalance uePParams ueCertState utxosUtxo
 
 data ConwayCertExecContext era = ConwayCertExecContext
   { ccecWithdrawals :: !(Map (Network, Credential 'Staking (EraCrypto era)) Coin)

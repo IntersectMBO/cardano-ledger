@@ -8,7 +8,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -59,18 +58,15 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   calculateDRepAcceptedRatio,
   calculatePoolAcceptedRatio,
   calculateCommitteeAcceptedRatio,
-  logAcceptedRatio,
   isDRepAccepted,
   isSpoAccepted,
   isCommitteeAccepted,
   getCommitteeMembers,
   getConstitution,
   registerInitialCommittee,
-  logRatificationChecks,
   resignCommitteeColdKey,
   registerCommitteeHotKey,
   registerCommitteeHotKeys,
-  logCurPParams,
   electCommittee,
   electBasicCommittee,
   proposalsShowDebug,
@@ -80,8 +76,6 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   submitGovActionForest,
   submitGovActionTree,
   getProposalsForest,
-  logProposalsForest,
-  logProposalsForestDiff,
   constitutionShouldBe,
   getCCExpiry,
   ccShouldBeExpired,
@@ -111,12 +105,17 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   minorFollow,
   majorFollow,
   cantFollow,
-  getsPParams,
   currentProposalsShouldContain,
   withImpStateWithProtVer,
   whenPostBootstrap,
   submitYesVoteCCs_,
   donateToTreasury,
+  -- Logging
+  logAcceptedRatio,
+  logRatificationChecks,
+  logCurPParams,
+  logProposalsForest,
+  logProposalsForestDiff,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -519,9 +518,6 @@ lookupDRepState dRepCred = do
   case Map.lookup dRepCred drepsState of
     Nothing -> error $ "Expected for DRep " ++ show dRepCred ++ " to be present in the CertState"
     Just state -> pure state
-
-getsPParams :: EraGov era => Lens' (PParams era) a -> ImpTestM era a
-getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
 
 -- | Sets up a stake pool with coin delegated to it.
 --

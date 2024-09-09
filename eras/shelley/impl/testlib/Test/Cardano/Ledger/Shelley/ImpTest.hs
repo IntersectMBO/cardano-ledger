@@ -98,6 +98,8 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   defaultInitImpTestState,
   impEraStartEpochNo,
   impSetSeed,
+  getsPParams,
+  getPParams,
 
   -- * Logging
   logEntry,
@@ -1749,3 +1751,9 @@ advanceToPointOfNoReturn = do
   impLastTick <- gets impLastTick
   (_, slotOfNoReturn, _) <- runShelleyBase $ getTheSlotOfNoReturn impLastTick
   impLastTickL .= slotOfNoReturn
+
+getsPParams :: EraGov era => Lens' (PParams era) a -> ImpTestM era a
+getsPParams f = getsNES $ nesEsL . curPParamsEpochStateL . f
+
+getPParams :: EraGov era => ImpTestM era (PParams era)
+getPParams = getsNES $ nesEsL . curPParamsEpochStateL
