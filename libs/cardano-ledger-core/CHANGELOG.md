@@ -5,6 +5,11 @@
 * Add `credKeyHash` to `Credential`
 * Remove `maxMajorPV` from `Globals`
 
+### `testlib`
+
+* Add `uniformSubMap` and `uniformSubMapElems`
+* Rename `uniformSubset` to `uniformSubSet`
+
 ## 1.14.0.0
 
 * Add `EncCBOR` instance for `PoolCert`

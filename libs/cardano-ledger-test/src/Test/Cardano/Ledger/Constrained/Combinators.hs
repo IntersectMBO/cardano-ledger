@@ -8,13 +8,13 @@
 module Test.Cardano.Ledger.Constrained.Combinators where
 
 import Cardano.Ledger.Coin (Coin (..))
-import Data.Foldable as F (foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
-import Test.Cardano.Ledger.Core.Arbitrary ()
+import Test.Cardano.Ledger.Binary.Random (QC (..))
+import Test.Cardano.Ledger.Core.Arbitrary (uniformSubMap, uniformSubSet)
 import Test.QuickCheck hiding (Fixed, total)
 
 -- ==========================================================================
@@ -122,18 +122,7 @@ subsetFromSetWithSize mess set n
             ++ show (Set.size set)
         )
         mess
-  -- It is faster to remove extra elements, when we need to drop more than a half
-  | Set.size set `div` 2 < n = fst <$> help (flip const) set Set.empty (Set.size set - n)
-  -- It is faster to pick out random elements when we only need under a half of the original set.
-  | otherwise = snd <$> help seq set Set.empty n
-  where
-    help optSeq !source target count
-      | count <= 0 = pure (source, target)
-      | otherwise = do
-          (item, source') <- itemFromSet (("subsetFromSetWithSize " ++ show n) : mess) source
-          -- To avoid a memory leak we only force the target when it is the set we want to keep.
-          let target' = Set.insert item target
-          target' `optSeq` help optSeq source' target' (count - 1)
+  | otherwise = uniformSubSet (Just n) set QC
 
 -- | Generate a larger map, from a smaller map 'subset'. The new larger map, should have all the
 --   keys and values of the smaller map.
@@ -234,8 +223,4 @@ genFromMap msgs m
     n = Map.size m
 
 subMapFromMapWithSize :: Ord k => Int -> Map k a -> Gen (Map k a)
-subMapFromMapWithSize n m = do
-  let indexes = [0 .. Map.size m - 1]
-      accum ans i = let (k, v) = Map.elemAt i m in Map.insert k v ans
-  shuffled <- shuffle indexes
-  pure (F.foldl' accum Map.empty (take n shuffled))
+subMapFromMapWithSize n m = uniformSubMap (Just n) m QC

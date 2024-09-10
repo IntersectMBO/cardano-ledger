@@ -131,9 +131,15 @@ data ConwayEpochEvent era
   | SnapEvent (Event (EraRule "SNAP" era))
   | EpochBoundaryRatifyState (RatifyState era)
   | GovInfoEvent
-      (Set (GovActionState era)) -- enacted
-      (Set (GovActionState era)) -- expired
-      (Set (GovActionId (EraCrypto era))) -- unclaimed
+      -- | Enacted actions
+      (Set (GovActionState era))
+      -- | Actions that were removed as conflicting due to enactment
+      (Set (GovActionState era))
+      -- | Actions that were removed due to expiration together with their dependees
+      (Set (GovActionState era))
+      -- | Ids of removed governance actions that had an unregistered reward account, thus
+      -- leading to unclaimed deposits being transfered to the treasury.
+      (Set (GovActionId (EraCrypto era)))
   deriving (Generic)
 
 type instance EraRuleEvent "EPOCH" (ConwayEra c) = ConwayEpochEvent (ConwayEra c)
@@ -325,7 +331,7 @@ epochTransition = do
     -- enacted actions and their sibling subtrees, as well as expired
     -- actions and their subtrees, removed, and with all the votes
     -- intact for the rest of them.
-    (newProposals, enactedActions, expiredActions) =
+    (newProposals, enactedActions, removedDueToEnactment, expiredActions) =
       proposalsApplyEnactment rsEnacted rsExpired (govState0 ^. proposalsGovStateL)
 
     -- Apply the values from the computed EnactState to the GovState
@@ -338,7 +344,7 @@ epochTransition = do
         & cgsPrevPParamsL .~ curPParams
         & cgsFuturePParamsL .~ PotentialPParamsUpdate Nothing
 
-    allRemovedGovActions = expiredActions `Map.union` enactedActions
+    allRemovedGovActions = Map.unions [expiredActions, enactedActions, removedDueToEnactment]
     (newUMap, unclaimed) =
       returnProposalDeposits allRemovedGovActions $
         dState2 ^. dsUnifiedL
@@ -346,6 +352,7 @@ epochTransition = do
   tellEvent $
     GovInfoEvent
       (Set.fromList $ Map.elems enactedActions)
+      (Set.fromList $ Map.elems removedDueToEnactment)
       (Set.fromList $ Map.elems expiredActions)
       (Map.keysSet unclaimed)
 

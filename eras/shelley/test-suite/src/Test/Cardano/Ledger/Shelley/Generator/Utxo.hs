@@ -74,7 +74,9 @@ import qualified Data.Set as Set
 import qualified Data.Vector as V
 import Lens.Micro
 import NoThunks.Class ()
+import Test.Cardano.Ledger.Binary.Random (QC (..))
 import Test.Cardano.Ledger.Common (tracedDiscard)
+import Test.Cardano.Ledger.Core.Arbitrary (uniformSubMapElems)
 import Test.Cardano.Ledger.Core.KeyPair (
   KeyPair,
   KeyPairs,
@@ -634,14 +636,7 @@ genIndices k (l', u')
 -- | Select @n@ random key value pairs from the supplied map. Order of keys with
 -- respect to each other will also be random, i.e. not sorted.
 pickRandomFromMap :: Int -> Map.Map k t -> Gen [(k, t)]
-pickRandomFromMap n' initMap = go (min (max 0 n') (Map.size initMap)) [] initMap
-  where
-    go n !acc !m
-      | n <= 0 = pure acc
-      | otherwise = do
-          i <- QC.choose (0, Map.size m - 1)
-          let (k, y) = Map.elemAt i m
-          go (n - 1) ((k, y) : acc) (Map.deleteAt i m)
+pickRandomFromMap n initMap = uniformSubMapElems (\k v -> ((k, v) :)) (Just n) initMap QC
 
 mkScriptWits ::
   forall era.

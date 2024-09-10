@@ -42,7 +42,7 @@ import Lens.Micro ((^.))
 import System.Environment (getEnv)
 import System.Random.Stateful
 import Test.Cardano.Ledger.Api.State.Query (getFilteredDelegationsAndRewardAccounts)
-import Test.Cardano.Ledger.Core.Arbitrary (uniformSubset)
+import Test.Cardano.Ledger.Core.Arbitrary (uniformSubSet)
 
 main :: IO ()
 main = do
@@ -120,7 +120,7 @@ main = do
     , env (pure es) $ \newEpochState ->
         let umap = dsUnified . certDState . lsCertState . esLState $ nesEs newEpochState
             elems = umElems umap
-            creds = runStateGen_ stdGen (uniformSubset (Just 10) (Map.keysSet elems))
+            creds = runStateGen_ stdGen (uniformSubSet (Just 10) (Map.keysSet elems))
          in bgroup
               ( "GetFilteredDelegationsAndRewardAccounts ("
                   ++ show (Set.size creds)

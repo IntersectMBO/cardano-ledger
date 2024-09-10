@@ -141,29 +141,29 @@ library testlib
     build-depends:
         base,
         bytestring,
-        cardano-data:{cardano-data, testlib},
-        containers,
-        cuddle >=0.3.0.0,
-        plutus-ledger-api,
-        deepseq,
-        microlens,
         cardano-crypto-class,
+        cardano-data:{cardano-data, testlib},
         cardano-ledger-allegra,
         cardano-ledger-alonzo:{cardano-ledger-alonzo, testlib},
-        cardano-ledger-binary,
+        cardano-ledger-binary:{cardano-ledger-binary, testlib},
         cardano-ledger-babbage:{cardano-ledger-babbage, testlib} >=1.8.2,
         cardano-ledger-conway,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         cardano-ledger-mary,
         cardano-ledger-shelley,
         cardano-strict-containers,
+        containers,
+        cuddle >=0.3.0.0,
         data-default-class,
+        deepseq,
         FailT,
         generic-random,
+        microlens,
         microlens-mtl,
         mtl,
-        text,
-        small-steps >=1.1
+        plutus-ledger-api,
+        small-steps >=1.1,
+        text
 
 executable huddle-cddl
     main-is:          Main.hs
