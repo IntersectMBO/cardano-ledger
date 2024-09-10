@@ -34,7 +34,6 @@ HADDOCK_OPTS=(
   --haddock-benchmarks
   --haddock-html
   --haddock-hyperlink-source
-  --haddock-option "--show-all"
   --haddock-option "--use-unicode"
   --haddock-option="--base-url=.."
   --haddock-quickjump
