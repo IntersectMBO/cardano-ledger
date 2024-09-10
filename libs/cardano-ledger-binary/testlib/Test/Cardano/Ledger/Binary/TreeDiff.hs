@@ -1,3 +1,4 @@
+{-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,9 +18,12 @@ module Test.Cardano.Ledger.Binary.TreeDiff (
   ansiDocToString,
   hexByteStringExpr,
   showHexBytesGrouped,
+  assertColorFailure,
   expectExprEqual,
   expectExprEqualWithMessage,
   assertExprEqualWithMessage,
+  callStackToLocation,
+  srcLocToLocation,
   Expr (App, Rec, Lst),
   defaultExprViaShow,
   trimExprViaShow,
@@ -40,6 +44,7 @@ import Cardano.Crypto.Hash.Class ()
 import Cardano.Ledger.Binary
 import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Term as CBOR
+import Control.Exception (throwIO)
 import Data.Bifunctor (bimap)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as Base16
@@ -51,13 +56,39 @@ import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Text.Lazy as TL
 import Data.TreeDiff
+import GHC.Stack (CallStack, HasCallStack, SrcLoc (..), getCallStack)
 import Prettyprinter (Doc)
 import qualified Prettyprinter as Pretty
 import Prettyprinter.Render.Terminal (AnsiStyle)
 import qualified Prettyprinter.Render.Terminal as Pretty
 import Test.Cardano.Slotting.TreeDiff ()
-import Test.Hspec (Expectation, HasCallStack, expectationFailure)
+import Test.Hspec (Expectation)
+import Test.Hspec.Core.Spec (
+  FailureReason (ColorizedReason),
+  Location (..),
+  ResultStatus (Failure),
+ )
 import Test.Tasty.HUnit (Assertion, assertFailure)
+
+callStackToLocation :: CallStack -> Maybe Location
+callStackToLocation cs =
+  case getCallStack cs of
+    [] -> Nothing
+    (_, loc) : _ -> Just $ srcLocToLocation loc
+
+srcLocToLocation :: SrcLoc -> Location
+srcLocToLocation loc =
+  Location
+    { locationFile = srcLocFile loc
+    , locationLine = srcLocStartLine loc
+    , locationColumn = srcLocStartCol loc
+    }
+
+-- | Similar to `assertFailure`, except hspec will not interfer with any escape sequences
+-- that indicate color output.
+assertColorFailure :: HasCallStack => String -> IO a
+assertColorFailure msg =
+  throwIO $ Failure (callStackToLocation ?callStack) (ColorizedReason msg)
 
 -- =====================================================
 -- Cardano functions that deal with TreeDiff and ToExpr
@@ -219,7 +250,7 @@ expectExprEqual = expectExprEqualWithMessage "Expected two values to be equal:"
 
 -- | Use this with HSpec, but with Tasty use 'assertExprEqualWithMessage' below
 expectExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => String -> a -> a -> Expectation
-expectExprEqualWithMessage = requireExprEqualWithMessage (expectationFailure . ansiDocToString) . Pretty.pretty
+expectExprEqualWithMessage = requireExprEqualWithMessage (assertColorFailure . ansiDocToString) . Pretty.pretty
 
 -- | Use this with Tasty, but with HSpec use 'expectExprEqualWithMessage' above
 assertExprEqualWithMessage :: (ToExpr a, Eq a, HasCallStack) => String -> a -> a -> Assertion

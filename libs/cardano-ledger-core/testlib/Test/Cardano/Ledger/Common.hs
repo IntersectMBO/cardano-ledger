@@ -19,6 +19,7 @@ module Test.Cardano.Ledger.Common (
   -- * Expectations
   assertBool,
   assertFailure,
+  assertColorFailure,
 
   -- ** Non-standard expectations
   shouldBeExpr,
@@ -57,6 +58,7 @@ import Test.Cardano.Ledger.Binary.TreeDiff (
   ansiDocToString,
   ansiExpr,
   ansiExprString,
+  assertColorFailure,
   diffExpr,
   diffExprCompact,
   diffExprCompactString,

@@ -272,6 +272,7 @@ import Prettyprinter.Render.Terminal (AnsiStyle, Color (..), color)
 import System.Random
 import qualified System.Random as Random
 import Test.Cardano.Ledger.Binary.RoundTrip (roundTripCborRangeFailureExpectation)
+import Test.Cardano.Ledger.Binary.TreeDiff (srcLocToLocation)
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.Cardano.Ledger.Core.Binary.RoundTrip (roundTripEraExpectation)
 import Test.Cardano.Ledger.Core.KeyPair (
@@ -293,6 +294,7 @@ import Test.Hspec.Core.Spec (
   Result (..),
   paramsQuickCheckArgs,
  )
+import qualified Test.Hspec.Core.Spec as H
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Random (QCGen (..), integerVariant, mkQCGen)
 import Type.Reflection (Typeable, typeOf)
@@ -918,24 +920,42 @@ runImpTestM mQCSize impState action = do
     -- number of the current era
     runReaderT (unImpTestM (passTick >> action)) env `catchAny` \exc -> do
       logs <- ansiDocToString . impLog <$> readIORef ioRef
-      let adjustHUnitExc header (HUnitFailure srcLoc failReason) =
-            toException $
-              HUnitFailure srcLoc $
-                case failReason of
-                  Reason msg -> Reason $ logs <> "\n" <> header <> msg
-                  ExpectedButGot Nothing expected got ->
-                    ExpectedButGot (Just $ logs <> header) expected got
-                  ExpectedButGot (Just msg) expected got ->
-                    ExpectedButGot (Just (logs <> "\n" <> header <> msg)) expected got
+      let x <?> my = case my of
+            Nothing -> x
+            Just y -> x <> "\n" <> y
+          uncaughtException header excThrown =
+            H.ColorizedReason $ header <> "\n" <> "Uncaught Exception: " <> displayException excThrown
+          fromHUnitFailure header (HUnitFailure mSrcLoc failReason) =
+            case failReason of
+              Reason msg ->
+                H.Failure (srcLocToLocation <$> mSrcLoc) $
+                  H.ColorizedReason (header <> "\n" <> msg)
+              ExpectedButGot mMsg expected got ->
+                H.Failure (srcLocToLocation <$> mSrcLoc) $
+                  H.ExpectedButGot (Just (header <?> mMsg)) expected got
+          adjustFailureReason header = \case
+            H.Failure mLoc failureReason ->
+              H.Failure mLoc $
+                case failureReason of
+                  H.NoReason -> H.ColorizedReason $ header <> "\nNoReason"
+                  H.Reason msg -> H.ColorizedReason $ header <> "\n" <> msg
+                  H.ColorizedReason msg -> H.ColorizedReason $ header <> "\n" <> msg
+                  H.ExpectedButGot mPreface expected actual ->
+                    H.ExpectedButGot (Just (header <?> mPreface)) expected actual
+                  H.Error mInfo excThrown -> uncaughtException (header <?> mInfo) excThrown
+            result -> result
           newExc
-            | Just hUnitExc <- fromException exc =
-                adjustHUnitExc [] hUnitExc
+            | Just hUnitExc <- fromException exc = fromHUnitFailure logs hUnitExc
+            | Just hspecFailure <- fromException exc = adjustFailureReason logs hspecFailure
             | Just (ImpException ann excThrown) <- fromException exc =
-                let header = unlines $ zipWith (\n str -> replicate n ' ' <> str) [0, 2 ..] ann
+                let header = unlines $ logs : zipWith (\n str -> replicate n ' ' <> str) [0, 2 ..] ann
                  in case fromException excThrown of
-                      Nothing -> toException $ ImpException [logs, header] excThrown
-                      Just hUnitExc -> adjustHUnitExc header hUnitExc
-            | otherwise = toException $ ImpException [logs] exc
+                      Just hUnitExc -> fromHUnitFailure header hUnitExc
+                      Nothing ->
+                        case fromException excThrown of
+                          Just hspecFailure -> adjustFailureReason logs hspecFailure
+                          Nothing -> H.Failure Nothing $ uncaughtException header excThrown
+            | otherwise = H.Failure Nothing $ uncaughtException logs exc
       throwIO newExc
   endState <- readIORef ioRef
   pure (res, endState)

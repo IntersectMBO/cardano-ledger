@@ -12,6 +12,7 @@
 * Add a function `tableDoc` that formats a table using `Prettyprinter`
 * Add a function `ansiDocToString` that converts a prettyprinted document to a string
   with embedded ANSI color sequences
+* Add `assertColorFailure`, `callStackToLocation` and `srcLocToLocation`
 
 ## 1.3.4.0
 
