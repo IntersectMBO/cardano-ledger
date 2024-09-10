@@ -38,7 +38,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxWits (AlonzoTxWits (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.TxOut (BabbageTxOut (..))
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Binary (Sized (..))
+import Cardano.Ledger.Binary (Sized (..), DecShareCBOR (..), Interns)
 import Cardano.Ledger.CertState (CommitteeAuthorization (..), CommitteeState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm)
 import Cardano.Ledger.Compactible (Compactible)
@@ -104,11 +104,13 @@ import Test.Cardano.Ledger.Conformance (
   SpecTranslate (..),
   SpecTranslationError,
   askCtx,
-  hashToInteger,
+  hashToInteger, withCtx,
  )
 import Test.Cardano.Ledger.Constrained.Conway (IsConwayUniv)
 import Test.Cardano.Ledger.Constrained.Conway.Epoch
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
+import Cardano.Ledger.Conway.TxBody (ConwayTxBody)
+import Cardano.Ledger.Conway.TxCert (ConwayTxCert)
 
 instance SpecTranslate ctx Void where
   type SpecRep Void = Agda.AgdaEmpty
@@ -539,39 +541,62 @@ instance SpecTranslate ctx (TxId era) where
 
   toSpecRep (TxId x) = Agda.MkTxId <$> toSpecRep x
 
-toAgdaTxBody ::
-  ( SpecRep (TxOut era) ~ Agda.TxOut
-  , SpecRep (TxCert era) ~ Agda.TxCert
-  , EraTx era
-  , BabbageEraTxBody era
+instance SpecTranslate ctx (Withdrawals era) where
+  type SpecRep (Withdrawals era) = Agda.Wdrl
+
+  toSpecRep (Withdrawals w) = toSpecRep w
+
+instance
+  ( ConwayEraTxBody era
+  , TxBody era ~ ConwayTxBody era
+  , SpecRep (TxOut era) ~ Agda.TxOut
+  , SpecRep (ConwayTxCert era) ~ Agda.TxCert
+  , TxCert era ~ ConwayTxCert era
+  , Share (TxOut era) ~ Interns (Credential Staking (EraCrypto era))
+  , Inject ctx Integer
+  , Inject ctx (TxId (EraCrypto era))
   , SpecTranslate ctx (TxOut era)
-  , SpecTranslate ctx (TxCert era)
+  , SpecTranslate ctx (ConwayTxCert era)
   ) =>
-  Tx era ->
-  SpecTransM ctx Agda.TxBody
-toAgdaTxBody tx =
-  Agda.MkTxBody
-    <$> toSpecRep (toList $ tx ^. bodyTxL . inputsTxBodyL)
-    <*> toSpecRep (toList $ tx ^. bodyTxL . referenceInputsTxBodyL)
-    <*> (Agda.MkHSMap . zip [0 ..] <$> toSpecRep (tx ^. bodyTxL . outputsTxBodyL))
-    <*> toSpecRep (tx ^. bodyTxL . feeTxBodyL)
-    <*> toSpecRep (tx ^. bodyTxL . vldtTxBodyL)
-    <*> pure (tx ^. sizeTxF)
-    <*> toSpecRep (txIdTx tx)
-    <*> toSpecRep (toList $ tx ^. bodyTxL . collateralInputsTxBodyL)
-    <*> toSpecRep (toList $ tx ^. bodyTxL . reqSignerHashesTxBodyL)
-    <*> toSpecRep (tx ^. bodyTxL . scriptIntegrityHashTxBodyL)
-    <*> toSpecRep (tx ^. bodyTxL . certsTxBodyL)
+  SpecTranslate ctx (ConwayTxBody era)
+  where
+  type SpecRep (ConwayTxBody era) = Agda.TxBody
+
+  toSpecRep txb = do
+    sizeTx <- askCtx
+    txId <- askCtx @(TxId (EraCrypto era))
+    Agda.MkTxBody
+      <$> toSpecRep (toList $ txb ^. inputsTxBodyL)
+      <*> toSpecRep (toList $ txb ^. referenceInputsTxBodyL)
+      <*> (Agda.MkHSMap . zip [0 ..] <$> toSpecRep (txb ^. outputsTxBodyL))
+      <*> toSpecRep (txb ^. feeTxBodyL)
+      <*> toSpecRep (txb ^. vldtTxBodyL)
+      <*> toSpecRep (txb ^. withdrawalsTxBodyL)
+      <*> pure sizeTx
+      <*> toSpecRep txId
+      <*> toSpecRep (toList $ txb ^. collateralInputsTxBodyL)
+      <*> toSpecRep (toList $ txb ^. reqSignerHashesTxBodyL)
+      <*> toSpecRep (txb ^. scriptIntegrityHashTxBodyL)
+      <*> toSpecRep (txb ^. certsTxBodyL)
+
+data ConwayTxBodyTransContext c = ConwayTxBodyTransContext
+  { ctbtcSizeTx :: !Integer
+  , ctbtcTxId :: !(TxId c)
+  }
+
+instance Inject (ConwayTxBodyTransContext c) Integer where
+  inject = ctbtcSizeTx
+
+instance Inject (ConwayTxBodyTransContext c) (TxId c) where
+  inject = ctbtcTxId
 
 instance
   ( SpecTranslate ctx (TxWits era)
   , SpecTranslate ctx (TxAuxData era)
-  , SpecTranslate ctx (TxOut era)
-  , SpecTranslate ctx (TxCert era)
+  , SpecTranslate (ConwayTxBodyTransContext (EraCrypto era)) (TxBody era)
   , SpecRep (TxWits era) ~ Agda.TxWitnesses
   , SpecRep (TxAuxData era) ~ Agda.AuxiliaryData
-  , SpecRep (TxOut era) ~ Agda.TxOut
-  , SpecRep (TxCert era) ~ Agda.TxCert
+  , SpecRep (TxBody era) ~ Agda.TxBody
   , Tx era ~ AlonzoTx era
   , EraTx era
   , BabbageEraTxBody era
@@ -582,7 +607,9 @@ instance
 
   toSpecRep tx =
     Agda.MkTx
-      <$> toAgdaTxBody @era tx
+      <$> withCtx
+            (ConwayTxBodyTransContext @(EraCrypto era) (tx ^. sizeTxF) (txIdTx tx))
+            (toSpecRep (body tx))
       <*> toSpecRep (wits tx)
       <*> toSpecRep (auxiliaryData tx)
 

@@ -29,9 +29,6 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   impPlutusWithContexts,
   impScriptPredicateFailure,
   expectPhase2Invalid,
-  showAlonzoTxBalance,
-  -- Logging
-  logAlonzoTxBalance,
   -- Fixup
   fixupDatums,
   fixupOutputDatums,
@@ -41,7 +38,7 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   fixupScriptWits,
 ) where
 
-import Cardano.Ledger.Address ( Withdrawals(..), Addr(..) )
+import Cardano.Ledger.Address ( Addr(..) )
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -60,7 +57,7 @@ import Cardano.Ledger.Alonzo.Rules (
   scriptFailureToFailureDescription,
  )
 import Cardano.Ledger.Alonzo.Scripts (plutusScriptLanguage, toAsItem, toAsIx)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), hashScriptIntegrity, AlonzoTx)
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), hashScriptIntegrity)
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData)
 import Cardano.Ledger.Alonzo.TxWits (Redeemers (..), TxDats (..))
 import Cardano.Ledger.Alonzo.UTxO (AlonzoEraUTxO (..), AlonzoScriptsNeeded (..))
@@ -89,9 +86,9 @@ import Cardano.Ledger.Shelley.LedgerState (
   esLStateL,
   lsUTxOStateL,
   nesEsL,
-  utxosUtxoL, CertState, consumed, produced, lsCertStateL,
+  utxosUtxoL,
  )
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO, balance, txInsFilter)
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ScriptsProvided (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (forM)
 import Data.Map.Strict (Map)
@@ -114,8 +111,6 @@ import Test.Cardano.Ledger.Plutus (
   testingCostModels,
  )
 import Test.Cardano.Ledger.Plutus.Examples
-import Cardano.Ledger.Val (Val(..))
-import Data.Foldable (Foldable(..))
 
 class
   ( MaryEraImp era
@@ -511,43 +506,3 @@ expectPhase2Invalid tx = do
   scriptPredicateFailure <- impScriptPredicateFailure fixedUpTx
   predFailure `shouldBeExpr` pure (injectFailure scriptPredicateFailure)
   withNoFixup $ submitTx_ $ fixedUpTx & isValidTxL .~ IsValid False
-
-showAlonzoTxBalance ::
-  ( EraUTxO era
-  , Tx era ~ AlonzoTx era
-  ) =>
-  PParams era ->
-  CertState era ->
-  UTxO era ->
-  AlonzoTx era ->
-  String
-showAlonzoTxBalance pp certState utxo tx = unlines
-  [ "Consumed:   \t"
-  , "Inputs:     \t" <> show (coin inputs)
-  --, "Refunds:    \t" <> show refunds
-  , "Withdrawals \t" <> show withdrawals
-  , "Total:      \t" <> (show . coin $ consumed pp certState utxo txBody)
-  , ""
-  , "Produced:\t"
-  , "Total:   \t" <> (show . coin $ produced pp certState txBody)
-  ]
-  where
-    --lookupStakingDeposit c = certState ^. certPStateL . psStakePoolParamsL
-    --lookupDRepDeposit c = undefined
-    txBody = tx ^. bodyTxL
-    inputs = balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
-    --refunds = getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody
-    withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
-
-logAlonzoTxBalance ::
-  ( EraUTxO era
-  , EraGov era
-  , Tx era ~ AlonzoTx era
-  ) =>
-  AlonzoTx era ->
-  ImpTestM era ()
-logAlonzoTxBalance tx = do
-  pp <- getsPParams id
-  certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
-  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
-  logEntry $ showAlonzoTxBalance pp certState utxo tx

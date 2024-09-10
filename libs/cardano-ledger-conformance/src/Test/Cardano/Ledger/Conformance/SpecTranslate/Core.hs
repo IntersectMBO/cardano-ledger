@@ -20,6 +20,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   SpecTransM,
   runSpecTransM,
   askCtx,
+  withCtx,
   toTestRep,
   OpaqueErrorString (..),
 ) where
@@ -27,7 +28,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Constrained.Base ()
 import Control.DeepSeq (NFData)
-import Control.Monad.Except (ExceptT, MonadError, runExceptT)
+import Control.Monad.Except (ExceptT, MonadError (..), runExceptT)
 import Control.Monad.Reader (MonadReader (..), Reader, asks, runReader)
 import Data.Kind (Type)
 import Data.Text (Text)
@@ -96,3 +97,10 @@ toTestRep = fmap fixup . toSpecRep
 
 askCtx :: forall b ctx. Inject ctx b => SpecTransM ctx b
 askCtx = asks inject
+
+withCtx :: ctx -> SpecTransM ctx a -> SpecTransM ctx' a
+withCtx ctx m = do
+  case runSpecTransM ctx m of
+    Right x -> pure x
+    Left e -> throwError e
+

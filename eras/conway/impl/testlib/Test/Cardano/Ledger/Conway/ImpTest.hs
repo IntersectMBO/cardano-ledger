@@ -110,12 +110,14 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   whenPostBootstrap,
   submitYesVoteCCs_,
   donateToTreasury,
+  showConwayTxBalance,
   -- Logging
   logAcceptedRatio,
   logRatificationChecks,
   logCurPParams,
   logProposalsForest,
   logProposalsForestDiff,
+  logConwayTxBalance,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -144,7 +146,7 @@ import Cardano.Ledger.CertState (
   CommitteeAuthorization (..),
   csCommitteeCredsL,
   vsActualDRepExpiry,
-  vsNumDormantEpochsL,
+  vsNumDormantEpochsL, CertState, certPStateL, psStakePoolParamsL,
  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
@@ -190,10 +192,10 @@ import Cardano.Ledger.Shelley.LedgerState (
   utxosGovStateL,
   utxosStakeDistrL,
   vsCommitteeStateL,
-  vsDRepsL,
+  vsDRepsL, consumed, produced, utxosUtxoL,
  )
 import Cardano.Ledger.TxIn (TxId (..))
-import Cardano.Ledger.Val ((<->))
+import Cardano.Ledger.Val ((<->), Val (..))
 import Control.Monad (forM)
 import Control.Monad.Trans.Fail.String (errorFail)
 import Control.State.Transition.Extended (STS (..))
@@ -219,6 +221,8 @@ import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModel)
+import Cardano.Ledger.UTxO (EraUTxO, UTxO, txInsFilter, balance, sumAllValue)
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx)
 
 -- | Modify the PParams in the current state with the given function
 conwayModifyPParams ::
@@ -1675,3 +1679,50 @@ donateToTreasury amount =
     passEpoch
     treasuryEndEpoch1 <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
     treasuryEndEpoch1 <-> treasuryStart `shouldBe` amount
+
+showConwayTxBalance ::
+  ( EraUTxO era
+  , ConwayEraTxBody era
+  , Tx era ~ AlonzoTx era
+  ) =>
+  PParams era ->
+  CertState era ->
+  UTxO era ->
+  AlonzoTx era ->
+  String
+showConwayTxBalance pp certState utxo tx = unlines
+  [ "Consumed:   \t"
+  , "Inputs:     \t" <> show (coin inputs)
+  --, "Refunds:    \t" <> show refunds
+  , "Withdrawals \t" <> show withdrawals
+  , "Total:      \t" <> (show . coin $ consumed pp certState utxo txBody)
+  , ""
+  , "Produced:  \t"
+  , "Outputs:   \t" <> show (coin $ sumAllValue (txBody ^. outputsTxBodyL))
+  , "Donations: \t" <> show (txBody ^. treasuryDonationTxBodyL)
+  , "Deposits:  \t" <> show (getTotalDepositsTxBody pp isRegPoolId txBody)
+  , "Fees:      \t" <> show (txBody ^. feeTxBodyL)
+  , "Total:     \t" <> (show . coin $ produced pp certState txBody)
+  ]
+  where
+    --lookupStakingDeposit c = certState ^. certPStateL . psStakePoolParamsL
+    --lookupDRepDeposit c = undefined
+    txBody = tx ^. bodyTxL
+    inputs = balance (txInsFilter utxo (txBody ^. inputsTxBodyL))
+    --refunds = getTotalRefundsTxBody pp lookupStakingDeposit lookupDRepDeposit txBody
+    isRegPoolId = (`Map.member` (certState ^. certPStateL . psStakePoolParamsL))
+    withdrawals = fold . unWithdrawals $ txBody ^. withdrawalsTxBodyL
+
+logConwayTxBalance ::
+  ( EraUTxO era
+  , EraGov era
+  , ConwayEraTxBody era
+  , Tx era ~ AlonzoTx era
+  ) =>
+  AlonzoTx era ->
+  ImpTestM era ()
+logConwayTxBalance tx = do
+  pp <- getsPParams id
+  certState <- getsNES $ nesEsL . esLStateL . lsCertStateL
+  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  logEntry $ showConwayTxBalance pp certState utxo tx
