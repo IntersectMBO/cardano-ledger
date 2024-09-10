@@ -7,11 +7,11 @@
 
 module Test.Cardano.Ledger.Conway.Imp.LedgerSpec (spec) where
 
-import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..), maxRefScriptSizePerTx)
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.SafeHash (originalBytesSize)
@@ -24,8 +24,6 @@ import Test.Cardano.Ledger.Plutus.Examples (
   alwaysFailsWithDatum,
   alwaysSucceedsNoDatum,
  )
-
-import Cardano.Ledger.Credential (Credential (..))
 
 spec ::
   forall era.
@@ -52,7 +50,8 @@ spec = do
 
   it "Withdraw from delegated and non-delegated staking key" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
-    cred <- KeyHashObj <$> freshKeyHash
+    kh <- freshKeyHash
+    let cred = KeyHashObj kh
     ra <- registerStakeCredential cred
     submitAndExpireProposalToMakeReward cred
     reward <- lookupReward cred
@@ -65,15 +64,14 @@ spec = do
       else
         submitFailingTx
           tx
-          [injectFailure $ ConwayWdrlNotDelegatedToDRep [raCredential ra]]
+          [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
     _ <- delegateToDRep cred (Coin 1_000_000) DRepAlwaysAbstain
     submitTx_ $
       mkBasicTx $
         mkBasicTxBody
           & withdrawalsTxBodyL
             .~ Withdrawals
-              [ (ra, if HF.bootstrapPhase pv then mempty else reward)
-              ]
+              [(ra, if HF.bootstrapPhase pv then mempty else reward)]
 
   it "Withdraw from delegated and non-delegated staking script" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
