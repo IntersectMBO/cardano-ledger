@@ -81,7 +81,7 @@ import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
 import Cardano.Ledger.Conway.UTxO (txNonDistinctRefScriptsSize)
 import Cardano.Ledger.Credential (Credential (..), credKeyHash)
 import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState (
   CertState (..),
@@ -136,7 +136,7 @@ data ConwayLedgerPredFailure era
   = ConwayUtxowFailure (PredicateFailure (EraRule "UTXOW" era))
   | ConwayCertsFailure (PredicateFailure (EraRule "CERTS" era))
   | ConwayGovFailure (PredicateFailure (EraRule "GOV" era))
-  | ConwayWdrlNotDelegatedToDRep (NonEmpty (Credential 'Staking (EraCrypto era)))
+  | ConwayWdrlNotDelegatedToDRep (NonEmpty (KeyHash 'Staking (EraCrypto era)))
   | ConwayTreasuryValueMismatch
       -- | Actual
       Coin
@@ -406,10 +406,9 @@ ledgerTransition = do
               delegatedAddrs = DRepUView dUnified
               wdrlsKeyHashes =
                 Set.fromList
-                  [ rc | (ra, _) <- Map.toList wdrls, let rc = raCredential ra, Just _ <- [credKeyHash rc]
-                  ]
+                  [kh | (ra, _) <- Map.toList wdrls, Just kh <- [credKeyHash $ raCredential ra]]
               nonExistentDelegations =
-                Set.filter (not . (`UMap.member` delegatedAddrs)) wdrlsKeyHashes
+                Set.filter (not . (`UMap.member` delegatedAddrs) . KeyHashObj) wdrlsKeyHashes
           failOnNonEmpty nonExistentDelegations ConwayWdrlNotDelegatedToDRep
 
         -- Votes and proposals from signal tx
