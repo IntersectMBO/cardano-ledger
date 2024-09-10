@@ -7,6 +7,29 @@ the `CHANGELOG.md` for each individual package for any changes relevant for deve
 If you are looking for the Ledger Releasing and Versioning Process then you can find it in
 [RELEASING.md](https://github.com/intersectmbo/cardano-ledger/blob/master/RELEASING.md#changelogmd).
 
+## 9.3
+
+- Disallow withdrawals to non-delegated keyhashes post-bootstrap [#4555](https://github.com/IntersectMBO/cardano-ledger/pull/4555)
+- Remove `maxMajorPV` from `Globals`, because it was unused: [#4218](https://github.com/IntersectMBO/cardano-ledger/pull/4218)
+
+## 9.2
+
+- DRep registration expiration fix: [#4547](https://github.com/IntersectMBO/cardano-ledger/pull/4547)
+- Use correct DRep threshold to ratify `NoConfidence`: [4516](https://github.com/IntersectMBO/cardano-ledger/pull/4516)
+- Added method to compute over-the-wire CBOR encoded transaction size needed for network layer: [4521](https://github.com/IntersectMBO/cardano-ledger/pull/4521)
+- Add governance related ledger state queries: [4514](https://github.com/IntersectMBO/cardano-ledger/pull/4514)
+- Improve Plutus debug functionality: [4503](https://github.com/IntersectMBO/cardano-ledger/pull/4503)
+
+## 9.1.1
+
+- Hotfix patch for inability to deserialize Conway version of the Ledger State due to
+  retained bogus address pointers:
+  [#4591](https://github.com/IntersectMBO/cardano-ledger/pull/4591)
+
+## 9.1
+
+- There were no ledger changes. The only difference with `cardano-node-9.0` is that `9.1`
+  provided genesis file for `Conway` era.
 
 ## 9.0
 
