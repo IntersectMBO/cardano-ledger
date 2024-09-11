@@ -544,5 +544,5 @@ eventsSpec = describe "Events" $ do
                             (Set.singleton gasA)
                             (Set.singleton gasC)
                             (Set.singleton gasB)
-                            (Set.singleton proposalC)
+                            (Map.singleton proposalC propDeposit)
                        ]
