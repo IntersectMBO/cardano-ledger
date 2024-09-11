@@ -531,7 +531,8 @@ setupPoolWithStake ::
     , Credential 'Staking (EraCrypto era)
     )
 setupPoolWithStake delegCoin = do
-  khPool <- registerPool
+  khPool <- freshKeyHash
+  registerPool khPool
   credDelegatorPayment <- KeyHashObj <$> freshKeyHash
   credDelegatorStaking <- KeyHashObj <$> freshKeyHash
   void $
@@ -558,7 +559,8 @@ setupPoolWithoutStake ::
     , Credential 'Staking (EraCrypto era)
     )
 setupPoolWithoutStake = do
-  khPool <- registerPool
+  khPool <- freshKeyHash
+  registerPool khPool
   credDelegatorStaking <- KeyHashObj <$> freshKeyHash
   deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
   submitTxAnn_ "Delegate to stake pool" $
