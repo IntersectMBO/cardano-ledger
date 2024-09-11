@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-shelley-test`
 
-## 1.4.1.0
+## 1.5.0.0
 
-*
+* Remove `myDiscard`
 
 ## 1.4.0.3
 

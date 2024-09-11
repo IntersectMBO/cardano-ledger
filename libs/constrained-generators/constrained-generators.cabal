@@ -56,7 +56,7 @@ library
         containers,
         mtl,
         prettyprinter,
-        QuickCheck ^>=2.14,
+        QuickCheck >=2.14,
         random,
         template-haskell
 

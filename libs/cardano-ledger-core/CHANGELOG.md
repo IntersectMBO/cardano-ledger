@@ -9,6 +9,7 @@
 
 * Add `uniformSubMap` and `uniformSubMapElems`
 * Rename `uniformSubset` to `uniformSubSet`
+* Add `tracedDiscard`
 
 ## 1.14.0.0
 
