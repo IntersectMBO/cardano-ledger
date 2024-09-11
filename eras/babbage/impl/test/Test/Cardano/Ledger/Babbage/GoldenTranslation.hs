@@ -18,23 +18,22 @@
 -- run the following command from the root of the repository:
 -- cabal run cardano-ledger-<era>-test:gen-golden"
 module Test.Cardano.Ledger.Babbage.GoldenTranslation (
-  tests,
+  spec,
 )
 where
 
 import Cardano.Ledger.Babbage (Babbage)
-import Paths_cardano_ledger_babbage_test (getDataFileName)
+import Paths_cardano_ledger_babbage (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Translation.Golden (assertTranslationResultsMatchGolden)
-import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Translation.TranslatableGen ()
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, testCase)
+import Test.Cardano.Ledger.Common
+import Test.HUnit (Assertion)
 
-tests :: TestTree
-tests =
-  testGroup
-    "Golden translation tests"
-    [testCase "golden/translations.cbor" $ check "golden/translations.cbor"]
+spec :: Spec
+spec =
+  describe "Golden translation tests" $
+    it "golden/translation.cbor" $
+      check "golden/translations.cbor"
 
 check :: String -> Assertion
 check file = assertTranslationResultsMatchGolden @Babbage (getDataFileName file)
