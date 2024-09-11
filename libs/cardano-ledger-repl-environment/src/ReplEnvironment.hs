@@ -3,6 +3,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE PolyKinds #-}
 
 -- | This module imports a lot of useful definitions to make it easier to work
 -- with `cabal repl`. Feel free to add additional imports here if you deem
@@ -56,3 +61,4 @@ import Test.Cardano.Ledger.Api.DebugTools
 import Test.Cardano.Ledger.Mary.Arbitrary
 
 import Test.QuickCheck
+import Data.Kind (Type)

@@ -593,6 +593,24 @@ genShelleyDelegCert =
       (poolId, _) <- genPool
       pure $ DelegStakeTxCert rewardAccount poolId
 
+genConwayDelegCert :: forall era.
+  ( Reflect era
+  , TxCert era ~ ConwayTxCert era
+  ) => GenRS era (ConwayTxCert era)
+genConwayDelegCert = do
+  pp <- asks gePParams
+  let keyDeposit = pp ^. ppKeyDepositL
+  frequencyT
+    [ (3, fmap ConwayTxCertDeleg $ ConwayRegCert <$> genFreshRegCred Certifying <*> pure (SJust keyDeposit))
+    , (1, fmap ConwayTxCertDeleg $ ConwayUnRegCert <$> genCredential Certifying <*> pure (SJust keyDeposit))
+    , (2, genDelegation)
+    ]
+  where
+    genDelegation = do
+      rewardAccount <- genFreshRegCred Certifying
+      (poolId, _) <- genPool
+      pure $ DelegStakeTxCert rewardAccount poolId
+
 genTxCertDeleg :: forall era. Reflect era => GenRS era (TxCert era)
 genTxCertDeleg = case reify @era of
   Shelley -> genShelleyDelegCert
@@ -600,7 +618,7 @@ genTxCertDeleg = case reify @era of
   Allegra -> genShelleyDelegCert
   Alonzo -> genShelleyDelegCert
   Babbage -> genShelleyDelegCert
-  Conway -> genShelleyDelegCert
+  Conway -> genConwayDelegCert
 
 genTxCert :: forall era. Reflect era => SlotNo -> GenRS era (TxCert era)
 genTxCert slot =
@@ -645,6 +663,7 @@ genTxCerts :: forall era. Reflect era => SlotNo -> GenRS era [TxCert era]
 genTxCerts slot = do
   let genUniqueScript (!dcs, !ss, !regCreds) _ = do
         honest <- gets gsStableDelegators
+        pp <- asks $ gePParams
         dc <- genTxCert slot
         -- Workaround a misfeature where duplicate plutus scripts in TxCert are ignored
         -- so if a duplicate might be generated, we don't do that generation
@@ -688,12 +707,20 @@ genTxCerts slot = do
             let (dcs', regCreds') =
                   if delegCred `Map.member` regCreds
                     then (dcs, regCreds)
-                    else -- In order to Delegate, the delegCred must exist in rewards.
+                    else
+                    -- In order to Delegate, the delegCred must exist in rewards.
                     -- so if it is not there, we put it there, otherwise we may
                     -- never generate a valid delegation.
-                      ( (RegTxCert delegCred) : dcs
-                      , Map.insert delegCred (Coin 99) regCreds
-                      )
+                    let newRegCert =
+                          case reify @era of
+                            Conway -> ConwayTxCertDeleg $
+                              ConwayRegCert delegCred (SJust $ pp ^. ppKeyDepositL)
+                            _ -> RegTxCert delegCred
+
+                     in
+                       ( newRegCert : dcs
+                       , Map.insert delegCred (Coin 99) regCreds
+                       )
              in insertIfNotPresent dcs' regCreds' (Just delegKey)
                   <$> plutusScriptHashFromTag delegCred Certifying
           _ -> pure (dc : dcs, ss, regCreds)
