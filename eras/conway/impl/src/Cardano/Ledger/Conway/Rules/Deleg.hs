@@ -98,7 +98,6 @@ data ConwayDelegPredFailure era
   | StakeKeyRegisteredDELEG !(Credential 'Staking (EraCrypto era))
   | StakeKeyNotRegisteredDELEG !(Credential 'Staking (EraCrypto era))
   | StakeKeyHasNonZeroRewardAccountBalanceDELEG !Coin
-  | DRepAlreadyRegisteredForStakeKeyDELEG !(Credential 'Staking (EraCrypto era))
   | DelegateeNotRegisteredDELEG !(KeyHash 'StakePool (EraCrypto era))
   deriving (Show, Eq, Generic)
 
@@ -123,8 +122,6 @@ instance Era era => EncCBOR (ConwayDelegPredFailure era) where
         Sum (StakeKeyNotRegisteredDELEG @era) 3 !> To stakeCred
       StakeKeyHasNonZeroRewardAccountBalanceDELEG mCoin ->
         Sum (StakeKeyHasNonZeroRewardAccountBalanceDELEG @era) 4 !> To mCoin
-      DRepAlreadyRegisteredForStakeKeyDELEG stakeCred ->
-        Sum (DRepAlreadyRegisteredForStakeKeyDELEG @era) 5 !> To stakeCred
       DelegateeNotRegisteredDELEG delegatee ->
         Sum (DelegateeNotRegisteredDELEG @era) 6 !> To delegatee
 
@@ -134,7 +131,6 @@ instance Era era => DecCBOR (ConwayDelegPredFailure era) where
     2 -> SumD StakeKeyRegisteredDELEG <! From
     3 -> SumD StakeKeyNotRegisteredDELEG <! From
     4 -> SumD StakeKeyHasNonZeroRewardAccountBalanceDELEG <! From
-    5 -> SumD DRepAlreadyRegisteredForStakeKeyDELEG <! From
     6 -> SumD DelegateeNotRegisteredDELEG <! From
     n -> Invalid n
 

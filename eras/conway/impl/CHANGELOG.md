@@ -3,6 +3,7 @@
 ## 1.17.0.0
 
 * Changed `ConwayWdrlNotDelegatedToDRep` to wrap `NonEmpty KeyHash`
+* Removed `DRepAlreadyRegisteredForStakeKeyDELEG`
 * Add `showGovActionType`, `acceptedByEveryone`
 * Added `unRatifySignal`
 * Added lenses:
