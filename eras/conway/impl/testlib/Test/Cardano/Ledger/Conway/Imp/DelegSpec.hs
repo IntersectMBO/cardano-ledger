@@ -12,13 +12,14 @@ module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
   spec,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..))
+import Cardano.Ledger.BaseTypes (EpochInterval (..), Network (..), addEpochInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
+import Cardano.Ledger.Keys (coerceKeyRole)
 import Cardano.Ledger.Plutus (
   SLanguage (..),
   hashPlutusScript,
@@ -98,6 +99,40 @@ spec = do
           )
           [injectFailure $ IncorrectDepositDELEG wrongDeposit]
         expectNotInRDMap (KeyHashObj kh)
+
+    it "When pool gets retired and re-registered" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+
+      cred <- KeyHashObj <$> freshKeyHash
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [RegDepositTxCert cred expectedDeposit]
+
+      poolKh <- registerPool
+
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [DelegTxCert cred (DelegStake poolKh)]
+
+      expectDelegatedToPool cred poolKh
+
+      curEpochNo <- getsNES nesELL
+      let poolLifetime = 2
+      let poolExpiry = addEpochInterval curEpochNo $ EpochInterval poolLifetime
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert poolKh poolExpiry]
+      passNEpochs $ fromIntegral poolLifetime
+
+      expectNotDelegatedToPool cred
+
+      -- re-register the pool using
+      rwdAccount <- getRewardAccountFor (KeyHashObj (coerceKeyRole poolKh))
+      void $ registerPoolWithRewardAccount rwdAccount
+
+      expectNotDelegatedToPool cred
 
   describe "Unregister stake credentials" $ do
     it "When registered" $ do

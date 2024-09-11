@@ -77,6 +77,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getRewardAccountFor,
   lookupReward,
   registerPool,
+  registerPoolWithRewardAccount,
   registerAndRetirePoolToMakeReward,
   getRewardAccountAmount,
   withImpState,
