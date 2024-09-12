@@ -77,7 +77,9 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   registerStakeCredential,
   getRewardAccountFor,
   lookupReward,
+  poolParams,
   registerPool,
+  registerPoolWithRewardAccount,
   registerAndRetirePoolToMakeReward,
   getRewardAccountAmount,
   withImpState,
@@ -1669,46 +1671,54 @@ lookupReward stakingCredential = do
           <> "or by some other means."
     Just rd -> pure $ fromCompact (rdReward rd)
 
-registerPool ::
+poolParams ::
   ShelleyEraImp era =>
-  ImpTestM era (KeyHash 'StakePool (EraCrypto era))
-registerPool = registerRewardAccount >>= registerPoolWithRewardAccount
-
-registerPoolWithRewardAccount ::
-  ShelleyEraImp era =>
+  KeyHash 'StakePool (EraCrypto era) ->
   RewardAccount (EraCrypto era) ->
-  ImpTestM era (KeyHash 'StakePool (EraCrypto era))
-registerPoolWithRewardAccount rewardAccount = do
-  khPool <- freshKeyHash
+  ImpTestM era (PoolParams (EraCrypto era))
+poolParams khPool rewardAccount = do
   vrfHash <- freshKeyHashVRF
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   let minCost = pp ^. ppMinPoolCostL
   poolCostExtra <- uniformRM (Coin 0, Coin 100_000_000)
   pledge <- uniformRM (Coin 0, Coin 100_000_000)
-  let
-    poolParams =
-      PoolParams
-        { ppVrf = vrfHash
-        , ppRewardAccount = rewardAccount
-        , ppRelays = mempty
-        , ppPledge = pledge
-        , ppOwners = mempty
-        , ppMetadata = SNothing
-        , ppMargin = def
-        , ppId = khPool
-        , ppCost = minCost <> poolCostExtra
-        }
+  pure
+    PoolParams
+      { ppVrf = vrfHash
+      , ppRewardAccount = rewardAccount
+      , ppRelays = mempty
+      , ppPledge = pledge
+      , ppOwners = mempty
+      , ppMetadata = SNothing
+      , ppMargin = def
+      , ppId = khPool
+      , ppCost = minCost <> poolCostExtra
+      }
+
+registerPool ::
+  ShelleyEraImp era =>
+  KeyHash 'StakePool (EraCrypto era) ->
+  ImpTestM era ()
+registerPool khPool = registerRewardAccount >>= registerPoolWithRewardAccount khPool
+
+registerPoolWithRewardAccount ::
+  ShelleyEraImp era =>
+  KeyHash 'StakePool (EraCrypto era) ->
+  RewardAccount (EraCrypto era) ->
+  ImpTestM era ()
+registerPoolWithRewardAccount khPool rewardAccount = do
+  pps <- poolParams khPool rewardAccount
   submitTxAnn_ "Registering a new stake pool" $
     mkBasicTx mkBasicTxBody
-      & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert poolParams)
-  pure khPool
+      & bodyTxL . certsTxBodyL .~ SSeq.singleton (RegPoolTxCert pps)
 
 registerAndRetirePoolToMakeReward ::
   ShelleyEraImp era =>
   Credential 'Staking (EraCrypto era) ->
   ImpTestM era ()
 registerAndRetirePoolToMakeReward stakingCred = do
-  poolId <- registerPoolWithRewardAccount =<< getRewardAccountFor stakingCred
+  poolId <- freshKeyHash
+  registerPoolWithRewardAccount poolId =<< getRewardAccountFor stakingCred
   passEpoch
   curEpochNo <- getsNES nesELL
   let poolLifetime = 2

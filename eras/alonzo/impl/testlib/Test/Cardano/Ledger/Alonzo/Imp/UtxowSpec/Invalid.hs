@@ -166,7 +166,7 @@ spec = describe "Invalid transactions" $ do
 
         it "No ExtraRedeemers on same script certificates" $ do
           Positive n <- arbitrary
-          replicateM_ n registerPool
+          replicateM_ n $ freshKeyHash >>= registerPool
           pools <- getsNES $ nesEsL . epochStatePoolParamsL
           poolId <- elements $ Map.keys pools
           let scriptHash = alwaysSucceedsNoDatumHash
@@ -265,7 +265,7 @@ spec = describe "Invalid transactions" $ do
             it "Multiple equal plutus-locked certs" $ do
               let scriptHash = alwaysSucceedsWithDatumHash
               Positive n <- arbitrary
-              replicateM_ n registerPool
+              replicateM_ n $ freshKeyHash >>= registerPool
               pools <- getsNES $ nesEsL . epochStatePoolParamsL
               poolId <- elements $ Map.keys pools
               let cred = ScriptHashObj scriptHash

@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Conway.Imp.DelegSpec (
   spec,
 ) where
 
-import Cardano.Ledger.BaseTypes (EpochInterval (..))
+import Cardano.Ledger.BaseTypes (EpochInterval (..), addEpochInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (ConwayDelegPredFailure (..))
@@ -26,6 +26,7 @@ import Cardano.Ledger.Plutus (
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.Val (Val (..))
+import Data.Functor ((<&>))
 import qualified Data.Map as Map
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
@@ -48,14 +49,14 @@ spec = do
         submitTx_ $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL .~ [RegTxCert (KeyHashObj kh)]
-        expectInRDMap (KeyHashObj kh)
+        expectRegistered (KeyHashObj kh)
 
       freshKeyHash >>= \kh -> do
         submitTx_ $
           mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
               .~ [RegDepositTxCert (KeyHashObj kh) expectedDeposit]
-        expectInRDMap (KeyHashObj kh)
+        expectRegistered (KeyHashObj kh)
 
     it "Twice the same certificate in the same transaction" $ do
       -- This is expected behavior because `certsTxBodyL` removes duplicates
@@ -67,7 +68,7 @@ spec = do
               .~ [ RegDepositTxCert (KeyHashObj kh) expectedDeposit
                  , RegDepositTxCert (KeyHashObj kh) expectedDeposit
                  ]
-        expectInRDMap (KeyHashObj kh)
+        expectRegistered (KeyHashObj kh)
 
     it "When already already registered" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
@@ -82,7 +83,7 @@ spec = do
         tx
         [ injectFailure $ StakeKeyRegisteredDELEG (ScriptHashObj sh)
         ]
-      expectInRDMap (ScriptHashObj sh)
+      expectRegistered (ScriptHashObj sh)
 
     it "With incorrect deposit" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
@@ -97,7 +98,7 @@ spec = do
                 .~ [RegDepositTxCert (KeyHashObj kh) wrongDeposit]
           )
           [injectFailure $ IncorrectDepositDELEG wrongDeposit]
-        expectNotInRDMap (KeyHashObj kh)
+        expectNotRegistered (KeyHashObj kh)
 
   describe "Unregister stake credentials" $ do
     it "When registered" $ do
@@ -112,7 +113,7 @@ spec = do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [UnRegDepositTxCert sh expectedDeposit]
-      expectNotInRDMap sh
+      expectNotRegistered sh
 
     it "When not registered" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
@@ -144,7 +145,7 @@ spec = do
         )
         [injectFailure $ IncorrectDepositDELEG wrongDeposit]
 
-      expectInRDMap cred
+      expectRegistered cred
 
     it "With non-zero reward balance" $ do
       modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
@@ -164,7 +165,7 @@ spec = do
             & bodyTxL . certsTxBodyL .~ [UnRegDepositTxCert cred expectedDeposit]
         )
         [injectFailure $ StakeKeyHasNonZeroRewardAccountBalanceDELEG reward]
-      expectInRDMap cred
+      expectRegistered cred
 
     it "Register and unregister in the same transaction" $ do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
@@ -175,7 +176,7 @@ spec = do
               .~ [ RegDepositTxCert (KeyHashObj kh) expectedDeposit
                  , UnRegDepositTxCert (KeyHashObj kh) expectedDeposit
                  ]
-        expectNotInRDMap (KeyHashObj kh)
+        expectNotRegistered (KeyHashObj kh)
 
   describe "Delegate stake" $ do
     it "Delegate registered stake credentials to registered pool" $ do
@@ -187,7 +188,8 @@ spec = do
           & bodyTxL . certsTxBodyL
             .~ [RegDepositTxCert cred expectedDeposit]
 
-      poolKh <- registerPool
+      poolKh <- freshKeyHash
+      registerPool poolKh
 
       submitTx_ $
         mkBasicTx mkBasicTxBody
@@ -200,7 +202,8 @@ spec = do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
       cred <- KeyHashObj <$> freshKeyHash
-      poolKh <- registerPool
+      poolKh <- freshKeyHash
+      registerPool poolKh
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
@@ -227,7 +230,8 @@ spec = do
 
     it "Delegate unregistered stake credentials" $ do
       cred <- KeyHashObj <$> freshKeyHash
-      poolKh <- registerPool
+      poolKh <- freshKeyHash
+      registerPool poolKh
       submitFailingTx
         ( mkBasicTx mkBasicTxBody
             & bodyTxL . certsTxBodyL
@@ -260,7 +264,8 @@ spec = do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
       cred <- KeyHashObj <$> freshKeyHash
-      poolKh <- registerPool
+      poolKh <- freshKeyHash
+      registerPool poolKh
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
@@ -274,15 +279,18 @@ spec = do
             .~ [DelegTxCert cred (DelegStake poolKh)]
       expectDelegatedToPool cred poolKh
 
-      poolKh1 <- registerPool
+      poolKh1 <- freshKeyHash
+      registerPool poolKh1
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [DelegTxCert cred (DelegStake poolKh1)]
       expectDelegatedToPool cred poolKh1
 
-      poolKh2 <- registerPool
-      poolKh3 <- registerPool
+      poolKh2 <- freshKeyHash
+      registerPool poolKh2
+      poolKh3 <- freshKeyHash
+      registerPool poolKh3
 
       submitTx_ $
         mkBasicTx mkBasicTxBody
@@ -297,7 +305,8 @@ spec = do
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
       cred <- KeyHashObj <$> freshKeyHash
-      poolKh <- registerPool
+      poolKh <- freshKeyHash
+      registerPool poolKh
       submitTx_ $
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
@@ -305,7 +314,7 @@ spec = do
                , DelegTxCert cred (DelegStake poolKh)
                , UnRegDepositTxCert cred expectedDeposit
                ]
-      expectNotInRDMap cred
+      expectNotRegistered cred
       expectNotDelegatedToPool cred
 
   describe "Delegate vote" $ do
@@ -388,36 +397,106 @@ spec = do
         mkBasicTx mkBasicTxBody
           & bodyTxL . certsTxBodyL
             .~ [UnRegDepositTxCert cred expectedDeposit]
-      expectNotInRDMap cred
+      expectNotRegistered cred
       expectNotDelegatedVote cred
 
-  it "Delegate both stake and vote" $ do
-    expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+  describe "Delegate both stake and vote" $ do
+    it "Delegate and unregister credentials" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
-    cred <- KeyHashObj <$> freshKeyHash
-    poolKh <- registerPool
-    drepCred <- KeyHashObj <$> freshKeyHash
+      cred <- KeyHashObj <$> freshKeyHash
+      poolKh <- freshKeyHash
+      registerPool poolKh
+      drepCred <- KeyHashObj <$> freshKeyHash
 
-    submitTx_ $
-      mkBasicTx mkBasicTxBody
-        & bodyTxL . certsTxBodyL
-          .~ [ RegDepositDelegTxCert
-                cred
-                (DelegStakeVote poolKh (DRepCredential drepCred))
-                expectedDeposit
-             ]
-    expectDelegatedToPool cred poolKh
-    expectDelegatedVote cred (DRepCredential drepCred)
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [ RegDepositDelegTxCert
+                  cred
+                  (DelegStakeVote poolKh (DRepCredential drepCred))
+                  expectedDeposit
+               ]
+      expectDelegatedToPool cred poolKh
+      expectDelegatedVote cred (DRepCredential drepCred)
 
-    submitTx_ $
-      mkBasicTx mkBasicTxBody
-        & bodyTxL . certsTxBodyL
-          .~ [UnRegDepositTxCert cred expectedDeposit]
-    expectNotInRDMap cred
-    expectNotDelegatedVote cred
-    expectNotDelegatedToPool cred
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [UnRegDepositTxCert cred expectedDeposit]
+      expectNotRegistered cred
+      expectNotDelegatedVote cred
+      expectNotDelegatedToPool cred
+
+    it "Delegate, retire and re-register pool" $ do
+      expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
+      cred <- KeyHashObj <$> freshKeyHash
+      poolKh <- freshKeyHash
+      rewardAccount <- registerRewardAccount
+      registerPool poolKh
+      drepCred <- KeyHashObj <$> freshKeyHash
+
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [ RegDepositDelegTxCert
+                  cred
+                  (DelegStakeVote poolKh (DRepCredential drepCred))
+                  expectedDeposit
+               ]
+      expectDelegatedToPool cred poolKh
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+      let poolLifetime = 2
+      let poolExpiry = getsNES nesELL <&> \n -> addEpochInterval n $ EpochInterval poolLifetime
+
+      poolExpiry >>= \pe ->
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert poolKh pe]
+
+      -- when pool is re-registered after its expiration, all delegations are cleared
+      passNEpochs $ fromIntegral poolLifetime
+      expectNotDelegatedToPool cred
+      registerPoolWithRewardAccount poolKh rewardAccount
+      expectNotDelegatedToPool cred
+      -- the vote delegation is kept
+      expectDelegatedVote cred (DRepCredential drepCred)
+
+      -- re-delegate
+      submitTx_ $
+        mkBasicTx mkBasicTxBody
+          & bodyTxL . certsTxBodyL
+            .~ [ DelegTxCert
+                  cred
+                  (DelegStake poolKh)
+               ]
+      expectDelegatedToPool cred poolKh
+
+      -- when pool is re-registered before its expiration, delegations are kept
+      poolExpiry >>= \pe ->
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert poolKh pe]
+      -- re-register the pool before the expiration time
+      passNEpochs $ fromIntegral poolLifetime - 1
+      registerPoolWithRewardAccount poolKh rewardAccount
+      expectDelegatedToPool cred poolKh
+      passNEpochs 2
+      expectDelegatedToPool cred poolKh
+
+      -- when pool is retired and re-registered in the same transaction, delegations are kept
+      pps <- poolParams poolKh rewardAccount
+      poolExpiry >>= \pe ->
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . certsTxBodyL .~ [RetirePoolTxCert poolKh pe, RegPoolTxCert pps]
+
+      expectDelegatedToPool cred poolKh
+      passNEpochs $ fromIntegral poolLifetime
+      expectDelegatedToPool cred poolKh
   where
-    expectInRDMap cred = do
+    expectRegistered cred = do
       umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
       expectedDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppKeyDepositL
 
@@ -426,7 +505,7 @@ spec = do
         (show cred <> " expected to be in UMap RewDep with the correct deposit")
         $ umapDeposit `shouldBe` Just expectedDeposit
 
-    expectNotInRDMap cred = do
+    expectNotRegistered cred = do
       umap <- getsNES $ nesEsL . esLStateL . lsCertStateL . certDStateL . dsUnifiedL
       impAnn (show cred <> " expected to not be in UMap RewDep") $
         UMap.notMember cred (RewDepUView umap) `shouldBe` True

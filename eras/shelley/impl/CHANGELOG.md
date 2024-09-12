@@ -11,6 +11,9 @@
 
 ### `testlib`
 
+* Exposed `registerPoolWithRewardAccount`
+* Added `poolParams` to `ImpTest`
+* Changed signature of `registerPool`
 * Remove `minMajorPV` and `maxMajorPV` from `Constants`
 * Add `logDoc` that takes a `Doc AnsiStyle` instead of a `String`
 * Rename `logEntry` to `logString`
