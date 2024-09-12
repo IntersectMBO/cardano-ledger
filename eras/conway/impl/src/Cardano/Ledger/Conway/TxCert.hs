@@ -146,12 +146,12 @@ instance Crypto c => EraTxCert (ConwayEra c) where
 instance Crypto c => ShelleyEraTxCert (ConwayEra c) where
   mkRegTxCert c = ConwayTxCertDeleg $ ConwayRegCert c SNothing
 
-  getRegTxCert (ConwayTxCertDeleg (ConwayRegCert c _)) = Just c
+  getRegTxCert (ConwayTxCertDeleg (ConwayRegCert c SNothing)) = Just c
   getRegTxCert _ = Nothing
 
   mkUnRegTxCert c = ConwayTxCertDeleg $ ConwayUnRegCert c SNothing
 
-  getUnRegTxCert (ConwayTxCertDeleg (ConwayUnRegCert c _)) = Just c
+  getUnRegTxCert (ConwayTxCertDeleg (ConwayUnRegCert c SNothing)) = Just c
   getUnRegTxCert _ = Nothing
 
   mkDelegStakeTxCert c kh = ConwayTxCertDeleg $ ConwayDelegCert c (DelegStake kh)
