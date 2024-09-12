@@ -6,6 +6,11 @@
   * `transTxRedeemers`
   * `toPlutusV2Args`
 
+### `testlib`
+
+* Move `TxInfo` golden tests over from the older `-test` package. #4599
+  * Also move the `gen-golden` executable over.
+
 ## 1.9.0.0
 
 * Change instance of `TranslationContext` to `NoGenesis`
