@@ -71,10 +71,15 @@ data LedgerTxInfo era = LedgerTxInfo
   }
 
 class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language) era where
-  toPlutusTxCert :: proxy l -> TxCert era -> Either (ContextError era) (PlutusTxCert l)
+  toPlutusTxCert ::
+    proxy l ->
+    ProtVer ->
+    TxCert era ->
+    Either (ContextError era) (PlutusTxCert l)
 
   toPlutusScriptPurpose ::
     proxy l ->
+    ProtVer ->
     PlutusPurpose AsIxItem era ->
     Either (ContextError era) (PlutusScriptPurpose l)
 
@@ -85,6 +90,7 @@ class (PlutusLanguage l, EraPlutusContext era) => EraPlutusTxInfo (l :: Language
 
   toPlutusArgs ::
     proxy l ->
+    ProtVer ->
     PlutusTxInfo l ->
     PlutusPurpose AsIxItem era ->
     Maybe (Data era) ->
@@ -129,7 +135,8 @@ toPlutusWithContext script scriptHash plutusPurpose lti (redeemerData, exUnits) 
       maybeSpendingDatum =
         getSpendingDatum (ltiUTxO lti) (ltiTx lti) (hoistPlutusPurpose toAsItem plutusPurpose)
   txInfo <- toPlutusTxInfo proxy lti
-  plutusArgs <- toPlutusArgs proxy txInfo plutusPurpose maybeSpendingDatum redeemerData
+  plutusArgs <-
+    toPlutusArgs proxy (ltiProtVer lti) txInfo plutusPurpose maybeSpendingDatum redeemerData
   pure $
     PlutusWithContext
       { pwcProtocolVersion = pvMajor (ltiProtVer lti)

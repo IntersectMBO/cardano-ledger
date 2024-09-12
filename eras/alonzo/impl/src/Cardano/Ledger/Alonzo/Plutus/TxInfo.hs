@@ -101,9 +101,9 @@ import NoThunks.Class (NoThunks)
 import qualified PlutusLedgerApi.V1 as PV1
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
-  toPlutusTxCert _ = pure . transTxCert
+  toPlutusTxCert _ _ = pure . transTxCert
 
-  toPlutusScriptPurpose proxy = transPlutusPurpose proxy . hoistPlutusPurpose toAsItem
+  toPlutusScriptPurpose proxy pv = transPlutusPurpose proxy pv . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     timeRange <-
@@ -111,7 +111,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
     txInsMaybes <- forM (Set.toList (txBody ^. inputsTxBodyL)) $ \txIn -> do
       txOut <- transLookupTxOut ltiUTxO txIn
       pure $ PV1.TxInInfo (transTxIn txIn) <$> transTxOut txOut
-    txCerts <- transTxBodyCerts proxy txBody
+    txCerts <- transTxBodyCerts proxy ltiProtVer txBody
     Right $
       PV1.TxInfo
         { -- A mistake was made in Alonzo of filtering out Byron addresses, so we need to
@@ -135,25 +135,27 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (AlonzoEra c) where
 toPlutusV1Args ::
   EraPlutusTxInfo 'PlutusV1 era =>
   proxy 'PlutusV1 ->
+  ProtVer ->
   PV1.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV1)
-toPlutusV1Args proxy txInfo scriptPurpose maybeSpendingData redeemerData =
+toPlutusV1Args proxy pv txInfo scriptPurpose maybeSpendingData redeemerData =
   PlutusV1Args
-    <$> toLegacyPlutusArgs proxy (PV1.ScriptContext txInfo) scriptPurpose maybeSpendingData redeemerData
+    <$> toLegacyPlutusArgs proxy pv (PV1.ScriptContext txInfo) scriptPurpose maybeSpendingData redeemerData
 
 toLegacyPlutusArgs ::
   EraPlutusTxInfo l era =>
   proxy l ->
+  ProtVer ->
   (PlutusScriptPurpose l -> PlutusScriptContext l) ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (LegacyPlutusArgs l)
-toLegacyPlutusArgs proxy mkScriptContext scriptPurpose maybeSpendingData redeemerData = do
-  scriptContext <- mkScriptContext <$> toPlutusScriptPurpose proxy scriptPurpose
+toLegacyPlutusArgs proxy pv mkScriptContext scriptPurpose maybeSpendingData redeemerData = do
+  scriptContext <- mkScriptContext <$> toPlutusScriptPurpose proxy pv scriptPurpose
   let redeemer = getPlutusData redeemerData
   pure $ case maybeSpendingData of
     Nothing -> LegacyPlutusArgs2 redeemer scriptContext
@@ -257,10 +259,11 @@ transTxBodyId txBody = PV1.TxId (transSafeHash (hashAnnotated txBody))
 transTxBodyCerts ::
   (EraPlutusTxInfo l era, EraTxBody era) =>
   proxy l ->
+  ProtVer ->
   TxBody era ->
   Either (ContextError era) [PlutusTxCert l]
-transTxBodyCerts proxy txBody =
-  mapM (toPlutusTxCert proxy) $ F.toList (txBody ^. certsTxBodyL)
+transTxBodyCerts proxy pv txBody =
+  mapM (toPlutusTxCert proxy pv) $ F.toList (txBody ^. certsTxBodyL)
 
 transWithdrawals :: Withdrawals c -> Map.Map PV1.StakingCredential Integer
 transWithdrawals (Withdrawals mp) = Map.foldlWithKey' accum Map.empty mp
@@ -348,11 +351,12 @@ transTxCertCommon = \case
 transPlutusPurpose ::
   (EraPlutusTxInfo l era, PlutusTxCert l ~ PV1.DCert) =>
   proxy l ->
+  ProtVer ->
   AlonzoPlutusPurpose AsItem era ->
   Either (ContextError era) PV1.ScriptPurpose
-transPlutusPurpose proxy = \case
+transPlutusPurpose proxy pv = \case
   AlonzoSpending (AsItem txIn) -> pure $ PV1.Spending (transTxIn txIn)
   AlonzoMinting (AsItem policyId) -> pure $ PV1.Minting (transPolicyID policyId)
-  AlonzoCertifying (AsItem txCert) -> PV1.Certifying <$> toPlutusTxCert proxy txCert
+  AlonzoCertifying (AsItem txCert) -> PV1.Certifying <$> toPlutusTxCert proxy pv txCert
   AlonzoRewarding (AsItem rewardAccount) ->
     pure $ PV1.Rewarding (PV1.StakingHash (transRewardAccount rewardAccount))

@@ -1,8 +1,10 @@
 # Version history for `cardano-ledger-babbage`
 
-## 1.9.0.1
+## 1.10.0.0
 
-*
+* Add `ProtVer` argument to `TxInfo` functions:
+  * `transTxRedeemers`
+  * `toPlutusV2Args`
 
 ## 1.9.0.0
 

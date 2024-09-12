@@ -93,6 +93,7 @@ collectTwoPhaseScriptInputsOutputOrdering = do
               txInfo <- toPlutusTxInfo plutus lti
               toPlutusArgs
                 plutus
+                (pp apf ^. ppProtocolVersionL)
                 txInfo
                 (spendingPurpose1 apf)
                 (Just (datum @Alonzo))
