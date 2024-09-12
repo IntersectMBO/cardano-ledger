@@ -14,7 +14,7 @@
   * `reDRepStateL`
   * `reCurrentEpochL`
   * `reCommitteeStateL`
-* Add a new field to `GovInfoEvent`
+* Add a new field to `GovInfoEvent` and change "unclaimed" field from `Set` to a `Map`.
 * Changed return type of `proposalsShowDebug`
 
 ### `testlib`
