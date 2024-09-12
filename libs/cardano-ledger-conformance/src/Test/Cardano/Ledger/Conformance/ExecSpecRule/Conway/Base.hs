@@ -8,6 +8,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -81,13 +82,15 @@ import Data.Foldable (Foldable (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Ratio ((%))
+import Data.Ratio (denominator, numerator, (%))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Lens.Micro (Lens', lens)
 import qualified Lib as Agda
+import qualified Prettyprinter as PP
+import Test.Cardano.Ledger.Binary.TreeDiff (tableDoc)
 import Test.Cardano.Ledger.Common (Arbitrary (..))
 import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
@@ -431,36 +434,43 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
       $ Agda.ratifyStep env st sig
 
   extraInfo ctx env@RatifyEnv {..} st sig@(RatifySignal actions) =
-    unlines $ specExtraInfo : (actionAcceptedRatio <$> toList actions)
+    PP.vsep $ specExtraInfo : (actionAcceptedRatio <$> toList actions)
     where
       members = foldMap' (committeeMembers @Conway) $ ensCommittee (rsEnactState st)
-      showAccepted True = "✓"
-      showAccepted False = "×"
+      showAccepted True = PP.brackets "✓"
+      showAccepted False = PP.brackets "×"
+      showRatio r = PP.viaShow (numerator r) <> "/" <> PP.viaShow (denominator r)
       specExtraInfo =
-        unlines
+        PP.vsep
           [ "Spec extra info:"
-          , either show T.unpack . runSpecTransM ctx $
+          , either PP.viaShow PP.pretty . runSpecTransM ctx $
               Agda.ratifyDebug
                 <$> toSpecRep env
                 <*> toSpecRep st
                 <*> toSpecRep sig
-          , ""
           ]
       actionAcceptedRatio gas@GovActionState {..} =
-        unlines
-          [ "GovActionId: \t" <> showExpr gasId
-          , "SPO: \t"
-              <> show (spoAcceptedRatio env gas)
-              <> "\t"
-              <> showAccepted (spoAccepted env st gas)
-          , "DRep: \t"
-              <> show (dRepAcceptedRatio env gasDRepVotes (gasAction gas))
-              <> "\t"
-              <> showAccepted (dRepAccepted env st gas)
-          , "CC: \t"
-              <> show (committeeAcceptedRatio members gasCommitteeVotes reCommitteeState reCurrentEpoch)
-              <> "\t"
-              <> showAccepted (committeeAccepted env st gas)
+        tableDoc
+          (Just "GovActionState")
+          [
+            ( "GovActionId:"
+            , PP.line <> PP.indent 2 (ansiExpr gasId)
+            )
+          ,
+            ( "SPO:"
+            , showAccepted (spoAccepted env st gas)
+                PP.<+> showRatio (spoAcceptedRatio env gas)
+            )
+          ,
+            ( "DRep:"
+            , showAccepted (dRepAccepted env st gas)
+                PP.<+> showRatio (dRepAcceptedRatio env gasDRepVotes (gasAction gas))
+            )
+          ,
+            ( "CC:"
+            , showAccepted (committeeAccepted env st gas)
+                PP.<+> showRatio (committeeAcceptedRatio members gasCommitteeVotes reCommitteeState reCurrentEpoch)
+            )
           ]
 
   testConformance ctx env st@(RatifyState {rsEnactState}) sig@(RatifySignal actions) =

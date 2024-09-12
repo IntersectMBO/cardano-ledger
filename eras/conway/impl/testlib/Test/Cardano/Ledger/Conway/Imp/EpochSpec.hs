@@ -328,10 +328,10 @@ dRepSpec =
       expectActualDRepExpiry drep2 $ offDRepActivity 12
 
     it "DRep registration should succeed" $ do
-      logEntry "Stake distribution before DRep registration:"
+      logString "Stake distribution before DRep registration:"
       logStakeDistr
       _ <- registerDRep
-      logEntry "Stake distribution after DRep registration:"
+      logString "Stake distribution after DRep registration:"
       logStakeDistr
       passEpoch
 
@@ -351,7 +351,7 @@ dRepVotingSpec =
 
       -- Submit NewConstitution proposal two epoch too early to check that the action
       -- doesn't expire prematurely (ppGovActionLifetimeL is set to two epochs)
-      logEntry "Submitting new minFee proposal"
+      logString "Submitting new minFee proposal"
       gid <- submitParameterChange SNothing proposedUpdate
 
       committeeHotCreds <- registerInitialCommittee

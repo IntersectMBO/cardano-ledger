@@ -74,6 +74,8 @@ library
         constrained-generators,
         deepseq,
         filepath,
+        prettyprinter,
+        prettyprinter-ansi-terminal,
         small-steps >=1.1,
         text,
         unliftio,

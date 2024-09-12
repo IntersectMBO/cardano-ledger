@@ -189,7 +189,7 @@ fixupRedeemerIndices tx = impAnn "fixupRedeemerIndices" $ do
 
 fixupRedeemers ::
   forall era.
-  AlonzoEraImp era =>
+  (AlonzoEraImp era, HasCallStack) =>
   Tx era ->
   ImpTestM era (Tx era)
 fixupRedeemers tx = impAnn "fixupRedeemers" $ do
@@ -209,7 +209,7 @@ fixupRedeemers tx = impAnn "fixupRedeemers" $ do
   exUnitsPerPurpose <-
     fmap (Map.mapMaybe id) $ forM reports $ \case
       Left err -> do
-        logEntry $ "Execution Units estimation error: " ++ show err
+        logString $ "Execution Units estimation error: " <> show err
         pure Nothing
       Right exUnits ->
         pure $ Just exUnits
@@ -221,7 +221,7 @@ fixupRedeemers tx = impAnn "fixupRedeemers" $ do
             Nothing ->
               case Map.lookup ptr exUnitsPerPurpose of
                 Nothing -> do
-                  logEntry $ "Missing Redeemer Ptr from execution estimation: " ++ show ptr
+                  logString $ "Missing Redeemer Ptr from execution estimation: " <> show ptr
                   pure Nothing
                 Just exUnits ->
                   pure $ Just (ptr, (Data dat, exUnits))

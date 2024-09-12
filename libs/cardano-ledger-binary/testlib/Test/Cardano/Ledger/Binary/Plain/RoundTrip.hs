@@ -36,7 +36,12 @@ import Data.Proxy
 import qualified Data.Text as Text
 import Data.Typeable
 import qualified Formatting.Buildable as B (Buildable (..))
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), diffExpr, showExpr, showHexBytesGrouped)
+import Test.Cardano.Ledger.Binary.TreeDiff (
+  CBORBytes (..),
+  ansiExprString,
+  diffExprString,
+  showHexBytesGrouped,
+ )
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
 import Test.QuickCheck hiding (label)
@@ -72,7 +77,7 @@ roundTripFailureExpectation x =
     Right _ ->
       expectationFailure $
         "Should not have deserialized: "
-          ++ showExpr (CBORBytes (serialize' x))
+          <> ansiExprString (CBORBytes (serialize' x))
 
 -- | Verify that round triping through the binary form holds
 roundTripExpectation ::
@@ -151,17 +156,17 @@ showFailedTermsWithReSerialization encodedBytes mReEncodedBytes =
       -- diff of Hex as well as Terms
       case (termWithHex "Original" encodedBytes, termWithHex "Reserialization" reBytes) of
         ((Right origTerm, origHex, _), (Right reTerm, reHex, _)) ->
-          [diffExpr (origTerm, origHex) (reTerm, reHex)]
+          [diffExprString (origTerm, origHex) (reTerm, reHex)]
         ((_, origHex, origStr), (_, reHex, reStr)) ->
-          diffExpr origHex reHex : origStr ++ reStr
+          diffExprString origHex reHex : origStr <> reStr
   where
     termWithHex name lazyBytes =
       let bytes = BSL.toStrict lazyBytes
           decTerm = case decodeFullDecoder' "Term" decodeTerm bytes of
-            Left err -> Left $ "Could not decode as Term: " ++ show err
+            Left err -> Left $ "Could not decode as Term: " <> show err
             Right term -> Right term
           hexLines = showHexBytesGrouped 128 bytes
-       in (decTerm, hexLines, [name ++ ":", either id showExpr decTerm])
+       in (decTerm, hexLines, [name <> ":", either id ansiExprString decTerm])
 
 -- | A definition of a CBOR trip through binary representation of one type to
 -- another. In this module this is called an embed. When a source and target type is the

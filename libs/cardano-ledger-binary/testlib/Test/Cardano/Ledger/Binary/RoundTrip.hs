@@ -79,7 +79,7 @@ import Test.Cardano.Ledger.Binary.Plain.RoundTrip (
   showFailedTermsWithReSerialization,
   showMaybeDecoderError,
  )
-import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), showExpr)
+import Test.Cardano.Ledger.Binary.TreeDiff (CBORBytes (..), ansiExprString)
 import Test.Cardano.Ledger.Binary.Twiddle (Twiddle (..))
 import Test.Hspec
 import Test.Hspec.QuickCheck (prop)
@@ -212,7 +212,7 @@ embedTripRangeFailureExpectation trip fromVersion toVersion t =
             [ "Should not have deserialized: <version: "
             , show version
             , "> "
-            , showExpr (CBORBytes (BSL.toStrict bs))
+            , ansiExprString (CBORBytes (BSL.toStrict bs))
             ]
 
 -- | Verify that round triping through the binary form holds for a range of versions.
@@ -295,7 +295,7 @@ roundTripAnnRangeFailureExpectation fromVersion toVersion t =
             [ "Should not have deserialized: <version: "
             , show version
             , "> "
-            , showExpr (CBORBytes (Plain.serialize' t))
+            , ansiExprString (CBORBytes (Plain.serialize' t))
             ]
 
 roundTripTwiddledProperty ::

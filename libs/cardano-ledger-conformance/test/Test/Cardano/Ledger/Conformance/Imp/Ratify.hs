@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conformance.Imp.Ratify (spec) where
@@ -77,7 +77,7 @@ spec = describe "RATIFY" . withImpStateWithProtVer @Conway (natVersion @10) $ do
         ratSt
         (RatifySignal (noConfidenceGAS SSeq.:<| SSeq.Empty))
   it "Duplicate CC hot keys count as separate votes" $ do
-    logEntry "Setting up a DRep"
+    logString "Setting up a DRep"
     let maxTermLength = EpochInterval 10
     modifyPParams $ \pp ->
       pp
@@ -90,7 +90,7 @@ spec = describe "RATIFY" . withImpStateWithProtVer @Conway (natVersion @10) $ do
     SJust (Committee {committeeMembers = oldCommittee}) <-
       getsNES $ nesEsL . epochStateGovStateL . committeeGovStateL
 
-    logEntry "Electing the committee"
+    logString "Electing the committee"
     ccCold0 <- KeyHashObj <$> freshKeyHash
     ccCold1 <- KeyHashObj <$> freshKeyHash
     ccCold2 <- KeyHashObj <$> freshKeyHash
@@ -118,17 +118,17 @@ spec = describe "RATIFY" . withImpStateWithProtVer @Conway (natVersion @10) $ do
       passNEpochs 2
       getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId committeeId)
 
-    logEntry "Registering hotkeys"
+    logString "Registering hotkeys"
     _ <- registerCommitteeHotKeys (pure hotKey) (ccCold0 NE.:| [ccCold1])
 
-    logEntry "Proposing a new constitution"
+    logString "Proposing a new constitution"
     newConstitution <- arbitrary
     constitutionId <- submitGovAction $ NewConstitution SNothing newConstitution
     submitYesVote_ (CommitteeVoter hotKey) constitutionId
     submitYesVote_ (DRepVoter credDRep) constitutionId
     constitutionGAS <- getGovActionState constitutionId
 
-    logEntry "Testing conformance"
+    logString "Testing conformance"
     treasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
     let execCtx = ConwayRatifyExecContext treasury [constitutionGAS]
     ratEnv <- getRatifyEnv
@@ -142,20 +142,20 @@ spec = describe "RATIFY" . withImpStateWithProtVer @Conway (natVersion @10) $ do
         ratEnv
         ratSt
         ratSig
-    logEntry "===context==="
+    logString "===context==="
     logToExpr execCtx
-    logEntry "===environment==="
+    logString "===environment==="
     logToExpr ratEnv
-    logEntry "===state==="
+    logString "===state==="
     logToExpr ratSt
-    logEntry "===signal==="
+    logString "===signal==="
     logToExpr ratSig
-    logEntry "Impl res:"
+    logString "Impl res:"
     logToExpr implRes
-    logEntry "Agda res:"
+    logString "Agda res:"
     logToExpr agdaRes
-    logEntry "Extra information:"
-    logEntry $
+    logString "Extra information:"
+    logDoc $
       extraInfo @ConwayFn @"RATIFY" @Conway
         execCtx
         ratEnv

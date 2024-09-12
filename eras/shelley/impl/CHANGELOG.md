@@ -12,6 +12,8 @@
 ### `testlib`
 
 * Remove `minMajorPV` and `maxMajorPV` from `Constants`
+* Add `logDoc` that takes a `Doc AnsiStyle` instead of a `String`
+* Rename `logEntry` to `logString`
 
 ## 1.13.0.0
 

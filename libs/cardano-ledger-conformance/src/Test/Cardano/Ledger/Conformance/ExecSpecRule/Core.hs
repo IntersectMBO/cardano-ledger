@@ -35,10 +35,13 @@ import Control.State.Transition.Extended (STS (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (bimapM)
 import Data.Functor (($>))
+import Data.String (fromString)
 import qualified Data.Text as T
 import Data.Typeable (Proxy (..), Typeable, typeRep)
 import GHC.Base (Constraint, NonEmpty, Symbol, Type)
 import GHC.TypeLits (KnownSymbol)
+import Prettyprinter
+import Prettyprinter.Render.Terminal
 import System.FilePath ((<.>))
 import Test.Cardano.Ledger.Api.DebugTools (writeCBOR)
 import Test.Cardano.Ledger.Binary.TreeDiff (Pretty (..), ansiWlPretty, ediff, ppEditExpr)
@@ -53,7 +56,7 @@ import Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
   ShelleyEraImp,
   impAnn,
-  logEntry,
+  logDoc,
   tryRunImpRule,
  )
 import UnliftIO (MonadIO (..), evaluateDeep)
@@ -99,15 +102,18 @@ class
   type ExecSignal fn rule era = Signal (EraRule rule era)
 
   environmentSpec ::
+    HasCallStack =>
     ExecContext fn rule era ->
     CV2.Specification fn (ExecEnvironment fn rule era)
 
   stateSpec ::
+    HasCallStack =>
     ExecContext fn rule era ->
     ExecEnvironment fn rule era ->
     CV2.Specification fn (ExecState fn rule era)
 
   signalSpec ::
+    HasCallStack =>
     ExecContext fn rule era ->
     ExecEnvironment fn rule era ->
     ExecState fn rule era ->
@@ -116,13 +122,14 @@ class
   classOf :: ExecSignal fn rule era -> Maybe String
   classOf _ = Nothing
 
-  genExecContext :: Gen (ExecContext fn rule era)
+  genExecContext :: HasCallStack => Gen (ExecContext fn rule era)
   default genExecContext ::
     Arbitrary (ExecContext fn rule era) =>
     Gen (ExecContext fn rule era)
   genExecContext = arbitrary
 
   runAgdaRule ::
+    HasCallStack =>
     SpecRep (ExecEnvironment fn rule era) ->
     SpecRep (ExecState fn rule era) ->
     SpecRep (ExecSignal fn rule era) ->
@@ -131,6 +138,7 @@ class
       (SpecRep (ExecState fn rule era))
 
   translateInputs ::
+    HasCallStack =>
     ExecEnvironment fn rule era ->
     ExecState fn rule era ->
     ExecSignal fn rule era ->
@@ -160,11 +168,11 @@ class
       expectRight' (Right x) = pure x
       expectRight' (Left e) = assertFailure (T.unpack e)
     agdaEnv <- expectRight' . runSpecTransM ctx $ toSpecRep env
-    logEntry $ "agdaEnv:\n" <> showExpr agdaEnv
+    logDoc $ "agdaEnv:\n" <> ansiExpr agdaEnv
     agdaSt <- expectRight' . runSpecTransM ctx $ toSpecRep st
-    logEntry $ "agdaSt:\n" <> showExpr agdaSt
+    logDoc $ "agdaSt:\n" <> ansiExpr agdaSt
     agdaSig <- expectRight' . runSpecTransM ctx $ toSpecRep sig
-    logEntry $ "agdaSig:\n" <> showExpr agdaSig
+    logDoc $ "agdaSig:\n" <> ansiExpr agdaSig
     pure (agdaEnv, agdaSt, agdaSig)
 
   testConformance ::
@@ -190,6 +198,7 @@ class
     , EncCBOR (State (EraRule rule era))
     , EncCBOR (Signal (EraRule rule era))
     , ToExpr (ExecContext fn rule era)
+    , HasCallStack
     ) =>
     ExecContext fn rule era ->
     ExecEnvironment fn rule era ->
@@ -199,12 +208,13 @@ class
   testConformance = defaultTestConformance @fn @era @rule
 
   extraInfo ::
+    HasCallStack =>
     ExecContext fn rule era ->
     Environment (EraRule rule era) ->
     State (EraRule rule era) ->
     Signal (EraRule rule era) ->
-    String
-  extraInfo _ _ _ _ = ""
+    Doc AnsiStyle
+  extraInfo _ _ _ _ = mempty
 
 dumpCbor ::
   forall era a.
@@ -230,6 +240,7 @@ checkConformance ::
   , EncCBOR (Environment (EraRule rule era))
   , EncCBOR (State (EraRule rule era))
   , EncCBOR (Signal (EraRule rule era))
+  , HasCallStack
   ) =>
   ExecContext fn rule era ->
   Environment (EraRule rule era) ->
@@ -244,30 +255,21 @@ checkConformance ::
   ImpTestM era ()
 checkConformance ctx env st sig implResTest agdaResTest = do
   let
+    delColor = Red
+    insColor = Magenta
     conformancePretty =
       ansiWlPretty
-        { ppDel = \d ->
-            mconcat
-              [ "\ESC[91m(Impl: "
-              , d
-              , ")\ESC[39m"
-              ]
-        , ppIns = \d ->
-            mconcat
-              [ "\ESC[92m(Agda: "
-              , d
-              , ")\ESC[39m"
-              ]
+        { ppDel = annotate (color delColor) . parens . ("Impl: " <>)
+        , ppIns = annotate (color insColor) . parens . ("Agda: " <>)
         }
     failMsg =
-      unlines
-        [ ""
-        , "===== DIFF ====="
-        , show (ppEditExpr conformancePretty (ediff implResTest agdaResTest))
+      annotate (color Yellow) . vsep $
+        [ "===== DIFF ====="
+        , ppEditExpr conformancePretty (ediff implResTest agdaResTest)
         , ""
         , "Legend:"
-        , "\t\ESC[91m-Implementation"
-        , "\t\ESC[92m+Specification\ESC[39m"
+        , indent 2 $ annotate (color delColor) "-Implementation"
+        , indent 2 $ annotate (color insColor) "+Specification"
         ]
   unless (implResTest == agdaResTest) $ do
     let envVarName = "CONFORMANCE_CBOR_DUMP_PATH"
@@ -278,13 +280,13 @@ checkConformance ctx env st sig implResTest agdaResTest = do
         dumpCbor path env "conformance_dump_env"
         dumpCbor path st "conformance_dump_st"
         dumpCbor path sig "conformance_dump_sig"
-        logEntry $ "Dumped a CBOR files to " <> show path
+        logDoc $ "Dumped a CBOR files to " <> ansiExpr path
       Nothing ->
-        logEntry $
+        logDoc $
           "Run the test again with "
-            ++ envVarName
-            ++ "=<path> to get a CBOR dump of the test data"
-    expectationFailure failMsg
+            <> fromString envVarName
+            <> "=<path> to get a CBOR dump of the test data"
+    expectationFailure . ansiDocToString $ failMsg
 
 defaultTestConformance ::
   forall fn era rule.
@@ -305,6 +307,7 @@ defaultTestConformance ::
   , EncCBOR (State (EraRule rule era))
   , EncCBOR (Signal (EraRule rule era))
   , ToExpr (ExecContext fn rule era)
+  , HasCallStack
   ) =>
   ExecContext fn rule era ->
   ExecEnvironment fn rule era ->
@@ -314,7 +317,7 @@ defaultTestConformance ::
 defaultTestConformance ctx env st sig = property $ do
   (implResTest, agdaResTest) <- runConformance @rule @fn @era ctx env st sig
   let extra = extraInfo @fn @rule @era ctx (inject env) (inject st) (inject sig)
-  logEntry extra
+  logDoc extra
   checkConformance @rule @_ @fn ctx (inject env) (inject st) (inject sig) implResTest agdaResTest
 
 runConformance ::
@@ -328,6 +331,7 @@ runConformance ::
   , Inject (State (EraRule rule era)) (ExecState fn rule era)
   , SpecTranslate (ExecContext fn rule era) (ExecState fn rule era)
   , ToExpr (ExecContext fn rule era)
+  , HasCallStack
   ) =>
   ExecContext fn rule era ->
   ExecEnvironment fn rule era ->
@@ -346,13 +350,13 @@ runConformance execContext env st sig = do
   (specEnv, specSt, specSig) <-
     impAnn "Translating the inputs" $
       translateInputs @fn @rule @era env st sig execContext
-  logEntry $ "ctx:\n" <> showExpr execContext
-  logEntry $ "implEnv:\n" <> showExpr env
-  logEntry $ "implSt:\n" <> showExpr st
-  logEntry $ "implSig:\n" <> showExpr sig
-  logEntry $ "specEnv:\n" <> showExpr specEnv
-  logEntry $ "specSt:\n" <> showExpr specSt
-  logEntry $ "specSig:\n" <> showExpr specSig
+  logDoc $ "ctx:\n" <> ansiExpr execContext
+  logDoc $ "implEnv:\n" <> ansiExpr env
+  logDoc $ "implSt:\n" <> ansiExpr st
+  logDoc $ "implSig:\n" <> ansiExpr sig
+  logDoc $ "specEnv:\n" <> ansiExpr specEnv
+  logDoc $ "specSt:\n" <> ansiExpr specSt
+  logDoc $ "specSig:\n" <> ansiExpr specSig
   agdaResTest <-
     fmap (bimap (fixup <$>) fixup) $
       impAnn "Deep evaluating Agda output" $
@@ -387,6 +391,7 @@ conformsToImpl ::
   , EncCBOR (Environment (EraRule rule era))
   , EncCBOR (State (EraRule rule era))
   , EncCBOR (Signal (EraRule rule era))
+  , HasCallStack
   ) =>
   Property
 conformsToImpl = property @(ImpTestM era Property) . (`runContT` pure) $ do
@@ -428,6 +433,7 @@ generatesWithin ::
   ( NFData a
   , ToExpr a
   , Typeable a
+  , HasCallStack
   ) =>
   Gen a ->
   Int ->

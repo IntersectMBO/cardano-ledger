@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -67,17 +68,17 @@ spec =
     checkMinFee :: HasCallStack => NativeScript era -> [Script era] -> ImpTestM era ()
     checkMinFee scriptToSpend refScripts = do
       refScriptFee <- setRefScriptFee
-      logEntry "lock an input with a script"
+      logString "lock an input with a script"
       scriptSpendIn <- createScriptUtxo scriptToSpend
-      logEntry
+      logString
         "create outputs with reference scripts and the return them mapped to their corresponding inputs"
       refScriptInToScripts <- createRefScriptsUtxos refScripts
-      logEntry "spend the initial input by passing the reference scripts"
+      logString "spend the initial input by passing the reference scripts"
       tx <- spendScriptUsingRefScripts scriptSpendIn $ Map.keysSet refScriptInToScripts
-      logEntry
+      logString
         "compute the difference between the current-era minFee and that computed in pre-Conway eras"
       minFeeDiff <- conwayDiffMinFee tx
-      logEntry "check that the difference is the sum of the sizes of the passed reference scripts"
+      logString "check that the difference is the sum of the sizes of the passed reference scripts"
       minFeeDiff
         `shouldBe` Coin
           ( floor $

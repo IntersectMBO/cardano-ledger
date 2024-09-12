@@ -1,8 +1,17 @@
 # Version history for `cardano-ledger-binary`
 
-## 1.3.4.1
+## 1.4.0.0
 
-*
+### `testlib`
+
+* Re-export types `Doc` and `AnsiStyle` in `Test.Cardano.Ledger.Binary.TreeDiff`
+* `diffExpr` and `diffExprCompact` changed type signature
+* Add `diffExprString` and `diffExprCompactString`, which replace the old implementations
+  of `diffExprNoColor` and `diffExprCompactNoColor` and embed ANSI color sequences into the strings
+* Add functions `ansiExpr` and `ansiExprString` that produce colored output via `toExpr`
+* Add a function `tableDoc` that formats a table using `Prettyprinter`
+* Add a function `ansiDocToString` that converts a prettyprinted document to a string
+  with embedded ANSI color sequences
 
 ## 1.3.4.0
 
