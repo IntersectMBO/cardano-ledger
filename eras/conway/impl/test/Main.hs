@@ -17,6 +17,7 @@ import qualified Test.Cardano.Ledger.Conway.Imp as Imp
 import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
 import qualified Test.Cardano.Ledger.Conway.Proposals as Proposals
 import qualified Test.Cardano.Ledger.Conway.Spec as Spec
+import qualified Test.Cardano.Ledger.Conway.TxInfoSpec as TxInfo
 import Test.Cardano.Ledger.Core.JSON (roundTripJsonEraSpec)
 
 main :: IO ()
@@ -41,3 +42,4 @@ main =
       describe "Plutus" $ do
         PlutusSpec.spec
       Regression.spec @Conway
+      TxInfo.spec

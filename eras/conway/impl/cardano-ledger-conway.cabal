@@ -195,6 +195,7 @@ test-suite tests
         Test.Cardano.Ledger.Conway.GenesisSpec
         Test.Cardano.Ledger.Conway.GovActionReorderSpec
         Test.Cardano.Ledger.Conway.Plutus.PlutusSpec
+        Test.Cardano.Ledger.Conway.TxInfoSpec
         Paths_cardano_ledger_conway
 
     default-language: Haskell2010
@@ -221,4 +222,5 @@ test-suite tests
         containers,
         data-default-class,
         microlens,
+        plutus-ledger-api,
         testlib
