@@ -209,7 +209,7 @@ specUpgrade BinaryUpgradeOpts {isScriptUpgradeable, isTxUpgradeable} =
 expectRawEqual :: (EqRaw a, ToExpr a, HasCallStack) => Doc AnsiStyle -> a -> a -> Expectation
 expectRawEqual thing expected actual =
   unless (eqRaw expected actual) $
-    expectationFailure . ansiDocToString $
+    assertColorFailure . ansiDocToString $
       Pretty.vsep
         [ Pretty.hsep ["Expected raw representation of", thing, "to be equal:"]
         , Pretty.indent 2 $ diffExpr expected actual

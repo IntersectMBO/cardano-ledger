@@ -18,6 +18,7 @@
 * Existing re-exported functions `diffExpr` and `diffExprCompact` have new return types
   per `cardano-ledger-binary-1.4.0.0`
 * Add a function `expectRawEqual`
+* Add `assertColorFailure`
 
 ## 1.14.0.0
 

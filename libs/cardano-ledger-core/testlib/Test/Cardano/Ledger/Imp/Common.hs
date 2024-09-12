@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Imp.Common (
   -- ** Lifted expectations
   assertBool,
   assertFailure,
+  assertColorFailure,
   expectationFailure,
   shouldBe,
   shouldSatisfy,
@@ -80,6 +81,7 @@ import Test.Cardano.Ledger.Binary.TreeDiff (expectExprEqualWithMessage)
 import Test.Cardano.Ledger.Common as X hiding (
   arbitrary,
   assertBool,
+  assertColorFailure,
   assertFailure,
   choose,
   elements,
@@ -185,6 +187,9 @@ io = id
 -- version of `H.assertFailure`
 assertFailure :: (HasCallStack, MonadIO m) => String -> m a
 assertFailure = liftIO . H.assertFailure
+
+assertColorFailure :: HasCallStack => String -> IO a
+assertColorFailure = liftIO . H.assertColorFailure
 
 -- | Just like `expectationBool`, but does not force the return type to unit. Lifted
 -- version of `H.assertBool`
