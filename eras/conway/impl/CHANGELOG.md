@@ -21,6 +21,7 @@
   * `reCommitteeStateL`
 * Add a new field to `GovInfoEvent` and change "unclaimed" field from `Set` to a `Map`.
 * Changed return type of `proposalsShowDebug`
+* Added `gen-golden` executable needed for golden tests: #4629
 
 ### `testlib`
 
