@@ -2,6 +2,11 @@
 
 ## 1.17.0.0
 
+* Add `ProtVer` argument to `TxInfo` functions:
+  * `transTxCert`
+  * `transScriptPurpose`
+  * `transPlutusPurposeV1V2`
+  * `toPlutusV3Args`
 * Changed `ConwayWdrlNotDelegatedToDRep` to wrap `NonEmpty KeyHash`
 * Removed `DRepAlreadyRegisteredForStakeKeyDELEG`
 * Add `showGovActionType`, `acceptedByEveryone`

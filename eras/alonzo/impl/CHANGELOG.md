@@ -1,8 +1,16 @@
 # Version history for `cardano-ledger-alonzo`
 
-## 1.10.2.1
+## 1.11.0.0
 
-*
+* Add `ProtVer` argument to functions in `EraPlutusTxInfo` class:
+  * `toPlutusTxCert` of
+  * `toPlutusScriptPurpose`
+  * `toPlutusArgs`
+* Add `ProtVer` argument to `TxInfo` functions:
+  * `transTxBodyCerts`
+  * `transPlutusPurpose`
+  * `toPlutusV1Args`
+  * `toLegacyPlutusArgs`
 
 ## 1.10.2.0
 

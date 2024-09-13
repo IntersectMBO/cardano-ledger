@@ -110,6 +110,7 @@ import Cardano.Ledger.Plutus.TxInfo (
 import qualified Cardano.Ledger.Plutus.TxInfo as TxInfo
 import Cardano.Ledger.PoolParams
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UTxO (UTxO)
 import Control.Arrow (ArrowChoice (..))
@@ -354,9 +355,9 @@ transTxCertV1V2 = \case
     | otherwise -> Left $ inject $ CertificateNotSupported txCert
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
-  toPlutusTxCert _ = transTxCertV1V2
+  toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose proxy = transPlutusPurposeV1V2 proxy . hoistPlutusPurpose toAsItem
+  toPlutusScriptPurpose proxy pv = transPlutusPurposeV1V2 proxy pv . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     guardConwayFeaturesForPlutusV1V2 ltiTx
@@ -369,7 +370,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
         (transTxOutV1 . TxOutFromOutput)
         [minBound ..]
         (F.toList (txBody ^. outputsTxBodyL))
-    txCerts <- Alonzo.transTxBodyCerts proxy txBody
+    txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
     pure
       PV1.TxInfo
         { PV1.txInfoInputs = inputs
@@ -389,9 +390,9 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV1 (ConwayEra c) where
   toPlutusArgs = Alonzo.toPlutusV1Args
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
-  toPlutusTxCert _ = transTxCertV1V2
+  toPlutusTxCert _ _ = transTxCertV1V2
 
-  toPlutusScriptPurpose proxy = transPlutusPurposeV1V2 proxy . hoistPlutusPurpose toAsItem
+  toPlutusScriptPurpose proxy pv = transPlutusPurposeV1V2 proxy pv . hoistPlutusPurpose toAsItem
 
   toPlutusTxInfo proxy LedgerTxInfo {ltiProtVer, ltiEpochInfo, ltiSystemStart, ltiUTxO, ltiTx} = do
     guardConwayFeaturesForPlutusV1V2 ltiTx
@@ -404,8 +405,8 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
         (Babbage.transTxOutV2 . TxOutFromOutput)
         [minBound ..]
         (F.toList (txBody ^. outputsTxBodyL))
-    txCerts <- Alonzo.transTxBodyCerts proxy txBody
-    plutusRedeemers <- Babbage.transTxRedeemers proxy ltiTx
+    txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
+    plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx
     pure
       PV2.TxInfo
         { PV2.txInfoInputs = inputs
@@ -427,7 +428,7 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV2 (ConwayEra c) where
   toPlutusArgs = Babbage.toPlutusV2Args
 
 instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
-  toPlutusTxCert _ = pure . transTxCert
+  toPlutusTxCert _ pv = pure . transTxCert pv
 
   toPlutusScriptPurpose = transScriptPurpose
 
@@ -441,8 +442,8 @@ instance Crypto c => EraPlutusTxInfo 'PlutusV3 (ConwayEra c) where
         (Babbage.transTxOutV2 . TxOutFromOutput)
         [minBound ..]
         (F.toList (txBody ^. outputsTxBodyL))
-    txCerts <- Alonzo.transTxBodyCerts proxy txBody
-    plutusRedeemers <- Babbage.transTxRedeemers proxy ltiTx
+    txCerts <- Alonzo.transTxBodyCerts proxy ltiProtVer txBody
+    plutusRedeemers <- Babbage.transTxRedeemers proxy ltiProtVer ltiTx
     pure
       PV3.TxInfo
         { PV3.txInfoInputs = inputs
@@ -486,8 +487,12 @@ transTxBodyWithdrawals :: EraTxBody era => TxBody era -> PV3.Map PV3.Credential 
 transTxBodyWithdrawals txBody =
   transMap transRewardAccount transCoinToLovelace (unWithdrawals $ txBody ^. withdrawalsTxBodyL)
 
-transTxCert :: ConwayEraTxCert era => TxCert era -> PV3.TxCert
-transTxCert = \case
+-- | In version 9, a bug in `RegTxCert` and `UnRegTxCert` pattern definitions
+-- was causing the deposit in `RegDepositTxCert` and `UnRegDepositTxCert` to be omitted.
+-- We need to keep this behavior for version 9, so, now that the bug in the patterns has been fixed,
+-- we are explicitly omitting the deposit in these cases.
+transTxCert :: ConwayEraTxCert era => ProtVer -> TxCert era -> PV3.TxCert
+transTxCert pv = \case
   RegPoolTxCert PoolParams {ppId, ppVrf} ->
     PV3.TxCertPoolRegister (transKeyHash ppId) (PV3.PubKeyHash (PV3.toBuiltin (hashToBytes ppVrf)))
   RetirePoolTxCert poolId retireEpochNo ->
@@ -497,9 +502,15 @@ transTxCert = \case
   UnRegTxCert stakeCred ->
     PV3.TxCertUnRegStaking (transCred stakeCred) Nothing
   RegDepositTxCert stakeCred deposit ->
-    PV3.TxCertRegStaking (transCred stakeCred) (Just (transCoinToLovelace deposit))
+    let transDeposit
+          | HF.bootstrapPhase pv = Nothing
+          | otherwise = Just (transCoinToLovelace deposit)
+     in PV3.TxCertRegStaking (transCred stakeCred) transDeposit
   UnRegDepositTxCert stakeCred refund ->
-    PV3.TxCertUnRegStaking (transCred stakeCred) (Just (transCoinToLovelace refund))
+    let transRefund
+          | HF.bootstrapPhase pv = Nothing
+          | otherwise = Just (transCoinToLovelace refund)
+     in PV3.TxCertUnRegStaking (transCred stakeCred) transRefund
   DelegTxCert stakeCred delegatee ->
     PV3.TxCertDelegStaking (transCred stakeCred) (transDelegatee delegatee)
   RegDepositDelegTxCert stakeCred delegatee deposit ->
@@ -546,13 +557,14 @@ transDRep = \case
 transScriptPurpose ::
   (ConwayEraPlutusTxInfo l era, PlutusTxCert l ~ PV3.TxCert) =>
   proxy l ->
+  ProtVer ->
   ConwayPlutusPurpose AsIxItem era ->
   Either (ContextError era) PV3.ScriptPurpose
-transScriptPurpose proxy = \case
+transScriptPurpose proxy pv = \case
   ConwaySpending (AsIxItem _ txIn) -> pure $ PV3.Spending (transTxIn txIn)
   ConwayMinting (AsIxItem _ policyId) -> pure $ PV3.Minting (Alonzo.transPolicyID policyId)
   ConwayCertifying (AsIxItem ix txCert) ->
-    PV3.Certifying (toInteger ix) <$> toPlutusTxCert proxy txCert
+    PV3.Certifying (toInteger ix) <$> toPlutusTxCert proxy pv txCert
   ConwayRewarding (AsIxItem _ rewardAccount) -> pure $ PV3.Rewarding (transRewardAccount rewardAccount)
   ConwayVoting (AsIxItem _ voter) -> pure $ PV3.Voting (transVoter voter)
   ConwayProposing (AsIxItem ix proposal) ->
@@ -642,13 +654,14 @@ transPlutusPurposeV1V2 ::
   , Inject (ConwayContextError era) (ContextError era)
   ) =>
   proxy l ->
+  ProtVer ->
   ConwayPlutusPurpose AsItem era ->
   Either (ContextError era) PV2.ScriptPurpose
-transPlutusPurposeV1V2 proxy = \case
-  ConwaySpending txIn -> Alonzo.transPlutusPurpose proxy $ AlonzoSpending txIn
-  ConwayMinting policyId -> Alonzo.transPlutusPurpose proxy $ AlonzoMinting policyId
-  ConwayCertifying txCert -> Alonzo.transPlutusPurpose proxy $ AlonzoCertifying txCert
-  ConwayRewarding rewardAccount -> Alonzo.transPlutusPurpose proxy $ AlonzoRewarding rewardAccount
+transPlutusPurposeV1V2 proxy pv = \case
+  ConwaySpending txIn -> Alonzo.transPlutusPurpose proxy pv $ AlonzoSpending txIn
+  ConwayMinting policyId -> Alonzo.transPlutusPurpose proxy pv $ AlonzoMinting policyId
+  ConwayCertifying txCert -> Alonzo.transPlutusPurpose proxy pv $ AlonzoCertifying txCert
+  ConwayRewarding rewardAccount -> Alonzo.transPlutusPurpose proxy pv $ AlonzoRewarding rewardAccount
   purpose -> Left $ inject $ PlutusPurposeNotSupported purpose
 
 transProtVer :: ProtVer -> PV3.ProtocolVersion
@@ -658,13 +671,14 @@ transProtVer (ProtVer major minor) =
 toPlutusV3Args ::
   EraPlutusTxInfo 'PlutusV3 era =>
   proxy 'PlutusV3 ->
+  ProtVer ->
   PV3.TxInfo ->
   PlutusPurpose AsIxItem era ->
   Maybe (Data era) ->
   Data era ->
   Either (ContextError era) (PlutusArgs 'PlutusV3)
-toPlutusV3Args proxy txInfo plutusPurpose maybeSpendingData redeemerData = do
-  scriptPurpose <- toPlutusScriptPurpose proxy plutusPurpose
+toPlutusV3Args proxy pv txInfo plutusPurpose maybeSpendingData redeemerData = do
+  scriptPurpose <- toPlutusScriptPurpose proxy pv plutusPurpose
   let scriptInfo =
         scriptPurposeToScriptInfo
           scriptPurpose
