@@ -110,6 +110,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   Doc,
   AnsiStyle,
   logDoc,
+  logPretty,
   logString,
   logToExpr,
   logStakeDistr,
@@ -991,9 +992,9 @@ runShelleyBase act = do
   pure $ runIdentity $ runReaderT act globals
 
 getRewardAccountAmount :: RewardAccount (EraCrypto era) -> ImpTestM era Coin
-getRewardAccountAmount rewardAcount = do
+getRewardAccountAmount rewardAccount = do
   umap <- getsNES $ nesEsL . epochStateUMapL
-  let cred = raCredential rewardAcount
+  let cred = raCredential rewardAccount
   case UMap.lookup cred (RewDepUView umap) of
     Nothing -> assertFailure $ "Expected a reward account: " ++ show cred
     Just RDPair {rdReward} -> pure $ fromCompact rdReward
@@ -1103,7 +1104,7 @@ impNativeScriptKeyPairs tx = do
   keyPairs <- mapM (impSatisfyNativeScript curAddrWits) nativeScripts
   pure . mconcat $ catMaybes keyPairs
 
-fixupTxOuts :: ShelleyEraImp era => Tx era -> ImpTestM era (Tx era)
+fixupTxOuts :: (ShelleyEraImp era, HasCallStack) => Tx era -> ImpTestM era (Tx era)
 fixupTxOuts tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   let
@@ -1487,11 +1488,17 @@ logWithCallStack callStack entry = impLogL %= (<> stack <> line <> indent 2 entr
             ]
         ]
     prefix n = if n <= 0 then "" else indent (n - 1) "└"
-    stack = vsep [prefix n <> prettySrcLoc' loc | (n, (_, loc)) <- zip [0, 2 ..] (getCallStack callStack)]
+    stack =
+      vsep
+        [prefix n <> prettySrcLoc' loc | (n, (_, loc)) <- zip [0, 2 ..] . reverse $ getCallStack callStack]
 
 -- | Adds a Doc to the log, which is only shown if the test fails
 logDoc :: HasCallStack => Doc AnsiStyle -> ImpTestM era ()
 logDoc = logWithCallStack ?callStack
+
+-- | Adds a pretty-printable value to the log, which is only shown if the test fails
+logPretty :: (Pretty a, HasCallStack) => a -> ImpTestM era ()
+logPretty = logWithCallStack ?callStack . pretty
 
 -- | Adds a String to the log, which is only shown if the test fails
 logString :: HasCallStack => String -> ImpTestM era ()
@@ -1850,7 +1857,7 @@ impLookupUTxO txIn = impAnn "Looking up TxOut" $ do
     Nothing -> error $ "Failed to get TxOut for " <> show txIn
 
 produceScript ::
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasCallStack) =>
   ScriptHash (EraCrypto era) ->
   ImpTestM era (TxIn (EraCrypto era))
 produceScript scriptHash = do
@@ -1858,6 +1865,7 @@ produceScript scriptHash = do
   let tx =
         mkBasicTx mkBasicTxBody
           & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr mempty)
+  logString $ "Produced script: " <> show scriptHash
   txInAt (0 :: Int) <$> submitTx tx
 
 advanceToPointOfNoReturn :: ImpTestM era ()
