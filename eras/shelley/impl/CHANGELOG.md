@@ -6,6 +6,7 @@
 
 ### `testlib`
 
+* Added `logText`
 * Added `ToExpr` instance for `LedgerEnv`
 * Added `tryRunImpRuleNoAssertions` to `ImpTest`
 
