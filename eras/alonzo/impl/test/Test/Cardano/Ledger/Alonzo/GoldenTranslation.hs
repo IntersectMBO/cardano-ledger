@@ -12,11 +12,11 @@
 -- | Deserializes `TranslationInstance`s from golden/translations.cbor file.
 --
 -- Each instance represents arguments passed to `ExtendedUTxO.txInfo` along with the produced result.
--- This test checks that calling `alonzoTxInfo` with the arguments from this file, produces the same result as in the flie.
+-- This test checks that calling `alonzoTxInfo` with the arguments from this file, produces the same result as in the file.
 --
 -- To regenerate the golden file (for example, if the logic in the translation changes),
 -- run the following command from the root of the repository:
--- cabal run cardano-ledger-alonzotest:gen-golden"
+-- cabal run cardano-ledger-alonzo:gen-golden"
 module Test.Cardano.Ledger.Alonzo.GoldenTranslation (
   tests,
 )
