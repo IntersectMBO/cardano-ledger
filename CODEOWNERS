@@ -1,7 +1,10 @@
 # code owners are automatically assigned to review PRs
 
 # DevX
-*.nix       @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
-nix         @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
-flake.lock  @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
-.github     @input-output-hk/core-tech-devx @input-output-hk/core-tech-release
+*.nix       @IntersectMBO/core-tech-devx
+nix         @IntersectMBO/core-tech-devx
+flake.lock  @IntersectMBO/core-tech-devx
+.github     @IntersectMBO/cardano-ledger-maintainers
+
+
+* @IntersectMBO/cardano-ledger-maintainers
