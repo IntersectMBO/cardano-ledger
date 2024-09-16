@@ -14,7 +14,6 @@ import Cardano.Ledger.Binary.Encoding (serialize)
 import Cardano.Ledger.Core
 import Control.Exception (throwIO)
 import qualified Data.ByteString.Lazy as BSL
-import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TranslatableGen (..),
   TxInfoLanguage (..),
@@ -27,7 +26,8 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   TranslationInstance (..),
   deserializeTranslationInstances,
  )
-import Test.Tasty.HUnit (Assertion, assertEqual)
+import Test.Cardano.Ledger.Common
+import Test.HUnit (Assertion, assertEqual)
 
 -- | Generates arguments for `ExtendedUTxO.txInfo`, applies them to it
 -- and serializes both arguments and result to golden/translations.cbor file

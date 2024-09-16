@@ -37,7 +37,6 @@ import Test.Cardano.Ledger.Alonzo.Translation.TranslatableGen (
   TxInfoLanguage (..),
  )
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
-import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Core.Arbitrary ()
 import Test.QuickCheck (
   Arbitrary,

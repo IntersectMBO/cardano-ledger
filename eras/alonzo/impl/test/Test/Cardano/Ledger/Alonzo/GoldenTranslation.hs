@@ -22,19 +22,17 @@ module Test.Cardano.Ledger.Alonzo.GoldenTranslation (
 )
 where
 
-import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
-
 import Cardano.Ledger.Alonzo (Alonzo)
-import Paths_cardano_ledger_alonzo_test (getDataFileName)
+import Paths_cardano_ledger_alonzo (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Translation.Golden (assertTranslationResultsMatchGolden)
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, testCase)
+import Test.Cardano.Ledger.Common
+import Test.HUnit (Assertion)
 
-tests :: TestTree
+tests :: Spec
 tests =
-  testGroup
-    "Golden translation tests"
-    [testCase "golden/translations.cbor" $ goldenAssertion "golden/translations.cbor"]
+  describe "Golden translation tests" $ do
+    it "golden/translations.cbor" $
+      goldenAssertion "golden/translations.cbor"
 
 goldenAssertion :: String -> Assertion
 goldenAssertion file = assertTranslationResultsMatchGolden @Alonzo (getDataFileName file)

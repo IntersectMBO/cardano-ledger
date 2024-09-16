@@ -36,7 +36,7 @@ import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Stack
 import Lens.Micro ((^.))
-import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
+import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Translation.TranslationInstance (
   TranslationInstance (..),
   VersionedTxInfo (..),

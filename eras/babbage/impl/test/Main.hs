@@ -7,6 +7,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Binary.CostModelsSpec as CostModelsS
 import qualified Test.Cardano.Ledger.Alonzo.Binary.TxWitsSpec as TxWitsSpec
 import qualified Test.Cardano.Ledger.Babbage.Binary.CddlSpec as CddlSpec
 import qualified Test.Cardano.Ledger.Babbage.BinarySpec as BinarySpec
+import qualified Test.Cardano.Ledger.Babbage.GoldenTranslation as Golden
 import qualified Test.Cardano.Ledger.Babbage.Imp as Imp
 import Test.Cardano.Ledger.Babbage.ImpTest ()
 import Test.Cardano.Ledger.Common
@@ -16,6 +17,7 @@ main :: IO ()
 main =
   ledgerTestMain $
     describe "Babbage" $ do
+      Golden.spec
       BinarySpec.spec
       CddlSpec.spec
       roundTripJsonEraSpec @Babbage

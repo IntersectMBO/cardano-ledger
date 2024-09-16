@@ -9,4 +9,4 @@ import Test.Cardano.Ledger.Conway.Translation.TranslatableGen ()
 
 -- | Generates golden translation file for Conway era
 main :: IO ()
-main = generateGoldenFile @Conway "eras/conway/test-suite/golden/translations.cbor"
+main = generateGoldenFile @Conway "eras/conway/impl/golden/translations.cbor"

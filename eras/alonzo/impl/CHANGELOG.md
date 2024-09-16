@@ -12,6 +12,11 @@
   * `toPlutusV1Args`
   * `toLegacyPlutusArgs`
 
+### `testlib`
+
+* Move `TxInfo` golden tests over from the older `-test` package. #4599
+  * Also move the `gen-golden` executable over.
+
 ## 1.10.2.0
 
 * Added `wireSizeAlonzoTxF`
