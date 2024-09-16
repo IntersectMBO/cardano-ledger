@@ -16,6 +16,7 @@ import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.SafeHash (originalBytesSize)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
+import Data.Default.Class (def)
 import qualified Data.Set as Set
 import Lens.Micro ((&), (.~))
 import Test.Cardano.Ledger.Conway.ImpTest
@@ -72,6 +73,82 @@ spec = do
           & withdrawalsTxBodyL
             .~ Withdrawals
               [(ra, if HF.bootstrapPhase pv then mempty else reward)]
+
+  it "Withdraw from a key delegated to an unregistered DRep" $ do
+    modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
+    kh <- freshKeyHash
+    let cred = KeyHashObj kh
+    ra <- registerStakeCredential cred
+    submitAndExpireProposalToMakeReward cred
+    reward <- lookupReward cred
+
+    (drep, _, _) <- setupSingleDRep 1_000_000
+
+    _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
+
+    unRegisterDRep drep
+    expectDRepNotRegistered drep
+
+    submitTx_ $
+      mkBasicTx $
+        mkBasicTxBody
+          & withdrawalsTxBodyL
+            .~ Withdrawals
+              [(ra, reward)]
+
+  it "Withdraw from a key delegated to an expired DRep" $ do
+    modifyPParams $ \pp ->
+      pp
+        & ppGovActionLifetimeL .~ EpochInterval 4
+        & ppDRepActivityL .~ EpochInterval 1
+    kh <- freshKeyHash
+    let cred = KeyHashObj kh
+    ra <- registerStakeCredential cred
+    submitAndExpireProposalToMakeReward cred
+    reward <- lookupReward cred
+
+    (drep, _, _) <- setupSingleDRep 1_000_000
+
+    -- expire the drep before delegation
+    void $ submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
+    passNEpochs 4
+    isDRepExpired drep `shouldReturn` True
+
+    _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
+
+    submitTx_ $
+      mkBasicTx $
+        mkBasicTxBody
+          & withdrawalsTxBodyL
+            .~ Withdrawals
+              [(ra, reward)]
+
+  it "Withdraw from a key delegated to a DRep that expired after delegation" $ do
+    modifyPParams $ \pp ->
+      pp
+        & ppGovActionLifetimeL .~ EpochInterval 4
+        & ppDRepActivityL .~ EpochInterval 1
+    kh <- freshKeyHash
+    let cred = KeyHashObj kh
+    ra <- registerStakeCredential cred
+    submitAndExpireProposalToMakeReward cred
+    reward <- lookupReward cred
+
+    (drep, _, _) <- setupSingleDRep 1_000_000
+
+    _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
+
+    -- expire the drep after  delegation
+    void $ submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
+    passNEpochs 4
+    isDRepExpired drep `shouldReturn` True
+
+    submitTx_ $
+      mkBasicTx $
+        mkBasicTxBody
+          & withdrawalsTxBodyL
+            .~ Withdrawals
+              [(ra, reward)]
 
   it "Withdraw from delegated and non-delegated staking script" $ do
     modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
