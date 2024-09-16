@@ -59,12 +59,7 @@ instance (HasSpec fn a, HasSpec fn b) => HasSpec fn (Prod a b) where
 
   combineSpec (Cartesian a b) (Cartesian a' b') = cartesian (a <> a') (b <> b')
 
-  conformsTo (Prod a b) (Cartesian sa sb) =
-    case (conformsToSpec a sa, conformsToSpec b sb) of
-      (True, True) -> True
-      (False, True) -> False
-      (True, False) -> False
-      (False, False) -> False
+  conformsTo (Prod a b) (Cartesian sa sb) = conformsToSpec a sa && conformsToSpec b sb
 
   genFromTypeSpec (Cartesian sa sb) = Prod <$> genFromSpecT sa <*> genFromSpecT sb
 

@@ -640,16 +640,11 @@ instance HasSpec fn a => Semigroup (Specification fn a) where
   TrueSpec <> s = s
   s <> TrueSpec = s
   ErrorSpec e <> ErrorSpec e' =
-    ErrorSpec (e <> e')
-  {-
-        ( NE.fromList
-            ( NE.toList e
-                ++ ""
-                : ("---------- spec <> spec ----------@" ++ show (typeRep (Proxy @a)))
-                : ""
-                : NE.toList e'
-            )
-        ) -}
+    ErrorSpec
+      ( e
+          <> pure ("------ spec <> spec ------ @" ++ show (typeRep (Proxy @a)))
+          <> e'
+      )
   ErrorSpec e <> _ = ErrorSpec e
   _ <> ErrorSpec e = ErrorSpec e
   MemberSpec as <> MemberSpec as' =
@@ -735,7 +730,7 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
   shrink TrueSpec = []
   shrink (MemberSpec xs) = TrueSpec : (MemberSpec . nub <$> shrinkList (shrinkWithSpec @fn TrueSpec) xs)
   shrink (TypeSpec ts cant)
-    | null cant = TrueSpec : MemberSpec [] : map typeSpec (shrink ts) -- FIXME
+    | null cant = TrueSpec : MemberSpec [] : map typeSpec (shrink ts) -- why MemberSpec[] ?
     | otherwise =
         [TrueSpec, typeSpec ts, MemberSpec (nub cant)]
           ++ map typeSpec (shrink ts)
@@ -857,11 +852,16 @@ class
   cardinalTrueSpec :: Specification fn Integer
   cardinalTrueSpec = TrueSpec
 
+  -- Each instance can decide if a TypeSpec has an Error, and what String
+  -- to pass to ErrorSpec to create an ErrorSpec value. Particulary
+  -- useful for type Sum and Prod
   typeSpecHasError :: TypeSpec fn a -> Maybe (NE.NonEmpty String)
   typeSpecHasError _ = Nothing
 
-  -- Some binary TypeSpec nest (X a (TypeSpec (X b (TypeSpec (X c w))))))
-  -- An would look better in Vertical mode as (X [a,b,c] m). This lets each HasSpec instance decide.
+  -- Some binary TypeSpecs, which nest to the right
+  -- e.g. something like this (X a (TypeSpec (X b (TypeSpec (X c w))))))
+  -- An would look better in Vertical mode as (X [a,b,c] m).
+  -- This lets each HasSpec instance decide. Particulary useful for type Sum and Prod
   alternateShow :: TypeSpec fn a -> BinaryShow
   alternateShow _ = NonBinary
 
@@ -1222,7 +1222,6 @@ data SolverStage fn where
 instance Pretty (SolverStage fn) where
   pretty SolverStage {..} =
     ("\nSolving for variable " <+> viaShow stageVar)
-      <+> viaShow stageVar
       <+> "<-"
         /> vsep'
           ( [pretty stageSpec | not $ isTrueSpec stageSpec]
@@ -3369,7 +3368,9 @@ guardSumSpec s@(SumSpecRaw tString _ sa sb)
   , isErrorLike sb =
       ErrorSpec $
         NE.fromList
-          ["When combining SumSpec, all branches in a caseOn" ++ sumType tString ++ " simplify to False.", show s]
+          [ "When combining SumSpec, all branches in a caseOn" ++ sumType tString ++ " simplify to False."
+          , show s
+          ]
   | otherwise = typeSpec s
 
 data SumSpec fn a b

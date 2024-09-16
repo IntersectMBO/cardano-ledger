@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Constrained.Conway.Gov where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway, ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
@@ -27,26 +28,9 @@ import Data.Foldable
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Lens.Micro
-import Constrained
-import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Lens.Micro qualified as L
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
-import Test.QuickCheck hiding (forAll)
-
-main :: IO ()
-main = do
-  env <- generate $ genFromSpec @ConwayFn govEnvSpec
-  let spec = govProposalsSpec @ConwayFn env
-  p <- generate (vectorOf 20 (genFromSpec spec))
-  case p of
-    (y : _) -> putStrLn $ (show . prettyA) y
-    _ -> pure ()
-  putStrLn $ show (map (\x -> conformsToSpec x spec) p)
 
 govEnvSpec ::
   IsConwayUniv fn =>

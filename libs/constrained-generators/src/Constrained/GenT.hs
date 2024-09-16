@@ -255,7 +255,7 @@ sizeT :: Monad m => GenT m Int
 sizeT = GenT $ \mode -> sized $ \n -> runGenT (pure n) mode
 
 -- ==================================================================
--- Reflective analysis of internal GE structure of (GenT GE x)
+-- Reflective analysis of the internal GE structure of (GenT GE x)
 -- This allows "catching" internal FatalError and GenError, and allowing
 -- the program to control what happens in those cases.
 

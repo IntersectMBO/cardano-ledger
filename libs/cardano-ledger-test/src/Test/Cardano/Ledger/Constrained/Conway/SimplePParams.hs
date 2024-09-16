@@ -27,8 +27,55 @@
 #endif
 
 -- | This module provides the necessary instances of `HasSpec`
---   and `HasSimpleRep` for the components of PParams.
-module Test.Cardano.Ledger.Constrained.Conway.SimplePParams where
+--   and `HasSimpleRep` for the components of PParams. It hides
+--   the fact that (PParams era) can have different underlying 'data' types
+--   in each era, and provides (Term fn) selector functions
+--   (e.g. minFeeA_, minFeeB_, etc.) for every PParam field (in every era).
+--   The class EraPP provides this era parametric abstraction.
+module Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
+  EraPP (..),
+  SimplePParams (..),
+  SimplePPUpdate (..),
+  simplePParamsSpec,
+  cSNothing_,
+  cSJust_,
+  succV_,
+  minFeeA_,
+  minFeeB_,
+  maxBBSize_,
+  maxTxSize_,
+  maxBHSize_,
+  keyDeposit_,
+  poolDeposit_,
+  eMax_,
+  nOpt_,
+  a0_,
+  rho_,
+  tau_,
+  decentral_,
+  protocolVersion_,
+  minUTxOValue_,
+  minPoolCost_,
+  coinsPerUTxOWord_,
+  costModels_,
+  prices_,
+  maxTxExUnits_,
+  maxBlockExUnits_,
+  maxValSize_,
+  collateralPercentage_,
+  maxCollateralInputs_,
+  coinsPerUTxOByte_,
+  poolVotingThresholds_,
+  drepVotingThresholds_,
+  committeeMinSize_,
+  committeeMaxTermLength_,
+  govActionLifetime_,
+  govActionDeposit_,
+  dRepDeposit_,
+  dRepActivity_,
+  minFeeRefScriptCostPerByte_,
+)
+where
 
 import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Alonzo (Alonzo)
@@ -40,300 +87,20 @@ import Cardano.Ledger.Conway (Conway)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Scripts ()
-import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Mary (Mary)
 import Cardano.Ledger.Plutus.CostModels (CostModels)
 import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Shelley (Shelley)
-import Cardano.Ledger.Shelley.PParams
-import Cardano.Ledger.Shelley.Rules
 import Constrained hiding (Value)
 import Constrained.Univ ()
-import Control.Monad.Trans.Fail.String
-import Data.Maybe
-import Data.Ratio ((%))
-import Data.Typeable
 import Data.Word
-import GHC.Generics (Generic)
 import Lens.Micro
 import Numeric.Natural (Natural)
-import System.Random
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyA (..))
-import Test.Cardano.Ledger.Generic.Proof (Reflect (..))
-import Test.QuickCheck hiding (Args, Fun, forAll)
-
--- =============================================================
--- Making Intervals based on Ratios, These can fail be careful
-
-makePrices :: Integer -> Integer -> Prices
-makePrices x y = Prices (fromJust (boundRational (x % 1))) (fromJust (boundRational (y % 1)))
-
-makeUnitInterval :: Integer -> Integer -> UnitInterval
-makeUnitInterval i j = fromJust (boundRational (i % j))
-
-makeNonNegativeInterval :: Integer -> Integer -> NonNegativeInterval
-makeNonNegativeInterval i j = fromJust (boundRational (i % j))
-
--- =============================================================
--- HasSpec instances for types that appear in PParams
-
-instance HasSimpleRep Coin where
-  type SimpleRep Coin = Word64
-  toSimpleRep (Coin i) = case integerToWord64 i of
-    Nothing -> error "The impossible happened in toSimpleRep for `Coin`"
-    Just w -> w
-  fromSimpleRep = word64ToCoin
-instance BaseUniverse fn => HasSpec fn Coin
-instance BaseUniverse fn => OrdLike fn Coin
-instance BaseUniverse fn => NumLike fn Coin
-instance BaseUniverse fn => Foldy fn Coin where
-  genList s s' = map fromSimpleRep <$> genList @fn @Word64 (toSimpleRepSpec s) (toSimpleRepSpec s')
-  theAddFn = addFn
-  theZero = Coin 0
-
--- TODO: This is hack to get around the need for `Num` in `NumLike`. We should possibly split
--- this up so that `NumLike` has its own addition etc. instead?
-deriving via Integer instance Num Coin
-
-instance HasSimpleRep (StrictMaybe a)
-instance (HasSpec fn a, IsNormalType a) => HasSpec fn (StrictMaybe a)
-
-cSNothing_ :: (HasSpec fn a, IsNormalType a) => Term fn (StrictMaybe a)
-cSNothing_ = con @"SNothing" (lit ())
-
-cSJust_ :: (HasSpec fn a, IsNormalType a) => Term fn a -> Term fn (StrictMaybe a)
-cSJust_ = con @"SJust"
-
-instance HasSimpleRep EpochInterval
-instance BaseUniverse fn => OrdLike fn EpochInterval
-instance BaseUniverse fn => HasSpec fn EpochInterval
-
--- TODO: once you start adding interesting functions on these to the
--- function universe this instance has to become more complicated
-instance BaseUniverse fn => HasSpec fn UnitInterval where
-  type TypeSpec fn UnitInterval = ()
-  emptySpec = ()
-  combineSpec _ _ = TrueSpec
-  genFromTypeSpec _ = pureGen arbitrary
-  cardinalTypeSpec _ = TrueSpec
-  shrinkWithTypeSpec _ = shrink
-  conformsTo _ _ = True
-  toPreds _ _ = toPred True
-
--- TODO: once you start adding interesting functions on these to the
--- function universe this instance has to become more complicated
-instance BaseUniverse fn => HasSpec fn NonNegativeInterval where
-  type TypeSpec fn NonNegativeInterval = ()
-  emptySpec = ()
-  combineSpec _ _ = TrueSpec
-  genFromTypeSpec _ = pureGen arbitrary
-  cardinalTypeSpec _ = TrueSpec
-  shrinkWithTypeSpec _ = shrink
-  conformsTo _ _ = True
-  toPreds _ _ = toPred True
-
-instance HasSimpleRep CostModels
-instance BaseUniverse fn => HasSpec fn CostModels where
-  type TypeSpec fn CostModels = ()
-  emptySpec = ()
-  combineSpec _ _ = TrueSpec
-  genFromTypeSpec _ = pureGen arbitrary
-  cardinalTypeSpec _ = TrueSpec
-  shrinkWithTypeSpec _ = shrink
-  conformsTo _ _ = True
-  toPreds _ _ = toPred True
-
-instance HasSimpleRep Prices
-instance BaseUniverse fn => HasSpec fn Prices
-
-instance HasSimpleRep ExUnits where
-  type SimpleRep ExUnits = SimpleRep (Natural, Natural)
-  fromSimpleRep = uncurry ExUnits . fromSimpleRep
-  toSimpleRep (ExUnits a b) = toSimpleRep (a, b)
-instance BaseUniverse fn => HasSpec fn ExUnits
-
-instance HasSimpleRep OrdExUnits where
-  type SimpleRep OrdExUnits = SimpleRep ExUnits
-  fromSimpleRep = OrdExUnits . fromSimpleRep
-  toSimpleRep = toSimpleRep . unOrdExUnits
-instance BaseUniverse fn => HasSpec fn OrdExUnits
-
-instance HasSimpleRep PoolVotingThresholds
-instance BaseUniverse fn => HasSpec fn PoolVotingThresholds
-
-instance HasSimpleRep DRepVotingThresholds
-instance BaseUniverse fn => HasSpec fn DRepVotingThresholds
-
-instance HasSimpleRep ProtVer
-instance BaseUniverse fn => HasSpec fn ProtVer
-
--- We do this like this to get the right bounds for `VersionRep`
--- while ensuring that we don't have to add instances for e.g. `Num`
--- to version.
-newtype VersionRep = VersionRep Word8
-  deriving (Show, Eq, Ord, Num, Random, Arbitrary, Integral, Real, Enum) via Word8
-instance BaseUniverse fn => HasSpec fn VersionRep where
-  type TypeSpec fn VersionRep = NumSpec fn VersionRep
-  emptySpec = emptyNumSpec
-  combineSpec = combineNumSpec
-  genFromTypeSpec = genFromNumSpec
-  shrinkWithTypeSpec = shrinkWithNumSpec
-  conformsTo = conformsToNumSpec
-  toPreds = toPredsNumSpec
-  cardinalTypeSpec = cardinalNumSpec
-instance Bounded VersionRep where
-  minBound = VersionRep $ getVersion minBound
-  maxBound = VersionRep $ getVersion maxBound
-instance MaybeBounded VersionRep
-
-instance HasSimpleRep Version where
-  type SimpleRep Version = VersionRep
-  fromSimpleRep (VersionRep rep) = case runFail $ mkVersion rep of
-    Left err ->
-      error $
-        unlines
-          [ "fromSimpleRep @Version:"
-          , show rep
-          , err
-          ]
-    Right a -> a
-  toSimpleRep = VersionRep . getVersion
-instance BaseUniverse fn => HasSpec fn Version
-instance BaseUniverse fn => OrdLike fn Version
-
-succV_ :: BaseUniverse fn => Term fn Version -> Term fn Version
-succV_ = fromGeneric_ . (+ 1) . toGeneric_
-
-instance (BaseUniverse fn, Typeable r, Crypto c) => HasSpec fn (KeyHash r c) where
-  type TypeSpec fn (KeyHash r c) = ()
-  emptySpec = ()
-  combineSpec _ _ = TrueSpec
-  genFromTypeSpec _ = pureGen arbitrary
-  cardinalTypeSpec _ = TrueSpec
-  shrinkWithTypeSpec _ = shrink
-  conformsTo _ _ = True
-  toPreds _ _ = toPred True
-
--- =============================================================================
--- So now we define very simple types to serve as the SimpleRep for PParams and
--- its related types  (PParamsUpdate, FuturePParams etc.)
-
--- | Use this as the SimpleRep of (PParams era). It is polymorphic enough to
---   encode PParams in EVERY Era. The EraPParams instances remove the fields
---   that do not appear in that Era.
-data SimplePParams era = SimplePParams
-  { minFeeA :: Coin
-  , minFeeB :: Coin
-  , maxBBSize :: Word32
-  , maxTxSize :: Word32
-  , maxBHSize :: Word32 -- Need to be downsized inside reify to Word16
-  , keyDeposit :: Coin
-  , poolDeposit :: Coin
-  , eMax :: EpochInterval
-  , nOpt :: Natural
-  , a0 :: NonNegativeInterval
-  , rho :: UnitInterval
-  , tau :: UnitInterval
-  , decentral :: UnitInterval
-  , protocolVersion :: ProtVer
-  , minUTxOValue :: Coin
-  , minPoolCost :: Coin
-  -- ^ Alonzo
-  , coinsPerUTxOWord :: Coin
-  , costModels :: CostModels
-  , prices :: Prices
-  , maxTxExUnits :: ExUnits
-  , maxBlockExUnits :: ExUnits
-  , maxValSize :: Natural
-  , collateralPercentage :: Natural
-  , maxCollateralInputs :: Natural
-  -- ^  Babbage
-  , coinsPerUTxOByte :: Coin
-  -- ^ Conway
-  , poolVotingThresholds :: PoolVotingThresholds
-  , drepVotingThresholds :: DRepVotingThresholds
-  , committeeMinSize :: Natural
-  , committeeMaxTermLength :: EpochInterval
-  , govActionLifetime :: EpochInterval
-  , govActionDeposit :: Coin
-  , dRepDeposit :: Coin
-  , dRepActivity :: EpochInterval
-  , minFeeRefScriptCostPerByte :: NonNegativeInterval
-  }
-  deriving (Eq, Generic)
-
-instance (EraPP era, Reflect era) => Show (SimplePParams era) where
-  show x = show (prettyA (subsetToPP @era x))
-
--- | Use then generic HasSimpleRep and HasSpec instances for SimplePParams
-instance HasSimpleRep (SimplePParams era)
-
-instance (EraPP era, Reflect era, BaseUniverse fn) => HasSpec fn (SimplePParams era)
-
--- | Use this as the SimpleRep of (PParamsUpdate era)
-data SimplePPUpdate = SimplePPUpdate
-  { uminFeeA :: StrictMaybe Coin
-  , uminFeeB :: StrictMaybe Coin
-  , umaxBBSize :: StrictMaybe Word32
-  , umaxTxSize :: StrictMaybe Word32
-  , umaxBHSize :: StrictMaybe Word32 -- Need to be downsized inside reify to Word16
-  , ukeyDeposit :: StrictMaybe Coin
-  , upoolDeposit :: StrictMaybe Coin
-  , ueMax :: StrictMaybe EpochInterval
-  , unOpt :: StrictMaybe Natural
-  , ua0 :: StrictMaybe NonNegativeInterval
-  , urho :: StrictMaybe UnitInterval
-  , utau :: StrictMaybe UnitInterval
-  , udecentral :: StrictMaybe UnitInterval
-  , uprotocolVersion :: StrictMaybe ProtVer
-  , uminUTxOValue :: StrictMaybe Coin
-  , uminPoolCost :: StrictMaybe Coin
-  , -- Alonzo
-    ucoinsPerUTxOWord :: StrictMaybe Coin
-  , ucostModels :: StrictMaybe CostModels
-  , uprices :: StrictMaybe Prices
-  , umaxTxExUnits :: StrictMaybe ExUnits
-  , umaxBlockExUnits :: StrictMaybe ExUnits
-  , umaxValSize :: StrictMaybe Natural
-  , ucollateralPercentage :: StrictMaybe Natural
-  , umaxCollateralInputs :: StrictMaybe Natural
-  , -- Babbage
-    ucoinsPerUTxOByte :: StrictMaybe Coin
-  , -- Conway
-    upoolVotingThresholds :: StrictMaybe PoolVotingThresholds
-  , udrepVotingThresholds :: StrictMaybe DRepVotingThresholds
-  , ucommitteeMinSize :: StrictMaybe Natural
-  , ucommitteeMaxTermLength :: StrictMaybe EpochInterval
-  , ugovActionLifetime :: StrictMaybe EpochInterval
-  , ugovActionDeposit :: StrictMaybe Coin
-  , udRepDeposit :: StrictMaybe Coin
-  , udRepActivity :: StrictMaybe EpochInterval
-  , uminFeeRefScriptCostPerByte :: StrictMaybe NonNegativeInterval
-  }
-  deriving (Eq, Show, Generic)
+import Test.Cardano.Ledger.Constrained.Conway.InstancesBasic
 
 -- ============================================
-
--- \| EraPP era means we can go back and forth between (SimplePParams era) and (PParams era)
---   This allow us to use (SimplePParams era) as the (SimpleRep (PParams era))
---   Much easier to constrain (SimplePParams era) than (PParams era) with all the THKD stuff.
-class
-  ( Reflect era
-  , Eq (PParamsHKD Identity era)
-  , Show (PParamsHKD Identity era)
-  , Eq (PParamsHKD StrictMaybe era)
-  , Show (PParamsHKD StrictMaybe era)
-  , EraPParams era
-  ) =>
-  EraPP era
-  where
-  subsetToPP :: SimplePParams era -> PParams era
-  ppToSubset :: PParams era -> SimplePParams era
-  updateToPPU :: SimplePPUpdate -> PParamsUpdate era
-  ppuToUpdate :: PParamsUpdate era -> SimplePPUpdate
 
 instance EraPP Shelley where
   subsetToPP = liftShelley
@@ -643,43 +410,6 @@ uLiftConway pps pp =
     & ppuDRepActivityL .~ (udRepActivity pps)
     & ppuMinFeeRefScriptCostPerByteL .~ (uminFeeRefScriptCostPerByte pps)
 
--- ==============================================================================
-
--- | Use the generic HasSimpleRep and HasSpec instances for SimplePParams
-instance HasSimpleRep SimplePPUpdate
-
-instance BaseUniverse fn => HasSpec fn SimplePPUpdate
-
--- | SimpleRep instance for PParamsUpdate
-instance EraPP era => HasSimpleRep (PParamsUpdate era) where
-  type SimpleRep (PParamsUpdate era) = SimplePPUpdate
-  toSimpleRep = ppuToUpdate
-  fromSimpleRep = updateToPPU
-
--- | HasSpec instance for PParams
-instance (BaseUniverse fn, EraPP era) => HasSpec fn (PParamsUpdate era) where
-  genFromTypeSpec x = fromSimpleRep <$> genFromTypeSpec x
-
--- ===============================================================
-
--- | SimpleRep instance for PParams
-instance EraPP era => HasSimpleRep (PParams era) where
-  type SimpleRep (PParams era) = SimplePParams era
-  toSimpleRep = ppToSubset
-  fromSimpleRep = subsetToPP
-
--- | HasSpec instance for PParams
-instance (BaseUniverse fn, EraPP era, HasSpec fn Coin) => HasSpec fn (PParams era) where
-  genFromTypeSpec x = fromSimpleRep <$> genFromTypeSpec x
-
--- =======================================
-
-instance EraPP era => HasSimpleRep (ProposedPPUpdates era)
-instance (EraPP era, BaseUniverse fn) => HasSpec fn (ProposedPPUpdates era)
-
-instance EraPP era => HasSimpleRep (FuturePParams era)
-instance (EraPP era, BaseUniverse fn) => HasSpec fn (FuturePParams era)
-
 -- ============================================================================
 -- Term Selectors for SimplePParams
 
@@ -743,8 +473,8 @@ prices_ simplepp = sel @18 simplepp
 maxTxExUnits_ :: (EraPP era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn ExUnits
 maxTxExUnits_ simplepp = sel @19 simplepp
 
-maxBlockUnits_ :: (EraPP era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn ExUnits
-maxBlockUnits_ simplepp = sel @20 simplepp
+maxBlockExUnits_ :: (EraPP era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn ExUnits
+maxBlockExUnits_ simplepp = sel @20 simplepp
 
 maxValSize_ :: (EraPP era, BaseUniverse fn) => Term fn (SimplePParams era) -> Term fn Natural
 maxValSize_ simplepp = sel @21 simplepp
@@ -802,7 +532,6 @@ minFeeRefScriptCostPerByte_ simplepp = sel @33 simplepp
 simplePParamsSpec ::
   forall fn era. (EraPP era, BaseUniverse fn) => Specification fn (SimplePParams era)
 simplePParamsSpec = constrained $ \pp ->
-  -- pp :: SimplePParams
   [ assert $ protocolVersion_ pp ==. lit (ProtVer (natVersion @10) 0)
   , assert $ maxBBSize_ pp /=. lit 0
   , assert $ maxTxSize_ pp /=. lit 0
@@ -817,10 +546,3 @@ simplePParamsSpec = constrained $ \pp ->
   , match (eMax_ pp) (\epochInterval -> lit 0 <. epochInterval)
   , assert $ costModels_ pp ==. lit mempty -- This makes examples soo much more readable.
   ]
-
-exampleSimplePParams :: IO Bool
-exampleSimplePParams = do
-  let thespec = simplePParamsSpec @BaseFn @Conway
-  pp <- generate $ genFromSpec thespec
-  putStrLn (show pp)
-  pure (conformsToSpec pp thespec)

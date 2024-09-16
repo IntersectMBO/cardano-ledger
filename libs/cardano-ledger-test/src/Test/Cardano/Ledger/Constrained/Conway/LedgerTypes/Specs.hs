@@ -12,6 +12,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -O0 #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Specs necessary to generate constrained (well formed) values of
@@ -20,14 +21,7 @@
 --   values in any era (Shelley,Allegra,Mary,Alonzo,Babbage,Conway)
 --   by type applying them to a particular era type. These specifications
 --   are a usefull guide to building ones own specifications with one's own
---   idea of whats well formed. Each specification comes with an example
---   computation (e.g. exampleXXX) which has an IO type, that will construct
---   and then display the result. Such visualizations are crucial to getting
---   the specifications correct. And readers are encouraged to experiment on
---   the specifications, and them observe the changes. The module also supplies
---   Two other usefull artifacts. The class (WellFormed t)
---   And a bunch of HSpec Spec tests, which tests the soundness of every
---   WellFormed instance on every Era.
+--   idea of whats well formed.
 module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs where
 
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (..))

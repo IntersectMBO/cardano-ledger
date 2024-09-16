@@ -1,9 +1,5 @@
--- {-# LANGUAGE UndecidableInstances #-}
--- {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
--- {-# LANGUAGE FlexibleInstances #-}
--- {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -12,9 +8,6 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Tests where
-
-import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
-import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
 
 import Cardano.Ledger.Alonzo.TxOut (AlonzoTxOut (..))
 import Cardano.Ledger.Api
@@ -50,6 +43,7 @@ import Constrained.Base (Pred (..), checkPredPure, fromList_, hasSize, rangeSize
 import Constrained.Env (singletonEnv)
 import Control.Monad.Writer.Lazy
 import Data.Default.Class (Default (def))
+import Data.Kind (Type)
 import qualified Data.List.NonEmpty as NE
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -62,6 +56,8 @@ import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Constrained.Conway ()
 import Test.Cardano.Ledger.Constrained.Conway.Gov (govProposalsSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.Specs
+import Test.Cardano.Ledger.Constrained.Conway.LedgerTypes.WellFormed
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
 import Test.Cardano.Ledger.Generic.PrettyCore (
   PrettyA (prettyA),
@@ -84,10 +80,13 @@ import Test.QuickCheck (
 -- Some Specifications are constrained by types (say 'x') that do not appear in the type being
 -- specified. We use the strategy of passing (Term fn x) as inputs to those specifcations.
 -- For example, the AccountState must have sufficient capacity to support the InstantaneousRewards
--- So we pass a (Term fn AccountState) as input to 'instantaneousRewardsSpec'
--- In order to create tests, we need specifications that are fully applied.
+-- So we pass a (Term fn AccountState) as input to 'instantaneousRewardsSpec' which then
+-- constrains both the AccountState Term and the 'instantaneousRewardsSpec' so that they are consistent.
+-- In order to create tests, we need specifications that are fully applied, so we write combinators
+-- to lift (Term a -> Spec b) functions to (Specification a -> Gen(Specification b))
 -- The idea is to combine several Specifications to get a Gen(composed specifations)
 -- For example (dstateSpec @Shelley !$! accountStateSpec !*! poolMapSpec)
+-- is a (Gen (Specification ConwayFn (DState Shelley)))
 -- If a Specification takes an actual PParams (not a (Term fn PParams)), like
 -- lederstateSpec, we can combine it like this using the Functor <$>, rather than our !$!
 -- (ledgerStateSpec <$> genConwayFn pparamsSpec !*! accountStateSpec !*! epochNoSpec)
@@ -123,26 +122,6 @@ delegationsSpec ::
     (Map (Credential 'Staking StandardCrypto) (KeyHash 'StakePool StandardCrypto))
 delegationsSpec = (hasSize (rangeSize 8 12))
 
--- =============================================================
--- helper functions for examples and tests
-
-{-
-generateSpec :: forall a. HasSpec ConwayFn a => Specification ConwayFn a -> IO a
-generateSpec specx = generate (genConwayFn specx)
-
-specToGen :: forall t. HasSpec ConwayFn t => Specification ConwayFn t -> Gen t
-specToGen = genFromSpec
-
-genSpec :: HasSpec ConwayFn a => Specification ConwayFn a -> IO a
-genSpec = generateSpec
-
-ioTest :: forall t. (HasSpec ConwayFn t, PrettyA t) => Specification ConwayFn t -> IO Bool
-ioTest specx = do
-  t <- generateSpec @t specx
-  putStrLn (show (prettyA t))
-  pure (conformsToSpec t specx)
--}
-
 -- ====================================================================
 -- HSpec tests
 -- ===================================================================
@@ -156,10 +135,11 @@ soundSpec specGen = do
     property $
       counterexample (show ("Does not meet spec\n" <> prettyA x)) (conformsToSpec x spect)
 
-soundSpecIt ::
+soundSpecWith ::
   forall t.
-  (HasSpec ConwayFn t, PrettyA t) => Int -> Gen (Specification ConwayFn t) -> SpecWith (Arg Property)
-soundSpecIt n specx = it (show (typeRep (Proxy @t))) $ withMaxSuccess n $ property $ (soundSpec @t specx)
+  (HasSpec ConwayFn t, PrettyA t) =>
+  Int -> Gen (Specification ConwayFn t) -> SpecWith (Arg Property)
+soundSpecWith n specx = it (show (typeRep (Proxy @t))) $ withMaxSuccess n $ property $ (soundSpec @t specx)
 
 utxoStateGen :: forall era. LedgerEra era ConwayFn => Gen (Specification ConwayFn (UTxOState era))
 utxoStateGen =
@@ -167,131 +147,49 @@ utxoStateGen =
     <$> genConwayFn @(PParams era) pparamsSpec
     <*> (lit <$> wff @(CertState era) @era)
 
+-- | A bunch of soundness tests on different LederTypes, all in the same Era.
+--   The idea is to run this suite on every era.
+specSuite ::
+  forall (era :: Type).
+  ( EraTxOut era
+  , EraCrypto era ~ StandardCrypto
+  , LedgerEra era ConwayFn
+  , IsNormalType (TxOut era)
+  , PrettyA (GovState era)
+  ) =>
+  Int -> Spec
+specSuite n = do
+  soundSpecWith @(PState era) (5 * n) (pstateSpec !$! epochNoSpec)
+  soundSpecWith @(DState era) (5 * n) (dstateSpec @era !$! accountStateSpec !*! poolMapSpec)
+  soundSpecWith @(VState era) (10 * n) (vstateSpec @_ @era !$! epochNoSpec)
+  soundSpecWith @(CertState era) (5 * n) (certStateSpec !$! accountStateSpec !*! epochNoSpec)
+  soundSpecWith @(UTxO era) (5 * n) (utxoSpec !$! delegationsSpec)
+  soundSpecWith @(GovState era)
+    (2 * n)
+    (do x <- genFromSpec (pparamsSpec @ConwayFn); pure $ govStateSpec @era x)
+  soundSpecWith @(UTxOState era) (2 * n) (utxoStateGen @era)
+  soundSpecWith @(LedgerState era)
+    (2 * n)
+    (ledgerStateSpec <$> genConwayFn pparamsSpec !*! accountStateSpec !*! epochNoSpec)
+  soundSpecWith @(EpochState era) (2 * n) (epochStateSpec <$> genConwayFn pparamsSpec !*! epochNoSpec)
+  soundSpecWith @(NewEpochState era) (2 * n) (newEpochStateSpec <$> genConwayFn pparamsSpec)
+
 spec :: Spec
 spec = do
-  describe "Soundnes of WellFormed types from the Cardano Ledger: " $ do
-    soundSpecIt @(ProtVer, ProtVer) 100 (pure protVersCanfollow)
-    soundSpecIt @(InstantaneousRewards StandardCrypto)
+  describe "Soundness of WellFormed types from the Cardano Ledger: " $ do
+    soundSpecWith @(ProtVer, ProtVer) 100 (pure protVersCanfollow)
+    soundSpecWith @(InstantaneousRewards StandardCrypto)
       20
       (instantaneousRewardsSpec !$! accountStateSpec)
-
-    soundSpecIt @(PState Shelley) 100 (pstateSpec !$! epochNoSpec)
-    soundSpecIt @(PState Allegra) 100 (pstateSpec !$! epochNoSpec)
-    soundSpecIt @(PState Mary) 100 (pstateSpec !$! epochNoSpec)
-    soundSpecIt @(PState Alonzo) 100 (pstateSpec !$! epochNoSpec)
-    soundSpecIt @(PState Babbage) 100 (pstateSpec !$! epochNoSpec)
-    soundSpecIt @(PState Conway) 20 (pstateSpec !$! epochNoSpec)
-
-    soundSpecIt @(DState Shelley) 50 (dstateSpec @Shelley !$! accountStateSpec !*! poolMapSpec)
-    soundSpecIt @(DState Allegra) 50 (dstateSpec @Allegra !$! accountStateSpec !*! poolMapSpec)
-    soundSpecIt @(DState Mary) 50 (dstateSpec @Mary !$! accountStateSpec !*! poolMapSpec)
-    soundSpecIt @(DState Alonzo) 50 (dstateSpec @Alonzo !$! accountStateSpec !*! poolMapSpec)
-    soundSpecIt @(DState Babbage) 50 (dstateSpec @Babbage !$! accountStateSpec !*! poolMapSpec)
-    soundSpecIt @(DState Conway) 20 (dstateSpec @Conway !$! accountStateSpec !*! poolMapSpec)
-
-    soundSpecIt @(VState Shelley) 100 (vstateSpec @_ @Shelley !$! epochNoSpec)
-    soundSpecIt @(VState Allegra) 100 (vstateSpec @_ @Allegra !$! epochNoSpec)
-    soundSpecIt @(VState Mary) 100 (vstateSpec @_ @Mary !$! epochNoSpec)
-    soundSpecIt @(VState Alonzo) 100 (vstateSpec @_ @Alonzo !$! epochNoSpec)
-    soundSpecIt @(VState Babbage) 100 (vstateSpec @_ @Babbage !$! epochNoSpec)
-    soundSpecIt @(VState Conway) 100 (vstateSpec @_ @Conway !$! epochNoSpec)
-
-    soundSpecIt @(CertState Shelley) 50 (certStateSpec !$! accountStateSpec !*! epochNoSpec)
-    soundSpecIt @(CertState Allegra) 50 (certStateSpec !$! accountStateSpec !*! epochNoSpec)
-    soundSpecIt @(CertState Mary) 50 (certStateSpec !$! accountStateSpec !*! epochNoSpec)
-    soundSpecIt @(CertState Alonzo) 50 (certStateSpec !$! accountStateSpec !*! epochNoSpec)
-    soundSpecIt @(CertState Babbage) 50 (certStateSpec !$! accountStateSpec !*! epochNoSpec)
-    soundSpecIt @(CertState Conway) 20 (certStateSpec !$! accountStateSpec !*! epochNoSpec)
-
-    soundSpecIt @(UTxO Shelley) 50 (utxoSpec !$! delegationsSpec)
-    soundSpecIt @(UTxO Allegra) 50 (utxoSpec !$! delegationsSpec)
-    soundSpecIt @(UTxO Mary) 50 (utxoSpec !$! delegationsSpec)
-    soundSpecIt @(UTxO Alonzo) 50 (utxoSpec !$! delegationsSpec)
-    soundSpecIt @(UTxO Babbage) 50 (utxoSpec !$! delegationsSpec)
-    soundSpecIt @(UTxO Conway) 50 (utxoSpec !$! delegationsSpec)
-
-    soundSpecIt @(GovState Shelley)
-      20
-      (do x <- genFromSpec (pparamsSpec @ConwayFn); pure $ govStateSpec @Shelley x)
-    soundSpecIt @(GovState Allegra)
-      20
-      (do x <- genFromSpec (pparamsSpec @ConwayFn @Allegra); pure $ govStateSpec @Allegra x)
-    soundSpecIt @(GovState Mary)
-      20
-      (do x <- genFromSpec (pparamsSpec @ConwayFn); pure $ govStateSpec @Mary x)
-    soundSpecIt @(GovState Alonzo)
-      20
-      (do x <- genFromSpec (pparamsSpec @ConwayFn); pure $ govStateSpec @Alonzo x)
-    soundSpecIt @(GovState Babbage)
-      20
-      (do x <- genFromSpec (pparamsSpec @ConwayFn); pure $ govStateSpec @Babbage x)
-    soundSpecIt @(GovState Conway)
-      20
-      (do x <- genFromSpec (pparamsSpec @ConwayFn); pure $ govStateSpec @Conway x)
-
-    soundSpecIt @(UTxOState Shelley) 50 (utxoStateGen @Shelley)
-    soundSpecIt @(UTxOState Allegra) 50 (utxoStateGen @Allegra)
-    soundSpecIt @(UTxOState Mary) 50 (utxoStateGen @Mary)
-    soundSpecIt @(UTxOState Alonzo) 50 (utxoStateGen @Alonzo)
-    soundSpecIt @(UTxOState Babbage) 50 (utxoStateGen @Babbage)
-    soundSpecIt @(UTxOState Conway) 20 (utxoStateGen @Conway)
-
-    soundSpecIt @(LedgerState Shelley)
-      50
-      (ledgerStateSpec <$> genConwayFn pparamsSpec !*! accountStateSpec !*! epochNoSpec)
-    soundSpecIt @(LedgerState Allegra)
-      50
-      (ledgerStateSpec <$> genConwayFn pparamsSpec !*! accountStateSpec !*! epochNoSpec)
-    soundSpecIt @(LedgerState Mary)
-      50
-      (ledgerStateSpec <$> genConwayFn pparamsSpec !*! accountStateSpec !*! epochNoSpec)
-    soundSpecIt @(LedgerState Alonzo)
-      50
-      (ledgerStateSpec <$> genConwayFn pparamsSpec !*! accountStateSpec !*! epochNoSpec)
-    soundSpecIt @(LedgerState Babbage)
-      50
-      (ledgerStateSpec <$> genConwayFn pparamsSpec !*! accountStateSpec !*! epochNoSpec)
-    soundSpecIt @(LedgerState Conway)
-      20
-      (ledgerStateSpec <$> genConwayFn pparamsSpec !*! accountStateSpec !*! epochNoSpec)
-
-    soundSpecIt @(EpochState Shelley) 20 (epochStateSpec <$> genConwayFn pparamsSpec !*! epochNoSpec)
-    soundSpecIt @(EpochState Allegra) 20 (epochStateSpec <$> genConwayFn pparamsSpec !*! epochNoSpec)
-    soundSpecIt @(EpochState Mary) 20 (epochStateSpec <$> genConwayFn pparamsSpec !*! epochNoSpec)
-    soundSpecIt @(EpochState Alonzo) 20 (epochStateSpec <$> genConwayFn pparamsSpec !*! epochNoSpec)
-    soundSpecIt @(EpochState Babbage) 20 (epochStateSpec <$> genConwayFn pparamsSpec !*! epochNoSpec)
-    soundSpecIt @(EpochState Conway) 20 (epochStateSpec <$> genConwayFn pparamsSpec !*! epochNoSpec)
-
-    soundSpecIt @(NewEpochState Shelley) 20 (newEpochStateSpec <$> genConwayFn pparamsSpec)
-    soundSpecIt @(NewEpochState Allegra) 20 (newEpochStateSpec <$> genConwayFn pparamsSpec)
-    soundSpecIt @(NewEpochState Mary) 20 (newEpochStateSpec <$> genConwayFn pparamsSpec)
-    soundSpecIt @(NewEpochState Alonzo) 20 (newEpochStateSpec <$> genConwayFn pparamsSpec)
-    soundSpecIt @(NewEpochState Babbage) 20 (newEpochStateSpec <$> genConwayFn pparamsSpec)
-    soundSpecIt @(NewEpochState Conway) 20 (newEpochStateSpec <$> genConwayFn pparamsSpec)
-
-    soundSpecIt @(SnapShots StandardCrypto)
-      20
+    soundSpecWith @(SnapShots StandardCrypto)
+      10
       (snapShotsSpec <$> ((lit . getMarkSnapShot) <$> (wff @(LedgerState Conway) @Conway)))
-
-{-
-
-monadConformsToSpec :: forall fn a. HasSpec fn a => a -> Specification fn a -> Writer [String] Bool
-monadConformsToSpec _ TrueSpec = pure True
-monadConformsToSpec a (MemberSpec as) =
-  if elem a as
-    then pure True
-    else tell [show a ++ " not an element of " ++ show as] >> pure False
-monadConformsToSpec a (TypeSpec s cant) = do
-  ans <- monadConformsTo @fn a s
-  if notElem a cant && ans
-    then pure True
-    else tell [show a ++ " is an element of the cant set" ++ show cant] >> pure False
-monadConformsToSpec a (SuspendedSpec v ps) =
-  if checkPredPure (singletonEnv v a) ps
-    then pure True
-    else tell ["Suspended Spec " ++ show (SuspendedSpec v ps)] >> pure False
-monadConformsToSpec _ (ErrorSpec es) = tell (NE.toList es) >> pure False
--}
+  specSuite @Shelley 10
+  specSuite @Allegra 10
+  specSuite @Mary 10
+  specSuite @Alonzo 10
+  specSuite @Babbage 10
+  specSuite @Conway 10
 
 test :: forall t era. (WellFormed t era, PrettyA t) => IO ()
 test = do
@@ -398,8 +296,8 @@ testAll = do
   test @(ConwayGovState Conway) @Conway
   test @(DRepState StandardCrypto) @Conway
   test @(UTxO Conway) @Conway
-  test @(SnapShot StandardCrypto) @Conway
   test @(SnapShots StandardCrypto) @Conway
+  test @(SnapShot StandardCrypto) @Conway
 
   test @(GovEnv Conway) @Conway
   test @(ConwayGovState Conway) @Conway

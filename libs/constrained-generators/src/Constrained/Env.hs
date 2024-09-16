@@ -7,12 +7,11 @@
 
 module Constrained.Env where
 
+import Constrained.Core
+import Constrained.GenT
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Typeable
-
-import Constrained.Core
-import Constrained.GenT
 import Prettyprinter
 
 -- | Typed environments for mapping `Var a` to `a`

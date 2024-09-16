@@ -8,12 +8,9 @@
 --   this one to get 'pparamsSpec'
 module Test.Cardano.Ledger.Constrained.Conway.PParams where
 
-import Cardano.Ledger.Conway.Core
+import Cardano.Ledger.Core (PParams (..))
 import Constrained
-import Test.Cardano.Ledger.Constrained.Conway.Instances (
-  EraPP (..),
-  simplePParamsSpec,
- )
+import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (EraPP (..), simplePParamsSpec)
 
 pparamsSpec :: forall fn era. (EraPP era, BaseUniverse fn) => Specification fn (PParams era)
 pparamsSpec = constrained' $ \simplepp -> satisfies simplepp (simplePParamsSpec @fn @era)

@@ -26,6 +26,7 @@ import Data.Word
 import Lens.Micro
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
+import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (maxTxSize_, protocolVersion_)
 
 utxoEnvSpec :: IsConwayUniv fn => Specification fn (UtxoEnv (ConwayEra StandardCrypto))
 utxoEnvSpec =
@@ -35,51 +36,13 @@ utxoEnvSpec =
        uePParams
        _ueCertState ->
           [ satisfies uePParams pparamsSpec
-          , match uePParams $ \cpp ->
+          , match uePParams $ \spp ->
               -- NOTE cpp has type (Term fn (SimplePParams era))
-              match cpp $
-                \_minFeeA
-                 _minFeeB
-                 _maxBBSize
-                 maxTxSize
-                 _maxBHSize
-                 _keyDeposit
-                 _poolDeposit
-                 _eMax
-                 _nOpt
-                 _a0
-                 _rho
-                 _tau
-                 _decentral
-                 protocolVersion
-                 _minUTxOValue
-                 _minPoolCost
-                 -- Alonzo
-                 _coinsPerUTxOWord
-                 _costModels
-                 _prices
-                 _maxTxExUnits
-                 _maBlockExUnits
-                 _maxValSize
-                 _collateralPercentage
-                 _MaxCollateralInputs
-                 -- Babbage
-                 _coinsPerUTxOByte
-                 -- Conway
-                 _poolVotingThresholds
-                 _drepVotingThresholds
-                 _committeeMinSize
-                 _committeeMaxTermLength
-                 _govActionLifetime
-                 _govActionDeposit
-                 _dRepDeposit
-                 _drepActivity
-                 _minFeeRefScriptCostPerByte ->
-                    -- NOTE: this is for testing only! We should figure out a nicer way
-                    -- of splitting generation and checking constraints here!
-                    [ assert $ protocolVersion ==. lit (ProtVer (natVersion @10) 0)
-                    , assert $ lit 3000 ==. maxTxSize
-                    ]
+              -- NOTE: this is for testing only! We should figure out a nicer way
+              -- of splitting generation and checking constraints here!
+              [ assert $ protocolVersion_ spp ==. lit (ProtVer (natVersion @10) 0)
+              , assert $ lit 3000 ==. maxTxSize_ spp
+              ]
           ]
 
 utxoStateSpec ::

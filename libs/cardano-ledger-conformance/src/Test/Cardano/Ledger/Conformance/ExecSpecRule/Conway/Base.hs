@@ -114,7 +114,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   utxoStateSpec,
   utxoTxSpec,
  )
-import Test.Cardano.Ledger.Constrained.Conway.Instances (
+import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
   committeeMaxTermLength_,
   committeeMinSize_,
   protocolVersion_,
