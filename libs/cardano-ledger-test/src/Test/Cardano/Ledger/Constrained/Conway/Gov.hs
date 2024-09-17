@@ -27,6 +27,7 @@ import Lens.Micro
 
 import Constrained
 
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -344,6 +345,7 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams} ps govAction =
     ( branch $ \withdrawMap policy ->
         [ forAll (dom_ withdrawMap) $ \rewAcnt ->
             match rewAcnt $ \net _ -> net ==. lit Testnet
+        , assert $ sum_ (rng_ withdrawMap) >. lit (Coin 0)
         , assert $ policy ==. lit gePPolicy
         , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
         ]

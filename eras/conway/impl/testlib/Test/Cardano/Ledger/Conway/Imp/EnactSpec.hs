@@ -148,6 +148,7 @@ treasuryWithdrawalsSpec =
     it "Withdrawals exceeding treasury submitted in several proposals within the same epoch" $ do
       committeeCs <- registerInitialCommittee
       (drepC, _, _) <- setupSingleDRep 1_000_000
+      donateToTreasury $ Coin 5_000_000
       initialTreasury <- getTreasury
       numWithdrawals <- choose (1, 10)
       withdrawals <- genWithdrawalsExceeding initialTreasury numWithdrawals

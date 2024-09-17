@@ -807,6 +807,8 @@ votingSpec =
         it "AlwaysAbstain" $ do
           let getTreasury = getsNES (nesEsL . esAccountStateL . asTreasuryL)
 
+          donateToTreasury $ Coin 5_000_000
+
           (drep1, comMember, _) <- electBasicCommittee
           initialTreasury <- getTreasury
 
