@@ -17,6 +17,7 @@ module Cardano.Ledger.MemoBytes (
   printMemo,
   shortToLazy,
   contentsEq,
+  decodeMemoBytes,
 
   -- * Memoized
   Memoized (RawType),
