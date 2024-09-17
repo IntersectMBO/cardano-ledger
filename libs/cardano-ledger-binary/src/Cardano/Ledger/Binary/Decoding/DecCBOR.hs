@@ -60,7 +60,6 @@ import Cardano.Slotting.Slot (
   WithOrigin (..),
  )
 import Cardano.Slotting.Time (SystemStart (..))
-import Codec.CBOR.ByteArray (ByteArray (..))
 import Codec.CBOR.ByteArray.Sliced (SlicedByteArray, fromByteArray)
 import Codec.CBOR.Term (Term (..))
 import Codec.Serialise as Serialise (Serialise (decode))

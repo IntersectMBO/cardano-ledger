@@ -19,6 +19,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   enforceDecoderVersion,
   DecoderError (..),
   C.ByteOffset,
+  ByteArray (..),
   C.DecodeAction (..),
   C.TokenType (..),
 
@@ -170,7 +171,7 @@ import Cardano.Ledger.Binary.Plain (
  )
 import Cardano.Ledger.Binary.Version (Version, mkVersion64, natVersion)
 import Cardano.Slotting.Slot (WithOrigin, withOriginFromMaybe)
-import Codec.CBOR.ByteArray (ByteArray)
+import Codec.CBOR.ByteArray (ByteArray (..))
 import qualified Codec.CBOR.Decoding as C (
   ByteOffset,
   DecodeAction (..),

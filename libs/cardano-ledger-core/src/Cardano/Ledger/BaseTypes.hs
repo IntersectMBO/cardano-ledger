@@ -158,6 +158,7 @@ import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict
+import Data.MemPack
 import Data.Proxy
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Scientific (
@@ -756,6 +757,14 @@ newtype BlocksMade c = BlocksMade
 newtype TxIx = TxIx {unTxIx :: Word64}
   deriving stock (Eq, Ord, Show, Generic)
   deriving newtype (NFData, Enum, Bounded, NoThunks, FromCBOR, ToCBOR, EncCBOR, ToJSON)
+
+instance MemPack TxIx where
+  packedByteCount (TxIx txIx) = packedByteCount (fromIntegral @Word64 @Word16 txIx)
+  {-# INLINE packedByteCount #-}
+  packM (TxIx txIx) = packM (fromIntegral @Word64 @Word16 txIx)
+  {-# INLINE packM #-}
+  unpackM = TxIx . fromIntegral @Word16 @Word64 <$> unpackM
+  {-# INLINE unpackM #-}
 
 instance DecCBOR TxIx where
   decCBOR =

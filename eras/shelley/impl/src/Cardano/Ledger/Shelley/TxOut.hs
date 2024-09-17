@@ -28,14 +28,18 @@ import qualified Cardano.Crypto.Hash as HS
 import Cardano.HeapWords (HeapWords (..))
 import Cardano.Ledger.Address (Addr (..), CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Binary (
+  ByteArray (unBA),
   DecCBOR (..),
   DecShareCBOR (..),
   EncCBOR (..),
   FromCBOR (..),
   Interns (..),
   ToCBOR (..),
+  TokenType (..),
+  decodeByteArray,
   decodeRecordNamed,
   encodeListLen,
+  peekTokenType,
  )
 import Cardano.Ledger.Compactible (Compactible (CompactForm, fromCompact, toCompact))
 import Cardano.Ledger.Core
@@ -45,11 +49,11 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Val (Val)
-import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
-
 import Control.DeepSeq (NFData (rnf))
-import Data.ByteString.Short (ShortByteString, pack)
+import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
+import qualified Data.ByteString.Short as SBS (ShortByteString, pack)
 import Data.Maybe (fromMaybe)
+import Data.MemPack (MemPack (..), unpack)
 import Data.Proxy (Proxy (..))
 import Data.Word (Word8)
 import GHC.Stack (HasCallStack)
@@ -60,6 +64,16 @@ data ShelleyTxOut era = TxOutCompact
   { txOutCompactAddr :: {-# UNPACK #-} !(CompactAddr (EraCrypto era))
   , txOutCompactValue :: !(CompactForm (Value era))
   }
+
+instance
+  (Era era, MemPack (CompactForm (Value era)), MemPack (CompactAddr (EraCrypto era))) =>
+  MemPack (ShelleyTxOut era)
+  where
+  packedByteCount TxOutCompact {txOutCompactAddr, txOutCompactValue} =
+    packedByteCount txOutCompactAddr + packedByteCount txOutCompactValue
+  packM TxOutCompact {txOutCompactAddr, txOutCompactValue} =
+    packM txOutCompactAddr >> packM txOutCompactValue
+  unpackM = TxOutCompact <$> unpackM <*> unpackM
 
 instance Crypto crypto => EraTxOut (ShelleyEra crypto) where
   {-# SPECIALIZE instance EraTxOut (ShelleyEra StandardCrypto) #-}
@@ -155,9 +169,19 @@ instance (Era era, DecCBOR (CompactForm (Value era))) => DecCBOR (ShelleyTxOut e
       cAddr <- decCBOR
       TxOutCompact cAddr <$> decCBOR
 
-instance (Era era, DecCBOR (CompactForm (Value era))) => DecShareCBOR (ShelleyTxOut era) where
+instance
+  ( Era era
+  , MemPack (CompactForm (Value era))
+  , DecCBOR (CompactForm (Value era))
+  ) =>
+  DecShareCBOR (ShelleyTxOut era)
+  where
   type Share (ShelleyTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  decShareCBOR _ = decCBOR
+  decShareCBOR _ = do
+    peekTokenType >>= \case
+      TypeBytes -> decodeByteArray >>= either (fail . show) pure . unpack . unBA
+      TypeBytesIndef -> decodeByteArray >>= either (fail . show) pure . unpack . unBA
+      _ -> decCBOR
 
 instance (Era era, EncCBOR (CompactForm (Value era))) => ToCBOR (ShelleyTxOut era) where
   toCBOR = toEraCBOR @era
@@ -177,9 +201,9 @@ toTxOutPair (ShelleyTxOut !addr !amount) =
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords
-packedADDRHASH :: forall proxy era. Crypto (EraCrypto era) => proxy era -> ShortByteString
+packedADDRHASH :: forall proxy era. Crypto (EraCrypto era) => proxy era -> SBS.ShortByteString
 packedADDRHASH _ =
-  pack $
+  SBS.pack $
     replicate
       (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy (ADDRHASH (EraCrypto era)))))
       (1 :: Word8)

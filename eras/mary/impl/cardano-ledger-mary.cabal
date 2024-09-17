@@ -81,6 +81,7 @@ library
         containers,
         deepseq,
         groups,
+        mempack,
         microlens,
         nothunks,
         primitive,

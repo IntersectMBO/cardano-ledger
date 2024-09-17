@@ -98,6 +98,7 @@ import Data.Map.Internal (
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
+import Data.MemPack
 import qualified Data.Monoid as M (Sum (Sum, getSum))
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
@@ -107,7 +108,7 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Text.Encoding (decodeLatin1)
 import Data.Typeable (Typeable)
-import Data.Word (Word16, Word32, Word64)
+import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
 import Prelude hiding (lookup)
@@ -406,7 +407,7 @@ instance ToJSONKey AssetName where
 
 instance Crypto c => Compactible (MaryValue c) where
   newtype CompactForm (MaryValue c) = CompactValue (CompactValue c)
-    deriving (Eq, Typeable, Show, NoThunks, EncCBOR, DecCBOR, NFData)
+    deriving (Eq, Typeable, Show, NoThunks, EncCBOR, DecCBOR, NFData, MemPack)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
@@ -429,6 +430,23 @@ data CompactValue c
       {-# UNPACK #-} !Word32 -- number of ma's
       {-# UNPACK #-} !ShortByteString -- rep
   deriving (Generic, Show, Typeable)
+
+instance Typeable c => MemPack (CompactValue c) where
+  packedByteCount = \case
+    CompactValueAdaOnly c ->
+      1 + packedByteCount c
+    CompactValueMultiAsset c numMA rep -> do
+      1 + packedByteCount c + packedByteCount (VarLen numMA) + packedByteCount rep
+  packM = \case
+    CompactValueAdaOnly c ->
+      packM (0 :: Word8) >> packM c
+    CompactValueMultiAsset c numMA rep -> do
+      packM (1 :: Word8) >> packM c >> packM (VarLen numMA) >> packM rep
+  unpackM = do
+    unpackM >>= \case
+      0 -> CompactValueAdaOnly <$> unpackM
+      1 -> CompactValueMultiAsset <$> unpackM <*> (unVarLen <$> unpackM) <*> unpackM
+      t -> fail $ "Unrecognized tag used for CompactMultiAsset: " <> show (t :: Word8)
 
 instance NFData (CompactValue c) where
   rnf = rwhnf

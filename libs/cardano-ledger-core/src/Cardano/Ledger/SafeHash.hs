@@ -26,7 +26,7 @@ module Cardano.Ledger.SafeHash (
 
   --
   -- $SAFE
-  SafeHash,
+  SafeHash (..),
   SafeToHash (..),
 
   -- * Creating SafeHash
@@ -72,6 +72,7 @@ import Data.ByteString.Short (ShortByteString, fromShort)
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Default.Class (Default (..))
 import Data.Foldable (fold)
+import Data.MemPack
 import Data.Typeable
 import NoThunks.Class (NoThunks (..))
 
@@ -94,6 +95,8 @@ newtype SafeHash c index = SafeHash (Hash.Hash (HASH c) index)
 deriving newtype instance
   Hash.HashAlgorithm (HASH c) =>
   SafeToHash (SafeHash c index)
+
+deriving newtype instance Crypto c => MemPack (SafeHash c index)
 
 deriving newtype instance HeapWords (SafeHash c i)
 
