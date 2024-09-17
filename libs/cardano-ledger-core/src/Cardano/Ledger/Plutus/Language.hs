@@ -92,6 +92,7 @@ import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Either (isRight)
 import Data.Ix (Ix)
 import Data.Kind (Type)
+import Data.MemPack
 import Data.Proxy (Proxy (..))
 import Data.Text (Text)
 import Data.Typeable (Typeable, gcast)
@@ -149,7 +150,7 @@ newtype Plutus (l :: Language) = Plutus
   { plutusBinary :: PlutusBinary
   }
   deriving stock (Show, Generic)
-  deriving newtype (Eq, Ord, SafeToHash, NoThunks, NFData)
+  deriving newtype (Eq, Ord, SafeToHash, NoThunks, NFData, MemPack)
 
 plutusSLanguage :: PlutusLanguage l => proxy l -> SLanguage l
 plutusSLanguage _ = isLanguage
@@ -201,7 +202,7 @@ plutusFromRunnable = Plutus . PlutusBinary . P.serialisedScript . plutusRunnable
 -- | Binary representation of a Plutus script.
 newtype PlutusBinary = PlutusBinary {unPlutusBinary :: ShortByteString}
   deriving stock (Eq, Ord, Generic)
-  deriving newtype (ToCBOR, FromCBOR, EncCBOR, DecCBOR, NFData, NoThunks)
+  deriving newtype (ToCBOR, FromCBOR, EncCBOR, DecCBOR, NFData, NoThunks, MemPack)
 
 instance Show PlutusBinary where
   show = show . B64.encode . fromShort . unPlutusBinary

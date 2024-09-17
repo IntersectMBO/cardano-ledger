@@ -99,6 +99,7 @@ import Data.Coerce (Coercible, coerce)
 import Data.Default (Default (..))
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
+import Data.MemPack
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -226,6 +227,7 @@ newtype KeyHash (r :: KeyRole) = KeyHash
     , ToJSON
     , FromJSON
     , Default
+    , MemPack
     )
 
 instance HasKeyRole KeyHash

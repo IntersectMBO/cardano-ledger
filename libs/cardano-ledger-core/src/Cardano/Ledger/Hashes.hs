@@ -34,6 +34,7 @@ import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import Data.MemPack
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -82,4 +83,5 @@ newtype ScriptHash
     , FromJSON
     , ToJSONKey
     , FromJSONKey
+    , MemPack
     )

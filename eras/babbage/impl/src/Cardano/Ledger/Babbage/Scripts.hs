@@ -33,6 +33,8 @@ import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Control.DeepSeq (NFData (..), rwhnf)
+import Data.MemPack
+import Data.Word
 import GHC.Generics
 import NoThunks.Class (NoThunks (..))
 
@@ -127,3 +129,18 @@ instance NFData (PlutusScript BabbageEra) where
 instance NoThunks (PlutusScript BabbageEra)
 instance SafeToHash (PlutusScript BabbageEra) where
   originalBytes ps = withPlutusScript ps originalBytes
+
+instance MemPack (PlutusScript BabbageEra) where
+  packedByteCount = \case
+    BabbagePlutusV1 script -> 1 + packedByteCount script
+    BabbagePlutusV2 script -> 1 + packedByteCount script
+  packM = \case
+    BabbagePlutusV1 script -> packM (0 :: Word8) >> packM script
+    BabbagePlutusV2 script -> packM (1 :: Word8) >> packM script
+  {-# INLINE packM #-}
+  unpackM =
+    unpackM >>= \case
+      0 -> BabbagePlutusV1 <$> unpackM
+      1 -> BabbagePlutusV2 <$> unpackM
+      n -> fail $ "Unrecognized Tag: " ++ show (n :: Word8)
+  {-# INLINE unpackM #-}

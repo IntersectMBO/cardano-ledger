@@ -111,6 +111,7 @@ library
     deepseq,
     groups,
     heapwords,
+    mempack,
     microlens,
     mtl,
     nothunks,
