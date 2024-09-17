@@ -12,6 +12,7 @@ import qualified Test.Cardano.Ledger.Conway.BinarySpec as Binary
 import qualified Test.Cardano.Ledger.Conway.CommitteeRatifySpec as CommitteeRatify
 import qualified Test.Cardano.Ledger.Conway.DRepRatifySpec as DRepRatify
 import qualified Test.Cardano.Ledger.Conway.GenesisSpec as Genesis
+import qualified Test.Cardano.Ledger.Conway.GoldenTranslation as Golden
 import qualified Test.Cardano.Ledger.Conway.GovActionReorderSpec as GovActionReorder
 import qualified Test.Cardano.Ledger.Conway.Imp as Imp
 import Test.Cardano.Ledger.Conway.Plutus.PlutusSpec as PlutusSpec
@@ -24,6 +25,7 @@ main :: IO ()
 main =
   ledgerTestMain $
     describe "Conway" $ do
+      Golden.spec
       Spec.spec
       Proposals.spec
       Binary.spec

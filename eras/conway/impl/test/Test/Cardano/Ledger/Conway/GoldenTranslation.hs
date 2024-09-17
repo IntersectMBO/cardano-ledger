@@ -11,28 +11,26 @@
 
 -- | Deserializes `TranslationInstance`s from golden/translations.cbor file.
 --
--- Each instance represents arguments passed to `ExtendedUTxO.txInfo` along with the produced result.
--- This test checks that calling `alonzoTxInfo` with the arguments from this file, produces the same result as in the file.
---
 -- To regenerate the golden file (for example, if the logic in the translation changes),
 -- run the following command from the root of the repository:
--- cabal run cardano-ledger-alonzo:gen-golden"
-module Test.Cardano.Ledger.Alonzo.GoldenTranslation (
-  tests,
+-- cabal run cardano-ledger-<era>:gen-golden"
+module Test.Cardano.Ledger.Conway.GoldenTranslation (
+  spec,
 )
 where
 
-import Cardano.Ledger.Alonzo (Alonzo)
-import Paths_cardano_ledger_alonzo (getDataFileName)
+import Cardano.Ledger.Conway (Conway)
+import Paths_cardano_ledger_conway (getDataFileName)
 import Test.Cardano.Ledger.Alonzo.Translation.Golden (assertTranslationResultsMatchGolden)
 import Test.Cardano.Ledger.Common
+import Test.Cardano.Ledger.Conway.Translation.TranslatableGen ()
 import Test.HUnit (Assertion)
 
-tests :: Spec
-tests =
-  describe "Golden translation tests" $ do
-    it "golden/translations.cbor" $
-      goldenAssertion "golden/translations.cbor"
+spec :: Spec
+spec =
+  describe "Golden translation tests" $
+    it "golden/translation.cbor" $
+      check "golden/translations.cbor"
 
-goldenAssertion :: String -> Assertion
-goldenAssertion file = assertTranslationResultsMatchGolden @Alonzo (getDataFileName file)
+check :: String -> Assertion
+check file = assertTranslationResultsMatchGolden @Conway (getDataFileName file)
