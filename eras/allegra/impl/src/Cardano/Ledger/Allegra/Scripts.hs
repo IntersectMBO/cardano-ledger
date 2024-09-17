@@ -91,6 +91,7 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireMOf,
   pattern RequireSignature,
  )
+import Data.MemPack
 
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.DeepSeq (NFData (..))
@@ -214,7 +215,7 @@ instance Era era => DecCBOR (Annotator (TimelockRaw era)) where
 
 newtype Timelock era = TimelockConstr (MemoBytes TimelockRaw era)
   deriving (Eq, Generic)
-  deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash)
+  deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash, MemPack)
 
 instance Era era => EncCBOR (Timelock era)
 

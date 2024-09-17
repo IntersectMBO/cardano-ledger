@@ -75,6 +75,7 @@ library
     cborg,
     containers,
     deepseq,
+    mempack,
     microlens,
     nothunks,
     small-steps >=1.1,

@@ -40,6 +40,7 @@ module Cardano.Ledger.MemoBytes.Internal (
   printMemo,
   shortToLazy,
   contentsEq,
+  decodeMemoBytes,
 
   -- * Memoized
   Memoized (RawType),
@@ -66,6 +67,7 @@ import Cardano.Ledger.Binary (
   Decoder,
   EncCBOR,
   decodeAnnotated,
+  decodeFullAnnotator,
   serialize,
   withSlice,
  )
@@ -75,12 +77,14 @@ import Cardano.Ledger.Core.Era (Era (EraCrypto), eraProtVerLow)
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.SafeHash (SafeHash, SafeToHash (..))
 import Control.DeepSeq (NFData (..))
+import Data.ByteString (ByteString)
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Lazy as Lazy
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import qualified Data.ByteString.Short as SBS (length)
 import Data.Coerce
+import Data.MemPack
+import qualified Data.Text as T
 import Data.Typeable
 import GHC.Base (Type)
 import GHC.Generics (Generic)
@@ -110,6 +114,25 @@ pattern Memo memoType memoBytes <-
     Memo mt mb = mkMemoBytes mt (shortToLazy mb)
 
 {-# COMPLETE Memo #-}
+
+instance (Typeable t, Era era, DecCBOR (Annotator (t era))) => MemPack (MemoBytes t era) where
+  packedByteCount = packedByteCount . mbBytes
+  {-# INLINE packedByteCount #-}
+  packM = packM . mbBytes
+  {-# INLINE packM #-}
+  unpackM = unpackM >>= decodeMemoBytes
+  {-# INLINE unpackM #-}
+
+decodeMemoBytes ::
+  forall t era m.
+  (Typeable t, Era era, DecCBOR (Annotator (t era)), MonadFail m) => ByteString -> m (MemoBytes t era)
+decodeMemoBytes bs =
+  either (fail . show) pure $
+    decodeFullAnnotator
+      (eraProtVerLow @era)
+      (T.pack (typeName @(MemoBytes t era)))
+      decCBOR
+      (BSL.fromStrict bs)
 
 type family MemoHashIndex (t :: Type -> Type) :: Type
 
@@ -147,7 +170,7 @@ instance SafeToHash (MemoBytes t era) where
   originalBytesSize = SBS.length . mbBytes
 
 -- | Turn a lazy bytestring into a short bytestring.
-shorten :: Lazy.ByteString -> ShortByteString
+shorten :: BSL.ByteString -> ShortByteString
 shorten x = toShort (toStrict x)
 
 -- | Useful when deriving DecCBOR(Annotator T)

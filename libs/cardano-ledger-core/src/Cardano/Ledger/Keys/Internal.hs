@@ -99,6 +99,7 @@ import Data.Coerce (Coercible, coerce)
 import Data.Default (Default (..))
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
+import Data.MemPack
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -227,6 +228,8 @@ newtype KeyHash (r :: KeyRole) c = KeyHash
   {unKeyHash :: Hash.Hash (ADDRHASH c) (DSIGN.VerKeyDSIGN (DSIGN c))}
   deriving (Show, Eq, Ord)
   deriving newtype (NFData, NoThunks, Generic)
+
+deriving newtype instance Crypto c => MemPack (KeyHash disc c)
 
 deriving newtype instance (Crypto c, Typeable r) => ToCBOR (KeyHash r c)
 

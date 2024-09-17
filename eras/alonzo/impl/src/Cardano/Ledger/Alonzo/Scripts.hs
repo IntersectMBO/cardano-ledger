@@ -117,6 +117,7 @@ import qualified Data.ByteString as BS
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, isJust)
+import Data.MemPack
 import Data.Typeable
 import Data.Word (Word16, Word32, Word8)
 import GHC.Generics (Generic)
@@ -420,6 +421,21 @@ data AlonzoScript era
   | PlutusScript !(PlutusScript era)
   deriving (Generic)
 
+instance (Era era, MemPack (PlutusScript era)) => MemPack (AlonzoScript era) where
+  packedByteCount = \case
+    TimelockScript script -> 1 + packedByteCount script
+    PlutusScript script -> 1 + packedByteCount script
+  packM = \case
+    TimelockScript script -> packM (0 :: Word8) >> packM script
+    PlutusScript script -> packM (1 :: Word8) >> packM script
+  {-# INLINE packM #-}
+  unpackM =
+    unpackM >>= \case
+      0 -> TimelockScript <$> unpackM
+      1 -> PlutusScript <$> unpackM
+      n -> fail $ "Unrecognized Tag: " ++ show (n :: Word8)
+  {-# INLINE unpackM #-}
+
 deriving instance Eq (PlutusScript era) => Eq (AlonzoScript era)
 
 instance (Era era, NoThunks (PlutusScript era)) => NoThunks (AlonzoScript era)
@@ -492,7 +508,7 @@ instance Crypto c => AlonzoEraScript (AlonzoEra c) where
   {-# SPECIALIZE instance AlonzoEraScript (AlonzoEra StandardCrypto) #-}
 
   newtype PlutusScript (AlonzoEra c) = AlonzoPlutusV1 (Plutus 'PlutusV1)
-    deriving newtype (Eq, Ord, Show, NFData, NoThunks, SafeToHash, Generic)
+    deriving newtype (Eq, Ord, Show, NFData, NoThunks, SafeToHash, Generic, MemPack)
 
   type PlutusPurpose f (AlonzoEra c) = AlonzoPlutusPurpose f (AlonzoEra c)
 

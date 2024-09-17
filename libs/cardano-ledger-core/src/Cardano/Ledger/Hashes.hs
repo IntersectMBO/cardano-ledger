@@ -35,6 +35,7 @@ import Cardano.Ledger.Crypto (ADDRHASH, Crypto)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import Data.MemPack
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -73,6 +74,8 @@ newtype ScriptHash c
   = ScriptHash (Hash.Hash (ADDRHASH c) EraIndependentScript)
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoThunks)
+
+deriving newtype instance Crypto c => MemPack (ScriptHash c)
 
 deriving newtype instance Crypto c => ToCBOR (ScriptHash c)
 
