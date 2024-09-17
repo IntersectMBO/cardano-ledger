@@ -17,8 +17,17 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
-module Cardano.Ledger.Allegra.TxBody (
+-- | Provides Allegra TxBody internals
+--
+-- = Warning
+--
+-- This module is considered __internal__.
+--
+-- The contents of this module may change __in any way whatsoever__
+-- and __without any warning__ between minor versions of this package.
+module Cardano.Ledger.Allegra.TxBody.Internal (
   AllegraEraTxBody (..),
   AllegraTxBody (
     AllegraTxBody,

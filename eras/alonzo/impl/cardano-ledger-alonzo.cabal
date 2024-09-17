@@ -44,8 +44,10 @@ library
         Cardano.Ledger.Alonzo.Tx
         Cardano.Ledger.Alonzo.TxAuxData
         Cardano.Ledger.Alonzo.TxBody
+        Cardano.Ledger.Alonzo.TxBody.Internal
         Cardano.Ledger.Alonzo.TxOut
         Cardano.Ledger.Alonzo.TxSeq
+        Cardano.Ledger.Alonzo.TxSeq.Internal
         Cardano.Ledger.Alonzo.TxWits
         Cardano.Ledger.Alonzo.UTxO
 

@@ -12,10 +12,17 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_HADDOCK not-home #-}
 
--- | TxSeq. This is effectively the block body, which consists of a sequence of
--- transactions with segregated witness and metadata information.
-module Cardano.Ledger.Alonzo.TxSeq (
+-- | Provides TxSeq internals
+--
+-- = Warning
+--
+-- This module is considered __internal__.
+--
+-- The contents of this module may change __in any way whatsoever__
+-- and __without any warning__ between minor versions of this package.
+module Cardano.Ledger.Alonzo.TxSeq.Internal (
   AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
   TxSeq,
   hashTxSeq,
