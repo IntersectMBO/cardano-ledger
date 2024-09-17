@@ -70,6 +70,7 @@ import Data.Aeson.Types (toJSONKeyText)
 import Data.Default (Default (..))
 import Data.Foldable (asum)
 import Data.Maybe (fromMaybe)
+import Data.MemPack
 import qualified Data.Text as T
 import Data.Typeable (Typeable)
 import Data.Word
@@ -89,6 +90,21 @@ data Credential (kr :: KeyRole) c
   deriving (Show, Eq, Generic, Ord)
 
 instance Crypto c => NFData (Credential r c)
+
+instance (Crypto c, Typeable kr) => MemPack (Credential kr c) where
+  packedByteCount = \case
+    ScriptHashObj hash -> 1 + packedByteCount hash
+    KeyHashObj hash -> 1 + packedByteCount hash
+  packM = \case
+    ScriptHashObj hash -> packM (0 :: Word8) >> packM hash
+    KeyHashObj hash -> packM (1 :: Word8) >> packM hash
+  {-# INLINE packM #-}
+  unpackM =
+    unpackM >>= \case
+      0 -> ScriptHashObj <$> unpackM
+      1 -> KeyHashObj <$> unpackM
+      n -> fail $ "Unrecognized Tag: " ++ show (n :: Word8)
+  {-# INLINE unpackM #-}
 
 instance Crypto e => Default (Credential r e) where
   def = KeyHashObj def

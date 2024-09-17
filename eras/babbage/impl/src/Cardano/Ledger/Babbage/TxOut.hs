@@ -75,6 +75,7 @@ import Cardano.Ledger.BaseTypes (
  )
 import Cardano.Ledger.Binary (
   Annotator (..),
+  ByteArray (unBA),
   DecCBOR (..),
   DecShareCBOR (..),
   Decoder,
@@ -88,6 +89,7 @@ import Cardano.Ledger.Binary (
   TokenType (..),
   cborError,
   decodeBreakOr,
+  decodeByteArray,
   decodeFullAnnotator,
   decodeListLenOrIndef,
   decodeNestedCborBytes,
@@ -112,12 +114,13 @@ import Cardano.Ledger.Plutus.Data (
  )
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (rnf), rwhnf)
-import Control.Monad ((<$!>))
 import Data.Aeson (KeyValue, ToJSON (..), object, pairs, (.=))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
+import Data.MemPack
 import qualified Data.Text as T
 import Data.Typeable (Proxy (..), (:~:) (Refl))
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import Lens.Micro (Lens', lens, to, (^.))
@@ -157,6 +160,75 @@ data BabbageTxOut era
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !DataHash32
   deriving (Generic)
+
+instance
+  ( Era era
+  , MemPack (CompactForm (Value era))
+  , MemPack (CompactAddr (EraCrypto era))
+  , MemPack (Script era)
+  ) =>
+  MemPack (BabbageTxOut era)
+  where
+  packedByteCount = \case
+    TxOutCompact' cAddr cValue ->
+      1 + packedByteCount cAddr + packedByteCount cValue
+    TxOutCompactDH' cAddr cValue dataHash ->
+      1 + packedByteCount cAddr + packedByteCount cValue + packedByteCount dataHash
+    TxOutCompactDatum cAddr cValue datum ->
+      1 + packedByteCount cAddr + packedByteCount cValue + packedByteCount datum
+    TxOutCompactRefScript cAddr cValue NoDatum script ->
+      1 + packedByteCount cAddr + packedByteCount cValue + packedByteCount script
+    TxOutCompactRefScript cAddr cValue (DatumHash datumHash) script ->
+      1
+        + packedByteCount cAddr
+        + packedByteCount cValue
+        + packedByteCount datumHash
+        + packedByteCount script
+    TxOutCompactRefScript cAddr cValue (Datum datum) script ->
+      1
+        + packedByteCount cAddr
+        + packedByteCount cValue
+        + packedByteCount datum
+        + packedByteCount script
+    TxOut_AddrHash28_AdaOnly cred addr28 cCoin ->
+      1 + packedByteCount cred + packedByteCount addr28 + packedByteCount cCoin
+    TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28 cCoin dataHash32 ->
+      1
+        + packedByteCount cred
+        + packedByteCount addr28
+        + packedByteCount cCoin
+        + packedByteCount dataHash32
+  {-# INLINE packedByteCount #-}
+  packM = \case
+    TxOutCompact' cAddr cValue ->
+      packM (0 :: Word8) >> packM cAddr >> packM cValue
+    TxOutCompactDH' cAddr cValue dataHash ->
+      packM (1 :: Word8) >> packM cAddr >> packM cValue >> packM dataHash
+    TxOutCompactDatum cAddr cValue datum ->
+      packM (2 :: Word8) >> packM cAddr >> packM cValue >> packM datum
+    TxOutCompactRefScript cAddr cValue NoDatum script ->
+      packM (3 :: Word8) >> packM cAddr >> packM cValue >> packM script
+    TxOutCompactRefScript cAddr cValue (DatumHash datumHash) script ->
+      packM (4 :: Word8) >> packM cAddr >> packM cValue >> packM datumHash >> packM script
+    TxOutCompactRefScript cAddr cValue (Datum datum) script ->
+      packM (5 :: Word8) >> packM cAddr >> packM cValue >> packM datum >> packM script
+    TxOut_AddrHash28_AdaOnly cred addr28 cCoin ->
+      packM (6 :: Word8) >> packM cred >> packM addr28 >> packM cCoin
+    TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28 cCoin dataHash32 ->
+      packM (7 :: Word8) >> packM cred >> packM addr28 >> packM cCoin >> packM dataHash32
+  {-# INLINE packM #-}
+  unpackM =
+    unpackM >>= \case
+      0 -> TxOutCompact' <$> unpackM <*> unpackM
+      1 -> TxOutCompactDH' <$> unpackM <*> unpackM <*> unpackM
+      2 -> TxOutCompactDatum <$> unpackM <*> unpackM <*> unpackM
+      3 -> TxOutCompactRefScript <$> unpackM <*> unpackM <*> pure NoDatum <*> unpackM
+      4 -> TxOutCompactRefScript <$> unpackM <*> unpackM <*> (DatumHash <$> unpackM) <*> unpackM
+      5 -> TxOutCompactRefScript <$> unpackM <*> unpackM <*> (Datum <$> unpackM) <*> unpackM
+      6 -> TxOut_AddrHash28_AdaOnly <$> unpackM <*> unpackM <*> unpackM
+      7 -> TxOut_AddrHash28_AdaOnly_DataHash32 <$> unpackM <*> unpackM <*> unpackM <*> unpackM
+      n -> fail $ "Unrecognized Tag: " ++ show (n :: Word8)
+  {-# INLINE unpackM #-}
 
 instance Crypto c => EraTxOut (BabbageEra c) where
   {-# SPECIALIZE instance EraTxOut (BabbageEra StandardCrypto) #-}
@@ -468,10 +540,22 @@ instance (EraScript era, Val (Value era)) => DecCBOR (BabbageTxOut era) where
   decCBOR = decodeBabbageTxOut fromCborBothAddr
   {-# INLINE decCBOR #-}
 
-instance (EraScript era, Val (Value era)) => DecShareCBOR (BabbageTxOut era) where
+instance
+  ( EraScript era
+  , Val (Value era)
+  , MemPack (Script era)
+  , MemPack (CompactForm (Value era))
+  ) =>
+  DecShareCBOR (BabbageTxOut era)
+  where
   type Share (BabbageTxOut era) = Interns (Credential 'Staking (EraCrypto era))
-  decShareCBOR credsInterns =
-    internBabbageTxOut (interns credsInterns) <$!> decodeBabbageTxOut fromCborRigorousBothAddr
+  decShareCBOR credsInterns = do
+    txOut <-
+      peekTokenType >>= \case
+        TypeBytes -> decodeByteArray >>= either (fail . show) pure . unpack . unBA
+        TypeBytesIndef -> decodeByteArray >>= either (fail . show) pure . unpack . unBA
+        _ -> decodeBabbageTxOut fromCborRigorousBothAddr
+    pure $! internBabbageTxOut (interns credsInterns) txOut
   {-# INLINEABLE decShareCBOR #-}
 
 internBabbageTxOut ::

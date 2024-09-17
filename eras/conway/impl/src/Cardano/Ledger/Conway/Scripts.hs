@@ -56,6 +56,7 @@ import Cardano.Ledger.Shelley.Scripts (ShelleyEraScript (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson (ToJSON (..), (.=))
+import Data.MemPack
 import Data.Typeable
 import Data.Word (Word16, Word32, Word8)
 import GHC.Generics
@@ -184,6 +185,24 @@ instance NFData (PlutusScript (ConwayEra c)) where
 instance NoThunks (PlutusScript (ConwayEra c))
 instance Crypto c => SafeToHash (PlutusScript (ConwayEra c)) where
   originalBytes ps = withPlutusScript ps originalBytes
+
+instance Crypto c => MemPack (PlutusScript (ConwayEra c)) where
+  packedByteCount = \case
+    ConwayPlutusV1 script -> 1 + packedByteCount script
+    ConwayPlutusV2 script -> 1 + packedByteCount script
+    ConwayPlutusV3 script -> 1 + packedByteCount script
+  packM = \case
+    ConwayPlutusV1 script -> packM (0 :: Word8) >> packM script
+    ConwayPlutusV2 script -> packM (1 :: Word8) >> packM script
+    ConwayPlutusV3 script -> packM (2 :: Word8) >> packM script
+  {-# INLINE packM #-}
+  unpackM =
+    unpackM >>= \case
+      0 -> ConwayPlutusV1 <$> unpackM
+      1 -> ConwayPlutusV2 <$> unpackM
+      2 -> ConwayPlutusV3 <$> unpackM
+      n -> fail $ "Unrecognized Tag: " ++ show (n :: Word8)
+  {-# INLINE unpackM #-}
 
 data ConwayPlutusPurpose f era
   = ConwaySpending !(f Word32 (TxIn (EraCrypto era)))

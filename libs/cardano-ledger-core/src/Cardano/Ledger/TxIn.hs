@@ -31,10 +31,11 @@ import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
 import Cardano.Ledger.Binary (DecCBOR (decCBOR), EncCBOR (..), decodeRecordNamed, encodeListLen)
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.SafeHash (SafeHash, extractHash)
+import Cardano.Ledger.SafeHash (SafeHash (..), extractHash)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON (..))
 import Data.Aeson.Types (ToJSONKey (..), toJSONKeyText)
+import Data.MemPack (MemPack (..))
 import Data.Text (Text)
 import qualified Data.Text as Text
 import GHC.Generics (Generic)
@@ -55,6 +56,14 @@ import NoThunks.Class (NoThunks (..))
 newtype TxId c = TxId {unTxId :: SafeHash c EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks, ToJSON, FromJSON)
+
+instance Crypto c => MemPack (TxId c) where
+  packedByteCount = packedByteCount . unTxId
+  {-# INLINE packedByteCount #-}
+  packM = packM . unTxId
+  {-# INLINE packM #-}
+  unpackM = TxId <$> unpackM
+  {-# INLINE unpackM #-}
 
 deriving newtype instance Crypto c => HeapWords (TxId c)
 
@@ -84,6 +93,14 @@ txInToText (TxIn (TxId txidHash) ix) =
 -- | The input of a UTxO.
 data TxIn c = TxIn !(TxId c) {-# UNPACK #-} !TxIx
   deriving (Generic)
+
+instance Crypto c => MemPack (TxIn c) where
+  packedByteCount (TxIn txId txIx) = packedByteCount txId + packedByteCount txIx
+  {-# INLINE packedByteCount #-}
+  packM (TxIn txId txIx) = packM txId >> packM txIx
+  {-# INLINE packM #-}
+  unpackM = TxIn <$> unpackM <*> unpackM
+  {-# INLINE unpackM #-}
 
 -- | Construct `TxIn` while throwing an error for an out of range `TxIx`. Make
 -- sure to use it only for testing.
