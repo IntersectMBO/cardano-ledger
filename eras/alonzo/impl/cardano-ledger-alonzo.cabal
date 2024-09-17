@@ -89,6 +89,7 @@ library
     containers,
     data-default,
     deepseq,
+    mempack,
     microlens,
     mtl,
     nothunks,

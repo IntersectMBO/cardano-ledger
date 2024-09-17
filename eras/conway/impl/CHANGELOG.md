@@ -2,6 +2,7 @@
 
 ## 1.19.0.0
 
+* Add `MemPack` instance for `PlutusScript ConwayEra`
 * Deprecate `Conway` type synonym
 * Remove crypto parametrization from `ConwayEra`
 

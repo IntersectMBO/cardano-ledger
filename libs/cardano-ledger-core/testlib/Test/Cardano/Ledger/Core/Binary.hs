@@ -8,6 +8,7 @@
 
 module Test.Cardano.Ledger.Core.Binary where
 
+import Cardano.Ledger.Binary (decNoShareCBOR, encodeMemPack)
 import Cardano.Ledger.Core
 import Cardano.Ledger.MemoBytes (EqRaw (eqRaw))
 import Data.Default (Default (def))
@@ -205,6 +206,14 @@ specUpgrade BinaryUpgradeOpts {isScriptUpgradeable, isTxUpgradeable} =
       specTxUpgrade @era
     when isScriptUpgradeable $
       specScriptUpgrade @era
+    -- This is a test that ensures that binary version of a TxOut is backwards compatible as it is
+    -- stored in the ledger state. This property is only important for using MemPack with UTxOHD
+    embedTripSpec
+      (eraProtVerHigh @(PreviousEra era))
+      (eraProtVerLow @era)
+      (mkTrip encodeMemPack decNoShareCBOR)
+      $ \(txOutCur :: TxOut era) (txOutPrev :: TxOut (PreviousEra era)) ->
+        upgradeTxOut txOutPrev `shouldBe` txOutCur
 
 expectRawEqual :: (EqRaw a, ToExpr a, HasCallStack) => Doc AnsiStyle -> a -> a -> Expectation
 expectRawEqual thing expected actual =

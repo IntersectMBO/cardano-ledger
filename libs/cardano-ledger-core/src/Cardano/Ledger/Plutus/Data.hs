@@ -73,6 +73,7 @@ import Data.Aeson (ToJSON (..), Value (Null))
 import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Coerce (coerce)
+import Data.MemPack
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -140,7 +141,7 @@ getPlutusData (getMemoRawType -> PlutusData d) = d
 -- exported, in order to prevent invalid creation of data from arbitrary binary
 -- data. Use `makeBinaryData` for smart construction.
 newtype BinaryData era = BinaryData ShortByteString
-  deriving newtype (Eq, NoThunks, Ord, Show, SafeToHash)
+  deriving newtype (Eq, NoThunks, Ord, Show, SafeToHash, MemPack)
   deriving (Generic)
 
 instance HashAnnotated (BinaryData era) EraIndependentData
@@ -208,6 +209,25 @@ data Datum era
   | DatumHash !DataHash
   | Datum !(BinaryData era)
   deriving (Eq, Generic, NoThunks, Ord, Show)
+
+instance Era era => MemPack (Datum era) where
+  packedByteCount = \case
+    NoDatum -> packedTagByteCount
+    DatumHash dataHash -> packedTagByteCount + packedByteCount dataHash
+    Datum binaryData -> packedTagByteCount + packedByteCount binaryData
+  {-# INLINE packedByteCount #-}
+  packM = \case
+    NoDatum -> packTagM 0
+    DatumHash dataHash -> packTagM 1 >> packM dataHash
+    Datum binaryData -> packTagM 2 >> packM binaryData
+  {-# INLINE packM #-}
+  unpackM =
+    unpackM >>= \case
+      0 -> pure NoDatum
+      1 -> DatumHash <$> unpackM
+      2 -> Datum <$> unpackM
+      n -> unknownTagM @(Datum era) n
+  {-# INLINE unpackM #-}
 
 instance Era era => EncCBOR (Datum era) where
   encCBOR d = encode $ case d of

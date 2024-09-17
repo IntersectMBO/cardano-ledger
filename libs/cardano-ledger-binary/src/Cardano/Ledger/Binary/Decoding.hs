@@ -36,6 +36,7 @@ module Cardano.Ledger.Binary.Decoding (
 
   -- * Helpers
   toStrictByteString,
+  decodeMemPack,
 )
 where
 
@@ -56,6 +57,7 @@ import Data.Bifunctor (bimap)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Internal as BSL
+import Data.MemPack
 import Data.Proxy (Proxy (Proxy))
 import Data.Text (Text)
 
@@ -268,3 +270,7 @@ decodeNestedCborBytes = decodeNestedCborTag >> decodeBytes
 -- Decode the bytes to get an @('Annotator' f)@ where f is a function that when given
 -- original bytes produces a value of type @t@, then apply @f@ to @('Full' bytes)@ to get
 -- the answer.
+
+-- | First decode as CBOR bytes and then use MemPack unpacker on it
+decodeMemPack :: MemPack a => Decoder s a
+decodeMemPack = unpackMonadFail . unBA =<< decodeByteArray

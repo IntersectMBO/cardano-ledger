@@ -1102,23 +1102,23 @@ tests =
             mconcat
               [ "8700a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b0825410aa158"
               , "1ca646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a03848219271019"
-              , "03e8828383a0a00084a0a0a0a08482a0a0a0a084a0a0000086a1825820ee155ace9c4029"
-              , "2074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e250082583900cb9358529df4"
-              , "729c3246a2a033cb9821abbfd16de4888005904abc410d6a577e9441ad8ed9663931906e"
-              , "4d43ece8f82c712b1d0235affb060a1903e80185a0a092000000190800000000001864d8"
-              , "1e820001d81e820001d81e820001d81e8200018100020001009200000019080000000000"
-              , "1864d81e820001d81e820001d81e820001d81e820001810002000000810082a0a0008483"
-              , "a0a0a083a0a0a083a0a0a00082a000818300880082020082a000000000a0a0840185a080"
-              , "00820200a0a082a0a082a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b"
-              , "047b08254183820101015820c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e13"
-              , "10c28e621dd87b4c01a0"
+              , "03e8828383a0a00084a0a0a0a08482a0a0a0a084a0a0000086a15822ee155ace9c402920"
+              , "74cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e250000583d003900cb9358529d"
+              , "f4729c3246a2a033cb9821abbfd16de4888005904abc410d6a577e9441ad8ed966393190"
+              , "6e4d43ece8f82c712b1d0235affb06000a1903e80185a0a0920000001908000000000018"
+              , "64d81e820001d81e820001d81e820001d81e820001810002000100920000001908000000"
+              , "00001864d81e820001d81e820001d81e820001d81e820001810002000000810082a0a000"
+              , "8483a0a0a083a0a0a083a0a0a00082a000818300880082020082a000000000a0a0840185"
+              , "a08000820200a0a082a0a082a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aad85006"
+              , "805b047b08254183820101015820c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae"
+              , "3e1310c28e621dd87b4c01a0"
               ]
        in testCase "ledger state golden test" $
             unless (actual == expected) $
               assertFailure . ansiDocToString $
                 Pretty.vsep
                   [ "Expected: " <> Pretty.viaShow expectedHex
-                  , "Actual: " <> Pretty.viaShow actualHex
+                  , "Actual:   " <> Pretty.viaShow actualHex
                   , "Difference:"
                   , Pretty.indent 2 $ diffExpr (CBORBytes expected) (CBORBytes actual)
                   ]

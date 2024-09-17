@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
@@ -45,6 +46,7 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Coerce (coerce)
 import Data.Group (Abelian, Group (..))
+import Data.MemPack
 import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
 import Data.Primitive.Types
@@ -121,6 +123,19 @@ instance Compactible Coin where
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
   fromCompact (CompactCoin c) = word64ToCoin c
+
+-- | This instance prefixes with a 0 Tag for binary compatibility with compact form of multiassets.
+instance MemPack (CompactForm Coin) where
+  packedByteCount (CompactCoin c) =
+    packedTagByteCount + packedByteCount (VarLen c)
+  {-# INLINE packedByteCount #-}
+  packM (CompactCoin c) = packTagM 0 >> packM (VarLen c)
+  {-# INLINE packM #-}
+  unpackM = do
+    unpackTagM >>= \case
+      0 -> CompactCoin . unVarLen <$> unpackM
+      n -> unknownTagM @(CompactForm Coin) n
+  {-# INLINE unpackM #-}
 
 instance Compactible DeltaCoin where
   newtype CompactForm DeltaCoin = CompactDeltaCoin Word64

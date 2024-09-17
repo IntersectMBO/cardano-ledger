@@ -2,6 +2,11 @@
 
 ## 1.17.0.0
 
+* Require `MemPack` instance for `TxOut` and `CompactForm (Value era)` for `EraTxOut` type class.
+* Add `decodeMemoBytes`
+* Add `MemPack` instance for `CompactAddr`, `TxIx`, `TxId`, `TxIn`, `CompactForm Coin`,
+  `KeyHash`, `ScriptHash`, `Credential`, `SafeHash`, `MemoBytes`, `Plutus`, `PlutusBinary`, `BinaryData` and `Datum`
+* Add `DecShareCBOR` instance for `TxIn`
 * Add `fromCborRigorousBothAddr`
 * Add `SlotNo32` and use it in `Ptr` definition
 * Add `mkPtrNormalized`

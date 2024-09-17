@@ -24,6 +24,7 @@ module Cardano.Ledger.Binary.Encoding (
 
   -- * Tools
   runByteBuilder,
+  encodeMemPack,
 )
 where
 
@@ -31,10 +32,12 @@ import qualified Cardano.Crypto.Hash.Class as C
 import Cardano.Ledger.Binary.Encoding.EncCBOR
 import Cardano.Ledger.Binary.Encoding.Encoder
 import Cardano.Ledger.Binary.Version
+import Codec.CBOR.ByteArray.Sliced (fromByteArray)
 import qualified Data.ByteString as BS
 import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder.Extra (safeStrategy, toLazyByteStringWith)
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.MemPack as MP
 
 -- | Serialize a Haskell value with a 'EncCBOR' instance to an external binary
 --   representation.
@@ -110,3 +113,7 @@ runByteBuilder :: Int -> Builder -> BS.ByteString
 runByteBuilder !sizeHint =
   BSL.toStrict . toLazyByteStringWith (safeStrategy sizeHint (2 * sizeHint)) mempty
 {-# NOINLINE runByteBuilder #-}
+
+-- | Encode as bytes using `MP.MemPack` and then encode those bytes as CBOR
+encodeMemPack :: MP.MemPack a => a -> Encoding
+encodeMemPack = encodeByteArray . fromByteArray . MP.pack

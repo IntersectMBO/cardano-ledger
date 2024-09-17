@@ -2,6 +2,7 @@
 
 ## 1.8.0.0
 
+* Add `MemPack` instance for `CompactValue` and `CompactForm MaryValue`
 * Deprecate `Mary` type synonym
 * Remove crypto parametrization from `MaryEra`
 
