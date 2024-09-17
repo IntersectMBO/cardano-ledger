@@ -1548,6 +1548,8 @@ ppConwayGovPredFailure x = case x of
   DisallowedVotesDuringBootstrap m -> ppSexp "DisallowedVotesDuringBootstrap" [prettyA m]
   VotersDoNotExist m -> ppSexp "VotersDoNotExist" [prettyA m]
   ZeroTreasuryWithdrawals ga -> ppSexp "ZeroTreasuryWithdrawals" [pcGovAction ga]
+  ProposalReturnAccountDoesNotExist a -> ppSexp "ProposalReturnAccountDoesNotExist" [prettyA a]
+  TreasuryWithdrawalReturnAccountsDoNotExist a -> ppSexp "TreasuryWithdrawalReturnAccountsDoNotExist" [prettyA a]
 
 instance PrettyA (ConwayGovPredFailure era) where
   prettyA = ppConwayGovPredFailure

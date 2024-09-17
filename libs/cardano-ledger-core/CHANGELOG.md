@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Add `member'` function to `UMap` module. #4639
 * Add `credKeyHash` to `Credential`
 * Remove `maxMajorPV` from `Globals`
 * Add `deleteStakingCredential` and `extractStakingCredential` to `UMap` module.
