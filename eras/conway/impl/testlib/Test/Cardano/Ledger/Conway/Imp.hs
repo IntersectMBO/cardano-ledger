@@ -20,6 +20,7 @@ import Cardano.Ledger.BaseTypes (Inject, natVersion)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure,
+  ConwayCertsPredFailure,
   ConwayDelegPredFailure,
   ConwayEpochEvent,
   ConwayGovCertPredFailure,
@@ -33,6 +34,7 @@ import Data.Typeable (Typeable)
 import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 import Test.Cardano.Ledger.Common
 import qualified Test.Cardano.Ledger.Conway.Imp.BbodySpec as Bbody
+import qualified Test.Cardano.Ledger.Conway.Imp.CertsSpec as Certs
 import qualified Test.Cardano.Ledger.Conway.Imp.DelegSpec as Deleg
 import qualified Test.Cardano.Ledger.Conway.Imp.EnactSpec as Enact
 import qualified Test.Cardano.Ledger.Conway.Imp.EpochSpec as Epoch
@@ -50,6 +52,7 @@ spec ::
   , ConwayEraImp era
   , EraSegWits era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
+  , InjectRuleFailure "LEDGER" ConwayCertsPredFailure era
   , Inject (BabbageContextError era) (ContextError era)
   , Inject (ConwayContextError era) (ContextError era)
   , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
@@ -89,6 +92,7 @@ spec = do
   describe "ConwayImpSpec - bootstrap phase (protocol version 9)" $
     withImpState @era $ do
       describe "BBODY" $ Bbody.spec @era
+      describe "CERTS" $ Certs.spec @era
       describe "DELEG" $ Deleg.spec @era
       describe "ENACT" $ Enact.relevantDuringBootstrapSpec @era
       describe "EPOCH" $ Epoch.relevantDuringBootstrapSpec @era
