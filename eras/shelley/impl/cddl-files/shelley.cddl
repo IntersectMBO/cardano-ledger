@@ -62,23 +62,23 @@ address = h'00100000000000000000000000000000000000000000000000000000001100000000
            / h'6070000000000000000000000000000000000000000000000000000000'
            / h'7080000000000000000000000000000000000000000000000000000000'
 
-block = [header,
-         transaction_bodies : [* transaction_body],
-         transaction_witness_sets : [* transaction_witness_set],
-         transaction_metadata_set : {* transaction_index => transaction_metadata}]
+block = [header
+        , transaction_bodies : [* transaction_body]
+        , transaction_witness_sets : [* transaction_witness_set]
+        , transaction_metadata_set : {* transaction_index => transaction_metadata}]
 
-bootstrap_witness = [public_key : $vkey,
-                     signature : $signature,
-                     chain_code : bytes .size 32,
-                     attributes : bytes]
+bootstrap_witness = [public_key : $vkey
+                    , signature : $signature
+                    , chain_code : bytes .size 32
+                    , attributes : bytes]
 
-certificate = [stake_registration // 
-               stake_deregistration // 
-               stake_delegation // 
-               pool_registration // 
-               pool_retirement // 
-               genesis_key_delegation // 
-               move_instantaneous_rewards_cert]
+certificate = [stake_registration
+               // stake_deregistration
+               // stake_delegation
+               // pool_registration
+               // pool_retirement
+               // genesis_key_delegation
+               // move_instantaneous_rewards_cert]
 
 coin = uint
 
@@ -92,17 +92,17 @@ genesishash = $hash28
 
 header = [header_body, body_signature : $kes_signature]
 
-header_body = [block_number : uint,
-               slot : uint,
-               prev_hash : $hash32 / nil,
-               issuer_vkey : $vkey,
-               vrf_vkey : $vrf_vkey,
-               nonce_vrf : $vrf_cert,
-               leader_vrf : $vrf_cert,
-               block_body_size : uint .size 4,
-               block_body_hash : $hash32,
-               operational_cert,
-               protocol_version]
+header_body = [block_number : uint
+              , slot : uint
+              , prev_hash : $hash32 / nil
+              , issuer_vkey : $vkey
+              , vrf_vkey : $vrf_vkey
+              , nonce_vrf : $vrf_cert
+              , leader_vrf : $vrf_cert
+              , block_body_size : uint .size 4
+              , block_body_hash : $hash32
+              , operational_cert
+              , protocol_version]
 
 ipv4 = bytes .size 4
 
@@ -114,13 +114,12 @@ metadata_hash = $hash32
 
 move_instantaneous_reward = [0 / 1, {* stake_credential => coin}]
 
-multisig_script = [multisig_pubkey // 
-                   multisig_all // 
-                   multisig_any // 
-                   multisig_n_of_k]
+multisig_script = [multisig_pubkey
+                   // multisig_all
+                   // multisig_any
+                   // multisig_n_of_k]
 
-nonce = [0 // 
-         1, bytes .size 32]
+nonce = [0 // 1, bytes .size 32]
 
 nonnegative_interval = #6.30([uint, positive_int])
 
@@ -134,26 +133,24 @@ positive_int = 1 .. 18446744073709551615
 
 proposed_protocol_parameter_updates = {* genesishash => protocol_param_update}
 
-protocol_param_update = {? 0 : uint,
-                         ? 1 : uint,
-                         ? 2 : uint,
-                         ? 3 : uint,
-                         ? 4 : uint .size 2,
-                         ? 5 : coin,
-                         ? 6 : coin,
-                         ? 7 : epoch,
-                         ? 8 : uint,
-                         ? 9 : nonnegative_interval,
-                         ? 10 : unit_interval,
-                         ? 11 : unit_interval,
-                         ? 12 : unit_interval,
-                         ? 13 : nonce,
-                         ? 14 : [protocol_version],
-                         ? 15 : coin}
+protocol_param_update = {? 0 : uint
+                        , ? 1 : uint
+                        , ? 2 : uint
+                        , ? 3 : uint
+                        , ? 4 : uint .size 2
+                        , ? 5 : coin
+                        , ? 6 : coin
+                        , ? 7 : epoch
+                        , ? 8 : uint
+                        , ? 9 : nonnegative_interval
+                        , ? 10 : unit_interval
+                        , ? 11 : unit_interval
+                        , ? 12 : unit_interval
+                        , ? 13 : nonce
+                        , ? 14 : [protocol_version]
+                        , ? 15 : coin}
 
-relay = [single_host_addr // 
-         single_host_name // 
-         multi_host_name]
+relay = [single_host_addr // single_host_name // multi_host_name]
 
 reward_account = h'E090000000000000000000000000000000000000000000000000000000'
                   / h'F0A0000000000000000000000000000000000000000000000000000000'
@@ -162,21 +159,20 @@ scripthash = $hash28
 
 signkeyKES = bytes .size 64
 
-stake_credential = [0, addr_keyhash // 
-                    1, scripthash]
+stake_credential = [0, addr_keyhash // 1, scripthash]
 
-transaction = [transaction_body,
-               transaction_witness_set,
-               transaction_metadata / nil]
+transaction = [transaction_body
+              , transaction_witness_set
+              , transaction_metadata / nil]
 
-transaction_body = {0 : set<transaction_input>,
-                    1 : [* transaction_output],
-                    2 : coin,
-                    3 : uint,
-                    ? 4 : [* certificate],
-                    ? 5 : withdrawals,
-                    ? 6 : update,
-                    ? 7 : metadata_hash}
+transaction_body = {0 : set<transaction_input>
+                   , 1 : [* transaction_output]
+                   , 2 : coin
+                   , 3 : uint
+                   , ? 4 : [* certificate]
+                   , ? 5 : withdrawals
+                   , ? 6 : update
+                   , ? 7 : metadata_hash}
 
 transaction_index = uint .size 2
 
@@ -194,9 +190,9 @@ transaction_metadatum_label = uint
 
 transaction_output = [address, amount : coin]
 
-transaction_witness_set = {? 0 : [* vkeywitness],
-                           ? 1 : [* multisig_script],
-                           ? 2 : [* bootstrap_witness]}
+transaction_witness_set = {? 0 : [* vkeywitness]
+                          , ? 1 : [* multisig_script]
+                          , ? 2 : [* bootstrap_witness]}
 
 unit_interval = #6.30([1, 2])
 
@@ -226,15 +222,15 @@ multisig_pubkey = (0, addr_keyhash)
 
 operational_cert = ($kes_vkey, uint, uint, $signature)
 
-pool_params = (pool_keyhash,
-               vrf_keyhash,
-               coin,
-               coin,
-               unit_interval,
-               reward_account,
-               set<addr_keyhash>,
-               [* relay],
-               pool_metadata / nil)
+pool_params = (pool_keyhash
+              , vrf_keyhash
+              , coin
+              , coin
+              , unit_interval
+              , reward_account
+              , set<addr_keyhash>
+              , [* relay]
+              , pool_metadata / nil)
 
 pool_registration = (3, pool_params)
 
