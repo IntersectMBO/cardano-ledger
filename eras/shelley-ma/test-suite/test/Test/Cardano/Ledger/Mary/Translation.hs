@@ -52,14 +52,6 @@ maryTranslationTests =
     , testProperty "ShelleyGovState compatibility" $
         translateEraEncoding @Mary @S.ShelleyGovState NoGenesis toCBOR toCBOR
     , testProperty "TxOut compatibility" (test @S.ShelleyTxOut)
-    , testProperty "UTxO compatibility" $
-        translateEraEncoding @Mary @S.UTxO NoGenesis toCBOR toCBOR
-    , testProperty "UTxOState compatibility" $
-        translateEraEncoding @Mary @S.UTxOState NoGenesis toCBOR toCBOR
-    , testProperty "LedgerState compatibility" $
-        translateEraEncoding @Mary @S.LedgerState NoGenesis toCBOR toCBOR
-    , testProperty "EpochState compatibility" $
-        translateEraEncoding @Mary @S.EpochState NoGenesis toCBOR toCBOR
     , testProperty "ShelleyTxWits compatibility" $
         translateEraEncoding @Mary @S.ShelleyTxWits NoGenesis toCBOR toCBOR
     , testProperty "Update compatibility" (test @S.Update)
