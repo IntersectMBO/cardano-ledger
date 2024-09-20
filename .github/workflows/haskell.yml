@@ -96,6 +96,15 @@ jobs:
           flags: -external-libsodium-vrf
         EOF
 
+    - name: Configure to limit the heap size for ghc 8
+      if: startsWith(${{ matrix.ghc }}, 8)
+      run: |
+        cat >> cabal.project <<EOF
+        with-compiler: $PWD/scripts/ghc-limited
+        with-hc-pkg: ghc-pkg
+        EOF
+        echo "GHC_HEAP_LIMIT=12" >> $GITHUB_ENV
+
     - name: Cabal update
       run: cabal update
 
