@@ -62,7 +62,6 @@ import Control.State.Transition (
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
-import qualified Data.Set as Set
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lens.Micro ((^.))
@@ -188,22 +187,22 @@ conwayDelegTransition = do
       checkStakeKeyNotRegistered stakeCred
       pure $ dState {dsUnified = registerStakeCredential stakeCred}
     ConwayUnRegCert stakeCred sMayRefund -> do
-      let mRDPair = UM.lookup stakeCred $ UM.RewDepUView dsUnified
+      let (mUMElem, umap) = UM.extractStakingCredential stakeCred dsUnified
           checkInvalidRefund = do
             SJust suppliedRefund <- Just sMayRefund
             -- we don't want to report invalid refund when stake credential is not registered:
-            UM.RDPair _ actualRefund <- mRDPair
+            UM.UMElem (SJust rd) _ _ _ <- mUMElem
             -- we return offending refund only when it doesn't match the expected one:
-            guard (suppliedRefund /= UM.fromCompact actualRefund)
+            guard (suppliedRefund /= UM.fromCompact (UM.rdDeposit rd))
             Just suppliedRefund
           checkStakeKeyHasZeroRewardBalance = do
-            UM.RDPair compactReward _ <- mRDPair
-            guard (compactReward /= mempty)
-            Just $ UM.fromCompact compactReward
+            UM.UMElem (SJust rd) _ _ _ <- mUMElem
+            guard (UM.rdReward rd /= mempty)
+            Just $ UM.fromCompact (UM.rdReward rd)
       failOnJust checkInvalidRefund IncorrectDepositDELEG
-      isJust mRDPair ?! StakeKeyNotRegisteredDELEG stakeCred
+      isJust mUMElem ?! StakeKeyNotRegisteredDELEG stakeCred
       failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroRewardAccountBalanceDELEG
-      pure $ dState {dsUnified = UM.domDeleteAll (Set.singleton stakeCred) dsUnified}
+      pure $ dState {dsUnified = umap}
     ConwayDelegCert stakeCred delegatee -> do
       checkStakeKeyIsRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
