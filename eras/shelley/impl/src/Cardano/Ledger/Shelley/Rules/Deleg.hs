@@ -19,7 +19,13 @@ module Cardano.Ledger.Shelley.Rules.Deleg (
 )
 where
 
-import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, epochInfoPure, invalidKey)
+import Cardano.Ledger.BaseTypes (
+  Globals (..),
+  ShelleyBase,
+  StrictMaybe (..),
+  epochInfoPure,
+  invalidKey,
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -60,9 +66,10 @@ import Cardano.Ledger.Slot (
   (*-),
   (+*),
  )
-import Cardano.Ledger.UMap (RDPair (..), UView (..), compactCoinOrError, fromCompact)
+import Cardano.Ledger.UMap (RDPair (..), UView (..), compactCoinOrError)
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq
+import Control.Monad (guard)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, range, singleton, (∉), (∪), (⨃))
 import Control.State.Transition
@@ -276,19 +283,16 @@ delegationTransition = do
           u2 = RewDepUView u1 UM.∪ (hk, RDPair (UM.CompactCoin 0) deposit)
           u3 = PtrUView u2 UM.∪ (ptr, hk)
       pure (ds {dsUnified = u3})
-    UnRegTxCert hk -> do
-      -- note that pattern match is used instead of cwitness, as in the spec
+    UnRegTxCert cred -> do
       -- (hk ∈ dom (rewards ds))
-      UM.member hk (rewards ds) ?! StakeKeyNotRegisteredDELEG hk
-      let rewardCoin = rdReward <$> UM.lookup hk (rewards ds)
-      rewardCoin == Just mempty ?! StakeKeyNonZeroAccountBalanceDELEG (fromCompact <$> rewardCoin)
-
-      let u0 = dsUnified ds
-          u1 = Set.singleton hk UM.⋪ RewDepUView u0
-          u2 = Set.singleton hk UM.⋪ SPoolUView u1
-          u3 = PtrUView u2 UM.⋫ Set.singleton hk
-          u4 = ds {dsUnified = u3}
-      pure u4
+      let (mUMElem, umap) = UM.extractStakingCredential cred (dsUnified ds)
+          checkStakeKeyHasZeroRewardBalance = do
+            UM.UMElem (SJust rd) _ _ _ <- mUMElem
+            guard (UM.rdReward rd /= mempty)
+            Just $ UM.fromCompact (UM.rdReward rd)
+      isJust mUMElem ?! StakeKeyNotRegisteredDELEG cred
+      failOnJust checkStakeKeyHasZeroRewardBalance (StakeKeyNonZeroAccountBalanceDELEG . Just)
+      pure $ ds {dsUnified = umap}
     DelegStakeTxCert hk dpool -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       -- (hk ∈ dom (rewards ds))
