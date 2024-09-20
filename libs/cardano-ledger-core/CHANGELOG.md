@@ -1,5 +1,9 @@
 # Version history for `cardano-ledger-core`
 
+## 1.14.1.0
+
+* Add `extractStakingCredential` and `deleteStakingCredential`
+
 ## 1.14.0.0
 
 * Add `mkTermToEvaluate` to `PlutusLanguage` class.

@@ -1,6 +1,10 @@
 # Version history for `cardano-ledger-conway`
 
-## 1.17.0.0
+## 1.16.2.0
+
+* Stop reporting `IncorrectDepositDELEG` whenever stake credential is not even registered.
+
+## 1.16.1.0
 
 * Replace GOVCERT `updateDRepExpiry` with `computeDRepExpiry`
 * Added `Eq`, `Show`, `NFData` and `Generic` instances for `CertsEnv`
