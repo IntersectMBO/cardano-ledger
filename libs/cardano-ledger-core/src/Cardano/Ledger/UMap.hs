@@ -109,6 +109,8 @@ module Cardano.Ledger.UMap (
   findWithDefault,
   size,
   domDeleteAll,
+  deleteStakingCredential,
+  extractStakingCredential,
 )
 where
 
@@ -127,7 +129,7 @@ import qualified Data.Aeson as Aeson
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.MapExtras (intersectDomPLeft)
+import Data.MapExtras as MapExtras (extract, intersectDomPLeft)
 import Data.Maybe as Maybe (fromMaybe, isNothing, mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
@@ -944,11 +946,25 @@ domDelete = (⋪)
 -- | Delete the stake credentials in the domain and all associated ranges from the `UMap`
 -- This can be expensive when there are many pointers associated with the credential.
 domDeleteAll :: Set (Credential 'Staking c) -> UMap c -> UMap c
-domDeleteAll ks UMap {umElems, umPtrs} =
-  UMap
-    { umElems = Map.withoutKeys umElems ks
-    , umPtrs = Map.filter (`Set.notMember` ks) umPtrs
-    }
+domDeleteAll ks umap = Set.foldr' deleteStakingCredential umap ks
+
+-- | Completely remove the staking credential from the UMap, including all associated
+-- pointers.
+deleteStakingCredential :: Credential 'Staking c -> UMap c -> UMap c
+deleteStakingCredential cred = snd . extractStakingCredential cred
+
+-- | Just like `deleteStakingCredential`, but also returned the removed element.
+extractStakingCredential :: Credential 'Staking c -> UMap c -> (Maybe (UMElem c), UMap c)
+extractStakingCredential cred umap@UMap {umElems, umPtrs} =
+  case MapExtras.extract cred umElems of
+    (Nothing, _) -> (Nothing, umap)
+    (e@(Just (UMElem _ ptrs _ _)), umElems') ->
+      ( e
+      , UMap
+          { umElems = umElems'
+          , umPtrs = umPtrs `Map.withoutKeys` ptrs
+          }
+      )
 
 -- | Delete all elements in the given `Set` from the range of the given map-like `UView`.
 -- This is slow for SPoolUView, RewDepUView, and DReps UViews, better hope the sets are small
