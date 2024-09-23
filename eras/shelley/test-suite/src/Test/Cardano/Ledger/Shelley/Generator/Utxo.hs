@@ -156,7 +156,7 @@ genTx
         scriptspace
         constants
       )
-  (LedgerEnv slot txIx pparams reserves)
+  (LedgerEnv slot txIx pparams reserves _)
   (LedgerState utxoSt@(UTxOState utxo _ _ _ _ _) dpState) =
     do
       -------------------------------------------------------------------------

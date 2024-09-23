@@ -167,7 +167,7 @@ ledgersTransition = do
   foldM
     ( \ !ls' (ix, tx) ->
         trans @(EraRule "LEDGER" era) $
-          TRC (LedgerEnv slot ix pp account, ls', tx)
+          TRC (LedgerEnv slot ix pp account False, ls', tx)
     )
     ls
     $ zip [minBound ..]

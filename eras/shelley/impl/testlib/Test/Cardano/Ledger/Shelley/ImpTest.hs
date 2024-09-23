@@ -619,6 +619,7 @@ impLedgerEnv nes = do
       , ledgerPp = nes ^. nesEsL . curPParamsEpochStateL
       , ledgerIx = TxIx 0
       , ledgerAccount = nes ^. nesEsL . esAccountStateL
+      , ledgerMempool = False
       }
 
 -- | Modify the previous PParams in the current state with the given function. For current

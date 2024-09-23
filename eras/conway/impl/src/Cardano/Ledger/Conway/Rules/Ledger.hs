@@ -368,7 +368,8 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot _txIx pp account, LedgerState utxoState certState, tx) <- judgmentContext
+  TRC (LedgerEnv slot _txIx pp account _mempool, LedgerState utxoState certState, tx) <-
+    judgmentContext
 
   currentEpoch <- liftSTS $ do
     ei <- asks epochInfoPure

@@ -172,7 +172,7 @@ ppsBench =
     & ppTauL .~ unsafeBoundRational 0.2
 
 ledgerEnv :: (EraPParams era, ProtVerAtMost era 4, ProtVerAtMost era 6) => LedgerEnv era
-ledgerEnv = LedgerEnv (SlotNo 0) minBound ppsBench (AccountState (Coin 0) (Coin 0))
+ledgerEnv = LedgerEnv (SlotNo 0) minBound ppsBench (AccountState (Coin 0) (Coin 0)) False
 
 testLEDGER ::
   LedgerState B ->

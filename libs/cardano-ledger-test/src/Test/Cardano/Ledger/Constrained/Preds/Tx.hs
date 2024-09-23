@@ -907,7 +907,7 @@ gone = do
   (PParamsF _ pp) <- monadTyped (findVar (unVar (pparams proof)) env)
   accntState <- monadTyped (runTarget env accountStateT)
   utxo1 <- monadTyped (findVar (unVar (utxo proof)) env)
-  let lenv = LedgerEnv slot txIx pp accntState
+  let lenv = LedgerEnv slot txIx pp accntState False
   -- putStrLn (show (pcTx Babbage tx))
   pure $ case applySTSByProof proof (TRC (lenv, ledgerstate, tx)) of
     Right _ledgerState' -> do
@@ -1016,7 +1016,7 @@ oneTest sizes proof = do
   (PParamsF _ pp) <- monadTyped (runTerm env2 (pparams proof))
   accntState <- monadTyped (runTarget env2 accountStateT)
   txIx <- arbitrary
-  let lenv = LedgerEnv slot txIx pp accntState
+  let lenv = LedgerEnv slot txIx pp accntState False
   case applySTSByProof proof (TRC (lenv, ledgerstate, tx)) of
     Right ledgerState' -> pure (totalAda ledgerState' === totalAda ledgerstate)
     Left errs -> do

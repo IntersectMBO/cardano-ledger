@@ -100,6 +100,7 @@ instance
     LedgerEnv (SlotNo 0) minBound
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
+      <*> pure False
 
   sigGen genenv env state = genTx genenv env state
 
@@ -150,7 +151,7 @@ instance
           TxIx ->
           Gen (LedgerState era, [Tx era])
         genAndApplyTx (ls', txs) txIx = do
-          let ledgerEnv = LedgerEnv slotNo txIx pParams reserves
+          let ledgerEnv = LedgerEnv slotNo txIx pParams reserves False
           tx <- genTx ge ledgerEnv ls'
 
           let res =

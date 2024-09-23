@@ -73,6 +73,7 @@ instance
     LedgerEnv (SlotNo 0) minBound
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
+      <*> pure False
 
   sigGen genenv env state = genTx genenv env state
 

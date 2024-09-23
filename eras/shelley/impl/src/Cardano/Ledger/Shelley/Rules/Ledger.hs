@@ -88,6 +88,7 @@ data LedgerEnv era = LedgerEnv
   , ledgerIx :: !TxIx
   , ledgerPp :: !(PParams era)
   , ledgerAccount :: !AccountState
+  , ledgerMempool :: !Bool
   }
   deriving (Generic)
 
@@ -95,7 +96,7 @@ deriving instance Show (PParams era) => Show (LedgerEnv era)
 deriving instance Eq (PParams era) => Eq (LedgerEnv era)
 
 instance NFData (PParams era) => NFData (LedgerEnv era) where
-  rnf (LedgerEnv _slotNo _ix pp _account) = rnf pp
+  rnf (LedgerEnv _slotNo _ix pp _account _mempool) = rnf pp
 
 data ShelleyLedgerPredFailure era
   = UtxowFailure (PredicateFailure (EraRule "UTXOW" era)) -- Subtransition Failures
@@ -265,7 +266,7 @@ ledgerTransition ::
   ) =>
   TransitionRule (ShelleyLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt certState, tx) <- judgmentContext
+  TRC (LedgerEnv slot txIx pp account _, LedgerState utxoSt certState, tx) <- judgmentContext
   certState' <-
     trans @(EraRule "DELEGS" era) $
       TRC
@@ -316,7 +317,7 @@ renderDepositEqualsObligationViolation ::
   AssertionViolation t ->
   String
 renderDepositEqualsObligationViolation
-  AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ pp _, _, tx), avState} =
+  AssertionViolation {avSTS, avMsg, avCtx = TRC (LedgerEnv slot _ pp _ _, _, tx), avState} =
     case avState of
       Nothing -> "\nAssertionViolation " ++ avSTS ++ " " ++ avMsg ++ " (avState is Nothing)."
       Just lstate ->

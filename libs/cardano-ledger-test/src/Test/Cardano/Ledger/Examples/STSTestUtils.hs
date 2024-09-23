@@ -350,7 +350,7 @@ runLEDGER ::
   Tx era ->
   Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (State (EraRule "LEDGER" era))
 runLEDGER wit@(LEDGER proof) state pparams tx =
-  let env = LedgerEnv (SlotNo 0) minBound pparams def
+  let env = LedgerEnv (SlotNo 0) minBound pparams def False
    in case proof of
         Conway -> runSTS' wit (TRC (env, state, tx))
         Babbage -> runSTS' wit (TRC (env, state, tx))
