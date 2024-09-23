@@ -158,7 +158,7 @@ library testlib
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-strict-containers,
         containers,
-        cuddle >=0.3.2.1,
+        cuddle >=0.3.2,
         data-default-class,
         deepseq,
         FailT,
