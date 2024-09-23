@@ -4,6 +4,7 @@
 
 * Add `credKeyHash` to `Credential`
 * Remove `maxMajorPV` from `Globals`
+* Add `deleteStakingCredential` and `extractStakingCredential` to `UMap` module.
 
 ### `testlib`
 
