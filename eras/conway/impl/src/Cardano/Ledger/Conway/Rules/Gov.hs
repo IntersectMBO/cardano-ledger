@@ -193,6 +193,8 @@ data ConwayGovPredFailure era
       (NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)))
   | -- | Predicate failure for votes by entities that are not present in the ledger state
     VotersDoNotExist (NonEmpty (Voter (EraCrypto era)))
+  | -- | Treasury withdrawals that sum up to zero are not allowed
+    ZeroTreasuryWithdrawals (GovAction era)
   deriving (Eq, Show, Generic)
 
 type instance EraRuleFailure "GOV" (ConwayEra c) = ConwayGovPredFailure (ConwayEra c)
@@ -222,6 +224,7 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     12 -> SumD DisallowedProposalDuringBootstrap <! From
     13 -> SumD DisallowedVotesDuringBootstrap <! From
     14 -> SumD VotersDoNotExist <! From
+    15 -> SumD ZeroTreasuryWithdrawals <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -260,6 +263,8 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum DisallowedVotesDuringBootstrap 13 !> To votes
       VotersDoNotExist voters ->
         Sum VotersDoNotExist 14 !> To voters
+      ZeroTreasuryWithdrawals ga ->
+        Sum ZeroTreasuryWithdrawals 15 !> To ga
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -461,6 +466,9 @@ govTransition = do
 
                   -- Policy check
                   runTest $ checkPolicy @era constitutionPolicy proposalPolicy
+
+                  -- The sum of all withdrawals must be positive
+                  F.fold wdrls /= mempty ?! ZeroTreasuryWithdrawals pProcGovAction
           UpdateCommittee _mPrevGovActionId membersToRemove membersToAdd _qrm -> do
             checkConflictingUpdate
             checkExpirationEpoch

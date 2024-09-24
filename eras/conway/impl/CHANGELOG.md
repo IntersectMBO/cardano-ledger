@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `ZeroTreasuryWithdrawals` to `ConwayGovPredFailure`
 * Add `ProtVer` argument to `TxInfo` functions:
   * `transTxCert`
   * `transScriptPurpose`

@@ -20,7 +20,7 @@ import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules (ConwayGovPredFailure (..))
-import Cardano.Ledger.Credential (Credential (KeyHashObj))
+import Cardano.Ledger.Credential (Credential (KeyHashObj), StakeCredential)
 import Cardano.Ledger.Plutus.CostModels (updateCostModels)
 import qualified Cardano.Ledger.Shelley.HardForks as HF
 import Cardano.Ledger.Shelley.LedgerState
@@ -31,8 +31,10 @@ import Cardano.Ledger.Shelley.Scripts (
   pattern RequireSignature,
  )
 import Cardano.Ledger.Val (zero, (<->))
+import Control.Monad (forM)
 import Data.Default.Class (Default (..))
 import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.OMap.Strict as OMap
@@ -57,7 +59,7 @@ spec = do
   proposalsWithVotingSpec
   votingSpec
   policySpec
-  networkIdWithdrawalsSpec
+  withdrawalsSpec
   predicateFailuresSpec
   unknownCostModelsSpec
 
@@ -489,7 +491,17 @@ proposalsWithVotingSpec =
       returnAddr <- registerRewardAccount
       deposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
       ens <- getEnactState
-      withdrawals <- arbitrary
+      withdrawals <- do
+        creds <- arbitrary :: ImpTestM era (NonEmpty (StakeCredential (EraCrypto era)))
+        pairs <-
+          forM
+            creds
+            ( \cred -> do
+                Positive n <- arbitrary
+                ac <- getRewardAccountFor cred
+                pure (ac, Coin n)
+            )
+        pure $ Map.fromList (NE.toList pairs)
       let
         mkProp name action = do
           ProposalProcedure
@@ -1133,14 +1145,14 @@ networkIdSpec =
               Testnet
         ]
 
-networkIdWithdrawalsSpec ::
+withdrawalsSpec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayGovPredFailure era
   ) =>
   SpecWith (ImpTestState era)
-networkIdWithdrawalsSpec =
-  describe "Network ID" $ do
+withdrawalsSpec =
+  describe "Withdrawals" $ do
     it "Fails with invalid network ID in withdrawal addresses" $ do
       rewardAccount <- registerRewardAccount
       rewardCredential <- KeyHashObj <$> freshKeyHash
@@ -1165,6 +1177,32 @@ networkIdWithdrawalsSpec =
               (Set.singleton badRewardAccount)
               Testnet
         ]
+
+    it "Fails for empty withdrawals" $ do
+      rwdAccount1 <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
+      rwdAccount2 <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
+      let wdrl = TreasuryWithdrawals Map.empty SNothing
+       in submitFailingGovAction
+            wdrl
+            [injectFailure $ ZeroTreasuryWithdrawals wdrl]
+
+      let wdrl = TreasuryWithdrawals [(rwdAccount1, zero)] SNothing
+       in submitFailingGovAction
+            wdrl
+            [injectFailure $ ZeroTreasuryWithdrawals wdrl]
+
+      let wdrl = TreasuryWithdrawals [(rwdAccount1, zero), (rwdAccount2, zero)] SNothing
+       in submitFailingGovAction
+            wdrl
+            [injectFailure $ ZeroTreasuryWithdrawals wdrl]
+
+      rwdAccountRegistered <- registerRewardAccount
+      let wdrl = TreasuryWithdrawals [(rwdAccountRegistered, zero)] SNothing
+       in submitFailingGovAction
+            wdrl
+            [injectFailure $ ZeroTreasuryWithdrawals wdrl]
+
+      void $ submitTreasuryWithdrawals [(rwdAccount1, zero), (rwdAccount2, Coin 100000)]
 
 proposalWithRewardAccount ::
   forall era.

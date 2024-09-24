@@ -112,7 +112,6 @@ test-suite cardano-ledger-api-test
         bytestring,
         cardano-ledger-api,
         cardano-ledger-byron,
-        data-default,
         data-default-class,
         testlib,
         cardano-crypto-class,
