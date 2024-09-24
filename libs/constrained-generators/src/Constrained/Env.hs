@@ -2,16 +2,17 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Constrained.Env where
 
+import Constrained.Core
+import Constrained.GenT
 import Data.Map (Map)
 import Data.Map qualified as Map
 import Data.Typeable
-
-import Constrained.Core
-import Constrained.GenT
+import Prettyprinter
 
 -- | Typed environments for mapping `Var a` to `a`
 newtype Env = Env {unEnv :: Map EnvKey EnvValue}
@@ -54,3 +55,14 @@ findEnv env var = do
   case lookupEnv env var of
     Just a -> pure a
     Nothing -> genError (pure ("Couldn't find " ++ show var ++ " in " ++ show env))
+
+instance Pretty EnvValue where
+  pretty (EnvValue x) = pretty $ take 80 (show x)
+
+instance Pretty EnvKey where
+  pretty (EnvKey x) = viaShow x
+
+instance Pretty Env where
+  pretty (Env m) = vsep ("Env" : (map f (Map.toList m)))
+    where
+      f (k, v) = hsep [pretty k, "->", pretty v]

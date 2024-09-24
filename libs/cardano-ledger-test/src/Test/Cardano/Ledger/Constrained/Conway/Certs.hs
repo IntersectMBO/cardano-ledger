@@ -20,7 +20,6 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (ppId))
-import Cardano.Ledger.UMap (dRepMap)
 import Constrained
 import Constrained.Base (Pred (..))
 import Data.Default.Class
@@ -34,15 +33,6 @@ import Test.Cardano.Ledger.Constrained.Conway.Cert (txCertSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Deleg (someZeros)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
-import Test.Cardano.Ledger.Generic.PrettyCore
-import Test.QuickCheck hiding (forAll)
-
-main :: IO ()
-main = do
-  context <- generate $ genFromSpec @ConwayFn (constrained $ \x -> sizeOf_ x ==. 3)
-  state <- generate $ genFromSpec @ConwayFn (bootstrapDStateSpec context)
-  putStrLn ("\n\nDRepDelegs\n" ++ show (prettyA (dRepMap (dsUnified state))))
-  putStrLn ("\n\nContext\n" ++ show (prettyA context))
 
 -- =======================================================
 

@@ -641,13 +641,9 @@ instance HasSpec fn a => Semigroup (Specification fn a) where
   s <> TrueSpec = s
   ErrorSpec e <> ErrorSpec e' =
     ErrorSpec
-      ( NE.fromList
-          ( NE.toList e
-              ++ ""
-              : ("---------- spec <> spec ----------@" ++ show (typeRep (Proxy @a)))
-              : ""
-              : NE.toList e'
-          )
+      ( e
+          <> pure ("------ spec <> spec ------ @" ++ show (typeRep (Proxy @a)))
+          <> e'
       )
   ErrorSpec e <> _ = ErrorSpec e
   _ <> ErrorSpec e = ErrorSpec e
@@ -734,7 +730,7 @@ instance (HasSpec fn a, Arbitrary (TypeSpec fn a)) => Arbitrary (Specification f
   shrink TrueSpec = []
   shrink (MemberSpec xs) = TrueSpec : (MemberSpec . nub <$> shrinkList (shrinkWithSpec @fn TrueSpec) xs)
   shrink (TypeSpec ts cant)
-    | null cant = TrueSpec : MemberSpec [] : map typeSpec (shrink ts)
+    | null cant = TrueSpec : MemberSpec [] : map typeSpec (shrink ts) -- why MemberSpec[] ?
     | otherwise =
         [TrueSpec, typeSpec ts, MemberSpec (nub cant)]
           ++ map typeSpec (shrink ts)
@@ -787,6 +783,11 @@ notMemberSpec = typeSpecOpt (emptySpec @fn @a) . toList
 
 typeSpec :: HasSpec fn a => TypeSpec fn a -> Specification fn a
 typeSpec ts = TypeSpec ts mempty
+
+-- Used to show binary operators like SumSpec and PairSpec
+data BinaryShow where
+  BinaryShow :: forall a. String -> [Doc a] -> BinaryShow
+  NonBinary :: BinaryShow
 
 -- The HasSpec Class ------------------------------------------------------
 
@@ -850,6 +851,25 @@ class
   --   answer than TrueSpec
   cardinalTrueSpec :: Specification fn Integer
   cardinalTrueSpec = TrueSpec
+
+  -- Each instance can decide if a TypeSpec has an Error, and what String
+  -- to pass to ErrorSpec to create an ErrorSpec value. Particulary
+  -- useful for type Sum and Prod
+  typeSpecHasError :: TypeSpec fn a -> Maybe (NE.NonEmpty String)
+  typeSpecHasError _ = Nothing
+
+  -- Some binary TypeSpecs, which nest to the right
+  -- e.g. something like this (X a (TypeSpec (X b (TypeSpec (X c w))))))
+  -- An would look better in Vertical mode as (X [a,b,c] m).
+  -- This lets each HasSpec instance decide. Particulary useful for type Sum and Prod
+  alternateShow :: TypeSpec fn a -> BinaryShow
+  alternateShow _ = NonBinary
+
+  monadConformsTo :: a -> TypeSpec fn a -> Writer [String] Bool
+  monadConformsTo x spec =
+    if conformsTo @fn @a x spec
+      then pure True
+      else tell ["Fails by " ++ show spec] >> pure False
 
   -- | For some types (especially finite ones) there may be much better ways to construct
   --   a Specification than the default method of just adding a large 'bad' list to TypSpec. This
@@ -1201,7 +1221,7 @@ data SolverStage fn where
 
 instance Pretty (SolverStage fn) where
   pretty SolverStage {..} =
-    viaShow stageVar
+    ("\nSolving for variable " <+> viaShow stageVar)
       <+> "<-"
         /> vsep'
           ( [pretty stageSpec | not $ isTrueSpec stageSpec]
@@ -1216,10 +1236,10 @@ data SolverPlan fn = SolverPlan
 
 instance Pretty (SolverPlan fn) where
   pretty SolverPlan {..} =
-    "SolverPlan"
+    "\nSolverPlan"
       /> vsep'
-        [ "Dependencies:" /> pretty solverDependencies
-        , "Linearization:" /> prettyLinear solverPlan
+        [ -- "\nDependencies:" /> pretty solverDependencies, -- Might be usefull someday
+          "\nLinearization:" /> prettyLinear solverPlan
         ]
 
 isTrueSpec :: Specification fn a -> Bool
@@ -1269,7 +1289,23 @@ saturatePred p =
 mergeSolverStage :: SolverStage fn -> [SolverStage fn] -> [SolverStage fn]
 mergeSolverStage (SolverStage x ps spec) plan =
   [ case eqVar x y of
-      Just Refl -> SolverStage y (ps ++ ps') (spec <> spec')
+      Just Refl ->
+        SolverStage
+          y
+          (ps ++ ps')
+          ( explainSpec
+              ( NE.fromList
+                  ( [ "Solving var " ++ show x ++ " fails."
+                    , "Merging the Specs"
+                    , "   " ++ show spec
+                    , "   " ++ show spec'
+                    , "Predicates"
+                    ]
+                      ++ (map show (ps ++ ps'))
+                  )
+              )
+              (spec <> spec')
+          )
       Nothing -> stage
   | stage@(SolverStage y ps' spec') <- plan
   ]
@@ -1339,10 +1375,27 @@ isEmptyPlan (SolverPlan plan _) = null plan
 stepPlan :: MonadGenError m => SolverPlan fn -> GenT m (Env, SolverPlan fn)
 stepPlan plan@(SolverPlan [] _) = pure (mempty, plan)
 stepPlan (SolverPlan (SolverStage x ps spec : pl) gr) = do
-  spec' <- runGE $ explain1 (show ("Computing specs for variable " <> pretty x /> vsep' (map pretty ps))) $ do
+  (spec', specs) <- runGE $ explain1 (show ("Computing specs for variable " <> pretty x /> vsep' (map pretty ps))) $ do
     specs <- mapM (computeSpec x) ps
-    pure $ fold specs
-  val <- genFromSpecT (spec <> spec')
+    pure $ (fold specs, specs)
+  val <-
+    genFromSpecT
+      ( explainSpec
+          ( NE.fromList
+              ( ( "\nStepPlan for variable: "
+                    ++ show x
+                    ++ " fails to produce Specification, probably overconstrained."
+                )
+                  : ("Original spec " ++ show spec)
+                  : "Predicates"
+                  : zipWith
+                    (\pred spec -> "  pred " ++ show pred ++ " -> " ++ show spec)
+                    ps
+                    specs
+              )
+          )
+          (spec <> spec')
+      )
   let env = singletonEnv x val
   pure (env, backPropagation $ SolverPlan (substStage env <$> pl) (deleteNode (Name x) gr))
 
@@ -1353,7 +1406,7 @@ substStage env (SolverStage y ps spec) = normalizeSolverStage $ SolverStage y (s
 -- all the free variables in `flattenPred p`.
 genFromPreds :: (MonadGenError m, BaseUniverse fn) => Pred fn -> GenT m Env
 -- TODO: remove this once optimisePred does a proper fixpoint computation
-genFromPreds (optimisePred . optimisePred -> preds) = explain1 (show $ "genFromPreds: " /> pretty preds) $ do
+genFromPreds (optimisePred . optimisePred -> preds) = explain1 (show $ "genFromPreds fails\nPreds are:" /> pretty preds) $ do
   -- NOTE: this is just lazy enough that the work of flattening, computing dependencies,
   -- and linearizing is memoized in properties that use `genFromPreds`.
   plan <- runGE $ prepareLinearization preds
@@ -1364,7 +1417,7 @@ genFromPreds (optimisePred . optimisePred -> preds) = explain1 (show $ "genFromP
     go env plan | isEmptyPlan plan = pure env
     go env plan = do
       (env', plan') <-
-        explain1 (show $ "Stepping the plan:" /> vsep [pretty plan, viaShow env]) $ stepPlan plan
+        explain1 (show $ "Stepping the plan:" /> vsep [pretty plan, pretty env]) $ stepPlan plan
       go (env <> env') plan'
 
 -- TODO: here we can compute both the explicit hints (i.e. constraints that
@@ -1458,7 +1511,7 @@ fromGESpec ge = case ge of
 
 explainSpec :: NE.NonEmpty String -> Specification fn a -> Specification fn a
 explainSpec es (ErrorSpec es') = ErrorSpec (es <> es')
-explainSpec es (MemberSpec []) = ErrorSpec (es <> (pure "MemberSpec []"))
+explainSpec es (MemberSpec []) = ErrorSpec (es <> (pure "Null MemberSpec in explainSpec"))
 explainSpec _ s = s
 
 regularize :: HasVariables fn t => Var a -> t -> Var a
@@ -1509,7 +1562,7 @@ simplifySpec spec = case regularizeNames spec of
                 ]
             )
           $ computeSpecSimplified x optP
-  MemberSpec [] -> ErrorSpec (pure "MemberSpec []")
+  MemberSpec [] -> ErrorSpec (pure "Null MemberSpec in simplfySpec")
   MemberSpec xs -> MemberSpec xs
   ErrorSpec es -> ErrorSpec es
   TypeSpec ts cant -> TypeSpec ts cant
@@ -1541,9 +1594,9 @@ computeSpecSimplified x p = localGESpec $ case p of
     bSpec <- computeSpecBinderSimplified b
     propagateSpec (fromForAllSpec bSpec) <$> toCtx x t
   Case (Lit val) bs -> runCaseOn val (mapList thing bs) $ \va vaVal psa -> computeSpec x (substPred (singletonEnv va vaVal) psa)
-  Case t branches -> explain1 ("Simplifying Case at type " ++ show (typeRep t)) $ do
+  Case t branches -> do
     branchSpecs <- mapMList (traverseWeighted computeSpecBinderSimplified) branches
-    propagateSpec (caseSpec True branchSpecs) <$> toCtx x t
+    propagateSpec (caseSpec (Just (show (typeRep (Proxy @a)))) branchSpecs) <$> toCtx x t
   When (Lit b) tp -> if b then computeSpecSimplified x tp else pure TrueSpec
   -- This shouldn't happen a lot of the time because when the body is trivial we mostly get rid of the `When` entirely
   When {} -> pure $ SuspendedSpec x p
@@ -1591,27 +1644,44 @@ computeSpecBinder (x :-> p) = computeSpec x p
 computeSpecBinderSimplified :: Binder fn a -> GE (Specification fn a)
 computeSpecBinderSimplified (x :-> p) = computeSpecSimplified x p
 
+-- | Turn a list of branches into a SumSpec. If all the branches fail return an ErrorSpec.
 caseSpec ::
   forall fn as.
   HasSpec fn (SumOver as) =>
-  Bool ->
+  Maybe String ->
   List (Weighted (Specification fn)) as ->
   Specification fn (SumOver as)
-caseSpec _ Nil = error "The impossible happened in caseSpec"
-caseSpec _ (s :> Nil) = thing s
-caseSpec topLevelCall (s :> ss@(_ :> _))
-  | Evidence <- prerequisites @fn @(SumOver as) =
-      if topLevelCall
-        then
-          explainSpec (pure "CASESPEC") $
-            typeSpec $
-              SumSpec theWeights (thing s) (caseSpec False ss)
-        else typeSpec $ SumSpec theWeights (thing s) (caseSpec False ss)
+caseSpec tString ss
+  | allBranchesFail ss =
+      ErrorSpec
+        ( NE.fromList
+            [ "When simplifying SumSpec, all branches in a caseOn" ++ sumType tString ++ " simplify to False."
+            , show spec
+            ]
+        )
+  | True = spec
   where
-    theWeights =
-      case (weight s, totalWeight ss) of
-        (Nothing, Nothing) -> Nothing
-        (a, b) -> Just (fromMaybe 1 a, fromMaybe (lengthList ss) b)
+    spec = loop tString ss
+
+    allBranchesFail :: forall as. List (Weighted (Specification fn)) as -> Bool
+    allBranchesFail Nil = error "The impossible happened in allBranchesFail"
+    allBranchesFail (Weighted _ s :> Nil) = isErrorLike s
+    allBranchesFail (Weighted _ s :> ss@(_ :> _)) = isErrorLike s && allBranchesFail ss
+
+    loop ::
+      forall fn as.
+      HasSpec fn (SumOver as) =>
+      Maybe String -> List (Weighted (Specification fn)) as -> Specification fn (SumOver as)
+    loop _ Nil = error "The impossible happened in caseSpec"
+    loop _ (s :> Nil) = thing s
+    loop mTypeString (s :> ss@(_ :> _))
+      | Evidence <- prerequisites @fn @(SumOver as) =
+          (typeSpec $ SumSpecRaw mTypeString theWeights (thing s) (loop Nothing ss))
+      where
+        theWeights =
+          case (weight s, totalWeight ss) of
+            (Nothing, Nothing) -> Nothing
+            (a, b) -> Just (fromMaybe 1 a, fromMaybe (lengthList ss) b)
 
 totalWeight :: List (Weighted f) as -> Maybe Int
 totalWeight = fmap Semigroup.getSum . foldMapList (fmap Semigroup.Sum . weight)
@@ -1696,15 +1766,23 @@ caseBoolSpec spec cont = case possibleValues spec of
   where
     possibleValues s = filter (flip conformsToSpec (simplifySpec s)) [True, False]
 
-isErrorLike :: Specification fn a -> Bool
+isErrorLike :: forall fn a. Specification fn a -> Bool
 isErrorLike ErrorSpec {} = True
 isErrorLike (MemberSpec []) = True
+isErrorLike (TypeSpec x _) =
+  case typeSpecHasError @fn @a x of
+    Nothing -> False
+    Just _ -> True
 isErrorLike _ = False
 
-errorLikeMessage :: Specification fn a -> NE.NonEmpty String
+errorLikeMessage :: forall fn a. Specification fn a -> NE.NonEmpty String
 errorLikeMessage (ErrorSpec es) = es
-errorLikeMessage (MemberSpec []) = pure ("MemberSpec []")
-errorLikeMessage _ = pure ("Bad call to errorLikeMessage, not guarded by isErrorLike")
+errorLikeMessage (MemberSpec []) = pure ("Null MemberSpec in errorLikeMessage")
+errorLikeMessage (TypeSpec x _) =
+  case typeSpecHasError @fn @a x of
+    Nothing -> pure ("Bad call to errorLikeMessage case 1, not guarded by isErrorLike")
+    Just xs -> xs
+errorLikeMessage _ = pure ("Bad call to errorLikeMessage, case 2, not guarded by isErrorLike")
 
 ------------------------------------------------------------------------
 -- Dependency Graphs
@@ -3109,7 +3187,7 @@ genNumList elemSIn foldSIn = do
 
     buildMemberSpec _ 0 es _ = pure (MemberSpec $ Set.toList es)
     buildMemberSpec sz fuel es spec = do
-      me <- scaleT (const sz) $ tryGen (genFromSpecT spec)
+      me <- scaleT (const sz) $ tryGenT (genFromSpecT spec)
       let sz'
             | sz > 100 = sz
             | isNothing me = 2 * sz + 1
@@ -3267,7 +3345,7 @@ instance BaseUniverse fn => HasSpec fn () where
   cardinalTypeSpec _ = MemberSpec [1]
   cardinalTrueSpec = equalSpec 1 -- there is exactly one, ()
   typeSpecOpt _ [] = TrueSpec
-  typeSpecOpt _ (_ : _) = MemberSpec []
+  typeSpecOpt _ (_ : _) = ErrorSpec (pure "Non null 'cant' set in typeSpecOpt @()")
 
 -- Bool -------------------------------------------------------------------
 
@@ -3285,13 +3363,38 @@ guardSumSpec ::
   (HasSpec fn a, HasSpec fn b, KnownNat (CountCases b)) =>
   SumSpec fn a b ->
   Specification fn (Sum a b)
-guardSumSpec s@(SumSpec _ sa sb)
+guardSumSpec s@(SumSpecRaw tString _ sa sb)
   | isErrorLike sa
   , isErrorLike sb =
-      ErrorSpec $ pure "All branches in a caseOn simplify to False"
+      ErrorSpec $
+        NE.fromList
+          [ "When combining SumSpec, all branches in a caseOn" ++ sumType tString ++ " simplify to False."
+          , show s
+          ]
   | otherwise = typeSpec s
 
-data SumSpec fn a b = SumSpec (Maybe (Int, Int)) (Specification fn a) (Specification fn b)
+data SumSpec fn a b
+  = SumSpecRaw
+      (Maybe String) -- A String which is the type of arg in (caseOn arg branch1 .. branchN)
+      (Maybe (Int, Int))
+      (Specification fn a)
+      (Specification fn b)
+
+pattern SumSpec ::
+  (Maybe (Int, Int)) -> (Specification fn a) -> (Specification fn b) -> SumSpec fn a b
+pattern SumSpec a b c <- SumSpecRaw _ a b c
+  where
+    SumSpec a b c = SumSpecRaw Nothing a b c
+
+{-# COMPLETE SumSpec #-}
+{-# COMPLETE SumSpecRaw #-}
+
+combTypeName :: Maybe String -> Maybe String -> Maybe String
+combTypeName (Just x) (Just y) =
+  if x == y then Just x else Just ("(" ++ x ++ " | " ++ y ++ ")")
+combTypeName (Just x) Nothing = Just x
+combTypeName Nothing (Just x) = Just x
+combTypeName Nothing Nothing = Nothing
 
 instance (Arbitrary (Specification fn a), Arbitrary (Specification fn b)) => Arbitrary (SumSpec fn a b) where
   arbitrary =
@@ -3313,8 +3416,8 @@ countCases :: forall a. KnownNat (CountCases a) => Int
 countCases = fromIntegral (natVal @(CountCases a) Proxy)
 
 instance (HasSpec fn a, HasSpec fn b) => Semigroup (SumSpec fn a b) where
-  SumSpec h sa sb <> SumSpec h' sa' sb' =
-    SumSpec (unionWithMaybe mergeH h h') (sa <> sa') (sb <> sb')
+  SumSpecRaw t h sa sb <> SumSpecRaw t' h' sa' sb' =
+    SumSpecRaw (combTypeName t t') (unionWithMaybe mergeH h h') (sa <> sa') (sb <> sb')
     where
       -- TODO: think more carefully about this, now weights like 2 2 and 10 15 give more weight to 10 15
       -- than would be the case if you had 2 2 and 2 3. But on the other hand this approach is associative
@@ -3331,7 +3434,7 @@ instance (HasSpec fn a, HasSpec fn b, KnownNat (CountCases b)) => HasSpec fn (Su
 
   emptySpec = mempty
 
-  combineSpec s s' = guardSumSpec $ s <> s'
+  combineSpec s s' = guardSumSpec (s <> s')
 
   conformsTo (SumLeft a) (SumSpec _ sa _) = conformsToSpec a sa
   conformsTo (SumRight b) (SumSpec _ _ sb) = conformsToSpec b sb
@@ -3364,7 +3467,45 @@ instance (HasSpec fn a, HasSpec fn b, KnownNat (CountCases b)) => HasSpec fn (Su
 
   cardinalTypeSpec (SumSpec _ leftspec rightspec) = addSpecInt (cardinality leftspec) (cardinality rightspec)
 
-deriving instance (HasSpec fn a, HasSpec fn b) => Show (SumSpec fn a b)
+  typeSpecHasError (SumSpec _ x y) =
+    case (isErrorLike x, isErrorLike y) of
+      (True, True) -> Just $ (errorLikeMessage x <> errorLikeMessage y)
+      _ -> Nothing
+
+  alternateShow (SumSpec h left right@(TypeSpec r [])) =
+    case alternateShow @fn @b r of
+      (BinaryShow "SumSpec" ps) -> BinaryShow "SumSpec" ("|" <+> sumWeightL h <+> viaShow left : ps)
+      (BinaryShow "Cartesian" ps) ->
+        BinaryShow "SumSpec" ("|" <+> sumWeightL h <+> viaShow left : [parens ("Cartesian" /> vsep ps)])
+      _ ->
+        BinaryShow "SumSpec" ["|" <+> sumWeightL h <+> viaShow left, "|" <+> sumWeightR h <+> viaShow right]
+  alternateShow (SumSpec h left right) =
+    BinaryShow "SumSpec" ["|" <+> sumWeightL h <+> viaShow left, "|" <+> sumWeightR h <+> viaShow right]
+
+sumType :: (Maybe String) -> String
+sumType Nothing = ""
+sumType (Just x) = " type=" ++ x
+
+sumWeightL, sumWeightR :: Maybe (Int, Int) -> Doc a
+sumWeightL Nothing = "1"
+sumWeightL (Just (x, _)) = fromString (show x)
+sumWeightR Nothing = "1"
+sumWeightR (Just (_, x)) = fromString (show x)
+
+instance (KnownNat (CountCases b), HasSpec fn a, HasSpec fn b) => Show (SumSpec fn a b) where
+  show sumspec@(SumSpecRaw tstring hint l r) = case alternateShow @fn @(Sum a b) sumspec of
+    (BinaryShow _ ps) -> show $ parens (fromString ("SumSpec" ++ sumType tstring) /> vsep ps)
+    NonBinary ->
+      "(SumSpec"
+        ++ sumType tstring
+        ++ show (sumWeightL hint)
+        ++ " ("
+        ++ show l
+        ++ ") "
+        ++ show (sumWeightR hint)
+        ++ " ("
+        ++ show r
+        ++ "))"
 
 -- Sets -------------------------------------------------------------------
 
@@ -5017,7 +5158,7 @@ instance Show (Pred fn) where
 instance HasSpec fn a => Pretty (WithPrec (Specification fn a)) where
   pretty (WithPrec d s) = case s of
     ErrorSpec es -> "ErrorSpec" /> vsep' (map fromString (NE.toList es))
-    TrueSpec -> "TrueSpec"
+    TrueSpec -> fromString $ "TrueSpec @(" ++ show (typeRep (Proxy @a)) ++ ")"
     MemberSpec xs -> parensIf (d > 10) $ "MemberSpec" <+> viaShow xs
     SuspendedSpec x p -> parensIf (d > 10) $ "constrained $ \\" <+> viaShow x <+> "->" /> pretty p
     -- TODO: require pretty for `TypeSpec` to make this much nicer
@@ -5099,7 +5240,7 @@ maxSpec TrueSpec = TrueSpec
 maxSpec s@(SuspendedSpec _ _) =
   constrained $ \x -> unsafeExists $ \y -> [y `satisfies` s, Assert (pure "maxSpec on SuspendedSpec") (x <=. y)]
 maxSpec (ErrorSpec xs) = ErrorSpec xs
-maxSpec (MemberSpec []) = ErrorSpec (pure "empty MemberSec in maxSpec.")
+maxSpec (MemberSpec []) = ErrorSpec (pure "Null MemberSec in maxSpec.")
 maxSpec (MemberSpec xs) = leqSpec (maximum xs)
 maxSpec (TypeSpec (NumSpecInterval _ hi) bad) = TypeSpec (NumSpecInterval Nothing hi) bad
 
@@ -5217,8 +5358,8 @@ operateSpec f ft x y = case (x, y) of
   (_, SuspendedSpec _ _) -> TrueSpec
   (SuspendedSpec _ _, _) -> TrueSpec
   (TypeSpec x bad1, TypeSpec y bad2) -> TypeSpec (ft x y) [f b1 b2 | b1 <- bad1, b2 <- bad2]
-  (MemberSpec [], _) -> ErrorSpec (pure "Null MemberSpec")
-  (_, MemberSpec []) -> ErrorSpec (pure "Null MemberSpec")
+  (MemberSpec [], _) -> ErrorSpec (pure "Null MemberSpec on right in operateSpec")
+  (_, MemberSpec []) -> ErrorSpec (pure "Null MemberSpec on left in operateSpec")
   (MemberSpec xs, MemberSpec ys) -> MemberSpec (nubOrd [f x y | x <- xs, y <- ys])
   -- This block is all (MemberSpec{}, TypeSpec{}) with MemberSpec on the left
   (MemberSpec xs, TypeSpec (NumSpecInterval (Just i) (Just j)) bad) ->

@@ -254,26 +254,76 @@ chooseT (a, b)
 sizeT :: Monad m => GenT m Int
 sizeT = GenT $ \mode -> sized $ \n -> runGenT (pure n) mode
 
-tryGen :: MonadGenError m => GenT GE a -> GenT m (Maybe a)
-tryGen g = do
-  r <- pureGen $ runGenT g Loose
-  case r of
-    FatalError es err -> foldr explain (fatalError err) es
-    GenError _ _ -> pure Nothing
-    Result _ a -> pure $ Just a
+-- ==================================================================
+-- Reflective analysis of the internal GE structure of (GenT GE x)
+-- This allows "catching" internal FatalError and GenError, and allowing
+-- the program to control what happens in those cases.
 
-tryGen' :: MonadGenError m => GenT GE a -> GenT m (Maybe a)
-tryGen' g = do
-  r <- pureGen $ runGenT g Strict
-  case r of
-    FatalError es err -> foldr explain (fatalError err) es
-    GenError _ _ -> pure Nothing
-    Result _ a -> pure $ Just a
+-- | Always succeeds, but returns the internal GE structure for analysis
+inspect :: MonadGenError m => GenT GE x -> GenT m (GE x)
+inspect (GenT f) = GenT g
+  where
+    g mode = do result <- f mode; pure (pure result)
 
-catchGenT :: GenT GE a -> Gen (Either [String] a)
-catchGenT g = genFromGenT $ do
-  r <- pureGen $ runGenT g Loose
+-- | Ignore all kinds of Errors, by squashing them into Nothing
+tryGenT :: MonadGenError m => GenT GE a -> GenT m (Maybe a)
+tryGenT g = do
+  r <- inspect g
   case r of
-    FatalError es e -> pure $ Left (NE.toList $ foldr1 (<>) es <> e)
-    GenError es e -> pure $ Left (NE.toList $ foldr1 (<>) es <> e)
-    Result _ a -> pure $ Right a
+    FatalError _ _ -> pure Nothing
+    GenError _ _ -> pure Nothing
+    Result es a -> explain (foldr1 (<>) es) (pure $ Just a)
+
+-- Pass on the error messages of both kinds of Errors, by squashing and combining both of them into Left constructor
+catchGenT :: MonadGenError m => GenT GE a -> GenT m (Either (NE.NonEmpty String) a)
+catchGenT g = do
+  r <- inspect g
+  case r of
+    FatalError es e -> pure $ Left (foldr1 (<>) es <> e)
+    GenError es e -> pure $ Left (foldr1 (<>) es <> e)
+    Result es a -> explain (foldr1 (<>) es) (pure $ Right a)
+
+-- Pass on the error messages of both kinds of Errors in the Gen (not the GenT) monad
+catchGen :: GenT GE a -> Gen (Either (NE.NonEmpty String) a)
+catchGen g = genFromGenT (catchGenT g)
+
+-- | Return the first successfull result from a list of computations, if they all fail
+--   return a list of the error messages from each one.
+firstGenT :: forall m a. MonadGenError m => [GenT GE a] -> GenT m (Either [NE.NonEmpty String] a)
+firstGenT gs = loop gs []
+  where
+    loop :: [GenT GE a] -> [NE.NonEmpty String] -> GenT m (Either [NE.NonEmpty String] a)
+    loop [] ys = pure (Left (reverse ys))
+    loop (x : xs) ys = do
+      this <- catchGenT x
+      case this of
+        Left zs -> loop xs (zs : ys)
+        Right a -> pure (Right a)
+
+liftGen :: forall x. (forall m. MonadGenError m => GenT m x) -> GenT GE x
+liftGen x = x
+
+-- Drop a (GenT GE) computation into a (GenT m) computation. Some error information
+-- is lost, as the two components of FatalError and GenError are folded into one component.
+dropGen :: MonadGenError m => GenT GE a -> GenT m a
+dropGen y = do
+  r <- inspect y
+  case r of
+    FatalError es e -> fatalError (foldr1 (<>) es <> e)
+    GenError es e -> genError (foldr1 (<>) es <> e)
+    Result es a -> explain (foldr1 (<>) es) (pure a)
+
+-- | Run one of the actions with frequency proportional to the count. If it fails, run the other.
+frequency2 :: forall m a. MonadGenError m => (Int, GenT GE a) -> (Int, GenT GE a) -> GenT m a
+frequency2 (n, g1) (m, g2)
+  | n <= 0 && m <= 0 = fatalError (pure ("Non positive frequencies in frequency2 " ++ show (n, m)))
+  | n <= 0 = dropGen g2
+  | m <= 0 = dropGen g1
+  | True = do
+      i <- pureGen $ choose (1, n + m)
+      ans <- if i <= n then firstGenT [g1, g2] else firstGenT [g2, g1]
+      case ans of
+        Left _ -> fatalError (pure "Both branches of frequency2 fail")
+        Right x -> pure x
+
+-- ======================================
