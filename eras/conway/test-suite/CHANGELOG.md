@@ -1,6 +1,6 @@
 # Version history for `cardano-ledger-conway-test`
 
-## 1.2.1.9
+## 1.3.0.0
 
 *
 
