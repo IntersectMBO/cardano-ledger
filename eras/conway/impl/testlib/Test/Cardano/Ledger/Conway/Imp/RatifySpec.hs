@@ -50,6 +50,7 @@ spec = do
   committeeMinSizeAffectsInFlightProposalsSpec
   paramChangeAffectsProposalsSpec
   committeeExpiryResignationDiscountSpec
+  committeeMaxTermLengthSpec
 
 relevantDuringBootstrapSpec ::
   forall era.
@@ -803,7 +804,6 @@ votingSpec =
           isDRepAccepted noConfidenceGovId `shouldReturn` True
           passEpoch
           getCommitteeMembers `shouldReturn` mempty
-
         it "AlwaysAbstain" $ do
           let getTreasury = getsNES (nesEsL . esAccountStateL . asTreasuryL)
 
@@ -1318,14 +1318,6 @@ delayingActionsSpec =
         getLastEnactedParameterChange `shouldReturn` SNothing
         getParameterChangeProposals `shouldReturn` Map.empty
       it "proposals to update the committee get delayed if the expiration exceeds the max term" $ do
-        let expectMembers ::
-              HasCallStack => Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) -> ImpTestM era ()
-            expectMembers expKhs = do
-              committee <-
-                getsNES $
-                  nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-              let members = Map.keysSet $ foldMap' committeeMembers committee
-              impAnn "Expecting committee members" $ members `shouldBe` expKhs
         (drep, _, _) <- setupSingleDRep 1_000_000
         (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
         maxTermLength <-
@@ -1389,3 +1381,152 @@ delayingActionsSpec =
           passNEpochs 2
           curConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
           curConstitution `shouldBe` constitution
+
+committeeMaxTermLengthSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+committeeMaxTermLengthSpec =
+  describe "Committee members can serve full `CommitteeMaxTermLength`" $ do
+    let
+      electMembersWithMaxTermLength ::
+        KeyHash 'StakePool (EraCrypto era) ->
+        Credential 'DRepRole (EraCrypto era) ->
+        ImpTestM era [Credential 'ColdCommitteeRole (EraCrypto era)]
+      electMembersWithMaxTermLength spoC drep = do
+        m1 <- KeyHashObj <$> freshKeyHash
+        m2 <- KeyHashObj <$> freshKeyHash
+        currentEpoch <- getsNES nesELL
+        maxTermLength <-
+          getsNES $
+            nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
+        let expiry = addEpochInterval (addEpochInterval currentEpoch $ EpochInterval 1) maxTermLength
+            members = [(m1, expiry), (m2, expiry)]
+        GovPurposeId gaid <-
+          electCommittee
+            SNothing
+            drep
+            Set.empty
+            members
+        submitYesVote_ (StakePoolVoter spoC) gaid
+        pure [m1, m2]
+    it "maxTermLength = 0" $ do
+      -- ======== EPOCH e ========
+
+      let termLength = EpochInterval 0
+      modifyPParams $ \pp ->
+        pp
+          & ppCommitteeMaxTermLengthL .~ termLength
+
+      (drep, _, _) <- setupSingleDRep 1_000_000
+      (spoC, _, _) <- setupPoolWithStake $ Coin 10_000_000
+      initialMembers <- getCommitteeMembers
+
+      -- Setup new committee members with max term length of 0 epoch
+      newMembers <- electMembersWithMaxTermLength spoC drep
+
+      curProtVer <- getProtVer
+      nextMajorVersion <- succVersion $ pvMajor curProtVer
+      let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
+
+      -- Create a proposal for a hard-fork initiation
+      gid <- submitGovAction $ HardForkInitiation SNothing nextProtVer
+
+      -- Accept the proposal with all the governing bodies except for the CC
+      submitYesVote_ (StakePoolVoter spoC) gid
+      submitYesVote_ (DRepVoter drep) gid
+
+      passEpoch
+      -- ======== EPOCH e+1 ========
+
+      hotCs <- mapM registerCommitteeHotKey newMembers
+      -- CC members can now vote for the hard-fork
+      submitYesVoteCCs_ hotCs gid
+
+      -- Although elected, new CC members are not yet active at this point
+      -- since it takes two epochs for their election to take effect, hence
+      -- the check fails
+      isCommitteeAccepted gid `shouldReturn` False
+      mapM_ expectCommitteeMemberAbsence newMembers
+
+      passEpoch
+      -- ======== EPOCH e+2 ========
+
+      -- Two epochs passed since the proposal and all the governing bodies except the
+      -- CC have voted 'Yes' for the hard-fork immediately. However, since the CC could only
+      -- vote in the next epoch, the hard-fork is not yet enacted...
+      getLastEnactedHardForkInitiation `shouldReturn` SNothing
+      -- ...but now we can see that the CC accepted the proposal...
+      isCommitteeAccepted gid `shouldReturn` True
+      -- ...and that they are elected members now, albeit already expired ones
+      expectMembers $ initialMembers <> Set.fromList newMembers
+      mapM_ ccShouldBeExpired newMembers
+
+      passEpoch
+      -- ======== EPOCH e+3 ========
+
+      -- Two epochs passed since the CCs also accepted the hard-fork, however
+      -- it didn't get enacted because the CCs expired by now and thus
+      -- their votes don't count
+      getLastEnactedHardForkInitiation `shouldReturn` SNothing
+      getProtVer `shouldReturn` curProtVer
+      isCommitteeAccepted gid `shouldReturn` False
+    it "maxTermLength = 1" $ do
+      -- ======== EPOCH e ========
+
+      let termLength = EpochInterval 1
+      modifyPParams $ \pp ->
+        pp
+          & ppCommitteeMaxTermLengthL .~ termLength
+
+      (drep, _, _) <- setupSingleDRep 1_000_000
+      (spoC, _, _) <- setupPoolWithStake $ Coin 10_000_000
+      initialMembers <- getCommitteeMembers
+
+      -- Setup new committee members with max term length of 1 epoch
+      newMembers <- electMembersWithMaxTermLength spoC drep
+
+      curProtVer <- getProtVer
+      nextMajorVersion <- succVersion $ pvMajor curProtVer
+      let nextProtVer = curProtVer {pvMajor = nextMajorVersion}
+
+      -- Create a proposal for a hard-fork initiation
+      gid <- submitGovAction $ HardForkInitiation SNothing nextProtVer
+
+      -- Accept the proposal with all the governing bodies except for the CC
+      submitYesVote_ (StakePoolVoter spoC) gid
+      submitYesVote_ (DRepVoter drep) gid
+
+      passEpoch
+      -- ======== EPOCH e+1 ========
+
+      hotCs <- mapM registerCommitteeHotKey newMembers
+      -- CC members can now vote for the hard-fork
+      submitYesVoteCCs_ hotCs gid
+
+      -- Although elected, new CC members are not yet active at this point
+      -- since it takes two epochs for their election to take effect, hence
+      -- the check fails
+      isCommitteeAccepted gid `shouldReturn` False
+      mapM_ expectCommitteeMemberAbsence newMembers
+
+      passEpoch
+      -- ======== EPOCH e+2 ========
+
+      -- Two epochs passed since the proposal and all the governing bodies except the
+      -- CC have voted 'Yes' for the hard-fork immediately. However, since the CC could only
+      -- vote in the next epoch, the hard-fork is not yet enacted...
+      getLastEnactedHardForkInitiation `shouldReturn` SNothing
+      -- ...but now we can see that the CC accepted the proposal...
+      isCommitteeAccepted gid `shouldReturn` True
+      -- ...and that they are active elected members now
+      expectMembers $ initialMembers <> Set.fromList newMembers
+      mapM_ ccShouldNotBeExpired newMembers
+
+      passEpoch
+      -- ======== EPOCH e+3 ========
+
+      -- Two epochs passed since the CCs also accepted the hard-fork, which
+      -- is now enacted since the CCs were active during the check
+      getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gid)
+      getProtVer `shouldReturn` nextProtVer

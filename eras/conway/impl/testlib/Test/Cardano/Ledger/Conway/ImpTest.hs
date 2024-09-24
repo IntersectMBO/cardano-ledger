@@ -116,6 +116,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   whenPostBootstrap,
   submitYesVoteCCs_,
   donateToTreasury,
+  expectMembers,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -1695,3 +1696,11 @@ donateToTreasury amount =
     passEpoch
     treasuryEndEpoch1 <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
     treasuryEndEpoch1 <-> treasuryStart `shouldBe` amount
+
+expectMembers ::
+  (HasCallStack, ConwayEraGov era) =>
+  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) -> ImpTestM era ()
+expectMembers expKhs = do
+  committee <- getsNES $ newEpochStateGovStateL . committeeGovStateL
+  let members = Map.keysSet $ foldMap' committeeMembers committee
+  impAnn "Expecting committee members" $ members `shouldBe` expKhs

@@ -32,6 +32,7 @@
 
 ### `testlib`
 
+* Added `expectMembers`
 * Removed `redelegateDRep` from `ImpTest`
 * Changed signature of `delegateToDRep` to take a `Credential` parameter
 * Move `TxInfo` golden tests over from the older `-test` package. #4599

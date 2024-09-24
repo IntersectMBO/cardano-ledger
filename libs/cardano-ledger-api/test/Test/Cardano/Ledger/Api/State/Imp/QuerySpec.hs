@@ -19,8 +19,6 @@ import Cardano.Ledger.Api.State.Query (
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Conway.Governance (
-  Committee (..),
-  ConwayEraGov (..),
   GovAction (..),
   GovPurposeId (..),
   Voter (StakePoolVoter),
@@ -33,7 +31,6 @@ import Cardano.Ledger.Keys (KeyRole (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HF
 import Cardano.Ledger.Shelley.LedgerState
 import Data.Default.Class (def)
-import Data.Foldable (Foldable (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Lens.Micro
@@ -423,15 +420,6 @@ spec = do
       , (c7, CommitteeMemberState MemberNotAuthorized Expired (Just c7Expiry) NoChangeExpected)
       ]
   where
-    expectMembers ::
-      HasCallStack => Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) -> ImpTestM era ()
-    expectMembers expKhs = do
-      committee <-
-        getsNES $
-          nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
-      let members = Map.keysSet $ foldMap' committeeMembers committee
-      impAnn "Expecting committee members" $ members `shouldBe` expKhs
-
     expectQueryResult ::
       HasCallStack =>
       Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
