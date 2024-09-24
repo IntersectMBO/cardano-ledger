@@ -103,6 +103,7 @@ import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.TxIn (TxId (..))
 import Control.DeepSeq (NFData)
+import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   STS (..),
@@ -467,8 +468,9 @@ govTransition = do
                   -- Policy check
                   runTest $ checkPolicy @era constitutionPolicy proposalPolicy
 
-                  -- The sum of all withdrawals must be positive
-                  F.fold wdrls /= mempty ?! ZeroTreasuryWithdrawals pProcGovAction
+                  unless (HF.bootstrapPhase (pp ^. ppProtocolVersionL)) $
+                    -- The sum of all withdrawals must be positive
+                    F.fold wdrls /= mempty ?! ZeroTreasuryWithdrawals pProcGovAction
           UpdateCommittee _mPrevGovActionId membersToRemove membersToAdd _qrm -> do
             checkConflictingUpdate
             checkExpirationEpoch
