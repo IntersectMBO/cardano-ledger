@@ -59,7 +59,6 @@ spec = do
   proposalsWithVotingSpec
   votingSpec
   policySpec
-  withdrawalsSpec
   predicateFailuresSpec
   unknownCostModelsSpec
 
@@ -70,6 +69,7 @@ relevantDuringBootstrapSpec ::
   ) =>
   SpecWith (ImpTestState era)
 relevantDuringBootstrapSpec = do
+  withdrawalsSpec
   hardForkSpec
   pparamUpdateSpec
   proposalsSpec
@@ -1154,55 +1154,53 @@ withdrawalsSpec ::
 withdrawalsSpec =
   describe "Withdrawals" $ do
     it "Fails with invalid network ID in withdrawal addresses" $ do
-      rewardAccount <- registerRewardAccount
       rewardCredential <- KeyHashObj <$> freshKeyHash
       let badRewardAccount =
             RewardAccount
               { raNetwork = Mainnet -- Our network is Testnet
               , raCredential = rewardCredential
               }
-      propDeposit <- getsNES $ nesEsL . curPParamsEpochStateL . ppGovActionDepositL
-      submitFailingProposal
-        ProposalProcedure
-          { pProcReturnAddr = rewardAccount
-          , pProcGovAction =
-              TreasuryWithdrawals
-                (Map.singleton badRewardAccount $ Coin 100_000_000)
-                SNothing
-          , pProcDeposit = propDeposit
-          , pProcAnchor = def
-          }
-        [ injectFailure $
-            TreasuryWithdrawalsNetworkIdMismatch
-              (Set.singleton badRewardAccount)
-              Testnet
-        ]
+          wdrls = TreasuryWithdrawals (Map.singleton badRewardAccount $ Coin 100_000_000) SNothing
+          idMismatch = TreasuryWithdrawalsNetworkIdMismatch (Set.singleton badRewardAccount) Testnet
+      expectPredFailures [idMismatch] [idMismatch] wdrls
 
     it "Fails for empty withdrawals" $ do
       rwdAccount1 <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
       rwdAccount2 <- freshKeyHash >>= getRewardAccountFor . KeyHashObj
-      let wdrl = TreasuryWithdrawals Map.empty SNothing
-       in submitFailingGovAction
-            wdrl
-            [injectFailure $ ZeroTreasuryWithdrawals wdrl]
+      let wdrls = TreasuryWithdrawals Map.empty SNothing
+       in expectPredFailures [ZeroTreasuryWithdrawals wdrls] [] wdrls
 
-      let wdrl = TreasuryWithdrawals [(rwdAccount1, zero)] SNothing
-       in submitFailingGovAction
-            wdrl
-            [injectFailure $ ZeroTreasuryWithdrawals wdrl]
+      let wdrls = TreasuryWithdrawals [(rwdAccount1, zero)] SNothing
+       in expectPredFailures [ZeroTreasuryWithdrawals wdrls] [] wdrls
 
-      let wdrl = TreasuryWithdrawals [(rwdAccount1, zero), (rwdAccount2, zero)] SNothing
-       in submitFailingGovAction
-            wdrl
-            [injectFailure $ ZeroTreasuryWithdrawals wdrl]
+      let wdrls = TreasuryWithdrawals [(rwdAccount1, zero), (rwdAccount2, zero)] SNothing
+       in expectPredFailures [ZeroTreasuryWithdrawals wdrls] [] wdrls
 
       rwdAccountRegistered <- registerRewardAccount
-      let wdrl = TreasuryWithdrawals [(rwdAccountRegistered, zero)] SNothing
-       in submitFailingGovAction
-            wdrl
-            [injectFailure $ ZeroTreasuryWithdrawals wdrl]
+      let wdrls = TreasuryWithdrawals [(rwdAccountRegistered, zero)] SNothing
+       in expectPredFailures [ZeroTreasuryWithdrawals wdrls] [] wdrls
 
-      void $ submitTreasuryWithdrawals [(rwdAccount1, zero), (rwdAccount2, Coin 100000)]
+      curProtVer <- getProtVer
+      let wdrls = [(rwdAccount1, zero), (rwdAccount2, Coin 100000)]
+          ga = TreasuryWithdrawals (Map.fromList wdrls) SNothing
+       in if HF.bootstrapPhase curProtVer
+            then do
+              expectPredFailures [] [] ga
+            else void $ submitTreasuryWithdrawals wdrls
+  where
+    expectPredFailures ::
+      [ConwayGovPredFailure era] -> [ConwayGovPredFailure era] -> GovAction era -> ImpTestM era ()
+    expectPredFailures predFailures bootstrapPredFailures wdrl = do
+      curProtVer <- getProtVer
+      propP <- proposalWithRewardAccount wdrl
+      submitFailingProposal
+        propP
+        ( injectFailure
+            <$> ( if HF.bootstrapPhase curProtVer
+                    then DisallowedProposalDuringBootstrap propP NE.:| bootstrapPredFailures
+                    else NE.fromList predFailures
+                )
+        )
 
 proposalWithRewardAccount ::
   forall era.
