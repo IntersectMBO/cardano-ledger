@@ -39,15 +39,15 @@ instance
   ) =>
   SpecTranslate ctx (ConwayDelegEnv era)
   where
-  type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv'
+  type SpecRep (ConwayDelegEnv era) = Agda.DelegEnv
 
   toSpecRep ConwayDelegEnv {..} =
-    Agda.MkDelegEnv'
+    Agda.MkDelegEnv
       <$> toSpecRep cdePParams
       <*> toSpecRep (Map.mapKeys (hashToInteger . unKeyHash) cdePools)
 
 instance SpecTranslate ctx (ConwayDelegCert c) where
-  type SpecRep (ConwayDelegCert c) = Agda.TxCert
+  type SpecRep (ConwayDelegCert c) = Agda.DCert
 
   toSpecRep (ConwayRegCert c d) =
     Agda.Delegate
@@ -85,7 +85,4 @@ instance SpecTranslate ctx (DState era) where
       <$> toSpecRep (UMap.dRepMap dsUnified)
       <*> toSpecRep (UMap.sPoolMap dsUnified)
       <*> toSpecRep (UMap.rewardMap dsUnified)
-      <*> toSpecRep deposits
-    where
-      deposits =
-        Map.mapKeys CredentialDeposit (UMap.depositMap dsUnified)
+      <*> undefined

@@ -20,9 +20,7 @@ import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
-import Cardano.Ledger.Credential
 import Cardano.Ledger.EpochBoundary
-import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.UMap (dRepMap, rewardMap, sPoolMap)
 import Data.Functor.Identity (Identity)
@@ -36,35 +34,36 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
 import Test.Cardano.Ledger.Conway.TreeDiff
+import Cardano.Ledger.Address (RewardAccount)
 
 instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
   , SpecRep (PParamsHKD Identity era) ~ Agda.PParams
   , Inject ctx (VotingProcedures era)
-  , Inject ctx (Map (Network, Credential 'Staking (EraCrypto era)) Coin)
+  , Inject ctx (Map (RewardAccount era) Coin)
   ) =>
   SpecTranslate ctx (CertEnv era)
   where
-  type SpecRep (CertEnv era) = Agda.CertEnv'
+  type SpecRep (CertEnv era) = Agda.CertEnv
   toSpecRep CertEnv {..} = do
     votes <- askCtx @(VotingProcedures era)
-    withdrawals <- askCtx @(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-    Agda.MkCertEnv'
+    withdrawals <- askCtx @(Map (RewardAccount era) Coin)
+    Agda.MkCertEnv
       <$> toSpecRep ceCurrentEpoch
       <*> toSpecRep cePParams
       <*> toSpecRep votes
       <*> toSpecRep withdrawals
 
 instance SpecTranslate ctx (CertState era) where
-  type SpecRep (CertState era) = Agda.CertState'
+  type SpecRep (CertState era) = Agda.CertState
   toSpecRep CertState {..} =
-    Agda.MkCertState'
+    Agda.MkCertState
       <$> toSpecRep certDState
       <*> toSpecRep certPState
       <*> toSpecRep certVState
 
-instance SpecTranslate ctx (ConwayTxCert era) where
-  type SpecRep (ConwayTxCert era) = Agda.TxCert
+instance Era era => SpecTranslate ctx (ConwayTxCert era) where
+  type SpecRep (ConwayTxCert era) = Agda.DCert
 
   toSpecRep (ConwayTxCertPool p) = toSpecRep p
   toSpecRep (ConwayTxCertGov c) = toSpecRep c
@@ -77,13 +76,14 @@ instance
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   , SpecRep (TxOut era) ~ Agda.TxOut
   , SpecTranslate ctx (TxOut era)
+  , Inject ctx (Map (DepositPurpose (EraCrypto era)) Coin)
   ) =>
   SpecTranslate ctx (LedgerState era)
   where
-  type SpecRep (LedgerState era) = Agda.LedgerState
+  type SpecRep (LedgerState era) = Agda.LState
 
   toSpecRep (LedgerState {..}) =
-    Agda.MkLedgerState
+    Agda.MkLState
       <$> toSpecRep lsUTxOState
       <*> toSpecRep (utxosGovState lsUTxOState ^. proposalsGovStateL)
       <*> agdaCertState lsCertState
@@ -96,7 +96,7 @@ instance
                   <*> toSpecRep (rewardMap dsUnified)
               )
           <*> toSpecRep pState
-          <*> ( Agda.MkGState
+          <*> ( Agda.MkGState'
                   <$> toSpecRep (drepExpiry <$> vsDReps)
                   <*> toSpecRep
                     (committeeCredentialToStrictMaybe <$> csCommitteeCreds vsCommitteeState)
@@ -113,6 +113,7 @@ instance
   , ToExpr (PParamsHKD StrictMaybe era)
   , SpecRep (TxOut era) ~ Agda.TxOut
   , SpecTranslate ctx (TxOut era)
+  , Inject ctx (Map (DepositPurpose (EraCrypto era)) Coin)
   ) =>
   SpecTranslate ctx (EpochState era)
   where
@@ -171,6 +172,7 @@ instance
   , ToExpr (PParamsHKD StrictMaybe era)
   , SpecRep (TxOut era) ~ Agda.TxOut
   , SpecTranslate ctx (TxOut era)
+  , Inject ctx (Map (DepositPurpose (EraCrypto era)) Coin)
   ) =>
   SpecTranslate ctx (NewEpochState era)
   where
