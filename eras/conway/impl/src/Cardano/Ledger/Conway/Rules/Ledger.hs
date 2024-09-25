@@ -50,6 +50,7 @@ import Cardano.Ledger.Conway.Era (
   ConwayEra,
   ConwayGOV,
   ConwayLEDGER,
+  ConwayMEMPOOL,
   ConwayUTXOW,
  )
 import Cardano.Ledger.Conway.Governance (
@@ -75,6 +76,7 @@ import Cardano.Ledger.Conway.Rules.Gov (
   GovSignal (..),
  )
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
+import Cardano.Ledger.Conway.Rules.Mempool (ConwayMempoolPredFailure (..))
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
@@ -109,7 +111,7 @@ import Cardano.Ledger.UMap (UView (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (EraUTxO (..))
 import Control.DeepSeq (NFData)
-import Control.Monad (unless)
+import Control.Monad (unless, void, when)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended (
   Embed (..),
@@ -129,6 +131,7 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Text (Text)
+import Data.Void (Void, absurd)
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
@@ -213,6 +216,9 @@ instance InjectRuleFailure "LEDGER" ConwayGovCertPredFailure (ConwayEra c) where
 
 instance InjectRuleFailure "LEDGER" ConwayGovPredFailure (ConwayEra c) where
   injectFailure = ConwayGovFailure
+
+instance InjectRuleFailure "LEDGER" ConwayMempoolPredFailure (ConwayEra c) where
+  injectFailure (ConwayMempoolPredFailure t) = ConwayMempoolFailure t
 
 deriving instance
   ( Era era
@@ -313,15 +319,19 @@ instance
   , Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
   , Embed (EraRule "GOV" era) (ConwayLEDGER era)
   , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
+  , Embed (EraRule "MEMPOOL" era) (ConwayLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
+  , State (EraRule "MEMPOOL" era) ~ LedgerState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
+  , Environment (EraRule "MEMPOOL" era) ~ LedgerEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
+  , Signal (EraRule "MEMPOOL" era) ~ Tx era
   ) =>
   STS (ConwayLEDGER era)
   where
@@ -354,22 +364,31 @@ ledgerTransition ::
   , Embed (EraRule "UTXOW" era) (someLEDGER era)
   , Embed (EraRule "GOV" era) (someLEDGER era)
   , Embed (EraRule "CERTS" era) (someLEDGER era)
+  , Embed (EraRule "MEMPOOL" era) (someLEDGER era)
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
+  , State (EraRule "MEMPOOL" era) ~ LedgerState era
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
+  , Environment (EraRule "MEMPOOL" era) ~ LedgerEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
+  , Signal (EraRule "MEMPOOL" era) ~ Tx era
   , BaseM (someLEDGER era) ~ ShelleyBase
   , STS (someLEDGER era)
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot _txIx pp account _mempool, LedgerState utxoState certState, tx) <-
+  TRC (le@(LedgerEnv slot _txIx pp account mempool), ls@(LedgerState utxoState certState), tx) <-
     judgmentContext
+
+  when mempool $
+    void $
+      trans @(EraRule "MEMPOOL" era) $
+        TRC (le, ls, tx)
 
   currentEpoch <- liftSTS $ do
     ei <- asks epochInfoPure
@@ -501,6 +520,7 @@ instance
   ( Embed (EraRule "UTXOW" era) (ConwayLEDGER era)
   , Embed (EraRule "CERTS" era) (ConwayLEDGER era)
   , Embed (EraRule "GOV" era) (ConwayLEDGER era)
+  , Embed (EraRule "MEMPOOL" era) (ConwayLEDGER era)
   , ConwayEraGov era
   , AlonzoEraTx era
   , ConwayEraTxBody era
@@ -509,12 +529,15 @@ instance
   , Environment (EraRule "UTXOW" era) ~ UtxoEnv era
   , Environment (EraRule "CERTS" era) ~ CertsEnv era
   , Environment (EraRule "GOV" era) ~ GovEnv era
+  , Environment (EraRule "MEMPOOL" era) ~ LedgerEnv era
   , Signal (EraRule "UTXOW" era) ~ Tx era
   , Signal (EraRule "CERTS" era) ~ Seq (TxCert era)
   , Signal (EraRule "GOV" era) ~ GovSignal era
+  , Signal (EraRule "MEMPOOL" era) ~ Tx era
   , State (EraRule "UTXOW" era) ~ UTxOState era
   , State (EraRule "CERTS" era) ~ CertState era
   , State (EraRule "GOV" era) ~ Proposals era
+  , State (EraRule "MEMPOOL" era) ~ LedgerState era
   , EraRule "GOV" era ~ ConwayGOV era
   , PredicateFailure (EraRule "LEDGER" era) ~ ConwayLedgerPredFailure era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
@@ -551,3 +574,14 @@ instance
   where
   wrapFailed = ConwayCertsFailure . CertFailure . DelegFailure
   wrapEvent = CertsEvent . CertEvent . DelegEvent
+
+instance
+  ( EraGov era
+  , EraRule "MEMPOOL" era ~ ConwayMEMPOOL era
+  , PredicateFailure (EraRule "MEMPOOL" era) ~ ConwayMempoolPredFailure era
+  , Event (EraRule "MEMPOOL" era) ~ Void
+  ) =>
+  Embed (ConwayMEMPOOL era) (ConwayLEDGER era)
+  where
+  wrapFailed (ConwayMempoolPredFailure t) = ConwayMempoolFailure t
+  wrapEvent = absurd
