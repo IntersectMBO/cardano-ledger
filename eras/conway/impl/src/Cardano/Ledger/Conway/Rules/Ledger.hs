@@ -128,6 +128,7 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Data.Text (Text)
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
@@ -147,6 +148,7 @@ data ConwayLedgerPredFailure era
       Int
       -- | Maximum allowed total reference script size
       Int
+  | ConwayMempoolFailure Text
   deriving (Generic)
 
 -- | In the next era this will become a proper protocol parameter. For now this is a hard
@@ -262,6 +264,7 @@ instance
       ConwayTreasuryValueMismatch actual submitted ->
         Sum (ConwayTreasuryValueMismatch @era) 5 !> To actual !> To submitted
       ConwayTxRefScriptsSizeTooBig x y -> Sum ConwayTxRefScriptsSizeTooBig 6 !> To x !> To y
+      ConwayMempoolFailure t -> Sum ConwayMempoolFailure 7 !> To t
 
 instance
   ( Era era
@@ -279,6 +282,7 @@ instance
       4 -> SumD ConwayWdrlNotDelegatedToDRep <! From
       5 -> SumD ConwayTreasuryValueMismatch <! From <! From
       6 -> SumD ConwayTxRefScriptsSizeTooBig <! From <! From
+      7 -> SumD ConwayMempoolFailure <! From
       n -> Invalid n
 
 data ConwayLedgerEvent era
