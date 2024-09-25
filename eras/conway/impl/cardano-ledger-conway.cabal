@@ -62,6 +62,7 @@ library
         Cardano.Ledger.Conway.Rules.Epoch
         Cardano.Ledger.Conway.Rules.Ledger
         Cardano.Ledger.Conway.Rules.Ledgers
+        Cardano.Ledger.Conway.Rules.Mempool
         Cardano.Ledger.Conway.Rules.NewEpoch
         Cardano.Ledger.Conway.Rules.Gov
         Cardano.Ledger.Conway.Rules.Pool

@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `Mempool` module, `ConwayMEMPOOL` and `ConwayMempoolPredFailure`
 * Add `ConwayMempoolFailure` to `ConwayLedgerPredFailure`
 * Add `ZeroTreasuryWithdrawals` to `ConwayGovPredFailure`
 * Add `ProtVer` argument to `TxInfo` functions:
