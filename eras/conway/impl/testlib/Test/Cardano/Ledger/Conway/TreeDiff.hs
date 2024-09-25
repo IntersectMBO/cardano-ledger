@@ -204,6 +204,7 @@ instance
   ( ToExpr (Event (EraRule "CERTS" era))
   , ToExpr (Event (EraRule "UTXOW" era))
   , ToExpr (Event (EraRule "GOV" era))
+  , ToExpr (Event (EraRule "MEMPOOL" era))
   ) =>
   ToExpr (ConwayLedgerEvent era)
 
@@ -277,3 +278,5 @@ instance
   , ToExpr (Tx era)
   ) =>
   ToExpr (CertsEnv era)
+
+instance ToExpr (ConwayMempoolEvent era)

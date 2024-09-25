@@ -76,7 +76,7 @@ import Cardano.Ledger.Conway.Rules.Gov (
   GovSignal (..),
  )
 import Cardano.Ledger.Conway.Rules.GovCert (ConwayGovCertPredFailure)
-import Cardano.Ledger.Conway.Rules.Mempool (ConwayMempoolPredFailure (..))
+import Cardano.Ledger.Conway.Rules.Mempool (ConwayMempoolEvent (..), ConwayMempoolPredFailure (..))
 import Cardano.Ledger.Conway.Rules.Utxo (ConwayUtxoPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxos (ConwayUtxosPredFailure)
 import Cardano.Ledger.Conway.Rules.Utxow (ConwayUtxowPredFailure)
@@ -131,7 +131,6 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Text (Text)
-import Data.Void (Void, absurd)
 import GHC.Generics (Generic (..))
 import Lens.Micro as L
 import NoThunks.Class (NoThunks (..))
@@ -295,12 +294,14 @@ data ConwayLedgerEvent era
   = UtxowEvent (Event (EraRule "UTXOW" era))
   | CertsEvent (Event (EraRule "CERTS" era))
   | GovEvent (Event (EraRule "GOV" era))
+  | MempoolEvent (Event (EraRule "MEMPOOL" era))
   deriving (Generic)
 
 deriving instance
   ( Eq (Event (EraRule "CERTS" era))
   , Eq (Event (EraRule "UTXOW" era))
   , Eq (Event (EraRule "GOV" era))
+  , Eq (Event (EraRule "MEMPOOL" era))
   ) =>
   Eq (ConwayLedgerEvent era)
 
@@ -308,6 +309,7 @@ instance
   ( NFData (Event (EraRule "CERTS" era))
   , NFData (Event (EraRule "UTXOW" era))
   , NFData (Event (EraRule "GOV" era))
+  , NFData (Event (EraRule "MEMPOOL" era))
   ) =>
   NFData (ConwayLedgerEvent era)
 
@@ -577,11 +579,12 @@ instance
 
 instance
   ( EraGov era
+  , EraTx era
   , EraRule "MEMPOOL" era ~ ConwayMEMPOOL era
   , PredicateFailure (EraRule "MEMPOOL" era) ~ ConwayMempoolPredFailure era
-  , Event (EraRule "MEMPOOL" era) ~ Void
+  , Event (EraRule "MEMPOOL" era) ~ ConwayMempoolEvent era
   ) =>
   Embed (ConwayMEMPOOL era) (ConwayLEDGER era)
   where
   wrapFailed (ConwayMempoolPredFailure t) = ConwayMempoolFailure t
-  wrapEvent = absurd
+  wrapEvent = MempoolEvent
