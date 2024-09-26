@@ -17,7 +17,6 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-
 {-# OPTIONS_HADDOCK not-home #-}
 
 -- | Provides MemoBytes internals
@@ -29,7 +28,7 @@
 -- The contents of this module may change __in any way whatsoever__
 -- and __without any warning__ between minor versions of this package.
 module Cardano.Ledger.MemoBytes.Internal (
-  MemoBytes (Memo),
+  MemoBytes (.., Memo),
   MemoHashIndex,
   Mem,
   mkMemoBytes,

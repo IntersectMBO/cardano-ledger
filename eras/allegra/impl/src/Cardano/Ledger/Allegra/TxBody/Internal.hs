@@ -30,6 +30,7 @@
 module Cardano.Ledger.Allegra.TxBody.Internal (
   AllegraEraTxBody (..),
   AllegraTxBody (
+    ..,
     AllegraTxBody,
     atbAuxDataHash,
     atbCerts,

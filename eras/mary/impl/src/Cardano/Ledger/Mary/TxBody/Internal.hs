@@ -29,6 +29,7 @@
 module Cardano.Ledger.Mary.TxBody.Internal (
   MaryEraTxBody (..),
   MaryTxBody (
+    ..,
     MaryTxBody,
     mtbAuxDataHash,
     mtbCerts,
@@ -40,7 +41,7 @@ module Cardano.Ledger.Mary.TxBody.Internal (
     mtbWithdrawals,
     mtbMint
   ),
-  MaryTxBodyRaw,
+  MaryTxBodyRaw (..),
 )
 where
 

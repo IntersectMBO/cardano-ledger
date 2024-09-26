@@ -33,6 +33,7 @@
 module Cardano.Ledger.Conway.TxBody.Internal (
   ConwayEraTxBody (..),
   ConwayTxBody (
+    ..,
     ConwayTxBody,
     ctbSpendInputs,
     ctbCollateralInputs,
@@ -54,7 +55,7 @@ module Cardano.Ledger.Conway.TxBody.Internal (
     ctbCurrentTreasuryValue,
     ctbTreasuryDonation
   ),
-  ConwayTxBodyRaw,
+  ConwayTxBodyRaw (..),
   conwayTotalDepositsTxBody,
   conwayProposalsDeposits,
 ) where
