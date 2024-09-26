@@ -28,6 +28,7 @@ import Constrained.Core
 import Constrained.GenT
 import Constrained.Instances ()
 import Constrained.List
+import Constrained.ListSplit
 import Constrained.Spec.Generics
 import Constrained.Spec.Pairs
 import Constrained.Univ
@@ -225,6 +226,7 @@ instance
             size'
             (simplifySpec $ constrained $ \v -> unsafeExists $ \k -> pair_ k v `satisfies` kvs)
             foldSpec'
+            noSplit
 
     restVals <-
       explain
@@ -315,7 +317,7 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
           | NilCtx HOLE <- ctx
           , Evidence <- prerequisites @fn @(Map k v) ->
               case spec of
-                TypeSpec (ListSpec listHint must size elemspec foldspec) [] ->
+                TypeSpec (ListSpec listHint must size elemspec foldspec (Split Nothing Nothing)) [] ->
                   typeSpec $
                     MapSpec
                       listHint
@@ -324,9 +326,9 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
                       size
                       (constrained $ \kv -> satisfies (app (sndFn @fn) (app (toGenericFn @fn) kv)) elemspec)
                       foldspec
-                -- NOTE: you'd think `MemberSpec [r]` was a safe and easy case. However, that requires not only that the elements
-                -- of the map are fixed to what is in `r`, but they appear in the order that they are in `r`. That's
-                -- very difficult to achieve!
+                -- NOTE: you'd think `MemberSpec [r]` was a safe and easy case. However, that requires not
+                -- only that the elements of the map are fixed to what is in `r`, but they appear in the
+                -- order that they are in `r`. That's very difficult to achieve!
                 _ -> ErrorSpec (NE.fromList ["Rng on bad map spec", show spec])
     Lookup ->
       case fn of
@@ -370,7 +372,8 @@ instance BaseUniverse fn => Functions (MapFn fn) fn where
         (_ :: MapFn fn '[Map k v] [v])
           | MapSpec _ _ mustList sz kvSpec foldSpec <- ts
           , Evidence <- prerequisites @fn @(Map k v) ->
-              typeSpec $ ListSpec Nothing mustList sz (mapSpec (sndFn @fn) $ toSimpleRepSpec kvSpec) foldSpec
+              typeSpec $
+                ListSpec Nothing mustList sz (mapSpec (sndFn @fn) $ toSimpleRepSpec kvSpec) foldSpec noSplit
 
 ------------------------------------------------------------------------
 -- Syntax

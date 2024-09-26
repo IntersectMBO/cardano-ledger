@@ -98,6 +98,8 @@ module Constrained (
   elem_,
   not_,
   foldMap_,
+  single_,
+  append_,
   sum_,
   size_,
   rng_,

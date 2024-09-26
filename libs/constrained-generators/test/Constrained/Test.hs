@@ -29,6 +29,7 @@ import Test.QuickCheck qualified as QC
 
 import Constrained.Examples
 import Constrained.Internals
+import Constrained.ListSplit (soundListSplit, soundMerge)
 import Constrained.Properties
 
 ------------------------------------------------------------------------
@@ -181,6 +182,10 @@ tests nightly =
       prop "[(Set Int, Set Bool)]" $ prop_gen_sound @BaseFn @[(Set Int, Set Bool)]
       prop "Set (Set Bool)" $ prop_gen_sound @BaseFn @(Set (Set Bool))
     negativeTests
+    appendSpec
+    describe "ListSplit soundness tests" $ do
+      prop "ListSplit specifications are sound" soundListSplit
+      prop "Merging ListSplit specifications are sound" soundMerge
 
 negativeTests :: Spec
 negativeTests =
@@ -355,3 +360,46 @@ hasSizeSet = hasSize (rangeSize 1 3)
 
 hasSizeMap :: Specification BaseFn (Map Int Int)
 hasSizeMap = hasSize (rangeSize 1 3)
+
+---------------------------------------------
+-- Tests for append_
+---------------------------------------------
+
+appendSpec :: Spec
+appendSpec =
+  describe "List tests with append_ " $ do
+    prop "app1: append_ (lit[1,2,3]) (lit[4,5,6])" (succeeds app1)
+    describe "Test with (append_ HOLE suffix)." $ do
+      prop "appSuffix2: x and y only constrained by suffix" (succeeds appSuffix2)
+      prop "appSuffix3: test that the suffix Split is constrained by even" (succeeds appSuffix3)
+      prop
+        "appSuffix4: test that the Split fails because suffix has none even elements"
+        (fails appSuffix4)
+      prop
+        "appSuffix5: test that the prefix makes the length too long for the size constraint"
+        (fails appSuffix5)
+      prop "appSuffix6: test that 'x' is overconstrained in the suffix" (fails appSuffix6)
+      prop "appSuffix7: test that 'x' has explicit conflicting suffix requirements" (fails appSuffix7)
+      prop "appSuffix8: test that 'x' has hidden conflicting suffix requirements" (fails appSuffix8)
+    describe "Test with (append_ prefix HOLE)." $ do
+      prop "appPrefix2: test both x and y only constrained by prefix" (succeeds appPrefix2)
+      prop "appPrefix3: test that the prefix Split is constrained by even" (succeeds appPrefix3)
+      prop
+        "appPrefix4: test that the Split fails because Prefix has none even elements"
+        (fails appPrefix4)
+      prop
+        "appPrefix5: test that the prefix makes the length too long for the size constraint"
+        (fails appPrefix5)
+      prop "appPrefix6: test that 'x' is overconstrained in the Prefix" (fails appPrefix6)
+      prop "appPrefix7: test that 'y' fills out what is missing from 'x'" (succeeds appPrefix7)
+      prop "appPrefix8: test that prefix is ambiguous" (fails appPrefix8)
+      prop
+        "appPrefix9: test that suffix and size interact correctly constrain the prefix in the HOLE."
+        (succeeds appPrefix9)
+      prop
+        "appPrefix10: test that suffix and size interact to constrain the size of the prefix in the HOLE."
+        (succeeds appPrefix10)
+      prop
+        "appSuffix11: test that prefix and size interact to constrain the size of the suffix in the HOLE."
+        (succeeds appSuffix11)
+      prop "app2: Fails because the cant set is over constrained" (fails app2)

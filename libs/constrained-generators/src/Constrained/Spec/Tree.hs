@@ -24,6 +24,7 @@ import Constrained.Base
 import Constrained.Core
 import Constrained.GenT
 import Constrained.List
+import Constrained.ListSplit
 import Constrained.Spec.Generics
 import Constrained.Spec.Pairs
 import Constrained.Univ
@@ -166,6 +167,7 @@ instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
               TrueSpec
               (typeSpec $ TreeSpec mal (Just sz') TrueSpec s)
               NoFold
+              noSplit
         innerSpec = s <> typeSpec (Cartesian rs childrenSpec)
     fmap (uncurry Node) $
       genFromSpecT @fn @(a, [Tree a]) innerSpec
