@@ -6,6 +6,7 @@
 
 ### `testlib`
 
+* Added `expectUTxOContent`
 * Added `disableTreasuryExpansion`
 * Added a `MonadFail` constraint to two methods of `ShelleyEraImp`:
   - `initGenesis`

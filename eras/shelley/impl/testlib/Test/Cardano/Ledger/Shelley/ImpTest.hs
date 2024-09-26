@@ -90,6 +90,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   lookupImpRootTxOut,
   sendValueTo,
   sendCoinTo,
+  expectUTxOContent,
   expectRegisteredRewardAddress,
   expectNotRegisteredRewardAddress,
   expectTreasury,
@@ -247,7 +248,7 @@ import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.Data (Proxy (..), type (:~:) (..))
 import Data.Default.Class (Default (..))
-import Data.Foldable (toList)
+import Data.Foldable (toList, traverse_)
 import Data.Functor (($>))
 import Data.Functor.Identity (Identity (..))
 import Data.IORef
@@ -1842,6 +1843,15 @@ withPostFixup ::
   ImpTestM era a ->
   ImpTestM era a
 withPostFixup f = withCustomFixup (>=> f)
+
+expectUTxOContent ::
+  (HasCallStack, ToExpr (TxOut era)) =>
+  UTxO era -> [(TxIn (EraCrypto era), Maybe (TxOut era) -> Bool)] -> ImpTestM era ()
+expectUTxOContent utxo = traverse_ $ \(txIn, test) -> do
+  let result = txIn `Map.lookup` unUTxO utxo
+  unless (test result) $
+    expectationFailure $
+      "UTxO content failed predicate:\n" <> ansiExprString txIn <> " -> " <> ansiExprString result
 
 expectRegisteredRewardAddress :: RewardAccount (EraCrypto era) -> ImpTestM era ()
 expectRegisteredRewardAddress (RewardAccount _ cred) = do
