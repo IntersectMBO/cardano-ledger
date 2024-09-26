@@ -72,6 +72,7 @@ import Cardano.Ledger.BaseTypes (
   mkCertIxPartial,
   mkNonceFromNumber,
   mkTxIxPartial,
+  natVersion,
   promoteRatio,
   textToDns,
   textToUrl,
@@ -789,7 +790,18 @@ instance Era era => Arbitrary (CertState era) where
   shrink = genericShrink
 
 instance Era era => Arbitrary (DState era) where
-  arbitrary = DState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary =
+    if eraProtVerLow @era >= natVersion @9
+      then DState <$> genConwayUMap <*> arbitrary <*> arbitrary <*> arbitrary
+      else DState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+
+genConwayUMap :: forall c. Crypto c => Gen (UMap c)
+genConwayUMap = UMap <$> genElems <*> pure mempty
+  where
+    genElems :: Gen (Map (Credential 'Staking c) (UMElem c))
+    genElems = Map.fromList <$> listOf ((,) <$> arbitrary <*> genElem)
+    genElem :: Gen (UMElem c)
+    genElem = UMElem <$> arbitrary <*> pure mempty <*> arbitrary <*> arbitrary
 
 instance Era era => Arbitrary (PState era) where
   arbitrary = PState <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
