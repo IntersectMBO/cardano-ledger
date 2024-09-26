@@ -10,6 +10,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -132,6 +134,7 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras as MapExtras (extract, intersectDomPLeft)
 import Data.Maybe as Maybe (fromMaybe, isNothing, mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Set.Internal as SI (Set (Tip))
@@ -240,7 +243,7 @@ instance Crypto c => DecShareCBOR (UMElem c) where
     decodeRecordNamed "UMElem" (const 4) $
       UMElem
         <$> decCBOR
-        <*> decCBOR
+        <*> ifDecoderVersionAtLeast (natVersion @9) (mempty <$ dropCBOR (Proxy @(Set Ptr))) decCBOR
         <*> decShareMonadCBOR is
         <*> decCBOR
 
@@ -475,7 +478,11 @@ instance Crypto c => DecShareCBOR (UMap c) where
           decodeRecordNamed "UMap" (const 2) $ do
             umElems <- decodeMap (interns a <$> decCBOR) (decShareCBOR b)
             let a' = internsFromMap umElems <> a
-            umPtrs <- decodeMap decCBOR (interns a' <$> decCBOR)
+            umPtrs <-
+              ifDecoderVersionAtLeast
+                (natVersion @9)
+                (mempty <$ dropCBOR (Proxy @(Map (Credential 'Staking c) (Set Ptr))))
+                $ decodeMap decCBOR (interns a' <$> decCBOR)
             pure (UMap {umElems, umPtrs}, (a', b))
       )
 
