@@ -20,6 +20,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
   SpecTransM,
   runSpecTransM,
   askCtx,
+  withCtx,
   toTestRep,
   OpaqueErrorString (..),
 ) where
@@ -27,7 +28,7 @@ module Test.Cardano.Ledger.Conformance.SpecTranslate.Core (
 import Cardano.Ledger.BaseTypes (Inject (..))
 import Constrained.Base ()
 import Control.DeepSeq (NFData)
-import Control.Monad.Except (ExceptT, MonadError, runExceptT)
+import Control.Monad.Except (ExceptT, MonadError (..), runExceptT)
 import Control.Monad.Reader (MonadReader (..), Reader, asks, runReader)
 import Data.Kind (Type)
 import Data.Text (Text)
@@ -46,7 +47,7 @@ instance ToExpr OpaqueErrorString where
   -- Using `toExpr` on a `String` displays escape codes in place of unicode
   -- characters (e.g. "≡" becomes "\8802")
   -- TODO figure out a less hacky way to solve this problem
-  toExpr (OpaqueErrorString x) = App "OpaqueErrorString" [App x []]
+  toExpr (OpaqueErrorString x) = App x []
 
 instance NFData OpaqueErrorString
 
@@ -96,3 +97,9 @@ toTestRep = fmap fixup . toSpecRep
 
 askCtx :: forall b ctx. Inject ctx b => SpecTransM ctx b
 askCtx = asks inject
+
+withCtx :: ctx -> SpecTransM ctx a -> SpecTransM ctx' a
+withCtx ctx m = do
+  case runSpecTransM ctx m of
+    Right x -> pure x
+    Left e -> throwError e

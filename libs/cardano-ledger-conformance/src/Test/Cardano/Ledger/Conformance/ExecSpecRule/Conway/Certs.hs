@@ -12,6 +12,7 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Certs (nameCerts) where
 
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert
 import Constrained
@@ -43,18 +44,18 @@ instance
           satisfies dstate (bootstrapDStateSpec (ccecWithdrawals context))
         ]
 
-  signalSpec _ env state = txCertsSpec env state
+  signalSpec _ = txCertsSpec
 
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
-      $ Agda.certsStep' env st sig
+      $ Agda.certsStep env st sig
   classOf = Just . nameCerts
 
   testConformance ctx env st sig = property $ do
     -- The results of runConformance are Agda types, the `ctx` is a Haskell type, we extract and translate the Withdrawal keys.
     specWithdrawalCredSet <-
-      translateWithContext () (Map.keysSet (Map.mapKeys snd (ccecWithdrawals ctx)))
+      translateWithContext () (Map.keysSet (Map.mapKeys raCredential (ccecWithdrawals ctx)))
     (implResTest, agdaResTest) <- runConformance @"CERTS" @fn @Conway ctx env st sig
     case (implResTest, agdaResTest) of
       (Right haskell, Right spec) ->
@@ -69,7 +70,7 @@ instance
           -- Zero out the rewards for credentials that are the key of some withdrawal
           -- (found in the ctx) as this happens in the Spec, but not in the implementation.
           fixRewards (Agda.MkHSSet creds) x =
-            x {Agda.dState' = (Agda.dState' x) {Agda.rewards' = zeroRewards (Agda.rewards' (Agda.dState' x))}}
+            x {Agda.dState = (Agda.dState x) {Agda.dsRewards = zeroRewards (Agda.dsRewards (Agda.dState x))}}
             where
               zeroRewards (Agda.MkHSMap pairs) = Agda.MkHSMap (map (\(c, r) -> if elem c creds then (c, 0) else (c, r)) pairs)
       _ -> checkConformance @"CERTS" @Conway @fn ctx env st sig implResTest agdaResTest

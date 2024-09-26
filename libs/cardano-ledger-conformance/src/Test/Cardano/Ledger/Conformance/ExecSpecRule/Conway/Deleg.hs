@@ -29,7 +29,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "DELEG" Conway where
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
-      $ Agda.delegStep' env st sig
+      $ Agda.delegStep env st sig
 
   classOf = Just . nameDelegCert
 

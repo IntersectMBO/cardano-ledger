@@ -34,7 +34,7 @@ import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
   Inject (..),
-  Network,
+  ProtVer (..),
   StrictMaybe (..),
   addEpochInterval,
   natVersion,
@@ -47,7 +47,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway (Conway)
-import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParams)
+import Cardano.Ledger.Conway.Core (Era (..), EraPParams (..), PParams, ppMaxTxSizeL)
 import Cardano.Ledger.Conway.Governance (
   Committee (..),
   EnactState (..),
@@ -71,9 +71,7 @@ import Cardano.Ledger.Conway.Rules (
   spoAcceptedRatio,
  )
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep (DRep (..))
-import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Constrained
 import Constrained.Base (fromList_)
@@ -87,7 +85,7 @@ import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import GHC.Generics (Generic)
-import Lens.Micro (Lens', lens)
+import Lens.Micro (Lens', lens, (&), (.~))
 import qualified Lib as Agda
 import qualified Prettyprinter as PP
 import Test.Cardano.Ledger.Binary.TreeDiff (tableDoc)
@@ -101,10 +99,14 @@ import Test.Cardano.Ledger.Conformance (
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (defaultTestConformance)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
-import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (ConwayExecEnactEnv (..))
+import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
+  ConwayExecEnactEnv (..),
+  DepositPurpose,
+ )
 import Test.Cardano.Ledger.Constrained.Conway (
   EpochExecEnv,
   IsConwayUniv,
+  UtxoExecContext (..),
   coerce_,
   epochEnvSpec,
   epochSignalSpec,
@@ -120,7 +122,12 @@ import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
   protocolVersion_,
  )
 
+import Cardano.Ledger.Address (RewardAccount)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Generic.GenState (GenEnv (..), GenState (..), runGenRS)
+import qualified Test.Cardano.Ledger.Generic.GenState as GenSize
+import qualified Test.Cardano.Ledger.Generic.Proof as Proof
+import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
 
 instance
@@ -128,6 +135,22 @@ instance
   IsConwayUniv fn =>
   ExecSpecRule fn "UTXO" Conway
   where
+  type ExecContext fn "UTXO" Conway = UtxoExecContext Conway
+
+  genExecContext = do
+    let proof = Proof.reify @Conway
+    uecSlotNo <- arbitrary
+    ((uecUTxO, uecTx), gs) <-
+      runGenRS proof GenSize.small $
+        genAlonzoTx proof uecSlotNo
+    let
+      uecPParams =
+        gePParams (gsGenEnv gs)
+          & ppMaxTxSizeL .~ 3000
+          & ppProtocolVersionL .~ ProtVer (natVersion @10) 0
+    uecDeposits <- arbitrary
+    pure UtxoExecContext {..}
+
   environmentSpec _ = utxoEnvSpec
 
   stateSpec _ = utxoStateSpec
@@ -173,7 +196,8 @@ instance
       $ Agda.utxoStep env st sig
 
 data ConwayCertExecContext era = ConwayCertExecContext
-  { ccecWithdrawals :: !(Map (Network, Credential 'Staking (EraCrypto era)) Coin)
+  { ccecWithdrawals :: !(Map (RewardAccount (EraCrypto era)) Coin)
+  , ccecDeposits :: !(Map (DepositPurpose (EraCrypto era)) Coin)
   , ccecVotes :: !(VotingProcedures era)
   }
   deriving (Generic, Eq, Show)
@@ -183,13 +207,15 @@ instance Era era => Arbitrary (ConwayCertExecContext era) where
     ConwayCertExecContext
       <$> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance Era era => EncCBOR (ConwayCertExecContext era) where
-  encCBOR x@(ConwayCertExecContext _ _) =
+  encCBOR x@(ConwayCertExecContext _ _ _) =
     let ConwayCertExecContext {..} = x
      in encode $
           Rec ConwayCertExecContext
             !> To ccecWithdrawals
+            !> To ccecDeposits
             !> To ccecVotes
 
 instance Era era => DecCBOR (ConwayCertExecContext era) where
@@ -198,17 +224,22 @@ instance Era era => DecCBOR (ConwayCertExecContext era) where
       RecD ConwayCertExecContext
         <! From
         <! From
+        <! From
 
 instance
   c ~ EraCrypto era =>
-  Inject
-    (ConwayCertExecContext era)
-    (Map (Network, Credential 'Staking c) Coin)
+  Inject (ConwayCertExecContext era) (Map (RewardAccount c) Coin)
   where
   inject = ccecWithdrawals
 
 instance Inject (ConwayCertExecContext era) (VotingProcedures era) where
   inject = ccecVotes
+
+instance
+  c ~ EraCrypto era =>
+  Inject (ConwayCertExecContext era) (Map (DepositPurpose c) Coin)
+  where
+  inject = ccecDeposits
 
 instance Era era => ToExpr (ConwayCertExecContext era)
 

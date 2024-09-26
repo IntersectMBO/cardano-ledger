@@ -1,7 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -9,6 +8,8 @@
 module Cardano.Ledger.Conway.Tx (
   module BabbageTxReExport,
   tierRefScriptFee,
+  refScriptCostStride,
+  refScriptCostMultiplier,
 )
 where
 
@@ -81,6 +82,13 @@ instance Crypto c => EraTx (ConwayEra c) where
       <*> pure valid
       <*> pure (fmap upgradeTxAuxData aux)
 
+-- | 25 KiB
+refScriptCostStride :: Int
+refScriptCostStride = 25_600
+
+refScriptCostMultiplier :: Rational
+refScriptCostMultiplier = 1.2
+
 getConwayMinFeeTx ::
   ( EraTx era
   , AlonzoEraTxWits era
@@ -94,9 +102,12 @@ getConwayMinFeeTx pp tx refScriptsSize =
   alonzoMinFeeTx pp tx <+> refScriptsFee
   where
     refScriptCostPerByte = unboundRational (pp ^. ppMinFeeRefScriptCostPerByteL)
-    refScriptsFee = tierRefScriptFee multiplier sizeIncrement refScriptCostPerByte refScriptsSize
-    multiplier = 1.2
-    sizeIncrement = 25_600 -- 25KiB
+    refScriptsFee =
+      tierRefScriptFee
+        refScriptCostMultiplier
+        refScriptCostStride
+        refScriptCostPerByte
+        refScriptsSize
 
 -- | Calculate the fee for reference scripts using an expoential growth of the price per
 -- byte with linear increments
