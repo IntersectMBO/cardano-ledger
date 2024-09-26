@@ -59,6 +59,7 @@ relevantDuringBootstrapSpec ::
 relevantDuringBootstrapSpec = do
   spoVotesForHardForkInitiation
   initiateHardForkWithLessThanMinimalCommitteeSize
+  spoAndCCVotingSpec
   it "Many CC Cold Credentials map to the same Hot Credential act as many votes" $ do
     hotCred NE.:| _ <- registerInitialCommittee
     (dRep, _, _) <- setupSingleDRep =<< uniformRM (10_000_000, 1_000_000_000)
@@ -104,6 +105,110 @@ initiateHardForkWithLessThanMinimalCommitteeSize =
         isCommitteeAccepted gai `shouldReturn` False
         passNEpochs 2
         getLastEnactedHardForkInitiation `shouldReturn` SNothing
+
+spoAndCCVotingSpec ::
+  forall era.
+  ConwayEraImp era =>
+  SpecWith (ImpTestState era)
+spoAndCCVotingSpec = do
+  describe "When CC expired" $ do
+    let expireCommitteeMembers = do
+          hotCs <- registerInitialCommittee
+          -- TODO: change the maxtermlength to make the test faster
+          EpochInterval committeeMaxTermLength <-
+            getsNES $
+              nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
+          passNEpochs $ fromIntegral committeeMaxTermLength
+          ms <- getCommitteeMembers
+          -- Make sure that committee expired
+          forM_ ms ccShouldBeExpired
+          pure hotCs
+    it "SPOs alone can't enact hard-fork" $ do
+      hotCs <- expireCommitteeMembers
+      (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
+      protVer <- getProtVer
+
+      gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+
+      submitYesVote_ (StakePoolVoter spoC) gai
+      -- CC members expired so their votes don't count - we are stuck!
+      submitYesVoteCCs_ hotCs gai
+
+      passNEpochs 2
+
+      getLastEnactedHardForkInitiation `shouldReturn` SNothing
+      getProtVer `shouldReturn` protVer
+    it "SPOs alone can't enact security group parameter change" $ do
+      void expireCommitteeMembers
+      (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
+      initialRefScriptBaseFee <- getsPParams ppMinFeeRefScriptCostPerByteL
+
+      gid <-
+        submitParameterChange SNothing $
+          emptyPParamsUpdate
+            & ppuMinFeeRefScriptCostPerByteL .~ SJust (25 %! 2)
+
+      submitYesVote_ (StakePoolVoter spoC) gid
+
+      passNEpochs 2
+
+      getLastEnactedParameterChange `shouldReturn` SNothing
+      getsPParams ppMinFeeRefScriptCostPerByteL `shouldReturn` initialRefScriptBaseFee
+  describe "When CC threshold is 0" $ do
+    -- During the bootstrap phase, proposals that modify the committee are not allowed,
+    -- hence we need to directly set the threshold for the initial members
+    let
+      modifyCommittee f = modifyNES $ \nes ->
+        nes
+          & newEpochStateGovStateL . committeeGovStateL %~ f
+          & newEpochStateDRepPulsingStateL %~ modifyDRepPulser
+        where
+          modifyDRepPulser pulser =
+            case finishDRepPulser pulser of
+              (snapshot, rState) -> DRComplete snapshot (rState & rsEnactStateL . ensCommitteeL %~ f)
+    it "SPOs alone can enact hard-fork during bootstrap" $ do
+      (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
+      protVer <- getProtVer
+      nextMajorVersion <- succVersion $ pvMajor protVer
+      let nextProtVer = protVer {pvMajor = nextMajorVersion}
+      modifyCommittee $ fmap (committeeThresholdL .~ 0 %! 1)
+
+      gai <- submitGovAction $ HardForkInitiation SNothing (majorFollow protVer)
+
+      submitYesVote_ (StakePoolVoter spoC) gai
+
+      passNEpochs 2
+
+      if bootstrapPhase protVer
+        then do
+          getLastEnactedHardForkInitiation `shouldReturn` SJust (GovPurposeId gai)
+          getProtVer `shouldReturn` nextProtVer
+        else do
+          getLastEnactedHardForkInitiation `shouldReturn` SNothing
+          getProtVer `shouldReturn` protVer
+    it "SPOs alone can enact security group parameter change during bootstrap" $ do
+      (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000_000
+      protVer <- getProtVer
+      initialRefScriptBaseFee <- getsPParams ppMinFeeRefScriptCostPerByteL
+      modifyCommittee $ fmap (committeeThresholdL .~ 0 %! 1)
+
+      gai <-
+        submitParameterChange SNothing $
+          emptyPParamsUpdate
+            & ppuMinFeeRefScriptCostPerByteL .~ SJust (25 %! 2)
+
+      submitYesVote_ (StakePoolVoter spoC) gai
+
+      passNEpochs 2
+
+      newRefScriptBaseFee <- getsPParams ppMinFeeRefScriptCostPerByteL
+      if bootstrapPhase protVer
+        then do
+          getLastEnactedParameterChange `shouldReturn` SJust (GovPurposeId gai)
+          newRefScriptBaseFee `shouldBe` (25 %! 2)
+        else do
+          getLastEnactedParameterChange `shouldReturn` SNothing
+          newRefScriptBaseFee `shouldBe` initialRefScriptBaseFee
 
 committeeExpiryResignationDiscountSpec ::
   forall era.
