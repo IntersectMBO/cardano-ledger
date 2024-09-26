@@ -29,6 +29,9 @@ module Test.Cardano.Ledger.Alonzo.ImpTest (
   impPlutusWithContexts,
   impScriptPredicateFailure,
   expectPhase2Invalid,
+  submitPhase2InvalidTx,
+  expectTxSuccess,
+  expectTxPhase2Failure,
   -- Fixup
   fixupDatums,
   fixupOutputDatums,
@@ -88,14 +91,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   utxosUtxoL,
  )
-import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ScriptsProvided (..))
+import Cardano.Ledger.Shelley.UTxO (EraUTxO (..), ScriptsProvided (..), UTxO (..), txouts)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (forM)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (fromElems)
-import Data.Maybe (catMaybes)
-import Data.Set (Set)
+import Data.Maybe (catMaybes, isJust, isNothing)
+import Data.Set (Set, (\\))
 import qualified Data.Set as Set
 import Lens.Micro
 import Lens.Micro.Mtl (use)
@@ -501,8 +504,48 @@ expectPhase2Invalid ::
   ) =>
   Tx era ->
   ImpTestM era ()
-expectPhase2Invalid tx = do
+expectPhase2Invalid = void . submitPhase2InvalidTx
+
+submitPhase2InvalidTx ::
+  ( HasCallStack
+  , AlonzoEraImp era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  ) =>
+  Tx era ->
+  ImpTestM era (Tx era)
+submitPhase2InvalidTx tx = do
   (predFailure, fixedUpTx) <- expectLeft =<< trySubmitTx tx
   scriptPredicateFailure <- impScriptPredicateFailure fixedUpTx
   predFailure `shouldBeExpr` pure (injectFailure scriptPredicateFailure)
-  withNoFixup $ submitTx_ $ fixedUpTx & isValidTxL .~ IsValid False
+  withNoFixup $ submitTx $ fixedUpTx & isValidTxL .~ IsValid False
+
+expectTxSuccess ::
+  ( HasCallStack
+  , AlonzoEraImp era
+  ) =>
+  Tx era -> ImpTestM era ()
+expectTxSuccess tx = do
+  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  let inputs = Set.toList $ tx ^. bodyTxL . inputsTxBodyL
+      outputs = Map.toList . unUTxO . txouts $ tx ^. bodyTxL
+  impAnn "Inputs should be gone from UTxO" $
+    expectUTxOContent utxo [(txIn, isNothing) | txIn <- inputs]
+  impAnn "Outputs should be in UTxO" $
+    expectUTxOContent utxo [(txIn, (== Just txOut)) | (txIn, txOut) <- outputs]
+
+expectTxPhase2Failure ::
+  ( HasCallStack
+  , AlonzoEraImp era
+  ) =>
+  Tx era -> ImpTestM era ()
+expectTxPhase2Failure tx = do
+  utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+  let inputs = tx ^. bodyTxL . inputsTxBodyL
+      collaterals = tx ^. bodyTxL . collateralInputsTxBodyL
+      outputs = Map.toList . unUTxO . txouts $ tx ^. bodyTxL
+  impAnn "Non-collateral inputs should still be in UTxO" $
+    expectUTxOContent utxo [(txIn, isJust) | txIn <- Set.toList $ inputs \\ collaterals]
+  impAnn "Collateral inputs should not be in UTxO" $
+    expectUTxOContent utxo [(txIn, isNothing) | txIn <- Set.toList collaterals]
+  impAnn "Outputs should not be in UTxO" $
+    expectUTxOContent utxo [(txIn, isNothing) | (txIn, _txOut) <- outputs]
