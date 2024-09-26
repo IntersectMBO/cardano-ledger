@@ -642,13 +642,13 @@ esNonMyopicL :: Lens' (EpochState era) (NonMyopic (EraCrypto era))
 esNonMyopicL = lens esNonMyopic (\x y -> x {esNonMyopic = y})
 
 curPParamsEpochStateL :: EraGov era => Lens' (EpochState era) (PParams era)
-curPParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL
+curPParamsEpochStateL = epochStateGovStateL . curPParamsGovStateL
 
 prevPParamsEpochStateL :: EraGov era => Lens' (EpochState era) (PParams era)
-prevPParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovStateL . prevPParamsGovStateL
+prevPParamsEpochStateL = epochStateGovStateL . prevPParamsGovStateL
 
 futurePParamsEpochStateL :: EraGov era => Lens' (EpochState era) (FuturePParams era)
-futurePParamsEpochStateL = esLStateL . lsUTxOStateL . utxosGovStateL . futurePParamsGovStateL
+futurePParamsEpochStateL = epochStateGovStateL . futurePParamsGovStateL
 
 -- ==========================================
 -- AccountState

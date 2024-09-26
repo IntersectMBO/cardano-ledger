@@ -215,9 +215,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   esLStateL,
   lsCertState,
   lsUTxOState,
-  lsUTxOStateL,
-  nesEsL,
-  utxosGovStateL,
+  newEpochStateGovStateL,
   utxosStakeDistr,
   vsCommitteeState,
   vsDReps,
@@ -421,10 +419,10 @@ instance Crypto c => ConwayEraGov (ConwayEra c) where
 newEpochStateDRepPulsingStateL ::
   ConwayEraGov era => Lens' (NewEpochState era) (DRepPulsingState era)
 newEpochStateDRepPulsingStateL =
-  nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
+  newEpochStateGovStateL . drepPulsingStateGovStateL
 
 epochStateDRepPulsingStateL :: ConwayEraGov era => Lens' (EpochState era) (DRepPulsingState era)
-epochStateDRepPulsingStateL = esLStateL . lsUTxOStateL . utxosGovStateL . drepPulsingStateGovStateL
+epochStateDRepPulsingStateL = epochStateGovStateL . drepPulsingStateGovStateL
 
 setCompleteDRepPulsingState ::
   GovState era ~ ConwayGovState era =>

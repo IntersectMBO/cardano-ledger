@@ -4,7 +4,6 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Conway.Imp.RatifySpec (
   spec,
@@ -1425,9 +1424,7 @@ delayingActionsSpec =
       it "proposals to update the committee get delayed if the expiration exceeds the max term" $ do
         (drep, _, _) <- setupSingleDRep 1_000_000
         (spoC, _, _) <- setupPoolWithStake $ Coin 42_000_000
-        maxTermLength <-
-          getsNES $
-            nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . curPParamsGovStateL . ppCommitteeMaxTermLengthL
+        maxTermLength <- getsNES $ nesEsL . curPParamsEpochStateL . ppCommitteeMaxTermLengthL
 
         hks <- registerInitialCommittee
         initialMembers <- getCommitteeMembers
