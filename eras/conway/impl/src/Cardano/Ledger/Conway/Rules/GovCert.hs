@@ -57,6 +57,7 @@ import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, DRepRole))
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Slotting.Slot (EpochInterval, binOpEpochNo)
 import Control.DeepSeq (NFData)
+import Control.Monad (guard)
 import Control.State.Transition.Extended (
   BaseM,
   Environment,
@@ -67,13 +68,13 @@ import Control.State.Transition.Extended (
   State,
   TRC (TRC),
   TransitionRule,
-  failBecause,
   failOnJust,
   judgmentContext,
   transitionRules,
   (?!),
  )
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import Data.Typeable (Typeable)
 import Data.Void (Void)
 import Data.Word (Word8)
@@ -264,11 +265,14 @@ conwayGovCertTransition = do
                 vsDReps
           }
     ConwayUnRegDRep cred refund -> do
-      case Map.lookup cred vsDReps of
-        Nothing -> failBecause $ ConwayDRepNotRegistered cred
-        Just drepState ->
-          let paidDeposit = drepState ^. drepDepositL
-           in refund == paidDeposit ?! ConwayDRepIncorrectRefund refund paidDeposit
+      let mDRepState = Map.lookup cred vsDReps
+          drepRefundMismatch = do
+            drepState <- mDRepState
+            let paidDeposit = drepState ^. drepDepositL
+            guard (refund /= paidDeposit)
+            pure paidDeposit
+      isJust mDRepState ?! ConwayDRepNotRegistered cred
+      failOnJust drepRefundMismatch $ ConwayDRepIncorrectRefund refund
       pure vState {vsDReps = Map.delete cred vsDReps}
     -- Update a DRep expiry along with its anchor.
     ConwayUpdateDRep cred mAnchor -> do
