@@ -218,7 +218,7 @@ data UMElem c
   | TFFEF {-# UNPACK #-} !RDPair !(Set Ptr) !(DRep c)
   | TFFFE {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool c)
   | TFFFF {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool c) !(DRep c)
-  deriving (Eq, Ord, Generic, NoThunks, NFData)
+  deriving (Eq, Ord, Show, Generic, NoThunks, NFData)
 
 instance Crypto c => ToJSON (UMElem c) where
   toJSON = object . toUMElemair
@@ -414,17 +414,6 @@ pattern UMElem i j k l <- (umElemAsTuple -> (i, j, k, l))
       (SJust r, p, SJust s, SJust d) -> TFFFF r p s d
 
 {-# COMPLETE UMElem #-}
-
-instance Show (UMElem c) where
-  show (UMElem a b c d) =
-    unlines
-      [ "(UMElem ("
-      , show a <> ", "
-      , show b <> ", "
-      , show c <> ", "
-      , show d
-      , "))"
-      ]
 
 -- | A unified map represents 4 Maps with domain @(Credential 'Staking c)@
 --
