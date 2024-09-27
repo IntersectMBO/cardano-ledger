@@ -200,7 +200,7 @@ instance Crypto c => TranslateEra (ConwayEra c) UTxOState where
         , API.utxosDeposited = API.utxosDeposited us
         , API.utxosFees = API.utxosFees us
         , API.utxosGovState = translateGovState ctxt $ API.utxosGovState us
-        , API.utxosStakeDistr = API.utxosStakeDistr us
+        , API.utxosStakeDistr = (API.utxosStakeDistr us) {API.ptrMap = mempty}
         , API.utxosDonation = API.utxosDonation us
         }
 
