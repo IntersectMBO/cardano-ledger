@@ -54,6 +54,7 @@ import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.LedgerState (
   epochStateGovStateL,
  )
+import qualified Cardano.Ledger.UMap as UM
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
 import Lens.Micro
@@ -138,7 +139,14 @@ instance Crypto c => TranslateEra (ConwayEra c) EpochState where
         }
 
 instance Crypto c => TranslateEra (ConwayEra c) DState where
-  translateEra _ DState {..} = pure DState {..}
+  translateEra _ DState {dsUnified = umap, ..} = pure DState {dsUnified = umap', ..}
+    where
+      umap' =
+        umap
+          { UM.umElems =
+              Map.map (\(UM.UMElem rd _ poolId drep) -> UM.UMElem rd mempty poolId drep) (UM.umElems umap)
+          , UM.umPtrs = mempty
+          }
 
 instance Crypto c => TranslateEra (ConwayEra c) CommitteeState where
   translateEra _ CommitteeState {..} = pure CommitteeState {..}
