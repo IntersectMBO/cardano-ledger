@@ -10,6 +10,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -132,6 +134,7 @@ import qualified Data.Map.Strict as Map
 import Data.MapExtras as MapExtras (extract, intersectDomPLeft)
 import Data.Maybe as Maybe (fromMaybe, isNothing, mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Set.Internal as SI (Set (Tip))
@@ -215,7 +218,7 @@ data UMElem c
   | TFFEF {-# UNPACK #-} !RDPair !(Set Ptr) !(DRep c)
   | TFFFE {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool c)
   | TFFFF {-# UNPACK #-} !RDPair !(Set Ptr) !(KeyHash 'StakePool c) !(DRep c)
-  deriving (Eq, Ord, Generic, NoThunks, NFData)
+  deriving (Eq, Ord, Show, Generic, NoThunks, NFData)
 
 instance Crypto c => ToJSON (UMElem c) where
   toJSON = object . toUMElemair
@@ -240,7 +243,7 @@ instance Crypto c => DecShareCBOR (UMElem c) where
     decodeRecordNamed "UMElem" (const 4) $
       UMElem
         <$> decCBOR
-        <*> decCBOR
+        <*> ifDecoderVersionAtLeast (natVersion @9) (mempty <$ dropCBOR (Proxy @(Set Ptr))) decCBOR
         <*> decShareMonadCBOR is
         <*> decCBOR
 
@@ -412,17 +415,6 @@ pattern UMElem i j k l <- (umElemAsTuple -> (i, j, k, l))
 
 {-# COMPLETE UMElem #-}
 
-instance Show (UMElem c) where
-  show (UMElem a b c d) =
-    unlines
-      [ "(UMElem ("
-      , show a <> ", "
-      , show b <> ", "
-      , show c <> ", "
-      , show d
-      , "))"
-      ]
-
 -- | A unified map represents 4 Maps with domain @(Credential 'Staking c)@
 --
 -- 1) Map (Credential 'Staking c) RDPair  -- (RDPair rewardCoin depositCoin)
@@ -475,7 +467,11 @@ instance Crypto c => DecShareCBOR (UMap c) where
           decodeRecordNamed "UMap" (const 2) $ do
             umElems <- decodeMap (interns a <$> decCBOR) (decShareCBOR b)
             let a' = internsFromMap umElems <> a
-            umPtrs <- decodeMap decCBOR (interns a' <$> decCBOR)
+            umPtrs <-
+              ifDecoderVersionAtLeast
+                (natVersion @9)
+                (mempty <$ dropCBOR (Proxy @(Map (Credential 'Staking c) (Set Ptr))))
+                $ decodeMap decCBOR (interns a' <$> decCBOR)
             pure (UMap {umElems, umPtrs}, (a', b))
       )
 
