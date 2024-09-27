@@ -56,7 +56,7 @@ import Cardano.Ledger.Shelley.API (
   CertState (..),
   PState (..),
   PoolEnv (PoolEnv),
-  VState,
+  VState (..),
  )
 import Cardano.Ledger.Shelley.Rules (PoolEvent, ShelleyPOOL, ShelleyPoolPredFailure)
 import Control.DeepSeq (NFData)

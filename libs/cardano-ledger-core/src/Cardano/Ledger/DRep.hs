@@ -8,7 +8,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.DRep (
-  DRep (DRepCredential, DRepAlwaysAbstain, DRepAlwaysNoConfidence),
+  DRep (DRepCredential, DRepKeyHash, DRepScriptHash, DRepAlwaysAbstain, DRepAlwaysNoConfidence),
   DRepState (..),
   drepExpiryL,
   drepAnchorL,
