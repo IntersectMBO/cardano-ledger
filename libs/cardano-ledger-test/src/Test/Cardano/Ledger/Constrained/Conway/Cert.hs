@@ -53,7 +53,7 @@ txCertSpec (CertEnv slot pp ce cc cp) certState@CertState {..} =
       -- across the 3 categories are chosen at similar frequencies.
       (branchW 3 $ \delegCert -> satisfies delegCert $ delegCertSpec delegEnv certState)
       (branchW 1 $ \poolCert -> satisfies poolCert $ poolCertSpec poolEnv certPState)
-      (branchW 3 $ \govCert -> satisfies govCert $ govCertSpec govCertEnv certVState)
+      (branchW 3 $ \govCert -> satisfies govCert $ govCertSpec govCertEnv certState)
   where
     delegEnv = ConwayDelegEnv pp (psStakePoolParams certPState)
     poolEnv = PoolEnv slot pp

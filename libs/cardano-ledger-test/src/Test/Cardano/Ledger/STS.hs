@@ -197,7 +197,7 @@ prop_GOVCERT :: Property
 prop_GOVCERT =
   stsPropertyV2 @"GOVCERT" @ConwayFn
     govCertEnvSpec
-    (\_env -> vStateSpec)
+    (\_env -> certStateSpec)
     (\env st -> govCertSpec env st)
     $ \_env _st _sig _st' -> True
 

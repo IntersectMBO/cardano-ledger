@@ -7,7 +7,7 @@
 * Add `HardForkEvent` constructor to `ConwayEpochEvent`
 * Add `HardFork` module, `ConwayHARDFORK` and `ConwayHardForkEvent`
 * Add predicate failures to guard against invalid reward accounts (return addresses) in proposals and treasury withdrawals. #4639
-  * `ProposalReturnAddressDoesNotExist`, and 
+  * `ProposalReturnAddressDoesNotExist`, and
   * `TreasuryWithdrawalReturnAddressDoesNotExist`.
 * Add `refScriptCostStride` and `refScriptCostMultiplier`
 * Added protocol version argument to `ppuWellFormed`
@@ -36,6 +36,7 @@
 * Add a new field to `GovInfoEvent` and change "unclaimed" field from `Set` to a `Map`.
 * Changed return type of `proposalsShowDebug`
 * Added `gen-golden` executable needed for golden tests: #4629
+* Change `State` for `CERT` and `GOVCERT` to `CertState`
 * Add `DelegateeDRepNotRegisteredDELEG` predicate failure
 
 ### `testlib`

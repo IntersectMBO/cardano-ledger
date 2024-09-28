@@ -39,10 +39,11 @@ vStateSpec = constrained' $ \ [var|_dreps|] [var|_commstate|] [var|dormantepochs
 govCertSpec ::
   IsConwayUniv fn =>
   ConwayGovCertEnv (ConwayEra StandardCrypto) ->
-  VState (ConwayEra StandardCrypto) ->
+  CertState (ConwayEra StandardCrypto) ->
   Specification fn (ConwayGovCert StandardCrypto)
-govCertSpec ConwayGovCertEnv {..} vs =
-  let reps = lit $ Map.keysSet $ vsDReps vs
+govCertSpec ConwayGovCertEnv {..} certState =
+  let vs = certVState certState
+      reps = lit $ Map.keysSet $ vsDReps vs
       deposits = Map.map drepDeposit (vsDReps vs)
       getNewMembers = \case
         UpdateCommittee _ _ newMembers _ -> Map.keysSet newMembers
