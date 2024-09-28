@@ -2,6 +2,7 @@
 
 ## 1.15.0.0
 
+* Added `drepDelegs` to `DRepState`
 * Add `member'` function to `UMap` module. #4639
 * Add `credKeyHash` to `Credential`
 * Remove `maxMajorPV` from `Globals`

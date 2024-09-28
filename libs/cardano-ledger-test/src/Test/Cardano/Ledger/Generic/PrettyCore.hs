@@ -3213,12 +3213,13 @@ instance PrettyA (Anchor c) where
   prettyA = pcAnchor
 
 pcDRepState :: DRepState c -> PDoc
-pcDRepState (DRepState expire anchor deposit) =
+pcDRepState (DRepState expire anchor deposit delegs) =
   ppRecord
     "DRepState"
     [ ("expire", ppEpochNo expire)
     , ("anchor", ppStrictMaybe pcAnchor anchor)
     , ("deposit", pcCoin deposit)
+    , ("delegations", ppSet pcCredential delegs)
     ]
 
 instance PrettyA (DRepState c) where

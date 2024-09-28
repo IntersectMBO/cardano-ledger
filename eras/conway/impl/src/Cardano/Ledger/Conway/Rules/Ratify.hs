@@ -275,8 +275,8 @@ dRepAcceptedRatio RatifyEnv {reDRepDistr, reDRepState, reCurrentEpoch} gasDRepVo
         DRepCredential cred ->
           case Map.lookup cred reDRepState of
             Nothing -> (yes, tot) -- drep is not registered, so we don't consider it
-            Just (DRepState expiry _ _)
-              | reCurrentEpoch > expiry -> (yes, tot) -- drep is expired, so we don't consider it
+            Just drepState
+              | reCurrentEpoch > drepExpiry drepState -> (yes, tot) -- drep is expired, so we don't consider it
               | otherwise ->
                   case Map.lookup cred gasDRepVotes of
                     -- drep hasn't voted for this action, so we don't count

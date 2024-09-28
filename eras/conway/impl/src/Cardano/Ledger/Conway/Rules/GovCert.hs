@@ -259,6 +259,7 @@ conwayGovCertTransition = do
                     )
                     mAnchor
                     ppDRepDeposit
+                    mempty
                 )
                 vsDReps
           }

@@ -88,7 +88,7 @@ acceptedRatioProp = do
           let drepState =
                 -- non-expired (active) dReps
                 Map.fromList
-                  [(cred, DRepState (EpochNo 100) SNothing mempty) | DRepCredential cred <- Map.keys distr]
+                  [(cred, DRepState (EpochNo 100) SNothing mempty mempty) | DRepCredential cred <- Map.keys distr]
               ratifyEnv = (emptyRatifyEnv @era) {reDRepDistr = distr, reDRepState = drepState}
               actual = dRepAcceptedRatio @era ratifyEnv votes InfoAction
               -- Check the accepted min ratio is : yes/(total - abstain), or zero if everyone abstained
@@ -115,7 +115,7 @@ acceptedRatioProp = do
 
           let allExpiredDreps =
                 Map.fromList
-                  [(cred, DRepState (EpochNo 9) SNothing mempty) | DRepCredential cred <- Map.keys distr]
+                  [(cred, DRepState (EpochNo 9) SNothing mempty mempty) | DRepCredential cred <- Map.keys distr]
               actualAllExpired =
                 dRepAcceptedRatio @era
                   ( (emptyRatifyEnv @era)
@@ -132,10 +132,10 @@ acceptedRatioProp = do
           let (activeDreps, expiredDreps) = splitAt (length distr `div` 2) (Map.keys distr)
               activeDrepsState =
                 Map.fromList
-                  [(cred, DRepState (EpochNo 10) SNothing mempty) | DRepCredential cred <- activeDreps]
+                  [(cred, DRepState (EpochNo 10) SNothing mempty mempty) | DRepCredential cred <- activeDreps]
               expiredDrepsState =
                 Map.fromList
-                  [(cred, DRepState (EpochNo 3) SNothing mempty) | DRepCredential cred <- expiredDreps]
+                  [(cred, DRepState (EpochNo 3) SNothing mempty mempty) | DRepCredential cred <- expiredDreps]
               someExpiredDrepsState = activeDrepsState `Map.union` expiredDrepsState
 
               actualSomeExpired =
@@ -225,7 +225,7 @@ activeDRepAcceptedRatio (TestData {..}) =
   let activeDrepState =
         -- non-expired dReps
         Map.fromList
-          [(cred, DRepState (EpochNo 100) SNothing mempty) | DRepCredential cred <- Map.keys distr]
+          [(cred, DRepState (EpochNo 100) SNothing mempty mempty) | DRepCredential cred <- Map.keys distr]
       ratifyEnv = (emptyRatifyEnv @era) {reDRepDistr = distr, reDRepState = activeDrepState}
    in dRepAcceptedRatio @era ratifyEnv votes InfoAction
 

@@ -353,9 +353,10 @@ instance IsConwayUniv fn => NumLike fn EpochNo
 
 drepStateSpec :: (IsConwayUniv fn, Crypto c) => Term fn EpochNo -> Specification fn (DRepState c)
 drepStateSpec epoch = constrained $ \ [var|drepstate|] ->
-  match drepstate $ \ [var|expiry|] _anchor [var|drepDdeposit|] ->
+  match drepstate $ \ [var|expiry|] _anchor [var|drepDdeposit|] _delegs ->
     [ assertExplain (pure "epoch of expiration must follow the current epoch") $ epoch <=. expiry
     , assertExplain (pure "no deposit is 0") $ lit (Coin 0) <=. drepDdeposit
+    -- TODO: add constraint that `delegs` must be present in the UMap
     ]
 
 vstateSpec :: (IsConwayUniv fn, Era era) => Term fn EpochNo -> Specification fn (VState era)
