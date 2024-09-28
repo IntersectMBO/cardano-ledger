@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Added protocol version argument to `ppuWellFormed`
 * Add `ConwayMempoolEvent` type
 * Add `MempoolEvent` to `ConwayLedgerEvent`
 * Add `Mempool` module, `ConwayMEMPOOL` and `ConwayMempoolPredFailure`

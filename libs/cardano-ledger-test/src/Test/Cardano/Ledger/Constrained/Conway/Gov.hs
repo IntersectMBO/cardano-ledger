@@ -479,7 +479,7 @@ wfPParamsUpdateSpec =
        collateralPercentage
        _MaxCollateralInputs
        -- Babbage
-       _coinsPerUTxOByte
+       coinsPerUTxOByte
        -- Conway
        _poolVotingThresholds
        _drepVotingThresholds
@@ -501,5 +501,6 @@ wfPParamsUpdateSpec =
           , govActionDeposit /=. lit (SJust mempty)
           , dRepDeposit /=. lit (SJust mempty)
           , costModels ==. lit (SNothing) -- NOTE: this is because the cost
+          , coinsPerUTxOByte /=. lit (SJust mempty)
           -- model generator is way too slow
           ]

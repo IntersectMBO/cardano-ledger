@@ -355,11 +355,12 @@ checkBootstrapVotes pp votes
           _ -> isBootstrapAction $ gasAction gas
   | otherwise = pure ()
 
-actionWellFormed :: ConwayEraPParams era => GovAction era -> Test (ConwayGovPredFailure era)
-actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
+actionWellFormed ::
+  ConwayEraPParams era => ProtVer -> GovAction era -> Test (ConwayGovPredFailure era)
+actionWellFormed pv ga = failureUnless isWellFormed $ MalformedProposal ga
   where
     isWellFormed = case ga of
-      ParameterChange _ ppd _ -> ppuWellFormed ppd
+      ParameterChange _ ppd _ -> ppuWellFormed pv ppd
       _ -> True
 
 mkGovActionState ::
@@ -443,7 +444,7 @@ govTransition = do
         failOnJust badHardFork id
 
         -- PParamsUpdate well-formedness check
-        runTest $ actionWellFormed pProcGovAction
+        runTest $ actionWellFormed (pp ^. ppProtocolVersionL) pProcGovAction
 
         -- Deposit check
         let expectedDep = pp ^. ppGovActionDepositL
