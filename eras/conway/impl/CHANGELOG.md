@@ -37,6 +37,8 @@
 * Move `TxInfo` golden tests over from the older `-test` package. #4599
   * Also move the `gen-golden` executable over.
 * Added Test.Cardano.Ledger.Conway.CDDL with CDDL definitions in Conway.
+* Change `ImpException` to contain `Doc`
+* Add `impAnnDoc`
 
 ## 1.16.1.0
 
