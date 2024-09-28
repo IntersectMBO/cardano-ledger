@@ -36,6 +36,7 @@ import Cardano.Ledger.CertState (
   CertState (..),
   CommitteeAuthorization (..),
   CommitteeState (..),
+  DState (..),
   VState (..),
   vsNumDormantEpochsL,
  )
@@ -56,6 +57,7 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.DRep (DRepState (..), drepAnchorL, drepDepositL, drepExpiryL)
 import Cardano.Ledger.Keys (KeyRole (ColdCommitteeRole, DRepRole))
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
+import qualified Cardano.Ledger.UMap as UM
 import Cardano.Slotting.Slot (EpochInterval, binOpEpochNo)
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
@@ -215,7 +217,7 @@ conwayGovCertTransition ::
 conwayGovCertTransition = do
   TRC
     ( ConwayGovCertEnv {cgcePParams, cgceCurrentEpoch, cgceCurrentCommittee, cgceCommitteeProposals}
-      , certState@CertState {certVState = vState@VState {vsDReps}}
+      , certState@CertState {certVState = vState@VState {vsDReps}, certDState}
       , cert
       ) <-
     judgmentContext
@@ -278,10 +280,19 @@ conwayGovCertTransition = do
             pure paidDeposit
       isJust mDRepState ?! ConwayDRepNotRegistered cred
       failOnJust drepRefundMismatch $ ConwayDRepIncorrectRefund refund
-      pure
-        certState
-          { certVState = vState {vsDReps = Map.delete cred vsDReps}
-          }
+      let
+        certState' =
+          certState {certVState = vState {vsDReps = Map.delete cred vsDReps}}
+      pure $
+        case mDRepState of
+          Nothing -> certState'
+          Just dRepState ->
+            certState'
+              { certDState =
+                  certDState
+                    { dsUnified = drepDelegs dRepState UM.⋪ UM.DRepUView (dsUnified certDState)
+                    }
+              }
     -- Update a DRep expiry along with its anchor.
     ConwayUpdateDRep cred mAnchor -> do
       Map.member cred vsDReps ?! ConwayDRepNotRegistered cred

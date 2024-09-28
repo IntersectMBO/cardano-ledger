@@ -31,7 +31,15 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
-import Cardano.Ledger.CertState (CertState (..), DState (..), certDStateL, dsUnifiedL, vsDReps)
+import Cardano.Ledger.CertState (
+  CertState (..),
+  DState (..),
+  certDStateL,
+  certVStateL,
+  dsUnifiedL,
+  vsDReps,
+  vsDRepsL,
+ )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayDELEG, ConwayEra)
@@ -40,7 +48,7 @@ import Cardano.Ledger.Conway.TxCert (
   Delegatee (DelegStake, DelegStakeVote, DelegVote),
  )
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.DRep (DRep (..))
+import Cardano.Ledger.DRep (DRep (..), DRepState (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams)
 import qualified Cardano.Ledger.Shelley.HardForks as HF
@@ -65,6 +73,7 @@ import Control.State.Transition (
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
+import Data.Set as Set
 import Data.Void (Void)
 import GHC.Generics (Generic)
 import Lens.Micro ((%~), (&), (.~), (^.))
@@ -173,18 +182,40 @@ conwayDelegTransition = do
         & certDStateL . dsUnifiedL %~ \umap ->
           UM.SPoolUView umap UM.⨃ Map.singleton stakeCred sPool
     delegVote stakeCred dRep cState =
-      cState
-        & certDStateL . dsUnifiedL %~ \umap ->
-          UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
+      let cState' =
+            cState
+              & certDStateL . dsUnifiedL %~ \umap ->
+                UM.DRepUView umap UM.⨃ Map.singleton stakeCred dRep
+          dReps = vsDReps (certVState cState)
+       in case dRep of
+            DRepCredential targetDRep
+              | Just dRepState <- Map.lookup targetDRep dReps ->
+                  let dRepState' = dRepState {drepDelegs = Set.insert stakeCred (drepDelegs dRepState)}
+                   in cState' & certVStateL . vsDRepsL .~ Map.insert targetDRep dRepState' dReps
+            _ -> cState'
+    unDelegVote stakeCred vState = \case
+      DRepCredential dRepCred ->
+        let removeDelegation dRepState =
+              dRepState {drepDelegs = Set.delete stakeCred (drepDelegs dRepState)}
+         in vState & vsDRepsL %~ Map.adjust removeDelegation dRepCred
+      _ -> vState
     processDelegation stakeCred delegatee =
       case delegatee of
         DelegStake sPool -> delegStake stakeCred sPool
         DelegVote dRep -> delegVote stakeCred dRep
         DelegStakeVote sPool dRep -> delegVote stakeCred dRep . delegStake stakeCred sPool
+    processUnDelegation _ Nothing cState = cState
+    processUnDelegation stakeCred (Just delegatee) cState@(CertState {certVState}) =
+      case delegatee of
+        DelegStake _ -> cState
+        DelegVote dRep -> cState {certVState = unDelegVote stakeCred certVState dRep}
+        DelegStakeVote _sPool dRep -> cState {certVState = unDelegVote stakeCred certVState dRep}
     checkStakeKeyNotRegistered stakeCred =
       UM.notMember stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyRegisteredDELEG stakeCred
-    checkStakeKeyIsRegistered stakeCred =
-      UM.member stakeCred (UM.RewDepUView dsUnified) ?! StakeKeyNotRegisteredDELEG stakeCred
+    checkStakeKeyIsRegistered stakeCred = do
+      let mUMElem = Map.lookup stakeCred (UM.umElems dsUnified)
+      isJust mUMElem ?! StakeKeyNotRegisteredDELEG stakeCred
+      pure $ mUMElem >>= umElemToDelegatee
     checkStakeDelegateeRegistered =
       let checkPoolRegistered targetPool =
             targetPool `Map.member` pools ?! DelegateeNotRegisteredDELEG targetPool
@@ -200,6 +231,12 @@ conwayDelegTransition = do
             DelegStakeVote targetPool targetDRep ->
               checkPoolRegistered targetPool >> checkDRepRegistered targetDRep
             DelegVote targetDRep -> checkDRepRegistered targetDRep
+    umElemToDelegatee (UM.UMElem _ _ mPool mDRep) =
+      case (mPool, mDRep) of
+        (SNothing, SNothing) -> Nothing
+        (SJust pool, SNothing) -> Just $ DelegStake pool
+        (SNothing, SJust dRep) -> Just $ DelegVote dRep
+        (SJust pool, SJust dRep) -> Just $ DelegStakeVote pool dRep
   case cert of
     ConwayRegCert stakeCred sMayDeposit -> do
       forM_ sMayDeposit checkDepositAgainstPParams
@@ -207,6 +244,7 @@ conwayDelegTransition = do
       pure $ certState & certDStateL . dsUnifiedL .~ registerStakeCredential stakeCred
     ConwayUnRegCert stakeCred sMayRefund -> do
       let (mUMElem, umap) = UM.extractStakingCredential stakeCred dsUnified
+          mCurDelegatee = mUMElem >>= umElemToDelegatee
           checkInvalidRefund = do
             SJust suppliedRefund <- Just sMayRefund
             -- we don't want to report invalid refund when stake credential is not registered:
@@ -221,11 +259,11 @@ conwayDelegTransition = do
       failOnJust checkInvalidRefund IncorrectDepositDELEG
       isJust mUMElem ?! StakeKeyNotRegisteredDELEG stakeCred
       failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroRewardAccountBalanceDELEG
-      pure $ certState & certDStateL . dsUnifiedL .~ umap
+      pure $ processUnDelegation stakeCred mCurDelegatee $ certState & certDStateL . dsUnifiedL .~ umap
     ConwayDelegCert stakeCred delegatee -> do
-      checkStakeKeyIsRegistered stakeCred
+      mCurDelegatee <- checkStakeKeyIsRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
-      pure $ processDelegation stakeCred delegatee certState
+      pure $ processDelegation stakeCred delegatee $ processUnDelegation stakeCred mCurDelegatee certState
     ConwayRegDelegCert stakeCred delegatee deposit -> do
       checkDepositAgainstPParams deposit
       checkStakeKeyNotRegistered stakeCred
