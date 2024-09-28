@@ -54,7 +54,6 @@ import Cardano.Ledger.Conway.TxCert (
  )
 import Cardano.Ledger.Shelley.API (
   CertState (..),
-  DState,
   PState (..),
   PoolEnv (PoolEnv),
   VState,
@@ -174,7 +173,7 @@ instance
 instance
   forall era.
   ( Era era
-  , State (EraRule "DELEG" era) ~ DState era
+  , State (EraRule "DELEG" era) ~ CertState era
   , State (EraRule "POOL" era) ~ PState era
   , State (EraRule "GOVCERT" era) ~ VState era
   , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
@@ -201,7 +200,7 @@ instance
 
 certTransition ::
   forall era.
-  ( State (EraRule "DELEG" era) ~ DState era
+  ( State (EraRule "DELEG" era) ~ CertState era
   , State (EraRule "POOL" era) ~ PState era
   , State (EraRule "GOVCERT" era) ~ VState era
   , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
@@ -219,12 +218,11 @@ certTransition ::
 certTransition = do
   TRC (CertEnv slot pp currentEpoch committee committeeProposals, cState, c) <- judgmentContext
   let
-    CertState {certDState, certPState, certVState} = cState
+    CertState {certPState, certVState} = cState
     pools = psStakePoolParams certPState
   case c of
     ConwayTxCertDeleg delegCert -> do
-      newDState <- trans @(EraRule "DELEG" era) $ TRC (ConwayDelegEnv pp pools, certDState, delegCert)
-      pure $ cState {certDState = newDState}
+      trans @(EraRule "DELEG" era) $ TRC (ConwayDelegEnv pp pools, cState, delegCert)
     ConwayTxCertPool poolCert -> do
       newPState <- trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, certPState, poolCert)
       pure $ cState {certPState = newPState}

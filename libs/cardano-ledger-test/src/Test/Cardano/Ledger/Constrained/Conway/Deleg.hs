@@ -55,10 +55,11 @@ delegCertSpec ::
   forall fn.
   IsConwayUniv fn =>
   ConwayDelegEnv (ConwayEra StandardCrypto) ->
-  DState (ConwayEra StandardCrypto) ->
+  CertState (ConwayEra StandardCrypto) ->
   Specification fn (ConwayDelegCert StandardCrypto)
-delegCertSpec (ConwayDelegEnv pp pools) ds =
-  let rewardMap = unUnify $ rewards ds
+delegCertSpec (ConwayDelegEnv pp pools) certState =
+  let ds = certDState certState
+      rewardMap = unUnify $ rewards ds
       delegMap = unUnify $ delegations ds
       zeroReward = (== 0) . fromCompact . rdReward
       depositOf k =

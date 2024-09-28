@@ -31,6 +31,7 @@ import Cardano.Ledger.Binary.Coders (
   (!>),
   (<!),
  )
+import Cardano.Ledger.CertState (CertState (..), DState (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayDELEG, ConwayEra)
@@ -41,7 +42,7 @@ import Cardano.Ledger.Conway.TxCert (
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams)
-import Cardano.Ledger.Shelley.LedgerState (DState (..))
+import qualified Cardano.Ledger.Shelley.HardForks as HF
 import qualified Cardano.Ledger.UMap as UM
 import Control.DeepSeq (NFData)
 import Control.Monad (forM_, guard)
@@ -135,14 +136,14 @@ instance Era era => DecCBOR (ConwayDelegPredFailure era) where
 
 instance
   ( EraPParams era
-  , State (EraRule "DELEG" era) ~ DState era
+  , State (EraRule "DELEG" era) ~ CertState era
   , Signal (EraRule "DELEG" era) ~ ConwayDelegCert (EraCrypto era)
   , Environment (EraRule "DELEG" era) ~ ConwayDelegEnv era
   , EraRule "DELEG" era ~ ConwayDELEG era
   ) =>
   STS (ConwayDELEG era)
   where
-  type State (ConwayDELEG era) = DState era
+  type State (ConwayDELEG era) = CertState era
   type Signal (ConwayDELEG era) = ConwayDelegCert (EraCrypto era)
   type Environment (ConwayDELEG era) = ConwayDelegEnv era
   type BaseM (ConwayDELEG era) = ShelleyBase
@@ -155,7 +156,7 @@ conwayDelegTransition :: forall era. EraPParams era => TransitionRule (ConwayDEL
 conwayDelegTransition = do
   TRC
     ( ConwayDelegEnv pp pools
-      , dState@DState {dsUnified}
+      , certState@CertState {certDState = dState@DState {dsUnified}}
       , cert
       ) <-
     judgmentContext
@@ -190,7 +191,7 @@ conwayDelegTransition = do
     ConwayRegCert stakeCred sMayDeposit -> do
       forM_ sMayDeposit checkDepositAgainstPParams
       checkStakeKeyNotRegistered stakeCred
-      pure $ dState {dsUnified = registerStakeCredential stakeCred}
+      pure $ certState {certDState = dState {dsUnified = registerStakeCredential stakeCred}}
     ConwayUnRegCert stakeCred sMayRefund -> do
       let (mUMElem, umap) = UM.extractStakingCredential stakeCred dsUnified
           checkInvalidRefund = do
@@ -207,16 +208,19 @@ conwayDelegTransition = do
       failOnJust checkInvalidRefund IncorrectDepositDELEG
       isJust mUMElem ?! StakeKeyNotRegisteredDELEG stakeCred
       failOnJust checkStakeKeyHasZeroRewardBalance StakeKeyHasNonZeroRewardAccountBalanceDELEG
-      pure $ dState {dsUnified = umap}
+      pure $ certState {certDState = dState {dsUnified = umap}}
     ConwayDelegCert stakeCred delegatee -> do
       checkStakeKeyIsRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
-      pure $ dState {dsUnified = processDelegation stakeCred delegatee dsUnified}
+      pure $ certState {certDState = dState {dsUnified = processDelegation stakeCred delegatee dsUnified}}
     ConwayRegDelegCert stakeCred delegatee deposit -> do
       checkDepositAgainstPParams deposit
       checkStakeKeyNotRegistered stakeCred
       checkStakeDelegateeRegistered delegatee
       pure $
-        dState
-          { dsUnified = processDelegation stakeCred delegatee $ registerStakeCredential stakeCred
+        certState
+          { certDState =
+              dState
+                { dsUnified = processDelegation stakeCred delegatee $ registerStakeCredential stakeCred
+                }
           }
