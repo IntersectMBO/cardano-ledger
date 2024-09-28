@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Added `mempool` to `LedgerEnv`
 * Added `registerStakeCredential` and `delegateStake` to `ImpTest`
 * Remove protocol version argument from `mkShelleyGlobals` (`maxMajorPV` was removed from `Globals`)
 * Added `EncCBOR` instances for:

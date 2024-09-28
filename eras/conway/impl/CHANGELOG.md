@@ -2,6 +2,10 @@
 
 ## 1.17.0.0
 
+* Add `ConwayMempoolEvent` type
+* Add `MempoolEvent` to `ConwayLedgerEvent`
+* Add `Mempool` module, `ConwayMEMPOOL` and `ConwayMempoolPredFailure`
+* Add `ConwayMempoolFailure` to `ConwayLedgerPredFailure`
 * Add `ZeroTreasuryWithdrawals` to `ConwayGovPredFailure`
 * Add `ProtVer` argument to `TxInfo` functions:
   * `transTxCert`

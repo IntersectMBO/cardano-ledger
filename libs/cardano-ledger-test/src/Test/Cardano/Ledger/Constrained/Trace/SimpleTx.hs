@@ -105,7 +105,7 @@ getSTSLedgerEnv proof txIx env = do
   slot <- runTerm env currentSlot
   (PParamsF _ pp) <- runTerm env (pparams proof)
   accntState <- runTarget env accountStateT
-  pure $ (LedgerEnv slot txIx pp accntState, ledgerstate)
+  pure (LedgerEnv slot txIx pp accntState False, ledgerstate)
 
 -- ====================================================================
 -- Picking things that have no Plutus Scripts inside. To make very

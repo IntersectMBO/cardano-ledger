@@ -1469,13 +1469,6 @@ ppConwayLedgerPredFailure proof x = case x of
       error
         ("Only the ConwayEra has a (PredicateFailure (EraRule \"GOV\" era)). This Era is " ++ show proof)
   ConwayUtxowFailure y -> ppUTXOW proof y
-  {- case proof of -- (PredicateFailure (EraRule "UTXOW" era))
-    Shelley -> ppShelleyUtxowPredFailure y
-    Allegra -> ppShelleyUtxowPredFailure y
-    Mary -> ppShelleyUtxowPredFailure y
-    Alonzo -> ppAlonzoUtxowPredFailure y
-    Babbage -> ppBabbageUtxowPredFailure proof y
-    Conway -> ppBabbageUtxowPredFailure proof y -}
   ConwayCertsFailure pf -> case proof of
     Conway -> ppConwayCertsPredFailure proof pf
     _ ->
@@ -1487,6 +1480,8 @@ ppConwayLedgerPredFailure proof x = case x of
       [ ("Computed sum of reference script size", ppInt s1)
       , ("Maximum allowed total reference script size", ppInt s2)
       ]
+  ConwayMempoolFailure t ->
+    ppSexp "ConwayMempoolFailure" [text t]
 
 instance Reflect era => PrettyA (ConwayLedgerPredFailure era) where
   prettyA = ppConwayLedgerPredFailure reify
@@ -3654,6 +3649,7 @@ instance Reflect era => PrettyA (LedgerEnv era) where
       , ("ix", prettyA (txIxToInt ledgerIx))
       , ("pparams", prettyA ledgerPp)
       , ("account", prettyA ledgerAccount)
+      , ("mempool", prettyA ledgerMempool)
       ]
 
 instance Reflect era => PrettyA (UtxoEnv era) where

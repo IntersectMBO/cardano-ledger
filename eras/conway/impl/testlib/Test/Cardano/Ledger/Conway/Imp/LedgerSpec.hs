@@ -4,21 +4,33 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Test.Cardano.Ledger.Conway.Imp.LedgerSpec (spec) where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Rules (ConwayLedgerPredFailure (..), maxRefScriptSizePerTx)
+import Cardano.Ledger.Conway.Rules (
+  ConwayLedgerEvent (..),
+  ConwayLedgerPredFailure (..),
+  ConwayMempoolEvent (..),
+  maxRefScriptSizePerTx,
+ )
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.SafeHash (originalBytesSize)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
+import Cardano.Ledger.Shelley.LedgerState
+import Cardano.Ledger.Shelley.Rules (ShelleyLedgersEnv (..), ShelleyLedgersEvent (..))
+import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (def)
+import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
-import Lens.Micro ((&), (.~))
+import Lens.Micro ((&), (.~), (^.))
+import Lens.Micro.Mtl (use)
 import Test.Cardano.Ledger.Conway.ImpTest
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus.Examples (
@@ -30,6 +42,13 @@ spec ::
   forall era.
   ( ConwayEraImp era
   , InjectRuleFailure "LEDGER" ConwayLedgerPredFailure era
+  , Event (EraRule "MEMPOOL" era) ~ ConwayMempoolEvent era
+  , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
+  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Signal (EraRule "LEDGERS" era) ~ Seq.Seq (Tx era)
+  , Event (EraRule "LEDGERS" era) ~ ShelleyLedgersEvent era
+  , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
+  , STS (EraRule "LEDGERS" era)
   ) =>
   SpecWith (ImpTestState era)
 spec = do
@@ -166,3 +185,19 @@ spec = do
     submitTx_ $
       mkBasicTx $
         mkBasicTxBody & withdrawalsTxBodyL .~ Withdrawals [(ra, mempty)]
+
+  describe "Mempool events" $ do
+    it "No Mempool events should be emitted via LEDGERS rules " $ do
+      nes <- use impNESL
+      slotNo <- use impLastTickG
+      let ls = nes ^. nesEsL . esLStateL
+          pp = nes ^. nesEsL . curPParamsEpochStateL
+          account = nes ^. nesEsL . esAccountStateL
+      tx <- fixupTx $ mkBasicTx mkBasicTxBody
+      Right (_, evs) <-
+        tryRunImpRule @"LEDGERS"
+          (LedgersEnv slotNo pp account)
+          ls
+          (Seq.singleton tx)
+      let mempoolEvents = [ev | LedgerEvent ev@(MempoolEvent (ConwayMempoolEvent _)) <- evs]
+      mempoolEvents `shouldBeExpr` []

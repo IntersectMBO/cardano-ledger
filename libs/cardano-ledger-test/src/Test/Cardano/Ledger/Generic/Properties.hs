@@ -88,27 +88,27 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 genTxAndUTXOState ::
   Reflect era => Proof era -> GenSize -> Gen (TRC (EraRule "UTXOW" era), GenState era)
 genTxAndUTXOState proof@Conway gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <-
+  (Box _ (TRC (LedgerEnv slotNo _ pp _ _, ledgerState, vtx)) genState) <-
     genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@Babbage gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <-
+  (Box _ (TRC (LedgerEnv slotNo _ pp _ _, ledgerState, vtx)) genState) <-
     genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@Alonzo gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <-
+  (Box _ (TRC (LedgerEnv slotNo _ pp _ _, ledgerState, vtx)) genState) <-
     genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@Mary gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <-
+  (Box _ (TRC (LedgerEnv slotNo _ pp _ _, ledgerState, vtx)) genState) <-
     genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@Allegra gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <-
+  (Box _ (TRC (LedgerEnv slotNo _ pp _ _, ledgerState, vtx)) genState) <-
     genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@Shelley gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <-
+  (Box _ (TRC (LedgerEnv slotNo _ pp _ _, ledgerState, vtx)) genState) <-
     genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp def, lsUTxOState ledgerState, vtx), genState)
 
@@ -142,7 +142,7 @@ genTxAndLEDGERState proof sizes = do
         model <- gets gsModel
         pp <- gets (gePParams . gsGenEnv)
         let ledgerState = extract @(LedgerState era) model
-            ledgerEnv = LedgerEnv slotNo txIx pp (AccountState (Coin 0) (Coin 0))
+            ledgerEnv = LedgerEnv slotNo txIx pp (AccountState (Coin 0) (Coin 0)) False
         pure $ TRC (ledgerEnv, ledgerState, tx)
   (trc, genstate) <- runGenRS proof sizes (initStableFields >> genT)
   pure (Box proof trc genstate)

@@ -9,6 +9,7 @@ module Cardano.Ledger.Conway.Era (
   ConwayGOVCERT,
   ConwayCERTS,
   ConwayGOV,
+  ConwayMEMPOOL,
   ConwayNEWEPOCH,
   ConwayEPOCH,
   ConwayENACT,
@@ -134,6 +135,10 @@ type instance EraRule "UTXO" (ConwayEra c) = ConwayUTXO (ConwayEra c)
 data ConwayBBODY era
 
 type instance EraRule "BBODY" (ConwayEra c) = ConwayBBODY (ConwayEra c)
+
+data ConwayMEMPOOL era
+
+type instance EraRule "MEMPOOL" (ConwayEra c) = ConwayMEMPOOL (ConwayEra c)
 
 -- Rules inherited from Shelley
 

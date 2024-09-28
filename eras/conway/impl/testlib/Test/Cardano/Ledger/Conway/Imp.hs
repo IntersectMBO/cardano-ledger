@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Rules (
  )
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
 import Cardano.Ledger.Babbage.TxInfo (BabbageContextError)
-import Cardano.Ledger.BaseTypes (Inject, natVersion)
+import Cardano.Ledger.BaseTypes (Inject, ShelleyBase, natVersion)
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Rules (
   ConwayBbodyPredFailure,
@@ -25,11 +25,20 @@ import Cardano.Ledger.Conway.Rules (
   ConwayEpochEvent,
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
+  ConwayLedgerEvent,
   ConwayLedgerPredFailure,
+  ConwayMempoolEvent,
   ConwayNewEpochEvent,
  )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
-import Cardano.Ledger.Shelley.Rules (Event, ShelleyUtxoPredFailure, ShelleyUtxowPredFailure)
+import Cardano.Ledger.Shelley.Rules (
+  ShelleyLedgersEnv,
+  ShelleyLedgersEvent,
+  ShelleyUtxoPredFailure,
+  ShelleyUtxowPredFailure,
+ )
+import Control.State.Transition.Extended
+import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import qualified Test.Cardano.Ledger.Babbage.Imp as BabbageImp
 import Test.Cardano.Ledger.Common
@@ -73,6 +82,13 @@ spec ::
   , InjectRuleEvent "TICK" ConwayEpochEvent era
   , Event (EraRule "EPOCH" era) ~ ConwayEpochEvent era
   , Event (EraRule "NEWEPOCH" era) ~ ConwayNewEpochEvent era
+  , Event (EraRule "MEMPOOL" era) ~ ConwayMempoolEvent era
+  , Event (EraRule "LEDGERS" era) ~ ShelleyLedgersEvent era
+  , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
+  , BaseM (EraRule "LEDGERS" era) ~ ShelleyBase
+  , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
+  , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
+  , STS (EraRule "LEDGERS" era)
   ) =>
   Spec
 spec = do
