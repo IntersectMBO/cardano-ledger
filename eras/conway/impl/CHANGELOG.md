@@ -49,6 +49,7 @@
 * Added Test.Cardano.Ledger.Conway.CDDL with CDDL definitions in Conway.
 * Change `ImpException` to contain `Doc`
 * Add `impAnnDoc`
+* Add `ifBootstrap`
 
 ## 1.16.1.0
 

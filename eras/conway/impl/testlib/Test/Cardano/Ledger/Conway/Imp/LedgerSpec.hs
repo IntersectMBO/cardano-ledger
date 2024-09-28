@@ -109,13 +109,14 @@ spec = do
 
     unRegisterDRep drep
     expectDRepNotRegistered drep
-
-    submitTx_ $
-      mkBasicTx $
-        mkBasicTxBody
-          & withdrawalsTxBodyL
-            .~ Withdrawals
-              [(ra, reward)]
+    let tx =
+          mkBasicTx $
+            mkBasicTxBody
+              & withdrawalsTxBodyL
+                .~ Withdrawals
+                  [(ra, reward)]
+    ifBootstrap (submitTx_ tx >> (lookupReward cred `shouldReturn` mempty)) $ do
+      submitFailingTx tx [injectFailure $ ConwayWdrlNotDelegatedToDRep [kh]]
 
   it "Withdraw from a key delegated to an expired DRep" $ do
     modifyPParams $ \pp ->
