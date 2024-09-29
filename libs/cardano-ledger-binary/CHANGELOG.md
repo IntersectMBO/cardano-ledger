@@ -18,7 +18,7 @@
 
 * Add `writeSpec` funtion to Test.Cardano.Ledger.Binary.Cuddle
 
-## 1.3.3.1
+### `testlib`
 
 * Add the module Test.Cardano.Ledger.Binary.Cuddle with the
   functions `huddleRoundTripCborSpec` and `huddleRoundTripAnnCborSpec`.

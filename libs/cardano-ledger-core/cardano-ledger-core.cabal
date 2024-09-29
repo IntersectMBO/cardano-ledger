@@ -146,6 +146,7 @@ library testlib
         Test.Cardano.Ledger.Core.Address
         Test.Cardano.Ledger.Core.Arbitrary
         Test.Cardano.Ledger.Core.Binary
+        Test.Cardano.Ledger.Core.Binary.CDDL
         Test.Cardano.Ledger.Core.Binary.RoundTrip
         Test.Cardano.Ledger.Core.JSON
         Test.Cardano.Ledger.Core.KeyPair
@@ -182,6 +183,7 @@ library testlib
         cardano-ledger-byron,
         cardano-ledger-byron-test,
         containers,
+        cuddle,
         data-default-class,
         deepseq,
         FailT,
@@ -189,6 +191,7 @@ library testlib
         genvalidity,
         hspec,
         hedgehog-quickcheck,
+        here,
         HUnit,
         mtl,
         nothunks,

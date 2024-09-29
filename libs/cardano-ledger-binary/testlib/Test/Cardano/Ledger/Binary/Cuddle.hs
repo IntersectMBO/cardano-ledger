@@ -217,6 +217,6 @@ writeSpec hddl path =
       preface = "; This file was auto-generated from huddle. Please do not modify it directly!"
    in withFile path WriteMode $ \h -> do
         hPutStrLn h preface
-        hPutDoc h (pretty $ Cuddle.sortCDDL cddl)
+        hPutDoc h (pretty cddl)
         -- Write an empty line at the end of the file
         hPutStrLn h ""

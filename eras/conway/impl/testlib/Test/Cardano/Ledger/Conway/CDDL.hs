@@ -1,6 +1,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
@@ -12,10 +13,18 @@ module Test.Cardano.Ledger.Conway.CDDL (conway) where
 import Codec.CBOR.Cuddle.Huddle
 import Data.Function (($))
 import Data.Semigroup ((<>))
-import Data.Text qualified as T
+import Data.String.Here (here)
 import Data.Word (Word64)
 import GHC.Num (Integer)
-import GHC.Show (Show (show))
+import Test.Cardano.Ledger.Core.Binary.CDDL
+import Test.Cardano.Ledger.Shelley.CDDL (
+  bootstrap_witness,
+  port,
+  single_host_addr,
+  transaction_index,
+  transaction_metadatum,
+  vkeywitness,
+ )
 
 conway :: Huddle
 conway =
@@ -25,16 +34,25 @@ conway =
 
 block :: Rule
 block =
-  "block"
-    =:= arr
-      [ a header
-      , "transaction_bodies" ==> arr [0 <+ a transaction_body]
-      , "transaction_witness_sets"
-          ==> arr [0 <+ a transaction_witness_set]
-      , "auxiliary_data_set"
-          ==> mp [0 <+ asKey transaction_index ==> auxiliary_data]
-      , "invalid_transactions" ==> arr [0 <+ a transaction_index]
-      ]
+  comment
+    [here|
+    Valid blocks must also satisfy the following two constraints:
+    1) the length of transaction_bodies and transaction_witness_sets
+       must be the same
+    2) every transaction_index must be strictly smaller than the
+       length of transaction_bodies
+
+  |]
+    $ "block"
+      =:= arr
+        [ a header
+        , "transaction_bodies" ==> arr [0 <+ a transaction_body]
+        , "transaction_witness_sets"
+            ==> arr [0 <+ a transaction_witness_set]
+        , "auxiliary_data_set"
+            ==> mp [0 <+ asKey transaction_index ==> auxiliary_data]
+        , "invalid_transactions" ==> arr [0 <+ a transaction_index]
+        ]
 
 transaction :: Rule
 transaction =
@@ -45,9 +63,6 @@ transaction =
       , a VBool
       , a (auxiliary_data / VNil)
       ]
-
-transaction_index :: Rule
-transaction_index = "transaction_index" =:= VUInt `sized` (2 :: Word64)
 
 header :: Rule
 header =
@@ -213,12 +228,20 @@ info_action = "info_action" =:= int 6
 
 voter :: Rule
 voter =
-  "voter"
-    =:= arr [0, a addr_keyhash]
-    / arr [1, a scripthash]
-    / arr [2, a addr_keyhash]
-    / arr [3, a scripthash]
-    / arr [4, a addr_keyhash]
+  comment
+    [here|
+    Constitutional Committee Hot KeyHash: 0
+    Constitutional Committee Hot ScriptHash: 1
+    DRep KeyHash: 2
+    DRep ScriptHash: 3
+    StakingPool KeyHash: 4
+  |]
+    $ "voter"
+      =:= arr [0, a addr_keyhash]
+      / arr [1, a scripthash]
+      / arr [2, a addr_keyhash]
+      / arr [3, a scripthash]
+      / arr [4, a addr_keyhash]
 
 anchor :: Rule
 anchor =
@@ -252,9 +275,14 @@ transaction_input =
 
 transaction_output :: Rule
 transaction_output =
-  "transaction_output"
-    =:= pre_babbage_transaction_output
-    / post_alonzo_transaction_output
+  comment
+    [here|
+    Both of the Alonzo and Babbage style TxOut formats are equally valid
+    and can be used interchangeably
+  |]
+    $ "transaction_output"
+      =:= pre_babbage_transaction_output
+      / post_alonzo_transaction_output
 
 pre_babbage_transaction_output :: Rule
 pre_babbage_transaction_output =
@@ -276,7 +304,77 @@ post_alonzo_transaction_output =
       ]
 
 script_data_hash :: Rule
-script_data_hash = "script_data_hash" =:= hash32
+script_data_hash =
+  comment
+    [here|
+    This is a hash of data which may affect evaluation of a script.
+    This data consists of:
+      - The redeemers from the transaction_witness_set (the value of field 5).
+      - The datums from the transaction_witness_set (the value of field 4).
+      - The value in the costmdls map corresponding to the script's language
+        (in field 18 of protocol_param_update.)
+    (In the future it may contain additional protocol parameters.)
+
+    Since this data does not exist in contiguous form inside a transaction, it needs
+    to be independently constructed by each recipient.
+
+    The bytestring which is hashed is the concatenation of three things:
+      redeemers || datums || language views
+    The redeemers are exactly the data present in the transaction witness set.
+    Similarly for the datums, if present. If no datums are provided, the middle
+    field is omitted (i.e. it is the empty/null bytestring).
+
+    language views CDDL:
+    { * language => script_integrity_data }
+
+    This must be encoded canonically, using the same scheme as in
+    RFC7049 section 3.9:
+     - Maps, strings, and bytestrings must use a definite-length encoding
+     - Integers must be as small as possible.
+     - The expressions for map length, string length, and bytestring length
+       must be as short as possible.
+     - The keys in the map must be sorted as follows:
+        -  If two keys have different lengths, the shorter one sorts earlier.
+        -  If two keys have the same length, the one with the lower value
+           in (byte-wise) lexical order sorts earlier.
+
+    For PlutusV1 (language id 0), the language view is the following:
+      - the value of costmdls map at key 0 (in other words, the script_integrity_data)
+        is encoded as an indefinite length list and the result is encoded as a bytestring.
+        (our apologies)
+        For example, the script_integrity_data corresponding to the all zero costmodel for V1
+        would be encoded as (in hex):
+        58a89f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff
+      - the language ID tag is also encoded twice. first as a uint then as
+        a bytestring. (our apologies)
+        Concretely, this means that the language version for V1 is encoded as
+        4100 in hex.
+    For PlutusV2 (language id 1), the language view is the following:
+      - the value of costmdls map at key 1 is encoded as an definite length list.
+        For example, the script_integrity_data corresponding to the all zero costmodel for V2
+        would be encoded as (in hex):
+        98af0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+      - the language ID tag is encoded as expected.
+        Concretely, this means that the language version for V2 is encoded as
+        01 in hex.
+    For PlutusV3 (language id 2), the language view is the following:
+      - the value of costmdls map at key 2 is encoded as a definite length list.
+
+    Note that each Plutus language represented inside a transaction must have
+    a cost model in the costmdls protocol parameter in order to execute,
+    regardless of what the script integrity data is.
+
+    Finally, note that in the case that a transaction includes datums but does not
+    include the redeemers field, the script data format becomes (in hex):
+    [ A0 | datums | A0 ]
+    corresponding to a CBOR empty map and an empty map for language view.
+    This empty redeeemer case has changed from the previous eras, since default
+    representation for redeemers has been changed to a map. Also whenever redeemers are
+    supplied either as a map or as an array they must contain at least one element,
+    therefore there is no way to override this behavior by providing a custom
+    representation for empty redeemers.
+  |]
+    $ "script_data_hash" =:= hash32
 
 certificate :: Rule
 certificate =
@@ -416,27 +514,8 @@ pool_params =
       , "pool_metadata" ==> (pool_metadata / VNil)
       ]
 
-port :: Rule
-port = "port" =:= VUInt `le` 65535
-
-ipv4 :: Rule
-ipv4 = "ipv4" =:= VBytes `sized` (4 :: Word64)
-
-ipv6 :: Rule
-ipv6 = "ipv6" =:= VBytes `sized` (16 :: Word64)
-
 dns_name :: Rule
 dns_name = "dns_name" =:= VText `sized` (0 :: Word64, 128 :: Word64)
-
-single_host_addr :: Named Group
-single_host_addr =
-  "single_host_addr"
-    =:~ grp
-      [ 0
-      , port / VNil
-      , ipv4 / VNil
-      , ipv6 / VNil
-      ]
 
 single_host_name :: Named Group
 single_host_name =
@@ -573,15 +652,6 @@ plutus_data =
     / big_int
     / bounded_bytes
 
-big_int :: Rule
-big_int = "big_int" =:= VInt / big_uint / big_nint
-
-big_uint :: Rule
-big_uint = "big_uint" =:= tag 2 bounded_bytes
-
-big_nint :: Rule
-big_nint = "big_nint" =:= tag 3 bounded_bytes
-
 constr :: IsType0 x => x -> GRuleCall
 constr = binding $ \x ->
   "constr"
@@ -670,15 +740,6 @@ costmdls =
         , 0 <+ asKey (3 ... 255) ==> arr [0 <+ a int64] -- Any 8-bit unsigned number can be used as a key.
         ]
 
-transaction_metadatum :: Rule
-transaction_metadatum =
-  "transaction_metadatum"
-    =:= smp [0 <+ asKey transaction_metadatum ==> transaction_metadatum]
-    / sarr [0 <+ a transaction_metadatum]
-    / VInt
-    / (VBytes `sized` (0 :: Word64, 64 :: Word64))
-    / (VText `sized` (0 :: Word64, 64 :: Word64))
-
 transaction_metadatum_label :: Rule
 transaction_metadatum_label = "transaction_metadatum_label" =:= (VUInt `sized` (8 :: Word64))
 
@@ -709,19 +770,6 @@ auxiliary_data =
           , opt (idx 4 ==> arr [0 <+ a plutus_v3_script])
           ]
       )
-
-vkeywitness :: Rule
-vkeywitness = "vkeywitness" =:= arr [a vkey, a signature]
-
-bootstrap_witness :: Rule
-bootstrap_witness =
-  "bootstrap_witness"
-    =:= arr
-      [ "public_key" ==> vkey
-      , "signature" ==> signature
-      , "chain_code" ==> (VBytes `sized` (32 :: Word64))
-      , "attributes" ==> VBytes
-      ]
 
 native_script :: Rule
 native_script =
@@ -758,9 +806,6 @@ invalid_before = "invalid_before" =:~ grp [4, a slot_no]
 invalid_hereafter :: Named Group
 invalid_hereafter = "invalid_hereafter" =:~ grp [5, a slot_no]
 
-coin :: Rule
-coin = "coin" =:= VUInt
-
 multiasset :: IsType0 a => a -> GRuleCall
 multiasset = binding $ \x ->
   "multiasset"
@@ -772,50 +817,11 @@ policy_id = "policy_id" =:= scripthash
 asset_name :: Rule
 asset_name = "asset_name" =:= VBytes `sized` (0 :: Word64, 32 :: Word64)
 
--- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
--- with:
---
--- minInt64 :: Rule
--- minInt64 = "minInt64" =:= -9223372036854775808
-minInt64 :: Integer
-minInt64 = -9223372036854775808
-
--- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
--- with:
---
--- maxInt64 :: Rule
--- maxInt64 = "maxInt64" =:= 9223372036854775807
-maxInt64 :: Integer
-maxInt64 = 9223372036854775807
-
--- Once https://github.com/input-output-hk/cuddle/issues/29 is in place, replace
--- with:
---
--- maxWord64 :: Rule
--- maxWord64 = "maxWord64" =:= 18446744073709551615
-maxWord64 :: Integer
-maxWord64 = 18446744073709551615
-
-negInt64 :: Rule
-negInt64 = "negInt64" =:= minInt64 ... (-1)
-
-posInt64 :: Rule
-posInt64 = "posInt64" =:= 1 ... maxInt64
-
-nonZeroInt64 :: Rule
-nonZeroInt64 = "nonZeroInt64" =:= negInt64 / posInt64 -- this is the same as the current int64 definition but without zero
-
-positive_coin :: Rule
-positive_coin = "positive_coin" =:= 1 ... maxWord64
-
 value :: Rule
 value = "value" =:= coin / sarr [a coin, a (multiasset positive_coin)]
 
 mint :: Rule
 mint = "mint" =:= multiasset nonZeroInt64
-
-int64 :: Rule
-int64 = "int64" =:= minInt64 ... maxInt64
 
 network_id :: Rule
 network_id = "network_id" =:= int 0 / int 1
@@ -831,15 +837,6 @@ slot_no = "slot_no" =:= VUInt `sized` (8 :: Word64)
 
 block_no :: Rule
 block_no = "block_no" =:= VUInt `sized` (8 :: Word64)
-
-addr_keyhash :: Rule
-addr_keyhash = "addr_keyhash" =:= hash28
-
-pool_keyhash :: Rule
-pool_keyhash = "pool_keyhash" =:= hash28
-
-vrf_keyhash :: Rule
-vrf_keyhash = "vrf_keyhash" =:= hash32
 
 auxiliary_data_hash :: Rule
 auxiliary_data_hash = "auxiliary_data_hash" =:= hash32
@@ -889,41 +886,6 @@ script =
     / arr [2, a plutus_v2_script]
     / arr [3, a plutus_v3_script]
 
---------------------------------------------------------------------------------
--- Crypto
---------------------------------------------------------------------------------
-
-hash28 :: Rule
-hash28 = "$hash28" =:= VBytes `sized` (28 :: Word64)
-
-hash32 :: Rule
-hash32 = "$hash32" =:= VBytes `sized` (32 :: Word64)
-
-vkey :: Rule
-vkey = "$vkey" =:= VBytes `sized` (32 :: Word64)
-
-vrf_vkey :: Rule
-vrf_vkey = "$vrf_vkey" =:= VBytes `sized` (32 :: Word64)
-
-vrf_cert :: Rule
-vrf_cert = "$vrf_cert" =:= arr [a VBytes, a (VBytes `sized` (80 :: Word64))]
-
-kes_vkey :: Rule
-kes_vkey = "$kes_vkey" =:= VBytes `sized` (32 :: Word64)
-
-kes_signature :: Rule
-kes_signature = "$kes_signature" =:= VBytes `sized` (448 :: Word64)
-
-signkeyKES :: Rule
-signkeyKES = "signkeyKES" =:= VBytes `sized` (64 :: Word64)
-
-signature :: Rule
-signature = "$signature" =:= VBytes `sized` (64 :: Word64)
-
---------------------------------------------------------------------------------
--- Extras
---------------------------------------------------------------------------------
-
 -- Conway era introduces an optional 258 tag for sets, which will become mandatory in the
 -- second era after Conway. We recommend all the tooling to account for this future breaking
 -- change sooner rather than later, in order to provide a smooth transition for their users.
@@ -936,75 +898,3 @@ nonempty_set = binding $ \x ->
   "nonempty_set"
     =:= tag 258 (arr [1 <+ a x])
     / sarr [1 <+ a x]
-
-positive_int :: Rule
-positive_int = "positive_int" =:= 1 ... 18446744073709551615
-
-unit_interval :: Rule
-unit_interval = "unit_interval" =:= tag 30 (arr [1, 2])
-
--- unit_interval = tag 0 [uint, uint]
---
--- Comment above depicts the actual definition for `unit_interval`.
---
--- Unit interval is a number in the range between 0 and 1, which
--- means there are two extra constraints:
--- \* numerator <= denominator
--- \* denominator > 0
---
--- Relation between numerator and denominator cannot be expressed in CDDL, which
--- poses a problem for testing. We need to be able to generate random valid data
--- for testing implementation of our encoders/decoders. Which means we cannot use
--- the actual definition here and we hard code the value to 1/2
-
--- nonnegative_interval = tag 0 [uint, positive_int]
-nonnegative_interval :: Rule
-nonnegative_interval = "nonnegative_interval" =:= tag 30 (arr [a VUInt, a positive_int])
-
-address :: Rule
-address =
-  "address"
-    =:= bstr
-      "001000000000000000000000000000000000000000000000000000000011000000000000000000000000000000000000000000000000000000"
-    / bstr
-      "102000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000"
-    / bstr
-      "203000000000000000000000000000000000000000000000000000000033000000000000000000000000000000000000000000000000000000"
-    / bstr
-      "304000000000000000000000000000000000000000000000000000000044000000000000000000000000000000000000000000000000000000"
-    / bstr "405000000000000000000000000000000000000000000000000000000087680203"
-    / bstr "506000000000000000000000000000000000000000000000000000000087680203"
-    / bstr "6070000000000000000000000000000000000000000000000000000000"
-    / bstr "7080000000000000000000000000000000000000000000000000000000"
-
-reward_account :: Rule
-reward_account =
-  "reward_account"
-    =:= bstr "E090000000000000000000000000000000000000000000000000000000"
-    / bstr "F0A0000000000000000000000000000000000000000000000000000000"
-
-bounded_bytes :: Rule
-bounded_bytes = "bounded_bytes" =:= VBytes `sized` (0 :: Word64, 64 :: Word64)
-
--- the real bounded_bytes does not have this limit. it instead has a different
--- limit which cannot be expressed in CDDL.
--- The limit is as follows:
---  - bytes with a definite-length encoding are limited to size 0..64
---  - for bytes with an indefinite-length CBOR encoding, each chunk is
---    limited to size 0..64
---  ( reminder: in CBOR, the indefinite-length encoding of bytestrings
---    consists of a token #2.31 followed by a sequence of definite-length
---    encoded bytestrings and a stop code )
-
--- a type for distinct values.
--- The type parameter must support .size, for example: bytes or uint
-distinct :: IsSizeable s => Value s -> Rule
-distinct x =
-  "distinct_"
-    <> T.pack (show x)
-      =:= (x `sized` (8 :: Word64))
-      / (x `sized` (16 :: Word64))
-      / (x `sized` (20 :: Word64))
-      / (x `sized` (24 :: Word64))
-      / (x `sized` (30 :: Word64))
-      / (x `sized` (32 :: Word64))
