@@ -257,7 +257,7 @@ spec = do
             & bodyTxL . certsTxBodyL
               .~ [DelegTxCert cred (DelegStake poolKh)]
         )
-        [injectFailure $ DelegateeNotRegisteredDELEG poolKh]
+        [injectFailure $ DelegateeStakePoolNotRegisteredDELEG poolKh]
 
       expectNotDelegatedToPool cred
 

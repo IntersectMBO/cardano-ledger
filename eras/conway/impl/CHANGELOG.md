@@ -38,6 +38,7 @@
 * Added `gen-golden` executable needed for golden tests: #4629
 * Change `State` for `CERT` and `GOVCERT` to `CertState`
 * Add `DelegateeDRepNotRegisteredDELEG` predicate failure
+* Rename `DelegateeNotRegisteredDELEG` to `DelegateeStakePoolNotRegisteredDELEG`
 
 ### `testlib`
 

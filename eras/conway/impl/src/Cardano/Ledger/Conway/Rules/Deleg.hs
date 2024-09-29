@@ -105,7 +105,7 @@ data ConwayDelegPredFailure era
   | StakeKeyNotRegisteredDELEG (Credential 'Staking (EraCrypto era))
   | StakeKeyHasNonZeroRewardAccountBalanceDELEG Coin
   | DelegateeDRepNotRegisteredDELEG (Credential 'DRepRole (EraCrypto era))
-  | DelegateeNotRegisteredDELEG (KeyHash 'StakePool (EraCrypto era))
+  | DelegateeStakePoolNotRegisteredDELEG (KeyHash 'StakePool (EraCrypto era))
   deriving (Show, Eq, Generic)
 
 type instance EraRuleFailure "DELEG" (ConwayEra c) = ConwayDelegPredFailure (ConwayEra c)
@@ -131,8 +131,8 @@ instance Era era => EncCBOR (ConwayDelegPredFailure era) where
         Sum (StakeKeyHasNonZeroRewardAccountBalanceDELEG @era) 4 !> To mCoin
       DelegateeDRepNotRegisteredDELEG delegatee ->
         Sum (DelegateeDRepNotRegisteredDELEG @era) 5 !> To delegatee
-      DelegateeNotRegisteredDELEG delegatee ->
-        Sum (DelegateeNotRegisteredDELEG @era) 6 !> To delegatee
+      DelegateeStakePoolNotRegisteredDELEG delegatee ->
+        Sum (DelegateeStakePoolNotRegisteredDELEG @era) 6 !> To delegatee
 
 instance Era era => DecCBOR (ConwayDelegPredFailure era) where
   decCBOR = decode $ Summands "ConwayDelegPredFailure" $ \case
@@ -141,7 +141,7 @@ instance Era era => DecCBOR (ConwayDelegPredFailure era) where
     3 -> SumD StakeKeyNotRegisteredDELEG <! From
     4 -> SumD StakeKeyHasNonZeroRewardAccountBalanceDELEG <! From
     5 -> SumD DelegateeDRepNotRegisteredDELEG <! From
-    6 -> SumD DelegateeNotRegisteredDELEG <! From
+    6 -> SumD DelegateeStakePoolNotRegisteredDELEG <! From
     n -> Invalid n
 
 instance
@@ -218,7 +218,7 @@ conwayDelegTransition = do
       pure $ mUMElem >>= umElemToDelegatee
     checkStakeDelegateeRegistered =
       let checkPoolRegistered targetPool =
-            targetPool `Map.member` pools ?! DelegateeNotRegisteredDELEG targetPool
+            targetPool `Map.member` pools ?! DelegateeStakePoolNotRegisteredDELEG targetPool
           checkDRepRegistered = \case
             DRepAlwaysAbstain -> pure ()
             DRepAlwaysNoConfidence -> pure ()
