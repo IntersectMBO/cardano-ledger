@@ -119,6 +119,7 @@ import Cardano.Ledger.Plutus.CostModels (
   mkCostModels,
  )
 import Cardano.Ledger.Plutus.Language (Language (PlutusV3))
+import Cardano.Ledger.Shelley.HardForks (bootstrapPhase)
 import Cardano.Ledger.Val (Val (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Data.Aeson hiding (Encoding, Value, decode, encode)
@@ -140,7 +141,7 @@ import Numeric.Natural (Natural)
 
 class BabbageEraPParams era => ConwayEraPParams era where
   modifiedPPGroups :: PParamsUpdate era -> Set PPGroups
-  ppuWellFormed :: PParamsUpdate era -> Bool
+  ppuWellFormed :: ProtVer -> PParamsUpdate era -> Bool
 
   hkdPoolVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f PoolVotingThresholds)
   hkdDRepVotingThresholdsL :: HKDFunctor f => Lens' (PParamsHKD f era) (HKD f DRepVotingThresholds)
@@ -750,7 +751,7 @@ instance Crypto c => BabbageEraPParams (ConwayEra c) where
 
 instance Crypto c => ConwayEraPParams (ConwayEra c) where
   modifiedPPGroups (PParamsUpdate ppu) = conwayModifiedPPGroups ppu
-  ppuWellFormed ppu =
+  ppuWellFormed pv ppu =
     and
       [ -- Numbers
         isValid (/= 0) ppuMaxBBSizeL
@@ -764,6 +765,8 @@ instance Crypto c => ConwayEraPParams (ConwayEra c) where
         isValid (/= zero) ppuPoolDepositL
       , isValid (/= zero) ppuGovActionDepositL
       , isValid (/= zero) ppuDRepDepositL
+      , bootstrapPhase pv
+          || isValid ((/= zero) . unCoinPerByte) ppuCoinsPerUTxOByteL
       , ppu /= emptyPParamsUpdate
       ]
     where
