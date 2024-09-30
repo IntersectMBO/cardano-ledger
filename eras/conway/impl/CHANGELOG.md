@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `refScriptCostStride` and `refScriptCostMultiplier`
 * Added protocol version argument to `ppuWellFormed`
 * Add `ConwayMempoolEvent` type
 * Add `MempoolEvent` to `ConwayLedgerEvent`

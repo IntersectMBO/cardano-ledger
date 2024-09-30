@@ -47,13 +47,13 @@ instance
   ) =>
   SpecTranslate ctx (GovSignal era)
   where
-  type SpecRep (GovSignal era) = [Agda.GovSignal]
+  type SpecRep (GovSignal era) = [Either Agda.GovVote Agda.GovProposal]
 
   toSpecRep GovSignal {gsVotingProcedures, gsProposalProcedures} = do
     votingProcedures <- toSpecRep gsVotingProcedures
     proposalProcedures <- toSpecRep gsProposalProcedures
     pure $
       mconcat
-        [ Agda.GovSignalVote <$> votingProcedures
-        , Agda.GovSignalProposal <$> proposalProcedures
+        [ Left <$> votingProcedures
+        , Right <$> proposalProcedures
         ]

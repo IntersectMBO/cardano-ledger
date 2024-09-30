@@ -64,6 +64,7 @@ library
         cardano-ledger-core,
         cardano-ledger-shelley:{cardano-ledger-shelley, testlib},
         cardano-ledger-alonzo,
+        cardano-ledger-allegra,
         cardano-ledger-babbage,
         cardano-ledger-conway:{cardano-ledger-conway, testlib},
         cardano-ledger-executable-spec,

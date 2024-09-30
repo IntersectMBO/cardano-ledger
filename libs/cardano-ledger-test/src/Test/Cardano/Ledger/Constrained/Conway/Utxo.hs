@@ -1,9 +1,15 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the UTXO rule
@@ -11,22 +17,39 @@ module Test.Cardano.Ledger.Constrained.Conway.Utxo where
 
 import Cardano.Ledger.Babbage.TxOut
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core (EraTx (..), ppMaxCollateralInputsL)
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Conway.Core (
+  EraPParams,
+  EraTx (..),
+  EraTxAuxData (..),
+  EraTxBody (..),
+  EraTxWits (..),
+  PParams,
+  ppMaxCollateralInputsL,
+ )
+import Cardano.Ledger.Conway.Governance (GovActionId)
+import Cardano.Ledger.Conway.Tx (AlonzoTx)
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.UTxO
 import Constrained
+import Control.DeepSeq (NFData)
 import Data.Foldable
 import Data.Map qualified as Map
 import Data.Maybe
 import Data.Set qualified as Set
 import Data.Word
+import GHC.Generics (Generic)
 import Lens.Micro
+import Test.Cardano.Ledger.Common (Arbitrary (..), oneof)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
 import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (maxTxSize_, protocolVersion_)
+import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr)
 
 utxoEnvSpec :: IsConwayUniv fn => Specification fn (UtxoEnv (ConwayEra StandardCrypto))
 utxoEnvSpec =
@@ -147,3 +170,88 @@ correctAddrAndWFCoin txOut =
                 (branch $ \_ -> True)
         )
     ]
+
+data DepositPurpose c
+  = CredentialDeposit !(Credential 'Staking c)
+  | PoolDeposit !(KeyHash 'StakePool c)
+  | DRepDeposit !(Credential 'DRepRole c)
+  | GovActionDeposit !(GovActionId c)
+  deriving (Generic, Eq, Show, Ord)
+
+instance Crypto c => Arbitrary (DepositPurpose c) where
+  arbitrary =
+    oneof
+      [ CredentialDeposit <$> arbitrary
+      , PoolDeposit <$> arbitrary
+      , DRepDeposit <$> arbitrary
+      , GovActionDeposit <$> arbitrary
+      ]
+
+instance Crypto c => DecCBOR (DepositPurpose c) where
+  decCBOR =
+    decode . Summands "DepositPurpose" $
+      \case
+        0 -> SumD CredentialDeposit <! From
+        1 -> SumD PoolDeposit <! From
+        2 -> SumD DRepDeposit <! From
+        3 -> SumD GovActionDeposit <! From
+        k -> Invalid k
+
+instance Crypto c => EncCBOR (DepositPurpose c) where
+  encCBOR =
+    encode . \case
+      CredentialDeposit c -> Sum CredentialDeposit 0 !> To c
+      PoolDeposit kh -> Sum PoolDeposit 1 !> To kh
+      DRepDeposit c -> Sum DRepDeposit 2 !> To c
+      GovActionDeposit gaid -> Sum GovActionDeposit 3 !> To gaid
+
+instance Crypto c => NFData (DepositPurpose c)
+
+instance ToExpr (DepositPurpose c)
+
+data UtxoExecContext era = UtxoExecContext
+  { uecTx :: !(AlonzoTx era)
+  , uecUTxO :: !(UTxO era)
+  , uecSlotNo :: !SlotNo
+  , uecPParams :: !(PParams era)
+  , uecDeposits :: !(Map.Map (DepositPurpose StandardCrypto) Coin)
+  }
+  deriving (Generic)
+
+instance Inject (UtxoExecContext era) (Map.Map (DepositPurpose StandardCrypto) Coin) where
+  inject = uecDeposits
+
+instance
+  ( EraTx era
+  , NFData (TxWits era)
+  , NFData (TxAuxData era)
+  ) =>
+  NFData (UtxoExecContext era)
+
+instance
+  ( EraTx era
+  , ToExpr (TxOut era)
+  , ToExpr (TxBody era)
+  , ToExpr (TxWits era)
+  , ToExpr (TxAuxData era)
+  , ToExpr (PParams era)
+  ) =>
+  ToExpr (UtxoExecContext era)
+
+instance
+  ( EraPParams era
+  , EncCBOR (TxOut era)
+  , EncCBOR (TxBody era)
+  , EncCBOR (TxAuxData era)
+  , EncCBOR (TxWits era)
+  ) =>
+  EncCBOR (UtxoExecContext era)
+  where
+  encCBOR x@(UtxoExecContext _ _ _ _ _) =
+    let UtxoExecContext {..} = x
+     in encode $
+          Rec UtxoExecContext
+            !> To uecTx
+            !> To uecUTxO
+            !> To uecSlotNo
+            !> To uecPParams

@@ -9,8 +9,8 @@
 -- for the CERTS rule
 module Test.Cardano.Ledger.Constrained.Conway.Certs where
 
+import Cardano.Ledger.Address (RewardAccount (..))
 import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
-import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Conway (Conway)
@@ -52,8 +52,8 @@ bootstrapDStateSpec ::
 bootstrapDStateSpec withdrawals =
   let isKey (ScriptHashObj _) = False
       isKey (KeyHashObj _) = True
-      withdrawalPairs = Map.toList (Map.mapKeys snd (Map.map coinToWord64 withdrawals))
-      withdrawalKeys = Map.keysSet (Map.mapKeys snd withdrawals)
+      withdrawalPairs = Map.toList (Map.mapKeys raCredential (Map.map coinToWord64 withdrawals))
+      withdrawalKeys = Map.keysSet (Map.mapKeys raCredential withdrawals)
    in constrained $ \ [var| dstate |] ->
         match dstate $ \ [var| rewardMap |] _futureGenDelegs _genDelegs _rewards ->
           [ assert $ sizeOf_ _futureGenDelegs ==. 0
@@ -86,7 +86,7 @@ bootstrapDStateSpec withdrawals =
 coinToWord64 :: Coin -> Word64
 coinToWord64 (Coin n) = fromIntegral n
 
-type CertsContext era = (Map (Network, Credential 'Staking (EraCrypto era)) Coin)
+type CertsContext era = Map (RewardAccount (EraCrypto era)) Coin
 
 txZero :: AlonzoTx Conway
 txZero = AlonzoTx mkBasicTxBody mempty (IsValid True) def

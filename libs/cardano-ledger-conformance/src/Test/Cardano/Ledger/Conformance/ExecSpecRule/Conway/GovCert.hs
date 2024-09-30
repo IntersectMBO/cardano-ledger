@@ -15,17 +15,26 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.GovCert (nameGovCert) where
 
+import Cardano.Ledger.BaseTypes (Inject)
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Conway
 import Cardano.Ledger.Conway.TxCert
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Data.Bifunctor (Bifunctor (..))
 import qualified Data.List.NonEmpty as NE
+import Data.Map.Strict (Map)
 import qualified Data.Text as T
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
 import Test.Cardano.Ledger.Constrained.Conway
 
-instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
+instance
+  ( IsConwayUniv fn
+  , Inject (ConwayCertExecContext Conway) (Map (DepositPurpose StandardCrypto) Coin)
+  ) =>
+  ExecSpecRule fn "GOVCERT" Conway
+  where
   type ExecContext fn "GOVCERT" Conway = ConwayCertExecContext Conway
 
   environmentSpec _ctx = govCertEnvSpec
@@ -39,7 +48,7 @@ instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
-      $ Agda.govCertStep' env st sig
+      $ Agda.govCertStep env st sig
 
 nameGovCert :: ConwayGovCert c -> String
 nameGovCert (ConwayRegDRep {}) = "ConwayRegDRep"
