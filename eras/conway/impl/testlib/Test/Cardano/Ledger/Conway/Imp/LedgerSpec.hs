@@ -22,10 +22,11 @@ import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.DRep
 import Cardano.Ledger.Plutus (SLanguage (..), hashPlutusScript)
 import Cardano.Ledger.SafeHash (originalBytesSize)
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..), mkMempoolEnv)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyLedgersEnv (..), ShelleyLedgersEvent (..))
-import Control.State.Transition.Extended (STS (..))
+import Control.State.Transition.Extended
 import Data.Default.Class (def)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
@@ -49,6 +50,7 @@ spec ::
   , Event (EraRule "LEDGERS" era) ~ ShelleyLedgersEvent era
   , Event (EraRule "LEDGER" era) ~ ConwayLedgerEvent era
   , STS (EraRule "LEDGERS" era)
+  , ApplyTx era
   ) =>
   SpecWith (ImpTestState era)
 spec = do
@@ -201,3 +203,23 @@ spec = do
           (Seq.singleton tx)
       let mempoolEvents = [ev | LedgerEvent ev@(MempoolEvent (ConwayMempoolEvent _)) <- evs]
       mempoolEvents `shouldBeExpr` []
+
+    it "Mempool events should be emitted via `applyTx` with `mkMempoolEnv`" $ do
+      globals <- use impGlobalsL
+      slotNo <- use impLastTickG
+      nes <- use impNESL
+      let ls = nes ^. nesEsL . esLStateL
+
+      let mempoolEnv = mkMempoolEnv nes slotNo
+      tx <- fixupTx $ mkBasicTx mkBasicTxBody
+      let stsOpts =
+            ApplySTSOpts
+              { asoAssertions = AssertionsAll
+              , asoValidation = ValidateAll
+              , asoEvents = EPReturn
+              }
+      case applyTxOpts stsOpts globals mempoolEnv ls tx of
+        Left e ->
+          assertFailure $ "Unexpected failure while applyingTx: " <> show tx <> ": " <> show e
+        Right (_, evs) ->
+          length [ev | ev@(MempoolEvent (ConwayMempoolEvent _)) <- evs] `shouldBe` 1
