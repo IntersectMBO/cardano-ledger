@@ -15,6 +15,7 @@
 -- | Interface to the Shelley ledger for the purposes of managing a Shelley
 -- mempool.
 module Cardano.Ledger.Shelley.API.Mempool (
+  applyTx,
   ApplyTx (..),
   ApplyTxError (..),
   Validated,
@@ -111,29 +112,6 @@ class
   ) =>
   ApplyTx era
   where
-  -- | Validate a transaction against a mempool state, and return both the new
-  -- mempool state and a "validated" 'TxInBlock'.
-  --
-  -- The meaning of being "validated" depends on the era. In general, a
-  -- 'TxInBlock' has had all checks run, and can now only fail due to checks
-  -- which depend on the state; most notably, that UTxO inputs disappear.
-  applyTx ::
-    MonadError (ApplyTxError era) m =>
-    Globals ->
-    MempoolEnv era ->
-    MempoolState era ->
-    Tx era ->
-    m (MempoolState era, Validated (Tx era))
-  applyTx globals env state tx =
-    let res =
-          flip runReader globals
-            . applySTS @(EraRule "LEDGER" era)
-            $ TRC (env, state, tx)
-     in liftEither
-          . left ApplyTxError
-          . right (,Validated tx)
-          $ res
-
   -- | Validate a transaction against a mempool state and for given STS options,
   -- and return the new mempool state, a "validated" 'TxInBlock' and,
   -- depending on the passed options, the emitted events.
@@ -335,3 +313,24 @@ overNewEpochState f st = do
               { LedgerState.esLState = ls
               }
         }
+
+-- | Validate a transaction against a mempool state using default STS options
+-- and return both the new mempool state and a "validated" 'TxInBlock'.
+--
+-- The meaning of being "validated" depends on the era. In general, a
+-- 'TxInBlock' has had all checks run, and can now only fail due to checks
+-- which depend on the state; most notably, that UTxO inputs disappear.
+applyTx ::
+  (ApplyTx era, MonadError (ApplyTxError era) m) =>
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  Tx era ->
+  m (MempoolState era, Validated (Tx era))
+applyTx =
+  applyTxOpts $
+    ApplySTSOpts
+      { asoAssertions = globalAssertionPolicy
+      , asoValidation = ValidateAll
+      , asoEvents = EPDiscard
+      }

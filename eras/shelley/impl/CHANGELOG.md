@@ -2,6 +2,8 @@
 
 ## 1.14.0.0
 
+* Replaced `applyTx` in `ApplyTx` class with `applyTxOpts`
+* Added and exposed `applyTx` in `Mempool`
 * Added `mempool` to `LedgerEnv`
 * Added `registerStakeCredential` and `delegateStake` to `ImpTest`
 * Remove protocol version argument from `mkShelleyGlobals` (`maxMajorPV` was removed from `Globals`)
