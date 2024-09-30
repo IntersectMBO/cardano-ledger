@@ -69,6 +69,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   getUTxO,
   impAddNativeScript,
   impAnn,
+  impAnnDoc,
   impLogToExpr,
   runImpRule,
   tryRunImpRule,
@@ -922,43 +923,63 @@ runImpTestM mQCSize impState action = do
     -- `futurePParams` are applied and the epoch number is updated to the first epoch
     -- number of the current era
     runReaderT (unImpTestM (passTick >> action)) env `catchAny` \exc -> do
-      logs <- ansiDocToString . impLog <$> readIORef ioRef
+      logs <- impLog <$> readIORef ioRef
       let x <?> my = case my of
             Nothing -> x
-            Just y -> x <> "\n" <> y
+            Just y -> x ++ [pretty y]
           uncaughtException header excThrown =
-            H.ColorizedReason $ header <> "\n" <> "Uncaught Exception: " <> displayException excThrown
+            H.ColorizedReason $
+              ansiDocToString $
+                vsep $
+                  header ++ [pretty $ "Uncaught Exception: " <> displayException excThrown]
           fromHUnitFailure header (HUnitFailure mSrcLoc failReason) =
             case failReason of
               Reason msg ->
                 H.Failure (srcLocToLocation <$> mSrcLoc) $
-                  H.ColorizedReason (header <> "\n" <> msg)
+                  H.ColorizedReason $
+                    ansiDocToString $
+                      vsep $
+                        header ++ [annotate (color Red) (pretty msg)]
               ExpectedButGot mMsg expected got ->
                 H.Failure (srcLocToLocation <$> mSrcLoc) $
-                  H.ExpectedButGot (Just (header <?> mMsg)) expected got
+                  H.ExpectedButGot (Just (ansiDocToString $ vsep (header <?> mMsg))) expected got
           adjustFailureReason header = \case
             H.Failure mLoc failureReason ->
               H.Failure mLoc $
                 case failureReason of
-                  H.NoReason -> H.ColorizedReason $ header <> "\nNoReason"
-                  H.Reason msg -> H.ColorizedReason $ header <> "\n" <> msg
-                  H.ColorizedReason msg -> H.ColorizedReason $ header <> "\n" <> msg
+                  H.NoReason ->
+                    H.ColorizedReason $ ansiDocToString $ vsep $ header ++ [annotate (color Red) "NoReason"]
+                  H.Reason msg ->
+                    H.ColorizedReason $ ansiDocToString $ vsep $ header ++ [annotate (color Red) (pretty msg)]
+                  H.ColorizedReason msg ->
+                    H.ColorizedReason $ ansiDocToString $ vsep $ header ++ [pretty msg]
                   H.ExpectedButGot mPreface expected actual ->
-                    H.ExpectedButGot (Just (header <?> mPreface)) expected actual
+                    H.ExpectedButGot (Just (ansiDocToString $ vsep (header <?> mPreface))) expected actual
                   H.Error mInfo excThrown -> uncaughtException (header <?> mInfo) excThrown
             result -> result
           newExc
-            | Just hUnitExc <- fromException exc = fromHUnitFailure logs hUnitExc
-            | Just hspecFailure <- fromException exc = adjustFailureReason logs hspecFailure
+            | Just hUnitExc <- fromException exc = fromHUnitFailure [logs] hUnitExc
+            | Just hspecFailure <- fromException exc = adjustFailureReason [logs] hspecFailure
             | Just (ImpException ann excThrown) <- fromException exc =
-                let header = unlines $ logs : zipWith (\n str -> replicate n ' ' <> str) [0, 2 ..] ann
+                let annLen = length ann
+                    header =
+                      logs
+                        : [ let prefix
+                                  | annLen <= 1 = "╺╸"
+                                  | n <= 0 = "┏╸"
+                                  | n + 1 == annLen = indent (n - 1) "┗━╸"
+                                  | otherwise = indent (n - 1) "┗┳╸"
+                             in annotate (color Red) prefix <> annotate (color Yellow) a
+                          | (n, a) <- zip [0 ..] ann
+                          ]
+                        ++ [""]
                  in case fromException excThrown of
                       Just hUnitExc -> fromHUnitFailure header hUnitExc
                       Nothing ->
                         case fromException excThrown of
-                          Just hspecFailure -> adjustFailureReason logs hspecFailure
+                          Just hspecFailure -> adjustFailureReason header hspecFailure
                           Nothing -> H.Failure Nothing $ uncaughtException header excThrown
-            | otherwise = H.Failure Nothing $ uncaughtException logs exc
+            | otherwise = H.Failure Nothing $ uncaughtException [logs] exc
       throwIO newExc
   endState <- readIORef ioRef
   pure (res, endState)
@@ -1385,24 +1406,32 @@ passNEpochsChecking n checks =
 
 -- | Stores extra information about the failure of the unit test
 data ImpException = ImpException
-  { ieAnnotation :: [String]
+  { ieAnnotation :: [Doc AnsiStyle]
   -- ^ Description of the IO action that caused the failure
   , ieThrownException :: SomeException
   -- ^ Exception that caused the test to fail
   }
+  deriving (Show)
 
-instance Show ImpException where
-  show (ImpException ann e) =
-    "Log:\n"
-      <> unlines ann
-      <> "\nFailed with Exception:\n\t"
-      <> displayException e
-instance Exception ImpException
+instance Exception ImpException where
+  displayException = ansiDocToString . prettyImpException
+
+prettyImpException :: ImpException -> Doc AnsiStyle
+prettyImpException (ImpException ann e) =
+  vsep $
+    mconcat
+      [ ["Annotations:"]
+      , zipWith indent [0, 2 ..] ann
+      , ["Failed with Exception:", indent 4 $ pretty (displayException e)]
+      ]
 
 -- | Annotation for when failure happens. All the logging done within annotation will be
 -- discarded if there no failures within the annotation.
 impAnn :: NFData a => String -> ImpTestM era a -> ImpTestM era a
-impAnn msg m = do
+impAnn msg = impAnnDoc (pretty msg)
+
+impAnnDoc :: NFData a => Doc AnsiStyle -> ImpTestM era a -> ImpTestM era a
+impAnnDoc msg m = do
   logs <- use impLogL
   res <- catchAnyDeep m $ \exc ->
     throwIO $
@@ -1427,7 +1456,7 @@ logWithCallStack callStack entry = impLogL %= (<> stack <> line <> indent 2 entr
             , (Yellow, "]")
             ]
         ]
-    prefix n = pretty (replicate (n - 1) ' ' <> if n == 0 then "" else "└")
+    prefix n = if n <= 0 then "" else indent (n - 1) "└"
     stack = vsep [prefix n <> prettySrcLoc' loc | (n, (_, loc)) <- zip [0, 2 ..] (getCallStack callStack)]
 
 -- | Adds a Doc to the log, which is only shown if the test fails
