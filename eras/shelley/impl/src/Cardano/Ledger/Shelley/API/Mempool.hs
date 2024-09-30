@@ -61,16 +61,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
 import Control.Monad.Except (Except, MonadError, liftEither)
 import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended (
-  BaseM,
-  Environment,
-  PredicateFailure,
-  STS,
-  Signal,
-  State,
-  TRC (..),
-  applySTS,
- )
+import Control.State.Transition.Extended
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
@@ -141,6 +132,29 @@ class
      in liftEither
           . left ApplyTxError
           . right (,Validated tx)
+          $ res
+
+  -- | Validate a transaction against a mempool state and for given STS options,
+  -- and return the new mempool state, a "validated" 'TxInBlock' and,
+  -- depending on the passed options, the emitted events.
+  applyTxOpts ::
+    forall ep m.
+    (MonadError (ApplyTxError era) m, EventReturnTypeRep ep) =>
+    ApplySTSOpts ep ->
+    Globals ->
+    MempoolEnv era ->
+    MempoolState era ->
+    Tx era ->
+    m (EventReturnType ep (EraRule "LEDGER" era) (MempoolState era, Validated (Tx era)))
+  applyTxOpts opts globals env state tx =
+    let res =
+          flip runReader globals
+            . applySTSOptsEither @(EraRule "LEDGER" era) opts
+            $ TRC (env, state, tx)
+     in liftEither
+          . left ApplyTxError
+          . right
+            (mapEventReturn @ep @(EraRule "LEDGER" era) @(MempoolState era) $ (,Validated tx))
           $ res
 
   -- | Reapply a previously validated 'Tx'.
