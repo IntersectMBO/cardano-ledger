@@ -330,3 +330,5 @@ emptyRatifyEnv =
     Map.empty
     (EpochNo 0)
     (CommitteeState Map.empty)
+    Map.empty
+    Map.empty

@@ -178,6 +178,7 @@ import Cardano.Ledger.Shelley.LedgerState (
   certVStateL,
   curPParamsEpochStateL,
   epochStateGovStateL,
+  epochStatePoolParamsL,
   esAccountStateL,
   esLStateL,
   lsCertStateL,
@@ -187,12 +188,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   nesEsL,
   nesPdL,
   newEpochStateGovStateL,
+  unifiedL,
   utxosGovStateL,
   utxosStakeDistrL,
   vsCommitteeStateL,
   vsDRepsL,
  )
 import Cardano.Ledger.TxIn (TxId (..))
+import Cardano.Ledger.UMap (dRepMap)
 import Cardano.Ledger.Val ((<->))
 import Control.Monad (forM)
 import Control.Monad.Trans.Fail.String (errorFail)
@@ -1004,6 +1007,8 @@ getRatifyEnv = do
   drepDistr <- getsNES $ nesEsL . epochStateDRepPulsingStateL . psDRepDistrG
   drepState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
   committeeState <- getsNES $ nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL
+  umap <- getsNES $ unifiedL
+  poolPs <- getsNES $ nesEsL . epochStatePoolParamsL
   pure
     RatifyEnv
       { reStakePoolDistr = poolDistr
@@ -1012,6 +1017,8 @@ getRatifyEnv = do
       , reDRepDistr = drepDistr
       , reCurrentEpoch = eNo - 1
       , reCommitteeState = committeeState
+      , reDelegatees = dRepMap umap
+      , rePoolParams = poolPs
       }
 
 ccShouldNotBeExpired ::
@@ -1106,7 +1113,8 @@ calculatePoolAcceptedRatio ::
 calculatePoolAcceptedRatio gaId = do
   ratEnv <- getRatifyEnv
   gas <- getGovActionState gaId
-  pure $ spoAcceptedRatio ratEnv gas
+  pv <- getProtVer
+  pure $ spoAcceptedRatio ratEnv gas pv
 
 -- | Logs the ratios of accepted votes per category
 logAcceptedRatio ::
@@ -1179,6 +1187,7 @@ logRatificationChecks gaId = do
   let ratSt = RatifyState ens mempty mempty False
   curTreasury <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
   currentEpoch <- getsNES nesELL
+  pv <- getProtVer
   let
     members = foldMap' committeeMembers committee
     committeeState = reCommitteeState ratEnv
@@ -1208,7 +1217,7 @@ logRatificationChecks gaId = do
             [ viaShow $ spoAccepted ratEnv ratSt gas
             , "["
             , "To Pass:"
-            , viaShow $ spoAcceptedRatio ratEnv gas
+            , viaShow $ spoAcceptedRatio ratEnv gas pv
             , ">="
             , viaShow $ votingStakePoolThreshold ratSt (gasAction gas)
             , "]"

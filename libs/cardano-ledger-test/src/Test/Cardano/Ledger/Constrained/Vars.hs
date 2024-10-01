@@ -1739,7 +1739,7 @@ pulsingPairT proof =
   Invert
     "DRepPulser"
     (typeRep @(UtxoPulse era))
-    (\utx a b c d e f g -> (utx, initPulser proof utx a b c d e f g))
+    (\utx a b c d e f g h -> (utx, initPulser proof utx a b c d e f g h))
     :$ Lensed (utxo proof) _1
     :$ Virtual drepDelegation (ppString "prevDRepDelegations") (_2 . prevDRepDelegationsL)
     :$ Virtual poolDistr (ppString "prevPoolDistr") (_2 . prevPoolDistrL)
@@ -1748,6 +1748,7 @@ pulsingPairT proof =
     :$ Virtual committeeState (ppString "prevCommitteeState") (_2 . prevCommitteeStateL)
     :$ Shift enactStateT (_2 . prevEnactStateL)
     :$ Virtual currGovStates (ppString "prevProposals") (_2 . ratifyGovActionStatesL)
+    :$ Virtual regPools (ppString "prevPoolParams") (_2 . prevRegPoolsL)
 
 -- TODO access prevTreasury from the EnactState
 --  :$ Virtual treasury (ppString "prevTreasury") (_2 . prevTreasuryL)
@@ -1769,6 +1770,7 @@ justPulser p =
     :$ Virtual committeeState (ppString "prevCommitteeState") prevCommitteeStateL
     :$ Shift enactStateT prevEnactStateL
     :$ Virtual currGovStates (ppString "prevProposals") ratifyGovActionStatesL
+    :$ Virtual regPools (ppString "prevPoolParams") prevRegPoolsL
 
 -- TODO access prevTreasury from the EnactState
 -- :$ Virtual treasury (ppString "prevTreasury") (prevTreasuryL)
@@ -1843,8 +1845,9 @@ initPulser ::
   EnactState era ->
   [GovActionState era] ->
   -- Coin ->
+  Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)) ->
   DRepPulser era Identity (RatifyState era)
-initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactstate govstates {- treas -} =
+initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactstate govstates {- treas -} poolParams =
   let umap = unify Map.empty Map.empty Map.empty credDRepMap
       umapSize = Map.size credDRepMap
       k = securityParameter testGlobals
@@ -1866,6 +1869,7 @@ initPulser proof utx credDRepMap poold credDRepStateMap epoch commstate enactsta
         (proposalsDeposits $ def & pPropsL .~ OMap.fromFoldable govstates)
         -- treas
         testGlobals
+        poolParams
 
 proposalsT :: forall era. Era era => Proof era -> RootTarget era (Proposals era) (Proposals era)
 proposalsT proof =
@@ -2036,6 +2040,19 @@ prevTreasuryL = lens dpTreasury (\x y -> x {dpTreasury = y})
 
 partialIndividualPoolStake :: Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) Coin)
 partialIndividualPoolStake = Var $ V "partialIndividualPoolStake" (MapR PoolHashR CoinR) No
+
+prevRegPools ::
+  Era era => Term era (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+prevRegPools = Var $ V "prevRegPools" (MapR PoolHashR PoolParamsR) No
+
+prevRegPoolsL ::
+  Lens'
+    (DRepPulser era Identity (RatifyState era))
+    (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era)))
+prevRegPoolsL =
+  lens
+    dpPoolParams
+    (\x y -> x {dpPoolParams = y})
 
 -- ======================================
 -- ConwayGovState

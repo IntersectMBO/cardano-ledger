@@ -1317,6 +1317,7 @@ type DRepPulserTypes =
    , EnactState Conway
    , StrictSeq (GovActionState Conway)
    , Map (Credential 'Staking StandardCrypto) (CompactForm Coin)
+   , Map (KeyHash 'StakePool StandardCrypto) (PoolParams StandardCrypto)
    ]
 instance
   HasSimpleRep
@@ -1339,11 +1340,12 @@ instance
       dpEnactState
       dpProposals
       dpProposalDeposits
+      dpPoolParams
   fromSimpleRep rep =
     algebra @'["DRepPulser" ::: DRepPulserTypes]
       rep
-      $ \ps um b sd spd dd ds ce cs es p pds ->
-        DRepPulser ps um b sd spd dd ds ce cs es p pds testGlobals
+      $ \ps um b sd spd dd ds ce cs es p pds poolps ->
+        DRepPulser ps um b sd spd dd ds ce cs es p pds testGlobals poolps
 instance
   (EraPP Conway, IsConwayUniv fn) =>
   HasSpec fn (DRepPulser Conway Identity (RatifyState Conway))

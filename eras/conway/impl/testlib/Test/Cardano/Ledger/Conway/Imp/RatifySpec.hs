@@ -337,10 +337,11 @@ paramChangeAffectsProposalsSpec =
         enactThreshold largerThreshold drepC hotCommitteeC
         isDRepAccepted gaiChild `shouldReturn` False
       it "Decreasing the threshold ratifies a hitherto-unratifiable proposal" $ do
+        -- This sets up a stake pool with 1_000_000 Coin
         (drepC, hotCommitteeC, _) <- electBasicCommittee
         setThreshold largerThreshold
         (drep, _, _) <- setupSingleDRep 1_000_000
-        (spoC, _, _) <- setupPoolWithStake $ Coin 1_000_000
+        (spoC, _, _) <- setupPoolWithStake $ Coin 3_000_000
         (gaiParent, gaiChild) <-
           submitTwoExampleProposalsAndVoteOnTheChild [(spoC, VoteYes)] [(drep, VoteYes)]
         isDRepAccepted gaiChild `shouldReturn` False
@@ -348,6 +349,8 @@ paramChangeAffectsProposalsSpec =
         isDRepAccepted gaiChild `shouldReturn` True
         -- Not vote on the parent too to make sure both get enacted
         submitYesVote_ (DRepVoter drep) gaiParent
+        -- bootstrap: 3 % 4 stake yes; 1 % 4 stake abstain; yes / stake - abstain > 1 % 2
+        -- post-bootstrap: 3 % 4 stake yes; 1 % 4 stake no
         submitYesVote_ (StakePoolVoter spoC) gaiParent
         passNEpochs 2
         getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gaiParent)
@@ -372,11 +375,14 @@ paramChangeAffectsProposalsSpec =
             submitYesVote_ (CommitteeVoter hotCommitteeC) pcGai
             passNEpochs 2
       it "Increasing the threshold prevents a hitherto-ratifiable proposal from being ratified" $ do
+        -- This sets up a stake pool with 1_000_000 Coin
         (drepC, hotCommitteeC, _) <- electBasicCommittee
         setThreshold smallerThreshold
-        (poolKH1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000_000
+        (poolKH1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 2_000_000
         (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
         passEpoch -- Make the new pool distribution count
+        -- bootstrap: 1 % 2 stake yes (2_000_000); 1 % 2 stake abstain; yes / stake - abstain == 1 % 2
+        -- post-bootstrap: 1 % 2 stake yes (2_000_000); 1 % 4 stake didn't vote; 1 % 4 stake no
         (_gaiParent, gaiChild) <-
           submitTwoExampleProposalsAndVoteOnTheChild
             [(poolKH1, VoteYes), (poolKH2, VoteNo)]
@@ -385,10 +391,13 @@ paramChangeAffectsProposalsSpec =
         enactThreshold largerThreshold drepC hotCommitteeC
         isSpoAccepted gaiChild `shouldReturn` False
       it "Decreasing the threshold ratifies a hitherto-unratifiable proposal" $ do
+        -- This sets up a stake pool with 1_000_000 Coin
         (drepC, hotCommitteeC, _) <- electBasicCommittee
         setThreshold largerThreshold
-        (poolKH1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 1_000_000
+        (poolKH1, _paymentC1, _stakingC1) <- setupPoolWithStake $ Coin 2_000_000
         (poolKH2, _paymentC2, _stakingC2) <- setupPoolWithStake $ Coin 1_000_000
+        -- bootstrap: 1 % 2 stake yes (2_000_000); 1 % 2 stake abstain; yes / stake - abstain == 1 % 2
+        -- post-bootstrap: 1 % 2 stake yes (2_000_000); 1 % 4 stake didn't vote; 1 % 4 stake no
         (gaiParent, gaiChild) <-
           submitTwoExampleProposalsAndVoteOnTheChild
             [(poolKH1, VoteYes), (poolKH2, VoteNo)]
@@ -521,10 +530,14 @@ spoVotesCommitteeUpdates =
         modifyPParams $ ppPoolVotingThresholdsL . pvtMotionNoConfidenceL .~ 1 %! 2
         whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
         gai <- submitGovAction $ NoConfidence SNothing
-        -- 1 % 4 stake yes; 3 % 4 stake abstain; yes / stake - abstain > 1 % 2
+        -- bootstrap: 1 % 4 stake yes; 3 % 4 stake abstain; yes / stake - abstain > 1 % 2
+        -- post-bootstrap: 1 % 4 stake yes; 3 % 4 stake no; yes stake < 1 % 2
         submitYesVote_ (StakePoolVoter spoK1) gai
         passNEpochs 2
-        getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gai)
+        pv <- getProtVer
+        if bootstrapPhase pv
+          then getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gai)
+          else getLastEnactedCommittee `shouldReturn` SNothing
       it "CommitteeUpdate" $ do
         (spoK1, _, _) <- setupPoolWithStake $ Coin 100_000_000
         _ <- setupPoolWithStake $ Coin 100_000_000
@@ -534,11 +547,14 @@ spoVotesCommitteeUpdates =
         whenPostBootstrap (modifyPParams $ ppDRepVotingThresholdsL .~ def)
         cc <- KeyHashObj <$> freshKeyHash
         gai <- submitUpdateCommittee Nothing mempty [(cc, EpochInterval 5)] (1 %! 2)
-        -- 1 % 4 stake yes; 3 % 4 stake abstain; yes / stake - abstain > 1 % 2
+        -- bootstrap: 1 % 4 stake yes; 3 % 4 stake abstain; yes / stake - abstain > 1 % 2
+        -- post-bootstrap: 1 % 4 stake yes; 3 % 4 stake no; yes stake < 1 % 2
         submitYesVote_ (StakePoolVoter spoK1) gai
         passNEpochs 2
-        getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gai)
-
+        pv <- getProtVer
+        if bootstrapPhase pv
+          then getLastEnactedCommittee `shouldReturn` SJust (GovPurposeId gai)
+          else getLastEnactedCommittee `shouldReturn` SNothing
 spoVotesForHardForkInitiation ::
   forall era.
   ConwayEraImp era =>
