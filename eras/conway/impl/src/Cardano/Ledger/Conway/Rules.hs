@@ -11,6 +11,7 @@ module Cardano.Ledger.Conway.Rules (
   module Cardano.Ledger.Conway.Rules.Certs,
   module Cardano.Ledger.Conway.Rules.Enact,
   module Cardano.Ledger.Conway.Rules.Epoch,
+  module Cardano.Ledger.Conway.Rules.HardFork,
   module Cardano.Ledger.Conway.Rules.Ledger,
   module Cardano.Ledger.Conway.Rules.Mempool,
   module Cardano.Ledger.Conway.Rules.NewEpoch,
@@ -33,6 +34,7 @@ import Cardano.Ledger.Conway.Rules.Enact
 import Cardano.Ledger.Conway.Rules.Epoch
 import Cardano.Ledger.Conway.Rules.Gov
 import Cardano.Ledger.Conway.Rules.GovCert
+import Cardano.Ledger.Conway.Rules.HardFork
 import Cardano.Ledger.Conway.Rules.Ledger
 import Cardano.Ledger.Conway.Rules.Ledgers ()
 import Cardano.Ledger.Conway.Rules.Mempool

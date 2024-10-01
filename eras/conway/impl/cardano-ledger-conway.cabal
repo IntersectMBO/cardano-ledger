@@ -61,6 +61,7 @@ library
         Cardano.Ledger.Conway.Rules.Certs
         Cardano.Ledger.Conway.Rules.Enact
         Cardano.Ledger.Conway.Rules.Epoch
+        Cardano.Ledger.Conway.Rules.HardFork
         Cardano.Ledger.Conway.Rules.Ledger
         Cardano.Ledger.Conway.Rules.Ledgers
         Cardano.Ledger.Conway.Rules.Mempool
