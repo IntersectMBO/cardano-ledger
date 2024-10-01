@@ -2,6 +2,7 @@
 
 ## 1.14.0.0
 
+* Deprecated `applyTxs` and `applyTxsTransition` in `Mempool`
 * Replaced `applyTx` in `ApplyTx` class with `applyTxOpts`
 * Added and exposed `applyTx` in `Mempool`
 * Added `mempool` to `LedgerEnv`

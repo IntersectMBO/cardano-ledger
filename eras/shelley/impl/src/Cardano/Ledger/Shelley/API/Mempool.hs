@@ -280,6 +280,7 @@ applyTxs
     overNewEpochState (applyTxsTransition globals mempoolEnv txs) state
     where
       mempoolEnv = mkMempoolEnv state slot
+{-# DEPRECATED applyTxs "Use `applyTxOpts` and `mkMempoolEnv` instead" #-}
 
 applyTxsTransition ::
   forall era m.
@@ -296,6 +297,7 @@ applyTxsTransition globals env txs state =
     (\st tx -> fst <$> applyTx globals env st tx)
     state
     txs
+{-# DEPRECATED applyTxsTransition "Use `applyTxOpts` and `mkMempoolEnv` instead" #-}
 
 -- | Transform a function over mempool states to one over the full
 -- 'NewEpochState'.

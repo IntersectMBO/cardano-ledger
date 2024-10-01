@@ -27,14 +27,13 @@ import Cardano.Ledger.Shelley.API (
   Globals,
   LedgerEnv,
   LedgerState,
-  applyTxsTransition,
+  applyTx,
  )
 import Cardano.Ledger.Shelley.Core
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (Environment, Signal, State)
 import Criterion
 import Data.Proxy (Proxy (..))
-import qualified Data.Sequence as Seq
 import Data.Typeable (typeRep)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
@@ -97,8 +96,11 @@ benchApplyTx px =
   benchWithGenState px pure $ \applyTxEnv ->
     let ApplyTxEnv {ateGlobals, ateMempoolEnv, ateState, ateTx} = applyTxEnv
      in nf
-          ( either (error . show) id
-              . applyTxsTransition ateGlobals ateMempoolEnv (Seq.singleton ateTx)
+          ( \st ->
+              either
+                (error . show)
+                fst
+                (applyTx ateGlobals ateMempoolEnv st ateTx)
           )
           ateState
 
