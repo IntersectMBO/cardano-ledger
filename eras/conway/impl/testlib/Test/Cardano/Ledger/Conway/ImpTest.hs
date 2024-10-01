@@ -8,7 +8,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -116,6 +115,7 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   whenPostBootstrap,
   submitYesVoteCCs_,
   donateToTreasury,
+  expectMembers,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -882,7 +882,7 @@ getEnactState :: ConwayEraGov era => ImpTestM era (EnactState era)
 getEnactState = mkEnactState <$> getsNES (nesEsL . epochStateGovStateL)
 
 getProposals :: ConwayEraGov era => ImpTestM era (Proposals era)
-getProposals = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL
+getProposals = getsNES $ newEpochStateGovStateL . proposalsGovStateL
 
 logProposalsForest :: (ConwayEraGov era, HasCallStack) => ImpTestM era ()
 logProposalsForest = do
@@ -893,8 +893,7 @@ getCommitteeMembers ::
   ConwayEraImp era =>
   ImpTestM era (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
 getCommitteeMembers = do
-  committee <-
-    getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+  committee <- getsNES $ newEpochStateGovStateL . committeeGovStateL
   pure $ Map.keysSet $ foldMap' committeeMembers committee
 
 getLastEnactedCommittee ::
@@ -906,8 +905,7 @@ getLastEnactedCommittee = do
 getConstitution ::
   ConwayEraImp era =>
   ImpTestM era (Constitution era)
-getConstitution =
-  getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . constitutionGovStateL
+getConstitution = getsNES $ newEpochStateGovStateL . constitutionGovStateL
 
 getLastEnactedConstitution ::
   ConwayEraGov era => ImpTestM era (StrictMaybe (GovPurposeId 'ConstitutionPurpose era))
@@ -1333,8 +1331,7 @@ electBasicCommittee = do
       ]
   submitYesVote_ (DRepVoter drep) gaidCommitteeProp
   submitYesVote_ (StakePoolVoter spoC) gaidCommitteeProp
-  passEpoch
-  passEpoch
+  passNEpochs 2
   committeeMembers <- getCommitteeMembers
   impAnn "The committee should be enacted" $
     committeeMembers `shouldSatisfy` Set.member coldCommitteeC
@@ -1481,9 +1478,7 @@ enactConstitution prevGovId constitution dRep committeeMembers = impAnn "Enactin
   submitYesVoteCCs_ committeeMembers govId
   logRatificationChecks govId
   passNEpochs 2
-  enactedConstitution <-
-    getsNES $
-      nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . constitutionGovStateL
+  enactedConstitution <- getsNES $ newEpochStateGovStateL . constitutionGovStateL
   enactedConstitution `shouldBe` constitution
   pure govId
 
@@ -1492,8 +1487,7 @@ enactConstitution prevGovId constitution dRep committeeMembers = impAnn "Enactin
 constitutionShouldBe :: (HasCallStack, ConwayEraGov era) => String -> ImpTestM era ()
 constitutionShouldBe cUrl = do
   Constitution {constitutionAnchor = Anchor {anchorUrl}} <-
-    getsNES $
-      nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . constitutionGovStateL
+    getsNES $ newEpochStateGovStateL . constitutionGovStateL
   anchorUrl `shouldBe` errorFail (textToUrl 128 $ T.pack cUrl)
 
 expectNumDormantEpochs :: HasCallStack => EpochNo -> ImpTestM era ()
@@ -1592,9 +1586,7 @@ expectNoPulserProposals = do
 
 currentProposalIds ::
   ConwayEraGov era => ImpTestM era (SSeq.StrictSeq (GovActionId (EraCrypto era)))
-currentProposalIds =
-  proposalsIds
-    <$> getsNES (nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL)
+currentProposalIds = proposalsIds <$> getsNES (newEpochStateGovStateL . proposalsGovStateL)
 
 lastEpochProposals ::
   forall era.
@@ -1661,8 +1653,7 @@ submitUpdateCommittee mParent ccsToRemove ccsToAdd threshold = do
   nes <- getsNES id
   let
     curEpochNo = nes ^. nesELL
-    rootCommittee =
-      nes ^. nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . cgsProposalsL . pRootsL . grCommitteeL
+    rootCommittee = nes ^. newEpochStateGovStateL . cgsProposalsL . pRootsL . grCommitteeL
     parent = fromMaybe (prRoot rootCommittee) mParent
     newCommitteMembers =
       Map.fromList [(cc, addEpochInterval curEpochNo lifetime) | (cc, lifetime) <- ccsToAdd]
@@ -1671,16 +1662,14 @@ submitUpdateCommittee mParent ccsToRemove ccsToAdd threshold = do
 expectCommitteeMemberPresence ::
   (HasCallStack, ConwayEraGov era) => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
 expectCommitteeMemberPresence cc = do
-  SJust committee <-
-    getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+  SJust committee <- getsNES $ newEpochStateGovStateL . committeeGovStateL
   assertBool ("Expected Committee Member: " ++ show cc ++ " to be present in the committee") $
     Map.member cc (committee ^. committeeMembersL)
 
 expectCommitteeMemberAbsence ::
   (HasCallStack, ConwayEraGov era) => Credential 'ColdCommitteeRole (EraCrypto era) -> ImpTestM era ()
 expectCommitteeMemberAbsence cc = do
-  SJust committee <-
-    getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . committeeGovStateL
+  SJust committee <- getsNES $ newEpochStateGovStateL . committeeGovStateL
   assertBool ("Expected Committee Member: " ++ show cc ++ " to be absent from the committee") $
     Map.notMember cc (committee ^. committeeMembersL)
 
@@ -1695,3 +1684,11 @@ donateToTreasury amount =
     passEpoch
     treasuryEndEpoch1 <- getsNES $ nesEsL . esAccountStateL . asTreasuryL
     treasuryEndEpoch1 <-> treasuryStart `shouldBe` amount
+
+expectMembers ::
+  (HasCallStack, ConwayEraGov era) =>
+  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) -> ImpTestM era ()
+expectMembers expKhs = do
+  committee <- getsNES $ newEpochStateGovStateL . committeeGovStateL
+  let members = Map.keysSet $ foldMap' committeeMembers committee
+  impAnn "Expecting committee members" $ members `shouldBe` expKhs

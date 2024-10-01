@@ -826,9 +826,7 @@ votingSpec =
         modifyPParams $ ppGovActionLifetimeL .~ EpochInterval 2
         (drep, _, _) <- setupSingleDRep 1_000_000
         (govActionId, _) <- submitConstitution SNothing
-        passEpoch
-        passEpoch
-        passEpoch
+        passNEpochs 3
         submitFailingVote
           (DRepVoter drep)
           govActionId
@@ -1017,7 +1015,7 @@ constitutionSpec =
       impAnn "Pulser has not changed" $
         expectedPulser `shouldBe` initialPulser
 
-      passEpoch >> passEpoch
+      passNEpochs 2
       impAnn "Proposal gets removed after expiry" $ do
         govStateFinal <- getsNES newEpochStateGovStateL
         let ratifyState = extractDRepPulsingState (govStateFinal ^. cgsDRepPulsingStateL)
