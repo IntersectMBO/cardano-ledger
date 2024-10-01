@@ -24,8 +24,8 @@ source-repository-package
   -- !WARNING!:
   -- MAKE SURE THIS POINTS TO A COMMIT IN `MAlonzo-code` BEFORE MERGE!
   subdir: generated
-  tag: 0b0b1f4eddb718b704824dcdc86abb8ce815deb2
-  --sha256: sha256-+bpsxn1hPGZqJ0rwZmUaPlOJuRj0RzLj1rulldUqk/E=
+  tag: d5c32e238236e6e2a3941551b4512e117e399271
+  --sha256: sha256-bi4+bXqi8n2BQM4+9uwwaDsm3nblg15Cj+9IvNGTkPI=
 -- NOTE: If you would like to update the above, look for the `MAlonzo-code`
 -- branch in the `formal-ledger-specifications` repo and copy the SHA of
 -- the commit you need. The `MAlonzo-code` branch functions like an alternative
