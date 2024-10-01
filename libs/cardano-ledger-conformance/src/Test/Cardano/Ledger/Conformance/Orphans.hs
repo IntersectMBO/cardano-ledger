@@ -60,6 +60,8 @@ instance NFData BootstrapAddr
 
 instance NFData Timelock
 
+instance NFData HashedTimelock
+
 instance NFData UTxOState
 
 instance NFData Vote
@@ -186,6 +188,8 @@ instance ToExpr BootstrapAddr
 
 instance ToExpr Timelock
 
+instance ToExpr HashedTimelock
+
 instance ToExpr TxBody
 
 instance ToExpr Tag
@@ -276,6 +280,8 @@ instance FixupSpecRep BaseAddr
 instance FixupSpecRep BootstrapAddr
 
 instance FixupSpecRep Timelock
+
+instance FixupSpecRep HashedTimelock
 
 instance FixupSpecRep UTxOState
 

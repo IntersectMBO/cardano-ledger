@@ -217,23 +217,25 @@ instance
   ) =>
   SpecTranslate ctx (Timelock era)
   where
-  type SpecRep (Timelock era) = Agda.Timelock
+  type SpecRep (Timelock era) = Agda.HashedTimelock
 
-  toSpecRep =
-    \case
-      RequireSignature kh ->
-        Agda.RequireSig <$> toSpecRep kh
-      RequireAllOf ss -> do
-        tls <- traverse toSpecRep ss
-        pure . Agda.RequireAllOf $ toList tls
-      RequireAnyOf ss -> do
-        tls <- traverse toSpecRep ss
-        pure . Agda.RequireAnyOf $ toList tls
-      RequireMOf m ss -> do
-        tls <- traverse toSpecRep ss
-        pure . Agda.RequireMOf (toInteger m) $ toList tls
-      RequireTimeExpire slot -> Agda.RequireTimeExpire <$> toSpecRep slot
-      RequireTimeStart slot -> Agda.RequireTimeStart <$> toSpecRep slot
+  toSpecRep tl = Agda.HashedTimelock <$> timelockToSpecRep tl <*> undefined
+    where
+      timelockToSpecRep x =
+        case x of
+          RequireSignature kh ->
+            Agda.RequireSig <$> toSpecRep kh
+          RequireAllOf ss -> do
+            tls <- traverse timelockToSpecRep ss
+            pure . Agda.RequireAllOf $ toList tls
+          RequireAnyOf ss -> do
+            tls <- traverse timelockToSpecRep ss
+            pure . Agda.RequireAnyOf $ toList tls
+          RequireMOf m ss -> do
+            tls <- traverse timelockToSpecRep ss
+            pure . Agda.RequireMOf (toInteger m) $ toList tls
+          RequireTimeExpire slot -> Agda.RequireTimeExpire <$> toSpecRep slot
+          RequireTimeStart slot -> Agda.RequireTimeStart <$> toSpecRep slot
 
 instance
   ( AlonzoEraScript era
@@ -261,7 +263,7 @@ instance
 instance
   ( EraTxOut era
   , SpecRep (Value era) ~ Agda.Coin
-  , SpecRep (Script era) ~ Either Agda.Timelock ()
+  , Script era ~ AlonzoScript era
   , SpecTranslate ctx (Value era)
   , SpecTranslate ctx (Script era)
   ) =>
