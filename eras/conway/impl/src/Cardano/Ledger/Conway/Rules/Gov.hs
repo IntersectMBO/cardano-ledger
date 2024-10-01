@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyDataDeriving #-}
@@ -16,6 +17,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Conway.Rules.Gov (
@@ -26,7 +28,7 @@ module Cardano.Ledger.Conway.Rules.Gov (
   ConwayGovPredFailure (..),
 ) where
 
-import Cardano.Ledger.Address (RewardAccount, raNetwork)
+import Cardano.Ledger.Address (RewardAccount, raCredential, raNetwork)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
   EpochNo (..),
@@ -59,6 +61,7 @@ import Cardano.Ledger.CertState (
   authorizedHotCommitteeCredentials,
  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Conway.Core (ppGovActionDepositL, ppGovActionLifetimeL)
 import Cardano.Ledger.Conway.Era (ConwayEra, ConwayGOV)
 import Cardano.Ledger.Conway.Governance (
   GovAction (..),
@@ -81,6 +84,8 @@ import Cardano.Ledger.Conway.Governance (
   isCommitteeVotingAllowed,
   isDRepVotingAllowed,
   isStakePoolVotingAllowed,
+  pProcGovActionL,
+  pProcReturnAddrL,
   pRootsL,
   proposalsActionsMap,
   proposalsAddAction,
@@ -91,8 +96,6 @@ import Cardano.Ledger.Conway.Governance (
 import Cardano.Ledger.Conway.Governance.Proposals (mapProposals)
 import Cardano.Ledger.Conway.PParams (
   ConwayEraPParams (..),
-  ppGovActionDepositL,
-  ppGovActionLifetimeL,
  )
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.Core
@@ -100,8 +103,10 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest)
 import qualified Cardano.Ledger.Shelley.HardForks as HF (bootstrapPhase)
+import Cardano.Ledger.Shelley.LedgerState (dsUnifiedL)
 import Cardano.Ledger.Shelley.PParams (pvCanFollow)
 import Cardano.Ledger.TxIn (TxId (..))
+import qualified Cardano.Ledger.UMap as UMap
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
@@ -196,6 +201,10 @@ data ConwayGovPredFailure era
     VotersDoNotExist (NonEmpty (Voter (EraCrypto era)))
   | -- | Treasury withdrawals that sum up to zero are not allowed
     ZeroTreasuryWithdrawals (GovAction era)
+  | -- | Proposals that have an invalid reward account for returns of the deposit
+    ProposalReturnAccountDoesNotExist (RewardAccount (EraCrypto era))
+  | -- | Treasury withdrawal proposals to an invalid reward account
+    TreasuryWithdrawalReturnAccountsDoNotExist (NonEmpty (RewardAccount (EraCrypto era)))
   deriving (Eq, Show, Generic)
 
 type instance EraRuleFailure "GOV" (ConwayEra c) = ConwayGovPredFailure (ConwayEra c)
@@ -226,6 +235,8 @@ instance EraPParams era => DecCBOR (ConwayGovPredFailure era) where
     13 -> SumD DisallowedVotesDuringBootstrap <! From
     14 -> SumD VotersDoNotExist <! From
     15 -> SumD ZeroTreasuryWithdrawals <! From
+    16 -> SumD ProposalReturnAccountDoesNotExist <! From
+    17 -> SumD TreasuryWithdrawalReturnAccountsDoNotExist <! From
     k -> Invalid k
 
 instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
@@ -266,6 +277,10 @@ instance EraPParams era => EncCBOR (ConwayGovPredFailure era) where
         Sum VotersDoNotExist 14 !> To voters
       ZeroTreasuryWithdrawals ga ->
         Sum ZeroTreasuryWithdrawals 15 !> To ga
+      ProposalReturnAccountDoesNotExist returnAccount ->
+        Sum ProposalReturnAccountDoesNotExist 16 !> To returnAccount
+      TreasuryWithdrawalReturnAccountsDoNotExist accounts ->
+        Sum TreasuryWithdrawalReturnAccountsDoNotExist 17 !> To accounts
 
 instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
@@ -416,7 +431,7 @@ govTransition ::
   TransitionRule (EraRule "GOV" era)
 govTransition = do
   TRC
-    ( GovEnv txid currentEpoch pp constitutionPolicy CertState {certPState, certVState}
+    ( GovEnv txid currentEpoch pp constitutionPolicy CertState {certDState, certPState, certVState}
       , st
       , GovSignal {gsVotingProcedures, gsProposalProcedures, gsCertificates}
       ) <-
@@ -445,6 +460,19 @@ govTransition = do
 
         -- PParamsUpdate well-formedness check
         runTest $ actionWellFormed (pp ^. ppProtocolVersionL) pProcGovAction
+
+        unless (HF.bootstrapPhase $ pp ^. ppProtocolVersionL) $ do
+          let refundAddress = proposal ^. pProcReturnAddrL
+              govAction = proposal ^. pProcGovActionL
+          UMap.member' (raCredential refundAddress) (certDState ^. dsUnifiedL)
+            ?! ProposalReturnAccountDoesNotExist refundAddress
+          case govAction of
+            TreasuryWithdrawals withdrawals _ -> do
+              let nonRegisteredAccounts =
+                    flip Map.filterWithKey withdrawals $ \withdrawalAddress _ ->
+                      not $ UMap.member' (raCredential withdrawalAddress) (certDState ^. dsUnifiedL)
+              failOnNonEmpty (Map.keys nonRegisteredAccounts) TreasuryWithdrawalReturnAccountsDoNotExist
+            _ -> pure ()
 
         -- Deposit check
         let expectedDep = pp ^. ppGovActionDepositL

@@ -82,6 +82,7 @@ module Cardano.Ledger.UMap (
   -- * Set and Map operations on `UView`s
   nullUView,
   member,
+  member',
   notMember,
   delete,
   delete',
@@ -1001,6 +1002,10 @@ DRepUView UMap {umElems, umPtrs} ⋫ dRepSet = UMap (Map.foldlWithKey' accum umE
              in Map.update go key ans
       _ -> ans
 rngDelete = (⋫)
+
+-- | Checks for membership directly against `umElems` instead of a `UView`.
+member' :: Credential 'Staking c -> UMap c -> Bool
+member' k = Map.member k . umElems
 
 -- | Membership check for a `UView`, just like `Map.member`
 --

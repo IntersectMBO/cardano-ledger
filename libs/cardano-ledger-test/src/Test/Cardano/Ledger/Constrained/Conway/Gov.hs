@@ -21,6 +21,7 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.HardForks qualified as HardForks
+import Cardano.Ledger.UMap (umElems)
 import Constrained
 import Constrained.Base (Pred (..))
 import Data.Coerce
@@ -46,7 +47,7 @@ govProposalsSpec ::
   IsConwayUniv fn =>
   GovEnv (ConwayEra StandardCrypto) ->
   Specification fn (Proposals (ConwayEra StandardCrypto))
-govProposalsSpec GovEnv {geEpoch, gePPolicy} =
+govProposalsSpec GovEnv {geEpoch, gePPolicy, geCertState} =
   constrained $ \ [var|props|] ->
     -- Note each of ppupTree, hardForkTree, committeeTree, constitutionTree
     -- have the pair type ProposalTree = (StrictMaybe (GovActionId StandardCrypto), [Tree GAS])
@@ -147,7 +148,10 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy} =
                   Block
                     [ dependsOn gasOther withdrawMap
                     , forAll (dom_ withdrawMap) $ \ [var|rewAcnt|] ->
-                        match rewAcnt $ \ [var|network|] _ -> network ==. lit Testnet
+                        match rewAcnt $ \ [var|network|] [var|credential|] ->
+                          [ network ==. lit Testnet
+                          , credential `member_` lit registeredCredentials
+                          ]
                     , assert $ policy ==. lit gePPolicy
                     ]
             )
@@ -161,6 +165,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy} =
   where
     treeGenHint = (Just 2, 10)
     listSizeHint = 5
+    registeredCredentials = Map.keysSet $ umElems $ dsUnified $ certDState geCertState
 
 allGASInTree ::
   (IsConwayUniv fn, IsPred p fn) =>
@@ -298,6 +303,7 @@ govProceduresSpec ge@GovEnv {..} ps =
         actions isDRepVotingAllowed
       stakepoolVotableActionIds =
         actions isStakePoolVotingAllowed
+      registeredCredentials = Map.keysSet $ umElems $ dsUnified $ certDState geCertState
    in constrained $ \govSignal ->
         match govSignal $ \votingProcs proposalProcs _certificates ->
           [ match votingProcs $ \votingProcsMap ->
@@ -322,9 +328,10 @@ govProceduresSpec ge@GovEnv {..} ps =
           , forAll proposalProcs $ \proc ->
               match proc $ \deposit returnAddr govAction _ ->
                 [ assert $ deposit ==. lit (gePParams ^. ppGovActionDepositL)
-                , match returnAddr $ \net _cred ->
+                , match returnAddr $ \net cred ->
                     [ dependsOn proc net
                     , assert $ net ==. lit Testnet
+                    , assert $ cred `member_` lit registeredCredentials
                     ]
                 , wfGovAction ge ps govAction
                 ]
@@ -336,7 +343,7 @@ wfGovAction ::
   Proposals (ConwayEra StandardCrypto) ->
   Term fn (GovAction (ConwayEra StandardCrypto)) ->
   Pred fn
-wfGovAction GovEnv {gePPolicy, geEpoch, gePParams} ps govAction =
+wfGovAction GovEnv {gePPolicy, geEpoch, gePParams, geCertState} ps govAction =
   caseOn
     govAction
     -- ParameterChange
@@ -373,7 +380,10 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams} ps govAction =
     -- TreasuryWithdrawals
     ( branch $ \withdrawMap policy ->
         [ forAll (dom_ withdrawMap) $ \rewAcnt ->
-            match rewAcnt $ \net _ -> net ==. lit Testnet
+            match rewAcnt $ \net cred ->
+              [ net ==. lit Testnet
+              , cred `member_` lit registeredCredentials
+              ]
         , assert $ sum_ (rng_ withdrawMap) >. lit (Coin 0)
         , assert $ policy ==. lit gePPolicy
         , assert $ not $ HardForks.bootstrapPhase (gePParams ^. ppProtocolVersionL)
@@ -402,6 +412,7 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams} ps govAction =
     -- InfoAction
     (branch $ \_ -> True)
   where
+    registeredCredentials = Map.keysSet $ umElems $ dsUnified $ certDState geCertState
     prevGovActionIds = ps ^. pRootsL . L.to toPrevGovActionIds
     constitutionIds =
       (prevGovActionIds ^. grConstitutionL)

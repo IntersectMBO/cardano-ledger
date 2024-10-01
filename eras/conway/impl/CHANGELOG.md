@@ -2,6 +2,9 @@
 
 ## 1.17.0.0
 
+* Add predicate failures to guard against invalid reward accounts (return addresses) in proposals and treasury withdrawals. #4639
+  * `ProposalReturnAddressDoesNotExist`, and 
+  * `TreasuryWithdrawalReturnAddressDoesNotExist`.
 * Add `refScriptCostStride` and `refScriptCostMultiplier`
 * Added protocol version argument to `ppuWellFormed`
 * Add `ConwayMempoolEvent` type
