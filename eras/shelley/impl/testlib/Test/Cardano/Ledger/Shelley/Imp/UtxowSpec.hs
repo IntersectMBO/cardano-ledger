@@ -120,7 +120,8 @@ spec = describe "UTXOW" $ do
     submitFailingTx
       tx
       [ injectFailure $
-          ConflictingMetadataHash wrongAuxDataHash auxDataHash
+          ConflictingMetadataHash $
+            Mismatch {mismatchSupplied = wrongAuxDataHash, mismatchExpected = auxDataHash}
       ]
 
   it "ExtraneousScriptWitnessesUTXOW" $ do

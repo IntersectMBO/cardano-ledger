@@ -3,7 +3,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -36,7 +35,6 @@ import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Rules.Newpp (
   NewppEnv (..),
   ShelleyNEWPP,
-  ShelleyNewppPredFailure,
   ShelleyNewppState (..),
  )
 import Cardano.Ledger.Shelley.Rules.Ppup (votedFuturePParams)
@@ -69,7 +67,7 @@ newtype ShelleyUpecPredFailure era
 
 instance NoThunks (ShelleyUpecPredFailure era)
 
-instance NFData (ShelleyNewppPredFailure era) => NFData (ShelleyUpecPredFailure era)
+instance NFData (ShelleyUpecPredFailure era)
 
 instance
   ( EraGov era

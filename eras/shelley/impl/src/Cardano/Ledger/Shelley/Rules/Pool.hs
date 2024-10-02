@@ -28,7 +28,9 @@ import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.Address (raNetwork)
 import Cardano.Ledger.BaseTypes (
   Globals (..),
+  Mismatch (..),
   Network,
+  Relation (..),
   ShelleyBase,
   addEpochInterval,
   epochInfoPure,
@@ -93,15 +95,12 @@ data ShelleyPoolPredFailure era
   = StakePoolNotRegisteredOnKeyPOOL
       !(KeyHash 'StakePool (EraCrypto era)) -- KeyHash which cannot be retired since it is not registered
   | StakePoolRetirementWrongEpochPOOL
-      !EpochNo -- Current Epoch
-      !EpochNo -- The epoch listed in the Pool Retirement Certificate
-      !EpochNo -- The first epoch that is too far out for retirement
+      !(Mismatch 'RelGT EpochNo)
+      !(Mismatch 'RelLTEQ EpochNo)
   | StakePoolCostTooLowPOOL
-      !Coin -- The stake pool cost listed in the Pool Registration Certificate
-      !Coin -- The minimum stake pool cost listed in the protocol parameters
+      !(Mismatch 'RelGTEQ Coin)
   | WrongNetworkPOOL
-      !Network -- Actual Network ID
-      !Network -- Network ID listed in Pool Registration Certificate
+      !(Mismatch 'RelEQ Network)
       !(KeyHash 'StakePool (EraCrypto era)) -- Stake Pool ID
   | PoolMedataHashTooBig
       !(KeyHash 'StakePool (EraCrypto era)) -- Stake Pool ID
@@ -140,12 +139,12 @@ instance Era era => EncCBOR (ShelleyPoolPredFailure era) where
   encCBOR = \case
     StakePoolNotRegisteredOnKeyPOOL kh ->
       encodeListLen 2 <> encCBOR (0 :: Word8) <> encCBOR kh
-    StakePoolRetirementWrongEpochPOOL ce e em ->
-      encodeListLen 4 <> encCBOR (1 :: Word8) <> encCBOR ce <> encCBOR e <> encCBOR em
-    StakePoolCostTooLowPOOL pc mc ->
-      encodeListLen 3 <> encCBOR (3 :: Word8) <> encCBOR pc <> encCBOR mc
-    WrongNetworkPOOL a b c ->
-      encodeListLen 4 <> encCBOR (4 :: Word8) <> encCBOR a <> encCBOR b <> encCBOR c
+    StakePoolRetirementWrongEpochPOOL gtmm lteqmm ->
+      encodeListLen 3 <> encCBOR (1 :: Word8) <> encCBOR gtmm <> encCBOR lteqmm
+    StakePoolCostTooLowPOOL mm ->
+      encodeListLen 2 <> encCBOR (3 :: Word8) <> encCBOR mm
+    WrongNetworkPOOL mm c ->
+      encodeListLen 3 <> encCBOR (4 :: Word8) <> encCBOR mm <> encCBOR c
     PoolMedataHashTooBig a b ->
       encodeListLen 3 <> encCBOR (5 :: Word8) <> encCBOR a <> encCBOR b
 
@@ -156,20 +155,17 @@ instance Era era => DecCBOR (ShelleyPoolPredFailure era) where
         kh <- decCBOR
         pure (2, StakePoolNotRegisteredOnKeyPOOL kh)
       1 -> do
-        ce <- decCBOR
-        e <- decCBOR
-        em <- decCBOR
-        pure (4, StakePoolRetirementWrongEpochPOOL ce e em)
+        gtmm <- decCBOR
+        lteqmm <- decCBOR
+        pure (3, StakePoolRetirementWrongEpochPOOL gtmm lteqmm)
       2 -> fail "WrongCertificateTypePOOL has been removed as impossible case"
       3 -> do
-        pc <- decCBOR
-        mc <- decCBOR
-        pure (3, StakePoolCostTooLowPOOL pc mc)
+        mm <- decCBOR
+        pure (2, StakePoolCostTooLowPOOL mm)
       4 -> do
-        actualNetID <- decCBOR
-        suppliedNetID <- decCBOR
+        mm <- decCBOR
         poolID <- decCBOR
-        pure (4, WrongNetworkPOOL actualNetID suppliedNetID poolID)
+        pure (3, WrongNetworkPOOL mm poolID)
       5 -> do
         poolID <- decCBOR
         s <- decCBOR
@@ -201,7 +197,14 @@ poolDelegationTransition = do
       when (HardForks.validatePoolRewardAccountNetID pv) $ do
         actualNetID <- liftSTS $ asks networkId
         let suppliedNetID = raNetwork ppRewardAccount
-        actualNetID == suppliedNetID ?! WrongNetworkPOOL actualNetID suppliedNetID ppId
+        actualNetID
+          == suppliedNetID
+            ?! WrongNetworkPOOL
+              Mismatch
+                { mismatchSupplied = suppliedNetID
+                , mismatchExpected = actualNetID
+                }
+              ppId
 
       when (SoftForks.restrictPoolMetadataHash pv) $
         forM_ ppMetadata $ \pmd ->
@@ -211,7 +214,13 @@ poolDelegationTransition = do
                   ?! PoolMedataHashTooBig ppId s
 
       let minPoolCost = pp ^. ppMinPoolCostL
-      ppCost >= minPoolCost ?! StakePoolCostTooLowPOOL ppCost minPoolCost
+      ppCost
+        >= minPoolCost
+          ?! StakePoolCostTooLowPOOL
+            Mismatch
+              { mismatchSupplied = ppCost
+              , mismatchExpected = minPoolCost
+              }
 
       if eval (ppId ∉ dom psStakePoolParams)
         then do
@@ -242,7 +251,16 @@ poolDelegationTransition = do
         ei <- asks epochInfoPure
         epochInfoEpoch ei slot
       let maxEpoch = pp ^. ppEMaxL
-      (cepoch < e && e <= addEpochInterval cepoch maxEpoch)
-        ?! StakePoolRetirementWrongEpochPOOL cepoch e (addEpochInterval cepoch maxEpoch)
+          limitEpoch = addEpochInterval cepoch maxEpoch
+      (cepoch < e && e <= limitEpoch)
+        ?! StakePoolRetirementWrongEpochPOOL
+          Mismatch -- 'RelGT - The supplied value should be greater than the current epoch
+            { mismatchSupplied = e
+            , mismatchExpected = cepoch
+            }
+          Mismatch -- 'RelLTEQ - The supplied value should be less then or equal to ppEMax after the current epoch
+            { mismatchSupplied = e
+            , mismatchExpected = limitEpoch
+            }
       -- We just schedule it for retirement. When it is retired we refund the deposit (see POOLREAP)
       pure $ ps {psRetiring = eval (psRetiring ⨃ singleton hk e)}

@@ -1,6 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -13,12 +12,10 @@ module Cardano.Ledger.Shelley.Rules.Newpp (
   ShelleyNEWPP,
   ShelleyNewppState (..),
   NewppEnv (..),
-  ShelleyNewppPredFailure (..),
   PredicateFailure,
 ) where
 
 import Cardano.Ledger.BaseTypes (Globals (quorum), ShelleyBase)
-import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Era (ShelleyNEWPP)
 import Cardano.Ledger.Shelley.Governance
@@ -32,7 +29,6 @@ import Cardano.Ledger.Shelley.PParams (
   hasLegalProtVerUpdate,
  )
 import Cardano.Ledger.Shelley.Rules.Ppup (votedFuturePParams)
-import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition (
   STS (..),
@@ -42,9 +38,8 @@ import Control.State.Transition (
   liftSTS,
  )
 import Data.Default.Class (Default, def)
+import Data.Void (Void)
 import Data.Word (Word64)
-import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
 
 data ShelleyNewppState era
   = NewppState (PParams era) (ShelleyGovState era)
@@ -53,16 +48,6 @@ data NewppEnv era = NewppEnv
   { neCertState :: !(CertState era)
   , neUTxOState :: !(UTxOState era)
   }
-
-data ShelleyNewppPredFailure era
-  = UnexpectedDepositPot
-      !Coin -- The total outstanding deposits
-      !Coin -- The deposit pot
-  deriving (Show, Eq, Generic)
-
-instance NoThunks (ShelleyNewppPredFailure era)
-
-instance NFData (ShelleyNewppPredFailure era)
 
 instance
   ( EraGov era
@@ -75,7 +60,7 @@ instance
   type Signal (ShelleyNEWPP era) = PParams era
   type Environment (ShelleyNEWPP era) = NewppEnv era
   type BaseM (ShelleyNEWPP era) = ShelleyBase
-  type PredicateFailure (ShelleyNEWPP era) = ShelleyNewppPredFailure era
+  type PredicateFailure (ShelleyNEWPP era) = Void
   transitionRules = [newPpTransition]
 
 instance EraPParams era => Default (ShelleyNewppState era) where

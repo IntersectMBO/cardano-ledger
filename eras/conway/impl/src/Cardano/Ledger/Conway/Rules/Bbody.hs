@@ -39,7 +39,7 @@ import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage.Core (BabbageEraTxBody)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure, BabbageUtxowPredFailure)
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (Mismatch (..), ShelleyBase)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders (
   Decode (..),
@@ -237,8 +237,12 @@ shelleyToConwayBbodyPredFailure ::
   forall era.
   ShelleyBbodyPredFailure era ->
   ConwayBbodyPredFailure era
-shelleyToConwayBbodyPredFailure (Shelley.WrongBlockBodySizeBBODY x y) = WrongBlockBodySizeBBODY x y
-shelleyToConwayBbodyPredFailure (Shelley.InvalidBodyHashBBODY x y) = InvalidBodyHashBBODY x y
+shelleyToConwayBbodyPredFailure
+  (Shelley.WrongBlockBodySizeBBODY (Mismatch supplied expected)) =
+    WrongBlockBodySizeBBODY supplied expected
+shelleyToConwayBbodyPredFailure
+  (Shelley.InvalidBodyHashBBODY (Mismatch supplied expected)) =
+    InvalidBodyHashBBODY supplied expected
 shelleyToConwayBbodyPredFailure (Shelley.LedgersFailure x) = LedgersFailure x
 
 alonzoToConwayBbodyPredFailure ::

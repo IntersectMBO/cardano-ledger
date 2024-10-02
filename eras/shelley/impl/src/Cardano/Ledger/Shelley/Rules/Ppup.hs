@@ -26,7 +26,9 @@ where
 
 import Cardano.Ledger.BaseTypes (
   Globals (quorum),
+  Mismatch (..),
   ProtVer,
+  Relation (..),
   ShelleyBase,
   StrictMaybe (..),
   invalidKey,
@@ -91,8 +93,7 @@ data ShelleyPpupPredFailure era
     --  The first set contains the key hashes which were a part of the update.
     --  The second set contains the key hashes of the genesis keys.
     NonGenesisUpdatePPUP
-      !(Set (KeyHash 'Genesis (EraCrypto era)))
-      !(Set (KeyHash 'Genesis (EraCrypto era)))
+      !(Mismatch 'RelSubset (Set (KeyHash 'Genesis (EraCrypto era))))
   | -- | An update was proposed for the wrong epoch.
     --  The first 'EpochNo' is the current epoch.
     --  The second 'EpochNo' is the epoch listed in the update.
@@ -138,11 +139,10 @@ instance (EraPParams era, ProtVerAtMost era 8) => STS (ShelleyPPUP era) where
 
 instance Era era => EncCBOR (ShelleyPpupPredFailure era) where
   encCBOR = \case
-    NonGenesisUpdatePPUP a b ->
-      encodeListLen 3
+    NonGenesisUpdatePPUP mm ->
+      encodeListLen 2
         <> encCBOR (0 :: Word8)
-        <> encCBOR a
-        <> encCBOR b
+        <> encCBOR mm
     PPUpdateWrongEpoch ce e vp ->
       encodeListLen 4 <> encCBOR (1 :: Word8) <> encCBOR ce <> encCBOR e <> encCBOR vp
     PVCannotFollowPPUP p -> encodeListLen 2 <> encCBOR (2 :: Word8) <> encCBOR p
@@ -151,9 +151,8 @@ instance Era era => DecCBOR (ShelleyPpupPredFailure era) where
   decCBOR = decodeRecordSum "ShelleyPpupPredFailure" $
     \case
       0 -> do
-        a <- decCBOR
-        b <- decCBOR
-        pure (3, NonGenesisUpdatePPUP a b)
+        mm <- decCBOR
+        pure (2, NonGenesisUpdatePPUP mm)
       1 -> do
         a <- decCBOR
         b <- decCBOR
@@ -180,7 +179,12 @@ ppupTransitionNonEmpty = do
   case update of
     SNothing -> pure pps
     SJust (Update (ProposedPPUpdates pup) targetEpochNo) -> do
-      eval (dom pup ⊆ dom genDelegs) ?! NonGenesisUpdatePPUP (eval (dom pup)) (eval (dom genDelegs))
+      eval (dom pup ⊆ dom genDelegs)
+        ?! NonGenesisUpdatePPUP
+          Mismatch
+            { mismatchSupplied = eval $ dom pup
+            , mismatchExpected = eval $ dom genDelegs
+            }
 
       let firstIllegalProtVerUpdate = do
             ppu <- F.find (not . hasLegalProtVerUpdate pp) pup

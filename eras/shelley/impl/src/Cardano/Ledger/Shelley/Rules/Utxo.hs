@@ -46,7 +46,15 @@ import Cardano.Ledger.Address (
   getNetwork,
   raNetwork,
  )
-import Cardano.Ledger.BaseTypes (Network, ShelleyBase, StrictMaybe, invalidKey, networkId)
+import Cardano.Ledger.BaseTypes (
+  Mismatch (..),
+  Network,
+  Relation (..),
+  ShelleyBase,
+  StrictMaybe,
+  invalidKey,
+  networkId,
+ )
 import Cardano.Ledger.Binary (
   DecCBOR (..),
   EncCBOR (..),
@@ -167,12 +175,10 @@ data ShelleyUtxoPredFailure era
       !SlotNo -- transaction's time to live
       !SlotNo -- current slot
   | MaxTxSizeUTxO
-      !Integer -- the actual transaction size
-      !Integer -- the max transaction size
+      !(Mismatch 'RelLTEQ Integer)
   | InputSetEmptyUTxO
   | FeeTooSmallUTxO
-      !Coin -- the minimum fee for this transaction
-      !Coin -- the fee supplied in this transaction
+      !(Mismatch 'RelGTEQ Coin)
   | ValueNotConservedUTxO
       !(Value era) -- the Coin consumed by this transaction
       !(Value era) -- the Coin produced by this transaction
@@ -241,17 +247,15 @@ instance
         <> encCBOR (1 :: Word8)
         <> encCBOR a
         <> encCBOR b
-    MaxTxSizeUTxO a b ->
-      encodeListLen 3
+    MaxTxSizeUTxO mm ->
+      encodeListLen 2
         <> encCBOR (2 :: Word8)
-        <> encCBOR a
-        <> encCBOR b
+        <> encCBOR mm
     InputSetEmptyUTxO -> encodeListLen 1 <> encCBOR (3 :: Word8)
-    FeeTooSmallUTxO a b ->
-      encodeListLen 3
+    FeeTooSmallUTxO mm ->
+      encodeListLen 2
         <> encCBOR (4 :: Word8)
-        <> encCBOR a
-        <> encCBOR b
+        <> encCBOR mm
     ValueNotConservedUTxO a b ->
       encodeListLen 3
         <> encCBOR (5 :: Word8)
@@ -297,14 +301,12 @@ instance
           b <- decCBOR
           pure (3, ExpiredUTxO a b)
         2 -> do
-          a <- decCBOR
-          b <- decCBOR
-          pure (3, MaxTxSizeUTxO a b)
+          mm <- decCBOR
+          pure (2, MaxTxSizeUTxO mm)
         3 -> pure (1, InputSetEmptyUTxO)
         4 -> do
-          a <- decCBOR
-          b <- decCBOR
-          pure (3, FeeTooSmallUTxO a b)
+          mm <- decCBOR
+          pure (2, FeeTooSmallUTxO mm)
         5 -> do
           a <- decCBOR
           b <- decCBOR
@@ -502,7 +504,12 @@ validateFeeTooSmallUTxO ::
   UTxO era ->
   Test (ShelleyUtxoPredFailure era)
 validateFeeTooSmallUTxO pp tx utxo =
-  failureUnless (minFee <= txFee) $ FeeTooSmallUTxO minFee txFee
+  failureUnless (minFee <= txFee) $
+    FeeTooSmallUTxO
+      Mismatch
+        { mismatchSupplied = txFee
+        , mismatchExpected = minFee
+        }
   where
     minFee = getMinFeeTxUtxo pp tx utxo
     txFee = txb ^. feeTxBodyL
@@ -618,7 +625,12 @@ validateMaxTxSizeUTxO ::
   Tx era ->
   Test (ShelleyUtxoPredFailure era)
 validateMaxTxSizeUTxO pp tx =
-  failureUnless (txSize <= maxTxSize) $ MaxTxSizeUTxO txSize maxTxSize
+  failureUnless (txSize <= maxTxSize) $
+    MaxTxSizeUTxO
+      Mismatch
+        { mismatchSupplied = txSize
+        , mismatchExpected = maxTxSize
+        }
   where
     maxTxSize = toInteger (pp ^. ppMaxTxSizeL)
     txSize = tx ^. sizeTxF

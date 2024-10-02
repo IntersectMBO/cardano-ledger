@@ -40,6 +40,8 @@ where
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (VerKeyDSIGN))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (
+  Mismatch (..),
+  Relation (..),
   ShelleyBase,
   StrictMaybe (..),
   invalidKey,
@@ -141,10 +143,9 @@ data ShelleyUtxowPredFailure era
   | MissingTxMetadata
       !(AuxiliaryDataHash (EraCrypto era)) -- hash of the metadata included in the transaction body
   | ConflictingMetadataHash
-      !(AuxiliaryDataHash (EraCrypto era)) -- hash of the metadata included in the transaction body
-      !(AuxiliaryDataHash (EraCrypto era)) -- hash of the full metadata
-      -- Contains out of range values (strings too long)
-  | InvalidMetadata
+      !(Mismatch 'RelEQ (AuxiliaryDataHash (EraCrypto era)))
+  | -- Contains out of range values (strings too long)
+    InvalidMetadata
   | ExtraneousScriptWitnessesUTXOW
       !(Set (ScriptHash (EraCrypto era))) -- extraneous scripts
   deriving (Generic)
@@ -225,8 +226,8 @@ instance
       encodeListLen 2 <> encCBOR (6 :: Word8) <> encCBOR h
     MissingTxMetadata h ->
       encodeListLen 2 <> encCBOR (7 :: Word8) <> encCBOR h
-    ConflictingMetadataHash bodyHash fullMDHash ->
-      encodeListLen 3 <> encCBOR (8 :: Word8) <> encCBOR bodyHash <> encCBOR fullMDHash
+    ConflictingMetadataHash mm ->
+      encodeListLen 2 <> encCBOR (8 :: Word8) <> encCBOR mm
     InvalidMetadata ->
       encodeListLen 1 <> encCBOR (9 :: Word8)
     ExtraneousScriptWitnessesUTXOW ss ->
@@ -269,9 +270,8 @@ instance
         h <- decCBOR
         pure (2, MissingTxMetadata h)
       8 -> do
-        bodyHash <- decCBOR
-        fullMDHash <- decCBOR
-        pure (3, ConflictingMetadataHash bodyHash fullMDHash)
+        mm <- decCBOR
+        pure (2, ConflictingMetadataHash mm)
       9 -> pure (1, InvalidMetadata)
       10 -> do
         ss <- decCBOR
@@ -509,7 +509,8 @@ validateMetadata pp tx =
         (SJust mdh, SJust md') ->
           sequenceA_
             [ failureUnless (hashTxAuxData md' == mdh) $
-                ConflictingMetadataHash mdh (hashTxAuxData md')
+                ConflictingMetadataHash $
+                  Mismatch {mismatchSupplied = mdh, mismatchExpected = hashTxAuxData md'}
             , -- check metadata value sizes
               when (SoftForks.validMetadata pv) $
                 failureUnless (validateTxAuxData pv md') InvalidMetadata

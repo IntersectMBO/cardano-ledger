@@ -33,7 +33,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTx, totExUnits)
 import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq, txSeqTxns)
 import Cardano.Ledger.Alonzo.TxWits (AlonzoEraTxWits (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
-import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfoPure)
+import Cardano.Ledger.BaseTypes (Mismatch (..), ShelleyBase, epochInfoPure)
 import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
 import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Block (Block (..))
@@ -209,14 +209,24 @@ alonzoBbodyTransition =
           == fromIntegral (bhviewBSize bh)
             ?! injectFailure
               ( ShelleyInAlonzoBbodyPredFailure
-                  (WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bh))
+                  ( WrongBlockBodySizeBBODY $
+                      Mismatch
+                        { mismatchSupplied = actualBodySize
+                        , mismatchExpected = fromIntegral $ bhviewBSize bh
+                        }
+                  )
               )
 
         actualBodyHash
           == bhviewBHash bh
             ?! injectFailure
               ( ShelleyInAlonzoBbodyPredFailure
-                  (InvalidBodyHashBBODY @era actualBodyHash (bhviewBHash bh))
+                  ( InvalidBodyHashBBODY @era $
+                      Mismatch
+                        { mismatchSupplied = actualBodyHash
+                        , mismatchExpected = bhviewBHash bh
+                        }
+                  )
               )
 
         ls' <-
