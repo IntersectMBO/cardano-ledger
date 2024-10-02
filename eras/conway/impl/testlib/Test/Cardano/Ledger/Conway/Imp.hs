@@ -31,6 +31,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayNewEpochEvent,
  )
 import Cardano.Ledger.Conway.TxInfo (ConwayContextError)
+import Cardano.Ledger.Shelley.API.Mempool (ApplyTx (..))
 import Cardano.Ledger.Shelley.Rules (
   ShelleyLedgersEnv,
   ShelleyLedgersEvent,
@@ -89,6 +90,7 @@ spec ::
   , Environment (EraRule "LEDGERS" era) ~ ShelleyLedgersEnv era
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , STS (EraRule "LEDGERS" era)
+  , ApplyTx era
   ) =>
   Spec
 spec = do

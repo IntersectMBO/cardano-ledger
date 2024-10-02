@@ -15,6 +15,7 @@
 -- | Interface to the Shelley ledger for the purposes of managing a Shelley
 -- mempool.
 module Cardano.Ledger.Shelley.API.Mempool (
+  applyTx,
   ApplyTx (..),
   ApplyTxError (..),
   Validated,
@@ -61,16 +62,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad (foldM)
 import Control.Monad.Except (Except, MonadError, liftEither)
 import Control.Monad.Trans.Reader (runReader)
-import Control.State.Transition.Extended (
-  BaseM,
-  Environment,
-  PredicateFailure,
-  STS,
-  Signal,
-  State,
-  TRC (..),
-  applySTS,
- )
+import Control.State.Transition.Extended
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.List.NonEmpty (NonEmpty)
@@ -120,27 +112,27 @@ class
   ) =>
   ApplyTx era
   where
-  -- | Validate a transaction against a mempool state, and return both the new
-  -- mempool state and a "validated" 'TxInBlock'.
-  --
-  -- The meaning of being "validated" depends on the era. In general, a
-  -- 'TxInBlock' has had all checks run, and can now only fail due to checks
-  -- which depend on the state; most notably, that UTxO inputs disappear.
-  applyTx ::
-    MonadError (ApplyTxError era) m =>
+  -- | Validate a transaction against a mempool state and for given STS options,
+  -- and return the new mempool state, a "validated" 'TxInBlock' and,
+  -- depending on the passed options, the emitted events.
+  applyTxOpts ::
+    forall ep m.
+    (MonadError (ApplyTxError era) m, EventReturnTypeRep ep) =>
+    ApplySTSOpts ep ->
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
     Tx era ->
-    m (MempoolState era, Validated (Tx era))
-  applyTx globals env state tx =
+    m (EventReturnType ep (EraRule "LEDGER" era) (MempoolState era, Validated (Tx era)))
+  applyTxOpts opts globals env state tx =
     let res =
           flip runReader globals
-            . applySTS @(EraRule "LEDGER" era)
+            . applySTSOptsEither @(EraRule "LEDGER" era) opts
             $ TRC (env, state, tx)
      in liftEither
           . left ApplyTxError
-          . right (,Validated tx)
+          . right
+            (mapEventReturn @ep @(EraRule "LEDGER" era) @(MempoolState era) $ (,Validated tx))
           $ res
 
   -- | Reapply a previously validated 'Tx'.
@@ -288,6 +280,7 @@ applyTxs
     overNewEpochState (applyTxsTransition globals mempoolEnv txs) state
     where
       mempoolEnv = mkMempoolEnv state slot
+{-# DEPRECATED applyTxs "Use `applyTxOpts` and `mkMempoolEnv` instead" #-}
 
 applyTxsTransition ::
   forall era m.
@@ -304,6 +297,7 @@ applyTxsTransition globals env txs state =
     (\st tx -> fst <$> applyTx globals env st tx)
     state
     txs
+{-# DEPRECATED applyTxsTransition "Use `applyTxOpts` and `mkMempoolEnv` instead" #-}
 
 -- | Transform a function over mempool states to one over the full
 -- 'NewEpochState'.
@@ -321,3 +315,24 @@ overNewEpochState f st = do
               { LedgerState.esLState = ls
               }
         }
+
+-- | Validate a transaction against a mempool state using default STS options
+-- and return both the new mempool state and a "validated" 'TxInBlock'.
+--
+-- The meaning of being "validated" depends on the era. In general, a
+-- 'TxInBlock' has had all checks run, and can now only fail due to checks
+-- which depend on the state; most notably, that UTxO inputs disappear.
+applyTx ::
+  (ApplyTx era, MonadError (ApplyTxError era) m) =>
+  Globals ->
+  MempoolEnv era ->
+  MempoolState era ->
+  Tx era ->
+  m (MempoolState era, Validated (Tx era))
+applyTx =
+  applyTxOpts $
+    ApplySTSOpts
+      { asoAssertions = globalAssertionPolicy
+      , asoValidation = ValidateAll
+      , asoEvents = EPDiscard
+      }
