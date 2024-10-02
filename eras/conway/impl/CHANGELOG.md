@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add `HardForkEvent` constructor to `ConwayEpochEvent`
 * Add `HardFork` module, `ConwayHARDFORK` and `ConwayHardForkEvent`
 * Add predicate failures to guard against invalid reward accounts (return addresses) in proposals and treasury withdrawals. #4639
   * `ProposalReturnAddressDoesNotExist`, and 

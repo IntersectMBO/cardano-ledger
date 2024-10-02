@@ -139,6 +139,7 @@ data ConwayEpochEvent era
       (Set (GovActionState era))
       -- | Map of removed governance action ids that had an unregistered reward account to their unclaimed deposits so they can be transferred to the treasury.
       (Map.Map (GovActionId (EraCrypto era)) Coin)
+  | HardForkEvent (Event (EraRule "HARDFORK" era))
   deriving (Generic)
 
 type instance EraRuleEvent "EPOCH" (ConwayEra c) = ConwayEpochEvent (ConwayEra c)
@@ -147,6 +148,7 @@ deriving instance
   ( EraPParams era
   , Eq (Event (EraRule "POOLREAP" era))
   , Eq (Event (EraRule "SNAP" era))
+  , Eq (Event (EraRule "HARDFORK" era))
   ) =>
   Eq (ConwayEpochEvent era)
 
@@ -154,6 +156,7 @@ instance
   ( EraPParams era
   , NFData (Event (EraRule "POOLREAP" era))
   , NFData (Event (EraRule "SNAP" era))
+  , NFData (Event (EraRule "HARDFORK" era))
   ) =>
   NFData (ConwayEpochEvent era)
 
