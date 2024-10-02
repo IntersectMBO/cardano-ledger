@@ -135,7 +135,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron (empty)
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN)
-import Cardano.Crypto.Hash (Hash, HashAlgorithm)
+import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (
@@ -156,6 +156,7 @@ import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Genesis (EraGenesis (..), NoGenesis (..))
 import Cardano.Ledger.Keys (
   HasKeyRole (..),
+  Hash,
   KeyHash,
   KeyRole (..),
   VerKeyVRF,
@@ -470,7 +471,7 @@ class
   , VRF.VRFAlgorithm (VRF (EraCrypto era))
   , HashAlgorithm (HASH (EraCrypto era))
   , DSIGNAlgorithm (DSIGN (EraCrypto era))
-  , Signable (DSIGN (EraCrypto era)) (Hash (HASH (EraCrypto era)) EraIndependentTxBody)
+  , Signable (DSIGN (EraCrypto era)) (Hash (EraCrypto era) EraIndependentTxBody)
   , ADDRHASH (EraCrypto era) ~ Blake2b_224
   ) =>
   ShelleyEraImp era
@@ -649,7 +650,7 @@ instance
   , NFData (VerKeyDSIGN (DSIGN c))
   , ADDRHASH c ~ Blake2b_224
   , DSIGN c ~ Ed25519DSIGN
-  , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
+  , Signable (DSIGN c) (Hash c EraIndependentTxBody)
   , ShelleyEraScript (ShelleyEra c)
   ) =>
   ShelleyEraImp (ShelleyEra c)
@@ -1537,7 +1538,7 @@ freshSafeHash = arbitrary
 
 freshKeyHashVRF ::
   Era era =>
-  ImpTestM era (Hash (HASH (EraCrypto era)) (VerKeyVRF (EraCrypto era)))
+  ImpTestM era (Hash (EraCrypto era) (VerKeyVRF (EraCrypto era)))
 freshKeyHashVRF = arbitrary
 
 -- | Adds a key pair to the keyhash lookup map
