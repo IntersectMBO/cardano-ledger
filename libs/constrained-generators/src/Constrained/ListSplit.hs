@@ -27,7 +27,7 @@ module Constrained.ListSplit where
 
 import Data.List (elemIndices, isPrefixOf, isSuffixOf)
 import Data.List.NonEmpty qualified as NE
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, fromMaybe)
 import Prettyprinter
 import Test.QuickCheck
 
@@ -55,40 +55,40 @@ genFromListSplit (Split Nothing (Just ys)) = (++ ys) <$> arbitrary
 genFromListSplit (Split (Just ys) Nothing) = (ys ++) <$> arbitrary
 
 conformSplit :: Eq a => [a] -> ListSplit a -> Bool
-conformSplit _ (Split Nothing Nothing) = True
-conformSplit xs (Split (Just ys) Nothing) = isPrefixOf ys xs
-conformSplit xs (Split Nothing (Just ys)) = isSuffixOf ys xs
-conformSplit xs (Split (Just ps) (Just ss)) = xs == (ps ++ ss)
+conformSplit xs (Split mp ms) =
+  maybe True (`isPrefixOf` xs) mp && maybe True (`isSuffixOf` xs) ms
 
-soundListSplit :: ListSplit Int -> Gen Property
-soundListSplit pf = do
-  x <- genFromListSplit pf
-  pure $ property (conformSplit x pf)
+prop_genFromListSplit_sound :: Property
+prop_genFromListSplit_sound =
+  withMaxSuccess 10000 $
+  forAll arbitrary $ \ (pf :: ListSplit Int) ->
+  forAll (genFromListSplit pf) $ \ x -> conformSplit x pf
 
-soundMerge :: Gen Property
-soundMerge = do
-  pf1 <- arbitrary :: Gen (ListSplit Int)
-  pf2 <- arbitrary :: Gen (ListSplit Int)
+prop_merge_sound :: Property
+prop_merge_sound =
+  withMaxSuccess 10000 $
+  forAll arbitrary $ \ (pf1 :: ListSplit Int) ->
+  forAll arbitrary $ \ pf2 ->
   case merge pf1 pf2 of
-    Left _ -> pure $ classify True "MergeFails" $ property True
-    Right pf3 -> do
-      x <- genFromListSplit pf3
-      pure $
+    Left _ -> discard
+    Right pf3 -> forAll (genFromListSplit pf3) $ \ x ->
         counterexample (unlines [show pf1, show pf2, show pf3, show x]) $
-          withMaxSuccess 10000 $
-            classify
-              True
-              "MergeSucceeds"
-              (property $ conformSplit x pf1 && conformSplit x pf2 && conformSplit x pf3)
+          classify (nullListSplit pf1) "null pf1" $
+          classify (nullListSplit pf2) "null pf2" $
+          classify (nullListSplit pf3) "null pf3" $
+          conformSplit x pf1 && conformSplit x pf2 && conformSplit x pf3
+
+nullListSplit :: ListSplit a -> Bool
+nullListSplit (Split p s) = null $ fromMaybe [] p ++ fromMaybe [] s
 
 genSmall :: Arbitrary a => Gen (Maybe [a])
 genSmall =
   frequency
     [
-      ( 2
+      ( 3
       , Just <$> do
           n <- choose (1, 5)
-          vectorOf n (arbitrary)
+          vectorOf n (resize 5 arbitrary)
       )
     , (1, pure Nothing)
     ]

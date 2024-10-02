@@ -3888,7 +3888,7 @@ instance HasSpec fn a => HasSpec fn [a] where
     | not (conformsToSpec (sizeOf (xs ++ ys)) size) = genError1 "Size and split don't agree"
     | not (all (`elem` (xs ++ ys)) must) =
         genError1 "Some elements in the must set are not in the split"
-    | True = pure (xs ++ ys)
+    | True = pure (xs ++ ys) -- TODO: this is not right - it's too constrained!
   genFromTypeSpec (ListSpec hint must size elemS NoFold (Split (Just xs) Nothing)) = do
     let residual =
           ListSpec
@@ -3970,36 +3970,37 @@ instance HasSpec fn a => HasSpec fn [a] where
       <> satisfies (sizeOf_ x) size
       <> maybe TruePred (flip genHint x) msz
       <> ( case split of
-            Split Nothing Nothing -> satisfies x TrueSpec
-            Split Nothing (Just suffix) ->
-              exists
-                ( \eval ->
-                    case stripSuffix suffix (eval x) of
-                      Nothing ->
-                        GenError
-                          []
-                          (pure ("Can't find a prefix from (stripSuffix " ++ show suffix ++ " " ++ show (eval x) ++ ")"))
-                      Just y -> pure y
-                )
-                $ \prefix ->
-                  [ assert $ x ==. append_ prefix (lit suffix)
-                  , satisfies (sizeOf_ prefix) (subSpecInt size (equalSpec (sizeOf suffix)))
-                  ]
-            Split (Just prefix) Nothing ->
-              exists
-                ( \eval ->
-                    case stripPrefix prefix (eval x) of
-                      Nothing ->
-                        GenError
-                          []
-                          (pure ("Can't find a suffix from (stripPrefix " ++ show prefix ++ " " ++ show (eval x) ++ ")"))
-                      Just y -> pure y
-                )
-                $ \suffix ->
-                  [ assert $ x ==. append_ (lit prefix) suffix
-                  , satisfies (sizeOf_ suffix) (subSpecInt size (equalSpec (sizeOf prefix)))
-                  ]
-            Split (Just xs) (Just ys) -> assert $ x ==. lit (xs ++ ys)
+            Split mpre msuf ->
+              maybe TruePred
+                (\ suffix -> exists
+                    ( \eval ->
+                        case stripSuffix suffix (eval x) of
+                          Nothing ->
+                            GenError
+                              []
+                              (pure ("Can't find a prefix from (stripSuffix " ++ show suffix ++ " " ++ show (eval x) ++ ")"))
+                          Just y -> pure y
+                    )
+                    $ \prefix ->
+                      [ assert $ x ==. append_ prefix (lit suffix)
+                      , satisfies (sizeOf_ prefix) (subSpecInt size (equalSpec (sizeOf suffix)))
+                      ]) msuf <>
+                maybe TruePred
+                  (\ prefix ->
+                    exists
+                      ( \eval ->
+                          case stripPrefix prefix (eval x) of
+                            Nothing ->
+                              GenError
+                                []
+                                (pure ("Can't find a suffix from (stripPrefix " ++ show prefix ++ " " ++ show (eval x) ++ ")"))
+                            Just y -> pure y
+                      )
+                      $ \suffix ->
+                        [ assert $ x ==. append_ (lit prefix) suffix
+                        , satisfies (sizeOf_ suffix) (subSpecInt size (equalSpec (sizeOf prefix)))
+                        ]
+                  ) mpre
          )
 
 instance HasSpec fn a => HasGenHint fn [a] where

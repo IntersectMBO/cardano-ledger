@@ -29,7 +29,7 @@ import Test.QuickCheck qualified as QC
 
 import Constrained.Examples
 import Constrained.Internals
-import Constrained.ListSplit (soundListSplit, soundMerge)
+import Constrained.ListSplit (prop_genFromListSplit_sound, prop_merge_sound)
 import Constrained.Properties
 
 ------------------------------------------------------------------------
@@ -184,8 +184,8 @@ tests nightly =
     negativeTests
     appendSpec
     describe "ListSplit soundness tests" $ do
-      prop "ListSplit specifications are sound" soundListSplit
-      prop "Merging ListSplit specifications are sound" soundMerge
+      prop "ListSplit specifications are sound" prop_genFromListSplit_sound
+      prop "Merging ListSplit specifications are sound" prop_merge_sound
 
 negativeTests :: Spec
 negativeTests =
