@@ -48,6 +48,15 @@ govProposalsSpec ::
   GovEnv (ConwayEra StandardCrypto) ->
   Specification fn (Proposals (ConwayEra StandardCrypto))
 govProposalsSpec GovEnv {geEpoch, gePPolicy, geCertState} =
+  proposalsSpec (lit geEpoch) (lit gePPolicy) (lit geCertState)
+
+proposalsSpec ::
+  IsConwayUniv fn =>
+  Term fn EpochNo ->
+  Term fn (StrictMaybe (ScriptHash StandardCrypto)) ->
+  Term fn (CertState Conway) ->
+  Specification fn (Proposals Conway)
+proposalsSpec geEpoch gePPolicy geCertState =
   constrained $ \ [var|props|] ->
     -- Note each of ppupTree, hardForkTree, committeeTree, constitutionTree
     -- have the pair type ProposalTree = (StrictMaybe (GovActionId StandardCrypto), [Tree GAS])
@@ -64,7 +73,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy, geCertState} =
                       \_ ppup policy ->
                         [ assert $ ppup /=. lit emptyPParamsUpdate
                         , satisfies ppup wfPParamsUpdateSpec
-                        , assert $ policy ==. lit gePPolicy
+                        , assert $ policy ==. gePPolicy
                         ]
                   ]
               )
@@ -117,7 +126,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy, geCertState} =
                     -- UpdateCommittee - We are only interested in this case
                     ( branch $ \_ _ added _ ->
                         forAll (rng_ added) $ \epoch ->
-                          lit geEpoch <. epoch
+                          geEpoch <. epoch
                     )
                     (branch $ \_ _ -> False)
                     (branch $ \_ -> False)
@@ -152,7 +161,7 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy, geCertState} =
                           [ network ==. lit Testnet
                           , credential `member_` lit registeredCredentials
                           ]
-                    , assert $ policy ==. lit gePPolicy
+                    , assert $ policy ==. gePPolicy
                     ]
             )
             (branch $ \_ -> False) -- NoConfidence
