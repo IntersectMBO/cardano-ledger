@@ -124,7 +124,7 @@ import Test.Cardano.Ledger.Conformance (
   hashToInteger,
   withCtx,
  )
-import Test.Cardano.Ledger.Constrained.Conway (DepositPurpose (..), IsConwayUniv)
+import Test.Cardano.Ledger.Constrained.Conway (IsConwayUniv, DepositPurpose (..))
 import Test.Cardano.Ledger.Constrained.Conway.Epoch
 import Test.Cardano.Ledger.Conway.TreeDiff (ToExpr (..), showExpr)
 

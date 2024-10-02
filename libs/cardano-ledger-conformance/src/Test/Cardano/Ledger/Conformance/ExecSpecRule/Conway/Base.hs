@@ -73,7 +73,6 @@ import Cardano.Ledger.Conway.Rules (
   spoAccepted,
   spoAcceptedRatio,
  )
-import Cardano.Ledger.Conway.Tx (AlonzoTx)
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Constrained
@@ -132,6 +131,10 @@ import qualified Test.Cardano.Ledger.Generic.GenState as GenSize
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState(..))
+import Cardano.Ledger.Shelley.Rules (UtxoEnv(..))
+import Test.Cardano.Ledger.Conway.ImpTest (showConwayTxBalance)
+import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
 
 instance
   forall fn.
@@ -143,60 +146,28 @@ instance
   genExecContext = do
     let proof = Proof.reify @Conway
     uecSlotNo <- arbitrary
-    ((uecUTxO, uecTx), gs) <-
-      runGenRS proof GenSize.small $
-        genAlonzoTx proof uecSlotNo
+    ((uecUTxO, uecTx), gs) <- runGenRS proof GenSize.small $
+      genAlonzoTx proof uecSlotNo
     let
-      uecPParams =
-        gePParams (gsGenEnv gs)
-          & ppMaxTxSizeL .~ 3000
-          & ppProtocolVersionL .~ ProtVer (natVersion @10) 0
-    uecDeposits <- arbitrary
+      uecPParams = gePParams (gsGenEnv gs)
+        & ppMaxTxSizeL .~ 3000
+        & ppProtocolVersionL .~ ProtVer (natVersion @10) 0
+      uecDeposits = undefined
     pure UtxoExecContext {..}
 
-  environmentSpec _ = utxoEnvSpec
+  environmentSpec = utxoEnvSpec
 
-  stateSpec _ = utxoStateSpec
+  stateSpec = utxoStateSpec
 
-  signalSpec _ env st =
-    utxoTxSpec env st
-      <> constrained disableInlineDatums
-    where
-      disableInlineDatums :: Term fn (AlonzoTx Conway) -> Pred fn
-      disableInlineDatums tx = match @fn tx $ \txBody _ _ _ ->
-        match txBody $
-          \_ctbSpendInputs
-           _ctbCollateralInputs
-           _ctbReferenceInputs
-           ctbOutputs
-           _ctbCollateralReturn
-           _ctbTotalCollateral
-           _ctbCerts
-           _ctbWithdrawals
-           _ctbTxfee
-           _ctbVldt
-           _ctbReqSignerHashes
-           _ctbMint
-           _ctbScriptIntegrityHash
-           _ctbAdHash
-           _ctbTxNetworkId
-           _ctbVotingProcedures
-           _ctbProposalProcedures
-           _ctbCurrentTreasuryValue
-           _ctbTreasuryDonation ->
-              match ctbOutputs $
-                \outs -> forAll' outs $
-                  \txOut _ -> match txOut $
-                    \_ _ dat _ ->
-                      (caseOn dat)
-                        (branch $ \_ -> True)
-                        (branch $ \_ -> True)
-                        (branch $ \_ -> False)
+  signalSpec ctx _ _ = utxoTxSpec ctx
 
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
       . computationResultToEither
       $ Agda.utxoStep env st sig
+
+  extraInfo _ctx UtxoEnv {..} UTxOState {..} =
+    PP.ppString . showConwayTxBalance uePParams ueCertState utxosUtxo
 
 data ConwayCertExecContext era = ConwayCertExecContext
   { ccecWithdrawals :: !(Map (RewardAccount (EraCrypto era)) Coin)
