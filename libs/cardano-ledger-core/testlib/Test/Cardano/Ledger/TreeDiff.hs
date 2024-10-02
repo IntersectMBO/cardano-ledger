@@ -149,6 +149,8 @@ instance ToExpr ProtVer
 
 instance ToExpr (Anchor c)
 
+instance ToExpr a => ToExpr (Mismatch r a)
+
 instance ToExpr EpochInterval
 
 -- AuxiliaryData

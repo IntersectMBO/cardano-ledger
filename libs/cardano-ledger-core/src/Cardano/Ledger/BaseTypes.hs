@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -15,7 +14,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -76,6 +74,8 @@ module Cardano.Ledger.BaseTypes (
   Globals (..),
   epochInfoPure,
   ShelleyBase,
+  Relation (..),
+  Mismatch (..),
 
   -- * Injection
   Inject (..),
@@ -712,6 +712,44 @@ newtype EpochErr = EpochErr Text
 deriving instance Show EpochErr
 
 instance Exception EpochErr
+
+-- | Relationship descriptor for the expectation in the 'Mismatch' type.
+data Relation
+  = -- | Equal
+    RelEQ
+  | -- | Less then
+    RelLT
+  | -- | Greater then
+    RelGT
+  | -- | Less then or equal
+    RelLTEQ
+  | -- | Greater then or equal
+    RelGTEQ
+  | -- | Is subset of
+    RelSubset
+  deriving (Eq, Ord, Enum, Bounded, Show, Generic, NFData, ToJSON, FromJSON, NoThunks, Typeable)
+
+-- | This is intended to help clarify supplied and expected values reported by
+-- predicate-failures in all eras.
+data Mismatch (r :: Relation) a = Mismatch
+  { mismatchSupplied :: !a
+  , mismatchExpected :: !a
+  }
+  deriving (Eq, Ord, Show, Generic, NFData, ToJSON, FromJSON, NoThunks)
+
+instance (EncCBOR a, Typeable r) => EncCBOR (Mismatch r a) where
+  encCBOR (Mismatch supplied expected) =
+    encode $
+      Rec Mismatch
+        !> To supplied
+        !> To expected
+
+instance (DecCBOR a, Typeable r) => DecCBOR (Mismatch r a) where
+  decCBOR =
+    decode $
+      RecD Mismatch
+        <! From
+        <! From
 
 data Network
   = Testnet
