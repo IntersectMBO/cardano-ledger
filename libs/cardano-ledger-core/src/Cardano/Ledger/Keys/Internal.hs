@@ -35,7 +35,6 @@ module Cardano.Ledger.Keys.Internal (
   -- * Genesis delegations
   GenDelegPair (..),
   GenDelegs (..),
-  GKeys (..),
 
   -- * KES
   KESignable,
@@ -95,7 +94,6 @@ import Data.Coerce (Coercible, coerce)
 import Data.Default.Class (Default (..))
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
-import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -336,10 +334,6 @@ newtype GenDelegs c = GenDelegs
   deriving (Show) via Quiet (GenDelegs c)
 
 deriving instance Crypto c => ToJSON (GenDelegs c)
-
-newtype GKeys c = GKeys {unGKeys :: Set (VKey 'Genesis c)}
-  deriving (Eq, NoThunks, Generic)
-  deriving (Show) via Quiet (GKeys c)
 
 --------------------------------------------------------------------------------
 -- crypto-parametrised types
