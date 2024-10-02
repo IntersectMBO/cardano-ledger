@@ -25,6 +25,7 @@ import Cardano.Ledger.Conway.Rules (
   ConwayEpochEvent,
   ConwayGovCertPredFailure,
   ConwayGovPredFailure,
+  ConwayHardForkEvent,
   ConwayLedgerEvent,
   ConwayLedgerPredFailure,
   ConwayMempoolEvent,
@@ -91,6 +92,7 @@ spec ::
   , Signal (EraRule "LEDGERS" era) ~ Seq (Tx era)
   , STS (EraRule "LEDGERS" era)
   , ApplyTx era
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
   ) =>
   Spec
 spec = do

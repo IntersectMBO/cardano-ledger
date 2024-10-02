@@ -25,7 +25,7 @@ module Cardano.Ledger.Conway.Rules.Epoch (
 where
 
 import Cardano.Ledger.Address (RewardAccount (..))
-import Cardano.Ledger.BaseTypes (ShelleyBase)
+import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase)
 import Cardano.Ledger.CertState (
   CertState (..),
   CommitteeState (..),
@@ -36,7 +36,7 @@ import Cardano.Ledger.CertState (
  )
 import Cardano.Ledger.Coin (Coin, compactCoinOrError)
 import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayRATIFY)
+import Cardano.Ledger.Conway.Era (ConwayEPOCH, ConwayEra, ConwayHARDFORK, ConwayRATIFY)
 import Cardano.Ledger.Conway.Governance (
   Committee,
   ConwayEraGov (..),
@@ -67,6 +67,9 @@ import Cardano.Ledger.Conway.Governance (
   setFreshDRepPulsingState,
  )
 import Cardano.Ledger.Conway.Governance.Procedures (Committee (..))
+import Cardano.Ledger.Conway.Rules.HardFork (
+  ConwayHardForkEvent (..),
+ )
 import Cardano.Ledger.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
@@ -76,12 +79,14 @@ import Cardano.Ledger.Shelley.LedgerState (
   PState (..),
   UTxOState (..),
   asTreasuryL,
+  curPParamsEpochStateL,
   esAccountState,
   esAccountStateL,
   esLStateL,
   esSnapshotsL,
   lsCertStateL,
   lsUTxOStateL,
+  prevPParamsEpochStateL,
   totalObligation,
   utxosDepositedL,
   utxosDonationL,
@@ -179,6 +184,10 @@ instance
   , GovState era ~ ConwayGovState era
   , State (EraRule "RATIFY" era) ~ RatifyState era
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
+  , Embed (EraRule "HARDFORK" era) (ConwayEPOCH era)
+  , Environment (EraRule "HARDFORK" era) ~ ()
+  , State (EraRule "HARDFORK" era) ~ EpochState era
+  , Signal (EraRule "HARDFORK" era) ~ ProtVer
   ) =>
   STS (ConwayEPOCH era)
   where
@@ -280,6 +289,10 @@ epochTransition ::
   , GovState era ~ ConwayGovState era
   , Signal (EraRule "RATIFY" era) ~ RatifySignal era
   , ConwayEraGov era
+  , Embed (EraRule "HARDFORK" era) (ConwayEPOCH era)
+  , Environment (EraRule "HARDFORK" era) ~ ()
+  , State (EraRule "HARDFORK" era) ~ EpochState era
+  , Signal (EraRule "HARDFORK" era) ~ ProtVer
   ) =>
   TransitionRule (ConwayEPOCH era)
 epochTransition = do
@@ -389,7 +402,12 @@ epochTransition = do
         & esSnapshotsL .~ snapshots1
         & esLStateL .~ ledgerState1
   tellEvent $ EpochBoundaryRatifyState ratState0
-  liftSTS $ setFreshDRepPulsingState eNo stakePoolDistr epochState1
+  epochState2 <- do
+    let curPv = epochState1 ^. curPParamsEpochStateL . ppProtocolVersionL
+    if curPv /= epochState1 ^. prevPParamsEpochStateL . ppProtocolVersionL
+      then trans @(EraRule "HARDFORK" era) $ TRC ((), epochState1, curPv)
+      else pure epochState1
+  liftSTS $ setFreshDRepPulsingState eNo stakePoolDistr epochState2
 
 instance
   ( Era era
@@ -423,6 +441,18 @@ instance
   where
   wrapFailed = absurd
   wrapEvent = absurd
+
+instance
+  ( EraGov era
+  , PredicateFailure (ConwayHARDFORK era) ~ Void
+  , STS (ConwayHARDFORK era)
+  , BaseM (ConwayHARDFORK era) ~ ShelleyBase
+  , Event (EraRule "HARDFORK" era) ~ ConwayHardForkEvent era
+  ) =>
+  Embed (ConwayHARDFORK era) (ConwayEPOCH era)
+  where
+  wrapFailed = absurd
+  wrapEvent = HardForkEvent
 
 updateCommitteeState :: StrictMaybe (Committee era) -> CommitteeState era -> CommitteeState era
 updateCommitteeState committee (CommitteeState creds) =
