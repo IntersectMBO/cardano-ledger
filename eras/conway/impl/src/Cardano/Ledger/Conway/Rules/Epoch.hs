@@ -328,7 +328,7 @@ epochTransition = do
     stakePoolDistr = ssStakeMarkPoolDistr snapshots1
     pulsingState = epochState0 ^. epochStateDRepPulsingStateL
 
-    ratState0@RatifyState {rsEnactState, rsEnacted, rsExpired} =
+    ratifyState@RatifyState {rsEnactState, rsEnacted, rsExpired} =
       extractDRepPulsingState pulsingState
 
     (accountState2, dState2, EnactState {..}) =
@@ -401,7 +401,7 @@ epochTransition = do
         & esAccountStateL .~ accountState3
         & esSnapshotsL .~ snapshots1
         & esLStateL .~ ledgerState1
-  tellEvent $ EpochBoundaryRatifyState ratState0
+  tellEvent $ EpochBoundaryRatifyState ratifyState
   epochState2 <- do
     let curPv = epochState1 ^. curPParamsEpochStateL . ppProtocolVersionL
     if curPv /= epochState1 ^. prevPParamsEpochStateL . ppProtocolVersionL

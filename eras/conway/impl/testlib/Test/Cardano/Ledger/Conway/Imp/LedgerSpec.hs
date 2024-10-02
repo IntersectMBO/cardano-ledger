@@ -160,7 +160,7 @@ spec = do
 
     _ <- delegateToDRep cred (Coin 1_000_000) (DRepCredential drep)
 
-    -- expire the drep after  delegation
+    -- expire the drep after delegation
     void $ submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
     passNEpochs 4
     isDRepExpired drep `shouldReturn` True

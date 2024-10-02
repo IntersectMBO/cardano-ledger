@@ -338,7 +338,7 @@ queryProposals nes gids
   | otherwise =
       Seq.filter (\GovActionState {..} -> gasId `Set.member` gids) proposals
   where
-    proposals = fromStrict $ case (nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL) of
+    proposals = fromStrict $ case nes ^. newEpochStateGovStateL . drepPulsingStateGovStateL of
       DRComplete snap _rs -> snap ^. psProposalsL
       DRPulsing DRepPulser {..} -> dpProposals
 
