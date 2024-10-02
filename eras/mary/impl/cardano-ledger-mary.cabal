@@ -35,6 +35,7 @@ library
         Cardano.Ledger.Mary.Transition
         Cardano.Ledger.Mary.Translation
         Cardano.Ledger.Mary.TxBody
+        Cardano.Ledger.Mary.TxBody.Internal
         Cardano.Ledger.Mary.TxOut
         Cardano.Ledger.Mary.UTxO
         Cardano.Ledger.Mary.Value

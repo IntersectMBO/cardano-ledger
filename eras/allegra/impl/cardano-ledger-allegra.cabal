@@ -34,6 +34,7 @@ library
         Cardano.Ledger.Allegra.Tx
         Cardano.Ledger.Allegra.TxAuxData
         Cardano.Ledger.Allegra.TxBody
+        Cardano.Ledger.Allegra.TxBody.Internal
 
     hs-source-dirs:   src
     other-modules:

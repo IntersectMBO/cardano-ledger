@@ -35,6 +35,7 @@ library
         Cardano.Ledger.Conway.PParams
         Cardano.Ledger.Conway.Tx
         Cardano.Ledger.Conway.TxBody
+        Cardano.Ledger.Conway.TxBody.Internal
         Cardano.Ledger.Conway.TxInfo
         Cardano.Ledger.Conway.TxWits
         Cardano.Ledger.Conway.Transition
