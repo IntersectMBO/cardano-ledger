@@ -1448,7 +1448,8 @@ instance Reflect era => PrettyA (ShelleyLedgersPredFailure era) where
 ppConwayLedgerPredFailure :: Reflect era => Proof era -> ConwayLedgerPredFailure era -> PDoc
 ppConwayLedgerPredFailure proof x = case x of
   ConwayWdrlNotDelegatedToDRep s -> ppSexp "ConwayWdrlNotDelegatedToDRep" [prettyA s]
-  ConwayTreasuryValueMismatch c1 c2 -> ppSexp "ConwayTreasuryValueMismatch" [pcCoin c1, pcCoin c2]
+  ConwayTreasuryValueMismatch (Mismatch {mismatchSupplied = c1, mismatchExpected = c2}) ->
+    ppSexp "ConwayTreasuryValueMismatch" [pcCoin c1, pcCoin c2]
   ConwayGovFailure y -> case proof of
     Conway -> ppSexp "ConwayGovFailure" [ppConwayGovPredFailure y]
     _ ->
@@ -1460,7 +1461,7 @@ ppConwayLedgerPredFailure proof x = case x of
     _ ->
       error
         ("Only the ConwayEra has a (PredicateFailure (EraRule \"CERTS\" era)). This Era is " ++ show proof)
-  ConwayTxRefScriptsSizeTooBig s1 s2 ->
+  ConwayTxRefScriptsSizeTooBig (Mismatch {mismatchSupplied = s1, mismatchExpected = s2}) ->
     ppRecord
       "ConwayTxRefScriptsSizeTooBig"
       [ ("Computed sum of reference script size", ppInt s1)
