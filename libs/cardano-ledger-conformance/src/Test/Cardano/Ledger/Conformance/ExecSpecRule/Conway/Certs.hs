@@ -2,11 +2,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -20,6 +18,7 @@ import Data.Bifunctor (first)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
@@ -72,7 +71,9 @@ instance
           fixRewards (Agda.MkHSSet creds) x =
             x {Agda.dState = (Agda.dState x) {Agda.dsRewards = zeroRewards (Agda.dsRewards (Agda.dState x))}}
             where
-              zeroRewards (Agda.MkHSMap pairs) = Agda.MkHSMap (map (\(c, r) -> if elem c creds then (c, 0) else (c, r)) pairs)
+              credsSet = Set.fromList creds
+              zeroRewards (Agda.MkHSMap pairs) =
+                Agda.MkHSMap (map (\(c, r) -> if c `Set.member` credsSet then (c, 0) else (c, r)) pairs)
       _ -> checkConformance @"CERTS" @Conway @fn ctx env st sig implResTest agdaResTest
 
 nameCerts :: Seq (ConwayTxCert Conway) -> String
