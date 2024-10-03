@@ -1489,9 +1489,11 @@ ppConwayGovCertPredFailure :: ConwayGovCertPredFailure era -> PDoc
 ppConwayGovCertPredFailure z = case z of
   ConwayDRepAlreadyRegistered x -> ppSexp "ConwayDRepAlreadyRegistered" [pcCredential x]
   ConwayDRepNotRegistered x -> ppSexp "ConwayDRepNotRegistered" [pcCredential x]
-  ConwayDRepIncorrectDeposit c1 c2 -> ppSexp "ConwayDRepIncorrectDeposit" [pcCoin c1, pcCoin c2]
+  ConwayDRepIncorrectDeposit (Mismatch {mismatchSupplied = c1, mismatchExpected = c2}) ->
+    ppSexp "ConwayDRepIncorrectDeposit" [pcCoin c1, pcCoin c2]
   ConwayCommitteeHasPreviouslyResigned x -> ppSexp "ConwayCommitteeHasPreviouslyResigned" [pcCredential x]
-  ConwayDRepIncorrectRefund c1 c2 -> ppSexp "ConwayDRepIncorrectRefund" [pcCoin c1, pcCoin c2]
+  ConwayDRepIncorrectRefund (Mismatch {mismatchSupplied = c1, mismatchExpected = c2}) ->
+    ppSexp "ConwayDRepIncorrectRefund" [pcCoin c1, pcCoin c2]
   ConwayCommitteeIsUnknown c -> ppSexp "ConwayCommitteeIsUnknown" [pcCredential c]
 
 instance PrettyA (ConwayGovCertPredFailure era) where
