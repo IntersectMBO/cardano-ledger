@@ -48,13 +48,13 @@ govProposalsSpec ::
   GovEnv (ConwayEra StandardCrypto) ->
   Specification fn (Proposals (ConwayEra StandardCrypto))
 govProposalsSpec GovEnv {geEpoch, gePPolicy, geCertState} =
-  proposalsSpec (lit geEpoch) (lit gePPolicy) (lit geCertState)
+  proposalsSpec (lit geEpoch) (lit gePPolicy) geCertState
 
 proposalsSpec ::
   IsConwayUniv fn =>
   Term fn EpochNo ->
   Term fn (StrictMaybe (ScriptHash StandardCrypto)) ->
-  Term fn (CertState Conway) ->
+  CertState Conway ->
   Specification fn (Proposals Conway)
 proposalsSpec geEpoch gePPolicy geCertState =
   constrained $ \ [var|props|] ->

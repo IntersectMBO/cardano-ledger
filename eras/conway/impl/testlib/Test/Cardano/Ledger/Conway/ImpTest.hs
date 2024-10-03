@@ -1718,17 +1718,17 @@ showConwayTxBalance ::
   String
 showConwayTxBalance pp certState utxo tx = unlines
   [ "Consumed:   \t"
-  , "Inputs:     \t" <> show (coin inputs)
+  , "\tInputs:     \t" <> show (coin inputs)
   --, "Refunds:    \t" <> show refunds
-  , "Withdrawals \t" <> show withdrawals
-  , "Total:      \t" <> (show . coin $ consumed pp certState utxo txBody)
+  , "\tWithdrawals \t" <> show withdrawals
+  , "\tTotal:      \t" <> (show . coin $ consumed pp certState utxo txBody)
   , ""
   , "Produced:  \t"
-  , "Outputs:   \t" <> show (coin $ sumAllValue (txBody ^. outputsTxBodyL))
-  , "Donations: \t" <> show (txBody ^. treasuryDonationTxBodyL)
-  , "Deposits:  \t" <> show (getTotalDepositsTxBody pp isRegPoolId txBody)
-  , "Fees:      \t" <> show (txBody ^. feeTxBodyL)
-  , "Total:     \t" <> (show . coin $ produced pp certState txBody)
+  , "\tOutputs:   \t" <> show (coin $ sumAllValue (txBody ^. outputsTxBodyL))
+  , "\tDonations: \t" <> show (txBody ^. treasuryDonationTxBodyL)
+  , "\tDeposits:  \t" <> show (getTotalDepositsTxBody pp isRegPoolId txBody)
+  , "\tFees:      \t" <> show (txBody ^. feeTxBodyL)
+  , "\tTotal:     \t" <> (show . coin $ produced pp certState txBody)
   ]
   where
     --lookupStakingDeposit c = certState ^. certPStateL . psStakePoolParamsL
