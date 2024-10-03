@@ -1,15 +1,15 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the UTXO rule
@@ -22,36 +22,45 @@ import Data.Word
 
 import Constrained
 
-import Cardano.Ledger.Conway (ConwayEra, Conway)
-import Cardano.Ledger.Conway.Core
-  ( EraTxWits (..)
-  , EraTxAuxData (..)
-  , EraTx
-  , EraTxBody (..)
-  , EraPParams (..), Era (..)
-  )
-import Test.Cardano.Ledger.Babbage.Arbitrary ()
-import Test.Cardano.Ledger.Conway.TreeDiff ()
-import Cardano.Ledger.Crypto (StandardCrypto, Crypto)
-import Test.Cardano.Ledger.Constrained.Conway.Instances
-import Test.Cardano.Ledger.Constrained.Conway.Gov (proposalsSpec)
-import Cardano.Ledger.Shelley.Rules (epochFromSlot, Identity)
-import Control.Monad.Reader (runReader)
-import Test.Cardano.Ledger.Core.Utils (testGlobals)
-import Control.DeepSeq (NFData)
-import GHC.Generics (Generic)
-import Test.Cardano.Ledger.Common (ToExpr, Arbitrary (..), oneof)
-import Cardano.Ledger.Binary (EncCBOR (..), DecCBOR (..))
-import Cardano.Ledger.Binary.Coders (Encode(..), encode, (!>), decode, Decode (..), (<!))
+import Cardano.Ledger.Binary (DecCBOR (..), EncCBOR (..))
+import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import Cardano.Ledger.CertState (
+  DRepState (..),
+  certDStateL,
+  certPStateL,
+  certVStateL,
+  dsUnifiedL,
+  psDepositsL,
+  vsDRepsL,
+ )
+import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway.Core (
+  Era (..),
+  EraPParams (..),
+  EraTx,
+  EraTxAuxData (..),
+  EraTxBody (..),
+  EraTxWits (..),
+ )
+import Cardano.Ledger.Conway.Governance (GovActionId, Proposals, gasDeposit, pPropsL)
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Conway.Governance (GovActionId, gasDeposit, pPropsL, Proposals)
-import Test.Cardano.Ledger.Conway.Arbitrary ()
-import qualified Data.Map.Strict as Map
-import Lens.Micro ((^.))
+import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
+import Cardano.Ledger.Shelley.Rules (Identity, epochFromSlot)
 import Cardano.Ledger.UMap (depositMap)
-import Cardano.Ledger.CertState (certDStateL, dsUnifiedL, certPStateL, psDepositsL, DRepState (..), vsDRepsL, certVStateL)
-import Data.Bifunctor (Bifunctor(..))
+import Control.DeepSeq (NFData)
+import Control.Monad.Reader (runReader)
+import Data.Bifunctor (Bifunctor (..))
+import qualified Data.Map.Strict as Map
 import qualified Data.OMap.Strict as OMap
+import GHC.Generics (Generic)
+import Lens.Micro ((^.))
+import Test.Cardano.Ledger.Babbage.Arbitrary ()
+import Test.Cardano.Ledger.Common (Arbitrary (..), ToExpr, oneof)
+import Test.Cardano.Ledger.Constrained.Conway.Gov (proposalsSpec)
+import Test.Cardano.Ledger.Constrained.Conway.Instances
+import Test.Cardano.Ledger.Conway.Arbitrary ()
+import Test.Cardano.Ledger.Conway.TreeDiff ()
+import Test.Cardano.Ledger.Core.Utils (testGlobals)
 
 data DepositPurpose c
   = CredentialDeposit !(Credential 'Staking c)
@@ -155,11 +164,12 @@ instance
   EncCBOR (UtxoExecContext era)
   where
   encCBOR x@(UtxoExecContext _ _ _) =
-    let  UtxoExecContext {..} = x
-     in encode $ Rec UtxoExecContext
-      !> To uecTx
-      !> To uecUTxO
-      !> To uecUtxoEnv
+    let UtxoExecContext {..} = x
+     in encode $
+          Rec UtxoExecContext
+            !> To uecTx
+            !> To uecUTxO
+            !> To uecUtxoEnv
 
 utxoTxSpec ::
   ( IsConwayUniv fn

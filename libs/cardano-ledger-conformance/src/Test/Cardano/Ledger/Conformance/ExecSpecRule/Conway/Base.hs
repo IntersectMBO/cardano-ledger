@@ -96,8 +96,10 @@ import Test.Cardano.Ledger.Conformance (
   ExecSpecRule (..),
   OpaqueErrorString (..),
   SpecTranslate (..),
+  checkConformance,
   computationResultToEither,
-  runSpecTransM, runConformance, checkConformance,
+  runConformance,
+  runSpecTransM,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (defaultTestConformance)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
@@ -106,6 +108,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base (
   DepositPurpose,
  )
 import Test.Cardano.Ledger.Constrained.Conway (
+  ConwayFn,
   EpochExecEnv,
   IsConwayUniv,
   UtxoExecContext (..),
@@ -117,7 +120,6 @@ import Test.Cardano.Ledger.Constrained.Conway (
   utxoEnvSpec,
   utxoStateSpec,
   utxoTxSpec,
-  ConwayFn,
  )
 import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
   committeeMaxTermLength_,
@@ -126,16 +128,21 @@ import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
  )
 
 import Cardano.Ledger.Address (RewardAccount)
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.Rules (UtxoEnv (..))
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Generic.GenState (GenEnv (..), GenState (..), runGenRS, invalidScriptFreq)
+import Test.Cardano.Ledger.Conway.ImpTest (logDoc, showConwayTxBalance)
+import Test.Cardano.Ledger.Generic.GenState (
+  GenEnv (..),
+  GenState (..),
+  invalidScriptFreq,
+  runGenRS,
+ )
 import qualified Test.Cardano.Ledger.Generic.GenState as GenSize
+import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState(..))
-import Cardano.Ledger.Shelley.Rules (UtxoEnv(..))
-import Test.Cardano.Ledger.Conway.ImpTest (showConwayTxBalance, logDoc)
-import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
 
 instance
   forall fn.
@@ -148,16 +155,19 @@ instance
     let proof = Proof.reify @Conway
     ueSlot <- arbitrary
     let
-      genSize = GenSize.small
-        { invalidScriptFreq = 0 -- TODO make the test work with invalid scripts
-        }
-    ((uecUTxO, uecTx), gs) <- runGenRS proof genSize $
-      genAlonzoTx proof ueSlot
+      genSize =
+        GenSize.small
+          { invalidScriptFreq = 0 -- TODO make the test work with invalid scripts
+          }
+    ((uecUTxO, uecTx), gs) <-
+      runGenRS proof genSize $
+        genAlonzoTx proof ueSlot
     ueCertState <- arbitrary
     let
-      uePParams = gePParams (gsGenEnv gs)
-        & ppMaxTxSizeL .~ 3000
-        & ppProtocolVersionL .~ ProtVer (natVersion @10) 0
+      uePParams =
+        gePParams (gsGenEnv gs)
+          & ppMaxTxSizeL .~ 3000
+          & ppProtocolVersionL .~ ProtVer (natVersion @10) 0
       uecUtxoEnv = UtxoEnv {..}
     pure UtxoExecContext {..}
 
@@ -173,15 +183,16 @@ instance
       $ Agda.utxoStep env st sig
 
   extraInfo ctx env@UtxoEnv {..} st@UTxOState {..} sig =
-    "Impl:\n" <>
-    PP.ppString (showConwayTxBalance uePParams ueCertState utxosUtxo sig) <>
-    "\n\nSpec:\n" <>
-    PP.ppString
-      ( either show T.unpack . runSpecTransM ctx $ Agda.utxoDebug
-          <$> toSpecRep env
-          <*> toSpecRep st
-          <*> toSpecRep sig
-      )
+    "Impl:\n"
+      <> PP.ppString (showConwayTxBalance uePParams ueCertState utxosUtxo sig)
+      <> "\n\nSpec:\n"
+      <> PP.ppString
+        ( either show T.unpack . runSpecTransM ctx $
+            Agda.utxoDebug
+              <$> toSpecRep env
+              <*> toSpecRep st
+              <*> toSpecRep sig
+        )
 
   testConformance ctx env st sig = property $ do
     (implResTest, agdaResTest) <- runConformance @"UTXO" @ConwayFn @Conway ctx env st sig

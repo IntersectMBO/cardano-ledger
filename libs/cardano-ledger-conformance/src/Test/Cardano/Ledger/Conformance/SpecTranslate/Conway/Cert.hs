@@ -33,8 +33,8 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
-import Test.Cardano.Ledger.Conway.TreeDiff
 import Test.Cardano.Ledger.Constrained.Conway.Utxo (depositsMap)
+import Test.Cardano.Ledger.Conway.TreeDiff
 
 instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
@@ -101,7 +101,8 @@ instance
   , Inject ctx [GovActionState era]
   , ToExpr (PParamsHKD StrictMaybe era)
   , SpecRep (TxOut era) ~ Agda.TxOut
-  , SpecTranslate (Map (DepositPurpose (EraCrypto era)) Coin) (TxOut era), GovState era ~ ConwayGovState era
+  , SpecTranslate (Map (DepositPurpose (EraCrypto era)) Coin) (TxOut era)
+  , GovState era ~ ConwayGovState era
   ) =>
   SpecTranslate ctx (EpochState era)
   where
