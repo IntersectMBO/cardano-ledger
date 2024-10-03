@@ -2,6 +2,7 @@
 
 ## 1.17.0.0
 
+* Add new event `GovRemovedVotes` for invalidated votes
 * Added `reDelegatees` and `rePoolParams` to `RatifyEnv` for updated SPO vote calculation #4645
 * Added `dpPoolParams` to `DRepPulser` to track the parameters of each stake pool
 * Add `HardForkEvent` constructor to `ConwayEpochEvent`
