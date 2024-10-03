@@ -219,7 +219,10 @@ instance
   where
   type SpecRep (Timelock era) = Agda.HashedTimelock
 
-  toSpecRep tl = Agda.HashedTimelock <$> timelockToSpecRep tl <*> undefined
+  toSpecRep tl =
+    Agda.HashedTimelock
+      <$> timelockToSpecRep tl
+      <*> toSpecRep (hashScript @era $ TimelockScript tl)
     where
       timelockToSpecRep x =
         case x of
@@ -297,18 +300,20 @@ instance
 instance
   ( SpecTranslate ctx (TxOut era)
   , SpecRep (TxOut era) ~ Agda.TxOut
-  , Inject ctx (Map (DepositPurpose (EraCrypto era)) Coin)
+  , GovState era ~ ConwayGovState era
   ) =>
   SpecTranslate ctx (UTxOState era)
   where
   type SpecRep (UTxOState era) = Agda.UTxOState
 
   toSpecRep UTxOState {..} = do
-    depositsMap <- askCtx @(Map (DepositPurpose (EraCrypto era)) Coin)
+    let
+      gasDeposits = Map.fromList . fmap (bimap GovActionDeposit gasDeposit) $
+        OMap.assocList (utxosGovState ^. cgsProposalsL . pPropsL)
     Agda.MkUTxOState
       <$> toSpecRep utxosUtxo
       <*> toSpecRep utxosFees
-      <*> toSpecRep depositsMap
+      <*> toSpecRep gasDeposits
       <*> toSpecRep utxosDonation
 
 deriving instance SpecTranslate ctx SlotNo

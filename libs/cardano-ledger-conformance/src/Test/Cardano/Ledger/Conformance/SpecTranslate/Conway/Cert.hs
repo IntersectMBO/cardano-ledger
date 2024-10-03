@@ -23,12 +23,8 @@ import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
 import Cardano.Ledger.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.UMap (depositMap)
-import Data.Bifunctor (Bifunctor (..))
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import qualified Data.OMap.Strict as OMap
 import qualified Data.VMap as VMap
 import Lens.Micro
 import qualified Lib as Agda
@@ -38,6 +34,7 @@ import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert ()
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool ()
 import Test.Cardano.Ledger.Conway.TreeDiff
+import Test.Cardano.Ledger.Constrained.Conway.Utxo (depositsMap)
 
 instance
   ( SpecTranslate ctx (PParamsHKD Identity era)
@@ -79,6 +76,7 @@ instance
   , SpecRep (PParamsHKD StrictMaybe era) ~ Agda.PParamsUpdate
   , SpecRep (TxOut era) ~ Agda.TxOut
   , SpecTranslate (Map (DepositPurpose (EraCrypto era)) Coin) (TxOut era)
+  , GovState era ~ ConwayGovState era
   ) =>
   SpecTranslate ctx (LedgerState era)
   where
@@ -87,13 +85,7 @@ instance
   toSpecRep (LedgerState {..}) = do
     let
       props = utxosGovState lsUTxOState ^. proposalsGovStateL
-      deposits =
-        Map.unions
-          [ Map.mapKeys CredentialDeposit $ depositMap (lsCertState ^. certDStateL . dsUnifiedL)
-          , Map.mapKeys PoolDeposit $ lsCertState ^. certPStateL . psDepositsL
-          , fmap drepDeposit . Map.mapKeys DRepDeposit $ lsCertState ^. certVStateL . vsDRepsL
-          , Map.fromList . fmap (bimap GovActionDeposit gasDeposit) $ OMap.assocList (props ^. pPropsL)
-          ]
+      deposits = depositsMap lsCertState props
     Agda.MkLState
       <$> withCtx deposits (toSpecRep lsUTxOState)
       <*> toSpecRep props
@@ -109,7 +101,7 @@ instance
   , Inject ctx [GovActionState era]
   , ToExpr (PParamsHKD StrictMaybe era)
   , SpecRep (TxOut era) ~ Agda.TxOut
-  , SpecTranslate (Map (DepositPurpose (EraCrypto era)) Coin) (TxOut era)
+  , SpecTranslate (Map (DepositPurpose (EraCrypto era)) Coin) (TxOut era), GovState era ~ ConwayGovState era
   ) =>
   SpecTranslate ctx (EpochState era)
   where
@@ -168,6 +160,7 @@ instance
   , ToExpr (PParamsHKD StrictMaybe era)
   , SpecRep (TxOut era) ~ Agda.TxOut
   , SpecTranslate (Map (DepositPurpose (EraCrypto era)) Coin) (TxOut era)
+  , GovState era ~ ConwayGovState era
   ) =>
   SpecTranslate ctx (NewEpochState era)
   where
