@@ -28,15 +28,14 @@ import Cardano.Ledger.Conway.Core
   , EraTxAuxData (..)
   , EraTx
   , EraTxBody (..)
-  , PParams
-  , EraPParams
+  , EraPParams (..), Era (..)
   )
 import Test.Cardano.Ledger.Babbage.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
 import Cardano.Ledger.Crypto (StandardCrypto, Crypto)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.Gov (proposalsSpec)
-import Cardano.Ledger.Shelley.Rules (epochFromSlot)
+import Cardano.Ledger.Shelley.Rules (epochFromSlot, Identity)
 import Control.Monad.Reader (runReader)
 import Test.Cardano.Ledger.Core.Utils (testGlobals)
 import Control.DeepSeq (NFData)
@@ -45,9 +44,14 @@ import Test.Cardano.Ledger.Common (ToExpr, Arbitrary (..), oneof)
 import Cardano.Ledger.Binary (EncCBOR (..), DecCBOR (..))
 import Cardano.Ledger.Binary.Coders (Encode(..), encode, (!>), decode, Decode (..), (<!))
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Conway.Governance (GovActionId)
+import Cardano.Ledger.Conway.Governance (GovActionId, gasDeposit, pPropsL, Proposals)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import qualified Data.Map.Strict as Map
+import Lens.Micro ((^.))
+import Cardano.Ledger.UMap (depositMap)
+import Cardano.Ledger.CertState (certDStateL, dsUnifiedL, certPStateL, psDepositsL, DRepState (..), vsDRepsL, certVStateL)
+import Data.Bifunctor (Bifunctor(..))
+import qualified Data.OMap.Strict as OMap
 
 data DepositPurpose c
   = CredentialDeposit !(Credential 'Staking c)
@@ -93,13 +97,7 @@ utxoEnvSpec ::
   Specification fn (UtxoEnv (ConwayEra StandardCrypto))
 utxoEnvSpec UtxoExecContext {..} =
   constrained $ \utxoEnv ->
-    match utxoEnv $
-      \ueSlot
-       uePParams
-       _ueCertState ->
-          [ assert $ uePParams ==. lit uecPParams
-          , assert $ ueSlot ==. lit uecSlotNo
-          ]
+    utxoEnv ==. lit uecUtxoEnv
 
 utxoStateSpec ::
   IsConwayUniv fn =>
@@ -126,14 +124,9 @@ utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot} =
 data UtxoExecContext era = UtxoExecContext
   { uecTx :: !(AlonzoTx era)
   , uecUTxO :: !(UTxO era)
-  , uecSlotNo :: !SlotNo
-  , uecPParams :: !(PParams era)
-  , uecDeposits :: !(Map.Map (DepositPurpose StandardCrypto) Coin)
+  , uecUtxoEnv :: !(UtxoEnv era)
   }
   deriving (Generic)
-
-instance Inject (UtxoExecContext era) (Map.Map (DepositPurpose StandardCrypto) Coin) where
-  inject = uecDeposits
 
 instance
   ( EraTx era
@@ -148,7 +141,7 @@ instance
   , ToExpr (TxBody era)
   , ToExpr (TxWits era)
   , ToExpr (TxAuxData era)
-  , ToExpr (PParams era)
+  , ToExpr (PParamsHKD Identity era)
   ) =>
   ToExpr (UtxoExecContext era)
 
@@ -161,14 +154,12 @@ instance
   ) =>
   EncCBOR (UtxoExecContext era)
   where
-  encCBOR x@(UtxoExecContext _ _ _ _ _) =
+  encCBOR x@(UtxoExecContext _ _ _) =
     let  UtxoExecContext {..} = x
      in encode $ Rec UtxoExecContext
       !> To uecTx
       !> To uecUTxO
-      !> To uecSlotNo
-      !> To uecPParams
-      !> To uecDeposits
+      !> To uecUtxoEnv
 
 utxoTxSpec ::
   ( IsConwayUniv fn
@@ -194,4 +185,13 @@ correctAddrAndWFCoin txOut =
                 (branch $ \_ -> False)
                 (branch $ \_ -> True)
         )
+    ]
+
+depositsMap :: CertState era -> Proposals era -> Map.Map (DepositPurpose (EraCrypto era)) Coin
+depositsMap certState props =
+  Map.unions
+    [ Map.mapKeys CredentialDeposit $ depositMap (certState ^. certDStateL . dsUnifiedL)
+    , Map.mapKeys PoolDeposit $ certState ^. certPStateL . psDepositsL
+    , fmap drepDeposit . Map.mapKeys DRepDeposit $ certState ^. certVStateL . vsDRepsL
+    , Map.fromList . fmap (bimap GovActionDeposit gasDeposit) $ OMap.assocList (props ^. pPropsL)
     ]

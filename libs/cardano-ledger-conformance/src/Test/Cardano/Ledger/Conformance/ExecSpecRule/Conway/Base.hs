@@ -116,7 +116,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   newEpochStateSpec,
   utxoEnvSpec,
   utxoStateSpec,
-  utxoTxSpec,
+  utxoTxSpec, depositsMap,
  )
 import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
   committeeMaxTermLength_,
@@ -145,14 +145,15 @@ instance
 
   genExecContext = do
     let proof = Proof.reify @Conway
-    uecSlotNo <- arbitrary
+    ueSlot <- arbitrary
     ((uecUTxO, uecTx), gs) <- runGenRS proof GenSize.small $
-      genAlonzoTx proof uecSlotNo
+      genAlonzoTx proof ueSlot
+    ueCertState <- arbitrary
     let
-      uecPParams = gePParams (gsGenEnv gs)
+      uePParams = gePParams (gsGenEnv gs)
         & ppMaxTxSizeL .~ 3000
         & ppProtocolVersionL .~ ProtVer (natVersion @10) 0
-      uecDeposits = undefined
+      uecUtxoEnv = UtxoEnv {..}
     pure UtxoExecContext {..}
 
   environmentSpec = utxoEnvSpec
@@ -166,8 +167,16 @@ instance
       . computationResultToEither
       $ Agda.utxoStep env st sig
 
-  extraInfo _ctx UtxoEnv {..} UTxOState {..} =
-    PP.ppString . showConwayTxBalance uePParams ueCertState utxosUtxo
+  extraInfo ctx env@UtxoEnv {..} st@UTxOState {..} sig =
+    "Impl:\n" <>
+    PP.ppString (showConwayTxBalance uePParams ueCertState utxosUtxo sig) <>
+    "\n\nSpec:\n" <>
+    PP.ppString
+      ( either show T.unpack . runSpecTransM ctx $ Agda.utxoDebug
+          <$> toSpecRep env
+          <*> toSpecRep st
+          <*> toSpecRep sig
+      )
 
 data ConwayCertExecContext era = ConwayCertExecContext
   { ccecWithdrawals :: !(Map (RewardAccount (EraCrypto era)) Coin)
