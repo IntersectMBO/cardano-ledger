@@ -104,7 +104,7 @@ utxoStateSpec ::
   UtxoExecContext (ConwayEra StandardCrypto) ->
   UtxoEnv (ConwayEra StandardCrypto) ->
   Specification fn (UTxOState (ConwayEra StandardCrypto))
-utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot} =
+utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot, ueCertState} =
   constrained $ \utxoState ->
     match utxoState $
       \utxosUtxo
@@ -116,7 +116,7 @@ utxoStateSpec UtxoExecContext {uecUTxO} UtxoEnv {ueSlot} =
           [ assert $ utxosUtxo ==. lit uecUTxO
           , match utxosGovState $ \props _ constitution _ _ _ _ ->
               match constitution $ \_ policy ->
-                satisfies props $ proposalsSpec (lit curEpoch) policy
+                satisfies props $ proposalsSpec (lit curEpoch) policy ueCertState
           ]
   where
     curEpoch = runReader (epochFromSlot ueSlot) testGlobals

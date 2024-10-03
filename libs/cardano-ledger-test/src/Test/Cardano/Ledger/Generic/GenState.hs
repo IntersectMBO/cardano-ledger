@@ -210,6 +210,7 @@ data GenSize = GenSize
   , withdrawalMax :: !Int
   , oldUtxoPercent :: !Int -- between 0-100, 10 means pick an old UTxO 10% of the time
   , maxStablePools :: !Int
+  , invalidScriptFreq :: !Int -- percentage
   }
   deriving (Show)
 
@@ -283,6 +284,7 @@ instance Default GenSize where
       , certificateMax = 10
       , withdrawalMax = 10
       , maxStablePools = 5
+      , invalidScriptFreq = 5
       }
 
 small :: GenSize
@@ -301,6 +303,7 @@ small =
     , certificateMax = 2
     , withdrawalMax = 2
     , maxStablePools = 4
+    , invalidScriptFreq = 5
     }
 
 data PlutusPurposeTag
@@ -969,7 +972,8 @@ genPlutusScript ::
   PlutusPurposeTag ->
   GenRS era (ScriptHash (EraCrypto era))
 genPlutusScript proof tag = do
-  isValid <- lift $ frequency [(5, pure False), (95, pure True)]
+  falseFreq <- asks $ invalidScriptFreq . geSize
+  isValid <- lift $ frequency [(falseFreq, pure False), (100 - falseFreq, pure True)]
   -- Plutus scripts alwaysSucceeds needs at least numArgs, while
   -- alwaysFails needs exactly numArgs to have the desired affect.
   -- For reasons unknown, this number differs from Alonzo to Babbage

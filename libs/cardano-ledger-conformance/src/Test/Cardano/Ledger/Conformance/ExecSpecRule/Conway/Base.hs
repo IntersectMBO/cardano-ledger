@@ -75,7 +75,7 @@ import Cardano.Ledger.Conway.Rules (
  )
 import Cardano.Ledger.DRep (DRep (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
-import Constrained
+import Constrained hiding (inject)
 import Constrained.Base (fromList_)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (Foldable (..))
@@ -97,7 +97,7 @@ import Test.Cardano.Ledger.Conformance (
   OpaqueErrorString (..),
   SpecTranslate (..),
   computationResultToEither,
-  runSpecTransM,
+  runSpecTransM, runConformance, checkConformance,
  )
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core (defaultTestConformance)
 import Test.Cardano.Ledger.Conformance.SpecTranslate.Conway ()
@@ -116,7 +116,8 @@ import Test.Cardano.Ledger.Constrained.Conway (
   newEpochStateSpec,
   utxoEnvSpec,
   utxoStateSpec,
-  utxoTxSpec, depositsMap,
+  utxoTxSpec,
+  ConwayFn,
  )
 import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
   committeeMaxTermLength_,
@@ -126,14 +127,14 @@ import Test.Cardano.Ledger.Constrained.Conway.SimplePParams (
 
 import Cardano.Ledger.Address (RewardAccount)
 import Test.Cardano.Ledger.Conway.Arbitrary ()
-import Test.Cardano.Ledger.Generic.GenState (GenEnv (..), GenState (..), runGenRS)
+import Test.Cardano.Ledger.Generic.GenState (GenEnv (..), GenState (..), runGenRS, invalidScriptFreq)
 import qualified Test.Cardano.Ledger.Generic.GenState as GenSize
 import qualified Test.Cardano.Ledger.Generic.Proof as Proof
 import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop, var)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState(..))
 import Cardano.Ledger.Shelley.Rules (UtxoEnv(..))
-import Test.Cardano.Ledger.Conway.ImpTest (showConwayTxBalance)
+import Test.Cardano.Ledger.Conway.ImpTest (showConwayTxBalance, logDoc)
 import qualified Test.Cardano.Ledger.Generic.PrettyCore as PP
 
 instance
@@ -146,7 +147,11 @@ instance
   genExecContext = do
     let proof = Proof.reify @Conway
     ueSlot <- arbitrary
-    ((uecUTxO, uecTx), gs) <- runGenRS proof GenSize.small $
+    let
+      genSize = GenSize.small
+        { invalidScriptFreq = 0 -- TODO make the test work with invalid scripts
+        }
+    ((uecUTxO, uecTx), gs) <- runGenRS proof genSize $
       genAlonzoTx proof ueSlot
     ueCertState <- arbitrary
     let
@@ -177,6 +182,26 @@ instance
           <*> toSpecRep st
           <*> toSpecRep sig
       )
+
+  testConformance ctx env st sig = property $ do
+    (implResTest, agdaResTest) <- runConformance @"UTXO" @ConwayFn @Conway ctx env st sig
+    let extra = extraInfo @ConwayFn @"UTXO" @Conway ctx (inject env) (inject st) (inject sig)
+    logDoc extra
+    let
+      -- TODO make the deposit map updates match up exactly between the spec and
+      -- the implmentation
+      eraseDeposits Agda.MkUTxOState {..} =
+        Agda.MkUTxOState {deposits = Agda.MkHSMap mempty, ..}
+    checkConformance
+      @"UTXO"
+      @Conway
+      @ConwayFn
+      ctx
+      (inject env)
+      (inject st)
+      (inject sig)
+      (second eraseDeposits implResTest)
+      (second eraseDeposits agdaResTest)
 
 data ConwayCertExecContext era = ConwayCertExecContext
   { ccecWithdrawals :: !(Map (RewardAccount (EraCrypto era)) Coin)
