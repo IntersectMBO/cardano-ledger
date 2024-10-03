@@ -535,15 +535,24 @@ govTransition = do
 
   -- Inversion of the keys in VotingProcedures, where we can find the voters for every
   -- govActionId
-  let (unknownGovActionIds, knownVotes) =
+  let (unknownGovActionIds, knownVotes, replacedVotes) =
         foldrVotingProcedures
-          -- strictness is not needed for `unknown`
-          ( \voter gaId _ (unknown, !known) ->
+          -- strictness is not needed for `unknown` or `replaced`
+          ( \voter gaId _ (unknown, !known, replaced) ->
               case Map.lookup gaId curGovActionIds of
-                Just gas -> (unknown, (voter, gas) : known)
-                Nothing -> (gaId : unknown, known)
+                Just gas ->
+                  let isVoteReplaced =
+                        case voter of
+                          CommitteeVoter hotCred -> hotCred `Map.member` gasCommitteeVotes gas
+                          DRepVoter cred -> cred `Map.member` gasDRepVotes gas
+                          StakePoolVoter poolId -> poolId `Map.member` gasStakePoolVotes gas
+                      replaced'
+                        | isVoteReplaced = Set.insert (voter, gaId) replaced
+                        | otherwise = replaced
+                   in (unknown, (voter, gas) : known, replaced')
+                Nothing -> (gaId : unknown, known, replaced)
           )
-          ([], [])
+          ([], [], Set.empty)
           gsVotingProcedures
       curGovActionIds = proposalsActionsMap proposals
       isVoterKnown = \case
